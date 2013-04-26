@@ -18,6 +18,7 @@ package org.strongswan.android.logic.imc;
 import org.strongswan.android.logic.imc.attributes.Attribute;
 import org.strongswan.android.logic.imc.attributes.AttributeType;
 import org.strongswan.android.logic.imc.collectors.Collector;
+import org.strongswan.android.logic.imc.collectors.ProductInformationCollector;
 import org.strongswan.android.logic.imc.collectors.StringVersionCollector;
 
 import android.content.Context;
@@ -46,6 +47,9 @@ public class AndroidImc
 
 		switch (attributeType)
 		{
+			case IETF_PRODUCT_INFORMATION:
+				collector = new ProductInformationCollector();
+				break;
 			case IETF_STRING_VERSION:
 				collector = new StringVersionCollector();
 				break;
