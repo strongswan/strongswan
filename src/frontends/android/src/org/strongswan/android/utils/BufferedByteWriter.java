@@ -135,6 +135,19 @@ public class BufferedByteWriter
 	}
 
 	/**
+	 * Write 24-bit of the given value in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put24(int value)
+	{
+		ensureCapacity(3);
+		mWriter.put((byte)(value >> 16));
+		mWriter.putShort((short)value);
+		return this;
+	}
+
+	/**
 	 * Write the given int value (32-bit) in big-endian order to the buffer
 	 * @param value
 	 * @return the writer
