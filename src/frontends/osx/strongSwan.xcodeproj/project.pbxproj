@@ -206,6 +206,7 @@
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
+					"-DVSTR_COMPILE_INLINE=0",
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
@@ -256,6 +257,7 @@
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
+					"-DVSTR_COMPILE_INLINE=0",
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
