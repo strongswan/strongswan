@@ -21,6 +21,7 @@ import org.strongswan.android.logic.imc.collectors.Collector;
 import org.strongswan.android.logic.imc.collectors.InstalledPackagesCollector;
 import org.strongswan.android.logic.imc.collectors.PortFilterCollector;
 import org.strongswan.android.logic.imc.collectors.ProductInformationCollector;
+import org.strongswan.android.logic.imc.collectors.SettingsCollector;
 import org.strongswan.android.logic.imc.collectors.StringVersionCollector;
 
 import android.content.Context;
@@ -74,6 +75,9 @@ public class AndroidImc
 				break;
 			case IETF_INSTALLED_PACKAGES:
 				collector = new InstalledPackagesCollector(mContext);
+				break;
+			case ITA_SETTINGS:
+				collector = new SettingsCollector(mContext, args);
 				break;
 			default:
 				break;

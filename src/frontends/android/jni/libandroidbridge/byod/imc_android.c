@@ -363,7 +363,10 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 		{
 			case PEN_IETF:
 				handle_ietf_attribute(attr_type, attr, out_msg);
-				/* fall-through */
+				continue;
+			case PEN_ITA:
+				handle_ita_attribute(attr_type, attr, out_msg);
+				continue;
 			default:
 				continue;
 		}

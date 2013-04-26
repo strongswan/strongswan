@@ -19,6 +19,7 @@ public enum PrivateEnterpriseNumber
 {
 	IETF(0x000000),
 	GOOGLE(0x002B79),
+	ITA(0x00902a),
 	UNASSIGNED(0xfffffe),
 	RESERVED(0xffffff);
 
