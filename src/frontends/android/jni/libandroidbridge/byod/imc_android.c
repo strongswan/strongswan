@@ -44,7 +44,8 @@
 static const char imc_name[] = "Android";
 
 static pen_type_t msg_types[] = {
-	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM }
+	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM },
+	{ PEN_IETF, PA_SUBTYPE_IETF_VPN },
 };
 
 static imc_agent_t *imc_android;

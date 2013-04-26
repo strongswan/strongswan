@@ -19,6 +19,7 @@ import org.strongswan.android.logic.imc.attributes.Attribute;
 import org.strongswan.android.logic.imc.attributes.AttributeType;
 import org.strongswan.android.logic.imc.collectors.Collector;
 import org.strongswan.android.logic.imc.collectors.InstalledPackagesCollector;
+import org.strongswan.android.logic.imc.collectors.PortFilterCollector;
 import org.strongswan.android.logic.imc.collectors.ProductInformationCollector;
 import org.strongswan.android.logic.imc.collectors.StringVersionCollector;
 
@@ -53,6 +54,9 @@ public class AndroidImc
 				break;
 			case IETF_STRING_VERSION:
 				collector = new StringVersionCollector();
+				break;
+			case IETF_PORT_FILTER:
+				collector = new PortFilterCollector();
 				break;
 			case IETF_INSTALLED_PACKAGES:
 				collector = new InstalledPackagesCollector(mContext);
