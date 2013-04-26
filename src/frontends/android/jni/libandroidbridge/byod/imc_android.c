@@ -30,6 +30,8 @@
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_get_settings.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
@@ -279,6 +281,22 @@ static void handle_ietf_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
 			add_measurement(*entry, out_msg, NULL);
 		}
 		enumerator->destroy(enumerator);
+	}
+}
+
+/**
+ * Handle an ITA attribute
+ */
+static void handle_ita_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
+								 imc_msg_t *out_msg)
+{
+	if (attr_type.type == ITA_ATTR_GET_SETTINGS)
+	{
+		ita_attr_get_settings_t *attr_cast;
+
+		attr_cast = (ita_attr_get_settings_t*)attr;
+		add_measurement((pen_type_t){ PEN_ITA, ITA_ATTR_SETTINGS },
+						out_msg, attr_cast->create_enumerator(attr_cast));
 	}
 }
 
