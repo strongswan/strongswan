@@ -560,6 +560,11 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 
 	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
 
+	if (!proposals || !proposals->get_count(proposals))
+	{
+		return &this->public;
+	}
+
 	/* IKEv1 encodes multiple proposals in a single substructure
 	 * TODO-IKEv1: Encode ESP+AH proposals in two substructs with same num */
 	substruct = proposal_substructure_create_from_proposals_v1(proposals,
