@@ -22,6 +22,7 @@
 #define IMV_OS_DATABASE_H_
 
 #include "imv_os_state.h"
+#include "imv/imv_database.h"
 
 #include <library.h>
 
@@ -42,32 +43,20 @@ struct imv_os_database_t {
 							   enumerator_t *package_enumerator);
 
 	/**
-	* Get the primary database key of the device ID
-	*
-	* @param value					Device ID value
-	*/
-	int (*get_device_id)(imv_os_database_t *this, chunk_t value);
+	 * Set health infos for a given  device
+	 *
+	 * @param sesson_id				Session ID
+	 * @param count					Number of installed packages
+	 * @param count_update			Number of packages to be updated
+	 * @param count_blacklist		Number of blacklisted packages
+	 * @param flags					Various flags, e.g. illegal OS settings
+	 */
+	void (*set_device_info)(imv_os_database_t *this, int session_id, int count,
+							int count_update, int count_blacklist, u_int flags);
 
 	/**
-	* Set health infos for a given  device
-	*
-	* @param device_id				Device ID primary key
-	* @param ar_id_type				Access Requestor ID Type
-	* @param ar_id_value			Access Requestor ID Value
-	* @param os_info				OS info string
-	* @param count					Number of installed packages
-	* @param count_update			Number of packages to be updated
-	* @param count_blacklist		Number of blacklisted packages
-	* @param flags					Various flags, e.g. illegal OS settings
-	*/
-	void (*set_device_info)(imv_os_database_t *this, int device_id,
-							u_int32_t ar_id_type, chunk_t ar_id_value,
-							char *os_info, int count, int count_update,
-							int count_blacklist, u_int flags);
-
-	/**
-	* Destroys an imv_os_database_t object.
-	*/
+	 * Destroys an imv_os_database_t object.
+	 */
 	void (*destroy)(imv_os_database_t *this);
 
 };
@@ -75,8 +64,8 @@ struct imv_os_database_t {
 /**
  * Create an imv_os_database_t instance
  *
- * @param uri			database uri
+ * @param imv_db			Already attached IMV database
  */
-imv_os_database_t* imv_os_database_create(char *uri);
+imv_os_database_t* imv_os_database_create(imv_database_t *imv_db);
 
 #endif /** IMV_OS_DATABASE_H_ @}*/

@@ -65,8 +65,6 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	char *uri;
-
 	if (imv_os)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
@@ -84,13 +82,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		return TNC_RESULT_NO_COMMON_VERSION;
 	}
 
-	/* attach OS database */
-	uri = lib->settings->get_str(lib->settings,
-				"libimcv.plugins.imv-os.database", NULL);
-	if (uri)
-	{
-		os_db = imv_os_database_create(uri);
-	}
+	/* attach OS database co-located with IMV database */
+	os_db = imv_os_database_create(imv_os->get_database(imv_os));
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -289,7 +282,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				case ITA_ATTR_SETTINGS:
 				{
 					ita_attr_settings_t *attr_cast;
+					imv_database_t *imv_db;
 					enumerator_t *e;
+					int did;
 					char *name;
 					chunk_t value;
 
@@ -306,8 +301,13 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 						else if ((streq(name, android_id_str) ||
 								  streq(name, machine_id_str)) && os_db)
 						{
-							os_state->set_device_id(os_state,
-										os_db->get_device_id(os_db, value));
+							imv_db = imv_os->get_database(imv_os);
+							if (imv_db)
+							{
+								did = imv_db->add_device(imv_db,
+										state->get_session_id(state), value);
+								os_state->set_device_id(os_state, did);
+							}
 						}
 						DBG1(DBG_IMV, "setting '%s'\n  %.*s",
 							 name, value.len, value.ptr);
@@ -332,10 +332,18 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	{
 		os_type_t os_type;
 		ita_attr_get_settings_t *attr_cast;
+		imv_database_t *imv_db;
 
 		/* set the OS type, name and version */
 		os_type = os_type_from_name(os_name);
 		os_state->set_info(os_state,os_type, os_name, os_version);
+
+		imv_db = imv_os->get_database(imv_os);
+		if (imv_db)
+		{
+			imv_db->add_product(imv_db, state->get_session_id(state),
+					os_state->get_info(os_state, NULL, NULL, NULL));
+		}
 
 		/* requesting installed packages */
 		os_state->set_package_request(os_state, TRUE);
@@ -376,10 +384,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		!os_state->get_angel_count(os_state) &&
 		 os_state->get_info(os_state, NULL, NULL, NULL))
 	{
-		int device_id, count, count_update, count_blacklist, count_ok;
+		int count, count_update, count_blacklist, count_ok;
 		u_int os_settings;
-		u_int32_t id_type;
-		chunk_t id_value;
 
 		os_settings = os_state->get_os_settings(os_state);
 		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
@@ -389,13 +395,10 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			 count_ok, count - count_update - count_blacklist - count_ok);
 
 		/* Store device information in database */
-		device_id = os_state->get_device_id(os_state);
-		id_value = state->get_ar_id(state, &id_type);
-		if (os_db && device_id)
+		if (os_db)
 		{
-			os_db->set_device_info(os_db, device_id, id_type, id_value,
-						os_state->get_info(os_state, NULL, NULL, NULL),
-						count, count_update, count_blacklist, os_settings);
+			os_db->set_device_info(os_db, state->get_session_id(state),
+					count, count_update, count_blacklist, os_settings);
 		}
 
 		if (count_update || count_blacklist || os_settings)
@@ -589,6 +592,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	DESTROY_IF(os_db);
+	os_db = NULL;
 
 	imv_os->destroy(imv_os);
 	imv_os = NULL;

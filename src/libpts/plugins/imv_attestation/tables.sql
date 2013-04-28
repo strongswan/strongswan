@@ -13,7 +13,7 @@ CREATE INDEX directories_path ON directories (
 DROP TABLE IF EXISTS files;
 CREATE TABLE files (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  dir INTEGER DEFAULT 0,
+  dir INTEGER DEFAULT 0 REFERENCES directories(id),
   name TEXT NOT NULL
 );
 DROP INDEX IF EXISTS files_name;
@@ -31,20 +31,39 @@ CREATE INDEX products_name ON products (
   name
 );
 
+DROP TABLE IF EXISTS product_file;
+CREATE TABLE product_file (
+  product INTEGER NOT NULL REFERENCES products(id),
+  file INTEGER NOT NULL REFERENCES files(id),
+  measurement INTEGER DEFAULT 0,
+  metadata INTEGER DEFAULT 0,
+  PRIMARY KEY (product, file)
+);
+
 DROP TABLE IF EXISTS algorithms;
 CREATE TABLE algorithms (
   id INTEGER PRIMARY KEY,
-  name TEXT not NULL
+  name VARCHAR(20) not NULL
 );
 
 DROP TABLE IF EXISTS file_hashes;
 CREATE TABLE file_hashes (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  file INTEGER NOT NULL,
-  product INTEGER NOT NULL,
+  file INTEGER NOT NULL REFERENCES files(id),
+  product INTEGER NOT NULL REFERENCES products(id),
   device INTEGER DEFAULT 0,
-  algo INTEGER NOT NULL,
+  algo INTEGER NOT NULL REFERENCES algorithms(id),
   hash BLOB NOT NULL
+);
+
+DROP TABLE IF EXISTS sessions;
+CREATE TABLE sessions (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  time INTEGER NOT NULL,
+  connection INTEGER NOT NULL,
+  identity INTEGER DEFAULT 0 REFERENCES identities(id),
+  device INTEGER DEFAULT 0 REFERENCES devices(id),
+  product INTEGER DEFAULT 0 REFERENCES products(id)
 );
 
 DROP TABLE IF EXISTS components;
@@ -118,10 +137,7 @@ CREATE INDEX devices_value ON devices (
 DROP TABLE IF EXISTS device_infos;
 CREATE TABLE device_infos (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  device INTEGER NOT NULL,
-  time INTEGER NOT NULL,
-  ar_id INTEGER DEFAULT 0,
-  product INTEGER DEFAULT 0,
+  session INTEGER NOT NULL REFERENCES sessions(id),
   count INTEGER DEFAULT 0,
   count_update INTEGER DEFAULT 0,
   count_blacklist INTEGER DEFAULT 0,
@@ -132,6 +148,6 @@ DROP TABLE IF EXISTS identities;
 CREATE TABLE identities (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   type INTEGER NOT NULL,
-  data BLOB NOT NULL,
-  UNIQUE (type, data)
+  value BLOB NOT NULL,
+  UNIQUE (type, value)
 );

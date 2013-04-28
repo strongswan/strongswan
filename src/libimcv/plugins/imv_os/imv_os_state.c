@@ -72,6 +72,11 @@ struct private_imv_os_state_t {
 	chunk_t ar_id_value;
 
 	/**
+	 * Unique session ID
+	 */
+	int session_id;
+
+	/**
 	 * IMV action recommendation
 	 */
 	TNC_IMV_Action_Recommendation rec;
@@ -344,6 +349,18 @@ METHOD(imv_state_t, get_ar_id, chunk_t,
 		*id_type = this->ar_id_type;
 	}
 	return this->ar_id_value;
+}
+
+METHOD(imv_state_t, set_session_id, void,
+	private_imv_os_state_t *this, int session_id)
+{
+	this->session_id = session_id;
+}
+
+METHOD(imv_state_t, get_session_id, int,
+	private_imv_os_state_t *this)
+{
+	return this->session_id;
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -633,6 +650,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_ar_id = _set_ar_id,
 				.get_ar_id = _get_ar_id,
+				.set_session_id = _set_session_id,
+				.get_session_id = _get_session_id,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,

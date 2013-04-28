@@ -228,6 +228,11 @@ struct attest_db_t {
 	void (*list_measurements)(attest_db_t *this);
 
 	/**
+	 * List sessions stored in the database
+	 */
+	void (*list_sessions)(attest_db_t *this);
+
+	/**
 	 * Add an entry to the database
 	 */
 	bool (*add)(attest_db_t *this);

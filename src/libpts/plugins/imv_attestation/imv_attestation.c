@@ -83,7 +83,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	char *hash_alg, *dh_group, *uri, *cadir;
+	char *hash_alg, *dh_group, *cadir;
 
 	if (imv_attestation)
 	{
@@ -133,10 +133,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		pts_credmgr->add_set(pts_credmgr, pts_creds->get_set(pts_creds));
 	}
 
-	/* attach file measurement database */
-	uri = lib->settings->get_str(lib->settings,
-				"libimcv.plugins.imv-attestation.database", NULL);
-	pts_db = pts_database_create(uri);
+	/* attach PTS database co-located with IMV database */
+	pts_db = pts_database_create(imv_attestation->get_database(imv_attestation));
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -473,7 +471,9 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		pts_creds->destroy(pts_creds);
 	}
 	DESTROY_IF(pts_db);
+	pts_db = NULL;
 	DESTROY_IF(pts_credmgr);
+	pts_credmgr = NULL;
 
 	libpts_deinit();
 

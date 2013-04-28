@@ -10,6 +10,7 @@ libimcv_la_SOURCES = \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \
 	imc/imc_msg.h imc/imc_msg.c \
 	imv/imv_agent.h imv/imv_agent.c imv/imv_state.h \
+	imv/imv_database.h imv/imv_database.c \
 	imv/imv_msg.h imv/imv_msg.c \
 	imv/imv_lang_string.h imv/imv_lang_string.c \
 	imv/imv_reason_string.h imv/imv_reason_string.c \

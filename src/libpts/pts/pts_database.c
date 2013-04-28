@@ -308,16 +308,20 @@ METHOD(pts_database_t, get_comp_measurement_count, status_t,
 METHOD(pts_database_t, destroy, void,
 	private_pts_database_t *this)
 {
-	this->db->destroy(this->db);
 	free(this);
 }
 
 /**
  * See header
  */
-pts_database_t *pts_database_create(char *uri)
+pts_database_t *pts_database_create(imv_database_t *imv_db)
 {
 	private_pts_database_t *this;
+
+	if (!imv_db)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -333,16 +337,8 @@ pts_database_t *pts_database_create(char *uri)
 			.get_comp_measurement_count = _get_comp_measurement_count,
 			.destroy = _destroy,
 		},
-		.db = lib->db->create(lib->db, uri),
+		.db = imv_db->get_database(imv_db),
 	);
-
-	if (!this->db)
-	{
-		DBG1(DBG_PTS,
-			 "failed to connect to PTS file measurement database '%s'", uri);
-		free(this);
-		return NULL;
-	}
 
 	return &this->public;
 }

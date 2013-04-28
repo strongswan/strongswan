@@ -187,147 +187,45 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	return status;
 }
 
-METHOD(imv_os_database_t, get_device_id, int,
-	private_imv_os_database_t *this, chunk_t value)
-{
-	enumerator_t *e;
-	int id;
-
-	/* get primary key of device ID */
-	e = this->db->query(this->db, "SELECT id FROM devices WHERE value = ?",
-						DB_BLOB, value, DB_INT);
-	if (!e)
-	{
-		return 0;
-	}
-	if (e->enumerate(e, &id))
-	{
-		/* device ID already exists in database - return primary key */
-		e->destroy(e);
-		return id;
-	}
-	e->destroy(e);
-
-	/* register new device ID in database and return primary key */
-	return (this->db->execute(this->db, &id,
-			"INSERT INTO devices (value) VALUES (?)", DB_BLOB, value) == 1) ?
-			id : 0;
-}
-
 METHOD(imv_os_database_t, set_device_info, void,
-	private_imv_os_database_t *this,  int device_id, u_int32_t ar_id_type,
-	chunk_t ar_id_value, char *os_info, int count, int count_update,
-	int count_blacklist, u_int flags)
+	private_imv_os_database_t *this,  int session_id, int count,
+	int count_update, int count_blacklist, u_int flags)
 {
 	enumerator_t *e;
-	time_t last_time;
-	int pid = 0, last_pid = 0, iid = 0, last_iid;
-	int last_count_update = 0, last_count_blacklist = 0;
-	u_int last_flags;
-	bool found = FALSE;
 
-	/* get primary key of OS info string if it exists */
-	e = this->db->query(this->db,
-			"SELECT id FROM products WHERE name = ?", DB_TEXT, os_info,
-			 DB_INT);
-	if (e)
-	{
-		e->enumerate(e, &pid);
-		e->destroy(e);
-	}
-
-	/* if OS info string has not been found - register it */
-	if (!pid)
-	{
-		this->db->execute(this->db, &pid,
-			"INSERT INTO products (name) VALUES (?)", DB_TEXT, os_info);
-	}
-
-	/* get primary key of AR identity if it exists */
-	e = this->db->query(this->db,
-			"SELECT id FROM identities WHERE type = ? AND data = ?",
-			 DB_INT,  ar_id_type, DB_BLOB, ar_id_value, DB_INT);
-	if (e)
-	{
-		e->enumerate(e, &iid);
-		e->destroy(e);
-	}
-
-	/* if AR identity has not been found - register it */
-	if (!iid)
-	{
-		this->db->execute(this->db, &iid,
-			"INSERT INTO identities (type, data) VALUES (?, ?)",
-			 DB_INT, ar_id_type, DB_BLOB, ar_id_value);
-	}
-
-	/* get latest device info record if it exists */
-	e = this->db->query(this->db,
-			"SELECT time, ar_id, product, count_update, count_blacklist, flags "
-			"FROM device_infos WHERE device = ? ORDER BY time DESC",
-			 DB_INT, device_id, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_UINT);
-	if (e)
-	{
-		found = e->enumerate(e, &last_time, &last_iid, &last_pid,
-								&last_count_update, &last_count_blacklist,
-								&last_flags);
-		e->destroy(e);
-	}
-	if (found && !last_count_update && !last_count_blacklist && !last_flags &&
-		iid == last_iid && pid == last_pid)
-	{
-		/* update device info */
-		this->db->execute(this->db, NULL,
-			"UPDATE device_infos SET time = ?, count = ?, count_update = ?, "
-			"count_blacklist = ?, flags = ? WHERE device = ? AND time = ?",
-			 DB_UINT, time(NULL), DB_INT, count, DB_INT, count_update,
-			 DB_INT, count_blacklist, DB_UINT, flags,
-			 DB_INT, device_id, DB_UINT, last_time);
-	}
-	else
-	{
-		/* insert device info */
-		this->db->execute(this->db, NULL,
-			"INSERT INTO device_infos (device, time, ar_id, product, count, "
-			"count_update, count_blacklist, flags) "
-			"VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			 DB_INT, device_id, DB_UINT, time(NULL), DB_INT, iid, DB_INT, pid,
-			 DB_INT, count, DB_INT, count_update, DB_INT, count_blacklist,
-			 DB_UINT, flags);
-	}
+	this->db->execute(this->db, NULL,
+			"INSERT INTO device_infos (session, count, count_update, "
+			"count_blacklist, flags) VALUES (?, ?, ?, ?, ?)",
+			 DB_INT, session_id, DB_INT, count, DB_INT, count_update,
+			 DB_INT, count_blacklist, DB_UINT, flags);
 }
 
 METHOD(imv_os_database_t, destroy, void,
 	private_imv_os_database_t *this)
 {
-	this->db->destroy(this->db);
 	free(this);
 }
 
 /**
  * See header
  */
-imv_os_database_t *imv_os_database_create(char *uri)
+imv_os_database_t *imv_os_database_create(imv_database_t *imv_db)
 {
 	private_imv_os_database_t *this;
+
+	if (!imv_db)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
 			.check_packages = _check_packages,
-			.get_device_id = _get_device_id,
 			.set_device_info = _set_device_info,
 			.destroy = _destroy,
 		},
-		.db = lib->db->create(lib->db, uri),
+		.db = imv_db->get_database(imv_db),
 	);
-
-	if (!this->db)
-	{
-		DBG1(DBG_IMV,
-			 "failed to connect to OS database '%s'", uri);
-		free(this);
-		return NULL;
-	}
 
 	return &this->public;
 }

@@ -23,6 +23,7 @@
 #define IMV_AGENT_H_
 
 #include "imv_state.h"
+#include "imv_database.h"
 #include "pa_tnc/pa_tnc_msg.h"
 
 #include <tncifimv.h>
@@ -136,6 +137,13 @@ struct imv_agent_t {
 	 */
 	bool (*get_state)(imv_agent_t *this,
 					  TNC_ConnectionID connection_id, imv_state_t **state);
+
+	/**
+	 * Get IMV database
+	 *
+	 * @return					IMV database if it exists, NULL otherwise
+	 */
+	imv_database_t* (*get_database)(imv_agent_t *this);
 
 	/**
 	 * Get IMV name

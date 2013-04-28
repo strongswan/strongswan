@@ -108,6 +108,7 @@ static void do_args(int argc, char *argv[])
 		OP_MEASUREMENTS,
 		OP_PACKAGES,
 		OP_PRODUCTS,
+		OP_SESSIONS,
 		OP_ADD,
 		OP_DEL,
 	} op = OP_UNDEF;
@@ -131,6 +132,7 @@ static void do_args(int argc, char *argv[])
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
 			{ "measurements", no_argument, NULL, 'm' },
+			{ "sessions", no_argument, NULL, 's' },
 			{ "add", no_argument, NULL, 'a' },
 			{ "delete", no_argument, NULL, 'r' },
 			{ "del", no_argument, NULL, 'r' },
@@ -200,6 +202,9 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'm':
 				op = OP_MEASUREMENTS;
+				continue;
+			case 's':
+				op = OP_SESSIONS;
 				continue;
 			case 'a':
 				op = OP_ADD;
@@ -407,6 +412,9 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_MEASUREMENTS:
 			attest->list_measurements(attest);
+			break;
+		case OP_SESSIONS:
+			attest->list_sessions(attest);
 			break;
 		case OP_ADD:
 			attest->add(attest);

@@ -63,6 +63,11 @@ struct private_imv_agent_t {
 	linked_list_t *additional_ids;
 
 	/**
+	 * IMV database
+	 */
+	imv_database_t *db;
+
+	/**
 	 * list of TNCS connection entries
 	 */
 	linked_list_t *connections;
@@ -402,11 +407,14 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 {
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
-	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
+	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE, first = TRUE;
 	linked_list_t *ar_identities;
 	enumerator_t *enumerator;
 	tncif_identity_t *tnc_id;
+	int session_id;
 	u_int32_t max_msg_len;
+	u_int32_t ar_id_type = TNC_ID_UNKNOWN;
+	chunk_t ar_id_value = chunk_empty;
 
 	conn_id = state->get_connection_id(state);
 	if (find_connection(this, conn_id))
@@ -462,10 +470,31 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 			 TNC_Subject_names, tcg_subject_type,
 			 id_value.len, id_value.ptr,
 			 TNC_Authentication_names, tcg_auth_type);
-		state->set_ar_id(state, tcg_id_type, id_value);
+
+		if (first)
+		{
+			ar_id_type = tcg_id_type;
+			ar_id_value = id_value;
+			state->set_ar_id(state, ar_id_type, ar_id_value);
+			first = FALSE;
+		}
 	}
 	enumerator->destroy(enumerator);
 
+	if (this->db)
+	{
+		session_id = this->db->get_session_id(this->db, conn_id,
+											  ar_id_type, ar_id_value);
+		if (session_id)
+		{
+			DBG2(DBG_IMV, "  assigned session ID %d", session_id);
+			state->set_session_id(state, session_id);
+		}
+		else
+		{
+			DBG1(DBG_IMV, "  no session ID assigned");
+		}
+	}
 	ar_identities->destroy_offset(ar_identities,
 						   offsetof(tncif_identity_t, destroy));
 	free(tnccs_p);
@@ -551,6 +580,12 @@ METHOD(imv_agent_t, get_state, bool,
 		return FALSE;
 	}
 	return TRUE;
+}
+
+METHOD(imv_agent_t, get_database, imv_database_t*,
+	private_imv_agent_t *this)
+{
+	return	this->db;
 }
 
 METHOD(imv_agent_t, get_name, const char*,
@@ -754,6 +789,7 @@ METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
 	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
+	DESTROY_IF(this->db);
 	this->additional_ids->destroy(this->additional_ids);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
@@ -772,6 +808,7 @@ imv_agent_t *imv_agent_create(const char *name,
 							  TNC_IMVID id, TNC_Version *actual_version)
 {
 	private_imv_agent_t *this;
+	char *uri;
 
 	/* initialize  or increase the reference count */
 	if (!libimcv_init())
@@ -786,6 +823,7 @@ imv_agent_t *imv_agent_create(const char *name,
 			.delete_state = _delete_state,
 			.change_state = _change_state,
 			.get_state = _get_state,
+			.get_database = _get_database,
 			.get_name = _get_name,
 			.get_id = _get_id,
 			.reserve_additional_ids = _reserve_additional_ids,
@@ -803,6 +841,13 @@ imv_agent_t *imv_agent_create(const char *name,
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
+
+	/* attach IMV database */
+	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
+	if (uri)
+	{
+		this->db = imv_database_create(uri);
+	}
 
 	*actual_version = TNC_IFIMV_VERSION_1;
 	DBG1(DBG_IMV, "IMV %u \"%s\" initialized", this->id, this->name);

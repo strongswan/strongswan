@@ -25,6 +25,8 @@ typedef struct pts_database_t pts_database_t;
 
 #include "pts_meas_algo.h"
 #include "components/pts_comp_func_name.h"
+
+#include <imv/imv_database.h>
 #include <library.h>
 
 /**
@@ -159,8 +161,8 @@ struct pts_database_t {
 /**
  * Creates an pts_database_t object
  *
- * @param uri				database uri
+ * @param imv_db			Already attached IMV database
  */
-pts_database_t* pts_database_create(char *uri);
+pts_database_t* pts_database_create(imv_database_t *imv_db);
 
 #endif /** PTS_DATABASE_H_ @}*/

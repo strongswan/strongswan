@@ -95,6 +95,20 @@ struct imv_state_t {
 	chunk_t (*get_ar_id)(imv_state_t *this, u_int32_t *id_type);
 
 	/**
+	 * Set unique session ID
+	 *
+	 * @param session_id	Unique session ID
+	 */
+	void (*set_session_id)(imv_state_t *this, int session_id);
+
+	/**
+	 * Get unique session_id
+	 *
+	 * @return				Unique session ID
+	 */
+	int (*get_session_id)(imv_state_t *this);
+
+	/**
 	 * Change the connection state
 	 *
 	 * @param new_state		new connection state
