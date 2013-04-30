@@ -13,4 +13,5 @@ libstrongswan_keychain_la_SOURCES = \
 	keychain_plugin.h keychain_plugin.c \
 	keychain_creds.h keychain_creds.c
 
-libstrongswan_keychain_la_LDFLAGS = -module -avoid-version
+libstrongswan_keychain_la_LDFLAGS = -module -avoid-version \
+	-framework Security -framework CoreFoundation
