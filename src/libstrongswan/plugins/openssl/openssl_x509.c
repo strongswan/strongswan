@@ -977,7 +977,12 @@ static bool parse_extensions(private_openssl_x509_t *this)
 								"libstrongswan.x509.enforce_critical", TRUE);
 					if (!ok)
 					{
-						DBG1(DBG_LIB, "found unsupported critical X.509 extension");
+						char buf[80] = "";
+
+						OBJ_obj2txt(buf, sizeof(buf),
+									X509_EXTENSION_get_object(ext), 0);
+						DBG1(DBG_LIB, "found unsupported critical X.509 "
+							 "extension: %s", buf);
 					}
 					break;
 			}
