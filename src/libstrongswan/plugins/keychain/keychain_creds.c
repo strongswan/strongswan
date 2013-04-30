@@ -20,6 +20,11 @@
 
 #include <Security/Security.h>
 
+/**
+ * System Root certificates keychain
+ */
+#define SYSTEM_ROOTS "/System/Library/Keychains/SystemRootCertificates.keychain"
+
 typedef struct private_keychain_creds_t private_keychain_creds_t;
 
 /**
@@ -36,7 +41,62 @@ struct private_keychain_creds_t {
 	 * Active in-memory credential set
 	 */
 	mem_cred_t *set;
+
+	/**
+	 * System roots credential set
+	 */
+	mem_cred_t *roots;
 };
+
+/**
+ * Load a credential set with System Root certificates
+ */
+static mem_cred_t* load_roots(private_keychain_creds_t *this)
+{
+	SecKeychainRef keychain;
+	SecKeychainSearchRef search;
+	SecKeychainItemRef item;
+	mem_cred_t *set;
+	OSStatus status;
+
+	set = mem_cred_create();
+
+	DBG1(DBG_CFG, "loading System Roots certificates:");
+	status = SecKeychainOpen(SYSTEM_ROOTS, &keychain);
+	if (status == errSecSuccess)
+	{
+		status = SecKeychainSearchCreateFromAttributes(keychain,
+									kSecCertificateItemClass, NULL, &search);
+		if (status == errSecSuccess)
+		{
+			while (SecKeychainSearchCopyNext(search, &item) == errSecSuccess)
+			{
+				certificate_t *cert;
+				UInt32 len;
+				void *data;
+
+				if (SecKeychainItemCopyAttributesAndData(item, NULL, NULL, NULL,
+												&len, &data) == errSecSuccess)
+				{
+					cert = lib->creds->create(lib->creds,
+								CRED_CERTIFICATE, CERT_X509,
+								BUILD_BLOB_ASN1_DER, chunk_create(data, len),
+								BUILD_END);
+					if (cert)
+					{
+						DBG1(DBG_CFG, "  loaded '%Y'", cert->get_subject(cert));
+						set->add_cert(set, TRUE, cert);
+					}
+					SecKeychainItemFreeAttributesAndData(NULL, data);
+				}
+				CFRelease(item);
+			}
+			CFRelease(search);
+		}
+		CFRelease(keychain);
+	}
+	return set;
+}
 
 /**
  * Create a credential set loaded with certificates
@@ -106,7 +166,9 @@ METHOD(keychain_creds_t, destroy, void,
 	private_keychain_creds_t *this)
 {
 	lib->credmgr->remove_set(lib->credmgr, &this->set->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->roots->set);
 	this->set->destroy(this->set);
+	this->roots->destroy(this->roots);
 	free(this);
 }
 
@@ -123,7 +185,10 @@ keychain_creds_t *keychain_creds_create()
 		},
 	);
 
+	this->roots = load_roots(this);
 	this->set = load_creds(this);
+
+	lib->credmgr->add_set(lib->credmgr, &this->roots->set);
 	lib->credmgr->add_set(lib->credmgr, &this->set->set);
 
 	return &this->public;
