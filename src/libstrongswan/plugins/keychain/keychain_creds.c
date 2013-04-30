@@ -16,6 +16,7 @@
 #include "keychain_creds.h"
 
 #include <utils/debug.h>
+#include <credentials/sets/mem_cred.h>
 
 #include <Security/Security.h>
 
@@ -30,87 +31,22 @@ struct private_keychain_creds_t {
 	 * Public keychain_creds_t interface.
 	 */
 	keychain_creds_t public;
+
+	/**
+	 * Active in-memory credential set
+	 */
+	mem_cred_t *set;
 };
 
 /**
- * Enumerator for certificates
+ * Create a credential set loaded with certificates
  */
-typedef struct {
-	/* implements enumerator_t */
-	enumerator_t public;
-	/* currently enumerating certificate */
-	certificate_t *current;
-	/* id to filter for */
-	identification_t *id;
-	/* certificate public key type we are looking for */
-	key_type_t type;
-	/* array of binary certificates to enumerate */
-	CFArrayRef certs;
-	/* current position in array */
-	int i;
-} cert_enumerator_t;
-
-METHOD(enumerator_t, enumerate_certs, bool,
-	cert_enumerator_t *this, certificate_t **out)
+static mem_cred_t* load_creds(private_keychain_creds_t *this)
 {
-	DESTROY_IF(this->current);
-	this->current = NULL;
-
-	while (this->i < CFArrayGetCount(this->certs))
-	{
-		certificate_t *cert;
-		public_key_t *key;
-		CFDataRef data;
-		chunk_t chunk;
-
-		data = CFArrayGetValueAtIndex(this->certs, this->i++);
-		if (data)
-		{
-			chunk = chunk_create((char*)CFDataGetBytePtr(data),
-								 CFDataGetLength(data));
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									  BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-			if (cert)
-			{
-				if (!this->id || cert->has_subject(cert, this->id))
-				{
-					key = cert->get_public_key(cert);
-					if (key)
-					{
-						if (this->type == KEY_ANY ||
-							this->type == key->get_type(key))
-						{
-							key->destroy(key);
-							this->current = cert;
-							*out = cert;
-							return TRUE;
-						}
-						key->destroy(key);
-					}
-				}
-				cert->destroy(cert);
-			}
-		}
-	}
-	return FALSE;
-}
-
-METHOD(enumerator_t, destroy_certs, void,
-	cert_enumerator_t *this)
-{
-	DESTROY_IF(this->current);
-	CFRelease(this->certs);
-	free(this);
-}
-
-METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
-	private_keychain_creds_t *this, certificate_type_t cert, key_type_t key,
-	identification_t *id, bool trusted)
-{
-	cert_enumerator_t *enumerator;
+	mem_cred_t *set;
 	OSStatus status;
 	CFDictionaryRef query;
-	CFArrayRef result;
+	CFArrayRef certs;
 	const void* keys[] = {
 		kSecReturnData,
 		kSecMatchLimit,
@@ -123,39 +59,54 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		kSecMatchLimitAll,
 		kSecClassCertificate,
 		kCFBooleanTrue,
-		trusted ? kCFBooleanTrue : kCFBooleanFalse,
+		kCFBooleanTrue,
 	};
+	int i;
 
-	if (cert == CERT_ANY || cert == CERT_X509)
+	set = mem_cred_create();
+
+	DBG1(DBG_CFG, "loading System certificates:");
+	query = CFDictionaryCreate(NULL, keys, values, countof(keys),
+							   &kCFTypeDictionaryKeyCallBacks,
+							   &kCFTypeDictionaryValueCallBacks);
+	if (query)
 	{
-		query = CFDictionaryCreate(NULL, keys, values, countof(keys),
-								   &kCFTypeDictionaryKeyCallBacks,
-								   &kCFTypeDictionaryValueCallBacks);
-		if (query)
+		status = SecItemCopyMatching(query, (CFTypeRef*)&certs);
+		CFRelease(query);
+		if (status == errSecSuccess)
 		{
-			status = SecItemCopyMatching(query, (CFTypeRef*)&result);
-			CFRelease(query);
-			if (status == errSecSuccess)
+			for (i = 0; i < CFArrayGetCount(certs); i++)
 			{
-				INIT(enumerator,
-					.public = {
-						.enumerate = (void*)_enumerate_certs,
-						.destroy = _destroy_certs,
-					},
-					.certs = result,
-					.id = id,
-					.type = key,
-				);
-				return &enumerator->public;
+				certificate_t *cert;
+				CFDataRef data;
+				chunk_t chunk;
+
+				data = CFArrayGetValueAtIndex(certs, i);
+				if (data)
+				{
+					chunk = chunk_create((char*)CFDataGetBytePtr(data),
+										 CFDataGetLength(data));
+					cert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+					if (cert)
+					{
+						DBG1(DBG_CFG, "  loaded '%Y'", cert->get_subject(cert));
+						set->add_cert(set, TRUE, cert);
+					}
+				}
 			}
+			CFRelease(certs);
 		}
 	}
-	return enumerator_create_empty();
+	return set;
 }
 
 METHOD(keychain_creds_t, destroy, void,
 	private_keychain_creds_t *this)
 {
+	lib->credmgr->remove_set(lib->credmgr, &this->set->set);
+	this->set->destroy(this->set);
 	free(this);
 }
 
@@ -168,16 +119,12 @@ keychain_creds_t *keychain_creds_create()
 
 	INIT(this,
 		.public = {
-			.set = {
-				.create_shared_enumerator = (void*)enumerator_create_empty,
-				.create_private_enumerator = (void*)enumerator_create_empty,
-				.create_cert_enumerator = _create_cert_enumerator,
-				.create_cdp_enumerator  = (void*)enumerator_create_empty,
-				.cache_cert = (void*)nop,
-			},
 			.destroy = _destroy,
 		},
 	);
+
+	this->set = load_creds(this);
+	lib->credmgr->add_set(lib->credmgr, &this->set->set);
 
 	return &this->public;
 }

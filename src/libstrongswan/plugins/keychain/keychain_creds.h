@@ -31,11 +31,6 @@ typedef struct keychain_creds_t keychain_creds_t;
 struct keychain_creds_t {
 
 	/**
-	 * Implements credential_set_t.
-	 */
-	credential_set_t set;
-
-	/**
 	 * Destroy a keychain_creds_t.
 	 */
 	void (*destroy)(keychain_creds_t *this);

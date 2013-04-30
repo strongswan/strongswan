@@ -42,11 +42,38 @@ METHOD(plugin_t, get_name, char*,
 	return "keychain";
 }
 
+/**
+ * Load/unload certificates from Keychain.
+ */
+static bool load_creds(private_keychain_plugin_t *this,
+					   plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		this->creds = keychain_creds_create();
+	}
+	else
+	{
+		this->creds->destroy(this->creds);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_keychain_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)load_creds, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "keychain"),
+				PLUGIN_DEPENDS(CERT_DECODE, CERT_X509),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_keychain_plugin_t *this)
 {
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	this->creds->destroy(this->creds);
 	free(this);
 }
 
@@ -61,13 +88,11 @@ plugin_t *keychain_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.creds = keychain_creds_create(),
 	);
-
-	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	return &this->public.plugin;
 }
