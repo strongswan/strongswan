@@ -125,6 +125,8 @@ static OSStatus keychain_cb(SecKeychainEvent keychainEvent,
 	lib->credmgr->add_set(lib->credmgr, &new->set);
 	lib->credmgr->remove_set(lib->credmgr, &this->set->set);
 
+	lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
+
 	this->set->destroy(this->set);
 	this->set = new;
 
