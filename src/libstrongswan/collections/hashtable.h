@@ -34,6 +34,22 @@ typedef struct hashtable_t hashtable_t;
 typedef u_int (*hashtable_hash_t)(void *key);
 
 /**
+ * Hashtable hash function calculation the hash solely based on the key pointer.
+ *
+ * @param key			key to hash
+ * @return				hash of key
+ */
+u_int hashtable_hash_ptr(void *key);
+
+/**
+ * Hashtable hash function calculation the hash for char* keys.
+ *
+ * @param key			key to hash, a char*
+ * @return				hash of key
+ */
+u_int hashtable_hash_str(void *key);
+
+/**
  * Prototype for a function that compares the two keys for equality.
  *
  * @param key			first key (the one we are looking for)
@@ -41,6 +57,24 @@ typedef u_int (*hashtable_hash_t)(void *key);
  * @return				TRUE if the keys are equal
  */
 typedef bool (*hashtable_equals_t)(void *key, void *other_key);
+
+/**
+ * Hashtable equals function comparing pointers.
+ *
+ * @param key			key to compare
+ * @param other_key		other key to compare
+ * @return				TRUE if key == other_key
+ */
+bool hashtable_equals_ptr(void *key, void *other_key);
+
+/**
+ * Hashtable equals function comparing char* keys.
+ *
+ * @param key			key to compare
+ * @param other_key		other key to compare
+ * @return				TRUE if streq(key, other_key)
+ */
+bool hashtable_equals_str(void *key, void *other_key);
 
 /**
  * Class implementing a hash table.
@@ -121,7 +155,6 @@ struct hashtable_t {
 	 * Destroys a hash table object.
 	 */
 	void (*destroy) (hashtable_t *this);
-
 };
 
 /**
