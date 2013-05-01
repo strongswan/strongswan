@@ -17,6 +17,7 @@
 
 #include <utils/debug.h>
 #include <credentials/sets/mem_cred.h>
+#include <processing/jobs/callback_job.h>
 
 #include <Security/Security.h>
 
@@ -51,6 +52,11 @@ struct private_keychain_creds_t {
 	 * System roots credential set
 	 */
 	mem_cred_t *roots;
+
+	/**
+	 * Run loop of event monitoring thread
+	 */
+	CFRunLoopRef loop;
 };
 
 /**
@@ -103,6 +109,61 @@ static mem_cred_t* load_certs(private_keychain_creds_t *this, char *path)
 	return set;
 }
 
+/**
+ * Callback function reloading keychain on changes
+ */
+static OSStatus keychain_cb(SecKeychainEvent keychainEvent,
+							SecKeychainCallbackInfo *info,
+							private_keychain_creds_t *this)
+{
+	mem_cred_t *new;
+
+	DBG1(DBG_CFG, "received keychain event, reloading credentials");
+
+	/* register new before removing old */
+	new = load_certs(this, SYSTEM);
+	lib->credmgr->add_set(lib->credmgr, &new->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->set->set);
+
+	this->set->destroy(this->set);
+	this->set = new;
+
+	return errSecSuccess;
+}
+
+/**
+ * Wait for changes in the keychain and handle them
+ */
+static job_requeue_t monitor_changes(private_keychain_creds_t *this)
+{
+	if (SecKeychainAddCallback((SecKeychainCallback)keychain_cb,
+						kSecAddEventMask | kSecDeleteEventMask |
+						kSecUpdateEventMask | kSecTrustSettingsChangedEventMask,
+						this) == errSecSuccess)
+	{
+		this->loop = CFRunLoopGetCurrent();
+
+		/* does not return until cancelled */
+		CFRunLoopRun();
+
+		this->loop = NULL;
+		SecKeychainRemoveCallback((SecKeychainCallback)keychain_cb);
+	}
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Cancel the monitoring thread in its RunLoop
+ */
+static bool cancel_monitor(private_keychain_creds_t *this)
+{
+	if (this->loop)
+	{
+		CFRunLoopStop(this->loop);
+	}
+	return TRUE;
+}
+
 METHOD(keychain_creds_t, destroy, void,
 	private_keychain_creds_t *this)
 {
@@ -131,6 +192,10 @@ keychain_creds_t *keychain_creds_create()
 
 	lib->credmgr->add_set(lib->credmgr, &this->roots->set);
 	lib->credmgr->add_set(lib->credmgr, &this->set->set);
+
+	lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create_with_prio((void*)monitor_changes,
+					this, NULL, (void*)cancel_monitor, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }
