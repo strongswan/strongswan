@@ -21,9 +21,14 @@
 #include <Security/Security.h>
 
 /**
- * System Root certificates keychain
+ * System Roots keychain
  */
 #define SYSTEM_ROOTS "/System/Library/Keychains/SystemRootCertificates.keychain"
+
+/**
+ * System keychain
+ */
+#define SYSTEM "/Library/Keychains/System.keychain"
 
 typedef struct private_keychain_creds_t private_keychain_creds_t;
 
@@ -49,9 +54,9 @@ struct private_keychain_creds_t {
 };
 
 /**
- * Load a credential set with System Root certificates
+ * Load a credential sets with certificates from a keychain path
  */
-static mem_cred_t* load_roots(private_keychain_creds_t *this)
+static mem_cred_t* load_certs(private_keychain_creds_t *this, char *path)
 {
 	SecKeychainRef keychain;
 	SecKeychainSearchRef search;
@@ -61,8 +66,8 @@ static mem_cred_t* load_roots(private_keychain_creds_t *this)
 
 	set = mem_cred_create();
 
-	DBG1(DBG_CFG, "loading System Roots certificates:");
-	status = SecKeychainOpen(SYSTEM_ROOTS, &keychain);
+	DBG1(DBG_CFG, "loading certificates from %s:", path);
+	status = SecKeychainOpen(path, &keychain);
 	if (status == errSecSuccess)
 	{
 		status = SecKeychainSearchCreateFromAttributes(keychain,
@@ -98,70 +103,6 @@ static mem_cred_t* load_roots(private_keychain_creds_t *this)
 	return set;
 }
 
-/**
- * Create a credential set loaded with certificates
- */
-static mem_cred_t* load_creds(private_keychain_creds_t *this)
-{
-	mem_cred_t *set;
-	OSStatus status;
-	CFDictionaryRef query;
-	CFArrayRef certs;
-	const void* keys[] = {
-		kSecReturnData,
-		kSecMatchLimit,
-		kSecClass,
-		kSecAttrCanVerify,
-		kSecMatchTrustedOnly,
-	};
-	const void* values[] = {
-		kCFBooleanTrue,
-		kSecMatchLimitAll,
-		kSecClassCertificate,
-		kCFBooleanTrue,
-		kCFBooleanTrue,
-	};
-	int i;
-
-	set = mem_cred_create();
-
-	DBG1(DBG_CFG, "loading System certificates:");
-	query = CFDictionaryCreate(NULL, keys, values, countof(keys),
-							   &kCFTypeDictionaryKeyCallBacks,
-							   &kCFTypeDictionaryValueCallBacks);
-	if (query)
-	{
-		status = SecItemCopyMatching(query, (CFTypeRef*)&certs);
-		CFRelease(query);
-		if (status == errSecSuccess)
-		{
-			for (i = 0; i < CFArrayGetCount(certs); i++)
-			{
-				certificate_t *cert;
-				CFDataRef data;
-				chunk_t chunk;
-
-				data = CFArrayGetValueAtIndex(certs, i);
-				if (data)
-				{
-					chunk = chunk_create((char*)CFDataGetBytePtr(data),
-										 CFDataGetLength(data));
-					cert = lib->creds->create(lib->creds,
-										CRED_CERTIFICATE, CERT_X509,
-										BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-					if (cert)
-					{
-						DBG1(DBG_CFG, "  loaded '%Y'", cert->get_subject(cert));
-						set->add_cert(set, TRUE, cert);
-					}
-				}
-			}
-			CFRelease(certs);
-		}
-	}
-	return set;
-}
-
 METHOD(keychain_creds_t, destroy, void,
 	private_keychain_creds_t *this)
 {
@@ -185,8 +126,8 @@ keychain_creds_t *keychain_creds_create()
 		},
 	);
 
-	this->roots = load_roots(this);
-	this->set = load_creds(this);
+	this->roots = load_certs(this, SYSTEM_ROOTS);
+	this->set = load_certs(this, SYSTEM);
 
 	lib->credmgr->add_set(lib->credmgr, &this->roots->set);
 	lib->credmgr->add_set(lib->credmgr, &this->set->set);
