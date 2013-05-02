@@ -199,6 +199,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Joe Developer";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				HEADER_SEARCH_PATHS = (
 					/usr/include,
 					../../libstrongswan,
@@ -250,6 +251,7 @@
 				CODE_SIGN_IDENTITY = "Joe Developer";
 				COPY_PHASE_STRIP = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				HEADER_SEARCH_PATHS = (
 					/usr/include,
 					../../libstrongswan,
