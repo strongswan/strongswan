@@ -195,7 +195,7 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
 }
 
 /**
- * XPC command dispatch table
+ * XPC RPC command dispatch table
  */
 static struct {
 	char *name;
@@ -213,26 +213,47 @@ static void handle(private_xpc_dispatch_t *this, xpc_object_t request)
 {
 	xpc_connection_t client;
 	xpc_object_t reply;
-	const char *command;
+	const char *type, *rpc;
+	bool found = FALSE;
 	int i;
 
 	client = xpc_dictionary_get_remote_connection(request);
-	command = xpc_dictionary_get_string(request, "command");
-	if (command)
+	type = xpc_dictionary_get_string(request, "type");
+	if (type)
 	{
-		for (i = 0; i < countof(commands); i++)
+		if (streq(type, "rpc"))
 		{
-			if (streq(commands[i].name, command))
+			rpc = xpc_dictionary_get_string(request, "rpc");
+			if (rpc)
 			{
-				reply = commands[i].handler(this, request, client);
-				if (reply)
+				for (i = 0; i < countof(commands); i++)
 				{
-					xpc_connection_send_message(client, reply);
-					xpc_release(reply);
+					if (streq(commands[i].name, rpc))
+					{
+						found = TRUE;
+						reply = commands[i].handler(this, request, client);
+						if (reply)
+						{
+							xpc_connection_send_message(client, reply);
+							xpc_release(reply);
+						}
+						break;
+					}
 				}
-				break;
+			}
+			if (!found)
+			{
+				DBG1(DBG_CFG, "received unknown XPC rpc command: %s", rpc);
 			}
 		}
+		else
+		{
+			DBG1(DBG_CFG, "received unknown XPC message type: %s", type);
+		}
+	}
+	else
+	{
+		DBG1(DBG_CFG, "received XPC message without a type");
 	}
 }
 
