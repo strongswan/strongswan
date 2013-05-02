@@ -262,27 +262,17 @@ static void handle(private_xpc_dispatch_t *this, xpc_object_t request)
  */
 static void set_handler(private_xpc_dispatch_t *this)
 {
-	xpc_connection_set_event_handler(this->service, ^(xpc_object_t conn) {
-
-		xpc_connection_set_event_handler(conn, ^(xpc_object_t event) {
-
-			if (xpc_get_type(event) == XPC_TYPE_ERROR)
-			{
-				if (event == XPC_ERROR_CONNECTION_INVALID ||
-					event == XPC_ERROR_TERMINATION_IMMINENT)
-				{
-					xpc_connection_cancel(conn);
-				}
-			}
-			else
+	xpc_connection_set_event_handler(this->service, ^(xpc_object_t conn)
+	{
+		xpc_connection_set_event_handler(conn, ^(xpc_object_t event)
+		{
+			if (xpc_get_type(event) == XPC_TYPE_DICTIONARY)
 			{
 				handle(this, event);
 			}
 		});
-
 		xpc_connection_resume(conn);
 	});
-
 	xpc_connection_resume(this->service);
 }
 
@@ -294,7 +284,7 @@ METHOD(xpc_dispatch_t, destroy, void,
 	if (this->service)
 	{
 		xpc_connection_suspend(this->service);
-		xpc_connection_cancel(this->service);
+		xpc_release(this->service);
 	}
 	free(this);
 }

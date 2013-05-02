@@ -71,7 +71,6 @@ static void destroy_entry(entry_t *entry)
 	charon->bus->remove_logger(charon->bus, &entry->logger->logger);
 	entry->logger->destroy(entry->logger);
 	xpc_connection_suspend(entry->conn);
-	xpc_connection_cancel(entry->conn);
 	xpc_release(entry->conn);
 	free(entry);
 }
@@ -88,7 +87,7 @@ static void remove_conn(private_xpc_channels_t *this, xpc_connection_t conn)
 	enumerator = this->channels->create_enumerator(this->channels);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (xpc_equal(entry->conn, conn))
+		if (entry->conn == conn)
 		{
 			this->channels->remove(this->channels, enumerator);
 			destroy_entry(entry);
@@ -118,14 +117,14 @@ METHOD(xpc_channels_t, add, void,
 		.logger = xpc_logger_create(conn),
 	);
 
-	xpc_connection_set_event_handler(entry->conn, ^(xpc_object_t event) {
-
+	xpc_connection_set_event_handler(entry->conn, ^(xpc_object_t event)
+	{
 		if (event == XPC_ERROR_CONNECTION_INVALID ||
 			event == XPC_ERROR_CONNECTION_INTERRUPTED)
 		{
 			remove_conn(this, conn);
 		}
-		else
+		else if (xpc_get_type(event) == XPC_TYPE_DICTIONARY)
 		{
 			handle(this, event);
 		}
@@ -223,8 +222,11 @@ static shared_key_t *query_password(xpc_connection_t conn, identification_t *id)
 	if (xpc_get_type(response) == XPC_TYPE_DICTIONARY)
 	{
 		password = (char*)xpc_dictionary_get_string(response, "password");
-		shared = shared_key_create(SHARED_EAP,
-								   chunk_clone(chunk_from_str(password)));
+		if (password)
+		{
+			shared = shared_key_create(SHARED_EAP,
+									   chunk_clone(chunk_from_str(password)));
+		}
 	}
 	xpc_release(response);
 	return shared;
@@ -281,9 +283,6 @@ static shared_key_t* password_cb(private_xpc_channels_t *this,
 METHOD(xpc_channels_t, destroy, void,
 	private_xpc_channels_t *this)
 {
-	enumerator_t *enumerator;
-	entry_t *entry;
-
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
 	this->channels->destroy(this->channels);
