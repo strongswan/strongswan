@@ -39,3 +39,50 @@ any non OS X dependencies.
 Both charon-xpc and the App must be code-signed to allow the installation of
 the privileged helper. git-grep for "Joe Developer" to change the signing
 identity.
+
+## XPC application protocol ##
+
+charon-xpc provides a Mach service under the name _org.strongswan.charon-xpc_.
+Clients can connect to this service to control the daemon. All messages
+on all connections use the following string dictionary keys/values:
+
+* _type_: XPC message type, currently either
+ * _rpc_ for a remote procedure call, expects a response
+ * _event_ for application specific event messages
+* _rpc_: defines the name of the RPC function to call (for _type_ = _rpc_)
+* _event_: defines a name for the event (for _type_ = _event_)
+
+Additional arguments and return values are specified by the call and can have
+any type. Keys are directly attached to the message dictionary.
+
+On the Mach service connection, the following RPC messages are currently
+defined:
+
+* string version = get_version()
+  * _version_: strongSwan version of charon-xpc
+* bool success = start_connection(string name, string host, string id,
+                                  endpoint channel)
+  * _success_: TRUE if initiation started successfully
+  * _name_: connection name to initiate
+  * _host_: server hostname (and identity)
+  * _id_: client identity to use
+  * _channel_: XPC endpoint for this connection
+
+The start_connection() RPC returns just after the initation of the call and
+does not wait for the connection to establish. Nonetheless does it have a
+return value to indicate if connection initiation could be triggered.
+
+The App passes an (anonymous) XPC endpoint to start_connection(). If the call
+succeeds, charon-xpc connects to this endpoint to establish a channel used for
+this specific IKE connection.
+
+On this channel, the following RPC calls are currently defined from charon-xpc
+to the App:
+
+* string password = get_password(string username)
+  * _password_: user password returned
+  * _username_: username to query a password for
+
+The following events are currently defined from charon-xpc to the App:
+* _up_: connection has been established
+* _down_: connection has been closed or failed to establish
