@@ -174,6 +174,7 @@ void libimcv_deinit(void)
 		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_IETF);
 		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_ITA);
 		DESTROY_IF(imcv_pa_tnc_attributes);
+		imcv_pa_tnc_attributes = NULL;
 		DESTROY_IF(imcv_db);
 		DBG1(DBG_LIB, "libimcv terminated");
 	}
