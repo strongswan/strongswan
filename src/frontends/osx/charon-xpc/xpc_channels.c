@@ -76,34 +76,128 @@ static void destroy_entry(entry_t *entry)
 }
 
 /**
- * Remove an entry for a given XPC connection
+ * Find an IKE_SA unique identifier by a given XPC channel
  */
-static void remove_conn(private_xpc_channels_t *this, xpc_connection_t conn)
+static u_int32_t find_ike_sa_by_conn(private_xpc_channels_t *this,
+									 xpc_connection_t conn)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	u_int32_t ike_sa = 0;
 
-	this->lock->write_lock(this->lock);
+	this->lock->read_lock(this->lock);
 	enumerator = this->channels->create_enumerator(this->channels);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
 		if (entry->conn == conn)
 		{
-			this->channels->remove(this->channels, enumerator);
-			destroy_entry(entry);
+			ike_sa = entry->sa;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
+
+	return ike_sa;
 }
+
+/**
+ * Remove an entry for a given XPC connection
+ */
+static void remove_conn(private_xpc_channels_t *this, xpc_connection_t conn)
+{
+	uintptr_t ike_sa;
+	entry_t *entry;
+
+	ike_sa = find_ike_sa_by_conn(this, conn);
+	if (ike_sa)
+	{
+		this->lock->write_lock(this->lock);
+		entry = this->channels->remove(this->channels, (void*)ike_sa);
+		this->lock->unlock(this->lock);
+
+		if (entry)
+		{
+			destroy_entry(entry);
+		}
+	}
+}
+
+/**
+ * Trigger termination of a connection
+ */
+static void stop_connection(private_xpc_channels_t *this, u_int32_t ike_sa,
+							xpc_object_t request, xpc_object_t reply)
+{
+	status_t status;
+
+	status = charon->controller->terminate_ike(charon->controller, ike_sa,
+											   NULL, NULL, 0);
+	xpc_dictionary_set_bool(reply, "success", status != NOT_FOUND);
+}
+
+/**
+ * XPC RPC command dispatch table
+ */
+static struct {
+	char *name;
+	void (*handler)(private_xpc_channels_t *this, u_int32_t ike_sa,
+					xpc_object_t request, xpc_object_t reply);
+} commands[] = {
+	{ "stop_connection", stop_connection },
+};
 
 /**
  * Handle a request message from App
  */
-static void handle(private_xpc_channels_t *this, xpc_object_t request)
+static void handle(private_xpc_channels_t *this, xpc_connection_t conn,
+				   xpc_object_t request)
 {
-	/* TODO: */
+	xpc_object_t reply;
+	const char *type, *rpc;
+	bool found = FALSE;
+	u_int32_t ike_sa;
+	int i;
+
+	type = xpc_dictionary_get_string(request, "type");
+	if (type)
+	{
+		if (streq(type, "rpc"))
+		{
+			reply = xpc_dictionary_create_reply(request);
+			rpc = xpc_dictionary_get_string(request, "rpc");
+			ike_sa = find_ike_sa_by_conn(this, conn);
+			if (reply && rpc && ike_sa)
+			{
+				for (i = 0; i < countof(commands); i++)
+				{
+					if (streq(commands[i].name, rpc))
+					{
+						found = TRUE;
+						commands[i].handler(this, ike_sa, request, reply);
+						break;
+					}
+				}
+			}
+			if (!found)
+			{
+				DBG1(DBG_CFG, "received invalid XPC rpc command: %s", rpc);
+			}
+			if (reply)
+			{
+				xpc_connection_send_message(conn, reply);
+				xpc_release(reply);
+			}
+		}
+		else
+		{
+			DBG1(DBG_CFG, "received unknown XPC message type: %s", type);
+		}
+	}
+	else
+	{
+		DBG1(DBG_CFG, "received XPC message without a type");
+	}
 }
 
 METHOD(xpc_channels_t, add, void,
@@ -126,7 +220,7 @@ METHOD(xpc_channels_t, add, void,
 		}
 		else if (xpc_get_type(event) == XPC_TYPE_DICTIONARY)
 		{
-			handle(this, event);
+			handle(this, conn, event);
 		}
 	});
 
