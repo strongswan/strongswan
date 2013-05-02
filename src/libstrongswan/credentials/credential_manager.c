@@ -393,6 +393,10 @@ METHOD(credential_manager_t, get_shared, shared_key_t*,
 			best_me = match_me;
 			best_other = match_other;
 		}
+		if (best_me == ID_MATCH_PERFECT && best_other == ID_MATCH_PERFECT)
+		{
+			break;
+		}
 	}
 	enumerator->destroy(enumerator);
 	return found;
