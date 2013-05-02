@@ -286,14 +286,6 @@ METHOD(xpc_channels_t, destroy, void,
 
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
-
-	enumerator = this->channels->create_enumerator(this->channels);
-	while (enumerator->enumerate(enumerator, NULL, &entry))
-	{
-		destroy_entry(entry);
-	}
-	enumerator->destroy(enumerator);
-
 	this->channels->destroy(this->channels);
 	this->lock->destroy(this->lock);
 	free(this);
