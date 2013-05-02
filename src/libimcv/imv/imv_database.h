@@ -56,11 +56,20 @@ struct imv_database_t {
 	/**
 	 * Add device identification to a session
 	 *
-	 * @param session_id	Sessiion ID
+	 * @param session_id	Session ID
 	 * @param device		Device identification
 	 * @return				Device ID or 0 if not available
 	 */
 	 int (*add_device)(imv_database_t *this, int session_id, chunk_t device);
+
+	/**
+	 * Announce session start/stop to policy script
+	 *
+	 * @param session_id	Session ID
+	 * @param start			TRUE if session start, FALSE if session stop
+	 * @return				TRUE if command successful, FALSE otherwise
+	 */
+	 bool (*policy_script)(imv_database_t *this, int session_id, bool start);
 
 	/**
 	 * Get database handle

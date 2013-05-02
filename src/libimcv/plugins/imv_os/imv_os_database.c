@@ -191,8 +191,6 @@ METHOD(imv_os_database_t, set_device_info, void,
 	private_imv_os_database_t *this,  int session_id, int count,
 	int count_update, int count_blacklist, u_int flags)
 {
-	enumerator_t *e;
-
 	this->db->execute(this->db, NULL,
 			"INSERT INTO device_infos (session, count, count_update, "
 			"count_blacklist, flags) VALUES (?, ?, ?, ?, ?)",

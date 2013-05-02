@@ -96,6 +96,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
+	imv_database_t *imv_db;
+	int session_id;
 
 	if (!imv_os)
 	{
@@ -108,6 +110,12 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			state = imv_os_state_create(connection_id);
 			return imv_os->create_state(imv_os, state);
 		case TNC_CONNECTION_STATE_DELETE:
+			imv_db = imv_os->get_database(imv_os);
+			if (imv_db && imv_os->get_state(imv_os, connection_id, &state))
+			{
+				session_id = state->get_session_id(state);
+				imv_db->policy_script(imv_db, session_id, FALSE);
+			}
 			return imv_os->delete_state(imv_os, connection_id);
 		default:
 			return imv_os->change_state(imv_os, connection_id,
@@ -284,7 +292,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ita_attr_settings_t *attr_cast;
 					imv_database_t *imv_db;
 					enumerator_t *e;
-					int did;
+					int session_id, device_id;
 					char *name;
 					chunk_t value;
 
@@ -304,9 +312,13 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 							imv_db = imv_os->get_database(imv_os);
 							if (imv_db)
 							{
-								did = imv_db->add_device(imv_db,
-										state->get_session_id(state), value);
-								os_state->set_device_id(os_state, did);
+								session_id = state->get_session_id(state);
+								device_id = imv_db->add_device(imv_db,
+														session_id, value);
+								os_state->set_device_id(os_state, device_id);
+
+								/* trigger the policy manager */
+								imv_db->policy_script(imv_db, session_id, TRUE);
 							}
 						}
 						DBG1(DBG_IMV, "setting '%s'\n  %.*s",

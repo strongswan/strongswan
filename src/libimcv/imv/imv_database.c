@@ -13,16 +13,21 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
 #include "imv_database.h"
 
 #include <utils/debug.h>
 
-#include <string.h>
-#include <time.h>
-
 typedef struct private_imv_database_t private_imv_database_t;
 
 #define SESSION_TIME_DELTA_MAX		2  /* seconds */
+
+#define DEFAULT_POLICY_SCRIPT		"ipsec _imv_policy"
 
 /**
  * Private data of a imv_database_t object.
@@ -39,6 +44,11 @@ struct private_imv_database_t {
 	 * database instance
 	 */
 	database_t *db;
+
+	/**
+	 * policy script
+	 */
+	char *script;
 
 };
 
@@ -165,6 +175,49 @@ METHOD(imv_database_t, add_device, int,
 	return did;
 }
 
+METHOD(imv_database_t, policy_script, bool,
+	private_imv_database_t *this, int session_id, bool start)
+{
+	char command[512], resp[128], *last;
+	FILE *shell;
+
+	snprintf(command, sizeof(command), "2>&1 TNC_SESSION_ID='%d' %s %s",
+			 session_id, this->script, start ? "start" : "stop");
+	DBG3(DBG_IMV, "running policy script: %s", command);
+
+	shell = popen(command, "r");
+	if (shell == NULL)
+	{
+		DBG1(DBG_IMV, "could not execute policy script '%s'",
+			 this->script);
+		return FALSE;
+	}
+	while (TRUE)
+	{
+		if (fgets(resp, sizeof(resp), shell) == NULL)
+		{
+			if (ferror(shell))
+			{
+				DBG1(DBG_IMV, "error reading output from policy script");
+			}
+			break;
+		}
+		else
+		{
+			last = resp + strlen(resp) - 1;
+			if (last >= resp && *last == '\n')
+			{
+				/* replace trailing '\n' */
+				*last = '\0';
+			}
+			DBG1(DBG_IMV, "policy: %s", resp);
+		}
+	}
+	pclose(shell);
+
+	return TRUE;
+}
+
 METHOD(imv_database_t, get_database, database_t*,
 	private_imv_database_t *this)
 {
@@ -190,10 +243,13 @@ imv_database_t *imv_database_create(char *uri)
 			.get_session_id = _get_session_id,
 			.add_product = _add_product,
 			.add_device = _add_device,
+			.policy_script = _policy_script,
 			.get_database = _get_database,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),
+		.script = lib->settings->get_str(lib->settings,
+					"libimcv.policy_script", DEFAULT_POLICY_SCRIPT),
 	);
 
 	if (!this->db)

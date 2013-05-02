@@ -39,6 +39,9 @@ libimcv_la_SOURCES = \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c
 
+ipsec_SCRIPTS = imv/_imv_policy
+EXTRA_DIST = imv/_imv_policy
+
 SUBDIRS = .
 
 if USE_IMC_TEST
