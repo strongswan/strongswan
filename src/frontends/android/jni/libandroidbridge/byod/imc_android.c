@@ -28,10 +28,15 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_installed_packages.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
+#include <tcg/tcg_pts_attr_file_meas.h>
+#include <tcg/tcg_pts_attr_meas_algo.h>
+#include <tcg/tcg_pts_attr_proto_caps.h>
+#include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
@@ -48,6 +53,7 @@ static const char imc_name[] = "Android";
 static pen_type_t msg_types[] = {
 	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM },
 	{ PEN_IETF, PA_SUBTYPE_IETF_VPN },
+	{ PEN_TCG, PA_SUBTYPE_TCG_PTS },
 };
 
 static imc_agent_t *imc_android;
@@ -301,6 +307,112 @@ static void handle_ita_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
 }
 
 /**
+ * Handle a TCG attribute
+ */
+static void handle_tcg_attribute(imc_android_state_t *state,
+								 pen_type_t attr_type, pa_tnc_attr_t *attr,
+								 imc_msg_t *out_msg)
+{
+	pts_t *pts;
+
+	pts = state->get_pts(state);
+	switch (attr_type.type)
+	{
+		case TCG_PTS_REQ_PROTO_CAPS:
+		{
+			tcg_pts_attr_proto_caps_t *attr_cast;
+			pts_proto_caps_flag_t caps;
+
+			attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
+			caps = attr_cast->get_flags(attr_cast) & pts->get_proto_caps(pts);
+			pts->set_proto_caps(pts, caps);
+			attr = tcg_pts_attr_proto_caps_create(caps, FALSE);
+			out_msg->add_attribute(out_msg, attr);
+			break;
+		}
+		case TCG_PTS_MEAS_ALGO:
+		{
+			tcg_pts_attr_meas_algo_t *attr_cast;
+			pts_meas_algorithms_t supported, algo;
+
+			if (!pts_meas_algo_probe(&supported))
+			{
+				attr = pts_hash_alg_error_create(PTS_MEAS_ALGO_NONE);
+				out_msg->add_attribute(out_msg, attr);
+				break;
+			}
+			attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
+			algo = pts_meas_algo_select(supported,
+										attr_cast->get_algorithms(attr_cast));
+			if (algo == PTS_MEAS_ALGO_NONE)
+			{
+				attr = pts_hash_alg_error_create(supported);
+				out_msg->add_attribute(out_msg, attr);
+				break;
+			}
+			pts->set_meas_algorithm(pts, algo);
+			attr = tcg_pts_attr_meas_algo_create(algo, TRUE);
+			out_msg->add_attribute(out_msg, attr);
+			break;
+		}
+		case TCG_PTS_REQ_FILE_MEAS:
+		{
+			tcg_pts_attr_req_file_meas_t *attr_cast;
+			pts_file_meas_t *measurements;
+			pts_error_code_t pts_error;
+			u_int32_t delim;
+			u_int16_t req_id;
+			bool is_dir;
+			char *path;
+
+			attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
+			path = attr_cast->get_pathname(attr_cast);
+			if (!pts->is_path_valid(pts, path, &pts_error))
+			{	/* silently ignore internal errors */
+				break;
+			}
+			else if (pts_error)
+			{
+				attr = ietf_attr_pa_tnc_error_create(pen_type_create(PEN_TCG,
+											pts_error), attr->get_value(attr));
+				out_msg->add_attribute(out_msg, attr);
+				break;
+			}
+			delim = attr_cast->get_delimiter(attr_cast);
+			if (delim != SOLIDUS_UTF && delim != REVERSE_SOLIDUS_UTF)
+			{
+				attr = ietf_attr_pa_tnc_error_create(pen_type_create(PEN_TCG,
+							TCG_PTS_INVALID_DELIMITER), attr->get_value(attr));
+				out_msg->add_attribute(out_msg, attr);
+				break;
+			}
+			req_id = attr_cast->get_request_id(attr_cast);
+			is_dir = attr_cast->get_directory_flag(attr_cast);
+
+			DBG1(DBG_IMC, "measurement request %d for %s '%s'", req_id,
+				 is_dir ? "directory" : "file", path);
+			measurements = pts_file_meas_create_from_path(req_id, path, is_dir,
+											TRUE, pts->get_meas_algorithm(pts));
+			if (!measurements)
+			{
+				attr = ietf_attr_pa_tnc_error_create(pen_type_create(PEN_TCG,
+								TCG_PTS_FILE_NOT_FOUND), attr->get_value(attr));
+				out_msg->add_attribute(out_msg, attr);
+				break;
+			}
+			attr = tcg_pts_attr_file_meas_create(measurements);
+			attr->set_noskip_flag(attr, TRUE);
+			out_msg->add_attribute(out_msg, attr);
+			break;
+		}
+		default:
+			DBG1(DBG_IMC, "received unsupported TCG attribute '%N'",
+				 tcg_attr_names, attr_type.type);
+			break;
+	}
+}
+
+/**
  * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
  */
 static TNC_Result tnc_imc_beginhandshake(TNC_IMCID imc_id,
@@ -336,7 +448,7 @@ static TNC_Result tnc_imc_beginhandshake(TNC_IMCID imc_id,
 	return result;
 }
 
-static TNC_Result receive_message(imc_msg_t *in_msg)
+static TNC_Result receive_message(imc_android_state_t *state, imc_msg_t *in_msg)
 {
 	imc_msg_t *out_msg;
 	enumerator_t *enumerator;
@@ -366,6 +478,9 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 				continue;
 			case PEN_ITA:
 				handle_ita_attribute(attr_type, attr, out_msg);
+				continue;
+			case PEN_TCG:
+				handle_tcg_attribute(state, attr_type, attr, out_msg);
 				continue;
 			default:
 				continue;
@@ -411,7 +526,7 @@ static TNC_Result tnc_imc_receivemessage(TNC_IMCID imc_id,
 	}
 	in_msg = imc_msg_create_from_data(imc_android, state, connection_id,
 									  msg_type, chunk_create(msg, msg_len));
-	result = receive_message(in_msg);
+	result = receive_message((imc_android_state_t*)state, in_msg);
 	in_msg->destroy(in_msg);
 
 	return result;
@@ -446,7 +561,7 @@ static TNC_Result tnc_imc_receivemessagelong(TNC_IMCID imc_id,
 	in_msg = imc_msg_create_from_long_data(imc_android, state, connection_id,
 								src_imv_id, dst_imc_id,msg_vid, msg_subtype,
 								chunk_create(msg, msg_len));
-	result =receive_message(in_msg);
+	result = receive_message((imc_android_state_t*)state, in_msg);
 	in_msg->destroy(in_msg);
 
 	return result;
@@ -476,10 +591,9 @@ static TNC_Result tnc_imc_terminate(TNC_IMCID imc_id)
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	/* has to be done before destroying the agent / deinitializing libimcv */
-	libpts_deinit();
 	imc_android->destroy(imc_android);
 	imc_android = NULL;
+	libpts_deinit();
 	return TNC_RESULT_SUCCESS;
 }
 
