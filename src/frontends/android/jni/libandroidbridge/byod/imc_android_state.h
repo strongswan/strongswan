@@ -23,6 +23,19 @@
 
 #include <imc/imc_state.h>
 
+typedef struct imc_android_state_t imc_android_state_t;
+
+/**
+ * Internal state of an imc_android_t connection instance
+ */
+struct imc_android_state_t {
+
+	/**
+	 * imc_state_t interface
+	 */
+	imc_state_t interface;
+};
+
 /**
  * Create an imc_android_state_t instance
  *
