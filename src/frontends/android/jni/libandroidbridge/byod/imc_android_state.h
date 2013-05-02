@@ -22,6 +22,7 @@
 #define IMC_ANDROID_STATE_H_
 
 #include <imc/imc_state.h>
+#include <pts/pts.h>
 
 typedef struct imc_android_state_t imc_android_state_t;
 
@@ -34,6 +35,11 @@ struct imc_android_state_t {
 	 * imc_state_t interface
 	 */
 	imc_state_t interface;
+
+	/**
+	 * Get TCG Platform Trust Service (PTS) object
+	 */
+	pts_t *(*get_pts)(imc_android_state_t *this);
 };
 
 /**
