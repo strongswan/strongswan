@@ -15,6 +15,7 @@
 
 #include "xpc_channels.h"
 
+#include <credentials/sets/callback_cred.h>
 #include <collections/hashtable.h>
 #include <threading/rwlock.h>
 #include <daemon.h>
@@ -40,6 +41,11 @@ struct private_xpc_channels_t {
 	 * Lock for channels list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Callback credential set for passwords
+	 */
+	callback_cred_t *creds;
 };
 
 /**
@@ -50,6 +56,8 @@ typedef struct {
 	xpc_connection_t conn;
 	/* associated IKE_SA unique identifier */
 	uintptr_t sa;
+	/* did we already ask for a password? */
+	bool passworded;
 } entry_t;
 
 /**
@@ -185,11 +193,89 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+/**
+ * Query password from App using XPC channel
+ */
+static shared_key_t *query_password(xpc_connection_t conn, identification_t *id)
+{
+	char buf[128], *password;
+	xpc_object_t request, response;
+	shared_key_t *shared = NULL;
+
+	request = xpc_dictionary_create(NULL, NULL, 0);
+	xpc_dictionary_set_string(request, "type", "rpc");
+	xpc_dictionary_set_string(request, "rpc", "get_password");
+	snprintf(buf, sizeof(buf), "%Y", id);
+	xpc_dictionary_set_string(request, "username", buf);
+
+	response = xpc_connection_send_message_with_reply_sync(conn, request);
+	xpc_release(request);
+	if (xpc_get_type(response) == XPC_TYPE_DICTIONARY)
+	{
+		password = (char*)xpc_dictionary_get_string(response, "password");
+		shared = shared_key_create(SHARED_EAP,
+								   chunk_clone(chunk_from_str(password)));
+	}
+	xpc_release(response);
+	return shared;
+}
+
+/**
+ * Password query callback
+ */
+static shared_key_t* password_cb(private_xpc_channels_t *this,
+								 shared_key_type_t type,
+								 identification_t *me, identification_t *other,
+								 id_match_t *match_me, id_match_t *match_other)
+{
+	shared_key_t *shared = NULL;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	u_int32_t sa;
+
+	switch (type)
+	{
+		case SHARED_EAP:
+			break;
+		default:
+			return NULL;
+	}
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
+	{
+		sa = ike_sa->get_unique_id(ike_sa);
+		this->lock->read_lock(this->lock);
+		entry = this->channels->get(this->channels, (void*)sa);
+		if (entry && !entry->passworded)
+		{
+			entry->passworded = TRUE;
+
+			shared = query_password(entry->conn, me);
+			if (shared)
+			{
+				if (match_me)
+				{
+					*match_me = ID_MATCH_PERFECT;
+				}
+				if (match_other)
+				{
+					*match_other = ID_MATCH_PERFECT;
+				}
+			}
+		}
+		this->lock->unlock(this->lock);
+	}
+	return shared;
+}
+
 METHOD(xpc_channels_t, destroy, void,
 	private_xpc_channels_t *this)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	this->creds->destroy(this->creds);
 
 	enumerator = this->channels->create_enumerator(this->channels);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
@@ -223,6 +309,10 @@ xpc_channels_t *xpc_channels_create()
 									 hashtable_equals_ptr, 4),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
+
+	this->creds = callback_cred_create_shared(
+								(callback_cred_shared_cb_t)password_cb, this);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	return &this->public;
 }
