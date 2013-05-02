@@ -64,15 +64,10 @@ struct private_xpc_dispatch_t {
 /**
  * Return version of this helper
  */
-static xpc_object_t get_version(private_xpc_dispatch_t *this,
-								xpc_object_t request, xpc_connection_t client)
+static void get_version(private_xpc_dispatch_t *this,
+						xpc_object_t request, xpc_object_t reply)
 {
-	xpc_object_t reply;
-
-	reply = xpc_dictionary_create_reply(request);
 	xpc_dictionary_set_string(reply, "version", PACKAGE_VERSION);
-
-	return reply;
 }
 
 /**
@@ -164,10 +159,9 @@ static bool initiate_cb(u_int32_t *sa, debug_t group, level_t level,
 /**
  * Start initiating an IKE connection
  */
-xpc_object_t start_connection(private_xpc_dispatch_t *this,
-							  xpc_object_t request, xpc_connection_t client)
+void start_connection(private_xpc_dispatch_t *this,
+					  xpc_object_t request, xpc_object_t reply)
 {
-	xpc_object_t reply;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	char *name, *id, *host;
@@ -181,7 +175,6 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
 	id = (char*)xpc_dictionary_get_string(request, "id");
 	endpoint = xpc_dictionary_get_value(request, "channel");
 	channel = xpc_connection_create_from_endpoint(endpoint);
-	reply = xpc_dictionary_create_reply(request);
 
 	if (name && id && host && channel)
 	{
@@ -202,8 +195,6 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
 	}
 
 	xpc_dictionary_set_bool(reply, "success", success);
-
-	return reply;
 }
 
 /**
@@ -211,8 +202,8 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
  */
 static struct {
 	char *name;
-	xpc_object_t (*handler)(private_xpc_dispatch_t *this,
-							xpc_object_t request, xpc_connection_t client);
+	void (*handler)(private_xpc_dispatch_t *this,
+					xpc_object_t request, xpc_object_t reply);
 } commands[] = {
 	{ "get_version", get_version },
 	{ "start_connection", start_connection },
@@ -229,33 +220,34 @@ static void handle(private_xpc_dispatch_t *this, xpc_object_t request)
 	bool found = FALSE;
 	int i;
 
-	client = xpc_dictionary_get_remote_connection(request);
 	type = xpc_dictionary_get_string(request, "type");
 	if (type)
 	{
 		if (streq(type, "rpc"))
 		{
+			reply = xpc_dictionary_create_reply(request);
 			rpc = xpc_dictionary_get_string(request, "rpc");
-			if (rpc)
+			if (reply && rpc)
 			{
 				for (i = 0; i < countof(commands); i++)
 				{
 					if (streq(commands[i].name, rpc))
 					{
 						found = TRUE;
-						reply = commands[i].handler(this, request, client);
-						if (reply)
-						{
-							xpc_connection_send_message(client, reply);
-							xpc_release(reply);
-						}
+						commands[i].handler(this, request, reply);
 						break;
 					}
 				}
 			}
 			if (!found)
 			{
-				DBG1(DBG_CFG, "received unknown XPC rpc command: %s", rpc);
+				DBG1(DBG_CFG, "received invalid XPC rpc command: %s", rpc);
+			}
+			if (reply)
+			{
+				client = xpc_dictionary_get_remote_connection(request);
+				xpc_connection_send_message(client, reply);
+				xpc_release(reply);
 			}
 		}
 		else
