@@ -254,6 +254,48 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, child_updown, bool,
+	private_xpc_channels_t *this, ike_sa_t *ike_sa,
+	child_sa_t *child_sa, bool up)
+{
+	entry_t *entry;
+	uintptr_t sa;
+
+	sa = ike_sa->get_unique_id(ike_sa);
+	this->lock->read_lock(this->lock);
+	entry = this->channels->get(this->channels, (void*)sa);
+	if (entry)
+	{
+		xpc_object_t msg;
+		linked_list_t *list;
+		char buf[256];
+
+		msg = xpc_dictionary_create(NULL, NULL, 0);
+		xpc_dictionary_set_string(msg, "type", "event");
+		if (up)
+		{
+			xpc_dictionary_set_string(msg, "event", "child_up");
+		}
+		else
+		{
+			xpc_dictionary_set_string(msg, "event", "child_down");
+		}
+
+		list = child_sa->get_traffic_selectors(child_sa, TRUE);
+		snprintf(buf, sizeof(buf), "%#R", list);
+		xpc_dictionary_set_string(msg, "ts_local", buf);
+
+		list = child_sa->get_traffic_selectors(child_sa, FALSE);
+		snprintf(buf, sizeof(buf), "%#R", list);
+		xpc_dictionary_set_string(msg, "ts_remote", buf);
+
+		xpc_connection_send_message(entry->conn, msg);
+		xpc_release(msg);
+	}
+	this->lock->unlock(this->lock);
+	return TRUE;
+}
+
 METHOD(listener_t, ike_updown, bool,
 	private_xpc_channels_t *this, ike_sa_t *ike_sa, bool up)
 {
@@ -396,6 +438,7 @@ xpc_channels_t *xpc_channels_create()
 			.listener = {
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
+				.child_updown = _child_updown,
 			},
 			.add = _add,
 			.destroy = _destroy,
