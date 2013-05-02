@@ -17,6 +17,8 @@
 #include "xpc_channels.h"
 
 #include <xpc/xpc.h>
+#include <signal.h>
+#include <unistd.h>
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
@@ -47,6 +49,16 @@ struct private_xpc_dispatch_t {
 	 * GCD queue for XPC events
 	 */
 	dispatch_queue_t queue;
+
+	/**
+	 * Number of active App connections
+	 */
+	refcount_t refcount;
+
+	/**
+	 * PID of main thread
+	 */
+	pid_t pid;
 };
 
 /**
@@ -258,6 +270,18 @@ static void handle(private_xpc_dispatch_t *this, xpc_object_t request)
 }
 
 /**
+ * Finalizer for client connections
+ */
+static void cleanup_connection(private_xpc_dispatch_t *this)
+{
+	if (ref_put(&this->refcount))
+	{
+		DBG1(DBG_CFG, "no XPC connections, raising SIGTERM");
+		kill(this->pid, SIGTERM);
+	}
+}
+
+/**
  * Set up GCD handler for XPC events
  */
 static void set_handler(private_xpc_dispatch_t *this)
@@ -271,6 +295,9 @@ static void set_handler(private_xpc_dispatch_t *this)
 				handle(this, event);
 			}
 		});
+		ref_get(&this->refcount);
+		xpc_connection_set_context(conn, this);
+		xpc_connection_set_finalizer_f(conn, (void*)cleanup_connection);
 		xpc_connection_resume(conn);
 	});
 	xpc_connection_resume(this->service);
@@ -303,6 +330,7 @@ xpc_dispatch_t *xpc_dispatch_create()
 		.channels = xpc_channels_create(),
 		.queue = dispatch_queue_create("org.strongswan.charon-xpc.q",
 									DISPATCH_QUEUE_CONCURRENT),
+		.pid = getpid(),
 	);
 	charon->bus->add_listener(charon->bus, &this->channels->listener);
 
