@@ -65,10 +65,10 @@ static jclass android_imc_cls;
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
-							  TNC_Version min_version,
-							  TNC_Version max_version,
-							  TNC_Version *actual_version)
+static TNC_Result tnc_imc_initialize(TNC_IMCID imc_id,
+									 TNC_Version min_version,
+									 TNC_Version max_version,
+									 TNC_Version *actual_version)
 {
 	if (imc_android)
 	{
@@ -95,9 +95,9 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 /**
  * see section 3.8.2 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
-										  TNC_ConnectionID connection_id,
-										  TNC_ConnectionState new_state)
+static TNC_Result tnc_imc_notifyconnectionchange(TNC_IMCID imc_id,
+												 TNC_ConnectionID connection_id,
+												 TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
 
@@ -303,8 +303,8 @@ static void handle_ita_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
 /**
  * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id)
+static TNC_Result tnc_imc_beginhandshake(TNC_IMCID imc_id,
+										 TNC_ConnectionID connection_id)
 {
 	imc_state_t *state;
 	imc_msg_t *out_msg;
@@ -390,11 +390,11 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
  * see section 3.8.4 of TCG TNC IF-IMC Specification 1.3
 
  */
-TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id,
-								  TNC_BufferReference msg,
-								  TNC_UInt32 msg_len,
-								  TNC_MessageType msg_type)
+static TNC_Result tnc_imc_receivemessage(TNC_IMCID imc_id,
+										 TNC_ConnectionID connection_id,
+										 TNC_BufferReference msg,
+										 TNC_UInt32 msg_len,
+										 TNC_MessageType msg_type)
 {
 	imc_state_t *state;
 	imc_msg_t *in_msg;
@@ -420,15 +420,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 /**
  * see section 3.8.6 of TCG TNC IF-IMV Specification 1.3
  */
-TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
-									  TNC_ConnectionID connection_id,
-									  TNC_UInt32 msg_flags,
-									  TNC_BufferReference msg,
-									  TNC_UInt32 msg_len,
-									  TNC_VendorID msg_vid,
-									  TNC_MessageSubtype msg_subtype,
-									  TNC_UInt32 src_imv_id,
-									  TNC_UInt32 dst_imc_id)
+static TNC_Result tnc_imc_receivemessagelong(TNC_IMCID imc_id,
+											 TNC_ConnectionID connection_id,
+											 TNC_UInt32 msg_flags,
+											 TNC_BufferReference msg,
+											 TNC_UInt32 msg_len,
+											 TNC_VendorID msg_vid,
+											 TNC_MessageSubtype msg_subtype,
+											 TNC_UInt32 src_imv_id,
+											 TNC_UInt32 dst_imc_id)
 {
 	imc_state_t *state;
 	imc_msg_t *in_msg;
@@ -455,8 +455,8 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 /**
  * see section 3.8.7 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
-							   TNC_ConnectionID connection_id)
+static TNC_Result tnc_imc_batchending(TNC_IMCID imc_id,
+									  TNC_ConnectionID connection_id)
 {
 	if (!imc_android)
 	{
@@ -469,7 +469,7 @@ TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
 /**
  * see section 3.8.8 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
+static TNC_Result tnc_imc_terminate(TNC_IMCID imc_id)
 {
 	if (!imc_android)
 	{
@@ -486,8 +486,8 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 /**
  * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
-									   TNC_TNCC_BindFunctionPointer bind_function)
+static TNC_Result tnc_imc_providebindfunction(TNC_IMCID imc_id,
+											  TNC_TNCC_BindFunctionPointer bind_function)
 {
 	if (!imc_android)
 	{
@@ -533,10 +533,10 @@ bool imc_android_register(plugin_t *plugin, plugin_feature_t *feature,
 		androidjni_detach_thread();
 
 		if (tnc->imcs->load_from_functions(tnc->imcs, "Android",
-							TNC_IMC_Initialize, TNC_IMC_NotifyConnectionChange,
-							TNC_IMC_BeginHandshake, TNC_IMC_ReceiveMessage,
-							TNC_IMC_ReceiveMessageLong, TNC_IMC_BatchEnding,
-							TNC_IMC_Terminate, TNC_IMC_ProvideBindFunction))
+							tnc_imc_initialize, tnc_imc_notifyconnectionchange,
+							tnc_imc_beginhandshake, tnc_imc_receivemessage,
+							tnc_imc_receivemessagelong, tnc_imc_batchending,
+							tnc_imc_terminate, tnc_imc_providebindfunction))
 		{
 			return TRUE;
 		}
