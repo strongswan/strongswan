@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
 				"random nonce pem pkcs1 openssl kernel-pfkey kernel-pfroute "
-				"socket-default eap-identity eap-mschapv2")))
+				"keychain socket-default eap-identity eap-mschapv2")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

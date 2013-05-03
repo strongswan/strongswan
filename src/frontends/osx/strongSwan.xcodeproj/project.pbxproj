@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B74984D172AA3550041971E /* xpc_dispatch.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B74984C172AA3550041971E /* xpc_dispatch.c */; };
 		5BD1CCD71726DB4000587077 /* charon-xpc.c in Sources */ = {isa = PBXBuildFile; fileRef = 5BD1CCD61726DB4000587077 /* charon-xpc.c */; };
 		5BF60F31173405A000E5D608 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCD31726DB4000587077 /* CoreFoundation.framework */; };
 		5BF60F33173405AC00E5D608 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCF21727DE3E00587077 /* Security.framework */; };

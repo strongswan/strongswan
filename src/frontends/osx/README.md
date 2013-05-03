@@ -28,7 +28,8 @@ CFLAGS="-I/usr/include -DOPENSSL_NO_CMS -O2 -Wall -Wno-format -Wno-pointer-sign"
   --enable-kernel-pfkey --enable-kernel-pfroute --enable-eap-mschapv2 \
   --enable-eap-identity --enable-monolithic --enable-nonce --enable-random \
   --enable-pkcs1 --enable-pem --enable-socket-default --enable-xauth-generic \
-  --enable-ikev1 --enable-ikev2 --enable-charon --disable-shared --enable-static
+  --enable-keychain --enable-ikev1 --enable-ikev2 --enable-charon \
+  --disable-shared --enable-static
 
 followed by calling make (no need to make install).
 
