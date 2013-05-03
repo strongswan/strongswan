@@ -164,7 +164,7 @@ static bool equals(char *a, char *b)
  * Write magic to memory, and try to clear it with memwipe()
  */
 __attribute__((noinline))
-static void do_magic(int magic, int **stack)
+static void do_magic(int *magic, int **stack)
 {
 	int buf[MEMWIPE_WIPE_WORDS], i;
 
@@ -172,7 +172,7 @@ static void do_magic(int magic, int **stack)
 	*stack = &i;
 	for (i = 0; i < countof(buf); i++)
 	{
-		buf[i] = magic;
+		buf[i] = *magic;
 	}
 	/* passing buf to dbg should make sure the compiler can't optimize out buf.
 	 * we use directly dbg(3), as DBG3() might be stripped with DEBUG_LEVEL. */
@@ -187,7 +187,7 @@ static bool check_memwipe()
 {
 	int magic = 0xCAFEBABE, *ptr, *deeper, i, stackdir = 1;
 
-	do_magic(magic, &deeper);
+	do_magic(&magic, &deeper);
 
 	ptr = &magic;
 	if (deeper < ptr)
