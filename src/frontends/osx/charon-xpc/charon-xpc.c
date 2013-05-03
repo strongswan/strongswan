@@ -17,11 +17,29 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <xpc/xpc.h>
+#include <signal.h>
+#include <pthread.h>
 
 #include <library.h>
 #include <hydra.h>
 #include <daemon.h>
+#include <threading/thread.h>
+#include <utils/backtrace.h>
+
+#include "xpc_dispatch.h"
+
+/**
+ * XPC dispatcher class
+ */
+static xpc_dispatch_t *dispatcher;
+
+/**
+ * atexit() cleanup for dispatcher
+ */
+void dispatcher_cleanup()
+{
+	DESTROY_IF(dispatcher);
+}
 
 /**
  * Loglevel configuration
@@ -51,97 +69,57 @@ static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
 }
 
 /**
- * Return version of this helper
+ * Run the daemon and handle unix signals
  */
-xpc_object_t get_version(xpc_object_t request, xpc_connection_t client)
+static int run()
 {
-    xpc_object_t reply;
+	sigset_t set;
 
-    reply = xpc_dictionary_create_reply(request);
-    xpc_dictionary_set_string(reply, "version", PACKAGE_VERSION);
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
-    return reply;
+	while (TRUE)
+	{
+		int sig;
+
+		if (sigwait(&set, &sig))
+		{
+			DBG1(DBG_DMN, "error while waiting for a signal");
+			return 1;
+		}
+		switch (sig)
+		{
+			case SIGINT:
+				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
+				return 0;
+			case SIGTERM:
+				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
+				return 0;
+			default:
+				DBG1(DBG_DMN, "unknown signal %d received. Ignored", sig);
+				break;
+		}
+	}
 }
 
 /**
- * XPC command dispatch table
+ * Handle SIGSEGV/SIGILL signals raised by threads
  */
-struct {
-    char *name;
-    xpc_object_t (*handler)(xpc_object_t request, xpc_connection_t client);
-} commands[] = {
-    { "get_version", get_version },
-};
-
-/**
- * Handle a received XPC request message
- */
-static void handle(xpc_object_t request)
+static void segv_handler(int signal)
 {
-    xpc_connection_t client;
-    xpc_object_t reply;
-    const char *command;
-    int i;
+	backtrace_t *backtrace;
 
-    client = xpc_dictionary_get_remote_connection(request);
-    command = xpc_dictionary_get_string(request, "command");
-    if (command)
-    {
-        for (i = 0; i < countof(commands); i++)
-        {
-            if (streq(commands[i].name, command))
-            {
-                reply = commands[i].handler(request, client);
-                if (reply)
-                {
-                    xpc_connection_send_message(client, reply);
-                    xpc_release(reply);
-                }
-                break;
-            }
-        }
-    }
-}
+	DBG1(DBG_DMN, "thread %u received %d", thread_current_id(), signal);
+	backtrace = backtrace_create(2);
+	backtrace->log(backtrace, NULL, TRUE);
+	backtrace->destroy(backtrace);
 
-/**
- * Dispatch XPC commands
- */
-static int dispatch()
-{
-    xpc_connection_t service;
-
-    service = xpc_connection_create_mach_service("org.strongswan.charon-xpc",
-                                    NULL, XPC_CONNECTION_MACH_SERVICE_LISTENER);
-    if (!service)
-    {
-        return EXIT_FAILURE;
-    }
-
-    xpc_connection_set_event_handler(service, ^(xpc_object_t conn) {
-
-        xpc_connection_set_event_handler(conn, ^(xpc_object_t event) {
-
-            if (xpc_get_type(event) == XPC_TYPE_ERROR)
-            {
-                if (event == XPC_ERROR_CONNECTION_INVALID ||
-                    event == XPC_ERROR_TERMINATION_IMMINENT)
-                {
-                    xpc_connection_cancel(conn);
-                }
-            }
-            else
-            {
-                handle(event);
-            }
-        });
-        xpc_connection_resume(conn);
-    });
-
-    xpc_connection_resume(service);
-
-    dispatch_main();
-
-    xpc_release(service);
+	DBG1(DBG_DMN, "killing ourself, received critical signal");
+	abort();
 }
 
 /**
@@ -149,6 +127,7 @@ static int dispatch()
  */
 int main(int argc, char *argv[])
 {
+	struct sigaction action;
 	struct utsname utsname;
 	int group;
 
@@ -184,9 +163,9 @@ int main(int argc, char *argv[])
 	lib->settings->set_default_str(lib->settings, "charon-cmd.port", "0");
 	lib->settings->set_default_str(lib->settings, "charon-cmd.port_nat_t", "0");
 	if (!charon->initialize(charon,
-            lib->settings->get_str(lib->settings, "charon-xpc.load",
-                "random nonce pem pkcs1 openssl kernel-pfkey kernel-pfroute "
-                "socket-default eap-identity eap-mschapv2")))
+			lib->settings->get_str(lib->settings, "charon-xpc.load",
+				"random nonce pem pkcs1 openssl kernel-pfkey kernel-pfroute "
+				"socket-default eap-identity eap-mschapv2")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
@@ -198,6 +177,29 @@ int main(int argc, char *argv[])
 	DBG1(DBG_DMN, "Starting charon-xpc IKE daemon (strongSwan %s, %s %s, %s)",
 		 VERSION, utsname.sysname, utsname.release, utsname.machine);
 
+	/* add handler for SEGV and ILL,
+	 * INT, TERM and HUP are handled by sigwait() in run() */
+	action.sa_handler = segv_handler;
+	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	sigaddset(&action.sa_mask, SIGINT);
+	sigaddset(&action.sa_mask, SIGTERM);
+	sigaddset(&action.sa_mask, SIGHUP);
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
+	action.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &action, NULL);
+
+	pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
+
+	dispatcher = xpc_dispatch_create();
+	if (!dispatcher)
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	atexit(dispatcher_cleanup);
+
 	charon->start(charon);
-	return dispatch();
+	return run();
 }
