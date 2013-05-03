@@ -14,6 +14,7 @@
  */
 
 #include "xpc_dispatch.h"
+#include "xpc_channels.h"
 
 #include <xpc/xpc.h>
 
@@ -37,10 +38,15 @@ struct private_xpc_dispatch_t {
 	 */
 	xpc_connection_t service;
 
-    /**
-     * GCD queue for XPC events
-     */
-    dispatch_queue_t queue;
+	/**
+	 * XPC IKE_SA specific channels to App
+	 */
+	xpc_channels_t *channels;
+
+	/**
+	 * GCD queue for XPC events
+	 */
+	dispatch_queue_t queue;
 };
 
 /**
@@ -153,14 +159,19 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	char *name, *id, *host;
-	u_int32_t sa = 0;
+	bool success = FALSE;
+	xpc_endpoint_t endpoint;
+	xpc_connection_t channel;
+	u_int32_t ike_sa;
 
 	name = (char*)xpc_dictionary_get_string(request, "name");
 	host = (char*)xpc_dictionary_get_string(request, "host");
 	id = (char*)xpc_dictionary_get_string(request, "id");
+	endpoint = xpc_dictionary_get_value(request, "channel");
+	channel = xpc_connection_create_from_endpoint(endpoint);
 	reply = xpc_dictionary_create_reply(request);
 
-	if (name && id && host)
+	if (name && id && host && channel)
 	{
 		peer_cfg = create_peer_cfg(name, host);
 
@@ -171,13 +182,14 @@ xpc_object_t start_connection(private_xpc_dispatch_t *this,
 		peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 
 		if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-							(controller_cb_t)initiate_cb, &sa, 0) != SUCCESS)
+					(controller_cb_t)initiate_cb, &ike_sa, 0) == NEED_MORE)
 		{
-			sa = 0;
+			this->channels->add(this->channels, channel, ike_sa);
+			success = TRUE;
 		}
 	}
 
-	xpc_dictionary_set_uint64(reply, "connection", sa);
+	xpc_dictionary_set_bool(reply, "success", success);
 
 	return reply;
 }
@@ -256,6 +268,8 @@ static void set_handler(private_xpc_dispatch_t *this)
 METHOD(xpc_dispatch_t, destroy, void,
 	private_xpc_dispatch_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->channels->listener);
+	this->channels->destroy(this->channels);
 	if (this->service)
 	{
 		xpc_connection_suspend(this->service);
@@ -275,9 +289,11 @@ xpc_dispatch_t *xpc_dispatch_create()
 		.public = {
 			.destroy = _destroy,
 		},
+		.channels = xpc_channels_create(),
 		.queue = dispatch_queue_create("org.strongswan.charon-xpc.q",
 									DISPATCH_QUEUE_CONCURRENT),
 	);
+	charon->bus->add_listener(charon->bus, &this->channels->listener);
 
 	this->service = xpc_connection_create_mach_service(
 									"org.strongswan.charon-xpc", this->queue,
