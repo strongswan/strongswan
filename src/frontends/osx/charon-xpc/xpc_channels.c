@@ -14,6 +14,7 @@
  */
 
 #include "xpc_channels.h"
+#include "xpc_logger.h"
 
 #include <credentials/sets/callback_cred.h>
 #include <collections/hashtable.h>
@@ -58,6 +59,8 @@ typedef struct {
 	uintptr_t sa;
 	/* did we already ask for a password? */
 	bool passworded;
+	/* channel specific logger */
+	xpc_logger_t *logger;
 } entry_t;
 
 /**
@@ -65,6 +68,8 @@ typedef struct {
  */
 static void destroy_entry(entry_t *entry)
 {
+	charon->bus->remove_logger(charon->bus, &entry->logger->logger);
+	entry->logger->destroy(entry->logger);
 	xpc_connection_suspend(entry->conn);
 	xpc_connection_cancel(entry->conn);
 	xpc_release(entry->conn);
@@ -110,6 +115,7 @@ METHOD(xpc_channels_t, add, void,
 	INIT(entry,
 		.conn = conn,
 		.sa = ike_sa,
+		.logger = xpc_logger_create(conn),
 	);
 
 	xpc_connection_set_event_handler(entry->conn, ^(xpc_object_t event) {
@@ -117,13 +123,16 @@ METHOD(xpc_channels_t, add, void,
 		if (event == XPC_ERROR_CONNECTION_INVALID ||
 			event == XPC_ERROR_CONNECTION_INTERRUPTED)
 		{
-			remove_conn(this, entry->conn);
+			remove_conn(this, conn);
 		}
 		else
 		{
 			handle(this, event);
 		}
 	});
+
+	entry->logger->set_ike_sa(entry->logger, entry->sa);
+	charon->bus->add_logger(charon->bus, &entry->logger->logger);
 
 	this->lock->write_lock(this->lock);
 	this->channels->put(this->channels, (void*)entry->sa, entry);
@@ -144,6 +153,7 @@ METHOD(listener_t, ike_rekey, bool,
 	if (entry)
 	{
 		entry->sa = new->get_unique_id(new);
+		entry->logger->set_ike_sa(entry->logger, entry->sa);
 		this->channels->put(this->channels, (void*)entry->sa, entry);
 	}
 	this->lock->unlock(this->lock);

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5B74989217311B200041971E /* xpc_channels.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B74989117311B200041971E /* xpc_channels.c */; };
+		5B7498B8173275D10041971E /* xpc_logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B7498B7173275D10041971E /* xpc_logger.c */; };
 		5BD1CCD71726DB4000587077 /* charon-xpc.c in Sources */ = {isa = PBXBuildFile; fileRef = 5BD1CCD61726DB4000587077 /* charon-xpc.c */; };
 		5BF60F31173405A000E5D608 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCD31726DB4000587077 /* CoreFoundation.framework */; };
 		5BF60F33173405AC00E5D608 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCF21727DE3E00587077 /* Security.framework */; };
@@ -21,6 +22,8 @@
 		5B74989117311B200041971E /* xpc_channels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xpc_channels.c; sourceTree = "<group>"; };
 		5BD1CCD11726DB4000587077 /* org.strongswan.charon-xpc */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.objfile"; includeInIndex = 0; path = "org.strongswan.charon-xpc"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5BD1CCD31726DB4000587077 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		5B7498B7173275D10041971E /* xpc_logger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xpc_logger.c; sourceTree = "<group>"; };
+		5B7498B9173275DD0041971E /* xpc_logger.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xpc_logger.h; sourceTree = "<group>"; };
 		5BD1CCD61726DB4000587077 /* charon-xpc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "charon-xpc.c"; sourceTree = "<group>"; };
 		5BD1CCE01726DCD000587077 /* charon-xpc-Launchd.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "charon-xpc-Launchd.plist"; sourceTree = "<group>"; };
 		5BD1CCE11726DD9900587077 /* charon-xpc-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "charon-xpc-Info.plist"; sourceTree = "<group>"; };
@@ -80,6 +83,8 @@
 				5B74984E172AA3670041971E /* xpc_dispatch.h */,
 				5B74989017311AFC0041971E /* xpc_channels.h */,
 				5B74989117311B200041971E /* xpc_channels.c */,
+				5B7498B7173275D10041971E /* xpc_logger.c */,
+				5B7498B9173275DD0041971E /* xpc_logger.h */,
 			);
 			path = "charon-xpc";
 			sourceTree = "<group>";
@@ -137,6 +142,7 @@
 				5BD1CCD71726DB4000587077 /* charon-xpc.c in Sources */,
 				5B74989217311B200041971E /* xpc_channels.c in Sources */,
 				5BF60F3E1734070A00E5D608 /* xpc_dispatch.c in Sources */,
+				5B7498B8173275D10041971E /* xpc_logger.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
