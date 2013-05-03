@@ -45,6 +45,10 @@
 #include "openssl_hmac.h"
 #include "openssl_gcm.h"
 
+#ifndef FIPS_MODE
+#define FIPS_MODE 0
+#endif
+
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
 /**
