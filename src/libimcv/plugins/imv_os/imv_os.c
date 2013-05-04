@@ -33,6 +33,7 @@
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
 #include <ita/ita_attr_angel.h>
+#include <ita/ita_attr_device_id.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -51,6 +52,22 @@ static pen_type_t msg_types[] = {
 };
 
 static imv_agent_t *imv_os;
+
+/**
+ * Flag set when corresponding attribute has been received
+ */
+typedef enum imv_os_attr_t imv_os_attr_t;
+
+enum imv_os_attr_t {
+	IMV_OS_ATTR_PRODUCT_INFORMATION =         (1<<0),
+	IMV_OS_ATTR_STRING_VERSION =              (1<<1),
+	IMV_OS_ATTR_NUMERIC_VERSION =             (1<<2),
+	IMV_OS_ATTR_OPERATIONAL_STATUS =          (1<<3),
+	IMV_OS_ATTR_FORWARDING_ENABLED =          (1<<4),
+	IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED = (1<<5),
+	IMV_OS_ATTR_DEVICE_ID =                   (1<<6),
+	IMV_OS_ATTR_ALL =                         (1<<7)-1
+};
 
 /**
  * IMV OS database
@@ -135,8 +152,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
 	char non_market_apps_str[] = "install_non_market_apps";
-	char android_id_str[] = "android_id";
-	char machine_id_str[] = "/var/lib/dbus/machine-id";
 
 	os_state = (imv_os_state_t*)state;
 
@@ -164,6 +179,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ietf_attr_product_info_t *attr_cast;
 					pen_t vendor_id;
 
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_PRODUCT_INFORMATION);
 					attr_cast = (ietf_attr_product_info_t*)attr;
 					os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
 					if (vendor_id != PEN_IETF)
@@ -183,6 +200,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				{
 					ietf_attr_string_version_t *attr_cast;
 
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_STRING_VERSION);
 					attr_cast = (ietf_attr_string_version_t*)attr;
 					os_version = attr_cast->get_version(attr_cast, NULL, NULL);
 					if (os_version.len)
@@ -197,6 +216,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ietf_attr_numeric_version_t *attr_cast;
 					u_int32_t major, minor;
 
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_NUMERIC_VERSION);
 					attr_cast = (ietf_attr_numeric_version_t*)attr;
 					attr_cast->get_version(attr_cast, &major, &minor);
 					DBG1(DBG_IMV, "operating system numeric version is %d.%d",
@@ -210,6 +231,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					op_result_t op_result;
 					time_t last_boot;
 
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_OPERATIONAL_STATUS);
 					attr_cast = (ietf_attr_op_status_t*)attr;
 					op_status = attr_cast->get_status(attr_cast);
 					op_result = attr_cast->get_result(attr_cast);
@@ -224,9 +247,11 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ietf_attr_fwd_enabled_t *attr_cast;
 					os_fwd_status_t fwd_status;
 
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_FORWARDING_ENABLED);
 					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
 					fwd_status = attr_cast->get_status(attr_cast);
-					DBG1(DBG_IMV, "IPv4 forwarding status: %N",
+					DBG1(DBG_IMV, "IPv4 forwarding is %N",
 								   os_fwd_status_names, fwd_status);
 					if (fwd_status == OS_FWD_ENABLED)
 					{
@@ -240,9 +265,11 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ietf_attr_default_pwd_enabled_t *attr_cast;
 					bool default_pwd_status;
 
+					os_state->set_received(os_state,
+									IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
 					attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
 					default_pwd_status = attr_cast->get_status(attr_cast);
-					DBG1(DBG_IMV, "factory default password: %sabled",
+					DBG1(DBG_IMV, "factory default password is %sabled",
 								   default_pwd_status ? "en":"dis");
 					if (default_pwd_status)
 					{
@@ -256,9 +283,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					ietf_attr_installed_packages_t *attr_cast;
 					enumerator_t *e;
 					status_t status;
-
-					/* Received at least one Installed Packages attribute */
-					os_state->set_package_request(os_state, FALSE);
 
 					if (!os_db)
 					{
@@ -290,9 +314,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				case ITA_ATTR_SETTINGS:
 				{
 					ita_attr_settings_t *attr_cast;
-					imv_database_t *imv_db;
 					enumerator_t *e;
-					int session_id, device_id;
 					char *name;
 					chunk_t value;
 
@@ -306,25 +328,30 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 							os_state->set_os_settings(os_state,
 												OS_SETTINGS_NON_MARKET_APPS);
 						}
-						else if ((streq(name, android_id_str) ||
-								  streq(name, machine_id_str)) && os_db)
-						{
-							imv_db = imv_os->get_database(imv_os);
-							if (imv_db)
-							{
-								session_id = state->get_session_id(state);
-								device_id = imv_db->add_device(imv_db,
-														session_id, value);
-								os_state->set_device_id(os_state, device_id);
-
-								/* trigger the policy manager */
-								imv_db->policy_script(imv_db, session_id, TRUE);
-							}
-						}
 						DBG1(DBG_IMV, "setting '%s'\n  %.*s",
 							 name, value.len, value.ptr);
 					}
 					e->destroy(e);
+					break;
+				}
+				case ITA_ATTR_DEVICE_ID:
+				{
+					imv_database_t *imv_db;
+					int session_id, device_id;
+					chunk_t value;
+
+					os_state->set_received(os_state,
+										   IMV_OS_ATTR_DEVICE_ID);
+					value = attr->get_value(attr);
+					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
+
+					imv_db = imv_os->get_database(imv_os);
+					if (imv_db)
+					{
+						session_id = state->get_session_id(state);
+						device_id = imv_db->add_device(imv_db, session_id, value);
+						os_state->set_device_id(os_state, device_id);
+					}
 					break;
 				}
 				case ITA_ATTR_START_ANGEL:
@@ -340,10 +367,13 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	}
 	enumerator->destroy(enumerator);
 
+	/**
+	 * The IETF Product Information and String Version attributes
+	 * are supposed to arrive in the same PA-TNC message
+	 */
 	if (os_name.len && os_version.len)
 	{
 		os_type_t os_type;
-		ita_attr_get_settings_t *attr_cast;
 		imv_database_t *imv_db;
 
 		/* set the OS type, name and version */
@@ -356,33 +386,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			imv_db->add_product(imv_db, state->get_session_id(state),
 					os_state->get_info(os_state, NULL, NULL, NULL));
 		}
-
-		/* requesting installed packages */
-		os_state->set_package_request(os_state, TRUE);
-		attr = ietf_attr_attr_request_create(PEN_IETF,
-											 IETF_ATTR_INSTALLED_PACKAGES);
-		out_msg->add_attribute(out_msg, attr);
-
-		/* requesting Android or Linux settings */
-		attr = ita_attr_get_settings_create();
-		attr_cast = (ita_attr_get_settings_t*)attr;
-
-		if (os_type == OS_TYPE_ANDROID)
-		{
-			attr_cast->add(attr_cast, android_id_str);
-			attr_cast->add(attr_cast, non_market_apps_str);
-		}
-		else
-		{
-			attr_cast->add(attr_cast, machine_id_str);
-			attr_cast->add(attr_cast, "/proc/sys/kernel/tainted");
-		}
-		out_msg->add_attribute(out_msg, attr);
 	}
 
-	if (fatal_error ||
-	   (os_state->get_attribute_request(os_state) &&
-		os_state->get_info(os_state, NULL, NULL, NULL) == NULL))
+	if (fatal_error)
 	{
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
@@ -392,9 +398,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 	/* If all Installed Packages attributes were received, go to assessment */
 	if (!assessment &&
-		!os_state->get_package_request(os_state) &&
-		!os_state->get_angel_count(os_state) &&
-		 os_state->get_info(os_state, NULL, NULL, NULL))
+		 os_state->get_handshake_state(os_state) == IMV_OS_STATE_POLICY_START &&
+		!os_state->get_angel_count(os_state))
 	{
 		int count, count_update, count_blacklist, count_ok;
 		u_int os_settings;
@@ -532,16 +537,61 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 }
 
 /**
+ * Build an IETF Attribute Request attribute for missing attributes
+ */
+static pa_tnc_attr_t* build_attr_request(u_int received)
+{
+	pa_tnc_attr_t *attr;
+	ietf_attr_attr_request_t *attr_cast;
+
+	attr = ietf_attr_attr_request_create(PEN_RESERVED, 0);
+	attr_cast = (ietf_attr_attr_request_t*)attr;
+
+	if (!(received & IMV_OS_ATTR_PRODUCT_INFORMATION) ||
+		!(received & IMV_OS_ATTR_STRING_VERSION))
+	{
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION);
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
+	}
+	if (!(received & IMV_OS_ATTR_NUMERIC_VERSION))
+	{
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_NUMERIC_VERSION);
+	}
+	if (!(received & IMV_OS_ATTR_OPERATIONAL_STATUS))
+	{
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_OPERATIONAL_STATUS);
+	}
+	if (!(received & IMV_OS_ATTR_FORWARDING_ENABLED))
+	{
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
+	}
+	if (!(received & IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED))
+	{
+		attr_cast->add(attr_cast, PEN_IETF,
+								  IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
+	}
+	if (!(received & IMV_OS_ATTR_DEVICE_ID))
+	{
+		attr_cast->add(attr_cast, PEN_ITA,  ITA_ATTR_DEVICE_ID);
+	}
+
+	return attr;
+}
+
+/**
  * see section 3.8.8 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 							   TNC_ConnectionID connection_id)
 {
+	imv_msg_t *out_msg;
 	imv_state_t *state;
+	imv_database_t *imv_db;
 	imv_os_state_t *os_state;
-	TNC_IMV_Action_Recommendation rec;
-	TNC_IMV_Evaluation_Result eval;
-	TNC_Result result = TNC_RESULT_SUCCESS;
+	imv_os_handshake_state_t handshake_state;
+	pa_tnc_attr_t *attr;
+	TNC_Result result;
+	u_int received;
 
 	if (!imv_os)
 	{
@@ -554,43 +604,83 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	}
 	os_state = (imv_os_state_t*)state;
 
-	state->get_recommendation(state, &rec, &eval);
+	handshake_state = os_state->get_handshake_state(os_state);
+	received = os_state->get_received(os_state);
 
-	/*
-	 * Don't send an attribute request if an evaluation is available 
-	 * or if an attribute request has already been sent
-	 */
-	if (eval != TNC_IMV_EVALUATION_RESULT_DONT_KNOW ||
-		os_state->get_attribute_request(os_state))
+	if (handshake_state == IMV_OS_STATE_INIT)
 	{
-		return TNC_RESULT_SUCCESS;
+		if (received != IMV_OS_ATTR_ALL)
+		{
+			/* send an attribute request for missing attributes */
+			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
+									 TNC_IMCID_ANY, msg_types[0]);
+			out_msg->add_attribute(out_msg, build_attr_request(received));
+
+			/* send PA-TNC message with excl flag not set */
+			result = out_msg->send(out_msg, FALSE);
+			out_msg->destroy(out_msg);
+
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				return result;
+			}
+		}
+	}
+	if (handshake_state < IMV_OS_STATE_POLICY_START)
+	{
+		if (((received & IMV_OS_ATTR_PRODUCT_INFORMATION) &&
+			 (received & IMV_OS_ATTR_STRING_VERSION)) &&
+			((received & IMV_OS_ATTR_DEVICE_ID) ||
+			 (handshake_state == IMV_OS_STATE_ATTR_REQ)))
+		{
+			imv_db = imv_os->get_database(imv_os);
+			if (imv_db)
+			{
+				/* trigger the policy manager */
+				imv_db->policy_script(imv_db, state->get_session_id(state),
+									  TRUE);
+			}
+			os_state->set_handshake_state(os_state, IMV_OS_STATE_POLICY_START);
+
+			/* requesting installed packages */
+			attr = ietf_attr_attr_request_create(PEN_IETF,
+									 IETF_ATTR_INSTALLED_PACKAGES);
+			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
+									 TNC_IMCID_ANY, msg_types[0]);
+			out_msg->add_attribute(out_msg, attr);
+
+			/* send PA-TNC message with excl flag set */
+			result = out_msg->send(out_msg, TRUE);
+			out_msg->destroy(out_msg);
+
+			return result;
+		}
+		if (handshake_state == IMV_OS_STATE_ATTR_REQ)
+		{
+			/**
+			 * Both the IETF Product Information and IETF String Version
+			 * attribute should have been present
+			 */
+			state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);
+
+			/* send assessment */
+			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
+									 TNC_IMCID_ANY, msg_types[0]);
+			result = out_msg->send_assessment(out_msg);
+			out_msg->destroy(out_msg);
+
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				return result;
+			}  
+			return imv_os->provide_recommendation(imv_os, state);
+		}
+		os_state->set_handshake_state(os_state, IMV_OS_STATE_ATTR_REQ);
 	}
 
-	if (os_state->get_info(os_state, NULL, NULL, NULL) == NULL)
-	{
-		imv_msg_t *out_msg;
-		pa_tnc_attr_t *attr;
-		ietf_attr_attr_request_t *attr_cast;
-
-		out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
-								 TNC_IMCID_ANY, msg_types[0]);
-		attr = ietf_attr_attr_request_create(PEN_IETF,
-											 IETF_ATTR_PRODUCT_INFORMATION);
-		attr_cast = (ietf_attr_attr_request_t*)attr;
-		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
-		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_NUMERIC_VERSION);
-		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_OPERATIONAL_STATUS);
-		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
-		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
-		out_msg->add_attribute(out_msg, attr);
-		os_state->set_attribute_request(os_state, TRUE);
-
-		/* send PA-TNC message with excl flag not set */
-		result = out_msg->send(out_msg, FALSE);
-		out_msg->destroy(out_msg);
-	}
-
-	return result;
+	return TNC_RESULT_SUCCESS;
 }
 
 /**

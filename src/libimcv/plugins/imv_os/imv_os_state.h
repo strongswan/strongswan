@@ -29,12 +29,25 @@
 #include <library.h>
 
 typedef struct imv_os_state_t imv_os_state_t;
+typedef enum imv_os_handshake_state_t imv_os_handshake_state_t;
 typedef enum os_settings_t os_settings_t;
 
+/**
+ * IMV OS Handshake States (state machine)
+ */
+enum imv_os_handshake_state_t {
+	IMV_OS_STATE_INIT,
+	IMV_OS_STATE_ATTR_REQ,
+	IMV_OS_STATE_POLICY_START
+};
+
+/**
+ * Flags for detected OS Settings
+ */
 enum os_settings_t {
-	OS_SETTINGS_FWD_ENABLED =         1,
-	OS_SETTINGS_DEFAULT_PWD_ENABLED = 2,
-	OS_SETTINGS_NON_MARKET_APPS =     4
+	OS_SETTINGS_FWD_ENABLED =         (1<<0),
+	OS_SETTINGS_DEFAULT_PWD_ENABLED = (1<<1),
+	OS_SETTINGS_NON_MARKET_APPS =     (1<<2)
 };
 
 /**
@@ -46,6 +59,21 @@ struct imv_os_state_t {
 	 * imv_state_t interface
 	 */
 	imv_state_t interface;
+
+	/**
+	 * Set state of the handshake
+	 *
+	 * @param new_state			the handshake state of IMV
+	 */
+	void (*set_handshake_state)(imv_os_state_t *this,
+								imv_os_handshake_state_t new_state);
+
+	/**
+	 * Get state of the handshake
+	 *
+	 * @return					the handshake state of IMV
+	 */
+	imv_os_handshake_state_t (*get_handshake_state)(imv_os_state_t *this);
 
 	/**
 	 * Set OS Product Information
@@ -91,32 +119,18 @@ struct imv_os_state_t {
 					  int *count_blacklist, int *count_ok);
 
 	/**
-	 * Set/reset attribute request status
+	 * Set flags for received attributes
 	 *
-	 * @param set			TRUE to set, FALSE to clear
+	 * @param flags			Flags to be set
 	 */
-	void (*set_attribute_request)(imv_os_state_t *this, bool set);
+	void (*set_received)(imv_os_state_t *this, u_int flags);
 
 	/**
-	 * Get attribute request status
+	 * Get flags set for received attributes
 	 *
-	 * @return				TRUE if set, FALSE if unset
+	 * @return				Flags set for received attributes
 	 */
-	bool (*get_attribute_request)(imv_os_state_t *this);
-
-	/**
-	 * Set/reset OS Installed Packages request status
-	 *
-	 * @param set			TRUE to set, FALSE to clear
-	 */
-	void (*set_package_request)(imv_os_state_t *this, bool set);
-
-	/**
-	 * Get OS Installed Packages request status
-	 *
-	 * @return				TRUE if set, FALSE if unset
-	 */
-	bool (*get_package_request)(imv_os_state_t *this);
+	u_int (*get_received)(imv_os_state_t *this);
 
 	/**
 	 * Set device ID

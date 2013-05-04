@@ -34,6 +34,7 @@ libimcv_la_SOURCES = \
 	ita/ita_attr_get_settings.h ita/ita_attr_get_settings.c \
 	ita/ita_attr_settings.h ita/ita_attr_settings.c \
 	ita/ita_attr_angel.h ita/ita_attr_angel.c \
+	ita/ita_attr_device_id.h ita/ita_attr_device_id.c \
 	os_info/os_info.h os_info/os_info.c \
 	pa_tnc/pa_tnc_attr.h \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \

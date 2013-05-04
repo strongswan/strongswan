@@ -30,6 +30,7 @@
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
 #include <ita/ita_attr_angel.h>
+#include <ita/ita_attr_device_id.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
@@ -213,7 +214,7 @@ static void add_fwd_enabled(imc_msg_t *msg)
 	os_fwd_status_t fwd_status;
 
 	fwd_status = os->get_fwd_status(os);
-	DBG1(DBG_IMC, "IPv4 forwarding status: %N",
+	DBG1(DBG_IMC, "IPv4 forwarding is %N",
 				   os_fwd_status_names, fwd_status);
 	attr = ietf_attr_fwd_enabled_create(fwd_status);
 	msg->add_attribute(msg, attr);
@@ -226,9 +227,34 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 
-	DBG1(DBG_IMC, "factory default password: disabled");
+	DBG1(DBG_IMC, "factory default password is disabled");
 	attr = ietf_attr_default_pwd_enabled_create(FALSE);
 	msg->add_attribute(msg, attr);
+}
+
+/**
+ * Add ITA Device ID attribute to the send queue
+ */
+static void add_device_id(imc_msg_t *msg)
+{
+	pa_tnc_attr_t *attr;
+	chunk_t value;
+	char *name;
+
+	name = os->get_type(os) == OS_TYPE_ANDROID ?
+				  "android_id" : "/var/lib/dbus/machine-id";
+	value = os->get_setting(os, name);
+
+	/* trim trailing newline character */
+	if (value.ptr[value.len - 1] == '\n')
+	{
+		value.len--;
+	}
+
+	DBG1(DBG_IMC, "device ID is %.*s", value.len, value.ptr);
+	attr = ita_attr_device_id_create(value);
+	msg->add_attribute(msg, attr);
+	free(value.ptr);
 }
 
 /**
@@ -365,6 +391,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		add_op_status(out_msg);
 		add_fwd_enabled(out_msg);
 		add_default_pwd_enabled(out_msg);
+		add_device_id(out_msg);
 
 		/* send PA-TNC message with the excl flag not set */
 		result = out_msg->send(out_msg, FALSE);
@@ -410,35 +437,45 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 				e = attr_cast->create_enumerator(attr_cast);
 				while (e->enumerate(e, &entry))
 				{
-					if (entry->vendor_id != PEN_IETF)
+					if (entry->vendor_id == PEN_IETF)
 					{
-						continue;
+						switch (entry->type)
+						{
+							case IETF_ATTR_PRODUCT_INFORMATION:
+								add_product_info(out_msg);
+								break;
+							case IETF_ATTR_STRING_VERSION:
+								add_string_version(out_msg);
+								break;
+							case IETF_ATTR_NUMERIC_VERSION:
+								add_numeric_version(out_msg);
+								break;
+							case IETF_ATTR_OPERATIONAL_STATUS:
+								add_op_status(out_msg);
+								break;
+							case IETF_ATTR_FORWARDING_ENABLED:
+								add_fwd_enabled(out_msg);
+								break;
+							case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
+								add_default_pwd_enabled(out_msg);
+								break;
+							case IETF_ATTR_INSTALLED_PACKAGES:
+								add_installed_packages(state, out_msg);
+								break;
+							default:
+								break;
+						}
 					}
-					switch (entry->type)
+					else if (entry->vendor_id == PEN_ITA)
 					{
-						case IETF_ATTR_PRODUCT_INFORMATION:
-							add_product_info(out_msg);
-							break;
-						case IETF_ATTR_STRING_VERSION:
-							add_string_version(out_msg);
-							break;
-						case IETF_ATTR_NUMERIC_VERSION:
-							add_numeric_version(out_msg);
-							break;
-						case IETF_ATTR_OPERATIONAL_STATUS:
-							add_op_status(out_msg);
-							break;
-						case IETF_ATTR_FORWARDING_ENABLED:
-							add_fwd_enabled(out_msg);
-							break;
-						case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
-							add_default_pwd_enabled(out_msg);
-							break;
-						case IETF_ATTR_INSTALLED_PACKAGES:
-							add_installed_packages(state, out_msg);
-							break;
-						default:
-							break;
+						switch (entry->type)
+						{
+							case ITA_ATTR_DEVICE_ID:
+								add_device_id(out_msg);
+								break;
+							default:
+								break;
+						}
 					}
 				}
 				e->destroy(e);

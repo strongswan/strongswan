@@ -87,6 +87,11 @@ struct private_imv_os_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
+	 * IMV OS handshake state
+	 */
+	imv_os_handshake_state_t handshake_state;
+
+	/**
 	 * OS Product Information (concatenation of OS Name and Version)
 	 */
 	char *info;
@@ -152,14 +157,9 @@ struct private_imv_os_state_t {
 	int count_ok;
 
 	/**
-	 * Attribute request sent - mandatory response expected
+	 * Flags set for received attributes
 	 */
-	bool attribute_request;
-
-	/**
-	 * OS Installed Package request sent - mandatory response expected
-	 */
-	bool package_request;
+	u_int received_flags;
 
 	/**
 	 * OS Settings
@@ -490,6 +490,18 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
+METHOD(imv_os_state_t, set_handshake_state, void,
+	private_imv_os_state_t *this, imv_os_handshake_state_t new_state)
+{
+	this->handshake_state = new_state;
+}
+
+METHOD(imv_os_state_t, get_handshake_state, imv_os_handshake_state_t,
+	private_imv_os_state_t *this)
+{
+	return this->handshake_state;
+}
+
 METHOD(imv_os_state_t, set_info, void,
 	private_imv_os_state_t *this, os_type_t type, chunk_t name, chunk_t version)
 {
@@ -556,28 +568,16 @@ METHOD(imv_os_state_t, get_count, void,
 	}
 }
 
-METHOD(imv_os_state_t, set_attribute_request, void,
-	private_imv_os_state_t *this, bool set)
+METHOD(imv_os_state_t, set_received, void,
+	private_imv_os_state_t *this, u_int flags)
 {
-	this->attribute_request = set;
+	this->received_flags |= flags;
 }
 
-METHOD(imv_os_state_t, get_attribute_request, bool,
+METHOD(imv_os_state_t, get_received, u_int,
 	private_imv_os_state_t *this)
 {
-	return this->attribute_request;
-}
-
-METHOD(imv_os_state_t, set_package_request, void,
-	private_imv_os_state_t *this, bool set)
-{
-	this->package_request = set;
-}
-
-METHOD(imv_os_state_t, get_package_request, bool,
-	private_imv_os_state_t *this)
-{
-	return this->package_request;
+	return this->received_flags;
 }
 
 METHOD(imv_os_state_t, set_device_id, void,
@@ -659,14 +659,14 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
 			},
+			.set_handshake_state = _set_handshake_state,
+			.get_handshake_state = _get_handshake_state,
 			.set_info = _set_info,
 			.get_info = _get_info,
 			.set_count = _set_count,
 			.get_count = _get_count,
-			.set_attribute_request = _set_attribute_request,
-			.get_attribute_request = _get_attribute_request,
-			.set_package_request = _set_package_request,
-			.get_package_request = _get_package_request,
+			.set_received = _set_received,
+			.get_received = _get_received,
 			.set_device_id = _set_device_id,
 			.get_device_id = _get_device_id,
 			.set_os_settings = _set_os_settings,

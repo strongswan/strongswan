@@ -234,7 +234,11 @@ pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type)
 		.list = linked_list_create(),
 		.ref = 1,
 	);
-	add(this, vendor_id, type);
+
+	if (vendor_id != PEN_RESERVED)
+	{
+		add(this, vendor_id, type);
+	}
 
 	return &this->public.pa_tnc_attribute;
 }
