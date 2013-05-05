@@ -245,6 +245,12 @@ static void add_device_id(imc_msg_t *msg)
 				  "android_id" : "/var/lib/dbus/machine-id";
 	value = os->get_setting(os, name);
 
+	if (value.len == 0)
+	{
+		DBG1(DBG_IMC, "no device ID available");
+		return;
+	}
+
 	/* trim trailing newline character */
 	if (value.ptr[value.len - 1] == '\n')
 	{
