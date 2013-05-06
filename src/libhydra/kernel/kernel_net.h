@@ -35,17 +35,17 @@ typedef enum kernel_address_type_t kernel_address_type_t;
  */
 enum kernel_address_type_t {
 	/** normal addresses (on regular, up, non-ignored) interfaces */
-	ADDR_TYPE_REGULAR = 0,
+	ADDR_TYPE_REGULAR = (1 << 0),
 	/** addresses on down interfaces */
-	ADDR_TYPE_DOWN =  (1 << 0),
+	ADDR_TYPE_DOWN =  (1 << 1),
 	/** addresses on ignored interfaces */
-	ADDR_TYPE_IGNORED = (1 << 1),
+	ADDR_TYPE_IGNORED = (1 << 2),
 	/** addresses on loopback interfaces */
-	ADDR_TYPE_LOOPBACK = (1 << 2),
+	ADDR_TYPE_LOOPBACK = (1 << 3),
 	/** virtual IP addresses */
-	ADDR_TYPE_VIRTUAL = (1 << 3),
+	ADDR_TYPE_VIRTUAL = (1 << 4),
 	/** to enumerate all available addresses */
-	ADDR_TYPE_ALL = (1 << 4) - 1,
+	ADDR_TYPE_ALL = (1 << 5) - 1,
 };
 
 /**

@@ -66,6 +66,14 @@ struct tun_device_t {
 	bool (*set_address)(tun_device_t *this, host_t *addr, u_int8_t netmask);
 
 	/**
+	 * Get the IP address previously assigned to using set_address().
+	 *
+	 * @param netmask		pointer receiving the configured netmask, or NULL
+	 * @return				address previously set, NULL if none
+	 */
+	host_t* (*get_address)(tun_device_t *this, u_int8_t *netmask);
+
+	/**
 	 * Bring the TUN device up
 	 *
 	 * @return				TRUE if operation successful
@@ -93,6 +101,13 @@ struct tun_device_t {
 	 * @return				interface name
 	 */
 	char *(*get_name)(tun_device_t *this);
+
+	/**
+	 * Get the underlying tun file descriptor.
+	 *
+	 * @return				file descriptor of this tun device
+	 */
+	int (*get_fd)(tun_device_t *this);
 
 	/**
 	 * Destroy a tun_device_t

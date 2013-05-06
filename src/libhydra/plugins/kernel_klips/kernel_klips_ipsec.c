@@ -1911,7 +1911,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	return NOT_SUPPORTED;  /* TODO */
 }
@@ -2118,7 +2118,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			this->install_routes)
 		{
 			hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-													   src_ts, &route->src_ip);
+												src_ts, &route->src_ip, NULL);
 		}
 
 		if (!route->src_ip)

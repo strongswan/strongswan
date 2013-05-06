@@ -65,6 +65,8 @@ typedef enum kernel_feature_t kernel_feature_t;
 enum kernel_feature_t {
 	/** IPsec can process ESPv3 (RFC 4303) TFC padded packets */
 	KERNEL_ESP_V3_TFC = (1<<0),
+	/** Networking requires an "exclude" route for IKE/ESP packets */
+	KERNEL_REQUIRE_EXCLUDE_ROUTE = (1<<1),
 };
 
 /**
@@ -195,11 +197,12 @@ struct kernel_interface_t {
 	 * @param mark			optional mark for this SA
 	 * @param[out] bytes	the number of bytes processed by SA
 	 * @param[out] packets	number of packets processed by SA
+	 * @param[out] time		last time of SA use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, u_int8_t protocol, mark_t mark,
-						  u_int64_t *bytes, u_int64_t *packets);
+						  u_int64_t *bytes, u_int64_t *packets, u_int32_t *time);
 
 	/**
 	 * Delete a previously installed SA from the SAD.
@@ -451,10 +454,11 @@ struct kernel_interface_t {
 	 *
 	 * @param ts			traffic selector
 	 * @param ip			returned IP address (has to be destroyed)
+	 * @param vip			set to TRUE if returned address is a virtual IP
 	 * @return				SUCCESS if address found
 	 */
 	status_t (*get_address_by_ts)(kernel_interface_t *this,
-								  traffic_selector_t *ts, host_t **ip);
+								  traffic_selector_t *ts, host_t **ip, bool *vip);
 
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.

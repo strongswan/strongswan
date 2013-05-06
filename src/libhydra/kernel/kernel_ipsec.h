@@ -155,11 +155,12 @@ struct kernel_ipsec_t {
 	 * @param mark			optional mark for this SA
 	 * @param[out] bytes	the number of bytes processed by SA
 	 * @param[out] packets	number of packets processed by SA
+	 * @param[out] time		last time of SA use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, u_int8_t protocol, mark_t mark,
-						  u_int64_t *bytes, u_int64_t *packets);
+						  u_int64_t *bytes, u_int64_t *packets, u_int32_t *time);
 
 	/**
 	 * Delete a previusly installed SA from the SAD.

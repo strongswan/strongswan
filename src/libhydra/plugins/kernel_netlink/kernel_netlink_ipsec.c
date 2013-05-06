@@ -1595,7 +1595,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1679,6 +1679,12 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 		if (packets)
 		{
 			*packets = sa->curlft.packets;
+		}
+		if (time)
+		{	/* curlft contains an "use" time, but that contains a timestamp
+			 * of the first use, not the last. Last use time must be queried
+			 * on the policy on Linux */
+			*time = 0;
 		}
 		status = SUCCESS;
 	}
@@ -2102,7 +2108,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		);
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				fwd->dst_ts, &route->src_ip) == SUCCESS)
+				fwd->dst_ts, &route->src_ip, NULL) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD) */
 			route->gateway = hydra->kernel_interface->get_nexthop(
@@ -2638,13 +2644,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
 													(sizeof(u_int32_t) * 8);
 
-	if (streq(hydra->daemon, "pluto"))
-	{	/* no routes for pluto, they are installed via updown script */
-		this->install_routes = FALSE;
-		/* no policy history for pluto */
-		this->policy_history = FALSE;
-	}
-	else if (streq(hydra->daemon, "starter"))
+	if (streq(hydra->daemon, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}

@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <ifaddrs.h>
 #include <net/route.h>
 #include <unistd.h>
@@ -26,8 +27,10 @@
 #include <hydra.h>
 #include <utils/debug.h>
 #include <networking/host.h>
+#include <networking/tun_device.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/condvar.h>
 #include <threading/rwlock.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
@@ -39,9 +42,6 @@
 
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
-
-/** buffer size for PF_ROUTE messages */
-#define PFROUTE_BUFFER_SIZE 4096
 
 typedef struct addr_entry_t addr_entry_t;
 
@@ -55,9 +55,6 @@ struct addr_entry_t {
 
 	/** virtual IP managed by us */
 	bool virtual;
-
-	/** Number of times this IP is used, if virtual */
-	u_int refcount;
 };
 
 /**
@@ -197,9 +194,24 @@ struct private_kernel_pfroute_net_t
 	hashtable_t *addrs;
 
 	/**
-	 * mutex to lock access to the PF_ROUTE socket
+	 * List of tun devices we installed for virtual IPs
 	 */
-	mutex_t *mutex_pfroute;
+	linked_list_t *tuns;
+
+	/**
+	 * mutex to communicate exclusively with PF_KEY
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * condvar to signal if PF_KEY query got a response
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * pid to send PF_ROUTE messages with
+	 */
+	pid_t pid;
 
 	/**
 	 * PF_ROUTE socket to communicate with the kernel
@@ -207,14 +219,19 @@ struct private_kernel_pfroute_net_t
 	int socket;
 
 	/**
-	 * PF_ROUTE socket to receive events
-	 */
-	int socket_events;
-
-	/**
 	 * sequence number for messages sent to the kernel
 	 */
 	int seq;
+
+	/**
+	 * Sequence number a query is waiting for
+	 */
+	int waiting_seq;
+
+	/**
+	 * Allocated reply message from kernel
+	 */
+	struct rt_msghdr *reply;
 
 	/**
 	 * time of last roam event
@@ -296,32 +313,90 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 }
 
 /**
+ * Data for enumerator over rtmsg sockaddrs
+ */
+typedef struct {
+	/** implements enumerator */
+	enumerator_t public;
+	/** copy of attribute bitfield */
+	int types;
+	/** bytes remaining in buffer */
+	int remaining;
+	/** next sockaddr to enumerate */
+	struct sockaddr *addr;
+} rt_enumerator_t;
+
+METHOD(enumerator_t, rt_enumerate, bool,
+	rt_enumerator_t *this, int *xtype, struct sockaddr **addr)
+{
+	int i, type;
+
+	if (this->remaining < sizeof(this->addr->sa_len) ||
+		this->remaining < this->addr->sa_len)
+	{
+		return FALSE;
+	}
+	for (i = 0; i < RTAX_MAX; i++)
+	{
+		type = (1 << i);
+		if (this->types & type)
+		{
+			this->types &= ~type;
+			*addr = this->addr;
+			*xtype = i;
+			this->remaining -= this->addr->sa_len;
+			this->addr = (void*)this->addr + this->addr->sa_len;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in ifa/ifam/rt_msg
+ */
+static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
+{
+	struct rt_msghdr *rthdr = hdr;
+	rt_enumerator_t *this;
+
+	INIT(this,
+		.public = {
+			.enumerate = (void*)_rt_enumerate,
+			.destroy = (void*)free,
+		},
+		.types = rthdr->rtm_addrs,
+		.remaining = rthdr->rtm_msglen - hdrlen,
+		.addr = hdr + hdrlen,
+	);
+	return &this->public;
+}
+
+/**
  * Process an RTM_*ADDR message from the kernel
  */
 static void process_addr(private_kernel_pfroute_net_t *this,
-						 struct rt_msghdr *msg)
+						 struct ifa_msghdr *ifa)
 {
-	struct ifa_msghdr *ifa = (struct ifa_msghdr*)msg;
-	sockaddr_t *sockaddr = (sockaddr_t*)(ifa + 1);
+	struct sockaddr *sockaddr;
 	host_t *host = NULL;
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	bool found = FALSE, changed = FALSE, roam = FALSE;
-	int i;
+	enumerator_t *enumerator;
+	int type;
 
-	for (i = 1; i < (1 << RTAX_MAX); i <<= 1)
+	enumerator = create_rtmsg_enumerator(ifa, sizeof(*ifa));
+	while (enumerator->enumerate(enumerator, &type, &sockaddr))
 	{
-		if (ifa->ifam_addrs & i)
+		if (type == RTAX_IFA)
 		{
-			if (RTA_IFA & i)
-			{
-				host = host_create_from_sockaddr(sockaddr);
-				break;
-			}
-			sockaddr = (sockaddr_t*)((char*)sockaddr + sockaddr->sa_len);
+			host = host_create_from_sockaddr(sockaddr);
+			break;
 		}
 	}
+	enumerator->destroy(enumerator);
 
 	if (!host)
 	{
@@ -352,21 +427,16 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 						addr_map_entry_remove(addr, iface, this);
 						addr_entry_destroy(addr);
 					}
-					else if (ifa->ifam_type == RTM_NEWADDR && addr->virtual)
-					{
-						addr->refcount = 1;
-					}
 				}
 			}
 			addrs->destroy(addrs);
 
 			if (!found && ifa->ifam_type == RTM_NEWADDR)
 			{
+				INIT(addr,
+					.ip = host->clone(host),
+				);
 				changed = TRUE;
-				addr = malloc_thing(addr_entry_t);
-				addr->ip = host->clone(host);
-				addr->virtual = FALSE;
-				addr->refcount = 1;
 				iface->addrs->insert_last(iface->addrs, addr);
 				addr_map_entry_add(this, addr, iface);
 				if (iface->usable)
@@ -393,15 +463,54 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 }
 
 /**
+ * Re-initialize address list of an interface if it changes state
+ */
+static void repopulate_iface(private_kernel_pfroute_net_t *this,
+							 iface_entry_t *iface)
+{
+	struct ifaddrs *ifap, *ifa;
+	addr_entry_t *addr;
+
+	while (iface->addrs->remove_last(iface->addrs, (void**)&addr) == SUCCESS)
+	{
+		addr_map_entry_remove(addr, iface, this);
+		addr_entry_destroy(addr);
+	}
+
+	if (getifaddrs(&ifap) == 0)
+	{
+		for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
+		{
+			if (ifa->ifa_addr && streq(ifa->ifa_name, iface->ifname))
+			{
+				switch (ifa->ifa_addr->sa_family)
+				{
+					case AF_INET:
+					case AF_INET6:
+						INIT(addr,
+							.ip = host_create_from_sockaddr(ifa->ifa_addr),
+						);
+						iface->addrs->insert_last(iface->addrs, addr);
+						addr_map_entry_add(this, addr, iface);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		freeifaddrs(ifap);
+	}
+}
+
+/**
  * Process an RTM_IFINFO message from the kernel
  */
 static void process_link(private_kernel_pfroute_net_t *this,
-						 struct rt_msghdr *hdr)
+						 struct if_msghdr *msg)
 {
-	struct if_msghdr *msg = (struct if_msghdr*)hdr;
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
-	bool roam = FALSE;
+	bool roam = FALSE, found = FALSE;;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -423,10 +532,33 @@ static void process_link(private_kernel_pfroute_net_t *this,
 				}
 			}
 			iface->flags = msg->ifm_flags;
+			repopulate_iface(this, iface);
+			found = TRUE;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		INIT(iface,
+			.ifindex = msg->ifm_index,
+			.flags = msg->ifm_flags,
+			.addrs = linked_list_create(),
+		);
+		if (if_indextoname(iface->ifindex, iface->ifname))
+		{
+			DBG1(DBG_KNL, "interface %s appeared", iface->ifname);
+			iface->usable = hydra->kernel_interface->is_interface_usable(
+										hydra->kernel_interface, iface->ifname);
+			repopulate_iface(this, iface);
+			this->ifaces->insert_last(this->ifaces, iface);
+		}
+		else
+		{
+			free(iface);
+		}
+	}
 	this->lock->unlock(this->lock);
 
 	if (roam)
@@ -445,17 +577,23 @@ static void process_route(private_kernel_pfroute_net_t *this,
 }
 
 /**
- * Receives events from kernel
+ * Receives PF_ROUTE messages from kernel
  */
 static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 {
-	unsigned char buf[PFROUTE_BUFFER_SIZE];
-	struct rt_msghdr *msg = (struct rt_msghdr*)buf;
-	int len;
+	struct {
+		union {
+			struct rt_msghdr rtm;
+			struct if_msghdr ifm;
+			struct ifa_msghdr ifam;
+		};
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg;
+	int len, hdrlen;
 	bool oldstate;
 
 	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
+	len = recv(this->socket, &msg, sizeof(msg), 0);
 	thread_cancelability(oldstate);
 
 	if (len < 0)
@@ -463,10 +601,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		switch (errno)
 		{
 			case EINTR:
-				/* interrupted, try again */
-				return JOB_REQUEUE_DIRECT;
 			case EAGAIN:
-				/* no data ready, select again */
 				return JOB_REQUEUE_DIRECT;
 			default:
 				DBG1(DBG_KNL, "unable to receive from PF_ROUTE event socket");
@@ -475,29 +610,66 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		}
 	}
 
-	if (len < sizeof(msg->rtm_msglen) || len < msg->rtm_msglen ||
-		msg->rtm_version != RTM_VERSION)
+	if (len < offsetof(struct rt_msghdr, rtm_flags) || len < msg.rtm.rtm_msglen)
 	{
-		DBG2(DBG_KNL, "received corrupted PF_ROUTE message");
+		DBG1(DBG_KNL, "received invalid PF_ROUTE message");
 		return JOB_REQUEUE_DIRECT;
 	}
-
-	switch (msg->rtm_type)
+	if (msg.rtm.rtm_version != RTM_VERSION)
+	{
+		DBG1(DBG_KNL, "received PF_ROUTE message with unsupported version: %d",
+			 msg.rtm.rtm_version);
+		return JOB_REQUEUE_DIRECT;
+	}
+	switch (msg.rtm.rtm_type)
 	{
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
-			process_addr(this, msg);
+			hdrlen = sizeof(msg.ifam);
 			break;
 		case RTM_IFINFO:
-		/*case RTM_IFANNOUNCE <- what about this*/
-			process_link(this, msg);
+			hdrlen = sizeof(msg.ifm);
 			break;
 		case RTM_ADD:
 		case RTM_DELETE:
-			process_route(this, msg);
+		case RTM_GET:
+			hdrlen = sizeof(msg.rtm);
+			break;
+		default:
+			return JOB_REQUEUE_DIRECT;
+	}
+	if (msg.rtm.rtm_msglen < hdrlen)
+	{
+		DBG1(DBG_KNL, "ignoring short PF_ROUTE message");
+		return JOB_REQUEUE_DIRECT;
+	}
+	switch (msg.rtm.rtm_type)
+	{
+		case RTM_NEWADDR:
+		case RTM_DELADDR:
+			process_addr(this, &msg.ifam);
+			break;
+		case RTM_IFINFO:
+			process_link(this, &msg.ifm);
+			break;
+		case RTM_ADD:
+		case RTM_DELETE:
+			process_route(this, &msg.rtm);
+			break;
 		default:
 			break;
 	}
+
+	this->mutex->lock(this->mutex);
+	if (msg.rtm.rtm_pid == this->pid && msg.rtm.rtm_seq == this->waiting_seq)
+	{
+		/* seems like the message someone is waiting for, deliver */
+		this->reply = realloc(this->reply, msg.rtm.rtm_msglen);
+		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
+	}
+	/* signal on any event, add_ip()/del_ip() might wait for it */
+	this->condvar->broadcast(this->condvar);
+	this->mutex->unlock(this->mutex);
 
 	return JOB_REQUEUE_DIRECT;
 }
@@ -528,6 +700,10 @@ static bool filter_addresses(address_enumerator_t *data,
 	host_t *ip;
 	if (!(data->which & ADDR_TYPE_VIRTUAL) && (*in)->virtual)
 	{   /* skip virtual interfaces added by us */
+		return FALSE;
+	}
+	if (!(data->which & ADDR_TYPE_REGULAR) && !(*in)->virtual)
+	{	/* address is regular, but not requested */
 		return FALSE;
 	}
 	ip = (*in)->ip;
@@ -578,9 +754,12 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_pfroute_net_t *this, kernel_address_type_t which)
 {
-	address_enumerator_t *data = malloc_thing(address_enumerator_t);
-	data->this = this;
-	data->which = which;
+	address_enumerator_t *data;
+
+	INIT(data,
+		.this = this,
+		.which = which,
+	);
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
@@ -589,6 +768,12 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 					(void*)filter_interfaces, data, NULL),
 				(void*)create_iface_enumerator, data,
 				(void*)address_enumerator_destroy);
+}
+
+METHOD(kernel_net_t, get_features, kernel_feature_t,
+	private_kernel_pfroute_net_t *this)
+{
+	return KERNEL_REQUIRE_EXCLUDE_ROUTE;
 }
 
 METHOD(kernel_net_t, get_interface_name, bool,
@@ -633,38 +818,352 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 	return NULL;
 }
 
-METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
-{
-	return NULL;
-}
-
 METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
-	char *iface)
+	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
+	char *ifname)
 {
-	return FAILED;
+	enumerator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	tun_device_t *tun;
+	bool timeout = FALSE;
+
+	tun = tun_device_create(NULL);
+	if (!tun)
+	{
+		return FAILED;
+	}
+	if (prefix == -1)
+	{
+		prefix = vip->get_address(vip).len * 8;
+	}
+	if (!tun->set_address(tun, vip, prefix) || !tun->up(tun))
+	{
+		tun->destroy(tun);
+		return FAILED;
+	}
+
+	/* wait until address appears */
+	this->mutex->lock(this->mutex);
+	while (!timeout && !get_interface_name(this, vip, NULL))
+	{
+		timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+	}
+	this->mutex->unlock(this->mutex);
+	if (timeout)
+	{
+		DBG1(DBG_KNL, "virtual IP %H did not appear on %s",
+			 vip, tun->get_name(tun));
+		tun->destroy(tun);
+		return FAILED;
+	}
+
+	this->lock->write_lock(this->lock);
+	this->tuns->insert_last(this->tuns, tun);
+
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (streq(iface->ifname, tun->get_name(tun)))
+		{
+			addrs = iface->addrs->create_enumerator(iface->addrs);
+			while (addrs->enumerate(addrs, &addr))
+			{
+				if (addr->ip->ip_equals(addr->ip, vip))
+				{
+					addr->virtual = TRUE;
+				}
+			}
+			addrs->destroy(addrs);
+		}
+	}
+	ifaces->destroy(ifaces);
+
+	this->lock->unlock(this->lock);
+
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
+	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
 	bool wait)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	tun_device_t *tun;
+	host_t *addr;
+	bool timeout = FALSE, found = FALSE;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->tuns->create_enumerator(this->tuns);
+	while (enumerator->enumerate(enumerator, &tun))
+	{
+		addr = tun->get_address(tun, NULL);
+		if (addr && addr->ip_equals(addr, vip))
+		{
+			this->tuns->remove_at(this->tuns, enumerator);
+			tun->destroy(tun);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	if (!found)
+	{
+		return NOT_FOUND;
+	}
+	/* wait until address disappears */
+	if (wait)
+	{
+		this->mutex->lock(this->mutex);
+		while (!timeout && get_interface_name(this, vip, NULL))
+		{
+			timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+		}
+		this->mutex->unlock(this->mutex);
+		if (timeout)
+		{
+			DBG1(DBG_KNL, "virtual IP %H did not disappear from tun", vip);
+			return FAILED;
+		}
+	}
+	return SUCCESS;
+}
+
+/**
+ * Append a sockaddr_in/in6 of given type to routing message
+ */
+static void add_rt_addr(struct rt_msghdr *hdr, int type, host_t *addr)
+{
+	if (addr)
+	{
+		int len;
+
+		len = *addr->get_sockaddr_len(addr);
+		memcpy((char*)hdr + hdr->rtm_msglen, addr->get_sockaddr(addr), len);
+		hdr->rtm_msglen += len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Append a subnet mask sockaddr using the given prefix to routing message
+ */
+static void add_rt_mask(struct rt_msghdr *hdr, int type, int family, int prefix)
+{
+	host_t *mask;
+
+	mask = host_create_netmask(family, prefix);
+	if (mask)
+	{
+		add_rt_addr(hdr, type, mask);
+		mask->destroy(mask);
+	}
+}
+
+/**
+ * Append an interface name sockaddr_dl to routing message
+ */
+static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
+{
+	struct sockaddr_dl sdl = {
+		.sdl_len = sizeof(struct sockaddr_dl),
+		.sdl_family = AF_LINK,
+		.sdl_nlen = strlen(name),
+	};
+
+	if (strlen(name) <= sizeof(sdl.sdl_data))
+	{
+		memcpy(sdl.sdl_data, name, sdl.sdl_nlen);
+		memcpy((char*)hdr + hdr->rtm_msglen, &sdl, sdl.sdl_len);
+		hdr->rtm_msglen += sdl.sdl_len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Add or remove a route
+ */
+static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
+							 chunk_t dst_net, u_int8_t prefixlen,
+							 host_t *gateway, char *if_name)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg = {
+		.hdr = {
+			.rtm_version = RTM_VERSION,
+			.rtm_type = op,
+			.rtm_flags = RTF_UP | RTF_STATIC,
+			.rtm_pid = this->pid,
+			.rtm_seq = ++this->seq,
+		},
+	};
+	host_t *dst;
+	int type;
+
+	if (prefixlen == 0 && dst_net.len)
+	{
+		status_t status;
+		chunk_t half;
+
+		half = chunk_clonea(dst_net);
+		half.ptr[0] |= 0x80;
+		prefixlen = 1;
+		status = manage_route(this, op, half, prefixlen, gateway, if_name);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+	}
+
+	dst = host_create_from_chunk(AF_UNSPEC, dst_net, 0);
+	if (!dst)
+	{
+		return FAILED;
+	}
+
+	if ((dst->get_family(dst) == AF_INET && prefixlen == 32) ||
+		(dst->get_family(dst) == AF_INET6 && prefixlen == 128))
+	{
+		msg.hdr.rtm_flags |= RTF_HOST | RTF_GATEWAY;
+	}
+
+	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
+	for (type = 0; type < RTAX_MAX; type++)
+	{
+		switch (type)
+		{
+			case RTAX_DST:
+				add_rt_addr(&msg.hdr, RTA_DST, dst);
+				break;
+			case RTAX_NETMASK:
+				if (!(msg.hdr.rtm_flags & RTF_HOST))
+				{
+					add_rt_mask(&msg.hdr, RTA_NETMASK,
+								dst->get_family(dst), prefixlen);
+				}
+				break;
+			case RTAX_GATEWAY:
+				/* interface name seems to replace gateway on OS X */
+				if (if_name)
+				{
+					add_rt_ifname(&msg.hdr, RTA_GATEWAY, if_name);
+				}
+				else if (gateway)
+				{
+					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	dst->destroy(dst);
+
+	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) != msg.hdr.rtm_msglen)
+	{
+		DBG1(DBG_KNL, "%s PF_ROUTE route failed: %s",
+			 op == RTM_ADD ? "adding" : "deleting", strerror(errno));
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_ADD, dst_net, prefixlen, gateway, if_name);
 }
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
+}
+
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg = {
+		.hdr = {
+			.rtm_version = RTM_VERSION,
+			.rtm_type = RTM_GET,
+			.rtm_pid = this->pid,
+			.rtm_seq = ++this->seq,
+		},
+	};
+	host_t *hop = NULL;
+	enumerator_t *enumerator;
+	struct sockaddr *addr;
+	int type;
+
+	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
+	for (type = 0; type < RTAX_MAX; type++)
+	{
+		switch (type)
+		{
+			case RTAX_DST:
+				add_rt_addr(&msg.hdr, RTA_DST, dest);
+				break;
+			case RTAX_IFA:
+				add_rt_addr(&msg.hdr, RTA_IFA, src);
+				break;
+			default:
+				break;
+		}
+	}
+	this->mutex->lock(this->mutex);
+
+	while (this->waiting_seq)
+	{
+		this->condvar->wait(this->condvar, this->mutex);
+	}
+	this->waiting_seq = msg.hdr.rtm_seq;
+	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) == msg.hdr.rtm_msglen)
+	{
+		while (TRUE)
+		{
+			if (this->condvar->timed_wait(this->condvar, this->mutex, 1000))
+			{	/* timed out? */
+				break;
+			}
+			if (this->reply->rtm_msglen < sizeof(*this->reply) ||
+				msg.hdr.rtm_seq != this->reply->rtm_seq)
+			{
+				continue;
+			}
+			enumerator = create_rtmsg_enumerator(this->reply,
+												 sizeof(*this->reply));
+			while (enumerator->enumerate(enumerator, &type, &addr))
+			{
+				if (type == RTAX_GATEWAY)
+				{
+					hop = host_create_from_sockaddr(addr);
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+			break;
+		}
+	}
+	else
+	{
+		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
+	}
+	/* signal completion of query to a waiting thread */
+	this->waiting_seq = 0;
+	this->condvar->signal(this->condvar);
+	this->mutex->unlock(this->mutex);
+
+	return hop;
 }
 
 /**
@@ -711,22 +1210,22 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 
 				if (!iface)
 				{
-					iface = malloc_thing(iface_entry_t);
+					INIT(iface,
+						.ifindex = if_nametoindex(ifa->ifa_name),
+						.flags = ifa->ifa_flags,
+						.addrs = linked_list_create(),
+						.usable = hydra->kernel_interface->is_interface_usable(
+										hydra->kernel_interface, ifa->ifa_name),
+					);
 					memcpy(iface->ifname, ifa->ifa_name, IFNAMSIZ);
-					iface->ifindex = if_nametoindex(ifa->ifa_name);
-					iface->flags = ifa->ifa_flags;
-					iface->addrs = linked_list_create();
-					iface->usable = hydra->kernel_interface->is_interface_usable(
-										hydra->kernel_interface, ifa->ifa_name);
 					this->ifaces->insert_last(this->ifaces, iface);
 				}
 
 				if (ifa->ifa_addr->sa_family != AF_LINK)
 				{
-					addr = malloc_thing(addr_entry_t);
-					addr->ip = host_create_from_sockaddr(ifa->ifa_addr);
-					addr->virtual = FALSE;
-					addr->refcount = 1;
+					INIT(addr,
+						.ip = host_create_from_sockaddr(ifa->ifa_addr),
+					);
 					iface->addrs->insert_last(iface->addrs, addr);
 					addr_map_entry_add(this, addr, iface);
 				}
@@ -760,13 +1259,9 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator_t *enumerator;
 	addr_entry_t *addr;
 
-	if (this->socket > 0)
+	if (this->socket != -1)
 	{
 		close(this->socket);
-	}
-	if (this->socket_events)
-	{
-		close(this->socket_events);
 	}
 	enumerator = this->addrs->create_enumerator(this->addrs);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
@@ -776,8 +1271,11 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->addrs->destroy(this->addrs);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
+	this->tuns->destroy(this->tuns);
 	this->lock->destroy(this->lock);
-	this->mutex_pfroute->destroy(this->mutex_pfroute);
+	this->mutex->destroy(this->mutex);
+	this->condvar->destroy(this->condvar);
+	free(this->reply);
 	free(this);
 }
 
@@ -787,11 +1285,11 @@ METHOD(kernel_net_t, destroy, void,
 kernel_pfroute_net_t *kernel_pfroute_net_create()
 {
 	private_kernel_pfroute_net_t *this;
-	bool register_for_events = TRUE;
 
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_interface = _get_interface_name,
 				.create_address_enumerator = _create_address_enumerator,
 				.get_source_addr = _get_source_addr,
@@ -803,45 +1301,42 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.pid = getpid(),
 		.ifaces = linked_list_create(),
 		.addrs = hashtable_create(
 								(hashtable_hash_t)addr_map_entry_hash,
 								(hashtable_equals_t)addr_map_entry_equals, 16),
+		.tuns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
-
-	if (streq(hydra->daemon, "starter"))
-	{   /* starter has no threads, so we do not register for kernel events */
-		register_for_events = FALSE;
-	}
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-	if (this->socket < 0)
+	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create PF_ROUTE socket");
 		destroy(this);
 		return NULL;
 	}
 
-	if (register_for_events)
+	if (streq(hydra->daemon, "starter"))
 	{
-		/* create a PF_ROUTE socket to receive events */
-		this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-		if (this->socket_events < 0)
+		/* starter has no threads, so we do not register for kernel events */
+		if (shutdown(this->socket, SHUT_RD) != 0)
 		{
-			DBG1(DBG_KNL, "unable to create PF_ROUTE event socket");
-			destroy(this);
-			return NULL;
+			DBG1(DBG_KNL, "closing read end of PF_ROUTE socket failed: %s",
+				 strerror(errno));
 		}
-
+	}
+	else
+	{
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio(
 					(callback_job_cb_t)receive_events, this, NULL,
 					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
-
 	if (init_address_list(this) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get interface list");

@@ -1165,6 +1165,10 @@ static bool filter_addresses(address_enumerator_t *data,
 	{	/* skip virtual interfaces added by us */
 		return FALSE;
 	}
+	if (!(data->which & ADDR_TYPE_REGULAR) && !(*in)->refcount)
+	{	/* address is regular, but not requested */
+		return FALSE;
+	}
 	if ((*in)->scope >= RT_SCOPE_LINK)
 	{	/* skip addresses with a unusable scope */
 		return FALSE;
@@ -1209,9 +1213,12 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_netlink_net_t *this, kernel_address_type_t which)
 {
-	address_enumerator_t *data = malloc_thing(address_enumerator_t);
-	data->this = this;
-	data->which = which;
+	address_enumerator_t *data;
+
+	INIT(data,
+		.this = this,
+		.which = which,
+	);
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(

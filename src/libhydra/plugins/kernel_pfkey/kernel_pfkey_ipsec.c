@@ -180,6 +180,11 @@ struct private_kernel_pfkey_ipsec_t
 	linked_list_t *policies;
 
 	/**
+	 * List of exclude routes (exclude_route_t)
+	 */
+	linked_list_t *excludes;
+
+	/**
 	 * Hash table of IPsec SAs using policies (ipsec_sa_t)
 	 */
 	hashtable_t *sas;
@@ -210,6 +215,33 @@ struct private_kernel_pfkey_ipsec_t
 	int seq;
 };
 
+typedef struct exclude_route_t exclude_route_t;
+
+/**
+ * Exclude route definition
+ */
+struct exclude_route_t {
+	/** destination address of exclude */
+	host_t *dst;
+	/** source address for route */
+	host_t *src;
+	/** nexthop exclude has been installed */
+	host_t *gtw;
+	/** references to this route */
+	int refs;
+};
+
+/**
+ * clean up a route exclude entry
+ */
+static void exclude_route_destroy(exclude_route_t *this)
+{
+	this->dst->destroy(this->dst);
+	this->src->destroy(this->src);
+	this->gtw->destroy(this->gtw);
+	free(this);
+}
+
 typedef struct route_entry_t route_entry_t;
 
 /**
@@ -230,6 +262,9 @@ struct route_entry_t {
 
 	/** destination net prefixlen */
 	u_int8_t prefixlen;
+
+	/** reference to exclude route, if any */
+	exclude_route_t *exclude;
 };
 
 /**
@@ -251,6 +286,7 @@ static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 {
 	return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
 		   a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
+		   a->gateway && b->gateway &&
 		   a->gateway->ip_equals(a->gateway, b->gateway) &&
 		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
 }
@@ -339,7 +375,7 @@ static void ipsec_sa_destroy(private_kernel_pfkey_ipsec_t *this,
 }
 
 typedef struct policy_sa_t policy_sa_t;
-typedef struct policy_sa_fwd_t policy_sa_fwd_t;
+typedef struct policy_sa_in_t policy_sa_in_t;
 
 /**
  * Mapping between a policy and an IPsec SA.
@@ -356,10 +392,10 @@ struct policy_sa_t {
 };
 
 /**
- * For forward policies we also cache the traffic selectors in order to install
+ * For input policies we also cache the traffic selectors in order to install
  * the route.
  */
-struct policy_sa_fwd_t {
+struct policy_sa_in_t {
 	/** Generic interface */
 	policy_sa_t generic;
 
@@ -371,7 +407,7 @@ struct policy_sa_fwd_t {
 };
 
 /**
- * Create a policy_sa(_fwd)_t object
+ * Create a policy_sa(_in)_t object
  */
 static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
@@ -379,14 +415,14 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 {
 	policy_sa_t *policy;
 
-	if (dir == POLICY_FWD)
+	if (dir == POLICY_IN)
 	{
-		policy_sa_fwd_t *fwd;
-		INIT(fwd,
+		policy_sa_in_t *in;
+		INIT(in,
 			.src_ts = src_ts->clone(src_ts),
 			.dst_ts = dst_ts->clone(dst_ts),
 		);
-		policy = &fwd->generic;
+		policy = &in->generic;
 	}
 	else
 	{
@@ -398,16 +434,16 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 }
 
 /**
- * Destroy a policy_sa(_fwd)_t object
+ * Destroy a policy_sa(_in)_t object
  */
 static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
 							  private_kernel_pfkey_ipsec_t *this)
 {
-	if (*dir == POLICY_FWD)
+	if (*dir == POLICY_IN)
 	{
-		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)policy;
-		fwd->src_ts->destroy(fwd->src_ts);
-		fwd->dst_ts->destroy(fwd->dst_ts);
+		policy_sa_in_t *in = (policy_sa_in_t*)policy;
+		in->src_ts->destroy(in->src_ts);
+		in->dst_ts->destroy(in->dst_ts);
 	}
 	ipsec_sa_destroy(this, policy->sa);
 	free(policy);
@@ -1090,7 +1126,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 		}
 		if (msg->sadb_msg_seq != this->seq)
 		{
-			DBG1(DBG_KNL, "received PF_KEY message with unexpected sequence "
+			DBG2(DBG_KNL, "received PF_KEY message with unexpected sequence "
 						  "number, was %d expected %d", msg->sadb_msg_seq,
 						  this->seq);
 			if (msg->sadb_msg_seq == 0)
@@ -1768,7 +1804,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1825,6 +1861,18 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	{
 		/* not supported by PF_KEY */
 		*packets = 0;
+	}
+	if (time)
+	{
+#ifdef __APPLE__
+		/* OS X uses the "last" time of use in usetime */
+		*time = response.lft_current->sadb_lifetime_usetime;
+#else /* !__APPLE__ */
+		/* on Linux, sadb_lifetime_usetime is set to the "first" time of use,
+		 * which is actually correct according to PF_KEY. We have to query
+		 * policies for the last usetime. */
+		*time = 0;
+#endif /* !__APPLE__ */
 	}
 
 	free(out);
@@ -1912,6 +1960,209 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	}
 	free(out);
 	return SUCCESS;
+}
+
+/**
+ * Add an explicit exclude route to a routing entry
+ */
+static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
+							  route_entry_t *route, host_t *src, host_t *dst)
+{
+	enumerator_t *enumerator;
+	exclude_route_t *exclude;
+	host_t *gtw;
+
+	enumerator = this->excludes->create_enumerator(this->excludes);
+	while (enumerator->enumerate(enumerator, &exclude))
+	{
+		if (dst->ip_equals(dst, exclude->dst))
+		{
+			route->exclude = exclude;
+			exclude->refs++;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!route->exclude)
+	{
+		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
+		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
+												   dst, NULL);
+		if (gtw)
+		{
+			if (hydra->kernel_interface->add_route(hydra->kernel_interface,
+									dst->get_address(dst),
+									dst->get_family(dst) == AF_INET ? 32 : 128,
+									gtw, src, NULL) == SUCCESS)
+			{
+				INIT(exclude,
+					.dst = dst->clone(dst),
+					.src = src->clone(src),
+					.gtw = gtw->clone(gtw),
+					.refs = 1,
+				);
+				route->exclude = exclude;
+				this->excludes->insert_last(this->excludes, exclude);
+			}
+			else
+			{
+				DBG1(DBG_KNL, "installing exclude route for %H failed", dst);
+			}
+			gtw->destroy(gtw);
+		}
+		else
+		{
+			DBG1(DBG_KNL, "gateway lookup for for %H failed", dst);
+		}
+	}
+}
+
+/**
+ * Remove an exclude route attached to a routing entry
+ */
+static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
+								 route_entry_t *route)
+{
+	if (route->exclude)
+	{
+		enumerator_t *enumerator;
+		exclude_route_t *exclude;
+		bool removed = FALSE;
+		host_t *dst;
+
+		enumerator = this->excludes->create_enumerator(this->excludes);
+		while (enumerator->enumerate(enumerator, &exclude))
+		{
+			if (route->exclude == exclude)
+			{
+				if (--exclude->refs == 0)
+				{
+					this->excludes->remove_at(this->excludes, enumerator);
+					removed = TRUE;
+					break;
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (removed)
+		{
+			dst = route->exclude->dst;
+			DBG2(DBG_KNL, "uninstalling exclude route for %H src %H",
+				 dst, route->exclude->src);
+			if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+									dst->get_address(dst),
+									dst->get_family(dst) == AF_INET ? 32 : 128,
+									route->exclude->gtw, route->exclude->src,
+									NULL) != SUCCESS)
+			{
+				DBG1(DBG_KNL, "uninstalling exclude route for %H failed", dst);
+			}
+			exclude_route_destroy(route->exclude);
+		}
+		route->exclude = NULL;
+	}
+}
+
+/**
+ * Try to install a route to the given inbound policy
+ */
+static bool install_route(private_kernel_pfkey_ipsec_t *this,
+						  policy_entry_t *policy, policy_sa_in_t *in)
+{
+	route_entry_t *route, *old;
+	host_t *host, *src, *dst;
+	bool is_virtual;
+
+	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
+									in->dst_ts, &host, &is_virtual) != SUCCESS)
+	{
+		return FALSE;
+	}
+
+	/* switch src/dst, as we handle an IN policy */
+	src = in->generic.sa->dst;
+	dst = in->generic.sa->src;
+
+	INIT(route,
+		.prefixlen = policy->src.mask,
+		.src_ip = host,
+		.gateway = hydra->kernel_interface->get_nexthop(
+											hydra->kernel_interface, dst, src),
+		.dst_net = chunk_clone(policy->src.net->get_address(policy->src.net)),
+	);
+
+	/* if the IP is virtual, we install the route over the interface it has
+	 * been installed on. Otherwise we use the interface we use for IKE, as
+	 * this is required for example on Linux. */
+	if (is_virtual)
+	{
+		src = route->src_ip;
+	}
+
+	/* get interface for route, using source address */
+	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												src, &route->if_name))
+	{
+		route_entry_destroy(route);
+		return FALSE;
+	}
+
+	if (policy->route)
+	{
+		old = policy->route;
+
+		if (route_entry_equals(old, route))
+		{	/* such a route already exists */
+			route_entry_destroy(route);
+			return TRUE;
+		}
+		/* uninstall previously installed route */
+		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+									old->dst_net, old->prefixlen, old->gateway,
+									old->src_ip, old->if_name) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+				 "%R === %R %N", in->src_ts, in->dst_ts,
+				policy_dir_names, policy->direction);
+		}
+		route_entry_destroy(old);
+		policy->route = NULL;
+	}
+
+	/* if remote traffic selector covers the IKE peer, add an exclude route */
+	if (hydra->kernel_interface->get_features(
+					hydra->kernel_interface) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
+	{
+		if (in->src_ts->includes(in->src_ts, dst))
+		{
+			add_exclude_route(this, route, in->generic.sa->dst, dst);
+		}
+	}
+
+	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
+		 in->src_ts, route->gateway, route->src_ip, route->if_name);
+
+	switch (hydra->kernel_interface->add_route(hydra->kernel_interface,
+							route->dst_net, route->prefixlen, route->gateway,
+							route->src_ip, route->if_name))
+	{
+		case ALREADY_DONE:
+			/* route exists, do not uninstall */
+			remove_exclude_route(this, route);
+			route_entry_destroy(route);
+			return TRUE;
+		case SUCCESS:
+			/* cache the installed route */
+			policy->route = route;
+			return TRUE;
+		default:
+			DBG1(DBG_KNL, "installing route failed: %R via %H src %H dev %s",
+				 in->src_ts, route->gateway, route->src_ip, route->if_name);
+			remove_exclude_route(this, route);
+			route_entry_destroy(route);
+			return FALSE;
+	}
 }
 
 /**
@@ -2027,83 +2278,10 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	 * - we are in tunnel mode
 	 * - routing is not disabled via strongswan.conf
 	 */
-	if (policy->direction == POLICY_FWD &&
+	if (policy->direction == POLICY_IN &&
 		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
-		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
-		route_entry_t *route;
-
-		INIT(route,
-			.prefixlen = policy->src.mask,
-		);
-
-		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				fwd->dst_ts, &route->src_ip) == SUCCESS)
-		{
-			/* get the nexthop to src (src as we are in POLICY_FWD).*/
-			route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, ipsec->src,
-											ipsec->dst);
-			route->dst_net = chunk_clone(policy->src.net->get_address(
-											policy->src.net));
-
-			/* install route via outgoing interface */
-			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												ipsec->dst, &route->if_name))
-			{
-				this->mutex->unlock(this->mutex);
-				route_entry_destroy(route);
-				return SUCCESS;
-			}
-
-			if (policy->route)
-			{
-				route_entry_t *old = policy->route;
-				if (route_entry_equals(old, route))
-				{
-					this->mutex->unlock(this->mutex);
-					route_entry_destroy(route);
-					return SUCCESS;
-				}
-				/* uninstall previously installed route */
-				if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-						old->dst_net, old->prefixlen, old->gateway,
-						old->src_ip, old->if_name) != SUCCESS)
-				{
-					DBG1(DBG_KNL, "error uninstalling route installed with "
-								  "policy %R === %R %N", fwd->src_ts,
-								   fwd->dst_ts, policy_dir_names,
-								   policy->direction);
-				}
-				route_entry_destroy(old);
-				policy->route = NULL;
-			}
-
-			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
-				 fwd->src_ts, route->gateway, route->src_ip, route->if_name);
-			switch (hydra->kernel_interface->add_route(
-								hydra->kernel_interface, route->dst_net,
-								route->prefixlen, route->gateway,
-								route->src_ip, route->if_name))
-			{
-				default:
-					DBG1(DBG_KNL, "unable to install source route for %H",
-								   route->src_ip);
-					/* FALL */
-				case ALREADY_DONE:
-					/* route exists, do not uninstall */
-					route_entry_destroy(route);
-					break;
-				case SUCCESS:
-					/* cache the installed route */
-					policy->route = route;
-					break;
-			}
-		}
-		else
-		{
-			free(route);
-		}
+		install_route(this, policy, (policy_sa_in_t*)mapping);
 	}
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;
@@ -2269,7 +2447,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	}
 	else if (response.lft_current == NULL)
 	{
-		DBG1(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
+		DBG2(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
 					  "use time", src_ts, dst_ts, policy_dir_names, direction);
 		free(out);
 		return FAILED;
@@ -2398,6 +2576,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 						  "policy %R === %R %N", src_ts, dst_ts,
 						   policy_dir_names, direction);
 		}
+		remove_exclude_route(this, route);
 	}
 
 	this->policies->remove(this->policies, found, NULL);
@@ -2548,8 +2727,10 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 		return FALSE;
 	}
 #else /* __APPLE__ */
-	if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &port,
-					 sizeof(port)) != 0)
+	int intport = port;
+
+	if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &intport,
+					 sizeof(intport)) != 0)
 	{
 		DBG1(DBG_KNL, "could not set net.inet.ipsec.esp_port to %d: %s",
 			 port, strerror(errno));
@@ -2575,6 +2756,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 								   (linked_list_invoke_t)policy_entry_destroy,
 									this);
 	this->policies->destroy(this->policies);
+	this->excludes->destroy(this->excludes);
 	this->sas->destroy(this->sas);
 	this->mutex->destroy(this->mutex);
 	this->mutex_pfkey->destroy(this->mutex_pfkey);
@@ -2609,6 +2791,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 			},
 		},
 		.policies = linked_list_create(),
+		.excludes = linked_list_create(),
 		.sas = hashtable_create((hashtable_hash_t)ipsec_sa_hash,
 								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -2618,11 +2801,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 												  hydra->daemon),
 	);
 
-	if (streq(hydra->daemon, "pluto"))
-	{	/* no routes for pluto, they are installed via updown script */
-		this->install_routes = FALSE;
-	}
-	else if (streq(hydra->daemon, "starter"))
+	if (streq(hydra->daemon, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}
