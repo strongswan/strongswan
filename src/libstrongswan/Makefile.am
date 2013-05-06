@@ -79,7 +79,7 @@ endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB)
+libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \

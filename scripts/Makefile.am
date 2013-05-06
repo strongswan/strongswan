@@ -4,7 +4,7 @@ AM_CFLAGS = \
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \
-	dnssec
+	dnssec malloc_speed
 
 if USE_TLS
   noinst_PROGRAMS += tls_test
@@ -24,6 +24,7 @@ dh_speed_SOURCES = dh_speed.c
 pubkey_speed_SOURCES = pubkey_speed.c
 crypt_burn_SOURCES = crypt_burn.c
 hash_burn_SOURCES = hash_burn.c
+malloc_speed_SOURCES = malloc_speed.c
 fetch_SOURCES = fetch.c
 dnssec_SOURCES = dnssec.c
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
@@ -34,6 +35,7 @@ dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 crypt_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 hash_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+malloc_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dnssec_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
