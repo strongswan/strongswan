@@ -239,6 +239,16 @@ struct settings_t {
 	void (*set_time)(settings_t *this, char *key, u_int32_t value, ...);
 
 	/**
+	 * Set a default for string value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param def		value to set if unconfigured
+	 * @param ...		argument list for key
+	 * @return			TRUE if a new default value for key has been set
+	 */
+	bool (*set_default_str)(settings_t *this, char *key, char *value, ...);
+
+	/**
 	 * Create an enumerator over subsection names of a section.
 	 *
 	 * @param section	section including parents, printf style format
