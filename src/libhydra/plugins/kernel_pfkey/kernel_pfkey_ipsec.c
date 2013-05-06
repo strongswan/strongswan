@@ -2618,11 +2618,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 												  hydra->daemon),
 	);
 
-	if (streq(hydra->daemon, "pluto"))
-	{	/* no routes for pluto, they are installed via updown script */
-		this->install_routes = FALSE;
-	}
-	else if (streq(hydra->daemon, "starter"))
+	if (streq(hydra->daemon, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}
