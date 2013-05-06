@@ -16,7 +16,7 @@ all: install
 	@touch $@
 
 .$(PKG)-built: .$(PKG)-cloned
-	cd $(PKG) && make tests && make
+	cd $(PKG) && make
 	@touch $@
 
 install: .$(PKG)-built
