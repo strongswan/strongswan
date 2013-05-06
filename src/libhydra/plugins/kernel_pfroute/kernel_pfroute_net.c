@@ -668,7 +668,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
 	}
 	/* signal on any event, add_ip()/del_ip() might wait for it */
-	this->condvar->signal(this->condvar);
+	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 
 	return JOB_REQUEUE_DIRECT;
@@ -1122,6 +1122,10 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	}
 	this->mutex->lock(this->mutex);
 
+	while (this->waiting_seq)
+	{
+		this->condvar->wait(this->condvar, this->mutex);
+	}
 	this->waiting_seq = msg.hdr.rtm_seq;
 	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) == msg.hdr.rtm_msglen)
 	{
@@ -1154,6 +1158,9 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	{
 		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
 	}
+	/* signal completion of query to a waiting thread */
+	this->waiting_seq = 0;
+	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
 	return hop;
