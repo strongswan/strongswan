@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -49,9 +52,9 @@ struct private_cmd_creds_t {
 	bool prompted;
 
 	/**
-	 * Provide keys via ssh-agent
+	 * Path to ssh-agent socket
 	 */
-	bool agent;
+	char *agent;
 
 	/**
 	 * Local identity
@@ -138,17 +141,9 @@ static void load_agent(private_cmd_creds_t *this)
 	public_key_t *pubkey;
 	identification_t *id;
 	certificate_t *cert;
-	char *agent;
 
-	agent = getenv("SSH_AUTH_SOCK");
-	if (!agent)
-	{
-		DBG1(DBG_CFG, "ssh-agent socket not found");
-		exit(1);
-	}
-
-	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								 KEY_ANY, BUILD_AGENT_SOCKET, agent, BUILD_END);
+	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+								 BUILD_AGENT_SOCKET, this->agent, BUILD_END);
 	if (!privkey)
 	{
 		DBG1(DBG_CFG, "failed to load private key from ssh-agent");
@@ -192,7 +187,12 @@ METHOD(cmd_creds_t, handle, bool,
 			this->identity = arg;
 			break;
 		case CMD_OPT_AGENT:
-			this->agent = TRUE;
+			this->agent = arg ?: getenv("SSH_AUTH_SOCK");
+			if (!this->agent)
+			{
+				DBG1(DBG_CFG, "no ssh-agent socket defined");
+				exit(1);
+			}
 			break;
 		default:
 			return FALSE;
@@ -201,7 +201,7 @@ METHOD(cmd_creds_t, handle, bool,
 	{
 		load_agent(this);
 		/* only do this once */
-		this->agent = FALSE;
+		this->agent = NULL;
 	}
 	return TRUE;
 }

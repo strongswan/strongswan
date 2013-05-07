@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -35,8 +38,10 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "trusted certificate, for authentication or trust chain validation", {}},
 	{ CMD_OPT_RSA, "rsa", required_argument, "path",
 	  "RSA private key to use for authentication", {}},
-	{ CMD_OPT_AGENT, "agent", no_argument, "",
-	  "use SSH agent for authentication", {}},
+	{ CMD_OPT_AGENT, "agent", optional_argument, "socket",
+	  "use SSH agent for authentication. If socket is not specified", {
+		"it is read from the SSH_AUTH_SOCK environment variable",
+	}},
 	{ CMD_OPT_LOCAL_TS, "local-ts", required_argument, "subnet",
 	  "additional traffic selector to propose for our side", {}},
 	{ CMD_OPT_REMOTE_TS, "remote-ts", required_argument, "subnet",
