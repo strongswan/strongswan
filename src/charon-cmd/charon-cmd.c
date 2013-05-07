@@ -282,6 +282,9 @@ static void handle_arguments(int argc, char *argv[])
 				{
 					continue;
 				}
+				/* fall-through */
+			case '?':
+				/* missing argument, unrecognized option */
 				usage(stderr, NULL, argv[0]);
 				exit(1);
 		}
