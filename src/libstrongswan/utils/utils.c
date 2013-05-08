@@ -466,11 +466,15 @@ static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
 /**
  * Increase refcount
  */
-void ref_get(refcount_t *ref)
+refcount_t ref_get(refcount_t *ref)
 {
+	refcount_t current;
+
 	pthread_mutex_lock(&ref_mutex);
-	(*ref)++;
+	current = ++(*ref);
 	pthread_mutex_unlock(&ref_mutex);
+
+	return current;
 }
 
 /**

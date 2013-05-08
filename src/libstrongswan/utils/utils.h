@@ -661,7 +661,7 @@ typedef volatile u_int refcount_t;
 
 #ifdef HAVE_GCC_ATOMIC_OPERATIONS
 
-#define ref_get(ref) {__sync_fetch_and_add(ref, 1); }
+#define ref_get(ref) __sync_add_and_fetch(ref, 1)
 #define ref_put(ref) (!__sync_sub_and_fetch(ref, 1))
 
 #define cas_bool(ptr, oldval, newval) \
@@ -677,8 +677,9 @@ typedef volatile u_int refcount_t;
  * Increments the reference counter atomic.
  *
  * @param ref	pointer to ref counter
+ * @return		new value of ref
  */
-void ref_get(refcount_t *ref);
+refcount_t ref_get(refcount_t *ref);
 
 /**
  * Put back a unused reference.
