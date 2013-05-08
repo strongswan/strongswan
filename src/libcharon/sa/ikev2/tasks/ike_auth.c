@@ -908,6 +908,7 @@ METHOD(task_t, process_i, status_t,
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						enumerator->destroy(enumerator);
+						charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 						return FAILED;
 					}
 					DBG2(DBG_IKE, "received %N notify",
