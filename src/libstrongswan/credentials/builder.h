@@ -59,6 +59,8 @@ enum builder_part_t {
 	BUILD_BLOB_PGP,
 	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
+	/** SSH public key blob (RFC 4253), chunk_t */
+	BUILD_BLOB_SSHKEY,
 	/** parameters from algorithmIdentifier (ASN.1 blob), chunk_t */
 	BUILD_BLOB_ALGID_PARAMS,
 	/** key size in bits, as used for key generation, u_int */

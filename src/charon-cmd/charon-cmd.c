@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2005-2013 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -199,7 +199,8 @@ static void segv_handler(int signal)
  */
 static void usage(FILE *out, char *msg, char *binary)
 {
-	int i, line, pre, post, padto = 0, spacing = 2;
+	char *pre, *post;
+	int i, line, padto = 0, spacing = 2;
 
 	for (i = 0; i < CMD_OPT_COUNT; i++)
 	{
@@ -218,19 +219,20 @@ static void usage(FILE *out, char *msg, char *binary)
 		switch (cmd_options[i].has_arg)
 		{
 			case required_argument:
-				pre = '<';
-				post = '>';
+				pre = " <";
+				post = ">";
 				break;
 			case optional_argument:
-				pre = '[';
-				post = ']';
+				pre = "[=";
+				post = "]";
 				break;
 			case no_argument:
 			default:
-				pre = post = ' ';
+				pre = "  ";
+				post = " ";
 				break;
 		}
-		fprintf(out, "  --%s %c%s%c %-*s%s\n",
+		fprintf(out, "  --%s%s%s%s %-*s%s\n",
 			cmd_options[i].name,
 			pre, cmd_options[i].arg, post,
 			padto - strlen(cmd_options[i].name) - strlen(cmd_options[i].arg), "",
@@ -282,6 +284,9 @@ static void handle_arguments(int argc, char *argv[])
 				{
 					continue;
 				}
+				/* fall-through */
+			case '?':
+				/* missing argument, unrecognized option */
 				usage(stderr, NULL, argv[0]);
 				exit(1);
 		}

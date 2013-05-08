@@ -315,6 +315,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SSHKEY
+  SUBDIRS += plugins/sshkey
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sshkey/libstrongswan-sshkey.la
+endif
+endif
+
 if USE_PEM
   SUBDIRS += plugins/pem
 if MONOLITHIC

@@ -279,29 +279,45 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 }
 
 METHOD(stroke_cred_t, load_pubkey, certificate_t*,
-	private_stroke_cred_t *this, key_type_t type, char *filename,
-	identification_t *identity)
+	private_stroke_cred_t *this, char *filename, identification_t *identity)
 {
 	certificate_t *cert;
+	public_key_t *key;
 	char path[PATH_MAX];
+	builder_part_t build_part;
+	key_type_t type = KEY_ANY;
 
 	if (streq(filename, "%dns"))
 	{
-
+		return NULL;
 	}
-	else if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
+	if (strncaseeq(filename, "dns:", 4))
+	{	/* RFC 3110 format */
+		build_part = BUILD_BLOB_DNSKEY;
+		/* not a complete RR, only RSA supported */
+		type = KEY_RSA;
+		filename += 4;
+	}
+	else if (strncaseeq(filename, "ssh:", 4))
+	{	/* SSH key */
+		build_part = BUILD_BLOB_SSHKEY;
+		filename += 4;
+	}
+	else
+	{	/* try PKCS#1 by default */
+		build_part = BUILD_BLOB_ASN1_DER;
+	}
+	if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
 	{
-		chunk_t printable_key, rfc3110_key;
-		public_key_t *key;
+		chunk_t printable_key, raw_key;
 
 		printable_key = chunk_create(filename + 2, strlen(filename) - 2);
-		rfc3110_key = strncaseeq(filename, "0x", 2) ?
+		raw_key = strncaseeq(filename, "0x", 2) ?
 								 chunk_from_hex(printable_key, NULL) :
 								 chunk_from_base64(printable_key, NULL);
-		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-								 BUILD_BLOB_DNSKEY, rfc3110_key,
-								 BUILD_END);
-		free(rfc3110_key.ptr);
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+								 build_part, raw_key, BUILD_END);
+		chunk_free(&raw_key);
 		if (key)
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
@@ -309,6 +325,7 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 									  BUILD_PUBLIC_KEY, key,
 									  BUILD_SUBJECT, identity,
 									  BUILD_END);
+			type = key->get_type(key);
 			key->destroy(key);
 			if (cert)
 			{
@@ -318,8 +335,7 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 				return cert;
 			}
 		}
-		DBG1(DBG_CFG, "  loading %N public key for \"%Y\" failed",
-			 key_type_names, type, identity);
+		DBG1(DBG_CFG, "  loading public key for \"%Y\" failed", identity);
 	}
 	else
 	{
@@ -340,12 +356,15 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 		if (cert)
 		{
 			cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+			key = cert->get_public_key(cert);
+			type = key->get_type(key);
+			key->destroy(key);
 			DBG1(DBG_CFG, "  loaded %N public key for \"%Y\" from '%s'",
 				 key_type_names, type, identity, filename);
 			return cert;
 		}
-		DBG1(DBG_CFG, "  loading %N public key for \"%Y\" from '%s' failed",
-			 key_type_names, type, identity, filename);
+		DBG1(DBG_CFG, "  loading public key for \"%Y\" from '%s' failed",
+			 identity, filename);
 	}
 	return NULL;
 }

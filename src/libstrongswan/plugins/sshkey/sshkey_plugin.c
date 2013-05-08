@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,45 +13,43 @@
  * for more details.
  */
 
-#include "agent_plugin.h"
+#include "sshkey_plugin.h"
 
 #include <library.h>
-#include "agent_private_key.h"
+#include "sshkey_builder.h"
 
-typedef struct private_agent_plugin_t private_agent_plugin_t;
+typedef struct private_sshkey_plugin_t private_sshkey_plugin_t;
 
 /**
- * private data of agent_plugin
+ * private data of sshkey_plugin
  */
-struct private_agent_plugin_t {
+struct private_sshkey_plugin_t {
 
 	/**
 	 * public functions
 	 */
-	agent_plugin_t public;
+	sshkey_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_agent_plugin_t *this)
+	private_sshkey_plugin_t *this)
 {
-	return "agent";
+	return "sshkey";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_agent_plugin_t *this, plugin_feature_t *features[])
+	private_sshkey_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(PRIVKEY, agent_private_key_open, FALSE),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+		PLUGIN_REGISTER(PUBKEY, sshkey_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 	};
 	*features = f;
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	private_agent_plugin_t *this)
+	private_sshkey_plugin_t *this)
 {
 	free(this);
 }
@@ -59,9 +57,9 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *agent_plugin_create()
+plugin_t *sshkey_plugin_create()
 {
-	private_agent_plugin_t *this;
+	private_sshkey_plugin_t *this;
 
 	INIT(this,
 		.public = {
@@ -75,4 +73,3 @@ plugin_t *agent_plugin_create()
 
 	return &this->public.plugin;
 }
-
