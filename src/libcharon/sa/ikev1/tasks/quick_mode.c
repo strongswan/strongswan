@@ -306,17 +306,21 @@ static bool install(private_quick_mode_t *this)
 	{
 		if (this->initiator)
 		{
-			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
-							this->spi_i, this->cpi_i, TRUE, FALSE, tsi, tsr);
-			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->spi_r, this->cpi_r, FALSE, FALSE, tsi, tsr);
+			status_i = this->child_sa->install(this->child_sa,
+									encr_r, integ_r, this->spi_i, this->cpi_i,
+									this->initiator, TRUE, FALSE, tsi, tsr);
+			status_o = this->child_sa->install(this->child_sa,
+									encr_i, integ_i, this->spi_r, this->cpi_r,
+									this->initiator, FALSE, FALSE, tsi, tsr);
 		}
 		else
 		{
-			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->spi_r, this->cpi_r, TRUE, FALSE, tsr, tsi);
-			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
-							this->spi_i, this->cpi_i, FALSE, FALSE, tsr, tsi);
+			status_i = this->child_sa->install(this->child_sa,
+									encr_i, integ_i, this->spi_r, this->cpi_r,
+									this->initiator, TRUE, FALSE, tsr, tsi);
+			status_o = this->child_sa->install(this->child_sa,
+									encr_r, integ_r, this->spi_i, this->cpi_i,
+									this->initiator, FALSE, FALSE, tsr, tsi);
 		}
 	}
 	chunk_clear(&integ_i);

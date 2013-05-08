@@ -526,20 +526,20 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		if (this->initiator)
 		{
-			status_i = this->child_sa->install(this->child_sa,
-							encr_r, integ_r, this->my_spi, this->my_cpi,
+			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
+							this->my_spi, this->my_cpi, this->initiator,
 							TRUE, this->tfcv3, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa,
-							encr_i, integ_i, this->other_spi, this->other_cpi,
+			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
+							this->other_spi, this->other_cpi, this->initiator,
 							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 		else
 		{
-			status_i = this->child_sa->install(this->child_sa,
-							encr_i, integ_i, this->my_spi, this->my_cpi,
+			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
+							this->my_spi, this->my_cpi, this->initiator,
 							TRUE, this->tfcv3, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa,
-							encr_r, integ_r, this->other_spi, this->other_cpi,
+			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
+							this->other_spi, this->other_cpi, this->initiator,
 							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 	}

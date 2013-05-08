@@ -607,9 +607,9 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 }
 
 METHOD(child_sa_t, install, status_t,
-	   private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
-	   u_int16_t cpi, bool inbound, bool tfcv3, linked_list_t *my_ts,
-	   linked_list_t *other_ts)
+	private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
+	u_int16_t cpi, bool initiator, bool inbound, bool tfcv3,
+	linked_list_t *my_ts, linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
@@ -703,7 +703,8 @@ METHOD(child_sa_t, install, status_t,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
-				this->ipcomp, cpi, this->encap, esn, update, src_ts, dst_ts);
+				this->ipcomp, cpi, initiator, this->encap, esn, update,
+				src_ts, dst_ts);
 
 	free(lifetime);
 

@@ -321,6 +321,7 @@ struct child_sa_t {
 	 * @param integ		integrity key
 	 * @param spi		SPI to use, allocated for inbound
 	 * @param cpi		CPI to use, allocated for outbound
+	 * @param initiator	TRUE if initiator of exchange resulting in this SA
 	 * @param inbound	TRUE to install an inbound SA, FALSE for outbound
 	 * @param tfcv3		TRUE if peer supports ESPv3 TFC
 	 * @param my_ts		negotiated local traffic selector list
@@ -328,7 +329,8 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*install)(child_sa_t *this, chunk_t encr, chunk_t integ,
-						u_int32_t spi, u_int16_t cpi, bool inbound, bool tfcv3,
+						u_int32_t spi, u_int16_t cpi,
+						bool initiator, bool inbound, bool tfcv3,
 						linked_list_t *my_ts, linked_list_t *other_ts);
 	/**
 	 * Install the policies using some traffic selectors.
