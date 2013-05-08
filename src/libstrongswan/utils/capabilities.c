@@ -309,15 +309,9 @@ capabilities_t *capabilities_create()
 		},
 	);
 
-#ifdef CAPABILITIES
 #ifdef CAPABILITIES_LIBCAP
 	this->caps = cap_init();
 #endif /* CAPABILITIES_LIBCAP */
-	if (lib->leak_detective)
-	{
-		keep(this, CAP_SYS_NICE);
-	}
-#endif /* CAPABILITIES */
 
 #ifdef EMULATE_R_FUNCS
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
