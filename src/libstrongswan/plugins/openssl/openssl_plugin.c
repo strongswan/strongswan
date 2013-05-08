@@ -528,9 +528,9 @@ plugin_t *openssl_plugin_create()
 	DBG1(DBG_LIB, "openssl FIPS mode(%d) - %sabled ",fips_mode,
 				   fips_mode ? "en" : "dis");
 #else
-	DBG1(DBG_LIB, "openssl FIPS mode(%d) unavailable", fips_mode);
 	if (fips_mode)
 	{
+		DBG1(DBG_LIB, "openssl FIPS mode(%d) unavailable", fips_mode);
 		return NULL;
 	}
 #endif
