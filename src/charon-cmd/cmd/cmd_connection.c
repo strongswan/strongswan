@@ -391,6 +391,7 @@ METHOD(cmd_connection_t, handle, bool,
 			break;
 		case CMD_OPT_RSA:
 		case CMD_OPT_AGENT:
+		case CMD_OPT_PKCS12:
 			this->key_seen = TRUE;
 			break;
 		case CMD_OPT_LOCAL_TS:

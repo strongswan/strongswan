@@ -475,13 +475,6 @@ char *whitelist[] = {
 	"Curl_client_write",
 	/* ClearSilver */
 	"nerr_init",
-	/* OpenSSL */
-	"RSA_new_method",
-	"DH_new_method",
-	"ENGINE_load_builtin_engines",
-	"OPENSSL_config",
-	"ecdsa_check",
-	"ERR_put_error",
 	/* libgcrypt */
 	"gcry_control",
 	"gcry_check_version",

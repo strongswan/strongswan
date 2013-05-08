@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/conf.h>
 #include <openssl/rand.h>
@@ -28,6 +29,7 @@
 #include <utils/debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/thread_value.h>
 #include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
@@ -41,6 +43,7 @@
 #include "openssl_x509.h"
 #include "openssl_crl.h"
 #include "openssl_pkcs7.h"
+#include "openssl_pkcs12.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
 #include "openssl_gcm.h"
@@ -131,14 +134,51 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
 }
 
 /**
+ * Thread-local value used to cleanup thread-specific error buffers
+ */
+static thread_value_t *cleanup;
+
+/**
+ * Called when a thread is destroyed. Avoid recursion by setting the thread id
+ * explicitly.
+ */
+static void cleanup_thread(void *arg)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+	CRYPTO_THREADID tid;
+
+	CRYPTO_THREADID_set_numeric(&tid, (u_long)(uintptr_t)arg);
+	ERR_remove_thread_state(&tid);
+#else
+	ERR_remove_state((u_long)(uintptr_t)arg);
+#endif
+}
+
+/**
  * Thread-ID callback function
  */
-static unsigned long id_function(void)
+static u_long id_function(void)
 {
+	u_long id;
+
 	/* ensure the thread ID is never zero, otherwise OpenSSL might try to
 	 * acquire locks recursively */
-	return 1 + (unsigned long)thread_current_id();
+	id = 1 + (u_long)thread_current_id();
+
+	/* cleanup a thread's state later if OpenSSL interacted with it */
+	cleanup->set(cleanup, (void*)(uintptr_t)id);
+	return id;
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+/**
+ * Callback for thread ID
+ */
+static void threadid_function(CRYPTO_THREADID *threadid)
+{
+	CRYPTO_THREADID_set_numeric(threadid, id_function());
+}
+#endif /* OPENSSL_VERSION_NUMBER */
 
 /**
  * initialize OpenSSL for multi-threaded use
@@ -147,7 +187,14 @@ static void threading_init()
 {
 	int i, num_locks;
 
+	cleanup = thread_value_create(cleanup_thread);
+
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+	CRYPTO_THREADID_set_callback(threadid_function);
+#else
 	CRYPTO_set_id_callback(id_function);
+#endif
+
 	CRYPTO_set_locking_callback(locking_function);
 
 	CRYPTO_set_dynlock_create_callback(create_function);
@@ -160,6 +207,24 @@ static void threading_init()
 	{
 		mutex[i] = mutex_create(MUTEX_TYPE_DEFAULT);
 	}
+}
+
+/**
+ * cleanup OpenSSL threading locks
+ */
+static void threading_cleanup()
+{
+	int i, num_locks;
+
+	num_locks = CRYPTO_num_locks();
+	for (i = 0; i < num_locks; i++)
+	{
+		mutex[i]->destroy(mutex[i]);
+	}
+	free(mutex);
+	mutex = NULL;
+
+	cleanup->destroy(cleanup);
 }
 
 /**
@@ -189,22 +254,6 @@ static bool seed_rng()
 	}
 	DESTROY_IF(rng);
 	return TRUE;
-}
-
-/**
- * cleanup OpenSSL threading locks
- */
-static void threading_cleanup()
-{
-	int i, num_locks;
-
-	num_locks = CRYPTO_num_locks();
-	for (i = 0; i < num_locks; i++)
-	{
-		mutex[i]->destroy(mutex[i]);
-	}
-	free(mutex);
-	mutex = NULL;
 }
 
 METHOD(plugin_t, get_name, char*,
@@ -307,6 +356,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_192),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_384),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
 #endif
 #endif /* OPENSSL_NO_HMAC */
 #if OPENSSL_VERSION_NUMBER >= 0x1000100fL
@@ -392,6 +442,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS7),
 #endif /* OPENSSL_NO_CMS */
 #endif /* OPENSSL_VERSION_NUMBER */
+		PLUGIN_REGISTER(CONTAINER_DECODE, openssl_pkcs12_load, TRUE),
+			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS12),
 #ifndef OPENSSL_NO_ECDH
 		/* EC DH groups */
 		PLUGIN_REGISTER(DH, openssl_ec_diffie_hellman_create),
@@ -444,13 +496,15 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+	CONF_modules_free();
+	OBJ_cleanup();
+	EVP_cleanup();
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
 #endif /* OPENSSL_NO_ENGINE */
-	EVP_cleanup();
-	CONF_modules_free();
-
+	CRYPTO_cleanup_all_ex_data();
 	threading_cleanup();
+	ERR_free_strings();
 
 	free(this);
 }

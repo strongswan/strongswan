@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -31,14 +34,18 @@ typedef enum container_type_t container_type_t;
  * Type of the container.
  */
 enum container_type_t {
-	/** Any kind of PKCS7/CMS container */
+	/** Any kind of PKCS#7/CMS container */
 	CONTAINER_PKCS7,
-	/** PKCS7/CMS plain "data" */
+	/** PKCS#7/CMS plain "data" */
 	CONTAINER_PKCS7_DATA,
-	/** PKCS7/CMS "signed-data" */
+	/** PKCS#7/CMS "signed-data" */
 	CONTAINER_PKCS7_SIGNED_DATA,
-	/** PKCS7/CMS "enveloped-data" */
+	/** PKCS#7/CMS "enveloped-data" */
 	CONTAINER_PKCS7_ENVELOPED_DATA,
+	/** PKCS#7/CMS "encrypted-data" */
+	CONTAINER_PKCS7_ENCRYPTED_DATA,
+	/** A PKCS#12 container */
+	CONTAINER_PKCS12,
 };
 
 /**

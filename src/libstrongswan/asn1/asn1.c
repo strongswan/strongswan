@@ -549,6 +549,22 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	return TRUE;
 }
 
+/*
+ * Described in header
+ */
+u_int64_t asn1_parse_integer_uint64(chunk_t blob)
+{
+	u_int64_t val = 0;
+	int i;
+
+	for (i = 0; i < blob.len; i++)
+	{	/* if it is longer than 8 bytes, we just use the 8 LSBs */
+		val <<= 8;
+		val |= (u_int64_t)blob.ptr[i];
+	}
+	return val;
+}
+
 /**
  * ASN.1 definition of an algorithmIdentifier
  */

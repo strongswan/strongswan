@@ -105,11 +105,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CERT_DECODE, CERT_GPG),
 				PLUGIN_DEPENDS(CERT_DECODE, CERT_GPG),
 
-		/* pluto specific certificate formats */
-		PLUGIN_REGISTER(CERT_DECODE, pem_certificate_load, FALSE),
-			PLUGIN_PROVIDE(CERT_DECODE, CERT_PLUTO_CERT),
-		PLUGIN_REGISTER(CERT_DECODE, pem_certificate_load, FALSE),
-			PLUGIN_PROVIDE(CERT_DECODE, CERT_PLUTO_CRL),
+		/* container PEM decoding */
+		PLUGIN_REGISTER(CONTAINER_DECODE, pem_container_load, FALSE),
+			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS12),
+				PLUGIN_DEPENDS(CONTAINER_DECODE, CONTAINER_PKCS12),
 	};
 	*features = f;
 	return countof(f);

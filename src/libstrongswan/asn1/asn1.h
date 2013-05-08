@@ -171,6 +171,15 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level0,
 							  const char* name);
 
 /**
+ * Converts an ASN.1 INTEGER object to an u_int64_t. If the INTEGER is longer
+ * than 8 bytes only the 8 LSBs are returned.
+ *
+ * @param blob		body of an ASN.1 coded integer object
+ * @return			converted integer
+ */
+u_int64_t asn1_parse_integer_uint64(chunk_t blob);
+
+/**
  * Print the value of an ASN.1 simple object
  *
  * @param object	ASN.1 object to be printed

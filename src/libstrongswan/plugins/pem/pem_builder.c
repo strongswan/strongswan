@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2001-2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
@@ -564,3 +565,10 @@ certificate_t *pem_certificate_load(certificate_type_t type, va_list args)
 	return pem_load(CRED_CERTIFICATE, type, args);
 }
 
+/**
+ * Container PEM loader.
+ */
+container_t *pem_container_load(container_type_t type, va_list args)
+{
+	return pem_load(CRED_CONTAINER, type, args);
+}

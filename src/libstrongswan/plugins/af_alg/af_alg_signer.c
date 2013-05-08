@@ -64,6 +64,7 @@ static struct {
 	{AUTH_HMAC_SHA2_384_192,	"hmac(sha384)",		24,		48,	},
 	{AUTH_HMAC_SHA2_384_384,	"hmac(sha384)",		48,		48,	},
 	{AUTH_HMAC_SHA2_512_256,	"hmac(sha512)",		32,		64,	},
+	{AUTH_HMAC_SHA2_512_512,	"hmac(sha512)",		64,		64,	},
 	{AUTH_AES_XCBC_96,			"xcbc(aes)",		12,		16,	},
 	{AUTH_CAMELLIA_XCBC_96,		"xcbc(camellia)",	12,		16,	},
 };

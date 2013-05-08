@@ -6,7 +6,7 @@ asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
 collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
-crypto/prfs/prf.c crypto/prfs/mac_prf.c \
+crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
@@ -15,7 +15,7 @@ credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c \
-credentials/containers/container.c \
+credentials/containers/container.c credentials/containers/pkcs12.c \
 credentials/ietf_attributes/ietf_attributes.c credentials/credential_manager.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
@@ -45,7 +45,7 @@ crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
 crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/rngs/rng.h crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \
-crypto/aead.h crypto/transform.h \
+crypto/aead.h crypto/transform.h crypto/pkcs5.h \
 credentials/credential_factory.h credentials/builder.h \
 credentials/cred_encoding.h credentials/keys/private_key.h \
 credentials/keys/public_key.h credentials/keys/shared_key.h \
@@ -55,6 +55,7 @@ credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h \
 credentials/certificates/pgp_certificate.h \
 credentials/containers/container.h credentials/containers/pkcs7.h \
+credentials/containers/pkcs12.h \
 credentials/ietf_attributes/ietf_attributes.h \
 credentials/credential_manager.h credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.h credentials/sets/cert_cache.h \
@@ -172,6 +173,13 @@ if USE_BLOWFISH
   SUBDIRS += plugins/blowfish
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/blowfish/libstrongswan-blowfish.la
+endif
+endif
+
+if USE_RC2
+  SUBDIRS += plugins/rc2
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/rc2/libstrongswan-rc2.la
 endif
 endif
 
@@ -298,6 +306,13 @@ if USE_PKCS8
   SUBDIRS += plugins/pkcs8
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/pkcs8/libstrongswan-pkcs8.la
+endif
+endif
+
+if USE_PKCS12
+  SUBDIRS += plugins/pkcs12
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs12/libstrongswan-pkcs12.la
 endif
 endif
 

@@ -22,6 +22,7 @@
 
 #include <utils/debug.h>
 #include <credentials/sets/mem_cred.h>
+#include <credentials/containers/pkcs12.h>
 #include <credentials/sets/callback_cred.h>
 
 typedef struct private_cmd_creds_t private_cmd_creds_t;
@@ -70,6 +71,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 								identification_t *me, identification_t *other,
 								id_match_t *match_me, id_match_t *match_other)
 {
+	shared_key_t *shared;
 	char *label, *pwd;
 
 	if (this->prompted)
@@ -84,6 +86,9 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		case SHARED_IKE:
 			label = "Preshared Key: ";
 			break;
+		case SHARED_PRIVATE_KEY_PASS:
+			label = "Password: ";
+			break;
 		default:
 			return NULL;
 	}
@@ -93,8 +98,18 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		return NULL;
 	}
 	this->prompted = TRUE;
-	*match_me = *match_other = ID_MATCH_PERFECT;
-	return shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	if (match_me)
+	{
+		*match_me = ID_MATCH_PERFECT;
+	}
+	if (match_other)
+	{
+		*match_other = ID_MATCH_PERFECT;
+	}
+	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	/* cache password in case it is required more than once */
+	this->creds->add_shared(this->creds, shared, NULL);
+	return shared->get_ref(shared);
 }
 
 /**
@@ -172,6 +187,40 @@ static void load_agent(private_cmd_creds_t *this)
 	this->creds->add_key(this->creds, privkey);
 }
 
+/**
+ * Load a PKCS#12 file from path
+ */
+static void load_pkcs12(private_cmd_creds_t *this, char *path)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	private_key_t *key;
+	container_t *container;
+	pkcs12_t *pkcs12;
+
+	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS12,
+								   BUILD_FROM_FILE, path, BUILD_END);
+	if (!container)
+	{
+		DBG1(DBG_CFG, "loading PKCS#12 file '%s' failed", path);
+		exit(1);
+	}
+	pkcs12 = (pkcs12_t*)container;
+	enumerator = pkcs12->create_cert_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		this->creds->add_cert(this->creds, TRUE, cert->get_ref(cert));
+	}
+	enumerator->destroy(enumerator);
+	enumerator = pkcs12->create_key_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &key))
+	{
+		this->creds->add_key(this->creds, key->get_ref(key));
+	}
+	enumerator->destroy(enumerator);
+	container->destroy(container);
+}
+
 METHOD(cmd_creds_t, handle, bool,
 	private_cmd_creds_t *this, cmd_option_type_t opt, char *arg)
 {
@@ -182,6 +231,9 @@ METHOD(cmd_creds_t, handle, bool,
 			break;
 		case CMD_OPT_RSA:
 			load_key(this, KEY_RSA, arg);
+			break;
+		case CMD_OPT_PKCS12:
+			load_pkcs12(this, arg);
 			break;
 		case CMD_OPT_IDENTITY:
 			this->identity = arg;

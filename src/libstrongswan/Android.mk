@@ -8,7 +8,7 @@ asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
 collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
-crypto/prfs/prf.c crypto/prfs/mac_prf.c \
+crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
@@ -17,7 +17,7 @@ credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c \
-credentials/containers/container.c \
+credentials/containers/container.c credentials/containers/pkcs12.c \
 credentials/ietf_attributes/ietf_attributes.c credentials/credential_manager.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \

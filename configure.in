@@ -112,6 +112,7 @@ ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via 
 ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
 ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
 ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
 ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
@@ -128,6 +129,7 @@ ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
 ARG_DISBL_SET([pkcs7],          [disable PKCS7 container support plugin.])
 ARG_DISBL_SET([pkcs8],          [disable PKCS8 private key decoding plugin.])
+ARG_DISBL_SET([pkcs12],         [disable PKCS12 container support plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
@@ -952,6 +954,7 @@ ADD_PLUGIN([pkcs11],               [s charon pki nm cmd])
 ADD_PLUGIN([aes],                  [s charon openac scepclient pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon openac scepclient pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon openac scepclient pki scripts nm cmd])
+ADD_PLUGIN([rc2],                  [s charon openac scepclient pki scripts nm cmd])
 ADD_PLUGIN([sha1],                 [s charon openac scepclient pki scripts medsrv attest nm cmd])
 ADD_PLUGIN([sha2],                 [s charon openac scepclient pki scripts medsrv attest nm cmd])
 ADD_PLUGIN([md4],                  [s charon openac manager scepclient pki nm cmd])
@@ -964,8 +967,9 @@ ADD_PLUGIN([revocation],           [s charon nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([pubkey],               [s charon cmd])
 ADD_PLUGIN([pkcs1],                [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
-ADD_PLUGIN([pkcs7],                [s scepclient pki])
+ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([pkcs8],                [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
 ADD_PLUGIN([dnskey],               [s charon])
 ADD_PLUGIN([sshkey],               [s charon nm cmd])
@@ -1081,6 +1085,7 @@ AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
 AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
+AM_CONDITIONAL(USE_RC2, test x$rc2 = xtrue)
 AM_CONDITIONAL(USE_MD4, test x$md4 = xtrue)
 AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
 AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
@@ -1097,6 +1102,7 @@ AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PKCS7, test x$pkcs7 = xtrue)
 AM_CONDITIONAL(USE_PKCS8, test x$pkcs8 = xtrue)
+AM_CONDITIONAL(USE_PKCS12, test x$pkcs12 = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
 AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
 AM_CONDITIONAL(USE_SSHKEY, test x$sshkey = xtrue)
@@ -1274,6 +1280,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/cmac/Makefile
 	src/libstrongswan/plugins/des/Makefile
 	src/libstrongswan/plugins/blowfish/Makefile
+	src/libstrongswan/plugins/rc2/Makefile
 	src/libstrongswan/plugins/md4/Makefile
 	src/libstrongswan/plugins/md5/Makefile
 	src/libstrongswan/plugins/sha1/Makefile
@@ -1292,6 +1299,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pkcs7/Makefile
 	src/libstrongswan/plugins/pkcs8/Makefile
+	src/libstrongswan/plugins/pkcs12/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/sshkey/Makefile

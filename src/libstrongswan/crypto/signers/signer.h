@@ -70,8 +70,10 @@ enum integrity_algorithm_t {
 	AUTH_HMAC_SHA2_256_256 = 1027,
 	/** SHA384 full length truncation variant, as used in TLS */
 	AUTH_HMAC_SHA2_384_384 = 1028,
+	/** SHA512 full length truncation variant */
+	AUTH_HMAC_SHA2_512_512 = 1029,
 	/** draft-kanno-ipsecme-camellia-xcbc, not yet assigned by IANA */
-	AUTH_CAMELLIA_XCBC_96 = 1029,
+	AUTH_CAMELLIA_XCBC_96 = 1030,
 };
 
 /**

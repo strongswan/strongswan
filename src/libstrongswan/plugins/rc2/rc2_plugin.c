@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,56 +13,53 @@
  * for more details.
  */
 
-#include "pkcs8_plugin.h"
+#include "rc2_plugin.h"
 
 #include <library.h>
+#include "rc2_crypter.h"
 
-#include "pkcs8_builder.h"
-
-typedef struct private_pkcs8_plugin_t private_pkcs8_plugin_t;
+typedef struct private_rc2_plugin_t private_rc2_plugin_t;
 
 /**
- * private data of pkcs8_plugin
+ * Private data of rc2_plugin
  */
-struct private_pkcs8_plugin_t {
+struct private_rc2_plugin_t {
 
 	/**
-	 * public functions
+	 * Public interface
 	 */
-	pkcs8_plugin_t public;
+	rc2_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_pkcs8_plugin_t *this)
+	private_rc2_plugin_t *this)
 {
-	return "pkcs8";
+	return "rc2";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_pkcs8_plugin_t *this, plugin_feature_t *features[])
+	private_rc2_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(PRIVKEY, pkcs8_private_key_load, FALSE),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+		PLUGIN_REGISTER(CRYPTER, rc2_crypter_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_RC2_CBC, 0),
 	};
 	*features = f;
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	private_pkcs8_plugin_t *this)
+	private_rc2_plugin_t *this)
 {
 	free(this);
 }
 
 /*
- * see header file
+ * Described in header
  */
-plugin_t *pkcs8_plugin_create()
+plugin_t *rc2_plugin_create()
 {
-	private_pkcs8_plugin_t *this;
+	private_rc2_plugin_t *this;
 
 	INIT(this,
 		.public = {

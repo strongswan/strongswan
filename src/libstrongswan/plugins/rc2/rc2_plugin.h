@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Martin Willi
- * Copyright (C) 2012 revosec AG
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,13 +13,30 @@
  * for more details.
  */
 
-#include "container.h"
+/**
+ * @defgroup rc2_p rc2
+ * @ingroup plugins
+ *
+ * @defgroup rc2_plugin rc2_plugin
+ * @{ @ingroup rc2_p
+ */
 
-ENUM(container_type_names, CONTAINER_PKCS7, CONTAINER_PKCS12,
-	"PKCS7",
-	"PKCS7_DATA",
-	"PKCS7_SIGNED_DATA",
-	"PKCS7_ENVELOPED_DATA",
-	"PKCS7_ENCRYPTED_DATA",
-	"PKCS12",
-);
+#ifndef RC2_PLUGIN_H_
+#define RC2_PLUGIN_H_
+
+#include <plugins/plugin.h>
+
+typedef struct rc2_plugin_t rc2_plugin_t;
+
+/**
+ * Plugin implementing RC2 (RFC 2268).
+ */
+struct rc2_plugin_t {
+
+	/**
+	 * Implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** RC2_PLUGIN_H_ @}*/
