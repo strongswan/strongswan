@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -36,11 +38,14 @@ typedef struct capabilities_t capabilities_t;
 struct capabilities_t {
 
 	/**
-	 * Register a capability to keep while calling drop().
+	 * Register a capability to keep while calling drop(). Verifies that the
+	 * capability is currently held.
 	 *
 	 * @param cap		capability to keep
+	 * @return			FALSE if the capability is currently not held
 	 */
-	void (*keep)(capabilities_t *this, u_int cap);
+	bool (*keep)(capabilities_t *this,
+				 u_int cap) __attribute__((warn_unused_result));
 
 	/**
 	 * Get the user ID set through set_uid/resolve_uid.

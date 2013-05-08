@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -76,9 +76,57 @@ struct private_capabilities_t {
 #endif
 };
 
-METHOD(capabilities_t, keep, void,
+static bool has_capability(u_int cap)
+{
+#ifndef CAPABILITIES
+	/* if we can't check the actual capabilities assume only root has it */
+	return getuid() == 0;
+#endif /* !CAPABILITIES */
+#ifdef CAPABILITIES_LIBCAP
+	cap_flag_value_t val;
+	cap_t caps;
+	bool ok;
+
+	caps = cap_get_proc();
+	if (!caps)
+	{
+		return FALSE;
+	}
+	ok = cap_get_flag(caps, cap, CAP_PERMITTED, &val) == 0 && val == CAP_SET;
+	cap_free(caps);
+	return ok;
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_header_struct header = {
+#if defined(_LINUX_CAPABILITY_VERSION_3)
+		.version = _LINUX_CAPABILITY_VERSION_3,
+#elif defined(_LINUX_CAPABILITY_VERSION_2)
+		.version = _LINUX_CAPABILITY_VERSION_2,
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
+		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
+		.version = _LINUX_CAPABILITY_VERSION,
+#endif
+	};
+	struct __user_cap_data_struct caps[2];
+	int i = 0;
+
+	if (cap >= 32)
+	{
+		i++;
+		cap -= 32;
+	}
+	return capget(&header, caps) == 0 && caps[i].permitted & (1 << cap);
+#endif /* CAPABILITIES_NATIVE */
+}
+
+METHOD(capabilities_t, keep, bool,
 	private_capabilities_t *this, u_int cap)
 {
+	if (!has_capability(cap))
+	{
+		return FALSE;
+	}
 #ifdef CAPABILITIES_LIBCAP
 	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
@@ -96,6 +144,7 @@ METHOD(capabilities_t, keep, void,
 	this->caps[i].permitted |= 1 << cap;
 	this->caps[i].inheritable |= 1 << cap;
 #endif /* CAPABILITIES_NATIVE */
+	return TRUE;
 }
 
 METHOD(capabilities_t, get_uid, uid_t,

@@ -142,7 +142,12 @@ static bool nm_backend_init()
 	}
 
 	/* bypass file permissions to read from users ssh-agent */
-	charon->caps->keep(charon->caps, CAP_DAC_OVERRIDE);
+	if (!charon->caps->keep(charon->caps, CAP_DAC_OVERRIDE))
+	{
+		DBG1(DBG_CFG, "NM backend requires CAP_DAC_OVERRIDE capability");
+		nm_backend_deinit();
+		return FALSE;
+	}
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)run, this,

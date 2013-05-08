@@ -591,8 +591,6 @@ private_daemon_t *daemon_create(const char *name)
 	this->public.shunts = shunt_manager_create();
 	this->kernel_handler = kernel_handler_create();
 
-	this->public.caps->keep(this->public.caps, CAP_NET_ADMIN);
-
 	return this;
 }
 
@@ -627,6 +625,12 @@ bool libcharon_init(const char *name)
 	}
 
 	this = daemon_create(name);
+
+	if (!this->public.caps->keep(this->public.caps, CAP_NET_ADMIN))
+	{
+		dbg(DBG_DMN, 1, "libcharon requires CAP_NET_ADMIN capability");
+		return FALSE;
+	}
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
