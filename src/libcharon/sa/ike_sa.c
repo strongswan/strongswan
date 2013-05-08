@@ -2169,7 +2169,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 						 ike_version_t version)
 {
 	private_ike_sa_t *this;
-	static u_int32_t unique_id = 0;
+	static refcount_t unique_id = 0;
 
 	if (version == IKE_ANY)
 	{	/* prefer IKEv2 if protocol not specified */
@@ -2281,7 +2281,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.other_auth = auth_cfg_create(),
 		.my_auths = linked_list_create(),
 		.other_auths = linked_list_create(),
-		.unique_id = ++unique_id,
+		.unique_id = ref_get(&unique_id),
 		.peer_addresses = linked_list_create(),
 		.my_vips = linked_list_create(),
 		.other_vips = linked_list_create(),
