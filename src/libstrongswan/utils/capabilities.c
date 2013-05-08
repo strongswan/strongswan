@@ -225,7 +225,7 @@ METHOD(capabilities_t, drop, bool,
 	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
 #endif
 
-	if (!init_supplementary_groups(this))
+	if (this->uid && !init_supplementary_groups(this))
 	{
 		DBG1(DBG_LIB, "initializing supplementary groups for %u failed",
 			 this->uid);
