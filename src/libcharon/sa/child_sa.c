@@ -1142,6 +1142,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	if (!this->reqid)
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA */
+		/* BUG: the static variable reqid gets accessed non-atomic */
 		this->reqid = rekey ? rekey : ++reqid;
 	}
 
