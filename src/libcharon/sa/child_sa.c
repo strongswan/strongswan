@@ -1083,7 +1083,7 @@ METHOD(child_sa_t, destroy, void,
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
-	static u_int32_t reqid = 0;
+	static refcount_t reqid = 0;
 	private_child_sa_t *this;
 
 	INIT(this,
@@ -1142,8 +1142,14 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	if (!this->reqid)
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA */
-		/* BUG: the static variable reqid gets accessed non-atomic */
-		this->reqid = rekey ? rekey : ++reqid;
+		if (rekey)
+		{
+			this->reqid = rekey;
+		}
+		else
+		{
+			this->reqid = ref_get(&reqid);
+		}
 	}
 
 	if (this->mark_in.value == MARK_REQID)
