@@ -1,0 +1,135 @@
+#/bin/sh
+
+# This is a very hackerish proof of concept of
+# a helper tool to manage software issues
+# directly within git commits.
+
+########
+# get last issue if none given
+########
+issueid=
+get_issueid()
+{
+	if [ -z $1 ]
+	then
+		issueid=`git log -n1 --grep "issue: " --format=format:%h`
+	else
+		# TODO: check if commit exists
+		issueid="$1"
+	fi
+}
+
+########
+# create a new issue, committing working tree if touched
+########
+new ()
+{
+	git commit --allow-empty -em "issue:
+
+issue-status: open
+# open, fixed, wontfix, invalid
+issue-type: bug
+# bug, feature, security
+#issue-keyword:
+#issue-affected:
+#issue-redmine:
+# refs #x, fixes #y
+" $@
+	exit $?
+}
+
+########
+# update a given issue, committing working tree if touched
+########
+update ()
+{
+	get_issueid $1
+	git commit --allow-empty -em "#title
+
+issue-id: $issueid
+issue-status: fixed
+# open, fixed, wontfix, invalid
+#issue-redmine:
+# refs #x, fixes #y
+" $@
+	exit $?
+}
+
+########
+# show issue opening and associated commits
+########
+show ()
+{
+	get_issueid "$1"
+	git show -s $issueid
+	echo ""
+	git log --grep "issue-id: $issueid" --reverse
+	exit $?
+}
+
+########
+# print a one line status of a single issue
+########
+status ()
+{
+	stat=`show $1 | grep issue-status: | tail -n1 | awk '{print $2}'`
+	subj=`git show $1 -s --format=format:%s`
+	echo "$1 ($stat): ${subj:7}"
+}
+
+########
+# list all issues opened in a git range
+########
+list ()
+{
+	for issue in `git log --format=format:%h --grep "issue: " "$@"`
+	do
+		status $issue
+	done
+	exit 0
+}
+
+########
+# show usage summary
+########
+usage ()
+{
+	echo "usage: $0 <command>
+  new       create a new issue, using working tree as commit
+  update    update an issue, using working tree as commit
+            if no issue commit id is given, last issue is used
+  list      list issues with status, argument is a git commit range
+  show      show commits related to an issue
+            if no issue commit id is given, last issue is used
+  help      show this help"
+	exit 0
+}
+
+if [ -z $1 ]
+then
+	usage
+fi
+
+command=$1
+shift
+
+case "$command" in
+	new)
+		new "$@"
+		;;
+	update)
+		update "$@"
+		;;
+	list)
+		list "$@"
+		;;
+	show)
+		show "$@"
+		;;
+	help)
+		usage
+		;;
+esac
+
+echo "invalid command: $command"
+exit 1
