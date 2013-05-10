@@ -84,6 +84,7 @@ revstatus=
 get_revstatus ()
 {
 	local stat
+	local aff
 	local issue=$1
 	local rev=$2
 	# check if opened at given revision
@@ -107,9 +108,34 @@ get_revstatus ()
 			revstatus=${stat:14}
 		fi
 	else
-		# issue is not known in this revision, assume open
-		# TODO: check for issue-affected: use invalid if $rev older
-		revstatus="open"
+		# issue is not known in this revision, assume open, unless affected
+
+		for update in $(git rev-list -n1 --all --all-match \
+						--grep "^issue-id: $issue" --grep "^issue-affected: ")
+		do
+			issue="$update"
+		done
+
+		aff=$(git show -s --format=format:%b $issue | grep "^issue-affected: ")
+
+		if [ -n "$aff" ]
+		then
+			aff=${aff:16}
+			# resolve commit id if affected by tag
+			aff=$(git show -s $aff^{commit} --format=format:%h)
+			revstatus=$(git rev-list "$rev" | grep "^$aff")
+			if [ -n "$revstatus" ]
+			then
+				# in affected range, must be open
+				revstatus="open"
+			else
+				# not in affected range,  unaffected
+				revstatus="unaffected"
+			fi
+		else
+			# no affected info found, assume open
+			revstatus="open"
+		fi
 	fi
 }
 
