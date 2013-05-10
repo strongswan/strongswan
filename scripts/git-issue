@@ -12,14 +12,14 @@ get_issueid()
 {
 	if [ -n "$1" ]
 	then
-		issueid=`git show -s --grep "^issue: " --format=format:%h $1`
+		issueid=$(git show -s --grep "^issue: " --format=format:%h $1)
 		if [ -z "$issueid" ]
 		then
 			echo "$1 is not an issue commit"
 			exit 1
 		fi
 	else
-		issueid=`git rev-list --all  --abbrev-commit -n1 --grep "^issue: "`
+		issueid=$(git rev-list --all --abbrev-commit -n1 --grep "^issue: ")
 		if [ -z "$issueid" ]
 		then
 			echo "no issues found"
@@ -83,21 +83,21 @@ show ()
 revstatus=
 get_revstatus ()
 {
-	local stat=
+	local stat
 	local issue=$1
 	local rev=$2
 	# check if opened at given revision
-	local revs=`git rev-list "$rev" | grep "^$issue"`
+	local revs=$(git rev-list "$rev" | grep "^$issue")
 	if [ -n "$revs" ]
 	then
 		# use status of last issue update, if any
-		for update in `git rev-list -n1 --all-match  \
-						--grep "^issue-id: $issue" --grep "^issue-status: " $rev`
+		for update in $(git rev-list -n1 --all-match $rev \
+						--grep "^issue-id: $issue" --grep "^issue-status: ")
 		do
 			issue="$update"
 		done
 
-		stat=`git show -s --format=format:%b $issue | grep "^issue-status: "`
+		stat=$(git show -s --format=format:%b $issue | grep "^issue-status: ")
 
 		# no status found? assume open
 		if [ -z "$stat" ]
@@ -119,16 +119,17 @@ get_revstatus ()
 issuetype=
 get_issuetype ()
 {
+	local type
 	local issue=$1
 
 	# use status of last type update, if any
-	for update in `git rev-list -n1 --all --all-match \
-					--grep "^issue-id: $issue " --grep "^issue-type: "`
+	for update in $(git rev-list -n1 --all --all-match \
+					--grep "^issue-id: $issue " --grep "^issue-type: ")
 	do
 		issue="$update"
 	done
 
-	type=`git show -s --format=format:%b $issue | grep "^issue-type: "`
+	type=$(git show -s --format=format:%b $issue | grep "^issue-type: ")
 
 	if [ -n "$type" ]
 	then
@@ -143,14 +144,14 @@ get_issuetype ()
 ########
 status ()
 {
-	local subj=
+	local subj
 	local issue=$1
 	local revision=$2
 	if [ -z $revision ]
 	then
 		revision="HEAD"
 	fi
-	subj=`git show $issue -s --format=format:%s`
+	subj=$(git show $issue -s --format=format:%s)
 	get_revstatus $issue $revision
 	get_issuetype $issue
 	echo "$issue ($issuetype, $revstatus): ${subj:7}"
@@ -171,7 +172,7 @@ info ()
 ########
 list ()
 {
-	for issue in `git rev-list --all --abbrev-commit --grep "^issue: "`
+	for issue in $(git rev-list --all --abbrev-commit --grep "^issue: ")
 	do
 		status $issue "$@"
 	done
