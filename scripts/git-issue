@@ -83,25 +83,28 @@ show ()
 revstatus=
 get_revstatus ()
 {
-	issue=$1
-	rev=$2
+	local stat=
+	local issue=$1
+	local rev=$2
 	# check if opened at given revision
-	revs=`git rev-list "$rev" | grep "^$issue"`
+	local revs=`git rev-list "$rev" | grep "^$issue"`
 	if [ -n "$revs" ]
 	then
-		revstatus=`git show -s --format=format:%b "$issue" | \
-			grep "^issue-status: " | awk '{print \$2}'`
-		for commit in `git rev-list --reverse --abbrev-commit --all-match  \
+		# use status of last issue update, if any
+		for update in `git rev-list -n1 --all-match  \
 						--grep "^issue-id: $issue" --grep "^issue-status: " $rev`
 		do
-			revstatus=`git show -s --format=format:%b $commit | \
-				grep "^issue-status: " | awk '{print \$2}'`
+			issue="$update"
 		done
 
-		# no status given? assume open
-		if [ -z "$revstatus" ]
+		stat=`git show -s --format=format:%b $issue | grep "^issue-status: "`
+
+		# no status found? assume open
+		if [ -z "$stat" ]
 		then
 			revstatus="open"
+		else
+			revstatus=${stat:14}
 		fi
 	else
 		# issue is not known in this revision, assume open
@@ -140,8 +143,9 @@ get_issuetype ()
 ########
 status ()
 {
-	issue=$1
-	revision=$2
+	local subj=
+	local issue=$1
+	local revision=$2
 	if [ -z $revision ]
 	then
 		revision="HEAD"
