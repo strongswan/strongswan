@@ -1,4 +1,4 @@
-#/bin/sh
+#!/bin/bash
 
 # This is a very hackerish proof of concept of
 # a helper tool to manage software issues
