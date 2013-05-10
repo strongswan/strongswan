@@ -12,7 +12,7 @@ get_issueid()
 {
 	if [ -n "$1" ]
 	then
-		issueid=`git rev-list --all --abbrev-commit -n1 --grep "^issue: " "$1"`
+		issueid=`git show -s --grep "^issue: " --format=format:%h $1`
 		if [ -z "$issueid" ]
 		then
 			echo "$1 is not an issue commit"
