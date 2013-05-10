@@ -116,19 +116,22 @@ get_revstatus ()
 issuetype=
 get_issuetype ()
 {
-	issue=$1
-	issuetype=`git show -s --format=format:%b "$issue" | \
-				grep "^issue-type: " | awk '{print \$2}'`
-	for commit in `git rev-list --all --all-match  \
-					--grep "^issue-id: $issue " --grep "^issue-status: " $rev`
+	local issue=$1
+
+	# use status of last type update, if any
+	for update in `git rev-list -n1 --all --all-match \
+					--grep "^issue-id: $issue " --grep "^issue-type: "`
 	do
-		issuetype=`git show -s --format=format:%b $commit | \
-					grep "^issue-status: " | awk '{print \$2}'`
+		issue="$update"
 	done
 
-	if [ -z "$issuetype" ]
+	type=`git show -s --format=format:%b $issue | grep "^issue-type: "`
+
+	if [ -n "$type" ]
 	then
-		revstatus="unknown"
+		issuetype=${type:12}
+	else
+		issuetype="unknown"
 	fi
 }
 
