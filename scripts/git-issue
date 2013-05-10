@@ -150,6 +150,16 @@ status ()
 }
 
 ########
+# show info about a single issue
+########
+info ()
+{
+	get_issueid $1
+	status $issueid $2
+	exit 0
+}
+
+########
 # list all issues for a given revision
 ########
 list ()
@@ -172,6 +182,9 @@ usage ()
             if no issue commit id is given, last issue is used
   list      list all known issues with status
             argument is revision to check issue status against, defaults to HEAD
+  info      show status of an issue given as first argument
+            if no issue commit id is given, last issue is used
+            second argument is revision to check issue status against
   show      show commits related to an issue
             if no issue commit id is given, last issue is used
   help      show this help"
@@ -195,6 +208,9 @@ case "$command" in
 		;;
 	list)
 		list "$@"
+		;;
+	info)
+		info "$@"
 		;;
 	show)
 		show "$@"
