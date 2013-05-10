@@ -60,7 +60,9 @@ opening commit is assigned.
 
 ## git-issue helper tool ##
 
-The git-issue helper script can be installed to the git tools, allowing
-a tight integration of issue management to the git workflow.
+The git-issue helper script can be installed locally, allowing a tight
+integration of issue management to the git workflow. The script can be installed
+in any location in PATH, but must keep the _git-_ prefix that allows git to find
+it.
 
 After installation, invoke _git issue_ for a usage summary.
