@@ -5,17 +5,26 @@
 # directly within git commits.
 
 ########
-# get last issue if none given
+# check if given issue commit id is valid, return last issue if none given
 ########
 issueid=
 get_issueid()
 {
-	if [ -z $1 ]
+	if [ -n "$1" ]
 	then
-		issueid=`git log -n1 --grep "issue: " --format=format:%h`
+		issueid=`git rev-list --all --abbrev-commit -n1 --grep "^issue: " "$1"`
+		if [ -z "$issueid" ]
+		then
+			echo "$1 is not an issue commit"
+			exit 1
+		fi
 	else
-		# TODO: check if commit exists
-		issueid="$1"
+		issueid=`git rev-list --all  --abbrev-commit -n1 --grep "^issue: "`
+		if [ -z "$issueid" ]
+		then
+			echo "no issues found"
+			exit 1
+		fi
 	fi
 }
 
@@ -44,6 +53,7 @@ issue-type: bug
 update ()
 {
 	get_issueid $1
+	shift
 	git commit --allow-empty -em "#title
 
 issue-id: $issueid
@@ -51,7 +61,7 @@ issue-status: fixed
 # open, fixed, wontfix, invalid
 #issue-redmine:
 # refs #x, fixes #y
-" $@
+" "$@"
 	exit $?
 }
 
@@ -63,8 +73,63 @@ show ()
 	get_issueid "$1"
 	git show -s $issueid
 	echo ""
-	git log --grep "issue-id: $issueid" --reverse
+	git log --all --grep "^issue-id: $issueid" --reverse
 	exit $?
+}
+
+########
+# get the status of an issue in a given revision
+########
+revstatus=
+get_revstatus ()
+{
+	issue=$1
+	rev=$2
+	# check if opened at given revision
+	revs=`git rev-list "$rev" | grep "^$issue"`
+	if [ -n "$revs" ]
+	then
+		revstatus=`git show -s --format=format:%b "$issue" | \
+			grep "^issue-status: " | awk '{print \$2}'`
+		for commit in `git rev-list --reverse --abbrev-commit --all-match  \
+						--grep "^issue-id: $issue" --grep "^issue-status: " $rev`
+		do
+			revstatus=`git show -s --format=format:%b $commit | \
+				grep "^issue-status: " | awk '{print \$2}'`
+		done
+
+		# no status given? assume open
+		if [ -z "$revstatus" ]
+		then
+			revstatus="open"
+		fi
+	else
+		# issue is not known in this revision, assume open
+		# TODO: check for issue-affected: use invalid if $rev older
+		revstatus="open"
+	fi
+}
+
+########
+# get the type of the issue
+########
+issuetype=
+get_issuetype ()
+{
+	issue=$1
+	issuetype=`git show -s --format=format:%b "$issue" | \
+				grep "^issue-type: " | awk '{print \$2}'`
+	for commit in `git rev-list --all --all-match  \
+					--grep "^issue-id: $issue " --grep "^issue-status: " $rev`
+	do
+		issuetype=`git show -s --format=format:%b $commit | \
+					grep "^issue-status: " | awk '{print \$2}'`
+	done
+
+	if [ -z "$issuetype" ]
+	then
+		revstatus="unknown"
+	fi
 }
 
 ########
@@ -72,19 +137,26 @@ show ()
 ########
 status ()
 {
-	stat=`show $1 | grep issue-status: | tail -n1 | awk '{print $2}'`
-	subj=`git show $1 -s --format=format:%s`
-	echo "$1 ($stat): ${subj:7}"
+	issue=$1
+	revision=$2
+	if [ -z $revision ]
+	then
+		revision="HEAD"
+	fi
+	subj=`git show $issue -s --format=format:%s`
+	get_revstatus $issue $revision
+	get_issuetype $issue
+	echo "$issue ($issuetype, $revstatus): ${subj:7}"
 }
 
 ########
-# list all issues opened in a git range
+# list all issues for a given revision
 ########
 list ()
 {
-	for issue in `git log --format=format:%h --grep "issue: " "$@"`
+	for issue in `git rev-list --all --abbrev-commit --grep "^issue: "`
 	do
-		status $issue
+		status $issue "$@"
 	done
 	exit 0
 }
@@ -98,7 +170,8 @@ usage ()
   new       create a new issue, using working tree as commit
   update    update an issue, using working tree as commit
             if no issue commit id is given, last issue is used
-  list      list issues with status, argument is a git commit range
+  list      list all known issues with status
+            argument is revision to check issue status against, defaults to HEAD
   show      show commits related to an issue
             if no issue commit id is given, last issue is used
   help      show this help"
