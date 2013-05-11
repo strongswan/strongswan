@@ -85,9 +85,31 @@ get_revstatus ()
 {
 	local stat
 	local aff
+	local fixed
 	local issue=$1
 	local rev=$2
+
+	# check for issue-fixed: keyword first
+	for update in $(git rev-list -n1 --all-match $rev \
+					--grep "^issue-id: $issue" --grep "^issue-fixed: ")
+	do
+		issue="$update"
+	done
+
+	fixed=$(git show -s --format=format:%b $issue | grep "^issue-fixed: ")
+	for fix in ${fixed:13}
+	do
+		# it has been fixed, check if that fix is in target revision
+		fix=$(git rev-list "$rev" | grep "^$fix")
+		if [ -n "$fix" ]
+		then
+			revstatus="fixed"
+			return
+		fi
+	done
+
 	# check if opened at given revision
+	issue=$1
 	local revs=$(git rev-list "$rev" | grep "^$issue")
 	if [ -n "$revs" ]
 	then
