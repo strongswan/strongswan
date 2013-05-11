@@ -42,6 +42,10 @@ Updates the type of the issue. _type_ is one of:
 * _major_: a more critical bugfix affecting more setups
 * _security_: a security related bugfix, a vulnerability
 
+### issue-cve: _CVE number_ ###
+If a CVE number has been assigned to the issue, it can be references using
+this keyword.
+
 ### issue-keyword: _keyword, keyword_ ###
 Add a set of keywords to the issue. May contain type of bug, but also affected
 components (charon, libstrongswan, openssl, etc).
@@ -53,6 +57,16 @@ Redmine issue referencing and control: refs #7, fixes #8 etc.
 Since when this issue exists, commit which introduced this issue. If this
 keyword is missing, all version before the "fixing" commit are considered
 affected.
+
+### issue-fixed: _commit_ ###
+Since when this issue has been fixed. Usually fixing is done using an
+_issue-status:_ update. However, if an issue has been fixed without a status
+update for the issue, a separate commit can fix an issue for a different
+version.
+
+issue-fixed may refer to multiple (space separated) commits. Each commit is
+considered a valid fix, and only one must be contained to consider a version
+as fixed.
 
 ### issue-assigned: _email_ ###
 Developer issue has been assigned. If not given, the author of the issue
