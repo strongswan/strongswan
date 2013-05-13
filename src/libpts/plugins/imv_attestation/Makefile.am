@@ -24,8 +24,7 @@ imv_attestation_la_LDFLAGS = -module -avoid-version
 ipsec_PROGRAMS = attest
 attest_SOURCES = attest.c \
 	attest_usage.h attest_usage.c \
-	attest_db.h attest_db.c \
-	tables.sql data.sql
+	attest_db.h attest_db.c
 attest_LDADD = \
 	$(top_builddir)/src/libimcv/libimcv.la \
 	$(top_builddir)/src/libpts/libpts.la \

@@ -52,9 +52,11 @@ struct ita_attr_get_settings_t {
 };
 
 /**
- * Creates an ita_attr_get_settings_t object with an empty settings list
+ * Creates an ita_attr_get_settings_t object with an optional first entry
+ *
+ * @param name				name of the requested setting or NULL
  */
-pa_tnc_attr_t* ita_attr_get_settings_create(void);
+pa_tnc_attr_t* ita_attr_get_settings_create(char *name);
 
 /**
  * Creates an ita_attr_get_settings_t object from received data

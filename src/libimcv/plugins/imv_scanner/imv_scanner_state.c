@@ -74,6 +74,11 @@ struct private_imv_scanner_state_t {
 	int session_id;
 
 	/**
+	 * List of workitems
+	 */
+	linked_list_t *workitems;
+
+	/**
 	 * IMV action recommendation
 	 */
 	TNC_IMV_Action_Recommendation rec;
@@ -187,6 +192,16 @@ METHOD(imv_state_t, set_ar_id, void,
 	this->ar_id_value = chunk_clone(id_value);
 }
 
+METHOD(imv_state_t, get_ar_id, chunk_t,
+	private_imv_scanner_state_t *this, u_int32_t *id_type)
+{
+	if (id_type)
+	{
+		*id_type = this->ar_id_type;
+	}
+	return this->ar_id_value;
+}
+
 METHOD(imv_state_t, set_session_id, void,
 	private_imv_scanner_state_t *this, int session_id)
 {
@@ -199,14 +214,34 @@ METHOD(imv_state_t, get_session_id, int,
 	return this->session_id;
 }
 
-METHOD(imv_state_t, get_ar_id, chunk_t,
-	private_imv_scanner_state_t *this, u_int32_t *id_type)
+METHOD(imv_state_t, add_workitem, void,
+	private_imv_scanner_state_t *this, imv_workitem_t *workitem)
 {
-	if (id_type)
-	{
-		*id_type = this->ar_id_type;
-	}
-	return this->ar_id_value;
+	this->workitems->insert_last(this->workitems, workitem);
+}
+
+METHOD(imv_state_t, get_workitem_count, int,
+	private_imv_scanner_state_t *this)
+{
+	return this->workitems->get_count(this->workitems);
+}
+
+METHOD(imv_state_t, create_workitem_enumerator, enumerator_t*,
+	private_imv_scanner_state_t *this)
+{
+	return this->workitems->create_enumerator(this->workitems);
+}
+
+METHOD(imv_state_t, finalize_workitem, void,
+	private_imv_scanner_state_t *this, enumerator_t *enumerator,
+	imv_workitem_t *workitem, char *result,	TNC_IMV_Evaluation_Result eval)
+{
+	TNC_IMV_Action_Recommendation rec;
+
+	this->workitems->remove_at(this->workitems, enumerator);
+	rec = workitem->set_result(workitem, result, eval);
+	/* TODO update workitem in IMV database */
+	workitem->destroy(workitem);
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -284,6 +319,8 @@ METHOD(imv_state_t, destroy, void,
 {
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
+	this->workitems->destroy_offset(this->workitems,
+									offsetof(imv_workitem_t, destroy));
 	this->violating_ports->destroy_function(this->violating_ports, free);
 	free(this->ar_id_value.ptr);
 	free(this);
@@ -315,6 +352,10 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.get_ar_id = _get_ar_id,
 				.set_session_id = _set_session_id,
 				.get_session_id = _get_session_id,
+				.add_workitem = _add_workitem,
+				.get_workitem_count = _get_workitem_count,
+				.create_workitem_enumerator = _create_workitem_enumerator,
+				.finalize_workitem = _finalize_workitem,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -328,6 +369,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.workitems = linked_list_create(),
 		.violating_ports = linked_list_create(),
 	);
 

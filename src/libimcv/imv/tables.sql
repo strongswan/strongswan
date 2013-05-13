@@ -1,4 +1,4 @@
-/* PTS SQLite database */
+/* IMV PTS SQLite database */
 
 DROP TABLE IF EXISTS directories;
 CREATE TABLE directories (
@@ -64,6 +64,22 @@ CREATE TABLE sessions (
   identity INTEGER DEFAULT 0 REFERENCES identities(id),
   device INTEGER DEFAULT 0 REFERENCES devices(id),
   product INTEGER DEFAULT 0 REFERENCES products(id)
+);
+
+DROP TABLE IF EXISTS workitems;
+CREATE TABLE workitems (
+    id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    session integer NOT NULL REFERENCES sessions(id),
+    type integer DEFAULT 0,
+    argument text NOT NULL,
+    rec_fail integer DEFAULT 1,
+    rec_noresult integer DEFAULT 1,
+    rec_final integer DEFAULT 3,
+    result text
+);
+DROP INDEX IF EXISTS workitems_session;
+CREATE INDEX workitems_sessions ON workitems (
+  session
 );
 
 DROP TABLE IF EXISTS components;

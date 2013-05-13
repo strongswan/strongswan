@@ -16,10 +16,12 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <time.h>
 
 #include "imv_database.h"
+#include "imv_workitem.h"
 
 #include <utils/debug.h>
 
@@ -218,6 +220,74 @@ METHOD(imv_database_t, policy_script, bool,
 	return TRUE;
 }
 
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** session ID */
+	int session_id;
+	/** database enumerator */
+	enumerator_t *e;
+} workitem_enumerator_t;
+
+/**
+ * Implementation of enumerator.enumerate
+ */
+static bool workitem_enumerator_enumerate(workitem_enumerator_t *this, ...)
+{
+	imv_workitem_t **workitem;
+	imv_workitem_type_t type;
+	int rec_fail, rec_noresult;
+	char *argument;
+	va_list args;
+
+	va_start(args, this);
+	workitem = va_arg(args, imv_workitem_t**);
+	va_end(args);
+
+	if (this->e->enumerate(this->e, &type, &argument, &rec_fail, &rec_noresult))
+	{
+		*workitem = imv_workitem_create(this->session_id, type, argument,
+										rec_fail, rec_noresult);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of enumerator.destroy
+ */
+static void workitem_enumerator_destroy(workitem_enumerator_t *this)
+{
+	this->e->destroy(this->e);
+	free(this);
+}
+
+METHOD(imv_database_t, create_workitem_enumerator, enumerator_t*,
+	private_imv_database_t *this, int session_id)
+{
+	workitem_enumerator_t *enumerator;
+	enumerator_t *e;
+
+	e = this->db->query(this->db,
+				"SELECT type, argument, rec_fail, rec_noresult "
+				"FROM workitems WHERE session = ?",
+				DB_INT, session_id, DB_INT, DB_TEXT, DB_INT, DB_INT);
+	if (!e)
+	{
+		return NULL;
+	}
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)workitem_enumerator_enumerate,
+			.destroy = (void*)workitem_enumerator_destroy,
+		},
+		.e = e,
+	);
+
+	return (enumerator_t*)enumerator;
+}
+
 METHOD(imv_database_t, get_database, database_t*,
 	private_imv_database_t *this)
 {
@@ -244,6 +314,7 @@ imv_database_t *imv_database_create(char *uri)
 			.add_product = _add_product,
 			.add_device = _add_device,
 			.policy_script = _policy_script,
+			.create_workitem_enumerator = _create_workitem_enumerator,
 			.get_database = _get_database,
 			.destroy = _destroy,
 		},

@@ -14,6 +14,7 @@
  */
 
 #include "imv_os_state.h"
+
 #include "imv/imv_lang_string.h"
 #include "imv/imv_reason_string.h"
 #include "imv/imv_remediation_string.h"
@@ -75,6 +76,11 @@ struct private_imv_os_state_t {
 	 * Unique session ID
 	 */
 	int session_id;
+
+	/**
+	 * List of workitems
+	 */
+	linked_list_t *workitems;
 
 	/**
 	 * IMV action recommendation
@@ -281,16 +287,16 @@ static imv_lang_string_t instr_default_pwd_enabled_descr[] = {
 };
 
 /**
- * Instruction strings for  "Install Non-Market Apps"
+ * Instruction strings for  "Unknown Source"
  */
-static imv_lang_string_t instr_non_market_apps_title[] = {
+static imv_lang_string_t instr_unknown_source_title[] = {
 	{ "en", "Unknown Software Origin" },
 	{ "de", "Unbekannte Softwareherkunft" },
 	{ "pl", "Nieznane pochodzenie softwaru" },
 	{ NULL, NULL }
 };
 
-static imv_lang_string_t instr_non_market_apps_descr[] = {
+static imv_lang_string_t instr_unknown_source_descr[] = {
 	{ "en", "Do not allow the installation of apps from unknown sources" },
 	{ "de", "Erlauben Sie nicht die Installation von Apps aus unbekannten Quellen" },
 	{ "pl", "Proszę nie dopuszczać do instalacji Apps z nieznanych źródeł" },
@@ -361,6 +367,112 @@ METHOD(imv_state_t, get_session_id, int,
 	private_imv_os_state_t *this)
 {
 	return this->session_id;
+}
+
+METHOD(imv_state_t, add_workitem, void,
+	private_imv_os_state_t *this, imv_workitem_t *workitem)
+{
+	this->workitems->insert_last(this->workitems, workitem);
+}
+
+METHOD(imv_state_t, get_workitem_count, int,
+	private_imv_os_state_t *this)
+{
+	return this->workitems->get_count(this->workitems);
+}
+
+METHOD(imv_state_t, create_workitem_enumerator, enumerator_t*,
+	private_imv_os_state_t *this)
+{
+	return this->workitems->create_enumerator(this->workitems);
+}
+
+METHOD(imv_state_t, finalize_workitem, void,
+	private_imv_os_state_t *this, enumerator_t *enumerator,
+	imv_workitem_t *workitem, char *result,	TNC_IMV_Evaluation_Result eval)
+{
+	TNC_IMV_Action_Recommendation rec;
+
+	this->workitems->remove_at(this->workitems, enumerator);
+	rec = workitem->set_result(workitem, result, eval);
+
+	/* Update overall evaluation result */
+	switch (this->eval)
+	{
+		case TNC_IMV_EVALUATION_RESULT_COMPLIANT:
+			switch (eval)
+			{
+				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
+				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
+				case TNC_IMV_EVALUATION_RESULT_ERROR:
+					this->eval = eval;
+					break;
+				default:
+					break;
+			}
+			break;
+		case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
+			switch (eval)
+			{
+				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
+				case TNC_IMV_EVALUATION_RESULT_ERROR:
+					this->eval = eval;
+					break;
+				default:
+					break;
+			}
+			break;
+		case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
+			switch (eval)
+			{
+				case TNC_IMV_EVALUATION_RESULT_ERROR:
+					this->eval = eval;
+					break;
+				default:
+					break;
+			}
+			break;
+		case TNC_IMV_EVALUATION_RESULT_DONT_KNOW:
+			this->eval = eval;
+			break;
+		default:
+			break;
+	}
+
+	/* Update overall action recommendation */
+	switch (this->rec)
+	{
+		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+			switch (rec)
+			{
+				case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+					this->rec = rec;
+					break;
+				default:
+					break;
+			}
+			break;
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+			switch (rec)
+			{
+				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+					this->rec = rec;
+					break;
+				default:
+					break;
+			}
+			break;
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+			this->rec = rec;
+			break;
+		default:
+			break;
+	}
+
+	/* TODO update workitem in IMV database */
+
+	workitem->destroy(workitem);
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -462,11 +574,11 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 							instr_default_pwd_enabled_title,
 							instr_default_pwd_enabled_descr, NULL, NULL);
 	}
-	if (this->os_settings & OS_SETTINGS_NON_MARKET_APPS)
+	if (this->os_settings & OS_SETTINGS_UNKNOWN_SOURCE)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-							instr_non_market_apps_title,
-							instr_non_market_apps_descr, NULL, NULL);
+							instr_unknown_source_title,
+							instr_unknown_source_descr, NULL, NULL);
 	}
 
 	*string = this->remediation_string->get_encoding(this->remediation_string);
@@ -481,6 +593,8 @@ METHOD(imv_state_t, destroy, void,
 {
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
+	this->workitems->destroy_offset(this->workitems,
+									offsetof(imv_workitem_t, destroy));
 	this->update_packages->destroy_function(this->update_packages, free);
 	this->remove_packages->destroy_function(this->remove_packages, free);
 	free(this->info);
@@ -652,6 +766,10 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_ar_id = _get_ar_id,
 				.set_session_id = _set_session_id,
 				.get_session_id = _get_session_id,
+				.add_workitem = _add_workitem,
+				.get_workitem_count = _get_workitem_count,
+				.create_workitem_enumerator = _create_workitem_enumerator,
+				.finalize_workitem = _finalize_workitem,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -679,6 +797,7 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.workitems = linked_list_create(),
 		.update_packages = linked_list_create(),
 		.remove_packages = linked_list_create(),
 	);

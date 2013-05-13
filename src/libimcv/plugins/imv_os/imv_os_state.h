@@ -38,7 +38,8 @@ typedef enum os_settings_t os_settings_t;
 enum imv_os_handshake_state_t {
 	IMV_OS_STATE_INIT,
 	IMV_OS_STATE_ATTR_REQ,
-	IMV_OS_STATE_POLICY_START
+	IMV_OS_STATE_POLICY_START,
+	IMV_OS_STATE_WORKITEMS
 };
 
 /**
@@ -47,7 +48,7 @@ enum imv_os_handshake_state_t {
 enum os_settings_t {
 	OS_SETTINGS_FWD_ENABLED =         (1<<0),
 	OS_SETTINGS_DEFAULT_PWD_ENABLED = (1<<1),
-	OS_SETTINGS_NON_MARKET_APPS =     (1<<2)
+	OS_SETTINGS_UNKNOWN_SOURCE =      (1<<2)
 };
 
 /**

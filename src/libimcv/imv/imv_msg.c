@@ -318,6 +318,12 @@ METHOD(imv_msg_t, receive, TNC_Result,
 	return TNC_RESULT_SUCCESS;
 }
 
+METHOD(imv_msg_t, get_attribute_count, int,
+	private_imv_msg_t *this)
+{
+	return this->attr_list->get_count(this->attr_list);
+}
+
 METHOD(imv_msg_t, create_attribute_enumerator, enumerator_t*,
 	private_imv_msg_t *this)
 {
@@ -363,6 +369,7 @@ imv_msg_t *imv_msg_create(imv_agent_t *agent, imv_state_t *state,
 			.send_assessment = _send_assessment,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
+			.get_attribute_count = _get_attribute_count,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.get_encoding = _get_encoding,
 			.destroy = _destroy,

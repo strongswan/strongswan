@@ -12,6 +12,8 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+#define _GNU_SOURCE
+#include <stdio.h>
 
 #include "imv_os_state.h"
 #include "imv_os_database.h"
@@ -53,6 +55,8 @@ static pen_type_t msg_types[] = {
 
 static imv_agent_t *imv_os;
 
+static char non_market_apps_str[] = "install_non_market_apps";
+
 /**
  * Flag set when corresponding attribute has been received
  */
@@ -66,7 +70,9 @@ enum imv_os_attr_t {
 	IMV_OS_ATTR_FORWARDING_ENABLED =          (1<<4),
 	IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED = (1<<5),
 	IMV_OS_ATTR_DEVICE_ID =                   (1<<6),
-	IMV_OS_ATTR_ALL =                         (1<<7)-1
+	IMV_OS_ATTR_MUST =                        (1<<7)-1,
+	IMV_OS_ATTR_INSTALLED_PACKAGES =          (1<<7),
+	IMV_OS_ATTR_SETTINGS =                    (1<<8)
 };
 
 /**
@@ -151,7 +157,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
-	char non_market_apps_str[] = "install_non_market_apps";
 
 	os_state = (imv_os_state_t*)state;
 
@@ -284,6 +289,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					enumerator_t *e;
 					status_t status;
 
+					os_state->set_received(os_state,
+									IMV_OS_ATTR_INSTALLED_PACKAGES);
 					if (!os_db)
 					{
 						break;
@@ -318,6 +325,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					char *name;
 					chunk_t value;
 
+					os_state->set_received(os_state, IMV_OS_ATTR_SETTINGS);
+
 					attr_cast = (ita_attr_settings_t*)attr;
 					e = attr_cast->create_enumerator(attr_cast);
 					while (e->enumerate(e, &name, &value))
@@ -326,7 +335,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 							chunk_equals(value, chunk_from_chars('1')))
 						{
 							os_state->set_os_settings(os_state,
-												OS_SETTINGS_NON_MARKET_APPS);
+												OS_SETTINGS_UNKNOWN_SOURCE);
 						}
 						DBG1(DBG_IMV, "setting '%s'\n  %.*s",
 							 name, value.len, value.ptr);
@@ -340,8 +349,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					int session_id, device_id;
 					chunk_t value;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_DEVICE_ID);
+					os_state->set_received(os_state, IMV_OS_ATTR_DEVICE_ID);
+
 					value = attr->get_value(attr);
 					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
 
@@ -393,43 +402,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
-		assessment = TRUE;
-	}
-
-	/* If all Installed Packages attributes were received, go to assessment */
-	if (!assessment &&
-		 os_state->get_handshake_state(os_state) == IMV_OS_STATE_POLICY_START &&
-		!os_state->get_angel_count(os_state))
-	{
-		int count, count_update, count_blacklist, count_ok;
-		u_int os_settings;
-
-		os_settings = os_state->get_os_settings(os_state);
-		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
-									  &count_ok);
-		DBG1(DBG_IMV, "processed %d packages: %d not updated, %d blacklisted, "
-			 "%d ok, %d not found", count, count_update, count_blacklist,
-			 count_ok, count - count_update - count_blacklist - count_ok);
-
-		/* Store device information in database */
-		if (os_db)
-		{
-			os_db->set_device_info(os_db, state->get_session_id(state),
-					count, count_update, count_blacklist, os_settings);
-		}
-
-		if (count_update || count_blacklist || os_settings)
-		{
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
-		}
-		else
-		{
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-		}
 		assessment = TRUE;
 	}
 
@@ -587,45 +559,44 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	imv_msg_t *out_msg;
 	imv_state_t *state;
 	imv_database_t *imv_db;
+	imv_workitem_t *workitem;
 	imv_os_state_t *os_state;
 	imv_os_handshake_state_t handshake_state;
 	pa_tnc_attr_t *attr;
-	TNC_Result result;
+	TNC_Result result = TNC_RESULT_SUCCESS;
+	enumerator_t *enumerator;
 	u_int received;
+	char *result_str;
+	bool fail;
 
 	if (!imv_os)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+	imv_db = imv_os->get_database(imv_os);
+
 	if (!imv_os->get_state(imv_os, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
 	os_state = (imv_os_state_t*)state;
-
 	handshake_state = os_state->get_handshake_state(os_state);
 	received = os_state->get_received(os_state);
 
+	/* create an empty out message - we might need it */
+	out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
+							 TNC_IMCID_ANY, msg_types[0]);
+
 	if (handshake_state == IMV_OS_STATE_INIT)
 	{
-		if (received != IMV_OS_ATTR_ALL)
+		if ((received & IMV_OS_ATTR_MUST) != IMV_OS_ATTR_MUST)
 		{
-			/* send an attribute request for missing attributes */
-			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
-									 TNC_IMCID_ANY, msg_types[0]);
+			/* create attribute request for missing mandatory attributes */
 			out_msg->add_attribute(out_msg, build_attr_request(received));
-
-			/* send PA-TNC message with excl flag not set */
-			result = out_msg->send(out_msg, FALSE);
-			out_msg->destroy(out_msg);
-
-			if (result != TNC_RESULT_SUCCESS)
-			{
-				return result;
-			}
 		}
 	}
+
 	if (handshake_state < IMV_OS_STATE_POLICY_START)
 	{
 		if (((received & IMV_OS_ATTR_PRODUCT_INFORMATION) &&
@@ -633,32 +604,17 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 			((received & IMV_OS_ATTR_DEVICE_ID) ||
 			 (handshake_state == IMV_OS_STATE_ATTR_REQ)))
 		{
-			imv_db = imv_os->get_database(imv_os);
 			if (imv_db)
 			{
 				/* trigger the policy manager */
-				imv_db->policy_script(imv_db, state->get_session_id(state),
-									  TRUE);
+				imv_db->policy_script(imv_db, state->get_session_id(state), TRUE);
 			}
-			os_state->set_handshake_state(os_state, IMV_OS_STATE_POLICY_START);
-
-			/* requesting installed packages */
-			attr = ietf_attr_attr_request_create(PEN_IETF,
-									 IETF_ATTR_INSTALLED_PACKAGES);
-			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
-									 TNC_IMCID_ANY, msg_types[0]);
-			out_msg->add_attribute(out_msg, attr);
-
-			/* send PA-TNC message with excl flag set */
-			result = out_msg->send(out_msg, TRUE);
-			out_msg->destroy(out_msg);
-
-			return result;
+			handshake_state = IMV_OS_STATE_POLICY_START;
 		}
-		if (handshake_state == IMV_OS_STATE_ATTR_REQ)
+		else if (handshake_state == IMV_OS_STATE_ATTR_REQ)
 		{
 			/**
-			 * Both the IETF Product Information and IETF String Version
+			 * both the IETF Product Information and IETF String Version
 			 * attribute should have been present
 			 */
 			state->set_recommendation(state,
@@ -666,8 +622,6 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 
 			/* send assessment */
-			out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
-									 TNC_IMCID_ANY, msg_types[0]);
 			result = out_msg->send_assessment(out_msg);
 			out_msg->destroy(out_msg);
 
@@ -677,10 +631,164 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 			}  
 			return imv_os->provide_recommendation(imv_os, state);
 		}
-		os_state->set_handshake_state(os_state, IMV_OS_STATE_ATTR_REQ);
+		else
+		{
+			handshake_state = IMV_OS_STATE_ATTR_REQ;
+		}
+		os_state->set_handshake_state(os_state, handshake_state);
 	}
 
-	return TNC_RESULT_SUCCESS;
+	if (handshake_state == IMV_OS_STATE_POLICY_START)
+	{
+		if (imv_db)
+		{
+			enumerator = imv_db->create_workitem_enumerator(imv_db,
+									state->get_session_id(state));
+			if (!enumerator)
+			{
+				return TNC_RESULT_SUCCESS;
+			}
+			while (enumerator->enumerate(enumerator, &workitem))
+			{
+				switch (workitem->get_type(workitem))
+				{
+					case IMV_WORKITEM_PACKAGES:
+						attr = ietf_attr_attr_request_create(PEN_IETF,
+										IETF_ATTR_INSTALLED_PACKAGES);
+						out_msg->add_attribute(out_msg, attr);
+						state->add_workitem(state, workitem);
+						break;
+					case IMV_WORKITEM_UNKNOWN_SOURCE:
+						attr = ita_attr_get_settings_create(non_market_apps_str);
+						out_msg->add_attribute(out_msg, attr);
+						state->add_workitem(state, workitem);
+						break;
+					case IMV_WORKITEM_FORWARDING:
+					case IMV_WORKITEM_DEFAULT_PWD:
+						state->add_workitem(state, workitem);
+						break;
+					case IMV_WORKITEM_START:
+						handshake_state = IMV_OS_STATE_WORKITEMS;
+						/* fall through to default */
+					default:
+						workitem->destroy(workitem);
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		else
+		{
+			/* TODO: define workitems without DB access */
+			handshake_state = IMV_OS_STATE_WORKITEMS;
+		}
+		os_state->set_handshake_state(os_state, handshake_state);
+	}
+
+	if (handshake_state == IMV_OS_STATE_WORKITEMS)
+	{
+		enumerator = state->create_workitem_enumerator(state);
+		while (enumerator->enumerate(enumerator, &workitem))
+		{
+			switch (workitem->get_type(workitem))
+			{
+				case IMV_WORKITEM_PACKAGES:
+				{
+					int count, count_update, count_blacklist, count_ok, ret;
+
+					if (!(received & IMV_OS_ATTR_INSTALLED_PACKAGES) ||
+						os_state->get_angel_count(os_state))
+					{
+						break;
+					}
+					os_state->get_count(os_state, &count, &count_update,
+										&count_blacklist, &count_ok);
+					fail = count_update || count_blacklist;
+					ret = asprintf(&result_str, "processed %d packages: "
+							"%d not updated, %d blacklisted, %d ok, "
+							"%d not found",
+							count, count_update, count_blacklist, count_ok,
+							count - count_update - count_blacklist - count_ok);
+					if (ret == -1)
+					{
+						result_str = strdup("");
+					}
+
+					state->finalize_workitem(state, enumerator, workitem,
+								result_str, fail ?
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+					free(result_str);
+					break;
+				}
+				case IMV_WORKITEM_UNKNOWN_SOURCE:
+					if (!(received & IMV_OS_ATTR_SETTINGS))
+					{
+						break;
+					}
+					fail = os_state->get_os_settings(os_state) &
+								OS_SETTINGS_UNKNOWN_SOURCE;
+					result_str = fail ? "unknown sources enabled" : "";
+
+					state->finalize_workitem(state, enumerator, workitem,
+								result_str, fail ?
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+					break;					
+				case IMV_WORKITEM_FORWARDING:
+					if (!(received & IMV_OS_ATTR_FORWARDING_ENABLED))
+					{
+						break;
+					}
+					fail = os_state->get_os_settings(os_state) &
+								OS_SETTINGS_FWD_ENABLED;
+					result_str = fail ? "forwarding enabled" : "";
+
+					state->finalize_workitem(state, enumerator, workitem,
+								result_str, fail ?
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+					break;
+				case IMV_WORKITEM_DEFAULT_PWD:
+					if (!(received & IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED))
+					{
+						break;
+					}
+					fail = os_state->get_os_settings(os_state) &
+								OS_SETTINGS_DEFAULT_PWD_ENABLED;
+					result_str = fail ? "default password enabled" : "";
+
+					state->finalize_workitem(state, enumerator, workitem,
+								result_str, fail ?
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* finalized all workitems ? */
+		if (state->get_workitem_count(state) == 0)
+		{
+			result = out_msg->send_assessment(out_msg);
+			out_msg->destroy(out_msg);
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				return result;
+			}
+			return imv_os->provide_recommendation(imv_os, state);
+		}		
+	}
+
+	/* send non-empty PA-TNC message with excl flag not set */
+	if (out_msg->get_attribute_count(out_msg))
+	{
+		result = out_msg->send(out_msg, FALSE);
+	}
+	out_msg->destroy(out_msg);
+
+	return result;
 }
 
 /**

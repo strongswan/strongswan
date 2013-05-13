@@ -22,6 +22,8 @@
 #ifndef IMV_STATE_H_
 #define IMV_STATE_H_
 
+#include "imv_workitem.h"
+
 #include <tncifimv.h>
 
 #include <library.h>
@@ -107,6 +109,39 @@ struct imv_state_t {
 	 * @return				Unique session ID
 	 */
 	int (*get_session_id)(imv_state_t *this);
+
+	/**
+	 * Add workitem to list
+	 *
+	 * @param workitem		Workitem to be added
+	 */
+	void (*add_workitem)(imv_state_t *this, imv_workitem_t *workitem);
+
+	/**
+	 * Return number of pending workitems
+	 *
+	 * @return				Number of pending workitems
+	 */
+	int (*get_workitem_count)(imv_state_t *this);
+
+	/**
+	 * Create an enumerator over the pending workitems
+	 *
+	 * @return				Workitem enumerator
+	 */
+	enumerator_t* (*create_workitem_enumerator)(imv_state_t *this);
+
+	/**
+	 * Finalize a workitem
+	 *
+	 * @param enumerator	Current enumerator position pointing to workitem
+	 * @param workitem		Workitem to be finalized
+	 * @param result		Result description as a text
+	 * @param eval			Evaluation Result
+	 */
+	void (*finalize_workitem)(imv_state_t *this, enumerator_t *enumerator,
+							  imv_workitem_t *workitem,  char *result,
+							  TNC_IMV_Evaluation_Result eval);
 
 	/**
 	 * Change the connection state

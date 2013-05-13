@@ -74,6 +74,11 @@ struct private_imv_test_state_t {
 	int session_id;
 
 	/**
+	 * List of workitems
+	 */
+	linked_list_t *workitems;
+
+	/**
 	 * IMV action recommendation
 	 */
 	TNC_IMV_Action_Recommendation rec;
@@ -187,6 +192,36 @@ METHOD(imv_state_t, get_session_id, int,
 	return this->session_id;
 }
 
+METHOD(imv_state_t, add_workitem, void,
+	private_imv_test_state_t *this, imv_workitem_t *workitem)
+{
+	this->workitems->insert_last(this->workitems, workitem);
+}
+
+METHOD(imv_state_t, get_workitem_count, int,
+	private_imv_test_state_t *this)
+{
+	return this->workitems->get_count(this->workitems);
+}
+
+METHOD(imv_state_t, create_workitem_enumerator, enumerator_t*,
+	private_imv_test_state_t *this)
+{
+	return this->workitems->create_enumerator(this->workitems);
+}
+
+METHOD(imv_state_t, finalize_workitem, void,
+	private_imv_test_state_t *this, enumerator_t *enumerator,
+	imv_workitem_t *workitem, char *result,	TNC_IMV_Evaluation_Result eval)
+{
+	TNC_IMV_Action_Recommendation rec;
+
+	this->workitems->remove_at(this->workitems, enumerator);
+	rec = workitem->set_result(workitem, result, eval);
+	/* TODO update workitem in IMV database */
+	workitem->destroy(workitem);
+}
+
 METHOD(imv_state_t, change_state, void,
 	private_imv_test_state_t *this, TNC_ConnectionState new_state)
 {
@@ -236,6 +271,8 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_test_state_t *this)
 {
 	DESTROY_IF(this->reason_string);
+	this->workitems->destroy_offset(this->workitems,
+									offsetof(imv_workitem_t, destroy));
 	this->imcs->destroy_function(this->imcs, free);
 	free(this->ar_id_value.ptr);
 	free(this);
@@ -326,6 +363,10 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.get_ar_id = _get_ar_id,
 				.set_session_id = _set_session_id,
 				.get_session_id = _get_session_id,
+				.add_workitem = _add_workitem,
+				.get_workitem_count = _get_workitem_count,
+				.create_workitem_enumerator = _create_workitem_enumerator,
+				.finalize_workitem = _finalize_workitem,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,

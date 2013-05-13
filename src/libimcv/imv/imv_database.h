@@ -72,6 +72,15 @@ struct imv_database_t {
 	 bool (*policy_script)(imv_database_t *this, int session_id, bool start);
 
 	/**
+	 * Create enumerator for workitems assigned to a session ID
+	 *
+	 * @param session_id	Session ID
+	 * @return				Enumerator of workitems assigned to session ID
+	 */
+	 enumerator_t* (*create_workitem_enumerator)(imv_database_t *this,
+					int session_id);
+
+	/**
 	 * Get database handle
 	 *
 	 * @return				Database handle

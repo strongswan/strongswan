@@ -203,7 +203,7 @@ METHOD(ita_attr_get_settings_t, create_enumerator, enumerator_t*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_get_settings_create(void)
+pa_tnc_attr_t *ita_attr_get_settings_create(char *name)
 {
 	private_ita_attr_get_settings_t *this;
 
@@ -227,6 +227,10 @@ pa_tnc_attr_t *ita_attr_get_settings_create(void)
 		.ref = 1,
 	);
 
+	if (name)
+	{
+		add(this, name);
+	}
 	return &this->public.pa_tnc_attribute;
 }
 
