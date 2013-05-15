@@ -111,6 +111,7 @@ METHOD(fetcher_manager_t, fetch, status_t,
 				case FETCH_CALLBACK:
 					good = fetcher->set_option(fetcher, opt,
 											va_arg(args, fetcher_callback_t));
+					continue;
 				case FETCH_END:
 					break;
 			}
@@ -204,4 +205,3 @@ fetcher_manager_t *fetcher_manager_create()
 
 	return &this->public;
 }
-
