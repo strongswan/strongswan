@@ -27,7 +27,7 @@ typedef struct af_alg_signer_t af_alg_signer_t;
 #include <crypto/signers/signer.h>
 
 /** Number of signers */
-#define AF_ALG_SIGNER 13
+#define AF_ALG_SIGNER 14
 
 /**
  * Implementation of signers using AF_ALG.
