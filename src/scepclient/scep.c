@@ -339,14 +339,21 @@ static char* escape_http_request(chunk_t req)
  * Send a SCEP request via HTTP and wait for a response
  */
 bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
-					   bool http_get_request, u_int timeout, chunk_t *response)
+					   bool http_get_request, u_int timeout, char *src,
+					   chunk_t *response)
 {
 	int len;
 	status_t status;
 	char *complete_url = NULL;
+	host_t *srcip = NULL;
 
 	/* initialize response */
 	*response = chunk_empty;
+
+	if (src)
+	{
+		srcip = host_create_from_string(src, 0);
+	}
 
 	DBG2(DBG_APP, "sending scep request to '%s'", url);
 
@@ -371,6 +378,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
+										 FETCH_SOURCEIP, srcip,
 										 FETCH_END);
 		}
 		else /* HTTP_POST */
@@ -386,6 +394,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 										 FETCH_REQUEST_DATA, msg,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
+										 FETCH_SOURCEIP, srcip,
 										 FETCH_END);
 		}
 	}
@@ -412,9 +421,11 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_HTTP_VERSION_1_0,
 									 FETCH_TIMEOUT, timeout,
+									 FETCH_SOURCEIP, srcip,
 									 FETCH_END);
 	}
 
+	DESTROY_IF(srcip);
 	free(complete_url);
 	return (status == SUCCESS);
 }

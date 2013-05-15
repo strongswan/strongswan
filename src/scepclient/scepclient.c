@@ -116,6 +116,9 @@ bool pkcs11_keep_state = FALSE;
 /* by default HTTP fetch timeout is 30s */
 static u_int http_timeout = 30;
 
+/* address to bind for HTTP fetches */
+static char* http_bind = NULL;
+
 /* options read by optionsfrom */
 options_t *options;
 
@@ -348,6 +351,7 @@ static void usage(const char *message)
 		" --optionsfrom (-+) <filename>     reads additional options from given file\n"
 		" --force (-f)                      force existing file(s)\n"
 		" --httptimeout (-T)                timeout for HTTP operations (default: 30s)\n"
+		" --bind (-b)                       source address to bind for HTTP operations\n"
 		"\n"
 		"Options for key generation (pkcs1):\n"
 		" --keylength (-k) <bits>           key length for RSA key generation\n"
@@ -523,6 +527,7 @@ int main(int argc, char **argv)
 			{ "out", required_argument, NULL, 'o' },
 			{ "force", no_argument, NULL, 'f' },
 			{ "httptimeout", required_argument, NULL, 'T' },
+			{ "bind", required_argument, NULL, 'b' },
 			{ "keylength", required_argument, NULL, 'k' },
 			{ "dn", required_argument, NULL, 'd' },
 			{ "days", required_argument, NULL, 'D' },
@@ -673,6 +678,10 @@ int main(int argc, char **argv)
 				{
 					usage("invalid httptimeout specified");
 				}
+				continue;
+
+			case 'b':       /* --bind */
+				http_bind = optarg;
 				continue;
 
 			case '+':       /* --optionsfrom <filename> */
@@ -953,7 +962,7 @@ int main(int argc, char **argv)
 
 		if (!scep_http_request(scep_url, chunk_create(ca_name, strlen(ca_name)),
 							   SCEP_GET_CA_CERT, http_get_request,
-							   http_timeout, &scep_response))
+							   http_timeout, http_bind, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
@@ -1331,7 +1340,7 @@ int main(int argc, char **argv)
 		creds->add_cert(creds, TRUE, x509_ca_sig->get_ref(x509_ca_sig));
 
 		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION,
-							   http_get_request, http_timeout, &scep_response))
+					http_get_request, http_timeout, http_bind, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
@@ -1381,7 +1390,7 @@ int main(int argc, char **argv)
 				exit_scepclient("failed to build scep request");
 			}
 			if (!scep_http_request(scep_url, getCertInitial, SCEP_PKI_OPERATION,
-							http_get_request, http_timeout, &scep_response))
+					http_get_request, http_timeout, http_bind, &scep_response))
 			{
 				exit_scepclient("did not receive a valid scep response");
 			}
