@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -305,6 +305,12 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 	}
 
+	private void clearError()
+	{
+		mError = ErrorState.NO_ERROR;
+		updateView();
+	}
+
 	private void showConnectDialog(String profile, String gateway)
 	{
 		mProgressDialog = new ProgressDialog(getActivity());
@@ -345,6 +351,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				@Override
 				public void onClick(DialogInterface dialog, int which)
 				{
+					clearError();
 					dialog.dismiss();
 					Intent logIntent = new Intent(getActivity(), LogActivity.class);
 					startActivity(logIntent);
@@ -354,16 +361,15 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				@Override
 				public void onClick(DialogInterface dialog, int id)
 				{
+					clearError();
 					dialog.dismiss();
 				}
 			}).create();
 		mErrorDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
 			@Override
 			public void onDismiss(DialogInterface dialog)
-			{	/* clear the error */
-				mError = ErrorState.NO_ERROR;
+			{
 				mErrorDialog = null;
-				updateView();
 			}
 		});
 		mErrorDialog.show();
