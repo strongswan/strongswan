@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.imc.ImcState;
 
 import android.app.Service;
 import android.content.Context;
@@ -36,6 +37,7 @@ public class VpnStateService extends Service
 	private VpnProfile mProfile;
 	private State mState = State.DISABLED;
 	private ErrorState mError = ErrorState.NO_ERROR;
+	private ImcState mImcState = ImcState.UNKNOWN;
 
 	public enum State
 	{
@@ -147,6 +149,16 @@ public class VpnStateService extends Service
 	}
 
 	/**
+	 * Get the current IMC state, if any.
+	 *
+	 * @return imc state
+	 */
+	public ImcState getImcState()
+	{	/* only updated from the main thread so no synchronization needed */
+		return mImcState;
+	}
+
+	/**
 	 * Disconnect any existing connection and shutdown the daemon, the
 	 * VpnService is not stopped but it is reset so new connections can be
 	 * started.
@@ -255,6 +267,29 @@ public class VpnStateService extends Service
 				if (VpnStateService.this.mError != error)
 				{
 					VpnStateService.this.mError = error;
+					return true;
+				}
+				return false;
+			}
+		});
+	}
+
+	/**
+	 * Set the current IMC state and notify all listeners, if changed.
+	 *
+	 * May be called from threads other than the main thread.
+	 *
+	 * @param error error state
+	 */
+	public void setImcState(final ImcState state)
+	{
+		notifyListeners(new Callable<Boolean>() {
+			@Override
+			public Boolean call() throws Exception
+			{
+				if (VpnStateService.this.mImcState != state)
+				{
+					VpnStateService.this.mImcState = state;
 					return true;
 				}
 				return false;

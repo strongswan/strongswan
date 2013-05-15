@@ -162,6 +162,30 @@ failed:
 	return success;
 }
 
+METHOD(charonservice_t, update_imc_state, bool,
+	private_charonservice_t *this, android_imc_state_t state)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	bool success = FALSE;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"updateImcState", "(I)V");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	(*env)->CallVoidMethod(env, this->vpn_service, method_id, (jint)state);
+	success = !androidjni_exception_occurred(env);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return success;
+}
+
 /**
  * Bypass a single socket
  */
@@ -466,6 +490,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 	INIT(this,
 		.public = {
 			.update_status = _update_status,
+			.update_imc_state = _update_imc_state,
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_user_certificate = _get_user_certificate,

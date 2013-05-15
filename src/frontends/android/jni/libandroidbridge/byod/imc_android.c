@@ -18,6 +18,7 @@
 
 #include "imc_android_state.h"
 #include "../android_jni.h"
+#include "../charonservice.h"
 
 #include <tnc/tnc.h>
 #include <libpts.h>
@@ -99,6 +100,29 @@ static TNC_Result tnc_imc_initialize(TNC_IMCID imc_id,
 }
 
 /**
+ * Update the state in the GUI.
+ */
+static void update_imc_state(TNC_ConnectionState state)
+{
+	android_imc_state_t imc_state = ANDROID_IMC_STATE_UNKNOWN;
+
+	switch (state)
+	{	/* map connection states to the values used by the GUI */
+		case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+			imc_state = ANDROID_IMC_STATE_ALLOW;
+			break;
+		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+			imc_state = ANDROID_IMC_STATE_ISOLATE;
+			break;
+		case TNC_CONNECTION_STATE_ACCESS_NONE:
+			imc_state = ANDROID_IMC_STATE_BLOCK;
+			break;
+	}
+
+	charonservice->update_imc_state(charonservice, imc_state);
+}
+
+/**
  * see section 3.8.2 of TCG TNC IF-IMC Specification 1.3
  */
 static TNC_Result tnc_imc_notifyconnectionchange(TNC_IMCID imc_id,
@@ -128,6 +152,11 @@ static TNC_Result tnc_imc_notifyconnectionchange(TNC_IMCID imc_id,
 			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_android->delete_state(imc_android, connection_id);
+		case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+		case TNC_CONNECTION_STATE_ACCESS_NONE:
+			update_imc_state(new_state);
+			/* fall-through */
 		default:
 			return imc_android->change_state(imc_android, connection_id,
 											 new_state, NULL);
