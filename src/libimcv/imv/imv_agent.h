@@ -139,13 +139,6 @@ struct imv_agent_t {
 					  TNC_ConnectionID connection_id, imv_state_t **state);
 
 	/**
-	 * Get IMV database
-	 *
-	 * @return					IMV database if it exists, NULL otherwise
-	 */
-	imv_database_t* (*get_database)(imv_agent_t *this);
-
-	/**
 	 * Get IMV name
 	 *
 	 * return					IMV name

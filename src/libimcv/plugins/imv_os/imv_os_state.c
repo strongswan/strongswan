@@ -19,6 +19,8 @@
 #include "imv/imv_reason_string.h"
 #include "imv/imv_remediation_string.h"
 
+#include <tncif_policy.h>
+
 #include <utils/debug.h>
 #include <collections/linked_list.h>
 
@@ -73,14 +75,9 @@ struct private_imv_os_state_t {
 	chunk_t ar_id_value;
 
 	/**
-	 * Unique session ID
+	 * IMV database session associated with TNCCS connection
 	 */
-	int session_id;
-
-	/**
-	 * List of workitems
-	 */
-	linked_list_t *workitems;
+	imv_session_t *session;
 
 	/**
 	 * IMV action recommendation
@@ -357,133 +354,21 @@ METHOD(imv_state_t, get_ar_id, chunk_t,
 	return this->ar_id_value;
 }
 
-METHOD(imv_state_t, set_session_id, void,
-	private_imv_os_state_t *this, int session_id)
+METHOD(imv_state_t, set_session, void,
+	private_imv_os_state_t *this, imv_session_t *session)
 {
-	this->session_id = session_id;
+	this->session = session;
 }
 
-METHOD(imv_state_t, get_session_id, int,
+METHOD(imv_state_t, get_session, imv_session_t*,
 	private_imv_os_state_t *this)
 {
-	return this->session_id;
-}
-
-METHOD(imv_state_t, add_workitem, void,
-	private_imv_os_state_t *this, imv_workitem_t *workitem)
-{
-	this->workitems->insert_last(this->workitems, workitem);
-}
-
-METHOD(imv_state_t, get_workitem_count, int,
-	private_imv_os_state_t *this)
-{
-	return this->workitems->get_count(this->workitems);
-}
-
-METHOD(imv_state_t, create_workitem_enumerator, enumerator_t*,
-	private_imv_os_state_t *this)
-{
-	return this->workitems->create_enumerator(this->workitems);
-}
-
-METHOD(imv_state_t, finalize_workitem, void,
-	private_imv_os_state_t *this, enumerator_t *enumerator,
-	imv_workitem_t *workitem, char *result,	TNC_IMV_Evaluation_Result eval)
-{
-	TNC_IMV_Action_Recommendation rec;
-
-	this->workitems->remove_at(this->workitems, enumerator);
-	rec = workitem->set_result(workitem, result, eval);
-
-	/* Update overall evaluation result */
-	switch (this->eval)
-	{
-		case TNC_IMV_EVALUATION_RESULT_COMPLIANT:
-			switch (eval)
-			{
-				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
-				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
-				case TNC_IMV_EVALUATION_RESULT_ERROR:
-					this->eval = eval;
-					break;
-				default:
-					break;
-			}
-			break;
-		case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
-			switch (eval)
-			{
-				case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
-				case TNC_IMV_EVALUATION_RESULT_ERROR:
-					this->eval = eval;
-					break;
-				default:
-					break;
-			}
-			break;
-		case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
-			switch (eval)
-			{
-				case TNC_IMV_EVALUATION_RESULT_ERROR:
-					this->eval = eval;
-					break;
-				default:
-					break;
-			}
-			break;
-		case TNC_IMV_EVALUATION_RESULT_DONT_KNOW:
-			this->eval = eval;
-			break;
-		default:
-			break;
-	}
-
-	/* Update overall action recommendation */
-	switch (this->rec)
-	{
-		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-			switch (rec)
-			{
-				case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
-				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-					this->rec = rec;
-					break;
-				default:
-					break;
-			}
-			break;
-		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
-			switch (rec)
-			{
-				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-					this->rec = rec;
-					break;
-				default:
-					break;
-			}
-			break;
-		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
-			this->rec = rec;
-			break;
-		default:
-			break;
-	}
-
-	/* TODO update workitem in IMV database */
-
-	workitem->destroy(workitem);
-}
-
-METHOD(imv_state_t, change_state, void,
-	private_imv_os_state_t *this, TNC_ConnectionState new_state)
-{
-	this->state = new_state;
+	return this->session;
 }
 
 METHOD(imv_state_t, get_recommendation, void,
 	private_imv_os_state_t *this, TNC_IMV_Action_Recommendation *rec,
-									TNC_IMV_Evaluation_Result *eval)
+								  TNC_IMV_Evaluation_Result *eval)
 {
 	*rec = this->rec;
 	*eval = this->eval;
@@ -491,10 +376,24 @@ METHOD(imv_state_t, get_recommendation, void,
 
 METHOD(imv_state_t, set_recommendation, void,
 	private_imv_os_state_t *this, TNC_IMV_Action_Recommendation rec,
-									TNC_IMV_Evaluation_Result eval)
+								  TNC_IMV_Evaluation_Result eval)
 {
 	this->rec = rec;
 	this->eval = eval;
+}
+
+METHOD(imv_state_t, update_recommendation, void,
+	private_imv_os_state_t *this, TNC_IMV_Action_Recommendation rec,
+								  TNC_IMV_Evaluation_Result eval)
+{
+	this->rec  = tncif_policy_update_recommendation(this->rec, rec);
+	this->eval = tncif_policy_update_evaluation(this->eval, eval);
+}
+
+METHOD(imv_state_t, change_state, void,
+	private_imv_os_state_t *this, TNC_ConnectionState new_state)
+{
+	this->state = new_state;
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
@@ -591,10 +490,9 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_os_state_t *this)
 {
+	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
-	this->workitems->destroy_offset(this->workitems,
-									offsetof(imv_workitem_t, destroy));
 	this->update_packages->destroy_function(this->update_packages, free);
 	this->remove_packages->destroy_function(this->remove_packages, free);
 	free(this->info);
@@ -764,15 +662,12 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_ar_id = _set_ar_id,
 				.get_ar_id = _get_ar_id,
-				.set_session_id = _set_session_id,
-				.get_session_id = _get_session_id,
-				.add_workitem = _add_workitem,
-				.get_workitem_count = _get_workitem_count,
-				.create_workitem_enumerator = _create_workitem_enumerator,
-				.finalize_workitem = _finalize_workitem,
+				.set_session = _set_session,
+				.get_session = _get_session,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
+				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
@@ -797,7 +692,6 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
-		.workitems = linked_list_create(),
 		.update_packages = linked_list_create(),
 		.remove_packages = linked_list_create(),
 	);

@@ -15,6 +15,7 @@ libimcv_la_SOURCES = \
 	imv/imv_lang_string.h imv/imv_lang_string.c \
 	imv/imv_reason_string.h imv/imv_reason_string.c \
 	imv/imv_remediation_string.h imv/imv_remediation_string.c \
+	imv/imv_session.h imv/imv_session.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
 	imv/tables.sql imv/data.sql \
 	ietf/ietf_attr.h ietf/ietf_attr.c \

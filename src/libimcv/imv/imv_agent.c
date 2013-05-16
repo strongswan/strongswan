@@ -15,6 +15,8 @@
 
 #include "imcv.h"
 #include "imv_agent.h"
+#include "imv_session.h"
+
 #include "ietf/ietf_attr_assess_result.h"
 
 #include <tncif_names.h>
@@ -61,11 +63,6 @@ struct private_imv_agent_t {
 	 * List of additional IMV IDs assigned by TNCS
 	 */
 	linked_list_t *additional_ids;
-
-	/**
-	 * IMV database
-	 */
-	imv_database_t *db;
 
 	/**
 	 * list of TNCS connection entries
@@ -411,7 +408,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	linked_list_t *ar_identities;
 	enumerator_t *enumerator;
 	tncif_identity_t *tnc_id;
-	int session_id;
+	imv_session_t *session;
 	u_int32_t max_msg_len;
 	u_int32_t ar_id_type = TNC_ID_UNKNOWN;
 	chunk_t ar_id_value = chunk_empty;
@@ -481,14 +478,14 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->db)
+	if (imcv_db)
 	{
-		session_id = this->db->get_session_id(this->db, conn_id,
-											  ar_id_type, ar_id_value);
-		if (session_id)
+		session = imcv_db->get_session(imcv_db, conn_id, ar_id_type, ar_id_value);
+		if (session)
 		{
-			DBG2(DBG_IMV, "  assigned session ID %d", session_id);
-			state->set_session_id(state, session_id);
+			DBG2(DBG_IMV, "  assigned session ID %d",
+				 session->get_session_id(session));
+			state->set_session(state, session);
 		}
 		else
 		{
@@ -580,12 +577,6 @@ METHOD(imv_agent_t, get_state, bool,
 		return FALSE;
 	}
 	return TRUE;
-}
-
-METHOD(imv_agent_t, get_database, imv_database_t*,
-	private_imv_agent_t *this)
-{
-	return	this->db;
 }
 
 METHOD(imv_agent_t, get_name, const char*,
@@ -789,7 +780,6 @@ METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
 	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
-	DESTROY_IF(this->db);
 	this->additional_ids->destroy(this->additional_ids);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
@@ -808,10 +798,9 @@ imv_agent_t *imv_agent_create(const char *name,
 							  TNC_IMVID id, TNC_Version *actual_version)
 {
 	private_imv_agent_t *this;
-	char *uri;
 
 	/* initialize  or increase the reference count */
-	if (!libimcv_init())
+	if (!libimcv_init(TRUE))
 	{
 		return NULL;
 	}
@@ -823,7 +812,6 @@ imv_agent_t *imv_agent_create(const char *name,
 			.delete_state = _delete_state,
 			.change_state = _change_state,
 			.get_state = _get_state,
-			.get_database = _get_database,
 			.get_name = _get_name,
 			.get_id = _get_id,
 			.reserve_additional_ids = _reserve_additional_ids,
@@ -841,13 +829,6 @@ imv_agent_t *imv_agent_create(const char *name,
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-
-	/* attach IMV database */
-	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
-	if (uri)
-	{
-		this->db = imv_database_create(uri);
-	}
 
 	*actual_version = TNC_IFIMV_VERSION_1;
 	DBG1(DBG_IMV, "IMV %u \"%s\" initialized", this->id, this->name);

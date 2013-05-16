@@ -17,6 +17,7 @@
 #include "imv_attestation_process.h"
 #include "imv_attestation_build.h"
 
+#include <imcv.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr.h>
@@ -134,7 +135,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 
 	/* attach PTS database co-located with IMV database */
-	pts_db = pts_database_create(imv_attestation->get_database(imv_attestation));
+	pts_db = pts_database_create(imcv_db);
 
 	return TNC_RESULT_SUCCESS;
 }

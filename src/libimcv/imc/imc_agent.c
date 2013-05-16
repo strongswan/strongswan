@@ -533,7 +533,7 @@ imc_agent_t *imc_agent_create(const char *name,
 	private_imc_agent_t *this;
 
 	/* initialize  or increase the reference count */
-	if (!libimcv_init())
+	if (!libimcv_init(FALSE))
 	{
 		return NULL;
 	}

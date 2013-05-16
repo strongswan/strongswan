@@ -18,6 +18,7 @@
 #include "imv_os_state.h"
 #include "imv_os_database.h"
 
+#include <imcv.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr.h>
@@ -106,7 +107,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 
 	/* attach OS database co-located with IMV database */
-	os_db = imv_os_database_create(imv_os->get_database(imv_os));
+	os_db = imv_os_database_create(imcv_db);
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -119,8 +120,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
-	imv_database_t *imv_db;
-	int session_id;
+	imv_session_t *session;
 
 	if (!imv_os)
 	{
@@ -133,11 +133,10 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			state = imv_os_state_create(connection_id);
 			return imv_os->create_state(imv_os, state);
 		case TNC_CONNECTION_STATE_DELETE:
-			imv_db = imv_os->get_database(imv_os);
-			if (imv_db && imv_os->get_state(imv_os, connection_id, &state))
+			if (imcv_db && imv_os->get_state(imv_os, connection_id, &state))
 			{
-				session_id = state->get_session_id(state);
-				imv_db->policy_script(imv_db, session_id, FALSE);
+				session = state->get_session(state);
+				imcv_db->policy_script(imcv_db, session, FALSE);
 			}
 			return imv_os->delete_state(imv_os, connection_id);
 		default:
@@ -345,8 +344,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				}
 				case ITA_ATTR_DEVICE_ID:
 				{
-					imv_database_t *imv_db;
-					int session_id, device_id;
+					imv_session_t *session;
+					int device_id;
 					chunk_t value;
 
 					os_state->set_received(os_state, IMV_OS_ATTR_DEVICE_ID);
@@ -354,11 +353,10 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					value = attr->get_value(attr);
 					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
 
-					imv_db = imv_os->get_database(imv_os);
-					if (imv_db)
+					if (imcv_db)
 					{
-						session_id = state->get_session_id(state);
-						device_id = imv_db->add_device(imv_db, session_id, value);
+						session = state->get_session(state);
+						device_id = imcv_db->add_device(imcv_db, session, value);
 						os_state->set_device_id(os_state, device_id);
 					}
 					break;
@@ -383,16 +381,14 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	if (os_name.len && os_version.len)
 	{
 		os_type_t os_type;
-		imv_database_t *imv_db;
 
 		/* set the OS type, name and version */
 		os_type = os_type_from_name(os_name);
 		os_state->set_info(os_state,os_type, os_name, os_version);
 
-		imv_db = imv_os->get_database(imv_os);
-		if (imv_db)
+		if (imcv_db)
 		{
-			imv_db->add_product(imv_db, state->get_session_id(state),
+			imcv_db->add_product(imcv_db, state->get_session(state),
 					os_state->get_info(os_state, NULL, NULL, NULL));
 		}
 	}
@@ -553,29 +549,24 @@ static pa_tnc_attr_t* build_attr_request(u_int received)
 /**
  * see section 3.8.8 of TCG TNC IF-IMV Specification 1.3
  */
-TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
-							   TNC_ConnectionID connection_id)
+TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 {
 	imv_msg_t *out_msg;
 	imv_state_t *state;
-	imv_database_t *imv_db;
 	imv_workitem_t *workitem;
 	imv_os_state_t *os_state;
 	imv_os_handshake_state_t handshake_state;
 	pa_tnc_attr_t *attr;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	enumerator_t *enumerator;
+	imv_session_t *session;
 	u_int received;
-	char *result_str;
-	bool fail;
 
 	if (!imv_os)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	imv_db = imv_os->get_database(imv_os);
-
 	if (!imv_os->get_state(imv_os, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
@@ -583,6 +574,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	os_state = (imv_os_state_t*)state;
 	handshake_state = os_state->get_handshake_state(os_state);
 	received = os_state->get_received(os_state);
+	session = state->get_session(state);
 
 	/* create an empty out message - we might need it */
 	out_msg = imv_msg_create(imv_os, state, connection_id, imv_id,
@@ -604,10 +596,10 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 			((received & IMV_OS_ATTR_DEVICE_ID) ||
 			 (handshake_state == IMV_OS_STATE_ATTR_REQ)))
 		{
-			if (imv_db)
+			if (imcv_db)
 			{
 				/* trigger the policy manager */
-				imv_db->policy_script(imv_db, state->get_session_id(state), TRUE);
+				imcv_db->policy_script(imcv_db, session, TRUE);
 			}
 			handshake_state = IMV_OS_STATE_POLICY_START;
 		}
@@ -638,138 +630,132 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 		os_state->set_handshake_state(os_state, handshake_state);
 	}
 
-	if (handshake_state == IMV_OS_STATE_POLICY_START)
+	if (handshake_state == IMV_OS_STATE_POLICY_START && session)
 	{
-		if (imv_db)
+		enumerator = session->create_workitem_enumerator(session);
+		if (enumerator)
 		{
-			enumerator = imv_db->create_workitem_enumerator(imv_db,
-									state->get_session_id(state));
-			if (!enumerator)
-			{
-				return TNC_RESULT_SUCCESS;
-			}
 			while (enumerator->enumerate(enumerator, &workitem))
 			{
+				if (workitem->get_imv_id(workitem) != 0)
+				{
+					continue;
+				}
 				switch (workitem->get_type(workitem))
 				{
 					case IMV_WORKITEM_PACKAGES:
 						attr = ietf_attr_attr_request_create(PEN_IETF,
 										IETF_ATTR_INSTALLED_PACKAGES);
 						out_msg->add_attribute(out_msg, attr);
-						state->add_workitem(state, workitem);
 						break;
 					case IMV_WORKITEM_UNKNOWN_SOURCE:
 						attr = ita_attr_get_settings_create(non_market_apps_str);
 						out_msg->add_attribute(out_msg, attr);
-						state->add_workitem(state, workitem);
 						break;
 					case IMV_WORKITEM_FORWARDING:
 					case IMV_WORKITEM_DEFAULT_PWD:
-						state->add_workitem(state, workitem);
 						break;
-					case IMV_WORKITEM_START:
-						handshake_state = IMV_OS_STATE_WORKITEMS;
-						/* fall through to default */
 					default:
-						workitem->destroy(workitem);
+						continue;
 				}
+				workitem->set_imv_id(workitem, imv_id);
 			}
 			enumerator->destroy(enumerator);
-		}
-		else
-		{
-			/* TODO: define workitems without DB access */
+
 			handshake_state = IMV_OS_STATE_WORKITEMS;
+			os_state->set_handshake_state(os_state, handshake_state);
 		}
-		os_state->set_handshake_state(os_state, handshake_state);
 	}
 
-	if (handshake_state == IMV_OS_STATE_WORKITEMS)
+	if (handshake_state == IMV_OS_STATE_WORKITEMS && session)
 	{
-		enumerator = state->create_workitem_enumerator(state);
+		TNC_IMV_Evaluation_Result eval;
+		TNC_IMV_Action_Recommendation rec;
+		char buf[BUF_LEN], *result_str;
+		bool fail;
+
+		enumerator = session->create_workitem_enumerator(session);
 		while (enumerator->enumerate(enumerator, &workitem))
 		{
+			if (workitem->get_imv_id(workitem) != imv_id)
+			{
+				continue;
+			}
+			eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
 			switch (workitem->get_type(workitem))
 			{
 				case IMV_WORKITEM_PACKAGES:
 				{
-					int count, count_update, count_blacklist, count_ok, ret;
+					int count, count_update, count_blacklist, count_ok;
 
 					if (!(received & IMV_OS_ATTR_INSTALLED_PACKAGES) ||
 						os_state->get_angel_count(os_state))
 					{
-						break;
+						continue;
 					}
 					os_state->get_count(os_state, &count, &count_update,
 										&count_blacklist, &count_ok);
 					fail = count_update || count_blacklist;
-					ret = asprintf(&result_str, "processed %d packages: "
+					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
+								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+					snprintf(buf, BUF_LEN, "processed %d packages: "
 							"%d not updated, %d blacklisted, %d ok, "
 							"%d not found",
 							count, count_update, count_blacklist, count_ok,
 							count - count_update - count_blacklist - count_ok);
-					if (ret == -1)
-					{
-						result_str = strdup("");
-					}
-
-					state->finalize_workitem(state, enumerator, workitem,
-								result_str, fail ?
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-					free(result_str);
+					result_str = buf;
 					break;
 				}
 				case IMV_WORKITEM_UNKNOWN_SOURCE:
 					if (!(received & IMV_OS_ATTR_SETTINGS))
 					{
-						break;
+						continue;
 					}
 					fail = os_state->get_os_settings(os_state) &
 								OS_SETTINGS_UNKNOWN_SOURCE;
+					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
+								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					result_str = fail ? "unknown sources enabled" : "";
-
-					state->finalize_workitem(state, enumerator, workitem,
-								result_str, fail ?
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 					break;					
 				case IMV_WORKITEM_FORWARDING:
 					if (!(received & IMV_OS_ATTR_FORWARDING_ENABLED))
 					{
-						break;
+						continue;
 					}
 					fail = os_state->get_os_settings(os_state) &
 								OS_SETTINGS_FWD_ENABLED;
+					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
+								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					result_str = fail ? "forwarding enabled" : "";
-
-					state->finalize_workitem(state, enumerator, workitem,
-								result_str, fail ?
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 					break;
 				case IMV_WORKITEM_DEFAULT_PWD:
 					if (!(received & IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED))
 					{
-						break;
+						continue;
 					}
 					fail = os_state->get_os_settings(os_state) &
 								OS_SETTINGS_DEFAULT_PWD_ENABLED;
+					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
+								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					result_str = fail ? "default password enabled" : "";
-
-					state->finalize_workitem(state, enumerator, workitem,
-								result_str, fail ?
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 					break;
 				default:
-					break;
+					continue;
+			}
+			if (eval != TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
+			{
+				session->remove_workitem(session, enumerator);
+				rec = workitem->set_result(workitem, result_str, eval);
+				state->update_recommendation(state, rec, eval);
+				imcv_db->finalize_workitem(imcv_db, workitem);
+				workitem->destroy(workitem);
 			}
 		}
 		enumerator->destroy(enumerator);
 
 		/* finalized all workitems ? */
-		if (state->get_workitem_count(state) == 0)
+		if (session->get_workitem_count(session, imv_id) == 0)
 		{
 			result = out_msg->send_assessment(out_msg);
 			out_msg->destroy(out_msg);

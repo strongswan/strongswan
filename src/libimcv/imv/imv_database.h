@@ -22,7 +22,10 @@
 #ifndef IMV_DATABASE_H_
 #define IMV_DATABASE_H_
 
-#include <tncif.h>
+#include "imv_session.h"
+#include "imv_workitem.h"
+
+#include <tncifimv.h>
 
 #include <library.h>
 
@@ -34,51 +37,53 @@ typedef struct imv_database_t imv_database_t;
 struct imv_database_t {
 
 	/**
-	 * Register or get a unique session ID using the TNCCS connection ID
+	 * Create or get a session associated with a TNCCS connection
 	 *
-	 * @param id			TNCCS Connection ID
+	 * @param conn_id		TNCCS Connection ID
 	 * @param ar_id_type	Access Requestor identity type
 	 * @param ar_id_value	Access Requestor identity value
-	 * @return				Session ID or 0 if not available
+	 * @return				Session associated with TNCCS Connection
 	 */
-	 int (*get_session_id)(imv_database_t *this, TNC_ConnectionID id,
-						   u_int32_t ar_id_type, chunk_t ar_id_value);
+	 imv_session_t* (*get_session)(imv_database_t *this,
+								   TNC_ConnectionID conn_id,
+								   u_int32_t ar_id_type, chunk_t ar_id_value);
 
 	/**
-	 * Add product information string to a session
+	 * Add product information string to a session database entry
 	 *
-	 * @param session_id	Session ID
+	 * @param session		Session
 	 * @param product		Product information string
-	 * @return				Product ID or 0 if not available
+	 * @return				Product ID
 	 */
-	 int (*add_product)(imv_database_t *this, int session_id, char *product);
+	 int (*add_product)(imv_database_t *this, imv_session_t *session,
+						char *product);
 
 	/**
-	 * Add device identification to a session
+	 * Add device identification to a session database entry
 	 *
-	 * @param session_id	Session ID
+	 * @param session		Session
 	 * @param device		Device identification
-	 * @return				Device ID or 0 if not available
+	 * @return				Device ID
 	 */
-	 int (*add_device)(imv_database_t *this, int session_id, chunk_t device);
+	 int (*add_device)(imv_database_t *this, imv_session_t *session,
+					   chunk_t device);
 
 	/**
 	 * Announce session start/stop to policy script
 	 *
-	 * @param session_id	Session ID
+	 * @param session		Session
 	 * @param start			TRUE if session start, FALSE if session stop
 	 * @return				TRUE if command successful, FALSE otherwise
 	 */
-	 bool (*policy_script)(imv_database_t *this, int session_id, bool start);
+	 bool (*policy_script)(imv_database_t *this, imv_session_t *session,
+						   bool start);
 
 	/**
-	 * Create enumerator for workitems assigned to a session ID
+	 * Finalize a workitem
 	 *
-	 * @param session_id	Session ID
-	 * @return				Enumerator of workitems assigned to session ID
+	 * @param workitem		Workitem to be finalized
 	 */
-	 enumerator_t* (*create_workitem_enumerator)(imv_database_t *this,
-					int session_id);
+	bool (*finalize_workitem)(imv_database_t *this, imv_workitem_t *workitem);
 
 	/**
 	 * Get database handle
@@ -96,8 +101,9 @@ struct imv_database_t {
 /**
  * Create an imv_database_t instance
  *
- * @param uri			database uri
+ * @param uri				Database uri
+ * @param script			Policy Manager script
  */
-imv_database_t* imv_database_create(char *uri);
+imv_database_t* imv_database_create(char *uri, char *script);
 
 #endif /** IMV_DATABASE_H_ @}*/

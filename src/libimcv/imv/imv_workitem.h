@@ -30,7 +30,6 @@ typedef struct imv_workitem_t imv_workitem_t;
 typedef enum imv_workitem_type_t imv_workitem_type_t;
 
 enum imv_workitem_type_t {
-	IMV_WORKITEM_START =          0,
 	IMV_WORKITEM_PACKAGES =       1,
 	IMV_WORKITEM_UNKNOWN_SOURCE = 2,
 	IMV_WORKITEM_FORWARDING =     3,
@@ -49,11 +48,11 @@ extern enum_name_t *imv_workitem_type_names;
 struct imv_workitem_t {
 
 	/**
-	 * Get workitem type
+	 * Get primary workitem key 
 	 *
-	 * @return				Session ID
+	 * @return				Primary workitem key
 	 */
-	 int (*get_session_id)(imv_workitem_t *this);
+	 int (*get_id)(imv_workitem_t *this);
 
 	/**
 	 * Get workitem type
@@ -61,6 +60,20 @@ struct imv_workitem_t {
 	 * @return				Workitem type
 	 */
 	 imv_workitem_type_t (*get_type)(imv_workitem_t *this);
+
+	/**
+	 * Set IMV ID
+	 *
+	 * @param id			IMV ID
+	 */
+	 void (*set_imv_id)(imv_workitem_t *this, TNC_IMVID imv_id);
+
+	/**
+	 * Get IMV ID
+	 *
+	 * @return				IMV ID
+	 */
+	 TNC_IMVID (*get_imv_id)(imv_workitem_t *this);
 
 	/**
 	 * Get argument string
@@ -74,9 +87,19 @@ struct imv_workitem_t {
 	 *
 	 * @param result		Result string
 	 * @param eval			Evaluation Result
+	 * @return				Action Recommendation
 	 */
-	 TNC_IMV_Action_Recommendation(*set_result)(imv_workitem_t *this, 
+	 TNC_IMV_Action_Recommendation (*set_result)(imv_workitem_t *this, 
 						char *result, TNC_IMV_Evaluation_Result eval);
+
+	/**
+	 * Set result string
+	 *
+	 * @param result		Result string
+	 * @return				Action Recommendatino
+	 */
+	 TNC_IMV_Action_Recommendation (*get_result)(imv_workitem_t *this, 
+												 char **result);
 
 	/**
 	 * Destroys an imv_workitem_t object
@@ -87,13 +110,13 @@ struct imv_workitem_t {
 /**
  * Create an imv_workitem_t instance
  *
- * @param session_id		Session ID to which workitem is assigned
+ * @param id				Primary workitem key
  * @param type				Workitem type
  * @param argument			Argument string
  * @param rec_fail			Recommendation with minor/major non-compliance case
  * @param rec_noresult		Recommendation in don't know/error case
  */
-imv_workitem_t *imv_workitem_create(int session_id, imv_workitem_type_t type,
+imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
 									char *argument,
 									TNC_IMV_Action_Recommendation rec_fail,
 									TNC_IMV_Action_Recommendation rec_noresult);

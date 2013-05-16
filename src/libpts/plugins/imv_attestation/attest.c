@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(cleanup);
-	libimcv_init();
+	libimcv_init(FALSE);
 	libpts_init();
 
 	do_args(argc, argv);

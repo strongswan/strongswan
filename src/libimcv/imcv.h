@@ -35,15 +35,17 @@
 #define IMCV_H_
 
 #include "pa_tnc/pa_tnc_attr_manager.h"
+#include "imv/imv_database.h"
 
 #include <library.h>
 
 /**
  * Initialize libimcv.
  *
+ * @param is_imv		TRUE if called by IMV, FALSE if by IMC
  * @return				FALSE if initialization failed
  */
-bool libimcv_init(void);
+bool libimcv_init(bool is_imv);
 
 /**
  * Deinitialize libimcv.
@@ -54,5 +56,10 @@ void libimcv_deinit(void);
  * PA-TNC attribute manager
  */
 extern pa_tnc_attr_manager_t* imcv_pa_tnc_attributes;
+
+/**
+ * Global IMV database object
+ */
+extern imv_database_t* imcv_db;
 
 #endif /** IMCV_H_ @}*/

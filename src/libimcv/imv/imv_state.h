@@ -22,7 +22,7 @@
 #ifndef IMV_STATE_H_
 #define IMV_STATE_H_
 
-#include "imv_workitem.h"
+#include "imv_session.h"
 
 #include <tncifimv.h>
 
@@ -36,9 +36,9 @@ typedef struct imv_state_t imv_state_t;
 struct imv_state_t {
 
 	/**
-	 * Get the TNCS connection ID attached to the state
+	 * Get the TNCCS connection ID attached to the state
 	 *
-	 * @return				TNCS connection ID of the state
+	 * @return				TNCCS connection ID of the state
 	 */
 	 TNC_ConnectionID (*get_connection_id)(imv_state_t *this);
 
@@ -97,51 +97,18 @@ struct imv_state_t {
 	chunk_t (*get_ar_id)(imv_state_t *this, u_int32_t *id_type);
 
 	/**
-	 * Set unique session ID
+	 * Set session associated with TNCCS Connection
 	 *
-	 * @param session_id	Unique session ID
+	 * @param session		Session associated with TNCCS Connection
 	 */
-	void (*set_session_id)(imv_state_t *this, int session_id);
+	void (*set_session)(imv_state_t *this, imv_session_t *session);
 
 	/**
-	 * Get unique session_id
+	 * Get session associated with TNCCS Connection
 	 *
-	 * @return				Unique session ID
+	 * @return				Session associated with TNCCS Connection
 	 */
-	int (*get_session_id)(imv_state_t *this);
-
-	/**
-	 * Add workitem to list
-	 *
-	 * @param workitem		Workitem to be added
-	 */
-	void (*add_workitem)(imv_state_t *this, imv_workitem_t *workitem);
-
-	/**
-	 * Return number of pending workitems
-	 *
-	 * @return				Number of pending workitems
-	 */
-	int (*get_workitem_count)(imv_state_t *this);
-
-	/**
-	 * Create an enumerator over the pending workitems
-	 *
-	 * @return				Workitem enumerator
-	 */
-	enumerator_t* (*create_workitem_enumerator)(imv_state_t *this);
-
-	/**
-	 * Finalize a workitem
-	 *
-	 * @param enumerator	Current enumerator position pointing to workitem
-	 * @param workitem		Workitem to be finalized
-	 * @param result		Result description as a text
-	 * @param eval			Evaluation Result
-	 */
-	void (*finalize_workitem)(imv_state_t *this, enumerator_t *enumerator,
-							  imv_workitem_t *workitem,  char *result,
-							  TNC_IMV_Evaluation_Result eval);
+	imv_session_t* (*get_session)(imv_state_t *this);
 
 	/**
 	 * Change the connection state
@@ -171,6 +138,17 @@ struct imv_state_t {
 	void (*set_recommendation)(imv_state_t *this,
 							   TNC_IMV_Action_Recommendation rec,
 							   TNC_IMV_Evaluation_Result eval);
+
+	/**
+	 * Update IMV action recommendation and evaluation result
+	 *
+	 * @param rec			IMV action recommendation
+	 * @param eval			IMV evaluation result
+	 *
+	 */
+	void (*update_recommendation)(imv_state_t *this,
+								  TNC_IMV_Action_Recommendation rec,
+								  TNC_IMV_Evaluation_Result eval);
 
 	/**
 	 * Get reason string based on the preferred language

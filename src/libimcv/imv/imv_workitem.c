@@ -20,8 +20,7 @@
 
 typedef struct private_imv_workitem_t private_imv_workitem_t;
 
-ENUM(imv_workitem_type_names, IMV_WORKITEM_START, IMV_WORKITEM_UDP_SCAN,
-	"START",
+ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_UDP_SCAN,
 	"PCKGS",
 	"UNSRC",
 	"FWDEN",
@@ -44,9 +43,14 @@ struct private_imv_workitem_t {
 	imv_workitem_t public;
 
 	/**
-	 * Session ID
+	 * Primary workitem key
 	 */
-	int session_id;
+	int id;
+
+	/**
+	 * IMV ID
+	 */
+	TNC_IMVID imv_id;
 
 	/**
 	 * Workitem type
@@ -80,10 +84,22 @@ struct private_imv_workitem_t {
 
 };
 
-METHOD(imv_workitem_t, get_session_id, int,
+METHOD(imv_workitem_t, get_id, int,
 	private_imv_workitem_t *this)
 {
-	return this->session_id;
+	return this->id;
+}
+
+METHOD(imv_workitem_t, set_imv_id, void,
+	private_imv_workitem_t *this, TNC_IMVID imv_id)
+{
+	this->imv_id = imv_id;
+}
+
+METHOD(imv_workitem_t, get_imv_id, TNC_IMVID,
+	private_imv_workitem_t *this)
+{
+	return this->imv_id;
 }
 
 METHOD(imv_workitem_t, get_type, imv_workitem_type_t,
@@ -124,6 +140,16 @@ METHOD(imv_workitem_t, set_result, TNC_IMV_Action_Recommendation,
 	return this->rec_final;	
 }
 
+METHOD(imv_workitem_t, get_result, TNC_IMV_Action_Recommendation,
+	private_imv_workitem_t *this, char **result)
+{
+	if (result)
+	{
+		*result = this->result;
+	}
+	return this->rec_final;
+}
+
 METHOD(imv_workitem_t, destroy, void,
 	private_imv_workitem_t *this)
 {
@@ -135,7 +161,7 @@ METHOD(imv_workitem_t, destroy, void,
 /**
  * See header
  */
-imv_workitem_t *imv_workitem_create(int session_id, imv_workitem_type_t type,
+imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
 									char *argument,
 									TNC_IMV_Action_Recommendation rec_fail,
 									TNC_IMV_Action_Recommendation rec_noresult)
@@ -144,13 +170,16 @@ imv_workitem_t *imv_workitem_create(int session_id, imv_workitem_type_t type,
 
 	INIT(this,
 		.public = {
-			.get_session_id = _get_session_id,
+			.get_id = _get_id,
+			.set_imv_id = _set_imv_id,
+			.get_imv_id = _get_imv_id,
 			.get_type = _get_type,
 			.get_argument = _get_argument,
 			.set_result = _set_result,
+			.get_result = _get_result,
 			.destroy = _destroy,
 		},
-		.session_id = session_id,
+		.id = id,
 		.type = type,
 		.argument = strdup(argument),
 		.rec_fail = rec_fail,

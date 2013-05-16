@@ -21,6 +21,8 @@
 #include <imv/imv_lang_string.h>
 #include "imv/imv_reason_string.h"
 
+#include <tncif_policy.h>
+
 #include <collections/linked_list.h>
 #include <utils/debug.h>
 
@@ -74,14 +76,9 @@ struct private_imv_attestation_state_t {
 	chunk_t ar_id_value;
 
 	/**
-	 * Unique session ID
+	 * IMV database session associated with TNCCS connection
 	 */
-	int session_id;
-
-	/**
-	 * List of workitems
-	 */
-	linked_list_t *workitems;
+	imv_session_t *session;
 
 	/**
 	 * IMV Attestation handshake state
@@ -253,46 +250,16 @@ METHOD(imv_state_t, get_ar_id, chunk_t,
 	return this->ar_id_value;
 }
 
-METHOD(imv_state_t, set_session_id, void,
-	private_imv_attestation_state_t *this, int session_id)
+METHOD(imv_state_t, set_session, void,
+	private_imv_attestation_state_t *this, imv_session_t *session)
 {
-	this->session_id = session_id;
+	this->session = session;
 }
 
-METHOD(imv_state_t, get_session_id, int,
+METHOD(imv_state_t, get_session, imv_session_t*,
 	private_imv_attestation_state_t *this)
 {
-	return this->session_id;
-}
-
-METHOD(imv_state_t, add_workitem, void,
-	private_imv_attestation_state_t *this, imv_workitem_t *workitem)
-{
-	this->workitems->insert_last(this->workitems, workitem);
-}
-
-METHOD(imv_state_t, get_workitem_count, int,
-	private_imv_attestation_state_t *this)
-{
-	return this->workitems->get_count(this->workitems);
-}
-
-METHOD(imv_state_t, create_workitem_enumerator, enumerator_t*,
-	private_imv_attestation_state_t *this)
-{
-	return this->workitems->create_enumerator(this->workitems);
-}
-
-METHOD(imv_state_t, finalize_workitem, void,
-	private_imv_attestation_state_t *this, enumerator_t *enumerator,
-	imv_workitem_t *workitem, char *result,	TNC_IMV_Evaluation_Result eval)
-{
-	TNC_IMV_Action_Recommendation rec;
-
-	this->workitems->remove_at(this->workitems, enumerator);
-	rec = workitem->set_result(workitem, result, eval);
-	/* TODO update workitem in IMV database */
-	workitem->destroy(workitem);
+	return this->session;
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -303,7 +270,7 @@ METHOD(imv_state_t, change_state, void,
 
 METHOD(imv_state_t, get_recommendation, void,
 	private_imv_attestation_state_t *this, TNC_IMV_Action_Recommendation *rec,
-									TNC_IMV_Evaluation_Result *eval)
+										   TNC_IMV_Evaluation_Result *eval)
 {
 	*rec = this->rec;
 	*eval = this->eval;
@@ -311,10 +278,18 @@ METHOD(imv_state_t, get_recommendation, void,
 
 METHOD(imv_state_t, set_recommendation, void,
 	private_imv_attestation_state_t *this, TNC_IMV_Action_Recommendation rec,
-									TNC_IMV_Evaluation_Result eval)
+										   TNC_IMV_Evaluation_Result eval)
 {
 	this->rec = rec;
 	this->eval = eval;
+}
+
+METHOD(imv_state_t, update_recommendation, void,
+	private_imv_attestation_state_t *this, TNC_IMV_Action_Recommendation rec,
+										   TNC_IMV_Evaluation_Result eval)
+{
+	this->rec  = tncif_policy_update_recommendation(this->rec, rec);
+	this->eval = tncif_policy_update_evaluation(this->eval, eval);
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
@@ -368,9 +343,8 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
+	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
-	this->workitems->destroy_offset(this->workitems,
-									offsetof(imv_workitem_t, destroy));
 	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
 	this->components->destroy_function(this->components, (void *)free_func_comp);
 	this->pts->destroy(this->pts);
@@ -564,15 +538,12 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_ar_id = _set_ar_id,
 				.get_ar_id = _get_ar_id,
-				.set_session_id = _set_session_id,
-				.get_session_id = _get_session_id,
-				.add_workitem = _add_workitem,
-				.get_workitem_count = _get_workitem_count,
-				.create_workitem_enumerator = _create_workitem_enumerator,
-				.finalize_workitem = _finalize_workitem,
+				.set_session = _set_session,
+				.get_session = _get_session,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
+				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
