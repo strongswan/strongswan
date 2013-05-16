@@ -814,38 +814,32 @@ traffic_selector_t *traffic_selector_create_from_string(
 										char *from_addr, u_int16_t from_port,
 										char *to_addr, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
-															from_port, to_port);
+	private_traffic_selector_t *this;
+	int family;
 
 	switch (type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-			if (inet_pton(AF_INET, from_addr, (struct in_addr*)this->from4) < 0)
-			{
-				free(this);
-				return NULL;
-			}
-			if (inet_pton(AF_INET, to_addr, (struct in_addr*)this->to4) < 0)
-			{
-				free(this);
-				return NULL;
-			}
+			family = AF_INET;
 			break;
 		case TS_IPV6_ADDR_RANGE:
-			if (inet_pton(AF_INET6, from_addr, (struct in6_addr*)this->from6) < 0)
-			{
-				free(this);
-				return NULL;
-			}
-			if (inet_pton(AF_INET6, to_addr, (struct in6_addr*)this->to6) < 0)
-			{
-				free(this);
-				return NULL;
-			}
+			family = AF_INET6;
 			break;
+		default:
+			return NULL;
 	}
+
+	this = traffic_selector_create(protocol, type, from_port, to_port);
+
+	if (inet_pton(family, from_addr, this->from) != 1 ||
+		inet_pton(family, to_addr, this->to) != 1)
+	{
+		free(this);
+		return NULL;
+	}
+
 	calc_netbits(this);
-	return (&this->public);
+	return &this->public;
 }
 
 /*
