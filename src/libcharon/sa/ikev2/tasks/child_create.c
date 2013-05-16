@@ -678,13 +678,6 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 static void add_ipcomp_notify(private_child_create_t *this,
 								  message_t *message, u_int8_t ipcomp)
 {
-	if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
-	{
-		DBG1(DBG_IKE, "IPComp is not supported if either peer is natted, "
-			 "IPComp disabled");
-		return;
-	}
-
 	this->my_cpi = this->child_sa->alloc_cpi(this->child_sa);
 	if (this->my_cpi)
 	{

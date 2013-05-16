@@ -774,19 +774,11 @@ METHOD(task_t, build_i, status_t,
 
 			if (this->config->use_ipcomp(this->config))
 			{
-				if (this->udp)
+				this->cpi_i = this->child_sa->alloc_cpi(this->child_sa);
+				if (!this->cpi_i)
 				{
-					DBG1(DBG_IKE, "IPComp is not supported if either peer is "
-						 "natted, IPComp disabled");
-				}
-				else
-				{
-					this->cpi_i = this->child_sa->alloc_cpi(this->child_sa);
-					if (!this->cpi_i)
-					{
-						DBG1(DBG_IKE, "unable to allocate a CPI from kernel, "
-							 "IPComp disabled");
-					}
+					DBG1(DBG_IKE, "unable to allocate a CPI from kernel, "
+						 "IPComp disabled");
 				}
 			}
 
@@ -1009,21 +1001,13 @@ METHOD(task_t, process_r, status_t,
 
 			if (this->config->use_ipcomp(this->config))
 			{
-				if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+				list = sa_payload->get_ipcomp_proposals(sa_payload,
+														&this->cpi_i);
+				if (!list->get_count(list))
 				{
-					DBG1(DBG_IKE, "IPComp is not supported if either peer is "
-						 "natted, IPComp disabled");
-				}
-				else
-				{
-					list = sa_payload->get_ipcomp_proposals(sa_payload,
-															&this->cpi_i);
-					if (!list->get_count(list))
-					{
-						DBG1(DBG_IKE, "expected IPComp proposal but peer did "
-							 "not send one, IPComp disabled");
-						this->cpi_i = 0;
-					}
+					DBG1(DBG_IKE, "expected IPComp proposal but peer did "
+						 "not send one, IPComp disabled");
+					this->cpi_i = 0;
 				}
 			}
 			if (!list || !list->get_count(list))
