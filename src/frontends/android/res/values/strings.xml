@@ -94,6 +94,7 @@
     <string name="error_unreachable">Gateway is unreachable.</string>
     <string name="error_peer_auth_failed">Verifying gateway authentication failed.</string>
     <string name="error_auth_failed">User authentication failed.</string>
+    <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Unspecified failure while connecting.</string>
     <string name="connecting_title">Connecting: %1$s</string>
     <string name="connecting_message">Establishing VPN with \""%1$s\".</string>

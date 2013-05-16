@@ -96,6 +96,7 @@
     <string name="error_unreachable">Bramka jest nieosiągalna</string>
     <string name="error_peer_auth_failed">Błąd przy weryfikacji bramki</string>
     <string name="error_auth_failed">Błąd przy autoryzacji użytkownika</string>
+    <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Nieznany błąd w czasie połączenia</string>
     <string name="connecting_title">Łączenie: %1$s</string>
     <string name="connecting_message">Tworzenie tunelu VPN z \""%1$s\".</string>

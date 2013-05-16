@@ -94,6 +94,7 @@
     <string name="error_unreachable">Gateway ist nicht erreichbar.</string>
     <string name="error_peer_auth_failed">Authentifizierung des Gateway ist fehlgeschlagen.</string>
     <string name="error_auth_failed">Benutzerauthentifizierung ist fehlgeschlagen.</string>
+    <string name="error_assessment_failed">Sicherheitsassessment ist fehlgeschlagen.</string>
     <string name="error_generic">Unbekannter Fehler während des Verbindens.</string>
     <string name="connecting_title">Verbinden: %1$s</string>
     <string name="connecting_message">Verbinde mit \""%1$s\".</string>

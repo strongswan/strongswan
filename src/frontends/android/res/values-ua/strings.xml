@@ -92,6 +92,7 @@
     <string name="error_unreachable">Немає зв\'язку зі шлюзом.</string>
     <string name="error_peer_auth_failed">Помилка перевірки данних аутентифікації шлюза.</string>
     <string name="error_auth_failed">Помилка аутентифікації користувача.</string>
+    <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Невідома помилка під час підключення.</string>
     <string name="connecting_title">Підключення: %1$s</string>
     <string name="connecting_message">Підключення VPN з \""%1$s\".</string>
