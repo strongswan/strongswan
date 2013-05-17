@@ -852,6 +852,33 @@ local_auth_failed:
 	return FAILED;
 }
 
+/**
+ * Send an INFORMATIONAL message with an AUTH_FAILED before closing IKE_SA
+ */
+static void send_auth_failed_informational(private_ike_auth_t *this,
+										   message_t *reply)
+{
+	message_t *message;
+	packet_t *packet;
+	host_t *host;
+
+	message = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
+	message->set_message_id(message, reply->get_message_id(reply) + 1);
+	host = this->ike_sa->get_my_host(this->ike_sa);
+	message->set_source(message, host->clone(host));
+	host = this->ike_sa->get_other_host(this->ike_sa);
+	message->set_destination(message, host->clone(host));
+	message->set_exchange_type(message, INFORMATIONAL);
+	message->add_notify(message, FALSE, AUTHENTICATION_FAILED, chunk_empty);
+
+	if (this->ike_sa->generate_message(this->ike_sa, message,
+									   &packet) == SUCCESS)
+	{
+		charon->sender->send(charon->sender, packet);
+	}
+	message->destroy(message);
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_auth_t *this, message_t *message)
 {
@@ -1005,6 +1032,7 @@ METHOD(task_t, process_i, status_t,
 				break;
 			default:
 				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
+				send_auth_failed_informational(this, message);
 				return FAILED;
 		}
 	}
@@ -1049,6 +1077,7 @@ METHOD(task_t, process_i, status_t,
 
 peer_auth_failed:
 	charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
+	send_auth_failed_informational(this, message);
 	return FAILED;
 }
 
