@@ -15,6 +15,7 @@
 
 #include <tncifimv.h>
 #include <tncif_names.h>
+#include <tncif_policy.h>
 
 #include <tnc/tnc.h>
 #include <tnc/imv/imv.h>
@@ -157,53 +158,10 @@ METHOD(recommendations_t, have_recommendation, bool,
 		switch (policy)
 		{
 			case RECOMMENDATION_POLICY_DEFAULT:
-				switch (entry->rec)
-				{
-					case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
-						final_rec = entry->rec;
-						break;
-					case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-						if (final_rec != TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS)
-						{
-							final_rec = entry->rec;
-						};
-						break;
-					case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-						if (final_rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
-						{
-							final_rec = entry->rec;
-						};
-						break;
-					case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
-						break;
-				}
-				switch (entry->eval)
-				{
-					case TNC_IMV_EVALUATION_RESULT_ERROR:
-						final_eval = entry->eval;
-						break;
-					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
-						if (final_eval != TNC_IMV_EVALUATION_RESULT_ERROR)
-						{
-							final_eval = entry->eval;
-						}
-						break;
-					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
-						if (final_eval != TNC_IMV_EVALUATION_RESULT_ERROR &&
-							final_eval != TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR)
-						{
-							final_eval = entry->eval;
-						}
-						break;
-					case TNC_IMV_EVALUATION_RESULT_COMPLIANT:
-						if (final_eval == TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
-						{
-							final_eval = entry->eval;
-						}
-						break;
-					case TNC_IMV_EVALUATION_RESULT_DONT_KNOW:
-						break;
-				}
+				final_rec = tncif_policy_update_recommendation(final_rec,
+															   entry->rec);
+				final_eval = tncif_policy_update_evaluation(final_eval,
+															entry->eval);
 				break;
 
 			case RECOMMENDATION_POLICY_ALL:
