@@ -91,6 +91,14 @@ struct charonservice_t {
 	bool (*update_imc_state)(charonservice_t *this, android_imc_state_t state);
 
 	/**
+	 * Add a remediation instruction via JNI
+	 *
+	 * @param instr			remediation instruction
+	 * @return				TRUE on success
+	 */
+	bool (*add_remediation_instr)(charonservice_t *this, char *instr);
+
+	/**
 	 * Install a bypass policy for the given socket using the protect() Method
 	 * of the Android VpnService interface.
 	 *

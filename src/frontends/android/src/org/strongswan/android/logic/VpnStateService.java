@@ -16,11 +16,14 @@
 package org.strongswan.android.logic;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.Service;
 import android.content.Context;
@@ -38,6 +41,7 @@ public class VpnStateService extends Service
 	private State mState = State.DISABLED;
 	private ErrorState mError = ErrorState.NO_ERROR;
 	private ImcState mImcState = ImcState.UNKNOWN;
+	private final LinkedList<RemediationInstruction> mRemediationInstructions = new LinkedList<RemediationInstruction>();
 
 	public enum State
 	{
@@ -159,6 +163,16 @@ public class VpnStateService extends Service
 	}
 
 	/**
+	 * Get the remediation instructions, if any.
+	 *
+	 * @return read-only list of instructions
+	 */
+	public List<RemediationInstruction> getRemediationInstructions()
+	{	/* only updated from the main thread so no synchronization needed */
+		return Collections.unmodifiableList(mRemediationInstructions);
+	}
+
+	/**
 	 * Disconnect any existing connection and shutdown the daemon, the
 	 * VpnService is not stopped but it is reset so new connections can be
 	 * started.
@@ -277,6 +291,8 @@ public class VpnStateService extends Service
 	/**
 	 * Set the current IMC state and notify all listeners, if changed.
 	 *
+	 * Setting the state to UNKNOWN clears all remediation instructions.
+	 *
 	 * May be called from threads other than the main thread.
 	 *
 	 * @param error error state
@@ -287,12 +303,37 @@ public class VpnStateService extends Service
 			@Override
 			public Boolean call() throws Exception
 			{
+				if (state == ImcState.UNKNOWN)
+				{
+					VpnStateService.this.mRemediationInstructions.clear();
+				}
 				if (VpnStateService.this.mImcState != state)
 				{
 					VpnStateService.this.mImcState = state;
 					return true;
 				}
 				return false;
+			}
+		});
+	}
+
+	/**
+	 * Add the given remediation instruction to the internal list.  Listeners
+	 * are not notified.
+	 *
+	 * Instructions are cleared if the IMC state is set to UNKNOWN.
+	 *
+	 * May be called from threads other than the main thread.
+	 *
+	 * @param instruction remediation instruction
+	 */
+	public void addRemediationInstruction(final RemediationInstruction instruction)
+	{
+		mHandler.post(new Runnable() {
+			@Override
+			public void run()
+			{
+				VpnStateService.this.mRemediationInstructions.add(instruction);
 			}
 		});
 	}

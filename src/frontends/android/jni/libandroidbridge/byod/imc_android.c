@@ -31,6 +31,7 @@
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_remediation_instr.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
@@ -316,6 +317,24 @@ static void handle_ietf_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
 			add_measurement(*entry, out_msg, NULL);
 		}
 		enumerator->destroy(enumerator);
+	}
+	else if (attr_type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
+	{
+		ietf_attr_remediation_instr_t *attr_cast;
+		pen_type_t param;
+		chunk_t str;
+		char *instr;
+
+		attr_cast = (ietf_attr_remediation_instr_t*)attr;
+		param = attr_cast->get_parameters_type(attr_cast);
+
+		if (pen_type_is(param, PEN_IETF, IETF_REMEDIATION_PARAMETERS_STRING))
+		{
+			str = attr_cast->get_string(attr_cast, NULL);
+			instr = strndup(str.ptr, str.len);
+			charonservice->add_remediation_instr(charonservice, instr);
+			free (instr);
+		}
 	}
 }
 

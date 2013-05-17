@@ -28,6 +28,7 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
 
 import android.app.PendingIntent;
@@ -386,6 +387,26 @@ public class CharonVpnService extends VpnService implements Runnable
 		if (state != null)
 		{
 			setImcState(state);
+		}
+	}
+
+	/**
+	 * Add a remediation instruction to the VPN state service.
+	 * Called via JNI by different threads (but not concurrently).
+	 *
+	 * @param xml XML text
+	 */
+	public void addRemediationInstruction(String xml)
+	{
+		for (RemediationInstruction instruction : RemediationInstruction.fromXml(xml))
+		{
+			synchronized (mServiceLock)
+			{
+				if (mService != null)
+				{
+					mService.addRemediationInstruction(instruction);
+				}
+			}
 		}
 	}
 

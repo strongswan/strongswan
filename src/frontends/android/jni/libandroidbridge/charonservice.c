@@ -186,6 +186,37 @@ failed:
 	return success;
 }
 
+METHOD(charonservice_t, add_remediation_instr, bool,
+	private_charonservice_t *this, char *instr)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jstring jinstr;
+	bool success = FALSE;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"addRemediationInstruction",
+									"(Ljava/lang/String;)V");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jinstr = (*env)->NewStringUTF(env, instr);
+	if (!jinstr)
+	{
+		goto failed;
+	}
+	(*env)->CallVoidMethod(env, this->vpn_service, method_id, jinstr);
+	success = !androidjni_exception_occurred(env);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return success;
+}
+
 /**
  * Bypass a single socket
  */
@@ -491,6 +522,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 		.public = {
 			.update_status = _update_status,
 			.update_imc_state = _update_imc_state,
+			.add_remediation_instr = _add_remediation_instr,
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_user_certificate = _get_user_certificate,
