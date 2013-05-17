@@ -553,13 +553,13 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 {
 	imv_msg_t *out_msg;
 	imv_state_t *state;
+	imv_session_t *session;
 	imv_workitem_t *workitem;
 	imv_os_state_t *os_state;
 	imv_os_handshake_state_t handshake_state;
 	pa_tnc_attr_t *attr;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	enumerator_t *enumerator;
-	imv_session_t *session;
 	u_int received;
 
 	if (!imv_os)
@@ -600,6 +600,13 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 			{
 				/* trigger the policy manager */
 				imcv_db->policy_script(imcv_db, session, TRUE);
+			}
+			else
+			{
+				/* just gather information without evaluation */
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
 			}
 			handshake_state = IMV_OS_STATE_POLICY_START;
 		}

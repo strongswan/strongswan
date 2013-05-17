@@ -86,6 +86,16 @@ struct private_imv_scanner_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
+	 * IMV Scanner handshake state
+	 */
+	imv_scanner_handshake_state_t handshake_state;
+
+	/**
+	 * Flags set for received attributes
+	 */
+	u_int received_flags;
+
+	/**
 	 * List with ports that should be closed
 	 */
 	 linked_list_t *violating_ports;
@@ -300,6 +310,31 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
+METHOD(imv_scanner_state_t, set_handshake_state, void,
+	private_imv_scanner_state_t *this, imv_scanner_handshake_state_t new_state)
+{
+	this->handshake_state = new_state;
+}
+
+METHOD(imv_scanner_state_t, get_handshake_state, imv_scanner_handshake_state_t,
+	private_imv_scanner_state_t *this)
+{
+	return this->handshake_state;
+}
+
+METHOD(imv_scanner_state_t, set_received, void,
+	private_imv_scanner_state_t *this, u_int flags)
+{
+	this->received_flags |= flags;
+}
+
+METHOD(imv_scanner_state_t, get_received, u_int,
+	private_imv_scanner_state_t *this)
+{
+	return this->received_flags;
+}
+
+
 METHOD(imv_scanner_state_t, add_violating_port, void,
 	private_imv_scanner_state_t *this, char *port)
 {
@@ -334,6 +369,10 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
 			},
+			.set_handshake_state = _set_handshake_state,
+			.get_handshake_state = _get_handshake_state,
+			.set_received = _set_received,
+			.get_received = _get_received,
 			.add_violating_port = _add_violating_port,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,

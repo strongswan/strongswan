@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2013 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,6 +28,16 @@
 #include <library.h>
 
 typedef struct imv_scanner_state_t imv_scanner_state_t;
+typedef enum imv_scanner_handshake_state_t imv_scanner_handshake_state_t;
+
+/**
+ * IMV Scanner Handshake States (state machine)
+ */
+enum imv_scanner_handshake_state_t {
+	IMV_SCANNER_STATE_INIT,
+	IMV_SCANNER_STATE_POLICY_START,
+	IMV_SCANNER_STATE_WORKITEMS
+};
 
 /**
  * Internal state of an imv_scanner_t connection instance
@@ -37,6 +48,35 @@ struct imv_scanner_state_t {
 	 * imv_state_t interface
 	 */
 	imv_state_t interface;
+
+	/**
+	 * Set state of the handshake
+	 *
+	 * @param new_state			the handshake state of IMV
+	 */
+	void (*set_handshake_state)(imv_scanner_state_t *this,
+								imv_scanner_handshake_state_t new_state);
+
+	/**
+	 * Get state of the handshake
+	 *
+	 * @return					the handshake state of IMV
+	 */
+	imv_scanner_handshake_state_t (*get_handshake_state)(imv_scanner_state_t *this);
+
+	/**
+	 * Set flags for received attributes
+	 *
+	 * @param flags			Flags to be set
+	 */
+	void (*set_received)(imv_scanner_state_t *this, u_int flags);
+
+	/**
+	 * Get flags set for received attributes
+	 *
+	 * @return				Flags set for received attributes
+	 */
+	u_int (*get_received)(imv_scanner_state_t *this);
 
 	/**
 	 * add a violating TCP or UDP port

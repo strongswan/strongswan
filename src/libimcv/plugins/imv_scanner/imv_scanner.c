@@ -40,6 +40,15 @@ static pen_type_t msg_types[] = {
 
 static imv_agent_t *imv_scanner;
 
+/**
+ * Flag set when corresponding attribute has been received
+ */
+typedef enum imv_scanner_attr_t imv_scanner_attr_t;
+
+enum imv_scanner_attr_t {
+	IMV_SCANNER_ATTR_PORT_FILTER =         (1<<0)
+};
+
 typedef struct port_range_t port_range_t;
 
 struct port_range_t {
@@ -202,7 +211,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PORT_FILTER)
 		{
-			imv_scanner_state_t *imv_scanner_state;
+			imv_scanner_state_t *scanner_state;
 			ietf_attr_port_filter_t *attr_port_filter;
 			enumerator_t *enumerator;
 			u_int8_t protocol;
@@ -210,8 +219,11 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			bool blocked, compliant = TRUE;
 
 
-			imv_scanner_state = (imv_scanner_state_t*)state;
+			scanner_state = (imv_scanner_state_t*)state;
+			scanner_state->set_received(scanner_state,
+										IMV_SCANNER_ATTR_PORT_FILTER);
 			attr_port_filter = (ietf_attr_port_filter_t*)attr;
+
 			enumerator = attr_port_filter->create_port_enumerator(attr_port_filter);
 			while (enumerator->enumerate(enumerator, &blocked, &protocol, &port))
 			{
@@ -248,8 +260,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					compliant = FALSE;
 					snprintf(buf, sizeof(buf), "%s/%u",
 							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
-					imv_scanner_state->add_violating_port(imv_scanner_state,
-														  strdup(buf));
+					scanner_state->add_violating_port(scanner_state, strdup(buf));
 				}
 			}
 			enumerator->destroy(enumerator);
