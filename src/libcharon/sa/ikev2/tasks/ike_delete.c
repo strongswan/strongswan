@@ -109,6 +109,14 @@ METHOD(task_t, process_r, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
+	if (message->get_exchange_type(message) == INFORMATIONAL &&
+		message->get_notify(message, AUTHENTICATION_FAILED))
+	{
+		/* a late AUTHENTICATION_FAILED notify from the initiator after
+		 * we have established the IKE_SA: signal auth failure */
+		charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
+	}
+
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
 		case IKE_ESTABLISHED:
