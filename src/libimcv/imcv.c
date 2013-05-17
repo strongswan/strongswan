@@ -23,7 +23,6 @@
 #include <syslog.h>
 
 #define IMCV_DEBUG_LEVEL			1
-#define IMCV_DEFAULT_DATABASE_URI	"sqlite:///etc/pts/config.db"
 #define IMCV_DEFAULT_POLICY_SCRIPT	"ipsec _imv_policy"
 
 
@@ -150,7 +149,7 @@ bool libimcv_init(bool is_imv)
 		if (is_imv)
 		{
 			uri = lib->settings->get_str(lib->settings,
-						"libimcv.database", IMCV_DEFAULT_DATABASE_URI);
+						"libimcv.database", NULL);
 			script = lib->settings->get_str(lib->settings,
 						"libimcv.policy_script", IMCV_DEFAULT_POLICY_SCRIPT);
 			if (uri)

@@ -303,7 +303,7 @@ METHOD(imv_database_t, get_database, database_t*,
 METHOD(imv_database_t, destroy, void,
 	private_imv_database_t *this)
 {
-	this->db->destroy(this->db);
+	DESTROY_IF(this->db);
 	this->sessions->destroy_offset(this->sessions,
 							offsetof(imv_session_t, destroy));
 	this->mutex->destroy(this->mutex);

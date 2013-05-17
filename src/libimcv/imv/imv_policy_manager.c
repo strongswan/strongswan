@@ -142,9 +142,8 @@ int main(int argc, char *argv[])
 	}
 	session_id = atoi(tnc_session_id);
 	
-	/* attach database */
-	uri = lib->settings->get_str(lib->settings, "imv_policy_manager.database",
-												"sqlite:///etc/pts/config.db");
+	/* attach IMV database */
+	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
 	db = lib->db->create(lib->db, uri);
 	if (!db)
 	{
