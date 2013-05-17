@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Dmitry Korzhevin
     Copyright (C) 2013 Pavel Kopchyk
+    Copyright (C) 2012 Dmitry Korzhevin
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -83,6 +83,11 @@
     <string name="state_disconnecting">Роз\'єднання&#8230;</string>
     <string name="state_disabled">Немає активних VPN</string>
     <string name="state_error">Помилка</string>
+
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">Assessment:</string>
+    <string name="imc_state_isolate">Restricted</string>
+    <string name="imc_state_block">Failed</string>
 
     <!-- Dialogs -->
     <string name="login_title">Введіть пароль для з\'єднання</string>

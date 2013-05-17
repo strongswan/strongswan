@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012-2013 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     Hochschule fuer Technik Rapperswil
@@ -85,6 +85,11 @@
     <string name="state_disconnecting">Trennen&#8230;</string>
     <string name="state_disabled">Kein aktives Profil</string>
     <string name="state_error">Fehler</string>
+
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">Assessment:</string>
+    <string name="imc_state_isolate">Eingeschränkt</string>
+    <string name="imc_state_block">Fehlgeschlagen</string>
 
     <!-- Dialogs -->
     <string name="login_title">Passwort eingeben um zu verbinden</string>
