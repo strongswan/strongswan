@@ -46,6 +46,14 @@ libimcv_la_SOURCES = \
 ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy
 
+ipsec_PROGRAMS = imv_policy_manager
+imv_policy_manager_SOURCES = \
+	imv/imv_policy_manager.c \
+	imv/imv_policy_manager_usage.h imv/imv_policy_manager_usage.c
+imv_policy_manager_LDADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
+#imv/imv_policy_manager.o :	$(top_builddir)/config.status
+
 SUBDIRS = .
 
 if USE_IMC_TEST
