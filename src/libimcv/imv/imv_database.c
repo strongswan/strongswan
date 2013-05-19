@@ -189,6 +189,16 @@ METHOD(imv_database_t, add_device, int,
 	return did;
 }
 
+METHOD(imv_database_t, add_recommendation, void,
+	private_imv_database_t *this, imv_session_t *session,
+	TNC_IMV_Action_Recommendation rec)
+{
+	/* add final recommendation to session */
+	this->db->execute(this->db, NULL,
+			"UPDATE sessions SET rec = ? WHERE id = ?",
+			 DB_INT, rec, DB_INT, session->get_session_id(session));
+}
+
 METHOD(imv_database_t, policy_script, bool,
 	private_imv_database_t *this, imv_session_t *session, bool start)
 {
@@ -322,6 +332,7 @@ imv_database_t *imv_database_create(char *uri, char *script)
 			.get_session = _get_session,
 			.add_product = _add_product,
 			.add_device = _add_device,
+			.add_recommendation = _add_recommendation,
 			.policy_script = _policy_script,
 			.finalize_workitem = _finalize_workitem,
 			.get_database = _get_database,

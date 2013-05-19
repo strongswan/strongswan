@@ -19,6 +19,8 @@
 #include <libgen.h>
 #include <time.h>
 
+#include <tncif_names.h>
+
 #include "attest_db.h"
 
 #include "libpts.h"
@@ -812,24 +814,22 @@ METHOD(attest_db_t, list_devices, void,
 	char *product;
 	time_t timestamp;
 	int id, last_id = 0, ar_id = 0, last_ar_id = 0, device_count = 0;
-	int count, count_update, count_blacklist;
+	int session_id, rec;
 	u_int32_t ar_id_type;
-	u_int tstamp, flags = 0;
+	u_int tstamp;
 
 	e = this->db->query(this->db,
-			"SELECT d.id, d.value, s.time, s.identity, p.name, "
-			"i.count, i.count_update, i.count_blacklist, i.flags "
+			"SELECT d.id, d.value, s.id, s.time, s.identity, s.rec, p.name "
 			"FROM devices AS d "
 			"JOIN sessions AS s ON d.id = s.device "
 			"JOIN products AS p ON p.id = s.product "
-			"JOIN device_infos AS i ON i.session = s.id "
-			"ORDER BY d.value, s.time DESC", DB_INT, DB_BLOB, DB_UINT,
-			 DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_UINT);
+			"ORDER BY d.value, s.time DESC", DB_INT, DB_BLOB, DB_INT, DB_UINT,
+			 DB_INT, DB_INT, DB_TEXT);
 
 	if (e)
 	{
-		while (e->enumerate(e, &id, &value, &tstamp, &ar_id, &product,
-							&count, &count_update, &count_blacklist, &flags))
+		while (e->enumerate(e, &id, &value, &session_id, &tstamp, &ar_id, &rec,
+							   &product))
 		{
 			if (id != last_id)
 			{
@@ -838,8 +838,8 @@ METHOD(attest_db_t, list_devices, void,
 				last_id = id;
 			}
 			timestamp = tstamp;
-			printf("      %T, %4d, %3d, %3d, %1u, '%s'", &timestamp, this->utc,
-				   count, count_update, count_blacklist, flags, product);
+			printf("%4d:   %T, %-20s", session_id, &timestamp, this->utc,
+									   product);
 			if (ar_id)
 			{
 				if (ar_id != last_ar_id)
@@ -861,7 +861,7 @@ METHOD(attest_db_t, list_devices, void,
 				}
 				last_ar_id = ar_id;
 			}
-			printf("\n");
+			printf(" - %N\n", TNC_IMV_Action_Recommendation_names, rec);
 		}
 		e->destroy(e);
 		free(ar_id_value.ptr);
@@ -1519,31 +1519,32 @@ METHOD(attest_db_t, list_sessions, void,
 	enumerator_t *e;
 	chunk_t device, identity;
 	char *product;
-	int session_id, conn_id;
+	int session_id, conn_id, rec;
 	time_t created;
 	u_int t;
 
 	e = this->db->query(this->db,
-				"SELECT s.id, s.time, s.connection, p.name, d.value, i.value "
-				"FROM sessions AS s "
-				"LEFT JOIN products AS p ON s.product = p.id "
-				"LEFT JOIN devices AS d ON s.device = d.id "
-				"LEFT JOIN identities AS i ON s.identity = i.id "
-				"ORDER BY s.time DESC",
-				 DB_INT, DB_UINT, DB_INT, DB_TEXT, DB_BLOB, DB_BLOB);
+			"SELECT s.id, s.time, s.connection, s.rec, p.name, d.value, i.value "
+			"FROM sessions AS s "
+			"LEFT JOIN products AS p ON s.product = p.id "
+			"LEFT JOIN devices AS d ON s.device = d.id "
+			"LEFT JOIN identities AS i ON s.identity = i.id "
+			"ORDER BY s.time DESC",
+			 DB_INT, DB_UINT, DB_INT, DB_INT, DB_TEXT, DB_BLOB, DB_BLOB);
 	if (e)
 	{
-		while (e->enumerate(e, &session_id, &t, &conn_id, &product, &device,
-							   &identity))
+		while (e->enumerate(e, &session_id, &t, &conn_id, &rec, &product,
+							   &device, &identity))
 		{
 			created = t;
 			product = product ? product : "-";
 			device = device.len ? device : chunk_from_str("-");
 			device.len = min(device.len, 20);
 			identity = identity.len ? identity : chunk_from_str("-");
-			printf("%4d: %T %2d %-20s %.*s%*s %.*s\n", session_id, &created,
+			printf("%4d: %T %2d %-20s %.*s%*s %.*s - %N\n", session_id, &created,
 				   FALSE, conn_id, product, device.len, device.ptr,
-				   20-device.len, " ", identity.len, identity.ptr);
+				   20-device.len, " ", identity.len, identity.ptr,
+				   TNC_IMV_Action_Recommendation_names, rec);
 		}
 		e->destroy(e);
 	}

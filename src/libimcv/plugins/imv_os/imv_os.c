@@ -119,6 +119,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_ConnectionState new_state)
 {
+	TNC_IMV_Action_Recommendation rec;
 	imv_state_t *state;
 	imv_session_t *session;
 
@@ -133,15 +134,31 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			state = imv_os_state_create(connection_id);
 			return imv_os->create_state(imv_os, state);
 		case TNC_CONNECTION_STATE_DELETE:
+			return imv_os->delete_state(imv_os, connection_id);
+		case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+		case TNC_CONNECTION_STATE_ACCESS_NONE:
 			if (imcv_db && imv_os->get_state(imv_os, connection_id, &state))
 			{
+				switch (new_state)
+				{
+					case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+						rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
+						break;
+					case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+						rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
+						break;
+					case TNC_CONNECTION_STATE_ACCESS_NONE:
+					default:
+						rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
+				}
 				session = state->get_session(state);
+				imcv_db->add_recommendation(imcv_db, session, rec);
 				imcv_db->policy_script(imcv_db, session, FALSE);
 			}
-			return imv_os->delete_state(imv_os, connection_id);
+			/* fall through to default state */
 		default:
-			return imv_os->change_state(imv_os, connection_id,
-											 new_state, NULL);
+			return imv_os->change_state(imv_os, connection_id, new_state, NULL);
 	}
 }
 

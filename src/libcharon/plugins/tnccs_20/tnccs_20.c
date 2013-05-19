@@ -583,6 +583,7 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 {
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
+	TNC_ConnectionState state;
 	TNC_IMVID id;
 	chunk_t reason, language;
 	enumerator_t *enumerator;
@@ -602,20 +603,27 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 
 		/**
 		 * Map IMV Action Recommendation codes to PB Access Recommendation codes
+		 * and communicate Access Recommendation to IMVs
 		 */
 		switch (rec)
 		{
 			case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+				state = TNC_CONNECTION_STATE_ACCESS_ALLOWED;
 				pb_rec = PB_REC_ACCESS_ALLOWED;
 				break;
 			case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+				state = TNC_CONNECTION_STATE_ACCESS_ISOLATED;
 				pb_rec = PB_REC_QUARANTINED;
 				break;
 			case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 			case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
 			default:
+				state = TNC_CONNECTION_STATE_ACCESS_NONE;
 				pb_rec = PB_REC_ACCESS_DENIED;
 		}
+		tnc->imvs->notify_connection_change(tnc->imvs, this->connection_id,
+											state);
+
 		msg = pb_access_recommendation_msg_create(pb_rec);
 		this->messages->insert_last(this->messages, msg);
 

@@ -63,7 +63,8 @@ CREATE TABLE sessions (
   connection INTEGER NOT NULL,
   identity INTEGER DEFAULT 0 REFERENCES identities(id),
   device INTEGER DEFAULT 0 REFERENCES devices(id),
-  product INTEGER DEFAULT 0 REFERENCES products(id)
+  product INTEGER DEFAULT 0 REFERENCES products(id),
+  rec INTEGER DEFAULT 3
 );
 
 DROP TABLE IF EXISTS workitems;
@@ -148,16 +149,6 @@ CREATE TABLE devices (
 DROP INDEX IF EXISTS devices_id;
 CREATE INDEX devices_value ON devices (
   value
-);
-
-DROP TABLE IF EXISTS device_infos;
-CREATE TABLE device_infos (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  session INTEGER NOT NULL REFERENCES sessions(id),
-  count INTEGER DEFAULT 0,
-  count_update INTEGER DEFAULT 0,
-  count_blacklist INTEGER DEFAULT 0,
-  flags INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS identities;

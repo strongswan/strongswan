@@ -69,6 +69,15 @@ struct imv_database_t {
 					   chunk_t device);
 
 	/**
+	 * Add final recommendation to a session database entry
+	 *
+	 * @param session		Session
+	 * @param rec			Final recommendation
+	 */
+	 void (*add_recommendation)(imv_database_t *this, imv_session_t *session,
+								TNC_IMV_Action_Recommendation rec);
+
+	/**
 	 * Announce session start/stop to policy script
 	 *
 	 * @param session		Session
