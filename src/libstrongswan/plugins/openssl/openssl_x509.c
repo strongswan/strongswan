@@ -17,6 +17,9 @@
  */
 
 /*
+ * Copyright (C) 2013 Michael Rossberg
+ * Copyright (C) 2013 Technische Universität Ilmenau
+ *
  * Copyright (C) 2010 secunet Security Networks AG
  * Copyright (C) 2010 Thomas Egerer
  *
@@ -50,7 +53,12 @@
 #include <utils/debug.h>
 #include <asn1/oid.h>
 #include <collections/linked_list.h>
+#include <selectors/traffic_selector.h>
 
+/* IP Addr block extension support was introduced with 0.9.8e */
+#if OPENSSL_VERSION_NUMBER < 0x0090805fL
+#define OPENSSL_NO_RFC3779
+#endif
 
 typedef struct private_openssl_x509_t private_openssl_x509_t;
 
@@ -148,6 +156,12 @@ struct private_openssl_x509_t {
 	 * List of OCSP URIs
 	 */
 	linked_list_t *ocsp_uris;
+
+	/**
+	 * List of ipAddrBlocks as traffic_selector_t
+	 */
+	linked_list_t *ipAddrBlocks;
+
 
 	/**
 	 * References to this cert
@@ -281,6 +295,12 @@ METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
 	private_openssl_x509_t *this)
 {
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
+}
+
+METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
+	private_openssl_x509_t *this)
+{
+	return this->ipAddrBlocks->create_enumerator(this->ipAddrBlocks);
 }
 
 METHOD(certificate_t, get_type, certificate_type_t,
@@ -506,6 +526,8 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
+		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
+										offsetof(traffic_selector_t, destroy));
 		free(this);
 	}
 }
@@ -542,7 +564,7 @@ static private_openssl_x509_t *create_empty()
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
-				.create_ipAddrBlock_enumerator = (void*)enumerator_create_empty,
+				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
 				.create_name_constraint_enumerator = (void*)enumerator_create_empty,
 				.create_cert_policy_enumerator = (void*)enumerator_create_empty,
 				.create_policy_mapping_enumerator = (void*)enumerator_create_empty,
@@ -552,6 +574,7 @@ static private_openssl_x509_t *create_empty()
 		.issuerAltNames = linked_list_create(),
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
+		.ipAddrBlocks = linked_list_create(),
 		.pathlen = X509_NO_CONSTRAINT,
 		.ref = 1,
 	);
@@ -772,6 +795,92 @@ static bool parse_authorityInfoAccess_ext(private_openssl_x509_t *this,
 	return TRUE;
 }
 
+#ifndef OPENSSL_NO_RFC3779
+
+/**
+ * Parse a single block of ipAddrBlock extension
+ */
+static void parse_ipAddrBlock_ext_fam(private_openssl_x509_t *this,
+									  IPAddressFamily *fam)
+{
+	const IPAddressOrRanges *list;
+	IPAddressOrRange *aor;
+	traffic_selector_t *ts;
+	ts_type_t type;
+	chunk_t from, to;
+	int i, afi;
+
+	if (fam->ipAddressChoice->type != IPAddressChoice_addressesOrRanges)
+	{
+		return;
+	}
+
+	afi = v3_addr_get_afi(fam);
+	switch (afi)
+	{
+		case IANA_AFI_IPV4:
+			from = chunk_alloca(4);
+			to = chunk_alloca(4);
+			type = TS_IPV4_ADDR_RANGE;
+			break;
+		case IANA_AFI_IPV6:
+			from = chunk_alloca(16);
+			to = chunk_alloca(16);
+			type = TS_IPV6_ADDR_RANGE;
+			break;
+		default:
+			return;
+	}
+
+	list = fam->ipAddressChoice->u.addressesOrRanges;
+	for (i = 0; i < sk_IPAddressOrRange_num(list); i++)
+	{
+		aor = sk_IPAddressOrRange_value(list, i);
+		if (v3_addr_get_range(aor, afi, from.ptr, to.ptr, from.len) > 0)
+		{
+			ts = traffic_selector_create_from_bytes(0, type, from, 0, to, 65535);
+			if (ts)
+			{
+				this->ipAddrBlocks->insert_last(this->ipAddrBlocks, ts);
+			}
+		}
+	}
+}
+
+/**
+ * Parse ipAddrBlock extension
+ */
+static bool parse_ipAddrBlock_ext(private_openssl_x509_t *this,
+								  X509_EXTENSION *ext)
+{
+	STACK_OF(IPAddressFamily) *blocks;
+	IPAddressFamily *fam;
+
+	blocks = (STACK_OF(IPAddressFamily)*)X509V3_EXT_d2i(ext);
+	if (!blocks)
+	{
+		return FALSE;
+	}
+
+	if (!v3_addr_is_canonical(blocks))
+	{
+		sk_IPAddressFamily_free(blocks);
+		return FALSE;
+	}
+
+	while (sk_IPAddressFamily_num(blocks) > 0)
+	{
+		fam = sk_IPAddressFamily_pop(blocks);
+		parse_ipAddrBlock_ext_fam(this, fam);
+		IPAddressFamily_free(fam);
+	}
+	sk_IPAddressFamily_free(blocks);
+
+	this->flags |= X509_IP_ADDR_BLOCKS;
+	return TRUE;
+}
+#endif /* !OPENSSL_NO_RFC3779 */
+
 /**
  * Parse authorityKeyIdentifier extension
  */
@@ -857,6 +966,11 @@ static bool parse_extensions(private_openssl_x509_t *this)
 				case NID_crl_distribution_points:
 					ok = parse_crlDistributionPoints_ext(this, ext);
 					break;
+#ifndef OPENSSL_NO_RFC3779
+				case NID_sbgp_ipAddrBlock:
+					ok = parse_ipAddrBlock_ext(this, ext);
+					break;
+#endif /* !OPENSSL_NO_RFC3779 */
 				default:
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,
