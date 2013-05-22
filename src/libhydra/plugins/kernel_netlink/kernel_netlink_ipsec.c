@@ -2055,7 +2055,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 							 policy->direction != POLICY_OUT;
 			tmpl->family = ipsec->src->get_family(ipsec->src);
 
-			if (proto_mode == MODE_TUNNEL)
+			if (proto_mode == MODE_TUNNEL || proto_mode == MODE_BEET)
 			{	/* only for tunnel mode */
 				host2xfrm(ipsec->src, &tmpl->saddr);
 				host2xfrm(ipsec->dst, &tmpl->id.daddr);
