@@ -49,42 +49,121 @@ static void stderr_dbg(debug_t group, level_t level, char *fmt, ...)
 
 bool policy_start(database_t *db, int session_id)
 {
- 	if (db->execute(db, NULL,
-				"INSERT INTO workitems (session, type, argument, "
-				"rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?)",
-				DB_INT, session_id, DB_INT, IMV_WORKITEM_PACKAGES,
-				DB_TEXT, "",
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS) != 1)
+	enumerator_t *e;
+	int id, gid, device_id, product_id, group_id = 0;
+	int type, rec_fail, rec_noresult;
+	char *argument;
+
+	/* get session data */
+	e = db->query(db,
+			"SELECT device, product FROM sessions WHERE id = ? ",
+			 DB_INT, session_id, DB_INT, DB_INT);
+	if (!e || !e->enumerate(e, &device_id, &product_id))
+	{
+		DESTROY_IF(e);
+		fprintf(stderr, "session %d not found\n", session_id);
+		return FALSE;
+	}
+	e->destroy(e);
+
+	/* if a device ID exists, check if device belongs to a group */
+	if (device_id)
+	{
+		e = db->query(db,
+				"SELECT group_id FROM group_members WHERE device = ?",
+				 DB_INT, device_id, DB_INT);
+		if (e)
+		{
+			if (e->enumerate(e, &gid))
+			{
+				group_id = gid;
+			}
+			e->destroy(e);
+		}
+	}
+
+	/* if no group membership found, try default product group */
+	if (!group_id)
+	{
+		e = db->query(db,
+				"SELECT group_id FROM default_product_groups WHERE product = ?",
+				 DB_INT, product_id, DB_INT);
+		if (e)
+		{
+			if (e->enumerate(e, &gid))
+			{
+				group_id = gid;
+			}
+			e->destroy(e);
+		}
+	}
+
+	/* if still no group membership found, leave */
+	if (!group_id)
+	{
+		fprintf(stderr, "no group membership found\n");
+		return TRUE;
+	}
+
+	/* get enforcements for given group */
+	e = db->query(db,
+			"SELECT e.id, p.type, p.argument, p.rec_fail, p.rec_noresult "
+			"FROM enforcements AS e JOIN policies as p ON  e.policy = p.id "
+			"WHERE e.group_id = ?",
+			 DB_INT, group_id, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
+	if (!e)
 	{
 		return FALSE;
 	}
-	if (db->execute(db, NULL,
-				"INSERT INTO workitems (session, type, argument, "
-				"rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?)",
-				DB_INT, session_id, DB_INT, IMV_WORKITEM_FORWARDING,
-				DB_TEXT, "",
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS) != 1)
+	while (e->enumerate(e, &id, &type, &argument, &rec_fail, &rec_noresult))
 	{
-		return FALSE;
+		/* insert a workitem */
+		if (db->execute(db, NULL,
+				"INSERT INTO workitems (session, enforcement, type, argument, "
+				"rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?, ?)",
+				DB_INT, session_id, DB_INT, id, DB_INT, type, DB_TEXT, argument,
+				DB_INT, rec_fail, DB_INT, rec_noresult) != 1)
+		{
+			e->destroy(e);
+			fprintf(stderr, "could not insert workitem\n");
+			return FALSE;
+		}
 	}
-	if (db->execute(db, NULL,
-				"INSERT INTO workitems (session, type, argument, "
-				"rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?)",
-				DB_INT, session_id, DB_INT, IMV_WORKITEM_TCP_SCAN,
-				DB_TEXT, "22",
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
-				DB_INT, TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS) != 1)
-	{
-		return FALSE;
-	}
+	e->destroy(e);
 
 	return TRUE;
 }
 
 bool policy_stop(database_t *db, int session_id)
 {
+	enumerator_t *e;
+	int rec, policy;
+	char *result;
+	bool no_worklists = TRUE;
+
+	e = db->query(db,
+			"SELECT w.rec_final, w.result, e.policy FROM workitems AS w "
+			"JOIN enforcements AS e ON w.enforcement = e.id WHERE w.id = ?",
+			 DB_INT, session_id, DB_INT, DB_TEXT, DB_INT);
+	if (e)
+	{
+		while (e->enumerate(e, &rec, &result, &policy))
+		{
+			no_worklists = FALSE;
+
+			/* insert result */
+			db->execute(db, NULL,
+				"INSERT INTO results (session, policy, rec, result) "
+				"VALUES (?, ?, ?, ?)", DB_INT, session_id, DB_INT, policy,
+				 DB_INT, rec, DB_TEXT, result);
+		}
+		e->destroy(e);
+
+		if (no_worklists)
+		{
+			return TRUE;
+		}
+	}
 	return db->execute(db, NULL,
 				"DELETE FROM workitems WHERE session = ?",
 				DB_UINT, session_id) > 0;

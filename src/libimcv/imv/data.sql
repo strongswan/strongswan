@@ -144,6 +144,18 @@ INSERT INTO products (			/* 24 */
  'Ubuntu 13.04 x86_64'
 );
 
+INSERT INTO products (			/* 25 */
+  name
+) VALUES (
+ 'Android 4.1.1'
+);
+
+INSERT INTO products (			/* 26 */
+  name
+) VALUES (
+ 'Android 4.2.1'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -248,26 +260,6 @@ INSERT INTO files (				/*  5 */
   name, dir
 ) VALUES (
   'openssl', 8
-);
-
-/* Product-File */
-
-INSERT INTO product_file (
-  product, file, measurement
-) VALUES (
-  3, 1, 1
-);
-
-INSERT INTO product_file (
-  product, file, measurement
-) VALUES (
-  3, 3, 1
-);
-
-INSERT INTO product_file (
-  product, file, measurement
-) VALUES (
-  3, 5, 1
 );
 
 /* Algorithms */
@@ -436,24 +428,363 @@ INSERT INTO packages (			/*  4 */
 
 INSERT INTO versions (
   package, product, release, time
-) values (
+) VALUES (
   1, 1, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
-) values (
+) VALUES (
   2, 1, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
-) values (
+) VALUES (
   3, 1, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
-) values (
+) VALUES (
   4, 1, '1.0.1e-2', 1366531494
 );
+
+/* Groups */
+
+INSERT INTO groups (			/*  1 */
+  name
+) VALUES (
+  'Default Debian i686'
+);
+
+INSERT INTO groups (			/*  2 */
+  name
+) VALUES (
+  'Default Debian x86_64'
+);
+
+INSERT INTO groups (			/*  3 */
+  name
+) VALUES (
+  'Default Ubuntu i686'
+);
+
+INSERT INTO groups (			/*  4 */
+  name
+) VALUES (
+  'Default Ubuntu x86_64'
+);
+
+INSERT INTO groups (			/*  5 */
+  name
+) VALUES (
+  'Default Android'
+);
+
+/* Default Product Groups */
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  1, 2
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  2, 3
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 5
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 8
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 11
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 14
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 17
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 20
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  3, 23
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 6
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 9
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 12
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 15
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 18
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 21
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  4, 24
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  5, 25
+);
+
+INSERT INTO default_product_groups (
+  group_id, product
+) VALUES (
+  5, 26
+);
+
+/* Policies */
+
+INSERT INTO policies (			/*  1 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  1, 'Installed Packages', 2, 2
+);
+
+INSERT INTO policies (			/*  2 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  2, 'Unknown Source', 2, 2
+);
+
+INSERT INTO policies (			/*  3 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  3, 'IP Forwarding Enabled',  1, 1
+);
+
+INSERT INTO policies (			/*  4 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  4, 'Default Factory Password Enabled', 1, 1
+);
+
+INSERT INTO policies (			/*  5 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  6, 'Measure /lib/x86_64-linux-gnu/libcrypto.so.1.0.0', 1, 2, 2
+);
+
+INSERT INTO policies (			/*  6 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  6, 'Measure /lib/x86_64-linux-gnu/libssl.so.1.0.0', 3, 2, 2
+);
+
+INSERT INTO policies (			/*  7 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  6, 'Measure /usr/bin/openssl', 5, 2, 2
+);
+
+INSERT INTO policies (			/*  8 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  9, 'No Open TCP Ports', 1, 1
+);
+
+INSERT INTO policies (			/*  9 */
+  type, name, rec_fail, rec_noresult
+) VALUES (
+  10, 'No Open UDP Ports', 1, 1
+);
+
+/* Enforcements */
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  1, 1, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  1, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  1, 3, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  1, 4, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  1, 5, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  2, 5, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  3, 1, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  3, 2, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  3, 3, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  3, 4, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  5, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  6, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  7, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  8, 1, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  8, 2, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  8, 3, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  8, 4, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  8, 5, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  9, 1, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  9, 2, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  9, 3, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  9, 4, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  9, 5, 60
+);
+

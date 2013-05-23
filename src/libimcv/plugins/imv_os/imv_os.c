@@ -576,6 +576,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 	imv_os_handshake_state_t handshake_state;
 	pa_tnc_attr_t *attr;
 	TNC_Result result = TNC_RESULT_SUCCESS;
+	bool no_workitems = TRUE;
 	enumerator_t *enumerator;
 	u_int received;
 
@@ -620,7 +621,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 			}
 			else
 			{
-				/* just gather information without evaluation */
+				DBG2(DBG_IMV, "no workitems available - no evaluation possible");
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
@@ -665,6 +666,8 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 				{
 					continue;
 				}
+				no_workitems = FALSE;
+
 				switch (workitem->get_type(workitem))
 				{
 					case IMV_WORKITEM_PACKAGES:
@@ -686,6 +689,13 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id, TNC_ConnectionID connection_id)
 			}
 			enumerator->destroy(enumerator);
 
+			if (no_workitems)
+			{
+				DBG2(DBG_IMV, "no workitems generated - no evaluation requested");
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			}
 			handshake_state = IMV_OS_STATE_WORKITEMS;
 			os_state->set_handshake_state(os_state, handshake_state);
 		}
