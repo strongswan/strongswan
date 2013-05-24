@@ -110,7 +110,7 @@ CREATE TABLE workitems (
   argument text NOT NULL,
   rec_fail integer NOT NULL,
   rec_noresult integer NOT NULL,
-  rec_final integer DEFAULT 3,
+  rec_final integer,
   result text
 );
 DROP INDEX IF EXISTS workitems_session;
