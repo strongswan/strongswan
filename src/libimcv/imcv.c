@@ -118,7 +118,8 @@ bool libimcv_init(void)
 		openlog("imcv", 0, LOG_DAEMON);
 
 		if (!lib->plugins->load(lib->plugins, NULL,
-							"sha1 sha2 random nonce gmp pubkey x509"))
+				lib->settings->get_str(lib->settings, "libimcv.load",
+					"random nonce gmp pubkey x509")))
 		{
 			library_deinit();
 			return FALSE;
