@@ -143,7 +143,7 @@ bool policy_stop(database_t *db, int session_id)
 
 	e = db->query(db,
 			"SELECT w.rec_final, w.result, e.policy FROM workitems AS w "
-			"JOIN enforcements AS e ON w.enforcement = e.id WHERE w.id = ?",
+			"JOIN enforcements AS e ON w.enforcement = e.id WHERE w.session = ?",
 			 DB_INT, session_id, DB_INT, DB_TEXT, DB_INT);
 	if (e)
 	{
