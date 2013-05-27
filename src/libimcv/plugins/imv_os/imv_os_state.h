@@ -30,6 +30,7 @@
 
 typedef struct imv_os_state_t imv_os_state_t;
 typedef enum imv_os_handshake_state_t imv_os_handshake_state_t;
+typedef enum imv_os_attr_t imv_os_attr_t;
 typedef enum os_settings_t os_settings_t;
 
 /**
@@ -40,6 +41,22 @@ enum imv_os_handshake_state_t {
 	IMV_OS_STATE_ATTR_REQ,
 	IMV_OS_STATE_POLICY_START,
 	IMV_OS_STATE_WORKITEMS
+};
+
+/**
+ * Flag set when corresponding attribute has been received
+ */
+enum imv_os_attr_t {
+	IMV_OS_ATTR_PRODUCT_INFORMATION =         (1<<0),
+	IMV_OS_ATTR_STRING_VERSION =              (1<<1),
+	IMV_OS_ATTR_NUMERIC_VERSION =             (1<<2),
+	IMV_OS_ATTR_OPERATIONAL_STATUS =          (1<<3),
+	IMV_OS_ATTR_FORWARDING_ENABLED =          (1<<4),
+	IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED = (1<<5),
+	IMV_OS_ATTR_DEVICE_ID =                   (1<<6),
+	IMV_OS_ATTR_MUST =                        (1<<7)-1,
+	IMV_OS_ATTR_INSTALLED_PACKAGES =          (1<<7),
+	IMV_OS_ATTR_SETTINGS =                    (1<<8)
 };
 
 /**

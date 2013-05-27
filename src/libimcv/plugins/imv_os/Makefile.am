@@ -11,6 +11,7 @@ imv_os_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la \
 
 imv_os_la_SOURCES = \
 	imv_os.c imv_os_state.h imv_os_state.c \
+	imv_os_batch_ending.h imv_os_batch_ending.c \
 	imv_os_database.c imv_os_database.h
 
 imv_os_la_LDFLAGS = -module -avoid-version
