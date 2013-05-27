@@ -234,6 +234,62 @@ METHOD(xpc_channels_t, add, void,
 	xpc_connection_resume(conn);
 }
 
+METHOD(listener_t, alert, bool,
+	private_xpc_channels_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
+{
+	const char *desc;
+
+	switch (alert)
+	{
+		case ALERT_LOCAL_AUTH_FAILED:
+			desc = "local-auth";
+			break;
+		case ALERT_PEER_AUTH_FAILED:
+			desc = "remote-auth";
+			break;
+		case ALERT_PEER_ADDR_FAILED:
+			desc = "dns";
+			break;
+		case ALERT_PEER_INIT_UNREACHABLE:
+			desc = "unreachable";
+			break;
+		case ALERT_RETRANSMIT_SEND_TIMEOUT:
+			desc = "timeout";
+			break;
+		case ALERT_PROPOSAL_MISMATCH_IKE:
+		case ALERT_PROPOSAL_MISMATCH_CHILD:
+			desc = "proposal-mismatch";
+			break;
+		case ALERT_TS_MISMATCH:
+			desc = "ts-mismatch";
+			break;
+		default:
+			return TRUE;
+	}
+	if (ike_sa)
+	{
+		entry_t *entry;
+		uintptr_t sa;
+
+		sa = ike_sa->get_unique_id(ike_sa);
+		this->lock->read_lock(this->lock);
+		entry = this->channels->get(this->channels, (void*)sa);
+		if (entry)
+		{
+			xpc_object_t msg;
+
+			msg = xpc_dictionary_create(NULL, NULL, 0);
+			xpc_dictionary_set_string(msg, "type", "event");
+			xpc_dictionary_set_string(msg, "event", "alert");
+			xpc_dictionary_set_string(msg, "alert", desc);
+			xpc_connection_send_message(entry->conn, msg);
+			xpc_release(msg);
+		}
+		this->lock->unlock(this->lock);
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, ike_rekey, bool,
 	private_xpc_channels_t *this, ike_sa_t *old, ike_sa_t *new)
 {
@@ -462,6 +518,7 @@ xpc_channels_t *xpc_channels_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.alert = _alert,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.ike_state_change = _ike_state_change,
