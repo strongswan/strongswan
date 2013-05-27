@@ -423,6 +423,10 @@ static inline void memwipe_inline(void *ptr, size_t n)
  */
 static inline void memwipe(void *ptr, size_t n)
 {
+	if (!ptr)
+	{
+		return;
+	}
 	if (__builtin_constant_p(n))
 	{
 		memwipe_inline(ptr, n);
