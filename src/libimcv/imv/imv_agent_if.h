@@ -106,14 +106,4 @@ struct imv_agent_if_t {
 
 };
 
-/**
- * Creates the an IMV agent
- *
- * @param name					Name of the IMV
- * @param id					ID of the IMV
- * @param actual_version		TNC IF-IMV version
- */
-imv_agent_if_t* imv_agent_if_create(const char* name, TNC_IMVID id,
-									TNC_Version *actual_version);
-
 #endif /** IMV_AGENT_IF_H_ @}*/
