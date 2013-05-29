@@ -80,7 +80,7 @@ struct private_imv_os_agent_t {
 	/**
 	 * Public members of imv_os_agent_t
 	 */
-	imv_os_agent_t public;
+	imv_agent_if_t public;
 
 	/**
 	 * IMV agent responsible for generic functions
@@ -94,13 +94,13 @@ struct private_imv_os_agent_t {
 
 };
 
-METHOD(imv_os_agent_t, bind_functions, TNC_Result,
+METHOD(imv_agent_if_t, bind_functions, TNC_Result,
 	private_imv_os_agent_t *this, TNC_TNCS_BindFunctionPointer bind_function)
 {
 	return this->agent->bind_functions(this->agent, bind_function);
 }
 
-METHOD(imv_os_agent_t, notify_connection_change, TNC_Result,
+METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id,
 	TNC_ConnectionState new_state)
 {
@@ -420,7 +420,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 	return result;
  }
 
-METHOD(imv_os_agent_t, receive_message, TNC_Result,
+METHOD(imv_agent_if_t, receive_message, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id,
 	TNC_MessageType msg_type, chunk_t msg)
 {
@@ -439,7 +439,7 @@ METHOD(imv_os_agent_t, receive_message, TNC_Result,
 	return result;
 }
 
-METHOD(imv_os_agent_t, receive_message_long, TNC_Result,
+METHOD(imv_agent_if_t, receive_message_long, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id,
 	TNC_UInt32 src_imc_id, TNC_UInt32 dst_imv_id,
 	TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype, chunk_t msg)
@@ -503,7 +503,7 @@ static pa_tnc_attr_t* build_attr_request(u_int received)
 	return attr;
 }
 
-METHOD(imv_os_agent_t, batch_ending, TNC_Result,
+METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id)
 {
 	imv_msg_t *out_msg;
@@ -747,7 +747,7 @@ METHOD(imv_os_agent_t, batch_ending, TNC_Result,
 	return result;
 }
 
-METHOD(imv_os_agent_t, solicit_recommendation, TNC_Result,
+METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id)
 {
 	imv_state_t *state;
@@ -759,7 +759,7 @@ METHOD(imv_os_agent_t, solicit_recommendation, TNC_Result,
 	return this->agent->provide_recommendation(this->agent, state);
 }
 
-METHOD(imv_os_agent_t, destroy, void,
+METHOD(imv_agent_if_t, destroy, void,
 	private_imv_os_agent_t *this)
 {
 	DESTROY_IF(this->agent);
@@ -770,7 +770,7 @@ METHOD(imv_os_agent_t, destroy, void,
 /**
  * Described in header.
  */
-imv_os_agent_t *imv_os_agent_create(const char *name, TNC_IMVID id,
+imv_agent_if_t *imv_os_agent_create(const char *name, TNC_IMVID id,
 									TNC_Version *actual_version)
 {
 	private_imv_os_agent_t *this;

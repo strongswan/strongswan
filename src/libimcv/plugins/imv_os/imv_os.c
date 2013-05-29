@@ -21,7 +21,7 @@
 
 static const char imv_name[] = "OS";
 
-static imv_os_agent_t *imv_agent;
+static imv_agent_if_t *imv_agent;
 
 /*
  * see section 3.8.1 of TCG TNC IF-IMV Specification 1.3
@@ -37,7 +37,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
 
-	imv_agent =imv_os_agent_create(imv_name, imv_id, actual_version);
+	imv_agent = imv_os_agent_create(imv_name, imv_id, actual_version);
 
 	if (!imv_agent)
 	{
