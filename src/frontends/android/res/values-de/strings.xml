@@ -91,6 +91,9 @@
     <string name="imc_state_isolate">Eingeschränkt</string>
     <string name="imc_state_block">Fehlgeschlagen</string>
 
+    <!-- Remediation instructions -->
+    <string name="remediation_instructions_title">Korrekturanweisungen</string>
+
     <!-- Dialogs -->
     <string name="login_title">Passwort eingeben um zu verbinden</string>
     <string name="login_confirm">Verbinden</string>

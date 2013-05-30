@@ -17,6 +17,7 @@ package org.strongswan.android.ui;
 
 import java.util.ArrayList;
 
+import org.strongswan.android.R;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.adapter.RemediationInstructionAdapter;
 
@@ -79,7 +80,7 @@ public class RemediationInstructionsFragment extends ListFragment
 	{
 		super.onStart();
 
-		boolean two_pane = false;
+		boolean two_pane = getFragmentManager().findFragmentById(R.id.remediation_instruction_fragment) != null;
 		if (two_pane)
 		{	/* two-pane layout, make list items selectable */
 			getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
