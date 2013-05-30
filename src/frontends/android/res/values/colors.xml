@@ -24,4 +24,10 @@
     <color
         name="success_text">#99CC00</color>
 
+    <color
+        name="panel_background">#333333</color>
+
+    <color
+        name="panel_separator">#5a5a5a</color>
+
 </resources>

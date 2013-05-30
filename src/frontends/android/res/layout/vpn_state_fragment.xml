@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012-2013 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     Hochschule fuer Technik Rapperswil
@@ -18,8 +18,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_margin="5dp"
-    android:background="@drawable/vpn_state_background"
+    android:paddingBottom="2dp"
+    android:background="@drawable/state_background"
     android:orientation="vertical" >
 
     <GridLayout
@@ -82,10 +82,5 @@
         android:text="@string/disconnect"
         style="?android:attr/borderlessButtonStyle" >
     </Button>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="?android:attr/listDivider" />
 
 </LinearLayout>

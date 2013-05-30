@@ -16,7 +16,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/vpn_state_background"
+    android:paddingBottom="2dp"
+    android:background="@drawable/state_background"
     android:orientation="vertical" >
 
     <LinearLayout
@@ -45,10 +46,5 @@
             android:textSize="20sp" />
 
     </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="?android:attr/listDivider" />
 
 </LinearLayout>
