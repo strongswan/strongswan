@@ -106,4 +106,10 @@ struct imv_agent_if_t {
 
 };
 
+/**
+ * Constructor template
+ */
+typedef imv_agent_if_t* (*imv_agent_create_t)(const char* name, TNC_IMVID id,
+											  TNC_Version *actual_version);
+
 #endif /** IMV_AGENT_IF_H_ @}*/

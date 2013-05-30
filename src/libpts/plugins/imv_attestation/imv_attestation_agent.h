@@ -13,12 +13,24 @@
  * for more details.
  */
 
-#include "imv_attestation_agent.h"
+/**
+ * @defgroup imv_attestation_agent_t imv_attestation_agent
+ * @{ @ingroup imv_attestation
+ */
 
-static const char imv_name[] = "Attestation";
-static const imv_agent_create_t imv_agent_create = imv_attestation_agent_create;
+#ifndef IMV_ATTESTATION_AGENT_H_
+#define IMV_ATTESTATION_AGENT_H_
 
-/* include generic TGC TNC IF-IMV API code below */
+#include <imv/imv_agent_if.h>
 
-#include <imv/imv_if.h>
+/**
+ * Creates a Attestation IMV agent
+ *
+ * @param name					Name of the IMV
+ * @param id					ID of the IMV
+ * @param actual_version		TNC IF-IMV version
+ */
+imv_agent_if_t* imv_attestation_agent_create(const char* name, TNC_IMVID id,
+											 TNC_Version *actual_version);
 
+#endif /** IMV_ATTESTATION_AGENT_H_ @}*/

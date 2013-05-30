@@ -16,6 +16,7 @@ imv_attestation_la_LIBADD = \
 
 imv_attestation_la_SOURCES = imv_attestation.c \
 	imv_attestation_state.h imv_attestation_state.c \
+	imv_attestation_agent.h imv_attestation_agent.c \
 	imv_attestation_process.h imv_attestation_process.c \
 	imv_attestation_build.h imv_attestation_build.c
 
