@@ -90,6 +90,7 @@
     <string name="imc_state_label">Assessment:</string>
     <string name="imc_state_isolate">Eingeschränkt</string>
     <string name="imc_state_block">Fehlgeschlagen</string>
+    <string name="show_remediation_instructions">Korrekturanweisungen anzeigen</string>
 
     <!-- Remediation instructions -->
     <string name="remediation_instructions_title">Korrekturanweisungen</string>

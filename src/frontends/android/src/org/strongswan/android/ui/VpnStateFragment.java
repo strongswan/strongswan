@@ -17,6 +17,9 @@
 
 package org.strongswan.android.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.VpnStateService;
@@ -24,6 +27,7 @@ import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
 import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.AlertDialog;
 import android.app.Fragment;
@@ -362,17 +366,31 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private void showErrorDialog(int textid)
 	{
+		final List<RemediationInstruction> instructions = mService.getRemediationInstructions();
+		final boolean show_instructions = mImcState == ImcState.BLOCK && !instructions.isEmpty();
+		int text = show_instructions ? R.string.show_remediation_instructions : R.string.show_log;
+
 		mErrorDialog = new AlertDialog.Builder(getActivity())
 			.setMessage(getString(R.string.error_introduction) + " " + getString(textid))
 			.setCancelable(false)
-			.setNeutralButton(R.string.show_log, new DialogInterface.OnClickListener() {
+			.setNeutralButton(text, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which)
 				{
 					clearError();
 					dialog.dismiss();
-					Intent logIntent = new Intent(getActivity(), LogActivity.class);
-					startActivity(logIntent);
+					Intent intent;
+					if (show_instructions)
+					{
+						intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
+						intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
+														   new ArrayList<RemediationInstruction>(instructions));
+					}
+					else
+					{
+						intent = new Intent(getActivity(), LogActivity.class);
+					}
+					startActivity(intent);
 				}
 			})
 			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
