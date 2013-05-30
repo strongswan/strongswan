@@ -24,14 +24,58 @@ import java.util.List;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Xml;
 
-public class RemediationInstruction
+public class RemediationInstruction implements Parcelable
 {
 	private String mTitle;
 	private String mDescription;
 	private String mHeader;
 	private final List<String> mItems = new LinkedList<String>();
+
+	@Override
+	public int describeContents()
+	{
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags)
+	{
+		dest.writeString(mTitle);
+		dest.writeString(mDescription);
+		dest.writeString(mHeader);
+		dest.writeStringList(mItems);
+	}
+
+	public static final Parcelable.Creator<RemediationInstruction> CREATOR = new Creator<RemediationInstruction>() {
+
+		@Override
+		public RemediationInstruction[] newArray(int size)
+		{
+			return new RemediationInstruction[size];
+		}
+
+		@Override
+		public RemediationInstruction createFromParcel(Parcel source)
+		{
+			return new RemediationInstruction(source);
+		}
+	};
+
+	private RemediationInstruction()
+	{
+	}
+
+	private RemediationInstruction(Parcel source)
+	{
+		mTitle = source.readString();
+		mDescription = source.readString();
+		mHeader = source.readString();
+		source.readStringList(mItems);
+	}
 
 	public String getTitle()
 	{
