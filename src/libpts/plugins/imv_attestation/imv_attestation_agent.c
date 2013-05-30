@@ -386,7 +386,7 @@ METHOD(imv_agent_if_t, destroy, void,
 	}
 	DESTROY_IF(this->pts_db);
 	DESTROY_IF(this->pts_credmgr);
-	this->agent->destroy(this->agent);
+	DESTROY_IF(this->agent);
 	free(this);
 	libpts_deinit();
 }
@@ -428,6 +428,8 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 	);
 
 	if (!this->agent ||
+		!pts_meas_algo_probe(&this->supported_algorithms) ||
+		!pts_dh_group_probe(&this->supported_dh_groups) ||
 		!pts_meas_algo_update(hash_alg, &this->supported_algorithms) ||
 		!pts_dh_group_update(dh_group, &this->supported_dh_groups))
 	{
