@@ -15,9 +15,12 @@
 
 package org.strongswan.android.ui;
 
+import java.util.ArrayList;
+
 import org.strongswan.android.R;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.Fragment;
 import android.app.FragmentTransaction;
@@ -30,12 +33,16 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class ImcStateFragment extends Fragment implements VpnStateListener
 {
 	private TextView mStateView;
+	private TextView mAction;
+	private LinearLayout mButton;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
@@ -72,7 +79,28 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	{
 		View view = inflater.inflate(R.layout.imc_state_fragment, null);
 
+		mButton = (LinearLayout)view.findViewById(R.id.imc_state_button);
+		mButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v)
+			{
+				Intent intent;
+				if (mService != null && !mService.getRemediationInstructions().isEmpty())
+				{
+					intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
+					intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
+													   new ArrayList<RemediationInstruction>(mService.getRemediationInstructions()));
+				}
+				else
+				{
+					intent = new Intent(getActivity(), LogActivity.class);
+				}
+				startActivity(intent);
+			}
+		});
+
 		mStateView = (TextView)view.findViewById(R.id.imc_state);
+		mAction = (TextView)view.findViewById(R.id.action);
 
 		return view;
 	}
@@ -116,5 +144,8 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 				break;
 		}
 		ft.commit();
+
+		mAction.setText(mService.getRemediationInstructions().isEmpty() ? R.string.show_log
+																		: R.string.show_remediation_instructions);
 	}
 }
