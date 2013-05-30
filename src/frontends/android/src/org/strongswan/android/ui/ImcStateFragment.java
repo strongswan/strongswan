@@ -62,6 +62,8 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		Context context = getActivity().getApplicationContext();
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
+		/* hide it initially */
+		getFragmentManager().beginTransaction().hide(this).commit();
 	}
 
 	@Override
@@ -95,7 +97,6 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	public void updateView()
 	{
 		FragmentTransaction ft = getFragmentManager().beginTransaction();
-		ft.show(this);
 
 		switch (mService.getImcState())
 		{
@@ -106,10 +107,12 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 			case ISOLATE:
 				mStateView.setText(R.string.imc_state_isolate);
 				mStateView.setTextColor(getResources().getColor(R.color.warning_text));
+				ft.show(this);
 				break;
 			case BLOCK:
 				mStateView.setText(R.string.imc_state_block);
 				mStateView.setTextColor(getResources().getColor(R.color.error_text));
+				ft.show(this);
 				break;
 		}
 		ft.commit();
