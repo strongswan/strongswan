@@ -399,12 +399,19 @@ METHOD(child_rekey_t, collide, void,
 	else if (other->get_type(other) == TASK_CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
-		if (del->get_child(del) == this->child_create->get_child(this->child_create))
+		if (this->collision &&
+			this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
 		{
-			/* peer deletes redundant child created in collision */
-			this->other_child_destroyed = TRUE;
-			other->destroy(other);
-			return;
+			private_child_rekey_t *rekey;
+
+			rekey = (private_child_rekey_t*)this->collision;
+			if (del->get_child(del) == rekey->child_create->get_child(rekey->child_create))
+			{
+				/* peer deletes redundant child created in collision */
+				this->other_child_destroyed = TRUE;
+				other->destroy(other);
+				return;
+			}
 		}
 		if (del->get_child(del) != this->child_sa)
 		{
