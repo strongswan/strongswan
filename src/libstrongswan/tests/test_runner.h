@@ -19,6 +19,7 @@
 #include <check.h>
 
 Suite *chunk_suite_create();
+Suite *enum_suite_create();
 Suite *enumerator_suite_create();
 Suite *linked_list_suite_create();
 Suite *linked_list_enumerator_suite_create();
