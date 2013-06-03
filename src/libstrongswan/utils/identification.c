@@ -277,6 +277,23 @@ METHOD(identification_t, create_part_enumerator, enumerator_t*,
 }
 
 /**
+ * Print a separator between two RDNs
+ */
+static inline bool print_separator(char **buf, size_t *len)
+{
+	int written;
+
+	written = snprintf(*buf, *len, ", ");
+	if (written < 0 || written >= *len)
+	{
+		return FALSE;
+	}
+	*buf += written;
+	*len -= written;
+	return TRUE;
+}
+
+/**
  * Print a DN with all its RDN in a buffer to present it to the user
  */
 static void dntoa(chunk_t dn, char *buf, size_t len)
@@ -292,8 +309,14 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 	{
 		empty = FALSE;
 
-		oid = asn1_known_oid(oid_data);
+		/* previous RDN was empty but it wasn't the last one */
+		if (finished && !print_separator(&buf, &len))
+		{
+			break;
+		}
+		finished = FALSE;
 
+		oid = asn1_known_oid(oid_data);
 		if (oid == OID_UNKNOWN)
 		{
 			written = snprintf(buf, len, "%#B=", &oid_data);
@@ -319,19 +342,17 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		buf += written;
 		len -= written;
 
-		if (data.ptr + data.len != dn.ptr + dn.len)
-		{
-			written = snprintf(buf, len, ", ");
-			if (written < 0 || written >= len)
-			{
-				break;
-			}
-			buf += written;
-			len -= written;
+		if (!data.ptr)
+		{	/* we can't calculate if we're finished, assume we are */
+			finished = TRUE;
 		}
-		else
+		else if (data.ptr + data.len == dn.ptr + dn.len)
 		{
 			finished = TRUE;
+			break;
+		}
+		else if (!print_separator(&buf, &len))
+		{
 			break;
 		}
 	}
