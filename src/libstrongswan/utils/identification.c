@@ -398,7 +398,7 @@ static status_t atodn(char *src, chunk_t *dn)
 		switch (state)
 		{
 			case SEARCH_OID:
-				if (*src != ' ' && *src != '/' && *src !=  ',')
+				if (*src != ' ' && *src != '/' && *src !=  ',' && *src != '\0')
 				{
 					oid.ptr = src;
 					oid.len = 1;
@@ -502,6 +502,11 @@ static status_t atodn(char *src, chunk_t *dn)
 		}
 	} while (*src++ != '\0');
 
+	if (state == READ_OID)
+	{	/* unterminated OID */
+		status = INVALID_ARG;
+	}
+
 	/* build the distinguished name sequence */
 	{
 		int i;
@@ -514,7 +519,6 @@ static status_t atodn(char *src, chunk_t *dn)
 			free(rdns[i].ptr);
 		}
 	}
-
 	if (status != SUCCESS)
 	{
 		free(dn->ptr);
