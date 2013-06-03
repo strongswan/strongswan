@@ -558,6 +558,9 @@ struct policy_entry_t {
 
 	/** List of SAs this policy is used by, ordered by priority */
 	linked_list_t *used_by;
+
+	/** reqid for this policy */
+	u_int32_t reqid;
 };
 
 /**
@@ -2048,7 +2051,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			{
 				continue;
 			}
-			tmpl->reqid = ipsec->cfg.reqid;
+			tmpl->reqid = policy->reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
@@ -2204,6 +2207,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		.sel = ts2selector(src_ts, dst_ts),
 		.mark = mark.value & mark.mask,
 		.direction = direction,
+		.reqid = sa->reqid,
 	);
 
 	/* find the policy, which matches EXACTLY */
@@ -2211,6 +2215,16 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	current = this->policies->get(this->policies, policy);
 	if (current)
 	{
+		if (current->reqid != sa->reqid)
+		{
+			DBG1(DBG_CFG, "unable to install policy %R === %R %N (mark "
+				 "%u/0x%08x) for reqid %u, the same policy for reqid %u exists",
+				 src_ts, dst_ts, policy_dir_names, direction,
+				 mark.value, mark.mask, sa->reqid, current->reqid);
+			policy_entry_destroy(this, policy);
+			this->mutex->unlock(this->mutex);
+			return INVALID_STATE;
+		}
 		/* use existing policy */
 		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%08x) "
 					  "already exists, increasing refcount",
@@ -2382,7 +2396,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	/* find the policy */
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, &policy);
-	if (!current)
+	if (!current || current->reqid != reqid)
 	{
 		if (mark.value)
 		{
@@ -2405,8 +2419,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		enumerator = current->used_by->create_enumerator(current->used_by);
 		while (enumerator->enumerate(enumerator, (void**)&mapping))
 		{
-			if (reqid == mapping->sa->cfg.reqid &&
-				priority == mapping->priority)
+			if (priority == mapping->priority)
 			{
 				current->used_by->remove_at(current->used_by, enumerator);
 				policy_sa_destroy(mapping, &direction, this);
