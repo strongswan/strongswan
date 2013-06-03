@@ -47,7 +47,7 @@ int enum_from_name(enum_name_t *e, char *name)
 
 		for (i = 0; i < count; i++)
 		{
-			if (strcaseeq(name, e->names[i]))
+			if (name && strcaseeq(name, e->names[i]))
 			{
 				return e->first + i;
 			}
