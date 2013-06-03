@@ -418,7 +418,7 @@ static status_t atodn(char *src, chunk_t *dn)
 				{
 					break;
 				}
-				else if (*src != ',' && *src != '/')
+				else if (*src != ',' && *src != '/' && *src != '\0')
 				{
 					name.ptr = src;
 					name.len = 1;
