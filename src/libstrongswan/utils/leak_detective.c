@@ -589,7 +589,7 @@ static int print_traces(private_leak_detective_t *this,
 	enumerator = entries->create_enumerator(entries);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (!thresh || entry->bytes >= thresh)
+		if (out && (!thresh || entry->bytes >= thresh))
 		{
 			fprintf(out, "%d bytes total, %d allocations, %d bytes average:\n",
 					entry->bytes, entry->count, entry->bytes / entry->count);
@@ -609,7 +609,7 @@ METHOD(leak_detective_t, report, void,
 {
 	if (lib->leak_detective)
 	{
-		int leaks = 0, whitelisted = 0;
+		int leaks, whitelisted = 0;
 
 		leaks = print_traces(this, stderr, 0, detailed, &whitelisted);
 		switch (leaks)
@@ -630,6 +630,19 @@ METHOD(leak_detective_t, report, void,
 	{
 		fprintf(stderr, "Leak detective disabled\n");
 	}
+}
+
+METHOD(leak_detective_t, leaks, int,
+	private_leak_detective_t *this)
+{
+	if (lib->leak_detective)
+	{
+		int leaks, whitelisted = 0;
+
+		leaks = print_traces(this, NULL, 0, FALSE, &whitelisted);
+		return leaks;
+	}
+	return 0;
 }
 
 METHOD(leak_detective_t, set_state, bool,
@@ -885,6 +898,7 @@ leak_detective_t *leak_detective_create()
 	INIT(this,
 		.public = {
 			.report = _report,
+			.leaks = _leaks,
 			.usage = _usage,
 			.set_state = _set_state,
 			.destroy = _destroy,

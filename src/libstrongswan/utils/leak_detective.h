@@ -43,6 +43,13 @@ struct leak_detective_t {
 	void (*report)(leak_detective_t *this, bool detailed);
 
 	/**
+	 * Number of detected leaks.
+	 *
+	 * @return				number of leaks
+	 */
+	int (*leaks)(leak_detective_t *this);
+
+	/**
 	 * Report current memory usage to out.
 	 *
 	 * @param out			target to write usage report to
