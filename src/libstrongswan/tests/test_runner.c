@@ -24,7 +24,8 @@ int main()
 	SRunner *sr;
 	int nf;
 
-	/* if a test fails there is no cleanup, so disable leak detective */
+	/* test cases are forked and there is no cleanup, so disable leak detective.
+	 * can be enabled for individual tests with leak_detective_t.set_state */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
@@ -32,6 +33,7 @@ int main()
 	library_init(NULL);
 
 	sr = srunner_create(NULL);
+	srunner_add_suite(sr, bio_reader_suite_create());
 	srunner_add_suite(sr, chunk_suite_create());
 	srunner_add_suite(sr, enum_suite_create());
 	srunner_add_suite(sr, enumerator_suite_create());
