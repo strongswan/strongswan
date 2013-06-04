@@ -19,6 +19,7 @@
 #include <check.h>
 
 Suite *bio_reader_suite_create();
+Suite *bio_writer_suite_create();
 Suite *chunk_suite_create();
 Suite *enum_suite_create();
 Suite *enumerator_suite_create();

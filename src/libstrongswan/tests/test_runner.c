@@ -34,6 +34,7 @@ int main()
 
 	sr = srunner_create(NULL);
 	srunner_add_suite(sr, bio_reader_suite_create());
+	srunner_add_suite(sr, bio_writer_suite_create());
 	srunner_add_suite(sr, chunk_suite_create());
 	srunner_add_suite(sr, enum_suite_create());
 	srunner_add_suite(sr, enumerator_suite_create());
