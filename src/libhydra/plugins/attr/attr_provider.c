@@ -219,7 +219,7 @@ static void load_entries(private_attr_provider_t *this)
 			host = host_create_from_string(token, 0);
 			if (!host)
 			{
-				if (!type)
+				if (mapped)
 				{
 					DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
 					continue;
