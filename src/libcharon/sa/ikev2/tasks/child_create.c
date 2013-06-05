@@ -555,6 +555,10 @@ static status_t select_and_install(private_child_create_t *this,
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using transport mode, not host-to-host");
 				}
+				if (this->config->get_mode(this->config) != MODE_TRANSPORT)
+				{
+					this->mode = MODE_TUNNEL;
+				}
 				break;
 			case MODE_BEET:
 				if (!ts_list_is_host(this->tsi, NULL) ||
@@ -562,6 +566,10 @@ static status_t select_and_install(private_child_create_t *this,
 				{
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
+				}
+				if (this->config->get_mode(this->config) != MODE_BEET)
+				{
+					this->mode = MODE_TUNNEL;
 				}
 				break;
 			default:
@@ -1168,8 +1176,6 @@ METHOD(task_t, build_r, status_t,
 		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
-
-	this->mode = this->config->get_mode(this->config);
 
 	/* check if ike_config_t included non-critical error notifies */
 	enumerator = message->create_payload_enumerator(message);
