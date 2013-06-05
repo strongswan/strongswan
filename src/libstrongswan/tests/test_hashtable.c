@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <collections/hashtable.h>
 #include <utils/chunk.h>
@@ -38,17 +38,19 @@ static bool equals(char *key1, char *key2)
 
 static hashtable_t *ht;
 
-static void setup_ht()
+START_SETUP(setup_ht)
 {
 	ht = hashtable_create((hashtable_hash_t)hash,
 						  (hashtable_equals_t)equals, 0);
 	ck_assert_int_eq(ht->get_count(ht), 0);
 }
+END_SETUP
 
-static void teardown_ht()
+START_TEARDOWN(teardown_ht)
 {
 	ht->destroy(ht);
 }
+END_TEARDOWN
 
 /*******************************************************************************
  * put/get

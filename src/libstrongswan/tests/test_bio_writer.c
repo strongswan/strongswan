@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <bio/bio_writer.h>
 

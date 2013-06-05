@@ -13,8 +13,7 @@
  * for more details.
  */
 
-
-#include <check.h>
+#include "test_suite.h"
 
 #include <library.h>
 #include <utils/utils.h>

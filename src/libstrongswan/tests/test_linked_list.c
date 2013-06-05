@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <collections/linked_list.h>
 
@@ -23,7 +23,7 @@
 
 static linked_list_t *list;
 
-static void setup_list()
+START_SETUP(setup_list)
 {
 	void *x = NULL;
 
@@ -32,11 +32,13 @@ static void setup_list()
 	ck_assert(list->get_first(list, &x) == NOT_FOUND);
 	ck_assert(list->get_last(list, &x) == NOT_FOUND);
 }
+END_SETUP
 
-static void teardown_list()
+START_TEARDOWN(teardown_list)
 {
 	list->destroy(list);
 }
+END_TEARDOWN
 
 /*******************************************************************************
  * insert first/last

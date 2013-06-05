@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <collections/enumerator.h>
 #include <collections/linked_list.h>
@@ -82,15 +82,17 @@ END_TEST
 
 static int destroy_data_called;
 
-static void setup_destroy_data()
+START_SETUP(setup_destroy_data)
 {
 	destroy_data_called = 0;
 }
+END_SETUP
 
-static void teardown_destroy_data()
+START_TEARDOWN(teardown_destroy_data)
 {
 	ck_assert_int_eq(destroy_data_called, 1);
 }
+END_TEARDOWN
 
 static void destroy_data(void *data)
 {

@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <collections/linked_list.h>
 
@@ -23,17 +23,19 @@
 
 static linked_list_t *list;
 
-static void setup_list()
+START_SETUP(setup_list)
 {
 	list = linked_list_create_with_items((void*)1, (void*)2, (void*)3, (void*)4,
 									 (void*)5, NULL);
 	ck_assert_int_eq(list->get_count(list), 5);
 }
+END_SETUP
 
-static void teardown_list()
+START_TEARDOWN(teardown_list)
 {
 	list->destroy(list);
 }
+END_TEARDOWN
 
 /*******************************************************************************
  * enumeration

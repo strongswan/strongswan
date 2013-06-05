@@ -14,9 +14,10 @@
  * for more details.
  */
 
-#include <check.h>
 #include <sched.h>
 #include <pthread.h>
+
+#include "test_suite.h"
 
 #include <threading/mutex.h>
 

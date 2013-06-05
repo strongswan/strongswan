@@ -15,7 +15,7 @@
  */
 
 
-#include <check.h>
+#include "test_suite.h"
 
 #include <utils/chunk.h>
 

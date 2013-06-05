@@ -25,7 +25,7 @@ int main()
 	int nf;
 
 	/* test cases are forked and there is no cleanup, so disable leak detective.
-	 * can be enabled for individual tests with leak_detective_t.set_state */
+	 * if test_suite.h is included leak detective is enabled in test cases */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
