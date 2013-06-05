@@ -156,20 +156,14 @@ static bool equals(char *a, char *b)
 #define MEMWIPE_WIPE_WORDS 16
 
 /**
- * Number of words we check stack for memwiped magic
- */
-#define MEMWIPE_CHECK_WORDS (MEMWIPE_WIPE_WORDS * 2)
-
-/**
  * Write magic to memory, and try to clear it with memwipe()
  */
 __attribute__((noinline))
-static void do_magic(int *magic, int **stack)
+static void do_magic(int *magic, int **out)
 {
 	int buf[MEMWIPE_WIPE_WORDS], i;
 
-	/* tell caller where callee stack is (but don't point to buf) */
-	*stack = &i;
+	*out = buf;
 	for (i = 0; i < countof(buf); i++)
 	{
 		buf[i] = *magic;
@@ -185,27 +179,16 @@ static void do_magic(int *magic, int **stack)
  */
 static bool check_memwipe()
 {
-	int magic = 0xCAFEBABE, *ptr, *deeper, i, stackdir = 1;
+	int magic = 0xCAFEBABE, *buf, i;
 
-	do_magic(&magic, &deeper);
+	do_magic(&magic, &buf);
 
-	ptr = &magic;
-	if (deeper < ptr)
-	{	/* stack grows down */
-		stackdir = -1;
-	}
-	for (i = 0; i < MEMWIPE_CHECK_WORDS; i++)
+	for (i = 0; i < MEMWIPE_WIPE_WORDS; i++)
 	{
-		ptr = ptr + stackdir;
-		if (*ptr == magic)
+		if (buf[i] == magic)
 		{
-			ptr = &magic + stackdir;
-			if (stackdir == -1)
-			{
-				ptr -= MEMWIPE_CHECK_WORDS;
-			}
-			DBG1(DBG_LIB, "memwipe() check failed: stackdir: %d %b",
-				 stackdir, ptr, (u_int)(MEMWIPE_CHECK_WORDS * sizeof(int)));
+			DBG1(DBG_LIB, "memwipe() check failed: stackdir: %b",
+				 buf, MEMWIPE_WIPE_WORDS * sizeof(int));
 			return FALSE;
 		}
 	}
