@@ -388,14 +388,10 @@ START_TEST(test_create)
 	chunk_t data = chunk_from_str("foobar");
 	bio_reader_t *reader;
 
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
-
 	data = chunk_clone(data);
 	reader = bio_reader_create(data);
 	reader->destroy(reader);
 	chunk_free(&data);
-
-	ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0);
 }
 END_TEST
 
@@ -404,13 +400,9 @@ START_TEST(test_create_own)
 	chunk_t data = chunk_from_str("foobar");
 	bio_reader_t *reader;
 
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
-
 	data = chunk_clone(data);
 	reader = bio_reader_create_own(data);
 	reader->destroy(reader);
-
-	ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0);
 }
 END_TEST
 

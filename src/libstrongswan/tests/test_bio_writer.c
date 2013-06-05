@@ -302,8 +302,6 @@ START_TEST(test_get_buf)
 	bio_writer_t *writer;
 	chunk_t data1, data2;
 
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
-
 	writer = bio_writer_create(0);
 	writer->write_uint8(writer, 1);
 	data1 = writer->get_buf(writer);
@@ -314,8 +312,6 @@ START_TEST(test_get_buf)
 	ck_assert(chunk_equals(data1, data2));
 	ck_assert(data1.ptr == data2.ptr);
 	writer->destroy(writer);
-
-	ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0);
 }
 END_TEST
 
@@ -323,8 +319,6 @@ START_TEST(test_extract_buf)
 {
 	bio_writer_t *writer;
 	chunk_t data1, data2;
-
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
 
 	writer = bio_writer_create(0);
 	writer->write_uint8(writer, 1);
@@ -346,8 +340,6 @@ START_TEST(test_extract_buf)
 
 	writer->destroy(writer);
 	chunk_free(&data1);
-
-	ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0);
 }
 END_TEST
 
