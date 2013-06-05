@@ -18,6 +18,7 @@
 
 #include <check.h>
 #include <library.h>
+#include <utils/debug.h>
 
 /**
  * Used to mark test cases that use test fixtures.
@@ -53,6 +54,7 @@ while(0)
 static void name (int _i CK_ATTRIBUTE_UNUSED) \
 { \
 	tcase_fn_start(""#name, __FILE__, __LINE__); \
+	dbg_default_set_level(LEVEL_SILENT); \
 	lib->leak_detective->set_state(lib->leak_detective, TRUE);
 
 #undef END_TEST
