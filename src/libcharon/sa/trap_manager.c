@@ -109,6 +109,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 								 0, ike_cfg->get_other_port(ike_cfg));
 	if (!other || other->is_anyaddr(other))
 	{
+		DESTROY_IF(other);
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
 	}
