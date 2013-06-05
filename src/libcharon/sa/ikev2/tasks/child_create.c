@@ -343,6 +343,79 @@ static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
 }
 
 /**
+ * Substitude any host address with NATed address in traffic selector
+ */
+static linked_list_t* get_transport_nat_ts(private_child_create_t *this,
+										   bool local, linked_list_t *in)
+{
+	enumerator_t *enumerator;
+	linked_list_t *out;
+	traffic_selector_t *ts;
+	host_t *ike, *first = NULL;
+	u_int8_t mask;
+
+	if (local)
+	{
+		ike = this->ike_sa->get_my_host(this->ike_sa);
+	}
+	else
+	{
+		ike = this->ike_sa->get_other_host(this->ike_sa);
+	}
+
+	out = linked_list_create();
+
+	enumerator = in->create_enumerator(in);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		/* require that all selectors match the first "host" selector */
+		if (ts->is_host(ts, first))
+		{
+			if (!first)
+			{
+				ts->to_subnet(ts, &first, &mask);
+			}
+			ts = ts->clone(ts);
+			ts->set_address(ts, ike);
+			out->insert_last(out, ts);
+		}
+	}
+	enumerator->destroy(enumerator);
+	DESTROY_IF(first);
+
+	return out;
+}
+
+/**
+ * Narrow received traffic selectors with configuration
+ */
+static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
+								linked_list_t *in)
+{
+	linked_list_t *hosts, *nat, *ts;
+	ike_condition_t cond;
+
+	cond = local ? COND_NAT_HERE : COND_NAT_THERE;
+	hosts = get_dynamic_hosts(this->ike_sa, local);
+
+	if (this->mode == MODE_TRANSPORT &&
+		this->ike_sa->has_condition(this->ike_sa, cond))
+	{
+		nat = get_transport_nat_ts(this, local, in);
+		ts = this->config->get_traffic_selectors(this->config, local, nat, hosts);
+		nat->destroy_offset(nat, offsetof(traffic_selector_t, destroy));
+	}
+	else
+	{
+		ts = this->config->get_traffic_selectors(this->config, local, in, hosts);
+	}
+
+	hosts->destroy(hosts);
+
+	return ts;
+}
+
+/**
  * Install a CHILD_SA for usage, return value:
  * - FAILED: no acceptable proposal
  * - INVALID_ARG: diffie hellman group inacceptable
@@ -355,7 +428,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t nonce_i, nonce_r;
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
-	linked_list_t *my_ts, *other_ts, *list;
+	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other;
 	bool private;
 
@@ -416,24 +489,16 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		nonce_i = this->my_nonce;
 		nonce_r = this->other_nonce;
-		my_ts = this->tsi;
-		other_ts = this->tsr;
+		my_ts = narrow_ts(this, TRUE, this->tsi);
+		other_ts = narrow_ts(this, FALSE, this->tsr);
 	}
 	else
 	{
 		nonce_r = this->my_nonce;
 		nonce_i = this->other_nonce;
-		my_ts = this->tsr;
-		other_ts = this->tsi;
+		my_ts = narrow_ts(this, TRUE, this->tsr);
+		other_ts = narrow_ts(this, FALSE, this->tsi);
 	}
-	list = get_dynamic_hosts(this->ike_sa, TRUE);
-	my_ts = this->config->get_traffic_selectors(this->config,
-												TRUE, my_ts, list);
-	list->destroy(list);
-	list = get_dynamic_hosts(this->ike_sa, FALSE);
-	other_ts = this->config->get_traffic_selectors(this->config,
-												FALSE, other_ts, list);
-	list->destroy(list);
 
 	if (this->initiator)
 	{
@@ -489,11 +554,6 @@ static status_t select_and_install(private_child_create_t *this,
 				{
 					this->mode = MODE_TUNNEL;
 					DBG1(DBG_IKE, "not using transport mode, not host-to-host");
-				}
-				else if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
-				{
-					this->mode = MODE_TUNNEL;
-					DBG1(DBG_IKE, "not using transport mode, connection NATed");
 				}
 				break;
 			case MODE_BEET:
@@ -895,12 +955,6 @@ METHOD(task_t, build_i, status_t,
 	this->proposals = this->config->get_proposals(this->config,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
-	if (this->mode == MODE_TRANSPORT &&
-		this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
-	{
-		this->mode = MODE_TUNNEL;
-		DBG1(DBG_IKE, "not using transport mode, connection NATed");
-	}
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
@@ -996,10 +1050,77 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	}
 }
 
+/**
+ * Substitute transport mode NAT selectors, if applicable
+ */
+static linked_list_t* get_ts_if_nat_transport(private_child_create_t *this,
+											  bool local, linked_list_t *in)
+{
+	linked_list_t *out = NULL;
+	ike_condition_t cond;
+
+	if (this->mode == MODE_TRANSPORT)
+	{
+		cond = local ? COND_NAT_HERE : COND_NAT_THERE;
+		if (this->ike_sa->has_condition(this->ike_sa, cond))
+		{
+			out = get_transport_nat_ts(this, local, in);
+			if (out->get_count(out) == 0)
+			{
+				out->destroy(out);
+				out = NULL;
+			}
+		}
+	}
+	return out;
+}
+
+/**
+ * Select a matching CHILD config as responder
+ */
+static child_cfg_t* select_child_cfg(private_child_create_t *this)
+{
+	peer_cfg_t *peer_cfg;
+	child_cfg_t *child_cfg = NULL;;
+
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg && this->tsi && this->tsr)
+	{
+		linked_list_t *listr, *listi, *tsr, *tsi;
+
+		tsr = get_ts_if_nat_transport(this, TRUE, this->tsr);
+		tsi = get_ts_if_nat_transport(this, FALSE, this->tsi);
+
+		listr = get_dynamic_hosts(this->ike_sa, TRUE);
+		listi = get_dynamic_hosts(this->ike_sa, FALSE);
+		child_cfg = peer_cfg->select_child_cfg(peer_cfg,
+											tsr ?: this->tsr, tsi ?: this->tsi,
+											listr, listi);
+		if ((tsi || tsr) && child_cfg &&
+			child_cfg->get_mode(child_cfg) != MODE_TRANSPORT)
+		{
+			/* found a CHILD config, but it doesn't use transport mode */
+			child_cfg->destroy(child_cfg);
+			child_cfg = NULL;
+		}
+		if (!child_cfg && (tsi || tsr))
+		{
+			/* no match for the substituted NAT selectors, try it without */
+			child_cfg = peer_cfg->select_child_cfg(peer_cfg,
+											this->tsr, this->tsi, listr, listi);
+		}
+		listr->destroy(listr);
+		listi->destroy(listi);
+		DESTROY_OFFSET_IF(tsi, offsetof(traffic_selector_t, destroy));
+		DESTROY_OFFSET_IF(tsr, offsetof(traffic_selector_t, destroy));
+	}
+
+	return child_cfg;
+}
+
 METHOD(task_t, build_r, status_t,
 	private_child_create_t *this, message_t *message)
 {
-	peer_cfg_t *peer_cfg;
 	payload_t *payload;
 	enumerator_t *enumerator;
 	bool no_dh = TRUE, ike_auth = FALSE;
@@ -1034,19 +1155,10 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (!this->config && peer_cfg && this->tsi && this->tsr)
+	if (this->config == NULL)
 	{
-		linked_list_t *listr, *listi;
-
-		listr = get_dynamic_hosts(this->ike_sa, TRUE);
-		listi = get_dynamic_hosts(this->ike_sa, FALSE);
-		this->config = peer_cfg->select_child_cfg(peer_cfg,
-											this->tsr, this->tsi, listr, listi);
-		listr->destroy(listr);
-		listi->destroy(listi);
+		this->config = select_child_cfg(this);
 	}
-
 	if (this->config == NULL)
 	{
 		DBG1(DBG_IKE, "traffic selectors %#R=== %#R inacceptable",
@@ -1056,6 +1168,8 @@ METHOD(task_t, build_r, status_t,
 		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
+
+	this->mode = this->config->get_mode(this->config);
 
 	/* check if ike_config_t included non-critical error notifies */
 	enumerator = message->create_payload_enumerator(message);
