@@ -252,9 +252,21 @@ static void load_entries(private_attr_provider_t *this)
 					}
 				}
 				host->destroy(host);
+				if (mapped)
+				{
+					switch (family)
+					{
+						case AF_INET:
+							type = mapped->v4;
+							break;
+						case AF_INET6:
+							type = mapped->v6;
+							break;
+					}
+				}
 			}
 			INIT(entry,
-				.type = type ?: (family == AF_INET ? mapped->v4 : mapped->v6),
+				.type = type,
 				.value = data,
 			);
 			DBG2(DBG_CFG, "loaded attribute %N: %#B",
@@ -308,4 +320,3 @@ attr_provider_t *attr_provider_create(database_t *db)
 
 	return &this->public;
 }
-
