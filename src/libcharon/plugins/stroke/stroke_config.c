@@ -1020,8 +1020,16 @@ static void add_ts(private_stroke_config_t *this,
 						continue;
 					}
 				}
-				ts = traffic_selector_create_from_cidr(subnet, proto,
-													   from_port, to_port);
+				if (streq(subnet, "%dynamic"))
+				{
+					ts = traffic_selector_create_dynamic(proto,
+														 from_port, to_port);
+				}
+				else
+				{
+					ts = traffic_selector_create_from_cidr(subnet, proto,
+														   from_port, to_port);
+				}
 				if (ts)
 				{
 					child_cfg->add_traffic_selector(child_cfg, local, ts);
