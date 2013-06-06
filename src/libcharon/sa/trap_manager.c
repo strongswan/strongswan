@@ -320,8 +320,7 @@ METHOD(trap_manager_t, acquire, void,
 		}
 		else
 		{
-			charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+			ike_sa->destroy(ike_sa);
 		}
 	}
 	peer->destroy(peer);
