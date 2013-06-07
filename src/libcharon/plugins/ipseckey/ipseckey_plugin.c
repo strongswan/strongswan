@@ -49,6 +49,28 @@ METHOD(plugin_t, get_name, char*,
 	return "ipseckey";
 }
 
+METHOD(plugin_t, reload, bool,
+	private_ipseckey_plugin_t *this)
+{
+	bool enabled = lib->settings->get_bool(lib->settings,
+							"%s.plugins.ipseckey.enable", FALSE, charon->name);
+
+	if (enabled != this->enabled)
+	{
+		if (enabled)
+		{
+			lib->credmgr->add_set(lib->credmgr, &this->cred->set);
+		}
+		else
+		{
+			lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
+		}
+		this->enabled = enabled;
+	}
+	DBG1(DBG_CFG, "ipseckey plugin is %sabled", this->enabled ? "en" : "dis");
+	return TRUE;
+}
+
 /**
  * Create resolver and register credential set
  */
@@ -66,23 +88,16 @@ static bool plugin_cb(private_ipseckey_plugin_t *this,
 			return FALSE;
 		}
 
-		if (this->enabled)
-		{
-			this->cred = ipseckey_cred_create(res);
-			lib->credmgr->add_set(lib->credmgr, &this->cred->set);
-		}
-		else
-		{
-			res->destroy(res);
-		}
+		this->cred = ipseckey_cred_create(res);
+		reload(this);
 	}
 	else
 	{
 		if (this->enabled)
 		{
 			lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
-			this->cred->destroy(this->cred);
 		}
+		this->cred->destroy(this->cred);
 	}
 	return TRUE;
 }
@@ -117,11 +132,10 @@ plugin_t *ipseckey_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},
-		.enabled = lib->settings->get_bool(lib->settings,
-							"%s.plugins.ipseckey.enable", FALSE, charon->name),
 	);
 
 	return &this->public.plugin;
