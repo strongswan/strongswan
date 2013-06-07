@@ -110,6 +110,17 @@ METHOD(plugin_t, get_name, char*,
 	return "test-vectors";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_test_vectors_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_NOOP,
+			PLUGIN_PROVIDE(CUSTOM, "test-vectors"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_test_vectors_plugin_t *this)
 {
@@ -128,7 +139,7 @@ plugin_t *test_vectors_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
