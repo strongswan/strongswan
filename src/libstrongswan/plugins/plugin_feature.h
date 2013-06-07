@@ -150,6 +150,8 @@ struct plugin_feature_t {
 		FEATURE_DATABASE,
 		/** fetcher_t */
 		FEATURE_FETCHER,
+		/** resolver_t */
+		FEATURE_RESOLVER,
 		/** custom feature, described with a string */
 		FEATURE_CUSTOM,
 	} type;
@@ -294,6 +296,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_EAP_PEER(kind, type)				__PLUGIN_FEATURE(kind, EAP_PEER, .eap = type)
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
+#define _PLUGIN_FEATURE_RESOLVER(kind, ...)					__PLUGIN_FEATURE(kind, RESOLVER, .custom = NULL)
 #define _PLUGIN_FEATURE_CUSTOM(kind, name)					__PLUGIN_FEATURE(kind, CUSTOM, .custom = name)
 #define _PLUGIN_FEATURE_XAUTH_SERVER(kind, name)			__PLUGIN_FEATURE(kind, XAUTH_SERVER, .xauth = name)
 #define _PLUGIN_FEATURE_XAUTH_PEER(kind, name)				__PLUGIN_FEATURE(kind, XAUTH_PEER, .xauth = name)
@@ -317,6 +320,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_CONTAINER_ENCODE(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_DATABASE(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_FETCHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_RESOLVER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 
 #define _PLUGIN_FEATURE_CALLBACK(_cb, _data) (plugin_feature_t){ FEATURE_CALLBACK, FEATURE_NONE, .arg.cb = { .f = _cb, .data = _data } }
 
