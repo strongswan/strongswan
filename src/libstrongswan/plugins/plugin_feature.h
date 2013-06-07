@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -340,11 +340,24 @@ u_int32_t plugin_feature_hash(plugin_feature_t *feature);
 /**
  * Check if feature a matches to feature b.
  *
+ * This is no check for equality.  For instance, for FEATURE_RNG a matches b if
+ * a's strength is at least the strength of b.  Or for FEATURE_SQL if a is
+ * DB_ANY it will match b if it is of the same type.
+ *
  * @param a			feature to check
  * @param b			feature to match against
  * @return			TRUE if a matches b
  */
 bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b);
+
+/**
+ * Check if feature a equals feature b.
+ *
+ * @param a			feature
+ * @param b			feature to compare
+ * @return			TRUE if a equals b
+ */
+bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b);
 
 /**
  * Get a string describing feature.

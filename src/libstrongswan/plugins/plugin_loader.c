@@ -179,7 +179,7 @@ static plugin_t *static_features_create(const char *name,
 /**
  * Compare function for hashtable of loaded features.
  */
-static bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
+static bool plugin_feature_equals_ptr(plugin_feature_t *a, plugin_feature_t *b)
 {
 	return a == b;
 }
@@ -850,7 +850,7 @@ plugin_loader_t *plugin_loader_create()
 		.plugins = linked_list_create(),
 		.loaded_features = hashtable_create(
 								(hashtable_hash_t)plugin_feature_hash,
-								(hashtable_equals_t)plugin_feature_equals, 64),
+								(hashtable_equals_t)plugin_feature_equals_ptr, 64),
 	);
 
 	return &this->public;

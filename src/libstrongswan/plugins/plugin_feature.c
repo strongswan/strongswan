@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -164,6 +164,55 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_XAUTH_SERVER:
 			case FEATURE_XAUTH_PEER:
 				return streq(a->arg.xauth, b->arg.xauth);
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * See header.
+ */
+bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
+{
+	if (a->type == b->type)
+	{
+		switch (a->type)
+		{
+			case FEATURE_NONE:
+			case FEATURE_CRYPTER:
+			case FEATURE_AEAD:
+			case FEATURE_SIGNER:
+			case FEATURE_HASHER:
+			case FEATURE_PRF:
+			case FEATURE_DH:
+			case FEATURE_NONCE_GEN:
+			case FEATURE_PRIVKEY:
+			case FEATURE_PRIVKEY_GEN:
+			case FEATURE_PUBKEY:
+			case FEATURE_PRIVKEY_SIGN:
+			case FEATURE_PUBKEY_VERIFY:
+			case FEATURE_PRIVKEY_DECRYPT:
+			case FEATURE_PUBKEY_ENCRYPT:
+			case FEATURE_CERT_DECODE:
+			case FEATURE_CERT_ENCODE:
+			case FEATURE_CONTAINER_DECODE:
+			case FEATURE_CONTAINER_ENCODE:
+			case FEATURE_EAP_SERVER:
+			case FEATURE_EAP_PEER:
+			case FEATURE_CUSTOM:
+			case FEATURE_XAUTH_SERVER:
+			case FEATURE_XAUTH_PEER:
+				return plugin_feature_matches(a, b);
+			case FEATURE_RNG:
+				return a->arg.rng_quality == b->arg.rng_quality;
+			case FEATURE_DATABASE:
+				return a->arg.database == b->arg.database;
+			case FEATURE_FETCHER:
+				if (a->arg.fetcher && b->arg.fetcher)
+				{
+					return streq(a->arg.fetcher, b->arg.fetcher);
+				}
+				return !a->arg.fetcher && !b->arg.fetcher;
 		}
 	}
 	return FALSE;
