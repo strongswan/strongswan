@@ -330,6 +330,27 @@ struct plugin_feature_t {
 extern enum_name_t *plugin_feature_names;
 
 /**
+ * Add a set of plugin features to the given array, which must have enough space
+ * to store the added features.
+ *
+ * @param features		the array of plugin features to extend
+ * @param to_add		the features to add
+ * @param count			number of features to add
+ * @param pos			current position in the features array, gets advanced
+ */
+static inline void plugin_features_add(plugin_feature_t *features,
+									   plugin_feature_t *to_add,
+									   int count, int *pos)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+	{
+		features[(*pos)++] = to_add[i];
+	}
+}
+
+/**
  * Calculates a hash value for the given feature.
  *
  * Since this is intended to be used with the plugin_features_matches function
