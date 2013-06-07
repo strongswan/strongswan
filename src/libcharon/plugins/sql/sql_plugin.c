@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -16,6 +17,8 @@
 #include "sql_plugin.h"
 
 #include <daemon.h>
+#include <plugins/plugin_feature.h>
+
 #include "sql_config.h"
 #include "sql_cred.h"
 #include "sql_logger.h"
@@ -59,16 +62,67 @@ METHOD(plugin_t, get_name, char*,
 	return "sql";
 }
 
+/**
+ * Connect to database
+ */
+static bool open_database(private_sql_plugin_t *this,
+						  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		char *uri;
+
+		uri = lib->settings->get_str(lib->settings, "%s.plugins.sql.database",
+									 NULL, charon->name);
+		if (!uri)
+		{
+			DBG1(DBG_CFG, "sql plugin: database URI not set");
+			return FALSE;
+		}
+
+		this->db = lib->db->create(lib->db, uri);
+		if (!this->db)
+		{
+			DBG1(DBG_CFG, "sql plugin failed to connect to database");
+			return FALSE;
+		}
+		this->config = sql_config_create(this->db);
+		this->cred = sql_cred_create(this->db);
+		this->logger = sql_logger_create(this->db);
+
+		charon->backends->add_backend(charon->backends, &this->config->backend);
+		lib->credmgr->add_set(lib->credmgr, &this->cred->set);
+		charon->bus->add_logger(charon->bus, &this->logger->logger);
+	}
+	else
+	{
+		charon->backends->remove_backend(charon->backends,
+										 &this->config->backend);
+		lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
+		charon->bus->remove_logger(charon->bus, &this->logger->logger);
+		this->config->destroy(this->config);
+		this->cred->destroy(this->cred);
+		this->logger->destroy(this->logger);
+		this->db->destroy(this->db);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_sql_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)open_database, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "sql"),
+				PLUGIN_DEPENDS(DATABASE, DB_ANY),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_sql_plugin_t *this)
 {
-	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
-	charon->bus->remove_logger(charon->bus, &this->logger->logger);
-	this->config->destroy(this->config);
-	this->cred->destroy(this->cred);
-	this->logger->destroy(this->logger);
-	this->db->destroy(this->db);
 	free(this);
 }
 
@@ -77,42 +131,17 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *sql_plugin_create()
 {
-	char *uri;
 	private_sql_plugin_t *this;
-
-	uri = lib->settings->get_str(lib->settings, "%s.plugins.sql.database",
-								 NULL, charon->name);
-	if (!uri)
-	{
-		DBG1(DBG_CFG, "sql plugin: database URI not set");
-		return NULL;
-	}
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.db = lib->db->create(lib->db, uri),
 	);
-
-	if (!this->db)
-	{
-		DBG1(DBG_CFG, "sql plugin failed to connect to database");
-		free(this);
-		return NULL;
-	}
-	this->config = sql_config_create(this->db);
-	this->cred = sql_cred_create(this->db);
-	this->logger = sql_logger_create(this->db);
-
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
-	charon->bus->add_logger(charon->bus, &this->logger->logger);
 
 	return &this->public.plugin;
 }
-
