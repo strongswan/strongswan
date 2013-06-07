@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,6 +22,7 @@
 #include <stdio.h>
 
 #include <library.h>
+#include <plugins/plugin_feature.h>
 #include <utils/debug.h>
 
 typedef struct private_padlock_plugin_t private_padlock_plugin_t;
@@ -107,28 +109,49 @@ METHOD(plugin_t, get_name, char*,
 	return "padlock";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_padlock_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f_rng[] = {
+		PLUGIN_REGISTER(RNG, padlock_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_WEAK),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+	};
+	static plugin_feature_t f_aes[] = {
+		PLUGIN_REGISTER(CRYPTER, padlock_aes_crypter_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
+	};
+	static plugin_feature_t f_sha1[] = {
+		PLUGIN_REGISTER(HASHER, padlock_sha1_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
+	};
+	static plugin_feature_t f[countof(f_rng) + countof(f_aes) +
+							  countof(f_sha1)] = {};
+	static int count = 0;
+
+	if (!count)
+	{	/* initialize only once */
+		if (this->features & PADLOCK_RNG_ENABLED)
+		{
+			plugin_features_add(f, f_rng, countof(f_rng), &count);
+		}
+		if (this->features & PADLOCK_ACE2_ENABLED)
+		{
+			plugin_features_add(f, f_aes, countof(f_aes), &count);
+		}
+		if (this->features & PADLOCK_PHE_ENABLED)
+		{
+			plugin_features_add(f, f_sha1, countof(f_sha1), &count);
+		}
+	}
+	*features = f;
+	return count;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_padlock_plugin_t *this)
 {
-	if (this->features & PADLOCK_RNG_ENABLED)
-	{
-		lib->crypto->remove_rng(lib->crypto,
-							(rng_constructor_t)padlock_rng_create);
-		lib->crypto->remove_rng(lib->crypto,
-							(rng_constructor_t)padlock_rng_create);
-		lib->crypto->remove_rng(lib->crypto,
-							(rng_constructor_t)padlock_rng_create);
-	}
-	if (this->features & PADLOCK_ACE2_ENABLED)
-	{
-		lib->crypto->remove_crypter(lib->crypto,
-							(crypter_constructor_t)padlock_aes_crypter_create);
-	}
-	if (this->features & PADLOCK_PHE_ENABLED)
-	{
-		lib->crypto->remove_hasher(lib->crypto,
-							(hasher_constructor_t)padlock_sha1_hasher_create);
-	}
 	free(this);
 }
 
@@ -143,7 +166,7 @@ plugin_t *padlock_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -167,24 +190,5 @@ plugin_t *padlock_plugin_create()
 		 this->features & PADLOCK_PHE_ENABLED ? " PHE" : "",
 		 this->features & PADLOCK_PMM_ENABLED ? " PMM" : "");
 
-	if (this->features & PADLOCK_RNG_ENABLED)
-	{
-		lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
-						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
-						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_WEAK, get_name(this),
-						(rng_constructor_t)padlock_rng_create);
-	}
-	if (this->features & PADLOCK_ACE2_ENABLED)
-	{
-		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
-						(crypter_constructor_t)padlock_aes_crypter_create);
-	}
-	if (this->features & PADLOCK_PHE_ENABLED)
-	{
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
-						(hasher_constructor_t)padlock_sha1_hasher_create);
-	}
 	return &this->public.plugin;
 }
