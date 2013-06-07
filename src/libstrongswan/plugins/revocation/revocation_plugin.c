@@ -42,10 +42,43 @@ METHOD(plugin_t, get_name, char*,
 	return "revocation";
 }
 
+/**
+ * Register validator
+ */
+static bool plugin_cb(private_revocation_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
+	}
+	else
+	{
+		lib->credmgr->remove_validator(lib->credmgr,
+									   &this->validator->validator);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_revocation_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "revocation"),
+				PLUGIN_SDEPEND(CERT_ENCODE, CERT_X509_OCSP_REQUEST),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509_OCSP_RESPONSE),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509_CRL),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+				PLUGIN_SDEPEND(FETCHER, NULL),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_revocation_plugin_t *this)
 {
-	lib->credmgr->remove_validator(lib->credmgr, &this->validator->validator);
 	this->validator->destroy(this->validator);
 	free(this);
 }
@@ -61,13 +94,12 @@ plugin_t *revocation_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.validator = revocation_validator_create(),
 	);
-	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
 
 	return &this->public.plugin;
 }
