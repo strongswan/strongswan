@@ -49,7 +49,7 @@ struct ipseckey_cred_t {
  * Create an ipseckey_cred instance which uses the given resolver
  * to query the DNS for IPSECKEY resource records.
  *
- * @param res		resolver to use
+ * @param res		resolver to use (gets adopted)
  * @return			credential set
  */
 ipseckey_cred_t *ipseckey_cred_create(resolver_t *res);

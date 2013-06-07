@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2012 Reto Guadagnini
  * Hochschule fuer Technik Rapperswil
  *
@@ -32,11 +33,6 @@ struct private_ipseckey_plugin_t {
 	ipseckey_plugin_t public;
 
 	/**
-	 * DNS resolver instance
-	 */
-	resolver_t *res;
-
-	/**
 	 * credential set
 	 */
 	ipseckey_cred_t *cred;
@@ -53,15 +49,59 @@ METHOD(plugin_t, get_name, char*,
 	return "ipseckey";
 }
 
+/**
+ * Create resolver and register credential set
+ */
+static bool plugin_cb(private_ipseckey_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		resolver_t *res;
+
+		res = lib->resolver->create(lib->resolver);
+		if (!res)
+		{
+			DBG1(DBG_CFG, "failed to create a DNS resolver instance");
+			return FALSE;
+		}
+
+		if (this->enabled)
+		{
+			this->cred = ipseckey_cred_create(res);
+			lib->credmgr->add_set(lib->credmgr, &this->cred->set);
+		}
+		else
+		{
+			res->destroy(res);
+		}
+	}
+	else
+	{
+		if (this->enabled)
+		{
+			lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
+			this->cred->destroy(this->cred);
+		}
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_ipseckey_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "ipseckey"),
+				PLUGIN_DEPENDS(RESOLVER),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ipseckey_plugin_t *this)
 {
-	if (this->enabled)
-	{
-		lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
-	}
-	DESTROY_IF(this->res);
-	DESTROY_IF(this->cred);
 	free(this);
 }
 
@@ -76,28 +116,13 @@ plugin_t *ipseckey_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.res = lib->resolver->create(lib->resolver),
 		.enabled = lib->settings->get_bool(lib->settings,
 							"%s.plugins.ipseckey.enable", FALSE, charon->name),
 	);
 
-	if (!this->res)
-	{
-		DBG1(DBG_CFG, "failed to create a DNS resolver instance");
-		destroy(this);
-		return NULL;
-	}
-
-	if (this->enabled)
-	{
-		this->cred = ipseckey_cred_create(this->res);
-		lib->credmgr->add_set(lib->credmgr, &this->cred->set);
-	}
-
 	return &this->public.plugin;
 }
-
