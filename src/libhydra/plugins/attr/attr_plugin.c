@@ -107,4 +107,3 @@ plugin_t *attr_plugin_create()
 
 	return &this->public.plugin;
 }
-

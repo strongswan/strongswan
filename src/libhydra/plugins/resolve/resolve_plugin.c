@@ -42,10 +42,39 @@ METHOD(plugin_t, get_name, char*,
 	return "resolve";
 }
 
+/**
+ * Register handler
+ */
+static bool plugin_cb(private_resolve_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		hydra->attributes->add_handler(hydra->attributes,
+									   &this->handler->handler);
+	}
+	else
+	{
+		hydra->attributes->remove_handler(hydra->attributes,
+										  &this->handler->handler);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_resolve_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "resolve"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_resolve_plugin_t *this)
 {
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->handler->destroy(this->handler);
 	free(this);
 }
@@ -61,13 +90,12 @@ plugin_t *resolve_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.handler = resolve_handler_create(),
 	);
-	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
 }
