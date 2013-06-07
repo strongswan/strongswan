@@ -97,14 +97,46 @@ METHOD(plugin_t, get_name, char*,
 	return "ha";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_ha_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->segments->listener);
+		charon->bus->add_listener(charon->bus, &this->ike->listener);
+		charon->bus->add_listener(charon->bus, &this->child->listener);
+		hydra->attributes->add_provider(hydra->attributes,
+										&this->attr->provider);
+	}
+	else
+	{
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->attr->provider);
+		charon->bus->remove_listener(charon->bus, &this->segments->listener);
+		charon->bus->remove_listener(charon->bus, &this->ike->listener);
+		charon->bus->remove_listener(charon->bus, &this->child->listener);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_ha_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "ha"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ha_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
-	hydra->attributes->remove_provider(hydra->attributes, &this->attr->provider);
-	charon->bus->remove_listener(charon->bus, &this->segments->listener);
-	charon->bus->remove_listener(charon->bus, &this->ike->listener);
-	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
@@ -151,7 +183,7 @@ plugin_t *ha_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -182,10 +214,6 @@ plugin_t *ha_plugin_create()
 	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
 	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
 								  this->kernel);
-	charon->bus->add_listener(charon->bus, &this->segments->listener);
-	charon->bus->add_listener(charon->bus, &this->ike->listener);
-	charon->bus->add_listener(charon->bus, &this->child->listener);
-	hydra->attributes->add_provider(hydra->attributes, &this->attr->provider);
 
 	return &this->public.plugin;
 }
