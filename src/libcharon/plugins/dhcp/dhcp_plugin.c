@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -17,6 +20,7 @@
 
 #include <hydra.h>
 #include <daemon.h>
+#include <plugins/plugin_feature.h>
 
 #include "dhcp_socket.h"
 #include "dhcp_provider.h"
@@ -50,13 +54,49 @@ METHOD(plugin_t, get_name, char*,
 	return "dhcp";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_dhcp_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		this->socket = dhcp_socket_create();
+
+		if (!this->socket)
+		{
+			return FALSE;
+		}
+		this->provider = dhcp_provider_create(this->socket);
+		hydra->attributes->add_provider(hydra->attributes,
+										&this->provider->provider);
+	}
+	else
+	{
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->provider->provider);
+		this->provider->destroy(this->provider);
+		this->socket->destroy(this->socket);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_dhcp_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "dhcp"),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_dhcp_plugin_t *this)
 {
-	hydra->attributes->remove_provider(hydra->attributes,
-									   &this->provider->provider);
-	this->provider->destroy(this->provider);
-	this->socket->destroy(this->socket);
 	free(this);
 }
 
@@ -71,23 +111,11 @@ plugin_t *dhcp_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.socket = dhcp_socket_create(),
 	);
-
-	if (!this->socket)
-	{
-		free(this);
-		return NULL;
-	}
-
-	this->provider = dhcp_provider_create(this->socket);
-	hydra->attributes->add_provider(hydra->attributes,
-									&this->provider->provider);
 
 	return &this->public.plugin;
 }
-
