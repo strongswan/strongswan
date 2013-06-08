@@ -42,6 +42,17 @@ METHOD(plugin_t, get_name, char*,
 	return "maemo";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_maemo_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_NOOP,
+			PLUGIN_PROVIDE(CUSTOM, "maemo"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_maemo_plugin_t *this)
 {
@@ -60,7 +71,7 @@ plugin_t *maemo_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -74,4 +85,3 @@ plugin_t *maemo_plugin_create()
 
 	return &this->public.plugin;
 }
-
