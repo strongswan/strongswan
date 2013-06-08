@@ -55,14 +55,47 @@ METHOD(plugin_t, get_name, char*,
 	return "unity";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_unity_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		hydra->attributes->add_handler(hydra->attributes,
+									   &this->handler->handler);
+		hydra->attributes->add_provider(hydra->attributes,
+										&this->provider->provider);
+		charon->bus->add_listener(charon->bus, &this->narrower->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->narrower->listener);
+		hydra->attributes->remove_handler(hydra->attributes,
+										  &this->handler->handler);
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->provider->provider);
+
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_unity_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "unity"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_unity_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->narrower->listener);
 	this->narrower->destroy(this->narrower);
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
-	hydra->attributes->remove_provider(hydra->attributes,
-									   &this->provider->provider);
 	this->handler->destroy(this->handler);
 	this->provider->destroy(this->provider);
 	free(this);
@@ -79,18 +112,14 @@ plugin_t *unity_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.handler = unity_handler_create(),
 		.provider = unity_provider_create(),
 	);
-	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
-	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
-
-	this->narrower = unity_narrow_create(this->handler),
-	charon->bus->add_listener(charon->bus, &this->narrower->listener);
+	this->narrower = unity_narrow_create(this->handler);
 
 	return &this->public.plugin;
 }
