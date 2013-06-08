@@ -43,6 +43,17 @@ METHOD(plugin_t, get_name, char*,
 	return "android-log";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_android_log_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_NOOP,
+			PLUGIN_PROVIDE(CUSTOM, "android-log"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_android_log_plugin_t *this)
 {
@@ -62,7 +73,7 @@ plugin_t *android_log_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -73,4 +84,3 @@ plugin_t *android_log_plugin_create()
 
 	return &this->public.plugin;
 }
-
