@@ -712,6 +712,17 @@ METHOD(plugin_t, get_name, char*,
 	return "smp";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_smp_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_NOOP,
+			PLUGIN_PROVIDE(CUSTOM, "smp"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_smp_t *this)
 {
@@ -732,7 +743,7 @@ plugin_t *smp_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -777,4 +788,3 @@ plugin_t *smp_plugin_create()
 
 	return &this->public.plugin;
 }
-
