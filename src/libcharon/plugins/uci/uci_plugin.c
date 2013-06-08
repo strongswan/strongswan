@@ -64,11 +64,40 @@ METHOD(plugin_t, get_name, char*,
 	return "uci";
 }
 
+/**
+ * Register backend
+ */
+static bool plugin_cb(private_uci_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->backends->add_backend(charon->backends, &this->config->backend);
+		lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
+	}
+	else
+	{
+		charon->backends->remove_backend(charon->backends,
+										 &this->config->backend);
+		lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_uci_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "uci"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_uci_plugin_t *this)
 {
-	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->parser->destroy(this->parser);
@@ -87,7 +116,7 @@ plugin_t *uci_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -97,9 +126,5 @@ plugin_t *uci_plugin_create()
 	this->config = uci_config_create(this->parser);
 	this->creds = uci_creds_create(this->parser);
 
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
-
 	return &this->public.plugin;
 }
-
