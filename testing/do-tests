@@ -557,7 +557,7 @@ do
 		$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
 
 	    ssh $SSHCONF $HOSTLOGIN grep imcv /var/log/daemon.log \
-		>> $TESTRESULTDIR/${host}.daemon.log
+		>> $TESTRESULTDIR/${host}.daemon.log 2>/dev/null
 
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
