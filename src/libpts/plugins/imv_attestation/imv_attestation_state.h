@@ -31,8 +31,17 @@
 #include <library.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
+typedef enum imv_attestation_flag_t imv_attestation_flag_t;
 typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t;
 typedef enum imv_meas_error_t imv_meas_error_t;
+
+/**
+ * IMV Attestation Flags set for completed actions
+ */
+enum imv_attestation_flag_t {
+	IMV_ATTESTATION_FLAG_ALGO =      (1<<0),
+	IMV_ATTESTATION_FLAG_FILE_MEAS = (1<<1)
+};
 
 /**
  * IMV Attestation Handshake States (state machine)
@@ -41,7 +50,6 @@ enum imv_attestation_handshake_state_t {
 	IMV_ATTESTATION_STATE_INIT,
 	IMV_ATTESTATION_STATE_NONCE_REQ,
 	IMV_ATTESTATION_STATE_TPM_INIT,
-	IMV_ATTESTATION_STATE_MEAS,
 	IMV_ATTESTATION_STATE_COMP_EVID,
 	IMV_ATTESTATION_STATE_EVID_FINAL,
 	IMV_ATTESTATION_STATE_END,
@@ -90,34 +98,6 @@ struct imv_attestation_state_t {
 	 * @return					PTS object
 	 */
 	pts_t* (*get_pts)(imv_attestation_state_t *this);
-
-	/**
-	 * Add an entry to the list of pending file/directory measurement requests
-	 *
-	 * @param file_id			primary key into file table
-	 * @param is_dir			TRUE if directory
-	 * @return					unique request ID
-	 */
-	u_int16_t (*add_file_meas_request)(imv_attestation_state_t *this,
-									   int file_id, bool is_dir);
-
-	/**
-	 * Returns the number of pending file/directory measurement requests
-	 *
-	 * @return					number of pending requests
-	 */
-	int (*get_file_meas_request_count)(imv_attestation_state_t *this);
-
-	/**
-	 * Check for presence of request_id and if found remove it from the list
-	 *
-	 * @param id				unique request ID
-	 * @param file_id			primary key into file table
-	 * @param is_dir			return TRUE if request was for a directory
-	 * @return					TRUE if request ID found, FALSE otherwise
-	 */
-	bool (*check_off_file_meas_request)(imv_attestation_state_t *this,
-										u_int16_t id, int *file_id, bool *is_dir);
 
 	/**
 	 * Create and add an entry to the list of Functional Components

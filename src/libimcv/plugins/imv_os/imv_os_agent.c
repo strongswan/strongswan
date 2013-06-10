@@ -184,8 +184,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					ietf_attr_product_info_t *attr_cast;
 					pen_t vendor_id;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_PRODUCT_INFORMATION);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_PRODUCT_INFORMATION);
 					attr_cast = (ietf_attr_product_info_t*)attr;
 					os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
 					if (vendor_id != PEN_IETF)
@@ -205,8 +205,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 				{
 					ietf_attr_string_version_t *attr_cast;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_STRING_VERSION);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_STRING_VERSION);
 					attr_cast = (ietf_attr_string_version_t*)attr;
 					os_version = attr_cast->get_version(attr_cast, NULL, NULL);
 					if (os_version.len)
@@ -221,8 +221,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					ietf_attr_numeric_version_t *attr_cast;
 					u_int32_t major, minor;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_NUMERIC_VERSION);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_NUMERIC_VERSION);
 					attr_cast = (ietf_attr_numeric_version_t*)attr;
 					attr_cast->get_version(attr_cast, &major, &minor);
 					DBG1(DBG_IMV, "operating system numeric version is %d.%d",
@@ -236,8 +236,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					op_result_t op_result;
 					time_t last_boot;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_OPERATIONAL_STATUS);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_OPERATIONAL_STATUS);
 					attr_cast = (ietf_attr_op_status_t*)attr;
 					op_status = attr_cast->get_status(attr_cast);
 					op_result = attr_cast->get_result(attr_cast);
@@ -252,8 +252,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					ietf_attr_fwd_enabled_t *attr_cast;
 					os_fwd_status_t fwd_status;
 
-					os_state->set_received(os_state,
-										   IMV_OS_ATTR_FORWARDING_ENABLED);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_FORWARDING_ENABLED);
 					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
 					fwd_status = attr_cast->get_status(attr_cast);
 					DBG1(DBG_IMV, "IPv4 forwarding is %N",
@@ -270,7 +270,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					ietf_attr_default_pwd_enabled_t *attr_cast;
 					bool default_pwd_status;
 
-					os_state->set_received(os_state,
+					state->set_action_flags(state,
 									IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
 					attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
 					default_pwd_status = attr_cast->get_status(attr_cast);
@@ -289,8 +289,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					enumerator_t *e;
 					status_t status;
 
-					os_state->set_received(os_state,
-									IMV_OS_ATTR_INSTALLED_PACKAGES);
+					state->set_action_flags(state,
+											IMV_OS_ATTR_INSTALLED_PACKAGES);
 					if (!this->db)
 					{
 						break;
@@ -325,7 +325,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					char *name;
 					chunk_t value;
 
-					os_state->set_received(os_state, IMV_OS_ATTR_SETTINGS);
+					state->set_action_flags(state, IMV_OS_ATTR_SETTINGS);
 
 					attr_cast = (ita_attr_settings_t*)attr;
 					e = attr_cast->create_enumerator(attr_cast);
@@ -349,7 +349,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					int device_id;
 					chunk_t value;
 
-					os_state->set_received(os_state, IMV_OS_ATTR_DEVICE_ID);
+					state->set_action_flags(state, IMV_OS_ATTR_DEVICE_ID);
 
 					value = attr->get_value(attr);
 					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
@@ -464,7 +464,7 @@ METHOD(imv_agent_if_t, receive_message_long, TNC_Result,
 /**
  * Build an IETF Attribute Request attribute for missing attributes
  */
-static pa_tnc_attr_t* build_attr_request(u_int received)
+static pa_tnc_attr_t* build_attr_request(u_int32_t received)
 {
 	pa_tnc_attr_t *attr;
 	ietf_attr_attr_request_t *attr_cast;
@@ -517,7 +517,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	bool no_workitems = TRUE;
 	enumerator_t *enumerator;
-	u_int received;
+	u_int32_t received;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
@@ -525,14 +525,18 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 	os_state = (imv_os_state_t*)state;
 	handshake_state = os_state->get_handshake_state(os_state);
-	received = os_state->get_received(os_state);
+	received = state->get_action_flags(state);
 	session = state->get_session(state);
 	imv_id = this->agent->get_id(this->agent);
 
+	if (handshake_state == IMV_OS_STATE_END)
+	{
+		return TNC_RESULT_SUCCESS;
+	}
+
 	/* create an empty out message - we might need it */
-	out_msg = imv_msg_create(this->agent, state, id,
-							 this->agent->get_id(this->agent),
-							 TNC_IMCID_ANY, msg_types[0]);
+	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+							 msg_types[0]);
 
 	if (handshake_state == IMV_OS_STATE_INIT)
 	{
@@ -627,7 +631,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 			if (no_workitems)
 			{
-				DBG2(DBG_IMV, "no workitems generated - no evaluation requested");
+				DBG2(DBG_IMV, "IMV %d has no workitems - "
+							  "no evaluation requested", imv_id);
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
@@ -727,6 +732,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		/* finalized all workitems ? */
 		if (session->get_workitem_count(session, imv_id) == 0)
 		{
+			os_state->set_handshake_state(os_state, IMV_OS_STATE_END);
+
 			result = out_msg->send_assessment(out_msg);
 			out_msg->destroy(out_msg);
 			if (result != TNC_RESULT_SUCCESS)

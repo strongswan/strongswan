@@ -36,35 +36,26 @@ typedef struct pts_database_t pts_database_t;
 struct pts_database_t {
 
 	/**
-	* Get files/directories to be measured by PTS
+	* Get absolute pathname for file or directory measurement
 	*
-	* @param product		Software product (os, vpn client, etc.)
-	* @return				Enumerator over all matching files/directories
+	* @param is_dir			TRUE if dir, FALSE if file
+	* @param id				Primary key into directories or files table
+	* @return				Absolute pathname as a text string
 	*/
-	enumerator_t* (*create_file_meas_enumerator)(pts_database_t *this,
-												 char *product);
-
-	/**
-	* Get files/directories to request metadata of
-	*
-	* @param product		Software product (os, vpn client, etc.)
-	* @return				Enumerator over all matching files/directories
-	*/
-	enumerator_t* (*create_file_meta_enumerator)(pts_database_t *this,
-												 char *product);
+	char* (*get_pathname)(pts_database_t *this, bool is_dir, int id);
 
 	/**
 	* Get stored measurement hash for single file or directory entries
 	*
 	* @param product		Software product (os, vpn client, etc.)
 	* @param algo			Hash algorithm used for measurement
-	* @param id				Primary key of measured file/directory
 	* @param is_dir			TRUE if directory was measured
+	* @param id				Primary key of measured file/directory
 	* @return				Enumerator over all matching measurement hashes
 	*/
 	enumerator_t* (*create_file_hash_enumerator)(pts_database_t *this,
 								char *product, pts_meas_algorithms_t algo,
-								int id, bool is_dir);
+								bool is_dir, int id);
 
 	/**
 	* Check if an AIK given by its keyid is registered in the database
@@ -82,6 +73,22 @@ struct pts_database_t {
 	* @return				Enumerator over all matching components
 	*/
 	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this, int kid);
+
+	/**
+	* Add PTS file measurement reference value
+	*
+	* @param product		Software product (os, vpn client, etc.)
+	* @param algo			File measurement hash algorithm used
+	* @param measurement	File measurement hash
+	* @param filename		Optional name of the file to be checked
+	* @param is_dir			TRUE if part of directory measurement
+	* @param id				Primary key into direcories/files table
+	* @return				Status
+	*/
+	status_t (*add_file_measurement)(pts_database_t *this, char *product,
+									 pts_meas_algorithms_t algo,
+									 chunk_t measurement, char *filename,
+									 bool is_dir, int id);
 
 	/**
 	* Check PTS file measurement against reference stored in database

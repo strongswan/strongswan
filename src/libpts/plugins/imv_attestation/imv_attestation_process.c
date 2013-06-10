@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2013 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,6 +15,7 @@
 
 #include "imv_attestation_process.h"
 
+#include <imcv.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
 #include <pts/pts.h>
@@ -35,15 +36,17 @@
 #include <inttypes.h>
 
 bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
-							 imv_attestation_state_t *attestation_state,
+							 imv_state_t *state,
 							 pts_meas_algorithms_t supported_algorithms,
 							 pts_dh_group_t supported_dh_groups,
 							 pts_database_t *pts_db,
 							 credential_manager_t *pts_credmgr)
 {
+	imv_attestation_state_t *attestation_state;
 	pen_type_t attr_type;
 	pts_t *pts;
 
+	attestation_state = (imv_attestation_state_t*)state;
 	pts = attestation_state->get_pts(attestation_state);
 	attr_type = attr->get_type(attr);
 
@@ -73,6 +76,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				return FALSE;
 			}
 			pts->set_meas_algorithm(pts, selected_algorithm);
+			state->set_action_flags(state, IMV_ATTESTATION_FLAG_ALGO);
 			break;
 		}
 		case TCG_PTS_DH_NONCE_PARAMS_RESP:
@@ -190,28 +194,26 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 		}
 		case TCG_PTS_FILE_MEAS:
 		{
+			TNC_IMV_Evaluation_Result eval;
+			TNC_IMV_Action_Recommendation rec;
 			tcg_pts_attr_file_meas_t *attr_cast;
 			u_int16_t request_id;
-			int file_count, file_id;
+			int arg_int, file_count;
 			pts_meas_algorithms_t algo;
 			pts_file_meas_t *measurements;
+			imv_session_t *session;
+			imv_workitem_t *workitem, *found = NULL;
+			imv_workitem_type_t type;
 			char *platform_info;
-			enumerator_t *e_hash;
 			bool is_dir;
+			enumerator_t *enumerator;
 
+			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+			session = state->get_session(state);
+			algo = pts->get_meas_algorithm(pts);
 			platform_info = pts->get_platform_info(pts);
-			if (!pts_db || !platform_info)
-			{
-				DBG1(DBG_IMV, "%s%s%s not available",
-					(pts_db) ? "" : "pts database",
-					(!pts_db && !platform_info) ? "and" : "",
-					(platform_info) ? "" : "platform info");
-				break;
-			}
-
 			attr_cast = (tcg_pts_attr_file_meas_t*)attr;
 			measurements = attr_cast->get_measurements(attr_cast);
-			algo = pts->get_meas_algorithm(pts);
 			request_id = measurements->get_request_id(measurements);
 			file_count = measurements->get_file_count(measurements);
 
@@ -220,23 +222,94 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 			if (request_id)
 			{
-				if (!attestation_state->check_off_file_meas_request(
-					attestation_state, request_id, &file_id, &is_dir))
+				enumerator = session->create_workitem_enumerator(session);
+				while (enumerator->enumerate(enumerator, &workitem))
+				{
+					/* request ID consist of lower 16 bits of workitem ID */
+					if ((workitem->get_id(workitem) & 0xffff) == request_id)
+					{
+						found = workitem;
+						break;
+					}
+				}
+
+				if (!found)
 				{
 					DBG1(DBG_IMV, "  no entry found for file measurement "
 								  "request %d", request_id);
+					enumerator->destroy(enumerator);
 					break;
 				}
-
-				/* check hashes from database against measurements */
-				e_hash = pts_db->create_file_hash_enumerator(pts_db,
-								platform_info, algo, file_id, is_dir);
-				if (!measurements->verify(measurements, e_hash, is_dir))
+				type =    found->get_type(found);
+				arg_int = found->get_arg_int(found);
+ 
+				switch (type)
 				{
-					attestation_state->set_measurement_error(attestation_state,
-										IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL);
+					default:
+					case IMV_WORKITEM_FILE_REF_MEAS:
+					case IMV_WORKITEM_FILE_MEAS:
+						is_dir = FALSE;
+						break;
+					case IMV_WORKITEM_DIR_REF_MEAS:
+					case IMV_WORKITEM_DIR_MEAS:
+						is_dir = TRUE;
 				}
-				e_hash->destroy(e_hash);
+
+				switch (type)
+				{
+					case IMV_WORKITEM_FILE_MEAS:
+					case IMV_WORKITEM_DIR_MEAS:
+					{
+						enumerator_t *e;
+
+						/* check hashes from database against measurements */
+						e = pts_db->create_file_hash_enumerator(pts_db,
+										platform_info, algo, is_dir, arg_int);
+						if (!e)
+						{
+							eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+							break;
+						}
+						if (!measurements->verify(measurements, e, is_dir))
+						{
+							attestation_state->set_measurement_error(
+										attestation_state,
+										IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL);
+							eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
+						}
+						e->destroy(e);
+						break;
+					}
+					case IMV_WORKITEM_FILE_REF_MEAS:
+					case IMV_WORKITEM_DIR_REF_MEAS:
+					{
+						enumerator_t *e;
+						char *filename;
+						chunk_t measurement;
+
+						e = measurements->create_enumerator(measurements);
+						while (e->enumerate(e, &filename, &measurement))
+						{
+							if (pts_db->add_file_measurement(pts_db, 
+									platform_info, algo, measurement, filename,
+									is_dir, arg_int) != SUCCESS)
+							{
+								eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+							}
+						}
+						e->destroy(e);
+						break;
+					}
+					default:
+						break;
+				}
+
+				session->remove_workitem(session, enumerator);
+				enumerator->destroy(enumerator);
+				rec = found->set_result(found, "", eval);
+				state->update_recommendation(state, rec, eval);
+				imcv_db->finalize_workitem(imcv_db, found);
+				found->destroy(found);
 			}
 			else
 			{

@@ -36,10 +36,12 @@ enum imv_workitem_type_t {
 	IMV_WORKITEM_DEFAULT_PWD =    4,
 	IMV_WORKITEM_FILE_REF_MEAS =  5,
 	IMV_WORKITEM_FILE_MEAS =      6,
-	IMV_WORKITEM_DIR_REF_MEAS =   7,
-	IMV_WORKITEM_DIR_MEAS =       8,
-	IMV_WORKITEM_TCP_SCAN =       9,
-	IMV_WORKITEM_UDP_SCAN =      10
+	IMV_WORKITEM_FILE_META =      7,
+	IMV_WORKITEM_DIR_REF_MEAS =   8,
+	IMV_WORKITEM_DIR_MEAS =       9,
+	IMV_WORKITEM_DIR_META =      10,
+	IMV_WORKITEM_TCP_SCAN =      11,
+	IMV_WORKITEM_UDP_SCAN =      12
 };
 
 extern enum_name_t *imv_workitem_type_names;
@@ -78,11 +80,18 @@ struct imv_workitem_t {
 	 TNC_IMVID (*get_imv_id)(imv_workitem_t *this);
 
 	/**
-	 * Get argument string
+	 * Get string argument
 	 *
 	 * @return				Argument string
 	 */
-	 char* (*get_argument)(imv_workitem_t *this);
+	 char* (*get_arg_str)(imv_workitem_t *this);
+
+	/**
+	 * Get integer argument
+	 *
+	 * @return				Argument integer
+	 */
+	 int (*get_arg_int)(imv_workitem_t *this);
 
 	/**
 	 * Set result string
@@ -114,12 +123,13 @@ struct imv_workitem_t {
  *
  * @param id				Primary workitem key
  * @param type				Workitem type
- * @param argument			Argument string
+ * @param arg_str			String argument
+ * @param arg_int			Integer argument
  * @param rec_fail			Recommendation with minor/major non-compliance case
  * @param rec_noresult		Recommendation in don't know/error case
  */
 imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
-									char *argument,
+									char *arg_str, int arg_int,
 									TNC_IMV_Action_Recommendation rec_fail,
 									TNC_IMV_Action_Recommendation rec_noresult);
 

@@ -25,7 +25,7 @@
 /**
  * global debug output variables
  */
-static int debug_level = 2;
+static int debug_level = 1;
 static bool stderr_quiet = FALSE;
 
 /**
@@ -51,7 +51,7 @@ bool policy_start(database_t *db, int session_id)
 {
 	enumerator_t *e;
 	int id, gid, device_id, product_id, group_id = 0;
-	int type, rec_fail, rec_noresult;
+	int type, file, dir, arg_int, rec_fail, rec_noresult;
 	char *argument;
 
 	/* get session data */
@@ -107,22 +107,41 @@ bool policy_start(database_t *db, int session_id)
 
 	/* get enforcements for given group */
 	e = db->query(db,
-			"SELECT e.id, p.type, p.argument, p.rec_fail, p.rec_noresult "
+			"SELECT e.id, "
+			"p.type, p.argument, p.file, p.dir, p.rec_fail, p.rec_noresult "
 			"FROM enforcements AS e JOIN policies as p ON  e.policy = p.id "
-			"WHERE e.group_id = ?",
-			 DB_INT, group_id, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
+			"WHERE e.group_id = ?", DB_INT, group_id,
+			 DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
 	if (!e)
 	{
 		return FALSE;
 	}
-	while (e->enumerate(e, &id, &type, &argument, &rec_fail, &rec_noresult))
+	while (e->enumerate(e, &id, &type, &argument, &file, &dir, &rec_fail,
+						   &rec_noresult))
 	{
+		/* determine arg_int */
+		switch ((imv_workitem_type_t)type)
+		{
+			case IMV_WORKITEM_FILE_REF_MEAS:
+			case IMV_WORKITEM_FILE_MEAS:
+			case IMV_WORKITEM_FILE_META:
+				arg_int = file;
+				break;
+			case IMV_WORKITEM_DIR_REF_MEAS:
+			case IMV_WORKITEM_DIR_MEAS:
+			case IMV_WORKITEM_DIR_META:
+				arg_int = dir;
+				break;
+			default:
+				arg_int = 0;
+		}
+
 		/* insert a workitem */
 		if (db->execute(db, NULL,
-				"INSERT INTO workitems (session, enforcement, type, argument, "
-				"rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?, ?)",
+				"INSERT INTO workitems (session, enforcement, type, arg_str, "
+				"arg_int, rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?, ?, ?)",
 				DB_INT, session_id, DB_INT, id, DB_INT, type, DB_TEXT, argument,
-				DB_INT, rec_fail, DB_INT, rec_noresult) != 1)
+				DB_INT, arg_int, DB_INT, rec_fail, DB_INT, rec_noresult) != 1)
 		{
 			e->destroy(e);
 			fprintf(stderr, "could not insert workitem\n");
@@ -139,7 +158,6 @@ bool policy_stop(database_t *db, int session_id)
 	enumerator_t *e;
 	int rec, policy;
 	char *result;
-	bool no_worklists = TRUE;
 
 	e = db->query(db,
 			"SELECT w.rec_final, w.result, e.policy FROM workitems AS w "
@@ -150,24 +168,16 @@ bool policy_stop(database_t *db, int session_id)
 	{
 		while (e->enumerate(e, &rec, &result, &policy))
 		{
-			no_worklists = FALSE;
-
-			/* insert result */
 			db->execute(db, NULL,
 				"INSERT INTO results (session, policy, rec, result) "
 				"VALUES (?, ?, ?, ?)", DB_INT, session_id, DB_INT, policy,
 				 DB_INT, rec, DB_TEXT, result);
 		}
 		e->destroy(e);
-
-		if (no_worklists)
-		{
-			return TRUE;
-		}
 	}
 	return db->execute(db, NULL,
 				"DELETE FROM workitems WHERE session = ?",
-				DB_UINT, session_id) > 0;
+				DB_UINT, session_id) >= 0;
 }
 
 int main(int argc, char *argv[])
@@ -224,6 +234,12 @@ int main(int argc, char *argv[])
 	
 	/* attach IMV database */
 	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
+	if (!uri)
+	{
+		fprintf(stderr, "database uri not defined.\n");
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+
 	db = lib->db->create(lib->db, uri);
 	if (!db)
 	{

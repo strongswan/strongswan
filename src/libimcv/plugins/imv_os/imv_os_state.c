@@ -65,6 +65,11 @@ struct private_imv_os_state_t {
 	u_int32_t max_msg_len;
 
 	/**
+	 * Flags set for completed actions
+	 */
+	u_int32_t action_flags;
+
+	/**
 	 * Access Requestor ID Type
 	 */
 	u_int32_t ar_id_type;
@@ -158,11 +163,6 @@ struct private_imv_os_state_t {
 	 * Number of whitelisted packages
 	 */
 	int count_ok;
-
-	/**
-	 * Flags set for received attributes
-	 */
-	u_int received_flags;
 
 	/**
 	 * OS Settings
@@ -335,6 +335,18 @@ METHOD(imv_state_t, get_max_msg_len, u_int32_t,
 	private_imv_os_state_t *this)
 {
 	return this->max_msg_len;
+}
+
+METHOD(imv_state_t, set_action_flags, void,
+	private_imv_os_state_t *this, u_int32_t flags)
+{
+	this->action_flags |= flags;
+}
+
+METHOD(imv_state_t, get_action_flags, u_int32_t,
+	private_imv_os_state_t *this)
+{
+	return this->action_flags;
 }
 
 METHOD(imv_state_t, set_ar_id, void,
@@ -580,18 +592,6 @@ METHOD(imv_os_state_t, get_count, void,
 	}
 }
 
-METHOD(imv_os_state_t, set_received, void,
-	private_imv_os_state_t *this, u_int flags)
-{
-	this->received_flags |= flags;
-}
-
-METHOD(imv_os_state_t, get_received, u_int,
-	private_imv_os_state_t *this)
-{
-	return this->received_flags;
-}
-
 METHOD(imv_os_state_t, set_device_id, void,
 	private_imv_os_state_t *this, int id)
 {
@@ -660,6 +660,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
+				.set_action_flags = _set_action_flags,
+				.get_action_flags = _get_action_flags,
 				.set_ar_id = _set_ar_id,
 				.get_ar_id = _get_ar_id,
 				.set_session = _set_session,
@@ -678,8 +680,6 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_info = _get_info,
 			.set_count = _set_count,
 			.get_count = _get_count,
-			.set_received = _set_received,
-			.get_received = _get_received,
 			.set_device_id = _set_device_id,
 			.get_device_id = _get_device_id,
 			.set_os_settings = _set_os_settings,

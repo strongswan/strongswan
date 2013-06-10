@@ -34,6 +34,8 @@
 #include <pts/pts_creds.h>
 
 #include <tcg/tcg_attr.h>
+#include <tcg/tcg_pts_attr_req_file_meas.h>
+#include <tcg/tcg_pts_attr_req_file_meta.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -117,31 +119,6 @@ METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 }
 
 /**
- * Build a message to be sent
- */
-static TNC_Result send_message(private_imv_attestation_agent_t *this,
-							   imv_state_t *state, imv_msg_t *out_msg)
-{
-	imv_attestation_state_t *attestation_state;
-	TNC_Result result;
-
-	attestation_state = (imv_attestation_state_t*)state;
-
-	if (imv_attestation_build(out_msg, attestation_state,
-							  this->supported_algorithms,
-							  this->supported_dh_groups, this->pts_db))
-	{
-		result = out_msg->send(out_msg, TRUE);
-	}
-	else
-	{
-		result = TNC_RESULT_FATAL;
-	}
-
-	return result;
-}
-
-/**
  * Process a received message
  */
 static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
@@ -197,8 +174,7 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 						DBG1(DBG_IMV, "received TCG-PTS error '%N'",
 							 pts_error_code_names, error_code.type);
 						DBG1(DBG_IMV, "error information: %B", &msg_info);
-
-						result = TNC_RESULT_FATAL;
+						fatal_error = TRUE;
 					}
 					break;
 				}
@@ -224,7 +200,7 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 		}
 		else if (type.vendor_id == PEN_TCG)
 		{
-			if (!imv_attestation_process(attr, out_msg, attestation_state, 
+			if (!imv_attestation_process(attr, out_msg, state,
 				this->supported_algorithms, this->supported_dh_groups,
 				this->pts_db, this->pts_credmgr))
 			{
@@ -235,6 +211,10 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	/**
+	 * The IETF Product Information and String Version attributes
+	 * are supposed to arrive in the same PA-TNC message
+	 */
 	if (os_name.len && os_version.len)
 	{
 		pts->set_platform_info(pts, os_name, os_version);
@@ -256,64 +236,9 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 
 	/* send PA-TNC message with excl flag set */
 	result = out_msg->send(out_msg, TRUE);
-
-	if (result != TNC_RESULT_SUCCESS)
-	{
-		out_msg->destroy(out_msg);
-		return result;
-	}
-
-	/* check the IMV state for the next PA-TNC attributes to send */
-	result = send_message(this, state, out_msg);
-
-	if (result != TNC_RESULT_SUCCESS)
-	{
-		state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
-								TNC_IMV_EVALUATION_RESULT_ERROR);
-		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		if (result != TNC_RESULT_SUCCESS)
-		{
-			return result;
-		}
-		return this->agent->provide_recommendation(this->agent, state);
-	}
-
-	if (attestation_state->get_handshake_state(attestation_state) ==
-		IMV_ATTESTATION_STATE_END)
-	{
-		if (attestation_state->get_file_meas_request_count(attestation_state))
-		{
-			DBG1(DBG_IMV, "failure due to %d pending file measurements",
-				attestation_state->get_file_meas_request_count(attestation_state));
-			attestation_state->set_measurement_error(attestation_state,
-								IMV_ATTESTATION_ERROR_FILE_MEAS_PEND);
-		}
-		if (attestation_state->get_measurement_error(attestation_state))
-		{
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
-		}
-		else
-		{
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-		}
-		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		if (result != TNC_RESULT_SUCCESS)
-		{
-			return result;
-		}
-		return this->agent->provide_recommendation(this->agent, state);
-	}
 	out_msg->destroy(out_msg);
 
 	return result;
-
 }
 
 METHOD(imv_agent_if_t, receive_message, TNC_Result,
@@ -354,23 +279,223 @@ METHOD(imv_agent_if_t, receive_message_long, TNC_Result,
 	in_msg->destroy(in_msg);
 
 	return result;
-
 }
 
 METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	private_imv_attestation_agent_t *this, TNC_ConnectionID id)
 {
-	return TNC_RESULT_SUCCESS;
+	imv_msg_t *out_msg;
+	imv_state_t *state;
+	imv_session_t *session;
+	imv_attestation_state_t *attestation_state;
+	TNC_IMVID imv_id;
+	TNC_Result result = TNC_RESULT_SUCCESS;
+	pts_t *pts;
+	char *platform_info;
+
+	if (!this->agent->get_state(this->agent, id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	attestation_state = (imv_attestation_state_t*)state;
+	pts = attestation_state->get_pts(attestation_state);
+	platform_info = pts->get_platform_info(pts);
+	session = state->get_session(state);
+	imv_id = this->agent->get_id(this->agent);
+
+	/* create an empty out message - we might need it */
+	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+							 msg_types[0]);
+
+	if (platform_info && session &&
+	   (state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ALGO) &&
+	  !(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_FILE_MEAS))
+	{
+		imv_workitem_t *workitem;
+		bool is_dir, no_workitems = TRUE;
+		u_int32_t delimiter = SOLIDUS_UTF;
+		u_int16_t request_id;
+		pa_tnc_attr_t *attr;
+		char *pathname;
+		enumerator_t *enumerator;
+
+		enumerator = session->create_workitem_enumerator(session);
+		if (enumerator)
+		{
+			while (enumerator->enumerate(enumerator, &workitem))
+			{
+				if (workitem->get_imv_id(workitem) != TNC_IMVID_ANY)
+				{
+					continue;
+				}
+
+				switch (workitem->get_type(workitem))
+				{
+					case IMV_WORKITEM_FILE_REF_MEAS:
+					case IMV_WORKITEM_FILE_MEAS:
+					case IMV_WORKITEM_FILE_META:
+						is_dir = FALSE;
+						break;
+					case IMV_WORKITEM_DIR_REF_MEAS:
+					case IMV_WORKITEM_DIR_MEAS:
+					case IMV_WORKITEM_DIR_META:
+						is_dir = TRUE;
+						break;
+					default:
+						continue;
+				}
+
+				pathname = this->pts_db->get_pathname(this->pts_db, is_dir,
+											workitem->get_arg_int(workitem));
+				if (!pathname)
+				{
+					continue;
+				}
+				workitem->set_imv_id(workitem, imv_id);
+				no_workitems = FALSE;
+
+				if (workitem->get_type(workitem) == IMV_WORKITEM_FILE_META)
+				{
+					TNC_IMV_Action_Recommendation rec;
+					TNC_IMV_Evaluation_Result eval;
+
+					DBG2(DBG_IMV, "IMV %d requests metadata for %s '%s'",
+						 imv_id, is_dir ? "directory" : "file", pathname);
+					attr = tcg_pts_attr_req_file_meta_create(is_dir,
+												delimiter, pathname);
+					/* currently just fire and forget metadata requests */
+					eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+					session->remove_workitem(session, enumerator);
+					rec = workitem->set_result(workitem, "", eval);
+					state->update_recommendation(state, rec, eval);
+					imcv_db->finalize_workitem(imcv_db, workitem);
+					workitem->destroy(workitem);
+				}
+				else
+				{
+					/* use lower 16 bits of the workitem ID as request ID */
+					request_id = workitem->get_id(workitem) & 0xffff;
+
+					DBG2(DBG_IMV, "IMV %d requests measurement %d for %s '%s'",
+						 imv_id, request_id, is_dir ? "directory" : "file",
+						 pathname);
+					attr = tcg_pts_attr_req_file_meas_create(is_dir, request_id,
+												delimiter, pathname);
+				}
+				free(pathname);
+				attr->set_noskip_flag(attr, TRUE);
+				out_msg->add_attribute(out_msg, attr);
+			}
+			enumerator->destroy(enumerator);
+
+			/* sent all file and directory measurement and metadata requests */
+			state->set_action_flags(state, IMV_ATTESTATION_FLAG_FILE_MEAS);
+
+			if (no_workitems)
+			{
+				DBG2(DBG_IMV, "IMV %d has no workitems - "
+							  "no evaluation requested", imv_id);
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			}
+		}
+	}
+
+	/* check the IMV state for the next PA-TNC attributes to send */
+	if (!imv_attestation_build(out_msg, attestation_state,
+							  this->supported_algorithms,
+							  this->supported_dh_groups, this->pts_db))
+	{
+		state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return this->agent->provide_recommendation(this->agent, state);
+	}
+
+	/* finalized all workitems? */
+	if (session && session->get_workitem_count(session, imv_id) == 0 &&
+		attestation_state->get_handshake_state(attestation_state) ==
+			IMV_ATTESTATION_STATE_END)
+	{
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return this->agent->provide_recommendation(this->agent, state);
+	}
+
+	/* send non-empty PA-TNC message with excl flag not set */
+	if (out_msg->get_attribute_count(out_msg))
+	{
+		result = out_msg->send(out_msg, FALSE);
+	}
+	out_msg->destroy(out_msg);
+
+	return result;
 }
 
 METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 	private_imv_attestation_agent_t *this, TNC_ConnectionID id)
 {
+	TNC_IMVID imv_id;
 	imv_state_t *state;
+	imv_attestation_state_t *attestation_state;
+	imv_session_t *session;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
 		return TNC_RESULT_FATAL;
+	}
+	attestation_state = (imv_attestation_state_t*)state;
+	session = state->get_session(state);
+	imv_id = this->agent->get_id(this->agent);
+
+	if (session)
+	{
+		imv_workitem_t *workitem;
+		enumerator_t *enumerator;
+		int pending_file_meas = 0;
+
+		enumerator = session->create_workitem_enumerator(session);
+		if (enumerator)
+		{
+			while (enumerator->enumerate(enumerator, &workitem))
+			{
+				if (workitem->get_imv_id(workitem) != imv_id)
+				{
+					continue;
+				}
+				switch (workitem->get_type(workitem))
+				{
+					case IMV_WORKITEM_FILE_REF_MEAS:
+					case IMV_WORKITEM_FILE_MEAS:
+					case IMV_WORKITEM_DIR_REF_MEAS:
+					case IMV_WORKITEM_DIR_MEAS:
+						pending_file_meas++;
+						break;
+					default:
+						break;
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			if (pending_file_meas)
+			{
+				DBG1(DBG_IMV, "failure due to %d pending file measurements",
+							   pending_file_meas);
+				attestation_state->set_measurement_error(attestation_state,
+							   IMV_ATTESTATION_ERROR_FILE_MEAS_PEND);
+			}
+		}
 	}
 	return this->agent->provide_recommendation(this->agent, state);
 }
@@ -406,7 +531,6 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 					"libimcv.plugins.imv-attestation.dh_group", "ecp256");
 	cadir = lib->settings->get_str(lib->settings,
 					"libimcv.plugins.imv-attestation.cadir", NULL);
-	libpts_init();
 
 	INIT(this,
 		.public = {
@@ -426,6 +550,8 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 		.pts_creds = pts_creds_create(cadir),
 		.pts_db = pts_database_create(imcv_db),
 	);
+
+	libpts_init();
 
 	if (!this->agent ||
 		!pts_meas_algo_probe(&this->supported_algorithms) ||

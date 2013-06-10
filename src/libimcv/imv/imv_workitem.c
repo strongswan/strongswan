@@ -27,8 +27,10 @@ ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_UDP_SCAN,
 	"PWDEN",
 	"FREFM",
 	"FMEAS",
+	"FMETA",
 	"DREFM",
 	"DMEAS",
+	"DMETA",
 	"TCPSC",
 	"UDPSC"
 );
@@ -62,7 +64,12 @@ struct private_imv_workitem_t {
 	/**
 	 * Argument string
 	 */
-	char *argument;
+	char *arg_str;
+
+	/**
+	 * Argument integer
+	 */
+	int arg_int;
 
 	/**
 	 * Result string
@@ -110,10 +117,16 @@ METHOD(imv_workitem_t, get_type, imv_workitem_type_t,
 	return this->type;
 }
 
-METHOD(imv_workitem_t, get_argument, char*,
+METHOD(imv_workitem_t, get_arg_str, char*,
 	private_imv_workitem_t *this)
 {
-	return this->argument;
+	return this->arg_str;
+}
+
+METHOD(imv_workitem_t, get_arg_int, int,
+	private_imv_workitem_t *this)
+{
+	return this->arg_int;
 }
 
 METHOD(imv_workitem_t, set_result, TNC_IMV_Action_Recommendation,
@@ -135,9 +148,10 @@ METHOD(imv_workitem_t, set_result, TNC_IMV_Action_Recommendation,
 			this->rec_final = this->rec_noresult;
 			break;
 	}
-	DBG2(DBG_IMV, "workitem %N: %N%s%s", imv_workitem_type_names, this->type,
-				   TNC_IMV_Action_Recommendation_names, this->rec_final, 
-				   strlen(result) ? " - " : "", result);
+	DBG2(DBG_IMV, "IMV %d handled %N workitem %d: %N%s%s", this->imv_id,
+		 imv_workitem_type_names, this->type, this->id,
+		 TNC_IMV_Action_Recommendation_names, this->rec_final,
+		 strlen(result) ? " - " : "", result);
 
 	return this->rec_final;	
 }
@@ -155,7 +169,7 @@ METHOD(imv_workitem_t, get_result, TNC_IMV_Action_Recommendation,
 METHOD(imv_workitem_t, destroy, void,
 	private_imv_workitem_t *this)
 {
-	free(this->argument);
+	free(this->arg_str);
 	free(this->result);
 	free(this);
 }
@@ -164,7 +178,7 @@ METHOD(imv_workitem_t, destroy, void,
  * See header
  */
 imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
-									char *argument,
+									char *arg_str, int arg_int,
 									TNC_IMV_Action_Recommendation rec_fail,
 									TNC_IMV_Action_Recommendation rec_noresult)
 {
@@ -176,7 +190,8 @@ imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
 			.set_imv_id = _set_imv_id,
 			.get_imv_id = _get_imv_id,
 			.get_type = _get_type,
-			.get_argument = _get_argument,
+			.get_arg_str = _get_arg_str,
+			.get_arg_int = _get_arg_int,
 			.set_result = _set_result,
 			.get_result = _get_result,
 			.destroy = _destroy,
@@ -184,7 +199,8 @@ imv_workitem_t *imv_workitem_create(int id, imv_workitem_type_t type,
 		.id = id,
 		.imv_id = TNC_IMVID_ANY,
 		.type = type,
-		.argument = strdup(argument),
+		.arg_str = arg_str ? strdup(arg_str) : NULL,
+		.arg_int = arg_int,
 		.rec_fail = rec_fail,
 		.rec_noresult = rec_noresult,
 		.rec_final = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,

@@ -262,6 +262,12 @@ INSERT INTO files (				/*  5 */
   'openssl', 8
 );
 
+INSERT INTO files (				/*  6 */
+  name, dir
+) VALUES (
+  'tnc_config', 2
+);
+
 /* Algorithms */
 
 INSERT INTO algorithms (
@@ -639,14 +645,39 @@ INSERT INTO policies (			/*  7 */
 INSERT INTO policies (			/*  8 */
   type, name, rec_fail, rec_noresult
 ) VALUES (
-  9, 'No Open TCP Ports', 1, 1
+  11, 'No Open TCP Ports', 1, 1
 );
 
 INSERT INTO policies (			/*  9 */
   type, name, rec_fail, rec_noresult
 ) VALUES (
-  10, 'No Open UDP Ports', 1, 1
+  12, 'No Open UDP Ports', 1, 1
 );
+
+INSERT INTO policies (			/* 10 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  7, 'Metadata of /etc/tnc_config', 6, 0, 0
+);
+
+INSERT INTO policies (			/* 11 */
+  type, name, dir, rec_fail, rec_noresult
+) VALUES (
+  8, 'Measure as reference /bin', 1, 0, 0
+);
+
+INSERT INTO policies (			/*  12 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0', 2, 2, 2
+);
+
+INSERT INTO policies (			/* 13 */
+  type, name, file, rec_fail, rec_noresult
+) VALUES (
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0', 4, 2, 2
+);
+
 
 /* Enforcements */
 
@@ -713,13 +744,13 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  5, 2, 86400
+  5, 4, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  6, 2, 86400
+  6, 4, 86400
 );
 
 INSERT INTO enforcements (
@@ -786,5 +817,29 @@ INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
   9, 5, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  10, 2, 60
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  11, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  12, 2, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  13, 2, 86400
 );
 

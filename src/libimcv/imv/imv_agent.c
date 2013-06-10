@@ -285,6 +285,7 @@ static bool delete_connection(private_imv_agent_t *this, TNC_ConnectionID id)
 {
 	enumerator_t *enumerator;
 	imv_state_t *state;
+	imv_session_t *session;
 	bool found = FALSE;
 
 	this->connection_lock->write_lock(this->connection_lock);
@@ -294,6 +295,11 @@ static bool delete_connection(private_imv_agent_t *this, TNC_ConnectionID id)
 		if (id == state->get_connection_id(state))
 		{
 			found = TRUE;
+			session = state->get_session(state);
+			if (session)
+			{
+				imcv_db->remove_session(imcv_db, session);
+			}
 			state->destroy(state);
 			this->connections->remove_at(this->connections, enumerator);
 			break;
@@ -480,7 +486,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 
 	if (imcv_db)
 	{
-		session = imcv_db->get_session(imcv_db, conn_id, ar_id_type, ar_id_value);
+		session = imcv_db->add_session(imcv_db, conn_id, ar_id_type, ar_id_value);
 		if (session)
 		{
 			DBG2(DBG_IMV, "  assigned session ID %d",

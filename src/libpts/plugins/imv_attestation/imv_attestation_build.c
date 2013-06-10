@@ -24,8 +24,6 @@
 #include <tcg/tcg_pts_attr_get_aik.h>
 #include <tcg/tcg_pts_attr_req_func_comp_evid.h>
 #include <tcg/tcg_pts_attr_gen_attest_evid.h>
-#include <tcg/tcg_pts_attr_req_file_meas.h>
-#include <tcg/tcg_pts_attr_req_file_meta.h>
 
 #include <utils/debug.h>
 
@@ -49,8 +47,7 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 	if (handshake_state == IMV_ATTESTATION_STATE_NONCE_REQ &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
 	{
-		DBG2(DBG_IMV, "PTS-IMC does not support DH Nonce negotiation - "
-					  "advancing to TPM Initialization");
+		DBG2(DBG_IMV, "PTS-IMC does not support DH Nonce negotiation");
 		handshake_state = IMV_ATTESTATION_STATE_TPM_INIT;
 	}
 
@@ -61,9 +58,8 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
 	{
-		DBG2(DBG_IMV, "PTS-IMC made no TPM available - "
-					  "advancing to File Measurements");
-		handshake_state = IMV_ATTESTATION_STATE_MEAS;
+		DBG2(DBG_IMV, "PTS-IMC made no TPM available");
+		handshake_state = IMV_ATTESTATION_STATE_END;
 	}
 
 	switch (handshake_state)
@@ -130,82 +126,8 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 			out_msg->add_attribute(out_msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_MEAS);
-			break;
-		}
-		case IMV_ATTESTATION_STATE_MEAS:
-		{
-			enumerator_t *enumerator;
-			u_int32_t delimiter = SOLIDUS_UTF;
-			char *platform_info, *pathname;
-			u_int16_t request_id;
-			int id, type;
-			bool is_dir, have_request = FALSE;
-
-			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_COMP_EVID);
-
-			/* Get Platform and OS of the PTS-IMC */
-			platform_info = pts->get_platform_info(pts);
-
-			if (!pts_db || !platform_info)
-			{
-				DBG1(DBG_IMV, "%s%s%s not available",
-					(pts_db) ? "" : "pts database",
-					(!pts_db && !platform_info) ? "and" : "",
-					(platform_info) ? "" : "platform info");
-				break;
-			}
-			DBG1(DBG_IMV, "platform is '%s'", platform_info);
-
-			/* Send Request File Metadata attribute */
-			enumerator = pts_db->create_file_meta_enumerator(pts_db,
-															 platform_info);
-			if (!enumerator)
-			{
-				break;
-			}
-			while (enumerator->enumerate(enumerator, &type, &pathname))
-			{
-				is_dir = (type != 0);
-				DBG2(DBG_IMV, "metadata request for %s '%s'",
-					 is_dir ? "directory" : "file", pathname);
-				attr = tcg_pts_attr_req_file_meta_create(is_dir, delimiter,
-														 pathname);
-				attr->set_noskip_flag(attr, TRUE);
-				out_msg->add_attribute(out_msg, attr);
-				have_request = TRUE;
-			}
-			enumerator->destroy(enumerator);
-
-			/* Send Request File Measurement attribute */
-			enumerator = pts_db->create_file_meas_enumerator(pts_db,
-															 platform_info);
-			if (!enumerator)
-			{
-				break;
-			}
-			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
-			{
-				is_dir = (type != 0);
-				request_id = attestation_state->add_file_meas_request(
-							attestation_state, id, is_dir);
-				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
-					 request_id, is_dir ? "directory" : "file", pathname);
-				attr = tcg_pts_attr_req_file_meas_create(is_dir, request_id,
-													 delimiter, pathname);
-				attr->set_noskip_flag(attr, TRUE);
-				out_msg->add_attribute(out_msg, attr);
-				have_request = TRUE;
-			}
-			enumerator->destroy(enumerator);
-
-			/* do we have any file metadata or measurement requests? */
-			if (have_request)
-			{
-				break;
-			}
-			/* fall through to next state */
+			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
@@ -304,6 +226,8 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 			}
 			break;
 		case IMV_ATTESTATION_STATE_END:
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_END);
 			break;
 	}
 	return TRUE;

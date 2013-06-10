@@ -80,6 +80,20 @@ struct imv_state_t {
 	u_int32_t (*get_max_msg_len)(imv_state_t *this);
 
 	/**
+	 * Set flags for completed actions
+	 *
+	 * @param flags			Flags to be set
+	 */
+	void (*set_action_flags)(imv_state_t *this, u_int32_t flags);
+
+	/**
+	 * Get flags set for completed actions
+	 *
+	 * @return				Flags set for completed actions
+	 */
+	u_int32_t (*get_action_flags)(imv_state_t *this);
+
+	/**
 	 * Set Access Requestor ID
 	 *
 	 * @param id_type		Access Requestor TCG Standard ID Type

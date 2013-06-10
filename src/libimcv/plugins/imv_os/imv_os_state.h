@@ -39,7 +39,8 @@ enum imv_os_handshake_state_t {
 	IMV_OS_STATE_INIT,
 	IMV_OS_STATE_ATTR_REQ,
 	IMV_OS_STATE_POLICY_START,
-	IMV_OS_STATE_WORKITEMS
+	IMV_OS_STATE_WORKITEMS,
+	IMV_OS_STATE_END
 };
 
 /**
@@ -118,20 +119,6 @@ struct imv_os_state_t {
 	 */
 	void (*get_count)(imv_os_state_t *this, int *count, int *count_update,
 					  int *count_blacklist, int *count_ok);
-
-	/**
-	 * Set flags for received attributes
-	 *
-	 * @param flags			Flags to be set
-	 */
-	void (*set_received)(imv_os_state_t *this, u_int flags);
-
-	/**
-	 * Get flags set for received attributes
-	 *
-	 * @return				Flags set for received attributes
-	 */
-	u_int (*get_received)(imv_os_state_t *this);
 
 	/**
 	 * Set device ID
