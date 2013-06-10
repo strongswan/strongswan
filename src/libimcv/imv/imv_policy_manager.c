@@ -50,7 +50,7 @@ static void stderr_dbg(debug_t group, level_t level, char *fmt, ...)
 bool policy_start(database_t *db, int session_id)
 {
 	enumerator_t *e;
-	int id, gid, device_id, product_id, group_id = 0;
+	int id, gid, device_id, product_id, group_id = 0, parent;
 	int type, file, dir, arg_int, rec_fail, rec_noresult;
 	char *argument;
 
@@ -98,57 +98,71 @@ bool policy_start(database_t *db, int session_id)
 		}
 	}
 
-	/* if still no group membership found, leave */
-	if (!group_id)
+	/* get iteratively enforcements for given group */
+	while (group_id)
 	{
-		fprintf(stderr, "no group membership found\n");
-		return TRUE;
-	}
-
-	/* get enforcements for given group */
-	e = db->query(db,
-			"SELECT e.id, "
-			"p.type, p.argument, p.file, p.dir, p.rec_fail, p.rec_noresult "
-			"FROM enforcements AS e JOIN policies as p ON  e.policy = p.id "
-			"WHERE e.group_id = ?", DB_INT, group_id,
-			 DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
-	if (!e)
-	{
-		return FALSE;
-	}
-	while (e->enumerate(e, &id, &type, &argument, &file, &dir, &rec_fail,
-						   &rec_noresult))
-	{
-		/* determine arg_int */
-		switch ((imv_workitem_type_t)type)
+		e = db->query(db,
+				"SELECT e.id, "
+				"p.type, p.argument, p.file, p.dir, p.rec_fail, p.rec_noresult "
+				"FROM enforcements AS e JOIN policies as p ON e.policy = p.id "
+				"WHERE e.group_id = ?", DB_INT, group_id,
+				 DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
+		if (!e)
 		{
-			case IMV_WORKITEM_FILE_REF_MEAS:
-			case IMV_WORKITEM_FILE_MEAS:
-			case IMV_WORKITEM_FILE_META:
-				arg_int = file;
-				break;
-			case IMV_WORKITEM_DIR_REF_MEAS:
-			case IMV_WORKITEM_DIR_MEAS:
-			case IMV_WORKITEM_DIR_META:
-				arg_int = dir;
-				break;
-			default:
-				arg_int = 0;
+			return FALSE;
 		}
+		while (e->enumerate(e, &id, &type, &argument, &file, &dir,
+							   &rec_fail, &rec_noresult))
+		{
+			/* determine arg_int */
+			switch ((imv_workitem_type_t)type)
+			{
+				case IMV_WORKITEM_FILE_REF_MEAS:
+				case IMV_WORKITEM_FILE_MEAS:
+				case IMV_WORKITEM_FILE_META:
+					arg_int = file;
+					break;
+				case IMV_WORKITEM_DIR_REF_MEAS:
+				case IMV_WORKITEM_DIR_MEAS:
+				case IMV_WORKITEM_DIR_META:
+					arg_int = dir;
+					break;
+				default:
+					arg_int = 0;
+			}
 
-		/* insert a workitem */
-		if (db->execute(db, NULL,
+			/* insert a workitem */
+			if (db->execute(db, NULL,
 				"INSERT INTO workitems (session, enforcement, type, arg_str, "
 				"arg_int, rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?, ?, ?)",
 				DB_INT, session_id, DB_INT, id, DB_INT, type, DB_TEXT, argument,
 				DB_INT, arg_int, DB_INT, rec_fail, DB_INT, rec_noresult) != 1)
+			{
+				e->destroy(e);
+				fprintf(stderr, "could not insert workitem\n");
+				return FALSE;
+			}
+		}
+		e->destroy(e);
+
+		e = db->query(db,
+				"SELECT parent FROM groups WHERE id = ?",
+				 DB_INT, group_id, DB_INT);
+		if (!e)
 		{
-			e->destroy(e);
-			fprintf(stderr, "could not insert workitem\n");
 			return FALSE;
 		}
+		if (e->enumerate(e, &parent))
+		{
+			group_id = parent;
+		}
+		else
+		{
+			fprintf(stderr, "group information not found\n");
+			group_id = 0;
+		}
+		e->destroy(e);
 	}
-	e->destroy(e);
 
 	return TRUE;
 }

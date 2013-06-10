@@ -50,7 +50,8 @@ CREATE TABLE file_hashes (
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
   id integer NOT NULL PRIMARY KEY,
-  name varchar(50) NOT NULL UNIQUE
+  name varchar(50) NOT NULL UNIQUE,
+  parent integer
 );
 
 DROP TABLE IF EXISTS group_members;

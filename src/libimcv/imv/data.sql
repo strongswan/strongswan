@@ -459,33 +459,45 @@ INSERT INTO versions (
 /* Groups */
 
 INSERT INTO groups (			/*  1 */
-  name
+  name, parent
 ) VALUES (
-  'Default Debian i686'
+  'Default Debian i686', 6
 );
 
 INSERT INTO groups (			/*  2 */
-  name
+  name, parent
 ) VALUES (
-  'Default Debian x86_64'
+  'Default Debian x86_64', 6
 );
 
 INSERT INTO groups (			/*  3 */
-  name
+  name, parent
 ) VALUES (
-  'Default Ubuntu i686'
+  'Default Ubuntu i686', 6
 );
 
 INSERT INTO groups (			/*  4 */
-  name
+  name, parent
 ) VALUES (
-  'Default Ubuntu x86_64'
+  'Default Ubuntu x86_64', 6
 );
 
 INSERT INTO groups (			/*  5 */
+  name, parent
+) VALUES (
+  'Default Android', 7
+);
+
+INSERT INTO groups (			/*  6 */
+  name, parent
+) VALUES (
+  'Default Linux', 7
+);
+
+INSERT INTO groups (			/*  7 */
   name
 ) VALUES (
-  'Default Android'
+  'Default'
 );
 
 /* Default Product Groups */
@@ -684,31 +696,7 @@ INSERT INTO policies (			/* 13 */
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  1, 1, 86400
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  1, 2, 86400
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  1, 3, 86400
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  1, 4, 86400
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  1, 5, 86400
+  1, 7, 86400
 );
 
 INSERT INTO enforcements (
@@ -720,25 +708,7 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  3, 1, 0
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  3, 2, 0
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  3, 3, 0
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  3, 4, 0
+  3, 6, 0
 );
 
 INSERT INTO enforcements (
@@ -762,61 +732,13 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  8, 1, 60
+  8, 7, 60
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  8, 2, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  8, 3, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  8, 4, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  8, 5, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  9, 1, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  9, 2, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  9, 3, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  9, 4, 60
-);
-
-INSERT INTO enforcements (
-  policy, group_id, max_age
-) VALUES (
-  9, 5, 60
+  9, 7, 60
 );
 
 INSERT INTO enforcements (
