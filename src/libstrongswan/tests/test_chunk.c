@@ -97,6 +97,7 @@ START_TEST(test_chunk_clear)
 	chunk_t chunk;
 	u_char *ptr;
 	int i;
+	bool cleared = TRUE;
 
 	chunk = chunk_empty;
 	chunk_clear(&chunk);
@@ -109,12 +110,18 @@ START_TEST(test_chunk_clear)
 		chunk.ptr[i] = i;
 	}
 	chunk_clear(&chunk);
-	assert_chunk_empty(chunk);
-	/* check memory area of freed chunk */
+	/* check memory area of freed chunk. We can't use ck_assert() for this
+	 * test directly, as it might allocate data at the freed area. */
 	for (i = 0; i < 64; i++)
 	{
-		ck_assert(ptr[i] == 0 || ptr[i] != i);
+		if (ptr[i] != 0 && ptr[i] == i)
+		{
+			cleared = FALSE;
+			break;
+		}
 	}
+	assert_chunk_empty(chunk);
+	ck_assert(cleared);
 }
 END_TEST
 
