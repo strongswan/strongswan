@@ -43,51 +43,69 @@ CREATE TABLE file_hashes (
   file INTEGER NOT NULL REFERENCES files(id),
   product INTEGER NOT NULL REFERENCES products(id),
   device INTEGER DEFAULT 0,
+  key INTEGER DEFAULT 0 REFERENCES keys(id),
   algo INTEGER NOT NULL REFERENCES algorithms(id),
   hash BLOB NOT NULL
 );
 
+DROP TABLE IF EXISTS keys;
+CREATE TABLE keys (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  keyid BLOB NOT NULL,
+  owner TEXT NOT NULL
+);
+DROP INDEX IF EXISTS keys_keyid;
+CREATE INDEX keys_keyid ON keys (
+  keyid
+);
+DROP INDEX IF EXISTS keys_owner;
+CREATE INDEX keys_owner ON keys (
+  owner
+);
+
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
-  id integer NOT NULL PRIMARY KEY,
-  name varchar(50) NOT NULL UNIQUE,
-  parent integer
+  id INTEGER NOT NULL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  parent INTEGER
 );
 
-DROP TABLE IF EXISTS group_members;
-CREATE TABLE group_members (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  group_id integer NOT NULL REFERENCES groups(id),
-  device integer NOT NULL REFERENCES devices(id),
-  UNIQUE (group_id, device)
+DROP TABLE IF EXISTS groups_members;
+CREATE TABLE groups_members (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  device_id INTEGER NOT NULL REFERENCES devices(id),
+  UNIQUE (group_id, device_id)
 );
 
-DROP TABLE IF EXISTS default_product_groups;
-CREATE TABLE default_product_groups (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  group_id integer NOT NULL REFERENCES groups(id),
-  product integer NOT NULL REFERENCES products(id),
-  UNIQUE (group_id, product)
+DROP TABLE IF EXISTS groups_product_defaults;
+CREATE TABLE groups_product_defaults (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  product_id INTEGER NOT NULL REFERENCES products(id),
+  UNIQUE (group_id, product_id)
 );
 
 DROP TABLE IF EXISTS policies;
 CREATE TABLE policies (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  type integer NOT NULL,
-  name varchar(100) NOT NULL UNIQUE,
-  argument text DEFAULT '' NOT NULL,
-  rec_fail integer NOT NULL,
-  rec_noresult integer NOT NULL,
-  file integer DEFAULT 0 REFERENCES files(id),
-  dir integer DEFAULT 0 REFERENCES directories(id)
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  type INTEGER NOT NULL,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  argument TEXT DEFAULT '' NOT NULL,
+  rec_fail INTEGER NOT NULL,
+  rec_noresult INTEGER NOT NULL,
+  file INTEGER DEFAULT 0 REFERENCES files(id),
+  dir INTEGER DEFAULT 0 REFERENCES directories(id)
 );
 
 DROP TABLE IF EXISTS enforcements;
 CREATE TABLE enforcements (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  policy integer NOT NULL REFERENCES policies(id),
-  group_id integer NOT NULL REFERENCES groups(id),
-  max_age integer NOT NULL,
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  policy INTEGER NOT NULL REFERENCES policies(id),
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  rec_fail INTEGER,
+  rec_noresult INTEGER,
+  max_age INTEGER NOT NULL,
   UNIQUE (policy, group_id)
 );
 
@@ -104,16 +122,16 @@ CREATE TABLE sessions (
 
 DROP TABLE IF EXISTS workitems;
 CREATE TABLE workitems (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  session integer NOT NULL REFERENCES sessions(id),
-  enforcement integer NOT NULL REFERENCES enforcements(id),
-  type integer NOT NULL,
-  arg_str text,
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  session INTEGER NOT NULL REFERENCES sessions(id),
+  enforcement INTEGER NOT NULL REFERENCES enforcements(id),
+  type INTEGER NOT NULL,
+  arg_str TEXT,
   arg_int INTEGER DEFAULT 0,
-  rec_fail integer NOT NULL,
-  rec_noresult integer NOT NULL,
-  rec_final integer,
-  result text
+  rec_fail INTEGER NOT NULL,
+  rec_noresult INTEGER NOT NULL,
+  rec_final INTEGER,
+  result TEXT
 );
 DROP INDEX IF EXISTS workitems_session;
 CREATE INDEX workitems_sessions ON workitems (
@@ -122,11 +140,11 @@ CREATE INDEX workitems_sessions ON workitems (
 
 DROP TABLE IF EXISTS results;
 CREATE TABLE results (
-  id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  session integer NOT NULL REFERENCES measurements(id),
-  policy integer NOT NULL REFERENCES policies(id),
-  rec integer NOT NULL,
-  result text NOT NULL
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  session INTEGER NOT NULL REFERENCES measurements(id),
+  policy INTEGER NOT NULL REFERENCES policies(id),
+  rec INTEGER NOT NULL,
+  result TEXT NOT NULL
 );
 DROP INDEX IF EXISTS results_session;
 CREATE INDEX results_session ON results (
@@ -166,7 +184,8 @@ CREATE TABLE component_hashes (
 DROP TABLE IF EXISTS packages;
 CREATE TABLE packages (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL
+  name TEXT NOT NULL,
+  blacklist INTEGER DEFAULT 0
 );
 DROP INDEX IF EXISTS packages_name;
 CREATE INDEX packages_name ON packages (
@@ -176,10 +195,11 @@ CREATE INDEX packages_name ON packages (
 DROP TABLE IF EXISTS versions;
 CREATE TABLE versions (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  package INTEGER NOT NULL,
-  product INTEGER NOT NULL,
+  package INTEGER NOT NULL REFERENCES packages(id),
+  product INTEGER NOT NULL REFERENCES products(id),
   release TEXT NOT NULL,
   security INTEGER DEFAULT 0,
+  blacklist INTEGER DEFAULT 0,
   time INTEGER DEFAULT 0
 );
 DROP INDEX IF EXISTS versions_release;
@@ -194,7 +214,10 @@ CREATE INDEX versions_package_product ON versions (
 DROP TABLE IF EXISTS devices;
 CREATE TABLE devices (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  value BLOB NOT NULL
+  description TEXT,
+  value BLOB NOT NULL,
+  product INTEGER REFERENCES products(id),
+  created INTEGER
 );
 DROP INDEX IF EXISTS devices_id;
 CREATE INDEX devices_value ON devices (

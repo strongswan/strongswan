@@ -502,110 +502,110 @@ INSERT INTO groups (			/*  7 */
 
 /* Default Product Groups */
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   1, 2
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   2, 3
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 5
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 8
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 11
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 14
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 17
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 20
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   3, 23
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 6
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 9
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 12
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 15
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 18
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 21
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   4, 24
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   5, 25
 );
 
-INSERT INTO default_product_groups (
-  group_id, product
+INSERT INTO groups_product_defaults (
+  group_id, product_id
 ) VALUES (
   5, 26
 );

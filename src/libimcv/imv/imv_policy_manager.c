@@ -70,7 +70,7 @@ bool policy_start(database_t *db, int session_id)
 	if (device_id)
 	{
 		e = db->query(db,
-				"SELECT group_id FROM group_members WHERE device = ?",
+				"SELECT group_id FROM groups_members WHERE device_id = ?",
 				 DB_INT, device_id, DB_INT);
 		if (e)
 		{
@@ -86,8 +86,8 @@ bool policy_start(database_t *db, int session_id)
 	if (!group_id)
 	{
 		e = db->query(db,
-				"SELECT group_id FROM default_product_groups WHERE product = ?",
-				 DB_INT, product_id, DB_INT);
+				"SELECT group_id FROM groups_product_defaults "
+				"WHERE product_id = ?", DB_INT, product_id, DB_INT);
 		if (e)
 		{
 			if (e->enumerate(e, &gid))
