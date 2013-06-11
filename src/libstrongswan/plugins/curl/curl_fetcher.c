@@ -177,6 +177,15 @@ METHOD(fetcher_t, set_option, bool,
 			this->cb = va_arg(args, fetcher_callback_t);
 			break;
 		}
+		case FETCH_SOURCEIP:
+		{
+			char buf[64];
+
+			snprintf(buf, sizeof(buf), "%H", va_arg(args, host_t*));
+			supported = curl_easy_setopt(this->curl, CURLOPT_INTERFACE,
+										 buf) == CURLE_OK;
+			break;
+		}
 		default:
 			supported = FALSE;
 			break;

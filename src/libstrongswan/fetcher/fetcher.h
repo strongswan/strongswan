@@ -90,6 +90,12 @@ enum fetcher_option_t {
 	FETCH_CALLBACK,
 
 	/**
+	 * Source IP address to bind for a fetch.
+	 * Additional argument is a host_t*, which may be NULL.
+	 */
+	FETCH_SOURCEIP,
+
+	/**
 	 * end of fetching options
 	 */
 	FETCH_END,
