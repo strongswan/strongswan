@@ -27,6 +27,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
+#include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/inactivity_job.h>
 
@@ -1159,6 +1160,38 @@ static void raise_alerts(private_child_create_t *this, notify_type_t type)
 	}
 }
 
+METHOD(task_t, build_i_delete, status_t,
+	private_child_create_t *this, message_t *message)
+{
+	message->set_exchange_type(message, INFORMATIONAL);
+	if (this->child_sa)
+	{
+		protocol_id_t proto;
+		delete_payload_t *del;
+		u_int32_t spi;
+
+		proto = this->child_sa->get_protocol(this->child_sa);
+		spi = this->child_sa->get_spi(this->child_sa, TRUE);
+		del = delete_payload_create(DELETE, proto);
+		del->add_spi(del, spi);
+		message->add_payload(message, (payload_t*)del);
+
+		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
+			 protocol_id_names, proto, ntohl(spi));
+	}
+	return NEED_MORE;
+}
+
+/**
+ * Change task to delete the failed CHILD_SA as initiator
+ */
+static status_t delete_failed_sa(private_child_create_t *this)
+{
+	this->public.task.build = _build_i_delete;
+	this->public.task.process = (void*)return_success;
+	return NEED_MORE;
+}
+
 METHOD(task_t, process_i, status_t,
 	private_child_create_t *this, message_t *message)
 {
@@ -1260,7 +1293,7 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "received an IPCOMP_SUPPORTED notify without requesting"
 			 " one, no CHILD_SA built");
 		handle_child_sa_failure(this, message);
-		return SUCCESS;
+		return delete_failed_sa(this);
 	}
 	else if (this->ipcomp != IPCOMP_NONE && this->ipcomp_received == IPCOMP_NONE)
 	{
@@ -1273,7 +1306,7 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "received an IPCOMP_SUPPORTED notify we didn't propose, "
 			 "no CHILD_SA built");
 		handle_child_sa_failure(this, message);
-		return SUCCESS;
+		return delete_failed_sa(this);
 	}
 
 	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
@@ -1295,6 +1328,7 @@ METHOD(task_t, process_i, status_t,
 	else
 	{
 		handle_child_sa_failure(this, message);
+		return delete_failed_sa(this);
 	}
 	return SUCCESS;
 }
