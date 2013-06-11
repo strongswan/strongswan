@@ -485,6 +485,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_KERNEL_LIBIPSEC
+  SUBDIRS += plugins/kernel_libipsec
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_libipsec/libstrongswan-kernel-libipsec.la
+endif
+endif
+
 if USE_WHITELIST
   SUBDIRS += plugins/whitelist
 if MONOLITHIC
