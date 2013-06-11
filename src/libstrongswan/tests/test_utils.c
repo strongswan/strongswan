@@ -18,6 +18,8 @@
 #include <library.h>
 #include <utils/utils.h>
 
+#include <time.h>
+
 /*******************************************************************************
  * object storage on lib
  */
@@ -390,6 +392,10 @@ Suite *utils_suite_create()
 {
 	Suite *s;
 	TCase *tc;
+
+	/* force a timezone to match non-UTC conversions */
+	setenv("TZ", "Europe/Zurich", 1);
+	tzset();
 
 	s = suite_create("utils");
 
