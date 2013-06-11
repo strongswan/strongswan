@@ -42,10 +42,39 @@ METHOD(plugin_t, get_name, char*,
 	return "constraints";
 }
 
+/**
+ * Register validator
+ */
+static bool plugin_cb(private_constraints_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
+	}
+	else
+	{
+		lib->credmgr->remove_validator(lib->credmgr,
+									   &this->validator->validator);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_constraints_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "constraints"),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_constraints_plugin_t *this)
 {
-	lib->credmgr->remove_validator(lib->credmgr, &this->validator->validator);
 	this->validator->destroy(this->validator);
 	free(this);
 }
@@ -61,13 +90,12 @@ plugin_t *constraints_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.validator = constraints_validator_create(),
 	);
-	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
 
 	return &this->public.plugin;
 }

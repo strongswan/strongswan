@@ -39,9 +39,4 @@ struct eap_ttls_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_ttls_plugin instance.
- */
-plugin_t *eap_ttls_plugin_create();
-
 #endif /** EAP_TTLS_PLUGIN_H_ @}*/

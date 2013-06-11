@@ -43,11 +43,48 @@ METHOD(plugin_t, get_name, char*,
 	return "coupling";
 }
 
+/**
+ * Since the validator instantiates a hasher we create it as plugin feature.
+ * The default is SHA1 which we soft depend but depending on the plugin order
+ * there is no guarantee that the configured algorithm is registered.
+ */
+static bool plugin_cb(private_coupling_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		this->validator = coupling_validator_create();
+
+		if (!this->validator)
+		{
+			return FALSE;
+		}
+		lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
+	}
+	else
+	{
+		lib->credmgr->remove_validator(lib->credmgr,
+									   &this->validator->validator);
+		this->validator->destroy(this->validator);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_coupling_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "coupling"),
+				PLUGIN_SDEPEND(HASHER, HASH_SHA1),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_coupling_plugin_t *this)
 {
-	lib->credmgr->remove_validator(lib->credmgr, &this->validator->validator);
-	this->validator->destroy(this->validator);
 	free(this);
 }
 
@@ -62,20 +99,11 @@ plugin_t *coupling_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.validator = coupling_validator_create(),
 	);
-
-	if (!this->validator)
-	{
-		free(this);
-		return NULL;
-	}
-
-	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
 
 	return &this->public.plugin;
 }

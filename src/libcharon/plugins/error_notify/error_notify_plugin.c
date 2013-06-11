@@ -49,10 +49,37 @@ METHOD(plugin_t, get_name, char*,
 	return "error-notify";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_error_notify_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_error_notify_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "error-notify"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_error_notify_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
 	this->socket->destroy(this->socket);
 	free(this);
@@ -69,7 +96,7 @@ plugin_t *error_notify_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -77,7 +104,6 @@ plugin_t *error_notify_plugin_create()
 	);
 
 	this->listener = error_notify_listener_create(this->socket);
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;
 }

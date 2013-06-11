@@ -37,10 +37,20 @@ METHOD(plugin_t, get_name, char*,
 	return "unbound";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_unbound_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(RESOLVER, unbound_resolver_create),
+			PLUGIN_PROVIDE(RESOLVER),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_unbound_plugin_t *this)
 {
-	lib->resolver->remove_resolver(lib->resolver, unbound_resolver_create);
 	free(this);
 }
 
@@ -55,12 +65,11 @@ plugin_t *unbound_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->resolver->add_resolver(lib->resolver, unbound_resolver_create);
 
 	return &this->public.plugin;
 }

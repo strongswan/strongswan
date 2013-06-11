@@ -49,17 +49,52 @@ METHOD(plugin_t, get_name, char*,
 	return "updown";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_updown_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		if (lib->settings->get_bool(lib->settings,
+									"charon.plugins.updown.dns_handler", FALSE))
+		{
+			this->handler = updown_handler_create();
+			hydra->attributes->add_handler(hydra->attributes,
+										   &this->handler->handler);
+		}
+		this->listener = updown_listener_create(this->handler);
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+		this->listener->destroy(this->listener);
+		if (this->handler)
+		{
+			this->handler->destroy(this->handler);
+			hydra->attributes->remove_handler(hydra->attributes,
+											  &this->handler->handler);
+		}
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_updown_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "updown"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_updown_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
-	this->listener->destroy(this->listener);
-	if (this->handler)
-	{
-		hydra->attributes->remove_handler(hydra->attributes,
-										  &this->handler->handler);
-		this->handler->destroy(this->handler);
-	}
 	free(this);
 }
 
@@ -74,22 +109,11 @@ plugin_t *updown_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	if (lib->settings->get_bool(lib->settings,
-								"charon.plugins.updown.dns_handler", FALSE))
-	{
-		this->handler = updown_handler_create();
-		hydra->attributes->add_handler(hydra->attributes,
-									   &this->handler->handler);
-	}
-	this->listener = updown_listener_create(this->handler);
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
-
 	return &this->public.plugin;
 }
-

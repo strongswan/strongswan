@@ -49,11 +49,38 @@ METHOD(plugin_t, get_name, char*,
 	return "lookip";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_lookip_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_lookip_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "lookip"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_lookip_plugin_t *this)
 {
 	this->socket->destroy(this->socket);
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
 	free(this);
 }
@@ -69,14 +96,12 @@ plugin_t *lookip_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.listener = lookip_listener_create(),
 	);
-
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
 	this->socket = lookip_socket_create(this->listener);
 
 	return &this->public.plugin;

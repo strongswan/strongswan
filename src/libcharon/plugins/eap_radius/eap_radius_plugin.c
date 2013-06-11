@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -186,12 +187,57 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-radius";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_eap_radius_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		this->accounting = eap_radius_accounting_create();
+		this->forward = eap_radius_forward_create();
+		this->provider = eap_radius_provider_create();
+
+		load_configs(this);
+
+		if (lib->settings->get_bool(lib->settings,
+					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
+		{
+			this->dae = eap_radius_dae_create(this->accounting);
+		}
+		if (this->forward)
+		{
+			charon->bus->add_listener(charon->bus, &this->forward->listener);
+		}
+		hydra->attributes->add_provider(hydra->attributes,
+										&this->provider->provider);
+	}
+	else
+	{
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->provider->provider);
+		if (this->forward)
+		{
+			charon->bus->remove_listener(charon->bus, &this->forward->listener);
+			this->forward->destroy(this->forward);
+		}
+		DESTROY_IF(this->dae);
+		this->provider->destroy(this->provider);
+		this->accounting->destroy(this->accounting);
+	}
+	return TRUE;
+}
+
 METHOD(plugin_t, get_features, int,
-	eap_radius_plugin_t *this, plugin_feature_t *features[])
+	private_eap_radius_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(eap_method_register, eap_radius_create),
 			PLUGIN_PROVIDE(EAP_SERVER, EAP_RADIUS),
+				PLUGIN_DEPENDS(CUSTOM, "eap-radius"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "eap-radius"),
 				PLUGIN_DEPENDS(HASHER, HASH_MD5),
 				PLUGIN_DEPENDS(SIGNER, AUTH_HMAC_MD5_128),
 				PLUGIN_DEPENDS(RNG, RNG_WEAK),
@@ -215,19 +261,9 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
-	hydra->attributes->remove_provider(hydra->attributes,
-									   &this->provider->provider);
-	this->provider->destroy(this->provider);
-	if (this->forward)
-	{
-		charon->bus->remove_listener(charon->bus, &this->forward->listener);
-		this->forward->destroy(this->forward);
-	}
-	DESTROY_IF(this->dae);
 	this->configs->destroy_offset(this->configs,
 								  offsetof(radius_config_t, destroy));
 	this->lock->destroy(this->lock);
-	this->accounting->destroy(this->accounting);
 	free(this);
 	instance = NULL;
 }
@@ -250,25 +286,8 @@ plugin_t *eap_radius_plugin_create()
 		},
 		.configs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.accounting = eap_radius_accounting_create(),
-		.forward = eap_radius_forward_create(),
-		.provider = eap_radius_provider_create(),
 	);
-
-	load_configs(this);
 	instance = this;
-
-	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
-	{
-		this->dae = eap_radius_dae_create(this->accounting);
-	}
-	if (this->forward)
-	{
-		charon->bus->add_listener(charon->bus, &this->forward->listener);
-	}
-	hydra->attributes->add_provider(hydra->attributes,
-									&this->provider->provider);
 
 	return &this->public.plugin;
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -54,14 +55,63 @@ METHOD(plugin_t, get_name, char*,
 	return "medsrv";
 }
 
+/**
+ * Connect to database
+ */
+static bool open_database(private_medsrv_plugin_t *this,
+						  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		char *uri;
+
+		uri = lib->settings->get_str(lib->settings,
+									 "medsrv.database", NULL);
+		if (!uri)
+		{
+			DBG1(DBG_CFG, "mediation database URI not defined, skipped");
+			return FALSE;
+		}
+
+		this->db = lib->db->create(lib->db, uri);
+		if (this->db == NULL)
+		{
+			DBG1(DBG_CFG, "opening mediation server database failed");
+			return FALSE;
+		}
+
+		this->creds = medsrv_creds_create(this->db);
+		this->config = medsrv_config_create(this->db);
+
+		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+		charon->backends->add_backend(charon->backends, &this->config->backend);
+	}
+	else
+	{
+		charon->backends->remove_backend(charon->backends, &this->config->backend);
+		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+		this->config->destroy(this->config);
+		this->creds->destroy(this->creds);
+		this->db->destroy(this->db);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_medsrv_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)open_database, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "medsrv"),
+				PLUGIN_DEPENDS(DATABASE, DB_ANY),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_medsrv_plugin_t *this)
 {
-	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	this->config->destroy(this->config);
-	this->creds->destroy(this->creds);
-	this->db->destroy(this->db);
 	free(this);
 }
 
@@ -70,42 +120,17 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *medsrv_plugin_create()
 {
-	char *uri;
 	private_medsrv_plugin_t *this;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	uri = lib->settings->get_str(lib->settings,
-								 "medsrv.database", NULL);
-	if (!uri)
-	{
-		DBG1(DBG_CFG, "mediation database URI not defined, skipped");
-		free(this);
-		return NULL;
-	}
-
-	this->db = lib->db->create(lib->db, uri);
-	if (this->db == NULL)
-	{
-		DBG1(DBG_CFG, "opening mediation server database failed");
-		free(this);
-		return NULL;
-	}
-
-	this->creds = medsrv_creds_create(this->db);
-	this->config = medsrv_config_create(this->db);
-
-	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-
 	return &this->public.plugin;
 }
-

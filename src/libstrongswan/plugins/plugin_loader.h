@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -84,9 +84,9 @@ struct plugin_loader_t {
 	/**
 	 * Create an enumerator over all loaded plugins.
 	 *
-	 * In addition to the plugin, the enumerator returns a list of pointers to
-	 * plugin features currently loaded (if the argument is not NULL).
-	 * This list is to be read only.
+	 * In addition to the plugin, the enumerator optionally provides a list of
+	 * pointers to plugin features currently loaded.
+	 * This list has to be destroyed.
 	 *
 	 * @return				enumerator over plugin_t*, linked_list_t*
 	 */

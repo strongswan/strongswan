@@ -49,11 +49,38 @@ METHOD(plugin_t, get_name, char*,
 	return "farp";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_farp_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_farp_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "farp"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_farp_plugin_t *this)
 {
 	DESTROY_IF(this->spoofer);
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
 	free(this);
 }
@@ -69,14 +96,12 @@ plugin_t *farp_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.listener = farp_listener_create(),
 	);
-
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	this->spoofer = farp_spoofer_create(this->listener);
 	if (!this->spoofer)
@@ -86,4 +111,3 @@ plugin_t *farp_plugin_create()
 	}
 	return &this->public.plugin;
 }
-

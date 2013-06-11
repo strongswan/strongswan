@@ -42,6 +42,36 @@ METHOD(plugin_t, get_name, char*,
 	return "attr";
 }
 
+/**
+ * Register provider
+ */
+static bool plugin_cb(private_attr_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		hydra->attributes->add_provider(hydra->attributes,
+										&this->provider->provider);
+	}
+	else
+	{
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->provider->provider);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_attr_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "attr"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, reload, bool,
 	private_attr_plugin_t *this)
 {
@@ -52,7 +82,6 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_attr_plugin_t *this)
 {
-	hydra->attributes->remove_provider(hydra->attributes, &this->provider->provider);
 	this->provider->destroy(this->provider);
 	free(this);
 }
@@ -68,14 +97,13 @@ plugin_t *attr_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},
 		.provider = attr_provider_create(),
 	);
-	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
 
 	return &this->public.plugin;
 }
-

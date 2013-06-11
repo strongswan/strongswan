@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -98,6 +99,32 @@ METHOD(plugin_t, get_name, char*,
 	return "unit-tester";
 }
 
+/**
+ * We currently don't depend explicitly on any plugin features.  But in case
+ * activated tests depend on such features we at least try to run them in plugin
+ * order.
+ */
+static bool plugin_cb(private_unit_tester_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		run_tests(this);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_unit_tester_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "unit-tester"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_unit_tester_t *this)
 {
@@ -115,14 +142,11 @@ plugin_t *unit_tester_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	run_tests(this);
-
 	return &this->public.plugin;
 }
-

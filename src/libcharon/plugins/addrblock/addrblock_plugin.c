@@ -16,6 +16,7 @@
 #include "addrblock_plugin.h"
 
 #include <daemon.h>
+#include <plugins/plugin_feature.h>
 
 #include "addrblock_validator.h"
 #include "addrblock_narrow.h"
@@ -49,11 +50,41 @@ METHOD(plugin_t, get_name, char*,
 	return "addrblock";
 }
 
+/**
+ * Register listener
+ */
+static bool plugin_cb(private_addrblock_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
+		charon->bus->add_listener(charon->bus, &this->narrower->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->narrower->listener);
+		lib->credmgr->remove_validator(lib->credmgr,
+									   &this->validator->validator);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_addrblock_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "addrblock"),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_addrblock_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->narrower->listener);
-	lib->credmgr->remove_validator(lib->credmgr, &this->validator->validator);
 	this->narrower->destroy(this->narrower);
 	this->validator->destroy(this->validator);
 	free(this);
@@ -70,15 +101,13 @@ plugin_t *addrblock_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.validator = addrblock_validator_create(),
 		.narrower = addrblock_narrow_create(),
 	);
-	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
-	charon->bus->add_listener(charon->bus, &this->narrower->listener);
 
 	return &this->public.plugin;
 }

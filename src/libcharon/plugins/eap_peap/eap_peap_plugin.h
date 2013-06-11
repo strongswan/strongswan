@@ -39,9 +39,4 @@ struct eap_peap_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_peap_plugin instance.
- */
-plugin_t *eap_peap_plugin_create();
-
 #endif /** EAP_PEAP_PLUGIN_H_ @}*/

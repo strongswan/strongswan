@@ -1364,6 +1364,7 @@ static void list_plugins(FILE *out)
 				free(str);
 			}
 		}
+		list->destroy(list);
 	}
 	enumerator->destroy(enumerator);
 }
