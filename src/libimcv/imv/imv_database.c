@@ -180,11 +180,22 @@ METHOD(imv_database_t, add_device, int,
 	private_imv_database_t *this, imv_session_t *session, chunk_t device)
 {
 	enumerator_t *e;
-	int did = 0;
+	int pid = 0, did = 0;
+
+	/* get primary key of product from session */
+	e = this->db->query(this->db,
+			"SELECT product FROM sessions WHERE id = ?",
+			 DB_INT, session->get_session_id(session), DB_INT);
+	if (e)
+	{
+		e->enumerate(e, &pid);
+		e->destroy(e);
+	}
 
 	/* get primary key of device identification if it exists */
 	e = this->db->query(this->db,
-			"SELECT id FROM devices WHERE value = ?", DB_BLOB, device, DB_INT);
+			"SELECT id FROM devices WHERE value = ? AND product = ?",
+			 DB_BLOB, device, DB_INT, pid, DB_INT);
 	if (e)
 	{
 		e->enumerate(e, &did);
@@ -195,7 +206,8 @@ METHOD(imv_database_t, add_device, int,
 	if (!did)
 	{
 		this->db->execute(this->db, &did,
-			"INSERT INTO devices (value) VALUES (?)", DB_BLOB, device);
+			"INSERT INTO devices (value, product) VALUES (?, ?)",
+			 DB_BLOB, device, DB_INT, pid);
 	}
 	
 	/* add device reference to session */

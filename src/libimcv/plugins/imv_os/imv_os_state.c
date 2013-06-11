@@ -140,9 +140,9 @@ struct private_imv_os_state_t {
 	imv_remediation_string_t *remediation_string;
 
 	/**
-	 * Primary database key of device ID
+	 * Dgevice ID
 	 */
-	int device_id;
+	chunk_t device_id;
 
 	/**
 	 * Number of processed packages
@@ -511,6 +511,7 @@ METHOD(imv_state_t, destroy, void,
 	free(this->name.ptr);
 	free(this->version.ptr);
 	free(this->ar_id_value.ptr);
+	free(this->device_id.ptr);
 	free(this);
 }
 
@@ -593,12 +594,12 @@ METHOD(imv_os_state_t, get_count, void,
 }
 
 METHOD(imv_os_state_t, set_device_id, void,
-	private_imv_os_state_t *this, int id)
+	private_imv_os_state_t *this, chunk_t id)
 {
-	this->device_id = id;
+	this->device_id = chunk_clone(id);
 }
 
-METHOD(imv_os_state_t, get_device_id, int,
+METHOD(imv_os_state_t, get_device_id, chunk_t,
 	private_imv_os_state_t *this)
 {
 	return this->device_id;

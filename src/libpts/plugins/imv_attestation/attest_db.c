@@ -833,13 +833,13 @@ METHOD(attest_db_t, list_devices, void,
 		{
 			if (id != last_id)
 			{
-				printf("%4d: %.*s\n", id, (int)value.len, value.ptr);
+				printf("%4d: %.*s - %s\n", id, (int)value.len, value.ptr,
+										  product);
 				device_count++;
 				last_id = id;
 			}
 			timestamp = tstamp;
-			printf("%4d:   %T, %-20s", session_id, &timestamp, this->utc,
-									   product);
+			printf("%4d:   %T", session_id, &timestamp, this->utc);
 			if (ar_id)
 			{
 				if (ar_id != last_ar_id)

@@ -345,21 +345,13 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 				}
 				case ITA_ATTR_DEVICE_ID:
 				{
-					imv_session_t *session;
-					int device_id;
 					chunk_t value;
 
 					state->set_action_flags(state, IMV_OS_ATTR_DEVICE_ID);
 
 					value = attr->get_value(attr);
+					os_state->set_device_id(os_state, value);
 					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
-
-					if (imcv_db)
-					{
-						session = state->get_session(state);
-						device_id = imcv_db->add_device(imcv_db, session, value);
-						os_state->set_device_id(os_state, device_id);
-					}
 					break;
 				}
 				case ITA_ATTR_START_ANGEL:
@@ -556,6 +548,9 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		{
 			if (imcv_db)
 			{
+				imcv_db->add_device(imcv_db, session,
+								os_state->get_device_id(os_state));
+
 				/* trigger the policy manager */
 				imcv_db->policy_script(imcv_db, session, TRUE);
 			}

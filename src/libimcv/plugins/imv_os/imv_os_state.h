@@ -123,16 +123,16 @@ struct imv_os_state_t {
 	/**
 	 * Set device ID
 	 *
-	 * @param device_id		Device ID primary database key
+	 * @param device_id		Device ID
 	 */
-	void (*set_device_id)(imv_os_state_t *this, int id);
+	void (*set_device_id)(imv_os_state_t *this, chunk_t id);
 
 	/**
 	 * Get device ID
 	 *
-	 * @return				Device ID primary database key
+	 * @return				Device ID
 	 */
-	int (*get_device_id)(imv_os_state_t *this);
+	chunk_t (*get_device_id)(imv_os_state_t *this);
 
 	/**
 	 * Set OS settings
