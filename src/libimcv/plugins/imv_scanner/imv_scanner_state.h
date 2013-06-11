@@ -65,20 +65,6 @@ struct imv_scanner_state_t {
 	imv_scanner_handshake_state_t (*get_handshake_state)(imv_scanner_state_t *this);
 
 	/**
-	 * Set flags for received attributes
-	 *
-	 * @param flags			Flags to be set
-	 */
-	void (*set_received)(imv_scanner_state_t *this, u_int flags);
-
-	/**
-	 * Get flags set for received attributes
-	 *
-	 * @return				Flags set for received attributes
-	 */
-	u_int (*get_received)(imv_scanner_state_t *this);
-
-	/**
 	 * add a violating TCP or UDP port
 	 */
 	void (*add_violating_port)(imv_scanner_state_t *this, char *port);

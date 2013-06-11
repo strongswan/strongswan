@@ -193,10 +193,8 @@ static TNC_Result receive_msg(private_imv_scanner_agent_t *this,
 			u_int16_t port;
 			bool blocked, compliant = TRUE;
 
-
+			state->set_action_flags(state, IMV_SCANNER_ATTR_PORT_FILTER);
 			scanner_state = (imv_scanner_state_t*)state;
-			scanner_state->set_received(scanner_state,
-										IMV_SCANNER_ATTR_PORT_FILTER);
 			attr_port_filter = (ietf_attr_port_filter_t*)attr;
 
 			enumerator = attr_port_filter->create_port_enumerator(attr_port_filter);

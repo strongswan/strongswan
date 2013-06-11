@@ -61,6 +61,11 @@ struct private_imv_scanner_state_t {
 	u_int32_t max_msg_len;
 
 	/**
+	 * Flags set for completed actions
+	 */
+	u_int32_t action_flags;
+
+	/**
 	 * Access Requestor ID Type
 	 */
 	u_int32_t ar_id_type;
@@ -89,11 +94,6 @@ struct private_imv_scanner_state_t {
 	 * IMV Scanner handshake state
 	 */
 	imv_scanner_handshake_state_t handshake_state;
-
-	/**
-	 * Flags set for received attributes
-	 */
-	u_int received_flags;
 
 	/**
 	 * List with ports that should be closed
@@ -190,6 +190,18 @@ METHOD(imv_state_t, get_max_msg_len, u_int32_t,
 	private_imv_scanner_state_t *this)
 {
 	return this->max_msg_len;
+}
+
+METHOD(imv_state_t, set_action_flags, void,
+	private_imv_scanner_state_t *this, u_int32_t flags)
+{
+	this->action_flags |= flags;
+}
+
+METHOD(imv_state_t, get_action_flags, u_int32_t,
+	private_imv_scanner_state_t *this)
+{
+	return this->action_flags;
 }
 
 METHOD(imv_state_t, set_ar_id, void,
@@ -322,19 +334,6 @@ METHOD(imv_scanner_state_t, get_handshake_state, imv_scanner_handshake_state_t,
 	return this->handshake_state;
 }
 
-METHOD(imv_scanner_state_t, set_received, void,
-	private_imv_scanner_state_t *this, u_int flags)
-{
-	this->received_flags |= flags;
-}
-
-METHOD(imv_scanner_state_t, get_received, u_int,
-	private_imv_scanner_state_t *this)
-{
-	return this->received_flags;
-}
-
-
 METHOD(imv_scanner_state_t, add_violating_port, void,
 	private_imv_scanner_state_t *this, char *port)
 {
@@ -357,6 +356,8 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
+				.set_action_flags = _set_action_flags,
+				.get_action_flags = _get_action_flags,
 				.set_ar_id = _set_ar_id,
 				.get_ar_id = _get_ar_id,
 				.set_session = _set_session,
@@ -371,8 +372,6 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_handshake_state = _set_handshake_state,
 			.get_handshake_state = _get_handshake_state,
-			.set_received = _set_received,
-			.get_received = _get_received,
 			.add_violating_port = _add_violating_port,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
