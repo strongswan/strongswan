@@ -17,7 +17,10 @@
 #include "kernel_libipsec_ipsec.h"
 
 #include <ipsec.h>
+#include <networking/tun_device.h>
 #include <utils/debug.h>
+
+#define TUN_DEFAULT_MTU 1400
 
 typedef struct private_kernel_libipsec_plugin_t private_kernel_libipsec_plugin_t;
 
@@ -30,6 +33,12 @@ struct private_kernel_libipsec_plugin_t {
 	 * implements plugin interface
 	 */
 	kernel_libipsec_plugin_t public;
+
+	/**
+	 * TUN device created by this plugin
+	 */
+	tun_device_t *tun;
+
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -52,6 +61,11 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_kernel_libipsec_plugin_t *this)
 {
+	if (this->tun)
+	{
+		lib->set(lib, "kernel-libipsec-tun", NULL);
+		this->tun->destroy(this->tun);
+	}
 	libipsec_deinit();
 	free(this);
 }
@@ -80,5 +94,24 @@ plugin_t *kernel_libipsec_plugin_create()
 		return NULL;
 	}
 
+	this->tun = tun_device_create("ipsec%d");
+	if (!this->tun)
+	{
+		DBG1(DBG_KNL, "failed to create TUN device");
+		destroy(this);
+		return NULL;
+	}
+	if (!this->tun->set_mtu(this->tun, TUN_DEFAULT_MTU) ||
+		!this->tun->up(this->tun))
+	{
+		DBG1(DBG_KNL, "failed to configure TUN device");
+		destroy(this);
+		return NULL;
+	}
+	lib->set(lib, "kernel-libipsec-tun", this->tun);
+
+	/* set TUN device as default to install VIPs */
+	lib->settings->set_str(lib->settings, "%s.install_virtual_ip_on",
+						   this->tun->get_name(this->tun), charon->name);
 	return &this->public.plugin;
 }

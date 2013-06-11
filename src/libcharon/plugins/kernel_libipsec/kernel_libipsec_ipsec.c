@@ -17,6 +17,7 @@
 #include <library.h>
 #include <ipsec.h>
 #include <hydra.h>
+#include <networking/tun_device.h>
 #include <utils/debug.h>
 
 typedef struct private_kernel_libipsec_ipsec_t private_kernel_libipsec_ipsec_t;
@@ -32,6 +33,11 @@ struct private_kernel_libipsec_ipsec_t {
 	 * Listener for lifetime expire events
 	 */
 	ipsec_event_listener_t ipsec_listener;
+
+	/**
+	 * TUN device
+	 */
+	tun_device_t *tun;
 };
 
 /**
@@ -181,6 +187,7 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		.ipsec_listener = {
 			.expire = expire,
 		},
+		.tun = lib->get(lib, "kernel-libipsec-tun"),
 	);
 
 	ipsec->events->register_listener(ipsec->events, &this->ipsec_listener);
