@@ -87,7 +87,8 @@ AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
 -DIPSEC_LIB_DIR=\"${ipseclibdir}\" \
 -DPLUGINDIR=\"${plugindir}\" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+@COVERAGE_CFLAGS@
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE
@@ -454,4 +455,11 @@ if USE_TEST_VECTORS
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/test_vectors/libstrongswan-test-vectors.la
 endif
+endif
+
+if UNITTESTS
+if MONOLITHIC
+  SUBDIRS += .
+endif
+  SUBDIRS += tests
 endif

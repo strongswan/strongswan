@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -47,21 +47,27 @@ struct private_bio_writer_t {
 };
 
 /**
- * Increase buffer size
+ * Increase buffer size, if required
  */
-static void increase(private_bio_writer_t *this)
+static inline void increase(private_bio_writer_t *this, size_t required)
 {
-	this->buf.len += this->increase;
-	this->buf.ptr = realloc(this->buf.ptr, this->buf.len);
+	bool inc = FALSE;
+
+	while (this->used + required > this->buf.len)
+	{
+		this->buf.len += this->increase;
+		inc = TRUE;
+	}
+	if (inc)
+	{
+		this->buf.ptr = realloc(this->buf.ptr, this->buf.len);
+	}
 }
 
 METHOD(bio_writer_t, write_uint8, void,
 	private_bio_writer_t *this, u_int8_t value)
 {
-	if (this->used + 1 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 1);
 	this->buf.ptr[this->used] = value;
 	this->used += 1;
 }
@@ -69,10 +75,7 @@ METHOD(bio_writer_t, write_uint8, void,
 METHOD(bio_writer_t, write_uint16, void,
 	private_bio_writer_t *this, u_int16_t value)
 {
-	if (this->used + 2 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 2);
 	htoun16(this->buf.ptr + this->used, value);
 	this->used += 2;
 }
@@ -80,10 +83,7 @@ METHOD(bio_writer_t, write_uint16, void,
 METHOD(bio_writer_t, write_uint24, void,
 	private_bio_writer_t *this, u_int32_t value)
 {
-	if (this->used + 3 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 3);
 	value = htonl(value);
 	memcpy(this->buf.ptr + this->used, ((char*)&value) + 1, 3);
 	this->used += 3;
@@ -92,10 +92,7 @@ METHOD(bio_writer_t, write_uint24, void,
 METHOD(bio_writer_t, write_uint32, void,
 	private_bio_writer_t *this, u_int32_t value)
 {
-	if (this->used + 4 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 4);
 	htoun32(this->buf.ptr + this->used, value);
 	this->used += 4;
 }
@@ -103,10 +100,7 @@ METHOD(bio_writer_t, write_uint32, void,
 METHOD(bio_writer_t, write_uint64, void,
 	private_bio_writer_t *this, u_int64_t value)
 {
-	if (this->used + 8 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 8);
 	htoun64(this->buf.ptr + this->used, value);
 	this->used += 8;
 }
@@ -114,10 +108,7 @@ METHOD(bio_writer_t, write_uint64, void,
 METHOD(bio_writer_t, write_data, void,
 	private_bio_writer_t *this, chunk_t value)
 {
-	while (this->used + value.len > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, value.len);
 	memcpy(this->buf.ptr + this->used, value.ptr, value.len);
 	this->used += value.len;
 }
@@ -125,6 +116,7 @@ METHOD(bio_writer_t, write_data, void,
 METHOD(bio_writer_t, write_data8, void,
 	private_bio_writer_t *this, chunk_t value)
 {
+	increase(this, 1 + value.len);
 	write_uint8(this, value.len);
 	write_data(this, value);
 }
@@ -132,6 +124,7 @@ METHOD(bio_writer_t, write_data8, void,
 METHOD(bio_writer_t, write_data16, void,
 	private_bio_writer_t *this, chunk_t value)
 {
+	increase(this, 2 + value.len);
 	write_uint16(this, value.len);
 	write_data(this, value);
 }
@@ -139,6 +132,7 @@ METHOD(bio_writer_t, write_data16, void,
 METHOD(bio_writer_t, write_data24, void,
 	private_bio_writer_t *this, chunk_t value)
 {
+	increase(this, 3 + value.len);
 	write_uint24(this, value.len);
 	write_data(this, value);
 }
@@ -146,6 +140,7 @@ METHOD(bio_writer_t, write_data24, void,
 METHOD(bio_writer_t, write_data32, void,
 	private_bio_writer_t *this, chunk_t value)
 {
+	increase(this, 4 + value.len);
 	write_uint32(this, value.len);
 	write_data(this, value);
 }
@@ -153,10 +148,7 @@ METHOD(bio_writer_t, write_data32, void,
 METHOD(bio_writer_t, wrap8, void,
 	private_bio_writer_t *this)
 {
-	if (this->used + 1 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 1);
 	memmove(this->buf.ptr + 1, this->buf.ptr, this->used);
 	this->buf.ptr[0] = this->used;
 	this->used += 1;
@@ -165,10 +157,7 @@ METHOD(bio_writer_t, wrap8, void,
 METHOD(bio_writer_t, wrap16, void,
 	private_bio_writer_t *this)
 {
-	if (this->used + 2 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 2);
 	memmove(this->buf.ptr + 2, this->buf.ptr, this->used);
 	htoun16(this->buf.ptr, this->used);
 	this->used += 2;
@@ -179,10 +168,7 @@ METHOD(bio_writer_t, wrap24, void,
 {
 	u_int32_t len;
 
-	if (this->used + 3 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 3);
 	memmove(this->buf.ptr + 3, this->buf.ptr, this->used);
 
 	len = htonl(this->used);
@@ -193,10 +179,7 @@ METHOD(bio_writer_t, wrap24, void,
 METHOD(bio_writer_t, wrap32, void,
 	private_bio_writer_t *this)
 {
-	if (this->used + 4 > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, 4);
 	memmove(this->buf.ptr + 4, this->buf.ptr, this->used);
 	htoun32(this->buf.ptr, this->used);
 	this->used += 4;
@@ -207,10 +190,7 @@ METHOD(bio_writer_t, skip, chunk_t,
 {
 	chunk_t skipped;
 
-	while (this->used + len > this->buf.len)
-	{
-		increase(this);
-	}
+	increase(this, len);
 	skipped = chunk_create(this->buf.ptr + this->used, len);
 	this->used += len;
 	return skipped;

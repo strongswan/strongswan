@@ -18,8 +18,11 @@ the code, you need the following tools:
     - lex/flex
     - yacc/bison
     - gperf
+
+    Optionally:
     - check
-    - optionally Doxygen
+    - lcov/genhtml
+    - Doxygen
 
 To check out the master branch, use:
 
