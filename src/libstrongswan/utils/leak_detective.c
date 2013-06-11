@@ -404,10 +404,13 @@ static void* real_realloc(void *ptr, size_t size)
 #define HOOK(ret, name, ...) ret name(__VA_ARGS__)
 
 /**
- * Hook initialization when not using hooks
+ * Hook initialization when not using hooks, resolve functions.
  */
 static bool register_hooks()
 {
+	void *buf = real_malloc(8);
+	real_realloc(buf, 16);
+	real_free(buf);
 	return TRUE;
 }
 
