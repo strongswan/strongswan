@@ -214,7 +214,7 @@ CREATE INDEX versions_package_product ON versions (
 DROP TABLE IF EXISTS devices;
 CREATE TABLE devices (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  description TEXT,
+  description TEXT DEFAULT '',
   value BLOB NOT NULL,
   product INTEGER REFERENCES products(id),
   created INTEGER

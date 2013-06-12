@@ -461,37 +461,37 @@ INSERT INTO versions (
 INSERT INTO groups (			/*  1 */
   name, parent
 ) VALUES (
-  'Default Debian i686', 6
+  'Debian i686', 6
 );
 
 INSERT INTO groups (			/*  2 */
   name, parent
 ) VALUES (
-  'Default Debian x86_64', 6
+  'Debian x86_64', 6
 );
 
 INSERT INTO groups (			/*  3 */
   name, parent
 ) VALUES (
-  'Default Ubuntu i686', 6
+  'Ubuntu i686', 6
 );
 
 INSERT INTO groups (			/*  4 */
   name, parent
 ) VALUES (
-  'Default Ubuntu x86_64', 6
+  'Ubuntu x86_64', 6
 );
 
 INSERT INTO groups (			/*  5 */
   name, parent
 ) VALUES (
-  'Default Android', 7
+  'Android', 7
 );
 
 INSERT INTO groups (			/*  6 */
   name, parent
 ) VALUES (
-  'Default Linux', 7
+  'Linux', 7
 );
 
 INSERT INTO groups (			/*  7 */
@@ -726,7 +726,7 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  7, 2, 86400
+  7, 6, 86400
 );
 
 INSERT INTO enforcements (
@@ -744,13 +744,13 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  10, 2, 60
+  10, 6, 60
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  11, 2, 86400
+  11, 6, 86400
 );
 
 INSERT INTO enforcements (
