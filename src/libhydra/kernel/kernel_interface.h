@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -560,6 +560,14 @@ struct kernel_interface_t {
 	 * @param address		TRUE if address list, FALSE if routing changed
 	 */
 	void (*roam)(kernel_interface_t *this, bool address);
+
+	/**
+	 * Raise a tun event.
+	 *
+	 * @param tun			TUN device
+	 * @param created		TRUE if created, FALSE if going to be destroyed
+	 */
+	void (*tun)(kernel_interface_t *this, tun_device_t *tun, bool created);
 
 	/**
 	 * Register a new algorithm with the kernel interface.
