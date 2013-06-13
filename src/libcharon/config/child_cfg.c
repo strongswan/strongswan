@@ -286,15 +286,17 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 			DBG2(DBG_CFG, " %R", ts1);
 			result->insert_last(result, ts1);
 		}
+		derived->destroy(derived);
 	}
 	else
 	{
-		e1 = supplied->create_enumerator(supplied);
+		e1 = derived->create_enumerator(derived);
+		e2 = supplied->create_enumerator(supplied);
 		/* enumerate all configured/derived selectors */
-		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
+		while (e1->enumerate(e1, &ts1))
 		{
 			/* enumerate all supplied traffic selectors */
-			while (e1->enumerate(e1, &ts2))
+			while (e2->enumerate(e2, &ts2))
 			{
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
@@ -309,12 +311,28 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 						 ts1, ts2);
 				}
 			}
-			supplied->reset_enumerator(supplied, e1);
-			ts1->destroy(ts1);
+			supplied->reset_enumerator(supplied, e2);
 		}
 		e1->destroy(e1);
+		e2->destroy(e2);
+
+		/* check if we/peer did any narrowing, raise alert */
+		e1 = derived->create_enumerator(derived);
+		e2 = result->create_enumerator(result);
+		while (e1->enumerate(e1, &ts1))
+		{
+			if (!e2->enumerate(e2, &ts2) || !ts1->equals(ts1, ts2))
+			{
+				charon->bus->alert(charon->bus, ALERT_TS_NARROWED,
+								   local, result, this);
+				break;
+			}
+		}
+		e1->destroy(e1);
+		e2->destroy(e2);
+
+		derived->destroy_offset(derived, offsetof(traffic_selector_t, destroy));
 	}
-	derived->destroy(derived);
 
 	/* remove any redundant traffic selectors in the list */
 	e1 = result->create_enumerator(result);
@@ -573,4 +591,3 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 
 	return &this->public;
 }
-
