@@ -70,6 +70,7 @@ struct ipsec_sa_mgr_t {
 	 * @param mode			mode for this SA (only tunnel mode is supported)
 	 * @param ipcomp		IPcomp transform (not supported, use IPCOMP_NONE)
 	 * @param cpi			CPI for IPcomp (ignored)
+	 * @param initiator		TRUE if initiator of the exchange creating this SA
 	 * @param encap			enable UDP encapsulation (must be TRUE)
 	 * @param esn			Extended Sequence Numbers (currently not supported)
 	 * @param inbound		TRUE if this is an inbound SA, FALSE otherwise
@@ -82,8 +83,9 @@ struct ipsec_sa_mgr_t {
 					   mark_t mark, u_int32_t tfc,	lifetime_cfg_t *lifetime,
 					   u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg,
 					   chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-					   u_int16_t cpi, bool encap, bool esn, bool inbound,
-					   traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
+					   u_int16_t cpi, bool initiator, bool encap, bool esn,
+					   bool inbound, traffic_selector_t *src_ts,
+					   traffic_selector_t *dst_ts);
 
 	/**
 	 * Update the hosts on an installed SA.
