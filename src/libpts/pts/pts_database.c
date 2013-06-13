@@ -161,7 +161,7 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 		/* does filename entry already exist? */
 		e = this->db->query(this->db,
 				"SELECT id FROM files WHERE name = ? AND dir = ?",
-				 DB_TEXT, filename, DB_INT, id);
+				 DB_TEXT, filename, DB_INT, id, DB_INT);
 		if (!e)
 		{
 			return FAILED;
