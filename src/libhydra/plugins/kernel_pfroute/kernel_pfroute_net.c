@@ -878,7 +878,10 @@ METHOD(kernel_net_t, add_ip, status_t,
 		}
 	}
 	ifaces->destroy(ifaces);
-
+	/* lets do this while holding the lock, thus preventing another thread
+	 * from deleting the TUN device concurrently, hopefully listeneres are quick
+	 * and cause no deadlocks */
+	hydra->kernel_interface->tun(hydra->kernel_interface, tun, TRUE);
 	this->lock->unlock(this->lock);
 
 	return SUCCESS;
@@ -901,6 +904,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 		if (addr && addr->ip_equals(addr, vip))
 		{
 			this->tuns->remove_at(this->tuns, enumerator);
+			hydra->kernel_interface->tun(hydra->kernel_interface, tun,
+										 FALSE);
 			tun->destroy(tun);
 			found = TRUE;
 			break;
