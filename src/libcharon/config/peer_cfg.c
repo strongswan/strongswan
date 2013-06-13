@@ -249,7 +249,7 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 {
 	linked_list_t *cfg_list;
 	enumerator_t *sup_enum, *cfg_enum;
-	traffic_selector_t *sup_ts, *cfg_ts;
+	traffic_selector_t *sup_ts, *cfg_ts, *subset;
 	int match = 0, round;
 
 	/* fetch configured TS list, narrowing dynamic TS */
@@ -268,10 +268,14 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 			{	/* equality is honored better than matches */
 				match += round * 5;
 			}
-			else if (cfg_ts->is_contained_in(cfg_ts, sup_ts) ||
-					 sup_ts->is_contained_in(sup_ts, cfg_ts))
+			else
 			{
-				match += round * 1;
+				subset = cfg_ts->get_subset(cfg_ts, sup_ts);
+				if (subset)
+				{
+					subset->destroy(subset);
+					match += round * 1;
+				}
 			}
 		}
 		cfg_enum->destroy(cfg_enum);
