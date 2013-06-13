@@ -61,6 +61,8 @@ char *cmd = NULL;
 char *pid_file = NULL;
 char *starter_pid_file = NULL;
 
+static char *config_file = NULL;
+
 /* logging */
 static bool log_to_stderr = TRUE;
 static bool log_to_syslog = TRUE;
@@ -393,7 +395,8 @@ static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>]\n"
 			"               [--debug|--debug-more|--debug-all|--nolog]\n"
-			"               [--attach-gdb] [--daemon <name>]\n");
+			"               [--attach-gdb] [--daemon <name>]\n"
+			"               [--conf <path to ipsec.conf>]\n");
 	exit(LSB_RC_INVALID_ARGUMENT);
 }
 
@@ -460,6 +463,10 @@ int main (int argc, char **argv)
 		{
 			daemon_name = argv[++i];
 		}
+		else if (streq(argv[i], "--conf") && i+1 < argc)
+		{
+			config_file = argv[++i];
+		}
 		else
 		{
 			usage(argv[0]);
@@ -470,6 +477,10 @@ int main (int argc, char **argv)
 	{
 		DBG1(DBG_APP, "unable to set daemon name");
 		exit(LSB_RC_FAILURE);
+	}
+	if (!config_file)
+	{
+		config_file = CONFIG_FILE;
 	}
 
 	init_log("ipsec_starter");
@@ -524,7 +535,7 @@ int main (int argc, char **argv)
 		exit(LSB_RC_FAILURE);
 	}
 
-	cfg = confread_load(CONFIG_FILE);
+	cfg = confread_load(config_file);
 	if (cfg == NULL || cfg->err > 0)
 	{
 		DBG1(DBG_APP, "unable to start strongSwan -- fatal errors in config");
@@ -706,7 +717,7 @@ int main (int argc, char **argv)
 		if (_action_ & FLAG_ACTION_UPDATE)
 		{
 			DBG2(DBG_APP, "Reloading config...");
-			new_cfg = confread_load(CONFIG_FILE);
+			new_cfg = confread_load(config_file);
 
 			if (new_cfg && (new_cfg->err == 0))
 			{
