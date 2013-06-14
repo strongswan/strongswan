@@ -615,7 +615,7 @@ static int open_socket(private_socket_default_socket_t *this,
 }
 
 /**
- * Open a socket pair (normal an NAT traversal) for a given address family
+ * Open a socket pair (normal and NAT traversal) for a given address family
  */
 static void open_socketpair(private_socket_default_socket_t *this, int family,
 							int *skt, int *skt_natt, char *label)
@@ -623,6 +623,7 @@ static void open_socketpair(private_socket_default_socket_t *this, int family,
 	*skt = open_socket(this, family, &this->port);
 	if (*skt == -1)
 	{
+		*skt_natt = -1;
 		DBG1(DBG_NET, "could not open %s socket, %s disabled", label, label);
 	}
 	else
