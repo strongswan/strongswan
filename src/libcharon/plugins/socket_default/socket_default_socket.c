@@ -192,22 +192,22 @@ METHOD(socket_t, receiver, status_t,
 	}
 	thread_cancelability(oldstate);
 
-	if (FD_ISSET(this->ipv4, &rfds))
+	if (this->ipv4 != -1 && FD_ISSET(this->ipv4, &rfds))
 	{
 		port = this->port;
 		selected = this->ipv4;
 	}
-	if (FD_ISSET(this->ipv4_natt, &rfds))
+	if (this->ipv4_natt != -1 && FD_ISSET(this->ipv4_natt, &rfds))
 	{
 		port = this->natt;
 		selected = this->ipv4_natt;
 	}
-	if (FD_ISSET(this->ipv6, &rfds))
+	if (this->ipv6 != -1 && FD_ISSET(this->ipv6, &rfds))
 	{
 		port = this->port;
 		selected = this->ipv6;
 	}
-	if (FD_ISSET(this->ipv6_natt, &rfds))
+	if (this->ipv6_natt != -1 && FD_ISSET(this->ipv6_natt, &rfds))
 	{
 		port = this->natt;
 		selected = this->ipv6_natt;
