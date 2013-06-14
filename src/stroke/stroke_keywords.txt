@@ -62,6 +62,8 @@ purgecrls,       STROKE_PURGE_CRLS
 purgecerts,      STROKE_PURGE_CERTS
 purgeike,        STROKE_PURGE_IKE
 exportx509,      STROKE_EXPORT_X509
+exportconncert,  STROKE_EXPORT_CONN_CERT
+exportconnchain, STROKE_EXPORT_CONN_CHAIN
 leases,          STROKE_LEASES
 memusage,        STROKE_MEMUSAGE
 user-creds,      STROKE_USER_CREDS

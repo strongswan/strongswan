@@ -321,6 +321,8 @@ static int purge(stroke_keyword_t kw)
 
 static int export_flags[] = {
 	EXPORT_X509,
+	EXPORT_CONN_CERT,
+	EXPORT_CONN_CHAIN,
 };
 
 static int export(stroke_keyword_t kw, char *selector)
@@ -449,6 +451,8 @@ static void exit_usage(char *error)
 	printf("    stroke purgeike\n");
 	printf("  Export credentials to the console:\n");
 	printf("    stroke exportx509 DN\n");
+	printf("    stroke exportconncert connname\n");
+	printf("    stroke exportconnchain connname\n");
 	printf("  Show current memory usage:\n");
 	printf("    stroke memusage\n");
 	printf("  Show leases of a pool:\n");
@@ -587,9 +591,11 @@ int main(int argc, char *argv[])
 			res = purge(token->kw);
 			break;
 		case STROKE_EXPORT_X509:
+		case STROKE_EXPORT_CONN_CERT:
+		case STROKE_EXPORT_CONN_CHAIN:
 			if (argc != 3)
 			{
-				exit_usage("\"exportx509\" needs a distinguished name");
+				exit_usage("\"export\" needs a name");
 			}
 			res = export(token->kw, argv[2]);
 			break;

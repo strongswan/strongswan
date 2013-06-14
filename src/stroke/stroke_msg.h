@@ -123,6 +123,10 @@ typedef enum export_flag_t export_flag_t;
 enum export_flag_t {
 	/** export an X509 certificate */
 	EXPORT_X509 =		0x0001,
+	/** export an X509 end entity certificate for a connection */
+	EXPORT_CONN_CERT =	0x0002,
+	/** export the complete trust chain of a connection */
+	EXPORT_CONN_CHAIN =	0x0004,
 };
 
 /**
