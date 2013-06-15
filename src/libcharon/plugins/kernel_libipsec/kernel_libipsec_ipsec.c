@@ -13,6 +13,7 @@
  */
 
 #include "kernel_libipsec_ipsec.h"
+#include "kernel_libipsec_router.h"
 
 #include <library.h>
 #include <ipsec.h>
@@ -34,11 +35,6 @@ struct private_kernel_libipsec_ipsec_t {
 	 * Listener for lifetime expire events
 	 */
 	ipsec_event_listener_t ipsec_listener;
-
-	/**
-	 * TUN device
-	 */
-	tun_device_t *tun;
 
 	/**
 	 * Mutex to lock access to various lists
@@ -389,7 +385,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	}
 
 	INIT(route,
-		.if_name = strdup(this->tun->get_name(this->tun)),
+		.if_name = router->get_tun_name(router, is_virtual ? src_ip : NULL),
 		.src_ip = src_ip,
 		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 		.prefixlen = policy->dst.mask,
@@ -634,7 +630,6 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		.ipsec_listener = {
 			.expire = expire,
 		},
-		.tun = lib->get(lib, "kernel-libipsec-tun"),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.policies = linked_list_create(),
 		.excludes = linked_list_create(),

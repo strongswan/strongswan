@@ -64,7 +64,7 @@ static bool create_router(private_kernel_libipsec_plugin_t *this,
 	}
 	else
 	{
-		this->router->destroy(this->router);
+		DESTROY_IF(this->router);
 	}
 	return TRUE;
 }

@@ -21,6 +21,8 @@
 #ifndef KERNEL_LIBIPSEC_ROUTER_H_
 #define KERNEL_LIBIPSEC_ROUTER_H_
 
+#include <kernel/kernel_listener.h>
+
 typedef struct kernel_libipsec_router_t kernel_libipsec_router_t;
 
 /**
@@ -30,10 +32,28 @@ typedef struct kernel_libipsec_router_t kernel_libipsec_router_t;
 struct kernel_libipsec_router_t {
 
 	/**
+	 * Implements kernel_listener_t interface
+	 */
+	kernel_listener_t listener;
+
+	/**
+	 * Get the name of the TUN device to be used with the given virtual IP.
+	 *
+	 * @param vip	virtual IP
+	 * @return		allocated name
+	 */
+	char *(*get_tun_name)(kernel_libipsec_router_t *this, host_t *vip);
+
+	/**
 	 * Destroy the given instance
 	 */
 	void (*destroy)(kernel_libipsec_router_t *this);
 };
+
+/**
+ * Single instance of this class, if created
+ */
+extern kernel_libipsec_router_t *router;
 
 /**
  * Create a kernel_libipsec_router_t instance.
