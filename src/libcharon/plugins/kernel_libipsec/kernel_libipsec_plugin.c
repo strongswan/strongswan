@@ -15,12 +15,11 @@
 
 #include "kernel_libipsec_plugin.h"
 #include "kernel_libipsec_ipsec.h"
+#include "kernel_libipsec_router.h"
 
 #include <daemon.h>
 #include <ipsec.h>
 #include <networking/tun_device.h>
-#include <processing/jobs/callback_job.h>
-#include <utils/debug.h>
 
 #define TUN_DEFAULT_MTU 1400
 
@@ -41,6 +40,10 @@ struct private_kernel_libipsec_plugin_t {
 	 */
 	tun_device_t *tun;
 
+	/**
+	 * Packet router
+	 */
+	kernel_libipsec_router_t *router;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -50,81 +53,18 @@ METHOD(plugin_t, get_name, char*,
 }
 
 /**
- * Outbound callback
+ * Create the kernel_libipsec_router_t instance
  */
-static void send_esp(void *data, esp_packet_t *packet)
-{
-	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
-}
-
-/**
- * Inbound callback
- */
-static void deliver_plain(private_kernel_libipsec_plugin_t *this,
-						  ip_packet_t *packet)
-{
-	this->tun->write_packet(this->tun, packet->get_encoding(packet));
-	packet->destroy(packet);
-}
-
-/**
- * Receiver callback
- */
-static void receiver_esp_cb(void *data, packet_t *packet)
-{
-	ipsec->processor->queue_inbound(ipsec->processor,
-									esp_packet_create_from_packet(packet));
-}
-
-/**
- * Job handling outbound plaintext packets
- */
-static job_requeue_t handle_plain(private_kernel_libipsec_plugin_t *this)
-{
-	chunk_t raw;
-
-	if (this->tun->read_packet(this->tun, &raw))
-	{
-		ip_packet_t *packet;
-
-		packet = ip_packet_create(raw);
-		if (packet)
-		{
-			ipsec->processor->queue_outbound(ipsec->processor, packet);
-		}
-		else
-		{
-			DBG1(DBG_KNL, "invalid IP packet read from TUN device");
-		}
-	}
-	return JOB_REQUEUE_DIRECT;
-}
-
-/**
- * Initialize/deinitialize sender and receiver
- */
-static bool packet_handler_cb(private_kernel_libipsec_plugin_t *this,
-							  plugin_feature_t *feature, bool reg, void *arg)
+static bool create_router(private_kernel_libipsec_plugin_t *this,
+						  plugin_feature_t *feature, bool reg, void *arg)
 {
 	if (reg)
-	{
-		ipsec->processor->register_outbound(ipsec->processor, send_esp, NULL);
-		ipsec->processor->register_inbound(ipsec->processor,
-									(ipsec_inbound_cb_t)deliver_plain, this);
-		charon->receiver->add_esp_cb(charon->receiver,
-									(receiver_esp_cb_t)receiver_esp_cb, NULL);
-		lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
-									NULL, (callback_job_cancel_t)return_false));
+	{	/* registers as packet handler etc. */
+		this->router = kernel_libipsec_router_create();
 	}
 	else
 	{
-		charon->receiver->del_esp_cb(charon->receiver,
-									(receiver_esp_cb_t)receiver_esp_cb);
-		ipsec->processor->unregister_outbound(ipsec->processor,
-											 (ipsec_outbound_cb_t)send_esp);
-		ipsec->processor->unregister_inbound(ipsec->processor,
-											 (ipsec_inbound_cb_t)deliver_plain);
+		this->router->destroy(this->router);
 	}
 	return TRUE;
 }
@@ -135,8 +75,8 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_libipsec_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-		PLUGIN_CALLBACK((plugin_feature_callback_t)packet_handler_cb, NULL),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-libipsec-handler"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)create_router, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-libipsec-router"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon-receiver"),
 	};
 	*features = f;
