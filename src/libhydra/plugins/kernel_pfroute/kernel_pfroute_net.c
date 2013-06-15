@@ -837,7 +837,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		prefix = vip->get_address(vip).len * 8;
 	}
-	if (!tun->set_address(tun, vip, prefix) || !tun->up(tun))
+	if (!tun->up(tun) || !tun->set_address(tun, vip, prefix))
 	{
 		tun->destroy(tun);
 		return FAILED;
