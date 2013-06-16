@@ -812,12 +812,6 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	return FALSE;
 }
 
-METHOD(kernel_net_t, get_source_addr, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
-{
-	return NULL;
-}
-
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
 	char *ifname)
@@ -1092,8 +1086,12 @@ METHOD(kernel_net_t, del_route, status_t,
 	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
 }
 
-METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+/**
+ * Do a route lookup for dest and return either the nexthop or the source
+ * address.
+ */
+static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
+						 host_t *dest, host_t *src)
 {
 	struct {
 		struct rt_msghdr hdr;
@@ -1106,7 +1104,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 			.rtm_seq = ++this->seq,
 		},
 	};
-	host_t *hop = NULL;
+	host_t *host = NULL;
 	enumerator_t *enumerator;
 	struct sockaddr *addr;
 	int type;
@@ -1150,9 +1148,14 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 												 sizeof(*this->reply));
 			while (enumerator->enumerate(enumerator, &type, &addr))
 			{
-				if (type == RTAX_GATEWAY)
+				if (nexthop && type == RTAX_GATEWAY)
 				{
-					hop = host_create_from_sockaddr(addr);
+					host = host_create_from_sockaddr(addr);
+					break;
+				}
+				if (!nexthop && type == RTAX_IFA)
+				{
+					host = host_create_from_sockaddr(addr);
 					break;
 				}
 			}
@@ -1169,7 +1172,19 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
-	return hop;
+	return host;
+}
+
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	return get_route(this, FALSE, dest, src);
+}
+
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	return get_route(this, TRUE, dest, src);
 }
 
 /**
