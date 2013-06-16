@@ -30,7 +30,9 @@ delete,          STROKE_DELETE
 route,           STROKE_ROUTE
 unroute,         STROKE_UNROUTE
 up,              STROKE_UP
+up-nb,           STROKE_UP_NOBLK
 down,            STROKE_DOWN
+down-nb,         STROKE_DOWN_NOBLK
 down-srcip,      STROKE_DOWN_SRCIP
 rekey,           STROKE_REKEY
 loglevel,        STROKE_LOGLEVEL
