@@ -96,8 +96,10 @@ typedef struct route_entry_t route_entry_t;
 struct route_entry_t {
 	/** Name of the interface the route is bound to */
 	char *if_name;
-	/** Source ip of the route */
+	/** Source IP of the route */
 	host_t *src_ip;
+	/** Gateway of the route */
+	host_t *gateway;
 	/** Destination net */
 	chunk_t dst_net;
 	/** Destination net prefixlen */
@@ -113,6 +115,7 @@ static void route_entry_destroy(route_entry_t *this)
 {
 	free(this->if_name);
 	DESTROY_IF(this->src_ip);
+	DESTROY_IF(this->gateway);
 	chunk_free(&this->dst_net);
 	free(this);
 }
@@ -122,9 +125,18 @@ static void route_entry_destroy(route_entry_t *this)
  */
 static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 {
-	return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
-		   a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
-		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
+	if ((!a->src_ip && !b->src_ip) || (a->src_ip && b->src_ip &&
+		  a->src_ip->ip_equals(a->src_ip, b->src_ip)))
+	{
+		if ((!a->gateway && !b->gateway) || (a->gateway && b->gateway &&
+			  a->gateway->ip_equals(a->gateway, b->gateway)))
+		{
+			return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
+				   chunk_equals(a->dst_net, b->dst_net) &&
+				   a->prefixlen == b->prefixlen;
+		}
+	}
+	return FALSE;
 }
 
 typedef struct policy_entry_t policy_entry_t;
@@ -390,6 +402,11 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 		.prefixlen = policy->dst.mask,
 	);
+#ifndef __linux__
+	/* on Linux we cant't install a gateway */
+	route->gateway = hydra->kernel_interface->get_nexthop(
+											hydra->kernel_interface, dst, src);
+#endif
 
 	if (policy->route)
 	{
@@ -403,7 +420,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		}
 		/* uninstall previously installed route */
 		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-									old->dst_net, old->prefixlen, NULL,
+									old->dst_net, old->prefixlen, old->gateway,
 									old->src_ip, old->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
@@ -425,7 +442,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		 dst_ts, route->src_ip, route->if_name);
 
 	switch (hydra->kernel_interface->add_route(hydra->kernel_interface,
-							route->dst_net, route->prefixlen, NULL,
+							route->dst_net, route->prefixlen, route->gateway,
 							route->src_ip, route->if_name))
 	{
 		case ALREADY_DONE:
@@ -537,7 +554,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		route_entry_t *route = policy->route;
 
 		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-				route->dst_net, route->prefixlen, NULL, route->src_ip,
+				route->dst_net, route->prefixlen, route->gateway, route->src_ip,
 				route->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
@@ -568,8 +585,8 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 			route_entry_t *route = pol->route;
 
 			hydra->kernel_interface->del_route(hydra->kernel_interface,
-					route->dst_net, route->prefixlen, NULL, route->src_ip,
-					route->if_name);
+					route->dst_net, route->prefixlen, route->gateway,
+					route->src_ip, route->if_name);
 			remove_exclude_route(this, route);
 		}
 		policy_entry_destroy(pol);
