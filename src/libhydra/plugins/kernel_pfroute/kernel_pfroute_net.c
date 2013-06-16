@@ -510,7 +510,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 {
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
-	bool roam = FALSE, found = FALSE;;
+	bool roam = FALSE, found = FALSE;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -1051,13 +1051,14 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 								dst->get_family(dst), prefixlen);
 				}
 				break;
-			case RTAX_GATEWAY:
-				/* interface name seems to replace gateway on OS X */
+			case RTAX_IFP:
 				if (if_name)
 				{
-					add_rt_ifname(&msg.hdr, RTA_GATEWAY, if_name);
+					add_rt_ifname(&msg.hdr, RTA_IFP, if_name);
 				}
-				else if (gateway)
+				break;
+			case RTAX_GATEWAY:
+				if (gateway)
 				{
 					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
 				}
