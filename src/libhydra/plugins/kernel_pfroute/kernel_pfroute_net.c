@@ -1153,6 +1153,12 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 					host = host_create_from_sockaddr(addr);
 					break;
 				}
+				if (nexthop && type == RTAX_DST &&
+					this->reply->rtm_flags & RTF_HOST)
+				{	/* probably a cloned direct route */
+					host = host_create_from_sockaddr(addr);
+					break;
+				}
 				if (!nexthop && type == RTAX_IFA)
 				{
 					host = host_create_from_sockaddr(addr);
