@@ -225,6 +225,12 @@ METHOD(tun_device_t, write_packet, bool,
 {
 	ssize_t s;
 
+#ifdef __APPLE__
+	/* UTUN's expect the packets to be prepended by a 32-bit protocol number
+	 * instead of parsing the packet again, we assume IPv4 for now */
+	u_int32_t proto = htonl(AF_INET);
+	packet = chunk_cata("cc", chunk_from_thing(proto), packet);
+#endif
 	s = write(this->tunfd, packet.ptr, packet.len);
 	if (s < 0)
 	{
@@ -271,6 +277,11 @@ METHOD(tun_device_t, read_packet, bool,
 		return FALSE;
 	}
 	packet->len = len;
+#ifdef __APPLE__
+	/* UTUN's prepend packets with a 32-bit protocol number */
+	packet->len -= sizeof(u_int32_t);
+	memmove(packet->ptr, packet->ptr + sizeof(u_int32_t), packet->len);
+#endif
 	return TRUE;
 }
 
