@@ -456,6 +456,32 @@ INSERT INTO versions (
   4, 1, '1.0.1e-2', 1366531494
 );
 
+/* Components */
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 1, 33  /* ITA TGRUB */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 2, 33  /* ITA TBOOT */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 3, 33  /* ITA IMA - Trusted Platform */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 3, 34  /* ITA IMA - Operating System */
+);
+
 /* Groups */
 
 INSERT INTO groups (			/*  1 */
