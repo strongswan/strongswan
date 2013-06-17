@@ -398,8 +398,30 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
 									src_ts, &src_ip, &is_virtual) != SUCCESS)
 	{
+		traffic_selector_t *multicast, *broadcast = NULL;
+		bool ignore = FALSE;
+
 		this->mutex->unlock(this->mutex);
-		return FALSE;
+		switch (src_ts->get_type(src_ts))
+		{
+			case TS_IPV4_ADDR_RANGE:
+				multicast = traffic_selector_create_from_cidr("224.0.0.0/4",
+															  0, 0, 0xffff);
+				broadcast = traffic_selector_create_from_cidr("255.255.255.255/32",
+															  0, 0, 0xffff);
+				break;
+			case TS_IPV6_ADDR_RANGE:
+				multicast = traffic_selector_create_from_cidr("ff00::/8",
+															  0, 0, 0xffff);
+				break;
+			default:
+				return FALSE;
+		}
+		ignore = src_ts->is_contained_in(src_ts, multicast);
+		ignore |= broadcast && src_ts->is_contained_in(src_ts, broadcast);
+		multicast->destroy(multicast);
+		DESTROY_IF(broadcast);
+		return ignore;
 	}
 
 	INIT(route,
