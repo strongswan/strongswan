@@ -223,6 +223,12 @@ static void expire(u_int32_t reqid, u_int8_t protocol, u_int32_t spi, bool hard)
 									spi, hard);
 }
 
+METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
+	private_kernel_libipsec_ipsec_t *this)
+{
+	return KERNEL_REQUIRE_UDP_ENCAPSULATION;
+}
+
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
@@ -628,6 +634,7 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_spi = _get_spi,
 				.get_cpi = _get_cpi,
 				.add_sa  = _add_sa,

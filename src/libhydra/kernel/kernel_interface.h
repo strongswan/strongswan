@@ -67,6 +67,8 @@ enum kernel_feature_t {
 	KERNEL_ESP_V3_TFC = (1<<0),
 	/** Networking requires an "exclude" route for IKE/ESP packets */
 	KERNEL_REQUIRE_EXCLUDE_ROUTE = (1<<1),
+	/** IPsec implementation requires UDP encapsulation of ESP packets */
+	KERNEL_REQUIRE_UDP_ENCAPSULATION = (1<<2),
 };
 
 /**
