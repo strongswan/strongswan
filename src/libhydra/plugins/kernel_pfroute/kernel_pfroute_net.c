@@ -1120,6 +1120,12 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 			case RTAX_IFA:
 				add_rt_addr(&msg.hdr, RTA_IFA, src);
 				break;
+			case RTAX_IFP:
+				if (!nexthop)
+				{	/* add an empty IFP to ensure we get a source address */
+					add_rt_ifname(&msg.hdr, RTA_IFP, "");
+				}
+				break;
 			default:
 				break;
 		}
