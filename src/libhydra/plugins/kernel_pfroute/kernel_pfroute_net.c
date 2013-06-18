@@ -41,7 +41,13 @@
 #endif
 
 /** properly align sockaddrs */
+#ifdef __APPLE__
+/* Apple always uses 4 bytes */
 #define SA_ALIGN 4
+#else
+/* while on other platforms like FreeBSD it depends on the architecture */
+#define SA_ALIGN sizeof(long)
+#endif
 #define SA_LEN(len) ((len) > 0 ? (((len)+SA_ALIGN-1) & ~(SA_ALIGN-1)) : SA_ALIGN)
 
 /** delay before firing roam events (ms) */
@@ -349,7 +355,8 @@ METHOD(enumerator_t, rt_enumerate, bool,
 			*addr = this->addr;
 			*xtype = i;
 			this->remaining -= SA_LEN(this->addr->sa_len);
-			this->addr = (char*)this->addr + SA_LEN(this->addr->sa_len);
+			this->addr = (struct sockaddr*)((char*)this->addr +
+											SA_LEN(this->addr->sa_len));
 			return TRUE;
 		}
 	}
