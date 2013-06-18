@@ -1098,48 +1098,6 @@ METHOD(kernel_net_t, del_route, status_t,
 }
 
 /**
- * Get an address on the given interface, preferably src.
- */
-static host_t *get_address_on(private_kernel_pfroute_net_t *this, char *ifname,
-                             host_t *src)
-{
-	enumerator_t *ifaces, *addrs;
-	iface_entry_t *iface;
-	addr_entry_t *addr, *found = NULL;
-	host_t *host = NULL;
-
-	this->lock->read_lock(this->lock);
-	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (ifaces->enumerate(ifaces, &iface))
-	{
-		if (streq(ifname, iface->ifname))
-		{
-			addrs = iface->addrs->create_enumerator(iface->addrs);
-			while (addrs->enumerate(addrs, &addr))
-			{
-				if (src->ip_equals(src, addr->ip))
-				{
-					found = addr;
-					break;
-				}
-				else if (!found)
-				{   /* use the first address as fallback if we don't find src */
-					found = addr;
-				}
-			}
-			addrs->destroy(addrs);
-			if (found)
-			{
-				host = found->ip->clone(found->ip);
-			}
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	this->lock->unlock(this->lock);
-	return host;
-}
-/**
  * Do a route lookup for dest and return either the nexthop or the source
  * address.
  */
@@ -1157,10 +1115,9 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 			.rtm_seq = ++this->seq,
 		},
 	};
-	host_t *host = NULL, *gtw = NULL, *dst = NULL, *ifa = NULL;
+	host_t *host = NULL;
 	enumerator_t *enumerator;
 	struct sockaddr *addr;
-	char *ifname = NULL;
 	int type;
 
 	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
@@ -1208,24 +1165,28 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 												 sizeof(*this->reply));
 			while (enumerator->enumerate(enumerator, &type, &addr))
 			{
-				if (type == RTAX_DST && this->reply->rtm_flags & RTF_HOST)
-				{	/* probably a cloned/cached direct route */
-					dst = host_create_from_sockaddr(addr);
-				}
-				if (type == RTAX_GATEWAY)
+				if (nexthop)
 				{
-					gtw = host_create_from_sockaddr(addr);
+					if (type == RTAX_DST && this->reply->rtm_flags & RTF_HOST)
+					{	/* probably a cloned/cached direct route, only use that
+						 * as fallback if no gateway is found */
+						host = host ?: host_create_from_sockaddr(addr);
+					}
+					if (type == RTAX_GATEWAY)
+					{	/* could actually be a MAC address */
+						host_t *gtw = host_create_from_sockaddr(addr);
+						if (gtw)
+						{
+							DESTROY_IF(host);
+							host = gtw;
+						}
+					}
 				}
-				if (type == RTAX_IFA)
+				else
 				{
-					ifa = host_create_from_sockaddr(addr);
-				}
-				if (type == RTAX_IFP)
-				{
-					struct sockaddr_dl *sdl = (struct sockaddr_dl*)addr;
-					if (addr->sa_family == AF_LINK && sdl->sdl_nlen)
+					if (type == RTAX_IFA)
 					{
-						ifname = strndup(sdl->sdl_data, sdl->sdl_nlen);
+						host = host_create_from_sockaddr(addr);
 					}
 				}
 			}
@@ -1242,43 +1203,11 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
-	DBG3(DBG_KNL, "route to %H: dst %H gw %H src %H if %s", dest, dst, gtw,
-		 ifa, ifname);
-	if (nexthop)
-	{
-		if (gtw)
-		{
-			host = gtw->clone(gtw);
-		}
-		else if (dst)
-		{
-			host = dst->clone(dst);
-		}
-	}
-	else
-	{
-		if (ifa)
-		{
-			host = ifa->clone(ifa);
-		}
-		else if (ifname)
-		{
-			host = get_address_on(this, ifname, src);
-		}
-		else if (gtw && !gtw->ip_equals(gtw, dest))
-		{
-			host = get_route(this, FALSE, gtw, src);
-		}
-	}
 	if (host)
 	{
 		DBG2(DBG_KNL, "using %H as %s to reach %H", host,
 			 nexthop ? "nexthop" : "address", dest);
 	}
-	DESTROY_IF(gtw);
-	DESTROY_IF(dst);
-	DESTROY_IF(ifa);
-	free(ifname);
 	return host;
 }
 
