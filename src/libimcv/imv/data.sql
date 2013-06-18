@@ -689,7 +689,7 @@ INSERT INTO policies (			/*  8 */
 INSERT INTO policies (			/*  9 */
   type, name, rec_fail, rec_noresult
 ) VALUES (
-  12, 'No Open UDP Ports', 1, 1
+  13, 'No Open UDP Ports', 1, 1
 );
 
 INSERT INTO policies (			/* 10 */

@@ -16,6 +16,7 @@
 #include "imv_scanner_agent.h"
 #include "imv_scanner_state.h"
 
+#include <imcv.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr.h>
@@ -36,86 +37,6 @@ typedef struct private_imv_scanner_agent_t private_imv_scanner_agent_t;
 static pen_type_t msg_types[] = {
 	{ PEN_IETF, PA_SUBTYPE_IETF_VPN }
 };
-
-/**
- * Flag set when corresponding attribute has been received
- */
-typedef enum imv_scanner_attr_t imv_scanner_attr_t;
-
-enum imv_scanner_attr_t {
-	IMV_SCANNER_ATTR_PORT_FILTER =         (1<<0)
-};
-
-typedef struct port_range_t port_range_t;
-
-struct port_range_t {
-	u_int16_t start, stop;
-};
-
-/**
- * Default port policy
- *
- * TRUE:  all server ports on the TNC client must be closed
- * FALSE: any server port on the TNC client is allowed to be open
- */
-static bool closed_port_policy = TRUE;
-
-/**
- * List of TCP and UDP port ranges
- *
- * TRUE:  server ports on the TNC client that are allowed to be open
- * FALSE: server ports on the TNC client that must be closed
- */
-static linked_list_t *tcp_ports, *udp_ports;
-
-/**
- * Get a TCP or UDP port list from strongswan.conf
- */
-static linked_list_t* get_port_list(char *label)
-{
-	char key[40], *value;
-	linked_list_t *list;
-	chunk_t port_list, port_item, port_start;
-	port_range_t *port_range;
-
-	list = linked_list_create();
-
-	snprintf(key, sizeof(key), "libimcv.plugins.imv-scanner.%s_ports", label);
-	value = lib->settings->get_str(lib->settings, key, NULL);
-	if (!value)
-	{
-		DBG1(DBG_IMV, "%s not defined", key);
-		return list;
-	}
-	port_list = chunk_create(value, strlen(value));
-	DBG2(DBG_IMV, "list of %s ports that %s:", label,
-		 closed_port_policy ? "are allowed to be open" : "must be closed");
-
-	while (eat_whitespace(&port_list))
-	{
-		if (!extract_token(&port_item, ' ', &port_list))
-		{
-			/* reached last port item */
-			port_item = port_list;
-			port_list = chunk_empty;
-		}
-		port_range = malloc_thing(port_range_t);
-		port_range->start = atoi(port_item.ptr);
-
-		if (extract_token(&port_start, '-', &port_item) && port_item.len)
-		{
-			port_range->stop = atoi(port_item.ptr);
-		}
-		else
-		{
-			port_range->stop = port_range->start;
-		}
-		DBG2(DBG_IMV, "%5u - %5u", port_range->start, port_range->stop);
-		list->insert_last(list, port_range);
-	}
-
-	return list;
-}
 
 /**
  * Private data of an imv_scanner_agent_t object.
@@ -165,10 +86,12 @@ static TNC_Result receive_msg(private_imv_scanner_agent_t *this,
 							  imv_state_t *state, imv_msg_t *in_msg)
 {
 	imv_msg_t *out_msg;
+	imv_scanner_state_t *scanner_state;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t type;
 	TNC_Result result;
+	ietf_attr_port_filter_t *port_filter_attr;
 	bool fatal_error = FALSE;
 
 	/* parse received PA-TNC message and handle local and remote errors */
@@ -186,70 +109,9 @@ static TNC_Result receive_msg(private_imv_scanner_agent_t *this,
 
 		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PORT_FILTER)
 		{
-			imv_scanner_state_t *scanner_state;
-			ietf_attr_port_filter_t *attr_port_filter;
-			enumerator_t *enumerator;
-			u_int8_t protocol;
-			u_int16_t port;
-			bool blocked, compliant = TRUE;
-
-			state->set_action_flags(state, IMV_SCANNER_ATTR_PORT_FILTER);
 			scanner_state = (imv_scanner_state_t*)state;
-			attr_port_filter = (ietf_attr_port_filter_t*)attr;
-
-			enumerator = attr_port_filter->create_port_enumerator(attr_port_filter);
-			while (enumerator->enumerate(enumerator, &blocked, &protocol, &port))
-			{
-				enumerator_t *e;
-				port_range_t *port_range;
-				bool passed, found = FALSE;
-				char buf[20];
-
-				if (blocked)
-				{
-					/* ignore closed ports */
-					continue;
-				}
-
-				e = (protocol == IPPROTO_TCP) ?
-							tcp_ports->create_enumerator(tcp_ports) :
-							udp_ports->create_enumerator(udp_ports);
-				while (e->enumerate(e, &port_range))
-				{
-					if (port >= port_range->start && port <= port_range->stop)
-					{
-						found = TRUE;
-						break;
-					}
-				}
-				e->destroy(e);
-
-				passed = (closed_port_policy == found);
-				DBG2(DBG_IMV, "%s port %5u %s: %s",
-					(protocol == IPPROTO_TCP) ? "tcp" : "udp", port,
-					 blocked ? "closed" : "open", passed ? "ok" : "fatal");
-				if (!passed)
-				{
-					compliant = FALSE;
-					snprintf(buf, sizeof(buf), "%s/%u",
-							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
-					scanner_state->add_violating_port(scanner_state, strdup(buf));
-				}
-			}
-			enumerator->destroy(enumerator);
-
-			if (compliant)
-			{
-				state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-			}
-			else
-			{
-				state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
-			}
+			port_filter_attr = (ietf_attr_port_filter_t*)attr->get_ref(attr);
+			scanner_state->set_port_filter_attr(scanner_state, port_filter_attr);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -259,16 +121,17 @@ static TNC_Result receive_msg(private_imv_scanner_agent_t *this,
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
+		out_msg = imv_msg_create_as_reply(in_msg);
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return this->agent->provide_recommendation(this->agent, state);
 	}
 
-	out_msg = imv_msg_create_as_reply(in_msg);
-	result = out_msg->send_assessment(out_msg);
-	out_msg->destroy(out_msg);
-	if (result != TNC_RESULT_SUCCESS)
-	{
-		return result;
-	}  
-	return this->agent->provide_recommendation(this->agent, state);
+	return TNC_RESULT_SUCCESS;
 }
 
 METHOD(imv_agent_if_t, receive_message, TNC_Result,
@@ -312,33 +175,262 @@ METHOD(imv_agent_if_t, receive_message_long, TNC_Result,
 
 }
 
+typedef struct port_range_t port_range_t;
+
+struct port_range_t {
+	u_int16_t start, stop;
+};
+
+/**
+ * Parse a TCP or UDP port list from an argument string
+ */
+static linked_list_t* get_port_list(u_int8_t protocol_family,
+									bool closed_port_policy, char *arg_str)
+{
+	chunk_t port_list, port_item, port_start;
+	port_range_t *port_range;
+	linked_list_t *list;
+
+	list = linked_list_create();
+
+	port_list = chunk_from_str(arg_str);
+	DBG2(DBG_IMV, "list of %s ports that %s:",
+		 (protocol_family == IPPROTO_TCP) ? "tcp" : "udp",
+		 closed_port_policy ? "are allowed to be open" : "must be closed");
+
+	while (eat_whitespace(&port_list))
+	{
+		if (!extract_token(&port_item, ' ', &port_list))
+		{
+			/* reached last port item */
+			port_item = port_list;
+			port_list = chunk_empty;
+		}
+		port_range = malloc_thing(port_range_t);
+		port_range->start = atoi(port_item.ptr);
+
+		if (extract_token(&port_start, '-', &port_item) && port_item.len)
+		{
+			port_range->stop = atoi(port_item.ptr);
+		}
+		else
+		{
+			port_range->stop = port_range->start;
+		}
+		DBG2(DBG_IMV, "%5u - %5u", port_range->start, port_range->stop);
+		list->insert_last(list, port_range);
+	}
+
+	return list;
+}
+
 METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	private_imv_scanner_agent_t *this, TNC_ConnectionID id)
 {
-	imv_state_t *state;
 	imv_msg_t *out_msg;
+	imv_state_t *state;
+	imv_session_t *session;
+	imv_workitem_t *workitem;
+	imv_scanner_state_t *scanner_state;
+	imv_scanner_handshake_state_t handshake_state;
 	pa_tnc_attr_t *attr;
-	TNC_IMV_Action_Recommendation rec;
-	TNC_IMV_Evaluation_Result eval;
+	ietf_attr_port_filter_t *port_filter_attr;
+	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
+	bool no_workitems = TRUE;
+	enumerator_t *enumerator;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
-	state->get_recommendation(state, &rec, &eval);
-	if (rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
-	{
-		out_msg = imv_msg_create(this->agent, state, id,
-								 this->agent->get_id(this->agent),
-								 TNC_IMCID_ANY, msg_types[0]);
-		attr = ietf_attr_attr_request_create(PEN_IETF, IETF_ATTR_PORT_FILTER);
-		out_msg->add_attribute(out_msg, attr);
+	scanner_state = (imv_scanner_state_t*)state;
+	handshake_state = scanner_state->get_handshake_state(scanner_state);
+	port_filter_attr = scanner_state->get_port_filter_attr(scanner_state);
+	session = state->get_session(state);
+	imv_id = this->agent->get_id(this->agent);
 
-		/* send PA-TNC message with excl flag not set */
-		result = out_msg->send(out_msg, FALSE);
-		out_msg->destroy(out_msg);
+	if (handshake_state == IMV_SCANNER_STATE_END)
+	{
+		return TNC_RESULT_SUCCESS;
 	}
+
+	if (!session)
+	{
+		DBG2(DBG_IMV, "no workitems available - no evaluation possible");
+		state->set_recommendation(state,
+							TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+							TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+		scanner_state->set_handshake_state(scanner_state,
+							IMV_SCANNER_STATE_END);
+		return TNC_RESULT_SUCCESS;
+	}
+
+	/* create an empty out message - we might need it */
+	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+							 msg_types[0]);
+
+	if (handshake_state == IMV_SCANNER_STATE_INIT)
+	{
+		enumerator = session->create_workitem_enumerator(session);
+		if (enumerator)
+		{
+			while (enumerator->enumerate(enumerator, &workitem))
+			{
+				if (workitem->get_imv_id(workitem) != TNC_IMVID_ANY)
+				{
+					continue;
+				}
+
+				switch (workitem->get_type(workitem))
+				{
+					case IMV_WORKITEM_TCP_PORT_OPEN:
+					case IMV_WORKITEM_TCP_PORT_BLOCK:
+					case IMV_WORKITEM_UDP_PORT_OPEN:
+					case IMV_WORKITEM_UDP_PORT_BLOCK:
+						if (!port_filter_attr &&
+							handshake_state != IMV_SCANNER_STATE_ATTR_REQ)
+						{
+							attr = ietf_attr_attr_request_create(PEN_IETF,
+											IETF_ATTR_PORT_FILTER);
+							out_msg->add_attribute(out_msg, attr);
+							handshake_state = IMV_SCANNER_STATE_ATTR_REQ;
+						}
+						break;
+					default:
+						continue;
+				}
+				workitem->set_imv_id(workitem, imv_id);
+				no_workitems = FALSE;
+			}
+			enumerator->destroy(enumerator);
+
+			if (no_workitems)
+			{
+				DBG2(DBG_IMV, "IMV %d has no workitems - "
+							  "no evaluation requested", imv_id);
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			}
+			handshake_state = IMV_SCANNER_STATE_WORKITEMS;
+			scanner_state->set_handshake_state(scanner_state, handshake_state);
+		}
+	}
+
+	if (handshake_state == IMV_SCANNER_STATE_WORKITEMS && port_filter_attr)
+	{
+		TNC_IMV_Evaluation_Result eval;
+		TNC_IMV_Action_Recommendation rec;
+		u_int8_t protocol_family, protocol;
+		u_int16_t port;
+		bool closed_port_policy, blocked;
+		linked_list_t *port_list;
+		enumerator_t *e1, *e2;
+
+		enumerator = session->create_workitem_enumerator(session);
+		while (enumerator->enumerate(enumerator, &workitem))
+		{
+			if (workitem->get_imv_id(workitem) != imv_id)
+			{
+				continue;
+			}
+			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+
+			switch (workitem->get_type(workitem))
+			{
+				case IMV_WORKITEM_TCP_PORT_OPEN:
+					protocol_family = IPPROTO_TCP;
+					closed_port_policy = TRUE;
+					break;
+				case IMV_WORKITEM_TCP_PORT_BLOCK:
+					protocol_family = IPPROTO_TCP;
+					closed_port_policy = FALSE;
+					break;
+				case IMV_WORKITEM_UDP_PORT_OPEN:
+					protocol_family = IPPROTO_UDP;
+					closed_port_policy = TRUE;
+					break;
+				case IMV_WORKITEM_UDP_PORT_BLOCK:
+					protocol_family = IPPROTO_UDP;
+					closed_port_policy = FALSE;
+					break;
+				default:
+					continue;
+			}
+			port_list = get_port_list(protocol_family, closed_port_policy,
+									  workitem->get_arg_str(workitem));
+
+			e1 = port_filter_attr->create_port_enumerator(port_filter_attr);
+			while (e1->enumerate(e1, &blocked, &protocol, &port))
+			{
+				port_range_t *port_range;
+				bool passed, found = FALSE;
+				char buf[20];
+
+				if (blocked)
+				{
+					/* ignore closed ports */
+					continue;
+				}
+
+				e2 = port_list->create_enumerator(port_list);
+				while (e2->enumerate(e2, &port_range))
+				{
+					if (port >= port_range->start && port <= port_range->stop)
+					{
+						found = TRUE;
+						break;
+					}
+				}
+				e2->destroy(e2);
+
+				passed = (closed_port_policy == found);
+				DBG2(DBG_IMV, "%s port %5u open: %s",
+					(protocol == IPPROTO_TCP) ? "tcp" : "udp", port,
+					 passed ? "ok" : "fatal");
+				if (!passed)
+				{
+					eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
+					snprintf(buf, sizeof(buf), "%s/%u",
+							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
+					scanner_state->add_violating_port(scanner_state, strdup(buf));
+				}
+			}
+			e1->destroy(e1);
+
+			port_list->destroy(port_list);
+
+			session->remove_workitem(session, enumerator);
+			rec = workitem->set_result(workitem, "", eval);
+			state->update_recommendation(state, rec, eval);
+			imcv_db->finalize_workitem(imcv_db, workitem);
+			workitem->destroy(workitem);
+		}
+		enumerator->destroy(enumerator);
+
+		/* finalized all workitems ? */
+		if (session->get_workitem_count(session, imv_id) == 0)
+		{
+			scanner_state->set_handshake_state(scanner_state,
+											   IMV_SCANNER_STATE_END);
+			result = out_msg->send_assessment(out_msg);
+			out_msg->destroy(out_msg);
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				return result;
+			}
+			return this->agent->provide_recommendation(this->agent, state);
+		}
+	}
+
+	/* send non-empty PA-TNC message with excl flag not set */
+	if (out_msg->get_attribute_count(out_msg))
+	{
+		result = out_msg->send(out_msg, FALSE);
+	}
+	out_msg->destroy(out_msg);
+
 	return result;
 }
 
@@ -357,8 +449,6 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 METHOD(imv_agent_if_t, destroy, void,
 	private_imv_scanner_agent_t *this)
 {
-	tcp_ports->destroy_function(tcp_ports, free);
-	udp_ports->destroy_function(udp_ports, free);
 	this->agent->destroy(this->agent);
 	free(this);
 }
@@ -391,16 +481,6 @@ imv_agent_if_t *imv_scanner_agent_create(const char *name, TNC_IMVID id,
 		},
 		.agent = agent,
 	);
-
-	/* set the default port policy to closed (TRUE) or open (FALSE) */
-	closed_port_policy = lib->settings->get_bool(lib->settings,
-						"libimcv.plugins.imv-scanner.closed_port_policy", TRUE);
-	DBG2(DBG_IMV, "default port policy is %s ports",
-						closed_port_policy ? "closed" : "open");
-
-	/* get the list of open|closed ports */
-	tcp_ports = get_port_list("tcp");
-	udp_ports = get_port_list("udp");
 
 	return &this->public;
 }

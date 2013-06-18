@@ -396,6 +396,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 
 	if (assessment)
 	{
+		os_state->set_handshake_state(os_state, IMV_OS_STATE_END);
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
 		if (result != TNC_RESULT_SUCCESS)
@@ -601,7 +602,6 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					continue;
 				}
-				no_workitems = FALSE;
 
 				switch (workitem->get_type(workitem))
 				{
@@ -621,6 +621,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 						continue;
 				}
 				workitem->set_imv_id(workitem, imv_id);
+				no_workitems = FALSE;
 			}
 			enumerator->destroy(enumerator);
 

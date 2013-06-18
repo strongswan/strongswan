@@ -96,6 +96,11 @@ struct private_imv_scanner_state_t {
 	imv_scanner_handshake_state_t handshake_state;
 
 	/**
+	 * Copy of the received IEEE Port Filter attribute
+	 */
+	 ietf_attr_port_filter_t *port_filter_attr;
+
+	/**
 	 * List with ports that should be closed
 	 */
 	 linked_list_t *violating_ports;
@@ -317,6 +322,7 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
+	DESTROY_IF(&this->port_filter_attr->pa_tnc_attribute);
 	this->violating_ports->destroy_function(this->violating_ports, free);
 	free(this->ar_id_value.ptr);
 	free(this);
@@ -332,6 +338,19 @@ METHOD(imv_scanner_state_t, get_handshake_state, imv_scanner_handshake_state_t,
 	private_imv_scanner_state_t *this)
 {
 	return this->handshake_state;
+}
+
+METHOD(imv_scanner_state_t, set_port_filter_attr, void,
+	private_imv_scanner_state_t *this, ietf_attr_port_filter_t *attr)
+{
+	DESTROY_IF(&this->port_filter_attr->pa_tnc_attribute);
+	this->port_filter_attr = attr;
+}
+
+METHOD(imv_scanner_state_t, get_port_filter_attr, ietf_attr_port_filter_t*,
+	private_imv_scanner_state_t *this)
+{
+	return this->port_filter_attr;
 }
 
 METHOD(imv_scanner_state_t, add_violating_port, void,
@@ -372,6 +391,8 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_handshake_state = _set_handshake_state,
 			.get_handshake_state = _get_handshake_state,
+			.set_port_filter_attr = _set_port_filter_attr,
+			.get_port_filter_attr = _get_port_filter_attr,
 			.add_violating_port = _add_violating_port,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
