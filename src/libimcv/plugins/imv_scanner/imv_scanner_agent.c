@@ -368,9 +368,9 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				bool passed, found = FALSE;
 				char buf[20];
 
-				if (blocked)
+				if (blocked || protocol != protocol_family)
 				{
-					/* ignore closed ports */
+					/* ignore closed ports or non-matching protocols */
 					continue;
 				}
 
