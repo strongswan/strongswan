@@ -162,6 +162,12 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	enumerator_t *enumerator;
 	host_t *vip;
 
+	if (pools->find_first(pools, (linked_list_match_t)streq,
+						  NULL, "dhcp") != SUCCESS)
+	{
+		return NULL;
+	}
+
 	this->mutex->lock(this->mutex);
 	enumerator = vips->create_enumerator(vips);
 	while (enumerator->enumerate(enumerator, &vip))
@@ -225,4 +231,3 @@ dhcp_provider_t *dhcp_provider_create(dhcp_socket_t *socket)
 
 	return &this->public;
 }
-
