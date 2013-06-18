@@ -40,6 +40,10 @@
 #error Cannot compile this plugin on systems where 'struct sockaddr' has no sa_len member.
 #endif
 
+/** properly align sockaddrs */
+#define SA_ALIGN 4
+#define SA_LEN(len) ((len) > 0 ? (((len)+SA_ALIGN-1) & ~(SA_ALIGN-1)) : SA_ALIGN)
+
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
@@ -344,8 +348,8 @@ METHOD(enumerator_t, rt_enumerate, bool,
 			this->types &= ~type;
 			*addr = this->addr;
 			*xtype = i;
-			this->remaining -= this->addr->sa_len;
-			this->addr = (void*)this->addr + this->addr->sa_len;
+			this->remaining -= SA_LEN(this->addr->sa_len);
+			this->addr = (char*)this->addr + SA_LEN(this->addr->sa_len);
 			return TRUE;
 		}
 	}
@@ -941,7 +945,7 @@ static void add_rt_addr(struct rt_msghdr *hdr, int type, host_t *addr)
 
 		len = *addr->get_sockaddr_len(addr);
 		memcpy((char*)hdr + hdr->rtm_msglen, addr->get_sockaddr(addr), len);
-		hdr->rtm_msglen += len;
+		hdr->rtm_msglen += SA_LEN(len);
 		hdr->rtm_addrs |= type;
 	}
 }
@@ -976,7 +980,7 @@ static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
 	{
 		memcpy(sdl.sdl_data, name, sdl.sdl_nlen);
 		memcpy((char*)hdr + hdr->rtm_msglen, &sdl, sdl.sdl_len);
-		hdr->rtm_msglen += sdl.sdl_len;
+		hdr->rtm_msglen += SA_LEN(sdl.sdl_len);
 		hdr->rtm_addrs |= type;
 	}
 }
