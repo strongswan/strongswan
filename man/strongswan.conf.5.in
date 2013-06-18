@@ -869,9 +869,6 @@ Use Quote2 AIK signature instead of Quote signature
 .BR libimcv.plugins.imv-attestation.cadir
 Path to directory with AIK cacerts
 .TP
-.BR libimcv.plugins.imv-attestation.database
-Path to database with file measurement information
-.TP
 .BR libimcv.plugins.imv-attestation.dh_group " [ecp256]"
 Preferred Diffie-Hellman group
 .TP
@@ -887,26 +884,14 @@ URI pointing to attestation remediation instructions
 .BR libimcv.plugins.imc-os.push_info " [yes]"
 Send operating system info without being prompted
 .TP
-.BR libimcv.plugins.imv-os.database
-Database URI for the database that stores operating system information
-.TP
 .BR libimcv.plugins.imv-os.remediation_uri
 URI pointing to operating system remediation instructions
 .TP
 .BR libimcv.plugins.imc-scanner.push_info " [yes]"
 Send open listening ports without being prompted
 .TP
-.BR libimcv.plugins.imv-scanner.closed_port_policy " [yes]"
-By default all ports must be closed (yes) or can be open (no)
-.TP
 .BR libimcv.plugins.imv-scanner.remediation_uri
 URI pointing to scanner remediation instructions
-.TP
-.BR libimcv.plugins.imv-scanner.tcp_ports
-List of TCP ports that can be open or must be closed
-.TP
-.BR libimcv.plugins.imv-scanner.udp_ports
-List of UDP ports that can be open or must be closed
 .TP
 .BR libimcv.plugins.imc-test.additional_ids " [0]"
 Number of additional IMC IDs
