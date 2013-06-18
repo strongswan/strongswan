@@ -291,11 +291,11 @@ static void generate_selfcert()
 			}
 		}
 #endif
-		setegid(gid);
-		seteuid(uid);
+		ignore_result(setegid(gid));
+		ignore_result(seteuid(uid));
 		ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
-		seteuid(0);
-		setegid(0);
+		ignore_result(seteuid(0));
+		ignore_result(setegid(0));
 
 		/* ipsec.secrets is root readable only */
 		oldmask = umask(0066);
@@ -898,4 +898,3 @@ int main (int argc, char **argv)
 	}
 	exit(LSB_RC_SUCCESS);
 }
-
