@@ -112,7 +112,7 @@ METHOD(fetcher_t, fetch, status_t,
 	status_t status = FAILED;
 	chunk_t *result = userdata;
 
-	if (!strneq(url, "ldap", 4))
+	if (!strpfx(url, "ldap"))
 	{
 		return NOT_SUPPORTED;
 	}

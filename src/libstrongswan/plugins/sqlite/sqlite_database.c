@@ -319,7 +319,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	/**
 	 * parse sqlite:///path/to/file.db uri
 	 */
-	if (!strneq(uri, "sqlite://", 9))
+	if (!strpfx(uri, "sqlite://"))
 	{
 		return NULL;
 	}

@@ -85,7 +85,7 @@ static sshkey_public_key_t *parse_public_key(chunk_t blob)
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 	}
 	else if (format.len > strlen(ECDSA_PREFIX) &&
-			 strneq(format.ptr, ECDSA_PREFIX, strlen(ECDSA_PREFIX)))
+			 strpfx(format.ptr, ECDSA_PREFIX))
 	{
 		chunk_t ec_blob, identifier, q, oid, encoded;
 		sshkey_public_key_t *key;
