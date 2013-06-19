@@ -33,6 +33,12 @@ int main()
 
 	library_init(NULL);
 
+	/* use non-blocking RNG to generate keys fast */
+	lib->settings->set_default_str(lib->settings,
+			"libstrongswan.plugins.random.random",
+			lib->settings->get_str(lib->settings,
+				"libstrongswan.plugins.random.urandom", "/dev/urandom"));
+
 	if (!lib->plugins->load(lib->plugins, NULL, PLUGINS))
 	{
 		library_deinit();
