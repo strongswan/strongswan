@@ -15,6 +15,8 @@
 
 #include "test_suite.h"
 
+#include <plugins/plugin_feature.h>
+
 /**
  * Signature schemes to test
  */
@@ -43,6 +45,13 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 
 	for (i = 0; i < countof(schemes); i++)
 	{
+		if (!lib->plugins->has_feature(lib->plugins,
+						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].scheme)) ||
+			!lib->plugins->has_feature(lib->plugins,
+						PLUGIN_PROVIDE(PRIVKEY_SIGN, schemes[i].scheme)))
+		{
+			continue;
+		}
 		if (schemes[i].key_size != 0 &&
 			schemes[i].scheme != privkey->get_keysize(privkey))
 		{
@@ -101,6 +110,11 @@ static void test_bad_sigs(public_key_t *pubkey)
 	{
 		if (schemes[s].key_size != 0 &&
 			schemes[s].scheme != pubkey->get_keysize(pubkey))
+		{
+			continue;
+		}
+		if (!lib->plugins->has_feature(lib->plugins,
+						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[s].scheme)))
 		{
 			continue;
 		}
