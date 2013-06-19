@@ -324,7 +324,9 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		TNC_IMV_Action_Recommendation rec;
 		u_int8_t protocol_family, protocol;
 		u_int16_t port;
-		bool closed_port_policy, blocked;
+		bool closed_port_policy, blocked, first = TRUE;
+		char result_str[BUF_LEN], *pos;
+		size_t len, written;
 		linked_list_t *port_list;
 		enumerator_t *e1, *e2;
 
@@ -360,6 +362,9 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 			}
 			port_list = get_port_list(protocol_family, closed_port_policy,
 									  workitem->get_arg_str(workitem));
+			result_str[0] = '\0';
+			pos = result_str;
+			len = BUF_LEN;
 
 			e1 = port_filter_attr->create_port_enumerator(port_filter_attr);
 			while (e1->enumerate(e1, &blocked, &protocol, &port))
@@ -395,14 +400,36 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					snprintf(buf, sizeof(buf), "%s/%u",
 							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
 					scanner_state->add_violating_port(scanner_state, strdup(buf));
+					if (first)
+					{
+						written = snprintf(pos, len, "violating ports:");
+						pos += written;
+						len -= written;
+						first = FALSE;
+					}
+					written = snprintf(pos, len, " %u", port);
+					if (written > len || written < 0)
+					{
+						pos += len - 1;
+						*pos = '\0';
+					}
+					else
+					{
+						pos += written;
+						len -= written;
+					}
 				}
 			}
 			e1->destroy(e1);
 
+			if (first)
+			{
+				snprintf(pos, len, "no violating ports");
+			}
 			port_list->destroy(port_list);
 
 			session->remove_workitem(session, enumerator);
-			rec = workitem->set_result(workitem, "", eval);
+			rec = workitem->set_result(workitem, result_str, eval);
 			state->update_recommendation(state, rec, eval);
 			imcv_db->finalize_workitem(imcv_db, workitem);
 			workitem->destroy(workitem);
