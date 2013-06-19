@@ -109,6 +109,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 								 0, ike_cfg->get_other_port(ike_cfg));
 	if (!other || other->is_anyaddr(other))
 	{
+		DESTROY_IF(other);
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
 	}
@@ -141,6 +142,8 @@ METHOD(trap_manager_t, install, u_int32_t,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
 	if (found)
 	{	/* config might have changed so update everything */
 		DBG1(DBG_CFG, "updating already routed CHILD_SA '%s'",
@@ -179,10 +182,11 @@ METHOD(trap_manager_t, install, u_int32_t,
 			.child_sa = child_sa,
 			.peer_cfg = peer->get_ref(peer),
 		);
+		this->lock->write_lock(this->lock);
 		this->traps->insert_last(this->traps, entry);
+		this->lock->unlock(this->lock);
 		reqid = child_sa->get_reqid(child_sa);
 	}
-	this->lock->unlock(this->lock);
 
 	if (status != SUCCESS)
 	{
@@ -249,6 +253,31 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 	return enumerator_create_filter(this->traps->create_enumerator(this->traps),
 									(void*)trap_filter, this->lock,
 									(void*)this->lock->unlock);
+}
+
+METHOD(trap_manager_t, find_reqid, u_int32_t,
+	private_trap_manager_t *this, child_cfg_t *child)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *current;
+	entry_t *entry;
+	u_int32_t reqid = 0;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->traps->create_enumerator(this->traps);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		current = entry->child_sa->get_config(entry->child_sa);
+		if (streq(current->get_name(current), child->get_name(child)))
+		{
+			reqid = entry->child_sa->get_reqid(entry->child_sa);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	return reqid;
 }
 
 METHOD(trap_manager_t, acquire, void,
@@ -319,8 +348,7 @@ METHOD(trap_manager_t, acquire, void,
 		}
 		else
 		{
-			charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
+			ike_sa->destroy(ike_sa);
 		}
 	}
 	peer->destroy(peer);
@@ -417,6 +445,7 @@ trap_manager_t *trap_manager_create(void)
 			.install = _install,
 			.uninstall = _uninstall,
 			.create_enumerator = _create_enumerator,
+			.find_reqid = _find_reqid,
 			.acquire = _acquire,
 			.flush = _flush,
 			.destroy = _destroy,
@@ -435,4 +464,3 @@ trap_manager_t *trap_manager_create(void)
 
 	return &this->public;
 }
-

@@ -1149,7 +1149,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		}
 		else
 		{
-			this->reqid = ref_get(&reqid);
+			this->reqid = charon->traps->find_reqid(charon->traps, config);
+			if (!this->reqid)
+			{
+				this->reqid = ref_get(&reqid);
+			}
 		}
 	}
 
