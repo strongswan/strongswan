@@ -10,10 +10,11 @@ strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
 	eap-identity eap-mschapv2 eap-md5 eap-gtc
 
 ifneq ($(strongswan_USE_BYOD),)
-strongswan_CHARON_PLUGINS += eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20
+strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20
 endif
 
-strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS)
+strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS) \
+	$(strongswan_BYOD_PLUGINS)
 
 include $(LOCAL_PATH)/strongswan/Android.common.mk
 

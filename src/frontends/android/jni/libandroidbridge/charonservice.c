@@ -507,7 +507,8 @@ static void set_options(char *logfile)
 /**
  * Initialize the charonservice object
  */
-static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
+static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
+							   jboolean byod)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
@@ -543,6 +544,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 									  countof(features), TRUE);
 
 #ifdef USE_BYOD
+	if (byod)
 	{
 		plugin_feature_t byod_features[] = {
 			PLUGIN_CALLBACK(imc_android_register, this->vpn_service),
@@ -588,11 +590,11 @@ static void segv_handler(int signal)
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, void,
-	jobject builder, jstring jlogfile)
+	jobject builder, jstring jlogfile, jboolean byod)
 {
 	struct sigaction action;
 	struct utsname utsname;
-	char *logfile;
+	char *logfile, *plugins;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -635,7 +637,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 
 	charon->load_loggers(charon, NULL, FALSE);
 
-	charonservice_init(env, this, builder);
+	charonservice_init(env, this, builder, byod);
 
 	if (uname(&utsname) != 0)
 	{
@@ -644,7 +646,18 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
 		  utsname.sysname, utsname.release, utsname.machine);
 
-	if (!charon->initialize(charon, PLUGINS))
+#ifdef PLUGINS_BYOD
+	if (byod)
+	{
+		plugins = PLUGINS " " PLUGINS_BYOD;
+	}
+	else
+#endif
+	{
+		plugins = PLUGINS;
+	}
+
+	if (!charon->initialize(charon, plugins))
 	{
 		libcharon_deinit();
 		charonservice_deinit(env);

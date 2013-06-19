@@ -41,6 +41,10 @@ endif
 LOCAL_CFLAGS := $(strongswan_CFLAGS) \
 	-DPLUGINS='"$(strongswan_CHARON_PLUGINS)"'
 
+ifneq ($(strongswan_USE_BYOD),)
+LOCAL_CFLAGS += -DPLUGINS_BYOD='"$(strongswan_BYOD_PLUGINS)"'
+endif
+
 LOCAL_MODULE := libandroidbridge
 
 LOCAL_MODULE_TAGS := optional
@@ -58,5 +62,3 @@ LOCAL_SHARED_LIBRARIES += libimcv libtncif libtnccs libpts
 endif
 
 include $(BUILD_SHARED_LIBRARY)
-
-

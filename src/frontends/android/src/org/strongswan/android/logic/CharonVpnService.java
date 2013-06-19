@@ -214,7 +214,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						initializeCharon(builder, mLogFile);
+						initializeCharon(builder, mLogFile, true);
 						Log.i(TAG, "charon started");
 
 						initiate(mCurrentProfile.getVpnType().getIdentifier(),
@@ -516,8 +516,9 @@ public class CharonVpnService extends VpnService implements Runnable
 	 *
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
+	 * @param boyd enable BYOD features
 	 */
-	public native void initializeCharon(BuilderAdapter builder, String logfile);
+	public native void initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
