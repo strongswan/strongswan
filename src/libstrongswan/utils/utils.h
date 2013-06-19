@@ -89,6 +89,14 @@ static inline bool strneq(const char *x, const char *y, size_t len)
 }
 
 /**
+ * Helper function that checks if a string starts with a given prefix
+ */
+static inline bool strpfx(const char *x, const char *prefix)
+{
+	return strneq(x, prefix, strlen(prefix));
+}
+
+/**
  * Helper function that compares two strings for equality ignoring case
  */
 static inline bool strcaseeq(const char *x, const char *y)
