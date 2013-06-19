@@ -1224,6 +1224,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			if(src_ts && dst_ts)
 			{
 				sa->sel = ts2selector(src_ts, dst_ts);
+				/* don't install proto/port on SA. This would break
+				 * potential secondary SAs for the same address using a
+				 * different prot/port. */
+				sa->sel.proto = 0;
+				sa->sel.dport = sa->sel.dport_mask = 0;
+				sa->sel.sport = sa->sel.sport_mask = 0;
 			}
 			break;
 		default:

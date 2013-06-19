@@ -21,6 +21,8 @@
 #include <threading/mutex.h>
 #include <utils/lexparser.h>
 
+#include <netdb.h>
+
 typedef struct private_stroke_config_t private_stroke_config_t;
 
 /**
@@ -883,6 +885,89 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 }
 
 /**
+ * Parse a protoport specifier
+ */
+static bool parse_protoport(char *token, u_int16_t *from_port,
+							u_int16_t *to_port, u_int8_t *protocol)
+{
+	char *sep, *port = "", *endptr;
+	struct protoent *proto;
+	struct servent *svc;
+	long int p;
+
+	sep = strchr(token, '/');
+	if (sep)
+	{	/* protocol/port */
+		*sep = '\0';
+		port = sep + 1;
+	}
+
+	if (streq(token, "%any"))
+	{
+		*protocol = 0;
+	}
+	else
+	{
+		proto = getprotobyname(token);
+		if (proto)
+		{
+			*protocol = proto->p_proto;
+		}
+		else
+		{
+			p = strtol(token, &endptr, 0);
+			if ((*token && *endptr) || p < 0 || p > 0xff)
+			{
+				return FALSE;
+			}
+			*protocol = (u_int8_t)p;
+		}
+	}
+	if (streq(port, "%any"))
+	{
+		*from_port = 0;
+		*to_port = 0xffff;
+	}
+	else if (streq(port, "%opaque"))
+	{
+		*from_port = 0xffff;
+		*to_port = 0;
+	}
+	else if (*port)
+	{
+		svc = getservbyname(port, NULL);
+		if (svc)
+		{
+			*from_port = *to_port = ntohs(svc->s_port);
+		}
+		else
+		{
+			p = strtol(port, &endptr, 0);
+			if (p < 0 || p > 0xffff)
+			{
+				return FALSE;
+			}
+			*from_port = p;
+			if (*endptr == '-')
+			{
+				port = endptr + 1;
+				p = strtol(port, &endptr, 0);
+				if (p < 0 || p > 0xffff)
+				{
+					return FALSE;
+				}
+			}
+			*to_port = p;
+			if (*endptr)
+			{
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+/**
  * build a traffic selector from a stroke_end
  */
 static void add_ts(private_stroke_config_t *this,
@@ -913,13 +998,38 @@ static void add_ts(private_stroke_config_t *this,
 		else
 		{
 			enumerator_t *enumerator;
-			char *subnet;
+			char *subnet, *pos;
+			u_int16_t from_port, to_port;
+			u_int8_t proto;
 
 			enumerator = enumerator_create_token(end->subnets, ",", " ");
 			while (enumerator->enumerate(enumerator, &subnet))
 			{
-				ts = traffic_selector_create_from_cidr(subnet, end->protocol,
-												end->from_port, end->to_port);
+				from_port = end->from_port;
+				to_port = end->to_port;
+				proto = end->protocol;
+
+				pos = strchr(subnet, ':');
+				if (pos)
+				{
+					*(pos++) = '\0';
+					if (!parse_protoport(pos, &from_port, &to_port, &proto))
+					{
+						DBG1(DBG_CFG, "invalid proto/port: %s, skipped subnet",
+							 pos);
+						continue;
+					}
+				}
+				if (streq(subnet, "%dynamic"))
+				{
+					ts = traffic_selector_create_dynamic(proto,
+														 from_port, to_port);
+				}
+				else
+				{
+					ts = traffic_selector_create_from_cidr(subnet, proto,
+														   from_port, to_port);
+				}
 				if (ts)
 				{
 					child_cfg->add_traffic_selector(child_cfg, local, ts);

@@ -731,29 +731,10 @@ different from the default additionally requires a socket implementation that
 listens on this port.
 .TP
 .BR leftprotoport " = <protocol>/<port>"
-restrict the traffic selector to a single protocol and/or port.
-Examples:
-.B leftprotoport=tcp/http
-or
-.B leftprotoport=6/80
-or
-.B leftprotoport=udp
-or
-.BR leftprotoport=/53 .
-Instead of omitting either value
-.B %any
-can be used to the same effect, e.g.
-.B leftprotoport=udp/%any
-or
-.BR leftprotoport=%any/53 .
-
-The port value can alternatively take the value
-.B %opaque
-for RFC 4301 OPAQUE selectors, or a numerical range in the form
-.BR 1024-65535 .
-None of the kernel backends currently supports opaque or port ranges and uses
-.B %any
-for policy installation instead.
+restrict the traffic selector to a single protocol and/or port. This option
+is now deprecated, protocol/port information can be defined for each subnet
+directly in
+.BR leftsubnet .
 .TP
 .BR leftsigkey " = <raw public key> | <path to public key>"
 the left participant's public key for public key signature authentication,
@@ -807,7 +788,7 @@ echoed back. Also supported are address pools expressed as
 or the use of an external IP address pool using %\fIpoolname\fR,
 where \fIpoolname\fR is the name of the IP address pool used for the lookup.
 .TP
-.BR leftsubnet " = <ip subnet>"
+.BR leftsubnet " = <ip subnet>[:<proto/port>][,...]"
 private subnet behind the left participant, expressed as
 \fInetwork\fB/\fInetmask\fR;
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
@@ -818,6 +799,35 @@ implementations, make sure to configure identical subnets in such
 configurations. IKEv2 supports multiple subnets separated by commas. IKEv1 only
 interprets the first subnet of such a definition, unless the Cisco Unity
 extension plugin is enabled.
+
+The part in each subnet following an optional colon specifies a protocol/port
+to restrict the selector for that subnet.
+
+Example:
+.BR leftsubnet=10.0.0.1:tcp/http,10.0.0.2:6/80,10.0.0.3:udp,10.0.0.0/16:/53 .
+Instead of omitting either value
+.B %any
+can be used to the same effect, e.g.
+.BR leftsubnet=10.0.0.3:udp/%any,10.0.0.0/16=%any/53 .
+
+The port value can alternatively take the value
+.B %opaque
+for RFC 4301 OPAQUE selectors, or a numerical range in the form
+.BR 1024-65535 .
+None of the kernel backends currently supports opaque or port ranges and uses
+.B %any
+for policy installation instead.
+
+Instead of specifying a subnet,
+.B %dynamic
+can be used to replace it with the IKE address, having the same effect
+as omitting
+.B leftsubnet
+completely. Using
+.B %dynamic
+can be used to define multiple dynamic selectors, each having a potentially
+different protocol/port definiton.
+
 .TP
 .BR leftupdown " = <path>"
 what ``updown'' script to run to adjust routing and/or firewalling
