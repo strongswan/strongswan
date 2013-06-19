@@ -214,7 +214,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						initializeCharon(builder, mLogFile, true);
+						initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().getEnableBYOD());
 						Log.i(TAG, "charon started");
 
 						initiate(mCurrentProfile.getVpnType().getIdentifier(),

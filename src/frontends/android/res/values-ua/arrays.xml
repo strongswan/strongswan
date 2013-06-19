@@ -18,5 +18,6 @@
         <item>IKEv2 EAP (Логін/Пароль)</item>
         <item>IKEv2 Сертифікати</item>
         <item>IKEv2 Сертифікати + EAP (Логін/Пароль)</item>
+        <item>IKEv2 EAP-TNC (Логін/Пароль)</item>
     </string-array>
 </resources>

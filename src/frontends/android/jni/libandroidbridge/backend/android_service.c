@@ -464,13 +464,18 @@ METHOD(listener_t, ike_reestablish, bool,
 }
 
 static void add_auth_cfg_eap(private_android_service_t *this,
-							 peer_cfg_t *peer_cfg)
+							 peer_cfg_t *peer_cfg, bool byod)
 {
 	identification_t *user;
 	auth_cfg_t *auth;
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+	if (byod)
+	{	/* use EAP-TTLS if BYOD is enabled */
+		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TTLS);
+	}
+
 	user = identification_create_from_string(this->username);
 	auth->add(auth, AUTH_RULE_IDENTITY, user);
 
@@ -549,9 +554,10 @@ static job_requeue_t initiate(private_android_service_t *this)
 		}
 	}
 	if (streq("ikev2-eap", this->type) ||
-		streq("ikev2-cert-eap", this->type))
+		streq("ikev2-cert-eap", this->type) ||
+		streq("ikev2-byod-eap", this->type))
 	{
-		add_auth_cfg_eap(this, peer_cfg);
+		add_auth_cfg_eap(this, peer_cfg, strpfx(this->type, "ikev2-byod"));
 	}
 
 	/* remote auth config */

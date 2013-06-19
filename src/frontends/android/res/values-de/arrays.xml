@@ -19,5 +19,6 @@
         <item>IKEv2 EAP (Benutzername/Passwort)</item>
         <item>IKEv2 Zertifikat</item>
         <item>IKEv2 Zertifikat + EAP (Benutzername/Passwort)</item>
+        <item>IKEv2 EAP-TNC (Benutzername/Passwort)</item>
     </string-array>
 </resources>
