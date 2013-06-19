@@ -382,9 +382,7 @@ METHOD(backtrace_t, log_, void,
 {
 #if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H)
 	size_t i;
-	char **strings;
-
-	strings = backtrace_symbols(this->frames, this->frame_count);
+	char **strings = NULL;
 
 	println(file, " dumping %d stack frame addresses:", this->frame_count);
 	for (i = 0; i < this->frame_count; i++)
@@ -424,10 +422,23 @@ METHOD(backtrace_t, log_, void,
 		else
 #endif /* HAVE_DLADDR */
 		{
-			println(file, "    %s", strings[i]);
+#ifdef HAVE_BACKTRACE
+			if (!strings)
+			{
+				strings = backtrace_symbols(this->frames, this->frame_count);
+			}
+			if (strings)
+			{
+				println(file, "    %s", strings[i]);
+			}
+			else
+#endif /* HAVE_BACKTRACE */
+			{
+				println(file, "    %p", this->frames[i]);
+			}
 		}
 	}
-	free (strings);
+	free(strings);
 #else /* !HAVE_BACKTRACE && !HAVE_LIBUNWIND_H */
 	println(file, "no support for backtrace()/libunwind");
 #endif /* HAVE_BACKTRACE/HAVE_LIBUNWIND_H */
