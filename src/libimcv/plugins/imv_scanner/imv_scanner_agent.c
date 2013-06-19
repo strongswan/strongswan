@@ -324,8 +324,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		TNC_IMV_Action_Recommendation rec;
 		u_int8_t protocol_family, protocol;
 		u_int16_t port;
-		bool closed_port_policy, blocked, first = TRUE;
-		char result_str[BUF_LEN], *pos;
+		bool closed_port_policy, blocked, first;
+		char result_str[BUF_LEN], *pos, *protocol_str;
 		size_t len, written;
 		linked_list_t *port_list;
 		enumerator_t *e1, *e2;
@@ -362,9 +362,11 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 			}
 			port_list = get_port_list(protocol_family, closed_port_policy,
 									  workitem->get_arg_str(workitem));
+			protocol_str = (protocol_family == IPPROTO_TCP) ? "tcp" : "udp";
 			result_str[0] = '\0';
 			pos = result_str;
 			len = BUF_LEN;
+			first = TRUE;
 
 			e1 = port_filter_attr->create_port_enumerator(port_filter_attr);
 			while (e1->enumerate(e1, &blocked, &protocol, &port))
@@ -391,18 +393,17 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				e2->destroy(e2);
 
 				passed = (closed_port_policy == found);
-				DBG2(DBG_IMV, "%s port %5u open: %s",
-					(protocol == IPPROTO_TCP) ? "tcp" : "udp", port,
-					 passed ? "ok" : "fatal");
+				DBG2(DBG_IMV, "%s port %5u open: %s", protocol_str, port,
+							   passed ? "ok" : "fatal");
 				if (!passed)
 				{
 					eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
-					snprintf(buf, sizeof(buf), "%s/%u",
-							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
+					snprintf(buf, sizeof(buf), "%s/%u", protocol_str, port);
 					scanner_state->add_violating_port(scanner_state, strdup(buf));
 					if (first)
 					{
-						written = snprintf(pos, len, "violating ports:");
+						written = snprintf(pos, len, "violating %s ports:",
+													  protocol_str);
 						pos += written;
 						len -= written;
 						first = FALSE;
@@ -424,7 +425,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 			if (first)
 			{
-				snprintf(pos, len, "no violating ports");
+				snprintf(pos, len, "no violating %s ports", protocol_str);
 			}
 			port_list->destroy(port_list);
 
