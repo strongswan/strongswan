@@ -656,8 +656,7 @@ static inline u_int64_t untoh64(void *network)
 /**
  * Special type to count references
  */
-typedef volatile u_int refcount_t;
-
+typedef u_int refcount_t;
 
 #ifdef HAVE_GCC_ATOMIC_OPERATIONS
 
