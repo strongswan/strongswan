@@ -81,9 +81,12 @@ static inline bool streq(const char *x, const char *y)
 }
 
 /**
- * Macro compares two strings for equality, length limited
+ * Helper function that compares two strings for equality, length limited
  */
-#define strneq(x,y,len) (strncmp(x, y, len) == 0)
+static inline bool strneq(const char *x, const char *y, size_t len)
+{
+	return strncmp(x, y, len) == 0;
+}
 
 /**
  * Helper function that compares two strings for equality ignoring case
@@ -94,9 +97,12 @@ static inline bool strcaseeq(const char *x, const char *y)
 }
 
 /**
- * Macro compares two strings for equality ignoring case, length limited
+ * Helper function that compares two strings for equality ignoring case, length limited
  */
-#define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
+static inline bool strncaseeq(const char *x, const char *y, size_t len)
+{
+	return strncasecmp(x, y, len) == 0;
+}
 
 /**
  * NULL-safe strdup variant
@@ -107,9 +113,12 @@ static inline char *strdupnull(const char *s)
 }
 
 /**
- * Macro compares two binary blobs for equality
+ * Helper function that compares two binary blobs for equality
  */
-#define memeq(x,y,len) (memcmp(x, y, len) == 0)
+static inline bool memeq(const void *x, const void *y, size_t len)
+{
+	return memcmp(x, y, len) == 0;
+}
 
 /**
  * Macro gives back larger of two values.
