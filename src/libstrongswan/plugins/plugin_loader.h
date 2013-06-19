@@ -93,6 +93,14 @@ struct plugin_loader_t {
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
 
 	/**
+	 * Check if the given feature is available and loaded.
+	 *
+	 * @param feature		feature to check
+	 * @return				TRUE if feature available
+	 */
+	bool (*has_feature)(plugin_loader_t *this, struct plugin_feature_t feature);
+
+	/**
 	 * Get a simple list the names of all loaded plugins.
 	 *
 	 * The function returns internal data, do not free.
