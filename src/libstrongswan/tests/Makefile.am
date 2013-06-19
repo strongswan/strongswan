@@ -18,4 +18,5 @@ test_runner_CFLAGS = \
 test_runner_LDFLAGS = @COVERAGE_LDFLAGS@
 test_runner_LDADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
+  $(PTHREADLIB) \
   @CHECK_LIBS@
