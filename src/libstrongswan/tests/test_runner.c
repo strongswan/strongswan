@@ -20,6 +20,34 @@
 #include <library.h>
 #include <plugins/plugin_feature.h>
 
+#include <dirent.h>
+
+/**
+ * Load plugins from builddir
+ */
+static bool load_plugins()
+{
+	enumerator_t *enumerator;
+	char *name, path[PATH_MAX], dir[64];
+	bool success = TRUE;
+
+	enumerator = enumerator_create_token(PLUGINS, " ", "");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		snprintf(dir, sizeof(dir), "%s", name);
+		translate(dir, "-", "_");
+		snprintf(path, sizeof(path), "%s/%s/.libs", PLUGINDIR, dir);
+		if (!lib->plugins->load(lib->plugins, path, name))
+		{
+			success = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return success;
+}
+
 int main()
 {
 	SRunner *sr;
@@ -39,7 +67,7 @@ int main()
 			lib->settings->get_str(lib->settings,
 				"libstrongswan.plugins.random.urandom", "/dev/urandom"));
 
-	if (!lib->plugins->load(lib->plugins, NULL, PLUGINS))
+	if (!load_plugins())
 	{
 		library_deinit();
 		return EXIT_FAILURE;
