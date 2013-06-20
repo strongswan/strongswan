@@ -37,7 +37,7 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	{ CMD_OPT_REMOTE_IDENTITY, "remote-identity", required_argument, "identity",
 	  "server identity to expect, defaults to host", {}},
 	{ CMD_OPT_CERT, "cert", required_argument, "path",
-	  "trusted certificate, for authentication or trust chain validation", {}},
+	  "certificate for authentication or trust chain validation", {}},
 	{ CMD_OPT_RSA, "rsa", required_argument, "path",
 	  "RSA private key to use for authentication", {}},
 	{ CMD_OPT_PKCS12, "p12", required_argument, "path",
@@ -51,7 +51,7 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	{ CMD_OPT_LOCAL_TS, "local-ts", required_argument, "subnet",
 	  "additional traffic selector to propose for our side", {}},
 	{ CMD_OPT_REMOTE_TS, "remote-ts", required_argument, "subnet",
-	  "remote traffic selector to propose for remote side", {}},
+	  "traffic selector to propose for remote side", {}},
 	{ CMD_OPT_PROFILE, "profile", required_argument, "name",
 	  "authentication profile to use, where name is one of:", {
 		"  ikev2-pub, ikev2-eap, ikev2-pub-eap",
