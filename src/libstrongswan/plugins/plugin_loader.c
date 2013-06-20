@@ -622,12 +622,12 @@ static bool load_dependencies(private_plugin_loader_t *this,
 			depend = plugin_feature_get_string(&provided->feature[i]);
 			if (soft)
 			{
-				DBG2(DBG_LIB, "%*sfeature %s in plugin '%s' has unmet soft "
+				DBG3(DBG_LIB, "%*sfeature %s in plugin '%s' has unmet soft "
 					 "dependency: %s", indent, "", provide, name, depend);
 			}
 			else
 			{
-				DBG1(DBG_LIB, "feature %s in plugin '%s' has unmet dependency: "
+				DBG2(DBG_LIB, "feature %s in plugin '%s' has unmet dependency: "
 					 "%s", provide, name, depend);
 			}
 			free(provide);
@@ -689,12 +689,12 @@ static void load_provided(private_plugin_loader_t *this,
 	provide = plugin_feature_get_string(provided->feature);
 	if (provided->loading)
 	{	/* prevent loop */
-		DBG2(DBG_LIB, "%*sloop detected while loading %s in plugin '%s'",
+		DBG3(DBG_LIB, "%*sloop detected while loading %s in plugin '%s'",
 			 indent, "", provide, name);
 		free(provide);
 		return;
 	}
-	DBG2(DBG_LIB, "%*sloading feature %s in plugin '%s'",
+	DBG3(DBG_LIB, "%*sloading feature %s in plugin '%s'",
 		 indent, "", provide, name);
 	free(provide);
 
