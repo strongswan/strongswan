@@ -594,6 +594,9 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 										 proto_ike2ip(protocol), this->reqid,
 										 &this->my_spi) == SUCCESS)
 	{
+		/* if we allocate a SPI, but then are unable to establish the SA, we
+		 * need to know the protocol family to delete the partial SA */
+		this->protocol = protocol;
 		return this->my_spi;
 	}
 	return 0;
@@ -1039,12 +1042,6 @@ METHOD(child_sa_t, destroy, void,
 	/* delete SAs in the kernel, if they are set up */
 	if (this->my_spi)
 	{
-		/* if CHILD was not established, use PROTO_ESP used during alloc_spi().
-		 * TODO: For AH support, we have to store protocol specific SPI.s */
-		if (this->protocol == PROTO_NONE)
-		{
-			this->protocol = PROTO_ESP;
-		}
 		hydra->kernel_interface->del_sa(hydra->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
 					proto_ike2ip(this->protocol), this->my_cpi,
