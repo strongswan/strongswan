@@ -204,15 +204,9 @@ static void segv_handler(int signal)
  */
 static void usage(FILE *out, char *msg, char *binary)
 {
-	char *pre, *post;
-	int i, line, padto = 0, spacing = 2;
-
-	for (i = 0; i < CMD_OPT_COUNT; i++)
-	{
-		padto = max(padto, strlen(cmd_options[i].name) +
-						   strlen(cmd_options[i].arg));
-	}
-	padto += spacing;
+	static const int padto = 18;
+	char cmd[64], *pre, *post;
+	int i, line, pad;
 
 	if (msg)
 	{
@@ -237,17 +231,22 @@ static void usage(FILE *out, char *msg, char *binary)
 				post = " ";
 				break;
 		}
-		fprintf(out, "  --%s%s%s%s %-*s%s\n",
-			cmd_options[i].name,
-			pre, cmd_options[i].arg, post,
-			padto - strlen(cmd_options[i].name) - strlen(cmd_options[i].arg), "",
-			cmd_options[i].desc);
+		snprintf(cmd, sizeof(cmd), "  --%s%s%s%s", cmd_options[i].name,
+				 pre, cmd_options[i].arg, post);
+		pad = padto - strlen(cmd);
+		if (pad >= 1)
+		{
+			fprintf(out, "%s%-*s%s\n", cmd, pad, "", cmd_options[i].desc);
+		}
+		else
+		{	/* write description to a separate line */
+			fprintf(out, "%s\n%-*s%s\n", cmd, padto, "", cmd_options[i].desc);
+		}
 		for (line = 0; line < countof(cmd_options[i].lines); line++)
 		{
 			if (cmd_options[i].lines[line])
 			{
-				fprintf(out, "%-*s        %s\n",
-						padto, "", cmd_options[i].lines[line]);
+				fprintf(out, "%-*s%s\n", padto, "", cmd_options[i].lines[line]);
 			}
 		}
 	}
