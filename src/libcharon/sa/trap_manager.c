@@ -102,6 +102,9 @@ METHOD(trap_manager_t, install, u_int32_t,
 	linked_list_t *my_ts, *other_ts, *list;
 	enumerator_t *enumerator;
 	status_t status;
+	linked_list_t *proposals;
+	proposal_t *proposal;
+	protocol_id_t proto = PROTO_ESP;
 
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
@@ -160,10 +163,15 @@ METHOD(trap_manager_t, install, u_int32_t,
 	other_ts = child->get_traffic_selectors(child, FALSE, NULL, list);
 	list->destroy_offset(list, offsetof(host_t, destroy));
 
-	/* while we don't know the finally negotiated protocol (ESP|AH), we
-	 * could iterate all proposals for a best guess (TODO). But as we
-	 * support ESP only for now, we set it here. */
-	child_sa->set_protocol(child_sa, PROTO_ESP);
+	/* We don't know the finally negotiated protocol (ESP|AH), we install
+	 * the SA with the protocol of the first proposal */
+	proposals = child->get_proposals(child, TRUE);
+	if (proposals->get_first(proposals, (void**)&proposal) == SUCCESS)
+	{
+		proto = proposal->get_protocol(proposal);
+	}
+	proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
+	child_sa->set_protocol(child_sa, proto);
 	child_sa->set_mode(child_sa, child->get_mode(child));
 	status = child_sa->add_policies(child_sa, my_ts, other_ts);
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
