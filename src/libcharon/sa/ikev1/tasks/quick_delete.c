@@ -177,7 +177,7 @@ METHOD(task_t, build_i, status_t,
 		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
 			 protocol_id_names, this->protocol, ntohl(this->spi));
 
-		delete_payload = delete_payload_create(DELETE_V1, PROTO_ESP);
+		delete_payload = delete_payload_create(DELETE_V1, this->protocol);
 		delete_payload->add_spi(delete_payload, this->spi);
 		message->add_payload(message, &delete_payload->payload_interface);
 
