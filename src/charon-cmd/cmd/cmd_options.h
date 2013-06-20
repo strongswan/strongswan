@@ -62,7 +62,7 @@ struct cmd_option_t {
 	/** short description to option */
 	const char *desc;
 	/** additional description lines */
-	const char *lines[8];
+	const char *lines[12];
 };
 
 /**

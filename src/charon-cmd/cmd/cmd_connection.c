@@ -38,19 +38,27 @@ enum profile_t {
 	PROF_V2_EAP,
 	PROF_V2_PUB_EAP,
 	PROF_V1_PUB,
+	PROF_V1_PUB_AM,
 	PROF_V1_XAUTH,
+	PROF_V1_XAUTH_AM,
 	PROF_V1_XAUTH_PSK,
+	PROF_V1_XAUTH_PSK_AM,
 	PROF_V1_HYBRID,
+	PROF_V1_HYBRID_AM,
 };
 
-ENUM(profile_names, PROF_V2_PUB, PROF_V1_HYBRID,
+ENUM(profile_names, PROF_V2_PUB, PROF_V1_HYBRID_AM,
 	"ikev2-pub",
 	"ikev2-eap",
 	"ikev2-pub-eap",
 	"ikev1-pub",
+	"ikev1-pub-am",
 	"ikev1-xauth",
+	"ikev1-xauth-am",
 	"ikev1-xauth-psk",
+	"ikev1-xauth-psk-am",
 	"ikev1-hybrid",
+	"ikev1-hybrid-am",
 );
 
 /**
@@ -121,6 +129,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	peer_cfg_t *peer_cfg;
 	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
 	ike_version_t version = IKE_ANY;
+	bool aggressive = FALSE;
 
 	switch (this->profile)
 	{
@@ -130,6 +139,12 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V2_PUB_EAP:
 			version = IKEV2;
 			break;
+		case PROF_V1_PUB_AM:
+		case PROF_V1_XAUTH_AM:
+		case PROF_V1_XAUTH_PSK_AM:
+		case PROF_V1_HYBRID_AM:
+			aggressive = TRUE;
+			/* FALL */
 		case PROF_V1_PUB:
 		case PROF_V1_XAUTH:
 		case PROF_V1_XAUTH_PSK:
@@ -150,7 +165,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
-					TRUE, FALSE, /* mobike, aggressive */
+					TRUE, aggressive, /* mobike, aggressive */
 					30, 0, /* DPD delay, timeout */
 					FALSE, NULL, NULL); /* mediation */
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
@@ -211,6 +226,8 @@ static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 		case PROF_V2_PUB_EAP:
 		case PROF_V1_PUB:
 		case PROF_V1_XAUTH:
+		case PROF_V1_PUB_AM:
+		case PROF_V1_XAUTH_AM:
 			if (!this->key_seen)
 			{
 				DBG1(DBG_CFG, "missing private key for profile %N",
@@ -238,20 +255,24 @@ static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_ANY);
 			break;
 		case PROF_V1_PUB:
+		case PROF_V1_PUB_AM:
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
 			break;
 		case PROF_V1_XAUTH:
+		case PROF_V1_XAUTH_AM:
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
 			break;
 		case PROF_V1_XAUTH_PSK:
+		case PROF_V1_XAUTH_PSK_AM:
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PSK);
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PSK);
 			break;
 		case PROF_V1_HYBRID:
+		case PROF_V1_HYBRID_AM:
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
 			break;
