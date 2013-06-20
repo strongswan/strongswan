@@ -63,6 +63,18 @@ struct private_plugin_loader_t {
 	 * List of names of loaded plugins
 	 */
 	char *loaded_plugins;
+
+	/**
+	 * Statistics collected while loading features
+	 */
+	struct {
+		/** Number of features that failed to load */
+		int failed;
+		/** Number of features that failed because of unmet dependencies */
+		int depends;
+		/** Number of features in critical plugins that failed to load */
+		int critical;
+	} stats;
 };
 
 /**
@@ -656,41 +668,40 @@ static void load_feature(private_plugin_loader_t *this,
 {
 	if (load_dependencies(this, provided, level))
 	{
+		char *name, *provide;
+
 		if (plugin_feature_load(provided->entry->plugin, provided->feature,
 								provided->reg))
 		{
 			provided->loaded = TRUE;
 			/* insert first so we can unload the features in reverse order */
 			this->loaded->insert_first(this->loaded, provided);
+			return;
+		}
+
+		name = provided->entry->plugin->get_name(provided->entry->plugin);
+		provide = plugin_feature_get_string(&provided->feature[0]);
+		if (provided->entry->critical)
+		{
+			DBG1(DBG_LIB, "feature %s in critical plugin '%s' failed to load",
+				 provide, name);
 		}
 		else
 		{
-			char *name, *provide;
-
-			name = provided->entry->plugin->get_name(provided->entry->plugin);
-			provide = plugin_feature_get_string(&provided->feature[0]);
-			if (provided->entry->critical)
-			{
-				DBG1(DBG_LIB, "feature %s in critical plugin '%s' failed to "
-					 "load", provide, name);
-				this->stats.critical++;
-			}
-			else
-			{
-				DBG2(DBG_LIB, "feature %s in plugin '%s' failed to load",
-					 provide, name);
-			}
-			free(provide);
-
-			provided->failed = TRUE;
+			DBG2(DBG_LIB, "feature %s in plugin '%s' failed to load",
+				 provide, name);
 		}
+		free(provide);
 	}
 	else
 	{	/* TODO: we could check the current level and set a different flag when
 		 * being loaded as dependency. If there are loops there is a chance the
 		 * feature can be loaded later when loading the feature directly. */
-		provided->failed = TRUE;
+		this->stats.depends++;
 	}
+	provided->failed = TRUE;
+	this->stats.critical += provided->entry->critical ? 1 : 0;
+	this->stats.failed++;
 }
 
 /**
@@ -853,54 +864,6 @@ static void unregister_features(private_plugin_loader_t *this,
 }
 
 /**
- * Check that we have all features loaded for critical plugins
- */
-static bool missing_critical_features(private_plugin_loader_t *this)
-{
-	enumerator_t *enumerator, *features;
-	plugin_entry_t *entry;
-	bool critical_failed = FALSE;
-
-	enumerator = this->plugins->create_enumerator(this->plugins);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		provided_feature_t *provided;
-		char *name, *provide;
-		int failed = 0;
-
-		if (!entry->plugin->get_features ||
-			!entry->critical)
-		{	/* feature interface not supported, or not critical */
-			continue;
-		}
-
-		name = entry->plugin->get_name(entry->plugin);
-		features = entry->features->create_enumerator(entry->features);
-		while (features->enumerate(features, &provided))
-		{
-			if (!provided->loaded)
-			{
-				provide = plugin_feature_get_string(provided->feature);
-				DBG2(DBG_LIB, "  failed to load %s in critical plugin '%s'",
-					 provide, name);
-				free(provide);
-				failed++;
-			}
-		}
-		features->destroy(features);
-		if (failed)
-		{
-			DBG1(DBG_LIB, "failed to load %d feature%s in critical plugin '%s'",
-				 failed, failed > 1 ? "s" : "", name);
-			critical_failed = TRUE;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	return critical_failed;
-}
-
-/**
  * Remove plugins we were not able to load any plugin features from.
  */
 static void purge_plugins(private_plugin_loader_t *this)
@@ -1005,8 +968,15 @@ METHOD(plugin_loader_t, load_plugins, bool,
 	if (!critical_failed)
 	{
 		load_features(this);
-		/* check for unloaded features provided by critical plugins */
-		critical_failed = missing_critical_features(this);
+		/* evaluate stats collected while loading the features */
+		critical_failed = this->stats.critical > 0;
+		if (this->stats.failed)
+		{
+			DBG1(DBG_LIB, "failed to load %d plugin feature%s (%d due to unmet "
+				 "dependencies, %d critical)", this->stats.failed,
+				 this->stats.failed == 1 ? "" : "s", this->stats.depends,
+				 this->stats.critical);
+		}
 		/* unload plugins that we were not able to load any features for */
 		purge_plugins(this);
 	}
@@ -1057,6 +1027,7 @@ METHOD(plugin_loader_t, unload, void,
 	}
 	free(this->loaded_plugins);
 	this->loaded_plugins = NULL;
+	memset(&this->stats, 0, sizeof(this->stats));
 }
 
 /**
