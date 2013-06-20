@@ -625,6 +625,11 @@ static bool load_dependencies(private_plugin_loader_t *this,
 				DBG3(DBG_LIB, "%*sfeature %s in plugin '%s' has unmet soft "
 					 "dependency: %s", indent, "", provide, name, depend);
 			}
+			else if (provided->entry->critical)
+			{
+				DBG1(DBG_LIB, "feature %s in critical plugin '%s' has unmet "
+					 "dependency: %s", provide, name, depend);
+			}
 			else
 			{
 				DBG2(DBG_LIB, "feature %s in plugin '%s' has unmet dependency: "
@@ -664,8 +669,17 @@ static void load_feature(private_plugin_loader_t *this,
 
 			name = provided->entry->plugin->get_name(provided->entry->plugin);
 			provide = plugin_feature_get_string(&provided->feature[0]);
-			DBG2(DBG_LIB, "feature %s in plugin '%s' failed to load",
-				 provide, name);
+			if (provided->entry->critical)
+			{
+				DBG1(DBG_LIB, "feature %s in critical plugin '%s' failed to "
+					 "load", provide, name);
+				this->stats.critical++;
+			}
+			else
+			{
+				DBG2(DBG_LIB, "feature %s in plugin '%s' failed to load",
+					 provide, name);
+			}
 			free(provide);
 
 			provided->failed = TRUE;
