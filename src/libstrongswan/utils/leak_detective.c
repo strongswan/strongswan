@@ -483,6 +483,11 @@ char *whitelist[] = {
 	"gcry_check_version",
 	"gcry_randomize",
 	"gcry_create_nonce",
+	/* OpenSSL: These are needed for unit-tests only, the openssl plugin
+	 * does properly clean up any memory during destroy(). */
+	"ECDSA_do_sign_ex",
+	"ECDSA_verify",
+	"RSA_new_method",
 	/* NSPR */
 	"PR_CallOnce",
 	/* libapr */
