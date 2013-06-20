@@ -186,6 +186,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.xauth_identity);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
+	pop_string(msg, &msg->add_conn.algorithms.ah);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
 	DBG2(DBG_CFG, "  eap_identity=%s", msg->add_conn.eap_identity);
@@ -193,6 +194,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  xauth_identity=%s", msg->add_conn.xauth_identity);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
+	DBG2(DBG_CFG, "  ah=%s", msg->add_conn.algorithms.ah);
 	DBG2(DBG_CFG, "  dpddelay=%d", msg->add_conn.dpd.delay);
 	DBG2(DBG_CFG, "  dpdtimeout=%d", msg->add_conn.dpd.timeout);
 	DBG2(DBG_CFG, "  dpdaction=%d", msg->add_conn.dpd.action);

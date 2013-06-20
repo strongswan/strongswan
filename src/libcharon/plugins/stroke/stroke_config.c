@@ -131,19 +131,14 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
  * parse a proposal string, either into ike_cfg or child_cfg
  */
 static void add_proposals(private_stroke_config_t *this, char *string,
-						  ike_cfg_t *ike_cfg, child_cfg_t *child_cfg)
+				ike_cfg_t *ike_cfg, child_cfg_t *child_cfg, protocol_id_t proto)
 {
 	if (string)
 	{
 		char *single;
 		char *strict;
 		proposal_t *proposal;
-		protocol_id_t proto = PROTO_ESP;
 
-		if (ike_cfg)
-		{
-			proto = PROTO_IKE;
-		}
 		strict = string + strlen(string) - 1;
 		if (*strict == '!')
 		{
@@ -178,11 +173,11 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 	}
 	if (ike_cfg)
 	{
-		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(proto));
 	}
 	else
 	{
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+		child_cfg->add_proposal(child_cfg, proposal_create_default(proto));
 	}
 }
 
@@ -270,7 +265,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 							 msg->add_conn.fragmentation,
 							 msg->add_conn.ikedscp);
 
-	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
+	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL, PROTO_IKE);
 	return ike_cfg;
 }
 
@@ -1159,8 +1154,16 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
 
-	add_proposals(this, msg->add_conn.algorithms.esp, NULL, child_cfg);
-
+	if (msg->add_conn.algorithms.ah)
+	{
+		add_proposals(this, msg->add_conn.algorithms.ah,
+					  NULL, child_cfg, PROTO_AH);
+	}
+	else
+	{
+		add_proposals(this, msg->add_conn.algorithms.esp,
+					  NULL, child_cfg, PROTO_ESP);
+	}
 	return child_cfg;
 }
 
