@@ -57,6 +57,7 @@ rekey,             KW_REKEY
 reauth,            KW_REAUTH
 ike,               KW_IKE
 esp,               KW_ESP
+ah,                KW_AH
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION

@@ -171,6 +171,7 @@ struct starter_conn {
 		unsigned long   id;
 
 		char            *esp;
+		char            *ah;
 		char            *ike;
 
 		time_t          dpd_delay;

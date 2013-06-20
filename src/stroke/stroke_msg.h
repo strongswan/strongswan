@@ -275,6 +275,7 @@ struct stroke_msg_t {
 			struct {
 				char *ike;
 				char *esp;
+				char *ah;
 			} algorithms;
 			struct {
 				int reauth;

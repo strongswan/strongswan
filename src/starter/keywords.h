@@ -57,6 +57,7 @@ typedef enum {
 	KW_REAUTH,
 	KW_IKE,
 	KW_ESP,
+	KW_AH,
 	KW_DPDDELAY,
 	KW_DPDTIMEOUT,
 	KW_DPDACTION,
