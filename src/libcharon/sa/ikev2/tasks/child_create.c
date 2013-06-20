@@ -1284,13 +1284,13 @@ METHOD(task_t, build_i_delete, status_t,
 	private_child_create_t *this, message_t *message)
 {
 	message->set_exchange_type(message, INFORMATIONAL);
-	if (this->child_sa)
+	if (this->child_sa && this->proposal)
 	{
 		protocol_id_t proto;
 		delete_payload_t *del;
 		u_int32_t spi;
 
-		proto = this->child_sa->get_protocol(this->child_sa);
+		proto = this->proposal->get_protocol(this->proposal);
 		spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		del = delete_payload_create(DELETE, proto);
 		del->add_spi(del, spi);
