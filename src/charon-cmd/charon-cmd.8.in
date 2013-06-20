@@ -77,13 +77,13 @@ Traffic selector to propose for remote side, defaults to 0.0.0.0/0.
 Authentication profile to use, the list of supported profiles can be found
 in the
 .B Authentication Profiles
-section below. Defaults to
+sections below. Defaults to
 .B ikev2\-pub
 if a private key was supplied, and to
 .B ikev2\-eap
 otherwise.
 .PP
-.SS "Authentication Profiles"
+.SS "IKEv2 Authentication Profiles"
 .TP
 .B "ikev2\-pub"
 IKEv2 with public key client and server authentication
@@ -94,19 +94,23 @@ IKEv2 with EAP client authentication and public key server authentication
 .B "ikev2\-pub\-eap"
 IKEv2 with public key and EAP client authentication (RFC 4739) and public key
 server authentication
+.PP
+.SS "IKEv1 Authentication Profiles"
+The following authentication profiles use either Main Mode or Aggressive Mode,
+the latter is denoted with a \fB\-am\fR suffix.
 .TP
-.B "ikev1\-pub"
+.BR "ikev1\-pub" ", " "ikev1\-pub\-am"
 IKEv1 with public key client and server authentication
 .TP
-.B "ikev1\-xauth"
+.BR "ikev1\-xauth" ", " "ikev1\-xauth\-am"
 IKEv1 with public key client and server authentication, followed by client XAuth
 authentication
 .TP
-.B "ikev1\-xauth\-psk"
+.BR "ikev1\-xauth\-psk" ", " "ikev1\-xauth\-psk\-am"
 IKEv1 with pre-shared key (PSK) client and server authentication, followed by
 client XAuth authentication (INSECURE!)
 .TP
-.B "ikev1\-hybrid"
+.BR "ikev1\-hybrid" ", " "ikev1\-hybrid\-am"
 IKEv1 with public key server authentication only, followed by client XAuth
 authentication
 .PP
