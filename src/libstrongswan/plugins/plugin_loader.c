@@ -660,6 +660,14 @@ static void load_feature(private_plugin_loader_t *this,
 		}
 		else
 		{
+			char *name, *provide;
+
+			name = provided->entry->plugin->get_name(provided->entry->plugin);
+			provide = plugin_feature_get_string(&provided->feature[0]);
+			DBG2(DBG_LIB, "feature %s in plugin '%s' failed to load",
+				 provide, name);
+			free(provide);
+
 			provided->failed = TRUE;
 		}
 	}
