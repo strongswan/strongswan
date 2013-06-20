@@ -429,30 +429,33 @@ static void check_proposal(private_proposal_t *this)
 		e->destroy(e);
 	}
 
-	e = create_enumerator(this, ENCRYPTION_ALGORITHM);
-	while (e->enumerate(e, &alg, &ks))
+	if (this->protocol == PROTO_ESP)
 	{
-		if (!encryption_algorithm_is_aead(alg))
+		e = create_enumerator(this, ENCRYPTION_ALGORITHM);
+		while (e->enumerate(e, &alg, &ks))
 		{
-			all_aead = FALSE;
-			break;
-		}
-	}
-	e->destroy(e);
-
-	if (all_aead)
-	{
-		/* if all encryption algorithms in the proposal are AEADs,
-		 * we MUST NOT propose any integrity algorithms */
-		e = array_create_enumerator(this->transforms);
-		while (e->enumerate(e, &entry))
-		{
-			if (entry->type == INTEGRITY_ALGORITHM)
+			if (!encryption_algorithm_is_aead(alg))
 			{
-				array_remove_at(this->transforms, e);
+				all_aead = FALSE;
+				break;
 			}
 		}
 		e->destroy(e);
+
+		if (all_aead)
+		{
+			/* if all encryption algorithms in the proposal are AEADs,
+			 * we MUST NOT propose any integrity algorithms */
+			e = array_create_enumerator(this->transforms);
+			while (e->enumerate(e, &entry))
+			{
+				if (entry->type == INTEGRITY_ALGORITHM)
+				{
+					array_remove_at(this->transforms, e);
+				}
+			}
+			e->destroy(e);
+		}
 	}
 
 	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
