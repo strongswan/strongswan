@@ -244,9 +244,23 @@ static bool allocate_spi(private_child_create_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
+	protocol_id_t proto = PROTO_ESP;
 
-	/* TODO: allocate additional SPI for AH if we have such proposals */
-	this->my_spi = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
+	if (this->initiator)
+	{
+		/* we just get a SPI for the first protocol. TODO: If we ever support
+		 * proposal lists with mixed protocols, we'd need multiple SPIs */
+		if (this->proposals->get_first(this->proposals,
+									   (void**)&proposal) == SUCCESS)
+		{
+			proto = proposal->get_protocol(proposal);
+		}
+	}
+	else
+	{
+		proto = this->proposal->get_protocol(this->proposal);
+	}
+	this->my_spi = this->child_sa->alloc_spi(this->child_sa, proto);
 	if (this->my_spi)
 	{
 		if (this->initiator)
