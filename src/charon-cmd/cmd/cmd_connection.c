@@ -115,9 +115,9 @@ struct private_cmd_connection_t {
 /**
  * Shut down application
  */
-static void terminate(private_cmd_connection_t *this)
+static void terminate(pid_t pid)
 {
-	kill(this->pid, SIGUSR1);
+	kill(pid, SIGUSR1);
 }
 
 /**
@@ -329,17 +329,18 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
+	pid_t pid = this->pid;
 
 	if (!this->host)
 	{
 		DBG1(DBG_CFG, "unable to initiate, missing --host option");
-		terminate(this);
+		terminate(pid);
 		return JOB_REQUEUE_NONE;
 	}
 	if (!this->identity)
 	{
 		DBG1(DBG_CFG, "unable to initiate, missing --identity option");
-		terminate(this);
+		terminate(pid);
 		return JOB_REQUEUE_NONE;
 	}
 
@@ -348,7 +349,7 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 	if (!add_auth_cfgs(this, peer_cfg))
 	{
 		peer_cfg->destroy(peer_cfg);
-		terminate(this);
+		terminate(pid);
 		return JOB_REQUEUE_NONE;
 	}
 
@@ -358,7 +359,7 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 controller_cb_empty, NULL, 0) != SUCCESS)
 	{
-		terminate(this);
+		terminate(pid);
 	}
 	return JOB_REQUEUE_NONE;
 }
