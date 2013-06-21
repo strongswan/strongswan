@@ -341,10 +341,10 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 {
 	int current_proposal = -1, unsupported_proposal = -1;
 	enumerator_t *enumerator;
-	proposal_substructure_t *substruct, *esp = NULL, *ipcomp = NULL;
+	proposal_substructure_t *substruct, *espah = NULL, *ipcomp = NULL;
 	linked_list_t *list;
 
-	/* we currently only support the combination ESP+IPComp, find the first */
+	/* we currently only support the combination ESP|AH+IPComp, find the first */
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &substruct))
 	{
@@ -355,25 +355,27 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 		{
 			continue;
 		}
-		if (protocol_id != PROTO_ESP && protocol_id != PROTO_IPCOMP)
+		if (protocol_id != PROTO_ESP && protocol_id != PROTO_AH &&
+			protocol_id != PROTO_IPCOMP)
 		{	/* unsupported combination */
-			esp = ipcomp = NULL;
+			espah = ipcomp = NULL;
 			unsupported_proposal = current_proposal;
 			continue;
 		}
 		if (proposal_number != current_proposal)
 		{	/* start of a new proposal */
-			if (esp && ipcomp)
+			if (espah && ipcomp)
 			{	/* previous proposal is valid */
 				break;
 			}
-			esp = ipcomp = NULL;
+			espah = ipcomp = NULL;
 			current_proposal = proposal_number;
 		}
 		switch (protocol_id)
 		{
 			case PROTO_ESP:
-				esp = substruct;
+			case PROTO_AH:
+				espah = substruct;
 				break;
 			case PROTO_IPCOMP:
 				ipcomp = substruct;
@@ -383,9 +385,9 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 	enumerator->destroy(enumerator);
 
 	list = linked_list_create();
-	if (esp && ipcomp && ipcomp->get_cpi(ipcomp, cpi))
+	if (espah && ipcomp && ipcomp->get_cpi(ipcomp, cpi))
 	{
-		esp->get_proposals(esp, list);
+		espah->get_proposals(espah, list);
 	}
 	return list;
 }
