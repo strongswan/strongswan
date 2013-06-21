@@ -688,9 +688,9 @@ INSERT INTO policies (			/*  8 */
 );
 
 INSERT INTO policies (			/*  9 */
-  type, name, rec_fail, rec_noresult
+  type, name, argument, rec_fail, rec_noresult
 ) VALUES (
-  13, 'No Open UDP Ports', 1, 1
+  13, 'Open UDP Ports', '500 4500 10000-65000', 1, 1
 );
 
 INSERT INTO policies (			/* 10 */
@@ -723,72 +723,72 @@ INSERT INTO policies (			/* 13 */
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  1, 7, 86400
+  1, 1, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  2, 5, 0
+  2, 3, 0
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  3, 6, 0
+  3, 2, 0
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  5, 4, 86400
+  5, 7, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  6, 4, 86400
+  6, 7, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  7, 6, 86400
+  7, 2, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  8, 7, 60
+  8, 1, 60
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  9, 7, 60
+  9, 1, 60
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  10, 6, 60
+  10, 2, 60
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  11, 6, 86400
+  11, 2, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  12, 2, 86400
+  12, 5, 86400
 );
 
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  13, 2, 86400
+  13, 5, 86400
 );
 
