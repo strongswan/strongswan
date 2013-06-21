@@ -249,9 +249,10 @@ static void usage(FILE *out, char *msg, char *binary)
 }
 
 /**
- * Handle command line options
+ * Handle command line options, if simple is TRUE only arguments like --help
+ * and --version are handled.
  */
-static void handle_arguments(int argc, char *argv[])
+static void handle_arguments(int argc, char *argv[], bool simple)
 {
 	struct option long_opts[CMD_OPT_COUNT + 1] = {};
 	int i, opt;
@@ -262,6 +263,8 @@ static void handle_arguments(int argc, char *argv[])
 		long_opts[i].val = cmd_options[i].id;
 		long_opts[i].has_arg = cmd_options[i].has_arg;
 	}
+	/* reset option parser */
+	optind = 1;
 	while (TRUE)
 	{
 		bool handled = FALSE;
@@ -278,6 +281,10 @@ static void handle_arguments(int argc, char *argv[])
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
 			default:
+				if (simple)
+				{
+					continue;
+				}
 				handled |= conn->handle(conn, opt, optarg);
 				handled |= creds->handle(creds, opt, optarg);
 				if (handled)
@@ -302,6 +309,9 @@ int main(int argc, char *argv[])
 	struct sigaction action;
 	struct utsname utsname;
 	int group;
+
+	/* handle simple arguments */
+	handle_arguments(argc, argv, TRUE);
 
 	dbg = dbg_stderr;
 	atexit(library_deinit);
@@ -353,7 +363,8 @@ int main(int argc, char *argv[])
 	creds = cmd_creds_create();
 	atexit(cleanup_creds);
 
-	handle_arguments(argc, argv);
+	/* handle all arguments */
+	handle_arguments(argc, argv, FALSE);
 
 	if (uname(&utsname) != 0)
 	{
