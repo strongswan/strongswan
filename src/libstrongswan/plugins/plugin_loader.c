@@ -387,6 +387,35 @@ METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 							(void*)plugin_filter, NULL, NULL);
 }
 
+METHOD(plugin_loader_t, has_feature, bool,
+	private_plugin_loader_t *this, plugin_feature_t feature)
+{
+	enumerator_t *plugins, *features;
+	plugin_t *plugin;
+	linked_list_t *list;
+	plugin_feature_t *current;
+	bool found = FALSE;
+
+	plugins = create_plugin_enumerator(this);
+	while (plugins->enumerate(plugins, &plugin, &list))
+	{
+		features = list->create_enumerator(list);
+		while (features->enumerate(features, &current))
+		{
+			if (plugin_feature_matches(&feature, current))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		features->destroy(features);
+		list->destroy(list);
+	}
+	plugins->destroy(plugins);
+
+	return found;
+}
+
 /**
  * Create a list of the names of all loaded plugins
  */
@@ -1085,6 +1114,7 @@ plugin_loader_t *plugin_loader_create()
 			.reload = _reload,
 			.unload = _unload,
 			.create_plugin_enumerator = _create_plugin_enumerator,
+			.has_feature = _has_feature,
 			.loaded_plugins = _loaded_plugins,
 			.destroy = _destroy,
 		},

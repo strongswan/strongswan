@@ -18,6 +18,8 @@
 #include <library.h>
 #include <utils/utils.h>
 
+#include <time.h>
+
 /*******************************************************************************
  * object storage on lib
  */
@@ -119,7 +121,7 @@ START_TEST(test_htoun)
 	chunk_t net64, expected;
 	u_int16_t host16 = 513;
 	u_int32_t net16 = 0, host32 = 67305985;
-	u_int64_t net32 = 0, host64 = 578437695752307201;
+	u_int64_t net32 = 0, host64 = 578437695752307201ULL;
 
 	net64 = chunk_alloca(16);
 	memset(net64.ptr, 0, net64.len);
@@ -159,7 +161,7 @@ START_TEST(test_untoh)
 	net = chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x08, 0x07, 0x06, 0x05,
 						   0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00);
 	host64 = untoh64(net.ptr + 4);
-	ck_assert(host64 == 578437695752307201);
+	ck_assert(host64 == 578437695752307201ULL);
 }
 END_TEST
 
@@ -390,6 +392,10 @@ Suite *utils_suite_create()
 {
 	Suite *s;
 	TCase *tc;
+
+	/* force a timezone to match non-UTC conversions */
+	setenv("TZ", "Europe/Zurich", 1);
+	tzset();
 
 	s = suite_create("utils");
 

@@ -18,6 +18,35 @@
 #include "test_runner.h"
 
 #include <library.h>
+#include <plugins/plugin_feature.h>
+
+#include <dirent.h>
+
+/**
+ * Load plugins from builddir
+ */
+static bool load_plugins()
+{
+	enumerator_t *enumerator;
+	char *name, path[PATH_MAX], dir[64];
+	bool success = TRUE;
+
+	enumerator = enumerator_create_token(PLUGINS, " ", "");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		snprintf(dir, sizeof(dir), "%s", name);
+		translate(dir, "-", "_");
+		snprintf(path, sizeof(path), "%s/%s/.libs", PLUGINDIR, dir);
+		if (!lib->plugins->load(lib->plugins, path, name))
+		{
+			success = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return success;
+}
 
 int main()
 {
@@ -32,6 +61,18 @@ int main()
 
 	library_init(NULL);
 
+	/* use non-blocking RNG to generate keys fast */
+	lib->settings->set_default_str(lib->settings,
+			"libstrongswan.plugins.random.random",
+			lib->settings->get_str(lib->settings,
+				"libstrongswan.plugins.random.urandom", "/dev/urandom"));
+
+	if (!load_plugins())
+	{
+		library_deinit();
+		return EXIT_FAILURE;
+	}
+
 	sr = srunner_create(NULL);
 	srunner_add_suite(sr, bio_reader_suite_create());
 	srunner_add_suite(sr, bio_writer_suite_create());
@@ -44,6 +85,17 @@ int main()
 	srunner_add_suite(sr, identification_suite_create());
 	srunner_add_suite(sr, threading_suite_create());
 	srunner_add_suite(sr, utils_suite_create());
+	srunner_add_suite(sr, vectors_suite_create());
+	if (lib->plugins->has_feature(lib->plugins,
+								  PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_RSA)))
+	{
+		srunner_add_suite(sr, rsa_suite_create());
+	}
+	if (lib->plugins->has_feature(lib->plugins,
+								  PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_ECDSA)))
+	{
+		srunner_add_suite(sr, ecdsa_suite_create());
+	}
 
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
