@@ -968,14 +968,11 @@ METHOD(plugin_loader_t, load_plugins, bool,
 	if (!critical_failed)
 	{
 		load_features(this);
-		/* evaluate stats collected while loading the features */
-		critical_failed = this->stats.critical > 0;
-		if (this->stats.failed)
+		if (this->stats.critical > 0)
 		{
-			DBG1(DBG_LIB, "failed to load %d plugin feature%s (%d due to unmet "
-				 "dependencies, %d critical)", this->stats.failed,
-				 this->stats.failed == 1 ? "" : "s", this->stats.depends,
-				 this->stats.critical);
+			critical_failed = TRUE;
+			DBG1(DBG_LIB, "failed to load %d critical plugin feature%s",
+				 this->stats.critical, this->stats.critical == 1 ? "" : "s");
 		}
 		/* unload plugins that we were not able to load any features for */
 		purge_plugins(this);
@@ -1088,6 +1085,13 @@ METHOD(plugin_loader_t, status, void,
 	if (this->loaded_plugins)
 	{
 		dbg(DBG_LIB, level, "loaded plugins: %s", this->loaded_plugins);
+
+		if (this->stats.failed)
+		{
+			dbg(DBG_LIB, level, "unable to load %d plugin feature%s (%d due to "
+				"unmet dependencies)", this->stats.failed,
+				this->stats.failed == 1 ? "" : "s", this->stats.depends);
+		}
 	}
 }
 
