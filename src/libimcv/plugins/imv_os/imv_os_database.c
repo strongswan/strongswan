@@ -44,10 +44,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	enumerator_t *package_enumerator)
 {
 	char *product, *package, *release, *cur_release;
-	u_char *pos;
-	chunk_t os_name, os_version, name, version;
+	chunk_t name, version;
 	os_type_t os_type;
-	size_t os_version_len;
 	os_package_state_t package_state;
 	int pid, gid;
 	int count = 0, count_ok = 0, count_no_match = 0, count_blacklist = 0;
@@ -55,21 +53,12 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	status_t status = SUCCESS;
 	bool found, match;
 
-	state->get_info(state, &os_type, &os_name, &os_version);
+	product = state->get_info(state, &os_type, NULL, NULL);
 
 	if (os_type == OS_TYPE_ANDROID)
 	{
 		/*no package dependency on Android version */
-		product = strdup(enum_to_name(os_type_names, os_type));
-	}
-	else
-	{
-		/* remove appended platform info */
-		pos = memchr(os_version.ptr, ' ', os_version.len);
-		os_version_len = pos ? (pos - os_version.ptr) : os_version.len;
-		product = malloc(os_name.len + 1 + os_version_len + 1);
-		sprintf(product, "%.*s %.*s", (int)os_name.len, os_name.ptr,
-									  (int)os_version_len, os_version.ptr);
+		product = enum_to_name(os_type_names, os_type);
 	}
 	DBG1(DBG_IMV, "processing installed '%s' packages", product);
 
@@ -79,13 +68,10 @@ METHOD(imv_os_database_t, check_packages, status_t,
 				DB_TEXT, product, DB_INT);
 	if (!e)
 	{
-		free(product);
-		return FAILED;
 	}
 	if (!e->enumerate(e, &pid))
 	{
 		e->destroy(e);
-		free(product);
 		return NOT_FOUND;
 	}
 	e->destroy(e);
@@ -102,7 +88,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 					DB_TEXT, package, DB_INT);
 		if (!e)
 		{
-			free(product);
 			free(package);
 			return FAILED;
 		}
@@ -130,7 +115,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 				DB_INT, pid, DB_INT, gid, DB_TEXT, DB_INT);
 		if (!e)
 		{
-			free(product);
 			free(package);
 			free(release);
 			return FAILED;
@@ -181,7 +165,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		free(package);
 		free(release);
 	}
-	free(product);
 	state->set_count(state, count, count_no_match, count_blacklist, count_ok);
 
 	return status;

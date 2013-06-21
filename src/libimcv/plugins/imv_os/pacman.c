@@ -21,11 +21,32 @@
 #include <errno.h>
 #include <syslog.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include "imv_os_state.h"
 
 #include <library.h>
 #include <utils/debug.h>
+
+typedef enum pacman_state_t pacman_state_t;
+
+enum pacman_state_t {
+	PACMAN_STATE_BEGIN_PACKAGE,
+	PACMAN_STATE_VERSION,
+	PACMAN_STATE_END_PACKAGE
+};
+
+typedef struct stats_t stats_t;
+
+struct stats_t {
+	time_t release;
+	int product;
+	int packages;
+	int new_packages;
+	int new_versions;
+	int updated_versions;
+	int deleted_versions;
+};
 
 /**
  * global debug output variables
@@ -88,54 +109,192 @@ static void usage(void)
 }
 
 /**
- * Extract the time the package file was generated
+ * Update the package database
  */
-static time_t extract_time(char *line)
+static bool update_database(database_t *db, char *package, char *version,
+							bool security, stats_t *stats)
 {
-	struct tm t;
-	char wday[4], mon[4];
-	char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-					   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-	int i;
+	char *cur_version, *version_update = NULL, *version_delete = NULL;
+	int cur_security, security_update = 0, security_delete = 0;
+	int pac_id = 0, vid = 0, vid_update = 0, vid_delete = 0;
+	u_int cur_time;
+	bool add_version = TRUE;
+	enumerator_t *e;
 
-	if (sscanf(line, "Generated: %3s %3s %2d %2d:%2d:%2d %4d UTC", wday, mon,
-			   &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec, &t.tm_year) != 7)
+	/* increment package count */
+	stats->packages++;
+
+	/* check if package is already in database */
+	e = db->query(db, "SELECT id FROM packages WHERE name = ?",
+					  DB_TEXT, package, DB_INT);
+	if (!e)
 	{
-		return UNDEFINED_TIME;
+		return FALSE;
 	}
-	t.tm_isdst = 0;
-	t.tm_year -= 1900;
-	t.tm_mon = 12;
-
-	for (i = 0; i < countof(months); i++)
+	if (!e->enumerate(e, &pac_id))
 	{
-		if (streq(mon, months[i]))
+		pac_id = 0;
+	}
+	e->destroy(e);
+
+	if (!pac_id && security)
+	{
+		if (db->execute(db, &pac_id, "INSERT INTO packages (name) VALUES (?)",
+						DB_TEXT, package) != 1)
 		{
-			t.tm_mon = i;
+			fprintf(stderr, "could not store package '%s' to database\n",
+							 package);
+			return FALSE;
+		}
+		stats->new_packages++;
+	}
+
+	/* check for package versions already in database */
+	e = db->query(db,
+			"SELECT id, release, security, time FROM versions "
+			"WHERE package = ? AND product = ?", DB_INT, pac_id,
+			 DB_INT, stats->product, DB_INT, DB_TEXT, DB_INT, DB_UINT);
+	if (!e)
+	{
+		return FALSE;
+	}
+
+	while (e->enumerate(e, &vid, &cur_version, &cur_security, &cur_time))
+	{
+		if (streq(version, cur_version))
+		{
+			/* already in data base */
+			add_version = FALSE;
 			break;
 		}
+		else if (stats->release >= cur_time)
+		{
+			if (security)
+			{
+				if (cur_security)
+				{
+					vid_update = vid;
+					version_update = strdup(cur_version);
+					security_update = cur_security;
+				}
+				else
+				{
+					vid_delete = vid;
+					version_delete = strdup(cur_version);
+					security_delete = cur_security;
+				}
+			}
+			else
+			{
+				if (!cur_security)
+				{
+					vid_update = vid;
+					version_update = strdup(cur_version);
+					security_update = cur_security;
+				}
+			}
+		}
+		else
+		{
+			if (security == cur_security)
+			{
+				add_version = FALSE;
+			}
+		}
 	}
-	if (t.tm_mon == 12)
+	e->destroy(e);
+
+	if ((!vid && !security) || (vid && !add_version))
 	{
-		return UNDEFINED_TIME;
+		free(version_update);
+		free(version_delete);
+		return TRUE;
 	}
 
-	return mktime(&t) - timezone;
+	if ((!vid && security) || (vid && !vid_update))
+	{
+		printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
+
+		if (db->execute(db, &vid,
+			"INSERT INTO versions "
+			"(package, product, release, security, time) "
+			"VALUES (?, ?, ?, ?, ?)", DB_INT, pac_id, DB_INT, stats->product,
+			DB_TEXT, version, DB_INT, security, DB_INT, stats->release) != 1)
+		{
+			fprintf(stderr, "could not store version '%s' to database\n",
+							 version);
+			free(version_update);
+			free(version_delete);
+			return FALSE;
+		}
+		stats->new_versions++;
+	}
+	else
+	{
+		printf("%s (%s) %s updated by\n",
+			   package, version_update, security_update ? "[s]" : "");
+		printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
+
+		if (db->execute(db, NULL,
+			"UPDATE versions SET release = ?, time = ? WHERE id = ?",
+			DB_TEXT, version, DB_INT, stats->release, DB_INT, vid_update) <= 0)
+		{
+			fprintf(stderr, "could not update version '%s' to database\n",
+							 version);
+			free(version_update);
+			free(version_delete);
+			return FALSE;
+		}
+		stats->updated_versions++;
+	}
+
+	if (vid_delete)
+	{
+		printf("%s (%s) %s deleted\n",
+			   package, version_delete, security_delete ? "[s]" : "");
+			if (db->execute(db, NULL,
+			"DELETE FROM  versions WHERE id = ?",
+			DB_INT, vid_delete) <= 0)
+		{
+			fprintf(stderr, "could not delete version '%s' from database\n",
+							 version_delete);
+			free(version_update);
+			free(version_delete);
+			return FALSE;
+		}
+		stats->deleted_versions++;
+	}
+	free(version_update);
+	free(version_delete);
+
+	return TRUE;
 }
 
 /**
  * Process a package file and store updates in the database
  */
-static void process_packages(char *filename, char *product, bool update)
+static void process_packages(char *filename, char *product, bool security)
 {
-	char *uri, line[12288], *pos;
-	int count = 0, errored = 0, vulnerable = 0, new_packages = 0;
-	int new_versions = 0, updated_versions = 0, deleted_versions = 0;
-	time_t gen_time;
-	u_int32_t pid = 0;
+	char *uri, line[BUF_LEN], *pos, *package = NULL, *version = NULL;
+	pacman_state_t pacman_state;
 	enumerator_t *e;
 	database_t *db;
+	int pid;
 	FILE *file;
+	struct stat st;
+	stats_t stats;
+	bool success;
+
+	/* initialize statistics */
+	memset(&stats, 0x00, sizeof(stats_t));
+
+	/* getting creation date of package file */
+	if (stat(filename, &st))
+	{
+		fprintf(stderr, "unable to obtain creation date on '%s'", filename);
+		exit(EXIT_FAILURE);
+	}
+	stats.release = st.st_mtime;
 
 	/* opening package file */
 	printf("loading\"%s\"\n", filename);
@@ -167,13 +326,13 @@ static void process_packages(char *filename, char *product, bool update)
 				  DB_TEXT, product, DB_INT);
 	if (e)
 	{
-		if (!e->enumerate(e, &pid))
+		if (e->enumerate(e, &pid))
 		{
-			pid = 0;
+			stats.product = pid;
 		}
 		e->destroy(e);
 	}
-	if (!pid)
+	if (!stats.product)
 	{
 		if (db->execute(db, &pid, "INSERT INTO products (name) VALUES (?)",
 						DB_TEXT, product) != 1)
@@ -184,248 +343,78 @@ static void process_packages(char *filename, char *product, bool update)
 			db->destroy(db);
 			exit(EXIT_FAILURE);
 		}
+		stats.product = pid;
 	}
+
+	pacman_state = PACMAN_STATE_BEGIN_PACKAGE;
 
 	while (fgets(line, sizeof(line), file))
 	{
-		char *package, *version;
-		char *cur_version, *version_update = NULL, *version_delete = NULL;
-		bool security, add_version = TRUE;
-		int cur_security, security_update = 0, security_delete = 0;
-		u_int32_t gid = 0, vid = 0, vid_update = 0, vid_delete = 0;
-		time_t cur_time;
+		/* set read pointer to beginning of line */
+		pos = line;
 
-		count++;
-		if (count == 1)
+		switch (pacman_state)
 		{
-			printf("%s", line);
-		}
-		if (count == 3)
-		{
-			gen_time = extract_time(line);
-
-			if (gen_time == UNDEFINED_TIME)
-			{
-				fprintf(stderr, "could not extract generation time\n");
-				fclose(file);
-				db->destroy(db);
-				exit(EXIT_FAILURE);
-			}
-			printf("Generated: %T\n", &gen_time, TRUE);
-		}
-		if (count < 7)
-		{
-			continue;
-		}
-
-		/* look for the package name */
-		pos = strchr(line, ' ');
-		if (!pos)
-		{
-			fprintf(stderr, "could not extract package name from '%.*s'\n",
-					(int)(strlen(line)-1), line);
-			errored++;
-			continue;
-		}
-		*pos++ = '\0';
-		package = line;
-
-		/* look for version string in parentheses */
-		if (*pos == '(')
-		{
-			version = ++pos;
-			pos = strchr(pos, ')');
-			if (pos)
-			{
-				*pos++ = '\0';
-			}
-			else
-			{
-				fprintf(stderr, "could not extract package version from "
-						"'%.*s'\n", (int)(strlen(line)-1), line);
-				errored++;
-				continue;
-			}
-		}
-		else
-		{
-			/* no version information, skip entry */
-			continue;
-		}
-		security = (strstr(pos, "[security]") != NULL);
-		if (security)
-		{
-			vulnerable++;
-		}
-
-		/* handle non-security packages in update mode only */
-		if (!update && !security)
-		{
-			continue;
-		}
-
-		/* check if package is already in database */
-		e = db->query(db, "SELECT id FROM packages WHERE name = ?",
-						  DB_TEXT, package, DB_INT);
-		if (e)
-		{
-			if (!e->enumerate(e, &gid))
-			{
-				gid = 0;
-			}
-			e->destroy(e);
-		}
-		if (!gid && security)
-		{
-			if (db->execute(db, &gid, "INSERT INTO packages (name) VALUES (?)",
-								DB_TEXT, package) != 1)
-			{
-				fprintf(stderr, "could not store package '%s' to database\n",
-								 package);
-				fclose(file);
-				db->destroy(db);
-				exit(EXIT_FAILURE);
-			}
-			new_packages++;
-		}
-
-		/* check for package versions already in database */
-		e = db->query(db,
-				"SELECT id, release, security, time FROM versions "
-				"WHERE package = ? AND product = ?",
-				DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT, DB_INT);
-		if (!e)
-		{
-			break;
-		}
-		while (e->enumerate(e, &vid, &cur_version, &cur_security, &cur_time))
-		{
-			if (streq(version, cur_version))
-			{
-				/* already in data base */
-				add_version = FALSE;
+			case PACMAN_STATE_BEGIN_PACKAGE:
+				pos = strstr(pos, "Package: ");
+				if (!pos)
+				{
+					continue;
+				}
+				pos += 9;
+				package = pos;
+				pos = strchr(pos, '\n');
+				if (pos)
+				{
+					package = strndup(package, pos - package);
+					pacman_state = PACMAN_STATE_VERSION;
+				}
 				break;
-			}
-			else if (gen_time > cur_time)
-			{
-				if (security)
+			case PACMAN_STATE_VERSION:
+				pos = strstr(pos, "Version: ");
+				if (!pos)
 				{
-					if (cur_security)
-					{
-						vid_update = vid;
-						version_update = strdup(cur_version);
-						security_update = cur_security;
-					}
-					else
-					{
-						vid_delete = vid;
-						version_delete = strdup(cur_version);
-						security_delete = cur_security;
-					}
+					continue;
 				}
-				else
+				pos += 9;
+				version = pos;
+				pos = strchr(pos, '\n');
+				if (pos)
 				{
-					if (!cur_security)
-					{
-						vid_update = vid;
-						version_update = strdup(cur_version);
-						security_update = cur_security;
-					}
+					version = strndup(version, pos - version);
+					pacman_state = PACMAN_STATE_END_PACKAGE;
 				}
-			}
-			else
-			{
-				if (security == cur_security)
+				break;
+			case PACMAN_STATE_END_PACKAGE:
+				if (*pos != '\n')
 				{
-					add_version = FALSE;
+					continue;
 				}
-			}
+				success = update_database(db, package, version, security, &stats);
+				free(package);
+				free(version);
+				if (!success)
+				{
+					fclose(file);
+					db->destroy(db);
+					exit(EXIT_FAILURE);
+				}
+				pacman_state = PACMAN_STATE_BEGIN_PACKAGE;
 		}
-		e->destroy(e);
-
-		if ((!vid && !security) || (vid && !add_version))
-		{
-			free(version_update);
-			free(version_delete);
-			continue;
-		}
-
-		if ((!vid && security) || (vid && !vid_update))
-		{
-			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
-
-			if (db->execute(db, &vid,
-				"INSERT INTO versions "
-				"(package, product, release, security, time) "
-				"VALUES (?, ?, ?, ?, ?)", DB_INT, gid, DB_INT, pid,
-				DB_TEXT, version, DB_INT, security, DB_INT, gen_time) != 1)
-			{
-				fprintf(stderr, "could not store version '%s' to database\n",
-								 version);
-				free(version_update);
-				free(version_delete);
-				fclose(file);
-				db->destroy(db);
-				exit(EXIT_FAILURE);
-			}
-			new_versions++;
-		}
-		else
-		{
-			printf("%s (%s) %s updated by\n",
-				   package, version_update, security_update ? "[s]" : "");
-			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
-
-			if (db->execute(db, NULL,
-				"UPDATE versions SET release = ?, time = ? WHERE id = ?",
-				DB_TEXT, version, DB_INT, gen_time, DB_INT, vid_update) <= 0)
-			{
-				fprintf(stderr, "could not update version '%s' to database\n",
-								 version);
-				free(version_update);
-				free(version_delete);
-				fclose(file);
-				db->destroy(db);
-				exit(EXIT_FAILURE);
-			}
-			updated_versions++;
-		}
-
-		if (vid_delete)
-		{
-			printf("%s (%s) %s deleted\n",
-				   package, version_delete, security_delete ? "[s]" : "");
-
-			if (db->execute(db, NULL,
-				"DELETE FROM  versions WHERE id = ?",
-				DB_INT, vid_delete) <= 0)
-			{
-				fprintf(stderr, "could not delete version '%s' from database\n",
-								 version_delete);
-				free(version_update);
-				free(version_delete);
-				fclose(file);
-				db->destroy(db);
-				exit(EXIT_FAILURE);
-			}
-			deleted_versions++;
-		}
-		free(version_update);
-		free(version_delete);
 	}
 	fclose(file);
 	db->destroy(db);
 
-	printf("processed %d packages, %d security, %d new packages, "
-		   "%d new versions, %d updated versions, %d deleted versions, "
-		   "%d errored\n", count - 6, vulnerable, new_packages, new_versions,
-		   updated_versions, deleted_versions, errored);
+	printf("processed %d packages, %d new packages, %d new versions, "
+		   "%d updated versions, %d deleted versions\n",
+			stats.packages, stats.new_packages, stats.new_versions,
+			stats.updated_versions, stats.deleted_versions);
 }
 
 static void do_args(int argc, char *argv[])
 {
 	char *filename = NULL, *product = NULL;
-	bool update = FALSE;
+	bool security = FALSE;
 
 	/* reinit getopt state */
 	optind = 0;
@@ -438,7 +427,7 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "file", required_argument, NULL, 'f' },
 			{ "product", required_argument, NULL, 'p' },
-			{ "update", no_argument, NULL, 'u' },
+			{ "security", no_argument, NULL, 's' },
 			{ 0,0,0,0 }
 		};
 
@@ -456,8 +445,8 @@ static void do_args(int argc, char *argv[])
 			case 'p':
 				product = optarg;
 				continue;
-			case 'u':
-				update = TRUE;
+			case 's':
+				security = TRUE;
 				continue;
 		}
 		break;
@@ -465,7 +454,7 @@ static void do_args(int argc, char *argv[])
 
 	if (filename && product)
 	{
-		process_packages(filename, product, update);
+		process_packages(filename, product, security);
 	}
 	else
 	{
