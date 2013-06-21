@@ -16,6 +16,10 @@ strongswan-5.1.0
   on error conditions using an additional exchange, keeping state in sync
   between peers.
 
+- Using a SQL database interface a Trusted Network Connect (TNC) Policy Manager
+  can  generate specific measurement workitems for an arbitrary number of Integrity
+  Measurement Verifiers (IMVs) based on the history of the VPN user and/or device.
+
 
 strongswan-5.0.4
 ----------------
