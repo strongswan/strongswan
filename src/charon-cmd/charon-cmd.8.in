@@ -56,6 +56,21 @@ the following snippet can be used:
 .PP
 .SH "OPTIONS"
 .TP
+.B "\-\-help"
+Prints usage information and a short summary of the available options.
+.TP
+.B "\-\-version"
+Prints the strongSwan version.
+.TP
+.BI "\-\-debug " level
+Sets the default log level (defaults to 1).
+.I level
+is a number between -1 and 4.
+Refer to
+.I strongswan.conf
+for options that allow a more fine-grained configuration of the logging
+output.
+.TP
 .BI "\-\-host " hostname
 DNS name or IP address to connect to.
 .TP
