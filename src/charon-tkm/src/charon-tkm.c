@@ -311,6 +311,7 @@ int main(int argc, char *argv[])
 		DBG1(DBG_DMN, "initialization failed - aborting %s", dmn_name);
 		goto deinit;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	/* set global pidfile name depending on daemon name */
 	if (asprintf(&pidfile_name, IPSEC_PIDDIR"/%s.pid", dmn_name) < 0)

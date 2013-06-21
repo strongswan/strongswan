@@ -518,6 +518,8 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
+
 	if (!load_certs(conftest->test, conftest->suite_dir))
 	{
 		return 1;

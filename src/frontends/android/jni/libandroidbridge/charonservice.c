@@ -565,6 +565,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		library_deinit();
 		return;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	/* add handler for SEGV and ILL etc. */
 	action.sa_handler = segv_handler;

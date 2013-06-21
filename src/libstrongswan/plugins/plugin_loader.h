@@ -25,6 +25,7 @@
 typedef struct plugin_loader_t plugin_loader_t;
 
 #include <collections/enumerator.h>
+#include <utils/debug.h>
 
 /* to avoid circular references we can't include plugin_feature.h */
 struct plugin_feature_t;
@@ -108,6 +109,13 @@ struct plugin_loader_t {
 	 * @return				list of the names of all loaded plugins
 	 */
 	char* (*loaded_plugins)(plugin_loader_t *this);
+
+	/**
+	 * Log status about loaded plugins and features.
+	 *
+	 * @param level			log level to use
+	 */
+	void (*status)(plugin_loader_t *this, level_t level);
 
 	/**
 	 * Unload loaded plugins, destroy plugin_loader instance.

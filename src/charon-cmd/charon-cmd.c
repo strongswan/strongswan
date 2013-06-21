@@ -361,6 +361,7 @@ int main(int argc, char *argv[])
 	}
 	DBG1(DBG_DMN, "Starting charon-cmd IKE client (strongSwan %s, %s %s, %s)",
 		 VERSION, utsname.sysname, utsname.release, utsname.machine);
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	/* add handler for SEGV and ILL,
 	 * INT, TERM and HUP are handled by sigwait() in run() */

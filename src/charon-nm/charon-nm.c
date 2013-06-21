@@ -212,6 +212,7 @@ int main(int argc, char *argv[])
 		DBG1(DBG_DMN, "initialization failed - aborting charon-nm");
 		goto deinit;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	if (!charon->caps->drop(charon->caps))
 	{

@@ -398,6 +398,7 @@ int main(int argc, char *argv[])
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		goto deinit;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	if (check_pidfile())
 	{

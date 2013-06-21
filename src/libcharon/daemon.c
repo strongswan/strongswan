@@ -538,8 +538,6 @@ METHOD(daemon_t, initialize, bool,
 	{
 		return FALSE;
 	}
-	DBG1(DBG_DMN, "loaded plugins: %s",
-		 lib->plugins->loaded_plugins(lib->plugins));
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)

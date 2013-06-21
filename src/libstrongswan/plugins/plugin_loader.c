@@ -1082,6 +1082,15 @@ METHOD(plugin_loader_t, loaded_plugins, char*,
 	return this->loaded_plugins ?: "";
 }
 
+METHOD(plugin_loader_t, status, void,
+	private_plugin_loader_t *this, level_t level)
+{
+	if (this->loaded_plugins)
+	{
+		dbg(DBG_LIB, level, "loaded plugins: %s", this->loaded_plugins);
+	}
+}
+
 METHOD(plugin_loader_t, destroy, void,
 	private_plugin_loader_t *this)
 {
@@ -1109,6 +1118,7 @@ plugin_loader_t *plugin_loader_create()
 			.create_plugin_enumerator = _create_plugin_enumerator,
 			.has_feature = _has_feature,
 			.loaded_plugins = _loaded_plugins,
+			.status = _status,
 			.destroy = _destroy,
 		},
 		.plugins = linked_list_create(),

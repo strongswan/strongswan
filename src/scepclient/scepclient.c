@@ -929,8 +929,7 @@ int main(int argc, char **argv)
 	{
 		exit_scepclient("plugin loading failed");
 	}
-	DBG1(DBG_APP, "  loaded plugins: %s",
-		 lib->plugins->loaded_plugins(lib->plugins));
+	lib->plugins->status(lib->plugins, LEVEL_DIAG);
 
 	if ((filetype_out == 0) && (!request_ca_certificate))
 	{
