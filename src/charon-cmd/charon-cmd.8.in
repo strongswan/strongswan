@@ -1,4 +1,4 @@
-.TH CHARON\-CMD 8 "2013-06-16" "@IPSEC_VERSION@" "strongSwan"
+.TH CHARON\-CMD 8 "2013-06-21" "@IPSEC_VERSION@" "strongSwan"
 .SH "NAME"
 charon\-cmd \- Simple IKE client (IPsec VPN client)
 .SH SYNOPSIS
@@ -31,6 +31,28 @@ and
 are required. Depending on the selected authentication
 .I profile
 credentials also have to be provided with their respective options.
+.PP
+Many of the
+.BR charon -specific
+configuration options in
+.I strongswan.conf
+also apply to
+.BR charon\-cmd .
+For instance, to configure customized logging to
+.B stdout
+the following snippet can be used:
+.PP
+.EX
+	charon-cmd {
+		filelog {
+			stdout {
+				default = 1
+				ike = 2
+				cfg = 2
+			}
+		}
+	}
+.EE
 .PP
 .SH "OPTIONS"
 .TP
@@ -115,4 +137,4 @@ IKEv1 with public key server authentication only, followed by client XAuth
 authentication
 .PP
 .SH "SEE ALSO"
-\fBipsec\fR(8)
+\fBstrongswan.conf\fR(5), \fBipsec\fR(8)

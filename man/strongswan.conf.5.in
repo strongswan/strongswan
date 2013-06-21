@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2013-04-01" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2013-06-21" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -133,7 +133,13 @@ Path to database with file measurement information
 .TP
 .BR attest.load
 Plugins to load in ipsec attest tool
+
 .SS charon section
+.TP
+.BR Note :
+Many of these options also apply to \fBcharon\-cmd\fR and other
+\fBcharon\fR derivatives. Just use their respective name (e.g.
+\fIcharon\-cmd\fR) instead of  \fIcharon\fR.
 .TP
 .BR charon.block_threshold " [5]"
 Maximum number of half-open IKE_SAs for a single peer IP
@@ -1611,7 +1617,8 @@ giving up	76s	165s
 /etc/strongswan.conf
 
 .SH SEE ALSO
-ipsec.conf(5), ipsec.secrets(5), ipsec(8)
+\fBipsec.conf\fR(5), \fBipsec.secrets\fR(5), \fBipsec\fR(8), \fBcharon-cmd\fR(8)
+
 .SH HISTORY
 Written for the
 .UR http://www.strongswan.org
