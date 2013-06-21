@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,9 +23,10 @@
 
 typedef struct kernel_listener_t kernel_listener_t;
 
-#include <kernel/kernel_ipsec.h>
-#include <selectors/traffic_selector.h>
 #include <networking/host.h>
+#include <networking/tun_device.h>
+#include <selectors/traffic_selector.h>
+#include <kernel/kernel_ipsec.h>
 
 /**
  * Interface for components interested in kernel events.
@@ -91,6 +92,15 @@ struct kernel_listener_t {
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
 	bool (*roam)(kernel_listener_t *this, bool address);
+
+	/**
+	 * Hook called after a TUN device was created for a virtual IP address, or
+	 * before such a device gets destroyed.
+	 *
+	 * @param tun			TUN device
+	 * @param created		TRUE if created, FALSE if going to be destroyed
+	 */
+	bool (*tun)(kernel_listener_t *this, tun_device_t *tun, bool created);
 };
 
 #endif /** KERNEL_LISTENER_H_ @}*/

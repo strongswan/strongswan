@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -67,6 +67,8 @@ enum kernel_feature_t {
 	KERNEL_ESP_V3_TFC = (1<<0),
 	/** Networking requires an "exclude" route for IKE/ESP packets */
 	KERNEL_REQUIRE_EXCLUDE_ROUTE = (1<<1),
+	/** IPsec implementation requires UDP encapsulation of ESP packets */
+	KERNEL_REQUIRE_UDP_ENCAPSULATION = (1<<2),
 };
 
 /**
@@ -560,6 +562,14 @@ struct kernel_interface_t {
 	 * @param address		TRUE if address list, FALSE if routing changed
 	 */
 	void (*roam)(kernel_interface_t *this, bool address);
+
+	/**
+	 * Raise a tun event.
+	 *
+	 * @param tun			TUN device
+	 * @param created		TRUE if created, FALSE if going to be destroyed
+	 */
+	void (*tun)(kernel_interface_t *this, tun_device_t *tun, bool created);
 
 	/**
 	 * Register a new algorithm with the kernel interface.

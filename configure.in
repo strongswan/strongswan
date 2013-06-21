@@ -192,6 +192,7 @@ ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
@@ -224,6 +225,7 @@ ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+ARG_ENABL_SET([osx-attr],       [enable OS X SystemConfiguration attribute handler.])
 ARG_ENABL_SET([android-dns],    [enable Android specific DNS handler.])
 ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
 ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
@@ -304,6 +306,10 @@ fi
 
 if test x$xauth_generic_given = xfalse -a x$ikev1 = xfalse; then
 	xauth_generic=false;
+fi
+
+if test x$kernel_libipsec = xtrue; then
+	libipsec=true;
 fi
 
 if test x$eap_aka_3gpp2 = xtrue; then
@@ -1015,6 +1021,7 @@ ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([attr],                 [h charon])
 ADD_PLUGIN([attr-sql],             [h charon])
 ADD_PLUGIN([load-tester],          [c charon])
+ADD_PLUGIN([kernel-libipsec],      [c charon cmd])
 ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
 ADD_PLUGIN([kernel-klips],         [h charon starter])
@@ -1060,6 +1067,7 @@ ADD_PLUGIN([tnccs-dynamic],        [c charon])
 ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
+ADD_PLUGIN([osx-attr],             [c charon cmd])
 ADD_PLUGIN([android-dns],          [c charon])
 ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
@@ -1152,6 +1160,7 @@ AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
+AM_CONDITIONAL(USE_OSX_ATTR, test x$osx_attr = xtrue)
 AM_CONDITIONAL(USE_ANDROID_DNS, test x$android_dns = xtrue)
 AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
@@ -1163,6 +1172,7 @@ AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tester = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
+AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
@@ -1418,6 +1428,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/unity/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
+	src/libcharon/plugins/kernel_libipsec/Makefile
 	src/libcharon/plugins/whitelist/Makefile
 	src/libcharon/plugins/lookip/Makefile
 	src/libcharon/plugins/error_notify/Makefile
@@ -1427,6 +1438,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/duplicheck/Makefile
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
+	src/libcharon/plugins/osx_attr/Makefile
 	src/libcharon/plugins/android_dns/Makefile
 	src/libcharon/plugins/android_log/Makefile
 	src/libcharon/plugins/maemo/Makefile

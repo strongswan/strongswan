@@ -225,6 +225,12 @@ METHOD(tun_device_t, write_packet, bool,
 {
 	ssize_t s;
 
+#ifdef __APPLE__
+	/* UTUN's expect the packets to be prepended by a 32-bit protocol number
+	 * instead of parsing the packet again, we assume IPv4 for now */
+	u_int32_t proto = htonl(AF_INET);
+	packet = chunk_cata("cc", chunk_from_thing(proto), packet);
+#endif
 	s = write(this->tunfd, packet.ptr, packet.len);
 	if (s < 0)
 	{
@@ -271,6 +277,11 @@ METHOD(tun_device_t, read_packet, bool,
 		return FALSE;
 	}
 	packet->len = len;
+#ifdef __APPLE__
+	/* UTUN's prepend packets with a 32-bit protocol number */
+	packet->len -= sizeof(u_int32_t);
+	memmove(packet->ptr, packet->ptr + sizeof(u_int32_t), packet->len);
+#endif
 	return TRUE;
 }
 
@@ -390,14 +401,18 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 	/* this works on FreeBSD and might also work on Linux with older TUN
 	 * driver versions (no IFF_TUN) */
 	char devname[IFNAMSIZ];
-	int i;
+	/* the same process is allowed to open a device again, but that's not what
+	 * we want (unless we previously closed a device, which we don't know at
+	 * this point).  therefore, this counter is static so we don't accidentally
+	 * open a device twice */
+	static int i = -1;
 
 	if (name_tmpl)
 	{
 		DBG1(DBG_LIB, "arbitrary naming of TUN devices is not supported");
 	}
 
-	for (i = 0; i < 256; i++)
+	for (; ++i < 256; )
 	{
 		snprintf(devname, IFNAMSIZ, "/dev/tun%d", i);
 		this->tunfd = open(devname, O_RDWR);

@@ -40,6 +40,16 @@
 #error Cannot compile this plugin on systems where 'struct sockaddr' has no sa_len member.
 #endif
 
+/** properly align sockaddrs */
+#ifdef __APPLE__
+/* Apple always uses 4 bytes */
+#define SA_ALIGN 4
+#else
+/* while on other platforms like FreeBSD it depends on the architecture */
+#define SA_ALIGN sizeof(long)
+#endif
+#define SA_LEN(len) ((len) > 0 ? (((len)+SA_ALIGN-1) & ~(SA_ALIGN-1)) : SA_ALIGN)
+
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
@@ -344,8 +354,9 @@ METHOD(enumerator_t, rt_enumerate, bool,
 			this->types &= ~type;
 			*addr = this->addr;
 			*xtype = i;
-			this->remaining -= this->addr->sa_len;
-			this->addr = (void*)this->addr + this->addr->sa_len;
+			this->remaining -= SA_LEN(this->addr->sa_len);
+			this->addr = (struct sockaddr*)((char*)this->addr +
+											SA_LEN(this->addr->sa_len));
 			return TRUE;
 		}
 	}
@@ -510,7 +521,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 {
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
-	bool roam = FALSE, found = FALSE;;
+	bool roam = FALSE, found = FALSE;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -812,12 +823,6 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	return FALSE;
 }
 
-METHOD(kernel_net_t, get_source_addr, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
-{
-	return NULL;
-}
-
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
 	char *ifname)
@@ -837,7 +842,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		prefix = vip->get_address(vip).len * 8;
 	}
-	if (!tun->set_address(tun, vip, prefix) || !tun->up(tun))
+	if (!tun->up(tun) || !tun->set_address(tun, vip, prefix))
 	{
 		tun->destroy(tun);
 		return FAILED;
@@ -878,7 +883,10 @@ METHOD(kernel_net_t, add_ip, status_t,
 		}
 	}
 	ifaces->destroy(ifaces);
-
+	/* lets do this while holding the lock, thus preventing another thread
+	 * from deleting the TUN device concurrently, hopefully listeneres are quick
+	 * and cause no deadlocks */
+	hydra->kernel_interface->tun(hydra->kernel_interface, tun, TRUE);
 	this->lock->unlock(this->lock);
 
 	return SUCCESS;
@@ -901,6 +909,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 		if (addr && addr->ip_equals(addr, vip))
 		{
 			this->tuns->remove_at(this->tuns, enumerator);
+			hydra->kernel_interface->tun(hydra->kernel_interface, tun,
+										 FALSE);
 			tun->destroy(tun);
 			found = TRUE;
 			break;
@@ -942,7 +952,7 @@ static void add_rt_addr(struct rt_msghdr *hdr, int type, host_t *addr)
 
 		len = *addr->get_sockaddr_len(addr);
 		memcpy((char*)hdr + hdr->rtm_msglen, addr->get_sockaddr(addr), len);
-		hdr->rtm_msglen += len;
+		hdr->rtm_msglen += SA_LEN(len);
 		hdr->rtm_addrs |= type;
 	}
 }
@@ -977,7 +987,7 @@ static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
 	{
 		memcpy(sdl.sdl_data, name, sdl.sdl_nlen);
 		memcpy((char*)hdr + hdr->rtm_msglen, &sdl, sdl.sdl_len);
-		hdr->rtm_msglen += sdl.sdl_len;
+		hdr->rtm_msglen += SA_LEN(sdl.sdl_len);
 		hdr->rtm_addrs |= type;
 	}
 }
@@ -1046,13 +1056,14 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 								dst->get_family(dst), prefixlen);
 				}
 				break;
-			case RTAX_GATEWAY:
-				/* interface name seems to replace gateway on OS X */
+			case RTAX_IFP:
 				if (if_name)
 				{
-					add_rt_ifname(&msg.hdr, RTA_GATEWAY, if_name);
+					add_rt_ifname(&msg.hdr, RTA_IFP, if_name);
 				}
-				else if (gateway)
+				break;
+			case RTAX_GATEWAY:
+				if (gateway)
 				{
 					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
 				}
@@ -1086,8 +1097,12 @@ METHOD(kernel_net_t, del_route, status_t,
 	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
 }
 
-METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+/**
+ * Do a route lookup for dest and return either the nexthop or the source
+ * address.
+ */
+static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
+						 host_t *dest, host_t *src)
 {
 	struct {
 		struct rt_msghdr hdr;
@@ -1100,7 +1115,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 			.rtm_seq = ++this->seq,
 		},
 	};
-	host_t *hop = NULL;
+	host_t *host = NULL;
 	enumerator_t *enumerator;
 	struct sockaddr *addr;
 	int type;
@@ -1115,6 +1130,12 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 				break;
 			case RTAX_IFA:
 				add_rt_addr(&msg.hdr, RTA_IFA, src);
+				break;
+			case RTAX_IFP:
+				if (!nexthop)
+				{	/* add an empty IFP to ensure we get a source address */
+					add_rt_ifname(&msg.hdr, RTA_IFP, "");
+				}
 				break;
 			default:
 				break;
@@ -1144,10 +1165,29 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 												 sizeof(*this->reply));
 			while (enumerator->enumerate(enumerator, &type, &addr))
 			{
-				if (type == RTAX_GATEWAY)
+				if (nexthop)
 				{
-					hop = host_create_from_sockaddr(addr);
-					break;
+					if (type == RTAX_DST && this->reply->rtm_flags & RTF_HOST)
+					{	/* probably a cloned/cached direct route, only use that
+						 * as fallback if no gateway is found */
+						host = host ?: host_create_from_sockaddr(addr);
+					}
+					if (type == RTAX_GATEWAY)
+					{	/* could actually be a MAC address */
+						host_t *gtw = host_create_from_sockaddr(addr);
+						if (gtw)
+						{
+							DESTROY_IF(host);
+							host = gtw;
+						}
+					}
+				}
+				else
+				{
+					if (type == RTAX_IFA)
+					{
+						host = host_create_from_sockaddr(addr);
+					}
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -1163,7 +1203,24 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
-	return hop;
+	if (host)
+	{
+		DBG2(DBG_KNL, "using %H as %s to reach %H", host,
+			 nexthop ? "nexthop" : "address", dest);
+	}
+	return host;
+}
+
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	return get_route(this, FALSE, dest, src);
+}
+
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	return get_route(this, TRUE, dest, src);
 }
 
 /**

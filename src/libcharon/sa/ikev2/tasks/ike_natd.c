@@ -78,6 +78,19 @@ struct private_ike_natd_t {
 	bool mapping_changed;
 };
 
+/**
+ * Check if UDP encapsulation has to be forced either by config or required
+ * by the kernel interface
+ */
+static bool force_encap(ike_cfg_t *ike_cfg)
+{
+	if (!ike_cfg->force_encap(ike_cfg))
+	{
+		return hydra->kernel_interface->get_features(hydra->kernel_interface) &
+					KERNEL_REQUIRE_UDP_ENCAPSULATION;
+	}
+	return TRUE;
+}
 
 /**
  * Build NAT detection hash for a host
@@ -147,7 +160,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 	config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	if (config->force_encap(config) && type == NAT_DETECTION_SOURCE_IP)
+	if (force_encap(config) && type == NAT_DETECTION_SOURCE_IP)
 	{
 		hash = generate_natd_hash_faked(this);
 	}
@@ -256,7 +269,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 									!this->src_matched);
 		config = this->ike_sa->get_ike_cfg(this->ike_sa);
 		if (this->dst_matched && this->src_matched &&
-			config->force_encap(config))
+			force_encap(config))
 		{
 			this->ike_sa->set_condition(this->ike_sa, COND_NAT_FAKE, TRUE);
 		}
@@ -316,7 +329,7 @@ METHOD(task_t, build_i, status_t,
 	 * 3. Include all possbile addresses
 	 */
 	host = message->get_source(message);
-	if (!host->is_anyaddr(host) || ike_cfg->force_encap(ike_cfg))
+	if (!host->is_anyaddr(host) || force_encap(ike_cfg))
 	{	/* 1. or if we force UDP encap, as it doesn't matter if it's %any */
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 		if (notify)

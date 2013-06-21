@@ -474,7 +474,6 @@ METHOD(printf_hook_t, destroy, void,
 	/* freeing the Vstr_conf of the main thread */
 	vstr_conf->destroy(vstr_conf);
 	vstr_conf = NULL;
-	vstr_free_conf(conf);
 	vstr_exit();
 #endif
 	free(this);

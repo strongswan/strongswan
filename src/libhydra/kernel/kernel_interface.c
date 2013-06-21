@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -644,6 +644,25 @@ METHOD(kernel_interface_t, roam, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(kernel_interface_t, tun, void,
+	private_kernel_interface_t *this, tun_device_t *tun, bool created)
+{
+	kernel_listener_t *listener;
+	enumerator_t *enumerator;
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (listener->tun &&
+			!listener->tun(listener, tun, created))
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(kernel_interface_t, register_algorithm, void,
 	private_kernel_interface_t *this, u_int16_t alg_id, transform_type_t type,
 	u_int16_t kernel_id, char *kernel_name)
@@ -764,6 +783,7 @@ kernel_interface_t *kernel_interface_create()
 			.mapping = _mapping,
 			.migrate = _migrate,
 			.roam = _roam,
+			.tun = _tun,
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
