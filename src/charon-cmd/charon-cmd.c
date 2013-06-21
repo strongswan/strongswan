@@ -37,6 +37,11 @@
 #include "cmd/cmd_creds.h"
 
 /**
+ * Default loglevel
+ */
+static level_t default_loglevel = LEVEL_CTRL;
+
+/**
  * Loglevel configuration
  */
 static level_t levels[DBG_MAX];
@@ -63,7 +68,7 @@ static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
 {
 	va_list args;
 
-	if (level <= 1)
+	if (level <= default_loglevel)
 	{
 		va_start(args, fmt);
 		fprintf(stderr, "00[%N] ", debug_names, group);
@@ -280,6 +285,9 @@ static void handle_arguments(int argc, char *argv[], bool simple)
 			case CMD_OPT_VERSION:
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
+			case CMD_OPT_DEBUG:
+				default_loglevel = atoi(optarg);
+				continue;
 			default:
 				if (simple)
 				{
@@ -338,7 +346,7 @@ int main(int argc, char *argv[])
 	}
 	for (group = 0; group < DBG_MAX; group++)
 	{
-		levels[group] = LEVEL_CTRL;
+		levels[group] = default_loglevel;
 	}
 	charon->load_loggers(charon, levels, TRUE);
 

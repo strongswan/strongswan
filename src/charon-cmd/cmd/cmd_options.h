@@ -33,6 +33,7 @@ typedef enum cmd_option_type_t cmd_option_type_t;
 enum cmd_option_type_t {
 	CMD_OPT_HELP,
 	CMD_OPT_VERSION,
+	CMD_OPT_DEBUG,
 	CMD_OPT_HOST,
 	CMD_OPT_IDENTITY,
 	CMD_OPT_REMOTE_IDENTITY,

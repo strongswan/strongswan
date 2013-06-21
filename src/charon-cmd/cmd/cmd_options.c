@@ -28,6 +28,8 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "print this usage information and exit", {}},
 	{ CMD_OPT_VERSION, "version", no_argument, "",
 	  "show version information and exit", {}},
+	{ CMD_OPT_DEBUG, "debug", required_argument, "level",
+	  "set the default log level (-1..4, default: 1)", {}},
 	{ CMD_OPT_HOST, "host", required_argument, "hostname",
 	  "DNS name or address to connect to", {}},
 	{ CMD_OPT_IDENTITY, "identity", required_argument, "identity",
