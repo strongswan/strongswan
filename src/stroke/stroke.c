@@ -438,7 +438,7 @@ static void exit_usage(char *error)
 	printf("  Show extended status information:\n");
 	printf("    stroke statusall\n");
 	printf("  Show extended status information without blocking:\n");
-	printf("    stroke statusallnb\n");
+	printf("    stroke statusall-nb\n");
 	printf("  Show list of authority and attribute certificates:\n");
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
