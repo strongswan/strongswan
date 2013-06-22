@@ -7,8 +7,25 @@ strongswan-5.1.0
   few simple command line options.
 
 - The kernel-pfroute networking backend has been greatly improved. It now
-  can install virtual IPs on tun devices on OS X and FreeBSD, allowing these
+  can install virtual IPs on TUN devices on OS X and FreeBSD, allowing these
   systems to act as a client in common road warrior scenarios.
+
+- The new kernel-libipsec plugin uses TUN devices and libipsec to provide IPsec
+  processing in userland on Linux, FreeBSD and Mac OS X.
+
+- The new osx-attr plugin installs configuration attributes (currently DNS
+  servers) via SystemConfiguration on Mac OS X.
+
+- The sshkey plugin parses SSH public keys, which, together with the --agent
+  option for charon-cmd, allows the use of ssh-agent for authentication.
+  To configure SSH keys in ipsec.conf the left|rightrsasigkey options are
+  replaced with left|rightsigkey, which now take public keys in one of three
+  formats: SSH (RFC 4253, ssh: prefix), DNSKEY (RFC 3110, dns: prefix), and
+  PKCS#1 (the default, no prefix).
+
+- Extraction of certificates and private keys from PKCS#12 files is now provided
+  by the new pkcs12 plugin or the openssl plugin.  charon-cmd (--p12) as well
+  as charon (via P12 token in ipsec.secrets) can make use of this.
 
 - IKEv2 can now negotiate transport mode and IPComp in NAT situations.
 
@@ -17,8 +34,26 @@ strongswan-5.1.0
   between peers.
 
 - Using a SQL database interface a Trusted Network Connect (TNC) Policy Manager
-  can  generate specific measurement workitems for an arbitrary number of Integrity
-  Measurement Verifiers (IMVs) based on the history of the VPN user and/or device.
+  can  generate specific measurement workitems for an arbitrary number of
+  Integrity Measurement Verifiers (IMVs) based on the history of the VPN user
+  and/or device.
+
+- Several core classes in libstrongswan are now tested with unit tests.  These
+  can be enabled with --enable-unit-tests and run with 'make check'.  Coverage
+  reports can be generated with --enable-coverage and 'make coverage' (this
+  disables any optimization, so it should not be enabled when building
+  production releases).
+
+- chunk_hash() is now based on SipHash-2-4 with a random key.  This provides
+  better distribution and prevents hash flooding attacks when used with
+  hashtables.
+
+- All default plugins implement the get_features() method to define features
+  and their dependencies.  The plugin loader has been improved, so that plugins
+  in a custom load statement can be ordered freely or to express preferences
+  without being affected by dependencies between plugin features.
+
+- libipsec now supports AES-GCM.
 
 
 strongswan-5.0.4
