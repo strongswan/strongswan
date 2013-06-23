@@ -74,7 +74,7 @@ METHOD(eap_method_t, initiate, status_t,
 		case EAP_TLS:
 		case EAP_TTLS:
 		case EAP_PEAP:
-			auth_type = TNC_AUTH_CERT;
+			auth_type = TNC_AUTH_X509_CERT;
 			break;
 		case EAP_MD5:
 		case EAP_MSCHAPV2:

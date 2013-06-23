@@ -744,11 +744,11 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_RFC822_ADDR:
-						id_type = TNC_ID_RFC822_ADDR;
+						id_type = TNC_ID_EMAIL_ADDR;
 						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_DER_ASN1_DN:
-						id_type = TNC_ID_ASN1_DN;
+						id_type = TNC_ID_X500_DN;
 						subject_type = TNC_SUBJECT_USER;
 						break;
 					default:

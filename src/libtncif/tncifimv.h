@@ -217,9 +217,9 @@ typedef TNC_Result (*TNC_IMV_ProvideBindFunctionPointer)(
 #define TNC_ID_IPV4_ADDR 1
 #define TNC_ID_IPV6_ADDR 2
 #define TNC_ID_FQDN 3
-#define TNC_ID_RFC822_ADDR 4
+#define TNC_ID_EMAIL_ADDR 4
 #define TNC_ID_USERNAME 5
-#define TNC_ID_ASN1_DN 6
+#define TNC_ID_X500_DN 6
 
 /* TNC Subject Types */
 
@@ -230,7 +230,7 @@ typedef TNC_Result (*TNC_IMV_ProvideBindFunctionPointer)(
 /* TNC Authentication Types */
 
 #define TNC_AUTH_UNKNOWN 0
-#define TNC_AUTH_CERT 1
+#define TNC_AUTH_X509_CERT 1
 #define TNC_AUTH_PASSWORD 2
 #define TNC_AUTH_SIM 3
 
