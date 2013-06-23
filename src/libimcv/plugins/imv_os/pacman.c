@@ -281,20 +281,14 @@ static void process_packages(char *filename, char *product, bool security)
 	database_t *db;
 	int pid;
 	FILE *file;
-	struct stat st;
 	stats_t stats;
 	bool success;
 
 	/* initialize statistics */
 	memset(&stats, 0x00, sizeof(stats_t));
 
-	/* getting creation date of package file */
-	if (stat(filename, &st))
-	{
-		fprintf(stderr, "unable to obtain creation date on '%s'", filename);
-		exit(EXIT_FAILURE);
-	}
-	stats.release = st.st_mtime;
+	/* Set release date to current time */
+	stats.release = time(NULL);
 
 	/* opening package file */
 	printf("loading\"%s\"\n", filename);
