@@ -255,6 +255,10 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		return TNC_RESULT_SUCCESS;
 	}
 
+	/* create an empty out message - we might need it */
+	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+							 msg_types[0]);
+
 	if (!session)
 	{
 		DBG2(DBG_IMV, "no workitems available - no evaluation possible");
@@ -263,12 +267,14 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 							TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
 		scanner_state->set_handshake_state(scanner_state,
 							IMV_SCANNER_STATE_END);
-		return TNC_RESULT_SUCCESS;
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return this->agent->provide_recommendation(this->agent, state);
 	}
-
-	/* create an empty out message - we might need it */
-	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
-							 msg_types[0]);
 
 	if (handshake_state == IMV_SCANNER_STATE_INIT)
 	{

@@ -272,7 +272,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_scanner_state_t *this, enumerator_t *language_enumerator,
 	chunk_t *reason_string, char **reason_language)
 {
-	if (!this->violating_ports)
+	if (this->violating_ports->get_count(this->violating_ports) == 0)
 	{
 		return FALSE;
 	}
@@ -292,7 +292,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_scanner_state_t *this, enumerator_t *language_enumerator,
 	chunk_t *string, char **lang_code, char **uri)
 {
-	if (!this->violating_ports)
+	if (this->violating_ports->get_count(this->violating_ports) == 0)
 	{
 		return FALSE;
 	}
