@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 /**
  * global debug output variables
@@ -52,13 +53,15 @@ bool policy_start(database_t *db, int session_id)
 	enumerator_t *e;
 	int id, gid, device_id, product_id, group_id = 0, parent;
 	int type, file, dir, arg_int, rec_fail, rec_noresult;
+	u_int created;
 	char *argument;
 
 	/* get session data */
 	e = db->query(db,
-			"SELECT device, product FROM sessions WHERE id = ? ",
-			 DB_INT, session_id, DB_INT, DB_INT);
-	if (!e || !e->enumerate(e, &device_id, &product_id))
+			"SELECT s.device, s.product, d.created FROM sessions AS s "
+			"LEFT JOIN devices AS d ON s.device = d.id WHERE s.id = ?",
+			 DB_INT, session_id, DB_INT, DB_INT, DB_UINT);
+	if (!e || !e->enumerate(e, &device_id, &product_id, &created))
 	{
 		DESTROY_IF(e);
 		fprintf(stderr, "session %d not found\n", session_id);
@@ -79,6 +82,18 @@ bool policy_start(database_t *db, int session_id)
 				group_id = gid;
 			}
 			e->destroy(e);
+		}
+
+		/* set the creation date if hasn't been set yet */
+		if (!created)
+		{
+			if (db->execute(db, NULL,
+					"UPDATE devices SET created = ? WHERE id = ?",
+					DB_UINT, time(NULL), DB_INT, device_id) != 1)
+			{
+				fprintf(stderr, "creation date of device could not be set\n");
+				return FALSE;
+			}
 		}
 	}
 
