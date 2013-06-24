@@ -80,6 +80,7 @@ void library_deinit()
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
+	this->public.watcher->destroy(this->public.watcher);
 	this->public.scheduler->destroy(this->public.scheduler);
 	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
@@ -266,6 +267,7 @@ bool library_init(char *settings)
 	this->public.db = database_factory_create();
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
+	this->public.watcher = watcher_create();
 	this->public.plugins = plugin_loader_create();
 
 	if (!check_memwipe())
