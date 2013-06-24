@@ -488,6 +488,8 @@ static TNC_Result tnc_imc_beginhandshake(TNC_IMCID imc_id,
 						out_msg, NULL);
 		add_measurement((pen_type_t){ PEN_IETF, IETF_ATTR_STRING_VERSION },
 						out_msg, NULL);
+		add_measurement((pen_type_t){ PEN_ITA, ITA_ATTR_DEVICE_ID },
+						out_msg, NULL);
 		/* send PA-TNC message with the excl flag not set */
 		result = out_msg->send(out_msg, FALSE);
 		out_msg->destroy(out_msg);
