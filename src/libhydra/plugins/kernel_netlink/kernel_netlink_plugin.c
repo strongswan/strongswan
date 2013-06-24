@@ -65,6 +65,13 @@ plugin_t *kernel_netlink_plugin_create()
 {
 	private_kernel_netlink_plugin_t *this;
 
+	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	{	/* required to bind/use XFRM sockets / create routing tables */
+		DBG1(DBG_KNL, "kernel-netlink plugin requires CAP_NET_ADMIN "
+			 "capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {

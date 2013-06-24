@@ -33,10 +33,6 @@
 #include <processing/jobs/start_action_job.h>
 #include <threading/mutex.h>
 
-#ifndef CAP_NET_ADMIN
-#define CAP_NET_ADMIN 12
-#endif
-
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
 #endif
@@ -623,12 +619,6 @@ bool libcharon_init(const char *name)
 	}
 
 	this = daemon_create(name);
-
-	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
-	{
-		dbg(DBG_DMN, 1, "libcharon requires CAP_NET_ADMIN capability");
-		return FALSE;
-	}
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
