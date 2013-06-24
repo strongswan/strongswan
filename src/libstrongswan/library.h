@@ -92,6 +92,7 @@
 #include "networking/host_resolver.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"
+#include "processing/watcher.h"
 #include "crypto/crypto_factory.h"
 #include "crypto/proposal/proposal_keywords.h"
 #include "fetcher/fetcher_manager.h"
@@ -195,6 +196,11 @@ struct library_t {
 	 * schedule jobs
 	 */
 	scheduler_t *scheduler;
+
+	/**
+	 * File descriptor monitoring
+	 */
+	watcher_t *watcher;
 
 	/**
 	 * resolve hosts by DNS name
