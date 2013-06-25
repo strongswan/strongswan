@@ -51,81 +51,15 @@ static void stderr_dbg(debug_t group, level_t level, char *fmt, ...)
 	}
 }
 
-bool policy_start(database_t *db, int session_id)
+/**
+ * Collect all enforcements by iterating up through parent groups
+ */
+static bool iterate_enforcements(database_t *db, int session_id, int group_id)
 {
-	enumerator_t *e;
-	int id, gid, device_id, product_id, group_id = 0, parent;
-	int type, file, dir, arg_int, rec_fail, rec_noresult;
-	u_int created;
+	int id, type, file, dir, arg_int, rec_fail, rec_noresult, parent;
 	char *argument;
+	enumerator_t *e;
 
-	/* get session data */
-	e = db->query(db,
-			"SELECT s.device, s.product, d.created FROM sessions AS s "
-			"LEFT JOIN devices AS d ON s.device = d.id WHERE s.id = ?",
-			 DB_INT, session_id, DB_INT, DB_INT, DB_UINT);
-	if (!e || !e->enumerate(e, &device_id, &product_id, &created))
-	{
-		DESTROY_IF(e);
-		fprintf(stderr, "session %d not found\n", session_id);
-		return FALSE;
-	}
-	e->destroy(e);
-
-	/* if a device ID exists, check if device belongs to a group */
-	if (device_id)
-	{
-		e = db->query(db,
-				"SELECT group_id FROM groups_members WHERE device_id = ?",
-				 DB_INT, device_id, DB_INT);
-		if (e)
-		{
-			if (e->enumerate(e, &gid))
-			{
-				group_id = gid;
-			}
-			e->destroy(e);
-		}
-
-		/* set the creation date if hasn't been set yet */
-		if (!created)
-		{
-			if (db->execute(db, NULL,
-					"UPDATE devices SET created = ? WHERE id = ?",
-					DB_UINT, time(NULL), DB_INT, device_id) != 1)
-			{
-				fprintf(stderr, "creation date of device could not be set\n");
-				return FALSE;
-			}
-		}
-	}
-
-	/* if no group membership found, try default product group */
-	if (!group_id)
-	{
-		e = db->query(db,
-				"SELECT group_id FROM groups_product_defaults "
-				"WHERE product_id = ?", DB_INT, product_id, DB_INT);
-		if (e)
-		{
-			if (e->enumerate(e, &gid))
-			{
-				group_id = gid;
-			}
-			e->destroy(e);
-		}
-	}
-
-	/* assign a newly created device to a default group */
-	if (device_id && !created)
-	{
-		db->execute(db, NULL,
-			"INSERT INTO groups_members (device_id, group_id) "
-			"VALUES (?, ?)", DB_INT, device_id,
-			DB_INT, group_id ? group_id : DEFAULT_GROUP_ID);
-	}
-
-	/* get iteratively enforcements for given group */
 	while (group_id)
 	{
 		e = db->query(db,
@@ -190,11 +124,90 @@ bool policy_start(database_t *db, int session_id)
 		}
 		e->destroy(e);
 	}
-
 	return TRUE;
 }
 
-bool policy_stop(database_t *db, int session_id)
+static bool policy_start(database_t *db, int session_id)
+{
+	enumerator_t *e;
+	int device_id, product_id, gid, group_id = DEFAULT_GROUP_ID;
+	u_int created;
+
+	/* get session data */
+	e = db->query(db,
+			"SELECT s.device, s.product, d.created FROM sessions AS s "
+			"LEFT JOIN devices AS d ON s.device = d.id WHERE s.id = ?",
+			 DB_INT, session_id, DB_INT, DB_INT, DB_UINT);
+	if (!e || !e->enumerate(e, &device_id, &product_id, &created))
+	{
+		DESTROY_IF(e);
+		fprintf(stderr, "session %d not found\n", session_id);
+		return FALSE;
+	}
+	e->destroy(e);
+
+	/* if a device ID with a creation date exists, get all group memberships */
+	if (device_id & created)
+	{
+		e = db->query(db,
+				"SELECT group_id FROM groups_members WHERE device_id = ?",
+				 DB_INT, device_id, DB_INT);
+		if (!e)
+		{
+			return FALSE;
+		}
+		while (e->enumerate(e, &group_id))
+		{
+			if (!iterate_enforcements(db, session_id, group_id))
+			{
+				e->destroy(e);
+				return FALSE;
+			}
+		}
+		e->destroy(e);
+
+		return TRUE;
+	}
+
+	/* determine if a default product group exists */
+	e = db->query(db,
+			"SELECT group_id FROM groups_product_defaults "
+			"WHERE product_id = ?", DB_INT, product_id, DB_INT);
+	if (!e)
+	{
+		return FALSE;
+	}
+	if (e->enumerate(e, &gid))
+	{
+		group_id = gid;
+	}
+	e->destroy(e);
+
+	if (device_id && !created)
+	{
+		/* assign a newly created device to a default group */
+		if (db->execute(db, NULL,
+			"INSERT INTO groups_members (device_id, group_id) "
+			"VALUES (?, ?)", DB_INT, device_id, DB_INT, group_id) != 1)
+		{
+			fprintf(stderr, "could not assign device to a default group\n");
+			return FALSE;
+		}
+
+		/* set the creation date if it hasn't been set yet */
+		if (db->execute(db, NULL,
+				"UPDATE devices SET created = ? WHERE id = ?",
+				DB_UINT, time(NULL), DB_INT, device_id) != 1)
+		{
+			fprintf(stderr, "creation date of device could not be set\n");
+			return FALSE;
+		}
+	}
+
+	return iterate_enforcements(db, session_id, group_id);
+}
+
+static bool policy_stop(database_t *db, int session_id)
 {
 	enumerator_t *e;
 	int rec, policy;
