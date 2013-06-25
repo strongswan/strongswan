@@ -80,7 +80,7 @@ static bool has_capability(u_int cap)
 {
 #ifndef CAPABILITIES
 	/* if we can't check the actual capabilities assume only root has it */
-	return getuid() == 0;
+	return geteuid() == 0;
 #endif /* !CAPABILITIES */
 #ifdef CAPABILITIES_LIBCAP
 	cap_flag_value_t val;
