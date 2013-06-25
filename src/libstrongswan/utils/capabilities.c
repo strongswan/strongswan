@@ -378,7 +378,7 @@ METHOD(capabilities_t, drop, bool,
 #endif /* CAPABILITIES_NATIVE */
 #ifdef CAPABILITIES
 	DBG1(DBG_LIB, "dropped capabilities, running as uid %u, gid %u",
-		 this->uid, this->gid);
+		 geteuid(), getegid());
 #endif /* CAPABILITIES */
 	return TRUE;
 }
