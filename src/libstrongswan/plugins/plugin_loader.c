@@ -17,6 +17,9 @@
 #define _GNU_SOURCE
 #include "plugin_loader.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
 #include <limits.h>
@@ -58,6 +61,11 @@ struct private_plugin_loader_t {
 	 * Loaded features (stored in reverse order), as provided_feature_t
 	 */
 	linked_list_t *loaded;
+
+	/**
+	 * List of paths to search for plugins
+	 */
+	linked_list_t *paths;
 
 	/**
 	 * List of names of loaded plugins
@@ -909,17 +917,36 @@ METHOD(plugin_loader_t, add_static_features, void,
 	register_features(this, entry);
 }
 
+/**
+ * Tries to find the plugin with the given name in the given path.
+ */
+static bool find_plugin(char *path, char *name, char *buf, char **file)
+{
+	struct stat stb;
+
+	if (path && snprintf(buf, PATH_MAX, "%s/libstrongswan-%s.so",
+						 path, name) < PATH_MAX)
+	{
+		if (stat(buf, &stb) == 0)
+		{
+			*file = buf;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 METHOD(plugin_loader_t, load_plugins, bool,
-	private_plugin_loader_t *this, char *path, char *list)
+	private_plugin_loader_t *this, char *default_path, char *list)
 {
 	enumerator_t *enumerator;
 	char *token;
 	bool critical_failed = FALSE;
 
 #ifdef PLUGINDIR
-	if (path == NULL)
+	if (default_path == NULL)
 	{
-		path = PLUGINDIR;
+		default_path = PLUGINDIR;
 	}
 #endif /* PLUGINDIR */
 
@@ -943,14 +970,14 @@ METHOD(plugin_loader_t, load_plugins, bool,
 			free(token);
 			continue;
 		}
-		if (path)
+		if (this->paths)
 		{
-			if (snprintf(buf, sizeof(buf), "%s/libstrongswan-%s.so",
-						 path, token) >= sizeof(buf))
-			{
-				return FALSE;
-			}
-			file = buf;
+			this->paths->find_first(this->paths, (void*)find_plugin, NULL,
+									token, buf, &file);
+		}
+		if (!file)
+		{
+			find_plugin(default_path, token, buf, &file);
 		}
 		entry = load_plugin(this, token, file, critical);
 		if (entry)
@@ -1025,6 +1052,16 @@ METHOD(plugin_loader_t, unload, void,
 	free(this->loaded_plugins);
 	this->loaded_plugins = NULL;
 	memset(&this->stats, 0, sizeof(this->stats));
+}
+
+METHOD(plugin_loader_t, add_path, void,
+	private_plugin_loader_t *this, char *path)
+{
+	if (!this->paths)
+	{
+		this->paths = linked_list_create();
+	}
+	this->paths->insert_last(this->paths, strdupnull(path));
 }
 
 /**
@@ -1102,6 +1139,7 @@ METHOD(plugin_loader_t, destroy, void,
 	this->features->destroy(this->features);
 	this->loaded->destroy(this->loaded);
 	this->plugins->destroy(this->plugins);
+	DESTROY_FUNCTION_IF(this->paths, free);
 	free(this->loaded_plugins);
 	free(this);
 }
@@ -1117,6 +1155,7 @@ plugin_loader_t *plugin_loader_create()
 		.public = {
 			.add_static_features = _add_static_features,
 			.load = _load_plugins,
+			.add_path = _add_path,
 			.reload = _reload,
 			.unload = _unload,
 			.create_plugin_enumerator = _create_plugin_enumerator,

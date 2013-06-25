@@ -63,11 +63,28 @@ struct plugin_loader_t {
 	 * as a critical plugin. If loading a critical plugin fails, plugin loading
 	 * is aborted and FALSE is returned.
 	 *
+	 * Additional paths can be added with add_path(), these will be searched
+	 * for the plugins first, in the order they were added, then the given path
+	 * or the default follow.
+	 *
+	 * @note Even though this method could be called multiple times this is
+	 * currently not really supported in regards to plugin features and their
+	 * dependencies (in particular soft dependencies).
+	 *
 	 * @param path			path containing loadable plugins, NULL for default
 	 * @param list			space separated list of plugins to load
 	 * @return				TRUE if all critical plugins loaded successfully
 	 */
 	bool (*load)(plugin_loader_t *this, char *path, char *list);
+
+	/**
+	 * Add an additional search path for plugins.
+	 *
+	 * These will be searched in the order they were added.
+	 *
+	 * @param path			path containing loadable plugins
+	 */
+	void (*add_path)(plugin_loader_t *this, char *path);
 
 	/**
 	 * Reload the configuration of one or multiple plugins.
