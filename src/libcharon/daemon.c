@@ -33,10 +33,6 @@
 #include <processing/jobs/start_action_job.h>
 #include <threading/mutex.h>
 
-#ifndef CAP_NET_ADMIN
-#define CAP_NET_ADMIN 12
-#endif
-
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
 #endif
@@ -471,7 +467,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.xauth);
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
-	DESTROY_IF(this->public.caps);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -581,7 +576,6 @@ private_daemon_t *daemon_create(const char *name)
 		.ref = 1,
 	);
 	charon = &this->public;
-	this->public.caps = capabilities_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.xauth = xauth_manager_create();
@@ -590,8 +584,6 @@ private_daemon_t *daemon_create(const char *name)
 	this->public.traps = trap_manager_create();
 	this->public.shunts = shunt_manager_create();
 	this->kernel_handler = kernel_handler_create();
-
-	this->public.caps->keep(this->public.caps, CAP_NET_ADMIN);
 
 	return this;
 }

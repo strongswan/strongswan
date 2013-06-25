@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -76,9 +76,63 @@ struct private_capabilities_t {
 #endif
 };
 
-METHOD(capabilities_t, keep, void,
-	private_capabilities_t *this, u_int cap)
+/**
+ * Verify that the current process has the given capability
+ */
+static bool has_capability(u_int cap)
 {
+#ifndef CAPABILITIES
+	/* if we can't check the actual capabilities assume only root has it */
+	return geteuid() == 0;
+#endif /* !CAPABILITIES */
+#ifdef CAPABILITIES_LIBCAP
+	cap_flag_value_t val;
+	cap_t caps;
+	bool ok;
+
+	caps = cap_get_proc();
+	if (!caps)
+	{
+		return FALSE;
+	}
+	ok = cap_get_flag(caps, cap, CAP_PERMITTED, &val) == 0 && val == CAP_SET;
+	cap_free(caps);
+	return ok;
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_header_struct header = {
+#if defined(_LINUX_CAPABILITY_VERSION_3)
+		.version = _LINUX_CAPABILITY_VERSION_3,
+#elif defined(_LINUX_CAPABILITY_VERSION_2)
+		.version = _LINUX_CAPABILITY_VERSION_2,
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
+		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
+		.version = _LINUX_CAPABILITY_VERSION,
+#endif
+	};
+	struct __user_cap_data_struct caps[2];
+	int i = 0;
+
+	if (cap >= 32)
+	{
+		i++;
+		cap -= 32;
+	}
+	return capget(&header, caps) == 0 && caps[i].permitted & (1 << cap);
+#endif /* CAPABILITIES_NATIVE */
+}
+
+/**
+ * Keep the given capability if it is held by the current process.  Returns
+ * FALSE, if this is not the case.
+ */
+static bool keep_capability(private_capabilities_t *this, u_int cap)
+{
+	if (!has_capability(cap))
+	{
+		return FALSE;
+	}
 #ifdef CAPABILITIES_LIBCAP
 	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
@@ -96,18 +150,71 @@ METHOD(capabilities_t, keep, void,
 	this->caps[i].permitted |= 1 << cap;
 	this->caps[i].inheritable |= 1 << cap;
 #endif /* CAPABILITIES_NATIVE */
+	return TRUE;
+}
+
+/**
+ * Returns TRUE if the current process/user is member of the given group
+ */
+static bool has_group(gid_t group)
+{
+	gid_t *groups;
+	long ngroups, i;
+	bool found = FALSE;
+
+	if (group == getegid())
+	{	/* it's unspecified if this is part of the list below or not */
+		return TRUE;
+	}
+	ngroups = sysconf(_SC_NGROUPS_MAX);
+	groups = calloc(ngroups, sizeof(gid_t));
+	ngroups = getgroups(ngroups, groups);
+	if (ngroups == -1)
+	{
+		DBG1(DBG_LIB, "getting groups for current process failed: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	for (i = 0; i < ngroups; i++)
+	{
+		if (group == groups[i])
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	free(groups);
+	return found;
+}
+
+METHOD(capabilities_t, keep, bool,
+	private_capabilities_t *this, u_int cap)
+{
+	if (cap == CAP_CHOWN)
+	{	/* if new files/UNIX sockets are created they should be owned by the
+		 * configured user and group.  This requires a call to chown(2).  But
+		 * CAP_CHOWN is not always required. */
+		if (!this->uid || geteuid() == this->uid)
+		{	/* if the owner does not change CAP_CHOWN is not needed */
+			if (!this->gid || has_group(this->gid))
+			{	/* the same applies if the owner is a member of the group */
+				return TRUE;
+			}
+		}
+	}
+	return keep_capability(this, cap);
 }
 
 METHOD(capabilities_t, get_uid, uid_t,
 	private_capabilities_t *this)
 {
-	return this->uid;
+	return this->uid ?: geteuid();
 }
 
 METHOD(capabilities_t, get_gid, gid_t,
 	private_capabilities_t *this)
 {
-	return this->gid;
+	return this->gid ?: getegid();
 }
 
 METHOD(capabilities_t, set_uid, void,
@@ -271,7 +378,7 @@ METHOD(capabilities_t, drop, bool,
 #endif /* CAPABILITIES_NATIVE */
 #ifdef CAPABILITIES
 	DBG1(DBG_LIB, "dropped capabilities, running as uid %u, gid %u",
-		 this->uid, this->gid);
+		 geteuid(), getegid());
 #endif /* CAPABILITIES */
 	return TRUE;
 }

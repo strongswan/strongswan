@@ -692,6 +692,18 @@ socket_default_socket_t *socket_default_socket_create()
 		this->natt = 0;
 	}
 
+	if ((this->port && this->port < 1024) || (this->natt && this->natt < 1024))
+	{
+		if (!lib->caps->keep(lib->caps, CAP_NET_BIND_SERVICE))
+		{
+			/* required to bind ports < 1024 */
+			DBG1(DBG_NET, "socket-default plugin requires CAP_NET_BIND_SERVICE "
+				 "capability");
+			destroy(this);
+			return NULL;
+		}
+	}
+
 	/* we allocate IPv6 sockets first as that will reserve randomly allocated
 	 * ports also for IPv4. On OS X, we have to do it the other way round
 	 * for the same effect. */

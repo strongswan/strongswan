@@ -52,6 +52,13 @@ plugin_t *xauth_pam_plugin_create()
 {
 	xauth_pam_plugin_t *this;
 
+	/* required for PAM authentication */
+	if (!lib->caps->keep(lib->caps, CAP_AUDIT_WRITE))
+	{
+		DBG1(DBG_DMN, "xauth-pam plugin requires CAP_AUDIT_WRITE capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
@@ -59,9 +66,6 @@ plugin_t *xauth_pam_plugin_create()
 			.destroy = _destroy,
 		},
 	);
-
-	/* required for PAM authentication */
-	charon->caps->keep(charon->caps, CAP_AUDIT_WRITE);
 
 	return &this->plugin;
 }

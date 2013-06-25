@@ -29,6 +29,17 @@
 #include <nm/nm_backend.h>
 
 /**
+ * Default user and group
+ */
+#ifndef IPSEC_USER
+#define IPSEC_USER NULL
+#endif
+
+#ifndef IPSEC_GROUP
+#define IPSEC_GROUP NULL
+#endif
+
+/**
  * Hook in library for debugging messages
  */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
@@ -121,18 +132,20 @@ static void segv_handler(int signal)
  */
 static bool lookup_uid_gid()
 {
-#ifdef IPSEC_USER
-	if (!charon->caps->resolve_uid(charon->caps, IPSEC_USER))
+	char *name;
+
+	name = lib->settings->get_str(lib->settings, "charon-nm.user",
+								  IPSEC_USER);
+	if (name && !lib->caps->resolve_uid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif
-#ifdef IPSEC_GROUP
-	if (!charon->caps->resolve_gid(charon->caps, IPSEC_GROUP))
+	name = lib->settings->get_str(lib->settings, "charon-nm.group",
+								  IPSEC_GROUP);
+	if (name && !lib->caps->resolve_gid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif
 	return TRUE;
 }
 
@@ -214,7 +227,7 @@ int main(int argc, char *argv[])
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
-	if (!charon->caps->drop(charon->caps))
+	if (!lib->caps->drop(lib->caps))
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon-nm");
 		goto deinit;

@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -21,6 +23,8 @@
 #ifndef CAPABILITIES_H_
 #define CAPABILITIES_H_
 
+typedef struct capabilities_t capabilities_t;
+
 #include <library.h>
 #ifdef HAVE_SYS_CAPABILITY_H
 # include <sys/capability.h>
@@ -28,7 +32,18 @@
 # include <linux/capability.h>
 #endif
 
-typedef struct capabilities_t capabilities_t;
+#ifndef CAP_CHOWN
+# define CAP_CHOWN 0
+#endif
+#ifndef CAP_NET_BIND_SERVICE
+# define CAP_NET_BIND_SERVICE 10
+#endif
+#ifndef CAP_NET_ADMIN
+# define CAP_NET_ADMIN 12
+#endif
+#ifndef CAP_NET_RAW
+# define CAP_NET_RAW 13
+#endif
 
 /**
  * POSIX capability dropping abstraction layer.
@@ -36,11 +51,14 @@ typedef struct capabilities_t capabilities_t;
 struct capabilities_t {
 
 	/**
-	 * Register a capability to keep while calling drop().
+	 * Register a capability to keep while calling drop(). Verifies that the
+	 * capability is currently held.
 	 *
 	 * @param cap		capability to keep
+	 * @return			FALSE if the capability is currently not held
 	 */
-	void (*keep)(capabilities_t *this, u_int cap);
+	bool (*keep)(capabilities_t *this,
+				 u_int cap) __attribute__((warn_unused_result));
 
 	/**
 	 * Get the user ID set through set_uid/resolve_uid.

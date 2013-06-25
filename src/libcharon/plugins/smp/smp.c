@@ -739,6 +739,12 @@ plugin_t *smp_plugin_create()
 	private_smp_t *this;
 	mode_t old;
 
+	if (!lib->caps->keep(lib->caps, CAP_CHOWN))
+	{	/* required to chown(2) control socket */
+		DBG1(DBG_CFG, "smp plugin requires CAP_CHOWN capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -768,8 +774,8 @@ plugin_t *smp_plugin_create()
 		return NULL;
 	}
 	umask(old);
-	if (chown(unix_addr.sun_path, charon->caps->get_uid(charon->caps),
-			  charon->caps->get_gid(charon->caps)) != 0)
+	if (chown(unix_addr.sun_path, lib->caps->get_uid(lib->caps),
+			  lib->caps->get_gid(lib->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing XML socket permissions failed: %s", strerror(errno));
 	}

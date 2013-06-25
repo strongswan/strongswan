@@ -65,6 +65,14 @@ plugin_t *kernel_netlink_plugin_create()
 {
 	private_kernel_netlink_plugin_t *this;
 
+	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	{	/* required to bind/use XFRM sockets / create/modify routing tables, but
+		 * not if only the read-only parts of kernel-netlink-net are used, so
+		 * we don't fail here */
+		DBG1(DBG_KNL, "kernel-netlink plugin might require CAP_NET_ADMIN "
+			 "capability");
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {

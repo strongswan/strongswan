@@ -77,8 +77,8 @@ static bool open_socket(private_whitelist_control_t *this)
 		return FALSE;
 	}
 	umask(old);
-	if (chown(addr.sun_path, charon->caps->get_uid(charon->caps),
-			  charon->caps->get_gid(charon->caps)) != 0)
+	if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
+			  lib->caps->get_gid(lib->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing whitelist socket permissions failed: %s",
 			 strerror(errno));
