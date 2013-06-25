@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <time.h>
 
+/* The default policy group #1 is assumed to always exist */
+#define DEFAULT_GROUP_ID	1
+
 /**
  * global debug output variables
  */
@@ -111,6 +114,15 @@ bool policy_start(database_t *db, int session_id)
 			}
 			e->destroy(e);
 		}
+	}
+
+	/* assign a newly created device to a default group */
+	if (device_id && !created)
+	{
+		db->execute(db, NULL,
+			"INSERT INTO groups_members (device_id, group_id) "
+			"VALUES (?, ?)", DB_INT, device_id,
+			DB_INT, group_id ? group_id : DEFAULT_GROUP_ID);
 	}
 
 	/* get iteratively enforcements for given group */
@@ -291,4 +303,3 @@ int main(int argc, char *argv[])
 
 	exit(EXIT_SUCCESS);
 }
-
