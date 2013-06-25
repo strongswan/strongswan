@@ -149,19 +149,19 @@ static void run()
 static bool lookup_uid_gid()
 {
 #ifdef IPSEC_USER
-	if (!charon->caps->resolve_uid(charon->caps, IPSEC_USER))
+	if (!lib->caps->resolve_uid(lib->caps, IPSEC_USER))
 	{
 		return FALSE;
 	}
 #endif
 #ifdef IPSEC_GROUP
-	if (!charon->caps->resolve_gid(charon->caps, IPSEC_GROUP))
+	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP))
 	{
 		return FALSE;
 	}
 #endif
 #ifdef ANDROID
-	charon->caps->set_uid(charon->caps, AID_VPN);
+	lib->caps->set_uid(lib->caps, AID_VPN);
 #endif
 	return TRUE;
 }
@@ -219,8 +219,8 @@ static bool check_pidfile()
 	if (pidfile)
 	{
 		ignore_result(fchown(fileno(pidfile),
-							 charon->caps->get_uid(charon->caps),
-							 charon->caps->get_gid(charon->caps)));
+							 lib->caps->get_uid(lib->caps),
+							 lib->caps->get_gid(lib->caps)));
 		fprintf(pidfile, "%d\n", getpid());
 		fflush(pidfile);
 	}
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	if (!charon->caps->drop(charon->caps))
+	if (!lib->caps->drop(lib->caps))
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon");
 		goto deinit;

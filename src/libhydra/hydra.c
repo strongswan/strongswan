@@ -97,4 +97,3 @@ bool libhydra_init(const char *daemon)
 	}
 	return !this->integrity_failed;
 }
-

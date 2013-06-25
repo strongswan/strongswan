@@ -169,13 +169,13 @@ static int run()
 static bool lookup_uid_gid()
 {
 #ifdef IPSEC_USER
-	if (!charon->caps->resolve_uid(charon->caps, IPSEC_USER))
+	if (!lib->caps->resolve_uid(lib->caps, IPSEC_USER))
 	{
 		return FALSE;
 	}
 #endif
 #ifdef IPSEC_GROUP
-	if (!charon->caps->resolve_gid(charon->caps, IPSEC_GROUP))
+	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP))
 	{
 		return FALSE;
 	}
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	if (!charon->caps->drop(charon->caps))
+	if (!lib->caps->drop(lib->caps))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

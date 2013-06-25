@@ -23,14 +23,14 @@
 #ifndef CAPABILITIES_H_
 #define CAPABILITIES_H_
 
+typedef struct capabilities_t capabilities_t;
+
 #include <library.h>
 #ifdef HAVE_SYS_CAPABILITY_H
 # include <sys/capability.h>
 #elif defined(CAPABILITIES_NATIVE)
 # include <linux/capability.h>
 #endif
-
-typedef struct capabilities_t capabilities_t;
 
 /**
  * POSIX capability dropping abstraction layer.

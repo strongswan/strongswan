@@ -101,6 +101,7 @@
 #include "credentials/credential_manager.h"
 #include "credentials/cred_encoding.h"
 #include "utils/chunk.h"
+#include "utils/capabilities.h"
 #include "utils/integrity_checker.h"
 #include "utils/leak_detective.h"
 #include "utils/settings.h"
@@ -139,6 +140,11 @@ struct library_t {
 	 * Proposal keywords registry
 	 */
 	proposal_keywords_t *proposal;
+
+	/**
+	 * POSIX capability dropping
+	 */
+	capabilities_t *caps;
 
 	/**
 	 * crypto algorithm registry and factory

@@ -142,7 +142,7 @@ static bool nm_backend_init()
 	}
 
 	/* bypass file permissions to read from users ssh-agent */
-	if (!charon->caps->keep(charon->caps, CAP_DAC_OVERRIDE))
+	if (!lib->caps->keep(lib->caps, CAP_DAC_OVERRIDE))
 	{
 		DBG1(DBG_CFG, "NM backend requires CAP_DAC_OVERRIDE capability");
 		nm_backend_deinit();

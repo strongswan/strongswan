@@ -471,7 +471,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.xauth);
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
-	DESTROY_IF(this->public.caps);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -581,7 +580,6 @@ private_daemon_t *daemon_create(const char *name)
 		.ref = 1,
 	);
 	charon = &this->public;
-	this->public.caps = capabilities_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.xauth = xauth_manager_create();
@@ -626,7 +624,7 @@ bool libcharon_init(const char *name)
 
 	this = daemon_create(name);
 
-	if (!this->public.caps->keep(this->public.caps, CAP_NET_ADMIN))
+	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
 	{
 		dbg(DBG_DMN, 1, "libcharon requires CAP_NET_ADMIN capability");
 		return FALSE;

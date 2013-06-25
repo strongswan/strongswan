@@ -163,7 +163,6 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/eap/eap_manager.h>
 #include <sa/xauth/xauth_manager.h>
-#include <utils/capabilities.h>
 
 #ifdef ME
 #include <sa/ikev2/connect_manager.h>
@@ -271,11 +270,6 @@ struct daemon_t {
 	 */
 	mediation_manager_t *mediation_manager;
 #endif /* ME */
-
-	/**
-	 * POSIX capability dropping
-	 */
-	capabilities_t *caps;
 
 	/**
 	 * Name of the binary that uses the library (used for settings etc.)
