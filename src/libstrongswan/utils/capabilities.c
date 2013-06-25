@@ -76,6 +76,9 @@ struct private_capabilities_t {
 #endif
 };
 
+/**
+ * Verify that the current process has the given capability
+ */
 static bool has_capability(u_int cap)
 {
 #ifndef CAPABILITIES
@@ -120,8 +123,11 @@ static bool has_capability(u_int cap)
 #endif /* CAPABILITIES_NATIVE */
 }
 
-METHOD(capabilities_t, keep, bool,
-	private_capabilities_t *this, u_int cap)
+/**
+ * Keep the given capability if it is held by the current process.  Returns
+ * FALSE, if this is not the case.
+ */
+static bool keep_capability(private_capabilities_t *this, u_int cap)
 {
 	if (!has_capability(cap))
 	{
@@ -145,6 +151,58 @@ METHOD(capabilities_t, keep, bool,
 	this->caps[i].inheritable |= 1 << cap;
 #endif /* CAPABILITIES_NATIVE */
 	return TRUE;
+}
+
+/**
+ * Returns TRUE if the current process/user is member of the given group
+ */
+static bool has_group(gid_t group)
+{
+	gid_t *groups;
+	long ngroups, i;
+	bool found = FALSE;
+
+	if (group == getegid())
+	{	/* it's unspecified if this is part of the list below or not */
+		return TRUE;
+	}
+	ngroups = sysconf(_SC_NGROUPS_MAX);
+	groups = calloc(ngroups, sizeof(gid_t));
+	ngroups = getgroups(ngroups, groups);
+	if (ngroups == -1)
+	{
+		DBG1(DBG_LIB, "getting groups for current process failed: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	for (i = 0; i < ngroups; i++)
+	{
+		if (group == groups[i])
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	free(groups);
+	return found;
+}
+
+METHOD(capabilities_t, keep, bool,
+	private_capabilities_t *this, u_int cap)
+{
+	if (cap == CAP_CHOWN)
+	{	/* if new files/UNIX sockets are created they should be owned by the
+		 * configured user and group.  This requires a call to chown(2).  But
+		 * CAP_CHOWN is not always required. */
+		if (!this->uid || geteuid() == this->uid)
+		{	/* if the owner does not change CAP_CHOWN is not needed */
+			if (!this->gid || has_group(this->gid))
+			{	/* the same applies if the owner is a member of the group */
+				return TRUE;
+			}
+		}
+	}
+	return keep_capability(this, cap);
 }
 
 METHOD(capabilities_t, get_uid, uid_t,

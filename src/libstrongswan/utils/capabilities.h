@@ -32,6 +32,9 @@ typedef struct capabilities_t capabilities_t;
 # include <linux/capability.h>
 #endif
 
+#ifndef CAP_CHOWN
+# define CAP_CHOWN 0
+#endif
 #ifndef CAP_NET_BIND_SERVICE
 # define CAP_NET_BIND_SERVICE 10
 #endif
