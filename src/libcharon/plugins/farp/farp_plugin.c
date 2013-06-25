@@ -92,6 +92,12 @@ plugin_t *farp_plugin_create()
 {
 	private_farp_plugin_t *this;
 
+	if (!lib->caps->keep(lib->caps, CAP_NET_RAW))
+	{	/* required to open ARP socket (AF_PACKET) */
+		DBG1(DBG_NET, "farp plugin requires CAP_NET_RAW capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
