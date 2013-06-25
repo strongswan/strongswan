@@ -208,13 +208,13 @@ METHOD(capabilities_t, keep, bool,
 METHOD(capabilities_t, get_uid, uid_t,
 	private_capabilities_t *this)
 {
-	return this->uid;
+	return this->uid ?: geteuid();
 }
 
 METHOD(capabilities_t, get_gid, gid_t,
 	private_capabilities_t *this)
 {
-	return this->gid;
+	return this->gid ?: getegid();
 }
 
 METHOD(capabilities_t, set_uid, void,
