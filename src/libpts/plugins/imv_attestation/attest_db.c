@@ -27,7 +27,9 @@
 #include "pts/pts_meas_algo.h"
 #include "pts/pts_file_meas.h"
 #include "pts/components/pts_comp_func_name.h"
+
 #define IMA_MAX_NAME_LEN	255
+#define DEVICE_MAX_LEN		 20
 
 typedef struct private_attest_db_t private_attest_db_t;
 
@@ -810,8 +812,8 @@ METHOD(attest_db_t, list_devices, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e, *e_ar;
-	chunk_t value, ar_id_value = chunk_empty;
-	char *product;
+	chunk_t ar_id_value = chunk_empty;
+	char *product, *device;
 	time_t timestamp;
 	int id, last_id = 0, ar_id = 0, last_ar_id = 0, device_count = 0;
 	int session_id, rec;
@@ -823,18 +825,17 @@ METHOD(attest_db_t, list_devices, void,
 			"FROM devices AS d "
 			"JOIN sessions AS s ON d.id = s.device "
 			"JOIN products AS p ON p.id = s.product "
-			"ORDER BY d.value, s.time DESC", DB_INT, DB_BLOB, DB_INT, DB_UINT,
+			"ORDER BY d.value, s.time DESC", DB_INT, DB_TEXT, DB_INT, DB_UINT,
 			 DB_INT, DB_INT, DB_TEXT);
 
 	if (e)
 	{
-		while (e->enumerate(e, &id, &value, &session_id, &tstamp, &ar_id, &rec,
+		while (e->enumerate(e, &id, &device, &session_id, &tstamp, &ar_id, &rec,
 							   &product))
 		{
 			if (id != last_id)
 			{
-				printf("%4d: %.*s - %s\n", id, (int)value.len, value.ptr,
-										  product);
+				printf("%4d: %s - %s\n", id, device, product);
 				device_count++;
 				last_id = id;
 			}
@@ -1517,9 +1518,9 @@ METHOD(attest_db_t, list_sessions, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e;
-	chunk_t device, identity;
-	char *product;
-	int session_id, conn_id, rec;
+	chunk_t identity;
+	char *product, *device;
+	int session_id, conn_id, rec, device_len;
 	time_t created;
 	u_int t;
 
@@ -1530,7 +1531,7 @@ METHOD(attest_db_t, list_sessions, void,
 			"LEFT JOIN devices AS d ON s.device = d.id "
 			"LEFT JOIN identities AS i ON s.identity = i.id "
 			"ORDER BY s.time DESC",
-			 DB_INT, DB_UINT, DB_INT, DB_INT, DB_TEXT, DB_BLOB, DB_BLOB);
+			 DB_INT, DB_UINT, DB_INT, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB);
 	if (e)
 	{
 		while (e->enumerate(e, &session_id, &t, &conn_id, &rec, &product,
@@ -1538,12 +1539,12 @@ METHOD(attest_db_t, list_sessions, void,
 		{
 			created = t;
 			product = product ? product : "-";
-			device = device.len ? device : chunk_from_str("-");
-			device.len = min(device.len, 20);
+			device = strlen(device) ? device : "-";
+			device_len = min(strlen(device), DEVICE_MAX_LEN);
 			identity = identity.len ? identity : chunk_from_str("-");
 			printf("%4d: %T %2d %-20s %.*s%*s %.*s - %N\n", session_id, &created,
-				   FALSE, conn_id, product, device.len, device.ptr,
-				   20-device.len, " ", identity.len, identity.ptr,
+				   FALSE, conn_id, product, device_len, device,
+				   DEVICE_MAX_LEN - device_len, " ", identity.len, identity.ptr,
 				   TNC_IMV_Action_Recommendation_names, rec);
 		}
 		e->destroy(e);

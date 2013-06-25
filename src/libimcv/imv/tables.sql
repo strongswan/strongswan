@@ -215,7 +215,7 @@ DROP TABLE IF EXISTS devices;
 CREATE TABLE devices (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   description TEXT DEFAULT '',
-  value BLOB NOT NULL,
+  value TEXT NOT NULL,
   product INTEGER REFERENCES products(id),
   created INTEGER
 );

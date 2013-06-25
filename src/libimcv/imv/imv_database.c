@@ -180,6 +180,7 @@ METHOD(imv_database_t, add_device, int,
 	private_imv_database_t *this, imv_session_t *session, chunk_t device)
 {
 	enumerator_t *e;
+	char *device_str;
 	int pid = 0, did = 0;
 
 	/* get primary key of product from session */
@@ -192,10 +193,13 @@ METHOD(imv_database_t, add_device, int,
 		e->destroy(e);
 	}
 
+	/* some IMV policy manager expect a text string */
+	device_str = strndup(device.ptr, device.len);
+
 	/* get primary key of device identification if it exists */
 	e = this->db->query(this->db,
 			"SELECT id FROM devices WHERE value = ? AND product = ?",
-			 DB_BLOB, device, DB_INT, pid, DB_INT);
+			 DB_TEXT, device_str, DB_INT, pid, DB_INT);
 	if (e)
 	{
 		e->enumerate(e, &did);
@@ -207,8 +211,9 @@ METHOD(imv_database_t, add_device, int,
 	{
 		this->db->execute(this->db, &did,
 			"INSERT INTO devices (value, product) VALUES (?, ?)",
-			 DB_BLOB, device, DB_INT, pid);
+			 DB_TEXT, device_str, DB_INT, pid);
 	}
+	free(device_str);
 	
 	/* add device reference to session */
 	if (did)
