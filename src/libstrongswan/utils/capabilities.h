@@ -38,6 +38,9 @@ typedef struct capabilities_t capabilities_t;
 #ifndef CAP_NET_ADMIN
 # define CAP_NET_ADMIN 12
 #endif
+#ifndef CAP_NET_RAW
+# define CAP_NET_RAW 13
+#endif
 
 /**
  * POSIX capability dropping abstraction layer.
