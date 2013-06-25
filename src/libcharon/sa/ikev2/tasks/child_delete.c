@@ -177,8 +177,11 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 					default:
 						break;
 				}
-
-				this->child_sas->insert_last(this->child_sas, child_sa);
+				if (this->child_sas->find_first(this->child_sas, NULL,
+												(void**)&child_sa) != SUCCESS)
+				{
+					this->child_sas->insert_last(this->child_sas, child_sa);
+				}
 			}
 			spis->destroy(spis);
 		}
@@ -310,10 +313,6 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_i, status_t,
 	private_child_delete_t *this, message_t *message)
 {
-	/* flush the list before adding new SAs */
-	this->child_sas->destroy(this->child_sas);
-	this->child_sas = linked_list_create();
-
 	process_payloads(this, message);
 	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
