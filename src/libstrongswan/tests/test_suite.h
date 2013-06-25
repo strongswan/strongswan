@@ -30,10 +30,13 @@
  */
 #define CHECK_FOR_LEAKS() do \
 { \
-	if (lib->leak_detective->leaks(lib->leak_detective)) { \
-		lib->leak_detective->report(lib->leak_detective, TRUE); \
+	if (lib->leak_detective) \
+	{ \
+		if (lib->leak_detective->leaks(lib->leak_detective)) { \
+			lib->leak_detective->report(lib->leak_detective, TRUE); \
+		} \
+		ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0); \
 	} \
-	ck_assert_int_eq(lib->leak_detective->leaks(lib->leak_detective), 0); \
 } \
 while(0)
 
@@ -55,7 +58,10 @@ static void name (int _i CK_ATTRIBUTE_UNUSED) \
 { \
 	tcase_fn_start(""#name, __FILE__, __LINE__); \
 	dbg_default_set_level(LEVEL_SILENT); \
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
+	if (lib->leak_detective) \
+	{ \
+		lib->leak_detective->set_state(lib->leak_detective, TRUE); \
+	}
 
 #undef END_TEST
 #define END_TEST \
@@ -73,7 +79,10 @@ static void name (int _i CK_ATTRIBUTE_UNUSED) \
 static void name() \
 { \
 	lib->set(lib, UNIT_TEST_FIXTURE_USED, (void*)TRUE); \
-	lib->leak_detective->set_state(lib->leak_detective, TRUE);
+	if (lib->leak_detective) \
+	{ \
+		lib->leak_detective->set_state(lib->leak_detective, TRUE); \
+	}
 
 /**
  * End a setup function
