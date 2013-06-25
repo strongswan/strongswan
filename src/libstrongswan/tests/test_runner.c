@@ -29,7 +29,6 @@ static bool load_plugins()
 {
 	enumerator_t *enumerator;
 	char *name, path[PATH_MAX], dir[64];
-	bool success = TRUE;
 
 	enumerator = enumerator_create_token(PLUGINS, " ", "");
 	while (enumerator->enumerate(enumerator, &name))
@@ -37,15 +36,11 @@ static bool load_plugins()
 		snprintf(dir, sizeof(dir), "%s", name);
 		translate(dir, "-", "_");
 		snprintf(path, sizeof(path), "%s/%s/.libs", PLUGINDIR, dir);
-		if (!lib->plugins->load(lib->plugins, path, name))
-		{
-			success = FALSE;
-			break;
-		}
+		lib->plugins->add_path(lib->plugins, path);
 	}
 	enumerator->destroy(enumerator);
 
-	return success;
+	return lib->plugins->load(lib->plugins, NULL, PLUGINS);
 }
 
 int main()
