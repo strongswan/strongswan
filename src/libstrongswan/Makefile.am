@@ -24,7 +24,7 @@ database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.
 ipsec/ipsec_types.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
 networking/tun_device.c networking/streams/stream.c \
-networking/streams/stream_service.c \
+networking/streams/stream_service.c networking/streams/stream_manager.c\
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
@@ -66,7 +66,7 @@ database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h networking/streams/stream.h \
-networking/streams/stream_service.h \
+networking/streams/stream_service.h networking/streams/stream_manager.h \
 resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
 resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
