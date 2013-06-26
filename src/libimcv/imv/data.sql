@@ -206,6 +206,18 @@ INSERT INTO directories (		/* 12 */
  '/usr/sbin'
 );
 
+INSERT INTO directories (		/* 13 */
+  path
+) VALUES (
+ '/system/bin'
+);
+
+INSERT INTO directories (		/* 14 */
+  path
+) VALUES (
+ '/system/lib'
+);
+
 /* Files */
 
 INSERT INTO files (				/*  1 */
@@ -502,6 +514,23 @@ INSERT INTO groups (			/*  7 */
   'Ubuntu x86_64', 2
 );
 
+INSERT INTO groups (			/*  8 */
+  name
+) VALUES (
+  'Reference'
+);
+
+INSERT INTO groups (			/*  9 */
+  name, parent
+) VALUES (
+  'Ref. Android', 8
+);
+
+INSERT INTO groups (			/* 10 */
+  name, parent
+) VALUES (
+  'Ref. Linux', 8
+);
 
 /* Default Product Groups */
 
@@ -702,7 +731,7 @@ INSERT INTO policies (			/* 10 */
 INSERT INTO policies (			/* 11 */
   type, name, dir, rec_fail, rec_noresult
 ) VALUES (
-  8, 'Measure as reference /bin', 1, 0, 0
+  8, 'Get /bin', 1, 0, 0
 );
 
 INSERT INTO policies (			/*  12 */
@@ -717,6 +746,17 @@ INSERT INTO policies (			/* 13 */
   6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0', 4, 2, 2
 );
 
+INSERT INTO policies (			/* 14 */
+  type, name, dir, rec_fail, rec_noresult
+) VALUES (
+  8, 'Get /system/bin', 13, 0, 0
+);
+
+INSERT INTO policies (			/* 15 */
+  type, name, dir, rec_fail, rec_noresult
+) VALUES (
+  8, 'Get /system/lib', 14, 0, 0
+);
 
 /* Enforcements */
 
@@ -777,7 +817,7 @@ INSERT INTO enforcements (
 INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
-  11, 2, 86400
+  11, 10, 86400
 );
 
 INSERT INTO enforcements (
@@ -790,5 +830,17 @@ INSERT INTO enforcements (
   policy, group_id, max_age
 ) VALUES (
   13, 5, 86400
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  14, 9, 0
+);
+
+INSERT INTO enforcements (
+  policy, group_id, max_age
+) VALUES (
+  15, 9, 0
 );
 
