@@ -75,4 +75,12 @@ struct stream_service_t {
  */
 stream_service_t *stream_service_create_from_fd(int fd);
 
+/**
+ * Create a service instance for UNIX sockets.
+ *
+ * @param uri		UNIX socket specific URI, must start with "unix://"
+ * @return			stream_service instance, NULL on failure
+ */
+stream_service_t *stream_service_create_unix(char *uri);
+
 #endif /** STREAM_SERVICE_H_ @}*/
