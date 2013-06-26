@@ -247,6 +247,8 @@ METHOD(stream_manager_t, remove_service, void,
 METHOD(stream_manager_t, destroy, void,
 	private_stream_manager_t *this)
 {
+	remove_stream(this, stream_create_unix);
+
 	this->streams->destroy(this->streams);
 	this->services->destroy(this->services);
 	this->running->destroy(this->running);
@@ -277,6 +279,8 @@ stream_manager_t *stream_manager_create()
 		.running = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
+
+	add_stream(this, "unix://", stream_create_unix);
 
 	return &this->public;
 }
