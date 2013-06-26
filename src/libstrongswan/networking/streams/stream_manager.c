@@ -248,6 +248,7 @@ METHOD(stream_manager_t, destroy, void,
 	private_stream_manager_t *this)
 {
 	remove_stream(this, stream_create_unix);
+	remove_service(this, stream_service_create_unix);
 
 	this->streams->destroy(this->streams);
 	this->services->destroy(this->services);
@@ -281,6 +282,7 @@ stream_manager_t *stream_manager_create()
 	);
 
 	add_stream(this, "unix://", stream_create_unix);
+	add_service(this, "unix://", stream_service_create_unix);
 
 	return &this->public;
 }
