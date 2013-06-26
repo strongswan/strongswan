@@ -250,7 +250,7 @@ static void do_args(int argc, char *argv[])
 				continue;
 			}
 			case 'B':
-				attest->set_security(attest, OS_PACKAGE_STATE_BLACKLIST);
+				attest->set_package_state(attest, OS_PACKAGE_STATE_BLACKLIST);
 				continue;
 			case 'C':
 				if (!attest->set_component(attest, optarg, op == OP_ADD))
@@ -330,7 +330,7 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 'Y':
-				attest->set_security(attest, OS_PACKAGE_STATE_SECURITY);
+				attest->set_package_state(attest, OS_PACKAGE_STATE_SECURITY);
 				continue;
 			case '1':
 				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);

@@ -160,9 +160,9 @@ struct attest_db_t {
 	void (*set_relative)(attest_db_t *this);
 
 	/**
-	 * Set the package security state
+	 * Set the package security or blacklist state
 	 */
-	void (*set_security)(attest_db_t *this, os_package_state_t security);
+	void (*set_package_state)(attest_db_t *this, os_package_state_t package_state);
 
 	/**
 	 * Set the sequence number

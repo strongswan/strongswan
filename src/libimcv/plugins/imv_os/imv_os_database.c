@@ -46,8 +46,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	char *product, *package, *release, *cur_release;
 	chunk_t name, version;
 	os_type_t os_type;
-	os_package_state_t package_state;
-	int pid, gid;
+	int pid, gid, security, blacklist;
 	int count = 0, count_ok = 0, count_no_match = 0, count_blacklist = 0;
 	enumerator_t *e;
 	status_t status = SUCCESS;
@@ -110,9 +109,9 @@ METHOD(imv_os_database_t, check_packages, status_t,
 
 		/* Enumerate over all acceptable versions */
 		e = this->db->query(this->db,
-				"SELECT release, security FROM versions "
+				"SELECT release, security, blacklist FROM versions "
 				"WHERE product = ? AND package = ?",
-				DB_INT, pid, DB_INT, gid, DB_TEXT, DB_INT);
+				DB_INT, pid, DB_INT, gid, DB_TEXT, DB_INT, DB_INT);
 		if (!e)
 		{
 			free(package);
@@ -122,7 +121,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		found = FALSE;
 		match = FALSE;
 
-		while (e->enumerate(e, &cur_release, &package_state))
+		while (e->enumerate(e, &cur_release, &security, &blacklist))
 		{
 			found = TRUE;
 			if (streq(release, cur_release) || streq("*", cur_release))
@@ -137,17 +136,18 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		{
 			if (match)
 			{
-				if (package_state == OS_PACKAGE_STATE_BLACKLIST)
+				if (blacklist)
 				{
 					DBG2(DBG_IMV, "package '%s' (%s) is blacklisted",
 								   package, release);
 					count_blacklist++;
-					state->add_bad_package(state, package, package_state);
+					state->add_bad_package(state, package,
+										   OS_PACKAGE_STATE_BLACKLIST);
 				}
 				else
 				{
-					DBG2(DBG_IMV, "package '%s' (%s)%N is ok", package, release,
-								   os_package_state_names, package_state);
+					DBG2(DBG_IMV, "package '%s' (%s)%s is ok", package, release,
+								   security ? " [s]" : "");
 					count_ok++;
 				}
 			}
@@ -155,7 +155,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 			{
 				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
 				count_no_match++;
-				state->add_bad_package(state, package, package_state);
+				state->add_bad_package(state, package,
+									   OS_PACKAGE_STATE_SECURITY);
 			}
 		}
 		else

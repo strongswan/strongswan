@@ -144,9 +144,9 @@ struct private_attest_db_t {
 	bool utc;
 
 	/**
-	 * Package security state
+	 * Package security or blacklist state
 	 */
-	os_package_state_t security;
+	os_package_state_t package_state;
 
 	/**
 	 * Sequence number for ordering entries
@@ -733,10 +733,10 @@ METHOD(attest_db_t, set_relative, void,
 	this->relative = TRUE;
 }
 
-METHOD(attest_db_t, set_security, void,
-	private_attest_db_t *this, os_package_state_t security)
+METHOD(attest_db_t, set_package_state, void,
+	private_attest_db_t *this, os_package_state_t package_state)
 {
-	this->security = security;
+	this->package_state = package_state;
 }
 
 METHOD(attest_db_t, set_sequence, void,
@@ -1018,20 +1018,23 @@ METHOD(attest_db_t, list_packages, void,
 {
 	enumerator_t *e;
 	char *package, *version;
-	os_package_state_t security;
-	int gid, gid_old = 0, spaces, count = 0, t;
+	os_package_state_t package_state;
+	int blacklist, security, gid, gid_old = 0, spaces, count = 0, t;
 	time_t timestamp;
 
 	if (this->pid)
 	{
 		e = this->db->query(this->db,
-				"SELECT p.id, p.name, v.release, v.security, v.time "
+				"SELECT p.id, p.name, "
+				"v.release, v.security, v.blacklist, v.time "
 				"FROM packages AS p JOIN versions AS v ON v.package = p.id "
 				"WHERE v.product = ? ORDER BY p.name, v.release",
-				DB_INT, this->pid, DB_INT, DB_TEXT, DB_TEXT, DB_INT, DB_INT);
+				DB_INT, this->pid,
+				DB_INT, DB_TEXT, DB_TEXT, DB_INT, DB_INT, DB_INT);
 		if (e)
 		{
-			while (e->enumerate(e, &gid, &package, &version, &security, &t))
+			while (e->enumerate(e, &gid, &package,
+								   &version, &security, &blacklist, &t))
 			{
 				if (gid != gid_old)
 				{
@@ -1047,8 +1050,17 @@ METHOD(attest_db_t, list_packages, void,
 					}
 				}
 				timestamp = t;
+				if (blacklist)
+				{
+					package_state = OS_PACKAGE_STATE_BLACKLIST;
+				}
+				else
+				{
+					package_state = security ? OS_PACKAGE_STATE_SECURITY :
+											   OS_PACKAGE_STATE_UPDATE;
+				}
 				printf(" %T (%s)%N\n", &timestamp, this->utc, version,
-					 os_package_state_names, security);
+					 os_package_state_names, package_state);
 				count++;
 			}
 			e->destroy(e);
@@ -1794,17 +1806,22 @@ METHOD(attest_db_t, add, bool,
 	if (this->version_set && this->gid && this->pid)
 	{
 		time_t t = time(NULL);
+		int security, blacklist;
+
+		security =  this->package_state == OS_PACKAGE_STATE_SECURITY;
+		blacklist = this->package_state == OS_PACKAGE_STATE_BLACKLIST;
 
 		success = this->db->execute(this->db, NULL,
 					"INSERT INTO versions "
-					"(package, product, release, security, time) "
-					"VALUES (?, ?, ?, ?, ?)",
-					DB_UINT, this->gid, DB_UINT, this->pid, DB_TEXT,
-					this->version, DB_UINT, this->security, DB_INT, t) == 1;
+					"(package, product, release, security, blacklist, time) "
+					"VALUES (?, ?, ?, ?, ?, ?)",
+					DB_UINT, this->gid, DB_INT, this->pid, DB_TEXT,
+					this->version, DB_INT, security, DB_INT, blacklist,
+					DB_INT, t) == 1;
 
 		printf("'%s' package %s (%s)%N %sinserted into database\n",
 				this->product, this->package, this->version,
-				os_package_state_names, this->security,
+				os_package_state_names, this->package_state,
 				success ? "" : "could not be ");
 	}
 	return success;
@@ -1982,7 +1999,7 @@ attest_db_t *attest_db_create(char *uri)
 			.set_version = _set_version,
 			.set_algo = _set_algo,
 			.set_relative = _set_relative,
-			.set_security = _set_security,
+			.set_package_state = _set_package_state,
 			.set_sequence = _set_sequence,
 			.set_owner = _set_owner,
 			.set_utc = _set_utc,
