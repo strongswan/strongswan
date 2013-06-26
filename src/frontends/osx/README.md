@@ -22,15 +22,15 @@ needed to run the built App.
 Before building the Xcode project, the strongSwan base tree must be built using
 a monolithic and static build. This can be achieved on OS X by using:
 
-	LDFLAGS="-all_load -L/opt/local/lib" \
-	CFLAGS="-idirafter /opt/local/include -O2 -Wall -Wno-format -Wno-pointer-sign"
-	./configure --enable-monolithic --disable-shared --enable-static \
-		--disable-defaults \
-		--enable-openssl --enable-kernel-pfkey --enable-kernel-pfroute \
-		--enable-eap-mschapv2 --enable-eap-identity --enable-nonce \
-		--enable-random --enable-pkcs1 --enable-pem --enable-socket-default \
-		--enable-xauth-generic --enable-keychain --enable-charon \
-		--enable-ikev1 --enable-ikev2
+    LDFLAGS="-all_load -L/opt/local/lib" \
+    CFLAGS="-idirafter /opt/local/include -O2 -Wall -Wno-format -Wno-pointer-sign" \
+    ./configure --enable-monolithic --disable-shared --enable-static \
+        --disable-defaults \
+        --enable-openssl --enable-kernel-pfkey --enable-kernel-pfroute \
+        --enable-eap-mschapv2 --enable-eap-identity --enable-nonce \
+        --enable-random --enable-pkcs1 --enable-pem --enable-socket-default \
+        --enable-xauth-generic --enable-keychain --enable-charon \
+        --enable-ikev1 --enable-ikev2
 
 followed by calling make (no need to make install).
 
