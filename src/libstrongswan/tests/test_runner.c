@@ -67,6 +67,7 @@ int main()
 		library_deinit();
 		return EXIT_FAILURE;
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	sr = srunner_create(NULL);
 	srunner_add_suite(sr, bio_reader_suite_create());
