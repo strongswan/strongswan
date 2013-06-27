@@ -23,7 +23,6 @@
 
 typedef struct stream_manager_t stream_manager_t;
 
-#include <networking/streams/stream.h>
 #include <networking/streams/stream_service.h>
 
 /**

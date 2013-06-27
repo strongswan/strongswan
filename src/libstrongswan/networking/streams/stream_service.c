@@ -13,8 +13,7 @@
  * for more details.
  */
 
-#include "stream_service.h"
-
+#include <library.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
