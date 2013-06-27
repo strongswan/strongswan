@@ -34,6 +34,23 @@ typedef struct stream_t stream_t;
 typedef stream_t*(*stream_constructor_t)(char *uri);
 
 /**
+ * Callback function prototype, called when stream is ready.
+ *
+ * It is not allowed to destroy the stream during the callback, this would
+ * deadlock. Instead, return FALSE to destroy the stream. It is not allowed
+ * to call on_read()/on_write() during this callback.
+ *
+ * As select() may return even if a read()/write() would actually block, it is
+ * recommended to use the non-blocking calls and handle return values
+ * appropriately.
+ *
+ * @param data			data passed during callback registration
+ * @param stream		associated stream
+ * @return				FALSE to destroy the stream
+ */
+typedef bool (*stream_cb_t)(void *data, stream_t *stream);
+
+/**
  * Abstraction of a Berkley socket using stream semantics.
  */
 struct stream_t {
@@ -52,6 +69,14 @@ struct stream_t {
 	ssize_t (*read)(stream_t *this, void *buf, size_t len, bool block);
 
 	/**
+	 * Register a callback to invoke when stream has data to read.
+	 *
+	 * @param cb		callback function, NULL to unregister
+	 * @param data		data to pass to callback
+	 */
+	void (*on_read)(stream_t *this, stream_cb_t cb, void *data);
+
+	/**
 	 * Write data to the stream.
 	 *
 	 * If "block" is FALSE and the write would block, the function returns -1
@@ -63,6 +88,14 @@ struct stream_t {
 	 * @return			number of bytes written, -1 on error
 	 */
 	ssize_t (*write)(stream_t *this, void *buf, size_t len, bool block);
+
+	/**
+	 * Register a callback to invoke when a write would not block.
+	 *
+	 * @param cb		callback function, NULL to unregister
+	 * @param data		data to pass to callback
+	 */
+	void (*on_write)(stream_t *this, stream_cb_t cb, void *data);
 
 	/**
 	 * printf() convenience function for this stream.
