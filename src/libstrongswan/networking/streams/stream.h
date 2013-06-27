@@ -65,6 +65,24 @@ struct stream_t {
 	ssize_t (*write)(stream_t *this, void *buf, size_t len, bool block);
 
 	/**
+	 * printf() convenience function for this stream.
+	 *
+	 * @param format	printf format string
+	 * @param ...		argument list for format string
+	 * @return			number of characters written, negative on error
+	 */
+	int (*print)(stream_t *this, char *format, ...);
+
+	/**
+	 * vprintf() convenience function for this stream.
+	 *
+	 * @param format	printf format string
+	 * @param ap		argument list for format string
+	 * @return			number of characters written, negative on error
+	 */
+	int (*vprint)(stream_t *this, char *format, va_list ap);
+
+	/**
 	 * Destroy a stream_t.
 	 */
 	void (*destroy)(stream_t *this);

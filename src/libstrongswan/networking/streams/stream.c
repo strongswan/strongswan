@@ -33,6 +33,11 @@ struct private_stream_t {
 	 * Underlying socket
 	 */
 	int fd;
+
+	/**
+	 * FILE* for convenience functions, or NULL
+	 */
+	FILE *file;
 };
 
 METHOD(stream_t, read_, ssize_t,
@@ -91,10 +96,44 @@ METHOD(stream_t, write_, ssize_t,
 	}
 }
 
+METHOD(stream_t, vprint, int,
+	private_stream_t *this, char *format, va_list ap)
+{
+	if (!this->file)
+	{
+		this->file = fdopen(this->fd, "w+");
+		if (!this->file)
+		{
+			return -1;
+		}
+	}
+	return vfprintf(this->file, format, ap);
+}
+
+METHOD(stream_t, print, int,
+	private_stream_t *this, char *format, ...)
+{
+	va_list ap;
+	int ret;
+
+	va_start(ap, format);
+	ret = vprint(this, format, ap);
+	va_end(ap);
+
+	return ret;
+}
+
 METHOD(stream_t, destroy, void,
 	private_stream_t *this)
 {
-	close(this->fd);
+	if (this->file)
+	{
+		fclose(this->file);
+	}
+	else
+	{
+		close(this->fd);
+	}
 	free(this);
 }
 
@@ -109,6 +148,8 @@ stream_t *stream_create_from_fd(int fd)
 		.public = {
 			.read = _read_,
 			.write = _write_,
+			.print = _print,
+			.vprint = _vprint,
 			.destroy = _destroy,
 		},
 		.fd = fd,
