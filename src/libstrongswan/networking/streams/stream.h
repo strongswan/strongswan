@@ -26,6 +26,7 @@ typedef struct stream_t stream_t;
 #include <library.h>
 
 #include <sys/un.h>
+#include <sys/socket.h>
 
 /**
  * Constructor function prototype for stream_t.
@@ -144,6 +145,32 @@ stream_t *stream_create_unix(char *uri);
  * @return			length of sockaddr, -1 on error
  */
 int stream_parse_uri_unix(char *uri, struct sockaddr_un *addr);
+
+/**
+ * Create a stream for TCP sockets.
+ *
+ * TCP URIs start with tcp://, followed by a hostname (FQDN or IP), followed
+ * by a colon separated port. A full TCP uri looks something like:
+ *
+ *   tcp://srv.example.com:5555
+ *   tcp://0.0.0.0:1234
+ *   tcp://[fec2::1]:7654
+ *
+ * There is no default port, so a colon after tcp:// is mandatory.
+ *
+ * @param uri		TCP socket specific URI, must start with "tcp://"
+ * @return			stream instance, NULL on failure
+ */
+stream_t *stream_create_tcp(char *uri);
+
+/**
+ * Helper function to parse a tcp:// URI to a sockaddr
+ *
+ * @param uri		URI
+ * @param addr		sockaddr, large enough for URI
+ * @return			length of sockaddr, -1 on error
+ */
+int stream_parse_uri_tcp(char *uri, struct sockaddr *addr);
 
 /**
  * Create a stream from a file descriptor.
