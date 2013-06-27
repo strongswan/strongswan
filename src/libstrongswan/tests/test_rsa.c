@@ -382,6 +382,7 @@ Suite *rsa_suite_create()
 
 	tc = tcase_create("generate");
 	tcase_add_loop_test(tc, test_gen, 0, countof(key_sizes));
+	tcase_set_timeout(tc, 8);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("load");
