@@ -83,4 +83,12 @@ stream_service_t *stream_service_create_from_fd(int fd);
  */
 stream_service_t *stream_service_create_unix(char *uri);
 
+/**
+ * Create a service instance for TCP sockets.
+ *
+ * @param uri		TCP socket specific URI, must start with "tcp://"
+ * @return			stream_service instance, NULL on failure
+ */
+stream_service_t *stream_service_create_tcp(char *uri);
+
 #endif /** STREAM_SERVICE_H_ @}*/
