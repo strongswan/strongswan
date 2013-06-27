@@ -23,6 +23,7 @@
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
@@ -303,6 +304,32 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	session = state->get_session(state);
 	imv_id = this->agent->get_id(this->agent);
 
+	/* send an IETF attribute request if no platform info was received */
+	if (!platform_info &&
+		!(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ATTR_REQ))
+	{
+		pa_tnc_attr_t *attr;
+		ietf_attr_attr_request_t *attr_cast;
+		imv_msg_t *os_msg;
+
+		attr = ietf_attr_attr_request_create(PEN_IETF,
+											 IETF_ATTR_PRODUCT_INFORMATION);
+		attr_cast = (ietf_attr_attr_request_t*)attr;
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
+
+		os_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+								 msg_types[1]);
+		os_msg->add_attribute(os_msg, attr);
+		result = os_msg->send(os_msg, FALSE);
+		os_msg->destroy(os_msg);
+
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		state->set_action_flags(state, IMV_ATTESTATION_FLAG_ATTR_REQ);
+	}
+
 	/* create an empty out message - we might need it */
 	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
 							 msg_types[0]);
@@ -420,7 +447,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 
 	/* finalized all workitems? */
-	if (session && session->get_workitem_count(session, imv_id) == 0 &&
+	if (session && session->get_policy_started(session) &&
+		session->get_workitem_count(session, imv_id) == 0 &&
 		attestation_state->get_handshake_state(attestation_state) ==
 			IMV_ATTESTATION_STATE_END)
 	{
