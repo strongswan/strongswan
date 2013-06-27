@@ -13,8 +13,7 @@
  * for more details.
  */
 
-#include "stream.h"
-
+#include <library.h>
 #include <errno.h>
 #include <unistd.h>
 
