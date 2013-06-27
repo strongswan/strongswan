@@ -83,6 +83,7 @@ int main()
 	srunner_add_suite(sr, utils_suite_create());
 	srunner_add_suite(sr, vectors_suite_create());
 	srunner_add_suite(sr, watcher_suite_create());
+	srunner_add_suite(sr, stream_suite_create());
 	if (lib->plugins->has_feature(lib->plugins,
 								  PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_RSA)))
 	{
