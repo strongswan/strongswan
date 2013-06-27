@@ -205,3 +205,46 @@ stream_service_t *stream_service_create_unix(char *uri)
 	}
 	return stream_service_create_from_fd(fd);
 }
+
+/**
+ * See header
+ */
+stream_service_t *stream_service_create_tcp(char *uri)
+{
+	union {
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+		struct sockaddr sa;
+	} addr;
+	int fd, len, on = 1;
+
+	len = stream_parse_uri_tcp(uri, &addr.sa);
+	if (len == -1)
+	{
+		DBG1(DBG_NET, "invalid stream URI: '%s'", uri);
+		return NULL;
+	}
+	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
+	if (fd < 0)
+	{
+		DBG1(DBG_NET, "opening socket '%s' failed: %s", uri, strerror(errno));
+		return NULL;
+	}
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) != 0)
+	{
+		DBG1(DBG_NET, "SO_REUSADDR on '%s' failed: %s", uri, strerror(errno));
+	}
+	if (bind(fd, &addr.sa, len) < 0)
+	{
+		DBG1(DBG_NET, "binding socket '%s' failed: %s", uri, strerror(errno));
+		close(fd);
+		return NULL;
+	}
+	if (listen(fd, 5) < 0)
+	{
+		DBG1(DBG_NET, "listen on socket '%s' failed: %s", uri, strerror(errno));
+		close(fd);
+		return NULL;
+	}
+	return stream_service_create_from_fd(fd);
+}
