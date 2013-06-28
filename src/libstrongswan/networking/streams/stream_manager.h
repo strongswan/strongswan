@@ -23,6 +23,7 @@
 
 typedef struct stream_manager_t stream_manager_t;
 
+#include <library.h>
 #include <networking/streams/stream_service.h>
 
 /**
@@ -45,10 +46,12 @@ struct stream_manager_t {
 	 * @param backlog	size of the backlog queue, as passed to listen()
 	 * @param cb		callback function invoked for each client connection
 	 * @param data		user data to pass to callback
+	 * @param prio		job priority to invoke callback with
 	 * @return			TRUE if service started, FALSE on failure
 	 */
 	bool (*start_service)(stream_manager_t *this, char *uri, int backlog,
-						  stream_service_cb_t cb, void *data);
+						  stream_service_cb_t cb, void *data,
+						  job_priority_t prio);
 
 	/**
 	 * Stop a service previously create with start_service().
