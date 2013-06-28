@@ -162,7 +162,7 @@ stream_service_t *stream_service_create_from_fd(int fd)
 /**
  * See header
  */
-stream_service_t *stream_service_create_unix(char *uri)
+stream_service_t *stream_service_create_unix(char *uri, int backlog)
 {
 	struct sockaddr_un addr;
 	mode_t old;
@@ -196,7 +196,7 @@ stream_service_t *stream_service_create_unix(char *uri)
 		DBG1(DBG_NET, "changing socket permissions for '%s' failed: %s",
 			 uri, strerror(errno));
 	}
-	if (listen(fd, 5) < 0)
+	if (listen(fd, backlog) < 0)
 	{
 		DBG1(DBG_NET, "listen on socket '%s' failed: %s", uri, strerror(errno));
 		unlink(addr.sun_path);
@@ -209,7 +209,7 @@ stream_service_t *stream_service_create_unix(char *uri)
 /**
  * See header
  */
-stream_service_t *stream_service_create_tcp(char *uri)
+stream_service_t *stream_service_create_tcp(char *uri, int backlog)
 {
 	union {
 		struct sockaddr_in in;
@@ -240,7 +240,7 @@ stream_service_t *stream_service_create_tcp(char *uri)
 		close(fd);
 		return NULL;
 	}
-	if (listen(fd, 5) < 0)
+	if (listen(fd, backlog) < 0)
 	{
 		DBG1(DBG_NET, "listen on socket '%s' failed: %s", uri, strerror(errno));
 		close(fd);

@@ -42,11 +42,12 @@ struct stream_manager_t {
 	 * Start a new service under an URI, accept()ing client connections.
 	 *
 	 * @param uri		URI of service to provide
+	 * @param backlog	size of the backlog queue, as passed to listen()
 	 * @param cb		callback function invoked for each client connection
 	 * @param data		user data to pass to callback
 	 * @return			TRUE if service started, FALSE on failure
 	 */
-	bool (*start_service)(stream_manager_t *this, char *uri,
+	bool (*start_service)(stream_manager_t *this, char *uri, int backlog,
 						  stream_service_cb_t cb, void *data);
 
 	/**

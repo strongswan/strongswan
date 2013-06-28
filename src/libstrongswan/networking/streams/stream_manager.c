@@ -107,7 +107,7 @@ METHOD(stream_manager_t, connect_, stream_t*,
 }
 
 METHOD(stream_manager_t, start_service, bool,
-	private_stream_manager_t *this, char *uri,
+	private_stream_manager_t *this, char *uri, int backlog,
 	stream_service_cb_t cb, void *data)
 {
 	running_entry_t *running;
@@ -121,7 +121,7 @@ METHOD(stream_manager_t, start_service, bool,
 	{
 		if (strpfx(uri, entry->prefix))
 		{
-			service = entry->create(uri);
+			service = entry->create(uri, backlog);
 			if (service)
 			{
 				break;
