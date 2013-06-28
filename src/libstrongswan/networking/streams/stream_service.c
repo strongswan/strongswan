@@ -156,8 +156,9 @@ static bool watch(private_stream_service_t *this, int fd, watcher_event_t event)
 		this->mutex->unlock(this->mutex);
 
 		lib->processor->queue_job(lib->processor,
-				(job_t*)callback_job_create_with_prio((void*)accept_async, data,
-							(void*)destroy_async_data, NULL, this->prio));
+			(job_t*)callback_job_create_with_prio((void*)accept_async, data,
+				(void*)destroy_async_data, (callback_job_cancel_t)return_false,
+				this->prio));
 	}
 	else
 	{
