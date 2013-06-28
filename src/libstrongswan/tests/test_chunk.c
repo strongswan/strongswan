@@ -698,7 +698,6 @@ START_TEST(test_chunk_mac)
 }
 END_TEST
 
-
 /*******************************************************************************
  * test for chunk_hash[_inc]()
  */
@@ -718,6 +717,35 @@ START_TEST(test_chunk_hash)
 	ck_assert(hash_a != hash_b);
 	hash_c = chunk_hash_inc(chunk, hash_a);
 	ck_assert(hash_b == hash_c);
+}
+END_TEST
+
+/*******************************************************************************
+ * test for chunk_hash_static[_inc]()
+ */
+
+START_TEST(test_chunk_hash_static)
+{
+	chunk_t in;
+	u_int32_t out, hash_a, hash_b, hash_inc = 0x7b891a95;
+	int i, count;
+
+	count = countof(sip_vectors);
+	in = chunk_alloca(count);
+
+	for (i = 0; i < count; ++i)
+	{
+		in.ptr[i] = i;
+		in.len = i;
+		/* compared to chunk_mac() we only get half the value back */
+		out = chunk_hash_static(in);
+		fail_unless(memeq(&out, sip_vectors[i], 4),
+					"test vector failed for %d bytes", i);
+	}
+	hash_a = chunk_hash_static_inc(in, out);
+	ck_assert_int_eq(hash_a, hash_inc);
+	hash_b = chunk_hash_static_inc(in, out);
+	ck_assert_int_eq(hash_a, hash_b);
 }
 END_TEST
 
@@ -820,6 +848,10 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_hash");
 	tcase_add_test(tc, test_chunk_hash);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_hash_static");
+	tcase_add_test(tc, test_chunk_hash_static);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hook");

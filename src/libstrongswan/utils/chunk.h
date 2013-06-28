@@ -302,7 +302,13 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 /**
  * Computes a 32 bit hash of the given chunk.
  *
- * @note This hash is only intended for hash tables not for cryptographic purposes.
+ * @note The output of this function is randomized, that is, it will only
+ * produce the same output for the same input when calling it from the same
+ * process.  For a more predictable hash function use chunk_hash_static()
+ * instead.
+ *
+ * @note This hash is only intended for hash tables not for cryptographic
+ * purposes.
  *
  * @param chunk			data to hash
  * @return				hash value
@@ -317,6 +323,30 @@ u_int32_t chunk_hash(chunk_t chunk);
  * @return				hash value
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
+
+/**
+ * Computes a 32 bit hash of the given chunk.
+ *
+ * Compared to chunk_hash() this will always calculate the same output for the
+ * same input.  Therefore, it should not be used for hash tables (to prevent
+ * hash flooding).
+ *
+ * @note This hash is not intended for cryptographic purposes.
+ *
+ * @param chunk			data to hash
+ * @return				hash value
+ */
+u_int32_t chunk_hash_static(chunk_t chunk);
+
+/**
+ * Incremental version of chunk_hash_static(). Use this to hash two or more
+ * chunks in a predictable way.
+ *
+ * @param chunk			data to hash
+ * @param hash			previous hash value
+ * @return				hash value
+ */
+u_int32_t chunk_hash_static_inc(chunk_t chunk, u_int32_t hash);
 
 /**
  * Computes a quick MAC from the given chunk and key using SipHash.
