@@ -788,7 +788,7 @@ echoed back. Also supported are address pools expressed as
 or the use of an external IP address pool using %\fIpoolname\fR,
 where \fIpoolname\fR is the name of the IP address pool used for the lookup.
 .TP
-.BR leftsubnet " = <ip subnet>[:<proto/port>][,...]"
+.BR leftsubnet " = <ip subnet>[[<proto/port>]][,...]"
 private subnet behind the left participant, expressed as
 \fInetwork\fB/\fInetmask\fR;
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
@@ -800,15 +800,16 @@ configurations. IKEv2 supports multiple subnets separated by commas. IKEv1 only
 interprets the first subnet of such a definition, unless the Cisco Unity
 extension plugin is enabled.
 
-The part in each subnet following an optional colon specifies a protocol/port
-to restrict the selector for that subnet.
+The optional part after each subnet enclosed in square brackets specifies a
+protocol/port to restrict the selector for that subnet.
 
-Example:
-.BR leftsubnet=10.0.0.1:tcp/http,10.0.0.2:6/80,10.0.0.3:udp,10.0.0.0/16:/53 .
+Examples:
+.BR leftsubnet=10.0.0.1[tcp/http],10.0.0.2[6/80] " or"
+.BR leftsubnet=fec1::1[udp],10.0.0.0/16[/53] .
 Instead of omitting either value
 .B %any
 can be used to the same effect, e.g.
-.BR leftsubnet=10.0.0.3:udp/%any,10.0.0.0/16=%any/53 .
+.BR leftsubnet=fec1::1[udp/%any],10.0.0.0/16[%any/53] .
 
 The port value can alternatively take the value
 .B %opaque

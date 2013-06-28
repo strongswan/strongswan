@@ -895,6 +895,13 @@ static bool parse_protoport(char *token, u_int16_t *from_port,
 	struct servent *svc;
 	long int p;
 
+	sep = strrchr(token, ']');
+	if (!sep)
+	{
+		return FALSE;
+	}
+	*sep = '\0';
+
 	sep = strchr(token, '/');
 	if (sep)
 	{	/* protocol/port */
@@ -1009,7 +1016,7 @@ static void add_ts(private_stroke_config_t *this,
 				to_port = end->to_port;
 				proto = end->protocol;
 
-				pos = strchr(subnet, ':');
+				pos = strchr(subnet, '[');
 				if (pos)
 				{
 					*(pos++) = '\0';
