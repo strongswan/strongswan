@@ -47,11 +47,12 @@ struct stream_manager_t {
 	 * @param cb		callback function invoked for each client connection
 	 * @param data		user data to pass to callback
 	 * @param prio		job priority to invoke callback with
+	 * @param cncrncy	maximum number of parallel callback invocations
 	 * @return			TRUE if service started, FALSE on failure
 	 */
 	bool (*start_service)(stream_manager_t *this, char *uri, int backlog,
 						  stream_service_cb_t cb, void *data,
-						  job_priority_t prio);
+						  job_priority_t prio, u_int cncrncy);
 
 	/**
 	 * Stop a service previously create with start_service().
