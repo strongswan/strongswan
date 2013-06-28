@@ -49,6 +49,11 @@ struct private_stream_service_t {
 	 * Accept callback data
 	 */
 	void *data;
+
+	/**
+	 * Job priority to invoke callback with
+	 */
+	job_priority_t prio;
 };
 
 /**
@@ -106,7 +111,7 @@ static bool watch(private_stream_service_t *this, int fd, watcher_event_t event)
 	{
 		lib->processor->queue_job(lib->processor,
 				(job_t*)callback_job_create_with_prio((void*)accept_async, data,
-							(void*)destroy_async_data, NULL, JOB_PRIO_HIGH));
+							(void*)destroy_async_data, NULL, this->prio));
 	}
 	else
 	{
@@ -116,7 +121,8 @@ static bool watch(private_stream_service_t *this, int fd, watcher_event_t event)
 }
 
 METHOD(stream_service_t, on_accept, void,
-	private_stream_service_t *this, stream_service_cb_t cb, void *data)
+	private_stream_service_t *this, stream_service_cb_t cb, void *data,
+	job_priority_t prio)
 {
 	if (this->cb)
 	{
@@ -125,6 +131,10 @@ METHOD(stream_service_t, on_accept, void,
 
 	this->cb = cb;
 	this->data = data;
+	if (prio <= JOB_PRIO_MAX)
+	{
+		this->prio = prio;
+	}
 
 	if (this->cb)
 	{
@@ -136,7 +146,7 @@ METHOD(stream_service_t, on_accept, void,
 METHOD(stream_service_t, destroy, void,
 	private_stream_service_t *this)
 {
-	on_accept(this, NULL, NULL);
+	on_accept(this, NULL, NULL, this->prio);
 	close(this->fd);
 	free(this);
 }
@@ -154,6 +164,7 @@ stream_service_t *stream_service_create_from_fd(int fd)
 			.destroy = _destroy,
 		},
 		.fd = fd,
+		.prio = JOB_PRIO_MEDIUM,
 	);
 
 	return &this->public;

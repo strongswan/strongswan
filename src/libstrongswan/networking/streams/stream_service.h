@@ -23,6 +23,8 @@
 
 typedef struct stream_service_t stream_service_t;
 
+#include <library.h>
+#include <processing/jobs/job.h>
 #include <networking/streams/stream.h>
 
 /**
@@ -56,9 +58,10 @@ struct stream_service_t {
 	 *
 	 * @param cb		callback function to call for accepted client streams
 	 * @param data		data to pass to callback function
+	 * @param prio		job priority to run callback with
 	 */
 	void (*on_accept)(stream_service_t *this,
-					  stream_service_cb_t cb, void *data);
+					  stream_service_cb_t cb, void *data, job_priority_t prio);
 
 	/**
 	 * Destroy a stream_service_t.
