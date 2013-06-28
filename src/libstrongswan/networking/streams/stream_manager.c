@@ -40,11 +40,6 @@ struct private_stream_manager_t {
 	linked_list_t *services;
 
 	/**
-	 * List of registered running services, as running_entry_t
-	 */
-	linked_list_t *running;
-
-	/**
 	 * Lock for all lists
 	 */
 	rwlock_t *lock;
@@ -69,16 +64,6 @@ typedef struct {
 	/** constructor function */
 	stream_service_constructor_t create;
 } service_entry_t;
-
-/**
- * Running service
- */
-typedef struct {
-	/** URI of service */
-	char *uri;
-	/** stream accept()ing connections */
-	stream_service_t *service;
-} running_entry_t;
 
 METHOD(stream_manager_t, connect_, stream_t*,
 	private_stream_manager_t *this, char *uri)
@@ -106,11 +91,9 @@ METHOD(stream_manager_t, connect_, stream_t*,
 	return stream;
 }
 
-METHOD(stream_manager_t, start_service, bool,
-	private_stream_manager_t *this, char *uri, int backlog,
-	stream_service_cb_t cb, void *data, job_priority_t prio, u_int cncrncy)
+METHOD(stream_manager_t, create_service, stream_service_t*,
+	private_stream_manager_t *this, char *uri, int backlog)
 {
-	running_entry_t *running;
 	enumerator_t *enumerator;
 	service_entry_t *entry;
 	stream_service_t *service = NULL;
@@ -131,44 +114,7 @@ METHOD(stream_manager_t, start_service, bool,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (!service)
-	{
-		return FALSE;
-	}
-
-	INIT(running,
-		.uri = strdup(uri),
-		.service = service,
-	);
-	service->on_accept(service, cb, data, prio, cncrncy);
-
-	this->lock->write_lock(this->lock);
-	this->running->insert_last(this->running, running);
-	this->lock->unlock(this->lock);
-
-	return TRUE;
-}
-
-METHOD(stream_manager_t, stop_service, void,
-	private_stream_manager_t *this, char *uri)
-{
-	enumerator_t *enumerator;
-	running_entry_t *entry;
-
-	this->lock->write_lock(this->lock);
-	enumerator = this->running->create_enumerator(this->running);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (streq(entry->uri, uri))
-		{
-			this->running->remove_at(this->running, enumerator);
-			entry->service->destroy(entry->service);
-			free(entry->uri);
-			free(entry);
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	return service;
 }
 
 METHOD(stream_manager_t, add_stream, void,
@@ -254,7 +200,6 @@ METHOD(stream_manager_t, destroy, void,
 
 	this->streams->destroy(this->streams);
 	this->services->destroy(this->services);
-	this->running->destroy(this->running);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -269,8 +214,7 @@ stream_manager_t *stream_manager_create()
 	INIT(this,
 		.public = {
 			.connect = _connect_,
-			.start_service = _start_service,
-			.stop_service = _stop_service,
+			.create_service = _create_service,
 			.add_stream = _add_stream,
 			.remove_stream = _remove_stream,
 			.add_service = _add_service,
@@ -279,7 +223,6 @@ stream_manager_t *stream_manager_create()
 		},
 		.streams = linked_list_create(),
 		.services = linked_list_create(),
-		.running = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
