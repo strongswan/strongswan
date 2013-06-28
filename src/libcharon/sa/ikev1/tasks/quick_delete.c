@@ -12,6 +12,27 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+/*
+ * Copyright (C) 2013 Oliver Smith
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include "quick_delete.h"
 
@@ -64,12 +85,13 @@ struct private_quick_delete_t {
 /**
  * Delete the specified CHILD_SA, if found
  */
-static bool delete_child(private_quick_delete_t *this,
-						 protocol_id_t protocol, u_int32_t spi)
+static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
+						 u_int32_t spi, bool remote_close)
 {
 	u_int64_t bytes_in, bytes_out;
 	child_sa_t *child_sa;
 	linked_list_t *my_ts, *other_ts;
+	child_cfg_t *child_cfg;
 	bool rekeyed;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
@@ -116,11 +138,31 @@ static bool delete_child(private_quick_delete_t *this,
 	if (!rekeyed)
 	{
 		charon->bus->child_updown(charon->bus, child_sa, FALSE);
+
+		if (remote_close)
+		{
+			child_cfg = child_sa->get_config(child_sa);
+			child_cfg->get_ref(child_cfg);
+
+			switch (child_sa->get_close_action(child_sa))
+			{
+				case ACTION_RESTART:
+					child_cfg->get_ref(child_cfg);
+					this->ike_sa->initiate(this->ike_sa, child_cfg,
+									child_sa->get_reqid(child_sa), NULL, NULL);
+					break;
+				case ACTION_ROUTE:
+					charon->traps->install(charon->traps,
+									this->ike_sa->get_peer_cfg(this->ike_sa),
+									child_cfg, child_sa->get_reqid(child_sa));
+					break;
+				default:
+					break;
+			}
+			child_cfg->destroy(child_cfg);
+		}
 	}
-
 	this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-
-	/* TODO-IKEv1: handle close action? */
 
 	return TRUE;
 }
@@ -128,7 +170,7 @@ static bool delete_child(private_quick_delete_t *this,
 METHOD(task_t, build_i, status_t,
 	private_quick_delete_t *this, message_t *message)
 {
-	if (delete_child(this, this->protocol, this->spi) || this->force)
+	if (delete_child(this, this->protocol, this->spi, FALSE) || this->force)
 	{
 		delete_payload_t *delete_payload;
 
@@ -176,7 +218,7 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
 					 protocol_id_names, protocol, ntohl(spi));
-				if (!delete_child(this, protocol, spi))
+				if (!delete_child(this, protocol, spi, TRUE))
 				{
 					DBG1(DBG_IKE, "CHILD_SA not found, ignored");
 					continue;
