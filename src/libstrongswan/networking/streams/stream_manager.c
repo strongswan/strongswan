@@ -108,7 +108,7 @@ METHOD(stream_manager_t, connect_, stream_t*,
 
 METHOD(stream_manager_t, start_service, bool,
 	private_stream_manager_t *this, char *uri, int backlog,
-	stream_service_cb_t cb, void *data, job_priority_t prio)
+	stream_service_cb_t cb, void *data, job_priority_t prio, u_int cncrncy)
 {
 	running_entry_t *running;
 	enumerator_t *enumerator;
@@ -140,7 +140,7 @@ METHOD(stream_manager_t, start_service, bool,
 		.uri = strdup(uri),
 		.service = service,
 	);
-	service->on_accept(service, cb, data, prio);
+	service->on_accept(service, cb, data, prio, cncrncy);
 
 	this->lock->write_lock(this->lock);
 	this->running->insert_last(this->running, running);
