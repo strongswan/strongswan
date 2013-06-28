@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	int limit = 0, i = 0;
 
 	library_init(NULL);
-	lib->plugins->load(lib->plugins, NULL, PLUGINS);
+	lib->plugins->load(lib->plugins, PLUGINS);
 	atexit(library_deinit);
 
 	printf("loaded: %s\n", PLUGINS);

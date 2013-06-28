@@ -509,7 +509,7 @@ int main(int argc, char *argv[])
 	}
 	load_loggers(logger);
 
-	if (!lib->plugins->load(lib->plugins, NULL,
+	if (!lib->plugins->load(lib->plugins,
 			conftest->test->get_str(conftest->test, "preload", "")))
 	{
 		return 1;

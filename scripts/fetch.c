@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
 	library_init(NULL);
 	atexit(library_deinit);
-	lib->plugins->load(lib->plugins, NULL, PLUGINS);
+	lib->plugins->load(lib->plugins, PLUGINS);
 
 	if (argc != 3 || (!streq(argv[1], "a") && !streq(argv[1], "s")))
 	{

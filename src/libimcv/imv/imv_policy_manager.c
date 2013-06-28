@@ -15,7 +15,7 @@
 
 #include "imv_policy_manager_usage.h"
 #include "imv_workitem.h"
- 
+
 #include <library.h>
 #include <utils/debug.h>
 
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
-	if (!lib->plugins->load(lib->plugins, NULL, 
+	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "imv_policy_manager.load",
 				 "sqlite")))
 	{
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	session_id = atoi(tnc_session_id);
-	
+
 	/* attach IMV database */
 	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
 	if (!uri)

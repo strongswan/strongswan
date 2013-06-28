@@ -255,7 +255,7 @@ static void init()
 
 	dbg = dbg_tls;
 
-	lib->plugins->load(lib->plugins, NULL, PLUGINS);
+	lib->plugins->load(lib->plugins, PLUGINS);
 
 	creds = mem_cred_create();
 	lib->credmgr->add_set(lib->credmgr, &creds->set);

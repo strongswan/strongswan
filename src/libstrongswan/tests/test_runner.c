@@ -40,7 +40,7 @@ static bool load_plugins()
 	}
 	enumerator->destroy(enumerator);
 
-	return lib->plugins->load(lib->plugins, NULL, PLUGINS);
+	return lib->plugins->load(lib->plugins, PLUGINS);
 }
 
 int main()

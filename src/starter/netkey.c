@@ -58,7 +58,7 @@ bool starter_netkey_init(void)
 
 void starter_netkey_cleanup(void)
 {
-	if (!lib->plugins->load(lib->plugins, NULL,
+	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "starter.load", PLUGINS)))
 	{
 		DBG1(DBG_APP, "unable to load kernel plugins");

@@ -937,17 +937,14 @@ static bool find_plugin(char *path, char *name, char *buf, char **file)
 }
 
 METHOD(plugin_loader_t, load_plugins, bool,
-	private_plugin_loader_t *this, char *default_path, char *list)
+	private_plugin_loader_t *this, char *list)
 {
 	enumerator_t *enumerator;
-	char *token;
+	char *default_path = NULL, *token;
 	bool critical_failed = FALSE;
 
 #ifdef PLUGINDIR
-	if (default_path == NULL)
-	{
-		default_path = PLUGINDIR;
-	}
+	default_path = PLUGINDIR;
 #endif /* PLUGINDIR */
 
 	enumerator = enumerator_create_token(list, " ", " ");

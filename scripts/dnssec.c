@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
 	dbg = dbg_dnssec;
 
-	if (!lib->plugins->load(lib->plugins, NULL, PLUGINS))
+	if (!lib->plugins->load(lib->plugins, PLUGINS))
 	{
 		return 1;
 	}

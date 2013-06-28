@@ -529,7 +529,7 @@ METHOD(daemon_t, initialize, bool,
 									  countof(features), TRUE);
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, NULL, plugins))
+	if (!lib->plugins->load(lib->plugins, plugins))
 	{
 		return FALSE;
 	}

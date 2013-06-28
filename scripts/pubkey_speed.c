@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	}
 
 	library_init(NULL);
-	lib->plugins->load(lib->plugins, NULL, argv[1]);
+	lib->plugins->load(lib->plugins, argv[1]);
 	atexit(library_deinit);
 
 	keydata = chunk_create(buf, 0);

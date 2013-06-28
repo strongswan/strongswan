@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
-	if (!lib->plugins->load(lib->plugins, NULL,
+	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "attest.load", PLUGINS)))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);

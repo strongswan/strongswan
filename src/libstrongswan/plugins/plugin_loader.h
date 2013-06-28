@@ -57,25 +57,24 @@ struct plugin_loader_t {
 								 bool critical);
 
 	/**
-	 * Load a list of plugins from a directory.
+	 * Load a list of plugins.
 	 *
-	 * Each plugin in list may have a ending exclamation mark (!) to mark it
+	 * Each plugin in list may have an ending exclamation mark (!) to mark it
 	 * as a critical plugin. If loading a critical plugin fails, plugin loading
 	 * is aborted and FALSE is returned.
 	 *
 	 * Additional paths can be added with add_path(), these will be searched
-	 * for the plugins first, in the order they were added, then the given path
-	 * or the default follow.
+	 * for the plugins first, in the order they were added, then the default
+	 * path follows.
 	 *
 	 * @note Even though this method could be called multiple times this is
 	 * currently not really supported in regards to plugin features and their
 	 * dependencies (in particular soft dependencies).
 	 *
-	 * @param path			path containing loadable plugins, NULL for default
 	 * @param list			space separated list of plugins to load
 	 * @return				TRUE if all critical plugins loaded successfully
 	 */
-	bool (*load)(plugin_loader_t *this, char *path, char *list);
+	bool (*load)(plugin_loader_t *this, char *list);
 
 	/**
 	 * Add an additional search path for plugins.

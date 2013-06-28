@@ -124,7 +124,7 @@ bool libimcv_init(bool is_imv)
 		dbg = imcv_dbg;
 		openlog("imcv", 0, LOG_DAEMON);
 
-		if (!lib->plugins->load(lib->plugins, NULL,
+		if (!lib->plugins->load(lib->plugins,
 				lib->settings->get_str(lib->settings, "libimcv.load",
 					"random nonce gmp pubkey x509")))
 		{
