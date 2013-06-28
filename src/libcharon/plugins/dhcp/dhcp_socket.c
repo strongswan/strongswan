@@ -227,7 +227,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	/* with ID specific postfix */
 	if (this->identity_lease)
 	{
-		id = htonl(chunk_hash(chunk));
+		id = htonl(chunk_hash_static(chunk));
 	}
 	else
 	{
