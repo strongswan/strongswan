@@ -65,11 +65,13 @@ struct private_quick_delete_t {
  * Delete the specified CHILD_SA, if found
  */
 static bool delete_child(private_quick_delete_t *this,
-						 protocol_id_t protocol, u_int32_t spi)
+						 protocol_id_t protocol, u_int32_t spi, bool remote_close)
 {
 	u_int64_t bytes_in, bytes_out;
 	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
 	bool rekeyed;
+	action_t action;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
 	if (!child_sa)
@@ -112,11 +114,35 @@ static bool delete_child(private_quick_delete_t *this,
 	if (!rekeyed)
 	{
 		charon->bus->child_updown(charon->bus, child_sa, FALSE);
+		action = child_sa->get_close_action(child_sa);
+		child_cfg = child_sa->get_config(child_sa);
+		child_cfg->get_ref(child_cfg);
+		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+
+		if (remote_close)
+		{
+			switch (action)
+			{
+				case ACTION_RESTART:
+					child_cfg->get_ref(child_cfg);
+					this->ike_sa->initiate(this->ike_sa, child_cfg,
+						child_sa->get_reqid(child_sa), NULL, NULL);
+					break;
+
+				case ACTION_ROUTE:
+					charon->traps->install(charon->traps,
+						this->ike_sa->get_peer_cfg(this->ike_sa),
+						child_cfg, child_sa->get_reqid(child_sa));
+					break;
+
+				default:
+					break;
+			}
+		}
+		child_cfg->destroy(child_cfg);
+	} else {
+		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
 	}
-
-	this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-
-	/* TODO-IKEv1: handle close action? */
 
 	return TRUE;
 }
@@ -124,7 +150,7 @@ static bool delete_child(private_quick_delete_t *this,
 METHOD(task_t, build_i, status_t,
 	private_quick_delete_t *this, message_t *message)
 {
-	if (delete_child(this, this->protocol, this->spi) || this->force)
+	if (delete_child(this, this->protocol, this->spi, false) || this->force)
 	{
 		delete_payload_t *delete_payload;
 
@@ -172,7 +198,7 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
 					 protocol_id_names, protocol, ntohl(spi));
-				if (!delete_child(this, protocol, spi))
+				if (!delete_child(this, protocol, spi, true))
 				{
 					DBG1(DBG_IKE, "CHILD_SA not found, ignored");
 					continue;
