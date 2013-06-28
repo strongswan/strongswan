@@ -101,22 +101,11 @@ struct stream_t {
 	void (*on_write)(stream_t *this, stream_cb_t cb, void *data);
 
 	/**
-	 * printf() convenience function for this stream.
+	 * Get a FILE reference for this stream.
 	 *
-	 * @param format	printf format string
-	 * @param ...		argument list for format string
-	 * @return			number of characters written, negative on error
+	 * @return			FILE*, must be fclose()d, NULL on error
 	 */
-	int (*print)(stream_t *this, char *format, ...);
-
-	/**
-	 * vprintf() convenience function for this stream.
-	 *
-	 * @param format	printf format string
-	 * @param ap		argument list for format string
-	 * @return			number of characters written, negative on error
-	 */
-	int (*vprint)(stream_t *this, char *format, va_list ap);
+	FILE* (*get_file)(stream_t *this);
 
 	/**
 	 * Destroy a stream_t.

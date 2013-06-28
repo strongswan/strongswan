@@ -36,11 +36,6 @@ struct private_stream_t {
 	int fd;
 
 	/**
-	 * FILE* for convenience functions, or NULL
-	 */
-	FILE *file;
-
-	/**
 	 * Callback if data is ready to read
 	 */
 	stream_cb_t read_cb;
@@ -203,45 +198,31 @@ METHOD(stream_t, on_write, void,
 	add_watcher(this);
 }
 
-METHOD(stream_t, vprint, int,
-	private_stream_t *this, char *format, va_list ap)
+METHOD(stream_t, get_file, FILE*,
+	private_stream_t *this)
 {
-	if (!this->file)
+	FILE *file;
+	int fd;
+
+	/* fclose() closes the FD passed to fdopen(), so dup() it */
+	fd = dup(this->fd);
+	if (fd == -1)
 	{
-		this->file = fdopen(this->fd, "w+");
-		if (!this->file)
-		{
-			return -1;
-		}
+		return NULL;
 	}
-	return vfprintf(this->file, format, ap);
-}
-
-METHOD(stream_t, print, int,
-	private_stream_t *this, char *format, ...)
-{
-	va_list ap;
-	int ret;
-
-	va_start(ap, format);
-	ret = vprint(this, format, ap);
-	va_end(ap);
-
-	return ret;
+	file = fdopen(fd, "w+");
+	if (!file)
+	{
+		close(fd);
+	}
+	return file;
 }
 
 METHOD(stream_t, destroy, void,
 	private_stream_t *this)
 {
 	remove_watcher(this);
-	if (this->file)
-	{
-		fclose(this->file);
-	}
-	else
-	{
-		close(this->fd);
-	}
+	close(this->fd);
 	free(this);
 }
 
@@ -258,8 +239,7 @@ stream_t *stream_create_from_fd(int fd)
 			.on_read = _on_read,
 			.write = _write_,
 			.on_write = _on_write,
-			.print = _print,
-			.vprint = _vprint,
+			.get_file = _get_file,
 			.destroy = _destroy,
 		},
 		.fd = fd,
