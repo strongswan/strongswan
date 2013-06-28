@@ -40,26 +40,14 @@ struct stream_manager_t {
 	stream_t* (*connect)(stream_manager_t *this, char *uri);
 
 	/**
-	 * Start a new service under an URI, accept()ing client connections.
+	 * Create a new service under an URI to accept() client connections.
 	 *
 	 * @param uri		URI of service to provide
 	 * @param backlog	size of the backlog queue, as passed to listen()
-	 * @param cb		callback function invoked for each client connection
-	 * @param data		user data to pass to callback
-	 * @param prio		job priority to invoke callback with
-	 * @param cncrncy	maximum number of parallel callback invocations
-	 * @return			TRUE if service started, FALSE on failure
+	 * @return			service, NULL on error
 	 */
-	bool (*start_service)(stream_manager_t *this, char *uri, int backlog,
-						  stream_service_cb_t cb, void *data,
-						  job_priority_t prio, u_int cncrncy);
-
-	/**
-	 * Stop a service previously create with start_service().
-	 *
-	 * @param uri		URI of service to stop
-	 */
-	void (*stop_service)(stream_manager_t *this, char *uri);
+	stream_service_t* (*create_service)(stream_manager_t *this, char *uri,
+										int backlog);
 
 	/**
 	 * Register a stream backend to the manager.
