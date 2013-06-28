@@ -32,11 +32,6 @@
 typedef struct private_integrity_checker_t private_integrity_checker_t;
 
 /**
- * Key used to calculate MACs (128-bit)
- */
-static char key[] = "IntegrityChecker";
-
-/**
  * Private data of an integrity_checker_t object.
  */
 struct private_integrity_checker_t {
@@ -96,7 +91,7 @@ METHOD(integrity_checker_t, build_file, u_int32_t,
 
 	*len = sb.st_size;
 	contents = chunk_create(addr, sb.st_size);
-	checksum = chunk_mac(contents, key);
+	checksum = chunk_hash_static(contents);
 
 	munmap(addr, sb.st_size);
 	close(fd);
@@ -158,7 +153,7 @@ METHOD(integrity_checker_t, build_segment, u_int32_t,
 
 	segment = chunk_create(dli.dli_fbase, dli.dli_saddr - dli.dli_fbase);
 	*len = segment.len;
-	return chunk_mac(segment, key);
+	return chunk_hash_static(segment);
 }
 
 /**
