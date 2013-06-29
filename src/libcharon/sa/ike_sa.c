@@ -1575,7 +1575,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps, this->peer_cfg,
-										   child_sa->get_config(child_sa));
+										   child_sa->get_config(child_sa),
+										   child_sa->get_reqid(child_sa));
 					break;
 				default:
 					break;

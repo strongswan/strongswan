@@ -92,7 +92,8 @@ static void destroy_entry(entry_t *entry)
 }
 
 METHOD(trap_manager_t, install, u_int32_t,
-	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child)
+	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child,
+	u_int32_t reqid)
 {
 	entry_t *entry, *found = NULL;
 	ike_cfg_t *ike_cfg;
@@ -101,7 +102,6 @@ METHOD(trap_manager_t, install, u_int32_t,
 	linked_list_t *my_ts, *other_ts, *list;
 	enumerator_t *enumerator;
 	status_t status;
-	u_int32_t reqid = 0;
 
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);

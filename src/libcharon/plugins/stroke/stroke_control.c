@@ -603,7 +603,7 @@ static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	}
 	else
 	{
-		if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+		if (charon->traps->install(charon->traps, peer_cfg, child_cfg, 0))
 		{
 			fprintf(out, "'%s' routed\n", name);
 		}

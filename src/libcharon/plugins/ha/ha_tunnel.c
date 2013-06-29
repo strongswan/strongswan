@@ -245,7 +245,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	charon->backends->add_backend(charon->backends, &this->backend.public);
 
 	/* install an acquiring trap */
-	this->trap = charon->traps->install(charon->traps, peer_cfg, child_cfg);
+	this->trap = charon->traps->install(charon->traps, peer_cfg, child_cfg, 0);
 }
 
 METHOD(ha_tunnel_t, destroy, void,
