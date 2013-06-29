@@ -1675,7 +1675,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 					DBG1(DBG_IKE, "restarting CHILD_SA %s",
 						 child_cfg->get_name(child_cfg));
 					child_cfg->get_ref(child_cfg);
-					status = new->initiate(new, child_cfg, 0, NULL, NULL);
+					status = new->initiate(new, child_cfg,
+									child_sa->get_reqid(child_sa), NULL, NULL);
 					break;
 				default:
 					continue;
