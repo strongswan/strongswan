@@ -50,7 +50,6 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
-#include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
@@ -1079,40 +1078,37 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 /**
  * Receives events from kernel
  */
-static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
+static bool receive_events(private_kernel_netlink_net_t *this, int fd,
+						   watcher_event_t event)
 {
 	char response[1024];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
 	int len;
-	bool oldstate;
 
-	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket_events, response, sizeof(response), 0,
-				   (struct sockaddr*)&addr, &addr_len);
-	thread_cancelability(oldstate);
-
+	len = recvfrom(this->socket_events, response, sizeof(response),
+				   MSG_DONTWAIT, (struct sockaddr*)&addr, &addr_len);
 	if (len < 0)
 	{
 		switch (errno)
 		{
 			case EINTR:
 				/* interrupted, try again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			case EAGAIN:
 				/* no data ready, select again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			default:
 				DBG1(DBG_KNL, "unable to receive from rt event socket");
 				sleep(1);
-				return JOB_REQUEUE_FAIR;
+				return TRUE;
 		}
 	}
 
 	if (addr.nl_pid != 0)
 	{	/* not from kernel. not interested, try another one */
-		return JOB_REQUEUE_DIRECT;
+		return TRUE;
 	}
 
 	while (NLMSG_OK(hdr, len))
@@ -1140,7 +1136,7 @@ static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
 		}
 		hdr = NLMSG_NEXT(hdr, len);
 	}
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 /** enumerator over addresses */
@@ -2175,6 +2171,7 @@ METHOD(kernel_net_t, destroy, void,
 	}
 	if (this->socket_events > 0)
 	{
+		lib->watcher->remove(lib->watcher, this->socket_events);
 		close(this->socket_events);
 	}
 	enumerator = this->routes->create_enumerator(this->routes);
@@ -2314,10 +2311,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 			return NULL;
 		}
 
-		lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create_with_prio(
-					(callback_job_cb_t)receive_events, this, NULL,
-					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+		lib->watcher->add(lib->watcher, this->socket_events, WATCHER_READ,
+						  (watcher_cb_t)receive_events, this);
 	}
 
 	if (init_address_list(this) != SUCCESS)
