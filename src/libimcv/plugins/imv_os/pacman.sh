@@ -23,11 +23,9 @@ do
     for d in $UBUNTU_DIRS
     do
   	  wget $UBUNTU/$v-security/$d/$a/Packages.bz2 -O $v-security/$a/Packages-$d.bz2
-      mv $v-security/$a/Packages-$d $v-security/$a/Packages-$d.old
-      bunzip2 $v-security/$a/Packages-$d.bz2
+      bunzip2 -f $v-security/$a/Packages-$d.bz2
   	  wget $UBUNTU/$v-updates/$d/$a/Packages.bz2  -O $v-updates/$a/Packages-$d.bz2
-      mv $v-updates/$a/Packages-$d $v-updates/$a/Packages-$d.old
-      bunzip2 $v-updates/$a/Packages-$d.bz2
+      bunzip2 -f $v-updates/$a/Packages-$d.bz2
 	done
   done
 done
@@ -40,8 +38,7 @@ do
     for d in $DEBIAN_DIRS
     do
   	  wget $DEBIAN/$v/updates/$d/$a/Packages.bz2  -O $v-updates/$a/Packages-$d.bz2
-      mv $v-updates/$a/Packages-$d $v-updates/$a/Packages-$d.old
-      bunzip2 $v-updates/$a/Packages-$d.bz2
+      bunzip2 -f $v-updates/$a/Packages-$d.bz2
 	done
   done
 done
