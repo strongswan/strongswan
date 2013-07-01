@@ -62,9 +62,7 @@
 #include <networking/host.h>
 #include <collections/linked_list.h>
 #include <collections/hashtable.h>
-#include <threading/thread.h>
 #include <threading/mutex.h>
-#include <processing/jobs/callback_job.h>
 
 /** non linux specific */
 #ifndef IPPROTO_COMP
@@ -1382,31 +1380,28 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 /**
  * Receives events from kernel
  */
-static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
+static bool receive_events(private_kernel_pfkey_ipsec_t *this, int fd,
+						   watcher_event_t event)
 {
 	unsigned char buf[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)buf;
-	bool oldstate;
 	int len;
 
-	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
-	thread_cancelability(oldstate);
-
+	len = recvfrom(this->socket_events, buf, sizeof(buf), MSG_DONTWAIT, NULL, 0);
 	if (len < 0)
 	{
 		switch (errno)
 		{
 			case EINTR:
 				/* interrupted, try again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			case EAGAIN:
 				/* no data ready, select again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			default:
 				DBG1(DBG_KNL, "unable to receive from PF_KEY event socket");
 				sleep(1);
-				return JOB_REQUEUE_FAIR;
+				return TRUE;
 		}
 	}
 
@@ -1414,17 +1409,17 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 		msg->sadb_msg_len < PFKEY_LEN(sizeof(struct sadb_msg)))
 	{
 		DBG2(DBG_KNL, "received corrupted PF_KEY message");
-		return JOB_REQUEUE_DIRECT;
+		return TRUE;
 	}
 	if (msg->sadb_msg_pid != 0)
 	{	/* not from kernel. not interested, try another one */
-		return JOB_REQUEUE_DIRECT;
+		return TRUE;
 	}
 	if (msg->sadb_msg_len > len / PFKEY_ALIGNMENT)
 	{
 		DBG1(DBG_KNL, "buffer was too small to receive the complete "
 					  "PF_KEY message");
-		return JOB_REQUEUE_DIRECT;
+		return TRUE;
 	}
 
 	switch (msg->sadb_msg_type)
@@ -1449,7 +1444,7 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 			break;
 	}
 
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
@@ -2750,6 +2745,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 	}
 	if (this->socket_events > 0)
 	{
+		lib->watcher->remove(lib->watcher, this->socket_events);
 		close(this->socket_events);
 	}
 	this->policies->invoke_function(this->policies,
@@ -2835,10 +2831,8 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 			return NULL;
 		}
 
-		lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create_with_prio(
-					(callback_job_cb_t)receive_events, this, NULL,
-					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+		lib->watcher->add(lib->watcher, this->socket_events, WATCHER_READ,
+						  (watcher_cb_t)receive_events, this);
 	}
 
 	return &this->public;
