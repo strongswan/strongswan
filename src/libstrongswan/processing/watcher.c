@@ -106,12 +106,25 @@ static void update(private_watcher_t *this)
 	}
 }
 
+/**
+ * Cleanup function if callback gets cancelled
+ */
+static void unregister(notify_data_t *data)
+{
+	/* if a thread processing a callback gets cancelled, we mark the entry
+	 * as cancelled, like the callback would return FALSE. This is required
+	 * to not queue this watcher again if all threads have been gone. */
+	data->keep = FALSE;
+}
+
  /**
  * Execute callback of registered FD, asynchronous
  */
 static job_requeue_t notify_async(notify_data_t *data)
 {
+	thread_cleanup_push((void*)unregister, data);
 	data->keep = data->cb(data->data, data->fd, data->event);
+	thread_cleanup_pop(FALSE);
 	return JOB_REQUEUE_NONE;
 }
 
