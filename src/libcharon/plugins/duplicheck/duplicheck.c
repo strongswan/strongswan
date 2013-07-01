@@ -16,44 +16,99 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
-#define DUPLICHECK_SOCKET IPSEC_PIDDIR "/charon.dck"
+#include "duplicheck_msg.h"
 
-int main(int argc, char *argv[])
+/**
+ * Connect to the daemon, return FD
+ */
+static int make_connection()
 {
-	struct sockaddr_un addr;
-	char buf[128];
+	union {
+		struct sockaddr_un un;
+		struct sockaddr_in in;
+		struct sockaddr sa;
+	} addr;
 	int fd, len;
 
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, DUPLICHECK_SOCKET);
+	if (getenv("TCP_PORT"))
+	{
+		addr.in.sin_family = AF_INET;
+		addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		addr.in.sin_port = htons(atoi(getenv("TCP_PORT")));
+		len = sizeof(addr.in);
+	}
+	else
+	{
+		addr.un.sun_family = AF_UNIX;
+		strcpy(addr.un.sun_path, DUPLICHECK_SOCKET);
 
-	fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+		len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.un.sun_path);
+	}
+	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
-		return 1;
+		return -1;
 	}
-	if (connect(fd, (struct sockaddr *)&addr,
-			offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path)) < 0)
+	if (connect(fd, &addr.sa, len) < 0)
 	{
-		fprintf(stderr, "connecting to %s failed: %s\n",
-				DUPLICHECK_SOCKET, strerror(errno));
+		fprintf(stderr, "connecting failed: %s\n", strerror(errno));
 		close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+int main(int argc, char *argv[])
+{
+	char buf[128];
+	int fd, len;
+	u_int16_t msglen;
+
+	fd = make_connection();
+	if (fd < 0)
+	{
 		return 1;
 	}
 	while (1)
 	{
-		len = recv(fd, &buf, sizeof(buf) - 1, 0);
+		len = recv(fd, &msglen, sizeof(msglen), 0);
+		if (len != sizeof(msglen))
+		{
+			break;
+		}
+		msglen = ntohs(msglen);
+		while (msglen)
+		{
+			if (sizeof(buf) > msglen)
+			{
+				len = msglen;
+			}
+			else
+			{
+				len = sizeof(buf);
+			}
+			len = recv(fd, &buf, len, 0);
+			if (len < 0)
+			{
+				break;
+			}
+			msglen -= len;
+			printf("%.*s", len, buf);
+		}
+		printf("\n");
 		if (len < 0)
 		{
-			fprintf(stderr, "reading from socket failed: %s\n", strerror(errno));
-			close(fd);
-			return 1;
+			break;
 		}
-		printf("%.*s\n", len, buf);
 	}
+	fprintf(stderr, "reading from socket failed: %s\n", strerror(errno));
+	close(fd);
+	return 1;
 }
