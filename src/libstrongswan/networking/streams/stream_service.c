@@ -124,8 +124,7 @@ static job_requeue_t accept_async(async_data_t *data)
 	if (stream)
 	{
 		thread_cleanup_push((void*)stream->destroy, stream);
-		data->cb(data->data, stream);
-		thread_cleanup_pop(TRUE);
+		thread_cleanup_pop(!data->cb(data->data, stream));
 	}
 	return JOB_REQUEUE_NONE;
 }
