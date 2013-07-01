@@ -43,12 +43,12 @@ struct private_error_notify_socket_t {
 	error_notify_socket_t public;
 
 	/**
-	 * Unix socket file descriptor
+	 * Service accepting connections
 	 */
-	int socket;
+	stream_service_t *service;
 
 	/**
-	 * List of connected clients, as uintptr_t FD
+	 * List of connected clients, as stream_t
 	 */
 	linked_list_t *connected;
 
@@ -57,48 +57,6 @@ struct private_error_notify_socket_t {
 	 */
 	mutex_t *mutex;
 };
-
-/**
- * Open error notify unix socket
- */
-static bool open_socket(private_error_notify_socket_t *this)
-{
-	struct sockaddr_un addr;
-	mode_t old;
-
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, ERROR_NOTIFY_SOCKET);
-
-	this->socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-	if (this->socket == -1)
-	{
-		DBG1(DBG_CFG, "creating notify socket failed");
-		return FALSE;
-	}
-	unlink(addr.sun_path);
-	old = umask(~(S_IRWXU | S_IRWXG));
-	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-	{
-		DBG1(DBG_CFG, "binding notify socket failed: %s", strerror(errno));
-		close(this->socket);
-		return FALSE;
-	}
-	umask(old);
-	if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
-			  lib->caps->get_gid(lib->caps)) != 0)
-	{
-		DBG1(DBG_CFG, "changing notify socket permissions failed: %s",
-			 strerror(errno));
-	}
-	if (listen(this->socket, 10) < 0)
-	{
-		DBG1(DBG_CFG, "listening on notify socket failed: %s", strerror(errno));
-		close(this->socket);
-		unlink(addr.sun_path);
-		return FALSE;
-	}
-	return TRUE;
-}
 
 METHOD(error_notify_socket_t, has_listeners, bool,
 	private_error_notify_socket_t *this)
@@ -116,23 +74,21 @@ METHOD(error_notify_socket_t, notify, void,
 	private_error_notify_socket_t *this, error_notify_msg_t *msg)
 {
 	enumerator_t *enumerator;
-	uintptr_t fd;
+	stream_t *stream;
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->connected->create_enumerator(this->connected);
-	while (enumerator->enumerate(enumerator, (void*)&fd))
+	while (enumerator->enumerate(enumerator, &stream))
 	{
-		while (send(fd, msg, sizeof(*msg), 0) <= 0)
+		if (!stream->write_all(stream, msg, sizeof(*msg)))
 		{
 			switch (errno)
 			{
-				case EINTR:
-					continue;
 				case ECONNRESET:
 				case EPIPE:
 					/* disconnect, remove this listener */
 					this->connected->remove_at(this->connected, enumerator);
-					close(fd);
+					stream->destroy(stream);
 					break;
 				default:
 					DBG1(DBG_CFG, "sending notify failed: %s", strerror(errno));
@@ -146,45 +102,23 @@ METHOD(error_notify_socket_t, notify, void,
 }
 
 /**
- * Accept client connections, dispatch
+ * Accept client connections
  */
-static job_requeue_t accept_(private_error_notify_socket_t *this)
+static bool on_accept(private_error_notify_socket_t *this, stream_t *stream)
 {
-	struct sockaddr_un addr;
-	int fd, len;
-	bool oldstate;
+	this->mutex->lock(this->mutex);
+	this->connected->insert_last(this->connected, stream);
+	this->mutex->unlock(this->mutex);
 
-	len = sizeof(addr);
-	oldstate = thread_cancelability(TRUE);
-	fd = accept(this->socket, (struct sockaddr*)&addr, &len);
-	thread_cancelability(oldstate);
-
-	if (fd != -1)
-	{
-		this->mutex->lock(this->mutex);
-		this->connected->insert_last(this->connected, (void*)(uintptr_t)fd);
-		this->mutex->unlock(this->mutex);
-	}
-	else
-	{
-		DBG1(DBG_CFG, "accepting notify connection failed: %s",
-			 strerror(errno));
-	}
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 METHOD(error_notify_socket_t, destroy, void,
 	private_error_notify_socket_t *this)
 {
-	uintptr_t fd;
-
-	while (this->connected->remove_last(this->connected, (void*)&fd) == SUCCESS)
-	{
-		close(fd);
-	}
-	this->connected->destroy(this->connected);
+	DESTROY_IF(this->service);
+	this->connected->destroy_offset(this->connected, offsetof(stream_t, destroy));
 	this->mutex->destroy(this->mutex);
-	close(this->socket);
 	free(this);
 }
 
@@ -194,6 +128,7 @@ METHOD(error_notify_socket_t, destroy, void,
 error_notify_socket_t *error_notify_socket_create()
 {
 	private_error_notify_socket_t *this;
+	char *uri;
 
 	INIT(this,
 		.public = {
@@ -205,15 +140,18 @@ error_notify_socket_t *error_notify_socket_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
-	if (!open_socket(this))
+	uri = lib->settings->get_str(lib->settings,
+				"%s.plugins.error-notify.socket", "unix://" ERROR_NOTIFY_SOCKET,
+				charon->name);
+	this->service = lib->streams->create_service(lib->streams, uri, 10);
+	if (!this->service)
 	{
-		free(this);
+		DBG1(DBG_CFG, "creating duplicheck socket failed");
+		destroy(this);
 		return NULL;
 	}
-
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create_with_prio((callback_job_cb_t)accept_, this,
-				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	this->service->on_accept(this->service, (stream_service_cb_t)on_accept,
+							 this, JOB_PRIO_CRITICAL, 1);
 
 	return &this->public;
 }

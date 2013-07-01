@@ -16,46 +16,89 @@
 #include "error_notify_msg.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
+#include <arpa/inet.h>
+
+/**
+ * Connect to the daemon, return FD
+ */
+static int make_connection()
+{
+	union {
+		struct sockaddr_un un;
+		struct sockaddr_in in;
+		struct sockaddr sa;
+	} addr;
+	int fd, len;
+
+	if (getenv("TCP_PORT"))
+	{
+		addr.in.sin_family = AF_INET;
+		addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		addr.in.sin_port = htons(atoi(getenv("TCP_PORT")));
+		len = sizeof(addr.in);
+	}
+	else
+	{
+		addr.un.sun_family = AF_UNIX;
+		strcpy(addr.un.sun_path, ERROR_NOTIFY_SOCKET);
+
+		len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.un.sun_path);
+	}
+	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
+	if (fd < 0)
+	{
+		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
+		return -1;
+	}
+	if (connect(fd, &addr.sa, len) < 0)
+	{
+		fprintf(stderr, "connecting failed: %s\n", strerror(errno));
+		close(fd);
+		return -1;
+	}
+	return fd;
+}
 
 /**
  * Example of a simple notification listener
  */
 int main(int argc, char *argv[])
 {
-	struct sockaddr_un addr;
 	error_notify_msg_t msg;
-	int s;
+	int s, len, total;
+	void *pos;
 
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, ERROR_NOTIFY_SOCKET);
-
-	s = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+	s = make_connection();
 	if (s < 0)
 	{
-		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
-		return 1;
-	}
-	if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-	{
-		fprintf(stderr, "connect failed: %s\n", strerror(errno));
-		close(s);
 		return 1;
 	}
 	while (1)
 	{
-		if (read(s, &msg, sizeof(msg)) != sizeof(msg))
+		total = 0;
+		pos = &msg;
+
+		while (total < sizeof(msg))
 		{
-			fprintf(stderr, "read failed: %s\n", strerror(errno));
-			close(s);
-			return 1;
+			len = read(s, pos, sizeof(msg) - total);
+			if (len < 0)
+			{
+				fprintf(stderr, "read failed: %s\n", strerror(errno));
+				close(s);
+				return 1;
+			}
+			total += len;
+			pos += len;
 		}
 		printf("%d %s %s %s %s\n",
-			   msg.type, msg.name, msg.id, msg.ip, msg.str);
+			   ntohl(msg.type), msg.name, msg.id, msg.ip, msg.str);
 	}
 	close(s);
 	return 0;
