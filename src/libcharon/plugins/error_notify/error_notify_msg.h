@@ -61,6 +61,6 @@ struct error_notify_msg_t {
 	char id[128];
 	/** peer address and port, if known */
 	char ip[60];
-};
+} __attribute__((packed));
 
 #endif /** ERROR_NOTIFY_MSG_H_ @}*/
