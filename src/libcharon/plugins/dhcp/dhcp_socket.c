@@ -562,7 +562,8 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 /**
  * Receive DHCP responses
  */
-static job_requeue_t receive_dhcp(private_dhcp_socket_t *this)
+static bool receive_dhcp(private_dhcp_socket_t *this, int fd,
+						 watcher_event_t event)
 {
 	struct sockaddr_ll addr;
 	socklen_t addr_len = sizeof(addr);
@@ -571,14 +572,12 @@ static job_requeue_t receive_dhcp(private_dhcp_socket_t *this)
 		struct udphdr udp;
 		dhcp_t dhcp;
 	} packet;
-	int oldstate, optlen, origoptlen, optsize, optpos = 0;
+	int optlen, origoptlen, optsize, optpos = 0;
 	ssize_t len;
 	dhcp_option_t *option;
 
-	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->receive, &packet, sizeof(packet), 0,
+	len = recvfrom(fd, &packet, sizeof(packet), MSG_DONTWAIT,
 					(struct sockaddr*)&addr, &addr_len);
-	thread_cancelability(oldstate);
 
 	if (len >= sizeof(struct iphdr) + sizeof(struct udphdr) +
 		offsetof(dhcp_t, options))
@@ -611,7 +610,7 @@ static job_requeue_t receive_dhcp(private_dhcp_socket_t *this)
 			optpos += optsize;
 		}
 	}
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 METHOD(dhcp_socket_t, destroy, void,
@@ -627,6 +626,7 @@ METHOD(dhcp_socket_t, destroy, void,
 	}
 	if (this->receive > 0)
 	{
+		lib->watcher->remove(lib->watcher, this->receive);
 		close(this->receive);
 	}
 	this->mutex->destroy(this->mutex);
@@ -767,10 +767,8 @@ dhcp_socket_t *dhcp_socket_create()
 		return NULL;
 	}
 
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive_dhcp,
-			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	lib->watcher->add(lib->watcher, this->receive, WATCHER_READ,
+					  (watcher_cb_t)receive_dhcp, this);
 
 	return &this->public;
 }
-
