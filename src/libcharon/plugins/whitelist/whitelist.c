@@ -18,36 +18,93 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 /**
  * Connect to the daemon, return FD
  */
 static int make_connection()
 {
-	struct sockaddr_un addr;
-	int fd;
+	union {
+		struct sockaddr_un un;
+		struct sockaddr_in in;
+		struct sockaddr sa;
+	} addr;
+	int fd, len;
 
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, WHITELIST_SOCKET);
+	if (getenv("TCP_PORT"))
+	{
+		addr.in.sin_family = AF_INET;
+		addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		addr.in.sin_port = htons(atoi(getenv("TCP_PORT")));
+		len = sizeof(addr.in);
+	}
+	else
+	{
+		addr.un.sun_family = AF_UNIX;
+		strcpy(addr.un.sun_path, WHITELIST_SOCKET);
 
-	fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+		len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.un.sun_path);
+	}
+	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
 		return -1;
 	}
-	if (connect(fd, (struct sockaddr *)&addr,
-			offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path)) < 0)
+	if (connect(fd, &addr.sa, len) < 0)
 	{
-		fprintf(stderr, "connecting to %s failed: %s\n",
-				WHITELIST_SOCKET, strerror(errno));
+		fprintf(stderr, "connecting failed: %s\n", strerror(errno));
 		close(fd);
 		return -1;
 	}
 	return fd;
+}
+
+static int read_all(int fd, void *buf, size_t len)
+{
+	ssize_t ret, done = 0;
+
+	while (done < len)
+	{
+		ret = read(fd, buf, len - done);
+		if (ret == -1 && errno == EINTR)
+		{	/* interrupted, try again */
+			continue;
+		}
+		if (ret < 0)
+		{
+			return -1;
+		}
+		done += ret;
+		buf += ret;
+	}
+	return len;
+}
+
+static int write_all(int fd, void *buf, size_t len)
+{
+	ssize_t ret, done = 0;
+
+	while (done < len)
+	{
+		ret = write(fd, buf, len - done);
+		if (ret == -1 && errno == EINTR)
+		{	/* interrupted, try again */
+			continue;
+		}
+		if (ret < 0)
+		{
+			return -1;
+		}
+		done += ret;
+		buf += ret;
+	}
+	return len;
 }
 
 /**
@@ -56,7 +113,7 @@ static int make_connection()
 static int send_msg(int type, char *id)
 {
 	whitelist_msg_t msg = {
-		.type = type,
+		.type = htonl(type),
 	};
 	int fd;
 
@@ -66,7 +123,7 @@ static int send_msg(int type, char *id)
 		return 2;
 	}
 	snprintf(msg.id, sizeof(msg.id), "%s", id);
-	if (send(fd, &msg, sizeof(msg), 0) != sizeof(msg))
+	if (write_all(fd, &msg, sizeof(msg)) != sizeof(msg))
 	{
 		fprintf(stderr, "writing to socket failed: %s\n", strerror(errno));
 		close(fd);
@@ -74,9 +131,15 @@ static int send_msg(int type, char *id)
 	}
 	if (type == WHITELIST_LIST)
 	{
-		while (recv(fd, &msg, sizeof(msg), 0) == sizeof(msg))
+		while (1)
 		{
-			if (msg.type != WHITELIST_LIST)
+			if (read_all(fd, &msg, sizeof(msg)) != sizeof(msg))
+			{
+				fprintf(stderr, "reading failed: %s\n", strerror(errno));
+				close(fd);
+				return 2;
+			}
+			if (ntohl(msg.type) != WHITELIST_LIST)
 			{
 				break;
 			}
@@ -94,7 +157,7 @@ static int send_msg(int type, char *id)
 static int send_batch(int type, char *file)
 {
 	whitelist_msg_t msg = {
-		.type = type,
+		.type = htonl(type),
 	};
 	FILE *f = stdin;
 	int fd, len;
@@ -125,7 +188,7 @@ static int send_batch(int type, char *file)
 		{
 			msg.id[len-1] = '\0';
 		}
-		if (send(fd, &msg, sizeof(msg), 0) != sizeof(msg))
+		if (write_all(fd, &msg, sizeof(msg)) != sizeof(msg))
 		{
 			fprintf(stderr, "writing to socket failed: %s\n", strerror(errno));
 			if (f != stdin)
