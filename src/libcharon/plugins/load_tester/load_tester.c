@@ -35,7 +35,7 @@ static FILE* make_connection()
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, LOAD_TESTER_SOCKET);
 
-	fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
