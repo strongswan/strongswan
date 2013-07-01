@@ -53,6 +53,6 @@ struct whitelist_msg_t {
 	int type;
 	/** null terminated identity */
 	char id[128];
-};
+} __attribute__((packed));
 
 #endif /** WHITELIST_MSG_H_ @}*/
