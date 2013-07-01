@@ -39,12 +39,14 @@ typedef stream_service_t*(*stream_service_constructor_t)(char *uri, int backlog)
 /**
  * Service callback routine for accepting client connections.
  *
- * The passed stream_service gets closed/destroyed by the callback caller.
+ * The passed stream gets closed/destroyed by the callback caller, unless
+ * TRUE is returned.
  *
  * @param data			user data, as passed during registration
  * @param stream		accept()ed client connection
+ * @return				TRUE to keep stream alive, FALSE to destroy it
  */
-typedef void (*stream_service_cb_t)(void *data, stream_t *stream);
+typedef bool (*stream_service_cb_t)(void *data, stream_t *stream);
 
 /**
  * A service accepting client connection streams.
