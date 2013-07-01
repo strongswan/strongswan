@@ -20,35 +20,96 @@
 #include <unistd.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <getopt.h>
+#include <arpa/inet.h>
 
 /**
  * Connect to the daemon, return FD
  */
 static int make_connection()
 {
-	struct sockaddr_un addr;
-	int fd;
+	union {
+		struct sockaddr_un un;
+		struct sockaddr_in in;
+		struct sockaddr sa;
+	} addr;
+	int fd, len;
 
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, LOOKIP_SOCKET);
+	if (getenv("TCP_PORT"))
+	{
+		addr.in.sin_family = AF_INET;
+		addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		addr.in.sin_port = htons(atoi(getenv("TCP_PORT")));
+		len = sizeof(addr.in);
+	}
+	else
+	{
+		addr.un.sun_family = AF_UNIX;
+		strcpy(addr.un.sun_path, LOOKIP_SOCKET);
 
-	fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+		len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.un.sun_path);
+	}
+	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "opening socket failed: %s\n", strerror(errno));
 		return -1;
 	}
-	if (connect(fd, (struct sockaddr *)&addr,
-			offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path)) < 0)
+	if (connect(fd, &addr.sa, len) < 0)
 	{
-		fprintf(stderr, "connecting to %s failed: %s\n",
-				LOOKIP_SOCKET, strerror(errno));
+		fprintf(stderr, "connecting failed: %s\n", strerror(errno));
 		close(fd);
 		return -1;
 	}
 	return fd;
+}
+
+static int read_all(int fd, void *buf, size_t len, int flags)
+{
+	ssize_t ret, done = 0;
+
+	while (done < len)
+	{
+		ret = recv(fd, buf, len - done, flags);
+		if (ret == -1 && errno == EINTR)
+		{	/* interrupted, try again */
+			continue;
+		}
+		if (ret == 0)
+		{
+			return 0;
+		}
+		if (ret < 0)
+		{
+			return -1;
+		}
+		done += ret;
+		buf += ret;
+	}
+	return len;
+}
+
+static int write_all(int fd, void *buf, size_t len)
+{
+	ssize_t ret, done = 0;
+
+	while (done < len)
+	{
+		ret = write(fd, buf, len - done);
+		if (ret == -1 && errno == EINTR)
+		{	/* interrupted, try again */
+			continue;
+		}
+		if (ret < 0)
+		{
+			return -1;
+		}
+		done += ret;
+		buf += ret;
+	}
+	return len;
 }
 
 /**
@@ -57,14 +118,14 @@ static int make_connection()
 static int send_request(int fd, int type, char *vip)
 {
 	lookip_request_t req = {
-		.type = type,
+		.type = htonl(type),
 	};
 
 	if (vip)
 	{
 		snprintf(req.vip, sizeof(req.vip), "%s", vip);
 	}
-	if (send(fd, &req, sizeof(req), 0) != sizeof(req))
+	if (write_all(fd, &req, sizeof(req)) != sizeof(req))
 	{
 		fprintf(stderr, "writing to socket failed: %s\n", strerror(errno));
 		return 2;
@@ -83,7 +144,7 @@ static int receive(int fd, int block, int loop)
 
 	do
 	{
-		res = recv(fd, &resp, sizeof(resp), block ? 0 : MSG_DONTWAIT);
+		res = read_all(fd, &resp, sizeof(resp), block ? 0 : MSG_DONTWAIT);
 		if (res == 0)
 		{	/* closed by server */
 			return 0;
@@ -97,7 +158,7 @@ static int receive(int fd, int block, int loop)
 			fprintf(stderr, "reading from socket failed: %s\n", strerror(errno));
 			return 1;
 		}
-		switch (resp.type)
+		switch (ntohl(resp.type))
 		{
 			case LOOKIP_ENTRY:
 				label = "lookup:";
@@ -120,7 +181,7 @@ static int receive(int fd, int block, int loop)
 		resp.id[sizeof(resp.id) - 1] = '\0';
 		resp.name[sizeof(resp.name) - 1] = '\0';
 
-		snprintf(name, sizeof(name), "%s[%u]", resp.name, resp.unique_id);
+		snprintf(name, sizeof(name), "%s[%u]", resp.name, ntohl(resp.unique_id));
 		printf("%-12s %16s %16s %20s %s\n",
 			   label, resp.vip, resp.ip, name, resp.id);
 	}
