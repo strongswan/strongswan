@@ -73,6 +73,9 @@ CONFIG_OPTS = \
 	--enable-unity \
 	--enable-unbound \
 	--enable-ipseckey \
+	--enable-cmd \
+	--enable-libipsec \
+	--enable-kernel-libipsec \
 	--enable-tkm
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
