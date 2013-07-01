@@ -332,6 +332,11 @@ static void schedule_expiration(private_ipsec_sa_mgr_t *this,
 	callback_job_t *job;
 	u_int32_t timeout;
 
+	if (!lifetime->time.life)
+	{	/* no expiration at all */
+		return;
+	}
+
 	INIT(expired,
 		.manager = this,
 		.entry = entry,
