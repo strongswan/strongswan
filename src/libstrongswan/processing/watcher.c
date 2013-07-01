@@ -184,6 +184,28 @@ static bool notify(private_watcher_t *this, entry_t *entry,
 }
 
 /**
+ * Thread cancellation function for watcher thread
+ */
+static void activate_all(private_watcher_t *this)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	/* When the watcher thread gets cancelled, we have to reactivate any entry
+	 * and signal threads in remove() to go on. */
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->fds->create_enumerator(this->fds);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		entry->active = TRUE;
+	}
+	enumerator->destroy(enumerator);
+	this->condvar->broadcast(this->condvar);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Dispatching function
  */
 static job_requeue_t watch(private_watcher_t *this)
@@ -238,9 +260,11 @@ static job_requeue_t watch(private_watcher_t *this)
 		char buf[1];
 		bool old, notified = FALSE;
 
+		thread_cleanup_push((void*)activate_all, this);
 		old = thread_cancelability(TRUE);
 		res = select(maxfd + 1, &rd, &wr, &ex, NULL);
 		thread_cancelability(old);
+		thread_cleanup_pop(FALSE);
 		if (res > 0)
 		{
 			if (this->notify[0] != -1 && FD_ISSET(this->notify[0], &rd))
