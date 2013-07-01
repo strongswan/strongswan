@@ -54,8 +54,6 @@ struct private_stream_t {
 	 * Data for write-ready callback
 	 */
 	void *write_data;
-
-
 };
 
 METHOD(stream_t, read_, ssize_t,
@@ -86,6 +84,29 @@ METHOD(stream_t, read_, ssize_t,
 	}
 }
 
+METHOD(stream_t, read_all, bool,
+	private_stream_t *this, void *buf, size_t len)
+{
+	ssize_t ret;
+
+	while (len)
+	{
+		ret = read_(this, buf, len, TRUE);
+		if (ret < 0)
+		{
+			return FALSE;
+		}
+		if (ret == 0)
+		{
+			errno = ECONNRESET;
+			return FALSE;
+		}
+		len -= ret;
+		buf += ret;
+	}
+	return TRUE;
+}
+
 METHOD(stream_t, write_, ssize_t,
 	private_stream_t *this, void *buf, size_t len, bool block)
 {
@@ -112,6 +133,29 @@ METHOD(stream_t, write_, ssize_t,
 		}
 		return ret;
 	}
+}
+
+METHOD(stream_t, write_all, bool,
+	private_stream_t *this, void *buf, size_t len)
+{
+	ssize_t ret;
+
+	while (len)
+	{
+		ret = write_(this, buf, len, TRUE);
+		if (ret < 0)
+		{
+			return FALSE;
+		}
+		if (ret == 0)
+		{
+			errno = ECONNRESET;
+			return FALSE;
+		}
+		len -= ret;
+		buf += ret;
+	}
+	return TRUE;
 }
 
 /**
@@ -236,8 +280,10 @@ stream_t *stream_create_from_fd(int fd)
 	INIT(this,
 		.public = {
 			.read = _read_,
+			.read_all = _read_all,
 			.on_read = _on_read,
 			.write = _write_,
+			.write_all = _write_all,
 			.on_write = _on_write,
 			.get_file = _get_file,
 			.destroy = _destroy,

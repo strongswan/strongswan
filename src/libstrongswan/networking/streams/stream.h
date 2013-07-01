@@ -72,6 +72,19 @@ struct stream_t {
 	ssize_t (*read)(stream_t *this, void *buf, size_t len, bool block);
 
 	/**
+	 * Read data from the stream, avoiding short reads.
+	 *
+	 * This call is always blocking, and reads until len has been read
+	 * completely. If the connection is closed before enough bytes could be
+	 * returned, errno is set to ECONNRESET.
+	 *
+	 * @param buf		data buffer to read into
+	 * @param len		number of bytes to read
+	 * @return			TRUE if len bytes read, FALSE on error
+	 */
+	bool (*read_all)(stream_t *this, void *buf, size_t len);
+
+	/**
 	 * Register a callback to invoke when stream has data to read.
 	 *
 	 * @param cb		callback function, NULL to unregister
@@ -91,6 +104,18 @@ struct stream_t {
 	 * @return			number of bytes written, -1 on error
 	 */
 	ssize_t (*write)(stream_t *this, void *buf, size_t len, bool block);
+
+	/**
+	 * Write data to the stream, avoiding short writes.
+	 *
+	 * This call is always blocking, and writes until len bytes has been
+	 * written.
+	 *
+	 * @param buf		data buffer to write
+	 * @param len		number of bytes to write
+	 * @return			TRUE if len bytes written, FALSE on error
+	 */
+	bool (*write_all)(stream_t *this, void *buf, size_t len);
 
 	/**
 	 * Register a callback to invoke when a write would not block.
