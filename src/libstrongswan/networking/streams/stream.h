@@ -39,9 +39,9 @@ typedef stream_t*(*stream_constructor_t)(char *uri);
 /**
  * Callback function prototype, called when stream is ready.
  *
- * It is not allowed to destroy the stream during the callback, this would
- * deadlock. Instead, return FALSE to destroy the stream. It is not allowed
- * to call on_read()/on_write() during this callback.
+ * It is allowed to destroy the stream during the callback, but only if it has
+ * no other active on_read()/on_write() callback and returns FALSE. It is not
+ * allowed to to call on_read()/on_write/() during the callback.
  *
  * As select() may return even if a read()/write() would actually block, it is
  * recommended to use the non-blocking calls and handle return values
@@ -49,7 +49,7 @@ typedef stream_t*(*stream_constructor_t)(char *uri);
  *
  * @param data			data passed during callback registration
  * @param stream		associated stream
- * @return				FALSE to destroy the stream
+ * @return				FALSE unregisters the invoked callback, TRUE keeps it
  */
 typedef bool (*stream_cb_t)(void *data, stream_t *stream);
 

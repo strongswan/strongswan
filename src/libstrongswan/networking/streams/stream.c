@@ -175,21 +175,26 @@ static void remove_watcher(private_stream_t *this)
 static bool watch(private_stream_t *this, int fd, watcher_event_t event)
 {
 	bool keep = FALSE;
+	stream_cb_t cb;
 
 	switch (event)
 	{
 		case WATCHER_READ:
-			keep = this->read_cb(this->read_data, &this->public);
-			if (!keep)
+			cb = this->read_cb;
+			this->read_cb = NULL;
+			keep = cb(this->read_data, &this->public);
+			if (keep)
 			{
-				this->read_cb = NULL;
+				this->read_cb = cb;
 			}
 			break;
 		case WATCHER_WRITE:
-			keep = this->write_cb(this->write_data, &this->public);
-			if (!keep)
+			cb = this->write_cb;
+			this->write_cb = NULL;
+			keep = cb(this->write_data, &this->public);
+			if (keep)
 			{
-				this->write_cb = NULL;
+				this->write_cb = cb;
 			}
 			break;
 		case WATCHER_EXCEPT:
