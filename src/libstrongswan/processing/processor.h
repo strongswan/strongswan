@@ -88,6 +88,16 @@ struct processor_t {
 	void (*set_threads)(processor_t *this, u_int count);
 
 	/**
+	 * Get the number of threads set with set_threads().
+	 *
+	 * This does not actually reflect the number of threads currently active,
+	 * but the number of threads targeted.
+	 *
+	 * @return				number of desired threads
+	 */
+	u_int (*get_threads)(processor_t *this);
+
+	/**
 	 * Sets the number of threads to 0 and cancels all blocking jobs, then waits
 	 * for all threads to be terminated.
 	 */
