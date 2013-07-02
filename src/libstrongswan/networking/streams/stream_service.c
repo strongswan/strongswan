@@ -109,7 +109,10 @@ static void destroy_async_data(async_data_t *data)
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
-	close(data->fd);
+	if (data->fd != -1)
+	{
+		close(data->fd);
+	}
 	free(data);
 }
 
@@ -123,6 +126,8 @@ static job_requeue_t accept_async(async_data_t *data)
 	stream = stream_create_from_fd(data->fd);
 	if (stream)
 	{
+		/* FD is now owned by stream, don't close it during cleanup */
+		data->fd = -1;
 		thread_cleanup_push((void*)stream->destroy, stream);
 		thread_cleanup_pop(!data->cb(data->data, stream));
 	}
