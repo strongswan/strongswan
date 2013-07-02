@@ -6,5 +6,3 @@ carol::iptables-restore < /etc/iptables.flush
 bob::iptables-restore < /etc/iptables.flush
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
-moon::conntrack -F
-sun::conntrack -F

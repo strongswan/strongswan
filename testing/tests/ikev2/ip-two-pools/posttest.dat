@@ -4,5 +4,4 @@ moon::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 alice::iptables-restore < /etc/iptables.flush
-moon::conntrack -F
 moon::rm /etc/ipsec.d/ipsec.*

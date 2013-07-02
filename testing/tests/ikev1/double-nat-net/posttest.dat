@@ -4,6 +4,4 @@ alice::iptables-restore < /etc/iptables.flush
 bob::iptables-restore < /etc/iptables.flush
 moon::iptables -t nat -F
 sun::iptables -t nat -F
-moon::conntrack -F
-sun::conntrack -F
 sun::ip route del 10.1.0.0/16 via PH_IP_BOB

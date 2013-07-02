@@ -13,5 +13,3 @@ alice::ip addr del 10.1.0.5/16 dev eth0
 alice::ifdown eth1
 venus::ip route del default via 10.1.0.5 dev eth0
 venus::ip route add default via 10.1.0.1 dev eth0
-moon::conntrack -F
-alice::conntrack -F 

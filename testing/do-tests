@@ -373,6 +373,15 @@ do
 	    done
 	fi
 
+	##########################################################################
+	# flush conntrack table on all hosts
+	#
+
+	for host in $STRONGSWANHOSTS
+	do
+		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'conntrack -F' >/dev/null 2>&1
+	done
+
 
 	##########################################################################
 	# execute pre-test commands

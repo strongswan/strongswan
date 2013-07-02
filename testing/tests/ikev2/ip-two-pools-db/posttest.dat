@@ -10,7 +10,6 @@ carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
 moon::ip route del 10.3.0.0/16 via PH_IP_MOON
 moon::ip route del 10.4.0.0/16 via PH_IP_MOON1
-moon::conntrack -F
 moon::ipsec pool --del extpool 2> /dev/null
 moon::ipsec pool --del intpool 2> /dev/null
 moon::ipsec pool --delattr dns --server PH_IP_VENUS --pool intpool --identity venus.strongswan.org 2> /dev/null

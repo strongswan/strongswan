@@ -2,5 +2,4 @@ moon::ipsec stop
 sun::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
-moon::conntrack -F
 moon::rm /etc/nat_updown

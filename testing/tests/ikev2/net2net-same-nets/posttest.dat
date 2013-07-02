@@ -4,4 +4,3 @@ moon::ipsec stop
 sun::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
-sun::conntrack -F
