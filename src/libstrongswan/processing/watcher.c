@@ -250,14 +250,17 @@ static job_requeue_t watch(private_watcher_t *this)
 		{
 			if (entry->events & WATCHER_READ)
 			{
+				DBG3(DBG_JOB, "  watching %d for reading", entry->fd);
 				FD_SET(entry->fd, &rd);
 			}
 			if (entry->events & WATCHER_WRITE)
 			{
+				DBG3(DBG_JOB, "  watching %d for writing", entry->fd);
 				FD_SET(entry->fd, &wr);
 			}
 			if (entry->events & WATCHER_EXCEPT)
 			{
+				DBG3(DBG_JOB, "  watching %d for exceptions", entry->fd);
 				FD_SET(entry->fd, &ex);
 			}
 			maxfd = max(maxfd, entry->fd);
@@ -272,6 +275,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		bool old;
 		job_t *job = NULL;
 
+		DBG2(DBG_JOB, "watcher going to select()");
 		thread_cleanup_push((void*)activate_all, this);
 		old = thread_cancelability(TRUE);
 		res = select(maxfd + 1, &rd, &wr, &ex, NULL);
@@ -281,6 +285,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		{
 			if (this->notify[0] != -1 && FD_ISSET(this->notify[0], &rd))
 			{
+				DBG2(DBG_JOB, "watcher got notification, rebuilding");
 				ignore_result(read(this->notify[0], buf, sizeof(buf)));
 				return JOB_REQUEUE_DIRECT;
 			}
@@ -291,16 +296,19 @@ static job_requeue_t watch(private_watcher_t *this)
 			{
 				if (FD_ISSET(entry->fd, &rd))
 				{
+					DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
 					job = notify(this, entry, WATCHER_READ);
 					break;
 				}
 				if (FD_ISSET(entry->fd, &wr))
 				{
+					DBG2(DBG_JOB, "watched FD %d ready to write", entry->fd);
 					job = notify(this, entry, WATCHER_WRITE);
 					break;
 				}
 				if (FD_ISSET(entry->fd, &ex))
 				{
+					DBG2(DBG_JOB, "watched FD %d has exception", entry->fd);
 					job = notify(this, entry, WATCHER_EXCEPT);
 					break;
 				}
@@ -322,6 +330,10 @@ static job_requeue_t watch(private_watcher_t *this)
 				/* we temporarily disable a notified FD, rebuild FDSET */
 				return JOB_REQUEUE_DIRECT;
 			}
+		}
+		else
+		{
+			DBG1(DBG_JOB, "watcher select() error: %s", strerror(errno));
 		}
 	}
 }
