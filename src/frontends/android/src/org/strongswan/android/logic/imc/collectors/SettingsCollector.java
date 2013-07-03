@@ -17,6 +17,8 @@
 
 package org.strongswan.android.logic.imc.collectors;
 
+import java.util.Locale;
+
 import org.strongswan.android.logic.imc.attributes.Attribute;
 import org.strongswan.android.logic.imc.attributes.SettingsAttribute;
 
@@ -44,10 +46,10 @@ public class SettingsCollector implements Collector
 		SettingsAttribute attribute = new SettingsAttribute();
 		for (String name : mSettings)
 		{
-			String value = android.provider.Settings.Secure.getString(mContentResolver, name.toLowerCase());
+			String value = android.provider.Settings.Secure.getString(mContentResolver, name.toLowerCase(Locale.US));
 			if (value == null)
 			{
-				value = android.provider.Settings.System.getString(mContentResolver, name.toLowerCase());
+				value = android.provider.Settings.System.getString(mContentResolver, name.toLowerCase(Locale.US));
 			}
 			if (value != null)
 			{
