@@ -417,6 +417,10 @@ static void set_options(char *logfile)
 	 * information */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.set_source", FALSE);
+	/* the Linux kernel does currently not support UDP encaspulation for IPv6
+	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
+	lib->settings->set_bool(lib->settings,
+					"charon.plugins.socket-default.use_ipv6", FALSE);
 	/* don't install virtual IPs via kernel-netlink */
 	lib->settings->set_bool(lib->settings,
 					"charon.install_virtual_ip", FALSE);
