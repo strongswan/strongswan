@@ -1081,6 +1081,20 @@ METHOD(ike_sa_t, initiate_mediated, status_t,
 static void resolve_hosts(private_ike_sa_t *this)
 {
 	host_t *host;
+	int family = 0;
+
+	switch (charon->socket->supported_families(charon->socket))
+	{
+		case SOCKET_FAMILY_IPV4:
+			family = AF_INET;
+			break;
+		case SOCKET_FAMILY_IPV6:
+			family = AF_INET6;
+			break;
+		case SOCKET_FAMILY_BOTH:
+		case SOCKET_FAMILY_NONE:
+			break;
+	}
 
 	if (this->remote_host)
 	{
@@ -1094,7 +1108,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 
 		other_addr = this->ike_cfg->get_other_addr(this->ike_cfg, NULL);
 		other_port = this->ike_cfg->get_other_port(this->ike_cfg);
-		host = host_create_from_dns(other_addr, 0, other_port);
+		host = host_create_from_dns(other_addr, family, other_port);
 	}
 	if (host)
 	{
@@ -1110,7 +1124,6 @@ static void resolve_hosts(private_ike_sa_t *this)
 	{
 		char *my_addr;
 		u_int16_t my_port;
-		int family = 0;
 
 		/* use same address family as for other */
 		if (!this->other_host->is_anyaddr(this->other_host))
@@ -1133,7 +1146,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 			}
 			else
 			{	/* fallback to address family specific %any(6), if configured */
-				host = host_create_from_dns(my_addr, 0, my_port);
+				host = host_create_from_dns(my_addr, family, my_port);
 			}
 		}
 	}
