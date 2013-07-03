@@ -631,11 +631,36 @@ static int open_socket(private_socket_default_socket_t *this,
 }
 
 /**
+ * Check if we should use the given family
+ */
+static bool use_family(int family)
+{
+	switch (family)
+	{
+		case AF_INET:
+			return lib->settings->get_bool(lib->settings,
+					"%s.plugins.socket-default.use_ipv4", TRUE, charon->name);
+		case AF_INET6:
+			return lib->settings->get_bool(lib->settings,
+					"%s.plugins.socket-default.use_ipv6", TRUE, charon->name);
+		default:
+			return FALSE;
+	}
+}
+
+/**
  * Open a socket pair (normal and NAT traversal) for a given address family
  */
 static void open_socketpair(private_socket_default_socket_t *this, int family,
 							int *skt, int *skt_natt, char *label)
 {
+	if (!use_family(family))
+	{
+		*skt = -1;
+		*skt_natt = -1;
+		return;
+	}
+
 	*skt = open_socket(this, family, &this->port);
 	if (*skt == -1)
 	{

@@ -632,6 +632,12 @@ have a high priority according to the order defined in interface-order(5).
 .BR charon.plugins.socket-default.set_source " [yes]"
 Set source address on outbound packets, if possible.
 .TP
+.BR charon.plugins.socket-default.use_ipv4 " [yes]"
+Listen on IPv4, if possible.
+.TP
+.BR charon.plugins.socket-default.use_ipv6 " [yes]"
+Listen on IPv6, if possible.
+.TP
 .BR charon.plugins.sql.database
 Database URI for charons SQL plugin
 .TP
