@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -620,6 +620,14 @@ METHOD(socket_t, get_port, u_int16_t,
 	return 0;
 }
 
+METHOD(socket_t, supported_families, socket_family_t,
+	private_socket_dynamic_socket_t *this)
+{
+	/* we could return only the families of the opened sockets, but it could
+	 * be that both families are supported even if no socket is yet open */
+	return SOCKET_FAMILY_BOTH;
+}
+
 METHOD(socket_t, destroy, void,
 	private_socket_dynamic_socket_t *this)
 {
@@ -654,6 +662,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 				.send = _sender,
 				.receive = _receiver,
 				.get_port = _get_port,
+				.supported_families = _supported_families,
 				.destroy = _destroy,
 			},
 		},

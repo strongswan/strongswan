@@ -102,6 +102,19 @@ METHOD(socket_manager_t, get_port, u_int16_t,
 	return port;
 }
 
+METHOD(socket_manager_t, supported_families, socket_family_t,
+	private_socket_manager_t *this)
+{
+	socket_family_t families = SOCKET_FAMILY_NONE;
+	this->lock->read_lock(this->lock);
+	if (this->socket)
+	{
+		families = this->socket->supported_families(this->socket);
+	}
+	this->lock->unlock(this->lock);
+	return families;
+}
+
 static void create_socket(private_socket_manager_t *this)
 {
 	socket_constructor_t create;
@@ -167,6 +180,7 @@ socket_manager_t *socket_manager_create()
 			.send = _sender,
 			.receive = _receiver,
 			.get_port = _get_port,
+			.supported_families = _supported_families,
 			.add_socket = _add_socket,
 			.remove_socket = _remove_socket,
 			.destroy = _destroy,

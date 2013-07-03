@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -40,7 +40,7 @@ struct socket_manager_t {
 	 *						- SUCCESS when packet successfully received
 	 *						- FAILED when unable to receive
 	 */
-	status_t (*receive) (socket_manager_t *this, packet_t **packet);
+	status_t (*receive)(socket_manager_t *this, packet_t **packet);
 
 	/**
 	 * Send a packet using the registered socket.
@@ -50,7 +50,7 @@ struct socket_manager_t {
 	 *						- SUCCESS when packet successfully sent
 	 *						- FAILED when unable to send
 	 */
-	status_t (*send) (socket_manager_t *this, packet_t *packet);
+	status_t (*send)(socket_manager_t *this, packet_t *packet);
 
 	/**
 	 * Get the port the registered socket is listening on.
@@ -58,7 +58,14 @@ struct socket_manager_t {
 	 * @param nat_t			TRUE to get the port used to float in case of NAT-T
 	 * @return				the port, or 0, if no socket is registered
 	 */
-	u_int16_t (*get_port) (socket_manager_t *this, bool nat_t);
+	u_int16_t (*get_port)(socket_manager_t *this, bool nat_t);
+
+	/**
+	 * Get the address families the registered socket is listening on.
+	 *
+	 * @return				address families
+	 */
+	socket_family_t (*supported_families)(socket_manager_t *this);
 
 	/**
 	 * Register a socket constructor.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -501,6 +501,22 @@ METHOD(socket_t, get_port, u_int16_t,
 	return nat_t ? this->natt : this->port;
 }
 
+METHOD(socket_t, supported_families, socket_family_t,
+	private_socket_default_socket_t *this)
+{
+	socket_family_t families = SOCKET_FAMILY_NONE;
+
+	if (this->ipv4 != -1 || this->ipv4_natt != -1)
+	{
+		families |= SOCKET_FAMILY_IPV4;
+	}
+	if (this->ipv6 != -1 || this->ipv6_natt != -1)
+	{
+		families |= SOCKET_FAMILY_IPV6;
+	}
+	return families;
+}
+
 /**
  * open a socket to send and receive packets
  */
@@ -671,6 +687,7 @@ socket_default_socket_t *socket_default_socket_create()
 				.send = _sender,
 				.receive = _receiver,
 				.get_port = _get_port,
+				.supported_families = _supported_families,
 				.destroy = _destroy,
 			},
 		},
