@@ -114,7 +114,7 @@
 
             <include
                 android:id="@+id/select_user_certificate"
-                layout="@layout/certificate_selector" />
+                layout="@layout/two_line_button" />
 
         </LinearLayout>
 
@@ -132,7 +132,7 @@
 
         <include
             android:id="@+id/select_certificate"
-            layout="@layout/certificate_selector" />
+            layout="@layout/two_line_button" />
 
     </LinearLayout>
 
