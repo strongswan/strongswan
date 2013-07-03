@@ -65,6 +65,11 @@
             android:spinnerMode="dropdown"
             android:entries="@array/vpn_types" />
 
+        <include
+            android:id="@+id/tnc_notice"
+            layout="@layout/two_line_button"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/username_password_group"
             android:layout_width="match_parent"
