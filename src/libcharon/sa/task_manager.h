@@ -202,7 +202,7 @@ struct task_manager_t {
 	status_t (*retransmit) (task_manager_t *this, u_int32_t message_id);
 
 	/**
-	 * Migrate all tasks from other to this.
+	 * Migrate all queued tasks from other to this.
 	 *
 	 * To rekey or reestablish an IKE_SA completely, all queued or active
 	 * tasks should get migrated to the new IKE_SA.
@@ -210,6 +210,13 @@ struct task_manager_t {
 	 * @param other			manager which gives away its tasks
 	 */
 	void (*adopt_tasks) (task_manager_t *this, task_manager_t *other);
+
+	/**
+	 * Migrate all active or queued CHILD_SA-creating tasks from other to this.
+	 *
+	 * @param other			manager which gives away its tasks
+	 */
+	void (*adopt_child_tasks) (task_manager_t *this, task_manager_t *other);
 
 	/**
 	 * Increment a message ID counter, in- or outbound.

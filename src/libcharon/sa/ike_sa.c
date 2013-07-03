@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1535,6 +1535,30 @@ METHOD(ike_sa_t, reauth, status_t,
 	return this->task_manager->initiate(this->task_manager);
 }
 
+/**
+ * Check if tasks to create CHILD_SAs are queued in the given queue
+ */
+static bool is_child_queued(private_ike_sa_t *this, task_queue_t queue)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+	bool found = FALSE;
+
+	enumerator = this->task_manager->create_task_enumerator(this->task_manager,
+															queue);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE ||
+			task->get_type(task) == TASK_QUICK_MODE)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
 METHOD(ike_sa_t, reestablish, status_t,
 	private_ike_sa_t *this)
 {
@@ -1592,6 +1616,9 @@ METHOD(ike_sa_t, reestablish, status_t,
 			}
 		}
 		enumerator->destroy(enumerator);
+		/* check if we have tasks that recreate children */
+		restart = is_child_queued(this, TASK_QUEUE_ACTIVE) ||
+				  is_child_queued(this, TASK_QUEUE_QUEUED);
 #ifdef ME
 		/* mediation connections have no children, keep them up anyway */
 		if (this->peer_cfg->is_mediation(this->peer_cfg))
@@ -1645,6 +1672,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	else
 #endif /* ME */
 	{
+		/* handle existing CHILD_SAs */
 		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
@@ -1696,6 +1724,16 @@ METHOD(ike_sa_t, reestablish, status_t,
 			}
 		}
 		enumerator->destroy(enumerator);
+		/* adopt any active or queued CHILD-creating tasks */
+		if (status != DESTROY_ME)
+		{
+			task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
+			other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
+			if (new->get_state(new) == IKE_CREATED)
+			{
+				status = new->initiate(new, NULL, 0, NULL, NULL);
+			}
+		}
 	}
 
 	if (status == DESTROY_ME)
