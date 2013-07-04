@@ -423,25 +423,25 @@ INSERT INTO packages (			/*  4 */
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  1, 1, '1.0.1e-2', 1366531494
+  1, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  2, 1, '1.0.1e-2', 1366531494
+  2, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  3, 1, '1.0.1e-2', 1366531494
+  3, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  4, 1, '1.0.1e-2', 1366531494
+  4, 4, '1.0.1e-2', 1366531494
 );
 
 /* Components */
