@@ -86,10 +86,10 @@ TNC_IMV_Action_Recommendation tncif_policy_update_recommendation(
 					break;
 			}
 			break;
-		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
 			switch (rec_add)
 			{
-				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+				case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 					rec = rec_add;
 					break;
 				default:
