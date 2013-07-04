@@ -85,6 +85,11 @@ METHOD(task_t, process_r, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	{
+		this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
+		this->ike_sa->reestablish(this->ike_sa);
+	}
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 	return DESTROY_ME;
