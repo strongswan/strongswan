@@ -204,8 +204,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			imv_session_t *session;
 			imv_workitem_t *workitem, *found = NULL;
 			imv_workitem_type_t type;
-			char *platform_info;
-			bool is_dir;
+			char result_str[BUF_LEN], *platform_info;
+			bool is_dir, correct;
 			enumerator_t *enumerator;
 
 			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
@@ -270,7 +270,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							eval = TNC_IMV_EVALUATION_RESULT_ERROR;
 							break;
 						}
-						if (!measurements->verify(measurements, e, is_dir))
+						correct = measurements->verify(measurements, e, is_dir);
+						if (!correct)
 						{
 							attestation_state->set_measurement_error(
 										attestation_state,
@@ -278,6 +279,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
 						}
 						e->destroy(e);
+
+						snprintf(result_str, BUF_LEN, "%s measurement%s correct",
+								 is_dir ? "directory" : "file",
+								 correct ? "" : " not");
 						break;
 					}
 					case IMV_WORKITEM_FILE_REF_MEAS:
@@ -298,6 +303,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							}
 						}
 						e->destroy(e);
+						snprintf(result_str, BUF_LEN, "%s reference measurement "
+								"successful", is_dir ? "directory" : "file");
 						break;
 					}
 					default:
@@ -306,7 +313,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 				session->remove_workitem(session, enumerator);
 				enumerator->destroy(enumerator);
-				rec = found->set_result(found, "", eval);
+				rec = found->set_result(found, result_str, eval);
 				state->update_recommendation(state, rec, eval);
 				imcv_db->finalize_workitem(imcv_db, found);
 				found->destroy(found);

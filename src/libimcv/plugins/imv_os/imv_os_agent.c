@@ -642,7 +642,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	{
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;
-		char buf[BUF_LEN], *result_str;
+		char result_str[BUF_LEN];
 		bool fail;
 
 		enumerator = session->create_workitem_enumerator(session);
@@ -670,12 +670,11 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					fail = count_update || count_blacklist;
 					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-					snprintf(buf, BUF_LEN, "processed %d packages: "
+					snprintf(result_str, BUF_LEN, "processed %d packages: "
 							"%d not updated, %d blacklisted, %d ok, "
 							"%d not found",
 							count, count_update, count_blacklist, count_ok,
 							count - count_update - count_blacklist - count_ok);
-					result_str = buf;
 					break;
 				}
 				case IMV_WORKITEM_UNKNOWN_SOURCE:
@@ -687,7 +686,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								OS_SETTINGS_UNKNOWN_SOURCE;
 					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-					result_str = fail ? "unknown sources enabled" : "";
+					snprintf(result_str, BUF_LEN, "unknown sources%s enabled",
+							 fail ? "" : " not");
 					break;					
 				case IMV_WORKITEM_FORWARDING:
 					if (!(received & IMV_OS_ATTR_FORWARDING_ENABLED))
@@ -698,7 +698,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								OS_SETTINGS_FWD_ENABLED;
 					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-					result_str = fail ? "forwarding enabled" : "";
+					snprintf(result_str, BUF_LEN, "forwarding%s enabled",
+							 fail ? "" : " not");
 					break;
 				case IMV_WORKITEM_DEFAULT_PWD:
 					if (!(received & IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED))
@@ -709,7 +710,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								OS_SETTINGS_DEFAULT_PWD_ENABLED;
 					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR :
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-					result_str = fail ? "default password enabled" : "";
+					snprintf(result_str, BUF_LEN, "factory default password%s enabled",
+							 fail ? "" : " not");
 					break;
 				default:
 					continue;

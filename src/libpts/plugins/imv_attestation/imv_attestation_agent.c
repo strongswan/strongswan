@@ -385,15 +385,19 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					TNC_IMV_Action_Recommendation rec;
 					TNC_IMV_Evaluation_Result eval;
+					char result_str[BUF_LEN];
 
 					DBG2(DBG_IMV, "IMV %d requests metadata for %s '%s'",
 						 imv_id, is_dir ? "directory" : "file", pathname);
+
+					/* currently just fire and forget metadata requests */
 					attr = tcg_pts_attr_req_file_meta_create(is_dir,
 												delimiter, pathname);
-					/* currently just fire and forget metadata requests */
+					snprintf(result_str, BUF_LEN, "%s metadata requested",
+							 is_dir ? "directory" : "file");
 					eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					session->remove_workitem(session, enumerator);
-					rec = workitem->set_result(workitem, "", eval);
+					rec = workitem->set_result(workitem, result_str, eval);
 					state->update_recommendation(state, rec, eval);
 					imcv_db->finalize_workitem(imcv_db, workitem);
 					workitem->destroy(workitem);
