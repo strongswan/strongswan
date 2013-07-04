@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.1.0dr1])
+AC_INIT([strongSwan],[5.1.0dr2])
 AM_INIT_AUTOMAKE(tar-ustar)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_MACRO_DIR([m4/config])
