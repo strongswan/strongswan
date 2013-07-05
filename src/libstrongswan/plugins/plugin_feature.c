@@ -51,6 +51,8 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"DATABASE",
 	"FETCHER",
 	"RESOLVER",
+	"STREAM",
+	"STREAM_SERVICE",
 	"CUSTOM",
 );
 
@@ -93,6 +95,10 @@ u_int32_t plugin_feature_hash(plugin_feature_t *feature)
 		case FEATURE_EAP_PEER:
 			data = chunk_from_thing(feature->arg);
 			break;
+		case FEATURE_STREAM:
+		case FEATURE_STREAM_SERVICE:
+			data = chunk_create(feature->arg.prefix,
+								strlen(feature->arg.prefix));
 		case FEATURE_CUSTOM:
 			data = chunk_create(feature->arg.custom,
 								strlen(feature->arg.custom));
@@ -167,6 +173,9 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_XAUTH_SERVER:
 			case FEATURE_XAUTH_PEER:
 				return streq(a->arg.xauth, b->arg.xauth);
+			case FEATURE_STREAM:
+			case FEATURE_STREAM_SERVICE:
+				return streq(a->arg.prefix, b->arg.prefix);
 		}
 	}
 	return FALSE;
@@ -206,6 +215,8 @@ bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_CUSTOM:
 			case FEATURE_XAUTH_SERVER:
 			case FEATURE_XAUTH_PEER:
+			case FEATURE_STREAM:
+			case FEATURE_STREAM_SERVICE:
 				return plugin_feature_matches(a, b);
 			case FEATURE_RNG:
 				return a->arg.rng_quality == b->arg.rng_quality;
@@ -373,6 +384,14 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 				return str;
 			}
 			break;
+		case FEATURE_STREAM:
+		case FEATURE_STREAM_SERVICE:
+			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
+					feature->arg.prefix) > 0)
+			{
+				return str;
+			}
+			break;
 	}
 	if (!str)
 	{
@@ -470,6 +489,14 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 		case FEATURE_RESOLVER:
 			lib->resolver->add_resolver(lib->resolver, reg->arg.reg.f);
 			break;
+		case FEATURE_STREAM:
+			lib->streams->add_stream(lib->streams, feature->arg.prefix,
+									 reg->arg.reg.f);
+			break;
+		case FEATURE_STREAM_SERVICE:
+			lib->streams->add_service(lib->streams, feature->arg.prefix,
+									  reg->arg.reg.f);
+			break;
 		default:
 			break;
 	}
@@ -544,6 +571,12 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->remove_resolver(lib->resolver, reg->arg.reg.f);
+			break;
+		case FEATURE_STREAM:
+			lib->streams->remove_stream(lib->streams, reg->arg.reg.f);
+			break;
+		case FEATURE_STREAM_SERVICE:
+			lib->streams->remove_service(lib->streams, reg->arg.reg.f);
 			break;
 		default:
 			break;

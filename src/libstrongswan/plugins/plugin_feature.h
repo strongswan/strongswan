@@ -152,6 +152,10 @@ struct plugin_feature_t {
 		FEATURE_FETCHER,
 		/** resolver_t */
 		FEATURE_RESOLVER,
+		/** stream_t */
+		FEATURE_STREAM,
+		/** stream_service_t */
+		FEATURE_STREAM_SERVICE,
 		/** custom feature, described with a string */
 		FEATURE_CUSTOM,
 	} type;
@@ -205,6 +209,8 @@ struct plugin_feature_t {
 		char *custom;
 		/** FEATURE_XAUTH_SERVER/CLIENT */
 		char *xauth;
+		/** FEATURE_STREAM/STREAM_SERVICE */
+		char *prefix;
 
 		/** FEATURE_REGISTER */
 		struct {
@@ -297,6 +303,8 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
 #define _PLUGIN_FEATURE_RESOLVER(kind, ...)					__PLUGIN_FEATURE(kind, RESOLVER, .custom = NULL)
+#define _PLUGIN_FEATURE_STREAM(kind, type)					__PLUGIN_FEATURE(kind, STREAM, .prefix = type)
+#define _PLUGIN_FEATURE_STREAM_SERVICE(kind, type)			__PLUGIN_FEATURE(kind, STREAM_SERVICE, .prefix = type)
 #define _PLUGIN_FEATURE_CUSTOM(kind, name)					__PLUGIN_FEATURE(kind, CUSTOM, .custom = name)
 #define _PLUGIN_FEATURE_XAUTH_SERVER(kind, name)			__PLUGIN_FEATURE(kind, XAUTH_SERVER, .xauth = name)
 #define _PLUGIN_FEATURE_XAUTH_PEER(kind, name)				__PLUGIN_FEATURE(kind, XAUTH_PEER, .xauth = name)
@@ -321,6 +329,8 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_DATABASE(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_FETCHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_RESOLVER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_STREAM(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_STREAM_SERVICE(type, f)	__PLUGIN_FEATURE_REGISTER(type, f)
 
 #define _PLUGIN_FEATURE_CALLBACK(_cb, _data) (plugin_feature_t){ FEATURE_CALLBACK, FEATURE_NONE, .arg.cb = { .f = _cb, .data = _data } }
 
