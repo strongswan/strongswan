@@ -82,7 +82,7 @@ endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
+libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB) $(top_builddir)/src/libtls/libtls.la
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
@@ -372,6 +372,13 @@ if USE_LDAP
   SUBDIRS += plugins/ldap
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/ldap/libstrongswan-ldap.la
+endif
+endif
+
+if USE_TLS_STREAM
+  SUBDIRS += plugins/tls_stream
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/tls_stream/libstrongswan-tls-stream.la
 endif
 endif
 
