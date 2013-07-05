@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import org.strongswan.android.R;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
+import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.Fragment;
@@ -31,9 +32,13 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -96,6 +101,31 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 					intent = new Intent(getActivity(), LogActivity.class);
 				}
 				startActivity(intent);
+			}
+		});
+		final GestureDetector gestures = new GestureDetector(getActivity(), new GestureDetector.SimpleOnGestureListener() {
+			/* a better value would be getScaledTouchExplorationTapSlop() but that is hidden */
+			private final int mMinDistance = ViewConfiguration.get(getActivity()).getScaledTouchSlop() * 4;
+
+			@Override
+			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY)
+			{
+				if (Math.abs(e1.getX() - e2.getX()) >= mMinDistance)
+				{	/* only if the user swiped a minimum horizontal distance */
+					if (mService != null)
+					{
+						mService.setImcState(ImcState.UNKNOWN);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+		mButton.setOnTouchListener(new OnTouchListener() {
+			@Override
+			public boolean onTouch(View v, MotionEvent event)
+			{
+				return gestures.onTouchEvent(event);
 			}
 		});
 
