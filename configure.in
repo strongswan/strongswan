@@ -482,6 +482,7 @@ AC_CHECK_FUNC(
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
+AC_CHECK_FUNCS(fopencookie funopen)
 
 AC_CHECK_HEADERS(sys/sockio.h glob.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
