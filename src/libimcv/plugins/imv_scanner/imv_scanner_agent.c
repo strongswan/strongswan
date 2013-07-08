@@ -265,10 +265,10 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		state->set_recommendation(state,
 							TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 							TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
-		scanner_state->set_handshake_state(scanner_state,
-							IMV_SCANNER_STATE_END);
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
+		scanner_state->set_handshake_state(scanner_state, IMV_SCANNER_STATE_END);
+
 		if (result != TNC_RESULT_SUCCESS)
 		{
 			return result;
