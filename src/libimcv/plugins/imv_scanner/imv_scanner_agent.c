@@ -442,20 +442,21 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 			workitem->destroy(workitem);
 		}
 		enumerator->destroy(enumerator);
+	}
 
-		/* finalized all workitems ? */
-		if (session->get_workitem_count(session, imv_id) == 0)
+	/* finalized all workitems ? */
+	if (handshake_state == IMV_SCANNER_STATE_WORKITEMS &&
+		session->get_workitem_count(session, imv_id) == 0)
+	{
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		scanner_state->set_handshake_state(scanner_state, IMV_SCANNER_STATE_END);
+
+		if (result != TNC_RESULT_SUCCESS)
 		{
-			scanner_state->set_handshake_state(scanner_state,
-											   IMV_SCANNER_STATE_END);
-			result = out_msg->send_assessment(out_msg);
-			out_msg->destroy(out_msg);
-			if (result != TNC_RESULT_SUCCESS)
-			{
-				return result;
-			}
-			return this->agent->provide_recommendation(this->agent, state);
+			return result;
 		}
+		return this->agent->provide_recommendation(this->agent, state);
 	}
 
 	/* send non-empty PA-TNC message with excl flag not set */
