@@ -108,7 +108,13 @@ plugin_t *whitelist_plugin_create()
 		},
 		.listener = whitelist_listener_create(),
 	);
+
 	this->control = whitelist_control_create(this->listener);
+	if (!this->control)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public.plugin;
 }
