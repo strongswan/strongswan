@@ -109,6 +109,12 @@ plugin_t *error_notify_plugin_create()
 		.socket = error_notify_socket_create(),
 	);
 
+	if (!this->socket)
+	{
+		free(this);
+		return NULL;
+	}
+
 	this->listener = error_notify_listener_create(this->socket);
 
 	return &this->public.plugin;
