@@ -559,9 +559,9 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 
 	/* authentication metod (class, actually) */
-	if (strneq(auth, "pubkey", strlen("pubkey")) ||
-		strneq(auth, "rsa", strlen("rsa")) ||
-		strneq(auth, "ecdsa", strlen("ecdsa")))
+	if (strpfx(auth, "pubkey") ||
+		strpfx(auth, "rsa") ||
+		strpfx(auth, "ecdsa"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
@@ -572,7 +572,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
 	}
-	else if (strneq(auth, "xauth", 5))
+	else if (strpfx(auth, "xauth"))
 	{
 		char *pos;
 
@@ -588,7 +588,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 				identification_create_from_string(msg->add_conn.xauth_identity));
 		}
 	}
-	else if (strneq(auth, "eap", 3))
+	else if (strpfx(auth, "eap"))
 	{
 		eap_vendor_type_t *type;
 

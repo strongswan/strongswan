@@ -355,7 +355,7 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 				}
 			}
 		}
-		else if (strneq(str, "eap", strlen("eap")))
+		else if (strpfx(str, "eap"))
 		{	/* EAP authentication, use a NAI */
 			class = AUTH_CLASS_EAP;
 			if (*(str + strlen("eap")) == '-')

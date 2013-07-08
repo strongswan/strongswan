@@ -13,6 +13,17 @@ add_plugin = $(if $(call plugin_enabled,$(1)), \
                   ) \
                 ) \
               )
+add_plugin_subdirs = $(if $(call plugin_enabled,$(1)), \
+               $(patsubst $(LOCAL_PATH)/%,%, \
+                 $(wildcard \
+                   $(subst %,$(subst -,_,$(strip $(1))), \
+                     $(addprefix $(LOCAL_PATH)/plugins/%/,$(addsuffix /*.c, \
+                       $(strip $(2)) \
+                      )) \
+                    ) \
+                  ) \
+                ) \
+              )
 
 # strongSwan version, replaced by top Makefile
 strongswan_VERSION := "@PACKAGE_VERSION@"

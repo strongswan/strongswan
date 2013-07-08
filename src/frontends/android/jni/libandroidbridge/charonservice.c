@@ -30,6 +30,10 @@
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
 
+#ifdef USE_BYOD
+#include "byod/imc_android.h"
+#endif
+
 #include <daemon.h>
 #include <hydra.h>
 #include <ipsec.h>
@@ -150,6 +154,61 @@ METHOD(charonservice_t, update_status, bool,
 		goto failed;
 	}
 	(*env)->CallVoidMethod(env, this->vpn_service, method_id, (jint)code);
+	success = !androidjni_exception_occurred(env);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return success;
+}
+
+METHOD(charonservice_t, update_imc_state, bool,
+	private_charonservice_t *this, android_imc_state_t state)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	bool success = FALSE;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"updateImcState", "(I)V");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	(*env)->CallVoidMethod(env, this->vpn_service, method_id, (jint)state);
+	success = !androidjni_exception_occurred(env);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return success;
+}
+
+METHOD(charonservice_t, add_remediation_instr, bool,
+	private_charonservice_t *this, char *instr)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jstring jinstr;
+	bool success = FALSE;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"addRemediationInstruction",
+									"(Ljava/lang/String;)V");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jinstr = (*env)->NewStringUTF(env, instr);
+	if (!jinstr)
+	{
+		goto failed;
+	}
+	(*env)->CallVoidMethod(env, this->vpn_service, method_id, jinstr);
 	success = !androidjni_exception_occurred(env);
 
 failed:
@@ -357,7 +416,7 @@ static void initiate(char *type, char *gateway, char *username, char *password)
 /**
  * Initialize/deinitialize Android backend
  */
-static bool charonservice_register(void *plugin, plugin_feature_t *feature,
+static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 								   bool reg, void *data)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
@@ -434,25 +493,37 @@ static void set_options(char *logfile)
 	lib->settings->set_str(lib->settings,
 					"charon.interfaces_ignore", "lo, tun0, tun1, tun2, tun3, "
 					"tun4");
+
+#ifdef USE_BYOD
+	lib->settings->set_str(lib->settings,
+					"charon.plugins.eap-tnc.protocol", "tnccs-2.0");
+	lib->settings->set_bool(lib->settings,
+					"android.imc.send_os_info", TRUE);
+	lib->settings->set_str(lib->settings,
+					"libtnccs.tnc_config", "");
+#endif
 }
 
 /**
  * Initialize the charonservice object
  */
-static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
+static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
+							   jboolean byod)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-		PLUGIN_CALLBACK((plugin_feature_callback_t)charonservice_register, NULL),
-			PLUGIN_PROVIDE(CUSTOM, "Android backend"),
+		PLUGIN_CALLBACK(charonservice_register, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
 	};
 
 	INIT(this,
 		.public = {
 			.update_status = _update_status,
+			.update_imc_state = _update_imc_state,
+			.add_remediation_instr = _add_remediation_instr,
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_user_certificate = _get_user_certificate,
@@ -471,6 +542,21 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 
 	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
 									  countof(features), TRUE);
+
+#ifdef USE_BYOD
+	if (byod)
+	{
+		plugin_feature_t byod_features[] = {
+			PLUGIN_CALLBACK(imc_android_register, this->vpn_service),
+				PLUGIN_PROVIDE(CUSTOM, "android-imc"),
+					PLUGIN_DEPENDS(CUSTOM, "android-backend"),
+					PLUGIN_DEPENDS(CUSTOM, "imc-manager"),
+		};
+
+		lib->plugins->add_static_features(lib->plugins, "android-byod",
+								byod_features, countof(byod_features), TRUE);
+	}
+#endif
 }
 
 /**
@@ -504,11 +590,11 @@ static void segv_handler(int signal)
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, void,
-	jobject builder, jstring jlogfile)
+	jobject builder, jstring jlogfile, jboolean byod)
 {
 	struct sigaction action;
 	struct utsname utsname;
-	char *logfile;
+	char *logfile, *plugins;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -551,7 +637,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 
 	charon->load_loggers(charon, NULL, FALSE);
 
-	charonservice_init(env, this, builder);
+	charonservice_init(env, this, builder, byod);
 
 	if (uname(&utsname) != 0)
 	{
@@ -560,7 +646,18 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
 		  utsname.sysname, utsname.release, utsname.machine);
 
-	if (!charon->initialize(charon, PLUGINS))
+#ifdef PLUGINS_BYOD
+	if (byod)
+	{
+		plugins = PLUGINS " " PLUGINS_BYOD;
+	}
+	else
+#endif
+	{
+		plugins = PLUGINS;
+	}
+
+	if (!charon->initialize(charon, plugins))
 	{
 		libcharon_deinit();
 		charonservice_deinit(env);

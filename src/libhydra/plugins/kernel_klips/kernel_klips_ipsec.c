@@ -78,7 +78,7 @@
 /** this is the default number of ipsec devices */
 #define DEFAULT_IPSEC_DEV_COUNT 4
 /** TRUE if the given name matches an ipsec device */
-#define IS_IPSEC_DEV(name) (strneq((name), IPSEC_DEV_PREFIX, sizeof(IPSEC_DEV_PREFIX) - 1))
+#define IS_IPSEC_DEV(name) (strpfx((name), IPSEC_DEV_PREFIX))
 
 /** the following stuff is from ipsec_tunnel.h */
 struct ipsectunnelconf
@@ -2332,7 +2332,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 	while (fgets(line, sizeof(line), file))
 	{
-		if (strneq(line, said, strlen(said)))
+		if (strpfx(line, said))
 		{
 			/* fine we found the correct line, now find the idle time */
 			u_int32_t idle_time;

@@ -666,7 +666,7 @@ mysql_database_t *mysql_database_create(char *uri)
 	conn_t *conn;
 	private_mysql_database_t *this;
 
-	if (!strneq(uri, "mysql://", 8))
+	if (!strpfx(uri, "mysql://"))
 	{
 		return NULL;
 	}

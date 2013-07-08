@@ -20,11 +20,13 @@ public enum VpnType
 	/* the order here must match the items in R.array.vpn_types */
 	IKEV2_EAP("ikev2-eap", true, false),
 	IKEV2_CERT("ikev2-cert", false, true),
-	IKEV2_CERT_EAP("ikev2-cert-eap", true, true);
+	IKEV2_CERT_EAP("ikev2-cert-eap", true, true),
+	IKEV2_BYOD_EAP("ikev2-byod-eap", true, false, true);
 
 	private String mIdentifier;
 	private boolean mCertificate;
 	private boolean mUsernamePassword;
+	private boolean mBYOD;
 
 	/**
 	 * Enum which provides additional information about the supported VPN types.
@@ -35,9 +37,23 @@ public enum VpnType
 	 */
 	VpnType(String id, boolean userpass, boolean certificate)
 	{
+		this(id, userpass, certificate, false);
+	}
+
+	/**
+	 * Enum which provides additional information about the supported VPN types.
+	 *
+	 * @param id identifier used to store and transmit this specific type
+	 * @param userpass true if username and password are required
+	 * @param certificate true if a client certificate is required
+	 * @param byod true to enable BYOD features
+	 */
+	VpnType(String id, boolean userpass, boolean certificate, boolean byod)
+	{
 		mIdentifier = id;
 		mUsernamePassword = userpass;
 		mCertificate = certificate;
+		mBYOD = byod;
 	}
 
 	/**
@@ -67,6 +83,16 @@ public enum VpnType
 	public boolean getRequiresCertificate()
 	{
 		return mCertificate;
+	}
+
+	/**
+	 * Whether BYOD features should be enabled.
+	 *
+	 * @return true if BYOD features are to be enabled
+	 */
+	public boolean getEnableBYOD()
+	{
+		return mBYOD;
 	}
 
 	/**

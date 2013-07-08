@@ -302,20 +302,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
 		return NULL;
 	}
 	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
-
-	INIT(this,
-		.public = {
-			.get_request_id = _get_request_id,
-			.get_file_count = _get_file_count,
-			.add = _add,
-			.create_enumerator = _create_enumerator,
-			.check = _check,
-			.verify = _verify,
-			.destroy = _destroy,
-		},
-		.request_id = request_id,
-		.list = linked_list_create(),
-	);
+	this = (private_pts_file_meas_t*)pts_file_meas_create(request_id);
 
 	if (is_dir)
 	{
@@ -338,8 +325,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
 			{
 				if (!hash_file(hasher, abs_name, hash))
 				{
-					success = FALSE;
-					break;
+					continue;
 				}
 				filename = use_rel_name ? rel_name : abs_name;
 				DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);

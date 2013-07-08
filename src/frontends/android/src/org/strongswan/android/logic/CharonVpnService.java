@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -27,6 +27,8 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
+import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
 
 import android.app.PendingIntent;
@@ -208,10 +210,11 @@ public class CharonVpnService extends VpnService implements Runnable
 						setProfile(mCurrentProfile);
 						setError(ErrorState.NO_ERROR);
 						setState(State.CONNECTING);
+						setImcState(ImcState.UNKNOWN);
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						initializeCharon(builder, mLogFile);
+						initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().getEnableBYOD());
 						Log.i(TAG, "charon started");
 
 						initiate(mCurrentProfile.getVpnType().getIdentifier(),
@@ -297,6 +300,23 @@ public class CharonVpnService extends VpnService implements Runnable
 	}
 
 	/**
+	 * Set the IMC state on the state service. Called by the handler thread and
+	 * any of charon's threads.
+	 *
+	 * @param state IMC state
+	 */
+	private void setImcState(ImcState state)
+	{
+		synchronized (mServiceLock)
+		{
+			if (mService != null)
+			{
+				mService.setImcState(state);
+			}
+		}
+	}
+
+	/**
 	 * Set an error on the state service and disconnect the current connection.
 	 * This is not done by calling stopCurrentConnection() above, but instead
 	 * is done asynchronously via state service.
@@ -352,6 +372,41 @@ public class CharonVpnService extends VpnService implements Runnable
 			default:
 				Log.e(TAG, "Unknown status code received");
 				break;
+		}
+	}
+
+	/**
+	 * Updates the IMC state of the current connection.
+	 * Called via JNI by different threads (but not concurrently).
+	 *
+	 * @param value new state
+	 */
+	public void updateImcState(int value)
+	{
+		ImcState state = ImcState.fromValue(value);
+		if (state != null)
+		{
+			setImcState(state);
+		}
+	}
+
+	/**
+	 * Add a remediation instruction to the VPN state service.
+	 * Called via JNI by different threads (but not concurrently).
+	 *
+	 * @param xml XML text
+	 */
+	public void addRemediationInstruction(String xml)
+	{
+		for (RemediationInstruction instruction : RemediationInstruction.fromXml(xml))
+		{
+			synchronized (mServiceLock)
+			{
+				if (mService != null)
+				{
+					mService.addRemediationInstruction(instruction);
+				}
+			}
 		}
 	}
 
@@ -461,8 +516,9 @@ public class CharonVpnService extends VpnService implements Runnable
 	 *
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
+	 * @param boyd enable BYOD features
 	 */
-	public native void initializeCharon(BuilderAdapter builder, String logfile);
+	public native void initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
@@ -600,6 +656,15 @@ public class CharonVpnService extends VpnService implements Runnable
 	{
 		System.loadLibrary("crypto");
 		System.loadLibrary("strongswan");
+
+		if (MainActivity.USE_BYOD)
+		{
+			System.loadLibrary("tncif");
+			System.loadLibrary("tnccs");
+			System.loadLibrary("imcv");
+			System.loadLibrary("pts");
+		}
+
 		System.loadLibrary("hydra");
 		System.loadLibrary("charon");
 		System.loadLibrary("ipsec");

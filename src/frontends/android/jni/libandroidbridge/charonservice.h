@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -21,6 +21,9 @@
  * @defgroup android_backend backend
  * @ingroup libandroidbridge
  *
+ * @defgroup android_byod byod
+ * @ingroup libandroidbridge
+ *
  * @defgroup android_kernel kernel
  * @ingroup libandroidbridge
  *
@@ -38,6 +41,7 @@
 #include <collections/linked_list.h>
 
 typedef enum android_vpn_state_t android_vpn_state_t;
+typedef enum android_imc_state_t android_imc_state_t;
 typedef struct charonservice_t charonservice_t;
 
 /**
@@ -54,6 +58,16 @@ enum android_vpn_state_t {
 };
 
 /**
+ * Final IMC state as defined in ImcState.java
+ */
+enum android_imc_state_t {
+	ANDROID_IMC_STATE_UNKNOWN = 0,
+	ANDROID_IMC_STATE_ALLOW = 1,
+	ANDROID_IMC_STATE_BLOCK = 2,
+	ANDROID_IMC_STATE_ISOLATE = 3,
+};
+
+/**
  * Public interface of charonservice.
  *
  * Used to communicate with CharonVpnService via JNI
@@ -67,6 +81,22 @@ struct charonservice_t {
 	 * @return				TRUE on success
 	 */
 	bool (*update_status)(charonservice_t *this, android_vpn_state_t code);
+
+	/**
+	 * Update final IMC state in the Java domain (UI)
+	 *
+	 * @param state			IMC state
+	 * @return				TRUE on success
+	 */
+	bool (*update_imc_state)(charonservice_t *this, android_imc_state_t state);
+
+	/**
+	 * Add a remediation instruction via JNI
+	 *
+	 * @param instr			remediation instruction
+	 * @return				TRUE on success
+	 */
+	bool (*add_remediation_instr)(charonservice_t *this, char *instr);
 
 	/**
 	 * Install a bypass policy for the given socket using the protect() Method

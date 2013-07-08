@@ -782,7 +782,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 	enumerator = enumerator_create_token(message, " ", " ");
 	while (enumerator->enumerate(enumerator, &token))
 	{
-		if (strneq(token, "S=", 2))
+		if (strpfx(token, "S="))
 		{
 			chunk_t hex;
 			token += 2;
@@ -795,7 +795,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 			hex = chunk_create(token, AUTH_RESPONSE_LEN - 2);
 			auth_string = chunk_from_hex(hex, NULL);
 		}
-		else if (strneq(token, "M=", 2))
+		else if (strpfx(token, "M="))
 		{
 			token += 2;
 			msg = strdup(token);
@@ -864,16 +864,16 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	enumerator = enumerator_create_token(message, " ", " ");
 	while (enumerator->enumerate(enumerator, &token))
 	{
-		if (strneq(token, "E=", 2))
+		if (strpfx(token, "E="))
 		{
 			token += 2;
 			error = atoi(token);
 		}
-		else if (strneq(token, "R=", 2))
+		else if (strpfx(token, "R="))
 		{
 			/* ignore retriable */
 		}
-		else if (strneq(token, "C=", 2))
+		else if (strpfx(token, "C="))
 		{
 			chunk_t hex;
 			token += 2;
@@ -886,11 +886,11 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 			hex = chunk_create(token, 2 * CHALLENGE_LEN);
 			challenge = chunk_from_hex(hex, NULL);
 		}
-		else if (strneq(token, "V=", 2))
+		else if (strpfx(token, "V="))
 		{
 			/* ignore version */
 		}
-		else if (strneq(token, "M=", 2))
+		else if (strpfx(token, "M="))
 		{
 			token += 2;
 			msg = strdup(token);

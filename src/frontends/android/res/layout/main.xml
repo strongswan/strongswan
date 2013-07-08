@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012-2013 Tobias Brunner
     Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,12 @@
     <fragment
             class="org.strongswan.android.ui.VpnStateFragment"
             android:id="@+id/vpn_state_frag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    <fragment
+            class="org.strongswan.android.ui.ImcStateFragment"
+            android:id="@+id/imc_state_frag"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 

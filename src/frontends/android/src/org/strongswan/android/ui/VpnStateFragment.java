@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -17,12 +17,17 @@
 
 package org.strongswan.android.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
+import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.AlertDialog;
 import android.app.Fragment;
@@ -45,6 +50,7 @@ import android.widget.TextView;
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
 	private static final String KEY_ERROR = "error";
+	private static final String KEY_IMC_STATE = "imc_state";
 	private static final String KEY_NAME = "name";
 
 	private TextView mProfileNameView;
@@ -56,6 +62,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private State mState;
 	private AlertDialog mErrorDialog;
 	private ErrorState mError;
+	private ImcState mImcState;
 	private String mErrorProfileName;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -85,9 +92,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 							mServiceConnection, Service.BIND_AUTO_CREATE);
 
 		mError = ErrorState.NO_ERROR;
+		mImcState = ImcState.UNKNOWN;
 		if (savedInstanceState != null && savedInstanceState.containsKey(KEY_ERROR))
 		{
 			mError = (ErrorState)savedInstanceState.getSerializable(KEY_ERROR);
+			mImcState = (ImcState)savedInstanceState.getSerializable(KEY_IMC_STATE);
 			mErrorProfileName = savedInstanceState.getString(KEY_NAME);
 		}
 	}
@@ -98,6 +107,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		super.onSaveInstanceState(outState);
 
 		outState.putSerializable(KEY_ERROR, mError);
+		outState.putSerializable(KEY_IMC_STATE, mImcState);
 		outState.putString(KEY_NAME, mErrorProfileName);
 	}
 
@@ -167,6 +177,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	{
 		State state = mService.getState();
 		ErrorState error = ErrorState.NO_ERROR;
+		ImcState imcState = ImcState.UNKNOWN;
 		String name = "", gateway = "";
 
 		if (state != State.DISABLED)
@@ -178,9 +189,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				gateway = profile.getGateway();
 			}
 			error = mService.getErrorState();
+			imcState = mService.getImcState();
 		}
 
-		if (reportError(name, state, error))
+		if (reportError(name, state, error, imcState))
 		{
 			return;
 		}
@@ -223,16 +235,18 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 	}
 
-	private boolean reportError(String name, State state, ErrorState error)
+	private boolean reportError(String name, State state, ErrorState error, ImcState imcState)
 	{
 		if (mError != ErrorState.NO_ERROR)
 		{	/* we are currently reporting an error which was not yet dismissed */
 			error = mError;
+			imcState = mImcState;
 			name = mErrorProfileName;
 		}
 		else if (error != ErrorState.NO_ERROR && (state == State.CONNECTING || state == State.CONNECTED))
 		{	/* while initiating we report errors */
 			mError = error;
+			mImcState = imcState;
 			mErrorProfileName = name;
 		}
 		else
@@ -257,7 +271,14 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		switch (error)
 		{
 			case AUTH_FAILED:
-				showErrorDialog(R.string.error_auth_failed);
+				if (imcState == ImcState.BLOCK)
+				{
+					showErrorDialog(R.string.error_assessment_failed);
+				}
+				else
+				{
+					showErrorDialog(R.string.error_auth_failed);
+				}
 				break;
 			case PEER_AUTH_FAILED:
 				showErrorDialog(R.string.error_peer_auth_failed);
@@ -305,6 +326,13 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 	}
 
+	private void clearError()
+	{
+		mError = ErrorState.NO_ERROR;
+		mImcState = ImcState.UNKNOWN;
+		updateView();
+	}
+
 	private void showConnectDialog(String profile, String gateway)
 	{
 		mProgressDialog = new ProgressDialog(getActivity());
@@ -338,32 +366,46 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private void showErrorDialog(int textid)
 	{
+		final List<RemediationInstruction> instructions = mService.getRemediationInstructions();
+		final boolean show_instructions = mImcState == ImcState.BLOCK && !instructions.isEmpty();
+		int text = show_instructions ? R.string.show_remediation_instructions : R.string.show_log;
+
 		mErrorDialog = new AlertDialog.Builder(getActivity())
 			.setMessage(getString(R.string.error_introduction) + " " + getString(textid))
 			.setCancelable(false)
-			.setNeutralButton(R.string.show_log, new DialogInterface.OnClickListener() {
+			.setNeutralButton(text, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which)
 				{
+					clearError();
 					dialog.dismiss();
-					Intent logIntent = new Intent(getActivity(), LogActivity.class);
-					startActivity(logIntent);
+					Intent intent;
+					if (show_instructions)
+					{
+						intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
+						intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
+														   new ArrayList<RemediationInstruction>(instructions));
+					}
+					else
+					{
+						intent = new Intent(getActivity(), LogActivity.class);
+					}
+					startActivity(intent);
 				}
 			})
 			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int id)
 				{
+					clearError();
 					dialog.dismiss();
 				}
 			}).create();
 		mErrorDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
 			@Override
 			public void onDismiss(DialogInterface dialog)
-			{	/* clear the error */
-				mError = ErrorState.NO_ERROR;
+			{
 				mErrorDialog = null;
-				updateView();
 			}
 		});
 		mErrorDialog.show();

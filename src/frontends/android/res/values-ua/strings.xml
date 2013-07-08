@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Dmitry Korzhevin
     Copyright (C) 2013 Pavel Kopchyk
+    Copyright (C) 2012 Dmitry Korzhevin
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -67,6 +67,9 @@
     <string name="alert_text_no_input_username">Введіть ім\'я користувача тут</string>
     <string name="alert_text_nocertfound_title">Не вибрано сертифікат CA</string>
     <string name="alert_text_nocertfound">Будь ласка виберіть один <i>Вибрати автоматично</i></string>
+    <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
+    <string name="tnc_notice_subtitle">Device data is sent to the gateway operator</string>
+    <string name="tnc_notice_details">&lt;p>Trusted Network Connect (TNC) allows gateway operators to assess the health of a client device.&lt;/p>&lt;p>For that purpose the gateway operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.&lt;/p>&lt;b>Any data will be sent only after verifying the gateway\'s identity.&lt;/b></string>
 
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">Сертифікати CA</string>
@@ -84,6 +87,15 @@
     <string name="state_disabled">Немає активних VPN</string>
     <string name="state_error">Помилка</string>
 
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">Assessment:</string>
+    <string name="imc_state_isolate">Restricted</string>
+    <string name="imc_state_block">Failed</string>
+    <string name="show_remediation_instructions">View remediation instructions</string>
+
+    <!-- Remediation instructions -->
+    <string name="remediation_instructions_title">Remediation instructions</string>
+
     <!-- Dialogs -->
     <string name="login_title">Введіть пароль для з\'єднання</string>
     <string name="login_confirm">Підключити</string>
@@ -92,6 +104,7 @@
     <string name="error_unreachable">Немає зв\'язку зі шлюзом.</string>
     <string name="error_peer_auth_failed">Помилка перевірки данних аутентифікації шлюза.</string>
     <string name="error_auth_failed">Помилка аутентифікації користувача.</string>
+    <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Невідома помилка під час підключення.</string>
     <string name="connecting_title">Підключення: %1$s</string>
     <string name="connecting_message">Підключення VPN з \""%1$s\".</string>

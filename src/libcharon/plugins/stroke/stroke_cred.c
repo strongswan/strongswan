@@ -175,7 +175,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 	certificate_t *cert = NULL;
 	char path[PATH_MAX];
 
-	if (strneq(filename, "%smartcard", strlen("%smartcard")))
+	if (strpfx(filename, "%smartcard"))
 	{
 		smartcard_format_t format;
 		char module[SC_PART_LEN], keyid[SC_PART_LEN];
@@ -239,7 +239,7 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 	certificate_t *cert = NULL;
 	char path[PATH_MAX];
 
-	if (strneq(filename, "%smartcard", strlen("%smartcard")))
+	if (strpfx(filename, "%smartcard"))
 	{
 		smartcard_format_t format;
 		char module[SC_PART_LEN], keyid[SC_PART_LEN];
@@ -787,7 +787,7 @@ static bool load_pin(mem_cred_t *secrets, chunk_t line, int line_nr,
 	}
 
 	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	if (secret.len == 7 && strpfx(secret.ptr, "%prompt"))
 	{
 		free(secret.ptr);
 		if (!prompt)
@@ -880,7 +880,7 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 			return FALSE;
 		}
 	}
-	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	if (secret.len == 7 && strpfx(secret.ptr, "%prompt"))
 	{
 		callback_cred_t *cb;
 		passphrase_cb_data_t pp_data = {
@@ -1142,8 +1142,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		{
 			continue;
 		}
-		if (line.len > strlen("include ") &&
-			strneq(line.ptr, "include ", strlen("include ")))
+		if (line.len > strlen("include ") && strpfx(line.ptr, "include "))
 		{
 			char **expanded, *dir, pattern[PATH_MAX];
 			u_char *pos;
@@ -1211,7 +1210,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			continue;
 		}
 
-		if (line.len > 2 && strneq(": ", line.ptr, 2))
+		if (line.len > 2 && strpfx(line.ptr, ": "))
 		{
 			/* no ids, skip the ':' */
 			ids = chunk_empty;

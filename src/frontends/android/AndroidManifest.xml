@@ -55,6 +55,10 @@
             android:label="@string/log_title" >
         </activity>
         <activity
+            android:name=".ui.RemediationInstructionsActivity"
+            android:label="@string/remediation_instructions_title" >
+        </activity>
+        <activity
             android:name=".ui.VpnProfileSelectActivity"
             android:label="@string/strongswan_shortcut" >
             <intent-filter>

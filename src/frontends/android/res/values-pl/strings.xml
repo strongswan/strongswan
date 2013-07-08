@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Giuliano Grassi
-    Copyright (C) 2012 Ralf Sager
     Copyright (C) 2012 Andreas Steffen
     HSR Hochschule fuer Technik Rapperswil
 
@@ -71,6 +69,9 @@
     <string name="alert_text_no_input_username">Wprowadź swoją nazwę użytkownika</string>
     <string name="alert_text_nocertfound_title">Nie wybrano żadnego certyfikatu CA</string>
     <string name="alert_text_nocertfound">Wybierz lub uaktywnij jeden <i>Wybierz automatycznie</i></string>
+    <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
+    <string name="tnc_notice_subtitle">Device data is sent to the gateway operator</string>
+    <string name="tnc_notice_details">&lt;p>Trusted Network Connect (TNC) allows gateway operators to assess the health of a client device.&lt;/p>&lt;p>For that purpose the gateway operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.&lt;/p>&lt;b>Any data will be sent only after verifying the gateway\'s identity.&lt;/b></string>
 
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">Certyfikaty CA</string>
@@ -88,6 +89,15 @@
     <string name="state_disabled">Brak aktywnego VPN</string>
     <string name="state_error">Błąd</string>
 
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">Assessment:</string>
+    <string name="imc_state_isolate">Restricted</string>
+    <string name="imc_state_block">Failed</string>
+    <string name="show_remediation_instructions">View remediation instructions</string>
+
+    <!-- Remediation instructions -->
+    <string name="remediation_instructions_title">Remediation instructions</string>
+
     <!-- Dialogs -->
     <string name="login_title">Wprowadż hasło</string>
     <string name="login_confirm">Połącz</string>
@@ -96,6 +106,7 @@
     <string name="error_unreachable">Bramka jest nieosiągalna</string>
     <string name="error_peer_auth_failed">Błąd przy weryfikacji bramki</string>
     <string name="error_auth_failed">Błąd przy autoryzacji użytkownika</string>
+    <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Nieznany błąd w czasie połączenia</string>
     <string name="connecting_title">Łączenie: %1$s</string>
     <string name="connecting_message">Tworzenie tunelu VPN z \""%1$s\".</string>

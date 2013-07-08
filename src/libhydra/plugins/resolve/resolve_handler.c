@@ -126,7 +126,7 @@ static void remove_nameserver(private_resolve_handler_t *this,
 			/* copy all, but matching line */
 			while (fgets(line, sizeof(line), in))
 			{
-				if (strneq(line, matcher, strlen(matcher)))
+				if (strpfx(line, matcher))
 				{
 					DBG1(DBG_IKE, "removing DNS server %H from %s",
 						 addr, this->file);

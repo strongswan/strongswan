@@ -28,6 +28,8 @@ import org.strongswan.android.logic.TrustedCertificateManager;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -36,6 +38,7 @@ import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -73,6 +76,7 @@ public class VpnProfileDetailActivity extends Activity
 	private TwoLineListItem mSelectUserCert;
 	private CheckBox mCheckAuto;
 	private TwoLineListItem mSelectCert;
+	private TwoLineListItem mTncNotice;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -90,6 +94,7 @@ public class VpnProfileDetailActivity extends Activity
 		mName = (EditText)findViewById(R.id.name);
 		mGateway = (EditText)findViewById(R.id.gateway);
 		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
+		mTncNotice = (TwoLineListItem)findViewById(R.id.tnc_notice);
 
 		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
 		mUsername = (EditText)findViewById(R.id.username);
@@ -114,6 +119,16 @@ public class VpnProfileDetailActivity extends Activity
 			{	/* should not happen */
 				mVpnType = VpnType.IKEV2_EAP;
 				updateCredentialView();
+			}
+		});
+
+		mTncNotice.getText1().setText(R.string.tnc_notice_title);
+		mTncNotice.getText2().setText(R.string.tnc_notice_subtitle);
+		mTncNotice.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v)
+			{
+				new TncNoticeDialog().show(VpnProfileDetailActivity.this.getFragmentManager(), "TncNotice");
 			}
 		});
 
@@ -225,6 +240,7 @@ public class VpnProfileDetailActivity extends Activity
 	{
 		mUsernamePassword.setVisibility(mVpnType.getRequiresUsernamePassword() ? View.VISIBLE : View.GONE);
 		mUserCertificate.setVisibility(mVpnType.getRequiresCertificate() ? View.VISIBLE : View.GONE);
+		mTncNotice.setVisibility(mVpnType.getEnableBYOD() ? View.VISIBLE : View.GONE);
 
 		if (mVpnType.getRequiresCertificate())
 		{
@@ -534,6 +550,27 @@ public class VpnProfileDetailActivity extends Activity
 			}
 			mUserCertLoading = null;
 			updateCredentialView();
+		}
+	}
+
+	/**
+	 * Dialog with notification message if EAP-TNC is used.
+	 */
+	public static class TncNoticeDialog extends DialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			return new AlertDialog.Builder(getActivity())
+				.setTitle(R.string.tnc_notice_title)
+				.setMessage(Html.fromHtml(getString(R.string.tnc_notice_details)))
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int id)
+					{
+						dialog.dismiss();
+					}
+				}).create();
 		}
 	}
 }

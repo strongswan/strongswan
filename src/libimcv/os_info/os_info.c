@@ -182,8 +182,8 @@ METHOD(os_info_t, get_setting, chunk_t,
 	size_t i = 0;
 	chunk_t value;
 
-	if (!strneq(name, "/etc/", 5) && !strneq(name, "/proc/", 6) &&
-		!strneq(name, "/sys/", 5) && !strneq(name, "/var/", 5))
+	if (!strpfx(name, "/etc/") && !strpfx(name, "/proc/") &&
+		!strpfx(name, "/sys/") && !strpfx(name, "/var/"))
 	{
 		/**
 		 * In order to guarantee privacy, only settings from the
