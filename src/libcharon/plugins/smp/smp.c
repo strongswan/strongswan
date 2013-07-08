@@ -741,7 +741,7 @@ plugin_t *smp_plugin_create()
 	private_smp_t *this;
 	mode_t old;
 
-	if (!lib->caps->keep(lib->caps, CAP_CHOWN))
+	if (!lib->caps->check(lib->caps, CAP_CHOWN))
 	{	/* required to chown(2) control socket */
 		DBG1(DBG_CFG, "smp plugin requires CAP_CHOWN capability");
 		return NULL;

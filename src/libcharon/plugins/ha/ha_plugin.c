@@ -180,7 +180,8 @@ plugin_t *ha_plugin_create()
 	}
 
 	if (!lib->caps->keep(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) control socket */
+	{	/* required to chown(2) control socket, ha_kernel also needs it at
+		 * runtime */
 		DBG1(DBG_CFG, "ha plugin requires CAP_CHOWN capability");
 		return NULL;
 	}

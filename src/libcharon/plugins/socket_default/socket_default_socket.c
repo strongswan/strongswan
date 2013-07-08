@@ -736,7 +736,7 @@ socket_default_socket_t *socket_default_socket_create()
 
 	if ((this->port && this->port < 1024) || (this->natt && this->natt < 1024))
 	{
-		if (!lib->caps->keep(lib->caps, CAP_NET_BIND_SERVICE))
+		if (!lib->caps->check(lib->caps, CAP_NET_BIND_SERVICE))
 		{
 			/* required to bind ports < 1024 */
 			DBG1(DBG_NET, "socket-default plugin requires CAP_NET_BIND_SERVICE "

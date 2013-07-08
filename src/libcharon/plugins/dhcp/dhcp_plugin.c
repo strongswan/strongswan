@@ -107,13 +107,14 @@ plugin_t *dhcp_plugin_create()
 {
 	private_dhcp_plugin_t *this;
 
-	if (!lib->caps->keep(lib->caps, CAP_NET_BIND_SERVICE))
+	if (!lib->caps->check(lib->caps, CAP_NET_BIND_SERVICE))
 	{	/* required to bind DHCP socket (port 68) */
 		DBG1(DBG_NET, "dhcp plugin requires CAP_NET_BIND_SERVICE capability");
 		return NULL;
 	}
 	else if (!lib->caps->keep(lib->caps, CAP_NET_RAW))
-	{	/* required to open DHCP receive socket (AF_PACKET) */
+	{	/* required to open DHCP receive socket (AF_PACKET). according to
+		 * capabilities(7) it is also required to use the socket */
 		DBG1(DBG_NET, "dhcp plugin requires CAP_NET_RAW capability");
 		return NULL;
 	}

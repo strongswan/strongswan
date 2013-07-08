@@ -62,7 +62,7 @@ plugin_t *kernel_pfkey_plugin_create()
 {
 	private_kernel_pfkey_plugin_t *this;
 
-	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	if (!lib->caps->check(lib->caps, CAP_NET_ADMIN))
 	{	/* required to open PF_KEY sockets */
 		DBG1(DBG_KNL, "kernel-pfkey plugin requires CAP_NET_ADMIN capability");
 		return NULL;

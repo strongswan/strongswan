@@ -102,7 +102,7 @@ plugin_t *kernel_libipsec_plugin_create()
 {
 	private_kernel_libipsec_plugin_t *this;
 
-	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	if (!lib->caps->check(lib->caps, CAP_NET_ADMIN))
 	{	/* required to create TUN devices */
 		DBG1(DBG_KNL, "kernel-libipsec plugin requires CAP_NET_ADMIN "
 			 "capability");

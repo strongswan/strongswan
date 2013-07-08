@@ -91,7 +91,7 @@ plugin_t *stroke_plugin_create()
 {
 	private_stroke_plugin_t *this;
 
-	if (!lib->caps->keep(lib->caps, CAP_CHOWN))
+	if (!lib->caps->check(lib->caps, CAP_CHOWN))
 	{	/* required to chown(2) stroke socket */
 		DBG1(DBG_CFG, "stroke plugin requires CAP_CHOWN capability");
 		return NULL;
