@@ -30,7 +30,7 @@ public class PortFilterCollector implements Collector
 {
 	private static Pattern LISTEN = Pattern.compile("\\bLISTEN\\b");
 	private static Pattern PROTOCOL = Pattern.compile("\\b(tcp|udp)6?\\b");
-	private static Pattern PORT = Pattern.compile("[:]{1,3}(\\d{1,5})\\b");
+	private static Pattern PORT = Pattern.compile("[:]{1,3}(\\d{1,5})\\b(?!\\.)");
 
 	@Override
 	public Attribute getMeasurement()
