@@ -75,6 +75,7 @@ static const attr_info_t attr_info[] = {
 	{ "unity_def_domain",     VALUE_STRING, UNITY_DEF_DOMAIN,     0 },
 	{ "unity_splitdns_name",  VALUE_STRING, UNITY_SPLITDNS_NAME,  0 },
 	{ "unity_split_include",  VALUE_SUBNET, UNITY_SPLIT_INCLUDE,  0 },
+	{ "unity_split_exclude",  VALUE_SUBNET, UNITY_LOCAL_LAN,      0 },
 	{ "unity_local_lan",      VALUE_SUBNET, UNITY_LOCAL_LAN,      0 },
 };
 
