@@ -153,6 +153,7 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 				memcpy(pos_addr,     addr_chunk.ptr, 4);
 				memcpy(pos_addr + 4, mask_chunk.ptr, 4);
 				addr->destroy(addr);
+				addr = NULL;
 				mask->destroy(mask);
 				chunk_free(blob);
 				*blob = blob_next;
