@@ -77,10 +77,61 @@ struct private_capabilities_t {
 };
 
 /**
+ * Returns TRUE if the current process/user is member of the given group
+ */
+static bool has_group(gid_t group)
+{
+	gid_t *groups;
+	long ngroups, i;
+	bool found = FALSE;
+
+	if (group == getegid())
+	{	/* it's unspecified if this is part of the list below or not */
+		return TRUE;
+	}
+	ngroups = sysconf(_SC_NGROUPS_MAX);
+	groups = calloc(ngroups, sizeof(gid_t));
+	ngroups = getgroups(ngroups, groups);
+	if (ngroups == -1)
+	{
+		DBG1(DBG_LIB, "getting groups for current process failed: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	for (i = 0; i < ngroups; i++)
+	{
+		if (group == groups[i])
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	free(groups);
+	return found;
+}
+
+/**
  * Verify that the current process has the given capability
  */
-static bool has_capability(u_int cap)
+static bool has_capability(private_capabilities_t *this, u_int cap,
+						   bool *ignore)
 {
+	if (cap == CAP_CHOWN)
+	{	/* if new files/UNIX sockets are created they should be owned by the
+		 * configured user and group.  This requires a call to chown(2).  But
+		 * CAP_CHOWN is not always required. */
+		if (!this->uid || geteuid() == this->uid)
+		{	/* if the owner does not change CAP_CHOWN is not needed */
+			if (!this->gid || has_group(this->gid))
+			{	/* the same applies if the owner is a member of the group */
+				if (ignore)
+				{	/* we don't have to keep this, if requested */
+					*ignore = TRUE;
+				}
+				return TRUE;
+			}
+		}
+	}
 #ifndef CAPABILITIES
 	/* if we can't check the actual capabilities assume only root has it */
 	return geteuid() == 0;
@@ -129,10 +180,6 @@ static bool has_capability(u_int cap)
  */
 static bool keep_capability(private_capabilities_t *this, u_int cap)
 {
-	if (!has_capability(cap))
-	{
-		return FALSE;
-	}
 #ifdef CAPABILITIES_LIBCAP
 	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
@@ -153,56 +200,26 @@ static bool keep_capability(private_capabilities_t *this, u_int cap)
 	return TRUE;
 }
 
-/**
- * Returns TRUE if the current process/user is member of the given group
- */
-static bool has_group(gid_t group)
-{
-	gid_t *groups;
-	long ngroups, i;
-	bool found = FALSE;
-
-	if (group == getegid())
-	{	/* it's unspecified if this is part of the list below or not */
-		return TRUE;
-	}
-	ngroups = sysconf(_SC_NGROUPS_MAX);
-	groups = calloc(ngroups, sizeof(gid_t));
-	ngroups = getgroups(ngroups, groups);
-	if (ngroups == -1)
-	{
-		DBG1(DBG_LIB, "getting groups for current process failed: %s",
-			 strerror(errno));
-		return FALSE;
-	}
-	for (i = 0; i < ngroups; i++)
-	{
-		if (group == groups[i])
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	free(groups);
-	return found;
-}
-
 METHOD(capabilities_t, keep, bool,
 	private_capabilities_t *this, u_int cap)
 {
-	if (cap == CAP_CHOWN)
-	{	/* if new files/UNIX sockets are created they should be owned by the
-		 * configured user and group.  This requires a call to chown(2).  But
-		 * CAP_CHOWN is not always required. */
-		if (!this->uid || geteuid() == this->uid)
-		{	/* if the owner does not change CAP_CHOWN is not needed */
-			if (!this->gid || has_group(this->gid))
-			{	/* the same applies if the owner is a member of the group */
-				return TRUE;
-			}
-		}
+	bool ignore = FALSE;
+
+	if (!has_capability(this, cap, &ignore))
+	{
+		return FALSE;
+	}
+	else if (ignore)
+	{	/* don't keep capabilities that are not required */
+		return TRUE;
 	}
 	return keep_capability(this, cap);
+}
+
+METHOD(capabilities_t, check, bool,
+	private_capabilities_t *this, u_int cap)
+{
+	return has_capability(this, cap, NULL);
 }
 
 METHOD(capabilities_t, get_uid, uid_t,
@@ -405,6 +422,7 @@ capabilities_t *capabilities_create()
 	INIT(this,
 		.public = {
 			.keep = _keep,
+			.check = _check,
 			.get_uid = _get_uid,
 			.get_gid = _get_gid,
 			.set_uid = _set_uid,

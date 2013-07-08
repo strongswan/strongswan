@@ -54,11 +54,23 @@ struct capabilities_t {
 	 * Register a capability to keep while calling drop(). Verifies that the
 	 * capability is currently held.
 	 *
+	 * @note CAP_CHOWN is handled specially as it might not be required.
+	 *
 	 * @param cap		capability to keep
 	 * @return			FALSE if the capability is currently not held
 	 */
 	bool (*keep)(capabilities_t *this,
 				 u_int cap) __attribute__((warn_unused_result));
+
+	/**
+	 * Check if the given capability is currently held.
+	 *
+	 * @note CAP_CHOWN is handled specially as it might not be required.
+	 *
+	 * @param cap		capability to check
+	 * @return			TRUE if the capability is currently held
+	 */
+	bool (*check)(capabilities_t *this, u_int cap);
 
 	/**
 	 * Get the user ID set through set_uid/resolve_uid.
