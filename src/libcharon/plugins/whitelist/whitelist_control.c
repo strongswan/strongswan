@@ -23,6 +23,7 @@
 #include <errno.h>
 
 #include <daemon.h>
+#include <collections/linked_list.h>
 
 #include "whitelist_msg.h"
 
@@ -49,13 +50,53 @@ struct private_whitelist_control_t {
 	stream_service_t *service;
 };
 
+/*
+ * List whitelist entries using a read-copy
+ */
+static void list(private_whitelist_control_t *this,
+				 stream_t *stream, identification_t *id)
+{
+	identification_t *current;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	whitelist_msg_t msg = {
+		.type = htonl(WHITELIST_LIST),
+	};
+
+	list = linked_list_create();
+	enumerator = this->listener->create_enumerator(this->listener);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->matches(current, id))
+		{
+			list->insert_last(list, current->clone(current));
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	while (list->remove_first(list, (void**)&current) == SUCCESS)
+	{
+		snprintf(msg.id, sizeof(msg.id), "%Y", current);
+		current->destroy(current);
+		if (!stream->write_all(stream, &msg, sizeof(msg)))
+		{
+			DBG1(DBG_CFG, "listing whitelist failed: %s", strerror(errno));
+			break;
+		}
+	}
+	list->destroy_offset(list, offsetof(identification_t, destroy));
+
+	msg.type = htonl(WHITELIST_END);
+	memset(msg.id, 0, sizeof(msg.id));
+	stream->write_all(stream, &msg, sizeof(msg));
+}
+
 /**
  * Dispatch a received message
  */
 static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
 {
-	identification_t *id, *current;
-	enumerator_t *enumerator;
+	identification_t *id;
 	whitelist_msg_t msg;
 
 	if (!stream->read_all(stream, &msg, sizeof(msg)))
@@ -74,23 +115,7 @@ static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
 			this->listener->remove(this->listener, id);
 			break;
 		case WHITELIST_LIST:
-			enumerator = this->listener->create_enumerator(this->listener);
-			while (enumerator->enumerate(enumerator, &current))
-			{
-				if (current->matches(current, id))
-				{
-					snprintf(msg.id, sizeof(msg.id), "%Y", current);
-					if (!stream->write_all(stream, &msg, sizeof(msg)))
-					{
-						DBG1(DBG_CFG, "listing whitelist failed");
-						break;
-					}
-				}
-			}
-			enumerator->destroy(enumerator);
-			msg.type = htonl(WHITELIST_END);
-			memset(msg.id, 0, sizeof(msg.id));
-			stream->write_all(stream, &msg, sizeof(msg));
+			list(this, stream, id);
 			break;
 		case WHITELIST_FLUSH:
 			this->listener->flush(this->listener, id);
