@@ -304,6 +304,12 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	session = state->get_session(state);
 	imv_id = this->agent->get_id(this->agent);
 
+	/* exit if a recommendation has already been provided */
+	if (state->get_action_flags(state) & IMV_ATTESTATION_FLAG_REC)
+	{
+		return TNC_RESULT_SUCCESS;
+	}
+
 	/* send an IETF attribute request if no platform info was received */
 	if (!platform_info &&
 		!(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ATTR_REQ))
@@ -443,6 +449,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
+		state->set_action_flags(state, IMV_ATTESTATION_FLAG_REC);
+
 		if (result != TNC_RESULT_SUCCESS)
 		{
 			return result;
@@ -458,6 +466,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	{
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
+		state->set_action_flags(state, IMV_ATTESTATION_FLAG_REC);
+
 		if (result != TNC_RESULT_SUCCESS)
 		{
 			return result;

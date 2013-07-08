@@ -41,7 +41,8 @@ typedef enum imv_meas_error_t imv_meas_error_t;
 enum imv_attestation_flag_t {
 	IMV_ATTESTATION_FLAG_ATTR_REQ =  (1<<0),
 	IMV_ATTESTATION_FLAG_ALGO =      (1<<1),
-	IMV_ATTESTATION_FLAG_FILE_MEAS = (1<<2)
+	IMV_ATTESTATION_FLAG_FILE_MEAS = (1<<2),
+	IMV_ATTESTATION_FLAG_REC =       (1<<3)
 };
 
 /**
