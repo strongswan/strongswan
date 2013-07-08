@@ -54,27 +54,67 @@ static void stderr_dbg(debug_t group, level_t level, char *fmt, ...)
 /**
  * Collect all enforcements by iterating up through parent groups
  */
-static bool iterate_enforcements(database_t *db, int session_id, int group_id)
+static bool iterate_enforcements(database_t *db, int device_id, int session_id,
+								 int group_id)
 {
-	int id, type, file, dir, arg_int, rec_fail, rec_noresult, parent;
+	int id, type, file, dir, arg_int, parent, policy, max_age;
+	int p_rec_fail, p_rec_noresult, e_rec_fail, e_rec_noresult, latest_rec;
+	bool latest_success;
 	char *argument;
-	enumerator_t *e;
+	time_t now;
+	enumerator_t *e, *e1, *e2;
+
+	now = time(NULL);
 
 	while (group_id)
 	{
-		e = db->query(db,
-				"SELECT e.id, "
-				"p.type, p.argument, p.file, p.dir, p.rec_fail, p.rec_noresult "
+		e1 = db->query(db,
+				"SELECT e.id, p.type, p.argument, p.file, p.dir, p.rec_fail, "
+				"p.rec_noresult, e.policy, e.max_age, e.rec_fail, e.rec_noresult "
 				"FROM enforcements AS e JOIN policies as p ON e.policy = p.id "
 				"WHERE e.group_id = ?", DB_INT, group_id,
-				 DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
-		if (!e)
+				 DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT,
+				 DB_INT, DB_INT, DB_INT, DB_INT);
+		if (!e1)
 		{
 			return FALSE;
 		}
-		while (e->enumerate(e, &id, &type, &argument, &file, &dir,
-							   &rec_fail, &rec_noresult))
+		while (e1->enumerate(e1, &id, &type, &argument, &file, &dir,
+								 &p_rec_fail, &p_rec_noresult, &policy, &max_age,
+								 &e_rec_fail, &e_rec_noresult))
 		{
+			/* check if the latest measurement of the device was successful */
+			latest_success = FALSE;
+
+			if (device_id)
+			{
+				e2 = db->query(db,
+						"SELECT r.rec FROM results AS r "
+						"JOIN sessions AS s ON s.id = r.session "
+						"WHERE r.policy = ? AND s.device = ? AND s.time > ? "
+						"ORDER BY s.time DESC",
+						DB_INT, policy, DB_INT, device_id,
+						DB_UINT, now - max_age,	DB_INT);
+				if (!e2)
+				{
+					e1->destroy(e1);
+					return FALSE;
+				}
+				if (e2->enumerate(e2, &latest_rec) &&
+					latest_rec == TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
+				{
+					latest_success = TRUE;
+				}
+				e2->destroy(e2);
+			}
+
+			if (latest_success)
+			{
+				/*skipping enforcement */
+				printf("skipping enforcment %d\n", id);
+				continue;
+			}
+
 			/* determine arg_int */
 			switch ((imv_workitem_type_t)type)
 			{
@@ -97,14 +137,15 @@ static bool iterate_enforcements(database_t *db, int session_id, int group_id)
 				"INSERT INTO workitems (session, enforcement, type, arg_str, "
 				"arg_int, rec_fail, rec_noresult) VALUES (?, ?, ?, ?, ?, ?, ?)",
 				DB_INT, session_id, DB_INT, id, DB_INT, type, DB_TEXT, argument,
-				DB_INT, arg_int, DB_INT, rec_fail, DB_INT, rec_noresult) != 1)
+				DB_INT, arg_int, DB_INT, e_rec_fail ? e_rec_fail : p_rec_fail,
+				DB_INT, e_rec_noresult ? e_rec_noresult : p_rec_noresult) != 1)
 			{
-				e->destroy(e);
+				e1->destroy(e1);
 				fprintf(stderr, "could not insert workitem\n");
 				return FALSE;
 			}
 		}
-		e->destroy(e);
+		e1->destroy(e1);
 
 		e = db->query(db,
 				"SELECT parent FROM groups WHERE id = ?",
@@ -158,7 +199,7 @@ static bool policy_start(database_t *db, int session_id)
 		}
 		while (e->enumerate(e, &group_id))
 		{
-			if (!iterate_enforcements(db, session_id, group_id))
+			if (!iterate_enforcements(db, device_id, session_id, group_id))
 			{
 				e->destroy(e);
 				return FALSE;
@@ -204,7 +245,7 @@ static bool policy_start(database_t *db, int session_id)
 		}
 	}
 
-	return iterate_enforcements(db, session_id, group_id);
+	return iterate_enforcements(db, device_id, session_id, group_id);
 }
 
 static bool policy_stop(database_t *db, int session_id)
