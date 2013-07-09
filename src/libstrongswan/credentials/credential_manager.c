@@ -81,6 +81,16 @@ struct private_credential_manager_t {
 	 * mutex for cache queue
 	 */
 	mutex_t *queue_mutex;
+
+	/**
+	 * Registered hook to call on validation errors
+	 */
+	credential_hook_t hook;
+
+	/**
+	 * Registered data to pass to hook
+	 */
+	void *hook_data;
 };
 
 /** data to pass to create_private_enumerator */
@@ -126,6 +136,22 @@ typedef struct {
 	enumerator_t *exclusive;
 } sets_enumerator_t;
 
+METHOD(credential_manager_t, set_hook, void,
+	private_credential_manager_t *this, credential_hook_t hook, void *data)
+{
+	this->hook = hook;
+	this->hook_data = data;
+}
+
+METHOD(credential_manager_t, call_hook, void,
+	private_credential_manager_t *this, credential_hook_type_t type,
+	certificate_t *cert)
+{
+	if (this->hook)
+	{
+		this->hook(this->hook_data, type, cert);
+	}
+}
 
 METHOD(enumerator_t, sets_enumerate, bool,
 	sets_enumerator_t *this, credential_set_t **set)
@@ -549,15 +575,17 @@ static bool check_lifetime(private_credential_manager_t *this,
 			{
 				DBG1(DBG_CFG, "%s certificate invalid (valid from %T to %T)",
 					 label, &not_before, FALSE, &not_after, FALSE);
-				return FALSE;
+				break;
 			}
 			return TRUE;
 		case SUCCESS:
 			return TRUE;
 		case FAILED:
 		default:
-			return FALSE;
+			break;
 	}
+	call_hook(this, CRED_HOOK_EXPIRED, cert);
+	return FALSE;
 }
 
 /**
@@ -718,9 +746,10 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				if (current->equals(current, issuer))
 				{
-					DBG1(DBG_CFG, "  self-signed certificate \"%Y\" is not trusted",
-						 current->get_subject(current));
+					DBG1(DBG_CFG, "  self-signed certificate \"%Y\" is not "
+						 "trusted", current->get_subject(current));
 					issuer->destroy(issuer);
+					call_hook(this, CRED_HOOK_UNTRUSTED_ROOT, current);
 					break;
 				}
 				auth->add(auth, AUTH_RULE_IM_CERT, issuer->get_ref(issuer));
@@ -732,6 +761,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				DBG1(DBG_CFG, "no issuer certificate found for \"%Y\"",
 					 current->get_subject(current));
+				call_hook(this, CRED_HOOK_NO_ISSUER, current);
 				break;
 			}
 		}
@@ -750,8 +780,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		current = issuer;
 		if (trusted)
 		{
-			DBG1(DBG_CFG, "  reached self-signed root ca with a path length of %d",
-						  pathlen);
+			DBG1(DBG_CFG, "  reached self-signed root ca with a "
+				 "path length of %d", pathlen);
 			break;
 		}
 	}
@@ -759,6 +789,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	if (pathlen > MAX_TRUST_PATH_LEN)
 	{
 		DBG1(DBG_CFG, "maximum path length of %d exceeded", MAX_TRUST_PATH_LEN);
+		call_hook(this, CRED_HOOK_EXCEEDED_PATH_LEN, subject);
 	}
 	if (trusted)
 	{
@@ -1301,6 +1332,8 @@ credential_manager_t *credential_manager_create()
 			.remove_local_set = _remove_local_set,
 			.add_validator = _add_validator,
 			.remove_validator = _remove_validator,
+			.set_hook = _set_hook,
+			.call_hook = _call_hook,
 			.destroy = _destroy,
 		},
 		.sets = linked_list_create(),

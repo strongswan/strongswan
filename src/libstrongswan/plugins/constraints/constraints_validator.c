@@ -533,20 +533,28 @@ METHOD(cert_validator_t, validate, bool,
 	{
 		if (!check_pathlen((x509_t*)issuer, pathlen))
 		{
+			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_EXCEEDED_PATH_LEN,
+									subject);
 			return FALSE;
 		}
 		if (!check_name_constraints(subject, (x509_t*)issuer))
 		{
+			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
+									subject);
 			return FALSE;
 		}
 		if (!check_policy((x509_t*)subject, (x509_t*)issuer, !pathlen, auth))
 		{
+			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
+									subject);
 			return FALSE;
 		}
 		if (anchor)
 		{
 			if (!check_policy_constraints((x509_t*)issuer, pathlen, auth))
 			{
+				lib->credmgr->call_hook(lib->credmgr,
+										CRED_HOOK_POLICY_VIOLATION, issuer);
 				return FALSE;
 			}
 		}

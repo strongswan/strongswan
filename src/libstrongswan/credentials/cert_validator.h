@@ -53,6 +53,9 @@ struct cert_validator_t {
 	/**
 	 * Validate a subject certificate in relation to its issuer.
 	 *
+	 * If FALSE is returned, the validator should call_hook() on the
+	 * credential manager with an appropriate type and the certificate.
+	 *
 	 * @param subject		subject certificate to check
 	 * @param issuer		issuer of subject
 	 * @param online		whether to do online revocation checking

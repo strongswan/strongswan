@@ -94,7 +94,12 @@ METHOD(cert_validator_t, validate, bool,
 	if (subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
-		return check_addrblock((x509_t*)subject, (x509_t*)issuer);
+		if (!check_addrblock((x509_t*)subject, (x509_t*)issuer))
+		{
+			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
+									subject);
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
