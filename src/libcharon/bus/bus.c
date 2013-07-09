@@ -833,10 +833,37 @@ METHOD(bus_t, assign_vips, void,
 	this->mutex->unlock(this->mutex);
 }
 
+/**
+ * Credential manager hook function to forward bus alerts
+ */
+static void hook_creds(private_bus_t *this, credential_hook_type_t type,
+					   certificate_t *cert)
+{
+	switch (type)
+	{
+		case CRED_HOOK_EXPIRED:
+			return alert(this, ALERT_CERT_EXPIRED, cert);
+		case CRED_HOOK_REVOKED:
+			return alert(this, ALERT_CERT_REVOKED, cert);
+		case CRED_HOOK_VALIDATION_FAILED:
+			return alert(this, ALERT_CERT_VALIDATION_FAILED, cert);
+		case CRED_HOOK_NO_ISSUER:
+			return alert(this, ALERT_CERT_NO_ISSUER, cert);
+		case CRED_HOOK_UNTRUSTED_ROOT:
+			return alert(this, ALERT_CERT_UNTRUSTED_ROOT, cert);
+		case CRED_HOOK_EXCEEDED_PATH_LEN:
+			return alert(this, ALERT_CERT_EXCEEDED_PATH_LEN, cert);
+		case CRED_HOOK_POLICY_VIOLATION:
+			return alert(this, ALERT_CERT_POLICY_VIOLATION, cert);
+	}
+}
+
 METHOD(bus_t, destroy, void,
 	private_bus_t *this)
 {
 	debug_t group;
+
+	lib->credmgr->set_hook(lib->credmgr, NULL, NULL);
 	for (group = 0; group < DBG_MAX; group++)
 	{
 		this->loggers[group]->destroy(this->loggers[group]);
@@ -896,6 +923,8 @@ bus_t *bus_create()
 		this->max_level[group] = LEVEL_SILENT;
 		this->max_vlevel[group] = LEVEL_SILENT;
 	}
+
+	lib->credmgr->set_hook(lib->credmgr, (credential_hook_t)hook_creds, this);
 
 	return &this->public;
 }
