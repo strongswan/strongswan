@@ -136,6 +136,20 @@ enum alert_t {
 	ALERT_AUTHORIZATION_FAILED,
 	/** IKE_SA hit the hard lifetime limit before it could be rekeyed */
 	ALERT_IKE_SA_EXPIRED,
+	/** Certificate rejected; it has expired, certificate_t */
+	ALERT_CERT_EXPIRED,
+	/** Certificate rejected; it has been revoked, certificate_t */
+	ALERT_CERT_REVOKED,
+	/** Validating certificate status failed, certificate_t */
+	ALERT_CERT_VALIDATION_FAILED,
+	/** Certificate rejected; no trusted issuer found, certificate_t */
+	ALERT_CERT_NO_ISSUER,
+	/** Certificate rejected; root not trusted, certificate_t */
+	ALERT_CERT_UNTRUSTED_ROOT,
+	/** Certificate rejected; trustchain length exceeds limit, certificate_t */
+	ALERT_CERT_EXCEEDED_PATH_LEN,
+	/** Certificate rejected; other policy violation, certificate_t */
+	ALERT_CERT_POLICY_VIOLATION,
 };
 
 /**
