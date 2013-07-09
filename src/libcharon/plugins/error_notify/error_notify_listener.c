@@ -45,6 +45,8 @@ METHOD(listener_t, alert, bool,
 	identification_t *id;
 	linked_list_t *list, *list2;
 	peer_cfg_t *peer_cfg;
+	certificate_t *cert;
+	time_t not_before, not_after;
 
 	if (!this->socket->has_listeners(this->socket))
 	{
@@ -146,6 +148,26 @@ METHOD(listener_t, alert, bool,
 			msg.type = htonl(ERROR_NOTIFY_AUTHORIZATION_FAILED);
 			snprintf(msg.str, sizeof(msg.str), "an authorization plugin "
 					 "prevented establishment of an IKE_SA");
+			break;
+		case ALERT_CERT_EXPIRED:
+			msg.type = htonl(ERROR_NOTIFY_CERT_EXPIRED);
+			cert = va_arg(args, certificate_t*);
+			cert->get_validity(cert, NULL, &not_before, &not_after);
+			snprintf(msg.str, sizeof(msg.str), "certificiate expired: '%Y' "
+					 "(valid from %T to %T)", cert->get_subject(cert),
+					 &not_before, TRUE, &not_after, TRUE);
+			break;
+		case ALERT_CERT_REVOKED:
+			msg.type = htonl(ERROR_NOTIFY_CERT_REVOKED);
+			cert = va_arg(args, certificate_t*);
+			snprintf(msg.str, sizeof(msg.str), "certificiate revoked: '%Y'",
+					 cert->get_subject(cert));
+			break;
+		case ALERT_CERT_NO_ISSUER:
+			msg.type = htonl(ERROR_NOTIFY_NO_ISSUER_CERT);
+			cert = va_arg(args, certificate_t*);
+			snprintf(msg.str, sizeof(msg.str), "no trusted issuer certificate "
+					 "found: '%Y'", cert->get_issuer(cert));
 			break;
 		default:
 			return TRUE;
