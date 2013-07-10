@@ -981,6 +981,10 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 {
 	traffic_selector_t *ts;
 	host_t *host;
+	u_int8_t proto;
+
+	proto = address->sadb_address_proto;
+	proto = proto == IPSEC_PROTO_ANY ? 0 : proto;
 
 	/* The Linux 2.6 kernel does not set the protocol and port information
 	 * in the src and dst sadb_address extensions of the SADB_ACQUIRE message.
@@ -988,8 +992,7 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 	host = host_create_from_sockaddr((sockaddr_t*)&address[1]);
 	ts = traffic_selector_create_from_subnet(host,
 											 address->sadb_address_prefixlen,
-											 address->sadb_address_proto,
-											 host->get_port(host),
+											 proto, host->get_port(host),
 											 host->get_port(host) ?: 65535);
 	return ts;
 }
