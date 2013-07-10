@@ -174,6 +174,15 @@ static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
 }
 
 /**
+ * Used with get_match this finds an address entry if it is installed as virtual
+ * IP address
+ */
+static bool addr_map_entry_match_virtual(addr_map_entry_t *a, addr_map_entry_t *b)
+{
+	return b->addr->virtual && a->ip->ip_equals(a->ip, b->ip);
+}
+
+/**
  * Used with get_match this finds an address entry if it is installed on
  * any active local interface
  */
@@ -1056,6 +1065,19 @@ METHOD(kernel_net_t, get_interface_name, bool,
 		{
 			*name = strdup(entry->iface->ifname);
 			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
+		}
+		this->lock->unlock(this->lock);
+		return TRUE;
+	}
+	/* check if it is a virtual IP */
+	entry = this->addrs->get_match(this->addrs, &lookup,
+								  (void*)addr_map_entry_match_virtual);
+	if (entry)
+	{
+		if (name)
+		{
+			*name = strdup(entry->iface->ifname);
+			DBG2(DBG_KNL, "virtual IP %H is on interface %s", ip, *name);
 		}
 		this->lock->unlock(this->lock);
 		return TRUE;
