@@ -247,6 +247,11 @@ struct private_kernel_pfroute_net_t
 	 * time of last roam event
 	 */
 	timeval_t last_roam;
+
+	/**
+	 * Time in ms to wait for IP addresses to appear/disappear
+	 */
+	int vip_wait;
 };
 
 /**
@@ -852,7 +857,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 	this->mutex->lock(this->mutex);
 	while (!timeout && !get_interface_name(this, vip, NULL))
 	{
-		timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+		timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+											this->vip_wait);
 	}
 	this->mutex->unlock(this->mutex);
 	if (timeout)
@@ -929,7 +935,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 		this->mutex->lock(this->mutex);
 		while (!timeout && get_interface_name(this, vip, NULL))
 		{
-			timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+			timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+												this->vip_wait);
 		}
 		this->mutex->unlock(this->mutex);
 		if (timeout)
@@ -1382,6 +1389,8 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.vip_wait = lib->settings->get_int(lib->settings,
+					"%s.plugins.kernel-pfroute.vip_wait", 1000, hydra->daemon),
 	);
 
 	/* create a PF_ROUTE socket to communicate with the kernel */

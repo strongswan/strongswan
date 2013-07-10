@@ -610,6 +610,9 @@ Set MTU of ipsecN device
 .BR charon.plugins.kernel-netlink.roam_events " [yes]"
 Whether to trigger roam events when interfaces, addresses or routes change
 .TP
+.BR charon.plugins.kernel-pfroute.vip_wait " [1000]"
+Time in ms to wait until virtual IP addresses appear/disappear before failing.
+.TP
 .BR charon.plugins.load-tester
 Section to configure the load-tester plugin, see LOAD TESTS
 .TP
