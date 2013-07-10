@@ -136,6 +136,9 @@ struct addr_map_entry_t {
 	/** The IP address */
 	host_t *ip;
 
+	/** The address entry for this IP address */
+	addr_entry_t *addr;
+
 	/** The interface this address is installed on */
 	iface_entry_t *iface;
 };
@@ -166,8 +169,8 @@ static bool addr_map_entry_equals(addr_map_entry_t *a, addr_map_entry_t *b)
 static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
 											   addr_map_entry_t *b)
 {
-	return iface_entry_up_and_usable(b->iface) &&
-		   a->ip->ip_equals(a->ip, b->ip);
+	return !b->addr->virtual && iface_entry_up_and_usable(b->iface) &&
+			a->ip->ip_equals(a->ip, b->ip);
 }
 
 /**
@@ -176,7 +179,8 @@ static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
  */
 static bool addr_map_entry_match_up(addr_map_entry_t *a, addr_map_entry_t *b)
 {
-	return iface_entry_up(b->iface) && a->ip->ip_equals(a->ip, b->ip);
+	return !b->addr->virtual && iface_entry_up(b->iface) &&
+			a->ip->ip_equals(a->ip, b->ip);
 }
 
 typedef struct route_entry_t route_entry_t;
@@ -489,13 +493,9 @@ static void addr_map_entry_add(private_kernel_pfroute_net_t *this,
 {
 	addr_map_entry_t *entry;
 
-	if (addr->virtual)
-	{	/* don't map virtual IPs */
-		return;
-	}
-
 	INIT(entry,
 		.ip = addr->ip,
+		.addr = addr,
 		.iface = iface,
 	);
 	entry = this->addrs->put(this->addrs, entry, entry);
@@ -511,14 +511,10 @@ static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = addr->ip,
+		.addr = addr,
 		.iface = iface,
 	};
 
-	if (addr->virtual)
-	{	/* these are never mapped, but this check avoid problems if a virtual IP
-		 * equals a regular one */
-		return;
-	}
 	entry = this->addrs->remove(this->addrs, &lookup);
 	free(entry);
 }
