@@ -598,7 +598,8 @@ static bool equals(backtrace_t *a, backtrace_t *b)
  * Summarize and print backtraces
  */
 static int print_traces(private_leak_detective_t *this,
-						FILE *out, int thresh, bool detailed, int *whitelisted)
+						FILE *out, int thresh, int thresh_count,
+						bool detailed, int *whitelisted)
 {
 	int leaks = 0;
 	memory_header_t *hdr;
@@ -649,7 +650,9 @@ static int print_traces(private_leak_detective_t *this,
 	enumerator = entries->create_enumerator(entries);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (out && (!thresh || entry->bytes >= thresh))
+		if (out &&
+			(!thresh || entry->bytes >= thresh) &&
+			(!thresh_count || entry->count >= thresh_count))
 		{
 			fprintf(out, "%d bytes total, %d allocations, %d bytes average:\n",
 					entry->bytes, entry->count, entry->bytes / entry->count);
@@ -672,7 +675,7 @@ METHOD(leak_detective_t, report, void,
 	{
 		int leaks, whitelisted = 0;
 
-		leaks = print_traces(this, stderr, 0, detailed, &whitelisted);
+		leaks = print_traces(this, stderr, 0, 0, detailed, &whitelisted);
 		switch (leaks)
 		{
 			case 0:
@@ -700,7 +703,7 @@ METHOD(leak_detective_t, leaks, int,
 	{
 		int leaks, whitelisted = 0;
 
-		leaks = print_traces(this, NULL, 0, FALSE, &whitelisted);
+		leaks = print_traces(this, NULL, 0, 0, FALSE, &whitelisted);
 		return leaks;
 	}
 	return 0;
@@ -716,14 +719,16 @@ METHOD(leak_detective_t, usage, void,
 	private_leak_detective_t *this, FILE *out)
 {
 	bool detailed;
-	int thresh;
+	int thresh, thresh_count;
 
 	thresh = lib->settings->get_int(lib->settings,
 					"libstrongswan.leak_detective.usage_threshold", 10240);
+	thresh_count = lib->settings->get_int(lib->settings,
+					"libstrongswan.leak_detective.usage_threshold_count", 0);
 	detailed = lib->settings->get_bool(lib->settings,
 					"libstrongswan.leak_detective.detailed", TRUE);
 
-	print_traces(this, out, thresh, detailed, NULL);
+	print_traces(this, out, thresh, thresh_count, detailed, NULL);
 }
 
 /**
