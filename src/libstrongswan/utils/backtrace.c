@@ -53,6 +53,11 @@ struct private_backtrace_t {
 };
 
 /**
+ * Forward declaration of method getter
+ */
+static backtrace_t get_methods();
+
+/**
  * Write a format string with arguments to a FILE line, if it is NULL to DBG
  */
 static void println(FILE *file, char *format, ...)
@@ -531,6 +536,21 @@ METHOD(backtrace_t, create_frame_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
+METHOD(backtrace_t, clone, backtrace_t*,
+	private_backtrace_t *this)
+{
+	private_backtrace_t *clone;
+
+	clone = malloc(sizeof(private_backtrace_t) +
+				   this->frame_count * sizeof(void*));
+	memcpy(clone->frames, this->frames, this->frame_count * sizeof(void*));
+	clone->frame_count = this->frame_count;
+
+	clone->public = get_methods();
+
+	return &clone->public;
+}
+
 METHOD(backtrace_t, destroy, void,
 	private_backtrace_t *this)
 {
@@ -565,6 +585,21 @@ static inline int backtrace_unwind(void **frames, int count)
 #endif /* HAVE_UNWIND */
 
 /**
+ * Get implementation methods of backtrace_t
+ */
+static backtrace_t get_methods()
+{
+	return (backtrace_t) {
+		.log = _log_,
+		.contains_function = _contains_function,
+		.equals = _equals,
+		.clone = _clone,
+		.create_frame_enumerator = _create_frame_enumerator,
+		.destroy = _destroy,
+	};
+}
+
+/**
  * See header
  */
 backtrace_t *backtrace_create(int skip)
@@ -583,13 +618,7 @@ backtrace_t *backtrace_create(int skip)
 	memcpy(this->frames, frames + skip, frame_count * sizeof(void*));
 	this->frame_count = frame_count;
 
-	this->public = (backtrace_t) {
-		.log = _log_,
-		.contains_function = _contains_function,
-		.equals = _equals,
-		.create_frame_enumerator = _create_frame_enumerator,
-		.destroy = _destroy,
-	};
+	this->public = get_methods();
 
 	return &this->public;
 }
