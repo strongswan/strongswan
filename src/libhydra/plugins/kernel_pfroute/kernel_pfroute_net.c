@@ -569,6 +569,10 @@ static void process_link(private_kernel_pfroute_net_t *this,
 										hydra->kernel_interface, iface->ifname);
 			repopulate_iface(this, iface);
 			this->ifaces->insert_last(this->ifaces, iface);
+			if (iface->usable)
+			{
+				roam = TRUE;
+			}
 		}
 		else
 		{
