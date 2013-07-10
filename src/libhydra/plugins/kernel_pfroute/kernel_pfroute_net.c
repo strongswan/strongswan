@@ -1118,8 +1118,10 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 	host_t *host = NULL;
 	enumerator_t *enumerator;
 	struct sockaddr *addr;
+	bool failed = FALSE;
 	int type;
 
+retry:
 	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
 	for (type = 0; type < RTAX_MAX; type++)
 	{
@@ -1196,12 +1198,25 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 	}
 	else
 	{
-		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
+		failed = TRUE;
 	}
 	/* signal completion of query to a waiting thread */
 	this->waiting_seq = 0;
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
+
+	if (failed)
+	{
+		if (src)
+		{	/* the given source address might be gone, try again without */
+			src = NULL;
+			msg.hdr.rtm_seq = ++this->seq;
+			msg.hdr.rtm_addrs = 0;
+			memset(msg.buf, sizeof(msg.buf), 0);
+			goto retry;
+		}
+		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
+	}
 
 	if (host)
 	{
