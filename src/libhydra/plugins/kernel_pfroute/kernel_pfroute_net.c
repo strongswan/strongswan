@@ -665,8 +665,9 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!host)
+	if (!host || host->is_anyaddr(host))
 	{
+		DESTROY_IF(host);
 		return;
 	}
 
