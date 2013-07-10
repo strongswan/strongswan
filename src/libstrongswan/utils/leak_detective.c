@@ -709,19 +709,7 @@ METHOD(leak_detective_t, leaks, int,
 METHOD(leak_detective_t, set_state, bool,
 	private_leak_detective_t *this, bool enable)
 {
-	if (enable == enabled)
-	{
-		return enabled;
-	}
-	if (enable)
-	{
-		enable_leak_detective();
-	}
-	else
-	{
-		disable_leak_detective();
-	}
-	return !enabled;
+	return enable_thread(enable);
 }
 
 METHOD(leak_detective_t, usage, void,

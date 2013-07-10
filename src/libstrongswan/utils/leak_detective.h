@@ -57,7 +57,7 @@ struct leak_detective_t {
 	void (*usage)(leak_detective_t *this, FILE *out);
 
 	/**
-	 * Enable/disable leak detective hooks.
+	 * Enable/disable leak detective hooks for the current thread.
 	 *
 	 * @param				TRUE to enable, FALSE to disable
 	 * @return				state active before calling set_state
@@ -76,4 +76,3 @@ struct leak_detective_t {
 leak_detective_t *leak_detective_create();
 
 #endif /** LEAK_DETECTIVE_H_ @}*/
-
