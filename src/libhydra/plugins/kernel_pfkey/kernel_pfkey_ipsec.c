@@ -1993,10 +1993,14 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 												   dst, NULL);
 		if (gtw)
 		{
-			if (hydra->kernel_interface->add_route(hydra->kernel_interface,
+			char *if_name = NULL;
+
+			if (hydra->kernel_interface->get_interface(
+									hydra->kernel_interface, src, &if_name) &&
+				hydra->kernel_interface->add_route(hydra->kernel_interface,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
-									gtw, src, NULL) == SUCCESS)
+									gtw, src, if_name) == SUCCESS)
 			{
 				INIT(exclude,
 					.dst = dst->clone(dst),
@@ -2012,6 +2016,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 				DBG1(DBG_KNL, "installing exclude route for %H failed", dst);
 			}
 			gtw->destroy(gtw);
+			free(if_name);
 		}
 		else
 		{
@@ -2050,18 +2055,24 @@ static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
 
 		if (removed)
 		{
+			char *if_name = NULL;
+
 			dst = route->exclude->dst;
 			DBG2(DBG_KNL, "uninstalling exclude route for %H src %H",
 				 dst, route->exclude->src);
-			if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+			if (hydra->kernel_interface->get_interface(
+									hydra->kernel_interface,
+									route->exclude->src, &if_name) &&
+				hydra->kernel_interface->del_route(hydra->kernel_interface,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									route->exclude->gtw, route->exclude->src,
-									NULL) != SUCCESS)
+									if_name) != SUCCESS)
 			{
 				DBG1(DBG_KNL, "uninstalling exclude route for %H failed", dst);
 			}
 			exclude_route_destroy(route->exclude);
+			free(if_name);
 		}
 		route->exclude = NULL;
 	}
