@@ -2479,9 +2479,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
 	policy_entry_t *policy, *found = NULL;
-	policy_sa_t *mapping;
+	policy_sa_t *mapping, *to_remove = NULL;
 	enumerator_t *enumerator;
-	bool is_installed = TRUE;
+	bool first = TRUE, is_installed = TRUE;
 	u_int32_t priority;
 	size_t len;
 
@@ -2511,19 +2511,26 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_entry_destroy(policy, this);
 	policy = found;
 
-	/* remove mapping to SA by reqid and priority */
+	/* remove mapping to SA by reqid and priority, if multiple match, which
+	 * could happen when rekeying due to an address change, remove the oldest */
 	priority = get_priority(policy, prio);
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
 		if (reqid == mapping->sa->cfg.reqid && priority == mapping->priority)
 		{
-			policy->used_by->remove_at(policy->used_by, enumerator);
+			to_remove = mapping;
+			is_installed = first;
+		}
+		else if (priority < mapping->priority)
+		{
 			break;
 		}
-		is_installed = FALSE;
+		first = FALSE;
 	}
 	enumerator->destroy(enumerator);
+	policy->used_by->remove(policy->used_by, to_remove, NULL);
+	mapping = to_remove;
 
 	if (policy->used_by->get_count(policy->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
