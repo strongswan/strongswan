@@ -601,11 +601,11 @@ METHOD(enumerator_t, rt_enumerate, bool,
 }
 
 /**
- * Create a safe enumerator over sockaddrs in ifa/ifam/rt_msg
+ * Create an enumerator over sockaddrs in rt/if messages
  */
-static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
+static enumerator_t *create_rt_enumerator(int types, int remaining,
+										  struct sockaddr *addr)
 {
-	struct rt_msghdr *rthdr = hdr;
 	rt_enumerator_t *this;
 
 	INIT(this,
@@ -613,11 +613,29 @@ static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
 			.enumerate = (void*)_rt_enumerate,
 			.destroy = (void*)free,
 		},
-		.types = rthdr->rtm_addrs,
-		.remaining = rthdr->rtm_msglen - hdrlen,
-		.addr = hdr + hdrlen,
+		.types = types,
+		.remaining = remaining,
+		.addr = addr,
 	);
 	return &this->public;
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in rt_msghdr
+ */
+static enumerator_t *create_rtmsg_enumerator(struct rt_msghdr *hdr)
+{
+	return create_rt_enumerator(hdr->rtm_addrs, hdr->rtm_msglen - sizeof(*hdr),
+								(struct sockaddr *)(hdr + 1));
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in ifa_msghdr
+ */
+static enumerator_t *create_ifamsg_enumerator(struct ifa_msghdr *hdr)
+{
+	return create_rt_enumerator(hdr->ifam_addrs, hdr->ifam_msglen - sizeof(*hdr),
+								(struct sockaddr *)(hdr + 1));
 }
 
 /**
@@ -636,7 +654,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	char *ifname = NULL;
 	int type;
 
-	enumerator = create_rtmsg_enumerator(ifa, sizeof(*ifa));
+	enumerator = create_ifamsg_enumerator(ifa);
 	while (enumerator->enumerate(enumerator, &type, &sockaddr))
 	{
 		if (type == RTAX_IFA)
@@ -1483,8 +1501,7 @@ retry:
 			{
 				continue;
 			}
-			enumerator = create_rtmsg_enumerator(this->reply,
-												 sizeof(*this->reply));
+			enumerator = create_rtmsg_enumerator(this->reply);
 			while (enumerator->enumerate(enumerator, &type, &addr))
 			{
 				if (nexthop)
