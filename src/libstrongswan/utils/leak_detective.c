@@ -637,11 +637,11 @@ static int print_traces(private_leak_detective_t *this,
 		else
 		{
 			INIT(entry,
-				.backtrace = hdr->backtrace,
+				.backtrace = hdr->backtrace->clone(hdr->backtrace),
 				.bytes = hdr->bytes,
 				.count = 1,
 			);
-			entries->put(entries, hdr->backtrace, entry);
+			entries->put(entries, entry->backtrace, entry);
 		}
 		leaks++;
 	}
@@ -655,6 +655,7 @@ static int print_traces(private_leak_detective_t *this,
 					entry->bytes, entry->count, entry->bytes / entry->count);
 			entry->backtrace->log(entry->backtrace, out, detailed);
 		}
+		entry->backtrace->destroy(entry->backtrace);
 		free(entry);
 	}
 	enumerator->destroy(enumerator);
