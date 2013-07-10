@@ -186,6 +186,58 @@ static bool enable_thread(bool enable)
 	return before;
 }
 
+/**
+ * Add a header to the beginning of the list
+ */
+static void add_hdr(memory_header_t *hdr)
+{
+	lock->lock(lock);
+	hdr->next = first_header.next;
+	if (hdr->next)
+	{
+		hdr->next->previous = hdr;
+	}
+	hdr->previous = &first_header;
+	first_header.next = hdr;
+	lock->unlock(lock);
+}
+
+/**
+ * Remove a header from the list
+ */
+static void remove_hdr(memory_header_t *hdr)
+{
+	lock->lock(lock);
+	if (hdr->next)
+	{
+		hdr->next->previous = hdr->previous;
+	}
+	hdr->previous->next = hdr->next;
+	lock->unlock(lock);
+}
+
+/**
+ * Check if a header is in the list
+ */
+static bool has_hdr(memory_header_t *hdr)
+{
+	memory_header_t *current;
+	bool found = FALSE;
+
+	lock->lock(lock);
+	for (current = &first_header; current != NULL; current = current->next)
+	{
+		if (current == hdr)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	lock->unlock(lock);
+
+	return found;
+}
+
 #ifdef __APPLE__
 
 /**
@@ -713,16 +765,7 @@ HOOK(void*, malloc, size_t bytes)
 	hdr->bytes = bytes;
 	tail->magic = MEMORY_TAIL_MAGIC;
 
-	/* insert at the beginning of the list */
-	lock->lock(lock);
-	hdr->next = first_header.next;
-	if (hdr->next)
-	{
-		hdr->next->previous = hdr;
-	}
-	hdr->previous = &first_header;
-	first_header.next = hdr;
-	lock->unlock(lock);
+	add_hdr(hdr);
 
 	return hdr + 1;
 }
@@ -755,10 +798,10 @@ HOOK(void*, valloc, size_t size)
  */
 HOOK(void, free, void *ptr)
 {
-	memory_header_t *hdr, *current;
+	memory_header_t *hdr;
 	memory_tail_t *tail;
 	backtrace_t *backtrace;
-	bool found = FALSE, before;
+	bool before;
 
 	if (!enabled || thread_disabled->get(thread_disabled))
 	{
@@ -777,17 +820,7 @@ HOOK(void, free, void *ptr)
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		lock->lock(lock);
-		for (current = &first_header; current != NULL; current = current->next)
-		{
-			if (current == hdr)
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		lock->unlock(lock);
-		if (found)
+		if (has_hdr(hdr))
 		{
 			/* memory was allocated by our hooks but is corrupted */
 			fprintf(stderr, "freeing corrupted memory (%p): "
@@ -805,14 +838,7 @@ HOOK(void, free, void *ptr)
 	}
 	else
 	{
-		/* remove item from list */
-		lock->lock(lock);
-		if (hdr->next)
-		{
-			hdr->next->previous = hdr->previous;
-		}
-		hdr->previous->next = hdr->next;
-		lock->unlock(lock);
+		remove_hdr(hdr);
 
 		hdr->backtrace->destroy(hdr->backtrace);
 
@@ -848,6 +874,8 @@ HOOK(void*, realloc, void *old, size_t bytes)
 	hdr = old - sizeof(memory_header_t);
 	tail = old + hdr->bytes;
 
+	remove_hdr(hdr);
+
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
 	{
@@ -875,14 +903,7 @@ HOOK(void*, realloc, void *old, size_t bytes)
 	hdr->backtrace = backtrace_create(2);
 	enable_thread(before);
 
-	/* update header of linked list neighbours */
-	lock->lock(lock);
-	if (hdr->next)
-	{
-		hdr->next->previous = hdr;
-	}
-	hdr->previous->next = hdr;
-	lock->unlock(lock);
+	add_hdr(hdr);
 
 	return hdr + 1;
 }
