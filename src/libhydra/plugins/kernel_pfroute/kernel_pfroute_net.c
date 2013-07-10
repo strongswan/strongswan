@@ -1015,7 +1015,7 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 			.rtm_type = op,
 			.rtm_flags = RTF_UP | RTF_STATIC,
 			.rtm_pid = this->pid,
-			.rtm_seq = ++this->seq,
+			.rtm_seq = ref_get(&this->seq),
 		},
 	};
 	host_t *dst;
@@ -1119,7 +1119,7 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 			.rtm_version = RTM_VERSION,
 			.rtm_type = RTM_GET,
 			.rtm_pid = this->pid,
-			.rtm_seq = ++this->seq,
+			.rtm_seq = ref_get(&this->seq),
 		},
 	};
 	host_t *host = NULL;
@@ -1217,7 +1217,7 @@ retry:
 		if (src)
 		{	/* the given source address might be gone, try again without */
 			src = NULL;
-			msg.hdr.rtm_seq = ++this->seq;
+			msg.hdr.rtm_seq = ref_get(&this->seq);
 			msg.hdr.rtm_addrs = 0;
 			memset(msg.buf, sizeof(msg.buf), 0);
 			goto retry;
