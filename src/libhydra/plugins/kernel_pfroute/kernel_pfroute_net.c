@@ -1519,12 +1519,28 @@ retry:
 		}
 		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
 	}
-
-	if (host)
+	if (!host)
 	{
-		DBG2(DBG_KNL, "using %H as %s to reach %H", host,
-			 nexthop ? "nexthop" : "address", dest);
+		return NULL;
 	}
+	if (!nexthop)
+	{	/* make sure the source address is not virtual and usable */
+		addr_entry_t *entry, lookup = {
+			.ip = host,
+		};
+
+		this->lock->read_lock(this->lock);
+		entry = this->addrs->get_match(this->addrs, &lookup,
+									(void*)addr_map_entry_match_up_and_usable);
+		this->lock->unlock(this->lock);
+		if (!entry)
+		{
+			host->destroy(host);
+			return NULL;
+		}
+	}
+	DBG2(DBG_KNL, "using %H as %s to reach %H", host,
+		 nexthop ? "nexthop" : "address", dest);
 	return host;
 }
 
