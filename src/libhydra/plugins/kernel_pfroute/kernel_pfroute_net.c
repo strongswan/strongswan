@@ -1335,6 +1335,10 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 
 	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) != msg.hdr.rtm_msglen)
 	{
+		if (errno == EEXIST)
+		{
+			return ALREADY_DONE;
+		}
 		DBG1(DBG_KNL, "%s PF_ROUTE route failed: %s",
 			 op == RTM_ADD ? "adding" : "deleting", strerror(errno));
 		return FAILED;
