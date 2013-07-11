@@ -19,7 +19,7 @@
 #include "proposal.h"
 
 #include <daemon.h>
-#include <collections/linked_list.h>
+#include <collections/array.h>
 #include <utils/identification.h>
 
 #include <crypto/transform.h>
@@ -55,7 +55,7 @@ struct private_proposal_t {
 	/**
 	 * Priority ordered list of transforms, as entry_t
 	 */
-	linked_list_t *transforms;
+	array_t *transforms;
 
 	/**
 	 * senders SPI
@@ -84,15 +84,13 @@ METHOD(proposal_t, add_algorithm, void,
 	private_proposal_t *this, transform_type_t type,
 	u_int16_t alg, u_int16_t key_size)
 {
-	entry_t *entry;
-
-	INIT(entry,
+	entry_t entry = {
 		.type = type,
 		.alg = alg,
 		.key_size = key_size,
-	);
+	};
 
-	this->transforms->insert_last(this->transforms, entry);
+	array_insert(this->transforms, ARRAY_TAIL, &entry);
 }
 
 /**
@@ -122,7 +120,7 @@ METHOD(proposal_t, create_enumerator, enumerator_t*,
 	private_proposal_t *this, transform_type_t type)
 {
 	return enumerator_create_filter(
-						this->transforms->create_enumerator(this->transforms),
+						array_create_enumerator(this->transforms),
 						(void*)alg_filter, (void*)(uintptr_t)type, NULL);
 }
 
@@ -175,14 +173,13 @@ METHOD(proposal_t, strip_dh, void,
 	enumerator_t *enumerator;
 	entry_t *entry;
 
-	enumerator = this->transforms->create_enumerator(this->transforms);
+	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (entry->type == DIFFIE_HELLMAN_GROUP &&
 			entry->alg != keep)
 		{
-			this->transforms->remove_at(this->transforms, enumerator);
-			free(entry);
+			array_remove_at(this->transforms, enumerator);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -362,19 +359,14 @@ METHOD(proposal_t, clone_, proposal_t*,
 {
 	private_proposal_t *clone;
 	enumerator_t *enumerator;
-	entry_t *current, *entry;
+	entry_t *entry;
 
 	clone = (private_proposal_t*)proposal_create(this->protocol, 0);
 
-	enumerator = this->transforms->create_enumerator(this->transforms);
-	while (enumerator->enumerate(enumerator, &current))
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		INIT(entry,
-			.type = current->type,
-			.alg = current->alg,
-			.key_size = current->key_size,
-		);
-		clone->transforms->insert_last(clone->transforms, entry);
+		array_insert(clone->transforms, ARRAY_TAIL, entry);
 	}
 	enumerator->destroy(enumerator);
 
@@ -452,13 +444,12 @@ static void check_proposal(private_proposal_t *this)
 	{
 		/* if all encryption algorithms in the proposal are AEADs,
 		 * we MUST NOT propose any integrity algorithms */
-		e = this->transforms->create_enumerator(this->transforms);
+		e = array_create_enumerator(this->transforms);
 		while (e->enumerate(e, &entry))
 		{
 			if (entry->type == INTEGRITY_ALGORITHM)
 			{
-				this->transforms->remove_at(this->transforms, e);
-				free(entry);
+				array_remove_at(this->transforms, e);
 			}
 		}
 		e->destroy(e);
@@ -473,6 +464,8 @@ static void check_proposal(private_proposal_t *this)
 		}
 		e->destroy(e);
 	}
+
+	array_compress(this->transforms);
 }
 
 /**
@@ -578,7 +571,7 @@ int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 METHOD(proposal_t, destroy, void,
 	private_proposal_t *this)
 {
-	this->transforms->destroy_function(this->transforms, free);
+	array_destroy(this->transforms);
 	free(this);
 }
 
@@ -607,7 +600,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 		},
 		.protocol = protocol,
 		.number = number,
-		.transforms = linked_list_create(),
+		.transforms = array_create(sizeof(entry_t), 0),
 	);
 
 	return &this->public;
