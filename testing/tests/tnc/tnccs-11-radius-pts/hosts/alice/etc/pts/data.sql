@@ -423,25 +423,25 @@ INSERT INTO packages (			/*  4 */
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  1, 1, '1.0.1e-2', 1366531494
+  1, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  2, 1, '1.0.1e-2', 1366531494
+  2, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  3, 1, '1.0.1e-2', 1366531494
+  3, 4, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  4, 1, '1.0.1e-2', 1366531494
+  4, 4, '1.0.1e-2', 1366531494
 );
 
 /* Components */
@@ -699,7 +699,7 @@ INSERT INTO policies (			/*  2 */
 INSERT INTO policies (			/*  3 */
   type, name, rec_fail, rec_noresult
 ) VALUES (
-  3, 'IP Forwarding Enabled',  2, 2 
+  3, 'IP Forwarding Enabled',  1, 1
 );
 
 INSERT INTO policies (			/*  4 */
@@ -789,15 +789,15 @@ INSERT INTO enforcements (
 );
 
 INSERT INTO enforcements (
-  policy, group_id, max_age
+  policy, group_id, max_age, rec_fail, rec_noresult
 ) VALUES (
-  3, 2, 0
+  3, 2, 0, 2, 2
 );
 
 INSERT INTO enforcements (
-  policy, group_id, max_age
+  policy, group_id, max_age, rec_fail, rec_noresult
 ) VALUES (
-  3, 10, 0
+  3, 10, 0, 2, 2
 );
 
 INSERT INTO enforcements (

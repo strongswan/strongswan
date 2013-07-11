@@ -683,7 +683,7 @@ INSERT INTO policies (			/*  2 */
 INSERT INTO policies (			/*  3 */
   type, name, rec_fail, rec_noresult
 ) VALUES (
-  3, 'IP Forwarding Enabled',  2, 2 
+  3, 'IP Forwarding Enabled',  1, 1
 );
 
 INSERT INTO policies (			/*  4 */
@@ -779,9 +779,9 @@ INSERT INTO enforcements (
 );
 
 INSERT INTO enforcements (
-  policy, group_id, max_age
+  policy, group_id, max_age, rec_fail, rec_noresult
 ) VALUES (
-  3, 2, 0
+  3, 2, 0, 2, 2
 );
 
 INSERT INTO enforcements (
