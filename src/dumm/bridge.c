@@ -14,6 +14,7 @@
  */
 
 #include <sys/types.h>
+#include <netinet/in.h>
 #include <libbridge.h>
 
 #include <utils/debug.h>
@@ -178,4 +179,3 @@ bridge_t *bridge_create(char *name)
 	instances++;
 	return &this->public;
 }
-
