@@ -464,6 +464,10 @@ static bool parse_extensions(private_openssl_crl_t *this)
 				case NID_crl_number:
 					ok = parse_crlNumber_ext(this, ext);
 					break;
+				case NID_issuing_distribution_point:
+					/* TODO support of IssuingDistributionPoints */
+					ok = TRUE;
+					break;
 				default:
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,

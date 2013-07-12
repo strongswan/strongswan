@@ -48,7 +48,7 @@
     0x17                     "holdInstructionCode"
     0x18                     "invalidityDate"
     0x1B                     "deltaCrlIndicator"		OID_DELTA_CRL_INDICATOR
-    0x1C                     "issuingDistributionPoint"
+    0x1C                     "issuingDistributionPoint"	OID_ISSUING_DIST_POINT
     0x1D                     "certificateIssuer"
     0x1E                     "nameConstraints"			OID_NAME_CONSTRAINTS
     0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
