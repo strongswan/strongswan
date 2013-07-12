@@ -872,6 +872,12 @@ HOOK(void*, realloc, void *old, size_t bytes)
 	{
 		return malloc(bytes);
 	}
+	/* handle zero size as a free() */
+	if (bytes == 0)
+	{
+		free(old);
+		return NULL;
+	}
 
 	hdr = old - sizeof(memory_header_t);
 	tail = old + hdr->bytes;
