@@ -599,7 +599,7 @@ static bool equals(backtrace_t *a, backtrace_t *b)
  */
 static int print_traces(private_leak_detective_t *this,
 						FILE *out, int thresh, int thresh_count,
-						bool detailed, int *whitelisted)
+						bool detailed, int *whitelisted, size_t *sum)
 {
 	int leaks = 0;
 	memory_header_t *hdr;
@@ -644,6 +644,10 @@ static int print_traces(private_leak_detective_t *this,
 			);
 			entries->put(entries, entry->backtrace, entry);
 		}
+		if (sum)
+		{
+			*sum += hdr->bytes;
+		}
 		leaks++;
 	}
 	lock->unlock(lock);
@@ -674,8 +678,9 @@ METHOD(leak_detective_t, report, void,
 	if (lib->leak_detective)
 	{
 		int leaks, whitelisted = 0;
+		size_t sum = 0;
 
-		leaks = print_traces(this, stderr, 0, 0, detailed, &whitelisted);
+		leaks = print_traces(this, stderr, 0, 0, detailed, &whitelisted, &sum);
 		switch (leaks)
 		{
 			case 0:
@@ -685,7 +690,7 @@ METHOD(leak_detective_t, report, void,
 				fprintf(stderr, "One leak detected");
 				break;
 			default:
-				fprintf(stderr, "%d leaks detected", leaks);
+				fprintf(stderr, "%d leaks detected, %zu bytes", leaks, sum);
 				break;
 		}
 		fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
@@ -703,7 +708,7 @@ METHOD(leak_detective_t, leaks, int,
 	{
 		int leaks, whitelisted = 0;
 
-		leaks = print_traces(this, NULL, 0, 0, FALSE, &whitelisted);
+		leaks = print_traces(this, NULL, 0, 0, FALSE, &whitelisted, NULL);
 		return leaks;
 	}
 	return 0;
@@ -720,6 +725,7 @@ METHOD(leak_detective_t, usage, void,
 {
 	bool detailed;
 	int thresh, thresh_count;
+	size_t sum = 0;
 
 	thresh = lib->settings->get_int(lib->settings,
 					"libstrongswan.leak_detective.usage_threshold", 10240);
@@ -728,7 +734,9 @@ METHOD(leak_detective_t, usage, void,
 	detailed = lib->settings->get_bool(lib->settings,
 					"libstrongswan.leak_detective.detailed", TRUE);
 
-	print_traces(this, out, thresh, thresh_count, detailed, NULL);
+	print_traces(this, out, thresh, thresh_count, detailed, NULL, &sum);
+
+	fprintf(out, "Total memory usage: %zu\n", sum);
 }
 
 /**
