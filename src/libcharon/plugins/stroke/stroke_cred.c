@@ -975,8 +975,8 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 /**
  * Load a PKCS#12 container
  */
-static bool load_pkcs12(mem_cred_t *secrets, chunk_t line, int line_nr,
-						FILE *prompt)
+static bool load_pkcs12(private_stroke_cred_t *this, mem_cred_t *secrets,
+						chunk_t line, int line_nr, FILE *prompt)
 {
 	enumerator_t *enumerator;
 	char path[PATH_MAX];
@@ -1009,7 +1009,7 @@ static bool load_pkcs12(mem_cred_t *secrets, chunk_t line, int line_nr,
 			DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
 				 cert->get_subject(cert), path);
 		}
-		secrets->add_cert(secrets, TRUE, cert->get_ref(cert));
+		this->creds->add_cert(this->creds, TRUE, cert->get_ref(cert));
 	}
 	enumerator->destroy(enumerator);
 	enumerator = pkcs12->create_key_enumerator(pkcs12);
@@ -1243,7 +1243,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		}
 		else if (match("P12", &token))
 		{
-			if (!load_pkcs12(secrets, line, line_nr, prompt))
+			if (!load_pkcs12(this, secrets, line, line_nr, prompt))
 			{
 				break;
 			}
