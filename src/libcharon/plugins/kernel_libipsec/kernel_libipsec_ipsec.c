@@ -421,6 +421,11 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		ignore |= broadcast && src_ts->is_contained_in(src_ts, broadcast);
 		multicast->destroy(multicast);
 		DESTROY_IF(broadcast);
+		if (!ignore)
+		{
+			DBG1(DBG_KNL, "error installing route with policy %R === %R %N",
+				 src_ts, dst_ts, policy_dir_names, policy->direction);
+		}
 		return ignore;
 	}
 
