@@ -36,13 +36,32 @@ struct private_unity_narrow_t {
 };
 
 /**
+ * Narrow the given received traffic selector with the child configuration and
+ * put them into the given list of TS
+ */
+static void narrow_ts(child_cfg_t *cfg, traffic_selector_t *ts,
+					  linked_list_t *list)
+{
+	linked_list_t *received, *selected;
+
+	received = linked_list_create();
+	received->insert_last(received, ts);
+	selected = cfg->get_traffic_selectors(cfg, FALSE, received, NULL);
+	while (selected->remove_first(selected, (void**)&ts) == SUCCESS)
+	{
+		list->insert_last(list, ts);
+	}
+	selected->destroy(selected);
+	received->destroy(received);
+}
+
+/**
  * Narrow TS as initiator to Unity Split-Include/Local-LAN
  */
 static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 							 child_cfg_t *cfg, linked_list_t *remote)
 {
 	traffic_selector_t *current, *orig = NULL;
-	linked_list_t *received, *selected;
 	enumerator_t *enumerator;
 
 	enumerator = this->handler->create_include_enumerator(this->handler,
@@ -56,16 +75,7 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 				break;
 			}
 		}
-		/* narrow received Unity TS with the child configuration */
-		received = linked_list_create();
-		received->insert_last(received, current);
-		selected = cfg->get_traffic_selectors(cfg, FALSE, received, NULL);
-		while (selected->remove_first(selected, (void**)&current) == SUCCESS)
-		{
-			remote->insert_last(remote, current);
-		}
-		selected->destroy(selected);
-		received->destroy(received);
+		narrow_ts(cfg, current, remote);
 	}
 	enumerator->destroy(enumerator);
 	if (orig)
@@ -74,6 +84,15 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 			 configuration_attribute_type_names,
 			 UNITY_SPLIT_INCLUDE, remote);
 		orig->destroy(orig);
+	}
+	else
+	{	/* since we originally changed the traffic selector to 0.0.0.0/0 local
+		 * narrowing is not applied if no Split-Include attrs are received */
+		if (remote->remove_first(remote, (void**)&orig) == SUCCESS)
+		{
+			narrow_ts(cfg, orig, remote);
+			orig->destroy(orig);
+		}
 	}
 }
 
@@ -93,6 +112,8 @@ static void narrow_initiator_pre(linked_list_t *list)
 											 "255.255.255.255", 65535);
 	if (ts)
 	{
+		DBG2(DBG_CFG, "changing proposed traffic selectors for other:");
+		DBG2(DBG_CFG, " %R", ts);
 		list->insert_last(list, ts);
 	}
 }
