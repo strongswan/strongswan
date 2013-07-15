@@ -70,7 +70,7 @@ static traffic_selector_t *create_ts(chunk_t subnet)
 	chunk_t net, mask;
 	int i;
 
-	if (subnet.len != 8)
+	if (subnet.len < 8)
 	{
 		return NULL;
 	}
