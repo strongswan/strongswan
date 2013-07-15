@@ -60,6 +60,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		}
 		if (ts->to_subnet(ts, &net, &mask))
 		{
+			ts->destroy(ts);
 			break;
 		}
 		ts->destroy(ts);
