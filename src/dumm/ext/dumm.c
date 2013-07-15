@@ -740,6 +740,7 @@ static VALUE template_each(int argc, VALUE *argv, VALUE class)
 static void template_init()
 {
 	rbc_template = rb_define_class_under(rbm_dumm , "Template", rb_cObject);
+	rb_include_module(rb_class_of(rbc_template), rb_mEnumerable);
 
 	rb_define_singleton_method(rbc_template, "load", template_load, 1);
 	rb_define_singleton_method(rbc_template, "unload", template_unload, 0);

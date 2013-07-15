@@ -34,8 +34,9 @@ module Dumm
     if name
       Template.load name
     else
-      Template.each {|t| puts t }
+      Template.sort.each {|t| puts t }
     end
+    return Dumm
   end
   
   # unload template/overlays, reset all guests and delete bridges
