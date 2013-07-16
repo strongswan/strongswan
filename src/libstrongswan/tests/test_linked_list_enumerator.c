@@ -59,6 +59,22 @@ START_TEST(test_enumerate)
 }
 END_TEST
 
+START_TEST(test_enumerate_null)
+{
+	enumerator_t *enumerator;
+	int round;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, NULL))
+	{
+		round++;
+	}
+	ck_assert_int_eq(round, 6);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
 START_TEST(test_reset_enumerator)
 {
 	enumerator_t *enumerator;
@@ -364,6 +380,7 @@ Suite *linked_list_enumerator_suite_create()
 	tc = tcase_create("enumerate");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_enumerate);
+	tcase_add_test(tc, test_enumerate_null);
 	tcase_add_test(tc, test_reset_enumerator);
 	tcase_add_test(tc, test_has_more_empty);
 	tcase_add_test(tc, test_has_more);

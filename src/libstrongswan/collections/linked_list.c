@@ -138,7 +138,10 @@ METHOD(enumerator_t, enumerate, bool,
 		this->finished = TRUE;
 		return FALSE;
 	}
-	*item = this->current->value;
+	if (item)
+	{
+		*item = this->current->value;
+	}
 	return TRUE;
 }
 
