@@ -227,14 +227,6 @@ struct linked_list_t {
 	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
 
 	/**
-	 * Clones a list and its objects using a given function.
-	 *
-	 * @param function	function that clones an object
-	 * @return			cloned list
-	 */
-	linked_list_t *(*clone_function) (linked_list_t *this, void*(*)(void*));
-
-	/**
 	 * Destroys a linked_list object.
 	 */
 	void (*destroy) (linked_list_t *this);

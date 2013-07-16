@@ -440,21 +440,6 @@ METHOD(linked_list_t, clone_offset, linked_list_t*,
 	return clone;
 }
 
-METHOD(linked_list_t, clone_function, linked_list_t*,
-	private_linked_list_t *this, void* (*fn)(void*))
-{
-	element_t *current = this->first;
-	linked_list_t *clone;
-
-	clone = linked_list_create();
-	while (current)
-	{
-		clone->insert_last(clone, fn(current->value));
-		current = current->next;
-	}
-	return clone;
-}
-
 METHOD(linked_list_t, destroy, void,
 	private_linked_list_t *this)
 {
@@ -526,7 +511,6 @@ linked_list_t *linked_list_create()
 			.invoke_offset = (void*)_invoke_offset,
 			.invoke_function = (void*)_invoke_function,
 			.clone_offset = _clone_offset,
-			.clone_function = _clone_function,
 			.destroy = _destroy,
 			.destroy_offset = _destroy_offset,
 			.destroy_function = _destroy_function,

@@ -303,14 +303,9 @@ struct clone_t {
 	void *(*clone)(clone_t *item);
 };
 
-static void *clone(void *item)
+static void *clone(clone_t *item)
 {
-	return item;
-}
-
-static void *clone_offset(clone_t *item)
-{
-	return clone(item->val);
+	return item->val;
 }
 
 static void test_clone(linked_list_t *list)
@@ -327,31 +322,15 @@ static void test_clone(linked_list_t *list)
 	ck_assert_int_eq(round, 6);
 }
 
-START_TEST(test_clone_function)
-{
-	linked_list_t *other;
-
-	list->insert_last(list, (void*)1);
-	list->insert_last(list, (void*)2);
-	list->insert_last(list, (void*)3);
-	list->insert_last(list, (void*)4);
-	list->insert_last(list, (void*)5);
-
-	other = list->clone_function(list, clone);
-	test_clone(other);
-	other->destroy(other);
-}
-END_TEST
-
 START_TEST(test_clone_offset)
 {
 	linked_list_t *other;
 	clone_t items[] = {
-		{ .val = (void*)1, .clone = clone_offset, },
-		{ .val = (void*)2, .clone = clone_offset, },
-		{ .val = (void*)3, .clone = clone_offset, },
-		{ .val = (void*)4, .clone = clone_offset, },
-		{ .val = (void*)5, .clone = clone_offset, },
+		{ .val = (void*)1, .clone = clone, },
+		{ .val = (void*)2, .clone = clone, },
+		{ .val = (void*)3, .clone = clone, },
+		{ .val = (void*)4, .clone = clone, },
+		{ .val = (void*)5, .clone = clone, },
 	};
 	int i;
 
@@ -400,7 +379,6 @@ Suite *linked_list_suite_create()
 
 	tc = tcase_create("clone");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
-	tcase_add_test(tc, test_clone_function);
 	tcase_add_test(tc, test_clone_offset);
 	suite_add_tcase(s, tc);
 
