@@ -215,48 +215,8 @@ START_TEST(test_insert_before_empty)
 END_TEST
 
 /*******************************************************************************
- * replace / remove_at
+ * remove_at
  */
-
-START_TEST(test_replace)
-{
-	enumerator_t *enumerator;
-	intptr_t x, y;
-	int round;
-
-	round = 1;
-	enumerator = list->create_enumerator(list);
-	while (enumerator->enumerate(enumerator, &x))
-	{
-		ck_assert_int_eq(round, x);
-		y = (intptr_t)list->replace(list, enumerator, (void*)(intptr_t)(6 - round));
-		ck_assert_int_eq(round, y);
-		round++;
-	}
-	list->reset_enumerator(list, enumerator);
-	round = 5;
-	while (enumerator->enumerate(enumerator, &x))
-	{
-		ck_assert_int_eq(round, x);
-		round--;
-	}
-	enumerator->destroy(enumerator);
-}
-END_TEST
-
-START_TEST(test_replace_first)
-{
-	enumerator_t *enumerator;
-	intptr_t x;
-
-	enumerator = list->create_enumerator(list);
-	x = (intptr_t)list->replace(list, enumerator, (void*)6);
-	ck_assert_int_eq(x, 0);
-	ck_assert(enumerator->enumerate(enumerator, &x));
-	ck_assert_int_eq(x, 1);
-	enumerator->destroy(enumerator);
-}
-END_TEST
 
 START_TEST(test_remove_at)
 {
@@ -308,6 +268,58 @@ START_TEST(test_remove_at_ends)
 	ck_assert_int_eq(list->get_count(list), 5);
 	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 5);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_insert_before_remove_at)
+{
+	enumerator_t *enumerator;
+	intptr_t x;
+	int round;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		if (round == 2)
+		{	/* this replaces the current item, as insert_before does not change
+			 * the enumerator position */
+			list->insert_before(list, enumerator, (void*)42);
+			list->remove_at(list, enumerator);
+		}
+		else if (round == 4)
+		{	/* this does not replace the item, as remove_at moves the enumerator
+			 * position to the previous item */
+			list->remove_at(list, enumerator);
+			list->insert_before(list, enumerator, (void*)21);
+		}
+		round++;
+	}
+	ck_assert_int_eq(list->get_count(list), 5);
+	list->reset_enumerator(list, enumerator);
+	round = 1;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		if (round == 2)
+		{	/* check replaced item */
+			ck_assert_int_eq(42, x);
+		}
+		else if (round == 3)
+		{	/* check misplaced item */
+			ck_assert_int_eq(21, x);
+		}
+		else if (round == 4)
+		{	/* check misplaced item */
+			ck_assert_int_eq(3, x);
+		}
+		else
+		{
+			ck_assert_int_eq(round, x);
+		}
+		round++;
+	}
 	enumerator->destroy(enumerator);
 }
 END_TEST
@@ -366,10 +378,9 @@ Suite *linked_list_enumerator_suite_create()
 
 	tc = tcase_create("modify");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
-	tcase_add_test(tc, test_replace);
-	tcase_add_test(tc, test_replace_first);
 	tcase_add_test(tc, test_remove_at);
 	tcase_add_test(tc, test_remove_at_ends);
+	tcase_add_test(tc, test_insert_before_remove_at);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("create_from_enumerator");

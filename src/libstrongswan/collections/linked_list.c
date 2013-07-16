@@ -316,20 +316,6 @@ METHOD(linked_list_t, insert_before, void,
 	this->count++;
 }
 
-METHOD(linked_list_t, replace, void*,
-	private_linked_list_t *this, private_enumerator_t *enumerator,
-	void *item)
-{
-	void *old = NULL;
-
-	if (enumerator->current)
-	{
-		old = enumerator->current->value;
-		enumerator->current->value = item;
-	}
-	return old;
-}
-
 METHOD(linked_list_t, get_last, status_t,
 	private_linked_list_t *this, void **item)
 {
@@ -556,7 +542,6 @@ linked_list_t *linked_list_create()
 			.insert_first = _insert_first,
 			.insert_last = _insert_last,
 			.insert_before = (void*)_insert_before,
-			.replace = (void*)_replace,
 			.remove_first = _remove_first,
 			.remove_last = _remove_last,
 			.remove = _remove_,
