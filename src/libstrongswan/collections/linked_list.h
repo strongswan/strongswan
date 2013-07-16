@@ -193,27 +193,6 @@ struct linked_list_t {
 							void **item, ...);
 
 	/**
-	 * Find the last matching element in the list.
-	 *
-	 * The first object passed to the match function is the current list item,
-	 * followed by the user supplied data.
-	 * If the supplied function returns TRUE this function returns SUCCESS, and
-	 * the current object is returned in the third parameter, otherwise,
-	 * the next item is checked.
-	 *
-	 * If match is NULL, *item and the current object are compared.
-	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
-	 * @param match			comparison function to call on each object, or NULL
-	 * @param item			the list item, if found
-	 * @param ...			user data to supply to match function (limited to 5 arguments)
-	 * @return				SUCCESS if found, NOT_FOUND otherwise
-	 */
-	status_t (*find_last) (linked_list_t *this, linked_list_match_t match,
-						   void **item, ...);
-
-	/**
 	 * Invoke a method on all of the contained objects.
 	 *
 	 * If a linked list contains objects with function pointers,

@@ -195,20 +195,14 @@ START_TEST(test_find)
 	void *a = (void*)1, *b = (void*)2;
 
 	ck_assert(list->find_first(list, NULL, &a) == NOT_FOUND);
-	ck_assert(list->find_last(list, NULL, &a) == NOT_FOUND);
 	list->insert_last(list, a);
 	ck_assert(list->find_first(list, NULL, &a) == SUCCESS);
 	ck_assert(list->find_first(list, NULL, &b) == NOT_FOUND);
-	ck_assert(list->find_last(list, NULL, &a) == SUCCESS);
-	ck_assert(list->find_last(list, NULL, &b) == NOT_FOUND);
 	list->insert_last(list, b);
 	ck_assert(list->find_first(list, NULL, &a) == SUCCESS);
 	ck_assert(list->find_first(list, NULL, &b) == SUCCESS);
-	ck_assert(list->find_last(list, NULL, &a) == SUCCESS);
-	ck_assert(list->find_last(list, NULL, &b) == SUCCESS);
 
 	ck_assert(list->find_first(list, NULL, NULL) == NOT_FOUND);
-	ck_assert(list->find_last(list, NULL, NULL) == NOT_FOUND);
 }
 END_TEST
 
@@ -228,31 +222,14 @@ START_TEST(test_find_callback)
 	ck_assert(list->find_first(list, (linked_list_match_t)match_a_b, &x, a, b) == SUCCESS);
 	ck_assert(a == x);
 
-	ck_assert(list->find_last(list, (linked_list_match_t)match_a, NULL, a) == SUCCESS);
-	x = NULL;
-	ck_assert(list->find_last(list, (linked_list_match_t)match_a, &x, a) == SUCCESS);
-	ck_assert(a == x);
-	ck_assert(list->find_last(list, (linked_list_match_t)match_b, &x, b) == NOT_FOUND);
-	ck_assert(a == x);
-	x = NULL;
-	ck_assert(list->find_last(list, (linked_list_match_t)match_a_b, &x, a, b) == SUCCESS);
-	ck_assert(a == x);
-
 	list->insert_last(list, b);
 	ck_assert(list->find_first(list, (linked_list_match_t)match_a, &x, a) == SUCCESS);
 	ck_assert(a == x);
 	ck_assert(list->find_first(list, (linked_list_match_t)match_b, &x, b) == SUCCESS);
 	ck_assert(b == x);
-	ck_assert(list->find_last(list, (linked_list_match_t)match_a, &x, a) == SUCCESS);
-	ck_assert(a == x);
-	ck_assert(list->find_last(list, (linked_list_match_t)match_b, &x, b) == SUCCESS);
-	ck_assert(b == x);
 	x = NULL;
 	ck_assert(list->find_first(list, (linked_list_match_t)match_a_b, &x, a, b) == SUCCESS);
 	ck_assert(a == x);
-	x = NULL;
-	ck_assert(list->find_last(list, (linked_list_match_t)match_a_b, &x, a, b) == SUCCESS);
-	ck_assert(b == x);
 }
 END_TEST
 

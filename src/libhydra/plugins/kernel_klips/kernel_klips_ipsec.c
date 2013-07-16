@@ -2022,7 +2022,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	else
 	{
 		/* apply the new one, if we have no such policy */
-		this->policies->insert_last(this->policies, policy);
+		this->policies->insert_first(this->policies, policy);
 	}
 
 	if (priority == POLICY_PRIORITY_ROUTED)
@@ -2088,7 +2088,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	this->mutex->lock(this->mutex);
 
 	/* we try to find the policy again and install the route if needed */
-	if (this->policies->find_last(this->policies, NULL, (void**)&policy) != SUCCESS)
+	if (this->policies->find_first(this->policies, NULL,
+								  (void**)&policy) != SUCCESS)
 	{
 		this->mutex->unlock(this->mutex);
 		DBG2(DBG_KNL, "the policy %R === %R %N is already gone, ignoring",

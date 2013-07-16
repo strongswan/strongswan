@@ -2261,8 +2261,8 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 
 	/* we try to find the policy again and update the kernel index */
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_last(this->policies, NULL,
-								 (void**)&policy) != SUCCESS)
+	if (this->policies->find_first(this->policies, NULL,
+								  (void**)&policy) != SUCCESS)
 	{
 		DBG2(DBG_KNL, "unable to update index, the policy is already gone, "
 					  "ignoring");
@@ -2319,7 +2319,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 	else
 	{	/* use the new one, if we have no such policy */
-		this->policies->insert_last(this->policies, policy);
+		this->policies->insert_first(this->policies, policy);
 		policy->used_by = linked_list_create();
 	}
 

@@ -395,28 +395,6 @@ METHOD(linked_list_t, find_first, status_t,
 	return NOT_FOUND;
 }
 
-METHOD(linked_list_t, find_last, status_t,
-	private_linked_list_t *this, linked_list_match_t match,
-	void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
-{
-	element_t *current = this->last;
-
-	while (current)
-	{
-		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
-			(!match && item && current->value == *item))
-		{
-			if (item != NULL)
-			{
-				*item = current->value;
-			}
-			return SUCCESS;
-		}
-		current = current->previous;
-	}
-	return NOT_FOUND;
-}
-
 METHOD(linked_list_t, invoke_offset, void,
 	private_linked_list_t *this, size_t offset,
 	void *d1, void *d2, void *d3, void *d4, void *d5)
@@ -538,7 +516,6 @@ linked_list_t *linked_list_create()
 			.get_first = _get_first,
 			.get_last = _get_last,
 			.find_first = (void*)_find_first,
-			.find_last = (void*)_find_last,
 			.insert_first = _insert_first,
 			.insert_last = _insert_last,
 			.insert_before = (void*)_insert_before,
