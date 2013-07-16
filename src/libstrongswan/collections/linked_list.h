@@ -78,15 +78,6 @@ struct linked_list_t {
 	void (*reset_enumerator)(linked_list_t *this, enumerator_t *enumerator);
 
 	/**
-	 * Checks if there are more elements following after the enumerator's
-	 * current position.
-	 *
-	 * @param enumerator	enumerator to check
-	 * @return				TRUE if more elements follow after the current item
-	 */
-	bool (*has_more)(linked_list_t *this, enumerator_t *enumerator);
-
-	/**
 	 * Inserts a new item at the beginning of the list.
 	 *
 	 * @param item		item value to insert in list

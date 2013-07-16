@@ -97,50 +97,6 @@ START_TEST(test_reset_enumerator)
 }
 END_TEST
 
-START_TEST(test_has_more_empty)
-{
-	enumerator_t *enumerator;
-	intptr_t x;
-
-	list->destroy(list);
-	list = linked_list_create();
-	enumerator = list->create_enumerator(list);
-	ck_assert(!list->has_more(list, enumerator));
-	ck_assert(!enumerator->enumerate(enumerator, &x));
-	ck_assert(!list->has_more(list, enumerator));
-	enumerator->destroy(enumerator);
-}
-END_TEST
-
-START_TEST(test_has_more)
-{
-	enumerator_t *enumerator;
-	intptr_t x;
-	int round;
-
-	round = 1;
-	enumerator = list->create_enumerator(list);
-	while (enumerator->enumerate(enumerator, &x))
-	{
-		ck_assert_int_eq(round, x);
-		round++;
-		if (x == 2)
-		{
-			break;
-		}
-	}
-	ck_assert(list->has_more(list, enumerator));
-	while (enumerator->enumerate(enumerator, &x))
-	{
-		ck_assert_int_eq(round, x);
-		round++;
-	}
-	ck_assert(!list->has_more(list, enumerator));
-	ck_assert_int_eq(round, 6);
-	enumerator->destroy(enumerator);
-}
-END_TEST
-
 /*******************************************************************************
  * insert before
  */
@@ -202,7 +158,6 @@ START_TEST(test_insert_before_ends)
 	ck_assert_int_eq(list->get_count(list), 7);
 	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 6);
-	ck_assert(!list->has_more(list, enumerator));
 	ck_assert(!enumerator->enumerate(enumerator, &x));
 	enumerator->destroy(enumerator);
 }
@@ -222,10 +177,9 @@ START_TEST(test_insert_before_empty)
 	ck_assert_int_eq(x, 1);
 	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 1);
-	ck_assert(list->has_more(list, enumerator));
 	ck_assert(enumerator->enumerate(enumerator, &x));
 	ck_assert_int_eq(x, 1);
-	ck_assert(!list->has_more(list, enumerator));
+	ck_assert(!enumerator->enumerate(enumerator, NULL));
 	enumerator->destroy(enumerator);
 }
 END_TEST
@@ -382,8 +336,6 @@ Suite *linked_list_enumerator_suite_create()
 	tcase_add_test(tc, test_enumerate);
 	tcase_add_test(tc, test_enumerate_null);
 	tcase_add_test(tc, test_reset_enumerator);
-	tcase_add_test(tc, test_has_more_empty);
-	tcase_add_test(tc, test_has_more);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("insert_before()");
