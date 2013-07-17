@@ -1,8 +1,11 @@
+AM_CPPFLAGS = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
-
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-socket-dynamic.la

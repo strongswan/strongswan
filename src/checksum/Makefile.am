@@ -13,12 +13,14 @@ checksum_builder_LDADD = \
 	$(DLLIB)
 
 CLEANFILES = checksum.c
-INCLUDES = \
+
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
+	-I$(top_srcdir)/src/libcharon \
+	-DPLUGINDIR=\"${DESTDIR}${plugindir}\"
+
 AM_CFLAGS = \
-	-DPLUGINDIR=\"${DESTDIR}${plugindir}\" \
 	-rdynamic
 
 # we keep track of build dependencies in deps and use libs to store the paths
@@ -29,14 +31,14 @@ libs = $(DESTDIR)$(ipseclibdir)/libstrongswan.so
 exes =
 
 if !MONOLITHIC
-  AM_CFLAGS += -DS_PLUGINS=\""${s_plugins}\""
+  AM_CPPFLAGS += -DS_PLUGINS=\""${s_plugins}\""
 endif
 
 if USE_LIBHYDRA
   deps += $(top_builddir)/src/libhydra/libhydra.la
   libs += $(DESTDIR)$(ipseclibdir)/libhydra.so
 if !MONOLITHIC
-  AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\""
+  AM_CPPFLAGS += -DH_PLUGINS=\""${h_plugins}\""
 endif
 endif
 
@@ -80,7 +82,7 @@ if USE_CHARON
   libs += $(DESTDIR)$(ipseclibdir)/libcharon.so
   exes += $(top_builddir)/src/charon/.libs/charon
 if !MONOLITHIC
-  AM_CFLAGS += -DC_PLUGINS=\""${c_plugins}\""
+  AM_CPPFLAGS += -DC_PLUGINS=\""${c_plugins}\""
 endif
 endif
 

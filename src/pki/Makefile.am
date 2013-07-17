@@ -15,6 +15,6 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 pki_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 pki.o :	$(top_builddir)/config.status
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-AM_CFLAGS = \
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
 	-DPLUGINS=\""${pki_plugins}\""

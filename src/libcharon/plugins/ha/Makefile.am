@@ -1,8 +1,11 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
+	-DIPSEC_PIDDIR=\"${piddir}\"
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
-
-AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-ha.la
@@ -24,4 +27,3 @@ libstrongswan_ha_la_SOURCES = \
   ha_child.h ha_child.c \
   ha_attribute.h ha_attribute.c
 libstrongswan_ha_la_LDFLAGS = -module -avoid-version
-

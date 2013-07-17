@@ -1,7 +1,8 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-sqlite.la
@@ -15,4 +16,3 @@ libstrongswan_sqlite_la_SOURCES = \
 
 libstrongswan_sqlite_la_LDFLAGS = -module -avoid-version
 libstrongswan_sqlite_la_LIBADD  = -lsqlite3
-

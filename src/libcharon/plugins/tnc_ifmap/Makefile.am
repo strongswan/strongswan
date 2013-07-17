@@ -1,12 +1,12 @@
-
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon \
-	${xml_CFLAGS}
+	-I$(top_srcdir)/src/libcharon
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	${xml_CFLAGS} \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnc-ifmap.la
@@ -26,4 +26,3 @@ libstrongswan_tnc_ifmap_la_SOURCES = \
 	tnc_ifmap_renew_session_job.h tnc_ifmap_renew_session_job.c
 
 libstrongswan_tnc_ifmap_la_LDFLAGS = -module -avoid-version
-

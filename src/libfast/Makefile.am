@@ -1,3 +1,10 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I/usr/include/ClearSilver
+
+AM_CFLAGS = \
+	-rdynamic
+
 ipseclib_LTLIBRARIES = libfast.la
 
 libfast_la_SOURCES = \
@@ -12,5 +19,3 @@ endif
 
 libfast_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
   -lfcgi $(clearsilver_LIBS) $(PTHREADLIB)
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I/usr/include/ClearSilver
-AM_CFLAGS = -rdynamic

@@ -1,7 +1,9 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-DFIPS_MODE=${fips_mode}
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic -DFIPS_MODE=${fips_mode}
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-openssl.la
@@ -31,4 +33,3 @@ libstrongswan_openssl_la_SOURCES = \
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = -lcrypto
-

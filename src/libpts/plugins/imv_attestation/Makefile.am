@@ -1,11 +1,12 @@
-
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libimcv \
-	-I$(top_srcdir)/src/libpts
+	-I$(top_srcdir)/src/libpts \
+	-DPLUGINS=\""${attest_plugins}\""
 
-AM_CFLAGS = -rdynamic -DPLUGINS=\""${attest_plugins}\""
+AM_CFLAGS = \
+	-rdynamic
 
 imcv_LTLIBRARIES = imv-attestation.la
 

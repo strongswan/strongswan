@@ -1,8 +1,10 @@
-
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan \
+AM_CPPFLAGS = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-pfkey.la

@@ -11,12 +11,10 @@ charon_cmd_SOURCES = \
 
 charon-cmd.o :	$(top_builddir)/config.status
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
-
-AM_CFLAGS = \
+	-I$(top_srcdir)/src/libcharon \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\" \
 	-DPLUGINS=\""${cmd_plugins}\""

@@ -1,7 +1,9 @@
+AM_CPPFLAGS = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-af-alg.la

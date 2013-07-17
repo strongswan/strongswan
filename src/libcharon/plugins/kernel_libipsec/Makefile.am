@@ -1,10 +1,11 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan \
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/libipsec
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-libipsec.la

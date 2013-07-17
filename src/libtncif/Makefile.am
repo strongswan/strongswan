@@ -1,4 +1,5 @@
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
 noinst_LTLIBRARIES = libtncif.la
 

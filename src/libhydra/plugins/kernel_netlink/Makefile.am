@@ -1,10 +1,12 @@
+AM_CPPFLAGS = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-DROUTING_TABLE=${routing_table} \
+	-DROUTING_TABLE_PRIO=${routing_table_prio}
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra
-
-AM_CFLAGS = -rdynamic \
--DROUTING_TABLE=${routing_table} \
--DROUTING_TABLE_PRIO=${routing_table_prio}
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-netlink.la

@@ -1,11 +1,13 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/stroke
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
+	-I$(top_srcdir)/src/stroke \
+	-DIPSEC_CONFDIR=\"${sysconfdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\"
 
 AM_CFLAGS = \
--rdynamic \
--DIPSEC_CONFDIR=\"${sysconfdir}\" \
--DIPSEC_PIDDIR=\"${piddir}\"
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-stroke.la

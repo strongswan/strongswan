@@ -5,12 +5,10 @@ charon.c
 
 charon.o :	$(top_builddir)/config.status
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
-
-AM_CFLAGS = \
+	-I$(top_srcdir)/src/libcharon \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\" \
 	-DPLUGINS=\""${charon_plugins}\""
@@ -22,4 +20,3 @@ charon_LDADD = \
 	-lm $(PTHREADLIB) $(DLLIB)
 
 EXTRA_DIST = Android.mk
-

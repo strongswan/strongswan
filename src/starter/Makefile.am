@@ -6,21 +6,19 @@ starterstroke.h confread.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h invokecharon.c \
 invokecharon.h klips.c klips.h
 
-INCLUDES = \
--I${linux_headers} \
--I$(top_srcdir)/src/libstrongswan \
--I$(top_srcdir)/src/libhydra \
--I$(top_srcdir)/src/stroke
-
-AM_CFLAGS = \
--DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${sysconfdir}\" \
--DIPSEC_PIDDIR=\"${piddir}\" \
--DIPSEC_EAPDIR=\"${eapdir}\" \
--DDEV_RANDOM=\"${random_device}\" \
--DDEV_URANDOM=\"${urandom_device}\" \
--DPLUGINS=\""${starter_plugins}\"" \
--DDEBUG
+AM_CPPFLAGS = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/stroke \
+	-DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_CONFDIR=\"${sysconfdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" \
+	-DIPSEC_EAPDIR=\"${eapdir}\" \
+	-DDEV_RANDOM=\"${random_device}\" \
+	-DDEV_URANDOM=\"${urandom_device}\" \
+	-DPLUGINS=\""${starter_plugins}\"" \
+	-DDEBUG
 
 AM_YFLAGS = -v -d
 
@@ -30,15 +28,15 @@ MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = parser.h
 
 if USE_CHARON
-  AM_CFLAGS += -DSTART_CHARON
+  AM_CPPFLAGS += -DSTART_CHARON
 endif
 
 if USE_LOAD_WARNING
-  AM_CFLAGS += -DLOAD_WARNING
+  AM_CPPFLAGS += -DLOAD_WARNING
 endif
 
 if USE_TOOLS
-  AM_CFLAGS += -DGENERATE_SELFCERT
+  AM_CPPFLAGS += -DGENERATE_SELFCERT
 endif
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h

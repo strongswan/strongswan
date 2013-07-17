@@ -1,5 +1,5 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
 ipseclib_LTLIBRARIES = libtls.la
 libtls_la_SOURCES = \

@@ -1,6 +1,9 @@
 ipsec_PROGRAMS = conftest
 
-AM_CFLAGS = -rdynamic \
+AM_CPPFLAGS = -rdynamic \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
 	-DPLUGINS=\""${charon_plugins}\""
 
 conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
@@ -12,11 +15,6 @@ conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/log_id.c hooks/custom_proposal.c hooks/set_ike_spi.c \
 	hooks/set_ike_request.c hooks/set_reserved.c hooks/set_ike_initiator.c \
 	hooks/log_ts.c hooks/rebuild_auth.c hooks/reset_seq.c
-
-INCLUDES = \
-	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
 
 conftest_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \

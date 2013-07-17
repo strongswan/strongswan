@@ -1,7 +1,8 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-gmp.la

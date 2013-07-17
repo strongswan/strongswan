@@ -13,11 +13,11 @@ kernel/kernel_listener.h
 
 libhydra_la_LIBADD =
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-AM_CFLAGS = \
--DIPSEC_DIR=\"${ipsecdir}\" \
--DPLUGINDIR=\"${plugindir}\" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-DIPSEC_DIR=\"${ipsecdir}\" \
+	-DPLUGINDIR=\"${plugindir}\" \
+	-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
 EXTRA_DIST = Android.mk
 
@@ -78,4 +78,3 @@ if MONOLITHIC
   libhydra_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
 endif
 endif
-

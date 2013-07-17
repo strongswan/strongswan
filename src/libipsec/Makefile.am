@@ -15,7 +15,7 @@ ipsec_sa_mgr.c ipsec_sa_mgr.h
 
 libipsec_la_LIBADD =
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan
 
 EXTRA_DIST = Android.mk
@@ -28,4 +28,3 @@ SUBDIRS =
 else
 SUBDIRS = .
 endif
-

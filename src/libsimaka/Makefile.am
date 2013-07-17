@@ -1,5 +1,7 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 
 ipseclib_LTLIBRARIES = libsimaka.la
 libsimaka_la_SOURCES = simaka_message.h simaka_message.c \

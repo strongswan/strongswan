@@ -1,14 +1,14 @@
-
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libtnccs \
-	${xml_CFLAGS}
+	-I$(top_srcdir)/src/libtnccs
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	${xml_CFLAGS} \
+	-rdynamic
 
 libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
 
@@ -33,4 +33,3 @@ libstrongswan_tnccs_11_la_SOURCES = \
 	messages/tnccs_tncs_contact_info_msg.h messages/tnccs_tncs_contact_info_msg.c
 
 libstrongswan_tnccs_11_la_LDFLAGS = -module -avoid-version
-

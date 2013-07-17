@@ -1,5 +1,5 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
 ipseclib_LTLIBRARIES = libradius.la
 libradius_la_SOURCES = \
@@ -8,4 +8,3 @@ libradius_la_SOURCES = \
 	radius_client.h radius_client.c \
 	radius_config.h radius_config.c \
 	radius_mppe.h
-

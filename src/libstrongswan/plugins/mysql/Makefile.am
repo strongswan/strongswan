@@ -1,7 +1,9 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic $(MYSQLCFLAG)
+AM_CFLAGS = \
+	$(MYSQLCFLAG) \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-mysql.la
@@ -15,4 +17,3 @@ libstrongswan_mysql_la_SOURCES = \
 
 libstrongswan_mysql_la_LDFLAGS = -module -avoid-version
 libstrongswan_mysql_la_LIBADD  = $(MYSQLLIB)
-

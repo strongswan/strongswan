@@ -1,6 +1,7 @@
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtls
-AM_CFLAGS = \
--DPLUGINS="\"${scripts_plugins}\""
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libtls \
+	-DPLUGINS="\"${scripts_plugins}\""
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \

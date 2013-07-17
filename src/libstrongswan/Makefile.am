@@ -83,25 +83,27 @@ library.lo :	$(top_builddir)/config.status
 
 libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_LIB_DIR=\"${ipseclibdir}\" \
+	-DPLUGINDIR=\"${plugindir}\" \
+	-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+
 AM_CFLAGS = \
--DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_LIB_DIR=\"${ipseclibdir}\" \
--DPLUGINDIR=\"${plugindir}\" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
-@COVERAGE_CFLAGS@
+	@COVERAGE_CFLAGS@
 
 if USE_LEAK_DETECTIVE
-  AM_CFLAGS += -DLEAK_DETECTIVE
+  AM_CPPFLAGS += -DLEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c
 endif
 
 if USE_LOCK_PROFILER
-  AM_CFLAGS += -DLOCK_PROFILER
+  AM_CPPFLAGS += -DLOCK_PROFILER
 endif
 
 if USE_INTEGRITY_TEST
-  AM_CFLAGS += -DINTEGRITY_TEST
+  AM_CPPFLAGS += -DINTEGRITY_TEST
   libstrongswan_la_SOURCES += utils/integrity_checker.c
 endif
 

@@ -1,5 +1,4 @@
-
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
@@ -7,7 +6,8 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtnccs
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-tnc.la

@@ -13,11 +13,16 @@ controller/gateway_controller.c controller/gateway_controller.h
 manager_fcgi_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 main.o :	$(top_builddir)/config.status
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
-AM_CFLAGS = -rdynamic \
-  -DIPSECDIR=\"${ipsecdir}\" \
-  -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DPLUGINS=\""${manager_plugins}\""
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libfast \
+	-DIPSECDIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" \
+	-DPLUGINS=\""${manager_plugins}\""
+
+AM_CFLAGS = \
+	${xml_CFLAGS} \
+	-rdynamic
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 manager_templatesdir = ${managerdir}/templates

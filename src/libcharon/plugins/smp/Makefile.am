@@ -1,8 +1,12 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
+	-DIPSEC_PIDDIR=\"${piddir}\"
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon ${xml_CFLAGS}
-
-AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
+AM_CFLAGS = \
+	${xml_CFLAGS} \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-smp.la

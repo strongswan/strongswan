@@ -1,9 +1,10 @@
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-DDEV_RANDOM=\"${random_device}\" \
+	-DDEV_URANDOM=\"${urandom_device}\"
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
-
-AM_CFLAGS = -rdynamic \
--DDEV_RANDOM=\"${random_device}\" \
--DDEV_URANDOM=\"${urandom_device}\"
+AM_CFLAGS = \
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-random.la

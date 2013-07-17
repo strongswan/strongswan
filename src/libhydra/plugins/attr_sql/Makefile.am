@@ -1,9 +1,10 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-DPLUGINS=\""${pool_plugins}\""
 
 AM_CFLAGS = \
-	-rdynamic \
-	-DPLUGINS=\""${pool_plugins}\""
+	-rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-attr-sql.la

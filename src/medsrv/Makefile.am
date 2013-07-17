@@ -10,11 +10,15 @@ controller/peer_controller.c controller/peer_controller.h
 medsrv_fcgi_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la
 main.o :	$(top_builddir)/config.status
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
-AM_CFLAGS = -rdynamic \
-  -DIPSECDIR=\"${ipsecdir}\" \
-  -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DPLUGINS=\""${medsrv_plugins}\""
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libfast \
+	-DIPSECDIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" \
+	-DPLUGINS=\""${medsrv_plugins}\""
+
+AM_CFLAGS = \
+	-rdynamic
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 medsrv_templatesdir = ${medsrvdir}/templates

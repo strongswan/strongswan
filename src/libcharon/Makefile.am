@@ -128,13 +128,11 @@ endif
 
 daemon.lo :		$(top_builddir)/config.status
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
-
-AM_CFLAGS = \
+	-I$(top_srcdir)/src/libcharon \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\"
 

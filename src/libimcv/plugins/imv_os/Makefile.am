@@ -1,8 +1,10 @@
-
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif \
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libimcv
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-rdynamic
 
 imcv_LTLIBRARIES = imv-os.la
 
@@ -17,9 +19,8 @@ imv_os_la_SOURCES = \
 imv_os_la_LDFLAGS = -module -avoid-version
 
 ipsec_PROGRAMS = pacman
-pacman_SOURCES = pacman.c 
+pacman_SOURCES = pacman.c
 pacman_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 pacman.o :	$(top_builddir)/config.status
 
 EXTRA_DIST = pacman.sh
-
