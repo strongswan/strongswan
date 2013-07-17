@@ -64,6 +64,9 @@ struct watcher_t {
 	/**
 	 * Start watching a new file descriptor.
 	 *
+	 * Multiple callbacks can be registered for the same file descriptor, and
+	 * all of them get notified. Such callbacks are executed concurrently.
+	 *
 	 * @param fd		file descriptor to start watching
 	 * @param events	ORed set of events to watch
 	 * @param cb		callback function to invoke on events
@@ -75,7 +78,8 @@ struct watcher_t {
 	/**
 	 * Stop watching a previously registered file descriptor.
 	 *
-	 * This call blocks until any active callback for this FD returns.
+	 * This call blocks until any active callback for this FD returns. All
+	 * callbacks registered for that FD get unregistered.
 	 *
 	 * @param fd		file descriptor to stop watching
 	 */
