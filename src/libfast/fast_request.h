@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup request request
+ * @defgroup fast_request fast_request
  * @{ @ingroup libfast
  */
 
-#ifndef REQUEST_H_
-#define REQUEST_H_
+#ifndef FAST_REQUEST_H_
+#define FAST_REQUEST_H_
 
 #include <fcgiapp.h>
 #include <library.h>
 
-typedef struct request_t request_t;
+typedef struct fast_request_t fast_request_t;
 
 /**
  * A HTTP request, encapsulates FCGX_Request.
  *
  * The response is also handled through the request object.
  */
-struct request_t {
+struct fast_request_t {
 
 	/**
 	 * Add a cookie to the reply (Set-Cookie header).
@@ -39,7 +39,7 @@ struct request_t {
 	 * @param name		name of the cookie to set
 	 * @param value		value of the cookie
 	 */
-	void (*add_cookie)(request_t *this, char *name, char *value);
+	void (*add_cookie)(fast_request_t *this, char *name, char *value);
 
 	/**
 	 * Get a cookie the client sent in the request.
@@ -47,35 +47,35 @@ struct request_t {
 	 * @param name		name of the cookie
 	 * @return			cookie value, NULL if no such cookie found
 	 */
-	char* (*get_cookie)(request_t *this, char *name);
+	char* (*get_cookie)(fast_request_t *this, char *name);
 
 	/**
 	 * Get the request path relative to the application.
 	 *
 	 * @return			path
 	 */
-	char* (*get_path)(request_t *this);
+	char* (*get_path)(fast_request_t *this);
 
 	/**
 	 * Get the base path of the application.
 	 *
 	 * @return			base path
 	 */
-	char* (*get_base)(request_t *this);
+	char* (*get_base)(fast_request_t *this);
 
 	/**
 	 * Get the remote host address of this request.
 	 *
 	 * @return			host address as string
 	 */
-	char* (*get_host)(request_t *this);
+	char* (*get_host)(fast_request_t *this);
 
 	/**
 	 * Get the user agent string.
 	 *
 	 * @return			user agent string
 	 */
-	char* (*get_user_agent)(request_t *this);
+	char* (*get_user_agent)(fast_request_t *this);
 
 	/**
 	 * Get a post/get variable included in the request.
@@ -83,7 +83,7 @@ struct request_t {
 	 * @param name		name of the POST/GET variable
 	 * @return			value, NULL if not found
 	 */
-	char* (*get_query_data)(request_t *this, char *name);
+	char* (*get_query_data)(fast_request_t *this, char *name);
 
 	/**
 	 * Get an arbitrary environment variable.
@@ -91,7 +91,7 @@ struct request_t {
 	 * @param name		name of the environment variable
 	 * @return			value, NULL if not found
 	 */
-	char* (*get_env_var)(request_t *this, char *name);
+	char* (*get_env_var)(fast_request_t *this, char *name);
 
 	/**
 	 * Read raw POST/PUT data from HTTP request.
@@ -100,19 +100,19 @@ struct request_t {
 	 * @param len		size of the supplied buffer
 	 * @return			number of bytes read, < 0 on error
 	 */
-	int (*read_data)(request_t *this, char *buf, int len);
+	int (*read_data)(fast_request_t *this, char *buf, int len);
 
 	/**
 	 * Close the session and it's context after handling.
 	 */
-	void (*close_session)(request_t *this);
+	void (*close_session)(fast_request_t *this);
 
 	/**
 	 * Has the session been closed by close_session()?
 	 *
 	 * @return			TRUE if session has been closed
 	 */
-	bool (*session_closed)(request_t *this);
+	bool (*session_closed)(fast_request_t *this);
 
 	/**
 	 * Redirect the client to another location.
@@ -120,19 +120,19 @@ struct request_t {
 	 * @param fmt		location format string
 	 * @param ...		variable argument for fmt
 	 */
-	void (*redirect)(request_t *this, char *fmt, ...);
+	void (*redirect)(fast_request_t *this, char *fmt, ...);
 
 	/**
 	 * Get the HTTP referer.
 	 *
 	 * @return			HTTP referer
 	 */
-	char* (*get_referer)(request_t *this);
+	char* (*get_referer)(fast_request_t *this);
 
 	/**
 	 * Redirect back to the referer.
 	 */
-	void (*to_referer)(request_t *this);
+	void (*to_referer)(fast_request_t *this);
 
 	/**
 	 * Set a template value.
@@ -140,7 +140,7 @@ struct request_t {
 	 * @param key		key to set
 	 * @param value		value to set key to
 	 */
-	void (*set)(request_t *this, char *key, char *value);
+	void (*set)(fast_request_t *this, char *key, char *value);
 
 	/**
 	 * Set a template value using format strings.
@@ -151,7 +151,7 @@ struct request_t {
 	 * @param format	printf like format string
 	 * @param ...		variable argument list
 	 */
-	void (*setf)(request_t *this, char *format, ...);
+	void (*setf)(fast_request_t *this, char *format, ...);
 
 	/**
 	 * Render a template.
@@ -162,7 +162,7 @@ struct request_t {
 	 *
 	 * @param template	clearsilver template file location
 	 */
-	void (*render)(request_t *this, char *template);
+	void (*render)(fast_request_t *this, char *template);
 
 	/**
 	 * Stream a format string to the client.
@@ -174,7 +174,7 @@ struct request_t {
 	 * @param ...		argmuent list to format string
 	 * @return			number of streamed bytes, < 0 if stream closed
 	 */
-	int (*streamf)(request_t *this, char *format, ...);
+	int (*streamf)(fast_request_t *this, char *format, ...);
 
 	/**
 	 * Serve a request with headers and a body.
@@ -182,7 +182,7 @@ struct request_t {
 	 * @param headers	HTTP headers, \n separated
 	 * @param chunk		body to write to output
 	 */
-	void (*serve)(request_t *this, char *headers, chunk_t chunk);
+	void (*serve)(fast_request_t *this, char *headers, chunk_t chunk);
 
 	/**
 	 * Send a file from the file system.
@@ -191,19 +191,19 @@ struct request_t {
 	 * @param mime		mime type of file to send, or NULL
 	 * @return			TRUE if file served successfully
 	 */
-	bool (*sendfile)(request_t *this, char *path, char *mime);
+	bool (*sendfile)(fast_request_t *this, char *path, char *mime);
 
 	/**
 	 * Increase the reference count to the stream.
 	 *
 	 * @return			this with increased refcount
 	 */
-	request_t* (*get_ref)(request_t *this);
+	fast_request_t* (*get_ref)(fast_request_t *this);
 
 	/**
-	 * Destroy the request_t.
+	 * Destroy the fast_request_t.
 	 */
-	void (*destroy) (request_t *this);
+	void (*destroy) (fast_request_t *this);
 };
 
 /**
@@ -212,6 +212,6 @@ struct request_t {
  * @param fd			file descripter opened with FCGX_OpenSocket
  * @param debug			no stripping, no compression, timing information
  */
-request_t *request_create(int fd, bool debug);
+fast_request_t *fast_request_create(int fd, bool debug);
 
 #endif /** REQUEST_H_ @}*/

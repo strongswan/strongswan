@@ -44,7 +44,7 @@ struct private_config_controller_t {
  * read XML of a peerconfig element and fill template
  */
 static void process_peerconfig(private_config_controller_t *this,
-							   enumerator_t *e, request_t *r)
+							   enumerator_t *e, fast_request_t *r)
 {
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3;
@@ -115,7 +115,7 @@ static void process_peerconfig(private_config_controller_t *this,
 	}
 }
 
-static void list(private_config_controller_t *this, request_t *r)
+static void list(private_config_controller_t *this, fast_request_t *r)
 {
 	gateway_t *gateway;
 	xml_t *xml;
@@ -149,14 +149,14 @@ static void list(private_config_controller_t *this, request_t *r)
 	}
 }
 
-METHOD(controller_t, get_name, char*,
+METHOD(fast_controller_t, get_name, char*,
 	private_config_controller_t *this)
 {
 	return "config";
 }
 
-METHOD(controller_t, handle, void,
-	private_config_controller_t *this, request_t *request, char *action,
+METHOD(fast_controller_t, handle, void,
+	private_config_controller_t *this, fast_request_t *request, char *action,
 	char *p2, char *p3, char *p4, char *p5)
 {
 	if (!this->manager->logged_in(this->manager))
@@ -177,7 +177,7 @@ METHOD(controller_t, handle, void,
 	return request->redirect(request, "config/list");
 }
 
-METHOD(controller_t, destroy, void,
+METHOD(fast_controller_t, destroy, void,
 	private_config_controller_t *this)
 {
 	free(this);
@@ -186,7 +186,8 @@ METHOD(controller_t, destroy, void,
 /*
  * see header file
  */
-controller_t *config_controller_create(context_t *context, void *param)
+fast_controller_t *config_controller_create(fast_context_t *context,
+											void *param)
 {
 	private_config_controller_t *this;
 
@@ -203,4 +204,3 @@ controller_t *config_controller_create(context_t *context, void *param)
 
 	return &this->public.controller;
 }
-

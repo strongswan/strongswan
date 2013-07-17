@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <dispatcher.h>
+#include <fast_dispatcher.h>
 #include <utils/debug.h>
 #include <stdio.h>
 
@@ -27,7 +27,7 @@
 
 int main (int arc, char *argv[])
 {
-	dispatcher_t *dispatcher;
+	fast_dispatcher_t *dispatcher;
 	storage_t *storage;
 	char *socket;
 	char *database;
@@ -50,7 +50,7 @@ int main (int arc, char *argv[])
 	{
 		DBG1(DBG_LIB, "database URI undefined, set manager.database "
 			 "in strongswan.conf");
-		return 1;
+		//return 1;
 	}
 
 	storage = storage_create(database);
@@ -59,8 +59,8 @@ int main (int arc, char *argv[])
 		return 1;
 	}
 
-	dispatcher = dispatcher_create(socket, debug, timeout,
-						(context_constructor_t)manager_create, storage);
+	dispatcher = fast_dispatcher_create(socket, debug, timeout,
+						(fast_context_constructor_t)manager_create, storage);
 	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
@@ -78,4 +78,3 @@ int main (int arc, char *argv[])
 
 	return 0;
 }
-

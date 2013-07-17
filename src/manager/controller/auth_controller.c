@@ -37,14 +37,14 @@ struct private_auth_controller_t {
 	manager_t *manager;
 };
 
-static void login(private_auth_controller_t *this, request_t *request)
+static void login(private_auth_controller_t *this, fast_request_t *request)
 {
 	request->set(request, "action", "check");
 	request->set(request, "title", "Login");
 	request->render(request, "templates/auth/login.cs");
 }
 
-static void check(private_auth_controller_t *this, request_t *request)
+static void check(private_auth_controller_t *this, fast_request_t *request)
 {
 	char *username, *password;
 
@@ -61,20 +61,20 @@ static void check(private_auth_controller_t *this, request_t *request)
 	}
 }
 
-static void logout(private_auth_controller_t *this, request_t *request)
+static void logout(private_auth_controller_t *this, fast_request_t *request)
 {
 	this->manager->logout(this->manager);
 	request->redirect(request, "auth/login");
 }
 
-METHOD(controller_t, get_name, char*,
+METHOD(fast_controller_t, get_name, char*,
 	private_auth_controller_t *this)
 {
 	return "auth";
 }
 
-METHOD(controller_t, handle, void,
-	private_auth_controller_t *this, request_t *request, char *action,
+METHOD(fast_controller_t, handle, void,
+	private_auth_controller_t *this, fast_request_t *request, char *action,
 	char *p2, char *p3, char *p4, char *p5)
 {
 	if (action)
@@ -95,7 +95,7 @@ METHOD(controller_t, handle, void,
 	request->redirect(request, "auth/login");
 }
 
-METHOD(controller_t, destroy, void,
+METHOD(fast_controller_t, destroy, void,
 	private_auth_controller_t *this)
 {
 	free(this);
@@ -104,7 +104,7 @@ METHOD(controller_t, destroy, void,
 /*
  * see header file
  */
-controller_t *auth_controller_create(context_t *context, void *param)
+fast_controller_t *auth_controller_create(fast_context_t *context, void *param)
 {
 	private_auth_controller_t *this;
 
@@ -121,4 +121,3 @@ controller_t *auth_controller_create(context_t *context, void *param)
 
 	return &this->public.controller;
 }
-

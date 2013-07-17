@@ -23,7 +23,7 @@
 #ifndef USER_H_
 #define USER_H_
 
-#include <context.h>
+#include <fast_context.h>
 #include <library.h>
 
 typedef struct user_t user_t;
@@ -36,7 +36,7 @@ struct user_t {
 	/**
 	 * implements context_t interface
 	 */
-	context_t context;
+	fast_context_t context;
 
 	/**
 	 * Set the user ID of the logged in user.

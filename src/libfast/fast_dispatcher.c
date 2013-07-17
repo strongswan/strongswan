@@ -13,10 +13,10 @@
  * for more details.
  */
 
-#include "dispatcher.h"
+#include "fast_dispatcher.h"
 
-#include "request.h"
-#include "session.h"
+#include "fast_request.h"
+#include "fast_session.h"
 
 #include <fcgiapp.h>
 #include <signal.h>
@@ -32,17 +32,17 @@
 /** Intervall to check for expired sessions, in seconds */
 #define CLEANUP_INTERVAL 30
 
-typedef struct private_dispatcher_t private_dispatcher_t;
+typedef struct private_fast_dispatcher_t private_fast_dispatcher_t;
 
 /**
  * private data of the task manager
  */
-struct private_dispatcher_t {
+struct private_fast_dispatcher_t {
 
 	/**
 	 * public functions
 	 */
-	dispatcher_t public;
+	fast_dispatcher_t public;
 
 	/**
 	 * fcgi socket fd
@@ -97,7 +97,7 @@ struct private_dispatcher_t {
 	/**
 	 * constructor function to create session context (in controller_entry_t)
 	 */
-	context_constructor_t context_constructor;
+	fast_context_constructor_t context_constructor;
 
 	/**
 	 * user param to context constructor
@@ -107,21 +107,21 @@ struct private_dispatcher_t {
 
 typedef struct {
 	/** constructor function */
-	controller_constructor_t constructor;
+	fast_controller_constructor_t constructor;
 	/** parameter to constructor */
 	void *param;
 } controller_entry_t;
 
 typedef struct {
 	/** constructor function */
-	filter_constructor_t constructor;
+	fast_filter_constructor_t constructor;
 	/** parameter to constructor */
 	void *param;
 } filter_entry_t;
 
 typedef struct {
 	/** session instance */
-	session_t *session;
+	fast_session_t *session;
 	/** condvar to wait for session */
 	condvar_t *cond;
 	/** client host address, to prevent session hijacking */
@@ -137,21 +137,21 @@ typedef struct {
 /**
  * create a session and instanciate controllers
  */
-static session_t* load_session(private_dispatcher_t *this)
+static fast_session_t* load_session(private_fast_dispatcher_t *this)
 {
 	enumerator_t *enumerator;
 	controller_entry_t *centry;
 	filter_entry_t *fentry;
-	session_t *session;
-	context_t *context = NULL;
-	controller_t *controller;
-	filter_t *filter;
+	fast_session_t *session;
+	fast_context_t *context = NULL;
+	fast_controller_t *controller;
+	fast_filter_t *filter;
 
 	if (this->context_constructor)
 	{
 		context = this->context_constructor(this->param);
 	}
-	session = session_create(context);
+	session = fast_session_create(context);
 
 	enumerator = this->controllers->create_enumerator(this->controllers);
 	while (enumerator->enumerate(enumerator, &centry))
@@ -175,11 +175,11 @@ static session_t* load_session(private_dispatcher_t *this)
 /**
  * create a new session entry
  */
-static session_entry_t *session_entry_create(private_dispatcher_t *this,
+static session_entry_t *session_entry_create(private_fast_dispatcher_t *this,
 											 char *host)
 {
 	session_entry_t *entry;
-	session_t *session;
+	fast_session_t *session;
 
 	session = load_session(this);
 	if (!session)
@@ -206,8 +206,8 @@ static void session_entry_destroy(session_entry_t *entry)
 	free(entry);
 }
 
-METHOD(dispatcher_t, add_controller, void,
-	private_dispatcher_t *this, controller_constructor_t constructor,
+METHOD(fast_dispatcher_t, add_controller, void,
+	private_fast_dispatcher_t *this, fast_controller_constructor_t constructor,
 	void *param)
 {
 	controller_entry_t *entry;
@@ -219,8 +219,9 @@ METHOD(dispatcher_t, add_controller, void,
 	this->controllers->insert_last(this->controllers, entry);
 }
 
-METHOD(dispatcher_t, add_filter, void,
-	private_dispatcher_t *this, filter_constructor_t constructor, void *param)
+METHOD(fast_dispatcher_t, add_filter, void,
+	private_fast_dispatcher_t *this, fast_filter_constructor_t constructor,
+	void *param)
 {
 	filter_entry_t *entry;
 
@@ -250,7 +251,7 @@ static bool session_equals(char *sid1, char *sid2)
 /**
  * Cleanup unused sessions
  */
-static void cleanup_sessions(private_dispatcher_t *this, time_t now)
+static void cleanup_sessions(private_fast_dispatcher_t *this, time_t now)
 {
 	if (this->last_cleanup < now - CLEANUP_INTERVAL)
 	{
@@ -288,19 +289,19 @@ static void cleanup_sessions(private_dispatcher_t *this, time_t now)
 /**
  * Actual dispatching code
  */
-static void dispatch(private_dispatcher_t *this)
+static void dispatch(private_fast_dispatcher_t *this)
 {
 	thread_cancelability(FALSE);
 
 	while (TRUE)
 	{
-		request_t *request;
+		fast_request_t *request;
 		session_entry_t *found = NULL;
 		time_t now;
 		char *sid;
 
 		thread_cancelability(TRUE);
-		request = request_create(this->fd, this->debug);
+		request = fast_request_create(this->fd, this->debug);
 		thread_cancelability(FALSE);
 
 		if (request == NULL)
@@ -358,8 +359,8 @@ static void dispatch(private_dispatcher_t *this)
 	}
 }
 
-METHOD(dispatcher_t, run, void,
-	private_dispatcher_t *this, int threads)
+METHOD(fast_dispatcher_t, run, void,
+	private_fast_dispatcher_t *this, int threads)
 {
 	this->thread_count = threads;
 	this->threads = malloc(sizeof(thread_t*) * threads);
@@ -374,8 +375,8 @@ METHOD(dispatcher_t, run, void,
 	}
 }
 
-METHOD(dispatcher_t, waitsignal, void,
-	private_dispatcher_t *this)
+METHOD(fast_dispatcher_t, waitsignal, void,
+	private_fast_dispatcher_t *this)
 {
 	sigset_t set;
 	int sig;
@@ -388,8 +389,8 @@ METHOD(dispatcher_t, waitsignal, void,
 	sigwait(&set, &sig);
 }
 
-METHOD(dispatcher_t, destroy, void,
-	private_dispatcher_t *this)
+METHOD(fast_dispatcher_t, destroy, void,
+	private_fast_dispatcher_t *this)
 {
 	char *sid;
 	session_entry_t *entry;
@@ -419,10 +420,10 @@ METHOD(dispatcher_t, destroy, void,
 /*
  * see header file
  */
-dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
-								context_constructor_t constructor, void *param)
+fast_dispatcher_t *fast_dispatcher_create(char *socket, bool debug, int timeout,
+							fast_context_constructor_t constructor, void *param)
 {
-	private_dispatcher_t *this;
+	private_fast_dispatcher_t *this;
 
 	INIT(this,
 		.public = {
@@ -453,4 +454,3 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	}
 	return &this->public;
 }
-

@@ -15,7 +15,7 @@
 
 #define _GNU_SOURCE
 
-#include "request.h"
+#include "fast_request.h"
 
 #include <library.h>
 #include <utils/debug.h>
@@ -32,17 +32,17 @@
 #include <threading/thread.h>
 #include <threading/thread_value.h>
 
-typedef struct private_request_t private_request_t;
+typedef struct private_fast_request_t private_fast_request_t;
 
 /**
  * private data of the task manager
  */
-struct private_request_t {
+struct private_fast_request_t {
 
 	/**
 	 * public functions
 	 */
-	request_t public;
+	fast_request_t public;
 
 	/**
 	 * FastCGI request object
@@ -91,7 +91,9 @@ pthread_once_t once = PTHREAD_ONCE_INIT;
  */
 static int read_cb(void *null, char *buf, int size)
 {
-	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
+	private_fast_request_t *this;
+
+	this = (private_fast_request_t*)thread_this->get(thread_this);
 
 	return FCGX_GetStr(buf, size, this->req.in);
 }
@@ -101,7 +103,9 @@ static int read_cb(void *null, char *buf, int size)
  */
 static int writef_cb(void *null, const char *format, va_list args)
 {
-	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
+	private_fast_request_t *this;
+
+	this = (private_fast_request_t*)thread_this->get(thread_this);
 
 	FCGX_VFPrintF(this->req.out, format, args);
 	return 0;
@@ -111,7 +115,9 @@ static int writef_cb(void *null, const char *format, va_list args)
  */
 static int write_cb(void *null, const char *buf, int size)
 {
-	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
+	private_fast_request_t *this;
+
+	this = (private_fast_request_t*)thread_this->get(thread_this);
 
 	return FCGX_PutStr(buf, size, this->req.out);
 }
@@ -122,7 +128,9 @@ static int write_cb(void *null, const char *buf, int size)
 static char *getenv_cb(void *null, const char *key)
 {
 	char *value;
-	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
+	private_fast_request_t *this;
+
+	this = (private_fast_request_t*)thread_this->get(thread_this);
 
 	value = FCGX_GetParam(key, this->req.envp);
 	return strdupnull(value);
@@ -142,9 +150,12 @@ static int putenv_cb(void *null, const char *key, const char *value)
  */
 static int iterenv_cb(void *null, int num, char **key, char **value)
 {
+	private_fast_request_t *this;
+
 	*key = NULL;
 	*value = NULL;
-	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
+	this = (private_fast_request_t*)thread_this->get(thread_this);
+
 	if (num < this->req_env_len)
 	{
 		char *eq;
@@ -165,66 +176,66 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 	return 0;
 }
 
-METHOD(request_t, get_cookie, char*,
-	private_request_t *this, char *name)
+METHOD(fast_request_t, get_cookie, char*,
+	private_fast_request_t *this, char *name)
 {
 	return hdf_get_valuef(this->hdf, "Cookie.%s", name);
 }
 
-METHOD(request_t, get_path, char*,
-	private_request_t *this)
+METHOD(fast_request_t, get_path, char*,
+	private_fast_request_t *this)
 {
-	char * path = FCGX_GetParam("PATH_INFO", this->req.envp);
+	char *path = FCGX_GetParam("PATH_INFO", this->req.envp);
 	return path ? path : "";
 }
 
-METHOD(request_t, get_host, char*,
-	private_request_t *this)
+METHOD(fast_request_t, get_host, char*,
+	private_fast_request_t *this)
 {
 	char *addr = FCGX_GetParam("REMOTE_ADDR", this->req.envp);
 	return addr ? addr : "";
 }
 
-METHOD(request_t, get_user_agent, char*,
-	private_request_t *this)
+METHOD(fast_request_t, get_user_agent, char*,
+	private_fast_request_t *this)
 {
 	char *agent = FCGX_GetParam("HTTP_USER_AGENT", this->req.envp);
 	return agent ? agent : "";
 }
 
-METHOD(request_t, get_query_data, char*,
-	private_request_t *this, char *name)
+METHOD(fast_request_t, get_query_data, char*,
+	private_fast_request_t *this, char *name)
 {
 	return hdf_get_valuef(this->hdf, "Query.%s", name);
 }
 
-METHOD(request_t, get_env_var, char*,
-	private_request_t *this, char *name)
+METHOD(fast_request_t, get_env_var, char*,
+	private_fast_request_t *this, char *name)
 {
 	return FCGX_GetParam(name, this->req.envp);
 }
 
-METHOD(request_t, read_data, int,
-	private_request_t *this, char *buf, int len)
+METHOD(fast_request_t, read_data, int,
+	private_fast_request_t *this, char *buf, int len)
 {
 	return FCGX_GetStr(buf, len, this->req.in);
 }
 
-METHOD(request_t, get_base, char*,
-	private_request_t *this)
+METHOD(fast_request_t, get_base, char*,
+	private_fast_request_t *this)
 {
 	return FCGX_GetParam("SCRIPT_NAME", this->req.envp);
 }
 
-METHOD(request_t, add_cookie, void,
-	private_request_t *this, char *name, char *value)
+METHOD(fast_request_t, add_cookie, void,
+	private_fast_request_t *this, char *name, char *value)
 {
 	thread_this->set(thread_this, this);
 	cgi_cookie_set(this->cgi, name, value, NULL, NULL, NULL, 0, 0);
 }
 
-METHOD(request_t, redirect, void,
-	private_request_t *this, char *fmt, ...)
+METHOD(fast_request_t, redirect, void,
+	private_fast_request_t *this, char *fmt, ...)
 {
 	va_list args;
 
@@ -237,14 +248,14 @@ METHOD(request_t, redirect, void,
 	FCGX_FPrintF(this->req.out, "\n\n");
 }
 
-METHOD(request_t, get_referer, char*,
-	private_request_t *this)
+METHOD(fast_request_t, get_referer, char*,
+	private_fast_request_t *this)
 {
 	return FCGX_GetParam("HTTP_REFERER", this->req.envp);
 }
 
-METHOD(request_t, to_referer, void,
-	private_request_t *this)
+METHOD(fast_request_t, to_referer, void,
+	private_fast_request_t *this)
 {
 	char *referer;
 
@@ -260,28 +271,28 @@ METHOD(request_t, to_referer, void,
 	}
 }
 
-METHOD(request_t, session_closed, bool,
-	private_request_t *this)
+METHOD(fast_request_t, session_closed, bool,
+	private_fast_request_t *this)
 {
 	return this->closed;
 }
 
-METHOD(request_t, close_session, void,
-	private_request_t *this)
+METHOD(fast_request_t, close_session, void,
+	private_fast_request_t *this)
 {
 	this->closed = TRUE;
 }
 
-METHOD(request_t, serve, void,
-	private_request_t *this, char *headers, chunk_t chunk)
+METHOD(fast_request_t, serve, void,
+	private_fast_request_t *this, char *headers, chunk_t chunk)
 {
 	FCGX_FPrintF(this->req.out, "%s\n\n", headers);
 
 	FCGX_PutStr(chunk.ptr, chunk.len, this->req.out);
 }
 
-METHOD(request_t, sendfile, bool,
-	private_request_t *this, char *path, char *mime)
+METHOD(fast_request_t, sendfile, bool,
+	private_fast_request_t *this, char *path, char *mime)
 {
 	struct stat sb;
 	chunk_t data;
@@ -334,8 +345,8 @@ METHOD(request_t, sendfile, bool,
 	return TRUE;
 }
 
-METHOD(request_t, render, void,
-	private_request_t *this, char *template)
+METHOD(fast_request_t, render, void,
+	private_fast_request_t *this, char *template)
 {
 	NEOERR* err;
 
@@ -348,8 +359,8 @@ METHOD(request_t, render, void,
 	}
 }
 
-METHOD(request_t, streamf, int,
-	private_request_t *this, char *format, ...)
+METHOD(fast_request_t, streamf, int,
+	private_fast_request_t *this, char *format, ...)
 {
 	va_list args;
 	int written;
@@ -365,14 +376,14 @@ METHOD(request_t, streamf, int,
 	return written;
 }
 
-METHOD(request_t, set, void,
-	private_request_t *this, char *key, char *value)
+METHOD(fast_request_t, set, void,
+	private_fast_request_t *this, char *key, char *value)
 {
 	hdf_set_value(this->hdf, key, value);
 }
 
-METHOD(request_t, setf, void,
-	private_request_t *this, char *format, ...)
+METHOD(fast_request_t, setf, void,
+	private_fast_request_t *this, char *format, ...)
 {
 	va_list args;
 
@@ -381,15 +392,15 @@ METHOD(request_t, setf, void,
 	va_end(args);
 }
 
-METHOD(request_t, get_ref, request_t*,
-	private_request_t *this)
+METHOD(fast_request_t, get_ref, fast_request_t*,
+	private_fast_request_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public;
 }
 
-METHOD(request_t, destroy, void,
-	private_request_t *this)
+METHOD(fast_request_t, destroy, void,
+	private_fast_request_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -414,10 +425,10 @@ static void init(void)
 /*
  * see header file
  */
-request_t *request_create(int fd, bool debug)
+fast_request_t *fast_request_create(int fd, bool debug)
 {
 	NEOERR* err;
-	private_request_t *this;
+	private_fast_request_t *this;
 	bool failed = FALSE;
 
 	INIT(this,
@@ -496,4 +507,3 @@ request_t *request_create(int fd, bool debug)
 	free(this);
 	return NULL;
 }
-

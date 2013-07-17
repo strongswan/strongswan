@@ -23,7 +23,7 @@
 #define AUTH_FILTER_H_
 
 #include <library.h>
-#include <filter.h>
+#include <fast_filter.h>
 
 #include "user.h"
 
@@ -37,12 +37,12 @@ struct auth_filter_t {
 	/**
 	 * Implements filter_t interface.
 	 */
-	filter_t filter;
+	fast_filter_t filter;
 };
 
 /**
  * Create a auth_filter instance.
  */
-filter_t *auth_filter_create(user_t *user, database_t *db);
+fast_filter_t *auth_filter_create(user_t *user, database_t *db);
 
 #endif /** AUTH_FILTER_H_  @}*/

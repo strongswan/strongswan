@@ -15,7 +15,7 @@
 
 #define _GNU_SOURCE
 
-#include "session.h"
+#include "fast_session.h"
 
 #include <string.h>
 #include <fcgiapp.h>
@@ -25,17 +25,17 @@
 
 #define COOKIE_LEN 16
 
-typedef struct private_session_t private_session_t;
+typedef struct private_fast_session_t private_fast_session_t;
 
 /**
  * private data of the task manager
  */
-struct private_session_t {
+struct private_fast_session_t {
 
 	/**
 	 * public functions
 	 */
-	session_t public;
+	fast_session_t public;
 
 	/**
 	 * session ID
@@ -60,17 +60,17 @@ struct private_session_t {
 	/**
 	 * user defined session context
 	 */
-	context_t *context;
+	fast_context_t *context;
 };
 
-METHOD(session_t, add_controller, void,
-	private_session_t *this, controller_t *controller)
+METHOD(fast_session_t, add_controller, void,
+	private_fast_session_t *this, fast_controller_t *controller)
 {
 	this->controllers->insert_last(this->controllers, controller);
 }
 
-METHOD(session_t, add_filter, void,
-	private_session_t *this, filter_t *filter)
+METHOD(fast_session_t, add_filter, void,
+	private_fast_session_t *this, fast_filter_t *filter)
 {
 	this->filters->insert_last(this->filters, filter);
 }
@@ -78,7 +78,7 @@ METHOD(session_t, add_filter, void,
 /**
  * Create a session ID and a cookie
  */
-static bool create_sid(private_session_t *this)
+static bool create_sid(private_fast_session_t *this)
 {
 	char buf[COOKIE_LEN];
 	rng_t *rng;
@@ -101,11 +101,11 @@ static bool create_sid(private_session_t *this)
 /**
  * run all registered filters
  */
-static bool run_filter(private_session_t *this, request_t *request, char *p0,
-					   char *p1, char *p2, char *p3, char *p4, char *p5)
+static bool run_filter(private_fast_session_t *this, fast_request_t *request,
+					char *p0, char *p1, char *p2, char *p3, char *p4, char *p5)
 {
 	enumerator_t *enumerator;
-	filter_t *filter;
+	fast_filter_t *filter;
 
 	enumerator = this->filters->create_enumerator(this->filters);
 	while (enumerator->enumerate(enumerator, &filter))
@@ -120,13 +120,13 @@ static bool run_filter(private_session_t *this, request_t *request, char *p0,
 	return TRUE;
 }
 
-METHOD(session_t, process, void,
-	private_session_t *this, request_t *request)
+METHOD(fast_session_t, process, void,
+	private_fast_session_t *this, fast_request_t *request)
 {
 	char *pos, *start, *param[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
 	enumerator_t *enumerator;
 	bool handled = FALSE;
-	controller_t *current;
+	fast_controller_t *current;
 	int i = 0;
 
 	if (!this->cookie_sent)
@@ -182,17 +182,19 @@ METHOD(session_t, process, void,
 	}
 }
 
-METHOD(session_t, get_sid, char*,
-	private_session_t *this)
+METHOD(fast_session_t, get_sid, char*,
+	private_fast_session_t *this)
 {
 	return this->sid;
 }
 
-METHOD(session_t, destroy, void,
-	private_session_t *this)
+METHOD(fast_session_t, destroy, void,
+	private_fast_session_t *this)
 {
-	this->controllers->destroy_offset(this->controllers, offsetof(controller_t, destroy));
-	this->filters->destroy_offset(this->filters, offsetof(filter_t, destroy));
+	this->controllers->destroy_offset(this->controllers,
+									  offsetof(fast_controller_t, destroy));
+	this->filters->destroy_offset(this->filters,
+									  offsetof(fast_filter_t, destroy));
 	DESTROY_IF(this->context);
 	free(this);
 }
@@ -200,9 +202,9 @@ METHOD(session_t, destroy, void,
 /*
  * see header file
  */
-session_t *session_create(context_t *context)
+fast_session_t *fast_session_create(fast_context_t *context)
 {
-	private_session_t *this;
+	private_fast_session_t *this;
 
 	INIT(this,
 		.public = {
@@ -224,4 +226,3 @@ session_t *session_create(context_t *context)
 
 	return &this->public;
 }
-

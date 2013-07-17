@@ -14,29 +14,29 @@
  */
 
 /**
- * @defgroup context context
+ * @defgroup fast_context fast_context
  * @{ @ingroup libfast
  */
 
-#ifndef CONTEXT_H_
-#define CONTEXT_H_
+#ifndef FAST_CONTEXT_H_
+#define FAST_CONTEXT_H_
 
-typedef struct context_t context_t;
+typedef struct fast_context_t fast_context_t;
 
 /**
  * Constructor function for a user specific context.
  */
-typedef context_t *(*context_constructor_t)(void *param);
+typedef fast_context_t *(*fast_context_constructor_t)(void *param);
 
 /**
  * User specific session context, to extend.
  */
-struct context_t {
+struct fast_context_t {
 
 	/**
-	 * Destroy the context_t.
+	 * Destroy the fast_context_t.
 	 */
-	void (*destroy) (context_t *this);
+	void (*destroy) (fast_context_t *this);
 };
 
-#endif /** CONTEXT_H_ @}*/
+#endif /** FAST_CONTEXT_H_ @}*/

@@ -13,24 +13,24 @@
  * for more details.
  */
 
-#include "smtp.h"
+#include "fast_smtp.h"
 
 #include <unistd.h>
 #include <errno.h>
 
 #include <utils/debug.h>
 
-typedef struct private_smtp_t private_smtp_t;
+typedef struct private_fast_smtp_t private_fast_smtp_t;
 
 /**
- * Private data of an smtp_t object.
+ * Private data of an fast_smtp_t object.
  */
-struct private_smtp_t {
+struct private_fast_smtp_t {
 
 	/**
-	 * Public smtp_t interface.
+	 * Public fast_smtp_t interface.
 	 */
-	smtp_t public;
+	fast_smtp_t public;
 
 	/**
 	 * file stream to SMTP server
@@ -41,7 +41,7 @@ struct private_smtp_t {
 /**
  * Read the response code from an SMTP server
  */
-static int read_response(private_smtp_t *this)
+static int read_response(private_fast_smtp_t *this)
 {
 	char buf[256], *end;
 	int res = 0;
@@ -72,7 +72,7 @@ static int read_response(private_smtp_t *this)
 /**
  * write a SMTP command to the server, read response code
  */
-static int write_cmd(private_smtp_t *this, char *fmt, ...)
+static int write_cmd(private_fast_smtp_t *this, char *fmt, ...)
 {
 	char buf[256];
 	va_list args;
@@ -89,8 +89,8 @@ static int write_cmd(private_smtp_t *this, char *fmt, ...)
 	return read_response(this);
 }
 
-METHOD(smtp_t, send_mail, bool,
-	private_smtp_t *this, char *from, char *to, char *subject, char *fmt, ...)
+METHOD(fast_smtp_t, send_mail, bool,
+	private_fast_smtp_t *this, char *from, char *to, char *subject, char *fmt, ...)
 {
 	va_list args;
 
@@ -122,8 +122,8 @@ METHOD(smtp_t, send_mail, bool,
 }
 
 
-METHOD(smtp_t, destroy, void,
-	private_smtp_t *this)
+METHOD(fast_smtp_t, destroy, void,
+	private_fast_smtp_t *this)
 {
 	write_cmd(this, "QUIT");
 	fclose(this->f);
@@ -133,9 +133,9 @@ METHOD(smtp_t, destroy, void,
 /**
  * See header
  */
-smtp_t *smtp_create()
+fast_smtp_t *fast_smtp_create()
 {
-	private_smtp_t *this;
+	private_fast_smtp_t *this;
 	struct sockaddr_in addr = {
 		.sin_family = AF_INET,
 		.sin_port = htons(25),
@@ -185,4 +185,3 @@ smtp_t *smtp_create()
 	}
 	return &this->public;
 }
-

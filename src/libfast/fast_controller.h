@@ -14,17 +14,17 @@
  */
 
 /**
- * @defgroup controller controller
+ * @defgroup fast_controller fast_controller
  * @{ @ingroup libfast
  */
 
-#ifndef CONTROLLER_H_
-#define CONTROLLER_H_
+#ifndef FAST_CONTROLLER_H_
+#define FAST_CONTROLLER_H_
 
-#include "request.h"
-#include "context.h"
+#include "fast_request.h"
+#include "fast_context.h"
 
-typedef struct controller_t controller_t;
+typedef struct fast_controller_t fast_controller_t;
 
 /**
  * Constructor function for a controller.
@@ -32,7 +32,8 @@ typedef struct controller_t controller_t;
  * @param context		session specific context, implements context_t
  * @param param			user supplied param, as registered to the dispatcher
  */
-typedef controller_t *(*controller_constructor_t)(context_t* context, void *param);
+typedef fast_controller_t *(*fast_controller_constructor_t)(
+										fast_context_t* context, void *param);
 
 /**
  * Controller interface, to be implemented by users controllers.
@@ -41,14 +42,14 @@ typedef controller_t *(*controller_constructor_t)(context_t* context, void *para
  * associated set of private controller instances.
  * The controller handle function is called for each incoming request.
  */
-struct controller_t {
+struct fast_controller_t {
 
 	/**
 	 * Get the name of the controller.
 	 *
 	 * @return				name of the controller
 	 */
-	char* (*get_name)(controller_t *this);
+	char* (*get_name)(fast_controller_t *this);
 
 	/**
 	 * Handle a HTTP request for that controller.
@@ -65,13 +66,13 @@ struct controller_t {
 	 * @param p5			fifth parameter
 	 * @return
 	 */
-	void (*handle)(controller_t *this, request_t *request,
+	void (*handle)(fast_controller_t *this, fast_request_t *request,
 				   char *p1, char *p2, char *p3, char *p4, char *p5);
 
 	/**
 	 * Destroy the controller instance.
 	 */
-	void (*destroy) (controller_t *this);
+	void (*destroy) (fast_controller_t *this);
 };
 
-#endif /** CONTROLLER_H_ @}*/
+#endif /** FAST_CONTROLLER_H_ @}*/

@@ -28,20 +28,20 @@
  * The session context is instanciated per session. Sessions are managed
  * automatically through session cookies. The session context is kept alive
  * until the session times out. It must implement the context_t interface and
- * a #context_constructor_t is needed to create instances. To each session,
+ * a #fast_context_constructor_t is needed to create instances. To each session,
  * a set of controllers gets instanciated. The controller instances are per
  * session, so you can hold private data for each user.
  * Controllers need to implement the controller_t interface and need a
- * #controller_constructor_t function to create instances.
+ * #fast_controller_constructor_t function to create instances.
  *
  * A small example shows how to set up libfast:
  * @code
-	dispatcher_t *dispatcher;
+	fast_fast_dispatcher_t *dispatcher;
 	your_global_context_implementation_t *global;
 
 	global = initialize_your_global_context();
 
-	dispatcher = dispatcher_create(NULL, FALSE, 180,
+	dispatcher = fast_dispatcher_create(NULL, FALSE, 180,
 			(context_constructor_t)your_session_context_create, global);
 	dispatcher->add_controller(dispatcher, your_controller1_create, param1);
 	dispatcher->add_controller(dispatcher, your_controller2_create, param2);
@@ -55,17 +55,17 @@
    @endcode
  * @}
  *
- * @defgroup dispatcher dispatcher
+ * @defgroup fast_dispatcher fast_dispatcher
  * @{ @ingroup libfast
  */
 
-#ifndef DISPATCHER_H_
-#define DISPATCHER_H_
+#ifndef FAST_DISPATCHER_H_
+#define FAST_DISPATCHER_H_
 
-#include "controller.h"
-#include "filter.h"
+#include "fast_controller.h"
+#include "fast_filter.h"
 
-typedef struct dispatcher_t dispatcher_t;
+typedef struct fast_dispatcher_t fast_dispatcher_t;
 
 /**
  * Dispatcher, accepts connections using multiple threads.
@@ -75,7 +75,7 @@ typedef struct dispatcher_t dispatcher_t;
  * Each controller is instanciated in the session using the controller
  * constructor added with add_controller.
  */
-struct dispatcher_t {
+struct fast_dispatcher_t {
 
 	/**
 	 * Register a controller to the dispatcher.
@@ -86,8 +86,9 @@ struct dispatcher_t {
 	 * @param constructor	constructor function to the conntroller
 	 * @param param			param to pass to constructor
 	 */
-	void (*add_controller)(dispatcher_t *this,
-						   controller_constructor_t constructor, void *param);
+	void (*add_controller)(fast_dispatcher_t *this,
+						   fast_controller_constructor_t constructor,
+						   void *param);
 
 	/**
 	 * Add a filter to the dispatcher.
@@ -95,8 +96,8 @@ struct dispatcher_t {
 	 * @param constructor	constructor to create filter in session
 	 * @param param			param to pass to constructor
 	 */
-	void (*add_filter)(dispatcher_t *this,
-					   filter_constructor_t constructor, void *param);
+	void (*add_filter)(fast_dispatcher_t *this,
+					   fast_filter_constructor_t constructor, void *param);
 
 	/**
 	 * Start with dispatching.
@@ -105,18 +106,17 @@ struct dispatcher_t {
 	 *
 	 * @param threads		number of dispatching threads
 	 */
-	void (*run)(dispatcher_t *this, int threads);
+	void (*run)(fast_dispatcher_t *this, int threads);
 
 	/**
 	 * Wait for a relevant signal action.
-	 *
 	 */
-	void (*waitsignal)(dispatcher_t *this);
+	void (*waitsignal)(fast_dispatcher_t *this);
 
 	/**
-	 * Destroy the dispatcher_t.
+	 * Destroy the fast_dispatcher_t.
 	 */
-	void (*destroy) (dispatcher_t *this);
+	void (*destroy) (fast_dispatcher_t *this);
 };
 
 /**
@@ -131,7 +131,7 @@ struct dispatcher_t {
  * @param constructor	construction function for session context
  * @param param			parameter to supply to context constructor
  */
-dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
-								context_constructor_t constructor, void *param);
+fast_dispatcher_t *fast_dispatcher_create(char *socket, bool debug, int timeout,
+							fast_context_constructor_t constructor, void *param);
 
-#endif /** DISPATCHER_H_ @}*/
+#endif /** FAST_DISPATCHER_H_ @}*/

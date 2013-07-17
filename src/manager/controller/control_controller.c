@@ -43,7 +43,7 @@ struct private_control_controller_t {
 /**
  * handle the result of a control operation
  */
-static void handle_result(private_control_controller_t *this, request_t *r,
+static void handle_result(private_control_controller_t *this, fast_request_t *r,
 						  enumerator_t *e)
 {
 	enumerator_t *e1;
@@ -93,7 +93,7 @@ static void handle_result(private_control_controller_t *this, request_t *r,
 /**
  * initiate an IKE or CHILD SA
  */
-static void initiate(private_control_controller_t *this, request_t *r,
+static void initiate(private_control_controller_t *this, fast_request_t *r,
 					 bool ike, char *config)
 {
 	gateway_t *gateway;
@@ -108,7 +108,7 @@ static void initiate(private_control_controller_t *this, request_t *r,
 /**
  * terminate an IKE or CHILD SA
  */
-static void terminate(private_control_controller_t *this, request_t *r,
+static void terminate(private_control_controller_t *this, fast_request_t *r,
 					  bool ike, u_int32_t id)
 {
 	gateway_t *gateway;
@@ -120,14 +120,14 @@ static void terminate(private_control_controller_t *this, request_t *r,
 	handle_result(this, r, e);
 }
 
-METHOD(controller_t, get_name, char*,
+METHOD(fast_controller_t, get_name, char*,
 	private_control_controller_t *this)
 {
 	return "control";
 }
 
-METHOD(controller_t, handle, void,
-	private_control_controller_t *this, request_t *request, char *action,
+METHOD(fast_controller_t, handle, void,
+	private_control_controller_t *this, fast_request_t *request, char *action,
 	char *str, char *p3, char *p4, char *p5)
 {
 	if (!this->manager->logged_in(this->manager))
@@ -174,7 +174,7 @@ METHOD(controller_t, handle, void,
 	return request->redirect(request, "ikesa/list");
 }
 
-METHOD(controller_t, destroy, void,
+METHOD(fast_controller_t, destroy, void,
 	private_control_controller_t *this)
 {
 	free(this);
@@ -183,7 +183,8 @@ METHOD(controller_t, destroy, void,
 /*
  * see header file
  */
-controller_t *control_controller_create(context_t *context, void *param)
+fast_controller_t *control_controller_create(fast_context_t *context,
+											 void *param)
 {
 	private_control_controller_t *this;
 
@@ -200,4 +201,3 @@ controller_t *control_controller_create(context_t *context, void *param)
 
 	return &this->public.controller;
 }
-

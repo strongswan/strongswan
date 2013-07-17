@@ -52,7 +52,7 @@ struct private_peer_controller_t {
 /**
  * list the configured peer configs
  */
-static void list(private_peer_controller_t *this, request_t *request)
+static void list(private_peer_controller_t *this, fast_request_t *request)
 {
 	enumerator_t *query;
 
@@ -83,7 +83,7 @@ static void list(private_peer_controller_t *this, request_t *request)
 /**
  * verify a peer alias
  */
-static bool verify_alias(private_peer_controller_t *this, request_t *request,
+static bool verify_alias(private_peer_controller_t *this, fast_request_t *request,
 						 char *alias)
 {
 	if (!alias || *alias == '\0')
@@ -117,7 +117,7 @@ static bool verify_alias(private_peer_controller_t *this, request_t *request,
  * parse and verify a public key
  */
 static bool parse_public_key(private_peer_controller_t *this,
-							 request_t *request, char *public_key,
+							 fast_request_t *request, char *public_key,
 							 chunk_t *encoding, chunk_t *keyid)
 {
 	public_key_t *public;
@@ -153,7 +153,7 @@ static bool parse_public_key(private_peer_controller_t *this,
 /**
  * register a new peer
  */
-static void add(private_peer_controller_t *this, request_t *request)
+static void add(private_peer_controller_t *this, fast_request_t *request)
 {
 	char *alias = "", *public_key = "";
 
@@ -231,7 +231,7 @@ char* pem_encode(chunk_t der)
 /**
  * edit a peer
  */
-static void edit(private_peer_controller_t *this, request_t *request, int id)
+static void edit(private_peer_controller_t *this, fast_request_t *request, int id)
 {
 	char *alias = "", *public_key = "", *pem;
 	chunk_t encoding, keyid;
@@ -305,21 +305,21 @@ static void edit(private_peer_controller_t *this, request_t *request, int id)
 /**
  * delete a peer from the database
  */
-static void delete(private_peer_controller_t *this, request_t *request, int id)
+static void delete(private_peer_controller_t *this, fast_request_t *request, int id)
 {
 	this->db->execute(this->db, NULL,
 					  "DELETE FROM peer WHERE id = ? AND user = ?",
 					  DB_INT, id, DB_UINT, this->user->get_user(this->user));
 }
 
-METHOD(controller_t, get_name, char*,
+METHOD(fast_controller_t, get_name, char*,
 	private_peer_controller_t *this)
 {
 	return "peer";
 }
 
-METHOD(controller_t, handle, void,
-	private_peer_controller_t *this, request_t *request, char *action,
+METHOD(fast_controller_t, handle, void,
+	private_peer_controller_t *this, fast_request_t *request, char *action,
 	char *idstr, char *p3, char *p4, char *p5)
 {
 	if (action)
@@ -350,7 +350,7 @@ METHOD(controller_t, handle, void,
 	request->redirect(request, "peer/list");
 }
 
-METHOD(controller_t, destroy, void,
+METHOD(fast_controller_t, destroy, void,
 	private_peer_controller_t *this)
 {
 	free(this);
@@ -359,7 +359,7 @@ METHOD(controller_t, destroy, void,
 /*
  * see header file
  */
-controller_t *peer_controller_create(user_t *user, database_t *db)
+fast_controller_t *peer_controller_create(user_t *user, database_t *db)
 {
 	private_peer_controller_t *this;
 
@@ -377,4 +377,3 @@ controller_t *peer_controller_create(user_t *user, database_t *db)
 
 	return &this->public.controller;
 }
-

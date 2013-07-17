@@ -14,21 +14,21 @@
  */
 
 /**
- * @defgroup smtp smtp
+ * @defgroup fast_smtp fast_smtp
  * @{ @ingroup libfast
  */
 
-#ifndef SMTP_H_
-#define SMTP_H_
+#ifndef FAST_SMTP_H_
+#define FAST_SMTP_H_
 
-typedef struct smtp_t smtp_t;
+typedef struct fast_smtp_t fast_smtp_t;
 
 #include <library.h>
 
 /**
  * Ultra-minimalistic SMTP client. Works at most with Exim on localhost.
  */
-struct smtp_t {
+struct fast_smtp_t {
 
 	/**
 	 * Send an e-mail message.
@@ -39,18 +39,18 @@ struct smtp_t {
 	 * @param fmt		mail body format string
 	 * @param ...		arguments for body format string
 	 */
-	bool (*send_mail)(smtp_t *this, char *from, char *to,
+	bool (*send_mail)(fast_smtp_t *this, char *from, char *to,
 					  char *subject, char *fmt, ...);
 
 	/**
-	 * Destroy a smtp_t.
+	 * Destroy a fast_smtp_t.
 	 */
-	void (*destroy)(smtp_t *this);
+	void (*destroy)(fast_smtp_t *this);
 };
 
 /**
  * Create a smtp instance.
  */
-smtp_t *smtp_create();
+fast_smtp_t *fast_smtp_create();
 
-#endif /** SMTP_H_ @}*/
+#endif /** FAST_SMTP_H_ @}*/

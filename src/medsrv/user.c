@@ -45,7 +45,7 @@ METHOD(user_t, get_user, u_int,
 	return this->user;
 }
 
-METHOD(context_t, destroy, void,
+METHOD(fast_context_t, destroy, void,
 	private_user_t *this)
 {
 	free(this);
@@ -70,4 +70,3 @@ user_t *user_create(void *param)
 
 	return &this->public;
 }
-

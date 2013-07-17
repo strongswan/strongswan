@@ -29,7 +29,7 @@
 #include "storage.h"
 #include "gateway.h"
 
-#include <context.h>
+#include <fast_context.h>
 
 typedef struct manager_t manager_t;
 
@@ -41,7 +41,7 @@ struct manager_t {
 	/**
 	 * implements context_t interface
 	 */
-	context_t context;
+	fast_context_t context;
 
 	/**
 	 * Create an enumerator over all configured gateways.

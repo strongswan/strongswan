@@ -24,7 +24,7 @@
 
 #include <user.h>
 
-#include <controller.h>
+#include <fast_controller.h>
 #include <database/database.h>
 
 typedef struct peer_controller_t peer_controller_t;
@@ -37,12 +37,12 @@ struct peer_controller_t {
 	/**
 	 * Implements controller_t interface.
 	 */
-	controller_t controller;
+	fast_controller_t controller;
 };
 
 /**
  * Create a peer_controller controller instance.
  */
-controller_t *peer_controller_create(user_t *user, database_t *db);
+fast_controller_t *peer_controller_create(user_t *user, database_t *db);
 
 #endif /** PEER_CONTROLLER_H_ @}*/

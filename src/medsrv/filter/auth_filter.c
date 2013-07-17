@@ -40,8 +40,8 @@ struct private_auth_filter_t {
 	database_t *db;
 };
 
-METHOD(filter_t, run, bool,
-	private_auth_filter_t *this, request_t *request, char *controller,
+METHOD(fast_filter_t, run, bool,
+	private_auth_filter_t *this, fast_request_t *request, char *controller,
 	char *action, char *p2, char *p3, char *p4, char *p5)
 {
 	if (this->user->get_user(this->user))
@@ -70,7 +70,7 @@ METHOD(filter_t, run, bool,
 	return FALSE;
 }
 
-METHOD(filter_t, destroy, void,
+METHOD(fast_filter_t, destroy, void,
 	private_auth_filter_t *this)
 {
 	free(this);
@@ -79,7 +79,7 @@ METHOD(filter_t, destroy, void,
 /*
  * see header file
  */
-filter_t *auth_filter_create(user_t *user, database_t *db)
+fast_filter_t *auth_filter_create(user_t *user, database_t *db)
 {
 	private_auth_filter_t *this;
 
@@ -96,4 +96,3 @@ filter_t *auth_filter_create(user_t *user, database_t *db)
 
 	return &this->public.filter;
 }
-

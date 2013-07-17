@@ -14,18 +14,18 @@
  */
 
 /*
- * @defgroup filter filter
+ * @defgroup fast_filter fast_filter
  * @{ @ingroup libfast
  */
 
-#ifndef FILTER_H_
-#define FILTER_H_
+#ifndef FAST_FILTER_H_
+#define FAST_FILTER_H_
 
-#include "request.h"
-#include "context.h"
-#include "controller.h"
+#include "fast_request.h"
+#include "fast_context.h"
+#include "fast_controller.h"
 
-typedef struct filter_t filter_t;
+typedef struct fast_filter_t fast_filter_t;
 
 /**
  * Constructor function for a filter
@@ -33,12 +33,13 @@ typedef struct filter_t filter_t;
  * @param context		session specific context
  * @param param			user supplied param
  */
-typedef filter_t *(*filter_constructor_t)(context_t* context, void *param);
+typedef fast_filter_t *(*fast_filter_constructor_t)(fast_context_t* context,
+													void *param);
 
 /**
  * Filter interface, to be implemented by users filters.
  */
-struct filter_t {
+struct fast_filter_t {
 
 	/**
 	 * Called before the controller handles the request.
@@ -51,13 +52,13 @@ struct filter_t {
 	 * @param p5			fifth parameter
 	 * @return				TRUE to continue request handling
 	 */
-	bool (*run)(filter_t *this, request_t *request,
+	bool (*run)(fast_filter_t *this, fast_request_t *request,
 				char *p0, char *p1, char *p2, char *p3, char *p4, char *p5);
 
 	/**
 	 * Destroy the filter instance.
 	 */
-	void (*destroy) (filter_t *this);
+	void (*destroy) (fast_filter_t *this);
 };
 
-#endif /* FILTER_H_ @} */
+#endif /* FAST_FILTER_H_ @} */

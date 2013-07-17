@@ -14,56 +14,56 @@
  */
 
 /**
- * @defgroup session session
+ * @defgroup fast_session fast_session
  * @{ @ingroup libfast
  */
 
-#ifndef SESSION_H_
-#define SESSION_H_
+#ifndef FAST_SESSION_H_
+#define FAST_SESSION_H_
 
-#include "request.h"
-#include "controller.h"
-#include "filter.h"
+#include "fast_request.h"
+#include "fast_controller.h"
+#include "fast_filter.h"
 
-typedef struct session_t session_t;
+typedef struct fast_session_t fast_session_t;
 
 /**
  * Session handling class, instanciated for each user session.
  */
-struct session_t {
+struct fast_session_t {
 
 	/**
 	 * Get the session ID of the session.
 	 *
 	 * @return				session ID
 	 */
-	char* (*get_sid)(session_t *this);
+	char* (*get_sid)(fast_session_t *this);
 
 	/**
 	 * Add a controller instance to the session.
 	 *
 	 * @param controller	controller to add
 	 */
-	void (*add_controller)(session_t *this, controller_t *controller);
+	void (*add_controller)(fast_session_t *this, fast_controller_t *controller);
 
 	/**
 	 * Add a filter instance to the session.
 	 *
 	 * @param filter		filter to add
 	 */
-	void (*add_filter)(session_t *this, filter_t *filter);
+	void (*add_filter)(fast_session_t *this, fast_filter_t *filter);
 
 	/**
 	 * Process a request in this session.
 	 *
 	 * @param request		request to process
 	 */
-	void (*process)(session_t *this, request_t *request);
+	void (*process)(fast_session_t *this, fast_request_t *request);
 
 	/**
-	 * Destroy the session_t.
+	 * Destroy the fast_session_t.
 	 */
-	void (*destroy) (session_t *this);
+	void (*destroy) (fast_session_t *this);
 };
 
 /**
@@ -72,6 +72,6 @@ struct session_t {
  * @param context		user defined session context instance
  * @return				client session, NULL on error
  */
-session_t *session_create(context_t *context);
+fast_session_t *fast_session_create(fast_context_t *context);
 
 #endif /** SESSION_H_ @}*/

@@ -1,12 +1,13 @@
 ipseclib_LTLIBRARIES = libfast.la
 
 libfast_la_SOURCES = \
-	dispatcher.c request.c session.c smtp.c
+	fast_dispatcher.c fast_request.c fast_session.c fast_smtp.c
 
 if USE_DEV_HEADERS
 fast_includedir = ${dev_headers}/fast
 nobase_fast_include_HEADERS = \
-	context.h controller.h dispatcher.h filter.h request.h session.h smtp.h
+	fast_context.h fast_controller.h fast_dispatcher.h fast_filter.h \
+	fast_request.h fast_session.h fast_smtp.h
 endif
 
 libfast_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \

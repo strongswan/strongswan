@@ -21,8 +21,7 @@
 #ifndef CONTROL_CONTROLLER_H_
 #define CONTROL_CONTROLLER_H_
 
-
-#include <controller.h>
+#include <fast_controller.h>
 
 typedef struct control_controller_t control_controller_t;
 
@@ -34,12 +33,13 @@ struct control_controller_t {
 	/**
 	 * Implements controller_t interface.
 	 */
-	controller_t controller;
+	fast_controller_t controller;
 };
 
 /**
  * Create a control_controller controller instance.
  */
-controller_t *control_controller_create(context_t *context, void *param);
+fast_controller_t *control_controller_create(fast_context_t *context,
+											 void *param);
 
 #endif /** CONTROL_CONTROLLER_H_ @}*/
