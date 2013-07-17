@@ -58,19 +58,30 @@ METHOD(listener_t, child_updown, bool,
 	bool up)
 {
 	enumerator_t *enumerator;
+	traffic_selector_t *ts;
 	entry_t *entry;
 
 	if (up)
 	{
 		INIT(entry,
-			.local = child_sa->get_traffic_selectors(child_sa, TRUE),
-			.remote = child_sa->get_traffic_selectors(child_sa, FALSE),
+			.local = linked_list_create(),
+			.remote = linked_list_create(),
 			.reqid = child_sa->get_reqid(child_sa),
 		);
-		entry->local = entry->local->clone_offset(entry->local,
-										offsetof(traffic_selector_t, clone));
-		entry->remote = entry->remote->clone_offset(entry->remote,
-										offsetof(traffic_selector_t, clone));
+
+		enumerator = child_sa->create_ts_enumerator(child_sa, TRUE);
+		while (enumerator->enumerate(enumerator, &ts))
+		{
+			entry->local->insert_last(entry->local, ts->clone(ts));
+		}
+		enumerator->destroy(enumerator);
+
+		enumerator = child_sa->create_ts_enumerator(child_sa, FALSE);
+		while (enumerator->enumerate(enumerator, &ts))
+		{
+			entry->remote->insert_last(entry->remote, ts->clone(ts));
+		}
+		enumerator->destroy(enumerator);
 
 		this->lock->write_lock(this->lock);
 		this->entries->insert_last(this->entries, entry);
@@ -160,4 +171,3 @@ farp_listener_t *farp_listener_create()
 
 	return &this->public;
 }
-

@@ -207,8 +207,10 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	time_t use_in, use_out, rekey, now;
 	u_int64_t bytes_in, bytes_out, packets_in, packets_out;
 	proposal_t *proposal;
-	child_cfg_t *config = child_sa->get_config(child_sa);
+	linked_list_t *my_ts, *other_ts;
+	child_cfg_t *config;
 
+	config = child_sa->get_config(child_sa);
 	now = time_monotonic(NULL);
 
 	fprintf(out, "%12s{%d}:  %N, %N%s",
@@ -319,10 +321,15 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 		fprintf(out, ", expires in %V", &now, &rekey);
 	}
 
+	my_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, FALSE));
 	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-			child_sa->get_traffic_selectors(child_sa, TRUE),
-			child_sa->get_traffic_selectors(child_sa, FALSE));
+			my_ts, other_ts);
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
 }
 
 /**

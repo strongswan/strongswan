@@ -165,8 +165,10 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
 
 	xmlTextWriterWriteFormatElement(writer, "spi", "%x",
 									htonl(child->get_spi(child, local)));
-	list = child->get_traffic_selectors(child, local);
+	list = linked_list_create_from_enumerator(
+									child->create_ts_enumerator(child, local));
 	write_networks(writer, "networks", list);
+	list->destroy(list);
 }
 
 /**

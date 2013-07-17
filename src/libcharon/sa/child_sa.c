@@ -331,10 +331,14 @@ METHOD(child_sa_t, set_proposal, void,
 	this->proposal = proposal->clone(proposal);
 }
 
-METHOD(child_sa_t, get_traffic_selectors, linked_list_t*,
-	   private_child_sa_t *this, bool local)
+METHOD(child_sa_t, create_ts_enumerator, enumerator_t*,
+	private_child_sa_t *this, bool local)
 {
-	return local ? this->my_ts : this->other_ts;
+	if (local)
+	{
+		return this->my_ts->create_enumerator(this->my_ts);
+	}
+	return this->other_ts->create_enumerator(this->other_ts);
 }
 
 typedef struct policy_enumerator_t policy_enumerator_t;
@@ -1117,7 +1121,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.install = _install,
 			.update = _update,
 			.add_policies = _add_policies,
-			.get_traffic_selectors = _get_traffic_selectors,
+			.create_ts_enumerator = _create_ts_enumerator,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
 		},

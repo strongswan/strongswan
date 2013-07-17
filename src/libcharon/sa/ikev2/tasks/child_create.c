@@ -673,6 +673,22 @@ static status_t select_and_install(private_child_create_t *this,
 	{	/* a rekeyed SA uses the same reqid, no need for a new job */
 		schedule_inactivity_timeout(this);
 	}
+
+	my_ts = linked_list_create_from_enumerator(
+				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
+
+	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
+		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+		 this->child_sa->get_name(this->child_sa),
+		 this->child_sa->get_reqid(this->child_sa),
+		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
+		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
+
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
+
 	return SUCCESS;
 }
 
@@ -1245,15 +1261,6 @@ METHOD(task_t, build_r, status_t,
 
 	build_payloads(this, message);
 
-	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
-		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
-		 this->child_sa->get_name(this->child_sa),
-		 this->child_sa->get_reqid(this->child_sa),
-		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
-		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
-		 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
-		 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
-
 	if (!this->rekey)
 	{	/* invoke the child_up() hook if we are not rekeying */
 		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
@@ -1431,15 +1438,6 @@ METHOD(task_t, process_i, status_t,
 
 	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
 	{
-		DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
-			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
-			 this->child_sa->get_name(this->child_sa),
-			 this->child_sa->get_reqid(this->child_sa),
-			 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
-			 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
-			 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
-			 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
-
 		if (!this->rekey)
 		{	/* invoke the child_up() hook if we are not rekeying */
 			charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
