@@ -1266,7 +1266,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 		if (name)
 		{
 			*name = strdup(entry->iface->ifname);
-			DBG2(DBG_KNL, "virtual %H is on interface %s", ip, *name);
+			DBG2(DBG_KNL, "virtual IP %H is on interface %s", ip, *name);
 		}
 		this->lock->unlock(this->lock);
 		return TRUE;

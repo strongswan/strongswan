@@ -981,6 +981,10 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 {
 	traffic_selector_t *ts;
 	host_t *host;
+	u_int8_t proto;
+
+	proto = address->sadb_address_proto;
+	proto = proto == IPSEC_PROTO_ANY ? 0 : proto;
 
 	/* The Linux 2.6 kernel does not set the protocol and port information
 	 * in the src and dst sadb_address extensions of the SADB_ACQUIRE message.
@@ -988,8 +992,7 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 	host = host_create_from_sockaddr((sockaddr_t*)&address[1]);
 	ts = traffic_selector_create_from_subnet(host,
 											 address->sadb_address_prefixlen,
-											 address->sadb_address_proto,
-											 host->get_port(host),
+											 proto, host->get_port(host),
 											 host->get_port(host) ?: 65535);
 	return ts;
 }
@@ -1990,10 +1993,14 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 												   dst, NULL);
 		if (gtw)
 		{
-			if (hydra->kernel_interface->add_route(hydra->kernel_interface,
+			char *if_name = NULL;
+
+			if (hydra->kernel_interface->get_interface(
+									hydra->kernel_interface, src, &if_name) &&
+				hydra->kernel_interface->add_route(hydra->kernel_interface,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
-									gtw, src, NULL) == SUCCESS)
+									gtw, src, if_name) == SUCCESS)
 			{
 				INIT(exclude,
 					.dst = dst->clone(dst),
@@ -2009,6 +2016,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 				DBG1(DBG_KNL, "installing exclude route for %H failed", dst);
 			}
 			gtw->destroy(gtw);
+			free(if_name);
 		}
 		else
 		{
@@ -2047,18 +2055,24 @@ static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
 
 		if (removed)
 		{
+			char *if_name = NULL;
+
 			dst = route->exclude->dst;
 			DBG2(DBG_KNL, "uninstalling exclude route for %H src %H",
 				 dst, route->exclude->src);
-			if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+			if (hydra->kernel_interface->get_interface(
+									hydra->kernel_interface,
+									route->exclude->src, &if_name) &&
+				hydra->kernel_interface->del_route(hydra->kernel_interface,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									route->exclude->gtw, route->exclude->src,
-									NULL) != SUCCESS)
+									if_name) != SUCCESS)
 			{
 				DBG1(DBG_KNL, "uninstalling exclude route for %H failed", dst);
 			}
 			exclude_route_destroy(route->exclude);
+			free(if_name);
 		}
 		route->exclude = NULL;
 	}
@@ -2476,9 +2490,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
 	policy_entry_t *policy, *found = NULL;
-	policy_sa_t *mapping;
+	policy_sa_t *mapping, *to_remove = NULL;
 	enumerator_t *enumerator;
-	bool is_installed = TRUE;
+	bool first = TRUE, is_installed = TRUE;
 	u_int32_t priority;
 	size_t len;
 
@@ -2508,19 +2522,26 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_entry_destroy(policy, this);
 	policy = found;
 
-	/* remove mapping to SA by reqid and priority */
+	/* remove mapping to SA by reqid and priority, if multiple match, which
+	 * could happen when rekeying due to an address change, remove the oldest */
 	priority = get_priority(policy, prio);
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
 		if (reqid == mapping->sa->cfg.reqid && priority == mapping->priority)
 		{
-			policy->used_by->remove_at(policy->used_by, enumerator);
+			to_remove = mapping;
+			is_installed = first;
+		}
+		else if (priority < mapping->priority)
+		{
 			break;
 		}
-		is_installed = FALSE;
+		first = FALSE;
 	}
 	enumerator->destroy(enumerator);
+	policy->used_by->remove(policy->used_by, to_remove, NULL);
+	mapping = to_remove;
 
 	if (policy->used_by->get_count(policy->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */

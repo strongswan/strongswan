@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 Tobias Brunner
+ * Copyright (C) 2009-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -52,6 +52,9 @@
 
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
+
+/** delay before reinstalling routes (ms) */
+#define ROUTE_DELAY 100
 
 typedef struct addr_entry_t addr_entry_t;
 
@@ -133,6 +136,9 @@ struct addr_map_entry_t {
 	/** The IP address */
 	host_t *ip;
 
+	/** The address entry for this IP address */
+	addr_entry_t *addr;
+
 	/** The interface this address is installed on */
 	iface_entry_t *iface;
 };
@@ -163,8 +169,17 @@ static bool addr_map_entry_equals(addr_map_entry_t *a, addr_map_entry_t *b)
 static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
 											   addr_map_entry_t *b)
 {
-	return iface_entry_up_and_usable(b->iface) &&
-		   a->ip->ip_equals(a->ip, b->ip);
+	return !b->addr->virtual && iface_entry_up_and_usable(b->iface) &&
+			a->ip->ip_equals(a->ip, b->ip);
+}
+
+/**
+ * Used with get_match this finds an address entry if it is installed as virtual
+ * IP address
+ */
+static bool addr_map_entry_match_virtual(addr_map_entry_t *a, addr_map_entry_t *b)
+{
+	return b->addr->virtual && a->ip->ip_equals(a->ip, b->ip);
 }
 
 /**
@@ -173,7 +188,112 @@ static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
  */
 static bool addr_map_entry_match_up(addr_map_entry_t *a, addr_map_entry_t *b)
 {
-	return iface_entry_up(b->iface) && a->ip->ip_equals(a->ip, b->ip);
+	return !b->addr->virtual && iface_entry_up(b->iface) &&
+			a->ip->ip_equals(a->ip, b->ip);
+}
+
+typedef struct route_entry_t route_entry_t;
+
+/**
+ * Installed routing entry
+ */
+struct route_entry_t {
+	/** Name of the interface the route is bound to */
+	char *if_name;
+
+	/** Gateway for this route */
+	host_t *gateway;
+
+	/** Destination net */
+	chunk_t dst_net;
+
+	/** Destination net prefixlen */
+	u_int8_t prefixlen;
+};
+
+/**
+ * Clone a route_entry_t object.
+ */
+static route_entry_t *route_entry_clone(route_entry_t *this)
+{
+	route_entry_t *route;
+
+	INIT(route,
+		.if_name = strdup(this->if_name),
+		.gateway = this->gateway ? this->gateway->clone(this->gateway) : NULL,
+		.dst_net = chunk_clone(this->dst_net),
+		.prefixlen = this->prefixlen,
+	);
+	return route;
+}
+
+/**
+ * Destroy a route_entry_t object
+ */
+static void route_entry_destroy(route_entry_t *this)
+{
+	free(this->if_name);
+	DESTROY_IF(this->gateway);
+	chunk_free(&this->dst_net);
+	free(this);
+}
+
+/**
+ * Hash a route_entry_t object
+ */
+static u_int route_entry_hash(route_entry_t *this)
+{
+	return chunk_hash_inc(chunk_from_thing(this->prefixlen),
+						  chunk_hash(this->dst_net));
+}
+
+/**
+ * Compare two route_entry_t objects
+ */
+static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
+{
+	if (a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
+		chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
+	{
+		return (!a->gateway && !b->gateway) || (a->gateway && b->gateway &&
+					a->gateway->ip_equals(a->gateway, b->gateway));
+	}
+	return FALSE;
+}
+
+typedef struct net_change_t net_change_t;
+
+/**
+ * Queued network changes
+ */
+struct net_change_t {
+	/** Name of the interface that got activated (or an IP appeared on) */
+	char *if_name;
+};
+
+/**
+ * Destroy a net_change_t object
+ */
+static void net_change_destroy(net_change_t *this)
+{
+	free(this->if_name);
+	free(this);
+}
+
+/**
+ * Hash a net_change_t object
+ */
+static u_int net_change_hash(net_change_t *this)
+{
+	return chunk_hash(chunk_create(this->if_name, strlen(this->if_name)));
+}
+
+/**
+ * Compare two net_change_t objects
+ */
+static bool net_change_equals(net_change_t *a, net_change_t *b)
+{
+	return streq(a->if_name, b->if_name);
 }
 
 typedef struct private_kernel_pfroute_net_t private_kernel_pfroute_net_t;
@@ -219,6 +339,31 @@ struct private_kernel_pfroute_net_t
 	condvar_t *condvar;
 
 	/**
+	 * installed routes
+	 */
+	hashtable_t *routes;
+
+	/**
+	 * mutex for routes
+	 */
+	mutex_t *routes_lock;
+
+	/**
+	 * interface changes which may trigger route reinstallation
+	 */
+	hashtable_t *net_changes;
+
+	/**
+	 * mutex for route reinstallation triggers
+	 */
+	mutex_t *net_changes_lock;
+
+	/**
+	 * time of last route reinstallation
+	 */
+	timeval_t last_route_reinstall;
+
+	/**
 	 * pid to send PF_ROUTE messages with
 	 */
 	pid_t pid;
@@ -247,7 +392,107 @@ struct private_kernel_pfroute_net_t
 	 * time of last roam event
 	 */
 	timeval_t last_roam;
+
+	/**
+	 * Time in ms to wait for IP addresses to appear/disappear
+	 */
+	int vip_wait;
 };
+
+
+/**
+ * Forward declaration
+ */
+static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
+							 chunk_t dst_net, u_int8_t prefixlen,
+							 host_t *gateway, char *if_name);
+
+/**
+ * Clear the queued network changes.
+ */
+static void net_changes_clear(private_kernel_pfroute_net_t *this)
+{
+	enumerator_t *enumerator;
+	net_change_t *change;
+
+	enumerator = this->net_changes->create_enumerator(this->net_changes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&change))
+	{
+		this->net_changes->remove_at(this->net_changes, enumerator);
+		net_change_destroy(change);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Act upon queued network changes.
+ */
+static job_requeue_t reinstall_routes(private_kernel_pfroute_net_t *this)
+{
+	enumerator_t *enumerator;
+	route_entry_t *route;
+
+	this->net_changes_lock->lock(this->net_changes_lock);
+	this->routes_lock->lock(this->routes_lock);
+
+	enumerator = this->routes->create_enumerator(this->routes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+	{
+		net_change_t *change, lookup = {
+			.if_name = route->if_name,
+		};
+		/* check if a change for the outgoing interface is queued */
+		change = this->net_changes->get(this->net_changes, &lookup);
+		if (change)
+		{
+			manage_route(this, RTM_ADD, route->dst_net, route->prefixlen,
+						 route->gateway, route->if_name);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->routes_lock->unlock(this->routes_lock);
+
+	net_changes_clear(this);
+	this->net_changes_lock->unlock(this->net_changes_lock);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Queue route reinstallation caused by network changes for a given interface.
+ *
+ * The route reinstallation is delayed for a while and only done once for
+ * several calls during this delay, in order to avoid doing it too often.
+ * The interface name is freed.
+ */
+static void queue_route_reinstall(private_kernel_pfroute_net_t *this,
+								  char *if_name)
+{
+	net_change_t *update, *found;
+	timeval_t now;
+	job_t *job;
+
+	INIT(update,
+		.if_name = if_name
+	);
+
+	this->net_changes_lock->lock(this->net_changes_lock);
+	found = this->net_changes->put(this->net_changes, update, update);
+	if (found)
+	{
+		net_change_destroy(found);
+	}
+	time_monotonic(&now);
+	if (timercmp(&now, &this->last_route_reinstall, >))
+	{
+		timeval_add_ms(&now, ROUTE_DELAY);
+		this->last_route_reinstall = now;
+
+		job = (job_t*)callback_job_create((callback_job_cb_t)reinstall_routes,
+										  this, NULL, NULL);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, ROUTE_DELAY);
+	}
+	this->net_changes_lock->unlock(this->net_changes_lock);
+}
 
 /**
  * Add an address map entry
@@ -257,13 +502,9 @@ static void addr_map_entry_add(private_kernel_pfroute_net_t *this,
 {
 	addr_map_entry_t *entry;
 
-	if (addr->virtual)
-	{	/* don't map virtual IPs */
-		return;
-	}
-
 	INIT(entry,
 		.ip = addr->ip,
+		.addr = addr,
 		.iface = iface,
 	);
 	entry = this->addrs->put(this->addrs, entry, entry);
@@ -279,14 +520,10 @@ static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = addr->ip,
+		.addr = addr,
 		.iface = iface,
 	};
 
-	if (addr->virtual)
-	{	/* these are never mapped, but this check avoid problems if a virtual IP
-		 * equals a regular one */
-		return;
-	}
 	entry = this->addrs->remove(this->addrs, &lookup);
 	free(entry);
 }
@@ -364,11 +601,11 @@ METHOD(enumerator_t, rt_enumerate, bool,
 }
 
 /**
- * Create a safe enumerator over sockaddrs in ifa/ifam/rt_msg
+ * Create an enumerator over sockaddrs in rt/if messages
  */
-static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
+static enumerator_t *create_rt_enumerator(int types, int remaining,
+										  struct sockaddr *addr)
 {
-	struct rt_msghdr *rthdr = hdr;
 	rt_enumerator_t *this;
 
 	INIT(this,
@@ -376,11 +613,29 @@ static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
 			.enumerate = (void*)_rt_enumerate,
 			.destroy = (void*)free,
 		},
-		.types = rthdr->rtm_addrs,
-		.remaining = rthdr->rtm_msglen - hdrlen,
-		.addr = hdr + hdrlen,
+		.types = types,
+		.remaining = remaining,
+		.addr = addr,
 	);
 	return &this->public;
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in rt_msghdr
+ */
+static enumerator_t *create_rtmsg_enumerator(struct rt_msghdr *hdr)
+{
+	return create_rt_enumerator(hdr->rtm_addrs, hdr->rtm_msglen - sizeof(*hdr),
+								(struct sockaddr *)(hdr + 1));
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in ifa_msghdr
+ */
+static enumerator_t *create_ifamsg_enumerator(struct ifa_msghdr *hdr)
+{
+	return create_rt_enumerator(hdr->ifam_addrs, hdr->ifam_msglen - sizeof(*hdr),
+								(struct sockaddr *)(hdr + 1));
 }
 
 /**
@@ -396,9 +651,10 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	addr_entry_t *addr;
 	bool found = FALSE, changed = FALSE, roam = FALSE;
 	enumerator_t *enumerator;
+	char *ifname = NULL;
 	int type;
 
-	enumerator = create_rtmsg_enumerator(ifa, sizeof(*ifa));
+	enumerator = create_ifamsg_enumerator(ifa);
 	while (enumerator->enumerate(enumerator, &type, &sockaddr))
 	{
 		if (type == RTAX_IFA)
@@ -409,8 +665,9 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!host)
+	if (!host || host->is_anyaddr(host))
 	{
+		DESTROY_IF(host);
 		return;
 	}
 
@@ -448,6 +705,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 					.ip = host->clone(host),
 				);
 				changed = TRUE;
+				ifname = strdup(iface->ifname);
 				iface->addrs->insert_last(iface->addrs, addr);
 				addr_map_entry_add(this, addr, iface);
 				if (iface->usable)
@@ -466,6 +724,15 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	ifaces->destroy(ifaces);
 	this->lock->unlock(this->lock);
 	host->destroy(host);
+
+	if (roam && ifname)
+	{
+		queue_route_reinstall(this, ifname);
+	}
+	else
+	{
+		free(ifname);
+	}
 
 	if (roam)
 	{
@@ -521,7 +788,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 {
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
-	bool roam = FALSE, found = FALSE;
+	bool roam = FALSE, found = FALSE, update_routes = FALSE;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -533,7 +800,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 			{
 				if (!(iface->flags & IFF_UP) && (msg->ifm_flags & IFF_UP))
 				{
-					roam = TRUE;
+					roam = update_routes = TRUE;
 					DBG1(DBG_KNL, "interface %s activated", iface->ifname);
 				}
 				else if ((iface->flags & IFF_UP) && !(msg->ifm_flags & IFF_UP))
@@ -564,6 +831,10 @@ static void process_link(private_kernel_pfroute_net_t *this,
 										hydra->kernel_interface, iface->ifname);
 			repopulate_iface(this, iface);
 			this->ifaces->insert_last(this->ifaces, iface);
+			if (iface->usable)
+			{
+				roam = update_routes = TRUE;
+			}
 		}
 		else
 		{
@@ -571,6 +842,11 @@ static void process_link(private_kernel_pfroute_net_t *this,
 		}
 	}
 	this->lock->unlock(this->lock);
+
+	if (update_routes)
+	{
+		queue_route_reinstall(this, strdup(iface->ifname));
+	}
 
 	if (roam)
 	{
@@ -812,6 +1088,19 @@ METHOD(kernel_net_t, get_interface_name, bool,
 		this->lock->unlock(this->lock);
 		return TRUE;
 	}
+	/* check if it is a virtual IP */
+	entry = this->addrs->get_match(this->addrs, &lookup,
+								  (void*)addr_map_entry_match_virtual);
+	if (entry)
+	{
+		if (name)
+		{
+			*name = strdup(entry->iface->ifname);
+			DBG2(DBG_KNL, "virtual IP %H is on interface %s", ip, *name);
+		}
+		this->lock->unlock(this->lock);
+		return TRUE;
+	}
 	/* maybe it is installed on an ignored interface */
 	entry = this->addrs->get_match(this->addrs, &lookup,
 								  (void*)addr_map_entry_match_up);
@@ -852,7 +1141,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 	this->mutex->lock(this->mutex);
 	while (!timeout && !get_interface_name(this, vip, NULL))
 	{
-		timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+		timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+											this->vip_wait);
 	}
 	this->mutex->unlock(this->mutex);
 	if (timeout)
@@ -880,11 +1170,16 @@ METHOD(kernel_net_t, add_ip, status_t,
 				}
 			}
 			addrs->destroy(addrs);
+			/* during IKEv1 reauthentication, children get moved from
+			 * old the new SA before the virtual IP is available. This
+			 * kills the route for our virtual IP, reinstall. */
+			queue_route_reinstall(this, strdup(iface->ifname));
+			break;
 		}
 	}
 	ifaces->destroy(ifaces);
 	/* lets do this while holding the lock, thus preventing another thread
-	 * from deleting the TUN device concurrently, hopefully listeneres are quick
+	 * from deleting the TUN device concurrently, hopefully listeners are quick
 	 * and cause no deadlocks */
 	hydra->kernel_interface->tun(hydra->kernel_interface, tun, TRUE);
 	this->lock->unlock(this->lock);
@@ -929,7 +1224,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 		this->mutex->lock(this->mutex);
 		while (!timeout && get_interface_name(this, vip, NULL))
 		{
-			timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+			timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+												this->vip_wait);
 		}
 		this->mutex->unlock(this->mutex);
 		if (timeout)
@@ -1008,7 +1304,7 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 			.rtm_type = op,
 			.rtm_flags = RTF_UP | RTF_STATIC,
 			.rtm_pid = this->pid,
-			.rtm_seq = ++this->seq,
+			.rtm_seq = ref_get(&this->seq),
 		},
 	};
 	host_t *dst;
@@ -1076,6 +1372,10 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 
 	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) != msg.hdr.rtm_msglen)
 	{
+		if (errno == EEXIST)
+		{
+			return ALREADY_DONE;
+		}
 		DBG1(DBG_KNL, "%s PF_ROUTE route failed: %s",
 			 op == RTM_ADD ? "adding" : "deleting", strerror(errno));
 		return FAILED;
@@ -1087,14 +1387,53 @@ METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return manage_route(this, RTM_ADD, dst_net, prefixlen, gateway, if_name);
+	status_t status;
+	route_entry_t *found, route = {
+		.dst_net = dst_net,
+		.prefixlen = prefixlen,
+		.gateway = gateway,
+		.if_name = if_name,
+	};
+
+	this->routes_lock->lock(this->routes_lock);
+	found = this->routes->get(this->routes, &route);
+	if (found)
+	{
+		this->routes_lock->unlock(this->routes_lock);
+		return ALREADY_DONE;
+	}
+	found = route_entry_clone(&route);
+	this->routes->put(this->routes, found, found);
+	status = manage_route(this, RTM_ADD, dst_net, prefixlen, gateway, if_name);
+	this->routes_lock->unlock(this->routes_lock);
+	return status;
 }
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
+	status_t status;
+	route_entry_t *found, route = {
+		.dst_net = dst_net,
+		.prefixlen = prefixlen,
+		.gateway = gateway,
+		.if_name = if_name,
+	};
+
+	this->routes_lock->lock(this->routes_lock);
+	found = this->routes->get(this->routes, &route);
+	if (!found)
+	{
+		this->routes_lock->unlock(this->routes_lock);
+		return NOT_FOUND;
+	}
+	this->routes->remove(this->routes, found);
+	route_entry_destroy(found);
+	status = manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway,
+						  if_name);
+	this->routes_lock->unlock(this->routes_lock);
+	return status;
 }
 
 /**
@@ -1112,14 +1451,16 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 			.rtm_version = RTM_VERSION,
 			.rtm_type = RTM_GET,
 			.rtm_pid = this->pid,
-			.rtm_seq = ++this->seq,
+			.rtm_seq = ref_get(&this->seq),
 		},
 	};
 	host_t *host = NULL;
 	enumerator_t *enumerator;
 	struct sockaddr *addr;
+	bool failed = FALSE;
 	int type;
 
+retry:
 	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
 	for (type = 0; type < RTAX_MAX; type++)
 	{
@@ -1161,8 +1502,7 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 			{
 				continue;
 			}
-			enumerator = create_rtmsg_enumerator(this->reply,
-												 sizeof(*this->reply));
+			enumerator = create_rtmsg_enumerator(this->reply);
 			while (enumerator->enumerate(enumerator, &type, &addr))
 			{
 				if (nexthop)
@@ -1196,18 +1536,47 @@ static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
 	}
 	else
 	{
-		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
+		failed = TRUE;
 	}
 	/* signal completion of query to a waiting thread */
 	this->waiting_seq = 0;
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
-	if (host)
+	if (failed)
 	{
-		DBG2(DBG_KNL, "using %H as %s to reach %H", host,
-			 nexthop ? "nexthop" : "address", dest);
+		if (src)
+		{	/* the given source address might be gone, try again without */
+			src = NULL;
+			msg.hdr.rtm_seq = ref_get(&this->seq);
+			msg.hdr.rtm_addrs = 0;
+			memset(msg.buf, sizeof(msg.buf), 0);
+			goto retry;
+		}
+		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
 	}
+	if (!host)
+	{
+		return NULL;
+	}
+	if (!nexthop)
+	{	/* make sure the source address is not virtual and usable */
+		addr_entry_t *entry, lookup = {
+			.ip = host,
+		};
+
+		this->lock->read_lock(this->lock);
+		entry = this->addrs->get_match(this->addrs, &lookup,
+									(void*)addr_map_entry_match_up_and_usable);
+		this->lock->unlock(this->lock);
+		if (!entry)
+		{
+			host->destroy(host);
+			return NULL;
+		}
+	}
+	DBG2(DBG_KNL, "using %H as %s to reach %H", host,
+		 nexthop ? "nexthop" : "address", dest);
 	return host;
 }
 
@@ -1314,12 +1683,29 @@ METHOD(kernel_net_t, destroy, void,
 	private_kernel_pfroute_net_t *this)
 {
 	enumerator_t *enumerator;
+	route_entry_t *route;
 	addr_entry_t *addr;
+
+	enumerator = this->routes->create_enumerator(this->routes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+	{
+		manage_route(this, RTM_DELETE, route->dst_net, route->prefixlen,
+					 route->gateway, route->if_name);
+		route_entry_destroy(route);
+	}
+	enumerator->destroy(enumerator);
+	this->routes->destroy(this->routes);
+	this->routes_lock->destroy(this->routes_lock);
 
 	if (this->socket != -1)
 	{
 		close(this->socket);
 	}
+
+	net_changes_clear(this);
+	this->net_changes->destroy(this->net_changes);
+	this->net_changes_lock->destroy(this->net_changes_lock);
+
 	enumerator = this->addrs->create_enumerator(this->addrs);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
 	{
@@ -1363,11 +1749,22 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.addrs = hashtable_create(
 								(hashtable_hash_t)addr_map_entry_hash,
 								(hashtable_equals_t)addr_map_entry_equals, 16),
+		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
+								   (hashtable_equals_t)route_entry_equals, 16),
+		.net_changes = hashtable_create(
+								   (hashtable_hash_t)net_change_hash,
+								   (hashtable_equals_t)net_change_equals, 16),
 		.tuns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.routes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
+		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
+		.vip_wait = lib->settings->get_int(lib->settings,
+					"%s.plugins.kernel-pfroute.vip_wait", 1000, hydra->daemon),
 	);
+	timerclear(&this->last_route_reinstall);
+	timerclear(&this->last_roam);
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
