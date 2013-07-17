@@ -300,8 +300,7 @@ for meaning of values).
 A
 .B closeaction should not be
 used if the peer uses reauthentication or uniquids checking, as these events
-might trigger the defined action when not desired. Currently not supported with
-IKEv1.
+might trigger the defined action when not desired.
 .TP
 .BR compress " = yes | " no
 whether IPComp compression of content is proposed on the connection
