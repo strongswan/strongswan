@@ -20,7 +20,7 @@ config_includedir = $(ipseclibdir)/include
 nodist_config_include_HEADERS = config.h
 endif
 
-Android.common.mk :	Android.common.mk.in configure.in
+Android.common.mk :	Android.common.mk.in configure.ac
 		$(AM_V_GEN) \
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
