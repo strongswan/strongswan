@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/select.h>
+#include <fcntl.h>
 
 typedef struct private_watcher_t private_watcher_t;
 
@@ -286,7 +287,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			if (this->notify[0] != -1 && FD_ISSET(this->notify[0], &rd))
 			{
 				DBG2(DBG_JOB, "watcher got notification, rebuilding");
-				ignore_result(read(this->notify[0], buf, sizeof(buf)));
+				while (read(this->notify[0], buf, sizeof(buf)) > 0);
 				return JOB_REQUEUE_DIRECT;
 			}
 
@@ -424,12 +425,14 @@ METHOD(watcher_t, destroy, void,
 	free(this);
 }
 
+
 /**
  * See header
  */
 watcher_t *watcher_create()
 {
 	private_watcher_t *this;
+	int flags;
 
 	INIT(this,
 		.public = {
@@ -444,7 +447,18 @@ watcher_t *watcher_create()
 		.notify[1] = -1,
 	);
 
-	if (pipe(this->notify) != 0)
+	if (pipe(this->notify) == 0)
+	{
+		/* use non-blocking I/O on read-end of notify pipe */
+		flags = fcntl(this->notify[0], F_GETFL);
+		if (flags == -1 ||
+			fcntl(this->notify[0], F_SETFL, flags | O_NONBLOCK) != -1)
+		{
+			DBG1(DBG_LIB, "setting watcher notify pipe read-end non-blocking "
+				 "failed: %s", strerror(errno));
+		}
+	}
+	else
 	{
 		DBG1(DBG_LIB, "creating watcher notify pipe failed: %s",
 			 strerror(errno));
