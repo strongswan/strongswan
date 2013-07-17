@@ -6,6 +6,7 @@ LOCAL_SRC_FILES := \
 library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
+collections/array.c \
 collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
@@ -110,4 +111,3 @@ LOCAL_PRELINK_MODULE := false
 LOCAL_SHARED_LIBRARIES += libdl libvstr
 
 include $(BUILD_SHARED_LIBRARY)
-

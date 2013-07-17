@@ -1753,21 +1753,22 @@ METHOD(task_manager_t, queue_child, void,
 /**
  * Check if two CHILD_SAs have the same traffic selector
  */
-static bool have_equal_ts(child_sa_t *a, child_sa_t *b, bool local)
+static bool have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
 {
-	linked_list_t *list;
-	traffic_selector_t *ts_a, *ts_b;
+	enumerator_t *e1, *e2;
+	traffic_selector_t *ts1, *ts2;
+	bool equal = FALSE;
 
-	list = a->get_traffic_selectors(a, local);
-	if (list->get_first(list, (void**)&ts_a) == SUCCESS)
+	e1 = child1->create_ts_enumerator(child1, local);
+	e2 = child2->create_ts_enumerator(child2, local);
+	if (e1->enumerate(e1, &ts1) && e2->enumerate(e2, &ts2))
 	{
-		list = b->get_traffic_selectors(b, local);
-		if (list->get_first(list, (void**)&ts_b) == SUCCESS)
-		{
-			return ts_a->equals(ts_a, ts_b);
-		}
+		equal = ts1->equals(ts1, ts2);
 	}
-	return FALSE;
+	e1->destroy(e1);
+	e1->destroy(e1);
+
+	return equal;
 }
 
 /**
@@ -1806,14 +1807,13 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 static traffic_selector_t* get_first_ts(child_sa_t *child_sa, bool local)
 {
 	traffic_selector_t *ts = NULL;
-	linked_list_t *list;
+	enumerator_t *enumerator;
 
-	list = child_sa->get_traffic_selectors(child_sa, local);
-	if (list->get_first(list, (void**)&ts) == SUCCESS)
-	{
-		return ts;
-	}
-	return NULL;
+	enumerator = child_sa->create_ts_enumerator(child_sa, local);
+	enumerator->enumerate(enumerator, &ts);
+	enumerator->destroy(enumerator);
+
+	return ts;
 }
 
 METHOD(task_manager_t, queue_child_rekey, void,

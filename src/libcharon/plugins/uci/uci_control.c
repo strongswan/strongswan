@@ -72,6 +72,7 @@ static void write_fifo(private_uci_control_t *this, char *format, ...)
 static void status(private_uci_control_t *this, char *name)
 {
 	enumerator_t *configs, *sas, *children;
+	linked_list_t *list;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	peer_cfg_t *peer_cfg;
@@ -108,8 +109,10 @@ static void status(private_uci_control_t *this, char *name)
 			children = ike_sa->create_child_sa_enumerator(ike_sa);
 			while (children->enumerate(children, (void**)&child_sa))
 			{
-				fprintf(out, "%#R",
-						child_sa->get_traffic_selectors(child_sa, FALSE));
+				list = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, FALSE));
+				fprintf(out, "%#R", list);
+				list->destroy(list);
 			}
 			children->destroy(children);
 			fprintf(out, "\n");
@@ -296,4 +299,3 @@ uci_control_t *uci_control_create()
 	}
 	return &this->public;
 }
-

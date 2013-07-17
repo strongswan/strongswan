@@ -284,17 +284,20 @@ struct child_sa_t {
 	mark_t (*get_mark)(child_sa_t *this, bool inbound);
 
 	/**
-	 * Get the traffic selectors list added for one side.
+	 * Create an enumerator over traffic selectors of one side.
 	 *
-	 * @param local		TRUE for own traffic selectors, FALSE for remote
-	 * @return			list of traffic selectors
+	 * @param local		TRUE for own traffic selectors, FALSE for remote.
+	 * @return			enumerator over traffic_selector_t*
 	 */
-	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
+	enumerator_t* (*create_ts_enumerator)(child_sa_t *this, bool local);
 
 	/**
 	 * Create an enumerator over installed policies.
 	 *
-	 * @return			enumerator over pairs of traffic selectors.
+	 * The enumerated traffic selectors is a full mesh of compatible local
+	 * and remote traffic selectors.
+	 *
+	 * @return			enumerator over a pair of traffic_selector_t*
 	 */
 	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
 

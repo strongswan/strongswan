@@ -25,6 +25,7 @@
 
 #include <hydra.h>
 #include <daemon.h>
+#include <collections/array.h>
 
 ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"CREATED",
@@ -79,14 +80,14 @@ struct private_child_sa_t {
 	u_int16_t other_cpi;
 
 	/**
-	 * List for local traffic selectors
+	 * Array for local traffic selectors
 	 */
-	linked_list_t *my_ts;
+	array_t *my_ts;
 
 	/**
-	 * List for remote traffic selectors
+	 * Array for remote traffic selectors
 	 */
-	linked_list_t *other_ts;
+	array_t *other_ts;
 
 	/**
 	 * Protocol used to protect this SA, ESP|AH
@@ -331,10 +332,14 @@ METHOD(child_sa_t, set_proposal, void,
 	this->proposal = proposal->clone(proposal);
 }
 
-METHOD(child_sa_t, get_traffic_selectors, linked_list_t*,
-	   private_child_sa_t *this, bool local)
+METHOD(child_sa_t, create_ts_enumerator, enumerator_t*,
+	private_child_sa_t *this, bool local)
 {
-	return local ? this->my_ts : this->other_ts;
+	if (local)
+	{
+		return array_create_enumerator(this->my_ts);
+	}
+	return array_create_enumerator(this->other_ts);
 }
 
 typedef struct policy_enumerator_t policy_enumerator_t;
@@ -349,8 +354,8 @@ struct policy_enumerator_t {
 	enumerator_t *mine;
 	/** enumerator over others TS */
 	enumerator_t *other;
-	/** list of others TS, to recreate enumerator */
-	linked_list_t *list;
+	/** array of others TS, to recreate enumerator */
+	array_t *array;
 	/** currently enumerating TS for "me" side */
 	traffic_selector_t *ts;
 };
@@ -366,7 +371,7 @@ METHOD(enumerator_t, policy_enumerate, bool,
 		if (!this->other->enumerate(this->other, &other_ts))
 		{	/* end of others list, restart with new of mine */
 			this->other->destroy(this->other);
-			this->other = this->list->create_enumerator(this->list);
+			this->other = array_create_enumerator(this->array);
 			this->ts = NULL;
 			continue;
 		}
@@ -405,9 +410,9 @@ METHOD(child_sa_t, create_policy_enumerator, enumerator_t*,
 			.enumerate = (void*)_policy_enumerate,
 			.destroy = _policy_destroy,
 		},
-		.mine = this->my_ts->create_enumerator(this->my_ts),
-		.other = this->other_ts->create_enumerator(this->other_ts),
-		.list = this->other_ts,
+		.mine = array_create_enumerator(this->my_ts),
+		.other = array_create_enumerator(this->other_ts),
+		.array = this->other_ts,
 		.ts = NULL,
 	);
 
@@ -772,13 +777,13 @@ METHOD(child_sa_t, add_policies, status_t,
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
 	while (enumerator->enumerate(enumerator, &my_ts))
 	{
-		this->my_ts->insert_last(this->my_ts, my_ts->clone(my_ts));
+		array_insert(this->my_ts, ARRAY_TAIL, my_ts->clone(my_ts));
 	}
 	enumerator->destroy(enumerator);
 	enumerator = other_ts_list->create_enumerator(other_ts_list);
 	while (enumerator->enumerate(enumerator, &other_ts))
 	{
-		this->other_ts->insert_last(this->other_ts, other_ts->clone(other_ts));
+		array_insert(this->other_ts, ARRAY_TAIL, other_ts->clone(other_ts));
 	}
 	enumerator->destroy(enumerator);
 
@@ -1069,13 +1074,48 @@ METHOD(child_sa_t, destroy, void,
 		enumerator->destroy(enumerator);
 	}
 
-	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
-	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
+	array_destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
+	array_destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->my_addr->destroy(this->my_addr);
 	this->other_addr->destroy(this->other_addr);
 	DESTROY_IF(this->proposal);
 	this->config->destroy(this->config);
 	free(this);
+}
+
+/**
+ * Get proxy address for one side, if any
+ */
+static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
+{
+	host_t *host = NULL;
+	u_int8_t mask;
+	enumerator_t *enumerator;
+	linked_list_t *ts_list, *list;
+	traffic_selector_t *ts;
+
+	list = linked_list_create_with_items(ike, NULL);
+	ts_list = config->get_traffic_selectors(config, local, NULL, list);
+	list->destroy(list);
+
+	enumerator = ts_list->create_enumerator(ts_list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		if (ts->is_host(ts, NULL) && ts->to_subnet(ts, &host, &mask))
+		{
+			DBG1(DBG_CHD, "%s address: %H is a transport mode proxy for %H",
+				 local ? "my" : "other", ike, host);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	ts_list->destroy_offset(ts_list, offsetof(traffic_selector_t, destroy));
+
+	if (!host)
+	{
+		host = ike->clone(ike);
+	}
+	return host;
 }
 
 /**
@@ -1117,17 +1157,15 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.install = _install,
 			.update = _update,
 			.add_policies = _add_policies,
-			.get_traffic_selectors = _get_traffic_selectors,
+			.create_ts_enumerator = _create_ts_enumerator,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
 		},
-		.my_addr = me->clone(me),
-		.other_addr = other->clone(other),
 		.encap = encap,
 		.ipcomp = IPCOMP_NONE,
 		.state = CHILD_CREATED,
-		.my_ts = linked_list_create(),
-		.other_ts = linked_list_create(),
+		.my_ts = array_create(0, 0),
+		.other_ts = array_create(0, 0),
 		.protocol = PROTO_NONE,
 		.mode = MODE_TUNNEL,
 		.close_action = config->get_close_action(config),
@@ -1170,62 +1208,15 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	if (config->get_mode(config) == MODE_TRANSPORT &&
 		config->use_proxy_mode(config))
 	{
-		ts_type_t type;
-		int family;
-		chunk_t addr;
-		host_t *host;
-		enumerator_t *enumerator;
-		linked_list_t *my_ts_list, *other_ts_list, *list;
-		traffic_selector_t *my_ts, *other_ts;
-
 		this->mode = MODE_TRANSPORT;
 
-		list = linked_list_create_with_items(me, NULL);
-		my_ts_list = config->get_traffic_selectors(config, TRUE, NULL, list);
-		list->destroy(list);
-		enumerator = my_ts_list->create_enumerator(my_ts_list);
-		if (enumerator->enumerate(enumerator, &my_ts))
-		{
-			if (my_ts->is_host(my_ts, NULL) &&
-			   !my_ts->is_host(my_ts, this->my_addr))
-			{
-				type = my_ts->get_type(my_ts);
-				family = (type == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
-				addr = my_ts->get_from_address(my_ts);
-				host = host_create_from_chunk(family, addr, 0);
-				free(addr.ptr);
-				DBG1(DBG_CHD, "my address: %H is a transport mode proxy for %H",
-							   this->my_addr, host);
-				this->my_addr->destroy(this->my_addr);
-				this->my_addr = host;
-			}
-		}
-		enumerator->destroy(enumerator);
-		my_ts_list->destroy_offset(my_ts_list, offsetof(traffic_selector_t, destroy));
-
-		list = linked_list_create_with_items(other, NULL);
-		other_ts_list = config->get_traffic_selectors(config, FALSE, NULL, list);
-		list->destroy(list);
-		enumerator = other_ts_list->create_enumerator(other_ts_list);
-		if (enumerator->enumerate(enumerator, &other_ts))
-		{
-			if (other_ts->is_host(other_ts, NULL) &&
-			   !other_ts->is_host(other_ts, this->other_addr))
-			{
-				type = other_ts->get_type(other_ts);
-				family = (type == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
-				addr = other_ts->get_from_address(other_ts);
-				host = host_create_from_chunk(family, addr, 0);
-				free(addr.ptr);
-				DBG1(DBG_CHD, "other address: %H is a transport mode proxy for %H",
-							   this->other_addr, host);
-				this->other_addr->destroy(this->other_addr);
-				this->other_addr = host;
-			}
-		}
-		enumerator->destroy(enumerator);
-		other_ts_list->destroy_offset(other_ts_list, offsetof(traffic_selector_t, destroy));
+		this->my_addr = get_proxy_addr(config, me, TRUE);
+		this->other_addr = get_proxy_addr(config, other, FALSE);
 	}
-
+	else
+	{
+		this->my_addr = me->clone(me);
+		this->other_addr = other->clone(other);
+	}
 	return &this->public;
 }

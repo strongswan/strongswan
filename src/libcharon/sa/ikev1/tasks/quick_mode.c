@@ -259,7 +259,7 @@ static bool install(private_quick_mode_t *this)
 {
 	status_t status, status_i, status_o;
 	chunk_t encr_i, encr_r, integ_i, integ_r;
-	linked_list_t *tsi, *tsr;
+	linked_list_t *tsi, *tsr, *my_ts, *other_ts;
 	child_sa_t *old = NULL;
 
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
@@ -362,14 +362,20 @@ static bool install(private_quick_mode_t *this)
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 
+	my_ts = linked_list_create_from_enumerator(
+				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
+
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_reqid(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
-		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
-		 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
-		 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
+		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
+
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
 
 	if (this->rekey)
 	{

@@ -103,18 +103,22 @@ METHOD(listener_t, child_keys, bool,
 		chunk_clear(&secret);
 	}
 
-	local_ts = child_sa->get_traffic_selectors(child_sa, TRUE);
-	enumerator = local_ts->create_enumerator(local_ts);
+	local_ts = linked_list_create();
+	remote_ts = linked_list_create();
+
+	enumerator = child_sa->create_ts_enumerator(child_sa, TRUE);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_LOCAL_TS, ts);
+		local_ts->insert_last(local_ts, ts);
 	}
 	enumerator->destroy(enumerator);
-	remote_ts = child_sa->get_traffic_selectors(child_sa, FALSE);
-	enumerator = remote_ts->create_enumerator(remote_ts);
+
+	enumerator = child_sa->create_ts_enumerator(child_sa, FALSE);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_REMOTE_TS, ts);
+		remote_ts->insert_last(remote_ts, ts);
 	}
 	enumerator->destroy(enumerator);
 
@@ -127,6 +131,9 @@ METHOD(listener_t, child_keys, bool,
 		child_sa->get_reqid(child_sa), local_ts, remote_ts,
 		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
 		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
+
+	local_ts->destroy(local_ts);
+	remote_ts->destroy(remote_ts);
 
 	this->socket->push(this->socket, m);
 	m->destroy(m);
@@ -195,4 +202,3 @@ ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 
 	return &this->public;
 }
-

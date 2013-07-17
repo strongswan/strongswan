@@ -69,6 +69,7 @@ static bool delete_child(private_quick_delete_t *this,
 {
 	u_int64_t bytes_in, bytes_out;
 	child_sa_t *child_sa;
+	linked_list_t *my_ts, *other_ts;
 	bool rekeyed;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
@@ -85,15 +86,17 @@ static bool delete_child(private_quick_delete_t *this,
 	rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYING;
 	child_sa->set_state(child_sa, CHILD_DELETING);
 
+	my_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, FALSE));
 	if (this->expired)
 	{
 		DBG0(DBG_IKE, "closing expired CHILD_SA %s{%d} "
 			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			 ntohl(child_sa->get_spi(child_sa, TRUE)),
-			 ntohl(child_sa->get_spi(child_sa, FALSE)),
-			 child_sa->get_traffic_selectors(child_sa, TRUE),
-			 child_sa->get_traffic_selectors(child_sa, FALSE));
+			 ntohl(child_sa->get_spi(child_sa, FALSE)), my_ts, other_ts);
 	}
 	else
 	{
@@ -105,9 +108,10 @@ static bool delete_child(private_quick_delete_t *this,
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
 			 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
-			 child_sa->get_traffic_selectors(child_sa, TRUE),
-			 child_sa->get_traffic_selectors(child_sa, FALSE));
+			 my_ts, other_ts);
 	}
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
 
 	if (!rekeyed)
 	{

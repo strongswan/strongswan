@@ -18,7 +18,7 @@
 
 #include <library.h>
 #include <utils/debug.h>
-#include <collections/linked_list.h>
+#include <collections/array.h>
 #include <utils/identification.h>
 #include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
@@ -109,9 +109,9 @@ struct private_auth_cfg_t {
 	auth_cfg_t public;
 
 	/**
-	 * list of entry_t
+	 * Array of entry_t
 	 */
-	linked_list_t *entries;
+	array_t *entries;
 };
 
 typedef struct entry_t entry_t;
@@ -184,18 +184,16 @@ METHOD(auth_cfg_t, create_enumerator, enumerator_t*,
 			.enumerate = (void*)enumerate,
 			.destroy = (void*)entry_enumerator_destroy,
 		},
-		.inner = this->entries->create_enumerator(this->entries),
+		.inner = array_create_enumerator(this->entries),
 	);
 	return &enumerator->public;
 }
 
 /**
- * Create an entry from the given arguments.
+ * Initialize an entry.
  */
-static entry_t *entry_create(auth_rule_t type, va_list args)
+static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 {
-	entry_t *this = malloc_thing(entry_t);
-
 	this->type = type;
 	switch (type)
 	{
@@ -233,7 +231,6 @@ static entry_t *entry_create(auth_rule_t type, va_list args)
 			this->value = NULL;
 			break;
 	}
-	return this;
 }
 
 /**
@@ -481,21 +478,21 @@ METHOD(auth_cfg_t, get, void*,
  */
 static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 {
-	entry_t *entry;
+	entry_t entry;
 	va_list args;
 
 	va_start(args, type);
-	entry = entry_create(type, args);
+	init_entry(&entry, type, args);
 	va_end(args);
 
 	if (is_multi_value_rule(type))
 	{	/* insert rules that may occur multiple times at the end */
-		this->entries->insert_last(this->entries, entry);
+		array_insert(this->entries, ARRAY_TAIL, &entry);
 	}
 	else
 	{	/* insert rules we expect only once at the front (get() will return
 		 * the latest value) */
-		this->entries->insert_first(this->entries, entry);
+		array_insert(this->entries, ARRAY_HEAD, &entry);
 	}
 }
 
@@ -917,13 +914,13 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 	}
 	else
 	{
-		entry_t *entry;
+		entry_t entry;
 
-		while (other->entries->remove_first(other->entries,
-											(void**)&entry) == SUCCESS)
+		while (array_remove(other->entries, ARRAY_HEAD, &entry))
 		{
-			this->entries->insert_last(this->entries, entry);
+			array_insert(this->entries, ARRAY_TAIL, &entry);
 		}
+		array_compress(other->entries);
 	}
 }
 
@@ -938,12 +935,12 @@ static bool auth_cfg_equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 
 	/* the rule count does not have to be equal for the two, as we only compare
 	 * the first value found for some rules */
-	e1 = this->entries->create_enumerator(this->entries);
+	e1 = array_create_enumerator(this->entries);
 	while (e1->enumerate(e1, &i1))
 	{
 		found = FALSE;
 
-		e2 = other->entries->create_enumerator(other->entries);
+		e2 = array_create_enumerator(other->entries);
 		while (e2->enumerate(e2, &i2))
 		{
 			if (entry_equals(i1, i2))
@@ -984,27 +981,21 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 METHOD(auth_cfg_t, purge, void,
 	private_auth_cfg_t *this, bool keep_ca)
 {
+	enumerator_t *enumerator;
 	entry_t *entry;
-	linked_list_t *cas;
 
-	cas = linked_list_create();
-	while (this->entries->remove_last(this->entries, (void**)&entry) == SUCCESS)
+	enumerator = array_create_enumerator(this->entries);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (keep_ca && entry->type == AUTH_RULE_CA_CERT)
+		if (!keep_ca || entry->type != AUTH_RULE_CA_CERT)
 		{
-			cas->insert_first(cas, entry);
-		}
-		else
-		{
+			array_remove_at(this->entries, enumerator);
 			destroy_entry_value(entry);
-			free(entry);
 		}
 	}
-	while (cas->remove_last(cas, (void**)&entry) == SUCCESS)
-	{
-		this->entries->insert_first(this->entries, entry);
-	}
-	cas->destroy(cas);
+	enumerator->destroy(enumerator);
+
+	array_compress(this->entries);
 }
 
 METHOD(auth_cfg_t, clone_, auth_cfg_t*,
@@ -1074,7 +1065,7 @@ METHOD(auth_cfg_t, destroy, void,
 	private_auth_cfg_t *this)
 {
 	purge(this, FALSE);
-	this->entries->destroy(this->entries);
+	array_destroy(this->entries);
 	free(this);
 }
 
@@ -1098,7 +1089,7 @@ auth_cfg_t *auth_cfg_create()
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
-		.entries = linked_list_create(),
+		.entries = array_create(sizeof(entry_t), 0),
 	);
 
 	return &this->public;

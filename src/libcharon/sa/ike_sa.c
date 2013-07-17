@@ -26,7 +26,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <daemon.h>
-#include <collections/linked_list.h>
+#include <collections/array.h>
 #include <utils/lexparser.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -95,24 +95,24 @@ struct private_ike_sa_t {
 	peer_cfg_t *peer_cfg;
 
 	/**
-	 * currently used authentication ruleset, local (as auth_cfg_t)
+	 * currently used authentication ruleset, local
 	 */
 	auth_cfg_t *my_auth;
 
 	/**
-	 * list of completed local authentication rounds
-	 */
-	linked_list_t *my_auths;
-
-	/**
-	 * list of completed remote authentication rounds
-	 */
-	linked_list_t *other_auths;
-
-	/**
-	 * currently used authentication constraints, remote (as auth_cfg_t)
+	 * currently used authentication constraints, remote
 	 */
 	auth_cfg_t *other_auth;
+
+	/**
+	 * Array of completed local authentication rounds (as auth_cfg_t)
+	 */
+	array_t *my_auths;
+
+	/**
+	 * Array of completed remote authentication rounds (as auth_cfg_t)
+	 */
+	array_t *other_auths;
 
 	/**
 	 * Selected IKE proposal
@@ -172,9 +172,9 @@ struct private_ike_sa_t {
 	ike_condition_t conditions;
 
 	/**
-	 * Linked List containing the child sa's of the current IKE_SA.
+	 * Array containing the child sa's of the current IKE_SA.
 	 */
-	linked_list_t *child_sas;
+	array_t *child_sas;
 
 	/**
 	 * keymat of this IKE_SA
@@ -184,22 +184,22 @@ struct private_ike_sa_t {
 	/**
 	 * Virtual IPs on local host
 	 */
-	linked_list_t *my_vips;
+	array_t *my_vips;
 
 	/**
 	 * Virtual IPs on remote host
 	 */
-	linked_list_t *other_vips;
+	array_t *other_vips;
 
 	/**
 	 * List of configuration attributes (attribute_entry_t)
 	 */
-	linked_list_t *attributes;
+	array_t *attributes;
 
 	/**
 	 * list of peer's addresses, additional ones transmitted via MOBIKE
 	 */
-	linked_list_t *peer_addresses;
+	array_t *peer_addresses;
 
 	/**
 	 * previously value of received DESTINATION_IP hash
@@ -282,7 +282,8 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	{
 		use_time = this->stats[STAT_OUTBOUND];
 	}
-	enumerator = this->child_sas->create_enumerator(this->child_sas);
+
+	enumerator = array_create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
 		child_sa->get_usestats(child_sa, inbound, &current, NULL, NULL);
@@ -389,11 +390,11 @@ METHOD(ike_sa_t, add_auth_cfg, void,
 {
 	if (local)
 	{
-		this->my_auths->insert_last(this->my_auths, cfg);
+		array_insert(this->my_auths, ARRAY_TAIL, cfg);
 	}
 	else
 	{
-		this->other_auths->insert_last(this->other_auths, cfg);
+		array_insert(this->other_auths, ARRAY_TAIL, cfg);
 	}
 }
 
@@ -402,9 +403,9 @@ METHOD(ike_sa_t, create_auth_cfg_enumerator, enumerator_t*,
 {
 	if (local)
 	{
-		return this->my_auths->create_enumerator(this->my_auths);
+		return array_create_enumerator(this->my_auths);
 	}
-	return this->other_auths->create_enumerator(this->other_auths);
+	return array_create_enumerator(this->other_auths);
 }
 
 /**
@@ -417,13 +418,11 @@ static void flush_auth_cfgs(private_ike_sa_t *this)
 	this->my_auth->purge(this->my_auth, FALSE);
 	this->other_auth->purge(this->other_auth, FALSE);
 
-	while (this->my_auths->remove_last(this->my_auths,
-									   (void**)&cfg) == SUCCESS)
+	while (array_remove(this->my_auths, ARRAY_TAIL, &cfg))
 	{
 		cfg->destroy(cfg);
 	}
-	while (this->other_auths->remove_last(this->other_auths,
-										  (void**)&cfg) == SUCCESS)
+	while (array_remove(this->other_auths, ARRAY_TAIL, &cfg))
 	{
 		cfg->destroy(cfg);
 	}
@@ -750,7 +749,7 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 			if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
 												ip, -1, iface) == SUCCESS)
 			{
-				this->my_vips->insert_last(this->my_vips, ip->clone(ip));
+				array_insert_create(&this->my_vips, ARRAY_TAIL, ip->clone(ip));
 			}
 			else
 			{
@@ -765,7 +764,7 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 	}
 	else
 	{
-		this->other_vips->insert_last(this->other_vips, ip->clone(ip));
+		array_insert_create(&this->other_vips, ARRAY_TAIL, ip->clone(ip));
 	}
 }
 
@@ -773,14 +772,15 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 METHOD(ike_sa_t, clear_virtual_ips, void,
 	private_ike_sa_t *this, bool local)
 {
-	linked_list_t *vips = local ? this->my_vips : this->other_vips;
+	array_t *vips;
 	host_t *vip;
 
-	if (!local && vips->get_count(vips))
+	vips = local ? this->my_vips : this->other_vips;
+	if (!local && array_count(vips))
 	{
 		charon->bus->assign_vips(charon->bus, &this->public, FALSE);
 	}
-	while (vips->remove_first(vips, (void**)&vip) == SUCCESS)
+	while (array_remove(vips, ARRAY_HEAD, &vip))
 	{
 		if (local)
 		{
@@ -796,23 +796,23 @@ METHOD(ike_sa_t, create_virtual_ip_enumerator, enumerator_t*,
 {
 	if (local)
 	{
-		return this->my_vips->create_enumerator(this->my_vips);
+		return array_create_enumerator(this->my_vips);
 	}
-	return this->other_vips->create_enumerator(this->other_vips);
+	return array_create_enumerator(this->other_vips);
 }
 
 METHOD(ike_sa_t, add_peer_address, void,
 	private_ike_sa_t *this, host_t *host)
 {
-	this->peer_addresses->insert_last(this->peer_addresses, host);
+	array_insert_create(&this->peer_addresses, ARRAY_TAIL, host);
 }
 
 METHOD(ike_sa_t, create_peer_address_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	if (this->peer_addresses->get_count(this->peer_addresses))
+	if (this->peer_addresses)
 	{
-		return this->peer_addresses->create_enumerator(this->peer_addresses);
+		return array_create_enumerator(this->peer_addresses);
 	}
 	/* in case we don't have MOBIKE */
 	return enumerator_create_single(this->other_host, NULL);
@@ -821,17 +821,8 @@ METHOD(ike_sa_t, create_peer_address_enumerator, enumerator_t*,
 METHOD(ike_sa_t, clear_peer_addresses, void,
 	private_ike_sa_t *this)
 {
-	enumerator_t *enumerator;
-	host_t *host;
-
-	enumerator = this->peer_addresses->create_enumerator(this->peer_addresses);
-	while (enumerator->enumerate(enumerator, (void**)&host))
-	{
-		this->peer_addresses->remove_at(this->peer_addresses,
-										enumerator);
-		host->destroy(host);
-	}
-	enumerator->destroy(enumerator);
+	array_destroy_offset(this->peer_addresses, offsetof(host_t, destroy));
+	this->peer_addresses = NULL;
 }
 
 METHOD(ike_sa_t, has_mapping_changed, bool,
@@ -927,13 +918,16 @@ METHOD(ike_sa_t, update_hosts, void,
 	{
 		enumerator_t *enumerator;
 		child_sa_t *child_sa;
+		linked_list_t *vips;
 
-		enumerator = this->child_sas->create_enumerator(this->child_sas);
-		while (enumerator->enumerate(enumerator, (void**)&child_sa))
+		vips = linked_list_create_from_enumerator(
+									array_create_enumerator(this->my_vips));
+
+		enumerator = array_create_enumerator(this->child_sas);
+		while (enumerator->enumerate(enumerator, &child_sa))
 		{
-			if (child_sa->update(child_sa, this->my_host,
-						this->other_host, this->my_vips,
-						has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
+			if (child_sa->update(child_sa, this->my_host, this->other_host,
+					vips, has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
 			{
 				this->public.rekey_child_sa(&this->public,
 						child_sa->get_protocol(child_sa),
@@ -941,6 +935,8 @@ METHOD(ike_sa_t, update_hosts, void,
 			}
 		}
 		enumerator->destroy(enumerator);
+
+		vips->destroy(vips);
 	}
 }
 
@@ -1326,7 +1322,7 @@ METHOD(ike_sa_t, get_other_eap_id, identification_t*,
 	enumerator_t *enumerator;
 	auth_cfg_t *cfg;
 
-	enumerator = this->other_auths->create_enumerator(this->other_auths);
+	enumerator = array_create_enumerator(this->other_auths);
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
 		/* prefer EAP-Identity of last round */
@@ -1363,7 +1359,7 @@ METHOD(ike_sa_t, set_other_id, void,
 METHOD(ike_sa_t, add_child_sa, void,
 	private_ike_sa_t *this, child_sa_t *child_sa)
 {
-	this->child_sas->insert_last(this->child_sas, child_sa);
+	array_insert_create(&this->child_sas, ARRAY_TAIL, child_sa);
 }
 
 METHOD(ike_sa_t, get_child_sa, child_sa_t*,
@@ -1372,7 +1368,7 @@ METHOD(ike_sa_t, get_child_sa, child_sa_t*,
 	enumerator_t *enumerator;
 	child_sa_t *current, *found = NULL;
 
-	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	enumerator = array_create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		if (current->get_spi(current, inbound) == spi &&
@@ -1388,19 +1384,19 @@ METHOD(ike_sa_t, get_child_sa, child_sa_t*,
 METHOD(ike_sa_t, get_child_count, int,
 	private_ike_sa_t *this)
 {
-	return this->child_sas->get_count(this->child_sas);
+	return array_count(this->child_sas);
 }
 
 METHOD(ike_sa_t, create_child_sa_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	return this->child_sas->create_enumerator(this->child_sas);
+	return array_create_enumerator(this->child_sas);
 }
 
 METHOD(ike_sa_t, remove_child_sa, void,
 	private_ike_sa_t *this, enumerator_t *enumerator)
 {
-	this->child_sas->remove_at(this->child_sas, enumerator);
+	array_remove_at(this->child_sas, enumerator);
 }
 
 METHOD(ike_sa_t, rekey_child_sa, status_t,
@@ -1433,13 +1429,13 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 	child_sa_t *child_sa;
 	status_t status = NOT_FOUND;
 
-	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	enumerator = array_create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_protocol(child_sa) == protocol &&
 			child_sa->get_spi(child_sa, TRUE) == spi)
 		{
-			this->child_sas->remove_at(this->child_sas, enumerator);
+			array_remove_at(this->child_sas, enumerator);
 			child_sa->destroy(child_sa);
 			status = SUCCESS;
 			break;
@@ -1506,7 +1502,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
-		if (this->other_vips->get_count(this->other_vips) != 0 ||
+		if (array_count(this->other_vips) != 0 ||
 			has_condition(this, COND_XAUTH_AUTHENTICATED) ||
 			has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
@@ -1553,7 +1549,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 
 	if (has_condition(this, COND_REAUTHENTICATING))
 	{	/* only reauthenticate if we have children */
-		if (this->child_sas->get_count(this->child_sas) == 0
+		if (array_count(this->child_sas) == 0
 #ifdef ME
 			/* allow reauth of mediation connections without CHILD_SAs */
 			&& !this->peer_cfg->is_mediation(this->peer_cfg)
@@ -1570,7 +1566,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	}
 	else
 	{	/* check if we have children to keep up at all */
-		enumerator = this->child_sas->create_enumerator(this->child_sas);
+		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (this->state == IKE_DELETING)
@@ -1611,7 +1607,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 
 	/* check if we are able to reestablish this IKE_SA */
 	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
-		(this->other_vips->get_count(this->other_vips) != 0 ||
+		(array_count(this->other_vips) != 0 ||
 		 has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
 		 || this->is_mediation_server
@@ -1634,7 +1630,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	host = this->my_host;
 	new->set_my_host(new, host->clone(host));
 	/* if we already have a virtual IP, we reuse it */
-	enumerator = this->my_vips->create_enumerator(this->my_vips);
+	enumerator = array_create_enumerator(this->my_vips);
 	while (enumerator->enumerate(enumerator, &host))
 	{
 		new->add_virtual_ip(new, TRUE, host);
@@ -1649,7 +1645,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	else
 #endif /* ME */
 	{
-		enumerator = this->child_sas->create_enumerator(this->child_sas);
+		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (has_condition(this, COND_REAUTHENTICATING))
@@ -1658,7 +1654,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 				{
 					case CHILD_ROUTED:
 					{	/* move routed child directly */
-						this->child_sas->remove_at(this->child_sas, enumerator);
+						array_remove_at(this->child_sas, enumerator);
 						new->add_child_sa(new, child_sa);
 						action = ACTION_NONE;
 						break;
@@ -1789,7 +1785,7 @@ METHOD(ike_sa_t, set_auth_lifetime, status_t,
 	 * We send the notify in IKE_AUTH if not yet ESTABLISHED. */
 	send_update = this->state == IKE_ESTABLISHED && this->version == IKEV2 &&
 				  !has_condition(this, COND_ORIGINAL_INITIATOR) &&
-				  (this->other_vips->get_count(this->other_vips) != 0 ||
+				  (array_count(this->other_vips) != 0 ||
 				  has_condition(this, COND_EAP_AUTHENTICATED));
 
 	if (lifetime < diff)
@@ -1963,13 +1959,12 @@ METHOD(ike_sa_t, add_configuration_attribute, void,
 	private_ike_sa_t *this, attribute_handler_t *handler,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	attribute_entry_t *entry = malloc_thing(attribute_entry_t);
-
-	entry->handler = handler;
-	entry->type = type;
-	entry->data = chunk_clone(data);
-
-	this->attributes->insert_last(this->attributes, entry);
+	attribute_entry_t entry = {
+		.handler = handler,
+		.type = type,
+		.data = chunk_clone(data),
+	};
+	array_insert(this->attributes, ARRAY_TAIL, &entry);
 }
 
 METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
@@ -1995,8 +1990,8 @@ METHOD(ike_sa_t, inherit, void,
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
 	child_sa_t *child_sa;
-	attribute_entry_t *entry;
 	enumerator_t *enumerator;
+	attribute_entry_t entry;
 	auth_cfg_t *cfg;
 	host_t *vip;
 
@@ -2011,35 +2006,33 @@ METHOD(ike_sa_t, inherit, void,
 	this->other_id = other->other_id->clone(other->other_id);
 
 	/* apply assigned virtual IPs... */
-	while (other->my_vips->remove_last(other->my_vips, (void**)&vip) == SUCCESS)
+	while (array_remove(other->my_vips, ARRAY_HEAD, &vip))
 	{
-		this->my_vips->insert_first(this->my_vips, vip);
+		array_insert_create(&this->my_vips, ARRAY_TAIL, vip);
 	}
-	while (other->other_vips->remove_last(other->other_vips,
-										  (void**)&vip) == SUCCESS)
+	while (array_remove(other->other_vips, ARRAY_HEAD, &vip))
 	{
-		this->other_vips->insert_first(this->other_vips, vip);
+		array_insert_create(&this->other_vips, ARRAY_TAIL, vip);
 	}
 
 	/* authentication information */
-	enumerator = other->my_auths->create_enumerator(other->my_auths);
+	enumerator = array_create_enumerator(other->my_auths);
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
-		this->my_auths->insert_last(this->my_auths, cfg->clone(cfg));
+		array_insert(this->my_auths, ARRAY_TAIL, cfg->clone(cfg));
 	}
 	enumerator->destroy(enumerator);
-	enumerator = other->other_auths->create_enumerator(other->other_auths);
+	enumerator = array_create_enumerator(other->other_auths);
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
-		this->other_auths->insert_last(this->other_auths, cfg->clone(cfg));
+		array_insert(this->other_auths, ARRAY_TAIL, cfg->clone(cfg));
 	}
 	enumerator->destroy(enumerator);
 
 	/* ... and configuration attributes */
-	while (other->attributes->remove_last(other->attributes,
-										  (void**)&entry) == SUCCESS)
+	while (array_remove(other->attributes, ARRAY_HEAD, &entry))
 	{
-		this->attributes->insert_first(this->attributes, entry);
+		array_insert(this->attributes, ARRAY_TAIL, &entry);
 	}
 
 	/* inherit all conditions */
@@ -2062,10 +2055,9 @@ METHOD(ike_sa_t, inherit, void,
 #endif /* ME */
 
 	/* adopt all children */
-	while (other->child_sas->remove_last(other->child_sas,
-										 (void**)&child_sa) == SUCCESS)
+	while (array_remove(other->child_sas, ARRAY_HEAD, &child_sa))
 	{
-		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
+		array_insert_create(&this->child_sas, ARRAY_TAIL, child_sa);
 	}
 
 	/* move pending tasks to the new IKE_SA */
@@ -2092,7 +2084,7 @@ METHOD(ike_sa_t, inherit, void,
 METHOD(ike_sa_t, destroy, void,
 	private_ike_sa_t *this)
 {
-	attribute_entry_t *entry;
+	attribute_entry_t entry;
 	host_t *vip;
 
 	charon->bus->set_sa(charon->bus, &this->public);
@@ -2101,25 +2093,22 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
-	while (this->attributes->remove_last(this->attributes,
-										 (void**)&entry) == SUCCESS)
+	while (array_remove(this->attributes, ARRAY_TAIL, &entry))
 	{
-		hydra->attributes->release(hydra->attributes, entry->handler,
-								   this->other_id, entry->type, entry->data);
-		free(entry->data.ptr);
-		free(entry);
+		hydra->attributes->release(hydra->attributes, entry.handler,
+								   this->other_id, entry.type, entry.data);
+		free(entry.data.ptr);
 	}
-	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
+	while (array_remove(this->my_vips, ARRAY_TAIL, &vip))
 	{
 		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1, TRUE);
 		vip->destroy(vip);
 	}
-	if (this->other_vips->get_count(this->other_vips))
+	if (array_count(this->other_vips))
 	{
 		charon->bus->assign_vips(charon->bus, &this->public, FALSE);
 	}
-	while (this->other_vips->remove_last(this->other_vips,
-										 (void**)&vip) == SUCCESS)
+	while (array_remove(this->other_vips, ARRAY_TAIL, &vip))
 	{
 		if (this->peer_cfg)
 		{
@@ -2138,13 +2127,12 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
+	array_destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
 	DESTROY_IF(this->keymat);
-	this->attributes->destroy(this->attributes);
-	this->my_vips->destroy(this->my_vips);
-	this->other_vips->destroy(this->other_vips);
-	this->peer_addresses->destroy_offset(this->peer_addresses,
-										 offsetof(host_t, destroy));
+	array_destroy(this->attributes);
+	array_destroy(this->my_vips);
+	array_destroy(this->other_vips);
+	array_destroy_offset(this->peer_addresses, offsetof(host_t, destroy));
 #ifdef ME
 	if (this->is_mediation_server)
 	{
@@ -2168,10 +2156,8 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->proposal);
 	this->my_auth->destroy(this->my_auth);
 	this->other_auth->destroy(this->other_auth);
-	this->my_auths->destroy_offset(this->my_auths,
-								   offsetof(auth_cfg_t, destroy));
-	this->other_auths->destroy_offset(this->other_auths,
-									  offsetof(auth_cfg_t, destroy));
+	array_destroy_offset(this->my_auths, offsetof(auth_cfg_t, destroy));
+	array_destroy_offset(this->other_auths, offsetof(auth_cfg_t, destroy));
 
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -2283,7 +2269,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,
-		.child_sas = linked_list_create(),
 		.my_host = host_create_any(AF_INET),
 		.other_host = host_create_any(AF_INET),
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
@@ -2294,13 +2279,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.stats[STAT_OUTBOUND] = time_monotonic(NULL),
 		.my_auth = auth_cfg_create(),
 		.other_auth = auth_cfg_create(),
-		.my_auths = linked_list_create(),
-		.other_auths = linked_list_create(),
+		.my_auths = array_create(0, 0),
+		.other_auths = array_create(0, 0),
+		.attributes = array_create(sizeof(attribute_entry_t), 0),
 		.unique_id = ref_get(&unique_id),
-		.peer_addresses = linked_list_create(),
-		.my_vips = linked_list_create(),
-		.other_vips = linked_list_create(),
-		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 							"%s.keep_alive", KEEPALIVE_INTERVAL, charon->name),
 		.retry_initiate_interval = lib->settings->get_time(lib->settings,

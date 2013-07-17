@@ -18,6 +18,7 @@
 
 #include <math.h>
 
+#include <collections/array.h>
 #include <daemon.h>
 #include <sa/ikev2/tasks/ike_init.h>
 #include <sa/ikev2/tasks/ike_natd.h>
@@ -122,19 +123,19 @@ struct private_task_manager_t {
 	} initiating;
 
 	/**
-	 * List of queued tasks not yet in action
+	 * Array of queued tasks not yet in action
 	 */
-	linked_list_t *queued_tasks;
+	array_t *queued_tasks;
 
 	/**
-	 * List of active tasks, initiated by ourselve
+	 * Array of active tasks, initiated by ourselve
 	 */
-	linked_list_t *active_tasks;
+	array_t *active_tasks;
 
 	/**
-	 * List of tasks initiated by peer
+	 * Array of tasks initiated by peer
 	 */
-	linked_list_t *passive_tasks;
+	array_t *passive_tasks;
 
 	/**
 	 * the task manager has been reset
@@ -160,24 +161,24 @@ struct private_task_manager_t {
 METHOD(task_manager_t, flush_queue, void,
 	private_task_manager_t *this, task_queue_t queue)
 {
-	linked_list_t *list;
+	array_t *array;
 	task_t *task;
 
 	switch (queue)
 	{
 		case TASK_QUEUE_ACTIVE:
-			list = this->active_tasks;
+			array = this->active_tasks;
 			break;
 		case TASK_QUEUE_PASSIVE:
-			list = this->passive_tasks;
+			array = this->passive_tasks;
 			break;
 		case TASK_QUEUE_QUEUED:
-			list = this->queued_tasks;
+			array = this->queued_tasks;
 			break;
 		default:
 			return;
 	}
-	while (list->remove_last(list, (void**)&task) == SUCCESS)
+	while (array_remove(array, ARRAY_TAIL, &task))
 	{
 		task->destroy(task);
 	}
@@ -202,14 +203,14 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	task_t *task;
 	bool found = FALSE;
 
-	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	enumerator = array_create_enumerator(this->queued_tasks);
 	while (enumerator->enumerate(enumerator, (void**)&task))
 	{
 		if (task->get_type(task) == type)
 		{
 			DBG2(DBG_IKE, "  activating %N task", task_type_names, type);
-			this->queued_tasks->remove_at(this->queued_tasks, enumerator);
-			this->active_tasks->insert_last(this->active_tasks, task);
+			array_remove_at(this->queued_tasks, enumerator);
+			array_insert(this->active_tasks, ARRAY_TAIL, task);
 			found = TRUE;
 			break;
 		}
@@ -231,7 +232,7 @@ METHOD(task_manager_t, retransmit, status_t,
 		ike_mobike_t *mobike = NULL;
 
 		/* check if we are retransmitting a MOBIKE routability check */
-		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		enumerator = array_create_enumerator(this->active_tasks);
 		while (enumerator->enumerate(enumerator, (void*)&task))
 		{
 			if (task->get_type(task) == TASK_IKE_MOBIKE)
@@ -319,7 +320,7 @@ METHOD(task_manager_t, initiate, status_t,
 		return SUCCESS;
 	}
 
-	if (this->active_tasks->get_count(this->active_tasks) == 0)
+	if (array_count(this->active_tasks) == 0)
 	{
 		DBG2(DBG_IKE, "activating new tasks");
 		switch (this->ike_sa->get_state(this->ike_sa))
@@ -414,8 +415,8 @@ METHOD(task_manager_t, initiate, status_t,
 	else
 	{
 		DBG2(DBG_IKE, "reinitiating already active tasks");
-		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-		while (enumerator->enumerate(enumerator, (void**)&task))
+		enumerator = array_create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, &task))
 		{
 			DBG2(DBG_IKE, "  %N task", task_type_names, task->get_type(task));
 			switch (task->get_type(task))
@@ -460,14 +461,14 @@ METHOD(task_manager_t, initiate, status_t,
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
 
-	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-	while (enumerator->enumerate(enumerator, (void*)&task))
+	enumerator = array_create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, &task))
 	{
 		switch (task->build(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				array_remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -507,6 +508,9 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	message->destroy(message);
 
+	array_compress(this->active_tasks);
+	array_compress(this->queued_tasks);
+
 	return retransmit(this, this->initiating.mid);
 }
 
@@ -530,14 +534,14 @@ static status_t process_response(private_task_manager_t *this,
 
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
-	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-	while (enumerator->enumerate(enumerator, (void*)&task))
+	enumerator = array_create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, &task))
 	{
 		switch (task->process(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				array_remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -549,7 +553,7 @@ static status_t process_response(private_task_manager_t *this,
 				/* FALL */
 			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
-				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				array_remove_at(this->active_tasks, enumerator);
 				enumerator->destroy(enumerator);
 				task->destroy(task);
 				return DESTROY_ME;
@@ -567,6 +571,8 @@ static status_t process_response(private_task_manager_t *this,
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
+
+	array_compress(this->active_tasks);
 
 	return initiate(this);
 }
@@ -588,8 +594,8 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 		type == TASK_IKE_REAUTH)
 	{
 		/* find an exchange collision, and notify these tasks */
-		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-		while (enumerator->enumerate(enumerator, (void**)&active))
+		enumerator = array_create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, &active))
 		{
 			switch (active->get_type(active))
 			{
@@ -646,14 +652,14 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
 
-	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	enumerator = array_create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->build(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
+				array_remove_at(this->passive_tasks, enumerator);
 				if (!handle_collisions(this, task))
 				{
 					task->destroy(task);
@@ -663,8 +669,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				/* processed, but task needs another exchange */
 				if (handle_collisions(this, task))
 				{
-					this->passive_tasks->remove_at(this->passive_tasks,
-												   enumerator);
+					array_remove_at(this->passive_tasks, enumerator);
 				}
 				break;
 			case FAILED:
@@ -721,6 +726,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 		}
 		return DESTROY_ME;
 	}
+
+	array_compress(this->passive_tasks);
+
 	return SUCCESS;
 }
 
@@ -736,37 +744,37 @@ static status_t process_request(private_task_manager_t *this,
 	notify_payload_t *notify;
 	delete_payload_t *delete;
 
-	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
+	if (array_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
 		switch (message->get_exchange_type(message))
 		{
 			case IKE_SA_INIT:
 			{
 				task = (task_t*)ike_vendor_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_init_create(this->ike_sa, FALSE, NULL);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 #ifdef ME
 				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 #endif /* ME */
 				task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
 													NULL, NULL);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				break;
 			}
 			case CREATE_CHILD_SA:
@@ -817,7 +825,7 @@ static status_t process_request(private_task_manager_t *this,
 				{
 					task = (task_t*)ike_rekey_create(this->ike_sa, FALSE);
 				}
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				break;
 			}
 			case INFORMATIONAL:
@@ -889,14 +897,14 @@ static status_t process_request(private_task_manager_t *this,
 				{
 					task = (task_t*)ike_dpd_create(FALSE);
 				}
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				break;
 			}
 #ifdef ME
 			case ME_CONNECT:
 			{
 				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 			}
 #endif /* ME */
 			default:
@@ -905,14 +913,14 @@ static status_t process_request(private_task_manager_t *this,
 	}
 
 	/* let the tasks process the message */
-	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	enumerator = array_create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->process(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
+				array_remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -924,7 +932,7 @@ static status_t process_request(private_task_manager_t *this,
 				/* FALL */
 			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
-				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
+				array_remove_at(this->passive_tasks, enumerator);
 				enumerator->destroy(enumerator);
 				task->destroy(task);
 				return DESTROY_ME;
@@ -1230,8 +1238,8 @@ METHOD(task_manager_t, queue_task, void,
 		enumerator_t *enumerator;
 		task_t *current;
 
-		enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
-		while (enumerator->enumerate(enumerator, (void**)&current))
+		enumerator = array_create_enumerator(this->queued_tasks);
+		while (enumerator->enumerate(enumerator, &current))
 		{
 			if (current->get_type(current) == TASK_IKE_MOBIKE)
 			{
@@ -1243,7 +1251,7 @@ METHOD(task_manager_t, queue_task, void,
 		enumerator->destroy(enumerator);
 	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
-	this->queued_tasks->insert_last(this->queued_tasks, task);
+	array_insert(this->queued_tasks, ARRAY_TAIL, task);
 }
 
 /**
@@ -1255,7 +1263,7 @@ static bool has_queued(private_task_manager_t *this, task_type_t type)
 	bool found = FALSE;
 	task_t *task;
 
-	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	enumerator = array_create_enumerator(this->queued_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
 		if (task->get_type(task) == type)
@@ -1410,19 +1418,18 @@ METHOD(task_manager_t, adopt_tasks, void,
 	task_t *task;
 
 	/* move queued tasks from other to this */
-	while (other->queued_tasks->remove_last(other->queued_tasks,
-												(void**)&task) == SUCCESS)
+	while (array_remove(other->queued_tasks, ARRAY_TAIL, &task))
 	{
 		DBG2(DBG_IKE, "migrating %N task", task_type_names, task->get_type(task));
 		task->migrate(task, this->ike_sa);
-		this->queued_tasks->insert_first(this->queued_tasks, task);
+		array_insert(this->queued_tasks, ARRAY_HEAD, task);
 	}
 }
 
 METHOD(task_manager_t, busy, bool,
 	private_task_manager_t *this)
 {
-	return (this->active_tasks->get_count(this->active_tasks) > 0);
+	return array_count(this->active_tasks) > 0;
 }
 
 METHOD(task_manager_t, reset, void,
@@ -1447,7 +1454,7 @@ METHOD(task_manager_t, reset, void,
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 
 	/* reset queued tasks */
-	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	enumerator = array_create_enumerator(this->queued_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
 		task->migrate(task, this->ike_sa);
@@ -1455,11 +1462,10 @@ METHOD(task_manager_t, reset, void,
 	enumerator->destroy(enumerator);
 
 	/* reset active tasks */
-	while (this->active_tasks->remove_last(this->active_tasks,
-										   (void**)&task) == SUCCESS)
+	while (array_remove(this->active_tasks, ARRAY_TAIL, &task))
 	{
 		task->migrate(task, this->ike_sa);
-		this->queued_tasks->insert_first(this->queued_tasks, task);
+		array_insert(this->queued_tasks, ARRAY_HEAD, task);
 	}
 
 	this->reset = TRUE;
@@ -1471,11 +1477,11 @@ METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
 	switch (queue)
 	{
 		case TASK_QUEUE_ACTIVE:
-			return this->active_tasks->create_enumerator(this->active_tasks);
+			return array_create_enumerator(this->active_tasks);
 		case TASK_QUEUE_PASSIVE:
-			return this->passive_tasks->create_enumerator(this->passive_tasks);
+			return array_create_enumerator(this->passive_tasks);
 		case TASK_QUEUE_QUEUED:
-			return this->queued_tasks->create_enumerator(this->queued_tasks);
+			return array_create_enumerator(this->queued_tasks);
 		default:
 			return enumerator_create_empty();
 	}
@@ -1486,9 +1492,9 @@ METHOD(task_manager_t, destroy, void,
 {
 	flush(this);
 
-	this->active_tasks->destroy(this->active_tasks);
-	this->queued_tasks->destroy(this->queued_tasks);
-	this->passive_tasks->destroy(this->passive_tasks);
+	array_destroy(this->active_tasks);
+	array_destroy(this->queued_tasks);
+	array_destroy(this->passive_tasks);
 
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
@@ -1529,9 +1535,9 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
-		.queued_tasks = linked_list_create(),
-		.active_tasks = linked_list_create(),
-		.passive_tasks = linked_list_create(),
+		.queued_tasks = array_create(0, 0),
+		.active_tasks = array_create(0, 0),
+		.passive_tasks = array_create(0, 0),
 		.retransmit_tries = lib->settings->get_int(lib->settings,
 					"%s.retransmit_tries", RETRANSMIT_TRIES, charon->name),
 		.retransmit_timeout = lib->settings->get_double(lib->settings,
