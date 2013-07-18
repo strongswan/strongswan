@@ -2148,6 +2148,14 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	if (hydra->kernel_interface->get_features(
 					hydra->kernel_interface) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
 	{
+		if (in->src_ts->is_host(in->src_ts, dst))
+		{
+			DBG1(DBG_KNL, "can't install route for %R === %R %N, conflicts "
+				 "with IKE traffic", in->src_ts, in->dst_ts, policy_dir_names,
+				 policy->direction);
+			route_entry_destroy(route);
+			return FALSE;
+		}
 		if (in->src_ts->includes(in->src_ts, dst))
 		{
 			add_exclude_route(this, route, in->generic.sa->dst, dst);
