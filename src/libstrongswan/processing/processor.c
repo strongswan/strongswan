@@ -462,12 +462,6 @@ METHOD(processor_t, set_threads, void,
 	this->mutex->unlock(this->mutex);
 }
 
-METHOD(processor_t, get_threads, u_int,
-	private_processor_t *this)
-{
-	return this->desired_threads;
-}
-
 METHOD(processor_t, cancel, void,
 	private_processor_t *this)
 {
@@ -539,7 +533,6 @@ processor_t *processor_create()
 			.queue_job = _queue_job,
 			.execute_job = _execute_job,
 			.set_threads = _set_threads,
-			.get_threads = _get_threads,
 			.cancel = _cancel,
 			.destroy = _destroy,
 		},
