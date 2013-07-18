@@ -133,7 +133,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 		 cur_reader += strlen(cur_reader) + 1)
 	{
 		DWORD dwActiveProtocol = -1;
-		SCARD_IO_REQUEST *pioSendPci;
+		const SCARD_IO_REQUEST *pioSendPci;
 		SCARD_IO_REQUEST pioRecvPci;
 		BYTE pbRecvBuffer[64];
 		DWORD dwRecvLength;
@@ -394,4 +394,3 @@ eap_sim_pcsc_card_t *eap_sim_pcsc_card_create()
 
 	return &this->public;
 }
-
