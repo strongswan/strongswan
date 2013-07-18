@@ -65,7 +65,9 @@ plugin_t *soup_plugin_create()
 {
 	private_soup_plugin_t *this;
 
+#if !GLIB_CHECK_VERSION(2,36,0)
 	g_type_init();
+#endif
 
 #if !GLIB_CHECK_VERSION(2,23,0)
 	if (!g_thread_get_initialized())
