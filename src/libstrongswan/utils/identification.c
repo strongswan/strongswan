@@ -1000,23 +1000,23 @@ identification_t *identification_create_from_string(char *string)
 	{
 		if (*string == '@')
 		{
-			if (*(string + 1) == '#')
+			string++;
+			if (*string == '#')
 			{
 				this = identification_create(ID_KEY_ID);
-				string += 2;
-				this->encoded = chunk_from_hex(
-									chunk_create(string, strlen(string)), NULL);
+				this->encoded = chunk_from_hex(chunk_from_str(string + 1), NULL);
+				return &this->public;
+			}
+			else if (*string == '@')
+			{
+				this = identification_create(ID_USER_FQDN);
+				this->encoded = chunk_clone(chunk_from_str(string + 1));
 				return &this->public;
 			}
 			else
 			{
 				this = identification_create(ID_FQDN);
-				string += 1;
-				this->encoded.len = strlen(string);
-				if (this->encoded.len)
-				{	/* if we only got an @ */
-					this->encoded.ptr = strdup(string);
-				}
+				this->encoded = chunk_clone(chunk_from_str(string));
 				return &this->public;
 			}
 		}
@@ -1093,4 +1093,3 @@ identification_t *identification_create_from_sockaddr(sockaddr_t *sockaddr)
 		}
 	}
 }
-
