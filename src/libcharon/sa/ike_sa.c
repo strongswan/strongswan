@@ -2123,6 +2123,7 @@ METHOD(ike_sa_t, destroy, void,
 	private_ike_sa_t *this)
 {
 	attribute_entry_t entry;
+	child_sa_t *child_sa;
 	host_t *vip;
 
 	charon->bus->set_sa(charon->bus, &this->public);
@@ -2136,6 +2137,12 @@ METHOD(ike_sa_t, destroy, void,
 		hydra->attributes->release(hydra->attributes, entry.handler,
 								   this->other_id, entry.type, entry.data);
 		free(entry.data.ptr);
+	}
+	/* uninstall CHILD_SAs before virtual IPs, otherwise we might kill
+	 * routes that the CHILD_SA tries to uninstall. */
+	while (array_remove(this->child_sas, ARRAY_TAIL, &child_sa))
+	{
+		child_sa->destroy(child_sa);
 	}
 	while (array_remove(this->my_vips, ARRAY_TAIL, &vip))
 	{
@@ -2165,7 +2172,7 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	array_destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
+	array_destroy(this->child_sas);
 	DESTROY_IF(this->keymat);
 	array_destroy(this->attributes);
 	array_destroy(this->my_vips);
