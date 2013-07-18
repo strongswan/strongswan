@@ -176,7 +176,7 @@ struct peer_cfg_t {
 	/**
 	 * Add an authentication config to the peer configuration.
 	 *
-	 * @param config		config to add
+	 * @param cfg			config to add
 	 * @param local			TRUE for local rules, FALSE for remote constraints
 	 */
 	void (*add_auth_cfg)(peer_cfg_t *this, auth_cfg_t *cfg, bool local);
@@ -190,7 +190,7 @@ struct peer_cfg_t {
 	enumerator_t* (*create_auth_cfg_enumerator)(peer_cfg_t *this, bool local);
 
 	/**
-	 * Should be sent a certificate for this connection?
+	 * Should a certificate be sent for this connection?
 	 *
 	 * @return			certificate sending policy
 	 */

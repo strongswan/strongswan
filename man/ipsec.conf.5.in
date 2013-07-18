@@ -826,7 +826,7 @@ as omitting
 completely. Using
 .B %dynamic
 can be used to define multiple dynamic selectors, each having a potentially
-different protocol/port definiton.
+different protocol/port definition.
 
 .TP
 .BR leftupdown " = <path>"

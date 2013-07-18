@@ -14,6 +14,8 @@
  */
 
 /**
+ * @defgroup xpc charon-xpc
+ *
  * @defgroup xpc_channels xpc_channels
  * @{ @ingroup xpc
  */

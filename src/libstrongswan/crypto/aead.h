@@ -58,7 +58,7 @@ struct aead_t {
 	 * is returned in the encrypted chunk, the last get_icv_size() bytes
 	 * contain the verified ICV.
 	 *
-	 * @param encrypted		data to encrypt and verify
+	 * @param encrypted		data to decrypt and verify
 	 * @param assoc			associated data to verify
 	 * @param iv			initialization vector
 	 * @param plain			allocated result, if successful
@@ -105,7 +105,7 @@ struct aead_t {
 					chunk_t key) __attribute__((warn_unused_result));
 
 	/**
-	 * Destroy a aead_t.
+	 * Destroy an aead_t.
 	 */
 	void (*destroy)(aead_t *this);
 };

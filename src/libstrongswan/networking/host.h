@@ -92,7 +92,7 @@ struct host_t {
 	 *
 	 * Returned chunk points to internal data.
 	 *
-	 * @return		address string,
+	 * @return		address blob
 	 */
 	chunk_t (*get_address) (host_t *this);
 
@@ -106,7 +106,7 @@ struct host_t {
 	/**
 	 * Set the port of this host
 	 *
-	 * @param port	port numer
+	 * @param port	port number
 	 */
 	void (*set_port) (host_t *this, u_int16_t port);
 
@@ -194,6 +194,7 @@ host_t *host_create_from_subnet(char *string, int *bits);
 /**
  * Create a netmask host having the first netbits bits set.
  *
+ * @param family		family of the netmask host
  * @param netbits		number of leading bits set in the host
  * @return				netmask host
  */

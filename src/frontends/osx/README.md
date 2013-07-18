@@ -69,7 +69,7 @@ defined:
 	* _id_: client identity to use
 	* _channel_: XPC endpoint for this connection
 
-The start_connection() RPC returns just after the initation of the call and
+The start_connection() RPC returns just after the initiation of the call and
 does not wait for the connection to establish. Nonetheless does it have a
 return value to indicate if connection initiation could be triggered.
 

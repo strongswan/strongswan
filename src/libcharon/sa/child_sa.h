@@ -231,7 +231,7 @@ struct child_sa_t {
 	/**
 	 * Override the DPD action specified by the CHILD_SA config.
 	 *
-	 * @param			close action to enforce
+	 * @param			dpd action to enforce
 	 */
 	void (*set_dpd_action)(child_sa_t *this, action_t action);
 
@@ -353,7 +353,7 @@ struct child_sa_t {
 	 * @param me		the new local host
 	 * @param other		the new remote host
 	 * @param vips		list of local virtual IPs
-	 * @param			TRUE to use UDP encapsulation for NAT traversal
+	 * @param encap		TRUE to use UDP encapsulation for NAT traversal
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update)(child_sa_t *this, host_t *me, host_t *other,

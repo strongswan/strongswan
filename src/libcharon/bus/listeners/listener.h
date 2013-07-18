@@ -31,7 +31,7 @@ typedef struct listener_t listener_t;
 struct listener_t {
 
 	/**
-	 * Hook called if a critical alert is risen.
+	 * Hook called if a critical alert is raised.
 	 *
 	 * @param ike_sa	IKE_SA associated to the alert, if any
 	 * @param alert		kind of alert

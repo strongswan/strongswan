@@ -79,7 +79,7 @@ struct keymat_t {
 	 */
 	nonce_gen_t* (*create_nonce_gen)(keymat_t *this);
 
-	/*
+	/**
 	 * Get a AEAD transform to en-/decrypt and sign/verify IKE messages.
 	 *
 	 * @param in		TRUE for inbound (decrypt), FALSE for outbound (encrypt)

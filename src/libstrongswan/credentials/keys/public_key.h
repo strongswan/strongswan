@@ -192,7 +192,7 @@ struct public_key_t {
 	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
-	 * @param type		type of the encoding, one of PRIVKEY_*
+	 * @param type		type of the encoding, one of PUBKEY_*
 	 * @param encoding	encoding of the key, allocated
 	 * @return			TRUE if encoding supported
 	 */

@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup pt_tls pt_tls
+ * @defgroup pt_tls libpttls
  *
  * @addtogroup pt_tls
  * @{

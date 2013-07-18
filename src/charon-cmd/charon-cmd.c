@@ -150,7 +150,7 @@ static int run()
 				return 0;
 			}
 			case SIGUSR1:
-			{	/* an error occured */
+			{	/* an error occurred */
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return 1;
 			}

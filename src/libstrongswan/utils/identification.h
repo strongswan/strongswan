@@ -241,7 +241,6 @@ struct identification_t {
 	 * no match at all, 1 means a bad match, and 2 a slightly better match.
 	 *
 	 * @param other		the ID containing one or more wildcards
-	 * @param wildcards	returns the number of wildcards, may be NULL
 	 * @return 			match value as described above
 	 */
 	id_match_t (*matches) (identification_t *this, identification_t *other);

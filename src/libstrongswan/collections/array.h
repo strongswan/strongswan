@@ -28,7 +28,7 @@
  *
  * An array is a primitive object with associated functions to avoid the
  * overhead of an object with methods. It is efficient in memory usage, but
- * less effecient than a linked list in manipulating elements.
+ * less efficient than a linked list in manipulating elements.
  */
 typedef struct array_t array_t;
 
@@ -140,11 +140,12 @@ void array_insert_create(array_t **array, int idx, void *ptr);
 void array_insert_enumerator(array_t *array, int idx, enumerator_t *enumerator);
 
 /**
- * Remove an element from the array end.
+ * Remove an element from the array.
  *
  * If data is given, the element is copied to that position.
  *
  * @param array			array to remove element from, or NULL
+ * @param idx			index of the item to remove
  * @param data			data to copy element to, or NULL
  * @return				TRUE if idx existed and item removed
  */

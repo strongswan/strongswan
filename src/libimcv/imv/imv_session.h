@@ -31,7 +31,7 @@
 typedef struct imv_session_t imv_session_t;
 
 /**
- * IMV session interface 
+ * IMV session interface
  */
 struct imv_session_t {
 
@@ -106,7 +106,7 @@ struct imv_session_t {
  * Create an imv_session_t instance
  *
  * @param session_id		Unique Session ID
- * @param conn_id			Associated Connection ID
+ * @param id				Associated Connection ID
  */
 imv_session_t* imv_session_create(int session_id, TNC_ConnectionID id);
 

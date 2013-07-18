@@ -28,7 +28,7 @@ typedef struct ike_cert_pre_t ike_cert_pre_t;
 #include <sa/task.h>
 
 /**
- * Task of type ike_cert_post, certificate processing before authentication.
+ * Task of type ike_cert_pre, certificate processing before authentication.
  */
 struct ike_cert_pre_t {
 

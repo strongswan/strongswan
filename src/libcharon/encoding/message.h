@@ -49,7 +49,7 @@ struct message_t {
 	 *
 	 * @param major_version	major version to set
 	 */
-	void (*set_major_version) (message_t *this,u_int8_t major_version);
+	void (*set_major_version) (message_t *this, u_int8_t major_version);
 
 	/**
 	 * Gets the IKE major version of the message.
@@ -63,7 +63,7 @@ struct message_t {
 	 *
 	 * @param minor_version	minor version to set
 	 */
-	void (*set_minor_version) (message_t *this,u_int8_t minor_version);
+	void (*set_minor_version) (message_t *this, u_int8_t minor_version);
 
 	/**
 	 * Gets the IKE minor version of the message.
@@ -77,7 +77,7 @@ struct message_t {
 	 *
 	 * @param message_id	message_id to set
 	 */
-	void (*set_message_id) (message_t *this,u_int32_t message_id);
+	void (*set_message_id) (message_t *this, u_int32_t message_id);
 
 	/**
 	 * Gets the Message ID of the message.
@@ -107,7 +107,7 @@ struct message_t {
 	 *
 	 * @param ike_sa_id		ike_sa_id to set
 	 */
-	void (*set_ike_sa_id) (message_t *this, ike_sa_id_t * ike_sa_id);
+	void (*set_ike_sa_id) (message_t *this, ike_sa_id_t *ike_sa_id);
 
 	/**
 	 * Gets the IKE_SA ID of the message.
@@ -123,7 +123,7 @@ struct message_t {
 	 *
 	 * @param exchange_type	exchange_type to set
 	 */
-	void (*set_exchange_type) (message_t *this,exchange_type_t exchange_type);
+	void (*set_exchange_type) (message_t *this, exchange_type_t exchange_type);
 
 	/**
 	 * Gets the exchange type of the message.

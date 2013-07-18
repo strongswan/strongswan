@@ -41,7 +41,7 @@ typedef enum watcher_event_t watcher_event_t;
  * and handle EAGAIN/EWOULDBLOCK gracefully.
  *
  * @param data		user data passed during registration
- * @param fd		file descriptor the event occured on
+ * @param fd		file descriptor the event occurred on
  * @param event		type of event
  * @return			TRUE to keep watching event, FALSE to unregister fd for event
  */

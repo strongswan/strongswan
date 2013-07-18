@@ -14,6 +14,11 @@
  */
 
 /**
+ * @defgroup charon-cmd charon-cmd
+ *
+ * @defgroup cmd cmd
+ * @ingroup charon-cmd
+ *
  * @defgroup cmd_connection cmd_connection
  * @{ @ingroup cmd
  */

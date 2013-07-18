@@ -213,14 +213,14 @@ struct child_cfg_t {
 	u_int32_t (*get_inactivity)(child_cfg_t *this);
 
 	/**
-	 * Specific reqid to use for CHILD_SA
+	 * Specific reqid to use for CHILD_SA.
 	 *
 	 * @return				reqid
 	 */
 	u_int32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
-	 * Optional mark for CHILD_SA
+	 * Optional mark for CHILD_SA.
 	 *
 	 * @param inbound		TRUE for inbound, FALSE for outbound
 	 * @return				mark
@@ -235,7 +235,7 @@ struct child_cfg_t {
 	u_int32_t (*get_tfc)(child_cfg_t *this);
 
 	/**
-	 * Sets two options needed for Mobile IPv6 interoperability
+	 * Sets two options needed for Mobile IPv6 interoperability.
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
 	 * @param install_policy install IPsec kernel policies (default TRUE)
@@ -244,7 +244,7 @@ struct child_cfg_t {
 												 bool install_policy);
 
 	/**
-	 * Check whether IPsec transport SA should be set up in proxy mode
+	 * Check whether IPsec transport SA should be set up in proxy mode.
 	 *
 	 * @return				TRUE, if proxy mode should be used
 	 *						FALSE, otherwise
@@ -252,7 +252,7 @@ struct child_cfg_t {
 	bool (*use_proxy_mode)(child_cfg_t *this);
 
 	/**
-	 * Check whether IPsec policies should be installed in the kernel
+	 * Check whether IPsec policies should be installed in the kernel.
 	 *
 	 * @return				TRUE, if IPsec kernel policies should be installed
 	 *						FALSE, otherwise

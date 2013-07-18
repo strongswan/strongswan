@@ -373,7 +373,7 @@ struct kernel_interface_t {
 	 *
 	 * The kernel interface uses refcounting, see add_ip().
 	 *
-	 * @param virtual_ip	virtual ip address to assign
+	 * @param virtual_ip	virtual ip address to remove
 	 * @param prefix		prefix length of the IP to uninstall, -1 for auto
 	 * @param wait			TRUE to wait untily IP is gone
 	 * @return				SUCCESS if operation completed
@@ -387,7 +387,7 @@ struct kernel_interface_t {
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
-	 * @param src_ip		sourc ip of the route
+	 * @param src_ip		source ip of the route
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
 	 *						ALREADY_DONE if the route already exists
@@ -402,7 +402,7 @@ struct kernel_interface_t {
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
-	 * @param src_ip		sourc ip of the route
+	 * @param src_ip		source ip of the route
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
 	 */
@@ -598,7 +598,7 @@ struct kernel_interface_t {
 							 char **kernel_name);
 
 	/**
-	 * Destroys a kernel_interface_manager_t object.
+	 * Destroys a kernel_interface_t object.
 	 */
 	void (*destroy) (kernel_interface_t *this);
 };

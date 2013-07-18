@@ -67,7 +67,7 @@ enum task_type_t {
 	TASK_CHILD_CREATE,
 	/** delete an established CHILD_SA */
 	TASK_CHILD_DELETE,
-	/** rekey an CHILD_SA */
+	/** rekey a CHILD_SA */
 	TASK_CHILD_REKEY,
 	/** IKEv1 main mode */
 	TASK_MAIN_MODE,

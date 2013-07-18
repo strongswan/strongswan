@@ -86,7 +86,7 @@ struct ike_sa_id_t {
 	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * Replace all values of a given ike_sa_id_t object with values.
+	 * Replace all values of a given ike_sa_id_t object with values
 	 * from another ike_sa_id_t object.
 	 *
 	 * After calling this function, both objects are equal.

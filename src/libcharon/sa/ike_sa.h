@@ -200,11 +200,11 @@ enum ike_condition_t {
 enum statistic_t {
 	/** Timestamp of SA establishement */
 	STAT_ESTABLISHED = 0,
-	/** Timestamp of scheudled rekeying */
+	/** Timestamp of scheduled rekeying */
 	STAT_REKEY,
-	/** Timestamp of scheudled reauthentication */
+	/** Timestamp of scheduled reauthentication */
 	STAT_REAUTH,
-	/** Timestamp of scheudled delete */
+	/** Timestamp of scheduled delete */
 	STAT_DELETE,
 	/** Timestamp of last inbound IKE packet */
 	STAT_INBOUND,
@@ -812,10 +812,8 @@ struct ike_sa_t {
 	/**
 	 * Sends a keep alive packet.
 	 *
-	 * To refresh NAT tables in a NAT router
-	 * between the peers, periodic empty
-	 * UDP packets are sent if no other traffic
-	 * was sent.
+	 * To refresh NAT tables in a NAT router between the peers, periodic empty
+	 * UDP packets are sent if no other traffic was sent.
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
 

@@ -41,7 +41,7 @@ struct ita_attr_device_id_t {
 /**
  * Creates an ita_attr_device_id_t object
  *
- * @param size				ITA Device ID attribute value
+ * @param value				ITA Device ID attribute value
  */
 pa_tnc_attr_t* ita_attr_device_id_create(chunk_t value);
 
