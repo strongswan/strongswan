@@ -1617,8 +1617,11 @@ METHOD(ike_sa_t, reestablish, status_t,
 		}
 		enumerator->destroy(enumerator);
 		/* check if we have tasks that recreate children */
-		restart = is_child_queued(this, TASK_QUEUE_ACTIVE) ||
-				  is_child_queued(this, TASK_QUEUE_QUEUED);
+		if (!restart)
+		{
+			restart = is_child_queued(this, TASK_QUEUE_ACTIVE) ||
+					  is_child_queued(this, TASK_QUEUE_QUEUED);
+		}
 #ifdef ME
 		/* mediation connections have no children, keep them up anyway */
 		if (this->peer_cfg->is_mediation(this->peer_cfg))
