@@ -290,6 +290,26 @@ METHOD(lookip_listener_t, add_listener, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(lookip_listener_t, remove_listener, void,
+	private_lookip_listener_t *this, void *user)
+{
+	listener_entry_t *listener;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (listener->user == user)
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+			free(listener);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(lookip_listener_t, destroy, void,
 	private_lookip_listener_t *this)
 {
@@ -315,6 +335,7 @@ lookip_listener_t *lookip_listener_create()
 			},
 			.lookup = _lookup,
 			.add_listener = _add_listener,
+			.remove_listener = _remove_listener,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),

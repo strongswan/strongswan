@@ -23,8 +23,7 @@
 #include <errno.h>
 
 #include <daemon.h>
-#include <threading/thread.h>
-#include <processing/jobs/callback_job.h>
+#include <collections/linked_list.h>
 
 #include "whitelist_msg.h"
 
@@ -46,65 +45,68 @@ struct private_whitelist_control_t {
 	whitelist_listener_t *listener;
 
 	/**
-	 * Whitelist unix socket file descriptor
+	 * Whitelist stream service
 	 */
-	int socket;
+	stream_service_t *service;
 };
 
-/**
- * Open whitelist unix socket
+/*
+ * List whitelist entries using a read-copy
  */
-static bool open_socket(private_whitelist_control_t *this)
+static void list(private_whitelist_control_t *this,
+				 stream_t *stream, identification_t *id)
 {
-	struct sockaddr_un addr;
-	mode_t old;
+	identification_t *current;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	whitelist_msg_t msg = {
+		.type = htonl(WHITELIST_LIST),
+	};
 
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, WHITELIST_SOCKET);
+	list = linked_list_create();
+	enumerator = this->listener->create_enumerator(this->listener);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->matches(current, id))
+		{
+			list->insert_last(list, current->clone(current));
+		}
+	}
+	enumerator->destroy(enumerator);
 
-	this->socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-	if (this->socket == -1)
+	while (list->remove_first(list, (void**)&current) == SUCCESS)
 	{
-		DBG1(DBG_CFG, "creating whitelist socket failed");
-		return FALSE;
+		snprintf(msg.id, sizeof(msg.id), "%Y", current);
+		current->destroy(current);
+		if (!stream->write_all(stream, &msg, sizeof(msg)))
+		{
+			DBG1(DBG_CFG, "listing whitelist failed: %s", strerror(errno));
+			break;
+		}
 	}
-	unlink(addr.sun_path);
-	old = umask(~(S_IRWXU | S_IRWXG));
-	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-	{
-		DBG1(DBG_CFG, "binding whitelist socket failed: %s", strerror(errno));
-		close(this->socket);
-		return FALSE;
-	}
-	umask(old);
-	if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
-			  lib->caps->get_gid(lib->caps)) != 0)
-	{
-		DBG1(DBG_CFG, "changing whitelist socket permissions failed: %s",
-			 strerror(errno));
-	}
-	if (listen(this->socket, 10) < 0)
-	{
-		DBG1(DBG_CFG, "listening on whitelist socket failed: %s", strerror(errno));
-		close(this->socket);
-		unlink(addr.sun_path);
-		return FALSE;
-	}
-	return TRUE;
+	list->destroy_offset(list, offsetof(identification_t, destroy));
+
+	msg.type = htonl(WHITELIST_END);
+	memset(msg.id, 0, sizeof(msg.id));
+	stream->write_all(stream, &msg, sizeof(msg));
 }
 
 /**
  * Dispatch a received message
  */
-static void dispatch(private_whitelist_control_t *this,
-					 int fd, whitelist_msg_t *msg)
+static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
 {
-	identification_t *id, *current;
-	enumerator_t *enumerator;
+	identification_t *id;
+	whitelist_msg_t msg;
 
-	msg->id[sizeof(msg->id)-1] = 0;
-	id = identification_create_from_string(msg->id);
-	switch (msg->type)
+	if (!stream->read_all(stream, &msg, sizeof(msg)))
+	{
+		return FALSE;
+	}
+
+	msg.id[sizeof(msg.id) - 1] = 0;
+	id = identification_create_from_string(msg.id);
+	switch (ntohl(msg.type))
 	{
 		case WHITELIST_ADD:
 			this->listener->add(this->listener, id);
@@ -113,23 +115,7 @@ static void dispatch(private_whitelist_control_t *this,
 			this->listener->remove(this->listener, id);
 			break;
 		case WHITELIST_LIST:
-			enumerator = this->listener->create_enumerator(this->listener);
-			while (enumerator->enumerate(enumerator, &current))
-			{
-				if (current->matches(current, id))
-				{
-					snprintf(msg->id, sizeof(msg->id), "%Y", current);
-					if (send(fd, msg, sizeof(*msg), 0) != sizeof(*msg))
-					{
-						DBG1(DBG_CFG, "listing whitelist failed");
-						break;
-					}
-				}
-			}
-			enumerator->destroy(enumerator);
-			msg->type = WHITELIST_END;
-			memset(msg->id, 0, sizeof(msg->id));
-			send(fd, msg, sizeof(*msg), 0);
+			list(this, stream, id);
 			break;
 		case WHITELIST_FLUSH:
 			this->listener->flush(this->listener, id);
@@ -145,58 +131,14 @@ static void dispatch(private_whitelist_control_t *this,
 			break;
 	}
 	id->destroy(id);
-}
 
-/**
- * Accept whitelist control connections, dispatch
- */
-static job_requeue_t receive(private_whitelist_control_t *this)
-{
-	struct sockaddr_un addr;
-	int fd, len = sizeof(addr);
-	whitelist_msg_t msg;
-	bool oldstate;
-
-	oldstate = thread_cancelability(TRUE);
-	fd = accept(this->socket, (struct sockaddr*)&addr, &len);
-	thread_cancelability(oldstate);
-
-	if (fd != -1)
-	{
-		while (TRUE)
-		{
-			oldstate = thread_cancelability(TRUE);
-			len = recv(fd, &msg, sizeof(msg), 0);
-			thread_cancelability(oldstate);
-
-			if (len == sizeof(msg))
-			{
-				dispatch(this, fd, &msg);
-			}
-			else
-			{
-				if (len != 0)
-				{
-					DBG1(DBG_CFG, "receiving whitelist msg failed: %s",
-						 strerror(errno));
-				}
-				break;
-			}
-		}
-		close(fd);
-	}
-	else
-	{
-		DBG1(DBG_CFG, "accepting whitelist connection failed: %s",
-			 strerror(errno));
-	}
-	return JOB_REQUEUE_FAIR;
+	return FALSE;
 }
 
 METHOD(whitelist_control_t, destroy, void,
 	private_whitelist_control_t *this)
 {
-	close(this->socket);
+	this->service->destroy(this->service);
 	free(this);
 }
 
@@ -206,6 +148,7 @@ METHOD(whitelist_control_t, destroy, void,
 whitelist_control_t *whitelist_control_create(whitelist_listener_t *listener)
 {
 	private_whitelist_control_t *this;
+	char *uri;
 
 	INIT(this,
 		.public = {
@@ -214,15 +157,19 @@ whitelist_control_t *whitelist_control_create(whitelist_listener_t *listener)
 		.listener = listener,
 	);
 
-	if (!open_socket(this))
+	uri = lib->settings->get_str(lib->settings,
+				"%s.plugins.whitelist.socket", "unix://" WHITELIST_SOCKET,
+				charon->name);
+	this->service = lib->streams->create_service(lib->streams, uri, 10);
+	if (!this->service)
 	{
+		DBG1(DBG_CFG, "creating whitelist socket failed");
 		free(this);
 		return NULL;
 	}
 
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
-				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	this->service->on_accept(this->service, (stream_service_cb_t)on_accept,
+							 this, JOB_PRIO_CRITICAL, 0);
 
 	return &this->public;
 }

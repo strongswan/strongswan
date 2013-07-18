@@ -98,12 +98,6 @@ plugin_t *duplicheck_plugin_create()
 		return NULL;
 	}
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) notify socket */
-		DBG1(DBG_CFG, "duplicheck plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {

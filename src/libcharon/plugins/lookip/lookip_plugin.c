@@ -80,7 +80,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_lookip_plugin_t *this)
 {
-	this->socket->destroy(this->socket);
+	DESTROY_IF(this->socket);
 	this->listener->destroy(this->listener);
 	free(this);
 }
@@ -92,12 +92,6 @@ plugin_t *lookip_plugin_create()
 {
 	private_lookip_plugin_t *this;
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) control socket */
-		DBG1(DBG_CFG, "lookip plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -108,7 +102,13 @@ plugin_t *lookip_plugin_create()
 		},
 		.listener = lookip_listener_create(),
 	);
+
 	this->socket = lookip_socket_create(this->listener);
+	if (!this->socket)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public.plugin;
 }

@@ -379,21 +379,17 @@ static void process_coa(private_eap_radius_dae_t *this,
 /**
  * Receive RADIUS DAE requests
  */
-static job_requeue_t receive(private_eap_radius_dae_t *this)
+static bool receive(private_eap_radius_dae_t *this)
 {
 	struct sockaddr_storage addr;
 	socklen_t addr_len = sizeof(addr);
 	radius_message_t *request;
 	char buf[2048];
 	ssize_t len;
-	bool oldstate;
 	host_t *client;
 
-	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->fd, buf, sizeof(buf), 0,
+	len = recvfrom(this->fd, buf, sizeof(buf), MSG_DONTWAIT,
 				   (struct sockaddr*)&addr, &addr_len);
-	thread_cancelability(oldstate);
-
 	if (len > 0)
 	{
 		request = radius_message_parse(chunk_create(buf, len));
@@ -433,11 +429,11 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 			DBG1(DBG_NET, "ignoring invalid RADIUS DAE request");
 		}
 	}
-	else
+	else if (errno != EWOULDBLOCK)
 	{
 		DBG1(DBG_NET, "receiving RADIUS DAE request failed: %s", strerror(errno));
 	}
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 /**
@@ -483,6 +479,7 @@ METHOD(eap_radius_dae_t, destroy, void,
 {
 	if (this->fd != -1)
 	{
+		lib->watcher->remove(lib->watcher, this->fd);
 		close(this->fd);
 	}
 	DESTROY_IF(this->signer);
@@ -533,9 +530,8 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		return NULL;
 	}
 
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive,
-			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	lib->watcher->add(lib->watcher, this->fd, WATCHER_READ,
+					  (watcher_cb_t)receive, this);
 
 	return &this->public;
 }

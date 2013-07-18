@@ -92,12 +92,6 @@ plugin_t *whitelist_plugin_create()
 {
 	private_whitelist_plugin_t *this;
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) control socket */
-		DBG1(DBG_CFG, "whitelist plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -108,7 +102,13 @@ plugin_t *whitelist_plugin_create()
 		},
 		.listener = whitelist_listener_create(),
 	);
+
 	this->control = whitelist_control_create(this->listener);
+	if (!this->control)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public.plugin;
 }

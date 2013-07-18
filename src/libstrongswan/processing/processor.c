@@ -401,6 +401,31 @@ METHOD(processor_t, queue_job, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(processor_t, execute_job, void,
+	private_processor_t *this, job_t *job)
+{
+	job_priority_t prio;
+	bool queued = FALSE;
+
+	this->mutex->lock(this->mutex);
+	if (get_idle_threads_nolock(this))
+	{
+		prio = sane_prio(job->get_priority(job));
+		job->status = JOB_STATUS_QUEUED;
+		/* insert job in front to execute it immediately */
+		this->jobs[prio]->insert_first(this->jobs[prio], job);
+		queued = TRUE;
+	}
+	this->job_added->signal(this->job_added);
+	this->mutex->unlock(this->mutex);
+
+	if (!queued)
+	{
+		job->execute(job);
+		job->destroy(job);
+	}
+}
+
 METHOD(processor_t, set_threads, void,
 	private_processor_t *this, u_int count)
 {
@@ -506,6 +531,7 @@ processor_t *processor_create()
 			.get_working_threads = _get_working_threads,
 			.get_job_load = _get_job_load,
 			.queue_job = _queue_job,
+			.execute_job = _execute_job,
 			.set_threads = _set_threads,
 			.cancel = _cancel,
 			.destroy = _destroy,
@@ -525,4 +551,3 @@ processor_t *processor_create()
 
 	return &this->public;
 }
-

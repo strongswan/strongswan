@@ -75,6 +75,13 @@ struct lookip_listener_t {
 						 lookip_callback_t cb, void *user);
 
 	/**
+	 * Unregister a listener by the user data.
+	 *
+	 * @param user		user data, as passed during add_listener()
+	 */
+	void (*remove_listener)(lookip_listener_t *this, void *user);
+
+	/**
 	 * Destroy a lookip_listener_t.
 	 */
 	void (*destroy)(lookip_listener_t *this);

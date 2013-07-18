@@ -45,6 +45,9 @@ enum {
 	ERROR_NOTIFY_UNIQUE_KEEP = 14,
 	ERROR_NOTIFY_VIP_FAILURE = 15,
 	ERROR_NOTIFY_AUTHORIZATION_FAILED = 16,
+	ERROR_NOTIFY_CERT_EXPIRED = 17,
+	ERROR_NOTIFY_CERT_REVOKED = 18,
+	ERROR_NOTIFY_NO_ISSUER_CERT = 19,
 };
 
 /**
@@ -54,13 +57,13 @@ struct error_notify_msg_t {
 	/** message type */
 	int type;
 	/** string with an error description */
-	char str[128];
+	char str[384];
 	/** connection name, if known */
 	char name[64];
 	/** peer identity, if known */
-	char id[128];
+	char id[256];
 	/** peer address and port, if known */
 	char ip[60];
-};
+} __attribute__((packed));
 
 #endif /** ERROR_NOTIFY_MSG_H_ @}*/

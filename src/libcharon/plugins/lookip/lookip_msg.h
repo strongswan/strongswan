@@ -69,7 +69,7 @@ struct lookip_request_t {
 	int type;
 	/** null terminated string representation of virtual IP */
 	char vip[40];
-};
+} __attribute__((packed));
 
 /**
  * Response message sent to client.
@@ -86,11 +86,11 @@ struct lookip_response_t {
 	/** null terminated string representation of outer IP */
 	char ip[40];
 	/** null terminated peer identity */
-	char id[128];
+	char id[256];
 	/** null terminated connection name */
 	char name[40];
 	/** unique connection id */
 	unsigned int unique_id;
-};
+} __attribute__((packed));
 
 #endif /** LOOKIP_MSG_H_ @}*/

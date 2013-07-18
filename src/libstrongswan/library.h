@@ -58,6 +58,9 @@
  * @defgroup networking networking
  * @ingroup libstrongswan
  *
+ * @defgroup streams streams
+ * @ingroup networking
+ *
  * @defgroup plugins plugins
  * @ingroup libstrongswan
  *
@@ -90,8 +93,10 @@
 #include "utils/printf_hook.h"
 #include "utils/utils.h"
 #include "networking/host_resolver.h"
+#include "networking/streams/stream_manager.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"
+#include "processing/watcher.h"
 #include "crypto/crypto_factory.h"
 #include "crypto/proposal/proposal_keywords.h"
 #include "fetcher/fetcher_manager.h"
@@ -195,6 +200,16 @@ struct library_t {
 	 * schedule jobs
 	 */
 	scheduler_t *scheduler;
+
+	/**
+	 * File descriptor monitoring
+	 */
+	watcher_t *watcher;
+
+	/**
+	 * Streams and Services
+	 */
+	stream_manager_t *streams;
 
 	/**
 	 * resolve hosts by DNS name

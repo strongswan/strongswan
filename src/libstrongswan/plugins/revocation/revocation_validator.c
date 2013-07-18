@@ -691,6 +691,8 @@ METHOD(cert_validator_t, validate, bool,
 			case VALIDATION_REVOKED:
 			case VALIDATION_ON_HOLD:
 				/* has already been logged */
+				lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_REVOKED,
+										subject);
 				return FALSE;
 			case VALIDATION_SKIPPED:
 				DBG2(DBG_CFG, "ocsp check skipped, no ocsp found");
@@ -711,6 +713,8 @@ METHOD(cert_validator_t, validate, bool,
 			case VALIDATION_REVOKED:
 			case VALIDATION_ON_HOLD:
 				/* has already been logged */
+				lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_REVOKED,
+										subject);
 				return FALSE;
 			case VALIDATION_FAILED:
 			case VALIDATION_SKIPPED:
@@ -720,6 +724,8 @@ METHOD(cert_validator_t, validate, bool,
 				DBG1(DBG_CFG, "certificate status is unknown, crl is stale");
 				break;
 		}
+		lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_VALIDATION_FAILED,
+								subject);
 	}
 	return TRUE;
 }

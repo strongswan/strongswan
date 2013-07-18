@@ -45,6 +45,8 @@ METHOD(listener_t, alert, bool,
 	identification_t *id;
 	linked_list_t *list, *list2;
 	peer_cfg_t *peer_cfg;
+	certificate_t *cert;
+	time_t not_before, not_after;
 
 	if (!this->socket->has_listeners(this->socket))
 	{
@@ -56,80 +58,80 @@ METHOD(listener_t, alert, bool,
 	switch (alert)
 	{
 		case ALERT_RADIUS_NOT_RESPONDING:
-			msg.type = ERROR_NOTIFY_RADIUS_NOT_RESPONDING;
+			msg.type = htonl(ERROR_NOTIFY_RADIUS_NOT_RESPONDING);
 			snprintf(msg.str, sizeof(msg.str),
 					 "a RADIUS request message timed out");
 			break;
 		case ALERT_LOCAL_AUTH_FAILED:
-			msg.type = ERROR_NOTIFY_LOCAL_AUTH_FAILED;
+			msg.type = htonl(ERROR_NOTIFY_LOCAL_AUTH_FAILED);
 			snprintf(msg.str, sizeof(msg.str),
 					 "creating local authentication data failed");
 			break;
 		case ALERT_PEER_AUTH_FAILED:
-			msg.type = ERROR_NOTIFY_PEER_AUTH_FAILED;
+			msg.type = htonl(ERROR_NOTIFY_PEER_AUTH_FAILED);
 			snprintf(msg.str, sizeof(msg.str), "peer authentication failed");
 			break;
 		case ALERT_PARSE_ERROR_HEADER:
-			msg.type = ERROR_NOTIFY_PARSE_ERROR_HEADER;
+			msg.type = htonl(ERROR_NOTIFY_PARSE_ERROR_HEADER);
 			message = va_arg(args, message_t*);
 			snprintf(msg.str, sizeof(msg.str), "parsing IKE header from "
 					 "%#H failed", message->get_source(message));
 			break;
 		case ALERT_PARSE_ERROR_BODY:
-			msg.type = ERROR_NOTIFY_PARSE_ERROR_BODY;
+			msg.type = htonl(ERROR_NOTIFY_PARSE_ERROR_BODY);
 			message = va_arg(args, message_t*);
 			snprintf(msg.str, sizeof(msg.str), "parsing IKE message from "
 					 "%#H failed", message->get_source(message));
 			break;
 		case ALERT_RETRANSMIT_SEND_TIMEOUT:
-			msg.type = ERROR_NOTIFY_RETRANSMIT_SEND_TIMEOUT;
+			msg.type = htonl(ERROR_NOTIFY_RETRANSMIT_SEND_TIMEOUT);
 			snprintf(msg.str, sizeof(msg.str),
 					 "IKE message retransmission timed out");
 			break;
 		case ALERT_HALF_OPEN_TIMEOUT:
-			msg.type = ERROR_NOTIFY_HALF_OPEN_TIMEOUT;
+			msg.type = htonl(ERROR_NOTIFY_HALF_OPEN_TIMEOUT);
 			snprintf(msg.str, sizeof(msg.str), "IKE_SA timed out before it "
 					 "could be established");
 			break;
 		case ALERT_PROPOSAL_MISMATCH_IKE:
-			msg.type = ERROR_NOTIFY_PROPOSAL_MISMATCH_IKE;
+			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_IKE);
 			list = va_arg(args, linked_list_t*);
 			snprintf(msg.str, sizeof(msg.str), "the received IKE_SA poposals "
 					 "did not match: %#P", list);
 			break;
 		case ALERT_PROPOSAL_MISMATCH_CHILD:
-			msg.type = ERROR_NOTIFY_PROPOSAL_MISMATCH_CHILD;
+			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_CHILD);
 			list = va_arg(args, linked_list_t*);
 			snprintf(msg.str, sizeof(msg.str), "the received CHILD_SA poposals "
 					 "did not match: %#P", list);
 			break;
 		case ALERT_TS_MISMATCH:
-			msg.type = ERROR_NOTIFY_TS_MISMATCH;
+			msg.type = htonl(ERROR_NOTIFY_TS_MISMATCH);
 			list = va_arg(args, linked_list_t*);
 			list2 = va_arg(args, linked_list_t*);
 			snprintf(msg.str, sizeof(msg.str), "the received traffic selectors "
 					 "did not match: %#R=== %#R", list, list2);
 			break;
 		case ALERT_INSTALL_CHILD_SA_FAILED:
-			msg.type = ERROR_NOTIFY_INSTALL_CHILD_SA_FAILED;
+			msg.type = htonl(ERROR_NOTIFY_INSTALL_CHILD_SA_FAILED);
 			snprintf(msg.str, sizeof(msg.str), "installing IPsec SA failed");
 			break;
 		case ALERT_INSTALL_CHILD_POLICY_FAILED:
-			msg.type = ERROR_NOTIFY_INSTALL_CHILD_POLICY_FAILED;
+			msg.type = htonl(ERROR_NOTIFY_INSTALL_CHILD_POLICY_FAILED);
 			snprintf(msg.str, sizeof(msg.str), "installing IPsec policy failed");
 			break;
 		case ALERT_UNIQUE_REPLACE:
-			msg.type = ERROR_NOTIFY_UNIQUE_REPLACE;
+			msg.type = htonl(ERROR_NOTIFY_UNIQUE_REPLACE);
 			snprintf(msg.str, sizeof(msg.str),
 					 "replaced old IKE_SA due to uniqueness policy");
 			break;
 		case ALERT_UNIQUE_KEEP:
-			msg.type = ERROR_NOTIFY_UNIQUE_KEEP;
+			msg.type = htonl(ERROR_NOTIFY_UNIQUE_KEEP);
 			snprintf(msg.str, sizeof(msg.str), "keep existing in favor of "
 					 "rejected new IKE_SA due to uniqueness policy");
 			break;
 		case ALERT_VIP_FAILURE:
-			msg.type = ERROR_NOTIFY_VIP_FAILURE;
+			msg.type = htonl(ERROR_NOTIFY_VIP_FAILURE);
 			list = va_arg(args, linked_list_t*);
 			if (list->get_first(list, (void**)&host) == SUCCESS)
 			{
@@ -143,9 +145,29 @@ METHOD(listener_t, alert, bool,
 			}
 			break;
 		case ALERT_AUTHORIZATION_FAILED:
-			msg.type = ERROR_NOTIFY_AUTHORIZATION_FAILED;
+			msg.type = htonl(ERROR_NOTIFY_AUTHORIZATION_FAILED);
 			snprintf(msg.str, sizeof(msg.str), "an authorization plugin "
 					 "prevented establishment of an IKE_SA");
+			break;
+		case ALERT_CERT_EXPIRED:
+			msg.type = htonl(ERROR_NOTIFY_CERT_EXPIRED);
+			cert = va_arg(args, certificate_t*);
+			cert->get_validity(cert, NULL, &not_before, &not_after);
+			snprintf(msg.str, sizeof(msg.str), "certificiate expired: '%Y' "
+					 "(valid from %T to %T)", cert->get_subject(cert),
+					 &not_before, TRUE, &not_after, TRUE);
+			break;
+		case ALERT_CERT_REVOKED:
+			msg.type = htonl(ERROR_NOTIFY_CERT_REVOKED);
+			cert = va_arg(args, certificate_t*);
+			snprintf(msg.str, sizeof(msg.str), "certificiate revoked: '%Y'",
+					 cert->get_subject(cert));
+			break;
+		case ALERT_CERT_NO_ISSUER:
+			msg.type = htonl(ERROR_NOTIFY_NO_ISSUER_CERT);
+			cert = va_arg(args, certificate_t*);
+			snprintf(msg.str, sizeof(msg.str), "no trusted issuer certificate "
+					 "found: '%Y'", cert->get_issuer(cert));
 			break;
 		default:
 			return TRUE;

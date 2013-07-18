@@ -37,11 +37,9 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
-#include <threading/thread.h>
 #include <threading/mutex.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
-#include <processing/jobs/callback_job.h>
 
 /** Required for Linux 2.6.26 kernel and later */
 #ifndef XFRM_STATE_AF_UNSPEC
@@ -972,40 +970,37 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 /**
  * Receives events from kernel
  */
-static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
+static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
+						   watcher_event_t event)
 {
 	char response[1024];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
 	int len;
-	bool oldstate;
 
-	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket_xfrm_events, response, sizeof(response), 0,
-				   (struct sockaddr*)&addr, &addr_len);
-	thread_cancelability(oldstate);
-
+	len = recvfrom(this->socket_xfrm_events, response, sizeof(response),
+				   MSG_DONTWAIT, (struct sockaddr*)&addr, &addr_len);
 	if (len < 0)
 	{
 		switch (errno)
 		{
 			case EINTR:
 				/* interrupted, try again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			case EAGAIN:
 				/* no data ready, select again */
-				return JOB_REQUEUE_DIRECT;
+				return TRUE;
 			default:
 				DBG1(DBG_KNL, "unable to receive from xfrm event socket");
 				sleep(1);
-				return JOB_REQUEUE_FAIR;
+				return TRUE;
 		}
 	}
 
 	if (addr.nl_pid != 0)
 	{	/* not from kernel. not interested, try another one */
-		return JOB_REQUEUE_DIRECT;
+		return TRUE;
 	}
 
 	while (NLMSG_OK(hdr, len))
@@ -1031,7 +1026,7 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 		}
 		hdr = NLMSG_NEXT(hdr, len);
 	}
-	return JOB_REQUEUE_DIRECT;
+	return TRUE;
 }
 
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
@@ -2605,6 +2600,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 
 	if (this->socket_xfrm_events > 0)
 	{
+		lib->watcher->remove(lib->watcher, this->socket_xfrm_events);
 		close(this->socket_xfrm_events);
 	}
 	DESTROY_IF(this->socket_xfrm);
@@ -2707,10 +2703,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 			destroy(this);
 			return NULL;
 		}
-		lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create_with_prio(
-					(callback_job_cb_t)receive_events, this, NULL,
-					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+		lib->watcher->add(lib->watcher, this->socket_xfrm_events, WATCHER_READ,
+						  (watcher_cb_t)receive_events, this);
 	}
 
 	return &this->public;

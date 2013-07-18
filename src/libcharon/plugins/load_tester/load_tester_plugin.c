@@ -269,12 +269,6 @@ plugin_t *load_tester_plugin_create()
 		return NULL;
 	}
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) control socket */
-		DBG1(DBG_CFG, "load-tester plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -304,4 +298,3 @@ plugin_t *load_tester_plugin_create()
 	}
 	return &this->public.plugin;
 }
-
