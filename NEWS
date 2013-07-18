@@ -58,6 +58,15 @@ strongswan-5.1.0
   in a custom load statement can be ordered freely or to express preferences
   without being affected by dependencies between plugin features.
 
+- A centralized thread can take care for watching multiple file descriptors
+  concurrently. This removes the need for a dedicated listener threads in
+  various plugins. The number of "reserved" threads for such tasks has been
+  reduced to about five, depending on the plugin configuration.
+
+- Plugins that can be controlled by a UNIX socket IPC mechanism gained network
+  transparency. Third party applications querying these plugins now can use
+  TCP connections from a different host.
+
 - libipsec now supports AES-GCM.
 
 
