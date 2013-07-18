@@ -45,6 +45,10 @@ strongswan-5.1.0
   disables any optimization, so it should not be enabled when building
   production releases).
 
+- The leak-detective developer tool has been greatly improved. It works much
+  faster/stabler with multiple threads, does not use deprecated malloc hooks
+  anymore and has been ported to OS X.
+
 - chunk_hash() is now based on SipHash-2-4 with a random key.  This provides
   better distribution and prevents hash flooding attacks when used with
   hashtables.
