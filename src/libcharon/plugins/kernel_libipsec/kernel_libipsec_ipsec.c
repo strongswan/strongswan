@@ -464,6 +464,15 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		policy->route = NULL;
 	}
 
+	if (dst_ts->is_host(dst_ts, dst))
+	{
+		DBG1(DBG_KNL, "can't install route for %R === %R %N, conflicts with "
+			 "IKE traffic", src_ts, dst_ts, policy_dir_names,
+			 policy->direction);
+		route_entry_destroy(route);
+		this->mutex->unlock(this->mutex);
+		return FALSE;
+	}
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
 	if (dst_ts->includes(dst_ts, dst))
 	{
