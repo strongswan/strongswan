@@ -14,7 +14,8 @@ strongswan-5.1.0
   processing in userland on Linux, FreeBSD and Mac OS X.
 
 - The new osx-attr plugin installs configuration attributes (currently DNS
-  servers) via SystemConfiguration on Mac OS X.
+  servers) via SystemConfiguration on Mac OS X. The keychain plugin provides
+  certificates from the OS X keychain service.
 
 - The sshkey plugin parses SSH public keys, which, together with the --agent
   option for charon-cmd, allows the use of ssh-agent for authentication.
