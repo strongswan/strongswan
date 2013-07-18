@@ -251,6 +251,11 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 		DBG1(DBG_NET, "invalid stream URI: '%s'", uri);
 		return NULL;
 	}
+	if (!lib->caps->check(lib->caps, CAP_CHOWN))
+	{	/* required to chown(2) service socket */
+		DBG1(DBG_NET, "socket '%s' requires CAP_CHOWN capability", uri);
+		return NULL;
+	}
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1)
 	{

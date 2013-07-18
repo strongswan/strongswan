@@ -51,12 +51,13 @@ static bool register_stroke(private_stroke_plugin_t *this,
 	if (reg)
 	{
 		this->socket = stroke_socket_create();
+		return this->socket != NULL;
 	}
 	else
 	{
 		DESTROY_IF(this->socket);
+		return TRUE;
 	}
-	return TRUE;
 }
 
 METHOD(plugin_t, get_features, int,
@@ -91,12 +92,6 @@ plugin_t *stroke_plugin_create()
 {
 	private_stroke_plugin_t *this;
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) stroke socket */
-		DBG1(DBG_CFG, "stroke plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -110,4 +105,3 @@ plugin_t *stroke_plugin_create()
 
 	return &this->public.plugin;
 }
-

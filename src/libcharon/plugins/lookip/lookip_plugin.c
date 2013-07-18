@@ -92,12 +92,6 @@ plugin_t *lookip_plugin_create()
 {
 	private_lookip_plugin_t *this;
 
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) control socket */
-		DBG1(DBG_CFG, "lookip plugin requires CAP_CHOWN capability");
-		return NULL;
-	}
-
 	INIT(this,
 		.public = {
 			.plugin = {
