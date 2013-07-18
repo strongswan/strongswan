@@ -75,6 +75,16 @@ struct processor_t {
 	void (*queue_job) (processor_t *this, job_t *job);
 
 	/**
+	 * Directly execute a job with an idle worker thread.
+	 *
+	 * If no idle thread is available, the job gets executed by the calling
+	 * thread.
+	 *
+	 * @param job			job, gets destroyed
+	 */
+	void (*execute_job)(processor_t *this, job_t *job);
+
+	/**
 	 * Set the number of threads to use in the processor.
 	 *
 	 * If the number of threads is smaller than number of currently running
