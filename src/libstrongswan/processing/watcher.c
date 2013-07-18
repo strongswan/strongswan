@@ -325,15 +325,7 @@ static job_requeue_t watch(private_watcher_t *this)
 				while (this->jobs->remove_first(this->jobs,
 												(void**)&job) == SUCCESS)
 				{
-					if (lib->processor->get_threads(lib->processor))
-					{
-						lib->processor->queue_job(lib->processor, job);
-					}
-					else
-					{
-						job->execute(job);
-						job->destroy(job);
-					}
+					lib->processor->execute_job(lib->processor, job);
 				}
 				/* we temporarily disable a notified FD, rebuild FDSET */
 				return JOB_REQUEUE_DIRECT;
