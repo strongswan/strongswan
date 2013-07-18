@@ -16,6 +16,8 @@
 
 #include "hashtable.h"
 
+#include <utils/chunk.h>
+
 /** The maximum capacity of the hash table (MUST be a power of 2) */
 #define MAX_CAPACITY (1 << 30)
 
@@ -146,8 +148,39 @@ struct private_enumerator_t {
 	 * previous pair (used by remove_at)
 	 */
 	pair_t *prev;
-
 };
+
+/*
+ * See header.
+ */
+u_int hashtable_hash_ptr(void *key)
+{
+	return chunk_hash(chunk_from_thing(key));
+}
+
+/*
+ * See header.
+ */
+u_int hashtable_hash_str(void *key)
+{
+	return chunk_hash(chunk_from_str((char*)key));
+}
+
+/*
+ * See header.
+ */
+bool hashtable_equals_ptr(void *key, void *other_key)
+{
+	return key == other_key;
+}
+
+/*
+ * See header.
+ */
+bool hashtable_equals_str(void *key, void *other_key)
+{
+	return streq(key, other_key);
+}
 
 /**
  * This function returns the next-highest power of two for the given number.
@@ -441,4 +474,3 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 
 	return &this->public;
 }
-

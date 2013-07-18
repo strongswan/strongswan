@@ -423,6 +423,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_KEYCHAIN
+  SUBDIRS += plugins/keychain
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/keychain/libstrongswan-keychain.la
+endif
+endif
+
 if USE_PKCS11
   SUBDIRS += plugins/pkcs11
 if MONOLITHIC

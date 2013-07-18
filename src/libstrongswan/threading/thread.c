@@ -341,7 +341,20 @@ thread_t *thread_create(thread_main_t main, void *arg)
  */
 thread_t *thread_current()
 {
-	return current_thread->get(current_thread);
+	private_thread_t *this;
+
+	this = (private_thread_t*)current_thread->get(current_thread);
+	if (!this)
+	{
+		this = thread_create_internal();
+
+		id_mutex->lock(id_mutex);
+		this->id = next_id++;
+		id_mutex->unlock(id_mutex);
+
+		current_thread->set(current_thread, (void*)this);
+	}
+	return &this->public;
 }
 
 /**

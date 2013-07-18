@@ -378,8 +378,8 @@ METHOD(credential_manager_t, get_shared, shared_key_t*,
 	identification_t *me, identification_t *other)
 {
 	shared_key_t *current, *found = NULL;
-	id_match_t *best_me = ID_MATCH_NONE, *best_other = ID_MATCH_NONE;
-	id_match_t *match_me, *match_other;
+	id_match_t best_me = ID_MATCH_NONE, best_other = ID_MATCH_NONE;
+	id_match_t match_me, match_other;
 	enumerator_t *enumerator;
 
 	enumerator = create_shared_enumerator(this, type, me, other);
@@ -392,6 +392,10 @@ METHOD(credential_manager_t, get_shared, shared_key_t*,
 			found = current->get_ref(current);
 			best_me = match_me;
 			best_other = match_other;
+		}
+		if (best_me == ID_MATCH_PERFECT && best_other == ID_MATCH_PERFECT)
+		{
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
