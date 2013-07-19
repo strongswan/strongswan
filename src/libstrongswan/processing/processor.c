@@ -408,7 +408,7 @@ METHOD(processor_t, execute_job, void,
 	bool queued = FALSE;
 
 	this->mutex->lock(this->mutex);
-	if (get_idle_threads_nolock(this))
+	if (this->desired_threads && get_idle_threads_nolock(this))
 	{
 		prio = sane_prio(job->get_priority(job));
 		job->status = JOB_STATUS_QUEUED;
