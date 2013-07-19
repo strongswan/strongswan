@@ -186,6 +186,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.ipcomp = conn->options & SA_OPTION_COMPRESS;
 	msg.add_conn.install_policy = conn->install_policy;
 	msg.add_conn.aggressive = conn->aggressive;
+	msg.add_conn.pushmode = conn->options & SA_OPTION_MODECFG_PUSH;
 	msg.add_conn.crl_policy = (crl_policy_t)cfg->setup.strictcrlpolicy;
 	msg.add_conn.unique = cfg->setup.uniqueids;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
