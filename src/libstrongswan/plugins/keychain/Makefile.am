@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+AM_CPPFLAGS = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
