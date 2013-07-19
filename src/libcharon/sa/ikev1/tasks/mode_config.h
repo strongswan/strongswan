@@ -43,8 +43,9 @@ struct mode_config_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator
+ * @param pull			TRUE to pull, FALSE to push (applies if initiator only)
  * @return				mode_config task to handle by the task_manager
  */
-mode_config_t *mode_config_create(ike_sa_t *ike_sa, bool initiator);
+mode_config_t *mode_config_create(ike_sa_t *ike_sa, bool initiator, bool pull);
 
 #endif /** MODE_CONFIG_H_ @}*/

@@ -539,23 +539,40 @@ static bool mode_config_expected(private_task_manager_t *this)
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
 	char *pool;
+	bool local;
 	host_t *host;
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg)
 	{
-		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
-		if (!enumerator->enumerate(enumerator, &pool))
-		{	/* no pool configured */
+		if (peer_cfg->use_pull_mode(peer_cfg))
+		{
+			enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
+			if (!enumerator->enumerate(enumerator, &pool))
+			{	/* no pool configured */
+				enumerator->destroy(enumerator);
+				return FALSE;
+			}
 			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		enumerator->destroy(enumerator);
 
+			local = FALSE;
+		}
+		else
+		{
+			enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
+			if (!enumerator->enumerate(enumerator, &host))
+			{	/* not requesting a vip */
+				enumerator->destroy(enumerator);
+				return FALSE;
+			}
+			enumerator->destroy(enumerator);
+
+			local = TRUE;
+		}
 		enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa,
-																FALSE);
+																local);
 		if (!enumerator->enumerate(enumerator, &host))
-		{	/* have a pool, but no VIP assigned yet */
+		{	/* expecting a VIP exchange, but no VIP assigned yet */
 			enumerator->destroy(enumerator);
 			return TRUE;
 		}
@@ -1087,7 +1104,8 @@ static status_t process_request(private_task_manager_t *this,
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
 				{
-					task = (task_t *)mode_config_create(this->ike_sa, FALSE);
+					task = (task_t *)mode_config_create(this->ike_sa,
+														FALSE, TRUE);
 				}
 				else
 				{

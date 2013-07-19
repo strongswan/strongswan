@@ -196,6 +196,17 @@ static status_t send_delete(private_aggressive_mode_t *this)
 	return ALREADY_DONE;
 }
 
+/**
+ * Schedule a timeout for the IKE_SA should it not establish
+ */
+static void schedule_timeout(ike_sa_t *ike_sa)
+{
+	job_t *job;
+
+	job = (job_t*)delete_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE);
+	lib->scheduler->schedule_job(lib->scheduler, job, HALF_OPEN_IKE_SA_TIMEOUT);
+}
+
 METHOD(task_t, build_i, status_t,
 	private_aggressive_mode_t *this, message_t *message)
 {
@@ -300,20 +311,15 @@ METHOD(task_t, build_i, status_t,
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_HYBRID_INIT_RSA:
-				{	/* wait for XAUTH request, since this may never come,
-					 * we queue a timeout */
-					job_t *job = (job_t*)delete_ike_sa_job_create(
-									this->ike_sa->get_id(this->ike_sa), FALSE);
-					lib->scheduler->schedule_job(lib->scheduler, job,
-												 HALF_OPEN_IKE_SA_TIMEOUT);
+					/* wait for XAUTH request */
+					schedule_timeout(this->ike_sa);
 					break;
-				}
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
 					this->ike_sa->queue_task(this->ike_sa,
 									(task_t*)xauth_create(this->ike_sa, TRUE));
-					return SUCCESS;
+					break;
 				default:
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
@@ -328,10 +334,30 @@ METHOD(task_t, build_i, status_t,
 					}
 					break;
 			}
+			/* check for and prepare mode config push/pull */
 			if (this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
 			{
-				this->ike_sa->queue_task(this->ike_sa,
-							(task_t*)mode_config_create(this->ike_sa, TRUE));
+				if (this->peer_cfg->use_pull_mode(this->peer_cfg))
+				{
+					this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)mode_config_create(this->ike_sa, TRUE, TRUE));
+				}
+				else
+				{
+					schedule_timeout(this->ike_sa);
+				}
+			}
+			else if (this->ph1->has_pool(this->ph1, this->peer_cfg))
+			{
+				if (this->peer_cfg->use_pull_mode(this->peer_cfg))
+				{
+					schedule_timeout(this->ike_sa);
+				}
+				else
+				{
+					this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)mode_config_create(this->ike_sa, TRUE, FALSE));
+				}
 			}
 			return SUCCESS;
 		}
@@ -482,7 +508,7 @@ METHOD(task_t, process_r, status_t,
 				case AUTH_HYBRID_INIT_RSA:
 					this->ike_sa->queue_task(this->ike_sa,
 									(task_t*)xauth_create(this->ike_sa, TRUE));
-					return SUCCESS;
+					break;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
@@ -505,11 +531,22 @@ METHOD(task_t, process_r, status_t,
 										this->ike_sa->get_id(this->ike_sa)));
 					break;
 			}
-			if (!this->ph1->has_pool(this->ph1, this->peer_cfg) &&
-				this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
+			/* check for and prepare mode config push/pull */
+			if (this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
 			{
-				this->ike_sa->queue_task(this->ike_sa,
-							(task_t*)mode_config_create(this->ike_sa, TRUE));
+				if (this->peer_cfg->use_pull_mode(this->peer_cfg))
+				{
+					this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)mode_config_create(this->ike_sa, TRUE, TRUE));
+				}
+			}
+			else if (this->ph1->has_pool(this->ph1, this->peer_cfg))
+			{
+				if (!this->peer_cfg->use_pull_mode(this->peer_cfg))
+				{
+					this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)mode_config_create(this->ike_sa, TRUE, FALSE));
+				}
 			}
 			return SUCCESS;
 		}
