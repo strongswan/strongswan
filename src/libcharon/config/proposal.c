@@ -627,6 +627,28 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 			case ENCR_AES_CTR:
 			case ENCR_CAMELLIA_CBC:
 			case ENCR_CAMELLIA_CTR:
+				/* we assume that we support all AES/Camellia sizes */
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+				break;
+			case ENCR_3DES:
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
+				break;
+			case ENCR_DES:
+				/* no, thanks */
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+	{
+		switch (encryption)
+		{
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
@@ -640,12 +662,6 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
 				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
 				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
-				break;
-			case ENCR_3DES:
-				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
-				break;
-			case ENCR_DES:
-				/* no, thanks */
 				break;
 			default:
 				break;
