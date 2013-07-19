@@ -18,7 +18,7 @@ DEFS += -DPLUGINS=\""$(PLUGINS)\"" -DIPSEC_PIDDIR=\"${piddir}\"
 
 BUILD_OPTS = \
 	-XOBJ_DIR=$(CURDIR)/obj \
-	-cargs $(INCLUDES) $(DEFS) \
+	-cargs $(AM_CPPFLAGS) $(DEFS) \
 	-largs $(LIBLD) $(LIBFL)
 
 # plugins to enable
