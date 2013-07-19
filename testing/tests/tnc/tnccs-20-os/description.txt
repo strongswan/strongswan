@@ -9,12 +9,13 @@ exchange PA-TNC attributes.
 <p>
 <b>carol</b> sends information on her operating system consisting of the PA-TNC attributes
 <em>Product Information</em>, <em>String Version</em>, <em>Numeric Version</em>,
-<em>Operational Status</em>, <em>Forwarding Enabled</em>, and
-<em>Factory Default Password Enabled</em> up-front, whereas <b>dave</b> must be prompted
-by the IMV to do so via an <em>Attribute Request</em> PA-TNC attribute. <b>carol</b> is
-then prompted to send a list of installed packages using the <em>Installed Packages</em>
-PA-TNC attribute whereas <b>dave</b>'s "Windows 1.2.3" operating system is not supported
-and thus <b>dave</b> receives a <em>Remediation Instructions</em> PA-TNC attribute.
+<em>Operational Status</em>, <em>Forwarding Enabled</em>, <em>Factory Default Password Enabled</em>
+and <em>Device ID> up-front, whereas <b>dave</b> must be prompted by the IMV to do so via an
+<em>Attribute Request</em> PA-TNC attribute. <b>carol</b> is then prompted to send a list of
+installed packages using the <em>Installed Packages</em> PA-TNC attribute. Since <b>dave</b>
+successfully connected to the VPN gateway shortly before, no new list of installed packages is
+requested again but because IP forwarding is enabled <b>dave</b> receives a corresponding
+<em>Remediation Instructions</em> PA-TNC attribute.
 <p>
 <b>carol</b> passes the health test and <b>dave</b> fails. Based on these assessments
 which are communicated to the IMCs using the <em>Assessment Result</em> PA-TNC attribute,
