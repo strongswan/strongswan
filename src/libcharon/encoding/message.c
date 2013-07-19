@@ -1268,7 +1268,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			pos += written;
 			len -= written;
 		}
-		if (payload->get_type(payload) == CONFIGURATION)
+		if (payload->get_type(payload) == CONFIGURATION ||
+			payload->get_type(payload) == CONFIGURATION_V1)
 		{
 			cp_payload_t *cp = (cp_payload_t*)payload;
 			enumerator_t *attributes;
