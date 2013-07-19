@@ -561,7 +561,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
 							   this->ike_rekey, 0, /* rekey, reauth */
 							   0, this->ike_rekey, /* jitter, overtime */
-							   FALSE, FALSE, /* mobike, aggressive mode */
+							   FALSE, FALSE, TRUE, /* mobike, aggressive, pull */
 							   this->dpd_delay,   /* dpd_delay */
 							   this->dpd_timeout, /* dpd_timeout */
 							   FALSE, NULL, NULL);

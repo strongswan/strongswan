@@ -374,7 +374,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			peer_cfg = peer_cfg_create(
 					name, ike, cert_policy, uniqueid,
 					keyingtries, rekeytime, reauthtime, jitter, overtime,
-					mobike, FALSE, dpd_delay, 0,
+					mobike, FALSE, TRUE, dpd_delay, 0,
 					mediation, mediated_cfg, peer_id);
 			if (vip)
 			{

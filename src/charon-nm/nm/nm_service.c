@@ -536,7 +536,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
-					TRUE, FALSE, /* mobike, aggressive */
+					TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
 					0, 0, /* DPD delay, timeout */
 					FALSE, NULL, NULL); /* mediation */
 	if (virtual)
