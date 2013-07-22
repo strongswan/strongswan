@@ -295,7 +295,7 @@ static void generate_selfcert()
 #endif
 		ignore_result(setegid(gid));
 		ignore_result(seteuid(uid));
-		ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
+		ignore_result(system(IPSEC_SCRIPT " scepclient --out pkcs1 --out cert-self --quiet"));
 		ignore_result(seteuid(0));
 		ignore_result(setegid(0));
 

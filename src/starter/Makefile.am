@@ -15,6 +15,7 @@ AM_CPPFLAGS = \
 	-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\" \
 	-DIPSEC_EAPDIR=\"${eapdir}\" \
+	-DIPSEC_SCRIPT=\"${ipsec_script}\" \
 	-DDEV_RANDOM=\"${random_device}\" \
 	-DDEV_URANDOM=\"${urandom_device}\" \
 	-DPLUGINS=\""${starter_plugins}\"" \
