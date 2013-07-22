@@ -57,4 +57,14 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
  */
 void eap_radius_process_attributes(radius_message_t *message);
 
+/**
+ * Build additional attributes for an Access-Request.
+ *
+ * Adds additional RADIUS attributes to use with Access-Request, such as
+ * different NAS specific attributes.
+ *
+ * @param message	Access-Request message to add attributes to
+ */
+void eap_radius_build_attributes(radius_message_t *message);
+
 #endif /** EAP_RADIUS_H_ @}*/

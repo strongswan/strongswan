@@ -75,11 +75,6 @@ struct private_eap_radius_t {
 	 * Prefix to prepend to EAP identity
 	 */
 	char *id_prefix;
-
-	/**
-	 * Format string we use for Called/Calling-Station-Id for a host
-	 */
-	char *station_id_fmt;
 };
 
 /**
@@ -153,20 +148,15 @@ static bool radius2ike(private_eap_radius_t *this,
 }
 
 /**
- * Add a set of RADIUS attributes to a request message
+ * See header.
  */
-static void add_radius_request_attrs(private_eap_radius_t *this,
-									 radius_message_t *request)
+void eap_radius_build_attributes(radius_message_t *request)
 {
 	ike_sa_t *ike_sa;
 	host_t *host;
-	char buf[40];
+	char buf[40], *station_id_fmt;;
 	u_int32_t value;
 	chunk_t chunk;
-
-	chunk = chunk_from_str(this->id_prefix);
-	chunk = chunk_cata("cc", chunk, this->peer->get_encoding(this->peer));
-	request->add(request, RAT_USER_NAME, chunk);
 
 	/* virtual NAS-Port-Type */
 	value = htonl(5);
@@ -195,13 +185,37 @@ static void add_radius_request_attrs(private_eap_radius_t *this,
 			default:
 				break;
 		}
-		snprintf(buf, sizeof(buf), this->station_id_fmt, host);
+		if (lib->settings->get_bool(lib->settings,
+									"%s.plugins.eap-radius.station_id_with_port",
+									TRUE, charon->name))
+		{
+			station_id_fmt = "%#H";
+		}
+		else
+		{
+			station_id_fmt = "%H";
+		}
+		snprintf(buf, sizeof(buf), station_id_fmt, host);
 		request->add(request, RAT_CALLED_STATION_ID, chunk_from_str(buf));
 		host = ike_sa->get_other_host(ike_sa);
-		snprintf(buf, sizeof(buf), this->station_id_fmt, host);
+		snprintf(buf, sizeof(buf), station_id_fmt, host);
 		request->add(request, RAT_CALLING_STATION_ID, chunk_from_str(buf));
 	}
+}
 
+/**
+ * Add a set of RADIUS attributes to a request message
+ */
+static void add_radius_request_attrs(private_eap_radius_t *this,
+									 radius_message_t *request)
+{
+	chunk_t chunk;
+
+	chunk = chunk_from_str(this->id_prefix);
+	chunk = chunk_cata("cc", chunk, this->peer->get_encoding(this->peer));
+	request->add(request, RAT_USER_NAME, chunk);
+
+	eap_radius_build_attributes(request);
 	eap_radius_forward_from_ike(request);
 }
 
@@ -591,15 +605,6 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 									"%s.plugins.eap-radius.id_prefix", "",
 									charon->name),
 	);
-	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.eap-radius.station_id_with_port", TRUE, charon->name))
-	{
-		this->station_id_fmt = "%#H";
-	}
-	else
-	{
-		this->station_id_fmt = "%H";
-	}
 	this->client = eap_radius_create_client();
 	if (!this->client)
 	{
