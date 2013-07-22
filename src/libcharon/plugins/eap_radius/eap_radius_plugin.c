@@ -17,6 +17,7 @@
 #include "eap_radius_plugin.h"
 
 #include "eap_radius.h"
+#include "eap_radius_xauth.h"
 #include "eap_radius_accounting.h"
 #include "eap_radius_dae.h"
 #include "eap_radius_forward.h"
@@ -235,6 +236,9 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(eap_method_register, eap_radius_create),
 			PLUGIN_PROVIDE(EAP_SERVER, EAP_RADIUS),
+				PLUGIN_DEPENDS(CUSTOM, "eap-radius"),
+		PLUGIN_CALLBACK(xauth_method_register, eap_radius_xauth_create_server),
+			PLUGIN_PROVIDE(XAUTH_SERVER, "radius"),
 				PLUGIN_DEPENDS(CUSTOM, "eap-radius"),
 		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "eap-radius"),
