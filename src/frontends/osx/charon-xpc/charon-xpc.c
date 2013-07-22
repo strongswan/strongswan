@@ -160,10 +160,10 @@ int main(int argc, char *argv[])
 	}
 	charon->load_loggers(charon, levels, TRUE);
 
-	lib->settings->set_default_str(lib->settings, "charon-cmd.port", "0");
-	lib->settings->set_default_str(lib->settings, "charon-cmd.port_nat_t", "0");
+	lib->settings->set_default_str(lib->settings, "charon-xpc.port", "0");
+	lib->settings->set_default_str(lib->settings, "charon-xpc.port_nat_t", "0");
 	lib->settings->set_default_str(lib->settings,
-								"charon-cmd.close_ike_on_child_failure", "yes");
+								"charon-xpc.close_ike_on_child_failure", "yes");
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
 				"random nonce pem pkcs1 openssl kernel-pfkey kernel-pfroute "
