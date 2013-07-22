@@ -76,7 +76,7 @@ case "$1" in
 	echo "	version"
 	echo "	stroke"
 	echo
-	echo "Some of these functions have their own manual pages, e.g. ipsec_scepclient(8)."
+	echo "Some of these functions have their own manual pages, e.g. scepclient(8)."
 	exit 0
 	;;
 --versioncode)
@@ -89,6 +89,10 @@ case "$1" in
 	;;
 --confdir)
 	echo "$IPSEC_CONFDIR"
+	exit 0
+	;;
+--piddir)
+	echo "$IPSEC_PIDDIR"
 	exit 0
 	;;
 copyright|--copyright)

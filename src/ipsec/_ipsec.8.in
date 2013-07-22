@@ -1,4 +1,4 @@
-.TH @IPSEC_SCRIPT_UPPER@ 8 "2012-06-19" "@IPSEC_VERSION@" "strongSwan"
+.TH @IPSEC_SCRIPT_UPPER@ 8 "2013-07-22" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 @IPSEC_SCRIPT@ \- invoke IPsec utilities
 .SH SYNOPSIS
@@ -259,6 +259,10 @@ returns the \fILIBEXECDIR\fP directory as defined by the configure options.
 .TP
 .B "\-\-confdir"
 returns the \fISYSCONFDIR\fP directory as defined by the configure options.
+.PP
+.TP
+.B "\-\-piddir"
+returns the \fIPIDDIR\fP directory as defined by the configure options.
 .SH FILES
 /usr/local/lib/ipsec	usual utilities directory
 .SH ENVIRONMENT
@@ -274,7 +278,7 @@ command sets them if they are not already set.
 IPSEC_DIR               directory containing ipsec programs and utilities
 IPSEC_SBINDIR           directory containing \fBipsec\fP command
 IPSEC_CONFDIR           directory containing configuration files
-IPSEC_PIDDIR            directory containing PID files
+IPSEC_PIDDIR            directory containing PID/socket files
 IPSEC_SCRIPT            name of the ipsec script
 IPSEC_NAME              name of ipsec distribution
 IPSEC_VERSION           version numer of ipsec userland and kernel
