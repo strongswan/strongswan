@@ -59,7 +59,7 @@ static bool plugin_cb(private_tnc_pdp_plugin_t *this,
 		int port;
 
 		port = lib->settings->get_int(lib->settings,
-						"%s.plugins.tnc_pdp.port", RADIUS_PORT, charon->name);
+						"%s.plugins.tnc-pdp.port", RADIUS_PORT, charon->name);
 		this->pdp = tnc_pdp_create(port);
 	}
 	else
