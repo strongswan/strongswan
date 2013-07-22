@@ -65,6 +65,11 @@ struct private_radius_message_t {
 	 * message data, allocated
 	 */
 	rmsg_t *msg;
+
+	/**
+	 * User-Password to encrypt and encode, if any
+	 */
+	chunk_t password;
 };
 
 /**
@@ -356,6 +361,15 @@ METHOD(radius_message_t, add, void,
 {
 	rattr_t *attribute;
 
+	if (type == RAT_USER_PASSWORD && !this->password.len)
+	{
+		/* store a null-padded password */
+		this->password = chunk_alloc(round_up(data.len, HASH_SIZE_MD5));
+		memset(this->password.ptr + data.len, 0, this->password.len - data.len);
+		memcpy(this->password.ptr, data.ptr, data.len);
+		return;
+	}
+
 	data.len = min(data.len, MAX_RADIUS_ATTRIBUTE_SIZE);
 	this->msg = realloc(this->msg,
 						ntohs(this->msg->length) + sizeof(rattr_t) + data.len);
@@ -450,6 +464,18 @@ METHOD(radius_message_t, sign, bool,
 		{
 			memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
 		}
+	}
+
+	if (this->password.len)
+	{
+		/* encrypt password inline */
+		if (!crypt(this, chunk_empty, this->password, this->password,
+				   secret, hasher))
+		{
+			return FALSE;
+		}
+		add(this, RAT_USER_PASSWORD, this->password);
+		chunk_clear(&this->password);
 	}
 
 	if (msg_auth)
@@ -601,6 +627,7 @@ METHOD(radius_message_t, get_encoding, chunk_t,
 METHOD(radius_message_t, destroy, void,
 	private_radius_message_t *this)
 {
+	chunk_clear(&this->password);
 	free(this->msg);
 	free(this);
 }
