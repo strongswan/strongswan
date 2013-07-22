@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2013-06-21" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2013-07-22" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -335,6 +335,18 @@ configuration payload (CP)
 .BR charon.plugins.certexpire.csv.cron
 Cron style string specifying CSV export times
 .TP
+.BR charon.plugins.certexpire.csv.empty_string
+String to use in empty intermediate CA fields
+.TP
+.BR charon.plugins.certexpire.csv.fixed_fields " [yes]"
+Use a fixed intermediate CA field count
+.TP
+.BR charon.plugins.certexpire.csv.force " [yes]"
+Force export of all trustchains we have a private key for
+.TP
+.BR charon.plugins.certexpire.csv.format " [%d:%m:%Y]"
+strftime(3) format string to export expiration dates as
+.TP
 .BR charon.plugins.certexpire.csv.local
 strftime(3) format string for the CSV file name to export local certificates to
 .TP
@@ -343,15 +355,6 @@ strftime(3) format string for the CSV file name to export remote certificates to
 .TP
 .BR charon.plugins.certexpire.csv.separator " [,]"
 CSV field separator
-.TP
-.BR charon.plugins.certexpire.csv.empty_string
-String to use in empty intermediate CA fields
-.TP
-.BR charon.plugins.certexpire.csv.format " [%d:%m:%Y]"
-strftime(3) format string to export expiration dates as
-.TP
-.BR charon.plugins.certexpire.csv.fixed_fields " [yes]"
-Use a fixed intermediate CA field count
 .TP
 .BR charon.plugins.coupling.file
 File to store coupling list to
@@ -378,6 +381,9 @@ DHCP server unicast or broadcast IP address
 .TP
 .BR charon.plugins.duplicheck.enable " [yes]"
 Enable duplicheck plugin (if loaded)
+.TP
+.BR charon.plugins.duplicheck.socket " [unix://${piddir}/charon.dck]"
+Socket provided by the duplicheck plugin
 .TP
 .BR charon.plugins.eap-aka.request_identity " [yes]"
 
@@ -421,6 +427,9 @@ Request peer authentication based on a client certificate
 .TP
 .BR charon.plugins.eap-radius.accounting " [no]"
 Send RADIUS accounting information to RADIUS servers.
+.TP
+.BR charon.plugins.eap-radius.accounting_requires_vip " [no]"
+If enabled, accounting is disabled unless an IKE_SA has at least one virtual IP
 .TP
 .BR charon.plugins.eap-radius.class_group " [no]"
 Use the
@@ -558,6 +567,9 @@ Start phase2 EAP TNC protocol after successful client authentication
 .BR charon.plugins.eap-ttls.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
 .TP
+.BR charon.plugins.error-notify.socket " [unix://${piddir}/charon.enfy]"
+Socket provided by the error-notify plugin
+.TP
 .BR charon.plugins.ha.autobalance " [0]"
 Interval in seconds to automatically balance handled segments between nodes.
 Set to 0 to disable.
@@ -654,6 +666,9 @@ certificates even if they don't contain a CA basic constraint.
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
+.BR charon.plugins.stroke.socket " [unix://${piddir}/charon.ctl]"
+Socket provided by the stroke plugin
+.TP
 .BR charon.plugins.stroke.timeout " [0]"
 Timeout in ms for any stroke command. Use 0 to disable the timeout
 .TP
@@ -731,6 +746,9 @@ plugins, like resolve)
 .BR charon.plugins.whitelist.enable " [yes]"
 Enable loaded whitelist plugin
 .TP
+.BR charon.plugins.whitelist.socket " [unix://${piddir}/charon.wlst]"
+Socket provided by the whitelist plugin
+.TP
 .BR charon.plugins.xauth-eap.backend " [radius]"
 EAP plugin to be used as backend for XAuth credential verification
 .TP
@@ -783,6 +801,9 @@ Includes source file names and line numbers in leak detective output
 .TP
 .BR libstrongswan.leak_detective.usage_threshold " [10240]"
 Threshold in bytes for leaks to be reported (0 to report all)
+.TP
+.BR libstrongswan.leak_detective.usage_threshold_count " [0]"
+Threshold in number of allocations for leaks to be reported (0 to report all)
 .TP
 .BR libstrongswan.processor.priority_threads
 Subsection to configure the number of reserved threads per priority class
@@ -853,17 +874,26 @@ TNC IMC/IMV configuration directory
 .BR libimcv.assessment_result " [yes]"
 Whether IMVs send a standard IETF Assessment Result attribute
 .TP
+.BR libimcv.database
+Global IMV policy database URI
+.TP
 .BR libimcv.debug_level " [1]"
 Debug level for a stand-alone libimcv library
 .TP
 .BR libimcv.stderr_quiet " [no]"
 Disable output to stderr with a stand-alone libimcv library
 .TP
+.BR libimcv.load " [random nonce gmp pubkey x509]"
+Plugins to load in IMC/IMVs
+.TP
 .BR libimcv.os_info.name
 Manually set the name of the client OS (e.g. Ubuntu)
 .TP
 .BR libimcv.os_info.version
 Manually set the version of the client OS (e.g. 12.04 i686)
+.TP
+.BR libimcv.policy_script " [ipsec _imv_policy]"
+Script called for each TNC connection to generate IMV policies
 .SS libimcv plugins section
 .TP
 .BR libimcv.plugins.imc-attestation.aik_blob
@@ -1459,9 +1489,16 @@ Request an INTERNAL_IPV4_ADDR from the server
 .BR charon.plugins.load-tester.shutdown_when_complete " [no]"
 Shutdown the daemon after all IKE_SAs have been established
 .TP
+.BR charon.plugins.load-tester.socket " [unix://${piddir}/charon.ldt]"
+Socket provided by the load-tester plugin
+.TP
 .BR charon.plugins.load-tester.version " [0]"
 IKE version to use (0 means use IKEv2 as initiator and accept any version as
 responder)
+.TP
+.BR charon.plugins.lookip.socket " [unix://${piddir}/charon.lkp]"
+Socket provided by the lookip plugin
+.PP
 .SS Configuration details
 For public key authentication, the responder uses the
 .B \(dqCN=srv, OU=load-test, O=strongSwan\(dq
