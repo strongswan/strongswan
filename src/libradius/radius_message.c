@@ -366,6 +366,67 @@ METHOD(radius_message_t, add, void,
 	this->msg->length = htons(ntohs(this->msg->length) + attribute->length);
 }
 
+METHOD(radius_message_t, crypt, bool,
+	private_radius_message_t *this, chunk_t salt, chunk_t in, chunk_t out,
+	chunk_t secret, hasher_t *hasher)
+{
+	char b[HASH_SIZE_MD5];
+
+	/**
+	 * From RFC2548 (encryption):
+	 * b(1) = MD5(S + R + A)    c(1) = p(1) xor b(1)   C = c(1)
+	 * b(2) = MD5(S + c(1))     c(2) = p(2) xor b(2)   C = C + c(2)
+	 *      . . .
+	 * b(i) = MD5(S + c(i-1))   c(i) = p(i) xor b(i)   C = C + c(i)
+	 *
+	 * P/C = Plain/Crypted => in/out
+	 * S = secret
+	 * R = authenticator
+	 * A = salt
+	 */
+	if (in.len != out.len)
+	{
+		return FALSE;
+	}
+	if (in.len % HASH_SIZE_MD5 || in.len < HASH_SIZE_MD5)
+	{
+		return FALSE;
+	}
+	if (out.ptr != in.ptr)
+	{
+		memcpy(out.ptr, in.ptr, in.len);
+	}
+	/* Preparse seed for first round:
+	 * b(1) = MD5(S + R + A) */
+	if (!hasher->get_hash(hasher, secret, NULL) ||
+		!hasher->get_hash(hasher,
+						  chunk_from_thing(this->msg->authenticator), NULL) ||
+		!hasher->get_hash(hasher, salt, b))
+	{
+		return FALSE;
+	}
+	while (in.len)
+	{
+		/* p(i) = b(i) xor c(1) */
+		memxor(out.ptr, b, HASH_SIZE_MD5);
+
+		out = chunk_skip(out, HASH_SIZE_MD5);
+		if (out.len)
+		{
+			/* Prepare seed for next round::
+			 * b(i) = MD5(S + c(i-1)) */
+			if (!hasher->get_hash(hasher, secret, NULL) ||
+				!hasher->get_hash(hasher,
+								  chunk_create(in.ptr, HASH_SIZE_MD5), b))
+			{
+				return FALSE;
+			}
+		}
+		in = chunk_skip(in, HASH_SIZE_MD5);
+	}
+	return TRUE;
+}
+
 METHOD(radius_message_t, sign, bool,
 	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
 	hasher_t *hasher, signer_t *signer, rng_t *rng, bool msg_auth)
@@ -563,6 +624,7 @@ static private_radius_message_t *radius_message_create_empty()
 			.get_encoding = _get_encoding,
 			.sign = _sign,
 			.verify = _verify,
+			.crypt = _crypt,
 			.destroy = _destroy,
 		},
 	);

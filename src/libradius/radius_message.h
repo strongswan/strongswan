@@ -285,6 +285,22 @@ struct radius_message_t {
 				   hasher_t *hasher, signer_t *signer);
 
 	/**
+	 * Perform RADIUS attribute en-/decryption.
+	 *
+	 * Performs en-/decryption by XOring the hash-extended secret into data,
+	 * as specified in RFC 2865 5.2 and used by RFC 2548.
+	 *
+	 * @param salt			salt to append to message authenticator, if any
+	 * @param in			data to en-/decrypt, multiple of HASH_SIZE_MD5
+	 * @param out			en-/decrypted data, length equal to in
+	 * @param secret		RADIUS secret
+	 * @param hasher		MD5 hasher
+	 * @return				TRUE if en-/decryption successful
+	 */
+	bool (*crypt)(radius_message_t *this, chunk_t salt, chunk_t in, chunk_t out,
+				  chunk_t secret, hasher_t *hasher);
+
+	/**
 	 * Destroy the message.
 	 */
 	void (*destroy)(radius_message_t *this);
