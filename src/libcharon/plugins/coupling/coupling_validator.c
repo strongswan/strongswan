@@ -167,7 +167,7 @@ METHOD(cert_validator_t, validate, bool,
 			{
 				DBG1(DBG_CFG, "coupling new certificate '%Y' failed",
 					 subject->get_subject(subject));
-				lib->credmgr->call_hook(lib->credmgr
+				lib->credmgr->call_hook(lib->credmgr,
 										CRED_HOOK_POLICY_VIOLATION, subject);
 			}
 		}
