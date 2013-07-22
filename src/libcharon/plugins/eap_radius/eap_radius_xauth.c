@@ -16,6 +16,7 @@
 #include "eap_radius_xauth.h"
 #include "eap_radius_plugin.h"
 #include "eap_radius.h"
+#include "eap_radius_forward.h"
 
 #include <daemon.h>
 #include <radius_client.h>
@@ -76,10 +77,12 @@ static status_t verify_radius(private_eap_radius_xauth_t *this, chunk_t pass)
 	request->add(request, RAT_USER_PASSWORD, pass);
 
 	eap_radius_build_attributes(request);
+	eap_radius_forward_from_ike(request);
 
 	response = this->client->request(this->client, request);
 	if (response)
 	{
+		eap_radius_forward_to_ike(response);
 		switch (response->get_code(response))
 		{
 			case RMC_ACCESS_ACCEPT:
