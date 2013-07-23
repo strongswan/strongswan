@@ -605,7 +605,7 @@ Set to 0 to disable.
 
 .TP
 .BR charon.plugins.ipseckey.enable " [no]"
-Enable the fetching of IPSECKEY RRs from the DNS
+Enable the fetching of IPSECKEY RRs via DNS
 .TP
 .BR charon.plugins.led.activity_led
 
@@ -627,6 +627,9 @@ Time in ms to wait until virtual IP addresses appear/disappear before failing.
 .TP
 .BR charon.plugins.load-tester
 Section to configure the load-tester plugin, see LOAD TESTS
+.TP
+.BR charon.plugins.lookip.socket " [unix://${piddir}/charon.lkp]"
+Socket provided by the lookip plugin
 .TP
 .BR charon.plugins.radattr.dir
 Directory where RADIUS attributes are stored in client-ID specific files.
@@ -865,6 +868,19 @@ File to read DNS resolver configuration from
 .TP
 .BR libstrongswan.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
 File to read DNSSEC trust anchors from (usually root zone KSK)
+.SS libtls section
+.TP
+.BR libtls.cipher
+List of TLS encryption ciphers
+.TP
+.BR libtls.key_exchange
+List of TLS key exchange methods
+.TP
+.BR libtls.mac
+List of TLS MAC algorithms
+.TP
+.BR libtls.suites
+List of TLS cipher suites
 .SS libtnccs section
 .TP
 .BR libtnccs.tnc_config " [/etc/tnc_config]"
@@ -880,9 +896,6 @@ Global IMV policy database URI
 .BR libimcv.debug_level " [1]"
 Debug level for a stand-alone libimcv library
 .TP
-.BR libimcv.stderr_quiet " [no]"
-Disable output to stderr with a stand-alone libimcv library
-.TP
 .BR libimcv.load " [random nonce gmp pubkey x509]"
 Plugins to load in IMC/IMVs
 .TP
@@ -894,6 +907,10 @@ Manually set the version of the client OS (e.g. 12.04 i686)
 .TP
 .BR libimcv.policy_script " [ipsec _imv_policy]"
 Script called for each TNC connection to generate IMV policies
+.TP
+.BR libimcv.stderr_quiet " [no]"
+isable output to stderr with a stand-alone libimcv library
+.PP
 .SS libimcv plugins section
 .TP
 .BR libimcv.plugins.imc-attestation.aik_blob
@@ -947,30 +964,17 @@ Command to be sent to the Test IMV
 .BR libimcv.plugins.imc-test.dummy_size " [0]"
 Size of dummy attribute to be sent to the Test IMV (0 = disabled)
 .TP
+.BR libimcv.plugins.imv-test.remediation_uri
+URI pointing to test remediation instructions
+.TP
 .BR libimcv.plugins.imc-test.retry " [no]"
 Do a handshake retry
 .TP
 .BR libimcv.plugins.imc-test.retry_command
 Command to be sent to the Test IMV in the handshake retry
 .TP
-.BR libimcv.plugins.imv-test.remediation_uri
-URI pointing to test remediation instructions
-.TP
 .BR libimcv.plugins.imv-test.rounds " [0]"
 Number of IMC-IMV retry rounds
-.SS libtls section
-.TP
-.BR libtls.cipher
-List of TLS encryption ciphers
-.TP
-.BR libtls.key_exchange
-List of TLS key exchange methods
-.TP
-.BR libtls.mac
-List of TLS MAC algorithms
-.TP
-.BR libtls.suites
-List of TLS cipher suites
 .SS manager section
 .TP
 .BR manager.database
@@ -1495,9 +1499,6 @@ Socket provided by the load-tester plugin
 .BR charon.plugins.load-tester.version " [0]"
 IKE version to use (0 means use IKEv2 as initiator and accept any version as
 responder)
-.TP
-.BR charon.plugins.lookip.socket " [unix://${piddir}/charon.lkp]"
-Socket provided by the lookip plugin
 .PP
 .SS Configuration details
 For public key authentication, the responder uses the
