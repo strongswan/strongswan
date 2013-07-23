@@ -195,7 +195,7 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 xauth_pam_t *xauth_pam_create_server(identification_t *server,
-									 identification_t *peer)
+									 identification_t *peer, char *profile)
 {
 	private_xauth_pam_t *this;
 

@@ -41,9 +41,11 @@ struct eap_radius_xauth_t {
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_generic_t object
  */
 eap_radius_xauth_t *eap_radius_xauth_create_server(identification_t *server,
-												   identification_t *peer);
+												   identification_t *peer,
+												   char *profile);
 
 #endif /** EAP_RADIUS_XAUTH_H_ @}*/

@@ -175,7 +175,8 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 eap_radius_xauth_t *eap_radius_xauth_create_server(identification_t *server,
-												   identification_t *peer)
+												   identification_t *peer,
+												   char *profile)
 {
 	private_eap_radius_xauth_t *this;
 

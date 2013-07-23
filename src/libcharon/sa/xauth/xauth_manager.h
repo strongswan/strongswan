@@ -55,7 +55,11 @@ struct xauth_manager_t {
 	/**
 	 * Create a new XAuth method instance.
 	 *
-	 * @param name			backend name, as it was registered with
+	 * The name may contain an option string, seperated by a colon. This option
+	 * string gets passed to the XAuth constructor to specify the behavior
+	 * of the XAuth method.
+	 *
+	 * @param name			backend name, with optional config string
 	 * @param role			XAUTH_SERVER or XAUTH_PEER
 	 * @param server		identity of the server
 	 * @param peer			identity of the peer (client)

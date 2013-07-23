@@ -42,19 +42,23 @@ struct xauth_generic_t {
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_generic_t object
  */
 xauth_generic_t *xauth_generic_create_server(identification_t *server,
-											 identification_t *peer);
+											 identification_t *peer,
+											 char *profile);
 
 /**
  * Creates the generic XAuth method, acting as peer.
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_generic_t object
  */
 xauth_generic_t *xauth_generic_create_peer(identification_t *server,
-										   identification_t *peer);
+										   identification_t *peer,
+										   char *profile);
 
 #endif /** XAUTH_GENERIC_H_ @}*/

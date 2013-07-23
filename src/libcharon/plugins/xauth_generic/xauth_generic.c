@@ -187,7 +187,8 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 xauth_generic_t *xauth_generic_create_peer(identification_t *server,
-										   identification_t *peer)
+										   identification_t *peer,
+										   char *profile)
 {
 	private_xauth_generic_t *this;
 
@@ -211,7 +212,8 @@ xauth_generic_t *xauth_generic_create_peer(identification_t *server,
  * Described in header.
  */
 xauth_generic_t *xauth_generic_create_server(identification_t *server,
-											 identification_t *peer)
+											 identification_t *peer,
+											 char *profile)
 {
 	private_xauth_generic_t *this;
 

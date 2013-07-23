@@ -41,9 +41,10 @@ struct xauth_pam_t {
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_pam_t object
  */
 xauth_pam_t *xauth_pam_create_server(identification_t *server,
-									 identification_t *peer);
+									 identification_t *peer, char *profile);
 
 #endif /** XAUTH_PAM_H_ @}*/
