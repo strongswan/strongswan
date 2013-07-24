@@ -49,7 +49,7 @@ struct array_t {
 /**
  * Get the actual size of a number of elements
  */
-static size_t get_size(array_t *array, int num)
+static size_t get_size(array_t *array, u_int32_t num)
 {
 	if (array->esize)
 	{
