@@ -48,9 +48,9 @@ struct private_cmd_creds_t {
 	callback_cred_t *cb;
 
 	/**
-	 * Already prompted for password?
+	 * Kind of secret we recently prompted
 	 */
-	bool prompted;
+	shared_key_type_t prompted;
 
 	/**
 	 * Path to ssh-agent socket
@@ -74,7 +74,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 	shared_key_t *shared;
 	char *label, *pwd;
 
-	if (this->prompted)
+	if (type == this->prompted)
 	{
 		return NULL;
 	}
@@ -89,6 +89,9 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		case SHARED_PRIVATE_KEY_PASS:
 			label = "Password: ";
 			break;
+		case SHARED_PIN:
+			label = "PIN: ";
+			break;
 		default:
 			return NULL;
 	}
@@ -97,7 +100,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 	{
 		return NULL;
 	}
-	this->prompted = TRUE;
+	this->prompted = type;
 	if (match_me)
 	{
 		*match_me = ID_MATCH_PERFECT;
@@ -281,6 +284,7 @@ cmd_creds_t *cmd_creds_create()
 			.destroy = _destroy,
 		},
 		.creds = mem_cred_create(),
+		.prompted = SHARED_ANY,
 	);
 	this->cb = callback_cred_create_shared((void*)callback_shared, this);
 
