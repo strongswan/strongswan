@@ -251,6 +251,8 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 		if (current == host2offset(this, requested))
 		{
 			offset = current;
+			/* add an additional "online" entry */
+			entry->online->insert_last(entry->online, (void*)current);
 			break;
 		}
 	}
@@ -377,9 +379,10 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 METHOD(mem_pool_t, release_address, bool,
 	private_mem_pool_t *this, host_t *address, identification_t *id)
 {
-	bool found = FALSE;
+	enumerator_t *enumerator;
+	bool found = FALSE, more = FALSE;
 	entry_t *entry;
-	uintptr_t offset;
+	uintptr_t offset, current;
 
 	if (this->size != 0)
 	{
@@ -388,11 +391,31 @@ METHOD(mem_pool_t, release_address, bool,
 		if (entry)
 		{
 			offset = host2offset(this, address);
-			if (entry->online->remove(entry->online, (void*)offset, NULL) > 0)
+
+			enumerator = entry->online->create_enumerator(entry->online);
+			while (enumerator->enumerate(enumerator, &current))
 			{
-				DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
+				if (current == offset)
+				{
+					if (!found)
+					{	/* remove the first entry only */
+						entry->online->remove_at(entry->online, enumerator);
+						found = TRUE;
+					}
+					else
+					{	/* but check for more entries */
+						more = TRUE;
+						break;
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			if (found && !more)
+			{
+				/* no tunnels are online anymore for this lease, make offline */
 				entry->offline->insert_last(entry->offline, (void*)offset);
-				found = TRUE;
+				DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
 			}
 		}
 		this->mutex->unlock(this->mutex);
