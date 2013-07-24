@@ -332,7 +332,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		u_int16_t port;
 		bool closed_port_policy, blocked, first;
 		char result_str[BUF_LEN], *pos, *protocol_str;
-		size_t len, written;
+		size_t len;
+		int written;
 		linked_list_t *port_list;
 		enumerator_t *e1, *e2;
 
@@ -410,12 +411,15 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					{
 						written = snprintf(pos, len, "violating %s ports:",
 													  protocol_str);
-						pos += written;
-						len -= written;
+						if (written > 0 && written < len)
+						{
+							pos += written;
+							len -= written;
+						}
 						first = FALSE;
 					}
 					written = snprintf(pos, len, " %u", port);
-					if (written > len || written < 0)
+					if (written < 0 || written >= len)
 					{
 						pos += len - 1;
 						*pos = '\0';
@@ -503,7 +507,7 @@ imv_agent_if_t *imv_scanner_agent_create(const char *name, TNC_IMVID id,
 	{
 		return NULL;
 	}
-	
+
 	INIT(this,
 		.public = {
 			.bind_functions = _bind_functions,
