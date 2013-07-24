@@ -597,13 +597,15 @@ host_t *host_create_netmask(int family, int netbits)
 	this->address.sa_family = family;
 	update_sa_len(this);
 
-	bytes = (netbits + 7) / 8;
-	bits = (bytes * 8) - netbits;
+	bytes = netbits / 8;
+	bits = 8 - (netbits & 0x07);
 
 	memset(target, 0xff, bytes);
-	memset(target + bytes, 0x00, len - bytes);
-	target[bytes - 1] = bits ? (u_int8_t)(0xff << bits) : 0xff;
-
+	if (bytes < len)
+	{
+		memset(target + bytes, 0x00, len - bytes);
+		target[bytes] = (u_int8_t)(0xff << bits);
+	}
 	return &this->public;
 }
 
