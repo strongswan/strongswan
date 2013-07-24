@@ -1665,7 +1665,7 @@ static bool add_hash(private_attest_db_t *this)
 	}
 	else
 	{
-		measurements = pts_file_meas_create_from_path(0, pathname, TRUE,
+		measurements = pts_file_meas_create_from_path(0, this->dir, TRUE,
 													  TRUE, this->algo);
 	}
 	if (!measurements)
