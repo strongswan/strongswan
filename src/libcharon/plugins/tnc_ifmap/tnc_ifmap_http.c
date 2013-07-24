@@ -75,7 +75,7 @@ METHOD(tnc_ifmap_http_t, build, status_t,
 	if (this->user_pass.len)
 	{
 		snprintf(auth, sizeof(auth), "Authorization: Basic %.*s\r\n",
-				 this->user_pass.len, this->user_pass.ptr);
+				(int)this->user_pass.len, this->user_pass.ptr);
 	}
 	else
 	{
@@ -90,7 +90,8 @@ METHOD(tnc_ifmap_http_t, build, status_t,
 			"Content-Type: application/soap+xml;charset=utf-8\r\n"
 			"Content-Length: %d\r\n"
 			"\r\n"
-			"%.*s", path, (path-host), host, auth, in->len, in->len, in->ptr);
+			"%.*s", path, (int)(path-host), host, auth, (int)in->len,
+			(int)in->len, in->ptr);
 	free(host);
 
 	if (len == -1)
@@ -120,7 +121,7 @@ static bool process_header(chunk_t *in, bool *chunked, u_int *content_len)
 	{
 		DBG1(DBG_TNC, "http response returns error code %d", code);
 		return FALSE;
-	}	
+	}
 
 	*content_len = 0;
 	*chunked = FALSE;
@@ -196,12 +197,12 @@ METHOD(tnc_ifmap_http_t, process, status_t,
 		{
 			out_chunk = *in;
 			out_chunk.len = len;
-			*out = chunk_cat("mc", *out, out_chunk); 
+			*out = chunk_cat("mc", *out, out_chunk);
 			*in = chunk_skip(*in, len);
 			if (!fetchline(in, &line) || line.len > 0)
 			{
 				return FAILED;
-			}		
+			}
 		}
 		else
 		{
