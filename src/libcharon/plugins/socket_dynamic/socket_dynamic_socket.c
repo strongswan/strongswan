@@ -398,7 +398,7 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 			break;
 		case AF_INET6:
 			addr.sin6.sin6_family = AF_INET6;
-			memset(&addr.sin6.sin6_addr, 0, sizeof(addr.sin6));
+			memset(&addr.sin6.sin6_addr, 0, sizeof(addr.sin6.sin6_addr));
 			addr.sin6.sin6_port = htons(*port);
 			addrlen = sizeof(addr.sin6);
 			sol = SOL_IPV6;
