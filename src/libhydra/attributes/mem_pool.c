@@ -16,6 +16,8 @@
 
 #include "mem_pool.h"
 
+#include <library.h>
+#include <hydra.h>
 #include <utils/debug.h>
 #include <collections/hashtable.h>
 #include <collections/array.h>
@@ -63,6 +65,11 @@ struct private_mem_pool_t {
 	 * lock to safely access the pool
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Do we reassign online leases to the same identity, if requested?
+	 */
+	bool reassign_online;
 };
 
 /**
@@ -258,7 +265,10 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 		DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
 		return offset;
 	}
-
+	if (!this->reassign_online)
+	{
+		return 0;
+	}
 	/* check for a valid online lease to reassign */
 	enumerator = array_create_enumerator(entry->online);
 	while (enumerator->enumerate(enumerator, &current))
@@ -562,6 +572,8 @@ static private_mem_pool_t *create_generic(char *name)
 		.leases = hashtable_create((hashtable_hash_t)id_hash,
 								   (hashtable_equals_t)id_equals, 16),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.reassign_online = lib->settings->get_bool(lib->settings,
+							"%s.mem-pool.reassign_online", FALSE, hydra->daemon),
 	);
 
 	return this;
