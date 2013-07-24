@@ -2543,6 +2543,11 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		first = FALSE;
 	}
 	enumerator->destroy(enumerator);
+	if (!to_remove)
+	{	/* sanity check */
+		this->mutex->unlock(this->mutex);
+		return SUCCESS;
+	}
 	policy->used_by->remove(policy->used_by, to_remove, NULL);
 	mapping = to_remove;
 
