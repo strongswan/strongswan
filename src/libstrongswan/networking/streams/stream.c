@@ -313,6 +313,7 @@ int stream_parse_uri_unix(char *uri, struct sockaddr_un *addr)
 	memset(addr, 0, sizeof(*addr));
 	addr->sun_family = AF_UNIX;
 	strncpy(addr->sun_path, uri, sizeof(addr->sun_path));
+	addr->sun_path[sizeof(addr->sun_path)-1] = '\0';
 
 	return offsetof(struct sockaddr_un, sun_path) + strlen(addr->sun_path);
 }
