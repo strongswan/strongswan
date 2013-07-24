@@ -310,6 +310,7 @@ static bool ensure_crypto_primitives(private_pkcs5_t *this, chunk_t data)
 				}
 				this->data.pbes1.hasher = hasher;
 			}
+			break;
 		}
 		case PKCS5_SCHEME_PBES2:
 		{
@@ -328,6 +329,7 @@ static bool ensure_crypto_primitives(private_pkcs5_t *this, chunk_t data)
 				}
 				this->data.pbes2.prf = prf;
 			}
+			break;
 		}
 		case PKCS5_SCHEME_PKCS12:
 			break;
