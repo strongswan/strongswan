@@ -1556,8 +1556,8 @@ METHOD(attest_db_t, list_sessions, void,
 			identity = identity.len ? identity : chunk_from_str("-");
 			printf("%4d: %T %2d %-20s %.*s%*s%.*s - %N\n", session_id, &created,
 				   FALSE, conn_id, product, device_len, device,
-				   DEVICE_MAX_LEN - device_len + 1, " ", identity.len, identity.ptr,
-				   TNC_IMV_Action_Recommendation_names, rec);
+				   DEVICE_MAX_LEN - device_len + 1, " ", (int)identity.len,
+				   identity.ptr, TNC_IMV_Action_Recommendation_names, rec);
 		}
 		e->destroy(e);
 	}
