@@ -90,12 +90,19 @@ static bool has_group(gid_t group)
 		return TRUE;
 	}
 	ngroups = sysconf(_SC_NGROUPS_MAX);
-	groups = calloc(ngroups, sizeof(gid_t));
+	if (ngroups == -1)
+	{
+		DBG1(DBG_LIB, "getting groups for current process failed: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	groups = calloc(ngroups + 1, sizeof(gid_t));
 	ngroups = getgroups(ngroups, groups);
 	if (ngroups == -1)
 	{
 		DBG1(DBG_LIB, "getting groups for current process failed: %s",
 			 strerror(errno));
+		free(groups);
 		return FALSE;
 	}
 	for (i = 0; i < ngroups; i++)
