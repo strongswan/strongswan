@@ -102,6 +102,11 @@ struct private_cmd_connection_t {
 	char *identity;
 
 	/**
+	 * XAuth/EAP identity
+	 */
+	char *xautheap;
+
+	/**
 	 * Is a private key configured
 	 */
 	bool key_seen;
@@ -187,6 +192,22 @@ static void add_auth_cfg(private_cmd_connection_t *this, peer_cfg_t *peer_cfg,
 	if (local)
 	{
 		id = identification_create_from_string(this->identity);
+		if (this->xautheap)
+		{
+			switch (class)
+			{
+				case AUTH_CLASS_EAP:
+					auth->add(auth, AUTH_RULE_EAP_IDENTITY,
+							identification_create_from_string(this->xautheap));
+					break;
+				case AUTH_CLASS_XAUTH:
+					auth->add(auth, AUTH_RULE_XAUTH_IDENTITY,
+							identification_create_from_string(this->xautheap));
+					break;
+				default:
+					break;
+			}
+		}
 	}
 	else
 	{
@@ -410,6 +431,10 @@ METHOD(cmd_connection_t, handle, bool,
 			break;
 		case CMD_OPT_IDENTITY:
 			this->identity = arg;
+			break;
+		case CMD_OPT_EAP_IDENTITY:
+		case CMD_OPT_XAUTH_USER:
+			this->xautheap = arg;
 			break;
 		case CMD_OPT_RSA:
 		case CMD_OPT_AGENT:
