@@ -94,6 +94,22 @@ struct ike_cfg_t {
 	host_t* (*resolve_other)(ike_cfg_t *this, int family);
 
 	/**
+	 * Check how good a host matches to the configured local address.
+	 *
+	 * @param host			host to check match quality
+	 * @return				quality of the match, 0 if not matching at all
+	 */
+	u_int (*match_me)(ike_cfg_t *this, host_t *host);
+
+	/**
+	 * Check how good a host matches to the configured remote address.
+	 *
+	 * @param host			host to check match quality
+	 * @return				quality of the match, 0 if not matching at all
+	 */
+	u_int (*match_other)(ike_cfg_t *this, host_t *host);
+
+	/**
 	 * Get own address.
 	 *
 	 * @param allow_any		allow any address to match

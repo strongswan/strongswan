@@ -141,6 +141,50 @@ METHOD(ike_cfg_t, resolve_other, host_t*,
 	return host_create_from_dns(this->other, family, this->other_port);
 }
 
+METHOD(ike_cfg_t, match_me, u_int,
+	private_ike_cfg_t *this, host_t *host)
+{
+	host_t *me;
+	int quality = 0;
+
+	me = resolve_me(this, host->get_family(host));
+	if (me)
+	{
+		if (me->ip_equals(me, host))
+		{
+			quality = 2;
+		}
+		else if (this->my_allow_any)
+		{
+			quality = 1;
+		}
+		me->destroy(me);
+	}
+	return quality;
+}
+
+METHOD(ike_cfg_t, match_other, u_int,
+	private_ike_cfg_t *this, host_t *host)
+{
+	host_t *other;
+	int quality = 0;
+
+	other = resolve_other(this, host->get_family(host));
+	if (other)
+	{
+		if (other->ip_equals(other, host))
+		{
+			quality = 2;
+		}
+		else if (this->other_allow_any)
+		{
+			quality = 1;
+		}
+		other->destroy(other);
+	}
+	return quality;
+}
+
 METHOD(ike_cfg_t, get_my_addr, char*,
 	private_ike_cfg_t *this, bool *allow_any)
 {
@@ -347,6 +391,8 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.fragmentation = _fragmentation,
 			.resolve_me = _resolve_me,
 			.resolve_other = _resolve_other,
+			.match_me = _match_me,
+			.match_other = _match_other,
 			.get_my_addr = _get_my_addr,
 			.get_other_addr = _get_other_addr,
 			.get_my_port = _get_my_port,
