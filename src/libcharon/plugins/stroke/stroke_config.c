@@ -824,7 +824,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 				}
 				else
 				{
-					if (strchr(ike_cfg->get_my_addr(ike_cfg, NULL), ':'))
+					if (strchr(ike_cfg->get_my_addr(ike_cfg), ':'))
 					{
 						vip = host_create_any(AF_INET6);
 					}

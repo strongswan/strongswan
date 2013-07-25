@@ -135,7 +135,6 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 {
 	ike_cfg_t *current, *found = NULL;
 	char *my_addr, *other_addr;
-	bool my_allow_any, other_allow_any;
 	enumerator_t *enumerator;
 	ike_cfg_match_t match, best = MATCH_ANY;
 	ike_data_t *data;
@@ -159,11 +158,10 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 			 match, me, other, ike_version_names, version);
 		if (match)
 		{
-			my_addr = current->get_my_addr(current, &my_allow_any);
-			other_addr = current->get_other_addr(current, &other_allow_any);
-			DBG2(DBG_CFG, "  candidate: %s%s...%s%s, prio %d",
-						  my_allow_any ? "%":"", my_addr,
-						  other_allow_any ? "%":"", other_addr, match);
+			my_addr = current->get_my_addr(current);
+			other_addr = current->get_other_addr(current);
+			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d",
+				 my_addr, other_addr, match);
 			if (match > best)
 			{
 				DESTROY_IF(found);
@@ -177,11 +175,10 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 	this->lock->unlock(this->lock);
 	if (found)
 	{
-		my_addr = found->get_my_addr(found, &my_allow_any);
-		other_addr = found->get_other_addr(found, &other_allow_any);
-		DBG2(DBG_CFG, "found matching ike config: %s%s...%s%s with prio %d",
-					  my_allow_any ? "%":"", my_addr,
-					  other_allow_any ? "%":"", other_addr, best);
+		my_addr = found->get_my_addr(found);
+		other_addr = found->get_other_addr(found);
+		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d",
+			 my_addr, other_addr, best);
 	}
 	return found;
 }

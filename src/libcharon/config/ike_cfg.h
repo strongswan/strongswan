@@ -112,18 +112,16 @@ struct ike_cfg_t {
 	/**
 	 * Get own address.
 	 *
-	 * @param allow_any		allow any address to match
 	 * @return				string of address/DNS name
 	 */
-	char* (*get_my_addr) (ike_cfg_t *this, bool *allow_any);
+	char* (*get_my_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get peer's address.
 	 *
-	 * @param allow_any		allow any address to match
 	 * @return				string of address/DNS name
 	 */
-	char* (*get_other_addr) (ike_cfg_t *this, bool *allow_any);
+	char* (*get_other_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get the port to use as our source port.

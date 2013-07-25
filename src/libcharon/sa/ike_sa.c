@@ -1166,7 +1166,7 @@ METHOD(ike_sa_t, initiate, status_t,
 			host_t *host;
 			char *addr;
 
-			addr = this->ike_cfg->get_my_addr(this->ike_cfg, NULL);
+			addr = this->ike_cfg->get_my_addr(this->ike_cfg);
 			host = this->ike_cfg->resolve_other(this->ike_cfg, AF_UNSPEC);
 			is_anyaddr = host && host->is_anyaddr(host);
 			DESTROY_IF(host);

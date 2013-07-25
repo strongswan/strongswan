@@ -186,22 +186,14 @@ METHOD(ike_cfg_t, match_other, u_int,
 }
 
 METHOD(ike_cfg_t, get_my_addr, char*,
-	private_ike_cfg_t *this, bool *allow_any)
+	private_ike_cfg_t *this)
 {
-	if (allow_any)
-	{
-		*allow_any = this->my_allow_any;
-	}
 	return this->me;
 }
 
 METHOD(ike_cfg_t, get_other_addr, char*,
-	private_ike_cfg_t *this, bool *allow_any)
+	private_ike_cfg_t *this)
 {
-	if (allow_any)
-	{
-		*allow_any = this->other_allow_any;
-	}
 	return this->other;
 }
 
