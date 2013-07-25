@@ -439,8 +439,7 @@ watcher_t *watcher_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.jobs = linked_list_create(),
-		.notify[0] = -1,
-		.notify[1] = -1,
+		.notify = {-1, -1},
 	);
 
 	if (pipe(this->notify) == 0)
