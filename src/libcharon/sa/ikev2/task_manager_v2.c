@@ -1092,6 +1092,7 @@ METHOD(task_manager_t, process_message, status_t,
 	host_t *me, *other;
 	status_t status;
 	u_int32_t mid;
+	bool schedule_delete_job = FALSE;
 
 	charon->bus->message(charon->bus, msg, TRUE, FALSE);
 	status = parse_message(this, msg);
@@ -1106,9 +1107,8 @@ METHOD(task_manager_t, process_message, status_t,
 	/* if this IKE_SA is virgin, we check for a config */
 	if (this->ike_sa->get_ike_cfg(this->ike_sa) == NULL)
 	{
-		ike_sa_id_t *ike_sa_id;
 		ike_cfg_t *ike_cfg;
-		job_t *job;
+
 		ike_cfg = charon->backends->get_ike_cfg(charon->backends,
 												me, other, IKEV2);
 		if (ike_cfg == NULL)
@@ -1123,12 +1123,7 @@ METHOD(task_manager_t, process_message, status_t,
 		this->ike_sa->set_ike_cfg(this->ike_sa, ike_cfg);
 		ike_cfg->destroy(ike_cfg);
 		/* add a timeout if peer does not establish it completely */
-		ike_sa_id = this->ike_sa->get_id(this->ike_sa);
-		job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
-		lib->scheduler->schedule_job(lib->scheduler, job,
-				lib->settings->get_int(lib->settings,
-						"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
-						charon->name));
+		schedule_delete_job = TRUE;
 	}
 	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 								time_monotonic(NULL));
@@ -1226,6 +1221,19 @@ METHOD(task_manager_t, process_message, status_t,
 				 mid, this->initiating.mid);
 			return SUCCESS;
 		}
+	}
+
+	if (schedule_delete_job)
+	{
+		ike_sa_id_t *ike_sa_id;
+		job_t *job;
+
+		ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+		job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
+		lib->scheduler->schedule_job(lib->scheduler, job,
+				lib->settings->get_int(lib->settings,
+						"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
+						charon->name));
 	}
 	return SUCCESS;
 }
