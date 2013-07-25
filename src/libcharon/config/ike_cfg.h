@@ -78,6 +78,22 @@ struct ike_cfg_t {
 	ike_version_t (*get_version)(ike_cfg_t *this);
 
 	/**
+	 * Resolve the local address to use for initiation.
+	 *
+	 * @param family		address family to prefer, or AF_UNSPEC
+	 * @return				resolved host, NULL on error
+	 */
+	host_t* (*resolve_me)(ike_cfg_t *this, int family);
+
+	/**
+	 * Resolve the remote address to use for initiation.
+	 *
+	 * @param family		address family to prefer, or AF_UNSPEC
+	 * @return				resolved host, NULL on error
+	 */
+	host_t* (*resolve_other)(ike_cfg_t *this, int family);
+
+	/**
 	 * Get own address.
 	 *
 	 * @param allow_any		allow any address to match

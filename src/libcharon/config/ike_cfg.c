@@ -129,6 +129,18 @@ METHOD(ike_cfg_t, fragmentation, fragmentation_t,
 	return this->fragmentation;
 }
 
+METHOD(ike_cfg_t, resolve_me, host_t*,
+	private_ike_cfg_t *this, int family)
+{
+	return host_create_from_dns(this->me, family, this->my_port);
+}
+
+METHOD(ike_cfg_t, resolve_other, host_t*,
+	private_ike_cfg_t *this, int family)
+{
+	return host_create_from_dns(this->other, family, this->other_port);
+}
+
 METHOD(ike_cfg_t, get_my_addr, char*,
 	private_ike_cfg_t *this, bool *allow_any)
 {
@@ -333,6 +345,8 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.send_certreq = _send_certreq,
 			.force_encap = _force_encap_,
 			.fragmentation = _fragmentation,
+			.resolve_me = _resolve_me,
+			.resolve_other = _resolve_other,
 			.get_my_addr = _get_my_addr,
 			.get_other_addr = _get_other_addr,
 			.get_my_port = _get_my_port,
