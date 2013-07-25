@@ -84,10 +84,8 @@ static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
 static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other,
 									 ike_version_t version)
 {
-	host_t *me_cand, *other_cand;
-	char *my_addr, *other_addr;
-	bool my_allow_any, other_allow_any;
 	ike_cfg_match_t match = MATCH_NONE;
+	int quality;
 
 	if (cand->get_version(cand) != IKE_ANY &&
 		version != cand->get_version(cand))
@@ -97,26 +95,12 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other,
 
 	if (me)
 	{
-		my_addr = cand->get_my_addr(cand, &my_allow_any);
-		me_cand = host_create_from_dns(my_addr, me->get_family(me), 0);
-		if (!me_cand)
+		quality = cand->match_me(cand, me);
+		if (!quality)
 		{
 			return MATCH_NONE;
 		}
-		if (me_cand->ip_equals(me_cand, me))
-		{
-			match += MATCH_ME;
-		}
-		else if (my_allow_any || me_cand->is_anyaddr(me_cand))
-		{
-			match += MATCH_ANY;
-		}
-		else
-		{
-			me_cand->destroy(me_cand);
-			return MATCH_NONE;
-		}
-		me_cand->destroy(me_cand);
+		match += quality * MATCH_ME;
 	}
 	else
 	{
@@ -125,26 +109,12 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other,
 
 	if (other)
 	{
-		other_addr = cand->get_other_addr(cand, &other_allow_any);
-		other_cand = host_create_from_dns(other_addr, other->get_family(other), 0);
-		if (!other_cand)
+		quality = cand->match_other(cand, other);
+		if (!quality)
 		{
 			return MATCH_NONE;
 		}
-		if (other_cand->ip_equals(other_cand, other))
-		{
-			match += MATCH_OTHER;
-		}
-		else if (other_allow_any || other_cand->is_anyaddr(other_cand))
-		{
-			match += MATCH_ANY;
-		}
-		else
-		{
-			other_cand->destroy(other_cand);
-			return MATCH_NONE;
-		}
-		other_cand->destroy(other_cand);
+		match += quality * MATCH_OTHER;
 	}
 	else
 	{
@@ -481,4 +451,3 @@ backend_manager_t *backend_manager_create()
 
 	return &this->public;
 }
-
