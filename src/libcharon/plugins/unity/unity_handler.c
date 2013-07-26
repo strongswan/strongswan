@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -70,12 +73,8 @@ static traffic_selector_t *create_ts(chunk_t subnet)
 	chunk_t net, mask;
 	int i;
 
-	if (subnet.len < 8)
-	{
-		return NULL;
-	}
 	net = chunk_create(subnet.ptr, 4);
-	mask = chunk_clonea(chunk_skip(subnet, 4));
+	mask = chunk_clonea(chunk_create(subnet.ptr + 4, 4));
 	for (i = 0; i < net.len; i++)
 	{
 		mask.ptr[i] = (mask.ptr[i] ^ 0xFF) | net.ptr[i];
@@ -85,11 +84,37 @@ static traffic_selector_t *create_ts(chunk_t subnet)
 }
 
 /**
- * Store a subnet to include in tunnels under this IKE_SA
+ * Parse a unity attribute and extract all subnets as traffic selectors
  */
-static bool add_include(private_unity_handler_t *this, chunk_t subnet)
+static linked_list_t *parse_subnets(chunk_t data)
+{
+	linked_list_t *list = NULL;
+	traffic_selector_t *ts;
+
+	while (data.len >= 8)
+	{	/* the padding is optional */
+		ts = create_ts(data);
+		if (ts)
+		{
+			if (!list)
+			{
+				list = linked_list_create();
+			}
+			list->insert_last(list, ts);
+		}
+		/* skip address, mask and 6 bytes of padding */
+		data = chunk_skip(data, 14);
+	}
+	return list;
+}
+
+/**
+ * Store a list of subnets to include in tunnels under this IKE_SA
+ */
+static bool add_include(private_unity_handler_t *this, chunk_t data)
 {
 	traffic_selector_t *ts;
+	linked_list_t *list;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
 
@@ -98,29 +123,34 @@ static bool add_include(private_unity_handler_t *this, chunk_t subnet)
 	{
 		return FALSE;
 	}
-	ts = create_ts(subnet);
-	if (!ts)
+	list = parse_subnets(data);
+	if (!list)
 	{
 		return FALSE;
 	}
-	INIT(entry,
-		.sa = ike_sa->get_unique_id(ike_sa),
-		.ts = ts,
-	);
+	while (list->remove_first(list, (void**)&ts) == SUCCESS)
+	{
+		INIT(entry,
+			.sa = ike_sa->get_unique_id(ike_sa),
+			.ts = ts,
+		);
 
-	this->mutex->lock(this->mutex);
-	this->include->insert_last(this->include, entry);
-	this->mutex->unlock(this->mutex);
+		this->mutex->lock(this->mutex);
+		this->include->insert_last(this->include, entry);
+		this->mutex->unlock(this->mutex);
+	}
+	list->destroy(list);
 	return TRUE;
 }
 
 /**
- * Remove a subnet from the inclusion list for this IKE_SA
+ * Remove a list of subnets from the inclusion list for this IKE_SA
  */
-static bool remove_include(private_unity_handler_t *this, chunk_t subnet)
+static bool remove_include(private_unity_handler_t *this, chunk_t data)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
+	linked_list_t *list;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
 
@@ -129,27 +159,31 @@ static bool remove_include(private_unity_handler_t *this, chunk_t subnet)
 	{
 		return FALSE;
 	}
-	ts = create_ts(subnet);
-	if (!ts)
+	list = parse_subnets(data);
+	if (!list)
 	{
 		return FALSE;
 	}
 
 	this->mutex->lock(this->mutex);
-	enumerator = this->include->create_enumerator(this->include);
-	while (enumerator->enumerate(enumerator, &entry))
+	while (list->remove_first(list, (void**)&ts) == SUCCESS)
 	{
-		if (entry->sa == ike_sa->get_unique_id(ike_sa) &&
-			ts->equals(ts, entry->ts))
+		enumerator = this->include->create_enumerator(this->include);
+		while (enumerator->enumerate(enumerator, &entry))
 		{
-			this->include->remove_at(this->include, enumerator);
-			entry_destroy(entry);
-			break;
+			if (entry->sa == ike_sa->get_unique_id(ike_sa) &&
+				ts->equals(ts, entry->ts))
+			{
+				this->include->remove_at(this->include, enumerator);
+				entry_destroy(entry);
+				break;
+			}
 		}
+		enumerator->destroy(enumerator);
+		ts->destroy(ts);
 	}
-	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-	ts->destroy(ts);
+	list->destroy(list);
 	return TRUE;
 }
 
@@ -212,9 +246,10 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 /**
  * Add a bypass policy for a given subnet
  */
-static bool add_exclude(private_unity_handler_t *this, chunk_t subnet)
+static bool add_exclude(private_unity_handler_t *this, chunk_t data)
 {
 	traffic_selector_t *ts;
+	linked_list_t *list;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
 
@@ -223,48 +258,60 @@ static bool add_exclude(private_unity_handler_t *this, chunk_t subnet)
 	{
 		return FALSE;
 	}
-	ts = create_ts(subnet);
-	if (!ts)
+	list = parse_subnets(data);
+	if (!list)
 	{
 		return FALSE;
 	}
-	INIT(entry,
-		.sa = ike_sa->get_unique_id(ike_sa),
-		.ts = ts,
-	);
 
-	/* we can't install the shunt policy yet, as we don't know the virtual IP.
-	 * Defer installation using an async callback. */
-	lib->processor->queue_job(lib->processor, (job_t*)
-						callback_job_create((void*)add_exclude_async, entry,
-											(void*)entry_destroy, NULL));
+	while (list->remove_first(list, (void**)&ts) == SUCCESS)
+	{
+		INIT(entry,
+			.sa = ike_sa->get_unique_id(ike_sa),
+			.ts = ts,
+		);
+
+		/* we can't install the shunt policy yet, as we don't know the virtual IP.
+		 * Defer installation using an async callback. */
+		lib->processor->queue_job(lib->processor, (job_t*)
+							callback_job_create((void*)add_exclude_async, entry,
+												(void*)entry_destroy, NULL));
+	}
+	list->destroy(list);
 	return TRUE;
 }
 
 /**
  * Remove a bypass policy for a given subnet
  */
-static bool remove_exclude(private_unity_handler_t *this, chunk_t subnet)
+static bool remove_exclude(private_unity_handler_t *this, chunk_t data)
 {
 	traffic_selector_t *ts;
+	linked_list_t *list;
 	ike_sa_t *ike_sa;
 	char name[128];
+	bool success = TRUE;
 
 	ike_sa = charon->bus->get_sa(charon->bus);
 	if (!ike_sa)
 	{
 		return FALSE;
 	}
-	ts = create_ts(subnet);
-	if (!ts)
+	list = parse_subnets(data);
+	if (!list)
 	{
 		return FALSE;
 	}
-	create_shunt_name(ike_sa, ts, name, sizeof(name));
-	DBG1(DBG_IKE, "uninstalling %N bypass policy for %R",
-		 configuration_attribute_type_names, UNITY_LOCAL_LAN, ts);
-	ts->destroy(ts);
-	return charon->shunts->uninstall(charon->shunts, name);
+	while (list->remove_first(list, (void**)&ts) == SUCCESS)
+	{
+		create_shunt_name(ike_sa, ts, name, sizeof(name));
+		DBG1(DBG_IKE, "uninstalling %N bypass policy for %R",
+			 configuration_attribute_type_names, UNITY_LOCAL_LAN, ts);
+		ts->destroy(ts);
+		success = charon->shunts->uninstall(charon->shunts, name) && success;
+	}
+	list->destroy(list);
+	return success;
 }
 
 METHOD(attribute_handler_t, handle, bool,
