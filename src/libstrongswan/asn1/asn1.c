@@ -642,6 +642,11 @@ bool is_asn1(chunk_t blob)
 
 	len = asn1_length(&blob);
 
+	if (len == ASN1_INVALID_LENGTH)
+	{
+		return FALSE;
+	}
+
 	/* exact match */
 	if (len == blob.len)
 	{
