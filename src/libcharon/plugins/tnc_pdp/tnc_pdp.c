@@ -450,102 +450,61 @@ end:
 /**
  * Process packets received on the RADIUS socket
  */
-static job_requeue_t receive(private_tnc_pdp_t *this)
+static bool receive(private_tnc_pdp_t *this, int fd, watcher_event_t event)
 {
-	while (TRUE)
+	radius_message_t *request;
+	char buffer[MAX_PACKET];
+	int bytes_read = 0;
+	host_t *source;
+	struct msghdr msg;
+	struct iovec iov;
+	union {
+		struct sockaddr_in in4;
+		struct sockaddr_in6 in6;
+	} src;
+
+	/* read received packet */
+	msg.msg_name = &src;
+	msg.msg_namelen = sizeof(src);
+	iov.iov_base = buffer;
+	iov.iov_len = MAX_PACKET;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_flags = 0;
+
+	bytes_read = recvmsg(fd, &msg, 0);
+	if (bytes_read < 0)
 	{
-		radius_message_t *request;
-		char buffer[MAX_PACKET];
-		int max_fd = 0, selected = 0, bytes_read = 0;
-		fd_set rfds;
-		bool oldstate;
-		host_t *source;
-		struct msghdr msg;
-		struct iovec iov;
-		union {
-			struct sockaddr_in in4;
-			struct sockaddr_in6 in6;
-		} src;
-
-		FD_ZERO(&rfds);
-
-		if (this->ipv4)
-		{
-			FD_SET(this->ipv4, &rfds);
-		}
-		if (this->ipv6)
-		{
-			FD_SET(this->ipv6, &rfds);
-		}
-		max_fd = max(this->ipv4, this->ipv6);
-
-		DBG2(DBG_CFG, "waiting for data on RADIUS sockets");
-		oldstate = thread_cancelability(TRUE);
-		if (select(max_fd + 1, &rfds, NULL, NULL, NULL) <= 0)
-		{
-			thread_cancelability(oldstate);
-			continue;
-		}
-		thread_cancelability(oldstate);
-
-		if (FD_ISSET(this->ipv4, &rfds))
-		{
-			selected = this->ipv4;
-		}
-		else if (FD_ISSET(this->ipv6, &rfds))
-		{
-			selected = this->ipv6;
-		}
-		else
-		{
-			/* oops, shouldn't happen */
-			continue;
-		}
-
-		/* read received packet */
-		msg.msg_name = &src;
-		msg.msg_namelen = sizeof(src);
-		iov.iov_base = buffer;
-		iov.iov_len = MAX_PACKET;
-		msg.msg_iov = &iov;
-		msg.msg_iovlen = 1;
-		msg.msg_flags = 0;
-
-		bytes_read = recvmsg(selected, &msg, 0);
-		if (bytes_read < 0)
-		{
-			DBG1(DBG_CFG, "error reading RADIUS socket: %s", strerror(errno));
-			continue;
-		}
-		if (msg.msg_flags & MSG_TRUNC)
-		{
-			DBG1(DBG_CFG, "receive buffer too small, RADIUS packet discarded");
-			continue;
-		}
-		source = host_create_from_sockaddr((sockaddr_t*)&src);
-		DBG2(DBG_CFG, "received RADIUS packet from %#H", source);
-		DBG3(DBG_CFG, "%b", buffer, bytes_read);
-		request = radius_message_parse(chunk_create(buffer, bytes_read));
-		if (request)
-		{
-			DBG1(DBG_CFG, "received RADIUS %N from client '%H'",
-				 radius_message_code_names, request->get_code(request), source);
-
-			if (request->verify(request, NULL, this->secret, this->hasher,
-											   this->signer))
-			{
-				process_eap(this, request, source);
-			}
-			request->destroy(request);
-
-		}
-		else
-		{
-			DBG1(DBG_CFG, "received invalid RADIUS message, ignored");
-		}
-		source->destroy(source);
+		DBG1(DBG_CFG, "error reading RADIUS socket: %s", strerror(errno));
+		return FALSE;
 	}
-	return JOB_REQUEUE_FAIR;
+	if (msg.msg_flags & MSG_TRUNC)
+	{
+		DBG1(DBG_CFG, "receive buffer too small, RADIUS packet discarded");
+		return FALSE;
+	}
+	source = host_create_from_sockaddr((sockaddr_t*)&src);
+	DBG2(DBG_CFG, "received RADIUS packet from %#H", source);
+	DBG3(DBG_CFG, "%b", buffer, bytes_read);
+	request = radius_message_parse(chunk_create(buffer, bytes_read));
+	if (request)
+	{
+		DBG1(DBG_CFG, "received RADIUS %N from client '%H'",
+		radius_message_code_names, request->get_code(request), source);
+
+		if (request->verify(request, NULL, this->secret, this->hasher,
+										   this->signer))
+		{
+			process_eap(this, request, source);
+		}
+		request->destroy(request);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "received invalid RADIUS message, ignored");
+	}
+	source->destroy(source);
+	return TRUE;
 }
 
 METHOD(tnc_pdp_t, destroy, void,
@@ -553,10 +512,12 @@ METHOD(tnc_pdp_t, destroy, void,
 {
 	if (this->ipv4)
 	{
+		lib->watcher->remove(lib->watcher, this->ipv4);
 		close(this->ipv4);
 	}
 	if (this->ipv6)
 	{
+		lib->watcher->remove(lib->watcher, this->ipv6);
 		close(this->ipv6);
 	}
 	DESTROY_IF(this->server);
@@ -599,11 +560,21 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		destroy(this);
 		return NULL;
 	}
-	if (!this->ipv4)
+	if (this->ipv4)
+	{
+		lib->watcher->add(lib->watcher, this->ipv4, WATCHER_READ,
+						 (watcher_cb_t)receive, this);
+	}
+	else
 	{
 		DBG1(DBG_NET, "could not open IPv4 RADIUS socket, IPv4 disabled");
 	}
-	if (!this->ipv6)
+	if (this->ipv6)
+	{
+		lib->watcher->add(lib->watcher, this->ipv6, WATCHER_READ,
+						 (watcher_cb_t)receive, this);
+	}
+	else
 	{
 		DBG1(DBG_NET, "could not open IPv6 RADIUS socket, IPv6 disabled");
 	}
