@@ -13,6 +13,12 @@ strongswan-5.1.0
 - The new kernel-libipsec plugin uses TUN devices and libipsec to provide IPsec
   processing in userland on Linux, FreeBSD and Mac OS X.
 
+- The eap-radius plugin can now serve as an XAuth backend called xauth-radius,
+  directly verifying XAuth credentials using RADIUS User-Name/User-Password
+  attributes. This is more efficient than the existing xauth-eap+eap-radius
+  combination, and allows RADIUS servers without EAP support to act as AAA
+  backend for IKEv1.
+
 - The new osx-attr plugin installs configuration attributes (currently DNS
   servers) via SystemConfiguration on Mac OS X. The keychain plugin provides
   certificates from the OS X keychain service.
