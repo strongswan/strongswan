@@ -261,15 +261,13 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
  */
 static bool check_cookie(private_receiver_t *this, message_t *message)
 {
-	packet_t *packet;
 	chunk_t data;
 
 	/* check for a cookie. We don't use our parser here and do it
 	 * quick and dirty for performance reasons.
 	 * we assume the cookie is the first payload (which is a MUST), and
 	 * the cookie's SPI length is zero. */
-	packet = message->get_packet(message);
-	data = packet->get_data(packet);
+	data = message->get_packet_data(message);
 	if (data.len <
 		 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
 		 sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher) ||
@@ -277,7 +275,6 @@ static bool check_cookie(private_receiver_t *this, message_t *message)
 		*(u_int16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
 	{
 		/* no cookie found */
-		packet->destroy(packet);
 		return FALSE;
 	}
 	data.ptr += IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH;
@@ -285,7 +282,6 @@ static bool check_cookie(private_receiver_t *this, message_t *message)
 	if (!cookie_verify(this, message, data))
 	{
 		DBG2(DBG_NET, "found cookie, but content invalid");
-		packet->destroy(packet);
 		return FALSE;
 	}
 	return TRUE;
