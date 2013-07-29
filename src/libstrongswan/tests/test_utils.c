@@ -166,6 +166,28 @@ START_TEST(test_untoh)
 END_TEST
 
 /*******************************************************************************
+ * round_up/down
+ */
+
+START_TEST(test_round)
+{
+	ck_assert_int_eq(round_up(0, 4), 0);
+	ck_assert_int_eq(round_up(1, 4), 4);
+	ck_assert_int_eq(round_up(2, 4), 4);
+	ck_assert_int_eq(round_up(3, 4), 4);
+	ck_assert_int_eq(round_up(4, 4), 4);
+	ck_assert_int_eq(round_up(5, 4), 8);
+
+	ck_assert_int_eq(round_down(0, 4), 0);
+	ck_assert_int_eq(round_down(1, 4), 0);
+	ck_assert_int_eq(round_down(2, 4), 0);
+	ck_assert_int_eq(round_down(3, 4), 0);
+	ck_assert_int_eq(round_down(4, 4), 4);
+	ck_assert_int_eq(round_down(5, 4), 4);
+}
+END_TEST
+
+/*******************************************************************************
  * memxor
  */
 
@@ -414,6 +436,10 @@ Suite *utils_suite_create()
 	tc = tcase_create("htoun,untoh");
 	tcase_add_test(tc, test_htoun);
 	tcase_add_test(tc, test_untoh);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("round");
+	tcase_add_test(tc, test_round);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("memxor");

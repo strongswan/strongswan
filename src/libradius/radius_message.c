@@ -65,6 +65,11 @@ struct private_radius_message_t {
 	 * message data, allocated
 	 */
 	rmsg_t *msg;
+
+	/**
+	 * User-Password to encrypt and encode, if any
+	 */
+	chunk_t password;
 };
 
 /**
@@ -356,6 +361,15 @@ METHOD(radius_message_t, add, void,
 {
 	rattr_t *attribute;
 
+	if (type == RAT_USER_PASSWORD && !this->password.len)
+	{
+		/* store a null-padded password */
+		this->password = chunk_alloc(round_up(data.len, HASH_SIZE_MD5));
+		memset(this->password.ptr + data.len, 0, this->password.len - data.len);
+		memcpy(this->password.ptr, data.ptr, data.len);
+		return;
+	}
+
 	data.len = min(data.len, MAX_RADIUS_ATTRIBUTE_SIZE);
 	this->msg = realloc(this->msg,
 						ntohs(this->msg->length) + sizeof(rattr_t) + data.len);
@@ -364,6 +378,67 @@ METHOD(radius_message_t, add, void,
 	attribute->length = data.len + sizeof(rattr_t);
 	memcpy(attribute->value, data.ptr, data.len);
 	this->msg->length = htons(ntohs(this->msg->length) + attribute->length);
+}
+
+METHOD(radius_message_t, crypt, bool,
+	private_radius_message_t *this, chunk_t salt, chunk_t in, chunk_t out,
+	chunk_t secret, hasher_t *hasher)
+{
+	char b[HASH_SIZE_MD5];
+
+	/**
+	 * From RFC2548 (encryption):
+	 * b(1) = MD5(S + R + A)    c(1) = p(1) xor b(1)   C = c(1)
+	 * b(2) = MD5(S + c(1))     c(2) = p(2) xor b(2)   C = C + c(2)
+	 *      . . .
+	 * b(i) = MD5(S + c(i-1))   c(i) = p(i) xor b(i)   C = C + c(i)
+	 *
+	 * P/C = Plain/Crypted => in/out
+	 * S = secret
+	 * R = authenticator
+	 * A = salt
+	 */
+	if (in.len != out.len)
+	{
+		return FALSE;
+	}
+	if (in.len % HASH_SIZE_MD5 || in.len < HASH_SIZE_MD5)
+	{
+		return FALSE;
+	}
+	if (out.ptr != in.ptr)
+	{
+		memcpy(out.ptr, in.ptr, in.len);
+	}
+	/* Preparse seed for first round:
+	 * b(1) = MD5(S + R + A) */
+	if (!hasher->get_hash(hasher, secret, NULL) ||
+		!hasher->get_hash(hasher,
+						  chunk_from_thing(this->msg->authenticator), NULL) ||
+		!hasher->get_hash(hasher, salt, b))
+	{
+		return FALSE;
+	}
+	while (in.len)
+	{
+		/* p(i) = b(i) xor c(1) */
+		memxor(out.ptr, b, HASH_SIZE_MD5);
+
+		out = chunk_skip(out, HASH_SIZE_MD5);
+		if (out.len)
+		{
+			/* Prepare seed for next round::
+			 * b(i) = MD5(S + c(i-1)) */
+			if (!hasher->get_hash(hasher, secret, NULL) ||
+				!hasher->get_hash(hasher,
+								  chunk_create(in.ptr, HASH_SIZE_MD5), b))
+			{
+				return FALSE;
+			}
+		}
+		in = chunk_skip(in, HASH_SIZE_MD5);
+	}
+	return TRUE;
 }
 
 METHOD(radius_message_t, sign, bool,
@@ -389,6 +464,18 @@ METHOD(radius_message_t, sign, bool,
 		{
 			memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
 		}
+	}
+
+	if (this->password.len)
+	{
+		/* encrypt password inline */
+		if (!crypt(this, chunk_empty, this->password, this->password,
+				   secret, hasher))
+		{
+			return FALSE;
+		}
+		add(this, RAT_USER_PASSWORD, this->password);
+		chunk_clear(&this->password);
 	}
 
 	if (msg_auth)
@@ -540,6 +627,7 @@ METHOD(radius_message_t, get_encoding, chunk_t,
 METHOD(radius_message_t, destroy, void,
 	private_radius_message_t *this)
 {
+	chunk_clear(&this->password);
 	free(this->msg);
 	free(this);
 }
@@ -563,6 +651,7 @@ static private_radius_message_t *radius_message_create_empty()
 			.get_encoding = _get_encoding,
 			.sign = _sign,
 			.verify = _verify,
+			.crypt = _crypt,
 			.destroy = _destroy,
 		},
 	);

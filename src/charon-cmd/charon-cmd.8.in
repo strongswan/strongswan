@@ -77,6 +77,12 @@ DNS name or IP address to connect to.
 .BI "\-\-identity " identity
 Identity the client uses for the IKE exchange.
 .TP
+.BI "\-\-eap\-identity " identity
+Identity the client uses for EAP authentication.
+.TP
+.BI "\-\-xauth\-username " username
+Username the client uses for XAuth authentication.
+.TP
 .BI "\-\-remote\-identity " identity
 Server identity to expect, defaults to
 .IR hostname .

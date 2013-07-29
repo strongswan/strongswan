@@ -24,6 +24,7 @@
 typedef struct eap_radius_t eap_radius_t;
 
 #include <sa/eap/eap_method.h>
+#include <radius_message.h>
 
 /**
  * Implementation of the eap_method_t interface using a RADIUS server.
@@ -44,5 +45,26 @@ struct eap_radius_t {
  * @return			eap_radius_t object
  */
 eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer);
+
+/**
+ * Process additional attributes from an Access-Accept.
+ *
+ * Parses and applies additional authorization attributes from an Accept
+ * message, such as group membership information or IKE configuration
+ * attributes.
+ *
+ * @param message	Access-Accept message to process
+ */
+void eap_radius_process_attributes(radius_message_t *message);
+
+/**
+ * Build additional attributes for an Access-Request.
+ *
+ * Adds additional RADIUS attributes to use with Access-Request, such as
+ * different NAS specific attributes.
+ *
+ * @param message	Access-Request message to add attributes to
+ */
+void eap_radius_build_attributes(radius_message_t *message);
 
 #endif /** EAP_RADIUS_H_ @}*/

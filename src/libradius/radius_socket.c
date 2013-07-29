@@ -233,54 +233,17 @@ METHOD(radius_socket_t, request, radius_message_t*,
 static chunk_t decrypt_mppe_key(private_radius_socket_t *this, u_int16_t salt,
 								chunk_t C, radius_message_t *request)
 {
-	chunk_t A, R, P, seed;
-	u_char *c, *p;
+	chunk_t decrypted;
 
-	/**
-	 * From RFC2548 (encryption):
-	 * b(1) = MD5(S + R + A)    c(1) = p(1) xor b(1)   C = c(1)
-	 * b(2) = MD5(S + c(1))     c(2) = p(2) xor b(2)   C = C + c(2)
-	 *      . . .
-	 * b(i) = MD5(S + c(i-1))   c(i) = p(i) xor b(i)   C = C + c(i)
-	 */
-
-	if (C.len % HASH_SIZE_MD5 || C.len < HASH_SIZE_MD5)
-	{
-		return chunk_empty;
-	}
-
-	A = chunk_create((u_char*)&salt, sizeof(salt));
-	R = chunk_create(request->get_authenticator(request), HASH_SIZE_MD5);
-	P = chunk_alloca(C.len);
-	p = P.ptr;
-	c = C.ptr;
-
-	seed = chunk_cata("cc", R, A);
-
-	while (c < C.ptr + C.len)
-	{
-		/* b(i) = MD5(S + c(i-1)) */
-		if (!this->hasher->get_hash(this->hasher, this->secret, NULL) ||
-			!this->hasher->get_hash(this->hasher, seed, p))
-		{
-			return chunk_empty;
-		}
-
-		/* p(i) = b(i) xor c(1) */
-		memxor(p, c, HASH_SIZE_MD5);
-
-		/* prepare next round */
-		seed = chunk_create(c, HASH_SIZE_MD5);
-		c += HASH_SIZE_MD5;
-		p += HASH_SIZE_MD5;
-	}
-
-	/* remove truncation, first byte is key length */
-	if (*P.ptr >= P.len)
+	decrypted = chunk_alloca(C.len);
+	if (!request->crypt(request, chunk_from_thing(salt), C, decrypted,
+						this->secret, this->hasher) ||
+		decrypted.ptr[0] >= decrypted.len)
 	{	/* decryption failed? */
 		return chunk_empty;
 	}
-	return chunk_clone(chunk_create(P.ptr + 1, *P.ptr));
+	/* remove truncation, first byte is key length */
+	return chunk_clone(chunk_create(decrypted.ptr + 1, decrypted.ptr[0]));
 }
 
 METHOD(radius_socket_t, decrypt_msk, chunk_t,

@@ -671,6 +671,29 @@ static inline u_int64_t untoh64(void *network)
 }
 
 /**
+ * Round up size to be multiple of alignement
+ */
+static inline size_t round_up(size_t size, int alignement)
+{
+	int remainder;
+
+	remainder = size % alignement;
+	if (remainder)
+	{
+		size += alignement - remainder;
+	}
+	return size;
+}
+
+/**
+ * Round down size to be a multiple of alignement
+ */
+static inline size_t round_down(size_t size, int alignement)
+{
+	return size - (size % alignement);
+}
+
+/**
  * Special type to count references
  */
 typedef u_int refcount_t;

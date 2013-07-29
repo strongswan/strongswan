@@ -17,6 +17,7 @@ endif
 libstrongswan_eap_radius_la_SOURCES = \
 	eap_radius_plugin.h eap_radius_plugin.c \
 	eap_radius.h eap_radius.c \
+	eap_radius_xauth.h eap_radius_xauth.c \
 	eap_radius_accounting.h eap_radius_accounting.c \
 	eap_radius_provider.h eap_radius_provider.c \
 	eap_radius_dae.h eap_radius_dae.c \
