@@ -381,6 +381,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
 			}
 			/* FALL */
 		case AF_INET6:
+			memset(&addr.v6, 0, sizeof(addr.v6));
 			if (inet_pton(AF_INET6, string, &addr.v6.sin6_addr) != 1)
 			{
 				return NULL;
@@ -394,6 +395,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
 				return NULL;
 			}
 		af_inet:
+			memset(&addr.v4, 0, sizeof(addr.v4));
 			if (inet_pton(AF_INET, string, &addr.v4.sin_addr) != 1)
 			{
 				return NULL;
