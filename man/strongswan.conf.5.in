@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2013-07-22" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2013-07-22" "@PACKAGE_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -852,11 +852,11 @@ keys not stored on tokens
 .BR libstrongswan.plugins.pkcs11.use_rng " [no]"
 Whether the PKCS#11 modules should be used as RNG
 .TP
-.BR libstrongswan.plugins.random.random " [@DEV_RANDOM@]"
-File to read random bytes from, instead of @DEV_RANDOM@
+.BR libstrongswan.plugins.random.random " [@random_device@]"
+File to read random bytes from, instead of @random_device@
 .TP
-.BR libstrongswan.plugins.random.urandom " [@DEV_URANDOM@]"
-File to read pseudo random bytes from, instead of @DEV_URANDOM@
+.BR libstrongswan.plugins.random.urandom " [@urandom_device@]"
+File to read pseudo random bytes from, instead of @urandom_device@
 .TP
 .BR libstrongswan.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
 File to read DNS resolver configuration from
@@ -970,7 +970,7 @@ Send open listening ports without being prompted
 .BR libimcv.plugins.imv-scanner.remediation_uri
 URI pointing to scanner remediation instructions
 .TP
-.BR libimcv.plugins.imc-swid.swid_directory "[$(prefix)/share]"
+.BR libimcv.plugins.imc-swid.swid_directory " [@prefix@/share]"
 Directory where SWID tags are located
 .TP
 .BR libimcv.plugins.imc-test.additional_ids " [0]"

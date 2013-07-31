@@ -1482,6 +1482,18 @@ AC_CONFIG_FILES([
 	scripts/Makefile
 	testing/Makefile
 ])
+
+# =================
+#  build man pages
+# =================
+
+AC_CONFIG_FILES([
+	man/ipsec.conf.5
+	man/ipsec.secrets.5
+	man/strongswan.conf.5
+	src/charon-cmd/charon-cmd.8
+])
+
 AC_OUTPUT
 
 # ========================

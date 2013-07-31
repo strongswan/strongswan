@@ -1,7 +1,6 @@
 sbin_PROGRAMS = charon-cmd
-CLEANFILES = charon-cmd.8
-dist_man8_MANS = charon-cmd.8
-EXTRA_DIST = charon-cmd.8.in
+man8_MANS = charon-cmd.8
+CLEANFILES = $(man8_MANS)
 
 charon_cmd_SOURCES = \
 	cmd/cmd_options.h cmd/cmd_options.c \
@@ -24,9 +23,3 @@ charon_cmd_LDADD = \
 	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	-lm $(PTHREADLIB) $(DLLIB)
-
-charon-cmd.8 : charon-cmd.8.in
-	$(AM_V_GEN) \
-	sed \
-	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-	$(srcdir)/$@.in > $@
