@@ -1,6 +1,11 @@
 strongswan-5.1.0
 ----------------
 
+- Fixed a denial-of-service vulnerability triggered by specific XAuth usernames
+  and EAP identities (since 5.0.3), and PEM files (since 4.1.11).  The crash
+  was caused by insufficient error handling in the is_asn1() function.
+  The vulnerability has been registered as CVE-2013-5018.
+
 - The new charon-cmd command line IKE client can establish road warrior
   connections using IKEv1 or IKEv2 with different authentication profiles.
   It does not depend on any configuration files and can be configured using a
@@ -36,7 +41,7 @@ strongswan-5.1.0
 
 - IKEv2 can now negotiate transport mode and IPComp in NAT situations.
 
-- IKEv2 exchange initiators now properly closes an established IKE or CHILD_SA
+- IKEv2 exchange initiators now properly close an established IKE or CHILD_SA
   on error conditions using an additional exchange, keeping state in sync
   between peers.
 
