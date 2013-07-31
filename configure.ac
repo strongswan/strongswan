@@ -1471,6 +1471,7 @@ AC_CONFIG_FILES([
 	src/openac/Makefile
 	src/scepclient/Makefile
 	src/pki/Makefile
+	src/pki/man/Makefile
 	src/dumm/Makefile
 	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
@@ -1492,6 +1493,7 @@ AC_CONFIG_FILES([
 	man/ipsec.secrets.5
 	man/strongswan.conf.5
 	src/charon-cmd/charon-cmd.8
+	src/pki/man/ipsec-pki.8
 ])
 
 AC_OUTPUT

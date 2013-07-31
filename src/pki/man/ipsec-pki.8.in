@@ -1,0 +1,72 @@
+.TH IPSEC\-PKI 8 "2013-07-30" "@PACKAGE_VERSION@" "strongSwan"
+.
+.SH "NAME"
+.
+ipsec pki \- Simple public key infrastructure (PKI) management tool
+.
+.SH "SYNOPSIS"
+.
+.SY "ipsec pki"
+.I command
+.RI [ option\~ .\|.\|.]
+.YS
+.
+.SY "ipsec pki"
+.B \-h
+|
+.B \-\-help
+.YS
+.
+.SH "DESCRIPTION"
+.
+.B ipsec pki
+is a suite of commands that allow you to manage a simple public key
+infrastructure (PKI).
+.P
+Generate RSA and ECDSA key pairs, create PKCS#10 certificate requests
+containing subjectAltNames, create X.509 self-signed end-entity and root CA
+certificates, issue end-entity and intermediate CA certificates signed by the
+private key of a CA and containing subjectAltNames, CRL distribution points
+and URIs of OCSP servers. You can also extract raw public keys from private
+keys, certificate requests and certificates and compute two kinds of SHA-1-based
+key IDs.
+.
+.SH "COMMANDS"
+.
+.TP
+.B "\-h, \-\-help"
+Prints usage information and a short summary of the available commands.
+.TP
+.B "\-g, \-\-gen"
+Generate a new private key.
+.TP
+.B "\-s, \-\-self"
+Create a self-signed certificate.
+.TP
+.B "\-i, \-\-issue"
+Issue a certificate using a CA certificate and key.
+.TP
+.B "\-c, \-\-signcrl"
+Issue a CRL using a CA certificate and key.
+.TP
+.B "\-r, \-\-req"
+Create a PKCS#10 certificate request.
+.TP
+.B "\-7, \-\-pkcs7"
+Provides PKCS#7 wrap/unwrap functions.
+.TP
+.B "\-k, \-\-keyid"
+Calculate key identifiers of a key or certificate.
+.TP
+.B "\-a, \-\-print"
+Print a credential (key, certificate etc.) in human readable form.
+.TP
+.B "\-p, \-\-pub"
+Extract a public key from a private key or certificate.
+.TP
+.B "\-v, \-\-verify"
+Verify a certificate using a CA certificate.
+.
+.SH "SEE ALSO"
+.
+.BR ipsec (8)

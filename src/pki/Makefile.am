@@ -1,3 +1,5 @@
+SUBDIRS = man
+
 ipsec_PROGRAMS = pki
 
 pki_SOURCES = pki.c pki.h command.c command.h \
