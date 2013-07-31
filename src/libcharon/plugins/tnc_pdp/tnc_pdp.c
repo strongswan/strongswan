@@ -456,22 +456,22 @@ static bool receive(private_tnc_pdp_t *this, int fd, watcher_event_t event)
 	char buffer[MAX_PACKET];
 	int bytes_read = 0;
 	host_t *source;
-	struct msghdr msg;
-	struct iovec iov;
 	union {
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
 	} src;
+	struct iovec iov = {
+		.iov_base = buffer,
+		.iov_len = MAX_PACKET,
+	};
+	struct msghdr msg = {
+		.msg_name = &src,
+		.msg_namelen = sizeof(src),
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
 
 	/* read received packet */
-	msg.msg_name = &src;
-	msg.msg_namelen = sizeof(src);
-	iov.iov_base = buffer;
-	iov.iov_len = MAX_PACKET;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_flags = 0;
-
 	bytes_read = recvmsg(fd, &msg, 0);
 	if (bytes_read < 0)
 	{
