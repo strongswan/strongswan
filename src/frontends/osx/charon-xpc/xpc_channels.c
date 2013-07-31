@@ -363,12 +363,16 @@ METHOD(listener_t, child_updown, bool,
 			xpc_dictionary_set_string(msg, "event", "child_down");
 		}
 
-		list = child_sa->get_traffic_selectors(child_sa, TRUE);
+		list = linked_list_create_from_enumerator(
+					child_sa->create_ts_enumerator(child_sa, TRUE));
 		snprintf(buf, sizeof(buf), "%#R", list);
+		list->destroy(list);
 		xpc_dictionary_set_string(msg, "ts_local", buf);
 
-		list = child_sa->get_traffic_selectors(child_sa, FALSE);
+		list = linked_list_create_from_enumerator(
+					child_sa->create_ts_enumerator(child_sa, FALSE));
 		snprintf(buf, sizeof(buf), "%#R", list);
+		list->destroy(list);
 		xpc_dictionary_set_string(msg, "ts_remote", buf);
 
 		xpc_connection_send_message(entry->conn, msg);
