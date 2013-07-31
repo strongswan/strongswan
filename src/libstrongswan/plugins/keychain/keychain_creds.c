@@ -69,10 +69,11 @@ static mem_cred_t* load_certs(private_keychain_creds_t *this, char *path)
 	SecKeychainItemRef item;
 	mem_cred_t *set;
 	OSStatus status;
+	int loaded = 0;
 
 	set = mem_cred_create();
 
-	DBG1(DBG_CFG, "loading certificates from %s:", path);
+	DBG2(DBG_CFG, "loading certificates from %s:", path);
 	status = SecKeychainOpen(path, &keychain);
 	if (status == errSecSuccess)
 	{
@@ -95,8 +96,9 @@ static mem_cred_t* load_certs(private_keychain_creds_t *this, char *path)
 								BUILD_END);
 					if (cert)
 					{
-						DBG1(DBG_CFG, "  loaded '%Y'", cert->get_subject(cert));
+						DBG2(DBG_CFG, "  loaded '%Y'", cert->get_subject(cert));
 						set->add_cert(set, TRUE, cert);
+						loaded++;
 					}
 					SecKeychainItemFreeAttributesAndData(NULL, data);
 				}
@@ -106,6 +108,7 @@ static mem_cred_t* load_certs(private_keychain_creds_t *this, char *path)
 		}
 		CFRelease(keychain);
 	}
+	DBG1(DBG_CFG, "loaded %d certificates from %s", loaded, path);
 	return set;
 }
 
