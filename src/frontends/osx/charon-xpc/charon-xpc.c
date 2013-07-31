@@ -166,8 +166,9 @@ int main(int argc, char *argv[])
 								"charon-xpc.close_ike_on_child_failure", "yes");
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
-				"nonce pkcs1 openssl kernel-libipsec kernel-pfroute "
-				"keychain socket-default eap-identity eap-mschapv2 osx-attr")))
+				"nonce pkcs1 openssl keychain ctr ccm gcm kernel-libipsec "
+				"kernel-pfroute socket-default eap-identity eap-mschapv2 "
+				"xauth-generic osx-attr")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
