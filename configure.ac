@@ -1494,6 +1494,7 @@ AC_CONFIG_FILES([
 	man/strongswan.conf.5
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/ipsec-pki.8
+	src/pki/man/pki---gen.8
 ])
 
 AC_OUTPUT

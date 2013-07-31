@@ -69,4 +69,5 @@ Verify a certificate using a CA certificate.
 .
 .SH "SEE ALSO"
 .
-.BR ipsec (8)
+.BR ipsec (8),
+.BR pki\ \-\-gen (8)
