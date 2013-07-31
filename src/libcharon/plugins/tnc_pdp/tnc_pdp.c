@@ -22,6 +22,8 @@
 #include <radius_message.h>
 #include <radius_mppe.h>
 
+#include <pt_tls_dispatcher.h>
+
 #include <daemon.h>
 #include <utils/debug.h>
 #include <pen/pen.h>
@@ -30,6 +32,16 @@
 #include <sa/eap/eap_method.h>
 
 typedef struct private_tnc_pdp_t private_tnc_pdp_t;
+
+/**
+ * Default RADIUS port, when not configured
+ */
+#define RADIUS_PORT 1812
+
+/**
+ * Default PT-TLS port, when not configured
+ */
+#define PT_TLS_PORT	 271
 
 /**
  * Maximum size of a RADIUS IP packet
@@ -90,6 +102,12 @@ struct private_tnc_pdp_t {
 	 * List of registered TNC-PDP connections
 	 */
 	tnc_pdp_connections_t *connections;
+
+	/**
+	 * PT-TLS dispatcher
+	 */
+	pt_tls_dispatcher_t *pt_tls_dispatcher;
+
 };
 
 
@@ -521,6 +539,7 @@ METHOD(tnc_pdp_t, destroy, void,
 		close(this->ipv6);
 	}
 	DESTROY_IF(this->server);
+	DESTROY_IF(this->pt_tls_dispatcher);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->ng);
@@ -531,17 +550,54 @@ METHOD(tnc_pdp_t, destroy, void,
 /*
  * see header file
  */
-tnc_pdp_t *tnc_pdp_create(u_int16_t port)
+tnc_pdp_t *tnc_pdp_create(void)
 {
 	private_tnc_pdp_t *this;
 	char *secret, *server, *eap_type_str;
+	int radius_port, pt_tls_port;
+	identification_t *id;
+	host_t *host;
+
+	server = lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-pdp.server", NULL, charon->name);
+	pt_tls_port = lib->settings->get_int(lib->settings,
+					"%s.plugins.tnc-pdp.pt_tls.port", PT_TLS_PORT, charon->name);
+	radius_port = lib->settings->get_int(lib->settings,
+					"%s.plugins.tnc-pdp.radius.port", RADIUS_PORT, charon->name);
+	secret = lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-pdp.radius.secret", NULL, charon->name);
+	eap_type_str = lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-pdp.radius.method", "ttls", charon->name);
+
+	if (!server)
+	{
+		DBG1(DBG_CFG, "missing PDP server name, PDP disabled");
+		return NULL;
+	}
+	if (!secret)
+	{
+		DBG1(DBG_CFG, "missing RADIUS secret, PDP disabled");
+		return NULL;
+	}
+
+	host = host_create_from_dns(server, AF_UNSPEC, pt_tls_port);
+	if (!host)
+	{
+		DBG1(DBG_CFG, "could not resolve server name");
+		return NULL;
+	}
+	id = identification_create_from_string(server);
 
 	INIT(this,
 		.public = {
 			.destroy = _destroy,
 		},
-		.ipv4 = open_socket(AF_INET,  port),
-		.ipv6 = open_socket(AF_INET6, port),
+		.server = id,
+		.pt_tls_dispatcher = pt_tls_dispatcher_create(host, id, PT_TLS_AUTH_NONE),
+		.ipv4 = open_socket(AF_INET,  radius_port),
+		.ipv6 = open_socket(AF_INET6, radius_port),
+		.secret = chunk_from_str(secret),
+		.type = eap_type_from_string(eap_type_str),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 		.ng = lib->crypto->create_nonce_gen(lib->crypto),
@@ -554,6 +610,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		destroy(this);
 		return NULL;
 	}
+
 	if (!this->ipv4 && !this->ipv6)
 	{
 		DBG1(DBG_NET, "could not create any RADIUS sockets");
@@ -579,25 +636,6 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		DBG1(DBG_NET, "could not open IPv6 RADIUS socket, IPv6 disabled");
 	}
 
-	server = lib->settings->get_str(lib->settings,
-						"%s.plugins.tnc-pdp.server", NULL, charon->name);
-	if (!server)
-	{
-		DBG1(DBG_CFG, "missing PDP server name, PDP disabled");
-		destroy(this);
-		return NULL;
-	}
-	this->server = identification_create_from_string(server);
-
-	secret = lib->settings->get_str(lib->settings,
-						"%s.plugins.tnc-pdp.secret", NULL, charon->name);
-	if (!secret)
-	{
-		DBG1(DBG_CFG, "missing RADIUS secret, PDP disabled");
-		destroy(this);
-		return NULL;
-	}
-	this->secret = chunk_create(secret, strlen(secret));
 	if (!this->signer->set_key(this->signer, this->secret))
 	{
 		DBG1(DBG_CFG, "could not set signer key");
@@ -605,9 +643,6 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		return NULL;
 	}
 
-	eap_type_str = lib->settings->get_str(lib->settings,
-						"%s.plugins.tnc-pdp.method", "ttls", charon->name);
-	this->type = eap_type_from_string(eap_type_str);
 	if (this->type == 0)
 	{
 		DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);

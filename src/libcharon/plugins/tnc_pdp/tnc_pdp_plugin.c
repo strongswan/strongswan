@@ -21,11 +21,6 @@
 typedef struct private_tnc_pdp_plugin_t private_tnc_pdp_plugin_t;
 
 /**
- * Default RADIUS port, when not configured
- */
-#define RADIUS_PORT 1812
-
-/**
  * private data of tnc_pdp plugin
  */
 struct private_tnc_pdp_plugin_t {
@@ -56,11 +51,7 @@ static bool plugin_cb(private_tnc_pdp_plugin_t *this,
 {
 	if (reg)
 	{
-		int port;
-
-		port = lib->settings->get_int(lib->settings,
-						"%s.plugins.tnc-pdp.port", RADIUS_PORT, charon->name);
-		this->pdp = tnc_pdp_create(port);
+		this->pdp = tnc_pdp_create();
 	}
 	else
 	{

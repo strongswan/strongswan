@@ -38,9 +38,7 @@ struct tnc_pdp_t {
 
 /**
  * Create a TNC PDP instance
- *
- * @param port		RADIUS port of TNC PDP
  */
-tnc_pdp_t* tnc_pdp_create(u_int16_t port);
+tnc_pdp_t* tnc_pdp_create(void);
 
 #endif /** TNC_PDP_PLUGIN_H_ @}*/
