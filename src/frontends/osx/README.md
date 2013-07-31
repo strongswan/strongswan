@@ -26,10 +26,11 @@ a monolithic and static build. This can be achieved on OS X by using:
     CFLAGS="-idirafter /opt/local/include -O2 -Wall -Wno-format -Wno-pointer-sign" \
     ./configure --enable-monolithic --disable-shared --enable-static \
         --disable-defaults \
-        --enable-openssl --enable-kernel-pfkey --enable-kernel-pfroute \
+        --enable-openssl --enable-kernel-libipsec --enable-kernel-pfroute \
         --enable-eap-mschapv2 --enable-eap-identity --enable-nonce \
-        --enable-random --enable-pkcs1 --enable-pem --enable-socket-default \
-        --enable-xauth-generic --enable-keychain --enable-charon \
+        --enable-pkcs1 --enable-socket-default --enable-osx-attr \
+        --enable-xauth-generic --enable-gcm --enable-ccm --enable-ctr \
+        --enable-keychain --enable-charon \
         --enable-ikev1 --enable-ikev2
 
 followed by calling make (no need to make install).
