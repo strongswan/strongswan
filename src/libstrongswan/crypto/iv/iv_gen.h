@@ -33,21 +33,23 @@ struct iv_gen_t {
 	/**
 	 * Generates an IV and writes it into the buffer.
 	 *
+	 * @param seq		external sequence number
 	 * @param size		size of IV in bytes
 	 * @param buffer	pointer where the generated IV will be written
 	 * @return			TRUE if IV allocation was successful, FALSE otherwise
 	 */
-	bool (*get_iv)(iv_gen_t *this, size_t size,
+	bool (*get_iv)(iv_gen_t *this, u_int64_t seq, size_t size,
 				   u_int8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generates an IV and allocates space for it.
 	 *
+	 * @param seq		external sequence number
 	 * @param size		size of IV in bytes
 	 * @param chunk		chunk which will hold the generated IV
 	 * @return			TRUE if IV allocation was successful, FALSE otherwise
 	 */
-	bool (*allocate_iv)(iv_gen_t *this, size_t size,
+	bool (*allocate_iv)(iv_gen_t *this, u_int64_t seq, size_t size,
 						chunk_t *chunk) __attribute__((warn_unused_result));
 
 	/**

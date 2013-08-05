@@ -26,38 +26,29 @@ struct private_iv_gen_t {
 	 * Public iv_gen_t interface.
 	 */
 	iv_gen_t public;
-
-	/**
-	 * sequence number
-	 */
-	u_int64_t seq;
 };
 
 METHOD(iv_gen_t, get_iv, bool,
-	private_iv_gen_t *this, size_t size, u_int8_t *buffer)
+	private_iv_gen_t *this, u_int64_t seq, size_t size, u_int8_t *buffer)
 {
 	u_int8_t iv[sizeof(u_int64_t)];
 	size_t len = size;
 
-	if (this->seq == UINT64_MAX || len < sizeof(u_int64_t))
-	{
-		return FALSE;
-	}
 	if (len > sizeof(u_int64_t))
 	{
 		len = sizeof(u_int64_t);
 		memset(buffer, 0, size - len);
 	}
-	htoun64(iv, this->seq++);
+	htoun64(iv, seq);
 	memcpy(buffer + size - len, iv + sizeof(u_int64_t) - len, len);
 	return TRUE;
 }
 
 METHOD(iv_gen_t, allocate_iv, bool,
-	private_iv_gen_t *this, size_t size, chunk_t *chunk)
+	private_iv_gen_t *this, u_int64_t seq, size_t size, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(size);
-	if (!get_iv(this, chunk->len, chunk->ptr))
+	if (!get_iv(this, seq, chunk->len, chunk->ptr))
 	{
 		chunk_free(chunk);
 		return FALSE;

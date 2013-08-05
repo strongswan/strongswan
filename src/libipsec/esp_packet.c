@@ -319,7 +319,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	writer->write_uint32(writer, next_seqno);
 
 	iv = writer->skip(writer, iv.len);
-	if (!iv_gen->get_iv(iv_gen, iv.len, iv.ptr))
+	if (!iv_gen->get_iv(iv_gen, next_seqno, iv.len, iv.ptr))
 	{
 		DBG1(DBG_ESP, "ESP encryption failed: could not generate IV");
 		writer->destroy(writer);

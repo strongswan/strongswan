@@ -309,7 +309,7 @@ static chunk_t append_header(private_encryption_payload_t *this, chunk_t assoc)
 }
 
 METHOD(encryption_payload_t, encrypt, status_t,
-	private_encryption_payload_t *this, chunk_t assoc)
+	private_encryption_payload_t *this, u_int64_t mid, chunk_t assoc)
 {
 	chunk_t iv, plain, padding, icv, crypt;
 	generator_t *generator;
@@ -364,7 +364,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	crypt = chunk_create(plain.ptr, plain.len + padding.len);
 	generator->destroy(generator);
 
-	if (!iv_gen->get_iv(iv_gen, iv.len, iv.ptr) ||
+	if (!iv_gen->get_iv(iv_gen, mid, iv.len, iv.ptr) ||
 		!rng->get_bytes(rng, padding.len - 1, padding.ptr))
 	{
 		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV or padding");
@@ -396,7 +396,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 }
 
 METHOD(encryption_payload_t, encrypt_v1, status_t,
-	private_encryption_payload_t *this, chunk_t iv)
+	private_encryption_payload_t *this, u_int64_t mid, chunk_t iv)
 {
 	generator_t *generator;
 	chunk_t plain, padding;
