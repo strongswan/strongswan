@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mac_prf mac_prf
- * @{ @ingroup crypto
+ * @{ @ingroup prf
  */
 
 #ifndef MAC_PRF_H_
