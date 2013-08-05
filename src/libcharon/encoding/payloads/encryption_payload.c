@@ -313,6 +313,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 {
 	chunk_t iv, plain, padding, icv, crypt;
 	generator_t *generator;
+	iv_gen_t *iv_gen;
 	rng_t *rng;
 	size_t bs;
 
@@ -326,6 +327,13 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	if (!rng)
 	{
 		DBG1(DBG_ENC, "encrypting encryption payload failed, no RNG found");
+		return NOT_SUPPORTED;
+	}
+
+	iv_gen = this->aead->get_iv_gen(this->aead);
+	if (!iv_gen)
+	{
+		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV generator");
 		return NOT_SUPPORTED;
 	}
 
@@ -356,7 +364,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	crypt = chunk_create(plain.ptr, plain.len + padding.len);
 	generator->destroy(generator);
 
-	if (!rng->get_bytes(rng, iv.len, iv.ptr) ||
+	if (!iv_gen->get_iv(iv_gen, iv.len, iv.ptr) ||
 		!rng->get_bytes(rng, padding.len - 1, padding.ptr))
 	{
 		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV or padding");
