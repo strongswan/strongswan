@@ -91,7 +91,7 @@ struct esp_packet_t {
 	 * @return					- SUCCESS if encrypted
 	 *							- FAILED if sequence number cycled or any of the
 	 *							  cryptographic functions failed
-	 *							- NOT_FOUND if no suitable RNG could be found
+	 *							- NOT_FOUND if no suitable IV generator provided
 	 */
 	status_t (*encrypt)(esp_packet_t *this, esp_context_t *esp_context,
 						u_int32_t spi);

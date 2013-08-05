@@ -283,7 +283,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	u_int32_t next_seqno;
 	size_t blocksize, plainlen;
 	aead_t *aead;
-	rng_t *rng;
+	iv_gen_t *iv_gen;
 
 	this->packet->set_data(this->packet, chunk_empty);
 
@@ -293,13 +293,13 @@ METHOD(esp_packet_t, encrypt, status_t,
 		return FAILED;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	aead = esp_context->get_aead(esp_context);
+	iv_gen = aead->get_iv_gen(aead);
+	if (!iv_gen)
 	{
-		DBG1(DBG_ESP, "ESP encryption failed: could not find RNG");
+		DBG1(DBG_ESP, "ESP encryption failed: no IV generator");
 		return NOT_FOUND;
 	}
-	aead = esp_context->get_aead(esp_context);
 
 	blocksize = aead->get_block_size(aead);
 	iv.len = aead->get_iv_size(aead);
@@ -319,14 +319,12 @@ METHOD(esp_packet_t, encrypt, status_t,
 	writer->write_uint32(writer, next_seqno);
 
 	iv = writer->skip(writer, iv.len);
-	if (!rng->get_bytes(rng, iv.len, iv.ptr))
+	if (!iv_gen->get_iv(iv_gen, iv.len, iv.ptr))
 	{
 		DBG1(DBG_ESP, "ESP encryption failed: could not generate IV");
 		writer->destroy(writer);
-		rng->destroy(rng);
 		return FAILED;
 	}
-	rng->destroy(rng);
 
 	/* plain-/ciphertext will start here */
 	ciphertext = writer->get_buf(writer);
