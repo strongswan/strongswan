@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -26,6 +29,7 @@ typedef struct aead_t aead_t;
 #include <library.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
+#include <crypto/iv/iv_gen.h>
 
 /**
  * Authenticated encryption / authentication decryption interface.
@@ -87,6 +91,13 @@ struct aead_t {
 	 * @return				IV size in bytes
 	 */
 	size_t (*get_iv_size)(aead_t *this);
+
+	/**
+	 * Get the IV generator implementation
+	 *
+	 * @return				IV generator
+	 */
+	iv_gen_t *(*get_iv_gen)(aead_t *this);
 
 	/**
 	 * Get the size of the key material (for encryption and authentication).

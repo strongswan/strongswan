@@ -15,6 +15,8 @@
 
 #include "ccm_aead.h"
 
+#include <crypto/iv/iv_gen_seq.h>
+
 #define BLOCK_SIZE 16
 #define SALT_SIZE 3
 #define IV_SIZE 8
@@ -37,6 +39,11 @@ struct private_ccm_aead_t {
 	 * Underlying CBC crypter.
 	 */
 	crypter_t *crypter;
+
+	/**
+	 * IV generator.
+	 */
+	iv_gen_t *iv_gen;
 
 	/**
 	 * Length of the integrity check value
@@ -305,6 +312,12 @@ METHOD(aead_t, get_iv_size, size_t,
 	return IV_SIZE;
 }
 
+METHOD(aead_t, get_iv_gen, iv_gen_t*
+	private_ccm_aead_t *this)
+{
+	return this->iv_gen;
+}
+
 METHOD(aead_t, get_key_size, size_t,
 	private_ccm_aead_t *this)
 {
@@ -323,6 +336,7 @@ METHOD(aead_t, destroy, void,
 	private_ccm_aead_t *this)
 {
 	this->crypter->destroy(this->crypter);
+	this->iv_gen->destroy(this->iv_gen);
 	free(this);
 }
 
@@ -384,12 +398,14 @@ ccm_aead_t *ccm_aead_create(encryption_algorithm_t algo, size_t key_size)
 				.get_block_size = _get_block_size,
 				.get_icv_size = _get_icv_size,
 				.get_iv_size = _get_iv_size,
+				.get_iv_gen = _get_iv_gen,
 				.get_key_size = _get_key_size,
 				.set_key = _set_key,
 				.destroy = _destroy,
 			},
 		},
 		.crypter = lib->crypto->create_crypter(lib->crypto, algo, key_size),
+		.iv_gen = iv_gen_seq_create(),
 		.icv_size = icv_size,
 	);
 

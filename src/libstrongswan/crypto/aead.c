@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -16,6 +19,7 @@
 #include "aead.h"
 
 #include <utils/debug.h>
+#include <crypto/iv/iv_gen_rand.h>
 
 typedef struct private_aead_t private_aead_t;
 
@@ -35,9 +39,14 @@ struct private_aead_t {
 	crypter_t *crypter;
 
 	/**
-	 * draditional signer
+	 * traditional signer
 	 */
 	signer_t *signer;
+
+	/**
+	 * IV generator
+	 */
+	iv_gen_t *iv_gen;
 };
 
 METHOD(aead_t, encrypt, bool,
@@ -126,6 +135,12 @@ METHOD(aead_t, get_iv_size, size_t,
 	return this->crypter->get_iv_size(this->crypter);
 }
 
+METHOD(aead_t, get_iv_gen, iv_gen_t*,
+	private_aead_t *this)
+{
+	return this->iv_gen;
+}
+
 METHOD(aead_t, get_key_size, size_t,
 	private_aead_t *this)
 {
@@ -148,6 +163,7 @@ METHOD(aead_t, set_key, bool,
 METHOD(aead_t, destroy, void,
 	private_aead_t *this)
 {
+	this->iv_gen->destroy(this->iv_gen);
 	this->crypter->destroy(this->crypter);
 	this->signer->destroy(this->signer);
 	free(this);
@@ -167,12 +183,14 @@ aead_t *aead_create(crypter_t *crypter, signer_t *signer)
 			.get_block_size = _get_block_size,
 			.get_icv_size = _get_icv_size,
 			.get_iv_size = _get_iv_size,
+			.get_iv_gen = _get_iv_gen,
 			.get_key_size = _get_key_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
 		.crypter = crypter,
 		.signer = signer,
+		.iv_gen = iv_gen_rand_create(),
 	);
 
 	return &this->public;

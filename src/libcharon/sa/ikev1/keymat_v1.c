@@ -196,6 +196,13 @@ METHOD(aead_t, get_iv_size, size_t,
 	return 0;
 }
 
+METHOD(aead_t, get_iv_gen, iv_gen_t*,
+	private_aead_t *this)
+{
+	/* IVs are retrieved via keymat_v1.get_iv() */
+	return NULL;
+}
+
 METHOD(aead_t, get_key_size, size_t,
 	private_aead_t *this)
 {
@@ -304,6 +311,7 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 			.get_block_size = _get_block_size,
 			.get_icv_size = _get_icv_size,
 			.get_iv_size = _get_iv_size,
+			.get_iv_gen = _get_iv_gen,
 			.get_key_size = _get_key_size,
 			.set_key = _set_key,
 			.destroy = _aead_destroy,
