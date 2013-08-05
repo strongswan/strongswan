@@ -26,6 +26,11 @@ struct private_iv_gen_t {
 	 * Public iv_gen_t interface.
 	 */
 	iv_gen_t public;
+
+	/**
+	 * Salt to mask counter
+	 */
+	u_int8_t *salt;
 };
 
 METHOD(iv_gen_t, get_iv, bool,
@@ -34,12 +39,17 @@ METHOD(iv_gen_t, get_iv, bool,
 	u_int8_t iv[sizeof(u_int64_t)];
 	size_t len = size;
 
+	if (!this->salt)
+	{
+		return FALSE;
+	}
 	if (len > sizeof(u_int64_t))
 	{
 		len = sizeof(u_int64_t);
 		memset(buffer, 0, size - len);
 	}
 	htoun64(iv, seq);
+	memxor(iv, this->salt, sizeof(u_int64_t));
 	memcpy(buffer + size - len, iv + sizeof(u_int64_t) - len, len);
 	return TRUE;
 }
@@ -59,12 +69,14 @@ METHOD(iv_gen_t, allocate_iv, bool,
 METHOD(iv_gen_t, destroy, void,
 	private_iv_gen_t *this)
 {
+	free(this->salt);
 	free(this);
 }
 
 iv_gen_t *iv_gen_seq_create()
 {
 	private_iv_gen_t *this;
+	rng_t *rng;
 
 	INIT(this,
 		.public = {
@@ -73,6 +85,18 @@ iv_gen_t *iv_gen_seq_create()
 			.destroy = _destroy,
 		},
 	);
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (rng)
+	{
+		this->salt = malloc(sizeof(u_int64_t));
+		if (!rng->get_bytes(rng, sizeof(u_int64_t), this->salt))
+		{
+			free(this->salt);
+			this->salt = NULL;
+		}
+		rng->destroy(rng);
+	}
 
 	return &this->public;
 }
