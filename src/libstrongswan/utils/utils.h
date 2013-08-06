@@ -113,6 +113,14 @@ static inline bool strncaseeq(const char *x, const char *y, size_t len)
 }
 
 /**
+ * Helper function that checks if a string starts with a given prefix
+ */
+static inline bool strcasepfx(const char *x, const char *prefix)
+{
+	return strncaseeq(x, prefix, strlen(prefix));
+}
+
+/**
  * NULL-safe strdup variant
  */
 static inline char *strdupnull(const char *s)

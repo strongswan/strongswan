@@ -188,6 +188,38 @@ START_TEST(test_round)
 END_TEST
 
 /*******************************************************************************
+ * strpfx
+ */
+
+static struct {
+	char *str;
+	char *pfx;
+	bool prefix;
+	bool case_prefix;
+} strpfx_data[] = {
+	{"", "", TRUE, TRUE},
+	{"abc", "", TRUE, TRUE},
+	{"abc", "a", TRUE, TRUE},
+	{"abc", "ab", TRUE, TRUE},
+	{"abc", "abc", TRUE, TRUE},
+	{"abc", "abcd", FALSE, FALSE},
+	{"abc", "AB", FALSE, TRUE},
+	{"ABC", "ab", FALSE, TRUE},
+	{" abc", "abc", FALSE, FALSE},
+};
+
+START_TEST(test_strpfx)
+{
+	bool prefix;
+
+	prefix = strpfx(strpfx_data[_i].str, strpfx_data[_i].pfx);
+	ck_assert(prefix == strpfx_data[_i].prefix);
+	prefix = strcasepfx(strpfx_data[_i].str, strpfx_data[_i].pfx);
+	ck_assert(prefix == strpfx_data[_i].case_prefix);
+}
+END_TEST
+
+/*******************************************************************************
  * memxor
  */
 
@@ -440,6 +472,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("round");
 	tcase_add_test(tc, test_round);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("string helper");
+	tcase_add_loop_test(tc, test_strpfx, 0, countof(strpfx_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("memxor");
