@@ -368,6 +368,7 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key);
  * Arguments are:
  *	chunk_t *chunk
  * Use #-modifier to print a compact version
+ * Use +-modifier to print a compact version without separator
  */
 int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					  const void *const *args);

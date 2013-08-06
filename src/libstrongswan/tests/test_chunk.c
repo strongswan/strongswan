@@ -756,11 +756,12 @@ END_TEST
 static struct {
 	chunk_t in;
 	char *out;
+	char *out_plus;
 } printf_hook_data[] = {
-	{chunk_from_chars(), ""},
-	{chunk_from_chars(0x00), "00"},
-	{chunk_from_chars(0x00, 0x01), "00:01"},
-	{chunk_from_chars(0x00, 0x01, 0x02), "00:01:02"},
+	{chunk_from_chars(), "", ""},
+	{chunk_from_chars(0x00), "00", "00"},
+	{chunk_from_chars(0x00, 0x01), "00:01", "0001"},
+	{chunk_from_chars(0x00, 0x01, 0x02), "00:01:02", "000102"},
 };
 
 START_TEST(test_printf_hook_hash)
@@ -771,6 +772,17 @@ START_TEST(test_printf_hook_hash)
 	len = snprintf(buf, sizeof(buf), "%#B", &printf_hook_data[_i].in);
 	ck_assert(len >= 0 && len < sizeof(buf));
 	ck_assert_str_eq(buf, printf_hook_data[_i].out);
+}
+END_TEST
+
+START_TEST(test_printf_hook_plus)
+{
+	char buf[16];
+	int len;
+
+	len = snprintf(buf, sizeof(buf), "%+B", &printf_hook_data[_i].in);
+	ck_assert(len >= 0 && len < sizeof(buf));
+	ck_assert_str_eq(buf, printf_hook_data[_i].out_plus);
 }
 END_TEST
 
@@ -856,6 +868,7 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("printf_hook");
 	tcase_add_loop_test(tc, test_printf_hook_hash, 0, countof(printf_hook_data));
+	tcase_add_loop_test(tc, test_printf_hook_plus, 0, countof(printf_hook_data));
 	tcase_add_loop_test(tc, test_printf_hook, 0, countof(printf_hook_data));
 	suite_add_tcase(s, tc);
 

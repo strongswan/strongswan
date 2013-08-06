@@ -797,7 +797,7 @@ int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	chunk_t copy = *chunk;
 	int written = 0;
 
-	if (!spec->hash)
+	if (!spec->hash && !spec->plus)
 	{
 		u_int chunk_len = chunk->len;
 		const void *new_args[] = {&chunk->ptr, &chunk_len};
@@ -810,7 +810,7 @@ int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 		{
 			first = FALSE;
 		}
-		else
+		else if (!spec->plus)
 		{
 			written += print_in_hook(data, ":");
 		}
