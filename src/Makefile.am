@@ -33,7 +33,7 @@ if USE_LIBTNCCS
 endif
 
 if USE_LIBPTTLS
-  SUBDIRS += libpttls
+  SUBDIRS += libpttls pt-tls-client
 endif
 
 if USE_IMCV

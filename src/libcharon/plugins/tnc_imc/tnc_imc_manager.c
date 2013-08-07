@@ -19,7 +19,6 @@
 
 #include <tncifimc.h>
 
-#include <daemon.h>
 #include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <threading/mutex.h>
@@ -225,7 +224,7 @@ METHOD(imc_manager_t, get_preferred_language, char*,
 	private_tnc_imc_manager_t *this)
 {
 	return lib->settings->get_str(lib->settings,
-				"%s.plugins.tnc-imc.preferred_language", "en", charon->name);
+				"%s.plugins.tnc-imc.preferred_language", "en", "charon");
 }
 
 METHOD(imc_manager_t, notify_connection_change, void,

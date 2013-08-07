@@ -37,6 +37,11 @@
  */
 #define PT_TLS_HEADER_LEN 16
 
+/**
+ * Default PT-TLS port
+ */
+#define PT_TLS_PORT	 271
+
 typedef enum pt_tls_message_type_t pt_tls_message_type_t;
 typedef enum pt_tls_sasl_result_t pt_tls_sasl_result_t;
 typedef enum pt_tls_auth_t pt_tls_auth_t;

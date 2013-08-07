@@ -34,9 +34,8 @@
 #include <tnc/imc/imc_manager.h>
 #include <tnc/imv/imv_manager.h>
 
-#include <utils/debug.h>
-#include <daemon.h>
 #include <threading/mutex.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 #include <pen/pen.h>
 
@@ -934,10 +933,10 @@ tnccs_t* tnccs_20_create(bool is_server,
 		.messages = linked_list_create(),
 		.max_batch_len = lib->settings->get_int(lib->settings,
 								"%s.plugins.tnccs-20.max_batch_size", 65522,
-								charon->name),
+								"charon"),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 								"%s.plugins.tnccs-20.max_message_size", 65490,
-								charon->name),
+								"charon"),
 	);
 
 	return &this->public;

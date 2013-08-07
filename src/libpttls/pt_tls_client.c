@@ -437,19 +437,26 @@ METHOD(pt_tls_client_t, run_assessment, status_t,
 {
 	if (!this->tls)
 	{
+		DBG1(DBG_TNC, "entering PT-TLS setup phase");
 		if (!make_connection(this))
 		{
 			return FAILED;
 		}
 	}
+
+	DBG1(DBG_TNC, "entering PT-TLS negotiation phase");
 	if (!negotiate_version(this))
 	{
 		return FAILED;
 	}
+
+	DBG1(DBG_TNC, "doing SASL client authentication");
 	if (!authenticate(this))
 	{
 		return FAILED;
 	}
+
+	DBG1(DBG_TNC, "entering PT-TLS data transport phase");
 	if (!assess(this, (tls_t*)tnccs))
 	{
 		return FAILED;

@@ -1467,6 +1467,7 @@ AC_CONFIG_FILES([
 	src/medsrv/Makefile
 	src/checksum/Makefile
 	src/conftest/Makefile
+	src/pt-tls-client/Makefile
 	scripts/Makefile
 	testing/Makefile
 ])

@@ -52,6 +52,10 @@ static bool plugin_cb(private_tnc_pdp_plugin_t *this,
 	if (reg)
 	{
 		this->pdp = tnc_pdp_create();
+		if (!this->pdp)
+		{
+			return FALSE;
+		}
 	}
 	else
 	{

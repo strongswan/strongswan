@@ -185,7 +185,7 @@ pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
 			.dispatch = _dispatch,
 			.destroy = _destroy,
 		},
-		.server = id,
+		.server = id->clone(id),
 		/* we currently don't authenticate the peer, use %any identity */
 		.peer = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.fd = -1,
@@ -194,11 +194,9 @@ pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
 
 	if (!open_socket(this, address))
 	{
-		address->destroy(address);
 		destroy(this);
 		return NULL;
 	}
-	address->destroy(address);
 
 	return &this->public;
 }

@@ -478,7 +478,7 @@ METHOD(pt_tls_server_t, handle, status_t,
 			}
 			DBG1(DBG_TNC, "negotiated PT-TLS version %d", PT_TLS_VERSION);
 			this->state = PT_TLS_SERVER_AUTH;
-			break;
+			/* fall through to next state */
 		case PT_TLS_SERVER_AUTH:
 			if (!authenticate(this))
 			{
