@@ -319,7 +319,11 @@ Send strongSwan vendor ID payload
 Section to define syslog loggers, see LOGGER CONFIGURATION
 .TP
 .BR charon.threads " [16]"
-Number of worker threads in charon
+Number of worker threads in charon. Several of these are reserved for long
+running tasks in internal modules and plugins. Therefore, make sure you don't
+set this value too low. The number of idle worker threads listed in
+.I ipsec statusall
+might be used as indicator on the number of reserved threads.
 .TP
 .BR charon.user
 Name of the user the daemon changes to after startup
