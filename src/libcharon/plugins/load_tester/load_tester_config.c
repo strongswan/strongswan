@@ -94,6 +94,11 @@ struct private_load_tester_config_t {
 	char *responder_id;
 
 	/**
+	 * IPSec mode, tunnel|transport|beet
+	 */
+	char *mode;
+
+	/**
 	 * Traffic Selector on initiator side, as proposed from initiator
 	 */
 	char *initiator_tsi;
@@ -508,6 +513,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	peer_cfg_t *peer_cfg;
 	char local[32], *remote;
 	host_t *addr;
+	ipsec_mode_t mode = MODE_TUNNEL;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = this->child_rekey * 2,
@@ -583,7 +589,19 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		generate_auth_cfg(this, this->initiator_auth, peer_cfg, FALSE, num);
 	}
 
-	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE, MODE_TUNNEL,
+	if (this->mode)
+	{
+		if (streq(this->mode, "transport"))
+		{
+			mode = MODE_TRANSPORT;
+		}
+		else if (streq(this->mode, "beet"))
+		{
+			mode = MODE_BEET;
+		}
+	}
+
+	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE, mode,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp));
@@ -793,6 +811,8 @@ load_tester_config_t *load_tester_config_create()
 	this->responder_id = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.responder_id", NULL, charon->name);
 
+	this->mode = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.mode", NULL, charon->name);
 	this->initiator_tsi = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.initiator_tsi", NULL, charon->name);
 	this->responder_tsi =lib->settings->get_str(lib->settings,
