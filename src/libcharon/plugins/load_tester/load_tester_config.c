@@ -15,11 +15,15 @@
 
 #include "load_tester_config.h"
 
+#include <netdb.h>
+
 #include <daemon.h>
 #include <hydra.h>
 #include <attributes/mem_pool.h>
 #include <collections/hashtable.h>
 #include <threading/mutex.h>
+
+#define UNIQUE_PORT_START 1025
 
 typedef struct private_load_tester_config_t private_load_tester_config_t;
 
@@ -117,6 +121,11 @@ struct private_load_tester_config_t {
 	 * Traffic Selector on responder side, as narrowed by responder
 	 */
 	char *responder_tsr;
+
+	/**
+	 * Current port for unique initiator ports
+	 */
+	u_int16_t unique_port;
 
 	/**
 	 * IKE_SA rekeying delay
@@ -422,27 +431,172 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 }
 
 /**
+ * Parse a protoport specifier
+ */
+static bool parse_protoport(char *token, u_int16_t *from_port,
+							u_int16_t *to_port, u_int8_t *protocol)
+{
+	char *sep, *port = "", *endptr;
+	struct protoent *proto;
+	struct servent *svc;
+	long int p;
+
+	sep = strrchr(token, ']');
+	if (!sep)
+	{
+		return FALSE;
+	}
+	*sep = '\0';
+
+	sep = strchr(token, '/');
+	if (sep)
+	{	/* protocol/port */
+		*sep = '\0';
+		port = sep + 1;
+	}
+
+	if (streq(token, "%any"))
+	{
+		*protocol = 0;
+	}
+	else
+	{
+		proto = getprotobyname(token);
+		if (proto)
+		{
+			*protocol = proto->p_proto;
+		}
+		else
+		{
+			p = strtol(token, &endptr, 0);
+			if ((*token && *endptr) || p < 0 || p > 0xff)
+			{
+				return FALSE;
+			}
+			*protocol = (u_int8_t)p;
+		}
+	}
+	if (streq(port, "%any"))
+	{
+		*from_port = 0;
+		*to_port = 0xffff;
+	}
+	else if (streq(port, "%opaque"))
+	{
+		*from_port = 0xffff;
+		*to_port = 0;
+	}
+	else if (streq(port, "%unique"))
+	{
+		*from_port = *to_port = 0;
+	}
+	else if (*port)
+	{
+		svc = getservbyname(port, NULL);
+		if (svc)
+		{
+			*from_port = *to_port = ntohs(svc->s_port);
+		}
+		else
+		{
+			p = strtol(port, &endptr, 0);
+			if (p < 0 || p > 0xffff)
+			{
+				return FALSE;
+			}
+			*from_port = p;
+			if (*endptr == '-')
+			{
+				port = endptr + 1;
+				p = strtol(port, &endptr, 0);
+				if (p < 0 || p > 0xffff)
+				{
+					return FALSE;
+				}
+			}
+			*to_port = p;
+			if (*endptr)
+			{
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+/**
  * Add a TS from a string to a child_cfg
  */
-static void add_ts(char *string, child_cfg_t *cfg, bool local)
+static void add_ts(private_load_tester_config_t *this,
+				   char *string, child_cfg_t *cfg, bool local, bool initiator)
 {
 	traffic_selector_t *ts;
 
 	if (string)
 	{
-		ts = traffic_selector_create_from_cidr(string, 0, 0, 65535);
-		if (!ts)
+		enumerator_t *enumerator;
+		char *subnet, *pos;
+		u_int16_t from_port, to_port;
+		u_int8_t proto;
+
+		enumerator = enumerator_create_token(string, ",", " ");
+		while (enumerator->enumerate(enumerator, &subnet))
 		{
-			DBG1(DBG_CFG, "parsing TS string '%s' failed", string);
+			proto = 0;
+			from_port = 0;
+			to_port = 65535;
+
+			pos = strchr(subnet, '[');
+			if (pos)
+			{
+				*(pos++) = '\0';
+				if (!parse_protoport(pos, &from_port, &to_port, &proto))
+				{
+					DBG1(DBG_CFG, "invalid proto/port: %s, skipped subnet",
+						 pos);
+					continue;
+				}
+			}
+			if (from_port == 0 && to_port == 0)
+			{	/* %unique */
+				if (initiator)
+				{
+					from_port = this->unique_port++;
+					from_port = to_port = max(from_port, UNIQUE_PORT_START);
+				}
+				else
+				{	/* not supported as responder, use %any */
+					to_port = 65535;
+				}
+			}
+			if (streq(subnet, "%dynamic"))
+			{
+				ts = traffic_selector_create_dynamic(proto,
+													 from_port, to_port);
+			}
+			else
+			{
+				ts = traffic_selector_create_from_cidr(subnet, proto,
+													   from_port, to_port);
+			}
+			if (ts)
+			{
+				cfg->add_traffic_selector(cfg, local, ts);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "invalid subnet: %s, skipped", subnet);
+			}
 		}
+		enumerator->destroy(enumerator);
 	}
 	else
 	{
 		ts = traffic_selector_create_dynamic(0, 0, 65535);
-	}
-	if (ts)
-	{
-		cfg->add_traffic_selector(cfg, local, ts);
+		if (ts)
+		{
+			cfg->add_traffic_selector(cfg, local, ts);
+		}
 	}
 }
 
@@ -610,18 +764,18 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	{	/* initiator */
 		if (this->vip)
 		{
-			add_ts(NULL, child_cfg, TRUE);
+			add_ts(this, NULL, child_cfg, TRUE, TRUE);
 		}
 		else
 		{
-			add_ts(this->initiator_tsi, child_cfg, TRUE);
+			add_ts(this, this->initiator_tsi, child_cfg, TRUE, TRUE);
 		}
-		add_ts(this->initiator_tsr, child_cfg, FALSE);
+		add_ts(this, this->initiator_tsr, child_cfg, FALSE, TRUE);
 	}
 	else
 	{	/* responder */
-		add_ts(this->responder_tsr, child_cfg, TRUE);
-		add_ts(this->responder_tsi, child_cfg, FALSE);
+		add_ts(this, this->responder_tsr, child_cfg, TRUE, FALSE);
+		add_ts(this, this->responder_tsi, child_cfg, FALSE, FALSE);
 	}
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 	return peer_cfg;
@@ -759,6 +913,7 @@ load_tester_config_t *load_tester_config_create()
 								   (hashtable_equals_t)equals, 256),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.num = 1,
+		.unique_port = UNIQUE_PORT_START,
 	);
 
 	if (lib->settings->get_bool(lib->settings,
