@@ -32,11 +32,11 @@ id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 keyid2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 oid2der_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
-pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
+dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
+pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
 crypt_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 hash_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-malloc_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
+malloc_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
 fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dnssec_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
