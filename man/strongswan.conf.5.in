@@ -712,9 +712,6 @@ Path to X.509 certificate file of IF-MAP server
 .BR charon.plugins.tnc-ifmap.username_password
 Credentials of IF-MAP client of the form username:password
 .TP
-.BR charon.plugins.tnc-imv.dlclose " [yes]"
-Unload IMV after use
-.TP
 .BR charon.plugins.tnc-pdp.pt_tls.port " [271]"
 PT-TLS server port the strongSwan PDP is listening on
 .TP
@@ -880,20 +877,23 @@ TNC IMC/IMV configuration directory
 .PP
 .SS libtnccs plugins section
 .TP
-.BR charon.plugins.tnccs-11.max_message_size " [45000]"
+.BR libtnccs.plugins.tnccs-11.max_message_size " [45000]"
 Maximum size of a PA-TNC message (XML & Base64 encoding)
 .TP
-.BR charon.plugins.tnccs-20.max_batch_size " [65522]"
+.BR libtnccs.plugins.tnccs-20.max_batch_size " [65522]"
 Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
 .TP
-.BR charon.plugins.tnccs-20.max_message_size " [65490]"
+.BR libtnccs.plugins.tnccs-20.max_message_size " [65490]"
 Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
 .TP
-.BR charon.plugins.tnc-imc.dlclose " [yes]"
+.BR libtnccs.plugins.tnc-imc.dlclose " [yes]"
 Unload IMC after use
 .TP
-.BR charon.plugins.tnc-imc.preferred_language " [en]"
+.BR libtnccs.plugins.tnc-imc.preferred_language " [en]"
 Preferred language for TNC recommendations
+.TP
+.BR libtnccs.plugins.tnc-imv.dlclose " [yes]"
+Unload IMV after use
 .SS libimcv section
 .TP
 .BR libimcv.assessment_result " [yes]"

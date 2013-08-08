@@ -169,8 +169,8 @@ METHOD(tnccs_manager_t, remove_method, void,
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server,
-	identification_t *server, identification_t *peer,
-	tnc_ift_type_t transport)
+	identification_t *server, identification_t *peer, tnc_ift_type_t transport,
+	tnccs_cb_t cb)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -182,7 +182,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	{
 		if (type == entry->type)
 		{
-			protocol = entry->constructor(is_server, server, peer, transport);
+			protocol = entry->constructor(is_server, server, peer, transport, cb);
 			if (protocol)
 			{
 				break;

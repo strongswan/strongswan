@@ -26,6 +26,9 @@
 
 #include <tnc/tnc.h>
 
+#include <tncifimv.h>
+#include <tncif_names.h>
+
 #include <daemon.h>
 #include <utils/debug.h>
 #include <pen/pen.h>
@@ -563,6 +566,19 @@ end:
 }
 
 /**
+ * Callback function to get recommendation from TNCCS connection
+ */
+static bool get_recommendation(TNC_IMV_Action_Recommendation rec,
+							   TNC_IMV_Evaluation_Result eval)
+{
+	DBG1(DBG_TNC, "final recommendation is '%N' and evaluation is '%N'",
+		 TNC_IMV_Action_Recommendation_names, rec,
+		 TNC_IMV_Evaluation_Result_names, eval);
+
+	return TRUE;
+}
+
+/**
  * Get more data on a PT-TLS connection
  */
 static bool pt_tls_receive_more(pt_tls_server_t *this, int fd,
@@ -607,7 +623,8 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	peer = identification_create_from_encoding(ID_ANY, chunk_empty),
 
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, TNCCS_2_0, TRUE,
-										this->server, peer, TNC_IFT_TLS_2_0);
+										this->server, peer, TNC_IFT_TLS_2_0,
+										(tnccs_cb_t)get_recommendation);
 	peer->destroy(peer);
 
 	if (!tnccs)

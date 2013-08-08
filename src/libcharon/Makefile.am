@@ -385,13 +385,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_TNC_IMV
-  SUBDIRS += plugins/tnc_imv
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
-endif
-endif
-
 if USE_LIBTNCCS
 if MONOLITHIC
   # otherwise this library is linked to the respective plugins

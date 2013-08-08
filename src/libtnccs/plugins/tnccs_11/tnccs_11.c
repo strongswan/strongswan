@@ -121,6 +121,11 @@ struct private_tnccs_11_t {
 	 */
 	recommendations_t *recs;
 
+	/**
+	 * Callback function to communicate recommendation (TNC Server only)
+	 */
+	tnccs_cb_t callback;
+
 };
 
 METHOD(tnccs_t, send_msg, TNC_Result,
@@ -540,7 +545,7 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		return tnc->imvs->enforce_recommendation(tnc->imvs, rec, eval);
+		return this->callback ? this->callback(rec, eval) : TRUE;
 	}
 	else
 	{
@@ -594,9 +599,8 @@ METHOD(tnccs_t, set_auth_type, void,
  * See header
  */
 tnccs_t* tnccs_11_create(bool is_server,
-						 identification_t *server,
-						 identification_t *peer,
-						 tnc_ift_type_t transport)
+						 identification_t *server, identification_t *peer,
+						 tnc_ift_type_t transport, tnccs_cb_t cb)
 {
 	private_tnccs_11_t *this;
 
@@ -622,6 +626,7 @@ tnccs_t* tnccs_11_create(bool is_server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.transport = transport,
+		.callback = cb,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 							"libtnccs.plugins.tnccs-11.max_message_size", 45000),

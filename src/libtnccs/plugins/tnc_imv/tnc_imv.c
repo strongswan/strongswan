@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2006 Mike McCauley
- * Copyright (C) 2010-2011 Andreas Steffen,
+ * Copyright (C) 2010-2013 Andreas Steffen,
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,7 +20,6 @@
 #include <tncif_pa_subtypes.h>
 
 #include <utils/debug.h>
-#include <daemon.h>
 #include <library.h>
 #include <collections/linked_list.h>
 #include <threading/mutex.h>
@@ -300,7 +298,7 @@ METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
 	if (this->handle && lib->settings->get_bool(lib->settings,
-		"%s.plugins.tnc-imv.dlclose", TRUE, charon->name))
+				"libtnccs.plugins.tnc-imv.dlclose", TRUE))
 	{
 		dlclose(this->handle);
 	}

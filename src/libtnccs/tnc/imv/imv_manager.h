@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -112,18 +112,6 @@ struct imv_manager_t {
 	 * @return					instance of a recommendations_t list
 	 */
 	recommendations_t* (*create_recommendations)(imv_manager_t *this);
-
-	/**
-	 * Enforce the TNC recommendation on the IKE_SA by either inserting an
-	 * allow|isolate group membership rule (TRUE) or by blocking access (FALSE)
-	 *
-	 * @param rec				TNC action recommendation
-	 * @param eval				TNC evaluation result
-	 * @return					TRUE for allow|isolate, FALSE for none
-	 */
-	bool (*enforce_recommendation)(imv_manager_t *this,
-								   TNC_IMV_Action_Recommendation rec,
-								   TNC_IMV_Evaluation_Result eval);
 
 	/**
 	 * Notify all IMV instances

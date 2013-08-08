@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2006 Mike McCauley
- * Copyright (C) 2010-2011 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,7 +18,6 @@
 #include "tnc_imv_recommendations.h"
 
 #include <tncifimv.h>
-#include <tncif_names.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -28,7 +26,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <daemon.h>
 #include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <threading/mutex.h>
@@ -247,61 +244,6 @@ METHOD(imv_manager_t, create_recommendations, recommendations_t*,
 	return tnc_imv_recommendations_create(this->imvs);
 }
 
-METHOD(imv_manager_t, enforce_recommendation, bool,
-	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec,
-									 TNC_IMV_Evaluation_Result eval)
-{
-	char *group;
-	identification_t *id;
-	ike_sa_t *ike_sa;
-	auth_cfg_t *auth;
-	bool no_access = FALSE;
-
-	DBG1(DBG_TNC, "final recommendation is '%N' and evaluation is '%N'",
-		 TNC_IMV_Action_Recommendation_names, rec,
-		 TNC_IMV_Evaluation_Result_names, eval);
-
-	switch (rec)
-	{
-		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-			group = "allow";
-			break;
-		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-			group = "isolate";
-			break;
-		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
-		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
-		default:
-			group = "no access";
-			no_access = TRUE;
-			break;
-	}
-
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa)
-	{
-		DBG1(DBG_TNC, "policy enforcement point did not find IKE_SA");
-		return FALSE;
-	}
-
-	id = ike_sa->get_other_id(ike_sa);
-	DBG0(DBG_TNC, "policy enforced on peer '%Y' is '%s'", id, group);
-
-	if (no_access)
-	{
-		return FALSE;
-	}
-	else
-	{
-		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
-		id = identification_create_from_string(group);
-		auth->add(auth, AUTH_RULE_GROUP, id);
-		DBG1(DBG_TNC, "policy enforcement point added group membership '%s'",
-			 group);
-	}
-	return TRUE;
-}
-
 
 METHOD(imv_manager_t, notify_connection_change, void,
 	private_tnc_imv_manager_t *this, TNC_ConnectionID id,
@@ -503,7 +445,6 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.reserve_id = _reserve_id,
 			.get_recommendation_policy = _get_recommendation_policy,
 			.create_recommendations = _create_recommendations,
-			.enforce_recommendation = _enforce_recommendation,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
 			.set_message_types_long = _set_message_types_long,
@@ -520,8 +461,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 
 	policy = enum_from_name(recommendation_policy_names,
 				lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-imv.recommendation_policy", "default",
-					charon->name));
+					"libtnccs.plugins.tnc-imv.recommendation_policy", "default"));
 	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_DEFAULT;
 	DBG1(DBG_TNC, "TNC recommendation policy is '%N'",
 				   recommendation_policy_names, this->policy);

@@ -32,11 +32,11 @@
  * @param server		Server identity
  * @param peer			Client identity
  * @param transport		Underlying IF-T transport protocol
+ * @param cb			Callback function if TNC Server, NULL if TNC Client
  * @return				TNC_IF_TNCCS 1.1 protocol stack
  */
 tnccs_t* tnccs_11_create(bool is_server,
-						 identification_t *server,
-						 identification_t *peer,
-						 tnc_ift_type_t transport);
+						 identification_t *server, identification_t *peer,
+						 tnc_ift_type_t transport, tnccs_cb_t cb);
 
 #endif /** TNCCS_11_H_ @}*/

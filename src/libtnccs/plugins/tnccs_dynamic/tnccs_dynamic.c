@@ -56,6 +56,11 @@ struct private_tnccs_dynamic_t {
 	 */
 	u_int32_t auth_type;
 
+	/**
+	 * Callback function to communicate recommendation (TNC Server only)
+	 */
+	tnccs_cb_t callback;
+
 };
 
 /**
@@ -99,7 +104,8 @@ METHOD(tls_t, process, status_t,
 		DBG1(DBG_TNC, "%N protocol detected dynamically",
 					   tnccs_type_names, type);
 		tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, TRUE,
-							this->server, this->peer, this->transport);
+							this->server, this->peer, this->transport,
+							this->callback);
 		if (!tnccs)
 		{
 			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);
@@ -190,9 +196,8 @@ METHOD(tnccs_t, set_auth_type, void,
  * See header
  */
 tnccs_t* tnccs_dynamic_create(bool is_server,
-							  identification_t *server,
-							  identification_t *peer,
-							  tnc_ift_type_t transport)
+							  identification_t *server, identification_t *peer,
+							  tnc_ift_type_t transport, tnccs_cb_t cb)
 {
 	private_tnccs_dynamic_t *this;
 
@@ -217,6 +222,7 @@ tnccs_t* tnccs_dynamic_create(bool is_server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.transport = transport,
+		.callback = cb,
 	);
 
 	return &this->public;

@@ -1062,7 +1062,7 @@ ADD_PLUGIN([xauth-noauth],         [c charon])
 ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
 ADD_PLUGIN([tnc-imc],              [t charon])
-ADD_PLUGIN([tnc-imv],              [c charon])
+ADD_PLUGIN([tnc-imv],              [t charon])
 ADD_PLUGIN([tnc-tnccs],            [t charon])
 ADD_PLUGIN([tnccs-20],             [t charon])
 ADD_PLUGIN([tnccs-11],             [t charon])
@@ -1378,6 +1378,7 @@ AC_CONFIG_FILES([
 	src/libtnccs/Makefile
 	src/libtnccs/plugins/tnc_tnccs/Makefile
 	src/libtnccs/plugins/tnc_imc/Makefile
+	src/libtnccs/plugins/tnc_imv/Makefile
 	src/libtnccs/plugins/tnccs_11/Makefile
 	src/libtnccs/plugins/tnccs_20/Makefile
 	src/libtnccs/plugins/tnccs_dynamic/Makefile
@@ -1421,7 +1422,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/xauth_noauth/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
-	src/libcharon/plugins/tnc_imv/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
 	src/libcharon/plugins/farp/Makefile

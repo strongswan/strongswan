@@ -22,6 +22,7 @@
 #include <daemon.h>
 
 #include <tncifimv.h>
+#include <tncif_names.h>
 
 /**
  * Maximum size of an EAP-TNC message
@@ -61,6 +62,63 @@ struct private_eap_tnc_t {
 	tnccs_t *tnccs;
 
 };
+
+/**
+ * Callback function to get recommendation from TNCCS connection
+ */
+static bool enforce_recommendation(TNC_IMV_Action_Recommendation rec,
+								   TNC_IMV_Evaluation_Result eval)
+{
+	char *group;
+	identification_t *id;
+	ike_sa_t *ike_sa;
+	auth_cfg_t *auth;
+	bool no_access = FALSE;
+
+	DBG1(DBG_TNC, "final recommendation is '%N' and evaluation is '%N'",
+		 TNC_IMV_Action_Recommendation_names, rec,
+		 TNC_IMV_Evaluation_Result_names, eval);
+
+	switch (rec)
+	{
+		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+			group = "allow";
+			break;
+		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+			group = "isolate";
+			break;
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+		default:
+			group = "no access";
+			no_access = TRUE;
+			break;
+	}
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa)
+	{
+		DBG1(DBG_TNC, "policy enforcement point did not find IKE_SA");
+		return FALSE;
+	}
+
+	id = ike_sa->get_other_id(ike_sa);
+	DBG0(DBG_TNC, "policy enforced on peer '%Y' is '%s'", id, group);
+
+	if (no_access)
+	{
+		return FALSE;
+	}
+	else
+	{
+		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+		id = identification_create_from_string(group);
+		auth->add(auth, AUTH_RULE_GROUP, id);
+		DBG1(DBG_TNC, "policy enforcement point added group membership '%s'",
+			 group);
+	}
+	return TRUE;
+}
 
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_tnc_t *this, eap_payload_t **out)
@@ -224,8 +282,9 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server,
-											  server, peer, TNC_IFT_EAP_1_1);
+	this->tnccs = tnc->tnccs->create_instance(tnc->tnccs, type,
+						is_server, server, peer, TNC_IFT_EAP_1_1,
+						is_server ? enforce_recommendation : NULL);
 	this->tls_eap = tls_eap_create(EAP_TNC, &this->tnccs->tls,
 								   EAP_TNC_MAX_MESSAGE_LEN,
 								   max_msg_count, FALSE);

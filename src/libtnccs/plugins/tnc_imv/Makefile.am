@@ -1,7 +1,5 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtnccs \
 	-I$(top_srcdir)/src/libtls

@@ -131,6 +131,16 @@ struct private_tnccs_20_t {
 	 */
 	recommendations_t *recs;
 
+	/**
+	 * Callback function to communicate recommendation (TNC Server only)
+	 */
+	tnccs_cb_t callback;
+
+	/**
+	 * Data to pass to callback function (TNC Server only)
+	 */
+	void *cb_data;
+
 };
 
 /**
@@ -844,7 +854,7 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		return tnc->imvs->enforce_recommendation(tnc->imvs, rec, eval);
+		return this->callback ? this->callback(rec, eval) : TRUE;
 	}
 	else
 	{
@@ -900,9 +910,8 @@ METHOD(tnccs_t, set_auth_type, void,
  * See header
  */
 tnccs_t* tnccs_20_create(bool is_server,
-						 identification_t *server,
-						 identification_t *peer,
-						 tnc_ift_type_t transport)
+						 identification_t *server, identification_t *peer,
+						 tnc_ift_type_t transport, tnccs_cb_t cb)
 {
 	private_tnccs_20_t *this;
 
@@ -928,6 +937,7 @@ tnccs_t* tnccs_20_create(bool is_server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.transport = transport,
+		.callback = cb,
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.messages = linked_list_create(),

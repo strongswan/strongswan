@@ -59,7 +59,7 @@ static int client(char *address, u_int16_t port, char *identity)
 	server = identification_create_from_string(address);
 	client = identification_create_from_string(identity);
 	tnccs = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, TNCCS_2_0, FALSE,
-												server, client, TNC_IFT_TLS_2_0);
+								server, client, TNC_IFT_TLS_2_0, NULL);
 	if (!tnccs)
 	{
 		fprintf(stderr, "loading TNCCS failed: %s\n", PLUGINS);

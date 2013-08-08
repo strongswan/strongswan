@@ -40,6 +40,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNC_IMV
+  SUBDIRS += plugins/tnc_imv
+if MONOLITHIC
+  libtnccs_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
+endif
+endif
+
 if USE_TNCCS_11
   SUBDIRS += plugins/tnccs_11
 if MONOLITHIC
