@@ -593,10 +593,9 @@ static bool pt_tls_receive_more(pt_tls_server_t *this, int fd,
 		case SUCCESS:
 		default:
 			DBG1(DBG_TNC, "PT-TLS connection terminates");
-			lib->watcher->remove(lib->watcher, fd);
-			close(fd);
 			this->destroy(this);
-			break;
+			close(fd);
+			return FALSE;
 	}
 
 	return TRUE;
