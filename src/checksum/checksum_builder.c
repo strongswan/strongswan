@@ -165,8 +165,8 @@ int main(int argc, char* argv[])
 #ifdef H_PLUGINS
 	build_plugin_checksums(H_PLUGINS);
 #endif
-#ifdef P_PLUGINS
-	build_plugin_checksums(P_PLUGINS);
+#ifdef T_PLUGINS
+	build_plugin_checksums(T_PLUGINS);
 #endif
 #ifdef C_PLUGINS
 	build_plugin_checksums(C_PLUGINS);

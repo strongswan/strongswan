@@ -303,7 +303,7 @@ METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
 	if (this->handle && lib->settings->get_bool(lib->settings,
-		"%s.plugins.tnc-imc.dlclose", TRUE, "charon"))
+		"libtnccs.plugins.tnc-imc.dlclose", TRUE))
 	{
 		dlclose(this->handle);
 	}

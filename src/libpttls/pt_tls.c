@@ -17,6 +17,14 @@
 
 #include <utils/debug.h>
 
+/**
+ * Described in header.
+ */
+void libpttls_init(void)
+{
+	/* empty */
+}
+
 /*
  * PT-TNC Message format:
  *                       1                   2                   3

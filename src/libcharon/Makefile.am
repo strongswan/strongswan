@@ -385,45 +385,10 @@ if MONOLITHIC
 endif
 endif
 
-if USE_TNC_IMC
-  SUBDIRS += plugins/tnc_imc
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc-imc.la
-endif
-endif
-
 if USE_TNC_IMV
   SUBDIRS += plugins/tnc_imv
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
-endif
-endif
-
-if USE_TNC_TNCCS
-  SUBDIRS += plugins/tnc_tnccs
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_tnccs/libstrongswan-tnc-tnccs.la
-endif
-endif
-
-if USE_TNCCS_11
-  SUBDIRS += plugins/tnccs_11
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnccs_11/libstrongswan-tnccs-11.la
-endif
-endif
-
-if USE_TNCCS_20
-  SUBDIRS += plugins/tnccs_20
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnccs_20/libstrongswan-tnccs-20.la
-endif
-endif
-
-if USE_TNCCS_DYNAMIC
-  SUBDIRS += plugins/tnccs_dynamic
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
 endif
 endif
 

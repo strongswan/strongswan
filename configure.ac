@@ -969,10 +969,11 @@ nm_plugins=
 cmd_plugins=
 
 # location specific lists for checksumming,
-# for src/libcharon, src/libhydra and src/libstrongswan
+# for src/libcharon, src/libhydra, src/libstrongswan and src/libtnccs
 c_plugins=
 h_plugins=
 s_plugins=
+t_plugins=
 
 ADD_PLUGIN([test-vectors],         [s charon openac scepclient pki])
 ADD_PLUGIN([curl],                 [s charon scepclient scripts nm cmd])
@@ -1060,12 +1061,12 @@ ADD_PLUGIN([xauth-pam],            [c charon])
 ADD_PLUGIN([xauth-noauth],         [c charon])
 ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
-ADD_PLUGIN([tnc-imc],              [c charon])
+ADD_PLUGIN([tnc-imc],              [t charon])
 ADD_PLUGIN([tnc-imv],              [c charon])
-ADD_PLUGIN([tnc-tnccs],            [c charon])
-ADD_PLUGIN([tnccs-20],             [c charon])
-ADD_PLUGIN([tnccs-11],             [c charon])
-ADD_PLUGIN([tnccs-dynamic],        [c charon])
+ADD_PLUGIN([tnc-tnccs],            [t charon])
+ADD_PLUGIN([tnccs-20],             [t charon])
+ADD_PLUGIN([tnccs-11],             [t charon])
+ADD_PLUGIN([tnccs-dynamic],        [t charon])
 ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
@@ -1104,6 +1105,7 @@ AC_SUBST(cmd_plugins)
 AC_SUBST(c_plugins)
 AC_SUBST(h_plugins)
 AC_SUBST(s_plugins)
+AC_SUBST(t_plugins)
 
 # ======================
 #  set Makefile.am vars
@@ -1374,6 +1376,11 @@ AC_CONFIG_FILES([
 	src/libradius/Makefile
 	src/libtncif/Makefile
 	src/libtnccs/Makefile
+	src/libtnccs/plugins/tnc_tnccs/Makefile
+	src/libtnccs/plugins/tnc_imc/Makefile
+	src/libtnccs/plugins/tnccs_11/Makefile
+	src/libtnccs/plugins/tnccs_20/Makefile
+	src/libtnccs/plugins/tnccs_dynamic/Makefile
 	src/libpttls/Makefile
 	src/libpts/Makefile
 	src/libpts/plugins/imc_attestation/Makefile
@@ -1414,12 +1421,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/xauth_noauth/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
-	src/libcharon/plugins/tnc_imc/Makefile
 	src/libcharon/plugins/tnc_imv/Makefile
-	src/libcharon/plugins/tnc_tnccs/Makefile
-	src/libcharon/plugins/tnccs_11/Makefile
-	src/libcharon/plugins/tnccs_20/Makefile
-	src/libcharon/plugins/tnccs_dynamic/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
 	src/libcharon/plugins/farp/Makefile
@@ -1484,4 +1486,5 @@ AC_MSG_RESULT([-----------------------------------------------------])
 AC_MSG_RESULT([libstrongswan:$s_plugins])
 AC_MSG_RESULT([libcharon:    $c_plugins])
 AC_MSG_RESULT([libhydra:     $h_plugins])
+AC_MSG_RESULT([libtnccs:     $t_plugins])
 AC_MSG_RESULT([])

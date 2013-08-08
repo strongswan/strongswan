@@ -111,4 +111,13 @@ bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
 bool pt_tls_write(tls_socket_t *tls, bio_writer_t *writer,
 				  pt_tls_message_type_t type, u_int32_t identifier);
 
+/**
+ * @}
+ * @addtogroup libpttls
+ * @{
+ *
+ * Dummy libpttls initialization function needed for integrity test
+ */
+void libpttls_init(void);
+
 #endif /** PT_TLS_H_ @}*/
