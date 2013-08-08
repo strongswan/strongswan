@@ -5,12 +5,12 @@
 # Copyright (C) 2003-2004 Tuomo Soini
 # Copyright (C) 2002-2004 Michael Richardson
 # Copyright (C) 2005      Andreas Steffen <andreas.steffen@strongsec.com>
-# 
+#
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at your
 # option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -44,10 +44,6 @@
 #              is the name of the  connection  for  which  we  are
 #              routing.
 #
-#       PLUTO_NEXT_HOP
-#              is the next hop to which packets bound for the peer
-#              must be sent.
-#
 #       PLUTO_INTERFACE
 #              is the name of the ipsec interface to be used.
 #
@@ -62,15 +58,6 @@
 #              the  client  is  just  the  host,  this will be the
 #              host's own IP address / max (where max  is  32  for
 #              IPv4 and 128 for IPv6).
-#
-#       PLUTO_MY_CLIENT_NET
-#              is the IP address of our client net.  If the client
-#              is just the host, this will be the  host's  own  IP
-#              address.
-#
-#       PLUTO_MY_CLIENT_MASK
-#              is  the  mask for our client net.  If the client is
-#              just the host, this will be 255.255.255.255.
 #
 #       PLUTO_MY_SOURCEIP
 #              if non-empty, then the source address for the route will be
@@ -89,24 +76,11 @@
 #       PLUTO_PEER_ID
 #              is the ID of our peer.
 #
-#       PLUTO_PEER_CA
-#              is the CA which issued the cert of our peer.
-#
 #       PLUTO_PEER_CLIENT
 #              is the IP address / count of the peer's client sub-
 #              net.   If the client is just the peer, this will be
 #              the peer's own IP address / max (where  max  is  32
 #              for IPv4 and 128 for IPv6).
-#
-#       PLUTO_PEER_CLIENT_NET
-#              is the IP address of the peer's client net.  If the
-#              client is just the peer, this will  be  the  peer's
-#              own IP address.
-#
-#       PLUTO_PEER_CLIENT_MASK
-#              is  the  mask  for  the  peer's client net.  If the
-#              client   is   just   the   peer,   this   will   be
-#              255.255.255.255.
 #
 #       PLUTO_PEER_PROTOCOL
 #              is the IP protocol that will be transported.
@@ -235,7 +209,7 @@ doroute() {
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
 	"0.0.0.0/0.0.0.0")
 		# opportunistic encryption work around
-		# need to provide route that eclipses default, without 
+		# need to provide route that eclipses default, without
 		# replacing it.
 		it="ip route $1 0.0.0.0/1 $parms2 $parms3 &&
 			ip route $1 128.0.0.0/1 $parms2 $parms3"
@@ -255,7 +229,7 @@ doroute() {
 	fi
 	return $st
 }
- 
+
 # define ESP mark
 ESP_MARK=50
 
@@ -295,7 +269,7 @@ prepare-host:*|prepare-client:*)
 	# delete possibly-existing route (preliminary to adding a route)
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
 	"0.0.0.0/0.0.0.0")
-		# need to provide route that eclipses default, without 
+		# need to provide route that eclipses default, without
 		# replacing it.
 		parms1="0.0.0.0/1"
 		parms2="128.0.0.0/1"
@@ -314,7 +288,7 @@ prepare-host:*|prepare-client:*)
 		oops="silent error, exit status $status"
 	fi
 	case "$oops" in
-	*'RTNETLINK answers: No such process'*)	
+	*'RTNETLINK answers: No such process'*)
 		# This is what route (currently -- not documented!) gives
 		# for "could not find such a route".
 		oops=

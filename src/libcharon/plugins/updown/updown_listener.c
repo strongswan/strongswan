@@ -303,7 +303,6 @@ METHOD(listener_t, child_updown, bool,
 							(my_ts->get_type(my_ts) == TS_IPV6_ADDR_RANGE);
 
 		/* build the command with all env variables.
-		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
 		 */
 		snprintf(command, sizeof(command),
 				 "2>&1 "
