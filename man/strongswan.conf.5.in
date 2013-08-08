@@ -691,15 +691,6 @@ Threshold date where system time is considered valid. Disabled if not specified
 .BR charon.plugins.systime-fix.threshold_format " [%Y]"
 strptime(3) format used to parse threshold option
 .TP
-.BR charon.plugins.tnccs-11.max_message_size " [45000]"
-Maximum size of a PA-TNC message (XML & Base64 encoding)
-.TP
-.BR charon.plugins.tnccs-20.max_batch_size " [65522]"
-Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
-.TP
-.BR charon.plugins.tnccs-20.max_message_size " [65490]"
-Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
-.TP
 .BR charon.plugins.tnc-ifmap.client_cert
 Path to X.509 certificate file of IF-MAP client
 .TP
@@ -720,12 +711,6 @@ Path to X.509 certificate file of IF-MAP server
 .TP
 .BR charon.plugins.tnc-ifmap.username_password
 Credentials of IF-MAP client of the form username:password
-.TP
-.BR charon.plugins.tnc-imc.dlclose " [yes]"
-Unload IMC after use
-.TP
-.BR charon.plugins.tnc-imc.preferred_language " [en]"
-Preferred language for TNC recommendations
 .TP
 .BR charon.plugins.tnc-imv.dlclose " [yes]"
 Unload IMV after use
@@ -892,6 +877,23 @@ List of TLS cipher suites
 .TP
 .BR libtnccs.tnc_config " [/etc/tnc_config]"
 TNC IMC/IMV configuration directory
+.PP
+.SS libtnccs plugins section
+.TP
+.BR charon.plugins.tnccs-11.max_message_size " [45000]"
+Maximum size of a PA-TNC message (XML & Base64 encoding)
+.TP
+.BR charon.plugins.tnccs-20.max_batch_size " [65522]"
+Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
+.TP
+.BR charon.plugins.tnccs-20.max_message_size " [65490]"
+Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
+.TP
+.BR charon.plugins.tnc-imc.dlclose " [yes]"
+Unload IMC after use
+.TP
+.BR charon.plugins.tnc-imc.preferred_language " [en]"
+Preferred language for TNC recommendations
 .SS libimcv section
 .TP
 .BR libimcv.assessment_result " [yes]"
