@@ -203,14 +203,15 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 					reader->destroy(reader);
 					return FAILED;
 				}
+				DBG1(DBG_TNC, "received SASL %N result",
+					 pt_tls_sasl_result_names, result);
+
 				switch (result)
 				{
 					case PT_TLS_SASL_RESULT_ABORT:
-						DBG1(DBG_TNC, "received SASL abort result");
 						reader->destroy(reader);
 						return FAILED;
 					case PT_TLS_SASL_RESULT_SUCCESS:
-						DBG1(DBG_TNC, "received SASL success result");
 						switch (sasl->process(sasl, reader->peek(reader)))
 						{
 							case SUCCESS:
@@ -226,7 +227,6 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 						break;
 					case PT_TLS_SASL_RESULT_MECH_FAILURE:
 					case PT_TLS_SASL_RESULT_FAILURE:
-						DBG1(DBG_TNC, "received SASL failure result");
 						/* non-fatal failure, try again */
 						reader->destroy(reader);
 						return NEED_MORE;

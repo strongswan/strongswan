@@ -472,6 +472,7 @@ METHOD(pt_tls_server_t, handle, status_t,
 	switch (this->state)
 	{
 		case PT_TLS_SERVER_VERSION:
+			DBG1(DBG_TNC, "entering PT-TLS negotiation phase");
 			if (!negotiate_version(this))
 			{
 				return FAILED;
@@ -480,6 +481,7 @@ METHOD(pt_tls_server_t, handle, status_t,
 			this->state = PT_TLS_SERVER_AUTH;
 			/* fall through to next state */
 		case PT_TLS_SERVER_AUTH:
+			DBG1(DBG_TNC, "doing SASL client authentication");
 			if (!authenticate(this))
 			{
 				return FAILED;
@@ -487,6 +489,7 @@ METHOD(pt_tls_server_t, handle, status_t,
 			this->state = PT_TLS_SERVER_TNCCS;
 			break;
 		case PT_TLS_SERVER_TNCCS:
+			DBG1(DBG_TNC, "entering PT-TLS data transport phase");
 			if (!assess(this, (tls_t*)this->tnccs))
 			{
 				return FAILED;

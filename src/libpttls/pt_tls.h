@@ -61,6 +61,8 @@ enum pt_tls_message_type_t {
 	PT_TLS_ERROR = 8,
 };
 
+extern enum_name_t *pt_tls_message_type_names;
+
 /**
  * Result code for a single SASL mechansim, as sent in PT_TLS_SASL_RESULT
  */
@@ -70,6 +72,8 @@ enum pt_tls_sasl_result_t {
 	PT_TLS_SASL_RESULT_ABORT = 2,
 	PT_TLS_SASL_RESULT_MECH_FAILURE = 3,
 };
+
+extern enum_name_t *pt_tls_sasl_result_names;
 
 /**
  * Client authentication to require as PT-TLS server.
