@@ -61,6 +61,7 @@ struct private_pt_tls_server_t {
 	 * TNCCS protocol handler, implemented as tls_t
 	 */
 	tls_t *tnccs;
+
 };
 
 /**
@@ -111,8 +112,27 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 							 sasl_mechanism_t *sasl, chunk_t data)
 {
 	bio_writer_t *writer;
+	status_t status;
+	identification_t *client;
+	tnccs_t *tnccs;
 
-	switch (sasl->process(sasl, data))
+	status = sasl->process(sasl, data);
+	if (status != NEED_MORE)
+	{
+		client = sasl->get_client(sasl);
+		if (client)
+		{
+			DBG1(DBG_TNC, "SASL client identity is '%Y'", client);
+			this->tnccs->set_peer_id(this->tnccs, client);
+			if (streq(sasl->get_name(sasl), "PLAIN"))
+			{
+				tnccs = (tnccs_t*)this->tnccs;
+				tnccs->set_auth_type(tnccs, TNC_AUTH_PASSWORD);
+			}
+		}
+	}
+
+	switch (status)
 	{
 		case NEED_MORE:
 			return NEED_MORE;

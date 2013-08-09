@@ -200,6 +200,13 @@ struct tls_t {
 	identification_t* (*get_server_id)(tls_t *this);
 
 	/**
+	 * Set the peer identity.
+	 *
+	 * @param id		peer identity
+	 */
+	void (*set_peer_id)(tls_t *this, identification_t *id);
+
+	/**
 	 * Return the peer identity.
 	 *
 	 * @return			peer identity

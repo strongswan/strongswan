@@ -35,6 +35,12 @@ struct private_sasl_plain_t {
 	identification_t *client;
 };
 
+METHOD(sasl_mechanism_t, get_client, identification_t*,
+	private_sasl_plain_t *this)
+{
+	return this->client;
+}
+
 METHOD(sasl_mechanism_t, get_name, char*,
 	private_sasl_plain_t *this)
 {
@@ -52,7 +58,6 @@ METHOD(sasl_mechanism_t, process_server, status_t,
 	private_sasl_plain_t *this, chunk_t message)
 {
 	chunk_t authz, authi, password;
-	identification_t *id;
 	shared_key_t *shared;
 	u_char *pos;
 
@@ -72,22 +77,21 @@ METHOD(sasl_mechanism_t, process_server, status_t,
 	}
 	authi = chunk_create(message.ptr, pos - message.ptr);
 	password = chunk_skip(message, authi.len + 1);
-	id = identification_create_from_data(authi);
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, id, NULL);
+	DESTROY_IF(this->client);
+	this->client = identification_create_from_data(authi);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, this->client,
+									  NULL);
 	if (!shared)
 	{
-		DBG1(DBG_CFG, "no shared secret found for '%Y'", id);
-		id->destroy(id);
+		DBG1(DBG_CFG, "no shared secret found for '%Y'", this->client);
 		return FAILED;
 	}
 	if (!chunk_equals(shared->get_key(shared), password))
 	{
-		DBG1(DBG_CFG, "shared secret for '%Y' does not match", id);
-		id->destroy(id);
+		DBG1(DBG_CFG, "shared secret for '%Y' does not match", this->client);
 		shared->destroy(shared);
 		return FAILED;
 	}
-	id->destroy(id);
 	shared->destroy(shared);
 	return SUCCESS;
 }
@@ -151,6 +155,7 @@ sasl_plain_t *sasl_plain_create(char *name, identification_t *client)
 		.public = {
 			.sasl = {
 				.get_name = _get_name,
+				.get_client = _get_client,
 				.destroy = _destroy,
 			},
 		},

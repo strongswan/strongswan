@@ -525,6 +525,13 @@ METHOD(tls_t, get_server_id, identification_t*,
 	return this->server;
 }
 
+METHOD(tls_t, set_peer_id, void,
+	private_tnccs_11_t *this, identification_t *id)
+{
+	DESTROY_IF(this->peer);
+	this->peer = id->clone(id);
+}
+
 METHOD(tls_t, get_peer_id, identification_t*,
 	private_tnccs_11_t *this)
 {
@@ -611,6 +618,7 @@ tnccs_t* tnccs_11_create(bool is_server,
 				.build = _build,
 				.is_server = _is_server,
 				.get_server_id = _get_server_id,
+				.set_peer_id = _set_peer_id,
 				.get_peer_id = _get_peer_id,
 				.get_purpose = _get_purpose,
 				.is_complete = _is_complete,

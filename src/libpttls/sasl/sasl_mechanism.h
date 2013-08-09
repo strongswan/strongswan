@@ -51,6 +51,13 @@ struct sasl_mechanism_t {
 	char* (*get_name)(sasl_mechanism_t *this);
 
 	/**
+	 * Get the client identity
+	 *
+	 * @return			client identity
+	 */
+	identification_t* (*get_client)(sasl_mechanism_t *this);
+
+	/**
 	 * Build a SASL message to send to remote host.
 	 *
 	 * A message is returned if the return value is NEED_MORE or SUCCESS. A
