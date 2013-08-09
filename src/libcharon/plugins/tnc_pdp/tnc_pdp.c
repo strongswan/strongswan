@@ -610,6 +610,7 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	identification_t *peer;
 	pt_tls_server_t *pt_tls;
 	tnccs_t *tnccs;
+	pt_tls_auth_t auth = PT_TLS_AUTH_TLS_OR_SASL;
 
 	pt_tls_fd = accept(fd, NULL, NULL);
 	if (pt_tls_fd == -1)
@@ -633,8 +634,7 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 		return FALSE;
 	}
 
-	pt_tls = pt_tls_server_create(this->server, pt_tls_fd, PT_TLS_AUTH_NONE,
-								  tnccs);
+	pt_tls = pt_tls_server_create(this->server, pt_tls_fd, auth, tnccs);
 	if (!pt_tls)
 	{
 		DBG1(DBG_TNC, "could not create PT-TLS connection instance");
