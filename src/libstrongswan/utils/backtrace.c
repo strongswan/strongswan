@@ -536,7 +536,7 @@ METHOD(backtrace_t, create_frame_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
-METHOD(backtrace_t, clone, backtrace_t*,
+METHOD(backtrace_t, clone_, backtrace_t*,
 	private_backtrace_t *this)
 {
 	private_backtrace_t *clone;
@@ -593,7 +593,7 @@ static backtrace_t get_methods()
 		.log = _log_,
 		.contains_function = _contains_function,
 		.equals = _equals,
-		.clone = _clone,
+		.clone = _clone_,
 		.create_frame_enumerator = _create_frame_enumerator,
 		.destroy = _destroy,
 	};
