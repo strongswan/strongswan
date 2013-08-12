@@ -32,6 +32,7 @@
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <threading/rwlock.h>
+#include <threading/spinlock.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -389,9 +390,19 @@ struct private_kernel_pfroute_net_t
 	struct rt_msghdr *reply;
 
 	/**
-	 * time of last roam event
+	 * earliest time of the next roam event
 	 */
-	timeval_t last_roam;
+	timeval_t next_roam;
+
+	/**
+	 * roam event due to address change
+	 */
+	bool roam_address;
+
+	/**
+	 * lock to check and update roam event time
+	 */
+	spinlock_t *roam_lock;
 
 	/**
 	 * Time in ms to wait for IP addresses to appear/disappear
@@ -531,9 +542,15 @@ static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
 /**
  * callback function that raises the delayed roam event
  */
-static job_requeue_t roam_event(uintptr_t address)
+static job_requeue_t roam_event(private_kernel_pfroute_net_t *this)
 {
-	hydra->kernel_interface->roam(hydra->kernel_interface, address != 0);
+	bool address;
+
+	this->roam_lock->lock(this->roam_lock);
+	address = this->roam_address;
+	this->roam_address = FALSE;
+	this->roam_lock->unlock(this->roam_lock);
+	hydra->kernel_interface->roam(hydra->kernel_interface, address);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -547,16 +564,20 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 	job_t *job;
 
 	time_monotonic(&now);
-	if (timercmp(&now, &this->last_roam, >))
+	this->roam_lock->lock(this->roam_lock);
+	if (!timercmp(&now, &this->next_roam, >))
 	{
-		timeval_add_ms(&now, ROAM_DELAY);
-		this->last_roam = now;
-
-		job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
-										  (void*)(uintptr_t)(address ? 1 : 0),
-										  NULL, NULL);
-		lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+		this->roam_lock->unlock(this->roam_lock);
+		return;
 	}
+	timeval_add_ms(&now, ROAM_DELAY);
+	this->next_roam = now;
+	this->roam_address |= address;
+	this->roam_lock->unlock(this->roam_lock);
+
+	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
+									  this, NULL, NULL);
+	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 }
 
 /**
@@ -1716,6 +1737,7 @@ METHOD(kernel_net_t, destroy, void,
 	this->lock->destroy(this->lock);
 	this->mutex->destroy(this->mutex);
 	this->condvar->destroy(this->condvar);
+	this->roam_lock->destroy(this->roam_lock);
 	free(this->reply);
 	free(this);
 }
@@ -1758,11 +1780,12 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.routes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
+		.roam_lock = spinlock_create(),
 		.vip_wait = lib->settings->get_int(lib->settings,
 					"%s.plugins.kernel-pfroute.vip_wait", 1000, hydra->daemon),
 	);
 	timerclear(&this->last_route_reinstall);
-	timerclear(&this->last_roam);
+	timerclear(&this->next_roam);
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
