@@ -174,9 +174,8 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
-		{"[--in file] [--type rsa|ecdsa]",
-		 " --dn distinguished-name [--san subjectAltName]+",
-		 "[--password challengePassword]",
+		{"  [--in file] [--type rsa|ecdsa] --dn distinguished-name",
+		 "[--san subjectAltName]+ [--password challengePassword]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},

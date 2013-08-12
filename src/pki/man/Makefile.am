@@ -3,6 +3,7 @@ man8_MANS = \
 	pki---gen.8 \
 	pki---self.8 \
 	pki---issue.8 \
-	pki---signcrl.8
+	pki---signcrl.8 \
+	pki---req.8
 
 CLEANFILES = $(man8_MANS)
