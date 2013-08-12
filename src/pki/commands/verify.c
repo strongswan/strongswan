@@ -125,7 +125,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		verify, 'v', "verify",
 		"verify a certificate using the CA certificate",
-		{"[--in file] [--ca file]"},
+		{"[--in file] [--cacert file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "X.509 certificate to verify, default: stdin"},
@@ -133,4 +133,3 @@ static void __attribute__ ((constructor))reg()
 		}
 	});
 }
-

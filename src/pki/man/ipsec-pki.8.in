@@ -78,4 +78,5 @@ Verify a certificate using a CA certificate.
 .BR pki\ \-\-pkcs7 (8),
 .BR pki\ \-\-keyid (8),
 .BR pki\ \-\-print (8),
-.BR pki\ \-\-pub (8)
+.BR pki\ \-\-pub (8),
+.BR pki\ \-\-verify (8)
