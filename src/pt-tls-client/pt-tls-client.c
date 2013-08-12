@@ -20,15 +20,17 @@
 #include <getopt.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include <library.h>
-#include <utils/debug.h>
 #include <pt_tls.h>
 #include <pt_tls_client.h>
 #include <tnc/tnc.h>
 #include <tls.h>
 
+#include <library.h>
+#include <utils/debug.h>
 #include <credentials/sets/mem_cred.h>
+#include <utils/optionsfrom.h>
 
 /**
  * Print usage information
@@ -38,6 +40,7 @@ static void usage(FILE *out, char *cmd)
 	fprintf(out, "usage:\n");
 	fprintf(out, "  %s --connect <address> [--port <port>] [--cert <file>]+\n", cmd);
 	fprintf(out, "               [--client <client-id>] [--secret <password>]\n");
+	fprintf(out, "	             [--optionsfrom <filename>]\n");
 }
 
 /**
@@ -120,7 +123,7 @@ static bool load_key(char *filename)
 /**
  * Debug level
  */
-static level_t pt_tls_level = 2;
+static level_t pt_tls_level = 1;
 
 static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 {
@@ -136,6 +139,11 @@ static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 }
 
 /**
+ * Handles --optionsfrom arguments
+ */
+options_t *options;
+
+/**
  * Cleanup
  */
 static void cleanup()
@@ -143,6 +151,7 @@ static void cleanup()
 	lib->processor->cancel(lib->processor);
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
+	options->destroy(options);
 	libtnccs_deinit();
 	library_deinit();
 }
@@ -156,6 +165,7 @@ static void init()
 	libtnccs_init();
 
 	dbg = dbg_pt_tls;
+	options = options_create();
 
 	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "pt-tls-client.load", PLUGINS)))
@@ -187,6 +197,7 @@ int main(int argc, char *argv[])
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
 			{"debug",		required_argument,		NULL,		'd' },
+			{"optionsfrom",	required_argument,		NULL,		'+' },
 			{0,0,0,0 }
 		};
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
@@ -227,6 +238,12 @@ int main(int argc, char *argv[])
 				continue;
 			case 'd':
 				pt_tls_level = atoi(optarg);
+				continue;
+			case '+':	/* --optionsfrom <filename> */
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					return 1;
+				}
 				continue;
 			default:
 				usage(stderr, argv[0]);
