@@ -1499,6 +1499,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---keyid.8
 	src/pki/man/pki---pkcs7.8
 	src/pki/man/pki---print.8
+	src/pki/man/pki---pub.8
 	src/pki/man/pki---req.8
 	src/pki/man/pki---self.8
 	src/pki/man/pki---signcrl.8

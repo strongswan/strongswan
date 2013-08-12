@@ -158,13 +158,13 @@ static void __attribute__ ((constructor))reg()
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
 		{"[--in file|--keyid hex] [--type rsa|ecdsa|pkcs10|x509]",
-		 "[--outform der|pem|pgp|dnskey]"},
+		 "[--outform der|pem|dnskey]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"keyid",	'x', 1, "keyid on smartcard of private key"},
 			{"type",	't', 1, "type of credential, default: rsa"},
-			{"outform",	'f', 1, "encoding of extracted public key"},
+			{"outform",	'f', 1, "encoding of extracted public key, default: der"},
 		}
 	});
 }

@@ -7,6 +7,7 @@ man8_MANS = \
 	pki---req.8 \
 	pki---pkcs7.8 \
 	pki---keyid.8 \
-	pki---print.8
+	pki---print.8 \
+	pki---pub.8
 
 CLEANFILES = $(man8_MANS)
