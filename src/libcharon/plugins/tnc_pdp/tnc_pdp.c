@@ -607,17 +607,23 @@ static bool pt_tls_receive_more(pt_tls_server_t *this, int fd,
 static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t event)
 {
 	int pt_tls_fd;
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
 	identification_t *peer;
+	host_t *host;
 	pt_tls_server_t *pt_tls;
 	tnccs_t *tnccs;
 	pt_tls_auth_t auth = PT_TLS_AUTH_TLS_OR_SASL;
 
-	pt_tls_fd = accept(fd, NULL, NULL);
+	pt_tls_fd = accept(fd, (sockaddr_t*)&addr, &addrlen);
 	if (pt_tls_fd == -1)
 	{
 		DBG1(DBG_TNC, "accepting PT-TLS stream failed: %s", strerror(errno));
 		return FALSE;
 	}
+	host = host_create_from_sockaddr((sockaddr_t*)&addr);
+	DBG1(DBG_TNC, "accepting PT-TLS stream from %H", host);
+	host->destroy(host);
 
 	/* At this moment the peer identity is not known yet */
 	peer = identification_create_from_encoding(ID_ANY, chunk_empty),
