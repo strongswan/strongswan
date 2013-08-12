@@ -117,11 +117,14 @@ METHOD(sasl_mechanism_t, build_client, status_t,
 	len = snprintf(buf, sizeof(buf), "%s%c%Y%c%.*s",
 				   "", 0, this->client, 0,
 				   (int)password.len, password.ptr);
+	shared->destroy(shared);
+
 	if (len < 0 || len >= sizeof(buf))
 	{
 		return FAILED;
 	}
 	*message = chunk_clone(chunk_create(buf, len));
+
 	return NEED_MORE;
 }
 
