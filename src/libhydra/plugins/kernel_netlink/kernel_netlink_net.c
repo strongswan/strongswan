@@ -394,6 +394,11 @@ struct private_kernel_netlink_net_t {
 	timeval_t next_roam;
 
 	/**
+	 * roam event due to address change
+	 */
+	bool roam_address;
+
+	/**
 	 * lock to check and update roam event time
 	 */
 	spinlock_t *roam_lock;
@@ -696,9 +701,15 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 /**
  * callback function that raises the delayed roam event
  */
-static job_requeue_t roam_event(uintptr_t address)
+static job_requeue_t roam_event(private_kernel_netlink_net_t *this)
 {
-	hydra->kernel_interface->roam(hydra->kernel_interface, address != 0);
+	bool address;
+
+	this->roam_lock->lock(this->roam_lock);
+	address = this->roam_address;
+	this->roam_address = FALSE;
+	this->roam_lock->unlock(this->roam_lock);
+	hydra->kernel_interface->roam(hydra->kernel_interface, address);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -725,11 +736,11 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 	}
 	timeval_add_ms(&now, ROAM_DELAY);
 	this->next_roam = now;
+	this->roam_address |= address;
 	this->roam_lock->unlock(this->roam_lock);
 
 	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
-									  (void*)(uintptr_t)(address ? 1 : 0),
-									   NULL, NULL);
+									  this, NULL, NULL);
 	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 }
 
