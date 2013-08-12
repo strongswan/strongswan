@@ -224,7 +224,7 @@ static bool create_aead(private_esp_context_t *this, int alg,
 	if (!this->aead)
 	{
 		DBG1(DBG_ESP, "failed to create ESP context: unsupported AEAD "
-			 "algorithm");
+			 "algorithm %N", encryption_algorithm_names, alg);
 		return FALSE;
 	}
 	if (!this->aead->set_key(this->aead, key))
@@ -241,22 +241,14 @@ static bool create_aead(private_esp_context_t *this, int alg,
 static bool create_traditional(private_esp_context_t *this, int enc_alg,
 							   chunk_t enc_key, int int_alg, chunk_t int_key)
 {
-	crypter_t *crypter = NULL;
-	signer_t *signer = NULL;
+	crypter_t *crypter;
+	signer_t *signer;
 
-	switch (enc_alg)
-	{
-		case ENCR_AES_CBC:
-			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg,
-												  enc_key.len);
-			break;
-		default:
-			break;
-	}
+	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_key.len);
 	if (!crypter)
 	{
 		DBG1(DBG_ESP, "failed to create ESP context: unsupported encryption "
-			 "algorithm");
+			 "algorithm %N", encryption_algorithm_names, enc_alg);
 		goto failed;
 	}
 	if (!crypter->set_key(crypter, enc_key))
@@ -266,21 +258,11 @@ static bool create_traditional(private_esp_context_t *this, int enc_alg,
 		goto failed;
 	}
 
-	switch (int_alg)
-	{
-		case AUTH_HMAC_SHA1_96:
-		case AUTH_HMAC_SHA2_256_128:
-		case AUTH_HMAC_SHA2_384_192:
-		case AUTH_HMAC_SHA2_512_256:
-			signer = lib->crypto->create_signer(lib->crypto, int_alg);
-			break;
-		default:
-			break;
-	}
+	signer = lib->crypto->create_signer(lib->crypto, int_alg);
 	if (!signer)
 	{
 		DBG1(DBG_ESP, "failed to create ESP context: unsupported integrity "
-			 "algorithm");
+			 "algorithm %N", integrity_algorithm_names, int_alg);
 		goto failed;
 	}
 	if (!signer->set_key(signer, int_key))
