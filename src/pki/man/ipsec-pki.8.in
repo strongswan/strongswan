@@ -74,4 +74,5 @@ Verify a certificate using a CA certificate.
 .BR pki\ \-\-self (8),
 .BR pki\ \-\-issue (8),
 .BR pki\ \-\-signcrl (8),
-.BR pki\ \-\-req (8)
+.BR pki\ \-\-req (8),
+.BR pki\ \-\-pkcs7 (8)
