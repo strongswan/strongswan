@@ -1497,6 +1497,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---gen.8
 	src/pki/man/pki---issue.8
 	src/pki/man/pki---self.8
+	src/pki/man/pki---signcrl.8
 ])
 
 AC_OUTPUT

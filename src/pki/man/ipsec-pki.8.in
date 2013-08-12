@@ -72,4 +72,5 @@ Verify a certificate using a CA certificate.
 .BR ipsec (8),
 .BR pki\ \-\-gen (8),
 .BR pki\ \-\-self (8),
-.BR pki\ \-\-issue (8)
+.BR pki\ \-\-issue (8),
+.BR pki\ \-\-signcrl (8)
