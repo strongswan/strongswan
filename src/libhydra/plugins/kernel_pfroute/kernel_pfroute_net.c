@@ -565,6 +565,7 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 
 	time_monotonic(&now);
 	this->roam_lock->lock(this->roam_lock);
+	this->roam_address |= address;
 	if (!timercmp(&now, &this->next_roam, >))
 	{
 		this->roam_lock->unlock(this->roam_lock);
@@ -572,7 +573,6 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 	}
 	timeval_add_ms(&now, ROAM_DELAY);
 	this->next_roam = now;
-	this->roam_address |= address;
 	this->roam_lock->unlock(this->roam_lock);
 
 	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
