@@ -1495,6 +1495,7 @@ AC_CONFIG_FILES([
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/ipsec-pki.8
 	src/pki/man/pki---gen.8
+	src/pki/man/pki---issue.8
 	src/pki/man/pki---self.8
 ])
 
