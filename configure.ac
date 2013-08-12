@@ -1496,6 +1496,7 @@ AC_CONFIG_FILES([
 	src/pki/man/ipsec-pki.8
 	src/pki/man/pki---gen.8
 	src/pki/man/pki---issue.8
+	src/pki/man/pki---keyid.8
 	src/pki/man/pki---pkcs7.8
 	src/pki/man/pki---req.8
 	src/pki/man/pki---self.8
