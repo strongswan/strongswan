@@ -321,34 +321,45 @@ static status_t read_sasl_mech_selection(private_pt_tls_server_t *this,
 static bool do_sasl(private_pt_tls_server_t *this)
 {
 	sasl_mechanism_t *sasl;
+	identification_t *client_id;
+	tnccs_t *tnccs;
 	status_t status;
+
+	client_id = this->tls->get_peer_id(this->tls);
+	tnccs = (tnccs_t*)this->tnccs;
 
 	switch (this->auth)
 	{
 		case PT_TLS_AUTH_NONE:
 			return TRUE;
 		case PT_TLS_AUTH_TLS:
-			if (this->tls->get_peer_id(this->tls))
+			if (client_id)
 			{
+				this->tnccs->set_peer_id(this->tnccs, client_id);
+				tnccs->set_auth_type(tnccs, TNC_AUTH_X509_CERT);
 				return TRUE;
 			}
-			DBG1(DBG_TNC, "requiring TLS certificate client authentication");
+			DBG1(DBG_TNC, "requiring TLS certificate-based "
+						  "client authentication");
 			return FALSE;
 		case PT_TLS_AUTH_SASL:
 			break;
 		case PT_TLS_AUTH_TLS_OR_SASL:
-			if (this->tls->get_peer_id(this->tls))
+			if (client_id)
 			{
-				DBG1(DBG_TNC, "skipping SASL, client authenticated with TLS "
-					 "certificate");
+				this->tnccs->set_peer_id(this->tnccs, client_id);
+				tnccs->set_auth_type(tnccs, TNC_AUTH_X509_CERT);
+				DBG1(DBG_TNC, "skipping SASL, client already authenticated by "
+							  "TLS certificate");
 				return TRUE;
 			}
 			break;
 		case PT_TLS_AUTH_TLS_AND_SASL:
 		default:
-			if (!this->tls->get_peer_id(this->tls))
+			if (!client_id)
 			{
-				DBG1(DBG_TNC, "requiring TLS certificate client authentication");
+				DBG1(DBG_TNC, "requiring TLS certificate-based "
+							  "client authentication");
 				return FALSE;
 			}
 			break;
