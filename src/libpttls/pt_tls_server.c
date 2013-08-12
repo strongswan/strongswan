@@ -112,33 +112,27 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 							 sasl_mechanism_t *sasl, chunk_t data)
 {
 	bio_writer_t *writer;
-	status_t status;
 	identification_t *client;
 	tnccs_t *tnccs;
 
-	status = sasl->process(sasl, data);
-	if (status != NEED_MORE)
-	{
-		client = sasl->get_client(sasl);
-		if (client)
-		{
-			DBG1(DBG_TNC, "SASL client identity is '%Y'", client);
-			this->tnccs->set_peer_id(this->tnccs, client);
-			if (streq(sasl->get_name(sasl), "PLAIN"))
-			{
-				tnccs = (tnccs_t*)this->tnccs;
-				tnccs->set_auth_type(tnccs, TNC_AUTH_PASSWORD);
-			}
-		}
-	}
-
-	switch (status)
+	switch (sasl->process(sasl, data))
 	{
 		case NEED_MORE:
 			return NEED_MORE;
 		case SUCCESS:
 			DBG1(DBG_TNC, "SASL %s authentication successful",
 				 sasl->get_name(sasl));
+			client = sasl->get_client(sasl);
+			if (client)
+			{
+				DBG1(DBG_TNC, "SASL client identity is '%Y'", client);
+				this->tnccs->set_peer_id(this->tnccs, client);
+				if (streq(sasl->get_name(sasl), "PLAIN"))
+				{
+					tnccs = (tnccs_t*)this->tnccs;
+					tnccs->set_auth_type(tnccs, TNC_AUTH_PASSWORD);
+				}
+			}
 			writer = bio_writer_create(1);
 			writer->write_uint8(writer, PT_TLS_SASL_RESULT_SUCCESS);
 			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
