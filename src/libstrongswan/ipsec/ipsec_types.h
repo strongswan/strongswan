@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -168,5 +168,14 @@ struct mark_t {
  * Special mark value that uses the reqid of the CHILD_SA as mark
  */
 #define MARK_REQID (0xFFFFFFFF)
+
+/**
+ * Try to parse a mark_t from the given string of the form <mark>[/<mask>].
+ *
+ * @param value		string to parse
+ * @param mark		mark to fill
+ * @return			TRUE if parsing was successful
+ */
+bool mark_from_string(const char *value, mark_t *mark);
 
 #endif /** IPSEC_TYPES_H_ @}*/
