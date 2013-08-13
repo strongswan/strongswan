@@ -73,6 +73,7 @@ static bool negotiate_version(private_pt_tls_server_t *this)
 	bio_writer_t *writer;
 	u_int32_t vendor, type, identifier;
 	u_int8_t reserved, vmin, vmax, vpref;
+	bool res;
 
 	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
 	if (!reader)
@@ -100,9 +101,10 @@ static bool negotiate_version(private_pt_tls_server_t *this)
 	writer = bio_writer_create(4);
 	writer->write_uint24(writer, 0);
 	writer->write_uint8(writer, PT_TLS_VERSION);
-
-	return pt_tls_write(this->tls, writer, PT_TLS_VERSION_RESPONSE,
-						this->identifier++);
+	res = pt_tls_write(this->tls, PT_TLS_VERSION_RESPONSE,
+					   this->identifier++, writer->get_buf(writer));
+	writer->destroy(writer);
+	return res;
 }
 
 /**
@@ -114,6 +116,7 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 	bio_writer_t *writer;
 	identification_t *client;
 	tnccs_t *tnccs;
+	bool res;
 
 	switch (sasl->process(sasl, data))
 	{
@@ -135,12 +138,10 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 			}
 			writer = bio_writer_create(1);
 			writer->write_uint8(writer, PT_TLS_SASL_RESULT_SUCCESS);
-			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
-							 this->identifier++))
-			{
-				return SUCCESS;
-			}
-			return FAILED;
+			res = pt_tls_write(this->tls, PT_TLS_SASL_RESULT,
+							   this->identifier++, writer->get_buf(writer));
+			writer->destroy(writer);
+			return res ? SUCCESS : FAILED;
 		case FAILED:
 		default:
 			DBG1(DBG_TNC, "SASL %s authentication failed",
@@ -148,8 +149,8 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 			writer = bio_writer_create(1);
 			/* sending abort does not allow the client to retry */
 			writer->write_uint8(writer, PT_TLS_SASL_RESULT_ABORT);
-			pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
-						 this->identifier++);
+			pt_tls_write(this->tls, PT_TLS_SASL_RESULT,
+						 this->identifier++, writer->get_buf(writer));
 			return FAILED;
 	}
 }
@@ -189,19 +190,15 @@ static status_t write_sasl(private_pt_tls_server_t *this,
 {
 	bio_writer_t *writer;
 	chunk_t chunk;
+	bool res;
 
 	switch (sasl->build(sasl, &chunk))
 	{
 		case NEED_MORE:
-			writer = bio_writer_create(chunk.len);
-			writer->write_data(writer, chunk);
+			res = pt_tls_write(this->tls, PT_TLS_SASL_AUTH_DATA,
+							   this->identifier++, chunk);
 			free(chunk.ptr);
-			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_AUTH_DATA,
-							 this->identifier++))
-			{
-				return NEED_MORE;
-			}
-			return FAILED;
+			return res ? NEED_MORE : FAILED;
 		case SUCCESS:
 			DBG1(DBG_TNC, "SASL %s authentication successful",
 				 sasl->get_name(sasl));
@@ -209,21 +206,18 @@ static status_t write_sasl(private_pt_tls_server_t *this,
 			writer->write_uint8(writer, PT_TLS_SASL_RESULT_SUCCESS);
 			writer->write_data(writer, chunk);
 			free(chunk.ptr);
-			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
-							 this->identifier++))
-			{
-				return SUCCESS;
-			}
-			return FAILED;
+			res = pt_tls_write(this->tls, PT_TLS_SASL_RESULT,
+							   this->identifier++, writer->get_buf(writer));
+			writer->destroy(writer);
+			return res ? SUCCESS : FAILED;
 		case FAILED:
 		default:
 			DBG1(DBG_TNC, "SASL %s authentication failed",
 				 sasl->get_name(sasl));
-			writer = bio_writer_create(1);
 			/* sending abort does not allow the client to retry */
-			writer->write_uint8(writer, PT_TLS_SASL_RESULT_ABORT);
-			pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
-						 this->identifier++);
+			chunk = chunk_from_chars(PT_TLS_SASL_RESULT_ABORT);
+			pt_tls_write(this->tls, PT_TLS_SASL_RESULT,
+						 this->identifier++, chunk);
 			return FAILED;
 	}
 }
@@ -236,6 +230,7 @@ static bool send_sasl_mechs(private_pt_tls_server_t *this)
 	enumerator_t *enumerator;
 	bio_writer_t *writer = NULL;
 	char *name;
+	bool res;
 
 	enumerator = sasl_mechanism_create_enumerator(TRUE);
 	while (enumerator->enumerate(enumerator, &name))
@@ -253,8 +248,10 @@ static bool send_sasl_mechs(private_pt_tls_server_t *this)
 	{	/* no mechanisms available? */
 		return FALSE;
 	}
-	return pt_tls_write(this->tls, writer, PT_TLS_SASL_MECHS,
-						this->identifier++);
+	res = pt_tls_write(this->tls, PT_TLS_SASL_MECHS,
+					   this->identifier++, writer->get_buf(writer));
+	writer->destroy(writer);
+	return res;
 }
 
 /**
@@ -394,11 +391,8 @@ static bool authenticate(private_pt_tls_server_t *this)
 	if (do_sasl(this))
 	{
 		/* complete SASL with emtpy mechanism list */
-		bio_writer_t *writer;
-
-		writer = bio_writer_create(0);
-		return pt_tls_write(this->tls, writer, PT_TLS_SASL_MECHS,
-							this->identifier++);
+		return pt_tls_write(this->tls, PT_TLS_SASL_MECHS, this->identifier++,
+							chunk_empty);
 	}
 	return FALSE;
 }
@@ -410,44 +404,30 @@ static bool assess(private_pt_tls_server_t *this, tls_t *tnccs)
 {
 	while (TRUE)
 	{
-		bio_writer_t *writer;
+		size_t msglen;
+		size_t buflen = PT_TLS_MAX_MESSAGE_LEN;
+		char buf[buflen];
 		bio_reader_t *reader;
 		u_int32_t vendor, type, identifier;
 		chunk_t data;
 
-		writer = bio_writer_create(32);
-		while (TRUE)
+		switch (tnccs->build(tnccs, buf, &buflen, &msglen))
 		{
-			char buf[2048];
-			size_t buflen, msglen;
-
-			buflen = sizeof(buf);
-			switch (tnccs->build(tnccs, buf, &buflen, &msglen))
-			{
-				case SUCCESS:
-					writer->destroy(writer);
-					return tnccs->is_complete(tnccs);
-				case FAILED:
-				default:
-					writer->destroy(writer);
+			case SUCCESS:
+				return tnccs->is_complete(tnccs);
+			case ALREADY_DONE:
+				data = chunk_create(buf, buflen);
+				if (!pt_tls_write(this->tls, PT_TLS_PB_TNC_BATCH,
+								  this->identifier++, data))
+				{
 					return FALSE;
-				case INVALID_STATE:
-					writer->destroy(writer);
-					break;
-				case NEED_MORE:
-					writer->write_data(writer, chunk_create(buf, buflen));
-					continue;
-				case ALREADY_DONE:
-					writer->write_data(writer, chunk_create(buf, buflen));
-					if (!pt_tls_write(this->tls, writer, PT_TLS_PB_TNC_BATCH,
-									  this->identifier++))
-					{
-						return FALSE;
-					}
-					writer = bio_writer_create(32);
-					continue;
-			}
-			break;
+				}
+				break;
+			case INVALID_STATE:
+				break;
+			case FAILED:
+			default:
+				return FALSE;
 		}
 
 		reader = pt_tls_read(this->tls, &vendor, &type, &identifier);

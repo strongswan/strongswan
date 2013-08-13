@@ -38,6 +38,11 @@
 #define PT_TLS_HEADER_LEN 16
 
 /**
+ * Maximum size of a PT-TLS message
+ */
+#define PT_TLS_MAX_MESSAGE_LEN	 8 * TLS_MAX_FRAGMENT_LEN - PT_TLS_HEADER_LEN
+
+/**
  * Default PT-TLS port
  */
 #define PT_TLS_PORT	 271
@@ -107,13 +112,13 @@ bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
  * Prepend a PT-TLS header to a writer, send data, destroy writer.
  *
  * @param tls			TLS socket to write to
- * @param writer		prepared Message value to write
  * @param type			Message Type to write
  * @param identifier	Message Identifier to write
+ * @param data			Message value to write
  * @return				TRUE if data written successfully
  */
-bool pt_tls_write(tls_socket_t *tls, bio_writer_t *writer,
-				  pt_tls_message_type_t type, u_int32_t identifier);
+bool pt_tls_write(tls_socket_t *tls, pt_tls_message_type_t type,
+				  u_int32_t identifier, chunk_t data);
 
 /**
  * @}

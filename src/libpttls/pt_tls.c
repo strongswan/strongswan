@@ -134,31 +134,32 @@ bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
 /**
  * Prepend a PT-TLS header to a writer, send data, destroy writer
  */
-bool pt_tls_write(tls_socket_t *tls, bio_writer_t *writer,
-				  pt_tls_message_type_t type, u_int32_t identifier)
+bool pt_tls_write(tls_socket_t *tls, pt_tls_message_type_t type,
+				  u_int32_t identifier, chunk_t data)
 {
-	bio_writer_t *header;
+	bio_writer_t *writer;
+	chunk_t out;
 	ssize_t len;
-	chunk_t data;
 
-	data =  writer->get_buf(writer);
 	len = PT_TLS_HEADER_LEN + data.len;
-	header = bio_writer_create(len);
-	header->write_uint8(header, 0);
-	header->write_uint24(header, 0);
-	header->write_uint32(header, type);
-	header->write_uint32(header, len);
-	header->write_uint32(header, identifier);
+	writer = bio_writer_create(len);
 
-	header->write_data(header, data);
-	writer->destroy(writer);
+	/* write PT-TLS header */
+	writer->write_uint8 (writer, 0);
+	writer->write_uint24(writer, 0);
+	writer->write_uint32(writer, type);
+	writer->write_uint32(writer, len);
+	writer->write_uint32(writer, identifier);
+
+	/* write PT-TLS body */
+	writer->write_data(writer, data);
 
 	DBG2(DBG_TNC, "sending PT-TLS message #%d of type '%N' (%d bytes)",
 				   identifier, pt_tls_message_type_names, type, len);
 
-	data = header->get_buf(header);
-	len = tls->write(tls, data.ptr, data.len);
-	header->destroy(header);
+	out = writer->get_buf(writer);
+	len = tls->write(tls, out.ptr, out.len);
+	writer->destroy(writer);
 
-	return len == data.len;
+	return len == out.len;
 }
