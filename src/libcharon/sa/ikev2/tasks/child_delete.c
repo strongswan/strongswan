@@ -198,7 +198,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
-	u_int32_t spi;
+	u_int32_t spi, reqid;
 	action_t action;
 	status_t status = SUCCESS;
 
@@ -211,6 +211,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			charon->bus->child_updown(charon->bus, child_sa, FALSE);
 		}
 		spi = child_sa->get_spi(child_sa, TRUE);
+		reqid = child_sa->get_reqid(child_sa);
 		protocol = child_sa->get_protocol(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
@@ -223,12 +224,12 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
 					status = this->ike_sa->initiate(this->ike_sa, child_cfg,
-									child_sa->get_reqid(child_sa), NULL, NULL);
+													reqid, NULL, NULL);
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
 							this->ike_sa->get_peer_cfg(this->ike_sa), child_cfg,
-							child_sa->get_reqid(child_sa));
+							reqid);
 					break;
 				default:
 					break;
