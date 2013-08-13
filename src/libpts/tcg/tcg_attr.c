@@ -39,15 +39,17 @@ ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 	"SCAP Assessment",
 	"SCAP Results",
 	"SCAP Summary Results");
-ENUM_NEXT(tcg_attr_names,	TCG_SWID_INVENTORY_REQUEST,
-							TCG_SWID_TAG_IDENTIFIER_RESPONSE,
+ENUM_NEXT(tcg_attr_names,	TCG_SWID_REQUEST,
+							TCG_SWID_TAG_EVENTS,
 							TCG_SCAP_SUMMARY_RESULTS,
-	"SWID Inventory Request",
-	"SWID Tag Response",
-	"SWID Tag Identifier Response");
+	"SWID Request",
+	"SWID Tag Identifier Inventory",
+	"SWID Tag Identifier Events",
+	"SWID Tag Inventory",
+	"SWID Tag Events");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_REQ_FUNC_COMP_EVID,
 							TCG_PTS_REQ_FUNC_COMP_EVID,
-							TCG_SWID_TAG_IDENTIFIER_RESPONSE,
+							TCG_SWID_TAG_EVENTS,
 	"Request Functional Component Evidence");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_GEN_ATTEST_EVID,
 							TCG_PTS_GEN_ATTEST_EVID,
