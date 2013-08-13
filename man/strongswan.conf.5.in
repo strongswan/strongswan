@@ -623,6 +623,11 @@ Number of ipsecN devices
 .BR charon.plugins.kernel-klips.ipsec_dev_mtu " [0]"
 Set MTU of ipsecN device
 .TP
+.BR charon.plugins.kernel-netlink.fwmark
+Firewall mark to set on the routing rule that directs traffic to our own routing
+table. The format is [!]mark[/mask], where the optional exclamation mark inverts
+the meaning (i.e. the rule only applies to packets that don't match the mark).
+.TP
 .BR charon.plugins.kernel-netlink.roam_events " [yes]"
 Whether to trigger roam events when interfaces, addresses or routes change
 .TP
