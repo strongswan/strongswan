@@ -50,6 +50,11 @@ struct private_kernel_libipsec_ipsec_t {
 	 * List of exclude routes (exclude_route_t)
 	 */
 	linked_list_t *excludes;
+
+	/**
+	 * Whether the remote TS may equal the IKE peer
+	 */
+	bool allow_peer_ts;
 };
 
 typedef struct exclude_route_t exclude_route_t;
@@ -465,7 +470,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		policy->route = NULL;
 	}
 
-	if (dst_ts->is_host(dst_ts, dst))
+	if (!this->allow_peer_ts && dst_ts->is_host(dst_ts, dst))
 	{
 		DBG1(DBG_KNL, "can't install route for %R === %R %N, conflicts with "
 			 "IKE traffic", src_ts, dst_ts, policy_dir_names,
@@ -475,7 +480,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		return FALSE;
 	}
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
-	if (dst_ts->includes(dst_ts, dst))
+	if (!this->allow_peer_ts && dst_ts->includes(dst_ts, dst))
 	{
 		/* add exclude route for peer */
 		add_exclude_route(this, route, src, dst);
@@ -694,6 +699,8 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.policies = linked_list_create(),
 		.excludes = linked_list_create(),
+		.allow_peer_ts = lib->settings->get_bool(lib->settings,
+				"%s.plugins.kernel-libipsec.allow_peer_ts", FALSE, hydra->daemon),
 	);
 
 	ipsec->events->register_listener(ipsec->events, &this->ipsec_listener);

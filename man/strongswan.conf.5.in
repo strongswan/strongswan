@@ -623,6 +623,13 @@ Number of ipsecN devices
 .BR charon.plugins.kernel-klips.ipsec_dev_mtu " [0]"
 Set MTU of ipsecN device
 .TP
+.BR charon.plugins.kernel-libipsec.allow_peer_ts " [no]"
+Allow that the remote traffic selector equals the IKE peer. The route installed
+for such traffic (via TUN device) usually prevents further IKE traffic. The
+fwmark options for the \fIkernel-netlink\fR and \fIsocket-default\fR plugins can
+be used to circumvent that problem.
+to
+.TP
 .BR charon.plugins.kernel-netlink.fwmark
 Firewall mark to set on the routing rule that directs traffic to our own routing
 table. The format is [!]mark[/mask], where the optional exclamation mark inverts
