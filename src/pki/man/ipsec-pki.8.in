@@ -67,6 +67,81 @@ Extract a public key from a private key or certificate.
 .B "\-v, \-\-verify"
 Verify a certificate using a CA certificate.
 .
+.SH "EXAMPLES"
+.
+.SS "Generating a CA Certificate"
+.
+The first step is to generate a private key using the
+.B \-\-gen
+command. By default this generates a 2048-bit RSA key.
+.PP
+.EX
+  ipsec pki \-\-gen > ca_key.der
+.EE
+.PP
+This key is used to create the self-signed CA certificate, using the
+.B \-\-self
+command. The distinguished name should be adjusted to your needs.
+.PP
+.EX
+  ipsec pki \-\-self \-\-ca \-\-in ca_key.der \\
+            \-\-dn "C=CH, O=strongSwan, CN=strongSwan CA" > ca_cert.der
+.EE
+.PP
+.
+.SS "Generating End-Entity Certificates"
+.
+With the root CA certificate and key at hand end-entity certificates for clients
+and servers can be issued. Similarly intermediate CA certificates can be issued,
+which in turn can issue other certificates.
+To generate a certificate for a server, we start by generating a private key.
+.PP
+.EX
+  ipsec pki \-\-gen > server_key.der
+.EE
+.PP
+The public key will be included in the certificate so lets extract that from the
+private key.
+.PP
+.EX
+  ipsec pki \-\-pub \-\-in server_key.der > server_pub.der
+.EE
+.PP
+The following command will use the CA certificate and private key to issue the
+certificate for this server. Adjust the distinguished name, subjectAltName(s)
+and flags as needed (check
+.BR pki\ \-\-issue (8)
+for more options).
+.PP
+.EX
+  ipsec pki \-\-issue \-\-in server_pub.der \-\-cacert ca_cert.der \\
+            \-\-cakey ca_key.der \-\-dn "C=CH, O=strongSwan, CN=VPN Server" \\
+            \-\-san vpn.strongswan.org \-\-flag serverAuth > server_cert.der
+.EE
+.PP
+Instead of storing the public key in a separate
+file, the output of
+.B \-\-pub
+may also be piped directly into the above command.
+.
+.SS "Generating Certificate Revocation Lists (CRL)"
+.
+If end-entity certificates have to be revoked, CRLs may be generated using
+the
+.B \-\-signcrl
+command.
+.PP
+.EX
+  ipsec pki \-\-signcrl \-\-cacert ca_cert.der \-\-cakey ca_key.der \\
+            \-\-reason superseded \-\-cert server_cert.der > crl.der
+.EE
+.PP
+The certificate given with \-\-cacert must be either a CA certificate or a
+certificate with the
+.I crlSign
+extended key usage (\-\-flag crlSign). URIs to CRLs may be included in issued
+certificates with the \-\-crl option.
+.
 .SH "SEE ALSO"
 .
 .BR ipsec (8),
