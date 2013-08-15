@@ -188,6 +188,8 @@ ARG_ENABL_SET([imc-os],         [enable IMC operating system module.])
 ARG_ENABL_SET([imv-os],         [enable IMV operating system module.])
 ARG_ENABL_SET([imc-attestation],[enable IMC attestation module.])
 ARG_ENABL_SET([imv-attestation],[enable IMV attestation module.])
+ARG_ENABL_SET([imc-swid],       [enable IMC swid module.])
+ARG_ENABL_SET([imv-swid],       [enable IMV swid module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -339,11 +341,11 @@ if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_
 	tnc_tnccs=true;
 fi
 
-if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue; then
 	imcv=true;
 fi
 
-if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue; then
 	pts=true;
 fi
 
@@ -1225,6 +1227,8 @@ AM_CONDITIONAL(USE_IMC_OS, test x$imc_os = xtrue)
 AM_CONDITIONAL(USE_IMV_OS, test x$imv_os = xtrue)
 AM_CONDITIONAL(USE_IMC_ATTESTATION, test x$imc_attestation = xtrue)
 AM_CONDITIONAL(USE_IMV_ATTESTATION, test x$imv_attestation = xtrue)
+AM_CONDITIONAL(USE_IMC_SWID, test x$imc_swid = xtrue)
+AM_CONDITIONAL(USE_IMV_SWID, test x$imv_swid = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
@@ -1386,6 +1390,8 @@ AC_CONFIG_FILES([
 	src/libpts/Makefile
 	src/libpts/plugins/imc_attestation/Makefile
 	src/libpts/plugins/imv_attestation/Makefile
+	src/libpts/plugins/imc_swid/Makefile
+	src/libpts/plugins/imv_swid/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile

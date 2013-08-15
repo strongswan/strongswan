@@ -13,23 +13,25 @@
  */
 
 #include "tcg_attr.h"
-#include "tcg/tcg_pts_attr_proto_caps.h"
-#include "tcg/tcg_pts_attr_dh_nonce_params_req.h"
-#include "tcg/tcg_pts_attr_dh_nonce_params_resp.h"
-#include "tcg/tcg_pts_attr_dh_nonce_finish.h"
-#include "tcg/tcg_pts_attr_meas_algo.h"
-#include "tcg/tcg_pts_attr_get_tpm_version_info.h"
-#include "tcg/tcg_pts_attr_tpm_version_info.h"
-#include "tcg/tcg_pts_attr_get_aik.h"
-#include "tcg/tcg_pts_attr_aik.h"
-#include "tcg/tcg_pts_attr_req_func_comp_evid.h"
-#include "tcg/tcg_pts_attr_gen_attest_evid.h"
-#include "tcg/tcg_pts_attr_simple_comp_evid.h"
-#include "tcg/tcg_pts_attr_simple_evid_final.h"
-#include "tcg/tcg_pts_attr_req_file_meas.h"
-#include "tcg/tcg_pts_attr_file_meas.h"
-#include "tcg/tcg_pts_attr_req_file_meta.h"
-#include "tcg/tcg_pts_attr_unix_file_meta.h"
+#include "tcg/pts/tcg_pts_attr_proto_caps.h"
+#include "tcg/pts/tcg_pts_attr_dh_nonce_params_req.h"
+#include "tcg/pts/tcg_pts_attr_dh_nonce_params_resp.h"
+#include "tcg/pts/tcg_pts_attr_dh_nonce_finish.h"
+#include "tcg/pts/tcg_pts_attr_meas_algo.h"
+#include "tcg/pts/tcg_pts_attr_get_tpm_version_info.h"
+#include "tcg/pts/tcg_pts_attr_tpm_version_info.h"
+#include "tcg/pts/tcg_pts_attr_get_aik.h"
+#include "tcg/pts/tcg_pts_attr_aik.h"
+#include "tcg/pts/tcg_pts_attr_req_func_comp_evid.h"
+#include "tcg/pts/tcg_pts_attr_gen_attest_evid.h"
+#include "tcg/pts/tcg_pts_attr_simple_comp_evid.h"
+#include "tcg/pts/tcg_pts_attr_simple_evid_final.h"
+#include "tcg/pts/tcg_pts_attr_req_file_meas.h"
+#include "tcg/pts/tcg_pts_attr_file_meas.h"
+#include "tcg/pts/tcg_pts_attr_req_file_meta.h"
+#include "tcg/pts/tcg_pts_attr_unix_file_meta.h"
+#include "tcg/swid/tcg_swid_attr_req.h"
+#include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 
 ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 							TCG_SCAP_SUMMARY_RESULTS,
@@ -172,6 +174,10 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 {
 	switch (type)
 	{
+		case TCG_SWID_REQUEST:
+			return tcg_swid_attr_req_create_from_data(value);
+		case TCG_SWID_TAG_ID_INVENTORY:
+			return tcg_swid_attr_tag_id_inv_create_from_data(value);
 		case TCG_PTS_REQ_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 		case TCG_PTS_PROTO_CAPS:
@@ -210,6 +216,9 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_req_file_meta_create_from_data(value);
 		case TCG_PTS_UNIX_FILE_META:
 			return tcg_pts_attr_unix_file_meta_create_from_data(value);
+		case TCG_SWID_TAG_ID_EVENTS:
+		case TCG_SWID_TAG_INVENTORY:
+		case TCG_SWID_TAG_EVENTS:
 		case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_UPDATE_TEMPL_REF_MANI:

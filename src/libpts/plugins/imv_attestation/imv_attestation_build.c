@@ -16,14 +16,14 @@
 #include "imv_attestation_build.h"
 #include "imv_attestation_state.h"
 
-#include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_meas_algo.h>
-#include <tcg/tcg_pts_attr_dh_nonce_params_req.h>
-#include <tcg/tcg_pts_attr_dh_nonce_finish.h>
-#include <tcg/tcg_pts_attr_get_tpm_version_info.h>
-#include <tcg/tcg_pts_attr_get_aik.h>
-#include <tcg/tcg_pts_attr_req_func_comp_evid.h>
-#include <tcg/tcg_pts_attr_gen_attest_evid.h>
+#include <tcg/pts/tcg_pts_attr_proto_caps.h>
+#include <tcg/pts/tcg_pts_attr_meas_algo.h>
+#include <tcg/pts/tcg_pts_attr_dh_nonce_params_req.h>
+#include <tcg/pts/tcg_pts_attr_dh_nonce_finish.h>
+#include <tcg/pts/tcg_pts_attr_get_tpm_version_info.h>
+#include <tcg/pts/tcg_pts_attr_get_aik.h>
+#include <tcg/pts/tcg_pts_attr_req_func_comp_evid.h>
+#include <tcg/pts/tcg_pts_attr_gen_attest_evid.h>
 
 #include <utils/debug.h>
 

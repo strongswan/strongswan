@@ -35,8 +35,8 @@
 #include <pts/pts_creds.h>
 
 #include <tcg/tcg_attr.h>
-#include <tcg/tcg_pts_attr_req_file_meas.h>
-#include <tcg/tcg_pts_attr_req_file_meta.h>
+#include <tcg/pts/tcg_pts_attr_req_file_meas.h>
+#include <tcg/pts/tcg_pts_attr_req_file_meta.h>
 
 #include <tncif_pa_subtypes.h>
 

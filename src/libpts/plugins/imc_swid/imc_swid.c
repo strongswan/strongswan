@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,50 +13,30 @@
  * for more details.
  */
 
-#include "imc_attestation_state.h"
-#include "imc_attestation_process.h"
+#include "imc_swid_state.h"
+
+#include "libpts.h"
+#include "swid/swid_tag_id.h"
+#include "tcg/swid/tcg_swid_attr_req.h"
+#include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
-#include <ietf/ietf_attr.h>
-#include <ietf/ietf_attr_pa_tnc_error.h>
-#include <ietf/ietf_attr_product_info.h>
-#include <ietf/ietf_attr_string_version.h>
-#include <ietf/ietf_attr_assess_result.h>
-#include <os_info/os_info.h>
-
-#include <libpts.h>
-
-#include <pts/pts_error.h>
-
-#include <tcg/pts/tcg_pts_attr_proto_caps.h>
-#include <tcg/pts/tcg_pts_attr_meas_algo.h>
 
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <utils/debug.h>
-#include <collections/linked_list.h>
 
 /* IMC definitions */
 
-static const char imc_name[] = "Attestation";
+static const char imc_name[] = "SWID";
 
 static pen_type_t msg_types[] = {
-	{ PEN_TCG, PA_SUBTYPE_TCG_PTS }
+	{ PEN_TCG, PA_SUBTYPE_TCG_SWID }
 };
 
-static imc_agent_t *imc_attestation;
-
-/**
- * Supported PTS measurement algorithms
- */
-static pts_meas_algorithms_t supported_algorithms = PTS_MEAS_ALGO_NONE;
-
-/**
- * Supported PTS Diffie Hellman Groups
- */
-static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
+static imc_agent_t *imc_swid;
 
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
@@ -66,19 +46,14 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	if (imc_attestation)
+	if (imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	if (!pts_meas_algo_probe(&supported_algorithms) ||
-		!pts_dh_group_probe(&supported_dh_groups))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	imc_attestation = imc_agent_create(imc_name, msg_types, countof(msg_types),
-									   imc_id, actual_version);
-	if (!imc_attestation)
+	imc_swid = imc_agent_create(imc_name, msg_types, countof(msg_types),
+							  imc_id, actual_version);
+	if (!imc_swid)
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -102,7 +77,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 {
 	imc_state_t *state;
 
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
@@ -110,11 +85,11 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
-			state = imc_attestation_state_create(connection_id);
-			return imc_attestation->create_state(imc_attestation, state);
+			state = imc_swid_state_create(connection_id);
+			return imc_swid->create_state(imc_swid, state);
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (imc_attestation->change_state(imc_attestation, connection_id,
-				new_state, &state) != TNC_RESULT_SUCCESS)
+			if (imc_swid->change_state(imc_swid, connection_id, new_state,
+				&state) != TNC_RESULT_SUCCESS)
 			{
 				return TNC_RESULT_FATAL;
 			}
@@ -122,15 +97,12 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
 			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
-			return imc_attestation->delete_state(imc_attestation, connection_id);
-		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
-		case TNC_CONNECTION_STATE_ACCESS_NONE:
+			return imc_swid->delete_state(imc_swid, connection_id);
 		default:
-			return imc_attestation->change_state(imc_attestation, connection_id,
-												  new_state, NULL);
+			return imc_swid->change_state(imc_swid, connection_id,
+										  new_state, NULL);
 	}
 }
-
 
 /**
  * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
@@ -138,10 +110,16 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
-	if (!imc_attestation)
+	imc_state_t *state;
+
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_swid->get_state(imc_swid, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
 	}
 
 	return TNC_RESULT_SUCCESS;
@@ -150,7 +128,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 {
 	imc_msg_t *out_msg;
-	imc_attestation_state_t *attestation_state;
+	imc_swid_state_t *swid_state;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t type;
@@ -164,53 +142,49 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		return result;
 	}
 	out_msg = imc_msg_create_as_reply(in_msg);
+	swid_state = (imc_swid_state_t*)state;
 
 	/* analyze PA-TNC attributes */
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
+		tcg_swid_attr_req_t *attr_req;
+		tcg_swid_attr_tag_id_inv_t *attr_tag_id_inv;
+		swid_tag_id_t *tag_id;
+		u_int8_t flags;
+		u_int32_t request_id, eid_epoch;
+
 		type = attr->get_type(attr);
 
-		if (type.vendor_id == PEN_IETF)
+		if (type.vendor_id != PEN_TCG || type.type != TCG_SWID_REQUEST)
 		{
-			if (type.type == IETF_ATTR_PA_TNC_ERROR)
-			{
-				ietf_attr_pa_tnc_error_t *error_attr;
-				pen_type_t error_code;
-				chunk_t msg_info;
-
-				error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-				error_code = error_attr->get_error_code(error_attr);
-
-				if (error_code.vendor_id == PEN_TCG)
-				{
-					msg_info = error_attr->get_msg_info(error_attr);
-
-					DBG1(DBG_IMC, "received TCG-PTS error '%N'",
-						 pts_error_code_names, error_code.type);
-					DBG1(DBG_IMC, "error information: %B", &msg_info);
-
-					result = TNC_RESULT_FATAL;
-				}
-			}
+			continue;
 		}
-		else if (type.vendor_id == PEN_TCG)
-		{
-			attestation_state = (imc_attestation_state_t*)state;
 
-			if (!imc_attestation_process(attr, out_msg, attestation_state,
-				supported_algorithms, supported_dh_groups))
-			{
-				result = TNC_RESULT_FATAL;
-				break;
-			}
+		attr_req = (tcg_swid_attr_req_t*)attr;
+		flags = attr_req->get_flags(attr_req);
+		request_id = attr_req->get_request_id(attr_req);
+		if (flags & TCG_SWID_ATTR_REQ_FLAG_R)
+		{
+			eid_epoch = swid_state->get_eid_epoch(swid_state);
+			attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
+			attr_tag_id_inv = (tcg_swid_attr_tag_id_inv_t*)attr;
+			tag_id = swid_tag_id_create(
+						chunk_from_str("regid.2004-03.org.strongswan"),
+						chunk_from_str("strongSwan-5-1-0"),
+						chunk_empty);
+			attr_tag_id_inv->add_tag_id(attr_tag_id_inv, tag_id);
+			out_msg->add_attribute(out_msg, attr);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (result == TNC_RESULT_SUCCESS)
+	if (fatal_error)
 	{
-		/* send PA-TNC message with the excl flag set */
+		result = TNC_RESULT_FATAL;
+	}
+	else
+	{
 		result = out_msg->send(out_msg, TRUE);
 	}
 	out_msg->destroy(out_msg);
@@ -220,6 +194,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 
 /**
  * see section 3.8.4 of TCG TNC IF-IMC Specification 1.3
+
  */
 TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id,
@@ -231,18 +206,17 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	imc_msg_t *in_msg;
 	TNC_Result result;
 
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
+	if (!imc_swid->get_state(imc_swid, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
-
-	in_msg = imc_msg_create_from_data(imc_attestation, state, connection_id,
-									  msg_type, chunk_create(msg, msg_len));
+	in_msg = imc_msg_create_from_data(imc_swid, state, connection_id, msg_type,
+									  chunk_create(msg, msg_len));
 	result = receive_message(state, in_msg);
 	in_msg->destroy(in_msg);
 
@@ -266,17 +240,17 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 	imc_msg_t *in_msg;
 	TNC_Result result;
 
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
+	if (!imc_swid->get_state(imc_swid, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
-	in_msg = imc_msg_create_from_long_data(imc_attestation, state, connection_id,
-								src_imv_id, dst_imc_id, msg_vid, msg_subtype,
+	in_msg = imc_msg_create_from_long_data(imc_swid, state, connection_id,
+								src_imv_id, dst_imc_id,msg_vid, msg_subtype,
 								chunk_create(msg, msg_len));
 	result =receive_message(state, in_msg);
 	in_msg->destroy(in_msg);
@@ -290,7 +264,7 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
 							   TNC_ConnectionID connection_id)
 {
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
@@ -303,7 +277,7 @@ TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
  */
 TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 {
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
@@ -311,8 +285,8 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 
 	libpts_deinit();
 
-	imc_attestation->destroy(imc_attestation);
-	imc_attestation = NULL;
+	imc_swid->destroy(imc_swid);
+	imc_swid = NULL;
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -321,12 +295,12 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
  * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
-								TNC_TNCC_BindFunctionPointer bind_function)
+									   TNC_TNCC_BindFunctionPointer bind_function)
 {
-	if (!imc_attestation)
+	if (!imc_swid)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imc_attestation->bind_functions(imc_attestation, bind_function);
+	return imc_swid->bind_functions(imc_swid, bind_function);
 }

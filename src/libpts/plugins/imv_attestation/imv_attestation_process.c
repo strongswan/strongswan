@@ -20,15 +20,15 @@
 
 #include <pts/pts.h>
 
-#include <tcg/tcg_pts_attr_aik.h>
-#include <tcg/tcg_pts_attr_dh_nonce_params_resp.h>
-#include <tcg/tcg_pts_attr_file_meas.h>
-#include <tcg/tcg_pts_attr_meas_algo.h>
-#include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_simple_comp_evid.h>
-#include <tcg/tcg_pts_attr_simple_evid_final.h>
-#include <tcg/tcg_pts_attr_tpm_version_info.h>
-#include <tcg/tcg_pts_attr_unix_file_meta.h>
+#include <tcg/pts/tcg_pts_attr_aik.h>
+#include <tcg/pts/tcg_pts_attr_dh_nonce_params_resp.h>
+#include <tcg/pts/tcg_pts_attr_file_meas.h>
+#include <tcg/pts/tcg_pts_attr_meas_algo.h>
+#include <tcg/pts/tcg_pts_attr_proto_caps.h>
+#include <tcg/pts/tcg_pts_attr_simple_comp_evid.h>
+#include <tcg/pts/tcg_pts_attr_simple_evid_final.h>
+#include <tcg/pts/tcg_pts_attr_tpm_version_info.h>
+#include <tcg/pts/tcg_pts_attr_unix_file_meta.h>
 
 #include <utils/debug.h>
 #include <crypto/hashers/hasher.h>

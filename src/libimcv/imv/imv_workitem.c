@@ -20,7 +20,7 @@
 
 typedef struct private_imv_workitem_t private_imv_workitem_t;
 
-ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_UDP_PORT_BLOCK,
+ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_SWID_TAGS,
 	"PCKGS",
 	"UNSRC",
 	"FWDEN",
@@ -34,7 +34,8 @@ ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_UDP_PORT_BLOCK
 	"TCPOP",
 	"TCPBL",
 	"UDPOP",
-	"UDPBL"
+	"UDPBL",
+	"SWIDT"
 );
 
 /**

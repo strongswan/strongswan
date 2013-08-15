@@ -33,7 +33,7 @@ if USE_LIBTNCCS
 endif
 
 if USE_LIBPTTLS
-  SUBDIRS += libpttls pt-tls-client
+  SUBDIRS += libpttls
 endif
 
 if USE_IMCV
@@ -106,6 +106,10 @@ endif
 
 if USE_CMD
   SUBDIRS += charon-cmd
+endif
+
+if USE_LIBPTTLS
+  SUBDIRS += pt-tls-client
 endif
 
 EXTRA_DIST = strongswan.conf
