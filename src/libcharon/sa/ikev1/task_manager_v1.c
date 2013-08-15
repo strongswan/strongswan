@@ -448,7 +448,7 @@ static bool send_packet(private_task_manager_t *this, bool request,
 		{	/* reduce size due to non-ESP marker */
 			frag_size -= 4;
 		}
-		count = (data.len / (frag_size + 1)) + 1;
+		count = data.len / frag_size + (data.len % frag_size ? 1 : 0);
 
 		DBG1(DBG_IKE, "sending IKE message with length of %zu bytes in "
 			 "%hhu fragments", data.len, count);
