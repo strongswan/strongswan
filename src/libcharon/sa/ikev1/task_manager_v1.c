@@ -413,7 +413,6 @@ static bool send_packet(private_task_manager_t *this, bool request,
 {
 	bool use_frags = FALSE;
 	ike_cfg_t *ike_cfg;
-	host_t *src, *dst;
 	chunk_t data;
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
@@ -438,14 +437,17 @@ static bool send_packet(private_task_manager_t *this, bool request,
 		fragment_payload_t *fragment;
 		u_int8_t num, count;
 		size_t len, frag_size;
-		bool nat;
-
-		/* reduce size due to non-ESP marker */
-		nat = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
-		frag_size = this->frag.size - (nat ? 4 : 0);
+		host_t *src, *dst;
 
 		src = packet->get_source(packet);
 		dst = packet->get_destination(packet);
+
+		frag_size = this->frag.size;
+		if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+			src->get_port(src) != IKEV2_UDP_PORT)
+		{	/* reduce size due to non-ESP marker */
+			frag_size -= 4;
+		}
 		count = (data.len / (frag_size + 1)) + 1;
 
 		DBG1(DBG_IKE, "sending IKE message with length of %zu bytes in "
