@@ -51,6 +51,11 @@ static int pub()
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
+				else if (streq(arg, "pub"))
+				{
+					type = CRED_PUBLIC_KEY;
+					subtype = KEY_ANY;
+				}
 				else if (streq(arg, "pkcs10"))
 				{
 					type = CRED_CERTIFICATE;
@@ -116,6 +121,15 @@ static int pub()
 		public = private->get_public_key(private);
 		private->destroy(private);
 	}
+	else if (type == CRED_PUBLIC_KEY)
+	{
+		public = cred;
+		if (!public)
+		{
+			fprintf(stderr, "parsing public key failed\n");
+			return 1;
+		}
+	}
 	else
 	{
 		cert = cred;
@@ -157,7 +171,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
-		{"[--in file|--keyid hex] [--type rsa|ecdsa|pkcs10|x509]",
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|pub|pkcs10|x509]",
 		 "[--outform der|pem|dnskey|sshkey]"},
 		{
 			{"help",	'h', 0, "show usage information"},

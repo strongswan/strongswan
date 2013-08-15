@@ -48,8 +48,9 @@ Input file. If not given the input is read from \fISTDIN\fR.
 .TP
 .BI "\-t, \-\-type " type
 Type of input. One of \fIrsa\fR (RSA private key), \fIecdsa\fR (ECDSA
-private key), \fIpkcs10\fR (PKCS#10 certificate request), \fIx509\fR (X.509
-certificate), defaults to \fIrsa\fR.
+private key), \fIpub\fR (public key),
+\fIpkcs10\fR (PKCS#10 certificate request), or \fIx509\fR (X.509 certificate),
+defaults to \fIrsa\fR.
 .TP
 .BI "\-f, \-\-outform " encoding
 Encoding of the extracted public key. One of \fIder\fR (ASN.1 DER), \fIpem\fR
