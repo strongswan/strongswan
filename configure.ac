@@ -1009,7 +1009,7 @@ ADD_PLUGIN([pkcs8],                [s charon openac scepclient pki scripts manag
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
 ADD_PLUGIN([dnskey],               [s charon pki])
-ADD_PLUGIN([sshkey],               [s charon nm cmd])
+ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([ipseckey],             [c charon])
 ADD_PLUGIN([pem],                  [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([padlock],              [s charon])

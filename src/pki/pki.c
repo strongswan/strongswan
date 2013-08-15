@@ -81,7 +81,18 @@ bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type)
 		switch (type)
 		{
 			case CRED_PUBLIC_KEY:
-				*enc =PUBKEY_DNSKEY;
+				*enc = PUBKEY_DNSKEY;
+				return TRUE;
+			default:
+				return FALSE;
+		}
+	}
+	else if (streq(form, "sshkey"))
+	{
+		switch (type)
+		{
+			case CRED_PUBLIC_KEY:
+				*enc = PUBKEY_SSHKEY;
 				return TRUE;
 			default:
 				return FALSE;

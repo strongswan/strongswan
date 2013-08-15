@@ -158,7 +158,7 @@ static void __attribute__ ((constructor))reg()
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
 		{"[--in file|--keyid hex] [--type rsa|ecdsa|pkcs10|x509]",
-		 "[--outform der|pem|dnskey]"},
+		 "[--outform der|pem|dnskey|sshkey]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
