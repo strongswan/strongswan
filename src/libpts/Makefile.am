@@ -35,6 +35,7 @@ libpts_la_SOURCES = \
 	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \
 	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
+	swid/swid_tag.h swid/swid_tag.c \
 	swid/swid_tag_id.h swid/swid_tag_id.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/pts/tcg_pts_attr_proto_caps.h tcg/pts/tcg_pts_attr_proto_caps.c \
@@ -55,7 +56,8 @@ libpts_la_SOURCES = \
 	tcg/pts/tcg_pts_attr_req_file_meta.h tcg/pts/tcg_pts_attr_req_file_meta.c \
 	tcg/pts/tcg_pts_attr_unix_file_meta.h tcg/pts/tcg_pts_attr_unix_file_meta.c \
 	tcg/swid/tcg_swid_attr_req.h tcg/swid/tcg_swid_attr_req.c \
-	tcg/swid/tcg_swid_attr_tag_id_inv.h tcg/swid/tcg_swid_attr_tag_id_inv.c
+	tcg/swid/tcg_swid_attr_tag_id_inv.h tcg/swid/tcg_swid_attr_tag_id_inv.c \
+	tcg/swid/tcg_swid_attr_tag_inv.h tcg/swid/tcg_swid_attr_tag_inv.c
 
 SUBDIRS = .
 

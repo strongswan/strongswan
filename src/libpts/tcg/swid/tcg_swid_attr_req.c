@@ -29,7 +29,7 @@ typedef struct private_tcg_swid_attr_req_t private_tcg_swid_attr_req_t;
  * SWID Request
  * see section 4.7 of TCG TNC SWID Message and Attributes for IF-M
  *
- *					   1				   2				   3
+ *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |Reserved |C|S|R|                   Tag ID Count                |

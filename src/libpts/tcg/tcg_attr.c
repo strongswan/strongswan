@@ -32,6 +32,7 @@
 #include "tcg/pts/tcg_pts_attr_unix_file_meta.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
+#include "tcg/swid/tcg_swid_attr_tag_inv.h"
 
 ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 							TCG_SCAP_SUMMARY_RESULTS,
@@ -178,6 +179,8 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_swid_attr_req_create_from_data(value);
 		case TCG_SWID_TAG_ID_INVENTORY:
 			return tcg_swid_attr_tag_id_inv_create_from_data(value);
+		case TCG_SWID_TAG_INVENTORY:
+			return tcg_swid_attr_tag_inv_create_from_data(value);
 		case TCG_PTS_REQ_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 		case TCG_PTS_PROTO_CAPS:
@@ -216,9 +219,10 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_req_file_meta_create_from_data(value);
 		case TCG_PTS_UNIX_FILE_META:
 			return tcg_pts_attr_unix_file_meta_create_from_data(value);
+		/* unsupported TCG/SWID attributes */
 		case TCG_SWID_TAG_ID_EVENTS:
-		case TCG_SWID_TAG_INVENTORY:
 		case TCG_SWID_TAG_EVENTS:
+		/* unsupported TCG/PTS attributes */
 		case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_UPDATE_TEMPL_REF_MANI:

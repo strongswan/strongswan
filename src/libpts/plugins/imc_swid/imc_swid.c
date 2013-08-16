@@ -16,8 +16,10 @@
 #include "imc_swid_state.h"
 
 #include "libpts.h"
+#include "swid/swid_tag.h"
 #include "swid/swid_tag_id.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
+#include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 
 #include <imc/imc_agent.h>
@@ -27,6 +29,39 @@
 
 #include <pen/pen.h>
 #include <utils/debug.h>
+
+static char strongswan_tag[] =
+	"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+	"<software_identification_tag "
+	"xmlns=\"http://standards.iso.org/iso/19770/-2/2009/schema.xsd\">\n"
+	"<entitlement_required_indicator>true</entitlement_required_indicator>\n"
+	"<product_title>strongSwan</product_title>\n"
+	"<product_version>\n"
+	"  <name>5.1.1dr1</name>\n"
+	"  <numeric>\n"
+	"    <major>5</major>\n"
+	"    <minor>1</minor>\n"
+	"    <build>0</build>\n"
+	"    <review></review>\n"
+	"  </numeric>\n"
+	"</product_version>\n"
+	"<software_creator>\n"
+	"  <name>strongSwan Project</name>\n"
+	"  <regid>regid.2004-03.org.strongswan</regid>\n"
+	"</software_creator>\n"
+	"<software_licensor>\n"
+	"  <name>strongSwan Project</name>\n"
+	"  <regid>regid.2004-03.org.strongswan</regid>\n"
+	"</software_licensor>\n"
+	"<software_id>\n"
+	"  <unique_id>strongSwan-5-1-0</unique_id>\n"
+	"  <tag_creator_regid>regid.2004-03.org.strongswan</tag_creator_regid>\n"
+	"</software_id>\n"
+	"<tag_creator>\n"
+	"  <name>strongSwan</name>\n"
+	"  <regid>regid.2004-03.org.strongswan</regid>\n"
+	"</tag_creator>\n"
+	"</software_identification_tag>\n";
 
 /* IMC definitions */
 
@@ -149,8 +184,6 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		tcg_swid_attr_req_t *attr_req;
-		tcg_swid_attr_tag_id_inv_t *attr_tag_id_inv;
-		swid_tag_id_t *tag_id;
 		u_int8_t flags;
 		u_int32_t request_id, eid_epoch;
 
@@ -164,18 +197,32 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		attr_req = (tcg_swid_attr_req_t*)attr;
 		flags = attr_req->get_flags(attr_req);
 		request_id = attr_req->get_request_id(attr_req);
+		eid_epoch = swid_state->get_eid_epoch(swid_state);
+
 		if (flags & TCG_SWID_ATTR_REQ_FLAG_R)
 		{
-			eid_epoch = swid_state->get_eid_epoch(swid_state);
+			swid_tag_id_t *tag_id;
+			tcg_swid_attr_tag_id_inv_t *attr_cast;
+
 			attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
-			attr_tag_id_inv = (tcg_swid_attr_tag_id_inv_t*)attr;
+			attr_cast = (tcg_swid_attr_tag_id_inv_t*)attr;
 			tag_id = swid_tag_id_create(
 						chunk_from_str("regid.2004-03.org.strongswan"),
 						chunk_from_str("strongSwan-5-1-0"),
 						chunk_empty);
-			attr_tag_id_inv->add_tag_id(attr_tag_id_inv, tag_id);
-			out_msg->add_attribute(out_msg, attr);
+			attr_cast->add_tag_id(attr_cast, tag_id);
 		}
+		else
+		{
+			swid_tag_t *tag;
+			tcg_swid_attr_tag_inv_t *attr_cast;
+	
+			attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1);
+			attr_cast = (tcg_swid_attr_tag_inv_t*)attr;
+			tag = swid_tag_create(chunk_from_str(strongswan_tag), chunk_empty);
+			attr_cast->add_tag(attr_cast, tag);
+		}
+		out_msg->add_attribute(out_msg, attr);
 	}
 	enumerator->destroy(enumerator);
 
