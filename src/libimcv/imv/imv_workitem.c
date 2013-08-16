@@ -106,6 +106,9 @@ METHOD(imv_workitem_t, set_imv_id, void,
 	private_imv_workitem_t *this, TNC_IMVID imv_id)
 {
 	this->imv_id = imv_id;
+
+	DBG2(DBG_IMV, "IMV %d handles %N workitem %d", imv_id,
+		 imv_workitem_type_names, this->type, this->id);
 }
 
 METHOD(imv_workitem_t, get_imv_id, TNC_IMVID,
