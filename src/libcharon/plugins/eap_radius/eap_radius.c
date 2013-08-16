@@ -392,6 +392,27 @@ static void process_timeout(radius_message_t *msg)
 }
 
 /**
+ * Add a Cisco Unity configuration attribute
+ */
+static void add_unity_attribute(eap_radius_provider_t *provider, u_int32_t id,
+								int type, chunk_t data)
+{
+	switch (type)
+	{
+		case 15: /* CVPN3000-IPSec-Banner1 */
+		case 36: /* CVPN3000-IPSec-Banner2 */
+			provider->add_attribute(provider, id, UNITY_BANNER, data);
+			break;
+		case 28: /* CVPN3000-IPSec-Default-Domain */
+			provider->add_attribute(provider, id, UNITY_DEF_DOMAIN, data);
+			break;
+		case 29: /* CVPN3000-IPSec-Split-DNS-Names */
+			provider->add_attribute(provider, id, UNITY_SPLITDNS_NAME, data);
+			break;
+	}
+}
+
+/**
  * Handle Framed-IP-Address and other IKE configuration attributes
  */
 static void process_cfg_attributes(radius_message_t *msg)
@@ -430,12 +451,13 @@ static void process_cfg_attributes(radius_message_t *msg)
 				switch (type)
 				{
 					case 15: /* CVPN3000-IPSec-Banner1 */
+					case 28: /* CVPN3000-IPSec-Default-Domain */
+					case 29: /* CVPN3000-IPSec-Split-DNS-Names */
 					case 36: /* CVPN3000-IPSec-Banner2 */
 						if (ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
 						{
-							provider->add_attribute(provider,
-												ike_sa->get_unique_id(ike_sa),
-												UNITY_BANNER, data);
+							add_unity_attribute(provider,
+									ike_sa->get_unique_id(ike_sa), type, data);
 						}
 						break;
 					default:
