@@ -15,7 +15,42 @@
 
 #include "sshkey_encoder.h"
 
+#include <asn1/asn1.h>
+#include <asn1/oid.h>
 #include <bio/bio_writer.h>
+
+#define ECDSA_PREFIX "ecdsa-sha2-"
+
+/**
+ * Write an EC domain parameter identifier as defined in RFC 5656
+ */
+static void write_ec_identifier(bio_writer_t *writer, char *prefix, int oid,
+								chunk_t enc)
+{
+	char *curve, identifier[128];
+
+	switch (oid)
+	{
+		case OID_PRIME256V1:
+			curve = strdup("nistp256");
+			break;
+		case OID_SECT384R1:
+			curve = strdup("nistp384");
+			break;
+		case OID_SECT521R1:
+			curve = strdup("nistp521");
+			break;
+		default:
+			curve = asn1_oid_to_string(enc);
+			break;
+	}
+	if (curve && snprintf(identifier, sizeof(identifier), "%s%s", prefix,
+						  curve) < sizeof(identifier))
+	{
+		writer->write_data32(writer, chunk_from_str(identifier));
+	}
+	free(curve);
+}
 
 /**
  * Encode the public key as Base64 encoded SSH key blob
@@ -33,6 +68,43 @@ static bool build_public_key(chunk_t *encoding, va_list args)
 
 		writer->write_data32(writer, e);
 		writer->write_data32(writer, n);
+		*encoding = chunk_to_base64(writer->get_buf(writer), NULL);
+		writer->destroy(writer);
+		return TRUE;
+	}
+	else if (cred_encoding_args(args, CRED_PART_ECDSA_PUB_ASN1_DER, &n,
+								CRED_PART_END))
+	{
+		chunk_t params, alg, q;
+		int oid;
+
+		/* parse subjectPublicKeyInfo */
+		if (asn1_unwrap(&n, &n) != ASN1_SEQUENCE)
+		{
+			return FALSE;
+		}
+		oid = asn1_parse_algorithmIdentifier(n, 1, &params);
+		if (oid != OID_EC_PUBLICKEY ||
+			asn1_unwrap(&params, &params) != ASN1_OID)
+		{
+			return FALSE;
+		}
+		oid = asn1_known_oid(params);
+		if (oid == OID_UNKNOWN)
+		{
+			return FALSE;
+		}
+		if (asn1_unwrap(&n, &alg) != ASN1_SEQUENCE ||
+			asn1_unwrap(&n, &q) != ASN1_BIT_STRING)
+		{
+			return FALSE;
+		}
+		writer = bio_writer_create(0);
+		write_ec_identifier(writer, ECDSA_PREFIX, oid, params);
+		write_ec_identifier(writer, "", oid, params);
+
+		q = chunk_skip_zero(q);
+		writer->write_data32(writer, q);
 		*encoding = chunk_to_base64(writer->get_buf(writer), NULL);
 		writer->destroy(writer);
 		return TRUE;
