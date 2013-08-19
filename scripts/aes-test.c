@@ -265,6 +265,10 @@ static bool get_next_test_vector(test_vector_t *test)
 				break;
 		}
 	}
+	if (param != PARAM_UNKNOWN)
+	{	/* could be that the file ended with a complete test vector */
+		return TRUE;
+	}
 	return FALSE;
 }
 
