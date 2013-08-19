@@ -10,7 +10,7 @@ exchange PA-TNC attributes.
 <b>carol</b> sends information on her operating system consisting of the PA-TNC attributes
 <em>Product Information</em>, <em>String Version</em>, <em>Numeric Version</em>,
 <em>Operational Status</em>, <em>Forwarding Enabled</em>, <em>Factory Default Password Enabled</em>
-and <em>Device ID> up-front, whereas <b>dave</b> must be prompted by the IMV to do so via an
+and <em>Device ID</em> up-front, whereas <b>dave</b> must be prompted by the IMV to do so via an
 <em>Attribute Request</em> PA-TNC attribute. <b>carol</b> is then prompted to send a list of
 installed packages using the <em>Installed Packages</em> PA-TNC attribute. Since <b>dave</b>
 successfully connected to the VPN gateway shortly before, no new list of installed packages is
