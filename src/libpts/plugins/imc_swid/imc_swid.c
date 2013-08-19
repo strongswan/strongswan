@@ -41,8 +41,8 @@ static char strongswan_tag[] =
 	"  <numeric>\n"
 	"    <major>5</major>\n"
 	"    <minor>1</minor>\n"
-	"    <build>0</build>\n"
-	"    <review></review>\n"
+	"    <build>1</build>\n"
+	"    <review>dr1</review>\n"
 	"  </numeric>\n"
 	"</product_version>\n"
 	"<software_creator>\n"
@@ -54,11 +54,11 @@ static char strongswan_tag[] =
 	"  <regid>regid.2004-03.org.strongswan</regid>\n"
 	"</software_licensor>\n"
 	"<software_id>\n"
-	"  <unique_id>strongSwan-5-1-0</unique_id>\n"
+	"  <unique_id>strongSwan-5-1-1-dr1</unique_id>\n"
 	"  <tag_creator_regid>regid.2004-03.org.strongswan</tag_creator_regid>\n"
 	"</software_id>\n"
 	"<tag_creator>\n"
-	"  <name>strongSwan</name>\n"
+	"  <name>strongSwan Project</name>\n"
 	"  <regid>regid.2004-03.org.strongswan</regid>\n"
 	"</tag_creator>\n"
 	"</software_identification_tag>\n";
@@ -208,7 +208,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 			attr_cast = (tcg_swid_attr_tag_id_inv_t*)attr;
 			tag_id = swid_tag_id_create(
 						chunk_from_str("regid.2004-03.org.strongswan"),
-						chunk_from_str("strongSwan-5-1-0"),
+						chunk_from_str("strongSwan-5-1-1-dr1"),
 						chunk_empty);
 			attr_cast->add_tag_id(attr_cast, tag_id);
 		}
