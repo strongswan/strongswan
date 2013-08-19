@@ -24,12 +24,12 @@
 /**
  * Buffer size for plain side I/O
  */
-#define PLAIN_BUF_SIZE 4096
+#define PLAIN_BUF_SIZE	TLS_MAX_FRAGMENT_LEN
 
 /**
  * Buffer size for encrypted side I/O
  */
-#define CRYPTO_BUF_SIZE 4096
+#define CRYPTO_BUF_SIZE	TLS_MAX_FRAGMENT_LEN + 2048
 
 typedef struct private_tls_socket_t private_tls_socket_t;
 typedef struct private_tls_application_t private_tls_application_t;
