@@ -1,0 +1,6 @@
+--connect aaa.strongswan.org
+--client dave@strongswan.org
+--key  /etc/ipsec.d/private/daveKey.pem
+--cert /etc/ipsec.d/certs/daveCert.pem
+--cert /etc/ipsec.d/cacerts/strongswanCert.pem
+--debug 2
