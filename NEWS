@@ -1,3 +1,10 @@
+strongswan-5.1.1
+----------------
+
+- The lean stand-alone pt-tls-client can set up a RFC 6876 PT-TLS session
+  with a strongSwan policy enforcement point which uses the tnc-pdp charon plugin.
+
+
 strongswan-5.1.0
 ----------------
 
