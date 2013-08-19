@@ -587,8 +587,7 @@ static bool pt_tls_receive_more(pt_tls_server_t *this, int fd,
 	switch (this->handle(this))
 	{
 		case NEED_MORE:
-			DBG1(DBG_TNC, "PT-TLS connection needs more");
-			break;
+			return TRUE;
 		case FAILED:
 		case SUCCESS:
 		default:
@@ -597,8 +596,6 @@ static bool pt_tls_receive_more(pt_tls_server_t *this, int fd,
 			close(fd);
 			return FALSE;
 	}
-
-	return TRUE;
 }
 
 /**

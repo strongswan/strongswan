@@ -400,75 +400,66 @@ static bool authenticate(private_pt_tls_server_t *this)
 /**
  * Perform assessment
  */
-static bool assess(private_pt_tls_server_t *this, tls_t *tnccs)
+static status_t assess(private_pt_tls_server_t *this, tls_t *tnccs)
 {
-	while (TRUE)
-	{
-		size_t msglen;
-		size_t buflen = PT_TLS_MAX_MESSAGE_LEN;
-		char buf[buflen];
-		bio_reader_t *reader;
-		u_int32_t vendor, type, identifier;
-		chunk_t data;
+	size_t msglen;
+	size_t buflen = PT_TLS_MAX_MESSAGE_LEN;
+	char buf[buflen];
+	bio_reader_t *reader;
+	u_int32_t vendor, type, identifier;
+	chunk_t data;
+	status_t status;
 
-		switch (tnccs->build(tnccs, buf, &buflen, &msglen))
+	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
+	if (!reader)
+	{
+		return FAILED;
+	}
+	if (vendor == 0)
+	{
+		if (type == PT_TLS_ERROR)
+		{
+			DBG1(DBG_TNC, "received PT-TLS error");
+			reader->destroy(reader);
+			return FAILED;
+		}
+		if (type != PT_TLS_PB_TNC_BATCH)
+		{
+			DBG1(DBG_TNC, "unexpected PT-TLS message: %d", type);
+			reader->destroy(reader);
+			return FAILED;
+		}
+		data = reader->peek(reader);
+		switch (tnccs->process(tnccs, data.ptr, data.len))
 		{
 			case SUCCESS:
-				return tnccs->is_complete(tnccs);
-			case ALREADY_DONE:
-				data = chunk_create(buf, buflen);
-				if (!pt_tls_write(this->tls, PT_TLS_PB_TNC_BATCH,
-								  this->identifier++, data))
-				{
-					return FALSE;
-				}
-				break;
-			case INVALID_STATE:
-				break;
+				reader->destroy(reader);
+				return tnccs->is_complete(tnccs) ? SUCCESS : FAILED;
 			case FAILED:
 			default:
-				return FALSE;
-		}
-
-		reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
-		if (!reader)
-		{
-			return FALSE;
-		}
-		if (vendor == 0)
-		{
-			if (type == PT_TLS_ERROR)
-			{
-				DBG1(DBG_TNC, "received PT-TLS error");
 				reader->destroy(reader);
 				return FALSE;
-			}
-			if (type != PT_TLS_PB_TNC_BATCH)
-			{
-				DBG1(DBG_TNC, "unexpected PT-TLS message: %d", type);
-				reader->destroy(reader);
-				return FALSE;
-			}
-			data = reader->peek(reader);
-			switch (tnccs->process(tnccs, data.ptr, data.len))
-			{
-				case SUCCESS:
-					reader->destroy(reader);
-					return tnccs->is_complete(tnccs);
-				case FAILED:
-				default:
-					reader->destroy(reader);
-					return FALSE;
-				case NEED_MORE:
-					break;
-			}
+			case NEED_MORE:
+				break;
 		}
-		else
-		{
-			DBG1(DBG_TNC, "ignoring vendor specific PT-TLS message");
-		}
-		reader->destroy(reader);
 	}
+	else
+	{
+		DBG1(DBG_TNC, "ignoring vendor specific PT-TLS message");
+	}
+	reader->destroy(reader);
+
+	status = tnccs->build(tnccs, buf, &buflen, &msglen);
+	if (status == ALREADY_DONE)
+	{
+		data = chunk_create(buf, buflen);
+		if (!pt_tls_write(this->tls, PT_TLS_PB_TNC_BATCH,
+						  this->identifier++, data))
+		{
+			return FAILED;
+		}
+	}
+	return status;
 }
 
 METHOD(pt_tls_server_t, handle, status_t,
@@ -492,15 +483,20 @@ METHOD(pt_tls_server_t, handle, status_t,
 				return FAILED;
 			}
 			this->state = PT_TLS_SERVER_TNCCS;
+			DBG1(DBG_TNC, "entering PT-TLS data transport phase");
 			break;
 		case PT_TLS_SERVER_TNCCS:
-			DBG1(DBG_TNC, "entering PT-TLS data transport phase");
-			if (!assess(this, (tls_t*)this->tnccs))
+			switch (assess(this, (tls_t*)this->tnccs))
 			{
-				return FAILED;
+				case SUCCESS:
+					this->state = PT_TLS_SERVER_END;
+					return SUCCESS;
+				case FAILED:
+					return FAILED;
+				default:
+					break;
 			}
-			this->state = PT_TLS_SERVER_END;
-			return SUCCESS;
+			break;
 		default:
 			return FAILED;
 	}
