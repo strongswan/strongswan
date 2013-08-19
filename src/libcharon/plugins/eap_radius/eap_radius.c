@@ -500,6 +500,11 @@ static void process_cfg_attributes(radius_message_t *msg)
 									ike_sa->get_unique_id(ike_sa), host);
 				}
 			}
+			else if (type == RAT_FRAMED_IP_NETMASK && data.len == 4)
+			{
+				provider->add_attribute(provider, ike_sa->get_unique_id(ike_sa),
+										INTERNAL_IP4_NETMASK, data);
+			}
 		}
 		enumerator->destroy(enumerator);
 
