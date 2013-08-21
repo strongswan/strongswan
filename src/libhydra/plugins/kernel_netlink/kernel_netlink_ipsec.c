@@ -628,6 +628,14 @@ static inline u_int32_t get_priority(policy_entry_t *policy,
 }
 
 /**
+ * Return the length of the ESN bitmap
+ */
+static inline size_t esn_bmp_len(private_kernel_netlink_ipsec_t *this)
+{
+	return this->replay_bmp * sizeof(u_int32_t);
+}
+
+/**
  * Convert the general ipsec mode to the one defined in xfrm.h
  */
 static u_int8_t mode2kernel(ipsec_mode_t mode)
@@ -1454,7 +1462,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			struct xfrm_replay_state_esn *replay;
 
 			replay = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
-							sizeof(*replay) + (this->replay_window + 7) / 8);
+									 sizeof(*replay) + esn_bmp_len(this));
 			if (!replay)
 			{
 				goto failed;
@@ -1585,7 +1593,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 				break;
 			}
 			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
-				RTA_PAYLOAD(rta) >= sizeof(**replay_esn) + this->replay_bmp)
+				RTA_PAYLOAD(rta) >= sizeof(**replay_esn) + esn_bmp_len(this))
 			{
 				*replay_esn = malloc(RTA_PAYLOAD(rta));
 				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
@@ -1903,12 +1911,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		struct xfrm_replay_state_esn *state;
 
 		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
-								sizeof(*state) + this->replay_bmp);
+								sizeof(*state) + esn_bmp_len(this));
 		if (!state)
 		{
 			goto failed;
 		}
-		memcpy(state, replay_esn, sizeof(*state) + this->replay_bmp);
+		memcpy(state, replay_esn, sizeof(*state) + esn_bmp_len(this));
 	}
 	else if (replay)
 	{
