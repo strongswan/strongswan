@@ -36,6 +36,10 @@
 
 #include "hook.h"
 
+/* this hook is currently only supported on Linux (systems like FreeBSD don't
+ * actually provide an interface to change the sequence numbers of SAs) */
+#ifdef __linux__
+
 #include <linux/xfrm.h>
 #include <unistd.h>
 #include <errno.h>
@@ -214,3 +218,5 @@ hook_t *reset_seq_hook_create(char *name)
 
 	return &this->hook;
 }
+
+#endif /* __linux__ */
