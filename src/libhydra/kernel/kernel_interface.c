@@ -447,7 +447,9 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	}
 	host->destroy(host);
 
-	addrs = create_address_enumerator(this, ADDR_TYPE_VIRTUAL);
+	/* try virtual IPs only first (on all interfaces) */
+	addrs = create_address_enumerator(this,
+									  ADDR_TYPE_ALL ^ ADDR_TYPE_REGULAR);
 	while (addrs->enumerate(addrs, (void**)&host))
 	{
 		if (ts->includes(ts, host))
@@ -464,8 +466,9 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	addrs->destroy(addrs);
 
 	if (!found)
-	{
-		addrs = create_address_enumerator(this, ADDR_TYPE_REGULAR);
+	{	/* then try the regular addresses (on all interfaces) */
+		addrs = create_address_enumerator(this,
+										  ADDR_TYPE_ALL ^ ADDR_TYPE_VIRTUAL);
 		while (addrs->enumerate(addrs, (void**)&host))
 		{
 			if (ts->includes(ts, host))
