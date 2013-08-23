@@ -647,7 +647,7 @@ METHOD(stroke_list_t, status, void,
 		half_open);
 	enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, wait);
-	while (enumerator->enumerate(enumerator, &ike_sa))
+	while (enumerator->enumerate(enumerator, &ike_sa) && ferror(out) == 0)
 	{
 		bool ike_printed = FALSE;
 		enumerator_t *children = ike_sa->create_child_sa_enumerator(ike_sa);
