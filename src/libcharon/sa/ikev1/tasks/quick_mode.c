@@ -733,6 +733,38 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 	return ALREADY_DONE;
 }
 
+/**
+ * Prepare a list of proposals from child_config containing only the specified
+ * DH group, unless it is set to MODP_NONE.
+ */
+static linked_list_t *get_proposals(private_quick_mode_t *this,
+									diffie_hellman_group_t group)
+{
+	linked_list_t *list;
+	proposal_t *proposal;
+	enumerator_t *enumerator;
+
+	list = this->config->get_proposals(this->config, FALSE);
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (group != MODP_NONE)
+		{
+			if (!proposal->has_dh_group(proposal, group))
+			{
+				list->remove_at(list, enumerator);
+				proposal->destroy(proposal);
+				continue;
+			}
+			proposal->strip_dh(proposal, group);
+		}
+		proposal->set_spi(proposal, this->spi_i);
+	}
+	enumerator->destroy(enumerator);
+
+	return list;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
@@ -740,10 +772,8 @@ METHOD(task_t, build_i, status_t,
 	{
 		case QM_INIT:
 		{
-			enumerator_t *enumerator;
 			sa_payload_t *sa_payload;
 			linked_list_t *list, *tsi, *tsr;
-			proposal_t *proposal;
 			diffie_hellman_group_t group;
 			encap_t encap;
 
@@ -779,33 +809,39 @@ METHOD(task_t, build_i, status_t,
 			group = this->config->get_dh_group(this->config);
 			if (group != MODP_NONE)
 			{
+				proposal_t *proposal;
+				u_int16_t preferred_group;
+
+				proposal = this->ike_sa->get_proposal(this->ike_sa);
+				proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+										&preferred_group, NULL);
+				/* try the negotiated DH group from IKE_SA */
+				list = get_proposals(this, preferred_group);
+				if (list->get_count(list))
+				{
+					group = preferred_group;
+				}
+				else
+				{
+					/* fall back to the first configured DH group */
+					list->destroy(list);
+					list = get_proposals(this, group);
+				}
+
 				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 														  group);
 				if (!this->dh)
 				{
 					DBG1(DBG_IKE, "configured DH group %N not supported",
 						 diffie_hellman_group_names, group);
+					list->destroy_offset(list, offsetof(proposal_t, destroy));
 					return FAILED;
 				}
 			}
-
-			list = this->config->get_proposals(this->config, FALSE);
-			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &proposal))
+			else
 			{
-				if (group != MODP_NONE)
-				{
-					if (!proposal->has_dh_group(proposal, group))
-					{
-						list->remove_at(list, enumerator);
-						proposal->destroy(proposal);
-						continue;
-					}
-					proposal->strip_dh(proposal, group);
-				}
-				proposal->set_spi(proposal, this->spi_i);
+				list = get_proposals(this, MODP_NONE);
 			}
-			enumerator->destroy(enumerator);
 
 			get_lifetimes(this);
 			encap = get_encap(this->ike_sa, this->udp);
