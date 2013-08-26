@@ -712,8 +712,14 @@ Path to X.509 certificate file of IF-MAP server
 .BR charon.plugins.tnc-ifmap.username_password
 Credentials of IF-MAP client of the form username:password
 .TP
+.BR charon.plugins.tnc-pdp.pt_tls.enable " [yes]"
+Enable PT-TLS protocol on the strongSwan PDP
+.TP
 .BR charon.plugins.tnc-pdp.pt_tls.port " [271]"
 PT-TLS server port the strongSwan PDP is listening on
+.TP
+.BR charon.plugins.tnc-pdp.radius.enable " [yes]"
+Enable RADIUS protocol on the strongSwan PDP
 .TP
 .BR charon.plugins.tnc-pdp.radius.method " [ttls]"
 EAP tunnel method to be used

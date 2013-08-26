@@ -750,11 +750,16 @@ tnc_pdp_t *tnc_pdp_create(void)
 	private_tnc_pdp_t *this;
 	char *secret, *server, *eap_type_str;
 	int radius_port, pt_tls_port;
+	bool radius_enable, pt_tls_enable;
 
 	server = lib->settings->get_str(lib->settings,
 					"%s.plugins.tnc-pdp.server", NULL, charon->name);
+	pt_tls_enable = lib->settings->get_bool(lib->settings,
+					"%s.plugins.tnc-pdp.pt_tls.enable", TRUE, charon->name);
 	pt_tls_port = lib->settings->get_int(lib->settings,
 					"%s.plugins.tnc-pdp.pt_tls.port", PT_TLS_PORT, charon->name);
+	radius_enable = lib->settings->get_bool(lib->settings,
+					"%s.plugins.tnc-pdp.radius.enable", TRUE, charon->name);
 	radius_port = lib->settings->get_int(lib->settings,
 					"%s.plugins.tnc-pdp.radius.port", RADIUS_PORT, charon->name);
 	secret = lib->settings->get_str(lib->settings,
@@ -762,14 +767,14 @@ tnc_pdp_t *tnc_pdp_create(void)
 	eap_type_str = lib->settings->get_str(lib->settings,
 					"%s.plugins.tnc-pdp.radius.method", "ttls", charon->name);
 
+	if (!pt_tls_enable && !radius_enable)
+	{
+		DBG1(DBG_CFG, " neither PT-TLS and RADIUS protocols enabled, PDP disabled");
+		return NULL;
+	}
 	if (!server)
 	{
 		DBG1(DBG_CFG, "missing PDP server name, PDP disabled");
-		return NULL;
-	}
-	if (!secret)
-	{
-		DBG1(DBG_CFG, "missing RADIUS secret, PDP disabled");
 		return NULL;
 	}
 
@@ -778,90 +783,104 @@ tnc_pdp_t *tnc_pdp_create(void)
 			.destroy = _destroy,
 		},
 		.server = identification_create_from_string(server),
-		.pt_tls_ipv4 = open_tcp_socket(AF_INET,  pt_tls_port),
-		.pt_tls_ipv6 = open_tcp_socket(AF_INET6, pt_tls_port),
-		.radius_ipv4 = open_udp_socket(AF_INET,  radius_port),
-		.radius_ipv6 = open_udp_socket(AF_INET6, radius_port),
-		.secret = chunk_from_str(secret),
-		.type = eap_type_from_string(eap_type_str),
-		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
-		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
-		.ng = lib->crypto->create_nonce_gen(lib->crypto),
 		.connections = tnc_pdp_connections_create(),
 	);
 
-	if (!this->pt_tls_ipv4 && !this->pt_tls_ipv6)
+	/* Create IPv4 and IPv6 PT-TLS listening sockets */
+	if (pt_tls_enable)
 	{
-		DBG1(DBG_NET, "could not create any PT-TLS sockets");
-		destroy(this);
-		return NULL;
-	}
-	if (this->pt_tls_ipv4)
-	{
-		lib->watcher->add(lib->watcher, this->pt_tls_ipv4, WATCHER_READ,
-									(watcher_cb_t)pt_tls_receive, this);
-	}
-	else
-	{
-		DBG1(DBG_NET, "could not open IPv4 PT-TLS socket, IPv4 disabled");
-	}
-	if (this->pt_tls_ipv6)
-	{
-		lib->watcher->add(lib->watcher, this->pt_tls_ipv6, WATCHER_READ,
-									 (watcher_cb_t)pt_tls_receive, this);
-	}
-	else
-	{
-		DBG1(DBG_NET, "could not open IPv6 PT-TLS socket, IPv6 disabled");
+		this->pt_tls_ipv4 = open_tcp_socket(AF_INET,  pt_tls_port);
+		this->pt_tls_ipv6 = open_tcp_socket(AF_INET6, pt_tls_port);
+
+		if (!this->pt_tls_ipv4 && !this->pt_tls_ipv6)
+		{
+			DBG1(DBG_NET, "could not create any PT-TLS sockets");
+			destroy(this);
+			return NULL;
+		}
+		if (this->pt_tls_ipv4)
+		{
+			lib->watcher->add(lib->watcher, this->pt_tls_ipv4, WATCHER_READ,
+							 (watcher_cb_t)pt_tls_receive, this);
+		}
+		else
+		{
+			DBG1(DBG_NET, "could not open IPv4 PT-TLS socket, IPv4 disabled");
+		}
+		if (this->pt_tls_ipv6)
+		{
+			lib->watcher->add(lib->watcher, this->pt_tls_ipv6, WATCHER_READ,
+							 (watcher_cb_t)pt_tls_receive, this);
+		}
+		else
+		{
+			DBG1(DBG_NET, "could not open IPv6 PT-TLS socket, IPv6 disabled");
+		}
 	}
 
-	if (!this->hasher || !this->signer || !this->ng)
+	/* Create IPv4 and IPv6 RADIUS listening sockets */
+	if (radius_enable)
 	{
-		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/NG required");
-		destroy(this);
-		return NULL;
-	}
+		if (!secret)
+		{
+			DBG1(DBG_CFG, "missing RADIUS secret, PDP disabled");
+			destroy(this);
+			return NULL;
+		}
 
-	if (!this->radius_ipv4 && !this->radius_ipv6)
-	{
-		DBG1(DBG_NET, "could not create any RADIUS sockets");
-		destroy(this);
-		return NULL;
-	}
-	if (this->radius_ipv4)
-	{
-		lib->watcher->add(lib->watcher, this->radius_ipv4, WATCHER_READ,
-						 (watcher_cb_t)radius_receive, this);
-	}
-	else
-	{
-		DBG1(DBG_NET, "could not open IPv4 RADIUS socket, IPv4 disabled");
-	}
-	if (this->radius_ipv6)
+		this->radius_ipv4 = open_udp_socket(AF_INET,  radius_port);
+		this->radius_ipv6 = open_udp_socket(AF_INET6, radius_port);
+		this->secret = chunk_from_str(secret);
+		this->type = eap_type_from_string(eap_type_str);
+		this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+		this->signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128);
+		this->ng = lib->crypto->create_nonce_gen(lib->crypto);
 
-	{
-		lib->watcher->add(lib->watcher, this->radius_ipv6, WATCHER_READ,
-						 (watcher_cb_t)radius_receive, this);
-	}
-	else
-	{
+		if (!this->hasher || !this->signer || !this->ng)
+		{
+			DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/NG required");
+			destroy(this);
+			return NULL;
+		}
+		if (!this->radius_ipv4 && !this->radius_ipv6)
+		{
+			DBG1(DBG_NET, "could not create any RADIUS sockets");
+			destroy(this);
+			return NULL;
+		}
+		if (this->radius_ipv4)
+		{
+			lib->watcher->add(lib->watcher, this->radius_ipv4, WATCHER_READ,
+							 (watcher_cb_t)radius_receive, this);
+		}
+		else
+		{
+			DBG1(DBG_NET, "could not open IPv4 RADIUS socket, IPv4 disabled");
+		}
+		if (this->radius_ipv6)
+		{
+			lib->watcher->add(lib->watcher, this->radius_ipv6, WATCHER_READ,
+							 (watcher_cb_t)radius_receive, this);
+		}
+		else
+		{
 		DBG1(DBG_NET, "could not open IPv6 RADIUS socket, IPv6 disabled");
-	}
+		}
 
-	if (!this->signer->set_key(this->signer, this->secret))
-	{
-		DBG1(DBG_CFG, "could not set signer key");
-		destroy(this);
-		return NULL;
+		if (!this->signer->set_key(this->signer, this->secret))
+		{
+			DBG1(DBG_CFG, "could not set signer key");
+			destroy(this);
+			return NULL;
+		}
+		if (this->type == 0)
+		{
+			DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);
+			destroy(this);
+			return NULL;
+		}
+		DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
 	}
-
-	if (this->type == 0)
-	{
-		DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);
-		destroy(this);
-		return NULL;
-	}
-	DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
 
 	return &this->public;
 }
