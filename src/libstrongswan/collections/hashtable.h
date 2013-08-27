@@ -156,6 +156,15 @@ struct hashtable_t {
 	 * Destroys a hash table object.
 	 */
 	void (*destroy) (hashtable_t *this);
+
+	/**
+	 * Destroys a hash table object and calls the given function for each
+	 * item and its key in the hash table.
+	 *
+	 * @param function	function to call on each item and key
+	 */
+	void (*destroy_function)(hashtable_t *this,
+							 void (*)(void *val, const void *key));
 };
 
 /**

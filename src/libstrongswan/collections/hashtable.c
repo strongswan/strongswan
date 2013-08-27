@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -250,7 +250,7 @@ static void rehash(private_hashtable_t *this)
 }
 
 METHOD(hashtable_t, put, void*,
-	   private_hashtable_t *this, const void *key, void *value)
+	private_hashtable_t *this, const void *key, void *value)
 {
 	void *old_value = NULL;
 	pair_t *pair;
@@ -309,19 +309,19 @@ static void *get_internal(private_hashtable_t *this, const void *key,
 }
 
 METHOD(hashtable_t, get, void*,
-	   private_hashtable_t *this, const void *key)
+	private_hashtable_t *this, const void *key)
 {
 	return get_internal(this, key, this->equals);
 }
 
 METHOD(hashtable_t, get_match, void*,
-	   private_hashtable_t *this, const void *key, hashtable_equals_t match)
+	private_hashtable_t *this, const void *key, hashtable_equals_t match)
 {
 	return get_internal(this, key, match);
 }
 
 METHOD(hashtable_t, remove_, void*,
-	   private_hashtable_t *this, const void *key)
+	private_hashtable_t *this, const void *key)
 {
 	void *value = NULL;
 	pair_t *pair, *prev = NULL;
@@ -353,7 +353,7 @@ METHOD(hashtable_t, remove_, void*,
 }
 
 METHOD(hashtable_t, remove_at, void,
-	   private_hashtable_t *this, private_enumerator_t *enumerator)
+	private_hashtable_t *this, private_enumerator_t *enumerator)
 {
 	if (enumerator->table == this && enumerator->current)
 	{
@@ -373,13 +373,13 @@ METHOD(hashtable_t, remove_at, void,
 }
 
 METHOD(hashtable_t, get_count, u_int,
-	   private_hashtable_t *this)
+	private_hashtable_t *this)
 {
 	return this->count;
 }
 
 METHOD(enumerator_t, enumerate, bool,
-	   private_enumerator_t *this, const void **key, void **value)
+	private_enumerator_t *this, const void **key, void **value)
 {
 	while (this->count && this->row < this->table->capacity)
 	{
@@ -411,7 +411,7 @@ METHOD(enumerator_t, enumerate, bool,
 }
 
 METHOD(hashtable_t, create_enumerator, enumerator_t*,
-	   private_hashtable_t *this)
+	private_hashtable_t *this)
 {
 	private_enumerator_t *enumerator;
 
@@ -427,8 +427,8 @@ METHOD(hashtable_t, create_enumerator, enumerator_t*,
 	return &enumerator->enumerator;
 }
 
-METHOD(hashtable_t, destroy, void,
-	   private_hashtable_t *this)
+static void destroy_internal(private_hashtable_t *this,
+							 void (*fn)(void*,const void*))
 {
 	pair_t *pair, *next;
 	u_int row;
@@ -438,6 +438,10 @@ METHOD(hashtable_t, destroy, void,
 		pair = this->table[row];
 		while (pair)
 		{
+			if (fn)
+			{
+				fn(pair->value, pair->key);
+			}
 			next = pair->next;
 			free(pair);
 			pair = next;
@@ -445,6 +449,18 @@ METHOD(hashtable_t, destroy, void,
 	}
 	free(this->table);
 	free(this);
+}
+
+METHOD(hashtable_t, destroy, void,
+	private_hashtable_t *this)
+{
+	destroy_internal(this, NULL);
+}
+
+METHOD(hashtable_t, destroy_function, void,
+	private_hashtable_t *this, void (*fn)(void*,const void*))
+{
+	destroy_internal(this, fn);
 }
 
 /*
@@ -465,6 +481,7 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 			.get_count = _get_count,
 			.create_enumerator = _create_enumerator,
 			.destroy = _destroy,
+			.destroy_function = _destroy_function,
 		},
 		.hash = hash,
 		.equals = equals,
