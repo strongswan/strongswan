@@ -132,6 +132,9 @@ static child_cfg_t* create_child_cfg(char *name)
 								 NULL, FALSE, MODE_TUNNEL, /* updown, hostaccess */
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+										"aes128gcm8-aes128gcm12-aes128gcm16-"
+										"aes256gcm8-aes256gcm12-aes256gcm16"));
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
