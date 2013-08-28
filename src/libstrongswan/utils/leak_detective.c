@@ -511,6 +511,7 @@ char *whitelist[] = {
 	"getspnam_r",
 	"getpwuid_r",
 	"initgroups",
+	"tzset",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
