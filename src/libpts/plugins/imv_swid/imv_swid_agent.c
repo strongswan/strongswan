@@ -17,11 +17,13 @@
 #include "imv_swid_state.h"
 
 #include "libpts.h"
+#include "swid/swid_error.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 
 #include <imcv.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 
@@ -30,6 +32,7 @@
 
 #include <pen/pen.h>
 #include <utils/debug.h>
+#include <bio/bio_reader.h>
 
 typedef struct private_imv_swid_agent_t private_imv_swid_agent_t;
 
@@ -89,7 +92,6 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 	imv_session_t *session;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
-	pen_type_t type;
 	TNC_Result result;
 	bool fatal_error = FALSE;
 
@@ -108,6 +110,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 	{
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;
+		pen_type_t type;
 		u_int32_t request_id, last_eid, eid_epoch;
 		int tag_count = 0;
 		char result_str[BUF_LEN], *tag_item;
@@ -116,10 +119,56 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 		
 		type = attr->get_type(attr);
 
-		if (type.vendor_id != PEN_TCG)
+		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
+		{
+			ietf_attr_pa_tnc_error_t *error_attr;
+			pen_type_t error_code;
+			chunk_t msg_info, description;
+			bio_reader_t *reader;
+			u_int32_t request_id = 0, max_attr_size;
+			bool success;
+
+			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+			error_code = error_attr->get_error_code(error_attr);
+
+			if (error_code.vendor_id == PEN_TCG)
+			{
+				fatal_error = TRUE;
+				msg_info = error_attr->get_msg_info(error_attr);
+				reader = bio_reader_create(msg_info);
+				success = reader->read_uint32(reader, &request_id);
+
+				DBG1(DBG_IMV, "received TCG error '%N' for request %d",
+					 swid_error_code_names, error_code.type, request_id);
+				if (!success)
+				{
+					reader->destroy(reader);
+					continue;
+				}
+				if (error_code.type == TCG_SWID_RESPONSE_TOO_LARGE)
+				{
+					if (!reader->read_uint32(reader, &max_attr_size))
+					{
+						reader->destroy(reader);
+						continue;
+					}
+					DBG1(DBG_IMV, "  maximum PA-TNC attribute size is %u bytes",
+						max_attr_size);
+				}
+				description = reader->peek(reader);
+				if (description.len)
+				{ 
+					DBG1(DBG_IMV, "  description: %.*s", description.len,
+														 description.ptr);
+				}
+				reader->destroy(reader);
+			}
+		}
+		else if (type.vendor_id != PEN_TCG)
 		{
 			continue;
 		}
+
 		switch (type.type)
 		{
 			case TCG_SWID_TAG_ID_INVENTORY:

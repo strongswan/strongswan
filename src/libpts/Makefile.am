@@ -35,6 +35,7 @@ libpts_la_SOURCES = \
 	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \
 	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
+	swid/swid_error.h swid/swid_error.c \
 	swid/swid_tag.h swid/swid_tag.c \
 	swid/swid_tag_id.h swid/swid_tag_id.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \

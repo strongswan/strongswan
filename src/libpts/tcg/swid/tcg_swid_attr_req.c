@@ -175,6 +175,12 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint24(reader, &tag_id_count);
 	reader->read_uint32(reader, &this->request_id);
 	reader->read_uint32(reader, &this->earliest_eid);
+
+	if (this->request_id == 0)
+	{
+		*offset = 4;
+		return FAILED;
+	}
 	*offset = SWID_REQ_SIZE;
 
 	this->flags &= SWID_REQ_RESERVED_MASK;

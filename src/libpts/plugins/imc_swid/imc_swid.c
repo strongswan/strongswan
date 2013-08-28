@@ -18,6 +18,7 @@
 #include "libpts.h"
 #include "swid/swid_tag.h"
 #include "swid/swid_tag_id.h"
+#include "swid/swid_error.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
@@ -198,6 +199,14 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		flags = attr_req->get_flags(attr_req);
 		request_id = attr_req->get_request_id(attr_req);
 		eid_epoch = swid_state->get_eid_epoch(swid_state);
+
+		if (flags & (TCG_SWID_ATTR_REQ_FLAG_S | TCG_SWID_ATTR_REQ_FLAG_C))
+		{
+			attr = swid_error_create(TCG_SWID_SUBSCRIPTION_DENIED, request_id,
+									 0, "no subscription available yet");
+			out_msg->add_attribute(out_msg, attr);
+			break;
+		}
 
 		if (flags & TCG_SWID_ATTR_REQ_FLAG_R)
 		{
