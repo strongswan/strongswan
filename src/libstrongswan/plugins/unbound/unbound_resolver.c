@@ -94,16 +94,17 @@ resolver_t *unbound_resolver_create(void)
 {
 	private_resolver_t *this;
 	int ub_retval = 0;
-	char *resolv_conf_file;
-	char *trust_anchor_file;
+	char *resolv_conf, *trust_anchors, *dlv_anchors;
 
-	resolv_conf_file = lib->settings->get_str(lib->settings,
+	resolv_conf = lib->settings->get_str(lib->settings,
 						"libstrongswan.plugins.unbound.resolv_conf",
 						RESOLV_CONF_FILE);
-
-	trust_anchor_file = lib->settings->get_str(lib->settings,
+	trust_anchors = lib->settings->get_str(lib->settings,
 						"libstrongswan.plugins.unbound.trust_anchors",
 						TRUST_ANCHOR_FILE);
+	dlv_anchors = lib->settings->get_str(lib->settings,
+						"libstrongswan.plugins.unbound.dlv_anchors",
+						NULL);
 
 	INIT(this,
 		.public = {
@@ -120,24 +121,34 @@ resolver_t *unbound_resolver_create(void)
 		return NULL;
 	}
 
-	DBG1(DBG_CFG, "loading unbound resolver config from '%s'", resolv_conf_file);
-	ub_retval = ub_ctx_resolvconf(this->ctx, resolv_conf_file);
+	DBG2(DBG_CFG, "loading unbound resolver config from '%s'", resolv_conf);
+	ub_retval = ub_ctx_resolvconf(this->ctx, resolv_conf);
 	if (ub_retval)
 	{
 		DBG1(DBG_CFG, "failed to read the resolver config: %s (%s)",
-					   ub_strerror(ub_retval), strerror(errno));
+			 ub_strerror(ub_retval), strerror(errno));
 		destroy(this);
 		return NULL;
 	}
 
-	DBG1(DBG_CFG, "loading unbound trust anchors from '%s'", trust_anchor_file);
-	ub_retval = ub_ctx_add_ta_file(this->ctx, trust_anchor_file);
+	DBG2(DBG_CFG, "loading unbound trust anchors from '%s'", trust_anchors);
+	ub_retval = ub_ctx_add_ta_file(this->ctx, trust_anchors);
 	if (ub_retval)
 	{
 		DBG1(DBG_CFG, "failed to load trust anchors: %s (%s)",
-					   ub_strerror(ub_retval), strerror(errno));
+			 ub_strerror(ub_retval), strerror(errno));
 	}
 
+	if (dlv_anchors)
+	{
+		DBG2(DBG_CFG, "loading trusted keys for DLV from '%s'", dlv_anchors);
+		ub_retval = ub_ctx_set_option(this->ctx, "dlv-anchor-file:",
+									  dlv_anchors);
+		if (ub_retval)
+		{
+			DBG1(DBG_CFG, "failed to load trusted keys for DLV: %s (%s)",
+				 ub_strerror(ub_retval), strerror(errno));
+		}
+	}
 	return &this->public;
 }
-
