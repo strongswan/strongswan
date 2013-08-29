@@ -1568,7 +1568,7 @@ retry:
 			src = NULL;
 			msg.hdr.rtm_seq = ref_get(&this->seq);
 			msg.hdr.rtm_addrs = 0;
-			memset(msg.buf, sizeof(msg.buf), 0);
+			memset(msg.buf, 0, sizeof(msg.buf));
 			goto retry;
 		}
 		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
