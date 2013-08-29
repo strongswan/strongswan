@@ -62,64 +62,59 @@ typedef struct {
 METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 	cert_enumerator_t *this, certificate_t **cert)
 {
-	rr_t *cur_rr = NULL;
-	ipseckey_t *cur_ipseckey = NULL;
-	chunk_t pub_key;
-	public_key_t * key = NULL;
-	bool supported_ipseckey_found = FALSE;
+	ipseckey_t *cur_ipseckey;
+	public_key_t *public;
+	rr_t *cur_rr;
+	chunk_t key;
 
 	/* Get the next supported IPSECKEY using the inner enumerator. */
-	while (this->inner->enumerate(this->inner, &cur_rr) &&
-		   !supported_ipseckey_found)
+	while (this->inner->enumerate(this->inner, &cur_rr))
 	{
-		supported_ipseckey_found = TRUE;
-
 		cur_ipseckey = ipseckey_create_frm_rr(cur_rr);
 
 		if (!cur_ipseckey)
 		{
-			DBG1(DBG_CFG, "failed to parse ipseckey - skipping this key");
-			supported_ipseckey_found = FALSE;
+			DBG1(DBG_CFG, "  failed to parse IPSECKEY, skipping");
+			continue;
 		}
 
-		if (cur_ipseckey &&
-			cur_ipseckey->get_algorithm(cur_ipseckey) != IPSECKEY_ALGORITHM_RSA)
+		if (cur_ipseckey->get_algorithm(cur_ipseckey) != IPSECKEY_ALGORITHM_RSA)
 		{
-			DBG1(DBG_CFG, "unsupported ipseckey algorithm - skipping this key");
+			DBG1(DBG_CFG, "  unsupported IPSECKEY algorithm, skipping");
 			cur_ipseckey->destroy(cur_ipseckey);
-			supported_ipseckey_found = FALSE;
+			continue;
 		}
-	}
 
-	if (supported_ipseckey_found)
-	{
-		/*
-		 * Wrap the key of the IPSECKEY in a certificate and return this
-		 * certificate.
-		 */
-		pub_key = cur_ipseckey->get_public_key(cur_ipseckey);
-
-		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-								 BUILD_BLOB_DNSKEY, pub_key,
-								 BUILD_END);
-
-		if (!key)
+		/* wrap the key of the IPSECKEY in a certificate and return this
+		 * certificate */
+		key = cur_ipseckey->get_public_key(cur_ipseckey);
+		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+									BUILD_BLOB_DNSKEY, key,
+									BUILD_END);
+		if (!public)
 		{
-			DBG1(DBG_CFG, "failed to create public key from ipseckey");
+			DBG1(DBG_CFG, "  failed to create public key from IPSECKEY");
 			cur_ipseckey->destroy(cur_ipseckey);
-			return FALSE;
+			continue;
 		}
 
 		*cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 								   CERT_TRUSTED_PUBKEY,
-								   BUILD_PUBLIC_KEY, key,
+								   BUILD_PUBLIC_KEY, public,
 								   BUILD_SUBJECT, this->identity,
 								   BUILD_NOT_BEFORE_TIME, this->notBefore,
 								   BUILD_NOT_AFTER_TIME, this->notAfter,
 								   BUILD_END);
+		if (*cert == NULL)
+		{
+			DBG1(DBG_CFG, "  failed to create certificate from IPSECKEY");
+			cur_ipseckey->destroy(cur_ipseckey);
+			public->destroy(public);
+			continue;
+		}
+		cur_ipseckey->destroy(cur_ipseckey);
 		return TRUE;
 	}
-
 	return FALSE;
 }
 
