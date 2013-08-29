@@ -109,6 +109,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "ipseckey"),
 				PLUGIN_DEPENDS(RESOLVER),
+				PLUGIN_DEPENDS(PUBKEY, KEY_RSA),
+				PLUGIN_DEPENDS(CERT_ENCODE, CERT_TRUSTED_PUBKEY),
 	};
 	*features = f;
 	return countof(f);
