@@ -13,6 +13,13 @@ needed.
 
 charon-xpc is a special build linking statically against strongSwan components.
 
+charon-xpc sources are not part of the official strongSwan distribution. Build
+the charon-xpc tarball with:
+
+    git archive -o charon-xpc-$(grep AC_INIT configure.ac | \
+                                cut -d '[' -f3 | cut -d ']' -f1).tar.bz2 \
+        HEAD src/frontends/osx
+
 ## Building strongSwan ##
 
 strongSwan on OS X requires the libvstr library. The simplest way to install
