@@ -25,6 +25,7 @@ typedef struct tcg_swid_attr_tag_id_inv_t tcg_swid_attr_tag_id_inv_t;
 
 #include "tcg/tcg_attr.h"
 #include "swid/swid_tag_id.h"
+#include "swid/swid_inventory.h"
 
 #include <pa_tnc/pa_tnc_attr.h>
 
@@ -56,18 +57,11 @@ struct tcg_swid_attr_tag_id_inv_t {
 							  u_int32_t *eid_epoch);
 
 	/**
-	 * Add Tag ID
+	 * Get Inventory of SWID tag IDs
 	 *
-	 * @param tag_id			SWID Tag ID (is not cloned by constructor!)
+	 * @result					SWID Tag ID Inventory
 	 */
-	void (*add_tag_id)(tcg_swid_attr_tag_id_inv_t *this, swid_tag_id_t *tag_id);
-
-	/**
-	 * Create Tag ID enumerator
-	 *
-	 * @return					Tag ID enumerator
-	 */
-	enumerator_t* (*create_tag_id_enumerator)(tcg_swid_attr_tag_id_inv_t *this);
+	swid_inventory_t* (*get_inventory)(tcg_swid_attr_tag_id_inv_t *this);
 
 };
 
@@ -77,10 +71,12 @@ struct tcg_swid_attr_tag_id_inv_t {
  * @param request_id			Copy of the Request ID
  * @param eid_epoch				Event ID Epoch
  * @param eid					Last Event ID
+ * @param inventory				SWID Tag Inventory
  */
 pa_tnc_attr_t* tcg_swid_attr_tag_id_inv_create(u_int32_t request_id,
 											   u_int32_t eid_epoch,
-											   u_int32_t eid);
+											   u_int32_t eid,
+											   swid_inventory_t *inventory);
 
 /**
  * Creates an tcg_swid_attr_tag_id_inv_t object from received data

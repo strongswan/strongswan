@@ -18,6 +18,7 @@
 
 #include "libpts.h"
 #include "swid/swid_error.h"
+#include "swid/swid_inventory.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
@@ -112,7 +113,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 		TNC_IMV_Action_Recommendation rec;
 		pen_type_t type;
 		u_int32_t request_id, last_eid, eid_epoch;
-		int tag_count = 0;
+		swid_inventory_t *inventory;
+		int tag_count;
 		char result_str[BUF_LEN], *tag_item;
 		imv_workitem_t *workitem, *found = NULL;
 		enumerator_t *et, *ew;
@@ -180,15 +182,15 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				attr_cast = (tcg_swid_attr_tag_id_inv_t*)attr;
 				request_id = attr_cast->get_request_id(attr_cast);
 				last_eid = attr_cast->get_last_eid(attr_cast, &eid_epoch);
+				inventory = attr_cast->get_inventory(attr_cast);
 				tag_item = "tag ID";
 				DBG2(DBG_IMV, "received SWID %s inventory for request %d "
 							  "at eid %d of epoch 0x%08x", tag_item,
 							   request_id, last_eid, eid_epoch);
 
-				et = attr_cast->create_tag_id_enumerator(attr_cast);
+				et = inventory->create_enumerator(inventory);
 				while (et->enumerate(et, &tag_id))
 				{
-					tag_count++;
 					tag_creator = tag_id->get_tag_creator(tag_id);
 					unique_sw_id = tag_id->get_unique_sw_id(tag_id, NULL);
 					DBG3(DBG_IMV, "  %.*s_%.*s.swidtag",
@@ -213,15 +215,15 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				attr_cast = (tcg_swid_attr_tag_inv_t*)attr;
 				request_id = attr_cast->get_request_id(attr_cast);
 				last_eid = attr_cast->get_last_eid(attr_cast, &eid_epoch);
+				inventory = attr_cast->get_inventory(attr_cast);
 				tag_item = "tag";
 				DBG2(DBG_IMV, "received SWID %s inventory for request %d "
 							  "at eid %d of epoch 0x%08x", tag_item,
 							   request_id, last_eid, eid_epoch);
 
-				et = attr_cast->create_tag_enumerator(attr_cast);
+				et = inventory->create_enumerator(inventory);
 				while (et->enumerate(et, &tag))
 				{
-					tag_count++;
 					tag_encoding = tag->get_encoding(tag);
 					DBG3(DBG_IMV, "%.*s", tag_encoding.len, tag_encoding.ptr);
 				}
@@ -256,6 +258,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 		}
 
 		eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+		tag_count = inventory->get_count(inventory);
 		snprintf(result_str, BUF_LEN, "received inventory of %d SWID %s%s",
 				 tag_count, tag_item, (tag_count == 1) ? "" : "s");
 		session->remove_workitem(session, ew);
