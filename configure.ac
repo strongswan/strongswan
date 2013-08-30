@@ -136,6 +136,7 @@ ARG_DISBL_SET([pkcs12],         [disable PKCS12 container support plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
+ARG_ENABL_SET([dnscert],        [enable DNSCERT authentication plugin.])
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
@@ -1015,6 +1016,7 @@ ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
 ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
+ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
 ADD_PLUGIN([pem],                  [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([padlock],              [s charon])
@@ -1181,6 +1183,7 @@ AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
+AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
@@ -1442,6 +1445,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/farp/Makefile
 	src/libcharon/plugins/smp/Makefile
 	src/libcharon/plugins/sql/Makefile
+	src/libcharon/plugins/dnscert/Makefile
 	src/libcharon/plugins/ipseckey/Makefile
 	src/libcharon/plugins/medsrv/Makefile
 	src/libcharon/plugins/medcli/Makefile
