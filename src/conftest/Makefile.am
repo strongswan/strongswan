@@ -1,10 +1,12 @@
 ipsec_PROGRAMS = conftest
 
-AM_CPPFLAGS = -rdynamic \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-DPLUGINS=\""${charon_plugins}\""
+
+AM_CFLAGS = -rdynamic
 
 conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/hook.h hooks/ike_auth_fill.c hooks/unsort_message.c \
