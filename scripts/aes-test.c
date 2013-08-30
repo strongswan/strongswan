@@ -385,7 +385,7 @@ static bool do_test_gcm(test_vector_t *test)
 	return TRUE;
 }
 
-static bool crypt(crypter_t *crypter, test_vector_t *test)
+static bool do_crypt(crypter_t *crypter, test_vector_t *test)
 {
 	if (ctx.decrypt)
 	{
@@ -424,7 +424,7 @@ static bool do_test_cbc(test_vector_t *test)
 		crypter->destroy(crypter);
 		return FALSE;
 	}
-	if (!crypt(crypter, test))
+	if (!do_crypt(crypter, test))
 	{
 		crypter->destroy(crypter);
 		return FALSE;
@@ -478,7 +478,7 @@ static bool do_test_mct(test_vector_t *test)
 			/* store previous output as it is used as input after next */
 			memcpy(prev.ptr, output->ptr, prev.len);
 			chunk_free(output);
-			if (!crypt(crypter, test))
+			if (!do_crypt(crypter, test))
 			{
 				crypter->destroy(crypter);
 				return FALSE;
