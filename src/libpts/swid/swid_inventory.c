@@ -64,11 +64,11 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 	enumerator = enumerator_create_directory(pathname);
 	if (!enumerator)
 	{
-		DBG1(DBG_IMV, "directory '%s' can not be opened, %s",
+		DBG1(DBG_IMC, "directory '%s' can not be opened, %s",
 			 pathname, strerror(errno));
 		return FALSE;
 	}
-	DBG2(DBG_IMV, "entering %s", pathname);
+	DBG2(DBG_IMC, "entering %s", pathname);
 	
 	while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
 	{
@@ -88,14 +88,14 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 			}
 			continue;
 		}
-		DBG2(DBG_IMV, "  %s", rel_name);
+		DBG2(DBG_IMC, "  %s", rel_name);
 
 		/* parse the regid filename into its components */
 		start = rel_name;
 		stop = strchr(start, '_');
 		if (!stop)
 		{
-			DBG1(DBG_IMV, "  '_' separator not found");
+			DBG1(DBG_IMC, "  '_' separator not found");
 			goto end;
 		}
 		tag_creator = chunk_create(start, stop-start);
@@ -111,7 +111,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 		stop = strstr(start, ".swidtag");
 		if (!stop)
 		{
-			DBG1(DBG_IMV, "  swidtag postfix not found");
+			DBG1(DBG_IMC, "  swidtag postfix not found");
 			goto end;
 		}
 		if (unique_sw_id.ptr)
@@ -134,14 +134,14 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 			fd = open(abs_name, O_RDONLY);
 			if (fd == -1)
 			{
-				DBG1(DBG_IMV, "  opening '%s' failed: %s", abs_name,
+				DBG1(DBG_IMC, "  opening '%s' failed: %s", abs_name,
 					 strerror(errno));
 				goto end;
 			}
 
 			if (fstat(fd, &sb) == -1)
 			{
-				DBG1(DBG_IMV, "  getting file size of '%s' failed: %s", abs_name,
+				DBG1(DBG_IMC, "  getting file size of '%s' failed: %s", abs_name,
 			 		 strerror(errno));
 				close(fd);
 				goto end;
@@ -150,7 +150,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 			addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 			if (addr == MAP_FAILED)
 			{
-				DBG1(DBG_IMV, "  mapping '%s' failed: %s", abs_name,
+				DBG1(DBG_IMC, "  mapping '%s' failed: %s", abs_name,
 					 strerror(errno));
 				close(fd);
 				goto end;
@@ -172,7 +172,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 
 end:
 	enumerator->destroy(enumerator);
-	DBG2(DBG_IMV, "leaving %s", pathname);
+	DBG2(DBG_IMC, "leaving %s", pathname);
 
 	return success;
 }
