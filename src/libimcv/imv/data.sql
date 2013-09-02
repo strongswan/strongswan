@@ -844,3 +844,54 @@ INSERT INTO enforcements (
   15, 9, 0
 );
 
+/* regids */
+
+INSERT INTO regids (			/*  1 */
+  name
+) VALUES (
+ 'regid.1986-12.com.adobe'
+);
+
+INSERT INTO regids (			/*  2 */
+  name
+) VALUES (
+ 'regid.1991-06.com.microsoft'
+);
+
+INSERT INTO regids (			/*  3 */
+  name
+) VALUES (
+ 'regid.2004-05.com.ubuntu'
+);
+
+INSERT INTO regids (			/*  4 */
+  name
+) VALUES (
+ 'regid.1995-04.org.apache'
+);
+
+INSERT INTO regids (			/*  5 */
+  name
+) VALUES (
+ 'regid.1999-03.org.debian'
+);
+
+INSERT INTO regids (			/*  6 */
+  name
+) VALUES (
+ 'regid.1994-04.org.isc'
+);
+
+INSERT INTO regids (			/*  7 */
+  name
+) VALUES (
+ 'regid.2002-08.org.sqlite'
+);
+
+INSERT INTO regids (			/*  8 */
+  name
+) VALUES (
+ 'regid.2004-03.org.strongswan'
+);
+
+

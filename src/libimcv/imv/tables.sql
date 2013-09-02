@@ -232,3 +232,14 @@ CREATE TABLE identities (
   UNIQUE (type, value)
 );
 
+DROP TABLE IF EXISTS regids;
+CREATE TABLE regids (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL
+);
+DROP INDEX IF EXISTS regids_name;
+CREATE INDEX regids_name ON regids (
+  name
+);
+
+
