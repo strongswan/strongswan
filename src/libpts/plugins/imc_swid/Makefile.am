@@ -4,6 +4,7 @@ swid_tag = $(regid)_$(unique_sw_id).swidtag
 
 swiddir = $(prefix)/share/$(regid)
 swid_DATA = $(swid_tag)
+ipsec_DATA = $(swid_tag)
 EXTRA_DIST = $(regid)_strongSwan.swidtag.in
 CLEANFILES = $(regid)_strongSwan*.swidtag
 
@@ -35,10 +36,3 @@ imc_swid_la_LIBADD = \
 imc_swid_la_SOURCES = imc_swid.c imc_swid_state.h imc_swid_state.c
 
 imc_swid_la_LDFLAGS = -module -avoid-version
-
-install-data-hook:
-	cp $(swiddir)/$(swid_tag) $(DESTDIR)$(ipsecdir)
-
-uninstall-hook:
-	rm $(DESTDIR)$(ipsecdir)/*.swidtag
-
