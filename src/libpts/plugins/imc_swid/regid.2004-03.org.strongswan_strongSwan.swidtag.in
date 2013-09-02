@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<software_identification_tag xmlns="http://standards.iso.org/iso/19770/-2/2009/schema.xsd">
+  <entitlement_required_indicator>true</entitlement_required_indicator>
+  <product_title>strongSwan</product_title>
+  <product_version>
+    <name>@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_BUILD@@VERSION_REVIEW@</name>
+    <numeric>
+      <major>@VERSION_MAJOR@</major>
+      <minor>@VERSION_MINOR@</minor>
+      <build>@VERSION_BUILD@</build>
+      <review>@VERSION_REVIEW@</review>
+    </numeric>
+  </product_version>
+  <software_creator>
+    <name>strongSwan Project</name>
+    <regid>regid.2004-03.org.strongswan</regid>
+  </software_creator>
+  <software_licensor>
+    <name>strongSwan Project</name>
+    <regid>regid.2004-03.org.strongswan</regid>
+  </software_licensor>
+  <software_id>
+    <unique_id>strongSwan-@VERSION_MAJOR@-@VERSION_MINOR@-@VERSION_BUILD@@VERSION_REVIEW@</unique_id>
+    <tag_creator_regid>regid.2004-03.org.strongswan</tag_creator_regid>
+  </software_id>
+  <tag_creator>
+    <name>strongSwan Project</name>
+    <regid>regid.2004-03.org.strongswan</regid>
+  </tag_creator>
+</software_identification_tag>
