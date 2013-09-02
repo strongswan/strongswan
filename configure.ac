@@ -27,6 +27,9 @@ AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
 PKG_PROG_PKG_CONFIG
 
+m4_include(m4/macros/split-package-version.m4)
+SPLIT_PACKAGE_VERSION
+
 # =================================
 #  check --enable-xxx & --with-xxx
 # =================================
