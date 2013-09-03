@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
 	int status = 0;
 	sigset_t set;
 	int sig;
-	char *suite_file = "suite.conf", *test_file = NULL;
+	char *suite_file = "suite.conf", *test_file = NULL, *preload, *plugins;
 	file_logger_t *logger;
 
 	if (!library_init(NULL))
@@ -509,16 +509,18 @@ int main(int argc, char *argv[])
 	}
 	load_loggers(logger);
 
-	if (!lib->plugins->load(lib->plugins,
-			conftest->test->get_str(conftest->test, "preload", "")))
+	preload = conftest->test->get_str(conftest->test, "preload", "");
+	if (asprintf(&plugins, "%s %s", preload, PLUGINS) < 0)
 	{
 		return 1;
 	}
-	if (!charon->initialize(charon, PLUGINS))
+	if (!charon->initialize(charon, plugins))
 	{
+		free(plugins);
 		return 1;
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
+	free(plugins);
 
 	if (!load_certs(conftest->test, conftest->suite_dir))
 	{
