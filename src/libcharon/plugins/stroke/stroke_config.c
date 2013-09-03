@@ -781,7 +781,13 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		enumerator->destroy(enumerator);
 	}
 
-	if (msg->add_conn.me.sourceip)
+	if (msg->add_conn.me.sourceip && msg->add_conn.other.sourceip)
+	{
+		DBG1(DBG_CFG, "'%s' has both left- and rightsourceip, but IKE can "
+			 "negotiate one virtual IP only, ignoring local virtual IP",
+			 msg->add_conn.name);
+	}
+	else if (msg->add_conn.me.sourceip)
 	{
 		enumerator_t *enumerator;
 		char *token;
