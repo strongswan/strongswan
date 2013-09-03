@@ -280,4 +280,3 @@ eap_gtc_t *eap_gtc_create_peer(identification_t *server, identification_t *peer)
 
 	return &this->public;
 }
-

@@ -69,7 +69,8 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 xauth_noauth_t *xauth_noauth_create_server(identification_t *server,
-										   identification_t *peer)
+										   identification_t *peer,
+										   char *profile)
 {
 	private_xauth_noauth_t *this;
 

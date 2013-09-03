@@ -42,9 +42,11 @@ struct xauth_noauth_t {
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_noauth_t object
  */
 xauth_noauth_t *xauth_noauth_create_server(identification_t *server,
-										   identification_t *peer);
+										   identification_t *peer,
+										   char *profile);
 
 #endif /** XAUTH_NOAUTH_H_ @}*/

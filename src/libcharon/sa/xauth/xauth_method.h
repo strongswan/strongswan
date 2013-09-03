@@ -104,10 +104,12 @@ struct xauth_method_t {
  *
  * @param server		ID of the server to use for credential lookup
  * @param peer			ID of the peer to use for credential lookup
+ * @param profile		configuration string to pass to XAuth method, or NULL
  * @return				implementation of the eap_method_t interface
  */
 typedef xauth_method_t *(*xauth_constructor_t)(identification_t *server,
-											   identification_t *peer);
+											   identification_t *peer,
+											   char *profile);
 
 /**
  * Helper function to (un-)register XAuth methods from plugin features.

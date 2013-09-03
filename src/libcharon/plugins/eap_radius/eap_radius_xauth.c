@@ -20,9 +20,21 @@
 
 #include <daemon.h>
 #include <radius_client.h>
+#include <collections/array.h>
 
 
 typedef struct private_eap_radius_xauth_t private_eap_radius_xauth_t;
+typedef struct xauth_round_t xauth_round_t;
+
+/**
+ * Configuration for an XAuth authentication exchange
+ */
+struct xauth_round_t {
+	/** XAuth message type to send */
+	configuration_attribute_type_t type;
+	/** Message to present to user */
+	char *message;
+};
 
 /**
  * Private data of an eap_radius_xauth_t object.
@@ -48,7 +60,43 @@ struct private_eap_radius_xauth_t {
 	 * RADIUS connection
 	 */
 	radius_client_t *client;
+
+	/**
+	 * XAuth authentication rounds, as xauth_round_t
+	 */
+	array_t *rounds;
+
+	/**
+	 * XAuth round currently in progress
+	 */
+	xauth_round_t round;
+
+	/**
+	 * Concatentated password of all rounds
+	 */
+	chunk_t pass;
 };
+
+/**
+ * Fetch next XAuth round, add attributes to CP payload
+ */
+static bool build_round(private_eap_radius_xauth_t *this, cp_payload_t *cp)
+{
+	if (!array_remove(this->rounds, ARRAY_HEAD, &this->round))
+	{
+		return FALSE;
+	}
+	cp->add_attribute(cp, configuration_attribute_create_chunk(
+					CONFIGURATION_ATTRIBUTE_V1, this->round.type, chunk_empty));
+
+	if (this->round.message && strlen(this->round.message))
+	{
+		cp->add_attribute(cp, configuration_attribute_create_chunk(
+					CONFIGURATION_ATTRIBUTE_V1, XAUTH_MESSAGE,
+					chunk_from_str(this->round.message)));
+	}
+	return TRUE;
+}
 
 METHOD(xauth_method_t, initiate, status_t,
 	private_eap_radius_xauth_t *this, cp_payload_t **out)
@@ -56,25 +104,30 @@ METHOD(xauth_method_t, initiate, status_t,
 	cp_payload_t *cp;
 
 	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	/* first message always comes with username */
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk_empty));
-	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, chunk_empty));
-	*out = cp;
-	return NEED_MORE;
+
+	if (build_round(this, cp))
+	{
+		*out = cp;
+		return NEED_MORE;
+	}
+	cp->destroy(cp);
+	return FAILED;
 }
 
 /**
  * Verify a password using RADIUS User-Name/User-Password attributes
  */
-static status_t verify_radius(private_eap_radius_xauth_t *this, chunk_t pass)
+static status_t verify_radius(private_eap_radius_xauth_t *this)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
 
 	request = radius_message_create(RMC_ACCESS_REQUEST);
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
-	request->add(request, RAT_USER_PASSWORD, pass);
+	request->add(request, RAT_USER_PASSWORD, this->pass);
 
 	eap_radius_build_attributes(request);
 	eap_radius_forward_from_ike(request);
@@ -114,34 +167,34 @@ METHOD(xauth_method_t, process, status_t,
 	configuration_attribute_t *attr;
 	enumerator_t *enumerator;
 	identification_t *id;
+	cp_payload_t *cp;
 	chunk_t user = chunk_empty, pass = chunk_empty;
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		switch (attr->get_type(attr))
+		if (attr->get_type(attr) == XAUTH_USER_NAME)
 		{
-			case XAUTH_USER_NAME:
-				user = attr->get_chunk(attr);
-				break;
-			case XAUTH_USER_PASSWORD:
-				pass = attr->get_chunk(attr);
-				/* trim password to any null termination. As User-Password
-				 * uses null padding, we can't have any null in it, and some
-				 * clients actually send null terminated strings (Android). */
-				pass.len = strnlen(pass.ptr, pass.len);
-				break;
-			default:
-				break;
+			user = attr->get_chunk(attr);
+		}
+		else if (attr->get_type(attr) == this->round.type)
+		{
+			pass = attr->get_chunk(attr);
+			/* trim password to any null termination. As User-Password
+			 * uses null padding, we can't have any null in it, and some
+			 * clients actually send null terminated strings (Android). */
+			pass.len = strnlen(pass.ptr, pass.len);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (!user.ptr || !pass.ptr)
+	if (!pass.ptr)
 	{
-		DBG1(DBG_IKE, "peer did not respond to our XAuth request");
+		DBG1(DBG_IKE, "peer did not respond to our XAuth %N request",
+			 configuration_attribute_type_names, this->round.type);
 		return FAILED;
 	}
+	this->pass = chunk_cat("mc", this->pass, pass);
 	if (user.len)
 	{
 		id = identification_create_from_data(user);
@@ -153,7 +206,19 @@ METHOD(xauth_method_t, process, status_t,
 		this->peer->destroy(this->peer);
 		this->peer = id;
 	}
-	return verify_radius(this, pass);
+
+	if (array_count(this->rounds) == 0)
+	{
+		return verify_radius(this);
+	}
+	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	if (build_round(this, cp))
+	{
+		*out = cp;
+		return NEED_MORE;
+	}
+	cp->destroy(cp);
+	return FAILED;
 }
 
 METHOD(xauth_method_t, get_identity, identification_t*,
@@ -162,10 +227,74 @@ METHOD(xauth_method_t, get_identity, identification_t*,
 	return this->peer;
 }
 
+/**
+ * Parse XAuth round configuration
+ */
+static bool parse_rounds(private_eap_radius_xauth_t *this, char *profile)
+{
+	struct {
+		char *str;
+		configuration_attribute_type_t type;
+	} map[] = {
+		{ "password",		XAUTH_USER_PASSWORD,	},
+		{ "passcode",		XAUTH_PASSCODE,			},
+		{ "nextpin",		XAUTH_NEXT_PIN,			},
+		{ "answer",			XAUTH_ANSWER,			},
+	};
+	enumerator_t *enumerator;
+	char *type, *message;
+	xauth_round_t round;
+	int i;
+
+	if (!profile || strlen(profile) == 0)
+	{
+		/* no config, fallback to password */
+		round.type = XAUTH_USER_PASSWORD;
+		round.message = NULL;
+		array_insert(this->rounds, ARRAY_TAIL, &round);
+		return TRUE;
+	}
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+					"%s.plugins.eap-radius.xauth.%s", charon->name, profile);
+	while (enumerator->enumerate(enumerator, &type, &message))
+	{
+		bool invalid = TRUE;
+
+		for (i = 0; i < countof(map); i++)
+		{
+			if (strcaseeq(map[i].str, type))
+			{
+				round.type = map[i].type;
+				round.message = message;
+				array_insert(this->rounds, ARRAY_TAIL, &round);
+				invalid = FALSE;
+				break;
+			}
+		}
+		if (invalid)
+		{
+			DBG1(DBG_CFG, "invalid XAuth round type: '%s'", type);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (array_count(this->rounds) == 0)
+	{
+		DBG1(DBG_CFG, "XAuth configuration profile '%s' invalid", profile);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(xauth_method_t, destroy, void,
 	private_eap_radius_xauth_t *this)
 {
 	DESTROY_IF(this->client);
+	chunk_clear(&this->pass);
+	array_destroy(this->rounds);
 	this->server->destroy(this->server);
 	this->peer->destroy(this->peer);
 	free(this);
@@ -175,7 +304,8 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 eap_radius_xauth_t *eap_radius_xauth_create_server(identification_t *server,
-												   identification_t *peer)
+												   identification_t *peer,
+												   char *profile)
 {
 	private_eap_radius_xauth_t *this;
 
@@ -191,8 +321,14 @@ eap_radius_xauth_t *eap_radius_xauth_create_server(identification_t *server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.client = eap_radius_create_client(),
+		.rounds = array_create(sizeof(xauth_round_t), 0),
 	);
 
+	if (!parse_rounds(this, profile))
+	{
+		destroy(this);
+		return NULL;
+	}
 	if (!this->client)
 	{
 		destroy(this);

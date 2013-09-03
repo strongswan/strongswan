@@ -47,9 +47,11 @@ struct xauth_eap_t {
  *
  * @param server	ID of the XAuth server
  * @param peer		ID of the XAuth client
+ * @param profile	configuration string
  * @return			xauth_eap_t object
  */
 xauth_eap_t *xauth_eap_create_server(identification_t *server,
-									 identification_t *peer);
+									 identification_t *peer,
+									 char *profile);
 
 #endif /** XAUTH_EAP_H_ @}*/

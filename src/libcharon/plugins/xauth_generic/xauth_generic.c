@@ -39,7 +39,6 @@ struct private_xauth_generic_t {
 	 * ID of the peer
 	 */
 	identification_t *peer;
-
 };
 
 METHOD(xauth_method_t, initiate_peer, status_t,
@@ -52,28 +51,64 @@ METHOD(xauth_method_t, initiate_peer, status_t,
 METHOD(xauth_method_t, process_peer, status_t,
 	private_xauth_generic_t *this, cp_payload_t *in, cp_payload_t **out)
 {
+	configuration_attribute_t *attr;
+	enumerator_t *enumerator;
 	shared_key_t *shared;
 	cp_payload_t *cp;
-	chunk_t user, pass;
+	chunk_t msg;
 
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, this->peer,
-									  this->server);
-	if (!shared)
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &attr))
 	{
-		DBG1(DBG_IKE, "no XAuth secret found for '%Y' - '%Y'", this->peer,
-			 this->server);
-		return FAILED;
+		if (attr->get_type(attr) == XAUTH_MESSAGE)
+		{
+			chunk_printable(attr->get_chunk(attr), &msg, '?');
+			DBG1(DBG_CFG, "XAuth message: %.*s", (int)msg.len, msg.ptr);
+			free(msg.ptr);
+		}
 	}
-
-	user = this->peer->get_encoding(this->peer);
-	pass = shared->get_key(shared);
+	enumerator->destroy(enumerator);
 
 	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
-	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, user));
-	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, pass));
-	shared->destroy(shared);
+
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		shared_key_type_t type = SHARED_EAP;
+
+		switch (attr->get_type(attr))
+		{
+			case XAUTH_USER_NAME:
+				cp->add_attribute(cp, configuration_attribute_create_chunk(
+							CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME,
+							this->peer->get_encoding(this->peer)));
+				break;
+			case XAUTH_NEXT_PIN:
+				type = SHARED_PIN;
+				/* FALL */
+			case XAUTH_USER_PASSWORD:
+				shared = lib->credmgr->get_shared(lib->credmgr, type,
+												  this->peer, this->server);
+				if (!shared)
+				{
+					DBG1(DBG_IKE, "no XAuth %s found for '%Y' - '%Y'",
+						 type == SHARED_EAP ? "password" : "PIN",
+						 this->peer, this->server);
+					enumerator->destroy(enumerator);
+					cp->destroy(cp);
+					return FAILED;
+				}
+				cp->add_attribute(cp, configuration_attribute_create_chunk(
+							CONFIGURATION_ATTRIBUTE_V1, attr->get_type(attr),
+							shared->get_key(shared)));
+				shared->destroy(shared);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	*out = cp;
 	return NEED_MORE;
 }
@@ -187,7 +222,8 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 xauth_generic_t *xauth_generic_create_peer(identification_t *server,
-										   identification_t *peer)
+										   identification_t *peer,
+										   char *profile)
 {
 	private_xauth_generic_t *this;
 
@@ -211,7 +247,8 @@ xauth_generic_t *xauth_generic_create_peer(identification_t *server,
  * Described in header.
  */
 xauth_generic_t *xauth_generic_create_server(identification_t *server,
-											 identification_t *peer)
+											 identification_t *peer,
+											 char *profile)
 {
 	private_xauth_generic_t *this;
 
