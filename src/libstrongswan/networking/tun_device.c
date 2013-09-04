@@ -27,6 +27,20 @@
 #include <unistd.h>
 #include <net/if.h>
 
+#include "tun_device.h"
+
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+
+#warning TUN devices are not supported!
+
+tun_device_t *tun_device_create(const char *name_tmpl)
+{
+	DBG1(DBG_LIB, "TUN devices are not supported");
+	return NULL;
+}
+
+#else /* TUN devices supported */
+
 #ifdef __APPLE__
 #include <net/if_utun.h>
 #include <netinet/in_var.h>
@@ -36,8 +50,6 @@
 #else
 #include <net/if_tun.h>
 #endif
-
-#include "tun_device.h"
 
 #include <library.h>
 #include <utils/debug.h>
@@ -468,3 +480,5 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 	}
 	return &this->public;
 }
+
+#endif /* TUN devices supported */
