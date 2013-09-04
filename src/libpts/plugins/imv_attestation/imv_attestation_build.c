@@ -28,17 +28,28 @@
 #include <utils/debug.h>
 
 bool imv_attestation_build(imv_msg_t *out_msg,
-						   imv_attestation_state_t *attestation_state,
+						   imv_state_t *state,
 						   pts_meas_algorithms_t supported_algorithms,
 						   pts_dh_group_t supported_dh_groups,
 						   pts_database_t *pts_db)
 {
+	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
 	pts_t *pts;
 	pa_tnc_attr_t *attr = NULL;
 
+	attestation_state = (imv_attestation_state_t*)state;
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
+
+	/**
+	 * Received a response form the Attestation IMC so we can proceeed
+	 */
+	if (handshake_state == IMV_ATTESTATION_STATE_DISCOVERY &&
+	   (state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ALGO))
+	{
+		handshake_state = IMV_ATTESTATION_STATE_NONCE_REQ;
+	}
 
 	/**
 	 * Skip DH Nonce Parameters Request attribute when
@@ -80,9 +91,11 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 			out_msg->add_attribute(out_msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_NONCE_REQ);
+										IMV_ATTESTATION_STATE_DISCOVERY);
 			break;
 		}
+		case IMV_ATTESTATION_STATE_DISCOVERY:
+			break;
 		case IMV_ATTESTATION_STATE_NONCE_REQ:
 		{
 			int min_nonce_len;

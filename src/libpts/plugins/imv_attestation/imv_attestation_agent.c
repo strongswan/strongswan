@@ -440,9 +440,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 
 	/* check the IMV state for the next PA-TNC attributes to send */
-	if (!imv_attestation_build(out_msg, attestation_state,
-							  this->supported_algorithms,
-							  this->supported_dh_groups, this->pts_db))
+	if (!imv_attestation_build(out_msg, state, this->supported_algorithms,
+							   this->supported_dh_groups, this->pts_db))
 	{
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
