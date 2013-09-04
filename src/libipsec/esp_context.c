@@ -241,8 +241,8 @@ static bool create_aead(private_esp_context_t *this, int alg,
 static bool create_traditional(private_esp_context_t *this, int enc_alg,
 							   chunk_t enc_key, int int_alg, chunk_t int_key)
 {
-	crypter_t *crypter;
-	signer_t *signer;
+	crypter_t *crypter = NULL;
+	signer_t *signer = NULL;
 
 	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_key.len);
 	if (!crypter)
