@@ -309,9 +309,9 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		xmlTextWriterStartElement(writer, "ikeconfig");
 		xmlTextWriterWriteElement(writer, "local",
-								  ike_cfg->get_my_addr(ike_cfg, NULL));
+								  ike_cfg->get_my_addr(ike_cfg));
 		xmlTextWriterWriteElement(writer, "remote",
-								  ike_cfg->get_other_addr(ike_cfg, NULL));
+								  ike_cfg->get_other_addr(ike_cfg));
 		xmlTextWriterEndElement(writer);
 		/* </ikeconfig> */
 

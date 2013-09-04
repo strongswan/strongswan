@@ -488,9 +488,8 @@ Relevant only locally, other end need not agree on it.
 synonym for
 .BR lifetime .
 .TP
-.BR left " = <ip address> | <fqdn> | " %any
-(required)
-the IP address of the left participant's public-network interface
+.BR left " = <ip address> | <fqdn> | " %any " | <range> | <subnet> "
+The IP address of the left participant's public-network interface
 or one of several magic values.
 The value
 .B %any
@@ -509,6 +508,14 @@ in front of a fully-qualified domain name or an IP address will implicitly set
 If
 .B %any
 is used for the remote endpoint it literally means any IP address.
+
+To limit the connection to a  specific range of hosts, a range (
+.BR 10.1.0.0-10.2.255.255
+) or a subnet (
+.BR 10.1.0.0/16
+) can be specified, and multiple addresses, ranges and subnets can be separated
+by commas. While one can freely combine these items, to initiate the connection
+at least one non-range/subnet is required.
 
 Please note that with the usage of wildcards multiple connection descriptions
 might match a given incoming connection attempt. The most specific description

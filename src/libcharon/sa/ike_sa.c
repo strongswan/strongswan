@@ -1077,7 +1077,7 @@ METHOD(ike_sa_t, initiate_mediated, status_t,
 static void resolve_hosts(private_ike_sa_t *this)
 {
 	host_t *host;
-	int family = 0;
+	int family = AF_UNSPEC;
 
 	switch (charon->socket->supported_families(charon->socket))
 	{
@@ -1099,12 +1099,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	else
 	{
-		char *other_addr;
-		u_int16_t other_port;
-
-		other_addr = this->ike_cfg->get_other_addr(this->ike_cfg, NULL);
-		other_port = this->ike_cfg->get_other_port(this->ike_cfg);
-		host = host_create_from_dns(other_addr, family, other_port);
+		host = this->ike_cfg->resolve_other(this->ike_cfg, family);
 	}
 	if (host)
 	{
@@ -1118,17 +1113,12 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	else
 	{
-		char *my_addr;
-		u_int16_t my_port;
-
 		/* use same address family as for other */
 		if (!this->other_host->is_anyaddr(this->other_host))
 		{
 			family = this->other_host->get_family(this->other_host);
 		}
-		my_addr = this->ike_cfg->get_my_addr(this->ike_cfg, NULL);
-		my_port = this->ike_cfg->get_my_port(this->ike_cfg);
-		host = host_create_from_dns(my_addr, family, my_port);
+		host = this->ike_cfg->resolve_me(this->ike_cfg, family);
 
 		if (host && host->is_anyaddr(host) &&
 			!this->other_host->is_anyaddr(this->other_host))
@@ -1142,7 +1132,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 			}
 			else
 			{	/* fallback to address family specific %any(6), if configured */
-				host = host_create_from_dns(my_addr, family, my_port);
+				host = this->ike_cfg->resolve_me(this->ike_cfg, family);
 			}
 		}
 	}
@@ -1172,8 +1162,14 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			char *addr = this->ike_cfg->get_other_addr(this->ike_cfg, NULL);
-			bool is_anyaddr = streq(addr, "%any") || streq(addr, "%any6");
+			bool is_anyaddr;
+			host_t *host;
+			char *addr;
+
+			addr = this->ike_cfg->get_my_addr(this->ike_cfg);
+			host = this->ike_cfg->resolve_other(this->ike_cfg, AF_UNSPEC);
+			is_anyaddr = host && host->is_anyaddr(host);
+			DESTROY_IF(host);
 
 			if (is_anyaddr || !this->retry_initiate_interval)
 			{

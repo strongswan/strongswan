@@ -191,38 +191,70 @@ static void add_proposals(private_stroke_config_t *this, char *string,
  */
 static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
 {
+	enumerator_t *enumerator;
 	stroke_end_t tmp_end;
 	ike_cfg_t *ike_cfg;
 	host_t *host;
 	u_int16_t ikeport;
+	char me[256], other[256], *token;
+	bool swapped = FALSE;;
 
-	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
-	if (host)
+	enumerator = enumerator_create_token(msg->add_conn.other.address, ",", " ");
+	while (enumerator->enumerate(enumerator, &token))
 	{
-		if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												   host, NULL))
+		if (!strchr(token, '/'))
 		{
-			DBG2(DBG_CFG, "left is other host, swapping ends");
-			tmp_end = msg->add_conn.me;
-			msg->add_conn.me = msg->add_conn.other;
-			msg->add_conn.other = tmp_end;
-			host->destroy(host);
-		}
-		else
-		{
-			host->destroy(host);
-			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
+			host = host_create_from_dns(token, 0, 0);
 			if (host)
 			{
-				if (!hydra->kernel_interface->get_interface(
+				if (hydra->kernel_interface->get_interface(
 										hydra->kernel_interface, host, NULL))
 				{
-					DBG1(DBG_CFG, "left nor right host is our side, "
-						 "assuming left=local");
+					DBG2(DBG_CFG, "left is other host, swapping ends");
+					tmp_end = msg->add_conn.me;
+					msg->add_conn.me = msg->add_conn.other;
+					msg->add_conn.other = tmp_end;
+					host->destroy(host);
+					swapped = TRUE;
 				}
 				host->destroy(host);
 			}
 		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!swapped)
+	{
+		enumerator = enumerator_create_token(msg->add_conn.me.address, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			if (!strchr(token, '/'))
+			{
+				host = host_create_from_dns(token, 0, 0);
+				if (host)
+				{
+					if (!hydra->kernel_interface->get_interface(
+										hydra->kernel_interface, host, NULL))
+					{
+						DBG1(DBG_CFG, "left nor right host is our side, "
+							 "assuming left=local");
+					}
+					host->destroy(host);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (msg->add_conn.me.allow_any)
+	{
+		snprintf(me, sizeof(me), "%s,0.0.0.0/0,::/0",
+				 msg->add_conn.me.address);
+	}
+	if (msg->add_conn.other.allow_any)
+	{
+		snprintf(other, sizeof(other), "%s,0.0.0.0/0,::/0",
+				 msg->add_conn.other.address);
 	}
 	ikeport = msg->add_conn.me.ikeport;
 	ikeport = (ikeport == IKEV2_UDP_PORT) ?
@@ -230,14 +262,15 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	ike_cfg = ike_cfg_create(msg->add_conn.version,
 							 msg->add_conn.other.sendcert != CERT_NEVER_SEND,
 							 msg->add_conn.force_encap,
-							 msg->add_conn.me.address,
-							 msg->add_conn.me.allow_any,
+							 msg->add_conn.me.allow_any ?
+								me : msg->add_conn.me.address,
 							 ikeport,
-							 msg->add_conn.other.address,
-							 msg->add_conn.other.allow_any,
+							 msg->add_conn.other.allow_any ?
+								other : msg->add_conn.other.address,
 							 msg->add_conn.other.ikeport,
 							 msg->add_conn.fragmentation,
 							 msg->add_conn.ikedscp);
+
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;
 }
@@ -824,7 +857,15 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 				}
 				else
 				{
-					if (strchr(ike_cfg->get_my_addr(ike_cfg, NULL), ':'))
+					char *addr, *next, *hit;
+
+					/* guess virtual IP family based on local address. If
+					 * multiple addresses are specified, we look at the first
+					 * only, as with leftallowany a ::/0 is always appended. */
+					addr = ike_cfg->get_my_addr(ike_cfg);
+					next = strchr(addr, ',');
+					hit = strchr(addr, ':');
+					if (hit && (!next || hit < next))
 					{
 						vip = host_create_any(AF_INET6);
 					}

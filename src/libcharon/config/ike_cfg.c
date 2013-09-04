@@ -50,24 +50,34 @@ struct private_ike_cfg_t {
 	ike_version_t version;
 
 	/**
-	 * Address of local host
+	 * Address list string for local host
 	 */
 	char *me;
 
 	/**
-	 * Address of remote host
+	 * Address list string for remote host
 	 */
 	char *other;
 
 	/**
-	 * Allow override of local address
+	 * Local single host or DNS names, as allocated char*
 	 */
-	bool my_allow_any;
+	linked_list_t *my_hosts;
 
 	/**
-	 * Allow override of remote address
+	 * Remote single host or DNS names, as allocated char*
 	 */
-	bool other_allow_any;
+	linked_list_t *other_hosts;
+
+	/**
+	 * Local ranges/subnets this config matches to, as traffic_selector_t*
+	 */
+	linked_list_t *my_ranges;
+
+	/**
+	 * Remote ranges/subnets this config matches to, as traffic_selector_t*
+	 */
+	linked_list_t *other_ranges;
 
 	/**
 	 * our source port
@@ -129,23 +139,124 @@ METHOD(ike_cfg_t, fragmentation, fragmentation_t,
 	return this->fragmentation;
 }
 
-METHOD(ike_cfg_t, get_my_addr, char*,
-	private_ike_cfg_t *this, bool *allow_any)
+/**
+ * Common function for resolve_me/other
+ */
+static host_t* resolve(linked_list_t *hosts, int family, u_int16_t port)
 {
-	if (allow_any)
+	enumerator_t *enumerator;
+	host_t *host = NULL;
+	bool tried = FALSE;
+	char *str;
+
+	enumerator = hosts->create_enumerator(hosts);
+	while (enumerator->enumerate(enumerator, &str))
 	{
-		*allow_any = this->my_allow_any;
+		host = host_create_from_dns(str, family, port);
+		if (host)
+		{
+			break;
+		}
+		tried = TRUE;
 	}
+	enumerator->destroy(enumerator);
+
+	if (!host && !tried)
+	{
+		/* we have no single host configured, return %any */
+		host = host_create_any(family ?: AF_INET);
+		host->set_port(host, port);
+	}
+	return host;
+}
+
+METHOD(ike_cfg_t, resolve_me, host_t*,
+	private_ike_cfg_t *this, int family)
+{
+	return resolve(this->my_hosts, family, this->my_port);
+}
+
+METHOD(ike_cfg_t, resolve_other, host_t*,
+	private_ike_cfg_t *this, int family)
+{
+	return resolve(this->other_hosts, family, this->other_port);
+}
+
+/**
+ * Common function for match_me/other
+ */
+static u_int match(linked_list_t *hosts, linked_list_t *ranges, host_t *cand)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	char *str;
+	host_t *host;
+	u_int8_t mask;
+	u_int quality = 0;
+
+	/* try single hosts first */
+	enumerator = hosts->create_enumerator(hosts);
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		host = host_create_from_dns(str, cand->get_family(cand), 0);
+		if (host)
+		{
+			if (host->ip_equals(host, cand))
+			{
+				quality = max(quality, 128 + 1);
+			}
+			if (host->is_anyaddr(host))
+			{
+				quality = max(quality, 1);
+			}
+			host->destroy(host);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* then ranges/subnets */
+	enumerator = ranges->create_enumerator(ranges);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		if (ts->includes(ts, cand))
+		{
+			if (ts->to_subnet(ts, &host, &mask))
+			{
+				quality = max(quality, mask + 1);
+				host->destroy(host);
+			}
+			else
+			{
+				quality = max(quality, 1);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return quality;
+}
+
+METHOD(ike_cfg_t, match_me, u_int,
+	private_ike_cfg_t *this, host_t *host)
+{
+	return match(this->my_hosts, this->my_ranges, host);
+}
+
+METHOD(ike_cfg_t, match_other, u_int,
+	private_ike_cfg_t *this, host_t *host)
+{
+	return match(this->other_hosts, this->other_ranges, host);
+}
+
+METHOD(ike_cfg_t, get_my_addr, char*,
+	private_ike_cfg_t *this)
+{
 	return this->me;
 }
 
 METHOD(ike_cfg_t, get_other_addr, char*,
-	private_ike_cfg_t *this, bool *allow_any)
+	private_ike_cfg_t *this)
 {
-	if (allow_any)
-	{
-		*allow_any = this->other_allow_any;
-	}
 	return this->other;
 }
 
@@ -313,16 +424,110 @@ METHOD(ike_cfg_t, destroy, void,
 										offsetof(proposal_t, destroy));
 		free(this->me);
 		free(this->other);
+		this->my_hosts->destroy_function(this->my_hosts, free);
+		this->other_hosts->destroy_function(this->other_hosts, free);
+		this->my_ranges->destroy_offset(this->my_ranges,
+										offsetof(traffic_selector_t, destroy));
+		this->other_ranges->destroy_offset(this->other_ranges,
+										offsetof(traffic_selector_t, destroy));
 		free(this);
 	}
+}
+
+/**
+ * Try to parse a string as subnet
+ */
+static traffic_selector_t* make_subnet(char *str)
+{
+	char *pos;
+
+	pos = strchr(str, '/');
+	if (!pos)
+	{
+		return NULL;
+	}
+	return traffic_selector_create_from_cidr(str, 0, 0, 0);
+}
+
+/**
+ * Try to parse a string as an IP range
+ */
+static traffic_selector_t* make_range(char *str)
+{
+	traffic_selector_t *ts;
+	ts_type_t type;
+	char *pos;
+	host_t *from, *to;
+
+	pos = strchr(str, '-');
+	if (!pos)
+	{
+		return NULL;
+	}
+	to = host_create_from_string(pos + 1, 0);
+	if (!to)
+	{
+		return NULL;
+	}
+	str = strndup(str, pos - str);
+	from = host_create_from_string_and_family(str, to->get_family(to), 0);
+	free(str);
+	if (!from)
+	{
+		to->destroy(to);
+		return NULL;
+	}
+	if (to->get_family(to) == AF_INET)
+	{
+		type = TS_IPV4_ADDR_RANGE;
+	}
+	else
+	{
+		type = TS_IPV6_ADDR_RANGE;
+	}
+	ts = traffic_selector_create_from_bytes(0, type,
+											from->get_address(from), 0,
+											to->get_address(to), 0);
+	from->destroy(from);
+	to->destroy(to);
+	return ts;
+}
+
+/**
+ * Parse address string into lists of single hosts and ranges/subnets
+ */
+static void parse_addresses(char *str, linked_list_t *hosts,
+							linked_list_t *ranges)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+
+	enumerator = enumerator_create_token(str, ",", " ");
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		ts = make_subnet(str);
+		if (ts)
+		{
+			ranges->insert_last(ranges, ts);
+			continue;
+		}
+		ts = make_range(str);
+		if (ts)
+		{
+			ranges->insert_last(ranges, ts);
+			continue;
+		}
+		hosts->insert_last(hosts, strdup(str));
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
  * Described in header.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
-						  char *me, bool my_allow_any, u_int16_t my_port,
-						  char *other, bool other_allow_any, u_int16_t other_port,
+						  char *me, u_int16_t my_port,
+						  char *other, u_int16_t other_port,
 						  fragmentation_t fragmentation, u_int8_t dscp)
 {
 	private_ike_cfg_t *this;
@@ -333,6 +538,10 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.send_certreq = _send_certreq,
 			.force_encap = _force_encap_,
 			.fragmentation = _fragmentation,
+			.resolve_me = _resolve_me,
+			.resolve_other = _resolve_other,
+			.match_me = _match_me,
+			.match_other = _match_other,
 			.get_my_addr = _get_my_addr,
 			.get_other_addr = _get_other_addr,
 			.get_my_port = _get_my_port,
@@ -352,14 +561,19 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 		.force_encap = force_encap,
 		.fragmentation = fragmentation,
 		.me = strdup(me),
+		.my_ranges = linked_list_create(),
+		.my_hosts = linked_list_create(),
 		.other = strdup(other),
-		.my_allow_any = my_allow_any,
-		.other_allow_any = other_allow_any,
+		.other_ranges = linked_list_create(),
+		.other_hosts = linked_list_create(),
 		.my_port = my_port,
 		.other_port = other_port,
 		.dscp = dscp,
 		.proposals = linked_list_create(),
 	);
+
+	parse_addresses(me, this->my_hosts, this->my_ranges);
+	parse_addresses(other, this->other_hosts, this->other_ranges);
 
 	return &this->public;
 }

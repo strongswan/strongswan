@@ -84,8 +84,8 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 	{
 		remote_port = IKEV2_NATT_PORT;
 	}
-	ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, "0.0.0.0", FALSE, local_port,
-							 host, FALSE, remote_port, FRAGMENTATION_NO, 0);
+	ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, "0.0.0.0", local_port,
+							 host, remote_port, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(name, ike_cfg,
 							   CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */

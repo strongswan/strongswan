@@ -152,10 +152,9 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 			&ike_proposal, &esp_proposal, &ike_rekey, &esp_rekey))
 	{
 		DESTROY_IF(this->peer_cfg);
-		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
-								 local_addr, FALSE,
+		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, local_addr,
 								 charon->socket->get_port(charon->socket, FALSE),
-								 remote_addr, FALSE, IKEV2_UDP_PORT,
+								 remote_addr, IKEV2_UDP_PORT,
 								 FRAGMENTATION_NO, 0);
 		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
 		this->peer_cfg = peer_cfg_create(
@@ -251,10 +250,9 @@ METHOD(enumerator_t, ike_enumerator_enumerate, bool,
 							   &local_addr, &remote_addr, &ike_proposal))
 	{
 		DESTROY_IF(this->ike_cfg);
-		this->ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
-								local_addr, FALSE,
+		this->ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, local_addr,
 								charon->socket->get_port(charon->socket, FALSE),
-								remote_addr, FALSE, IKEV2_UDP_PORT,
+								remote_addr, IKEV2_UDP_PORT,
 								FRAGMENTATION_NO, 0);
 		this->ike_cfg->add_proposal(this->ike_cfg,
 									create_proposal(ike_proposal, PROTO_IKE));

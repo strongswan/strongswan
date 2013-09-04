@@ -78,20 +78,50 @@ struct ike_cfg_t {
 	ike_version_t (*get_version)(ike_cfg_t *this);
 
 	/**
+	 * Resolve the local address to use for initiation.
+	 *
+	 * @param family		address family to prefer, or AF_UNSPEC
+	 * @return				resolved host, NULL on error
+	 */
+	host_t* (*resolve_me)(ike_cfg_t *this, int family);
+
+	/**
+	 * Resolve the remote address to use for initiation.
+	 *
+	 * @param family		address family to prefer, or AF_UNSPEC
+	 * @return				resolved host, NULL on error
+	 */
+	host_t* (*resolve_other)(ike_cfg_t *this, int family);
+
+	/**
+	 * Check how good a host matches to the configured local address.
+	 *
+	 * @param host			host to check match quality
+	 * @return				quality of the match, 0 if not matching at all
+	 */
+	u_int (*match_me)(ike_cfg_t *this, host_t *host);
+
+	/**
+	 * Check how good a host matches to the configured remote address.
+	 *
+	 * @param host			host to check match quality
+	 * @return				quality of the match, 0 if not matching at all
+	 */
+	u_int (*match_other)(ike_cfg_t *this, host_t *host);
+
+	/**
 	 * Get own address.
 	 *
-	 * @param allow_any		allow any address to match
 	 * @return				string of address/DNS name
 	 */
-	char* (*get_my_addr) (ike_cfg_t *this, bool *allow_any);
+	char* (*get_my_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get peer's address.
 	 *
-	 * @param allow_any		allow any address to match
 	 * @return				string of address/DNS name
 	 */
-	char* (*get_other_addr) (ike_cfg_t *this, bool *allow_any);
+	char* (*get_other_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get the port to use as our source port.
@@ -200,24 +230,27 @@ struct ike_cfg_t {
 /**
  * Creates a ike_cfg_t object.
  *
- * Supplied hosts become owned by ike_cfg, the name gets cloned.
+ * Supplied hosts become owned by ike_cfg, strings get cloned.
+ *
+ * me and other are comma separated lists of IP addresses, DNS names, IP ranges
+ * or subnets. When initiating, the first non-range/subnet address is used
+ * as address. When responding, a match is performed against all items in the
+ * list.
  *
  * @param version			IKE major version to use for this config
  * @param certreq			TRUE to send a certificate request
  * @param force_encap		enforce UDP encapsulation by faking NATD notify
  * @param me				address/DNS name of local peer
- * @param my_allow_any		allow override of local address by any address
  * @param my_port			IKE port to use as source, 500 uses IKEv2 port floating
  * @param other				address/DNS name of remote peer
- * @param other_allow_any	allow override of remote address by any address
  * @param other_port		IKE port to use as dest, 500 uses IKEv2 port floating
  * @param fragmentation		use IKEv1 fragmentation
  * @param dscp				DSCP value to send IKE packets with
  * @return 					ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
-						  char *me, bool my_allow_any, u_int16_t my_port,
-						  char *other, bool other_allow_any, u_int16_t other_port,
+						  char *me, u_int16_t my_port,
+						  char *other, u_int16_t other_port,
 						  fragmentation_t fragmentation, u_int8_t dscp);
 
 #endif /** IKE_CFG_H_ @}*/
