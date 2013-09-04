@@ -1,8 +1,10 @@
 #!/bin/bash
 
+DIR=$(dirname `readlink -f $0`)
+
 function rsatest {
-  echo -n " e=3    "; openssl genrsa -3 $1 2>/dev/null| sudo ./pubkey_speed "$2" rsa $3
-  echo -n " e=f4   "; openssl genrsa -f4 $1 2>/dev/null| sudo ./pubkey_speed "$2" rsa $3
+  echo -n " e=3    "; openssl genrsa -3 $1 2>/dev/null| $DIR/pubkey_speed "$2" rsa $3
+  echo -n " e=f4   "; openssl genrsa -f4 $1 2>/dev/null| $DIR/pubkey_speed "$2" rsa $3
 }
 
 function rsatestall {
@@ -19,7 +21,7 @@ function rsatestall {
 }
 
 function ecdsatest {
-  openssl ecparam -genkey -name $1 -noout | sudo ./pubkey_speed "$2" ecdsa $3
+  openssl ecparam -genkey -name $1 -noout | $DIR/pubkey_speed "$2" ecdsa $3
 
 }
 
@@ -27,7 +29,7 @@ function ecdsatestall {
   echo "testing: $1"
   ecdsatest prime256v1 "$1" 4000
   ecdsatest secp384r1 "$1" 1000
-  ecdsatest secp521r1 "$1" 500 
+  ecdsatest secp521r1 "$1" 500
 }
 
 rsatestall "gmp gcrypt pem"
