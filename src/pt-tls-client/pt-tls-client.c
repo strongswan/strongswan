@@ -179,6 +179,7 @@ static void init()
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	creds = mem_cred_create();
 	lib->credmgr->add_set(lib->credmgr, &creds->set);
