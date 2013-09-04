@@ -931,8 +931,7 @@ Accepted values are
 and
 .B pull
 (the default).
-Push mode is currently not supported in charon, hence this parameter has no
-effect.
+Push mode is currently not supported with IKEv2.
 .TP
 .BR reauth " = " yes " | no"
 whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,

@@ -100,6 +100,11 @@ struct private_peer_cfg_t {
 	bool aggressive;
 
 	/**
+	 * Use pull or push in mode config?
+	 */
+	bool pull_mode;
+
+	/**
 	 * Time before starting rekeying
 	 */
 	u_int32_t rekey_time;
@@ -390,6 +395,12 @@ METHOD(peer_cfg_t, use_aggressive, bool,
 	return this->aggressive;
 }
 
+METHOD(peer_cfg_t, use_pull_mode, bool,
+	private_peer_cfg_t *this)
+{
+	return this->pull_mode;
+}
+
 METHOD(peer_cfg_t, get_dpd, u_int32_t,
 	private_peer_cfg_t *this)
 {
@@ -588,6 +599,7 @@ METHOD(peer_cfg_t, equals, bool,
 		this->over_time == other->over_time &&
 		this->dpd == other->dpd &&
 		this->aggressive == other->aggressive &&
+		this->pull_mode == other->pull_mode &&
 		auth_cfg_equal(this, other)
 #ifdef ME
 		&& this->mediation == other->mediation &&
@@ -638,8 +650,8 @@ peer_cfg_t *peer_cfg_create(char *name,
 							unique_policy_t unique, u_int32_t keyingtries,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
-							bool mobike, bool aggressive, u_int32_t dpd,
-							u_int32_t dpd_timeout,
+							bool mobike, bool aggressive, bool pull_mode,
+							u_int32_t dpd, u_int32_t dpd_timeout,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
@@ -671,6 +683,7 @@ peer_cfg_t *peer_cfg_create(char *name,
 			.get_over_time = _get_over_time,
 			.use_mobike = _use_mobike,
 			.use_aggressive = _use_aggressive,
+			.use_pull_mode = _use_pull_mode,
 			.get_dpd = _get_dpd,
 			.get_dpd_timeout = _get_dpd_timeout,
 			.add_virtual_ip = _add_virtual_ip,
@@ -701,6 +714,7 @@ peer_cfg_t *peer_cfg_create(char *name,
 		.over_time = over_time,
 		.use_mobike = mobike,
 		.aggressive = aggressive,
+		.pull_mode = pull_mode,
 		.dpd = dpd,
 		.dpd_timeout = dpd_timeout,
 		.vips = linked_list_create(),

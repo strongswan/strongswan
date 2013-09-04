@@ -170,7 +170,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
-					TRUE, aggressive, /* mobike, aggressive */
+					TRUE, aggressive, TRUE, /* mobike, aggressive, pull */
 					30, 0, /* DPD delay, timeout */
 					FALSE, NULL, NULL); /* mediation */
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
