@@ -5,6 +5,9 @@ AM_CPPFLAGS = \
 AM_CFLAGS = \
 	-rdynamic
 
+AM_LDFLAGS = \
+	-no-undefined
+
 ipseclib_LTLIBRARIES = libfast.la
 
 libfast_la_SOURCES = \
@@ -17,5 +20,6 @@ nobase_fast_include_HEADERS = \
 	fast_request.h fast_session.h fast_smtp.h
 endif
 
-libfast_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
-  -lfcgi $(clearsilver_LIBS) $(PTHREADLIB)
+libfast_la_LIBADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	-lfcgi $(clearsilver_LIBS) $(PTHREADLIB)

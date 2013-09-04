@@ -4,7 +4,12 @@ AM_CPPFLAGS = \
 
 ipseclib_LTLIBRARIES = libimcv.la
 
-libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
+libimcv_la_LDFLAGS = \
+	-no-undefined
+
+libimcv_la_LIBADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libtncif/libtncif.la
 
 libimcv_la_SOURCES = \
 	imcv.h imcv.c \

@@ -11,13 +11,17 @@ kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
 kernel/kernel_net.c kernel/kernel_net.h \
 kernel/kernel_listener.h
 
-libhydra_la_LIBADD =
+libhydra_la_LIBADD = \
+  $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DPLUGINDIR=\"${plugindir}\" \
 	-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+
+AM_LDFLAGS = \
+  -no-undefined
 
 EXTRA_DIST = Android.mk
 

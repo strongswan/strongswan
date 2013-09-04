@@ -95,6 +95,9 @@ AM_CPPFLAGS = \
 AM_CFLAGS = \
 	@COVERAGE_CFLAGS@
 
+AM_LDFLAGS = \
+	-no-undefined
+
 if USE_LEAK_DETECTIVE
   AM_CPPFLAGS += -DLEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c

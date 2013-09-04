@@ -3,9 +3,15 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libimcv
 
+AM_LDFLAGS = \
+	-no-undefined
+
 ipseclib_LTLIBRARIES = libpts.la
 
-libpts_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la
+libpts_la_LIBADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libtncif/libtncif.la \
+	$(top_builddir)/src/libimcv/libimcv.la
 
 if USE_TROUSERS
   libpts_la_LIBADD += -ltspi

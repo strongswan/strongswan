@@ -136,7 +136,13 @@ AM_CPPFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\"
 
-libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
+AM_LDFLAGS = \
+  -no-undefined
+
+libcharon_la_LIBADD = \
+  $(top_builddir)/src/libstrongswan/libstrongswan.la \
+  $(top_builddir)/src/libhydra/libhydra.la \
+  -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 EXTRA_DIST = Android.mk
 

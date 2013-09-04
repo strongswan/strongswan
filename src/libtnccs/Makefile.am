@@ -3,9 +3,14 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtls
 
+AM_LDFLAGS = \
+	-no-undefined
+
 ipseclib_LTLIBRARIES = libtnccs.la
 
-libtnccs_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
+libtnccs_la_LIBADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libtncif/libtncif.la
 
 libtnccs_la_SOURCES = \
 tnc/tnc.h tnc/tnc.c \
