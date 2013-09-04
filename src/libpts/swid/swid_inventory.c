@@ -54,8 +54,7 @@ struct private_swid_inventory_t {
 	linked_list_t *list;
 };
 
-static bool collect_tags(private_swid_inventory_t *this, char *pathname,
-						 int *tag_count)
+static bool collect_tags(private_swid_inventory_t *this, char *pathname)
 {
 	char *rel_name, *abs_name;
 	struct stat st;
@@ -83,7 +82,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 		}
 		if (S_ISDIR(st.st_mode))
 		{
-			if (!collect_tags(this, abs_name, tag_count))
+			if (!collect_tags(this, abs_name))
 			{
 				goto end;
 			}
@@ -168,7 +167,6 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 			tag_id = swid_tag_id_create(tag_creator, unique_sw_id, unique_seq_id);
 			this->list->insert_last(this->list, tag_id);
 		}
-		(*tag_count)++;
 
 	}
 	success = TRUE;
@@ -183,18 +181,7 @@ end:
 METHOD(swid_inventory_t, collect, bool,
 	private_swid_inventory_t *this)
 {
-	int tag_count = 0;
-
-	if (collect_tags(this, SWID_TAG_DIRECTORY, &tag_count))
-	{
-		DBG1(DBG_IMC, "collected %d SWID tag%s%s", tag_count,
-			 this->full_tags ? "" : " ID", (tag_count == 1) ? "" : "s");
-		return TRUE;
-	}
-	else
-	{
-		return FALSE;
-	}
+	return collect_tags(this, SWID_TAG_DIRECTORY);
 }
 
 METHOD(swid_inventory_t, add, void,

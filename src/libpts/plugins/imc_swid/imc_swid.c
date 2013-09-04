@@ -187,6 +187,9 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 			out_msg->add_attribute(out_msg, attr);
 			break;
 		}
+		DBG1(DBG_IMC, "collected %d SWID tag%s%s",
+			 swid_inventory->get_count(swid_inventory), full_tags ? "" : " ID",
+			 swid_inventory->get_count(swid_inventory) == 1 ? "" : "s");
 
 		if (full_tags)
 		{
