@@ -161,12 +161,19 @@ static void cleanup()
  */
 static void init()
 {
+	plugin_feature_t features[] = {
+		PLUGIN_NOOP,
+			PLUGIN_PROVIDE(CUSTOM, "pt-tls-client"),
+				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
+	};
 	library_init(NULL);
 	libtnccs_init();
 
 	dbg = dbg_pt_tls;
 	options = options_create();
 
+	lib->plugins->add_static_features(lib->plugins, "pt-tls-client", features,
+									  countof(features), TRUE);
 	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "pt-tls-client.load", PLUGINS)))
 	{
