@@ -35,10 +35,10 @@
 #include <ietf/ietf_attr_string_version.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
-#include <tcg/tcg_pts_attr_file_meas.h>
-#include <tcg/tcg_pts_attr_meas_algo.h>
-#include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_req_file_meas.h>
+#include <tcg/pts/tcg_pts_attr_file_meas.h>
+#include <tcg/pts/tcg_pts_attr_meas_algo.h>
+#include <tcg/pts/tcg_pts_attr_proto_caps.h>
+#include <tcg/pts/tcg_pts_attr_req_file_meas.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
