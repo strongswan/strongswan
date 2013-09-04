@@ -93,7 +93,7 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 	esp_packet_t *packet;
 	ipsec_sa_t *sa;
 	u_int8_t next_header;
-	u_int32_t spi;
+	u_int32_t spi, reqid;
 
 	packet = (esp_packet_t*)this->inbound_queue->dequeue(this->inbound_queue);
 
@@ -126,6 +126,7 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 		packet->destroy(packet);
 		return JOB_REQUEUE_DIRECT;
 	}
+	reqid = sa->get_reqid(sa);
 	ipsec->sas->checkin(ipsec->sas, sa);
 
 	next_header = packet->get_next_header(packet);
@@ -139,7 +140,7 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 
 			ip_packet = packet->get_payload(packet);
 			policy = ipsec->policies->find_by_packet(ipsec->policies,
-													 ip_packet, TRUE);
+													 ip_packet, TRUE, reqid);
 			if (policy)
 			{	/* TODO-IPSEC: update policy/sa stats? */
 				deliver_inbound(this, packet);
@@ -193,7 +194,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 
 	packet = (ip_packet_t*)this->outbound_queue->dequeue(this->outbound_queue);
 
-	policy = ipsec->policies->find_by_packet(ipsec->policies, packet, FALSE);
+	policy = ipsec->policies->find_by_packet(ipsec->policies, packet, FALSE, 0);
 	if (!policy)
 	{
 		DBG2(DBG_ESP, "no matching outbound IPsec policy for %H == %H",

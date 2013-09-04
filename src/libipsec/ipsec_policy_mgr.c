@@ -230,7 +230,8 @@ METHOD(ipsec_policy_mgr_t, flush_policies, status_t,
 }
 
 METHOD(ipsec_policy_mgr_t, find_by_packet, ipsec_policy_t*,
-	private_ipsec_policy_mgr_t *this, ip_packet_t *packet, bool inbound)
+	private_ipsec_policy_mgr_t *this, ip_packet_t *packet, bool inbound,
+	u_int32_t reqid)
 {
 	enumerator_t *enumerator;
 	ipsec_policy_entry_t *current;
@@ -245,8 +246,11 @@ METHOD(ipsec_policy_mgr_t, find_by_packet, ipsec_policy_t*,
 		if ((inbound == (policy->get_direction(policy) == POLICY_IN)) &&
 			 policy->match_packet(policy, packet))
 		{
-			found = policy->get_ref(policy);
-			break;
+			if (reqid == 0 || reqid == policy->get_reqid(policy))
+			{
+				found = policy->get_ref(policy);
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);

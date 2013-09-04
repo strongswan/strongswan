@@ -97,10 +97,12 @@ struct ipsec_policy_mgr_t {
 	 *
 	 * @param packet		IP packet to match
 	 * @param inbound		TRUE for an inbound packet
+	 * @param reqid			require a policy with a specific reqid, 0 for any
 	 * @return				reference to the policy, or NULL if none found
 	 */
 	ipsec_policy_t *(*find_by_packet)(ipsec_policy_mgr_t *this,
-									  ip_packet_t *packet, bool inbound);
+									  ip_packet_t *packet, bool inbound,
+									  u_int32_t reqid);
 
 	/**
 	 * Destroy an ipsec_policy_mgr_t
