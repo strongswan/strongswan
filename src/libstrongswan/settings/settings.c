@@ -24,10 +24,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifdef HAVE_GLOB_H
-#include <glob.h>
-#endif /* HAVE_GLOB_H */
-
 #include "settings.h"
 
 #include "collections/array.h"
@@ -1284,8 +1280,9 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section)
 {
+	enumerator_t *enumerator;
 	bool success = TRUE;
-	char pat[PATH_MAX];
+	char pat[PATH_MAX], *expanded;
 
 	if (level > MAX_INCLUSION_LEVEL)
 	{
@@ -1319,39 +1316,23 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 		}
 		free(dir);
 	}
-#ifdef HAVE_GLOB_H
+	enumerator = enumerator_create_glob(pat);
+	if (enumerator)
 	{
-		int status;
-		glob_t buf;
-
-		status = glob(pat, GLOB_ERR, NULL, &buf);
-		if (status == GLOB_NOMATCH)
+		while (enumerator->enumerate(enumerator, &expanded, NULL))
 		{
-			DBG1(DBG_LIB, "no files found matching '%s', ignored", pat);
-		}
-		else if (status != 0)
-		{
-			DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
-			success = FALSE;
-		}
-		else
-		{
-			char **expanded;
-			for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+			success &= parse_file(contents, expanded, level + 1, section);
+			if (!success)
 			{
-				success &= parse_file(contents, *expanded, level + 1, section);
-				if (!success)
-				{
-					break;
-				}
+				break;
 			}
 		}
-		globfree(&buf);
+		enumerator->destroy(enumerator);
 	}
-#else /* HAVE_GLOB_H */
-	/* if glob(3) is not available, try to load pattern directly */
-	success = parse_file(contents, pat, level + 1, section);
-#endif /* HAVE_GLOB_H */
+	else
+	{	/* if glob(3) is not available, try to load pattern directly */
+		success = parse_file(contents, pat, level + 1, section);
+	}
 	return success;
 }
 
