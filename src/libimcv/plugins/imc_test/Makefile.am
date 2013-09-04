@@ -13,4 +13,4 @@ imc_test_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la \
 
 imc_test_la_SOURCES = imc_test.c imc_test_state.h imc_test_state.c
 
-imc_test_la_LDFLAGS = -module -avoid-version
+imc_test_la_LDFLAGS = -module -avoid-version -no-undefined

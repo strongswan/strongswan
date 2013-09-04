@@ -16,7 +16,7 @@ imv_os_la_SOURCES = \
 	imv_os_agent.h imv_os_agent.c \
 	imv_os_database.c imv_os_database.h
 
-imv_os_la_LDFLAGS = -module -avoid-version
+imv_os_la_LDFLAGS = -module -avoid-version -no-undefined
 
 ipsec_PROGRAMS = pacman
 pacman_SOURCES = pacman.c

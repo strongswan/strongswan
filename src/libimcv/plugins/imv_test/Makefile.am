@@ -15,4 +15,4 @@ imv_test_la_SOURCES = \
 	imv_test.c imv_test_state.h imv_test_state.c \
 	imv_test_agent.h imv_test_agent.c
 
-imv_test_la_LDFLAGS = -module -avoid-version
+imv_test_la_LDFLAGS = -module -avoid-version -no-undefined

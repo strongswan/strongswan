@@ -18,4 +18,4 @@ imv_swid_la_SOURCES = \
 	imv_swid.c imv_swid_state.h imv_swid_state.c \
 	imv_swid_agent.h imv_swid_agent.c
 
-imv_swid_la_LDFLAGS = -module -avoid-version
+imv_swid_la_LDFLAGS = -module -avoid-version -no-undefined

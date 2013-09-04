@@ -36,4 +36,4 @@ imc_swid_la_LIBADD = \
 
 imc_swid_la_SOURCES = imc_swid.c imc_swid_state.h imc_swid_state.c
 
-imc_swid_la_LDFLAGS = -module -avoid-version
+imc_swid_la_LDFLAGS = -module -avoid-version -no-undefined
