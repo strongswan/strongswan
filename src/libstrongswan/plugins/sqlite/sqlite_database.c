@@ -21,6 +21,7 @@
 #include <library.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
+#include <threading/thread_value.h>
 
 typedef struct private_sqlite_database_t private_sqlite_database_t;
 
@@ -40,10 +41,32 @@ struct private_sqlite_database_t {
 	sqlite3 *db;
 
 	/**
-	 * mutex used to lock execute()
+	 * thread-specific transaction, as transaction_t
+	 */
+	thread_value_t *transaction;
+
+	/**
+	 * mutex used to lock execute(), if necessary
 	 */
 	mutex_t *mutex;
 };
+
+/**
+ * Database transaction
+ */
+typedef struct {
+
+	/**
+	 * Refcounter if transaction() is called multiple times
+	 */
+	refcount_t refs;
+
+	/**
+	 * TRUE if transaction was rolled back
+	 */
+	bool rollback;
+
+} transaction_t;
 
 /**
  * Create and run a sqlite stmt using a sql string and args
@@ -284,19 +307,72 @@ METHOD(database_t, execute, int,
 METHOD(database_t, transaction, bool,
 	private_sqlite_database_t *this)
 {
-	return FALSE;
+	transaction_t *trans;
+
+	trans = this->transaction->get(this->transaction);
+	if (trans)
+	{
+		ref_get(&trans->refs);
+		return TRUE;
+	}
+	if (execute(this, NULL, "BEGIN EXCLUSIVE TRANSACTION") == -1)
+	{
+		return FALSE;
+	}
+	INIT(trans,
+		.refs = 1,
+	);
+	this->transaction->set(this->transaction, trans);
+	return TRUE;
+}
+
+/**
+ * Finalize a transaction depending on the reference count and if it should be
+ * rolled back.
+ */
+static bool finalize_transaction(private_sqlite_database_t *this,
+								 bool rollback)
+{
+	transaction_t *trans;
+	char *command = "COMMIT TRANSACTION";
+	bool success;
+
+	trans = this->transaction->get(this->transaction);
+	if (!trans)
+	{
+		DBG1(DBG_LIB, "no database transaction found");
+		return FALSE;
+	}
+
+	if (ref_put(&trans->refs))
+	{
+		if (trans->rollback)
+		{
+			command = "ROLLBACK TRANSACTION";
+		}
+		success = execute(this, NULL, command) != -1;
+
+		this->transaction->set(this->transaction, NULL);
+		free(trans);
+		return success;
+	}
+	else
+	{	/* set flag, can't be unset */
+		trans->rollback |= rollback;
+	}
+	return TRUE;
 }
 
 METHOD(database_t, commit, bool,
 	private_sqlite_database_t *this)
 {
-	return FALSE;
+	return finalize_transaction(this, FALSE);
 }
 
 METHOD(database_t, rollback, bool,
 	private_sqlite_database_t *this)
 {
-	return FALSE;
+	return finalize_transaction(this, TRUE);
 }
 
 METHOD(database_t, get_driver, db_driver_t,
@@ -323,6 +399,7 @@ METHOD(database_t, destroy, void,
 	{
 		DBG1(DBG_LIB, "sqlite close failed because database is busy");
 	}
+	this->transaction->destroy(this->transaction);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -357,13 +434,14 @@ sqlite_database_t *sqlite_database_create(char *uri)
 			},
 		},
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.transaction = thread_value_create(NULL),
 	);
 
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
 		DBG1(DBG_LIB, "opening SQLite database '%s' failed: %s",
 			 file, sqlite3_errmsg(this->db));
-		_destroy(this);
+		destroy(this);
 		return NULL;
 	}
 
@@ -371,4 +449,3 @@ sqlite_database_t *sqlite_database_create(char *uri)
 
 	return &this->public;
 }
-
