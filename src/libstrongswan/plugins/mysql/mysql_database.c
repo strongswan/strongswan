@@ -101,9 +101,11 @@ struct conn_t {
 /**
  * Release a mysql connection
  */
-static void conn_release(conn_t *conn)
+static void conn_release(private_mysql_database_t *this, conn_t *conn)
 {
+	this->mutex->lock(this->mutex);
 	conn->in_use = FALSE;
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -197,9 +199,10 @@ static conn_t *conn_get(private_mysql_database_t *this)
 	}
 	if (found == NULL)
 	{
-		found = malloc_thing(conn_t);
-		found->in_use = TRUE;
-		found->mysql = mysql_init(NULL);
+		INIT(found,
+			.in_use = TRUE,
+			.mysql = mysql_init(NULL),
+		);
 		if (!mysql_real_connect(found->mysql, this->host, this->username,
 								this->password, this->database, this->port,
 								NULL, 0))
@@ -332,6 +335,8 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
+	/** mysql database */
+	private_mysql_database_t *db;
 	/** associated MySQL statement */
 	MYSQL_STMT *stmt;
 	/** result bindings */
@@ -373,7 +378,7 @@ static void mysql_enumerator_destroy(mysql_enumerator_t *this)
 		}
 	}
 	mysql_stmt_close(this->stmt);
-	conn_release(this->conn);
+	conn_release(this->db, this->conn);
 	free(this->bind);
 	free(this->val.p_void);
 	free(this->length);
@@ -496,11 +501,16 @@ METHOD(database_t, query, enumerator_t*,
 	{
 		int columns, i;
 
-		enumerator = malloc_thing(mysql_enumerator_t);
-		enumerator->public.enumerate = (void*)mysql_enumerator_enumerate;
-		enumerator->public.destroy = (void*)mysql_enumerator_destroy;
-		enumerator->stmt = stmt;
-		enumerator->conn = conn;
+		INIT(enumerator,
+			.public = {
+				.enumerate = (void*)mysql_enumerator_enumerate,
+				.destroy = (void*)mysql_enumerator_destroy,
+
+			},
+			.db = this,
+			.stmt = stmt,
+			.conn = conn,
+		);
 		columns = mysql_stmt_field_count(stmt);
 		enumerator->bind = calloc(columns, sizeof(MYSQL_BIND));
 		enumerator->length = calloc(columns, sizeof(unsigned long));
@@ -557,7 +567,7 @@ METHOD(database_t, query, enumerator_t*,
 	}
 	else
 	{
-		conn_release(conn);
+		conn_release(this, conn);
 	}
 	va_end(args);
 	return (enumerator_t*)enumerator;
@@ -588,7 +598,7 @@ METHOD(database_t, execute, int,
 		mysql_stmt_close(stmt);
 	}
 	va_end(args);
-	conn_release(conn);
+	conn_release(this, conn);
 	return affected;
 }
 
@@ -697,7 +707,6 @@ mysql_database_t *mysql_database_create(char *uri)
 		destroy(this);
 		return NULL;
 	}
-	conn_release(conn);
+	conn_release(this, conn);
 	return &this->public;
 }
-
