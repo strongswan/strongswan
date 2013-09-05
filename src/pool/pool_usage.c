@@ -124,4 +124,3 @@ Usage:\n\
                lines are ignored. The file may not contain a --batch command.\n\
   \n");
 }
-

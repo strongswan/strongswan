@@ -1478,6 +1478,7 @@ AC_CONFIG_FILES([
 	src/scepclient/Makefile
 	src/pki/Makefile
 	src/pki/man/Makefile
+	src/pool/Makefile
 	src/dumm/Makefile
 	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
