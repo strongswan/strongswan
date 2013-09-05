@@ -30,8 +30,6 @@
 
 typedef struct private_swid_inventory_t private_swid_inventory_t;
 
-#define SWID_TAG_DIRECTORY	"/usr/share"
-
 /**
  * Private data of a swid_inventory_t object.
  *
@@ -179,9 +177,9 @@ end:
 }
 
 METHOD(swid_inventory_t, collect, bool,
-	private_swid_inventory_t *this)
+	private_swid_inventory_t *this, char *directory)
 {
-	return collect_tags(this, SWID_TAG_DIRECTORY);
+	return collect_tags(this, directory);
 }
 
 METHOD(swid_inventory_t, add, void,

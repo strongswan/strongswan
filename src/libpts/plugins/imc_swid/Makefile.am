@@ -21,7 +21,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libimcv \
-	-I$(top_srcdir)/src/libpts
+	-I$(top_srcdir)/src/libpts \
+	-DSWID_DIRECTORY=\"${prefix}/share\"
 
 AM_CFLAGS = \
 	-rdynamic

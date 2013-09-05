@@ -33,9 +33,10 @@ struct swid_inventory_t {
 	/**
 	 * Collect the SWID tags stored on the endpoint
 	 *
+	 * @param directory		SWID directory path
 	 * @return				TRUE if successful
 	 */
-	bool (*collect)(swid_inventory_t *this);
+	bool (*collect)(swid_inventory_t *this, char *directory);
 
 	/**
 	 * Collect the SWID tags stored on the endpoint

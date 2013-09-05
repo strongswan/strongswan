@@ -970,6 +970,9 @@ Send open listening ports without being prompted
 .BR libimcv.plugins.imv-scanner.remediation_uri
 URI pointing to scanner remediation instructions
 .TP
+.BR libimcv.plugins.imc-swid.swid_directory "[$(prefix)/share]"
+Directory where SWID tags are located
+.TP
 .BR libimcv.plugins.imc-test.additional_ids " [0]"
 Number of additional IMC IDs
 .TP
