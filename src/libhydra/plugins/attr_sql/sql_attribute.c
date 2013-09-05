@@ -346,8 +346,6 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		u_int count;
 		char *name;
 
-		this->db->execute(this->db, NULL, "BEGIN EXCLUSIVE TRANSACTION");
-
 		/* in a first step check for attributes that match name and id */
 		if (id)
 		{
@@ -418,8 +416,6 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 			pool_enumerator->destroy(pool_enumerator);
 		}
 
-		this->db->execute(this->db, NULL, "END TRANSACTION");
-
 		/* lastly try to find global attributes */
 		if (!attr_enumerator)
 		{
@@ -474,4 +470,3 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 					  DB_UINT, now);
 	return &this->public;
 }
-
