@@ -241,3 +241,16 @@ DROP INDEX IF EXISTS regids_name;
 CREATE INDEX regids_name ON regids (
   name
 );
+
+DROP TABLE IF EXISTS tags;
+CREATE TABLE tags (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  regid INTEGER NOT NULL REFERENCES regids(id),
+  unique_sw_id TEXT NOT NULL,
+  value TEXT
+);
+DROP INDEX IF EXISTS tags_name;
+CREATE INDEX tags_unique_sw_id ON tags (
+  unique_sw_id
+);
+

@@ -885,13 +885,92 @@ INSERT INTO regids (			/*  6 */
 INSERT INTO regids (			/*  7 */
   name
 ) VALUES (
- 'regid.2002-08.org.sqlite'
+ 'regid.1998-12.org.openssl'
 );
 
 INSERT INTO regids (			/*  8 */
   name
 ) VALUES (
+ 'regid.1998-01.org.samba'
+);
+
+INSERT INTO regids (			/*  9 */
+  name
+) VALUES (
+ 'regid.2002-08.org.sqlite'
+);
+
+INSERT INTO regids (			/* 10 */
+  name
+) VALUES (
  'regid.2004-03.org.strongswan'
 );
 
+/* Tags */
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  2, 'Windows-8-Pro'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'apache-2-2-22-13'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'bind-9-8-4-dfsg'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'libsqlite-3-7-13-1'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'libssl-1-0-1e-2'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'libssl-dev-1-0-1e-2'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'libssl-doc-1-0-1e-2'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'openssl-1-0-1e-2'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'smbclient-3-6-6-6'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  5, 'sqlite-3-7-13-1'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  10, 'strongSwan-5-1-1'
+);
 
