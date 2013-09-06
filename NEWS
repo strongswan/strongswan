@@ -4,6 +4,9 @@ strongswan-5.1.1
 - The lean stand-alone pt-tls-client can set up a RFC 6876 PT-TLS session
   with a strongSwan policy enforcement point which uses the tnc-pdp charon plugin.
 
+- The new TCG TNC SWID IMC/IMV pair supports targeted SWID requests for either
+  full SWID Tag or concise SWID Tag ID inventories.
+
 - The XAuth backend in eap-radius now supports multiple XAuth exchanges for
   different credential types and display messages. All user input gets
   concatenated and verified with a single User-Password RADIUS attribute on
@@ -21,6 +24,7 @@ strongswan-5.1.1
 
 - load-tester supports transport mode connections and more complex traffic
   selectors, including such using unique ports for each tunnel.
+
 
 strongswan-5.1.0
 ----------------
