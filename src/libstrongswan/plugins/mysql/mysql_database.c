@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -602,6 +603,24 @@ METHOD(database_t, execute, int,
 	return affected;
 }
 
+METHOD(database_t, transaction, bool,
+	private_mysql_database_t *this)
+{
+	return FALSE;
+}
+
+METHOD(database_t, commit, bool,
+	private_mysql_database_t *this)
+{
+	return FALSE;
+}
+
+METHOD(database_t, rollback, bool,
+	private_mysql_database_t *this)
+{
+	return FALSE;
+}
+
 METHOD(database_t, get_driver,db_driver_t,
 	private_mysql_database_t *this)
 {
@@ -686,6 +705,9 @@ mysql_database_t *mysql_database_create(char *uri)
 			.db = {
 				.query = _query,
 				.execute = _execute,
+				.transaction = _transaction,
+				.commit = _commit,
+				.rollback = _rollback,
 				.get_driver = _get_driver,
 				.destroy = _destroy,
 			},
