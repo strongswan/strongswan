@@ -1,5 +1,4 @@
 
-
 DROP TABLE IF EXISTS `identities`;
 CREATE TABLE `identities` (
   `id` int(10) unsigned NOT NULL auto_increment,
@@ -7,7 +6,7 @@ CREATE TABLE `identities` (
   `data` varbinary(64) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`type`, `data`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `child_configs`;
@@ -27,7 +26,7 @@ CREATE TABLE `child_configs` (
   `reqid` mediumint(8) unsigned NOT NULL default '0',
   PRIMARY KEY (`id`),
   INDEX (`name`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `child_config_traffic_selector`;
@@ -36,7 +35,7 @@ CREATE TABLE `child_config_traffic_selector` (
   `traffic_selector` int(10) unsigned NOT NULL,
   `kind` tinyint(3) unsigned NOT NULL,
   INDEX (`child_cfg`, `traffic_selector`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `proposals`;
@@ -44,7 +43,7 @@ CREATE TABLE `proposals` (
   `id` int(10) unsigned NOT NULL auto_increment,
   `proposal` varchar(128) NOT NULL,
   PRIMARY KEY (`id`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `child_config_proposal`;
@@ -52,7 +51,7 @@ CREATE TABLE `child_config_proposal` (
   `child_cfg` int(10) unsigned NOT NULL,
   `prio` smallint(5) unsigned NOT NULL,
   `prop` int(10) unsigned NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `ike_configs`;
@@ -63,7 +62,7 @@ CREATE TABLE `ike_configs` (
   `local` varchar(128) collate utf8_unicode_ci NOT NULL,
   `remote` varchar(128) collate utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `ike_config_proposal`;
@@ -71,7 +70,7 @@ CREATE TABLE `ike_config_proposal` (
   `ike_cfg` int(10) unsigned NOT NULL,
   `prio` smallint(5) unsigned NOT NULL,
   `prop` int(10) unsigned NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `peer_configs`;
@@ -101,7 +100,7 @@ CREATE TABLE `peer_configs` (
   `peer_id` int(10) unsigned NOT NULL default '0',
   PRIMARY KEY (`id`),
   INDEX (`name`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `peer_config_child_config`;
@@ -109,7 +108,7 @@ CREATE TABLE `peer_config_child_config` (
   `peer_cfg` int(10) unsigned NOT NULL,
   `child_cfg` int(10) unsigned NOT NULL,
   PRIMARY KEY (`peer_cfg`, `child_cfg`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS `traffic_selectors`;
@@ -122,7 +121,7 @@ CREATE TABLE `traffic_selectors` (
   `start_port` smallint(5) unsigned NOT NULL default '0',
   `end_port` smallint(5) unsigned NOT NULL default '65535',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS certificates;
@@ -132,7 +131,7 @@ CREATE TABLE certificates (
   `keytype` tinyint(3) unsigned NOT NULL,
   `data` BLOB NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS certificate_identity;
@@ -140,7 +139,7 @@ CREATE TABLE certificate_identity (
   `certificate` int(10) unsigned NOT NULL,
   `identity` int(10) unsigned NOT NULL,
   PRIMARY KEY (`certificate`, `identity`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS private_keys;
@@ -149,7 +148,7 @@ CREATE TABLE private_keys (
   `type` tinyint(3) unsigned NOT NULL,
   `data` BLOB NOT NULL,
   PRIMARY KEY  (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS private_key_identity;
@@ -157,7 +156,7 @@ CREATE TABLE private_key_identity (
   `private_key` int(10) unsigned NOT NULL,
   `identity` int(10) unsigned NOT NULL,
   PRIMARY KEY (`private_key`, `identity`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS shared_secrets;
@@ -166,7 +165,7 @@ CREATE TABLE shared_secrets (
   `type` tinyint(3) unsigned NOT NULL,
   `data` varbinary(256) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS shared_secret_identity;
@@ -174,7 +173,7 @@ CREATE TABLE shared_secret_identity (
   `shared_secret` int(10) unsigned NOT NULL,
   `identity` int(10) unsigned NOT NULL,
   PRIMARY KEY (`shared_secret`, `identity`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS certificate_authorities;
@@ -182,7 +181,7 @@ CREATE TABLE certificate_authorities (
   `id` int(10) unsigned NOT NULL auto_increment,
   `certificate` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS certificate_distribution_points;
@@ -192,7 +191,7 @@ CREATE TABLE certificate_distribution_points (
   `type` tinyint(3) unsigned NOT NULL,
   `uri` varchar(256) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS pools;
@@ -204,7 +203,7 @@ CREATE TABLE pools (
   `timeout` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`name`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS addresses;
@@ -219,7 +218,7 @@ CREATE TABLE addresses (
   INDEX (`pool`),
   INDEX (`identity`),
   INDEX (`address`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 DROP TABLE IF EXISTS leases;
 CREATE TABLE leases (
@@ -229,14 +228,14 @@ CREATE TABLE leases (
   `acquired` int(10) unsigned NOT NULL,
   `released` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 DROP TABLE IF EXISTS attribute_pools;
 CREATE TABLE attribute_pools (
   `id` int(10) unsigned NOT NULL auto_increment,
   `name` varchar(32) NOT NULL,
   PRIMARY KEY (`id`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 DROP TABLE IF EXISTS attributes;
 CREATE TABLE attributes (
@@ -248,7 +247,7 @@ CREATE TABLE attributes (
   PRIMARY KEY (`id`),
   INDEX (`identity`),
   INDEX (`pool`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (
@@ -265,7 +264,7 @@ CREATE TABLE ike_sas (
   `remote_host_data` varbinary(16) NOT NULL,
   `lastuse` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`local_spi`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
 DROP TABLE IF EXISTS logs;
@@ -277,6 +276,6 @@ CREATE TABLE logs (
   `msg` varchar(256) NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
