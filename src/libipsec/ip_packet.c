@@ -98,7 +98,7 @@ METHOD(ip_packet_t, get_next_header, u_int8_t,
 METHOD(ip_packet_t, clone, ip_packet_t*,
 	private_ip_packet_t *this)
 {
-	return ip_packet_create(this->packet);
+	return ip_packet_create(chunk_clone(this->packet));
 }
 
 METHOD(ip_packet_t, destroy, void,
