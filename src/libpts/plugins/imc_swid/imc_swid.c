@@ -154,7 +154,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		tcg_swid_attr_req_t *attr_req;
 		u_int8_t flags;
 		u_int32_t request_id, eid_epoch;
-		swid_inventory_t *swid_inventory;
+		swid_inventory_t *swid_inventory, *targets;
 		char *swid_directory;
 		bool full_tags;
 
@@ -168,6 +168,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		attr_req = (tcg_swid_attr_req_t*)attr;
 		flags = attr_req->get_flags(attr_req);
 		request_id = attr_req->get_request_id(attr_req);
+		targets = attr_req->get_targets(attr_req);
 		eid_epoch = swid_state->get_eid_epoch(swid_state);
 
 		if (flags & (TCG_SWID_ATTR_REQ_FLAG_S | TCG_SWID_ATTR_REQ_FLAG_C))
@@ -183,7 +184,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 								"libimcv.plugins.imc-swid.swid_directory",
 								 SWID_DIRECTORY);
 		swid_inventory = swid_inventory_create(full_tags);
-		if (!swid_inventory->collect(swid_inventory, swid_directory))
+		if (!swid_inventory->collect(swid_inventory, swid_directory, targets))
 		{
 			swid_inventory->destroy(swid_inventory);
 			attr = swid_error_create(TCG_SWID_ERROR, request_id,

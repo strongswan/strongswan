@@ -88,9 +88,9 @@ struct private_tcg_swid_attr_req_t {
 	u_int32_t earliest_eid;
 
 	/**
-	 * List of Tag Identifiers
+	 * List of Target Tag Identifiers
 	 */
-	linked_list_t *tag_id_list;
+	swid_inventory_t *targets;
 
 	/**
 	 * Reference count
@@ -137,11 +137,11 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(SWID_REQ_SIZE);
 	writer->write_uint8 (writer, this->flags);
-	writer->write_uint24(writer, this->tag_id_list->get_count(this->tag_id_list));
+	writer->write_uint24(writer, this->targets->get_count(this->targets));
 	writer->write_uint32(writer, this->request_id);
 	writer->write_uint32(writer, this->earliest_eid);
 
-	enumerator = this->tag_id_list->create_enumerator(this->tag_id_list);
+	enumerator = this->targets->create_enumerator(this->targets);
 	while (enumerator->enumerate(enumerator, &tag_id))
 	{
 		tag_creator = tag_id->get_tag_creator(tag_id);
@@ -202,7 +202,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset += 2 + unique_sw_id.len;
 		
 		tag_id = swid_tag_id_create(tag_creator, unique_sw_id, chunk_empty);
-		this->tag_id_list->insert_last(this->tag_id_list, tag_id);
+		this->targets->add(this->targets, tag_id);
 	}
 	reader->destroy(reader);
 
@@ -221,8 +221,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		this->tag_id_list->destroy_offset(this->tag_id_list,
-										  offsetof(swid_tag_id_t, destroy));
+		this->targets->destroy(this->targets);
 		free(this->value.ptr);
 		free(this);
 	}
@@ -246,16 +245,16 @@ METHOD(tcg_swid_attr_req_t, get_earliest_eid, u_int32_t,
 	return this->earliest_eid;
 }
 
-METHOD(tcg_swid_attr_req_t, add_tag_id, void,
+METHOD(tcg_swid_attr_req_t, add_target, void,
 	private_tcg_swid_attr_req_t *this, swid_tag_id_t *tag_id)
 {
-	this->tag_id_list->insert_last(this->tag_id_list, tag_id);
+	this->targets->add(this->targets, tag_id);
 }
 
-METHOD(tcg_swid_attr_req_t, create_tag_id_enumerator, enumerator_t*,
+METHOD(tcg_swid_attr_req_t, get_targets, swid_inventory_t*,
 	private_tcg_swid_attr_req_t *this)
 {
-	return this->tag_id_list->create_enumerator(this->tag_id_list);
+	return this->targets;
 }
 
 /**
@@ -281,14 +280,14 @@ pa_tnc_attr_t *tcg_swid_attr_req_create(u_int8_t flags, u_int32_t request_id,
 			.get_flags = _get_flags,
 			.get_request_id = _get_request_id,
 			.get_earliest_eid = _get_earliest_eid,
-			.add_tag_id = _add_tag_id,
-			.create_tag_id_enumerator = _create_tag_id_enumerator,
+			.add_target = _add_target,
+			.get_targets = _get_targets,
 		},
 		.type = { PEN_TCG, TCG_SWID_REQUEST },
 		.flags = flags & SWID_REQ_RESERVED_MASK,
 		.request_id = request_id,
 		.earliest_eid = eid,
-		.tag_id_list = linked_list_create(),
+		.targets = swid_inventory_create(FALSE),
 		.ref = 1,
 	);
 
@@ -317,12 +316,12 @@ pa_tnc_attr_t *tcg_swid_attr_req_create_from_data(chunk_t data)
 			.get_flags = _get_flags,
 			.get_request_id = _get_request_id,
 			.get_earliest_eid = _get_earliest_eid,
-			.add_tag_id = _add_tag_id,
-			.create_tag_id_enumerator = _create_tag_id_enumerator,
+			.add_target = _add_target,
+			.get_targets = _get_targets,
 		},
 		.type = { PEN_TCG, TCG_SWID_REQUEST },
 		.value = chunk_clone(data),
-		.tag_id_list = linked_list_create(),
+		.targets = swid_inventory_create(FALSE),
 		.ref = 1,
 	);
 

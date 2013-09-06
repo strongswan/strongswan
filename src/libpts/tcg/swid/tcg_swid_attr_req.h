@@ -33,6 +33,7 @@ enum tcg_swid_attr_req_flag_t {
 
 #include "tcg/tcg_attr.h"
 #include "swid/swid_tag_id.h"
+#include "swid/swid_inventory.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**
@@ -71,14 +72,14 @@ struct tcg_swid_attr_req_t {
 	 *
 	 * @param tag_id			SWID Tag ID (is not cloned by constructor!)
 	 */
-	void (*add_tag_id)(tcg_swid_attr_req_t *this, swid_tag_id_t *tag_id);
+	void (*add_target)(tcg_swid_attr_req_t *this, swid_tag_id_t *tag_id);
 
 	/**
 	 * Create Tag ID enumerator
 	 *
-	 * @return					Tag ID enumerator
+	 * @return					Get a list of target tag IDs
 	 */
-	enumerator_t* (*create_tag_id_enumerator)(tcg_swid_attr_req_t *this);
+	swid_inventory_t* (*get_targets)(tcg_swid_attr_req_t *this);
 
 };
 
