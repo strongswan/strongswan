@@ -157,10 +157,10 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 			target_enumerator = targets->create_enumerator(targets);
 			while (target_enumerator->enumerate(target_enumerator, &tag_id))
 			{
-				if (chunk_equals(tag_id->get_tag_creator(tag_id),
-								 tag_creator) &&
-					chunk_equals(tag_id->get_unique_sw_id(tag_id, NULL),
-								 unique_sw_id))
+				if (chunk_equals(tag_id->get_unique_sw_id(tag_id, NULL),
+								 unique_sw_id) &&
+					chunk_equals(tag_id->get_tag_creator(tag_id),
+								 tag_creator))
 				{
 					match = TRUE;
 					break;
