@@ -214,7 +214,6 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 					tmp_end = msg->add_conn.me;
 					msg->add_conn.me = msg->add_conn.other;
 					msg->add_conn.other = tmp_end;
-					host->destroy(host);
 					swapped = TRUE;
 				}
 				host->destroy(host);
