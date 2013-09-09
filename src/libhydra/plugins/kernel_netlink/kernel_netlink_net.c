@@ -1092,7 +1092,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 						   watcher_event_t event)
 {
-	char response[1024];
+	char response[1536];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
