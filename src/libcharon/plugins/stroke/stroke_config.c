@@ -1235,7 +1235,7 @@ METHOD(stroke_config_t, del, void,
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->list->create_enumerator(this->list);
-	while (enumerator->enumerate(enumerator, (void**)&peer))
+	while (enumerator->enumerate(enumerator, &peer))
 	{
 		bool keep = FALSE;
 
@@ -1256,12 +1256,11 @@ METHOD(stroke_config_t, del, void,
 		}
 		children->destroy(children);
 
-		/* if peer config matches, or has no children anymore, remove it */
-		if (!keep || streq(peer->get_name(peer), msg->del_conn.name))
+		/* if peer config has no children anymore, remove it */
+		if (!keep)
 		{
 			this->list->remove_at(this->list, enumerator);
 			peer->destroy(peer);
-			deleted = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
