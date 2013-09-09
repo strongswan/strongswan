@@ -36,6 +36,7 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
  * See IKEv2 RFC 3.3.2 and RFC 3526.
  *
  * ECP groups are defined in RFC 4753 and RFC 5114.
+ * ECC Brainpool groups are defined in RFC 6954.
  */
 enum diffie_hellman_group_t {
 	MODP_NONE     =  0,
@@ -55,6 +56,10 @@ enum diffie_hellman_group_t {
 	MODP_2048_256 = 24,
 	ECP_192_BIT   = 25,
 	ECP_224_BIT   = 26,
+	ECP_224_BP    = 27,
+	ECP_256_BP    = 28,
+	ECP_384_BP    = 29,
+	ECP_512_BP    = 30,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL = 1024,
 	/** MODP group with custom generator/prime */
