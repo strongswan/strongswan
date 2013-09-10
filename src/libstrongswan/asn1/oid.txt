@@ -302,15 +302,15 @@
                 0x02         "brainpoolP160t1"
                 0x03         "brainpoolP192r1"
                 0x04         "brainpoolP192t1"
-                0x05         "brainpoolP224r1"
+                0x05         "brainpoolP224r1"			OID_BRAINPOOL_P224R1
                 0x06         "brainpoolP224t1"
-                0x07         "brainpoolP256r1"
+                0x07         "brainpoolP256r1"			OID_BRAINPOOL_P256R1
                 0x08         "brainpoolP256t1"
                 0x09         "brainpoolP320r1"
                 0x0A         "brainpoolP320t1"
-                0x0B         "brainpoolP384r1"
+                0x0B         "brainpoolP384r1"			OID_BRAINPOOL_P384R1
                 0x0C         "brainpoolP384t1"
-                0x0D         "brainpoolP512r1"
+                0x0D         "brainpoolP512r1"			OID_BRAINPOOL_P512R1
                 0x0E         "brainpoolP512t1"
   0x81                       ""
     0x04                     "Certicom"
