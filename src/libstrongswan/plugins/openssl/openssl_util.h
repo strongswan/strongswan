@@ -26,11 +26,6 @@
 #include <openssl/asn1.h>
 
 /**
- * Returns the length in bytes of a field element
- */
-#define EC_FIELD_ELEMENT_LEN(group) ((EC_GROUP_get_degree(group) + 7) / 8)
-
-/**
  * Creates a hash of a given type of a chunk of data.
  *
  * Note: this function allocates memory for the hash

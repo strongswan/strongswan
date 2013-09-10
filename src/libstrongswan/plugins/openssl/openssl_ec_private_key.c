@@ -20,6 +20,7 @@
 
 #include "openssl_ec_private_key.h"
 #include "openssl_ec_public_key.h"
+#include "openssl_ec_util.h"
 #include "openssl_util.h"
 
 #include <utils/debug.h>

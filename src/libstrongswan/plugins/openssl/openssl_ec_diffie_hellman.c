@@ -21,6 +21,7 @@
 #include <openssl/objects.h>
 
 #include "openssl_ec_diffie_hellman.h"
+#include "openssl_ec_util.h"
 #include "openssl_util.h"
 
 #include <utils/debug.h>
