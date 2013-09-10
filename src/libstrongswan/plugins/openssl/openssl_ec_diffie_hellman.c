@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,7 +18,6 @@
 #ifndef OPENSSL_NO_EC
 
 #include <openssl/ec.h>
-#include <openssl/objects.h>
 
 #include "openssl_ec_diffie_hellman.h"
 #include "openssl_ec_util.h"
@@ -256,8 +255,14 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_openssl_ec_diffie_hellman_t *this)
 {
-	EC_POINT_clear_free(this->pub_key);
-	EC_KEY_free(this->key);
+	if (this->pub_key)
+	{
+		EC_POINT_clear_free(this->pub_key);
+	}
+	if (this->key)
+	{
+		EC_KEY_free(this->key);
+	}
 	chunk_clear(&this->shared_secret);
 	free(this);
 }
@@ -268,6 +273,7 @@ METHOD(diffie_hellman_t, destroy, void,
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_openssl_ec_diffie_hellman_t *this;
+	EC_GROUP *ec_group;
 
 	INIT(this,
 		.public = {
@@ -282,52 +288,37 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 		.group = group,
 	);
 
-	switch (group)
-	{
-		case ECP_192_BIT:
-			this->key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v1);
-			break;
-		case ECP_224_BIT:
-			this->key = EC_KEY_new_by_curve_name(NID_secp224r1);
-			break;
-		case ECP_256_BIT:
-			this->key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-			break;
-		case ECP_384_BIT:
-			this->key = EC_KEY_new_by_curve_name(NID_secp384r1);
-			break;
-		case ECP_521_BIT:
-			this->key = EC_KEY_new_by_curve_name(NID_secp521r1);
-			break;
-		default:
-			this->key = NULL;
-			break;
-	}
-
-	if (!this->key)
+	ec_group = openssl_ec_group_for_curve(ec_curve_for_dh(group));
+	if (!ec_group)
 	{
 		free(this);
 		return NULL;
 	}
 
-	/* caching the EC group */
+	this->key = EC_KEY_new();
+	if (!this->key || !EC_KEY_set_group(this->key, ec_group))
+	{
+		EC_GROUP_free(ec_group);
+		destroy(this);
+		return NULL;
+	}
+	/* no need to keep the group around twice */
+	EC_GROUP_free(ec_group);
 	this->ec_group = EC_KEY_get0_group(this->key);
 
 	this->pub_key = EC_POINT_new(this->ec_group);
 	if (!this->pub_key)
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
 	/* generate an EC private (public) key */
 	if (!EC_KEY_generate_key(this->key))
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-
 	return &this->public;
 }
 #endif /* OPENSSL_NO_EC */
-
