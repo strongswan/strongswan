@@ -445,6 +445,7 @@ METHOD(socket_t, sender, status_t,
 #elif defined(IP_SENDSRCADDR)
 			char buf[CMSG_SPACE(sizeof(struct in_addr))];
 #endif
+			memset(buf, 0, sizeof(buf));
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
@@ -453,7 +454,6 @@ METHOD(socket_t, sender, status_t,
 			cmsg->cmsg_type = IP_PKTINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
-			memset(pktinfo, 0, sizeof(struct in_pktinfo));
 			addr = &pktinfo->ipi_spec_dst;
 #elif defined(IP_SENDSRCADDR)
 			cmsg->cmsg_type = IP_SENDSRCADDR;
@@ -471,6 +471,7 @@ METHOD(socket_t, sender, status_t,
 			struct in6_pktinfo *pktinfo;
 			struct sockaddr_in6 *sin;
 
+			memset(buf, 0, sizeof(buf));
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
@@ -478,7 +479,6 @@ METHOD(socket_t, sender, status_t,
 			cmsg->cmsg_type = IPV6_PKTINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			memset(pktinfo, 0, sizeof(struct in6_pktinfo));
 			sin = (struct sockaddr_in6*)src->get_sockaddr(src);
 			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
 		}
