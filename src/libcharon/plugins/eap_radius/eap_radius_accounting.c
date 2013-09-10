@@ -210,7 +210,7 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 {
 	enumerator_t *enumerator;
 	host_t *vip, *host;
-	char buf[64];
+	char buf[128];
 	chunk_t data;
 	u_int32_t value;
 
