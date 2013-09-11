@@ -296,6 +296,14 @@ imv_agent_if_t *imv_test_agent_create(const char *name, TNC_IMVID id,
 									  TNC_Version *actual_version)
 {
 	private_imv_test_agent_t *this;
+	imv_agent_t *agent;
+
+	agent = imv_agent_create(name, msg_types, countof(msg_types), id,
+							 actual_version);
+	if (!agent)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -307,15 +315,9 @@ imv_agent_if_t *imv_test_agent_create(const char *name, TNC_IMVID id,
 			.solicit_recommendation = _solicit_recommendation,
 			.destroy = _destroy,
 		},
-		.agent = imv_agent_create(name, msg_types, countof(msg_types), id,
-								  actual_version),
+		.agent = agent,
 	);
 
-	if (!this->agent)
-	{
-		destroy(this);
-		return NULL;
-	}
 	return &this->public;
 }
 

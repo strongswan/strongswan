@@ -71,11 +71,6 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	if (!pts_meas_algo_probe(&supported_algorithms) ||
-		!pts_dh_group_probe(&supported_dh_groups))
-	{
-		return TNC_RESULT_FATAL;
-	}
 	imc_attestation = imc_agent_create(imc_name, msg_types, countof(msg_types),
 									   imc_id, actual_version);
 	if (!imc_attestation)
@@ -83,6 +78,13 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 
+	if (!pts_meas_algo_probe(&supported_algorithms) ||
+		!pts_dh_group_probe(&supported_dh_groups))
+	{
+		imc_attestation->destroy(imc_attestation);
+		imc_attestation = NULL;
+		return TNC_RESULT_FATAL;
+	}
 	libpts_init();
 
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)

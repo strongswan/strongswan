@@ -564,7 +564,15 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 										 TNC_Version *actual_version)
 {
 	private_imv_attestation_agent_t *this;
+	imv_agent_t *agent;
 	char *hash_alg, *dh_group, *cadir;
+
+	agent = imv_agent_create(name, msg_types, countof(msg_types), id,
+							 actual_version);
+	if (!agent)
+	{
+		return NULL;
+	}
 
 	hash_alg = lib->settings->get_str(lib->settings,
 					"libimcv.plugins.imv-attestation.hash_algorithm", "sha256");
@@ -583,8 +591,7 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 			.solicit_recommendation = _solicit_recommendation,
 			.destroy = _destroy,
 		},
-		.agent = imv_agent_create(name, msg_types, countof(msg_types), id,
-								  actual_version),
+		.agent = agent,
 		.supported_algorithms = PTS_MEAS_ALGO_NONE,
 		.supported_dh_groups = PTS_DH_GROUP_NONE,
 		.pts_credmgr = credential_manager_create(),
@@ -594,8 +601,7 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 
 	libpts_init();
 
-	if (!this->agent ||
-		!pts_meas_algo_probe(&this->supported_algorithms) ||
+	if (!pts_meas_algo_probe(&this->supported_algorithms) ||
 		!pts_dh_group_probe(&this->supported_dh_groups) ||
 		!pts_meas_algo_update(hash_alg, &this->supported_algorithms) ||
 		!pts_dh_group_update(dh_group, &this->supported_dh_groups))
@@ -612,4 +618,3 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 
 	return &this->public;
 }
-
