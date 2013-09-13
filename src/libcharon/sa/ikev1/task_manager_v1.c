@@ -1785,7 +1785,7 @@ static bool have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
 	{
 		equal = ts1->equals(ts1, ts2);
 	}
-	e1->destroy(e1);
+	e2->destroy(e2);
 	e1->destroy(e1);
 
 	return equal;
