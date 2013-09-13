@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup sshky_public_key sshky_public_key
+ * @defgroup sshkey_public_key sshkey_public_key
  * @{ @ingroup sshkey_p
  */
 

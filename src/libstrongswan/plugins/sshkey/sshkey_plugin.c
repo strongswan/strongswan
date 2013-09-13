@@ -17,6 +17,7 @@
 
 #include <library.h>
 #include "sshkey_builder.h"
+#include "sshkey_encoder.h"
 
 typedef struct private_sshkey_plugin_t private_sshkey_plugin_t;
 
@@ -51,6 +52,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_sshkey_plugin_t *this)
 {
+	lib->encoding->remove_encoder(lib->encoding, sshkey_encoder_encode);
 	free(this);
 }
 
@@ -70,6 +72,7 @@ plugin_t *sshkey_plugin_create()
 			},
 		},
 	);
+	lib->encoding->add_encoder(lib->encoding, sshkey_encoder_encode);
 
 	return &this->public.plugin;
 }

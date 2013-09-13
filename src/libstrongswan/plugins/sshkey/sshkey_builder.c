@@ -13,6 +13,10 @@
  * for more details.
  */
 
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+
 #include "sshkey_builder.h"
 
 #include <asn1/oid.h>
@@ -125,11 +129,84 @@ static sshkey_public_key_t *parse_public_key(chunk_t blob)
 }
 
 /**
+ * Load SSH key from a FILE stream, closes the stream
+ */
+static sshkey_public_key_t *load_from_stream(FILE *file)
+{
+	sshkey_public_key_t *public = NULL;
+	chunk_t blob = chunk_empty;
+	enumerator_t *enumerator;
+	char line[1024], *token;
+
+	while (!public && fgets(line, sizeof(line), file))
+	{	/* the format is: ssh-[rsa|ecdsa-...] <key(base64)> <identifier> */
+		if (!strpfx(line, "ssh-"))
+		{
+			continue;
+		}
+		enumerator = enumerator_create_token(line, " ", " ");
+		if (enumerator->enumerate(enumerator, &token) &&
+			enumerator->enumerate(enumerator, &token))
+		{
+			blob = chunk_from_base64(chunk_from_str(token), NULL);
+		}
+		enumerator->destroy(enumerator);
+		if (blob.ptr)
+		{
+			public = parse_public_key(blob);
+			chunk_free(&blob);
+		}
+	}
+	fclose(file);
+	return public;
+}
+
+/**
+ * Load SSH key from FD
+ */
+static sshkey_public_key_t *load_from_fd(int fd)
+{
+	FILE *stream;
+
+	/* dup the FD as it gets closed in fclose() */
+	fd = dup(fd);
+	if (fd == -1)
+	{
+		return NULL;
+	}
+	stream = fdopen(fd, "r");
+	if (!stream)
+	{
+		close(fd);
+		return NULL;
+	}
+	return load_from_stream(stream);
+}
+
+/**
+ * Load SSH key from file
+ */
+static sshkey_public_key_t *load_from_file(char *file)
+{
+	FILE *stream;
+
+	stream = fopen(file, "r");
+	if (!stream)
+	{
+		DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
+		return NULL;
+	}
+	return load_from_stream(stream);
+}
+
+/**
  * See header.
  */
 sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 {
 	chunk_t blob = chunk_empty;
+	char *file = NULL;
+	int fd = -1;
 
 	while (TRUE)
 	{
@@ -138,6 +215,12 @@ sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 			case BUILD_BLOB_SSHKEY:
 				blob = va_arg(args, chunk_t);
 				continue;
+			case BUILD_FROM_FILE:
+				file = va_arg(args, char*);
+				continue;
+			case BUILD_FROM_FD:
+				fd = va_arg(args, int);
+				continue;
 			case BUILD_END:
 				break;
 			default:
@@ -145,9 +228,17 @@ sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (blob.ptr && type == KEY_ANY)
+	if (blob.ptr)
 	{
 		return parse_public_key(blob);
+	}
+	if (file)
+	{
+		return load_from_file(file);
+	}
+	if (fd != -1)
+	{
+		return load_from_fd(fd);
 	}
 	return NULL;
 }
