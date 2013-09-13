@@ -50,19 +50,24 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 {
 	enumerator_t *e;
 	u_int row;
+	int try = 0;
 
+retry:
 	/* look for peer identity in the identities table */
 	e = this->db->query(this->db,
 						"SELECT id FROM identities WHERE type = ? AND data = ?",
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
 						DB_UINT);
-
 	if (e && e->enumerate(e, &row))
 	{
 		e->destroy(e);
 		return row;
 	}
 	DESTROY_IF(e);
+	if (try > 0)
+	{
+		return 0;
+	}
 	/* not found, insert new one */
 	if (this->db->execute(this->db, &row,
 				  "INSERT INTO identities (type, data) VALUES (?, ?)",
@@ -70,7 +75,12 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 	{
 		return row;
 	}
-	return 0;
+	/* the INSERT could fail due to the UNIQUE constraint, if the identity was
+	 * added concurrently by another thread or the pool utility,
+	 * therefore try finding it again. a nicer fix would be to use locking
+	 * on the database, but our API currently not supports that */
+	try++;
+	goto retry;
 }
 
 /**
