@@ -1,4 +1,4 @@
-.TH "PKI \-\-REQ" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-REQ" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -30,7 +30,7 @@ pki \-\-req \- Create a PKCS#10 certificate request
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 is used to create a PKCS#10 certificate request.
 .
 .SH "OPTIONS"
@@ -74,18 +74,18 @@ Encoding of the created certificate file. Either \fIder\fR (ASN.1 DER) or
 Generate a certificate request for an RSA key, with a subjectAltName extension:
 .PP
 .EX
-  ipsec pki \-\-req \-\-in key.der \-\-dn "C=CH, O=strongSwan, CN=moon" \\
-            \-\-san moon@strongswan.org > req.der
+  pki \-\-req \-\-in key.der \-\-dn "C=CH, O=strongSwan, CN=moon" \\
+       \-\-san moon@strongswan.org > req.der
 .EE
 .PP
 Generate a certificate request for an ECDSA key and a different digest:
 .PP
 .EX
-  ipsec pki \-\-req \-\-in key.der \-\-type ecdsa \-\-digest sha256 \\
-            \-\-dn "C=CH, O=strongSwan, CN=carol"  > req.der
+  pki \-\-req \-\-in key.der \-\-type ecdsa \-\-digest sha256 \\
+      \-\-dn "C=CH, O=strongSwan, CN=carol"  > req.der
 .EE
 .PP
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

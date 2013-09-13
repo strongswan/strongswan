@@ -45,7 +45,7 @@ pki \-\-issue \- Issue a certificate using a CA certificate and key
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 is used to issue a certificate using a CA certificate and private key.
 .
 .SH "OPTIONS"
@@ -170,10 +170,10 @@ Then the following command can be used to issue a certificate based on a
 given PKCS#10 certificate request and the options above:
 .PP
 .EX
-  ipsec pki --issue --options pki.opt --in req.der > cert.der
+  pki --issue --options pki.opt --in req.der > cert.der
 .EE
 .PP
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

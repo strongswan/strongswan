@@ -15,7 +15,7 @@
 # for more details.
 
 # define a minimum PATH environment in case it is not set
-PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@:@IPSEC_BINDIR@"
 export PATH
 
 # set daemon name
@@ -28,6 +28,7 @@ IPSEC_VERSION="U@IPSEC_VERSION@/K`uname -r`"
 
 # where the private directory and the config files are
 IPSEC_DIR="@IPSEC_DIR@"
+IPSEC_BINDIR="@IPSEC_BINDIR@"
 IPSEC_SBINDIR="@IPSEC_SBINDIR@"
 IPSEC_CONFDIR="@IPSEC_CONFDIR@"
 IPSEC_PIDDIR="@IPSEC_PIDDIR@"
@@ -39,7 +40,7 @@ IPSEC_CHARON_PID="${IPSEC_PIDDIR}/${DAEMON_NAME}.pid"
 IPSEC_STROKE="${IPSEC_DIR}/stroke"
 IPSEC_STARTER="${IPSEC_DIR}/starter"
 
-export IPSEC_DIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_SCRIPT IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_CHARON_PID
+export IPSEC_DIR IPSEC_BINDIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_SCRIPT IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_CHARON_PID
 
 IPSEC_DISTRO="Institute for Internet Technologies and Applications\nUniversity of Applied Sciences Rapperswil, Switzerland"
 
@@ -312,6 +313,10 @@ update)
 		echo "Updating strongSwan IPsec failed: starter is not running" >&2
 		exit 7
 	fi
+	;;
+pki)
+	shift
+	exec $IPSEC_BINDIR/pki "$@"
 	;;
 version|--version)
 	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"

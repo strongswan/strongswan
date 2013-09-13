@@ -1,6 +1,6 @@
 SUBDIRS = man
 
-ipsec_PROGRAMS = pki
+bin_PROGRAMS = pki
 
 pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/gen.c \

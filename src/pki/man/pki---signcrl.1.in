@@ -1,4 +1,4 @@
-.TH "PKI \-\-SIGNCRL" 8 "2013-08-12" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-SIGNCRL" 1 "2013-08-12" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -32,7 +32,7 @@ pki \-\-signcrl \- Issue a Certificate Revocation List (CRL) using a CA certific
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 is used to issue a Certificate Revocation List (CRL) using a CA certificate and
 private key.
 .
@@ -107,18 +107,18 @@ Hexadecimal encoded serial number of the certificate to revoke.
 Revoke a certificate:
 .PP
 .EX
-  ipsec pki \-\-signcrl \-\-cacert ca_cert.der \-\-cakey ca_key.der \\
-            \-\-reason superseded \-\-cert cert.der > crl.der
+  pki \-\-signcrl \-\-cacert ca_cert.der \-\-cakey ca_key.der \\
+      \-\-reason superseded \-\-cert cert.der > crl.der
 .EE
 .PP
 Update an existing CRL with two new revocations, using the certificate's serial
 number, but no reason:
 .PP
 .EX
-  ipsec pki \-\-signcrl \-\-cacert ca_cert.der \-\-cakey ca_key.der \\
-            \-\-lastcrl old_crl.der \-\-serial 0123 \-\-serial 0345 > crl.der
+  pki \-\-signcrl \-\-cacert ca_cert.der \-\-cakey ca_key.der \\
+      \-\-lastcrl old_crl.der \-\-serial 0123 \-\-serial 0345 > crl.der
 .EE
 .PP
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

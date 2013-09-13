@@ -1,4 +1,4 @@
-.TH "PKI \-\-KEYID" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-KEYID" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -25,7 +25,7 @@ pki \-\-keyid \- Calculate key identifiers of a key or certificate
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 calculates key identifiers of private keys and certificates.
 .
 .SH "OPTIONS"
@@ -53,7 +53,7 @@ request), \fIx509\fR (X.509 certificate), defaults to \fIrsa-priv\fR.
 Calculate key identifiers of an RSA private key:
 .PP
 .EX
-  ipsec pki --keyid --in key.der
+  pki --keyid --in key.der
   subjectKeyIdentifier:      6a:9c:74:d1:f8:89:79:89:f6:5a:94:e9:89:f1...
   subjectPublicKeyInfo hash: 6e:55:dc:7e:9c:a5:58:d9:5b:e3:c7:13:14:e1...
 .EE
@@ -61,7 +61,7 @@ Calculate key identifiers of an RSA private key:
 Calculate key identifiers of an X.509 certificate:
 .PP
 .EX
-  ipsec pki --keyid --in cert.der --type x509
+  pki --keyid --in cert.der --type x509
   subjectKeyIdentifier:      6a:9c:74:d1:f8:89:79:89:f6:5a:94:e9:89:f1...
   subjectPublicKeyInfo hash: 6e:55:dc:7e:9c:a5:58:d9:5b:e3:c7:13:14:e1...
 .EE
@@ -69,4 +69,4 @@ Calculate key identifiers of an X.509 certificate:
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

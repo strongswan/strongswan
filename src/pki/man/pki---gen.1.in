@@ -1,4 +1,4 @@
-.TH "PKI \-\-GEN" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-GEN" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -29,7 +29,7 @@ pki \-\-gen \- Generate a new RSA or ECDSA private key
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 is used to generate a new RSA or ECDSA private key.
 .
 .SH "OPTIONS"
@@ -100,13 +100,13 @@ of lower quality.
 .SH "EXAMPLES"
 .
 .TP
-.B ipsec pki \-\-gen \-\-size 3072 > rsa_key.der
+.B pki \-\-gen \-\-size 3072 > rsa_key.der
 Generates a 3072-bit RSA private key.
 .
 .TP
-.B ipsec pki \-\-gen \-\-type ecdsa \-\-size 256 > ecdsa_key.der
+.B pki \-\-gen \-\-type ecdsa \-\-size 256 > ecdsa_key.der
 Generates a 256-bit ECDSA private key.
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

@@ -1,14 +1,14 @@
-man8_MANS = \
-	ipsec-pki.8 \
-	pki---gen.8 \
-	pki---self.8 \
-	pki---issue.8 \
-	pki---signcrl.8 \
-	pki---req.8 \
-	pki---pkcs7.8 \
-	pki---keyid.8 \
-	pki---print.8 \
-	pki---pub.8 \
-	pki---verify.8
+man1_MANS = \
+	pki.1 \
+	pki---gen.1 \
+	pki---self.1 \
+	pki---issue.1 \
+	pki---signcrl.1 \
+	pki---req.1 \
+	pki---pkcs7.1 \
+	pki---keyid.1 \
+	pki---print.1 \
+	pki---pub.1 \
+	pki---verify.1
 
-CLEANFILES = $(man8_MANS)
+CLEANFILES = $(man1_MANS)

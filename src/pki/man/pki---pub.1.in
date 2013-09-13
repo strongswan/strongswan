@@ -1,4 +1,4 @@
-.TH "PKI \-\-PUB" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-PUB" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -28,7 +28,7 @@ pki \-\-pub \- Extract a public key from a private key or certificate
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 extracts public keys from a private keys and certificates.
 .
 .SH "OPTIONS"
@@ -60,16 +60,16 @@ Encoding of the extracted public key. One of \fIder\fR (ASN.1 DER), \fIpem\fR
 Extract the public key from an RSA private key:
 .PP
 .EX
-  ipsec pki --pub --in key.der > pub.der
+  pki --pub --in key.der > pub.der
 .EE
 .PP
 Extract the public key from an X.509 certificate:
 .PP
 .EX
-  ipsec pki --pub --in cert.der --type x509 > pub.der
+  pki --pub --in cert.der --type x509 > pub.der
 .EE
 .PP
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

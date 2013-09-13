@@ -1,4 +1,4 @@
-.TH "PKI \-\-PKCS7" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-PKCS7" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -27,7 +27,7 @@ pki \-\-pkcs7 \- Provides PKCS#7 wrap/unwrap functions
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 provides functions to wrap/unwrap PKCS#7 containers.
 .
 .SH "OPTIONS"
@@ -76,4 +76,4 @@ Can be used multiple times.
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

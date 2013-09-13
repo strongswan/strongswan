@@ -20,6 +20,7 @@ _ipsec : _ipsec.in
 	-e "s:@IPSEC_DISTRO@::" \
 	-e "s:@IPSEC_DIR@:$(ipsecdir):" \
 	-e "s:@IPSEC_SCRIPT@:$(ipsec_script):" \
+	-e "s:@IPSEC_BINDIR@:$(bindir):" \
 	-e "s:@IPSEC_SBINDIR@:$(sbindir):" \
 	-e "s:@IPSEC_CONFDIR@:$(sysconfdir):" \
 	-e "s:@IPSEC_PIDDIR@:$(piddir):" \

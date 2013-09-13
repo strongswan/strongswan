@@ -1,4 +1,4 @@
-.TH "PKI \-\-PRINT" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-PRINT" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -25,7 +25,7 @@ pki \-\-print \- Print a credential (key, certificate etc.) in human readable fo
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 prints credentials (keys, certificates etc.) in human readable form.
 .
 .SH "OPTIONS"
@@ -50,4 +50,4 @@ private key), \fIpub\fR (public key), \fIx509\fR (X.509 certificate), \fIcrl\fR
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)

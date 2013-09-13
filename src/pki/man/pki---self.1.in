@@ -1,4 +1,4 @@
-.TH "PKI \-\-SELF" 8 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-SELF" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -44,7 +44,7 @@ pki \-\-self \- Create a self-signed certificate
 .SH "DESCRIPTION"
 .
 This sub-command of
-.BR ipsec\-pki (8)
+.BR pki (1)
 is used to create a self-signed certificate.
 .
 .SH "OPTIONS"
@@ -139,10 +139,10 @@ User notice for certificatePolicy.
 Generate a self-signed certificate using the given RSA key:
 .PP
 .EX
-  ipsec pki \-\-self \-\-in key.der \-\-dn "C=CH, O=strongSwan, CN=moon" \\
-            \-\-san moon.strongswan.org > cert.der
+  pki \-\-self \-\-in key.der \-\-dn "C=CH, O=strongSwan, CN=moon" \\
+      \-\-san moon.strongswan.org > cert.der
 .EE
 .
 .SH "SEE ALSO"
 .
-.BR ipsec\-pki (8)
+.BR pki (1)
