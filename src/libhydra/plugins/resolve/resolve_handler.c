@@ -170,8 +170,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 			return FALSE;
 		}
 		DBG1(DBG_IKE, "installing DNS server %H via resolvconf", addr);
-		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n", addr,
-				server);
+		fprintf(out, "nameserver %H\n", addr);
 		success = !ferror(out);
 		if (pclose(out))
 		{
