@@ -445,8 +445,8 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		pkcs7, '7', "pkcs7", "PKCS#7 wrap/unwrap functions",
-		{"--sign | --verify | --encrypt | --decrypt",
-		 "--certificate+ [--key]"},
+		{"--sign|--verify|--encrypt|--decrypt|--show",
+		 "[--in file] [--cert file]+ [--key file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"sign",	's', 0, "create PKCS#7 signed-data"},
@@ -455,8 +455,8 @@ static void __attribute__ ((constructor))reg()
 			{"decrypt",	'd', 0, "decrypt PKCS#7 enveloped-data"},
 			{"show",	'p', 0, "show info about PKCS#7, print certificates"},
 			{"in",		'i', 1, "input file, default: stdin"},
-			{"key",		'k', 1, "path to private key for sign/decryp"},
-			{"cert",	'c', 1, "path to certificate for sign/verify/encryp"},
+			{"key",		'k', 1, "path to private key for sign/decrypt"},
+			{"cert",	'c', 1, "path to certificate for sign/verify/encrypt"},
 		}
 	});
 }

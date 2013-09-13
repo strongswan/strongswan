@@ -258,6 +258,6 @@ int command_dispatch(int c, char *v[])
 			return cmds[i].call();
 		}
 	}
-	return command_usage("invalid operation");
+	return command_usage(c > 1 ? "invalid operation" : NULL);
 }
 

@@ -1,4 +1,4 @@
-.TH CHARON\-CMD 8 "2013-06-21" "@IPSEC_VERSION@" "strongSwan"
+.TH CHARON\-CMD 8 "2013-06-21" "@PACKAGE_VERSION@" "strongSwan"
 .SH "NAME"
 charon\-cmd \- Simple IKE client (IPsec VPN client)
 .SH SYNOPSIS

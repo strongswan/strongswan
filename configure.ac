@@ -1471,6 +1471,7 @@ AC_CONFIG_FILES([
 	src/openac/Makefile
 	src/scepclient/Makefile
 	src/pki/Makefile
+	src/pki/man/Makefile
 	src/dumm/Makefile
 	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
@@ -1482,6 +1483,29 @@ AC_CONFIG_FILES([
 	scripts/Makefile
 	testing/Makefile
 ])
+
+# =================
+#  build man pages
+# =================
+
+AC_CONFIG_FILES([
+	man/ipsec.conf.5
+	man/ipsec.secrets.5
+	man/strongswan.conf.5
+	src/charon-cmd/charon-cmd.8
+	src/pki/man/pki.1
+	src/pki/man/pki---gen.1
+	src/pki/man/pki---issue.1
+	src/pki/man/pki---keyid.1
+	src/pki/man/pki---pkcs7.1
+	src/pki/man/pki---print.1
+	src/pki/man/pki---pub.1
+	src/pki/man/pki---req.1
+	src/pki/man/pki---self.1
+	src/pki/man/pki---signcrl.1
+	src/pki/man/pki---verify.1
+])
+
 AC_OUTPUT
 
 # ========================

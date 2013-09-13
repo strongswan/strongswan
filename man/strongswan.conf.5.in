@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2013-07-22" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2013-07-22" "@PACKAGE_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -386,7 +386,7 @@ DHCP server unicast or broadcast IP address
 .BR charon.plugins.duplicheck.enable " [yes]"
 Enable duplicheck plugin (if loaded)
 .TP
-.BR charon.plugins.duplicheck.socket " [unix://${piddir}/charon.dck]"
+.BR charon.plugins.duplicheck.socket " [unix://@piddir@/charon.dck]"
 Socket provided by the duplicheck plugin
 .TP
 .BR charon.plugins.eap-aka.request_identity " [yes]"
@@ -571,7 +571,7 @@ Start phase2 EAP TNC protocol after successful client authentication
 .BR charon.plugins.eap-ttls.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
 .TP
-.BR charon.plugins.error-notify.socket " [unix://${piddir}/charon.enfy]"
+.BR charon.plugins.error-notify.socket " [unix://@piddir@/charon.enfy]"
 Socket provided by the error-notify plugin
 .TP
 .BR charon.plugins.ha.autobalance " [0]"
@@ -632,7 +632,7 @@ Time in ms to wait until virtual IP addresses appear/disappear before failing.
 .BR charon.plugins.load-tester
 Section to configure the load-tester plugin, see LOAD TESTS
 .TP
-.BR charon.plugins.lookip.socket " [unix://${piddir}/charon.lkp]"
+.BR charon.plugins.lookip.socket " [unix://@piddir@/charon.lkp]"
 Socket provided by the lookip plugin
 .TP
 .BR charon.plugins.radattr.dir
@@ -673,7 +673,7 @@ certificates even if they don't contain a CA basic constraint.
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
-.BR charon.plugins.stroke.socket " [unix://${piddir}/charon.ctl]"
+.BR charon.plugins.stroke.socket " [unix://@piddir@/charon.ctl]"
 Socket provided by the stroke plugin
 .TP
 .BR charon.plugins.stroke.timeout " [0]"
@@ -744,7 +744,7 @@ plugins, like resolve)
 .BR charon.plugins.whitelist.enable " [yes]"
 Enable loaded whitelist plugin
 .TP
-.BR charon.plugins.whitelist.socket " [unix://${piddir}/charon.wlst]"
+.BR charon.plugins.whitelist.socket " [unix://@piddir@/charon.wlst]"
 Socket provided by the whitelist plugin
 .TP
 .BR charon.plugins.xauth-eap.backend " [radius]"
@@ -852,11 +852,11 @@ keys not stored on tokens
 .BR libstrongswan.plugins.pkcs11.use_rng " [no]"
 Whether the PKCS#11 modules should be used as RNG
 .TP
-.BR libstrongswan.plugins.random.random " [@DEV_RANDOM@]"
-File to read random bytes from, instead of @DEV_RANDOM@
+.BR libstrongswan.plugins.random.random " [@random_device@]"
+File to read random bytes from, instead of @random_device@
 .TP
-.BR libstrongswan.plugins.random.urandom " [@DEV_URANDOM@]"
-File to read pseudo random bytes from, instead of @DEV_URANDOM@
+.BR libstrongswan.plugins.random.urandom " [@urandom_device@]"
+File to read pseudo random bytes from, instead of @urandom_device@
 .TP
 .BR libstrongswan.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
 File to read DNS resolver configuration from
@@ -970,7 +970,7 @@ Send open listening ports without being prompted
 .BR libimcv.plugins.imv-scanner.remediation_uri
 URI pointing to scanner remediation instructions
 .TP
-.BR libimcv.plugins.imc-swid.swid_directory "[$(prefix)/share]"
+.BR libimcv.plugins.imc-swid.swid_directory " [@prefix@/share]"
 Directory where SWID tags are located
 .TP
 .BR libimcv.plugins.imc-test.additional_ids " [0]"
@@ -1511,7 +1511,7 @@ Request an INTERNAL_IPV4_ADDR from the server
 .BR charon.plugins.load-tester.shutdown_when_complete " [no]"
 Shutdown the daemon after all IKE_SAs have been established
 .TP
-.BR charon.plugins.load-tester.socket " [unix://${piddir}/charon.ldt]"
+.BR charon.plugins.load-tester.socket " [unix://@piddir@/charon.ldt]"
 Socket provided by the load-tester plugin
 .TP
 .BR charon.plugins.load-tester.version " [0]"
