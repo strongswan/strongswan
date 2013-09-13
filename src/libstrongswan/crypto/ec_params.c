@@ -17,6 +17,19 @@
 
 #include <asn1/oid.h>
 
+ENUM_BEGIN(ec_curve_names, ECC_UNKNOWN, ECC_BP_512,
+	"unknown",
+	"nist192",
+	"nist224",
+	"nist256",
+	"nist384",
+	"nist521",
+	"bp224",
+	"bp256",
+	"bp384",
+	"bp512");
+ENUM_END(ec_curve_names, ECC_BP_512);
+
 /**
  * List of supported ECC curves.
  */

@@ -52,6 +52,11 @@ enum ec_curve_t {
 };
 
 /**
+ * enum name for ec_curve_t.
+ */
+extern enum_name_t *ec_curve_names;
+
+/**
  * Parameters for a specific ECC curve.
  *
  * All currently supported curves have a cofactor h of 1.
