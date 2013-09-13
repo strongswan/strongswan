@@ -20,6 +20,7 @@ ylwrap
 config.log
 config.status
 libtool
+.dirstamp
 *.l[ao]
 *.[ao]
 y.tab.[ch]
