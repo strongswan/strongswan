@@ -9,6 +9,7 @@ pki \-\-gen \- Generate a new RSA or ECDSA private key
 .SY pki\ \-\-gen
 .OP \-\-type type
 .OP \-\-size bits
+.OP \-\-curve curve
 .OP \-\-safe\-primes
 .OP \-\-shares n
 .OP \-\-threshold l
@@ -49,7 +50,46 @@ Type of key to generate. Either \fIrsa\fR or \fIecdsa\fR, defaults to \fIrsa\fR.
 .TP
 .BI "\-s, \-\-size " bits
 Key length in bits. Defaults to 2048 for \fIrsa\fR and 384 for \fIecdsa\fR.
-For \fIecdsa\fR only three values are currently supported: 256, 384 and 521.
+For \fIecdsa\fR only the three values 256, 384 and 521 can be used, they
+correspond to the respective NIST curve.
+.TP
+.BI "\-c, \-\-curve " curve
+Elliptic curve to use for \fIecdsa\fR keys. If configured \fI\-\-size\fR has
+no effect. Currently supported are the following curves (with their known
+aliases):
+.RS
+.TP
+.I nist192
+NIST 192-bit curve (X9.62 prime192v1, SECP secp192r1)
+.TP
+.I nist224
+NIST 224-bit curve (SECP secp224r1)
+.TP
+.I nist256
+NIST 256-bit curve (X9.62 prime256v1, SECP secp256r1)
+.TP
+.I nist384
+NIST 384-bit curve (SECP secp384r1)
+.TP
+.I nist521
+NIST 521-bit curve (SECP secp521r1)
+.TP
+.I bp224
+ECC Brainpool 224-bit curve (brainpoolP224r1)
+.TP
+.I bp256
+ECC Brainpool 256-bit curve (brainpoolP256r1)
+.TP
+.I bp384
+ECC Brainpool 384-bit curve (brainpoolP384r1)
+.TP
+.I bp512
+ECC Brainpool 512-bit curve (brainpoolP512r1)
+.PP
+.B Note:
+Only the three NIST curves with 256, 384 and 521 bit length, respectively, can
+currently be used for authentication in IKE.
+.RE
 .TP
 .BI "\-p, \-\-safe\-primes"
 Generate RSA safe primes.

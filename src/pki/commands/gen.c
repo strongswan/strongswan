@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,6 +16,8 @@
 
 #include "pki.h"
 
+#include <crypto/ec_params.h>
+
 /**
  * Generate a private key
  */
@@ -22,6 +25,7 @@ static int gen()
 {
 	cred_encoding_type_t form = PRIVKEY_ASN1_DER;
 	key_type_t type = KEY_RSA;
+	ec_curve_t curve = ECC_UNKNOWN;
 	u_int size = 0, shares = 0, threshold = 1;
 	private_key_t *key;
 	chunk_t encoding;
@@ -59,6 +63,13 @@ static int gen()
 				if (!size)
 				{
 					return command_usage("invalid key size");
+				}
+				continue;
+			case 'c':
+				curve = enum_from_name(ec_curve_names, arg);
+				if (curve == -1 || curve == ECC_UNKNOWN)
+				{
+					return command_usage("invalid elliptic curve");
 				}
 				continue;
 			case 'p':
@@ -116,6 +127,11 @@ static int gen()
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_SAFE_PRIMES, BUILD_END);
 	}
+	else if (type == KEY_ECDSA && curve != ECC_UNKNOWN)
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+							BUILD_ECC_CURVE, curve, BUILD_END);
+	}
 	else
 	{
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
@@ -156,6 +172,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
+			{"curve",		'c', 1, "elliptic curve to use for ecdsa"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
 			{"shares",		'n', 1, "number of private rsa key shares"},
 			{"threshold",	'l', 1, "minimum number of participating rsa key shares"},
@@ -163,4 +180,3 @@ static void __attribute__ ((constructor))reg()
 		}
 	});
 }
-
