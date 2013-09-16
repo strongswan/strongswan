@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -316,7 +316,9 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 													 va_list args)
 {
 	private_openssl_ec_private_key_t *this;
+	ec_curve_t curve = ECC_UNKNOWN;
 	u_int key_size = 0;
+	EC_GROUP *ec_group;
 
 	while (TRUE)
 	{
@@ -325,6 +327,9 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 			case BUILD_KEY_SIZE:
 				key_size = va_arg(args, u_int);
 				continue;
+			case BUILD_ECC_CURVE:
+				curve = va_arg(args, ec_curve_t);
+				continue;
 			case BUILD_END:
 				break;
 			default:
@@ -332,30 +337,44 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 		}
 		break;
 	}
-	if (!key_size)
+	if (curve == ECC_UNKNOWN)
 	{
+		switch (key_size)
+		{
+			case 256:
+				curve = ECC_NIST_256;
+				break;
+			case 384:
+				curve = ECC_NIST_384;
+				break;
+			case 521:
+				curve = ECC_NIST_521;
+				break;
+			default:
+				DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
+				return NULL;
+		}
+	}
+	ec_group = openssl_ec_group_for_curve(curve);
+	if (!ec_group)
+	{
+		DBG1(DBG_LIB, "elliptic curve %d not supported", curve);
 		return NULL;
 	}
+
 	this = create_empty();
-	switch (key_size)
+	this->ec = EC_KEY_new();
+	if (!this->ec || !EC_KEY_set_group(this->ec, ec_group))
 	{
-		case 256:
-			this->ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-			break;
-		case 384:
-			this->ec = EC_KEY_new_by_curve_name(NID_secp384r1);
-			break;
-		case 521:
-			this->ec = EC_KEY_new_by_curve_name(NID_secp521r1);
-			break;
-		default:
-			DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
-			destroy(this);
-			return NULL;
+		EC_GROUP_free(ec_group);
+		destroy(this);
+		return NULL;
 	}
+	EC_GROUP_free(ec_group);
+
 	if (EC_KEY_generate_key(this->ec) != 1)
 	{
-		DBG1(DBG_LIB, "EC private key generation failed", key_size);
+		DBG1(DBG_LIB, "EC private key generation failed");
 		destroy(this);
 		return NULL;
 	}

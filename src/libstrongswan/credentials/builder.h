@@ -153,6 +153,8 @@ enum builder_part_t {
 	BUILD_SHARES,
 	/** minimum number of participating private key shares */
 	BUILD_THRESHOLD,
+	/** elliptic curve for ECDSA keys, ec_curve_t */
+	BUILD_ECC_CURVE,
 	/** end of variable argument builder list */
 	BUILD_END,
 };
