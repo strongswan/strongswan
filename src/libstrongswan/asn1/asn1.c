@@ -91,35 +91,54 @@ int asn1_known_oid(chunk_t object)
 	return -1;
 }
 
+/**
+ * Fill the octets of a known OID into the given chunk (already allocated with
+ * len == oid_names[idx].level + 1).
+ */
+static bool fill_known_oid(chunk_t chunk, int oid)
+{
+	int i;
+
+	i = oid_names[oid].level + 1;
+	if (chunk.len < i)
+	{
+		return FALSE;
+	}
+	do
+	{
+		if (oid_names[oid].level >= i)
+		{
+			oid--;
+			continue;
+		}
+		chunk.ptr[--i] = oid_names[oid--].octet;
+	}
+	while (i > 0);
+	return TRUE;
+}
+
 /*
  * Defined in header.
  */
 chunk_t asn1_build_known_oid(int n)
 {
 	chunk_t oid;
-	int i;
+	int len;
 
 	if (n < 0 || n >= OID_MAX)
 	{
 		return chunk_empty;
 	}
 
-	i = oid_names[n].level + 1;
-	oid = chunk_alloc(2 + i);
+	len = oid_names[n].level + 1;
+	oid = chunk_alloc(2 + len);
 	oid.ptr[0] = ASN1_OID;
-	oid.ptr[1] = i;
-
-	do
+	oid.ptr[1] = len;
+	if (!fill_known_oid(chunk_skip(oid, 2), n))
 	{
-		if (oid_names[n].level >= i)
-		{
-			n--;
-			continue;
-		}
-		oid.ptr[--i + 2] = oid_names[n--].octet;
+		chunk_free(&oid);
+		return chunk_empty;
 	}
-	while (i > 0);
-
 	return oid;
 }
 
@@ -210,6 +229,25 @@ char *asn1_oid_to_string(chunk_t oid)
 		oid = chunk_skip(oid, 1);
 	}
 	return (val == 0) ? strdup(buf) : NULL;
+}
+
+/*
+ * Defined in header.
+ */
+char *asn1_known_oid_to_string(int oid)
+{
+	chunk_t buf;
+
+	if (oid < 0 || oid >= OID_MAX)
+	{
+		return NULL;
+	}
+	buf = chunk_alloca(oid_names[oid].level + 1);
+	if (!fill_known_oid(buf, oid))
+	{
+		return NULL;
+	}
+	return asn1_oid_to_string(buf);
 }
 
 /*

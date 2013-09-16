@@ -131,6 +131,14 @@ chunk_t asn1_oid_from_string(char *str);
 char* asn1_oid_to_string(chunk_t oid);
 
 /**
+ * Converts a known OID index to a human readable string.
+ *
+ * @param oid		known OID index
+ * @return			human readable OID string, allocated, NULL on error
+ */
+char* asn1_known_oid_to_string(int oid);
+
+/**
  * Returns the length of an ASN.1 object
  * The blob pointer is advanced past the tag length fields
  *
