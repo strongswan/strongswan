@@ -20,6 +20,59 @@
 #include "openssl_ec_util.h"
 
 #include <openssl/bn.h>
+#include <openssl/objects.h>
+
+#include <asn1/oid.h>
+
+/**
+ * This is from asn1.h, which we can't include due to conflicting constants
+ */
+char* asn1_known_oid_to_string(int oid);
+
+/**
+ * Map from curve to OpenSSL NID
+ */
+static int nid_map[ECC_MAX];
+
+/*
+ * See header
+ */
+void openssl_ec_lookup_table_cleanup()
+{
+	memset(nid_map, 0, sizeof(nid_map));
+}
+
+/**
+ * Get or allocate a NID for the given curve.
+ */
+static int get_nid(ec_curve_t curve)
+{
+	char *numeric, name[16];
+	int oid, nid;
+
+	nid = nid_map[curve];
+	if (nid)
+	{
+		return nid;
+	}
+	oid = ec_curve_to_oid(curve);
+	if (oid == OID_UNKNOWN)
+	{
+		return 0;
+	}
+	if (snprintf(name, sizeof(name), "%N", ec_curve_names, curve) >= sizeof(name))
+	{
+		return 0;
+	}
+	numeric = asn1_known_oid_to_string(oid);
+	if (!numeric)
+	{
+		return 0;
+	}
+	nid = nid_map[curve] = OBJ_create(numeric, name, name);
+	free(numeric);
+	return nid;
+}
 
 /*
  * See header
@@ -32,6 +85,7 @@ EC_GROUP *openssl_ec_group_for_curve(ec_curve_t curve)
 	EC_POINT *G = NULL;
 	EC_GROUP *group = NULL, *result = NULL;
 	BN_CTX *ctx = NULL;
+	int nid;
 
 	params = ec_get_params(curve);
 	if (!params)
@@ -65,6 +119,12 @@ EC_GROUP *openssl_ec_group_for_curve(ec_curve_t curve)
 	{
 		goto failed;
 	}
+	nid = get_nid(curve);
+	if (!nid)
+	{
+		goto failed;
+	}
+	EC_GROUP_set_curve_name(group, nid);
 	result = group;
 
 failed:

@@ -49,6 +49,8 @@ enum ec_curve_t {
 	ECC_BP_384,
 	/* ECC Brainpool 512-bit curve (RFC 5639), brainpoolP512r1 */
 	ECC_BP_512,
+	/* Array helper */
+	ECC_MAX,
 };
 
 /**

@@ -37,4 +37,9 @@
  */
 EC_GROUP *openssl_ec_group_for_curve(ec_curve_t curve);
 
+/**
+ * Clear lookup table to map from ec_curve_t to OpenSSL NID
+ */
+void openssl_ec_lookup_table_cleanup();
+
 #endif /** OPENSSL_EC_UTIL_H_ @}*/

@@ -502,6 +502,9 @@ METHOD(plugin_t, destroy, void,
 {
 	CONF_modules_free();
 	OBJ_cleanup();
+#ifndef OPENSSL_NO_EC
+	openssl_ec_lookup_table_cleanup();
+#endif
 	EVP_cleanup();
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
