@@ -103,6 +103,14 @@ struct ec_params_t {
 ec_curve_t ec_curve_from_oid(int oid);
 
 /**
+ * Get the OID for the given curve identifier.
+ *
+ * @param group			curve
+ * @return				OID or OID_UNKNOWN
+ */
+int ec_curve_to_oid(ec_curve_t curve);
+
+/**
  * Get the curve identifier for the specified DH group.
  *
  * @param group			DH group

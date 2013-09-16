@@ -331,6 +331,36 @@ ec_curve_t ec_curve_from_oid(int oid)
 /*
  * See header
  */
+int ec_curve_to_oid(ec_curve_t curve)
+{
+	switch (curve)
+	{
+		case ECC_NIST_192:
+			return OID_PRIME192V1;
+		case ECC_NIST_224:
+			return OID_SECT224R1;
+		case ECC_NIST_256:
+			return OID_PRIME256V1;
+		case ECC_NIST_384:
+			return OID_SECT384R1;
+		case ECC_NIST_521:
+			return OID_SECT521R1;
+		case ECC_BP_224:
+			return OID_BRAINPOOL_P224R1;
+		case ECC_BP_256:
+			return OID_BRAINPOOL_P256R1;
+		case ECC_BP_384:
+			return OID_BRAINPOOL_P384R1;
+		case ECC_BP_512:
+			return OID_BRAINPOOL_P512R1;
+		default:
+			return OID_UNKNOWN;
+	}
+}
+
+/*
+ * See header
+ */
 ec_curve_t ec_curve_for_dh(diffie_hellman_group_t group)
 {
 	switch (group)
