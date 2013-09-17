@@ -14,14 +14,15 @@
  */
 
 #include "pb_tnc_msg.h"
-#include "pb_experimental_msg.h"
-#include "pb_pa_msg.h"
-#include "pb_error_msg.h"
-#include "pb_language_preference_msg.h"
-#include "pb_assessment_result_msg.h"
-#include "pb_access_recommendation_msg.h"
-#include "pb_remediation_parameters_msg.h"
-#include "pb_reason_string_msg.h"
+#include "ietf/pb_experimental_msg.h"
+#include "ietf/pb_pa_msg.h"
+#include "ietf/pb_error_msg.h"
+#include "ietf/pb_language_preference_msg.h"
+#include "ietf/pb_assessment_result_msg.h"
+#include "ietf/pb_access_recommendation_msg.h"
+#include "ietf/pb_remediation_parameters_msg.h"
+#include "ietf/pb_reason_string_msg.h"
+#include "tcg/pb_pdp_referral_msg.h"
 
 #include <library.h>
 
@@ -36,6 +37,10 @@ ENUM(pb_tnc_msg_type_names, PB_MSG_EXPERIMENTAL, PB_MSG_REASON_STRING,
 	"PB-Reason-String"
 );
 
+ENUM(pb_tnc_tcg_msg_type_names, PB_TCG_MSG_PDP_REFERRAL, PB_TCG_MSG_PDP_REFERRAL,
+	"PB-PDP-Referral"
+);
+
 pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
 	{ 12, FALSE, FALSE, TRUE_OR_FALSE },
 	{ 24, FALSE, FALSE, TRUE  },
@@ -47,29 +52,43 @@ pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
 	{ 17, FALSE, TRUE,  FALSE },
 };
 
+pb_tnc_msg_info_t pb_tnc_tcg_msg_infos[] = {
+	{ 20, FALSE, TRUE, FALSE },
+};
+
 /**
  * See header
  */
-pb_tnc_msg_t* pb_tnc_msg_create_from_data(pb_tnc_msg_type_t type, chunk_t value)
+pb_tnc_msg_t* pb_tnc_msg_create_from_data(pen_type_t msg_type, chunk_t value)
 {
-	switch (type)
+	if (msg_type.vendor_id == PEN_IETF)
 	{
-		case PB_MSG_PA:
-			return pb_pa_msg_create_from_data(value);
-		case PB_MSG_ERROR:
-			return pb_error_msg_create_from_data(value);
-		case PB_MSG_EXPERIMENTAL:
-			return pb_experimental_msg_create_from_data(value);
-		case PB_MSG_LANGUAGE_PREFERENCE:
-			return pb_language_preference_msg_create_from_data(value);
-		case PB_MSG_ASSESSMENT_RESULT:
-			return pb_assessment_result_msg_create_from_data(value);
-		case PB_MSG_ACCESS_RECOMMENDATION:
-			return pb_access_recommendation_msg_create_from_data(value);
-		case PB_MSG_REMEDIATION_PARAMETERS:
-			return pb_remediation_parameters_msg_create_from_data(value);
-		case PB_MSG_REASON_STRING:
-			return pb_reason_string_msg_create_from_data(value);
+		switch (msg_type.type)
+		{
+			case PB_MSG_PA:
+				return pb_pa_msg_create_from_data(value);
+			case PB_MSG_ERROR:
+				return pb_error_msg_create_from_data(value);
+			case PB_MSG_EXPERIMENTAL:
+				return pb_experimental_msg_create_from_data(value);
+			case PB_MSG_LANGUAGE_PREFERENCE:
+				return pb_language_preference_msg_create_from_data(value);
+			case PB_MSG_ASSESSMENT_RESULT:
+				return pb_assessment_result_msg_create_from_data(value);
+			case PB_MSG_ACCESS_RECOMMENDATION:
+				return pb_access_recommendation_msg_create_from_data(value);
+			case PB_MSG_REMEDIATION_PARAMETERS:
+				return pb_remediation_parameters_msg_create_from_data(value);
+			case PB_MSG_REASON_STRING:
+				return pb_reason_string_msg_create_from_data(value);
+		}
+	}
+	else if (msg_type.vendor_id == PEN_TCG)
+	{
+		if (msg_type.type == PB_TCG_MSG_PDP_REFERRAL)
+		{
+			return pb_pdp_referral_msg_create_from_data(value);
+		}
 	}
 	return NULL;
 }

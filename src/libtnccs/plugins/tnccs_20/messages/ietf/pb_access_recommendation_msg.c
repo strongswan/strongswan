@@ -52,7 +52,7 @@ struct private_pb_access_recommendation_msg_t {
 	/**
 	 * PB-TNC message type
 	 */
-	pb_tnc_msg_type_t type;
+	pen_type_t type;
 
 	/**
 	 * Access recommendation code
@@ -65,7 +65,7 @@ struct private_pb_access_recommendation_msg_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+METHOD(pb_tnc_msg_t, get_type, pen_type_t,
 	private_pb_access_recommendation_msg_t *this)
 {
 	return this->type;
@@ -148,7 +148,7 @@ pb_tnc_msg_t *pb_access_recommendation_msg_create_from_data(chunk_t data)
 			},
 			.get_access_recommendation = _get_access_recommendation,
 		},
-		.type = PB_MSG_ACCESS_RECOMMENDATION,
+		.type = { PEN_IETF, PB_MSG_ACCESS_RECOMMENDATION },
 		.encoding = chunk_clone(data),
 	);
 
@@ -173,7 +173,7 @@ pb_tnc_msg_t *pb_access_recommendation_msg_create(u_int16_t recommendation)
 			},
 			.get_access_recommendation = _get_access_recommendation,
 		},
-		.type = PB_MSG_ACCESS_RECOMMENDATION,
+		.type = { PEN_IETF, PB_MSG_ACCESS_RECOMMENDATION },
 		.recommendation = recommendation,
 	);
 

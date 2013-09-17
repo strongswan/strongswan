@@ -17,13 +17,13 @@
 #include "tnccs_20.h"
 #include "batch/pb_tnc_batch.h"
 #include "messages/pb_tnc_msg.h"
-#include "messages/pb_pa_msg.h"
-#include "messages/pb_error_msg.h"
-#include "messages/pb_assessment_result_msg.h"
-#include "messages/pb_access_recommendation_msg.h"
-#include "messages/pb_remediation_parameters_msg.h"
-#include "messages/pb_reason_string_msg.h"
-#include "messages/pb_language_preference_msg.h"
+#include "messages/ietf/pb_pa_msg.h"
+#include "messages/ietf/pb_error_msg.h"
+#include "messages/ietf/pb_assessment_result_msg.h"
+#include "messages/ietf/pb_access_recommendation_msg.h"
+#include "messages/ietf/pb_remediation_parameters_msg.h"
+#include "messages/ietf/pb_reason_string_msg.h"
+#include "messages/ietf/pb_language_preference_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <tncif_names.h>
@@ -225,11 +225,13 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 }
 
 /**
- * Handle a single PB-TNC message according to its type
+ * Handle a single PB-TNC IETF standard message according to its type
  */
-static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
+static void handle_ietf_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 {
-	switch (msg->get_type(msg))
+	pen_type_t msg_type = msg->get_type(msg);
+
+	switch (msg_type.type)
 	{
 		case PB_MSG_EXPERIMENTAL:
 			/* nothing to do */
@@ -435,6 +437,43 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 				 (int)language_code.len, language_code.ptr);
 			break;
 		}
+		default:
+			break;
+	}
+}
+
+/**
+ * Handle a single PB-TNC TCG standard message according to its type
+ */
+static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
+{
+	pen_type_t msg_type = msg->get_type(msg);
+
+	switch (msg_type.type)
+	{
+		case PB_TCG_MSG_PDP_REFERRAL:
+			/* TODO handle PDP Referral */
+			break;
+		default:
+			break;
+	}
+}
+
+/**
+ * Handle a single PB-TNC message according to its type
+ */
+static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
+{
+	pen_type_t msg_type = msg->get_type(msg);
+
+	switch (msg_type.vendor_id)
+	{
+		case PEN_IETF:
+			handle_ietf_message(this, msg);
+			break;
+		case PEN_TCG:
+			handle_tcg_message(this, msg);
+			break;
 		default:
 			break;
 	}

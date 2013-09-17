@@ -23,7 +23,7 @@
 
 typedef struct pb_assessment_result_msg_t pb_assessment_result_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * Class representing the PB-Assessment-Result message type.

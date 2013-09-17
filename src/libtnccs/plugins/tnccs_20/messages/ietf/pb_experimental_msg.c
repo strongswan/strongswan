@@ -30,7 +30,7 @@ struct private_pb_experimental_msg_t {
 	/**
 	 * PB-TNC message type
 	 */
-	pb_tnc_msg_type_t type;
+	pen_type_t type;
 
 	/**
 	 * Encoded message
@@ -38,7 +38,7 @@ struct private_pb_experimental_msg_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+METHOD(pb_tnc_msg_t, get_type, pen_type_t,
 	private_pb_experimental_msg_t *this)
 {
 	return this->type;
@@ -86,7 +86,7 @@ pb_tnc_msg_t *pb_experimental_msg_create_from_data(chunk_t data)
 				.destroy = _destroy,
 			},
 		},
-		.type = PB_MSG_EXPERIMENTAL,
+		.type = { PEN_IETF, PB_MSG_EXPERIMENTAL },
 		.encoding = chunk_clone(data),
 	);
 

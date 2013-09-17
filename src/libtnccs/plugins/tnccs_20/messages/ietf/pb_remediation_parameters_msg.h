@@ -24,7 +24,7 @@
 typedef enum pb_tnc_remed_param_type_t pb_tnc_remed_param_type_t;
 typedef struct pb_remediation_parameters_msg_t pb_remediation_parameters_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 #include <pen/pen.h>
 

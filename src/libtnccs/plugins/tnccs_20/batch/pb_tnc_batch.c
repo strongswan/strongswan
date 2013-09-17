@@ -15,7 +15,7 @@
  */
 
 #include "pb_tnc_batch.h"
-#include "messages/pb_error_msg.h"
+#include "messages/ietf/pb_error_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <tnc/tnccs/tnccs.h>
@@ -141,7 +141,9 @@ METHOD(pb_tnc_batch_t, get_encoding, chunk_t,
 METHOD(pb_tnc_batch_t, add_msg, bool,
 	private_pb_tnc_batch_t *this, pb_tnc_msg_t* msg)
 {
+	enum_name_t *msg_type_names;
 	chunk_t msg_value;
+	pen_type_t msg_type;
 	size_t msg_len;
 
 	msg->build(msg);
@@ -155,8 +157,19 @@ METHOD(pb_tnc_batch_t, add_msg, bool,
 	}
 	this->batch_len += msg_len;
 
-	DBG2(DBG_TNC, "adding %N message", pb_tnc_msg_type_names,
-									   msg->get_type(msg));
+	msg_type = msg->get_type(msg);
+	switch (msg_type.vendor_id)
+	{
+		default:
+		case PEN_IETF:
+			msg_type_names = pb_tnc_msg_type_names;
+			break;
+		case PEN_TCG:
+			msg_type_names = pb_tnc_tcg_msg_type_names;
+			break;
+	}
+	DBG2(DBG_TNC, "adding %N/%N message", pen_names, msg_type.vendor_id,
+										  msg_type_names, msg_type.type);
 	this->messages->insert_last(this->messages, msg);
 	return TRUE;
 }
@@ -167,8 +180,9 @@ METHOD(pb_tnc_batch_t, build, void,
 	u_int32_t msg_len;
 	chunk_t msg_value;
 	enumerator_t *enumerator;
-	pb_tnc_msg_type_t msg_type;
+	pen_type_t msg_type;
 	pb_tnc_msg_t *msg;
+	pb_tnc_msg_info_t *msg_infos;
 	bio_writer_t *writer;
 
 	/* build PB-TNC batch header */
@@ -189,13 +203,23 @@ METHOD(pb_tnc_batch_t, build, void,
 		msg_value = msg->get_encoding(msg);
 		msg_len = PB_TNC_HEADER_SIZE + msg_value.len;
 		msg_type = msg->get_type(msg);
-		if (pb_tnc_msg_infos[msg_type].has_noskip_flag)
+		switch (msg_type.vendor_id)
+		{
+			default:
+			case PEN_IETF:
+				msg_infos = pb_tnc_msg_infos;
+				break;
+			case PEN_TCG:
+				msg_infos = pb_tnc_tcg_msg_infos;
+				break;
+		}
+		if (msg_infos[msg_type.type].has_noskip_flag)
 		{
 			flags |= PB_TNC_FLAG_NOSKIP;
 		}
 		writer->write_uint8 (writer, flags);
-		writer->write_uint24(writer, PEN_IETF);
-		writer->write_uint32(writer, msg_type);
+		writer->write_uint24(writer, msg_type.vendor_id);
+		writer->write_uint32(writer, msg_type.type);
 		writer->write_uint32(writer, msg_len);
 		writer->write_data  (writer, msg_value);
 	}
@@ -304,10 +328,13 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 {
 	bio_reader_t *reader;
 	pb_tnc_msg_t *pb_tnc_msg, *msg;
+	pb_tnc_msg_info_t *msg_infos;
 	u_int8_t flags;
 	u_int32_t vendor_id, msg_type, msg_len, offset;
 	chunk_t data, msg_value;
 	bool noskip_flag;
+	enum_name_t *msg_type_names;
+	pen_type_t msg_pen_type;
 	status_t status;
 
 	data = chunk_skip(this->encoding, this->offset);
@@ -356,8 +383,25 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		goto fatal;
 	}
 
-
-	if (vendor_id != PEN_IETF || msg_type > PB_MSG_ROOF)
+	if (vendor_id == PEN_IETF && msg_type <= PB_MSG_ROOF)
+	{
+		if (msg_type == PB_MSG_EXPERIMENTAL && noskip_flag)
+		{
+			DBG1(DBG_TNC, "reject IETF/PB-Experimental message with "
+						  "NOSKIP flag set");
+			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
+							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
+			goto fatal;
+		}
+		msg_type_names = pb_tnc_msg_type_names;
+		msg_infos = pb_tnc_msg_infos;
+	}
+	else if (vendor_id == PEN_IETF && msg_type <= PB_TCG_MSG_ROOF)
+	{
+		msg_type_names = pb_tnc_tcg_msg_type_names;
+		msg_infos = pb_tnc_tcg_msg_infos;
+	}
+	else
 	{
 		if (msg_len < PB_TNC_HEADER_SIZE)
 		{
@@ -384,65 +428,56 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 			return SUCCESS;
 		}
 	}
-	else
-	{
-		if (msg_type == PB_MSG_EXPERIMENTAL && noskip_flag)
-		{
-			DBG1(DBG_TNC, "reject PB-Experimental message with NOSKIP flag set");
-			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
-							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
-			goto fatal;
-		}
-		if (pb_tnc_msg_infos[msg_type].has_noskip_flag != TRUE_OR_FALSE &&
-			pb_tnc_msg_infos[msg_type].has_noskip_flag != noskip_flag)
-		{
-			DBG1(DBG_TNC, "%N message must%s have NOSKIP flag set",
-				 pb_tnc_msg_type_names, msg_type,
-				 pb_tnc_msg_infos[msg_type].has_noskip_flag ? "" : " not");
-			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
-								PB_ERROR_INVALID_PARAMETER, this->offset);
-			goto fatal;
-		}
 
-		if (msg_len < pb_tnc_msg_infos[msg_type].min_size ||
-		   (pb_tnc_msg_infos[msg_type].exact_size &&
-			msg_len != pb_tnc_msg_infos[msg_type].min_size))
-		{
-			DBG1(DBG_TNC, "%N message length must be %s %u bytes but is %u bytes",
-				 pb_tnc_msg_type_names, msg_type,
-				 pb_tnc_msg_infos[msg_type].exact_size ? "exactly" : "at least",
-				 pb_tnc_msg_infos[msg_type].min_size, msg_len);
-			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
-								PB_ERROR_INVALID_PARAMETER, this->offset);
-			goto fatal;
-		}
+	if (msg_infos[msg_type].has_noskip_flag != TRUE_OR_FALSE &&
+		msg_infos[msg_type].has_noskip_flag != noskip_flag)
+	{
+		DBG1(DBG_TNC, "%N/%N message must%s have NOSKIP flag set",
+			 pen_names, vendor_id, msg_type_names, msg_type,
+			 msg_infos[msg_type].has_noskip_flag ? "" : " not");
+		msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
+							PB_ERROR_INVALID_PARAMETER, this->offset);
+		goto fatal;
 	}
 
-	if (pb_tnc_msg_infos[msg_type].in_result_batch &&
-		this->type != PB_BATCH_RESULT)
+	if (msg_len < msg_infos[msg_type].min_size ||
+	   (msg_infos[msg_type].exact_size && 
+		msg_len != msg_infos[msg_type].min_size))
+	{
+		DBG1(DBG_TNC, "%N/%N message length must be %s %u bytes but is %u bytes",
+			 pen_names, vendor_id, msg_type_names, msg_type,
+			 msg_infos[msg_type].exact_size ? "exactly" : "at least",
+			 msg_infos[msg_type].min_size, msg_len);
+		msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
+							PB_ERROR_INVALID_PARAMETER, this->offset);
+		goto fatal;
+	}
+
+	if (msg_infos[msg_type].in_result_batch && this->type != PB_BATCH_RESULT)
 	{
 		if (this->is_server)
 		{
-			DBG1(DBG_TNC,"reject %N message received from a PB-TNC client",
-						  pb_tnc_msg_type_names, msg_type);
+			DBG1(DBG_TNC,"reject %N/%N message received from a PB-TNC client",
+				 pen_names, vendor_id, msg_type_names, msg_type);
 			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
 								PB_ERROR_INVALID_PARAMETER, this->offset);
 			goto fatal;
 		}
 		else
 		{
-			DBG1(DBG_TNC,"ignore %N message not received within RESULT batch",
-						  pb_tnc_msg_type_names, msg_type);
+			DBG1(DBG_TNC,"ignore %N/%N message not received within RESULT batch",
+				 pen_names, vendor_id, msg_type_names, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;
 		}
 	}
 
-	DBG2(DBG_TNC, "processing %N message (%u bytes)", pb_tnc_msg_type_names,
-				   msg_type, msg_len);
+	DBG2(DBG_TNC, "processing %N/%N message (%u bytes)", pen_names, vendor_id,
+		 msg_type_names, msg_type, msg_len);
 	data.len = msg_len;
 	msg_value = chunk_skip(data, PB_TNC_HEADER_SIZE);
-	pb_tnc_msg = pb_tnc_msg_create_from_data(msg_type, msg_value);
+	msg_pen_type = pen_type_create(vendor_id, msg_type);
+	pb_tnc_msg = pb_tnc_msg_create_from_data(msg_pen_type, msg_value);
 
 	status = pb_tnc_msg->process(pb_tnc_msg, &offset);
 	if (status == FAILED || status == VERIFY_ERROR)

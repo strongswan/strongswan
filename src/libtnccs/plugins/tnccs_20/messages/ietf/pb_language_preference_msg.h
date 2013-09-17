@@ -23,7 +23,7 @@
 
 typedef struct pb_language_preference_msg_t pb_language_preference_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * Class representing the PB-Language-Preference message type.

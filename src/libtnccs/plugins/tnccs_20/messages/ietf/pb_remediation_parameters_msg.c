@@ -63,7 +63,7 @@ struct private_pb_remediation_parameters_msg_t {
 	/**
 	 * PB-TNC message type
 	 */
-	pb_tnc_msg_type_t type;
+	pen_type_t type;
 
 	/**
 	 * Remediation Parameters Type
@@ -91,7 +91,7 @@ struct private_pb_remediation_parameters_msg_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+METHOD(pb_tnc_msg_t, get_type, pen_type_t,
 	private_pb_remediation_parameters_msg_t *this)
 {
 	return this->type;
@@ -115,7 +115,7 @@ METHOD(pb_tnc_msg_t, build, void,
 	writer = bio_writer_create(64);
 	writer->write_uint32(writer, this->parameters_type.vendor_id);
 	writer->write_uint32(writer, this->parameters_type.type);
-	writer->write_data32(writer, this->parameters);
+	writer->write_data  (writer, this->parameters);
 
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
@@ -240,7 +240,7 @@ pb_tnc_msg_t* pb_remediation_parameters_msg_create(pen_type_t parameters_type,
 			.get_uri = _get_parameters,
 			.get_string = _get_string,
 		},
-		.type = PB_MSG_REMEDIATION_PARAMETERS,
+		.type = { PEN_IETF, PB_MSG_REMEDIATION_PARAMETERS },
 		.parameters_type = parameters_type,
 		.parameters = chunk_clone(parameters),
 	);
@@ -302,7 +302,7 @@ pb_tnc_msg_t *pb_remediation_parameters_msg_create_from_data(chunk_t data)
 			.get_uri = _get_parameters,
 			.get_string = _get_string,
 		},
-		.type = PB_MSG_REMEDIATION_PARAMETERS,
+		.type = { PEN_IETF, PB_MSG_REMEDIATION_PARAMETERS },
 		.encoding = chunk_clone(data),
 	);
 

@@ -23,7 +23,7 @@
 
 typedef struct pb_reason_string_msg_t pb_reason_string_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * Class representing the PB-Reason-String message type.

@@ -23,7 +23,7 @@
 
 typedef struct pb_pa_msg_t pb_pa_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 #include <pen/pen.h>
 

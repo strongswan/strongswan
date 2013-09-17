@@ -65,7 +65,7 @@ struct private_pb_error_msg_t {
 	/**
 	 * PB-TNC message type
 	 */
-	pb_tnc_msg_type_t type;
+	pen_type_t type;
 
 	/**
 	 * Fatal flag
@@ -103,7 +103,7 @@ struct private_pb_error_msg_t {
 	refcount_t ref;
 };
 
-METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+METHOD(pb_tnc_msg_t, get_type, pen_type_t,
 	private_pb_error_msg_t *this)
 {
 	return this->type;
@@ -271,7 +271,7 @@ pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
 			.get_bad_version = _get_bad_version,
 			.set_bad_version = _set_bad_version,
 		},
-		.type = PB_MSG_ERROR,
+		.type = { PEN_IETF, PB_MSG_ERROR },
 		.ref = 1,
 		.fatal = fatal,
 		.vendor_id = vendor_id,
@@ -307,7 +307,7 @@ pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, u_int32_t vendor_id,
 			.get_bad_version = _get_bad_version,
 			.set_bad_version = _set_bad_version,
 		},
-		.type = PB_MSG_ERROR,
+		.type = { PEN_IETF, PB_MSG_ERROR },
 		.ref = 1,
 		.fatal = fatal,
 		.vendor_id = vendor_id,
@@ -342,7 +342,7 @@ pb_tnc_msg_t *pb_error_msg_create_from_data(chunk_t data)
 			.get_bad_version = _get_bad_version,
 			.set_bad_version = _set_bad_version,
 		},
-		.type = PB_MSG_ERROR,
+		.type = { PEN_IETF, PB_MSG_ERROR },
 		.ref = 1,
 		.encoding = chunk_clone(data),
 	);

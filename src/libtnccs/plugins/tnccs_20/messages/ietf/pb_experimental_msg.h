@@ -23,7 +23,7 @@
 
 typedef struct pb_experimental_msg_t pb_experimental_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * Class representing the PB-Experimental message type.

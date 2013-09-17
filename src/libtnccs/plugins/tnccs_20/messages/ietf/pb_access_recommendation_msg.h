@@ -24,7 +24,7 @@
 typedef enum pb_access_recommendation_code_t pb_access_recommendation_code_t;
 typedef struct pb_access_recommendation_msg_t pb_access_recommendation_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * PB Access Recommendation Codes as defined in section 4.7 of RFC 5793

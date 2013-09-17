@@ -24,7 +24,7 @@
 typedef enum pb_tnc_error_code_t pb_tnc_error_code_t;
 typedef struct pb_error_msg_t pb_error_msg_t;
 
-#include "pb_tnc_msg.h"
+#include "messages/pb_tnc_msg.h"
 
 /**
  * PB-TNC Error Codes as defined in section 4.9.1 of RFC 5793

@@ -47,7 +47,7 @@ struct private_pb_language_preference_msg_t {
 	/**
 	 * PB-TNC message type
 	 */
-	pb_tnc_msg_type_t type;
+	pen_type_t type;
 
 	/**
 	 * Language preference
@@ -60,7 +60,7 @@ struct private_pb_language_preference_msg_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+METHOD(pb_tnc_msg_t, get_type, pen_type_t,
 	private_pb_language_preference_msg_t *this)
 {
 	return this->type;
@@ -146,7 +146,7 @@ pb_tnc_msg_t *pb_language_preference_msg_create_from_data(chunk_t data)
 			},
 			.get_language_preference = _get_language_preference,
 		},
-		.type = PB_MSG_LANGUAGE_PREFERENCE,
+		.type = { PEN_IETF, PB_MSG_LANGUAGE_PREFERENCE },
 		.encoding = chunk_clone(data),
 	);
 
@@ -171,7 +171,7 @@ pb_tnc_msg_t *pb_language_preference_msg_create(chunk_t language_preference)
 			},
 			.get_language_preference = _get_language_preference,
 		},
-		.type = PB_MSG_LANGUAGE_PREFERENCE,
+		.type = { PEN_IETF, PB_MSG_LANGUAGE_PREFERENCE },
 		.language_preference = chunk_clone(language_preference),
 	);
 
