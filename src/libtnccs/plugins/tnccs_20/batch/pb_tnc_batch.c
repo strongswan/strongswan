@@ -396,7 +396,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		msg_type_names = pb_tnc_msg_type_names;
 		msg_infos = pb_tnc_msg_infos;
 	}
-	else if (vendor_id == PEN_IETF && msg_type <= PB_TCG_MSG_ROOF)
+	else if (vendor_id == PEN_TCG && msg_type <= PB_TCG_MSG_ROOF)
 	{
 		msg_type_names = pb_tnc_tcg_msg_type_names;
 		msg_infos = pb_tnc_tcg_msg_infos;
@@ -414,16 +414,16 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 		if (noskip_flag)
 		{
-			DBG1(DBG_TNC, "reject PB-TNC message (Vendor ID 0x%06x / "
-						  "Type 0x%08x)", vendor_id, msg_type);
+			DBG1(DBG_TNC, "reject PB-TNC message 0x%06x/0x%08x)",
+						   vendor_id, msg_type);
 			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
 							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
 			goto fatal;
 		}
 		else
 		{
-			DBG1(DBG_TNC, "ignore PB-TNC message (Vendor ID 0x%06x / "
-						  "Type 0x%08x)", vendor_id, msg_type);
+			DBG1(DBG_TNC, "ignore PB-TNC message 0x%06x/0x%08x)",
+						   vendor_id, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;
 		}

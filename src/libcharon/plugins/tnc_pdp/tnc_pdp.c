@@ -69,6 +69,11 @@ struct private_tnc_pdp_t {
 	eap_type_t type;
 
 	/**
+	 * PT-TLS port of the server
+	 */
+	u_int16_t pt_tls_port;
+
+	/**
 	 * PT-TLS IPv4 socket
 	 */
 	int pt_tls_ipv4;
@@ -798,6 +803,8 @@ tnc_pdp_t *tnc_pdp_create(void)
 			destroy(this);
 			return NULL;
 		}
+		this->pt_tls_port = pt_tls_port;
+
 		if (this->pt_tls_ipv4)
 		{
 			lib->watcher->add(lib->watcher, this->pt_tls_ipv4, WATCHER_READ,
@@ -807,6 +814,7 @@ tnc_pdp_t *tnc_pdp_create(void)
 		{
 			DBG1(DBG_NET, "could not open IPv4 PT-TLS socket, IPv4 disabled");
 		}
+
 		if (this->pt_tls_ipv6)
 		{
 			lib->watcher->add(lib->watcher, this->pt_tls_ipv6, WATCHER_READ,
@@ -816,6 +824,10 @@ tnc_pdp_t *tnc_pdp_create(void)
 		{
 			DBG1(DBG_NET, "could not open IPv6 PT-TLS socket, IPv6 disabled");
 		}
+
+		/* register PT-TLS service */
+		lib->set(lib, "pt-tls-server", this->server);
+		lib->set(lib, "pt-tls-port", &this->pt_tls_port);
 	}
 
 	/* Create IPv4 and IPv6 RADIUS listening sockets */

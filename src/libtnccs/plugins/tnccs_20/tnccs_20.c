@@ -24,6 +24,7 @@
 #include "messages/ietf/pb_remediation_parameters_msg.h"
 #include "messages/ietf/pb_reason_string_msg.h"
 #include "messages/ietf/pb_language_preference_msg.h"
+#include "messages/tcg/pb_pdp_referral_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <tncif_names.h>
@@ -452,8 +453,31 @@ static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 	switch (msg_type.type)
 	{
 		case PB_TCG_MSG_PDP_REFERRAL:
-			/* TODO handle PDP Referral */
+		{
+			pb_pdp_referral_msg_t *pdp_msg;
+			pen_type_t pdp_id_type;
+			chunk_t pdp_server;
+			u_int8_t pdp_protocol;
+			u_int16_t pdp_port;
+
+			pdp_msg = (pb_pdp_referral_msg_t*)msg;
+			pdp_id_type = pdp_msg->get_identifier_type(pdp_msg);
+
+			if (pdp_id_type.vendor_id == PEN_TCG &&
+				pdp_id_type.type == PB_PDP_ID_FQDN)
+			{
+				pdp_server = pdp_msg->get_fqdn(pdp_msg, &pdp_protocol,
+											   &pdp_port);
+				if (pdp_protocol != 0)
+				{
+					DBG1(DBG_TNC, "unsupported PDP transport protocol");
+					break;
+				}
+				DBG1(DBG_TNC, "PDP server '%.*s' is listening on port %u",
+							   pdp_server.len, pdp_server.ptr, pdp_port);
+			}
 			break;
+		}
 		default:
 			break;
 	}
@@ -510,6 +534,8 @@ METHOD(tls_t, process, status_t,
 	pb_tnc_batch_t *batch;
 	pb_tnc_msg_t *msg;
 	enumerator_t *enumerator;
+	identification_t *pdp_server;
+	u_int16_t *pdp_port;
 	status_t status;
 
 	if (this->is_server && !this->connection_id)
@@ -526,6 +552,19 @@ METHOD(tls_t, process, status_t,
 											TNC_CONNECTION_STATE_CREATE);
 		tnc->imvs->notify_connection_change(tnc->imvs, this->connection_id,
 											TNC_CONNECTION_STATE_HANDSHAKE);
+
+		/* Send a PB-TNC TCG PDP Referral message if PDP is known */
+		pdp_server = (identification_t*)lib->get(lib, "pt-tls-server");
+		pdp_port = (u_int16_t*)lib->get(lib, "pt-tls-port");
+
+		if ((this->transport ==	TNC_IFT_EAP_1_1 ||
+			 this->transport == TNC_IFT_EAP_2_0) &&	pdp_server && pdp_port)
+		{
+			msg = pb_pdp_referral_msg_create_from_fqdn(
+						pdp_server->get_encoding(pdp_server), *pdp_port);
+			this->messages->insert_last(this->messages, msg);
+		}
+
 	}
 
 	data = chunk_create(buf, buflen);

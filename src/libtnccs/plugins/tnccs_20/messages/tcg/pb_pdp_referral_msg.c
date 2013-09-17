@@ -79,6 +79,11 @@ typedef struct private_pb_pdp_referral_msg_t private_pb_pdp_referral_msg_t;
  *
  */
 
+# define PDP_REFERRAL_HEADER_SIZE		8
+# define PDP_REFERRAL_ID_HEADER_SIZE	4
+# define PDP_REFERRAL_RESERVED			0x00
+# define PDP_REFERRAL_PROTOCOL			0x00
+
 /**
  * Private data of a pb_pdp_referral_msg_t object.
  *
@@ -103,6 +108,21 @@ struct private_pb_pdp_referral_msg_t {
 	 * PDP Identifier Value
 	 */
 	chunk_t identifier;
+
+	/**
+	 * PDP FQDN Identifier
+	 */
+	chunk_t fqdn;
+
+	/**
+	 * PT protocol the PDP is using
+	 */
+	u_int8_t protocol;
+
+	/**
+	 * PT port the PDP is using
+	 */
+	u_int16_t port;
 
 	/**
 	 * Encoded message
@@ -131,10 +151,11 @@ METHOD(pb_tnc_msg_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(64);
-	writer->write_uint32(writer, this->identifier_type.vendor_id);
+	writer = bio_writer_create(PDP_REFERRAL_HEADER_SIZE + this->identifier.len);
+	writer->write_uint8 (writer, PDP_REFERRAL_RESERVED);
+	writer->write_uint24(writer, this->identifier_type.vendor_id);
 	writer->write_uint32(writer, this->identifier_type.type);
-	writer->write_data(writer, this->identifier);
+	writer->write_data  (writer, this->identifier);
 
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
@@ -146,7 +167,6 @@ METHOD(pb_tnc_msg_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int8_t reserved;
-	status_t status = SUCCESS;
 
 	*offset = 0;
 
@@ -160,11 +180,25 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	this->identifier = chunk_clone(this->identifier);
 	reader->destroy(reader);
 
-	if (this->identifier_type.vendor_id == PEN_TCG)
+	if (this->identifier_type.vendor_id == PEN_TCG &&
+		this->identifier_type.type == PB_PDP_ID_FQDN)
 	{
-		/* TODO parse PDP Identifier Types */
+		reader = bio_reader_create(this->identifier);
+		*offset += PDP_REFERRAL_HEADER_SIZE;
+
+		if (this->identifier.len <= PDP_REFERRAL_ID_HEADER_SIZE)
+		{
+			reader->destroy(reader);
+			return FAILED;
+		}
+		reader->read_uint8 (reader, &reserved);
+		reader->read_uint8 (reader, &this->protocol);
+		reader->read_uint16(reader, &this->port);
+		reader->read_data  (reader, reader->remaining(reader), &this->fqdn);
+		this->fqdn = chunk_clone(this->fqdn);
+		reader->destroy(reader);
 	}
-	return status;
+	return SUCCESS;
 }
 
 METHOD(pb_tnc_msg_t, destroy, void,
@@ -172,6 +206,7 @@ METHOD(pb_tnc_msg_t, destroy, void,
 {
 	free(this->encoding.ptr);
 	free(this->identifier.ptr);
+	free(this->fqdn.ptr);
 	free(this);
 }
 
@@ -185,6 +220,20 @@ METHOD(pb_pdp_referral_msg_t, get_identifier, chunk_t,
 	private_pb_pdp_referral_msg_t *this)
 {
 	return this->identifier;
+}
+
+METHOD(pb_pdp_referral_msg_t, get_fqdn, chunk_t,
+	private_pb_pdp_referral_msg_t *this, u_int8_t *protocol, u_int16_t *port)
+{
+	if (protocol)
+	{
+		*protocol = this->protocol;
+	}
+	if (port)
+	{
+		*port = this->port;
+	}
+	return this->fqdn;
 }
 
 /**
@@ -218,6 +267,27 @@ pb_tnc_msg_t* pb_pdp_referral_msg_create(pen_type_t identifier_type,
 /**
  * See header
  */
+pb_tnc_msg_t* pb_pdp_referral_msg_create_from_fqdn(chunk_t fqdn, u_int16_t port)
+{
+	pb_tnc_msg_t *msg;
+	bio_writer_t *writer;
+	pen_type_t type = { PEN_TCG, PB_PDP_ID_FQDN };
+
+	writer = bio_writer_create(PDP_REFERRAL_ID_HEADER_SIZE + fqdn.len);
+	writer->write_uint8 (writer, PDP_REFERRAL_RESERVED);
+	writer->write_uint8 (writer, PDP_REFERRAL_PROTOCOL);
+	writer->write_uint16(writer, port);
+	writer->write_data  (writer, fqdn);
+
+	msg = pb_pdp_referral_msg_create(type, writer->get_buf(writer));
+	writer->destroy(writer);
+
+	return msg;
+}
+
+/**
+ * See header
+ */
 pb_tnc_msg_t *pb_pdp_referral_msg_create_from_data(chunk_t data)
 {
 	private_pb_pdp_referral_msg_t *this;
@@ -233,6 +303,7 @@ pb_tnc_msg_t *pb_pdp_referral_msg_create_from_data(chunk_t data)
 			},
 			.get_identifier_type = _get_identifier_type,
 			.get_identifier = _get_identifier,
+			.get_fqdn = _get_fqdn,
 		},
 		.type = { PEN_TCG, PB_TCG_MSG_PDP_REFERRAL },
 		.encoding = chunk_clone(data),
