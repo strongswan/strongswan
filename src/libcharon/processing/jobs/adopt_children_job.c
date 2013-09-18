@@ -102,8 +102,12 @@ METHOD(job_t, execute, job_requeue_t,
 						children->insert_last(children, child_sa);
 					}
 					childenum->destroy(childenum);
-					DBG1(DBG_IKE, "detected reauth of existing IKE_SA, "
-						 "adopting %d children", children->get_count(children));
+					if (children->get_count(children))
+					{
+						DBG1(DBG_IKE, "detected reauth of existing IKE_SA, "
+							 "adopting %d children",
+							 children->get_count(children));
+					}
 					ike_sa->set_state(ike_sa, IKE_DELETING);
 					charon->bus->ike_updown(charon->bus, ike_sa, FALSE);
 					charon->ike_sa_manager->checkin_and_destroy(
