@@ -1766,6 +1766,15 @@ static void adopt_children(ike_sa_t *old, ike_sa_t *new)
 }
 
 /**
+ * Check if the replaced IKE_SA might get reauthenticated from host
+ */
+static bool is_ikev1_reauth(ike_sa_t *duplicate, host_t *host)
+{
+	return duplicate->get_version(duplicate) == IKEV1 &&
+		   host->equals(host, duplicate->get_other_host(duplicate));
+}
+
+/**
  * Delete an existing IKE_SA due to a unique replace policy
  */
 static status_t enforce_replace(private_ike_sa_manager_t *this,
@@ -1774,8 +1783,7 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 {
 	charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
 
-	if (duplicate->get_version(duplicate) == IKEV1 &&
-		host->equals(host, duplicate->get_other_host(duplicate)))
+	if (is_ikev1_reauth(duplicate, host))
 	{
 		/* looks like a reauthentication attempt */
 		adopt_children(duplicate, new);
@@ -1846,10 +1854,13 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 													 other, other_host);
 							break;
 						case UNIQUE_KEEP:
-							cancel = TRUE;
-							/* we keep the first IKE_SA and delete all
-							 * other duplicates that might exist */
-							policy = UNIQUE_REPLACE;
+							if (!is_ikev1_reauth(duplicate, other_host))
+							{
+								cancel = TRUE;
+								/* we keep the first IKE_SA and delete all
+								 * other duplicates that might exist */
+								policy = UNIQUE_REPLACE;
+							}
 							break;
 						default:
 							break;
