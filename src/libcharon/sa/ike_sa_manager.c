@@ -28,6 +28,7 @@
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 #include <crypto/hashers/hasher.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 /* the default size of the hash table (MUST be a power of 2) */
 #define DEFAULT_HASHTABLE_SIZE 1
@@ -1764,6 +1765,32 @@ static void adopt_children(ike_sa_t *old, ike_sa_t *new)
 	enumerator->destroy(enumerator);
 }
 
+/**
+ * Delete an existing IKE_SA due to a unique replace policy
+ */
+static status_t enforce_replace(private_ike_sa_manager_t *this,
+								ike_sa_t *duplicate, ike_sa_t *new,
+								identification_t *other, host_t *host)
+{
+	charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
+
+	if (duplicate->get_version(duplicate) == IKEV1 &&
+		host->equals(host, duplicate->get_other_host(duplicate)))
+	{
+		/* looks like a reauthentication attempt */
+		adopt_children(duplicate, new);
+		/* For IKEv1 we have to delay the delete for the old IKE_SA. Some
+		 * peers need to complete the new SA first, otherwise the quick modes
+		 * might get lost. */
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+			delete_ike_sa_job_create(duplicate->get_id(duplicate), TRUE), 10);
+		return SUCCESS;
+	}
+	DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer '%Y' due to "
+		 "uniqueness policy", other);
+	return duplicate->delete(duplicate);
+}
+
 METHOD(ike_sa_manager_t, check_uniqueness, bool,
 	private_ike_sa_manager_t *this, ike_sa_t *ike_sa, bool force_replace)
 {
@@ -1815,14 +1842,8 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 					switch (policy)
 					{
 						case UNIQUE_REPLACE:
-							charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
-							if (duplicate->get_version(duplicate) == IKEV1)
-							{
-								adopt_children(duplicate, ike_sa);
-							}
-							DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer "
-									"'%Y' due to uniqueness policy", other);
-							status = duplicate->delete(duplicate);
+							status = enforce_replace(this, duplicate, ike_sa,
+													 other, other_host);
 							break;
 						case UNIQUE_KEEP:
 							cancel = TRUE;
