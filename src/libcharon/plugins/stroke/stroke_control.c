@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -580,12 +581,54 @@ METHOD(stroke_control_t, purge_ike, void,
 }
 
 /**
+ * Find an existing CHILD_SA/reqid
+ */
+static u_int32_t find_reqid(child_cfg_t *child_cfg)
+{
+	enumerator_t *enumerator, *children;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
+	char *name;
+	u_int32_t reqid;
+
+	reqid = charon->traps->find_reqid(charon->traps, child_cfg);
+	if (reqid)
+	{	/* already trapped */
+		return reqid;
+	}
+
+	name = child_cfg->get_name(child_cfg);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, (void**)&child_sa))
+		{
+			if (streq(name, child_sa->get_name(child_sa)))
+			{
+				reqid = child_sa->get_reqid(child_sa);
+				break;
+			}
+		}
+		children->destroy(children);
+		if (reqid)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return reqid;
+}
+
+/**
  * call charon to install a shunt or trap
  */
 static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 						 char *name, FILE *out)
 {
 	ipsec_mode_t mode;
+	u_int32_t reqid;
 
 	mode = child_cfg->get_mode(child_cfg);
 	if (mode == MODE_PASS || mode == MODE_DROP)
@@ -603,7 +646,8 @@ static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	}
 	else
 	{
-		if (charon->traps->install(charon->traps, peer_cfg, child_cfg, 0))
+		reqid = find_reqid(child_cfg);
+		if (charon->traps->install(charon->traps, peer_cfg, child_cfg, reqid))
 		{
 			fprintf(out, "'%s' routed\n", name);
 		}
