@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Tobias Brunner
+ * Copyright (C) 2011-2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,6 +19,7 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <threading/rwlock.h>
+#include <threading/thread_value.h>
 #include <collections/linked_list.h>
 
 
@@ -60,6 +61,11 @@ struct private_trap_manager_t {
 	 * read write lock for traps list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * track if the current thread is installing a trap policy
+	 */
+	thread_value_t *installing;
 
 	/**
 	 * listener to track acquiring IKE_SAs
@@ -131,6 +137,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 	}
 
 	this->lock->write_lock(this->lock);
+	this->installing->set(this->installing, this);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -143,7 +150,6 @@ METHOD(trap_manager_t, install, u_int32_t,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
 
 	if (found)
 	{	/* config might have changed so update everything */
@@ -188,11 +194,11 @@ METHOD(trap_manager_t, install, u_int32_t,
 			.child_sa = child_sa,
 			.peer_cfg = peer->get_ref(peer),
 		);
-		this->lock->write_lock(this->lock);
 		this->traps->insert_last(this->traps, entry);
-		this->lock->unlock(this->lock);
 		reqid = child_sa->get_reqid(child_sa);
 	}
+	this->installing->set(this->installing, NULL);
+	this->lock->unlock(this->lock);
 
 	if (status != SUCCESS)
 	{
@@ -269,6 +275,10 @@ METHOD(trap_manager_t, find_reqid, u_int32_t,
 	entry_t *entry;
 	u_int32_t reqid = 0;
 
+	if (this->installing->get(this->installing))
+	{	/* current thread holds the lock */
+		return reqid;
+	}
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -435,6 +445,7 @@ METHOD(trap_manager_t, destroy, void,
 {
 	charon->bus->remove_listener(charon->bus, &this->listener.listener);
 	this->traps->destroy_function(this->traps, (void*)destroy_entry);
+	this->installing->destroy(this->installing);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -465,6 +476,7 @@ trap_manager_t *trap_manager_create(void)
 		},
 		.traps = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.installing = thread_value_create(NULL),
 	);
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
 
