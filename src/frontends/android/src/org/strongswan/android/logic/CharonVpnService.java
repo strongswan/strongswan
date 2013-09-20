@@ -190,7 +190,6 @@ public class CharonVpnService extends VpnService implements Runnable
 					stopCurrentConnection();
 					if (mNextProfile == null)
 					{
-						setProfile(null);
 						setState(State.DISABLED);
 						if (mTerminate)
 						{
@@ -207,10 +206,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						mCurrentCertificateAlias = mCurrentProfile.getCertificateAlias();
 						mCurrentUserCertificateAlias = mCurrentProfile.getUserCertificateAlias();
 
-						setProfile(mCurrentProfile);
-						setError(ErrorState.NO_ERROR);
-						setState(State.CONNECTING);
-						setImcState(ImcState.UNKNOWN);
+						startConnection(mCurrentProfile);
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
@@ -258,17 +254,18 @@ public class CharonVpnService extends VpnService implements Runnable
 	}
 
 	/**
-	 * Update the VPN profile on the state service. Called by the handler thread.
+	 * Notify the state service about a new connection attempt.
+	 * Called by the handler thread.
 	 *
 	 * @param profile currently active VPN profile
 	 */
-	private void setProfile(VpnProfile profile)
+	private void startConnection(VpnProfile profile)
 	{
 		synchronized (mServiceLock)
 		{
 			if (mService != null)
 			{
-				mService.setProfile(profile);
+				mService.startConnection(profile);
 			}
 		}
 	}
@@ -337,9 +334,9 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			if (mService != null)
 			{
-				mService.setError(error);
 				if (!mIsDisconnecting)
 				{
+					mService.setError(error);
 					mService.disconnect();
 				}
 			}

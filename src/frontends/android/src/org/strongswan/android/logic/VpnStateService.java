@@ -36,6 +36,7 @@ public class VpnStateService extends Service
 {
 	private final List<VpnStateListener> mListeners = new ArrayList<VpnStateListener>();
 	private final IBinder mBinder = new LocalBinder();
+	private long mConnectionID = 0;
 	private Handler mHandler;
 	private VpnProfile mProfile;
 	private State mState = State.DISABLED;
@@ -133,6 +134,19 @@ public class VpnStateService extends Service
 	}
 
 	/**
+	 * Get the current connection ID.  May be used to track which state
+	 * changes have already been handled.
+	 *
+	 * Is increased when startConnection() is called.
+	 *
+	 * @return connection ID
+	 */
+	public long getConnectionID()
+	{	/* only updated from the main thread so no synchronization needed */
+		return mConnectionID;
+	}
+
+	/**
 	 * Get the current state.
 	 *
 	 * @return state
@@ -223,21 +237,26 @@ public class VpnStateService extends Service
 	}
 
 	/**
-	 * Set the VPN profile currently active. Listeners are not notified.
+	 * Called when a connection is started.  Sets the currently active VPN
+	 * profile, resets IMC and Error state variables, sets the State to
+	 * CONNECTING, increases the connection ID, and notifies all listeners.
 	 *
 	 * May be called from threads other than the main thread.
 	 *
 	 * @param profile current profile
 	 */
-	public void setProfile(final VpnProfile profile)
+	public void startConnection(final VpnProfile profile)
 	{
-		/* even though we don't notify the listeners the update is done from the
-		 * same handler so updates are predictable for listeners */
-		mHandler.post(new Runnable() {
+		notifyListeners(new Callable<Boolean>() {
 			@Override
-			public void run()
+			public Boolean call() throws Exception
 			{
+				VpnStateService.this.mConnectionID++;
 				VpnStateService.this.mProfile = profile;
+				VpnStateService.this.mState = State.CONNECTING;
+				VpnStateService.this.mError = ErrorState.NO_ERROR;
+				VpnStateService.this.mImcState = ImcState.UNKNOWN;
+				return true;
 			}
 		});
 	}
