@@ -136,12 +136,32 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	}
 
 	@Override
+	public void onStart()
+	{
+		super.onStart();
+		if (mService != null)
+		{
+			mService.registerListener(this);
+			updateView();
+		}
+	}
+
+	@Override
+	public void onStop()
+	{
+		super.onStop();
+		if (mService != null)
+		{
+			mService.unregisterListener(this);
+		}
+	}
+
+	@Override
 	public void onDestroy()
 	{
 		super.onDestroy();
 		if (mService != null)
 		{
-			mService.unregisterListener(this);
 			getActivity().getApplicationContext().unbindService(mServiceConnection);
 		}
 	}

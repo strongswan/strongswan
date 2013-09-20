@@ -144,6 +144,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		super.onStart();
 		if (mService != null)
 		{
+			mService.registerListener(this);
 			updateView();
 		}
 	}
@@ -152,6 +153,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	public void onStop()
 	{
 		super.onStop();
+		if (mService != null)
+		{
+			mService.unregisterListener(this);
+		}
 		hideErrorDialog();
 		hideProgressDialog();
 	}
@@ -162,7 +167,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		super.onDestroy();
 		if (mService != null)
 		{
-			mService.unregisterListener(this);
 			getActivity().getApplicationContext().unbindService(mServiceConnection);
 		}
 	}
