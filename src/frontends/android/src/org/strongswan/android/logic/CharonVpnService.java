@@ -214,12 +214,20 @@ public class CharonVpnService extends VpnService implements Runnable
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().getEnableBYOD());
-						Log.i(TAG, "charon started");
-
-						initiate(mCurrentProfile.getVpnType().getIdentifier(),
-								 mCurrentProfile.getGateway(), mCurrentProfile.getUsername(),
-								 mCurrentProfile.getPassword());
+						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().getEnableBYOD()))
+						{
+							Log.i(TAG, "charon started");
+							initiate(mCurrentProfile.getVpnType().getIdentifier(),
+									 mCurrentProfile.getGateway(), mCurrentProfile.getUsername(),
+									 mCurrentProfile.getPassword());
+						}
+						else
+						{
+							Log.e(TAG, "failed to start charon");
+							setError(ErrorState.GENERIC_ERROR);
+							setState(State.DISABLED);
+							mCurrentProfile = null;
+						}
 					}
 				}
 				catch (InterruptedException ex)
@@ -517,8 +525,9 @@ public class CharonVpnService extends VpnService implements Runnable
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
 	 * @param boyd enable BYOD features
+	 * @return TRUE if initialization was successful
 	 */
-	public native void initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
+	public native boolean initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so

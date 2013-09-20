@@ -589,7 +589,7 @@ static void segv_handler(int signal)
 /**
  * Initialize charon and the libraries via JNI
  */
-JNI_METHOD(CharonVpnService, initializeCharon, void,
+JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	jobject builder, jstring jlogfile, jboolean byod)
 {
 	struct sigaction action;
@@ -603,7 +603,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	if (!library_init(NULL))
 	{
 		library_deinit();
-		return;
+		return FALSE;
 	}
 
 	/* set options before initializing other libraries that might read them */
@@ -615,7 +615,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	{
 		libhydra_deinit();
 		library_deinit();
-		return;
+		return FALSE;
 	}
 
 	if (!libipsec_init())
@@ -623,7 +623,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
-		return;
+		return FALSE;
 	}
 
 	if (!libcharon_init("charon"))
@@ -632,7 +632,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
-		return;
+		return FALSE;
 	}
 
 	charon->load_loggers(charon, NULL, FALSE);
@@ -664,7 +664,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
-		return;
+		return FALSE;
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
@@ -680,6 +680,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 
 	/* start daemon (i.e. the threads in the thread-pool) */
 	charon->start(charon);
+	return TRUE;
 }
 
 /**
