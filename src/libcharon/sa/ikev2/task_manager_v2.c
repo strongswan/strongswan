@@ -1145,14 +1145,9 @@ METHOD(task_manager_t, process_message, status_t,
 					return FAILED;
 				}
 			}
-			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
-				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
-				msg->get_exchange_type(msg) != IKE_SA_INIT)
-			{	/* only do host updates based on verified messages */
-				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
-				}
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+			{	/* with MOBIKE, we do no implicit updates */
+				this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
 			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
@@ -1198,10 +1193,13 @@ METHOD(task_manager_t, process_message, status_t,
 			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
 				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
 				msg->get_exchange_type(msg) != IKE_SA_INIT)
-			{	/* only do host updates based on verified messages */
+			{	/* only do updates based on verified messages (or inital ones) */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other, FALSE);
+				{	/* with MOBIKE, we do no implicit updates.  we force an
+					 * update of the local address on IKE_SA_INIT, but never
+					 * for the remote address */
+					this->ike_sa->update_hosts(this->ike_sa, me, NULL, mid == 0);
+					this->ike_sa->update_hosts(this->ike_sa, NULL, other, FALSE);
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
