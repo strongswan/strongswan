@@ -187,6 +187,10 @@ endif
 LOCAL_SRC_FILES += $(call add_plugin, eap-peap)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-tnc)
+ifneq ($(call plugin_enabled, eap-tnc),)
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtnccs/ $(LOCAL_PATH)/../libtncif/
+LOCAL_SHARED_LIBRARIES += libtnccs libtncif
+endif
 
 # adding libtls if any of the four plugins above is enabled
 ifneq ($(or $(call plugin_enabled, eap-tls), $(call plugin_enabled, eap-ttls), \
@@ -210,41 +214,13 @@ ifneq ($(call plugin_enabled, stroke),)
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../stroke/
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, tnc-imc)
-ifneq ($(call plugin_enabled, tnc-imc),)
-LOCAL_SHARED_LIBRARIES += libdl
-endif
-
-LOCAL_SRC_FILES += $(call add_plugin, tnc-tnccs)
-
-LOCAL_SRC_FILES += $(call add_plugin, tnccs-20)
-LOCAL_SRC_FILES += $(call add_plugin_subdirs, tnccs-20, batch messages state_machine)
-ifneq ($(call plugin_enabled, tnccs-20),)
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/plugins/tnccs_20/
-# for tls.h
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtls/
-endif
-
-ifneq ($(or $(call plugin_enabled, eap-tnc), $(call plugin_enabled, tnc-imc), \
-			$(call plugin_enabled, tnc-tnccs), $(call plugin_enabled, tnccs-20)),)
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtnccs/
-LOCAL_SHARED_LIBRARIES += libtnccs
-endif
-
-ifneq ($(or $(call plugin_enabled, tnc-imc), $(call plugin_enabled, tnc-tnccs), \
-			$(call plugin_enabled, tnccs-20)),)
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtncif/
-LOCAL_SHARED_LIBRARIES += libtncif
-endif
-
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/include \
 	$(strongswan_PATH)/src/libhydra \
-	$(strongswan_PATH)/src/libstrongswan \
-	$(strongswan_PATH)/src/libtncif
+	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
 
