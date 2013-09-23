@@ -270,7 +270,8 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes,
 	u_int64_t *packets, time_t *time)
 {
-	return NOT_SUPPORTED;
+	return ipsec->sas->query_sa(ipsec->sas, src, dst, spi, protocol, mark,
+								bytes, packets, time);
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
