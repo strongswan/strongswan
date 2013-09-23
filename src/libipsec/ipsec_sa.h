@@ -110,6 +110,23 @@ struct ipsec_sa_t {
 	esp_context_t *(*get_esp_context)(ipsec_sa_t *this);
 
 	/**
+	 * Get usage statistics for this SA.
+	 *
+	 * @param bytes		receives number of processed bytes, or NULL
+	 * @param packets	receives number of processed packets, or NULL
+	 * @param time		receives last use time of this SA, or NULL
+	 */
+	void (*get_usestats)(ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+						 time_t *time);
+
+	/**
+	 * Record en/decryption of a packet to update usage statistics.
+	 *
+	 * @param bytes		length of packet processed
+	 */
+	void (*update_usestats)(ipsec_sa_t *this, u_int32_t bytes);
+
+	/**
 	 * Check if this SA matches all given parameters
 	 *
 	 * @param spi		SPI

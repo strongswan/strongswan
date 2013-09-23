@@ -81,6 +81,18 @@ struct private_ipsec_sa_t {
 	 * ESP context
 	 */
 	esp_context_t *esp_context;
+
+	/**
+	 * Usage statistics
+	 */
+	struct {
+		/** last time of use */
+		time_t time;
+		/** number of packets processed */
+		u_int64_t packets;
+		/** number of bytes processed */
+		u_int64_t bytes;
+	} use;
 };
 
 METHOD(ipsec_sa_t, get_source, host_t*,
@@ -143,6 +155,32 @@ METHOD(ipsec_sa_t, get_esp_context, esp_context_t*,
 	private_ipsec_sa_t *this)
 {
 	return this->esp_context;
+}
+
+METHOD(ipsec_sa_t, get_usestats, void,
+	private_ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+	time_t *time)
+{
+	if (bytes)
+	{
+		*bytes = this->use.bytes;
+	}
+	if (packets)
+	{
+		*packets = this->use.packets;
+	}
+	if (time)
+	{
+		*time = this->use.time;
+	}
+}
+
+METHOD(ipsec_sa_t, update_usestats, void,
+	private_ipsec_sa_t *this, u_int32_t bytes)
+{
+	this->use.time = time_monotonic(NULL);
+	this->use.packets++;
+	this->use.bytes += bytes;
 }
 
 METHOD(ipsec_sa_t, match_by_spi_dst, bool,
@@ -227,6 +265,8 @@ ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
 			.match_by_spi_src_dst = _match_by_spi_src_dst,
 			.match_by_reqid = _match_by_reqid,
 			.get_esp_context = _get_esp_context,
+			.get_usestats = _get_usestats,
+			.update_usestats = _update_usestats,
 		},
 		.spi = spi,
 		.src = src->clone(src),
