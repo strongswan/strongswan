@@ -489,12 +489,12 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
-	u_int32_t last_use = 0;
+	time_t last_use = 0;
 
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
-		u_int32_t in, out, fwd;
+		time_t in, out, fwd;
 
 		if (inbound)
 		{

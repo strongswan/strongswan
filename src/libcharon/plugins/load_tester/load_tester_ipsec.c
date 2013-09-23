@@ -95,7 +95,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 METHOD(kernel_ipsec_t, query_policy, status_t,
 	private_load_tester_ipsec_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	u_int32_t *use_time)
+	time_t *use_time)
 {
 	*use_time = 1;
 	return SUCCESS;
