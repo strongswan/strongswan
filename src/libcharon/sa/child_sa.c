@@ -167,12 +167,12 @@ struct private_child_sa_t {
 	/**
 	 * time of last use in seconds (inbound)
 	 */
-	u_int32_t my_usetime;
+	time_t my_usetime;
 
 	/**
 	 * time of last use in seconds (outbound)
 	 */
-	u_int32_t other_usetime;
+	time_t other_usetime;
 
 	/**
 	 * last number of inbound bytes
@@ -429,7 +429,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
 	u_int64_t bytes, packets;
-	u_int32_t time;
+	time_t time;
 
 	if (inbound)
 	{
