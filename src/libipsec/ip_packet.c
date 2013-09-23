@@ -139,6 +139,9 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 				goto failed;
 			}
 			ip = (struct ip*)packet.ptr;
+			/* remove any RFC 4303 TFC extra padding */
+			packet.len = min(packet.len, untoh16(&ip->ip_len));
+
 			src = host_create_from_chunk(AF_INET,
 										 chunk_from_thing(ip->ip_src), 0);
 			dst = host_create_from_chunk(AF_INET,
@@ -157,6 +160,9 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 				goto failed;
 			}
 			ip = (struct ip6_hdr*)packet.ptr;
+			/* remove any RFC 4303 TFC extra padding */
+			packet.len = min(packet.len, untoh16(&ip->ip6_plen));
+
 			src = host_create_from_chunk(AF_INET6,
 										 chunk_from_thing(ip->ip6_src), 0);
 			dst = host_create_from_chunk(AF_INET6,
