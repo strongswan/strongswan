@@ -76,6 +76,9 @@
 /** Default replay window size, if not set using charon.replay_window */
 #define DEFAULT_REPLAY_WINDOW 32
 
+/** Default lifetime of an acquire XFRM state (in seconds) */
+#define DEFAULT_ACQUIRE_LIFETIME 165
+
 /**
  * Map the limit for bytes and packets to XFRM_INF by default
  */
@@ -2631,7 +2634,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 {
 	private_kernel_netlink_ipsec_t *this;
 	bool register_for_events = TRUE;
-	int fd;
+	FILE *f;
 
 	INIT(this,
 		.public = {
@@ -2673,12 +2676,13 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		register_for_events = FALSE;
 	}
 
-	/* disable lifetimes for allocated SPIs in kernel */
-	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
-	if (fd > 0)
+	f = fopen("/proc/sys/net/core/xfrm_acq_expires", "w");
+	if (f)
 	{
-		ignore_result(write(fd, "165", 3));
-		close(fd);
+		fprintf(f, "%u", lib->settings->get_int(lib->settings,
+								"%s.plugins.kernel-netlink.xfrm_acq_expires",
+								DEFAULT_ACQUIRE_LIFETIME, hydra->daemon));
+		fclose(f);
 	}
 
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM);
