@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2013 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sys/uio.h>
 
 typedef struct private_printf_hook_t private_printf_hook_t;
 typedef struct printf_hook_handler_t printf_hook_handler_t;
@@ -300,23 +301,23 @@ int vstr_wrapper_asprintf(char **str, const char *format, ...)
 	va_end(args);
 	return written;
 }
-static inline int vstr_wrapper_vprintf_internal(Vstr_conf *conf, int fd,
+static inline int vstr_wrapper_vprintf_internal(Vstr_conf *conf, FILE *stream,
 												const char *format,
 												va_list args)
 {
-	int written;
+	struct iovec *iov;
+	int iovcnt, written = 0;
 	Vstr_base *s = vstr_make_base(conf);
 	vstr_add_vfmt(s, 0, format, args);
-	written = s->len;
-	while (s->len)
+	if (vstr_export_iovec_ptr_all(s, &iov, &iovcnt))
 	{
-		if (!vstr_sc_write_fd(s, 1, s->len, fd, NULL))
+		while (iovcnt--)
 		{
-			if (errno != EAGAIN && errno != EINTR)
+			if (iov->iov_base)
 			{
-				written -= s->len;
-				break;
+				written += fwrite(iov->iov_base, 1, iov->iov_len, stream);
 			}
+			iov++;
 		}
 	}
 	vstr_free_base(s);
@@ -327,7 +328,7 @@ int vstr_wrapper_vprintf(const char *format, va_list args)
 	Vstr_conf *conf = get_vstr_conf();
 	if (conf)
 	{
-		return vstr_wrapper_vprintf_internal(conf, STDOUT_FILENO, format, args);
+		return vstr_wrapper_vprintf_internal(conf, stdout, format, args);
 	}
 	return vprintf(format, args);
 }
@@ -336,8 +337,7 @@ int vstr_wrapper_vfprintf(FILE *stream, const char *format, va_list args)
 	Vstr_conf *conf = get_vstr_conf();
 	if (conf)
 	{
-		return vstr_wrapper_vprintf_internal(conf, fileno(stream), format,
-											 args);
+		return vstr_wrapper_vprintf_internal(conf, stream, format, args);
 	}
 	return vfprintf(stream, format, args);
 }
