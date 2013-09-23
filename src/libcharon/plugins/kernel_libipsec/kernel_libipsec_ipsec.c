@@ -226,7 +226,7 @@ static void expire(u_int32_t reqid, u_int8_t protocol, u_int32_t spi, bool hard)
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_libipsec_ipsec_t *this)
 {
-	return KERNEL_REQUIRE_UDP_ENCAPSULATION;
+	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC;
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
