@@ -342,7 +342,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!trusted)
+	if (!trusted && this->private)
 	{
 		/* peer certificate, generate on demand */
 		serial = htonl(++this->serial);
