@@ -256,6 +256,7 @@ public class VpnStateService extends Service
 				VpnStateService.this.mState = State.CONNECTING;
 				VpnStateService.this.mError = ErrorState.NO_ERROR;
 				VpnStateService.this.mImcState = ImcState.UNKNOWN;
+				VpnStateService.this.mRemediationInstructions.clear();
 				return true;
 			}
 		});
