@@ -176,9 +176,10 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		msg.add_conn.rekey.margin_bytes = conn->sa_ipsec_margin_bytes;
 		msg.add_conn.rekey.life_packets = conn->sa_ipsec_life_packets;
 		msg.add_conn.rekey.margin_packets = conn->sa_ipsec_margin_packets;
-		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
+	msg.add_conn.rekey.tries = conn->sa_keying_tries;
+
 	msg.add_conn.mobike = conn->options & SA_OPTION_MOBIKE;
 	msg.add_conn.force_encap = conn->options & SA_OPTION_FORCE_ENCAP;
 	msg.add_conn.fragmentation = conn->fragmentation;
