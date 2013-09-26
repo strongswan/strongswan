@@ -57,6 +57,8 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private TextView mStateView;
 	private int stateBaseColor;
 	private Button mActionButton;
+	private ProgressDialog mConnectDialog;
+	private ProgressDialog mDisconnectDialog;
 	private ProgressDialog mProgressDialog;
 	private AlertDialog mErrorDialog;
 	private long mErrorConnectionID;
@@ -192,7 +194,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			return;
 		}
 
-		hideProgressDialog();
 		enableActionButton(false);
 		mProfileNameView.setText(name);
 
@@ -200,6 +201,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		{
 			case DISABLED:
 				showProfile(false);
+				hideProgressDialog();
 				mStateView.setText(R.string.state_disabled);
 				mStateView.setTextColor(stateBaseColor);
 				break;
@@ -211,6 +213,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				break;
 			case CONNECTED:
 				showProfile(true);
+				hideProgressDialog();
 				enableActionButton(true);
 				mStateView.setText(R.string.state_connected);
 				mStateView.setTextColor(getResources().getColor(R.color.success_text));
@@ -295,6 +298,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		{
 			mProgressDialog.dismiss();
 			mProgressDialog = null;
+			mDisconnectDialog = mConnectDialog = null;
 		}
 	}
 
@@ -315,33 +319,46 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private void showConnectDialog(String profile, String gateway)
 	{
-		mProgressDialog = new ProgressDialog(getActivity());
-		mProgressDialog.setTitle(String.format(getString(R.string.connecting_title), profile));
-		mProgressDialog.setMessage(String.format(getString(R.string.connecting_message), gateway));
-		mProgressDialog.setIndeterminate(true);
-		mProgressDialog.setCancelable(false);
-		mProgressDialog.setButton(getString(android.R.string.cancel),
-								  new DialogInterface.OnClickListener()
-								  {
-									  @Override
-									  public void onClick(DialogInterface dialog, int which)
-									  {
-										  if (mService != null)
-										  {
-											  mService.disconnect();
-										  }
-									  }
-								  });
-		mProgressDialog.show();
+		if (mConnectDialog != null)
+		{	/* already showing the dialog */
+			return;
+		}
+		hideProgressDialog();
+		mConnectDialog = new ProgressDialog(getActivity());
+		mConnectDialog.setTitle(String.format(getString(R.string.connecting_title), profile));
+		mConnectDialog.setMessage(String.format(getString(R.string.connecting_message), gateway));
+		mConnectDialog.setIndeterminate(true);
+		mConnectDialog.setCancelable(false);
+		mConnectDialog.setButton(DialogInterface.BUTTON_NEGATIVE,
+			  getString(android.R.string.cancel),
+			  new DialogInterface.OnClickListener()
+			  {
+				  @Override
+				  public void onClick(DialogInterface dialog, int which)
+				  {
+					  if (mService != null)
+					  {
+						  mService.disconnect();
+					  }
+				  }
+			  });
+		mConnectDialog.show();
+		mProgressDialog = mConnectDialog;
 	}
 
 	private void showDisconnectDialog(String profile)
 	{
-		mProgressDialog = new ProgressDialog(getActivity());
-		mProgressDialog.setMessage(getString(R.string.state_disconnecting));
-		mProgressDialog.setIndeterminate(true);
-		mProgressDialog.setCancelable(false);
-		mProgressDialog.show();
+		if (mDisconnectDialog != null)
+		{	/* already showing the dialog */
+			return;
+		}
+		hideProgressDialog();
+		mDisconnectDialog = new ProgressDialog(getActivity());
+		mDisconnectDialog.setMessage(getString(R.string.state_disconnecting));
+		mDisconnectDialog.setIndeterminate(true);
+		mDisconnectDialog.setCancelable(false);
+		mDisconnectDialog.show();
+		mProgressDialog = mDisconnectDialog;
 	}
 
 	private void showErrorDialog(int textid)
