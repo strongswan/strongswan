@@ -75,6 +75,7 @@ CONFIG_OPTS = \
 	--enable-unity \
 	--enable-unbound \
 	--enable-ipseckey \
+	--enable-dnscert \
 	--enable-cmd \
 	--enable-libipsec \
 	--enable-kernel-libipsec \
