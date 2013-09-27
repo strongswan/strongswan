@@ -46,6 +46,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 #define PRINTF_BUF_LEN 8192
 #define ARGS_MAX 3
@@ -679,6 +680,13 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 								/* String */
 								sarg = va_arg(ap, const char *);
 								sarg = sarg ? sarg : "(null)";
+								slen = strlen(sarg);
+								goto is_string;
+							}
+							case 'm':
+							{
+								/* glibc error string */
+								sarg = strerror(errno);
 								slen = strlen(sarg);
 								goto is_string;
 							}

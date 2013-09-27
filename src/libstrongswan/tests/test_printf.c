@@ -15,6 +15,8 @@
 
 #include "test_suite.h"
 
+#include <errno.h>
+
 static void verify(char *expected, char *format, ...)
 {
 	FILE *mem;
@@ -42,6 +44,13 @@ START_TEST(test_printf_strings)
 	verify("  asdf", "%6s", "asdf");
 	verify("  asdf", "%+6s", "asdf");
 	verify("asdf  ", "%-6s", "asdf");
+}
+END_TEST
+
+START_TEST(test_printf_err)
+{
+	errno = EINVAL;
+	verify((char*)strerror(errno), "%m");
 }
 END_TEST
 
@@ -91,6 +100,10 @@ Suite *printf_suite_create()
 
 	tc = tcase_create("strings");
 	tcase_add_test(tc, test_printf_strings);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("err");
+	tcase_add_test(tc, test_printf_err);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("unsiged");
