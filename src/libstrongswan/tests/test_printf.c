@@ -16,6 +16,7 @@
 #include "test_suite.h"
 
 #include <errno.h>
+#include <math.h>
 
 static void verify(char *expected, char *format, ...)
 {
@@ -133,6 +134,19 @@ START_TEST(test_printf_float)
 	verify("-1.12", "%.2f", -1.1249);
 	verify("-1.124", "%.3f", -1.12351);
 	verify("-1.123", "%.3f", -1.12349);
+
+#ifdef NAN
+	verify("nan", "%.3f", NAN);
+	verify("  nan", "%5.3f", NAN);
+	verify("NAN", "%.3F", NAN);
+	verify("NAN  ", "%-5.3F", NAN);
+#endif
+#ifdef INFINITY
+	verify("inf", "%.3f", INFINITY);
+	verify("-inf", "%.4f", -INFINITY);
+	verify("INF", "%.3F", INFINITY);
+	verify("-INF", "%.4F", -INFINITY);
+#endif
 }
 END_TEST
 

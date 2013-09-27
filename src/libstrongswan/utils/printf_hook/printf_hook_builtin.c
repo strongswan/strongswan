@@ -923,9 +923,29 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 							}
 							is_double:
 							{
+								double dval;
+
+								dval = va_arg(ap, double);
+								if (isinf(dval) == 1)
+								{
+									sarg = flags & FL_UPPER ? "INF" : "inf";
+									slen = strlen(sarg);
+									goto is_string;
+								}
+								if (isinf(dval) == -1)
+								{
+									sarg = flags & FL_UPPER ? "-INF" : "-inf";
+									slen = strlen(sarg);
+									goto is_string;
+								}
+								if (isnan(dval))
+								{
+									sarg = flags & FL_UPPER ? "NAN" : "nan";
+									slen = strlen(sarg);
+									goto is_string;
+								}
 								sz = format_double(q, (o < n) ? n - o : 0,
-												   va_arg(ap, double),
-												   flags, base, width, prec);
+												dval, flags, base, width, prec);
 								q += sz;
 								o += sz;
 								break;
