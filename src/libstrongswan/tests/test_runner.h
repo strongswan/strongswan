@@ -34,5 +34,6 @@ Suite *vectors_suite_create();
 Suite *ecdsa_suite_create();
 Suite *rsa_suite_create();
 Suite *host_suite_create();
+Suite *printf_suite_create();
 
 #endif /** TEST_RUNNER_H_ */
