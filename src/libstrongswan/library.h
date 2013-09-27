@@ -90,7 +90,7 @@
 #endif
 
 /* make sure we include printf_hook.h and utils.h first */
-#include "utils/printf_hook.h"
+#include "utils/printf_hook/printf_hook.h"
 #include "utils/utils.h"
 #include "networking/host_resolver.h"
 #include "networking/streams/stream_manager.h"

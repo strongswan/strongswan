@@ -33,7 +33,7 @@ selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/printf_hook.c utils/settings.c
+utils/settings.c
 
 if USE_DEV_HEADERS
 strongswan_includedir = ${dev_headers}
@@ -78,7 +78,9 @@ threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
-utils/leak_detective.h utils/printf_hook.h utils/settings.h utils/integrity_checker.h
+utils/leak_detective.h utils/printf_hook/printf_hook.h \
+utils/printf_hook/printf_hook_vstr.h \
+utils/settings.h utils/integrity_checker.h
 endif
 
 library.lo :	$(top_builddir)/config.status
@@ -113,7 +115,12 @@ if USE_INTEGRITY_TEST
 endif
 
 if USE_VSTR
+  libstrongswan_la_SOURCES += utils/printf_hook/printf_hook_vstr.c
   libstrongswan_la_LIBADD += -lvstr
+endif
+
+if !USE_VSTR
+  libstrongswan_la_SOURCES += utils/printf_hook/printf_hook_glibc.c
 endif
 
 if USE_LIBCAP
