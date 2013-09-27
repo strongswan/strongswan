@@ -520,13 +520,14 @@ plugin_t *openssl_plugin_create()
 	fips_mode = lib->settings->get_int(lib->settings,
 						"libstrongswan.plugins.openssl.fips_mode", FIPS_MODE);
 #ifdef OPENSSL_FIPS
-	if (!FIPS_mode_set(fips_mode))
+	if (fips_mode)
 	{
-		DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d)", fips_mode);
-		return NULL;
+		if (!FIPS_mode_set(fips_mode))
+		{
+			DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d)", fips_mode);
+			return NULL;
+		}
 	}
-	DBG1(DBG_LIB, "openssl FIPS mode(%d) - %sabled ",fips_mode,
-				   fips_mode ? "en" : "dis");
 #else
 	if (fips_mode)
 	{
@@ -549,6 +550,13 @@ plugin_t *openssl_plugin_create()
 
 	OPENSSL_config(NULL);
 	OpenSSL_add_all_algorithms();
+
+#ifdef OPENSSL_FIPS
+	/* we do this here as it may have been enabled via openssl.conf */
+	fips_mode = FIPS_mode();
+	DBG1(DBG_LIB, "openssl FIPS mode(%d) - %sabled ", fips_mode,
+		 fips_mode ? "en" : "dis");
+#endif /* OPENSSL_FIPS */
 
 #ifndef OPENSSL_NO_ENGINE
 	/* activate support for hardware accelerators */
