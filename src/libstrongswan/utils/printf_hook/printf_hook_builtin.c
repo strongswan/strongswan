@@ -500,6 +500,14 @@ static size_t format_double(char *q, size_t n, double val, bpf_flag_t flags,
 	oo = o;
 
 	tmpval = (uintmax_t)fabs(val);
+	if (!prec)
+	{
+		/* round up if no additional digits */
+		if (fabs(val) - tmpval >= 0.5)
+		{
+			tmpval++;
+		}
+	}
 	while (ndigits > 0)
 	{
 		qq--;
@@ -521,9 +529,14 @@ static size_t format_double(char *q, size_t n, double val, bpf_flag_t flags,
 		qq = q;
 		oo = o;
 
+		tmpval = (uintmax_t)(fabs(val) * pow(base, prec));
+		/* round up if required */
+		if (fabs(val) * pow(base, prec) - tmpval >= 0.5)
+		{
+			tmpval++;
+		}
 		while (prec > 0)
 		{
-			tmpval = (uintmax_t)(fabs(val) * pow(base, prec));
 			qq--;
 			oo--;
 			prec--;
@@ -531,6 +544,7 @@ static size_t format_double(char *q, size_t n, double val, bpf_flag_t flags,
 			{
 				*qq = digits[tmpval % base];
 			}
+			tmpval /= base;
 		}
 	}
 
