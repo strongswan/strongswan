@@ -127,7 +127,19 @@ struct ipsec_sa_t {
 	void (*update_usestats)(ipsec_sa_t *this, u_int32_t bytes);
 
 	/**
+	 * Expire this SA, soft or hard.
+	 *
+	 * A soft expire triggers a rekey, a hard expire blocks the SA and
+	 * triggers a delete for the SA.
+	 *
+	 * @param hard		TRUE for hard, FALSE for soft
+	 */
+	void (*expire)(ipsec_sa_t *this, bool hard);
+
+	/**
 	 * Check if this SA matches all given parameters
+	 *
+	 * Only matches if the SA has not yet expired.
 	 *
 	 * @param spi		SPI
 	 * @param dst		destination address
@@ -148,6 +160,8 @@ struct ipsec_sa_t {
 
 	/**
 	 * Check if this SA matches all given parameters
+	 *
+	 * Only matches if the SA has not yet expired.
 	 *
 	 * @param reqid		reqid
 	 * @param inbound	TRUE for inbound SA, FALSE for outbound

@@ -299,12 +299,10 @@ static job_requeue_t sa_expired(ipsec_sa_expired_t *expired)
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_ptr,
 							  NULL, expired->entry) == SUCCESS)
 	{
-		u_int32_t hard_offset = expired->hard_offset;
-		ipsec_sa_t *sa = expired->entry->sa;
+		u_int32_t hard_offset;
 
-		ipsec->events->expire(ipsec->events, sa->get_reqid(sa),
-							  sa->get_protocol(sa), sa->get_spi(sa),
-							  hard_offset == 0);
+		hard_offset = expired->hard_offset;
+		expired->entry->sa->expire(expired->entry->sa, hard_offset == 0);
 		if (hard_offset)
 		{	/* soft limit reached, schedule hard expire */
 			expired->hard_offset = 0;
