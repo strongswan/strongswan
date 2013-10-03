@@ -655,7 +655,7 @@ receiver_t *receiver_create()
 	this->initiator_only = lib->settings->get_bool(lib->settings,
 				"%s.initiator_only", FALSE, charon->name),
 
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!this->hasher)
 	{
 		DBG1(DBG_NET, "creating cookie hasher failed, no hashers supported");

@@ -2133,7 +2133,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		},
 	);
 
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (this->hasher == NULL)
 	{
 		DBG1(DBG_MGR, "manager initialization failed, no hasher supported");

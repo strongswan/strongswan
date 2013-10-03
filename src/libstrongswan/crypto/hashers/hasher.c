@@ -21,7 +21,6 @@
 
 ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_UNKNOWN",
-	"HASH_PREFERRED",
 	"HASH_MD2",
 	"HASH_MD4",
 	"HASH_MD5",
@@ -34,7 +33,6 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 
 ENUM(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SHA512,
 	"unknown",
-	"preferred",
 	"md2",
 	"md4",
 	"md5",
@@ -199,7 +197,6 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 			}
 			break;
 		case HASH_SHA1:
-		case HASH_PREFERRED:
 			switch (length)
 			{
 				case 12:

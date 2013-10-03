@@ -213,9 +213,6 @@ struct crypto_factory_t {
 	/**
 	 * Register a hasher constructor.
 	 *
-	 * The first added hasher is the preferred hasher returned on
-	 * create_hasher(HASH_PREFERRED).
-	 *
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm

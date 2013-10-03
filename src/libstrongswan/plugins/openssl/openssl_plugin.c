@@ -298,9 +298,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_NULL, 0),
 		/* hashers */
 		PLUGIN_REGISTER(HASHER, openssl_hasher_create),
-#ifndef OPENSSL_NO_SHA1
-			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
-#endif
 #ifndef OPENSSL_NO_MD2
 			PLUGIN_PROVIDE(HASHER, HASH_MD2),
 #endif
@@ -309,6 +306,9 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifndef OPENSSL_NO_MD5
 			PLUGIN_PROVIDE(HASHER, HASH_MD5),
+#endif
+#ifndef OPENSSL_NO_SHA1
+			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
 #endif
 #ifndef OPENSSL_NO_SHA256
 			PLUGIN_PROVIDE(HASHER, HASH_SHA224),

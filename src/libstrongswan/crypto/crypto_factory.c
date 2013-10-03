@@ -249,9 +249,9 @@ METHOD(crypto_factory_t, create_hasher, hasher_t*,
 	enumerator = this->hashers->create_enumerator(this->hashers);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (algo == HASH_PREFERRED || entry->algo == algo)
+		if (entry->algo == algo)
 		{
-			if (this->test_on_create && algo != HASH_PREFERRED &&
+			if (this->test_on_create &&
 				!this->tester->test_hasher(this->tester, algo,
 										   entry->create_hasher, NULL,
 										   default_plugin_name))
