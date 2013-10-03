@@ -235,7 +235,6 @@ METHOD(crypto_factory_t, create_signer, signer_t*,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-
 	return signer;
 }
 
@@ -308,14 +307,13 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	u_int diff = ~0;
-	rng_constructor_t constr = NULL;
+	rng_t *rng = NULL;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->rngs->create_enumerator(this->rngs);
 	while (enumerator->enumerate(enumerator, &entry))
 	{	/* find the best matching quality, but at least as good as requested */
-		if (entry->algo >= quality && diff > entry->algo - quality)
+		if (entry->algo >= quality)
 		{
 			if (this->test_on_create &&
 				!this->tester->test_rng(this->tester, quality,
@@ -324,21 +322,16 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 			{
 				continue;
 			}
-			diff = entry->algo - quality;
-			constr = entry->create_rng;
-			if (diff == 0)
-			{	/* perfect match, won't get better */
+			rng = entry->create_rng(quality);
+			if (rng)
+			{
 				break;
 			}
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	if (constr)
-	{
-		return constr(quality);
-	}
-	return NULL;
+	return rng;
 }
 
 METHOD(crypto_factory_t, create_nonce_gen, nonce_gen_t*,
