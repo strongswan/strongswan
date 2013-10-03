@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -396,47 +397,42 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 
 /**
  * Insert an algorithm entry to a list
+ *
+ * Entries are sorted by algorithm identifier (which is important for RNGs)
+ * while maintaining the order in which algorithms were added, unless they were
+ * benchmarked and speed is provided, which then is used to order entries of
+ * the same algorithm.
  */
 static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 					  int algo, const char *plugin_name,
 					  u_int speed, void *create)
 {
+	enumerator_t *enumerator;
 	entry_t *entry, *current;
-	linked_list_t *tmp;
-	bool inserted = FALSE;
 
 	INIT(entry,
 		.algo = algo,
 		.plugin_name = plugin_name,
 		.speed = speed,
+		.create = create,
 	);
-	entry->create = create;
 
 	this->lock->write_lock(this->lock);
-	if (speed)
-	{	/* insert sorted by speed using a temporary list */
-		tmp = linked_list_create();
-		while (list->remove_first(list, (void**)&current) == SUCCESS)
-		{
-			tmp->insert_last(tmp, current);
-		}
-		while (tmp->remove_first(tmp, (void**)&current) == SUCCESS)
-		{
-			if (!inserted &&
-				current->algo == algo &&
-				current->speed < speed)
-			{
-				list->insert_last(list, entry);
-				inserted = TRUE;
-			}
-			list->insert_last(list, current);
-		}
-		tmp->destroy(tmp);
-	}
-	if (!inserted)
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		list->insert_last(list, entry);
+		if (current->algo > algo)
+		{
+			break;
+		}
+		else if (current->algo == algo && speed &&
+				 current->speed < speed)
+		{
+			break;
+		}
 	}
+	list->insert_before(list, enumerator, entry);
+	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 }
 
