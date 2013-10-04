@@ -757,6 +757,10 @@ EAP plugin to be used as backend for XAuth credential verification
 .TP
 .BR charon.plugins.xauth-pam.pam_service " [login]"
 PAM service to be used for authentication
+.TP
+.BR charon.plugins.xauth-pam.trim_email " [yes]"
+If an email address is given as an XAuth username, trim it to just the
+username part.
 .SS libstrongswan section
 .TP
 .BR libstrongswan.cert_cache " [yes]"
