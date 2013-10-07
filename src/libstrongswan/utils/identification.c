@@ -602,7 +602,7 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 		}
 	}
 	/* try a binary compare */
-	if (memeq(t_dn.ptr, o_dn.ptr, t_dn.len))
+	if (chunk_equals(t_dn, o_dn))
 	{
 		return TRUE;
 	}
