@@ -360,7 +360,7 @@ static bool id_equals(identification_t *a, char *b_str)
 
 	b = identification_create_from_string(b_str);
 	equals = a->equals(a, b);
-	equals = equals && b->equals(b, a);
+	ck_assert_int_eq(equals, b->equals(b, a));
 	b->destroy(b);
 	return equals;
 }
