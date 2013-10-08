@@ -619,6 +619,49 @@ START_TEST(test_matches_string)
 }
 END_TEST
 
+START_TEST(test_matches_empty)
+{
+	identification_t *a;
+
+	a = identification_create_from_encoding(_i, chunk_empty);
+
+	switch (_i)
+	{
+		case ID_ANY:
+			ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+			break;
+		case ID_IPV4_ADDR:
+			ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_NONE));
+			break;
+		case ID_FQDN:
+			ck_assert(id_matches(a, "moon.strongswan.org", ID_MATCH_NONE));
+			break;
+		case ID_USER_FQDN:
+			ck_assert(id_matches(a, "moon@strongswan.org", ID_MATCH_NONE));
+			break;
+		case ID_IPV6_ADDR:
+			ck_assert(id_matches(a, "fec0::1", ID_MATCH_NONE));
+			break;
+		case ID_DER_ASN1_DN:
+			ck_assert(id_matches(a, "C=CH, E=moon@strongswan.org, CN=moon",
+								 ID_MATCH_NONE));
+			break;
+		case ID_KEY_ID:
+			ck_assert(id_matches(a, "@#12345678", ID_MATCH_NONE));
+			break;
+		case ID_DER_ASN1_GN:
+		case ID_IPV4_ADDR_SUBNET:
+		case ID_IPV6_ADDR_SUBNET:
+		case ID_IPV4_ADDR_RANGE:
+		case ID_IPV6_ADDR_RANGE:
+			/* currently not tested */
+			break;
+	}
+
+	a->destroy(a);
+}
+END_TEST
+
 /*******************************************************************************
  * identification part enumeration
  */
@@ -740,6 +783,7 @@ Suite *identification_suite_create()
 	tcase_add_test(tc, test_matches_any);
 	tcase_add_test(tc, test_matches_binary);
 	tcase_add_test(tc, test_matches_string);
+	tcase_add_loop_test(tc, test_matches_empty, ID_ANY, ID_KEY_ID + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("part enumeration");
