@@ -213,17 +213,23 @@ METHOD(eap_method_t, is_mutual, bool,
 METHOD(eap_method_t, destroy, void,
 	private_eap_tnc_t *this)
 {
-	chunk_t pdp_server;
+	char *pdp_server;
 	u_int16_t pdp_port;
+	host_t *host;
 	tls_t *tls;
 
-	pdp_server = this->tnccs->get_pdp_server(this->tnccs, &pdp_port);
-	if (pdp_server.len)
-	{
-		DBG2(DBG_TNC, "TODO: setup PT-TLS connection to %.*s:%u",
-			 pdp_server.len, pdp_server.ptr, pdp_port);
-	}
 	tls = &this->tnccs->tls;
+	pdp_server = this->tnccs->get_pdp_server(this->tnccs, &pdp_port);
+	if (pdp_server)
+	{
+		host = host_create_from_dns(pdp_server, AF_UNSPEC, pdp_port);
+		if (host)
+		{
+			DBG2(DBG_TNC, "TODO: setup PT-TLS connection to '%s' at %#H",
+				 pdp_server, host);
+			host->destroy(host);
+		}
+	}
 	tls->destroy(tls);
 	this->tls_eap->destroy(this->tls_eap);
 	free(this);

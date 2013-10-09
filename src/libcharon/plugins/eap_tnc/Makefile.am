@@ -3,6 +3,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/libtls \
+	-I$(top_srcdir)/src/libpttls \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtnccs
 
@@ -15,6 +16,7 @@ else
 plugin_LTLIBRARIES = libstrongswan-eap-tnc.la
 libstrongswan_eap_tnc_la_LIBADD = \
 	$(top_builddir)/src/libtls/libtls.la \
+	$(top_builddir)/src/libpttls/libpttls.la \
 	$(top_builddir)/src/libtnccs/libtnccs.la
 endif
 

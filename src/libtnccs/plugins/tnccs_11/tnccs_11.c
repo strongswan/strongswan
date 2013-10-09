@@ -610,12 +610,12 @@ METHOD(tnccs_t, set_auth_type, void,
 	this->auth_type = auth_type;
 }
 
-METHOD(tnccs_t, get_pdp_server, chunk_t,
+METHOD(tnccs_t, get_pdp_server, char*,
 	private_tnccs_11_t *this, u_int16_t *port)
 {
 	*port = 0;
 
-	return chunk_empty;
+	return NULL;
 }
 
 METHOD(tnccs_t, get_ref, tnccs_t*,

@@ -145,7 +145,7 @@ struct private_tnccs_20_t {
 	/**
 	 * PDP server FQDN
 	 */
-	chunk_t pdp_server;
+	char *pdp_server;
 
 	/**
 	 * PDP server port
@@ -471,6 +471,7 @@ static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 		{
 			pb_pdp_referral_msg_t *pdp_msg;
 			pen_type_t pdp_id_type;
+			chunk_t pdp_server;
 			u_int8_t pdp_protocol;
 
 			pdp_msg = (pb_pdp_referral_msg_t*)msg;
@@ -479,16 +480,17 @@ static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			if (pdp_id_type.vendor_id == PEN_TCG &&
 				pdp_id_type.type == PB_PDP_ID_FQDN)
 			{
-				this->pdp_server = chunk_clone(pdp_msg->get_fqdn(pdp_msg,
-										 &pdp_protocol, &this->pdp_port));
+				pdp_server = pdp_msg->get_fqdn(pdp_msg, &pdp_protocol,
+														&this->pdp_port);
 				if (pdp_protocol != 0)
 				{
 					DBG1(DBG_TNC, "unsupported PDP transport protocol");
 					break;
 				}
-				DBG1(DBG_TNC, "PDP server '%.*s' is listening on port %u",
-							   this->pdp_server.len, this->pdp_server.ptr,
-							   this->pdp_port);
+				this->pdp_server = strndup(pdp_server.ptr, pdp_server.len);
+
+				DBG1(DBG_TNC, "PDP server '%s' is listening on port %u",
+							   this->pdp_server, this->pdp_port);
 			}
 			break;
 		}
@@ -980,7 +982,7 @@ METHOD(tls_t, destroy, void,
 		this->mutex->destroy(this->mutex);
 		this->messages->destroy_offset(this->messages,
 									   offsetof(pb_tnc_msg_t, destroy));
-		free(this->pdp_server.ptr);
+		free(this->pdp_server);
 		free(this);
 	}
 }
@@ -1009,7 +1011,7 @@ METHOD(tnccs_t, set_auth_type, void,
 	this->auth_type = auth_type;
 }
 
-METHOD(tnccs_t, get_pdp_server, chunk_t,
+METHOD(tnccs_t, get_pdp_server, char*,
 	private_tnccs_20_t *this, u_int16_t *port)
 {
 	*port = this->pdp_port;

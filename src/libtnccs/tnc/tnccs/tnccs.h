@@ -120,7 +120,7 @@ struct tnccs_t {
 	 * @param port		PDP port number
 	 * @return			PDP server name
 	 */
-	chunk_t (*get_pdp_server)(tnccs_t *this, u_int16_t *port);
+	char* (*get_pdp_server)(tnccs_t *this, u_int16_t *port);
 
 	/**
 	 * Get a new reference to the TNCCS object.
