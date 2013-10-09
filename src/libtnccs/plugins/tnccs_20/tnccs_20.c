@@ -142,6 +142,21 @@ struct private_tnccs_20_t {
 	 */
 	void *cb_data;
 
+	/**
+	 * PDP server FQDN
+	 */
+	chunk_t pdp_server;
+
+	/**
+	 * PDP server port
+	 */
+	u_int16_t pdp_port;
+
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
+
 };
 
 /**
@@ -456,9 +471,7 @@ static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 		{
 			pb_pdp_referral_msg_t *pdp_msg;
 			pen_type_t pdp_id_type;
-			chunk_t pdp_server;
 			u_int8_t pdp_protocol;
-			u_int16_t pdp_port;
 
 			pdp_msg = (pb_pdp_referral_msg_t*)msg;
 			pdp_id_type = pdp_msg->get_identifier_type(pdp_msg);
@@ -466,15 +479,16 @@ static void handle_tcg_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			if (pdp_id_type.vendor_id == PEN_TCG &&
 				pdp_id_type.type == PB_PDP_ID_FQDN)
 			{
-				pdp_server = pdp_msg->get_fqdn(pdp_msg, &pdp_protocol,
-											   &pdp_port);
+				this->pdp_server = chunk_clone(pdp_msg->get_fqdn(pdp_msg,
+										 &pdp_protocol, &this->pdp_port));
 				if (pdp_protocol != 0)
 				{
 					DBG1(DBG_TNC, "unsupported PDP transport protocol");
 					break;
 				}
 				DBG1(DBG_TNC, "PDP server '%.*s' is listening on port %u",
-							   pdp_server.len, pdp_server.ptr, pdp_port);
+							   this->pdp_server.len, this->pdp_server.ptr,
+							   this->pdp_port);
 			}
 			break;
 		}
@@ -956,15 +970,19 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
-	tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
-											  this->is_server);
-	this->server->destroy(this->server);
-	this->peer->destroy(this->peer);
-	this->state_machine->destroy(this->state_machine);
-	this->mutex->destroy(this->mutex);
-	this->messages->destroy_offset(this->messages,
-								   offsetof(pb_tnc_msg_t, destroy));
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
+												  this->is_server);
+		this->server->destroy(this->server);
+		this->peer->destroy(this->peer);
+		this->state_machine->destroy(this->state_machine);
+		this->mutex->destroy(this->mutex);
+		this->messages->destroy_offset(this->messages,
+									   offsetof(pb_tnc_msg_t, destroy));
+		free(this->pdp_server.ptr);
+		free(this);
+	}
 }
 
 METHOD(tnccs_t, get_transport, tnc_ift_type_t,
@@ -989,6 +1007,21 @@ METHOD(tnccs_t, set_auth_type, void,
 	private_tnccs_20_t *this, u_int32_t auth_type)
 {
 	this->auth_type = auth_type;
+}
+
+METHOD(tnccs_t, get_pdp_server, chunk_t,
+	private_tnccs_20_t *this, u_int16_t *port)
+{
+	*port = this->pdp_port;
+
+	return this->pdp_server;
+}
+
+METHOD(tnccs_t, get_ref, tnccs_t*,
+	private_tnccs_20_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 /**
@@ -1018,6 +1051,8 @@ tnccs_t* tnccs_20_create(bool is_server,
 			.set_transport = _set_transport,
 			.get_auth_type = _get_auth_type,
 			.set_auth_type = _set_auth_type,
+			.get_pdp_server = _get_pdp_server,
+			.get_ref = _get_ref,
 		},
 		.is_server = is_server,
 		.server = server->clone(server),
@@ -1031,6 +1066,7 @@ tnccs_t* tnccs_20_create(bool is_server,
 							"libtnccs.plugins.tnccs-20.max_batch_size", 65522),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 							"libtnccs.plugins.tnccs-20.max_message_size", 65490),
+		.ref = 1,
 	);
 
 	return &this->public;

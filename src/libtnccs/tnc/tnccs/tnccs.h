@@ -114,6 +114,21 @@ struct tnccs_t {
 	 */
 	void (*set_auth_type)(tnccs_t *this, u_int32_t auth_type);
 
+	/**
+	 * Get PDP server name and port number
+	 *
+	 * @param port		PDP port number
+	 * @return			PDP server name
+	 */
+	chunk_t (*get_pdp_server)(tnccs_t *this, u_int16_t *port);
+
+	/**
+	 * Get a new reference to the TNCCS object.
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	tnccs_t* (*get_ref)(tnccs_t *this);
+
 };
 
 /**

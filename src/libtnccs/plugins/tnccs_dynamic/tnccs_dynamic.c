@@ -61,6 +61,11 @@ struct private_tnccs_dynamic_t {
 	 */
 	tnccs_cb_t callback;
 
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
+
 };
 
 /**
@@ -173,10 +178,13 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_dynamic_t *this)
 {
-	DESTROY_IF(this->tls);
-	this->server->destroy(this->server);
-	this->peer->destroy(this->peer);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		DESTROY_IF(this->tls);
+		this->server->destroy(this->server);
+		this->peer->destroy(this->peer);
+		free(this);
+	}
 }
 
 METHOD(tnccs_t, get_transport, tnc_ift_type_t,
@@ -201,6 +209,21 @@ METHOD(tnccs_t, set_auth_type, void,
 	private_tnccs_dynamic_t *this, u_int32_t auth_type)
 {
 	this->auth_type = auth_type;
+}
+
+METHOD(tnccs_t, get_pdp_server, chunk_t,
+	private_tnccs_dynamic_t *this, u_int16_t *port)
+{
+	tnccs_t *tnccs = (tnccs_t*)this->tls;
+
+	return tnccs->get_pdp_server(tnccs, port);
+}
+
+METHOD(tnccs_t, get_ref, tnccs_t*,
+	private_tnccs_dynamic_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 /**
@@ -230,11 +253,14 @@ tnccs_t* tnccs_dynamic_create(bool is_server,
 			.set_transport = _set_transport,
 			.get_auth_type = _get_auth_type,
 			.set_auth_type = _set_auth_type,
+			.get_pdp_server = _get_pdp_server,
+			.get_ref = _get_ref,
 		},
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.transport = transport,
 		.callback = cb,
+		.ref = 1,
 	);
 
 	return &this->public;

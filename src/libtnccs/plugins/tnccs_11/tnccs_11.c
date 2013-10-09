@@ -126,6 +126,11 @@ struct private_tnccs_11_t {
 	 */
 	tnccs_cb_t callback;
 
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
+
 };
 
 METHOD(tnccs_t, send_msg, TNC_Result,
@@ -569,13 +574,16 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
-	tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
-											  this->is_server);
-	this->server->destroy(this->server);
-	this->peer->destroy(this->peer);
-	this->mutex->destroy(this->mutex);
-	DESTROY_IF(this->batch);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
+												  this->is_server);
+		this->server->destroy(this->server);
+		this->peer->destroy(this->peer);
+		this->mutex->destroy(this->mutex);
+		DESTROY_IF(this->batch);
+		free(this);
+	}
 }
 
 METHOD(tnccs_t, get_transport, tnc_ift_type_t,
@@ -600,6 +608,21 @@ METHOD(tnccs_t, set_auth_type, void,
 	private_tnccs_11_t *this, u_int32_t auth_type)
 {
 	this->auth_type = auth_type;
+}
+
+METHOD(tnccs_t, get_pdp_server, chunk_t,
+	private_tnccs_11_t *this, u_int16_t *port)
+{
+	*port = 0;
+
+	return chunk_empty;
+}
+
+METHOD(tnccs_t, get_ref, tnccs_t*,
+	private_tnccs_11_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 /**
@@ -629,6 +652,8 @@ tnccs_t* tnccs_11_create(bool is_server,
 			.set_transport = _set_transport,
 			.get_auth_type = _get_auth_type,
 			.set_auth_type = _set_auth_type,
+			.get_pdp_server = _get_pdp_server,
+			.get_ref = _get_ref,
 		},
 		.is_server = is_server,
 		.server = server->clone(server),
@@ -638,6 +663,7 @@ tnccs_t* tnccs_11_create(bool is_server,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 							"libtnccs.plugins.tnccs-11.max_message_size", 45000),
+		.ref = 1,
 	);
 
 	return &this->public;

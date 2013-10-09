@@ -213,6 +213,18 @@ METHOD(eap_method_t, is_mutual, bool,
 METHOD(eap_method_t, destroy, void,
 	private_eap_tnc_t *this)
 {
+	chunk_t pdp_server;
+	u_int16_t pdp_port;
+	tls_t *tls;
+
+	pdp_server = this->tnccs->get_pdp_server(this->tnccs, &pdp_port);
+	if (pdp_server.len)
+	{
+		DBG2(DBG_TNC, "TODO: setup PT-TLS connection to %.*s:%u",
+			 pdp_server.len, pdp_server.ptr, pdp_port);
+	}
+	tls = &this->tnccs->tls;
+	tls->destroy(tls);
 	this->tls_eap->destroy(this->tls_eap);
 	free(this);
 }
@@ -238,6 +250,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	private_eap_tnc_t *this;
 	int max_msg_count;
 	char* protocol;
+	tnccs_t *tnccs;
 	tnccs_type_t type;
 
 	INIT(this,
@@ -282,10 +295,11 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->tnccs = tnc->tnccs->create_instance(tnc->tnccs, type,
+	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type,
 						is_server, server, peer, TNC_IFT_EAP_1_1,
 						is_server ? enforce_recommendation : NULL);
-	this->tls_eap = tls_eap_create(EAP_TNC, &this->tnccs->tls,
+	this->tnccs = tnccs->get_ref(tnccs);
+	this->tls_eap = tls_eap_create(EAP_TNC, &tnccs->tls,
 								   EAP_TNC_MAX_MESSAGE_LEN,
 								   max_msg_count, FALSE);
 	if (!this->tls_eap)
