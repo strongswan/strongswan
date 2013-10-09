@@ -311,6 +311,7 @@ METHOD(listener_t, child_updown, bool,
 				"PLUTO_CONNECTION='%s' "
 				"PLUTO_INTERFACE='%s' "
 				"PLUTO_REQID='%u' "
+				"PLUTO_PROTO='%s' "
 				"PLUTO_UNIQUEID='%u' "
 				"PLUTO_ME='%H' "
 				"PLUTO_MY_ID='%Y' "
@@ -336,6 +337,7 @@ METHOD(listener_t, child_updown, bool,
 				 config->get_name(config),
 				 iface ? iface : "unknown",
 				 child_sa->get_reqid(child_sa),
+				 child_sa->get_protocol(child_sa) == PROTO_ESP ? "esp" : "ah",
 				 ike_sa->get_unique_id(ike_sa),
 				 me, ike_sa->get_my_id(ike_sa),
 				 my_client, my_client_mask,

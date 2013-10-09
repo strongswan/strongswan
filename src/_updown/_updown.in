@@ -45,7 +45,10 @@
 #              is the name of the ipsec interface to be used.
 #
 #       PLUTO_REQID
-#              is the requid of the ESP policy
+#              is the requid of the AH|ESP policy
+#
+#       PLUTO_PROTO
+#              is the negotiated IPsec protocol, ah|esp
 #
 #       PLUTO_UNIQUEID
 #              is the unique identifier of the associated IKE_SA
