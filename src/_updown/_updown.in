@@ -283,7 +283,7 @@ then
 	IPSEC_POLICY_OUT=""
 else
 	KLIPS=
-	IPSEC_POLICY="-m policy --pol ipsec --proto esp --reqid $PLUTO_REQID"
+	IPSEC_POLICY="-m policy --pol ipsec --proto $PLUTO_PROTO --reqid $PLUTO_REQID"
 	IPSEC_POLICY_IN="$IPSEC_POLICY --dir in"
 	IPSEC_POLICY_OUT="$IPSEC_POLICY --dir out"
 fi
