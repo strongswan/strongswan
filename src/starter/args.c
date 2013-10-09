@@ -295,6 +295,15 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 		return FALSE;
 	}
 
+	if (token == KW_ESP || token == KW_AH)
+	{
+		if (*seen & (SEEN_KW(KW_ESP, first) | SEEN_KW(KW_AH, first)))
+		{
+			DBG1(DBG_APP, "# can't have both 'ah' and 'esp' options");
+			return FALSE;
+		}
+	}
+
 	/* set flag that this argument has been seen */
 	*seen |= SEEN_KW(token, first);
 
