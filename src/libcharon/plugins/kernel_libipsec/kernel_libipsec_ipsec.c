@@ -523,11 +523,6 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_entry_t *policy, *found = NULL;
 	status_t status;
 
-	if (type != POLICY_IPSEC)
-	{
-		return SUCCESS;
-	}
-
 	status = ipsec->policies->add_policy(ipsec->policies, src, dst, src_ts,
 								dst_ts, direction, type, sa, mark, priority);
 	if (status != SUCCESS)
