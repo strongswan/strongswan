@@ -236,9 +236,43 @@ identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 .BR aggressive " = yes | " no
 whether to use IKEv1 Aggressive or Main Mode (the default).
 .TP
+.BR ah " = <cipher suites>"
+comma-separated list of AH algorithms to be used for the connection, e.g.
+.BR sha1-sha256-modp1024 .
+The notation is
+.BR integrity[-dhgroup] .
+For IKEv2, multiple algorithms (separated by -) of the same type can be included
+in a single proposal. IKEv1 only includes the first algorithm in a proposal.
+Only either the
+.B ah
+or
+.B esp
+keyword may be used, AH+ESP bundles are not supported.
+
+There is no default, by default ESP is used.
+The daemon adds its extensive default proposal to the configured value. To
+restrict it to the configured proposal an
+exclamation mark
+.RB ( ! )
+can be added at the end.
+
+If
+.B dh-group
+is specified, CHILD_SA/Quick Mode setup and rekeying include a separate
+Diffie-Hellman exchange.
+.TP
 .BR also " = <name>"
 includes conn section
 .BR <name> .
+.TP
+.BR auth " = <value>"
+was used by the
+.B pluto
+IKEv1 daemon to use AH integrity protection for ESP encrypted packets, but is
+not supported in charon. The
+.B ah
+keyword specifies algorithms to use for integrity protection with AH, but
+without encryption. AH+ESP bundles are not supported.
 .TP
 .BR authby " = " pubkey " | rsasig | ecdsasig | psk | secret | never | xauthpsk | xauthrsasig"
 how the two security gateways should authenticate each other;
@@ -368,6 +402,13 @@ for the connection, e.g.
 .BR aes128-sha256 .
 The notation is
 .BR encryption-integrity[-dhgroup][-esnmode] .
+For IKEv2, multiple algorithms (separated by -) of the same type can be included
+in a single proposal. IKEv1 only includes the first algorithm in a proposal.
+Only either the
+.B ah
+or
+.B esp
+keyword may be used, AH+ESP bundles are not supported.
 
 Defaults to
 .BR aes128-sha1,3des-sha1 .
