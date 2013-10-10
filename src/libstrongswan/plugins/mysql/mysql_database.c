@@ -652,7 +652,7 @@ METHOD(database_t, execute, int,
 }
 
 METHOD(database_t, transaction, bool,
-	private_mysql_database_t *this)
+	private_mysql_database_t *this, bool serializable)
 {
 	transaction_t *trans = NULL;
 	conn_t *conn;
@@ -669,6 +669,17 @@ METHOD(database_t, transaction, bool,
 	}
 	/* these statements are not supported in prepared statements that are used
 	 * by the execute() method */
+	if (serializable)
+	{
+		if (mysql_query(conn->mysql,
+						"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE") != 0)
+		{
+			DBG1(DBG_LIB, "starting transaction failed: %s",
+				 mysql_error(conn->mysql));
+			conn_release(this, conn);
+			return FALSE;
+		}
+	}
 	if (mysql_query(conn->mysql, "START TRANSACTION") != 0)
 	{
 		DBG1(DBG_LIB, "starting transaction failed: %s",

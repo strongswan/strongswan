@@ -305,9 +305,11 @@ METHOD(database_t, execute, int,
 }
 
 METHOD(database_t, transaction, bool,
-	private_sqlite_database_t *this)
+	private_sqlite_database_t *this, bool serializable)
 {
 	transaction_t *trans;
+	char *cmd = serializable ? "BEGIN EXCLUSIVE TRANSACTION"
+							 : "BEGIN TRANSACTION";
 
 	trans = this->transaction->get(this->transaction);
 	if (trans)
@@ -315,7 +317,7 @@ METHOD(database_t, transaction, bool,
 		ref_get(&trans->refs);
 		return TRUE;
 	}
-	if (execute(this, NULL, "BEGIN EXCLUSIVE TRANSACTION") == -1)
+	if (execute(this, NULL, cmd) == -1)
 	{
 		return FALSE;
 	}

@@ -335,7 +335,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 	id = create_pool(name, start_addr, end_addr, timeout);
 	printf("allocating %d addresses... ", count);
 	fflush(stdout);
-	db->transaction(db);
+	db->transaction(db, FALSE);
 	while (TRUE)
 	{
 		db->execute(db, NULL,
@@ -413,7 +413,7 @@ static void add_addresses(char *pool, char *path, int timeout)
 	host_t *addr;
 	FILE *file;
 
-	db->transaction(db);
+	db->transaction(db, FALSE);
 
 	addr = host_create_from_string("%any", 0);
 	pool_id = create_pool(pool, addr->get_address(addr),
@@ -559,7 +559,7 @@ static void resize(char *name, host_t *end)
 	}
 	DESTROY_IF(old_end);
 
-	db->transaction(db);
+	db->transaction(db, FALSE);
 	if (db->execute(db, NULL,
 			"UPDATE pools SET end = ? WHERE name = ?",
 			DB_BLOB, new_addr, DB_TEXT, name) <= 0)
@@ -862,7 +862,7 @@ static void batch(char *argv0, char *name)
 		exit(EXIT_FAILURE);
 	}
 
-	db->transaction(db);
+	db->transaction(db, FALSE);
 	while (fgets(command, sizeof(command), file))
 	{
 		char *argv[ARGV_SIZE], *start;

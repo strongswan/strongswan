@@ -115,6 +115,10 @@ struct database_t {
 	/**
 	 * Start a transaction.
 	 *
+	 * A serializable transaction forces a strict separation between other
+	 * transactions.  Due to the performance overhead they should only be used
+	 * in certain situations (e.g. SELECT->INSERT|UPDATE).
+	 *
 	 * @note Either commit() or rollback() has to be called to end the
 	 * transaction.
 	 * @note Transactions are thread-specific. So commit()/rollbak() has to be
@@ -124,9 +128,10 @@ struct database_t {
 	 * not supported.  So if any if the "inner" transactions are rolled back
 	 * the outer most transaction is rolled back.
 	 *
-	 * @return			TRUE on success
+	 * @param serializable	TRUE to create a serializable transaction
+	 * @return				TRUE on success
 	 */
-	bool (*transaction)(database_t *this);
+	bool (*transaction)(database_t *this, bool serializable);
 
 	/**
 	 * Commit all changes made during the current transaction.
