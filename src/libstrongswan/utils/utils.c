@@ -418,7 +418,11 @@ void closefrom(int lowfd)
 	}
 
 	/* ...fall back to closing all fds otherwise */
+#ifdef WIN32
+	maxfd = _getmaxstdio();
+#else
 	maxfd = (int)sysconf(_SC_OPEN_MAX);
+#endif
 	if (maxfd < 0)
 	{
 		maxfd = 256;
