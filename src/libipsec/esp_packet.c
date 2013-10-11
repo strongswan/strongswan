@@ -309,7 +309,9 @@ METHOD(esp_packet_t, encrypt, status_t,
 	payload = this->payload ? this->payload->get_encoding(this->payload)
 							: chunk_empty;
 	plainlen = payload.len + 2;
-	padding.len = blocksize - (plainlen % blocksize);
+	padding.len = pad_len(plainlen, blocksize);
+	/* ICV must be on a 4-byte boundary */
+	padding.len += pad_len(iv.len + plainlen + padding.len, 4);
 	plainlen += padding.len;
 
 	/* len = spi, seq, IV, plaintext, ICV */
