@@ -47,6 +47,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #define PRINTF_BUF_LEN 8192
 #define ARGS_MAX 3
@@ -222,14 +223,15 @@ typedef enum {
 
 #define EMIT(x) ({ if (o<n){*q++ = (x);} o++; })
 
+static const char lcdigits[] = "0123456789abcdef";
+static const char ucdigits[] = "0123456789ABCDEF";
+
 /**
  * Write an integer argument to q, using flags, base, width and precision
  */
 static size_t format_int(char *q, size_t n, uintmax_t val, bpf_flag_t flags,
 						 int base, int width, int prec)
 {
-	static const char lcdigits[] = "0123456789abcdef";
-	static const char ucdigits[] = "0123456789ABCDEF";
 	char *qq;
 	size_t o = 0, oo;
 	const char *digits;
@@ -381,6 +383,155 @@ static size_t format_int(char *q, size_t n, uintmax_t val, bpf_flag_t flags,
 			*qq = digits[val % base];
 		}
 		val /= base;
+	}
+
+	/* Emit late space padding */
+	while ((flags & FL_MINUS) && width > nchars)
+	{
+		EMIT(' ');
+		width--;
+	}
+
+	return o;
+}
+
+/**
+ * Write an double argument to q, using flags, base, width and precision
+ */
+static size_t format_double(char *q, size_t n, double val, bpf_flag_t flags,
+							int base, int width, int prec)
+{
+	char *qq;
+	size_t o = 0, oo;
+	const char *digits;
+	uintmax_t tmpval;
+	int minus = 0;
+	int ndigits = 0, nchars;
+
+	/* Select type of digits */
+	digits = (flags & FL_UPPER) ? ucdigits : lcdigits;
+
+	if (prec < 0)
+	{
+		/* default precision */
+		prec = 6;
+	}
+	if (val < 0)
+	{
+		minus = 1;
+	}
+
+	tmpval = (uintmax_t)fabs(val);
+	while (tmpval)
+	{
+		tmpval /= base;
+		ndigits++;
+	}
+	if (val == 0)
+	{
+		ndigits++;
+	}
+
+	/* Now compute the number of nondigits */
+	nchars = ndigits;
+
+	if (prec)
+	{
+		/* Space for decimal-point and digits after that */
+		nchars += prec + 1;
+	}
+	if (minus || (flags & (FL_PLUS | FL_SPACE)))
+	{
+		/* Need space for sign */
+		nchars++;
+	}
+	if ((flags & FL_HASH) && base == 16)
+	{
+		/* Add 0x for hex */
+		nchars += 2;
+	}
+
+	/* Emit early space padding */
+	if (!(flags & (FL_MINUS | FL_ZERO)) && width > nchars)
+	{
+		while (width > nchars)
+		{
+			EMIT(' ');
+			width--;
+		}
+	}
+
+	/* Emit nondigits */
+	if (minus)
+	{
+		EMIT('-');
+	}
+	else if (flags & FL_PLUS)
+	{
+		EMIT('+');
+	}
+	else if (flags & FL_SPACE)
+	{
+		EMIT(' ');
+	}
+
+	if ((flags & FL_HASH) && base == 16)
+	{
+		EMIT('0');
+		EMIT((flags & FL_UPPER) ? 'X' : 'x');
+	}
+
+	/* Emit zero padding */
+	if ((flags & (FL_MINUS | FL_ZERO)) == FL_ZERO && width > ndigits)
+	{
+		while (width > nchars)
+		{
+			EMIT('0');
+			width--;
+		}
+	}
+
+	/* Generate the number.  This is done from right to left. */
+	/* Advance the pointer to end of number */
+	q += ndigits;
+	o += ndigits;
+	/* Temporary values */
+	qq = q;
+	oo = o;
+
+	tmpval = (uintmax_t)fabs(val);
+	while (ndigits > 0)
+	{
+		qq--;
+		oo--;
+		ndigits--;
+		if (oo < n)
+		{
+			*qq = digits[tmpval % base];
+		}
+		tmpval /= base;
+	}
+
+	if (prec)
+	{
+		EMIT('.');
+
+		q += prec;
+		o += prec;
+		qq = q;
+		oo = o;
+
+		while (prec > 0)
+		{
+			tmpval = (uintmax_t)(fabs(val) * pow(base, prec));
+			qq--;
+			oo--;
+			prec--;
+			if (oo < n)
+			{
+				*qq = digits[tmpval % base];
+			}
+		}
 	}
 
 	/* Emit late space padding */
@@ -722,6 +873,47 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 										width--;
 									}
 								}
+								break;
+							}
+							case 'A':
+							{
+								base = 16;
+								flags |= FL_UPPER;
+								goto is_double;
+							}
+							case 'E':
+							case 'G':
+							{
+								/* currently not supported, fall */
+							}
+							case 'F':
+							{
+								base = 10;
+								flags |= FL_UPPER;
+								goto is_double;
+							}
+							case 'a':
+							{
+								base = 16;
+								goto is_double;
+							}
+							case 'e':
+							case 'g':
+							{
+								/* currently not supported, fall */
+							}
+							case 'f':
+							{
+								base = 10;
+								goto is_double;
+							}
+							is_double:
+							{
+								sz = format_double(q, (o < n) ? n - o : 0,
+												   va_arg(ap, double),
+												   flags, base, width, prec);
+								q += sz;
+								o += sz;
 								break;
 							}
 							case 'n':

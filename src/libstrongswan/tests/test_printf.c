@@ -91,6 +91,31 @@ START_TEST(test_printf_hex)
 }
 END_TEST
 
+START_TEST(test_printf_float)
+{
+	verify("0.000000", "%f", 0.0);
+	verify("1.000000", "%f", 1.0);
+	verify("12345.1", "%.1f", 12345.123);
+	verify("1", "%.0f", 1.0);
+	verify("1.4", "%.1f", 1.456789);
+	verify("1.34", "%.2f", 1.3456789);
+	verify("1.234", "%.3f", 1.23456789);
+	verify("1.1234", "%.4f", 1.123456789);
+
+	verify("-1.000000", "%f", -1.0);
+	verify("-12345.1", "%.1f", -12345.123);
+	verify("-1", "%.0f", -1.0);
+	verify("-1.4", "%.1f", -1.456789);
+	verify("-1.34", "%.2f", -1.3456789);
+	verify("-1.234", "%.3f", -1.23456789);
+	verify("-1.1234", "%.4f", -1.123456789);
+
+	verify("  1.2", "%5.1f", 1.234);
+	verify("001.2", "%05.1f", 1.234);
+	verify("1.2  ", "%-5.1f", 1.234);
+}
+END_TEST
+
 Suite *printf_suite_create()
 {
 	Suite *s;
@@ -116,6 +141,10 @@ Suite *printf_suite_create()
 
 	tc = tcase_create("hex");
 	tcase_add_test(tc, test_printf_hex);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("float");
+	tcase_add_test(tc, test_printf_float);
 	suite_add_tcase(s, tc);
 
 	return s;
