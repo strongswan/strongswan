@@ -1273,7 +1273,7 @@ static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 		return FAILED;
 	}
 
-	if (this->frag.id != payload->get_id(payload))
+	if (!this->frag.list || this->frag.id != payload->get_id(payload))
 	{
 		clear_fragments(this, payload->get_id(payload));
 		this->frag.list = linked_list_create();
