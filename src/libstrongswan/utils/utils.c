@@ -307,7 +307,11 @@ bool mkdir_p(const char *path, mode_t mode)
 		*pos = '\0';
 		if (access(full, F_OK) < 0)
 		{
+#ifdef WIN32
+			if (_mkdir(full) < 0)
+#else
 			if (mkdir(full, mode) < 0)
+#endif
 			{
 				DBG1(DBG_LIB, "failed to create directory %s", full);
 				return FALSE;
