@@ -144,7 +144,7 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 	spec.hash = fmt_spec->fmt_hash;
 	spec.plus = fmt_spec->fmt_plus;
 	spec.minus = fmt_spec->fmt_minus;
-	spec.width = fmt_spec->fmt_field_width;
+	spec.width = fmt_spec->obj_field_width;
 
 	handler->hook(&data, &spec, args);
 
