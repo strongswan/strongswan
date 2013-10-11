@@ -21,7 +21,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef HAVE_DLADDR
 #include <dlfcn.h>
+#endif
 #include <limits.h>
 #include <stdio.h>
 
