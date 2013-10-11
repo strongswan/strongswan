@@ -28,18 +28,30 @@ typedef enum crl_reason_t crl_reason_t;
 #include <library.h>
 #include <credentials/certificates/certificate.h>
 
+/* <wincrypt.h> comes with CRL_REASON clashing with ours. Even if the values
+ * are identical, we undef them here to use our enum instead of defines. */
+#ifdef WIN32
+# undef CRL_REASON_UNSPECIFIED
+# undef CRL_REASON_KEY_COMPROMISE
+# undef CRL_REASON_CA_COMPROMISE
+# undef CRL_REASON_AFFILIATION_CHANGED
+# undef CRL_REASON_SUPERSEDED
+# undef CRL_REASON_CERTIFICATE_HOLD
+# undef CRL_REASON_REMOVE_FROM_CRL
+#endif
+
 /**
  * RFC 2459 CRL reason codes
  */
 enum crl_reason_t {
-	CRL_REASON_UNSPECIFIED			= 0,
-	CRL_REASON_KEY_COMPROMISE		 = 1,
-	CRL_REASON_CA_COMPROMISE		  = 2,
-	CRL_REASON_AFFILIATION_CHANGED	= 3,
-	CRL_REASON_SUPERSEDED			 = 4,
-	CRL_REASON_CESSATION_OF_OPERATON  = 5,
-	CRL_REASON_CERTIFICATE_HOLD	   = 6,
-	CRL_REASON_REMOVE_FROM_CRL		= 8,
+	CRL_REASON_UNSPECIFIED				= 0,
+	CRL_REASON_KEY_COMPROMISE			= 1,
+	CRL_REASON_CA_COMPROMISE			= 2,
+	CRL_REASON_AFFILIATION_CHANGED		= 3,
+	CRL_REASON_SUPERSEDED				= 4,
+	CRL_REASON_CESSATION_OF_OPERATON	= 5,
+	CRL_REASON_CERTIFICATE_HOLD			= 6,
+	CRL_REASON_REMOVE_FROM_CRL			= 8,
 };
 
 /**
