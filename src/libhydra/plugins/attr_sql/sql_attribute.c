@@ -51,15 +51,16 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 	enumerator_t *e;
 	u_int row;
 
+	this->db->transaction(this->db, TRUE);
 	/* look for peer identity in the identities table */
 	e = this->db->query(this->db,
 						"SELECT id FROM identities WHERE type = ? AND data = ?",
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
 						DB_UINT);
-
 	if (e && e->enumerate(e, &row))
 	{
 		e->destroy(e);
+		this->db->commit(this->db);
 		return row;
 	}
 	DESTROY_IF(e);
@@ -68,8 +69,10 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 				  "INSERT INTO identities (type, data) VALUES (?, ?)",
 				  DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id)) == 1)
 	{
+		this->db->commit(this->db);
 		return row;
 	}
+	this->db->rollback(this->db);
 	return 0;
 }
 
@@ -346,8 +349,6 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		u_int count;
 		char *name;
 
-		this->db->execute(this->db, NULL, "BEGIN EXCLUSIVE TRANSACTION");
-
 		/* in a first step check for attributes that match name and id */
 		if (id)
 		{
@@ -418,8 +419,6 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 			pool_enumerator->destroy(pool_enumerator);
 		}
 
-		this->db->execute(this->db, NULL, "END TRANSACTION");
-
 		/* lastly try to find global attributes */
 		if (!attr_enumerator)
 		{
@@ -474,4 +473,3 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 					  DB_UINT, now);
 	return &this->public;
 }
-

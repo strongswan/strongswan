@@ -52,41 +52,6 @@ static void del(char *name);
 static void do_args(int argc, char *argv[]);
 
 /**
- * nesting counter for database transaction functions
- */
-int nested_transaction = 0;
-
-/**
- * start a database transaction
- */
-static void begin_transaction()
-{
-	if (db->get_driver(db) == DB_SQLITE)
-	{
-		if (!nested_transaction)
-		{
-			db->execute(db, NULL, "BEGIN EXCLUSIVE TRANSACTION");
-		}
-		++nested_transaction;
-	}
-}
-
-/**
- * commit a database transaction
- */
-static void commit_transaction()
-{
-	if (db->get_driver(db) == DB_SQLITE)
-	{
-		--nested_transaction;
-		if (!nested_transaction)
-		{
-			db->execute(db, NULL, "END TRANSACTION");
-		}
-	}
-}
-
-/**
  * Create or replace a pool by name
  */
 static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
@@ -370,8 +335,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 	id = create_pool(name, start_addr, end_addr, timeout);
 	printf("allocating %d addresses... ", count);
 	fflush(stdout);
-	/* run population in a transaction for sqlite */
-	begin_transaction();
+	db->transaction(db, FALSE);
 	while (TRUE)
 	{
 		db->execute(db, NULL,
@@ -384,7 +348,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		}
 		chunk_increment(cur_addr);
 	}
-	commit_transaction();
+	db->commit(db);
 	printf("done.\n");
 }
 
@@ -449,8 +413,7 @@ static void add_addresses(char *pool, char *path, int timeout)
 	host_t *addr;
 	FILE *file;
 
-	/* run population in a transaction for sqlite */
-	begin_transaction();
+	db->transaction(db, FALSE);
 
 	addr = host_create_from_string("%any", 0);
 	pool_id = create_pool(pool, addr->get_address(addr),
@@ -510,7 +473,7 @@ static void add_addresses(char *pool, char *path, int timeout)
 		addr->destroy(addr);
 	}
 
-	commit_transaction();
+	db->commit(db);
 
 	printf("%d addresses done.\n", count);
 }
@@ -596,6 +559,7 @@ static void resize(char *name, host_t *end)
 	}
 	DESTROY_IF(old_end);
 
+	db->transaction(db, FALSE);
 	if (db->execute(db, NULL,
 			"UPDATE pools SET end = ? WHERE name = ?",
 			DB_BLOB, new_addr, DB_TEXT, name) <= 0)
@@ -606,8 +570,6 @@ static void resize(char *name, host_t *end)
 
 	printf("allocating %d new addresses... ", count);
 	fflush(stdout);
-	/* run population in a transaction for sqlite */
-	begin_transaction();
 	while (count-- > 0)
 	{
 		chunk_increment(cur_addr);
@@ -616,7 +578,7 @@ static void resize(char *name, host_t *end)
 			"VALUES (?, ?, ?, ?, ?)",
 			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
 	}
-	commit_transaction();
+	db->commit(db);
 	printf("done.\n");
 
 }
@@ -900,7 +862,7 @@ static void batch(char *argv0, char *name)
 		exit(EXIT_FAILURE);
 	}
 
-	begin_transaction();
+	db->transaction(db, FALSE);
 	while (fgets(command, sizeof(command), file))
 	{
 		char *argv[ARGV_SIZE], *start;
@@ -939,7 +901,7 @@ static void batch(char *argv0, char *name)
 
 		do_args(argc, argv);
 	}
-	commit_transaction();
+	db->commit(db);
 
 	if (file != stdin)
 	{
@@ -1284,4 +1246,3 @@ int main(int argc, char *argv[])
 
 	exit(EXIT_SUCCESS);
 }
-

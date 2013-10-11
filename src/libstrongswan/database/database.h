@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -102,7 +103,7 @@ struct database_t {
 	enumerator_t* (*query)(database_t *this, char *sql, ...);
 
 	/**
-	 * Execute a query which dows not return rows, such as INSERT.
+	 * Execute a query which does not return rows, such as INSERT.
 	 *
 	 * @param rowid		pointer to write inserted AUTO_INCREMENT row ID, or NULL
 	 * @param sql		sql string, containing '?' placeholders
@@ -110,6 +111,41 @@ struct database_t {
 	 * @return			number of affected rows, < 0 on failure
 	 */
 	int (*execute)(database_t *this, int *rowid, char *sql, ...);
+
+	/**
+	 * Start a transaction.
+	 *
+	 * A serializable transaction forces a strict separation between other
+	 * transactions.  Due to the performance overhead they should only be used
+	 * in certain situations (e.g. SELECT->INSERT|UPDATE).
+	 *
+	 * @note Either commit() or rollback() has to be called to end the
+	 * transaction.
+	 * @note Transactions are thread-specific. So commit()/rollbak() has to be
+	 * called from the same thread.
+	 * @note While this method can be called multiple times (commit/rollback
+	 * have to be called an equal number of times) real nested transactions are
+	 * not supported.  So if any if the "inner" transactions are rolled back
+	 * the outer most transaction is rolled back.
+	 *
+	 * @param serializable	TRUE to create a serializable transaction
+	 * @return				TRUE on success
+	 */
+	bool (*transaction)(database_t *this, bool serializable);
+
+	/**
+	 * Commit all changes made during the current transaction.
+	 *
+	 * @return			TRUE on success
+	 */
+	bool (*commit)(database_t *this);
+
+	/**
+	 * Rollback/revert all changes made during the current transaction.
+	 *
+	 * @return			TRUE on success
+	 */
+	bool (*rollback)(database_t *this);
 
 	/**
 	 * Get the database implementation type.

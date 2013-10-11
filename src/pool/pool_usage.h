@@ -22,5 +22,4 @@
  */
 void usage(void);
 
-
 #endif /* POOL_USAGE_H_ */

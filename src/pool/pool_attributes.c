@@ -49,7 +49,7 @@ static const attr_info_t attr_info[] = {
 	{ "internal_ip4_netmask", VALUE_ADDR,   INTERNAL_IP4_NETMASK, 0 },
 	{ "internal_ip6_netmask", VALUE_ADDR,   INTERNAL_IP6_NETMASK, 0 },
 	{ "netmask",              VALUE_ADDR,   INTERNAL_IP4_NETMASK,
-							 				INTERNAL_IP6_NETMASK    },
+											INTERNAL_IP6_NETMASK    },
 	{ "internal_ip4_dns",     VALUE_ADDR,   INTERNAL_IP4_DNS,     0 },
 	{ "internal_ip6_dns",     VALUE_ADDR,   INTERNAL_IP6_DNS,     0 },
 	{ "dns",                  VALUE_ADDR,   INTERNAL_IP4_DNS,
@@ -57,7 +57,7 @@ static const attr_info_t attr_info[] = {
 	{ "internal_ip4_nbns",    VALUE_ADDR,   INTERNAL_IP4_NBNS,    0 },
 	{ "internal_ip6_nbns",    VALUE_ADDR,   INTERNAL_IP6_NBNS,    0 },
 	{ "nbns",                 VALUE_ADDR,   INTERNAL_IP4_NBNS,
-							 				INTERNAL_IP6_NBNS       },
+											INTERNAL_IP6_NBNS       },
 	{ "wins",                 VALUE_ADDR,   INTERNAL_IP4_NBNS,
 											INTERNAL_IP6_NBNS       },
 	{ "internal_ip4_dhcp",    VALUE_ADDR,   INTERNAL_IP4_DHCP,    0 },
@@ -214,7 +214,7 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 			if (*value_type == VALUE_ADDR)
 			{
 				*type = (addr->get_family(addr) == AF_INET) ?
-						 	attr_info[i].type : attr_info[i].type_ip6;
+							attr_info[i].type : attr_info[i].type_ip6;
 				addr->destroy(addr);
 			}
 			else if (*value_type == VALUE_HEX)
@@ -493,14 +493,14 @@ void del_attr(char *name, char *pool, char *identity,
 			else if (value_type == VALUE_STRING)
 			{
 				fprintf(stderr, "deleting %s attribute (%N) with value '%.*s'%s failed.\n",
-						 		name, configuration_attribute_type_names, type,
+								name, configuration_attribute_type_names, type,
 								(int)blob_db.len, blob_db.ptr, id_pool_str);
 			}
 
 			else
 			{
 				fprintf(stderr, "deleting %s attribute (%N) with value %#B%s failed.\n",
-						 		name, configuration_attribute_type_names, type,
+								name, configuration_attribute_type_names, type,
 								&blob_db, id_pool_str);
 			}
 			query->destroy(query);
@@ -529,7 +529,7 @@ void del_attr(char *name, char *pool, char *identity,
 
 	if (!found)
 	{
-	 	if (blob.len == 0)
+		if (blob.len == 0)
 		{
 			if (type_ip6 == 0)
 			{
@@ -714,4 +714,3 @@ void show_attr(void)
 		}
 	}
 }
-

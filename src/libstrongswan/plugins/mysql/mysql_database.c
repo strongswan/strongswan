@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -50,6 +51,11 @@ struct private_mysql_database_t {
 	linked_list_t *pool;
 
 	/**
+	 * thread-specific transaction, as transaction_t
+	 */
+	thread_value_t *transaction;
+
+	/**
 	 * mutex to lock pool
 	 */
 	mutex_t *mutex;
@@ -99,11 +105,45 @@ struct conn_t {
 };
 
 /**
+ * database transaction
+ */
+typedef struct {
+
+	/**
+	 * Reference to the specific connection we started the transaction on
+	 */
+	conn_t *conn;
+
+	/**
+	 * Refcounter if transaction() is called multiple times
+	 */
+	refcount_t refs;
+
+	/**
+	 * TRUE if transaction was rolled back
+	 */
+	bool rollback;
+
+} transaction_t;
+
+/**
  * Release a mysql connection
  */
-static void conn_release(conn_t *conn)
+static void conn_release(private_mysql_database_t *this, conn_t *conn)
 {
+	this->mutex->lock(this->mutex);
 	conn->in_use = FALSE;
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Destroy a transaction and release the connection
+ */
+static void transaction_destroy(private_mysql_database_t *this,
+								transaction_t *trans)
+{
+	conn_release(this, trans->conn);
+	free(trans);
 }
 
 /**
@@ -158,12 +198,23 @@ static void conn_destroy(conn_t *this)
 /**
  * Acquire/Reuse a mysql connection
  */
-static conn_t *conn_get(private_mysql_database_t *this)
+static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 {
 	conn_t *current, *found = NULL;
 	enumerator_t *enumerator;
+	transaction_t *transaction;
 
 	thread_initialize();
+
+	transaction = this->transaction->get(this->transaction);
+	if (transaction)
+	{
+		if (trans)
+		{
+			*trans = transaction;
+		}
+		return transaction->conn;
+	}
 
 	while (TRUE)
 	{
@@ -197,9 +248,10 @@ static conn_t *conn_get(private_mysql_database_t *this)
 	}
 	if (found == NULL)
 	{
-		found = malloc_thing(conn_t);
-		found->in_use = TRUE;
-		found->mysql = mysql_init(NULL);
+		INIT(found,
+			.in_use = TRUE,
+			.mysql = mysql_init(NULL),
+		);
 		if (!mysql_real_connect(found->mysql, this->host, this->username,
 								this->password, this->database, this->port,
 								NULL, 0))
@@ -332,6 +384,8 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
+	/** mysql database */
+	private_mysql_database_t *db;
 	/** associated MySQL statement */
 	MYSQL_STMT *stmt;
 	/** result bindings */
@@ -373,7 +427,7 @@ static void mysql_enumerator_destroy(mysql_enumerator_t *this)
 		}
 	}
 	mysql_stmt_close(this->stmt);
-	conn_release(this->conn);
+	conn_release(this->db, this->conn);
 	free(this->bind);
 	free(this->val.p_void);
 	free(this->length);
@@ -484,7 +538,7 @@ METHOD(database_t, query, enumerator_t*,
 	mysql_enumerator_t *enumerator = NULL;
 	conn_t *conn;
 
-	conn = conn_get(this);
+	conn = conn_get(this, NULL);
 	if (!conn)
 	{
 		return NULL;
@@ -496,11 +550,16 @@ METHOD(database_t, query, enumerator_t*,
 	{
 		int columns, i;
 
-		enumerator = malloc_thing(mysql_enumerator_t);
-		enumerator->public.enumerate = (void*)mysql_enumerator_enumerate;
-		enumerator->public.destroy = (void*)mysql_enumerator_destroy;
-		enumerator->stmt = stmt;
-		enumerator->conn = conn;
+		INIT(enumerator,
+			.public = {
+				.enumerate = (void*)mysql_enumerator_enumerate,
+				.destroy = (void*)mysql_enumerator_destroy,
+
+			},
+			.db = this,
+			.stmt = stmt,
+			.conn = conn,
+		);
 		columns = mysql_stmt_field_count(stmt);
 		enumerator->bind = calloc(columns, sizeof(MYSQL_BIND));
 		enumerator->length = calloc(columns, sizeof(unsigned long));
@@ -557,7 +616,7 @@ METHOD(database_t, query, enumerator_t*,
 	}
 	else
 	{
-		conn_release(conn);
+		conn_release(this, conn);
 	}
 	va_end(args);
 	return (enumerator_t*)enumerator;
@@ -571,7 +630,7 @@ METHOD(database_t, execute, int,
 	conn_t *conn;
 	int affected = -1;
 
-	conn = conn_get(this);
+	conn = conn_get(this, NULL);
 	if (!conn)
 	{
 		return -1;
@@ -588,8 +647,99 @@ METHOD(database_t, execute, int,
 		mysql_stmt_close(stmt);
 	}
 	va_end(args);
-	conn_release(conn);
+	conn_release(this, conn);
 	return affected;
+}
+
+METHOD(database_t, transaction, bool,
+	private_mysql_database_t *this, bool serializable)
+{
+	transaction_t *trans = NULL;
+	conn_t *conn;
+
+	conn = conn_get(this, &trans);
+	if (!conn)
+	{
+		return FALSE;
+	}
+	else if (trans)
+	{
+		ref_get(&trans->refs);
+		return TRUE;
+	}
+	/* these statements are not supported in prepared statements that are used
+	 * by the execute() method */
+	if (serializable)
+	{
+		if (mysql_query(conn->mysql,
+						"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE") != 0)
+		{
+			DBG1(DBG_LIB, "starting transaction failed: %s",
+				 mysql_error(conn->mysql));
+			conn_release(this, conn);
+			return FALSE;
+		}
+	}
+	if (mysql_query(conn->mysql, "START TRANSACTION") != 0)
+	{
+		DBG1(DBG_LIB, "starting transaction failed: %s",
+			 mysql_error(conn->mysql));
+		conn_release(this, conn);
+		return FALSE;
+	}
+	INIT(trans,
+		.conn = conn,
+		.refs = 1,
+	);
+	this->transaction->set(this->transaction, trans);
+	return TRUE;
+}
+
+/**
+ * Finalize a transaction depending on the reference count and if it should be
+ * rolled back.
+ */
+static bool finalize_transaction(private_mysql_database_t *this,
+								 bool rollback)
+{
+	transaction_t *trans;
+	char *command = "COMMIT";
+	bool success;
+
+	trans = this->transaction->get(this->transaction);
+	if (!trans)
+	{
+		DBG1(DBG_LIB, "no database transaction found");
+		return FALSE;
+	}
+	/* set flag, can't be unset */
+	trans->rollback |= rollback;
+
+	if (ref_put(&trans->refs))
+	{
+		if (trans->rollback)
+		{
+			command = "ROLLBACK";
+		}
+		success = mysql_query(trans->conn->mysql, command) == 0;
+
+		this->transaction->set(this->transaction, NULL);
+		transaction_destroy(this, trans);
+		return success;
+	}
+	return TRUE;
+}
+
+METHOD(database_t, commit, bool,
+	private_mysql_database_t *this)
+{
+	return finalize_transaction(this, FALSE);
+}
+
+METHOD(database_t, rollback, bool,
+	private_mysql_database_t *this)
+{
+	return finalize_transaction(this, TRUE);
 }
 
 METHOD(database_t, get_driver,db_driver_t,
@@ -601,6 +751,7 @@ METHOD(database_t, get_driver,db_driver_t,
 METHOD(database_t, destroy, void,
 	private_mysql_database_t *this)
 {
+	this->transaction->destroy(this->transaction);
 	this->pool->destroy_function(this->pool, (void*)conn_destroy);
 	this->mutex->destroy(this->mutex);
 	free(this->host);
@@ -676,6 +827,9 @@ mysql_database_t *mysql_database_create(char *uri)
 			.db = {
 				.query = _query,
 				.execute = _execute,
+				.transaction = _transaction,
+				.commit = _commit,
+				.rollback = _rollback,
 				.get_driver = _get_driver,
 				.destroy = _destroy,
 			},
@@ -689,15 +843,15 @@ mysql_database_t *mysql_database_create(char *uri)
 	}
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->pool = linked_list_create();
+	this->transaction = thread_value_create(NULL);
 
 	/* check connectivity */
-	conn = conn_get(this);
+	conn = conn_get(this, NULL);
 	if (!conn)
 	{
 		destroy(this);
 		return NULL;
 	}
-	conn_release(conn);
+	conn_release(this, conn);
 	return &this->public;
 }
-

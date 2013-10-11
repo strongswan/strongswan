@@ -61,5 +61,3 @@ void status_attr(bool hexout);
 void show_attr(void);
 
 #endif /* POOL_ATTRIBUTES_H_ */
-
-

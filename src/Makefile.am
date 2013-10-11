@@ -100,6 +100,10 @@ if USE_INTEGRITY_TEST
   SUBDIRS += checksum
 endif
 
+if USE_ATTR_SQL
+  SUBDIRS += pool
+endif
+
 if USE_TKM
   SUBDIRS += charon-tkm
 endif
