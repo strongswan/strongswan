@@ -22,7 +22,7 @@
 #ifndef ENUM_H_
 #define ENUM_H_
 
-#include "printf_hook.h"
+#include <utils/printf_hook/printf_hook.h>
 
 typedef struct enum_name_t enum_name_t;
 

@@ -624,7 +624,7 @@ AC_CHECK_FUNC(
 		[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
 		[
 			AC_MSG_NOTICE([printf does not support custom format specifiers!])
-			vstr=true
+			builtin_printf=true
 		]
 	)]
 )
@@ -632,6 +632,11 @@ AC_CHECK_FUNC(
 if test x$vstr = xtrue; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use vstring library for printf hooks])
+	builtin_printf=false
+fi
+
+if test x$builtin_printf = xtrue; then
+	AC_DEFINE([USE_BUILTIN_PRINTF], [], [using builtin printf for printf hooks])
 fi
 
 if test x$gmp = xtrue; then
@@ -1278,6 +1283,7 @@ AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
+AM_CONDITIONAL(USE_BUILTIN_PRINTF, test x$builtin_printf = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
