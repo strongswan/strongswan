@@ -17,13 +17,26 @@ strongswan-5.1.1
   modeconfig=push option enables it for both client and server, the same way
   as pluto used it.
 
+- Using the "ah" ipsec.conf keyword on both IKEv1 and IKEv2 connections,
+  charon can negotiate and install Security Associations integrity-protected by
+  the Authentication Header protocol. Supported are plain AH(+IPComp) SAs only,
+  but not the deprecated RFC2401 style ESP+AH bundles.
+
 - The left and right options in ipsec.conf can take multiple address ranges
   and subnets. This allows connection matching against a larger set of
   addresses, for example to use a different connection for clients connecting
   from a internal network.
 
+- The kernel-libipsec userland IPsec backend now supports usage statistics,
+  volume based rekeying and accepts ESPv3 style TFC padded packets.
+
 - load-tester supports transport mode connections and more complex traffic
   selectors, including such using unique ports for each tunnel.
+
+- libstrongswan now can provide an experimental custom implementation of the
+  printf family functions based on klibc if neither Vstr nor glibc style printf
+  hooks are available. This can avoid the Vstr dependency on some systems at
+  the cost of slower and less complete printf functions.
 
 
 strongswan-5.1.0
