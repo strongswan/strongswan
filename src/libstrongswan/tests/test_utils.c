@@ -17,6 +17,7 @@
 
 #include <library.h>
 #include <utils/utils.h>
+#include <ipsec/ipsec_types.h>
 
 #include <time.h>
 
@@ -442,6 +443,50 @@ START_TEST(test_time_delta_printf_hook)
 }
 END_TEST
 
+/*******************************************************************************
+ * mark_from_string
+ */
+
+static struct {
+	char *s;
+	bool ok;
+	mark_t m;
+} mark_data[] = {
+	{NULL,			FALSE, { 0 }},
+	{"",			TRUE,  { 0, 0xffffffff }},
+	{"/",			TRUE,  { 0, 0 }},
+	{"42",			TRUE,  { 42, 0xffffffff }},
+	{"0x42",		TRUE,  { 0x42, 0xffffffff }},
+	{"x",			FALSE, { 0 }},
+	{"42/",			TRUE,  { 0, 0 }},
+	{"42/0",		TRUE,  { 0, 0 }},
+	{"42/x",		FALSE, { 0 }},
+	{"42/42",		TRUE,  { 42, 42 }},
+	{"42/0xff",		TRUE,  { 42, 0xff }},
+	{"0x42/0xff",	TRUE,  { 0x42, 0xff }},
+	{"/0xff",		TRUE,  { 0, 0xff }},
+	{"/x",			FALSE, { 0 }},
+	{"x/x",			FALSE, { 0 }},
+	{"0xffffffff/0x0000ffff",	TRUE, { 0x0000ffff, 0x0000ffff }},
+	{"0xffffffff/0xffffffff",	TRUE, { 0xffffffff, 0xffffffff }},
+};
+
+START_TEST(test_mark_from_string)
+{
+	mark_t mark;
+
+	if (mark_from_string(mark_data[_i].s, &mark))
+	{
+		ck_assert_int_eq(mark.value, mark_data[_i].m.value);
+		ck_assert_int_eq(mark.mask, mark_data[_i].m.mask);
+	}
+	else
+	{
+		ck_assert(!mark_data[_i].ok);
+	}
+}
+END_TEST
+
 Suite *utils_suite_create()
 {
 	Suite *s;
@@ -494,6 +539,10 @@ Suite *utils_suite_create()
 	tc = tcase_create("printf_hooks");
 	tcase_add_loop_test(tc, test_time_printf_hook, 0, countof(time_data));
 	tcase_add_loop_test(tc, test_time_delta_printf_hook, 0, countof(time_delta_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("mark_from_string");
+	tcase_add_loop_test(tc, test_mark_from_string, 0, countof(mark_data));
 	suite_add_tcase(s, tc);
 
 	return s;

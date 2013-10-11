@@ -375,47 +375,6 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	}
 }
 
-static bool handle_mark(char *value, mark_t *mark)
-{
-	char *sep, *endptr;
-
-	sep = strchr(value, '/');
-	if (sep)
-	{
-		*sep = '\0';
-		mark->mask = strtoul(sep+1, &endptr, 0);
-		if (*endptr != '\0')
-		{
-			DBG1(DBG_APP, "# invalid mark mask: %s", sep+1);
-			return FALSE;
-		}
-	}
-	else
-	{
-		mark->mask = 0xffffffff;
-	}
-	if (value == '\0')
-	{
-		mark->value = 0;
-	}
-	else
-	{
-		mark->value = strtoul(value, &endptr, 0);
-		if (*endptr != '\0')
-		{
-			DBG1(DBG_APP, "# invalid mark value: %s", value);
-			return FALSE;
-		}
-	}
-	if (sep)
-	{	/* restore the original text in case also= is used */
-		*sep = '/';
-	}
-	/* apply the mask to ensure the value is in range */
-	mark->value &= mark->mask;
-	return TRUE;
-}
-
 /*
  * parse a conn section
  */
@@ -522,7 +481,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_COMPRESS)
 			break;
 		case KW_MARK:
-			if (!handle_mark(kw->value, &conn->mark_in))
+			if (!mark_from_string(kw->value, &conn->mark_in))
 			{
 				cfg->err++;
 				break;
@@ -530,13 +489,13 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			conn->mark_out = conn->mark_in;
 			break;
 		case KW_MARK_IN:
-			if (!handle_mark(kw->value, &conn->mark_in))
+			if (!mark_from_string(kw->value, &conn->mark_in))
 			{
 				cfg->err++;
 			}
 			break;
 		case KW_MARK_OUT:
-			if (!handle_mark(kw->value, &conn->mark_out))
+			if (!mark_from_string(kw->value, &conn->mark_out))
 			{
 				cfg->err++;
 			}

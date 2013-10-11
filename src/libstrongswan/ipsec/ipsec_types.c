@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,3 +36,38 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 	"IPCOMP_LZS",
 	"IPCOMP_LZJH"
 );
+
+/*
+ * See header
+ */
+bool mark_from_string(const char *value, mark_t *mark)
+{
+	char *endptr;
+
+	if (!value)
+	{
+		return FALSE;
+	}
+	mark->value = strtoul(value, &endptr, 0);
+	if (*endptr)
+	{
+		if (*endptr != '/')
+		{
+			DBG1(DBG_APP, "invalid mark value: %s", value);
+			return FALSE;
+		}
+		mark->mask = strtoul(endptr+1, &endptr, 0);
+		if (*endptr)
+		{
+			DBG1(DBG_LIB, "invalid mark mask: %s", endptr);
+			return FALSE;
+		}
+	}
+	else
+	{
+		mark->mask = 0xffffffff;
+	}
+	/* apply the mask to ensure the value is in range */
+	mark->value &= mark->mask;
+	return TRUE;
+}

@@ -611,6 +611,24 @@ static int open_socket(private_socket_default_socket_t *this,
 			return -1;
 		}
 	}
+#ifdef SO_MARK
+	{	/* set optional MARK on socket (requires CAP_NET_ADMIN) */
+		char *fwmark;
+		mark_t mark;
+
+		fwmark = lib->settings->get_str(lib->settings,
+						"%s.plugins.socket-default.fwmark", NULL, charon->name);
+		if (fwmark && mark_from_string(fwmark, &mark))
+		{
+			if (setsockopt(skt, SOL_SOCKET, SO_MARK, &mark.value,
+						   sizeof(mark.value)) < 0)
+			{
+				DBG1(DBG_NET, "unable to set SO_MARK on socket: %s",
+					 strerror(errno));
+			}
+		}
+	}
+#endif
 
 	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
 												skt, family))
