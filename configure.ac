@@ -724,6 +724,19 @@ if test x$printf_hooks = xauto -o x$printf_hooks = xglibc; then
 	)
 fi
 
+AC_MSG_CHECKING([for Windows target])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <windows.h>]],
+		[[#ifndef WIN32
+		  # error WIN32 undefined
+		  #endif
+		]])],
+	[AC_MSG_RESULT([yes]); windows=true ],
+	[AC_MSG_RESULT([no])]
+)
+AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
+
 if test x$printf_hooks = xvstr; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
