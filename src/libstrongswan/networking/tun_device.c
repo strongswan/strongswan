@@ -16,6 +16,21 @@
  * for more details.
  */
 
+#include "tun_device.h"
+
+#include <utils/debug.h>
+#include <threading/thread.h>
+
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+
+tun_device_t *tun_device_create(const char *name_tmpl)
+{
+	DBG1(DBG_LIB, "TUN devices are not supported");
+	return NULL;
+}
+
+#else /* TUN devices supported */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -26,22 +41,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <net/if.h>
-
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
-
-#include "tun_device.h"
-
-#include <utils/debug.h>
-
-#warning TUN devices are not supported!
-
-tun_device_t *tun_device_create(const char *name_tmpl)
-{
-	DBG1(DBG_LIB, "TUN devices are not supported");
-	return NULL;
-}
-
-#else /* TUN devices supported */
 
 #ifdef __APPLE__
 #include <net/if_utun.h>
@@ -57,11 +56,6 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #else
 #include <net/if_tun.h>
 #endif
-
-#include "tun_device.h"
-
-#include <utils/debug.h>
-#include <threading/thread.h>
 
 #define TUN_DEFAULT_MTU 1500
 
