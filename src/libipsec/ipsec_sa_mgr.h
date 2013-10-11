@@ -109,6 +109,23 @@ struct ipsec_sa_mgr_t {
 						  bool encap, bool new_encap, mark_t mark);
 
 	/**
+	 * Query the number of bytes processed by an SA from the SAD.
+	 *
+	 * @param src			source address for this SA
+	 * @param dst			destination address for this SA
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param mark			optional mark for this SA
+	 * @param[out] bytes	the number of bytes processed by SA
+	 * @param[out] packets	number of packets processed by SA
+	 * @param[out] time		last (monotonic) time of SA use
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*query_sa)(ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
+						 u_int32_t spi, u_int8_t protocol, mark_t mark,
+						 u_int64_t *bytes, u_int64_t *packets, time_t *time);
+
+	/**
 	 * Delete a previously added SA
 	 *
 	 * @param spi			SPI of the SA

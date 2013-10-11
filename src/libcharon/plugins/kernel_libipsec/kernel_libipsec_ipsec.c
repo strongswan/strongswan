@@ -226,7 +226,7 @@ static void expire(u_int32_t reqid, u_int8_t protocol, u_int32_t spi, bool hard)
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_libipsec_ipsec_t *this)
 {
-	return KERNEL_REQUIRE_UDP_ENCAPSULATION;
+	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC;
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
@@ -268,9 +268,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes,
-	u_int64_t *packets, u_int32_t *time)
+	u_int64_t *packets, time_t *time)
 {
-	return NOT_SUPPORTED;
+	return ipsec->sas->query_sa(ipsec->sas, src, dst, spi, protocol, mark,
+								bytes, packets, time);
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
@@ -555,7 +556,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 METHOD(kernel_ipsec_t, query_policy, status_t,
 	private_kernel_libipsec_ipsec_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	u_int32_t *use_time)
+	time_t *use_time)
 {
 	return NOT_SUPPORTED;
 }

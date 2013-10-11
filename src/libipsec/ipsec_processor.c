@@ -91,6 +91,7 @@ static void deliver_inbound(private_ipsec_processor_t *this,
 static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 {
 	esp_packet_t *packet;
+	ip_packet_t *ip_packet;
 	ipsec_sa_t *sa;
 	u_int8_t next_header;
 	u_int32_t spi, reqid;
@@ -126,6 +127,8 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 		packet->destroy(packet);
 		return JOB_REQUEUE_DIRECT;
 	}
+	ip_packet = packet->get_payload(packet);
+	sa->update_usestats(sa, ip_packet->get_encoding(ip_packet).len);
 	reqid = sa->get_reqid(sa);
 	ipsec->sas->checkin(ipsec->sas, sa);
 
@@ -136,13 +139,11 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 		case IPPROTO_IPV6:
 		{
 			ipsec_policy_t *policy;
-			ip_packet_t *ip_packet;
 
-			ip_packet = packet->get_payload(packet);
 			policy = ipsec->policies->find_by_packet(ipsec->policies,
 													 ip_packet, TRUE, reqid);
 			if (policy)
-			{	/* TODO-IPSEC: update policy/sa stats? */
+			{
 				deliver_inbound(this, packet);
 				policy->destroy(policy);
 				break;
@@ -225,7 +226,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 		policy->destroy(policy);
 		return JOB_REQUEUE_DIRECT;
 	}
-	/* TODO-IPSEC: update policy/sa counters? */
+	sa->update_usestats(sa, packet->get_encoding(packet).len);
 	ipsec->sas->checkin(ipsec->sas, sa);
 	policy->destroy(policy);
 	send_outbound(this, esp_packet);

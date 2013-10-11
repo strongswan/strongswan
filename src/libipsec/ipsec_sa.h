@@ -110,7 +110,36 @@ struct ipsec_sa_t {
 	esp_context_t *(*get_esp_context)(ipsec_sa_t *this);
 
 	/**
+	 * Get usage statistics for this SA.
+	 *
+	 * @param bytes		receives number of processed bytes, or NULL
+	 * @param packets	receives number of processed packets, or NULL
+	 * @param time		receives last use time of this SA, or NULL
+	 */
+	void (*get_usestats)(ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+						 time_t *time);
+
+	/**
+	 * Record en/decryption of a packet to update usage statistics.
+	 *
+	 * @param bytes		length of packet processed
+	 */
+	void (*update_usestats)(ipsec_sa_t *this, u_int32_t bytes);
+
+	/**
+	 * Expire this SA, soft or hard.
+	 *
+	 * A soft expire triggers a rekey, a hard expire blocks the SA and
+	 * triggers a delete for the SA.
+	 *
+	 * @param hard		TRUE for hard, FALSE for soft
+	 */
+	void (*expire)(ipsec_sa_t *this, bool hard);
+
+	/**
 	 * Check if this SA matches all given parameters
+	 *
+	 * Only matches if the SA has not yet expired.
 	 *
 	 * @param spi		SPI
 	 * @param dst		destination address
@@ -131,6 +160,8 @@ struct ipsec_sa_t {
 
 	/**
 	 * Check if this SA matches all given parameters
+	 *
+	 * Only matches if the SA has not yet expired.
 	 *
 	 * @param reqid		reqid
 	 * @param inbound	TRUE for inbound SA, FALSE for outbound

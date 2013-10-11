@@ -15,6 +15,7 @@
  * for more details.
  */
 
+#include "ipsec.h"
 #include "ipsec_sa.h"
 
 #include <library.h>
@@ -81,6 +82,28 @@ struct private_ipsec_sa_t {
 	 * ESP context
 	 */
 	esp_context_t *esp_context;
+
+	/**
+	 * Usage statistics
+	 */
+	struct {
+		/** last time of use */
+		time_t time;
+		/** number of packets processed */
+		u_int64_t packets;
+		/** number of bytes processed */
+		u_int64_t bytes;
+	} use;
+
+	/**
+	 * Has the SA soft-expired?
+	 */
+	bool soft_expired;
+
+	/**
+	 * Has the SA hard-expired?
+	 */
+	bool hard_expired;
 };
 
 METHOD(ipsec_sa_t, get_source, host_t*,
@@ -145,10 +168,81 @@ METHOD(ipsec_sa_t, get_esp_context, esp_context_t*,
 	return this->esp_context;
 }
 
+METHOD(ipsec_sa_t, get_usestats, void,
+	private_ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+	time_t *time)
+{
+	if (bytes)
+	{
+		*bytes = this->use.bytes;
+	}
+	if (packets)
+	{
+		*packets = this->use.packets;
+	}
+	if (time)
+	{
+		*time = this->use.time;
+	}
+}
+
+METHOD(ipsec_sa_t, expire, void,
+	private_ipsec_sa_t *this, bool hard)
+{
+	if (hard)
+	{
+		if (!this->hard_expired)
+		{
+			this->hard_expired = TRUE;
+			ipsec->events->expire(ipsec->events, this->reqid, this->protocol,
+								  this->spi, TRUE);
+		}
+	}
+	else
+	{
+		if (!this->hard_expired && !this->soft_expired)
+		{
+			this->soft_expired = TRUE;
+			ipsec->events->expire(ipsec->events, this->reqid, this->protocol,
+								  this->spi, FALSE);
+		}
+	}
+}
+
+METHOD(ipsec_sa_t, update_usestats, void,
+	private_ipsec_sa_t *this, u_int32_t bytes)
+{
+	this->use.time = time_monotonic(NULL);
+	this->use.packets++;
+	this->use.bytes += bytes;
+
+	if (this->lifetime.packets.life &&
+		this->use.packets >= this->lifetime.packets.life)
+	{
+		return expire(this, TRUE);
+	}
+	if (this->lifetime.bytes.life &&
+		this->use.bytes >= this->lifetime.bytes.life)
+	{
+		return expire(this, TRUE);
+	}
+	if (this->lifetime.packets.rekey &&
+		this->use.packets >= this->lifetime.packets.rekey)
+	{
+		return expire(this, FALSE);
+	}
+	if (this->lifetime.bytes.rekey &&
+		this->use.bytes >= this->lifetime.bytes.rekey)
+	{
+		return expire(this, FALSE);
+	}
+}
+
 METHOD(ipsec_sa_t, match_by_spi_dst, bool,
 	private_ipsec_sa_t *this, u_int32_t spi, host_t *dst)
 {
-	return this->spi == spi && this->dst->ip_equals(this->dst, dst);
+	return this->spi == spi && this->dst->ip_equals(this->dst, dst) &&
+		   !this->hard_expired;
 }
 
 METHOD(ipsec_sa_t, match_by_spi_src_dst, bool,
@@ -161,7 +255,8 @@ METHOD(ipsec_sa_t, match_by_spi_src_dst, bool,
 METHOD(ipsec_sa_t, match_by_reqid, bool,
 	private_ipsec_sa_t *this, u_int32_t reqid, bool inbound)
 {
-	return this->reqid == reqid && this->inbound == inbound;
+	return this->reqid == reqid && this->inbound == inbound &&
+		   !this->hard_expired;
 }
 
 METHOD(ipsec_sa_t, destroy, void,
@@ -227,6 +322,9 @@ ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
 			.match_by_spi_src_dst = _match_by_spi_src_dst,
 			.match_by_reqid = _match_by_reqid,
 			.get_esp_context = _get_esp_context,
+			.get_usestats = _get_usestats,
+			.update_usestats = _update_usestats,
+			.expire = _expire,
 		},
 		.spi = spi,
 		.src = src->clone(src),

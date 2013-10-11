@@ -1802,7 +1802,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
+	u_int64_t *bytes, u_int64_t *packets, time_t *time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2382,7 +2382,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 METHOD(kernel_ipsec_t, query_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	u_int32_t *use_time)
+	time_t *use_time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;

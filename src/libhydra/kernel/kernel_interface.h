@@ -200,12 +200,12 @@ struct kernel_interface_t {
 	 * @param mark			optional mark for this SA
 	 * @param[out] bytes	the number of bytes processed by SA
 	 * @param[out] packets	number of packets processed by SA
-	 * @param[out] time		last time of SA use
+	 * @param[out] time		last (monotonic) time of SA use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, u_int8_t protocol, mark_t mark,
-						  u_int64_t *bytes, u_int64_t *packets, u_int32_t *time);
+						  u_int64_t *bytes, u_int64_t *packets, time_t *time);
 
 	/**
 	 * Delete a previously installed SA from the SAD.
@@ -264,14 +264,14 @@ struct kernel_interface_t {
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param mark			optional mark
-	 * @param[out] use_time	the time of this SA's last use
+	 * @param[out] use_time	the (monotonic) time of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_interface_t *this,
 							  traffic_selector_t *src_ts,
 							  traffic_selector_t *dst_ts,
 							  policy_dir_t direction, mark_t mark,
-							  u_int32_t *use_time);
+							  time_t *use_time);
 
 	/**
 	 * Remove a policy from the SPD.
