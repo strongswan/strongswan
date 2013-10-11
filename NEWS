@@ -2,7 +2,8 @@ strongswan-5.1.1
 ----------------
 
 - The lean stand-alone pt-tls-client can set up a RFC 6876 PT-TLS session
-  with a strongSwan policy enforcement point which uses the tnc-pdp charon plugin.
+  with a strongSwan policy enforcement point which uses the tnc-pdp charon
+  plugin.
 
 - The new TCG TNC SWID IMC/IMV pair supports targeted SWID requests for either
   full SWID Tag or concise SWID Tag ID inventories.
@@ -22,6 +23,10 @@ strongswan-5.1.1
   the Authentication Header protocol. Supported are plain AH(+IPComp) SAs only,
   but not the deprecated RFC2401 style ESP+AH bundles.
 
+- The generation of initialization vectors for IKE and ESP (when using libipsec)
+  is now modularized and IVs for e.g. AES-GCM are now correctly allocated
+  sequentially, while other algorithms like AES-CBC still use random IVs.
+
 - The left and right options in ipsec.conf can take multiple address ranges
   and subnets. This allows connection matching against a larger set of
   addresses, for example to use a different connection for clients connecting
@@ -30,8 +35,20 @@ strongswan-5.1.1
 - The kernel-libipsec userland IPsec backend now supports usage statistics,
   volume based rekeying and accepts ESPv3 style TFC padded packets.
 
+- With two new strongswan.conf options fwmarks can be used to implement
+  host-to-host tunnels with kernel-libipsec.
+
 - load-tester supports transport mode connections and more complex traffic
   selectors, including such using unique ports for each tunnel.
+
+- The new dnscert plugin provides support for authentication via CERT RRs that
+  are protected via DNSSEC.  The plugin was created by Ruslan N. Marchenko.
+
+- The eap-radius plugin supports forwarding of several Cisco Unity specific
+  RADIUS attributes in corresponding configuration payloads.
+
+- Database transactions are now abstracted and implemented by the two backends.
+  If you use MySQL make sure all tables use the InnoDB engine.
 
 - libstrongswan now can provide an experimental custom implementation of the
   printf family functions based on klibc if neither Vstr nor glibc style printf
