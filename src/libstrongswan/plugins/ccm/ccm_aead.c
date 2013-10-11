@@ -312,7 +312,7 @@ METHOD(aead_t, get_iv_size, size_t,
 	return IV_SIZE;
 }
 
-METHOD(aead_t, get_iv_gen, iv_gen_t*
+METHOD(aead_t, get_iv_gen, iv_gen_t*,
 	private_ccm_aead_t *this)
 {
 	return this->iv_gen;
