@@ -26,8 +26,17 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <sys/time.h>
-#include <arpa/inet.h>
 #include <string.h>
+
+#ifdef WIN32
+# include "windows.h"
+#else
+# define _GNU_SOURCE
+# include <arpa/inet.h>
+# include <sys/socket.h>
+# include <netdb.h>
+# include <netinet/in.h>
+#endif
 
 /**
  * strongSwan program return codes
@@ -273,7 +282,7 @@ static inline bool memeq(const void *x, const void *y, size_t len)
  * TODO: since the uintXX_t types are defined by the C99 standard we should
  * probably use those anyway
  */
-#ifdef __sun
+#if defined __sun || defined WIN32
         #include <stdint.h>
         typedef uint8_t         u_int8_t;
         typedef uint16_t        u_int16_t;

@@ -19,14 +19,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <signal.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
-#include <syslog.h>
-#include <netdb.h>
 #include <locale.h>
+#ifdef HAVE_DLADDR
 #include <dlfcn.h>
+#endif
 #include <time.h>
 #include <errno.h>
 
@@ -42,6 +39,7 @@
 #include "leak_detective.h"
 
 #include <library.h>
+#include <utils/utils.h>
 #include <utils/debug.h>
 #include <utils/backtrace.h>
 #include <collections/hashtable.h>

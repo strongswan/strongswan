@@ -14,8 +14,10 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-#include <dlfcn.h>
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif
 #include <time.h>
 
 #include "crypto_tester.h"

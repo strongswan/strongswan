@@ -87,7 +87,7 @@ utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
-utils/parser_helper.h utils/test.h utils/integrity_checker.h \
+utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/windows.h \
 utils/utils/strerror.h
 endif
 
