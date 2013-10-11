@@ -34,7 +34,6 @@ type,              KW_TYPE
 compress,          KW_COMPRESS
 installpolicy,     KW_INSTALLPOLICY
 aggressive,        KW_AGGRESSIVE
-auth,              KW_AUTH
 authby,            KW_AUTHBY
 eap_identity,      KW_EAP_IDENTITY
 aaa_identity,      KW_AAA_IDENTITY
@@ -57,6 +56,7 @@ rekey,             KW_REKEY
 reauth,            KW_REAUTH
 ike,               KW_IKE
 esp,               KW_ESP
+ah,                KW_AH
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION

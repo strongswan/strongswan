@@ -246,6 +246,24 @@ typedef enum {
 } ikev1_esp_auth_transid_it;
 
 /**
+ * IKEv1 Transform ID AH authentication algorithm.
+ */
+typedef enum {
+	IKEV1_AH_HMAC_MD5 = 2,
+	IKEV1_AH_HMAC_SHA = 3,
+	IKEV1_AH_DES_MAC = 4,
+	IKEV1_AH_HMAC_SHA2_256 = 5,
+	IKEV1_AH_HMAC_SHA2_384 = 6,
+	IKEV1_AH_HMAC_SHA2_512 = 7,
+	IKEV1_AH_RIPEMD = 8,
+	IKEV1_AH_AES_XCBC_MAC = 9,
+	IKEV1_AH_RSA = 10,
+	IKEV1_AH_AES_128_GMAC = 11,
+	IKEV1_AH_AES_192_GMAC = 12,
+	IKEV1_AH_AES_256_GMAC = 13,
+} ikev1_ah_transid_t;
+
+/**
  * IKEv1 ESP Encapsulation mode.
  */
 typedef enum {
@@ -637,6 +655,22 @@ static algo_map_t map_esp_auth[] = {
 };
 
 /**
+ * AH authentication algorithm mapping
+ */
+static algo_map_t map_ah[] = {
+	{ IKEV1_AH_HMAC_MD5,		AUTH_HMAC_MD5_96 },
+	{ IKEV1_AH_HMAC_SHA,		AUTH_HMAC_SHA1_96 },
+	{ IKEV1_AH_DES_MAC,			AUTH_DES_MAC },
+	{ IKEV1_AH_HMAC_SHA2_256,	AUTH_HMAC_SHA2_256_128 },
+	{ IKEV1_AH_HMAC_SHA2_384,	AUTH_HMAC_SHA2_384_192 },
+	{ IKEV1_AH_HMAC_SHA2_512,	AUTH_HMAC_SHA2_512_256 },
+	{ IKEV1_AH_AES_XCBC_MAC,	AUTH_AES_XCBC_96 },
+	{ IKEV1_AH_AES_128_GMAC,	AUTH_AES_128_GMAC },
+	{ IKEV1_AH_AES_192_GMAC,	AUTH_AES_192_GMAC },
+	{ IKEV1_AH_AES_256_GMAC,	AUTH_AES_256_GMAC },
+};
+
+/**
  * Get IKEv2 algorithm from IKEv1 identifier
  */
 static u_int16_t get_alg_from_ikev1(transform_type_t type, u_int16_t value)
@@ -713,7 +747,8 @@ static u_int16_t get_ikev1_from_alg(transform_type_t type, u_int16_t value)
 /**
  * Get IKEv2 algorithm from IKEv1 ESP transaction ID
  */
-static u_int16_t get_alg_from_ikev1_transid(transform_type_t type, u_int16_t value)
+static u_int16_t get_alg_from_ikev1_transid(protocol_id_t proto,
+										transform_type_t type, u_int16_t value)
 {
 	algo_map_t *map;
 	u_int16_t def;
@@ -727,8 +762,16 @@ static u_int16_t get_alg_from_ikev1_transid(transform_type_t type, u_int16_t val
 			def = ENCR_UNDEFINED;
 			break;
 		case INTEGRITY_ALGORITHM:
-			map = map_esp_auth;
-			count = countof(map_esp_auth);
+			if (proto == PROTO_ESP)
+			{
+				map = map_esp_auth;
+				count = countof(map_esp_auth);
+			}
+			else
+			{
+				map = map_ah;
+				count = countof(map_ah);
+			}
 			def = AUTH_UNDEFINED;
 			break;
 		default:
@@ -745,9 +788,10 @@ static u_int16_t get_alg_from_ikev1_transid(transform_type_t type, u_int16_t val
 }
 
 /**
- * Get IKEv1 ESP transaction ID from IKEv2 identifier
+ * Get IKEv1 ESP/AH transaction ID from IKEv2 identifier
  */
-static u_int16_t get_ikev1_transid_from_alg(transform_type_t type, u_int16_t value)
+static u_int16_t get_ikev1_transid_from_alg(protocol_id_t proto,
+										transform_type_t type, u_int16_t value)
 {
 	algo_map_t *map;
 	int i, count;
@@ -759,8 +803,16 @@ static u_int16_t get_ikev1_transid_from_alg(transform_type_t type, u_int16_t val
 			count = countof(map_esp_encr);
 			break;
 		case INTEGRITY_ALGORITHM:
-			map = map_esp_auth;
-			count = countof(map_esp_auth);
+			if (proto == PROTO_ESP)
+			{
+				map = map_esp_auth;
+				count = countof(map_esp_auth);
+			}
+			else
+			{
+				map = map_ah;
+				count = countof(map_ah);
+			}
 			break;
 		default:
 			return 0;
@@ -889,10 +941,10 @@ static void add_to_proposal_v1_ike(proposal_t *proposal,
 }
 
 /**
- * Add an ESP transform to a proposal for IKEv1
+ * Add an ESP/AH transform to a proposal for IKEv1
  */
-static void add_to_proposal_v1_esp(proposal_t *proposal,
-								   transform_substructure_t *transform)
+static void add_to_proposal_v1(proposal_t *proposal,
+					transform_substructure_t *transform, protocol_id_t proto)
 {
 	transform_attribute_type_t type;
 	transform_attribute_t *tattr;
@@ -911,7 +963,7 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 				break;
 			case TATTR_PH2_AUTH_ALGORITHM:
 				proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM,
-						get_alg_from_ikev1_transid(INTEGRITY_ALGORITHM,
+						get_alg_from_ikev1_transid(proto, INTEGRITY_ALGORITHM,
 												   value), 0);
 				break;
 			case TATTR_PH2_GROUP:
@@ -927,12 +979,15 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 	/* TODO-IKEv1: handle ESN attribute */
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
 							NO_EXT_SEQ_NUMBERS, 0);
-	encr = get_alg_from_ikev1_transid(ENCRYPTION_ALGORITHM,
-									  transform->get_transform_id(transform));
-	if (encr)
+	if (proto == PROTO_ESP)
 	{
-		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr,
-								key_length);
+		encr = get_alg_from_ikev1_transid(proto, ENCRYPTION_ALGORITHM,
+									transform->get_transform_id(transform));
+		if (encr)
+		{
+			proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr,
+									key_length);
+		}
 	}
 }
 
@@ -977,7 +1032,8 @@ METHOD(proposal_substructure_t, get_proposals, void,
 					add_to_proposal_v1_ike(proposal, transform);
 					break;
 				case PROTO_ESP:
-					add_to_proposal_v1_esp(proposal, transform);
+				case PROTO_AH:
+					add_to_proposal_v1(proposal, transform, this->protocol_id);
 					break;
 				default:
 					break;
@@ -1072,6 +1128,7 @@ METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
 			return get_life_duration(this, TATTR_PH1_LIFE_TYPE,
 						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH1_LIFE_DURATION);
 		case PROTO_ESP:
+		case PROTO_AH:
 			duration = get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
 						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH2_SA_LIFE_DURATION);
 			if (!duration)
@@ -1090,6 +1147,7 @@ METHOD(proposal_substructure_t, get_lifebytes, u_int64_t,
 	switch (this->protocol_id)
 	{
 		case PROTO_ESP:
+		case PROTO_AH:
 			return 1000 * get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
 					IKEV1_LIFE_TYPE_KILOBYTES, TATTR_PH2_SA_LIFE_DURATION);
 		case PROTO_IKE:
@@ -1281,24 +1339,26 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 }
 
 /**
- * Add an IKEv1 ESP proposal to the substructure
+ * Add an IKEv1 ESP/AH proposal to the substructure
  */
-static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
+static void set_from_proposal_v1(private_proposal_substructure_t *this,
 				proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
 				ipsec_mode_t mode, encap_t udp, int number)
 {
 	transform_substructure_t *transform = NULL;
 	u_int16_t alg, key_size;
 	enumerator_t *enumerator;
+	protocol_id_t proto;
 
+	proto = proposal->get_protocol(proposal);
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		alg = get_ikev1_transid_from_alg(ENCRYPTION_ALGORITHM, alg);
+		alg = get_ikev1_transid_from_alg(proto, ENCRYPTION_ALGORITHM, alg);
 		if (alg)
 		{
-			transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
-														   number, alg);
+			transform = transform_substructure_create_type(
+									TRANSFORM_SUBSTRUCTURE_V1, number, alg);
 			if (key_size)
 			{
 				transform->add_transform_attribute(transform,
@@ -1308,23 +1368,29 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	if (!transform)
-	{
-		return;
-	}
 
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		alg = get_ikev1_transid_from_alg(INTEGRITY_ALGORITHM, alg);
+		alg = get_ikev1_transid_from_alg(proto, INTEGRITY_ALGORITHM, alg);
 		if (alg)
 		{
+			if (!transform)
+			{
+				transform = transform_substructure_create_type(
+									TRANSFORM_SUBSTRUCTURE_V1, number, alg);
+			}
 			transform->add_transform_attribute(transform,
 				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 									TATTR_PH2_AUTH_ALGORITHM, alg));
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (!transform)
+	{
+		return;
+	}
 
 	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
@@ -1493,8 +1559,9 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			set_from_proposal_v1_ike(this, proposal, lifetime, auth, 1);
 			break;
 		case PROTO_ESP:
-			set_from_proposal_v1_esp(this, proposal, lifetime,
-									 lifebytes, mode, udp, 1);
+		case PROTO_AH:
+			set_from_proposal_v1(this, proposal, lifetime,
+								 lifebytes, mode, udp, 1);
 			break;
 		default:
 			break;
@@ -1535,8 +1602,9 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 											 auth, ++number);
 					break;
 				case PROTO_ESP:
-					set_from_proposal_v1_esp(this, proposal, lifetime,
-											 lifebytes, mode, udp, ++number);
+				case PROTO_AH:
+					set_from_proposal_v1(this, proposal, lifetime,
+										 lifebytes, mode, udp, ++number);
 					break;
 				default:
 					break;

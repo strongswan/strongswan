@@ -9,6 +9,10 @@
 -A INPUT  -i eth0 -p 50 -j ACCEPT
 -A OUTPUT -o eth0 -p 50 -j ACCEPT
 
+# allow ah
+-A INPUT  -i eth0 -p 51 -j ACCEPT
+-A OUTPUT -o eth0 -p 51 -j ACCEPT
+
 # allow IKE
 -A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
 -A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT

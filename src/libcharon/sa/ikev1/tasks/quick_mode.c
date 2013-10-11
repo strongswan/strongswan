@@ -165,6 +165,11 @@ struct private_quick_mode_t {
 	 */
 	ipsec_mode_t mode;
 
+	/*
+	 * SA protocol (ESP|AH) negotiated
+	 */
+	protocol_id_t proto;
+
 	/**
 	 * Use UDP encapsulation
 	 */
@@ -722,7 +727,7 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 	notify_payload_t *notify;
 
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-														  PROTO_ESP, type);
+														  this->proto, type);
 	notify->set_spi(notify, this->spi_i);
 
 	this->ike_sa->queue_task(this->ike_sa,
@@ -774,6 +779,7 @@ METHOD(task_t, build_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *list, *tsi, *tsr;
+			proposal_t *proposal;
 			diffie_hellman_group_t group;
 			encap_t encap;
 
@@ -800,12 +806,19 @@ METHOD(task_t, build_i, status_t,
 				}
 			}
 
-			this->spi_i = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
+			list = this->config->get_proposals(this->config, MODP_NONE);
+			if (list->get_first(list, (void**)&proposal) == SUCCESS)
+			{
+				this->proto = proposal->get_protocol(proposal);
+			}
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
+			this->spi_i = this->child_sa->alloc_spi(this->child_sa, this->proto);
 			if (!this->spi_i)
 			{
 				DBG1(DBG_IKE, "allocating SPI from kernel failed");
 				return FAILED;
 			}
+
 			group = this->config->get_dh_group(this->config);
 			if (group != MODP_NONE)
 			{
@@ -1139,7 +1152,8 @@ METHOD(task_t, build_r, status_t,
 			sa_payload_t *sa_payload;
 			encap_t encap;
 
-			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
+			this->proto = this->proposal->get_protocol(this->proposal);
+			this->spi_r = this->child_sa->alloc_spi(this->child_sa, this->proto);
 			if (!this->spi_r)
 			{
 				DBG1(DBG_IKE, "allocating SPI from kernel failed");
@@ -1347,6 +1361,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 		.state = QM_INIT,
 		.tsi = tsi ? tsi->clone(tsi) : NULL,
 		.tsr = tsr ? tsr->clone(tsr) : NULL,
+		.proto = PROTO_ESP,
 	);
 
 	if (config)

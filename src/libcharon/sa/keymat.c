@@ -93,6 +93,7 @@ int keymat_get_keylen_integ(integrity_algorithm_t alg)
 		{AUTH_HMAC_SHA2_384_192,	384},
 		{AUTH_HMAC_SHA2_512_256,	512},
 		{AUTH_AES_XCBC_96,			128},
+		{AUTH_AES_CMAC_96,			128},
 	};
 	int i;
 

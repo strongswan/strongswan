@@ -78,7 +78,6 @@ typedef enum {
 
 typedef enum {
 		/* IPsec options */
-		SA_OPTION_AUTHENTICATE	= 1 << 0, /* use AH instead of ESP? */
 		SA_OPTION_COMPRESS      = 1 << 1, /* use IPComp */
 
 		/* IKE and other other options */
@@ -171,6 +170,7 @@ struct starter_conn {
 		unsigned long   id;
 
 		char            *esp;
+		char            *ah;
 		char            *ike;
 
 		time_t          dpd_delay;

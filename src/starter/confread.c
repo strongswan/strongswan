@@ -521,9 +521,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		case KW_COMPRESS:
 			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_COMPRESS)
 			break;
-		case KW_AUTH:
-			KW_SA_OPTION_FLAG("ah", "esp", SA_OPTION_AUTHENTICATE)
-			break;
 		case KW_MARK:
 			if (!handle_mark(kw->value, &conn->mark_in))
 			{
