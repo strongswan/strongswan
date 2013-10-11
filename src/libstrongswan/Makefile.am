@@ -79,7 +79,7 @@ threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h utils/printf_hook/printf_hook.h \
-utils/printf_hook/printf_hook_vstr.h \
+utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
 utils/settings.h utils/integrity_checker.h
 endif
 
@@ -119,8 +119,15 @@ if USE_VSTR
   libstrongswan_la_LIBADD += -lvstr
 endif
 
+if USE_BUILTIN_PRINTF
+  libstrongswan_la_SOURCES += utils/printf_hook/printf_hook_builtin.c
+  libstrongswan_la_LIBADD += -lm
+endif
+
+if !USE_BUILTIN_PRINTF
 if !USE_VSTR
   libstrongswan_la_SOURCES += utils/printf_hook/printf_hook_glibc.c
+endif
 endif
 
 if USE_LIBCAP

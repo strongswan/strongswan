@@ -31,6 +31,8 @@ typedef enum printf_hook_argtype_t printf_hook_argtype_t;
 
 #if defined(USE_VSTR)
 # include "printf_hook_vstr.h"
+#elif defined(USE_BUILTIN_PRINTF)
+# include "printf_hook_builtin.h"
 #endif
 
 /**
