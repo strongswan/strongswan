@@ -19,10 +19,10 @@
 #include <threading/condvar.h>
 #include <processing/jobs/callback_job.h>
 
+#include "stream_service.h"
+
 #include <errno.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/stat.h>
 
 typedef struct private_stream_service_t private_stream_service_t;
@@ -234,99 +234,4 @@ stream_service_t *stream_service_create_from_fd(int fd)
 	);
 
 	return &this->public;
-}
-
-/**
- * See header
- */
-stream_service_t *stream_service_create_unix(char *uri, int backlog)
-{
-	struct sockaddr_un addr;
-	mode_t old;
-	int fd, len;
-
-	len = stream_parse_uri_unix(uri, &addr);
-	if (len == -1)
-	{
-		DBG1(DBG_NET, "invalid stream URI: '%s'", uri);
-		return NULL;
-	}
-	if (!lib->caps->check(lib->caps, CAP_CHOWN))
-	{	/* required to chown(2) service socket */
-		DBG1(DBG_NET, "socket '%s' requires CAP_CHOWN capability", uri);
-		return NULL;
-	}
-	fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd == -1)
-	{
-		DBG1(DBG_NET, "opening socket '%s' failed: %s", uri, strerror(errno));
-		return NULL;
-	}
-	unlink(addr.sun_path);
-
-	old = umask(S_IRWXO);
-	if (bind(fd, (struct sockaddr*)&addr, len) < 0)
-	{
-		DBG1(DBG_NET, "binding socket '%s' failed: %s", uri, strerror(errno));
-		close(fd);
-		return NULL;
-	}
-	umask(old);
-	if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
-			  lib->caps->get_gid(lib->caps)) != 0)
-	{
-		DBG1(DBG_NET, "changing socket permissions for '%s' failed: %s",
-			 uri, strerror(errno));
-	}
-	if (listen(fd, backlog) < 0)
-	{
-		DBG1(DBG_NET, "listen on socket '%s' failed: %s", uri, strerror(errno));
-		unlink(addr.sun_path);
-		close(fd);
-		return NULL;
-	}
-	return stream_service_create_from_fd(fd);
-}
-
-/**
- * See header
- */
-stream_service_t *stream_service_create_tcp(char *uri, int backlog)
-{
-	union {
-		struct sockaddr_in in;
-		struct sockaddr_in6 in6;
-		struct sockaddr sa;
-	} addr;
-	int fd, len, on = 1;
-
-	len = stream_parse_uri_tcp(uri, &addr.sa);
-	if (len == -1)
-	{
-		DBG1(DBG_NET, "invalid stream URI: '%s'", uri);
-		return NULL;
-	}
-	fd = socket(addr.sa.sa_family, SOCK_STREAM, 0);
-	if (fd < 0)
-	{
-		DBG1(DBG_NET, "opening socket '%s' failed: %s", uri, strerror(errno));
-		return NULL;
-	}
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) != 0)
-	{
-		DBG1(DBG_NET, "SO_REUSADDR on '%s' failed: %s", uri, strerror(errno));
-	}
-	if (bind(fd, &addr.sa, len) < 0)
-	{
-		DBG1(DBG_NET, "binding socket '%s' failed: %s", uri, strerror(errno));
-		close(fd);
-		return NULL;
-	}
-	if (listen(fd, backlog) < 0)
-	{
-		DBG1(DBG_NET, "listen on socket '%s' failed: %s", uri, strerror(errno));
-		close(fd);
-		return NULL;
-	}
-	return stream_service_create_from_fd(fd);
 }

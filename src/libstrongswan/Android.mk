@@ -27,8 +27,10 @@ credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
 ipsec/ipsec_types.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
-networking/tun_device.c networking/streams/stream.c \
-networking/streams/stream_service.c networking/streams/stream_manager.c \
+networking/tun_device.c networking/streams/stream_manager.c \
+networking/streams/stream.c networking/streams/stream_service.c \
+networking/streams/stream_tcp.c networking/streams/stream_service_tcp.c \
+networking/streams/stream_unix.c networking/streams/stream_service_unix.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \

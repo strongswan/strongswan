@@ -262,6 +262,12 @@ int socketpair(int domain, int type, int protocol, int sv[2]);
 #define EWOULDBLOCK EAGAIN
 
 /**
+ * ECONNRESET is mapped to something arbitrary. It is returned by
+ * stream->read_all() but should not be mapped from a send/recv WSA error.
+ */
+#define ECONNRESET ENXIO
+
+/**
  * recv(2) with support for MSG_DONTWAIT
  */
 #define recv(...) windows_recv(__VA_ARGS__)
