@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,23 +14,19 @@
  */
 
 /**
- * @defgroup mac_prf mac_prf
- * @{ @ingroup prf
+ * @{ @ingroup iv
  */
 
-#ifndef MAC_PRF_H_
-#define MAC_PRF_H_
+#ifndef IV_GEN_RAND_H_
+#define IV_GEN_RAND_H_
 
-#include <crypto/mac.h>
-#include <crypto/prfs/prf.h>
+#include <crypto/iv/iv_gen.h>
 
 /**
- * Creates an implementation of the prf_t interface using the provided mac_t
- * implementation.  Basically a simple wrapper to map the interface.
+ * Create an IV generator that generates random IVs.
  *
- * @param mac		mac_t implementation
- * @return			prf_t object
+ * @return		IV generator
  */
-prf_t *mac_prf_create(mac_t *mac);
+iv_gen_t *iv_gen_rand_create();
 
-#endif /** MAC_PRF_H_ @}*/
+#endif /** IV_GEN_RAND_H_ @}*/

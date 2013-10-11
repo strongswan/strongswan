@@ -1622,7 +1622,7 @@ METHOD(message_t, generate, status_t,
 			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
 		}
 		this->payloads->insert_last(this->payloads, encryption);
-		if (encryption->encrypt(encryption, chunk) != SUCCESS)
+		if (encryption->encrypt(encryption, this->message_id, chunk) != SUCCESS)
 		{
 			generator->destroy(generator);
 			return INVALID_STATE;
