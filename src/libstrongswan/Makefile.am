@@ -110,6 +110,10 @@ AM_LDFLAGS = \
 
 AM_YFLAGS = -v -d
 
+if USE_WINDOWS
+  libstrongswan_la_LIBADD += -lws2_32
+endif
+
 if USE_LEAK_DETECTIVE
   AM_CPPFLAGS += -DLEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c
