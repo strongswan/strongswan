@@ -105,7 +105,7 @@ if USE_TOOLS
 endif
 
 if USE_ATTR_SQL
-  exes += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
+  exes += $(top_builddir)/src/pool/.libs/pool
 endif
 
 if USE_IMV_ATTESTATION
