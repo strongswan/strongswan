@@ -29,8 +29,14 @@ static inline void verify_int_buffer(chunk_t data, int bits, int val)
 	ck_assert_int_eq(data.len, (val + 1) * len);
 	for (i = 0; i < data.len; i++)
 	{
-		(i + 1) % len ? ck_assert_int_eq(data.ptr[i], 0)
-					  : ck_assert_int_eq(data.ptr[i], i / len);
+		if ((i + 1) % len)
+		{
+			ck_assert_int_eq(data.ptr[i], 0);
+		}
+		else
+		{
+			ck_assert_int_eq(data.ptr[i], i / len);
+		}
 	}
 }
 
