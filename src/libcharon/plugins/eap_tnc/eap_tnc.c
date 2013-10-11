@@ -24,6 +24,8 @@
 #include <tncifimv.h>
 #include <tncif_names.h>
 
+#include <pt_tls_client.h>
+
 /**
  * Maximum size of an EAP-TNC message
  */
@@ -213,6 +215,8 @@ METHOD(eap_method_t, is_mutual, bool,
 METHOD(eap_method_t, destroy, void,
 	private_eap_tnc_t *this)
 {
+	pt_tls_client_t *pt_tls_client;
+	identification_t *server, *client;
 	char *pdp_server;
 	u_int16_t pdp_port;
 	host_t *host;
@@ -223,11 +227,15 @@ METHOD(eap_method_t, destroy, void,
 	if (pdp_server)
 	{
 		host = host_create_from_dns(pdp_server, AF_UNSPEC, pdp_port);
+		server = identification_create_from_string(pdp_server);
+		client = tls->get_peer_id(tls);
 		if (host)
 		{
 			DBG2(DBG_TNC, "TODO: setup PT-TLS connection to '%s' at %#H",
 				 pdp_server, host);
-			host->destroy(host);
+			pt_tls_client = pt_tls_client_create(host, server,
+												 client->clone(client));
+			pt_tls_client->destroy(pt_tls_client);
 		}
 	}
 	tls->destroy(tls);
