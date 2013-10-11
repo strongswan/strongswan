@@ -301,6 +301,9 @@ static void *thread_main(private_thread_t *this)
 #ifdef HAVE_GETTID
 	DBG2(DBG_LIB, "created thread %.2d [%u]",
 		 this->id, gettid());
+#elif defined(WIN32)
+	DBG2(DBG_LIB, "created thread %.2d [%p]",
+		 this->id, this->thread_id.p);
 #else
 	DBG2(DBG_LIB, "created thread %.2d [%lx]",
 		 this->id, (u_long)this->thread_id);
