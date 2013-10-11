@@ -167,11 +167,18 @@ START_TEST(test_untoh)
 END_TEST
 
 /*******************************************************************************
- * round_up/down
+ * pad_len/round_up/down
  */
 
 START_TEST(test_round)
 {
+	ck_assert_int_eq(pad_len(0, 4), 0);
+	ck_assert_int_eq(pad_len(1, 4), 3);
+	ck_assert_int_eq(pad_len(2, 4), 2);
+	ck_assert_int_eq(pad_len(3, 4), 1);
+	ck_assert_int_eq(pad_len(4, 4), 0);
+	ck_assert_int_eq(pad_len(5, 4), 3);
+
 	ck_assert_int_eq(round_up(0, 4), 0);
 	ck_assert_int_eq(round_up(1, 4), 4);
 	ck_assert_int_eq(round_up(2, 4), 4);

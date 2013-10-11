@@ -679,26 +679,30 @@ static inline u_int64_t untoh64(void *network)
 }
 
 /**
- * Round up size to be multiple of alignement
+ * Get the padding required to make size a multiple of alignment
  */
-static inline size_t round_up(size_t size, int alignement)
+static inline size_t pad_len(size_t size, size_t alignment)
 {
-	int remainder;
+	size_t remainder;
 
-	remainder = size % alignement;
-	if (remainder)
-	{
-		size += alignement - remainder;
-	}
-	return size;
+	remainder = size % alignment;
+	return remainder ? alignment - remainder : 0;
 }
 
 /**
- * Round down size to be a multiple of alignement
+ * Round up size to be multiple of alignment
  */
-static inline size_t round_down(size_t size, int alignement)
+static inline size_t round_up(size_t size, size_t alignment)
 {
-	return size - (size % alignement);
+	return size + pad_len(size, alignment);
+}
+
+/**
+ * Round down size to be a multiple of alignment
+ */
+static inline size_t round_down(size_t size, size_t alignment)
+{
+	return size - (size % alignment);
 }
 
 /**
