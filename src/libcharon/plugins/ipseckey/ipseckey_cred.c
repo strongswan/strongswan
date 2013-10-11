@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2012 Reto Guadagnini
  * Hochschule fuer Technik Rapperswil
  *
@@ -12,6 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +22,6 @@
 #include "ipseckey.h"
 
 #include <bio/bio_reader.h>
-#include <daemon.h>
 
 typedef struct private_ipseckey_cred_t private_ipseckey_cred_t;
 
@@ -61,64 +62,59 @@ typedef struct {
 METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 	cert_enumerator_t *this, certificate_t **cert)
 {
-	rr_t *cur_rr = NULL;
-	ipseckey_t *cur_ipseckey = NULL;
-	chunk_t pub_key;
-	public_key_t * key = NULL;
-	bool supported_ipseckey_found = FALSE;
+	ipseckey_t *cur_ipseckey;
+	public_key_t *public;
+	rr_t *cur_rr;
+	chunk_t key;
 
 	/* Get the next supported IPSECKEY using the inner enumerator. */
-	while (this->inner->enumerate(this->inner, &cur_rr) &&
-		   !supported_ipseckey_found)
+	while (this->inner->enumerate(this->inner, &cur_rr))
 	{
-		supported_ipseckey_found = TRUE;
-
 		cur_ipseckey = ipseckey_create_frm_rr(cur_rr);
 
 		if (!cur_ipseckey)
 		{
-			DBG1(DBG_CFG, "failed to parse ipseckey - skipping this key");
-			supported_ipseckey_found = FALSE;
+			DBG1(DBG_CFG, "  failed to parse IPSECKEY, skipping");
+			continue;
 		}
 
-		if (cur_ipseckey &&
-			cur_ipseckey->get_algorithm(cur_ipseckey) != IPSECKEY_ALGORITHM_RSA)
+		if (cur_ipseckey->get_algorithm(cur_ipseckey) != IPSECKEY_ALGORITHM_RSA)
 		{
-			DBG1(DBG_CFG, "unsupported ipseckey algorithm -skipping this key");
+			DBG1(DBG_CFG, "  unsupported IPSECKEY algorithm, skipping");
 			cur_ipseckey->destroy(cur_ipseckey);
-			supported_ipseckey_found = FALSE;
+			continue;
 		}
-	}
 
-	if (supported_ipseckey_found)
-	{
-		/*
-		 * Wrap the key of the IPSECKEY in a certificate and return this
-		 * certificate.
-		 */
-		pub_key = cur_ipseckey->get_public_key(cur_ipseckey);
-
-		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-								 BUILD_BLOB_DNSKEY, pub_key,
-								 BUILD_END);
-
-		if (!key)
+		/* wrap the key of the IPSECKEY in a certificate and return this
+		 * certificate */
+		key = cur_ipseckey->get_public_key(cur_ipseckey);
+		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+									BUILD_BLOB_DNSKEY, key,
+									BUILD_END);
+		if (!public)
 		{
-			DBG1(DBG_CFG, "failed to create public key from ipseckey");
+			DBG1(DBG_CFG, "  failed to create public key from IPSECKEY");
 			cur_ipseckey->destroy(cur_ipseckey);
-			return FALSE;
+			continue;
 		}
 
 		*cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 								   CERT_TRUSTED_PUBKEY,
-								   BUILD_PUBLIC_KEY, key,
+								   BUILD_PUBLIC_KEY, public,
 								   BUILD_SUBJECT, this->identity,
 								   BUILD_NOT_BEFORE_TIME, this->notBefore,
 								   BUILD_NOT_AFTER_TIME, this->notAfter,
 								   BUILD_END);
+		if (*cert == NULL)
+		{
+			DBG1(DBG_CFG, "  failed to create certificate from IPSECKEY");
+			cur_ipseckey->destroy(cur_ipseckey);
+			public->destroy(public);
+			continue;
+		}
+		cur_ipseckey->destroy(cur_ipseckey);
 		return TRUE;
 	}
-
 	return FALSE;
 }
 
@@ -134,101 +130,95 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	private_ipseckey_cred_t *this, certificate_type_t cert, key_type_t key,
 	identification_t *id, bool trusted)
 {
-	char *fqdn = NULL;
-	resolver_response_t *response = NULL;
-	rr_set_t *rrset = NULL;
-	enumerator_t *rrsig_enum = NULL;
-	rr_t *rrsig = NULL;
-	bio_reader_t *reader = NULL;
-	chunk_t ignore;
-	u_int32_t nBefore, nAfter;
+	resolver_response_t *response;
+	enumerator_t *rrsig_enum;
 	cert_enumerator_t *e;
+	rr_set_t *rrset;
+	rr_t *rrsig;
+	bio_reader_t *reader;
+	u_int32_t nBefore, nAfter;
+	chunk_t ignore;
+	char *fqdn;
 
-	if (id && id->get_type(id) == ID_FQDN)
+	if (!id || id->get_type(id) != ID_FQDN)
 	{
-		/**	Query the DNS for the required IPSECKEY RRs */
-
-		if (0 >= asprintf(&fqdn, "%Y", id))
-		{
-			DBG1(DBG_CFG, "empty FQDN string");
-			return enumerator_create_empty();
-		}
-
-		DBG1(DBG_CFG, "performing a DNS query for IPSECKEY RRs of '%s'",
-					   fqdn);
-		response = this->res->query(this->res, fqdn, RR_CLASS_IN,
-									RR_TYPE_IPSECKEY);
-		if (!response)
-		{
-			DBG1(DBG_CFG, "  query for IPSECKEY RRs failed");
-			free(fqdn);
-			return enumerator_create_empty();
-		}
-
-		if (!response->has_data(response) ||
-			!response->query_name_exist(response))
-		{
-			DBG1(DBG_CFG, "  unable to retrieve IPSECKEY RRs from the DNS");
-			response->destroy(response);
-			free(fqdn);
-			return enumerator_create_empty();
-		}
-
-		if (!(response->get_security_state(response) == SECURE))
-		{
-			DBG1(DBG_CFG, "  DNSSEC state of IPSECKEY RRs is not secure");
-			response->destroy(response);
-			free(fqdn);
-			return enumerator_create_empty();
-		}
-
-		free(fqdn);
-
-		/** Determine the validity period of the retrieved IPSECKEYs
-		 *
-		 * We use the "Signature Inception" and "Signature Expiration" field
-		 * of the first RRSIG RR to determine the validity period of the
-		 * IPSECKEY RRs. TODO: Take multiple RRSIGs into account.
-		 */
-		rrset = response->get_rr_set(response);
-		rrsig_enum = rrset->create_rrsig_enumerator(rrset);
-		if (!rrsig_enum || !rrsig_enum->enumerate(rrsig_enum, &rrsig))
-		{
-			DBG1(DBG_CFG, "  unable to determine the validity period of "
-						  "IPSECKEY RRs because no RRSIGs are present");
-			DESTROY_IF(rrsig_enum);
-			response->destroy(response);
-			return enumerator_create_empty();
-		}
-
-		/**
-		 * Parse the RRSIG for its validity period (RFC 4034)
-		 */
-		reader = bio_reader_create(rrsig->get_rdata(rrsig));
-		reader->read_data(reader, 8, &ignore);
-		reader->read_uint32(reader, &nAfter);
-		reader->read_uint32(reader, &nBefore);
-		reader->destroy(reader);
-
-		/*Create and return an iterator over the retrieved IPSECKEYs */
-		INIT(e,
-			.public = {
-				.enumerate = (void*)_cert_enumerator_enumerate,
-				.destroy = _cert_enumerator_destroy,
-			},
-			.inner = response->get_rr_set(response)->create_rr_enumerator(
-										  response->get_rr_set(response)),
-			.response = response,
-			.notBefore = nBefore,
-			.notAfter = nAfter,
-			.identity = id,
-		);
-
-		return &e->public;
+		return enumerator_create_empty();
 	}
 
+	/* query the DNS for the required IPSECKEY RRs */
+	if (asprintf(&fqdn, "%Y", id) <= 0)
+	{
+		DBG1(DBG_CFG, "failed to determine FQDN to retrieve IPSECKEY RRs");
+		return enumerator_create_empty();
+	}
+	DBG1(DBG_CFG, "performing a DNS query for IPSECKEY RRs of '%s'", fqdn);
+	response = this->res->query(this->res, fqdn, RR_CLASS_IN, RR_TYPE_IPSECKEY);
+	if (!response)
+	{
+		DBG1(DBG_CFG, "  query for IPSECKEY RRs failed");
+		free(fqdn);
+		return enumerator_create_empty();
+	}
+	free(fqdn);
 
-	return enumerator_create_empty();
+	if (!response->has_data(response) ||
+		!response->query_name_exist(response))
+	{
+		DBG1(DBG_CFG, "  unable to retrieve IPSECKEY RRs from the DNS");
+		response->destroy(response);
+		return enumerator_create_empty();
+	}
+
+	if (response->get_security_state(response) != SECURE)
+	{
+		DBG1(DBG_CFG, "  DNSSEC state of IPSECKEY RRs is not secure");
+		response->destroy(response);
+		return enumerator_create_empty();
+	}
+
+	/* determine the validity period of the retrieved IPSECKEYs
+	 *
+	 * we use the "Signature Inception" and "Signature Expiration" field
+	 * of the first RRSIG RR to determine the validity period of the
+	 * IPSECKEY RRs.
+	 * TODO: Take multiple RRSIGs into account. */
+	rrset = response->get_rr_set(response);
+	rrsig_enum = rrset->create_rrsig_enumerator(rrset);
+	if (!rrsig_enum || !rrsig_enum->enumerate(rrsig_enum, &rrsig))
+	{
+		DBG1(DBG_CFG, "  unable to determine the validity period of "
+			 "IPSECKEY RRs because no RRSIGs are present");
+		DESTROY_IF(rrsig_enum);
+		response->destroy(response);
+		return enumerator_create_empty();
+	}
+	rrsig_enum->destroy(rrsig_enum);
+
+	/* parse the RRSIG for its validity period (RFC 4034) */
+	reader = bio_reader_create(rrsig->get_rdata(rrsig));
+	if (!reader->read_data(reader, 8, &ignore) ||
+		!reader->read_uint32(reader, &nAfter) ||
+		!reader->read_uint32(reader, &nBefore))
+	{
+		DBG1(DBG_CFG, "  unable to determine the validity period of RRSIG RRs");
+		reader->destroy(reader);
+		response->destroy(response);
+		return enumerator_create_empty();
+	}
+	reader->destroy(reader);
+
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_cert_enumerator_enumerate,
+			.destroy = _cert_enumerator_destroy,
+		},
+		.inner = rrset->create_rr_enumerator(rrset),
+		.response = response,
+		.notBefore = nBefore,
+		.notAfter = nAfter,
+		.identity = id,
+	);
+	return &e->public;
 }
 
 METHOD(ipseckey_cred_t, destroy, void,

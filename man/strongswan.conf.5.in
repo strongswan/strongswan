@@ -886,7 +886,15 @@ File to read pseudo random bytes from, instead of @urandom_device@
 File to read DNS resolver configuration from
 .TP
 .BR libstrongswan.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
-File to read DNSSEC trust anchors from (usually root zone KSK)
+File to read DNSSEC trust anchors from (usually root zone KSK). The format of
+the file is the standard DNS Zone file format, anchors can be stored as DS or
+DNSKEY entries in the file.
+.TP
+.BR libstrongswan.plugins.unbound.dlv_anchors
+File to read trusted keys for DLV (DNSSEC Lookaside Validation) from. It uses
+the same format as \fItrust_anchors\fR. Only one DLV can be configured, which
+is then used as a root trusted DLV, this means that it is a lookaside for
+the root.
 .SS libtls section
 .TP
 .BR libtls.cipher

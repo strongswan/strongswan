@@ -216,6 +216,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_DNSCERT
+  SUBDIRS += plugins/dnscert
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/dnscert/libstrongswan-dnscert.la
+endif
+endif
+
 if USE_IPSECKEY
   SUBDIRS += plugins/ipseckey
 if MONOLITHIC

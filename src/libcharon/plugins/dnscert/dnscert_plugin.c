@@ -13,47 +13,68 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+/*
+ * Copyright (C) 2013 Ruslan Marchenko
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+*/
 
-#include "ipseckey_plugin.h"
+#include "dnscert_plugin.h"
 
 #include <daemon.h>
-#include "ipseckey_cred.h"
+#include "dnscert_cred.h"
 
-typedef struct private_ipseckey_plugin_t private_ipseckey_plugin_t;
+typedef struct private_dnscert_plugin_t private_dnscert_plugin_t;
 
 
 /**
- * private data of the ipseckey plugin
+ * private data of the dnscert plugin
  */
-struct private_ipseckey_plugin_t {
+struct private_dnscert_plugin_t {
 
 	/**
 	 * implements plugin interface
 	 */
-	ipseckey_plugin_t public;
+	dnscert_plugin_t public;
 
 	/**
 	 * credential set
 	 */
-	ipseckey_cred_t *cred;
+	dnscert_cred_t *cred;
 
 	/**
-	 * IPSECKEY based authentication enabled
+	 * DNSCERT based authentication enabled
 	 */
 	bool enabled;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_ipseckey_plugin_t *this)
+	private_dnscert_plugin_t *this)
 {
-	return "ipseckey";
+	return "dnscert";
 }
 
 METHOD(plugin_t, reload, bool,
-	private_ipseckey_plugin_t *this)
+	private_dnscert_plugin_t *this)
 {
 	bool enabled = lib->settings->get_bool(lib->settings,
-							"%s.plugins.ipseckey.enable", FALSE, charon->name);
+							"%s.plugins.dnscert.enable", FALSE, charon->name);
 
 	if (enabled != this->enabled)
 	{
@@ -67,14 +88,14 @@ METHOD(plugin_t, reload, bool,
 		}
 		this->enabled = enabled;
 	}
-	DBG1(DBG_CFG, "ipseckey plugin is %sabled", this->enabled ? "en" : "dis");
+	DBG1(DBG_CFG, "dnscert plugin is %sabled", this->enabled ? "en" : "dis");
 	return TRUE;
 }
 
 /**
  * Create resolver and register credential set
  */
-static bool plugin_cb(private_ipseckey_plugin_t *this,
+static bool plugin_cb(private_dnscert_plugin_t *this,
 					  plugin_feature_t *feature, bool reg, void *cb_data)
 {
 	if (reg)
@@ -88,7 +109,7 @@ static bool plugin_cb(private_ipseckey_plugin_t *this,
 			return FALSE;
 		}
 
-		this->cred = ipseckey_cred_create(res);
+		this->cred = dnscert_cred_create(res);
 		reload(this);
 	}
 	else
@@ -103,21 +124,22 @@ static bool plugin_cb(private_ipseckey_plugin_t *this,
 }
 
 METHOD(plugin_t, get_features, int,
-	private_ipseckey_plugin_t *this, plugin_feature_t *features[])
+	private_dnscert_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
-			PLUGIN_PROVIDE(CUSTOM, "ipseckey"),
+			PLUGIN_PROVIDE(CUSTOM, "dnscert"),
 				PLUGIN_DEPENDS(RESOLVER),
-				PLUGIN_DEPENDS(PUBKEY, KEY_RSA),
-				PLUGIN_DEPENDS(CERT_ENCODE, CERT_TRUSTED_PUBKEY),
+				PLUGIN_DEPENDS(CERT_DECODE, CERT_ANY),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_GPG),
 	};
 	*features = f;
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	private_ipseckey_plugin_t *this)
+	private_dnscert_plugin_t *this)
 {
 	free(this);
 }
@@ -125,9 +147,9 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *ipseckey_plugin_create()
+plugin_t *dnscert_plugin_create()
 {
-	private_ipseckey_plugin_t *this;
+	private_dnscert_plugin_t *this;
 
 	INIT(this,
 		.public = {
