@@ -461,6 +461,9 @@ METHOD(imv_attestation_state_t, finalize_components, void,
 		if (!entry->comp->finalize(entry->comp, entry->qualifier))
 		{
 			set_measurement_error(this, IMV_ATTESTATION_ERROR_COMP_EVID_PEND);
+			update_recommendation(this,
+					 TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+					 TNC_IMV_EVALUATION_RESULT_ERROR);
 		}
 		free_func_comp(entry);
 	}

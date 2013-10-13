@@ -380,6 +380,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			if (comp->verify(comp, name->get_qualifier(name), pts,
 							 evidence) != SUCCESS)
 			{
+				state->update_recommendation(state,
+							TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+							TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 				attestation_state->set_measurement_error(attestation_state,
 									IMV_ATTESTATION_ERROR_COMP_EVID_FAIL);
 				name->log(name, "  measurement mismatch for ");
@@ -417,23 +420,28 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				{
 					DBG1(DBG_IMV, "received PCR Composite does not match "
 								  "constructed one");
+					state->update_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
-					free(pcr_composite.ptr);
-					free(quote_info.ptr);
-					break;
+					goto quote_error;
 				}
 				DBG2(DBG_IMV, "received PCR Composite matches constructed one");
-				free(pcr_composite.ptr);
 
 				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sig))
 				{
+					state->update_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
-					free(quote_info.ptr);
-					break;
+					goto quote_error;
 				}
 				DBG2(DBG_IMV, "TPM Quote Info signature verification successful");
+
+quote_error:
+				free(pcr_composite.ptr);
 				free(quote_info.ptr);
 
 				/**

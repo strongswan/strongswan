@@ -502,8 +502,11 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 
 	if (session)
 	{
+		TNC_IMV_Evaluation_Result eval;
+		TNC_IMV_Action_Recommendation rec;
 		imv_workitem_t *workitem;
 		enumerator_t *enumerator;
+		char *result_str;
 		int pending_file_meas = 0;
 
 		enumerator = session->create_workitem_enumerator(session);
@@ -521,6 +524,13 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 					case IMV_WORKITEM_FILE_MEAS:
 					case IMV_WORKITEM_DIR_REF_MEAS:
 					case IMV_WORKITEM_DIR_MEAS:
+						session->remove_workitem(session, enumerator);
+						result_str = "pending file measurements";
+						eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+						rec = workitem->set_result(workitem, result_str, eval);
+						state->update_recommendation(state, rec, eval);
+						imcv_db->finalize_workitem(imcv_db, workitem);
+						workitem->destroy(workitem);
 						pending_file_meas++;
 						break;
 					default:
