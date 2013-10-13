@@ -407,8 +407,8 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 		.algo = algo,
 		.plugin_name = plugin_name,
 		.speed = speed,
-		.create = create,
 	);
+	entry->create = create;
 
 	this->lock->write_lock(this->lock);
 	enumerator = list->create_enumerator(list);
