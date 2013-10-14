@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -744,6 +744,17 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 	ts2subnet(src, &sel.saddr, &sel.prefixlen_s);
 	ts2ports(dst, &sel.dport, &sel.dport_mask);
 	ts2ports(src, &sel.sport, &sel.sport_mask);
+	if ((sel.proto == IPPROTO_ICMP || sel.proto == IPPROTO_ICMPV6) &&
+		(sel.dport || sel.sport))
+	{
+		/* the ICMP type is encoded in the most significant 8 bits and the ICMP
+		 * code in the least significant 8 bits of the port.  via XFRM we have
+		 * to pass the ICMP type and code in the source and destination port
+		 * fields, respectively.  the port is in network byte order. */
+		u_int16_t port = max(sel.dport, sel.sport);
+		sel.sport = htons(port & 0xff);
+		sel.dport = htons(port >> 8);
+	}
 	sel.ifindex = 0;
 	sel.user = 0;
 
