@@ -16,7 +16,7 @@
 #ifndef TEST_RUNNER_H_
 #define TEST_RUNNER_H_
 
-#include <check.h>
+#include <test_suite.h>
 
 Suite *bio_reader_suite_create();
 Suite *bio_writer_suite_create();
