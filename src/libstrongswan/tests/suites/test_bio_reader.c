@@ -329,7 +329,7 @@ END_TEST
  */
 
 #define assert_read_data_len(bits) ({ \
- 	bio_reader_t *reader; \
+	bio_reader_t *reader; \
 	chunk_t read, data; \
 	int i, len = bits / 8; \
 	data = chunk_empty; \
