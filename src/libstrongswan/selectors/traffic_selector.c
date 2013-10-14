@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009 Tobias Brunner
+ * Copyright (C) 2007-2013 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -910,6 +910,10 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 		.protocol = protocol,
 		.type = type,
 	);
-
+	if (protocol == IPPROTO_ICMP || protocol == IPPROTO_ICMPV6)
+	{
+		this->from_port = from_port < 256 ? from_port << 8 : from_port;
+		this->to_port = to_port < 256 ? to_port << 8 : to_port;
+	}
 	return this;
 }
