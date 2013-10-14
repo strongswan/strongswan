@@ -78,7 +78,8 @@
 #
 #       PLUTO_MY_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on our side.
+#              restricted on our side.  For ICMP/ICMPv6 this contains the
+#              message type, and PLUTO_PEER_PORT the message code.
 #
 #       PLUTO_PEER
 #              is the IP address of our peer.
@@ -97,7 +98,8 @@
 #
 #       PLUTO_PEER_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on the peer side.
+#              restricted on the peer side.  For ICMP/ICMPv6 this contains the
+#              message code, and PLUTO_MY_PORT the message type.
 #
 #       PLUTO_XAUTH_ID
 #              is an optional user ID employed by the XAUTH protocol
