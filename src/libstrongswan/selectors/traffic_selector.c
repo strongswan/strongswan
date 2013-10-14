@@ -194,6 +194,22 @@ static bool is_any(private_traffic_selector_t *this)
 }
 
 /**
+ * Print ICMP/ICMPv6 type and code
+ */
+static int print_icmp(printf_hook_data_t *data, u_int16_t port)
+{
+	u_int8_t type, code;
+
+	type = traffic_selector_icmp_type(port);
+	code = traffic_selector_icmp_code(port);
+	if (code)
+	{
+		return print_in_hook(data, "%d(%d)", type, code);
+	}
+	return print_in_hook(data, "%d", type);
+}
+
+/**
  * Described in header.
  */
 int traffic_selector_printf_hook(printf_hook_data_t *data,
@@ -302,19 +318,34 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 		{
 			struct servent *serv;
 
-			serv = getservbyport(htons(this->from_port), serv_proto);
-			if (serv)
+			if (this->protocol == IPPROTO_ICMP ||
+				this->protocol == IPPROTO_ICMPV6)
 			{
-				written += print_in_hook(data, "%s", serv->s_name);
+				written += print_icmp(data, this->from_port);
 			}
 			else
 			{
-				written += print_in_hook(data, "%d", this->from_port);
+				serv = getservbyport(htons(this->from_port), serv_proto);
+				if (serv)
+				{
+					written += print_in_hook(data, "%s", serv->s_name);
+				}
+				else
+				{
+					written += print_in_hook(data, "%d", this->from_port);
+				}
 			}
 		}
 		else if (is_opaque(this))
 		{
 			written += print_in_hook(data, "OPAQUE");
+		}
+		else if (this->protocol == IPPROTO_ICMP ||
+				 this->protocol == IPPROTO_ICMPV6)
+		{
+			written += print_icmp(data, this->from_port);
+			written += print_in_hook(data, "-");
+			written += print_icmp(data, this->to_port);
 		}
 		else
 		{
