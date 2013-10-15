@@ -777,7 +777,7 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 		prefixlen = sel->prefixlen_s;
 		if (sel->sport_mask)
 		{
-			port = htons(sel->sport);
+			port = ntohs(sel->sport);
 		}
 	}
 	else
@@ -786,10 +786,15 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 		prefixlen = sel->prefixlen_d;
 		if (sel->dport_mask)
 		{
-			port = htons(sel->dport);
+			port = ntohs(sel->dport);
 		}
 	}
-
+	if (sel->proto == IPPROTO_ICMP || sel->proto == IPPROTO_ICMPV6)
+	{	/* convert ICMP[v6] message type and code as supplied by the kernel in
+		 * source and destination ports (both in network order) */
+		port = (sel->sport >> 8) | (sel->dport & 0xff00);
+		port = ntohs(port);
+	}
 	/* The Linux 2.6 kernel does not set the selector's family field,
 	 * so as a kludge we additionally test the prefix length.
 	 */
