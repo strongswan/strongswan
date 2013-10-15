@@ -111,21 +111,17 @@ static inline void timersub(struct timeval *a, struct timeval *b,
  */
 static inline struct tm *gmtime_r(const time_t *timep, struct tm *result)
 {
-	if (sizeof(time_t) == 4)
+	struct tm *ret;
+
+	/* gmtime_s() and friends seem not to be implemented/functioning.
+	 * Relying on gmtime() on Windows works as well, as it uses thread
+	 * specific buffers. */
+	ret = gmtime(timep);
+	if (ret)
 	{
-		if (_gmtime32_s(result, (__time32_t*)time) == 0)
-		{
-			return result;
-		}
+		memcpy(result, ret, sizeof(*result));
 	}
-	else
-	{
-		if (_gmtime64_s(result, (__time64_t*)time) == 0)
-		{
-			return result;
-		}
-	}
-	return NULL;
+	return ret;
 }
 
 /**
@@ -133,21 +129,17 @@ static inline struct tm *gmtime_r(const time_t *timep, struct tm *result)
  */
 static inline struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
-	if (sizeof(time_t) == 4)
+	struct tm *ret;
+
+	/* localtime_s() and friends seem not to be implemented/functioning.
+	 * Relying on localtime() on Windows works as well, as it uses thread
+	 * specific buffers. */
+	ret = localtime(timep);
+	if (ret)
 	{
-		if (_localtime32_s(result, (__time32_t*)time) == 0)
-		{
-			return result;
-		}
+		memcpy(result, ret, sizeof(*result));
 	}
-	else
-	{
-		if (_localtime64_s(result, (__time64_t*)time) == 0)
-		{
-			return result;
-		}
-	}
-	return NULL;
+	return ret;
 }
 
 /**
