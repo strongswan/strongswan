@@ -139,8 +139,7 @@ struct pb_tnc_msg_t {
  * Useful for the parser which wants a generic constructor for all
  * pb_tnc_message_t types.
  *
- * @param vendor_id			PB-TNC vendor ID
- * @param type				PB-TNC message type
+ * @param msg_type			PB-TNC message type
  * @param value				PB-TNC message value
  */
 pb_tnc_msg_t* pb_tnc_msg_create_from_data(pen_type_t msg_type, chunk_t value);

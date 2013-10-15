@@ -121,10 +121,6 @@ bool pt_tls_write(tls_socket_t *tls, pt_tls_message_type_t type,
 				  u_int32_t identifier, chunk_t data);
 
 /**
- * @}
- * @addtogroup libpttls
- * @{
- *
  * Dummy libpttls initialization function needed for integrity test
  */
 void libpttls_init(void);

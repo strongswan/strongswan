@@ -373,7 +373,7 @@ struct peer_cfg_t {
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param aggressive		use/accept aggressive mode with IKEv1
- * @param pullmode			TRUE to use modeconfig pull, FALSE for push
+ * @param pull_mode			TRUE to use modeconfig pull, FALSE for push
  * @param dpd				DPD check interval, 0 to disable
  * @param dpd_timeout		DPD timeout interval (IKEv1 only), if 0 default applies
  * @param mediation			TRUE if this is a mediation connection

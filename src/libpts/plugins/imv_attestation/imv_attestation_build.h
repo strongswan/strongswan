@@ -34,7 +34,7 @@
  * Process a TCG PTS attribute
  *
  * @param out_msg				outbound PA-TNC message to be built
- * @param _state				state of a given connection
+ * @param state					state of a given connection
  * @param supported_algorithms	supported PTS measurement algorithms
  * @param supported_dh_groups	supported DH groups
  * @param pts_db				PTS configuration database

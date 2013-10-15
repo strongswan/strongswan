@@ -18,6 +18,9 @@
  * @defgroup libpts_plugins plugins
  * @ingroup libpts
  *
+ * @defgroup swid swid
+ * @ingroup libpts
+ *
  * @addtogroup libpts
  * @{
  */

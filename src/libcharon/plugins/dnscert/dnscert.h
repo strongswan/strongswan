@@ -59,8 +59,7 @@ enum dnscert_type_t {
 };
 
 /**
- * DNSCERT algorithms as defined in http://www.iana.org/assignments/
- *  dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml#dns-sec-alg-numbers-1
+ * DNSCERT algorithms as defined in http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml#dns-sec-alg-numbers-1
  */
 enum dnscert_algorithm_t {
 	/** No defined */

@@ -170,7 +170,7 @@ struct mark_t {
 #define MARK_REQID (0xFFFFFFFF)
 
 /**
- * Try to parse a mark_t from the given string of the form <mark>[/<mask>].
+ * Try to parse a mark_t from the given string of the form mark[/mask].
  *
  * @param value		string to parse
  * @param mark		mark to fill
