@@ -363,6 +363,9 @@ char* tty_escape_get(int fd, tty_escape_t escape)
 		case TTY_BOLD:
 		case TTY_UNDERLINE:
 		case TTY_BLINKING:
+#ifdef WIN32
+			return "";
+#endif
 		case TTY_FG_BLACK:
 		case TTY_FG_RED:
 		case TTY_FG_GREEN:
@@ -382,7 +385,7 @@ char* tty_escape_get(int fd, tty_escape_t escape)
 		case TTY_BG_WHITE:
 		case TTY_BG_DEF:
 			return enum_to_name(tty_color_names, escape);
-		/* warn if a excape code is missing */
+		/* warn if a escape code is missing */
 	}
 	return "";
 }
