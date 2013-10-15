@@ -17,7 +17,7 @@
 
 /**
  * @defgroup traffic_selector traffic_selector
- * @{ @ingroup config
+ * @{ @ingroup selectors
  */
 
 #ifndef TRAFFIC_SELECTOR_H_
