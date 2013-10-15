@@ -648,20 +648,23 @@ int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	};
 	time_t *time = *((time_t**)(args[0]));
 	bool utc = *((int*)(args[1]));
-	struct tm t;
+	struct tm t, *ret = NULL;
 
-	if (*time == UNDEFINED_TIME)
+	if (*time != UNDEFINED_TIME)
+	{
+		if (utc)
+		{
+			ret = gmtime_r(time, &t);
+		}
+		else
+		{
+			ret = localtime_r(time, &t);
+		}
+	}
+	if (ret == NULL)
 	{
 		return print_in_hook(data, "--- -- --:--:--%s----",
 							 utc ? " UTC " : " ");
-	}
-	if (utc)
-	{
-		gmtime_r(time, &t);
-	}
-	else
-	{
-		localtime_r(time, &t);
 	}
 	return print_in_hook(data, "%s %02d %02d:%02d:%02d%s%04d",
 						 months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
