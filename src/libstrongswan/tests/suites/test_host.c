@@ -286,8 +286,8 @@ END_TEST
 
 START_TEST(test_create_from_sockaddr_other)
 {
-	struct sockaddr_un addr = {
-		.sun_family = AF_UNIX,
+	struct sockaddr addr = {
+		.sa_family = AF_UNIX,
 	};
 	host_t *host;
 
