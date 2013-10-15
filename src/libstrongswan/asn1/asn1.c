@@ -460,7 +460,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	const char *format;
 	char buf[BUF_LEN];
 	chunk_t formatted_time;
-	struct tm t;
+	struct tm t = {};
 
 	gmtime_r(time, &t);
 	/* RFC 5280 says that dates through the year 2049 MUST be encoded as UTCTIME
