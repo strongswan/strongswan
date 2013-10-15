@@ -24,6 +24,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <direct.h>
+#include <inttypes.h>
 
 /* undef Windows variants evaluating values more than once */
 #undef min
@@ -222,5 +223,75 @@ static inline int dlclose(void *handle)
 {
 	return FreeLibrary((HMODULE)handle);
 }
+
+/* Windows does not support "ll" format printf length modifiers. Mingw
+ * therefore maps these to the Windows specific I64 length modifier. That
+ * won't work for us, as we use our own printf backend on Windows, which works
+ * just fine with "ll". */
+#undef PRId64
+#define PRId64 "lld"
+#undef PRId64
+#define PRId64 "lld"
+#undef PRIdLEAST64
+#define PRIdLEAST64 "lld"
+#undef PRIdFAST64
+#define PRIdFAST64 "lld"
+#undef PRIdMAX
+#define PRIdMAX "lld"
+#undef PRIi64
+#define PRIi64 "lli"
+#undef PRIiLEAST64
+#define PRIiLEAST64 "lli"
+#undef PRIiFAST64
+#define PRIiFAST64 "lli"
+#undef PRIiMAX
+#define PRIiMAX "lli"
+#undef PRIo64
+#define PRIo64 "llo"
+#undef PRIoLEAST64
+#define PRIoLEAST64 "llo"
+#undef PRIoFAST64
+#define PRIoFAST64 "llo"
+#undef PRIoMAX
+#define PRIoMAX "llo"
+#undef PRIu64
+#define PRIu64 "llu"
+#undef PRIuLEAST64
+#define PRIuLEAST64 "llu"
+#undef PRIuFAST64
+#define PRIuFAST64 "llu"
+#undef PRIuMAX
+#define PRIuMAX "llu"
+#undef PRIx64
+#define PRIx64 "llx"
+#undef PRIxLEAST64
+#define PRIxLEAST64 "llx"
+#undef PRIxFAST64
+#define PRIxFAST64 "llx"
+#undef PRIxMAX
+#define PRIxMAX "llx"
+#undef PRIX64
+#define PRIX64 "llX"
+#undef PRIXLEAST64
+#define PRIXLEAST64 "llX"
+#undef PRIXFAST64
+#define PRIXFAST64 "llX"
+#undef PRIXMAX
+#define PRIXMAX "llX"
+
+#ifdef _WIN64
+# undef PRIdPTR
+# define PRIdPTR "lld"
+# undef PRIiPTR
+# define PRIiPTR "lli"
+# undef PRIoPTR
+# define PRIoPTR "llo"
+# undef PRIuPTR
+# define PRIuPTR "llu"
+# undef PRIxPTR
+# define PRIxPTR "llx"
+# undef PRIXPTR
+# define PRIXPTR "llX"
+#endif /* _WIN64 */
 
 #endif /** WINDOWS_H_ @}*/
