@@ -871,6 +871,28 @@ static int lookup_algorithm(transform_type_t type, int ikev2)
 }
 
 /**
+ * Helper to set a port in a sockaddr_t, the port has to be in host order
+ */
+static void set_port(sockaddr_t *addr, u_int16_t port)
+{
+	switch (addr->sa_family)
+	{
+		case AF_INET:
+		{
+			struct sockaddr_in *sin = (struct sockaddr_in*)addr;
+			sin->sin_port = htons(port);
+			break;
+		}
+		case AF_INET6:
+		{
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)addr;
+			sin6->sin6_port = htons(port);
+			break;
+		}
+	}
+}
+
+/**
  * Copy a host_t as sockaddr_t to the given memory location.
  * @return		the number of bytes copied
  */
@@ -878,37 +900,38 @@ static size_t hostcpy(void *dest, host_t *host, bool include_port)
 {
 	sockaddr_t *addr = host->get_sockaddr(host), *dest_addr = dest;
 	socklen_t *len = host->get_sockaddr_len(host);
-	u_int16_t port = htons(host->get_port(host));
 
 	memcpy(dest, addr, *len);
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 	dest_addr->sa_len = *len;
 #endif
-	switch (dest_addr->sa_family)
+	if (!include_port)
 	{
-		case AF_INET:
-		{
-			struct sockaddr_in *sin = dest;
-			sin->sin_port = include_port ? port : 0;
-			break;
-		}
-		case AF_INET6:
-		{
-			struct sockaddr_in6 *sin6 = dest;
-			sin6->sin6_port = include_port ? port : 0;
-			break;
-		}
+		set_port(dest_addr, 0);
 	}
 	return *len;
 }
 
 /**
- * add a host behind an sadb_address extension
+ * Copy a host_t as sockaddr_t to the given memory location and map the port to
+ * ICMP/ICMPv6 message type/code as the Linux kernel expects it, that is, the
+ * type in the source and the code in the destination address.
+ * @return		the number of bytes copied
  */
-static void host2ext(host_t *host, struct sadb_address *ext, bool include_port)
+static size_t hostcpy_icmp(void *dest, host_t *host, u_int16_t type)
 {
-	size_t len = hostcpy(ext + 1, host, include_port);
-	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + len);
+	size_t len;
+
+	len = hostcpy(dest, host, TRUE);
+	if (type == SADB_EXT_ADDRESS_SRC)
+	{
+		set_port(dest, traffic_selector_icmp_type(host->get_port(host)));
+	}
+	else
+	{
+		set_port(dest, traffic_selector_icmp_code(host->get_port(host)));
+	}
+	return len;
 }
 
 /**
@@ -918,10 +941,20 @@ static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
 						 u_int8_t proto, u_int8_t prefixlen, bool include_port)
 {
 	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
+	size_t len;
+
 	addr->sadb_address_exttype = type;
 	addr->sadb_address_proto = proto;
 	addr->sadb_address_prefixlen = prefixlen;
-	host2ext(host, addr, include_port);
+	if (proto == IPPROTO_ICMP || proto == IPPROTO_ICMPV6)
+	{
+		len = hostcpy_icmp(addr + 1, host, type);
+	}
+	else
+	{
+		len = hostcpy(addr + 1, host, include_port);
+	}
+	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
 	PFKEY_EXT_ADD(msg, addr);
 }
 
