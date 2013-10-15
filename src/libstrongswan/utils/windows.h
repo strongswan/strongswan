@@ -144,6 +144,18 @@ static inline struct tm *localtime_r(const time_t *timep, struct tm *result)
 }
 
 /**
+ * setenv(3) from <stdlib.h>, overwrite flag is ignored
+ */
+static inline int setenv(const char *name, const char *value, int overwrite)
+{
+	if (SetEnvironmentVariableA(name, value) == 0)
+	{	/* failed */
+		return -1;
+	}
+	return 0;
+}
+
+/**
  * dlerror(3) from <dlfcn.h>, printing error to an alloca() buffer
  */
 #define dlerror() \
