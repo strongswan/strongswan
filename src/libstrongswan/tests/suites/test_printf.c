@@ -20,7 +20,6 @@
 
 static void verify(char *expected, char *format, ...)
 {
-	FILE *mem;
 	char buf[128];
 	va_list args;
 
@@ -29,12 +28,18 @@ static void verify(char *expected, char *format, ...)
 	ck_assert_str_eq(expected, buf);
 	va_end(args);
 
-	mem = fmemopen(buf, sizeof(buf), "w");
-	va_start(args, format);
-	vfprintf(mem, format, args);
-	va_end(args);
-	fclose(mem);
-	ck_assert_str_eq(expected, buf);
+#ifdef HAVE_FMEMOPEN
+	{
+		FILE *mem;
+
+		mem = fmemopen(buf, sizeof(buf), "w");
+		va_start(args, format);
+		vfprintf(mem, format, args);
+		va_end(args);
+		fclose(mem);
+		ck_assert_str_eq(expected, buf);
+	}
+#endif /* HAVE_FMEMOPEN */
 }
 
 START_TEST(test_printf_strings)
