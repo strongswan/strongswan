@@ -97,3 +97,102 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 	closesocket(c);
 	return -1;
 }
+
+/**
+ * Check and clear the dontwait flag
+ */
+static bool check_dontwait(int *flags)
+{
+	if (*flags & MSG_DONTWAIT)
+	{
+		*flags &= ~MSG_DONTWAIT;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * See header
+ */
+#undef recv
+ssize_t windows_recv(int sockfd, void *buf, size_t len, int flags)
+{
+	u_long on = 1, off = 0;
+	ssize_t outlen = -1;
+
+	if (!check_dontwait(&flags))
+	{
+		return recv(sockfd, buf, len, flags);
+	}
+	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	{
+		outlen = recv(sockfd, buf, len, flags);
+		ioctlsocket(sockfd, FIONBIO, &off);
+	}
+	return outlen;
+}
+
+/**
+ * See header
+ */
+#undef recvfrom
+ssize_t windows_recvfrom(int sockfd, void *buf, size_t len, int flags,
+						 struct sockaddr *src_addr, socklen_t *addrlen)
+{
+	u_long on = 1, off = 0;
+	ssize_t outlen = -1;
+
+	if (!check_dontwait(&flags))
+	{
+		return recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+	}
+	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	{
+		outlen = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+		ioctlsocket(sockfd, FIONBIO, &off);
+	}
+	return outlen;
+}
+
+/**
+ * See header
+ */
+#undef send
+ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags)
+{
+	u_long on = 1, off = 0;
+	ssize_t outlen = -1;
+
+	if (!check_dontwait(&flags))
+	{
+		return send(sockfd, buf, len, flags);
+	}
+	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	{
+		outlen = send(sockfd, buf, len, flags);
+		ioctlsocket(sockfd, FIONBIO, &off);
+	}
+	return outlen;
+}
+
+/**
+ * See header
+ */
+#undef sendto
+ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
+					   const struct sockaddr *dest_addr, socklen_t addrlen)
+{
+	u_long on = 1, off = 0;
+	ssize_t outlen = -1;
+
+	if (!check_dontwait(&flags))
+	{
+		return sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+	}
+	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	{
+		outlen = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+		ioctlsocket(sockfd, FIONBIO, &off);
+	}
+	return outlen;
+}

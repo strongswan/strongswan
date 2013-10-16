@@ -251,6 +251,42 @@ static inline int dlclose(void *handle)
  */
 int socketpair(int domain, int type, int protocol, int sv[2]);
 
+/**
+ * Map MSG_DONTWAIT to the reserved, but deprecated MSG_INTERRUPT
+ */
+#define MSG_DONTWAIT MSG_INTERRUPT
+
+/**
+ * EWOULDBLOCK is EAGAIN on other systems as well
+ */
+#define EWOULDBLOCK EAGAIN
+
+/**
+ * recv(2) with support for MSG_DONTWAIT
+ */
+#define recv(...) windows_recv(__VA_ARGS__)
+ssize_t windows_recv(int sockfd, void *buf, size_t len, int flags);
+
+/**
+ * recvfrom(2) with support for MSG_DONTWAIT
+ */
+#define recvfrom(...) windows_recvfrom(__VA_ARGS__)
+ssize_t windows_recvfrom(int sockfd, void *buf, size_t len, int flags,
+						 struct sockaddr *src_addr, socklen_t *addrlen);
+
+/**
+ * recvfrom(2) with support for MSG_DONTWAIT
+ */
+#define send(...) windows_send(__VA_ARGS__)
+ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags);
+
+/**
+ * recvfrom(2) with support for MSG_DONTWAIT
+ */
+#define sendto(...) windows_send(__VA_ARGS__)
+ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
+					   const struct sockaddr *dest_addr, socklen_t addrlen);
+
 /* Windows does not support "ll" format printf length modifiers. Mingw
  * therefore maps these to the Windows specific I64 length modifier. That
  * won't work for us, as we use our own printf backend on Windows, which works
