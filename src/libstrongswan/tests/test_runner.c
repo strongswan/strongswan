@@ -75,6 +75,9 @@ static array_t *load_suites()
 	} otest = 0;
 
 	library_init(NULL);
+
+	test_setup_handler();
+
 	if (!load_plugins())
 	{
 		library_deinit();
@@ -276,6 +279,10 @@ static bool post_test(bool check_leaks, array_t *failures, char *name, int i)
 		.i = i,
 	};
 
+	lib->processor->set_threads(lib->processor, 0);
+	lib->processor->cancel(lib->processor);
+	lib->plugins->unload(lib->plugins);
+
 	if (check_leaks && lib->leak_detective)
 	{
 		lib->leak_detective->set_report_cb(lib->leak_detective,
@@ -458,8 +465,6 @@ int main(int argc, char *argv[])
 
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
-
-	test_setup_handler();
 
 	suites = load_suites();
 	if (!suites)

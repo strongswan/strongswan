@@ -18,6 +18,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <pthread.h>
+
 /**
  * Failure message buf
  */
@@ -118,11 +120,24 @@ void test_suite_add_case(test_suite_t *suite, test_case_t *tcase)
 }
 
 /**
+ * Main thread performing tests
+ */
+static pthread_t main_thread;
+
+/**
  * Let test case fail
  */
 static inline void test_failure()
 {
-	siglongjmp(test_restore_point_env, 1);
+	if (pthread_self() == main_thread)
+	{
+		siglongjmp(test_restore_point_env, 1);
+	}
+	else
+	{
+		pthread_kill(main_thread, SIGUSR1);
+		/* how can we stop just the thread? longjmp to a restore point? */
+	}
 }
 
 /**
@@ -163,6 +178,9 @@ static void test_sighandler(int signal)
 
 	switch (signal)
 	{
+		case SIGUSR1:
+			/* a different thread failed, abort test */
+			return test_failure();
 		case SIGSEGV:
 			signame = "SIGSEGV";
 			break;
@@ -189,6 +207,11 @@ static void test_sighandler(int signal)
 		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
 	test_fail_msg(NULL, 0, "%s(%d)", signame, signal);
+	/* unable to restore a valid context for that thread, terminate */
+	fprintf(stderr, "\n%s(%d) outside of main thread:\n", signame, signal);
+	failure_backtrace->log(failure_backtrace, stderr, TRUE);
+	fprintf(stderr, "terminating...\n");
+	abort();
 }
 
 /**
@@ -196,15 +219,20 @@ static void test_sighandler(int signal)
  */
 void test_setup_handler()
 {
-	struct sigaction action;
+	struct sigaction action = {
+		.sa_handler = test_sighandler,
+	};
 
-	action.sa_handler = test_sighandler;
-	action.sa_flags = 0;
-	sigemptyset(&action.sa_mask);
+	main_thread = pthread_self();
+
+	/* signal handler inherited by all threads */
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
+	/* ignore ALRM/USR1, these are catched by main thread only */
+	action.sa_handler = SIG_IGN;
 	sigaction(SIGALRM, &action, NULL);
+	sigaction(SIGUSR1, &action, NULL);
 }
 
 /**
@@ -212,6 +240,15 @@ void test_setup_handler()
  */
 void test_setup_timeout(int s)
 {
+	struct sigaction action = {
+		.sa_handler = test_sighandler,
+	};
+
+	/* This called by main thread only. Setup handler for timeout and
+	 * failure cross-thread signaling. */
+	sigaction(SIGALRM, &action, NULL);
+	sigaction(SIGUSR1, &action, NULL);
+
 	alarm(s);
 }
 
