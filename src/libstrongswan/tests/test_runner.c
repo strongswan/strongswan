@@ -311,6 +311,8 @@ static void print_failures(array_t *failures)
 {
 	failure_t failure;
 
+	backtrace_init();
+
 	while (array_remove(failures, 0, &failure))
 	{
 		fprintf(stderr, "      %sFailure in '%s': %s (",
@@ -326,6 +328,8 @@ static void print_failures(array_t *failures)
 			failure.bt->destroy(failure.bt);
 		}
 	}
+
+	backtrace_deinit();
 }
 
 /**
