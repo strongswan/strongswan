@@ -42,6 +42,16 @@ typedef u_int uid_t;
 typedef u_int gid_t;
 
 /**
+ * Initialize Windows libraries
+ */
+void windows_init();
+
+/**
+ * Deinitialize windows libraries
+ */
+void windows_deinit();
+
+/**
  * Replacement for random(3)
  */
 static inline long random(void)

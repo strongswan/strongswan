@@ -83,6 +83,16 @@
 #include "utils/strerror.h"
 
 /**
+ * Initialize utility functions
+ */
+void utils_init();
+
+/**
+ * Deinitialize utility functions
+ */
+void utils_deinit();
+
+/**
  * Helper function that compares two strings for equality
  */
 static inline bool streq(const char *x, const char *y)

@@ -146,6 +146,7 @@ void library_deinit()
 	arrays_deinit();
 	threads_deinit();
 	backtrace_deinit();
+	utils_deinit();
 
 	free((void*)this->public.ns);
 	free(this);
@@ -259,6 +260,7 @@ bool library_init(char *settings, const char *namespace)
 	);
 	lib = &this->public;
 
+	utils_init();
 	backtrace_init();
 	threads_init();
 	arrays_init();

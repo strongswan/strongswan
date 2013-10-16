@@ -112,6 +112,8 @@ AM_YFLAGS = -v -d
 
 if USE_WINDOWS
   libstrongswan_la_LIBADD += -lws2_32
+  libstrongswan_la_SOURCES += \
+    utils/windows.c
 endif
 
 if USE_DBGHELP
