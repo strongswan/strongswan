@@ -59,6 +59,21 @@ struct private_leak_detective_t {
 	 * public functions
 	 */
 	leak_detective_t public;
+
+	/**
+	 * Registered report() function
+	 */
+	leak_detective_report_cb_t report_cb;
+
+	/**
+	 * Registered report() summary function
+	 */
+	leak_detective_summary_cb_t report_scb;
+
+	/**
+	 * Registered user data for callbacks
+	 */
+	void *report_data;
 };
 
 /**
@@ -599,7 +614,8 @@ static bool equals(backtrace_t *a, backtrace_t *b)
  * Summarize and print backtraces
  */
 static int print_traces(private_leak_detective_t *this,
-						FILE *out, int thresh, int thresh_count,
+						leak_detective_report_cb_t cb, void *user,
+						int thresh, int thresh_count,
 						bool detailed, int *whitelisted, size_t *sum)
 {
 	int leaks = 0;
@@ -652,16 +668,20 @@ static int print_traces(private_leak_detective_t *this,
 		leaks++;
 	}
 	lock->unlock(lock);
+
 	enumerator = entries->create_enumerator(entries);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (out &&
-			(!thresh || entry->bytes >= thresh) &&
-			(!thresh_count || entry->count >= thresh_count))
+		if (cb)
 		{
-			fprintf(out, "%d bytes total, %d allocations, %d bytes average:\n",
-					entry->bytes, entry->count, entry->bytes / entry->count);
-			entry->backtrace->log(entry->backtrace, out, detailed);
+			if (!thresh || entry->bytes >= thresh)
+			{
+				if (!thresh_count || entry->count >= thresh_count)
+				{
+					this->report_cb(this->report_data, entry->count,
+									entry->bytes, entry->backtrace, detailed);
+				}
+			}
 		}
 		entry->backtrace->destroy(entry->backtrace);
 		free(entry);
@@ -681,38 +701,30 @@ METHOD(leak_detective_t, report, void,
 		int leaks, whitelisted = 0;
 		size_t sum = 0;
 
-		leaks = print_traces(this, stderr, 0, 0, detailed, &whitelisted, &sum);
-		switch (leaks)
+		leaks = print_traces(this, this->report_cb, this->report_data,
+							 0, 0, detailed, &whitelisted, &sum);
+		if (this->report_scb)
 		{
-			case 0:
-				fprintf(stderr, "No leaks detected");
-				break;
-			case 1:
-				fprintf(stderr, "One leak detected");
-				break;
-			default:
-				fprintf(stderr, "%d leaks detected, %zu bytes", leaks, sum);
-				break;
+			this->report_scb(this->report_data, leaks, sum, whitelisted);
 		}
-		fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
 	}
-	else
-	{
-		fprintf(stderr, "Leak detective disabled\n");
-	}
+}
+
+METHOD(leak_detective_t, set_report_cb, void,
+	private_leak_detective_t *this, leak_detective_report_cb_t cb,
+	leak_detective_summary_cb_t scb, void *user)
+{
+	this->report_cb = cb;
+	this->report_scb = scb;
+	this->report_data = user;
 }
 
 METHOD(leak_detective_t, leaks, int,
 	private_leak_detective_t *this)
 {
-	if (lib->leak_detective)
-	{
-		int leaks, whitelisted = 0;
+	int whitelisted = 0;
 
-		leaks = print_traces(this, NULL, 0, 0, FALSE, &whitelisted, NULL);
-		return leaks;
-	}
-	return 0;
+	return print_traces(this, NULL, NULL, 0, 0, FALSE, &whitelisted, NULL);
 }
 
 METHOD(leak_detective_t, set_state, bool,
@@ -722,10 +734,11 @@ METHOD(leak_detective_t, set_state, bool,
 }
 
 METHOD(leak_detective_t, usage, void,
-	private_leak_detective_t *this, FILE *out)
+	private_leak_detective_t *this, leak_detective_report_cb_t cb,
+	leak_detective_summary_cb_t scb, void *user)
 {
 	bool detailed;
-	int thresh, thresh_count;
+	int thresh, thresh_count, leaks, whitelisted = 0;
 	size_t sum = 0;
 
 	thresh = lib->settings->get_int(lib->settings,
@@ -735,9 +748,12 @@ METHOD(leak_detective_t, usage, void,
 	detailed = lib->settings->get_bool(lib->settings,
 					"libstrongswan.leak_detective.detailed", TRUE);
 
-	print_traces(this, out, thresh, thresh_count, detailed, NULL, &sum);
-
-	fprintf(out, "Total memory usage: %zu\n", sum);
+	leaks = print_traces(this, cb, user, thresh, thresh_count,
+						 detailed, &whitelisted, &sum);
+	if (scb)
+	{
+		scb(user, leaks, sum, whitelisted);
+	}
 }
 
 /**
@@ -936,8 +952,9 @@ leak_detective_t *leak_detective_create()
 	INIT(this,
 		.public = {
 			.report = _report,
-			.leaks = _leaks,
+			.set_report_cb = _set_report_cb,
 			.usage = _usage,
+			.leaks = _leaks,
 			.set_state = _set_state,
 			.destroy = _destroy,
 		},

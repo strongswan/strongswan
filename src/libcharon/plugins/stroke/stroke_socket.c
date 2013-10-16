@@ -490,6 +490,25 @@ static void stroke_leases(private_stroke_socket_t *this,
 }
 
 /**
+ * Callback function for usage report
+ */
+static void report_usage(FILE *out, int count, size_t bytes,
+						 backtrace_t *bt, bool detailed)
+{
+	fprintf(out, "%d bytes total, %d allocations, %d bytes average:\n",
+			bytes, count, bytes / count);
+	bt->log(bt, out, detailed);
+}
+
+/**
+ * Callback function for memusage summary
+ */
+static void sum_usage(FILE *out, int count, size_t bytes, int whitelisted)
+{
+	fprintf(out, "Total memory usage: %zu\n", bytes);
+}
+
+/**
  * Show memory usage
  */
 static void stroke_memusage(private_stroke_socket_t *this,
@@ -497,7 +516,9 @@ static void stroke_memusage(private_stroke_socket_t *this,
 {
 	if (lib->leak_detective)
 	{
-		lib->leak_detective->usage(lib->leak_detective, out);
+		lib->leak_detective->usage(lib->leak_detective,
+								   (leak_detective_report_cb_t)report_usage,
+								   (leak_detective_summary_cb_t)sum_usage, out);
 	}
 }
 

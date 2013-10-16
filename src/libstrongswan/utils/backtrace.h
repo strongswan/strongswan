@@ -21,11 +21,11 @@
 #ifndef BACKTRACE_H_
 #define BACKTRACE_H_
 
+typedef struct backtrace_t backtrace_t;
+
 #include <stdio.h>
 
 #include <library.h>
-
-typedef struct backtrace_t backtrace_t;
 
 /**
  * A backtrace registers the frames on the stack during creation.
