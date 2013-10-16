@@ -246,6 +246,11 @@ static inline int dlclose(void *handle)
 	return FreeLibrary((HMODULE)handle);
 }
 
+/**
+ * socketpair(2) for SOCK_STREAM, uses TCP on loopback
+ */
+int socketpair(int domain, int type, int protocol, int sv[2]);
+
 /* Windows does not support "ll" format printf length modifiers. Mingw
  * therefore maps these to the Windows specific I64 length modifier. That
  * won't work for us, as we use our own printf backend on Windows, which works
