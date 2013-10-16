@@ -15,6 +15,7 @@ test_runner_SOURCES = \
   suites/test_identification.c \
   suites/test_threading.c \
   suites/test_watcher.c \
+  suites/test_stream.c \
   suites/test_utils.c \
   suites/test_vectors.c \
   suites/test_array.c \

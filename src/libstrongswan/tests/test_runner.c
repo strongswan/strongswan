@@ -106,6 +106,7 @@ static array_t *load_suites()
 	array_insert(suites, -1, identification_suite_create());
 	array_insert(suites, -1, threading_suite_create());
 	array_insert(suites, -1, watcher_suite_create());
+	array_insert(suites, -1, stream_suite_create());
 	array_insert(suites, -1, utils_suite_create());
 	array_insert(suites, -1, host_suite_create());
 	array_insert(suites, -1, vectors_suite_create());
