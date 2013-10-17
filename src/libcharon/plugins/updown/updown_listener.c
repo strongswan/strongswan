@@ -174,6 +174,27 @@ static char *make_vip_vars(private_updown_listener_t *this, ike_sa_t *ike_sa)
 	return strdup(total);
 }
 
+/**
+ * Determine proper values for port env variable
+ */
+static u_int16_t get_port(traffic_selector_t *me,
+						  traffic_selector_t *other, bool local)
+{
+	switch (max(me->get_protocol(me), other->get_protocol(other)))
+	{
+		case IPPROTO_ICMP:
+		case IPPROTO_ICMPV6:
+		{
+			u_int16_t port = me->get_from_port(me);
+
+			port = max(port, other->get_from_port(other));
+			return local ? traffic_selector_icmp_type(port)
+						 : traffic_selector_icmp_code(port);
+		}
+	}
+	return local ? me->get_from_port(me) : other->get_from_port(other);
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_updown_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -341,11 +362,11 @@ METHOD(listener_t, child_updown, bool,
 				 ike_sa->get_unique_id(ike_sa),
 				 me, ike_sa->get_my_id(ike_sa),
 				 my_client, my_client_mask,
-				 my_ts->get_from_port(my_ts),
+				 get_port(my_ts, other_ts, TRUE),
 				 my_ts->get_protocol(my_ts),
 				 other, ike_sa->get_other_id(ike_sa),
 				 other_client, other_client_mask,
-				 other_ts->get_from_port(other_ts),
+				 get_port(my_ts, other_ts, FALSE),
 				 other_ts->get_protocol(other_ts),
 				 xauth,
 				 virtual_ip,

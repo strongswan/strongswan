@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2013 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -17,7 +17,7 @@
 
 /**
  * @defgroup traffic_selector traffic_selector
- * @{ @ingroup config
+ * @{ @ingroup selectors
  */
 
 #ifndef TRAFFIC_SELECTOR_H_
@@ -62,7 +62,12 @@ extern enum_name_t *ts_type_name;
  * Object representing a traffic selector entry.
  *
  * A traffic selector defines an range of addresses
- * and a range of ports. IPv6 is not fully supported yet.
+ * and a range of ports.
+ *
+ * If the protocol is ICMP or ICMPv6 the ICMP type and code are stored in the
+ * port field as follows:  The message type is placed in the most significant
+ * 8 bits and the code in the least significant 8 bits.  Utility functions are
+ * provided to extract the individual values.
  */
 struct traffic_selector_t {
 
@@ -109,7 +114,11 @@ struct traffic_selector_t {
 	 * Get starting port of this ts.
 	 *
 	 * Port is in host order, since the parser converts it.
-	 * Size depends on protocol.
+	 *
+	 * If the protocol is ICMP/ICMPv6 the ICMP type and code are stored in this
+	 * field as follows:  The message type is placed in the most significant
+	 * 8 bits and the code in the least significant 8 bits.  Use the utility
+	 * functions to extract them.
 	 *
 	 * @return			port
 	 */
@@ -119,7 +128,11 @@ struct traffic_selector_t {
 	 * Get ending port of this ts.
 	 *
 	 * Port is in host order, since the parser converts it.
-	 * Size depends on protocol.
+	 *
+	 * If the protocol is ICMP/ICMPv6 the ICMP type and code are stored in this
+	 * field as follows:  The message type is placed in the most significant
+	 * 8 bits and the code in the least significant 8 bits.  Use the utility
+	 * functions to extract them.
 	 *
 	 * @return			port
 	 */
@@ -214,7 +227,34 @@ struct traffic_selector_t {
 };
 
 /**
+ * Extract the ICMP/ICMPv6 message type from a port in host order
+ *
+ * @param port			port number in host order
+ * @return				ICMP/ICMPv6 message type
+ */
+static inline u_int8_t traffic_selector_icmp_type(u_int16_t port)
+{
+	return port >> 8;
+}
+
+/**
+ * Extract the ICMP/ICMPv6 message code from a port in host order
+ *
+ * @param port			port number in host order
+ * @return				ICMP/ICMPv6 message code
+ */
+static inline u_int8_t traffic_selector_icmp_code(u_int16_t port)
+{
+	return port & 0xff;
+}
+
+/**
  * Create a new traffic selector using human readable params.
+ *
+ * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
+ * are less than 256 the value is assumed to be a message type, if they are
+ * greater or equal to 256 they are assumed to be type and code as defined
+ * for traffic_selector_t.
  *
  * @param protocol		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
@@ -236,6 +276,11 @@ traffic_selector_t *traffic_selector_create_from_string(
 /**
  * Create a traffic selector from a CIDR string.
  *
+ * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
+ * are less than 256 the value is assumed to be a message type, if they are
+ * greater or equal to 256 they are assumed to be type and code as defined
+ * for traffic_selector_t.
+ *
  * @param string		CIDR string, such as 10.1.0.0/16
  * @param protocol		protocol for this ts, such as TCP or UDP
  * @param from_port		start of allowed port range
@@ -252,6 +297,11 @@ traffic_selector_t *traffic_selector_create_from_cidr(
  * There exists a mix of network and host order in the params.
  * But the parser gives us this data in this format, so we
  * don't have to convert twice.
+ *
+ * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
+ * are less than 256 the value is assumed to be a message type, if they are
+ * greater or equal to 256 they are assumed to be type and code as defined
+ * for traffic_selector_t.
  *
  * @param protocol		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
@@ -284,8 +334,12 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  * is sufficient. This constructor creates a traffic selector for
  * all protocols, all ports and the address range specified by the
  * subnet.
- * Additionally, a protocol and a port may be specified. Port ranges
- * are not supported via this constructor.
+ * Additionally, a protocol and ports may be specified.
+ *
+ * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
+ * are less than 256 the value is assumed to be a message type, if they are
+ * greater or equal to 256 they are assumed to be type and code as defined
+ * for traffic_selector_t.
  *
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
@@ -307,6 +361,10 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * created at runtime using the external/virtual IP. Using this constructor,
  * a call to set_address() sets this traffic selector to the supplied host.
  *
+ * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
+ * are less than 256 the value is assumed to be a message type, if they are
+ * greater or equal to 256 they are assumed to be type and code as defined
+ * for traffic_selector_t.
  *
  * @param protocol		upper layer protocl to allow
  * @param from_port		start of allowed port range

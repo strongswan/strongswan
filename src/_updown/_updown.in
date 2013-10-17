@@ -78,7 +78,8 @@
 #
 #       PLUTO_MY_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on our side.
+#              restricted on our side.  For ICMP/ICMPv6 this contains the
+#              message type, and PLUTO_PEER_PORT the message code.
 #
 #       PLUTO_PEER
 #              is the IP address of our peer.
@@ -97,7 +98,8 @@
 #
 #       PLUTO_PEER_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on the peer side.
+#              restricted on the peer side.  For ICMP/ICMPv6 this contains the
+#              message code, and PLUTO_MY_PORT the message type.
 #
 #       PLUTO_XAUTH_ID
 #              is an optional user ID employed by the XAUTH protocol
@@ -288,16 +290,41 @@ else
 	IPSEC_POLICY_OUT="$IPSEC_POLICY --dir out"
 fi
 
+# use protocol specific options to set ports
+case "$PLUTO_MY_PROTOCOL" in
+1)	# ICMP
+	ICMP_TYPE_OPTION="--icmp-type"
+	;;
+58)	# ICMPv6
+	ICMP_TYPE_OPTION="--icmpv6-type"
+	;;
+*)
+	;;
+esac
+
 # are there port numbers?
 if [ "$PLUTO_MY_PORT" != 0 ]
 then
-	S_MY_PORT="--sport $PLUTO_MY_PORT"
-	D_MY_PORT="--dport $PLUTO_MY_PORT"
+	if [ -n "$ICMP_TYPE_OPTION" ]
+	then
+		S_MY_PORT="$ICMP_TYPE_OPTION $PLUTO_MY_PORT"
+		D_MY_PORT="$ICMP_TYPE_OPTION $PLUTO_MY_PORT"
+	else
+		S_MY_PORT="--sport $PLUTO_MY_PORT"
+		D_MY_PORT="--dport $PLUTO_MY_PORT"
+	fi
 fi
 if [ "$PLUTO_PEER_PORT" != 0 ]
 then
-	S_PEER_PORT="--sport $PLUTO_PEER_PORT"
-	D_PEER_PORT="--dport $PLUTO_PEER_PORT"
+	if [ -n "$ICMP_TYPE_OPTION" ]
+	then
+		# the syntax is --icmp[v6]-type type[/code], so add it to the existing option
+		S_MY_PORT="$S_MY_PORT/$PLUTO_PEER_PORT"
+		D_MY_PORT="$D_MY_PORT/$PLUTO_PEER_PORT"
+	else
+		S_PEER_PORT="--sport $PLUTO_PEER_PORT"
+		D_PEER_PORT="--dport $PLUTO_PEER_PORT"
+	fi
 fi
 
 # resolve octal escape sequences

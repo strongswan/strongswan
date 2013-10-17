@@ -70,6 +70,9 @@
  * @defgroup jobs jobs
  * @ingroup processing
  *
+ * @defgroup selectors selectors
+ * @ingroup libstrongswan
+ *
  * @defgroup threading threading
  * @ingroup libstrongswan
  *

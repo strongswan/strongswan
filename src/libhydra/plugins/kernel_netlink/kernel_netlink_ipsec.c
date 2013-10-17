@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2013 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -744,6 +744,17 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 	ts2subnet(src, &sel.saddr, &sel.prefixlen_s);
 	ts2ports(dst, &sel.dport, &sel.dport_mask);
 	ts2ports(src, &sel.sport, &sel.sport_mask);
+	if ((sel.proto == IPPROTO_ICMP || sel.proto == IPPROTO_ICMPV6) &&
+		(sel.dport || sel.sport))
+	{
+		/* the ICMP type is encoded in the most significant 8 bits and the ICMP
+		 * code in the least significant 8 bits of the port.  via XFRM we have
+		 * to pass the ICMP type and code in the source and destination port
+		 * fields, respectively.  the port is in network byte order. */
+		u_int16_t port = max(sel.dport, sel.sport);
+		sel.sport = htons(port & 0xff);
+		sel.dport = htons(port >> 8);
+	}
 	sel.ifindex = 0;
 	sel.user = 0;
 
@@ -766,7 +777,7 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 		prefixlen = sel->prefixlen_s;
 		if (sel->sport_mask)
 		{
-			port = htons(sel->sport);
+			port = ntohs(sel->sport);
 		}
 	}
 	else
@@ -775,10 +786,15 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 		prefixlen = sel->prefixlen_d;
 		if (sel->dport_mask)
 		{
-			port = htons(sel->dport);
+			port = ntohs(sel->dport);
 		}
 	}
-
+	if (sel->proto == IPPROTO_ICMP || sel->proto == IPPROTO_ICMPV6)
+	{	/* convert ICMP[v6] message type and code as supplied by the kernel in
+		 * source and destination ports (both in network order) */
+		port = (sel->sport >> 8) | (sel->dport & 0xff00);
+		port = ntohs(port);
+	}
 	/* The Linux 2.6 kernel does not set the selector's family field,
 	 * so as a kludge we additionally test the prefix length.
 	 */

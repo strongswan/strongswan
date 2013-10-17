@@ -858,6 +858,14 @@ Instead of omitting either value
 can be used to the same effect, e.g.
 .BR leftsubnet=fec1::1[udp/%any],10.0.0.0/16[%any/53] .
 
+If the protocol is
+.B icmp
+or
+.B ipv6-icmp
+the port is interpreted as ICMP message type if it is less than 256 or as type
+and code if it is greater or equal to 256, with the type in the most significant
+8 bits and the code in the least significant 8 bits.
+
 The port value can alternatively take the value
 .B %opaque
 for RFC 4301 OPAQUE selectors, or a numerical range in the form
