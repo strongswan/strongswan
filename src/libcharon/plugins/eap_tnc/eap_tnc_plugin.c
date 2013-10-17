@@ -36,6 +36,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(EAP_PEER, EAP_TNC),
 				PLUGIN_DEPENDS(EAP_PEER, EAP_TTLS),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
+				PLUGIN_SDEPEND(CUSTOM, "pt-tls-manager"),
 	};
 	*features = f;
 	return countof(f);

@@ -398,6 +398,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNC_PT_TLS
+  SUBDIRS += plugins/tnc_pt_tls
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_pt_tls/libstrongswan-tnc-pt-tls.la
+endif
+endif
+
 if USE_LIBTNCCS
 if MONOLITHIC
   # otherwise this library is linked to the respective plugins

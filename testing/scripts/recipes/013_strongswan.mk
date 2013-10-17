@@ -30,6 +30,7 @@ CONFIG_OPTS = \
 	--enable-eap-tnc \
 	--enable-tnc-ifmap \
 	--enable-tnc-pdp \
+	--enable-tnc-pt-tls \
 	--enable-tnc-imc \
 	--enable-tnc-imv \
 	--enable-tnccs-11 \

@@ -187,6 +187,7 @@ ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actually verify or even request any credentials.])
+ARG_ENABL_SET([tnc-pt-tls],     [enable PT-TLS protocol support.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
@@ -1076,6 +1077,7 @@ ADD_PLUGIN([xauth-generic],        [c charon cmd])
 ADD_PLUGIN([xauth-eap],            [c charon])
 ADD_PLUGIN([xauth-pam],            [c charon])
 ADD_PLUGIN([xauth-noauth],         [c charon])
+ADD_PLUGIN([tnc-pt-tls],           [c charon])
 ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
 ADD_PLUGIN([tnc-imc],              [t charon])
@@ -1230,6 +1232,7 @@ AM_CONDITIONAL(USE_XAUTH_PAM, test x$xauth_pam = xtrue)
 AM_CONDITIONAL(USE_XAUTH_NOAUTH, test x$xauth_noauth = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
+AM_CONDITIONAL(USE_TNC_PT_TLS, test x$tnc_pt_tls = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
@@ -1287,7 +1290,7 @@ AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$n
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
-AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue)
+AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue -o x$tnc_pt_tls = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
@@ -1446,6 +1449,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/xauth_noauth/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
+	src/libcharon/plugins/tnc_pt_tls/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
 	src/libcharon/plugins/farp/Makefile
