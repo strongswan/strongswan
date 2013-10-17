@@ -99,6 +99,74 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 }
 
 /**
+ * Set errno for a function setting WSA error on failure
+ */
+static int wserr(int retval)
+{
+	if (retval < 0)
+	{
+		switch (WSAGetLastError())
+		{
+			case WSANOTINITIALISED:
+				errno = EBADF;
+				break;
+			case WSAENETDOWN:
+			case WSAENETRESET:
+			case WSAESHUTDOWN:
+				errno = EPIPE;
+				break;
+			case WSAEACCES:
+				errno = EACCES;
+				break;
+			case WSAEINTR:
+				errno = EINTR;
+				break;
+			case WSAEINPROGRESS:
+				errno = EBUSY;
+				break;
+			case WSAEFAULT:
+				errno = EFAULT;
+				break;
+			case WSAENOBUFS:
+				errno = ENOMEM;
+				break;
+			case WSAENOTSOCK:
+				errno = EINVAL;
+				break;
+			case WSAEOPNOTSUPP:
+				errno = ENOSYS;
+				break;
+			case WSAEWOULDBLOCK:
+				errno = EWOULDBLOCK;
+				break;
+			case WSAEMSGSIZE:
+				errno = ENOSPC;
+				break;
+			case WSAEINVAL:
+				errno = EINVAL;
+				break;
+			case WSAENOTCONN:
+			case WSAEHOSTUNREACH:
+			case WSAECONNABORTED:
+			case WSAECONNRESET:
+				errno = EIO;
+				break;
+			case WSAETIMEDOUT:
+				errno = ESRCH;
+				break;
+			default:
+				errno = ENOENT;
+				break;
+		}
+	}
+	else
+	{
+		errno = 0;
+	}
+	return retval;
+}
+
+/**
  * Check and clear the dontwait flag
  */
 static bool check_dontwait(int *flags)
@@ -122,11 +190,11 @@ ssize_t windows_recv(int sockfd, void *buf, size_t len, int flags)
 
 	if (!check_dontwait(&flags))
 	{
-		return recv(sockfd, buf, len, flags);
+		return wserr(recv(sockfd, buf, len, flags));
 	}
-	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	if (wserr(ioctlsocket(sockfd, FIONBIO, &on) == 0))
 	{
-		outlen = recv(sockfd, buf, len, flags);
+		outlen = wserr(recv(sockfd, buf, len, flags));
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
@@ -144,11 +212,11 @@ ssize_t windows_recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 	if (!check_dontwait(&flags))
 	{
-		return recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+		return wserr(recvfrom(sockfd, buf, len, flags, src_addr, addrlen));
 	}
-	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	if (wserr(ioctlsocket(sockfd, FIONBIO, &on)) == 0)
 	{
-		outlen = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+		outlen = wserr(recvfrom(sockfd, buf, len, flags, src_addr, addrlen));
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
@@ -165,11 +233,11 @@ ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags)
 
 	if (!check_dontwait(&flags))
 	{
-		return send(sockfd, buf, len, flags);
+		return wserr(send(sockfd, buf, len, flags));
 	}
-	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	if (wserr(ioctlsocket(sockfd, FIONBIO, &on)) == 0)
 	{
-		outlen = send(sockfd, buf, len, flags);
+		outlen = wserr(send(sockfd, buf, len, flags));
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
@@ -187,11 +255,11 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 
 	if (!check_dontwait(&flags))
 	{
-		return sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+		return wserr(sendto(sockfd, buf, len, flags, dest_addr, addrlen));
 	}
-	if (ioctlsocket(sockfd, FIONBIO, &on) == 0)
+	if (wserr(ioctlsocket(sockfd, FIONBIO, &on)) == 0)
 	{
-		outlen = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+		outlen = wserr(sendto(sockfd, buf, len, flags, dest_addr, addrlen));
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
