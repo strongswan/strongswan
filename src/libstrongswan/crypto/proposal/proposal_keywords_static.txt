@@ -157,5 +157,9 @@ ecp521,           DIFFIE_HELLMAN_GROUP, ECP_521_BIT,               0
 modp1024s160,     DIFFIE_HELLMAN_GROUP, MODP_1024_160,             0
 modp2048s224,     DIFFIE_HELLMAN_GROUP, MODP_2048_224,             0
 modp2048s256,     DIFFIE_HELLMAN_GROUP, MODP_2048_256,             0
+ecp224bp,         DIFFIE_HELLMAN_GROUP, ECP_224_BP,                0
+ecp256bp,         DIFFIE_HELLMAN_GROUP, ECP_256_BP,                0
+ecp384bp,         DIFFIE_HELLMAN_GROUP, ECP_384_BP,                0
+ecp512bp,         DIFFIE_HELLMAN_GROUP, ECP_512_BP,                0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0

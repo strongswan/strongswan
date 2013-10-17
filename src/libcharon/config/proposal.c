@@ -737,6 +737,10 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 			case MODP_2048_256:
 			case ECP_192_BIT:
 			case ECP_224_BIT:
+			case ECP_224_BP:
+			case ECP_256_BP:
+			case ECP_384_BP:
+			case ECP_512_BP:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
