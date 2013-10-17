@@ -232,7 +232,6 @@ METHOD(esp_packet_t, decrypt, status_t,
 		return PARSE_ERROR;
 	}
 	ciphertext = reader->peek(reader);
-	ciphertext.len += icv.len;
 	reader->destroy(reader);
 
 	if (!esp_context->verify_seqno(esp_context, seq))
@@ -245,6 +244,8 @@ METHOD(esp_packet_t, decrypt, status_t,
 	DBG3(DBG_ESP, "ESP decryption:\n  SPI %.8x [seq %u]\n  IV %B\n  "
 		 "encrypted %B\n  ICV %B", spi, seq, &iv, &ciphertext, &icv);
 
+	/* include ICV in ciphertext for decryption/verification */
+	ciphertext.len += icv.len;
 	/* aad = spi + seq */
 	aad = chunk_create(data.ptr, 8);
 
