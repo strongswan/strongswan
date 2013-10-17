@@ -18,7 +18,9 @@
 #include <unistd.h>
 
 static char* services[] = {
+#ifndef WIN32
 	"unix:///tmp/strongswan-test-service.sck",
+#endif
 	"tcp://127.0.0.1:7766",
 	"tcp://[::1]:7766",
 };
@@ -120,7 +122,6 @@ START_TEST(test_async)
 {
 	stream_service_t *service;
 	stream_t *stream;
-
 
 	lib->processor->set_threads(lib->processor, 8);
 
