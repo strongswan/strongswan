@@ -68,6 +68,21 @@ static inline void srandom(unsigned int seed)
 }
 
 /**
+ * strdup(3), the Windows variant can't free(strdup("")) and others
+ */
+#define strdup strdup_windows
+static inline char* strdup_windows(const char *src)
+{
+	size_t len;
+	char *dst;
+
+	len = strlen(src) + 1;
+	dst = malloc(len);
+	memcpy(dst, src, len);
+	return dst;
+}
+
+/**
  * Provided via ws2_32
  */
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
