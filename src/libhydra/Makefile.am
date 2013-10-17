@@ -14,6 +14,10 @@ kernel/kernel_listener.h
 libhydra_la_LIBADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la
 
+if USE_WINDOWS
+  libhydra_la_LIBADD += -lws2_32
+endif
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
