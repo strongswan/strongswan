@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -255,10 +255,46 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_openssl_ec_diffie_hellman_t *this)
 {
-	EC_POINT_clear_free(this->pub_key);
-	EC_KEY_free(this->key);
+	if (this->pub_key)
+	{
+		EC_POINT_clear_free(this->pub_key);
+	}
+	if (this->key)
+	{
+		EC_KEY_free(this->key);
+	}
 	chunk_clear(&this->shared_secret);
 	free(this);
+}
+
+/**
+ * Create an EC_KEY for ECC Brainpool curves as defined by OpenSSL, they are not
+ * defined in releases < 1.0.2, but we don't check the version in case somebody
+ * backorted them.
+ */
+static EC_KEY *ec_key_new_brainpool(diffie_hellman_group_t group)
+{
+	switch (group)
+	{
+#ifdef NID_brainpoolP224r1
+		case ECP_224_BP:
+			return EC_KEY_new_by_curve_name(NID_brainpoolP224r1);
+#endif
+#ifdef NID_brainpoolP256r1
+		case ECP_256_BP:
+			return EC_KEY_new_by_curve_name(NID_brainpoolP256r1);
+#endif
+#ifdef NID_brainpoolP384r1
+		case ECP_384_BP:
+			return EC_KEY_new_by_curve_name(NID_brainpoolP384r1);
+#endif
+#ifdef NID_brainpoolP512r1
+		case ECP_512_BP:
+			return EC_KEY_new_by_curve_name(NID_brainpoolP512r1);
+#endif
+		default:
+			return NULL;
+	}
 }
 
 /*
@@ -298,6 +334,12 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 		case ECP_521_BIT:
 			this->key = EC_KEY_new_by_curve_name(NID_secp521r1);
 			break;
+		case ECP_224_BP:
+		case ECP_256_BP:
+		case ECP_384_BP:
+		case ECP_512_BP:
+			this->key = ec_key_new_brainpool(group);
+			break;
 		default:
 			this->key = NULL;
 			break;
@@ -315,18 +357,17 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 	this->pub_key = EC_POINT_new(this->ec_group);
 	if (!this->pub_key)
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
 	/* generate an EC private (public) key */
 	if (!EC_KEY_generate_key(this->key))
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
 	return &this->public;
 }
 #endif /* OPENSSL_NO_EC */
-
