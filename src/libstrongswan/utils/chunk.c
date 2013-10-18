@@ -24,8 +24,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <pthread.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "chunk.h"
 
@@ -884,9 +884,9 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key)
 }
 
 /**
- * Secret key allocated randomly during first use.
+ * Secret key allocated randomly with chunk_hash_seed().
  */
-static u_char key[16];
+static u_char key[16] = {};
 
 /**
  * Static key used in case predictable hash values are required.
@@ -895,15 +895,9 @@ static u_char static_key[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 							  0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 /**
- * Only allocate the key once
+ * See header
  */
-static pthread_once_t key_allocated = PTHREAD_ONCE_INIT;
-
-/**
- * Allocate a key on first use, we do this manually to avoid dependencies on
- * plugins.
- */
-static void allocate_key()
+void chunk_hash_seed()
 {
 	ssize_t len;
 	size_t done = 0;
@@ -939,7 +933,6 @@ static void allocate_key()
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
-	pthread_once(&key_allocated, allocate_key);
 	/* we could use a mac of the previous hash, but this is faster */
 	return chunk_mac_inc(chunk, key, ((u_int64_t)hash) << 32 | hash);
 }
@@ -949,7 +942,6 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
  */
 u_int32_t chunk_hash(chunk_t chunk)
 {
-	pthread_once(&key_allocated, allocate_key);
 	return chunk_mac(chunk, key);
 }
 

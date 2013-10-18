@@ -340,6 +340,14 @@ bool chunk_increment(chunk_t chunk);
 bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 
 /**
+ * Seed initial key for chunk_hash().
+ *
+ * This call should get invoked once during startup. This is usually done
+ * by calling library_init().
+ */
+void chunk_hash_seed();
+
+/**
  * Computes a 32 bit hash of the given chunk.
  *
  * @note The output of this function is randomized, that is, it will only
