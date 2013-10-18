@@ -44,7 +44,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <net/if.h>
+#ifdef HAVE_LINUX_FIB_RULES_H
 #include <linux/fib_rules.h>
+#endif
 
 #include "kernel_netlink_net.h"
 #include "kernel_netlink_shared.h"
@@ -2098,7 +2100,6 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	struct rtmsg *msg;
 	chunk_t chunk;
 	char *fwmark;
-	mark_t mark;
 
 	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
@@ -2124,6 +2125,9 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 					"%s.plugins.kernel-netlink.fwmark", NULL, hydra->daemon);
 	if (fwmark)
 	{
+#ifdef HAVE_LINUX_FIB_RULES_H
+		mark_t mark;
+
 		if (fwmark[0] == '!')
 		{
 			msg->rtm_flags |= FIB_RULE_INVERT;
@@ -2136,6 +2140,9 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 			chunk = chunk_from_thing(mark.mask);
 			netlink_add_attribute(hdr, FRA_FWMASK, chunk, sizeof(request));
 		}
+#else
+		DBG1(DBG_KNL, "setting firewall mark on routing rule is not supported");
+#endif
 	}
 	return this->socket->send_ack(this->socket, hdr);
 }

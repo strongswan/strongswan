@@ -490,7 +490,7 @@ AC_CHECK_FUNC(
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
 
-AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h)
+AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h linux/fib_rules.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 AC_CHECK_HEADERS(netinet/ip6.h, [], [],
 [
