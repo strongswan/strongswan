@@ -15,6 +15,13 @@
  */
 
 #define _GNU_SOURCE /* for memrchr */
+#ifdef WIN32
+/* for GetTickCount64, Windows 7 */
+# define _WIN32_WINNT 0x0601
+#endif
+
+#include "utils.h"
+
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
@@ -441,6 +448,19 @@ void closefrom(int lowfd)
  */
 time_t time_monotonic(timeval_t *tv)
 {
+#ifdef WIN32
+	ULONGLONG ms;
+	time_t s;
+
+	ms = GetTickCount64();
+	s = ms / 1000;
+	if (tv)
+	{
+		tv->tv_sec = s;
+		tv->tv_usec = (ms - (s * 1000)) * 1000;
+	}
+	return s;
+#else /* !WIN32 */
 #if defined(HAVE_CLOCK_GETTIME) && \
 	(defined(HAVE_CONDATTR_CLOCK_MONOTONIC) || \
 	 defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC))
@@ -472,6 +492,7 @@ time_t time_monotonic(timeval_t *tv)
 		return -1;
 	}
 	return tv->tv_sec;
+#endif /* !WIN32 */
 }
 
 /**
