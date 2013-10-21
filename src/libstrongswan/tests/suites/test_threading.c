@@ -22,6 +22,7 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
+#include <threading/thread_value.h>
 
 /*******************************************************************************
  * recursive mutex test
@@ -545,6 +546,65 @@ START_TEST(test_cleanup_pop)
 }
 END_TEST
 
+static thread_value_t *tls[10];
+
+static void *tls_run(void *data)
+{
+	uintptr_t value = (uintptr_t)data;
+	int i, j;
+
+	for (i = 0; i < countof(tls); i++)
+	{
+		ck_assert(tls[i]->get(tls[i]) == NULL);
+	}
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i]->set(tls[i], (void*)(value * i));
+	}
+	for (j = 0; j < 1000; j++)
+	{
+		for (i = 0; i < countof(tls); i++)
+		{
+			tls[i]->set(tls[i], (void*)(value * i));
+			ck_assert(tls[i]->get(tls[i]) == (void*)(value * i));
+		}
+		sched_yield();
+	}
+	for (i = 0; i < countof(tls); i++)
+	{
+		ck_assert(tls[i]->get(tls[i]) == (void*)(value * i));
+	}
+	return (void*)(value + 1);
+}
+
+START_TEST(test_tls)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i] = thread_value_create(NULL);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(tls_run, (void*)(uintptr_t)i);
+	}
+
+	ck_assert_int_eq((uintptr_t)tls_run((void*)(uintptr_t)(THREADS + 1)),
+					 THREADS + 2);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		ck_assert_int_eq((uintptr_t)threads[i]->join(threads[i]), i + 1);
+	}
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i]->destroy(tls[i]);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -577,6 +637,10 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_cleanup_exit);
 	tcase_add_test(tc, test_cleanup_cancel);
 	tcase_add_test(tc, test_cleanup_pop);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread local storage");
+	tcase_add_test(tc, test_tls);
 	suite_add_tcase(s, tc);
 
 	return s;
