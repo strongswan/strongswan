@@ -132,6 +132,18 @@ INSERT INTO products (			/* 22 */
  'Android 4.2.1'
 );
 
+INSERT INTO products (			/* 23 */
+  name
+) VALUES (
+ 'Ubuntu 13.10 i686'
+);
+
+INSERT INTO products (			/* 24 */
+  name
+) VALUES (
+ 'Ubuntu 13.10 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -615,6 +627,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  6, 23
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   7, 8
 );
 
@@ -652,6 +670,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   7, 20
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  7, 24
 );
 
 INSERT INTO groups_product_defaults (
