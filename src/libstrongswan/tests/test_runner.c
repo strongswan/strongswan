@@ -18,6 +18,7 @@
 #include "test_runner.h"
 
 #include <library.h>
+#include <threading/thread.h>
 #include <plugins/plugin_feature.h>
 #include <collections/array.h>
 #include <utils/test.h>
@@ -372,6 +373,7 @@ static void print_failures(array_t *failures)
 {
 	failure_t failure;
 
+	threads_init();
 	backtrace_init();
 
 	while (array_remove(failures, 0, &failure))
@@ -391,6 +393,7 @@ static void print_failures(array_t *failures)
 	}
 
 	backtrace_deinit();
+	threads_deinit();
 }
 
 /**

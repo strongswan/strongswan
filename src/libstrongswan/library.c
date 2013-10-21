@@ -141,12 +141,13 @@ void library_deinit()
 	{
 		lib->leak_detective->report(lib->leak_detective, detailed);
 		lib->leak_detective->destroy(lib->leak_detective);
+		lib->leak_detective = NULL;
 	}
 
-	arrays_deinit();
-	threads_deinit();
 	backtrace_deinit();
+	arrays_deinit();
 	utils_deinit();
+	threads_deinit();
 
 	free((void*)this->public.ns);
 	free(this);
@@ -269,10 +270,10 @@ bool library_init(char *settings, const char *namespace)
 	);
 	lib = &this->public;
 
-	utils_init();
-	backtrace_init();
 	threads_init();
+	utils_init();
 	arrays_init();
+	backtrace_init();
 
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();
