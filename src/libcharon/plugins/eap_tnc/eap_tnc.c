@@ -298,6 +298,12 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type,
 						is_server, server, peer, TNC_IFT_EAP_1_1,
 						is_server ? enforce_recommendation : NULL);
+	if (!tnccs)
+	{
+		DBG1(DBG_TNC, "TNCCS protocol '%s' not enabled", protocol);
+		free(this);
+		return NULL;
+	}
 	this->tnccs = tnccs->get_ref(tnccs);
 	this->tls_eap = tls_eap_create(EAP_TNC, &tnccs->tls,
 								   EAP_TNC_MAX_MESSAGE_LEN,
