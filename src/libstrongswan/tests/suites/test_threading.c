@@ -166,6 +166,29 @@ START_TEST(test_mutex)
 }
 END_TEST
 
+static void *join_run(void *data)
+{
+	/* force some context switches */
+	sched_yield();
+	return (void*)((uintptr_t)data + THREADS);
+}
+
+START_TEST(test_join)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(join_run, (void*)(uintptr_t)i);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		ck_assert_int_eq((uintptr_t)threads[i]->join(threads[i]), i + THREADS);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -175,6 +198,10 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("recursive mutex");
 	tcase_add_test(tc, test_mutex);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread joining");
+	tcase_add_test(tc, test_join);
 	suite_add_tcase(s, tc);
 
 	return s;
