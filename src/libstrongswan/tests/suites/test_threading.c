@@ -312,6 +312,55 @@ START_TEST(test_cancel)
 }
 END_TEST
 
+static void *cancel_onoff_run(void *data)
+{
+	bool *cancellable = (bool*)data;
+
+	thread_cancelability(FALSE);
+	*cancellable = FALSE;
+
+	/* we should not get cancelled here */
+	usleep(50000);
+
+	*cancellable = TRUE;
+	thread_cancelability(TRUE);
+
+	/* but here */
+	while (TRUE)
+	{
+		sleep(10);
+	}
+	return NULL;
+}
+
+START_TEST(test_cancel_onoff)
+{
+	thread_t *threads[THREADS];
+	bool cancellable[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		cancellable[i] = TRUE;
+		threads[i] = thread_create(cancel_onoff_run, &cancellable[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		/* wait until thread has cleared its cancellability */
+		while (cancellable[i])
+		{
+			sched_yield();
+		}
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert(cancellable[i]);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -335,6 +384,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("thread cancellation");
 	tcase_add_test(tc, test_cancel);
+	tcase_add_test(tc, test_cancel_onoff);
 	suite_add_tcase(s, tc);
 
 	return s;
