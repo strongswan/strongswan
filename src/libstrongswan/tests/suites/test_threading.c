@@ -221,6 +221,48 @@ START_TEST(test_condvar)
 }
 END_TEST
 
+static void *condvar_run_broad(void *data)
+{
+	mutex->lock(mutex);
+	while (sigcount < 0)
+	{
+		condvar->wait(condvar, mutex);
+	}
+	mutex->unlock(mutex);
+	return NULL;
+}
+
+START_TEST(test_condvar_broad)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(condvar_run_broad, NULL);
+	}
+
+	sched_yield();
+
+	mutex->lock(mutex);
+	sigcount = 1;
+	condvar->broadcast(condvar);
+	mutex->unlock(mutex);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	mutex->destroy(mutex);
+	condvar->destroy(condvar);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -720,6 +762,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("condvar");
 	tcase_add_test(tc, test_condvar);
+	tcase_add_test(tc, test_condvar_broad);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
