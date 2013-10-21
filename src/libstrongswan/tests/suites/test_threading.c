@@ -263,6 +263,45 @@ START_TEST(test_condvar_broad)
 }
 END_TEST
 
+START_TEST(test_condvar_timed)
+{
+	thread_t *thread;
+	timeval_t start, end, diff = { .tv_usec = 50000 };
+
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	sigcount = 0;
+
+	mutex->lock(mutex);
+	while (TRUE)
+	{
+		time_monotonic(&start);
+		if (condvar->timed_wait(condvar, mutex, diff.tv_usec / 1000))
+		{
+			break;
+		}
+	}
+	time_monotonic(&end);
+	mutex->unlock(mutex);
+	timersub(&end, &start, &end);
+	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
+					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+
+	thread = thread_create(condvar_run, NULL);
+
+	mutex->lock(mutex);
+	while (sigcount == 0)
+	{
+		ck_assert(!condvar->timed_wait(condvar, mutex, 1000));
+	}
+	mutex->unlock(mutex);
+
+	thread->join(thread);
+	mutex->destroy(mutex);
+	condvar->destroy(condvar);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -763,6 +802,7 @@ Suite *threading_suite_create()
 	tc = tcase_create("condvar");
 	tcase_add_test(tc, test_condvar);
 	tcase_add_test(tc, test_condvar_broad);
+	tcase_add_test(tc, test_condvar_timed);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
