@@ -14,12 +14,13 @@
  * for more details.
  */
 
-#include <sched.h>
-#include <pthread.h>
-
 #include "test_suite.h"
 
+#include <sched.h>
+
+#include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/condvar.h>
 
 /*******************************************************************************
  * recursive mutex test
@@ -27,31 +28,100 @@
 
 #define THREADS 20
 
-static mutex_t *mutex;
+/**
+ * Thread barrier data
+ */
+typedef struct {
+	mutex_t *mutex;
+	condvar_t *cond;
+	int count;
+	int current;
+	bool active;
+} barrier_t;
 
-static pthread_barrier_t mutex_barrier;
+/**
+ * Create a thread barrier for count threads
+ */
+static barrier_t* barrier_create(int count)
+{
+	barrier_t *this;
 
-static int mutex_locked = 0;
+	INIT(this,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.cond = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.count = count,
+	);
+
+	return this;
+}
+
+/**
+ * Destroy a thread barrier
+ */
+static void barrier_destroy(barrier_t *this)
+{
+	this->mutex->destroy(this->mutex);
+	this->cond->destroy(this->cond);
+	free(this);
+}
+
+/**
+ * Wait to have configured number of threads in barrier
+ */
+static bool barrier_wait(barrier_t *this)
+{
+	bool winner = FALSE;
+
+	this->mutex->lock(this->mutex);
+	if (!this->active)
+	{	/* first, reset */
+		this->active = TRUE;
+		this->current = 0;
+	}
+
+	this->current++;
+	while (this->current < this->count)
+	{
+		this->cond->wait(this->cond, this->mutex);
+	}
+	if (this->active)
+	{	/* first, win */
+		winner = TRUE;
+		this->active = FALSE;
+	}
+	this->mutex->unlock(this->mutex);
+	this->cond->broadcast(this->cond);
+	sched_yield();
+
+	return winner;
+}
+
+/**
+ * Barrier for some tests
+ */
+static barrier_t *barrier;
 
 static void *mutex_run(void *data)
 {
+	mutex_t *mutex = (mutex_t*)data;
+	static int locked = 0;
 	int i;
 
 	/* wait for all threads before getting in action */
-	pthread_barrier_wait(&mutex_barrier);
+	barrier_wait(barrier);
 
 	for (i = 0; i < 100; i++)
 	{
 		mutex->lock(mutex);
 		mutex->lock(mutex);
 		mutex->lock(mutex);
-		mutex_locked++;
+		locked++;
 		sched_yield();
-		if (mutex_locked > 1)
+		if (locked > 1)
 		{
 			fail("two threads locked the mutex concurrently");
 		}
-		mutex_locked--;
+		locked--;
 		mutex->unlock(mutex);
 		mutex->unlock(mutex);
 		mutex->unlock(mutex);
@@ -61,9 +131,11 @@ static void *mutex_run(void *data)
 
 START_TEST(test_mutex)
 {
-	pthread_t threads[THREADS];
+	thread_t *threads[THREADS];
+	mutex_t *mutex;
 	int i;
 
+	barrier = barrier_create(THREADS);
 	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 
 	for (i = 0; i < 10; i++)
@@ -80,18 +152,17 @@ START_TEST(test_mutex)
 		mutex->unlock(mutex);
 	}
 
-	pthread_barrier_init(&mutex_barrier, NULL, THREADS);
 	for (i = 0; i < THREADS; i++)
 	{
-		pthread_create(&threads[i], NULL, mutex_run, NULL);
+		threads[i] = thread_create(mutex_run, mutex);
 	}
 	for (i = 0; i < THREADS; i++)
 	{
-		pthread_join(threads[i], NULL);
+		threads[i]->join(threads[i]);
 	}
-	pthread_barrier_destroy(&mutex_barrier);
 
 	mutex->destroy(mutex);
+	barrier_destroy(barrier);
 }
 END_TEST
 
