@@ -361,6 +361,38 @@ START_TEST(test_cancel_onoff)
 }
 END_TEST
 
+static void *cancel_point_run(void *data)
+{
+	thread_cancelability(FALSE);
+	while (TRUE)
+	{
+		/* implicitly enables cancellability */
+		thread_cancellation_point();
+	}
+	return NULL;
+}
+
+START_TEST(test_cancel_point)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(cancel_point_run, NULL);
+	}
+	sched_yield();
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -385,6 +417,7 @@ Suite *threading_suite_create()
 	tc = tcase_create("thread cancellation");
 	tcase_add_test(tc, test_cancel);
 	tcase_add_test(tc, test_cancel_onoff);
+	tcase_add_test(tc, test_cancel_point);
 	suite_add_tcase(s, tc);
 
 	return s;
