@@ -103,10 +103,24 @@ static bool barrier_wait(barrier_t *this)
  */
 static barrier_t *barrier;
 
+/**
+ * A mutex for tests requiring one
+ */
+static mutex_t *mutex;
+
+/**
+ * A condvar for tests requiring one
+ */
+static condvar_t *condvar;
+
+/**
+ * A counter for signaling
+ */
+static int sigcount;
+
 static void *mutex_run(void *data)
 {
-	mutex_t *mutex = (mutex_t*)data;
-	static int locked = 0;
+	int locked = 0;
 	int i;
 
 	/* wait for all threads before getting in action */
@@ -134,7 +148,6 @@ static void *mutex_run(void *data)
 START_TEST(test_mutex)
 {
 	thread_t *threads[THREADS];
-	mutex_t *mutex;
 	int i;
 
 	barrier = barrier_create(THREADS);
@@ -156,7 +169,7 @@ START_TEST(test_mutex)
 
 	for (i = 0; i < THREADS; i++)
 	{
-		threads[i] = thread_create(mutex_run, mutex);
+		threads[i] = thread_create(mutex_run, NULL);
 	}
 	for (i = 0; i < THREADS; i++)
 	{
@@ -165,6 +178,46 @@ START_TEST(test_mutex)
 
 	mutex->destroy(mutex);
 	barrier_destroy(barrier);
+}
+END_TEST
+
+static void *condvar_run(void *data)
+{
+	mutex->lock(mutex);
+	sigcount++;
+	condvar->signal(condvar);
+	mutex->unlock(mutex);
+	return NULL;
+}
+
+START_TEST(test_condvar)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(condvar_run, NULL);
+	}
+
+	mutex->lock(mutex);
+	while (sigcount < THREADS)
+	{
+		condvar->wait(condvar, mutex);
+	}
+	mutex->unlock(mutex);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	mutex->destroy(mutex);
+	condvar->destroy(condvar);
 }
 END_TEST
 
@@ -663,6 +716,10 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("recursive mutex");
 	tcase_add_test(tc, test_mutex);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("condvar");
+	tcase_add_test(tc, test_condvar);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
