@@ -393,6 +393,126 @@ START_TEST(test_cancel_point)
 }
 END_TEST
 
+static void cleanup1(void *data)
+{
+	uintptr_t *value = (uintptr_t*)data;
+
+	ck_assert_int_eq(*value, 1);
+	(*value)++;
+}
+
+static void cleanup2(void *data)
+{
+	uintptr_t *value = (uintptr_t*)data;
+
+	ck_assert_int_eq(*value, 2);
+	(*value)++;
+}
+
+static void cleanup3(void *data)
+{
+	uintptr_t *value = (uintptr_t*)data;
+
+	ck_assert_int_eq(*value, 3);
+	(*value)++;
+}
+
+static void *cleanup_run(void *data)
+{
+	thread_cleanup_push(cleanup3, data);
+	thread_cleanup_push(cleanup2, data);
+	thread_cleanup_push(cleanup1, data);
+	return NULL;
+}
+
+START_TEST(test_cleanup)
+{
+	thread_t *threads[THREADS];
+	uintptr_t values[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		values[i] = 1;
+		threads[i] = thread_create(cleanup_run, &values[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert_int_eq(values[i], 4);
+	}
+}
+END_TEST
+
+static void *cleanup_exit_run(void *data)
+{
+	thread_cleanup_push(cleanup3, data);
+	thread_cleanup_push(cleanup2, data);
+	thread_cleanup_push(cleanup1, data);
+	thread_exit(NULL);
+	ck_assert(FALSE);
+	return NULL;
+}
+
+START_TEST(test_cleanup_exit)
+{
+	thread_t *threads[THREADS];
+	uintptr_t values[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		values[i] = 1;
+		threads[i] = thread_create(cleanup_exit_run, &values[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert_int_eq(values[i], 4);
+	}
+}
+END_TEST
+
+static void *cleanup_cancel_run(void *data)
+{
+	thread_cancelability(FALSE);
+
+	thread_cleanup_push(cleanup3, data);
+	thread_cleanup_push(cleanup2, data);
+	thread_cleanup_push(cleanup1, data);
+
+	thread_cancelability(TRUE);
+
+	while (TRUE)
+	{
+		sleep(1);
+	}
+	return NULL;
+}
+
+START_TEST(test_cleanup_cancel)
+{
+	thread_t *threads[THREADS];
+	uintptr_t values[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		values[i] = 1;
+		threads[i] = thread_create(cleanup_cancel_run, &values[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert_int_eq(values[i], 4);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -418,6 +538,12 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_cancel);
 	tcase_add_test(tc, test_cancel_onoff);
 	tcase_add_test(tc, test_cancel_point);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread cleanup");
+	tcase_add_test(tc, test_cleanup);
+	tcase_add_test(tc, test_cleanup_exit);
+	tcase_add_test(tc, test_cleanup_cancel);
 	suite_add_tcase(s, tc);
 
 	return s;
