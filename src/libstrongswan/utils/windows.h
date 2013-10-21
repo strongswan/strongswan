@@ -77,6 +77,15 @@ static inline int sched_yield(void)
 }
 
 /**
+ * Replacement of sleep(3), cancellable by thread_cancel()
+ */
+static inline int sleep(unsigned int seconds)
+{
+	SleepEx(seconds * 1000, TRUE);
+	return 0;
+}
+
+/**
  * strdup(3), the Windows variant can't free(strdup("")) and others
  */
 #define strdup strdup_windows
