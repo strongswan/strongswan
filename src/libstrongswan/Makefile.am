@@ -33,14 +33,18 @@ processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
 selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
 settings/settings_parser.y settings/settings_lexer.l \
-threading/thread.c threading/thread_value.c threading/mutex.c \
-threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/parser_helper.c utils/test.c utils/utils/strerror.c
 
 if !USE_WINDOWS
   libstrongswan_la_SOURCES += \
+    threading/thread.c \
+    threading/thread_value.c \
+    threading/mutex.c \
+    threading/rwlock.c \
+    threading/spinlock.c \
+    threading/semaphore.c \
     networking/streams/stream_unix.c \
     networking/streams/stream_service_unix.c
 endif
@@ -89,7 +93,8 @@ resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h processing/watcher.h selectors/traffic_selector.h \
-settings/settings.h threading/thread.h threading/thread_value.h \
+settings/settings.h threading/thread_value.h \
+threading/thread.h threading/windows/thread.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
@@ -102,7 +107,7 @@ endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
+libstrongswan_la_LIBADD = $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
@@ -122,7 +127,15 @@ AM_YFLAGS = -v -d
 if USE_WINDOWS
   libstrongswan_la_LIBADD += -lws2_32
   libstrongswan_la_SOURCES += \
+    threading/windows/thread.c \
+    threading/windows/thread_value.c \
+    threading/windows/mutex.c \
+    threading/windows/rwlock.c \
+    threading/windows/spinlock.c \
+    threading/windows/semaphore.c \
     utils/windows.c
+else
+  libstrongswan_la_LIBADD += $(PTHREADLIB)
 endif
 
 if USE_DBGHELP
