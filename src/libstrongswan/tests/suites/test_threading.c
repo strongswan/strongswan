@@ -17,6 +17,7 @@
 #include "test_suite.h"
 
 #include <sched.h>
+#include <unistd.h>
 
 #include <threading/thread.h>
 #include <threading/mutex.h>
@@ -281,6 +282,36 @@ START_TEST(test_detach_exit)
 }
 END_TEST
 
+static void *cancel_run(void *data)
+{
+	/* default cancellability should be TRUE, so don't change it */
+	while (TRUE)
+	{
+		sleep(10);
+	}
+	return NULL;
+}
+
+START_TEST(test_cancel)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(cancel_run, NULL);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -300,6 +331,10 @@ Suite *threading_suite_create()
 	tc = tcase_create("thread detaching");
 	tcase_add_test(tc, test_detach);
 	tcase_add_test(tc, test_detach_exit);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread cancellation");
+	tcase_add_test(tc, test_cancel);
 	suite_add_tcase(s, tc);
 
 	return s;
