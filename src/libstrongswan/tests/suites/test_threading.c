@@ -189,6 +189,38 @@ START_TEST(test_join)
 }
 END_TEST
 
+static void *detach_run(void *data)
+{
+	refcount_t *running = (refcount_t*)data;
+
+	ignore_result(ref_put(running));
+	return NULL;
+}
+
+START_TEST(test_detach)
+{
+	thread_t *threads[THREADS];
+	int i;
+	refcount_t running = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		ref_get(&running);
+		threads[i] = thread_create(detach_run, &running);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->detach(threads[i]);
+	}
+	while (running > 0)
+	{
+		sched_yield();
+	}
+	/* no checks done here, but we check that thread state gets cleaned
+	 * up with leak detective. */
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -202,6 +234,10 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("thread joining");
 	tcase_add_test(tc, test_join);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread detaching");
+	tcase_add_test(tc, test_detach);
 	suite_add_tcase(s, tc);
 
 	return s;
