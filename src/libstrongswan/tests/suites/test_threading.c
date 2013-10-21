@@ -605,6 +605,55 @@ START_TEST(test_tls)
 }
 END_TEST
 
+static void tls_cleanup(void *data)
+{
+	uintptr_t *value = (uintptr_t*)data;
+
+	(*value)--;
+}
+
+static void *tls_cleanup_run(void *data)
+{
+	int i;
+
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i]->set(tls[i], data);
+	}
+	return NULL;
+}
+
+START_TEST(test_tls_cleanup)
+{
+	thread_t *threads[THREADS];
+	uintptr_t values[THREADS], main_value = countof(tls);
+	int i;
+
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i] = thread_value_create(tls_cleanup);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		values[i] = countof(tls);
+		threads[i] = thread_create(tls_cleanup_run, &values[i]);
+	}
+
+	tls_cleanup_run(&main_value);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert_int_eq(values[i], 0);
+	}
+	for (i = 0; i < countof(tls); i++)
+	{
+		tls[i]->destroy(tls[i]);
+	}
+	ck_assert_int_eq(main_value, 0);
+}
+END_TEST
+
 Suite *threading_suite_create()
 {
 	Suite *s;
@@ -641,6 +690,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("thread local storage");
 	tcase_add_test(tc, test_tls);
+	tcase_add_test(tc, test_tls_cleanup);
 	suite_add_tcase(s, tc);
 
 	return s;
