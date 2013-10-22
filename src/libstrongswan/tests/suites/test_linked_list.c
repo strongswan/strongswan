@@ -307,7 +307,7 @@ struct clone_t {
 	void *(*clone)(clone_t *item);
 };
 
-static void *clone(clone_t *item)
+static void *clonefn(clone_t *item)
 {
 	return item->val;
 }
@@ -330,11 +330,11 @@ START_TEST(test_clone_offset)
 {
 	linked_list_t *other;
 	clone_t items[] = {
-		{ .val = (void*)1, .clone = clone, },
-		{ .val = (void*)2, .clone = clone, },
-		{ .val = (void*)3, .clone = clone, },
-		{ .val = (void*)4, .clone = clone, },
-		{ .val = (void*)5, .clone = clone, },
+		{ .val = (void*)1, .clone = clonefn, },
+		{ .val = (void*)2, .clone = clonefn, },
+		{ .val = (void*)3, .clone = clonefn, },
+		{ .val = (void*)4, .clone = clonefn, },
+		{ .val = (void*)5, .clone = clonefn, },
 	};
 	int i;
 
