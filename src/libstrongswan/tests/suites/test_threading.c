@@ -676,6 +676,62 @@ START_TEST(test_rwlock_condvar_timed_abs)
 }
 END_TEST
 
+static void *rwlock_condvar_cancel_run(void *data)
+{
+	thread_cancelability(FALSE);
+
+	rwlock->write_lock(rwlock);
+
+	sigcount++;
+	rwcond->broadcast(rwcond);
+
+	thread_cleanup_push((void*)rwlock->unlock, rwlock);
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		rwcond->wait(rwcond, rwlock);
+	}
+	thread_cleanup_pop(TRUE);
+
+	return NULL;
+}
+
+START_TEST(test_rwlock_condvar_cancel)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	rwcond = rwlock_condvar_create();
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(rwlock_condvar_cancel_run, NULL);
+	}
+
+	/* wait for all threads */
+	rwlock->write_lock(rwlock);
+	while (sigcount < THREADS)
+	{
+		rwcond->wait(rwcond, rwlock);
+	}
+	rwlock->unlock(rwlock);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	rwlock->destroy(rwlock);
+	rwcond->destroy(rwcond);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1191,6 +1247,7 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_rwlock_condvar_broad);
 	tcase_add_test(tc, test_rwlock_condvar_timed);
 	tcase_add_test(tc, test_rwlock_condvar_timed_abs);
+	tcase_add_test(tc, test_rwlock_condvar_cancel);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
