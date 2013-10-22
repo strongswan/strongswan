@@ -144,6 +144,30 @@ INSERT INTO products (			/* 24 */
  'Ubuntu 13.10 x86_64'
 );
 
+INSERT INTO products (			/* 25 */
+  name
+) VALUES (
+ 'Debian 7.1 i686'
+);
+
+INSERT INTO products (			/* 26 */
+  name
+) VALUES (
+ 'Debian 7.1 x86_64'
+);
+
+INSERT INTO products (			/* 27 */
+  name
+) VALUES (
+ 'Debian 7.2 i686'
+);
+
+INSERT INTO products (			/* 28 */
+  name
+) VALUES (
+ 'Debian 7.2 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -299,109 +323,109 @@ INSERT INTO algorithms (
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 2, 32768, X'6c6f8e12f6cbfba612e780374c4cdcd40f20968a' 
+  28, 2, 32768, X'6c6f8e12f6cbfba612e780374c4cdcd40f20968a'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 2, 16384, X'dbcecd19d59310183cf5c31ddee29e8d7bec64d3f9583aad074330a1b3024b07' 
+  28, 2, 16384, X'dbcecd19d59310183cf5c31ddee29e8d7bec64d3f9583aad074330a1b3024b07'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 2, 8192, X'197c5385e5853003188833d4f991136c1b0875fa416a60b1159f64e57e457b3184762c884a802a2bda194c058e3bd953' 
+  28, 2, 8192, X'197c5385e5853003188833d4f991136c1b0875fa416a60b1159f64e57e457b3184762c884a802a2bda194c058e3bd953'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 4, 32768, X'3ad204f99eb7262efab79cfca02628870ea76361' 
+  28, 4, 32768, X'3ad204f99eb7262efab79cfca02628870ea76361'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 4, 16384, X'3a2170aad92fdd58b55e0e199822bc873cf587b2d1eb1ed7ed8dcea97ae86376' 
+  28, 4, 16384, X'3a2170aad92fdd58b55e0e199822bc873cf587b2d1eb1ed7ed8dcea97ae86376'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 4, 8192, X'f778076baa876b5e4b502494a3db081fb09dd870dee6991d54104a74b7e009c58fe261db5ffd13c11e08ef0cefcfa59f' 
+  28, 4, 8192, X'f778076baa876b5e4b502494a3db081fb09dd870dee6991d54104a74b7e009c58fe261db5ffd13c11e08ef0cefcfa59f'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 5, 32768, X'ecd9c7076cc0572724c7a67db7f19c2831e0445f' 
+  28, 5, 32768, X'ecd9c7076cc0572724c7a67db7f19c2831e0445f'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 5, 16384, X'28f3ea5afd34444c8232ea75003131e294a0c9b847de300e4b205d38c1a41305' 
+  28, 5, 16384, X'28f3ea5afd34444c8232ea75003131e294a0c9b847de300e4b205d38c1a41305'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  4, 5, 8192, X'51921a8b9322f2d3f06d55002ff40a79da67e70cb563b2a50977642d603dfac2ccbb68b3d32a8bb350769b75d6254208' 
+  28, 5, 8192, X'51921a8b9322f2d3f06d55002ff40a79da67e70cb563b2a50977642d603dfac2ccbb68b3d32a8bb350769b75d6254208'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 1, 32768, X'd9309b9e45928239d7a7b18711e690792632cce4' 
+  18, 1, 32768, X'd9309b9e45928239d7a7b18711e690792632cce4'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 1, 16384, X'dbfa1856d278d8707c4989b30dd065b4bcd309908f0f2e6e66ff2aa83ff93f59' 
+  18, 1, 16384, X'dbfa1856d278d8707c4989b30dd065b4bcd309908f0f2e6e66ff2aa83ff93f59'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 1, 8192, X'fb8d027f03bb5ebb47741ed247eb9e174127b714d20229885feb37e0979aeb14a1b74020cded891d680441093625729c' 
+  18, 1, 8192, X'fb8d027f03bb5ebb47741ed247eb9e174127b714d20229885feb37e0979aeb14a1b74020cded891d680441093625729c'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 3, 32768, X'3715f2f94016a91fab5bbc503f0f1d43c5a9fc2b' 
+  18, 3, 32768, X'3715f2f94016a91fab5bbc503f0f1d43c5a9fc2b'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 3, 16384, X'c03a5296b5decb87b01517f9927a8b2349dfb29ff9f5ba084f994c155ca5d4be' 
+  18, 3, 16384, X'c03a5296b5decb87b01517f9927a8b2349dfb29ff9f5ba084f994c155ca5d4be'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 3, 8192, X'b8bc345f56115235cc6091f61e312ce43ea54a5b99e7295002ae7b415fd35e06ec4c731ab70ad00d784bb53a318a2fa0' 
+  18, 3, 8192, X'b8bc345f56115235cc6091f61e312ce43ea54a5b99e7295002ae7b415fd35e06ec4c731ab70ad00d784bb53a318a2fa0'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 5, 32768, X'e59602f4edf24c1b36199588886d06665d4adcd7' 
+  18, 5, 32768, X'e59602f4edf24c1b36199588886d06665d4adcd7'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 5, 16384, X'090e1b77bda7fe665e498c6b5e09dbb7ddc5cfe57f213de48f4fb6736484f500' 
+  18, 5, 16384, X'090e1b77bda7fe665e498c6b5e09dbb7ddc5cfe57f213de48f4fb6736484f500'
 );
 
 INSERT INTO file_hashes (
   product, file, algo, hash
 ) VALUES (
-  18, 5, 8192, X'7cbdb4612a13443dba910ecdef5161f2213e52c9b4a2eef14bcee5d287e9df931cd022e9e9715518ad9c9b6e3384a668' 
+  18, 5, 8192, X'7cbdb4612a13443dba910ecdef5161f2213e52c9b4a2eef14bcee5d287e9df931cd022e9e9715518ad9c9b6e3384a668'
 );
 
 /* Packages */
@@ -435,25 +459,25 @@ INSERT INTO packages (			/*  4 */
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  1, 4, '1.0.1e-2', 1366531494
+  1, 28, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  2, 4, '1.0.1e-2', 1366531494
+  2, 28, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  3, 4, '1.0.1e-2', 1366531494
+  3, 28, '1.0.1e-2', 1366531494
 );
 
 INSERT INTO versions (
   package, product, release, time
 ) VALUES (
-  4, 4, '1.0.1e-2', 1366531494
+  4, 28, '1.0.1e-2', 1366531494
 );
 
 /* Components */
@@ -567,6 +591,18 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 25
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 27
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -585,7 +621,13 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
-  6, 7
+  5, 26
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 28
 );
 
 INSERT INTO groups_product_defaults (
@@ -782,87 +824,105 @@ INSERT INTO policies (			/* 15 */
   8, 'Get /system/lib', 14, 0, 0
 );
 
+INSERT INTO policies (          /* 16 */
+  type, name, dir, rec_fail, rec_noresult
+) VALUES (
+  9, 'Measure /bin', 1, 2, 2
+);
+
+INSERT INTO policies (			/* 17 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  15, 'SWID Tag IDs', 'R', 2, 2
+);
+
+INSERT INTO policies (			/* 18 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  15, 'SWID Tags', '', 2, 2
+);
+
 /* Enforcements */
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  1 */
   policy, group_id, max_age
 ) VALUES (
   1, 1, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  2 */
   policy, group_id, max_age
 ) VALUES (
   2, 3, 0
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  3 */
   policy, group_id, max_age
 ) VALUES (
   3, 2, 0
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  4 */
   policy, group_id, max_age
 ) VALUES (
   5, 7, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  5 */
   policy, group_id, max_age
 ) VALUES (
   6, 7, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  6 */
   policy, group_id, max_age
 ) VALUES (
   7, 2, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  7 */
   policy, group_id, max_age
 ) VALUES (
   8, 1, 60
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  8 */
   policy, group_id, max_age
 ) VALUES (
   9, 1, 60
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/*  9 */
   policy, group_id, max_age
 ) VALUES (
   10, 2, 60
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/* 10 */
   policy, group_id, max_age
 ) VALUES (
   11, 10, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/* 11 */
   policy, group_id, max_age
 ) VALUES (
   12, 5, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/* 12 */
   policy, group_id, max_age
 ) VALUES (
   13, 5, 86400
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/* 13 */
   policy, group_id, max_age
 ) VALUES (
   14, 9, 0
 );
 
-INSERT INTO enforcements (
+INSERT INTO enforcements (		/* 14 */
   policy, group_id, max_age
 ) VALUES (
   15, 9, 0
