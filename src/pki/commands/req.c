@@ -116,8 +116,12 @@ static int req()
 	}
 	else
 	{
+		chunk_t chunk;
+
+		chunk = chunk_from_fd(0);
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-									 BUILD_FROM_FD, 0, BUILD_END);
+									 BUILD_BLOB, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	if (!private)
 	{

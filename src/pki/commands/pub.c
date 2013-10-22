@@ -101,13 +101,17 @@ static int pub()
 
 		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
 		cred = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
-									 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+								  BUILD_PKCS11_KEYID, chunk, BUILD_END);
 		free(chunk.ptr);
 	}
 	else
 	{
+		chunk_t chunk;
+
+		chunk = chunk_from_fd(0);
 		cred = lib->creds->create(lib->creds, type, subtype,
-									 BUILD_FROM_FD, 0, BUILD_END);
+								  BUILD_BLOB, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 
 	if (type == CRED_PRIVATE_KEY)

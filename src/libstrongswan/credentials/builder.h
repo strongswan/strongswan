@@ -45,8 +45,6 @@ typedef void* (*builder_function_t)(int subtype, va_list args);
 enum builder_part_t {
 	/** path to a file encoded in any format, char* */
 	BUILD_FROM_FILE,
-	/** file descriptor to read data, encoded in any format, int */
-	BUILD_FROM_FD,
 	/** unix socket of a ssh/pgp agent, char* */
 	BUILD_AGENT_SOCKET,
 	/** An arbitrary blob of data, chunk_t */

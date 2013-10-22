@@ -55,8 +55,12 @@ static int verify()
 	}
 	else
 	{
+		chunk_t chunk;
+
+		chunk = chunk_from_fd(0);
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FD, 0, BUILD_END);
+								  BUILD_BLOB, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	if (!cert)
 	{

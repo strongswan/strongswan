@@ -380,9 +380,13 @@ static int issue()
 		}
 		else
 		{
+			chunk_t chunk;
+
+			chunk = chunk_from_fd(0);
 			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										  CERT_PKCS10_REQUEST,
-										  BUILD_FROM_FD, 0, BUILD_END);
+										  BUILD_BLOB, chunk, BUILD_END);
+			free(chunk.ptr);
 		}
 		if (!cert_req)
 		{
@@ -419,8 +423,12 @@ static int issue()
 		}
 		else
 		{
+			chunk_t chunk;
+
+			chunk = chunk_from_fd(0);
 			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-										 BUILD_FROM_FD, 0, BUILD_END);
+										 BUILD_BLOB, chunk, BUILD_END);
+			free(chunk.ptr);
 		}
 	}
 	if (!public)

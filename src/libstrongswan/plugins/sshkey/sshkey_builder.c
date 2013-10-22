@@ -162,22 +162,15 @@ static sshkey_public_key_t *load_from_stream(FILE *file)
 }
 
 /**
- * Load SSH key from FD
+ * Load SSH key from a blob of data (most likely the content of a file)
  */
-static sshkey_public_key_t *load_from_fd(int fd)
+static sshkey_public_key_t *load_from_blob(chunk_t blob)
 {
 	FILE *stream;
 
-	/* dup the FD as it gets closed in fclose() */
-	fd = dup(fd);
-	if (fd == -1)
-	{
-		return NULL;
-	}
-	stream = fdopen(fd, "r");
+	stream = fmemopen(blob.ptr, blob.len, "r");
 	if (!stream)
 	{
-		close(fd);
 		return NULL;
 	}
 	return load_from_stream(stream);
@@ -204,22 +197,21 @@ static sshkey_public_key_t *load_from_file(char *file)
  */
 sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 {
-	chunk_t blob = chunk_empty;
+	chunk_t sshkey = chunk_empty, blob = chunk_empty;
 	char *file = NULL;
-	int fd = -1;
 
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_SSHKEY:
-				blob = va_arg(args, chunk_t);
+				sshkey = va_arg(args, chunk_t);
 				continue;
 			case BUILD_FROM_FILE:
 				file = va_arg(args, char*);
 				continue;
-			case BUILD_FROM_FD:
-				fd = va_arg(args, int);
+			case BUILD_BLOB:
+				blob = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -228,17 +220,17 @@ sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (blob.ptr)
+	if (sshkey.ptr)
 	{
-		return parse_public_key(blob);
+		return parse_public_key(sshkey);
 	}
 	if (file)
 	{
 		return load_from_file(file);
 	}
-	if (fd != -1)
+	if (blob.ptr)
 	{
-		return load_from_fd(fd);
+		return load_from_blob(blob);
 	}
 	return NULL;
 }

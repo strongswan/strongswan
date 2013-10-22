@@ -87,8 +87,12 @@ static int keyid()
 	}
 	else
 	{
+		chunk_t chunk;
+
+		chunk = chunk_from_fd(0);
 		cred = lib->creds->create(lib->creds, type, subtype,
-								  BUILD_FROM_FD, 0, BUILD_END);
+								  BUILD_BLOB, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	if (!cred)
 	{

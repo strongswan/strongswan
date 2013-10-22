@@ -455,46 +455,11 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 }
 
 /**
- * load the credential from a file descriptor
- */
-static void *load_from_fd(int fd, credential_type_t type, int subtype,
-						  identification_t *subject, x509_flag_t flags)
-{
-	char buf[8096];
-	char *pos = buf;
-	ssize_t len, total = 0;
-
-	while (TRUE)
-	{
-		len = read(fd, pos, buf + sizeof(buf) - pos);
-		if (len < 0)
-		{
-			DBG1(DBG_LIB, "reading from file descriptor failed: %s",
-				 strerror(errno));
-			return NULL;
-		}
-		if (len == 0)
-		{
-			break;
-		}
-		total += len;
-		if (total == sizeof(buf))
-		{
-			DBG1(DBG_LIB, "buffer too small to read from file descriptor");
-			return NULL;
-		}
-	}
-	return load_from_blob(chunk_create(buf, total), type, subtype,
-						  subject, flags);
-}
-
-/**
  * Load all kind of PEM encoded credentials.
  */
 static void *pem_load(credential_type_t type, int subtype, va_list args)
 {
 	char *file = NULL;
-	int fd = -1;
 	chunk_t pem = chunk_empty;
 	identification_t *subject = NULL;
 	int flags = 0;
@@ -506,9 +471,7 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 			case BUILD_FROM_FILE:
 				file = va_arg(args, char*);
 				continue;
-			case BUILD_FROM_FD:
-				fd = va_arg(args, int);
-				continue;
+			case BUILD_BLOB:
 			case BUILD_BLOB_PEM:
 				pem = va_arg(args, chunk_t);
 				continue;
@@ -533,10 +496,6 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 	if (file)
 	{
 		return load_from_file(file, type, subtype, subject, flags);
-	}
-	if (fd != -1)
-	{
-		return load_from_fd(fd, type, subtype, subject, flags);
 	}
 	return NULL;
 }

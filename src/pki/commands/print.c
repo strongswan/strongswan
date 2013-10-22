@@ -338,7 +338,7 @@ static void print_crl(crl_t *crl)
 
 	if (crl->is_delta_crl(crl, &chunk))
 	{
-		chunk = chunk_skip_zero(chunk);		
+		chunk = chunk_skip_zero(chunk);
 		printf("delta CRL: for serial %#B\n", &chunk);
 	}
 	chunk = crl->get_authKeyIdentifier(crl);
@@ -508,8 +508,12 @@ static int print()
 	}
 	else
 	{
+		chunk_t chunk;
+
+		chunk = chunk_from_fd(0);
 		cred = lib->creds->create(lib->creds, type, subtype,
-								  BUILD_FROM_FD, 0, BUILD_END);
+								  BUILD_BLOB, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	if (!cred)
 	{
