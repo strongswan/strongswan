@@ -553,6 +553,48 @@ START_TEST(test_rwlock_condvar)
 }
 END_TEST
 
+static void *rwlock_condvar_run_broad(void *data)
+{
+	rwlock->write_lock(rwlock);
+	while (sigcount < 0)
+	{
+		rwcond->wait(rwcond, rwlock);
+	}
+	rwlock->unlock(rwlock);
+	return NULL;
+}
+
+START_TEST(test_rwlock_condvar_broad)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	rwcond = rwlock_condvar_create();
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(rwlock_condvar_run_broad, NULL);
+	}
+
+	sched_yield();
+
+	rwlock->write_lock(rwlock);
+	sigcount = 1;
+	rwcond->broadcast(rwcond);
+	rwlock->unlock(rwlock);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	rwlock->destroy(rwlock);
+	rwcond->destroy(rwcond);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1065,6 +1107,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("rwlock condvar");
 	tcase_add_test(tc, test_rwlock_condvar);
+	tcase_add_test(tc, test_rwlock_condvar_broad);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
