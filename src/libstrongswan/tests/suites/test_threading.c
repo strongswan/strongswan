@@ -634,6 +634,48 @@ START_TEST(test_rwlock_condvar_timed)
 }
 END_TEST
 
+START_TEST(test_rwlock_condvar_timed_abs)
+{
+	thread_t *thread;
+	timeval_t start, end, abso, diff = { .tv_usec = 50000 };
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	rwcond = rwlock_condvar_create();
+	sigcount = 0;
+
+	rwlock->write_lock(rwlock);
+	while (TRUE)
+	{
+		time_monotonic(&start);
+		timeradd(&start, &diff, &abso);
+		if (rwcond->timed_wait_abs(rwcond, rwlock, abso))
+		{
+			break;
+		}
+	}
+	rwlock->unlock(rwlock);
+	time_monotonic(&end);
+	ck_assert_msg(timercmp(&end, &abso, >), "end: %u.%u, abso: %u.%u",
+					end.tv_sec, end.tv_usec, abso.tv_sec, abso.tv_usec);
+
+	thread = thread_create(rwlock_condvar_run, NULL);
+
+	time_monotonic(&start);
+	diff.tv_sec = 1;
+	timeradd(&start, &diff, &abso);
+	rwlock->write_lock(rwlock);
+	while (sigcount == 0)
+	{
+		ck_assert(!rwcond->timed_wait_abs(rwcond, rwlock, abso));
+	}
+	rwlock->unlock(rwlock);
+
+	thread->join(thread);
+	rwlock->destroy(rwlock);
+	rwcond->destroy(rwcond);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1148,6 +1190,7 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_rwlock_condvar);
 	tcase_add_test(tc, test_rwlock_condvar_broad);
 	tcase_add_test(tc, test_rwlock_condvar_timed);
+	tcase_add_test(tc, test_rwlock_condvar_timed_abs);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
