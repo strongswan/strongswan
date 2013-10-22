@@ -393,6 +393,62 @@ START_TEST(test_condvar_timed_abs)
 }
 END_TEST
 
+static void *condvar_cancel_run(void *data)
+{
+	thread_cancelability(FALSE);
+
+	mutex->lock(mutex);
+
+	sigcount++;
+	condvar->broadcast(condvar);
+
+	thread_cleanup_push((void*)mutex->unlock, mutex);
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		condvar->wait(condvar, mutex);
+	}
+	thread_cleanup_pop(TRUE);
+
+	return NULL;
+}
+
+START_TEST(test_condvar_cancel)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(condvar_cancel_run, NULL);
+	}
+
+	/* wait for all threads */
+	mutex->lock(mutex);
+	while (sigcount < THREADS)
+	{
+		condvar->wait(condvar, mutex);
+	}
+	mutex->unlock(mutex);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	mutex->destroy(mutex);
+	condvar->destroy(condvar);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -896,6 +952,7 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_condvar_broad);
 	tcase_add_test(tc, test_condvar_timed);
 	tcase_add_test(tc, test_condvar_timed_abs);
+	tcase_add_test(tc, test_condvar_cancel);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
