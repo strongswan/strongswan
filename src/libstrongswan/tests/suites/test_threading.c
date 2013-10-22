@@ -22,6 +22,7 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
+#include <threading/rwlock.h>
 #include <threading/thread_value.h>
 
 /*******************************************************************************
@@ -446,6 +447,63 @@ START_TEST(test_condvar_cancel)
 
 	mutex->destroy(mutex);
 	condvar->destroy(condvar);
+}
+END_TEST
+
+/**
+ * RWlock for different tests
+ */
+static rwlock_t *rwlock;
+
+static void *rwlock_run(refcount_t *refs)
+{
+	rwlock->read_lock(rwlock);
+	ref_get(refs);
+	sched_yield();
+	ignore_result(ref_put(refs));
+	rwlock->unlock(rwlock);
+
+	if (rwlock->try_write_lock(rwlock))
+	{
+		ck_assert_int_eq(*refs, 0);
+		sched_yield();
+		rwlock->unlock(rwlock);
+	}
+
+	rwlock->write_lock(rwlock);
+	ck_assert_int_eq(*refs, 0);
+	sched_yield();
+	rwlock->unlock(rwlock);
+
+	rwlock->read_lock(rwlock);
+	rwlock->read_lock(rwlock);
+	ref_get(refs);
+	sched_yield();
+	ignore_result(ref_put(refs));
+	rwlock->unlock(rwlock);
+	rwlock->unlock(rwlock);
+
+	return NULL;
+}
+
+START_TEST(test_rwlock)
+{
+	thread_t *threads[THREADS];
+	refcount_t refs = 0;
+	int i;
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create((void*)rwlock_run, &refs);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	rwlock->destroy(rwlock);
 }
 END_TEST
 
@@ -953,6 +1011,10 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_condvar_timed);
 	tcase_add_test(tc, test_condvar_timed_abs);
 	tcase_add_test(tc, test_condvar_cancel);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("rwlock");
+	tcase_add_test(tc, test_rwlock);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
