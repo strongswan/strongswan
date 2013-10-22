@@ -417,7 +417,7 @@ METHOD(rwlock_condvar_t, timed_wait_abs, bool,
 	thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
 	timed_out = this->condvar->timed_wait_abs(this->condvar, this->mutex, time);
 	thread_cleanup_pop(TRUE);
-	thread_cleanup_pop(!timed_out);
+	thread_cleanup_pop(TRUE);
 	return timed_out;
 }
 
