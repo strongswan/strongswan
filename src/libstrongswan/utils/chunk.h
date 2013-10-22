@@ -100,6 +100,14 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force);
 
 /**
+ * Store data read from FD into a chunk
+ *
+ * @param fd			file descriptor to read from
+ * @return				chunk or chunk_empty on failure
+ */
+chunk_t chunk_from_fd(int fd);
+
+/**
  * Convert a chunk of data to hex encoding.
  *
  * The resulting string is '\\0' terminated, but the chunk does not include

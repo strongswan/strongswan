@@ -243,6 +243,38 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	return good;
 }
 
+/**
+ * Described in header.
+ */
+chunk_t chunk_from_fd(int fd)
+{
+	char buf[8096];
+	char *pos = buf;
+	ssize_t len, total = 0;
+
+	while (TRUE)
+	{
+		len = read(fd, pos, buf + sizeof(buf) - pos);
+		if (len < 0)
+		{
+			DBG1(DBG_LIB, "reading from file descriptor failed: %s",
+				 strerror(errno));
+			return chunk_empty;
+		}
+		if (len == 0)
+		{
+			break;
+		}
+		total += len;
+		if (total == sizeof(buf))
+		{
+			DBG1(DBG_LIB, "buffer too small to read from file descriptor");
+			return chunk_empty;
+		}
+	}
+	return chunk_clone(chunk_create(buf, total));
+}
+
 
 /** hex conversion digits */
 static char hexdig_upper[] = "0123456789ABCDEF";
