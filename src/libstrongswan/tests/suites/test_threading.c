@@ -23,6 +23,7 @@
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <threading/rwlock.h>
+#include <threading/rwlock_condvar.h>
 #include <threading/thread_value.h>
 
 /*******************************************************************************
@@ -504,6 +505,51 @@ START_TEST(test_rwlock)
 	}
 
 	rwlock->destroy(rwlock);
+}
+END_TEST
+
+/**
+ * Rwlock condvar
+ */
+static rwlock_condvar_t *rwcond;
+
+static void *rwlock_condvar_run(void *data)
+{
+	rwlock->write_lock(rwlock);
+	sigcount++;
+	rwcond->signal(rwcond);
+	rwlock->unlock(rwlock);
+	return NULL;
+}
+
+START_TEST(test_rwlock_condvar)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	rwcond = rwlock_condvar_create();
+	sigcount = 0;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(rwlock_condvar_run, NULL);
+	}
+
+	rwlock->write_lock(rwlock);
+	while (sigcount < THREADS)
+	{
+		rwcond->wait(rwcond, rwlock);
+	}
+	rwlock->unlock(rwlock);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	rwlock->destroy(rwlock);
+	rwcond->destroy(rwcond);
 }
 END_TEST
 
@@ -1015,6 +1061,10 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("rwlock");
 	tcase_add_test(tc, test_rwlock);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("rwlock condvar");
+	tcase_add_test(tc, test_rwlock_condvar);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
