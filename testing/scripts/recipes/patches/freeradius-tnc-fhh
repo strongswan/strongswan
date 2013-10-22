@@ -5074,7 +5074,7 @@ diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc
   *
   */
 -#include <freeradius-devel/ident.h>
--RCSID("$Id$")
+-RCSID("$Id: 213ede51c46a8c533961be8715395c0ab1f6b5c9 $")
 -
 -
 -/*
@@ -5489,7 +5489,7 @@ diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc
   */
  
 -#include <freeradius-devel/ident.h>
--RCSID("$Id$")
+-RCSID("$Id: 985ac01f384110b9a46ec8e84592351c21b3f09a $")
 +/*
 + * EAP-TNC Packet with EAP Header, general structure
 + *
@@ -6180,7 +6180,7 @@ diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc
 - *
 - */
 -#include <freeradius-devel/ident.h>
--RCSID("$Id$")
+-RCSID("$Id: 6077f6d2bdc2ebdea6575678e80e255f57215900 $")
 -
 -#include "tncs_connect.h"
 -#include <ltdl.h>
