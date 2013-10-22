@@ -221,6 +221,55 @@ START_TEST(test_condvar)
 }
 END_TEST
 
+static void *condvar_recursive_run(void *data)
+{
+	mutex->lock(mutex);
+	mutex->lock(mutex);
+	mutex->lock(mutex);
+	sigcount++;
+	condvar->signal(condvar);
+	mutex->unlock(mutex);
+	mutex->unlock(mutex);
+	mutex->unlock(mutex);
+	return NULL;
+}
+
+START_TEST(test_condvar_recursive)
+{
+	thread_t *threads[THREADS];
+	int i;
+
+	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
+	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	sigcount = 0;
+
+	mutex->lock(mutex);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(condvar_recursive_run, NULL);
+	}
+
+	mutex->lock(mutex);
+	mutex->lock(mutex);
+	while (sigcount < THREADS)
+	{
+		condvar->wait(condvar, mutex);
+	}
+	mutex->unlock(mutex);
+	mutex->unlock(mutex);
+	mutex->unlock(mutex);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	mutex->destroy(mutex);
+	condvar->destroy(condvar);
+}
+END_TEST
+
 static void *condvar_run_broad(void *data)
 {
 	mutex->lock(mutex);
@@ -843,6 +892,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("condvar");
 	tcase_add_test(tc, test_condvar);
+	tcase_add_test(tc, test_condvar_recursive);
 	tcase_add_test(tc, test_condvar_broad);
 	tcase_add_test(tc, test_condvar_timed);
 	tcase_add_test(tc, test_condvar_timed_abs);
