@@ -595,6 +595,45 @@ START_TEST(test_rwlock_condvar_broad)
 }
 END_TEST
 
+START_TEST(test_rwlock_condvar_timed)
+{
+	thread_t *thread;
+	timeval_t start, end, diff = { .tv_usec = 50000 };
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	rwcond = rwlock_condvar_create();
+	sigcount = 0;
+
+	rwlock->write_lock(rwlock);
+	while (TRUE)
+	{
+		time_monotonic(&start);
+		if (rwcond->timed_wait(rwcond, rwlock, diff.tv_usec / 1000))
+		{
+			break;
+		}
+	}
+	rwlock->unlock(rwlock);
+	time_monotonic(&end);
+	timersub(&end, &start, &end);
+	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
+					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+
+	thread = thread_create(rwlock_condvar_run, NULL);
+
+	rwlock->write_lock(rwlock);
+	while (sigcount == 0)
+	{
+		ck_assert(!rwcond->timed_wait(rwcond, rwlock, 1000));
+	}
+	rwlock->unlock(rwlock);
+
+	thread->join(thread);
+	rwlock->destroy(rwlock);
+	rwcond->destroy(rwcond);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1108,6 +1147,7 @@ Suite *threading_suite_create()
 	tc = tcase_create("rwlock condvar");
 	tcase_add_test(tc, test_rwlock_condvar);
 	tcase_add_test(tc, test_rwlock_condvar_broad);
+	tcase_add_test(tc, test_rwlock_condvar_timed);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
