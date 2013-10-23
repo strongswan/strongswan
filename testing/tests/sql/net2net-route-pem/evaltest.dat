@@ -2,10 +2,10 @@ moon:: ipsec status 2> /dev/null::net-1.*ROUTED, TUNNEL::YES
 sun::  ipsec status 2> /dev/null::net-1.*ROUTED, TUNNEL::YES
 moon:: ipsec status 2> /dev/null::net-2.*ROUTED, TUNNEL::YES
 sun::  ipsec status 2> /dev/null::net-2.*ROUTED, TUNNEL::YES
-moon:: cat /var/log/daemon.log::creating acquire job for policy 10.1.0.10/32\[icmp/8\] === 10.2.0.10/32\[icmp\] with reqid {1}::YES
+moon:: cat /var/log/daemon.log::creating acquire job for policy 10.1.0.10/32\[icmp/8\] === 10.2.0.10/32\[icmp/8\] with reqid {1}::YES
 moon:: ipsec status 2> /dev/null::net-1.*INSTALLED, TUNNEL::YES
 sun::  ipsec status 2> /dev/null::net-1.*INSTALLED. TUNNEL::YES
-sun::  cat /var/log/daemon.log::creating acquire job for policy 10.2.0.10/32\[icmp/8\] === 10.1.0.20/32\[icmp\] with reqid {2}::YES
+sun::  cat /var/log/daemon.log::creating acquire job for policy 10.2.0.10/32\[icmp/8\] === 10.1.0.20/32\[icmp/8\] with reqid {2}::YES
 moon:: ipsec status 2> /dev/null::net-net.*ESTABLISHED.*moon.strongswan.org.*sun.strongswan.org::YES
 sun::  ipsec status 2> /dev/null::net-net.*ESTABLISHED.*sun.strongswan.org.*moon.strongswan.org::YES
 moon:: ipsec status 2> /dev/null::net-2.*INSTALLED, TUNNEL::YES
