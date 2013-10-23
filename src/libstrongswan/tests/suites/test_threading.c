@@ -813,6 +813,29 @@ START_TEST(test_semaphore)
 }
 END_TEST
 
+START_TEST(test_semaphore_timed)
+{
+	thread_t *thread;
+	timeval_t start, end, diff = { .tv_usec = 50000 };
+
+	semaphore = semaphore_create(0);
+
+	time_monotonic(&start);
+	ck_assert(semaphore->timed_wait(semaphore, diff.tv_usec / 1000));
+	time_monotonic(&end);
+	timersub(&end, &start, &end);
+	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
+					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+
+	thread = thread_create(semaphore_run, NULL);
+
+	ck_assert(!semaphore->timed_wait(semaphore, 1000));
+
+	thread->join(thread);
+	semaphore->destroy(semaphore);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1337,6 +1360,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("semaphore");
 	tcase_add_test(tc, test_semaphore);
+	tcase_add_test(tc, test_semaphore_timed);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
