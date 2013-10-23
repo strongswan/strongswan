@@ -86,6 +86,11 @@ static inline int sleep(unsigned int seconds)
 }
 
 /**
+ * Replacement of usleep(3), cancellable, ms resolution only
+ */
+int usleep(useconds_t usec);
+
+/**
  * strdup(3), the Windows variant can't free(strdup("")) and others
  */
 #define strdup strdup_windows

@@ -39,6 +39,19 @@ void windows_deinit()
 /**
  * See header
  */
+int usleep(useconds_t usec)
+{
+	if (usec > 0 && usec < 1000)
+	{	/* do not Sleep(0) for small values */
+		usec = 1000;
+	}
+	SleepEx(usec / 1000, TRUE);
+	return 0;
+}
+
+/**
+ * See header
+ */
 int socketpair(int domain, int type, int protocol, int sv[2])
 {
 	struct sockaddr_in addr = {
