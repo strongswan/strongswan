@@ -26,6 +26,7 @@
 #ifdef HAVE_SEM_TIMEDWAIT
 #include <semaphore.h>
 #else /* !HAVE_SEM_TIMEDWAIT */
+#include <threading/thread.h>
 #include <threading/condvar.h>
 #endif /* HAVE_SEM_TIMEDWAIT */
 
@@ -73,12 +74,13 @@ METHOD(semaphore_t, wait_, void,
 	sem_wait(&this->sem);
 #else /* !HAVE_SEM_TIMEDWAIT */
 	this->mutex->lock(this->mutex);
+	thread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	while (this->count == 0)
 	{
 		this->cond->wait(this->cond, this->mutex);
 	}
 	this->count--;
-	this->mutex->unlock(this->mutex);
+	thread_cleanup_pop(TRUE);
 #endif /* HAVE_SEM_TIMEDWAIT */
 }
 
@@ -96,16 +98,17 @@ METHOD(semaphore_t, timed_wait_abs, bool,
 	return sem_timedwait(&this->sem, &ts) == -1;
 #else /* !HAVE_SEM_TIMEDWAIT */
 	this->mutex->lock(this->mutex);
+	thread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	while (this->count == 0)
 	{
 		if (this->cond->timed_wait_abs(this->cond, this->mutex, tv))
 		{
-			this->mutex->unlock(this->mutex);
+			thread_cleanup_pop(TRUE);
 			return TRUE;
 		}
 	}
 	this->count--;
-	this->mutex->unlock(this->mutex);
+	thread_cleanup_pop(TRUE);
 	return FALSE;
 #endif /* HAVE_SEM_TIMEDWAIT */
 }
@@ -176,4 +179,3 @@ semaphore_t *semaphore_create(u_int value)
 
 	return &this->public;
 }
-
