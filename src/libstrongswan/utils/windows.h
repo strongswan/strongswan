@@ -68,6 +68,15 @@ static inline void srandom(unsigned int seed)
 }
 
 /**
+ * Replacement of sched_yield(2) from <sched.h>
+ */
+static inline int sched_yield(void)
+{
+	Sleep(0);
+	return 0;
+}
+
+/**
  * strdup(3), the Windows variant can't free(strdup("")) and others
  */
 #define strdup strdup_windows

@@ -16,7 +16,6 @@
 #include "cert_cache.h"
 
 #include <time.h>
-#include <sched.h>
 
 #include <library.h>
 #include <threading/rwlock.h>
