@@ -862,6 +862,49 @@ START_TEST(test_semaphore_timed_abs)
 }
 END_TEST
 
+static void *semaphore_cancel_run(void *data)
+{
+	refcount_t *ready = (refcount_t*)data;
+
+	thread_cancelability(FALSE);
+	ref_get(ready);
+
+	thread_cancelability(TRUE);
+	semaphore->wait(semaphore);
+
+	ck_assert(FALSE);
+	return NULL;
+}
+
+START_TEST(test_semaphore_cancel)
+{
+	thread_t *threads[THREADS];
+	refcount_t ready = 0;
+	int i;
+
+	semaphore = semaphore_create(0);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(semaphore_cancel_run, &ready);
+	}
+	while (ready < THREADS)
+	{
+		sched_yield();
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->cancel(threads[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	semaphore->destroy(semaphore);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1388,6 +1431,7 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_semaphore);
 	tcase_add_test(tc, test_semaphore_timed);
 	tcase_add_test(tc, test_semaphore_timed_abs);
+	tcase_add_test(tc, test_semaphore_cancel);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
