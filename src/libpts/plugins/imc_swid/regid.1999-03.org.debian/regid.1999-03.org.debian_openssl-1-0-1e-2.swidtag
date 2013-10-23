@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<software_identification_tag xmlns="http://standards.iso.org/iso/19770/-2/2009/schema.xsd">
+  <entitlement_required_indicator>true</entitlement_required_indicator>
+  <product_title>openssl</product_title>
+  <product_version>
+    <name>1.0.1e-2</name>
+    <numeric>
+      <major>1</major>
+      <minor>0</minor>
+      <build>1e</build>
+      <review>2</review>
+    </numeric>
+  </product_version>
+  <software_creator>
+    <name>OpenSSL Project</name>
+    <regid>regid.1998-12.org.openssl</regid>
+  </software_creator>
+  <software_licensor>
+    <name>Debian Project</name>
+    <regid>regid.1999-03.org.debian</regid>
+  </software_licensor>
+  <software_id>
+    <unique_id>openssl-1-0-1e-2</unique_id>
+    <tag_creator_regid>regid.1999-03.org.debian</tag_creator_regid>
+  </software_id>
+  <tag_creator>
+    <name>Debian Project</name>
+    <regid>regid.1999-03.org.debian</regid>
+  </tag_creator>
+</software_identification_tag>

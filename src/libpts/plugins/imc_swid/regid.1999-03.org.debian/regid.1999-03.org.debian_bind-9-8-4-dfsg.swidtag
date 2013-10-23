@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<software_identification_tag xmlns="http://standards.iso.org/iso/19770/-2/2009/schema.xsd">
+  <entitlement_required_indicator>true</entitlement_required_indicator>
+  <product_title>bind9</product_title>
+  <product_version>
+    <name>9-8-4-dfsg</name>
+    <numeric>
+      <major>9</major>
+      <minor>8</minor>
+      <build>4</build>
+      <review>dfsg</review>
+    </numeric>
+  </product_version>
+  <software_creator>
+    <name>Internet Systems Consortium</name>
+    <regid>regid.1994-04.org.isc</regid>
+  </software_creator>
+  <software_licensor>
+    <name>Debian Project</name>
+    <regid>regid.1999-03.org.debian</regid>
+  </software_licensor>
+  <software_id>
+    <unique_id>bind-9-8-4-dfsg</unique_id>
+    <tag_creator_regid>regid.1999-03.org.debian</tag_creator_regid>
+  </software_id>
+  <tag_creator>
+    <name>Debian Project</name>
+    <regid>regid.1999-03.org.debian</regid>
+  </tag_creator>
+</software_identification_tag>
