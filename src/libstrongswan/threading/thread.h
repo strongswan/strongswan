@@ -71,7 +71,6 @@ typedef void *(*thread_main_t)(void *arg);
  */
 typedef void (*thread_cleanup_t)(void *arg);
 
-
 /**
  * Thread wrapper implements simple, portable and advanced thread functions.
  *
@@ -110,9 +109,7 @@ struct thread_t {
 	 *					a call to exit.
 	 */
 	void *(*join)(thread_t *this);
-
 };
-
 
 /**
  * Create a new thread instance.
@@ -168,6 +165,10 @@ bool thread_cancelability(bool enable);
 
 /**
  * Force creation of a cancellation point in the calling thread.
+ *
+ * This temporarily enables thread cancelability, tests for a pending
+ * cancellation request and then disables cancelability again if it was
+ * disabled before the call to thread_cancellation_point().
  */
 void thread_cancellation_point();
 
@@ -188,6 +189,4 @@ void threads_init();
  */
 void threads_deinit();
 
-
 #endif /** THREADING_THREAD_H_ @} */
-
