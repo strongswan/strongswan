@@ -32,6 +32,10 @@ strongswan-5.1.1
   addresses, for example to use a different connection for clients connecting
   from a internal network.
 
+- For all those who have a queasy feeling about the NIST elliptic curve set,
+  the Brainpool curves introduced for use with IKE by RFC 6932 might be a
+  more trustworthy alternative.
+
 - The kernel-libipsec userland IPsec backend now supports usage statistics,
   volume based rekeying and accepts ESPv3 style TFC padded packets.
 
