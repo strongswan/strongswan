@@ -25,6 +25,7 @@
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
 #include <threading/spinlock.h>
+#include <threading/semaphore.h>
 #include <threading/thread_value.h>
 
 /*******************************************************************************
@@ -777,6 +778,41 @@ START_TEST(test_rwlock_condvar_cancel)
 }
 END_TEST
 
+/**
+ * Semaphore for different tests
+ */
+static semaphore_t *semaphore;
+
+static void *semaphore_run(void *data)
+{
+	semaphore->post(semaphore);
+	return NULL;
+}
+
+START_TEST(test_semaphore)
+{
+	thread_t *threads[THREADS];
+	int i, initial = 5;
+
+	semaphore = semaphore_create(initial);
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(semaphore_run, NULL);
+	}
+	for (i = 0; i < THREADS + initial; i++)
+	{
+		semaphore->wait(semaphore);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	semaphore->destroy(semaphore);
+}
+END_TEST
+
 static void *join_run(void *data)
 {
 	/* force some context switches */
@@ -1297,6 +1333,10 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_rwlock_condvar_timed);
 	tcase_add_test(tc, test_rwlock_condvar_timed_abs);
 	tcase_add_test(tc, test_rwlock_condvar_cancel);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("semaphore");
+	tcase_add_test(tc, test_semaphore);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread joining");
