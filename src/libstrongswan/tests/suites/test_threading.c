@@ -24,6 +24,7 @@
 #include <threading/condvar.h>
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
+#include <threading/spinlock.h>
 #include <threading/thread_value.h>
 
 /*******************************************************************************
@@ -179,6 +180,50 @@ START_TEST(test_mutex)
 	}
 
 	mutex->destroy(mutex);
+	barrier_destroy(barrier);
+}
+END_TEST
+
+/**
+ * Spinlock for testing
+ */
+static spinlock_t *spinlock;
+
+static void *spinlock_run(void *data)
+{
+	int i, *locked = (int*)data;
+
+	barrier_wait(barrier);
+
+	for (i = 0; i < 1000; i++)
+	{
+		spinlock->lock(spinlock);
+		(*locked)++;
+		ck_assert_int_eq(*locked, 1);
+		(*locked)--;
+		spinlock->unlock(spinlock);
+	}
+	return NULL;
+}
+
+START_TEST(test_spinlock)
+{
+	thread_t *threads[THREADS];
+	int i, locked = 0;
+
+	barrier = barrier_create(THREADS);
+	spinlock = spinlock_create();
+
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i] = thread_create(spinlock_run, &locked);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+
+	spinlock->destroy(spinlock);
 	barrier_destroy(barrier);
 }
 END_TEST
@@ -1227,6 +1272,10 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("recursive mutex");
 	tcase_add_test(tc, test_mutex);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("spinlock");
+	tcase_add_test(tc, test_spinlock);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("condvar");
