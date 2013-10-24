@@ -243,6 +243,9 @@ END_TEST
 START_TEST(test_create_from_sockaddr_v4)
 {
 	struct sockaddr_in addr = {
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+		.sin_len = sizeof(struct sockaddr_in),
+#endif
 		.sin_family = AF_INET,
 		.sin_port = htons(500),
 	}, *val;
@@ -262,6 +265,9 @@ END_TEST
 START_TEST(test_create_from_sockaddr_v6)
 {
 	struct sockaddr_in6 addr = {
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+		.sin6_len = sizeof(struct sockaddr_in6),
+#endif
 		.sin6_family = AF_INET6,
 		.sin6_port = htons(500),
 	}, *val;
