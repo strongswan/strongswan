@@ -765,6 +765,21 @@ bool cas_ptr(void **ptr, void *oldval, void *newval);
 
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
+#ifndef HAVE_FMEMOPEN
+# ifdef HAVE_FUNOPEN
+#  define HAVE_FMEMOPEN fallback
+/**
+ * fmemopen(3) fallback using BSD funopen.
+ *
+ * We could also provide one using fopencookie(), but should we have it we
+ * most likely have fmemopen().
+ *
+ * fseek() is currently not supported.
+ */
+FILE *fmemopen(void *buf, size_t size, const char *mode);
+# endif /* FUNOPEN */
+#endif /* FMEMOPEN */
+
 /**
  * printf hook for time_t.
  *

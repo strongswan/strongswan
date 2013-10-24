@@ -29,6 +29,7 @@
 
 #include "collections/enumerator.h"
 #include "utils/debug.h"
+#include "utils/chunk.h"
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
@@ -512,6 +513,51 @@ _cas_impl(bool, bool)
 _cas_impl(ptr, void*)
 
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
+
+
+#if HAVE_FMEMOPEN == fallback
+
+static int fmemread(chunk_t *cookie, char *buf, int size)
+{
+	int len;
+
+	len = min(size, cookie->len);
+	memcpy(buf, cookie->ptr, len);
+	*cookie = chunk_skip(*cookie, len);
+
+	return len;
+}
+
+static int fmemwrite(chunk_t *cookie, const char *buf, int size)
+{
+	int len;
+
+	len = min(size, cookie->len);
+	memcpy(cookie->ptr, buf, len);
+	*cookie = chunk_skip(*cookie, len);
+
+	return len;
+}
+
+static int fmemclose(void *cookie)
+{
+	free(cookie);
+	return 0;
+}
+
+FILE *fmemopen(void *buf, size_t size, const char *mode)
+{
+	chunk_t *cookie;
+
+	INIT(cookie,
+		.ptr = buf,
+		.len = size,
+	);
+
+	return funopen(cookie, (void*)fmemread, (void*)fmemwrite, NULL, fmemclose);
+}
+
+#endif /* FMEMOPEN fallback*/
 
 /**
  * Described in header.
