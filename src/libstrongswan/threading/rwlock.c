@@ -261,6 +261,7 @@ METHOD(rwlock_t, read_lock, void,
 	private_rwlock_t *this)
 {
 	uintptr_t reading;
+	bool old;
 
 	reading = (uintptr_t)pthread_getspecific(is_reader);
 	profiler_start(&this->profile);
@@ -272,10 +273,12 @@ METHOD(rwlock_t, read_lock, void,
 	}
 	else
 	{
+		old = thread_cancelability(FALSE);
 		while (this->writer || this->waiting_writers)
 		{
 			this->readers->wait(this->readers, this->mutex);
 		}
+		thread_cancelability(old);
 	}
 	this->reader_count++;
 	profiler_end(&this->profile);
@@ -286,13 +289,17 @@ METHOD(rwlock_t, read_lock, void,
 METHOD(rwlock_t, write_lock, void,
 	private_rwlock_t *this)
 {
+	bool old;
+
 	profiler_start(&this->profile);
 	this->mutex->lock(this->mutex);
 	this->waiting_writers++;
+	old = thread_cancelability(FALSE);
 	while (this->writer || this->reader_count)
 	{
 		this->writers->wait(this->writers, this->mutex);
 	}
+	thread_cancelability(old);
 	this->waiting_writers--;
 	this->writer = TRUE;
 	profiler_end(&this->profile);
