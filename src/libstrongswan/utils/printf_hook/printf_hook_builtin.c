@@ -926,15 +926,16 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 								double dval;
 
 								dval = va_arg(ap, double);
-								if (isinf(dval) == 1)
+								if (isinf(dval))
 								{
-									sarg = flags & FL_UPPER ? "INF" : "inf";
-									slen = strlen(sarg);
-									goto is_string;
-								}
-								if (isinf(dval) == -1)
-								{
-									sarg = flags & FL_UPPER ? "-INF" : "-inf";
+									if (isgreater(dval, 0.0))
+									{
+										sarg = flags & FL_UPPER ? "INF" : "inf";
+									}
+									else
+									{
+										sarg = flags & FL_UPPER ? "-INF" : "-inf";
+									}
 									slen = strlen(sarg);
 									goto is_string;
 								}
