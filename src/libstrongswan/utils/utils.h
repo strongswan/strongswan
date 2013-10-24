@@ -767,7 +767,8 @@ bool cas_ptr(void **ptr, void *oldval, void *newval);
 
 #ifndef HAVE_FMEMOPEN
 # ifdef HAVE_FUNOPEN
-#  define HAVE_FMEMOPEN fallback
+#  define HAVE_FMEMOPEN
+#  define HAVE_FMEMOPEN_FALLBACK
 /**
  * fmemopen(3) fallback using BSD funopen.
  *

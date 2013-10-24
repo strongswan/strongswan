@@ -515,7 +515,7 @@ _cas_impl(ptr, void*)
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 
-#if HAVE_FMEMOPEN == fallback
+#ifdef HAVE_FMEMOPEN_FALLBACK
 
 static int fmemread(chunk_t *cookie, char *buf, int size)
 {
