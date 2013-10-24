@@ -27,6 +27,13 @@
 #include "mutex.h"
 #include "lock_profiler.h"
 
+#ifdef __APPLE__
+/* while pthread_rwlock_rdlock(3) says that it supports multiple read locks,
+ * this does not seem to be true. After releasing the a recursive rdlock,
+ * a subsequent wrlock fails... */
+# undef HAVE_PTHREAD_RWLOCK_INIT
+#endif
+
 typedef struct private_rwlock_t private_rwlock_t;
 typedef struct private_rwlock_condvar_t private_rwlock_condvar_t;
 
