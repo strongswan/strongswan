@@ -45,6 +45,11 @@ struct private_watcher_t {
 	linked_list_t *fds;
 
 	/**
+	 * Pending update of FD list?
+	 */
+	bool pending;
+
+	/**
 	 * Lock to access FD list
 	 */
 	mutex_t *mutex;
@@ -106,6 +111,7 @@ static void update(private_watcher_t *this)
 {
 	char buf[1] = { 'u' };
 
+	this->pending = TRUE;
 	if (this->notify[1] != -1)
 	{
 		ignore_result(write(this->notify[1], buf, sizeof(buf)));
@@ -294,6 +300,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			{
 				DBG2(DBG_JOB, "watcher got notification, rebuilding");
 				while (read(this->notify[0], buf, sizeof(buf)) > 0);
+				this->pending = FALSE;
 				return JOB_REQUEUE_DIRECT;
 			}
 
@@ -333,7 +340,11 @@ static job_requeue_t watch(private_watcher_t *this)
 		}
 		else
 		{
-			DBG1(DBG_JOB, "watcher select() error: %s", strerror(errno));
+			if (!this->pending)
+			{	/* complain only if no pending updates */
+				DBG1(DBG_JOB, "watcher select() error: %s", strerror(errno));
+			}
+			return JOB_REQUEUE_DIRECT;
 		}
 	}
 }
