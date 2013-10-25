@@ -7,7 +7,7 @@ AM_CPPFLAGS = \
 	-DIPSEC_PIDDIR=\"${piddir}\"
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-stroke.la

@@ -5,7 +5,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libsimaka
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 libstrongswan_eap_aka_3gpp2_la_LDFLAGS = -module -avoid-version
 libstrongswan_eap_aka_3gpp2_la_LIBADD = -lgmp

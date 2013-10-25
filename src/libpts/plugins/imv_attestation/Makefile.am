@@ -6,7 +6,7 @@ AM_CPPFLAGS = \
 	-DPLUGINS=\""${attest_plugins}\""
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 imcv_LTLIBRARIES = imv-attestation.la
 

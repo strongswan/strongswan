@@ -734,7 +734,7 @@ AC_COMPILE_IFELSE(
 		  #endif
 		]])],
 	[AC_MSG_RESULT([yes]); windows=true ],
-	[AC_MSG_RESULT([no])]
+	[AC_MSG_RESULT([no]); AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])]
 )
 AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
 

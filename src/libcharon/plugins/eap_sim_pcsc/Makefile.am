@@ -6,7 +6,7 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = \
 	${pcsclite_CFLAGS} \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 libstrongswan_eap_sim_pcsc_la_LDFLAGS = -module -avoid-version
 libstrongswan_eap_sim_pcsc_la_LIBADD  = ${pcsclite_LIBS}

@@ -3,7 +3,7 @@ AM_CPPFLAGS = \
 	-DFIPS_MODE=${fips_mode}
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-openssl.la

@@ -22,7 +22,7 @@ AM_CPPFLAGS = \
 	-DPLUGINDIR=\"${DESTDIR}${plugindir}\"
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 # we keep track of build dependencies in deps and use libs to store the paths
 # to the installed libraries. for executables we use the built files directly

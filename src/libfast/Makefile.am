@@ -3,7 +3,7 @@ AM_CPPFLAGS = \
 	-I/usr/include/ClearSilver
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 AM_LDFLAGS = \
 	-no-undefined

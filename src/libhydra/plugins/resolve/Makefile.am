@@ -4,7 +4,7 @@ AM_CPPFLAGS = \
 	-DRESOLV_CONF=\"${resolv_conf}\"
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-resolve.la

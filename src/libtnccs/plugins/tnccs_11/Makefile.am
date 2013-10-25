@@ -6,7 +6,7 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = \
 	${xml_CFLAGS} \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
 
