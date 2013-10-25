@@ -17,6 +17,7 @@
 
 #include <errno.h>
 #include <math.h>
+#include <inttypes.h>
 
 static void verify(char *expected, char *format, ...)
 {
@@ -155,6 +156,26 @@ START_TEST(test_printf_float)
 }
 END_TEST
 
+START_TEST(test_printf_pri)
+{
+	verify("255", "%" PRIu8, (u_int8_t)0xFF);
+	verify("65535", "%" PRIu16, (u_int16_t)0xFFFF);
+	verify("4294967295", "%" PRIu32, (u_int32_t)0x1FFFFFFFFll);
+	verify("18446744073709551615", "%" PRIu64, (u_int64_t)0xFFFFFFFFFFFFFFFFll);
+
+	verify("-1", "%" PRId8, (int8_t)-1);
+	verify("-1", "%" PRId16, (int16_t)-1);
+	verify("-1", "%" PRId32, (int32_t)-1);
+	verify("-1", "%" PRId64, (int64_t)-1);
+
+	verify("1", "%" PRIuMAX, (uintmax_t)1);
+	verify("1", "%" PRIuPTR, (uintptr_t)1);
+
+	verify("-1", "%" PRIdMAX, (intmax_t)-1);
+	verify("-1", "%" PRIdPTR, (intptr_t)-1);
+}
+END_TEST
+
 Suite *printf_suite_create()
 {
 	Suite *s;
@@ -184,6 +205,10 @@ Suite *printf_suite_create()
 
 	tc = tcase_create("float");
 	tcase_add_test(tc, test_printf_float);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("PRI*");
+	tcase_add_test(tc, test_printf_pri);
 	suite_add_tcase(s, tc);
 
 	return s;
