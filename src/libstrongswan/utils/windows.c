@@ -49,6 +49,21 @@ int usleep(useconds_t usec)
 	return 0;
 }
 
+/**
+ * See header.
+ */
+char* strndup(const char *s, size_t n)
+{
+	char *dst;
+
+	n = min(strnlen(s, n), n);
+	dst = malloc(n + 1);
+	memcpy(dst, s, n);
+	dst[n] = '\0';
+
+	return dst;
+}
+
 /*
  * See header.
  */

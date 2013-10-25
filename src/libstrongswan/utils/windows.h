@@ -106,6 +106,11 @@ static inline char* strdup_windows(const char *src)
 }
 
 /**
+ * strndup(3)
+ */
+char* strndup(const char *s, size_t n);
+
+/**
  * Provided via ws2_32
  */
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
