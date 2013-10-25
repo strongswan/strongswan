@@ -733,9 +733,18 @@ AC_COMPILE_IFELSE(
 		  # error WIN32 undefined
 		  #endif
 		]])],
-	[AC_MSG_RESULT([yes]); windows=true ],
-	[AC_MSG_RESULT([no]); AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])]
+	[
+		AC_MSG_RESULT([yes])
+		windows=true
+		openssl_lib=eay32
+	],
+	[
+		AC_MSG_RESULT([no])
+		openssl_lib=crypto
+		AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])
+	]
 )
+AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
 AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
 
 if test x$printf_hooks = xvstr; then
@@ -918,7 +927,7 @@ if test x$sqlite = xtrue; then
 fi
 
 if test x$openssl = xtrue; then
-	AC_CHECK_LIB([crypto],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL crypto library not found])],[])
+	AC_CHECK_LIB([$openssl_lib],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL lib$openssl_lib not found])],[])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
