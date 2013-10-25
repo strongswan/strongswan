@@ -204,37 +204,9 @@ static inline int setenv(const char *name, const char *value, int overwrite)
 }
 
 /**
- * dlerror(3) from <dlfcn.h>, printing error to an alloca() buffer
- */
-#define dlerror() \
-({ \
-	char buf[128], *out;\
-	ssize_t len; \
-	DWORD err; \
-	err = GetLastError(); \
-	len = FormatMessage(0, NULL, err, 0, buf, sizeof(buf), NULL); \
-	if (len <= 0) \
-	{ \
-		len = snprintf(buf, sizeof(buf), "(%u)", err); \
-	} \
-	len++; \
-	out = alloca(len); \
-	memcpy(out, buf, len); \
-	out; \
-})
-
-/**
  * Lazy binding, ignored on Windows
  */
 #define RTLD_LAZY 1
-
-/**
- * dlopen(3) from <dlfcn.h>
- */
-static inline void *dlopen(const char *filename, int flag)
-{
-	return LoadLibrary(filename);
-}
 
 /**
  * Default handle targeting .exe
@@ -247,42 +219,24 @@ static inline void *dlopen(const char *filename, int flag)
 #define RTLD_NEXT ((void*)~(uintptr_t)0)
 
 /**
+ * dlopen(3) from <dlfcn.h>
+ */
+void* dlopen(const char *filename, int flag);
+
+/**
  * dlsym() from <dlfcn.h>
  */
-static inline void *dlsym(void *handle, const char *symbol)
-{
-	if (handle == RTLD_DEFAULT)
-	{
-		handle = GetModuleHandle(NULL);
-	}
-	else if (handle == RTLD_NEXT)
-	{
-		if (strcmp(symbol, "malloc") == 0 ||
-			strcmp(symbol, "realloc") == 0 ||
-			strcmp(symbol, "free") == 0)
-		{
-			/* for leak-detective */
-			handle = GetModuleHandle("msvcrt");
-		}
-		else
-		{
-			return NULL;
-		}
-	}
-	if (handle)
-	{
-		return GetProcAddress((HMODULE)handle, symbol);
-	}
-	return NULL;
-}
+void* dlsym(void *handle, const char *symbol);
+
+/**
+ * dlerror(3) from <dlfcn.h>, currently not thread save
+ */
+char* dlerror(void);
 
 /**
  * dlclose() from <dlfcn.h>
  */
-static inline int dlclose(void *handle)
-{
-	return FreeLibrary((HMODULE)handle);
-}
+int dlclose(void *handle);
 
 /**
  * socketpair(2) for SOCK_STREAM, uses TCP on loopback

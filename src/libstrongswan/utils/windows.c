@@ -49,6 +49,130 @@ int usleep(useconds_t usec)
 	return 0;
 }
 
+/*
+ * See header.
+ */
+void *dlopen(const char *filename, int flag)
+{
+	return LoadLibrary(filename);
+}
+
+/**
+ * Load a symbol from known default libs (monolithic build)
+ */
+static void* dlsym_default(const char *name)
+{
+	const char *dlls[] = {
+		"libstrongswan-0.dll",
+		"libhydra-0.dll",
+		"libcharon-0.dll",
+		"libtnccs-0.dll",
+		NULL /* .exe */
+	};
+	HANDLE handle;
+	void *sym = NULL;
+	int i;
+
+	for (i = 0; i < countof(dlls); i++)
+	{
+		handle = GetModuleHandle(dlls[i]);
+		if (handle)
+		{
+			sym = GetProcAddress(handle, name);
+			if (sym)
+			{
+				break;
+			}
+		}
+	}
+	return sym;
+}
+
+/**
+ * Emulate RTLD_NEXT for some known symbols
+ */
+static void* dlsym_next(const char *name)
+{
+	struct {
+		const char *dll;
+		const char *syms[4];
+	} dlls[] = {
+		/* for leak detective */
+		{ "msvcrt",
+			{ "malloc", "calloc", "realloc", "free" }
+		},
+	};
+	HANDLE handle = NULL;
+	int i, j;
+
+	for (i = 0; i < countof(dlls); i++)
+	{
+		for (j = 0; j < countof(dlls[0].syms); j++)
+		{
+			if (dlls[i].syms[j] && streq(dlls[i].syms[j], name))
+			{
+				handle = GetModuleHandle(dlls[i].dll);
+				break;
+			}
+		}
+	}
+	if (handle)
+	{
+		return GetProcAddress(handle, name);
+	}
+	return handle;
+}
+
+/**
+ * See header.
+ */
+void* dlsym(void *handle, const char *symbol)
+{
+	if (handle == RTLD_DEFAULT)
+	{
+		return dlsym_default(symbol);
+	}
+	if (handle == RTLD_NEXT)
+	{
+		return dlsym_next(symbol);
+	}
+	return GetProcAddress((HMODULE)handle, symbol);
+}
+
+/**
+ * See header.
+ */
+char* dlerror(void)
+{
+	static char buf[128];
+	char *pos;
+	DWORD err;
+
+	err = GetLastError();
+	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+					  NULL, err, 0, buf, sizeof(buf), NULL) > 0)
+	{
+		pos = strchr(buf, '\n');
+		if (pos)
+		{
+			*pos = '\0';
+		}
+	}
+	else
+	{
+		snprintf(buf, sizeof(buf), "(%u)", err);
+	}
+	return buf;
+}
+
+/**
+ * See header.
+ */
+int dlclose(void *handle)
+{
+	return FreeLibrary((HMODULE)handle);
+}
+
 /**
  * See header
  */
