@@ -14,6 +14,12 @@
  * for more details.
  */
 
+#include <library.h>
+#include <utils/debug.h>
+#include <threading/thread.h>
+#include <threading/mutex.h>
+#include <threading/thread_value.h>
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/conf.h>
@@ -24,12 +30,6 @@
 #endif
 
 #include "openssl_plugin.h"
-
-#include <library.h>
-#include <utils/debug.h>
-#include <threading/thread.h>
-#include <threading/mutex.h>
-#include <threading/thread_value.h>
 #include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
