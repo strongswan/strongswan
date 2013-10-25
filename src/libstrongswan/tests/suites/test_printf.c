@@ -48,6 +48,8 @@ START_TEST(test_printf_strings)
 	verify("a bc def", "%s %s %s", "a", "bc", "def");
 	verify("asd", "%.3s", "asdfg");
 	verify("asdf", "%.*s", (int)4, "asdfg");
+	verify("", "%.0s", NULL);
+	verify("", "%.*s", (int)0, NULL);
 	verify("  asdf", "%6s", "asdf");
 	verify("  asdf", "%+6s", "asdf");
 	verify("asdf  ", "%-6s", "asdf");
