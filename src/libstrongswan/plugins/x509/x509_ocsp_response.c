@@ -35,6 +35,11 @@
  */
 #define OCSP_DEFAULT_LIFETIME 30
 
+/* defined in wincrypt.h */
+#ifdef OCSP_RESPONSE
+# undef OCSP_RESPONSE
+#endif
+
 typedef struct private_x509_ocsp_response_t private_x509_ocsp_response_t;
 
 /**
