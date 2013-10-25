@@ -16,7 +16,7 @@
 #include "sha1_prf.h"
 #include "sha1_hasher.h"
 
-#include <arpa/inet.h>
+#include <library.h>
 
 typedef struct private_sha1_prf_t private_sha1_prf_t;
 typedef struct private_sha1_hasher_t private_sha1_hasher_t;
@@ -148,4 +148,3 @@ sha1_prf_t *sha1_prf_create(pseudo_random_function_t algo)
 
 	return &this->public;
 }
-
