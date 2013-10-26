@@ -40,6 +40,20 @@ typedef pt_tls_connection_t* (*pt_tls_connection_constructor_t)(tnccs_t *tnccs,
 struct pt_tls_connection_t {
 
 	/**
+	 * Get IP address of PDP server
+	 *
+	 * @return		PDP server address
+	 */
+	host_t* (*get_host)(pt_tls_connection_t *this);
+
+	/**
+	 * Start the PT-TLS connection.
+	 *
+	 * @return		Connection status
+	 */
+	status_t (*start)(pt_tls_connection_t *this);
+
+	/**
 	 * Destroy a pt_tls_connection_t object.
 	 */
 	void (*destroy)(pt_tls_connection_t *this);

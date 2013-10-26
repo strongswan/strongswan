@@ -34,9 +34,24 @@ typedef struct pt_tls_client_t pt_tls_client_t;
 struct pt_tls_client_t {
 
 	/**
+	 * Get destination IP address.
+	 *
+	 * @return			IP address of PT-TLS server
+	 */
+	host_t* (*get_address)(pt_tls_client_t *this);
+
+	/**
+	 * Start a connection to a PT-TLS server
+	 *
+	 * @param 			tnccs layer PT-TLS client is transporting
+	 * @return			connection status
+	 */
+	status_t (*start)(pt_tls_client_t *this, tnccs_t *tnccs);
+
+	/**
 	 * Perform an assessment.
 	 *
-	 * @param tnccs		upper layer TNC client used for assessment
+	 * @param 			tnccs layer PT-TNC client used for assessment
 	 * @return			status of assessment
 	 */
 	status_t (*run_assessment)(pt_tls_client_t *this, tnccs_t *tnccs);

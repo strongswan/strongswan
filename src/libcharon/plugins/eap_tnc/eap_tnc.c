@@ -242,7 +242,7 @@ METHOD(eap_method_t, destroy, void,
 		}
 		else
 		{
-			DBG1(DBG_TNC, "could not resolve hostname '%s'", pdp_server);
+			DBG1(DBG_TNC, "could not resolve PDP hostname '%s'", pdp_server);
 		}
 	}
 	this->tls_eap->destroy(this->tls_eap);

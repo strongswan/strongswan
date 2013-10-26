@@ -69,6 +69,12 @@ METHOD(pt_tls_manager_t, remove_connection, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(pt_tls_manager_t, create_connection_enumerator, enumerator_t*,
+	private_pt_tls_manager_t *this)
+{
+	return this->connections->create_enumerator(this->connections);
+}
+
 METHOD(pt_tls_manager_t, destroy, void,
 	private_pt_tls_manager_t *this)
 {
@@ -90,6 +96,7 @@ pt_tls_manager_t *pt_tls_manager_create(pt_tls_connection_constructor_t create)
 			.create_connection = _create_connection,
 			.add_connection = _add_connection,
 			.remove_connection = _remove_connection,
+			.create_connection_enumerator = _create_connection_enumerator,
 			.destroy = _destroy,
 		},
 		.create = create,

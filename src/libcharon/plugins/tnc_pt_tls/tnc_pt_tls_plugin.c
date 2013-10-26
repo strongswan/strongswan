@@ -14,6 +14,7 @@
  */
 
 #include "tnc_pt_tls_plugin.h"
+#include "tnc_pt_tls_listener.h"
 #include "tnc_pt_tls_connection.h"
 
 #include "pt_tls_manager.h"
@@ -33,9 +34,14 @@ struct private_tnc_pt_tls_plugin_t {
 	pt_tls_plugin_t public;
 
 	/**
-	 * PT-TLS backend manager
+	 * PT-TLS connection manager
 	 */
 	pt_tls_manager_t *mgr;
+
+	/**
+	 * Listener interface, listens to CHILD_SA state changes
+	 */
+	tnc_pt_tls_listener_t *listener;
 };
 
 
@@ -54,9 +60,13 @@ static bool plugin_cb(private_tnc_pt_tls_plugin_t *this,
 	if (reg)
 	{
 		lib->set(lib, "pt-tls-manager", this->mgr);
+		this->listener = tnc_pt_tls_listener_create(this->mgr);
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
 	}
 	else
 	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+		this->listener->destroy(this->listener);
 		lib->set(lib, "pt-tls-manager", NULL);
 	}
 	return TRUE;

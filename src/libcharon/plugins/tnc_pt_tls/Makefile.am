@@ -22,6 +22,7 @@ endif
 
 libstrongswan_tnc_pt_tls_la_SOURCES = \
 	tnc_pt_tls_plugin.h tnc_pt_tls_plugin.c \
-	tnc_pt_tls_connection.h tnc_pt_tls_connection.c
+	tnc_pt_tls_connection.h tnc_pt_tls_connection.c \
+	tnc_pt_tls_listener.h tnc_pt_tls_listener.c
 
 libstrongswan_tnc_pt_tls_la_LDFLAGS = -module -avoid-version

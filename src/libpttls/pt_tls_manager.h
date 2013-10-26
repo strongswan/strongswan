@@ -60,6 +60,13 @@ struct pt_tls_manager_t {
 							  pt_tls_connection_t *connection);
 
 	/**
+	 * Enumerate over all registered PT-TLS connections
+	 *
+	 * @return				PT-TLS connection enumerator
+	 */
+	enumerator_t* (*create_connection_enumerator)(pt_tls_manager_t *this);
+
+	/**
 	 * Destroy a manager instance.
 	 */
 	void (*destroy)(pt_tls_manager_t *this);

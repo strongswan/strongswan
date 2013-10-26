@@ -426,6 +426,33 @@ static bool assess(private_pt_tls_client_t *this, tls_t *tnccs)
 	}
 }
 
+METHOD(pt_tls_client_t, start, status_t,
+	private_pt_tls_client_t *this, tnccs_t *tnccs)
+{
+	if (!this->tls)
+	{
+		DBG1(DBG_TNC, "entering PT-TLS setup phase");
+		if (!make_connection(this))
+		{
+			return FAILED;
+		}
+	}
+
+	DBG1(DBG_TNC, "entering PT-TLS negotiation phase");
+	if (!negotiate_version(this))
+	{
+		return FAILED;
+	}
+
+	DBG1(DBG_TNC, "doing SASL client authentication");
+	if (!authenticate(this))
+	{
+		return FAILED;
+	}
+
+	return SUCCESS;
+}
+
 METHOD(pt_tls_client_t, run_assessment, status_t,
 	private_pt_tls_client_t *this, tnccs_t *tnccs)
 {
@@ -458,6 +485,11 @@ METHOD(pt_tls_client_t, run_assessment, status_t,
 	return SUCCESS;
 }
 
+METHOD(pt_tls_client_t, get_address, host_t*,
+	private_pt_tls_client_t *this)
+{
+	return this->address;
+}
 
 METHOD(pt_tls_client_t, destroy, void,
 	private_pt_tls_client_t *this)
@@ -486,6 +518,8 @@ pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *server,
 
 	INIT(this,
 		.public = {
+			.get_address = _get_address,
+			.start = _start,
 			.run_assessment = _run_assessment,
 			.destroy = _destroy,
 		},
