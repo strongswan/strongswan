@@ -22,15 +22,11 @@ the charon-xpc tarball with:
 
 ## Building strongSwan ##
 
-strongSwan on OS X requires the libvstr library. The simplest way to install
-it is using MacPorts. It gets statically linked to charon-xpc, hence it is not
-needed to run the built App.
-
 Before building the Xcode project, the strongSwan base tree must be built using
 a monolithic and static build. This can be achieved on OS X by using:
 
-    LDFLAGS="-all_load -L/opt/local/lib" \
-    CFLAGS="-idirafter /opt/local/include -O2 -Wall -Wno-format -Wno-pointer-sign" \
+    LDFLAGS="-all_load" \
+    CFLAGS="-O2 -Wall -Wno-format -Wno-pointer-sign" \
     ./configure --enable-monolithic --disable-shared --enable-static \
         --disable-defaults \
         --enable-openssl --enable-kernel-libipsec --enable-kernel-pfroute \

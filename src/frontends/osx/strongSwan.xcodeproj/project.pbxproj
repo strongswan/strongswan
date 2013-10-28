@@ -209,12 +209,12 @@
 				CODE_SIGN_IDENTITY = "Joe Developer";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
 				HEADER_SEARCH_PATHS = (
 					/usr/include,
 					../../libstrongswan,
 					../../libcharon,
 					../../libhydra,
-					/opt/local/include,
 				);
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
@@ -223,16 +223,13 @@
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
 					../../libhydra/.libs,
-					/opt/local/lib,
 				);
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
-					"-DVSTR_COMPILE_INLINE=0",
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
-					/opt/local/lib/libvstr.a,
 					"-force_load",
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
@@ -263,12 +260,12 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
 				HEADER_SEARCH_PATHS = (
 					/usr/include,
 					../../libstrongswan,
 					../../libcharon,
 					../../libhydra,
-					/opt/local/include,
 				);
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
@@ -277,16 +274,13 @@
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
 					../../libhydra/.libs,
-					/opt/local/lib,
 				);
 				OTHER_CFLAGS = (
 					"-include",
 					../../../config.h,
-					"-DVSTR_COMPILE_INLINE=0",
 				);
 				OTHER_LDFLAGS = (
 					"-lcrypto",
-					/opt/local/lib/libvstr.a,
 					"-force_load",
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
