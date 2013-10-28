@@ -211,6 +211,7 @@ METHOD(xpc_channels_t, add, void,
 		.logger = xpc_logger_create(conn),
 	);
 
+	xpc_retain(entry->conn);
 	xpc_connection_set_event_handler(entry->conn, ^(xpc_object_t event)
 	{
 		if (event == XPC_ERROR_CONNECTION_INVALID ||

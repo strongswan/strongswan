@@ -281,6 +281,7 @@ static void cleanup_connection(private_xpc_dispatch_t *this)
  */
 static void set_handler(private_xpc_dispatch_t *this)
 {
+	xpc_retain(this->service);
 	xpc_connection_set_event_handler(this->service, ^(xpc_object_t conn)
 	{
 		xpc_connection_set_event_handler(conn, ^(xpc_object_t event)
