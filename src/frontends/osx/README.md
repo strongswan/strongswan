@@ -34,10 +34,10 @@ a monolithic and static build. This can be achieved on OS X by using:
     ./configure --enable-monolithic --disable-shared --enable-static \
         --disable-defaults \
         --enable-openssl --enable-kernel-libipsec --enable-kernel-pfroute \
-        --enable-eap-mschapv2 --enable-eap-identity --enable-nonce \
+        --enable-eap-mschapv2 --enable-eap-identity --enable-eap-md5 \
         --enable-pkcs1 --enable-socket-default --enable-osx-attr \
         --enable-xauth-generic --enable-gcm --enable-ccm --enable-ctr \
-        --enable-keychain --enable-charon \
+        --enable-keychain --enable-nonce --enable-charon \
         --enable-ikev1 --enable-ikev2
 
 followed by calling make (no need to make install).
