@@ -25,7 +25,6 @@ the charon-xpc tarball with:
 Before building the Xcode project, the strongSwan base tree must be built using
 a monolithic and static build. This can be achieved on OS X by using:
 
-    LDFLAGS="-all_load" \
     CFLAGS="-O2 -Wall -Wno-format -Wno-pointer-sign" \
     ./configure --enable-monolithic --disable-shared --enable-static \
         --disable-defaults \
