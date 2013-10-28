@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
 				"nonce pkcs1 openssl keychain ctr ccm gcm kernel-libipsec "
 				"kernel-pfroute socket-default eap-identity eap-mschapv2 "
-				"xauth-generic osx-attr")))
+				"eap-md5 xauth-generic osx-attr")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
