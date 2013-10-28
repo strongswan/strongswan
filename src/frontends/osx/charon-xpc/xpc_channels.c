@@ -479,7 +479,7 @@ static shared_key_t* password_cb(private_xpc_channels_t *this,
 	{
 		sa = ike_sa->get_unique_id(ike_sa);
 		this->lock->read_lock(this->lock);
-		entry = this->channels->get(this->channels, (void*)sa);
+		entry = this->channels->get(this->channels, (void*)(uintptr_t)sa);
 		if (entry && !entry->passworded)
 		{
 			entry->passworded = TRUE;
