@@ -45,8 +45,8 @@ METHOD(listener_t, message, bool,
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == ID_INITIATOR ||
-				payload->get_type(payload) == ID_RESPONDER)
+			if (payload->get_type(payload) == PLV2_ID_INITIATOR ||
+				payload->get_type(payload) == PLV2_ID_RESPONDER)
 			{
 				id_payload = (id_payload_t*)payload;
 				id = id_payload->get_identification(id_payload);

@@ -70,7 +70,7 @@ struct id_payload_t {
 /**
  * Creates an empty id_payload_t object.
  *
- * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
+ * @param type		one of PLV2_ID_INITIATOR, PLV2_ID_RESPONDER, PLV1_ID and PLV1_NAT_OA
  * @return			id_payload_t object
  */
 id_payload_t *id_payload_create(payload_type_t type);
@@ -78,7 +78,7 @@ id_payload_t *id_payload_create(payload_type_t type);
 /**
  * Creates an id_payload_t from an existing identification_t object.
  *
- * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
+ * @param type		one of PLV2_ID_INITIATOR, PLV2_ID_RESPONDER, PLV1_ID and PLV1_NAT_OA
  * @param id		identification_t object
  * @return			id_payload_t object
  */
@@ -89,7 +89,7 @@ id_payload_t *id_payload_create_from_identification(payload_type_t type,
  * Create an IKEv1 ID_ADDR_SUBNET/RANGE identity from a traffic selector.
  *
  * @param ts		traffic selector
- * @return			ID_V1 id_paylad_t object.
+ * @return			PLV1_ID id_paylad_t object.
  */
 id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts);
 

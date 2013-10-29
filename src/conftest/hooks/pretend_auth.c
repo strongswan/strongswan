@@ -79,7 +79,7 @@ static void process_init_request(private_pretend_auth_t *this,
 {
 	nonce_payload_t *nonce;
 
-	nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
 	if (nonce)
 	{
 		free(this->nonce.ptr);
@@ -98,13 +98,13 @@ static void process_auth_request(private_pretend_auth_t *this,
 	ts_payload_t *tsi, *tsr;
 	linked_list_t *proposals;
 
-	id = (id_payload_t*)message->get_payload(message, ID_RESPONDER);
+	id = (id_payload_t*)message->get_payload(message, PLV2_ID_RESPONDER);
 	if (id)
 	{
 		this->id->destroy(this->id);
 		this->id = id->get_identification(id);
 	}
-	sa = (sa_payload_t*)message->get_payload(message, SECURITY_ASSOCIATION);
+	sa = (sa_payload_t*)message->get_payload(message, PLV2_SECURITY_ASSOCIATION);
 	if (sa)
 	{
 		proposals = sa->get_proposals(sa);
@@ -116,13 +116,13 @@ static void process_auth_request(private_pretend_auth_t *this,
 		proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 	}
 	tsi = (ts_payload_t*)message->get_payload(message,
-											  TRAFFIC_SELECTOR_INITIATOR);
+											  PLV2_TS_INITIATOR);
 	if (tsi)
 	{
 		this->tsi = tsi->get_traffic_selectors(tsi);
 	}
 	tsr = (ts_payload_t*)message->get_payload(message,
-											  TRAFFIC_SELECTOR_RESPONDER);
+											  PLV2_TS_RESPONDER);
 	if (tsr)
 	{
 		this->tsr = tsr->get_traffic_selectors(tsr);
@@ -154,7 +154,7 @@ static void build_certs(private_pretend_auth_t *this,
 	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
 	{
-		payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+		payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 		if (payload)
 		{
 			DBG1(DBG_IKE, "pretending end entity cert \"%Y\"",
@@ -167,7 +167,7 @@ static void build_certs(private_pretend_auth_t *this,
 	{
 		if (type == AUTH_RULE_IM_CERT)
 		{
-			payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+			payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 			if (payload)
 			{
 				DBG1(DBG_IKE, "pretending issuer cert \"%Y\"",
@@ -276,7 +276,7 @@ static void process_auth_response(private_pretend_auth_t *this,
 	{
 		notify_payload_t *notify = (notify_payload_t*)payload;
 
-		if (payload->get_type(payload) != NOTIFY ||
+		if (payload->get_type(payload) != PLV2_NOTIFY ||
 			notify->get_notify_type(notify) != AUTHENTICATION_FAILED)
 		{
 			DBG1(DBG_CFG, "no %N notify found, disabling AUTH pretending",
@@ -295,7 +295,7 @@ static void process_auth_response(private_pretend_auth_t *this,
 		return;
 	}
 	message->add_payload(message, (payload_t*)
-				id_payload_create_from_identification(ID_RESPONDER, this->id));
+				id_payload_create_from_identification(PLV2_ID_RESPONDER, this->id));
 	if (this->proposal)
 	{
 		message->add_payload(message, (payload_t*)

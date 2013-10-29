@@ -96,7 +96,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 		chunk_t data;
 		host_t *host;
 
-		if (payload->get_type(payload) != NOTIFY)
+		if (payload->get_type(payload) != PLV2_NOTIFY)
 		{
 			continue;
 		}

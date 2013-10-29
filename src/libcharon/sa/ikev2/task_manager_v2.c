@@ -792,7 +792,7 @@ static status_t process_request(private_task_manager_t *this,
 				{
 					switch (payload->get_type(payload))
 					{
-						case NOTIFY:
+						case PLV2_NOTIFY:
 						{	/* if we find a rekey notify, its CHILD_SA rekeying */
 							notify = (notify_payload_t*)payload;
 							if (notify->get_notify_type(notify) == REKEY_SA &&
@@ -803,8 +803,8 @@ static status_t process_request(private_task_manager_t *this,
 							}
 							break;
 						}
-						case TRAFFIC_SELECTOR_INITIATOR:
-						case TRAFFIC_SELECTOR_RESPONDER:
+						case PLV2_TS_INITIATOR:
+						case PLV2_TS_RESPONDER:
 						{	/* if we don't find a TS, its IKE rekeying */
 							ts_found = TRUE;
 							break;
@@ -842,7 +842,7 @@ static status_t process_request(private_task_manager_t *this,
 				{
 					switch (payload->get_type(payload))
 					{
-						case NOTIFY:
+						case PLV2_NOTIFY:
 						{
 							notify = (notify_payload_t*)payload;
 							switch (notify->get_notify_type(notify))
@@ -875,7 +875,7 @@ static status_t process_request(private_task_manager_t *this,
 							}
 							break;
 						}
-						case DELETE:
+						case PLV2_DELETE:
 						{
 							delete = (delete_payload_t*)payload;
 							if (delete->get_protocol_id(delete) == PROTO_IKE)

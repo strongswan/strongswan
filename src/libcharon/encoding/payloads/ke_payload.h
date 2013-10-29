@@ -63,7 +63,7 @@ struct ke_payload_t {
 /**
  * Creates an empty ke_payload_t object.
  *
- * @param type		KEY_EXCHANGE or KEY_EXCHANGE_V1
+ * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
  * @return			ke_payload_t object
  */
 ke_payload_t *ke_payload_create(payload_type_t type);
@@ -71,7 +71,7 @@ ke_payload_t *ke_payload_create(payload_type_t type);
 /**
  * Creates a ke_payload_t from a diffie_hellman_t.
  *
- * @param type		KEY_EXCHANGE or KEY_EXCHANGE_V1
+ * @param type		PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
  * @param dh		diffie hellman object containing group and key
  * @return 			ke_payload_t object
  */

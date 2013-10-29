@@ -43,7 +43,7 @@ METHOD(listener_t, message, bool,
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == KEY_EXCHANGE)
+			if (payload->get_type(payload) == PLV2_KEY_EXCHANGE)
 			{
 				ke = (ke_payload_t*)payload;
 				DBG1(DBG_CFG, "received DH group %N",

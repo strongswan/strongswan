@@ -108,7 +108,7 @@ METHOD(listener_t, message, bool,
 			diff = this->bytes - size - CERT_PAYLOAD_HEADER_LENGTH;
 			data = chunk_alloc(diff);
 			memset(data.ptr, 0x12, data.len);
-			pld = cert_payload_create_custom(CERTIFICATE, 201, data);
+			pld = cert_payload_create_custom(PLV2_CERTIFICATE, 201, data);
 			message->add_payload(message, &pld->payload_interface);
 			DBG1(DBG_CFG, "inserting %d dummy bytes certificate payload", diff);
 		}

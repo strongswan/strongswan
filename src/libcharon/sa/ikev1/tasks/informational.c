@@ -93,7 +93,7 @@ METHOD(task_t, process_r, status_t,
 	{
 		switch (payload->get_type(payload))
 		{
-			case NOTIFY_V1:
+			case PLV1_NOTIFY:
 				notify = (notify_payload_t*)payload;
 				type = notify->get_notify_type(notify);
 
@@ -153,7 +153,7 @@ METHOD(task_t, process_r, status_t,
 						 notify_type_names, type);
 				}
 				continue;
-			case DELETE_V1:
+			case PLV1_DELETE:
 				if (!this->del)
 				{
 					delete = (delete_payload_t*)payload;

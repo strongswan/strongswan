@@ -65,7 +65,7 @@ METHOD(task_t, build_i, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
-	delete_payload = delete_payload_create(DELETE, PROTO_IKE);
+	delete_payload = delete_payload_create(PLV2_DELETE, PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)

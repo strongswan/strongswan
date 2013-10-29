@@ -52,7 +52,7 @@ struct private_hash_payload_t {
 	chunk_t hash;
 
 	/**
-	 * either HASH_V1 or NAT_D_V1
+	 * either PLV1_HASH or PLV1_NAT_D
 	 */
 	payload_type_t type;
 };
@@ -169,7 +169,7 @@ hash_payload_t *hash_payload_create(payload_type_t type)
 			.get_hash = _get_hash,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);

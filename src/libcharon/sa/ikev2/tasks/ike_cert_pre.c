@@ -138,10 +138,10 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	{
 		switch (payload->get_type(payload))
 		{
-			case CERTIFICATE_REQUEST:
+			case PLV2_CERTREQ:
 				process_certreq(this, (certreq_payload_t*)payload, auth);
 				break;
-			case NOTIFY:
+			case PLV2_NOTIFY:
 				process_notify(this, (notify_payload_t*)payload);
 				break;
 			default:
@@ -298,7 +298,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == CERTIFICATE)
+		if (payload->get_type(payload) == PLV2_CERTIFICATE)
 		{
 			cert_payload_t *cert_payload;
 			cert_encoding_t encoding;
@@ -469,7 +469,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 static bool final_auth(message_t *message)
 {
 	/* we check for an AUTH payload without a ANOTHER_AUTH_FOLLOWS notify */
-	if (message->get_payload(message, AUTHENTICATION) == NULL)
+	if (message->get_payload(message, PLV2_AUTH) == NULL)
 	{
 		return FALSE;
 	}

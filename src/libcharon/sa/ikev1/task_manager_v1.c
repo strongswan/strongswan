@@ -956,7 +956,7 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 	response->set_request(response, TRUE);
 	response->set_message_id(response, mid);
 	response->add_payload(response, (payload_t*)
-				notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+				notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
 													PROTO_IKE, type));
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
@@ -1265,7 +1265,7 @@ static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 	chunk_t data;
 	u_int8_t num;
 
-	payload = (fragment_payload_t*)msg->get_payload(msg, FRAGMENT_V1);
+	payload = (fragment_payload_t*)msg->get_payload(msg, PLV1_FRAGMENT);
 	if (!payload)
 	{
 		return FAILED;
@@ -1412,7 +1412,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		}
 	}
 
-	if (msg->get_first_payload_type(msg) == FRAGMENT_V1)
+	if (msg->get_first_payload_type(msg) == PLV1_FRAGMENT)
 	{
 		return handle_fragment(this, msg);
 	}
@@ -1514,7 +1514,7 @@ METHOD(task_manager_t, process_message, status_t,
 		{
 			if (this->ike_sa->get_state(this->ike_sa) != IKE_CREATED &&
 				this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING &&
-				msg->get_first_payload_type(msg) != FRAGMENT_V1)
+				msg->get_first_payload_type(msg) != PLV1_FRAGMENT)
 			{
 				DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
 					 exchange_type_names, msg->get_exchange_type(msg));

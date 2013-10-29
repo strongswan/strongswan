@@ -97,7 +97,7 @@ struct transform_substructure_t {
 /**
  * Creates an empty transform_substructure_t object.
  *
- * @param type			TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
+ * @param type			PLV2_TRANSFORM_SUBSTRUCTURE or PLV1_TRANSFORM_SUBSTRUCTURE
  * @return				created transform_substructure_t object
  */
 transform_substructure_t *transform_substructure_create(payload_type_t type);
@@ -105,7 +105,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type);
 /**
  * Creates an empty transform_substructure_t object.
  *
- * @param type				TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
+ * @param type				PLV2_TRANSFORM_SUBSTRUCTURE or PLV1_TRANSFORM_SUBSTRUCTURE
  * @param type_or_number	Type (IKEv2) or number (IKEv1) of transform
  * @param id				transform id specifc for the transform type
  * @return					transform_substructure_t object

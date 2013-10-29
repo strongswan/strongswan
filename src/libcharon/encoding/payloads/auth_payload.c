@@ -135,7 +135,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_auth_payload_t *this)
 {
-	return AUTHENTICATION;
+	return PLV2_AUTH;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -214,7 +214,7 @@ auth_payload_t *auth_payload_create()
 			.get_data = _get_data,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 	);
 	return &this->public;

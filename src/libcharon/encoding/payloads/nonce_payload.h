@@ -64,7 +64,7 @@ struct nonce_payload_t {
 /**
  * Creates an empty nonce_payload_t object
  *
- * @param type		NONCE or NONCE_V1
+ * @param type		PLV2_NONCE or PLV1_NONCE
  * @return			nonce_payload_t object
  */
 nonce_payload_t *nonce_payload_create(payload_type_t type);

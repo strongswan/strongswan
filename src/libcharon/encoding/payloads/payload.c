@@ -39,16 +39,16 @@
 #include <encoding/payloads/fragment_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 
-ENUM_BEGIN(payload_type_names, NO_PAYLOAD, NO_PAYLOAD,
-	"NO_PAYLOAD");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
+ENUM_BEGIN(payload_type_names, PL_NONE, PL_NONE,
+	"PL_NONE");
+ENUM_NEXT(payload_type_names, PLV1_SECURITY_ASSOCIATION, PLV1_CONFIGURATION, PL_NONE,
 	"SECURITY_ASSOCIATION_V1",
 	"PROPOSAL_V1",
 	"TRANSFORM_V1",
 	"KEY_EXCHANGE_V1",
 	"ID_V1",
 	"CERTIFICATE_V1",
-	"CERTIFICATE_REQUEST_V1",
+	"CERTREQ_V1",
 	"HASH_V1",
 	"SIGNATURE_V1",
 	"NONCE_V1",
@@ -56,41 +56,41 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYL
 	"DELETE_V1",
 	"VENDOR_ID_V1",
 	"CONFIGURATION_V1");
-ENUM_NEXT(payload_type_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+ENUM_NEXT(payload_type_names, PLV1_NAT_D, PLV1_NAT_OA, PLV1_CONFIGURATION,
 	"NAT_D_V1",
 	"NAT_OA_V1");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METHOD, NAT_OA_V1,
+ENUM_NEXT(payload_type_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_NAT_OA,
 	"SECURITY_ASSOCIATION",
 	"KEY_EXCHANGE",
 	"ID_INITIATOR",
 	"ID_RESPONDER",
 	"CERTIFICATE",
-	"CERTIFICATE_REQUEST",
-	"AUTHENTICATION",
+	"CERTREQ",
+	"AUTH",
 	"NONCE",
 	"NOTIFY",
 	"DELETE",
 	"VENDOR_ID",
-	"TRAFFIC_SELECTOR_INITIATOR",
-	"TRAFFIC_SELECTOR_RESPONDER",
+	"TS_INITIATOR",
+	"TS_RESPONDER",
 	"ENCRYPTED",
 	"CONFIGURATION",
-	"EXTENSIBLE_AUTHENTICATION",
-	"GENERIC_SECURE_PASSWORD_METHOD");
+	"EAP",
+	"GSPM");
 #ifdef ME
-ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_GSPM,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, ID_PEER,
+ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_ID_PEER,
 	"NAT_D_DRAFT_V1",
 	"NAT_OA_DRAFT_V1",
 	"FRAGMENT");
 #else
-ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_GSPM,
 	"NAT_D_DRAFT_V1",
 	"NAT_OA_DRAFT_V1",
 	"FRAGMENT");
 #endif /* ME */
-ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
+ENUM_NEXT(payload_type_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"PROPOSAL_SUBSTRUCTURE_V1",
@@ -102,12 +102,12 @@ ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
 	"CONFIGURATION_ATTRIBUTE",
 	"CONFIGURATION_ATTRIBUTE_V1",
 	"ENCRYPTED_V1");
-ENUM_END(payload_type_names, ENCRYPTED_V1);
+ENUM_END(payload_type_names, PLV1_ENCRYPTED);
 
 /* short forms of payload names */
-ENUM_BEGIN(payload_type_short_names, NO_PAYLOAD, NO_PAYLOAD,
+ENUM_BEGIN(payload_type_short_names, PL_NONE, PL_NONE,
 	"--");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
+ENUM_NEXT(payload_type_short_names, PLV1_SECURITY_ASSOCIATION, PLV1_CONFIGURATION, PL_NONE,
 	"SA",
 	"PROP",
 	"TRANS",
@@ -122,10 +122,10 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, N
 	"D",
 	"V",
 	"CP");
-ENUM_NEXT(payload_type_short_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+ENUM_NEXT(payload_type_short_names, PLV1_NAT_D, PLV1_NAT_OA, PLV1_CONFIGURATION,
 	"NAT-D",
 	"NAT-OA");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METHOD, NAT_OA_V1,
+ENUM_NEXT(payload_type_short_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_NAT_OA,
 	"SA",
 	"KE",
 	"IDi",
@@ -144,19 +144,19 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWOR
 	"EAP",
 	"GSPM");
 #ifdef ME
-ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_GSPM,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, ID_PEER,
+ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_ID_PEER,
 	"NAT-D",
 	"NAT-OA",
 	"FRAG");
 #else
-ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_GSPM,
 	"NAT-D",
 	"NAT-OA",
 	"FRAG");
 #endif /* ME */
-ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
+ENUM_NEXT(payload_type_short_names, PL_HEADER, PLV1_ENCRYPTED, PLV1_FRAGMENT,
 	"HDR",
 	"PROP",
 	"PROP",
@@ -168,7 +168,7 @@ ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
 	"CATTR",
 	"CATTR",
 	"E");
-ENUM_END(payload_type_short_names, ENCRYPTED_V1);
+ENUM_END(payload_type_short_names, PLV1_ENCRYPTED);
 
 /*
  * see header
@@ -177,75 +177,75 @@ payload_t *payload_create(payload_type_t type)
 {
 	switch (type)
 	{
-		case HEADER:
+		case PL_HEADER:
 			return (payload_t*)ike_header_create();
-		case SECURITY_ASSOCIATION:
-		case SECURITY_ASSOCIATION_V1:
+		case PLV2_SECURITY_ASSOCIATION:
+		case PLV1_SECURITY_ASSOCIATION:
 			return (payload_t*)sa_payload_create(type);
-		case PROPOSAL_SUBSTRUCTURE:
-		case PROPOSAL_SUBSTRUCTURE_V1:
+		case PLV2_PROPOSAL_SUBSTRUCTURE:
+		case PLV1_PROPOSAL_SUBSTRUCTURE:
 			return (payload_t*)proposal_substructure_create(type);
-		case TRANSFORM_SUBSTRUCTURE:
-		case TRANSFORM_SUBSTRUCTURE_V1:
+		case PLV2_TRANSFORM_SUBSTRUCTURE:
+		case PLV1_TRANSFORM_SUBSTRUCTURE:
 			return (payload_t*)transform_substructure_create(type);
-		case TRANSFORM_ATTRIBUTE:
-		case TRANSFORM_ATTRIBUTE_V1:
+		case PLV2_TRANSFORM_ATTRIBUTE:
+		case PLV1_TRANSFORM_ATTRIBUTE:
 			return (payload_t*)transform_attribute_create(type);
-		case NONCE:
-		case NONCE_V1:
+		case PLV2_NONCE:
+		case PLV1_NONCE:
 			return (payload_t*)nonce_payload_create(type);
-		case ID_INITIATOR:
-		case ID_RESPONDER:
-		case ID_V1:
-		case NAT_OA_V1:
-		case NAT_OA_DRAFT_00_03_V1:
+		case PLV2_ID_INITIATOR:
+		case PLV2_ID_RESPONDER:
+		case PLV1_ID:
+		case PLV1_NAT_OA:
+		case PLV1_NAT_OA_DRAFT_00_03:
 #ifdef ME
-		case ID_PEER:
+		case PLV2_ID_PEER:
 #endif /* ME */
 			return (payload_t*)id_payload_create(type);
-		case AUTHENTICATION:
+		case PLV2_AUTH:
 			return (payload_t*)auth_payload_create();
-		case CERTIFICATE:
-		case CERTIFICATE_V1:
+		case PLV2_CERTIFICATE:
+		case PLV1_CERTIFICATE:
 			return (payload_t*)cert_payload_create(type);
-		case CERTIFICATE_REQUEST:
-		case CERTIFICATE_REQUEST_V1:
+		case PLV2_CERTREQ:
+		case PLV1_CERTREQ:
 			return (payload_t*)certreq_payload_create(type);
-		case TRAFFIC_SELECTOR_SUBSTRUCTURE:
+		case PLV2_TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			return (payload_t*)traffic_selector_substructure_create();
-		case TRAFFIC_SELECTOR_INITIATOR:
+		case PLV2_TS_INITIATOR:
 			return (payload_t*)ts_payload_create(TRUE);
-		case TRAFFIC_SELECTOR_RESPONDER:
+		case PLV2_TS_RESPONDER:
 			return (payload_t*)ts_payload_create(FALSE);
-		case KEY_EXCHANGE:
-		case KEY_EXCHANGE_V1:
+		case PLV2_KEY_EXCHANGE:
+		case PLV1_KEY_EXCHANGE:
 			return (payload_t*)ke_payload_create(type);
-		case NOTIFY:
-		case NOTIFY_V1:
+		case PLV2_NOTIFY:
+		case PLV1_NOTIFY:
 			return (payload_t*)notify_payload_create(type);
-		case DELETE:
-		case DELETE_V1:
+		case PLV2_DELETE:
+		case PLV1_DELETE:
 			return (payload_t*)delete_payload_create(type, 0);
-		case VENDOR_ID:
-		case VENDOR_ID_V1:
+		case PLV2_VENDOR_ID:
+		case PLV1_VENDOR_ID:
 			return (payload_t*)vendor_id_payload_create(type);
-		case HASH_V1:
-		case SIGNATURE_V1:
-		case NAT_D_V1:
-		case NAT_D_DRAFT_00_03_V1:
+		case PLV1_HASH:
+		case PLV1_SIGNATURE:
+		case PLV1_NAT_D:
+		case PLV1_NAT_D_DRAFT_00_03:
 			return (payload_t*)hash_payload_create(type);
-		case CONFIGURATION:
-		case CONFIGURATION_V1:
+		case PLV2_CONFIGURATION:
+		case PLV1_CONFIGURATION:
 			return (payload_t*)cp_payload_create(type);
-		case CONFIGURATION_ATTRIBUTE:
-		case CONFIGURATION_ATTRIBUTE_V1:
+		case PLV2_CONFIGURATION_ATTRIBUTE:
+		case PLV1_CONFIGURATION_ATTRIBUTE:
 			return (payload_t*)configuration_attribute_create(type);
-		case EXTENSIBLE_AUTHENTICATION:
+		case PLV2_EAP:
 			return (payload_t*)eap_payload_create();
-		case ENCRYPTED:
-		case ENCRYPTED_V1:
+		case PLV2_ENCRYPTED:
+		case PLV1_ENCRYPTED:
 			return (payload_t*)encryption_payload_create(type);
-		case FRAGMENT_V1:
+		case PLV1_FRAGMENT:
 			return (payload_t*)fragment_payload_create();
 		default:
 			return (payload_t*)unknown_payload_create(type);
@@ -257,29 +257,29 @@ payload_t *payload_create(payload_type_t type)
  */
 bool payload_is_known(payload_type_t type)
 {
-	if (type == HEADER)
+	if (type == PL_HEADER)
 	{
 		return TRUE;
 	}
-	if (type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION)
+	if (type >= PLV2_SECURITY_ASSOCIATION && type <= PLV2_EAP)
 	{
 		return TRUE;
 	}
-	if (type >= SECURITY_ASSOCIATION_V1 && type <= CONFIGURATION_V1)
+	if (type >= PLV1_SECURITY_ASSOCIATION && type <= PLV1_CONFIGURATION)
 	{
 		return TRUE;
 	}
-	if (type >= NAT_D_V1 && type <= NAT_OA_V1)
+	if (type >= PLV1_NAT_D && type <= PLV1_NAT_OA)
 	{
 		return TRUE;
 	}
 #ifdef ME
-	if (type == ID_PEER)
+	if (type == PLV2_ID_PEER)
 	{
 		return TRUE;
 	}
 #endif
-	if (type >= NAT_D_DRAFT_00_03_V1 && type <= FRAGMENT_V1)
+	if (type >= PLV1_NAT_D_DRAFT_00_03 && type <= PLV1_FRAGMENT)
 	{
 		return TRUE;
 	}

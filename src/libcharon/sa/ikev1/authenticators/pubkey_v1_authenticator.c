@@ -108,7 +108,7 @@ METHOD(authenticator_t, build, status_t,
 
 	if (private->sign(private, scheme, hash, &sig))
 	{
-		sig_payload = hash_payload_create(SIGNATURE_V1);
+		sig_payload = hash_payload_create(PLV1_SIGNATURE);
 		sig_payload->set_hash(sig_payload, sig);
 		free(sig.ptr);
 		message->add_payload(message, &sig_payload->payload_interface);
@@ -144,7 +144,7 @@ METHOD(authenticator_t, process, status_t,
 		scheme = SIGN_ECDSA_WITH_NULL;
 	}
 
-	sig_payload = (hash_payload_t*)message->get_payload(message, SIGNATURE_V1);
+	sig_payload = (hash_payload_t*)message->get_payload(message, PLV1_SIGNATURE);
 	if (!sig_payload)
 	{
 		DBG1(DBG_IKE, "SIG payload missing in message");

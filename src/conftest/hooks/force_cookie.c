@@ -44,7 +44,7 @@ METHOD(listener_t, message, bool,
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == NOTIFY)
+			if (payload->get_type(payload) == PLV2_NOTIFY)
 			{
 				notify_payload_t *notify = (notify_payload_t*)payload;
 				chunk_t data;

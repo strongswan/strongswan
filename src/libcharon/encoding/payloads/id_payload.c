@@ -81,7 +81,7 @@ struct private_id_payload_t {
 	u_int16_t port;
 
 	/**
-	 * one of ID_INITIATOR, ID_RESPONDER, IDv1 and NAT_OA_V1
+	 * one of PLV2_ID_INITIATOR, PLV2_ID_RESPONDER, IDv1 and PLV1_NAT_OA
 	 */
 	payload_type_t type;
 };
@@ -165,7 +165,7 @@ METHOD(payload_t, verify, status_t,
 {
 	bool bad_length = FALSE;
 
-	if ((this->type == NAT_OA_V1 || this->type == NAT_OA_DRAFT_00_03_V1) &&
+	if ((this->type == PLV1_NAT_OA || this->type == PLV1_NAT_OA_DRAFT_00_03) &&
 		this->id_type != ID_IPV4_ADDR && this->id_type != ID_IPV6_ADDR)
 	{
 		DBG1(DBG_ENC, "invalid ID type %N for %N payload", id_type_names,
@@ -195,8 +195,8 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_id_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == ID_V1 ||
-		this->type == NAT_OA_V1 || this->type == NAT_OA_DRAFT_00_03_V1)
+	if (this->type == PLV1_ID ||
+		this->type == PLV1_NAT_OA || this->type == PLV1_NAT_OA_DRAFT_00_03)
 	{
 		*rules = encodings_v1;
 		return countof(encodings_v1);
@@ -368,7 +368,7 @@ id_payload_t *id_payload_create(payload_type_t type)
 			.get_ts = _get_ts,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);
@@ -400,7 +400,7 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 	u_int8_t mask;
 	host_t *net;
 
-	this = (private_id_payload_t*)id_payload_create(ID_V1);
+	this = (private_id_payload_t*)id_payload_create(PLV1_ID);
 
 	if (ts->is_host(ts, NULL))
 	{

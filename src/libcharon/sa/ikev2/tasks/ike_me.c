@@ -171,7 +171,7 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) != NOTIFY)
+		if (payload->get_type(payload) != PLV2_NOTIFY)
 		{
 			continue;
 		}
@@ -277,7 +277,7 @@ METHOD(task_t, build_i, status_t,
 		{
 			rng_t *rng;
 			id_payload_t *id_payload;
-			id_payload = id_payload_create_from_identification(ID_PEER,
+			id_payload = id_payload_create_from_identification(PLV2_ID_PEER,
 															   this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 
@@ -339,7 +339,7 @@ METHOD(task_t, process_r, status_t,
 		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
-			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
+			id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_PEER);
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload"
@@ -534,7 +534,7 @@ METHOD(task_t, build_i_ms, status_t,
 		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
-			id_payload = id_payload_create_from_identification(ID_PEER,
+			id_payload = id_payload_create_from_identification(PLV2_ID_PEER,
 															   this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 
@@ -594,7 +594,7 @@ METHOD(task_t, process_r_ms, status_t,
 		case ME_CONNECT:
 		{
 			id_payload_t *id_payload;
-			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
+			id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_PEER);
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload"

@@ -68,7 +68,7 @@ static void print_radius_attributes(private_radattr_listener_t *this,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify = (notify_payload_t*)payload;
 			if (notify->get_notify_type(notify) == RADIUS_ATTRIBUTE)
@@ -144,7 +144,7 @@ METHOD(listener_t, message, bool,
 {
 	if (plain && ike_sa->supports_extension(ike_sa, EXT_STRONGSWAN) &&
 		message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
+		message->get_payload(message, PLV2_EAP))
 	{
 		if (incoming)
 		{

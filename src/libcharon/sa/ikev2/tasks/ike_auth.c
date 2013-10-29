@@ -132,7 +132,7 @@ static status_t collect_my_init_data(private_ike_auth_t *this,
 	nonce_payload_t *nonce;
 
 	/* get the nonce that was generated in ike_init */
-	nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
 	if (nonce == NULL)
 	{
 		return FAILED;
@@ -158,7 +158,7 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	nonce_payload_t *nonce;
 
 	/* get the nonce that was generated in ike_init */
-	nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
 	if (nonce == NULL)
 	{
 		return FAILED;
@@ -433,7 +433,7 @@ METHOD(task_t, build_i, status_t,
 			{
 				this->ike_sa->set_other_id(this->ike_sa, idr->clone(idr));
 				id_payload = id_payload_create_from_identification(
-															ID_RESPONDER, idr);
+															PLV2_ID_RESPONDER, idr);
 				message->add_payload(message, (payload_t*)id_payload);
 			}
 		}
@@ -451,7 +451,7 @@ METHOD(task_t, build_i, status_t,
 			cfg->add(cfg, AUTH_RULE_IDENTITY, idi);
 		}
 		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
-		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);
+		id_payload = id_payload_create_from_identification(PLV2_ID_INITIATOR, idi);
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
@@ -498,7 +498,7 @@ METHOD(task_t, build_i, status_t,
 	/* check for additional authentication rounds */
 	if (do_another_auth(this))
 	{
-		if (message->get_payload(message, AUTHENTICATION))
+		if (message->get_payload(message, PLV2_AUTH))
 		{
 			message->add_notify(message, FALSE, ANOTHER_AUTH_FOLLOWS, chunk_empty);
 		}
@@ -525,7 +525,7 @@ METHOD(task_t, process_r, status_t,
 	if (this->my_auth == NULL && this->do_another_auth)
 	{
 		/* handle (optional) IDr payload, apply proposed identity */
-		id_payload = (id_payload_t*)message->get_payload(message, ID_RESPONDER);
+		id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_RESPONDER);
 		if (id_payload)
 		{
 			id = id_payload->get_identification(id_payload);
@@ -558,7 +558,7 @@ METHOD(task_t, process_r, status_t,
 	if (this->other_auth == NULL)
 	{
 		/* handle IDi payload */
-		id_payload = (id_payload_t*)message->get_payload(message, ID_INITIATOR);
+		id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_INITIATOR);
 		if (!id_payload)
 		{
 			DBG1(DBG_IKE, "IDi payload missing");
@@ -578,7 +578,7 @@ METHOD(task_t, process_r, status_t,
 				return NEED_MORE;
 			}
 		}
-		if (message->get_payload(message, AUTHENTICATION) == NULL)
+		if (message->get_payload(message, PLV2_AUTH) == NULL)
 		{	/* before authenticating with EAP, we need a EAP config */
 			cand = get_auth_cfg(this, FALSE);
 			while (!cand || (
@@ -631,7 +631,7 @@ METHOD(task_t, process_r, status_t,
 			this->other_auth = NULL;
 			break;
 		case NEED_MORE:
-			if (message->get_payload(message, AUTHENTICATION))
+			if (message->get_payload(message, PLV2_AUTH))
 			{	/* AUTH verification successful, but another build() needed */
 				break;
 			}
@@ -733,7 +733,7 @@ METHOD(task_t, build_r, status_t,
 			}
 		}
 
-		id_payload = id_payload_create_from_identification(ID_RESPONDER, id);
+		id_payload = id_payload_create_from_identification(PLV2_ID_RESPONDER, id);
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
@@ -780,7 +780,7 @@ METHOD(task_t, build_r, status_t,
 			case NEED_MORE:
 				break;
 			default:
-				if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
+				if (message->get_payload(message, PLV2_EAP))
 				{	/* skip AUTHENTICATION_FAILED if we have EAP_FAILURE */
 					goto peer_auth_failed_no_notify;
 				}
@@ -900,7 +900,7 @@ METHOD(task_t, process_i, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			notify_type_t type = notify->get_notify_type(notify);
@@ -956,7 +956,7 @@ METHOD(task_t, process_i, status_t,
 
 			/* handle IDr payload */
 			id_payload = (id_payload_t*)message->get_payload(message,
-															 ID_RESPONDER);
+															 PLV2_ID_RESPONDER);
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDr payload missing");
@@ -968,7 +968,7 @@ METHOD(task_t, process_i, status_t,
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 
-			if (message->get_payload(message, AUTHENTICATION))
+			if (message->get_payload(message, PLV2_AUTH))
 			{
 				/* verify authentication data */
 				this->other_auth = authenticator_create_verifier(this->ike_sa,

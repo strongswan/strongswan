@@ -748,7 +748,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) != NOTIFY)
+		if (payload->get_type(payload) != PLV2_NOTIFY)
 		{
 			DBG1(DBG_IKE, "ignoring payload of type '%N' while processing "
 				 "connectivity check", payload_type_names,

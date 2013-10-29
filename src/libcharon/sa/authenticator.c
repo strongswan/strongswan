@@ -86,7 +86,7 @@ authenticator_t *authenticator_create_verifier(
 {
 	auth_payload_t *auth_payload;
 
-	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	auth_payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
 	if (auth_payload == NULL)
 	{
 		return (authenticator_t*)eap_authenticator_create_verifier(ike_sa,

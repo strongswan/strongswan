@@ -85,7 +85,7 @@ METHOD(authenticator_t, build, status_t,
 	}
 	free(dh.ptr);
 
-	hash_payload = hash_payload_create(HASH_V1);
+	hash_payload = hash_payload_create(PLV1_HASH);
 	hash_payload->set_hash(hash_payload, hash);
 	message->add_payload(message, &hash_payload->payload_interface);
 	free(hash.ptr);
@@ -101,7 +101,7 @@ METHOD(authenticator_t, process, status_t,
 	chunk_t hash, dh;
 	auth_cfg_t *auth;
 
-	hash_payload = (hash_payload_t*)message->get_payload(message, HASH_V1);
+	hash_payload = (hash_payload_t*)message->get_payload(message, PLV1_HASH);
 	if (!hash_payload)
 	{
 		DBG1(DBG_IKE, "HASH payload missing in message");

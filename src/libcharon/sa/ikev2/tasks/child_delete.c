@@ -93,7 +93,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_ESP:
 				if (esp == NULL)
 				{
-					esp = delete_payload_create(DELETE, PROTO_ESP);
+					esp = delete_payload_create(PLV2_DELETE, PROTO_ESP);
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
@@ -103,7 +103,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_AH:
 				if (ah == NULL)
 				{
-					ah = delete_payload_create(DELETE, PROTO_AH);
+					ah = delete_payload_create(PLV2_DELETE, PROTO_AH);
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);
@@ -133,7 +133,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
 	{
-		if (payload->get_type(payload) == DELETE)
+		if (payload->get_type(payload) == PLV2_DELETE)
 		{
 			delete_payload = (delete_payload_t*)payload;
 			protocol = delete_payload->get_protocol_id(delete_payload);

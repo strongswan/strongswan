@@ -177,7 +177,7 @@ METHOD(task_t, build_i, status_t,
 		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
 			 protocol_id_names, this->protocol, ntohl(this->spi));
 
-		delete_payload = delete_payload_create(DELETE_V1, this->protocol);
+		delete_payload = delete_payload_create(PLV1_DELETE, this->protocol);
 		delete_payload->add_spi(delete_payload, this->spi);
 		message->add_payload(message, &delete_payload->payload_interface);
 
@@ -205,7 +205,7 @@ METHOD(task_t, process_r, status_t,
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
 	{
-		if (payload->get_type(payload) == DELETE_V1)
+		if (payload->get_type(payload) == PLV1_DELETE)
 		{
 			delete_payload = (delete_payload_t*)payload;
 			protocol = delete_payload->get_protocol_id(delete_payload);

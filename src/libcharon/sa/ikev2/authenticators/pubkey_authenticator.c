@@ -147,7 +147,7 @@ METHOD(authenticator_t, process, status_t,
 	status_t status = NOT_FOUND;
 	keymat_v2_t *keymat;
 
-	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	auth_payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
 	if (!auth_payload)
 	{
 		return FAILED;

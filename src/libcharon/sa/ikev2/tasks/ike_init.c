@@ -147,9 +147,9 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
-	nonce_payload = nonce_payload_create(NONCE);
+	nonce_payload = nonce_payload_create(PLV2_NONCE);
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
-	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE, this->dh);
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
@@ -176,7 +176,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	{
 		switch (payload->get_type(payload))
 		{
-			case SECURITY_ASSOCIATION:
+			case PLV2_SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_t *proposal_list;
@@ -196,7 +196,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 											  offsetof(proposal_t, destroy));
 				break;
 			}
-			case KEY_EXCHANGE:
+			case PLV2_KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
 
@@ -213,7 +213,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				}
 				break;
 			}
-			case NONCE:
+			case PLV2_NONCE:
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
 
@@ -449,7 +449,7 @@ METHOD(task_t, process_i, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			notify_type_t type = notify->get_notify_type(notify);

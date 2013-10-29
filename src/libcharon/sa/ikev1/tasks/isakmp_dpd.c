@@ -55,7 +55,7 @@ METHOD(task_t, build, status_t,
 	u_int32_t seqnr;
 	chunk_t spi;
 
-	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+	notify = notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
 														  PROTO_IKE, this->type);
 	seqnr = htonl(this->seqnr);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);

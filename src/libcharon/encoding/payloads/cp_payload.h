@@ -100,7 +100,7 @@ struct cp_payload_t {
 /**
  * Creates an empty configuration payload
  *
- * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @param type		payload type, PLV2_CONFIGURATION or PLV1_CONFIGURATION
  * @return			empty configuration payload
  */
 cp_payload_t *cp_payload_create(payload_type_t type);
@@ -108,7 +108,7 @@ cp_payload_t *cp_payload_create(payload_type_t type);
 /**
  * Creates an cp_payload_t with type and value
  *
- * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @param type		payload type, PLV2_CONFIGURATION or PLV1_CONFIGURATION
  * @param cfg_type	type of configuration payload to create
  * @return			created configuration payload
  */

@@ -310,7 +310,7 @@ METHOD(listener_t, message, bool,
 	     " (ISA context %llu)", isa_id);
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
-														 AUTHENTICATION);
+														 PLV2_AUTH);
 	if (auth_payload)
 	{
 		chunk_t auth_data;

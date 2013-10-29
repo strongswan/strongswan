@@ -427,7 +427,7 @@ static bool add_nonce(private_quick_mode_t *this, chunk_t *nonce,
 	}
 	nonceg->destroy(nonceg);
 
-	nonce_payload = nonce_payload_create(NONCE_V1);
+	nonce_payload = nonce_payload_create(PLV1_NONCE);
 	nonce_payload->set_nonce(nonce_payload, *nonce);
 	message->add_payload(message, &nonce_payload->payload_interface);
 
@@ -442,7 +442,7 @@ static bool get_nonce(private_quick_mode_t *this, chunk_t *nonce,
 {
 	nonce_payload_t *nonce_payload;
 
-	nonce_payload = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	nonce_payload = (nonce_payload_t*)message->get_payload(message, PLV1_NONCE);
 	if (!nonce_payload)
 	{
 		DBG1(DBG_IKE, "NONCE payload missing in message");
@@ -460,7 +460,7 @@ static void add_ke(private_quick_mode_t *this, message_t *message)
 {
 	ke_payload_t *ke_payload;
 
-	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE, this->dh);
 	message->add_payload(message, &ke_payload->payload_interface);
 }
 
@@ -471,7 +471,7 @@ static bool get_ke(private_quick_mode_t *this, message_t *message)
 {
 	ke_payload_t *ke_payload;
 
-	ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE_V1);
+	ke_payload = (ke_payload_t*)message->get_payload(message, PLV1_KEY_EXCHANGE);
 	if (!ke_payload)
 	{
 		DBG1(DBG_IKE, "KE payload missing");
@@ -537,7 +537,7 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == ID_V1)
+		if (payload->get_type(payload) == PLV1_ID)
 		{
 			id_payload = (id_payload_t*)payload;
 
@@ -640,9 +640,9 @@ static payload_type_t get_nat_oa_payload_type(ike_sa_t *ike_sa)
 {
 	if (ike_sa->supports_extension(ike_sa, EXT_NATT_DRAFT_02_03))
 	{
-		return NAT_OA_DRAFT_00_03_V1;
+		return PLV1_NAT_OA_DRAFT_00_03;
 	}
-	return NAT_OA_V1;
+	return PLV1_NAT_OA;
 }
 
 /**
@@ -726,7 +726,7 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 {
 	notify_payload_t *notify;
 
-	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+	notify = notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
 														  this->proto, type);
 	notify->set_spi(notify, this->spi_i);
 
@@ -917,7 +917,7 @@ static bool has_notify_errors(private_quick_mode_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY_V1)
+		if (payload->get_type(payload) == PLV1_NOTIFY)
 		{
 			notify_payload_t *notify;
 			notify_type_t type;
@@ -1000,7 +1000,7 @@ METHOD(task_t, process_r, status_t,
 			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
-													SECURITY_ASSOCIATION_V1);
+													PLV1_SECURITY_ASSOCIATION);
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "sa payload missing");
@@ -1215,7 +1215,7 @@ METHOD(task_t, process_i, status_t,
 			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
-													SECURITY_ASSOCIATION_V1);
+													PLV1_SECURITY_ASSOCIATION);
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "sa payload missing");

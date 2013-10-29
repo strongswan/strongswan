@@ -168,7 +168,7 @@ struct proposal_substructure_t {
 /**
  * Creates an empty proposal_substructure_t object
  *
- * @param type		PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
+ * @param type		PLV2_PROPOSAL_SUBSTRUCTURE or PLV1_PROPOSAL_SUBSTRUCTURE
  * @return			proposal_substructure_t object
  */
 proposal_substructure_t *proposal_substructure_create(payload_type_t type);
@@ -177,7 +177,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type);
  * Creates an IKEv2 proposal_substructure_t from a proposal_t.
  *
  * @param proposal	proposal to build a substruct out of it
- * @return			proposal_substructure_t PROPOSAL_SUBSTRUCTURE
+ * @return			proposal_substructure_t PLV2_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 														proposal_t *proposal);
@@ -190,7 +190,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp		ENCAP_UDP to use UDP encapsulation
- * @return			proposal_substructure_t object PROPOSAL_SUBSTRUCTURE_V1
+ * @return			proposal_substructure_t object PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
@@ -205,7 +205,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp		ENCAP_UDP to use UDP encapsulation
- * @return			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
+ * @return			IKEv1 proposal_substructure_t PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
@@ -221,7 +221,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp				ENCAP_UDP to use UDP encapsulation
  * @param proposal_number	the proposal number of the proposal to be linked
- * @return					IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
+ * @return					IKEv1 proposal_substructure_t PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,

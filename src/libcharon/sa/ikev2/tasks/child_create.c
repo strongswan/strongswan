@@ -187,7 +187,7 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
 {
 	nonce_payload_t *payload;
 
-	payload = (nonce_payload_t*)message->get_payload(message, NONCE);
+	payload = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
 	if (payload == NULL)
 	{
 		return FAILED;
@@ -731,7 +731,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	/* add nonce payload if not in IKE_AUTH */
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
-		nonce_payload = nonce_payload_create(NONCE);
+		nonce_payload = nonce_payload_create(PLV2_NONCE);
 		nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}
@@ -739,7 +739,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	/* diffie hellman exchange, if PFS enabled */
 	if (this->dh)
 	{
-		ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE,
+		ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 														   this->dh);
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
@@ -866,11 +866,11 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	{
 		switch (payload->get_type(payload))
 		{
-			case SECURITY_ASSOCIATION:
+			case PLV2_SECURITY_ASSOCIATION:
 				sa_payload = (sa_payload_t*)payload;
 				this->proposals = sa_payload->get_proposals(sa_payload);
 				break;
-			case KEY_EXCHANGE:
+			case PLV2_KEY_EXCHANGE:
 				ke_payload = (ke_payload_t*)payload;
 				if (!this->initiator)
 				{
@@ -884,15 +884,15 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
-			case TRAFFIC_SELECTOR_INITIATOR:
+			case PLV2_TS_INITIATOR:
 				ts_payload = (ts_payload_t*)payload;
 				this->tsi = ts_payload->get_traffic_selectors(ts_payload);
 				break;
-			case TRAFFIC_SELECTOR_RESPONDER:
+			case PLV2_TS_RESPONDER:
 				ts_payload = (ts_payload_t*)payload;
 				this->tsr = ts_payload->get_traffic_selectors(ts_payload);
 				break;
-			case NOTIFY:
+			case PLV2_NOTIFY:
 				handle_notify(this, (notify_payload_t*)payload);
 				break;
 			default:
@@ -1217,7 +1217,7 @@ METHOD(task_t, build_r, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 
@@ -1319,7 +1319,7 @@ METHOD(task_t, build_i_delete, status_t,
 
 		proto = this->proposal->get_protocol(this->proposal);
 		spi = this->child_sa->get_spi(this->child_sa, TRUE);
-		del = delete_payload_create(DELETE, proto);
+		del = delete_payload_create(PLV2_DELETE, proto);
 		del->add_spi(del, spi);
 		message->add_payload(message, (payload_t*)del);
 
@@ -1368,7 +1368,7 @@ METHOD(task_t, process_i, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			notify_type_t type = notify->get_notify_type(notify);

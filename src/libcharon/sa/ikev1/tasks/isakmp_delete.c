@@ -50,7 +50,7 @@ METHOD(task_t, build_i, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
-	delete_payload = delete_payload_create(DELETE_V1, PROTO_IKE);
+	delete_payload = delete_payload_create(PLV1_DELETE, PROTO_IKE);
 	id = this->ike_sa->get_id(this->ike_sa);
 	delete_payload->set_ike_spi(delete_payload, id->get_initiator_spi(id),
 								id->get_responder_spi(id));

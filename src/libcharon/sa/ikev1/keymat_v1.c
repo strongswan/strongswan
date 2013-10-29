@@ -791,7 +791,7 @@ METHOD(keymat_v1_t, get_hash, bool,
 static bool get_nonce(message_t *message, chunk_t *n)
 {
 	nonce_payload_t *nonce;
-	nonce = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	nonce = (nonce_payload_t*)message->get_payload(message, PLV1_NONCE);
 	if (nonce)
 	{
 		*n = nonce->get_nonce(nonce);
@@ -815,7 +815,7 @@ static chunk_t get_message_data(message_t *message, generator_t *generator)
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == HASH_V1)
+			if (payload->get_type(payload) == PLV1_HASH)
 			{
 				continue;
 			}
@@ -835,7 +835,7 @@ static chunk_t get_message_data(message_t *message, generator_t *generator)
 				generator->generate_payload(generator, payload);
 				payload = next;
 			}
-			payload->set_next_type(payload, NO_PAYLOAD);
+			payload->set_next_type(payload, PL_NONE);
 			generator->generate_payload(generator, payload);
 		}
 		enumerator->destroy(enumerator);

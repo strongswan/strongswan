@@ -43,8 +43,8 @@ METHOD(listener_t, message, bool,
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == TRAFFIC_SELECTOR_INITIATOR ||
-				payload->get_type(payload) == TRAFFIC_SELECTOR_RESPONDER)
+			if (payload->get_type(payload) == PLV2_TS_INITIATOR ||
+				payload->get_type(payload) == PLV2_TS_RESPONDER)
 			{
 				ts = (ts_payload_t*)payload;
 				host_t *from, *to;

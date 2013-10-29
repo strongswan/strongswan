@@ -70,7 +70,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	u_int32_t *lenpos;
 
 	payload = message->get_payload(message,
-					message->get_request(message) ? ID_INITIATOR : ID_RESPONDER);
+					message->get_request(message) ? PLV2_ID_INITIATOR : PLV2_ID_RESPONDER);
 	if (!payload)
 	{
 		DBG1(DBG_CFG, "ID payload not found to rebuild AUTH");
@@ -160,7 +160,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == AUTHENTICATION)
+		if (payload->get_type(payload) == PLV2_AUTH)
 		{
 			message->remove_payload_at(message, enumerator);
 			payload->destroy(payload);
@@ -191,7 +191,7 @@ METHOD(listener_t, message, bool,
 			{
 				nonce_payload_t *nonce;
 
-				nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+				nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
 				if (nonce)
 				{
 					free(this->nonce.ptr);

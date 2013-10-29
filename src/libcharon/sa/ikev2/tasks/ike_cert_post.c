@@ -63,14 +63,14 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
 	{
-		return cert_payload_create_from_cert(CERTIFICATE, cert);
+		return cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
 		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
-		return cert_payload_create_from_cert(CERTIFICATE, cert);
+		return cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 	}
 
 	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
@@ -83,7 +83,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	{
 		hasher->destroy(hasher);
 		chunk_free(&encoded);
-		return cert_payload_create_from_cert(CERTIFICATE, cert);
+		return cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 	}
 	chunk_free(&encoded);
 	hasher->destroy(hasher);
@@ -97,7 +97,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	}
 	else
 	{
-		payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+		payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 	}
 	enumerator->destroy(enumerator);
 	chunk_free(&hash);
@@ -145,7 +145,7 @@ static void add_im_certs(private_ike_cert_post_t *this, auth_cfg_t *auth,
 	{
 		if (type == AUTH_RULE_IM_CERT)
 		{
-			payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+			payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 			if (payload)
 			{
 				DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
@@ -187,7 +187,7 @@ static void add_attribute_certs(private_ike_cert_post_t *this,
 			if (id && id->equals(id, subject->get_issuer(subject)) &&
 				cert->get_validity(cert, NULL, NULL, NULL))
 			{
-				payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+				payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
 				if (payload)
 				{
 					DBG1(DBG_IKE, "sending attribute certificate "
@@ -210,7 +210,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 	auth_payload_t *payload;
 	auth_cfg_t *auth;
 
-	payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (!peer_cfg || !payload || payload->get_auth_method(payload) == AUTH_PSK)
 	{	/* no CERT payload for EAP/PSK */
