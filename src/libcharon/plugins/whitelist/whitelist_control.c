@@ -99,38 +99,36 @@ static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
 	identification_t *id;
 	whitelist_msg_t msg;
 
-	if (!stream->read_all(stream, &msg, sizeof(msg)))
+	while (stream->read_all(stream, &msg, sizeof(msg)))
 	{
-		return FALSE;
+		msg.id[sizeof(msg.id) - 1] = 0;
+		id = identification_create_from_string(msg.id);
+		switch (ntohl(msg.type))
+		{
+			case WHITELIST_ADD:
+				this->listener->add(this->listener, id);
+				break;
+			case WHITELIST_REMOVE:
+				this->listener->remove(this->listener, id);
+				break;
+			case WHITELIST_LIST:
+				list(this, stream, id);
+				break;
+			case WHITELIST_FLUSH:
+				this->listener->flush(this->listener, id);
+				break;
+			case WHITELIST_ENABLE:
+				this->listener->set_active(this->listener, TRUE);
+				break;
+			case WHITELIST_DISABLE:
+				this->listener->set_active(this->listener, FALSE);
+				break;
+			default:
+				DBG1(DBG_CFG, "received unknown whitelist command");
+				break;
+		}
+		id->destroy(id);
 	}
-
-	msg.id[sizeof(msg.id) - 1] = 0;
-	id = identification_create_from_string(msg.id);
-	switch (ntohl(msg.type))
-	{
-		case WHITELIST_ADD:
-			this->listener->add(this->listener, id);
-			break;
-		case WHITELIST_REMOVE:
-			this->listener->remove(this->listener, id);
-			break;
-		case WHITELIST_LIST:
-			list(this, stream, id);
-			break;
-		case WHITELIST_FLUSH:
-			this->listener->flush(this->listener, id);
-			break;
-		case WHITELIST_ENABLE:
-			this->listener->set_active(this->listener, TRUE);
-			break;
-		case WHITELIST_DISABLE:
-			this->listener->set_active(this->listener, FALSE);
-			break;
-		default:
-			DBG1(DBG_CFG, "received unknown whitelist command");
-			break;
-	}
-	id->destroy(id);
 
 	return FALSE;
 }
