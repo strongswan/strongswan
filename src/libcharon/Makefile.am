@@ -5,7 +5,6 @@ bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/logger.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
-bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
@@ -143,6 +142,12 @@ libcharon_la_LIBADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
   $(top_builddir)/src/libhydra/libhydra.la \
   -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
+
+if USE_WINDOWS
+else
+  libcharon_la_SOURCES += \
+    bus/listeners/sys_logger.c bus/listeners/sys_logger.h
+endif
 
 EXTRA_DIST = Android.mk
 
