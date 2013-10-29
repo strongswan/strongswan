@@ -68,7 +68,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 		return FALSE;
 	}
 	DBG2(DBG_IMC, "entering %s", pathname);
-	
+
 	while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
 	{
 		char * start, *stop;
@@ -208,9 +208,10 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 				goto end;
 			}
 			xml_tag = chunk_create(addr, sb.st_size);
-
 			tag = swid_tag_create(xml_tag, unique_seq_id);
 			this->list->insert_last(this->list, tag);
+			munmap(addr, sb.st_size);
+			close(fd);
 		}
 		else
 		{
