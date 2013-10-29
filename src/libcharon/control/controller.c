@@ -20,7 +20,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <dlfcn.h>
 
 #include <daemon.h>
 #include <library.h>
