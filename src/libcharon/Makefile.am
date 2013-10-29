@@ -144,6 +144,7 @@ libcharon_la_LIBADD = \
   -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 if USE_WINDOWS
+  libcharon_la_LIBADD += -lws2_32
 else
   libcharon_la_SOURCES += \
     bus/listeners/sys_logger.c bus/listeners/sys_logger.h
