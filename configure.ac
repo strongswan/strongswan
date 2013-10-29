@@ -266,6 +266,7 @@ ARG_ENABL_SET([medcli],         [enable mediation client configuration database 
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([svc],            [enable charon Windows service.])
 ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
@@ -1400,9 +1401,9 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
-AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
@@ -1426,6 +1427,7 @@ AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
 AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
+AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
 
 # ========================
 #  set global definitions
@@ -1565,6 +1567,7 @@ AC_CONFIG_FILES([
 	src/charon-nm/Makefile
 	src/charon-tkm/Makefile
 	src/charon-cmd/Makefile
+	src/charon-svc/Makefile
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile

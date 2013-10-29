@@ -116,6 +116,10 @@ if USE_CMD
   SUBDIRS += charon-cmd
 endif
 
+if USE_SVC
+  SUBDIRS += charon-svc
+endif
+
 if USE_LIBPTTLS
   SUBDIRS += pt-tls-client
 endif
