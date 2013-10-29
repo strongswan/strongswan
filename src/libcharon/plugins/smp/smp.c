@@ -767,7 +767,7 @@ plugin_t *smp_plugin_create()
 	}
 
 	unlink(unix_addr.sun_path);
-	old = umask(~(S_IRWXU | S_IRWXG));
+	old = umask(S_IRWXO);
 	if (bind(this->socket, (struct sockaddr *)&unix_addr, sizeof(unix_addr)) < 0)
 	{
 		DBG1(DBG_CFG, "could not bind XML socket: %s", strerror(errno));

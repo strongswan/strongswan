@@ -121,7 +121,7 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 
 	if (access(HA_FIFO, R_OK|W_OK) != 0)
 	{
-		old = umask(~(S_IRWXU | S_IRWXG));
+		old = umask(S_IRWXO);
 		if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
 		{
 			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
