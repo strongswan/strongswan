@@ -214,10 +214,12 @@ METHOD(file_logger_t, open_, void,
 				 this->filename, strerror(errno));
 			return;
 		}
+#ifdef HAVE_SETLINEBUF
 		if (flush_line)
 		{
 			setlinebuf(file);
 		}
+#endif /* HAVE_SETLINEBUF */
 	}
 	this->lock->write_lock(this->lock);
 	close_file(this);
