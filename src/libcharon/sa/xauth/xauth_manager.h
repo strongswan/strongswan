@@ -55,7 +55,7 @@ struct xauth_manager_t {
 	/**
 	 * Create a new XAuth method instance.
 	 *
-	 * The name may contain an option string, seperated by a colon. This option
+	 * The name may contain an option string, separated by a colon. This option
 	 * string gets passed to the XAuth constructor to specify the behavior
 	 * of the XAuth method.
 	 *

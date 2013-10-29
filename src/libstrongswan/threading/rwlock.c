@@ -29,7 +29,7 @@
 
 #ifdef __APPLE__
 /* while pthread_rwlock_rdlock(3) says that it supports multiple read locks,
- * this does not seem to be true. After releasing the a recursive rdlock,
+ * this does not seem to be true. After releasing a recursive rdlock,
  * a subsequent wrlock fails... */
 # undef HAVE_PTHREAD_RWLOCK_INIT
 #endif

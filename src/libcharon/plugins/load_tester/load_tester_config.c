@@ -98,7 +98,7 @@ struct private_load_tester_config_t {
 	char *responder_id;
 
 	/**
-	 * IPSec mode, tunnel|transport|beet
+	 * IPsec mode, tunnel|transport|beet
 	 */
 	char *mode;
 

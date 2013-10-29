@@ -1193,7 +1193,7 @@ METHOD(task_manager_t, process_message, status_t,
 			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
 				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
 				msg->get_exchange_type(msg) != IKE_SA_INIT)
-			{	/* only do updates based on verified messages (or inital ones) */
+			{	/* only do updates based on verified messages (or initial ones) */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates.  we force an
 					 * update of the local address on IKE_SA_INIT, but never
