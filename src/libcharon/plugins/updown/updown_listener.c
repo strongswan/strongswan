@@ -310,6 +310,10 @@ METHOD(listener_t, child_updown, bool,
 			{
 				cache_iface(this, child_sa->get_reqid(child_sa), iface);
 			}
+			else
+			{
+				iface = NULL;
+			}
 		}
 		else
 		{
