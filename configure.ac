@@ -206,6 +206,7 @@ ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+ARG_ENABL_SET([socket-win],     [enable Winsock2 based socket implementation for charon])
 # configuration/control plugins
 ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
 ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
@@ -1215,6 +1216,7 @@ ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
 ADD_PLUGIN([resolve],              [h charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
+ADD_PLUGIN([socket-win],           [c charon])
 ADD_PLUGIN([farp],                 [c charon])
 ADD_PLUGIN([stroke],               [c charon])
 ADD_PLUGIN([vici],                 [c charon])
@@ -1417,6 +1419,7 @@ AM_CONDITIONAL(USE_IMC_SWID, test x$imc_swid = xtrue)
 AM_CONDITIONAL(USE_IMV_SWID, test x$imv_swid = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
+AM_CONDITIONAL(USE_SOCKET_WIN, test x$socket_win = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
@@ -1646,6 +1649,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
+	src/libcharon/plugins/socket_win/Makefile
 	src/libcharon/plugins/farp/Makefile
 	src/libcharon/plugins/smp/Makefile
 	src/libcharon/plugins/sql/Makefile
