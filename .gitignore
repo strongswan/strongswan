@@ -43,3 +43,4 @@ coverage/
 .project
 .metadata/
 .settings/
+test-driver
