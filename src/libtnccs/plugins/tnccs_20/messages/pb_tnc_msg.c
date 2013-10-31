@@ -54,7 +54,7 @@ pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
 
 pb_tnc_msg_info_t pb_tnc_tcg_msg_infos[] = {
 	{ 0 }, /* dummy entry because pb_tnc_tcg_msg_type_t starts with 1 */
-	{ 20, FALSE, TRUE,  FALSE },
+	{ 20, FALSE, FALSE,  FALSE },
 };
 
 /**
