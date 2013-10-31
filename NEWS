@@ -1,6 +1,15 @@
 strongswan-5.1.1
 ----------------
 
+- Fixed a denial-of-service vulnerability and potential authorization bypass
+  triggered by a crafted ID_DER_ASN1_DN ID payload. The cause is an insufficient
+  length check when comparing such identities. The vulnerability has been
+  registered as CVE-2013-6075.
+
+- Fixed a denial-of-service vulnerability triggered by a crafted IKEv1
+  fragmentation payload. The cause is a NULL pointer dereference. The
+  vulnerability has been registered as CVE-2013-6076.
+
 - The lean stand-alone pt-tls-client can set up a RFC 6876 PT-TLS session
   with a strongSwan policy enforcement point which uses the tnc-pdp charon
   plugin.
