@@ -24,7 +24,7 @@
 #include <library.h>
 
 static const char *copyright[] = {
-	"Copyright (C) 1999-2012",
+	"Copyright (C) 1999-2013",
 	"    Henry Spencer, D. Hugh Redelmeier, Michael Richardson, Ken Bantoft,",
 	"    Stephen J. Bevan, JuanJo Ciarlante, Thomas Egerer, Heiko Hund,",
 	"    Mathieu Lafon, Stephane Laroche, Kai Martius, Stephan Scholz,",
@@ -36,10 +36,12 @@ static const char *copyright[] = {
 	"    Roger Wegmann, Simon Zwahlen,",
 	"    ZHW Zuercher Hochschule Winterthur (Switzerland).",
 	"",
-	"    Philip Boetschi, Tobias Brunner, Sansar Choinyambuu, Adrian Doerig,",
-	"    Andreas Eigenmann, Giuliano Grassi, Reto Guadagnini, Fabian Hartmann,",
-	"    Noah Heusser, Jan Hutter, Thomas Kallenberg, Daniel Roethlisberger,",
-	"    Ralf Sager, Joel Stillhart, Daniel Wydler, Andreas Steffen,",
+	"    Philip Boetschi, Tobias Brunner, Christoph Buehler, Reto Buerki,",
+	"    Sansar Choinyambuu, Adrian Doerig, Andreas Eigenmann, Giuliano Grassi,",
+	"    Reto Guadagnini, Fabian Hartmann, Noah Heusser, Jan Hutter,",
+	"    Thomas Kallenberg, Patrick Loetscher, Daniel Roethlisberger,",
+	"    Adrian-Ken Rueegsegger, Ralf Sager, Joel Stillhart, Daniel Wydler,",
+	"    Andreas Steffen,",
 	"    HSR Hochschule fuer Technik Rapperswil (Switzerland).",
 	"",
 	"    Martin Willi (revosec AG), Clavister (Sweden).",
