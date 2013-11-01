@@ -687,6 +687,14 @@ METHOD(ike_sa_t, set_state, void,
 					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
 				trigger_dpd = this->peer_cfg->get_dpd(this->peer_cfg);
+				if (trigger_dpd)
+				{
+					/* Some peers delay the DELETE after rekeying an IKE_SA.
+					 * If this delay is longer than our DPD delay, we would
+					 * send a DPD request here. The IKE_SA is not ready to do
+					 * so yet, so prevent that. */
+					this->stats[STAT_INBOUND] = this->stats[STAT_ESTABLISHED];
+				}
 			}
 			break;
 		}
