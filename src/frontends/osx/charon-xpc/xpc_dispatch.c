@@ -110,6 +110,10 @@ static void add_auth_cfg(peer_cfg_t *peer_cfg, bool local,
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
 	auth->add(auth, AUTH_RULE_IDENTITY, identification_create_from_string(id));
+	if (!local)
+	{
+		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
+	}
 	peer_cfg->add_auth_cfg(peer_cfg, auth, local);
 }
 
