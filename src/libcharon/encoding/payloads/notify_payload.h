@@ -145,6 +145,8 @@ enum notify_type_t {
 	PSK_CONFIRM = 16426,
 	/* EAP Re-authentication Extension, RFC 6867 */
 	ERX_SUPPORTED = 16427,
+	/* IFOM capability, 3GPP TS 24.303, annex B.2 */
+	IFOM_CAPABILITY = 16428,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
