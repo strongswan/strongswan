@@ -781,10 +781,17 @@ chunk_t asn1_integer(const char *mode, chunk_t content)
 	chunk_t object;
 	size_t len;
 	u_char *pos;
+	bool move;
+
 
 	if (content.len == 0)
 	{	/* make sure 0 is encoded properly */
 		content = chunk_from_chars(0x00);
+		move = FALSE;
+	}
+	else
+	{
+		move = (*mode == 'm');
 	}
 
 	/* ASN.1 integers must be positive numbers in two's complement */
@@ -794,11 +801,9 @@ chunk_t asn1_integer(const char *mode, chunk_t content)
 	{
 		*pos++ = 0x00;
 	}
-	if (len)
-	{
-		memcpy(pos, content.ptr, content.len);
-	}
-	if (*mode == 'm')
+	memcpy(pos, content.ptr, content.len);
+
+	if (move)
 	{
 		free(content.ptr);
 	}
