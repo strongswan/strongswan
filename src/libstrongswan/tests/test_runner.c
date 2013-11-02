@@ -86,6 +86,7 @@ int main()
 	srunner_add_suite(sr, vectors_suite_create());
 	srunner_add_suite(sr, printf_suite_create());
 	srunner_add_suite(sr, pen_suite_create());
+	srunner_add_suite(sr, asn1_suite_create());
 	if (lib->plugins->has_feature(lib->plugins,
 								  PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_RSA)))
 	{
