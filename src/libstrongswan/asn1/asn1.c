@@ -88,7 +88,7 @@ int asn1_known_oid(chunk_t object)
 			}
 		}
 	}
-	return -1;
+	return OID_UNKNOWN;
 }
 
 /*
@@ -129,7 +129,8 @@ chunk_t asn1_build_known_oid(int n)
 chunk_t asn1_oid_from_string(char *str)
 {
 	enumerator_t *enumerator;
-	u_char buf[64];
+	size_t buf_len = 64;
+	u_char buf[buf_len];
 	char *end;
 	int i = 0, pos = 0, shift;
 	u_int val, shifted_val, first = 0;
@@ -138,7 +139,7 @@ chunk_t asn1_oid_from_string(char *str)
 	while (enumerator->enumerate(enumerator, &str))
 	{
 		val = strtoul(str, &end, 10);
-		if (end == str || pos > countof(buf))
+		if (end == str || pos > buf_len-4)
 		{
 			pos = 0;
 			break;
@@ -175,8 +176,9 @@ chunk_t asn1_oid_from_string(char *str)
  */
 char *asn1_oid_to_string(chunk_t oid)
 {
-	char buf[64], *pos = buf;
-	int len;
+	size_t len = 64;
+	char buf[len], *pos = buf;
+	int written;
 	u_int val;
 
 	if (!oid.len)
@@ -184,13 +186,14 @@ char *asn1_oid_to_string(chunk_t oid)
 		return NULL;
 	}
 	val = oid.ptr[0] / 40;
-	len = snprintf(buf, sizeof(buf), "%u.%u", val, oid.ptr[0] - val * 40);
+	written = snprintf(buf, len, "%u.%u", val, oid.ptr[0] - val * 40);
 	oid = chunk_skip(oid, 1);
-	if (len < 0 || len >= sizeof(buf))
+	if (written < 0 || written >= len)
 	{
 		return NULL;
 	}
-	pos += len;
+	pos += written;
+	len -= written;
 	val = 0;
 
 	while (oid.len)
@@ -199,12 +202,13 @@ char *asn1_oid_to_string(chunk_t oid)
 
 		if (oid.ptr[0] < 128)
 		{
-			len = snprintf(pos, sizeof(buf) + buf - pos, ".%u", val);
-			if (len < 0 || len >= sizeof(buf) + buf - pos)
+			written = snprintf(pos, len, ".%u", val);
+			if (written < 0 || written >= len)
 			{
 				return NULL;
 			}
-			pos += len;
+			pos += written;
+			len -= written;
 			val = 0;
 		}
 		oid = chunk_skip(oid, 1);
@@ -675,7 +679,9 @@ bool asn1_is_printablestring(chunk_t str)
 	for (i = 0; i < str.len; i++)
 	{
 		if (strchr(printablestring_charset, str.ptr[i]) == NULL)
+		{
 			return FALSE;
+		}
 	}
 	return TRUE;
 }
