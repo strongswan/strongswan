@@ -300,7 +300,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *inner)
 	else
 	{	/* composite length, determine number of length octets */
 		len &= 0x7f;
-		if (len == 0 || len > sizeof(res.len))
+		if (len == 0 || len > blob->len || len > sizeof(res.len))
 		{
 			return ASN1_INVALID;
 		}
@@ -541,7 +541,7 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 
 	len = asn1_length(object);
 
-	if (len == ASN1_INVALID_LENGTH || object->len < len)
+	if (len == ASN1_INVALID_LENGTH)
 	{
 		DBG2(DBG_ASN, "L%d - %s:  length of ASN.1 object invalid or too large",
 			 level, name);
