@@ -76,7 +76,7 @@ START_TEST(test_asn1_parse_algorithmIdentifier)
 		algid = asn1_wrap(ASN1_SEQUENCE, "mc",
 					 asn1_build_known_oid(test[i].alg), test[i].parameters);
 		parameters = chunk_empty;
-		if (i == 0)
+		if (i == 2)
 		{
 			alg = asn1_parse_algorithmIdentifier(algid, 0, NULL);
 		}
@@ -253,7 +253,8 @@ START_TEST(test_asn1_oid_to_string)
 		{ NULL, chunk_from_chars(
 			0x0a, 0x02, 0x64, 0x87, 0x68, 0xce, 0x10, 0x86, 0x8d, 0x20,
 			0xbd, 0x84, 0x40, 0x84, 0xe2, 0xad, 0x00, 0xaf, 0xd7, 0xc2, 0x00,
-		    0xff, 0xff, 0xff, 0x7f) }
+		    0xff, 0xff, 0xff, 0x7f) },
+		{ NULL, chunk_from_chars(0x0a, 0x87) }
 	};
 
 	int i;
@@ -373,10 +374,12 @@ START_TEST(test_is_asn1)
 
 	u_char buf[8];
 	chunk_t chunk_zero = { buf, 0 };
+	chunk_t chunk_mean = {   0, 1 };
 
 	testdata_t test[] = {
 		{ FALSE, chunk_zero },
 		{ FALSE, chunk_empty },
+		{ FALSE, chunk_mean },
 		{ TRUE,  chunk_from_chars(0x30, 0x00) },
 		{ TRUE,  chunk_from_chars(0x31, 0x00) },
 		{ TRUE,  chunk_from_chars(0x04, 0x00) },
@@ -386,6 +389,7 @@ START_TEST(test_is_asn1)
 		{ TRUE,  chunk_from_chars(0x30, 0x01, 0xa1) },
 		{ FALSE, chunk_from_chars(0x30, 0x01, 0xa1, 0xa2) },
 		{ TRUE,  chunk_from_chars(0x30, 0x01, 0xa1, 0x0a) },
+		{ FALSE, chunk_from_chars(0x30, 0x01, 0xa1, 0xa2, 0x0a) },
 	};
 
 	int i;
@@ -449,22 +453,25 @@ START_TEST(test_asn1_to_time)
 	} testdata_t;
 
 	testdata_t test[] = {
-		{    352980, 0x18, "197001050203Z" },
-		{    352984, 0x18, "19700105020304Z" },
-		{    352980, 0x17, "7001050203Z" },
-		{    347580, 0x17, "7001050203+0130" },
-		{    358380, 0x17, "7001050203-0130" },
-		{    352984, 0x17, "700105020304Z" },
-		{    347584, 0x17, "700105020304+0130" },
-		{    358384, 0x17, "700105020304-0130" },
-		{         0, 0x17, "700105020304+01" },
-		{         0, 0x17, "700105020304-01" },
-		{         0, 0x17, "700105020304" },
-		{         0, 0x17, "70010502Z" },
-		{         0, 0x17, "7001050203xxZ" },
-		{         0, 0x17, "7000050203Z" },
-		{         0, 0x17, "7013050203Z" },
-		{ 131328000, 0x17, "7403010000Z" },
+		{     352980, 0x18, "197001050203Z" },
+		{     352984, 0x18, "19700105020304Z" },
+		{     352980, 0x17, "7001050203Z" },
+		{     347580, 0x17, "7001050203+0130" },
+		{     358380, 0x17, "7001050203-0130" },
+		{     352984, 0x17, "700105020304Z" },
+		{     347584, 0x17, "700105020304+0130" },
+		{     358384, 0x17, "700105020304-0130" },
+		{          0, 0x17, "700105020304+01" },
+		{          0, 0x17, "700105020304-01" },
+		{          0, 0x17, "700105020304" },
+		{          0, 0x17, "70010502Z" },
+		{          0, 0x17, "7001050203xxZ" },
+		{          0, 0x17, "7000050203Z" },
+		{          0, 0x17, "7013050203Z" },
+		{    5097600, 0x17, "7003010000Z" },
+		{   68256000, 0x17, "7203010000Z" },
+		{  951868800, 0x17, "0003010000Z" },
+		{ 4107542400, 0x18, "210003010000Z" }
 	};
 
 	int i;
@@ -472,6 +479,10 @@ START_TEST(test_asn1_to_time)
 
 	for (i = 0; i < countof(test); i++)
 	{
+		if (test[i].time > TIME_32_BIT_SIGNED_MAX && sizeof(time_t) == 4)
+		{
+			continue;
+		}
 		chunk = chunk_from_str(test[i].string);
 		ck_assert(asn1_to_time(&chunk, test[i].type) == test[i].time);
 	}
@@ -491,15 +502,18 @@ START_TEST(test_asn1_from_time)
 	} testdata_t;
 
 	testdata_t test[] = {
-		{    352984, 0x18, chunk_from_chars(
-					 0x18, 0x0f, 0x31, 0x39, 0x37, 0x30, 0x30, 0x31, 0x30, 0x35,
-					 0x30, 0x32, 0x30, 0x33, 0x30, 0x34, 0x5a) },
-		{    352984, 0x17, chunk_from_chars(
-					 0x17, 0x0d, 0x37, 0x30, 0x30, 0x31, 0x30, 0x35,
-					 0x30, 0x32, 0x30, 0x33, 0x30, 0x34, 0x5a) },
-		{ 131328000, 0x17, chunk_from_chars(
-					 0x17, 0x0d, 0x37, 0x34, 0x30, 0x33, 0x30, 0x31,
-					 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a) }
+		{     352984, 0x18, chunk_from_chars(
+					  0x18, 0x0f, 0x31, 0x39, 0x37, 0x30, 0x30, 0x31, 0x30, 0x35,
+					  0x30, 0x32, 0x30, 0x33, 0x30, 0x34, 0x5a) },
+		{     352984, 0x17, chunk_from_chars(
+					  0x17, 0x0d, 0x37, 0x30, 0x30, 0x31, 0x30, 0x35,
+					  0x30, 0x32, 0x30, 0x33, 0x30, 0x34, 0x5a) },
+		{ 1078099200, 0x17, chunk_from_chars(
+					  0x17, 0x0d, 0x30, 0x34, 0x30, 0x33, 0x30, 0x31,
+					  0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a) },
+        { 4107542400, 0x18, chunk_from_chars( 
+					  0x18, 0x0f, 0x32, 0x31, 0x30, 0x30, 0x30, 0x33, 0x30, 0x31,
+					  0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a) }
 	};
 
 	int i;
@@ -507,6 +521,10 @@ START_TEST(test_asn1_from_time)
 
 	for (i = 0; i < countof(test); i++)
 	{
+		if (test[i].time > TIME_32_BIT_SIGNED_MAX && sizeof(time_t) == 4)
+        {
+			continue;
+        }
 		chunk = asn1_from_time(&test[i].time, test[i].type);
 		ck_assert(chunk_equals(chunk, test[i].chunk));
 	}
@@ -612,14 +630,18 @@ START_TEST(test_asn1_parse_simple_object)
 {
 	typedef struct {
 		bool res;
+		int type;
 		chunk_t chunk;
 	} testdata_t;
 
 	testdata_t test[] = {
-		{ FALSE, chunk_from_chars(0x04) },
-		{ FALSE, chunk_from_chars(0x02, 0x01, 0x55) },
-		{ FALSE, chunk_from_chars(0x04, 0x01) },
-		{ TRUE,  chunk_from_chars(0x04, 0x01, 0x55) }
+		{ FALSE, 0x04, chunk_from_chars(0x04) },
+		{ FALSE, 0x04, chunk_from_chars(0x02, 0x01, 0x55) },
+		{ FALSE, 0x04, chunk_from_chars(0x04, 0x01) },
+		{ TRUE,  0x04, chunk_from_chars(0x04, 0x01, 0x55) },
+		{ TRUE,  0x06, chunk_from_chars(0x06, 0x02, 0x55, 0x03) },
+		{ TRUE,  0x06, chunk_from_chars(0x06, 0x00) },
+		{ TRUE,  0x13, chunk_from_chars(0x13, 0x01, 0x55), }
 	};
 
 	int i;
@@ -627,9 +649,9 @@ START_TEST(test_asn1_parse_simple_object)
 
 	for (i = 0; i < countof(test); i++)
 	{
-		res = asn1_parse_simple_object(&test[i].chunk, 0x04, 0, "test");
+		res = asn1_parse_simple_object(&test[i].chunk, test[i].type, 0, "test");
 		ck_assert(res == test[i].res);
-		if (res)
+		if (res && test[i].chunk.len)
 		{
 			ck_assert(*test[i].chunk.ptr == 0x55);
 		}
