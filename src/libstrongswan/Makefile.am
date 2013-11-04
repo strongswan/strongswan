@@ -488,9 +488,7 @@ if MONOLITHIC
 endif
 endif
 
-if UNITTESTS
 if MONOLITHIC
   SUBDIRS += .
 endif
-  SUBDIRS += tests
-endif
+SUBDIRS += tests
