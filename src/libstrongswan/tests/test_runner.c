@@ -15,7 +15,7 @@
  * for more details.
  */
 
-#include "test_runner.h"
+#include "test_suite.h"
 
 #include <library.h>
 #include <plugins/plugin_feature.h>
@@ -51,17 +51,12 @@ static bool load_plugins()
 	return lib->plugins->load(lib->plugins, PLUGINS);
 }
 
-/**
- * Check if a specific feature is available, return falg if so
- */
-static int check_feature(plugin_feature_t feature, int flag)
-{
-	if (lib->plugins->has_feature(lib->plugins, feature))
-	{
-		return flag;
-	}
-	return 0;
-}
+/* declare test suite constructors */
+#define TEST_SUITE(x) test_suite_t* x();
+#define TEST_SUITE_DEPEND(x, ...) TEST_SUITE(x)
+#include "test_runner.h"
+#undef TEST_SUITE
+#undef TEST_SUITE_DEPEND
 
 /**
  * Load all available test suites
@@ -69,10 +64,18 @@ static int check_feature(plugin_feature_t feature, int flag)
 static array_t *load_suites()
 {
 	array_t *suites;
-	enum {
-		OTEST_RSA = (1<<0),
-		OTEST_ECDSA = (1<<1),
-	} otest = 0;
+	struct {
+		test_suite_t *(*suite)();
+		plugin_feature_t feature;
+	} constructors[] = {
+#define TEST_SUITE(x) \
+		{ .suite = x, },
+#define TEST_SUITE_DEPEND(x, type, args) \
+		{ .suite = x, .feature = PLUGIN_DEPENDS(type, args) },
+#include "test_runner.h"
+	};
+	bool old = FALSE;
+	int i;
 
 	library_init(NULL);
 
@@ -85,42 +88,28 @@ static array_t *load_suites()
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
-	/* we have to build the test suite array without leak detective, so
-	 * separate plugin checks and suite creation */
-	otest |= check_feature(PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_RSA), OTEST_RSA);
-	otest |= check_feature(PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_ECDSA), OTEST_ECDSA);
-
-	library_deinit();
+	if (lib->leak_detective)
+	{
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
 
 	suites = array_create(0, 0);
 
-	array_insert(suites, -1, bio_reader_suite_create());
-	array_insert(suites, -1, bio_writer_suite_create());
-	array_insert(suites, -1, chunk_suite_create());
-	array_insert(suites, -1, enum_suite_create());
-	array_insert(suites, -1, enumerator_suite_create());
-	array_insert(suites, -1, linked_list_suite_create());
-	array_insert(suites, -1, linked_list_enumerator_suite_create());
-	array_insert(suites, -1, hashtable_suite_create());
-	array_insert(suites, -1, array_suite_create());
-	array_insert(suites, -1, identification_suite_create());
-	array_insert(suites, -1, threading_suite_create());
-	array_insert(suites, -1, watcher_suite_create());
-	array_insert(suites, -1, stream_suite_create());
-	array_insert(suites, -1, utils_suite_create());
-	array_insert(suites, -1, host_suite_create());
-	array_insert(suites, -1, vectors_suite_create());
-	array_insert(suites, -1, pen_suite_create());
-	array_insert(suites, -1, asn1_suite_create());
-	array_insert(suites, -1, printf_suite_create());
-	if (otest & OTEST_RSA)
+	for (i = 0; i < countof(constructors); i++)
 	{
-		array_insert(suites, -1, rsa_suite_create());
+		if (constructors[i].feature.type == 0 ||
+			lib->plugins->has_feature(lib->plugins, constructors[i].feature))
+		{
+			array_insert(suites, -1, constructors[i].suite());
+		}
 	}
-	if (otest & OTEST_ECDSA)
+
+	if (lib->leak_detective)
 	{
-		array_insert(suites, -1, ecdsa_suite_create());
+		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
+
+	library_deinit();
 
 	return suites;
 }

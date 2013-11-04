@@ -13,31 +13,24 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
-
-#include <test_suite.h>
-
-Suite *bio_reader_suite_create();
-Suite *bio_writer_suite_create();
-Suite *chunk_suite_create();
-Suite *enum_suite_create();
-Suite *enumerator_suite_create();
-Suite *linked_list_suite_create();
-Suite *linked_list_enumerator_suite_create();
-Suite *hashtable_suite_create();
-Suite *array_suite_create();
-Suite *identification_suite_create();
-Suite *threading_suite_create();
-Suite *watcher_suite_create();
-Suite *stream_suite_create();
-Suite *utils_suite_create();
-Suite *vectors_suite_create();
-Suite *ecdsa_suite_create();
-Suite *rsa_suite_create();
-Suite *host_suite_create();
-Suite *printf_suite_create();
-Suite *pen_suite_create();
-Suite *asn1_suite_create();
-
-#endif /** TEST_RUNNER_H_ */
+TEST_SUITE(bio_reader_suite_create)
+TEST_SUITE(bio_writer_suite_create)
+TEST_SUITE(chunk_suite_create)
+TEST_SUITE(enum_suite_create)
+TEST_SUITE(enumerator_suite_create)
+TEST_SUITE(linked_list_suite_create)
+TEST_SUITE(linked_list_enumerator_suite_create)
+TEST_SUITE(hashtable_suite_create)
+TEST_SUITE(array_suite_create)
+TEST_SUITE(identification_suite_create)
+TEST_SUITE(threading_suite_create)
+TEST_SUITE(watcher_suite_create)
+TEST_SUITE(stream_suite_create)
+TEST_SUITE(utils_suite_create)
+TEST_SUITE(vectors_suite_create)
+TEST_SUITE_DEPEND(ecdsa_suite_create, PRIVKEY_GEN, KEY_ECDSA)
+TEST_SUITE_DEPEND(rsa_suite_create, PRIVKEY_GEN, KEY_RSA)
+TEST_SUITE(host_suite_create)
+TEST_SUITE(printf_suite_create)
+TEST_SUITE(pen_suite_create)
+TEST_SUITE(asn1_suite_create)
