@@ -14,17 +14,10 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
-
-#include <check.h>
-
-TCase *make_id_manager_tests(void);
-TCase *make_chunk_map_tests(void);
-TCase *make_utility_tests(void);
-TCase *make_nonceg_tests(void);
-TCase *make_diffie_hellman_tests(void);
-TCase *make_keymat_tests(void);
-TCase *make_kernel_sad_tests(void);
-
-#endif /** TEST_RUNNER_H_ */
+TEST_SUITE(make_id_manager_tests)
+TEST_SUITE(make_chunk_map_tests)
+TEST_SUITE(make_utility_tests)
+TEST_SUITE(make_nonceg_tests)
+TEST_SUITE(make_diffie_hellman_tests)
+TEST_SUITE(make_keymat_tests)
+TEST_SUITE(make_kernel_sad_tests)

@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include <tests/test_suite.h>
 
 #include "tkm_id_manager.h"
 
@@ -135,16 +135,28 @@ START_TEST(test_release_id_nonexistent)
 }
 END_TEST
 
-TCase *make_id_manager_tests(void)
+Suite *make_id_manager_tests()
 {
-	TCase *tc = tcase_create("Context id manager tests");
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("context id manager");
+
+	tc = tcase_create("creation");
 	tcase_add_test(tc, test_id_mgr_creation);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("acquire");
 	tcase_add_test(tc, test_acquire_id);
 	tcase_add_test(tc, test_acquire_id_invalid_kind);
 	tcase_add_test(tc, test_acquire_id_same);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("release");
 	tcase_add_test(tc, test_release_id);
 	tcase_add_test(tc, test_release_id_invalid_kind);
 	tcase_add_test(tc, test_release_id_nonexistent);
+	suite_add_tcase(s, tc);
 
-	return tc;
+	return s;
 }

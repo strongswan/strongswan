@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include <tests/test_suite.h>
 
 #include "tkm_diffie_hellman.h"
 
@@ -49,11 +49,20 @@ START_TEST(test_dh_get_my_pubvalue)
 }
 END_TEST
 
-TCase *make_diffie_hellman_tests(void)
+Suite *make_diffie_hellman_tests()
 {
-	TCase *tc = tcase_create("Diffie-Hellman tests");
-	tcase_add_test(tc, test_dh_creation);
-	tcase_add_test(tc, test_dh_get_my_pubvalue);
+	Suite *s;
+	TCase *tc;
 
-	return tc;
+	s = suite_create("Diffie-Hellman");
+
+	tc = tcase_create("creation");
+	tcase_add_test(tc, test_dh_creation);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("get_my_pubvalue");
+	tcase_add_test(tc, test_dh_get_my_pubvalue);
+	suite_add_tcase(s, tc);
+
+	return s;
 }

@@ -14,7 +14,8 @@
  * for more details.
  */
 
-#include <check.h>
+#include <tests/test_suite.h>
+
 #include <daemon.h>
 #include <hydra.h>
 #include <config/proposal.h>
@@ -139,11 +140,20 @@ START_TEST(test_derive_child_keys)
 }
 END_TEST
 
-TCase *make_keymat_tests(void)
+Suite *make_keymat_tests()
 {
-	TCase *tc = tcase_create("Keymat tests");
-	tcase_add_test(tc, test_derive_ike_keys);
-	tcase_add_test(tc, test_derive_child_keys);
+	Suite *s;
+	TCase *tc;
 
-	return tc;
+	s = suite_create("keymat");
+
+	tc = tcase_create("derive IKE keys");
+	tcase_add_test(tc, test_derive_ike_keys);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("derive CHILD keys");
+	tcase_add_test(tc, test_derive_child_keys);
+	suite_add_tcase(s, tc);
+
+	return s;
 }

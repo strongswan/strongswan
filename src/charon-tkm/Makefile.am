@@ -21,6 +21,10 @@ BUILD_OPTS = \
 	-cargs $(AM_CPPFLAGS) $(DEFS) \
 	-largs $(LIBLD) $(LIBFL)
 
+TEST_OPTS = \
+	-cargs -DBUILDDIR=\"${abs_top_builddir}\" \
+	-largs -L$(OBJ)/libstrongswan/tests/.libs -ltest
+
 # plugins to enable
 PLUGINS = \
 	kernel-netlink \
@@ -35,11 +39,11 @@ build_charon: build_charon.gpr src/charon-tkm.c
 	@$(GPRBUILD) -p $< $(BUILD_OPTS)
 
 build_tests: build_tests.gpr
-	@$(GPRBUILD) -p $< $(BUILD_OPTS) -cargs @CHECK_CFLAGS@ -largs @CHECK_LIBS@
+	@$(GPRBUILD) -p $< $(BUILD_OPTS) $(TEST_OPTS)
 
 if UNITTESTS
 check: build_tests
-	@LD_LIBRARY_PATH=$(LIBPT) obj/test_runner
+	@LD_LIBRARY_PATH=$(LIBPT) obj/tests
 else
 check:
 	@echo "reconfigure with --enable-unit-tests"

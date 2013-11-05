@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <check.h>
+#include <tests/test_suite.h>
 
 #include "tkm_kernel_sad.h"
 
@@ -107,16 +107,31 @@ START_TEST(test_remove_nonexistent)
 }
 END_TEST
 
-TCase *make_kernel_sad_tests(void)
+Suite *make_kernel_sad_tests()
 {
-	TCase *tc = tcase_create("Kernel SAD tests");
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("kernel SAD tests");
+
+	tc = tcase_create("creation");
 	tcase_add_test(tc, test_sad_creation);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("insert");
 	tcase_add_test(tc, test_insert);
 	tcase_add_test(tc, test_insert_duplicate);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("get_esa_id");
 	tcase_add_test(tc, test_get_esa_id);
 	tcase_add_test(tc, test_get_esa_id_nonexistent);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("remove");
 	tcase_add_test(tc, test_remove);
 	tcase_add_test(tc, test_remove_nonexistent);
+	suite_add_tcase(s, tc);
 
-	return tc;
+	return s;
 }
