@@ -5,7 +5,7 @@ project Build_Common is
 
    for Source_Dirs use ();
 
-   Obj_Dir := "obj";
+   Obj_Dir := external ("OBJ_DIR", "obj");
 
    C_Compiler_Switches   := ("-W",
                              "-Wall",

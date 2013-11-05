@@ -1,23 +1,23 @@
-SRC = $(top_builddir)/src
+SRC = $(abs_top_srcdir)/src
+OBJ = $(abs_top_builddir)/src
 
-# includes relative to obj directory
 AM_CPPFLAGS = \
-	-include $(top_builddir)/config.h \
-	-I../$(SRC)/libstrongswan \
-	-I../$(SRC)/libhydra \
-	-I../$(SRC)/libcharon
+	-include $(abs_top_builddir)/config.h \
+	-I$(SRC)/libstrongswan \
+	-I$(SRC)/libhydra \
+	-I$(SRC)/libcharon
 
 LIBLD = \
-	-L$(SRC)/libstrongswan/.libs \
-	-L$(SRC)/libhydra/.libs \
-	-L$(SRC)/libcharon/.libs
-LIBPT = $(SRC)/libstrongswan/.libs:$(SRC)/libhydra/.libs:$(SRC)/libcharon/.libs
+	-L$(OBJ)/libstrongswan/.libs \
+	-L$(OBJ)/libhydra/.libs \
+	-L$(OBJ)/libcharon/.libs
+LIBPT = $(OBJ)/libstrongswan/.libs:$(OBJ)/libhydra/.libs:$(OBJ)/libcharon/.libs
 LIBFL = -lstrongswan -lhydra -lcharon
 
 DEFS += -DPLUGINS=\""$(PLUGINS)\"" -DIPSEC_PIDDIR=\"${piddir}\"
 
 BUILD_OPTS = \
-	-XOBJ_DIR=$(CURDIR)/obj \
+	-XOBJ_DIR=$(abs_builddir)/obj \
 	-cargs $(AM_CPPFLAGS) $(DEFS) \
 	-largs $(LIBLD) $(LIBFL)
 
