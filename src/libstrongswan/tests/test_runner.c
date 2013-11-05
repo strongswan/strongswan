@@ -15,7 +15,7 @@
  * for more details.
  */
 
-#include "test_suite.h"
+#include "test_runner.h"
 
 #include <library.h>
 #include <plugins/plugin_feature.h>
@@ -33,47 +33,35 @@
 /**
  * Load plugins from builddir
  */
-static bool load_plugins()
+static bool load_plugins(char *plugindirs[], char *plugins)
 {
 	enumerator_t *enumerator;
 	char *name, path[PATH_MAX], dir[64];
+	int i;
 
-	enumerator = enumerator_create_token(PLUGINS, " ", "");
+	enumerator = enumerator_create_token(plugins, " ", "");
 	while (enumerator->enumerate(enumerator, &name))
 	{
 		snprintf(dir, sizeof(dir), "%s", name);
 		translate(dir, "-", "_");
-		snprintf(path, sizeof(path), "%s/%s/.libs", PLUGINDIR, dir);
-		lib->plugins->add_path(lib->plugins, path);
+		for (i = 0; plugindirs[i]; i++)
+		{
+			snprintf(path, sizeof(path), "%s/%s/.libs", plugindirs[i], dir);
+			lib->plugins->add_path(lib->plugins, path);
+		}
 	}
 	enumerator->destroy(enumerator);
 
-	return lib->plugins->load(lib->plugins, PLUGINS);
+	return lib->plugins->load(lib->plugins, plugins);
 }
-
-/* declare test suite constructors */
-#define TEST_SUITE(x) test_suite_t* x();
-#define TEST_SUITE_DEPEND(x, ...) TEST_SUITE(x)
-#include "test_runner.h"
-#undef TEST_SUITE
-#undef TEST_SUITE_DEPEND
 
 /**
  * Load all available test suites
  */
-static array_t *load_suites()
+static array_t *load_suites(test_configuration_t configs[],
+							char *plugindirs[], char *plugins)
 {
 	array_t *suites;
-	struct {
-		test_suite_t *(*suite)();
-		plugin_feature_t feature;
-	} constructors[] = {
-#define TEST_SUITE(x) \
-		{ .suite = x, },
-#define TEST_SUITE_DEPEND(x, type, args) \
-		{ .suite = x, .feature = PLUGIN_DEPENDS(type, args) },
-#include "test_runner.h"
-	};
 	bool old = FALSE;
 	int i;
 
@@ -81,7 +69,7 @@ static array_t *load_suites()
 
 	test_setup_handler();
 
-	if (!load_plugins())
+	if (!load_plugins(plugindirs, plugins))
 	{
 		library_deinit();
 		return NULL;
@@ -95,12 +83,12 @@ static array_t *load_suites()
 
 	suites = array_create(0, 0);
 
-	for (i = 0; i < countof(constructors); i++)
+	for (i = 0; configs[i].suite; i++)
 	{
-		if (constructors[i].feature.type == 0 ||
-			lib->plugins->has_feature(lib->plugins, constructors[i].feature))
+		if (configs[i].feature.type == 0 ||
+			lib->plugins->has_feature(lib->plugins, configs[i].feature))
 		{
-			array_insert(suites, -1, constructors[i].suite());
+			array_insert(suites, -1, configs[i].suite());
 		}
 	}
 
@@ -184,7 +172,7 @@ static bool call_fixture(test_case_t *tcase, bool up)
 /**
  * Test initialization, initializes libstrongswan for the next run
  */
-static bool pre_test()
+static bool pre_test(char *plugindirs[], char *plugins)
 {
 	library_init(NULL);
 
@@ -200,7 +188,7 @@ static bool pre_test()
 		lib->leak_detective->set_report_cb(lib->leak_detective,
 										   NULL, NULL, NULL);
 	}
-	if (!load_plugins())
+	if (!load_plugins(plugindirs, plugins))
 	{
 		library_deinit();
 		return FALSE;
@@ -333,7 +321,7 @@ static void print_failures(array_t *failures)
 /**
  * Run a single test case with fixtures
  */
-static bool run_case(test_case_t *tcase)
+static bool run_case(test_case_t *tcase, char *plugindirs[], char *plugins)
 {
 	enumerator_t *enumerator;
 	test_function_t *tfun;
@@ -352,7 +340,7 @@ static bool run_case(test_case_t *tcase)
 
 		for (i = tfun->start; i < tfun->end; i++)
 		{
-			if (pre_test())
+			if (pre_test(plugindirs, plugins))
 			{
 				bool ok = FALSE, leaks = FALSE;
 
@@ -418,7 +406,7 @@ static bool run_case(test_case_t *tcase)
 /**
  * Run a single test suite
  */
-static bool run_suite(test_suite_t *suite)
+static bool run_suite(test_suite_t *suite, char *plugindirs[], char *plugins)
 {
 	enumerator_t *enumerator;
 	test_case_t *tcase;
@@ -429,7 +417,7 @@ static bool run_suite(test_suite_t *suite)
 	enumerator = array_create_enumerator(suite->tcases);
 	while (enumerator->enumerate(enumerator, &tcase))
 	{
-		if (run_case(tcase))
+		if (run_case(tcase, plugindirs, plugins))
 		{
 			passed++;
 		}
@@ -447,7 +435,11 @@ static bool run_suite(test_suite_t *suite)
 	return FALSE;
 }
 
-int main(int argc, char *argv[])
+/**
+ * See header.
+ */
+int test_runner_run(test_configuration_t configs[],
+					char *plugindirs[], char *plugins)
 {
 	array_t *suites;
 	test_suite_t *suite;
@@ -457,7 +449,7 @@ int main(int argc, char *argv[])
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
 
-	suites = load_suites();
+	suites = load_suites(configs, plugindirs, plugins);
 	if (!suites)
 	{
 		return EXIT_FAILURE;
@@ -468,7 +460,7 @@ int main(int argc, char *argv[])
 	enumerator = array_create_enumerator(suites);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if (run_suite(suite))
+		if (run_suite(suite, plugindirs, plugins))
 		{
 			passed++;
 		}

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2013 Martin Willi
+ * Copyright (C) 2013 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,24 +13,38 @@
  * for more details.
  */
 
-TEST_SUITE(bio_reader_suite_create)
-TEST_SUITE(bio_writer_suite_create)
-TEST_SUITE(chunk_suite_create)
-TEST_SUITE(enum_suite_create)
-TEST_SUITE(enumerator_suite_create)
-TEST_SUITE(linked_list_suite_create)
-TEST_SUITE(linked_list_enumerator_suite_create)
-TEST_SUITE(hashtable_suite_create)
-TEST_SUITE(array_suite_create)
-TEST_SUITE(identification_suite_create)
-TEST_SUITE(threading_suite_create)
-TEST_SUITE(watcher_suite_create)
-TEST_SUITE(stream_suite_create)
-TEST_SUITE(utils_suite_create)
-TEST_SUITE(vectors_suite_create)
-TEST_SUITE_DEPEND(ecdsa_suite_create, PRIVKEY_GEN, KEY_ECDSA)
-TEST_SUITE_DEPEND(rsa_suite_create, PRIVKEY_GEN, KEY_RSA)
-TEST_SUITE(host_suite_create)
-TEST_SUITE(printf_suite_create)
-TEST_SUITE(pen_suite_create)
-TEST_SUITE(asn1_suite_create)
+#include "test_suite.h"
+
+#include <plugins/plugin_feature.h>
+
+typedef struct test_configuration_t test_configuration_t;
+
+/**
+ * Test configuration, suite constructor with plugin dependency
+ */
+struct test_configuration_t {
+
+	/**
+	 * Constructor function to create suite.
+	 */
+	test_suite_t *(*suite)();
+
+	/**
+	 * Plugin feature this test suite depends on
+	 */
+	plugin_feature_t feature;
+};
+
+/**
+ * Run test configuration, loading plugins from plugin base directory.
+ *
+ * Both the configs and the plugindirs array must be terminated with a NULL
+ * element.
+ *
+ * @param configs		test suite constructors with dependencies
+ * @param plugindirs	base directories containing plugin directories to load
+ * @param plugins		plugin names to load, space separated
+ * @return				test result, EXIT_SUCCESS if all tests passed
+ */
+int test_runner_run(test_configuration_t config[],
+					char *plugindirs[], char *plugins);
