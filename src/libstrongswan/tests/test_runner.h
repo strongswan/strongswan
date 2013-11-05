@@ -20,6 +20,19 @@
 typedef struct test_configuration_t test_configuration_t;
 
 /**
+ * Callback called before and after each test case to de-/initialize the
+ * environment (e.g. to load plugins).  It is also called before and after the
+ * test suites are loaded.
+ *
+ * It is called after libstrongswan has been initialized and likewise before it
+ * gets deinitialized.
+ *
+ * @param init			TRUE during initialization
+ * @return				FALSE if de-/init failed
+ */
+typedef bool (*test_runner_init_t)(bool init);
+
+/**
  * Test configuration, suite constructor with plugin dependency
  */
 struct test_configuration_t {
@@ -36,15 +49,12 @@ struct test_configuration_t {
 };
 
 /**
- * Run test configuration, loading plugins from plugin base directory.
+ * Run test configuration.
  *
- * Both the configs and the plugindirs array must be terminated with a NULL
- * element.
+ * The configs array must be terminated with a NULL element.
  *
  * @param configs		test suite constructors with dependencies
- * @param plugindirs	base directories containing plugin directories to load
- * @param plugins		plugin names to load, space separated
+ * @param init_cb		init/deinit callback
  * @return				test result, EXIT_SUCCESS if all tests passed
  */
-int test_runner_run(test_configuration_t config[],
-					char *plugindirs[], char *plugins);
+int test_runner_run(test_configuration_t config[], test_runner_init_t init_cb);

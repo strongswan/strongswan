@@ -31,35 +31,10 @@
 #define TTY(color) tty_escape_get(2, TTY_FG_##color)
 
 /**
- * Load plugins from builddir
- */
-static bool load_plugins(char *plugindirs[], char *plugins)
-{
-	enumerator_t *enumerator;
-	char *name, path[PATH_MAX], dir[64];
-	int i;
-
-	enumerator = enumerator_create_token(plugins, " ", "");
-	while (enumerator->enumerate(enumerator, &name))
-	{
-		snprintf(dir, sizeof(dir), "%s", name);
-		translate(dir, "-", "_");
-		for (i = 0; plugindirs[i]; i++)
-		{
-			snprintf(path, sizeof(path), "%s/%s/.libs", plugindirs[i], dir);
-			lib->plugins->add_path(lib->plugins, path);
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	return lib->plugins->load(lib->plugins, plugins);
-}
-
-/**
  * Load all available test suites
  */
 static array_t *load_suites(test_configuration_t configs[],
-							char *plugindirs[], char *plugins)
+							test_runner_init_t init)
 {
 	array_t *suites;
 	bool old = FALSE;
@@ -69,7 +44,7 @@ static array_t *load_suites(test_configuration_t configs[],
 
 	test_setup_handler();
 
-	if (!load_plugins(plugindirs, plugins))
+	if (init && !init(TRUE))
 	{
 		library_deinit();
 		return NULL;
@@ -97,6 +72,10 @@ static array_t *load_suites(test_configuration_t configs[],
 		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
 
+	if (init)
+	{
+		init(FALSE);
+	}
 	library_deinit();
 
 	return suites;
@@ -172,7 +151,7 @@ static bool call_fixture(test_case_t *tcase, bool up)
 /**
  * Test initialization, initializes libstrongswan for the next run
  */
-static bool pre_test(char *plugindirs[], char *plugins)
+static bool pre_test(test_runner_init_t init)
 {
 	library_init(NULL);
 
@@ -188,12 +167,11 @@ static bool pre_test(char *plugindirs[], char *plugins)
 		lib->leak_detective->set_report_cb(lib->leak_detective,
 										   NULL, NULL, NULL);
 	}
-	if (!load_plugins(plugindirs, plugins))
+	if (init && !init(TRUE))
 	{
 		library_deinit();
 		return FALSE;
 	}
-
 	dbg_default_set_level(LEVEL_SILENT);
 	return TRUE;
 }
@@ -250,7 +228,8 @@ static void sum_leaks(report_data_t *data, int count, size_t bytes,
 /**
  * Do library cleanup and optionally check for memory leaks
  */
-static bool post_test(bool check_leaks, array_t *failures, char *name, int i)
+static bool post_test(test_runner_init_t init, bool check_leaks,
+					  array_t *failures, char *name, int i)
 {
 	report_data_t data = {
 		.failures = failures,
@@ -258,10 +237,10 @@ static bool post_test(bool check_leaks, array_t *failures, char *name, int i)
 		.i = i,
 	};
 
-	lib->processor->set_threads(lib->processor, 0);
-	lib->processor->cancel(lib->processor);
-	lib->plugins->unload(lib->plugins);
-
+	if (init)
+	{
+		init(FALSE);
+	}
 	if (check_leaks && lib->leak_detective)
 	{
 		lib->leak_detective->set_report_cb(lib->leak_detective,
@@ -321,7 +300,7 @@ static void print_failures(array_t *failures)
 /**
  * Run a single test case with fixtures
  */
-static bool run_case(test_case_t *tcase, char *plugindirs[], char *plugins)
+static bool run_case(test_case_t *tcase, test_runner_init_t init)
 {
 	enumerator_t *enumerator;
 	test_function_t *tfun;
@@ -340,7 +319,7 @@ static bool run_case(test_case_t *tcase, char *plugindirs[], char *plugins)
 
 		for (i = tfun->start; i < tfun->end; i++)
 		{
-			if (pre_test(plugindirs, plugins))
+			if (pre_test(init))
 			{
 				bool ok = FALSE, leaks = FALSE;
 
@@ -361,7 +340,7 @@ static bool run_case(test_case_t *tcase, char *plugindirs[], char *plugins)
 					}
 
 				}
-				leaks = post_test(ok, failures, tfun->name, i);
+				leaks = post_test(init, ok, failures, tfun->name, i);
 
 				test_setup_timeout(0);
 
@@ -406,7 +385,7 @@ static bool run_case(test_case_t *tcase, char *plugindirs[], char *plugins)
 /**
  * Run a single test suite
  */
-static bool run_suite(test_suite_t *suite, char *plugindirs[], char *plugins)
+static bool run_suite(test_suite_t *suite, test_runner_init_t init)
 {
 	enumerator_t *enumerator;
 	test_case_t *tcase;
@@ -417,7 +396,7 @@ static bool run_suite(test_suite_t *suite, char *plugindirs[], char *plugins)
 	enumerator = array_create_enumerator(suite->tcases);
 	while (enumerator->enumerate(enumerator, &tcase))
 	{
-		if (run_case(tcase, plugindirs, plugins))
+		if (run_case(tcase, init))
 		{
 			passed++;
 		}
@@ -438,8 +417,7 @@ static bool run_suite(test_suite_t *suite, char *plugindirs[], char *plugins)
 /**
  * See header.
  */
-int test_runner_run(test_configuration_t configs[],
-					char *plugindirs[], char *plugins)
+int test_runner_run(test_configuration_t configs[], test_runner_init_t init)
 {
 	array_t *suites;
 	test_suite_t *suite;
@@ -449,7 +427,7 @@ int test_runner_run(test_configuration_t configs[],
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
 
-	suites = load_suites(configs, plugindirs, plugins);
+	suites = load_suites(configs, init);
 	if (!suites)
 	{
 		return EXIT_FAILURE;
@@ -460,7 +438,7 @@ int test_runner_run(test_configuration_t configs[],
 	enumerator = array_create_enumerator(suites);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if (run_suite(suite, plugindirs, plugins))
+		if (run_suite(suite, init))
 		{
 			passed++;
 		}

@@ -31,12 +31,26 @@ static test_configuration_t tests[] = {
 	{ .suite = NULL, }
 };
 
-static char *plugindirs[] = {
-	PLUGINDIR,
-	NULL,
-};
+static bool test_runner_init(bool init)
+{
+	if (init)
+	{
+		plugin_loader_add_plugindirs(PLUGINDIR, PLUGINS);
+		if (!lib->plugins->load(lib->plugins, PLUGINS))
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		lib->processor->set_threads(lib->processor, 0);
+		lib->processor->cancel(lib->processor);
+		lib->plugins->unload(lib->plugins);
+	}
+	return TRUE;
+}
 
 int main(int argc, char *argv[])
 {
-	return test_runner_run(tests, plugindirs, PLUGINS);
+	return test_runner_run(tests, test_runner_init);
 }
