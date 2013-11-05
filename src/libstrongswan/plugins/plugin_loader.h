@@ -146,4 +146,13 @@ struct plugin_loader_t {
  */
 plugin_loader_t *plugin_loader_create();
 
+/**
+ * Convenience function to add plugin directories for the given plugins within
+ * the given base directory according to the conventions in the src/build tree.
+ *
+ * @param basedir	base directory
+ * @param plugins	space separated list of plugins
+ */
+void plugin_loader_add_plugindirs(char *basedir, char *plugins);
+
 #endif /** PLUGIN_LOADER_H_ @}*/
