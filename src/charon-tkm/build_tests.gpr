@@ -11,4 +11,8 @@ project Build_Tests is
       for Default_Switches ("c") use Build_Common.C_Compiler_Switches;
    end Compiler;
 
+   package Binder is
+      for Default_Switches ("ada") use Build_Common.Ada_Binder_Switches;
+   end Binder;
+
 end Build_Tests;
