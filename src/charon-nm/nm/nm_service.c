@@ -564,7 +564,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
 	{
-		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 	}
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_class);
@@ -612,9 +613,9 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
-											 "0.0.0.0", 0,
-											 "255.255.255.255", 65535);
+	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
