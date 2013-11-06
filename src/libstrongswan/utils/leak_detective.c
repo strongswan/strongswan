@@ -587,7 +587,12 @@ char *whitelist[] = {
  */
 static void init_static_allocations()
 {
+	struct tm tm;
+	time_t t = 0;
+
 	tzset();
+	gmtime_r(&t, &tm);
+	localtime_r(&t, &tm);
 }
 
 /**
