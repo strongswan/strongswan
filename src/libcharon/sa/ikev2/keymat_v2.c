@@ -278,6 +278,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
+		chunk_clear(&secret);
 		return FALSE;
 	}
 	this->prf_alg = alg;
@@ -287,6 +288,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		DBG1(DBG_IKE, "%N %N not supported!",
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
 			 pseudo_random_function_names, alg);
+		chunk_clear(&secret);
 		return FALSE;
 	}
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
@@ -339,6 +341,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		{
 			DBG1(DBG_IKE, "PRF of old SA %N not supported!",
 				 pseudo_random_function_names, rekey_function);
+			chunk_clear(&secret);
 			chunk_free(&full_nonce);
 			chunk_free(&fixed_nonce);
 			chunk_clear(&prf_plus_seed);
