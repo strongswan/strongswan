@@ -453,17 +453,6 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	chunk_t seed, secret = chunk_empty;
 	prf_plus_t *prf_plus;
 
-	if (dh)
-	{
-		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
-		{
-			return FALSE;
-		}
-		DBG4(DBG_CHD, "DH secret %B", &secret);
-	}
-	seed = chunk_cata("mcc", secret, nonce_i, nonce_r);
-	DBG4(DBG_CHD, "seed %B", &seed);
-
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 								&enc_alg, &enc_size))
 	{
@@ -530,7 +519,21 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	{
 		return FALSE;
 	}
+
+	if (dh)
+	{
+		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "DH secret %B", &secret);
+	}
+	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
+	DBG4(DBG_CHD, "seed %B", &seed);
+
 	prf_plus = prf_plus_create(this->prf, TRUE, seed);
+	memwipe(seed.ptr, seed.len);
+
 	if (!prf_plus)
 	{
 		return FALSE;
