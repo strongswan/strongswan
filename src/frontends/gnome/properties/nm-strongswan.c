@@ -665,7 +665,7 @@ strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class)
 static guint32
 get_capabilities (NMVpnEditorPlugin *iface)
 {
-	return 0;
+	return NM_VPN_EDITOR_PLUGIN_CAPABILITY_IPV6;
 }
 
 static NMVpnEditor *
