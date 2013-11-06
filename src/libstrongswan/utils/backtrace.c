@@ -314,7 +314,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
 	bool old = FALSE;
 
 	bfd_mutex->lock(bfd_mutex);
-	if (lib->leak_detective)
+	if (lib && lib->leak_detective)
 	{
 		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
 	}
@@ -324,7 +324,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
 		data.entry = entry;
 		bfd_map_over_sections(entry->abfd, (void*)find_addr, &data);
 	}
-	if (lib->leak_detective)
+	if (lib && lib->leak_detective)
 	{
 		lib->leak_detective->set_state(lib->leak_detective, old);
 	}

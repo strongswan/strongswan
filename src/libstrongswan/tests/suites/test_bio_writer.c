@@ -181,7 +181,7 @@ END_TEST
  */
 
 #define assert_write_data_len(init, bits) ({ \
- 	bio_writer_t *writer; \
+	bio_writer_t *writer; \
 	chunk_t buf, data; \
 	int i, len = bits / 8; \
 	writer = bio_writer_create(init); \
@@ -240,7 +240,7 @@ END_TEST
  */
 
 #define assert_wrap_data(init, bits) ({ \
- 	bio_writer_t *writer; \
+	bio_writer_t *writer; \
 	chunk_t buf, data; \
 	int i, len = bits / 8; \
 	writer = bio_writer_create(init); \

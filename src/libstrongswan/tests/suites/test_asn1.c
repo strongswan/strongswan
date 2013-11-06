@@ -45,6 +45,7 @@ START_TEST(test_asn1_algorithmIdentifier)
 	{
 		algid = asn1_algorithmIdentifier(test[i].n);
 		ck_assert(chunk_equals(algid, test[i].algid));
+		free(algid.ptr);
 	}
 }
 END_TEST
@@ -527,6 +528,7 @@ START_TEST(test_asn1_from_time)
         }
 		chunk = asn1_from_time(&test[i].time, test[i].type);
 		ck_assert(chunk_equals(chunk, test[i].chunk));
+		free(chunk.ptr);
 	}
 }
 END_TEST
@@ -600,7 +602,7 @@ START_TEST(test_asn1_build_object)
 		pos = asn1_build_object(&a, test[i].b[0], test[i].len);
 		ck_assert(pos == (a.ptr + test[i].size));
 		ck_assert(a.len == test[i].size + test[i].len);
-		ck_assert(memeq(a.ptr, test[i].b, test[i].size)); 
+		ck_assert(memeq(a.ptr, test[i].b, test[i].size));
 		chunk_free(&a);
 	}
 }

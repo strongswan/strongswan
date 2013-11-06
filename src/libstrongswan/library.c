@@ -61,6 +61,39 @@ struct private_library_t {
  */
 library_t *lib = NULL;
 
+#ifdef LEAK_DETECTIVE
+/**
+ * Default leak report callback
+ */
+static void report_leaks(void *user, int count, size_t bytes,
+						 backtrace_t *bt, bool detailed)
+{
+	fprintf(stderr, "%zu bytes total, %d allocations, %zu bytes average:\n",
+			bytes, count, bytes / count);
+	bt->log(bt, stderr, detailed);
+}
+
+/**
+ * Default leak report summary callback
+ */
+static void sum_leaks(void* user, int count, size_t bytes, int whitelisted)
+{
+	switch (count)
+	{
+		case 0:
+			fprintf(stderr, "No leaks detected");
+			break;
+		case 1:
+			fprintf(stderr, "One leak detected");
+			break;
+		default:
+			fprintf(stderr, "%d leaks detected, %zu bytes", count, bytes);
+			break;
+	}
+	fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
+}
+#endif /* LEAK_DETECTIVE */
+
 /**
  * Deinitialize library
  */
@@ -227,6 +260,8 @@ bool library_init(char *settings)
 
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();
+	lib->leak_detective->set_report_cb(lib->leak_detective,
+									   report_leaks, sum_leaks, NULL);
 #endif /* LEAK_DETECTIVE */
 
 	pfh = printf_hook_create();

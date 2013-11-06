@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2013 Martin Willi
+ * Copyright (C) 2013 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,29 +13,48 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
+#include "test_suite.h"
 
-#include <check.h>
+#include <plugins/plugin_feature.h>
 
-Suite *bio_reader_suite_create();
-Suite *bio_writer_suite_create();
-Suite *chunk_suite_create();
-Suite *enum_suite_create();
-Suite *enumerator_suite_create();
-Suite *linked_list_suite_create();
-Suite *linked_list_enumerator_suite_create();
-Suite *hashtable_suite_create();
-Suite *array_suite_create();
-Suite *identification_suite_create();
-Suite *threading_suite_create();
-Suite *utils_suite_create();
-Suite *vectors_suite_create();
-Suite *ecdsa_suite_create();
-Suite *rsa_suite_create();
-Suite *host_suite_create();
-Suite *printf_suite_create();
-Suite *pen_suite_create();
-Suite *asn1_suite_create();
+typedef struct test_configuration_t test_configuration_t;
 
-#endif /** TEST_RUNNER_H_ */
+/**
+ * Callback called before and after each test case to de-/initialize the
+ * environment (e.g. to load plugins).  It is also called before and after the
+ * test suites are loaded.
+ *
+ * It is called after libstrongswan has been initialized and likewise before it
+ * gets deinitialized.
+ *
+ * @param init			TRUE during initialization
+ * @return				FALSE if de-/init failed
+ */
+typedef bool (*test_runner_init_t)(bool init);
+
+/**
+ * Test configuration, suite constructor with plugin dependency
+ */
+struct test_configuration_t {
+
+	/**
+	 * Constructor function to create suite.
+	 */
+	test_suite_t *(*suite)();
+
+	/**
+	 * Plugin feature this test suite depends on
+	 */
+	plugin_feature_t feature;
+};
+
+/**
+ * Run test configuration.
+ *
+ * The configs array must be terminated with a NULL element.
+ *
+ * @param configs		test suite constructors with dependencies
+ * @param init_cb		init/deinit callback
+ * @return				test result, EXIT_SUCCESS if all tests passed
+ */
+int test_runner_run(test_configuration_t config[], test_runner_init_t init_cb);

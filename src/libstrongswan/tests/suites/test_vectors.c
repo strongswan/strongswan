@@ -21,7 +21,8 @@
 
 START_TEST(test_vectors)
 {
-	fail_if(lib->crypto->get_test_vector_failures(lib->crypto));
+	u_int failed = lib->crypto->get_test_vector_failures(lib->crypto);
+	fail_if(failed > 0, "%u test vectors failed", failed);
 }
 END_TEST
 

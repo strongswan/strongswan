@@ -1170,3 +1170,22 @@ plugin_loader_t *plugin_loader_create()
 
 	return &this->public;
 }
+
+/*
+ * See header
+ */
+void plugin_loader_add_plugindirs(char *basedir, char *plugins)
+{
+	enumerator_t *enumerator;
+	char *name, path[PATH_MAX], dir[64];
+
+	enumerator = enumerator_create_token(plugins, " ", "");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		snprintf(dir, sizeof(dir), "%s", name);
+		translate(dir, "-", "_");
+		snprintf(path, sizeof(path), "%s/%s/.libs", basedir, dir);
+		lib->plugins->add_path(lib->plugins, path);
+	}
+	enumerator->destroy(enumerator);
+}

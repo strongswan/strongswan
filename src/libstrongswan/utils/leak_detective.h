@@ -24,6 +24,30 @@
 typedef struct leak_detective_t leak_detective_t;
 
 #include <library.h>
+#include <utils/backtrace.h>
+
+/**
+ * Callback function to report leak/usage information
+ *
+ * @param user			user specific data
+ * @param count			number of allocations
+ * @param bytes			total size of allocations
+ * @param bt			backtrace of allocation
+ * @param detailed		TRUE to show a detailed backtrace
+ */
+typedef void (*leak_detective_report_cb_t)(void *user, int count, size_t bytes,
+										   backtrace_t *bt, bool detailed);
+
+/**
+ * Callback function to report leak/usage summary information
+ *
+ * @param user			user specific data
+ * @param count			total number of allocations
+ * @param bytes			total size of all reported allocations
+ * @param whitelisted	number of allocations suppressed by whitelist
+ */
+typedef void (*leak_detective_summary_cb_t)(void* user, int count, size_t bytes,
+										    int whitelisted);
 
 /**
  * Leak detective finds leaks and bad frees using malloc hooks.
@@ -36,11 +60,32 @@ typedef struct leak_detective_t leak_detective_t;
 struct leak_detective_t {
 
 	/**
-	 * Report leaks to stderr.
+	 * Report leaks to the registered callback functions.
 	 *
 	 * @param detailed 		TRUE to resolve line/filename of leak (slow)
 	 */
 	void (*report)(leak_detective_t *this, bool detailed);
+
+	/**
+	 * Report current memory usage to out.
+	 * Set callback functions invoked during a report().
+	 *
+	 * @param cb			callback invoked for each detected leak
+	 * @param scb			summary callback invoked at end of report
+	 * @param user			user data to supply to callbacks
+	 */
+	void (*set_report_cb)(leak_detective_t *this, leak_detective_report_cb_t cb,
+						  leak_detective_summary_cb_t scb, void *user);
+
+	/**
+	 * Report current memory usage using a callbacks.
+	 *
+	 * @param cb			callback invoked for each allocation
+	 * @param scb			summary callback invoked at end of usage report
+	 * @param user			user data supplied to callbacks
+	 */
+	void (*usage)(leak_detective_t *this, leak_detective_report_cb_t cb,
+				  leak_detective_summary_cb_t scb, void *user);
 
 	/**
 	 * Number of detected leaks.
@@ -48,13 +93,6 @@ struct leak_detective_t {
 	 * @return				number of leaks
 	 */
 	int (*leaks)(leak_detective_t *this);
-
-	/**
-	 * Report current memory usage to out.
-	 *
-	 * @param out			target to write usage report to
-	 */
-	void (*usage)(leak_detective_t *this, FILE *out);
 
 	/**
 	 * Enable/disable leak detective hooks for the current thread.

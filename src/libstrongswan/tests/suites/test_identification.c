@@ -179,7 +179,7 @@ static struct {
 START_TEST(test_from_string)
 {
 	identification_t *a;
-	chunk_t encoding, expected;
+	chunk_t encoding, expected = chunk_empty;
 	char *id;
 
 	id = string_data[_i].id;

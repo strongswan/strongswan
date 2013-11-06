@@ -20,7 +20,17 @@
 # ============================
 
 AC_INIT([strongSwan],[5.1.1])
-AM_INIT_AUTOMAKE([tar-ustar subdir-objects])
+AM_INIT_AUTOMAKE(m4_esyscmd([
+	echo tar-ustar
+	echo subdir-objects
+	case `automake --version | head -n 1` in
+		*" 1.9"*);;
+		*" 1.10"*);;
+		*" 1.11"*);;
+		# don't use parallel test harness in 1.12 and up
+		*) echo serial-tests;;
+	esac
+]))
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])

@@ -246,10 +246,10 @@ struct invoke_t {
 
 static void invoke(intptr_t item, void *a, void *b, void *c, void *d, int *sum)
 {
-	ck_assert(a == (void*)1);
-	ck_assert(b == (void*)2);
-	ck_assert(c == (void*)3);
-	ck_assert(d == (void*)4);
+	ck_assert_int_eq((uintptr_t)a, 1);
+	ck_assert_int_eq((uintptr_t)b, 2);
+	ck_assert_int_eq((uintptr_t)c, 3);
+	ck_assert_int_eq((uintptr_t)d, 4);
 	*sum += item;
 }
 
@@ -267,7 +267,9 @@ START_TEST(test_invoke_function)
 	list->insert_last(list, (void*)3);
 	list->insert_last(list, (void*)4);
 	list->insert_last(list, (void*)5);
-	list->invoke_function(list, (linked_list_invoke_t)invoke, 1, 2, 3, 4, &sum);
+	list->invoke_function(list, (linked_list_invoke_t)invoke,
+						  (uintptr_t)1, (uintptr_t)2,
+						  (uintptr_t)3, (uintptr_t)4, &sum);
 	ck_assert_int_eq(sum, 15);
 }
 END_TEST
@@ -287,7 +289,9 @@ START_TEST(test_invoke_offset)
 	{
 		list->insert_last(list, &items[i]);
 	}
-	list->invoke_offset(list, offsetof(invoke_t, invoke), 1, 2, 3, 4, &sum);
+	list->invoke_offset(list, offsetof(invoke_t, invoke),
+						(uintptr_t)1, (uintptr_t)2,
+						(uintptr_t)3, (uintptr_t)4, &sum);
 	ck_assert_int_eq(sum, 15);
 }
 END_TEST
@@ -303,7 +307,7 @@ struct clone_t {
 	void *(*clone)(clone_t *item);
 };
 
-static void *clone(clone_t *item)
+static void *clonefn(clone_t *item)
 {
 	return item->val;
 }
@@ -326,11 +330,11 @@ START_TEST(test_clone_offset)
 {
 	linked_list_t *other;
 	clone_t items[] = {
-		{ .val = (void*)1, .clone = clone, },
-		{ .val = (void*)2, .clone = clone, },
-		{ .val = (void*)3, .clone = clone, },
-		{ .val = (void*)4, .clone = clone, },
-		{ .val = (void*)5, .clone = clone, },
+		{ .val = (void*)1, .clone = clonefn, },
+		{ .val = (void*)2, .clone = clonefn, },
+		{ .val = (void*)3, .clone = clonefn, },
+		{ .val = (void*)4, .clone = clonefn, },
+		{ .val = (void*)5, .clone = clonefn, },
 	};
 	int i;
 
