@@ -737,6 +737,7 @@ AC_COMPILE_IFELSE(
 		AC_MSG_RESULT([yes])
 		windows=true
 		openssl_lib=eay32
+		AC_SUBST(PTHREADLIB, "")
 	],
 	[
 		AC_MSG_RESULT([no])
