@@ -333,8 +333,15 @@ HOOK(size_t, size, const void *ptr)
  */
 static bool register_hooks()
 {
+	static bool once = FALSE;
 	malloc_zone_t *zone;
 	void *page;
+
+	if (once)
+	{
+		return TRUE;
+	}
+	once = TRUE;
 
 	zone = malloc_default_zone();
 	if (zone->version != MALLOC_ZONE_VERSION)
