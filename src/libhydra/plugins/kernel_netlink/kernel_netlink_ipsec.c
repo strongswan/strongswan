@@ -1214,7 +1214,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
 			   tfc, &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED,
 			   chunk_empty, mode, ipcomp, 0, initiator, FALSE, FALSE, inbound,
-			   NULL, NULL);
+			   src_ts, dst_ts);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
