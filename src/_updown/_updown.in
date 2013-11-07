@@ -50,6 +50,9 @@
 #       PLUTO_PROTO
 #              is the negotiated IPsec protocol, ah|esp
 #
+#       PLUTO_IPCOMP
+#              is not empty if IPComp was negotiated
+#
 #       PLUTO_UNIQUEID
 #              is the unique identifier of the associated IKE_SA
 #
