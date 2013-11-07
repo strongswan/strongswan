@@ -219,7 +219,7 @@ METHOD(listener_t, child_updown, bool,
 	enumerator = child_sa->create_policy_enumerator(child_sa);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
-		char command[1024];
+		char command[2048];
 		host_t *my_client, *other_client;
 		u_int8_t my_client_mask, other_client_mask;
 		char *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc, *dns, *xauth;
