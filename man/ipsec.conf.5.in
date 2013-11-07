@@ -386,7 +386,9 @@ retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
-not send or receive any traffic.
+not send or receive any traffic. The inactivity counter is reset during CHILD_SA
+rekeying. This means that the inactivity timeout must be smaller than the
+rekeying interval to have any effect.
 .TP
 .BR eap_identity " = <id>"
 defines the identity the client uses to reply to an EAP Identity request.

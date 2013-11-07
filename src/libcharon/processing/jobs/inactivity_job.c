@@ -73,12 +73,13 @@ METHOD(job_t, execute, job_requeue_t,
 		{
 			if (child_sa->get_reqid(child_sa) == this->reqid)
 			{
-				time_t in, out, diff;
+				time_t in, out, install, diff;
 
 				child_sa->get_usestats(child_sa, TRUE, &in, NULL, NULL);
 				child_sa->get_usestats(child_sa, FALSE, &out, NULL, NULL);
+				install = child_sa->get_installtime(child_sa);
 
-				diff = time_monotonic(NULL) - max(in, out);
+				diff = time_monotonic(NULL) - max(max(in, out), install);
 
 				if (diff >= this->timeout)
 				{
