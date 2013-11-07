@@ -120,6 +120,11 @@ struct private_child_sa_t {
 	time_t expire_time;
 
 	/**
+	 * absolute time when SA has been installed
+	 */
+	time_t install_time;
+
+	/**
 	 * state of the CHILD_SA
 	 */
 	child_sa_state_t state;
@@ -584,6 +589,12 @@ METHOD(child_sa_t, get_lifetime, time_t,
 	   private_child_sa_t *this, bool hard)
 {
 	return hard ? this->expire_time : this->rekey_time;
+}
+
+METHOD(child_sa_t, get_installtime, time_t,
+	private_child_sa_t *this)
+{
+	return this->install_time;
 }
 
 METHOD(child_sa_t, alloc_spi, u_int32_t,
@@ -1140,6 +1151,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.get_proposal = _get_proposal,
 			.set_proposal = _set_proposal,
 			.get_lifetime = _get_lifetime,
+			.get_installtime = _get_installtime,
 			.get_usestats = _get_usestats,
 			.get_mark = _get_mark,
 			.has_encap = _has_encap,
@@ -1170,6 +1182,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.reqid = config->get_reqid(config),
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
+		.install_time = time_monotonic(NULL),
 	);
 
 	this->config = config;

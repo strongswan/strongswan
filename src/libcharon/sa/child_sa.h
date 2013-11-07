@@ -265,6 +265,13 @@ struct child_sa_t {
 	time_t (*get_lifetime)(child_sa_t *this, bool hard);
 
 	/**
+	 * Get the absolute time when this SA has been installed.
+	 *
+	 * @return			monotonic absolute install time
+	 */
+	time_t (*get_installtime)(child_sa_t *this);
+
+	/**
 	 * Get last use time and the number of bytes processed.
 	 *
 	 * @param inbound		TRUE for inbound traffic, FALSE for outbound
