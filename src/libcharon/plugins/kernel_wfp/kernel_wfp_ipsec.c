@@ -13,12 +13,19 @@
  * for more details.
  */
 
+/* Windows 7, for some fwpmu.h functionality */
+#define _WIN32_WINNT 0x0601
+
 #include "kernel_wfp_ipsec.h"
 
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <collections/array.h>
 #include <collections/hashtable.h>
+
+#include <fwpmtypes.h>
+#include <fwpmu.h>
+#undef interface
 
 typedef struct private_kernel_wfp_ipsec_t private_kernel_wfp_ipsec_t;
 
@@ -48,6 +55,11 @@ struct private_kernel_wfp_ipsec_t {
 	 * Mutex for accessing entries
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * WFP session handle
+	 */
+	HANDLE handle;
 };
 
 /**
@@ -485,6 +497,10 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_wfp_ipsec_t *this)
 {
+	if (this->handle)
+	{
+		FwpmEngineClose0(this->handle);
+	}
 	this->entries->destroy(this->entries);
 	this->sas->destroy(this->sas);
 	this->mutex->destroy(this->mutex);
@@ -497,6 +513,13 @@ METHOD(kernel_ipsec_t, destroy, void,
 kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 {
 	private_kernel_wfp_ipsec_t *this;
+	DWORD res;
+	FWPM_SESSION0 session = {
+		.displayData = {
+			.name = L"charon",
+			.description = L"strongSwan IKE kernel-wfp backend",
+		},
+	};
 
 	INIT(this,
 		.public = {
@@ -524,5 +547,14 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 		.sas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 	);
 
+	res = FwpmEngineOpen0(NULL, RPC_C_AUTHN_WINNT, NULL, &session,
+						  &this->handle);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "opening WFP engine failed: 0x%08x", res);
+		destroy(this);
+		return NULL;
+	}
+
 	return &this->public;
-};
+}
