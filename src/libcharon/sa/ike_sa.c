@@ -1170,26 +1170,13 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			bool is_anyaddr;
-			host_t *host;
 			char *addr;
 
 			addr = this->ike_cfg->get_other_addr(this->ike_cfg);
-			host = this->ike_cfg->resolve_other(this->ike_cfg, AF_UNSPEC);
-			is_anyaddr = host && host->is_anyaddr(host);
-			DESTROY_IF(host);
-
-			if (is_anyaddr || !this->retry_initiate_interval)
+			if (!this->retry_initiate_interval)
 			{
-				if (is_anyaddr)
-				{
-					DBG1(DBG_IKE, "unable to initiate to %s", addr);
-				}
-				else
-				{
-					DBG1(DBG_IKE, "unable to resolve %s, initiate aborted",
-						 addr);
-				}
+				DBG1(DBG_IKE, "unable to resolve %s, initiate aborted",
+					 addr);
 				DESTROY_IF(child_cfg);
 				charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
 				return DESTROY_ME;
