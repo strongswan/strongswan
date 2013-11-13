@@ -35,7 +35,6 @@ endif
 # build libtncif ---------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libtls \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libstrongswan

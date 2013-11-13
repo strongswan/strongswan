@@ -23,7 +23,6 @@ endif
 # build libandroidbridge -------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libipsec \
 	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libcharon \

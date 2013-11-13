@@ -11,12 +11,3 @@ folder:
    built on Android (and especially in the NDK), we provide a modified mirror
    of the official Android OpenSSL version on git.strongswan.org.
 
- - vstr: The Vstr string library.  Since cross-compiling this library is not
-   that easy with the configure script and Makefiles included in the tarball,
-   the easiest way to build it is using either droid-gcc (as described on
-   wiki.strongswan.org) or a standalone toolchain built with the NDK.
-   The build script provided on the wiki builds the library with droid-gcc
-   and copies the required header files to the configured installation
-   directory.  Please note that the Android.mk provided on the wiki (vstr.mk)
-   does not work in the NDK.  A replacement is already in place in jni/vstr.
-

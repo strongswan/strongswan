@@ -20,7 +20,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(libipsec_la_SOURCES))
 # build libipsec ---------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/include \
 	$(strongswan_PATH)/src/libstrongswan
 

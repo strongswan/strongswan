@@ -14,7 +14,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(starter_SOURCES))
 # build starter ----------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libstrongswan \
 	$(strongswan_PATH)/src/stroke

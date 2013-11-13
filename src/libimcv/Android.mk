@@ -46,7 +46,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(libimcv_la_SOURCES))
 # build libimcv ----------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libstrongswan
 

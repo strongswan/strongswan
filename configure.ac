@@ -643,7 +643,7 @@ AC_CHECK_FUNC(
 
 if test x$vstr = xtrue; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
-	AC_DEFINE([USE_VSTR], [], [use vstring library for printf hooks])
+	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
 	builtin_printf=false
 fi
 

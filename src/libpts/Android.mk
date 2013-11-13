@@ -57,7 +57,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(libpts_la_SOURCES))
 # build libpts -----------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libimcv \
 	$(strongswan_PATH)/src/libstrongswan

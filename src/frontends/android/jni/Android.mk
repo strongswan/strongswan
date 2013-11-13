@@ -20,7 +20,6 @@ include $(LOCAL_PATH)/strongswan/Android.common.mk
 
 # includes
 strongswan_PATH := $(LOCAL_PATH)/strongswan
-libvstr_PATH := $(LOCAL_PATH)/vstr/include
 openssl_PATH := $(LOCAL_PATH)/openssl/include
 
 # CFLAGS (partially from a configure run using droid-gcc)
@@ -53,7 +52,7 @@ strongswan_CFLAGS := \
 	-DMONOLITHIC \
 	-DUSE_IKEV1 \
 	-DUSE_IKEV2 \
-	-DUSE_VSTR \
+	-DUSE_BUILTIN_PRINTF \
 	-DDEBUG \
 	-DCHARON_UDP_PORT=0 \
 	-DCHARON_NATT_PORT=0 \
@@ -66,7 +65,6 @@ strongswan_CFLAGS += -DUSE_BYOD
 endif
 
 strongswan_BUILD := \
-	vstr \
 	openssl \
 	libandroidbridge \
 	strongswan/src/libipsec \

@@ -10,7 +10,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(scepclient_SOURCES))
 # build scepclient -------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS) \

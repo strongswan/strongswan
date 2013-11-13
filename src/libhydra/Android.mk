@@ -26,7 +26,6 @@ LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
 # build libhydra ---------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/include \
 	$(strongswan_PATH)/src/libstrongswan
 

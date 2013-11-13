@@ -8,7 +8,6 @@ charon.c
 # build charon -----------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libcharon \
 	$(strongswan_PATH)/src/libstrongswan
