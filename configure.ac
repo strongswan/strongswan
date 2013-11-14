@@ -261,7 +261,6 @@ ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replac
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
-ARG_ENABL_SET([unit-tests],     [enable unit tests using the check test framework.])
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
@@ -384,10 +383,6 @@ fi
 
 if test x$medcli = xtrue; then
 	mediation=true
-fi
-
-if test x$coverage = xtrue; then
-	unit_tests=true
 fi
 
 # ===========================================
@@ -945,12 +940,6 @@ if test x$tkm = xtrue; then
 	AC_PATH_PROG([GPRBUILD], [gprbuild], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 fi
 
-if test x$unit_tests = xtrue; then
-	PKG_CHECK_MODULES(CHECK, [check >= 0.9.4])
-	AC_SUBST(CHECK_CFLAGS)
-	AC_SUBST(CHECK_LIBS)
-fi
-
 if test x$coverage = xtrue; then
 	AC_PATH_PROG([LCOV], [lcov], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	if test x$LCOV = x; then
@@ -1306,7 +1295,6 @@ AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
-AM_CONDITIONAL(UNITTESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
