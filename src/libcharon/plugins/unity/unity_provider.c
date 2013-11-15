@@ -38,10 +38,15 @@ typedef struct {
 	enumerator_t public;
 	/** list of traffic selectors to enumerate */
 	linked_list_t *list;
-	/** currently enumerating subnet */
-	u_char subnet[4];
-	/** currently enumerating subnet mask */
-	u_char mask[4];
+	/** currently enumerating attribute data */
+	struct __attribute__((packed)) {
+		u_char net[4];
+		u_char mask[4];
+		/* the Cisco client parses this as protocol, src and dst port, the first
+		 * two in network order the last in host order - no other clients seem
+		 * to support these fields so we don't use them either */
+		u_char padding[6];
+	} attr;
 } attribute_enumerator_t;
 
 METHOD(enumerator_t, attribute_enumerate, bool,
@@ -65,23 +70,23 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		}
 		ts->destroy(ts);
 	}
+	memcpy(this->attr.net, net->get_address(net).ptr, sizeof(this->attr.net));
+	net->destroy(net);
 
-	memset(this->mask, 0, sizeof(this->mask));
-	for (i = 0; i < sizeof(this->mask); i++)
+	memset(this->attr.mask, 0, sizeof(this->attr.mask));
+	for (i = 0; i < sizeof(this->attr.mask); i++)
 	{
 		if (mask < 8)
 		{
-			this->mask[i] = 0xFF << (8 - mask);
+			this->attr.mask[i] = 0xFF << (8 - mask);
 			break;
 		}
-		this->mask[i] = 0xFF;
+		this->attr.mask[i] = 0xFF;
 		mask -= 8;
 	}
-	memcpy(this->subnet, net->get_address(net).ptr, sizeof(this->subnet));
-	net->destroy(net);
 
 	*type = UNITY_SPLIT_INCLUDE;
-	*attr = chunk_create(this->subnet, sizeof(this->subnet) + sizeof(this->mask));
+	*attr = chunk_create(this->attr.net, sizeof(this->attr));
 
 	return TRUE;
 }
