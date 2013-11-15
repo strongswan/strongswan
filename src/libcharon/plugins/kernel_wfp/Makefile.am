@@ -14,6 +14,7 @@ endif
 
 libstrongswan_kernel_wfp_la_SOURCES = \
 	kernel_wfp_plugin.h kernel_wfp_plugin.c \
+	kernel_wfp_compat.c kernel_wfp_compat.h \
 	kernel_wfp_ipsec.h kernel_wfp_ipsec.c
 
 libstrongswan_kernel_wfp_la_LDFLAGS = -module -avoid-version

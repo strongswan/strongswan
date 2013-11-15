@@ -16,6 +16,7 @@
 /* Windows 7, for some fwpmu.h functionality */
 #define _WIN32_WINNT 0x0601
 
+#include "kernel_wfp_compat.h"
 #include "kernel_wfp_ipsec.h"
 
 #include <daemon.h>
@@ -23,9 +24,6 @@
 #include <collections/array.h>
 #include <collections/hashtable.h>
 
-#include <fwpmtypes.h>
-#include <fwpmu.h>
-#undef interface
 
 typedef struct private_kernel_wfp_ipsec_t private_kernel_wfp_ipsec_t;
 
