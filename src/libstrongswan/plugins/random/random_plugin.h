@@ -49,4 +49,9 @@ int random_plugin_get_dev_random();
  */
 int random_plugin_get_dev_urandom();
 
+/**
+ * Must strong randomness be equivalent to true randomness?
+ */
+bool random_plugin_get_strong_equals_true();
+
 #endif /** RANDOM_PLUGIN_H_ @}*/

@@ -99,6 +99,10 @@ random_rng_t *random_rng_create(rng_quality_t quality)
 			this->fd = random_plugin_get_dev_random();
 			break;
 		case RNG_STRONG:
+			this->fd = random_plugin_get_strong_equals_true() ?
+							random_plugin_get_dev_random() :
+							random_plugin_get_dev_urandom();
+			break;
 		case RNG_WEAK:
 		default:
 			this->fd = random_plugin_get_dev_urandom();

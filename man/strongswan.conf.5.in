@@ -905,6 +905,10 @@ File to read random bytes from, instead of @random_device@
 .BR libstrongswan.plugins.random.urandom " [@urandom_device@]"
 File to read pseudo random bytes from, instead of @urandom_device@
 .TP
+.BR libstrongswan.plugins.random.strong_equals_true " [no]"
+If set to yes the RNG_STRONG class reads random bytes from the same source as
+the RNG_TRUE class.
+.TP
 .BR libstrongswan.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
 File to read DNS resolver configuration from
 .TP
