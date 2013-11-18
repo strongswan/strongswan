@@ -481,6 +481,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NTRU
+  SUBDIRS += plugins/ntru
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ntru/libstrongswan-ntru.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC

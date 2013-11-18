@@ -45,7 +45,12 @@ ENUM_NEXT(diffie_hellman_group_names, MODP_1024_160, ECP_512_BP, ECP_521_BIT,
 ENUM_NEXT(diffie_hellman_group_names, MODP_NULL, MODP_CUSTOM, ECP_512_BP,
 	"MODP_NULL",
 	"MODP_CUSTOM");
-ENUM_END(diffie_hellman_group_names, MODP_CUSTOM);
+ENUM_NEXT(diffie_hellman_group_names, NTRU_112_BIT, NTRU_256_BIT, MODP_CUSTOM,
+	"NTRU_112",
+	"NTRU_128",
+	"NTRU_192",
+	"NTRU_256");
+ENUM_END(diffie_hellman_group_names, NTRU_256_BIT);
 
 
 /**

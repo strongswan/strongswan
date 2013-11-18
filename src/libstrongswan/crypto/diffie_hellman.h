@@ -64,6 +64,11 @@ enum diffie_hellman_group_t {
 	MODP_NULL = 1024,
 	/** MODP group with custom generator/prime */
 	MODP_CUSTOM = 1025,
+	/** Parameters defined by IEEE 1363.1, in PRIVATE USE */
+	NTRU_112_BIT = 1030,
+	NTRU_128_BIT = 1031,
+	NTRU_192_BIT = 1032,
+	NTRU_256_BIT = 1033
 };
 
 /**

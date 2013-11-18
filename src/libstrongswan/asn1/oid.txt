@@ -93,6 +93,7 @@
                 0x04         "md5WithRSAEncryption"		OID_MD5_WITH_RSA
                 0x05         "sha-1WithRSAEncryption"	OID_SHA1_WITH_RSA
                 0x07         "id-RSAES-OAEP"			OID_RSAES_OAEP
+                0x08         "id-mgf1"
                 0x09         "id-pSpecified"
                 0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
@@ -211,6 +212,29 @@
                   0x02       ""
                     0x02     ""
                       0x4B   "TCGID"					OID_TCGID
+          0xc1               ""
+            0x16             "ntruCryptosystems"
+              0x01           "eess"
+                0x01         "eess1"
+                  0x01       "eess1-algs"
+                    0x01     "ntru-EESS1v1-SVES"
+                    0x02     "ntru-EESS1v1-SVSSA"
+                    0x03     "ntru-EESS1v1-NTRUSign"
+                  0x02       "eess1-params"
+                    0x01     "ees251ep1"
+                    0x02     "ees347ep1"
+                    0x03     "ees503ep1"
+                    0x07     "ees251sp2"
+                    0x0C     "ees251ep4"
+                    0x0D     "ees251ep5"
+                    0x0E     "ees251sp3"
+                    0x0F     "ees251sp4"
+                    0x10     "ees251sp5"
+                    0x11     "ees251sp6"
+                    0x12     "ees251sp7"
+                    0x13     "ees251sp8"
+                    0x14     "ees251sp9"
+                  0x03       "eess1-encodingMethods"
       0x05                   "security"
         0x05                 "mechanisms"
           0x07               "id-pkix"

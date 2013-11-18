@@ -239,6 +239,7 @@ ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
 ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
@@ -1033,6 +1034,7 @@ ADD_PLUGIN([hmac],                 [s charon scripts nm cmd])
 ADD_PLUGIN([ctr],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
+ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
 ADD_PLUGIN([attr],                 [h charon])
 ADD_PLUGIN([attr-sql],             [h charon])
 ADD_PLUGIN([load-tester],          [c charon])
@@ -1170,6 +1172,7 @@ AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
+AM_CONDITIONAL(USE_NTRU, test x$ntru = xtrue)
 
 #  charon plugins
 # ----------------
@@ -1375,6 +1378,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/ccm/Makefile
 	src/libstrongswan/plugins/gcm/Makefile
 	src/libstrongswan/plugins/af_alg/Makefile
+	src/libstrongswan/plugins/ntru/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libhydra/Makefile

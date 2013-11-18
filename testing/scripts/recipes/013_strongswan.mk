@@ -79,7 +79,8 @@ CONFIG_OPTS = \
 	--enable-cmd \
 	--enable-libipsec \
 	--enable-kernel-libipsec \
-	--enable-tkm
+	--enable-tkm \
+	--enable-ntru
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
