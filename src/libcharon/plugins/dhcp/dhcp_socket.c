@@ -643,6 +643,28 @@ METHOD(dhcp_socket_t, destroy, void,
 }
 
 /**
+ * Bind a socket to a particular interface name
+ */
+static bool bind_to_device(int fd, char *iface)
+{
+	struct ifreq ifreq;
+
+	if (strlen(iface) > sizeof(ifreq.ifr_name))
+	{
+		DBG1(DBG_CFG, "name for DHCP interface too long: '%s'", iface);
+		return FALSE;
+	}
+	memcpy(ifreq.ifr_name, iface, sizeof(ifreq.ifr_name));
+	if (setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, &ifreq, sizeof(ifreq)))
+	{
+		DBG1(DBG_CFG, "binding DHCP socket to '%s' failed: %s",
+			 iface, strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * See header
  */
 dhcp_socket_t *dhcp_socket_create()
@@ -655,6 +677,7 @@ dhcp_socket_t *dhcp_socket_create()
 			.s_addr = INADDR_ANY,
 		},
 	};
+	char *iface;
 	int on = 1;
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS,
@@ -718,6 +741,8 @@ dhcp_socket_t *dhcp_socket_create()
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.server", "255.255.255.255",
 								charon->name), DHCP_SERVER_PORT);
+	iface = lib->settings->get_str(lib->settings, "%s.plugins.dhcp.interface",
+			NULL, charon->name);
 	if (!this->dst)
 	{
 		DBG1(DBG_CFG, "configured DHCP server address invalid");
@@ -765,6 +790,15 @@ dhcp_socket_t *dhcp_socket_create()
 			 strerror(errno));
 		destroy(this);
 		return NULL;
+	}
+	if (iface)
+	{
+		if (!bind_to_device(this->send, iface) ||
+			!bind_to_device(this->receive, iface))
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	lib->watcher->add(lib->watcher, this->receive, WATCHER_READ,
