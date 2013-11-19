@@ -725,12 +725,6 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 
 						switch (ch)
 						{
-							case 'P':
-							{
-								/* Upper case pointer */
-								flags |= FL_UPPER;
-								/* fall through */
-							}
 							case 'p':
 							{
 								/* Pointer */
