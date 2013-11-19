@@ -46,6 +46,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <netinet/in_var.h>
 #include <sys/kern_control.h>
 #elif defined(__linux__)
+#include <linux/types.h>
 #include <linux/if_tun.h>
 #else
 #include <net/if_tun.h>
