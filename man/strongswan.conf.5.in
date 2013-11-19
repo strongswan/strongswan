@@ -383,6 +383,11 @@ Derive user-defined MAC address from hash of IKEv2 identity
 .BR charon.plugins.dhcp.server " [255.255.255.255]"
 DHCP server unicast or broadcast IP address
 .TP
+.BR charon.plugins.dhcp.interface " []"
+Interface name the plugin uses for address allocation. The default is to bind
+to any (0.0.0.0) and let the system decide which way to route the packets to
+the DHCP server.
+.TP
 .BR charon.plugins.dnscert.enable " [no]"
 Enable fetching of CERT RRs via DNS
 .TP
