@@ -30,6 +30,15 @@
 
 #include <utils/debug.h>
 
+#ifdef WIN32
+# include <psapi.h>
+/* missing in MinGW */
+WINBOOL K32GetModuleInformation(HANDLE hProcess, HMODULE hModule,
+								LPMODULEINFO lpmodinfo, DWORD cb);
+DWORD K32GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule,
+							  LPTSTR lpFilename, DWORD nSize);
+#endif
+
 typedef struct private_backtrace_t private_backtrace_t;
 
 /**
@@ -80,9 +89,34 @@ static void println(FILE *file, char *format, ...)
 	va_end(args);
 }
 
-#ifdef HAVE_DLADDR
+#ifdef HAVE_DBGHELP
 
+#include <dbghelp.h>
+#include <threading/mutex.h>
+
+/**
+ * Mutex to access non-thread-safe dbghelp functions
+ */
+static mutex_t *dbghelp_mutex;
+
+void backtrace_init()
+{
+	SymSetOptions(SYMOPT_LOAD_LINES);
+	SymInitialize(GetCurrentProcess(), NULL, TRUE);
+	dbghelp_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+}
+
+void backtrace_deinit()
+{
+	dbghelp_mutex->destroy(dbghelp_mutex);
+	SymCleanup(GetCurrentProcess());
+}
+
+#elif defined(HAVE_DLADDR) || defined(HAVE_BFD_H)
+
+#ifdef HAVE_DLADDR
 #include <dlfcn.h>
+#endif
 
 /**
  * Same as tty_escape_get(), but for a potentially NULL FILE*
@@ -355,7 +389,6 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 	snprintf(buf, sizeof(buf), "addr2line -e %s %p", filename, ptr);
 #endif /* __APPLE__ */
 
-
 	output = popen(buf, "r");
 	if (output)
 	{
@@ -378,29 +411,6 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 
 #endif /* HAVE_BFD_H */
 
-#elif defined(HAVE_DBGHELP) /* && !HAVE_DLADDR */
-
-#include <dbghelp.h>
-#include <threading/mutex.h>
-
-/**
- * Mutex to access non-thread-safe dbghelp functions
- */
-static mutex_t *dbghelp_mutex;
-
-void backtrace_init()
-{
-	SymSetOptions(SYMOPT_LOAD_LINES);
-	SymInitialize(GetCurrentProcess(), NULL, TRUE);
-	dbghelp_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-}
-
-void backtrace_deinit()
-{
-	dbghelp_mutex->destroy(dbghelp_mutex);
-	SymCleanup(GetCurrentProcess());
-}
-
 #else /* !HAVE_DLADDR && !HAVE_DBGHELP */
 
 void backtrace_init() {}
@@ -411,7 +421,7 @@ void backtrace_deinit() {}
 METHOD(backtrace_t, log_, void,
 	private_backtrace_t *this, FILE *file, bool detailed)
 {
-#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H) || defined(HAVE_DBGHELP)
+#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H) || defined(WIN32)
 	size_t i;
 	char **strings = NULL;
 
@@ -506,6 +516,26 @@ METHOD(backtrace_t, log_, void,
 							esc(file, TTY_FG_DEF));
 				}
 			}
+		}
+		else
+#elif defined(WIN32)
+		HMODULE module;
+		MODULEINFO info;
+		char filename[MAX_PATH];
+
+		if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+						this->frames[i], &module) &&
+			K32GetModuleInformation(GetCurrentProcess(), module,
+						&info, sizeof(info)) &&
+			K32GetModuleFileNameExA(GetCurrentProcess(), module,
+						filename, sizeof(filename)))
+		{
+			println(file, "  %s%s%s @ %p [%p]",
+					esc(file, TTY_FG_YELLOW), filename,
+					esc(file, TTY_FG_DEF), info.lpBaseOfDll, this->frames[i]);
+#ifdef HAVE_BFD_H
+			print_sourceline(file, filename, this->frames[i], info.lpBaseOfDll);
+#endif /* HAVE_BFD_H */
 		}
 		else
 #endif /* HAVE_DLADDR/HAVE_DBGHELP */
@@ -709,7 +739,7 @@ static inline int backtrace_unwind(void **frames, int count)
 #ifdef HAVE_DBGHELP
 
 /**
- * Windows variant for glibc backtrace()
+ * Windows dbghelp variant for glibc backtrace()
  */
 static inline int backtrace_win(void **frames, int count)
 {
@@ -763,6 +793,7 @@ static inline int backtrace_win(void **frames, int count)
 
 	return got;
 }
+
 #endif /* HAVE_DBGHELP */
 
 /**
@@ -795,6 +826,9 @@ backtrace_t *backtrace_create(int skip)
 	frame_count = backtrace(frames, countof(frames));
 #elif defined(HAVE_DBGHELP)
 	frame_count = backtrace_win(frames, countof(frames));
+#elif defined(WIN32)
+	frame_count = CaptureStackBackTrace(skip, countof(frames), frames, NULL);
+	skip = 0;
 #endif
 	frame_count = max(frame_count - skip, 0);
 	this = malloc(sizeof(private_backtrace_t) + frame_count * sizeof(void*));
