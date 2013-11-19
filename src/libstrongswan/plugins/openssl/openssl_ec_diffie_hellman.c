@@ -102,6 +102,11 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EC_POINT *point)
 		goto error;
 	}
 
+	if (!EC_POINT_is_on_curve(group, point, ctx))
+	{
+		goto error;
+	}
+
 	ret = TRUE;
 error:
 	BN_CTX_end(ctx);
