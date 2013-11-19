@@ -39,7 +39,8 @@ tests_SOURCES = tests.h tests.c \
   suites/test_host.c \
   suites/test_pen.c \
   suites/test_asn1.c \
-  suites/test_printf.c
+  suites/test_printf.c \
+  suites/test_ntru.c
 
 tests_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
