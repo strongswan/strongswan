@@ -193,6 +193,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			chunk_free(&this->shared_secret);
 			return;
 		}
+		this->computed = TRUE;
 
 		/* determine the size of the ciphertext */
 		if (ntru_crypto_ntru_encrypt(this->drbg,
@@ -204,7 +205,6 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			return;
 		}
 		this->ciphertext = chunk_alloc(ciphertext_len);
-		this->computed = TRUE;
 
 		/* encrypt the shared secret */
 		if (ntru_crypto_ntru_encrypt(this->drbg,
@@ -247,35 +247,68 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_ntru_ke_t *this;
 	char personalization_str[] = "strongSwan NTRU-KE";
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_id;
+	NTRU_ENCRYPT_PARAM_SET_ID *param_set, param_set_id;
 	DRBG_HANDLE drbg;
+	char *param_set_selection;
 	u_int32_t strength;
 
-	/**
-	 * We are selecting the X9.98 / IEEE 1363.1 parameter sets
-	 * which balance speed and bandwidth
-	 */
+	/* Best bandwidth and speed, no X9.98 compatibility */
+	NTRU_ENCRYPT_PARAM_SET_ID param_set_optimum[] = {
+		NTRU_EES401EP2, NTRU_EES439EP1, NTRU_EES593EP1, NTRU_EES743EP1
+	};
+
+	/* X9.98/IEEE 1363.1 parameter set for best speed */
+	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_speed[] = {
+		NTRU_EES659EP1, NTRU_EES761EP1, NTRU_EES1087EP1, NTRU_EES1499EP1
+	};
+
+	/* X9.98/IEEE 1363.1 parameter set for best bandwidth (smallest size) */
+	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_bandwidth[] = {
+		NTRU_EES401EP1, NTRU_EES449EP1, NTRU_EES677EP1, NTRU_EES1087EP1
+	};
+
+	/* X9.98/IEEE 1363.1 parameter set balancing speed and bandwidth */
+	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_balance[] = {
+		NTRU_EES541EP1, NTRU_EES613EP1, NTRU_EES887EP1, NTRU_EES1171EP1
+	};
+
+	param_set_selection = lib->settings->get_str(lib->settings,
+				"libstrongswan.plugins.ntru.param__set_selection", "optimum");
+
+	if (streq(param_set_selection, "x9_98_speed"))
+	{
+		param_set = param_set_x9_98_speed;
+	}
+	else if (streq(param_set_selection, "x9_98_bandwidth"))
+	{
+		param_set = param_set_x9_98_bandwidth;
+	}
+	else if (streq(param_set_selection, "x9_98_balance"))
+	{
+		param_set = param_set_x9_98_balance;
+	}
+	else
+	{
+		param_set = param_set_optimum;
+	}
+
 	switch (group)
 	{
 		case NTRU_112_BIT:
 			strength = 112;
-			/* param_set_id = NTRU_EES541EP1; */
-			param_set_id = NTRU_EES401EP2;
+			param_set_id = param_set[0];
 			break;
 		case NTRU_128_BIT:
 			strength = 128;
-			/* param_set_id = NTRU_EES613EP1; */
-			param_set_id = NTRU_EES439EP1;
+			param_set_id = param_set[1];
 			break;
 		case NTRU_192_BIT:
 			strength = 192;
-			/* param_set_id = NTRU_EES887EP1; */
-			param_set_id = NTRU_EES593EP1;
+			param_set_id = param_set[2];
 			break;
 		case NTRU_256_BIT:
 			strength = 256;
-			/* param_set_id = NTRU_EES1171EP1; */
-			param_set_id = NTRU_EES743EP1;
+			param_set_id = param_set[3];
 			break;
 		default:
 			return NULL;
