@@ -19,7 +19,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <errno.h>
 
 #include <daemon.h>
@@ -110,10 +109,7 @@ static void add_radius_attribute(private_radattr_listener_t *this,
 		identification_t *id;
 		auth_cfg_t *auth;
 		char path[PATH_MAX];
-		chunk_t data;
-		struct stat sb;
-		void *addr;
-		int fd;
+		chunk_t *data;
 
 		auth = ike_sa->get_auth_cfg(ike_sa, TRUE);
 		id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
@@ -123,44 +119,16 @@ static void add_radius_attribute(private_radattr_listener_t *this,
 		}
 
 		snprintf(path, sizeof(path), "%s/%Y", this->dir, id);
-		fd = open(path, O_RDONLY);
-		if (fd != -1)
+		data = chunk_map(path, FALSE);
+		if (data)
 		{
-			if (fstat(fd, &sb) != -1)
+			if (data->len >= 2)
 			{
-				if (sb.st_size <= MAX_ATTR_SIZE)
-				{
-					addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-					if (addr != MAP_FAILED)
-					{
-						data = chunk_create(addr, sb.st_size);
-						if (data.len >= 2)
-						{
-							DBG1(DBG_CFG, "adding RADIUS %N attribute",
-								 radius_attribute_type_names, data.ptr[0]);
-							message->add_notify(message, FALSE,
-												RADIUS_ATTRIBUTE, data);
-						}
-						munmap(addr, sb.st_size);
-					}
-					else
-					{
-						DBG1(DBG_CFG, "mapping RADIUS attribute '%s' failed: %s",
-							 path, strerror(errno));
-					}
-				}
-				else
-				{
-					DBG1(DBG_CFG, "RADIUS attribute '%s' exceeds size limit",
-						 path);
-				}
+				DBG1(DBG_CFG, "adding RADIUS %N attribute",
+					 radius_attribute_type_names, data->ptr[0]);
+				message->add_notify(message, FALSE, RADIUS_ATTRIBUTE, *data);
 			}
-			else
-			{
-				DBG1(DBG_CFG, "fstat RADIUS attribute '%s' failed: %s",
-					 path, strerror(errno));
-			}
-			close(fd);
+			chunk_unmap(data);
 		}
 		else
 		{
