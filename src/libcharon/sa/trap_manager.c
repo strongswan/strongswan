@@ -373,6 +373,7 @@ METHOD(trap_manager_t, acquire, void,
 		else
 		{
 			ike_sa->destroy(ike_sa);
+			charon->bus->set_sa(charon->bus, NULL);
 		}
 	}
 	peer->destroy(peer);
