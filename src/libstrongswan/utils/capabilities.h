@@ -44,6 +44,9 @@ typedef struct capabilities_t capabilities_t;
 #ifndef CAP_NET_RAW
 # define CAP_NET_RAW 13
 #endif
+#ifndef CAP_DAC_OVERRIDE
+# define CAP_DAC_OVERRIDE 1
+#endif
 
 /**
  * POSIX capability dropping abstraction layer.

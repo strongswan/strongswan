@@ -22,10 +22,6 @@
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
-#ifndef CAP_DAC_OVERRIDE
-#define CAP_DAC_OVERRIDE 1
-#endif
-
 typedef struct nm_backend_t nm_backend_t;
 
 /**
@@ -139,14 +135,6 @@ static bool nm_backend_init()
 	if (!this->plugin)
 	{
 		DBG1(DBG_CFG, "DBUS binding failed");
-		nm_backend_deinit();
-		return FALSE;
-	}
-
-	/* bypass file permissions to read from users ssh-agent */
-	if (!lib->caps->keep(lib->caps, CAP_DAC_OVERRIDE))
-	{
-		DBG1(DBG_CFG, "NM backend requires CAP_DAC_OVERRIDE capability");
 		nm_backend_deinit();
 		return FALSE;
 	}

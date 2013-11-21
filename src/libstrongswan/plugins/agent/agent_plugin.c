@@ -63,6 +63,13 @@ plugin_t *agent_plugin_create()
 {
 	private_agent_plugin_t *this;
 
+	/* required to connect to ssh-agent socket */
+	if (!lib->caps->keep(lib->caps, CAP_DAC_OVERRIDE))
+	{
+		DBG1(DBG_DMN, "agent plugin requires CAP_DAC_OVERRIDE capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -75,4 +82,3 @@ plugin_t *agent_plugin_create()
 
 	return &this->public.plugin;
 }
-

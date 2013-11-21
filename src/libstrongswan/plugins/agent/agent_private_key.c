@@ -442,4 +442,3 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 	}
 	return &this->public;
 }
-
