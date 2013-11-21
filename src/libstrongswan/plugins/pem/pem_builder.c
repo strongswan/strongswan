@@ -25,7 +25,6 @@
 #include <stddef.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 #include <utils/debug.h>
@@ -418,39 +417,17 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
 static void *load_from_file(char *file, credential_type_t type, int subtype,
 							identification_t *subject, x509_flag_t flags)
 {
-	void *cred = NULL;
-	struct stat sb;
-	void *addr;
-	int fd;
+	void *cred;
+	chunk_t *chunk;
 
-	fd = open(file, O_RDONLY);
-	if (fd == -1)
+	chunk = chunk_map(file, FALSE);
+	if (!chunk)
 	{
 		DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
 		return NULL;
 	}
-
-	if (fstat(fd, &sb) == -1)
-	{
-		DBG1(DBG_LIB, "  getting file size of '%s' failed: %s", file,
-			 strerror(errno));
-		close(fd);
-		return NULL;
-	}
-
-	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (addr == MAP_FAILED)
-	{
-		DBG1(DBG_LIB, "  mapping '%s' failed: %s", file, strerror(errno));
-		close(fd);
-		return NULL;
-	}
-
-	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype,
-									   subject, flags);
-
-	munmap(addr, sb.st_size);
-	close(fd);
+	cred = load_from_blob(*chunk, type, subtype, subject, flags);
+	chunk_unmap(chunk);
 	return cred;
 }
 
