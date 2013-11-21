@@ -22,6 +22,48 @@
 #include <utils/debug.h>
 
 typedef struct private_ntru_ke_t private_ntru_ke_t;
+typedef struct param_set_t param_set_t;
+
+/**
+ * Defines an NTRU parameter set by ID or OID
+ */
+struct param_set_t {
+	NTRU_ENCRYPT_PARAM_SET_ID id;
+	char oid[3];
+	char *name;
+};
+
+/* Best bandwidth and speed, no X9.98 compatibility */
+static param_set_t param_sets_optimum[] = {
+	{ NTRU_EES401EP2,  {0x00, 0x02, 0x10}, "ees401ep2"  },
+	{ NTRU_EES439EP1,  {0x00, 0x03, 0x10}, "ees439ep1"  },
+	{ NTRU_EES593EP1,  {0x00, 0x05, 0x10}, "ees593ep1"  },
+	{ NTRU_EES743EP1,  {0x00, 0x06, 0x10}, "ees743ep1"  }
+};
+
+/* X9.98/IEEE 1363.1 parameter sets for best speed */
+static param_set_t param_sets_x9_98_speed[] = {
+	{ NTRU_EES659EP1,  {0x00, 0x02, 0x06}, "ees659ep1"  },
+	{ NTRU_EES761EP1,  {0x00, 0x03, 0x05}, "ees761ep1"  },
+	{ NTRU_EES1087EP1, {0x00, 0x05, 0x05}, "ees1087ep1" },
+	{ NTRU_EES1499EP1, {0x00, 0x06, 0x05}, "ees1499ep1" }
+};
+
+/* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
+static param_set_t param_sets_x9_98_bandwidth[] = {
+	{ NTRU_EES401EP1,  {0x00, 0x02, 0x04}, "ees401ep1"  },
+	{ NTRU_EES449EP1,  {0x00, 0x03, 0x03}, "ees449ep1"  },
+	{ NTRU_EES677EP1,  {0x00, 0x05, 0x03}, "ees677ep1"  },
+	{ NTRU_EES1087EP2, {0x00, 0x06, 0x03}, "ees1087ep2" }
+};
+
+/* X9.98/IEEE 1363.1 parameter sets balancing speed and bandwidth */
+static param_set_t param_sets_x9_98_balance[] = {
+	{ NTRU_EES541EP1,  {0x00, 0x02, 0x05}, "ees541ep1"  },
+	{ NTRU_EES613EP1,  {0x00, 0x03, 0x04}, "ees613ep1"  },
+	{ NTRU_EES887EP1,  {0x00, 0x05, 0x04}, "ees887ep1"  },
+	{ NTRU_EES1171EP1, {0x00, 0x06, 0x04}, "ees1171ep1" }
+};
 
 /**
  * Private data of an ntru_ke_t object.
@@ -38,9 +80,9 @@ struct private_ntru_ke_t {
 	u_int16_t group;
 
 	/**
-	 * NTRU Parameter Set ID
+	 * NTRU Parameter Set
 	 */
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_id;
+	param_set_t *param_set;
 
 	/**
 	 * Cryptographical strength in bits of the NTRU Parameter Set
@@ -102,7 +144,7 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 		if (this->pub_key.len == 0)
 		{
 			/* determine the NTRU public and private key sizes */
-			if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set_id,
+			if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set->id,
 								&pub_key_len, NULL,
 				 				&priv_key_len, NULL) != NTRU_OK)
 			{
@@ -114,7 +156,7 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 			this->priv_key = chunk_alloc(priv_key_len);
 
 			/* generate a random NTRU public/private key pair */
-		    if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set_id,
+		    if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set->id,
 								&pub_key_len, this->pub_key.ptr,
 				 				&priv_key_len, this->priv_key.ptr) != NTRU_OK)
 			{
@@ -180,6 +222,18 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	{
 		/* responder generating and encrypting the shared secret */
 		this->responder = TRUE;
+
+		/* check the NTRU public key format */
+		if (value.len < 5 || value.ptr[0] != 1 || value.ptr[1] != 3)
+		{
+			DBG1(DBG_LIB, "received NTRU public key with invalid header");
+			return;
+		}
+		if (!memeq(value.ptr + 2, this->param_set->oid, 3))
+		{
+			DBG1(DBG_LIB, "received NTRU public key with wrong OID");
+			return;
+		}
 		this->pub_key = chunk_clone(value);
 
 		/* shared secret size is chosen as twice the cryptographical strength */
@@ -247,72 +301,54 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_ntru_ke_t *this;
 	char personalization_str[] = "strongSwan NTRU-KE";
-	NTRU_ENCRYPT_PARAM_SET_ID *param_set, param_set_id;
+	param_set_t *param_sets, *param_set;
 	DRBG_HANDLE drbg;
-	char *param_set_selection;
+	char *parameter_set;
 	u_int32_t strength;
 
-	/* Best bandwidth and speed, no X9.98 compatibility */
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_optimum[] = {
-		NTRU_EES401EP2, NTRU_EES439EP1, NTRU_EES593EP1, NTRU_EES743EP1
-	};
+	parameter_set = lib->settings->get_str(lib->settings,
+				"libstrongswan.plugins.ntru.parameter_set", "optimum");
 
-	/* X9.98/IEEE 1363.1 parameter set for best speed */
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_speed[] = {
-		NTRU_EES659EP1, NTRU_EES761EP1, NTRU_EES1087EP1, NTRU_EES1499EP1
-	};
-
-	/* X9.98/IEEE 1363.1 parameter set for best bandwidth (smallest size) */
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_bandwidth[] = {
-		NTRU_EES401EP1, NTRU_EES449EP1, NTRU_EES677EP1, NTRU_EES1087EP1
-	};
-
-	/* X9.98/IEEE 1363.1 parameter set balancing speed and bandwidth */
-	NTRU_ENCRYPT_PARAM_SET_ID param_set_x9_98_balance[] = {
-		NTRU_EES541EP1, NTRU_EES613EP1, NTRU_EES887EP1, NTRU_EES1171EP1
-	};
-
-	param_set_selection = lib->settings->get_str(lib->settings,
-				"libstrongswan.plugins.ntru.param__set_selection", "optimum");
-
-	if (streq(param_set_selection, "x9_98_speed"))
+	if (streq(parameter_set, "x9_98_speed"))
 	{
-		param_set = param_set_x9_98_speed;
+		param_sets = param_sets_x9_98_speed;
 	}
-	else if (streq(param_set_selection, "x9_98_bandwidth"))
+	else if (streq(parameter_set, "x9_98_bandwidth"))
 	{
-		param_set = param_set_x9_98_bandwidth;
+		param_sets = param_sets_x9_98_bandwidth;
 	}
-	else if (streq(param_set_selection, "x9_98_balance"))
+	else if (streq(parameter_set, "x9_98_balance"))
 	{
-		param_set = param_set_x9_98_balance;
+		param_sets = param_sets_x9_98_balance;
 	}
 	else
 	{
-		param_set = param_set_optimum;
+		param_sets = param_sets_optimum;
 	}
 
 	switch (group)
 	{
 		case NTRU_112_BIT:
 			strength = 112;
-			param_set_id = param_set[0];
+			param_set = &param_sets[0];
 			break;
 		case NTRU_128_BIT:
 			strength = 128;
-			param_set_id = param_set[1];
+			param_set = &param_sets[1];
 			break;
 		case NTRU_192_BIT:
 			strength = 192;
-			param_set_id = param_set[2];
+			param_set = &param_sets[2];
 			break;
 		case NTRU_256_BIT:
 			strength = 256;
-			param_set_id = param_set[3];
+			param_set = &param_sets[3];
 			break;
 		default:
 			return NULL;
 	}
+	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %s selected", strength,
+				   parameter_set, param_set->name);
 
     if (ntru_crypto_drbg_instantiate(strength,
 						personalization_str, strlen(personalization_str),
@@ -320,10 +356,6 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
  	{
 		DBG1(DBG_LIB, "error instantiating DRBG at %u bit security", strength);
         return NULL;
-	}
-	else
-	{
-    	DBG2(DBG_LIB, "instantiated DRBG at %u bit security", strength);
 	}
 
 	INIT(this,
@@ -337,7 +369,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 			},
 		},
 		.group = group,
-		.param_set_id = param_set_id,
+		.param_set = param_set,
 		.strength = strength,
 		.drbg = drbg,
 	);

@@ -867,10 +867,10 @@ Enable logging of SQL IP pool leases
 .BR libstrongswan.plugins.gcrypt.quick_random " [no]"
 Use faster random numbers in gcrypt; for testing only, produces weak keys!
 .TP
-.BR libstrongswan.plugins.ntru.param_set_selection " [optimum]"
+.BR libstrongswan.plugins.ntru.parameter_set " [optimum]"
 The following parameter sets are available: 'x9_98_speed', 'x9_98_bandwidth',
 'x9_98_balance' and 'optimum', the last set not being part of the X9.98
-standard but exhibiting the best performance.
+standard but having the best performance.
 .TP
 .BR libstrongswan.plugins.openssl.engine_id " [pkcs11]"
 ENGINE ID to use in the OpenSSL plugin

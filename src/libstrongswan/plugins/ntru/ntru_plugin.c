@@ -48,7 +48,6 @@ bool ntru_plugin_get_entropy(ENTROPY_CMD cmd, uint8_t *out)
 			{
 				return FALSE;
 			}
-			DBG2(DBG_LIB, "read one byte of entropy");
 			return TRUE;
 		default:
 			return FALSE;

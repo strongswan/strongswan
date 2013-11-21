@@ -31,7 +31,7 @@ static struct {
 /**
  * NTRU parameter set selection
  */
-char *param_set_selection[] = {
+char *parameter_sets[] = {
 		"x9_98_speed", "x9_98_bandwidth", "x9_98_balance", "optimum"
 };
 
@@ -48,11 +48,11 @@ START_TEST(test_ntru_ke)
 	ck_assert(len == 8);
 	ck_assert(streq(buf, params[_i].group_name));
 
-	for (n = 0; n < countof(param_set_selection); n++)
+	for (n = 0; n < countof(parameter_sets); n++)
 	{
 		lib->settings->set_str(lib->settings,
-							  "libcharon.plugins.ntru.param_set_selection",
-							   param_set_selection[n]);
+							  "libstrongswan.plugins.ntru.parameter_set",
+							   parameter_sets[n]);
 
 		i_ntru = lib->crypto->create_dh(lib->crypto, params[_i].group);
 		ck_assert(i_ntru != NULL);
@@ -94,17 +94,57 @@ START_TEST(test_ntru_ke)
 }
 END_TEST
 
-START_TEST(test_ntru_pubkey)
+START_TEST(test_ntru_pubkey_oid)
 {
+	chunk_t test[] = {
+		chunk_empty,
+		chunk_from_chars(0x00),
+		chunk_from_chars(0x01),
+		chunk_from_chars(0x02),
+		chunk_from_chars(0x02, 0x03, 0x00, 0x03, 0x10),
+		chunk_from_chars(0x01, 0x04, 0x00, 0x03, 0x10),
+		chunk_from_chars(0x01, 0x03, 0x00, 0x03, 0x10),
+		chunk_from_chars(0x01, 0x03, 0xff, 0x03, 0x10),
+	};
+
 	diffie_hellman_t *r_ntru;
 	chunk_t cipher_text;
+	int i;
 
-	r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
-	r_ntru->set_other_public_value(r_ntru, chunk_empty);
+	for (i = 0; i < countof(test); i++)
+	{
+		r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
+		r_ntru->set_other_public_value(r_ntru, test[i]);
+		r_ntru->get_my_public_value(r_ntru, &cipher_text);
+		ck_assert(cipher_text.len == 0);
+		r_ntru->destroy(r_ntru);
+	}
+}
+END_TEST
+
+START_TEST(test_ntru_wrong_set)
+{
+	diffie_hellman_t *i_ntru, *r_ntru;
+	chunk_t pub_key, cipher_text;
+
+	lib->settings->set_str(lib->settings,
+						  "libstrongswan.plugins.ntru.parameter_set",
+			 			  "x9_98_bandwidth");
+	i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_112_BIT);
+	i_ntru->get_my_public_value(i_ntru, &pub_key);
+
+	lib->settings->set_str(lib->settings,
+						  "libstrongswan.plugins.ntru.parameter_set",
+						  "optimum");
+	r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_112_BIT);
+	r_ntru->set_other_public_value(r_ntru, pub_key);
 	r_ntru->get_my_public_value(r_ntru, &cipher_text);
 	ck_assert(cipher_text.len == 0);
-	r_ntru->destroy(r_ntru);
 
+	chunk_free(&pub_key);
+	chunk_free(&cipher_text);
+	i_ntru->destroy(i_ntru);
+	r_ntru->destroy(r_ntru);
 }
 END_TEST
 
@@ -119,8 +159,12 @@ Suite *ntru_suite_create()
 	tcase_add_loop_test(tc, test_ntru_ke, 0, countof(params));
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("pubkey");
-	tcase_add_test(tc, test_ntru_pubkey);
+	tc = tcase_create("pubkey_oid");
+	tcase_add_test(tc, test_ntru_pubkey_oid);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("wrong_set");
+	tcase_add_test(tc, test_ntru_wrong_set);
 	suite_add_tcase(s, tc);
 
 	return s;
