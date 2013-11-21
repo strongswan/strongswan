@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -275,6 +276,85 @@ chunk_t chunk_from_fd(int fd)
 	return chunk_clone(chunk_create(buf, total));
 }
 
+/**
+ * Implementation for mmap()ed chunks
+ */
+typedef struct {
+	/* public chunk interface */
+	chunk_t public;
+	/* FD of open file */
+	int fd;
+	/* mmap() address */
+	void *map;
+	/* size of map */
+	size_t len;
+} mmaped_chunk_t;
+
+/**
+ * See header.
+ */
+chunk_t *chunk_map(char *path, bool wr)
+{
+	mmaped_chunk_t *chunk;
+	struct stat sb;
+	int tmp;
+
+	INIT(chunk,
+		.fd = open(path, wr ? O_RDWR : O_RDONLY),
+	);
+
+	if (chunk->fd == -1)
+	{
+		free(chunk);
+		return NULL;
+	}
+	if (fstat(chunk->fd, &sb) == -1)
+	{
+		tmp = errno;
+		chunk_unmap(&chunk->public);
+		errno = tmp;
+		return NULL;
+	}
+	chunk->len = sb.st_size;
+	/* map non-empty files only, as mmap() complains otherwise */
+	if (chunk->len)
+	{
+		/* in read-only mode, we allow writes, but don't sync to disk */
+		chunk->map = mmap(NULL, chunk->len, PROT_READ | PROT_WRITE,
+						  wr ? MAP_SHARED : MAP_PRIVATE, chunk->fd, 0);
+		if (chunk->map == MAP_FAILED)
+		{
+			tmp = errno;
+			chunk_unmap(&chunk->public);
+			errno = tmp;
+			return NULL;
+		}
+	}
+	chunk->public = chunk_create(chunk->map, chunk->len);
+	return &chunk->public;
+}
+
+/**
+ * See header.
+ */
+bool chunk_unmap(chunk_t *public)
+{
+	mmaped_chunk_t *chunk;
+	bool ret = FALSE;
+	int tmp = 0;
+
+	chunk = (mmaped_chunk_t*)public;
+	if (chunk->map && chunk->map != MAP_FAILED)
+	{
+		ret = munmap(chunk->map, chunk->len) == 0;
+		tmp = errno;
+	}
+	close(chunk->fd);
+	free(chunk);
+	errno = tmp;
+
+	return ret;
+}
 
 /** hex conversion digits */
 static char hexdig_upper[] = "0123456789ABCDEF";

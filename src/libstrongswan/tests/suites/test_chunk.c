@@ -14,8 +14,9 @@
  * for more details.
  */
 
-
 #include "test_suite.h"
+
+#include <unistd.h>
 
 #include <utils/chunk.h>
 
@@ -775,6 +776,43 @@ START_TEST(test_chunk_hash_static)
 END_TEST
 
 /*******************************************************************************
+ * test for chunk_map and friends
+ */
+
+START_TEST(test_chunk_map)
+{
+	chunk_t *map, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+	char *path = "/tmp/strongswan-chunk-map-test";
+
+	ck_assert(chunk_write(contents, path, "chunk_map", 022, TRUE));
+
+	/* read */
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	/* altering mapped chunk should not hurt */
+	*map = chunk_empty;
+	ck_assert(chunk_unmap(map));
+
+	/* write */
+	map = chunk_map(path, TRUE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	map->ptr[0] = 0x06;
+	ck_assert(chunk_unmap(map));
+
+	/* verify write */
+	contents.ptr[0] = 0x06;
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	ck_assert(chunk_unmap(map));
+
+	unlink(path);
+}
+END_TEST
+
+/*******************************************************************************
  * printf_hook tests
  */
 
@@ -889,6 +927,10 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_hash_static");
 	tcase_add_test(tc, test_chunk_hash_static);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_map");
+	tcase_add_test(tc, test_chunk_map);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hook");

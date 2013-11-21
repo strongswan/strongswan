@@ -108,6 +108,32 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 chunk_t chunk_from_fd(int fd);
 
 /**
+ * mmap() a file to a chunk
+ *
+ * The returned chunk structure is allocated from heap, but it must be freed
+ * through chunk_unmap(). A user may alter the chunk ptr or len, but must pass
+ * the chunk pointer returned from chunk_map() to chunk_unmap() after use.
+ *
+ * On error, errno is set appropriately.
+ *
+ * @param path			path of file to map
+ * @param wr			TRUE to sync writes to disk
+ * @return				mapped chunk, NULL on error
+ */
+chunk_t *chunk_map(char *path, bool wr);
+
+/**
+ * munmap() a chunk previously mapped with chunk_map()
+ *
+ * When unmapping a writeable map, the return value should be checked to
+ * ensure changes landed on disk.
+ *
+ * @param chunk			pointer returned from chunk_map()
+ * @return				TRUE of changes written back to file
+ */
+bool chunk_unmap(chunk_t *chunk);
+
+/**
  * Convert a chunk of data to hex encoding.
  *
  * The resulting string is '\\0' terminated, but the chunk does not include
