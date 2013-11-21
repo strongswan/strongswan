@@ -18,7 +18,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
+#ifdef HAVE_MMAP
+# include <sys/mman.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -317,6 +319,8 @@ typedef struct {
 	void *map;
 	/* size of map */
 	size_t len;
+	/* do we write? */
+	bool wr;
 } mmaped_chunk_t;
 
 /**
@@ -330,6 +334,7 @@ chunk_t *chunk_map(char *path, bool wr)
 
 	INIT(chunk,
 		.fd = open(path, wr ? O_RDWR : O_RDONLY),
+		.wr = wr,
 	);
 
 	if (chunk->fd == -1)
@@ -344,6 +349,7 @@ chunk_t *chunk_map(char *path, bool wr)
 		errno = tmp;
 		return NULL;
 	}
+#ifdef HAVE_MMAP
 	chunk->len = sb.st_size;
 	/* map non-empty files only, as mmap() complains otherwise */
 	if (chunk->len)
@@ -360,6 +366,17 @@ chunk_t *chunk_map(char *path, bool wr)
 		}
 	}
 	chunk->public = chunk_create(chunk->map, chunk->len);
+#else /* !HAVE_MMAP */
+	if (!chunk_from_fd(chunk->fd, &chunk->public))
+	{
+		tmp = errno;
+		chunk_unmap(&chunk->public);
+		errno = tmp;
+		return NULL;
+	}
+	chunk->map = chunk->public.ptr;
+	chunk->len = chunk->public.len;
+#endif /* !HAVE_MMAP */
 	return &chunk->public;
 }
 
@@ -373,11 +390,39 @@ bool chunk_unmap(chunk_t *public)
 	int tmp = 0;
 
 	chunk = (mmaped_chunk_t*)public;
+#ifdef HAVE_MMAP
 	if (chunk->map && chunk->map != MAP_FAILED)
 	{
 		ret = munmap(chunk->map, chunk->len) == 0;
 		tmp = errno;
 	}
+#else /* !HAVE_MMAP */
+	if (chunk->wr)
+	{
+		if (lseek(chunk->fd, 0, SEEK_SET) != -1)
+		{
+			int len, total = 0;
+
+			ret = TRUE;
+			while (total < chunk->len)
+			{
+				len = write(chunk->fd, chunk->map + total, chunk->len - total);
+				if (len <= 0)
+				{
+					ret = FALSE;
+					break;
+				}
+				total += len;
+			}
+		}
+		tmp = errno;
+	}
+	else
+	{
+		ret = TRUE;
+	}
+	free(chunk->map);
+#endif /* !HAVE_MMAP */
 	close(chunk->fd);
 	free(chunk);
 	errno = tmp;
