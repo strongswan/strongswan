@@ -14,6 +14,7 @@
  */
 
 #include <time.h>
+#include <errno.h>
 
 #include "pki.h"
 
@@ -382,7 +383,12 @@ static int issue()
 		{
 			chunk_t chunk;
 
-			chunk = chunk_from_fd(0);
+			if (!chunk_from_fd(0, &chunk))
+			{
+				fprintf(stderr, "%s: ", strerror(errno));
+				error = "reading certificate request failed";
+				goto end;
+			}
 			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										  CERT_PKCS10_REQUEST,
 										  BUILD_BLOB, chunk, BUILD_END);
@@ -425,7 +431,12 @@ static int issue()
 		{
 			chunk_t chunk;
 
-			chunk = chunk_from_fd(0);
+			if (!chunk_from_fd(0, &chunk))
+			{
+				fprintf(stderr, "%s: ", strerror(errno));
+				error = "reading public key failed";
+				goto end;
+			}
 			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 										 BUILD_BLOB, chunk, BUILD_END);
 			free(chunk.ptr);
@@ -562,4 +573,3 @@ static void __attribute__ ((constructor))reg()
 		}
 	});
 }
-

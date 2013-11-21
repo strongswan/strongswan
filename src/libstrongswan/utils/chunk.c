@@ -247,33 +247,62 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 /**
  * Described in header.
  */
-chunk_t chunk_from_fd(int fd)
+bool chunk_from_fd(int fd, chunk_t *out)
 {
-	char buf[8096];
-	char *pos = buf;
-	ssize_t len, total = 0;
+	struct stat sb;
+	char *buf, *tmp;
+	ssize_t len, total = 0, bufsize;
+
+	if (fstat(fd, &sb) == 0 && S_ISREG(sb.st_mode))
+	{
+		bufsize = sb.st_size;
+	}
+	else
+	{
+		bufsize = 256;
+	}
+	buf = malloc(bufsize);
+	if (!buf)
+	{	/* for huge files */
+		return FALSE;
+	}
 
 	while (TRUE)
 	{
-		len = read(fd, pos, buf + sizeof(buf) - pos);
+		len = read(fd, buf + total, bufsize - total);
 		if (len < 0)
 		{
-			DBG1(DBG_LIB, "reading from file descriptor failed: %s",
-				 strerror(errno));
-			return chunk_empty;
+			free(buf);
+			return FALSE;
 		}
 		if (len == 0)
 		{
 			break;
 		}
 		total += len;
-		if (total == sizeof(buf))
+		if (total == bufsize)
 		{
-			DBG1(DBG_LIB, "buffer too small to read from file descriptor");
-			return chunk_empty;
+			bufsize *= 2;
+			tmp = realloc(buf, bufsize);
+			if (!tmp)
+			{
+				free(buf);
+				return FALSE;
+			}
+			buf = tmp;
 		}
 	}
-	return chunk_clone(chunk_create(buf, total));
+	if (total == 0)
+	{
+		free(buf);
+		buf = NULL;
+	}
+	else if (total < bufsize)
+	{
+		buf = realloc(buf, total);
+	}
+	*out = chunk_create(buf, total);
+	return TRUE;
 }
 
 /**

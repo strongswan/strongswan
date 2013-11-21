@@ -102,10 +102,13 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 /**
  * Store data read from FD into a chunk
  *
+ * On error, errno is set appropriately.
+ *
  * @param fd			file descriptor to read from
- * @return				chunk or chunk_empty on failure
+ * @param chunk			chunk receiving allocated buffer
+ * @return				TRUE if successful, FALSE on failure
  */
-chunk_t chunk_from_fd(int fd);
+bool chunk_from_fd(int fd, chunk_t *chunk);
 
 /**
  * mmap() a file to a chunk
