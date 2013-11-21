@@ -265,6 +265,12 @@ int socketpair(int domain, int type, int protocol, int sv[2]);
 #define ECONNRESET ENXIO
 
 /**
+ * close(2) working for file handles and Winsock sockets
+ */
+#define close windows_close
+int windows_close(int fd);
+
+/**
  * recv(2) with support for MSG_DONTWAIT
  */
 #define recv windows_recv

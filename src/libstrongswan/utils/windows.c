@@ -334,6 +334,22 @@ static bool check_dontwait(int *flags)
 /**
  * See header
  */
+#undef close
+int windows_close(int fd)
+{
+	int ret;
+
+	ret = close(fd);
+	if (ret == -1 && errno == EBADF)
+	{	/* Winsock socket? */
+		ret = wserr(closesocket(fd));
+	}
+	return ret;
+}
+
+/**
+ * See header
+ */
 #undef recv
 ssize_t windows_recv(int sockfd, void *buf, size_t len, int flags)
 {
