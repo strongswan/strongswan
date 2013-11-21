@@ -193,6 +193,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	if (this->priv_key.len)
 	{
 		/* initiator decrypting shared secret */
+		if (value.len == 0)
+		{
+			DBG1(DBG_LIB, "empty NTRU ciphertext");
+			return;
+		}
 		this->ciphertext = chunk_clone(value);
 		DBG3(DBG_LIB, "NTRU ciphertext: %B", &this->ciphertext);
 

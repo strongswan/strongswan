@@ -52,4 +52,5 @@ tests_CFLAGS = \
 tests_LDFLAGS = @COVERAGE_LDFLAGS@
 tests_LDADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
+  $(top_builddir)/src/libstrongswan/plugins/ntru/libstrongswan-ntru.la \
   libtest.la

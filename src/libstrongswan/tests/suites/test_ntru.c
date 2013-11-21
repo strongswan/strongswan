@@ -15,6 +15,8 @@
 
 #include "test_suite.h"
 
+#include <plugins/ntru/ntru_plugin.h>
+
 /**
  * NTRU parameter sets to test
  */
@@ -34,6 +36,14 @@ static struct {
 char *parameter_sets[] = {
 		"x9_98_speed", "x9_98_bandwidth", "x9_98_balance", "optimum"
 };
+
+START_TEST(test_ntru_entropy)
+{
+	ck_assert(!ntru_plugin_get_entropy(GET_NUM_BYTES_PER_BYTE_OF_ENTROPY, NULL));
+	ck_assert(!ntru_plugin_get_entropy(GET_BYTE_OF_ENTROPY, NULL));
+	ck_assert(!ntru_plugin_get_entropy(10, NULL));
+}
+END_TEST
 
 START_TEST(test_ntru_ke)
 {
@@ -94,6 +104,22 @@ START_TEST(test_ntru_ke)
 }
 END_TEST
 
+START_TEST(test_ntru_retransmission)
+{
+	diffie_hellman_t *i_ntru;
+	chunk_t pub_key1, pub_key2;
+
+	i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_256_BIT);
+	i_ntru->get_my_public_value(i_ntru, &pub_key1);
+	i_ntru->get_my_public_value(i_ntru, &pub_key2);
+	ck_assert(chunk_equals(pub_key1, pub_key2));
+
+	chunk_free(&pub_key1);
+	chunk_free(&pub_key2);
+	i_ntru->destroy(i_ntru);
+}
+END_TEST
+
 START_TEST(test_ntru_pubkey_oid)
 {
 	chunk_t test[] = {
@@ -148,6 +174,31 @@ START_TEST(test_ntru_wrong_set)
 }
 END_TEST
 
+START_TEST(test_ntru_ciphertext)
+{
+	chunk_t test[] = {
+		chunk_empty,
+		chunk_from_chars(0x00),
+	};
+
+	diffie_hellman_t *i_ntru;
+	chunk_t pub_key, shared_secret;
+	int i;
+
+	for (i = 0; i < countof(test); i++)
+	{
+		i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
+		i_ntru->get_my_public_value(i_ntru, &pub_key);
+		i_ntru->set_other_public_value(i_ntru, test[i]);
+		ck_assert(i_ntru->get_shared_secret(i_ntru, &shared_secret) != SUCCESS);
+		ck_assert(shared_secret.len == 0);
+
+		chunk_free(&pub_key);
+		i_ntru->destroy(i_ntru);
+	}
+}
+END_TEST
+
 Suite *ntru_suite_create()
 {
 	Suite *s;
@@ -155,8 +206,16 @@ Suite *ntru_suite_create()
 
 	s = suite_create("ntru");
 
+	tc = tcase_create("entropy");
+	tcase_add_test(tc, test_ntru_entropy);
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("ke");
 	tcase_add_loop_test(tc, test_ntru_ke, 0, countof(params));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("retransmission");
+	tcase_add_test(tc, test_ntru_retransmission);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("pubkey_oid");
@@ -165,6 +224,10 @@ Suite *ntru_suite_create()
 
 	tc = tcase_create("wrong_set");
 	tcase_add_test(tc, test_ntru_wrong_set);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ciphertext");
+	tcase_add_test(tc, test_ntru_ciphertext);
 	suite_add_tcase(s, tc);
 
 	return s;
