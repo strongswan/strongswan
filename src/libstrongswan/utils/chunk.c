@@ -269,6 +269,12 @@ bool chunk_from_fd(int fd, chunk_t *out)
 	while (TRUE)
 	{
 		len = read(fd, buf + total, bufsize - total);
+#ifdef WIN32
+		if (len == -1 && errno == EBADF)
+		{	/* operating on a Winsock socket? */
+			len = recv(fd, buf + total, bufsize - total, 0);
+		}
+#endif
 		if (len < 0)
 		{
 			free(buf);
