@@ -28,7 +28,6 @@
 #include <ctype.h>
 
 #include "chunk.h"
-#include "debug.h"
 
 /**
  * Empty chunk.
@@ -209,15 +208,16 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 /**
  * Described in header.
  */
-bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force)
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 {
 	mode_t oldmask;
 	FILE *fd;
 	bool good = FALSE;
+	int tmp = 0;
 
 	if (!force && access(path, F_OK) == 0)
 	{
-		DBG1(DBG_LIB, "  %s file '%s' already exists", label, path);
+		errno = EEXIST;
 		return FALSE;
 	}
 	oldmask = umask(mask);
@@ -226,23 +226,20 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
-			DBG1(DBG_LIB, "  written %s file '%s' (%d bytes)",
-				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1(DBG_LIB, "  writing %s file '%s' failed: %s",
-				 label, path, strerror(errno));
+			tmp = errno;
 		}
 		fclose(fd);
 	}
 	else
 	{
-		DBG1(DBG_LIB, "  could not open %s file '%s': %s", label, path,
-			 strerror(errno));
+		tmp = errno;
 	}
 	umask(oldmask);
+	errno = tmp;
 	return good;
 }
 

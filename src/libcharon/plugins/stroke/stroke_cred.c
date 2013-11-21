@@ -521,7 +521,16 @@ METHOD(stroke_cred_t, cache_cert, void,
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
 			{
-				chunk_write(chunk, buf, "crl", 022, TRUE);
+				if (chunk_write(chunk, buf, 022, TRUE))
+				{
+					DBG1(DBG_CFG, "  written crl file '%s' (%d bytes)",
+						 buf, chunk.len);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  writing crl file '%s' failed: %s",
+						 buf, strerror(errno));
+				}
 				free(chunk.ptr);
 			}
 		}

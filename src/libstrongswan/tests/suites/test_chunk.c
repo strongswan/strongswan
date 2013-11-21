@@ -789,7 +789,7 @@ START_TEST(test_chunk_map)
 	chunk_t *map, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
 	char *path = "/tmp/strongswan-chunk-map-test";
 
-	ck_assert(chunk_write(contents, path, "chunk_map", 022, TRUE));
+	ck_assert(chunk_write(contents, path, 022, TRUE));
 
 	/* read */
 	map = chunk_map(path, FALSE);
@@ -827,7 +827,7 @@ START_TEST(test_chunk_from_fd_file)
 	char *path = "/tmp/strongswan-chunk-fd-test";
 	int fd;
 
-	ck_assert(chunk_write(contents, path, "chunk_fd", 022, TRUE));
+	ck_assert(chunk_write(contents, path, 022, TRUE));
 
 	fd = open(path, O_RDONLY);
 	ck_assert(fd != -1);

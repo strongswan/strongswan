@@ -90,14 +90,15 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 /**
  * Write the binary contents of a chunk_t to a file
  *
+ * If the write fails, errno is set appropriately.
+ *
  * @param chunk			contents to write to file
  * @param path			path where file is written to
- * @param label			label specifying file type
  * @param mask			file mode creation mask
  * @param force			overwrite existing file by force
  * @return				TRUE if write operation was successful
  */
-bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force);
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
 
 /**
  * Store data read from FD into a chunk

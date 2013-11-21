@@ -24,6 +24,7 @@
 #include <time.h>
 #include <limits.h>
 #include <syslog.h>
+#include <errno.h>
 
 #include <library.h>
 #include <utils/debug.h>
@@ -975,9 +976,10 @@ int main(int argc, char **argv)
 		{	/* no PKCS#7 encoded CA+RA certificates, assume simple CA cert */
 
 			DBG1(DBG_APP, "unable to parse PKCS#7, assuming plain CA cert");
-			if (!chunk_write(scep_response, ca_path, "ca cert",  0022, force))
+			if (!chunk_write(scep_response, ca_path, 0022, force))
 			{
-				exit_scepclient("could not write ca cert file '%s'", ca_path);
+				exit_scepclient("could not write ca cert file '%s': %s",
+								ca_path, strerror(errno));
 			}
 		}
 		else
@@ -1031,10 +1033,10 @@ int main(int argc, char **argv)
 				}
 
 				if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding) ||
-					!chunk_write(encoding, path,
-								 ca_cert ? "ca cert" : "ra cert", 0022, force))
+					!chunk_write(encoding, path, 0022, force))
 				{
-					exit_scepclient("could not write cert file '%s'", path);
+					exit_scepclient("could not write cert file '%s': %s",
+									path, strerror(errno));
 				}
 				chunk_free(&encoding);
 			}
@@ -1149,9 +1151,10 @@ int main(int argc, char **argv)
 
 		join_paths(path, sizeof(path), REQ_PATH, file_out_pkcs10);
 
-		if (!chunk_write(pkcs10_encoding, path, "pkcs10",  0022, force))
+		if (!chunk_write(pkcs10_encoding, path, 0022, force))
 		{
-			exit_scepclient("could not write pkcs10 file '%s'", path);
+			exit_scepclient("could not write pkcs10 file '%s': %s",
+							path, strerror(errno));
 		}
 		filetype_out &= ~PKCS10;   /* delete PKCS10 flag */
 	}
@@ -1172,9 +1175,10 @@ int main(int argc, char **argv)
 
 		DBG2(DBG_APP, "building pkcs1 object:");
 		if (!private_key->get_encoding(private_key, PRIVKEY_ASN1_DER, &pkcs1) ||
-			!chunk_write(pkcs1, path, "pkcs1", 0066, force))
+			!chunk_write(pkcs1, path, 0066, force))
 		{
-			exit_scepclient("could not write pkcs1 file '%s'", path);
+			exit_scepclient("could not write pkcs1 file '%s': %s",
+							path, strerror(errno));
 		}
 		filetype_out &= ~PKCS1;   /* delete PKCS1 flag */
 	}
@@ -1236,9 +1240,10 @@ int main(int argc, char **argv)
 		{
 			exit_scepclient("encoding certificate failed");
 		}
-		if (!chunk_write(encoding, path, "self-signed cert", 0022, force))
+		if (!chunk_write(encoding, path, 0022, force))
 		{
-			exit_scepclient("could not write self-signed cert file '%s'", path);
+			exit_scepclient("could not write self-signed cert file '%s': %s",
+							path, strerror(errno));
 		}
 		chunk_free(&encoding);
 		filetype_out &= ~CERT_SELF;   /* delete CERT_SELF flag */
@@ -1300,9 +1305,10 @@ int main(int argc, char **argv)
 
 		join_paths(path, sizeof(path), REQ_PATH, file_out_pkcs7);
 
-		if (!chunk_write(pkcs7, path, "pkcs7 encrypted request", 0022, force))
+		if (!chunk_write(pkcs7, path, 0022, force))
 		{
-			exit_scepclient("could not write pkcs7 file '%s'", path);
+			exit_scepclient("could not write pkcs7 file '%s': %s",
+							path, strerror(errno));
 		}
 		filetype_out &= ~PKCS7;   /* delete PKCS7 flag */
 	}
@@ -1460,9 +1466,10 @@ int main(int argc, char **argv)
 					exit_scepclient("multiple certs received, only first stored");
 				}
 				if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding) ||
-					!chunk_write(encoding, path, "requested cert", 0022, force))
+					!chunk_write(encoding, path, 0022, force))
 				{
-					exit_scepclient("could not write cert file '%s'", path);
+					exit_scepclient("could not write cert file '%s': %s",
+									path, strerror(errno));
 				}
 				chunk_free(&encoding);
 				stored = TRUE;

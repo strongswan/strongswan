@@ -29,6 +29,7 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <time.h>
+#include <errno.h>
 
 #include <library.h>
 #include <utils/debug.h>
@@ -515,10 +516,17 @@ int main(int argc, char **argv)
 		/* write the attribute certificate to file */
 		if (attr_cert->get_encoding(attr_cert, CERT_ASN1_DER, &attr_chunk))
 		{
-			if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
+			if (chunk_write(attr_chunk, outfile, 0022, TRUE))
 			{
+				DBG1(DBG_APP, "  written attribute cert file '%s' (%d bytes)",
+						 outfile, attr_chunk.len);
 				write_serial(serial);
 				status = 0;
+			}
+			else
+			{
+				DBG1(DBG_APP, "  writing attribute cert file '%s' failed: %s",
+					 outfile, strerror(errno));
 			}
 		}
 	}
