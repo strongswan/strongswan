@@ -177,6 +177,7 @@ METHOD(diffie_hellman_t, get_shared_secret, status_t,
 {
 	if (!this->computed || !this->shared_secret.len)
 	{
+		*secret = chunk_empty;
 		return FAILED;
 	}
 	*secret = chunk_clone(this->shared_secret);

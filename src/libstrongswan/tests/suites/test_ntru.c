@@ -176,14 +176,21 @@ END_TEST
 
 START_TEST(test_ntru_ciphertext)
 {
+	char buf_00[604], buf_ff[604];
+
 	chunk_t test[] = {
 		chunk_empty,
 		chunk_from_chars(0x00),
+		chunk_create(buf_00, sizeof(buf_00)),
+		chunk_create(buf_ff, sizeof(buf_ff)),
 	};
 
 	diffie_hellman_t *i_ntru;
 	chunk_t pub_key, shared_secret;
 	int i;
+
+	memset(buf_00, 0x00, sizeof(buf_00));
+	memset(buf_ff, 0xff, sizeof(buf_ff));
 
 	for (i = 0; i < countof(test); i++)
 	{
@@ -196,6 +203,32 @@ START_TEST(test_ntru_ciphertext)
 		chunk_free(&pub_key);
 		i_ntru->destroy(i_ntru);
 	}
+}
+END_TEST
+
+START_TEST(test_ntru_wrong_ciphertext)
+{
+	diffie_hellman_t *i_ntru, *r_ntru, *m_ntru;
+	chunk_t pub_key_i, pub_key_m, cipher_text, shared_secret;
+
+	i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
+	r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
+	m_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
+
+	i_ntru->get_my_public_value(i_ntru, &pub_key_i);
+	m_ntru->get_my_public_value(m_ntru, &pub_key_m);
+	r_ntru->set_other_public_value(r_ntru, pub_key_m);
+	r_ntru->get_my_public_value(r_ntru, &cipher_text);
+	i_ntru->set_other_public_value(i_ntru, cipher_text);
+	ck_assert(i_ntru->get_shared_secret(i_ntru, &shared_secret) != SUCCESS);
+	ck_assert(shared_secret.len == 0);
+
+	chunk_free(&pub_key_i);
+	chunk_free(&pub_key_m);
+	chunk_free(&cipher_text);
+	i_ntru->destroy(i_ntru);
+	m_ntru->destroy(m_ntru);
+	r_ntru->destroy(r_ntru);
 }
 END_TEST
 
@@ -230,5 +263,8 @@ Suite *ntru_suite_create()
 	tcase_add_test(tc, test_ntru_ciphertext);
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("wrong_ciphertext");
+	tcase_add_test(tc, test_ntru_wrong_ciphertext);
+	suite_add_tcase(s, tc);
 	return s;
 }
