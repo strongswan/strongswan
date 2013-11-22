@@ -324,6 +324,85 @@ static bool have_pool(ike_sa_t *ike_sa)
 }
 
 /**
+ * Check if a list of traffic selectors equals to one side of a CHILD_SA
+ */
+static bool ts_list_equals_child(linked_list_t *list, child_sa_t *child,
+								 bool local)
+{
+	traffic_selector_t *tsa, *tsb;
+	enumerator_t *a, *b;
+	bool equal = TRUE;
+
+	a = child->create_ts_enumerator(child, local);
+	while (equal && a->enumerate(a, &tsa))
+	{
+		equal = FALSE;
+
+		b = list->create_enumerator(list);
+		while (!equal && b->enumerate(b, &tsb))
+		{
+			equal = tsa->equals(tsa, tsb);
+		}
+		b->destroy(b);
+	}
+	a->destroy(a);
+
+	return equal;
+}
+
+/**
+ * Check if the marks of a CHILD_SA and a config equal
+ */
+static bool mark_equals_child(child_sa_t *child, child_cfg_t *cfg, bool local)
+{
+	mark_t a, b;
+
+	a = child->get_mark(child, local);
+	b = cfg->get_mark(cfg, local);
+
+	return a.value == b.value && a.mask == b.mask;
+}
+
+/**
+ * Delete any duplicate CHILD_SAs we have under this IKE_SA
+ */
+static bool delete_duplicates(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child;
+	bool fatal = FALSE;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &child))
+	{
+		if (child != this->child_sa &&
+			streq(child->get_name(child), this->config->get_name(this->config)))
+		{
+			if (mark_equals_child(child, this->config, TRUE) &&
+				mark_equals_child(child, this->config, FALSE))
+			{
+				if (ts_list_equals_child(this->tsi, child, this->initiator) &&
+					ts_list_equals_child(this->tsr, child, !this->initiator))
+				{
+					DBG1(DBG_IKE, "detected duplicate CHILD_SA, closing");
+					if (this->ike_sa->delete_child_sa(this->ike_sa,
+													child->get_protocol(child),
+													child->get_spi(child, TRUE),
+													FALSE) == DESTROY_ME)
+					{
+						fatal = TRUE;
+						break;
+					}
+				}
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return !fatal;
+}
+
+/**
  * Get hosts to use for dynamic traffic selectors
  */
 static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
@@ -686,6 +765,11 @@ static status_t select_and_install(private_child_create_t *this,
 	if (!this->rekey)
 	{	/* a rekeyed SA uses the same reqid, no need for a new job */
 		schedule_inactivity_timeout(this);
+
+		if (!delete_duplicates(this))
+		{
+			return DESTROY_ME;
+		}
 	}
 
 	my_ts = linked_list_create_from_enumerator(
@@ -1272,6 +1356,9 @@ METHOD(task_t, build_r, status_t,
 			handle_child_sa_failure(this, message);
 			return SUCCESS;
 		}
+		case DESTROY_ME:
+			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			return FAILED;
 		case FAILED:
 		default:
 			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
@@ -1456,17 +1543,20 @@ METHOD(task_t, process_i, status_t,
 		return delete_failed_sa(this);
 	}
 
-	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
+	switch (select_and_install(this, no_dh, ike_auth))
 	{
-		if (!this->rekey)
-		{	/* invoke the child_up() hook if we are not rekeying */
-			charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
-		}
+		case SUCCESS:
+			break;
+		case DESTROY_ME:
+			return FAILED;
+		default:
+			handle_child_sa_failure(this, message);
+			return delete_failed_sa(this);
 	}
-	else
-	{
-		handle_child_sa_failure(this, message);
-		return delete_failed_sa(this);
+
+	if (!this->rekey)
+	{	/* invoke the child_up() hook if we are not rekeying */
+		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
 	}
 	return SUCCESS;
 }
