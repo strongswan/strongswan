@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -139,6 +139,58 @@ char* translate(char *str, const char *from, const char *to)
 		pos++;
 	}
 	return str;
+}
+
+/**
+ * Described in header.
+ */
+char* strreplace(const char *str, const char *search, const char *replace)
+{
+	size_t len, slen, rlen, count = 0;
+	char *res, *pos, *found, *dst;
+
+	if (!str || !*str || !search || !*search || !replace)
+	{
+		return (char*)str;
+	}
+	slen = strlen(search);
+	rlen = strlen(replace);
+	if (slen != rlen)
+	{
+		for (pos = (char*)str; (pos = strstr(pos, search)); pos += slen)
+		{
+			found = pos;
+			count++;
+		}
+		if (!count)
+		{
+			return (char*)str;
+		}
+		len = (found - str) + strlen(found) + count * (rlen - slen);
+	}
+	else
+	{
+		len = strlen(str);
+	}
+	found = strstr(str, search);
+	if (!found)
+	{
+		return (char*)str;
+	}
+	dst = res = malloc(len + 1);
+	pos = (char*)str;
+	do
+	{
+		len = found - pos;
+		memcpy(dst, pos, len);
+		dst += len;
+		memcpy(dst, replace, rlen);
+		dst += rlen;
+		pos = found + slen;
+	}
+	while ((found = strstr(pos, search)));
+	strcpy(dst, pos);
+	return res;
 }
 
 /**

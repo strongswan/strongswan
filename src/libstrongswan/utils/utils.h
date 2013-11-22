@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -470,6 +470,20 @@ void *memstr(const void *haystack, const char *needle, size_t n);
  * characters.
  */
 char *translate(char *str, const char *from, const char *to);
+
+/**
+ * Replaces all occurences of search in the given string with replace.
+ *
+ * Allocates memory only if anything is replaced in the string.  The original
+ * string is also returned if any of the arguments are invalid (e.g. if search
+ * is empty or any of them are NULL).
+ *
+ * @param str		original string
+ * @param search	string to search for and replace
+ * @param replace	string to replace found occurences with
+ * @return			allocated string, if anything got replaced, str otherwise
+ */
+char *strreplace(const char *str, const char *search, const char *replace);
 
 /**
  * Creates a directory and all required parent directories.

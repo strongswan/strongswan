@@ -385,6 +385,89 @@ START_TEST(test_translate)
 END_TEST
 
 /*******************************************************************************
+ * strreplace
+ */
+
+static struct {
+	char *in;
+	char *out;
+	char *search;
+	char *replace;
+	bool allocated;
+} strreplace_data[] = {
+	/* invalid arguments */
+	{NULL, NULL, NULL, NULL, FALSE},
+	{"", "", NULL, NULL, FALSE},
+	{"", "", "", NULL, FALSE},
+	{"", "", NULL, "", FALSE},
+	{"", "", "", "", FALSE},
+	{"", "", "", "asdf", FALSE},
+	{"", "", "asdf", "", FALSE},
+	{"asdf", "asdf", NULL, NULL, FALSE},
+	{"asdf", "asdf", "", NULL, FALSE},
+	{"asdf", "asdf", NULL, "", FALSE},
+	{"asdf", "asdf", "", "", FALSE},
+	{"asdf", "asdf", "", "asdf", FALSE},
+	{"asdf", "asdf", "asdf", NULL, FALSE},
+	{"qwer", "qwer", "", "asdf", FALSE},
+	/* replacement shorter */
+	{"asdf", "", "asdf", "", TRUE},
+	{"asdfasdf", "", "asdf", "", TRUE},
+	{"asasdfdf", "asdf", "asdf", "", TRUE},
+	{"asdf", "df", "as", "", TRUE},
+	{"asdf", "as", "df", "", TRUE},
+	{"qwer", "qwer", "asdf", "", FALSE},
+	/* replacement same length */
+	{"a", "b", "a", "b", TRUE},
+	{"aaa", "bbb", "a", "b", TRUE},
+	{"aaa", "bbb", "aaa", "bbb", TRUE},
+	{"asdf", "asdf", "asdf", "asdf", TRUE},
+	{"qwer", "qwer", "asdf", "asdf", FALSE},
+	/* replacement longer */
+	{"asdf", "asdf", "", "asdf", FALSE},
+	{"asdf", "asdfasdf", "asdf", "asdfasdf", TRUE},
+	{"asdf", "asdfsdf", "a", "asdf", TRUE},
+	{"asdf", "asdasdf", "f", "asdf", TRUE},
+	{"aaa", "asdfasdfasdf", "a", "asdf", TRUE},
+	{"qwer", "qwer", "asdf", "asdfasdf", FALSE},
+	/* real examples */
+	{"http://x.org/no/spaces", "http://x.org/no/spaces", " ", "%20", FALSE},
+	{"http://x.org/end ", "http://x.org/end%20", " ", "%20", TRUE},
+	{" http://x.org/start", "%20http://x.org/start", " ", "%20", TRUE},
+	{" http://x.org/both ", "%20http://x.org/both%20", " ", "%20", TRUE},
+	{"http://x.org/ /slash", "http://x.org/%20/slash", " ", "%20", TRUE},
+	{"http://x.org/   /three", "http://x.org/%20%20%20/three", " ", "%20", TRUE},
+	{"http://x.org/      ", "http://x.org/%20%20%20%20%20%20", " ", "%20", TRUE},
+	{"http://x.org/%20/encoded", "http://x.org/%20/encoded", " ", "%20", FALSE},
+};
+
+START_TEST(test_strreplace)
+{
+	char *ret;
+
+	ret = strreplace(strreplace_data[_i].in, strreplace_data[_i].search,
+					 strreplace_data[_i].replace);
+	if (ret && strreplace_data[_i].out)
+	{
+		ck_assert_str_eq(ret, strreplace_data[_i].out);
+	}
+	else
+	{
+		ck_assert(ret == strreplace_data[_i].out);
+	}
+	if (strreplace_data[_i].allocated)
+	{
+		ck_assert(ret != strreplace_data[_i].in);
+		free(ret);
+	}
+	else
+	{
+		ck_assert(ret == strreplace_data[_i].in);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * time_printf_hook
  */
 
@@ -541,6 +624,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("translate");
 	tcase_add_loop_test(tc, test_translate, 0, countof(translate_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("strreplace");
+	tcase_add_loop_test(tc, test_strreplace, 0, countof(strreplace_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hooks");
