@@ -412,9 +412,10 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		loose_gateway_id = TRUE;
 	}
 
-	if (auth_class == AUTH_CLASS_EAP)
+	if (auth_class == AUTH_CLASS_EAP ||
+		auth_class == AUTH_CLASS_PSK)
 	{
-		/* username/password authentication ... */
+		/* username/password or PSK authentication ... */
 		str = nm_setting_vpn_get_data_item(vpn, "user");
 		if (str)
 		{
@@ -548,7 +549,14 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth->add(auth, AUTH_RULE_IDENTITY, user);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	auth = auth_cfg_create();
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	if (auth_class == AUTH_CLASS_PSK)
+	{
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	}
+	else
+	{
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, loose_gateway_id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
@@ -623,7 +631,7 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 	method = nm_setting_vpn_get_data_item(settings, "method");
 	if (method)
 	{
-		if (streq(method, "eap"))
+		if (streq(method, "eap") || streq(method, "psk"))
 		{
 			if (nm_setting_vpn_get_secret(settings, "password"))
 			{
