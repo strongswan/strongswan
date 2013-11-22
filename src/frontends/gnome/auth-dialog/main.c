@@ -99,7 +99,7 @@ static char* get_connection_type(char *uuid)
 		fprintf (stderr, "Failed to read data and secrets from stdin.\n");
 		return NULL;
 	}
-	
+
 	method = g_hash_table_lookup (data, "method");
 	if (method)
 		method = g_strdup(method);
@@ -159,7 +159,8 @@ int main (int argc, char *argv[])
 		fprintf(stderr, "Connection lookup failed\n");
 		return 1;
 	}
-	if (!strcmp(type, "eap") || !strcmp(type, "key") || !strcmp(type, "smartcard"))
+	if (!strcmp(type, "eap") || !strcmp(type, "key") || !strcmp(type, "psk") ||
+		!strcmp(type, "smartcard"))
 	{
 		pass = lookup_password(name, service);
 		if ((!pass || retry) && allow_interaction)
@@ -175,6 +176,13 @@ int main (int argc, char *argv[])
 			{
 				dialog = gnome_password_dialog_new(_("VPN password required"),
 							_("Private key decryption password required to establish VPN connection:"),
+							NULL, NULL, TRUE);
+				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+			}
+			else if (!strcmp(type, "psk"))
+			{
+				dialog = gnome_password_dialog_new(_("VPN password required"),
+							_("Pre-shared key required to establish VPN connection:"),
 							NULL, NULL, TRUE);
 				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
 			}
@@ -244,4 +252,3 @@ int main (int argc, char *argv[])
 	wait_for_quit ();
 	return 0;
 }
-
