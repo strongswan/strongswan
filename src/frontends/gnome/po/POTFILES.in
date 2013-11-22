@@ -1,5 +1,5 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
 properties/nm-strongswan.c
-properties/nm-strongswan-dialog.ui
+[type: gettext/glade]properties/nm-strongswan-dialog.ui
 auth-dialog/main.c
