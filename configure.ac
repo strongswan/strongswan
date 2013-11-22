@@ -895,12 +895,18 @@ if test x$fast = xtrue; then
 fi
 
 if test x$mysql = xtrue; then
-	AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
-	if test x$MYSQLCONFIG = x; then
-		AC_MSG_ERROR([mysql_config not found!])
+	if test "x$windows" = xtrue; then
+		AC_CHECK_HEADER([mysql.h],,[AC_MSG_ERROR([MySQL header file mysql.h not found!])])
+		AC_CHECK_LIB([mysql],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([MySQL library not found!])],[])
+		AC_SUBST(MYSQLLIB, -lmysql)
+	else
+		AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+		if test x$MYSQLCONFIG = x; then
+			AC_MSG_ERROR([mysql_config not found!])
+		fi
+		AC_SUBST(MYSQLLIB, `$MYSQLCONFIG --libs_r`)
+		AC_SUBST(MYSQLCFLAG, `$MYSQLCONFIG --cflags`)
 	fi
-	AC_SUBST(MYSQLLIB, `$MYSQLCONFIG --libs_r`)
-	AC_SUBST(MYSQLCFLAG, `$MYSQLCONFIG --cflags`)
 fi
 
 if test x$sqlite = xtrue; then

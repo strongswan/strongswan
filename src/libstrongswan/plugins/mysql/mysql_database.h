@@ -21,6 +21,7 @@
 #ifndef MYSQL_DATABASE_H_
 #define MYSQL_DATABASE_H_
 
+#include <library.h>
 #include <database/database.h>
 
 typedef struct mysql_database_t mysql_database_t;
