@@ -16,10 +16,6 @@ libstrongswan_ntru_la_SOURCES = \
 	ntru_ke.h ntru_ke.c \
 	ntru_test_rng.h ntru_test_rng.c \
 	ntru_crypto/ntru_crypto.h ntru_crypto/ntru_crypto_error.h \
-	ntru_crypto/ntru_crypto_hash_basics.h \
-	ntru_crypto/ntru_crypto_hash.h ntru_crypto/ntru_crypto_hash.c \
-	ntru_crypto/ntru_crypto_msbyte_uint32.h \
-	ntru_crypto/ntru_crypto_msbyte_uint32.c \
 	ntru_crypto/ntru_crypto_ntru_convert.h \
 	ntru_crypto/ntru_crypto_ntru_convert.c \
 	ntru_crypto/ntru_crypto_ntru_encrypt.c \
@@ -28,11 +24,7 @@ libstrongswan_ntru_la_SOURCES = \
 	ntru_crypto/ntru_crypto_ntru_encrypt_param_sets.h \
 	ntru_crypto/ntru_crypto_ntru_encrypt_param_sets.c \
 	ntru_crypto/ntru_crypto_ntru_mgf1.h ntru_crypto/ntru_crypto_ntru_mgf1.c \
-	ntru_crypto/ntru_crypto_ntru_poly.h ntru_crypto/ntru_crypto_ntru_poly.c \
-	ntru_crypto/ntru_crypto_platform.h ntru_crypto/ntru_crypto_sha.h\
-	ntru_crypto/ntru_crypto_sha1.h ntru_crypto/ntru_crypto_sha1.c\
-	ntru_crypto/ntru_crypto_sha2.h ntru_crypto/ntru_crypto_sha2.c\
-	ntru_crypto/ntru_crypto_sha256.h ntru_crypto/ntru_crypto_sha256.c
+	ntru_crypto/ntru_crypto_ntru_poly.h ntru_crypto/ntru_crypto_ntru_poly.c
 
 libstrongswan_ntru_la_LDFLAGS = -module -avoid-version
 

@@ -106,7 +106,7 @@ ntru_crypto_ntru_encrypt(
     uint8_t                *b_buf = NULL;
     uint8_t                *tmp_buf = NULL;
     bool                    msg_rep_good = FALSE;
-    NTRU_CRYPTO_HASH_ALGID  hash_algid;
+    hash_algorithm_t        hash_algid;
     uint8_t                 md_len;
     uint16_t                mprime_len = 0;
     uint16_t                mod_q_mask;
@@ -178,15 +178,17 @@ ntru_crypto_ntru_encrypt(
     b_buf = (uint8_t *)(r_buf + (dr << 1));
     tmp_buf = (uint8_t *)scratch_buf;
 
-    /* set hash algorithm based on security strength */
-
-    if (params->sec_strength_len <= 20) {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA1;
-        md_len = 20;
-    } else {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA256;
-        md_len = 32;
-    }
+	/* set hash algorithm based on security strength */
+	if (params->sec_strength_len <= 20)
+	{
+		hash_algid = HASH_SHA1;
+		md_len = 20;
+	}
+	else
+	{
+		hash_algid = HASH_SHA256;
+		md_len = 32;
+	}
 
     /* set constants */
 
@@ -424,7 +426,7 @@ ntru_crypto_ntru_decrypt(
     uint8_t                *Mtrin_buf = NULL;
     uint8_t                *M_buf = NULL;
     uint8_t                *ptr = NULL;
-    NTRU_CRYPTO_HASH_ALGID  hash_algid;
+    hash_algorithm_t        hash_algid;
     uint8_t                 md_len;
     uint16_t                cmprime_len;
     uint16_t                mod_q_mask;
@@ -502,14 +504,16 @@ ntru_crypto_ntru_decrypt(
     Mtrin_buf = (uint8_t *)ringel_buf1;
     M_buf = Mtrin_buf + params->N;
 
-    /* set hash algorithm based on security strength */
-
-    if (params->sec_strength_len <= 20) {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA1;
-        md_len = 20;
-    } else {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA256;
-        md_len = 32;
+	/* set hash algorithm based on security strength */
+	if (params->sec_strength_len <= 20)
+	{
+		hash_algid = HASH_SHA1;
+		md_len = 20;
+	}
+	else
+	{
+		hash_algid = HASH_SHA256;
+		md_len = 32;
     }
 
     /* set constants */
@@ -802,7 +806,7 @@ ntru_crypto_ntru_encrypt_keygen(
     uint16_t               *F_buf = NULL;
     uint8_t                *tmp_buf = NULL;
     uint16_t                mod_q_mask;
-    NTRU_CRYPTO_HASH_ALGID  hash_algid;
+    hash_algorithm_t        hash_algid;
     uint8_t                 md_len;
     uint16_t                seed_len;
     uint32_t                result = NTRU_OK;
@@ -866,16 +870,18 @@ ntru_crypto_ntru_encrypt_keygen(
     F_buf = ringel_buf2 + params->N;
     tmp_buf = (uint8_t *)scratch_buf;
 
-    /* set hash algorithm and seed length based on security strength */
-
-    if (params->sec_strength_len <= 20) {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA1;
-        md_len = 20;
-    } else {
-        hash_algid = NTRU_CRYPTO_HASH_ALGID_SHA256;
-        md_len = 32;
-    }
-    seed_len = params->sec_strength_len + 8;
+	/* set hash algorithm and seed length based on security strength */
+    if (params->sec_strength_len <= 20)
+	{
+		hash_algid = HASH_SHA1;
+		md_len = 20;
+	}
+	else
+	{
+		hash_algid = HASH_SHA256;
+		md_len = 32;
+	}
+	seed_len = params->sec_strength_len + 8;
 
     /* set constants */
 

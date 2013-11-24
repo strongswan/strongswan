@@ -53,45 +53,60 @@
 
 uint32_t
 ntru_mgf1(
-    uint8_t                *state,      /* in/out - pointer to the state */
-    NTRU_CRYPTO_HASH_ALGID  algid,      /*     in - hash algorithm ID */
-    uint8_t                 md_len,     /*     in - no. of octets in digest */
-    uint8_t                 num_calls,  /*     in - no. of hash calls */
-    uint16_t                seed_len,   /*     in - no. of octets in seed */
-    uint8_t const          *seed,       /*     in - pointer to seed */
-    uint8_t                *out)        /*    out - address for output */
+	uint8_t                *state,      /* in/out - pointer to the state */
+	hash_algorithm_t        hash_algid, /*     in - hash algorithm ID */
+	uint8_t                 md_len,     /*     in - no. of octets in digest */
+	uint8_t                 num_calls,  /*     in - no. of hash calls */
+	uint16_t                seed_len,   /*     in - no. of octets in seed */
+	uint8_t                *seed,       /*     in - pointer to seed */
+	uint8_t                *out)        /*    out - address for output */
 {
-    uint8_t  *ctr = state + md_len;
-    uint32_t  retcode;
+	uint8_t  *ctr = state + md_len;
+	hasher_t *hasher;
 
-    assert(state);
-    assert(out);
+	assert(state);
+	assert(out);
 
-    /* if seed present, init state */
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_algid);
+	if (!hasher)
+	{
+	    NTRU_RET(NTRU_FAIL);
+	}
 
-    if (seed) {
-        if ((retcode = ntru_crypto_hash_digest(algid, seed, seed_len, state)) !=
-                NTRU_CRYPTO_HASH_OK)
-            return retcode;
-        memset(ctr, 0, 4);
+	/* if seed present, init state */
+	if (seed)
+	{
+		if (!hasher->get_hash(hasher, chunk_create(seed, seed_len), state))
+		{
+			hasher->destroy(hasher);
+			NTRU_RET(NTRU_FAIL);
+		}
+		memset(ctr, 0, 4);
+	}
+
+	/* generate output */
+	while (num_calls-- > 0)
+	{
+		if (!hasher->get_hash(hasher, chunk_create(state, md_len + 4), out))
+		{
+			hasher->destroy(hasher);
+			NTRU_RET(NTRU_FAIL);
+		}
+		out += md_len;
+
+		/* increment counter */
+		if (++ctr[3] == 0)
+		{
+			if (++ctr[2] == 0)
+			{
+				if (++ctr[1] == 0)
+				{
+					++ctr[0];
+				}
+			}
+		}
     }
-
-    /* generate output */
-
-    while (num_calls-- > 0) {
-        if ((retcode = ntru_crypto_hash_digest(algid, state, md_len + 4,
-                                               out)) !=
-                NTRU_CRYPTO_HASH_OK)
-            return retcode;
-        out += md_len;
-
-        /* increment counter */
-
-        if (++ctr[3] == 0)
-            if (++ctr[2] == 0)
-                if (++ctr[1] == 0)
-                    ++ctr[0];
-    }
+	hasher->destroy(hasher);
 
     NTRU_RET(NTRU_OK);
 }
@@ -113,85 +128,93 @@ ntru_mgf1(
 
 uint32_t
 ntru_mgftp1(
-    NTRU_CRYPTO_HASH_ALGID  hash_algid,       /*  in - hash alg ID for
+	hash_algorithm_t        hash_algid,       /*  in - hash alg ID for
                                                        MGF-TP-1 */
-    uint8_t                 md_len,           /*  in - no. of octets in
+	uint8_t                 md_len,           /*  in - no. of octets in
                                                        digest */
-    uint8_t                 min_calls,        /*  in - minimum no. of hash
+	uint8_t                 min_calls,        /*  in - minimum no. of hash
                                                        calls */
-    uint16_t                seed_len,         /*  in - no. of octets in seed */
-    uint8_t                *seed,             /*  in - pointer to seed */
-    uint8_t                *buf,              /*  in - pointer to working
+	uint16_t                seed_len,         /*  in - no. of octets in seed */
+	uint8_t                *seed,             /*  in - pointer to seed */
+	uint8_t                *buf,              /*  in - pointer to working
                                                        buffer */
-    uint16_t                num_trits_needed, /*  in - no. of trits in mask */
-    uint8_t                *mask)             /* out - address for mask trits */
+	uint16_t                num_trits_needed, /*  in - no. of trits in mask */
+	uint8_t                *mask)             /* out - address for mask trits */
 {
-    uint8_t  *mgf_out;
-    uint8_t  *octets;
-    uint16_t  octets_available;
-    uint32_t  retcode;
+	uint8_t  *mgf_out;
+	uint8_t  *octets;
+	uint16_t  octets_available;
+	uint32_t  retcode;
 
-    assert(seed);
-    assert(buf);
-    assert(mask);
+	assert(seed);
+	assert(buf);
+	assert(mask);
 
-    /* generate minimum MGF1 output */
-
-    mgf_out = buf + md_len + 4;
-    if ((retcode = ntru_mgf1(buf, hash_algid, md_len, min_calls,
+	/* generate minimum MGF1 output */
+	mgf_out = buf + md_len + 4;
+	if ((retcode = ntru_mgf1(buf, hash_algid, md_len, min_calls,
                              seed_len, seed, mgf_out)) != NTRU_OK)
-        return retcode;
-    octets = mgf_out;
-    octets_available = min_calls * md_len;
+	{
+		return retcode;
+	}
+	octets = mgf_out;
+	octets_available = min_calls * md_len;
 
-    /* get trits for mask */
-
-    while (num_trits_needed >= 5) {
-
-        /* get another octet and convert it to 5 trits */
-
-        if (octets_available == 0) {
-            if ((retcode = ntru_mgf1(buf, hash_algid, md_len, 1,
+	/* get trits for mask */
+	while (num_trits_needed >= 5)
+	{
+		/* get another octet and convert it to 5 trits */
+		if (octets_available == 0)
+		{
+			if ((retcode = ntru_mgf1(buf, hash_algid, md_len, 1,
                                      0, NULL, mgf_out)) != NTRU_OK)
-                return retcode;
-            octets = mgf_out;
-            octets_available = md_len;
-        }
+			{
+				return retcode;
+			}
+			octets = mgf_out;
+			octets_available = md_len;
+		}
 
-        if (*octets < 243) {
-            ntru_octet_2_trits(*octets, mask);
-            mask += 5;
-            num_trits_needed -= 5;
-        }
-        octets++;
-        --octets_available;
-    }
+		if (*octets < 243)
+		{
+			ntru_octet_2_trits(*octets, mask);
+			mask += 5;
+			num_trits_needed -= 5;
+		}
+		octets++;
+		--octets_available;
+	}
 
-    /* get any remaining trits */
+	/* get any remaining trits */
+	while (num_trits_needed)
+	{
+		uint8_t trits[5];
 
-    while (num_trits_needed) {
-        uint8_t trits[5];
-
-        /* get another octet and convert it to remaining trits */
-
-        if (octets_available == 0) {
-            if ((retcode = ntru_mgf1(buf, hash_algid, md_len, 1,
+		/* get another octet and convert it to remaining trits */
+		if (octets_available == 0)
+		{
+			if ((retcode = ntru_mgf1(buf, hash_algid, md_len, 1,
                                      0, NULL, mgf_out)) != NTRU_OK)
-                return retcode;
-            octets = mgf_out;
-            octets_available = md_len;
-        }
-        if (*octets < 243) {
-            ntru_octet_2_trits(*octets, trits);
-            memcpy(mask, trits, num_trits_needed);
-            num_trits_needed = 0;
-        } else {
-            octets++;
-            --octets_available;
-        }
-    }
+			{
+				return retcode;
+			}
+			octets = mgf_out;
+			octets_available = md_len;
+		}
+		if (*octets < 243)
+		{
+			ntru_octet_2_trits(*octets, trits);
+			memcpy(mask, trits, num_trits_needed);
+			num_trits_needed = 0;
+		}
+		else
+		{
+			octets++;
+			--octets_available;
+		}
+	}
 
-    NTRU_RET(NTRU_OK);
+	NTRU_RET(NTRU_OK);
 }
 
 

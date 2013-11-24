@@ -62,7 +62,7 @@
 
 uint32_t
 ntru_gen_poly(
-    NTRU_CRYPTO_HASH_ALGID  hash_algid,      /*  in - hash algorithm ID for
+    hash_algorithm_t        hash_algid,      /*  in - hash algorithm ID for
                                                       IGF-2 */
     uint8_t                 md_len,          /*  in - no. of octets in digest */
     uint8_t                 min_calls,       /*  in - minimum no. of hash

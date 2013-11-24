@@ -36,8 +36,8 @@
 
 
 #include "ntru_crypto.h"
-#include "ntru_crypto_hash.h"
 
+#include <crypto/hashers/hasher.h>
 
 /* function declarations */
 
@@ -57,11 +57,11 @@
 extern uint32_t
 ntru_mgf1(
     uint8_t                *state,      /* in/out - pointer to the state */
-    NTRU_CRYPTO_HASH_ALGID  algid,      /*     in - hash algorithm ID */
+    hash_algorithm_t        hash_algid, /*     in - hash algorithm ID */
     uint8_t                 md_len,     /*     in - no. of octets in digest */
     uint8_t                 num_calls,  /*     in - no. of hash calls */
     uint16_t                seed_len,   /*     in - no. of octets in seed */
-    uint8_t const          *seed,       /*     in - pointer to seed */
+    uint8_t                *seed,       /*     in - pointer to seed */
     uint8_t                *out);       /*    out - address for output */
 
 
@@ -81,7 +81,7 @@ ntru_mgf1(
 
 extern uint32_t
 ntru_mgftp1(
-    NTRU_CRYPTO_HASH_ALGID  hash_algid,       /*  in - hash alg ID for
+    hash_algorithm_t        hash_algid,       /*  in - hash alg ID for
                                                        MGF-TP-1 */
     uint8_t                 md_len,           /*  in - no. of octets in
                                                        digest */

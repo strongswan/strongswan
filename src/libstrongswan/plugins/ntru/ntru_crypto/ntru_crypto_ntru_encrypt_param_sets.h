@@ -34,8 +34,6 @@
 #define NTRU_CRYPTO_NTRU_ENCRYPT_PARAM_SETS_H
 
 #include "ntru_crypto.h"
-#include "ntru_crypto_hash_basics.h"
-
 
 /* structures */
 
@@ -104,21 +102,6 @@ ntru_encrypt_get_params_with_id(
 extern NTRU_ENCRYPT_PARAM_SET *
 ntru_encrypt_get_params_with_OID(
     uint8_t const *oid);            /*  in - pointer to parameter-set OID */
-
-
-/* ntru_encrypt_get_params_with_DER_id
- *
- * Looks up a set of NTRUEncrypt parameters based on the DER id of the
- * parameter set.
- *
- * Returns a pointer to the parameter set parameters if successful.
- * Returns NULL if the parameter set cannot be found.
- */
-
-extern NTRU_ENCRYPT_PARAM_SET *
-ntru_encrypt_get_params_with_DER_id(
-    uint8_t der_id);                /*  in - parameter-set DER id */
-
 
 #endif /* NTRU_CRYPTO_NTRU_ENCRYPT_PARAM_SETS_H */
 
