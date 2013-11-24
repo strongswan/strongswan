@@ -12,12 +12,12 @@ endif
 
 libstrongswan_ntru_la_SOURCES = \
 	ntru_plugin.h ntru_plugin.c \
+	ntru_drbg.h ntru_drbg.c \
 	ntru_ke.h ntru_ke.c \
+	ntru_test_rng.h ntru_test_rng.c \
 	ntru_crypto/ntru_crypto.h ntru_crypto/ntru_crypto_error.h \
-	ntru_crypto/ntru_crypto_drbg.h ntru_crypto/ntru_crypto_drbg.c \
 	ntru_crypto/ntru_crypto_hash_basics.h \
 	ntru_crypto/ntru_crypto_hash.h ntru_crypto/ntru_crypto_hash.c \
-	ntru_crypto/ntru_crypto_hmac.h ntru_crypto/ntru_crypto_hmac.c \
 	ntru_crypto/ntru_crypto_msbyte_uint32.h \
 	ntru_crypto/ntru_crypto_msbyte_uint32.c \
 	ntru_crypto/ntru_crypto_ntru_convert.h \

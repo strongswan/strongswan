@@ -41,8 +41,6 @@
 #include "ntru_crypto_ntru_convert.h"
 #include "ntru_crypto_ntru_poly.h"
 #include "ntru_crypto_ntru_mgf1.h"
-#include "ntru_crypto_drbg.h"
-
 
 /* ntru_crypto_ntru_encrypt
  *
@@ -81,7 +79,7 @@
 
 uint32_t
 ntru_crypto_ntru_encrypt(
-    DRBG_HANDLE     drbg_handle,     /*     in - handle of DRBG */
+    ntru_drbg_t    *drbg,            /*     in - handle of DRBG */
     uint16_t        pubkey_blob_len, /*     in - no. of octets in public key
                                                  blob */
     uint8_t const  *pubkey_blob,     /*     in - pointer to public key */
@@ -200,9 +198,15 @@ ntru_crypto_ntru_encrypt(
         uint8_t *ptr = tmp_buf;
 
         /* get b */
-        result = ntru_crypto_drbg_generate(drbg_handle,
-                                           params->sec_strength_len << 3,
-                                           params->sec_strength_len, b_buf);
+        if (drbg->generate(drbg, params->sec_strength_len << 3,
+                                 params->sec_strength_len, b_buf))
+		{
+			result = NTRU_OK;
+		}
+		else
+		{
+			result = NTRU_FAIL;
+		}
 
         if (result == NTRU_OK) {
 
@@ -767,7 +771,7 @@ ntru_crypto_ntru_decrypt(
 
 uint32_t
 ntru_crypto_ntru_encrypt_keygen(
-    DRBG_HANDLE                drbg_handle,      /*     in - handle of DRBG */
+    ntru_drbg_t               *drbg,             /*     in - handle of DRBG */
     NTRU_ENCRYPT_PARAM_SET_ID  param_set_id,     /*     in - parameter set ID */
     uint16_t                  *pubkey_blob_len,  /* in/out - no. of octets in
                                                              pubkey_blob, addr
@@ -881,9 +885,14 @@ ntru_crypto_ntru_encrypt_keygen(
      * as a list of indices
      */
 
-    result = ntru_crypto_drbg_generate(drbg_handle,
-                                       params->sec_strength_len << 3,
-                                       seed_len, tmp_buf);
+    if (drbg->generate(drbg, params->sec_strength_len << 3, seed_len, tmp_buf))
+	{
+		result = NTRU_OK;
+	}
+	else
+	{
+		result = NTRU_FAIL;
+	}
 
     if (result == NTRU_OK) {
 
@@ -960,9 +969,11 @@ ntru_crypto_ntru_encrypt_keygen(
         /* get random bytes for seed for generating trinary g
          * as a list of indices
          */
-        result = ntru_crypto_drbg_generate(drbg_handle,
-                                           params->sec_strength_len << 3,
-                                           seed_len, tmp_buf);
+        if (!drbg->generate(drbg, params->sec_strength_len << 3, seed_len,
+								  tmp_buf))
+		{
+			result = NTRU_FAIL;
+		}
     }
 
     if (result == NTRU_OK) {

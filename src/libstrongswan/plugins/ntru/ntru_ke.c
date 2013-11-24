@@ -14,7 +14,7 @@
  */
 
 #include "ntru_ke.h"
-#include "ntru_plugin.h"
+#include "ntru_drbg.h"
 
 #include "ntru_crypto/ntru_crypto.h"
 
@@ -120,9 +120,14 @@ struct private_ntru_ke_t {
 	bool computed;
 
 	/**
+	 * True Random Generator
+	 */
+	rng_t *entropy;
+
+	/**
 	 * Deterministic Random Bit Generator
 	 */
-    DRBG_HANDLE drbg;
+    ntru_drbg_t *drbg;
 };
 
 METHOD(diffie_hellman_t, get_my_public_value, void,
@@ -246,8 +251,8 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		this->shared_secret = chunk_alloc(2 * this->strength / BITS_PER_BYTE);
 
 		/* generate the random shared secret */
-		if (ntru_crypto_drbg_generate(this->drbg, this->strength,
-			this->shared_secret.len, this->shared_secret.ptr) != DRBG_OK)
+		if (!this->drbg->generate(this->drbg, this->strength,
+				this->shared_secret.len, this->shared_secret.ptr))
 		{
 			DBG1(DBG_LIB, "generation of shared secret failed");
 			chunk_free(&this->shared_secret);
@@ -289,10 +294,8 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_ntru_ke_t *this)
 {
-    if (ntru_crypto_drbg_uninstantiate(this->drbg) != DRBG_OK)
-	{
-		DBG1(DBG_LIB, "error uninstantiating DRBG");
-	}
+	this->drbg->destroy(this->drbg);
+	this->entropy->destroy(this->entropy);
 	chunk_free(&this->pub_key);
 	chunk_free(&this->ciphertext);
 	chunk_clear(&this->priv_key);
@@ -306,9 +309,9 @@ METHOD(diffie_hellman_t, destroy, void,
 ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_ntru_ke_t *this;
-	char personalization_str[] = "strongSwan NTRU-KE";
 	param_set_t *param_sets, *param_set;
-	DRBG_HANDLE drbg;
+	rng_t *entropy;
+	ntru_drbg_t *drbg;
 	char *parameter_set;
 	u_int32_t strength;
 
@@ -356,11 +359,18 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %s selected", strength,
 				   parameter_set, param_set->name);
 
-    if (ntru_crypto_drbg_instantiate(strength,
-						personalization_str, strlen(personalization_str),
-						(ENTROPY_FN) &ntru_plugin_get_entropy, &drbg) != DRBG_OK)
+	entropy = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+	if (!entropy)
+	{
+		DBG1(DBG_LIB, "could not attach entropy source for DRBG");
+		return NULL;
+	}
+
+	drbg = ntru_drbg_create(strength, chunk_from_str("IKE NTRU-KE"), entropy);
+	if (!drbg)
  	{
-		DBG1(DBG_LIB, "error instantiating DRBG at %u bit security", strength);
+		DBG1(DBG_LIB, "could not instantiate DRBG at %u bit security", strength);
+		entropy->destroy(entropy);
         return NULL;
 	}
 
@@ -377,6 +387,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 		.group = group,
 		.param_set = param_set,
 		.strength = strength,
+		.entropy = entropy,
 		.drbg = drbg,
 	);
 

@@ -35,8 +35,9 @@
 #define NTRU_CRYPTO_H
 
 #include "ntru_crypto_platform.h"
-#include "ntru_crypto_drbg.h"
 #include "ntru_crypto_error.h"
+
+#include "ntru_drbg.h"
 
 #if !defined( NTRUCALL )
   #if !defined(WIN32) || defined (NTRUCRYPTO_STATIC)
@@ -135,7 +136,7 @@ typedef enum _NTRU_ENCRYPT_PARAM_SET_ID {
 
 NTRUCALL
 ntru_crypto_ntru_encrypt(
-    DRBG_HANDLE     drbg_handle,     /*     in - handle for DRBG */
+    ntru_drbg_t     *drbg      ,     /*     in - handle for DRBG */
     uint16_t        pubkey_blob_len, /*     in - no. of octets in public key
                                                  blob */
     uint8_t const  *pubkey_blob,     /*     in - pointer to public key */
@@ -234,7 +235,7 @@ ntru_crypto_ntru_decrypt(
 
 NTRUCALL
 ntru_crypto_ntru_encrypt_keygen(
-    DRBG_HANDLE                drbg_handle,      /*     in - handle of DRBG */
+    ntru_drbg_t               *drbg,             /*     in - handle of DRBG */
     NTRU_ENCRYPT_PARAM_SET_ID  param_set_id,     /*     in - parameter set ID */
     uint16_t                  *pubkey_blob_len,  /* in/out - no. of octets in
                                                              pubkey_blob, addr

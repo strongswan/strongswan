@@ -14,29 +14,34 @@
  */
 
 /**
- * @defgroup ntru_p ntru
- * @ingroup plugins
- *
- * @defgroup ntru_plugin ntru_plugin
+ * @defgroup ntru_test_rng ntru_test_rng
  * @{ @ingroup ntru_p
  */
 
-#ifndef NTRU_PLUGIN_H_
-#define NTRU_PLUGIN_H_
+#ifndef NTRU_TEST_RNG_H_
+#define NTRU_TEST_RNG_H_
 
-#include <plugins/plugin.h>
+typedef struct ntru_test_rng_t ntru_test_rng_t;
 
-typedef struct ntru_plugin_t ntru_plugin_t;
+#include <library.h>
 
 /**
- * Plugin implementing NTRU-base key exchange
+ * rng_t providing NIST SP 800-90A entropy test vectors
  */
-struct ntru_plugin_t {
+struct ntru_test_rng_t {
 
 	/**
-	 * implements plugin interface
+	 * Implements rng_t.
 	 */
-	plugin_t plugin;
+	rng_t rng;
 };
 
-#endif /** NTRU_PLUGIN_H_ @}*/
+/**
+ * Creates an ntru_test_rng_t instance.
+ *
+ * @param entropy	entropy test vector
+ * @return			created ntru_test_rng_t
+ */
+rng_t *ntru_test_rng_create(chunk_t entropy);
+
+#endif /** NTRU_TEST_RNG_H_ @} */
