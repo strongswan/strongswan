@@ -35,7 +35,7 @@
 #define NTRU_CRYPTO_MSBYTE_UINT32_H
 
 
-#include "ntru_crypto_platform.h"
+#include <library.h>
 
 
 /* ntru_crypto_msbyte_2_uint32()

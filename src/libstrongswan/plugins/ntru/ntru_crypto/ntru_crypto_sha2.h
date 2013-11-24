@@ -34,9 +34,9 @@
 #define NTRU_CRYPTO_SHA2_H
 
 
-#include "ntru_crypto_platform.h"
 #include "ntru_crypto_sha.h"
 
+#include <library.h>
 
 /*************************
  * structure definitions *

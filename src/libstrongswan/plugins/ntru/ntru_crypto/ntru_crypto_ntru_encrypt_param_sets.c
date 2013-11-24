@@ -430,28 +430,3 @@ ntru_encrypt_get_params_with_OID(
     return NULL;
 }
 
-
-/* ntru_encrypt_get_params_with_DER_id
- *
- * Looks up a set of NTRUEncrypt parameters based on the DER id of the
- * parameter set.
- *
- * Returns a pointer to the parameter set parameters if successful.
- * Returns NULL if the parameter set cannot be found.
- */
-
-NTRU_ENCRYPT_PARAM_SET *
-ntru_encrypt_get_params_with_DER_id(
-    uint8_t der_id)                 /*  in - parameter-set DER id */
-{
-    size_t i;
-
-    for (i = 0; i < numParamSets; i++) {
-        if (ntruParamSets[i].der_id == der_id) {
-            return &(ntruParamSets[i]);
-        }
-    }
-    return NULL;
-}
-
-

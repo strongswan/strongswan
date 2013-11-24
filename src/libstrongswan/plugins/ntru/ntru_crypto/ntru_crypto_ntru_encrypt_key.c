@@ -290,43 +290,6 @@ ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
 }
 
 
-/* ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob
- *
- * Returns a public key blob, recreated from an already-packed public key.
- */
-
-void
-ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
-                                                               param set
-                                                               parameters */
-    uint16_t                      packed_pubkey_len,  /*  in - no. octets in
-                                                               packed pubkey */
-    uint8_t const                *packed_pubkey,      /*  in - pointer to the
-                                                               packed pubkey */
-    uint8_t                       pubkey_pack_type,   /* out - pubkey packing
-                                                               type */
-    uint8_t                      *pubkey_blob)        /* out - addr for the
-                                                               pubkey blob */
-{
-    assert(params);
-    assert(packed_pubkey);
-    assert(pubkey_blob);
-
-    switch (pubkey_pack_type) {
-        case NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS:
-            *pubkey_blob++ = NTRU_ENCRYPT_PUBKEY_TAG;
-            *pubkey_blob++ = (uint8_t)sizeof(params->OID);
-            memcpy(pubkey_blob, params->OID, sizeof(params->OID));
-            pubkey_blob += sizeof(params->OID);
-            memcpy(pubkey_blob, packed_pubkey, packed_pubkey_len);
-            break;
-        default:
-            assert(FALSE);
-    }
-}
-
-
 /* ntru_crypto_ntru_encrypt_key_create_privkey_blob
  *
  * Returns a private key blob, packed according to the packing type provided.

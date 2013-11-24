@@ -33,12 +33,12 @@
 #ifndef NTRU_CRYPTO_HASH_H
 #define NTRU_CRYPTO_HASH_H
 
-#include "ntru_crypto_platform.h"
 #include "ntru_crypto_error.h"
 #include "ntru_crypto_hash_basics.h"
 #include "ntru_crypto_sha1.h"
 #include "ntru_crypto_sha256.h"
 
+#include <library.h>
 
 /***************
  * error macro *

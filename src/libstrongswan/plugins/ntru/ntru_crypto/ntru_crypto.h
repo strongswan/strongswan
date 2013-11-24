@@ -34,8 +34,9 @@
 #ifndef NTRU_CRYPTO_H
 #define NTRU_CRYPTO_H
 
-#include "ntru_crypto_platform.h"
 #include "ntru_crypto_error.h"
+
+#include <library.h>
 
 #include "ntru_drbg.h"
 
@@ -51,11 +52,6 @@
     #define NTRUCALL extern __declspec(dllimport) uint32_t
   #endif
 #endif /* NTRUCALL */
-
-#if defined ( __cplusplus )
-extern "C" {
-#endif /* __cplusplus */
-
 
 /* parameter set ID list */
 
@@ -249,90 +245,4 @@ ntru_crypto_ntru_encrypt_keygen(
                                                              in privkey_blob */
     uint8_t                   *privkey_blob);    /*    out - address for
                                                              private key blob */
-
-
-/* ntru_crypto_ntru_encrypt_publicKey2SubjectPublicKeyInfo
- *
- * DER-encodes an NTRUEncrypt public-key from a public-key blob into a
- * SubjectPublicKeyInfo field for inclusion in an X.509 certificate.
- *
- * The required minimum size of the output SubjectPublicKeyInfo buffer
- * (encoded_subjectPublicKeyInfo) may be queried by invoking this function
- * with encoded_subjectPublicKeyInfo = NULL.  In this case, no encoding is
- * performed, NTRU_OK is returned, and the required minimum size for
- * encoded_subjectPublicKeyInfo is returned in encoded_subjectPublicKeyInfo_len.
- *
- * When encoded_subjectPublicKeyInfo != NULL, at invocation
- * *encoded_subjectPublicKeyInfo_len must be the size of the
- * encoded_subjectPublicKeyInfo buffer.
- * Upon return, it is the actual size of the encoded public key.
- *
- * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than encoded_subjectPublicKeyInfo) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if pubkey_blob_len is zero.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PUBLIC_KEY if the public-key blob is
- *  invalid (unknown format, corrupt, bad length).
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the SubjectPublicKeyInfo
- *  buffer is too small.
- */
-
-NTRUCALL
-ntru_crypto_ntru_encrypt_publicKey2SubjectPublicKeyInfo(
-    uint16_t       pubkey_blob_len, /*     in - no. of octets in public-key
-                                                blob */
-    uint8_t const *pubkey_blob,     /*     in - ptr to public-key blob */
-    uint16_t      *encoded_subjectPublicKeyInfo_len,
-                                    /* in/out - no. of octets in encoded info,
-                                                address for no. of octets in
-                                                encoded info */
-    uint8_t       *encoded_subjectPublicKeyInfo);
-                                    /*    out - address for encoded info */
-
-
-/* ntru_crypto_ntru_encrypt_SubjectPublicKeyInfo2PublicKey
- *
- * Decodes a DER-encoded NTRUEncrypt public-key from a
- * SubjectPublicKeyInfo field in an X.509 certificate and returns the
- * public-key blob itself.
- *
- * The required minimum size of the output public-key buffer (pubkey_blob)
- * may be queried by invoking this function with pubkey_blob = NULL.
- * In this case, no decoding is performed, NTRU_OK is returned, and the
- * required minimum size for pubkey_blob is returned in pubkey_blob_len.
- *
- * When pubkey_blob != NULL, at invocation *pubkey_blob_len must be the
- * size of the pubkey_blob buffer.
- * Upon return, it is the actual size of the public-key blob.
- *
- * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than pubkey_blob) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_ENCODING if the encoded data is
- *  an invalid encoding of an NTRU public key.
- * Returns NTRU_ERROR_BASE + NTRU_OID_NOT_RECOGNIZED if the
- *  encoded data contains an OID that identifies an object other than
- *  an NTRU public key.
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the pubkey_blob buffer
- *  is too small.
- */
-
-NTRUCALL
-ntru_crypto_ntru_encrypt_subjectPublicKeyInfo2PublicKey(
-    uint8_t const  *encoded_data,    /*     in - ptr to subjectPublicKeyInfo
-                                                 in the encoded data */
-    uint16_t       *pubkey_blob_len, /* in/out - no. of octets in pubkey blob,
-                                                 address for no. of octets in
-                                                 pubkey blob */
-    uint8_t        *pubkey_blob,     /*    out - address for pubkey blob */
-    uint8_t       **next);           /*    out - address for ptr to encoded
-                                                 data following the 
-                                                 subjectPublicKeyInfo */
-
-
-#if defined ( __cplusplus )
-}
-#endif /* __cplusplus */
-
-
 #endif /* NTRU_CRYPTO_H */

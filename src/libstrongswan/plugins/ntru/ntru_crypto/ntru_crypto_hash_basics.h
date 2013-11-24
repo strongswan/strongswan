@@ -33,7 +33,7 @@
 #ifndef NTRU_CRYPTO_HASH_BASICS_H
 #define NTRU_CRYPTO_HASH_BASICS_H
 
-#include "ntru_crypto_platform.h"
+#include <library.h>
 
 
 /**************

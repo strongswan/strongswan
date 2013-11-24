@@ -35,9 +35,9 @@
 #define CRYPTO_SHA256_H
 
 
-#include "ntru_crypto_platform.h"
 #include "ntru_crypto_sha2.h"
 
+#include <library.h>
 
 /******************************************
  * macros needed for generic hash objects * 
