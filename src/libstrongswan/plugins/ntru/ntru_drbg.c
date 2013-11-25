@@ -18,7 +18,7 @@
 #include <utils/debug.h>
 
 #define	MAX_STRENGTH_BITS	256
-#define MAX_DRBG_REQUESTS	0xffffffff
+#define MAX_DRBG_REQUESTS	0xfffffffe
 
 typedef struct private_ntru_drbg_t private_ntru_drbg_t;
 
@@ -149,7 +149,7 @@ METHOD(ntru_drbg_t, generate, bool,
 	}
 	output = chunk_create(out, len); 
 
-	if (this->reseed_counter >= this->max_requests)
+	if (this->reseed_counter > this->max_requests)
 	{
 		if (!reseed(this))
 		{
