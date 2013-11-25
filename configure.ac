@@ -284,7 +284,7 @@ fi
 # ===========================
 
 if test -z "$CFLAGS"; then
-	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign"
+	CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign"
 fi
 AC_PROG_CC
 AM_PROG_CC_C_O
