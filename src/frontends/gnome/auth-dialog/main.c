@@ -118,7 +118,7 @@ int main (int argc, char *argv[])
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
 	GOptionContext *context;
 	char *agent, *type;
-	guint32 itemid;
+	guint32 itemid, minlen = 0;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
@@ -182,9 +182,10 @@ int main (int argc, char *argv[])
 			else if (!strcmp(type, "psk"))
 			{
 				dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("Pre-shared key required to establish VPN connection:"),
+							_("Pre-shared key required to establish VPN connection (min. 20 characters):"),
 							NULL, NULL, TRUE);
 				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+				minlen = 20;
 			}
 			else /* smartcard */
 			{
@@ -198,12 +199,18 @@ int main (int argc, char *argv[])
 			{
 				gnome_password_dialog_set_password(GNOME_PASSWORD_DIALOG(dialog), pass);
 			}
+
+too_short_retry:
 			if (!gnome_password_dialog_run_and_block(GNOME_PASSWORD_DIALOG(dialog)))
 			{
 				return 1;
 			}
 
 			pass = gnome_password_dialog_get_password(GNOME_PASSWORD_DIALOG(dialog));
+			if (minlen && strlen(pass) < minlen)
+			{
+				goto too_short_retry;
+			}
 			switch (gnome_password_dialog_get_remember(GNOME_PASSWORD_DIALOG(dialog)))
 			{
 				case GNOME_PASSWORD_DIALOG_REMEMBER_NOTHING:

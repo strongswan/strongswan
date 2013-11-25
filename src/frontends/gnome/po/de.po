@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-11-22 14:00+0100\n"
+"POT-Creation-Date: 2013-11-25 18:14+0100\n"
 "PO-Revision-Date: 2010-02-18 09:20+0100\n"
 "Last-Translator: Martin Willi <martin@strongswan.org>\n"
 "Language-Team: de <martin@strongswan.org>\n"
@@ -161,9 +161,11 @@ msgstr ""
 "Passwort geschützt:"
 
 #: ../auth-dialog/main.c:185
-msgid "Pre-shared key required to establish VPN connection:"
+msgid ""
+"Pre-shared key required to establish VPN connection (min. 20 characters):"
 msgstr ""
-"Für die Erstellung des VPN-Tunnels ist ein Pre-shared Key erforderlich:"
+"Für die Erstellung des VPN-Tunnels ist ein Pre-shared Key erforderlich (min. "
+"20 Zeichen):"
 
 #: ../auth-dialog/main.c:192
 msgid "Smartcard PIN required to establish VPN connection:"
