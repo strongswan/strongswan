@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <daemon.h>
 #include <tests/test_suite.h>
 
 #include "tkm_diffie_hellman.h"

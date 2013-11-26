@@ -47,6 +47,19 @@ struct tkm_diffie_hellman_t {
 };
 
 /**
+ * Loads IANA DH group identifier to TKM id mapping from config and registers
+ * the corresponding DH features.
+ *
+ * @return          number of registered mappings
+ */
+int register_dh_mapping();
+
+/**
+ * Destroy IANA DH group identifier to TKM id mapping.
+ */
+void destroy_dh_mapping();
+
+/**
  * Creates a new tkm_diffie_hellman_t object.
  *
  * @param group			Diffie Hellman group number to use

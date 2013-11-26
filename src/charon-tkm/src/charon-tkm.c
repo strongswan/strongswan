@@ -288,10 +288,6 @@ int main(int argc, char *argv[])
 	static plugin_feature_t features[] = {
 		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
 			PLUGIN_PROVIDE(NONCE_GEN),
-		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
-			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
-			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
 		PLUGIN_REGISTER(PUBKEY, tkm_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
@@ -301,6 +297,12 @@ int main(int argc, char *argv[])
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE);
+
+	if (!register_dh_mapping())
+	{
+		DBG1(DBG_DMN, "no DH group mapping defined - aborting %s", dmn_name);
+		goto deinit;
+	}
 
 	/* register TKM keymat variant */
 	keymat_register_constructor(IKEV2, (keymat_constructor_t)tkm_keymat_create);
@@ -380,6 +382,7 @@ int main(int argc, char *argv[])
 	lib->encoding->remove_encoder(lib->encoding, tkm_encoder_encode);
 
 deinit:
+	destroy_dh_mapping();
 	libcharon_deinit();
 	libhydra_deinit();
 	library_deinit();

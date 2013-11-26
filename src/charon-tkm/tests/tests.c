@@ -60,14 +60,17 @@ static bool test_runner_init(bool init)
 		static plugin_feature_t features[] = {
 			PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
 				PLUGIN_PROVIDE(NONCE_GEN),
-			PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
-				PLUGIN_PROVIDE(DH, MODP_3072_BIT),
-				PLUGIN_PROVIDE(DH, MODP_4096_BIT),
 			PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
 				PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 		};
 		lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
 										  countof(features), TRUE);
+
+		lib->settings->set_int(lib->settings, "%s.dh_mapping.%d", 1,
+							   charon->name, MODP_3072_BIT);
+		lib->settings->set_int(lib->settings, "%s.dh_mapping.%d", 2,
+							   charon->name, MODP_4096_BIT);
+		register_dh_mapping();
 
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libstrongswan/plugins",
 									 PLUGINS);
@@ -90,6 +93,7 @@ static bool test_runner_init(bool init)
 		result = FALSE;
 	}
 
+	destroy_dh_mapping();
 	libcharon_deinit();
 	libhydra_deinit();
 	return result;
