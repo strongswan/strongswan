@@ -17,7 +17,6 @@
 #include "tkm_id_manager.h"
 
 #include <utils/debug.h>
-#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 #define TKM_LIMIT 100
