@@ -191,17 +191,17 @@ static inline void chunk_clear(chunk_t *chunk)
 /**
  * Initialize a chunk using a char array
  */
-#define chunk_from_chars(...) ((chunk_t){(char[]){__VA_ARGS__}, sizeof((char[]){__VA_ARGS__})})
+#define chunk_from_chars(...) ((chunk_t){(u_char[]){__VA_ARGS__}, sizeof((u_char[]){__VA_ARGS__})})
 
 /**
  * Initialize a chunk to point to a thing
  */
-#define chunk_from_thing(thing) chunk_create((char*)&(thing), sizeof(thing))
+#define chunk_from_thing(thing) chunk_create((u_char*)&(thing), sizeof(thing))
 
 /**
  * Initialize a chunk from a string, not containing 0-terminator
  */
-#define chunk_from_str(str) ({char *x = (str); chunk_create(x, strlen(x));})
+#define chunk_from_str(str) ({char *x = (str); chunk_create((u_char*)x, strlen(x));})
 
 /**
  * Allocate a chunk on the heap
