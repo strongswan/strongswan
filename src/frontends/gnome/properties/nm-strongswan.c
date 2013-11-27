@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2005 David Zeuthen
@@ -30,7 +31,6 @@
 #include <nm-vpn-plugin-ui-interface.h>
 #include <nm-setting-vpn.h>
 #include <nm-setting-connection.h>
-#include <nm-setting-ip4-config.h>
 
 #include "nm-strongswan.h"
 
@@ -149,6 +149,7 @@ static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *p
 			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
 			break;
 		case 3:
+		case 4:
 			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
 			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
 			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
@@ -208,6 +209,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate/ssh-agent"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Smartcard"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Pre-shared key"));
 	value = nm_setting_vpn_get_data_item (settings, "method");
 	if (value) {
 		if (g_strcmp0 (value, "key") == 0) {
@@ -221,6 +223,9 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		}
 		if (g_strcmp0 (value, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
+		}
+		if (g_strcmp0 (value, "psk") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 4);
 		}
 	}
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
@@ -350,6 +355,14 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 				nm_setting_vpn_add_data_item (settings, "user", str);
 			}
 			str = "eap";
+			break;
+		case 4:
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
+			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+			if (str && strlen (str)) {
+				nm_setting_vpn_add_data_item (settings, "user", str);
+			}
+			str = "psk";
 			break;
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
@@ -536,4 +549,3 @@ nm_vpn_plugin_ui_factory (GError **error)
 
 	return NM_VPN_PLUGIN_UI_INTERFACE (g_object_new (STRONGSWAN_TYPE_PLUGIN_UI, NULL));
 }
-
