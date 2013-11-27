@@ -1,3 +1,14 @@
+strongswan-5.1.2
+----------------
+
+- The ntru libstrongswan plugin supports NTRUEncrypt as a post-quantum
+  computer IKE key exchange mechanism. The implementation is based on the
+  ntru-crypto library from the NTRUOpenSourceProject. The supported security
+  strengths are ntru112, ntru128, ntru192, and ntru256. Since the private DH
+  group IDs 1030..1033 have been assigned, the strongSwan Vendor ID must be
+  sent (charon.send_vendor_id = yes) in order to use NTRU.
+
+
 strongswan-5.1.1
 ----------------
 
