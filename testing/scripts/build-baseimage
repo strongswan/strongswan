@@ -68,7 +68,7 @@ do_on_exit graceful_umount $APTCACHE
 log_action "Running debootstrap ($BASEIMGSUITE, $BASEIMGARCH)"
 execute "debootstrap --arch=$BASEIMGARCH --include=$INC $BASEIMGSUITE $LOOPDIR $BASEIMGMIRROR"
 
-execute "mount -t proc none $LOOPDIR/proc"
+execute "mount -t proc none $LOOPDIR/proc" 0
 do_on_exit graceful_umount $LOOPDIR/proc
 
 for service in $SERVICES
