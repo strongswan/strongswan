@@ -593,7 +593,7 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	idx = chunk_cata("cc", chunk, id->get_encoding(id));
 
 	DBG3(DBG_IKE, "IDx' %B", &idx);
-	DBG3(DBG_IKE, "SK_p %B", &skp);
+	DBG4(DBG_IKE, "SK_p %B", &skp);
 	if (!this->prf->set_key(this->prf, skp) ||
 		!this->prf->allocate_bytes(this->prf, idx, &chunk))
 	{
