@@ -14,34 +14,23 @@
  */
 
 /**
- * @defgroup ntru_test_rng ntru_test_rng
- * @{ @ingroup ntru_p
+ * rng_t providing NIST SP 800-90A entropy test vectors
+ *
+ * @defgroup test_rng test_rng
+ * @{ @ingroup test_utils
  */
 
-#ifndef NTRU_TEST_RNG_H_
-#define NTRU_TEST_RNG_H_
-
-typedef struct ntru_test_rng_t ntru_test_rng_t;
+#ifndef TEST_RNG_H_
+#define TEST_RNG_H_
 
 #include <library.h>
 
 /**
- * rng_t providing NIST SP 800-90A entropy test vectors
- */
-struct ntru_test_rng_t {
-
-	/**
-	 * Implements rng_t.
-	 */
-	rng_t rng;
-};
-
-/**
- * Creates an ntru_test_rng_t instance.
+ * Creates a test_rng_t instance.
  *
  * @param entropy	entropy test vector
- * @return			created ntru_test_rng_t
+ * @return			created test_rng_t
  */
-rng_t *ntru_test_rng_create(chunk_t entropy);
+rng_t *test_rng_create(chunk_t entropy);
 
-#endif /** NTRU_TEST_RNG_H_ @} */
+#endif /** TEST_RNG_H_ @} */

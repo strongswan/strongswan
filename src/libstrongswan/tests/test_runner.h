@@ -16,6 +16,9 @@
 /**
  * @defgroup libtest libtest
  *
+ * @defgroup test_utils test_utils
+ * @ingroup libtest
+ *
  * @defgroup test_runner test_runner
  * @{ @ingroup libtest
  */

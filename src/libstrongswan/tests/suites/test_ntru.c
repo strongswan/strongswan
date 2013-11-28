@@ -15,8 +15,8 @@
 
 #include "test_suite.h"
 
+#include <tests/utils/test_rng.h>
 #include <plugins/ntru/ntru_drbg.h>
-#include <plugins/ntru/ntru_test_rng.h>
 
 /**
  * NTRU parameter sets to test
@@ -47,7 +47,7 @@ START_TEST(test_ntru_test_rng)
 	in2 = chunk_from_chars(0x07, 0x08);
 	in = chunk_cat("cc", in1, in2);
 
-	entropy = ntru_test_rng_create(in);
+	entropy = test_rng_create(in);
 	ck_assert(entropy->allocate_bytes(entropy, 6, &out));
 	ck_assert(chunk_equals(in1, out));
 	ck_assert(entropy->get_bytes(entropy, 2, out.ptr));
@@ -241,7 +241,7 @@ START_TEST(test_ntru_drbg)
 	chunk_t out;
 
 	out = chunk_alloc(128);
-	entropy = ntru_test_rng_create(drbg_tests[_i].entropy);
+	entropy = test_rng_create(drbg_tests[_i].entropy);
 	drbg = ntru_drbg_create(256, drbg_tests[_i].pers_str, entropy);
 	ck_assert(drbg != NULL);
 	ck_assert(drbg->reseed(drbg));
@@ -263,7 +263,7 @@ START_TEST(test_ntru_drbg_reseed)
 	lib->settings->set_int(lib->settings,
 						  "libstrongswan.plugins.ntru.max_drbg_requests", 2);
 	out = chunk_alloc(128);
-	entropy = ntru_test_rng_create(drbg_tests[0].entropy);
+	entropy = test_rng_create(drbg_tests[0].entropy);
 	drbg = ntru_drbg_create(256, chunk_empty, entropy);
 
 	/* bad output parameters */
@@ -287,7 +287,7 @@ START_TEST(test_ntru_drbg_reseed)
 	entropy->destroy(entropy);
 
 	/* one automatic reseeding occurs */
-	entropy = ntru_test_rng_create(drbg_tests[0].entropy);
+	entropy = test_rng_create(drbg_tests[0].entropy);
 	drbg = ntru_drbg_create(256, chunk_empty, entropy);
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
@@ -311,7 +311,7 @@ START_TEST(test_ntru_ke)
 	char buf[10];
 	int n, len;
 	status_t status;
-	
+
 	len = snprintf(buf, sizeof(buf), "%N", diffie_hellman_group_names,
 				   params[_i].group);
 	ck_assert(len == 8);

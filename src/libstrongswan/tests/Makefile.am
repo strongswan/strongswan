@@ -2,7 +2,8 @@ check_LTLIBRARIES = libtest.la
 
 libtest_la_SOURCES = \
   test_suite.c test_suite.h \
-  test_runner.c test_runner.h
+  test_runner.c test_runner.h \
+  utils/test_rng.c utils/test_rng.h
 
 libtest_la_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \

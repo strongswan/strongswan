@@ -14,7 +14,6 @@ libstrongswan_ntru_la_SOURCES = \
 	ntru_plugin.h ntru_plugin.c \
 	ntru_drbg.h ntru_drbg.c \
 	ntru_ke.h ntru_ke.c \
-	ntru_test_rng.h ntru_test_rng.c \
 	ntru_crypto/ntru_crypto.h ntru_crypto/ntru_crypto_error.h \
 	ntru_crypto/ntru_crypto_ntru_convert.h \
 	ntru_crypto/ntru_crypto_ntru_convert.c \

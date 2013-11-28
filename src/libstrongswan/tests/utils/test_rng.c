@@ -13,28 +13,28 @@
  * for more details.
  */
 
-#include "ntru_test_rng.h"
+#include "test_rng.h"
 
-typedef struct private_ntru_test_rng_t private_ntru_test_rng_t;
+typedef struct private_rng_t private_rng_t;
 
 /**
- * Private data of an ntru_test_rng_t object.
+ * Private data.
  */
-struct private_ntru_test_rng_t {
+struct private_rng_t {
 
 	/**
-	 * Public ntru_test_rng_t interface.
+	 * Public interface.
 	 */
-	ntru_test_rng_t public;
+	rng_t public;
 
 	/**
-	 * entropy string
+	 * Entropy string.
 	 */
 	chunk_t entropy;
 };
 
 METHOD(rng_t, get_bytes, bool,
-	private_ntru_test_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	if (bytes > this->entropy.len)
 	{
@@ -46,7 +46,7 @@ METHOD(rng_t, get_bytes, bool,
 }
 
 METHOD(rng_t, allocate_bytes, bool,
-	private_ntru_test_rng_t *this, size_t bytes, chunk_t *chunk)
+	private_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	if (bytes > this->entropy.len)
 	{
@@ -61,7 +61,7 @@ METHOD(rng_t, allocate_bytes, bool,
 }
 
 METHOD(rng_t, destroy, void,
-	private_ntru_test_rng_t *this)
+	private_rng_t *this)
 {
 	free(this);
 }
@@ -69,21 +69,18 @@ METHOD(rng_t, destroy, void,
 /*
  * Described in header.
  */
-rng_t *ntru_test_rng_create(chunk_t entropy)
+rng_t *test_rng_create(chunk_t entropy)
 {
-	private_ntru_test_rng_t *this;
+	private_rng_t *this;
 
 	INIT(this,
 		.public = {
-			.rng = {
-				.get_bytes = _get_bytes,
-				.allocate_bytes = _allocate_bytes,
-				.destroy = _destroy,
-			},
+			.get_bytes = _get_bytes,
+			.allocate_bytes = _allocate_bytes,
+			.destroy = _destroy,
 		},
 		.entropy = entropy,
 	);
 
-	return &this->public.rng;
+	return &this->public;
 }
-
