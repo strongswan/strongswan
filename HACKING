@@ -20,7 +20,6 @@ the code, you need the following tools:
     - gperf
 
     Optionally:
-    - check
     - lcov/genhtml
     - Doxygen
 
