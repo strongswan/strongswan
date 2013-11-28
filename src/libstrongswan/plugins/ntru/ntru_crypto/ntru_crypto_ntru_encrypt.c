@@ -591,9 +591,9 @@ ntru_crypto_ntru_decrypt(
 
     for (i = 0; i < cmprime_len; i++) {
         if (Mtrin_buf[i] == 1)
-            ringel_buf2[i] = --ringel_buf2[i] & mod_q_mask;
+            ringel_buf2[i] = (ringel_buf2[i] - 1) & mod_q_mask;
         else if (Mtrin_buf[i] == 2)
-            ringel_buf2[i] = ++ringel_buf2[i] & mod_q_mask;
+            ringel_buf2[i] = (ringel_buf2[i] + 1) & mod_q_mask;
     }
     if (params->is_product_form)
         ringel_buf2[i] = (ringel_buf2[i] + m1) & mod_q_mask;
@@ -940,11 +940,11 @@ ntru_crypto_ntru_encrypt_keygen(
 
             for (i = 0; i < dF3; i++) {
                 uint16_t index = F_buf[dF3_offset + i];
-                ringel_buf1[index] = ++ringel_buf1[index] & mod_q_mask;
+                ringel_buf1[index] = (ringel_buf1[index] + 1) & mod_q_mask;
             }
             for (; i < (dF3 << 1); i++) {
                 uint16_t index = F_buf[dF3_offset + i];
-                ringel_buf1[index] = --ringel_buf1[index] & mod_q_mask;
+                ringel_buf1[index] = (ringel_buf1[index] - 1) & mod_q_mask;
             }
 
         } else {
