@@ -939,6 +939,9 @@ CFLAGS="$CFLAGS -include `pwd`/config.h"
 
 if test x$tkm = xtrue; then
 	AC_PATH_PROG([GPRBUILD], [gprbuild], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+	if test x$GPRBUILD = x; then
+		AC_MSG_ERROR([gprbuild not found])
+	fi
 fi
 
 if test x$coverage = xtrue; then
