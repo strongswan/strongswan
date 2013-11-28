@@ -20,6 +20,7 @@
 #include <library.h>
 #include <plugins/plugin_feature.h>
 #include <collections/array.h>
+#include <utils/test.h>
 
 #include <dirent.h>
 #include <unistd.h>
@@ -29,6 +30,30 @@
  * Get a tty color escape character for stderr
  */
 #define TTY(color) tty_escape_get(2, TTY_FG_##color)
+
+/**
+ * Initialize the lookup table for testable functions (defined in libstrongswan)
+ */
+static void testable_functions_create() __attribute__ ((constructor(1000)));
+static void testable_functions_create()
+{
+	testable_functions = hashtable_create(hashtable_hash_str,
+										  hashtable_equals_str, 8);
+}
+
+/**
+ * Destroy the lookup table for testable functions
+ */
+static void testable_functions_destroy() __attribute__ ((destructor(1000)));
+static void testable_functions_destroy()
+{
+	testable_functions->destroy(testable_functions);
+	/* if leak detective is enabled plugins are not actually unloaded, which
+	 * means their destructor is called AFTER this one when the process
+	 * terminates, even though the priority says differently, make sure this
+	 * does not crash */
+	testable_functions = NULL;
+}
 
 /**
  * Load all available test suites
