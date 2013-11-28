@@ -15,8 +15,13 @@
  * for more details.
  */
 
-#ifndef TEST_UTILS_H_
-#define TEST_UTILS_H_
+/**
+ * @defgroup test_suite test_suite
+ * @{ @ingroup libtest
+ */
+
+#ifndef TEST_SUITE_H_
+#define TEST_SUITE_H_
 
 #define _GNU_SOURCE
 #include <setjmp.h>
@@ -161,10 +166,8 @@ void test_case_set_timeout(test_case_t *tcase, int s);
 /**
  * Add a test function to a test case, looped several times
  *
- * @param tcase		test case to add test function to
- * @param cb		callback function to invoke for test
- * @param start		start of loop counter
- * @param end		end of loop counter
+ * @param suite		test suite to add test case to
+ * @param tcase		test case to add
  */
 void test_suite_add_case(test_suite_t *suite, test_case_t *tcase);
 
@@ -326,4 +329,4 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 #define START_TEARDOWN(name) static void name() {
 #define END_TEARDOWN }
 
-#endif /** TEST_UTILS_H_ */
+#endif /** TEST_SUITE_H_ @}*/
