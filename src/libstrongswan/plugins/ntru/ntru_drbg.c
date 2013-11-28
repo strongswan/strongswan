@@ -16,6 +16,7 @@
 #include "ntru_drbg.h"
 
 #include <utils/debug.h>
+#include <utils/test.h>
 
 #define	MAX_STRENGTH_BITS	256
 #define MAX_DRBG_REQUESTS	0xfffffffe
@@ -80,7 +81,7 @@ static bool update(private_ntru_drbg_t *this, chunk_t data)
 		!this->hmac->get_signature(this->hmac, this->value, NULL) ||
 	    !this->hmac->get_signature(this->hmac, ch_00, NULL) ||
 	    !this->hmac->get_signature(this->hmac, data, this->key.ptr) ||
-		!this->hmac->set_key(this->hmac, this->key) ||	
+		!this->hmac->set_key(this->hmac, this->key) ||
 	    !this->hmac->get_signature(this->hmac, this->value,
 											   this->value.ptr))
 	{
@@ -93,7 +94,7 @@ static bool update(private_ntru_drbg_t *this, chunk_t data)
 			!this->hmac->get_signature(this->hmac, this->value, NULL) ||
 			!this->hmac->get_signature(this->hmac, ch_01, NULL) ||
 			!this->hmac->get_signature(this->hmac, data, this->key.ptr) ||
-			!this->hmac->set_key(this->hmac, this->key) ||	
+			!this->hmac->set_key(this->hmac, this->key) ||
 			!this->hmac->get_signature(this->hmac, this->value,
 												   this->value.ptr))
 		{
@@ -147,7 +148,7 @@ METHOD(ntru_drbg_t, generate, bool,
 	{
 		return FALSE;
 	}
-	output = chunk_create(out, len); 
+	output = chunk_create(out, len);
 
 	if (this->reseed_counter > this->max_requests)
 	{
@@ -175,7 +176,7 @@ METHOD(ntru_drbg_t, generate, bool,
 		return FALSE;
 	}
 	this->reseed_counter++;
- 
+
 	return TRUE;
 }
 
@@ -227,7 +228,7 @@ ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
 		DBG1(DBG_LIB, "could not instantiate HMAC-SHA256");
 		return NULL;
 	}
- 
+
 	max_requests = lib->settings->get_int(lib->settings,
 							"libstrongswan.plugins.ntru.max_drbg_requests",
 							 MAX_DRBG_REQUESTS);
@@ -275,3 +276,4 @@ ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
 	return &this->public;
 }
 
+EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create);

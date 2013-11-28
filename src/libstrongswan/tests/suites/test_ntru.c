@@ -17,6 +17,10 @@
 
 #include <tests/utils/test_rng.h>
 #include <plugins/ntru/ntru_drbg.h>
+#include <utils/test.h>
+
+IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
+						  u_int32_t strength, chunk_t pers_str, rng_t *entropy)
 
 /**
  * NTRU parameter sets to test
