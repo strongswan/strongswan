@@ -721,6 +721,9 @@ certificates even if they don't contain a CA basic constraint.
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
+.BR charon.plugins.stroke.prevent_loglevel_changes " [no]"
+If enabled log level changes via stroke socket are not allowed.
+.TP
 .BR charon.plugins.stroke.socket " [unix://@piddir@/charon.ctl]"
 Socket provided by the stroke plugin
 .TP

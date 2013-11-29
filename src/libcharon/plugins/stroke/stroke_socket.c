@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Tobias Brunner
+ * Copyright (C) 2011-2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -99,6 +99,11 @@ struct private_stroke_socket_t {
 	 * Counter values for IKE events
 	 */
 	stroke_counter_t *counter;
+
+	/**
+	 * TRUE if log level changes are not allowed
+	 */
+	bool prevent_loglevel_changes;
 };
 
 /**
@@ -567,6 +572,12 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 
+	if (this->prevent_loglevel_changes)
+	{
+		DBG1(DBG_CFG, "prevented log level change");
+		fprintf(out, "command not allowed!\n");
+		return;
+	}
 	if (strcaseeq(msg->loglevel.type, "any"))
 	{
 		group = DBG_ANY;
@@ -576,7 +587,7 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 		group = enum_from_name(debug_names, msg->loglevel.type);
 		if ((int)group < 0)
 		{
-			fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
+			fprintf(out, "unknown type '%s'!\n", msg->loglevel.type);
 			return;
 		}
 	}
@@ -748,6 +759,8 @@ stroke_socket_t *stroke_socket_create()
 		.public = {
 			.destroy = _destroy,
 		},
+		.prevent_loglevel_changes = lib->settings->get_bool(lib->settings,
+			"%s.plugins.stroke.prevent_loglevel_changes", FALSE, charon->name),
 	);
 
 	this->cred = stroke_cred_create();
