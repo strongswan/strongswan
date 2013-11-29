@@ -46,6 +46,8 @@
 typedef struct proposal_token_t proposal_token_t;
 typedef struct proposal_keywords_t proposal_keywords_t;
 
+typedef proposal_token_t*(*proposal_algname_parser_t)(const char *algname);
+
 #include <library.h>
 #include <crypto/transform.h>
 
@@ -100,6 +102,17 @@ struct proposal_keywords_t {
 	void (*register_token)(proposal_keywords_t *this, const char *name,
 						   transform_type_t type, u_int16_t algorithm,
 						   u_int16_t keysize);
+
+	/**
+	 * Register an algorithm name parser.
+	 *
+	 * It is meant to parse an algorithm name into a proposal token in a
+	 * generic, user defined way.
+	 *
+	 * @param parser	a pointer to the parser function
+	 */
+	void (*register_algname_parser)(proposal_keywords_t *this,
+									proposal_algname_parser_t parser);
 
 	/**
 	 * Destroy a proposal_keywords_t instance.

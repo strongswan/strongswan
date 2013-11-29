@@ -56,6 +56,11 @@ struct private_proposal_keywords_t {
 	linked_list_t * tokens;
 
 	/**
+	 * registered algname parsers, as proposal_algname_parser_t
+	 */
+	linked_list_t *parsers;
+
+	/**
 	 * rwlock to lock access to modules
 	 */
 	rwlock_t *lock;
@@ -85,11 +90,46 @@ static const proposal_token_t* find_token(private_proposal_keywords_t *this,
 	return found;
 }
 
+/**
+ * Parse the given algorithm into a token with user defined parser functions.
+ */
+static const proposal_token_t* parse_token(private_proposal_keywords_t *this,
+										   const char *str)
+{
+	proposal_algname_parser_t parser;
+	enumerator_t *enumerator;
+	proposal_token_t *found = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->parsers->create_enumerator(this->parsers);
+	while (enumerator->enumerate(enumerator, &parser))
+	{
+		found = parser(str);
+		if (found)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return found;
+}
+
 METHOD(proposal_keywords_t, get_token, const proposal_token_t*,
 	private_proposal_keywords_t *this, const char *str)
 {
-	const proposal_token_t *token = proposal_get_token_static(str, strlen(str));
-	return token ?: find_token(this, str);
+	const proposal_token_t *token;
+
+	token = proposal_get_token_static(str, strlen(str));
+	if (!token)
+	{
+		token = find_token(this, str);
+	}
+	if (!token)
+	{
+		token = parse_token(this, str);
+	}
+	return token;
 }
 
 METHOD(proposal_keywords_t, register_token, void,
@@ -110,6 +150,14 @@ METHOD(proposal_keywords_t, register_token, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(proposal_keywords_t, register_algname_parser, void,
+	private_proposal_keywords_t *this, proposal_algname_parser_t parser)
+{
+	this->lock->write_lock(this->lock);
+	this->tokens->insert_first(this->parsers, parser);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(proposal_keywords_t, destroy, void,
 	private_proposal_keywords_t *this)
 {
@@ -121,6 +169,7 @@ METHOD(proposal_keywords_t, destroy, void,
 		free(token);
 	}
 	this->tokens->destroy(this->tokens);
+	this->parsers->destroy(this->parsers);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -136,9 +185,11 @@ proposal_keywords_t *proposal_keywords_create()
 		.public = {
 			.get_token = _get_token,
 			.register_token = _register_token,
+			.register_algname_parser = _register_algname_parser,
 			.destroy = _destroy,
 		},
 		.tokens = linked_list_create(),
+		.parsers = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
