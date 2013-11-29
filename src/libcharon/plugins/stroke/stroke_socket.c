@@ -623,8 +623,8 @@ static bool on_accept(private_stroke_socket_t *this, stream_t *stream)
 		return FALSE;
 	}
 
-	/* read message */
-	msg = malloc(len);
+	/* read message (we need an additional byte to terminate the buffer) */
+	msg = malloc(len + 1);
 	msg->length = len;
 	if (!stream->read_all(stream, (char*)msg + sizeof(len), len - sizeof(len)))
 	{
@@ -635,6 +635,9 @@ static bool on_accept(private_stroke_socket_t *this, stream_t *stream)
 		free(msg);
 		return FALSE;
 	}
+	/* make sure even incorrectly unterminated strings don't extend over the
+	 * message boundaries */
+	((char*)msg)[len] = '\0';
 
 	DBG3(DBG_CFG, "stroke message %b", (void*)msg, len);
 
