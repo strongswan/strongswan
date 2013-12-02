@@ -367,7 +367,7 @@ static bool finalize_transaction(private_sqlite_database_t *this,
 	return TRUE;
 }
 
-METHOD(database_t, commit, bool,
+METHOD(database_t, commit_, bool,
 	private_sqlite_database_t *this)
 {
 	return finalize_transaction(this, FALSE);
@@ -431,7 +431,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 				.query = _query,
 				.execute = _execute,
 				.transaction = _transaction,
-				.commit = _commit,
+				.commit = _commit_,
 				.rollback = _rollback,
 				.get_driver = _get_driver,
 				.destroy = _destroy,
