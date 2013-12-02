@@ -42,6 +42,11 @@ void testable_function_register(char *name, void *fn);
  * Macro to automatically register/unregister a function that can be called
  * from tests.
  *
+ * @note The constructor has a priority set so that it runs after the
+ * constructor that creates the hashtable.  The destructor, on the other hand,
+ * does not have a priority set, as test coverage would report that function as
+ * untested otherwise.
+ *
  * @param ns		namespace
  * @param fn		function to register
  */
@@ -51,7 +56,7 @@ static void testable_function_register_##fn() \
 { \
 	testable_function_register(#ns "/" #fn, fn); \
 } \
-static void testable_function_unregister_##fn() __attribute__ ((destructor(2000))); \
+static void testable_function_unregister_##fn() __attribute__ ((destructor)); \
 static void testable_function_unregister_##fn() \
 { \
 	testable_function_register(#ns "/" #fn, NULL); \
