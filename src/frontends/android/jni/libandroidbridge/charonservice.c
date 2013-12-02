@@ -497,6 +497,8 @@ static void set_options(char *logfile)
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
 					"charon.plugins.eap-tnc.protocol", "tnccs-2.0");
+	lib->settings->set_int(lib->settings,
+					"charon.plugins.eap-ttls.max_message_count", 0);
 	lib->settings->set_bool(lib->settings,
 					"android.imc.send_os_info", TRUE);
 	lib->settings->set_str(lib->settings,
