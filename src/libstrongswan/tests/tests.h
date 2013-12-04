@@ -34,5 +34,6 @@ TEST_SUITE(host_suite_create)
 TEST_SUITE(printf_suite_create)
 TEST_SUITE(pen_suite_create)
 TEST_SUITE(asn1_suite_create)
+TEST_SUITE(test_rng_suite_create)
 TEST_SUITE_DEPEND(ntru_suite_create, DH, NTRU_112_BIT)
 

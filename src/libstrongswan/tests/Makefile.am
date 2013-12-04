@@ -41,6 +41,7 @@ tests_SOURCES = tests.h tests.c \
   suites/test_pen.c \
   suites/test_asn1.c \
   suites/test_printf.c \
+  suites/test_test_rng.c \
   suites/test_ntru.c
 
 tests_CFLAGS = \

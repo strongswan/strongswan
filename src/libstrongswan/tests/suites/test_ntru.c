@@ -42,28 +42,6 @@ char *parameter_sets[] = {
 		"x9_98_speed", "x9_98_bandwidth", "x9_98_balance", "optimum"
 };
 
-START_TEST(test_ntru_test_rng)
-{
-	rng_t *entropy;
-	chunk_t in, in1, in2, out;
-
-	in1 = chunk_from_chars(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
-	in2 = chunk_from_chars(0x07, 0x08);
-	in = chunk_cat("cc", in1, in2);
-
-	entropy = test_rng_create(in);
-	ck_assert(entropy->allocate_bytes(entropy, 6, &out));
-	ck_assert(chunk_equals(in1, out));
-	ck_assert(entropy->get_bytes(entropy, 2, out.ptr));
-	ck_assert(memeq(in2.ptr, out.ptr, in2.len));
-	ck_assert(!entropy->get_bytes(entropy, 4, out.ptr));
-	chunk_free(&out);
-	ck_assert(!entropy->allocate_bytes(entropy, 4, &out));
-	entropy->destroy(entropy);
-	chunk_free(&in);
-}
-END_TEST
-
 typedef struct {
 	u_int32_t requested;
 	u_int32_t standard;
@@ -497,10 +475,6 @@ Suite *ntru_suite_create()
 	TCase *tc;
 
 	s = suite_create("ntru");
-
-	tc = tcase_create("test_rng");
-	tcase_add_test(tc, test_ntru_test_rng);
-	suite_add_tcase(s, tc);
 
 	tc = tcase_create("drbg_strength");
 	tcase_add_loop_test(tc, test_ntru_drbg_strength, 0, countof(strengths));
