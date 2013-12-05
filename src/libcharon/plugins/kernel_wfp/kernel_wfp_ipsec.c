@@ -58,6 +58,11 @@ struct private_kernel_wfp_ipsec_t {
 	 * WFP session handle
 	 */
 	HANDLE handle;
+
+	/**
+	 * Provider charon registers as
+	 */
+	FWPM_PROVIDER0 provider;
 };
 
 /**
@@ -1182,6 +1187,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 {
 	if (this->handle)
 	{
+		FwpmProviderDeleteByKey0(this->handle, &this->provider.providerKey);
 		FwpmEngineClose0(this->handle);
 	}
 	this->entries->destroy(this->entries);
@@ -1224,6 +1230,14 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
+		.provider = {
+			.displayData = {
+				.name = L"charon",
+				.description = L"strongSwan IKE kernel-wfp backend",
+			},
+			.providerKey = { 0x59cdae2e, 0xf6bb, 0x4c09,
+							{ 0xa9,0x59,0x9d,0x91,0xac,0xaf,0xf9,0x19 }},
+		},
 		.nextspi = htonl(0xc0000001),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.entries = hashtable_create(hashtable_hash_ptr,
@@ -1236,6 +1250,14 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "opening WFP engine failed: 0x%08x", res);
+		destroy(this);
+		return NULL;
+	}
+
+	res = FwpmProviderAdd0(this->handle, &this->provider, NULL);
+	if (res != ERROR_SUCCESS && res != FWP_E_ALREADY_EXISTS)
+	{
+		DBG1(DBG_KNL, "registering WFP provider failed: 0x%08x", res);
 		destroy(this);
 		return NULL;
 	}
