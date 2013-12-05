@@ -68,7 +68,6 @@ extern uint32_t
 ntru_gen_poly(
     hash_algorithm_t       hash_algid,      /*  in - hash algorithm ID for
                                                       IGF-2 */
-    uint8_t                 md_len,          /*  in - no. of octets in digest */
     uint8_t                 min_calls,       /*  in - minimum no. of hash
                                                       calls */
     uint16_t                seed_len,        /*  in - no. of octets in seed */

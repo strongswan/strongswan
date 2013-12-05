@@ -40,7 +40,7 @@
 #include "ntru_crypto_ntru_encrypt_key.h"
 #include "ntru_crypto_ntru_convert.h"
 #include "ntru_crypto_ntru_poly.h"
-#include "ntru_crypto_ntru_mgf1.h"
+#include "ntru_crypto_ntru_mgftp1.h"
 
 /* ntru_crypto_ntru_encrypt
  *
@@ -63,18 +63,14 @@
  * Upon return it is the actual size of the ciphertext.
  *
  * Returns NTRU_OK if successful.
- * Returns DRBG_ERROR_BASE + DRBG_BAD_PARAMETER if the DRBG handle is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than ct) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument
- *  (pubkey_blob_len or pt_len) is zero, or if pt_len exceeds the
- *  maximum plaintext length for the parameter set.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PUBLIC_KEY if the public-key blob is
- *  invalid (unknown format, corrupt, bad length).
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the ciphertext buffer
- *  is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
+ * Returns NTRU_DRBG_FAIL if the DRBG handle is invalid.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than ct) is NULL.
+ * Returns NTRU_BAD_LENGTH if a length argument (pubkey_blob_len or pt_len) is
+  * zero, or if pt_len exceeds the maximum plaintext length for the parameter set.
+ * Returns NTRU_BAD_PUBLIC_KEY if the public-key blob is invalid
+ *  (unknown format, corrupt, bad length).
+ * Returns NTRU_BUFFER_TOO_SMALL if the ciphertext buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
  */
 
 uint32_t
@@ -107,17 +103,20 @@ ntru_crypto_ntru_encrypt(
     uint8_t                *tmp_buf = NULL;
     bool                    msg_rep_good = FALSE;
     hash_algorithm_t        hash_algid;
-    uint8_t                 md_len;
     uint16_t                mprime_len = 0;
     uint16_t                mod_q_mask;
     uint32_t                result = NTRU_OK;
 
     /* check for bad parameters */
 
-    if (!pubkey_blob || !pt || !ct_len)
-        NTRU_RET(NTRU_BAD_PARAMETER);
-    if ((pubkey_blob_len == 0) || (pt_len == 0))
-        NTRU_RET(NTRU_BAD_LENGTH);
+	if (!pubkey_blob || !pt || !ct_len)
+	{
+		return NTRU_BAD_PARAMETER;
+	}
+	if ((pubkey_blob_len == 0) || (pt_len == 0))
+	{
+		return NTRU_BAD_LENGTH;
+	}
 
     /* get a pointer to the parameter-set parameters, the packing type for
      * the public key, and a pointer to the packed public key
@@ -127,37 +126,45 @@ ntru_crypto_ntru_encrypt(
                                             pubkey_blob, &pubkey_pack_type,
                                             NULL, &params, &pubkey_packed,
                                             NULL))
-        NTRU_RET(NTRU_BAD_PUBLIC_KEY);
+	{
+		return NTRU_BAD_PUBLIC_KEY;
+	}
 
     /* return the ciphertext size if requested */
 
     packed_ct_len = (params->N * params->q_bits + 7) >> 3;
-    if (!ct) {
+    if (!ct)
+	{
         *ct_len = packed_ct_len;
-        NTRU_RET(NTRU_OK);
+		return NTRU_OK;
     }
 
     /* check the ciphertext buffer size */
 
-    if (*ct_len < packed_ct_len) {
-        NTRU_RET(NTRU_BUFFER_TOO_SMALL);
+    if (*ct_len < packed_ct_len)
+	{
+		return NTRU_BUFFER_TOO_SMALL;
     }
 
     /* check the plaintext length */
 
-    if (pt_len > params->m_len_max) {
-        NTRU_RET(NTRU_BAD_LENGTH);
+    if (pt_len > params->m_len_max)
+	{
+		return NTRU_BAD_LENGTH;
     }
 
     /* allocate memory for all operations */
 
-    if (params->is_product_form) {
+    if (params->is_product_form)
+	{
         ring_mult_tmp_len = params->N << 1; /* 2N 16-bit word buffer */
         dr1 =  params->dF_r & 0xff;
         dr2 = (params->dF_r >>  8) & 0xff;
         dr3 = (params->dF_r >> 16) & 0xff;
         dr = dr1 + dr2 + dr3;
-    } else {
+    }
+	else
+	{
         ring_mult_tmp_len = params->N;      /* N 16-bit word buffer */
         dr = params->dF_r;
     }
@@ -170,8 +177,9 @@ ntru_crypto_ntru_encrypt(
                       params->sec_strength_len;
                                             /* buffer for b */
     scratch_buf = malloc(scratch_buf_len);
-    if (!scratch_buf) {
-        NTRU_RET(NTRU_OUT_OF_MEMORY);
+    if (!scratch_buf)
+	{
+		return NTRU_OUT_OF_MEMORY;
     }
     ringel_buf = scratch_buf + ring_mult_tmp_len;
     r_buf = ringel_buf + params->N;
@@ -179,20 +187,10 @@ ntru_crypto_ntru_encrypt(
     tmp_buf = (uint8_t *)scratch_buf;
 
 	/* set hash algorithm based on security strength */
-	if (params->sec_strength_len <= 20)
-	{
-		hash_algid = HASH_SHA1;
-		md_len = 20;
-	}
-	else
-	{
-		hash_algid = HASH_SHA256;
-		md_len = 32;
-	}
+	 hash_algid = (params->sec_strength_len <= 20) ? HASH_SHA1 : HASH_SHA256;
 
     /* set constants */
-
-    mod_q_mask = params->q - 1;
+	mod_q_mask = params->q - 1;
 
     /* loop until a message representative with proper weight is achieved */
 
@@ -210,10 +208,10 @@ ntru_crypto_ntru_encrypt(
 			result = NTRU_FAIL;
 		}
 
-        if (result == NTRU_OK) {
+		if (result == NTRU_OK)
+		{
 
             /* form sData (OID || m || b || hTrunc) */
-
             memcpy(ptr, params->OID, 3);
             ptr += 3;
             memcpy(ptr, pt, pt_len);
@@ -225,8 +223,7 @@ ntru_crypto_ntru_encrypt(
 
 
             /* generate r */
-
-            result = ntru_gen_poly(hash_algid, md_len,
+            result = ntru_gen_poly(hash_algid,
                                    params->min_IGF_hash_calls,
                                    (uint16_t)(ptr - tmp_buf),
                                    tmp_buf, tmp_buf,
@@ -236,11 +233,11 @@ ntru_crypto_ntru_encrypt(
                                    params->dF_r << 1, r_buf);
         }
 
-        if (result == NTRU_OK) {
+		if (result == NTRU_OK)
+		{
             uint16_t pubkey_packed_len;
 
             /* unpack the public key */
-
             assert(pubkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS);
             pubkey_packed_len = (params->N * params->q_bits + 7) >> 3;
             ntru_octets_2_elements(pubkey_packed_len, pubkey_packed,
@@ -259,17 +256,15 @@ ntru_crypto_ntru_encrypt(
                                        scratch_buf, ringel_buf);
 
             /* form R mod 4 */
-
             ntru_coeffs_mod4_2_octets(params->N, ringel_buf, tmp_buf);
 
             /* form mask */
-
-            result = ntru_mgftp1(hash_algid, md_len,
-                                 params->min_MGF_hash_calls,
+            result = ntru_mgftp1(hash_algid, params->min_MGF_hash_calls,
                                  (params->N + 3) / 4, tmp_buf,
                                  tmp_buf + params->N, params->N, tmp_buf);
         }
-        if (result == NTRU_OK) {
+		if (result == NTRU_OK)
+		{
             uint8_t  *Mtrin_buf = tmp_buf + params->N;
             uint8_t  *M_buf = Mtrin_buf + params->N -
                               (params->sec_strength_len + params->m_len_len +
@@ -277,7 +272,6 @@ ntru_crypto_ntru_encrypt(
             uint16_t  i;
 
             /* form the padded message M */
-
             ptr = M_buf;
             memcpy(ptr, b_buf, params->sec_strength_len);
             ptr += params->sec_strength_len;
@@ -295,10 +289,11 @@ ntru_crypto_ntru_encrypt(
             memset(ptr, 0, params->m_len_max - pt_len + 2);
 
             /* convert M to trits (Mbin to Mtrin) */
-
             mprime_len = params->N;
-            if (params->is_product_form)
+			if (params->is_product_form)
+			{
                 --mprime_len;
+			}
 
             ntru_bits_2_trits(M_buf, mprime_len, Mtrin_buf);
 
@@ -336,7 +331,8 @@ ntru_crypto_ntru_encrypt(
         }
     } while ((result == NTRU_OK) && !msg_rep_good);
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
         uint16_t i;
 
         /* form ciphertext e by adding m' to R mod q */
@@ -351,17 +347,15 @@ ntru_crypto_ntru_encrypt(
             ringel_buf[i] = (ringel_buf[i] - m1) & mod_q_mask;
 
         /* pack ciphertext */
-
         ntru_elements_2_octets(params->N, ringel_buf, params->q_bits, ct);
         *ct_len = packed_ct_len;
     }
 
     /* cleanup */
-
     memset(scratch_buf, 0, scratch_buf_len);
     free(scratch_buf);
     
-    return result;
+	return result;
 }
 
 
@@ -381,17 +375,14 @@ ntru_crypto_ntru_encrypt(
  * Upon return it is the actual size of the plaintext.
  *
  * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than pt) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument
- *  (privkey_blob) is zero, or if ct_len is invalid for the parameter set.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PRIVATE_KEY if the private-key blob is
- *  invalid (unknown format, corrupt, bad length).
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the plaintext buffer
- *  is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
- * Returns NTRU_ERROR_BASE + NTRU_FAIL if a decryption error occurs.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than pt) is NULL.
+ * Returns NTRU_BAD_LENGTH if a length argument (privkey_blob) is zero, or if
+ *  ct_len is invalid for the parameter set.
+ * Returns NTRU_BAD_PRIVATE_KEY if the private-key blob is invalid
+ *  (unknown format, corrupt, bad length).
+ * Returns NTRU_BUFFER_TOO_SMALL if the plaintext buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
+ * Returns NTRU_FAIL if a decryption error occurs.
  */
 
 uint32_t
@@ -427,7 +418,6 @@ ntru_crypto_ntru_decrypt(
     uint8_t                *M_buf = NULL;
     uint8_t                *ptr = NULL;
     hash_algorithm_t        hash_algid;
-    uint8_t                 md_len;
     uint16_t                cmprime_len;
     uint16_t                mod_q_mask;
     uint16_t                q_mod_p;
@@ -439,28 +429,35 @@ ntru_crypto_ntru_decrypt(
 
     /* check for bad parameters */
 
-    if (!privkey_blob || !ct || !pt_len)
-        NTRU_RET(NTRU_BAD_PARAMETER);
-    if ((privkey_blob_len == 0) || (ct_len == 0))
-        NTRU_RET(NTRU_BAD_LENGTH);
+	if (!privkey_blob || !ct || !pt_len)
+	{
+		return NTRU_BAD_PARAMETER;
+	}
+	if ((privkey_blob_len == 0) || (ct_len == 0))
+	{
+		return NTRU_BAD_LENGTH;
+	}
 
     /* get a pointer to the parameter-set parameters, the packing types for
      * the public and private keys, and pointers to the packed public and
      * private keys
      */
 
-    if (!ntru_crypto_ntru_encrypt_key_parse(FALSE /* privkey */,
+	if (!ntru_crypto_ntru_encrypt_key_parse(FALSE /* privkey */,
                                             privkey_blob_len,
                                             privkey_blob, &pubkey_pack_type,
                                             &privkey_pack_type, &params,
                                             &pubkey_packed, &privkey_packed))
-        NTRU_RET(NTRU_BAD_PRIVATE_KEY);
+	{
+		return NTRU_BAD_PRIVATE_KEY;
+	}
 
     /* return the max plaintext size if requested */
 
-    if (!pt) {
+	if (!pt)
+	{
         *pt_len = params->m_len_max;
-        NTRU_RET(NTRU_OK);
+		return NTRU_OK;
     }
 
     /* cannot check the plaintext buffer size until after the plaintext
@@ -470,12 +467,15 @@ ntru_crypto_ntru_decrypt(
 
     /* check the ciphertext length */
 
-    if (ct_len != (params->N * params->q_bits + 7) >> 3)
-        NTRU_RET(NTRU_BAD_LENGTH);
+	if (ct_len != (params->N * params->q_bits + 7) >> 3)
+	{
+		return NTRU_BAD_LENGTH;
+	}
 
     /* allocate memory for all operations */
 
-    if (params->is_product_form) {
+	if (params->is_product_form)
+	{
         ring_mult_tmp_len = params->N << 1; /* 2N 16-bit word buffer */
         dF_r1 =  params->dF_r & 0xff;
         dF_r2 = (params->dF_r >>  8) & 0xff;
@@ -493,8 +493,9 @@ ntru_crypto_ntru_decrypt(
                       (dF_r << 2) +         /* buffer for F, r indices */
                       params->m_len_max;    /* buffer for plaintext */
     scratch_buf = malloc(scratch_buf_len);
-    if (!scratch_buf) {
-        NTRU_RET(NTRU_OUT_OF_MEMORY);
+	if (!scratch_buf)
+	{
+		return NTRU_OUT_OF_MEMORY;
     }
     ringel_buf1 = scratch_buf + ring_mult_tmp_len;
     ringel_buf2 = ringel_buf1 + params->N;
@@ -505,38 +506,31 @@ ntru_crypto_ntru_decrypt(
     M_buf = Mtrin_buf + params->N;
 
 	/* set hash algorithm based on security strength */
-	if (params->sec_strength_len <= 20)
-	{
-		hash_algid = HASH_SHA1;
-		md_len = 20;
-	}
-	else
-	{
-		hash_algid = HASH_SHA256;
-		md_len = 32;
-    }
+	hash_algid = (params->sec_strength_len <= 20) ? HASH_SHA1 : HASH_SHA256;
 
     /* set constants */
-
     mod_q_mask = params->q - 1;
     q_mod_p = params->q % 3;
 
     /* unpack the ciphertext */
-
     ntru_octets_2_elements(ct_len, ct, params->q_bits, ringel_buf2);
 
     /* unpack the private key */
-
-    if (privkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_TRITS) {
+    if (privkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_TRITS)
+	{
         ntru_packed_trits_2_indices(privkey_packed, params->N, i_buf,
                                     i_buf + dF_r);
 
-    } else if (privkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_INDICES) {
+    }
+	else if (privkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_INDICES)
+	{
         ntru_octets_2_elements(
                 (((uint16_t)dF_r << 1) * params->N_bits + 7) >> 3,
                 privkey_packed, params->N_bits, i_buf);
 
-    } else {
+    }
+	else
+	{
         assert(FALSE);
     }
 
@@ -548,7 +542,8 @@ ntru_crypto_ntru_decrypt(
      */
 
     cmprime_len = params->N;
-    if (params->is_product_form) {
+    if (params->is_product_form)
+	{
          --cmprime_len;
         ntru_ring_mult_product_indices(ringel_buf2, (uint16_t)dF_r1,
                                        (uint16_t)dF_r2, (uint16_t)dF_r3,
@@ -564,7 +559,9 @@ ntru_crypto_ntru_decrypt(
             else if (Mtrin_buf[i] == 2)
                 --m1;
         }
-    } else {
+    }
+	else
+	{
         ntru_ring_mult_indices(ringel_buf2, (uint16_t)dF_r, (uint16_t)dF_r,
                                i_buf, params->N, params->q,
                                scratch_buf, ringel_buf1);
@@ -581,11 +578,15 @@ ntru_crypto_ntru_decrypt(
      */
 
     if (params->is_product_form)
-    decryption_ok = m1 < 0 ? (bool)(-m1 <= params->min_msg_rep_wt) : 
-                             (bool)( m1 <= params->min_msg_rep_wt);
-    else
+	{
+	    decryption_ok = m1 < 0 ? (bool)(-m1 <= params->min_msg_rep_wt) : 
+	                             (bool)( m1 <= params->min_msg_rep_wt);
+	}
+	else
+	{
         decryption_ok = ntru_poly_check_min_weight(cmprime_len, Mtrin_buf,
-                                                   params->min_msg_rep_wt);
+												   params->min_msg_rep_wt);
+	}
 
     /* form cR = e - cm' mod q */
 
@@ -605,12 +606,12 @@ ntru_crypto_ntru_decrypt(
 
     /* form mask */
 
-    result = ntru_mgftp1(hash_algid, md_len,
-                         params->min_MGF_hash_calls,
+    result = ntru_mgftp1(hash_algid, params->min_MGF_hash_calls,
                          (params->N + 3) / 4, tmp_buf,
                          tmp_buf + params->N, params->N, tmp_buf);
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
 
         /* form cMtrin by subtracting mask from cm', mod p */
 
@@ -665,7 +666,7 @@ ntru_crypto_ntru_decrypt(
 
         /* generate cr */
 
-        result = ntru_gen_poly(hash_algid, md_len,
+        result = ntru_gen_poly(hash_algid,
                                params->min_IGF_hash_calls,
                                (uint16_t)(ptr - tmp_buf),
                                tmp_buf, tmp_buf,
@@ -675,7 +676,8 @@ ntru_crypto_ntru_decrypt(
                                params->dF_r << 1, i_buf);
     }
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
 
         /* unpack the public key */
 
@@ -709,9 +711,12 @@ ntru_crypto_ntru_decrypt(
 
         /* output plaintext and plaintext length */
 
-        if (decryption_ok) {
+        if (decryption_ok)
+		{
             if (*pt_len < cm_len)
-                NTRU_RET(NTRU_BUFFER_TOO_SMALL);
+			{
+				return NTRU_BUFFER_TOO_SMALL;
+			}
             memcpy(pt, m_buf, cm_len);
             *pt_len = cm_len;
         }
@@ -723,21 +728,17 @@ ntru_crypto_ntru_decrypt(
     free(scratch_buf);
     
     if (!decryption_ok)
-        NTRU_RET(NTRU_FAIL);
-    return result;
+	{
+		return NTRU_FAIL;
+	}
+
+	return result;
 }
 
 
 /* ntru_crypto_ntru_encrypt_keygen
  *
  * Implements key generation for NTRUEncrypt for the parameter set specified.
- *
- * Before invoking this function, a DRBG must be instantiated using
- * ntru_crypto_drbg_instantiate() to obtain a DRBG handle, and in that
- * instantiation the requested security strength must be at least as large
- * as the security strength of the NTRU parameter set being used.
- * Failure to instantiate the DRBG with the proper security strength will
- * result in this function returning DRBG_ERROR_BASE + DRBG_BAD_LENGTH.
  *
  * The required minimum size of the output public-key buffer (pubkey_blob)
  * may be queried by invoking this function with pubkey_blob = NULL.
@@ -759,17 +760,15 @@ ntru_crypto_ntru_decrypt(
  * and *privkey_blob_len is the actual size of the private-key blob.
  *
  * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than pubkey_blob or privkey_blob) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_INVALID_PARAMETER_SET if the parameter-set
- *  ID is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if either the pubkey_blob
- * buffer or the privkey_blob buffer is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
- * Returns NTRU_ERROR_BASE + NTRU_FAIL if the polynomial generated for f is
- *  not invertible in (Z/qZ)[X]/(X^N - 1), which is extremely unlikely.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than pubkey_blob or
+ *  privkey_blob) is NULL.
+ * Returns NTRU_INVALID_PARAMETER_SET if the parameter-set ID is invalid.
+ * Returns NTRU_BAD_LENGTH if a length argument is invalid.
+ * Returns NTRU_BUFFER_TOO_SMALL if either the pubkey_blob buffer or the
+ *  privkey_blob buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
+ * Returns NTRU_FAIL if the polynomial generated for f is not invertible in
+ *  (Z/qZ)[X]/(X^N - 1), which is extremely unlikely.
  *  Should this occur, this function should simply be invoked again.
  */
 
@@ -814,12 +813,16 @@ ntru_crypto_ntru_encrypt_keygen(
     /* get a pointer to the parameter-set parameters */
 
     if ((params = ntru_encrypt_get_params_with_id(param_set_id)) == NULL)
-        NTRU_RET(NTRU_INVALID_PARAMETER_SET);
+	{
+		return NTRU_INVALID_PARAMETER_SET;
+	}
 
     /* check for bad parameters */
 
     if (!pubkey_blob_len || !privkey_blob_len)
-        NTRU_RET(NTRU_BAD_PARAMETER);
+	{
+		return NTRU_BAD_PARAMETER;
+	}
 
     /* get public and private key packing types and blob lengths */
 
@@ -830,22 +833,24 @@ ntru_crypto_ntru_encrypt_keygen(
 
     /* return the pubkey_blob size and/or privkey_blob size if requested */
 
-    if (!pubkey_blob || !privkey_blob) {
+    if (!pubkey_blob || !privkey_blob)
+	{
         if (!pubkey_blob)
             *pubkey_blob_len = public_key_blob_len;
         if (!privkey_blob)
             *privkey_blob_len = private_key_blob_len;
-        NTRU_RET(NTRU_OK);
+		return NTRU_OK;
     }
 
     /* check size of output buffers */
 
     if ((*pubkey_blob_len < public_key_blob_len) ||
             (*privkey_blob_len < private_key_blob_len))
-        NTRU_RET(NTRU_BUFFER_TOO_SMALL);
+	{
+		return NTRU_BUFFER_TOO_SMALL;
+	}
 
     /* allocate memory for all operations */
-
     if (params->is_product_form) {
         dF1 =  params->dF_r & 0xff;
         dF2 = (params->dF_r >> 8) & 0xff;
@@ -862,8 +867,9 @@ ntru_crypto_ntru_encrypt_keygen(
                                                2N-byte buffer for f^-1 */
                       (dF << 2);            /* buffer for F indices */
     scratch_buf = malloc(scratch_buf_len);
-    if (!scratch_buf) {
-        NTRU_RET(NTRU_OUT_OF_MEMORY);
+	if (!scratch_buf)
+	{
+		return NTRU_OUT_OF_MEMORY;
     }
     ringel_buf1 = scratch_buf + (params->N << 1);
     ringel_buf2 = ringel_buf1 + params->N;
@@ -897,14 +903,14 @@ ntru_crypto_ntru_encrypt_keygen(
 	}
 	else
 	{
-		result = NTRU_FAIL;
+		result = NTRU_DRBG_FAIL;
 	}
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
 
         /* generate F */
-
-        result = ntru_gen_poly(hash_algid, md_len,
+        result = ntru_gen_poly(hash_algid,
                                params->min_IGF_hash_calls,
                                seed_len, tmp_buf, tmp_buf,
                                params->N, params->c_bits,
@@ -913,7 +919,8 @@ ntru_crypto_ntru_encrypt_keygen(
                                params->dF_r << 1, F_buf);
     }
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
         uint32_t i;
 
         memset(ringel_buf1, 0, params->N * sizeof(uint16_t));
@@ -967,10 +974,13 @@ ntru_crypto_ntru_encrypt_keygen(
 
         if (!ntru_ring_inv(ringel_buf1, params->N, params->q,
                            scratch_buf, ringel_buf2))
-            result = NTRU_ERROR_BASE + NTRU_FAIL;
+		{
+			result = NTRU_FAIL;
+		}
     }
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
 
         /* get random bytes for seed for generating trinary g
          * as a list of indices
@@ -978,18 +988,19 @@ ntru_crypto_ntru_encrypt_keygen(
         if (!drbg->generate(drbg, params->sec_strength_len << 3, seed_len,
 								  tmp_buf))
 		{
-			result = NTRU_FAIL;
+			result = NTRU_DRBG_FAIL;
 		}
     }
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
         uint16_t min_IGF_hash_calls =
             ((((params->dg << 2) + 2) * params->N_bits) + (md_len << 3) - 1) /
             (md_len << 3);
 
         /* generate g */
 
-        result = ntru_gen_poly(hash_algid, md_len,
+        result = ntru_gen_poly(hash_algid,
                                (uint8_t)min_IGF_hash_calls,
                                seed_len, tmp_buf, tmp_buf,
                                params->N, params->c_bits,
@@ -997,7 +1008,8 @@ ntru_crypto_ntru_encrypt_keygen(
                                (params->dg << 1) + 1, ringel_buf1);
     }
 
-    if (result == NTRU_OK) {
+	if (result == NTRU_OK)
+	{
         uint16_t i;
 
         /* compute h = p * (f^-1 * g) mod q */

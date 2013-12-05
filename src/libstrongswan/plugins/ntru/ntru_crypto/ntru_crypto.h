@@ -34,8 +34,6 @@
 #ifndef NTRU_CRYPTO_H
 #define NTRU_CRYPTO_H
 
-#include "ntru_crypto_error.h"
-
 #include <library.h>
 
 #include "ntru_drbg.h"
@@ -88,10 +86,8 @@ typedef enum _NTRU_ENCRYPT_PARAM_SET_ID {
 #define NTRU_OUT_OF_MEMORY          8
 #define NTRU_BAD_ENCODING           9
 #define NTRU_OID_NOT_RECOGNIZED    10
-
-#define NTRU_RESULT(r)   ((uint32_t)((r) ? NTRU_ERROR_BASE + (r) : (r)))
-#define NTRU_RET(r)      return NTRU_RESULT((r))
-
+#define NTRU_DRBG_FAIL             11
+#define NTRU_MGF1_FAIL             12
 
 /* function declarations */
 
@@ -116,18 +112,14 @@ typedef enum _NTRU_ENCRYPT_PARAM_SET_ID {
  * Upon return it is the actual size of the ciphertext.
  *
  * Returns NTRU_OK if successful.
- * Returns DRBG_ERROR_BASE + DRBG_BAD_PARAMETER if the DRBG handle is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than ct) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument
- *  (pubkey_blob_len or pt_len) is zero, or if pt_len exceeds the
- *  maximum plaintext length for the parameter set.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PUBLIC_KEY if the public-key blob is
- *  invalid (unknown format, corrupt, bad length).
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the ciphertext buffer
- *  is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
+ * Returns NTRU_DRBG_FAIL if the DRBG handle is invalid.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than ct) is NULL.
+ * Returns NTRU_BAD_LENGTH if a length argument (pubkey_blob_len or pt_len) is
+ *  zero, or if pt_len exceeds the maximum plaintext length for the parameter set.
+ * Returns NTRU_BAD_PUBLIC_KEY if the public-key blob is invalid
+ *  (unknown format, corrupt, bad length).
+ * Returns NTRU_BUFFER_TOO_SMALL if the ciphertext buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
  */
 
 NTRUCALL
@@ -159,17 +151,14 @@ ntru_crypto_ntru_encrypt(
  * Upon return it is the actual size of the plaintext.
  *
  * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than pt) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument
- *  (privkey_blob) is zero, or if ct_len is invalid for the parameter set.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PRIVATE_KEY if the private-key blob is
- *  invalid (unknown format, corrupt, bad length).
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if the plaintext buffer
- *  is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
- * Returns NTRU_ERROR_BASE + NTRU_FAIL if a decryption error occurs.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than pt) is NULL.
+ * Returns NTRU_BAD_LENGTH if a length argument (privkey_blob) is zero, or if
+ *  ct_len is invalid for the parameter set.
+ * Returns NTRU_BAD_PRIVATE_KEY if the private-key blob is invalid
+ *  (unknown format, corrupt, bad length).
+ * Returns NTRU_BUFFER_TOO_SMALL if the plaintext buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
+ * Returns NTRU_FAIL if a decryption error occurs.
  */
 
 NTRUCALL
@@ -193,7 +182,7 @@ ntru_crypto_ntru_decrypt(
  * instantiation the requested security strength must be at least as large
  * as the security strength of the NTRU parameter set being used.
  * Failure to instantiate the DRBG with the proper security strength will
- * result in this function returning DRBG_ERROR_BASE + DRBG_BAD_LENGTH.
+ * result in this function returning NTRU_DRBG_FAIL.
  *
  * The required minimum size of the output public-key buffer (pubkey_blob)
  * may be queried by invoking this function with pubkey_blob = NULL.
@@ -215,17 +204,15 @@ ntru_crypto_ntru_decrypt(
  * and *privkey_blob_len is the actual size of the private-key blob.
  *
  * Returns NTRU_OK if successful.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_PARAMETER if an argument pointer
- *  (other than pubkey_blob or privkey_blob) is NULL.
- * Returns NTRU_ERROR_BASE + NTRU_INVALID_PARAMETER_SET if the parameter-set
- *  ID is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BAD_LENGTH if a length argument is invalid.
- * Returns NTRU_ERROR_BASE + NTRU_BUFFER_TOO_SMALL if either the pubkey_blob
- * buffer or the privkey_blob buffer is too small.
- * Returns NTRU_ERROR_BASE + NTRU_NO_MEMORY if memory needed cannot be
- *  allocated from the heap.
- * Returns NTRU_ERROR_BASE + NTRU_FAIL if the polynomial generated for f is
- *  not invertible in (Z/qZ)[X]/(X^N - 1), which is extremely unlikely.
+ * Returns NTRU_BAD_PARAMETER if an argument pointer (other than pubkey_blob
+ * or privkey_blob) is NULL.
+ * Returns NTRU_INVALID_PARAMETER_SET if the parameter-set ID is invalid.
+ * Returns NTRU_BAD_LENGTH if a length argument is invalid.
+ * Returns NTRU_BUFFER_TOO_SMALL if either the pubkey_blob buffer or the
+ *  privkey_blob buffer is too small.
+ * Returns NTRU_NO_MEMORY if memory needed cannot be allocated from the heap.
+ * Returns NTRU_FAIL if the polynomial generated for f is not invertible in
+ *  (Z/qZ)[X]/(X^N - 1), which is extremely unlikely.
  *  Should this occur, this function should simply be invoked again.
  */
 

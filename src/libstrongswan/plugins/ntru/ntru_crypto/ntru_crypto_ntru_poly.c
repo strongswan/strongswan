@@ -34,10 +34,12 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include "ntru_crypto_ntru_poly.h"
-#include "ntru_crypto_ntru_mgf1.h"
+#include "ntru_crypto_ntru_mgftp1.h"
 
+#include "ntru_mgf1.h"
+
+#include <utils/debug.h>
 
 /* ntru_gen_poly
  *
@@ -64,7 +66,6 @@ uint32_t
 ntru_gen_poly(
     hash_algorithm_t        hash_algid,      /*  in - hash algorithm ID for
                                                       IGF-2 */
-    uint8_t                 md_len,          /*  in - no. of octets in digest */
     uint8_t                 min_calls,       /*  in - minimum no. of hash
                                                       calls */
     uint16_t                seed_len,        /*  in - no. of octets in seed */
@@ -80,7 +81,7 @@ ntru_gen_poly(
     uint32_t                indices_counts,  /*  in - nos. of indices needed */
     uint16_t               *indices)         /* out - address for indices */
 {
-    uint8_t  *mgf_out;
+	uint8_t   md_len;
     uint8_t  *octets;
     uint8_t  *used;
     uint8_t   num_polys;
@@ -89,23 +90,26 @@ ntru_gen_poly(
     uint16_t  index_cnt = 0;
     uint8_t   left = 0;
     uint8_t   num_left = 0;
-    uint32_t  retcode;
-
-    assert(seed);
-    assert(buf);
-    assert(indices);
+	ntru_mgf1_t *mgf1;
 
     /* generate minimum MGF1 output */
-
-    mgf_out = buf + md_len + 4;
-    if ((retcode = ntru_mgf1(buf, hash_algid, md_len, min_calls,
-                             seed_len, seed, mgf_out)) != NTRU_OK)
-        return retcode;
-    octets = mgf_out;
+	mgf1 = ntru_mgf1_create(hash_algid, chunk_create(seed, seed_len), TRUE);
+	if (!mgf1)
+	{
+		return NTRU_MGF1_FAIL;
+	}
+	md_len = mgf1->get_hash_size(mgf1);
+    octets = buf;
     octets_available = min_calls * md_len;
 
-    /* init indices counts for number of polynomials being generated */
+	DBG2(DBG_LIB, "MGF1 generates %u octets", octets_available);
+	if (!mgf1->get_mask(mgf1, octets_available, octets))
+	{
+		mgf1->destroy(mgf1);
+		return NTRU_MGF1_FAIL;
+	}
 
+    /* init indices counts for number of polynomials being generated */
     if (is_product_form) {
 
         /* number of indices for poly1 is in low byte of indices_counts,
@@ -126,7 +130,7 @@ ntru_gen_poly(
 
     /* init used-index array */
 
-    used = mgf_out + octets_available;
+    used = buf + octets_available;
     memset(used, 0, N);
 
     /* generate indices (IGF-2) for all polynomials */
@@ -153,21 +157,28 @@ ntru_gen_poly(
                 /* get the rest of the bits needed from new octets */
 
                 num_needed = c_bits - num_left;
-                while (num_needed != 0) {
+                while (num_needed != 0)
+				{
 
                     /* get another octet */
-
-                    if (octets_available == 0) {
-                        if ((retcode = ntru_mgf1(buf, hash_algid, md_len, 1,
-                                                 0, NULL, mgf_out)) != NTRU_OK)
-                            return retcode;
-                        octets = mgf_out;
+                    if (octets_available == 0)
+					{
+                        octets = buf;
                         octets_available = md_len;
+
+						DBG2(DBG_LIB, "MGF1 generates another %u octets",
+									   octets_available);
+						if (!mgf1->get_mask(mgf1, octets_available, octets))
+						{
+							mgf1->destroy(mgf1);
+							return NTRU_MGF1_FAIL;
+						}
                     }
                     left = *octets++;
                     --octets_available;
 
-                    if (num_needed <= 8) {
+					if (num_needed <= 8)
+					{
 
                         /* all bits needed to fill the index are in this octet */
 
@@ -191,7 +202,8 @@ ntru_gen_poly(
             /* form index and check if unique */
 
             index %= N;
-            if (!used[index]) {
+			if (!used[index])
+			{
                 used[index] = 1;
                 indices[index_cnt] = index;
                 ++index_cnt;
@@ -201,15 +213,17 @@ ntru_gen_poly(
 
         /* init for next polynomial if another polynomial to be generated */
 
-        if (num_polys > 0) {
+		if (num_polys > 0)
+		{
             memset(used, 0, N);
             num_indices = num_indices +
                           (uint16_t)(indices_counts & 0xff);
             indices_counts >>= 8;
         }
     }
+	mgf1->destroy(mgf1);
 
-    NTRU_RET(NTRU_OK);
+	return NTRU_OK;
 }
 
 
@@ -275,11 +289,6 @@ ntru_ring_mult_indices(
 {
     uint16_t mod_q_mask = q - 1;
     uint16_t i, j, k;
-
-    assert(a);
-    assert(bi);
-    assert(t);
-    assert(c);
 
     /* t[(i+k)%N] = sum i=0 through N-1 of a[i], for b[k] = -1 */
 
@@ -356,27 +365,19 @@ ntru_ring_mult_product_indices(
     uint16_t  mod_q_mask = q - 1;
     uint16_t  i;
 
-    assert(a);
-    assert(bi);
-    assert(t);
-    assert(c);
 
     /* t2 = a * b1 */
-
     ntru_ring_mult_indices(a, b1i_len, b1i_len, bi, N, q, t, t2);
 
     /* t2 = (a * b1) * b2 */
-
     ntru_ring_mult_indices(t2, b2i_len, b2i_len, bi + (b1i_len << 1), N, q,
                            t, t2);
 
     /* t = a * b3 */
-
     ntru_ring_mult_indices(a, b3i_len, b3i_len,
                            bi + ((b1i_len + b2i_len) << 1), N, q, t, t);
 
     /* c = (a * b1 * b2) + (a * b3) */
-
     for (i = 0; i < N; i++)
         c[i] = (t2[i] + t[i]) & mod_q_mask;
 }
@@ -406,12 +407,7 @@ ntru_ring_mult_coefficients(
     uint16_t        mod_q_mask = q - 1;
     uint16_t        i, k;
 
-    assert(a);
-    assert(b);
-    assert(c);
-
     /* c[k] = sum(a[i] * b[k-i]) mod q */
-
     memset(c, 0, N * sizeof(uint16_t));
     for (k = 0; k < N; k++) {
         i = 0;
@@ -457,31 +453,22 @@ ntru_ring_inv(
     bool      done = FALSE;
     uint16_t  i, j;
 
-    assert(a);
-    assert(t);
-    assert(a_inv);
-
     /* form a^-1 in (Z/2Z)[X]/X^N - 1) */
-
-    memset(b, 0, (N << 1));         /* clear to init b, c */
+    memset(b, 0, (N << 1));                /* clear to init b, c */
 
     /* b(X) = 1 */
-
     b[0] = 1;
     deg_b = 0;
 
     /* c(X) = 0 (cleared above) */
-
     deg_c = 0;
 
     /* f(X) = a(X) mod 2 */
-
     for (i = 0; i < N; i++)
         f[i] = (uint8_t)(a[i] & 1);
     deg_f = N - 1;
 
     /* g(X) = X^N - 1 */
-
     g[0] = 1;
     memset(g + 1, 0, N - 1);
     g[N] = 1;
@@ -489,7 +476,8 @@ ntru_ring_inv(
 
     /* until f(X) = 1 */
 
-    while (!done) {
+	while (!done)
+	{
 
         /* while f[0] = 0, f(X) /= X, c(X) *= X, k++ */
 

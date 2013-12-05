@@ -2,7 +2,7 @@
  * NTRU Cryptography Reference Source Code
  * Copyright (c) 2009-2013, by Security Innovation, Inc. All rights reserved. 
  *
- * ntru_crypto_ntru_mgf1.h is a component of ntru-crypto.
+ * ntru_crypto_ntru_mgftp1.h is a component of ntru-crypto.
  *
  * Copyright (C) 2009-2013  Security Innovation
  * 
@@ -24,9 +24,9 @@
  
 /******************************************************************************
  *
- * File:  ntru_crypto_ntru_mgf1.h
+ * File:  ntru_crypto_ntru_mgftp1.h
  *
- * Contents: Public header file for MGF-1 in the NTRU algorithm.
+ * Contents: Public header file for MGF-TP-1 in the NTRU algorithm.
  *
  *****************************************************************************/
 
@@ -38,32 +38,6 @@
 #include "ntru_crypto.h"
 
 #include <crypto/hashers/hasher.h>
-
-/* function declarations */
-
-/* ntru_mgf1
- *
- * Implements a basic mask-generation function, generating an arbitrary
- * number of octets based on hashing a digest-length string concatenated
- * with a 4-octet counter.
- *
- * The state (string and counter) is initialized when a seed is present.
- *
- * Returns NTRU_OK if successful.
- * Returns NTRU_CRYPTO_HASH_ errors if they occur.
- *
- */
-
-extern uint32_t
-ntru_mgf1(
-    uint8_t                *state,      /* in/out - pointer to the state */
-    hash_algorithm_t        hash_algid, /*     in - hash algorithm ID */
-    uint8_t                 md_len,     /*     in - no. of octets in digest */
-    uint8_t                 num_calls,  /*     in - no. of hash calls */
-    uint16_t                seed_len,   /*     in - no. of octets in seed */
-    uint8_t                *seed,       /*     in - pointer to seed */
-    uint8_t                *out);       /*    out - address for output */
-
 
 /* ntru_mgftp1
  *
@@ -83,8 +57,6 @@ extern uint32_t
 ntru_mgftp1(
     hash_algorithm_t        hash_algid,       /*  in - hash alg ID for
                                                        MGF-TP-1 */
-    uint8_t                 md_len,           /*  in - no. of octets in
-                                                       digest */
     uint8_t                 min_calls,        /*  in - minimum no. of hash
                                                        calls */
     uint16_t                seed_len,         /*  in - no. of octets in seed */
