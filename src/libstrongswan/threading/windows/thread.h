@@ -73,10 +73,18 @@ void* thread_tls_get(void *key);
  * Remove a thread specific value from the current thread.
  *
  * @param key		unique key specifying the TLS variable
- * @param value		value to set
- * @return			old value for key, if any
+ * @return			value for key, if any
  */
 void* thread_tls_remove(void *key);
+
+/**
+ * Remove a thread specific value from all threads.
+ *
+ * For each found TLS value thread_tls_cleanup() is invoked.
+ *
+ * @param key		unique key specifying the TLS variable
+ */
+void thread_tls_remove_all(void *key);
 
 /**
  * Cleanup function for thread specific value.

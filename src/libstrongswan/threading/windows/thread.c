@@ -68,7 +68,7 @@ struct private_thread_t {
 	array_t *cleanup;
 
 	/**
-	 * Thread specific values for this thread, as cleanup_t
+	 * Thread specific values for this thread
 	 */
 	hashtable_t *tls;
 
@@ -238,10 +238,42 @@ void* thread_tls_remove(void *key)
 	thread = get_current_thread();
 
 	old = set_leak_detective(FALSE);
+	threads_lock->lock(threads_lock);
 	value = thread->tls->remove(thread->tls, key);
+	threads_lock->unlock(threads_lock);
 	set_leak_detective(old);
 
 	return value;
+}
+
+/**
+ * See header.
+ */
+void thread_tls_remove_all(void *key)
+{
+	private_thread_t *thread;
+	enumerator_t *enumerator;
+	void *value;
+	bool old;
+
+	old = set_leak_detective(FALSE);
+	threads_lock->lock(threads_lock);
+
+	enumerator = threads->create_enumerator(threads);
+	while (enumerator->enumerate(enumerator, NULL, &thread))
+	{
+		value = thread->tls->remove(thread->tls, key);
+		if (value)
+		{
+			set_leak_detective(old);
+			thread_tls_cleanup(value);
+			set_leak_detective(FALSE);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	threads_lock->unlock(threads_lock);
+	set_leak_detective(old);
 }
 
 /**
@@ -272,6 +304,7 @@ static void docleanup(private_thread_t *this)
 		set_leak_detective(FALSE);
 	}
 
+	threads_lock->lock(threads_lock);
 	enumerator = this->tls->create_enumerator(this->tls);
 	while (enumerator->enumerate(enumerator, NULL, &tls))
 	{
@@ -282,6 +315,7 @@ static void docleanup(private_thread_t *this)
 		set_leak_detective(FALSE);
 	}
 	enumerator->destroy(enumerator);
+	threads_lock->unlock(threads_lock);
 
 	set_leak_detective(old);
 }
