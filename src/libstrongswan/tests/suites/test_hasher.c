@@ -27,7 +27,7 @@ typedef struct {
 	key_type_t key;
 }hasher_oid_t;
 
-hasher_oid_t oids[] = {
+static hasher_oid_t oids[] = {
 	{ OID_MD2, HASH_MD2, KEY_ANY },
 	{ OID_MD5, HASH_MD5, KEY_ANY },
 	{ OID_SHA1, HASH_SHA1, KEY_ANY },
@@ -75,7 +75,7 @@ typedef struct {
 	hash_algorithm_t alg;
 }hasher_prf_t;
 
-hasher_prf_t prfs[] = {
+static hasher_prf_t prfs[] = {
 	{ PRF_HMAC_MD5, HASH_MD5 },
 	{ PRF_HMAC_SHA1, HASH_SHA1 },
 	{ PRF_FIPS_SHA1_160, HASH_SHA1 },
@@ -104,7 +104,7 @@ typedef struct {
 	size_t length;
 }hasher_auth_t;
 
-hasher_auth_t auths[] = {
+static hasher_auth_t auths[] = {
 	{ AUTH_UNDEFINED, HASH_MD2, 0 },
 	{ AUTH_UNDEFINED, HASH_MD4, 0 },
 	{ AUTH_UNDEFINED, HASH_SHA224, 0 },
