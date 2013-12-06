@@ -93,6 +93,7 @@ ntru_gen_poly(
 	ntru_mgf1_t *mgf1;
 
     /* generate minimum MGF1 output */
+	DBG2(DBG_LIB, "MGF1 is seeded with %u octets", seed_len);
 	mgf1 = ntru_mgf1_create(hash_algid, chunk_create(seed, seed_len), TRUE);
 	if (!mgf1)
 	{
@@ -101,13 +102,6 @@ ntru_gen_poly(
 	md_len = mgf1->get_hash_size(mgf1);
     octets = buf;
     octets_available = min_calls * md_len;
-
-	DBG2(DBG_LIB, "MGF1 generates %u octets", octets_available);
-	if (!mgf1->get_mask(mgf1, octets_available, octets))
-	{
-		mgf1->destroy(mgf1);
-		return NTRU_MGF1_FAIL;
-	}
 
     /* init indices counts for number of polynomials being generated */
     if (is_product_form) {
@@ -134,6 +128,13 @@ ntru_gen_poly(
     memset(used, 0, N);
 
     /* generate indices (IGF-2) for all polynomials */
+	DBG2(DBG_LIB, "MGF1 generates %u octets for %u indices",
+				   octets_available, num_indices);
+	if (!mgf1->get_mask(mgf1, octets_available, octets))
+	{
+		mgf1->destroy(mgf1);
+		return NTRU_MGF1_FAIL;
+	}
 
     while (num_polys > 0) {
 
@@ -166,8 +167,9 @@ ntru_gen_poly(
                         octets = buf;
                         octets_available = md_len;
 
-						DBG2(DBG_LIB, "MGF1 generates another %u octets",
-									   octets_available);
+						DBG2(DBG_LIB, "MGF1 generates another %u octets for the "
+									  "remaining %u indices", octets_available,
+									   num_indices - index_cnt);
 						if (!mgf1->get_mask(mgf1, octets_available, octets))
 						{
 							mgf1->destroy(mgf1);

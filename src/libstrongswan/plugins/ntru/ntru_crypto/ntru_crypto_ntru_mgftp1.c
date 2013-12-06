@@ -71,6 +71,7 @@ ntru_mgftp1(
 	ntru_mgf1_t *mgf1;
 
 	/* generate minimum MGF1 output */
+	DBG2(DBG_LIB, "MGF1 is seeded with %u octets", seed_len);
 	mgf1 = ntru_mgf1_create(hash_algid, chunk_create(seed, seed_len), TRUE);
 	if (!mgf1)
 	{
@@ -80,7 +81,8 @@ ntru_mgftp1(
 	octets = buf;
 	octets_available = min_calls * md_len;
 
-	DBG2(DBG_LIB, "MGF1 generates %u octets", octets_available);
+	DBG2(DBG_LIB, "MGF1 generates %u octets to extract %d trits",
+				   octets_available, num_trits_needed);
 	if (!mgf1->get_mask(mgf1, octets_available, octets))
 	{
 		mgf1->destroy(mgf1);
@@ -96,7 +98,8 @@ ntru_mgftp1(
 			octets = buf;
 			octets_available = md_len;
 
-			DBG2(DBG_LIB, "MGF1 generates another %u octets", octets_available);
+			DBG2(DBG_LIB, "MGF1 generates another %u octets for the remaining "
+						  "%u trits", octets_available, num_trits_needed);
 			if (!mgf1->get_mask(mgf1, octets_available, octets))
 			{
 				mgf1->destroy(mgf1);
@@ -125,7 +128,8 @@ ntru_mgftp1(
 			octets = buf;
 			octets_available = md_len;
 
-			DBG2(DBG_LIB, "MGF1 generates another %u octets", octets_available);
+			DBG2(DBG_LIB, "MGF1 generates another %u octets for the remaining "
+						  "%u trits", octets_available, num_trits_needed);
 			if (!mgf1->get_mask(mgf1, octets_available, octets))
 			{
 				mgf1->destroy(mgf1);
