@@ -35,7 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ntru_crypto_ntru_poly.h"
-#include "ntru_crypto_ntru_mgftp1.h"
 
 #include "ntru_mgf1.h"
 
@@ -93,7 +92,7 @@ ntru_gen_poly(
 	ntru_mgf1_t *mgf1;
 
     /* generate minimum MGF1 output */
-	DBG2(DBG_LIB, "MGF1 is seeded with %u octets", seed_len);
+	DBG2(DBG_LIB, "MGF1 is seeded with %u bytes", seed_len);
 	mgf1 = ntru_mgf1_create(hash_algid, chunk_create(seed, seed_len), TRUE);
 	if (!mgf1)
 	{

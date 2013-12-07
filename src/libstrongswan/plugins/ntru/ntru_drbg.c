@@ -119,7 +119,7 @@ METHOD(ntru_drbg_t, reseed, bool,
 	chunk_t seed;
 
 	seed = chunk_alloc(this->strength / BITS_PER_BYTE);
-	DBG2(DBG_LIB, "DRG requests %u bytes of entropy", seed.len);
+	DBG2(DBG_LIB, "DRBG requests %u bytes of entropy", seed.len);
 
 	if (!this->entropy->get_bytes(this->entropy, seed.len, seed.ptr))
 	{

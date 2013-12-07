@@ -18,6 +18,7 @@
 #include <tests/utils/test_rng.h>
 #include <plugins/ntru/ntru_drbg.h>
 #include <plugins/ntru/ntru_mgf1.h>
+#include <plugins/ntru/ntru_trits.h>
 #include <utils/test.h>
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
@@ -25,6 +26,9 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_mgf1_create, ntru_mgf1_t*,
 						  hash_algorithm_t alg, chunk_t seed, bool hash_seed)
+
+IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
+						  size_t len, hash_algorithm_t alg, chunk_t seed)
 
 /**
  * NTRU parameter sets to test
@@ -297,6 +301,7 @@ typedef struct {
 	chunk_t seed;
 	chunk_t hashed_seed;
 	chunk_t mask;
+	chunk_t trits;
 } mgf1_test_t;
 
 /**
@@ -338,7 +343,31 @@ mgf1_test_t mgf1_tests[] = {
 						0x40, 0x4B, 0xE7, 0x22, 0x3A, 0x56, 0x10, 0x6D,
 						0x4D, 0x29, 0x0B, 0xCE, 0xA6, 0x21, 0xB5, 0x5C,
 						0x71, 0x66, 0x2F, 0x70, 0x35, 0xD8, 0x8A, 0x92,
-						0x33, 0xF0, 0x16, 0xD4, 0x0E, 0x43, 0x8A, 0x14) },
+						0x33, 0xF0, 0x16, 0xD4, 0x0E, 0x43, 0x8A, 0x14), 
+		chunk_from_chars(
+				1, 2, 1, 0, 0,  1, 1, 1, 2, 0,  1, 0, 1, 1, 1,  0, 2, 0, 1, 1,
+				0, 0, 0, 1, 1,  0, 2, 0, 2, 2,	1, 2, 2, 2, 1,  2, 1, 1, 0, 0,
+				2, 0, 1, 1, 1,	0, 0, 0, 0, 1,  1, 2, 0, 0, 1,  0, 1, 0, 2, 0,
+				0, 1, 0, 2, 1,  0, 0, 0, 2, 0,  0, 0, 1, 2, 2,	0, 0, 2, 0, 1,
+				1, 2, 1, 1, 0,  0, 1, 1, 1, 2,	2, 1, 2, 0, 0,  2, 1, 0, 0, 1,
+				0, 1, 1, 0, 0,	0, 1, 2, 2, 0,  1, 2, 1, 2, 0,  2, 0, 0, 0, 2,
+				1, 2, 0, 0, 0,  2, 0, 0, 0, 2,  2, 1, 0, 2, 0,	1, 2, 0, 2, 1,
+				0, 2, 2, 1, 0,  2, 1, 2, 2, 0,  2, 0, 2, 1, 2,  2, 0, 2, 0, 1,
+				1, 2, 2, 2, 2,  1, 0, 1, 0, 2,  2, 0, 1, 1, 2,  2, 2, 0, 0, 1,
+				0, 2, 0, 1, 0,  2, 1, 2, 1, 0,  1, 1, 2, 0, 0,  2, 1, 1, 2, 0,
+				1, 2, 1, 1, 0,  1, 0, 2, 1, 1,  1, 2, 1, 0, 2,  0, 2, 0, 0, 2,
+				2, 1, 0, 0, 2,  2, 0, 1, 1, 0,  0, 1, 1, 0, 1,  1, 2, 1, 2, 2,
+				2, 0, 0, 0, 0,  1, 0, 0, 1, 2,  1, 2, 0, 2, 1,  1, 1, 0, 2, 2,
+				1, 2, 2, 1, 0,  1, 0, 2, 2, 2,  1, 2, 1, 0, 0,  1, 0, 1, 1, 1,
+				1, 1, 2, 0, 0,  2, 1, 0, 2, 1,  2, 1, 0, 2, 2,  0, 0, 1, 2, 1,
+				2, 0, 1, 2, 1,  1, 2, 0, 2, 0,  2, 1, 1, 1, 0,  0, 0, 1, 2, 1,
+				2, 2, 1, 2, 1,  1, 2, 1, 2, 0,  2, 2, 1, 0, 0,  1, 2, 0, 1, 1,
+				2, 0, 0, 0, 1,  2, 2, 1, 2, 0,  0, 2, 1, 0, 2,  2, 2, 1, 1, 0,
+				2, 1, 2, 1, 2,  2, 1, 2, 1, 1,  0, 1, 1, 1, 1,  2, 0, 2, 2, 1,
+				0, 1, 1, 2, 1,  2, 0, 2, 1, 0,  1, 0, 1, 0, 1,  2, 0, 1, 1, 0,
+				0, 1, 1, 2, 0,  2, 2, 0, 0, 0,  1, 1, 0, 1, 0,  1, 1, 0, 1, 1,
+				0, 1, 2, 0, 1,  1, 0, 1, 2, 0,  0, 1, 2, 2, 0,  0, 2, 1, 2)
+	},
 	{	HASH_SHA256, 32, 64, 32, 33,
 		chunk_from_chars(
 						0x52, 0xC5, 0xDD, 0x1E, 0xEF, 0x76, 0x1B, 0x53,
@@ -385,7 +414,39 @@ mgf1_test_t mgf1_tests[] = {
 						0x35, 0xD7, 0x06, 0x3F, 0x40, 0x82, 0xDA, 0xC3,
 						0x2B, 0x3C, 0x91, 0x3A, 0x32, 0xF8, 0xB2, 0xC6,
 						0x44, 0x4D, 0xCD, 0xB6, 0x54, 0x5F, 0x81, 0x95,
-						0x59, 0xA1, 0xE5, 0x4E, 0xA5, 0x0A, 0x4A, 0x42) }
+						0x59, 0xA1, 0xE5, 0x4E, 0xA5, 0x0A, 0x4A, 0x42),
+		chunk_from_chars(
+				1, 2, 2, 2, 2,  1, 2, 2, 0, 0,  2, 0, 0, 0, 0,  1, 2, 2, 2, 0,
+				2, 0, 0, 2, 2,  1, 2, 0, 0, 1,  2, 1, 0, 0, 0,  1, 0, 2, 2, 1,
+				1, 2, 0, 0, 0,  1, 2, 0, 2, 2,  1, 2, 1, 0, 1,  0, 1, 2, 1, 1,
+				1, 2, 0, 1, 0,  2, 1, 1, 0, 0,  0, 1, 2, 0, 0,  1, 2, 1, 2, 0,
+				2, 1, 1, 1, 2,  2, 2, 2, 1, 0,  0, 2, 0, 2, 0,  1, 1, 0, 2, 2,
+				2, 0, 1, 0, 2,  2, 1, 0, 1, 0,  1, 0, 0, 2, 2,  0, 0, 1, 2, 0,
+				1, 1, 1, 0, 0,  2, 0, 2, 1, 2,  2, 2, 0, 0, 2,  1, 0, 2, 0, 1,
+				0, 1, 2, 0, 1,  2, 0, 1, 0, 1,  2, 0, 2, 2, 0,  1, 2, 2, 1, 2,
+				2, 2, 0, 2, 1,  1, 1, 0, 0, 1,  0, 2, 0, 0, 1,  0, 1, 2, 0, 0,
+				1, 2, 1, 0, 2,  1, 1, 0, 0, 2,  1, 2, 2, 2, 1,  2, 1, 1, 2, 2,
+				0, 2, 0, 0, 2,  0, 0, 1, 1, 2,  0, 0, 0, 1, 2,  1, 1, 1, 1, 0,
+				0, 0, 2, 0, 2,  0, 2, 2, 1, 2,  2, 0, 0, 1, 1,  1, 0, 1, 0, 1,
+				0, 1, 2, 2, 0,  2, 1, 1, 0, 2,  1, 2, 1, 2, 1,  0, 0, 1, 0, 0,
+				1, 0, 1, 0, 2,  0, 2, 0, 0, 1,  2, 0, 2, 0, 1,  1, 0, 2, 0, 0,
+				1, 2, 1, 2, 1,  2, 1, 0, 1, 1,  2, 2, 1, 1, 0,  0, 2, 1, 2, 0,
+				1, 0, 2, 0, 0,  1, 2, 0, 2, 0,  1, 1, 2, 2, 2,  2, 0, 0, 1, 2,
+				1, 1, 1, 0, 2,  1, 2, 2, 0, 2,  0, 1, 2, 2, 0,  1, 1, 1, 0, 0,
+				2, 0, 1, 0, 1,  0, 2, 1, 2, 0,  2, 1, 2, 1, 2,  2, 0, 2, 1, 0,
+				2, 1, 2, 0, 0,  2, 0, 1, 2, 1,  1, 2, 0, 0, 0,  0, 1, 2, 0, 1,
+				2, 2, 1, 0, 0,  1, 2, 1, 2, 0,  0, 1, 1, 0, 0,  0, 1, 0, 0, 0,
+				2, 0, 1, 2, 1,  2, 0, 0, 0, 2,  1, 0, 0, 0, 1,  2, 2, 0, 0, 0,
+				2, 2, 1, 1, 0,  1, 0, 2, 2, 0,  2, 1, 2, 1, 0,  2, 2, 2, 0, 0,
+				0, 1, 1, 2, 1,  0, 0, 0, 0, 1,  2, 2, 1, 2, 1,  2, 0, 2, 0, 2,
+				1, 1, 1, 2, 1,  2, 1, 2, 1, 1,  0, 1, 0, 2, 0,  0, 0, 2, 1, 2,
+				2, 2, 2, 0, 1,  1, 1, 0, 1, 0,  2, 0, 2, 1, 0,  1, 2, 1, 1, 0,
+				1, 2, 1, 0, 0,  2, 1, 0, 1, 1,  2, 2, 1, 1, 1,  2, 2, 2, 1, 0,
+				0, 0, 0, 1, 1,  0, 0, 2, 2, 2,  2, 2, 0, 1, 2,  0, 1, 2, 0, 1,
+				1, 0, 1, 1, 2,  2, 0, 1, 1, 0,  2, 2, 1, 1, 1,  2, 1, 2, 2, 1,
+				1, 0, 1, 0, 2,  2, 1, 0, 2, 2,  2, 2, 2, 1, 0,  2, 2, 2, 1, 2,
+				0, 2, 0, 0, 0,  0, 0, 1, 2, 0,  1, 0, 1)
+	}
 };
 
 START_TEST(test_ntru_mgf1)
@@ -450,6 +511,30 @@ START_TEST(test_ntru_mgf1)
 
 	mgf1->destroy(mgf1);
 	chunk_free(&mask);
+}
+END_TEST
+
+START_TEST(test_ntru_trits)
+{
+	ntru_trits_t *mask;
+	chunk_t trits;
+
+	mask = ntru_trits_create(mgf1_tests[_i].trits.len, HASH_UNKNOWN,
+							 mgf1_tests[_i].seed);
+	ck_assert(mask == NULL);
+
+	mask = ntru_trits_create(mgf1_tests[_i].trits.len, mgf1_tests[_i].alg,
+							 chunk_empty);
+	ck_assert(mask == NULL);
+
+	mask = ntru_trits_create(mgf1_tests[_i].trits.len, mgf1_tests[_i].alg,
+							 mgf1_tests[_i].seed);
+	ck_assert(mask);
+
+	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
+	ck_assert(chunk_equals(trits, mgf1_tests[_i].trits));
+
+	mask->destroy(mask);
 }
 END_TEST
 
@@ -657,6 +742,10 @@ Suite *ntru_suite_create()
 
 	tc = tcase_create("mgf1");
 	tcase_add_loop_test(tc, test_ntru_mgf1, 0, countof(mgf1_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("trits");
+	tcase_add_loop_test(tc, test_ntru_trits, 0, countof(mgf1_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ke");
