@@ -68,7 +68,9 @@ METHOD(ntru_mgf1_t, get_mask, bool,
 	private_ntru_mgf1_t *this, size_t mask_len, u_char *mask)
 {
 	u_char buf[HASH_SIZE_SHA512];
-	size_t len;
+	size_t hash_len;
+
+	hash_len = this->hasher->get_hash_size(this->hasher);
 
 	while (mask_len > 0)
 	{
@@ -83,17 +85,20 @@ METHOD(ntru_mgf1_t, get_mask, bool,
 			this->overflow = TRUE;
 		}
 
-		if (!this->hasher->get_hash(this->hasher, this->state, buf))
+		/* get the next or final mask block from the hash function */
+		if (!this->hasher->get_hash(this->hasher, this->state,
+								   (mask_len < hash_len) ? buf : mask))
 		{
 			return FALSE;
 		}
-
-		len = min(mask_len, this->hasher->get_hash_size(this->hasher)); 
-		memcpy(mask, buf, len);
-		mask_len -= len;
-		mask += len;
+		if (mask_len < hash_len)
+		{
+			memcpy(mask, buf, mask_len);
+			return TRUE;
+		}
+		mask_len -= hash_len;
+		mask += hash_len;
 	}
-
 	return TRUE;
 }
 
