@@ -57,7 +57,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         32,                          /* min. no. of hash calls for IGF-2 */
-        9,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -78,7 +77,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         9,                           /* c */
         1,                           /* lLen */
         31,                          /* min. no. of hash calls for IGF-2 */
-        9,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -99,7 +97,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         27,                          /* min. no. of hash calls for IGF-2 */
-        9,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -120,7 +117,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         13,                          /* c */
         1,                           /* lLen */
         25,                          /* min. no. of hash calls for IGF-2 */
-        14,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -141,7 +137,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         12,                          /* c */
         1,                           /* lLen */
         15,                          /* min. no. of hash calls for IGF-2 */
-        11,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -162,7 +157,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         16,                          /* min. no. of hash calls for IGF-2 */
-        13,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -183,7 +177,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         10,                          /* c */
         1,                           /* lLen */
         13,                          /* min. no. of hash calls for IGF-2 */
-        12,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -204,7 +197,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         12,                          /* c */
         1,                           /* lLen */
         20,                          /* min. no. of hash calls for IGF-2 */
-        15,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -225,7 +217,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         11,                          /* min. no. of hash calls for IGF-2 */
-        14,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -246,7 +237,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         12,                          /* c */
         1,                           /* lLen */
         13,                          /* min. no. of hash calls for IGF-2 */
-        16,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -267,7 +257,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         13,                          /* c */
         1,                           /* lLen */
         13,                          /* min. no. of hash calls for IGF-2 */
-        14,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -288,7 +277,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         13,                          /* c */
         1,                           /* lLen */
         17,                          /* min. no. of hash calls for IGF-2 */
-        19,                          /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -309,7 +297,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         10,                          /* min. no. of hash calls for IGF-2 */
-        6,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -330,7 +317,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         9,                           /* c */
         1,                           /* lLen */
         15,                          /* min. no. of hash calls for IGF-2 */
-        6,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -351,7 +337,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         11,                          /* c */
         1,                           /* lLen */
         12,                          /* min. no. of hash calls for IGF-2 */
-        5,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
     {
@@ -372,7 +357,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         13,                          /* c */
         1,                           /* lLen */
         12,                          /* min. no. of hash calls for IGF-2 */
-        7,                           /* min. no. of hash calls for MGF-TP-1 */
     },
 
 };
