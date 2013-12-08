@@ -533,7 +533,14 @@ START_TEST(test_ntru_trits)
 
 	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
 	ck_assert(chunk_equals(trits, mgf1_tests[_i].trits));
+	mask->destroy(mask);
 
+	/* generate a multiple of 5 trits */
+	mask = ntru_trits_create(10, mgf1_tests[_i].alg, mgf1_tests[_i].seed);
+	ck_assert(mask);
+
+	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
+	ck_assert(chunk_equals(trits, chunk_create(mgf1_tests[_i].trits.ptr, 10)));
 	mask->destroy(mask);
 }
 END_TEST
