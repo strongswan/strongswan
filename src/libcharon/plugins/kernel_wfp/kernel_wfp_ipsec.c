@@ -40,14 +40,19 @@ struct private_kernel_wfp_ipsec_t {
 	refcount_t nextspi;
 
 	/**
-	 * SAD/SPD entries, as reqid => entry_t
+	 * Temporary SAD/SPD entries referenced reqid, as uintptr_t => entry_t
 	 */
-	hashtable_t *entries;
+	hashtable_t *tsas;
 
 	/**
-	 * SAD entry lookup, as sa_entry_t => entry_t
+	 * SAD/SPD entries referenced by inbound SA, as sa_entry_t => entry_t
 	 */
-	hashtable_t *sas;
+	hashtable_t *isas;
+
+	/**
+	 * SAD/SPD entries referenced by outbound SA, as sa_entry_t => entry_t
+	 */
+	hashtable_t *osas;
 
 	/**
 	 * Mutex for accessing entries
@@ -71,10 +76,10 @@ struct private_kernel_wfp_ipsec_t {
 typedef struct {
 	/** SPI for this SA */
 	u_int32_t spi;
+	/** protocol, IPPROTO_ESP/IPPROTO_AH */
+	u_int8_t protocol;
 	/** destination host address for this SPI */
 	host_t *dst;
-	/** inbound or outbound SA? */
-	bool inbound;
 	struct {
 		/** algorithm */
 		u_int16_t alg;
@@ -82,16 +87,6 @@ typedef struct {
 		chunk_t key;
 	} integ, encr;
 } sa_entry_t;
-
-/**
- * Destroy an SA entry
- */
-static void sa_entry_destroy(sa_entry_t *sa)
-{
-	chunk_clear(&sa->integ.key);
-	chunk_clear(&sa->encr.key);
-	free(sa);
-}
 
 /**
  * Hash function for sas lookup table
@@ -118,8 +113,6 @@ typedef struct {
 	traffic_selector_t *src;
 	/** policy destinaiton addresses */
 	traffic_selector_t *dst;
-	/** direction of policy, in|out */
-	policy_dir_t direction;
 } sp_entry_t;
 
 /**
@@ -142,12 +135,12 @@ typedef struct {
 	host_t *local;
 	/** outer address on remote host */
 	host_t *remote;
-	/** associated security associations, as sa_entry_t* */
-	array_t *sas;
-	/** associated policies, as sp_entry_t* */
+	/** inbound SA entry */
+	sa_entry_t isa;
+	/** outbound SA entry */
+	sa_entry_t osa;
+	/** associated (outbound) policies, as sp_entry_t* */
 	array_t *sps;
-	/** IPsec protocol, ESP|AH */
-	u_int8_t protocol;
 	/** IPsec mode, tunnel|transport */
 	ipsec_mode_t mode;
 	/** UDP encapsulation */
@@ -159,27 +152,6 @@ typedef struct {
 	/** WFP allocated LUID for SA context */
 	u_int64_t sa_id;
 } entry_t;
-
-/**
- * Create a SA/SP entry set
- */
-static entry_t *entry_create(u_int32_t reqid, host_t *local, host_t *remote,
-							 u_int8_t protocol, ipsec_mode_t mode, bool encap)
-{
-	entry_t *entry;
-
-	INIT(entry,
-		.reqid = reqid,
-		.sas = array_create(0, 0),
-		.sps = array_create(0, 0),
-		.local = local->clone(local),
-		.remote = remote->clone(remote),
-		.protocol = protocol,
-		.mode = mode,
-		.encap = encap,
-	);
-	return entry;
-}
 
 /**
  * Remove a transport or tunnel policy from kernel
@@ -231,37 +203,14 @@ static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 		IPsecSaContextDeleteById0(this->handle, entry->sa_id);
 	}
 	cleanup_policies(this, entry);
-	array_destroy(entry->sas);
-	array_destroy(entry->sps);
+	array_destroy_function(entry->sps, (void*)sp_entry_destroy, NULL);
 	entry->local->destroy(entry->local);
 	entry->remote->destroy(entry->remote);
+	chunk_clear(&entry->isa.integ.key);
+	chunk_clear(&entry->isa.encr.key);
+	chunk_clear(&entry->osa.integ.key);
+	chunk_clear(&entry->osa.encr.key);
 	free(entry);
-}
-
-/**
- * Get an entry, create if not exists. May fail if non-matching entry found
- */
-static entry_t *get_or_create_entry(private_kernel_wfp_ipsec_t *this,
-							u_int32_t reqid, host_t *local, host_t *remote,
-							u_int8_t protocol, ipsec_mode_t mode, bool encap)
-{
-	entry_t *entry;
-
-	entry = this->entries->get(this->entries, (void*)(uintptr_t)reqid);
-	if (!entry)
-	{
-		entry = entry_create(reqid, local, remote, protocol, mode, encap);
-		this->entries->put(this->entries, (void*)(uintptr_t)reqid, entry);
-		return entry;
-	}
-	if (entry->protocol == protocol &&
-		entry->mode == mode &&
-		entry->local->ip_equals(entry->local, local) &&
-		entry->remote->ip_equals(entry->remote, remote))
-	{
-		return entry;
-	}
-	return NULL;
 }
 
 /**
@@ -544,19 +493,11 @@ static bool install_transport_sp(private_kernel_wfp_ipsec_t *this,
 	{
 		if (inbound)
 		{
-			if (sp->direction != POLICY_IN)
-			{
-				continue;
-			}
 			local = sp->dst;
 			remote = sp->src;
 		}
 		else
 		{
-			if (sp->direction != POLICY_OUT)
-			{
-				continue;
-			}
 			local = sp->src;
 			remote = sp->dst;
 		}
@@ -697,8 +638,8 @@ static integrity_algorithm_t encr2integ(encryption_algorithm_t encr, int keylen)
 /**
  * Install a single SA
  */
-static bool install_sa(private_kernel_wfp_ipsec_t *this,
-					   entry_t *entry, sa_entry_t *sa, FWP_IP_VERSION version)
+static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
+					   bool inbound, sa_entry_t *sa, FWP_IP_VERSION version)
 {
 	IPSEC_SA_AUTH_AND_CIPHER_INFORMATION0 info = {};
 	IPSEC_SA0 ipsec = {
@@ -715,7 +656,7 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this,
 	} integ = {}, encr = {};
 	DWORD res;
 
-	switch (entry->protocol)
+	switch (sa->protocol)
 	{
 		case IPPROTO_AH:
 			ipsec.saTransformType = IPSEC_TRANSFORM_AH;
@@ -773,7 +714,7 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this,
 		}
 	}
 
-	if (sa->inbound)
+	if (inbound)
 	{
 		res = IPsecSaContextAddInbound0(this->handle, entry->sa_id, &bundle);
 	}
@@ -784,7 +725,7 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this,
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "adding %sbound WFP SA failed: 0x%08x",
-			 sa->inbound ? "in" : "out", res);
+			 inbound ? "in" : "out", res);
 		return FALSE;
 	}
 	return TRUE;
@@ -804,9 +745,6 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 			.trafficType = type,
 		},
 	};
-	sa_entry_t *sa;
-	IPSEC_SA_SPI inbound_spi = 0;
-	enumerator_t *enumerator;
 	DWORD res;
 
 	if (type == IPSEC_TRAFFIC_TYPE_TRANSPORT)
@@ -847,28 +785,14 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		return FALSE;
 	}
 
-	enumerator = array_create_enumerator(entry->sas);
-	while (enumerator->enumerate(enumerator, &sa))
-	{
-		if (sa->inbound)
-		{
-			inbound_spi = ntohl(sa->spi);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (!inbound_spi)
-	{
-		return FALSE;
-	}
-
 	memcpy(spi.inboundIpsecTraffic.localV6Address, traffic.localV6Address,
 		   sizeof(traffic.localV6Address));
 	memcpy(spi.inboundIpsecTraffic.remoteV6Address, traffic.remoteV6Address,
 		   sizeof(traffic.remoteV6Address));
 	spi.ipVersion = traffic.ipVersion;
 
-	res = IPsecSaContextSetSpi0(this->handle, entry->sa_id, &spi, inbound_spi);
+	res = IPsecSaContextSetSpi0(this->handle, entry->sa_id, &spi,
+								ntohl(entry->isa.spi));
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "setting WFP SA SPI failed: 0x%08x", res);
@@ -877,18 +801,13 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		return FALSE;
 	}
 
-	enumerator = array_create_enumerator(entry->sas);
-	while (enumerator->enumerate(enumerator, &sa))
+	if (!install_sa(this, entry, TRUE, &entry->isa, spi.ipVersion) ||
+		!install_sa(this, entry, FALSE, &entry->osa, spi.ipVersion))
 	{
-		if (!install_sa(this, entry, sa, spi.ipVersion))
-		{
-			enumerator->destroy(enumerator);
-			IPsecSaContextDeleteById0(this->handle, entry->sa_id);
-			entry->sa_id = 0;
-			return FALSE;
-		}
+		IPsecSaContextDeleteById0(this->handle, entry->sa_id);
+		entry->sa_id = 0;
+		return FALSE;
 	}
-	enumerator->destroy(enumerator);
 
 	return TRUE;
 }
@@ -1003,13 +922,8 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	enumerator = array_create_enumerator(entry->sps);
 	while (enumerator->enumerate(enumerator, &sp))
 	{
-		if (sp->direction != POLICY_IN)
-		{
-			continue;
-		}
-		/* TODO: verify OUT/FORWARD matches to IN? */
-		if (!ts2condition(sp->dst, TRUE, &conds, &count) ||
-			!ts2condition(sp->src, FALSE, &conds, &count))
+		if (!ts2condition(sp->src, TRUE, &conds, &count) ||
+			!ts2condition(sp->dst, FALSE, &conds, &count))
 		{
 			free_conditions(conds, count);
 			enumerator->destroy(enumerator);
@@ -1100,31 +1014,61 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
-	status_t status = SUCCESS;
 	host_t *local, *remote;
 	entry_t *entry;
-	sa_entry_t *sa;
 
 	if (inbound)
 	{
-		local = dst;
-		remote = src;
+		/* comes first, create new entry */
+		local = dst->clone(dst);
+		remote = src->clone(src);
+
+		INIT(entry,
+			.reqid = reqid,
+			.isa = {
+				.spi = spi,
+				.dst = local,
+				.protocol = protocol,
+				.encr = {
+					.alg = enc_alg,
+					.key = chunk_clone(enc_key),
+				},
+				.integ = {
+					.alg = int_alg,
+					.key = chunk_clone(int_key),
+				},
+			},
+			.sps = array_create(0, 0),
+			.local = local,
+			.remote = remote,
+			.mode = mode,
+			.encap = encap,
+		);
+
+		this->mutex->lock(this->mutex);
+		this->tsas->put(this->tsas, (void*)(uintptr_t)reqid, entry);
+		this->isas->put(this->isas, &entry->isa, entry);
+		this->mutex->unlock(this->mutex);
 	}
 	else
 	{
-		local = src;
-		remote = dst;
-	}
+		/* comes after inbound, update entry */
+		this->mutex->lock(this->mutex);
+		entry = this->tsas->remove(this->tsas, (void*)(uintptr_t)reqid);
+		this->mutex->unlock(this->mutex);
 
-	this->mutex->lock(this->mutex);
-	entry = get_or_create_entry(this, reqid, local, remote,
-								protocol, mode, encap);
-	if (entry)
-	{
-		INIT(sa,
+		if (!entry)
+		{
+			DBG1(DBG_KNL, "adding outbound SA failed, no inbound SA found "
+				 "for reqid %u ", reqid);
+			return NOT_FOUND;
+		}
+		/* TODO: should we check for local/remote, mode etc.? */
+
+		entry->osa = (sa_entry_t){
 			.spi = spi,
-			.inbound = inbound,
-			.dst = inbound ? entry->local : entry->remote,
+			.dst = entry->remote,
+			.protocol = protocol,
 			.encr = {
 				.alg = enc_alg,
 				.key = chunk_clone(enc_key),
@@ -1133,19 +1077,14 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				.alg = int_alg,
 				.key = chunk_clone(int_key),
 			},
-		);
-		array_insert(entry->sas, -1, sa);
-		this->sas->put(this->sas, sa, entry);
-	}
-	else
-	{
-		DBG1(DBG_KNL, "adding SA failed, a different SA with reqid %u exists",
-			 reqid);
-		status = FAILED;
-	}
-	this->mutex->unlock(this->mutex);
+		};
 
-	return status;
+		this->mutex->lock(this->mutex);
+		this->osas->put(this->osas, &entry->osa, entry);
+		this->mutex->unlock(this->mutex);
+	}
+
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
@@ -1168,61 +1107,33 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
-	status_t status = NOT_FOUND;
 	entry_t *entry;
-	host_t *local, *remote;
-	enumerator_t *enumerator;
-	sa_entry_t *sa, key = {
+	sa_entry_t key = {
 		.dst = dst,
 		.spi = spi,
 	};
 
 	this->mutex->lock(this->mutex);
-
-	entry = this->sas->get(this->sas, &key);
-	if (entry)
-	{
-		enumerator = array_create_enumerator(entry->sas);
-		while (enumerator->enumerate(enumerator, &sa))
-		{
-			if (sa->inbound)
-			{
-				local = dst;
-				remote = src;
-			}
-			else
-			{
-				local = src;
-				remote = dst;
-			}
-			if (sa->spi == spi && entry->protocol == protocol &&
-				local->ip_equals(local, entry->local) &&
-				remote->ip_equals(remote, entry->remote))
-			{
-				array_remove_at(entry->sas, enumerator);
-				this->sas->remove(this->sas, sa);
-				/* TODO: uninstall SA from kernel */
-				sa_entry_destroy(sa);
-				status = SUCCESS;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-
-		if (!array_count(entry->sas) && !array_count(entry->sps))
-		{
-			entry = this->entries->remove(this->entries,
-										  (void*)(uintptr_t)entry->reqid);
-			if (entry)
-			{
-				entry_destroy(this, entry);
-			}
-		}
-	}
-
+	entry = this->isas->remove(this->isas, &key);
 	this->mutex->unlock(this->mutex);
 
-	return status;
+	if (entry)
+	{
+		/* keep entry until removal of outbound */
+		return SUCCESS;
+	}
+
+	this->mutex->lock(this->mutex);
+	entry = this->osas->remove(this->osas, &key);
+	this->mutex->unlock(this->mutex);
+
+	if (entry)
+	{
+		entry_destroy(this, entry);
+		return SUCCESS;
+	}
+
+	return NOT_FOUND;
 }
 
 METHOD(kernel_ipsec_t, flush_sas, status_t,
@@ -1238,50 +1149,70 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_priority_t priority)
 {
 	status_t status = SUCCESS;
-	host_t *local, *remote;
 	entry_t *entry;
 	sp_entry_t *sp;
+	sa_entry_t key = {
+		.spi = sa->esp.use ? sa->esp.spi : sa->ah.spi,
+		.dst = dst,
+	};
 
-	if (direction == POLICY_FWD || priority != POLICY_PRIORITY_DEFAULT)
+	if (sa->esp.use && sa->ah.use)
 	{
-		return SUCCESS;
+		return NOT_SUPPORTED;
 	}
 
-	if (direction == POLICY_IN)
+	switch (direction)
 	{
-		local = dst;
-		remote = src;
+		case POLICY_OUT:
+			break;
+		case POLICY_IN:
+		case POLICY_FWD:
+			/* not required */
+			return SUCCESS;
+		default:
+			return NOT_SUPPORTED;
 	}
-	else
+
+	switch (priority)
 	{
-		local = src;
-		remote = dst;
+		case POLICY_PRIORITY_DEFAULT:
+			break;
+		case POLICY_PRIORITY_FALLBACK:
+			/* TODO: install fallback policy? */
+			return SUCCESS;
+		case POLICY_PRIORITY_ROUTED:
+			/* TODO: install trap policy with low prio */
+		default:
+			return NOT_SUPPORTED;
 	}
 
 	this->mutex->lock(this->mutex);
-	entry = get_or_create_entry(this, sa->reqid, local, remote,
-								sa->esp.use ? IPPROTO_ESP : IPPROTO_AH,
-								sa->mode, FALSE);
+	entry = this->osas->get(this->osas, &key);
 	if (entry)
 	{
-		INIT(sp,
-			.src = src_ts->clone(src_ts),
-			.dst = dst_ts->clone(dst_ts),
-			.direction = direction,
-		);
-		array_insert(entry->sps, -1, sp);
-		if (array_count(entry->sps) > 1)
+		if (array_count(entry->sps) == 0)
 		{
+			INIT(sp,
+				.src = src_ts->clone(src_ts),
+				.dst = dst_ts->clone(dst_ts),
+			);
+			array_insert(entry->sps, -1, sp);
 			if (!install(this, entry))
 			{
 				status = FAILED;
 			}
 		}
+		else
+		{
+			/* TODO: reinstall with a filter using multiple TS?
+			 * Filters are ANDed for a match, but we could install a filter
+			 * with the inverse TS set using NOT-matches... */
+			status = NOT_SUPPORTED;
+		}
 	}
 	else
 	{
-		DBG1(DBG_KNL, "adding SP failed, a different SP with reqid %u exists",
-			 sa->reqid);
+		DBG1(DBG_KNL, "adding SP failed, no SA found for SPI 0x%08x", key.spi);
 		status = FAILED;
 	}
 	this->mutex->unlock(this->mutex);
@@ -1302,46 +1233,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
 	mark_t mark, policy_priority_t priority)
 {
-	status_t status = NOT_FOUND;
-	entry_t *entry;
-	sp_entry_t *sp;
-	enumerator_t *enumerator;
-
-	this->mutex->lock(this->mutex);
-
-	entry = this->entries->get(this->entries, (void*)(uintptr_t)reqid);
-	if (entry)
-	{
-		enumerator = array_create_enumerator(entry->sps);
-		while (enumerator->enumerate(enumerator, &sp))
-		{
-			if (sp->direction == direction &&
-				src_ts->equals(src_ts, sp->src) &&
-				dst_ts->equals(dst_ts, sp->dst))
-			{
-				array_remove_at(entry->sps, enumerator);
-				/* TODO: uninstall SP from kernel */
-				sp_entry_destroy(sp);
-				status = SUCCESS;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-
-		if (!array_count(entry->sas) && !array_count(entry->sps))
-		{
-			entry = this->entries->remove(this->entries,
-										  (void*)(uintptr_t)reqid);
-			if (entry)
-			{
-				entry_destroy(this, entry);
-			}
-		}
-	}
-
-	this->mutex->unlock(this->mutex);
-
-	return status;
+	/* not required, as we delete the whole SA/SP set during del_sa() */
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, flush_policies, status_t,
@@ -1370,8 +1263,9 @@ METHOD(kernel_ipsec_t, destroy, void,
 		FwpmProviderDeleteByKey0(this->handle, &this->provider.providerKey);
 		FwpmEngineClose0(this->handle);
 	}
-	this->entries->destroy(this->entries);
-	this->sas->destroy(this->sas);
+	this->tsas->destroy(this->tsas);
+	this->isas->destroy(this->isas);
+	this->osas->destroy(this->osas);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -1420,9 +1314,9 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 		},
 		.nextspi = htonl(0xc0000001),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.entries = hashtable_create(hashtable_hash_ptr,
-									hashtable_equals_ptr, 4),
-		.sas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
+		.tsas = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
+		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
+		.osas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 	);
 
 	res = FwpmEngineOpen0(NULL, RPC_C_AUTHN_WINNT, NULL, &session,
