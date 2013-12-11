@@ -140,6 +140,13 @@ void command_register(command_t command)
 {
 	int i;
 
+	if (registered == MAX_COMMANDS)
+	{
+		fprintf(stderr, "unable to register command, please increase "
+				"MAX_COMMANDS\n");
+		return;
+	}
+
 	cmds[registered] = command;
 	/* append default options, but not to --help */
 	if (!active)
