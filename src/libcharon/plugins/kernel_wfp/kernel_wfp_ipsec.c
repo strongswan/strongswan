@@ -1100,6 +1100,10 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes,
 	u_int64_t *packets, time_t *time)
 {
+	/* It does not seem that WFP provides any means of getting per-SA traffic
+	 * statistics. IPsecGetStatistics0/1() provides global stats, and
+	 * IPsecSaContextEnum0/1() and IPsecSaEnum0/1() return the configured
+	 * values only. */
 	return NOT_SUPPORTED;
 }
 
@@ -1225,6 +1229,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
 	time_t *use_time)
 {
+	/* see query_sa() for some notes */
 	return NOT_SUPPORTED;
 }
 
