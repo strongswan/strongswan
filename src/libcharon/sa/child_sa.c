@@ -731,6 +731,17 @@ METHOD(child_sa_t, install, status_t,
 }
 
 /**
+ * Check kernel interface if policy updates are required
+ */
+static bool require_policy_update()
+{
+	kernel_feature_t f;
+
+	f = hydra->kernel_interface->get_features(hydra->kernel_interface);
+	return !(f & KERNEL_NO_POLICY_UPDATES);
+}
+
+/**
  * Install 3 policies: out, in and forward
  */
 static status_t install_policies_internal(private_child_sa_t *this,
@@ -842,7 +853,7 @@ METHOD(child_sa_t, add_policies, status_t,
 		{
 			/* install outbound drop policy to avoid packets leaving unencrypted
 			 * when updating policies */
-			if (priority == POLICY_PRIORITY_DEFAULT)
+			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
 			{
 				status |= install_policies_internal(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
@@ -936,7 +947,7 @@ METHOD(child_sa_t, update, status_t,
 		}
 	}
 
-	if (this->config->install_policy(this->config))
+	if (this->config->install_policy(this->config) && require_policy_update())
 	{
 		ipsec_sa_cfg_t my_sa = {
 			.mode = this->mode,
@@ -1075,7 +1086,7 @@ METHOD(child_sa_t, destroy, void,
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			del_policies_internal(this, my_ts, other_ts, priority);
-			if (priority == POLICY_PRIORITY_DEFAULT)
+			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
 			{
 				del_policies_internal(this, my_ts, other_ts,
 									  POLICY_PRIORITY_FALLBACK);
