@@ -78,6 +78,8 @@ typedef struct {
 	u_int32_t spi;
 	/** protocol, IPPROTO_ESP/IPPROTO_AH */
 	u_int8_t protocol;
+	/** hard lifetime of SA */
+	u_int32_t lifetime;
 	/** destination host address for this SPI */
 	host_t *dst;
 	struct {
@@ -646,6 +648,10 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		.spi = ntohl(sa->spi),
 	};
 	IPSEC_SA_BUNDLE0 bundle = {
+		.lifetime = {
+			.lifetimeSeconds = inbound ? entry->isa.lifetime
+									   : entry->osa.lifetime,
+		},
 		.saList = &ipsec,
 		.numSAs = 1,
 		.ipVersion = version,
@@ -1029,6 +1035,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				.spi = spi,
 				.dst = local,
 				.protocol = protocol,
+				.lifetime = lifetime->time.life,
 				.encr = {
 					.alg = enc_alg,
 					.key = chunk_clone(enc_key),
@@ -1069,6 +1076,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			.spi = spi,
 			.dst = entry->remote,
 			.protocol = protocol,
+			.lifetime = lifetime->time.life,
 			.encr = {
 				.alg = enc_alg,
 				.key = chunk_clone(enc_key),
