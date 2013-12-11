@@ -1003,7 +1003,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
-	*spi = ref_get(&this->nextspi);
+	*spi = htonl(ref_get(&this->nextspi));
 	return SUCCESS;
 }
 
@@ -1433,7 +1433,7 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 			.providerKey = { 0x59cdae2e, 0xf6bb, 0x4c09,
 							{ 0xa9,0x59,0x9d,0x91,0xac,0xaf,0xf9,0x19 }},
 		},
-		.nextspi = htonl(0xc0000001),
+		.nextspi = 0xc0000001,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.tsas = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
