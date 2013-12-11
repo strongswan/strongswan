@@ -55,12 +55,12 @@ static options_t *options;
 /**
  * Global options used by all subcommands
  */
-static struct option command_opts[MAX_COMMANDS > MAX_OPTIONS ?: MAX_OPTIONS];
+static struct option command_opts[MAX_COMMANDS > MAX_OPTIONS ? MAX_COMMANDS : MAX_OPTIONS];
 
 /**
  * Global optstring used by all subcommands
  */
-static char command_optstring[(MAX_COMMANDS > MAX_OPTIONS ?: MAX_OPTIONS) * 3];
+static char command_optstring[(MAX_COMMANDS > MAX_OPTIONS ? MAX_COMMANDS : MAX_OPTIONS) * 3];
 
 /**
  * Build command_opts/command_optstr for the active command
