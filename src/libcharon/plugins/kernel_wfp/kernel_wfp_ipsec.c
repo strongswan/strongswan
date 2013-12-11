@@ -154,7 +154,7 @@ typedef struct {
 	bool encap;
 	/** WFP allocated LUID for inbound filter/tunnel policy ID */
 	u_int64_t policy_in;
-	/** WFP allocated LUID for outbound filter/tunnel policy ID */
+	/** WFP allocated LUID for outbound filter ID, unused for tunnel mode */
 	u_int64_t policy_out;
 	/** WFP allocated LUID for SA context */
 	u_int64_t sa_id;
@@ -182,6 +182,46 @@ static entry_t *entry_create(u_int32_t reqid, host_t *local, host_t *remote,
 }
 
 /**
+ * Remove a transport or tunnel policy from kernel
+ */
+static void cleanup_policy(private_kernel_wfp_ipsec_t *this, bool transport,
+						   u_int64_t policy)
+{
+	if (transport)
+	{
+		FwpmFilterDeleteById0(this->handle, policy);
+	}
+	else
+	{
+		FWPM_PROVIDER_CONTEXT0 *ctx;
+
+		if (FwpmProviderContextGetById0(this->handle, policy,
+										&ctx) == ERROR_SUCCESS)
+		{
+			FwpmIPsecTunnelDeleteByKey0(this->handle, &ctx->providerContextKey);
+			FwpmFreeMemory0((void**)&ctx);
+		}
+	}
+}
+
+/**
+ * Remove policies associated to an entry from kernel
+ */
+static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
+{
+	if (entry->policy_in)
+	{
+		cleanup_policy(this, entry->mode == MODE_TRANSPORT, entry->policy_in);
+		entry->policy_in = 0;
+	}
+	if (entry->policy_out)
+	{
+		cleanup_policy(this, entry->mode == MODE_TRANSPORT, entry->policy_out);
+		entry->policy_out = 0;
+	}
+}
+
+/**
  * Destroy a SA/SP entry set
  */
 static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
@@ -190,14 +230,7 @@ static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	{
 		IPsecSaContextDeleteById0(this->handle, entry->sa_id);
 	}
-	if (entry->policy_in)
-	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_in);
-	}
-	if (entry->policy_out)
-	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_out);
-	}
+	cleanup_policies(this, entry);
 	array_destroy(entry->sas);
 	array_destroy(entry->sps);
 	entry->local->destroy(entry->local);
@@ -662,10 +695,10 @@ static integrity_algorithm_t encr2integ(encryption_algorithm_t encr, int keylen)
 }
 
 /**
- * Install a single transport mode SA
+ * Install a single SA
  */
-static bool install_transport_sa(private_kernel_wfp_ipsec_t *this,
-						entry_t *entry, sa_entry_t *sa, FWP_IP_VERSION version)
+static bool install_sa(private_kernel_wfp_ipsec_t *this,
+					   entry_t *entry, sa_entry_t *sa, FWP_IP_VERSION version)
 {
 	IPSEC_SA_AUTH_AND_CIPHER_INFORMATION0 info = {};
 	IPSEC_SA0 ipsec = {
@@ -758,24 +791,34 @@ static bool install_transport_sa(private_kernel_wfp_ipsec_t *this,
 }
 
 /**
- * Install transport mode SAs to the kernel
+ * Install SAs to the kernel
  */
-static bool install_transport_sas(private_kernel_wfp_ipsec_t *this,
-								  entry_t *entry)
+static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
+						IPSEC_TRAFFIC_TYPE type)
 {
 	IPSEC_TRAFFIC0 traffic = {
-		.trafficType = IPSEC_TRAFFIC_TYPE_TRANSPORT,
+		.trafficType = type,
 	};
 	IPSEC_GETSPI1 spi = {
 		.inboundIpsecTraffic = {
-			.trafficType = IPSEC_TRAFFIC_TYPE_TRANSPORT,
-			.ipsecFilterId = entry->policy_in,
+			.trafficType = type,
 		},
 	};
 	sa_entry_t *sa;
 	IPSEC_SA_SPI inbound_spi = 0;
 	enumerator_t *enumerator;
 	DWORD res;
+
+	if (type == IPSEC_TRAFFIC_TYPE_TRANSPORT)
+	{
+		traffic.ipsecFilterId = entry->policy_out;
+		spi.inboundIpsecTraffic.ipsecFilterId = entry->policy_in;
+	}
+	else
+	{
+		traffic.tunnelPolicyId = entry->policy_in;
+		spi.inboundIpsecTraffic.tunnelPolicyId = entry->policy_in;
+	}
 
 	switch (entry->local->get_family(entry->local))
 	{
@@ -797,7 +840,6 @@ static bool install_transport_sas(private_kernel_wfp_ipsec_t *this,
 			return FALSE;
 	}
 
-	traffic.ipsecFilterId = entry->policy_out;
 	res = IPsecSaContextCreate0(this->handle, &traffic, NULL, &entry->sa_id);
 	if (res != ERROR_SUCCESS)
 	{
@@ -838,7 +880,7 @@ static bool install_transport_sas(private_kernel_wfp_ipsec_t *this,
 	enumerator = array_create_enumerator(entry->sas);
 	while (enumerator->enumerate(enumerator, &sa))
 	{
-		if (!install_transport_sa(this, entry, sa, spi.ipVersion))
+		if (!install_sa(this, entry, sa, spi.ipVersion))
 		{
 			enumerator->destroy(enumerator);
 			IPsecSaContextDeleteById0(this->handle, entry->sa_id);
@@ -858,20 +900,157 @@ static bool install_transport(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
 	if (install_transport_sp(this, entry, TRUE) &&
 		install_transport_sp(this, entry, FALSE) &&
-		install_transport_sas(this, entry))
+		install_sas(this, entry, IPSEC_TRAFFIC_TYPE_TRANSPORT))
 	{
 		return TRUE;
 	}
-	if (entry->policy_in)
+	cleanup_policies(this, entry);
+	return FALSE;
+}
+
+/**
+ * Generate a new GUID, random
+ */
+static bool generate_guid(private_kernel_wfp_ipsec_t *this, GUID *guid)
+{
+	bool ok;
+	rng_t *rng;
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_in);
-		entry->policy_in = 0;
+		return FALSE;
 	}
-	if (entry->policy_out)
+	ok = rng->get_bytes(rng, sizeof(GUID), (u_int8_t*)guid);
+	rng->destroy(rng);
+	return ok;
+}
+
+/**
+ * Install tunnel mode SPs to the kernel
+ */
+static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
+{
+	FWPM_FILTER_CONDITION0 *conds = NULL;
+	int count = 0;
+	enumerator_t *enumerator;
+	sp_entry_t *sp;
+	DWORD res;
+
+	IPSEC_AUTH_TRANSFORM0 transform = {
+		/* Create any valid proposal. This is actually not used, as we
+		 * don't create an SA from this information. */
+		.authTransformId = IPSEC_AUTH_TRANSFORM_ID_HMAC_SHA_1_96,
+	};
+	IPSEC_SA_TRANSFORM0 transforms = {
+		.ipsecTransformType = IPSEC_TRANSFORM_ESP_AUTH,
+		.espAuthTransform = &transform,
+	};
+	IPSEC_PROPOSAL0 proposal = {
+		.lifetime = {
+			/* We need a valid lifetime, even if we don't create any SA
+			 * from these values. Pick some values accepted. */
+			.lifetimeSeconds = 0xFFFF,
+			.lifetimeKilobytes = 0xFFFFFFFF,
+			.lifetimePackets = 0xFFFFFFFF,
+		},
+		.numSaTransforms = 1,
+		.saTransforms = &transforms,
+	};
+	IPSEC_TUNNEL_POLICY0 policy = {
+		.numIpsecProposals = 1,
+		.ipsecProposals = &proposal,
+		.saIdleTimeout = {
+			/* not used, set to lifetime for maximum */
+			.idleTimeoutSeconds = proposal.lifetime.lifetimeSeconds,
+			.idleTimeoutSecondsFailOver = proposal.lifetime.lifetimeSeconds,
+		},
+	};
+	FWPM_PROVIDER_CONTEXT0 *ctx, qm = {
+		.displayData = {
+			.name = L"charon tunnel provider context",
+		},
+		.providerKey = (GUID*)&this->provider.providerKey,
+		.type = FWPM_IPSEC_IKE_QM_TUNNEL_CONTEXT,
+		.ikeQmTunnelPolicy = &policy,
+	};
+
+	switch (entry->local->get_family(entry->local))
 	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_out);
-		entry->policy_out = 0;
+		case AF_INET:
+			policy.tunnelEndpoints.ipVersion = FWP_IP_VERSION_V4;
+			policy.tunnelEndpoints.localV4Address =
+						untoh32(entry->local->get_address(entry->local).ptr);
+			policy.tunnelEndpoints.remoteV4Address =
+						untoh32(entry->remote->get_address(entry->remote).ptr);
+			break;
+		case AF_INET6:
+			policy.tunnelEndpoints.ipVersion = FWP_IP_VERSION_V6;
+			memcpy(&policy.tunnelEndpoints.localV6Address,
+				   entry->local->get_address(entry->local).ptr, 16);
+			memcpy(&policy.tunnelEndpoints.remoteV6Address,
+				   entry->remote->get_address(entry->remote).ptr, 16);
+			break;
+		default:
+			return FALSE;
 	}
+
+	if (!generate_guid(this, &qm.providerContextKey))
+	{
+		return FALSE;
+	}
+
+	enumerator = array_create_enumerator(entry->sps);
+	while (enumerator->enumerate(enumerator, &sp))
+	{
+		if (sp->direction != POLICY_IN)
+		{
+			continue;
+		}
+		/* TODO: verify OUT/FORWARD matches to IN? */
+		if (!ts2condition(sp->dst, TRUE, &conds, &count) ||
+			!ts2condition(sp->src, FALSE, &conds, &count))
+		{
+			free_conditions(conds, count);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	res = FwpmIPsecTunnelAdd0(this->handle, 0, NULL, &qm, count, conds, NULL);
+	free_conditions(conds, count);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "installing FWP tunnel policy failed: 0x%08x", res);
+		return FALSE;
+	}
+
+	/* to get the tunnelPolicyId LUID we have to query the context */
+	res = FwpmProviderContextGetByKey0(this->handle, &qm.providerContextKey,
+									   &ctx);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "getting FWP tunnel policy context failed: 0x%08x", res);
+		return FALSE;
+	}
+	entry->policy_in = ctx->providerContextId;
+	FwpmFreeMemory0((void**)&ctx);
+
+	return TRUE;
+}
+
+/**
+ * Install a tunnel mode SA/SP set to the kernel
+ */
+static bool install_tunnel(private_kernel_wfp_ipsec_t *this, entry_t *entry)
+{
+	if (install_tunnel_sps(this, entry) &&
+		install_sas(this, entry, IPSEC_TRAFFIC_TYPE_TUNNEL))
+	{
+		return TRUE;
+	}
+	cleanup_policies(this, entry);
 	return FALSE;
 }
 
@@ -885,6 +1064,7 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 		case MODE_TRANSPORT:
 			return install_transport(this, entry);
 		case MODE_TUNNEL:
+			return install_tunnel(this, entry);
 		case MODE_BEET:
 		default:
 			return FALSE;
