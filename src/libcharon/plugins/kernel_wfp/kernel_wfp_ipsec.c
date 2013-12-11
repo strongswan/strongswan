@@ -20,9 +20,11 @@
 #include "kernel_wfp_ipsec.h"
 
 #include <daemon.h>
+#include <hydra.h>
 #include <threading/mutex.h>
 #include <collections/array.h>
 #include <collections/hashtable.h>
+#include <processing/jobs/callback_job.h>
 
 
 typedef struct private_kernel_wfp_ipsec_t private_kernel_wfp_ipsec_t;
@@ -1012,6 +1014,103 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 	return NOT_SUPPORTED;
 }
 
+/**
+ * Data for an expire callback job
+ */
+typedef struct {
+	/* backref to kernel backend */
+	private_kernel_wfp_ipsec_t *this;
+	/* SPI of expiring SA */
+	u_int32_t spi;
+	/* destination address of expiring SA */
+	host_t *dst;
+	/* is this a hard expire, or a rekey request? */
+	bool hard;
+} expire_data_t;
+
+/**
+ * Clean up expire data
+ */
+static void expire_data_destroy(expire_data_t *data)
+{
+	data->dst->destroy(data->dst);
+	free(data);
+}
+
+/**
+ * Callback job for SA expiration
+ */
+static job_requeue_t expire_job(expire_data_t *data)
+{
+	private_kernel_wfp_ipsec_t *this = data->this;
+	u_int32_t reqid = 0;
+	u_int8_t protocol;
+	entry_t *entry;
+	sa_entry_t key = {
+		.spi = data->spi,
+		.dst = data->dst,
+	};
+
+	if (data->hard)
+	{
+		this->mutex->lock(this->mutex);
+		entry = this->isas->remove(this->isas, &key);
+		this->mutex->unlock(this->mutex);
+		if (entry)
+		{
+			protocol = entry->isa.protocol;
+			reqid = entry->reqid;
+			if (entry->osa.dst)
+			{
+				key.dst = entry->osa.dst;
+				key.spi = entry->osa.spi;
+				this->osas->remove(this->osas, &key);
+			}
+			entry_destroy(this, entry);
+		}
+	}
+	else
+	{
+		this->mutex->lock(this->mutex);
+		entry = this->isas->get(this->isas, &key);
+		if (entry)
+		{
+			protocol = entry->isa.protocol;
+			reqid = entry->reqid;
+		}
+		this->mutex->unlock(this->mutex);
+	}
+
+	if (reqid)
+	{
+		hydra->kernel_interface->expire(hydra->kernel_interface,
+										reqid, protocol, data->spi, data->hard);
+	}
+
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Schedule an expire event for an SA
+ */
+static void schedule_expire(private_kernel_wfp_ipsec_t *this, u_int32_t spi,
+							host_t *dst, u_int32_t lifetime, bool hard)
+{
+	expire_data_t *data;
+
+	INIT(data,
+		.this = this,
+		.spi = spi,
+		.dst = dst->clone(dst),
+		.hard = hard,
+	);
+
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+						callback_job_create((void*)expire_job, data,
+											(void*)expire_data_destroy, NULL),
+						lifetime);
+}
+
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
@@ -1051,6 +1150,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			.mode = mode,
 			.encap = encap,
 		);
+
+		if (lifetime->time.life)
+		{
+			schedule_expire(this, spi, local, lifetime->time.life, TRUE);
+		}
+		if (lifetime->time.rekey && lifetime->time.rekey != lifetime->time.life)
+		{
+			schedule_expire(this, spi, local, lifetime->time.rekey, FALSE);
+		}
 
 		this->mutex->lock(this->mutex);
 		this->tsas->put(this->tsas, (void*)(uintptr_t)reqid, entry);
