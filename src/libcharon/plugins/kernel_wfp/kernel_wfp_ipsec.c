@@ -996,7 +996,7 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_wfp_ipsec_t *this)
 {
-	return KERNEL_ESP_V3_TFC;
+	return KERNEL_ESP_V3_TFC | KERNEL_NO_POLICY_UPDATES;
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
@@ -1281,6 +1281,15 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		return NOT_SUPPORTED;
 	}
 
+	switch (type)
+	{
+		case POLICY_IPSEC:
+			break;
+		case POLICY_PASS:
+		case POLICY_DROP:
+			return NOT_SUPPORTED;
+	}
+
 	switch (direction)
 	{
 		case POLICY_OUT:
@@ -1297,11 +1306,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	{
 		case POLICY_PRIORITY_DEFAULT:
 			break;
-		case POLICY_PRIORITY_FALLBACK:
-			/* TODO: install fallback policy? */
-			return SUCCESS;
 		case POLICY_PRIORITY_ROUTED:
 			/* TODO: install trap policy with low prio */
+		case POLICY_PRIORITY_FALLBACK:
 		default:
 			return NOT_SUPPORTED;
 	}
