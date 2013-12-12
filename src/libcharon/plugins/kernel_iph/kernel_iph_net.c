@@ -13,9 +13,21 @@
  * for more details.
  */
 
+/* Windows 7, for some iphlpapi.h functionality */
+#define _WIN32_WINNT 0x0601
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <windows.h>
+#include <ntddndis.h>
+#include <naptypes.h>
+#include <iphlpapi.h>
+
 #include "kernel_iph_net.h"
 
 #include <hydra.h>
+#include <threading/mutex.h>
+#include <collections/linked_list.h>
+
 
 typedef struct private_kernel_iph_net_t private_kernel_iph_net_t;
 
@@ -28,7 +40,304 @@ struct private_kernel_iph_net_t {
 	 * Public interface.
 	 */
 	kernel_iph_net_t public;
+
+	/**
+	 * NotifyIpInterfaceChange() handle
+	 */
+	HANDLE changes;
+
+	/**
+	 * Mutex to access interface list
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Known interfaces, as iface_t
+	 */
+	linked_list_t *ifaces;
 };
+
+/**
+ * Interface entry
+ */
+typedef struct  {
+	/** interface index */
+	DWORD ifindex;
+	/** interface name */
+	char *ifname;
+	/** interface description */
+	char *ifdesc;
+	/** type of interface */
+	DWORD iftype;
+	/** interface status */
+	IF_OPER_STATUS status;
+	/** list of known addresses, as host_t */
+	linked_list_t *addrs;
+} iface_t;
+
+/**
+ * Clean up an iface_t
+ */
+static void iface_destroy(iface_t *this)
+{
+	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
+	free(this->ifname);
+	free(this->ifdesc);
+	free(this);
+}
+
+/**
+ * Enum names for Windows IF_OPER_STATUS
+ */
+ENUM(if_oper_names, IfOperStatusUp, IfOperStatusLowerLayerDown,
+	"Up",
+	"Down",
+	"Testing",
+	"Unknown",
+	"Dormant",
+	"NotPresent",
+	"LowerLayerDown",
+);
+
+/**
+ * Update addresses for an iface entry
+ */
+static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
+						 IP_ADAPTER_ADDRESSES *addr, bool log)
+{
+	IP_ADAPTER_UNICAST_ADDRESS *current;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	host_t *host, *old;
+
+	list = entry->addrs;
+	entry->addrs = linked_list_create();
+
+	for (current = addr->FirstUnicastAddress; current; current = current->Next)
+	{
+		if (current->Address.lpSockaddr->sa_family == AF_INET6)
+		{
+			struct sockaddr_in6 *sin;
+
+			sin = (struct sockaddr_in6*)current->Address.lpSockaddr;
+			if (IN6_IS_ADDR_LINKLOCAL(&sin->sin6_addr))
+			{
+				continue;
+			}
+		}
+
+		host = host_create_from_sockaddr(current->Address.lpSockaddr);
+		if (host)
+		{
+			bool found = FALSE;
+
+			enumerator = list->create_enumerator(list);
+			while (enumerator->enumerate(enumerator, &old))
+			{
+				if (host->ip_equals(host, old))
+				{
+					list->remove_at(list, enumerator);
+					old->destroy(old);
+					found = TRUE;
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			entry->addrs->insert_last(entry->addrs, host);
+
+			if (!found && log)
+			{
+				DBG1(DBG_KNL, "%H appeared on interface %u '%s'",
+					 host, entry->ifindex, entry->ifdesc);
+			}
+		}
+	}
+
+	while (list->remove_first(list, (void**)&old) == SUCCESS)
+	{
+		if (log)
+		{
+			DBG1(DBG_KNL, "%H disappeared from interface %u '%s'",
+				 old, entry->ifindex, entry->ifdesc);
+		}
+		old->destroy(old);
+	}
+	list->destroy(list);
+}
+
+/**
+ * Add an interface entry
+ */
+static void add_interface(private_kernel_iph_net_t *this,
+						  IP_ADAPTER_ADDRESSES *addr, bool log)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+	bool exists = FALSE;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->ifindex == addr->IfIndex)
+		{
+			exists = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	if (!exists)
+	{
+		char desc[128] = "";
+
+		wcstombs(desc, addr->Description, sizeof(desc));
+
+		INIT(entry,
+			.ifindex = addr->IfIndex,
+			.ifname = strdup(addr->AdapterName),
+			.ifdesc = strdup(desc),
+			.iftype = addr->IfType,
+			.status = addr->OperStatus,
+			.addrs = linked_list_create(),
+		);
+
+		if (log)
+		{
+			DBG1(DBG_KNL, "interface %u '%s' appeared",
+				 entry->ifindex, entry->ifdesc);
+		}
+
+		this->mutex->lock(this->mutex);
+		update_addrs(this, entry, addr, log);
+		this->ifaces->insert_last(this->ifaces, entry);
+		this->mutex->unlock(this->mutex);
+	}
+}
+
+/**
+ * Remove an interface entry that is gone
+ */
+static void remove_interface(private_kernel_iph_net_t *this, NET_IFINDEX index)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->ifindex == index)
+		{
+			this->ifaces->remove_at(this->ifaces, enumerator);
+			DBG1(DBG_KNL, "interface %u '%s' disappeared",
+				 entry->ifindex, entry->ifdesc);
+			iface_destroy(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Update an interface entry changed
+ */
+static void update_interface(private_kernel_iph_net_t *this,
+							 IP_ADAPTER_ADDRESSES *addr)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->ifindex == addr->IfIndex)
+		{
+			if (entry->status != addr->OperStatus)
+			{
+				DBG1(DBG_KNL, "interface %u '%s' changed state from %N to %N",
+					 entry->ifindex, entry->ifdesc, if_oper_names,
+					 entry->status, if_oper_names, addr->OperStatus);
+				entry->status = addr->OperStatus;
+			}
+			update_addrs(this, entry, addr, TRUE);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * MinGW gets MIB_IPINTERFACE_ROW wrong, as it packs InterfaceLuid just after
+ * Family. Fix that with our own version of the struct header.
+ */
+typedef struct {
+	ADDRESS_FAMILY Family;
+	union {
+		ULONG64 Value;
+		struct {
+			ULONG64 Reserved :24;
+			ULONG64 NetLuidIndex :24;
+			ULONG64 IfType :16;
+		} Info;
+	} InterfaceLuid;
+	NET_IFINDEX InterfaceIndex;
+	/* more would go here if needed */
+} MIB_IPINTERFACE_ROW_FIXUP;
+
+/**
+ * NotifyIpInterfaceChange() callback
+ */
+static void change_interface(private_kernel_iph_net_t *this,
+					MIB_IPINTERFACE_ROW_FIXUP *row, MIB_NOTIFICATION_TYPE type)
+{
+	IP_ADAPTER_ADDRESSES addrs[64], *current;
+	ULONG res, size = sizeof(addrs);
+
+	if (row && type == MibDeleteInstance)
+	{
+		remove_interface(this, row->InterfaceIndex);
+	}
+	else
+	{
+		res = GetAdaptersAddresses(AF_UNSPEC,
+						GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST |
+						GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
+						NULL, addrs, &size);
+		if (res == NO_ERROR)
+		{
+			current = addrs;
+			while (current)
+			{
+				/* row is NULL only on MibInitialNotification */
+				if (!row || row->InterfaceIndex == current->IfIndex)
+				{
+					switch (type)
+					{
+						case MibParameterNotification:
+							update_interface(this, current);
+							break;
+						case MibInitialNotification:
+							add_interface(this, current, FALSE);
+							break;
+						case MibAddInstance:
+							add_interface(this, current, TRUE);
+							break;
+						default:
+							break;
+					}
+				}
+				current = current->Next;
+			}
+		}
+		else
+		{
+			DBG1(DBG_KNL, "getting IPH adapter addresses failed: 0x%08lx", res);
+		}
+	}
+}
 
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_iph_net_t *this, host_t* ip, char **name)
@@ -85,6 +394,12 @@ METHOD(kernel_net_t, del_route, status_t,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_iph_net_t *this)
 {
+	if (this->changes)
+	{
+		CancelMibChangeNotify2(this->changes);
+	}
+	this->mutex->destroy(this->mutex);
+	this->ifaces->destroy_function(this->ifaces, (void*)iface_destroy);
 	free(this);
 }
 
@@ -94,6 +409,7 @@ METHOD(kernel_net_t, destroy, void,
 kernel_iph_net_t *kernel_iph_net_create()
 {
 	private_kernel_iph_net_t *this;
+	ULONG res;
 
 	INIT(this,
 		.public = {
@@ -109,7 +425,19 @@ kernel_iph_net_t *kernel_iph_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.ifaces = linked_list_create(),
 	);
+
+	res = NotifyIpInterfaceChange(AF_UNSPEC, (void*)change_interface,
+								  this, TRUE, &this->changes);
+	if (res != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "registering for IPH interface changes failed: 0x%08lx",
+			 res);
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }
