@@ -339,10 +339,47 @@ static void change_interface(private_kernel_iph_net_t *this,
 	}
 }
 
+/**
+ * Get an iface entry for a local address, does no locking
+ */
+static iface_t* address2entry(private_kernel_iph_net_t *this, host_t *ip)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_t *entry, *found = NULL;
+	host_t *host;
+
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (!found && ifaces->enumerate(ifaces, &entry))
+	{
+		addrs = entry->addrs->create_enumerator(entry->addrs);
+		while (!found && addrs->enumerate(addrs, &host))
+		{
+			if (host->ip_equals(host, ip))
+			{
+				found = entry;
+			}
+		}
+		addrs->destroy(addrs);
+	}
+	ifaces->destroy(ifaces);
+
+	return found;
+}
+
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_iph_net_t *this, host_t* ip, char **name)
 {
-	return FALSE;
+	iface_t *entry;
+
+	this->mutex->lock(this->mutex);
+	entry = address2entry(this, ip);
+	if (entry && name)
+	{
+		*name = strdup(entry->ifname);
+	}
+	this->mutex->unlock(this->mutex);
+
+	return entry != NULL;
 }
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
