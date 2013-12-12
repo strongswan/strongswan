@@ -469,7 +469,29 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_iph_net_t *this, host_t *dest, host_t *src)
 {
-	return NULL;
+	MIB_IPFORWARD_ROW2 route;
+	SOCKADDR_INET best, *sai_dst, *sai_src = NULL;
+	DWORD res, index = 0;
+
+	res = GetBestInterfaceEx(dest->get_sockaddr(dest), &index);
+	if (res != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "getting interface to %H failed: 0x%08x", dest, res);
+		return NULL;
+	}
+
+	sai_dst = (SOCKADDR_INET*)dest->get_sockaddr(dest);
+	if (src)
+	{
+		sai_src = (SOCKADDR_INET*)src->get_sockaddr(src);
+	}
+	res = GetBestRoute2(0, index, sai_src, sai_dst, 0, &route, &best);
+	if (res != NO_ERROR)
+	{
+		DBG2(DBG_KNL, "getting src address to %H failed: 0x%08x", dest, res);
+		return NULL;
+	}
+	return host_create_from_sockaddr((struct sockaddr*)&best);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
