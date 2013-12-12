@@ -382,10 +382,88 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	return entry != NULL;
 }
 
+/**
+ * Address enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** what kind of address should we enumerate? */
+	kernel_address_type_t which;
+	/** enumerator over interfaces */
+	enumerator_t *ifaces;
+	/** current enumerator over addresses, or NULL */
+	enumerator_t *addrs;
+	/** mutex to unlock on destruction */
+	mutex_t *mutex;
+} addr_enumerator_t;
+
+METHOD(enumerator_t, addr_enumerate, bool,
+	addr_enumerator_t *this, host_t **host)
+{
+	iface_t *entry;
+
+	while (TRUE)
+	{
+		while (!this->addrs)
+		{
+			if (!this->ifaces->enumerate(this->ifaces, &entry))
+			{
+				return FALSE;
+			}
+			if (entry->iftype == IF_TYPE_SOFTWARE_LOOPBACK &&
+				!(this->which & ADDR_TYPE_LOOPBACK))
+			{
+				continue;
+			}
+			if (entry->status != IfOperStatusUp &&
+				!(this->which & ADDR_TYPE_DOWN))
+			{
+				continue;
+			}
+			this->addrs = entry->addrs->create_enumerator(entry->addrs);
+		}
+		if (this->addrs->enumerate(this->addrs, host))
+		{
+			return TRUE;
+		}
+		this->addrs->destroy(this->addrs);
+		this->addrs = NULL;
+	}
+}
+
+METHOD(enumerator_t, addr_destroy, void,
+	addr_enumerator_t *this)
+{
+	DESTROY_IF(this->addrs);
+	this->ifaces->destroy(this->ifaces);
+	this->mutex->unlock(this->mutex);
+	free(this);
+}
+
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_iph_net_t *this, kernel_address_type_t which)
 {
-	return enumerator_create_empty();
+	addr_enumerator_t *enumerator;
+
+	if (!(which & ADDR_TYPE_REGULAR))
+	{
+		/* we currently have no virtual, but regular IPs only */
+		return enumerator_create_empty();
+	}
+
+	this->mutex->lock(this->mutex);
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_addr_enumerate,
+			.destroy = _addr_destroy,
+		},
+		.which = which,
+		.ifaces = this->ifaces->create_enumerator(this->ifaces),
+		.mutex = this->mutex,
+	);
+	return &enumerator->public;
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
