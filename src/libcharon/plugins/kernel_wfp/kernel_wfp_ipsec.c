@@ -57,6 +57,11 @@ struct private_kernel_wfp_ipsec_t {
 	hashtable_t *osas;
 
 	/**
+	 * Installed routes, as route_t => route_t
+	 */
+	hashtable_t *routes;
+
+	/**
 	 * Mutex for accessing entries
 	 */
 	mutex_t *mutex;
@@ -158,6 +163,56 @@ typedef struct {
 } entry_t;
 
 /**
+ * Installed route
+ */
+typedef struct {
+	/** destination net of route */
+	host_t *dst;
+	/** prefix length of dst */
+	u_int8_t mask;
+	/** source address for route */
+	host_t *src;
+	/** gateway of route, NULL if directly attached */
+	host_t *gtw;
+	/** references for route */
+	u_int refs;
+} route_t;
+
+/**
+ * Destroy a route_t
+ */
+static void destroy_route(route_t *this)
+{
+	this->dst->destroy(this->dst);
+	this->src->destroy(this->src);
+	DESTROY_IF(this->gtw);
+	free(this);
+}
+
+/**
+ * Hashtable equals function for routes
+ */
+static bool equals_route(route_t *a, route_t *b)
+{
+	return a->mask == b->mask &&
+		   a->dst->ip_equals(a->dst, b->dst) &&
+		   a->src->ip_equals(a->src, b->src);
+}
+
+/**
+ * Hashtable hash function for routes
+ */
+static u_int hash_route(route_t *route)
+{
+	return chunk_hash_inc(route->src->get_address(route->src),
+			chunk_hash_inc(route->dst->get_address(route->dst), route->mask));
+}
+
+/** forward declaration */
+static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
+						  bool add);
+
+/**
  * Remove a transport or tunnel policy from kernel
  */
 static void cleanup_policy(private_kernel_wfp_ipsec_t *this, bool transport,
@@ -194,6 +249,10 @@ static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	{
 		cleanup_policy(this, entry->mode == MODE_TRANSPORT, entry->policy_out);
 		entry->policy_out = 0;
+	}
+	if (entry->mode == MODE_TUNNEL)
+	{
+		manage_routes(this, entry, FALSE);
 	}
 }
 
@@ -963,11 +1022,157 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 }
 
 /**
+ * Reduce refcount, or uninstall a route if all refs gone
+ */
+static bool uninstall_route(private_kernel_wfp_ipsec_t *this,
+							host_t *dst, u_int8_t mask, host_t *src, host_t *gtw)
+{
+	route_t *route, key = {
+		.dst = dst,
+		.mask = mask,
+		.src = src,
+	};
+	char *name;
+	bool res = FALSE;
+
+	this->mutex->lock(this->mutex);
+	route = this->routes->get(this->routes, &key);
+	if (route)
+	{
+		if (--route->refs == 0)
+		{
+			if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
+													   src, &name))
+			{
+				res = hydra->kernel_interface->del_route(hydra->kernel_interface,
+						dst->get_address(dst), mask, gtw, src, name) == SUCCESS;
+				free(name);
+			}
+			route = this->routes->remove(this->routes, route);
+			if (route)
+			{
+				destroy_route(route);
+			}
+		}
+		else
+		{
+			res = TRUE;
+		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	return res;
+}
+
+/**
+ * Install a single route, or refcount if exists
+ */
+static bool install_route(private_kernel_wfp_ipsec_t *this,
+						  host_t *dst, u_int8_t mask, host_t *src, host_t *gtw)
+{
+	route_t *route, key = {
+		.dst = dst,
+		.mask = mask,
+		.src = src,
+	};
+	char *name;
+	bool res = FALSE;
+
+	this->mutex->lock(this->mutex);
+	route = this->routes->get(this->routes, &key);
+	if (route)
+	{
+		route->refs++;
+		res = TRUE;
+	}
+	else
+	{
+		if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												   src, &name))
+		{
+			if (hydra->kernel_interface->add_route(hydra->kernel_interface,
+						dst->get_address(dst), mask, gtw, src, name) == SUCCESS)
+			{
+				INIT(route,
+					.dst = dst->clone(dst),
+					.mask = mask,
+					.src = src->clone(src),
+					.gtw = gtw ? gtw->clone(gtw) : NULL,
+					.refs = 1,
+				);
+				route = this->routes->put(this->routes, route, route);
+				if (route)
+				{
+					destroy_route(route);
+				}
+				res = TRUE;
+			}
+			free(name);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	return res;
+}
+
+/**
+ * (Un)-install routes for IPsec policies
+ */
+static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
+						  bool add)
+{
+	enumerator_t *enumerator;
+	host_t *src, *dst, *gtw;
+	sp_entry_t *sp;
+	u_int8_t mask;
+
+	enumerator = array_create_enumerator(entry->sps);
+	while (enumerator->enumerate(enumerator, &sp))
+	{
+		if (!sp->dst->to_subnet(sp->dst, &dst, &mask))
+		{
+			continue;
+		}
+		if (hydra->kernel_interface->get_address_by_ts( hydra->kernel_interface,
+												sp->src, &src, NULL) != SUCCESS)
+		{
+			dst->destroy(dst);
+			continue;
+		}
+		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
+												   entry->remote, entry->local);
+		if (add)
+		{
+			if (!install_route(this, dst, mask, src, gtw))
+			{
+				DBG1(DBG_KNL, "installing route for policy %R === %R failed",
+					 sp->src, sp->dst);
+			}
+		}
+		else
+		{
+			if (!uninstall_route(this, dst, mask, src, gtw))
+			{
+				DBG1(DBG_KNL, "uninstalling route for policy %R === %R failed",
+					 sp->src, sp->dst);
+			}
+		}
+		dst->destroy(dst);
+		src->destroy(src);
+		DESTROY_IF(gtw);
+	}
+	enumerator->destroy(enumerator);
+
+	return TRUE;
+}
+
+/**
  * Install a tunnel mode SA/SP set to the kernel
  */
 static bool install_tunnel(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
 	if (install_tunnel_sps(this, entry) &&
+		manage_routes(this, entry, TRUE) &&
 		install_sas(this, entry, IPSEC_TRAFFIC_TYPE_TUNNEL))
 	{
 		return TRUE;
@@ -1394,6 +1599,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 	this->tsas->destroy(this->tsas);
 	this->isas->destroy(this->isas);
 	this->osas->destroy(this->osas);
+	this->routes->destroy(this->routes);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -1441,10 +1647,11 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 							{ 0xa9,0x59,0x9d,0x91,0xac,0xaf,0xf9,0x19 }},
 		},
 		.nextspi = 0xc0000001,
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.tsas = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.osas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
+		.routes = hashtable_create((void*)hash_route, (void*)equals_route, 4),
 	);
 
 	res = FwpmEngineOpen0(NULL, RPC_C_AUTHN_WINNT, NULL, &session,
