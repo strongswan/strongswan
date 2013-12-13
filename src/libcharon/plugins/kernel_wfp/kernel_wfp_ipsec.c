@@ -804,12 +804,39 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 }
 
 /**
+ * Fill in traffic structure from entry addresses
+ */
+static bool hosts2traffic(private_kernel_wfp_ipsec_t *this,
+						  host_t *l, host_t *r, IPSEC_TRAFFIC1 *traffic)
+{
+	if (l->get_family(l) != r->get_family(r))
+	{
+		return FALSE;
+	}
+	switch (l->get_family(l))
+	{
+		case AF_INET:
+			traffic->ipVersion = FWP_IP_VERSION_V4;
+			traffic->localV4Address = untoh32(l->get_address(l).ptr);
+			traffic->remoteV4Address = untoh32(r->get_address(r).ptr);
+			return TRUE;
+		case AF_INET6:
+			traffic->ipVersion = FWP_IP_VERSION_V6;
+			memcpy(&traffic->localV6Address, l->get_address(l).ptr, 16);
+			memcpy(&traffic->remoteV6Address, r->get_address(r).ptr, 16);
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
  * Install SAs to the kernel
  */
 static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 						IPSEC_TRAFFIC_TYPE type)
 {
-	IPSEC_TRAFFIC0 traffic = {
+	IPSEC_TRAFFIC1 traffic = {
 		.trafficType = type,
 	};
 	IPSEC_GETSPI1 spi = {
@@ -830,27 +857,13 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		spi.inboundIpsecTraffic.tunnelPolicyId = entry->policy_in;
 	}
 
-	switch (entry->local->get_family(entry->local))
+	if (!hosts2traffic(this, entry->local, entry->remote, &traffic))
 	{
-		case AF_INET:
-			traffic.ipVersion = FWP_IP_VERSION_V4;
-			traffic.localV4Address =
-						untoh32(entry->local->get_address(entry->local).ptr);
-			traffic.remoteV4Address =
-						untoh32(entry->remote->get_address(entry->remote).ptr);
-			break;
-		case AF_INET6:
-			traffic.ipVersion = FWP_IP_VERSION_V6;
-			memcpy(&traffic.localV6Address,
-				   entry->local->get_address(entry->local).ptr, 16);
-			memcpy(&traffic.remoteV6Address,
-				   entry->remote->get_address(entry->remote).ptr, 16);
-			break;
-		default:
-			return FALSE;
+		return FALSE;
 	}
 
-	res = IPsecSaContextCreate0(this->handle, &traffic, NULL, &entry->sa_id);
+	res = IPsecSaContextCreate1(this->handle, &traffic, NULL, NULL,
+								&entry->sa_id);
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "creating WFP SA context failed: 0x%08x", res);
