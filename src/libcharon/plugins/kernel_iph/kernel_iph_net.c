@@ -27,7 +27,11 @@
 #include <hydra.h>
 #include <threading/mutex.h>
 #include <collections/linked_list.h>
+#include <processing/jobs/callback_job.h>
 
+
+/** delay before firing roam events (ms) */
+#define ROAM_DELAY 500
 
 typedef struct private_kernel_iph_net_t private_kernel_iph_net_t;
 
@@ -55,6 +59,16 @@ struct private_kernel_iph_net_t {
 	 * Known interfaces, as iface_t
 	 */
 	linked_list_t *ifaces;
+
+	/**
+	 * Earliest time of the next roam event
+	 */
+	timeval_t roam_next;
+
+	/**
+	 * Roam event due to address change?
+	 */
+	bool roam_address;
 };
 
 /**
@@ -100,6 +114,42 @@ ENUM(if_oper_names, IfOperStatusUp, IfOperStatusLowerLayerDown,
 );
 
 /**
+ * Callback function that raises the delayed roam event
+ */
+static job_requeue_t roam_event(private_kernel_iph_net_t *this)
+{
+	bool address;
+
+	this->mutex->lock(this->mutex);
+	address = this->roam_address;
+	this->roam_address = FALSE;
+	this->mutex->unlock(this->mutex);
+
+	hydra->kernel_interface->roam(hydra->kernel_interface, address);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Fire delayed roam event, caller should hold mutex
+ */
+static void fire_roam_event(private_kernel_iph_net_t *this, bool address)
+{
+	timeval_t now;
+
+	time_monotonic(&now);
+	this->roam_address |= address;
+	if (timercmp(&now, &this->roam_next, >))
+	{
+		timeval_add_ms(&now, ROAM_DELAY);
+		this->roam_next = now;
+		lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
+							callback_job_create((callback_job_cb_t)roam_event,
+												this, NULL, NULL),
+							ROAM_DELAY);
+	}
+}
+
+/**
  * Update addresses for an iface entry
  */
 static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
@@ -109,6 +159,7 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	host_t *host, *old;
+	bool changes = FALSE;
 
 	list = entry->addrs;
 	entry->addrs = linked_list_create();
@@ -149,6 +200,7 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 			{
 				DBG1(DBG_KNL, "%H appeared on interface %u '%s'",
 					 host, entry->ifindex, entry->ifdesc);
+				changes = TRUE;
 			}
 		}
 	}
@@ -159,10 +211,16 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 		{
 			DBG1(DBG_KNL, "%H disappeared from interface %u '%s'",
 				 old, entry->ifindex, entry->ifdesc);
+			changes = TRUE;
 		}
 		old->destroy(old);
 	}
 	list->destroy(list);
+
+	if (changes)
+	{
+		fire_roam_event(this, TRUE);
+	}
 }
 
 /**
@@ -234,6 +292,7 @@ static void remove_interface(private_kernel_iph_net_t *this, NET_IFINDEX index)
 			DBG1(DBG_KNL, "interface %u '%s' disappeared",
 				 entry->ifindex, entry->ifdesc);
 			iface_destroy(entry);
+			fire_roam_event(this, TRUE);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -261,6 +320,7 @@ static void update_interface(private_kernel_iph_net_t *this,
 					 entry->ifindex, entry->ifdesc, if_oper_names,
 					 entry->status, if_oper_names, addr->OperStatus);
 				entry->status = addr->OperStatus;
+				fire_roam_event(this, TRUE);
 			}
 			update_addrs(this, entry, addr, TRUE);
 		}
