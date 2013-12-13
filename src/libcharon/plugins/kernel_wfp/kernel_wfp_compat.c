@@ -90,3 +90,9 @@ STUB(fwpuclnt, DWORD, IPsecSaContextCreate1, 40,
 
 STUB(fwpuclnt, DWORD, IPsecSaContextSetSpi0, 32,
 	HANDLE engineHandle, UINT64 id, const void *getSpi, UINT32 inboundSpi)
+
+STUB(fwpuclnt, DWORD, IPsecSaContextGetById1, 24,
+	HANDLE engineHandle, UINT64 id, void **saContext)
+
+STUB(fwpuclnt, DWORD, IPsecSaContextUpdate0, 24,
+	HANDLE engineHandle, UINT32 flags, const void *newValues)

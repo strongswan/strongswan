@@ -1509,7 +1509,103 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
-	return NOT_SUPPORTED;
+	entry_t *entry;
+	sa_entry_t key = {
+		.dst = dst,
+		.spi = spi,
+	};
+	UINT64 sa_id = 0;
+	IPSEC_SA_CONTEXT1 *ctx;
+	IPSEC_V4_UDP_ENCAPSULATION0 ports;
+	UINT32 flags = IPSEC_SA_DETAILS_UPDATE_TRAFFIC;
+	DWORD res;
+
+	this->mutex->lock(this->mutex);
+	entry = this->osas->get(this->osas, &key);
+	this->mutex->unlock(this->mutex);
+
+	if (entry)
+	{
+		/* outbound entry, nothing to do */
+		return SUCCESS;
+	}
+
+	this->mutex->lock(this->mutex);
+	entry = this->isas->get(this->isas, &key);
+	if (entry)
+	{
+		/* inbound entry, do update */
+		sa_id = entry->sa_id;
+		ports.localUdpEncapPort = entry->local->get_port(entry->local);
+		ports.remoteUdpEncapPort = entry->remote->get_port(entry->remote);
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (!sa_id)
+	{
+		return NOT_FOUND;
+	}
+
+	res = IPsecSaContextGetById1(this->handle, sa_id, &ctx);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "getting WFP SA context for updated failed: 0x%08x", res);
+		return FAILED;
+	}
+	if (!hosts2traffic(this, new_dst, new_src, &ctx->inboundSa->traffic) ||
+		!hosts2traffic(this, new_dst, new_src, &ctx->outboundSa->traffic))
+	{
+		FwpmFreeMemory0((void**)&ctx);
+		return FAILED;
+	}
+
+	if (new_encap != encap)
+	{
+		if (new_encap)
+		{
+			ctx->inboundSa->udpEncapsulation = &ports;
+			ctx->outboundSa->udpEncapsulation = &ports;
+		}
+		else
+		{
+			ctx->inboundSa->udpEncapsulation = NULL;
+			ctx->outboundSa->udpEncapsulation = NULL;
+		}
+		flags |= IPSEC_SA_DETAILS_UPDATE_UDP_ENCAPSULATION;
+	}
+
+	res = IPsecSaContextUpdate0(this->handle, flags, ctx);
+	FwpmFreeMemory0((void**)&ctx);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "updating WFP SA context failed: 0x%08x", res);
+		return FAILED;
+	}
+
+	this->mutex->lock(this->mutex);
+	entry = this->isas->remove(this->isas, &key);
+	if (entry)
+	{
+		key.spi = entry->osa.spi;
+		key.dst = entry->osa.dst;
+		this->osas->remove(this->osas, &key);
+
+		entry->local->destroy(entry->local);
+		entry->remote->destroy(entry->remote);
+		entry->local = new_dst->clone(new_dst);
+		entry->remote = new_src->clone(new_src);
+		entry->isa.dst = entry->local;
+		entry->osa.dst = entry->remote;
+
+		this->isas->put(this->isas, &entry->isa, entry);
+		this->osas->put(this->osas, &entry->osa, entry);
+
+		manage_routes(this, entry, FALSE);
+		manage_routes(this, entry, TRUE);
+	}
+	this->mutex->unlock(this->mutex);
+
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
