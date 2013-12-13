@@ -546,18 +546,92 @@ METHOD(kernel_net_t, del_ip, status_t,
 	return NOT_SUPPORTED;
 }
 
-METHOD(kernel_net_t, add_route, status_t,
-	private_kernel_iph_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
-	host_t *gateway, host_t *src_ip, char *if_name)
+/**
+ * Add or remove a route
+ */
+static status_t manage_route(private_kernel_iph_net_t *this, bool add,
+					chunk_t dst, u_int8_t prefixlen, host_t *gtw, char *name)
 {
-	return NOT_SUPPORTED;
+	MIB_IPFORWARD_ROW2 row = {
+		.DestinationPrefix = {
+			.PrefixLength = prefixlen,
+		},
+		.SitePrefixLength = prefixlen,
+		.ValidLifetime = INFINITE,
+		.PreferredLifetime = INFINITE,
+		.Metric = 10,
+		.Protocol = MIB_IPPROTO_NETMGMT,
+	};
+	enumerator_t *enumerator;
+	iface_t *entry;
+	ULONG ret;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (streq(name, entry->ifname))
+		{
+			row.InterfaceIndex = entry->ifindex;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	if (!row.InterfaceIndex)
+	{
+		return NOT_FOUND;
+	}
+	switch (dst.len)
+	{
+		case 4:
+			row.DestinationPrefix.Prefix.si_family = AF_INET;
+			memcpy(&row.DestinationPrefix.Prefix.Ipv4.sin_addr,
+				   dst.ptr, dst.len);
+			break;
+		case 16:
+			row.DestinationPrefix.Prefix.si_family = AF_INET6;
+			memcpy(&row.DestinationPrefix.Prefix.Ipv6.sin6_addr,
+				   dst.ptr, dst.len);
+			break;
+		default:
+			return FAILED;
+	}
+	if (gtw)
+	{
+		memcpy(&row.NextHop, gtw->get_sockaddr(gtw),
+			   *gtw->get_sockaddr_len(gtw));
+	}
+
+	if (add)
+	{
+		ret = CreateIpForwardEntry2(&row);
+	}
+	else
+	{
+		ret = DeleteIpForwardEntry2(&row);
+	}
+	if (ret != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "%sing route failed: 0x%08lx", add ? "add" : "remov", ret);
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+METHOD(kernel_net_t, add_route, status_t,
+	private_kernel_iph_net_t *this, chunk_t dst, u_int8_t prefixlen,
+	host_t *gateway, host_t *src, char *name)
+{
+	return manage_route(this, TRUE, dst, prefixlen, gateway, name);
 }
 
 METHOD(kernel_net_t, del_route, status_t,
-	private_kernel_iph_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
-	host_t *gateway, host_t *src_ip, char *if_name)
+	private_kernel_iph_net_t *this, chunk_t dst, u_int8_t prefixlen,
+	host_t *gateway, host_t *src, char *name)
 {
-	return NOT_SUPPORTED;
+	return manage_route(this, FALSE, dst, prefixlen, gateway, name);
 }
 
 METHOD(kernel_net_t, destroy, void,
