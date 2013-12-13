@@ -42,6 +42,11 @@ struct private_kernel_wfp_ipsec_t {
 	refcount_t nextspi;
 
 	/**
+	 * Mix value to distribute SPI allocation randomly
+	 */
+	u_int32_t mixspi;
+
+	/**
 	 * Temporary SAD/SPD entries referenced reqid, as uintptr_t => entry_t
 	 */
 	hashtable_t *tsas;
@@ -1204,11 +1209,58 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	return KERNEL_ESP_V3_TFC | KERNEL_NO_POLICY_UPDATES;
 }
 
+/**
+ * Initialize seeds for SPI generation
+ */
+static bool init_spi(private_kernel_wfp_ipsec_t *this)
+{
+	bool ok = TRUE;
+	rng_t *rng;
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
+	{
+		return FALSE;
+	}
+	ok = rng->get_bytes(rng, sizeof(this->nextspi), (u_int8_t*)&this->nextspi);
+	if (ok)
+	{
+		ok = rng->get_bytes(rng, sizeof(this->mixspi), (u_int8_t*)&this->mixspi);
+	}
+	rng->destroy(rng);
+	return ok;
+}
+
+/**
+ * Map an integer x with a one-to-one function using quadratic residues.
+ */
+static u_int permute(u_int x, u_int p)
+{
+	u_int qr;
+
+	x = x % p;
+	qr = ((u_int64_t)x * x) % p;
+	if (x <= p / 2)
+	{
+		return qr;
+	}
+	return p - qr;
+}
+
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
-	*spi = htonl(ref_get(&this->nextspi));
+	/* To avoid sequencial SPIs, we use a one-to-one permuation function on
+	 * an incrementing counter, that is a full period PRNG for the range we
+	 * allocate SPIs in. We add some randomness using a fixed XOR and start
+	 * the counter at random position. This is not cryptographically safe,
+	 * but that is actually not required.
+	 * The selected prime should be smaller than the range we allocate SPIs
+	 * in, and it must satisfy p % 4 == 3 to map x > p/2 using p - qr. */
+	static const u_int p = 268435399, offset = 0xc0000000;
+
+	*spi = htonl(offset + permute(ref_get(&this->nextspi) ^ this->mixspi, p));
 	return SUCCESS;
 }
 
@@ -1646,13 +1698,18 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 			.providerKey = { 0x59cdae2e, 0xf6bb, 0x4c09,
 							{ 0xa9,0x59,0x9d,0x91,0xac,0xaf,0xf9,0x19 }},
 		},
-		.nextspi = 0xc0000001,
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.tsas = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.osas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.routes = hashtable_create((void*)hash_route, (void*)equals_route, 4),
 	);
+
+	if (!init_spi(this))
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	res = FwpmEngineOpen0(NULL, RPC_C_AUTHN_WINNT, NULL, &session,
 						  &this->handle);
