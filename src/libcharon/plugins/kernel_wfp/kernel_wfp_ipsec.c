@@ -894,6 +894,37 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		return FALSE;
 	}
 
+	if (entry->encap)
+	{
+		IPSEC_V4_UDP_ENCAPSULATION0 encap = {
+			.localUdpEncapPort = entry->local->get_port(entry->local),
+			.remoteUdpEncapPort = entry->remote->get_port(entry->remote),
+		};
+		IPSEC_SA_CONTEXT1 *ctx;
+
+		res = IPsecSaContextGetById1(this->handle, entry->sa_id, &ctx);
+		if (res != ERROR_SUCCESS)
+		{
+			DBG1(DBG_KNL, "getting WFP SA for UDP encap failed: 0x%08x", res);
+			IPsecSaContextDeleteById0(this->handle, entry->sa_id);
+			entry->sa_id = 0;
+			return FALSE;
+		}
+		ctx->inboundSa->udpEncapsulation = &encap;
+		ctx->outboundSa->udpEncapsulation = &encap;
+
+		res = IPsecSaContextUpdate0(this->handle,
+								IPSEC_SA_DETAILS_UPDATE_UDP_ENCAPSULATION, ctx);
+		FwpmFreeMemory0((void**)&ctx);
+		if (res != ERROR_SUCCESS)
+		{
+			DBG1(DBG_KNL, "enable WFP UDP encap failed: 0x%08x", res);
+			IPsecSaContextDeleteById0(this->handle, entry->sa_id);
+			entry->sa_id = 0;
+			return FALSE;
+		}
+	}
+
 	return TRUE;
 }
 
