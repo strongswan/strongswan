@@ -43,6 +43,8 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_wfp_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+				PLUGIN_DEPENDS(RNG, RNG_STRONG),
 	};
 	*features = f;
 	return countof(f);
