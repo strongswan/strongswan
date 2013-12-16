@@ -96,3 +96,7 @@ STUB(fwpuclnt, DWORD, IPsecSaContextGetById1, 24,
 
 STUB(fwpuclnt, DWORD, IPsecSaContextUpdate0, 24,
 	HANDLE engineHandle, UINT32 flags, const void *newValues)
+
+STUB(fwpuclnt, DWORD, IPsecSaContextEnum1, 40,
+	HANDLE engineHandle, HANDLE enumHandle, UINT32 numEntriesRequested,
+	void ***entries, UINT32 *numEntriesReturned)

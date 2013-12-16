@@ -19,3 +19,12 @@ libstrongswan_kernel_wfp_la_SOURCES = \
 
 libstrongswan_kernel_wfp_la_LDFLAGS = -module -avoid-version
 libstrongswan_kernel_wfp_la_LIBADD = -lfwpuclnt
+
+
+noinst_PROGRAMS = ipsecdump
+
+ipsecdump_SOURCES = \
+	ipsecdump.c
+ipsecdump_LDADD = \
+	libstrongswan-kernel-wfp.la \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
