@@ -804,6 +804,21 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 }
 
 /**
+ * Convert an IPv6 host address to WFP representation
+ */
+static void host2address6(host_t *host, void *out)
+{
+	u_int32_t *src, *dst = out;
+
+	src = (u_int32_t*)host->get_address(host).ptr;
+
+	dst[0] = untoh32(&src[3]);
+	dst[1] = untoh32(&src[2]);
+	dst[2] = untoh32(&src[1]);
+	dst[3] = untoh32(&src[0]);
+}
+
+/**
  * Fill in traffic structure from entry addresses
  */
 static bool hosts2traffic(private_kernel_wfp_ipsec_t *this,
@@ -822,8 +837,8 @@ static bool hosts2traffic(private_kernel_wfp_ipsec_t *this,
 			return TRUE;
 		case AF_INET6:
 			traffic->ipVersion = FWP_IP_VERSION_V6;
-			memcpy(&traffic->localV6Address, l->get_address(l).ptr, 16);
-			memcpy(&traffic->remoteV6Address, r->get_address(r).ptr, 16);
+			host2address6(l, &traffic->localV6Address);
+			host2address6(r, &traffic->remoteV6Address);
 			return TRUE;
 		default:
 			return FALSE;
