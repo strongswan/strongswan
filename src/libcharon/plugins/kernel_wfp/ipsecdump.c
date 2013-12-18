@@ -389,6 +389,280 @@ static bool list_contexts(HANDLE engine)
 	return TRUE;
 }
 
+const GUID FWPM_LAYER_IPSEC_KM_DEMUX_V4 = {
+	0xf02b1526, 0xa459, 0x4a51, { 0xb9, 0xe3, 0x75, 0x9d, 0xe5, 0x2b, 0x9d, 0x2c }
+};
+const GUID FWPM_LAYER_IPSEC_KM_DEMUX_V6 = {
+	0x2f755cf6, 0x2fd4, 0x4e88, { 0xb3, 0xe4, 0xa9, 0x1b, 0xca, 0x49, 0x52, 0x35 }
+};
+const GUID FWPM_LAYER_IPSEC_V4 = {
+	0xeda65c74, 0x610d, 0x4bc5, { 0x94, 0x8f, 0x3c, 0x4f, 0x89, 0x55, 0x68, 0x67 }
+};
+const GUID FWPM_LAYER_IPSEC_V6 = {
+	0x13c48442, 0x8d87, 0x4261, { 0x9a, 0x29, 0x59, 0xd2, 0xab, 0xc3, 0x48, 0xb4 }
+};
+const GUID FWPM_LAYER_IKEEXT_V4 = {
+	0xb14b7bdb, 0xdbbd, 0x473e, { 0xbe, 0xd4, 0x8b, 0x47, 0x08, 0xd4, 0xf2, 0x70 }
+};
+const GUID FWPM_LAYER_IKEEXT_V6 = {
+	0xb64786b3, 0xf687, 0x4eb9, { 0x89, 0xd2, 0x8e, 0xf3, 0x2a, 0xcd, 0xab, 0xe2 }
+};
+const GUID FWPM_LAYER_INBOUND_IPPACKET_V4 = {
+	0xc86fd1bf, 0x21cd, 0x497e, { 0xa0, 0xbb, 0x17, 0x42, 0x5c, 0x88, 0x5c, 0x58 }
+};
+const GUID FWPM_LAYER_INBOUND_IPPACKET_V4_DISCARD = {
+	0xb5a230d0, 0xa8c0, 0x44f2, { 0x91, 0x6e, 0x99, 0x1b, 0x53, 0xde, 0xd1, 0xf7 }
+};
+const GUID FWPM_LAYER_INBOUND_IPPACKET_V6 = {
+	0xf52032cb, 0x991c, 0x46e7, { 0x97, 0x1d, 0x26, 0x01, 0x45, 0x9a, 0x91, 0xca }
+};
+const GUID FWPM_LAYER_INBOUND_IPPACKET_V6_DISCARD = {
+	0xbb24c279, 0x93b4, 0x47a2, { 0x83, 0xad, 0xae, 0x16, 0x98, 0xb5, 0x08, 0x85 }
+};
+const GUID FWPM_LAYER_OUTBOUND_IPPACKET_V4 = {
+	0x1e5c9fae, 0x8a84, 0x4135, { 0xa3, 0x31, 0x95, 0x0b, 0x54, 0x22, 0x9e, 0xcd }
+};
+const GUID FWPM_LAYER_OUTBOUND_IPPACKET_V4_DISCARD = {
+	0x08e4bcb5, 0xb647, 0x48f3, { 0x95, 0x3c, 0xe5, 0xdd, 0xbd, 0x03, 0x93, 0x7e }
+};
+const GUID FWPM_LAYER_OUTBOUND_IPPACKET_V6 = {
+	0xa3b3ab6b, 0x3564, 0x488c, { 0x91, 0x17, 0xf3, 0x4e, 0x82, 0x14, 0x27, 0x63 }
+};
+const GUID FWPM_LAYER_OUTBOUND_IPPACKET_V6_DISCARD = {
+	0x9513d7c4, 0xa934, 0x49dc, { 0x91, 0xa7, 0x6c, 0xcb, 0x80, 0xcc, 0x02, 0xe3 }
+};
+const GUID FWPM_LAYER_IPFORWARD_V4 = {
+	0xa82acc24, 0x4ee1, 0x4ee1, { 0xb4, 0x65, 0xfd, 0x1d, 0x25, 0xcb, 0x10, 0xa4 }
+};
+const GUID FWPM_LAYER_IPFORWARD_V4_DISCARD = {
+	0x9e9ea773, 0x2fae, 0x4210, { 0x8f, 0x17, 0x34, 0x12, 0x9e, 0xf3, 0x69, 0xeb }
+};
+const GUID FWPM_LAYER_IPFORWARD_V6 = {
+	0x7b964818, 0x19c7, 0x493a, { 0xb7, 0x1f, 0x83, 0x2c, 0x36, 0x84, 0xd2, 0x8c }
+};
+const GUID FWPM_LAYER_IPFORWARD_V6_DISCARD = {
+	0x31524a5d, 0x1dfe, 0x472f, { 0xbb, 0x93, 0x51, 0x8e, 0xe9, 0x45, 0xd8, 0xa2 }
+};
+const GUID FWPM_LAYER_INBOUND_TRANSPORT_V4_DISCARD = {
+	0xac4a9833, 0xf69d, 0x4648, { 0xb2, 0x61, 0x6d, 0xc8, 0x48, 0x35, 0xef, 0x39 }
+};
+const GUID FWPM_LAYER_INBOUND_TRANSPORT_V6_DISCARD = {
+	0x2a6ff955, 0x3b2b, 0x49d2, { 0x98, 0x48, 0xad, 0x9d, 0x72, 0xdc, 0xaa, 0xb7 }
+};
+const GUID FWPM_LAYER_OUTBOUND_TRANSPORT_V4_DISCARD = {
+	0xc5f10551, 0xbdb0, 0x43d7, { 0xa3, 0x13, 0x50, 0xe2, 0x11, 0xf4, 0xd6, 0x8a }
+};
+const GUID FWPM_LAYER_OUTBOUND_TRANSPORT_V6_DISCARD = {
+	0xf433df69, 0xccbd, 0x482e, { 0xb9, 0xb2, 0x57, 0x16, 0x56, 0x58, 0xc3, 0xb3 }
+};
+
+/**
+ * Convert filter layer GUID to name
+ */
+static char* layer2name(GUID *guid)
+{
+	struct {
+		GUID guid;
+		char *name;
+	} map[] = {
+		{ FWPM_LAYER_IPSEC_KM_DEMUX_V4, "IPsec KM demux v4" },
+		{ FWPM_LAYER_IPSEC_KM_DEMUX_V6, "IPsec KM demux v6" },
+		{ FWPM_LAYER_IPSEC_V4, "IPsec v4" },
+		{ FWPM_LAYER_IPSEC_V6, "IPsec v6" },
+		{ FWPM_LAYER_IKEEXT_V4, "IKE ext v4" },
+		{ FWPM_LAYER_IKEEXT_V6, "IKE ext v6" },
+		{ FWPM_LAYER_INBOUND_IPPACKET_V4, "inbound v4" },
+		{ FWPM_LAYER_INBOUND_IPPACKET_V4_DISCARD, "inbound v4 dsc" },
+		{ FWPM_LAYER_INBOUND_IPPACKET_V6, "inbound v6" },
+		{ FWPM_LAYER_INBOUND_IPPACKET_V6_DISCARD, "inbound v6 dsc" },
+		{ FWPM_LAYER_OUTBOUND_IPPACKET_V4, "outbound v4" },
+		{ FWPM_LAYER_OUTBOUND_IPPACKET_V4_DISCARD, "outbound v4 dsc" },
+		{ FWPM_LAYER_OUTBOUND_IPPACKET_V6, "outbound v6" },
+		{ FWPM_LAYER_OUTBOUND_IPPACKET_V6_DISCARD, "outbound v6 dsc" },
+		{ FWPM_LAYER_IPFORWARD_V4, "forward v4" },
+		{ FWPM_LAYER_IPFORWARD_V4_DISCARD, "forward v4 dsc" },
+		{ FWPM_LAYER_IPFORWARD_V6, "forward v6" },
+		{ FWPM_LAYER_IPFORWARD_V6_DISCARD, "forward v6 discard" },
+		{ FWPM_LAYER_INBOUND_TRANSPORT_V4, "inbound transport v4" },
+		{ FWPM_LAYER_INBOUND_TRANSPORT_V4_DISCARD, "inbound transport v4 dsc" },
+		{ FWPM_LAYER_INBOUND_TRANSPORT_V6, "inbound transport v6" },
+		{ FWPM_LAYER_INBOUND_TRANSPORT_V6_DISCARD, "inbound v6 transport dsc" },
+		{ FWPM_LAYER_OUTBOUND_TRANSPORT_V4, "outbound transport v4" },
+		{ FWPM_LAYER_OUTBOUND_TRANSPORT_V4_DISCARD, "outbound transport v4 dsc" },
+		{ FWPM_LAYER_OUTBOUND_TRANSPORT_V6, "outbound transport v6" },
+		{ FWPM_LAYER_OUTBOUND_TRANSPORT_V6_DISCARD, "outbound transport v6 dsc" },
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (memeq(&map[i].guid, guid, sizeof(GUID)))
+		{
+			return map[i].name;
+		}
+	}
+	return NULL;
+}
+
+const GUID FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4 = {
+	0x191a8a46, 0x0bf8, 0x46cf, { 0xb0,0x45,0x4b,0x45,0xdf,0xa6,0xa3,0x24 }
+};
+const GUID FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6 = {
+	0x80c342e3, 0x1e53, 0x4d6f, { 0x9b,0x44,0x03,0xdf,0x5a,0xee,0xe1,0x54 }
+};
+const GUID FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4 = {
+	0x70a4196c, 0x835b, 0x4fb0, { 0x98,0xe8,0x07,0x5f,0x4d,0x97,0x7d,0x46 }
+};
+const GUID FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6 = {
+	0xf1835363, 0xa6a5, 0x4e62, { 0xb1,0x80,0x23,0xdb,0x78,0x9d,0x8d,0xa6 }
+};
+const GUID FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4 = {
+	0x28829633, 0xc4f0, 0x4e66, { 0x87,0x3f,0x84,0x4d,0xb2,0xa8,0x99,0xc7 }
+};
+const GUID FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6 = {
+	0xaf50bec2, 0xc686, 0x429a, { 0x88,0x4d,0xb7,0x44,0x43,0xe7,0xb0,0xb4 }
+};
+const GUID FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4 = {
+	0xfb532136, 0x15cb, 0x440b, { 0x93,0x7c,0x17,0x17,0xca,0x32,0x0c,0x40 }
+};
+const GUID FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6 = {
+	0xdae640cc, 0xe021, 0x4bee, { 0x9e,0xb6,0xa4,0x8b,0x27,0x5c,0x8c,0x1d }
+};
+
+/**
+ * Convert filter callout GUID to name
+ */
+static char* callout2name(GUID *guid)
+{
+	struct {
+		GUID guid;
+		char *name;
+	} map[] = {
+		{ FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4, "inbound transport v4" },
+		{ FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V6, "inbound transport v6" },
+		{ FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4, "outbound transport v4" },
+		{ FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V6, "outbound transport v6" },
+		{ FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4, "inbound tunnel v4" },
+		{ FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6, "inbound tunnel v6" },
+		{ FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4, "outbound tunnel v4" },
+		{ FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6, "outbound tunnel v6" },
+		{ FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4, "forward in tunnel v4" },
+		{ FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6, "forward in tunnel v6" },
+		{ FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4, "forward out tunnel v4" },
+		{ FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6, "forward out tunnel v6" },
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (memeq(&map[i].guid, guid, sizeof(GUID)))
+		{
+			return map[i].name;
+		}
+	}
+	return guid2string(guid);
+}
+
+/**
+ * Print display data with description
+ */
+static void print_display_data(FWPM_DISPLAY_DATA0 *data)
+{
+	char buf[128];
+
+	buf[0] = '\0';
+	if (data->name)
+	{
+		wcstombs(buf, data->name, sizeof(buf));
+	}
+	printf("%s", buf);
+	if (data->description)
+	{
+		buf[0] = '\0';
+		wcstombs(buf, data->description, sizeof(buf));
+		if (strlen(buf))
+		{
+			printf(" (%s)", buf);
+		}
+	}
+}
+
+/**
+ * List installed firewall filters
+ */
+static bool list_filters(HANDLE engine)
+{
+	HANDLE handle;
+	UINT32 returned;
+	DWORD res;
+	FWPM_FILTER0 **entries;
+	char *layer;
+	int i;
+
+	res = FwpmFilterCreateEnumHandle0(engine, NULL, &handle);
+	if (res != ERROR_SUCCESS)
+	{
+		fprintf(stderr, "FwpmFilterCreateEnumHandle0(): 0x%08x\n", res);
+		return FALSE;
+	}
+
+	while (TRUE)
+	{
+		res = FwpmFilterEnum0(engine, handle, 1, &entries, &returned);
+		if (res != ERROR_SUCCESS)
+		{
+			fprintf(stderr, "FwpmFilterEnum0(): 0x%08x\n", res);
+			FwpmFilterDestroyEnumHandle0(engine, handle);
+			return FALSE;
+		}
+		if (returned == 0)
+		{
+			break;
+		}
+
+		layer = layer2name(&entries[0]->layerKey);
+		if (layer)
+		{
+			printf("Filter ID %llu, '", entries[0]->filterId);
+			print_display_data(&entries[0]->displayData);
+			printf("'\n");
+			printf("  %s, ", layer);
+
+			switch (entries[0]->action.type)
+			{
+				case FWP_ACTION_BLOCK:
+					printf("block\n");
+					break;
+				case FWP_ACTION_PERMIT:
+					printf("permit\n");
+					break;
+				case FWP_ACTION_CALLOUT_TERMINATING:
+					printf("callout terminating: %s\n",
+						callout2name(&entries[0]->action.calloutKey));
+					break;
+				case FWP_ACTION_CALLOUT_INSPECTION:
+					printf("callout inspection: %s\n",
+						callout2name(&entries[0]->action.calloutKey));
+					break;
+				case FWP_ACTION_CALLOUT_UNKNOWN:
+					printf("callout unknown: %s\n",
+						callout2name(&entries[0]->action.calloutKey));
+					break;
+				default:
+					printf("(unknown action)\n");
+					break;
+			}
+			for (i = 0; i < entries[0]->numFilterConditions; i++)
+			{
+				list_cond(engine, &entries[0]->filterCondition[i]);
+			}
+		}
+		FwpmFreeMemory0((void**)&entries);
+	}
+	FwpmFilterDestroyEnumHandle0(engine, handle);
+	return TRUE;
+}
+
 /**
  * ipsecdump main()
  */
@@ -413,7 +687,14 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "FwpmEngineOpen(): 0x%08x\n", res);
 		return 2;
 	}
-	code = list_contexts(engine) ? 0 : 1;
+	if (argc > 1 && streq(argv[1], "filters"))
+	{
+		code = list_filters(engine) ? 0 : 1;
+	}
+	else
+	{
+		code = list_contexts(engine) ? 0 : 1;
+	}
 	FwpmEngineClose0(engine);
 	return code;
 }
