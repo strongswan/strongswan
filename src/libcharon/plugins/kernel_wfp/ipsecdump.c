@@ -627,6 +627,10 @@ static bool list_filters(HANDLE engine)
 			print_display_data(&entries[0]->displayData);
 			printf("'\n");
 			printf("  %s, ", layer);
+			if (entries[0]->effectiveWeight.type == FWP_UINT64)
+			{
+				printf("weight %016llx, ", *entries[0]->effectiveWeight.uint64);
+			}
 
 			switch (entries[0]->action.type)
 			{
