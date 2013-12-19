@@ -49,6 +49,7 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(socket_register, socket_win_socket_create),
 			PLUGIN_PROVIDE(CUSTOM, "socket"),
+				PLUGIN_DEPENDS(CUSTOM, "kernel-ipsec"),
 	};
 	*features = f;
 	return countof(f);
