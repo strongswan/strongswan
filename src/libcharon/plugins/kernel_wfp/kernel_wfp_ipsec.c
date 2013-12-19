@@ -72,6 +72,11 @@ struct private_kernel_wfp_ipsec_t {
 	hashtable_t *routes;
 
 	/**
+	 * Installed traps, as trap_t => trap_t
+	 */
+	hashtable_t *traps;
+
+	/**
 	 * Mutex for accessing entries
 	 */
 	mutex_t *mutex;
@@ -1273,11 +1278,154 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 }
 
 /**
+ * Installed trap entry
+ */
+typedef struct {
+	/** reqid this trap is installed for */
+	u_int32_t reqid;
+	/** local traffic selector */
+	traffic_selector_t *local;
+	/** remote traffic selector */
+	traffic_selector_t *remote;
+	/** LUID of installed tunnel policy filter */
+	UINT64 filter_id;
+} trap_t;
+
+/**
+ * Destroy a trap entry
+ */
+static void destroy_trap(trap_t *this)
+{
+	this->local->destroy(this->local);
+	this->remote->destroy(this->remote);
+	free(this);
+}
+
+/**
+ * Hashtable equals function for traps
+ */
+static bool equals_trap(trap_t *a, trap_t *b)
+{
+	return a->filter_id == b->filter_id;
+}
+
+/**
+ * Hashtable hash function for traps
+ */
+static u_int hash_trap(trap_t *trap)
+{
+	return chunk_hash(chunk_from_thing(trap->filter_id));
+}
+
+/**
+ * Send an acquire for an installed trap filter
+ */
+static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
+					traffic_selector_t *src, traffic_selector_t *dst)
+{
+	u_int32_t reqid = 0;
+	trap_t *trap, key = {
+		.filter_id = filter_id,
+	};
+
+	this->mutex->lock(this->mutex);
+	trap = this->traps->get(this->traps, &key);
+	if (trap)
+	{
+		reqid = trap->reqid;
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (reqid)
+	{
+		hydra->kernel_interface->acquire(hydra->kernel_interface, reqid,
+										 src->clone(src), dst->clone(dst));
+	}
+}
+
+/**
+ * Create a single host traffic selector from an FWP address definition
+ */
+static traffic_selector_t *addr2ts(FWP_IP_VERSION version, void *data,
+					u_int8_t protocol, u_int16_t from_port, u_int16_t to_port)
+{
+	ts_type_t type;
+	UINT32 ints[4];
+	chunk_t addr;
+
+	switch (version)
+	{
+		case FWP_IP_VERSION_V4:
+			ints[0] = untoh32(data);
+			addr = chunk_from_thing(ints[0]);
+			type = TS_IPV4_ADDR_RANGE;
+			break;
+		case FWP_IP_VERSION_V6:
+			ints[3] = untoh32(data);
+			ints[2] = untoh32(data + 4);
+			ints[1] = untoh32(data + 8);
+			ints[0] = untoh32(data + 12);
+			addr = chunk_from_thing(ints);
+			type = TS_IPV6_ADDR_RANGE;
+			break;
+		default:
+			return NULL;
+	}
+	return traffic_selector_create_from_bytes(protocol, type, addr, from_port,
+											  addr, to_port);
+}
+
+/**
  * FwpmNetEventSubscribe0() callback
  */
 static void event_callback(private_kernel_wfp_ipsec_t *this,
 						   const FWPM_NET_EVENT1 *event)
 {
+	traffic_selector_t *local = NULL, *remote = NULL;
+	u_int8_t protocol = 0;
+	u_int16_t from_local = 0, to_local = 65535;
+	u_int16_t from_remote = 0, to_remote = 65535;
+
+	if ((event->header.flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET) &&
+		(event->header.flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET))
+	{
+		if (event->header.flags & FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET)
+		{
+			from_local = to_local = event->header.localPort;
+		}
+		if (event->header.flags & FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET)
+		{
+			from_remote = to_remote = event->header.remotePort;
+		}
+		if (event->header.flags & FWPM_NET_EVENT_FLAG_IP_PROTOCOL_SET)
+		{
+			protocol = event->header.ipProtocol;
+		}
+
+		local = addr2ts(event->header.ipVersion,
+						(void*)&event->header.localAddrV6,
+						protocol, from_local, to_local);
+		remote = addr2ts(event->header.ipVersion,
+						(void*)&event->header.remoteAddrV6,
+						protocol, from_remote, to_remote);
+	}
+
+	switch (event->type)
+	{
+		case FWPM_NET_EVENT_TYPE_CLASSIFY_DROP:
+			acquire(this, event->classifyDrop->filterId, local, remote);
+			break;
+		case FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE:
+		case FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE:
+		case FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE:
+		case FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP:
+		case FWPM_NET_EVENT_TYPE_IPSEC_DOSP_DROP:
+		default:
+			break;
+	}
+
+	DESTROY_IF(local);
+	DESTROY_IF(remote);
 }
 
 /**
@@ -1296,6 +1444,133 @@ static bool register_events(private_kernel_wfp_ipsec_t *this)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+/**
+ * Install a trap policy to kernel
+ */
+static bool install_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
+{
+	FWPM_FILTER_CONDITION0 *conds = NULL;
+	int count = 0;
+	DWORD res;
+	UINT64 weight = 0x000000000000ff00;
+	FWPM_FILTER0 filter = {
+		.displayData = {
+			.name = L"charon IPsec trap",
+		},
+		.action = {
+			.type = FWP_ACTION_BLOCK,
+		},
+		.weight = {
+			.type = FWP_UINT64,
+			.uint64 = &weight,
+		},
+	};
+
+	switch (trap->local->get_type(trap->local))
+	{
+		case TS_IPV4_ADDR_RANGE:
+			filter.layerKey = FWPM_LAYER_OUTBOUND_TRANSPORT_V4;
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			filter.layerKey = FWPM_LAYER_OUTBOUND_TRANSPORT_V6;
+			break;
+	}
+
+	if (!ts2condition(trap->local, TRUE, &conds, &count) ||
+		!ts2condition(trap->remote, FALSE, &conds, &count))
+	{
+		free_conditions(conds, count);
+		return FALSE;
+	}
+
+	filter.numFilterConditions = count;
+	filter.filterCondition = conds;
+
+	res = FwpmFilterAdd0(this->handle, &filter, NULL, &trap->filter_id);
+	free_conditions(conds, count);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "installing FWP trap filter failed: 0x%08x", res);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Uninstall a trap policy from kernel
+ */
+static bool uninstall_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
+{
+	DWORD res;
+
+	res = FwpmFilterDeleteById0(this->handle, trap->filter_id);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "uninstalling FWP trap filter failed: 0x%08x", res);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Create and install a new trap entry
+ */
+static bool add_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
+					 traffic_selector_t *local, traffic_selector_t *remote)
+{
+	trap_t *trap;
+
+	INIT(trap,
+		.reqid = reqid,
+		.local = local->clone(local),
+		.remote = remote->clone(remote),
+	);
+
+	if (!install_trap(this, trap))
+	{
+		destroy_trap(trap);
+		return FALSE;
+	}
+	this->mutex->lock(this->mutex);
+	this->traps->put(this->traps, trap, trap);
+	this->mutex->unlock(this->mutex);
+	return TRUE;
+}
+
+/**
+ * Uninstall and remove a new trap entry
+ */
+static bool remove_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
+						traffic_selector_t *local, traffic_selector_t *remote)
+{
+	enumerator_t *enumerator;
+	trap_t *trap, *found = NULL;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->traps->create_enumerator(this->traps);
+	while (enumerator->enumerate(enumerator, NULL, &trap))
+	{
+		if (reqid == trap->reqid &&
+			local->equals(local, trap->local) &&
+			remote->equals(remote, trap->remote))
+		{
+			this->traps->remove_at(this->traps, enumerator);
+			found = trap;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	if (found)
+	{
+		uninstall_trap(this, found);
+		destroy_trap(found);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
@@ -1755,7 +2030,11 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		case POLICY_PRIORITY_DEFAULT:
 			break;
 		case POLICY_PRIORITY_ROUTED:
-			/* TODO: install trap policy with low prio */
+			if (add_trap(this, sa->reqid, src_ts, dst_ts))
+			{
+				return SUCCESS;
+			}
+			return FAILED;
 		case POLICY_PRIORITY_FALLBACK:
 		default:
 			return NOT_SUPPORTED;
@@ -1809,6 +2088,14 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
 	mark_t mark, policy_priority_t priority)
 {
+	if (direction == POLICY_OUT && priority == POLICY_PRIORITY_ROUTED)
+	{
+		if (remove_trap(this, reqid, src_ts, dst_ts))
+		{
+			return SUCCESS;
+		}
+		return NOT_FOUND;
+	}
 	/* not required, as we delete the whole SA/SP set during del_sa() */
 	return SUCCESS;
 }
@@ -1956,6 +2243,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 	this->isas->destroy(this->isas);
 	this->osas->destroy(this->osas);
 	this->routes->destroy(this->routes);
+	this->traps->destroy(this->traps);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -2008,6 +2296,7 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.osas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.routes = hashtable_create((void*)hash_route, (void*)equals_route, 4),
+		.traps = hashtable_create((void*)hash_trap, (void*)equals_trap, 4),
 	);
 
 	if (!init_spi(this))
