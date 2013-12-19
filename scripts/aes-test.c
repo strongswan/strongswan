@@ -167,7 +167,7 @@ static bool get_next_test_vector(test_vector_t *test)
 	while (fgets(line, sizeof(line), ctx.in))
 	{
 		enumerator_t *enumerator;
-		chunk_t value;
+		chunk_t value = chunk_empty;
 		char *token;
 		int i;
 
