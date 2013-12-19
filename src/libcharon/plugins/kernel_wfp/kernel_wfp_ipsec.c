@@ -47,6 +47,11 @@ struct private_kernel_wfp_ipsec_t {
 	u_int32_t mixspi;
 
 	/**
+	 * IKE bypass filters, as UINT64 filter LUID
+	 */
+	array_t *bypass;
+
+	/**
 	 * Temporary SAD/SPD entries referenced reqid, as uintptr_t => entry_t
 	 */
 	hashtable_t *tsas;
@@ -1814,21 +1819,129 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 	return NOT_SUPPORTED;
 }
 
+/**
+ * Add a bypass policy for a specific UDP port
+ */
+static bool add_bypass(private_kernel_wfp_ipsec_t *this,
+					   int family, u_int16_t port, bool inbound, UINT64 *luid)
+{
+	FWPM_FILTER_CONDITION0 *cond, *conds = NULL;
+	int count = 0;
+	DWORD res;
+	UINT64 weight = 0xff00000000000000;
+	FWPM_FILTER0 filter = {
+		.displayData = {
+			.name = L"charon IKE bypass",
+		},
+		.action = {
+			.type = FWP_ACTION_PERMIT,
+		},
+		.weight = {
+			.type = FWP_UINT64,
+			.uint64 = &weight,
+		},
+	};
+
+	switch (family)
+	{
+		case AF_INET:
+			filter.layerKey = inbound ? FWPM_LAYER_INBOUND_TRANSPORT_V4
+									  : FWPM_LAYER_OUTBOUND_TRANSPORT_V4;
+			break;
+		case AF_INET6:
+			filter.layerKey = inbound ? FWPM_LAYER_INBOUND_TRANSPORT_V6
+									  : FWPM_LAYER_OUTBOUND_TRANSPORT_V6;
+			break;
+		default:
+			return FALSE;
+	}
+
+	cond = append_condition(&conds, &count);
+	cond->fieldKey = FWPM_CONDITION_IP_PROTOCOL;
+	cond->matchType = FWP_MATCH_EQUAL;
+	cond->conditionValue.type = FWP_UINT8;
+	cond->conditionValue.uint8 = IPPROTO_UDP;
+
+	cond = append_condition(&conds, &count);
+	cond->fieldKey = FWPM_CONDITION_IP_LOCAL_PORT;
+	cond->matchType = FWP_MATCH_EQUAL;
+	cond->conditionValue.type = FWP_UINT16;
+	cond->conditionValue.uint16 = port;
+
+	filter.numFilterConditions = count;
+	filter.filterCondition = conds;
+
+	res = FwpmFilterAdd0(this->handle, &filter, NULL, luid);
+	free_conditions(conds, count);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "installing FWP trap filter failed: 0x%08x", res);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, bypass_socket, bool,
 	private_kernel_wfp_ipsec_t *this, int fd, int family)
 {
-	return NOT_SUPPORTED;
+	union {
+		struct sockaddr sa;
+		SOCKADDR_IN in;
+		SOCKADDR_IN6 in6;
+	} saddr;
+	int addrlen = sizeof(saddr);
+	UINT64 filter_out, filter_in = 0;
+	u_int16_t port;
+
+	if (getsockname(fd, &saddr.sa, &addrlen) == SOCKET_ERROR)
+	{
+		return FALSE;
+	}
+	switch (family)
+	{
+		case AF_INET:
+			port = ntohs(saddr.in.sin_port);
+			break;
+		case AF_INET6:
+			port = ntohs(saddr.in6.sin6_port);
+			break;
+		default:
+			return FALSE;
+	}
+
+	if (!add_bypass(this, family, port, TRUE, &filter_in) ||
+		!add_bypass(this, family, port, FALSE, &filter_out))
+	{
+		if (filter_in)
+		{
+			FwpmFilterDeleteById0(this->handle, filter_in);
+		}
+		return FALSE;
+	}
+
+	this->mutex->lock(this->mutex);
+	array_insert(this->bypass, ARRAY_TAIL, &filter_in);
+	array_insert(this->bypass, ARRAY_TAIL, &filter_out);
+	this->mutex->unlock(this->mutex);
+
+	return TRUE;
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 	private_kernel_wfp_ipsec_t *this, int fd, int family, u_int16_t port)
 {
-	return NOT_SUPPORTED;
+	return FALSE;
 }
 
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_wfp_ipsec_t *this)
 {
+	UINT64 filter;
+
+	while (array_remove(this->bypass, ARRAY_TAIL, &filter))
+	{
+		FwpmFilterDeleteById0(this->handle, filter);
+	}
 	if (this->handle)
 	{
 		if (this->event)
@@ -1838,6 +1951,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 		FwpmProviderDeleteByKey0(this->handle, &this->provider.providerKey);
 		FwpmEngineClose0(this->handle);
 	}
+	array_destroy(this->bypass);
 	this->tsas->destroy(this->tsas);
 	this->isas->destroy(this->isas);
 	this->osas->destroy(this->osas);
@@ -1889,6 +2003,7 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 							{ 0xa9,0x59,0x9d,0x91,0xac,0xaf,0xf9,0x19 }},
 		},
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.bypass = array_create(sizeof(UINT64), 2),
 		.tsas = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.isas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
 		.osas = hashtable_create((void*)hash_sa, (void*)equals_sa, 4),
