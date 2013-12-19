@@ -112,3 +112,10 @@ STUB(fwpuclnt, DWORD, IPsecSaContextUpdate0, 24,
 STUB(fwpuclnt, DWORD, IPsecSaContextEnum1, 40,
 	HANDLE engineHandle, HANDLE enumHandle, UINT32 numEntriesRequested,
 	void ***entries, UINT32 *numEntriesReturned)
+
+STUB(fwpuclnt, DWORD, FwpmNetEventSubscribe0, 40,
+	HANDLE engineHandle, const void *subscription, void(*callback)(),
+	void *context, HANDLE *eventsHandle)
+
+STUB(fwpuclnt, DWORD, FwpmNetEventUnsubscribe0, 16,
+	HANDLE engineHandle, HANDLE eventsHandle)

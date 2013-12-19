@@ -80,6 +80,11 @@ struct private_kernel_wfp_ipsec_t {
 	 * Provider charon registers as
 	 */
 	FWPM_PROVIDER0 provider;
+
+	/**
+	 * Event handle
+	 */
+	HANDLE event;
 };
 
 /**
@@ -1262,6 +1267,32 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	}
 }
 
+/**
+ * FwpmNetEventSubscribe0() callback
+ */
+static void event_callback(private_kernel_wfp_ipsec_t *this,
+						   const FWPM_NET_EVENT1 *event)
+{
+}
+
+/**
+ * Register for net events
+ */
+static bool register_events(private_kernel_wfp_ipsec_t *this)
+{
+	FWPM_NET_EVENT_SUBSCRIPTION0 subscription = {};
+	DWORD res;
+
+	res = FwpmNetEventSubscribe0(this->handle, &subscription,
+								 (void*)event_callback, this, &this->event);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "registering for WFP events failed: 0x%08x", res);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_wfp_ipsec_t *this)
 {
@@ -1800,6 +1831,10 @@ METHOD(kernel_ipsec_t, destroy, void,
 {
 	if (this->handle)
 	{
+		if (this->event)
+		{
+			FwpmNetEventUnsubscribe0(this->handle, this->event);
+		}
 		FwpmProviderDeleteByKey0(this->handle, &this->provider.providerKey);
 		FwpmEngineClose0(this->handle);
 	}
@@ -1879,6 +1914,12 @@ kernel_wfp_ipsec_t *kernel_wfp_ipsec_create()
 	if (res != ERROR_SUCCESS && res != FWP_E_ALREADY_EXISTS)
 	{
 		DBG1(DBG_KNL, "registering WFP provider failed: 0x%08x", res);
+		destroy(this);
+		return NULL;
+	}
+
+	if (!register_events(this))
+	{
 		destroy(this);
 		return NULL;
 	}
