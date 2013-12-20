@@ -23,7 +23,6 @@
 #ifndef TUN_DEVICE_H_
 #define TUN_DEVICE_H_
 
-#include <library.h>
 #include <networking/host.h>
 
 typedef struct tun_device_t tun_device_t;

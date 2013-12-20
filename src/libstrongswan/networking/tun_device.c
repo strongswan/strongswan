@@ -27,9 +27,11 @@
 #include <unistd.h>
 #include <net/if.h>
 
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+
 #include "tun_device.h"
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+#include <utils/debug.h>
 
 #warning TUN devices are not supported!
 
@@ -52,7 +54,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <net/if_tun.h>
 #endif
 
-#include <library.h>
+#include "tun_device.h"
+
 #include <utils/debug.h>
 #include <threading/thread.h>
 
