@@ -178,6 +178,10 @@ typedef struct {
 	u_int64_t policy_in;
 	/** WFP allocated LUID for outbound filter ID */
 	u_int64_t policy_out;
+	/** WFP allocated LUID for forward inbound filter ID, tunnel mode only */
+	u_int64_t policy_fwd_in;
+	/** WFP allocated LUID for forward outbound filter ID, tunnel mode only */
+	u_int64_t policy_fwd_out;
 	/** provider context, for tunnel mode only */
 	u_int64_t provider;
 	/** WFP allocated LUID for SA context */
@@ -252,6 +256,16 @@ static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	if (entry->mode == MODE_TUNNEL)
 	{
 		manage_routes(this, entry, FALSE);
+		if (entry->policy_fwd_in)
+		{
+			FwpmFilterDeleteById0(this->handle, entry->policy_fwd_in);
+			entry->policy_fwd_in = 0;
+		}
+		if (entry->policy_fwd_out)
+		{
+			FwpmFilterDeleteById0(this->handle, entry->policy_fwd_out);
+			entry->policy_fwd_out = 0;
+		}
 	}
 }
 
@@ -343,7 +357,7 @@ static void range2cond(FWPM_FILTER_CONDITION0 *cond,
 /**
  * (Re-)allocate filter conditions for given local or remote traffic selector
  */
-static bool ts2condition(traffic_selector_t *ts, bool local,
+static bool ts2condition(traffic_selector_t *ts, const GUID *target,
 						 FWPM_FILTER_CONDITION0 *conds[], int *count)
 {
 	FWPM_FILTER_CONDITION0 *cond;
@@ -361,14 +375,7 @@ static bool ts2condition(traffic_selector_t *ts, bool local,
 	to_port = ts->get_to_port(ts);
 
 	cond = append_condition(conds, count);
-	if (local)
-	{
-		cond->fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS;
-	}
-	else
-	{
-		cond->fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
-	}
+	cond->fieldKey = *target;
 	if (ts->is_host(ts, NULL))
 	{
 		cond->matchType = FWP_MATCH_EQUAL;
@@ -440,7 +447,7 @@ static bool ts2condition(traffic_selector_t *ts, bool local,
 	}
 
 	proto = ts->get_protocol(ts);
-	if (proto && local)
+	if (proto && target == &FWPM_CONDITION_IP_LOCAL_ADDRESS)
 	{
 		cond = append_condition(conds, count);
 		cond->fieldKey = FWPM_CONDITION_IP_PROTOCOL;
@@ -451,7 +458,7 @@ static bool ts2condition(traffic_selector_t *ts, bool local,
 
 	if (proto == IPPROTO_ICMP)
 	{
-		if (local)
+		if (target == &FWPM_CONDITION_IP_LOCAL_ADDRESS)
 		{
 			u_int8_t from_type, to_type, from_code, to_code;
 
@@ -476,16 +483,18 @@ static bool ts2condition(traffic_selector_t *ts, bool local,
 	}
 	else if (from_port != 0 || to_port != 0xFFFF)
 	{
-		cond = append_condition(conds, count);
-		if (local)
+		if (target == &FWPM_CONDITION_IP_LOCAL_ADDRESS)
 		{
+			cond = append_condition(conds, count);
 			cond->fieldKey = FWPM_CONDITION_IP_LOCAL_PORT;
+			range2cond(cond, from_port, to_port);
 		}
-		else
+		if (target == &FWPM_CONDITION_IP_REMOTE_ADDRESS)
 		{
+			cond = append_condition(conds, count);
 			cond->fieldKey = FWPM_CONDITION_IP_REMOTE_PORT;
+			range2cond(cond, from_port, to_port);
 		}
-		range2cond(cond, from_port, to_port);
 	}
 	return TRUE;
 }
@@ -530,16 +539,72 @@ static void free_conditions(FWPM_FILTER_CONDITION0 *conds, int count)
 }
 
 /**
+ * Find the callout GUID for given parameters
+ */
+static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
+						 GUID *layer, GUID *callout)
+{
+	struct {
+		bool tunnel;
+		bool v6;
+		bool inbound;
+		bool forward;
+		const GUID *layer;
+		const GUID *callout;
+	} map[] = {
+		{ 0, 0, 0, 0, 	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4			},
+		{ 0, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
+						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4			},
+		{ 0, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V6			},
+		{ 0, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
+						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V6			},
+		{ 1, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4				},
+		{ 1, 0, 0, 1,	&FWPM_LAYER_IPFORWARD_V4,
+						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4		},
+		{ 1, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
+						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4				},
+		{ 1, 0, 1, 1,	&FWPM_LAYER_IPFORWARD_V4,
+						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4		},
+		{ 1, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6				},
+		{ 1, 1, 0, 1,	&FWPM_LAYER_IPFORWARD_V6,
+						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6		},
+		{ 1, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
+						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6				},
+		{ 1, 1, 1, 1,	&FWPM_LAYER_IPFORWARD_V6,
+						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6		},
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (tunnel == map[i].tunnel &&
+			v6 == map[i].v6 &&
+			inbound == map[i].inbound &&
+			forward == map[i].forward)
+		{
+			*callout = *map[i].callout;
+			*layer = *map[i].layer;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Install a single policy in to the kernel
  */
-static bool install_sp(private_kernel_wfp_ipsec_t *this,
-					   entry_t *entry, GUID *context, bool inbound)
+static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
+					   GUID *context, bool inbound, bool fwd, UINT64 *filter_id)
 {
 	FWPM_FILTER_CONDITION0 *conds = NULL;
-	int count = 0;
-	enumerator_t *enumerator;
 	traffic_selector_t *local, *remote;
-	sp_entry_t *sp;
+	const GUID *ltarget, *rtarget;
+	int count = 0;
+	bool v6;
 	DWORD res;
 	FWPM_FILTER0 filter = {
 		.displayData = {
@@ -548,78 +613,111 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this,
 		.action = {
 			.type = FWP_ACTION_CALLOUT_TERMINATING,
 		},
-		.layerKey = inbound ? FWPM_LAYER_INBOUND_TRANSPORT_V4 :
-							  FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
 	};
 
 	if (context)
 	{
-		if (inbound)
-		{
-			filter.action.calloutKey = FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4;
-		}
-		else
-		{
-			filter.action.calloutKey = FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4;
-		}
 		filter.flags |= FWPM_FILTER_FLAG_HAS_PROVIDER_CONTEXT;
-		filter.providerKey = (GUID*)&this->provider.providerKey,
-		memcpy(&filter.providerContextKey, context, sizeof(GUID));
+		filter.providerKey = (GUID*)&this->provider.providerKey;
+		filter.providerContextKey = *context;
+	}
+
+	v6 = sp->src->get_type(sp->src) == TS_IPV6_ADDR_RANGE;
+	if (!find_callout(context != NULL, v6, inbound, fwd,
+					  &filter.layerKey, &filter.action.calloutKey))
+	{
+		return FALSE;
+	}
+
+	if (inbound && fwd)
+	{
+		local = sp->dst;
+		remote = sp->src;
 	}
 	else
 	{
-		if (inbound)
-		{
-			filter.action.calloutKey = FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4;
-		}
-		else
-		{
-			filter.action.calloutKey = FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4;
-		}
+		local = sp->src;
+		remote = sp->dst;
 	}
-
-	enumerator = array_create_enumerator(entry->sps);
-	while (enumerator->enumerate(enumerator, &sp))
+	if (fwd)
 	{
-		if (inbound)
-		{
-			local = sp->dst;
-			remote = sp->src;
-		}
-		else
-		{
-			local = sp->src;
-			remote = sp->dst;
-		}
-
-		if (!ts2condition(local, TRUE, &conds, &count) ||
-			!ts2condition(remote, FALSE, &conds, &count))
-		{
-			free_conditions(conds, count);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
+		ltarget = &FWPM_CONDITION_IP_SOURCE_ADDRESS;
+		rtarget = &FWPM_CONDITION_IP_DESTINATION_ADDRESS;
 	}
-	enumerator->destroy(enumerator);
+	else
+	{
+		ltarget = &FWPM_CONDITION_IP_LOCAL_ADDRESS;
+		rtarget = &FWPM_CONDITION_IP_REMOTE_ADDRESS;
+	}
+	if (!ts2condition(local, ltarget, &conds, &count) ||
+		!ts2condition(remote, rtarget, &conds, &count))
+	{
+		free_conditions(conds, count);
+		return FALSE;
+	}
 
 	filter.numFilterConditions = count;
 	filter.filterCondition = conds;
 
-	if (inbound)
-	{
-		res = FwpmFilterAdd0(this->handle, &filter, NULL, &entry->policy_in);
-	}
-	else
-	{
-		res = FwpmFilterAdd0(this->handle, &filter, NULL, &entry->policy_out);
-	}
+	res = FwpmFilterAdd0(this->handle, &filter, NULL, filter_id);
 	free_conditions(conds, count);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "installing %sbound FWP filter failed: 0x%08x",
-			 inbound ? "in" : "out", res);
+		DBG1(DBG_KNL, "installing %s%sbound WFP filter failed: 0x%08x",
+			 fwd ? "forward " : "", inbound ? "in" : "out", res);
 		return FALSE;
 	}
+	return TRUE;
+}
+
+/**
+ * Install a set of policies in to the kernel
+ */
+static bool install_sps(private_kernel_wfp_ipsec_t *this,
+						entry_t *entry, GUID *context)
+{
+	enumerator_t *enumerator;
+	sp_entry_t *sp;
+
+	enumerator = array_create_enumerator(entry->sps);
+	while (enumerator->enumerate(enumerator, &sp))
+	{
+		/* inbound policy */
+		if (!install_sp(this, sp, context, TRUE, FALSE, &entry->policy_in))
+		{
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		/* outbound policy */
+		if (!install_sp(this, sp, context, FALSE, FALSE, &entry->policy_out))
+		{
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		if (context)
+		{
+			if (!sp->src->is_host(sp->src, entry->local) ||
+				!sp->dst->is_host(sp->dst, entry->remote))
+			{
+				/* inbound forward policy, from decapsulation */
+				if (!install_sp(this, sp, context,
+								TRUE, TRUE, &entry->policy_fwd_in))
+				{
+					enumerator->destroy(enumerator);
+					return FALSE;
+				}
+				/* outbound forward policy, to encapsulate */
+				if (!install_sp(this, sp, context,
+								FALSE, TRUE, &entry->policy_fwd_out))
+				{
+					enumerator->destroy(enumerator);
+					return FALSE;
+				}
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	return TRUE;
 }
 
@@ -971,8 +1069,7 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
  */
 static bool install_transport(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
-	if (install_sp(this, entry, NULL, TRUE) &&
-		install_sp(this, entry, NULL, FALSE) &&
+	if (install_sps(this, entry, NULL) &&
 		install_sas(this, entry, IPSEC_TRAFFIC_TYPE_TRANSPORT))
 	{
 		return TRUE;
@@ -1000,9 +1097,10 @@ static bool generate_guid(private_kernel_wfp_ipsec_t *this, GUID *guid)
 }
 
 /**
- * Install tunnel mode SPs to the kernel
+ * Register a dummy tunnel provider to associate tunnel filters to
  */
-static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
+static bool add_tunnel_provider(private_kernel_wfp_ipsec_t *this,
+								entry_t *entry, GUID *guid, UINT64 *luid)
 {
 	DWORD res;
 
@@ -1037,7 +1135,7 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	};
 	FWPM_PROVIDER_CONTEXT0 qm = {
 		.displayData = {
-			.name = L"charon tunnel provider context",
+			.name = L"charon tunnel provider",
 		},
 		.providerKey = (GUID*)&this->provider.providerKey,
 		.type = FWPM_IPSEC_IKE_QM_TUNNEL_CONTEXT,
@@ -1055,10 +1153,8 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 			break;
 		case AF_INET6:
 			policy.tunnelEndpoints.ipVersion = FWP_IP_VERSION_V6;
-			memcpy(&policy.tunnelEndpoints.localV6Address,
-				   entry->local->get_address(entry->local).ptr, 16);
-			memcpy(&policy.tunnelEndpoints.remoteV6Address,
-				   entry->remote->get_address(entry->remote).ptr, 16);
+			host2address6(entry->local, &policy.tunnelEndpoints.localV6Address);
+			host2address6(entry->remote, &policy.tunnelEndpoints.remoteV6Address);
 			break;
 		default:
 			return FALSE;
@@ -1069,15 +1165,28 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 		return FALSE;
 	}
 
-	res = FwpmProviderContextAdd0(this->handle, &qm, NULL, &entry->provider);
+	res = FwpmProviderContextAdd0(this->handle, &qm, NULL, luid);
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "adding provider context failed: 0x%08x", res);
 		return FALSE;
 	}
+	*guid = qm.providerContextKey;
+	return TRUE;
+}
 
-	if (!install_sp(this, entry, &qm.providerContextKey, TRUE) ||
-		!install_sp(this, entry, &qm.providerContextKey, FALSE))
+/**
+ * Install tunnel mode SPs to the kernel
+ */
+static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
+{
+	GUID guid;
+
+	if (!add_tunnel_provider(this, entry, &guid, &entry->provider))
+	{
+		return FALSE;
+	}
+	if (!install_sps(this, entry, &guid))
 	{
 		return FALSE;
 	}
@@ -1267,10 +1376,12 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 typedef struct {
 	/** reqid this trap is installed for */
 	u_int32_t reqid;
-	/** local traffic selector */
-	traffic_selector_t *local;
-	/** remote traffic selector */
-	traffic_selector_t *remote;
+	/** is this a forward policy trap for tunnel mode? */
+	bool fwd;
+	/** src traffic selector */
+	traffic_selector_t *src;
+	/** dst traffic selector */
+	traffic_selector_t *dst;
 	/** LUID of installed tunnel policy filter */
 	UINT64 filter_id;
 } trap_t;
@@ -1280,8 +1391,8 @@ typedef struct {
  */
 static void destroy_trap(trap_t *this)
 {
-	this->local->destroy(this->local);
-	this->remote->destroy(this->remote);
+	this->src->destroy(this->src);
+	this->dst->destroy(this->dst);
 	free(this);
 }
 
@@ -1438,6 +1549,7 @@ static bool install_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
 	FWPM_FILTER_CONDITION0 *conds = NULL;
 	int count = 0;
 	DWORD res;
+	const GUID *starget, *dtarget;
 	UINT64 weight = 0x000000000000ff00;
 	FWPM_FILTER0 filter = {
 		.displayData = {
@@ -1452,18 +1564,35 @@ static bool install_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
 		},
 	};
 
-	switch (trap->local->get_type(trap->local))
+	if (trap->fwd)
 	{
-		case TS_IPV4_ADDR_RANGE:
+		if (trap->src->get_type(trap->src) == TS_IPV4_ADDR_RANGE)
+		{
+			filter.layerKey = FWPM_LAYER_IPFORWARD_V4;
+		}
+		else
+		{
+			filter.layerKey = FWPM_LAYER_IPFORWARD_V6;
+		}
+		starget = &FWPM_CONDITION_IP_SOURCE_ADDRESS;
+		dtarget = &FWPM_CONDITION_IP_DESTINATION_ADDRESS;
+	}
+	else
+	{
+		if (trap->src->get_type(trap->src) == TS_IPV4_ADDR_RANGE)
+		{
 			filter.layerKey = FWPM_LAYER_OUTBOUND_TRANSPORT_V4;
-			break;
-		case TS_IPV6_ADDR_RANGE:
+		}
+		else
+		{
 			filter.layerKey = FWPM_LAYER_OUTBOUND_TRANSPORT_V6;
-			break;
+		}
+		starget = &FWPM_CONDITION_IP_LOCAL_ADDRESS;
+		dtarget = &FWPM_CONDITION_IP_REMOTE_ADDRESS;
 	}
 
-	if (!ts2condition(trap->local, TRUE, &conds, &count) ||
-		!ts2condition(trap->remote, FALSE, &conds, &count))
+	if (!ts2condition(trap->src, starget, &conds, &count) ||
+		!ts2condition(trap->dst, dtarget, &conds, &count))
 	{
 		free_conditions(conds, count);
 		return FALSE;
@@ -1476,7 +1605,7 @@ static bool install_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
 	free_conditions(conds, count);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "installing FWP trap filter failed: 0x%08x", res);
+		DBG1(DBG_KNL, "installing WFP trap filter failed: 0x%08x", res);
 		return FALSE;
 	}
 	return TRUE;
@@ -1492,7 +1621,7 @@ static bool uninstall_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
 	res = FwpmFilterDeleteById0(this->handle, trap->filter_id);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "uninstalling FWP trap filter failed: 0x%08x", res);
+		DBG1(DBG_KNL, "uninstalling WFP trap filter failed: 0x%08x", res);
 		return FALSE;
 	}
 	return TRUE;
@@ -1501,15 +1630,17 @@ static bool uninstall_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
 /**
  * Create and install a new trap entry
  */
-static bool add_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
-					 traffic_selector_t *local, traffic_selector_t *remote)
+static bool add_trap(private_kernel_wfp_ipsec_t *this,
+					 u_int32_t reqid, bool fwd,
+					 traffic_selector_t *src, traffic_selector_t *dst)
 {
 	trap_t *trap;
 
 	INIT(trap,
 		.reqid = reqid,
-		.local = local->clone(local),
-		.remote = remote->clone(remote),
+		.fwd = fwd,
+		.src = src->clone(src),
+		.dst = dst->clone(dst),
 	);
 
 	if (!install_trap(this, trap))
@@ -1526,8 +1657,9 @@ static bool add_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
 /**
  * Uninstall and remove a new trap entry
  */
-static bool remove_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
-						traffic_selector_t *local, traffic_selector_t *remote)
+static bool remove_trap(private_kernel_wfp_ipsec_t *this,
+						u_int32_t reqid, bool fwd,
+						traffic_selector_t *src, traffic_selector_t *dst)
 {
 	enumerator_t *enumerator;
 	trap_t *trap, *found = NULL;
@@ -1537,8 +1669,9 @@ static bool remove_trap(private_kernel_wfp_ipsec_t *this, u_int32_t reqid,
 	while (enumerator->enumerate(enumerator, NULL, &trap))
 	{
 		if (reqid == trap->reqid &&
-			local->equals(local, trap->local) &&
-			remote->equals(remote, trap->remote))
+			fwd == trap->fwd &&
+			src->equals(src, trap->src) &&
+			dst->equals(dst, trap->dst))
 		{
 			this->traps->remove_at(this->traps, enumerator);
 			found = trap;
@@ -2014,11 +2147,18 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		case POLICY_PRIORITY_DEFAULT:
 			break;
 		case POLICY_PRIORITY_ROUTED:
-			if (add_trap(this, sa->reqid, src_ts, dst_ts))
+			if (!add_trap(this, sa->reqid, FALSE, src_ts, dst_ts))
 			{
-				return SUCCESS;
+				return FAILED;
 			}
-			return FAILED;
+			if (sa->mode == MODE_TUNNEL)
+			{
+				if (!add_trap(this, sa->reqid, TRUE, src_ts, dst_ts))
+				{
+					return FAILED;
+				}
+			}
+			return SUCCESS;
 		case POLICY_PRIORITY_FALLBACK:
 		default:
 			return NOT_SUPPORTED;
@@ -2074,8 +2214,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 {
 	if (direction == POLICY_OUT && priority == POLICY_PRIORITY_ROUTED)
 	{
-		if (remove_trap(this, reqid, src_ts, dst_ts))
+		if (remove_trap(this, reqid, FALSE, src_ts, dst_ts))
 		{
+			remove_trap(this, reqid, TRUE, src_ts, dst_ts);
 			return SUCCESS;
 		}
 		return NOT_FOUND;
@@ -2146,7 +2287,7 @@ static bool add_bypass(private_kernel_wfp_ipsec_t *this,
 	free_conditions(conds, count);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "installing FWP trap filter failed: 0x%08x", res);
+		DBG1(DBG_KNL, "installing WFP bypass filter failed: 0x%08x", res);
 		return FALSE;
 	}
 	return TRUE;
