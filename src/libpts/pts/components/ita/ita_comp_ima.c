@@ -683,7 +683,7 @@ METHOD(pts_component_t, verify, status_t,
 					status = this->pts_db->check_comp_measurement(this->pts_db,
 										measurement, this->bios_cid, this->kid,
 										++this->seq_no,	pcr, algo);
-					if (status != SUCCESS)
+					if (status == FAILED)
 					{
 						return status;
 					}
@@ -803,7 +803,7 @@ METHOD(pts_component_t, verify, status_t,
 		}
 		if (pcrs->set(pcrs, pcr, pcr_after))
 		{
-			return SUCCESS;
+			return status;
 		}
 	}
 	else
@@ -811,7 +811,7 @@ METHOD(pts_component_t, verify, status_t,
 		pcr_after = pcrs->extend(pcrs, pcr, measurement);
 		if (pcr_after.ptr)
 		{
-			return SUCCESS;
+			return status;
 		}
 	}
 	return FAILED;
