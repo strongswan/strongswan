@@ -913,6 +913,7 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 	}
 	else
 	{
+		bundle.flags |= IPSEC_SA_BUNDLE_FLAG_ASSUME_UDP_CONTEXT_OUTBOUND;
 		res = IPsecSaContextAddOutbound0(this->handle, entry->sa_id, &bundle);
 	}
 	if (res != ERROR_SUCCESS)
