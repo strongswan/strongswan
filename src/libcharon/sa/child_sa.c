@@ -847,6 +847,14 @@ METHOD(child_sa_t, add_policies, status_t,
 		priority = this->trap ? POLICY_PRIORITY_ROUTED
 							  : POLICY_PRIORITY_DEFAULT;
 
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			my_sa.policy_count++;
+			other_sa.policy_count++;
+		}
+		enumerator->destroy(enumerator);
+
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
