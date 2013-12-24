@@ -1515,6 +1515,12 @@ static void event_callback(private_kernel_wfp_ipsec_t *this,
 		case FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE:
 		case FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE:
 		case FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP:
+			DBG1(DBG_KNL, "IPsec kernel drop: %R === %R, error 0x%08x, "
+				 "SPI 0x%08x, %s filterId %llu", local, remote,
+				 event->ipsecDrop->failureStatus, event->ipsecDrop->spi,
+				 event->ipsecDrop->direction ? "in" : "out",
+				 event->ipsecDrop->filterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IPSEC_DOSP_DROP:
 		default:
 			break;
