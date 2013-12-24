@@ -51,6 +51,11 @@ struct private_kernel_iph_net_t {
 	HANDLE changes;
 
 	/**
+	 * EnableRouter() OVERLAPPED
+	 */
+	OVERLAPPED router;
+
+	/**
 	 * Mutex to access interface list
 	 */
 	mutex_t *mutex;
@@ -677,6 +682,23 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 		DBG1(DBG_KNL, "%sing route failed: 0x%08lx", add ? "add" : "remov", ret);
 		return FAILED;
 	}
+
+	if (add)
+	{
+		ret = EnableRouter(NULL, &this->router);
+		if (ret != ERROR_IO_PENDING)
+		{
+			DBG1(DBG_KNL, "EnableRouter router failed: 0x%08lx", ret);
+		}
+	}
+	else
+	{
+		ret = UnenableRouter(&this->router, NULL);
+		if (ret != NO_ERROR)
+		{
+			DBG1(DBG_KNL, "UnenableRouter router failed: 0x%08lx", ret);
+		}
+	}
 	return SUCCESS;
 }
 
@@ -701,6 +723,7 @@ METHOD(kernel_net_t, destroy, void,
 	{
 		CancelMibChangeNotify2(this->changes);
 	}
+	CloseHandle(this->router.hEvent);
 	this->mutex->destroy(this->mutex);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_destroy);
 	free(this);
@@ -727,6 +750,9 @@ kernel_iph_net_t *kernel_iph_net_create()
 				.del_route = _del_route,
 				.destroy = _destroy,
 			},
+		},
+		.router = {
+			.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL),
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
