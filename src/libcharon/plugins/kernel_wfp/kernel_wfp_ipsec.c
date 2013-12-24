@@ -142,6 +142,16 @@ typedef struct {
 	traffic_selector_t *src;
 	/** policy destinaiton addresses */
 	traffic_selector_t *dst;
+	/** WFP allocated LUID for inbound filter ID */
+	u_int64_t policy_in;
+	/** WFP allocated LUID for outbound filter ID */
+	u_int64_t policy_out;
+	/** WFP allocated LUID for forward inbound filter ID, tunnel mode only */
+	u_int64_t policy_fwd_in;
+	/** WFP allocated LUID for forward outbound filter ID, tunnel mode only */
+	u_int64_t policy_fwd_out;
+	/** have installed a route for it? */
+	bool route;
 } sp_entry_t;
 
 /**
@@ -174,14 +184,6 @@ typedef struct {
 	ipsec_mode_t mode;
 	/** UDP encapsulation */
 	bool encap;
-	/** WFP allocated LUID for inbound filter ID */
-	u_int64_t policy_in;
-	/** WFP allocated LUID for outbound filter ID */
-	u_int64_t policy_out;
-	/** WFP allocated LUID for forward inbound filter ID, tunnel mode only */
-	u_int64_t policy_fwd_in;
-	/** WFP allocated LUID for forward outbound filter ID, tunnel mode only */
-	u_int64_t policy_fwd_out;
 	/** provider context, for tunnel mode only */
 	u_int64_t provider;
 	/** WFP allocated LUID for SA context */
@@ -243,30 +245,39 @@ static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
  */
 static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
-	if (entry->policy_in)
-	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_in);
-		entry->policy_in = 0;
-	}
-	if (entry->policy_out)
-	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_out);
-		entry->policy_out = 0;
-	}
+	enumerator_t *enumerator;
+	sp_entry_t *sp;
+
 	if (entry->mode == MODE_TUNNEL)
 	{
 		manage_routes(this, entry, FALSE);
-		if (entry->policy_fwd_in)
+	}
+
+	enumerator = array_create_enumerator(entry->sps);
+	while (enumerator->enumerate(enumerator, &sp))
+	{
+		if (sp->policy_in)
 		{
-			FwpmFilterDeleteById0(this->handle, entry->policy_fwd_in);
-			entry->policy_fwd_in = 0;
+			FwpmFilterDeleteById0(this->handle, sp->policy_in);
+			sp->policy_in = 0;
 		}
-		if (entry->policy_fwd_out)
+		if (sp->policy_out)
 		{
-			FwpmFilterDeleteById0(this->handle, entry->policy_fwd_out);
-			entry->policy_fwd_out = 0;
+			FwpmFilterDeleteById0(this->handle, sp->policy_out);
+			sp->policy_out = 0;
+		}
+		if (sp->policy_fwd_in)
+		{
+			FwpmFilterDeleteById0(this->handle, sp->policy_fwd_in);
+			sp->policy_fwd_in = 0;
+		}
+		if (sp->policy_fwd_out)
+		{
+			FwpmFilterDeleteById0(this->handle, sp->policy_fwd_out);
+			sp->policy_fwd_out = 0;
 		}
 	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -683,13 +694,13 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 	while (enumerator->enumerate(enumerator, &sp))
 	{
 		/* inbound policy */
-		if (!install_sp(this, sp, context, TRUE, FALSE, &entry->policy_in))
+		if (!install_sp(this, sp, context, TRUE, FALSE, &sp->policy_in))
 		{
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}
 		/* outbound policy */
-		if (!install_sp(this, sp, context, FALSE, FALSE, &entry->policy_out))
+		if (!install_sp(this, sp, context, FALSE, FALSE, &sp->policy_out))
 		{
 			enumerator->destroy(enumerator);
 			return FALSE;
@@ -701,14 +712,14 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 			{
 				/* inbound forward policy, from decapsulation */
 				if (!install_sp(this, sp, context,
-								TRUE, TRUE, &entry->policy_fwd_in))
+								TRUE, TRUE, &sp->policy_fwd_in))
 				{
 					enumerator->destroy(enumerator);
 					return FALSE;
 				}
 				/* outbound forward policy, to encapsulate */
 				if (!install_sp(this, sp, context,
-								FALSE, TRUE, &entry->policy_fwd_out))
+								FALSE, TRUE, &sp->policy_fwd_out))
 				{
 					enumerator->destroy(enumerator);
 					return FALSE;
@@ -981,12 +992,24 @@ static bool install_sas(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 			.trafficType = type,
 		},
 	};
+	enumerator_t *enumerator;
+	sp_entry_t *sp;
 	DWORD res;
 
 	if (type == IPSEC_TRAFFIC_TYPE_TRANSPORT)
 	{
-		traffic.ipsecFilterId = entry->policy_out;
-		spi.inboundIpsecTraffic.ipsecFilterId = entry->policy_in;
+		enumerator = array_create_enumerator(entry->sps);
+		if (enumerator->enumerate(enumerator, &sp))
+		{
+			traffic.ipsecFilterId = sp->policy_out;
+			spi.inboundIpsecTraffic.ipsecFilterId = sp->policy_in;
+		}
+		else
+		{
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		enumerator->destroy(enumerator);
 	}
 	else
 	{
@@ -1302,11 +1325,19 @@ static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 	enumerator = array_create_enumerator(entry->sps);
 	while (enumerator->enumerate(enumerator, &sp))
 	{
+		if (add && sp->route)
+		{
+			continue;
+		}
+		if (!add && !sp->route)
+		{
+			continue;
+		}
 		if (!sp->dst->to_subnet(sp->dst, &dst, &mask))
 		{
 			continue;
 		}
-		if (hydra->kernel_interface->get_address_by_ts( hydra->kernel_interface,
+		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
 												sp->src, &src, NULL) != SUCCESS)
 		{
 			dst->destroy(dst);
@@ -1316,7 +1347,11 @@ static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 												   entry->remote, entry->local);
 		if (add)
 		{
-			if (!install_route(this, dst, mask, src, gtw))
+			if (install_route(this, dst, mask, src, gtw))
+			{
+				sp->route = TRUE;
+			}
+			else
 			{
 				DBG1(DBG_KNL, "installing route for policy %R === %R failed",
 					 sp->src, sp->dst);
@@ -1324,7 +1359,11 @@ static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		}
 		else
 		{
-			if (!uninstall_route(this, dst, mask, src, gtw))
+			if (uninstall_route(this, dst, mask, src, gtw))
+			{
+				sp->route = FALSE;
+			}
+			else
 			{
 				DBG1(DBG_KNL, "uninstalling route for policy %R === %R failed",
 					 sp->src, sp->dst);
@@ -2175,16 +2214,19 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	entry = this->osas->get(this->osas, &key);
 	if (entry)
 	{
-		if (array_count(entry->sps) == 0)
+		if (sa->mode == MODE_TUNNEL || array_count(entry->sps) == 0)
 		{
 			INIT(sp,
 				.src = src_ts->clone(src_ts),
 				.dst = dst_ts->clone(dst_ts),
 			);
 			array_insert(entry->sps, -1, sp);
-			if (!install(this, entry))
+			if (array_count(entry->sps) == sa->policy_count)
 			{
-				status = FAILED;
+				if (!install(this, entry))
+				{
+					status = FAILED;
+				}
 			}
 		}
 		else
@@ -2192,6 +2234,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			/* TODO: reinstall with a filter using multiple TS?
 			 * Filters are ANDed for a match, but we could install a filter
 			 * with the inverse TS set using NOT-matches... */
+			DBG1(DBG_KNL, "multiple transport mode traffic selectors not "
+				 "supported by WFP");
 			status = NOT_SUPPORTED;
 		}
 	}
