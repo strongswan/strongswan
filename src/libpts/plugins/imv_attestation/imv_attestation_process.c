@@ -366,6 +366,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			pts_comp_evidence_t *evidence;
 			pts_component_t *comp;
 			u_int32_t depth;
+			status_t status;
 
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 			evidence = attr_cast->get_comp_evidence(attr_cast);
@@ -377,8 +378,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
-			if (comp->verify(comp, name->get_qualifier(name), pts,
-							 evidence) != SUCCESS)
+			status = comp->verify(comp, name->get_qualifier(name), pts, evidence);
+			if (status == VERIFY_ERROR || status == FAILED)
 			{
 				state->update_recommendation(state,
 							TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
@@ -396,6 +397,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			pts_meas_algorithms_t comp_hash_algorithm;
 			chunk_t pcr_comp, tpm_quote_sig, evid_sig;
 			chunk_t pcr_composite, quote_info;
+			imv_session_t *session;
+			imv_workitem_t *workitem;
+			enumerator_t *enumerator;
 			bool use_quote2, use_ver_info;
 
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
@@ -449,6 +453,41 @@ quote_error:
 				 * if all expected component measurements were received
 				 */
 				attestation_state->finalize_components(attestation_state);
+
+				session = state->get_session(state);
+				enumerator = session->create_workitem_enumerator(session);
+				while (enumerator->enumerate(enumerator, &workitem))
+				{
+					if (workitem->get_type(workitem) == IMV_WORKITEM_TPM_ATTEST)
+					{
+						TNC_IMV_Action_Recommendation rec;
+						TNC_IMV_Evaluation_Result eval;
+						char *result_str;
+						u_int32_t error;
+
+						error = attestation_state->get_measurement_error(
+														attestation_state);
+						if (error & (IMV_ATTESTATION_ERROR_COMP_EVID_FAIL |
+									 IMV_ATTESTATION_ERROR_COMP_EVID_PEND |
+									 IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL))
+						{
+							result_str = "attestation failed";
+							eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+						}
+						else
+						{
+							result_str = "attestation successful";
+							eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+						}
+						session->remove_workitem(session, enumerator);
+						rec = workitem->set_result(workitem, result_str, eval);
+						state->update_recommendation(state, rec, eval);
+						imcv_db->finalize_workitem(imcv_db, workitem);
+						workitem->destroy(workitem);
+						break;
+					}
+				}
+				enumerator->destroy(enumerator);
 			}
 
 			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))

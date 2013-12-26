@@ -20,7 +20,7 @@
 
 typedef struct private_imv_workitem_t private_imv_workitem_t;
 
-ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_SWID_TAGS,
+ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_TPM_ATTEST,
 	"PCKGS",
 	"UNSRC",
 	"FWDEN",

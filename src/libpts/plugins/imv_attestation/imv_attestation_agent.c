@@ -374,10 +374,37 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					case IMV_WORKITEM_DIR_META:
 						is_dir = TRUE;
 						break;
+					case IMV_WORKITEM_TPM_ATTEST:
+					{
+						TNC_IMV_Action_Recommendation rec;
+						TNC_IMV_Evaluation_Result eval;
+						bool no_d_flag, no_t_flag;
+						char result_str[BUF_LEN];
+
+						workitem->set_imv_id(workitem, imv_id);
+						no_workitems = FALSE;
+						no_d_flag = !(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D);
+						no_t_flag = !(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T);
+						if (no_d_flag || no_t_flag)
+						{
+							snprintf(result_str, BUF_LEN, "%s%s%s",
+									(no_t_flag) ? "no TPM available" : "",
+									(no_t_flag && no_d_flag) ? ", " : "",
+									(no_d_flag) ? "no DH nonce negotiation" : "");
+							eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+							session->remove_workitem(session, enumerator);
+							rec = workitem->set_result(workitem, result_str, eval);
+							state->update_recommendation(state, rec, eval);
+							imcv_db->finalize_workitem(imcv_db, workitem);
+							workitem->destroy(workitem);
+						}
+						continue;
+					}
 					default:
 						continue;
 				}
 
+				/* initiate file and directory measurements */
 				pathname = this->pts_db->get_pathname(this->pts_db, is_dir,
 											workitem->get_arg_int(workitem));
 				if (!pathname)
