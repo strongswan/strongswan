@@ -35,7 +35,8 @@ ENUM(imv_workitem_type_names, IMV_WORKITEM_PACKAGES, IMV_WORKITEM_SWID_TAGS,
 	"TCPBL",
 	"UDPOP",
 	"UDPBL",
-	"SWIDT"
+	"SWIDT",
+	"TPMRA"
 );
 
 /**

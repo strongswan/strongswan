@@ -44,7 +44,8 @@ enum imv_workitem_type_t {
 	IMV_WORKITEM_TCP_PORT_BLOCK = 12,
 	IMV_WORKITEM_UDP_PORT_OPEN =  13,
 	IMV_WORKITEM_UDP_PORT_BLOCK = 14,
-	IMV_WORKITEM_SWID_TAGS =      15
+	IMV_WORKITEM_SWID_TAGS =      15,
+	IMV_WORKITEM_TPM_ATTEST =     16
 };
 
 extern enum_name_t *imv_workitem_type_names;
