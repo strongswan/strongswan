@@ -228,7 +228,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 
 	/* Instantiate a TNC Reason String object */
 	DESTROY_IF(this->reason_string);
-	this->reason_string = imv_reason_string_create(*reason_language);
+	this->reason_string = imv_reason_string_create(*reason_language, "\n");
 	this->reason_string->add_reason(this->reason_string, reasons);
 	*reason_string = this->reason_string->get_encoding(this->reason_string);
 

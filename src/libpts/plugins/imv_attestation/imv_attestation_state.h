@@ -25,6 +25,7 @@
 #define IMV_ATTESTATION_STATE_H_
 
 #include <imv/imv_state.h>
+#include <imv/imv_reason_string.h>
 #include <pts/pts.h>
 #include <pts/pts_database.h>
 #include <pts/components/pts_component.h>
@@ -150,6 +151,21 @@ struct imv_attestation_state_t {
 	void (*set_measurement_error)(imv_attestation_state_t *this,
 								  u_int32_t error);
 
+	/**
+	 * Returns a concatenation of File Measurement reason strings
+	 *
+	 * @param reason_string		Concatenated reason strings
+	 */
+	void (*add_file_meas_reasons)(imv_attestation_state_t *this,
+								  imv_reason_string_t *reason_string);
+
+	/**
+	 * Returns a concatenation of Component Evidence reason strings
+	 *
+	 * @param reason_string		Concatenated reason strings
+	 */
+	void (*add_comp_evid_reasons)(imv_attestation_state_t *this,
+								  imv_reason_string_t *reason_string);
 };
 
 /**

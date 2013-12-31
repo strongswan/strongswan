@@ -424,9 +424,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				{
 					DBG1(DBG_IMV, "received PCR Composite does not match "
 								  "constructed one");
-					state->update_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
 					goto quote_error;
@@ -435,9 +432,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sig))
 				{
-					state->update_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
 					goto quote_error;
@@ -471,12 +465,20 @@ quote_error:
 									 IMV_ATTESTATION_ERROR_COMP_EVID_PEND |
 									 IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL))
 						{
-							result_str = "attestation failed";
-							eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+							imv_reason_string_t *reason_string;
+							chunk_t result;
+
+							reason_string = imv_reason_string_create("en", ", ");
+							attestation_state->add_comp_evid_reasons(
+											attestation_state, reason_string);
+							result = reason_string->get_encoding(reason_string);
+							result_str = strndup(result.ptr, result.len);
+							reason_string->destroy(reason_string);
+							eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
 						}
 						else
 						{
-							result_str = "attestation successful";
+							result_str = strdup("attestation successful");
 							eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 						}
 						session->remove_workitem(session, enumerator);
@@ -484,6 +486,7 @@ quote_error:
 						state->update_recommendation(state, rec, eval);
 						imcv_db->finalize_workitem(imcv_db, workitem);
 						workitem->destroy(workitem);
+						free(result_str);
 						break;
 					}
 				}

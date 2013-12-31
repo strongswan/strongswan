@@ -290,6 +290,36 @@ METHOD(imv_state_t, update_recommendation, void,
 	this->eval = tncif_policy_update_evaluation(this->eval, eval);
 }
 
+METHOD(imv_attestation_state_t, add_file_meas_reasons, void,
+	private_imv_attestation_state_t *this, imv_reason_string_t *reason_string)
+{
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL)
+	{
+		reason_string->add_reason(reason_string, reason_file_meas_fail);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_PEND)
+	{
+		reason_string->add_reason(reason_string, reason_file_meas_pend);
+	}
+}
+
+METHOD(imv_attestation_state_t, add_comp_evid_reasons, void,
+	private_imv_attestation_state_t *this, imv_reason_string_t *reason_string)
+{
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_FAIL)
+	{
+		reason_string->add_reason(reason_string, reason_comp_evid_fail);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_PEND)
+	{
+		reason_string->add_reason(reason_string, reason_comp_evid_pend);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL)
+	{
+		reason_string->add_reason(reason_string, reason_tpm_quote_fail);
+	}
+}
+
 METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_attestation_state_t *this, enumerator_t *language_enumerator,
 	chunk_t *reason_string, char **reason_language)
@@ -299,33 +329,9 @@ METHOD(imv_state_t, get_reason_string, bool,
 
 	/* Instantiate a TNC Reason String object */
 	DESTROY_IF(this->reason_string);
-	this->reason_string = imv_reason_string_create(*reason_language);
-
-	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL)
-	{
-		this->reason_string->add_reason(this->reason_string,
-										reason_file_meas_fail);
-	}
-	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_PEND)
-	{
-		this->reason_string->add_reason(this->reason_string,
-										reason_file_meas_pend);
-	}
-	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_FAIL)
-	{
-		this->reason_string->add_reason(this->reason_string,
-										reason_comp_evid_fail);
-	}
-	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_PEND)
-	{
-		this->reason_string->add_reason(this->reason_string,
-										reason_comp_evid_pend);
-	}
-	if (this->measurement_error & IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL)
-	{
-		this->reason_string->add_reason(this->reason_string,
-										reason_tpm_quote_fail);
-	}
+	this->reason_string = imv_reason_string_create(*reason_language, "\n");
+	add_file_meas_reasons(this, this->reason_string);
+	add_comp_evid_reasons(this, this->reason_string);
 	*reason_string = this->reason_string->get_encoding(this->reason_string);
 
 	return TRUE;
@@ -461,9 +467,6 @@ METHOD(imv_attestation_state_t, finalize_components, void,
 		if (!entry->comp->finalize(entry->comp, entry->qualifier))
 		{
 			set_measurement_error(this, IMV_ATTESTATION_ERROR_COMP_EVID_PEND);
-			update_recommendation(this,
-					 TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-					 TNC_IMV_EVALUATION_RESULT_ERROR);
 		}
 		free_func_comp(entry);
 	}
@@ -514,6 +517,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.components_finalized = _components_finalized,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,
+			.add_file_meas_reasons = _add_file_meas_reasons,
+			.add_comp_evid_reasons = _add_comp_evid_reasons,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,

@@ -551,18 +551,22 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 					case IMV_WORKITEM_FILE_MEAS:
 					case IMV_WORKITEM_DIR_REF_MEAS:
 					case IMV_WORKITEM_DIR_MEAS:
-						session->remove_workitem(session, enumerator);
-						result_str = "pending file measurements";
-						eval = TNC_IMV_EVALUATION_RESULT_ERROR;
-						rec = workitem->set_result(workitem, result_str, eval);
-						state->update_recommendation(state, rec, eval);
-						imcv_db->finalize_workitem(imcv_db, workitem);
-						workitem->destroy(workitem);
+						result_str = "Pending file measurements";
 						pending_file_meas++;
 						break;
-					default:
+					case IMV_WORKITEM_TPM_ATTEST:
+						attestation_state->finalize_components(attestation_state);
+						result_str = "Pending component evidence";
 						break;
+					default:
+						continue;
 				}
+				session->remove_workitem(session, enumerator);
+				eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+				rec = workitem->set_result(workitem, result_str, eval);
+				state->update_recommendation(state, rec, eval);
+				imcv_db->finalize_workitem(imcv_db, workitem);
+				workitem->destroy(workitem);
 			}
 			enumerator->destroy(enumerator);
 

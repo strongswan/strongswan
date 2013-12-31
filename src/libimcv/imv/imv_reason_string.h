@@ -58,7 +58,8 @@ struct imv_reason_string_t {
  * Creates an Reason String object
  *
  * @param lang				Preferred language
+ * @param separator			String separating multiple reasons
  */
- imv_reason_string_t* imv_reason_string_create(char *lang);
+ imv_reason_string_t* imv_reason_string_create(char *lang, char *separator);
 
 #endif /** IMV_REASON_STRING_H_ @}*/
