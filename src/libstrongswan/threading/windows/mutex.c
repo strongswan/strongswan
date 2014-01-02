@@ -13,12 +13,11 @@
  * for more details.
  */
 
-#include <library.h>
+#include "thread.h"
+
 #include <utils/debug.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
-
-#include "thread.h"
 
 typedef struct private_mutex_t private_mutex_t;
 typedef struct private_condvar_t private_condvar_t;

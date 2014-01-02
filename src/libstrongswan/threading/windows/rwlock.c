@@ -13,13 +13,12 @@
  * for more details.
  */
 
-#include <library.h>
+#include "thread.h"
+
 #include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
 #include <threading/thread_value.h>
-
-#include "thread.h"
 
 typedef struct private_rwlock_t private_rwlock_t;
 typedef struct private_rwlock_condvar_t private_rwlock_condvar_t;

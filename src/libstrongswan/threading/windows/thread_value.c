@@ -13,10 +13,9 @@
  * for more details.
  */
 
-#include <library.h>
-#include <threading/thread_value.h>
-
 #include "thread.h"
+
+#include <threading/thread_value.h>
 
 
 typedef struct private_thread_value_t private_thread_value_t;

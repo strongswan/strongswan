@@ -16,6 +16,10 @@
 #ifndef WINDOWS_THREAD_H_
 #define WINDOWS_THREAD_H_
 
+/* for conditionVariables, Vista */
+#define _WIN32_WINNT 0x0600
+#include <library.h>
+
 /**
  * @defgroup windowsthread windows
  * @ingroup threading
@@ -23,27 +27,6 @@
  * @defgroup threadwindows thread
  * @{ @ingroup windowsthread
  */
-
-/**
- * MinGW seems to miss the actual struct definition
- */
-typedef struct {
-	PVOID Ptr;
-} SRWLOCK, *PSRWLOCK, CONDITION_VARIABLE, *PCONDITION_VARIABLE;
-
-VOID WINAPI InitializeConditionVariable(PCONDITION_VARIABLE ConditionVariable);
-BOOL WINAPI SleepConditionVariableCS(PCONDITION_VARIABLE ConditionVariable,
-					PCRITICAL_SECTION CriticalSection, DWORD dwMilliseconds);
-BOOL WINAPI SleepConditionVariableSRW(PCONDITION_VARIABLE ConditionVariable,
-						PSRWLOCK SRWLock, DWORD dwMilliseconds, ULONG Flags);
-VOID WINAPI WakeAllConditionVariable(PCONDITION_VARIABLE ConditionVariable);
-VOID WINAPI WakeConditionVariable(PCONDITION_VARIABLE ConditionVariable);
-VOID WINAPI AcquireSRWLockExclusive(PSRWLOCK SRWLock);
-VOID WINAPI AcquireSRWLockShared(PSRWLOCK SRWLock);
-BOOL TryAcquireSRWLockExclusive(PSRWLOCK SRWLock);
-VOID WINAPI InitializeSRWLock(PSRWLOCK SRWLock);
-VOID WINAPI ReleaseSRWLockExclusive(PSRWLOCK SRWLock);
-VOID WINAPI ReleaseSRWLockShared(PSRWLOCK SRWLock);
 
 /**
  * Set active condvar of a thread before waiting in it.

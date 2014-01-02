@@ -13,14 +13,13 @@
  * for more details.
  */
 
-#include <library.h>
+#include "thread.h"
+
 #include <utils/debug.h>
 #include <threading/spinlock.h>
 #include <threading/thread.h>
 #include <collections/hashtable.h>
 #include <collections/array.h>
-
-#include "thread.h"
 
 
 typedef struct private_thread_t private_thread_t;
