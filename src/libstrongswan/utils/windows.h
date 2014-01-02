@@ -25,6 +25,7 @@
 #include <ws2tcpip.h>
 #include <direct.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 /* undef Windows variants evaluating values more than once */
 #undef min
@@ -79,7 +80,8 @@ static inline int sched_yield(void)
 /**
  * Replacement of sleep(3), cancellable by thread_cancel()
  */
-static inline int sleep(unsigned int seconds)
+#define sleep sleep_cancellable
+static inline int sleep_cancellable(unsigned int seconds)
 {
 	SleepEx(seconds * 1000, TRUE);
 	return 0;
