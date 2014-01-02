@@ -89,6 +89,18 @@ static void println(FILE *file, char *format, ...)
 	va_end(args);
 }
 
+/**
+ * Same as tty_escape_get(), but for a potentially NULL FILE*
+ */
+static inline char* esc(FILE *file, tty_escape_t escape)
+{
+	if (file)
+	{
+		return tty_escape_get(fileno(file), escape);
+	}
+	return "";
+}
+
 #ifdef HAVE_DBGHELP
 
 #include <dbghelp.h>
@@ -117,18 +129,6 @@ void backtrace_deinit()
 #ifdef HAVE_DLADDR
 #include <dlfcn.h>
 #endif
-
-/**
- * Same as tty_escape_get(), but for a potentially NULL FILE*
- */
-static char* esc(FILE *file, tty_escape_t escape)
-{
-	if (file)
-	{
-		return tty_escape_get(fileno(file), escape);
-	}
-	return "";
-}
 
 #ifdef HAVE_BFD_H
 
