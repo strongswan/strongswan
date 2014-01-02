@@ -258,13 +258,17 @@ int socketpair(int domain, int type, int protocol, int sv[2]);
 /**
  * EWOULDBLOCK is EAGAIN on other systems as well
  */
+#ifndef EWOULDBLOCK
 #define EWOULDBLOCK EAGAIN
+#endif
 
 /**
  * ECONNRESET is mapped to something arbitrary. It is returned by
  * stream->read_all() but should not be mapped from a send/recv WSA error.
  */
+#ifndef ECONNRESET
 #define ECONNRESET ENXIO
+#endif
 
 /**
  * close(2) working for file handles and Winsock sockets
