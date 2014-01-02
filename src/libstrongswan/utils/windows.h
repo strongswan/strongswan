@@ -115,12 +115,16 @@ char* strndup(const char *s, size_t n);
 /**
  * Provided via ws2_32
  */
+#ifndef InetNtop
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+#endif
 
 /**
  * Provided via ws2_32
  */
+#ifndef InetPton
 int inet_pton(int af, const char *src, void *dst);
+#endif
 
 /**
  * Provided by printf hook backend
