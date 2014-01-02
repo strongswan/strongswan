@@ -104,7 +104,7 @@ static const char* get_name(void *sym)
 	return "unknown";
 }
 
-#ifdef CLOCK_THREAD_CPUTIME_ID
+#if defined(CLOCK_THREAD_CPUTIME_ID) && defined(HAVE_CLOCK_GETTIME)
 
 /**
  * Start a benchmark timer
