@@ -23,9 +23,6 @@
 #include <daemon.h>
 #include <collections/enumerator.h>
 
-/* we need to fake the pluto symbol to dlopen() the xauth plugin */
-void *pluto;
-
 /**
  * Integrity checker
  */
