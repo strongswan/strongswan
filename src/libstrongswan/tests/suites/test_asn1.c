@@ -480,7 +480,7 @@ START_TEST(test_asn1_to_time)
 
 	for (i = 0; i < countof(test); i++)
 	{
-		if (test[i].time > TIME_32_BIT_SIGNED_MAX && sizeof(time_t) == 4)
+		if (test[i].time < 0 && sizeof(time_t) == 4)
 		{
 			continue;
 		}
@@ -522,7 +522,7 @@ START_TEST(test_asn1_from_time)
 
 	for (i = 0; i < countof(test); i++)
 	{
-		if (test[i].time > TIME_32_BIT_SIGNED_MAX && sizeof(time_t) == 4)
+		if (test[i].time < 0 && sizeof(time_t) == 4)
         {
 			continue;
         }
