@@ -672,6 +672,31 @@ static const u_char sip_vectors[64][8] =
 	{ 0x72, 0x45, 0x06, 0xeb, 0x4c, 0x32, 0x8a, 0x95, }
 };
 
+/**
+ * Our SipHash-2-4 implementation returns the result in host order, which
+ * doesn't matter for practical purposes and even avoids a byte swap.  But
+ * because the test vectors are in little-endian we have to account for this
+ * with this custom comparison function.
+ */
+static inline bool sipeq(const void *a, const void *b, size_t n)
+{
+	u_char *ap = (u_char*)a, *bp = (u_char*)b;
+	int i;
+
+	for (i = 0; i < n; i++)
+	{
+#ifdef WORDS_BIGENDIAN
+		if (ap[i] != bp[n - i - 1])
+#else
+		if (ap[i] != bp[i])
+#endif
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 START_TEST(test_chunk_mac)
 {
 	chunk_t in;
@@ -692,7 +717,7 @@ START_TEST(test_chunk_mac)
 		in.ptr[i] = i;
 		in.len = i;
 		out = chunk_mac(in, key);
-		fail_unless(memeq(&out, sip_vectors[i], 8),
+		fail_unless(sipeq(&out, sip_vectors[i], 8),
 					"test vector failed for %d bytes", i);
 	}
 }
@@ -739,7 +764,7 @@ START_TEST(test_chunk_hash_static)
 		in.len = i;
 		/* compared to chunk_mac() we only get half the value back */
 		out = chunk_hash_static(in);
-		fail_unless(memeq(&out, sip_vectors[i], 4),
+		fail_unless(sipeq(&out, sip_vectors[i], 4),
 					"test vector failed for %d bytes", i);
 	}
 	hash_a = chunk_hash_static_inc(in, out);
