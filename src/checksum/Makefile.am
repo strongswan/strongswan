@@ -4,7 +4,7 @@ ipseclib_LTLIBRARIES = $(LIBCHECKSUM_LIBS)
 nodist_libchecksum_la_SOURCES = checksum.c
 libchecksum_la_LDFLAGS = -module -avoid-version -rpath '$(ipseclibdir)'
 
-noinst_PROGRAMS = checksum_builder
+EXTRA_PROGRAMS = checksum_builder
 checksum_builder_SOURCES = checksum_builder.c
 checksum_builder_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
@@ -12,7 +12,7 @@ checksum_builder_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	$(DLLIB)
 
-CLEANFILES = checksum.c
+CLEANFILES = checksum.c $(EXTRA_PROGRAMS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
