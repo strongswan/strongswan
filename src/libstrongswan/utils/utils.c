@@ -570,7 +570,7 @@ int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
 	time_t *time = *((time_t**)(args[0]));
-	bool utc = *((bool*)(args[1]));;
+	bool utc = *((int*)(args[1]));
 	struct tm t;
 
 	if (*time == UNDEFINED_TIME)
