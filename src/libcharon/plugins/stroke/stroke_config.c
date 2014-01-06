@@ -880,7 +880,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			else
 			{
 				vip = host_create_from_string(token, 0);
-				if (vip)
+				if (!vip)
 				{
 					DBG1(DBG_CFG, "ignored invalid subnet token: %s", token);
 				}
