@@ -490,7 +490,7 @@ METHOD(imc_agent_t, reserve_additional_ids, TNC_Result,
 		count--;
 
 		/* store the scalar value in the pointer */
-		pointer = (void*)id;
+		pointer = (void*)(uintptr_t)id;
 		this->additional_ids->insert_last(this->additional_ids, pointer);
 		DBG2(DBG_IMC, "IMC %u \"%s\" reserved additional ID %u",
 					  this->id, this->name, id);
@@ -566,4 +566,3 @@ imc_agent_t *imc_agent_create(const char *name,
 
 	return &this->public;
 }
-
