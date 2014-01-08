@@ -14,6 +14,10 @@ libtls_la_SOURCES = \
 libtls_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 
+if USE_WINDOWS
+  libtls_la_LIBADD += -lws2_32
+endif
+
 if USE_DEV_HEADERS
 tls_includedir = ${dev_headers}/tls
 nobase_tls_include_HEADERS = \
