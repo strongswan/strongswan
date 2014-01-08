@@ -569,7 +569,13 @@ AC_CHECK_FUNC(
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
-AC_CHECK_FUNCS(fmemopen funopen mmap memrchr syslog setlinebuf)
+AC_CHECK_FUNCS(fmemopen funopen mmap memrchr setlinebuf)
+
+AC_CHECK_FUNC([syslog], [
+	AC_DEFINE([HAVE_SYSLOG], [], [have syslog(3) and friends])
+	syslog=true
+])
+AM_CONDITIONAL(USE_SYSLOG, [test "x$syslog" = xtrue])
 
 AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h linux/fib_rules.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)

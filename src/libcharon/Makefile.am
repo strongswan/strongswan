@@ -124,6 +124,10 @@ processing/jobs/dpd_timeout_job.c processing/jobs/dpd_timeout_job.h \
 processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
 endif
 
+if USE_SYSLOG
+  libcharon_la_SOURCES += \
+    bus/listeners/sys_logger.c bus/listeners/sys_logger.h
+endif
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -145,9 +149,6 @@ libcharon_la_LIBADD = \
 
 if USE_WINDOWS
   libcharon_la_LIBADD += -lws2_32
-else
-  libcharon_la_SOURCES += \
-    bus/listeners/sys_logger.c bus/listeners/sys_logger.h
 endif
 
 EXTRA_DIST = Android.mk
