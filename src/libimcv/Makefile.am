@@ -11,6 +11,10 @@ libimcv_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libtncif/libtncif.la
 
+if USE_WINDOWS
+  libimcv_la_LIBADD += -lws2_32
+endif
+
 libimcv_la_SOURCES = \
 	imcv.h imcv.c \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \
