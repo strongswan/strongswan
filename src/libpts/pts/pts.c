@@ -35,7 +35,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/utsname.h>
 #include <libgen.h>
 #include <unistd.h>
 #include <errno.h>
@@ -537,6 +536,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	{
 		this->type = PTS_FILE_FIFO;
 	}
+#ifndef WIN32
 	else if (S_ISLNK(st.st_mode))
 	{
 		this->type = PTS_FILE_SYM_LINK;
@@ -545,6 +545,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	{
 		this->type = PTS_FILE_SOCKET;
 	}
+#endif /* WIN32 */
 	else
 	{
 		this->type = PTS_FILE_OTHER;
