@@ -22,6 +22,10 @@
 #include <bio/bio_reader.h>
 
 #ifdef TSS_TROUSERS
+#ifdef _BASETSD_H_
+/* MinGW defines _BASETSD_H_, but TSS checks for _BASETSD_H */
+# define _BASETSD_H
+#endif
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 #else
