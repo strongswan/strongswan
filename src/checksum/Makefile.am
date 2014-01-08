@@ -11,6 +11,7 @@ checksum_builder_LDADD = \
 	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	$(DLLIB)
+checksum_builder_LDFLAGS = -rpath '$(DESTDIR)$(ipseclibdir)'
 
 CLEANFILES = checksum.c $(EXTRA_PROGRAMS)
 
