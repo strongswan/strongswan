@@ -15,7 +15,9 @@
 
 #include "tnc_imc.h"
 
+#ifndef WIN32
 #include <dlfcn.h>
+#endif
 
 #include <tncif_pa_subtypes.h>
 
