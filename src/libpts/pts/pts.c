@@ -623,7 +623,8 @@ METHOD(pts_t, read_pcr, bool,
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
-	chunk_t rgbPcrValue;
+	BYTE *buf;
+	UINT32 len;
 
 	bool success = FALSE;
 
@@ -644,12 +645,12 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
-	result = Tspi_TPM_PcrRead(hTPM, pcr_num, (UINT32*)&rgbPcrValue.len, &rgbPcrValue.ptr);
+	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &len, &buf);
 	if (result != TSS_SUCCESS)
 	{
 		goto err;
 	}
-	*pcr_value = chunk_clone(rgbPcrValue);
+	*pcr_value = chunk_clone(chunk_create(buf, len));
 	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, pcr_value);
 	success = TRUE;
 
