@@ -305,29 +305,23 @@ METHOD(pts_t, calculate_secret, bool,
  */
 static void print_tpm_version_info(private_pts_t *this)
 {
-	TPM_CAP_VERSION_INFO versionInfo;
-	UINT64 offset = 0;
-	TSS_RESULT result;
+	TPM_CAP_VERSION_INFO *info;
 
-	result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset,
-						this->tpm_version_info.ptr, &versionInfo);
-	if (result != TSS_SUCCESS)
+	info = (TPM_CAP_VERSION_INFO*)this->tpm_version_info.ptr;
+
+	if (this->tpm_version_info.len >=
+			sizeof(*info) - sizeof(info->vendorSpecific))
 	{
-		DBG1(DBG_PTS, "could not parse tpm version info: tss error 0x%x",
-			 result);
+		DBG2(DBG_PTS, "TPM Version Info: Chip Version: %u.%u.%u.%u, "
+			 "Spec Level: %u, Errata Rev: %u, Vendor ID: %.4s",
+			 info->version.major, info->version.minor,
+			 info->version.revMajor, info->version.revMinor,
+			 untoh16(&info->specLevel), info->errataRev, info->tpmVendorID);
 	}
 	else
 	{
-		DBG2(DBG_PTS, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
-					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s [%.*s]",
-					  versionInfo.version.major, versionInfo.version.minor,
-					  versionInfo.version.revMajor, versionInfo.version.revMinor,
-					  versionInfo.specLevel, versionInfo.errataRev,
-					  versionInfo.tpmVendorID, versionInfo.vendorSpecificSize,
-					  versionInfo.vendorSpecificSize ?
-					  (char*)versionInfo.vendorSpecific : "");
+		DBG1(DBG_PTS, "could not parse tpm version info");
 	}
-	free(versionInfo.vendorSpecific);
 }
 
 #else
