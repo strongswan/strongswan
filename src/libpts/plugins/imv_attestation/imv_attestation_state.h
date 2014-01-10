@@ -117,6 +117,13 @@ struct imv_attestation_state_t {
 										 pts_database_t *pts_db);
 
 	/**
+	 * Enumerate over all Functional Components
+	 *
+	 * @return					Functional Component enumerator
+	 */
+	enumerator_t* (*create_component_enumerator)(imv_attestation_state_t *this);
+
+	/**
 	 * Get a Functional Component with a given name
 	 *
 	 * @param name				Name of the requested Functional Component

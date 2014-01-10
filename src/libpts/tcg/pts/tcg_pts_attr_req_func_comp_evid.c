@@ -286,7 +286,7 @@ METHOD(tcg_pts_attr_req_func_comp_evid_t, add_component, void,
 	entry = malloc_thing(entry_t);
 	entry->flags = flags;
 	entry->depth = depth;
-	entry->name = name;
+	entry->name = name->clone(name);
 	this->list->insert_last(this->list, entry);
 }
 

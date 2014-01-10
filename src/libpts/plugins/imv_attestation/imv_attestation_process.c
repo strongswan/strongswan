@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2013 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -381,9 +382,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			status = comp->verify(comp, name->get_qualifier(name), pts, evidence);
 			if (status == VERIFY_ERROR || status == FAILED)
 			{
-				state->update_recommendation(state,
-							TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-							TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 				attestation_state->set_measurement_error(attestation_state,
 									IMV_ATTESTATION_ERROR_COMP_EVID_FAIL);
 				name->log(name, "  measurement mismatch for ");

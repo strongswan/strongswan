@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 Sansar Choinyambuu
- * Copyright (C) 2011-2013 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -127,7 +127,7 @@ struct private_imv_attestation_state_t {
  */
 struct func_comp_t {
 	pts_component_t *comp;
-	u_int8_t qualifier;
+	pts_comp_func_name_t* name;
 };
 
 /**
@@ -136,6 +136,7 @@ struct func_comp_t {
 static void free_func_comp(func_comp_t *this)
 {
 	this->comp->destroy(this->comp);
+	this->name->destroy(this->name);
 	free(this);
 }
 
@@ -396,13 +397,13 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 
 	if (found)
 	{
-		if (name->get_qualifier(name) == entry->qualifier)
+		if (name->equals(name, entry->name))
 		{
 			/* duplicate entry */
 			return NULL;
 		}
 		new_entry = malloc_thing(func_comp_t);
-		new_entry->qualifier = name->get_qualifier(name);
+		new_entry->name = name->clone(name);
 		new_entry->comp = entry->comp->get_ref(entry->comp);
 		this->components->insert_last(this->components, new_entry);
 		return entry->comp;
@@ -416,11 +417,39 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 			return NULL;
 		}
 		new_entry = malloc_thing(func_comp_t);
-		new_entry->qualifier = name->get_qualifier(name);
+		new_entry->name = name->clone(name);
 		new_entry->comp = component;
 		this->components->insert_last(this->components, new_entry);
 		return component;
 	}
+}
+
+/**
+ * Enumerate file measurement entries
+ */
+static bool entry_filter(void *null, func_comp_t **entry, u_int8_t *flags,
+						 void *i2, u_int32_t *depth,
+						 void *i3, pts_comp_func_name_t **comp_name)
+{
+	pts_component_t *comp;
+	pts_comp_func_name_t *name;
+
+	comp = (*entry)->comp;
+	name = (*entry)->name;
+
+	*flags = comp->get_evidence_flags(comp);
+	*depth = comp->get_depth(comp);
+	*comp_name = name;
+
+	return TRUE;
+}
+
+METHOD(imv_attestation_state_t, create_component_enumerator, enumerator_t*,
+	private_imv_attestation_state_t *this)
+{
+	return enumerator_create_filter(
+				this->components->create_enumerator(this->components),
+				(void*)entry_filter, NULL, NULL);
 }
 
 METHOD(imv_attestation_state_t, get_component, pts_component_t*,
@@ -433,8 +462,7 @@ METHOD(imv_attestation_state_t, get_component, pts_component_t*,
 	enumerator = this->components->create_enumerator(this->components);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (name->equals(name, entry->comp->get_comp_func_name(entry->comp)) &&
-			name->get_qualifier(name) == entry->qualifier)
+		if (name->equals(name, entry->name))
 		{
 			found = entry->comp;
 			break;
@@ -464,7 +492,8 @@ METHOD(imv_attestation_state_t, finalize_components, void,
 	while (this->components->remove_last(this->components,
 										(void**)&entry) == SUCCESS)
 	{
-		if (!entry->comp->finalize(entry->comp, entry->qualifier))
+		if (!entry->comp->finalize(entry->comp,
+								   entry->name->get_qualifier(entry->name)))
 		{
 			set_measurement_error(this, IMV_ATTESTATION_ERROR_COMP_EVID_PEND);
 		}
@@ -512,6 +541,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.set_handshake_state = _set_handshake_state,
 			.get_pts = _get_pts,
 			.create_component = _create_component,
+			.create_component_enumerator = _create_component_enumerator,
 			.get_component = _get_component,
 			.finalize_components = _finalize_components,
 			.components_finalized = _components_finalized,
