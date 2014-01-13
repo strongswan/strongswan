@@ -369,42 +369,31 @@ METHOD(pts_t, set_tpm_version_info, void,
  */
 static void load_aik_blob(private_pts_t *this)
 {
-	char *blob_path;
-	FILE *fp;
-	u_int32_t aikBlobLen;
+	char *path;
+	chunk_t *map;
 
-	blob_path = lib->settings->get_str(lib->settings,
+	path = lib->settings->get_str(lib->settings,
 						"%s.plugins.imc-attestation.aik_blob", NULL, lib->ns);
-
-	if (blob_path)
+	if (path)
 	{
-		/* Read aik key blob from a file */
-		if ((fp = fopen(blob_path, "r")) == NULL)
+		map = chunk_map(path, FALSE);
+		if (map)
 		{
-			DBG1(DBG_PTS, "unable to open AIK Blob file: %s", blob_path);
-			return;
-		}
-
-		fseek(fp, 0, SEEK_END);
-		aikBlobLen = ftell(fp);
-		fseek(fp, 0L, SEEK_SET);
-
-		this->aik_blob = chunk_alloc(aikBlobLen);
-		if (fread(this->aik_blob.ptr, 1, aikBlobLen, fp) == aikBlobLen)
-		{
-			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", blob_path);
-			DBG3(DBG_PTS, "AIK Blob: %B", &this->aik_blob);
+			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", path);
+			DBG3(DBG_PTS, "AIK Blob: %B", map);
+			this->aik_blob = chunk_clone(*map);
+			chunk_unmap(map);
 		}
 		else
 		{
-			DBG1(DBG_PTS, "unable to read AIK Blob file '%s'", blob_path);
-			chunk_free(&this->aik_blob);
+			DBG1(DBG_PTS, "unable to map AIK Blob file '%s': %s",
+				 path, strerror(errno));
 		}
-		fclose(fp);
-		return;
 	}
-
-	DBG1(DBG_PTS, "AIK Blob is not available");
+	else
+	{
+		DBG1(DBG_PTS, "AIK Blob is not available");
+	}
 }
 
 /**
