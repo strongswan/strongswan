@@ -333,10 +333,15 @@ chunk_t *chunk_map(char *path, bool wr)
 {
 	mmaped_chunk_t *chunk;
 	struct stat sb;
-	int tmp;
+	int tmp, flags;
+
+	flags = wr ? O_RDWR : O_RDONLY;
+#ifdef WIN32
+	flags |= O_BINARY;
+#endif
 
 	INIT(chunk,
-		.fd = open(path, wr ? O_RDWR : O_RDONLY),
+		.fd = open(path, flags),
 		.wr = wr,
 	);
 
