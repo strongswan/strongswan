@@ -98,20 +98,14 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
-			if (!pts->get_aik_keyid(pts, &keyid))
+			if (!pts->get_aik_keyid(pts, &keyid) ||
+				 pts_db->check_aik_keyid(pts_db, keyid, &kid) != SUCCESS)
 			{
-				DBG1(DBG_IMV, "retrieval of AIK keyid failed");
+				attestation_state->set_measurement_error(attestation_state,
+									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
 				return FALSE;
 			}
-			if (!pts_db)
-			{
-				DBG1(DBG_IMV, "pts database not available");
-				break;
-			}
-			if (pts_db->check_aik_keyid(pts_db, keyid, &kid) != SUCCESS)
-			{
-				return FALSE;
-			}
+
 			enumerator = attestation_state->create_component_enumerator(
 													attestation_state);
 			while (enumerator->enumerate(enumerator, &flags, &depth, &name))
@@ -146,15 +140,9 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			}
 			break;
 		}
-		case IMV_ATTESTATION_STATE_EVID_FINAL:
-			if (attestation_state->components_finalized(attestation_state))
-			{
-				attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_END);
-			}
-			break;
 		default:
 			break;
 	}
+
 	return TRUE;
 }

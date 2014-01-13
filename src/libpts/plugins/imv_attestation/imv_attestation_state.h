@@ -65,9 +65,10 @@ enum imv_attestation_handshake_state_t {
 enum imv_meas_error_t {
 	IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL =  1,
 	IMV_ATTESTATION_ERROR_FILE_MEAS_PEND =  2,
-	IMV_ATTESTATION_ERROR_COMP_EVID_FAIL =  4,
-	IMV_ATTESTATION_ERROR_COMP_EVID_PEND =  8,
-	IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL = 16
+	IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK =  4,
+	IMV_ATTESTATION_ERROR_COMP_EVID_FAIL =  8,
+	IMV_ATTESTATION_ERROR_COMP_EVID_PEND = 16,
+	IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL = 32
 };
 
 /**
@@ -137,11 +138,6 @@ struct imv_attestation_state_t {
 	 * and to check if all expected measurements were received
 	 */
 	void (*finalize_components)(imv_attestation_state_t *this);
-
-	/**
-	 * Have the Functional Component measurements been finalized?
-	 */
-	bool (*components_finalized)(imv_attestation_state_t *this);
 
 	/**
 	 * Indicates the types of measurement errors that occurred

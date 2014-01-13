@@ -293,10 +293,14 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	imv_session_t *session;
 	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
+	imv_workitem_t *workitem;
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
 	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	pts_t *pts;
 	char *platform_info;
+	enumerator_t *enumerator;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
@@ -369,13 +373,11 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	   (state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ALGO) &&
 	  !(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_FILE_MEAS))
 	{
-		imv_workitem_t *workitem;
 		bool is_dir, no_workitems = TRUE;
 		u_int32_t delimiter = SOLIDUS_UTF;
 		u_int16_t request_id;
 		pa_tnc_attr_t *attr;
 		char *pathname;
-		enumerator_t *enumerator;
 
 		attestation_state->set_handshake_state(attestation_state,
 											   IMV_ATTESTATION_STATE_END);
@@ -406,8 +408,6 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					{
 						pts_component_t *comp;
 						pts_comp_func_name_t *comp_name;
-						TNC_IMV_Action_Recommendation rec;
-						TNC_IMV_Evaluation_Result eval;
 						bool no_d_flag, no_t_flag;
 						char result_str[BUF_LEN];
 
@@ -535,22 +535,35 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 
 	/* check the IMV state for the next PA-TNC attributes to send */
-	if (!imv_attestation_build(out_msg, state, this->supported_dh_groups,
-							   this->pts_db))
+	enumerator = session->create_workitem_enumerator(session);
+	while (enumerator->enumerate(enumerator, &workitem))
 	{
-		state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
-								TNC_IMV_EVALUATION_RESULT_ERROR);
-		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		state->set_action_flags(state, IMV_ATTESTATION_FLAG_REC);
-
-		if (result != TNC_RESULT_SUCCESS)
+		if (workitem->get_type(workitem) == IMV_WORKITEM_TPM_ATTEST)
 		{
-			return result;
+			if (!imv_attestation_build(out_msg, state,
+									   this->supported_dh_groups, this->pts_db))
+			{
+				imv_reason_string_t *reason_string;
+				chunk_t result;
+				char *result_str;
+
+				reason_string = imv_reason_string_create("en", ", ");
+				attestation_state->add_comp_evid_reasons(attestation_state,
+													 reason_string);
+				result = reason_string->get_encoding(reason_string);
+				result_str = strndup(result.ptr, result.len);
+				reason_string->destroy(reason_string);
+
+				eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+				session->remove_workitem(session, enumerator);
+				rec = workitem->set_result(workitem, result_str, eval);
+				state->update_recommendation(state, rec, eval);
+				imcv_db->finalize_workitem(imcv_db, workitem);
+			}
+			break;
 		}
-		return this->agent->provide_recommendation(this->agent, state);
 	}
+	enumerator->destroy(enumerator);
 
 	/* finalized all workitems? */
 	if (session && session->get_policy_started(session) &&

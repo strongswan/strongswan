@@ -163,7 +163,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			if (!aik)
 			{
 				DBG1(DBG_IMV, "AIK unavailable");
-				return FALSE;
+				attestation_state->set_measurement_error(attestation_state,
+									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
+				break;
 			}
 			if (aik->get_type(aik) == CERT_X509)
 			{
@@ -187,7 +189,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							   trusted ? "" : "not ");
 				if (!trusted)
 				{
-					return FALSE;
+					attestation_state->set_measurement_error(attestation_state,
+										IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
+					break;
 				}
 			}
 			pts->set_aik(pts, aik);
@@ -485,6 +489,8 @@ quote_error:
 						imcv_db->finalize_workitem(imcv_db, workitem);
 						workitem->destroy(workitem);
 						free(result_str);
+						attestation_state->set_handshake_state(attestation_state,
+													IMV_ATTESTATION_STATE_END);
 						break;
 					}
 				}
