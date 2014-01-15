@@ -27,7 +27,7 @@ then
 fi
 
 log_action "Unpacking kernel"
-execute "tar xjf $KERNELTARBALL"
+execute "tar xJf $KERNELTARBALL"
 
 KERNELDIR=$BUILDDIR/$KERNEL
 cd $KERNELDIR
