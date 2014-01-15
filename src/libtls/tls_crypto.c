@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ * Copyright (C) 2010-2014 Martin Willi
+ * Copyright (C) 2010-2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,6 +16,7 @@
 #include "tls_crypto.h"
 
 #include <utils/debug.h>
+#include <plugins/plugin_feature.h>
 
 ENUM_BEGIN(tls_cipher_suite_names, TLS_NULL_WITH_NULL_NULL,
 								   TLS_DH_anon_WITH_3DES_EDE_CBC_SHA,
@@ -1166,58 +1167,79 @@ METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
 	return MODP_NONE;
 }
 
+/**
+ * Map signature schemes to TLS key types and hashes, ordered by preference
+ */
+static struct {
+	tls_signature_algorithm_t sig;
+	tls_hash_algorithm_t hash;
+	signature_scheme_t scheme;
+} schemes[] = {
+	{ TLS_SIG_ECDSA,	TLS_HASH_SHA256,	SIGN_ECDSA_WITH_SHA256_DER	},
+	{ TLS_SIG_ECDSA,	TLS_HASH_SHA384,	SIGN_ECDSA_WITH_SHA384_DER	},
+	{ TLS_SIG_ECDSA,	TLS_HASH_SHA512,	SIGN_ECDSA_WITH_SHA512_DER	},
+	{ TLS_SIG_ECDSA,	TLS_HASH_SHA1,		SIGN_ECDSA_WITH_SHA1_DER	},
+	{ TLS_SIG_RSA,		TLS_HASH_SHA256,	SIGN_RSA_EMSA_PKCS1_SHA256	},
+	{ TLS_SIG_RSA,		TLS_HASH_SHA384,	SIGN_RSA_EMSA_PKCS1_SHA384	},
+	{ TLS_SIG_RSA,		TLS_HASH_SHA512,	SIGN_RSA_EMSA_PKCS1_SHA512	},
+	{ TLS_SIG_RSA,		TLS_HASH_SHA224,	SIGN_RSA_EMSA_PKCS1_SHA224	},
+	{ TLS_SIG_RSA,		TLS_HASH_SHA1,		SIGN_RSA_EMSA_PKCS1_SHA1	},
+	{ TLS_SIG_RSA,		TLS_HASH_MD5,		SIGN_RSA_EMSA_PKCS1_MD5		},
+};
+
 METHOD(tls_crypto_t, get_signature_algorithms, void,
 	private_tls_crypto_t *this, bio_writer_t *writer)
 {
 	bio_writer_t *supported;
-	enumerator_t *enumerator;
-	hash_algorithm_t alg;
-	tls_hash_algorithm_t hash;
-	const char *plugin_name;
+	int i;
 
 	supported = bio_writer_create(32);
-	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &alg, &plugin_name))
+
+	for (i = 0; i < countof(schemes); i++)
 	{
-		switch (alg)
+		if (schemes[i].sig == TLS_SIG_RSA && !this->rsa)
 		{
-			case HASH_MD5:
-				hash = TLS_HASH_MD5;
-				break;
-			case HASH_SHA1:
-				hash = TLS_HASH_SHA1;
-				break;
-			case HASH_SHA224:
-				hash = TLS_HASH_SHA224;
-				break;
-			case HASH_SHA256:
-				hash = TLS_HASH_SHA256;
-				break;
-			case HASH_SHA384:
-				hash = TLS_HASH_SHA384;
-				break;
-			case HASH_SHA512:
-				hash = TLS_HASH_SHA512;
-				break;
-			default:
-				continue;
+			continue;
 		}
-		if (this->rsa)
+		if (schemes[i].sig == TLS_SIG_ECDSA && !this->ecdsa)
 		{
-			supported->write_uint8(supported, hash);
-			supported->write_uint8(supported, TLS_SIG_RSA);
+			continue;
 		}
-		if (this->ecdsa && alg != HASH_MD5 && alg != HASH_SHA224)
-		{	/* currently we have no signature scheme for MD5/SHA224 */
-			supported->write_uint8(supported, hash);
-			supported->write_uint8(supported, TLS_SIG_ECDSA);
+		if (!lib->plugins->has_feature(lib->plugins,
+						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].scheme)))
+		{
+			continue;
 		}
+		supported->write_uint8(supported, schemes[i].hash);
+		supported->write_uint8(supported, schemes[i].sig);
 	}
-	enumerator->destroy(enumerator);
 
 	supported->wrap16(supported);
 	writer->write_data16(writer, supported->get_buf(supported));
 	supported->destroy(supported);
+}
+
+/**
+ * Get the signature scheme from a TLS 1.2 hash/sig algorithm pair
+ */
+static signature_scheme_t hashsig_to_scheme(key_type_t type,
+											tls_hash_algorithm_t hash,
+											tls_signature_algorithm_t sig)
+{
+	int i;
+
+	if ((sig == TLS_SIG_RSA && type == KEY_RSA) ||
+		(sig == TLS_SIG_ECDSA && type == KEY_ECDSA))
+	{
+		for (i = 0; i < countof(schemes); i++)
+		{
+			if (schemes[i].sig == sig && schemes[i].hash == hash)
+			{
+				return schemes[i].scheme;
+			}
+		}
+	}
+	return SIGN_UNKNOWN;
 }
 
 /**
@@ -1335,59 +1357,6 @@ static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 		*hash = chunk_clone(chunk_from_thing(buf));
 	}
 	return TRUE;
-}
-
-/**
- * Get the signature scheme from a TLS 1.2 hash/sig algorithm pair
- */
-static signature_scheme_t hashsig_to_scheme(key_type_t type,
-					tls_hash_algorithm_t hash, tls_signature_algorithm_t sig)
-{
-	switch (sig)
-	{
-		case TLS_SIG_RSA:
-			if (type != KEY_RSA)
-			{
-				return SIGN_UNKNOWN;
-			}
-			switch (hash)
-			{
-				case TLS_HASH_MD5:
-					return SIGN_RSA_EMSA_PKCS1_MD5;
-				case TLS_HASH_SHA1:
-					return SIGN_RSA_EMSA_PKCS1_SHA1;
-				case TLS_HASH_SHA224:
-					return SIGN_RSA_EMSA_PKCS1_SHA224;
-				case TLS_HASH_SHA256:
-					return SIGN_RSA_EMSA_PKCS1_SHA256;
-				case TLS_HASH_SHA384:
-					return SIGN_RSA_EMSA_PKCS1_SHA384;
-				case TLS_HASH_SHA512:
-					return SIGN_RSA_EMSA_PKCS1_SHA512;
-				default:
-					return SIGN_UNKNOWN;
-			}
-		case TLS_SIG_ECDSA:
-			if (type != KEY_ECDSA)
-			{
-				return SIGN_UNKNOWN;
-			}
-			switch (hash)
-			{
-				case TLS_HASH_SHA224:
-					return SIGN_ECDSA_WITH_SHA1_DER;
-				case TLS_HASH_SHA256:
-					return SIGN_ECDSA_WITH_SHA256_DER;
-				case TLS_HASH_SHA384:
-					return SIGN_ECDSA_WITH_SHA384_DER;
-				case TLS_HASH_SHA512:
-					return SIGN_ECDSA_WITH_SHA512_DER;
-				default:
-					return SIGN_UNKNOWN;
-			}
-		default:
-			return SIGN_UNKNOWN;
-	}
 }
 
 METHOD(tls_crypto_t, sign, bool,
