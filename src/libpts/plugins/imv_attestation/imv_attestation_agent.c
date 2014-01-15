@@ -345,14 +345,13 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		state->set_action_flags(state, IMV_ATTESTATION_FLAG_ATTR_REQ);
 	}
 
-	/* create an empty out message - we might need it */
-	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
-							 msg_types[0]);
-
 	if (handshake_state == IMV_ATTESTATION_STATE_INIT)
 	{
 		pa_tnc_attr_t *attr;
 		pts_proto_caps_flag_t flags;
+
+		out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+								 msg_types[0]);
 
 		/* Send Request Protocol Capabilities attribute */
 		flags = pts->get_proto_caps(pts);
@@ -367,11 +366,27 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 		attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_DISCOVERY);
+
+		/* send these initial PTS attributes and exit */
+		result = out_msg->send(out_msg, FALSE);
+		out_msg->destroy(out_msg);
+
+		return result;
 	}
 
-	if (platform_info && session &&
-	   (state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ALGO) &&
-	  !(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_FILE_MEAS))
+	/* exit if we are not ready yet for PTS measurements */
+	if (!platform_info || !session ||
+	    !(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_ALGO))
+	{
+		return TNC_RESULT_SUCCESS;
+	}
+
+	/* create an empty out message - we might need it */
+	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+							 msg_types[0]);
+
+	/* establish the PTS measurements to be taken */
+	if (!(state->get_action_flags(state) & IMV_ATTESTATION_FLAG_FILE_MEAS))
 	{
 		bool is_dir, no_workitems = TRUE;
 		u_int32_t delimiter = SOLIDUS_UTF;
