@@ -755,6 +755,17 @@ AC_COMPILE_IFELSE(
 AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
 AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
 
+AC_MSG_CHECKING([for working __attribute__((packed))])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM([], [[
+		struct test { char a; short b; } __attribute__((packed));
+		char x[sizeof(struct test) == sizeof(char) + sizeof(short) ? 1 : -1];
+		return 0;
+	]])],
+	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no]); AC_MSG_ERROR([__attribute__((packed)) does not work])]
+)
+
 if test x$printf_hooks = xvstr; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
