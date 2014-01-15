@@ -122,10 +122,14 @@ size_t print_in_hook(printf_hook_data_t *data, char *fmt, ...)
 
 	if (written > data->n)
 	{
-		written = data->n;
+		data->q += data->n;
+		data->n = 0;
 	}
-	data->q += written;
-	data->n += written;
+	else
+	{
+		data->q += written;
+		data->n -= written;
+	}
 	return written;
 }
 
