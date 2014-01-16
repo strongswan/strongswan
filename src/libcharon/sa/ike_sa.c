@@ -2138,7 +2138,10 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
-	DESTROY_IF(this->task_manager);
+	if (this->task_manager)
+	{
+		this->task_manager->flush(this->task_manager);
+	}
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (array_remove(this->attributes, ARRAY_TAIL, &entry))
@@ -2182,6 +2185,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, NULL);
 
 	array_destroy(this->child_sas);
+	DESTROY_IF(this->task_manager);
 	DESTROY_IF(this->keymat);
 	array_destroy(this->attributes);
 	array_destroy(this->my_vips);

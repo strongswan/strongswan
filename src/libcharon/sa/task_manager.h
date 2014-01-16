@@ -261,6 +261,11 @@ struct task_manager_t {
 											task_queue_t queue);
 
 	/**
+	 * Flush all tasks, regardless of the queue.
+	 */
+	void (*flush)(task_manager_t *this);
+
+	/**
 	 * Flush a queue, cancelling all tasks.
 	 *
 	 * @param queue			queue to flush

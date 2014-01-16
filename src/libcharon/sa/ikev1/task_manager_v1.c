@@ -339,10 +339,8 @@ METHOD(task_manager_t, flush_queue, void,
 	}
 }
 
-/**
- * flush all tasks in the task manager
- */
-static void flush(private_task_manager_t *this)
+METHOD(task_manager_t, flush, void,
+	private_task_manager_t *this)
 {
 	flush_queue(this, TASK_QUEUE_QUEUED);
 	flush_queue(this, TASK_QUEUE_PASSIVE);
@@ -2070,6 +2068,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.flush = _flush,
 				.flush_queue = _flush_queue,
 				.destroy = _destroy,
 			},
