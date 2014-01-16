@@ -8,6 +8,9 @@ strongswan-5.1.2
   group IDs 1030..1033 have been assigned, the strongSwan Vendor ID must be
   sent (charon.send_vendor_id = yes) in order to use NTRU.
 
+- Defined a TPMRA remote attestation workitem and added support for it to the
+  Attestation IMV.
+
 
 strongswan-5.1.1
 ----------------
