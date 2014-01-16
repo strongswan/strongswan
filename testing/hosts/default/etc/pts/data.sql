@@ -568,6 +568,24 @@ INSERT INTO groups (			/* 10 */
   'Ref. Linux', 8
 );
 
+INSERT INTO groups (            /* 11 */
+  name
+) VALUES (
+  'TPM BIOS'
+);
+
+INSERT INTO groups (            /* 12 */
+  name
+) VALUES (
+  'TPM IMA'
+);
+
+INSERT INTO groups (            /* 13 */
+  name
+) VALUES (
+  'TPM BIOS/IMA'
+);
+
 /* Default Product Groups */
 
 INSERT INTO groups_product_defaults (
@@ -842,6 +860,24 @@ INSERT INTO policies (			/* 18 */
   15, 'SWID Tags', '', 2, 2
 );
 
+INSERT INTO policies (          /* 19 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  16, 'TPM BIOS Measurements', 'B', 2, 2
+);
+
+INSERT INTO policies (          /* 20 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  16, 'TPM IMA Measurements', 'I', 2, 2
+);
+
+INSERT INTO policies (          /* 21 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  16, 'TPM BIOS/IMA Measurements', 'BI', 2, 2
+);
+
 /* Enforcements */
 
 INSERT INTO enforcements (		/*  1 */
@@ -926,6 +962,24 @@ INSERT INTO enforcements (		/* 14 */
   policy, group_id, max_age
 ) VALUES (
   15, 9, 0
+);
+
+INSERT INTO enforcements (      /* 15 */
+  policy, group_id, max_age
+) VALUES (
+  19, 11, 60
+);
+
+INSERT INTO enforcements (      /* 16 */
+  policy, group_id, max_age
+) VALUES (
+  20, 12, 60
+);
+
+INSERT INTO enforcements (      /* 17 */
+  policy, group_id, max_age
+) VALUES (
+  21, 13, 60
 );
 
 /* regids */
@@ -1056,5 +1110,11 @@ INSERT INTO tags (
   regid, unique_sw_id
 ) VALUES (
   10, 'strongSwan-5-1-1'
+);
+
+INSERT INTO tags (
+  regid, unique_sw_id
+) VALUES (
+  10, 'strongSwan-5-1-2'
 );
 
