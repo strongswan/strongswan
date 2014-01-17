@@ -70,6 +70,8 @@ static vid_data_t vids[] = {
 	/* strongSwan MD5("strongSwan") */
 	{ "strongSwan", EXT_STRONGSWAN, 16,
 	  "\x88\x2f\xe5\x6d\x6f\xd2\x0d\xbc\x22\x51\x61\x3b\x2e\xbe\x5b\xeb"},
+	{ "Cisco Delete Reason", 0, 0,
+	  "CISCO-DELETE-REASON" },
 };
 
 METHOD(task_t, build, status_t,
