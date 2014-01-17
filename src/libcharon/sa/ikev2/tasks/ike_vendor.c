@@ -74,6 +74,8 @@ static vid_data_t vids[] = {
 	  "CISCO-DELETE-REASON" },
 	{ "Cisco Copyright (c) 2009", 0, 0,
 	  "CISCO(COPYRIGHT)&Copyright (c) 2009 Cisco Systems, Inc." },
+	{ "FRAGMENTATION", 0, 16,
+	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3"},
 };
 
 METHOD(task_t, build, status_t,
