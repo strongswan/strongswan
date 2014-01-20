@@ -222,11 +222,17 @@ Suite *ecdsa_suite_create()
 {
 	Suite *s;
 	TCase *tc;
+	int gen_count = countof(key_sizes);
 
 	s = suite_create("ecdsa");
 
+	if (getenv("TESTS_REDUCED_KEYLENGTHS") != NULL)
+	{
+		gen_count = min(1, gen_count);
+	}
+
 	tc = tcase_create("generate");
-	tcase_add_loop_test(tc, test_gen, 0, countof(key_sizes));
+	tcase_add_loop_test(tc, test_gen, 0, gen_count);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("load");
