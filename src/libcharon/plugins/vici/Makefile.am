@@ -17,3 +17,22 @@ libstrongswan_vici_la_SOURCES = \
 	vici_plugin.h vici_plugin.c
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
+
+TESTS = vici_tests
+
+check_PROGRAMS = $(TESTS)
+
+vici_tests_SOURCES = \
+	vici_tests.h vici_tests.c
+
+vici_tests_CFLAGS = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libstrongswan/tests \
+	@COVERAGE_CFLAGS@
+
+vici_tests_LDFLAGS = @COVERAGE_LDFLAGS@
+vici_tests_LDADD = \
+	$(top_builddir)/src/libcharon/libcharon.la \
+	$(top_builddir)/src/libhydra/libhydra.la \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libstrongswan/tests/libtest.la
