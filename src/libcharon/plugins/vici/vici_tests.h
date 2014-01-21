@@ -12,3 +12,6 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+TEST_SUITE(socket_suite_create)
+TEST_SUITE(message_suite_create)

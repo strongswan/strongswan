@@ -14,6 +14,8 @@ plugin_LTLIBRARIES = libstrongswan-vici.la
 endif
 
 libstrongswan_vici_la_SOURCES = \
+	vici_socket.h vici_socket.c \
+	vici_message.h vici_message.c \
 	vici_plugin.h vici_plugin.c
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
@@ -23,6 +25,10 @@ TESTS = vici_tests
 check_PROGRAMS = $(TESTS)
 
 vici_tests_SOURCES = \
+	suites/test_socket.c \
+	suites/test_message.c \
+	vici_socket.c \
+	vici_message.c \
 	vici_tests.h vici_tests.c
 
 vici_tests_CFLAGS = \
