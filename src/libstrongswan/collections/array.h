@@ -140,6 +140,18 @@ void array_insert_create(array_t **array, int idx, void *ptr);
 void array_insert_enumerator(array_t *array, int idx, enumerator_t *enumerator);
 
 /**
+ * Get an element from the array.
+ *
+ * If data is given, the element is copied to that position.
+ *
+ * @param array			array to get element from, or NULL
+ * @param idx			index of the item to get
+ * @param data			data to copy element to, or NULL
+ * @return				TRUE if idx valid and item returned
+ */
+bool array_get(array_t *array, int idx, void *data);
+
+/**
  * Remove an element from the array.
  *
  * If data is given, the element is copied to that position.

@@ -314,7 +314,7 @@ void array_insert(array_t *array, int idx, void *data)
 	}
 }
 
-bool array_remove(array_t *array, int idx, void *data)
+bool array_get(array_t *array, int idx, void *data)
 {
 	if (!array)
 	{
@@ -337,12 +337,25 @@ bool array_remove(array_t *array, int idx, void *data)
 		memcpy(data, array->data + get_size(array, array->head + idx),
 			   get_size(array, 1));
 	}
+	return TRUE;
+}
+
+bool array_remove(array_t *array, int idx, void *data)
+{
+	if (!array_get(array, idx, data))
+	{
+		return FALSE;
+	}
 	if (idx > array_count(array) / 2)
 	{
 		remove_tail(array, idx);
 	}
 	else
 	{
+		if (idx < 0)
+		{
+			idx = array_count(array) - 1;
+		}
 		remove_head(array, idx);
 	}
 	if (array->head + array->tail > ARRAY_MAX_UNUSED)

@@ -35,6 +35,14 @@ START_TEST(test_append_ptr)
 
 		/* 3, 4 */
 
+		ck_assert(array_get(array, ARRAY_HEAD, &x));
+		ck_assert_int_eq(x, 3);
+		ck_assert(array_get(array, 1, &x));
+		ck_assert_int_eq(x, 4);
+		ck_assert(array_get(array, ARRAY_TAIL, &x));
+		ck_assert_int_eq(x, 4);
+		ck_assert(!array_get(array, 3, &x));
+
 		array_insert(array, ARRAY_HEAD, (void*)(uintptr_t)1);
 		array_insert(array, 1, (void*)(uintptr_t)2);
 		ck_assert_int_eq(array_count(array), 4);
@@ -107,6 +115,14 @@ START_TEST(test_append_obj)
 		ck_assert_int_eq(array_count(array), 2);;
 
 		/* 3, 4 */
+
+		ck_assert(array_get(array, ARRAY_HEAD, &x));
+		ck_assert_int_eq(x, 3);
+		ck_assert(array_get(array, 1, &x));
+		ck_assert_int_eq(x, 4);
+		ck_assert(array_get(array, ARRAY_TAIL, &x));
+		ck_assert_int_eq(x, 4);
+		ck_assert(!array_get(array, 3, &x));
 
 		array_insert(array, ARRAY_HEAD, &y[1]);
 		array_insert(array, 1, &y[2]);
@@ -336,11 +352,11 @@ Suite *array_suite_create()
 
 	s = suite_create("array");
 
-	tc = tcase_create("add/remove ptr");
+	tc = tcase_create("add/get/remove ptr");
 	tcase_add_test(tc, test_append_ptr);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("add/remove obj");
+	tc = tcase_create("add/get/remove obj");
 	tcase_add_test(tc, test_append_obj);
 	suite_add_tcase(s, tc);
 
