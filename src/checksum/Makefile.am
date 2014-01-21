@@ -89,28 +89,28 @@ endif
 if USE_CHARON
   deps += $(top_builddir)/src/libcharon/libcharon.la
   libs += $(DESTDIR)$(ipseclibdir)/libcharon.so
-  exes += $(top_builddir)/src/charon/.libs/charon
+  exes += $(DESTDIR)$(ipsecdir)/charon
 if !MONOLITHIC
   AM_CPPFLAGS += -DC_PLUGINS=\""${c_plugins}\""
 endif
 endif
 
 if USE_CMD
-  exes += $(top_builddir)/src/charon-cmd/.libs/charon-cmd
+  exes += $(DESTDIR)$(sbindir)/charon-cmd
 endif
 
 if USE_TOOLS
-  exes += $(top_builddir)/src/openac/.libs/openac
-  exes += $(top_builddir)/src/pki/.libs/pki
-  exes += $(top_builddir)/src/scepclient/.libs/scepclient
+  exes += $(DESTDIR)$(ipsecdir)/openac
+  exes += $(DESTDIR)$(ipsecdir)/scepclient
+  exes += $(DESTDIR)$(bindir)/pki
 endif
 
 if USE_ATTR_SQL
-  exes += $(top_builddir)/src/pool/.libs/pool
+  exes += $(DESTDIR)$(ipsecdir)/pool
 endif
 
 if USE_IMV_ATTESTATION
-  exes += $(top_builddir)/src/libpts/plugins/imv_attestation/.libs/attest
+  exes += $(DESTDIR)$(ipsecdir)/attest
 endif
 
 checksum.c : checksum_builder $(deps) $(exes)
