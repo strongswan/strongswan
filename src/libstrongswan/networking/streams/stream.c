@@ -159,17 +159,6 @@ METHOD(stream_t, write_all, bool,
 }
 
 /**
- * Remove a registered watcher
- */
-static void remove_watcher(private_stream_t *this)
-{
-	if (this->read_cb || this->write_cb)
-	{
-		lib->watcher->remove(lib->watcher, this->fd);
-	}
-}
-
-/**
  * Watcher callback
  */
 static bool watch(private_stream_t *this, int fd, watcher_event_t event)
@@ -228,7 +217,7 @@ static void add_watcher(private_stream_t *this)
 METHOD(stream_t, on_read, void,
 	private_stream_t *this, stream_cb_t cb, void *data)
 {
-	remove_watcher(this);
+	lib->watcher->remove(lib->watcher, this->fd);
 
 	this->read_cb = cb;
 	this->read_data = data;
@@ -239,7 +228,7 @@ METHOD(stream_t, on_read, void,
 METHOD(stream_t, on_write, void,
 	private_stream_t *this, stream_cb_t cb, void *data)
 {
-	remove_watcher(this);
+	lib->watcher->remove(lib->watcher, this->fd);
 
 	this->write_cb = cb;
 	this->write_data = data;
@@ -270,7 +259,7 @@ METHOD(stream_t, get_file, FILE*,
 METHOD(stream_t, destroy, void,
 	private_stream_t *this)
 {
-	remove_watcher(this);
+	lib->watcher->remove(lib->watcher, this->fd);
 	close(this->fd);
 	free(this);
 }
