@@ -15,6 +15,7 @@
 
 #include "xauth_pam_plugin.h"
 #include "xauth_pam.h"
+#include "xauth_pam_listener.h"
 
 #include <daemon.h>
 
@@ -22,26 +23,73 @@
 #define CAP_AUDIT_WRITE 29
 #endif
 
+typedef struct private_xauth_pam_plugin_t private_xauth_pam_plugin_t;
+
+/**
+ * private data of xauth_pam plugin
+ */
+struct private_xauth_pam_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	xauth_pam_plugin_t public;
+
+	/**
+	 * Listener
+	 */
+	xauth_pam_listener_t *listener;
+
+	/**
+	 * Do PAM session management?
+	 */
+	bool session;
+};
+
+/**
+ * Register XAuth method and listener
+ */
+static bool register_listener(private_xauth_pam_plugin_t *this,
+							  plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	}
+	return TRUE;
+}
+
 METHOD(plugin_t, get_name, char*,
-	xauth_pam_plugin_t *this)
+	private_xauth_pam_plugin_t *this)
 {
 	return "xauth-pam";
 }
 
 METHOD(plugin_t, get_features, int,
-	xauth_pam_plugin_t *this, plugin_feature_t *features[])
+	private_xauth_pam_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(xauth_method_register, xauth_pam_create_server),
 			PLUGIN_PROVIDE(XAUTH_SERVER, "pam"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)register_listener, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "pam-session"),
 	};
 	*features = f;
+	if (!this->session)
+	{
+		return 2;
+	}
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	xauth_pam_plugin_t *this)
+	private_xauth_pam_plugin_t *this)
 {
+	this->listener->destroy(this->listener),
 	free(this);
 }
 
@@ -50,7 +98,7 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *xauth_pam_plugin_create()
 {
-	xauth_pam_plugin_t *this;
+	private_xauth_pam_plugin_t *this;
 
 	/* required for PAM authentication */
 	if (!lib->caps->keep(lib->caps, CAP_AUDIT_WRITE))
@@ -60,12 +108,17 @@ plugin_t *xauth_pam_plugin_create()
 	}
 
 	INIT(this,
-		.plugin = {
-			.get_name = _get_name,
-			.get_features = _get_features,
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.get_features = _get_features,
+				.destroy = _destroy,
+			},
 		},
+		.session = lib->settings->get_str(lib->settings,
+						"%s.plugins.xauth-pam.session", FALSE, charon->name),
+		.listener = xauth_pam_listener_create(),
 	);
 
-	return &this->plugin;
+	return &this->public.plugin;
 }
