@@ -52,5 +52,5 @@ static bool test_runner_init(bool init)
 
 int main(int argc, char *argv[])
 {
-	return test_runner_run(tests, test_runner_init);
+	return test_runner_run("libstrongswan", tests, test_runner_init);
 }

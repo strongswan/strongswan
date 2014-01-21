@@ -442,7 +442,8 @@ static bool run_suite(test_suite_t *suite, test_runner_init_t init)
 /**
  * See header.
  */
-int test_runner_run(test_configuration_t configs[], test_runner_init_t init)
+int test_runner_run(const char *name, test_configuration_t configs[],
+					test_runner_init_t init)
 {
 	array_t *suites;
 	test_suite_t *suite;
@@ -458,7 +459,7 @@ int test_runner_run(test_configuration_t configs[], test_runner_init_t init)
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stderr, "Running %u test suites:\n", array_count(suites));
+	fprintf(stderr, "Running %u '%s' test suites:\n", array_count(suites), name);
 
 	enumerator = array_create_enumerator(suites);
 	while (enumerator->enumerate(enumerator, &suite))
@@ -472,14 +473,14 @@ int test_runner_run(test_configuration_t configs[], test_runner_init_t init)
 
 	if (passed == array_count(suites))
 	{
-		fprintf(stderr, "%sPassed all %u suites%s\n",
-				TTY(GREEN), array_count(suites), TTY(DEF));
+		fprintf(stderr, "%sPassed all %u '%s' suites%s\n",
+				TTY(GREEN), array_count(suites), name, TTY(DEF));
 		result = EXIT_SUCCESS;
 	}
 	else
 	{
-		fprintf(stderr, "%sPassed %u of %u suites%s\n",
-				TTY(RED), passed, array_count(suites), TTY(DEF));
+		fprintf(stderr, "%sPassed %u of %u '%s' suites%s\n",
+				TTY(RED), passed, array_count(suites), name, TTY(DEF));
 		result = EXIT_FAILURE;
 	}
 

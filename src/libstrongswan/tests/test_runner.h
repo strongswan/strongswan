@@ -66,10 +66,12 @@ struct test_configuration_t {
  *
  * The configs array must be terminated with a NULL element.
  *
+ * @oaran name			name of test runner
  * @param config		test suite constructors with dependencies
  * @param init_cb		init/deinit callback
  * @return				test result, EXIT_SUCCESS if all tests passed
  */
-int test_runner_run(test_configuration_t config[], test_runner_init_t init_cb);
+int test_runner_run(const char *name, test_configuration_t config[],
+					test_runner_init_t init_cb);
 
 #endif /** TEST_RUNNER_H_ @}*/

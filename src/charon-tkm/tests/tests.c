@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 	 * does not work otherwise due to limitations of the external libraries */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
 
-	result = test_runner_run(tests, test_runner_init);
+	result = test_runner_run("tkm", tests, test_runner_init);
 	tkm_deinit();
 
 	return result;
