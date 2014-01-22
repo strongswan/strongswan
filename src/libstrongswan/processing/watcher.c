@@ -340,7 +340,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		}
 		else
 		{
-			if (!this->pending)
+			if (!this->pending && errno != EINTR)
 			{	/* complain only if no pending updates */
 				DBG1(DBG_JOB, "watcher select() error: %s", strerror(errno));
 			}
