@@ -116,7 +116,11 @@ static void attr2string(char *buf, size_t len, chunk_t chunk)
 {
 	if (chunk.len && chunk.len < len)
 	{
-		snprintf(buf, len, "%.*s", (int)chunk.len, chunk.ptr);
+		chunk_t sane;
+
+		chunk_printable(chunk, &sane, '?');
+		snprintf(buf, len, "%.*s", (int)sane.len, sane.ptr);
+		chunk_clear(&sane);
 	}
 }
 
