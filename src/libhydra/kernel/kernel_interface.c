@@ -796,12 +796,12 @@ kernel_interface_t *kernel_interface_create()
 	);
 
 	ifaces = lib->settings->get_str(lib->settings,
-					"%s.interfaces_use", NULL, hydra->daemon);
+									"%s.interfaces_use", NULL, lib->ns);
 	if (!ifaces)
 	{
 		this->ifaces_exclude = TRUE;
 		ifaces = lib->settings->get_str(lib->settings,
-					"%s.interfaces_ignore", NULL, hydra->daemon);
+									"%s.interfaces_ignore", NULL, lib->ns);
 	}
 	if (ifaces)
 	{

@@ -573,7 +573,7 @@ static private_mem_pool_t *create_generic(char *name)
 								   (hashtable_equals_t)id_equals, 16),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.reassign_online = lib->settings->get_bool(lib->settings,
-							"%s.mem-pool.reassign_online", FALSE, hydra->daemon),
+								"%s.mem-pool.reassign_online", FALSE, lib->ns),
 	);
 
 	return this;

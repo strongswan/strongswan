@@ -2861,10 +2861,10 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 		.mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
 												  "%s.install_routes", TRUE,
-												  hydra->daemon),
+												  lib->ns),
 	);
 
-	if (streq(hydra->daemon, "starter"))
+	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}

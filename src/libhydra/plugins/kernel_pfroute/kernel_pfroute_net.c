@@ -1785,7 +1785,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.roam_lock = spinlock_create(),
 		.vip_wait = lib->settings->get_int(lib->settings,
-					"%s.plugins.kernel-pfroute.vip_wait", 1000, hydra->daemon),
+						"%s.plugins.kernel-pfroute.vip_wait", 1000, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
@@ -1799,7 +1799,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		return NULL;
 	}
 
-	if (streq(hydra->daemon, "starter"))
+	if (streq(lib->ns, "starter"))
 	{
 		/* starter has no threads, so we do not register for kernel events */
 		if (shutdown(this->socket, SHUT_RD) != 0)
