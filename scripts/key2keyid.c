@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 	char buf[8096];
 	int read;
 
-	library_init(NULL);
+	library_init(NULL, "key2keyid");
 	lib->plugins->load(lib->plugins, PLUGINS);
 	atexit(library_deinit);
 

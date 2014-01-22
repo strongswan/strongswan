@@ -65,7 +65,7 @@ static array_t *load_suites(test_configuration_t configs[],
 	bool old = FALSE;
 	int i;
 
-	library_init(NULL);
+	library_init(NULL, "test-runner");
 
 	test_setup_handler();
 
@@ -178,7 +178,7 @@ static bool call_fixture(test_case_t *tcase, bool up)
  */
 static bool pre_test(test_runner_init_t init)
 {
-	library_init(NULL);
+	library_init(NULL, "test-runner");
 
 	/* use non-blocking RNG to generate keys fast */
 	lib->settings->set_default_str(lib->settings,

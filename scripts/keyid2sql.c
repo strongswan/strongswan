@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 	char buf[8096];
 	int read, n;
 
-	library_init(NULL);
+	library_init(NULL, "keyid2sql");
 	lib->plugins->load(lib->plugins, PLUGINS);
 	atexit(library_deinit);
 

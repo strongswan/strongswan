@@ -439,7 +439,7 @@ int main(int argc, char *argv[])
 	atexit(library_deinit);
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "attest"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

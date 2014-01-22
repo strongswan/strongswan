@@ -229,7 +229,7 @@ int main(int argc, char **argv)
 
 	/* initialize library */
 	atexit(library_deinit);
-	if (!library_init(NULL))
+	if (!library_init(NULL, "openac"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

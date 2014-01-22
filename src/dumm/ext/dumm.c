@@ -774,7 +774,7 @@ void Init_dumm()
 	/* there are too many to report, rubyruby... */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
 
-	library_init(NULL);
+	library_init(NULL, "dumm");
 
 	dumm = dumm_create(NULL);
 

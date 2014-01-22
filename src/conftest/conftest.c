@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 	char *suite_file = "suite.conf", *test_file = NULL, *preload, *plugins;
 	file_logger_t *logger;
 
-	if (!library_init(NULL))
+	if (!library_init(NULL, "conftest"))
 	{
 		library_deinit();
 		return SS_RC_LIBSTRONGSWAN_INTEGRITY;

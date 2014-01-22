@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	int sizes[16] = { 1, 13, 100, 1000, 16, 10000, 50, 17,
 					  123, 32, 8, 64, 8096, 1024, 123, 9 };
 
-	library_init(NULL);
+	library_init(NULL, "malloc_speed");
 	atexit(library_deinit);
 
 	print_mallinfo();

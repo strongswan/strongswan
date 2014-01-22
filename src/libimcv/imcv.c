@@ -109,7 +109,7 @@ bool libimcv_init(bool is_imv)
 	else
 	{
 		/* we are the first to initialize libstrongswan */
-		if (!library_init(NULL))
+		if (!library_init(NULL, "libimcv"))
 		{
 			return FALSE;
 		}

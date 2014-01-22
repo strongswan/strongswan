@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-	library_init(NULL);
+	library_init(NULL, "dh_speed");
 	lib->plugins->load(lib->plugins, argv[1]);
 	atexit(library_deinit);
 

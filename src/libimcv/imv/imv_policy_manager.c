@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	atexit(library_deinit);
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "imv_policy_manager"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

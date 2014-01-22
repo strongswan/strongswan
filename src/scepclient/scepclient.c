@@ -487,7 +487,7 @@ int main(int argc, char **argv)
 	err_t ugh = NULL;
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "scepclient"))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);

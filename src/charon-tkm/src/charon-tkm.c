@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
 	dbg = dbg_syslog;
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, dmn_name))
 	{
 		library_deinit();
 		exit(status);

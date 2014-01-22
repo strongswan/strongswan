@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 	const char **notice = copyright;
 	const char **co;
 
-	library_init(NULL);
+	library_init(NULL, "_copyright");
 	atexit(library_deinit);
 
 	while ((opt = getopt_long(argc, argv, "", opts, NULL)) != EOF)

@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	char buffer[1024];
 	int limit = 0, i = 0;
 
-	library_init(NULL);
+	library_init(NULL, "hash_burn");
 	lib->plugins->load(lib->plugins, PLUGINS);
 	atexit(library_deinit);
 

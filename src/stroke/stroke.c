@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
 	const stroke_token_t *token;
 	int res = 0;
 
-	library_init(NULL);
+	library_init(NULL, "stroke");
 	atexit(library_deinit);
 
 	if (argc < 2)

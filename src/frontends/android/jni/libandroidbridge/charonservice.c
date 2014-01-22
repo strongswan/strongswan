@@ -600,7 +600,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	dbg = dbg_android;
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "charon"))
 	{
 		library_deinit();
 		return FALSE;

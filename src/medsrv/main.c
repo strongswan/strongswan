@@ -33,7 +33,7 @@ int main(int arc, char *argv[])
 	char *uri;
 	int timeout, threads;
 
-	library_init(NULL);
+	library_init(NULL, "medsrv");
 	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "medsrv.load", PLUGINS)))
 	{

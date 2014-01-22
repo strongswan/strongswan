@@ -251,7 +251,7 @@ static void cleanup()
  */
 static void init()
 {
-	library_init(NULL);
+	library_init(NULL, "tls_test");
 
 	dbg = dbg_tls;
 

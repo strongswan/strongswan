@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
 	dbg = dbg_stderr;
 	atexit(library_deinit);
-	if (!library_init(NULL))
+	if (!library_init(NULL, "charon-xpc"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

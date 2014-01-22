@@ -145,6 +145,7 @@ void library_deinit()
 	threads_deinit();
 	backtrace_deinit();
 
+	free((void*)this->public.ns);
 	free(this);
 	lib = NULL;
 }
@@ -234,7 +235,7 @@ static bool check_memwipe()
 /*
  * see header file
  */
-bool library_init(char *settings)
+bool library_init(char *settings, const char *namespace)
 {
 	private_library_t *this;
 	printf_hook_t *pfh;
@@ -250,6 +251,7 @@ bool library_init(char *settings)
 		.public = {
 			.get = _get,
 			.set = _set,
+			.ns = strdup(namespace ?: "libstrongswan"),
 		},
 		.ref = 1,
 	);

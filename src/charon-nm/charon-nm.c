@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	dbg = dbg_syslog;
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "charon-nm"))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
