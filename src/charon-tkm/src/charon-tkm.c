@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
 		exit(status);
 	}
 
-	if (!libhydra_init(dmn_name))
+	if (!libhydra_init())
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting %s", dmn_name);
 		libhydra_deinit();

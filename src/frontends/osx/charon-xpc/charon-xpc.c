@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	atexit(libhydra_deinit);
-	if (!libhydra_init("charon-xpc"))
+	if (!libhydra_init())
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

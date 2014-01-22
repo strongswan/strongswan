@@ -50,7 +50,7 @@ static bool test_runner_init(bool init)
 
 	if (init)
 	{
-		libhydra_init("test_runner");
+		libhydra_init();
 		libcharon_init("test_runner");
 		lib->settings->set_int(lib->settings,
 							   "test_runner.filelog.stdout.default", 0);

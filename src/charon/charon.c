@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
-	if (!libhydra_init("charon"))
+	if (!libhydra_init())
 	{
 		dbg_stderr(DBG_DMN, 1, "initialization failed - aborting charon");
 		libhydra_deinit();

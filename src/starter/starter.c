@@ -422,7 +422,7 @@ int main (int argc, char **argv)
 	library_init(NULL, "starter");
 	atexit(library_deinit);
 
-	libhydra_init("starter");
+	libhydra_init();
 	atexit(libhydra_deinit);
 
 	/* parse command line */

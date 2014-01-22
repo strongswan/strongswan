@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
-	if (!libhydra_init("charon-nm"))
+	if (!libhydra_init())
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting charon-nm");
 		libhydra_deinit();
