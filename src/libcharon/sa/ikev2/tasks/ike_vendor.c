@@ -86,7 +86,7 @@ METHOD(task_t, build, status_t,
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
-							"%s.send_vendor_id", FALSE, charon->name);
+							"%s.send_vendor_id", FALSE, lib->ns);
 	for (i = 0; i < countof(vids); i++)
 	{
 		if (vids[i].extension == EXT_STRONGSWAN && strongswan)

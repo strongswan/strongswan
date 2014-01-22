@@ -721,7 +721,7 @@ eap_aka_server_t *eap_aka_server_create(identification_t *server,
 	this->permanent = peer->clone(peer);
 	this->use_reauth = this->use_pseudonym = this->use_permanent =
 		lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-aka.request_identity", TRUE, charon->name);
+						"%s.plugins.eap-aka.request_identity", TRUE, lib->ns);
 
 	/* generate a non-zero identifier */
 	do {

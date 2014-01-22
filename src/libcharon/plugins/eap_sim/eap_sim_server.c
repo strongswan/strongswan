@@ -635,7 +635,7 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 	this->use_reauth = this->use_pseudonym = this->use_permanent =
 		lib->settings->get_bool(lib->settings,
 								"%s.plugins.eap-sim.request_identity", TRUE,
-								charon->name);
+								lib->ns);
 
 	/* generate a non-zero identifier */
 	do {

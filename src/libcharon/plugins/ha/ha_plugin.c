@@ -160,19 +160,19 @@ plugin_t *ha_plugin_create()
 	bool fifo, monitor, resync;
 
 	local = lib->settings->get_str(lib->settings,
-							"%s.plugins.ha.local", NULL, charon->name);
+								"%s.plugins.ha.local", NULL, lib->ns);
 	remote = lib->settings->get_str(lib->settings,
-							"%s.plugins.ha.remote", NULL, charon->name);
+								"%s.plugins.ha.remote", NULL, lib->ns);
 	secret = lib->settings->get_str(lib->settings,
-							"%s.plugins.ha.secret", NULL, charon->name);
+								"%s.plugins.ha.secret", NULL, lib->ns);
 	fifo = lib->settings->get_bool(lib->settings,
-							"%s.plugins.ha.fifo_interface", TRUE, charon->name);
+								"%s.plugins.ha.fifo_interface", TRUE, lib->ns);
 	monitor = lib->settings->get_bool(lib->settings,
-							"%s.plugins.ha.monitor", TRUE, charon->name);
+								"%s.plugins.ha.monitor", TRUE, lib->ns);
 	resync = lib->settings->get_bool(lib->settings,
-							"%s.plugins.ha.resync", TRUE, charon->name);
+								"%s.plugins.ha.resync", TRUE, lib->ns);
 	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
-							"%s.plugins.ha.segment_count", 1, charon->name));
+								"%s.plugins.ha.segment_count", 1, lib->ns));
 	if (!local || !remote)
 	{
 		DBG1(DBG_CFG, "HA config misses local/remote address");

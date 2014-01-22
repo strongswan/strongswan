@@ -130,7 +130,7 @@ duplicheck_notify_t *duplicheck_notify_create()
 
 	uri = lib->settings->get_str(lib->settings,
 					"%s.plugins.duplicheck.socket", "unix://" DUPLICHECK_SOCKET,
-					charon->name);
+					lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 3);
 	if (!this->service)
 	{

@@ -194,7 +194,7 @@ static void schedule_inactivity_timeout(private_quick_mode_t *this)
 	if (timeout)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
-								"%s.inactivity_close_ike", FALSE, charon->name);
+									"%s.inactivity_close_ike", FALSE, lib->ns);
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
 									  timeout, close_ike), timeout);

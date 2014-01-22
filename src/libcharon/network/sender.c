@@ -204,13 +204,13 @@ sender_t * sender_create()
 		.got = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.sent = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.send_delay = lib->settings->get_int(lib->settings,
-								"%s.send_delay", 0, charon->name),
+									"%s.send_delay", 0, lib->ns),
 		.send_delay_type = lib->settings->get_int(lib->settings,
-								"%s.send_delay_type", 0, charon->name),
+									"%s.send_delay_type", 0, lib->ns),
 		.send_delay_request = lib->settings->get_bool(lib->settings,
-								"%s.send_delay_request", TRUE, charon->name),
+									"%s.send_delay_request", TRUE, lib->ns),
 		.send_delay_response = lib->settings->get_bool(lib->settings,
-								"%s.send_delay_response", TRUE, charon->name),
+									"%s.send_delay_response", TRUE, lib->ns),
 	);
 
 	lib->processor->queue_job(lib->processor,

@@ -136,8 +136,8 @@ xauth_pam_listener_t *xauth_pam_listener_create()
 						"%s.plugins.xauth-pam.pam_service",
 							lib->settings->get_str(lib->settings,
 								"%s.plugins.eap-gtc.pam_service",
-							"login", charon->name),
-						charon->name),
+							"login", lib->ns),
+						lib->ns),
 	);
 
 	return &this->public;

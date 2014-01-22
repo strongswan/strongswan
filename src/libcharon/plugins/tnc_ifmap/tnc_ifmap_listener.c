@@ -191,8 +191,8 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 
 	/* schedule periodic transmission of IF-MAP renewSession request */
 	reschedule =  lib->settings->get_int(lib->settings,
-						"%s.plugins.tnc-ifmap.renew_session_interval",
-						 IFMAP_RENEW_SESSION_INTERVAL, charon->name);
+								"%s.plugins.tnc-ifmap.renew_session_interval",
+								 IFMAP_RENEW_SESSION_INTERVAL, lib->ns);
 
 	job = (job_t*)tnc_ifmap_renew_session_job_create(
 						this->ifmap->get_ref(this->ifmap), reschedule);

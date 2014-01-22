@@ -778,7 +778,7 @@ stroke_control_t *stroke_control_create()
 			.destroy = _destroy,
 		},
 		.timeout = lib->settings->get_int(lib->settings,
-								"%s.plugins.stroke.timeout", 0, charon->name),
+									"%s.plugins.stroke.timeout", 0, lib->ns),
 	);
 
 	return &this->public;

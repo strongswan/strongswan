@@ -92,7 +92,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 							"%s.plugins.eap-peap.phase2_method", "mschapv2",
-							charon->name);
+							lib->ns);
 	type = eap_type_from_string(eap_type_str);
 	if (type == 0)
 	{
@@ -129,7 +129,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 static status_t start_phase2_tnc(private_eap_peap_server_t *this)
 {
 	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
-						"%s.plugins.eap-peap.phase2_tnc", FALSE, charon->name))
+						"%s.plugins.eap-peap.phase2_tnc", FALSE, lib->ns))
 	{
 		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
 		this->ph2_method = charon->eap->create_instance(charon->eap, EAP_TNC,
@@ -274,7 +274,7 @@ METHOD(tls_application_t, process, status_t,
 
 		/* Start Phase 2 of EAP-PEAP authentication */
 		if (lib->settings->get_bool(lib->settings,
-				"%s.plugins.eap-peap.request_peer_auth", FALSE, charon->name))
+					"%s.plugins.eap-peap.request_peer_auth", FALSE, lib->ns))
 		{
 			return start_phase2_tnc(this);
 		}
@@ -425,7 +425,7 @@ eap_peap_server_t *eap_peap_server_create(identification_t *server,
 		.start_phase2_tnc = TRUE,
 		.start_phase2_id = lib->settings->get_bool(lib->settings,
 										"%s.plugins.eap-peap.phase2_piggyback",
-										FALSE, charon->name),
+										FALSE, lib->ns),
 		.phase2_result = EAP_FAILURE,
 		.avp = eap_peap_avp_create(TRUE),
 	);

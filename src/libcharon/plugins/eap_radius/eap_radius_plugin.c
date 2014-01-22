@@ -100,23 +100,23 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	int auth_port, acct_port, sockets, preference;
 
 	address = lib->settings->get_str(lib->settings,
-					"%s.plugins.eap-radius.server", NULL, charon->name);
+								"%s.plugins.eap-radius.server", NULL, lib->ns);
 	if (address)
 	{	/* legacy configuration */
 		secret = lib->settings->get_str(lib->settings,
-					"%s.plugins.eap-radius.secret", NULL, charon->name);
+								"%s.plugins.eap-radius.secret", NULL, lib->ns);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "no RADIUS secret defined");
 			return;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
-					"%s.plugins.eap-radius.nas_identifier", "strongSwan",
-					charon->name);
+						"%s.plugins.eap-radius.nas_identifier", "strongSwan",
+						lib->ns);
 		auth_port = lib->settings->get_int(lib->settings,
-					"%s.plugins.eap-radius.port", AUTH_PORT, charon->name);
+						"%s.plugins.eap-radius.port", AUTH_PORT, lib->ns);
 		sockets = lib->settings->get_int(lib->settings,
-					"%s.plugins.eap-radius.sockets", 1, charon->name);
+						"%s.plugins.eap-radius.sockets", 1, lib->ns);
 		config = radius_config_create(address, address, auth_port, ACCT_PORT,
 									  nas_identifier, secret, sockets, 0);
 		if (!config)
@@ -129,12 +129,12 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	}
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
-								"%s.plugins.eap-radius.servers", charon->name);
+									"%s.plugins.eap-radius.servers", lib->ns);
 	while (enumerator->enumerate(enumerator, &section))
 	{
 		address = lib->settings->get_str(lib->settings,
 							"%s.plugins.eap-radius.servers.%s.address", NULL,
-							charon->name, section);
+							lib->ns, section);
 		if (!address)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses address, skipped", section);
@@ -142,7 +142,7 @@ static void load_configs(private_eap_radius_plugin_t *this)
 		}
 		secret = lib->settings->get_str(lib->settings,
 							"%s.plugins.eap-radius.servers.%s.secret", NULL,
-							charon->name, section);
+							lib->ns, section);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses secret, skipped", section);
@@ -150,22 +150,22 @@ static void load_configs(private_eap_radius_plugin_t *this)
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.nas_identifier", "strongSwan",
-				charon->name, section);
+				lib->ns, section);
 		auth_port = lib->settings->get_int(lib->settings,
 			"%s.plugins.eap-radius.servers.%s.auth_port",
 				lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-radius.servers.%s.port",
-					AUTH_PORT, charon->name, section),
-			charon->name, section);
+					AUTH_PORT, lib->ns, section),
+			lib->ns, section);
 		acct_port = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.acct_port", ACCT_PORT,
-				charon->name, section);
+				lib->ns, section);
 		sockets = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.sockets", 1,
-				charon->name, section);
+				lib->ns, section);
 		preference = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.preference", 0,
-				charon->name, section);
+				lib->ns, section);
 		config = radius_config_create(section, address, auth_port, acct_port,
 								nas_identifier, secret, sockets, preference);
 		if (!config)
@@ -203,7 +203,7 @@ static bool plugin_cb(private_eap_radius_plugin_t *this,
 		load_configs(this);
 
 		if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
+						"%s.plugins.eap-radius.dae.enable", FALSE, lib->ns))
 		{
 			this->dae = eap_radius_dae_create(this->accounting);
 		}
@@ -368,7 +368,7 @@ void eap_radius_handle_timeout(ike_sa_id_t *id)
 
 	if (lib->settings->get_bool(lib->settings,
 								"%s.plugins.eap-radius.close_all_on_timeout",
-								FALSE, charon->name))
+								FALSE, lib->ns))
 	{
 		DBG1(DBG_CFG, "deleting all IKE_SAs after RADIUS timeout");
 		lib->processor->queue_job(lib->processor,

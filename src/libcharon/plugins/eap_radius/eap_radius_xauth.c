@@ -256,7 +256,7 @@ static bool parse_rounds(private_eap_radius_xauth_t *this, char *profile)
 	}
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-					"%s.plugins.eap-radius.xauth.%s", charon->name, profile);
+							"%s.plugins.eap-radius.xauth.%s", lib->ns, profile);
 	while (enumerator->enumerate(enumerator, &type, &message))
 	{
 		bool invalid = TRUE;

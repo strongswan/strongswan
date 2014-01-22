@@ -142,7 +142,7 @@ error_notify_socket_t *error_notify_socket_create()
 
 	uri = lib->settings->get_str(lib->settings,
 				"%s.plugins.error-notify.socket", "unix://" ERROR_NOTIFY_SOCKET,
-				charon->name);
+				lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (!this->service)
 	{

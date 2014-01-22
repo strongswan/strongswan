@@ -157,7 +157,7 @@ whitelist_control_t *whitelist_control_create(whitelist_listener_t *listener)
 
 	uri = lib->settings->get_str(lib->settings,
 				"%s.plugins.whitelist.socket", "unix://" WHITELIST_SOCKET,
-				charon->name);
+				lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (!this->service)
 	{

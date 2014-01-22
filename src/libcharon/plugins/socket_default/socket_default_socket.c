@@ -617,7 +617,7 @@ static int open_socket(private_socket_default_socket_t *this,
 		mark_t mark;
 
 		fwmark = lib->settings->get_str(lib->settings,
-						"%s.plugins.socket-default.fwmark", NULL, charon->name);
+							"%s.plugins.socket-default.fwmark", NULL, lib->ns);
 		if (fwmark && mark_from_string(fwmark, &mark))
 		{
 			if (setsockopt(skt, SOL_SOCKET, SO_MARK, &mark.value,
@@ -657,10 +657,10 @@ static bool use_family(int family)
 	{
 		case AF_INET:
 			return lib->settings->get_bool(lib->settings,
-					"%s.plugins.socket-default.use_ipv4", TRUE, charon->name);
+						"%s.plugins.socket-default.use_ipv4", TRUE, lib->ns);
 		case AF_INET6:
 			return lib->settings->get_bool(lib->settings,
-					"%s.plugins.socket-default.use_ipv6", TRUE, charon->name);
+						"%s.plugins.socket-default.use_ipv6", TRUE, lib->ns);
 		default:
 			return FALSE;
 	}
@@ -735,14 +735,14 @@ socket_default_socket_t *socket_default_socket_create()
 			},
 		},
 		.port = lib->settings->get_int(lib->settings,
-							"%s.port", CHARON_UDP_PORT, charon->name),
+							"%s.port", CHARON_UDP_PORT, lib->ns),
 		.natt = lib->settings->get_int(lib->settings,
-							"%s.port_nat_t", CHARON_NATT_PORT, charon->name),
+							"%s.port_nat_t", CHARON_NATT_PORT, lib->ns),
 		.max_packet = lib->settings->get_int(lib->settings,
-							"%s.max_packet", MAX_PACKET, charon->name),
+							"%s.max_packet", MAX_PACKET, lib->ns),
 		.set_source = lib->settings->get_bool(lib->settings,
 							"%s.plugins.socket-default.set_source", TRUE,
-							charon->name),
+							lib->ns),
 	);
 
 	if (this->port && this->port == this->natt)

@@ -141,7 +141,7 @@ sql_logger_t *sql_logger_create(database_t *db)
 		.db = db,
 		.recursive = thread_value_create(NULL),
 		.level = lib->settings->get_int(lib->settings,
-								"%s.plugins.sql.loglevel", -1, charon->name),
+										"%s.plugins.sql.loglevel", -1, lib->ns),
 	);
 
 	return &this->public;

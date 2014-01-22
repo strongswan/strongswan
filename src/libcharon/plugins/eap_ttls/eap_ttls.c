@@ -147,18 +147,18 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 	);
 	if (is_server && !lib->settings->get_bool(lib->settings,
 								"%s.plugins.eap-ttls.request_peer_auth", FALSE,
-								charon->name))
+								lib->ns))
 	{
 		peer = NULL;
 	}
 	frag_size = lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN,
-					charon->name);
+					lib->ns);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-ttls.max_message_count", MAX_MESSAGE_COUNT,
-					charon->name);
+					lib->ns);
 	include_length = lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-ttls.include_length", TRUE, charon->name);
+					"%s.plugins.eap-ttls.include_length", TRUE, lib->ns);
 	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS,
 					 application, NULL);
 	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size, max_msg_count,

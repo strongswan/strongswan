@@ -2329,11 +2329,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.attributes = array_create(sizeof(attribute_entry_t), 0),
 		.unique_id = ref_get(&unique_id),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
-							"%s.keep_alive", KEEPALIVE_INTERVAL, charon->name),
+								"%s.keep_alive", KEEPALIVE_INTERVAL, lib->ns),
 		.retry_initiate_interval = lib->settings->get_time(lib->settings,
-							"%s.retry_initiate_interval", 0, charon->name),
+								"%s.retry_initiate_interval", 0, lib->ns),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
-							"%s.flush_auth_cfg", FALSE, charon->name),
+								"%s.flush_auth_cfg", FALSE, lib->ns),
 	);
 
 	if (version == IKEV2)

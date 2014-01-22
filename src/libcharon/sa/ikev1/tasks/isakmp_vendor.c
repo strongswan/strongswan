@@ -191,9 +191,9 @@ static void build(private_isakmp_vendor_t *this, message_t *message)
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
-								"%s.send_vendor_id", FALSE, charon->name);
+										 "%s.send_vendor_id", FALSE, lib->ns);
 	cisco_unity = lib->settings->get_bool(lib->settings,
-								"%s.cisco_unity", FALSE, charon->name);
+										 "%s.cisco_unity", FALSE, lib->ns);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	fragmentation = ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO;
 	if (!this->initiator && fragmentation)

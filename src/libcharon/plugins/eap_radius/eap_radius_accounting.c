@@ -712,7 +712,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.eap-radius.station_id_with_port", TRUE, charon->name))
+				"%s.plugins.eap-radius.station_id_with_port", TRUE, lib->ns))
 	{
 		this->station_id_fmt = "%#H";
 	}
@@ -721,14 +721,14 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		this->station_id_fmt = "%H";
 	}
 	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
+							"%s.plugins.eap-radius.accounting", FALSE, lib->ns))
 	{
 		singleton = this;
 		charon->bus->add_listener(charon->bus, &this->public.listener);
 	}
 	this->acct_req_vip = lib->settings->get_bool(lib->settings,
 							"%s.plugins.eap-radius.accounting_requires_vip",
-							FALSE, charon->name);
+							FALSE, lib->ns);
 
 	return &this->public;
 }

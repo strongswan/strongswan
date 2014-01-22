@@ -758,19 +758,19 @@ tnc_pdp_t *tnc_pdp_create(void)
 	bool radius_enable, pt_tls_enable;
 
 	server = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-pdp.server", NULL, charon->name);
+						"%s.plugins.tnc-pdp.server", NULL, lib->ns);
 	pt_tls_enable = lib->settings->get_bool(lib->settings,
-					"%s.plugins.tnc-pdp.pt_tls.enable", TRUE, charon->name);
+						"%s.plugins.tnc-pdp.pt_tls.enable", TRUE, lib->ns);
 	pt_tls_port = lib->settings->get_int(lib->settings,
-					"%s.plugins.tnc-pdp.pt_tls.port", PT_TLS_PORT, charon->name);
+						"%s.plugins.tnc-pdp.pt_tls.port", PT_TLS_PORT, lib->ns);
 	radius_enable = lib->settings->get_bool(lib->settings,
-					"%s.plugins.tnc-pdp.radius.enable", TRUE, charon->name);
+						"%s.plugins.tnc-pdp.radius.enable", TRUE, lib->ns);
 	radius_port = lib->settings->get_int(lib->settings,
-					"%s.plugins.tnc-pdp.radius.port", RADIUS_PORT, charon->name);
+						"%s.plugins.tnc-pdp.radius.port", RADIUS_PORT, lib->ns);
 	secret = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-pdp.radius.secret", NULL, charon->name);
+						"%s.plugins.tnc-pdp.radius.secret", NULL, lib->ns);
 	eap_type_str = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-pdp.radius.method", "ttls", charon->name);
+						"%s.plugins.tnc-pdp.radius.method", "ttls", lib->ns);
 
 	if (!pt_tls_enable && !radius_enable)
 	{

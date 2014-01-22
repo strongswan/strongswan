@@ -178,9 +178,9 @@ static bool load_validator(private_systime_fix_plugin_t *this)
 	char *str, *fmt;
 
 	fmt = lib->settings->get_str(lib->settings,
-			"%s.plugins.%s.threshold_format", "%Y", charon->name, get_name(this));
+			"%s.plugins.%s.threshold_format", "%Y", lib->ns, get_name(this));
 	str = lib->settings->get_str(lib->settings,
-			"%s.plugins.%s.threshold", NULL, charon->name, get_name(this));
+			"%s.plugins.%s.threshold", NULL, lib->ns, get_name(this));
 	if (!str)
 	{
 		DBG1(DBG_CFG, "no threshold configured for %s, disabled",
@@ -274,9 +274,9 @@ plugin_t *systime_fix_plugin_create()
 			},
 		},
 		.interval = lib->settings->get_int(lib->settings,
-				"%s.plugins.%s.interval", 0, charon->name, get_name(this)),
+						"%s.plugins.%s.interval", 0, lib->ns, get_name(this)),
 		.reauth = lib->settings->get_bool(lib->settings,
-				"%s.plugins.%s.reauth", FALSE, charon->name, get_name(this)),
+						"%s.plugins.%s.reauth", FALSE, lib->ns, get_name(this)),
 	);
 
 	return &this->public.plugin;

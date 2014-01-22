@@ -668,7 +668,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.max_packet = lib->settings->get_int(lib->settings,
-									"%s.max_packet", MAX_PACKET, charon->name),
+										"%s.max_packet", MAX_PACKET, lib->ns),
 	);
 
 	if (pipe(this->notify) != 0)

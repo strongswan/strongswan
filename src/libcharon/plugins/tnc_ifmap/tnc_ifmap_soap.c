@@ -134,8 +134,8 @@ METHOD(tnc_ifmap_soap_t, newSession, bool,
 
 	/* set PEP and PDP device name (defaults to IF-MAP Publisher ID) */
 	this->device_name = lib->settings->get_str(lib->settings,
-									"%s.plugins.tnc-ifmap.device_name",
-									 this->ifmap_publisher_id, charon->name);
+										"%s.plugins.tnc-ifmap.device_name",
+										 this->ifmap_publisher_id, lib->ns);
 	this->device_name = strdup(this->device_name);
 
     return this->session_id && this->ifmap_publisher_id;
@@ -731,15 +731,15 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 
 	/* getting configuration parameters from strongswan.conf */
 	server_uri =  lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.server_uri", IFMAP_URI, charon->name);
+					"%s.plugins.tnc-ifmap.server_uri", IFMAP_URI, lib->ns);
 	server_cert = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.server_cert", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.server_cert", NULL, lib->ns);
 	client_cert = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.client_cert", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.client_cert", NULL, lib->ns);
 	client_key =  lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.client_key", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.client_key", NULL, lib->ns);
 	user_pass =   lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.username_password", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.username_password", NULL, lib->ns);
 
 	/* load [self-signed] MAP server certificate */
 	if (!server_cert)

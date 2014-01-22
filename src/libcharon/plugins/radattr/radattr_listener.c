@@ -180,9 +180,9 @@ radattr_listener_t *radattr_listener_create()
 			.destroy = _destroy,
 		},
 		.dir = lib->settings->get_str(lib->settings,
-							"%s.plugins.radattr.dir", NULL, charon->name),
+								"%s.plugins.radattr.dir", NULL, lib->ns),
 		.mid = lib->settings->get_int(lib->settings,
-							"%s.plugins.radattr.message_id", -1, charon->name),
+								"%s.plugins.radattr.message_id", -1, lib->ns),
 	);
 
 	return &this->public;
