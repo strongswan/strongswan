@@ -67,9 +67,9 @@ static bool test_runner_init(bool init)
 										  countof(features), TRUE);
 
 		lib->settings->set_int(lib->settings, "%s.dh_mapping.%d", 1,
-							   charon->name, MODP_3072_BIT);
+							   lib->ns, MODP_3072_BIT);
 		lib->settings->set_int(lib->settings, "%s.dh_mapping.%d", 2,
-							   charon->name, MODP_4096_BIT);
+							   lib->ns, MODP_4096_BIT);
 		register_dh_mapping();
 
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libstrongswan/plugins",

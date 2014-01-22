@@ -133,7 +133,7 @@ int register_dh_mapping()
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
 															"%s.dh_mapping",
-															charon->name);
+															lib->ns);
 
 	while (enumerator->enumerate(enumerator, &iana_id_str, &tkm_id_str))
 	{
