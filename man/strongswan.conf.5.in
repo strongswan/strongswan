@@ -804,6 +804,9 @@ EAP plugin to be used as backend for XAuth credential verification
 .BR charon.plugins.xauth-pam.pam_service " [login]"
 PAM service to be used for authentication
 .TP
+.BR charon.plugins.xauth-pam.session " [no]"
+Open/close a PAM session for each active IKE_SA
+.TP
 .BR charon.plugins.xauth-pam.trim_email " [yes]"
 If an email address is given as an XAuth username, trim it to just the
 username part.
