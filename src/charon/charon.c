@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
-	if (!libcharon_init("charon"))
+	if (!libcharon_init())
 	{
 		dbg_stderr(DBG_DMN, 1, "initialization failed - aborting charon");
 		goto deinit;

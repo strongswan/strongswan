@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
 		library_deinit();
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	if (!libcharon_init("conftest"))
+	if (!libcharon_init())
 	{
 		libcharon_deinit();
 		libhydra_deinit();

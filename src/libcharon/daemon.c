@@ -473,7 +473,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.bus);
 	this->loggers->destroy_function(this->loggers, (void*)logger_entry_destroy);
 	this->mutex->destroy(this->mutex);
-	free((void*)this->public.name);
 	free(this);
 }
 
@@ -558,7 +557,7 @@ METHOD(daemon_t, initialize, bool,
 /**
  * Create the daemon.
  */
-private_daemon_t *daemon_create(const char *name)
+private_daemon_t *daemon_create()
 {
 	private_daemon_t *this;
 
@@ -569,7 +568,6 @@ private_daemon_t *daemon_create(const char *name)
 			.load_loggers = _load_loggers,
 			.set_level = _set_level,
 			.bus = bus_create(),
-			.name = strdup(name ?: "libcharon"),
 		},
 		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -607,7 +605,7 @@ void libcharon_deinit()
 /**
  * Described in header.
  */
-bool libcharon_init(const char *name)
+bool libcharon_init()
 {
 	private_daemon_t *this;
 
@@ -618,7 +616,7 @@ bool libcharon_init(const char *name)
 		return !this->integrity_failed;
 	}
 
-	this = daemon_create(name);
+	this = daemon_create();
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());

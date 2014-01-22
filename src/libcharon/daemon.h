@@ -272,11 +272,6 @@ struct daemon_t {
 #endif /* ME */
 
 	/**
-	 * Name of the binary that uses the library (used for settings etc.)
-	 */
-	const char *name;
-
-	/**
 	 * Initialize the daemon.
 	 *
 	 * @param plugins	list of plugins to load
@@ -324,12 +319,11 @@ extern daemon_t *charon;
  * calling initialize().
  *
  * libcharon_init() may be called multiple times in a single process, but each
- * caller should call libcharon_deinit() for each call to libcharon_init().
+ * caller must call libcharon_deinit() for each call to libcharon_init().
  *
- * @param name	name of the binary that uses the library
  * @return		FALSE if integrity check failed
  */
-bool libcharon_init(const char *name);
+bool libcharon_init();
 
 /**
  * Deinitialize libcharon and destroy the "charon" instance of daemon_t.

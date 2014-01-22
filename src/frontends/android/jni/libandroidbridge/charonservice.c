@@ -626,7 +626,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 		return FALSE;
 	}
 
-	if (!libcharon_init("charon"))
+	if (!libcharon_init())
 	{
 		libcharon_deinit();
 		libipsec_deinit();

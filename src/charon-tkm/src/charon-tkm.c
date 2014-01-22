@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 		exit(status);
 	}
 
-	if (!libcharon_init(dmn_name))
+	if (!libcharon_init())
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting %s", dmn_name);
 		goto deinit;

@@ -51,7 +51,7 @@ static bool test_runner_init(bool init)
 	if (init)
 	{
 		libhydra_init();
-		libcharon_init("test_runner");
+		libcharon_init();
 		lib->settings->set_int(lib->settings,
 							   "test_runner.filelog.stdout.default", 0);
 		charon->load_loggers(charon, NULL, FALSE);
