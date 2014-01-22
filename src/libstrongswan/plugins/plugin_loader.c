@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -28,6 +28,7 @@
 #include <utils/debug.h>
 #include <library.h>
 #include <collections/hashtable.h>
+#include <collections/array.h>
 #include <collections/linked_list.h>
 #include <plugins/plugin.h>
 #include <utils/integrity_checker.h>
@@ -936,18 +937,146 @@ static bool find_plugin(char *path, char *name, char *buf, char **file)
 	return FALSE;
 }
 
+/**
+ * Used to sort plugins by priority
+ */
+typedef struct {
+	/* name of the plugin */
+	char *name;
+	/* the plugins priority */
+	int prio;
+	/* default priority */
+	int def;
+} plugin_priority_t;
+
+static void plugin_priority_free(const plugin_priority_t *this, int idx,
+								 void *user)
+{
+	free(this->name);
+}
+
+/**
+ * Sort plugins and their priority by name
+ */
+static int plugin_priority_cmp_name(const plugin_priority_t *a,
+								    const plugin_priority_t *b)
+{
+	return strcmp(a->name, b->name);
+}
+
+/**
+ * Sort plugins by decreasing priority or default priority then by name
+ */
+static int plugin_priority_cmp(const plugin_priority_t *a,
+							   const plugin_priority_t *b, void *user)
+{
+	int diff;
+
+	diff = b->prio - a->prio;
+	if (!diff)
+	{	/* the same priority, use default order */
+		diff = b->def - a->def;
+		if (!diff)
+		{	/* same default priority (i.e. both were not found in that list) */
+			return strcmp(a->name, b->name);
+		}
+	}
+	return diff;
+}
+
+
+/**
+ * Determine the list of plugins to load via load option in each plugin's
+ * config section.
+ */
+static char *modular_pluginlist(char *list)
+{
+	enumerator_t *enumerator;
+	array_t *given, *final;
+	plugin_priority_t item, *current, found;
+	char *plugin, *plugins = NULL;
+	int i = 0, max_prio;
+
+	if (!lib->settings->get_bool(lib->settings, "%s.load_modular", FALSE,
+								 lib->ns))
+	{
+		return list;
+	}
+
+	given = array_create(sizeof(plugin_priority_t), 0);
+	final = array_create(sizeof(plugin_priority_t), 0);
+
+	enumerator = enumerator_create_token(list, " ", " ");
+	while (enumerator->enumerate(enumerator, &plugin))
+	{
+		item.name = strdup(plugin);
+		item.prio = i++;
+		array_insert(given, ARRAY_TAIL, &item);
+	}
+	enumerator->destroy(enumerator);
+	array_sort(given, (void*)plugin_priority_cmp_name, NULL);
+	/* the maximum priority used for plugins not found in this list */
+	max_prio = i + 1;
+
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														"%s.plugins", lib->ns);
+	while (enumerator->enumerate(enumerator, &plugin))
+	{
+		item.prio = lib->settings->get_int(lib->settings,
+								"%s.plugins.%s.load", 0, lib->ns, plugin);
+		if (!item.prio)
+		{
+			if (!lib->settings->get_bool(lib->settings,
+								"%s.plugins.%s.load", FALSE, lib->ns, plugin))
+			{
+				continue;
+			}
+			item.prio = 1;
+		}
+		item.name = plugin;
+		item.def = max_prio;
+		if (array_bsearch(given, &item, (void*)plugin_priority_cmp_name,
+						  &found) != -1)
+		{
+			item.def = max_prio - found.prio;
+		}
+		array_insert(final, ARRAY_TAIL, &item);
+	}
+	enumerator->destroy(enumerator);
+	array_destroy_function(given, (void*)plugin_priority_free, NULL);
+
+	array_sort(final, (void*)plugin_priority_cmp, NULL);
+
+	enumerator = array_create_enumerator(final);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		char *prev = plugins;
+		if (asprintf(&plugins, "%s %s", plugins ?: "", current->name) < 0)
+		{
+			plugins = prev;
+			break;
+		}
+		free(prev);
+	}
+	enumerator->destroy(enumerator);
+	array_destroy(final);
+	return plugins;
+}
+
 METHOD(plugin_loader_t, load_plugins, bool,
 	private_plugin_loader_t *this, char *list)
 {
 	enumerator_t *enumerator;
-	char *default_path = NULL, *token;
+	char *default_path = NULL, *plugins, *token;
 	bool critical_failed = FALSE;
 
 #ifdef PLUGINDIR
 	default_path = PLUGINDIR;
 #endif /* PLUGINDIR */
 
-	enumerator = enumerator_create_token(list, " ", " ");
+	plugins = modular_pluginlist(list);
+
+	enumerator = enumerator_create_token(plugins, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
 	{
 		plugin_entry_t *entry;
@@ -1005,6 +1134,10 @@ METHOD(plugin_loader_t, load_plugins, bool,
 	{
 		free(this->loaded_plugins);
 		this->loaded_plugins = loaded_plugins_list(this);
+	}
+	if (plugins != list)
+	{
+		free(plugins);
 	}
 	return !critical_failed;
 }

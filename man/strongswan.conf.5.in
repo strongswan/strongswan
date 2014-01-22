@@ -290,6 +290,15 @@ Threshold in number of allocations for leaks to be reported (0 to report all)
 .BR charon.load
 Plugins to load in the IKEv2 daemon charon
 .TP
+.BR charon.load_modular " [no]"
+If enabled, the list of plugins to load is determined via the value of the
+charon.plugins.<name>.load options.  In addition to a simple boolean flag that
+option may take an integer value indicating the priority of a plugin, which
+would influence the order of a plugin in the plugin list (the default is 1).
+If two plugins have the same priority their order in the default plugin list
+is preserved. Enabled plugins not found in that list are ordered alphabetically
+before other plugins with the same priority.
+.TP
 .BR charon.max_packet " [10000]"
 Maximum packet size accepted by charon
 .TP

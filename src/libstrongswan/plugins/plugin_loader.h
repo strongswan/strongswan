@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -66,6 +66,13 @@ struct plugin_loader_t {
 	 * Additional paths can be added with add_path(), these will be searched
 	 * for the plugins first, in the order they were added, then the default
 	 * path follows.
+	 *
+	 * If <ns>.load_modular is enabled (where <ns> is lib->ns) the plugins to
+	 * load are determined via a load option in their respective plugin config
+	 * section e.g. <ns>.plugins.<plugin>.load = <priority|bool>.
+	 * The oder is determined by the configured priority.  If two plugins have
+	 * the same priority the order as seen in list is preserved.  Plugins not
+	 * found in list are loaded first, in alphabetical order.
 	 *
 	 * @note Even though this method could be called multiple times this is
 	 * currently not really supported in regards to plugin features and their
