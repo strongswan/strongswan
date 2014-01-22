@@ -204,6 +204,19 @@ static inline bool memeq(const void *x, const void *y, size_t len)
 	static ret name(this, ##__VA_ARGS__)
 
 /**
+ * Callback declaration/definition macro, allowing casted first parameter.
+ *
+ * This is very similar to METHOD, but instead of casting the first parameter
+ * to a public interface, it uses a void*. This allows type safe definition
+ * of a callback function, while using the real type for the first parameter.
+ */
+#define CALLBACK(name, ret, param1, ...) \
+	static ret _cb_##name(union {void *_generic; param1;} \
+	__attribute__((transparent_union)), ##__VA_ARGS__); \
+	static typeof(_cb_##name) *name = (typeof(_cb_##name)*)_cb_##name; \
+	static ret _cb_##name(param1, ##__VA_ARGS__)
+
+/**
  * Architecture independent bitfield definition helpers (at least with GCC).
  *
  * Defines a bitfield with a type t and a fixed size of bitfield members, e.g.:
