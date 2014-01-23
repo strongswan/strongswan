@@ -1368,6 +1368,7 @@ fi
 
 AC_CONFIG_FILES([
 	Makefile
+	conf/Makefile
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile
