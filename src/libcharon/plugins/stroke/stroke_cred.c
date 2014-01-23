@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <libgen.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -521,7 +520,16 @@ METHOD(stroke_cred_t, cache_cert, void,
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
 			{
-				chunk_write(chunk, buf, "crl", 022, TRUE);
+				if (chunk_write(chunk, buf, 022, TRUE))
+				{
+					DBG1(DBG_CFG, "  written crl file '%s' (%d bytes)",
+						 buf, chunk.len);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  writing crl file '%s' failed: %s",
+						 buf, strerror(errno));
+				}
 				free(chunk.ptr);
 			}
 		}
@@ -1092,46 +1100,24 @@ static bool load_shared(mem_cred_t *secrets, chunk_t line, int line_nr,
 static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 						 char *file, int level, FILE *prompt)
 {
-	int line_nr = 0, fd;
-	chunk_t src, line;
-	struct stat sb;
-	void *addr;
+	int line_nr = 0;
+	chunk_t *src, line;
 
 	DBG1(DBG_CFG, "loading secrets from '%s'", file);
-	fd = open(file, O_RDONLY);
-	if (fd == -1)
+	src = chunk_map(file, FALSE);
+	if (!src)
 	{
 		DBG1(DBG_CFG, "opening secrets file '%s' failed: %s", file,
 			 strerror(errno));
 		return;
 	}
-	if (fstat(fd, &sb) == -1)
-	{
-		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", file,
-			 strerror(errno));
-		close(fd);
-		return;
-	}
-	if (sb.st_size == 0)
-	{	/* skip empty files, as mmap() complains */
-		close(fd);
-		return;
-	}
-	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-	if (addr == MAP_FAILED)
-	{
-		DBG1(DBG_LIB, "mapping '%s' failed: %s", file, strerror(errno));
-		close(fd);
-		return;
-	}
-	src = chunk_create(addr, sb.st_size);
 
 	if (!secrets)
 	{
 		secrets = mem_cred_create();
 	}
 
-	while (fetchline(&src, &line))
+	while (fetchline(src, &line))
 	{
 		chunk_t ids, token;
 		shared_key_type_t type;
@@ -1272,8 +1258,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			break;
 		}
 	}
-	munmap(addr, sb.st_size);
-	close(fd);
+	chunk_unmap(src);
 
 	if (level == 0)
 	{	/* replace secrets in active credential set */

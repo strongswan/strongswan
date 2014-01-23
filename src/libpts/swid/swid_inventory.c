@@ -24,7 +24,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 #include <libgen.h>
 #include <errno.h>
 
@@ -178,40 +177,19 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 		if (this->full_tags)
 		{
 			swid_tag_t *tag;
-			chunk_t xml_tag;
-			struct stat sb;
-			void *addr;
-			int fd;
+			chunk_t *xml_tag;
 
-			fd = open(abs_name, O_RDONLY);
-			if (fd == -1)
+			xml_tag = chunk_map(abs_name, FALSE);
+			if (!xml_tag)
 			{
 				DBG1(DBG_IMC, "  opening '%s' failed: %s", abs_name,
 					 strerror(errno));
 				goto end;
 			}
 
-			if (fstat(fd, &sb) == -1)
-			{
-				DBG1(DBG_IMC, "  getting file size of '%s' failed: %s", abs_name,
-			 		 strerror(errno));
-				close(fd);
-				goto end;
-			}
-
-			addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-			if (addr == MAP_FAILED)
-			{
-				DBG1(DBG_IMC, "  mapping '%s' failed: %s", abs_name,
-					 strerror(errno));
-				close(fd);
-				goto end;
-			}
-			xml_tag = chunk_create(addr, sb.st_size);
-			tag = swid_tag_create(xml_tag, unique_seq_id);
+			tag = swid_tag_create(*xml_tag, unique_seq_id);
 			this->list->insert_last(this->list, tag);
-			munmap(addr, sb.st_size);
-			close(fd);
+			chunk_unmap(xml_tag);
 		}
 		else
 		{
@@ -290,5 +268,3 @@ swid_inventory_t *swid_inventory_create(bool full_tags)
 
 	return &this->public;
 }
-
-

@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <errno.h>
+
 #include "pki.h"
 
 #include <credentials/certificates/certificate.h>
@@ -108,7 +110,11 @@ static int pub()
 	{
 		chunk_t chunk;
 
-		chunk = chunk_from_fd(0);
+		if (!chunk_from_fd(0, &chunk))
+		{
+			fprintf(stderr, "reading input failed: %s\n", strerror(errno));
+			return 1;
+		}
 		cred = lib->creds->create(lib->creds, type, subtype,
 								  BUILD_BLOB, chunk, BUILD_END);
 		free(chunk.ptr);
@@ -186,4 +192,3 @@ static void __attribute__ ((constructor))reg()
 		}
 	});
 }
-

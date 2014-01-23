@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <errno.h>
+
 #include "pki.h"
 
 #include <credentials/certificates/certificate.h>
@@ -57,7 +59,11 @@ static int verify()
 	{
 		chunk_t chunk;
 
-		chunk = chunk_from_fd(0);
+		if (!chunk_from_fd(0, &chunk))
+		{
+			fprintf(stderr, "reading certificate failed: %s\n", strerror(errno));
+			return 1;
+		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB, chunk, BUILD_END);
 		free(chunk.ptr);

@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef HAVE_MMAP
+# include <sys/mman.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -25,7 +28,6 @@
 #include <ctype.h>
 
 #include "chunk.h"
-#include "debug.h"
 
 /**
  * Empty chunk.
@@ -206,15 +208,16 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 /**
  * Described in header.
  */
-bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force)
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 {
 	mode_t oldmask;
 	FILE *fd;
 	bool good = FALSE;
+	int tmp = 0;
 
 	if (!force && access(path, F_OK) == 0)
 	{
-		DBG1(DBG_LIB, "  %s file '%s' already exists", label, path);
+		errno = EEXIST;
 		return FALSE;
 	}
 	oldmask = umask(mask);
@@ -223,58 +226,206 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
-			DBG1(DBG_LIB, "  written %s file '%s' (%d bytes)",
-				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1(DBG_LIB, "  writing %s file '%s' failed: %s",
-				 label, path, strerror(errno));
+			tmp = errno;
 		}
 		fclose(fd);
 	}
 	else
 	{
-		DBG1(DBG_LIB, "  could not open %s file '%s': %s", label, path,
-			 strerror(errno));
+		tmp = errno;
 	}
 	umask(oldmask);
+	errno = tmp;
 	return good;
 }
 
 /**
  * Described in header.
  */
-chunk_t chunk_from_fd(int fd)
+bool chunk_from_fd(int fd, chunk_t *out)
 {
-	char buf[8096];
-	char *pos = buf;
-	ssize_t len, total = 0;
+	struct stat sb;
+	char *buf, *tmp;
+	ssize_t len, total = 0, bufsize;
+
+	if (fstat(fd, &sb) == 0 && S_ISREG(sb.st_mode))
+	{
+		bufsize = sb.st_size;
+	}
+	else
+	{
+		bufsize = 256;
+	}
+	buf = malloc(bufsize);
+	if (!buf)
+	{	/* for huge files */
+		return FALSE;
+	}
 
 	while (TRUE)
 	{
-		len = read(fd, pos, buf + sizeof(buf) - pos);
+		len = read(fd, buf + total, bufsize - total);
 		if (len < 0)
 		{
-			DBG1(DBG_LIB, "reading from file descriptor failed: %s",
-				 strerror(errno));
-			return chunk_empty;
+			free(buf);
+			return FALSE;
 		}
 		if (len == 0)
 		{
 			break;
 		}
 		total += len;
-		if (total == sizeof(buf))
+		if (total == bufsize)
 		{
-			DBG1(DBG_LIB, "buffer too small to read from file descriptor");
-			return chunk_empty;
+			bufsize *= 2;
+			tmp = realloc(buf, bufsize);
+			if (!tmp)
+			{
+				free(buf);
+				return FALSE;
+			}
+			buf = tmp;
 		}
 	}
-	return chunk_clone(chunk_create(buf, total));
+	if (total == 0)
+	{
+		free(buf);
+		buf = NULL;
+	}
+	else if (total < bufsize)
+	{
+		buf = realloc(buf, total);
+	}
+	*out = chunk_create(buf, total);
+	return TRUE;
 }
 
+/**
+ * Implementation for mmap()ed chunks
+ */
+typedef struct {
+	/* public chunk interface */
+	chunk_t public;
+	/* FD of open file */
+	int fd;
+	/* mmap() address */
+	void *map;
+	/* size of map */
+	size_t len;
+	/* do we write? */
+	bool wr;
+} mmaped_chunk_t;
+
+/**
+ * See header.
+ */
+chunk_t *chunk_map(char *path, bool wr)
+{
+	mmaped_chunk_t *chunk;
+	struct stat sb;
+	int tmp;
+
+	INIT(chunk,
+		.fd = open(path, wr ? O_RDWR : O_RDONLY),
+		.wr = wr,
+	);
+
+	if (chunk->fd == -1)
+	{
+		free(chunk);
+		return NULL;
+	}
+	if (fstat(chunk->fd, &sb) == -1)
+	{
+		tmp = errno;
+		chunk_unmap(&chunk->public);
+		errno = tmp;
+		return NULL;
+	}
+#ifdef HAVE_MMAP
+	chunk->len = sb.st_size;
+	/* map non-empty files only, as mmap() complains otherwise */
+	if (chunk->len)
+	{
+		/* in read-only mode, we allow writes, but don't sync to disk */
+		chunk->map = mmap(NULL, chunk->len, PROT_READ | PROT_WRITE,
+						  wr ? MAP_SHARED : MAP_PRIVATE, chunk->fd, 0);
+		if (chunk->map == MAP_FAILED)
+		{
+			tmp = errno;
+			chunk_unmap(&chunk->public);
+			errno = tmp;
+			return NULL;
+		}
+	}
+	chunk->public = chunk_create(chunk->map, chunk->len);
+#else /* !HAVE_MMAP */
+	if (!chunk_from_fd(chunk->fd, &chunk->public))
+	{
+		tmp = errno;
+		chunk_unmap(&chunk->public);
+		errno = tmp;
+		return NULL;
+	}
+	chunk->map = chunk->public.ptr;
+	chunk->len = chunk->public.len;
+#endif /* !HAVE_MMAP */
+	return &chunk->public;
+}
+
+/**
+ * See header.
+ */
+bool chunk_unmap(chunk_t *public)
+{
+	mmaped_chunk_t *chunk;
+	bool ret = FALSE;
+	int tmp = 0;
+
+	chunk = (mmaped_chunk_t*)public;
+#ifdef HAVE_MMAP
+	if (chunk->map && chunk->map != MAP_FAILED)
+	{
+		ret = munmap(chunk->map, chunk->len) == 0;
+		tmp = errno;
+	}
+#else /* !HAVE_MMAP */
+	if (chunk->wr)
+	{
+		if (lseek(chunk->fd, 0, SEEK_SET) != -1)
+		{
+			int len, total = 0;
+
+			ret = TRUE;
+			while (total < chunk->len)
+			{
+				len = write(chunk->fd, chunk->map + total, chunk->len - total);
+				if (len <= 0)
+				{
+					ret = FALSE;
+					break;
+				}
+				total += len;
+			}
+		}
+		tmp = errno;
+	}
+	else
+	{
+		ret = TRUE;
+	}
+	free(chunk->map);
+#endif /* !HAVE_MMAP */
+	close(chunk->fd);
+	free(chunk);
+	errno = tmp;
+
+	return ret;
+}
 
 /** hex conversion digits */
 static char hexdig_upper[] = "0123456789ABCDEF";

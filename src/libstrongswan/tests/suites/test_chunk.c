@@ -14,10 +14,16 @@
  * for more details.
  */
 
-
 #include "test_suite.h"
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+
 #include <utils/chunk.h>
+#include <threading/thread.h>
 
 /*******************************************************************************
  * utilities
@@ -775,6 +781,116 @@ START_TEST(test_chunk_hash_static)
 END_TEST
 
 /*******************************************************************************
+ * test for chunk_map and friends
+ */
+
+START_TEST(test_chunk_map)
+{
+	chunk_t *map, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+	char *path = "/tmp/strongswan-chunk-map-test";
+
+	ck_assert(chunk_write(contents, path, 022, TRUE));
+
+	/* read */
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	/* altering mapped chunk should not hurt */
+	*map = chunk_empty;
+	ck_assert(chunk_unmap(map));
+
+	/* write */
+	map = chunk_map(path, TRUE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	map->ptr[0] = 0x06;
+	ck_assert(chunk_unmap(map));
+
+	/* verify write */
+	contents.ptr[0] = 0x06;
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	ck_assert(chunk_unmap(map));
+
+	unlink(path);
+}
+END_TEST
+
+/*******************************************************************************
+ * test for chunk_from_fd
+ */
+
+START_TEST(test_chunk_from_fd_file)
+{
+	chunk_t in, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+	char *path = "/tmp/strongswan-chunk-fd-test";
+	int fd;
+
+	ck_assert(chunk_write(contents, path, 022, TRUE));
+
+	fd = open(path, O_RDONLY);
+	ck_assert(fd != -1);
+
+	ck_assert(chunk_from_fd(fd, &in));
+	close(fd);
+	ck_assert_msg(chunk_equals(in, contents), "%B", &in);
+	unlink(path);
+	free(in.ptr);
+}
+END_TEST
+
+START_TEST(test_chunk_from_fd_skt)
+{
+	chunk_t in, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+	int s[2];
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, s) == 0);
+	ck_assert(write(s[1], contents.ptr, contents.len) == contents.len);
+	close(s[1]);
+	ck_assert_msg(chunk_from_fd(s[0], &in), "%s", strerror(errno));
+	close(s[0]);
+	ck_assert_msg(chunk_equals(in, contents), "%B", &in);
+	free(in.ptr);
+}
+END_TEST
+
+#define FROM_FD_COUNT 8192
+
+void *chunk_from_fd_run(void *data)
+{
+	int i, fd = (uintptr_t)data;
+
+	for (i = 0; i < FROM_FD_COUNT; i++)
+	{
+		ck_assert(write(fd, &i, sizeof(i)) == sizeof(i));
+	}
+	close(fd);
+	return NULL;
+}
+
+START_TEST(test_chunk_from_fd_huge)
+{
+	thread_t *thread;
+	chunk_t in;
+	int s[2], i;
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, s) == 0);
+
+	thread = thread_create(chunk_from_fd_run, (void*)(uintptr_t)s[1]);
+	ck_assert_msg(chunk_from_fd(s[0], &in), "%s", strerror(errno));
+	ck_assert_int_eq(in.len, FROM_FD_COUNT * sizeof(i));
+	for (i = 0; i < FROM_FD_COUNT; i++)
+	{
+		ck_assert_int_eq(((int*)in.ptr)[i], i);
+	}
+	thread->join(thread);
+	close(s[0]);
+	free(in.ptr);
+}
+END_TEST
+
+/*******************************************************************************
  * printf_hook tests
  */
 
@@ -889,6 +1005,16 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_hash_static");
 	tcase_add_test(tc, test_chunk_hash_static);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_map");
+	tcase_add_test(tc, test_chunk_map);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_from_fd");
+	tcase_add_test(tc, test_chunk_from_fd_file);
+	tcase_add_test(tc, test_chunk_from_fd_skt);
+	tcase_add_test(tc, test_chunk_from_fd_huge);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hook");

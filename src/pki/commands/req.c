@@ -16,6 +16,7 @@
  */
 
 #include <time.h>
+#include <errno.h>
 
 #include "pki.h"
 
@@ -118,7 +119,11 @@ static int req()
 	{
 		chunk_t chunk;
 
-		chunk = chunk_from_fd(0);
+		if (!chunk_from_fd(0, &chunk))
+		{
+			fprintf(stderr, "reading private key failed: %s\n", strerror(errno));
+			return 1;
+		}
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 									 BUILD_BLOB, chunk, BUILD_END);
 		free(chunk.ptr);

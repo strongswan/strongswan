@@ -22,7 +22,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -61,40 +60,17 @@ METHOD(integrity_checker_t, build_file, u_int32_t,
 	private_integrity_checker_t *this, char *file, size_t *len)
 {
 	u_int32_t checksum;
-	chunk_t contents;
-	struct stat sb;
-	void *addr;
-	int fd;
+	chunk_t *contents;
 
-	fd = open(file, O_RDONLY);
-	if (fd == -1)
+	contents = chunk_map(file, FALSE);
+	if (!contents)
 	{
 		DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
 		return 0;
 	}
-
-	if (fstat(fd, &sb) == -1)
-	{
-		DBG1(DBG_LIB, "  getting file size of '%s' failed: %s", file,
-			 strerror(errno));
-		close(fd);
-		return 0;
-	}
-
-	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (addr == MAP_FAILED)
-	{
-		DBG1(DBG_LIB, "  mapping '%s' failed: %s", file, strerror(errno));
-		close(fd);
-		return 0;
-	}
-
-	*len = sb.st_size;
-	contents = chunk_create(addr, sb.st_size);
-	checksum = chunk_hash_static(contents);
-
-	munmap(addr, sb.st_size);
-	close(fd);
+	*len = contents->len;
+	checksum = chunk_hash_static(*contents);
+	chunk_unmap(contents);
 
 	return checksum;
 }
@@ -318,4 +294,3 @@ integrity_checker_t *integrity_checker_create(char *checksum_library)
 	}
 	return &this->public;
 }
-

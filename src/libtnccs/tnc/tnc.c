@@ -17,7 +17,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -94,10 +93,8 @@ void libtnccs_deinit(void)
 static bool load_imcvs_from_config(char *filename, bool is_imc)
 {
 	bool success = FALSE;
-	int fd, line_nr = 0;
-	chunk_t src, line;
-	struct stat sb;
-	void *addr;
+	int line_nr = 0;
+	chunk_t *src, line;
 	char *label;
 
 	if (!filename || !*filename)
@@ -108,30 +105,15 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 	label = is_imc ? "IMC" : "IMV";
 
 	DBG1(DBG_TNC, "loading %ss from '%s'", label, filename);
-	fd = open(filename, O_RDONLY);
-	if (fd == -1)
+	src = chunk_map(filename, FALSE);
+	if (!src)
 	{
 		DBG1(DBG_TNC, "opening configuration file '%s' failed: %s", filename,
 			 strerror(errno));
 		return FALSE;
 	}
-	if (fstat(fd, &sb) == -1)
-	{
-		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", filename,
-			 strerror(errno));
-		close(fd);
-		return FALSE;
-	}
-	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-	if (addr == MAP_FAILED)
-	{
-		DBG1(DBG_LIB, "mapping '%s' failed: %s", filename, strerror(errno));
-		close(fd);
-		return FALSE;
-	}
-	src = chunk_create(addr, sb.st_size);
 
-	while (fetchline(&src, &line))
+	while (fetchline(src, &line))
 	{
 		char *name, *path;
 		chunk_t token;
@@ -201,8 +183,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 			break;
 		}
 	}
-	munmap(addr, sb.st_size);
-	close(fd);
+	chunk_unmap(src);
 	return success;
 }
 
@@ -272,4 +253,3 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 	}
 	return TRUE;
 }
-
