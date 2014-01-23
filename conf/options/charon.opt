@@ -1,0 +1,2 @@
+charon.threads = 16
+	Number of threads
