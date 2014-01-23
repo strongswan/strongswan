@@ -106,7 +106,7 @@ vici_message_t *vici_message_create_from_enumerator(enumerator_t *enumerator);
 /**
  * Create vici message from a variable argument list.
  *
- * @param first			first type beginning message
+ * @param type			first type beginning message
  * @param ...			vici_type_t and args, terminated by VICI_END
  * @return				message representation, NULL on error
  */
@@ -115,11 +115,16 @@ vici_message_t *vici_message_create_from_args(vici_type_t type, ...);
 /**
  * Check if a chunk has a printable string, and print it to buf.
  *
- * @param chunkt		chunk containing potential string
+ * @param chunk			chunk containing potential string
  * @param buf			buffer to write string to
  * @param size			size of buf
  * @return				TRUE if printable and string written to buf
  */
 bool vici_stringify(chunk_t chunk, char *buf, size_t size);
+
+/**
+ * Verify the occurence of a given type for given section/list nesting
+ */
+bool vici_verify_type(vici_type_t type, u_int section, bool list);
 
 #endif /** VICI_MESSAGE_H_ @}*/

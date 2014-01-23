@@ -16,6 +16,7 @@
 #include <test_suite.h>
 
 #include "../vici_message.h"
+#include "../vici_builder.h"
 
 #include <unistd.h>
 
@@ -247,6 +248,62 @@ START_TEST(test_vararg)
 }
 END_TEST
 
+START_TEST(test_builder)
+{
+	enumerator_t *parse, *tmpl;
+	vici_message_t *m;
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+	b->add(b, VICI_SECTION_START, "section1");
+	b->add(b,  VICI_LIST_START, "list1");
+	b->add(b,   VICI_LIST_ITEM, chunk_from_str("item1"));
+	b->add(b,   VICI_LIST_ITEM, chunk_from_str("item2"));
+	b->add(b,  VICI_LIST_END);
+	b->add(b,  VICI_KEY_VALUE, "key1", chunk_from_str("value1"));
+	b->add(b, VICI_SECTION_END);
+	m = b->finalize(b);
+	ck_assert(m);
+	tmpl = endecode_create_enumerator(endecode_test_list);
+	parse = m->create_enumerator(m);
+	ck_assert(parse);
+
+	compare_vici(parse, tmpl);
+
+	m->destroy(m);
+	tmpl->destroy(tmpl);
+	parse->destroy(parse);
+}
+END_TEST
+
+START_TEST(test_builder_fmt)
+{
+	enumerator_t *parse, *tmpl;
+	vici_message_t *m;
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+	b->begin_section(b, "section1");
+	b->begin_list(b, "list1");
+	b->add_li(b, "item%u", 1);
+	b->add_li(b, "%s%u", "item", 2);
+	b->end_list(b);
+	b->add_kv(b, "key1", "value%u", 1);
+	b->end_section(b);
+	m = b->finalize(b);
+	ck_assert(m);
+	tmpl = endecode_create_enumerator(endecode_test_list);
+	parse = m->create_enumerator(m);
+	ck_assert(parse);
+
+	compare_vici(parse, tmpl);
+
+	m->destroy(m);
+	tmpl->destroy(tmpl);
+	parse->destroy(parse);
+}
+END_TEST
+
 Suite *message_suite_create()
 {
 	Suite *s;
@@ -260,6 +317,14 @@ Suite *message_suite_create()
 
 	tc = tcase_create("vararg encode");
 	tcase_add_test(tc, test_vararg);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("builder encode");
+	tcase_add_test(tc, test_builder);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("builder format encode");
+	tcase_add_test(tc, test_builder_fmt);
 	suite_add_tcase(s, tc);
 
 	return s;

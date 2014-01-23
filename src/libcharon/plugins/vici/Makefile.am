@@ -16,6 +16,8 @@ endif
 libstrongswan_vici_la_SOURCES = \
 	vici_socket.h vici_socket.c \
 	vici_message.h vici_message.c \
+	vici_builder.h vici_builder.c \
+	vici_dispatcher.h vici_dispatcher.c \
 	vici_plugin.h vici_plugin.c
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
@@ -29,6 +31,7 @@ vici_tests_SOURCES = \
 	suites/test_message.c \
 	vici_socket.c \
 	vici_message.c \
+	vici_builder.c \
 	vici_tests.h vici_tests.c
 
 vici_tests_CFLAGS = \

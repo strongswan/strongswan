@@ -14,8 +14,10 @@
  */
 
 #include "vici_plugin.h"
+#include "vici_dispatcher.h"
 
 #include <library.h>
+#include <daemon.h>
 
 typedef struct private_vici_plugin_t private_vici_plugin_t;
 
@@ -28,6 +30,11 @@ struct private_vici_plugin_t {
 	 * public functions
 	 */
 	vici_plugin_t public;
+
+	/**
+	 * Dispatcher, creating socket
+	 */
+	vici_dispatcher_t *dispatcher;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -42,6 +49,19 @@ METHOD(plugin_t, get_name, char*,
 static bool register_vici(private_vici_plugin_t *this,
 						  plugin_feature_t *feature, bool reg, void *data)
 {
+	if (reg)
+	{
+		char *uri;
+
+		uri = lib->settings->get_str(lib->settings, "%s.plugins.vici.socket",
+									 VICI_DEFAULT_URI, lib->ns);
+		this->dispatcher = vici_dispatcher_create(uri);
+		return this->dispatcher != NULL;
+	}
+	else
+	{
+		this->dispatcher->destroy(this->dispatcher);
+	}
 	return TRUE;
 }
 

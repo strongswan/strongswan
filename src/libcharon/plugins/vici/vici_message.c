@@ -14,6 +14,7 @@
  */
 
 #include "vici_message.h"
+#include "vici_builder.h"
 
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
@@ -65,9 +66,9 @@ bool vici_stringify(chunk_t chunk, char *buf, size_t size)
 }
 
 /**
- * Verify the occurence of a given type for given section/list nesting
+ * See header.
  */
-static bool verify_type(vici_type_t type, int section, bool list)
+bool vici_verify_type(vici_type_t type, u_int section, bool list)
 {
 	if (list)
 	{
@@ -133,7 +134,7 @@ METHOD(enumerator_t, parse_enumerate, bool,
 		*out = VICI_END;
 		return TRUE;
 	}
-	if (!verify_type(type, this->section, this->list))
+	if (!vici_verify_type(type, this->section, this->list))
 	{
 		return FALSE;
 	}
@@ -251,137 +252,43 @@ vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 }
 
 /**
- * Write from enumerator to writer
- */
-static bool write_from_enumerator(bio_writer_t *writer,
-								  enumerator_t *enumerator)
-{
-	vici_type_t type;
-	char *name;
-	chunk_t value;
-	int section = 0;
-	bool list = FALSE;
-
-	while (enumerator->enumerate(enumerator, &type, &name, &value))
-	{
-		if (!verify_type(type, section, list))
-		{
-			return FALSE;
-		}
-
-		if (type != VICI_END)
-		{
-			writer->write_uint8(writer, type);
-		}
-
-		switch (type)
-		{
-			case VICI_SECTION_START:
-				writer->write_data8(writer, chunk_from_str(name));
-				section++;
-				break;
-			case VICI_SECTION_END:
-				section--;
-				break;
-			case VICI_KEY_VALUE:
-				writer->write_data8(writer, chunk_from_str(name));
-				writer->write_data16(writer, value);
-				break;
-			case VICI_LIST_START:
-				writer->write_data8(writer, chunk_from_str(name));
-				list = TRUE;
-				break;
-			case VICI_LIST_ITEM:
-				writer->write_data16(writer, value);
-				break;
-			case VICI_LIST_END:
-				list = FALSE;
-				break;
-			case VICI_END:
-				return TRUE;
-			default:
-				return FALSE;
-		}
-	}
-	return FALSE;
-}
-
-/**
  * See header
  */
 vici_message_t *vici_message_create_from_enumerator(enumerator_t *enumerator)
 {
-	vici_message_t *message = NULL;
-	bio_writer_t *writer;
-	chunk_t data;
+	vici_builder_t *builder;
+	vici_type_t type;
+	char *name;
+	chunk_t value;
 
-	writer = bio_writer_create(0);
-	if (write_from_enumerator(writer, enumerator))
+	builder = vici_builder_create();
+	while (enumerator->enumerate(enumerator, &type, &name, &value))
 	{
-		data = chunk_clone(writer->get_buf(writer));
-		message = vici_message_create_from_data(data, TRUE);
+		switch (type)
+		{
+			case VICI_SECTION_START:
+			case VICI_LIST_START:
+				builder->add(builder, type, name);
+				continue;
+			case VICI_KEY_VALUE:
+				builder->add(builder, type, name, value);
+				continue;
+			case VICI_LIST_ITEM:
+				builder->add(builder, type, value);
+				continue;
+			case VICI_SECTION_END:
+			case VICI_LIST_END:
+			default:
+				builder->add(builder, type);
+				continue;
+			case VICI_END:
+				break;
+		}
+		break;
 	}
 	enumerator->destroy(enumerator);
-	writer->destroy(writer);
 
-	return message;
-}
-
-/**
- * Enumerator for va_list arguments
- */
-typedef struct {
-	/* implements enumerator */
-	enumerator_t public;
-	/** arguments to enumerate */
-	va_list args;
-	/** first type, if not yet processed */
-	vici_type_t *first;
-} va_enumerator_t;
-
-METHOD(enumerator_t, va_enumerate, bool,
-	va_enumerator_t *this, vici_type_t *out, char **name, chunk_t *value)
-{
-	vici_type_t type;
-
-	if (this->first)
-	{
-		type = *this->first;
-		this->first = NULL;
-	}
-	else
-	{
-		type = va_arg(this->args, vici_type_t);
-	}
-	switch (type)
-	{
-		case VICI_SECTION_END:
-		case VICI_LIST_END:
-		case VICI_END:
-			break;
-		case VICI_LIST_START:
-		case VICI_SECTION_START:
-			*name = va_arg(this->args, char*);
-			break;
-		case VICI_KEY_VALUE:
-			*name = va_arg(this->args, char*);
-			*value = va_arg(this->args, chunk_t);
-			break;
-		case VICI_LIST_ITEM:
-			*value = va_arg(this->args, chunk_t);
-			break;
-		default:
-			return FALSE;
-	}
-	*out = type;
-	return TRUE;
-}
-
-METHOD(enumerator_t, va_destroy, void,
-	va_enumerator_t *this)
-{
-	va_end(this->args);
-	free(this);
+	return builder->finalize(builder);
 }
 
 /**
@@ -389,16 +296,39 @@ METHOD(enumerator_t, va_destroy, void,
  */
 vici_message_t *vici_message_create_from_args(vici_type_t type, ...)
 {
-	va_enumerator_t *enumerator;
+	vici_builder_t *builder;
+	va_list args;
+	char *name;
+	chunk_t value;
 
-	INIT(enumerator,
-		.public = {
-			.enumerate = (void*)_va_enumerate,
-			.destroy = _va_destroy,
-		},
-		.first = &type,
-	);
-	va_start(enumerator->args, type);
-
-	return vici_message_create_from_enumerator(&enumerator->public);
+	builder = vici_builder_create();
+	va_start(args, type);
+	while (type != VICI_END)
+	{
+		switch (type)
+		{
+			case VICI_LIST_START:
+			case VICI_SECTION_START:
+				name = va_arg(args, char*);
+				builder->add(builder, type, name);
+				break;
+			case VICI_KEY_VALUE:
+				name = va_arg(args, char*);
+				value = va_arg(args, chunk_t);
+				builder->add(builder, type, name, value);
+				break;
+			case VICI_LIST_ITEM:
+				value = va_arg(args, chunk_t);
+				builder->add(builder, type, value);
+				break;
+			case VICI_SECTION_END:
+			case VICI_LIST_END:
+			default:
+				builder->add(builder, type);
+				break;
+		}
+		type = va_arg(args, vici_type_t);
+	}
+	va_end(args);
+	return builder->finalize(builder);
 }
