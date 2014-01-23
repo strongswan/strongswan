@@ -96,10 +96,6 @@ if USE_MEDSRV
   SUBDIRS += medsrv
 endif
 
-if USE_INTEGRITY_TEST
-  SUBDIRS += checksum
-endif
-
 if USE_ATTR_SQL
   SUBDIRS += pool
 endif
@@ -114,6 +110,10 @@ endif
 
 if USE_LIBPTTLS
   SUBDIRS += pt-tls-client
+endif
+
+if USE_INTEGRITY_TEST
+  SUBDIRS += checksum
 endif
 
 EXTRA_DIST = strongswan.conf
