@@ -97,9 +97,9 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * As initiator, bump up TS to 0.0.0.0/0 for on-the-wire bits
+ * As initiator and responder, bump up TS to 0.0.0.0/0 for on-the-wire bits
  */
-static void narrow_initiator_pre(linked_list_t *list)
+static void narrow_pre(linked_list_t *list, char *side)
 {
 	traffic_selector_t *ts;
 
@@ -112,7 +112,7 @@ static void narrow_initiator_pre(linked_list_t *list)
 											 "255.255.255.255", 65535);
 	if (ts)
 	{
-		DBG2(DBG_CFG, "changing proposed traffic selectors for other:");
+		DBG2(DBG_CFG, "changing proposed traffic selectors for %s:", side);
 		DBG2(DBG_CFG, " %R", ts);
 		list->insert_last(list, ts);
 	}
@@ -149,11 +149,14 @@ METHOD(listener_t, narrow, bool,
 		switch (type)
 		{
 			case NARROW_INITIATOR_PRE_AUTH:
-				narrow_initiator_pre(remote);
+				narrow_pre(remote, "other");
 				break;
 			case NARROW_INITIATOR_POST_AUTH:
 				narrow_initiator(this, ike_sa,
 								 child_sa->get_config(child_sa), remote);
+				break;
+			case NARROW_RESPONDER:
+				narrow_pre(local, "us");
 				break;
 			case NARROW_RESPONDER_POST:
 				narrow_responder_post(child_sa->get_config(child_sa), local);
