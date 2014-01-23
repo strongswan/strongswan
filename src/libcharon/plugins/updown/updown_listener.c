@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -218,12 +219,12 @@ METHOD(listener_t, child_updown, bool,
 	enumerator = child_sa->create_policy_enumerator(child_sa);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
-		char command[1024];
+		char command[2048];
 		host_t *my_client, *other_client;
 		u_int8_t my_client_mask, other_client_mask;
 		char *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc, *dns, *xauth;
 		mark_t mark;
-		bool is_host, is_ipv6;
+		bool is_host, is_ipv6, use_ipcomp;
 		FILE *shell;
 
 		my_ts->to_subnet(my_ts, &my_client, &my_client_mask);
@@ -322,6 +323,9 @@ METHOD(listener_t, child_updown, bool,
 
 		dns = make_dns_vars(this, ike_sa);
 
+		/* check for IPComp */
+		use_ipcomp = child_sa->get_ipcomp(child_sa) != IPCOMP_NONE;
+
 		/* determine IPv4/IPv6 and client/host situation */
 		is_host = my_ts->is_host(my_ts, me);
 		is_ipv6 = is_host ? (me->get_family(me) == AF_INET6) :
@@ -355,6 +359,7 @@ METHOD(listener_t, child_updown, bool,
 				"%s"
 				"%s"
 				"%s"
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 is_host ? "-host" : "-client",
@@ -377,6 +382,7 @@ METHOD(listener_t, child_updown, bool,
 				 mark_in,
 				 mark_out,
 				 udp_enc,
+				 use_ipcomp ? "PLUTO_IPCOMP='1' " : "",
 				 config->get_hostaccess(config) ? "PLUTO_HOST_ACCESS='1' " : "",
 				 dns,
 				 script);

@@ -1,3 +1,5 @@
+carol::iptables-restore < /etc/iptables.rules
+moon::iptables-restore < /etc/iptables.rules
 carol::ipsec start
 moon::ipsec start
 carol::sleep 2

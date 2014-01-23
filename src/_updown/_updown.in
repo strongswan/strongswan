@@ -50,6 +50,9 @@
 #       PLUTO_PROTO
 #              is the negotiated IPsec protocol, ah|esp
 #
+#       PLUTO_IPCOMP
+#              is not empty if IPComp was negotiated
+#
 #       PLUTO_UNIQUEID
 #              is the unique identifier of the associated IKE_SA
 #
@@ -411,6 +414,14 @@ up-host:iptables)
 	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
 	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
 	#
+	# allow IPIP traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed)
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+	  iptables -I INPUT 1 -i $PLUTO_INTERFACE -p 4 \
+	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
+	fi
+	#
 	# log IPsec host connection setup
 	if [ $VPN_LOGGING ]
 	then
@@ -434,6 +445,13 @@ down-host:iptables)
 	iptables -D OUTPUT -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
 	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
 	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
+	#
+	# IPIP exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+	  iptables -D INPUT -i $PLUTO_INTERFACE -p 4 \
+	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
+	fi
 	#
 	# log IPsec host connection teardown
 	if [ $VPN_LOGGING ]
@@ -472,6 +490,15 @@ up-client:iptables)
 	  iptables -I OUTPUT 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
 	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
 	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
+	fi
+	#
+	# allow IPIP traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed).
+	# INPUT is correct here even for forwarded traffic.
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+	  iptables -I INPUT 1 -i $PLUTO_INTERFACE -p 4 \
+	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
 	#
 	# log IPsec client connection setup
@@ -515,6 +542,13 @@ down-client:iptables)
 	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
 	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT \
 	         $IPSEC_POLICY_OUT -j ACCEPT
+	fi
+	#
+	# IPIP exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+	  iptables -D INPUT -i $PLUTO_INTERFACE -p 4 \
+	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
 	#
 	# log IPsec client connection teardown

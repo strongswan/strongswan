@@ -1203,6 +1203,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;
+	ipsec_mode_t original_mode = mode;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
@@ -1213,7 +1214,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
 			   tfc, &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED,
 			   chunk_empty, mode, ipcomp, 0, initiator, FALSE, FALSE, inbound,
-			   NULL, NULL);
+			   src_ts, dst_ts);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
@@ -1243,7 +1244,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			break;
 		case MODE_BEET:
 		case MODE_TRANSPORT:
-			if(src_ts && dst_ts)
+			if (original_mode == MODE_TUNNEL)
+			{	/* don't install selectors for switched SAs.  because only one
+				 * selector can be installed other traffic would get dropped */
+				break;
+			}
+			if (src_ts && dst_ts)
 			{
 				sa->sel = ts2selector(src_ts, dst_ts);
 				/* don't install proto/port on SA. This would break
