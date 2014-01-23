@@ -11,6 +11,9 @@ strongswan-5.1.2
 - Defined a TPMRA remote attestation workitem and added support for it to the
   Attestation IMV.
 
+- When enabling its "session" strongswan.conf option, the xauth-pam plugin opens
+  and closes a PAM session for each established IKE_SA. Patch courtesy of
+  Andrea Bonomi.
 
 strongswan-5.1.1
 ----------------
