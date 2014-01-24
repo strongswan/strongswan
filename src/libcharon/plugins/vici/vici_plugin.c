@@ -15,6 +15,7 @@
 
 #include "vici_plugin.h"
 #include "vici_dispatcher.h"
+#include "vici_query.h"
 
 #include <library.h>
 #include <daemon.h>
@@ -35,6 +36,11 @@ struct private_vici_plugin_t {
 	 * Dispatcher, creating socket
 	 */
 	vici_dispatcher_t *dispatcher;
+
+	/**
+	 * Query commands
+	 */
+	vici_query_t *query;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -56,10 +62,16 @@ static bool register_vici(private_vici_plugin_t *this,
 		uri = lib->settings->get_str(lib->settings, "%s.plugins.vici.socket",
 									 VICI_DEFAULT_URI, lib->ns);
 		this->dispatcher = vici_dispatcher_create(uri);
-		return this->dispatcher != NULL;
+		if (this->dispatcher)
+		{
+			this->query = vici_query_create(this->dispatcher);
+			return TRUE;
+		}
+		return FALSE;
 	}
 	else
 	{
+		this->query->destroy(this->query);
 		this->dispatcher->destroy(this->dispatcher);
 	}
 	return TRUE;
