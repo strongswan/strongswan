@@ -15,6 +15,11 @@ strongswan-5.1.2
   and closes a PAM session for each established IKE_SA. Patch courtesy of
   Andrea Bonomi.
 
+- The strongSwan unit testing framework has been rewritten without the "check"
+  dependency for improved flexibility and portability. It now properly supports
+  multi-threaded and memory leak testing and brings a bunch of new test cases.
+
+
 strongswan-5.1.1
 ----------------
 
