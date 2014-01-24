@@ -494,6 +494,43 @@ AC_CHECK_FUNC(
 	)]
 )
 
+AC_CHECK_FUNC(
+	[qsort_r],
+	[
+		AC_DEFINE([HAVE_QSORT_R], [], [have qsort_r()])
+		# set -Werror so that we get an error for "argument ... has
+		# incompatible pointer type" warnings
+		save_CFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -Werror"
+		AC_MSG_CHECKING([for GNU-style qsort_r])
+		AC_COMPILE_IFELSE(
+			[AC_LANG_PROGRAM(
+				[[#define _GNU_SOURCE
+				  #include <stdlib.h>
+				  int cmp (const void *a, const void *b, void *x) { return 0; }]],
+				[[int arr[] = { 0, 1 };
+				  qsort_r(arr, 2, sizeof(int), cmp, arr);]])],
+		[AC_MSG_RESULT([yes]);
+		 AC_DEFINE([HAVE_QSORT_R_GNU], [], [have GNU-style qsort_r()])],
+		[
+			AC_MSG_RESULT([no]);
+			AC_MSG_CHECKING([for BSD-style qsort_r])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM(
+					[[#include <stdlib.h>
+					  int cmp (void *x, const void *a, const void *b) { return 0; }]],
+					[[int arr[] = { 0, 1 };
+					  qsort_r(arr, 2, sizeof(int), arr, cmp);]])],
+			[AC_MSG_RESULT([yes]);
+			 AC_DEFINE([HAVE_QSORT_R_BSD], [], [have BSD-style qsort_r()])],
+			[AC_MSG_RESULT([no]);
+			 AC_MSG_FAILURE([qsort_r has unknown semantics])])
+		])
+		CFLAGS="$save_CFLAGS"
+	],
+	[AC_MSG_FAILURE([qsort_r not found])]
+)
+
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
 AC_CHECK_FUNCS(fmemopen funopen mmap)
 

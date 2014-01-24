@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -87,7 +90,7 @@ void array_compress(array_t *array);
  * The enumerater enumerates directly over the array element (pass a pointer to
  * element types), unless the array is pointer based. If zero is passed as
  * element size during construction, the enumerator enumerates over the
- * deferenced pointer values.
+ * dereferenced pointer values.
  *
  * @param array			array to create enumerator for, or NULL
  * @return				enumerator, over elements or pointers
@@ -162,6 +165,25 @@ bool array_get(array_t *array, int idx, void *data);
  * @return				TRUE if idx existed and item removed
  */
 bool array_remove(array_t *array, int idx, void *data);
+
+/**
+ * Sort the array.
+ *
+ * The comparison function must return an integer less than, equal to, or
+ * greater than zero if the first argument is considered to be respectively less
+ * than, equal to, or greater than the second.  If two elements compare as
+ * equal, their order in the sorted array is undefined.
+ *
+ * The comparison function receives pointers to the array elements (esize != 0)
+ * or the actual pointers (esize = 0). The third argument is the user data
+ * supplied to this function.
+ *
+ * @param array			array to sort, or NULL
+ * @param cmp			comparison function
+ * @param user			user data to pass to comparison function
+ */
+void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
+				void *user);
 
 /**
  * Invoke a callback for all array members.

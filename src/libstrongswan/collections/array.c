@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -12,6 +15,9 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+#define _GNU_SOURCE /* for qsort_r() */
+#include <stdlib.h>
 
 #include "array.h"
 
@@ -363,6 +369,54 @@ bool array_remove(array_t *array, int idx, void *data)
 		array_compress(array);
 	}
 	return TRUE;
+}
+
+typedef struct {
+	/** the array */
+	array_t *array;
+	/** comparison function */
+	int (*cmp)(const void*,const void*,void*);
+	/** optional user arg */
+	void *arg;
+} sort_data_t;
+
+#ifdef HAVE_QSORT_R_GNU
+static int compare_elements(const void *a, const void *b, void *arg)
+#else /* HAVE_QSORT_R_BSD */
+static int compare_elements(void *arg, const void *a, const void *b)
+#endif
+{
+	sort_data_t *data = (sort_data_t*)arg;
+
+	if (data->array->esize)
+	{
+		return data->cmp(a, b, data->arg);
+	}
+	return data->cmp(*(void**)a, *(void**)b, data->arg);
+}
+
+void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
+				void *user)
+{
+	if (array)
+	{
+		sort_data_t data = {
+			.array = array,
+			.cmp = cmp,
+			.arg = user,
+		};
+		void *start;
+
+		start = array->data + get_size(array, array->head);
+
+#ifdef HAVE_QSORT_R_GNU
+		qsort_r(start, array->count, get_size(array, 1), compare_elements,
+				&data);
+#else /* HAVE_QSORT_R_BSD */
+		qsort_r(start, array->count, get_size(array, 1), &data,
+				compare_elements);
+#endif
+	}
 }
 
 void array_invoke(array_t *array, array_callback_t cb, void *user)
