@@ -528,7 +528,7 @@ AC_CHECK_FUNC(
 		])
 		CFLAGS="$save_CFLAGS"
 	],
-	[AC_MSG_FAILURE([qsort_r not found])]
+	[]
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)

@@ -251,4 +251,16 @@ void array_destroy_function(array_t *array, array_callback_t cb, void *user);
  */
 void array_destroy_offset(array_t *array, size_t offset);
 
+
+/**
+ * Required on some platforms to initialize thread local value to implement
+ * array_sort().
+ */
+void arrays_init();
+
+/**
+ * Destroys the thread local value if required.
+ */
+void arrays_deinit();
+
 #endif /** ARRAY_H_ @}*/

@@ -22,6 +22,7 @@
 #include <threading/thread.h>
 #include <utils/identification.h>
 #include <networking/host.h>
+#include <collections/array.h>
 #include <collections/hashtable.h>
 #include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>
@@ -142,6 +143,7 @@ void library_deinit()
 		lib->leak_detective->destroy(lib->leak_detective);
 	}
 
+	arrays_deinit();
 	threads_deinit();
 	backtrace_deinit();
 
@@ -259,6 +261,7 @@ bool library_init(char *settings, const char *namespace)
 
 	backtrace_init();
 	threads_init();
+	arrays_init();
 
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();

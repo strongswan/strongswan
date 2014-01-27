@@ -21,6 +21,10 @@
 
 #include "array.h"
 
+#ifndef HAVE_QSORT_R
+#include <threading/thread_value.h>
+#endif
+
 /**
  * Data is an allocated block, with potentially unused head and tail:
  *
@@ -48,6 +52,11 @@ struct array_t {
 	/** array elements */
 	void *data;
 };
+
+#ifndef HAVE_QSORT_R
+	/* store data to replicate qsort_r in thread local storage */
+	static thread_value_t *sort_data;
+#endif
 
 /** maximum number of unused head/tail elements before cleanup */
 #define ARRAY_MAX_UNUSED 32
@@ -382,11 +391,17 @@ typedef struct {
 
 #ifdef HAVE_QSORT_R_GNU
 static int compare_elements(const void *a, const void *b, void *arg)
-#else /* HAVE_QSORT_R_BSD */
+#elif  HAVE_QSORT_R_BSD
 static int compare_elements(void *arg, const void *a, const void *b)
+#else /* !HAVE_QSORT_R */
+static int compare_elements(const void *a, const void *b)
 #endif
 {
+#ifdef HAVE_QSORT_R
 	sort_data_t *data = (sort_data_t*)arg;
+#else
+	sort_data_t *data = sort_data->get(sort_data);
+#endif
 
 	if (data->array->esize)
 	{
@@ -412,9 +427,12 @@ void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
 #ifdef HAVE_QSORT_R_GNU
 		qsort_r(start, array->count, get_size(array, 1), compare_elements,
 				&data);
-#else /* HAVE_QSORT_R_BSD */
+#elif  HAVE_QSORT_R_BSD
 		qsort_r(start, array->count, get_size(array, 1), &data,
 				compare_elements);
+#else /* !HAVE_QSORT_R */
+		sort_data->set(sort_data, &data);
+		qsort(start, array->count, get_size(array, 1), compare_elements);
 #endif
 	}
 }
@@ -530,4 +548,18 @@ void array_destroy_offset(array_t *array, size_t offset)
 {
 	array_invoke_offset(array, offset);
 	array_destroy(array);
+}
+
+void arrays_init()
+{
+#ifndef HAVE_QSORT_R
+	sort_data =  thread_value_create(NULL);
+#endif
+}
+
+void arrays_deinit()
+{
+#ifndef HAVE_QSORT_R
+	sort_data->destroy(sort_data);
+#endif
 }
