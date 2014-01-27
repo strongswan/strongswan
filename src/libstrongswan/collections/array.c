@@ -419,6 +419,56 @@ void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
 	}
 }
 
+typedef struct {
+	/** the array */
+	array_t *array;
+	/** the key */
+	const void *key;
+	/** comparison function */
+	int (*cmp)(const void*,const void*);
+} bsearch_data_t;
+
+static int search_elements(const void *a, const void *b)
+{
+	bsearch_data_t *data = (bsearch_data_t*)a;
+
+	if (data->array->esize)
+	{
+		return data->cmp(data->key, b);
+	}
+	return data->cmp(data->key, *(void**)b);
+}
+
+int array_bsearch(array_t *array, const void *key,
+				  int (*cmp)(const void*,const void*), void *out)
+{
+	int idx = -1;
+
+	if (array)
+	{
+		bsearch_data_t data = {
+			.array = array,
+			.key = key,
+			.cmp = cmp,
+		};
+		void *start, *item;
+
+		start = array->data + get_size(array, array->head);
+
+		item = bsearch(&data, start, array->count, get_size(array, 1),
+					   search_elements);
+		if (item)
+		{
+			if (out)
+			{
+				memcpy(out, item, get_size(array, 1));
+			}
+			idx = (item - start) / get_size(array, 1);
+		}
+	}
+	return idx;
+}
+
 void array_invoke(array_t *array, array_callback_t cb, void *user)
 {
 	if (array)

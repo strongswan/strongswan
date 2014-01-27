@@ -186,6 +186,31 @@ void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
 				void *user);
 
 /**
+ * Binary search of a sorted array.
+ *
+ * The array should be sorted in ascending order according to the given
+ * comparison function.
+ *
+ * The comparison function must return an integer less than, equal to, or
+ * greater than zero if the first argument (the key) is considered to be
+ * respectively less than, equal to, or greater than the second.
+ *
+ * If there are multiple elements that match the key it is not specified which
+ * element is returned.
+ *
+ * The comparison function receives the key object and a pointer to an array
+ * element (esize != 0) or an actual pointer (esize = 0).
+ *
+ * @param array			array to search, or NULL
+ * @param key			key to search for
+ * @param cmp			comparison function
+ * @param data			data to copy element to, or NULL
+ * @return				index of the element if found, -1 if not
+ */
+int array_bsearch(array_t *array, const void *key,
+				  int (*cmp)(const void*,const void*), void *data);
+
+/**
  * Invoke a callback for all array members.
  *
  * @param array			array to traverse, or NULL
