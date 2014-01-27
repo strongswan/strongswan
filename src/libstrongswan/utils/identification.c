@@ -332,8 +332,13 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		buf += written;
 		len -= written;
 
+		written = 0;
 		chunk_printable(data, &printable, '?');
-		written = snprintf(buf, len, "%.*s", (int)printable.len, printable.ptr);
+		if (printable.ptr)
+		{
+			written = snprintf(buf, len, "%.*s", (int)printable.len,
+							   printable.ptr);
+		}
 		chunk_free(&printable);
 		if (written < 0 || written >= len)
 		{
