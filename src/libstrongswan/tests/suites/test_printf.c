@@ -43,13 +43,23 @@ static void verify(char *expected, char *format, ...)
 #endif /* HAVE_FMEMOPEN */
 }
 
+START_TEST(test_printf_null)
+{
+	char buf[16];
+
+	/* on FreeBSD "(null)" gets printed even when a precision of 0 is used.
+	 * because printing of "(null)" for NULL is not standardized we don't verify
+	 * the output and just make sure there is no crash */
+	snprintf(buf, sizeof(buf), "%s", NULL);
+}
+END_TEST
+
 START_TEST(test_printf_strings)
 {
 	verify("a bc def", "%s %s %s", "a", "bc", "def");
+	verify("", "%.0s", "asdfg");
 	verify("asd", "%.3s", "asdfg");
 	verify("asdf", "%.*s", (int)4, "asdfg");
-	verify("", "%.0s", NULL);
-	verify("", "%.*s", (int)0, NULL);
 	verify("  asdf", "%6s", "asdf");
 	verify("  asdf", "%+6s", "asdf");
 	verify("asdf  ", "%-6s", "asdf");
@@ -186,6 +196,7 @@ Suite *printf_suite_create()
 	s = suite_create("printf");
 
 	tc = tcase_create("strings");
+	tcase_add_test(tc, test_printf_null);
 	tcase_add_test(tc, test_printf_strings);
 	suite_add_tcase(s, tc);
 
