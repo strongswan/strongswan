@@ -77,6 +77,8 @@ END_TEARDOWN
 START_TEST(test_get_str)
 {
 	verify_string("val1", "main.key1");
+	verify_string("val1", "main..key1");
+	verify_string("val1", ".main.key1");
 	verify_string("with spaces", "main.key2");
 	verify_string("value", "main.sub1.key");
 	verify_string("value2", "main.sub1.key2");

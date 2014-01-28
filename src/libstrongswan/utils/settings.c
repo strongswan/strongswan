@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -251,9 +251,13 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		return NULL;
 	}
-	if (section->sections->find_first(section->sections,
-									  (linked_list_match_t)section_find,
-									  (void**)&found, buf) != SUCCESS)
+	if (!strlen(buf))
+	{
+		found = section;
+	}
+	else if (section->sections->find_first(section->sections,
+										  (linked_list_match_t)section_find,
+										  (void**)&found, buf) != SUCCESS)
 	{
 		if (ensure)
 		{
@@ -336,9 +340,13 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-		if (section->sections->find_first(section->sections,
-										  (linked_list_match_t)section_find,
-										  (void**)&found, buf) != SUCCESS)
+		if (!strlen(buf))
+		{
+			found = section;
+		}
+		else if (section->sections->find_first(section->sections,
+											  (linked_list_match_t)section_find,
+											  (void**)&found, buf) != SUCCESS)
 		{
 			if (!ensure)
 			{
@@ -429,7 +437,7 @@ static void set_value(private_settings_t *this, section_t *section,
 }
 
 METHOD(settings_t, get_str, char*,
-	   private_settings_t *this, char *key, char *def, ...)
+	private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
 	va_list args;
@@ -470,7 +478,7 @@ inline bool settings_value_as_bool(char *value, bool def)
 }
 
 METHOD(settings_t, get_bool, bool,
-	   private_settings_t *this, char *key, bool def, ...)
+	private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
 	va_list args;
@@ -500,7 +508,7 @@ inline int settings_value_as_int(char *value, int def)
 }
 
 METHOD(settings_t, get_int, int,
-	   private_settings_t *this, char *key, int def, ...)
+	private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	va_list args;
@@ -530,7 +538,7 @@ inline double settings_value_as_double(char *value, double def)
 }
 
 METHOD(settings_t, get_double, double,
-	   private_settings_t *this, char *key, double def, ...)
+	private_settings_t *this, char *key, double def, ...)
 {
 	char *value;
 	va_list args;
@@ -576,7 +584,7 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 }
 
 METHOD(settings_t, get_time, u_int32_t,
-	   private_settings_t *this, char *key, u_int32_t def, ...)
+	private_settings_t *this, char *key, u_int32_t def, ...)
 {
 	char *value;
 	va_list args;
@@ -588,7 +596,7 @@ METHOD(settings_t, get_time, u_int32_t,
 }
 
 METHOD(settings_t, set_str, void,
-	   private_settings_t *this, char *key, char *value, ...)
+	private_settings_t *this, char *key, char *value, ...)
 {
 	va_list args;
 	va_start(args, value);
@@ -597,7 +605,7 @@ METHOD(settings_t, set_str, void,
 }
 
 METHOD(settings_t, set_bool, void,
-	   private_settings_t *this, char *key, bool value, ...)
+	private_settings_t *this, char *key, bool value, ...)
 {
 	va_list args;
 	va_start(args, value);
@@ -606,7 +614,7 @@ METHOD(settings_t, set_bool, void,
 }
 
 METHOD(settings_t, set_int, void,
-	   private_settings_t *this, char *key, int value, ...)
+	private_settings_t *this, char *key, int value, ...)
 {
 	char val[16];
 	va_list args;
@@ -619,7 +627,7 @@ METHOD(settings_t, set_int, void,
 }
 
 METHOD(settings_t, set_double, void,
-	   private_settings_t *this, char *key, double value, ...)
+	private_settings_t *this, char *key, double value, ...)
 {
 	char val[64];
 	va_list args;
@@ -632,7 +640,7 @@ METHOD(settings_t, set_double, void,
 }
 
 METHOD(settings_t, set_time, void,
-	   private_settings_t *this, char *key, u_int32_t value, ...)
+	private_settings_t *this, char *key, u_int32_t value, ...)
 {
 	char val[16];
 	va_list args;
@@ -645,7 +653,7 @@ METHOD(settings_t, set_time, void,
 }
 
 METHOD(settings_t, set_default_str, bool,
-	   private_settings_t *this, char *key, char *value, ...)
+	private_settings_t *this, char *key, char *value, ...)
 {
 	char *old;
 	va_list args;
@@ -674,7 +682,7 @@ static bool section_filter(void *null, section_t **in, char **out)
 }
 
 METHOD(settings_t, create_section_enumerator, enumerator_t*,
-	   private_settings_t *this, char *key, ...)
+	private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -705,7 +713,7 @@ static bool kv_filter(void *null, kv_t **in, char **key,
 }
 
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
-	   private_settings_t *this, char *key, ...)
+	private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1179,13 +1187,13 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 }
 
 METHOD(settings_t, load_files, bool,
-	   private_settings_t *this, char *pattern, bool merge)
+	private_settings_t *this, char *pattern, bool merge)
 {
 	return load_files_internal(this, this->top, pattern, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
-	   private_settings_t *this, char *pattern, bool merge, char *key, ...)
+	private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1202,7 +1210,7 @@ METHOD(settings_t, load_files_section, bool,
 }
 
 METHOD(settings_t, destroy, void,
-	   private_settings_t *this)
+	private_settings_t *this)
 {
 	section_destroy(this->top);
 	this->contents->destroy_function(this->contents, (void*)free);
