@@ -20,6 +20,7 @@
 #include <utils/settings.h>
 #include <utils/chunk.h>
 #include <utils/utils.h>
+#include <collections/linked_list.h>
 
 static char *path = "/tmp/strongswan-settings-test";
 static settings_t *settings;
@@ -55,6 +56,8 @@ START_SETUP(setup_base_config)
 		"out = side\n"
 		"other {\n"
 		"	key1 = other val\n"
+		"	empty {\n"
+		"	}\n"
 		"}"));
 }
 END_SETUP
@@ -382,6 +385,141 @@ START_TEST(test_set_time)
 }
 END_TEST
 
+static bool verify_section(linked_list_t *verifier, char *section)
+{
+	enumerator_t *enumerator;
+	char *current;
+	bool result = FALSE;
+
+	enumerator = verifier->create_enumerator(verifier);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (streq(current, section))
+		{
+			verifier->remove_at(verifier, enumerator);
+			result = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return result;
+}
+
+static void verify_sections(linked_list_t *verifier, char *parent)
+{
+	enumerator_t *enumerator;
+	char *section;
+
+	enumerator = settings->create_section_enumerator(settings, parent);
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		ck_assert(verify_section(verifier, section));
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(0, verifier->get_count(verifier));
+	verifier->destroy(verifier);
+}
+
+START_TEST(test_section_enumerator)
+{
+	linked_list_t *verifier;
+
+	verifier = linked_list_create_with_items("sub1", "sub%", NULL);
+	verify_sections(verifier, "main");
+
+	settings->set_str(settings, "main.sub2.new", "added");
+	verifier = linked_list_create_with_items("sub1", "sub%", "sub2", NULL);
+	verify_sections(verifier, "main");
+
+	verifier = linked_list_create_with_items("subsub", NULL);
+	verify_sections(verifier, "main.sub1");
+
+	verifier = linked_list_create_with_items(NULL);
+	verify_sections(verifier, "main.sub%%");
+
+	verifier = linked_list_create_with_items(NULL);
+	verify_sections(verifier, "main.key1");
+
+	verifier = linked_list_create_with_items(NULL);
+	verify_sections(verifier, "main.unknown");
+}
+END_TEST
+
+static bool verify_key_value(linked_list_t *keys, linked_list_t *values,
+							 char *key, char *value)
+{
+	enumerator_t *enum_keys, *enum_values;
+	char *current_key, *current_value;
+	bool result = FALSE;
+
+	enum_keys = keys->create_enumerator(keys);
+	enum_values = values->create_enumerator(values);
+	while (enum_keys->enumerate(enum_keys, &current_key) &&
+		   enum_values->enumerate(enum_values, &current_value))
+	{
+		if (streq(current_key, key))
+		{
+			ck_assert_str_eq(current_value, value);
+			keys->remove_at(keys, enum_keys);
+			values->remove_at(values, enum_values);
+			result = TRUE;
+			break;
+		}
+	}
+	enum_keys->destroy(enum_keys);
+	enum_values->destroy(enum_values);
+	return result;
+}
+
+static void verify_key_values(linked_list_t *keys, linked_list_t *values,
+							  char *parent)
+{
+	enumerator_t *enumerator;
+	char *key, *value;
+
+	enumerator = settings->create_key_value_enumerator(settings, parent);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		ck_assert(verify_key_value(keys, values, key, value));
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(0, keys->get_count(keys));
+	keys->destroy(keys);
+	values->destroy(values);
+}
+
+START_TEST(test_key_value_enumerator)
+{
+	linked_list_t *keys, *values;
+
+	keys = linked_list_create_with_items("key1", "key2", "none", NULL);
+	values = linked_list_create_with_items("val1", "with spaces", "", NULL);
+	verify_key_values(keys, values, "main");
+
+	keys = linked_list_create_with_items("key", "key2", "subsub", NULL);
+	values = linked_list_create_with_items("value", "value2", "section value", NULL);
+	verify_key_values(keys, values, "main.sub1");
+
+	settings->set_str(settings, "main.sub2.new", "added");
+	keys = linked_list_create_with_items("new", NULL);
+	values = linked_list_create_with_items("added", NULL);
+	verify_key_values(keys, values, "main.sub2");
+
+	keys = linked_list_create_with_items(NULL);
+	values = linked_list_create_with_items(NULL);
+	verify_key_values(keys, values, "other.empty");
+
+	settings->set_str(settings, "other.empty.new", "added");
+	keys = linked_list_create_with_items("new", NULL);
+	values = linked_list_create_with_items("added", NULL);
+	verify_key_values(keys, values, "other.empty");
+
+	keys = linked_list_create_with_items(NULL);
+	values = linked_list_create_with_items(NULL);
+	verify_key_values(keys, values, "main.unknown");
+}
+END_TEST
+
 Suite *settings_suite_create()
 {
 	Suite *s;
@@ -420,6 +558,16 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_time_config, teardown_config);
 	tcase_add_test(tc, test_get_time);
 	tcase_add_test(tc, test_set_time);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("section enumerator");
+	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
+	tcase_add_test(tc, test_section_enumerator);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("key/value enumerator");
+	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
+	tcase_add_test(tc, test_key_value_enumerator);
 	suite_add_tcase(s, tc);
 
 	return s;
