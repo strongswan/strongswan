@@ -34,6 +34,7 @@ tests_SOURCES = tests.h tests.c \
   suites/test_stream.c \
   suites/test_fetch_http.c \
   suites/test_utils.c \
+  suites/test_settings.c \
   suites/test_vectors.c \
   suites/test_array.c \
   suites/test_ecdsa.c \
