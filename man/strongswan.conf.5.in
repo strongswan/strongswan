@@ -139,10 +139,14 @@ Plugins to load in ipsec attest tool
 .BR Note :
 Many of these options also apply to \fBcharon\-cmd\fR and other
 \fBcharon\fR derivatives. Just use their respective name (e.g.
-\fIcharon\-cmd\fR) instead of  \fIcharon\fR.
+\fIcharon\-cmd\fR) instead of  \fIcharon\fR. For many options defaults
+can be defined in the \fIlibstrongswan\fR section.
 .TP
 .BR charon.block_threshold " [5]"
 Maximum number of half-open IKE_SAs for a single peer IP
+.TP
+.BR charon.cert_cache " [yes]"
+Whether relations in validated certificate chains should be cached in memory
 .TP
 .BR charon.cisco_unity " [no]
 Send Cisco Unity vendor ID payload (IKEv1 only)
@@ -153,6 +157,31 @@ Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed
 .BR charon.cookie_threshold " [10]"
 Number of half-open IKE_SAs that activate the cookie mechanism
 .TP
+.BR charon.crypto_test.bench " [no]"
+
+.TP
+.BR charon.crypto_test.bench_size " [1024]"
+
+.TP
+.BR charon.crypto_test.bench_time " [50]"
+
+.TP
+.BR charon.crypto_test.on_add " [no]"
+Test crypto algorithms during registration
+.TP
+.BR charon.crypto_test.on_create " [no]"
+Test crypto algorithms on each crypto primitive instantiation
+.TP
+.BR charon.crypto_test.required " [no]"
+Strictly require at least one test vector to enable an algorithm
+.TP
+.BR charon.crypto_test.rng_true " [no]"
+Whether to test RNG with TRUE quality; requires a lot of entropy
+.TP
+.BR charon.dh_exponent_ansi_x9_42 " [yes]"
+Use ANSI X9.42 DH exponent size or optimum size matched to cryptographical
+strength
+.TP
 .BR charon.dns1
 .TQ
 .BR charon.dns2
@@ -160,6 +189,9 @@ DNS servers assigned to peer via configuration payload (CP)
 .TP
 .BR charon.dos_protection " [yes]"
 Enable Denial of Service protection using cookies and aggressiveness checks
+.TP
+.BR charon.ecp_x_coordinate_only " [yes]"
+Compliance with the errata for RFC 4753
 .TP
 .BR charon.filelog
 Section to define file loggers, see LOGGER CONFIGURATION
@@ -182,6 +214,12 @@ Timeout in seconds for connecting IKE_SAs (also see IKE_SA_INIT DROPPING).
 .TP
 .BR charon.hash_and_url " [no]"
 Enable hash and URL support
+.TP
+.BR charon.host_resolver.max_threads " [3]"
+Maximum number of concurrent resolver threads (they are terminated if unused)
+.TP
+.BR charon.host_resolver.min_threads " [0]"
+Minimum number of resolver threads to keep around
 .TP
 .BR charon.i_dont_care_about_security_and_use_aggressive_mode_psk " [no]"
 If enabled responders are allowed to use IKEv1 Aggressive Mode with pre-shared
@@ -225,6 +263,9 @@ Install virtual IP addresses
 The name of the interface on which virtual IP addresses should be installed.
 If not specified the addresses will be installed on the outbound interface.
 .TP
+.BR charon.integrity_test " [no]"
+Check daemon, libstrongswan and plugin integrity at startup
+.TP
 .BR charon.interfaces_ignore
 A comma-separated list of network interfaces that should be ignored, if
 .B charon.interfaces_use
@@ -236,6 +277,15 @@ All other interfaces are ignored.
 .TP
 .BR charon.keep_alive " [20s]"
 NAT keep alive interval
+.TP
+.BR charon.leak_detective.detailed " [yes]"
+Includes source file names and line numbers in leak detective output
+.TP
+.BR charon.leak_detective.usage_threshold " [10240]"
+Threshold in bytes for leaks to be reported (0 to report all)
+.TP
+.BR charon.leak_detective.usage_threshold_count " [0]"
+Threshold in number of allocations for leaks to be reported (0 to report all)
 .TP
 .BR charon.load
 Plugins to load in the IKEv2 daemon charon
@@ -262,6 +312,10 @@ otherwise a random port will be allocated.
 .TP
 .BR charon.process_route " [yes]"
 Process RTM_NEWROUTE and RTM_DELROUTE events
+.TP
+.BR charon.processor.priority_threads
+Subsection to configure the number of reserved threads per priority class
+see JOB PRIORITY MANAGEMENT
 .TP
 .BR charon.receive_delay " [0]"
 Delay in ms for receiving packets, to simulate larger RTT
@@ -327,6 +381,10 @@ might be used as indicator on the number of reserved threads.
 .TP
 .BR charon.user
 Name of the user the daemon changes to after startup
+.TP
+.BR charon.x509.enforce_critical " [yes]"
+Discard certificates with unsupported or unknown critical extensions
+.
 .SS charon.plugins subsection
 .TP
 .BR charon.plugins.android_log.loglevel " [1]"
@@ -335,6 +393,12 @@ Loglevel for logging to Android specific logger
 .BR charon.plugins.attr
 Section to specify arbitrary attributes that are assigned to a peer via
 configuration payload (CP)
+.TP
+.BR charon.plugins.attr-sql.database
+Database URI for attr-sql plugin used by charon
+.TP
+.BR charon.plugins.attr-sql.lease_history " [yes]"
+Enable logging of SQL IP pool leases
 .TP
 .BR charon.plugins.certexpire.csv.cron
 Cron style string specifying CSV export times
@@ -603,6 +667,9 @@ Request peer authentication based on a client certificate
 .BR charon.plugins.error-notify.socket " [unix://@piddir@/charon.enfy]"
 Socket provided by the error-notify plugin
 .TP
+.BR charon.plugins.gcrypt.quick_random " [no]"
+Use faster random numbers in gcrypt; for testing only, produces weak keys!
+.TP
 .BR charon.plugins.ha.autobalance " [0]"
 Interval in seconds to automatically balance handled segments between nodes.
 Set to 0 to disable.
@@ -680,12 +747,67 @@ Section to configure the load-tester plugin, see LOAD TESTS
 .BR charon.plugins.lookip.socket " [unix://@piddir@/charon.lkp]"
 Socket provided by the lookip plugin
 .TP
+.BR charon.plugins.ntru.max_drbg_requests " [4294967294]"
+Number of pseudo-random bit requests from the DRBG before an automatic
+reseeding occurs.
+.TP
+.BR charon.plugins.ntru.parameter_set " [optimum]"
+The following parameter sets are available:
+.BR x9_98_speed ,
+.BR x9_98_bandwidth ,
+.B x9_98_balance
+and
+.BR optimum ,
+the last set not being part of the X9.98 standard but having the best performance.
+.TP
+.BR charon.plugins.openssl.engine_id " [pkcs11]"
+ENGINE ID to use in the OpenSSL plugin
+.TP
+.BR charon.plugins.openssl.fips_mode " [0]"
+Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2)
+.TP
+.BR charon.plugins.pkcs11.modules
+List of available PKCS#11 modules
+.TP
+.BR charon.plugins.pkcs11.load_certs " [yes]"
+Whether to load certificates from tokens
+.TP
+.BR charon.plugins.pkcs11.reload_certs " [no]"
+Reload certificates from all tokens if charon receives a SIGHUP
+.TP
+.BR charon.plugins.pkcs11.use_dh " [no]"
+Whether the PKCS#11 modules should be used for DH and ECDH (see use_ecc option)
+.TP
+.BR charon.plugins.pkcs11.use_ecc " [no]"
+Whether the PKCS#11 modules should be used for ECDH and ECDSA public key
+operations. ECDSA private keys can be used regardless of this option
+.TP
+.BR charon.plugins.pkcs11.use_hasher " [no]"
+Whether the PKCS#11 modules should be used to hash data
+.TP
+.BR charon.plugins.pkcs11.use_pubkey " [no]"
+Whether the PKCS#11 modules should be used for public key operations, even for
+keys not stored on tokens
+.TP
+.BR charon.plugins.pkcs11.use_rng " [no]"
+Whether the PKCS#11 modules should be used as RNG
+.TP
 .BR charon.plugins.radattr.dir
 Directory where RADIUS attributes are stored in client-ID specific files.
 .TP
 .BR charon.plugins.radattr.message_id " [-1]"
 Attributes are added to all IKE_AUTH messages by default (-1), or only to the
 IKE_AUTH message with the given IKEv2 message ID.
+.TP
+.BR charon.plugins.random.random " [@random_device@]"
+File to read random bytes from, instead of @random_device@
+.TP
+.BR charon.plugins.random.urandom " [@urandom_device@]"
+File to read pseudo random bytes from, instead of @urandom_device@
+.TP
+.BR charon.plugins.random.strong_equals_true " [no]"
+If set to yes the RNG_STRONG class reads random bytes from the same source as
+the RNG_TRUE class.
 .TP
 .BR charon.plugins.resolve.file " [/etc/resolv.conf]"
 File where to add DNS server entries
@@ -787,6 +909,20 @@ Name of the strongSwan PDP as contained in the AAA certificate
 .BR charon.plugins.tnc-pdp.timeout
 Timeout in seconds before closing incomplete connections
 .TP
+.BR charon.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
+File to read DNS resolver configuration from
+.TP
+.BR charon.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
+File to read DNSSEC trust anchors from (usually root zone KSK). The format of
+the file is the standard DNS Zone file format, anchors can be stored as DS or
+DNSKEY entries in the file.
+.TP
+.BR charon.plugins.unbound.dlv_anchors
+File to read trusted keys for DLV (DNSSEC Lookaside Validation) from. It uses
+the same format as \fItrust_anchors\fR. Only one DLV can be configured, which
+is then used as a root trusted DLV, this means that it is a lookaside for
+the root.
+.TP
 .BR charon.plugins.updown.dns_handler " [no]"
 Whether the updown script should handle DNS serves assigned via IKEv1 Mode
 Config or IKEv2 Config Payloads (if enabled they can't be handled by other
@@ -810,142 +946,6 @@ Open/close a PAM session for each active IKE_SA
 .BR charon.plugins.xauth-pam.trim_email " [yes]"
 If an email address is given as an XAuth username, trim it to just the
 username part.
-.SS libstrongswan section
-.TP
-.BR libstrongswan.cert_cache " [yes]"
-Whether relations in validated certificate chains should be cached in memory
-.TP
-.BR libstrongswan.crypto_test.bench " [no]"
-
-.TP
-.BR libstrongswan.crypto_test.bench_size " [1024]"
-
-.TP
-.BR libstrongswan.crypto_test.bench_time " [50]"
-
-.TP
-.BR libstrongswan.crypto_test.on_add " [no]"
-Test crypto algorithms during registration
-.TP
-.BR libstrongswan.crypto_test.on_create " [no]"
-Test crypto algorithms on each crypto primitive instantiation
-.TP
-.BR libstrongswan.crypto_test.required " [no]"
-Strictly require at least one test vector to enable an algorithm
-.TP
-.BR libstrongswan.crypto_test.rng_true " [no]"
-Whether to test RNG with TRUE quality; requires a lot of entropy
-.TP
-.BR libstrongswan.dh_exponent_ansi_x9_42 " [yes]"
-Use ANSI X9.42 DH exponent size or optimum size matched to cryptographical
-strength
-.TP
-.BR libstrongswan.ecp_x_coordinate_only " [yes]"
-Compliance with the errata for RFC 4753
-.TP
-.BR libstrongswan.host_resolver.max_threads " [3]"
-Maximum number of concurrent resolver threads (they are terminated if unused)
-.TP
-.BR libstrongswan.host_resolver.min_threads " [0]"
-Minimum number of resolver threads to keep around
-.TP
-.BR libstrongswan.integrity_test " [no]"
-Check daemon, libstrongswan and plugin integrity at startup
-.TP
-.BR libstrongswan.leak_detective.detailed " [yes]"
-Includes source file names and line numbers in leak detective output
-.TP
-.BR libstrongswan.leak_detective.usage_threshold " [10240]"
-Threshold in bytes for leaks to be reported (0 to report all)
-.TP
-.BR libstrongswan.leak_detective.usage_threshold_count " [0]"
-Threshold in number of allocations for leaks to be reported (0 to report all)
-.TP
-.BR libstrongswan.processor.priority_threads
-Subsection to configure the number of reserved threads per priority class
-see JOB PRIORITY MANAGEMENT
-.TP
-.BR libstrongswan.x509.enforce_critical " [yes]"
-Discard certificates with unsupported or unknown critical extensions
-.SS libstrongswan.plugins subsection
-.TP
-.BR libstrongswan.plugins.attr-sql.database
-Database URI for attr-sql plugin used by charon
-.TP
-.BR libstrongswan.plugins.attr-sql.lease_history " [yes]"
-Enable logging of SQL IP pool leases
-.TP
-.BR libstrongswan.plugins.gcrypt.quick_random " [no]"
-Use faster random numbers in gcrypt; for testing only, produces weak keys!
-.TP
-.BR libstrongswan.plugins.ntru.max_drbg_requests " [4294967294]"
-Number of pseudo-random bit requests from the DRBG before an automatic
-reseeding occurs.
-.TP
-.BR libstrongswan.plugins.ntru.parameter_set " [optimum]"
-The following parameter sets are available:
-.BR x9_98_speed ,
-.BR x9_98_bandwidth ,
-.B x9_98_balance
-and
-.BR optimum ,
-the last set not being part of the X9.98 standard but having the best performance.
-.TP
-.BR libstrongswan.plugins.openssl.engine_id " [pkcs11]"
-ENGINE ID to use in the OpenSSL plugin
-.TP
-.BR libstrongswan.plugins.openssl.fips_mode " [0]"
-Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2)
-.TP
-.BR libstrongswan.plugins.pkcs11.modules
-List of available PKCS#11 modules
-.TP
-.BR libstrongswan.plugins.pkcs11.load_certs " [yes]"
-Whether to load certificates from tokens
-.TP
-.BR libstrongswan.plugins.pkcs11.reload_certs " [no]"
-Reload certificates from all tokens if charon receives a SIGHUP
-.TP
-.BR libstrongswan.plugins.pkcs11.use_dh " [no]"
-Whether the PKCS#11 modules should be used for DH and ECDH (see use_ecc option)
-.TP
-.BR libstrongswan.plugins.pkcs11.use_ecc " [no]"
-Whether the PKCS#11 modules should be used for ECDH and ECDSA public key
-operations. ECDSA private keys can be used regardless of this option
-.TP
-.BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
-Whether the PKCS#11 modules should be used to hash data
-.TP
-.BR libstrongswan.plugins.pkcs11.use_pubkey " [no]"
-Whether the PKCS#11 modules should be used for public key operations, even for
-keys not stored on tokens
-.TP
-.BR libstrongswan.plugins.pkcs11.use_rng " [no]"
-Whether the PKCS#11 modules should be used as RNG
-.TP
-.BR libstrongswan.plugins.random.random " [@random_device@]"
-File to read random bytes from, instead of @random_device@
-.TP
-.BR libstrongswan.plugins.random.urandom " [@urandom_device@]"
-File to read pseudo random bytes from, instead of @urandom_device@
-.TP
-.BR libstrongswan.plugins.random.strong_equals_true " [no]"
-If set to yes the RNG_STRONG class reads random bytes from the same source as
-the RNG_TRUE class.
-.TP
-.BR libstrongswan.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
-File to read DNS resolver configuration from
-.TP
-.BR libstrongswan.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
-File to read DNSSEC trust anchors from (usually root zone KSK). The format of
-the file is the standard DNS Zone file format, anchors can be stored as DS or
-DNSKEY entries in the file.
-.TP
-.BR libstrongswan.plugins.unbound.dlv_anchors
-File to read trusted keys for DLV (DNSSEC Lookaside Validation) from. It uses
-the same format as \fItrust_anchors\fR. Only one DLV can be configured, which
-is then used as a root trusted DLV, this means that it is a lookaside for
-the root.
 .SS libtls section
 .TP
 .BR libtls.cipher
@@ -1378,22 +1378,22 @@ for one).
 To ensure that there are always enough threads available for higher priority
 tasks, threads must be reserved for each priority class.
 .TP
-.BR libstrongswan.processor.priority_threads.critical " [0]"
+.BR charon.processor.priority_threads.critical " [0]"
 Threads reserved for CRITICAL priority class jobs
 .TP
-.BR libstrongswan.processor.priority_threads.high " [0]"
+.BR charon.processor.priority_threads.high " [0]"
 Threads reserved for HIGH priority class jobs
 .TP
-.BR libstrongswan.processor.priority_threads.medium " [0]"
+.BR charon.processor.priority_threads.medium " [0]"
 Threads reserved for MEDIUM priority class jobs
 .TP
-.BR libstrongswan.processor.priority_threads.low " [0]"
+.BR charon.processor.priority_threads.low " [0]"
 Threads reserved for LOW priority class jobs
 .PP
 Let's consider the following configuration:
 .PP
 .EX
-	libstrongswan {
+	charon {
 		processor {
 			priority_threads {
 				high = 1

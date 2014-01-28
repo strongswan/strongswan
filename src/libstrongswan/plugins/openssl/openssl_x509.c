@@ -1012,7 +1012,7 @@ static bool parse_extensions(private_openssl_x509_t *this)
 				default:
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,
-								"libstrongswan.x509.enforce_critical", TRUE);
+									"%s.x509.enforce_critical", TRUE, lib->ns);
 					if (!ok)
 					{
 						char buf[80] = "";

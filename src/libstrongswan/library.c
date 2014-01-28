@@ -108,7 +108,7 @@ void library_deinit()
 	}
 
 	detailed = lib->settings->get_bool(lib->settings,
-								"libstrongswan.leak_detective.detailed", TRUE);
+								"%s.leak_detective.detailed", TRUE, lib->ns);
 
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
@@ -318,7 +318,7 @@ bool library_init(char *settings, const char *namespace)
 	}
 
 	if (lib->settings->get_bool(lib->settings,
-								"libstrongswan.integrity_test", FALSE))
+								"%s.integrity_test", FALSE, lib->ns))
 	{
 #ifdef INTEGRITY_TEST
 		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);

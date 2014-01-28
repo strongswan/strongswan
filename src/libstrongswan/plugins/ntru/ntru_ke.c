@@ -316,7 +316,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	u_int32_t strength;
 
 	parameter_set = lib->settings->get_str(lib->settings,
-				"libstrongswan.plugins.ntru.parameter_set", "optimum");
+						"%s.plugins.ntru.parameter_set", "optimum", lib->ns);
 
 	if (streq(parameter_set, "x9_98_speed"))
 	{

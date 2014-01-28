@@ -83,8 +83,8 @@ static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
 	if (add && this->handle_events)
 	{
 		if (lib->settings->get_bool(lib->settings,
-						"libstrongswan.plugins.pkcs11.modules.%s.load_certs",
-						TRUE, p11->get_name(p11)))
+								"%s.plugins.pkcs11.modules.%s.load_certs",
+								TRUE, lib->ns, p11->get_name(p11)))
 		{
 			creds = pkcs11_creds_create(p11, slot);
 			if (creds)
@@ -174,8 +174,8 @@ static bool handle_certs(private_pkcs11_plugin_t *this,
 METHOD(plugin_t, reload, bool,
 	private_pkcs11_plugin_t *this)
 {
-	if (lib->settings->get_bool(lib->settings,
-					"libstrongswan.plugins.pkcs11.reload_certs", FALSE))
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.pkcs11.reload_certs",
+								FALSE, lib->ns))
 	{
 		DBG1(DBG_CFG, "reloading certificates from PKCS#11 tokens");
 		handle_certs(this, NULL, FALSE, NULL);
@@ -247,28 +247,28 @@ METHOD(plugin_t, get_features, int,
 	if (!count)
 	{	/* initialize only once */
 		bool use_ecc = lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_ecc", FALSE);
+								"%s.plugins.pkcs11.use_ecc", FALSE, lib->ns);
 		plugin_features_add(f, f_manager, countof(f_manager), &count);
 		/* private key handling for EC keys is not disabled by use_ecc */
 		plugin_features_add(f, f_privkey, countof(f_privkey), &count);
 		if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_pubkey", FALSE))
+								"%s.plugins.pkcs11.use_pubkey", FALSE, lib->ns))
 		{
 			plugin_features_add(f, f_pubkey, countof(f_pubkey) - (use_ecc ? 0 : 1),
 								&count);
 		}
 		if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
+								"%s.plugins.pkcs11.use_hasher", FALSE, lib->ns))
 		{
 			plugin_features_add(f, f_hash, countof(f_hash), &count);
 		}
 		if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_rng", FALSE))
+								"%s.plugins.pkcs11.use_rng", FALSE, lib->ns))
 		{
 			plugin_features_add(f, f_rng, countof(f_rng), &count);
 		}
 		if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_dh", FALSE))
+								"%s.plugins.pkcs11.use_dh", FALSE, lib->ns))
 		{
 			plugin_features_add(f, f_dh, countof(f_dh), &count);
 			if (use_ecc)

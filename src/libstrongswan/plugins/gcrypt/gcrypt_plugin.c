@@ -194,8 +194,8 @@ plugin_t *gcrypt_plugin_create()
 
 	/* we currently do not use secure memory */
 	gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
-	if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.gcrypt.quick_random", FALSE))
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.gcrypt.quick_random",
+								FALSE, lib->ns))
 	{
 		gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 	}

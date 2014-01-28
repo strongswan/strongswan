@@ -325,7 +325,7 @@ static bool parse(private_x509_crl_t *this)
 						break;
 					default:
 						if (critical && lib->settings->get_bool(lib->settings,
-							"libstrongswan.x509.enforce_critical", TRUE))
+							"%s.x509.enforce_critical", TRUE, lib->ns))
 						{
 							DBG1(DBG_ASN, "critical '%s' extension not supported",
 								 (extn_oid == OID_UNKNOWN) ? "unknown" :

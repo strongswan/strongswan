@@ -522,7 +522,7 @@ plugin_t *openssl_plugin_create()
 	int fips_mode;
 
 	fips_mode = lib->settings->get_int(lib->settings,
-						"libstrongswan.plugins.openssl.fips_mode", FIPS_MODE);
+							"%s.plugins.openssl.fips_mode", FIPS_MODE, lib->ns);
 #ifdef OPENSSL_FIPS
 	if (fips_mode)
 	{

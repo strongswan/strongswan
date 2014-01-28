@@ -230,8 +230,8 @@ ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
 	}
 
 	max_requests = lib->settings->get_int(lib->settings,
-							"libstrongswan.plugins.ntru.max_drbg_requests",
-							 MAX_DRBG_REQUESTS);
+										  "%s.plugins.ntru.max_drbg_requests",
+										  MAX_DRBG_REQUESTS, lib->ns);
 
 	INIT(this,
 		.public = {
