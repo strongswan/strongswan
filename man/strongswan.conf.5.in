@@ -379,6 +379,18 @@ set this value too low. The number of idle worker threads listed in
 .I ipsec statusall
 might be used as indicator on the number of reserved threads.
 .TP
+.BR charon.tls.cipher
+List of TLS encryption ciphers
+.TP
+.BR charon.tls.key_exchange
+List of TLS key exchange methods
+.TP
+.BR charon.tls.mac
+List of TLS MAC algorithms
+.TP
+.BR charon.tls.suites
+List of TLS cipher suites
+.TP
 .BR charon.user
 Name of the user the daemon changes to after startup
 .TP
@@ -946,19 +958,6 @@ Open/close a PAM session for each active IKE_SA
 .BR charon.plugins.xauth-pam.trim_email " [yes]"
 If an email address is given as an XAuth username, trim it to just the
 username part.
-.SS libtls section
-.TP
-.BR libtls.cipher
-List of TLS encryption ciphers
-.TP
-.BR libtls.key_exchange
-List of TLS key exchange methods
-.TP
-.BR libtls.mac
-List of TLS MAC algorithms
-.TP
-.BR libtls.suites
-List of TLS cipher suites
 .SS libtnccs section
 .TP
 .BR libtnccs.tnc_config " [/etc/tnc_config]"
