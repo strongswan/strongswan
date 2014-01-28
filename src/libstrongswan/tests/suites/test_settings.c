@@ -522,6 +522,148 @@ START_TEST(test_key_value_enumerator)
 }
 END_TEST
 
+#define include1 "/tmp/strongswan-settings-test-include1"
+#define include2 "/tmp/strongswan-settings-test-include2"
+
+START_SETUP(setup_include_config)
+{
+	chunk_t inc1 = chunk_from_str(
+		"main {\n"
+		"	key1 = n1\n"
+		"	key2 = n2\n"
+		"	none = \n"
+		"	sub1 {\n"
+		"		key3 = value\n"
+		"	}\n"
+		"	sub2 {\n"
+		"		sub3 = val3\n"
+		"	}\n"
+		"	include " include2 "\n"
+		"}");
+	chunk_t inc2 = chunk_from_str(
+		"key2 = v2\n"
+		"sub1 {\n"
+		"	key = val\n"
+		"}");
+	ck_assert(chunk_write(inc1, include1, 0022, TRUE));
+	ck_assert(chunk_write(inc2, include2, 0022, TRUE));
+}
+END_SETUP
+
+START_TEARDOWN(teardown_include_config)
+{
+	settings->destroy(settings);
+	unlink(include2);
+	unlink(include1);
+	unlink(path);
+}
+END_TEARDOWN
+
+static void verify_include()
+{
+	verify_string("n1", "main.key1");
+	verify_string("v2", "main.key2");
+	verify_string("", "main.none");
+	verify_string("val", "main.sub1.key");
+	verify_string("v2", "main.sub1.key2");
+	verify_string("val", "main.sub1.sub1.key");
+	verify_string("value", "main.sub1.key3");
+	verify_string("value", "main.sub1.include");
+	verify_string("val3", "main.sub2.sub3");
+}
+
+START_TEST(test_include)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"		include " include2 "\n"
+		"	}\n"
+		"}\n"
+		"# currently there must be a newline after include statements\n"
+		"include " include1 "\n");
+
+	create_settings(contents);
+	verify_include();
+}
+END_TEST
+
+START_TEST(test_load_files)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = v2\n"
+		"		sub1 {\n"
+		"			key = val\n"
+		"		}\n"
+		"	}\n"
+		"}");
+
+	create_settings(contents);
+
+	ck_assert(settings->load_files(settings, include1, TRUE));
+	verify_include();
+
+	ck_assert(settings->load_files(settings, include2, FALSE));
+	verify_null("main.key1");
+	verify_string("v2", "key2");
+	verify_string("val", "sub1.key");
+	verify_null("main.sub1.key3");
+}
+END_TEST
+
+START_TEST(test_load_files_section)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"	}\n"
+		"}");
+
+	create_settings(contents);
+
+	ck_assert(settings->load_files_section(settings, include1, TRUE, ""));
+	ck_assert(settings->load_files_section(settings, include2, TRUE, "main.sub1"));
+	verify_include();
+
+	/* non existing files are no failure */
+	ck_assert(settings->load_files_section(settings, include1".conf", TRUE, ""));
+	verify_include();
+
+	/* unreadable files are */
+	ck_assert(chunk_write(contents, include1".no", 0444, TRUE));
+	ck_assert(!settings->load_files_section(settings, include1".no", TRUE, ""));
+	unlink(include1".no");
+	verify_include();
+
+	ck_assert(settings->load_files_section(settings, include2, FALSE, "main"));
+	verify_null("main.key1");
+	verify_string("v2", "main.key2");
+	verify_string("val", "main.sub1.key");
+	verify_null("main.sub1.key3");
+	verify_null("main.sub2.sub3");
+
+	ck_assert(settings->load_files_section(settings, include2, TRUE, "main.sub2"));
+	verify_string("v2", "main.sub2.key2");
+	verify_string("val", "main.sub2.sub1.key");
+}
+END_TEST
+
 Suite *settings_suite_create()
 {
 	Suite *s;
@@ -570,6 +712,13 @@ Suite *settings_suite_create()
 	tc = tcase_create("key/value enumerator");
 	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
 	tcase_add_test(tc, test_key_value_enumerator);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("include/load_files[_section]");
+	tcase_add_checked_fixture(tc, setup_include_config, teardown_include_config);
+	tcase_add_test(tc, test_include);
+	tcase_add_test(tc, test_load_files);
+	tcase_add_test(tc, test_load_files_section);
 	suite_add_tcase(s, tc);
 
 	return s;
