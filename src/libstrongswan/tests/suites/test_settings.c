@@ -664,6 +664,109 @@ START_TEST(test_load_files_section)
 }
 END_TEST
 
+START_SETUP(setup_fallback_config)
+{
+	create_settings(chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	sub1 {\n"
+		"		key1 = val1\n"
+		"	}\n"
+		"}\n"
+		"sub {\n"
+		"	key1 = subval1\n"
+		"	key2 = subval2\n"
+		"	subsub {\n"
+		"		subkey1 = subsubval1\n"
+		"	}\n"
+		"}\n"
+		"base {\n"
+		"	key1 = baseval1\n"
+		"	key2 = baseval2\n"
+		"	sub1 {\n"
+		"		key1 = subbase1\n"
+		"		key2 = subbase2\n"
+		"		key3 = subbase3\n"
+		"		subsub {\n"
+		"			subkey1 = subsubbaseval1\n"
+		"			subkey2 = subsubbaseval2\n"
+		"		}\n"
+		"	}\n"
+		"	sub2 {\n"
+		"		key4 = subbase4\n"
+		"	}\n"
+		"}"));
+}
+END_SETUP
+
+START_TEST(test_add_fallback)
+{
+	linked_list_t *keys, *values;
+
+	settings->add_fallback(settings, "main.sub1", "sub");
+	verify_string("val1", "main.sub1.key1");
+	verify_string("subval2", "main.sub1.key2");
+	verify_string("subsubval1", "main.sub1.subsub.subkey1");
+
+	/* fallbacks are preserved even if the complete config is replaced */
+	settings->load_files(settings, path, FALSE);
+	verify_string("val1", "main.sub1.key1");
+	verify_string("subval2", "main.sub1.key2");
+	verify_string("subsubval1", "main.sub1.subsub.subkey1");
+
+	/* fallbacks currently have no effect on section & key/value enumerators */
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "main.sub1");
+
+	keys = linked_list_create_with_items("key1", NULL);
+	values = linked_list_create_with_items("val1", NULL);
+	verify_key_values(keys, values, "main.sub1");
+
+	settings->add_fallback(settings, "main", "base");
+	verify_string("val1", "main.key1");
+	verify_string("baseval2", "main.key2");
+	verify_string("val1", "main.sub1.key1");
+	verify_string("subval2", "main.sub1.key2");
+	verify_string("subsubval1", "main.sub1.subsub.subkey1");
+	verify_string("subsubbaseval2", "main.sub1.subsub.subkey2");
+	verify_string("subbase3", "main.sub1.key3");
+	verify_string("subbase4", "main.sub2.key4");
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "main.sub1");
+	keys = linked_list_create_with_items("sub1", NULL);
+	verify_sections(keys, "main");
+
+	keys = linked_list_create_with_items("key1", NULL);
+	values = linked_list_create_with_items("val1", NULL);
+	verify_key_values(keys, values, "main.sub1");
+
+	keys = linked_list_create_with_items("key1", NULL);
+	values = linked_list_create_with_items("val1", NULL);
+	verify_key_values(keys, values, "main");
+
+	settings->set_str(settings, "main.sub1.key2", "val2");
+	verify_string("val2", "main.sub1.key2");
+	settings->set_str(settings, "main.sub1.subsub.subkey2", "val2");
+	verify_string("val2", "main.sub1.subsub.subkey2");
+	verify_string("subsubval1", "main.sub1.subsub.subkey1");
+}
+END_TEST
+
+START_TEST(test_add_fallback_printf)
+{
+	settings->add_fallback(settings, "%s.sub1", "sub", "main");
+	verify_string("val1", "main.sub1.key1");
+	verify_string("subval2", "main.sub1.key2");
+	verify_string("subsubval1", "main.sub1.subsub.subkey1");
+
+	settings->add_fallback(settings, "%s.%s2", "%s.%s1", "main", "sub");
+	verify_string("val1", "main.sub2.key1");
+	verify_string("subval2", "main.sub2.key2");
+	verify_string("subsubval1", "main.sub2.subsub.subkey1");
+}
+END_TEST
+
 Suite *settings_suite_create()
 {
 	Suite *s;
@@ -719,6 +822,12 @@ Suite *settings_suite_create()
 	tcase_add_test(tc, test_include);
 	tcase_add_test(tc, test_load_files);
 	tcase_add_test(tc, test_load_files_section);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("fallback");
+	tcase_add_checked_fixture(tc, setup_fallback_config, teardown_config);
+	tcase_add_test(tc, test_add_fallback);
+	tcase_add_test(tc, test_add_fallback_printf);
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -31,6 +31,7 @@
 
 #include "settings.h"
 
+#include "collections/array.h"
 #include "collections/linked_list.h"
 #include "threading/rwlock.h"
 #include "utils/debug.h"
@@ -76,6 +77,11 @@ struct section_t {
 	 * name of the section
 	 */
 	char *name;
+
+	/**
+	 * fallback sections, as section_t
+	 */
+	array_t *fallbacks;
 
 	/**
 	 * subsections, as section_t
@@ -147,19 +153,45 @@ static void section_destroy(section_t *this)
 {
 	this->kv->destroy_function(this->kv, (void*)kv_destroy);
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	array_destroy(this->fallbacks);
 	free(this->name);
 	free(this);
 }
 
-/**
- * Purge contents of a section
+/*
+ * forward declaration
  */
-static void section_purge(section_t *this)
+static bool section_purge(section_t *this);
+
+/**
+ * Check if it is safe to remove the given section.
+ */
+static bool section_remove(section_t *this)
 {
+	if (section_purge(this))
+	{
+		return FALSE;
+	}
+	section_destroy(this);
+	return TRUE;
+}
+
+/**
+ * Purge contents of a section, returns TRUE if section has to be kept due to
+ * any subsections.
+ */
+static bool section_purge(section_t *this)
+{
+	int count, removed;
+
 	this->kv->destroy_function(this->kv, (void*)kv_destroy);
 	this->kv = linked_list_create();
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
-	this->sections = linked_list_create();
+	/* we ensure sections used as fallback, or configured with fallbacks (or
+	 * having any such subsections) are not removed */
+	count = this->sections->get_count(this->sections);
+	removed = this->sections->remove(this->sections, NULL,
+									(void*)section_remove);
+	return this->fallbacks || removed < count;
 }
 
 /**
@@ -291,7 +323,7 @@ static section_t *find_section(private_settings_t *this, section_t *section,
  * Ensure that the section with the given key exists (thread-safe).
  */
 static section_t *ensure_section(private_settings_t *this, section_t *section,
-								 char *key, va_list args)
+								 const char *key, va_list args)
 {
 	char buf[128], keybuf[512];
 	section_t *found;
@@ -309,13 +341,72 @@ static section_t *ensure_section(private_settings_t *this, section_t *section,
 }
 
 /**
+ * Check if the given fallback section already exists
+ */
+static bool fallback_exists(section_t *section, section_t *fallback)
+{
+	if (section == fallback)
+	{
+		return TRUE;
+	}
+	else if (section->fallbacks)
+	{
+		section_t *existing;
+		int i;
+
+		for (i = 0; i < array_count(section->fallbacks); i++)
+		{
+			array_get(section->fallbacks, i, &existing);
+			if (existing == fallback)
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Ensure that the section with the given key exists and add the given fallback
+ * section (thread-safe).
+ */
+static void add_fallback_to_section(private_settings_t *this,
+							section_t *section, const char *key, va_list args,
+							section_t *fallback)
+{
+	char buf[128], keybuf[512];
+	section_t *found;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return;
+	}
+	this->lock->write_lock(this->lock);
+	found = find_section_buffered(section, keybuf, keybuf, args, buf,
+								  sizeof(buf), TRUE);
+	if (!fallback_exists(found, fallback))
+	{
+		/* to ensure sections referred to as fallback are not purged, we create
+		 * the array there too */
+		if (!fallback->fallbacks)
+		{
+			fallback->fallbacks = array_create(0, 0);
+		}
+		array_insert_create(&found->fallbacks, ARRAY_TAIL, fallback);
+	}
+	this->lock->unlock(this->lock);
+}
+
+/**
  * Find the key/value pair for a key, using buffered key, reusable buffer
  * If "ensure" is TRUE, the sections (and key/value pair) are created if they
  * don't exist.
+ * Fallbacks are only considered if "ensure" is FALSE.
  */
 static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 								 va_list args, char *buf, int len, bool ensure)
 {
+	int i;
 	char *pos;
 	kv_t *kv = NULL;
 	section_t *found = NULL;
@@ -329,12 +420,12 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 	if (pos)
 	{
 		*pos = '\0';
-		pos++;
-
 		if (!print_key(buf, len, start, key, args))
 		{
 			return NULL;
 		}
+		/* restore so we can retry for fallbacks */
+		*pos = '.';
 		if (!strlen(buf))
 		{
 			found = section;
@@ -343,15 +434,26 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 											  (linked_list_match_t)section_find,
 											  (void**)&found, buf) != SUCCESS)
 		{
-			if (!ensure)
+			if (ensure)
 			{
-				return NULL;
+				found = section_create(buf);
+				section->sections->insert_last(section->sections, found);
 			}
-			found = section_create(buf);
-			section->sections->insert_last(section->sections, found);
 		}
-		return find_value_buffered(found, start, pos, args, buf, len,
-								   ensure);
+		if (found)
+		{
+			kv = find_value_buffered(found, start, pos+1, args, buf, len,
+									 ensure);
+		}
+		if (!kv && !ensure && section->fallbacks)
+		{
+			for (i = 0; !kv && i < array_count(section->fallbacks); i++)
+			{
+				array_get(section->fallbacks, i, &found);
+				kv = find_value_buffered(found, start, key, args, buf, len,
+										 ensure);
+			}
+		}
 	}
 	else
 	{
@@ -366,6 +468,15 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 			{
 				kv = kv_create(buf, NULL);
 				section->kv->insert_last(section->kv, kv);
+			}
+			else if (section->fallbacks)
+			{
+				for (i = 0; !kv && i < array_count(section->fallbacks); i++)
+				{
+					array_get(section->fallbacks, i, &found);
+					kv = find_value_buffered(found, start, key, args, buf, len,
+											 ensure);
+				}
 			}
 		}
 	}
@@ -725,6 +836,22 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	return enumerator_create_filter(
 					section->kv->create_enumerator(section->kv),
 					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
+}
+
+METHOD(settings_t, add_fallback, void,
+	private_settings_t *this, const char *key, const char *fallback, ...)
+{
+	section_t *section;
+	va_list args;
+
+	/* find/create the fallback */
+	va_start(args, fallback);
+	section = ensure_section(this, this->top, fallback, args);
+	va_end(args);
+
+	va_start(args, fallback);
+	add_fallback_to_section(this, this->top, key, args, section);
+	va_end(args);
 }
 
 /**
@@ -1235,6 +1362,7 @@ settings_t *settings_create(char *file)
 			.set_default_str = _set_default_str,
 			.create_section_enumerator = _create_section_enumerator,
 			.create_key_value_enumerator = _create_key_value_enumerator,
+			.add_fallback = _add_fallback,
 			.load_files = _load_files,
 			.load_files_section = _load_files_section,
 			.destroy = _destroy,

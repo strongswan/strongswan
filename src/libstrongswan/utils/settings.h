@@ -269,6 +269,32 @@ struct settings_t {
 												 char *section, ...);
 
 	/**
+	 * Add a fallback for the given section.
+	 *
+	 * Example: When the fallback 'section-two' is configured for
+	 * 'section-one.two' any failed lookup for a section or key in
+	 * 'section-one.two' will result in a lookup for the same section/key
+	 * in 'section-two'.
+	 *
+	 * @note This has only an effect on single value lookups.  Enumerators for
+	 * sections and key/value-pairs are not affected.  The reason is that it is
+	 * rather tricky to implement such a merge without requiring allocations for
+	 * each lookup.  For instance, if charon.tls has libtls as fallback and
+	 * charon has libstrongswan as fallback, the key/value-enumerator for
+	 * charon.tls had to enumerate the libtls and libstrongswan.tls sections
+	 * too, but it would have to keep track of the already enumerated keys.
+	 *
+	 * @note Additional arguments will be applied to both section format
+	 * strings so they must be compatible.
+	 *
+	 * @param section	section for which a fallback is configured, printf style
+	 * @param fallback	fallback section, printf style
+	 * @param ...		argument list for section and fallback
+	 */
+	void (*add_fallback)(settings_t *this, const char *section,
+						 const char *fallback, ...);
+
+	/**
 	 * Load settings from the files matching the given pattern.
 	 *
 	 * If merge is TRUE, existing sections are extended, existing values
