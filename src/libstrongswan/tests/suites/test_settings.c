@@ -767,6 +767,73 @@ START_TEST(test_add_fallback_printf)
 }
 END_TEST
 
+START_SETUP(setup_invalid_config)
+{
+	create_settings(chunk_from_str(
+		"# section without name\n"
+		"{\n"
+		"	key1 = val1\n"
+		"}\n"
+		"main {\n"
+		"	key2 = val2\n"
+		"   # value without key\n"
+		"	= val3\n"
+		"	key4 = val4\n"
+		"	# key without value does not change it\n"
+		"	key4\n"
+		"	# subsection without name\n"
+		"	{\n"
+		"		key5 = val5\n"
+		"	}\n"
+		"	# empty include pattern\n"
+		"	include\n"
+		"	key6 = val6\n"
+		"}"));
+}
+END_SETUP
+
+START_TEST(test_invalid)
+{
+	linked_list_t *keys, *values;
+	chunk_t contents;
+
+	verify_null("key1");
+	verify_null(".key1");
+	verify_null("%s.key1", "");
+	verify_string("val2", "main.key2");
+	verify_string("val4", "main.key4");
+	verify_null("main..key5");
+	verify_string("val6", "main.key6");
+
+	keys = linked_list_create_with_items("main", NULL);
+	verify_sections(keys, "");
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "main");
+
+	keys = linked_list_create_with_items("key2", "key4", "key6", NULL);
+	values = linked_list_create_with_items("val2", "val4", "val6", NULL);
+	verify_key_values(keys, values, "main");
+
+	/* FIXME: we should probably fix this */
+	contents = chunk_from_str(
+		"requires = newline");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"unterminated {\n"
+		"	not = valid\n");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"singleline { not = valid }\n");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+}
+END_TEST
+
 Suite *settings_suite_create()
 {
 	Suite *s;
@@ -828,6 +895,11 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_fallback_config, teardown_config);
 	tcase_add_test(tc, test_add_fallback);
 	tcase_add_test(tc, test_add_fallback_printf);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("invalid data");
+	tcase_add_checked_fixture(tc, setup_invalid_config, teardown_config);
+	tcase_add_test(tc, test_invalid);
 	suite_add_tcase(s, tc);
 
 	return s;
