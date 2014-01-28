@@ -124,6 +124,47 @@ START_TEST(test_get_str_printf)
 }
 END_TEST
 
+START_TEST(test_set_str)
+{
+	settings->set_str(settings, "main.key1", "val");
+	verify_string("val", "main.key1");
+	settings->set_str(settings, "main.key1", "longer value");
+	verify_string("longer value", "main.key1");
+	settings->set_str(settings, "main", "main val");
+	verify_string("main val", "main");
+	settings->set_str(settings, "main.sub1.new", "added");
+	verify_string("added", "main.sub1.new");
+	settings->set_str(settings, "main.sub2.newsub.foo", "bar");
+	verify_string("bar", "main.sub2.newsub.foo");
+	settings->set_str(settings, "new.newsub.foo", "bar");
+	verify_string("bar", "new.newsub.foo");
+	settings->set_str(settings, "main.key1", NULL);
+	verify_null("main.key1");
+}
+END_TEST
+
+START_TEST(test_set_str_printf)
+{
+	settings->set_str(settings, "%s.key1", "val", "main");
+	verify_string("val", "main.key1");
+	settings->set_str(settings, "main.%N.new", "added", test_settings_test_names, SUB1);
+	verify_string("added", "main.sub1.new");
+	settings->set_str(settings, "main.%s%d.newsub.%s", "bar", "sub", 2, "foo");
+	verify_string("bar", "main.sub2.newsub.foo");
+}
+END_TEST
+
+START_TEST(test_set_default_str)
+{
+	settings->set_default_str(settings, "main.key1", "default");
+	verify_string("val1", "main.key1");
+	settings->set_default_str(settings, "main.sub1.new", "added");
+	verify_string("added", "main.sub1.new");
+	settings->set_str(settings, "main.sub1.new", "changed");
+	verify_string("changed", "main.sub1.new");
+}
+END_TEST
+
 START_SETUP(setup_bool_config)
 {
 	create_settings(chunk_from_str(
@@ -170,6 +211,22 @@ START_TEST(test_get_bool)
 }
 END_TEST
 
+START_TEST(test_set_bool)
+{
+	settings->set_str(settings, "main.key1", "no");
+	verify_bool(FALSE, TRUE, "main.key1");
+	settings->set_bool(settings, "main.key2", FALSE);
+	verify_bool(FALSE, TRUE, "main.key2");
+	settings->set_str(settings, "main.key3", NULL);
+	verify_bool(FALSE, FALSE, "main.key3");
+	verify_bool(TRUE, TRUE, "main.key3");
+	settings->set_bool(settings, "main.key5", TRUE);
+	verify_bool(TRUE, FALSE, "main.key5");
+	settings->set_bool(settings, "main.new", TRUE);
+	verify_bool(TRUE, FALSE, "main.new");
+}
+END_TEST
+
 START_SETUP(setup_int_config)
 {
 	create_settings(chunk_from_str(
@@ -203,6 +260,21 @@ START_TEST(test_get_int)
 
 	verify_int(13, 13, "main.key4");
 	verify_int(-13, -13, "main");
+}
+END_TEST
+
+START_TEST(test_set_int)
+{
+	settings->set_str(settings, "main.key1", "13");
+	verify_int(13, 0, "main.key1");
+	settings->set_int(settings, "main.key2", 6);
+	verify_int(6, 0, "main.key2");
+	settings->set_int(settings, "main.key3", -6);
+	verify_int(-6, 0, "main.key3");
+	settings->set_str(settings, "main.key3", NULL);
+	verify_int(15, 15, "main.key3");
+	settings->set_int(settings, "main.new", 314);
+	verify_int(314, 0, "main.new");
 }
 END_TEST
 
@@ -243,6 +315,23 @@ START_TEST(test_get_double)
 }
 END_TEST
 
+START_TEST(test_set_double)
+{
+	settings->set_str(settings, "main.key1", "5.5");
+	verify_double(5.5, 0, "main.key1");
+	settings->set_double(settings, "main.key2", 13);
+	verify_double(13, 0, "main.key2");
+	settings->set_double(settings, "main.key3", -13.5);
+	verify_double(-13.5, 0, "main.key3");
+	settings->set_double(settings, "main.key4", 11.5);
+	verify_double(11.5, 0, "main.key4");
+	settings->set_str(settings, "main.key4", NULL);
+	verify_double(42.5, 42.5, "main.key4");
+	settings->set_double(settings, "main.new", 3.14);
+	verify_double(3.14, 0, "main.new");
+}
+END_TEST
+
 START_SETUP(setup_time_config)
 {
 	create_settings(chunk_from_str(
@@ -280,6 +369,19 @@ START_TEST(test_get_time)
 }
 END_TEST
 
+START_TEST(test_set_time)
+{
+	settings->set_str(settings, "main.key1", "15m");
+	verify_time(900, 0, "main.key1");
+	settings->set_time(settings, "main.key2", 15);
+	verify_time(15, 0, "main.key2");
+	settings->set_str(settings, "main.key3", NULL);
+	verify_time(300, 300, "main.key3");
+	settings->set_time(settings, "main.new", 314);
+	verify_time(314, 0, "main.new");
+}
+END_TEST
+
 Suite *settings_suite_create()
 {
 	Suite *s;
@@ -291,26 +393,33 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
 	tcase_add_test(tc, test_get_str);
 	tcase_add_test(tc, test_get_str_printf);
+	tcase_add_test(tc, test_set_str);
+	tcase_add_test(tc, test_set_str_printf);
+	tcase_add_test(tc, test_set_default_str);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get/set_bool");
 	tcase_add_checked_fixture(tc, setup_bool_config, teardown_config);
 	tcase_add_test(tc, test_get_bool);
+	tcase_add_test(tc, test_set_bool);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get/set_int");
 	tcase_add_checked_fixture(tc, setup_int_config, teardown_config);
 	tcase_add_test(tc, test_get_int);
+	tcase_add_test(tc, test_set_int);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get/set_double");
 	tcase_add_checked_fixture(tc, setup_double_config, teardown_config);
 	tcase_add_test(tc, test_get_double);
+	tcase_add_test(tc, test_set_double);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get/set_time");
 	tcase_add_checked_fixture(tc, setup_time_config, teardown_config);
 	tcase_add_test(tc, test_get_time);
+	tcase_add_test(tc, test_set_time);
 	suite_add_tcase(s, tc);
 
 	return s;
