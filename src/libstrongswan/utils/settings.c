@@ -184,17 +184,16 @@ static bool kv_find(kv_t *this, char *key)
 static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 {
 	va_list copy;
+	char *pos = start;
 	bool res;
-	char *pos;
 
 	va_copy(copy, args);
-	while (start < key)
+	while (TRUE)
 	{
-		pos = strchr(start, '%');
+		pos = memchr(pos, '%', key - pos);
 		if (!pos)
 		{
-			start += strlen(start) + 1;
-			continue;
+			break;
 		}
 		pos++;
 		switch (*pos)
@@ -215,11 +214,7 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 				DBG1(DBG_CFG, "settings with %%%c not supported!", *pos);
 				break;
 		}
-		start = pos;
-		if (*start)
-		{
-			start++;
-		}
+		pos++;
 	}
 	res = vsnprintf(buf, len, key, copy) < len;
 	va_end(copy);
