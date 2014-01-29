@@ -22,9 +22,9 @@ charonconf_DATA = $(plugins_install_src)
 man_MANS = \
 	strongswan.conf.5
 
-BUILT_SOURCES = default.conf $(confsnippets)
+BUILT_SOURCES = default.conf strongswan.conf.5.main $(confsnippets)
 EXTRA_DIST = format-options.py strongswan.conf default.opt \
-	default.conf $(alloptions) $(confsnippets)
+	default.conf strongswan.conf.5.main $(alloptions) $(confsnippets)
 
 CLEANFILES=$(man_MANS)
 
@@ -53,6 +53,10 @@ $(plugins_install_tmp):
 	sed \
 	-e "s:\@PLUGIN_NAME\@:`basename $< .tmp`:" \
 	$(srcdir)/$< > $(srcdir)/$@
+
+strongswan.conf.5.main: $(alloptions)
+	$(AM_V_GEN) \
+	$(PYTHON) $(srcdir)/format-options.py -f man $^ > $@
 
 maintainer-clean-local:
 	cd $(srcdir) && \
