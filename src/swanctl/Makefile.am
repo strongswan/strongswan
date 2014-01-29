@@ -2,6 +2,7 @@ sbin_PROGRAMS = swanctl
 
 swanctl_SOURCES = \
 	command.c command.h \
+	commands/list_sas.c \
 	swanctl.c
 
 swanctl_LDADD = \
