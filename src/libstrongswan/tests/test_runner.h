@@ -66,7 +66,7 @@ struct test_configuration_t {
  *
  * The configs array must be terminated with a NULL element.
  *
- * @oaran name			name of test runner
+ * @param name			name of test runner
  * @param config		test suite constructors with dependencies
  * @param init_cb		init/deinit callback
  * @return				test result, EXIT_SUCCESS if all tests passed
