@@ -58,6 +58,10 @@ strongswan.conf.5.main: $(alloptions)
 	$(AM_V_GEN) \
 	$(PYTHON) $(srcdir)/format-options.py -f man $^ > $@
 
+strongswan.conf.5: strongswan.conf.5.head strongswan.conf.5.main strongswan.conf.5.tail
+	$(AM_V_GEN) \
+	cat $^ > $@
+
 maintainer-clean-local:
 	cd $(srcdir) && \
 		rm -f $(confsnippets) default.conf plugins/*.conf plugins/*.tmp

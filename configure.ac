@@ -1545,7 +1545,8 @@ AC_CONFIG_FILES([
 # =================
 
 AC_CONFIG_FILES([
-	conf/strongswan.conf.5
+	conf/strongswan.conf.5.head
+	conf/strongswan.conf.5.tail
 	man/ipsec.conf.5
 	man/ipsec.secrets.5
 	src/charon-cmd/charon-cmd.8
