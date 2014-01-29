@@ -19,10 +19,14 @@ plugins_install_src = $(charon_plugins:%=plugins/%.conf)
 
 strongswand_DATA = $(options:opt=conf)
 charonconf_DATA = $(plugins_install_src)
+man_MANS = \
+	strongswan.conf.5
 
 BUILT_SOURCES = default.conf $(confsnippets)
 EXTRA_DIST = format-options.py strongswan.conf default.opt \
 	default.conf $(alloptions) $(confsnippets)
+
+CLEANFILES=$(man_MANS)
 
 .opt.conf:
 	$(AM_V_GEN) \

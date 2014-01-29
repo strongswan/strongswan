@@ -1545,9 +1545,9 @@ AC_CONFIG_FILES([
 # =================
 
 AC_CONFIG_FILES([
+	conf/strongswan.conf.5
 	man/ipsec.conf.5
 	man/ipsec.secrets.5
-	man/strongswan.conf.5
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/pki.1
 	src/pki/man/pki---gen.1
