@@ -100,13 +100,14 @@ CLEANFILES=$(man_MANS)
 # if the rules above did not catch it.  this requires an intermediate step that
 # generates a copy of the generic config template.
 $(plugins_install_tmp):
-	@cp $(srcdir)/default.conf $(srcdir)/$@
+	@mkdir -p $(builddir)/plugins
+	@cp $(srcdir)/default.conf $(builddir)/$@
 
 .tmp.conf:
 	$(AM_V_GEN) \
 	sed \
 	-e "s:\@PLUGIN_NAME\@:`basename $< .tmp`:" \
-	$(srcdir)/$< > $(srcdir)/$@
+	$(builddir)/$< > $(builddir)/$@
 
 strongswan.conf.5.main: $(alloptions)
 	$(AM_V_GEN) \
@@ -115,6 +116,9 @@ strongswan.conf.5.main: $(alloptions)
 strongswan.conf.5: strongswan.conf.5.head strongswan.conf.5.main strongswan.conf.5.tail
 	$(AM_V_GEN) \
 	cat $^ > $@
+
+clean-local:
+	rm -f plugins/*.conf plugins/*.tmp
 
 maintainer-clean-local:
 	cd $(srcdir) && \
@@ -131,5 +135,6 @@ install-data-local: $(plugins_install_src)
 	done
 	for f in $(plugins_install_src); do \
 		name=`basename $$f`; \
-		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 640 -t "$(DESTDIR)$(charonconfdir)" $(srcdir)/$$f || true; \
+		if test -f "$$f"; then dir=; else dir="$(srcdir)/"; fi; \
+		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 640 -t "$(DESTDIR)$(charonconfdir)" "$$dir$$f" || true; \
 	done
