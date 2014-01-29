@@ -265,6 +265,7 @@ ARG_ENABL_SET([medcli],         [enable mediation client configuration database 
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
 ARG_ENABL_SET([aikgen],         [enable AIK generator.])
@@ -397,6 +398,10 @@ if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse; then
 		sha1=true;
 	fi
+fi
+
+if test x$swanctl = xtrue; then
+	vici=true
 fi
 
 if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
@@ -1389,6 +1394,7 @@ AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
+AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
 
 # ========================
 #  set global definitions
@@ -1605,6 +1611,7 @@ AC_CONFIG_FILES([
 	src/checksum/Makefile
 	src/conftest/Makefile
 	src/pt-tls-client/Makefile
+	src/swanctl/Makefile
 	scripts/Makefile
 	testing/Makefile
 ])
