@@ -22,6 +22,17 @@ libstrongswan_vici_la_SOURCES = \
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
 
+
+lib_LTLIBRARIES = libvici.la
+
+libvici_la_SOURCES = \
+	vici_message.c vici_message.h \
+	vici_builder.c vici_builder.h \
+	libvici.c libvici.h
+
+libvici_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+
+
 TESTS = vici_tests
 
 check_PROGRAMS = $(TESTS)
@@ -29,9 +40,13 @@ check_PROGRAMS = $(TESTS)
 vici_tests_SOURCES = \
 	suites/test_socket.c \
 	suites/test_message.c \
+	suites/test_request.c \
+	suites/test_event.c \
 	vici_socket.c \
 	vici_message.c \
 	vici_builder.c \
+	vici_dispatcher.c \
+	libvici.c \
 	vici_tests.h vici_tests.c
 
 vici_tests_CFLAGS = \

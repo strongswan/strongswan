@@ -15,3 +15,5 @@
 
 TEST_SUITE(socket_suite_create)
 TEST_SUITE(message_suite_create)
+TEST_SUITE(request_suite_create)
+TEST_SUITE(event_suite_create)
