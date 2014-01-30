@@ -425,6 +425,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WINHTTP
+  SUBDIRS += plugins/winhttp
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/winhttp/libstrongswan-winhttp.la
+endif
+endif
+
 if USE_UNBOUND
   SUBDIRS += plugins/unbound
 if MONOLITHIC
