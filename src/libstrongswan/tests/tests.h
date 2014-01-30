@@ -38,4 +38,4 @@ TEST_SUITE(pen_suite_create)
 TEST_SUITE(asn1_suite_create)
 TEST_SUITE(test_rng_suite_create)
 TEST_SUITE_DEPEND(ntru_suite_create, DH, NTRU_112_BIT)
-
+TEST_SUITE_DEPEND(fetch_http_suite_create, FETCHER, "http://")
