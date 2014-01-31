@@ -3,7 +3,7 @@
 PV  = 2.2.1
 PKG = freeradius-server-$(PV)
 TAR = $(PKG).tar.bz2
-SRC = ftp://ftp.freeradius.org/pub/freeradius/$(TAR)
+SRC = ftp://ftp.freeradius.org/pub/freeradius/old/$(TAR)
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
