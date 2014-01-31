@@ -20,7 +20,8 @@
  * McGrew & Viega - http://citeseer.ist.psu.edu/656989.html
  */
 aead_test_vector_t aes_gcm1 = {
-	.alg = ENCR_AES_GCM_ICV8, .key_size = 16, .len = 64, .alen = 0,
+	.alg = ENCR_AES_GCM_ICV8, .key_size = 16, .salt_size = 4,
+	.len = 64, .alen = 0,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
 	.iv		= "\xfa\xce\xdb\xad\xde\xca\xf8\x88",
@@ -36,7 +37,8 @@ aead_test_vector_t aes_gcm1 = {
 };
 
 aead_test_vector_t aes_gcm2 = {
-	.alg = ENCR_AES_GCM_ICV12, .key_size = 16, .len = 64, .alen = 0,
+	.alg = ENCR_AES_GCM_ICV12, .key_size = 16, .salt_size = 4,
+	.len = 64, .alen = 0,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
 	.iv		= "\xfa\xce\xdb\xad\xde\xca\xf8\x88",
@@ -52,7 +54,8 @@ aead_test_vector_t aes_gcm2 = {
 };
 
 aead_test_vector_t aes_gcm3 = {
-	.alg = ENCR_AES_GCM_ICV16, .key_size = 16, .len = 64, .alen = 0,
+	.alg = ENCR_AES_GCM_ICV16, .key_size = 16, .salt_size = 4,
+	.len = 64, .alen = 0,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
 	.iv		= "\xfa\xce\xdb\xad\xde\xca\xf8\x88",
@@ -68,7 +71,8 @@ aead_test_vector_t aes_gcm3 = {
 };
 
 aead_test_vector_t aes_gcm4 = {
-	.alg = ENCR_AES_GCM_ICV16, .key_size = 16, .len = 60, .alen = 20,
+	.alg = ENCR_AES_GCM_ICV16, .key_size = 16, .salt_size = 4,
+	.len = 60, .alen = 20,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
 	.iv		= "\xfa\xce\xdb\xad\xde\xca\xf8\x88",
@@ -86,7 +90,8 @@ aead_test_vector_t aes_gcm4 = {
 };
 
 aead_test_vector_t aes_gcm5 = {
-	.alg = ENCR_AES_GCM_ICV16, .key_size = 24, .len = 64, .alen = 0,
+	.alg = ENCR_AES_GCM_ICV16, .key_size = 24, .salt_size = 4,
+	.len = 64, .alen = 0,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xfe\xff\xe9\x92\x86\x65\x73\x1c\xca\xfe\xba\xbe",
 	.iv		= "\xfa\xce\xdb\xad\xde\xca\xf8\x88",
@@ -102,7 +107,8 @@ aead_test_vector_t aes_gcm5 = {
 };
 
 aead_test_vector_t aes_gcm6 = {
-	.alg = ENCR_AES_GCM_ICV16, .key_size = 32, .len = 64, .alen = 0,
+	.alg = ENCR_AES_GCM_ICV16, .key_size = 32, .salt_size = 4,
+	.len = 64, .alen = 0,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
@@ -119,7 +125,8 @@ aead_test_vector_t aes_gcm6 = {
 };
 
 aead_test_vector_t aes_gcm7 = {
-	.alg = ENCR_AES_GCM_ICV16, .key_size = 32, .len = 60, .alen = 20,
+	.alg = ENCR_AES_GCM_ICV16, .key_size = 32, .salt_size = 4,
+	.len = 60, .alen = 20,
 	.key	= "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xfe\xff\xe9\x92\x86\x65\x73\x1c\x6d\x6a\x8f\x94\x67\x30\x83\x08"
 			  "\xca\xfe\xba\xbe",
@@ -136,4 +143,3 @@ aead_test_vector_t aes_gcm7 = {
 			  "\xc5\xf6\x1e\x63\x93\xba\x7a\x0a\xbc\xc9\xf6\x62\x76\xfc\x6e\xce"
 			  "\x0f\x4e\x17\x68\xcd\xdf\x88\x53\xbb\x2d\x55\x1b",
 };
-

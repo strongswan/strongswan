@@ -21,7 +21,8 @@
  * originally from "fips cavs fax files on hand at Red Hat".
  */
 aead_test_vector_t aes_ccm1 = {
-	.alg = ENCR_AES_CCM_ICV16, .key_size = 16, .len = 32, .alen = 0,
+	.alg = ENCR_AES_CCM_ICV16, .key_size = 16, .salt_size = 3,
+	.len = 32, .alen = 0,
 	.key	= "\x83\xac\x54\x66\xc2\xeb\xe5\x05\x2e\x01\xd1\xfc\x5d\x82\x66\x2e"
 			  "\x96\xac\x59",
 	.iv		= "\x30\x07\xa1\xe2\xa2\xc7\x55\x24",
@@ -33,7 +34,8 @@ aead_test_vector_t aes_ccm1 = {
 };
 
 aead_test_vector_t aes_ccm2 = {
-	.alg = ENCR_AES_CCM_ICV16, .key_size = 16, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV16, .key_size = 16, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\x1e\x2c\x7e\x01\x41\x9a\xef\xc0\x0d\x58\x96\x6e\x5c\xa2\x4b\xd3"
 			  "\x4f\xa3\x19",
 	.iv		= "\xd3\x01\x5a\xd8\x30\x60\x15\x56",
@@ -47,7 +49,8 @@ aead_test_vector_t aes_ccm2 = {
 };
 
 aead_test_vector_t aes_ccm3 = {
-	.alg = ENCR_AES_CCM_ICV16, .key_size = 24, .len = 0, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV16, .key_size = 24, .salt_size = 3,
+	.len = 0, .alen = 32,
 	.key	= "\xf4\x6b\xc2\x75\x62\xfe\xb4\xe1\xa3\xf0\xff\xdd\x4e\x4b\x12\x75"
 			  "\x53\x14\x73\x66\x8d\x88\xf6\x80\xa0\x20\x35",
 	.iv		= "\x26\xf2\x21\x8d\x50\x20\xda\xe2",
@@ -57,7 +60,8 @@ aead_test_vector_t aes_ccm3 = {
 };
 
 aead_test_vector_t aes_ccm4 = {
-	.alg = ENCR_AES_CCM_ICV16, .key_size = 24, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV16, .key_size = 24, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\x56\xdf\x5c\x8f\x26\x3f\x0e\x42\xef\x7a\xd3\xce\xfc\x84\x60\x62"
 			  "\xca\xb4\x40\xaf\x5f\xc9\xc9\x01\xd6\x3c\x8c",
 	.iv		= "\x86\x84\xb6\xcd\xef\x09\x2e\x94",
@@ -71,7 +75,8 @@ aead_test_vector_t aes_ccm4 = {
 };
 
 aead_test_vector_t aes_ccm5 = {
-	.alg = ENCR_AES_CCM_ICV8, .key_size = 32, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV8, .key_size = 32, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\xe0\x8d\x99\x71\x60\xd7\x97\x1a\xbd\x01\x99\xd5\x8a\xdf\x71\x3a"
 			  "\xd3\xdf\x24\x4b\x5e\x3d\x4b\x4e\x30\x7a\xb9\xd8\x53\x0a\x5e\x2b"
 			  "\x1e\x29\x91",
@@ -86,7 +91,8 @@ aead_test_vector_t aes_ccm5 = {
 };
 
 aead_test_vector_t aes_ccm6 = {
-	.alg = ENCR_AES_CCM_ICV12, .key_size = 32, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV12, .key_size = 32, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\x7c\xc8\x18\x3b\x8d\x99\xe0\x7c\x45\x41\xb8\xbd\x5c\xa7\xc2\x32"
 			  "\x8a\xb8\x02\x59\xa4\xfe\xa9\x2c\x09\x75\x9a\x9b\x3c\x9b\x27\x39"
 			  "\xf9\xd9\x4e",
@@ -101,7 +107,8 @@ aead_test_vector_t aes_ccm6 = {
 };
 
 aead_test_vector_t aes_ccm7 = {
-	.alg = ENCR_AES_CCM_ICV16, .key_size = 32, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV16, .key_size = 32, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\xab\xd0\xe9\x33\x07\x26\xe5\x83\x8c\x76\x95\xd4\xb6\xdc\xf3\x46"
 			  "\xf9\x8f\xad\xe3\x02\x13\x83\x77\x3f\xb0\xf1\xa1\xa1\x22\x0f\x2b"
 			  "\x24\xa7\x8b",
@@ -116,7 +123,8 @@ aead_test_vector_t aes_ccm7 = {
 };
 
 aead_test_vector_t aes_ccm8 = {
-	.alg = ENCR_AES_CCM_ICV8, .key_size = 16, .len = 0, .alen = 0,
+	.alg = ENCR_AES_CCM_ICV8, .key_size = 16, .salt_size = 3,
+	.len = 0, .alen = 0,
 	.key	= "\xab\x2f\x8a\x74\xb7\x1c\xd2\xb1\xff\x80\x2e\x48\x7d\x82\xf8\xb9"
 			  "\xaf\x94\x87",
 	.iv		= "\x78\x35\x82\x81\x7f\x88\x94\x68",
@@ -124,7 +132,8 @@ aead_test_vector_t aes_ccm8 = {
 };
 
 aead_test_vector_t aes_ccm9 = {
-	.alg = ENCR_AES_CCM_ICV8, .key_size = 24, .len = 0, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV8, .key_size = 24, .salt_size = 3,
+	.len = 0, .alen = 32,
 	.key	= "\x39\xbb\xa7\xbe\x59\x97\x9e\x73\xa2\xbc\x6b\x98\xd7\x75\x7f\xe3"
 			  "\xa4\x48\x93\x39\x26\x71\x4a\xc6\xee\x49\x83",
 	.iv		= "\xe9\xa9\xff\xe9\x57\xba\xfd\x9e",
@@ -134,7 +143,8 @@ aead_test_vector_t aes_ccm9 = {
 };
 
 aead_test_vector_t aes_ccm10 = {
-	.alg = ENCR_AES_CCM_ICV8, .key_size = 32, .len = 0, .alen = 0,
+	.alg = ENCR_AES_CCM_ICV8, .key_size = 32, .salt_size = 3,
+	.len = 0, .alen = 0,
 	.key	= "\xa4\x4b\x54\x29\x0a\xb8\x6d\x01\x5b\x80\x2a\xcf\x25\xc4\xb7\x5c"
 			  "\x20\x2c\xad\x30\xc2\x2b\x41\xfb\x0e\x85\xbc\x33\xad\x0f\x2b\xff"
 			  "\xee\x49\x83",
@@ -143,7 +153,8 @@ aead_test_vector_t aes_ccm10 = {
 };
 
 aead_test_vector_t aes_ccm11 = {
-	.alg = ENCR_AES_CCM_ICV8, .key_size = 24, .len = 32, .alen = 32,
+	.alg = ENCR_AES_CCM_ICV8, .key_size = 24, .salt_size = 3,
+	.len = 32, .alen = 32,
 	.key	= "\x58\x5d\xa0\x96\x65\x1a\x04\xd7\x96\xe5\xc5\x68\xaa\x95\x35\xe0"
 			  "\x29\xa0\xba\x9e\x48\x78\xd1\xba\xee\x49\x83",
 	.iv		= "\xe9\xa9\xff\xe9\x57\xba\xfd\x9e",

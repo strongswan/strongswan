@@ -54,6 +54,8 @@ struct aead_test_vector_t {
 	encryption_algorithm_t alg;
 	/** key length to use, in bytes */
 	size_t key_size;
+	/** salt length to use, in bytes */
+	size_t salt_size;
 	/** encryption key of test vector */
 	u_char *key;
 	/** initialization vector, using crypters blocksize bytes */
@@ -150,13 +152,15 @@ struct crypto_tester_t {
 	 *
 	 * @param alg			algorithm to test
 	 * @param key_size		key size to test, 0 for default
+	 * @param salt_size		salt length to test, 0 for default
 	 * @param create		constructor function for the aead transform
 	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_aead)(crypto_tester_t *this, encryption_algorithm_t alg,
-						 size_t key_size, aead_constructor_t create,
-						 u_int *speed, const char *plugin_name);
+					  size_t key_size, size_t salt_size,
+					  aead_constructor_t create,
+					  u_int *speed, const char *plugin_name);
 	/**
 	 * Test a signer algorithm.
 	 *
