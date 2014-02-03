@@ -144,4 +144,13 @@ tls_aead_t *tls_aead_create_implicit(integrity_algorithm_t mac,
  */
 tls_aead_t *tls_aead_create_null(integrity_algorithm_t mac);
 
+/**
+ * Create a tls_aead instance using real a AEAD cipher.
+ *
+ * @param encr			AEAD encryption algorithm
+ * @param encr_size		encryption key size, in bytes
+ * @return				TLS AEAD transform
+ */
+tls_aead_t *tls_aead_create_aead(encryption_algorithm_t encr, size_t encr_size);
+
 #endif /** TLS_AEAD_H_ @}*/

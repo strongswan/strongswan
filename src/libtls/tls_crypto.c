@@ -607,7 +607,7 @@ static suite_algs_t *find_suite(tls_cipher_suite_t suite)
 /**
  * Filter a suite list using a transform enumerator
  */
-static void filter_suite(private_tls_crypto_t *this,
+static void filter_suite(private_tls_crypto_t *this, bool aead,
 						 suite_algs_t suites[], int *count, int offset,
 						 enumerator_t*(*create_enumerator)(crypto_factory_t*))
 {
@@ -625,8 +625,10 @@ static void filter_suite(private_tls_crypto_t *this,
 		while (enumerator->enumerate(enumerator, current_alg, &plugin_name))
 		{
 			if ((suites[i].encr == ENCR_NULL ||
+				 aead != encryption_algorithm_is_aead(suites[i].encr) ||
 				 !current.encr || current.encr == suites[i].encr) &&
-				(!current.mac  || current.mac  == suites[i].mac) &&
+				(suites[i].mac == AUTH_UNDEFINED ||
+				 !current.mac  || current.mac  == suites[i].mac) &&
 				(!current.prf  || current.prf  == suites[i].prf) &&
 				(!current.hash || current.hash == suites[i].hash) &&
 				(suites[i].dh == MODP_NONE ||
@@ -912,15 +914,17 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	}
 
 	/* filter suite list by each algorithm */
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
+	filter_suite(this, FALSE, suites, &count, offsetof(suite_algs_t, encr),
 				 lib->crypto->create_crypter_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, mac),
+	filter_suite(this, TRUE, suites, &count, offsetof(suite_algs_t, encr),
+				 lib->crypto->create_aead_enumerator);
+	filter_suite(this, FALSE, suites, &count, offsetof(suite_algs_t, mac),
 				 lib->crypto->create_signer_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, prf),
+	filter_suite(this, FALSE, suites, &count, offsetof(suite_algs_t, prf),
 				 lib->crypto->create_prf_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, hash),
+	filter_suite(this, FALSE, suites, &count, offsetof(suite_algs_t, hash),
 				 lib->crypto->create_hasher_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, dh),
+	filter_suite(this, FALSE, suites, &count, offsetof(suite_algs_t, dh),
 				 lib->crypto->create_dh_enumerator);
 
 	/* filter suites with strongswan.conf options */
@@ -994,6 +998,22 @@ static bool create_traditional(private_tls_crypto_t *this, suite_algs_t *algs)
 }
 
 /**
+ * Create AEAD transforms
+ */
+static bool create_aead(private_tls_crypto_t *this, suite_algs_t *algs)
+{
+	this->aead_in = tls_aead_create_aead(algs->encr, algs->encr_size);
+	this->aead_out = tls_aead_create_aead(algs->encr, algs->encr_size);
+	if (!this->aead_in || !this->aead_out)
+	{
+		DBG1(DBG_TLS, "selected TLS transforms %N-%u not supported",
+			 encryption_algorithm_names, algs->encr, algs->encr_size * 8);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Clean up and unset AEAD transforms
  */
 static void destroy_aeads(private_tls_crypto_t *this)
@@ -1026,6 +1046,13 @@ static bool create_ciphers(private_tls_crypto_t *this, suite_algs_t *algs)
 	if (algs->encr == ENCR_NULL)
 	{
 		if (create_null(this, algs))
+		{
+			return TRUE;
+		}
+	}
+	else if (encryption_algorithm_is_aead(algs->encr))
+	{
+		if (create_aead(this, algs))
 		{
 			return TRUE;
 		}
