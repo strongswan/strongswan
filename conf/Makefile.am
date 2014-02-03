@@ -4,7 +4,8 @@ strongswanddir = $(strongswanconfdir)/strongswan.d
 charonconfdir = $(strongswanddir)/charon
 
 options = \
-	options/charon.opt
+	options/charon.opt \
+	options/charon-logging.opt
 
 plugins = \
 	plugins/test.opt

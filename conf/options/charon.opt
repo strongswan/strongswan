@@ -62,9 +62,6 @@ charon.dos_protection = yes
 charon.ecp_x_coordinate_only = yes
 	Compliance with the errata for RFC 4753.
 
-charon.filelog
-	Section to define file loggers, see LOGGER CONFIGURATION
-
 charon.flush_auth_cfg = no
 	Free objects during authentication (might conflict with plugins).
 
@@ -258,10 +255,6 @@ charon.send_delay_type = 0
 
 charon.send_vendor_id = no
 	Send strongSwan vendor ID payload
-
-charon.syslog
-	Section to define syslog loggers
-	Section to define syslog loggers, see LOGGER CONFIGURATION
 
 charon.threads = 16
 	Number of worker threads in charon.

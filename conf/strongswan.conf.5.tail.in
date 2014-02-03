@@ -1,16 +1,18 @@
 .SH LOGGER CONFIGURATION
-The options described below provide a much more flexible way to configure
-loggers for the IKEv2 daemon charon than using the
+Options in
+.BR strongswan.conf (5)
+provide a much more flexible way to configure loggers for the IKE daemon charon
+than using the
 .B charondebug
 option in
 .BR ipsec.conf (5).
 .PP
-.B Please note
-that if any loggers are specified in strongswan.conf,
+.BR Note :
+If any loggers are specified in strongswan.conf,
 .B charondebug
 does not have any effect.
 .PP
-There are currently two types of loggers defined:
+There are currently two types of loggers:
 .TP
 .B File loggers
 Log directly to a file and are defined by specifying the full path to the
@@ -29,43 +31,6 @@ section. The following facilities are currently supported:
 .PP
 Multiple loggers can be defined for each type with different log verbosity for
 the different subsystems of the daemon.
-.SS Options
-.TP
-.BR charon.filelog.<filename>.default " [1]"
-.TQ
-.BR charon.syslog.<facility>.default
-Specifies the default loglevel to be used for subsystems for which no specific
-loglevel is defined.
-.TP
-.BR charon.filelog.<filename>.<subsystem> " [<default>]"
-.TQ
-.BR charon.syslog.<facility>.<subsystem>
-Specifies the loglevel for the given subsystem.
-.TP
-.BR charon.filelog.<filename>.append " [yes]"
-If this option is enabled log entries are appended to the existing file.
-.TP
-.BR charon.filelog.<filename>.flush_line " [no]"
-Enabling this option disables block buffering and enables line buffering.
-.TP
-.BR charon.filelog.<filename>.ike_name " [no]"
-.TQ
-.BR charon.syslog.<facility>.ike_name
-Prefix each log entry with the connection name and a unique numerical
-identifier for each IKE_SA.
-.TP
-.BR charon.filelog.<filename>.time_format
-Prefix each log entry with a timestamp. The option accepts a format string as
-passed to
-.BR strftime (3).
-.TP
-.BR charon.syslog.identifier
-Global identifier used for an
-.BR openlog (3)
-call, prepended to each log message by syslog.  If not configured,
-.BR openlog (3)
-is not called, so the value will depend on system defaults (often the program
-name).
 
 .SS Subsystems
 .TP
