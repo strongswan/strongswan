@@ -440,6 +440,16 @@ static suite_algs_t suite_algs[] = {
 		HASH_SHA384, PRF_HMAC_SHA2_384,
 		AUTH_HMAC_SHA2_384_384, ENCR_AES_CBC, 32
 	},
+	{ TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		KEY_ECDSA, ECP_256_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16
+	},
+	{ TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		KEY_ECDSA, ECP_384_BIT,
+		HASH_SHA384, PRF_HMAC_SHA2_384,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32
+	},
 	{ TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 		KEY_RSA, ECP_256_BIT,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
@@ -460,6 +470,16 @@ static suite_algs_t suite_algs[] = {
 		HASH_SHA384, PRF_HMAC_SHA2_384,
 		AUTH_HMAC_SHA2_384_384, ENCR_AES_CBC, 32
 	},
+	{ TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		KEY_RSA, ECP_256_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16
+	},
+	{ TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		KEY_RSA, ECP_384_BIT,
+		HASH_SHA384, PRF_HMAC_SHA2_384,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32
+	},
 	{ TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
 		KEY_RSA, MODP_2048_BIT,
 		HASH_SHA256,PRF_HMAC_SHA2_256,
@@ -479,6 +499,16 @@ static suite_algs_t suite_algs[] = {
 		KEY_RSA, MODP_4096_BIT,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32
+	},
+	{ TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+		KEY_RSA, MODP_3072_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16
+	},
+	{ TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
+		KEY_RSA, MODP_4096_BIT,
+		HASH_SHA384, PRF_HMAC_SHA2_384,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32
 	},
 	{ TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,
 		KEY_RSA, MODP_2048_BIT,
@@ -524,6 +554,16 @@ static suite_algs_t suite_algs[] = {
 		KEY_RSA, MODP_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32
+	},
+	{ TLS_RSA_WITH_AES_128_GCM_SHA256,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16
+	},
+	{ TLS_RSA_WITH_AES_256_GCM_SHA384,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA384, PRF_HMAC_SHA2_384,
+		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
 		KEY_RSA, MODP_NONE,
@@ -766,6 +806,20 @@ static void filter_cipher_config_suites(private_tls_crypto_t *this,
 				}
 				if (strcaseeq(token, "aes256") &&
 					suites[i].encr == ENCR_AES_CBC &&
+					suites[i].encr_size == 32)
+				{
+					suites[remaining++] = suites[i];
+					break;
+				}
+				if (strcaseeq(token, "aes128gcm") &&
+					suites[i].encr == ENCR_AES_GCM_ICV16 &&
+					suites[i].encr_size == 16)
+				{
+					suites[remaining++] = suites[i];
+					break;
+				}
+				if (strcaseeq(token, "aes256gcm") &&
+					suites[i].encr == ENCR_AES_GCM_ICV16 &&
 					suites[i].encr_size == 32)
 				{
 					suites[remaining++] = suites[i];
