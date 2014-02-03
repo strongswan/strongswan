@@ -385,34 +385,14 @@ struct private_tls_crypto_t {
 	tls_prf_t *prf;
 
 	/**
-	 * Signer instance for inbound traffic
+	 * AEAD transform for inbound traffic
 	 */
-	signer_t *signer_in;
+	tls_aead_t *aead_in;
 
 	/**
-	 * Signer instance for outbound traffic
+	 * AEAD transform for outbound traffic
 	 */
-	signer_t *signer_out;
-
-	/**
-	 * Crypter instance for inbound traffic
-	 */
-	crypter_t *crypter_in;
-
-	/**
-	 * Crypter instance for outbound traffic
-	 */
-	crypter_t *crypter_out;
-
-	/**
-	 * IV for input decryption, if < TLSv1.2
-	 */
-	chunk_t iv_in;
-
-	/**
-	 * IV for output decryption, if < TLSv1.2
-	 */
-	chunk_t iv_out;
+	tls_aead_t *aead_out;
 
 	/**
 	 * EAP-[T]TLS MSK
@@ -969,10 +949,66 @@ METHOD(tls_crypto_t, get_cipher_suites, int,
 }
 
 /**
+ * Create NULL encryption transforms
+ */
+static bool create_null(private_tls_crypto_t *this, suite_algs_t *algs)
+{
+	this->aead_in = tls_aead_create_null(algs->mac);
+	this->aead_out = tls_aead_create_null(algs->mac);
+	if (!this->aead_in || !this->aead_out)
+	{
+		DBG1(DBG_TLS, "selected TLS MAC %N not supported",
+			 integrity_algorithm_names, algs->mac);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Create traditional transforms
+ */
+static bool create_traditional(private_tls_crypto_t *this, suite_algs_t *algs)
+{
+	if (this->tls->get_version(this->tls) < TLS_1_1)
+	{
+		this->aead_in = tls_aead_create_implicit(algs->mac,
+								algs->encr, algs->encr_size);
+		this->aead_out = tls_aead_create_implicit(algs->mac,
+								algs->encr, algs->encr_size);
+	}
+	else
+	{
+		this->aead_in = tls_aead_create_explicit(algs->mac,
+								algs->encr, algs->encr_size);
+		this->aead_out = tls_aead_create_explicit(algs->mac,
+								algs->encr, algs->encr_size);
+	}
+	if (!this->aead_in || !this->aead_out)
+	{
+		DBG1(DBG_TLS, "selected TLS transforms %N-%u-%N not supported",
+			 encryption_algorithm_names, algs->encr, algs->encr_size * 8,
+			 integrity_algorithm_names, algs->mac);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Clean up and unset AEAD transforms
+ */
+static void destroy_aeads(private_tls_crypto_t *this)
+{
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
+	this->aead_in = this->aead_out = NULL;
+}
+
+/**
  * Create crypto primitives
  */
 static bool create_ciphers(private_tls_crypto_t *this, suite_algs_t *algs)
 {
+	destroy_aeads(this);
 	DESTROY_IF(this->prf);
 	if (this->tls->get_version(this->tls) < TLS_1_2)
 	{
@@ -987,38 +1023,22 @@ static bool create_ciphers(private_tls_crypto_t *this, suite_algs_t *algs)
 		DBG1(DBG_TLS, "selected TLS PRF not supported");
 		return FALSE;
 	}
-
-	DESTROY_IF(this->signer_in);
-	DESTROY_IF(this->signer_out);
-	this->signer_in = lib->crypto->create_signer(lib->crypto, algs->mac);
-	this->signer_out = lib->crypto->create_signer(lib->crypto, algs->mac);
-	if (!this->signer_in || !this->signer_out)
-	{
-		DBG1(DBG_TLS, "selected TLS MAC %N not supported",
-			 integrity_algorithm_names, algs->mac);
-		return FALSE;
-	}
-
-	DESTROY_IF(this->crypter_in);
-	DESTROY_IF(this->crypter_out);
 	if (algs->encr == ENCR_NULL)
 	{
-		this->crypter_in = this->crypter_out = NULL;
+		if (create_null(this, algs))
+		{
+			return TRUE;
+		}
 	}
 	else
 	{
-		this->crypter_in = lib->crypto->create_crypter(lib->crypto,
-												algs->encr, algs->encr_size);
-		this->crypter_out = lib->crypto->create_crypter(lib->crypto,
-												algs->encr, algs->encr_size);
-		if (!this->crypter_in || !this->crypter_out)
+		if (create_traditional(this, algs))
 		{
-			DBG1(DBG_TLS, "selected TLS crypter %N not supported",
-				 encryption_algorithm_names, algs->encr);
-			return FALSE;
+			return TRUE;
 		}
 	}
-	return TRUE;
+	destroy_aeads(this);
+	return FALSE;
 }
 
 METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
@@ -1512,90 +1532,60 @@ static bool derive_master(private_tls_crypto_t *this, chunk_t premaster,
 static bool expand_keys(private_tls_crypto_t *this,
 						chunk_t client_random, chunk_t server_random)
 {
-	chunk_t seed, block, client_write, server_write;
-	int mks, eks = 0, ivs = 0;
+	chunk_t seed, block;
+	chunk_t cw_mac, cw, cw_iv;
+	chunk_t sw_mac, sw, sw_iv;
+	int mklen, eklen, ivlen;
+
+	if (!this->aead_in || !this->aead_out)
+	{
+		return FALSE;
+	}
 
 	/* derive key block for key expansion */
-	mks = this->signer_out->get_key_size(this->signer_out);
-	if (this->crypter_out)
-	{
-		eks = this->crypter_out->get_key_size(this->crypter_out);
-		if (this->tls->get_version(this->tls) < TLS_1_1)
-		{
-			ivs = this->crypter_out->get_iv_size(this->crypter_out);
-		}
-	}
+	mklen = this->aead_in->get_mac_key_size(this->aead_in);
+	eklen = this->aead_in->get_encr_key_size(this->aead_in);
+	ivlen = this->aead_in->get_iv_size(this->aead_in);
 	seed = chunk_cata("cc", server_random, client_random);
-	block = chunk_alloca((mks + eks + ivs) * 2);
+	block = chunk_alloca((mklen + eklen + ivlen) * 2);
 	if (!this->prf->get_bytes(this->prf, "key expansion", seed,
 							  block.len, block.ptr))
 	{
 		return FALSE;
 	}
 
-	/* signer keys */
-	client_write = chunk_create(block.ptr, mks);
-	block = chunk_skip(block, mks);
-	server_write = chunk_create(block.ptr, mks);
-	block = chunk_skip(block, mks);
+	/* client/server write signer keys */
+	cw_mac = chunk_create(block.ptr, mklen);
+	block = chunk_skip(block, mklen);
+	sw_mac = chunk_create(block.ptr, mklen);
+	block = chunk_skip(block, mklen);
+
+	/* client/server write encryption keys */
+	cw = chunk_create(block.ptr, eklen);
+	block = chunk_skip(block, eklen);
+	sw = chunk_create(block.ptr, eklen);
+	block = chunk_skip(block, eklen);
+
+	/* client/server write IV; TLS 1.0 implicit IVs or AEAD salt, if any */
+	cw_iv = chunk_create(block.ptr, ivlen);
+	block = chunk_skip(block, ivlen);
+	sw_iv = chunk_create(block.ptr, ivlen);
+	block = chunk_skip(block, ivlen);
+
 	if (this->tls->is_server(this->tls))
 	{
-		if (!this->signer_in->set_key(this->signer_in, client_write) ||
-			!this->signer_out->set_key(this->signer_out, server_write))
+		if (!this->aead_in->set_keys(this->aead_in, cw_mac, cw, cw_iv) ||
+			!this->aead_out->set_keys(this->aead_out, sw_mac, sw, sw_iv))
 		{
 			return FALSE;
 		}
 	}
 	else
 	{
-		if (!this->signer_out->set_key(this->signer_out, client_write) ||
-			!this->signer_in->set_key(this->signer_in, server_write))
+		if (!this->aead_out->set_keys(this->aead_out, cw_mac, cw, cw_iv) ||
+			!this->aead_in->set_keys(this->aead_in, sw_mac, sw, sw_iv))
 		{
 			return FALSE;
-		}
-	}
-
-	/* crypter keys, and IVs if < TLSv1.2 */
-	if (this->crypter_out && this->crypter_in)
-	{
-		client_write = chunk_create(block.ptr, eks);
-		block = chunk_skip(block, eks);
-		server_write = chunk_create(block.ptr, eks);
-		block = chunk_skip(block, eks);
-
-		if (this->tls->is_server(this->tls))
-		{
-			if (!this->crypter_in->set_key(this->crypter_in, client_write) ||
-				!this->crypter_out->set_key(this->crypter_out, server_write))
-			{
-				return FALSE;
-			}
-		}
-		else
-		{
-			if (!this->crypter_out->set_key(this->crypter_out, client_write) ||
-				!this->crypter_in->set_key(this->crypter_in, server_write))
-			{
-				return FALSE;
-			}
-		}
-		if (ivs)
-		{
-			client_write = chunk_create(block.ptr, ivs);
-			block = chunk_skip(block, ivs);
-			server_write = chunk_create(block.ptr, ivs);
-			block = chunk_skip(block, ivs);
-
-			if (this->tls->is_server(this->tls))
-			{
-				this->iv_in = chunk_clone(client_write);
-				this->iv_out = chunk_clone(server_write);
-			}
-			else
-			{
-				this->iv_out = chunk_clone(client_write);
-				this->iv_in = chunk_clone(server_write);
-			}
 		}
 	}
 
@@ -1666,13 +1656,11 @@ METHOD(tls_crypto_t, change_cipher, void,
 	{
 		if (inbound)
 		{
-			this->protection->set_cipher(this->protection, TRUE,
-							this->signer_in, this->crypter_in, this->iv_in);
+			this->protection->set_cipher(this->protection, TRUE, this->aead_in);
 		}
 		else
 		{
-			this->protection->set_cipher(this->protection, FALSE,
-							this->signer_out, this->crypter_out, this->iv_out);
+			this->protection->set_cipher(this->protection, FALSE, this->aead_out);
 		}
 	}
 }
@@ -1686,12 +1674,7 @@ METHOD(tls_crypto_t, get_eap_msk, chunk_t,
 METHOD(tls_crypto_t, destroy, void,
 	private_tls_crypto_t *this)
 {
-	DESTROY_IF(this->signer_in);
-	DESTROY_IF(this->signer_out);
-	DESTROY_IF(this->crypter_in);
-	DESTROY_IF(this->crypter_out);
-	free(this->iv_in.ptr);
-	free(this->iv_out.ptr);
+	destroy_aeads(this);
 	free(this->handshake.ptr);
 	free(this->msk.ptr);
 	DESTROY_IF(this->prf);
