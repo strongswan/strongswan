@@ -1,0 +1,5 @@
+charon.plugins.sql.database =
+	Database URI for charons SQL plugin.
+
+charon.plugins.sql.loglevel = -1
+	Loglevel for logging to SQL database.

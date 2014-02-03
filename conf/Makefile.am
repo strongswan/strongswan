@@ -8,7 +8,53 @@ options = \
 	options/charon-logging.opt
 
 plugins = \
-	plugins/test.opt
+	plugins/android_log.opt \
+	plugins/attr.opt \
+	plugins/attr-sql.opt \
+	plugins/certexpire.opt \
+	plugins/coupling.opt \
+	plugins/dhcp.opt \
+	plugins/dnscert.opt \
+	plugins/duplicheck.opt \
+	plugins/eap-aka.opt \
+	plugins/eap-aka-3ggp2.opt \
+	plugins/eap-dynamic.opt \
+	plugins/eap-gtc.opt \
+	plugins/eap-peap.opt \
+	plugins/eap-radius.opt \
+	plugins/eap-sim.opt \
+	plugins/eap-simaka-sql.opt \
+	plugins/eap-tls.opt \
+	plugins/eap-tnc.opt \
+	plugins/eap-ttls.opt \
+	plugins/error-notify.opt \
+	plugins/gcrypt.opt \
+	plugins/ha.opt \
+	plugins/ipseckey.opt \
+	plugins/led.opt \
+	plugins/kernel-klips.opt \
+	plugins/kernel-libipsec.opt \
+	plugins/kernel-netlink.opt \
+	plugins/kernel-pfroute.opt \
+	plugins/load-tester.opt \
+	plugins/lookip.opt \
+	plugins/ntru.opt \
+	plugins/openssl.opt \
+	plugins/pkcs11.opt \
+	plugins/radattr.opt \
+	plugins/random.opt \
+	plugins/resolve.opt \
+	plugins/socket-default.opt \
+	plugins/sql.opt \
+	plugins/stroke.opt \
+	plugins/systime-fix.opt \
+	plugins/tnc-ifmap.opt \
+	plugins/tnc-pdp.opt \
+	plugins/unbound.opt \
+	plugins/updown.opt \
+	plugins/whitelist.opt \
+	plugins/xauth-eap.opt \
+	plugins/xauth-pam.opt
 
 alloptions = $(options) $(plugins)
 

@@ -1,0 +1,4 @@
+charon.plugins.load-tester {}
+	Section to configure the load-tester plugin, see LOAD TESTS in
+	**strongswan.conf**(5)
+

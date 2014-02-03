@@ -1,0 +1,5 @@
+charon.plugins.attr-sql.database
+	Database URI for attr-sql plugin used by charon.
+
+charon.plugins.attr-sql.lease_history = yes
+	Enable logging of SQL IP pool leases.

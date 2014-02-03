@@ -1,0 +1,5 @@
+charon.plugins.kernel-klips.ipsec_dev_count = 4
+	Number of ipsecN devices.
+
+charon.plugins.kernel-klips.ipsec_dev_mtu = 0
+	Set MTU of ipsecN device.
