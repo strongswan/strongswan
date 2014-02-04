@@ -92,6 +92,11 @@ struct private_cmd_connection_t {
 	linked_list_t *ike_proposals;
 
 	/**
+	 * List of CHILD proposals
+	 */
+	linked_list_t *child_proposals;
+
+	/**
 	 * Hostname to connect to
 	 */
 	char *host;
@@ -327,6 +332,7 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
+	proposal_t *proposal;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = 10800 /* 3h */,
@@ -339,7 +345,18 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 								 NULL, FALSE, MODE_TUNNEL, /* updown, hostaccess */
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	if (this->child_proposals->get_count(this->child_proposals))
+	{
+		while (this->child_proposals->remove_first(this->child_proposals,
+												(void**)&proposal) == SUCCESS)
+		{
+			child_cfg->add_proposal(child_cfg, proposal);
+		}
+	}
+	else
+	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	}
 	while (this->local_ts->remove_first(this->local_ts, (void**)&ts) == SUCCESS)
 	{
 		child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -474,6 +491,22 @@ METHOD(cmd_connection_t, handle, bool,
 			}
 			this->ike_proposals->insert_last(this->ike_proposals, proposal);
 			break;
+		case CMD_OPT_ESP_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_ESP, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->child_proposals->insert_last(this->child_proposals, proposal);
+			break;
+		case CMD_OPT_AH_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_AH, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->child_proposals->insert_last(this->child_proposals, proposal);
+			break;
 		case CMD_OPT_PROFILE:
 			set_profile(this, arg);
 			break;
@@ -487,6 +520,8 @@ METHOD(cmd_connection_t, destroy, void,
 	private_cmd_connection_t *this)
 {
 	this->ike_proposals->destroy_offset(this->ike_proposals,
+								offsetof(proposal_t, destroy));
+	this->child_proposals->destroy_offset(this->child_proposals,
 								offsetof(proposal_t, destroy));
 	this->local_ts->destroy_offset(this->local_ts,
 								offsetof(traffic_selector_t, destroy));
@@ -511,6 +546,7 @@ cmd_connection_t *cmd_connection_create()
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
 		.ike_proposals = linked_list_create(),
+		.child_proposals = linked_list_create(),
 		.profile = PROF_UNDEF,
 	);
 

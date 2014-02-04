@@ -58,6 +58,10 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "traffic selector to propose for remote side", {}},
 	{ CMD_OPT_IKE_PROPOSAL, "ike-proposal", required_argument, "proposal",
 	  "a single IKE proposal to offer instead of the default", {}},
+	{ CMD_OPT_ESP_PROPOSAL, "esp-proposal", required_argument, "proposal",
+	  "a single ESP proposal to offer instead of the default", {}},
+	{ CMD_OPT_AH_PROPOSAL, "ah-proposal", required_argument, "proposal",
+	  "a single AH proposal to offer instead of the default", {}},
 	{ CMD_OPT_PROFILE, "profile", required_argument, "name",
 	  "authentication profile to use, where name is one of:", {
 		"  ikev2-pub, ikev2-eap, ikev2-pub-eap",
