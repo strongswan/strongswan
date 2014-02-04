@@ -169,42 +169,41 @@ extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit,
 /**
  * parses a directoryName
  */
-static bool parse_directoryName(chunk_t blob, int level, bool implicit, identification_t **name)
+static bool parse_directoryName(chunk_t blob, int level, bool implicit,
+								identification_t **name)
 {
-	bool has_directoryName;
-	linked_list_t *list = linked_list_create();
+	identification_t *directoryName;
+	enumerator_t *enumerator;
+	bool first = TRUE;
+	linked_list_t *list;
 
+	list = linked_list_create();
 	x509_parse_generalNames(blob, level, implicit, list);
-	has_directoryName = list->get_count(list) > 0;
 
-	if (has_directoryName)
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &directoryName))
 	{
-		enumerator_t *enumerator = list->create_enumerator(list);
-		identification_t *directoryName;
-		bool first = TRUE;
-
-		while (enumerator->enumerate(enumerator, (void**)&directoryName))
+		if (first)
 		{
-			if (first)
-			{
-				*name = directoryName;
-				first = FALSE;
-			}
-			else
-			{
-				DBG1(DBG_ASN, "more than one directory name - first selected");
-				directoryName->destroy(directoryName);
-			}
+			*name = directoryName;
+			first = FALSE;
 		}
-		enumerator->destroy(enumerator);
+		else
+		{
+			DBG1(DBG_ASN, "more than one directory name - first selected");
+			directoryName->destroy(directoryName);
+			break;
+		}
 	}
-	else
+	enumerator->destroy(enumerator);
+	list->destroy(list);
+
+	if (first)
 	{
 		DBG1(DBG_ASN, "no directoryName found");
+		return FALSE;
 	}
-
-	list->destroy(list);
-	return has_directoryName;
+	return TRUE;
 }
 
 /**
@@ -250,57 +249,57 @@ static const asn1Object_t acObjects[] =
 {
 	{ 0, "AttributeCertificate",			ASN1_SEQUENCE,		  ASN1_OBJ  }, /*  0 */
 	{ 1,   "AttributeCertificateInfo",		ASN1_SEQUENCE,		  ASN1_OBJ  }, /*  1 */
-	{ 2,	   "version",					ASN1_INTEGER,		  ASN1_DEF |
+	{ 2,       "version",					ASN1_INTEGER,		  ASN1_DEF |
 																  ASN1_BODY }, /*  2 */
-	{ 2,	   "holder",					ASN1_SEQUENCE,		  ASN1_NONE }, /*  3 */
-	{ 3,	     "baseCertificateID",		ASN1_CONTEXT_C_0,	  ASN1_OPT  }, /*  4 */
-	{ 4,	       "issuer",				ASN1_SEQUENCE,		  ASN1_OBJ  }, /*  5 */
-	{ 4,	       "serial",				ASN1_INTEGER,		  ASN1_BODY }, /*  6 */
+	{ 2,       "holder",					ASN1_SEQUENCE,		  ASN1_NONE }, /*  3 */
+	{ 3,         "baseCertificateID",		ASN1_CONTEXT_C_0,	  ASN1_OPT  }, /*  4 */
+	{ 4,           "issuer",				ASN1_SEQUENCE,		  ASN1_OBJ  }, /*  5 */
+	{ 4,           "serial",				ASN1_INTEGER,		  ASN1_BODY }, /*  6 */
 	{ 4,         "issuerUID",				ASN1_BIT_STRING,	  ASN1_OPT |
 																  ASN1_BODY }, /*  7 */
 	{ 4,         "end opt",					ASN1_EOC,			  ASN1_END  }, /*  8 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /*  9 */
-	{ 3,	   "entityName",				ASN1_CONTEXT_C_1,	  ASN1_OPT |
+	{ 3,       "entityName",				ASN1_CONTEXT_C_1,	  ASN1_OPT |
 																  ASN1_OBJ  }, /* 10 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 11 */
-	{ 3,	     "objectDigestInfo",		ASN1_CONTEXT_C_2,	  ASN1_OPT  }, /* 12 */
-	{ 4,	       "digestedObjectType",	ASN1_ENUMERATED,	  ASN1_BODY }, /* 13 */
-	{ 4,	       "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
+	{ 3,         "objectDigestInfo",		ASN1_CONTEXT_C_2,	  ASN1_OPT  }, /* 12 */
+	{ 4,           "digestedObjectType",	ASN1_ENUMERATED,	  ASN1_BODY }, /* 13 */
+	{ 4,           "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
 																  ASN1_BODY }, /* 14 */
 	{ 4,         "end opt",					ASN1_EOC,			  ASN1_END  }, /* 15 */
 	{ 4,         "digestAlgorithm",			ASN1_EOC,			  ASN1_RAW  }, /* 16 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 17 */
-	{ 2,	   "v2Form",					ASN1_CONTEXT_C_0,	  ASN1_NONE }, /* 18 */
-	{ 3,	     "issuerName",				ASN1_SEQUENCE,		  ASN1_OPT |
+	{ 2,       "v2Form",					ASN1_CONTEXT_C_0,	  ASN1_NONE }, /* 18 */
+	{ 3,         "issuerName",				ASN1_SEQUENCE,		  ASN1_OPT |
 																  ASN1_OBJ  }, /* 19 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 20 */
-	{ 3,	     "baseCertificateID",		ASN1_CONTEXT_C_0,	  ASN1_OPT  }, /* 21 */
-	{ 4,	       "issuerSerial",			ASN1_SEQUENCE,		  ASN1_NONE }, /* 22 */
-	{ 5,	         "issuer",				ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 23 */
-	{ 5,		 "serial",					ASN1_INTEGER,		  ASN1_BODY }, /* 24 */
+	{ 3,         "baseCertificateID",		ASN1_CONTEXT_C_0,	  ASN1_OPT  }, /* 21 */
+	{ 4,           "issuerSerial",			ASN1_SEQUENCE,		  ASN1_NONE }, /* 22 */
+	{ 5,             "issuer",				ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 23 */
+	{ 5,         "serial",					ASN1_INTEGER,		  ASN1_BODY }, /* 24 */
 	{ 5,           "issuerUID",				ASN1_BIT_STRING,	  ASN1_OPT |
 																  ASN1_BODY }, /* 25 */
 	{ 5,           "end opt",				ASN1_EOC,			  ASN1_END  }, /* 26 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 27 */
 	{ 3,       "objectDigestInfo",			ASN1_CONTEXT_C_1,	  ASN1_OPT  }, /* 28 */
-	{ 4,	       "digestInfo",			ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 29 */
-	{ 5,  	 "digestedObjectType",			ASN1_ENUMERATED,	  ASN1_BODY }, /* 30 */
-	{ 5,		 "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
+	{ 4,           "digestInfo",			ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 29 */
+	{ 5,     "digestedObjectType",			ASN1_ENUMERATED,	  ASN1_BODY }, /* 30 */
+	{ 5,         "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
 																  ASN1_BODY }, /* 31 */
 	{ 5,           "end opt",				ASN1_EOC,			  ASN1_END  }, /* 32 */
 	{ 5,           "digestAlgorithm",		ASN1_EOC,			  ASN1_RAW  }, /* 33 */
 	{ 3,       "end opt",					ASN1_EOC,			  ASN1_END  }, /* 34 */
-	{ 2,	   "signature",					ASN1_EOC,			  ASN1_RAW  }, /* 35 */
-	{ 2,	   "serialNumber",				ASN1_INTEGER,		  ASN1_BODY }, /* 36 */
-	{ 2,	   "attrCertValidityPeriod",	ASN1_SEQUENCE,		  ASN1_NONE }, /* 37 */
-	{ 3,	     "notBeforeTime",			ASN1_GENERALIZEDTIME, ASN1_BODY }, /* 38 */
-	{ 3,	     "notAfterTime",			ASN1_GENERALIZEDTIME, ASN1_BODY }, /* 39 */
-	{ 2,	   "attributes",				ASN1_SEQUENCE,		  ASN1_LOOP }, /* 40 */
+	{ 2,       "signature",					ASN1_EOC,			  ASN1_RAW  }, /* 35 */
+	{ 2,       "serialNumber",				ASN1_INTEGER,		  ASN1_BODY }, /* 36 */
+	{ 2,       "attrCertValidityPeriod",	ASN1_SEQUENCE,		  ASN1_NONE }, /* 37 */
+	{ 3,         "notBeforeTime",			ASN1_GENERALIZEDTIME, ASN1_BODY }, /* 38 */
+	{ 3,         "notAfterTime",			ASN1_GENERALIZEDTIME, ASN1_BODY }, /* 39 */
+	{ 2,       "attributes",				ASN1_SEQUENCE,		  ASN1_LOOP }, /* 40 */
 	{ 3,       "attribute",					ASN1_SEQUENCE,		  ASN1_NONE }, /* 41 */
 	{ 4,         "type",					ASN1_OID,			  ASN1_BODY }, /* 42 */
 	{ 4,         "values",					ASN1_SET, 			  ASN1_LOOP }, /* 43 */
 	{ 5,           "value",					ASN1_EOC, 			  ASN1_RAW  }, /* 44 */
-	{ 4, 	       "end loop",				ASN1_EOC,			  ASN1_END  }, /* 45 */
+	{ 4,           "end loop",				ASN1_EOC,			  ASN1_END  }, /* 45 */
 	{ 2,     "end loop",					ASN1_EOC,			  ASN1_END  }, /* 46 */
 	{ 2,     "extensions",					ASN1_SEQUENCE,		  ASN1_LOOP }, /* 47 */
 	{ 3,       "extension",					ASN1_SEQUENCE,		  ASN1_NONE }, /* 48 */
@@ -368,7 +367,8 @@ static bool parse_certificate(private_x509_ac_t *this)
 				}
 				break;
 			case AC_OBJ_HOLDER_ISSUER:
-				if (!parse_directoryName(object, level, FALSE, &this->holderIssuer))
+				if (!parse_directoryName(object, level, FALSE,
+										 &this->holderIssuer))
 				{
 					goto end;
 				}
@@ -377,13 +377,15 @@ static bool parse_certificate(private_x509_ac_t *this)
 				this->holderSerial = object;
 				break;
 			case AC_OBJ_ENTITY_NAME:
-				if (!parse_directoryName(object, level, TRUE, &this->entityName))
+				if (!parse_directoryName(object, level, TRUE,
+										 &this->entityName))
 				{
 					goto end;
 				}
 				break;
 			case AC_OBJ_ISSUER_NAME:
-				if (!parse_directoryName(object, level, FALSE, &this->issuerName))
+				if (!parse_directoryName(object, level, FALSE,
+										 &this->issuerName))
 				{
 					goto end;
 				}
@@ -446,8 +448,9 @@ static bool parse_certificate(private_x509_ac_t *this)
 						DBG2(DBG_ASN, "  need to parse crlDistributionPoints");
 						break;
 					case OID_AUTHORITY_KEY_ID:
-						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
-													level, &this->authKeySerialNumber);
+						this->authKeyIdentifier =
+								x509_parse_authorityKeyIdentifier(object,
+											level, &this->authKeySerialNumber);
 						break;
 					case OID_TARGET_INFORMATION:
 						DBG2(DBG_ASN, "  need to parse targetInformation");
@@ -490,7 +493,7 @@ end:
 static chunk_t build_directoryName(asn1_t tag, chunk_t name)
 {
 	return asn1_wrap(tag, "m",
-		asn1_simple_object(ASN1_CONTEXT_C_4, name));
+				asn1_simple_object(ASN1_CONTEXT_C_4, name));
 }
 
 /**
@@ -499,14 +502,15 @@ static chunk_t build_directoryName(asn1_t tag, chunk_t name)
 static chunk_t build_holder(private_x509_ac_t *this)
 {
 	x509_t* x509 = (x509_t*)this->holderCert;
-	identification_t *issuer = this->holderCert->get_issuer(this->holderCert);
-	identification_t *subject = this->holderCert->get_subject(this->holderCert);
+	identification_t *issuer, *subject;
+
+	issuer = this->holderCert->get_issuer(this->holderCert);
+	subject = this->holderCert->get_subject(this->holderCert);
 
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
 		asn1_wrap(ASN1_CONTEXT_C_0, "mm",
 			build_directoryName(ASN1_SEQUENCE, issuer->get_encoding(issuer)),
-			asn1_simple_object(ASN1_INTEGER, x509->get_serial(x509))
-		),
+			asn1_simple_object(ASN1_INTEGER, x509->get_serial(x509))),
 		build_directoryName(ASN1_CONTEXT_C_1, subject->get_encoding(subject)));
 }
 
@@ -515,10 +519,12 @@ static chunk_t build_holder(private_x509_ac_t *this)
  */
 static chunk_t build_v2_form(private_x509_ac_t *this)
 {
-	identification_t *subject = this->signerCert->get_subject(this->signerCert);
+	identification_t *subject;
 
+	subject = this->signerCert->get_subject(this->signerCert);
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m",
-		build_directoryName(ASN1_SEQUENCE, subject->get_encoding(subject)));
+				build_directoryName(ASN1_SEQUENCE,
+					subject->get_encoding(subject)));
 }
 
 /**
@@ -530,7 +536,6 @@ static chunk_t build_attr_cert_validity(private_x509_ac_t *this)
 				asn1_from_time(&this->notBefore, ASN1_GENERALIZEDTIME),
 				asn1_from_time(&this->notAfter, ASN1_GENERALIZEDTIME));
 }
-
 
 /**
  * build attribute type
@@ -548,7 +553,8 @@ static chunk_t build_attribute_type(int type, chunk_t content)
 static chunk_t build_attributes(private_x509_ac_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-		build_attribute_type(OID_GROUP, this->groups->get_encoding(this->groups)));
+					 build_attribute_type(OID_GROUP,
+						this->groups->get_encoding(this->groups)));
 }
 
 /**
@@ -621,14 +627,11 @@ static chunk_t build_attr_cert_info(private_x509_ac_t *this)
  */
 static chunk_t build_ac(private_x509_ac_t *this)
 {
-	chunk_t signatureValue;
-	chunk_t attributeCertificateInfo;
+	chunk_t signatureValue, attributeCertificateInfo;
 
 	attributeCertificateInfo = build_attr_cert_info(this);
-
 	this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
 						  attributeCertificateInfo, &signatureValue);
-
 	return asn1_wrap(ASN1_SEQUENCE, "mmm",
 				attributeCertificateInfo,
 				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
@@ -692,7 +695,8 @@ METHOD(certificate_t, has_subject, id_match_t,
 METHOD(certificate_t, has_issuer, id_match_t,
 	private_x509_ac_t *this, identification_t *issuer)
 {
-	if (issuer->get_type(issuer) == ID_KEY_ID && this->authKeyIdentifier.ptr &&
+	if (issuer->get_type(issuer) == ID_KEY_ID &&
+		this->authKeyIdentifier.ptr &&
 		chunk_equals(this->authKeyIdentifier, issuer->get_encoding(issuer)))
 	{
 		return ID_MATCH_PERFECT;
@@ -808,9 +812,10 @@ METHOD(certificate_t, equals, bool,
 	{
 		return TRUE;
 	}
-	if (other->equals == (void*)equals)
+	if (other->equals == _equals)
 	{	/* skip allocation if we have the same implementation */
-		return chunk_equals(this->encoding, ((private_x509_ac_t*)other)->encoding);
+		return chunk_equals(this->encoding,
+							((private_x509_ac_t*)other)->encoding);
 	}
 	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
 	{
@@ -968,4 +973,3 @@ x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 	destroy(ac);
 	return NULL;
 }
-
