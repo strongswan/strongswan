@@ -24,7 +24,6 @@
 
 #include <library.h>
 #include <credentials/certificates/certificate.h>
-#include <credentials/ietf_attributes/ietf_attributes.h>
 
 typedef struct ac_t ac_t;
 typedef enum ac_group_type_t ac_group_type_t;

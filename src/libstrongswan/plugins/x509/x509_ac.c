@@ -29,7 +29,6 @@
 #include <utils/identification.h>
 #include <collections/linked_list.h>
 #include <credentials/certificates/x509.h>
-#include <credentials/ietf_attributes/ietf_attributes.h>
 #include <credentials/keys/private_key.h>
 
 extern chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob,
@@ -98,9 +97,9 @@ struct private_x509_ac_t {
 	time_t notAfter;
 
 	/**
-	 * List of groub attributes
+	 * List of group attributes, as group_t
 	 */
-	ietf_attributes_t *groups;
+	linked_list_t *groups;
 
 	/**
 	 * Authority Key Identifier
@@ -147,6 +146,25 @@ struct private_x509_ac_t {
 	 */
 	refcount_t ref;
 };
+
+/**
+ * Group definition, an IETF attribute
+ */
+typedef struct {
+	/** Attribute type */
+	ac_group_type_t type;
+	/* attribute value */
+	chunk_t value;
+} group_t;
+
+/**
+ * Clean up a group entry
+ */
+static void group_destroy(group_t *group)
+{
+	free(group->value.ptr);
+	free(group);
+}
 
 static chunk_t ASN1_noRevAvail_ext = chunk_from_chars(
 	0x30, 0x09,
@@ -235,6 +253,74 @@ static void parse_roleSyntax(chunk_t blob, int level0)
 		}
 	}
 	parser->destroy(parser);
+}
+
+/**
+ * ASN.1 definition of ietfAttrSyntax
+ */
+static const asn1Object_t ietfAttrSyntaxObjects[] =
+{
+	{ 0, "ietfAttrSyntax",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
+	{ 1,   "policyAuthority",	ASN1_CONTEXT_C_0,	ASN1_OPT |
+													ASN1_BODY }, /*  1 */
+	{ 1,   "end opt",			ASN1_EOC,			ASN1_END  }, /*  2 */
+	{ 1,   "values",			ASN1_SEQUENCE,		ASN1_LOOP }, /*  3 */
+	{ 2,     "octets",			ASN1_OCTET_STRING,	ASN1_OPT |
+													ASN1_BODY }, /*  4 */
+	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  5 */
+	{ 2,     "oid",				ASN1_OID,			ASN1_OPT |
+													ASN1_BODY }, /*  6 */
+	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  7 */
+	{ 2,     "string",			ASN1_UTF8STRING,	ASN1_OPT |
+													ASN1_BODY }, /*  8 */
+	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  9 */
+	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }, /* 10 */
+	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT }
+};
+#define IETF_ATTR_OCTETS	 4
+#define IETF_ATTR_OID		 6
+#define IETF_ATTR_STRING	 8
+
+/**
+ * Parse group memberships, IETF attributes
+ */
+static bool parse_groups(private_x509_ac_t *this, chunk_t encoded, int level0)
+{
+	ac_group_type_t type;
+	group_t *group;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+	bool success;
+
+	parser = asn1_parser_create(ietfAttrSyntaxObjects, encoded);
+	parser->set_top_level(parser, level0);
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case IETF_ATTR_OCTETS:
+				type = AC_GROUP_TYPE_OCTETS;
+				break;
+			case IETF_ATTR_OID:
+				type = AC_GROUP_TYPE_OID;
+				break;
+			case IETF_ATTR_STRING:
+				type = AC_GROUP_TYPE_STRING;
+				break;
+			default:
+				continue;
+		}
+		INIT(group,
+			.type = type,
+			.value = chunk_clone(object),
+		);
+		this->groups->insert_last(this->groups, group);
+	}
+	success = parser->success(parser);
+	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -415,7 +501,10 @@ static bool parse_certificate(private_x509_ac_t *this)
 						break;
 					case OID_GROUP:
 						DBG2(DBG_ASN, "-- > --");
-						this->groups = ietf_attributes_create_from_encoding(object);
+						if (!parse_groups(this, object, level))
+						{
+							goto end;
+						}
 						DBG2(DBG_ASN, "-- < --");
 						break;
 					case OID_ROLE:
@@ -545,9 +634,55 @@ static chunk_t build_attribute_type(int type, chunk_t content)
  */
 static chunk_t build_attributes(private_x509_ac_t *this)
 {
+	enumerator_t *enumerator;
+	group_t *group;
+	chunk_t values;
+	size_t size = 0, len;
+	u_char *pos;
+
+	/* precalculate the total size of all values */
+	enumerator = this->groups->create_enumerator(this->groups);
+	while (enumerator->enumerate(enumerator, &group))
+	{
+		len = group->value.len;
+		size += 1 + (len > 0) + (len >= 128) +
+				(len >= 256) + (len >= 65536) + len;
+	}
+	enumerator->destroy(enumerator);
+
+	pos = asn1_build_object(&values, ASN1_SEQUENCE, size);
+
+	enumerator = this->groups->create_enumerator(this->groups);
+	while (enumerator->enumerate(enumerator, &group))
+	{
+		chunk_t attr;
+		asn1_t type;
+
+		switch (group->type)
+		{
+			case AC_GROUP_TYPE_OCTETS:
+				type = ASN1_OCTET_STRING;
+				break;
+			case AC_GROUP_TYPE_STRING:
+				type = ASN1_UTF8STRING;
+				break;
+			case AC_GROUP_TYPE_OID:
+				type = ASN1_OID;
+				break;
+			default:
+				continue;
+		}
+		attr = asn1_simple_object(type, group->value);
+
+		memcpy(pos, attr.ptr, attr.len);
+		pos += attr.len;
+		free(attr.ptr);
+	}
+	enumerator->destroy(enumerator);
+
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-					 build_attribute_type(OID_GROUP,
-						this->groups->get_encoding(this->groups)));
+				build_attribute_type(OID_GROUP,
+					asn1_wrap(ASN1_SEQUENCE, "m", values)));
 }
 
 /**
@@ -655,10 +790,28 @@ METHOD(ac_t, get_authKeyIdentifier, chunk_t,
 	return this->authKeyIdentifier;
 }
 
+/**
+ * Filter function for attribute enumeration
+ */
+static bool attr_filter(void *null, group_t **in, ac_group_type_t *type,
+						void *in2, chunk_t *out)
+{
+	if ((*in)->type == AC_GROUP_TYPE_STRING &&
+		!chunk_printable((*in)->value, NULL, 0))
+	{	/* skip non-printable strings */
+		return FALSE;
+	}
+	*type = (*in)->type;
+	*out = (*in)->value;
+	return TRUE;
+}
+
 METHOD(ac_t, create_group_enumerator, enumerator_t*,
 	private_x509_ac_t *this)
 {
-	return this->groups->create_enumerator(this->groups);
+	return enumerator_create_filter(
+							this->groups->create_enumerator(this->groups),
+							(void*)attr_filter, NULL, NULL);
 }
 
 METHOD(certificate_t, get_type, certificate_type_t,
@@ -830,7 +983,7 @@ METHOD(certificate_t, destroy, void,
 		DESTROY_IF(this->holderCert);
 		DESTROY_IF(this->signerCert);
 		DESTROY_IF(this->signerKey);
-		DESTROY_IF(this->groups);
+		this->groups->destroy_function(this->groups, (void*)group_destroy);
 		free(this->serialNumber.ptr);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
@@ -869,6 +1022,7 @@ static private_x509_ac_t *create_empty(void)
 				.create_group_enumerator = _create_group_enumerator,
 			},
 		},
+		.groups = linked_list_create(),
 		.ref = 1,
 	);
 
@@ -911,6 +1065,27 @@ x509_ac_t *x509_ac_load(certificate_type_t type, va_list args)
 }
 
 /**
+ * Parse a comma separated group list into AC group memberships
+ */
+static void add_groups_from_string(private_x509_ac_t *this, char *str)
+{
+	enumerator_t *enumerator;
+	group_t *group;
+	char *name;
+
+	enumerator = enumerator_create_token(str, ",", " ");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		INIT(group,
+			.type = AC_GROUP_TYPE_STRING,
+			.value = chunk_clone(chunk_from_str(name)),
+		);
+		this->groups->insert_last(this->groups, group);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * See header.
  */
 x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
@@ -932,7 +1107,7 @@ x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 				ac->serialNumber = chunk_clone(va_arg(args, chunk_t));
 				continue;
 			case BUILD_IETF_GROUP_ATTR:
-				ac->groups = ietf_attributes_create_from_string(va_arg(args, char*));
+				add_groups_from_string(ac, va_arg(args, char*));
 				continue;
 			case BUILD_CERT:
 				ac->holderCert = va_arg(args, certificate_t*);
