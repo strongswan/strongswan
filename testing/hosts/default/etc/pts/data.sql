@@ -183,16 +183,22 @@ INSERT INTO products (			/* 30 */
 INSERT INTO products (			/* 31 */
   name
 ) VALUES (
- 'Android 4.4'
+ 'Android 4.3.1'
 );
 
 INSERT INTO products (			/* 32 */
   name
 ) VALUES (
- 'Android 4.4.1'
+ 'Android 4.4'
 );
 
 INSERT INTO products (			/* 33 */
+  name
+) VALUES (
+ 'Android 4.4.1'
+);
+
+INSERT INTO products (			/* 34 */
   name
 ) VALUES (
  'Android 4.4.2'
@@ -808,6 +814,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 33
+)
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 34
 )
 
 /* Policies */
