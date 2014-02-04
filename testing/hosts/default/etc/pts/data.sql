@@ -168,6 +168,36 @@ INSERT INTO products (			/* 28 */
  'Debian 7.2 x86_64'
 );
 
+INSERT INTO products (			/* 29 */
+  name
+) VALUES (
+ 'Android 4.1.2'
+);
+
+INSERT INTO products (			/* 30 */
+  name
+) VALUES (
+ 'Android 4.2.2'
+);
+
+INSERT INTO products (			/* 31 */
+  name
+) VALUES (
+ 'Android 4.4'
+);
+
+INSERT INTO products (			/* 32 */
+  name
+) VALUES (
+ 'Android 4.4.1'
+);
+
+INSERT INTO products (			/* 33 */
+  name
+) VALUES (
+ 'Android 4.4.2'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -749,6 +779,36 @@ INSERT INTO groups_product_defaults (
 ) VALUES (
   3, 22
 );
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 29
+)
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 30
+)
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 31
+)
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 32
+)
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 33
+)
 
 /* Policies */
 
