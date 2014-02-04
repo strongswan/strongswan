@@ -1065,15 +1065,15 @@ x509_ac_t *x509_ac_load(certificate_type_t type, va_list args)
 }
 
 /**
- * Parse a comma separated group list into AC group memberships
+ * Add groups from a list into AC group memberships
  */
-static void add_groups_from_string(private_x509_ac_t *this, char *str)
+static void add_groups_from_list(private_x509_ac_t *this, linked_list_t *list)
 {
 	enumerator_t *enumerator;
 	group_t *group;
 	char *name;
 
-	enumerator = enumerator_create_token(str, ",", " ");
+	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &name))
 	{
 		INIT(group,
@@ -1106,8 +1106,8 @@ x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 			case BUILD_SERIAL:
 				ac->serialNumber = chunk_clone(va_arg(args, chunk_t));
 				continue;
-			case BUILD_IETF_GROUP_ATTR:
-				add_groups_from_string(ac, va_arg(args, char*));
+			case BUILD_AC_GROUP_STRINGS:
+				add_groups_from_list(ac, va_arg(args, linked_list_t*));
 				continue;
 			case BUILD_CERT:
 				ac->holderCert = va_arg(args, certificate_t*);

@@ -495,6 +495,18 @@ int main(int argc, char **argv)
 	if (userCert != NULL && signerCert != NULL && signerKey != NULL &&
 		outfile != NULL)
 	{
+		linked_list_t *group_list;
+		enumerator_t *enumerator;
+		char *group;
+
+		group_list = linked_list_create();
+		enumerator = enumerator_create_token(groups, ",", " ");
+		while (enumerator->enumerate(enumerator, &group))
+		{
+			group_list->insert_last(group_list, strdup(group));
+		}
+		enumerator->destroy(enumerator);
+
 		/* read the serial number and increment it by one */
 		serial = read_serial();
 
@@ -504,10 +516,11 @@ int main(int argc, char **argv)
 							BUILD_NOT_BEFORE_TIME, notBefore,
 							BUILD_NOT_AFTER_TIME, notAfter,
 							BUILD_SERIAL, serial,
-							BUILD_IETF_GROUP_ATTR, groups,
+							BUILD_AC_GROUP_STRINGS, group_list,
 							BUILD_SIGNING_CERT, signerCert,
 							BUILD_SIGNING_KEY, signerKey,
 							BUILD_END);
+		group_list->destroy_function(group_list, free);
 		if (!attr_cert)
 		{
 			goto end;
