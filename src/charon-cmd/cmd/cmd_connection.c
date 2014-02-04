@@ -87,6 +87,11 @@ struct private_cmd_connection_t {
 	linked_list_t *remote_ts;
 
 	/**
+	 * List of IKE proposals
+	 */
+	linked_list_t *ike_proposals;
+
+	/**
 	 * Hostname to connect to
 	 */
 	char *host;
@@ -135,6 +140,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
 	ike_version_t version = IKE_ANY;
 	bool aggressive = FALSE;
+	proposal_t *proposal;
 
 	switch (this->profile)
 	{
@@ -165,7 +171,18 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	}
 	ike_cfg = ike_cfg_create(version, TRUE, FALSE, "0.0.0.0", local_port,
 					this->host, remote_port, FRAGMENTATION_NO, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	if (this->ike_proposals->get_count(this->ike_proposals))
+	{
+		while (this->ike_proposals->remove_first(this->ike_proposals,
+												 (void**)&proposal) == SUCCESS)
+		{
+			ike_cfg->add_proposal(ike_cfg, proposal);
+		}
+	}
+	else
+	{
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	}
 	peer_cfg = peer_cfg_create("cmd", ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
@@ -421,6 +438,8 @@ static void set_profile(private_cmd_connection_t *this, char *name)
 METHOD(cmd_connection_t, handle, bool,
 	private_cmd_connection_t *this, cmd_option_type_t opt, char *arg)
 {
+	proposal_t *proposal;
+
 	switch (opt)
 	{
 		case CMD_OPT_HOST:
@@ -447,6 +466,14 @@ METHOD(cmd_connection_t, handle, bool,
 		case CMD_OPT_REMOTE_TS:
 			add_ts(this, this->remote_ts, arg);
 			break;
+		case CMD_OPT_IKE_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_IKE, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->ike_proposals->insert_last(this->ike_proposals, proposal);
+			break;
 		case CMD_OPT_PROFILE:
 			set_profile(this, arg);
 			break;
@@ -459,6 +486,8 @@ METHOD(cmd_connection_t, handle, bool,
 METHOD(cmd_connection_t, destroy, void,
 	private_cmd_connection_t *this)
 {
+	this->ike_proposals->destroy_offset(this->ike_proposals,
+								offsetof(proposal_t, destroy));
 	this->local_ts->destroy_offset(this->local_ts,
 								offsetof(traffic_selector_t, destroy));
 	this->remote_ts->destroy_offset(this->remote_ts,
@@ -481,6 +510,7 @@ cmd_connection_t *cmd_connection_create()
 		.pid = getpid(),
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
+		.ike_proposals = linked_list_create(),
 		.profile = PROF_UNDEF,
 	);
 
