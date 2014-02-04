@@ -98,11 +98,6 @@ struct private_x509_ac_t {
 	time_t notAfter;
 
 	/**
-	 * List of charging attributes
-	 */
-	ietf_attributes_t *charging;
-
-	/**
 	 * List of groub attributes
 	 */
 	ietf_attributes_t *groups;
@@ -416,9 +411,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 						DBG2(DBG_ASN, "  need to parse accessIdentity");
 						break;
 					case OID_CHARGING_IDENTITY:
-						DBG2(DBG_ASN, "-- > --");
-						this->charging = ietf_attributes_create_from_encoding(object);
-						DBG2(DBG_ASN, "-- < --");
+						DBG2(DBG_ASN, "  need to parse chargingIdentity");
 						break;
 					case OID_GROUP:
 						DBG2(DBG_ASN, "-- > --");
@@ -837,7 +830,6 @@ METHOD(certificate_t, destroy, void,
 		DESTROY_IF(this->holderCert);
 		DESTROY_IF(this->signerCert);
 		DESTROY_IF(this->signerKey);
-		DESTROY_IF(this->charging);
 		DESTROY_IF(this->groups);
 		free(this->serialNumber.ptr);
 		free(this->authKeyIdentifier.ptr);
