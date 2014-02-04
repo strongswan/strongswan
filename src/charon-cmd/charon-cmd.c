@@ -389,6 +389,7 @@ int main(int argc, char *argv[])
 	sigaddset(&action.sa_mask, SIGINT);
 	sigaddset(&action.sa_mask, SIGTERM);
 	sigaddset(&action.sa_mask, SIGHUP);
+	sigaddset(&action.sa_mask, SIGUSR1);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
