@@ -195,7 +195,6 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 					TRUE, aggressive, TRUE, /* mobike, aggressive, pull */
 					30, 0, /* DPD delay, timeout */
 					FALSE, NULL, NULL); /* mediation */
-	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
 	return peer_cfg;
 }
@@ -328,11 +327,13 @@ static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 /**
  * Attach child config to peer config
  */
-static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
+static child_cfg_t* create_child_cfg(private_cmd_connection_t *this,
+									 peer_cfg_t *peer_cfg)
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
 	proposal_t *proposal;
+	bool has_v4 = FALSE, has_v6 = FALSE;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = 10800 /* 3h */,
@@ -367,12 +368,31 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 		ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
 									"0.0.0.0", 0, "255.255.255.255", 65535);
 		this->remote_ts->insert_last(this->remote_ts, ts);
+		has_v4 = TRUE;
 	}
 	while (this->remote_ts->remove_first(this->remote_ts,
 										 (void**)&ts) == SUCCESS)
 	{
+		switch (ts->get_type(ts))
+		{
+			case TS_IPV4_ADDR_RANGE:
+				has_v4 = TRUE;
+				break;
+			case TS_IPV6_ADDR_RANGE:
+				has_v6 = TRUE;
+				break;
+		}
 		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	}
+	if (has_v4)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+	}
+	if (has_v6)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("::", 0));
+	}
+	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 
 	return child_cfg;
 }
@@ -408,8 +428,7 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 		return JOB_REQUEUE_NONE;
 	}
 
-	child_cfg = create_child_cfg(this);
-	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
+	child_cfg = create_child_cfg(this, peer_cfg);
 
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 controller_cb_empty, NULL, 0) != SUCCESS)
