@@ -75,14 +75,6 @@ struct ac_t {
 	 * @return			object containing a list of IETF attributes
 	 */
 	ietf_attributes_t* (*get_groups)(ac_t *this);
-
-	/**
-	 * @brief Checks if two attribute certificates belong to the same holder
-	 *
-	 * @param that			other attribute certificate
-	 * @return				TRUE if same holder
-	 */
-	bool (*equals_holder) (ac_t *this, ac_t *other);
 };
 
 #endif /** AC_H_ @}*/
