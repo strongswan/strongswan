@@ -19,17 +19,9 @@
 #include <asn1/asn1_parser.h>
 #include <collections/linked_list.h>
 #include <utils/lexparser.h>
+#include <credentials/certificates/ac.h>
 
 #include "ietf_attributes.h"
-
-/**
- * Private definition of IETF attribute types
- */
-typedef enum {
-	IETF_ATTRIBUTE_OCTETS =	0,
-	IETF_ATTRIBUTE_OID =	1,
-	IETF_ATTRIBUTE_STRING =	2
-} ietf_attribute_type_t;
 
 typedef struct ietf_attr_t ietf_attr_t;
 
@@ -37,31 +29,16 @@ typedef struct ietf_attr_t ietf_attr_t;
  * Private definition of an IETF attribute
  */
 struct ietf_attr_t {
+
 	/**
 	 * IETF attribute type
 	 */
-	ietf_attribute_type_t type;
+	ac_group_type_t type;
 
 	/**
 	 * IETF attribute value
 	 */
 	chunk_t value;
-
-	/**
-	 * Compares two IETF attributes
-	 *
-	 * return -1 if this is earlier in the alphabet than other
-	 * return  0 if this equals other
-	 * return +1 if this is later in the alphabet than other
-	 *
-	 * @param other		other object
-	 */
-	int (*compare) (ietf_attr_t *this, ietf_attr_t *other);
-
-	/**
-	 * Destroys an ietf_attr_t object.
-	 */
-	void (*destroy) (ietf_attr_t *this);
 };
 
 /**
@@ -72,11 +49,11 @@ static int ietf_attr_compare(ietf_attr_t *this, ietf_attr_t *other)
 	int cmp_len, len, cmp_value;
 
 	/* OID attributes are appended after STRING and OCTETS attributes */
-	if (this->type != IETF_ATTRIBUTE_OID && other->type == IETF_ATTRIBUTE_OID)
+	if (this->type != AC_GROUP_TYPE_OID && other->type == AC_GROUP_TYPE_OID)
 	{
 		return -1;
 	}
-	if (this->type == IETF_ATTRIBUTE_OID && other->type != IETF_ATTRIBUTE_OID)
+	if (this->type == AC_GROUP_TYPE_OID && other->type != AC_GROUP_TYPE_OID)
 	{
 		return 1;
 	}
@@ -100,13 +77,11 @@ static void ietf_attr_destroy(ietf_attr_t *this)
 /**
  * Creates an ietf_attr_t object.
  */
-static ietf_attr_t* ietf_attr_create(ietf_attribute_type_t type, chunk_t value)
+static ietf_attr_t* ietf_attr_create(ac_group_type_t type, chunk_t value)
 {
 	ietf_attr_t *this;
 
 	INIT(this,
-		.compare = ietf_attr_compare,
-		.destroy = ietf_attr_destroy,
 		.type = type,
 		.value = chunk_clone(value),
 	);
@@ -175,12 +150,12 @@ METHOD(ietf_attributes_t, get_string, char*,
 
 			switch (attr->type)
 			{
-				case IETF_ATTRIBUTE_OCTETS:
-				case IETF_ATTRIBUTE_STRING:
+				case AC_GROUP_TYPE_OCTETS:
+				case AC_GROUP_TYPE_STRING:
 					written = snprintf(pos, len, "%.*s", (int)attr->value.len,
 														 attr->value.ptr);
 					break;
-				case IETF_ATTRIBUTE_OID:
+				case AC_GROUP_TYPE_OID:
 				{
 					int oid = asn1_known_oid(attr->value);
 
@@ -214,6 +189,24 @@ METHOD(ietf_attributes_t, get_string, char*,
 	return this->string;
 }
 
+/**
+ * Filter function for attribute enumeration
+ */
+static bool attr_filter(void *null, ietf_attr_t **in, ac_group_type_t *type,
+						void *in2, chunk_t *out)
+{
+	*type = (*in)->type;
+	*out = (*in)->value;
+	return TRUE;
+}
+
+METHOD(ietf_attributes_t, create_enumerator, enumerator_t*,
+	private_ietf_attributes_t *this)
+{
+	return enumerator_create_filter(this->list->create_enumerator(this->list),
+								(void*)attr_filter, NULL, NULL);
+}
+
 METHOD(ietf_attributes_t, get_encoding, chunk_t,
 	private_ietf_attributes_t *this)
 {
@@ -243,13 +236,13 @@ METHOD(ietf_attributes_t, get_encoding, chunk_t,
 
 		switch (attr->type)
 		{
-			case IETF_ATTRIBUTE_OCTETS:
+			case AC_GROUP_TYPE_OCTETS:
 				type = ASN1_OCTET_STRING;
 				break;
-			case IETF_ATTRIBUTE_STRING:
+			case AC_GROUP_TYPE_STRING:
 				type = ASN1_UTF8STRING;
 				break;
-			case IETF_ATTRIBUTE_OID:
+			case AC_GROUP_TYPE_OID:
 				type = ASN1_OID;
 				break;
 		}
@@ -290,7 +283,7 @@ static bool equals(private_ietf_attributes_t *this,
 		while (enum_a->enumerate(enum_a, &attr_a) &&
 			   enum_b->enumerate(enum_b, &attr_b))
 		{
-			if (attr_a->compare(attr_a, attr_b) != 0)
+			if (ietf_attr_compare(attr_a, attr_b) != 0)
 			{
 				/* we have a mismatch */
 				result = FALSE;
@@ -334,8 +327,9 @@ static bool matches(private_ietf_attributes_t *this,
 	/* look for at least one common attribute */
 	while (TRUE)
 	{
-		int cmp = attr_a->compare(attr_a, attr_b);
+		int cmp;
 
+		cmp = ietf_attr_compare(attr_a, attr_b);
 		if (cmp == 0)
 		{
 			/* we have a match */
@@ -379,7 +373,7 @@ METHOD(ietf_attributes_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		this->list->destroy_offset(this->list, offsetof(ietf_attr_t, destroy));
+		this->list->destroy_function(this->list, (void*)ietf_attr_destroy);
 		free(this->string);
 		free(this);
 	}
@@ -392,6 +386,7 @@ static private_ietf_attributes_t* create_empty(void)
 	INIT(this,
 		.public = {
 			.get_string = _get_string,
+			.create_enumerator = _create_enumerator,
 			.get_encoding = _get_encoding,
 			.equals = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))equals,
 			.matches = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))matches,
@@ -417,13 +412,13 @@ static void ietf_attributes_add(private_ietf_attributes_t *this,
 
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, (void **)&current_attr) &&
-		  (cmp = attr->compare(attr, current_attr)) > 0)
+		  (cmp = ietf_attr_compare(attr, current_attr)) > 0)
 	{
 		continue;
 	}
 	if (cmp == 0)
 	{
-		attr->destroy(attr);
+		ietf_attr_destroy(attr);
 	}
 	else
 	{	/* the enumerator either points to the end or to the attribute > attr */
@@ -461,7 +456,7 @@ ietf_attributes_t *ietf_attributes_create_from_string(char *string)
 		/* add the group attribute to the list */
 		if (group.len > 0)
 		{
-			ietf_attr_t *attr = ietf_attr_create(IETF_ATTRIBUTE_STRING, group);
+			ietf_attr_t *attr = ietf_attr_create(AC_GROUP_TYPE_STRING, group);
 
 			ietf_attributes_add(this, attr);
 		}
@@ -515,7 +510,7 @@ ietf_attributes_t *ietf_attributes_create_from_encoding(chunk_t encoded)
 			case IETF_ATTR_OID:
 			case IETF_ATTR_STRING:
 				{
-					ietf_attribute_type_t type;
+					ac_group_type_t type;
 					ietf_attr_t *attr;
 
 					type = (objectID - IETF_ATTR_OCTETS) / 2;
@@ -531,4 +526,3 @@ ietf_attributes_t *ietf_attributes_create_from_encoding(chunk_t encoded)
 
 	return &(this->public);
 }
-

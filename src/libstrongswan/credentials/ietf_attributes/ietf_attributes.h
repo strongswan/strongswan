@@ -41,6 +41,13 @@ struct ietf_attributes_t {
 	char* (*get_string) (ietf_attributes_t *this);
 
 	/**
+	 * Create an enumerator over attributes.
+	 *
+	 * @return			enumerator over (ac_group_type_t, chunk_t)
+	 */
+	enumerator_t* (*create_enumerator)(ietf_attributes_t *this);
+
+	/**
 	 * Get the ASN.1 encoding of the IETF attributes.
 	 *
 	 * @return 			allocated chunk containing the encoded bytes
@@ -58,7 +65,7 @@ struct ietf_attributes_t {
 	/**
 	 * Check for common attributes between two lists.
 	 *
-	 * @param other		attribute list to be matched 
+	 * @param other		attribute list to be matched
 	 * @return 			TRUE if there is at least a common attribute
 	 */
 	bool (*matches) (ietf_attributes_t *this, ietf_attributes_t *other);
@@ -89,4 +96,3 @@ ietf_attributes_t *ietf_attributes_create_from_string(char *string);
 ietf_attributes_t *ietf_attributes_create_from_encoding(chunk_t encoded);
 
 #endif /** IETF_ATTRIBUTES_H_ @}*/
-

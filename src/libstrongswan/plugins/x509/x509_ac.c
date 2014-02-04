@@ -655,10 +655,10 @@ METHOD(ac_t, get_authKeyIdentifier, chunk_t,
 	return this->authKeyIdentifier;
 }
 
-METHOD(ac_t, get_groups, ietf_attributes_t*,
+METHOD(ac_t, create_group_enumerator, enumerator_t*,
 	private_x509_ac_t *this)
 {
-	return this->groups ? this->groups->get_ref(this->groups) : NULL;
+	return this->groups->create_enumerator(this->groups);
 }
 
 METHOD(certificate_t, get_type, certificate_type_t,
@@ -866,7 +866,7 @@ static private_x509_ac_t *create_empty(void)
 				.get_holderSerial = _get_holderSerial,
 				.get_holderIssuer = _get_holderIssuer,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-				.get_groups = _get_groups,
+				.create_group_enumerator = _create_group_enumerator,
 			},
 		},
 		.ref = 1,
