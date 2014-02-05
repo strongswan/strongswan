@@ -402,12 +402,23 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	/* representation of months as 0..11*/
 	if (tm_mon < 1 || tm_mon > 12)
 	{
-		return 0; /* error in month format */
+		return 0;
 	}
 	tm_mon--;
 
 	/* representation of days as 0..30 */
+	if (tm_day < 1 || tm_day > 31)
+	{	/* we don't actually validate the day in relation to tm_year/tm_mon */
+		return 0;
+	}
 	tm_day--;
+
+	if (tm_hour < 0 || tm_hour > 23 ||
+		tm_min < 0 || tm_min > 59 ||
+		tm_sec < 0 || tm_sec > 60 /* allow leap seconds */)
+	{
+		return 0;
+	}
 
 	/* number of leap years between last year and 1970? */
 	tm_leap_4 = (tm_year - 1) / 4;
