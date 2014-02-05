@@ -790,37 +790,37 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 29
-)
+);
 
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 30
-)
+);
 
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 31
-)
+);
 
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 32
-)
+);
 
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 33
-)
+);
 
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 34
-)
+);
 
 /* Policies */
 
