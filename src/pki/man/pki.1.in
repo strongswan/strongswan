@@ -49,6 +49,9 @@ Issue a certificate using a CA certificate and key.
 .B "\-c, \-\-signcrl"
 Issue a CRL using a CA certificate and key.
 .TP
+.B "\-z, \-\-acert"
+Issue an attribute certificate.
+.TP
 .B "\-r, \-\-req"
 Create a PKCS#10 certificate request.
 .TP
@@ -148,6 +151,7 @@ certificates with the \-\-crl option.
 .BR pki\ \-\-self (1),
 .BR pki\ \-\-issue (1),
 .BR pki\ \-\-signcrl (1),
+.BR pki\ \-\-acert (1),
 .BR pki\ \-\-req (1),
 .BR pki\ \-\-pkcs7 (1),
 .BR pki\ \-\-keyid (1),
