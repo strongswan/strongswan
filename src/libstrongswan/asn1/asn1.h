@@ -191,6 +191,13 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private);
 /**
  * Converts an ASN.1 UTCTIME or GENERALIZEDTIME string to time_t
  *
+ * On systems where sizeof(time_t) == 4 there will be an overflow
+ * for dates
+ *   > Tue, 19 Jan 2038 03:14:07 UTC (0x7fffffff)
+ * and
+ *   < Fri, 13 Dec 1901 20:45:52 UTC (0x80000000)
+ * in both cases TIME_32_BIT_SIGNED_MAX is returned.
+ *
  * @param utctime	body of an ASN.1 coded time object
  * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
  * @return			time_t in UTC

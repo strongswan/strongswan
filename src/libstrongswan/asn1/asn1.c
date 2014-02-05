@@ -393,8 +393,8 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		tm_year += (tm_year < 50) ? 2000 : 1900;
 	}
 
-	/* prevent large 32 bit integer overflows */
-	if (sizeof(time_t) == 4 && tm_year > 2038)
+	/* prevent obvious 32 bit integer overflows */
+	if (sizeof(time_t) == 4 && (tm_year > 2038 || tm_year < 1901))
 	{
 		return TIME_32_BIT_SIGNED_MAX;
 	}
@@ -435,8 +435,20 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
 	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec - tz_offset;
 
-	/* has a 32 bit signed integer overflow occurred? */
-	return (tm_secs < 0) ? TIME_32_BIT_SIGNED_MAX : tm_secs;
+	if (sizeof(time_t) == 4)
+	{	/* has a 32 bit signed integer overflow occurred? */
+		if (tm_year > 1970 && tm_secs < 0)
+		{	/* depending on the time zone, the first days in 1970 may result in
+			 * a negative value, but dates after 1970 never will */
+			return TIME_32_BIT_SIGNED_MAX;
+		}
+		if (tm_year < 1969 && tm_secs > 0)
+		{	/* similarly, tm_secs is not positive for dates before 1970, except
+			 * for the last days in 1969, depending on the time zone */
+			return TIME_32_BIT_SIGNED_MAX;
+		}
+	}
+	return tm_secs;
 }
 
 /**
