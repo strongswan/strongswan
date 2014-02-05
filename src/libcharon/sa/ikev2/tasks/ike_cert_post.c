@@ -22,6 +22,7 @@
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/certificates/ac.h>
 
 
 typedef struct private_ike_cert_post_t private_ike_cert_post_t;
@@ -157,6 +158,50 @@ static void add_im_certs(private_ike_cert_post_t *this, auth_cfg_t *auth,
 }
 
 /**
+ * Add any valid attribute certificates of subject to message
+ */
+static void add_attribute_certs(private_ike_cert_post_t *this,
+								auth_cfg_t *auth, message_t *message)
+{
+	certificate_t *subject, *cert;
+
+	subject = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (subject && subject->get_type(subject) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)subject;
+		identification_t *id, *serial;
+		enumerator_t *enumerator;
+		cert_payload_t *payload;
+		ac_t *ac;
+
+		/* we look for attribute certs having our serial and holder issuer,
+		 * which is recommended by RFC 5755 */
+		serial = identification_create_from_encoding(ID_KEY_ID,
+													 x509->get_serial(x509));
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+										CERT_X509_AC, KEY_ANY, serial, FALSE);
+		while (enumerator->enumerate(enumerator, &ac))
+		{
+			cert = &ac->certificate;
+			id = ac->get_holderIssuer(ac);
+			if (id && id->equals(id, subject->get_issuer(subject)) &&
+				cert->get_validity(cert, NULL, NULL, NULL))
+			{
+				payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+				if (payload)
+				{
+					DBG1(DBG_IKE, "sending attribute certificate "
+						 "issued by \"%Y\"", cert->get_issuer(cert));
+					message->add_payload(message, (payload_t*)payload);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+		serial->destroy(serial);
+	}
+}
+
+/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
@@ -187,6 +232,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			if (add_subject_cert(this, auth, message))
 			{
 				add_im_certs(this, auth, message);
+				add_attribute_certs(this, auth, message);
 			}
 			break;
 	}
