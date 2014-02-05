@@ -105,12 +105,65 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 }
 
 /**
+ * Add subject certificate to message
+ */
+static bool add_subject_cert(private_ike_cert_post_t *this, auth_cfg_t *auth,
+							 message_t *message)
+{
+	cert_payload_t *payload;
+	certificate_t *cert;
+
+	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (!cert)
+	{
+		return FALSE;
+	}
+	payload = build_cert_payload(this, cert);
+	if (!payload)
+	{
+		return FALSE;
+	}
+	DBG1(DBG_IKE, "sending end entity cert \"%Y\"", cert->get_subject(cert));
+	message->add_payload(message, (payload_t*)payload);
+	return TRUE;
+}
+
+/**
+ * Add intermediate CA certificates to message
+ */
+static void add_im_certs(private_ike_cert_post_t *this, auth_cfg_t *auth,
+						 message_t *message)
+{
+	cert_payload_t *payload;
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	auth_rule_t type;
+
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &type, &cert))
+	{
+		if (type == AUTH_RULE_IM_CERT)
+		{
+			payload = cert_payload_create_from_cert(CERTIFICATE, cert);
+			if (payload)
+			{
+				DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
+					 cert->get_subject(cert));
+				message->add_payload(message, (payload_t*)payload);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	auth_payload_t *payload;
+	auth_cfg_t *auth;
 
 	payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
@@ -130,46 +183,12 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			}
 			/* FALL */
 		case CERT_ALWAYS_SEND:
-		{
-			cert_payload_t *payload;
-			enumerator_t *enumerator;
-			certificate_t *cert;
-			auth_rule_t type;
-			auth_cfg_t *auth;
-
 			auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-
-			/* get subject cert first, then issuing certificates */
-			cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
-			if (!cert)
+			if (add_subject_cert(this, auth, message))
 			{
-				break;
+				add_im_certs(this, auth, message);
 			}
-			payload = build_cert_payload(this, cert);
-			if (!payload)
-			{
-				break;
-			}
-			DBG1(DBG_IKE, "sending end entity cert \"%Y\"",
-				 cert->get_subject(cert));
-			message->add_payload(message, (payload_t*)payload);
-
-			enumerator = auth->create_enumerator(auth);
-			while (enumerator->enumerate(enumerator, &type, &cert))
-			{
-				if (type == AUTH_RULE_IM_CERT)
-				{
-					payload = cert_payload_create_from_cert(CERTIFICATE, cert);
-					if (payload)
-					{
-						DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
-							 cert->get_subject(cert));
-						message->add_payload(message, (payload_t*)payload);
-					}
-				}
-			}
-			enumerator->destroy(enumerator);
-		}
+			break;
 	}
 }
 
