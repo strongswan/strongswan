@@ -74,7 +74,7 @@ struct private_x509_ac_t {
 	/**
 	 * Serial number of the holder certificate
 	 */
-	chunk_t holderSerial;
+	identification_t *holderSerial;
 
 	/**
 	 * ID representing the holder
@@ -455,7 +455,8 @@ static bool parse_certificate(private_x509_ac_t *this)
 				}
 				break;
 			case AC_OBJ_HOLDER_SERIAL:
-				this->holderSerial = object;
+				this->holderSerial = identification_create_from_encoding(
+															ID_KEY_ID, object);
 				break;
 			case AC_OBJ_ENTITY_NAME:
 				if (!parse_directoryName(object, level, TRUE,
@@ -775,7 +776,11 @@ METHOD(ac_t, get_serial, chunk_t,
 METHOD(ac_t, get_holderSerial, chunk_t,
 	private_x509_ac_t *this)
 {
-	return this->holderSerial;
+	if (this->holderSerial)
+	{
+		return this->holderSerial->get_encoding(this->holderSerial);
+	}
+	return chunk_empty;
 }
 
 METHOD(ac_t, get_holderIssuer, identification_t*,
@@ -823,7 +828,11 @@ METHOD(certificate_t, get_type, certificate_type_t,
 METHOD(certificate_t, get_subject, identification_t*,
 	private_x509_ac_t *this)
 {
-	return this->entityName;
+	if (this->entityName)
+	{
+		return this->entityName;
+	}
+	return this->holderSerial;
 }
 
 METHOD(certificate_t, get_issuer, identification_t*,
@@ -835,7 +844,17 @@ METHOD(certificate_t, get_issuer, identification_t*,
 METHOD(certificate_t, has_subject, id_match_t,
 	private_x509_ac_t *this, identification_t *subject)
 {
-	return ID_MATCH_NONE;
+	id_match_t entity = ID_MATCH_NONE, serial = ID_MATCH_NONE;
+
+	if (this->entityName)
+	{
+		entity = this->entityName->matches(this->entityName, subject);
+	}
+	if (this->holderSerial)
+	{
+		serial = this->holderSerial->matches(this->holderSerial, subject);
+	}
+	return max(entity, serial);
 }
 
 METHOD(certificate_t, has_issuer, id_match_t,
@@ -978,6 +997,7 @@ METHOD(certificate_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		DESTROY_IF(this->holderIssuer);
+		DESTROY_IF(this->holderSerial);
 		DESTROY_IF(this->entityName);
 		DESTROY_IF(this->issuerName);
 		DESTROY_IF(this->holderCert);
