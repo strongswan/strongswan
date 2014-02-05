@@ -31,7 +31,7 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_XAUTH,
 	"XAuth",
 );
 
-ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
+ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"RULE_IDENTITY",
 	"RULE_IDENTITY_LOOSE",
 	"RULE_AUTH_CLASS",
@@ -56,6 +56,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
 	"HELPER_IM_HASH_URL",
 	"HELPER_SUBJECT_HASH_URL",
 	"HELPER_REVOCATION_CERT",
+	"HELPER_AC_CERT",
 );
 
 /**
@@ -91,6 +92,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
 			return TRUE;
 	}
 	return FALSE;
@@ -224,6 +226,7 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
 			/* pointer type */
 			this->value = va_arg(args, void*);
 			break;
@@ -262,6 +265,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
 		{
 			certificate_t *c1, *c2;
 
@@ -319,6 +323,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
 		{
 			certificate_t *cert = (certificate_t*)entry->value;
 			cert->destroy(cert);
@@ -390,6 +395,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			case AUTH_HELPER_REVOCATION_CERT:
+			case AUTH_HELPER_AC_CERT:
 				/* pointer type */
 				entry->value = va_arg(args, void*);
 				break;
@@ -467,6 +473,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
 		case AUTH_RULE_MAX:
 			break;
 	}
@@ -736,6 +743,7 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			case AUTH_HELPER_REVOCATION_CERT:
+			case AUTH_HELPER_AC_CERT:
 			case AUTH_RULE_MAX:
 				/* skip helpers */
 				continue;
@@ -868,6 +876,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_HELPER_IM_CERT:
 				case AUTH_HELPER_SUBJECT_CERT:
 				case AUTH_HELPER_REVOCATION_CERT:
+				case AUTH_HELPER_AC_CERT:
 				{
 					certificate_t *cert = (certificate_t*)value;
 
@@ -1029,6 +1038,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_REVOCATION_CERT:
+			case AUTH_HELPER_AC_CERT:
 			{
 				certificate_t *cert = (certificate_t*)value;
 				clone->add(clone, type, cert->get_ref(cert));
