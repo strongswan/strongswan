@@ -165,6 +165,7 @@ ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysq
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
 # authentication/credential plugins
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
+ARG_ENABL_SET([acert],          [enable X509 attribute certificate checking plugin.])
 ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
 ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
@@ -1090,6 +1091,7 @@ ADD_PLUGIN([nonce],                [s charon nm cmd])
 ADD_PLUGIN([x509],                 [s charon openac scepclient pki scripts attest nm cmd])
 ADD_PLUGIN([revocation],           [s charon nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
+ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd])
 ADD_PLUGIN([pkcs1],                [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
@@ -1229,6 +1231,7 @@ AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
 AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
+AM_CONDITIONAL(USE_ACERT, test x$acert = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PKCS7, test x$pkcs7 = xtrue)
@@ -1454,6 +1457,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/revocation/Makefile
 	src/libstrongswan/plugins/constraints/Makefile
+	src/libstrongswan/plugins/acert/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pkcs7/Makefile

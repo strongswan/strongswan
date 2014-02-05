@@ -307,6 +307,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ACERT
+  SUBDIRS += plugins/acert
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/acert/libstrongswan-acert.la
+endif
+endif
+
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 if MONOLITHIC
