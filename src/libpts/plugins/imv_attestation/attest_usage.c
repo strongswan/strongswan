@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,7 +24,7 @@ void usage(void)
 {
 	printf("\
 Usage:\n\
-  ipsec attest --components|--devices|--files|--hashes|--keys [options]\n\
+  ipsec attest --components|--devices|--sessions|--files|--hashes|--keys [options]\n\
   \n\
   ipsec attest --measurements|--packages|--products|--add|--del [options]\n\
   \n\
@@ -34,6 +34,9 @@ Usage:\n\
   \n\
   ipsec attest --devices [--utc]\n\
     Show a list of registered devices and associated collected information\n\
+  \n\
+  ipsec attest --sessions [--utc]\n\
+    Show a chronologically sorted list of all TNC sessions\n\
   \n\
   ipsec attest --files [--product <name>|--pid <id>]\n\
     Show a list of files with a software product name or\n\
