@@ -260,6 +260,30 @@ static void process_crl(cert_payload_t *payload, auth_cfg_t *auth)
 }
 
 /**
+ * Process an attribute certificate payload
+ */
+static void process_ac(cert_payload_t *payload, auth_cfg_t *auth)
+{
+	certificate_t *cert;
+
+	cert = payload->get_cert(payload);
+	if (cert)
+	{
+		if (cert->get_issuer(cert))
+		{
+			DBG1(DBG_IKE, "received attribute certificate issued by \"%Y\"",
+				 cert->get_issuer(cert));
+		}
+		else if (cert->get_subject(cert))
+		{
+			DBG1(DBG_IKE, "received attribute certificate for \"%Y\"",
+				 cert->get_subject(cert));
+		}
+		auth->add(auth, AUTH_HELPER_AC_CERT, cert);
+	}
+}
+
+/**
  * Process certificate payloads
  */
 static void process_certs(private_ike_cert_pre_t *this, message_t *message)
@@ -298,13 +322,15 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 				case ENC_CRL:
 					process_crl(cert_payload, auth);
 					break;
+				case ENC_X509_ATTRIBUTE:
+					process_ac(cert_payload, auth);
+					break;
 				case ENC_PKCS7_WRAPPED_X509:
 				case ENC_PGP:
 				case ENC_DNS_SIGNED_KEY:
 				case ENC_KERBEROS_TOKEN:
 				case ENC_ARL:
 				case ENC_SPKI:
-				case ENC_X509_ATTRIBUTE:
 				case ENC_RAW_RSA_KEY:
 				case ENC_X509_HASH_AND_URL_BUNDLE:
 				case ENC_OCSP_CONTENT:
