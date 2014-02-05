@@ -363,6 +363,7 @@ static int issue()
 			rng->destroy(rng);
 			goto end;
 		}
+		serial.ptr[0] &= 0x7F;
 		rng->destroy(rng);
 	}
 
