@@ -188,7 +188,7 @@ METHOD(updown_handler_t, create_dns_enumerator, enumerator_t*,
 	ike_sa = charon->bus->get_sa(charon->bus);
 	if (!ike_sa)
 	{
-		return FALSE;
+		return enumerator_create_empty();
 	}
 
 	this->lock->read_lock(this->lock);
