@@ -2,6 +2,10 @@
 strongswanconfdir = `dirname $(strongswan_conf)`
 strongswanddir = $(strongswanconfdir)/strongswan.d
 charonconfdir = $(strongswanddir)/charon
+# copy these files also to /usr/share
+templatesdir = $(pkgdatadir)/templates/config
+optionstemplatedir = $(templatesdir)/strongswan.d
+pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
 	options/charon.opt \
@@ -66,6 +70,9 @@ plugins_install_src = $(charon_plugins:%=plugins/%.conf)
 
 options_install_src = $(options:opt=conf)
 
+templates_DATA = strongswan.conf
+optionstemplate_DATA = $(options_install_src)
+pluginstemplate_DATA = $(plugins_install_src)
 man_MANS = \
 	strongswan.conf.5
 
