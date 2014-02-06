@@ -87,6 +87,16 @@ struct private_cmd_connection_t {
 	linked_list_t *remote_ts;
 
 	/**
+	 * List of IKE proposals
+	 */
+	linked_list_t *ike_proposals;
+
+	/**
+	 * List of CHILD proposals
+	 */
+	linked_list_t *child_proposals;
+
+	/**
 	 * Hostname to connect to
 	 */
 	char *host;
@@ -135,6 +145,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
 	ike_version_t version = IKE_ANY;
 	bool aggressive = FALSE;
+	proposal_t *proposal;
 
 	switch (this->profile)
 	{
@@ -165,7 +176,18 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	}
 	ike_cfg = ike_cfg_create(version, TRUE, FALSE, "0.0.0.0", local_port,
 					this->host, remote_port, FRAGMENTATION_NO, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	if (this->ike_proposals->get_count(this->ike_proposals))
+	{
+		while (this->ike_proposals->remove_first(this->ike_proposals,
+												 (void**)&proposal) == SUCCESS)
+		{
+			ike_cfg->add_proposal(ike_cfg, proposal);
+		}
+	}
+	else
+	{
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	}
 	peer_cfg = peer_cfg_create("cmd", ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
@@ -173,7 +195,6 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 					TRUE, aggressive, TRUE, /* mobike, aggressive, pull */
 					30, 0, /* DPD delay, timeout */
 					FALSE, NULL, NULL); /* mediation */
-	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
 	return peer_cfg;
 }
@@ -306,10 +327,13 @@ static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 /**
  * Attach child config to peer config
  */
-static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
+static child_cfg_t* create_child_cfg(private_cmd_connection_t *this,
+									 peer_cfg_t *peer_cfg)
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
+	proposal_t *proposal;
+	bool has_v4 = FALSE, has_v6 = FALSE;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = 10800 /* 3h */,
@@ -322,7 +346,18 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 								 NULL, FALSE, MODE_TUNNEL, /* updown, hostaccess */
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	if (this->child_proposals->get_count(this->child_proposals))
+	{
+		while (this->child_proposals->remove_first(this->child_proposals,
+												(void**)&proposal) == SUCCESS)
+		{
+			child_cfg->add_proposal(child_cfg, proposal);
+		}
+	}
+	else
+	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	}
 	while (this->local_ts->remove_first(this->local_ts, (void**)&ts) == SUCCESS)
 	{
 		child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -333,12 +368,31 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 		ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
 									"0.0.0.0", 0, "255.255.255.255", 65535);
 		this->remote_ts->insert_last(this->remote_ts, ts);
+		has_v4 = TRUE;
 	}
 	while (this->remote_ts->remove_first(this->remote_ts,
 										 (void**)&ts) == SUCCESS)
 	{
+		switch (ts->get_type(ts))
+		{
+			case TS_IPV4_ADDR_RANGE:
+				has_v4 = TRUE;
+				break;
+			case TS_IPV6_ADDR_RANGE:
+				has_v6 = TRUE;
+				break;
+		}
 		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	}
+	if (has_v4)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+	}
+	if (has_v6)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("::", 0));
+	}
+	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 
 	return child_cfg;
 }
@@ -374,8 +428,7 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 		return JOB_REQUEUE_NONE;
 	}
 
-	child_cfg = create_child_cfg(this);
-	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
+	child_cfg = create_child_cfg(this, peer_cfg);
 
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 controller_cb_empty, NULL, 0) != SUCCESS)
@@ -421,6 +474,8 @@ static void set_profile(private_cmd_connection_t *this, char *name)
 METHOD(cmd_connection_t, handle, bool,
 	private_cmd_connection_t *this, cmd_option_type_t opt, char *arg)
 {
+	proposal_t *proposal;
+
 	switch (opt)
 	{
 		case CMD_OPT_HOST:
@@ -447,6 +502,30 @@ METHOD(cmd_connection_t, handle, bool,
 		case CMD_OPT_REMOTE_TS:
 			add_ts(this, this->remote_ts, arg);
 			break;
+		case CMD_OPT_IKE_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_IKE, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->ike_proposals->insert_last(this->ike_proposals, proposal);
+			break;
+		case CMD_OPT_ESP_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_ESP, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->child_proposals->insert_last(this->child_proposals, proposal);
+			break;
+		case CMD_OPT_AH_PROPOSAL:
+			proposal = proposal_create_from_string(PROTO_AH, arg);
+			if (!proposal)
+			{
+				exit(1);
+			}
+			this->child_proposals->insert_last(this->child_proposals, proposal);
+			break;
 		case CMD_OPT_PROFILE:
 			set_profile(this, arg);
 			break;
@@ -459,6 +538,10 @@ METHOD(cmd_connection_t, handle, bool,
 METHOD(cmd_connection_t, destroy, void,
 	private_cmd_connection_t *this)
 {
+	this->ike_proposals->destroy_offset(this->ike_proposals,
+								offsetof(proposal_t, destroy));
+	this->child_proposals->destroy_offset(this->child_proposals,
+								offsetof(proposal_t, destroy));
 	this->local_ts->destroy_offset(this->local_ts,
 								offsetof(traffic_selector_t, destroy));
 	this->remote_ts->destroy_offset(this->remote_ts,
@@ -481,6 +564,8 @@ cmd_connection_t *cmd_connection_create()
 		.pid = getpid(),
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
+		.ike_proposals = linked_list_create(),
+		.child_proposals = linked_list_create(),
 		.profile = PROF_UNDEF,
 	);
 

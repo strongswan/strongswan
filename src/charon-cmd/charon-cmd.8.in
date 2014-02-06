@@ -116,6 +116,24 @@ address will always be proposed.
 .BI "\-\-remote\-ts " subnet
 Traffic selector to propose for remote side, defaults to 0.0.0.0/0.
 .TP
+.BI "\-\-ike\-proposal " proposal
+IKE proposal to offer instead of default. For IKEv1, a single proposal consists
+of one encryption algorithm, an integrity/PRF algorithm and a DH group. IKEv2
+can propose multiple algorithms of the same kind. To specify multiple proposals,
+repeat the option.
+.TP
+.BI "\-\-esp\-proposal " proposal
+ESP proposal to offer instead of default. For IKEv1, a single proposal consists
+of one encryption algorithm, an integrity algorithm and an optional DH group for
+Perfect Forward Secrecy rekeying. IKEv2 can propose multiple algorithms of the
+same kind. To specify multiple proposals, repeat the option.
+.TP
+.BI "\-\-ah\-proposal " proposal
+AH proposal to offer instead of ESP. For IKEv1, a single proposal consists
+of an integrity algorithm and an optional DH group for Perfect Forward Secrecy
+rekeying. IKEv2 can propose multiple algorithms of the same kind. To specify
+multiple proposals, repeat the option.
+.TP
 .BI "\-\-profile " name
 Authentication profile to use, the list of supported profiles can be found
 in the
