@@ -20,6 +20,9 @@ config_includedir = $(ipseclibdir)/include
 nodist_config_include_HEADERS = config.h
 endif
 
+# we leave config files behind intentionally so prevent distcheck from complaining
+distuninstallcheck_listfiles = find . -type f \! -name '*.conf' -print
+
 Android.common.mk :	Android.common.mk.in configure.ac
 		$(AM_V_GEN) \
 		sed \
