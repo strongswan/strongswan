@@ -64,8 +64,8 @@ confsnippets = $(alloptions:opt=conf)
 plugins_install_tmp = $(charon_plugins:%=plugins/%.tmp)
 plugins_install_src = $(charon_plugins:%=plugins/%.conf)
 
-strongswand_DATA = $(options:opt=conf)
-charonconf_DATA = $(plugins_install_src)
+options_install_src = $(options:opt=conf)
+
 man_MANS = \
 	strongswan.conf.5
 
@@ -113,10 +113,16 @@ maintainer-clean-local:
 	cd $(srcdir) && \
 		rm -f $(confsnippets) default.conf plugins/*.conf plugins/*.tmp
 
-install-exec-local:
+install-data-local: $(plugins_install_src)
 	test -e "$(DESTDIR)${strongswanconfdir}" || $(INSTALL) -d "$(DESTDIR)$(strongswanconfdir)"
+	test -e "$(DESTDIR)${strongswanddir}" || $(INSTALL) -d "$(DESTDIR)$(strongswanddir)"
+	test -e "$(DESTDIR)${charonconfdir}" || $(INSTALL) -d "$(DESTDIR)$(charonconfdir)"
 	test -e "$(DESTDIR)$(strongswanconfdir)/strongswan.conf" || $(INSTALL) -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(strongswanconfdir)/strongswan.conf || true
-
-install-data-hook:
-	chmod 0640 $(DESTDIR)$(strongswanddir)/*.conf
-	chmod 0640 $(DESTDIR)$(charonconfdir)/*.conf
+	for f in $(options_install_src); do \
+		name=`basename $$f`; \
+		test -f "$(DESTDIR)$(strongswanddir)/$$name" || $(INSTALL) -m 640 -t "$(DESTDIR)$(strongswanddir)" $(srcdir)/$$f || true; \
+	done
+	for f in $(plugins_install_src); do \
+		name=`basename $$f`; \
+		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 640 -t "$(DESTDIR)$(charonconfdir)" $(srcdir)/$$f || true; \
+	done
