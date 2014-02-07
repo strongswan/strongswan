@@ -89,8 +89,9 @@ confsnippets = $(alloptions:opt=conf)
 # we only install snippets for enabled plugins
 plugins_install_tmp = $(charon_plugins:%=plugins/%.tmp)
 plugins_install_src = $(charon_plugins:%=plugins/%.conf)
-
-options_install_src = $(options:opt=conf)
+# only install snippets for enabled components
+# has to be defined via autoconf as we can't do it with automake conditionals
+options_install_src = $(strongswan_options:%=options/%.conf)
 
 templates_DATA = strongswan.conf
 optionstemplate_DATA = $(options_install_src)

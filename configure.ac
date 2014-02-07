@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2013 Tobias Brunner
+# Copyright (C) 2007-2014 Tobias Brunner
 # Copyright (C) 2006-2013 Andreas Steffen
 # Copyright (C) 2006-2013 Martin Willi
 # Hochschule fuer Technik Rapperswil
@@ -1362,6 +1362,25 @@ fi
 if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
 fi
+
+# ====================================================
+#  options for enabled modules (see conf/Makefile.am)
+# ====================================================
+
+strongswan_options=
+
+AM_COND_IF([USE_ATTR_SQL], [strongswan_options=${strongswan_options}" pool"])
+AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging"])
+AM_COND_IF([USE_FILE_CONFIG], [strongswan_options=${strongswan_options}" starter"])
+AM_COND_IF([USE_IMV_ATTESTATION], [strongswan_options=${strongswan_options}" attest"])
+AM_COND_IF([USE_IMCV], [strongswan_options=${strongswan_options}" imcv"])
+AM_COND_IF([USE_IMV_OS], [strongswan_options=${strongswan_options}" pacman"])
+AM_COND_IF([USE_LIBTNCCS], [strongswan_options=${strongswan_options}" tnc"])
+AM_COND_IF([USE_MANAGER], [strongswan_options=${strongswan_options}" manager"])
+AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
+AM_COND_IF([USE_TOOLS], [strongswan_options=${strongswan_options}" tools"])
+
+AC_SUBST(strongswan_options)
 
 # =================
 #  build Makefiles
