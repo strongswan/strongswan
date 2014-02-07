@@ -9,7 +9,8 @@ pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
 	options/charon.opt \
-	options/charon-logging.opt
+	options/charon-logging.opt \
+	options/tnc.opt
 
 plugins = \
 	plugins/android_log.opt \
@@ -53,7 +54,11 @@ plugins = \
 	plugins/stroke.opt \
 	plugins/systime-fix.opt \
 	plugins/tnc-ifmap.opt \
+	plugins/tnc-imc.opt \
+	plugins/tnc-imv.opt \
 	plugins/tnc-pdp.opt \
+	plugins/tnccs-11.opt \
+	plugins/tnccs-20.opt \
 	plugins/unbound.opt \
 	plugins/updown.opt \
 	plugins/whitelist.opt \
