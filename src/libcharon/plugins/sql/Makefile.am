@@ -17,3 +17,6 @@ libstrongswan_sql_la_SOURCES = \
 	sql_cred.h sql_cred.c sql_logger.h sql_logger.c
 
 libstrongswan_sql_la_LDFLAGS = -module -avoid-version
+
+templatesdir = $(pkgdatadir)/templates/database/sql
+dist_templates_DATA = mysql.sql sqlite.sql
