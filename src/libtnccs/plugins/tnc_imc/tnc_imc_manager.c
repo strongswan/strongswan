@@ -224,7 +224,7 @@ METHOD(imc_manager_t, get_preferred_language, char*,
 	private_tnc_imc_manager_t *this)
 {
 	return lib->settings->get_str(lib->settings,
-				"libtnccs.plugins.tnc-imc.preferred_language", "en");
+				"%s.plugins.tnc-imc.preferred_language", "en", lib->ns);
 }
 
 METHOD(imc_manager_t, notify_connection_change, void,
