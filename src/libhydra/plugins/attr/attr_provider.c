@@ -190,6 +190,10 @@ static void load_entries(private_attr_provider_t *this)
 		char *pos;
 		int i, mask = -1, family;
 
+		if (streq(key, "load"))
+		{
+			continue;
+		}
 		type = atoi(key);
 		if (!type)
 		{
