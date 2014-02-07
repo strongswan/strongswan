@@ -1,0 +1,5 @@
+attest.database =
+	Path to database with file measurement information.
+
+attest.load =
+	Plugins to load in ipsec attest tool.

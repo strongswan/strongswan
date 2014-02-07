@@ -1,0 +1,2 @@
+charon.plugins.imc-swid.swid_directory = ${prefix}/share
+	Directory where SWID tags are located.

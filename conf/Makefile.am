@@ -8,6 +8,7 @@ optionstemplatedir = $(templatesdir)/strongswan.d
 pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
+	options/attest.opt \
 	options/charon.opt \
 	options/charon-logging.opt \
 	options/imcv.opt \
@@ -37,9 +38,12 @@ plugins = \
 	plugins/error-notify.opt \
 	plugins/gcrypt.opt \
 	plugins/ha.opt \
+	plugins/imc-attestation.opt \
 	plugins/imc-os.opt \
 	plugins/imc-scanner.opt \
+	plugins/imc-swid.opt \
 	plugins/imc-test.opt \
+	plugins/imv-attestation.opt \
 	plugins/imv-os.opt \
 	plugins/imv-scanner.opt \
 	plugins/imv-test.opt \

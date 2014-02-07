@@ -1,0 +1,17 @@
+charon.plugins.imc-attestation.aik_blob =
+	AIK encrypted private key blob file.
+
+charon.plugins.imc-attestation.aik_cert =
+	AIK certificate file.
+
+charon.plugins.imc-attestation.aik_key =
+	AIK public key file.
+
+charon.plugins.imc-attestation.nonce_len = 20
+	DH nonce length.
+
+charon.plugins.imc-attestation.use_quote2 = yes
+	Use Quote2 AIK signature instead of Quote signature.
+
+charon.plugins.imc-attestation.pcr_info = yes
+	Whether to send pcr_before and pcr_after info.
