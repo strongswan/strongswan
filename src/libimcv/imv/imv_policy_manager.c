@@ -328,7 +328,12 @@ int main(int argc, char *argv[])
 	session_id = atoi(tnc_session_id);
 
 	/* attach IMV database */
-	uri = lib->settings->get_str(lib->settings, "libimcv.database", NULL);
+	uri = lib->settings->get_str(lib->settings,
+			"imv_policy_manager.database",
+			lib->settings->get_str(lib->settings,
+				"charon.imcv.database",
+				lib->settings->get_str(lib->settings,
+					"libimcv.database", NULL)));
 	if (!uri)
 	{
 		fprintf(stderr, "database uri not defined.\n");

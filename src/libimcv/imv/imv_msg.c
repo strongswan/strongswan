@@ -208,8 +208,8 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 	}
 
 	/* Send an IETF Assessment Result attribute if enabled */
-	if (lib->settings->get_bool(lib->settings, "libimcv.assessment_result",
-								TRUE))
+	if (lib->settings->get_bool(lib->settings, "%s.imcv.assessment_result",
+								TRUE, lib->ns))
 	{
 		this->state->get_recommendation(this->state, &rec, &eval);
 		attr = ietf_attr_assess_result_create(eval);

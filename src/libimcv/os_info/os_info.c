@@ -560,9 +560,9 @@ os_info_t *os_info_create(void)
 
 	/* As an option OS name and OS version can be configured manually */
 	name.ptr = lib->settings->get_str(lib->settings,
-									  "libimcv.os_info.name", NULL);
+									  "%s.imcv.os_info.name", NULL, lib->ns);
 	version.ptr = lib->settings->get_str(lib->settings,
-									  "libimcv.os_info.version", NULL);
+									  "%s.imcv.os_info.version", NULL, lib->ns);
 	if (name.ptr && version.ptr)
 	{
 		name.len = strlen(name.ptr);

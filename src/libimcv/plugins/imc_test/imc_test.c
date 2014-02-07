@@ -91,11 +91,11 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	{
 		case TNC_CONNECTION_STATE_CREATE:
 			command = lib->settings->get_str(lib->settings,
-						 		"libimcv.plugins.imc-test.command", "none");
+								"%s.plugins.imc-test.command", "none", lib->ns);
 			dummy_size = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imc-test.dummy_size", 0);
+								"%s.plugins.imc-test.dummy_size", 0, lib->ns);
 			retry = lib->settings->get_bool(lib->settings,
-								"libimcv.plugins.imc-test.retry", FALSE);
+								"%s.plugins.imc-test.retry", FALSE, lib->ns);
 			state = imc_test_state_create(connection_id, command, dummy_size,
 										  retry);
 
@@ -107,7 +107,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 
 			/* Optionally reserve additional IMC IDs */
 			additional_ids = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imc-test.additional_ids", 0);
+							"%s.plugins.imc-test.additional_ids", 0, lib->ns);
 			imc_test->reserve_additional_ids(imc_test, additional_ids -
 								imc_test->count_additional_ids(imc_test));
 
@@ -127,8 +127,8 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			if (!test_state->is_first_handshake(test_state))
 			{
 				command = lib->settings->get_str(lib->settings,
-								"libimcv.plugins.imc-test.retry_command",
-								test_state->get_command(test_state));
+								"%s.plugins.imc-test.retry_command",
+								test_state->get_command(test_state), lib->ns);
 				test_state->set_command(test_state, command);
 			}
 
