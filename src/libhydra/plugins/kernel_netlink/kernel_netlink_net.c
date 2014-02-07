@@ -1962,10 +1962,13 @@ METHOD(kernel_net_t, add_route, status_t,
 		this->routes_lock->unlock(this->routes_lock);
 		return ALREADY_DONE;
 	}
-	found = route_entry_clone(&route);
-	this->routes->put(this->routes, found, found);
 	status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
 							 dst_net, prefixlen, gateway, src_ip, if_name);
+	if (status == SUCCESS)
+	{
+		found = route_entry_clone(&route);
+		this->routes->put(this->routes, found, found);
+	}
 	this->routes_lock->unlock(this->routes_lock);
 	return status;
 }
