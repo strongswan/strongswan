@@ -478,7 +478,7 @@ METHOD(task_t, process_r, status_t,
 			while (TRUE)
 			{
 				if (this->ph1->verify_auth(this->ph1, this->method, message,
-										   this->id_data))
+										   chunk_clone(this->id_data)))
 				{
 					break;
 				}
@@ -487,12 +487,10 @@ METHOD(task_t, process_r, status_t,
 													this->method, TRUE, NULL);
 				if (!this->peer_cfg)
 				{
-					this->id_data = chunk_empty;
 					return send_delete(this);
 				}
 				this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 			}
-			this->id_data = chunk_empty;
 
 			if (!charon->bus->authorize(charon->bus, FALSE))
 			{
