@@ -12,8 +12,13 @@ options = \
 	options/charon.opt \
 	options/charon-logging.opt \
 	options/imcv.opt \
+	options/manager.opt \
+	options/medsrv.opt \
 	options/pacman.opt \
-	options/tnc.opt
+	options/pool.opt \
+	options/starter.opt \
+	options/tnc.opt \
+	options/tools.opt
 
 plugins = \
 	plugins/android_log.opt \

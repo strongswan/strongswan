@@ -1,0 +1,6 @@
+pool.database
+	Database URI for the database that stores IP pools and configuration
+	attributes.
+
+pool.load =
+	Plugins to load in ipsec pool tool.
