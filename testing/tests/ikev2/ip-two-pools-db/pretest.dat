@@ -1,6 +1,6 @@
-moon::cat /etc/ipsec.d/tables.sql > /etc/ipsec.d/ipsec.sql
+moon::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql > /etc/ipsec.d/ipsec.sql
 moon::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
-moon::ipsec pool --add extpool --start 10.3.0.1 --end 10.3.1.244 --timeout 48 2> /dev/null 
+moon::ipsec pool --add extpool --start 10.3.0.1 --end 10.3.1.244 --timeout 48 2> /dev/null
 moon::ipsec pool --add intpool --start 10.4.0.1 --end 10.4.1.244 --timeout  0 2> /dev/null
 moon::ipsec pool --addattr dns --server PH_IP_VENUS --pool intpool --identity venus.strongswan.org 2> /dev/null
 moon::ipsec pool --addattr dns --server PH_IP_ALICE --pool intpool --identity alice@strongswan.org 2> /dev/null
@@ -18,7 +18,7 @@ venus::ipsec start
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start
-carol::sleep 2 
+carol::sleep 2
 carol::ipsec up home
 dave::ipsec up home
 alice::ipsec up home

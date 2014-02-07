@@ -1,7 +1,7 @@
 moon::rm /etc/ipsec.d/cacerts/*
 carol::rm /etc/ipsec.d/cacerts/*
-moon::cat /etc/ipsec.d/tables.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
-carol::cat /etc/ipsec.d/tables.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
+moon::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
+carol::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
 moon::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
 carol::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
 moon::iptables-restore < /etc/iptables.rules
