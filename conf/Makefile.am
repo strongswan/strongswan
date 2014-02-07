@@ -10,6 +10,8 @@ pluginstemplatedir = $(templatesdir)/plugins
 options = \
 	options/charon.opt \
 	options/charon-logging.opt \
+	options/imcv.opt \
+	options/pacman.opt \
 	options/tnc.opt
 
 plugins = \
@@ -35,6 +37,12 @@ plugins = \
 	plugins/error-notify.opt \
 	plugins/gcrypt.opt \
 	plugins/ha.opt \
+	plugins/imc-os.opt \
+	plugins/imc-scanner.opt \
+	plugins/imc-test.opt \
+	plugins/imv-os.opt \
+	plugins/imv-scanner.opt \
+	plugins/imv-test.opt \
 	plugins/ipseckey.opt \
 	plugins/led.opt \
 	plugins/kernel-klips.opt \

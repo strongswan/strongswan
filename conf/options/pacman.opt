@@ -1,0 +1,5 @@
+pacman.database =
+	Database URI for the database that stores the package information.
+
+pacman.load =
+	Plugins to load in package manager.
