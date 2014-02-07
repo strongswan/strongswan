@@ -951,7 +951,7 @@ pts_component_t *pts_ita_comp_ima_create(u_int32_t depth,
 		.bios_list = linked_list_create(),
 		.ima_list = linked_list_create(),
 		.pcr_info = lib->settings->get_bool(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr_info", TRUE),
+						"%s.plugins.imc-attestation.pcr_info", TRUE, lib->ns),
 		.ref = 1,
 	);
 

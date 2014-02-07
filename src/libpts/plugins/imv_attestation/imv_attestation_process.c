@@ -93,7 +93,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 			/* check compliance of responder nonce length */
 			min_nonce_len = lib->settings->get_int(lib->settings,
-						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
+						"%s.plugins.imv-attestation.min_nonce_len", 0, lib->ns);
 			nonce_len = responder_nonce.len;
 			if (nonce_len < PTS_MIN_NONCE_LEN ||
 			   (min_nonce_len > 0 && nonce_len < min_nonce_len))
@@ -247,7 +247,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				}
 				type =    found->get_type(found);
 				arg_int = found->get_arg_int(found);
- 
+
 				switch (type)
 				{
 					default:
@@ -300,7 +300,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 						e = measurements->create_enumerator(measurements);
 						while (e->enumerate(e, &filename, &measurement))
 						{
-							if (pts_db->add_file_measurement(pts_db, 
+							if (pts_db->add_file_measurement(pts_db,
 									platform_info, algo, measurement, filename,
 									is_dir, arg_int) != SUCCESS)
 							{
