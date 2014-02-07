@@ -24,7 +24,6 @@ libimcv_la_SOURCES = \
 	imv/imv_remediation_string.h imv/imv_remediation_string.c \
 	imv/imv_session.h imv/imv_session.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
-	imv/tables.sql imv/data.sql \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
 	ietf/ietf_attr_attr_request.h ietf/ietf_attr_attr_request.c \
@@ -52,6 +51,9 @@ libimcv_la_SOURCES = \
 
 ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy
+
+templatesdir = $(pkgdatadir)/templates/database/imv
+dist_templates_DATA = imv/tables.sql imv/data.sql
 
 ipsec_PROGRAMS = imv_policy_manager
 imv_policy_manager_SOURCES = \
