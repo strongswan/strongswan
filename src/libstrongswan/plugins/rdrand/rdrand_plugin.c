@@ -102,7 +102,11 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
 	};
 	*features = f;
-	return countof(f);
+	if (have_rdrand())
+	{
+		return countof(f);
+	}
+	return 0;
 }
 
 METHOD(plugin_t, destroy, void,
@@ -122,16 +126,12 @@ plugin_t *rdrand_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	if (have_rdrand())
-	{
-		this->public.plugin.get_features = _get_features;
-	}
 
 	return &this->public.plugin;
 }
