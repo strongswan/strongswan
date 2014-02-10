@@ -86,12 +86,12 @@ struct section_t {
 	/**
 	 * subsections, as section_t
 	 */
-	linked_list_t *sections;
+	array_t *sections;
 
 	/**
 	 * key value pairs, as kv_t
 	 */
-	linked_list_t *kv;
+	array_t *kv;
 };
 
 /**
@@ -140,8 +140,6 @@ static section_t *section_create(char *name)
 	section_t *this;
 	INIT(this,
 		.name = strdupnull(name),
-		.sections = linked_list_create(),
-		.kv = linked_list_create(),
 	);
 	return this;
 }
@@ -151,63 +149,73 @@ static section_t *section_create(char *name)
  */
 static void section_destroy(section_t *this)
 {
-	this->kv->destroy_function(this->kv, (void*)kv_destroy);
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	array_destroy_function(this->sections, (void*)section_destroy, NULL);
+	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
 	array_destroy(this->fallbacks);
 	free(this->name);
 	free(this);
 }
 
-/*
- * forward declaration
- */
-static bool section_purge(section_t *this);
-
 /**
- * Check if it is safe to remove the given section.
- */
-static bool section_remove(section_t *this)
-{
-	if (section_purge(this))
-	{
-		return FALSE;
-	}
-	section_destroy(this);
-	return TRUE;
-}
-
-/**
- * Purge contents of a section, returns TRUE if section has to be kept due to
- * any subsections.
+ * Purge contents of a section, returns if section can be safely removed.
  */
 static bool section_purge(section_t *this)
 {
-	int count, removed;
+	section_t *current;
+	int i;
 
-	this->kv->destroy_function(this->kv, (void*)kv_destroy);
-	this->kv = linked_list_create();
+	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
+	this->kv = NULL;
 	/* we ensure sections used as fallback, or configured with fallbacks (or
 	 * having any such subsections) are not removed */
-	count = this->sections->get_count(this->sections);
-	removed = this->sections->remove(this->sections, NULL,
-									(void*)section_remove);
-	return this->fallbacks || removed < count;
+	for (i = array_count(this->sections) - 1; i >= 0; i--)
+	{
+		array_get(this->sections, i, &current);
+		if (section_purge(current))
+		{
+			array_remove(this->sections, i, NULL);
+			section_destroy(current);
+		}
+	}
+	return !this->fallbacks && !array_count(this->sections);
 }
 
 /**
  * callback to find a section by name
  */
-static bool section_find(section_t *this, char *name)
+static int section_find(const void *a, const void *b)
 {
-	return streq(this->name, name);
+	const char *key = a;
+	const section_t *item = b;
+	return strcmp(key, item->name);
+}
+
+/**
+ * callback to sort sections by name
+ */
+static int section_sort(const void *a, const void *b, void *user)
+{
+	const section_t *sa = a, *sb = b;
+	return strcmp(sa->name, sb->name);
 }
 
 /**
  * callback to find a kv pair by key
  */
-static bool kv_find(kv_t *this, char *key)
+static int kv_find(const void *a, const void *b)
 {
-	return streq(this->key, key);
+	const char *key = a;
+	const kv_t *item = b;
+	return strcmp(key, item->key);
+}
+
+/**
+ * callback to sort kv pairs by key
+ */
+static int kv_sort(const void *a, const void *b, void *user)
+{
+	const kv_t *kva = a, *kvb = b;
+	return strcmp(kva->key, kvb->key);
 }
 
 /**
@@ -282,14 +290,13 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		found = section;
 	}
-	else if (section->sections->find_first(section->sections,
-										  (linked_list_match_t)section_find,
-										  (void**)&found, buf) != SUCCESS)
+	else if (array_bsearch(section->sections, buf, section_find, &found) == -1)
 	{
 		if (ensure)
 		{
 			found = section_create(buf);
-			section->sections->insert_last(section->sections, found);
+			array_insert_create(&section->sections, ARRAY_TAIL, found);
+			array_sort(section->sections, section_sort, NULL);
 		}
 	}
 	if (found && pos)
@@ -430,14 +437,14 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			found = section;
 		}
-		else if (section->sections->find_first(section->sections,
-											  (linked_list_match_t)section_find,
-											  (void**)&found, buf) != SUCCESS)
+		else if (array_bsearch(section->sections, buf, section_find,
+							   &found) == -1)
 		{
 			if (ensure)
 			{
 				found = section_create(buf);
-				section->sections->insert_last(section->sections, found);
+				array_insert_create(&section->sections, ARRAY_TAIL, found);
+				array_sort(section->sections, section_sort, NULL);
 			}
 		}
 		if (found)
@@ -461,13 +468,13 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-		if (section->kv->find_first(section->kv, (linked_list_match_t)kv_find,
-									(void**)&kv, buf) != SUCCESS)
+		if (array_bsearch(section->kv, buf, kv_find, &kv) == -1)
 		{
 			if (ensure)
 			{
 				kv = kv_create(buf, NULL);
-				section->kv->insert_last(section->kv, kv);
+				array_insert_create(&section->kv, ARRAY_TAIL, kv);
+				array_sort(section->kv, kv_sort, NULL);
 			}
 			else if (section->fallbacks)
 			{
@@ -803,7 +810,7 @@ METHOD(settings_t, create_section_enumerator, enumerator_t*,
 	}
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
-				section->sections->create_enumerator(section->sections),
+				array_create_enumerator(section->sections),
 				(void*)section_filter, this->lock, (void*)this->lock->unlock);
 }
 
@@ -834,7 +841,7 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	}
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
-					section->kv->create_enumerator(section->kv),
+					array_create_enumerator(section->kv),
 					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
 }
 
@@ -1011,15 +1018,15 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 							 section->name);
 						continue;
 					}
-					if (section->sections->find_first(section->sections,
-											(linked_list_match_t)section_find,
-											(void**)&sub, key) != SUCCESS)
+					if (array_bsearch(section->sections, key, section_find,
+									  &sub) == -1)
 					{
 						sub = section_create(key);
 						if (parse_section(contents, file, level, &inner, sub))
 						{
-							section->sections->insert_last(section->sections,
-														   sub);
+							array_insert_create(&section->sections, ARRAY_TAIL,
+												sub);
+							array_sort(section->sections, section_sort, NULL);
 							continue;
 						}
 						section_destroy(sub);
@@ -1046,12 +1053,11 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 							 section->name);
 						continue;
 					}
-					if (section->kv->find_first(section->kv,
-								(linked_list_match_t)kv_find,
-								(void**)&kv, key) != SUCCESS)
+					if (array_bsearch(section->kv, key, kv_find, &kv) == -1)
 					{
 						kv = kv_create(key, value);
-						section->kv->insert_last(section->kv, kv);
+						array_insert_create(&section->kv, ARRAY_TAIL, kv);
+						array_sort(section->kv, kv_sort, NULL);
 					}
 					else
 					{	/* replace with the most recently read value */
@@ -1222,37 +1228,37 @@ static void section_extend(section_t *base, section_t *extension)
 	section_t *sec;
 	kv_t *kv;
 
-	enumerator = extension->sections->create_enumerator(extension->sections);
+	enumerator = array_create_enumerator(extension->sections);
 	while (enumerator->enumerate(enumerator, (void**)&sec))
 	{
 		section_t *found;
-		if (base->sections->find_first(base->sections,
-					(linked_list_match_t)section_find, (void**)&found,
-					sec->name) == SUCCESS)
+		if (array_bsearch(base->sections, sec->name, section_find,
+			&found) != -1)
 		{
 			section_extend(found, sec);
 		}
 		else
 		{
-			extension->sections->remove_at(extension->sections, enumerator);
-			base->sections->insert_last(base->sections, sec);
+			array_remove_at(extension->sections, enumerator);
+			array_insert_create(&base->sections, ARRAY_TAIL, sec);
+			array_sort(base->sections, section_sort, NULL);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = extension->kv->create_enumerator(extension->kv);
+	enumerator = array_create_enumerator(extension->kv);
 	while (enumerator->enumerate(enumerator, (void**)&kv))
 	{
 		kv_t *found;
-		if (base->kv->find_first(base->kv, (linked_list_match_t)kv_find,
-					(void**)&found, kv->key) == SUCCESS)
+		if (array_bsearch(base->kv, kv->key, kv_find, &found) != -1)
 		{
 			found->value = kv->value;
 		}
 		else
 		{
-			extension->kv->remove_at(extension->kv, enumerator);
-			base->kv->insert_last(base->kv, kv);
+			array_remove_at(extension->kv, enumerator);
+			array_insert_create(&base->kv, ARRAY_TAIL, kv);
+			array_sort(base->kv, kv_sort, NULL);
 		}
 	}
 	enumerator->destroy(enumerator);
