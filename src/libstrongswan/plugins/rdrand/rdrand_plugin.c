@@ -77,11 +77,11 @@ static bool have_rdrand()
 		cpuid(1, &a, &b, &c, &d);
 		if (c & CPUID_RDRAND)
 		{
-			DBG1(DBG_LIB, "detected RDRAND support on %s CPU", vendor);
+			DBG2(DBG_LIB, "detected RDRAND support on %s CPU", vendor);
 			return TRUE;
 		}
 	}
-	DBG1(DBG_LIB, "no RDRAND support on %s CPU, disabled", vendor);
+	DBG2(DBG_LIB, "no RDRAND support on %s CPU, disabled", vendor);
 	return FALSE;
 }
 
