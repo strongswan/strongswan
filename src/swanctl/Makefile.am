@@ -2,6 +2,7 @@ sbin_PROGRAMS = swanctl
 
 swanctl_SOURCES = \
 	command.c command.h \
+	commands/initiate.c \
 	commands/list_sas.c \
 	swanctl.c
 
