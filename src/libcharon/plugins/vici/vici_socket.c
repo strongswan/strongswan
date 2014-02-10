@@ -346,10 +346,6 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 		entry->in.done += len;
 	}
 
-	this->inbound(this->user, entry->id, entry->in.buf);
-	chunk_clear(&entry->in.buf);
-	entry->in.hdrlen = entry->in.done = 0;
-
 	return TRUE;
 }
 
@@ -359,6 +355,7 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 CALLBACK(on_read, bool,
 	entry_t *entry, stream_t *stream)
 {
+	chunk_t data = chunk_empty;
 	bool ret;
 
 	entry->mutex->lock(entry->mutex);
@@ -367,7 +364,19 @@ CALLBACK(on_read, bool,
 	{
 		disconnect(entry->this, entry->id);
 	}
+	if (entry->in.buf.len == entry->in.done)
+	{
+		data = entry->in.buf;
+		entry->in.buf = chunk_empty;
+		entry->in.hdrlen = entry->in.done = 0;
+	}
 	entry->mutex->unlock(entry->mutex);
+
+	if (data.len)
+	{
+		entry->this->inbound(entry->this->user, entry->id, data);
+		chunk_clear(&data);
+	}
 
 	return ret;
 }
