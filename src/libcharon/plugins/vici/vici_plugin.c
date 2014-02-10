@@ -16,6 +16,7 @@
 #include "vici_plugin.h"
 #include "vici_dispatcher.h"
 #include "vici_query.h"
+#include "vici_control.h"
 
 #include <library.h>
 #include <daemon.h>
@@ -41,6 +42,11 @@ struct private_vici_plugin_t {
 	 * Query commands
 	 */
 	vici_query_t *query;
+
+	/**
+	 * Control commands
+	 */
+	vici_control_t *control;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -65,12 +71,14 @@ static bool register_vici(private_vici_plugin_t *this,
 		if (this->dispatcher)
 		{
 			this->query = vici_query_create(this->dispatcher);
+			this->control = vici_control_create(this->dispatcher);
 			return TRUE;
 		}
 		return FALSE;
 	}
 	else
 	{
+		this->control->destroy(this->control);
 		this->query->destroy(this->query);
 		this->dispatcher->destroy(this->dispatcher);
 	}
