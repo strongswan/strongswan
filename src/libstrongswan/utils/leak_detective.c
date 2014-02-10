@@ -483,7 +483,7 @@ static void* real_realloc(void *ptr, size_t size)
 static bool register_hooks()
 {
 	void *buf = real_malloc(8);
-	real_realloc(buf, 16);
+	buf = real_realloc(buf, 16);
 	real_free(buf);
 	return TRUE;
 }
