@@ -55,7 +55,7 @@ START_TEST(test_event)
 	ck_assert(vici_register(conn, "test", event_cb, &count) == 0);
 	ck_assert(vici_register(conn, "nonexistent", event_cb, &count) != 0);
 
-	dispatcher->raise_event(dispatcher, "test", vici_message_create_from_args(
+	dispatcher->raise_event(dispatcher, "test", 0, vici_message_create_from_args(
 		 VICI_KEY_VALUE, "key1", chunk_from_str("value1"),
 		VICI_END));
 
@@ -100,7 +100,7 @@ START_TEST(test_stress)
 		/* do some event re/deregistration in between */
 		ck_assert(vici_register(conn, "dummy", event_cb, NULL) == 0);
 
-		dispatcher->raise_event(dispatcher, "test",
+		dispatcher->raise_event(dispatcher, "test", 0,
 			vici_message_create_from_args(
 				 VICI_KEY_VALUE, "key1", chunk_from_str("value1"),
 				VICI_END));

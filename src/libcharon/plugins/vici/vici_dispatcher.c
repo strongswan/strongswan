@@ -382,11 +382,12 @@ METHOD(vici_dispatcher_t, manage_event, void,
 }
 
 METHOD(vici_dispatcher_t, raise_event, void,
-	private_vici_dispatcher_t *this, char *name, vici_message_t *message)
+	private_vici_dispatcher_t *this, char *name, u_int id,
+	vici_message_t *message)
 {
 	enumerator_t *enumerator;
 	event_t *event;
-	u_int *id;
+	u_int *current;
 
 	this->mutex->lock(this->mutex);
 	event = this->events->get(this->events, name);
@@ -397,9 +398,12 @@ METHOD(vici_dispatcher_t, raise_event, void,
 	this->mutex->unlock(this->mutex);
 
 	enumerator = array_create_enumerator(event->clients);
-	while (enumerator->enumerate(enumerator, &id))
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		send_op(this, *id, VICI_EVENT, name, message);
+		if (id == 0 || id == *current)
+		{
+			send_op(this, *current, VICI_EVENT, name, message);
+		}
 	}
 	enumerator->destroy(enumerator);
 

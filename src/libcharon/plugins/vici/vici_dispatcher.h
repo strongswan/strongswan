@@ -92,12 +92,13 @@ struct vici_dispatcher_t {
 	void (*manage_event)(vici_dispatcher_t *this, char *name, bool reg);
 
 	/**
-	 * Raise an event to all clients registered to that event.
+	 * Raise an event to a specific or all clients registered to that event.
 	 *
 	 * @param name			event name to raise
+	 * @param id			client connection ID, 0 for all
 	 * @param message		event message to send, gets destroyed
 	 */
-	void (*raise_event)(vici_dispatcher_t *this, char *name,
+	void (*raise_event)(vici_dispatcher_t *this, char *name, u_int id,
 						vici_message_t *message);
 
 	/**

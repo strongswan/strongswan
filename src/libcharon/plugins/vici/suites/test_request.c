@@ -188,7 +188,7 @@ START_TEST(test_stress)
 	{
 		/* do some event management in between */
 		ck_assert(vici_register(conn, "dummy", event_cb, &events) == 0);
-		dispatcher->raise_event(dispatcher, "dummy",
+		dispatcher->raise_event(dispatcher, "dummy", 0,
 			vici_message_create_from_args(
 				 VICI_KEY_VALUE, "key1", chunk_from_str("value1"),
 				VICI_END));
