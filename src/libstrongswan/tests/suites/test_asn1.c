@@ -311,6 +311,9 @@ START_TEST(test_asn1_length)
 	a = chunk_from_chars(0x04, 0x81);
 	ck_assert(asn1_length(&a) == ASN1_INVALID_LENGTH);
 
+	a = chunk_from_chars(0x04, 0x81, 0x00);
+	ck_assert(asn1_length(&a) == 0);
+
 	a = chunk_from_chars(0x04, 0x81, 0x80, 0xaa);
 	ck_assert(asn1_length(&a) == ASN1_INVALID_LENGTH);
 
@@ -325,6 +328,16 @@ START_TEST(test_asn1_length)
 	a = chunk_from_chars(0x04, 0x83, 0x01, 0x02, 0x03, 0xaa);
 	a.len = 5 + 66051;
 	ck_assert(asn1_length(&a) == 66051);
+
+	a = chunk_from_chars(0x04, 0x84, 0x01, 0x02, 0x03, 0x04, 0xaa);
+	a.len = 6 + 16909060;
+	ck_assert(asn1_length(&a) == 16909060);
+
+	/* largest chunk on 32 bit system */
+	a = chunk_from_chars(0x04, 0x84, 0xff, 0xff, 0xff, 0xf9, 0xaa);
+	a.len = 4294967295;
+	ck_assert(asn1_length(&a) == 4294967289);
+
 }
 END_TEST
 
