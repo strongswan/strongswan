@@ -276,13 +276,12 @@ struct settings_t {
 	 * 'section-one.two' will result in a lookup for the same section/key
 	 * in 'section-two'.
 	 *
-	 * @note This has only an effect on single value lookups.  Enumerators for
-	 * sections and key/value-pairs are not affected.  The reason is that it is
-	 * rather tricky to implement such a merge without requiring allocations for
-	 * each lookup.  For instance, if charon.tls has libtls as fallback and
-	 * charon has libstrongswan as fallback, the key/value-enumerator for
-	 * charon.tls had to enumerate the libtls and libstrongswan.tls sections
-	 * too, but it would have to keep track of the already enumerated keys.
+	 * @note Lookups are depth-first and currently strictly top-down.
+	 * For instance, if app.sec had lib1.sec as fallback and lib1 had lib2 as
+	 * fallback the keys/sections in lib2.sec would not be considered.  But if
+	 * app had lib3 as fallback the contents of lib3.sec would (as app is passed
+	 * during the initial lookup).  In the last example the order during
+	 * enumerations would be app.sec, lib1.sec, lib3.sec.
 	 *
 	 * @note Additional arguments will be applied to both section format
 	 * strings so they must be compatible.

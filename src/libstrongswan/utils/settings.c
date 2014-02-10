@@ -32,6 +32,7 @@
 #include "settings.h"
 
 #include "collections/array.h"
+#include "collections/hashtable.h"
 #include "collections/linked_list.h"
 #include "threading/rwlock.h"
 #include "utils/debug.h"
@@ -307,23 +308,67 @@ static section_t *find_section_buffered(section_t *section,
 }
 
 /**
- * Find a section by a given key (thread-safe).
+ * Find all sections via a given key considering fallbacks, using buffered key,
+ * reusable buffer.
  */
-static section_t *find_section(private_settings_t *this, section_t *section,
-							   char *key, va_list args)
+static void find_sections_buffered(section_t *section, char *start, char *key,
+						va_list args, char *buf, int len, array_t **sections)
 {
-	char buf[128], keybuf[512];
-	section_t *found;
+	section_t *found = NULL, *fallback;
+	char *pos;
+	int i;
 
-	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	if (!section)
 	{
-		return NULL;
+		return;
 	}
-	this->lock->read_lock(this->lock);
-	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf), FALSE);
-	this->lock->unlock(this->lock);
-	return found;
+	pos = strchr(key, '.');
+	if (pos)
+	{
+		*pos = '\0';
+	}
+	if (!print_key(buf, len, start, key, args))
+	{
+		return;
+	}
+	if (pos)
+	{	/* restore so we can follow fallbacks */
+		*pos = '.';
+	}
+	if (!strlen(buf))
+	{
+		found = section;
+	}
+	else
+	{
+		array_bsearch(section->sections, buf, section_find, &found);
+	}
+	if (found)
+	{
+		if (pos)
+		{
+			find_sections_buffered(found, start, pos+1, args, buf, len,
+								   sections);
+		}
+		else
+		{
+			array_insert_create(sections, ARRAY_TAIL, found);
+			for (i = 0; i < array_count(found->fallbacks); i++)
+			{
+				array_get(found->fallbacks, i, &fallback);
+				array_insert_create(sections, ARRAY_TAIL, fallback);
+			}
+		}
+	}
+	if (section->fallbacks)
+	{
+		for (i = 0; i < array_count(section->fallbacks); i++)
+		{
+			array_get(section->fallbacks, i, &fallback);
+			find_sections_buffered(fallback, start, key, args, buf, len,
+								   sections);
+		}
+	}
 }
 
 /**
@@ -345,6 +390,26 @@ static section_t *ensure_section(private_settings_t *this, section_t *section,
 								  sizeof(buf), TRUE);
 	this->lock->unlock(this->lock);
 	return found;
+}
+
+/**
+ * Find a section by a given key with its fallbacks (not thread-safe!).
+ * Sections are returned in depth-first order (array is allocated). NULL is
+ * returned if no sections are found.
+ */
+static array_t *find_sections(private_settings_t *this, section_t *section,
+							  char *key, va_list args)
+{
+	char buf[128], keybuf[512];
+	array_t *sections = NULL;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return NULL;
+	}
+	find_sections_buffered(section, keybuf, keybuf, args, buf,
+						   sizeof(buf), &sections);
+	return sections;
 }
 
 /**
@@ -786,63 +851,127 @@ METHOD(settings_t, set_default_str, bool,
 }
 
 /**
+ * Data for enumerators
+ */
+typedef struct {
+	/** settings_t instance */
+	private_settings_t *settings;
+	/** sections to enumerate */
+	array_t *sections;
+	/** sections/keys that were already enumerated */
+	hashtable_t *seen;
+} enumerator_data_t;
+
+/**
+ * Destroy enumerator data
+ */
+static void enumerator_destroy(enumerator_data_t *this)
+{
+	this->settings->lock->unlock(this->settings->lock);
+	this->seen->destroy(this->seen);
+	array_destroy(this->sections);
+	free(this);
+}
+
+/**
  * Enumerate section names, not sections
  */
-static bool section_filter(void *null, section_t **in, char **out)
+static bool section_filter(hashtable_t *seen, section_t **in, char **out)
 {
 	*out = (*in)->name;
+	if (seen->get(seen, *out))
+	{
+		return FALSE;
+	}
+	seen->put(seen, *out, *out);
 	return TRUE;
+}
+
+/**
+ * Enumerate sections of the given section
+ */
+static enumerator_t *section_enumerator(section_t *section,
+										enumerator_data_t *data)
+{
+	return enumerator_create_filter(array_create_enumerator(section->sections),
+				(void*)section_filter, data->seen, NULL);
 }
 
 METHOD(settings_t, create_section_enumerator, enumerator_t*,
 	private_settings_t *this, char *key, ...)
 {
-	section_t *section;
+	enumerator_data_t *data;
+	array_t *sections;
 	va_list args;
 
+	this->lock->read_lock(this->lock);
 	va_start(args, key);
-	section = find_section(this, this->top, key, args);
+	sections = find_sections(this, this->top, key, args);
 	va_end(args);
 
-	if (!section)
+	if (!sections)
 	{
+		this->lock->unlock(this->lock);
 		return enumerator_create_empty();
 	}
-	this->lock->read_lock(this->lock);
-	return enumerator_create_filter(
-				array_create_enumerator(section->sections),
-				(void*)section_filter, this->lock, (void*)this->lock->unlock);
+	INIT(data,
+		.settings = this,
+		.sections = sections,
+		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
+	);
+	return enumerator_create_nested(array_create_enumerator(sections),
+					(void*)section_enumerator, data, (void*)enumerator_destroy);
 }
 
 /**
  * Enumerate key and values, not kv_t entries
  */
-static bool kv_filter(void *null, kv_t **in, char **key,
+static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
 					  void *none, char **value)
 {
 	*key = (*in)->key;
+	if (seen->get(seen, *key))
+	{
+		return FALSE;
+	}
 	*value = (*in)->value;
+	seen->put(seen, *key, *key);
 	return TRUE;
+}
+
+/**
+ * Enumerate key/value pairs of the given section
+ */
+static enumerator_t *kv_enumerator(section_t *section, enumerator_data_t *data)
+{
+	return enumerator_create_filter(array_create_enumerator(section->kv),
+					(void*)kv_filter, data->seen, NULL);
 }
 
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	private_settings_t *this, char *key, ...)
 {
-	section_t *section;
+	enumerator_data_t *data;
+	array_t *sections;
 	va_list args;
 
+	this->lock->read_lock(this->lock);
 	va_start(args, key);
-	section = find_section(this, this->top, key, args);
+	sections = find_sections(this, this->top, key, args);
 	va_end(args);
 
-	if (!section)
+	if (!sections)
 	{
+		this->lock->unlock(this->lock);
 		return enumerator_create_empty();
 	}
-	this->lock->read_lock(this->lock);
-	return enumerator_create_filter(
-					array_create_enumerator(section->kv),
-					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
+	INIT(data,
+		.settings = this,
+		.sections = sections,
+		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
+	);
+	return enumerator_create_nested(array_create_enumerator(sections),
+					(void*)kv_enumerator, data, (void*)enumerator_destroy);
 }
 
 METHOD(settings_t, add_fallback, void,

@@ -714,13 +714,22 @@ START_TEST(test_add_fallback)
 	verify_string("subval2", "main.sub1.key2");
 	verify_string("subsubval1", "main.sub1.subsub.subkey1");
 
-	/* fallbacks currently have no effect on section & key/value enumerators */
-	keys = linked_list_create_with_items(NULL);
+	keys = linked_list_create_with_items("sub1", NULL);
+	verify_sections(keys, "main");
+	keys = linked_list_create_with_items("subsub", NULL);
 	verify_sections(keys, "main.sub1");
 
 	keys = linked_list_create_with_items("key1", NULL);
 	values = linked_list_create_with_items("val1", NULL);
+	verify_key_values(keys, values, "main");
+
+	keys = linked_list_create_with_items("key1", "key2", NULL);
+	values = linked_list_create_with_items("val1", "subval2", NULL);
 	verify_key_values(keys, values, "main.sub1");
+
+	keys = linked_list_create_with_items("subkey1", NULL);
+	values = linked_list_create_with_items("subsubval1", NULL);
+	verify_key_values(keys, values, "main.sub1.subsub");
 
 	settings->add_fallback(settings, "main", "base");
 	verify_string("val1", "main.key1");
@@ -732,18 +741,23 @@ START_TEST(test_add_fallback)
 	verify_string("subbase3", "main.sub1.key3");
 	verify_string("subbase4", "main.sub2.key4");
 
-	keys = linked_list_create_with_items(NULL);
-	verify_sections(keys, "main.sub1");
-	keys = linked_list_create_with_items("sub1", NULL);
-	verify_sections(keys, "main");
 
-	keys = linked_list_create_with_items("key1", NULL);
-	values = linked_list_create_with_items("val1", NULL);
+	keys = linked_list_create_with_items("sub1", "sub2", NULL);
+	verify_sections(keys, "main");
+	keys = linked_list_create_with_items("subsub", NULL);
+	verify_sections(keys, "main.sub1");
+
+	keys = linked_list_create_with_items("key1", "key2", NULL);
+	values = linked_list_create_with_items("val1", "baseval2", NULL);
+	verify_key_values(keys, values, "main");
+
+	keys = linked_list_create_with_items("key1", "key2", "key3", NULL);
+	values = linked_list_create_with_items("val1", "subval2", "subbase3", NULL);
 	verify_key_values(keys, values, "main.sub1");
 
-	keys = linked_list_create_with_items("key1", NULL);
-	values = linked_list_create_with_items("val1", NULL);
-	verify_key_values(keys, values, "main");
+	keys = linked_list_create_with_items("subkey1", "subkey2", NULL);
+	values = linked_list_create_with_items("subsubval1", "subsubbaseval2", NULL);
+	verify_key_values(keys, values, "main.sub1.subsub");
 
 	settings->set_str(settings, "main.sub1.key2", "val2");
 	verify_string("val2", "main.sub1.key2");
