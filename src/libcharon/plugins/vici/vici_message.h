@@ -70,6 +70,67 @@ struct vici_message_t {
 	enumerator_t* (*create_enumerator)(vici_message_t *this);
 
 	/**
+	 * Get the value of a key/value pair as a string.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param ...	arguments to fmt string
+	 * @return		string
+	 */
+	char* (*get_str)(vici_message_t *this, char *def, char *fmt, ...);
+
+	/**
+	 * Get the value of a key/value pair as a string, va_list variant.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param args	arguments to fmt string
+	 * @return		string
+	 */
+	char* (*vget_str)(vici_message_t *this, char *def, char *fmt, va_list args);
+
+	/**
+	 * Get the value of a key/value pair as integer.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param ...	arguments to fmt string
+	 * @return		value
+	 */
+	int (*get_int)(vici_message_t *this, int def, char *fmt, ...);
+
+	/**
+	 * Get the value of a key/value pair as integer, va_list variant
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param args	arguments to fmt string
+	 * @return		value
+	 */
+	int (*vget_int)(vici_message_t *this, int def, char *fmt, va_list args);
+
+	/**
+	 * Get the raw value of a key/value pair.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param ...	arguments to fmt string
+	 * @return		value
+	 */
+	chunk_t (*get_value)(vici_message_t *this, chunk_t def, char *fmt, ...);
+
+	/**
+	 * Get the raw value of a key/value pair, va_list variant.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param args	arguments to fmt string
+	 * @return		value
+	 */
+	chunk_t (*vget_value)(vici_message_t *this, chunk_t def,
+						 char *fmt, va_list args);
+
+	/**
 	 * Get encoded message.
 	 *
 	 * @return		message data, points to internal data

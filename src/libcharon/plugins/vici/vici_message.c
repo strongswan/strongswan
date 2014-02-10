@@ -19,6 +19,8 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
+#include <errno.h>
+
 typedef struct private_vici_message_t private_vici_message_t;
 
 /**
@@ -40,6 +42,11 @@ struct private_vici_message_t {
 	 * Free encoding during destruction?
 	 */
 	bool cleanup;
+
+	/**
+	 * Allocated strings we maintain for get_str()
+	 */
+	linked_list_t *strings;
 };
 
 ENUM(vici_type_names, VICI_SECTION_START, VICI_END,
@@ -129,7 +136,8 @@ METHOD(enumerator_t, parse_enumerate, bool,
 	u_int8_t type;
 	chunk_t data;
 
-	if (!this->reader->read_uint8(this->reader, &type))
+	if (!this->reader->remaining(this->reader) ||
+		!this->reader->read_uint8(this->reader, &type))
 	{
 		*out = VICI_END;
 		return TRUE;
@@ -215,6 +223,189 @@ METHOD(vici_message_t, create_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
+/**
+ * Find a value for given vararg key
+ */
+static bool find_value(private_vici_message_t *this, chunk_t *value,
+					   char *fmt, va_list args)
+{
+	enumerator_t *enumerator;
+	char buf[128], *name, *key, *dot, *next;
+	int section = 0, keysection = 0;
+	bool found = FALSE;
+	chunk_t current;
+	vici_type_t type;
+
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	next = buf;
+
+	enumerator = create_enumerator(this);
+
+	/* descent into section */
+	while (TRUE)
+	{
+		dot = strchr(next, '.');
+		if (!dot)
+		{
+			key = next;
+			break;
+		}
+		*dot = '\0';
+		key = next;
+		next = dot + 1;
+		keysection++;
+
+		while (enumerator->enumerate(enumerator, &type, &name, &current))
+		{
+			switch (type)
+			{
+				case VICI_SECTION_START:
+					section++;
+					if (section == keysection && streq(name, key))
+					{
+						break;
+					}
+					break;
+				case VICI_SECTION_END:
+					section--;
+					continue;
+				case VICI_END:
+					break;
+				default:
+					continue;
+			}
+			break;
+		}
+	}
+
+	/* find key/value in current section */
+	while (enumerator->enumerate(enumerator, &type, &name, &current))
+	{
+		switch (type)
+		{
+			case VICI_KEY_VALUE:
+				if (section == keysection && streq(key, name))
+				{
+					*value = current;
+					found = TRUE;
+					break;
+				}
+				continue;
+			case VICI_SECTION_START:
+				section++;
+				continue;
+			case VICI_SECTION_END:
+				section--;
+				continue;
+			case VICI_END:
+				break;
+			default:
+				continue;
+		}
+		break;
+	}
+
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
+METHOD(vici_message_t, vget_str, char*,
+	private_vici_message_t *this, char *def, char *fmt, va_list args)
+{
+	chunk_t value;
+	bool found;
+	char *str;
+
+	found = find_value(this, &value, fmt, args);
+	if (found)
+	{
+		if (chunk_printable(value, NULL, 0))
+		{
+			str = strndup(value.ptr, value.len);
+			/* keep a reference to string, so caller doesn't have to care */
+			this->strings->insert_last(this->strings, str);
+			return str;
+		}
+	}
+	return def;
+}
+
+METHOD(vici_message_t, get_str, char*,
+	private_vici_message_t *this, char *def, char *fmt, ...)
+{
+	va_list args;
+	char *str;
+
+	va_start(args, fmt);
+	str = vget_str(this, def, fmt, args);
+	va_end(args);
+	return str;
+}
+
+METHOD(vici_message_t, vget_int, int,
+	private_vici_message_t *this, int def, char *fmt, va_list args)
+{
+	chunk_t value;
+	bool found;
+	char buf[32], *pos;
+	int ret;
+
+	found = find_value(this, &value, fmt, args);
+	if (found)
+	{
+		if (chunk_printable(value, NULL, 0))
+		{
+			snprintf(buf, sizeof(buf), "%.*s", (int)value.len, value.ptr);
+			errno = 0;
+			ret = strtol(buf, &pos, 0);
+			if (errno == 0 && pos == buf + strlen(buf))
+			{
+				return ret;
+			}
+		}
+	}
+	return def;
+}
+
+METHOD(vici_message_t, get_int, int,
+	private_vici_message_t *this, int def, char *fmt, ...)
+{
+	va_list args;
+	int val;
+
+	va_start(args, fmt);
+	val = vget_int(this, def, fmt, args);
+	va_end(args);
+	return val;
+}
+
+METHOD(vici_message_t, vget_value, chunk_t,
+	private_vici_message_t *this, chunk_t def, char *fmt, va_list args)
+{
+	chunk_t value;
+	bool found;
+
+	found = find_value(this, &value, fmt, args);
+	if (found)
+	{
+		return value;
+	}
+	return def;
+}
+
+METHOD(vici_message_t, get_value, chunk_t,
+	private_vici_message_t *this, chunk_t def, char *fmt, ...)
+{
+	va_list args;
+	chunk_t value;
+
+	va_start(args, fmt);
+	value = vget_value(this, def, fmt, args);
+	va_end(args);
+	return value;
+}
+
 METHOD(vici_message_t, get_encoding, chunk_t,
 	private_vici_message_t *this)
 {
@@ -228,6 +419,7 @@ METHOD(vici_message_t, destroy, void,
 	{
 		chunk_clear(&this->encoding);
 	}
+	this->strings->destroy_function(this->strings, free);
 	free(this);
 }
 
@@ -241,9 +433,16 @@ vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 	INIT(this,
 		.public = {
 			.create_enumerator = _create_enumerator,
+			.get_str = _get_str,
+			.vget_str = _vget_str,
+			.get_int = _get_int,
+			.vget_int = _vget_int,
+			.get_value = _get_value,
+			.vget_value = _vget_value,
 			.get_encoding = _get_encoding,
 			.destroy = _destroy,
 		},
+		.strings = linked_list_create(),
 		.encoding = data,
 		.cleanup = cleanup,
 	);

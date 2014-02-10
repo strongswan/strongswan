@@ -304,6 +304,76 @@ START_TEST(test_builder_fmt)
 }
 END_TEST
 
+static vici_message_t* build_getter_msg()
+{
+	return vici_message_create_from_args(
+			VICI_KEY_VALUE, "key1", chunk_from_str("1"),
+			VICI_SECTION_START, "section1",
+			 VICI_KEY_VALUE, "key2", chunk_from_str("0x12"),
+			 VICI_SECTION_START, "section2",
+			  VICI_KEY_VALUE, "key3", chunk_from_str("-1"),
+			 VICI_SECTION_END,
+			 VICI_KEY_VALUE, "key4", chunk_from_str("asdf"),
+			VICI_SECTION_END,
+			VICI_KEY_VALUE, "key5", chunk_from_str(""),
+			VICI_END);
+}
+
+START_TEST(test_get_str)
+{
+	vici_message_t *m;
+
+	m = build_getter_msg();
+
+	ck_assert_str_eq(m->get_str(m, "def", "key1"), "1");
+	ck_assert_str_eq(m->get_str(m, "def", "section1.key2"), "0x12");
+	ck_assert_str_eq(m->get_str(m, "def", "section%d.section2.key3", 1), "-1");
+	ck_assert_str_eq(m->get_str(m, "def", "section1.key4"), "asdf");
+	ck_assert_str_eq(m->get_str(m, "def", "key5"), "");
+	ck_assert_str_eq(m->get_str(m, "no", "nonexistent"), "no");
+	ck_assert_str_eq(m->get_str(m, "no", "n.o.n.e.x.i.s.t.e.n.t"), "no");
+
+	m->destroy(m);
+}
+END_TEST
+
+START_TEST(test_get_int)
+{
+	vici_message_t *m;
+
+	m = build_getter_msg();
+
+	ck_assert_int_eq(m->get_int(m, 2, "key1"), 1);
+	ck_assert_int_eq(m->get_int(m, 2, "section1.key2"), 0x12);
+	ck_assert_int_eq(m->get_int(m, 2, "section1.section2.key3"), -1);
+	ck_assert_int_eq(m->get_int(m, 2, "section1.key4"), 2);
+	ck_assert_int_eq(m->get_int(m, 2, "key5"), 0);
+	ck_assert_int_eq(m->get_int(m, 2, "nonexistent"), 2);
+	ck_assert_int_eq(m->get_int(m, 2, "n.o.n.e.x.i.s.t.e.n.t"), 2);
+
+	m->destroy(m);
+}
+END_TEST
+
+START_TEST(test_get_value)
+{
+	vici_message_t *m;
+	chunk_t d = chunk_from_chars('d','e','f');
+
+	m = build_getter_msg();
+
+	ck_assert_chunk_eq(m->get_value(m, d, "key1"), chunk_from_str("1"));
+	ck_assert_chunk_eq(m->get_value(m, d, "section1.key2"), chunk_from_str("0x12"));
+	ck_assert_chunk_eq(m->get_value(m, d, "section1.section2.key3"), chunk_from_str("-1"));
+	ck_assert_chunk_eq(m->get_value(m, d, "section1.key4"), chunk_from_str("asdf"));
+	ck_assert_chunk_eq(m->get_value(m, d, "key5"), chunk_empty);
+	ck_assert_chunk_eq(m->get_value(m, d, "nonexistent"), d);
+	ck_assert_chunk_eq(m->get_value(m, d, "n.o.n.e.x.i.s.t.e.n.t"), d);
+
+	m->destroy(m);
+}
+END_TEST
+
 Suite *message_suite_create()
 {
 	Suite *s;
@@ -325,6 +395,12 @@ Suite *message_suite_create()
 
 	tc = tcase_create("builder format encode");
 	tcase_add_test(tc, test_builder_fmt);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("convenience getters");
+	tcase_add_test(tc, test_get_str);
+	tcase_add_test(tc, test_get_int);
+	tcase_add_test(tc, test_get_value);
 	suite_add_tcase(s, tc);
 
 	return s;
