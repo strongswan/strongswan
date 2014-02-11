@@ -412,6 +412,72 @@ METHOD(vici_message_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
+METHOD(vici_message_t, dump, bool,
+	private_vici_message_t *this, char *label, FILE *out)
+{
+	enumerator_t *enumerator;
+	int ident = 0, delta = 2;
+	vici_type_t type;
+	char *name;
+	chunk_t value;
+
+	fprintf(out, "%s {\n", label);
+	ident += delta;
+
+	enumerator = create_enumerator(this);
+	while (enumerator->enumerate(enumerator, &type, &name, &value))
+	{
+		switch (type)
+		{
+			case VICI_SECTION_START:
+				fprintf(out, "%*s%s {\n", ident, "", name);
+				ident += delta;
+				break;
+			case VICI_SECTION_END:
+				ident -= delta;
+				fprintf(out, "%*s}\n", ident, "");
+				break;
+			case VICI_KEY_VALUE:
+				if (chunk_printable(value, NULL, ' '))
+				{
+					fprintf(out, "%*s%s = %.*s\n",
+							ident, "", name, (int)value.len, value.ptr);
+				}
+				else
+				{
+					fprintf(out, "%*s%s = 0x%+#B\n",
+							ident, "", name, &value);
+				}
+				break;
+			case VICI_LIST_START:
+				fprintf(out, "%*s%s = [\n", ident, "", name);
+				ident += delta;
+				break;
+			case VICI_LIST_END:
+				ident -= delta;
+				fprintf(out, "%*s]\n", ident, "");
+				break;
+			case VICI_LIST_ITEM:
+				if (chunk_printable(value, NULL, ' '))
+				{
+					fprintf(out, "%*s%.*s\n",
+							ident, "", (int)value.len, value.ptr);
+				}
+				else
+				{
+					fprintf(out, "%*s 0x%+#B\n", ident, "", &value);
+				}
+				break;
+			case VICI_END:
+				fprintf(out, "}\n");
+				enumerator->destroy(enumerator);
+				return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
 METHOD(vici_message_t, destroy, void,
 	private_vici_message_t *this)
 {
@@ -440,6 +506,7 @@ vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 			.get_value = _get_value,
 			.vget_value = _vget_value,
 			.get_encoding = _get_encoding,
+			.dump = _dump,
 			.destroy = _destroy,
 		},
 		.strings = linked_list_create(),

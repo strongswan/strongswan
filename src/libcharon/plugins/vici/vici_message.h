@@ -138,6 +138,15 @@ struct vici_message_t {
 	chunk_t (*get_encoding)(vici_message_t *this);
 
 	/**
+	 * Dump a message text representation to a FILE stream.
+	 *
+	 * @param label	label to print for message
+	 * @param out	FILE stream to dump to
+	 * @return		TRUE if message valid
+	 */
+	bool (*dump)(vici_message_t *this, char *label, FILE *out);
+
+	/**
 	 * Destroy a vici_message_t.
 	 */
 	void (*destroy)(vici_message_t *this);

@@ -417,64 +417,12 @@ void vici_free_req(vici_req_t *req)
 	free(req);
 }
 
-int vici_dump(vici_res_t *res, FILE *out)
+int vici_dump(vici_res_t *res, char *label, FILE *out)
 {
-	enumerator_t *enumerator;
-	int ident = 0, delta = 2;
-	vici_type_t type;
-	char *name;
-	chunk_t value;
-
-	enumerator = res->message->create_enumerator(res->message);
-	while (enumerator->enumerate(enumerator, &type, &name, &value))
+	if (res->message->dump(res->message, label, out))
 	{
-		switch (type)
-		{
-			case VICI_SECTION_START:
-				fprintf(out, "%*s%s {\n", ident, "", name);
-				ident += delta;
-				break;
-			case VICI_SECTION_END:
-				ident -= delta;
-				fprintf(out, "%*s}\n", ident, "");
-				break;
-			case VICI_KEY_VALUE:
-				if (chunk_printable(value, NULL, ' '))
-				{
-					fprintf(out, "%*s%s = %.*s\n",
-							ident, "", name, (int)value.len, value.ptr);
-				}
-				else
-				{
-					fprintf(out, "%*s%s = 0x%+#B\n",
-							ident, "", name, &value);
-				}
-				break;
-			case VICI_LIST_START:
-				fprintf(out, "%*s%s = [\n", ident, "", name);
-				ident += delta;
-				break;
-			case VICI_LIST_END:
-				ident -= delta;
-				fprintf(out, "%*s]\n", ident, "");
-				break;
-			case VICI_LIST_ITEM:
-				if (chunk_printable(value, NULL, ' '))
-				{
-					fprintf(out, "%*s%.*s\n",
-							ident, "", (int)value.len, value.ptr);
-				}
-				else
-				{
-					fprintf(out, "%*s 0x%+#B\n", ident, "", &value);
-				}
-				break;
-			case VICI_END:
-				enumerator->destroy(enumerator);
-				return 0;
-		}
+		return 0;
 	}
-	enumerator->destroy(enumerator);
 	errno = EBADMSG;
 	return 1;
 }
