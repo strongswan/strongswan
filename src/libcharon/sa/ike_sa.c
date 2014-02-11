@@ -2150,8 +2150,11 @@ METHOD(ike_sa_t, destroy, void,
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (array_remove(this->attributes, ARRAY_TAIL, &entry))
 	{
-		hydra->attributes->release(hydra->attributes, entry.handler,
-								   this->other_id, entry.type, entry.data);
+		if (entry.handler)
+		{
+			hydra->attributes->release(hydra->attributes, entry.handler,
+									   this->other_id, entry.type, entry.data);
+		}
 		free(entry.data.ptr);
 	}
 	/* uninstall CHILD_SAs before virtual IPs, otherwise we might kill

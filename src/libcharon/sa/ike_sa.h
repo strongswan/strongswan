@@ -978,6 +978,9 @@ struct ike_sa_t {
 	 * registered at the IKE_SA. Attributes are inherit()ed and get released
 	 * when the IKE_SA is closed.
 	 *
+	 * Unhandled attributes are passed as well, but with a NULL handler. They
+	 * do not get released.
+	 *
 	 * @param handler		handler installed the attribute, use for release()
 	 * @param type			configuration attribute type
 	 * @param data			associated attribute data
