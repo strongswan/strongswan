@@ -17,6 +17,7 @@
 #include "vici_builder.h"
 
 #include <inttypes.h>
+#include <sys/utsname.h>
 
 #include <daemon.h>
 
@@ -336,6 +337,27 @@ CALLBACK(list_sas, vici_message_t*,
 	return b->finalize(b);
 }
 
+CALLBACK(version, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	struct utsname utsname;
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+
+	b->add_kv(b, "daemon", "%s", lib->ns);
+	b->add_kv(b, "version", "%s", VERSION);
+
+	if (uname(&utsname) == 0)
+	{
+		b->add_kv(b, "sysname", "%s", utsname.sysname);
+		b->add_kv(b, "release", "%s", utsname.release);
+		b->add_kv(b, "machine", "%s", utsname.machine);
+	}
+
+	return b->finalize(b);
+}
+
 static void manage_command(private_vici_query_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -350,6 +372,7 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 {
 	this->dispatcher->manage_event(this->dispatcher, "list-sa", reg);
 	manage_command(this, "list-sas", list_sas, reg);
+	manage_command(this, "version", version, reg);
 }
 
 METHOD(vici_query_t, destroy, void,
