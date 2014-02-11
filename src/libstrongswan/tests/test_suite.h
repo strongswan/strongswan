@@ -270,6 +270,23 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 })
 
 /**
+ * Check if two chunks are equal, fail test if not
+ *
+ * @param a			first chunk
+ * @param b			second chunk
+ */
+#define test_chunk_eq(a, b) \
+({ \
+	chunk_t _a = (chunk_t)a; \
+	chunk_t _b = (chunk_t)b; \
+	if (_a.len != _b.len || !memeq(a.ptr, b.ptr, a.len)) \
+	{ \
+		test_fail_msg(__FILE__, __LINE__, \
+					  #a " != " #b " (\"%#B\" != \"%#B\")", &_a, &_b); \
+	} \
+})
+
+/**
  * Check if a statement evaluates to TRUE, fail test if not
  *
  * @param x			statement to evaluate
@@ -306,6 +323,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 #define ck_assert test_assert
 #define ck_assert_msg test_assert_msg
 #define ck_assert_str_eq test_str_eq
+#define ck_assert_chunk_eq test_chunk_eq
 #define fail(fmt, ...) test_fail_msg(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define fail_if(x, fmt, ...) \
 ({ \
