@@ -20,6 +20,7 @@
 #include <bio/bio_writer.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
+#include <threading/thread.h>
 #include <collections/array.h>
 #include <collections/hashtable.h>
 
@@ -185,39 +186,68 @@ static void unregister_event(private_vici_dispatcher_t *this, char *name,
 }
 
 /**
+ * Data to release on thread cancellation
+ */
+typedef struct {
+	private_vici_dispatcher_t *this;
+	command_t *cmd;
+	vici_message_t *request;
+} release_data_t;
+
+/**
+ * Release command after execution/cancellation
+ */
+CALLBACK(release_command, void,
+	release_data_t *release)
+{
+	release->request->destroy(release->request);
+
+	release->this->mutex->lock(release->this->mutex);
+	if (--release->cmd->uses == 0)
+	{
+		release->this->cond->broadcast(release->this->cond);
+	}
+	release->this->mutex->unlock(release->this->mutex);
+
+	free(release);
+}
+
+/**
  * Process a request message
  */
 void process_request(private_vici_dispatcher_t *this, char *name, u_int id,
 					 chunk_t data)
 {
-	command_t *cmd;
-	vici_message_t *request, *response = NULL;
+	vici_message_t *response = NULL;
+	release_data_t *release;
+
+	INIT(release,
+		.this = this,
+	);
 
 	this->mutex->lock(this->mutex);
-	cmd = this->cmds->get(this->cmds, name);
-	if (cmd)
+	release->cmd = this->cmds->get(this->cmds, name);
+	if (release->cmd)
 	{
-		cmd->uses++;
+		release->cmd->uses++;
 	}
 	this->mutex->unlock(this->mutex);
 
-	if (cmd)
+	if (release->cmd)
 	{
-		request = vici_message_create_from_data(data, FALSE);
-		response = cmd->cb(cmd->user, cmd->name, id, request);
-		request->destroy(request);
+		thread_cleanup_push(release_command, release);
 
-		this->mutex->lock(this->mutex);
-		if (--cmd->uses == 0)
+		release->request = vici_message_create_from_data(data, FALSE);
+		response = release->cmd->cb(release->cmd->user, release->cmd->name,
+									id, release->request);
+
+		thread_cleanup_pop(TRUE);
+
+		if (response)
 		{
-			this->cond->broadcast(this->cond);
+			send_op(this, id, VICI_CMD_RESPONSE, NULL, response);
+			response->destroy(response);
 		}
-		this->mutex->unlock(this->mutex);
-	}
-	if (response)
-	{
-		send_op(this, id, VICI_CMD_RESPONSE, NULL, response);
-		response->destroy(response);
 	}
 	else
 	{
@@ -264,7 +294,9 @@ CALLBACK(inbound, void,
 				if (reader->read_data8(reader, &chunk) &&
 					vici_stringify(chunk, name, sizeof(name)))
 				{
+					thread_cleanup_push((void*)reader->destroy, reader);
 					process_request(this, name, id, reader->peek(reader));
+					thread_cleanup_pop(FALSE);
 				}
 				else
 				{

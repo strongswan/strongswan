@@ -18,6 +18,7 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+#include <threading/thread.h>
 #include <collections/array.h>
 #include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -374,8 +375,9 @@ CALLBACK(on_read, bool,
 
 	if (data.len)
 	{
+		thread_cleanup_push(free, data.ptr);
 		entry->this->inbound(entry->this->user, entry->id, data);
-		chunk_clear(&data);
+		thread_cleanup_pop(TRUE);
 	}
 
 	return ret;
