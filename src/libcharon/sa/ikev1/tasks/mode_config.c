@@ -393,6 +393,8 @@ static status_t build_set(private_mode_config_t *this, message_t *message)
 	any4->destroy(any4);
 	any6->destroy(any6);
 
+	charon->bus->assign_vips(charon->bus, this->ike_sa, TRUE);
+
 	/* query registered providers for additional attributes to include */
 	pools = linked_list_create_from_enumerator(
 									config->create_pool_enumerator(config));
@@ -501,6 +503,8 @@ static status_t build_reply(private_mode_config_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	charon->bus->assign_vips(charon->bus, this->ike_sa, TRUE);
 
 	/* query registered providers for additional attributes to include */
 	enumerator = hydra->attributes->create_responder_enumerator(

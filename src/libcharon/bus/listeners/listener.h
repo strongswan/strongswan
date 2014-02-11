@@ -192,10 +192,10 @@ struct listener_t {
 				narrow_hook_t type, linked_list_t *local, linked_list_t *remote);
 
 	/**
-	 * Virtual IP address assignment hook
+	 * Virtual IP address assignment hook.
 	 *
-	 * This hook gets invoked when a a Virtual IP address is assigned to an
-	 * IKE_SA (assign = TRUE) and again when it is released (assign = FALSE)
+	 * This hook gets invoked after virtual IPs have been assigned to a peer
+	 * for a specific IKE_SA, and again before they get released.
 	 *
 	 * @param ike_sa	IKE_SA the VIPs are assigned to
 	 * @param assign	TRUE if assigned to IKE_SA, FALSE if released
