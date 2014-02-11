@@ -990,6 +990,17 @@ struct ike_sa_t {
 							configuration_attribute_type_t type, chunk_t data);
 
 	/**
+	 * Create an enumerator over received configuration attributes.
+	 *
+	 * The resulting enumerator is over the configuration_attribute_type_t type,
+	 * a value chunk_t followed by a bool flag. The boolean flag indicates if
+	 * the attribute has been handled by an attribute handler.
+	 *
+	 * @return				enumerator over type, value and the "handled" flag.
+	 */
+	enumerator_t* (*create_attribute_enumerator)(ike_sa_t *this);
+
+	/**
 	 * Set local and remote host addresses to be used for IKE.
 	 *
 	 * These addresses are communicated via the KMADDRESS field of a MIGRATE

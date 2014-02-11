@@ -2001,6 +2001,26 @@ METHOD(ike_sa_t, add_configuration_attribute, void,
 	array_insert(this->attributes, ARRAY_TAIL, &entry);
 }
 
+/**
+ * Enumerator filter for attributes
+ */
+static bool filter_attribute(void *null, attribute_entry_t **in,
+							 configuration_attribute_type_t *type, void *in2,
+							 chunk_t *data, void *in3, bool *handled)
+{
+	*type = (*in)->type;
+	*data = (*in)->data;
+	*handled = (*in)->handler != NULL;
+	return TRUE;
+}
+
+METHOD(ike_sa_t, create_attribute_enumerator, enumerator_t*,
+	private_ike_sa_t *this)
+{
+	return enumerator_create_filter(array_create_enumerator(this->attributes),
+									(void*)filter_attribute, NULL, NULL);
+}
+
 METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	private_ike_sa_t *this, task_queue_t queue)
 {
@@ -2317,6 +2337,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.clear_virtual_ips = _clear_virtual_ips,
 			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
 			.add_configuration_attribute = _add_configuration_attribute,
+			.create_attribute_enumerator = _create_attribute_enumerator,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
 			.flush_queue = _flush_queue,
