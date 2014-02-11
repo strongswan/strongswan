@@ -446,6 +446,8 @@ METHOD(task_t, process_i, status_t,
 			}
 		}
 		enumerator->destroy(enumerator);
+
+		charon->bus->handle_vips(charon->bus, this->ike_sa, TRUE);
 		return SUCCESS;
 	}
 	return NEED_MORE;

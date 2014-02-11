@@ -441,6 +441,8 @@ static void install_vips(private_mode_config_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	charon->bus->handle_vips(charon->bus, this->ike_sa, TRUE);
 }
 
 METHOD(task_t, process_r, status_t,

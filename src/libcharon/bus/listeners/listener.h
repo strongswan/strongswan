@@ -203,6 +203,18 @@ struct listener_t {
 	 */
 	bool (*assign_vips)(listener_t *this, ike_sa_t *ike_sa, bool assign);
 
+	/**
+	 * Virtual IP and configuration attribute handler hook.
+	 *
+	 * This hook gets invoked after virtual IP and other configuration
+	 * attributes just got installed or are about to get uninstalled on a peer
+	 * receiving them.
+	 *
+	 * @param ike_sa	IKE_SA the VIPs/attributes are handled on
+	 * @param handle	TRUE if handled by IKE_SA, FALSE on release
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*handle_vips)(listener_t *this, ike_sa_t *ike_sa, bool handle);
 };
 
 #endif /** LISTENER_H_ @}*/

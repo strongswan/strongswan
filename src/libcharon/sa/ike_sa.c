@@ -2168,6 +2168,7 @@ METHOD(ike_sa_t, destroy, void,
 	}
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
+	charon->bus->handle_vips(charon->bus, &this->public, FALSE);
 	while (array_remove(this->attributes, ARRAY_TAIL, &entry))
 	{
 		if (entry.handler)
