@@ -574,6 +574,43 @@ char* vici_parse_value_str(vici_res_t *res)
 	}
 }
 
+void* vici_find(vici_res_t *res, int *len, char *fmt, ...)
+{
+	va_list args;
+	chunk_t value;
+
+	va_start(args, fmt);
+	value = res->message->vget_value(res->message, chunk_empty, fmt, args);
+	va_end(args);
+
+	*len = value.len;
+	return value.ptr;
+}
+
+char* vici_find_str(vici_res_t *res, char *def, char *fmt, ...)
+{
+	va_list args;
+	char *str;
+
+	va_start(args, fmt);
+	str = res->message->vget_str(res->message, def, fmt, args);
+	va_end(args);
+
+	return str;
+}
+
+int vici_find_int(vici_res_t *res, int def, char *fmt, ...)
+{
+	va_list args;
+	int val;
+
+	va_start(args, fmt);
+	val = res->message->vget_int(res->message, def, fmt, args);
+	va_end(args);
+
+	return val;
+}
+
 void vici_free_res(vici_res_t *res)
 {
 	res->strings->destroy_function(res->strings, free);

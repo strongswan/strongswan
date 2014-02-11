@@ -308,6 +308,45 @@ void* vici_parse_value(vici_res_t *res, int *len);
 char* vici_parse_value_str(vici_res_t *res);
 
 /**
+ * Find a blob value in a message for a given key.
+ *
+ * Sections can be selected by prefixing them separated by dots.
+ *
+ * @param res		response message to parse
+ * @param len		length of returned object
+ * @param fmt		printf format string of key and sections
+ * @param ...		arguments to format string
+ * @return			blob value, having *len bytes, NULL if not found
+ */
+void *vici_find(vici_res_t *res, int *len, char *fmt, ...);
+
+/**
+ * Find a string value in a message for a given key.
+ *
+ * Sections can be selected by prefixing them separated by dots.
+ *
+ * @param res		response message to parse
+ * @param def		default value, if key not found
+ * @param fmt		printf format string of key and sections
+ * @param ...		arguments to format string
+ * @return			string, def if not found
+ */
+char* vici_find_str(vici_res_t *res, char *def, char *fmt, ...);
+
+/**
+ * Find an integer value in a message for a given key.
+ *
+ * Sections can be selected by prefixing them separated by dots.
+ *
+ * @param res		response message to parse
+ * @param def		default value, if key not found
+ * @param fmt		printf format string of key and sections
+ * @param ...		arguments to format string
+ * @return			integer value, def if not found
+ */
+int vici_find_int(vici_res_t *res, int def, char *fmt, ...);
+
+/**
  * Clean up a received response message.
  *
  * Event messages get cleaned up by the library, it is not allowed to call
