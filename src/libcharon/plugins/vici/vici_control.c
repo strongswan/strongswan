@@ -19,6 +19,7 @@
 #include <inttypes.h>
 
 #include <daemon.h>
+#include <collections/array.h>
 
 typedef struct private_vici_control_t private_vici_control_t;
 
@@ -176,6 +177,122 @@ CALLBACK(initiate, vici_message_t*,
 	}
 }
 
+CALLBACK(terminate, vici_message_t*,
+	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
+{
+	enumerator_t *enumerator, *isas, *csas;
+	char *child, *ike;
+	u_int timeout, child_id, ike_id, current, *del, done = 0;
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	array_t *ids;
+	vici_message_t *reply;
+	log_info_t log = {
+		.dispatcher = this->dispatcher,
+		.id = id,
+	};
+
+	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
+	child_id = request->get_int(request, 0, "child-id");
+	ike_id = request->get_int(request, 0, "ike-id");
+	timeout = request->get_int(request, 0, "timeout");
+	log.level = request->get_int(request, 1, "loglevel");
+
+	if (!child && !ike && !ike_id && !child_id)
+	{
+		return send_reply(this, "missing terminate selector");
+	}
+
+	ids = array_create(sizeof(u_int), 0);
+
+	isas = charon->controller->create_ike_sa_enumerator(charon->controller, TRUE);
+	while (isas->enumerate(isas, &ike_sa))
+	{
+		if (child || child_id)
+		{
+			if (ike && !streq(ike, ike_sa->get_name(ike_sa)))
+			{
+				continue;
+			}
+			if (ike_id && ike_id != ike_sa->get_unique_id(ike_sa))
+			{
+				continue;
+			}
+			csas = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (csas->enumerate(csas, &child_sa))
+			{
+				if (child && !streq(child, child_sa->get_name(child_sa)))
+				{
+					continue;
+				}
+				if (child_id && child_sa->get_reqid(child_sa) != child_id)
+				{
+					continue;
+				}
+				current = child_sa->get_reqid(child_sa);
+				array_insert(ids, ARRAY_TAIL, &current);
+			}
+			csas->destroy(csas);
+		}
+		else if (ike && streq(ike, ike_sa->get_name(ike_sa)))
+		{
+			current = ike_sa->get_unique_id(ike_sa);
+			array_insert(ids, ARRAY_TAIL, &current);
+		}
+		else if (ike_id && ike_id == ike_sa->get_unique_id(ike_sa))
+		{
+			array_insert(ids, ARRAY_TAIL, &ike_id);
+		}
+	}
+	isas->destroy(isas);
+
+	enumerator = array_create_enumerator(ids);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		if (child || child_id)
+		{
+			if (charon->controller->terminate_child(charon->controller, *del,
+						(controller_cb_t)log_vici, &log, timeout) == SUCCESS)
+			{
+				done++;
+			}
+		}
+		else
+		{
+			if (charon->controller->terminate_ike(charon->controller, *del,
+						(controller_cb_t)log_vici, &log, timeout) == SUCCESS)
+			{
+				done++;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (array_count(ids) == 0)
+	{
+		reply = send_reply(this, "no matching SAs to terminate found");
+	}
+	else if (done < array_count(ids))
+	{
+		if (array_count(ids) == 1)
+		{
+			reply = send_reply(this, "terminating SA failed");
+		}
+		else
+		{
+			reply = send_reply(this, "terminated %u of %u SAs",
+							   done, array_count(ids));
+		}
+	}
+	else
+	{
+		reply = send_reply(this, NULL);
+	}
+	array_destroy(ids);
+	return reply;
+}
+
 static void manage_command(private_vici_control_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -189,6 +306,7 @@ static void manage_command(private_vici_control_t *this,
 static void manage_commands(private_vici_control_t *this, bool reg)
 {
 	manage_command(this, "initiate", initiate, reg);
+	manage_command(this, "terminate", terminate, reg);
 	this->dispatcher->manage_event(this->dispatcher, "control-log", reg);
 }
 
