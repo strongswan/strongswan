@@ -3,13 +3,13 @@ carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
 carol::echo 0 > /proc/sys/net/ipv4/ip_forward
 dave::echo aabbccddeeff11223344556677889900 > /var/lib/dbus/machine-id
-moon::cd /etc/pts; cat tables.sql data.sql data1.sql | sqlite3 config.db
+moon::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql data.sql /etc/pts/data1.sql | sqlite3 /etc/pts/config.db
 moon::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 moon::ipsec start
-dave::ipsec start 
-carol::ipsec start 
+dave::ipsec start
+carol::ipsec start
 dave::sleep 1
 dave::ipsec up home
 carol::ipsec up home

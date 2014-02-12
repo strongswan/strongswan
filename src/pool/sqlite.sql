@@ -1,4 +1,4 @@
-/* strongSwan SQLite database */
+
 
 DROP TABLE IF EXISTS identities;
 CREATE TABLE identities (
@@ -8,13 +8,14 @@ CREATE TABLE identities (
   UNIQUE (type, data)
 );
 
+
 DROP TABLE IF EXISTS child_configs;
 CREATE TABLE child_configs (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  lifetime INTEGER NOT NULL DEFAULT '1200',
-  rekeytime INTEGER NOT NULL DEFAULT '1020',
-  jitter INTEGER NOT NULL DEFAULT '180',
+  lifetime INTEGER NOT NULL DEFAULT '1500',
+  rekeytime INTEGER NOT NULL DEFAULT '1200',
+  jitter INTEGER NOT NULL DEFAULT '60',
   updown TEXT DEFAULT NULL,
   hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '2',
@@ -28,6 +29,7 @@ DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (
   name
 );
+
 
 DROP TABLE IF EXISTS child_config_traffic_selector;
 CREATE TABLE child_config_traffic_selector (
@@ -46,12 +48,14 @@ CREATE TABLE proposals (
   proposal TEXT NOT NULL
 );
 
+
 DROP TABLE IF EXISTS child_config_proposal;
 CREATE TABLE child_config_proposal (
   child_cfg INTEGER NOT NULL,
   prio INTEGER NOT NULL,
   prop INTEGER NOT NULL
 );
+
 
 DROP TABLE IF EXISTS ike_configs;
 CREATE TABLE ike_configs (
@@ -62,12 +66,14 @@ CREATE TABLE ike_configs (
   remote TEXT NOT NULL
 );
 
+
 DROP TABLE IF EXISTS ike_config_proposal;
 CREATE TABLE ike_config_proposal (
   ike_cfg INTEGER NOT NULL,
   prio INTEGER NOT NULL,
   prop INTEGER NOT NULL
 );
+
 
 DROP TABLE IF EXISTS peer_configs;
 CREATE TABLE peer_configs (
@@ -82,9 +88,9 @@ CREATE TABLE peer_configs (
   auth_method INTEGER NOT NULL DEFAULT '1',
   eap_type INTEGER NOT NULL DEFAULT '0',
   eap_vendor INTEGER NOT NULL DEFAULT '0',
-  keyingtries INTEGER NOT NULL DEFAULT '1',
-  rekeytime INTEGER NOT NULL DEFAULT '0',
-  reauthtime INTEGER NOT NULL DEFAULT '3600',
+  keyingtries INTEGER NOT NULL DEFAULT '3',
+  rekeytime INTEGER NOT NULL DEFAULT '7200',
+  reauthtime INTEGER NOT NULL DEFAULT '0',
   jitter INTEGER NOT NULL DEFAULT '180',
   overtime INTEGER NOT NULL DEFAULT '300',
   mobike INTEGER NOT NULL DEFAULT '1',
@@ -100,12 +106,14 @@ CREATE INDEX peer_configs_name ON peer_configs (
   name
 );
 
+
 DROP TABLE IF EXISTS peer_config_child_config;
 CREATE TABLE peer_config_child_config (
   peer_cfg INTEGER NOT NULL,
   child_cfg INTEGER NOT NULL,
   PRIMARY KEY (peer_cfg, child_cfg)
 );
+
 
 DROP TABLE IF EXISTS traffic_selectors;
 CREATE TABLE traffic_selectors (
@@ -118,6 +126,7 @@ CREATE TABLE traffic_selectors (
   end_port INTEGER NOT NULL DEFAULT '65535'
 );
 
+
 DROP TABLE IF EXISTS certificates;
 CREATE TABLE certificates (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -126,12 +135,14 @@ CREATE TABLE certificates (
   data BLOB NOT NULL
 );
 
+
 DROP TABLE IF EXISTS certificate_identity;
 CREATE TABLE certificate_identity (
   certificate INTEGER NOT NULL,
   identity INTEGER NOT NULL,
   PRIMARY KEY (certificate, identity)
 );
+
 
 DROP TABLE IF EXISTS private_keys;
 CREATE TABLE private_keys (
@@ -140,12 +151,14 @@ CREATE TABLE private_keys (
   data BLOB NOT NULL
 );
 
+
 DROP TABLE IF EXISTS private_key_identity;
 CREATE TABLE private_key_identity (
   private_key INTEGER NOT NULL,
   identity INTEGER NOT NULL,
   PRIMARY KEY (private_key, identity)
 );
+
 
 DROP TABLE IF EXISTS shared_secrets;
 CREATE TABLE shared_secrets (
@@ -154,6 +167,7 @@ CREATE TABLE shared_secrets (
   data BLOB NOT NULL
 );
 
+
 DROP TABLE IF EXISTS shared_secret_identity;
 CREATE TABLE shared_secret_identity (
   shared_secret INTEGER NOT NULL,
@@ -161,11 +175,13 @@ CREATE TABLE shared_secret_identity (
   PRIMARY KEY (shared_secret, identity)
 );
 
+
 DROP TABLE IF EXISTS certificate_authorities;
 CREATE TABLE certificate_authorities (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   certificate INTEGER NOT NULL
 );
+
 
 DROP TABLE IF EXISTS certificate_distribution_points;
 CREATE TABLE certificate_distribution_points (
@@ -175,17 +191,14 @@ CREATE TABLE certificate_distribution_points (
   uri TEXT NOT NULL
 );
 
+
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
+  name TEXT NOT NULL UNIQUE,
   start BLOB NOT NULL,
   end BLOB NOT NULL,
   timeout INTEGER NOT NULL
-);
-DROP INDEX IF EXISTS pools_name;
-CREATE INDEX pools_name ON pools (
-  name
 );
 
 DROP TABLE IF EXISTS addresses;
