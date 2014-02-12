@@ -98,6 +98,10 @@ endif
 
 if USE_ATTR_SQL
   SUBDIRS += pool
+else
+if USE_SQL
+  SUBDIRS += pool
+endif
 endif
 
 if USE_TKM
