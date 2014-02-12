@@ -302,7 +302,7 @@ load_tester_control_t *load_tester_control_create()
 
 	uri = lib->settings->get_str(lib->settings,
 				"%s.plugins.load-tester.socket", "unix://" LOAD_TESTER_SOCKET,
-				charon->name);
+				lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (this->service)
 	{

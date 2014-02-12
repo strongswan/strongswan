@@ -754,11 +754,11 @@ METHOD(leak_detective_t, usage, void,
 	size_t sum = 0;
 
 	thresh = lib->settings->get_int(lib->settings,
-					"libstrongswan.leak_detective.usage_threshold", 10240);
+						"%s.leak_detective.usage_threshold", 10240, lib->ns);
 	thresh_count = lib->settings->get_int(lib->settings,
-					"libstrongswan.leak_detective.usage_threshold_count", 0);
+						"%s.leak_detective.usage_threshold_count", 0, lib->ns);
 	detailed = lib->settings->get_bool(lib->settings,
-					"libstrongswan.leak_detective.detailed", TRUE);
+						"%s.leak_detective.detailed", TRUE, lib->ns);
 
 	leaks = print_traces(this, cb, user, thresh, thresh_count,
 						 detailed, &whitelisted, &sum);

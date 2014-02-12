@@ -61,7 +61,7 @@ static bool open_database(private_attr_sql_plugin_t *this,
 		char *uri;
 
 		uri = lib->settings->get_str(lib->settings,
-								"libhydra.plugins.attr-sql.database", NULL);
+								"%s.plugins.attr-sql.database", NULL, lib->ns);
 		if (!uri)
 		{
 			DBG1(DBG_CFG, "attr-sql plugin: database URI not set");
@@ -122,6 +122,8 @@ plugin_t *attr_sql_plugin_create()
 			},
 		},
 	);
+	lib->settings->add_fallback(lib->settings, "%s.plugins.attr-sql",
+								"libhydra.plugins.attr-sql", lib->ns);
 
 	return &this->public.plugin;
 }

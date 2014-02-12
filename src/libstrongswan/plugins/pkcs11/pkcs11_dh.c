@@ -135,7 +135,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			};
 
 			if (!lib->settings->get_bool(lib->settings,
-								"libstrongswan.ecp_x_coordinate_only", TRUE))
+									"%s.ecp_x_coordinate_only", TRUE, lib->ns))
 			{	/* we only get the x coordinate back */
 				return;
 			}

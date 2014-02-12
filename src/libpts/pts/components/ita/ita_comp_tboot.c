@@ -130,21 +130,21 @@ METHOD(pts_component_t, measure, status_t,
 			/* dummy data since currently the TBOOT log is not retrieved */
 			time(&this->measurement_time);
 			meas_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_meas", NULL);
+						"%s.plugins.imc-attestation.pcr17_meas", NULL, lib->ns);
 			pcr_before_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_before", NULL);
+						"%s.plugins.imc-attestation.pcr17_before", NULL, lib->ns);
 			pcr_after_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_after", NULL);
+						"%s.plugins.imc-attestation.pcr17_after", NULL, lib->ns);
 			extended_pcr = PCR_TBOOT_POLICY;
 			break;
 		case 1:
 			/* dummy data since currently the TBOOT log is not retrieved */
 			meas_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_meas", NULL);
+						"%s.plugins.imc-attestation.pcr18_meas", NULL, lib->ns);
 			pcr_before_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_before", NULL);
+						"%s.plugins.imc-attestation.pcr18_before", NULL, lib->ns);
 			pcr_after_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_after", NULL);
+						"%s.plugins.imc-attestation.pcr18_after", NULL, lib->ns);
 			extended_pcr = PCR_TBOOT_MLE;
 			break;
 		default:

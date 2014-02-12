@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -140,6 +141,12 @@ struct library_t {
 	bool (*set)(library_t *this, char *name, void *object);
 
 	/**
+	 * Namespace used for settings etc. (i.e. the name of the binary that uses
+	 * the library)
+	 */
+	const char *ns;
+
+	/**
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
@@ -239,12 +246,17 @@ struct library_t {
  * Initialize library, creates "lib" instance.
  *
  * library_init() may be called multiple times in a single process, but each
- * caller should call library_deinit() for each call to library_init().
+ * caller must call library_deinit() for each call to library_init().
+ *
+ * The settings and namespace arguments are only used on the first call.
  *
  * @param settings		file to read settings from, may be NULL for default
+ * @param namespace		name of the binary that uses the library, determines
+ *						the first section name when reading config options.
+ *						Defaults to libstrongswan if NULL.
  * @return				FALSE if integrity check failed
  */
-bool library_init(char *settings);
+bool library_init(char *settings, const char *namespace);
 
 /**
  * Deinitialize library, destroys "lib" instance.

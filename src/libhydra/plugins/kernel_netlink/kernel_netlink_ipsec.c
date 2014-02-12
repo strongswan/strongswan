@@ -2685,15 +2685,15 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.policy_history = TRUE,
 		.install_routes = lib->settings->get_bool(lib->settings,
-					"%s.install_routes", TRUE, hydra->daemon),
+							"%s.install_routes", TRUE, lib->ns),
 		.replay_window = lib->settings->get_int(lib->settings,
-					"%s.replay_window", DEFAULT_REPLAY_WINDOW, hydra->daemon),
+							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 	);
 
 	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
 													(sizeof(u_int32_t) * 8);
 
-	if (streq(hydra->daemon, "starter"))
+	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}
@@ -2703,7 +2703,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	{
 		fprintf(f, "%u", lib->settings->get_int(lib->settings,
 								"%s.plugins.kernel-netlink.xfrm_acq_expires",
-								DEFAULT_ACQUIRE_LIFETIME, hydra->daemon));
+								DEFAULT_ACQUIRE_LIFETIME, lib->ns));
 		fclose(f);
 	}
 

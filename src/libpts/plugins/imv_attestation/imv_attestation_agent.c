@@ -712,11 +712,11 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 	}
 
 	hash_alg = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imv-attestation.hash_algorithm", "sha256");
+				"%s.plugins.imv-attestation.hash_algorithm", "sha256", lib->ns);
 	dh_group = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imv-attestation.dh_group", "ecp256");
+				"%s.plugins.imv-attestation.dh_group", "ecp256", lib->ns);
 	cadir = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imv-attestation.cadir", NULL);
+				"%s.plugins.imv-attestation.cadir", NULL, lib->ns);
 
 	INIT(this,
 		.public = {

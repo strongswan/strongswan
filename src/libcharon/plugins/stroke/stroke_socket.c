@@ -763,7 +763,7 @@ stroke_socket_t *stroke_socket_create()
 			.destroy = _destroy,
 		},
 		.prevent_loglevel_changes = lib->settings->get_bool(lib->settings,
-			"%s.plugins.stroke.prevent_loglevel_changes", FALSE, charon->name),
+				"%s.plugins.stroke.prevent_loglevel_changes", FALSE, lib->ns),
 	);
 
 	this->cred = stroke_cred_create();
@@ -783,10 +783,10 @@ stroke_socket_t *stroke_socket_create()
 	charon->bus->add_listener(charon->bus, &this->counter->listener);
 
 	max_concurrent = lib->settings->get_int(lib->settings,
-			"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,
-			charon->name);
+				"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,
+				lib->ns);
 	uri = lib->settings->get_str(lib->settings,
-			"%s.plugins.stroke.socket", "unix://" STROKE_SOCKET, charon->name);
+				"%s.plugins.stroke.socket", "unix://" STROKE_SOCKET, lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (!this->service)
 	{

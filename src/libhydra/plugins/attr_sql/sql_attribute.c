@@ -457,7 +457,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 		},
 		.db = db,
 		.history = lib->settings->get_bool(lib->settings,
-							"libhydra.plugins.attr-sql.lease_history", TRUE),
+							"%s.plugins.attr-sql.lease_history", TRUE, lib->ns),
 	);
 
 	/* close any "online" leases in the case we crashed */

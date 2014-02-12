@@ -2125,7 +2125,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	netlink_add_attribute(hdr, RTA_PRIORITY, chunk, sizeof(request));
 
 	fwmark = lib->settings->get_str(lib->settings,
-					"%s.plugins.kernel-netlink.fwmark", NULL, hydra->daemon);
+							"%s.plugins.kernel-netlink.fwmark", NULL, lib->ns);
 	if (fwmark)
 	{
 #ifdef HAVE_LINUX_FIB_RULES_H
@@ -2285,30 +2285,30 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.condvar = rwlock_condvar_create(),
 		.roam_lock = spinlock_create(),
 		.routing_table = lib->settings->get_int(lib->settings,
-				"%s.routing_table", ROUTING_TABLE, hydra->daemon),
+						"%s.routing_table", ROUTING_TABLE, lib->ns),
 		.routing_table_prio = lib->settings->get_int(lib->settings,
-				"%s.routing_table_prio", ROUTING_TABLE_PRIO, hydra->daemon),
+						"%s.routing_table_prio", ROUTING_TABLE_PRIO, lib->ns),
 		.process_route = lib->settings->get_bool(lib->settings,
-				"%s.process_route", TRUE, hydra->daemon),
+						"%s.process_route", TRUE, lib->ns),
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
-				"%s.install_virtual_ip", TRUE, hydra->daemon),
+						"%s.install_virtual_ip", TRUE, lib->ns),
 		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
-				"%s.install_virtual_ip_on", NULL, hydra->daemon),
+						"%s.install_virtual_ip_on", NULL, lib->ns),
 		.roam_events = lib->settings->get_bool(lib->settings,
-				"%s.plugins.kernel-netlink.roam_events", TRUE, hydra->daemon),
+						"%s.plugins.kernel-netlink.roam_events", TRUE, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
 
 	check_kernel_features(this);
 
-	if (streq(hydra->daemon, "starter"))
+	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}
 
 	exclude = lib->settings->get_str(lib->settings,
-					"%s.ignore_routing_tables", NULL, hydra->daemon);
+									 "%s.ignore_routing_tables", NULL, lib->ns);
 	if (exclude)
 	{
 		char *token;

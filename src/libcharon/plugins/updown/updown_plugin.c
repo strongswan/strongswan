@@ -58,7 +58,7 @@ static bool plugin_cb(private_updown_plugin_t *this,
 	if (reg)
 	{
 		if (lib->settings->get_bool(lib->settings,
-									"charon.plugins.updown.dns_handler", FALSE))
+							"%s.plugins.updown.dns_handler", FALSE, lib->ns))
 		{
 			this->handler = updown_handler_create();
 			hydra->attributes->add_handler(hydra->attributes,

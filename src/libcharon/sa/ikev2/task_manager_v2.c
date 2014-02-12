@@ -1229,7 +1229,7 @@ METHOD(task_manager_t, process_message, status_t,
 		lib->scheduler->schedule_job(lib->scheduler, job,
 				lib->settings->get_int(lib->settings,
 						"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
-						charon->name));
+						lib->ns));
 	}
 	return SUCCESS;
 }
@@ -1578,11 +1578,11 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 		.active_tasks = array_create(0, 0),
 		.passive_tasks = array_create(0, 0),
 		.retransmit_tries = lib->settings->get_int(lib->settings,
-					"%s.retransmit_tries", RETRANSMIT_TRIES, charon->name),
+					"%s.retransmit_tries", RETRANSMIT_TRIES, lib->ns),
 		.retransmit_timeout = lib->settings->get_double(lib->settings,
-					"%s.retransmit_timeout", RETRANSMIT_TIMEOUT, charon->name),
+					"%s.retransmit_timeout", RETRANSMIT_TIMEOUT, lib->ns),
 		.retransmit_base = lib->settings->get_double(lib->settings,
-					"%s.retransmit_base", RETRANSMIT_BASE, charon->name),
+					"%s.retransmit_base", RETRANSMIT_BASE, lib->ns),
 	);
 
 	return &this->public;

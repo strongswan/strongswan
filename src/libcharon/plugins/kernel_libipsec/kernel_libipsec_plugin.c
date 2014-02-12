@@ -144,6 +144,6 @@ plugin_t *kernel_libipsec_plugin_create()
 
 	/* set TUN device as default to install VIPs */
 	lib->settings->set_str(lib->settings, "%s.install_virtual_ip_on",
-						   this->tun->get_name(this->tun), charon->name);
+						   this->tun->get_name(this->tun), lib->ns);
 	return &this->public.plugin;
 }

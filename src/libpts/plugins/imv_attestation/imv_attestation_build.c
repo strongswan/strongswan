@@ -47,7 +47,7 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 
 			/* Send DH nonce parameters request attribute */
 			min_nonce_len = lib->settings->get_int(lib->settings,
-						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
+						"%s.plugins.imv-attestation.min_nonce_len", 0, lib->ns);
 			attr = tcg_pts_attr_dh_nonce_params_req_create(min_nonce_len,
 													 supported_dh_groups);
 			attr->set_noskip_flag(attr, TRUE);

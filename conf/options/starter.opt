@@ -1,0 +1,5 @@
+starter.load =
+	Plugins to load in starter.
+
+starter.load_warning = yes
+	Disable charon plugin load option warning.

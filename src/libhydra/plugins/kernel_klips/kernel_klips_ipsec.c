@@ -311,8 +311,8 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 	}
 
 	mtu = lib->settings->get_int(lib->settings,
-						"%s.plugins.kernel-klips.ipsec_dev_mtu", 0,
-						hydra->daemon);
+								 "%s.plugins.kernel-klips.ipsec_dev_mtu", 0,
+								 lib->ns);
 	if (mtu <= 0)
 	{
 		/* guess MTU as physical MTU - ESP overhead [- NAT-T overhead]
@@ -2505,8 +2505,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 {
 	int i, count = lib->settings->get_int(lib->settings,
-						"%s.plugins.kernel-klips.ipsec_dev_count",
-						DEFAULT_IPSEC_DEV_COUNT, hydra->daemon);
+									"%s.plugins.kernel-klips.ipsec_dev_count",
+									DEFAULT_IPSEC_DEV_COUNT, lib->ns);
 
 	for (i = 0; i < count; ++i)
 	{
@@ -2611,7 +2611,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 		.mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
 												  "%s.install_routes", TRUE,
-												  hydra->daemon),
+												  lib->ns),
 	);
 
 	/* initialize ipsec devices */

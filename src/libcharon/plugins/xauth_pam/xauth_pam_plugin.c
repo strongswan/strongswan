@@ -116,7 +116,7 @@ plugin_t *xauth_pam_plugin_create()
 			},
 		},
 		.session = lib->settings->get_str(lib->settings,
-						"%s.plugins.xauth-pam.session", FALSE, charon->name),
+						"%s.plugins.xauth-pam.session", FALSE, lib->ns),
 		.listener = xauth_pam_listener_create(),
 	);
 

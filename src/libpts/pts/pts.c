@@ -377,7 +377,7 @@ static void load_aik_blob(private_pts_t *this)
 	u_int32_t aikBlobLen;
 
 	blob_path = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.aik_blob", NULL);
+						"%s.plugins.imc-attestation.aik_blob", NULL, lib->ns);
 
 	if (blob_path)
 	{
@@ -418,9 +418,9 @@ static void load_aik(private_pts_t *this)
 	char *cert_path, *key_path;
 
 	cert_path = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.aik_cert", NULL);
+						"%s.plugins.imc-attestation.aik_cert", NULL, lib->ns);
 	key_path = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.aik_key", NULL);
+						"%s.plugins.imc-attestation.aik_key", NULL, lib->ns);
 
 	if (cert_path)
 	{

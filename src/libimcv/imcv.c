@@ -109,7 +109,7 @@ bool libimcv_init(bool is_imv)
 	else
 	{
 		/* we are the first to initialize libstrongswan */
-		if (!library_init(NULL))
+		if (!library_init(NULL, "libimcv"))
 		{
 			return FALSE;
 		}
@@ -134,6 +134,10 @@ bool libimcv_init(bool is_imv)
 	}
 	ref_get(&libstrongswan_ref);
 
+	lib->settings->add_fallback(lib->settings, "%s.imcv", "libimcv", lib->ns);
+	lib->settings->add_fallback(lib->settings, "%s.plugins", "libimcv.plugins",
+								lib->ns);
+
 	if (libimcv_ref == 0)
 	{
 		char *uri, *script;
@@ -149,9 +153,10 @@ bool libimcv_init(bool is_imv)
 		if (is_imv)
 		{
 			uri = lib->settings->get_str(lib->settings,
-						"libimcv.database", NULL);
+						"%s.imcv.database", NULL, lib->ns);
 			script = lib->settings->get_str(lib->settings,
-						"libimcv.policy_script", IMCV_DEFAULT_POLICY_SCRIPT);
+						"%s.imcv.policy_script", IMCV_DEFAULT_POLICY_SCRIPT,
+						lib->ns);
 			if (uri)
 			{
 				imcv_db = imv_database_create(uri, script);

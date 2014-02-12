@@ -70,8 +70,10 @@ void libtnccs_init(void)
 		},
 		.ref = 1,
 	);
-
 	tnc = &this->public;
+	lib->settings->add_fallback(lib->settings, "%s.tnc", "libtnccs", lib->ns);
+	lib->settings->add_fallback(lib->settings, "%s.plugins", "libtnccs.plugins",
+								lib->ns);
 }
 
 /**
@@ -247,7 +249,7 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 		{
 			load_imcvs_from_config(
 						lib->settings->get_str(lib->settings,
-									"libtnccs.tnc_config", "/etc/tnc_config"),
+								"%s.tnc.tnc_config", "/etc/tnc_config", lib->ns),
 						is_imc);
 		}
 	}

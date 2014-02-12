@@ -193,7 +193,7 @@ static bool register_load_tester(private_load_tester_plugin_t *this,
 		lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
 
 		if (lib->settings->get_bool(lib->settings,
-				"%s.plugins.load-tester.shutdown_when_complete", 0, charon->name))
+				"%s.plugins.load-tester.shutdown_when_complete", 0, lib->ns))
 		{
 			shutdown_on = this->iterations * this->initiators;
 		}
@@ -262,8 +262,8 @@ plugin_t *load_tester_plugin_create()
 {
 	private_load_tester_plugin_t *this;
 
-	if (!lib->settings->get_bool(lib->settings,
-						"%s.plugins.load-tester.enable", FALSE, charon->name))
+	if (!lib->settings->get_bool(lib->settings, "%s.plugins.load-tester.enable",
+								 FALSE, lib->ns))
 	{
 		DBG1(DBG_CFG, "disabling load-tester plugin, not configured");
 		return NULL;
@@ -279,19 +279,19 @@ plugin_t *load_tester_plugin_create()
 			},
 		},
 		.delay = lib->settings->get_int(lib->settings,
-						"%s.plugins.load-tester.delay", 0, charon->name),
+							"%s.plugins.load-tester.delay", 0, lib->ns),
 		.iterations = lib->settings->get_int(lib->settings,
-						"%s.plugins.load-tester.iterations", 1, charon->name),
+							"%s.plugins.load-tester.iterations", 1, lib->ns),
 		.initiators = lib->settings->get_int(lib->settings,
-						"%s.plugins.load-tester.initiators", 0, charon->name),
+							"%s.plugins.load-tester.initiators", 0, lib->ns),
 		.init_limit = lib->settings->get_int(lib->settings,
-						"%s.plugins.load-tester.init_limit", 0, charon->name),
+							"%s.plugins.load-tester.init_limit", 0, lib->ns),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
 
 	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.load-tester.fake_kernel", FALSE, charon->name))
+			"%s.plugins.load-tester.fake_kernel", FALSE, lib->ns))
 	{
 		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);

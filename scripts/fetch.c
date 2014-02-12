@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 {
 	chunk_t res;
 
-	library_init(NULL);
+	library_init(NULL, "fetch");
 	atexit(library_deinit);
 	lib->plugins->load(lib->plugins, PLUGINS);
 

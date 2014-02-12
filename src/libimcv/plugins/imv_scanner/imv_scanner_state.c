@@ -314,7 +314,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 									this->violating_ports);
 	*string = this->remediation_string->get_encoding(this->remediation_string);
 	*uri = lib->settings->get_str(lib->settings,
-				"libimcv.plugins.imv-scanner.remediation_uri", NULL);
+					"%s.plugins.imv-scanner.remediation_uri", NULL, lib->ns);
 
 	return TRUE;
 }

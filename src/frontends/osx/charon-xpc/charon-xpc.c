@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
 	dbg = dbg_stderr;
 	atexit(library_deinit);
-	if (!library_init(NULL))
+	if (!library_init(NULL, "charon-xpc"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
@@ -145,12 +145,12 @@ int main(int argc, char *argv[])
 		}
 	}
 	atexit(libhydra_deinit);
-	if (!libhydra_init("charon-xpc"))
+	if (!libhydra_init())
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(libcharon_deinit);
-	if (!libcharon_init("charon-xpc"))
+	if (!libcharon_init())
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

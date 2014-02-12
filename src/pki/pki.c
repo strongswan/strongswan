@@ -168,7 +168,7 @@ static void remove_callback()
 int main(int argc, char *argv[])
 {
 	atexit(library_deinit);
-	if (!library_init(NULL))
+	if (!library_init(NULL, "pki"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

@@ -361,7 +361,7 @@ resolve_handler_t *resolve_handler_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.file = lib->settings->get_str(lib->settings, "%s.plugins.resolve.file",
-									   RESOLV_CONF, hydra->daemon),
+									   RESOLV_CONF, lib->ns),
 	);
 
 	if (stat(RESOLVCONF_EXEC, &st) == 0)
@@ -369,7 +369,7 @@ resolve_handler_t *resolve_handler_create()
 		this->use_resolvconf = TRUE;
 		this->iface_prefix = lib->settings->get_str(lib->settings,
 								"%s.plugins.resolve.resolvconf.iface_prefix",
-								RESOLVCONF_PREFIX, hydra->daemon);
+								RESOLVCONF_PREFIX, lib->ns);
 	}
 
 	return &this->public;

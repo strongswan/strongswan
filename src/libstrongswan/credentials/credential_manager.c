@@ -1349,7 +1349,7 @@ credential_manager_t *credential_manager_create()
 
 	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
 	this->exclusive_local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
-	if (lib->settings->get_bool(lib->settings, "libstrongswan.cert_cache", TRUE))
+	if (lib->settings->get_bool(lib->settings, "%s.cert_cache", TRUE, lib->ns))
 	{
 		this->cache = cert_cache_create();
 		this->sets->insert_first(this->sets, this->cache);

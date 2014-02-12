@@ -494,7 +494,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 
 	*string = this->remediation_string->get_encoding(this->remediation_string);
 	*uri = lib->settings->get_str(lib->settings,
-							"libimcv.plugins.imv-os.remediation_uri", NULL);
+							"%s.plugins.imv-os.remediation_uri", NULL, lib->ns);
 
 	return TRUE;
 }

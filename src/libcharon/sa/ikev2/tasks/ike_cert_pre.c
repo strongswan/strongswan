@@ -428,7 +428,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)req);
 
 		if (lib->settings->get_bool(lib->settings,
-									"%s.hash_and_url", FALSE, charon->name))
+									"%s.hash_and_url", FALSE, lib->ns))
 		{
 			message->add_notify(message, FALSE, HTTP_CERT_LOOKUP_SUPPORTED,
 								chunk_empty);

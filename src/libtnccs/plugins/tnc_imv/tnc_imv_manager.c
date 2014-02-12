@@ -460,7 +460,8 @@ imv_manager_t* tnc_imv_manager_create(void)
 
 	policy = enum_from_name(recommendation_policy_names,
 				lib->settings->get_str(lib->settings,
-					"libtnccs.plugins.tnc-imv.recommendation_policy", "default"));
+					"%s.plugins.tnc-imv.recommendation_policy",
+					"default", lib->ns));
 	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_DEFAULT;
 	DBG1(DBG_TNC, "TNC recommendation policy is '%N'",
 				   recommendation_policy_names, this->policy);

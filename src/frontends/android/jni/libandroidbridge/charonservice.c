@@ -600,7 +600,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	dbg = dbg_android;
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "charon"))
 	{
 		library_deinit();
 		return FALSE;
@@ -611,7 +611,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	set_options(logfile);
 	free(logfile);
 
-	if (!libhydra_init("charon"))
+	if (!libhydra_init())
 	{
 		libhydra_deinit();
 		library_deinit();
@@ -626,7 +626,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 		return FALSE;
 	}
 
-	if (!libcharon_init("charon"))
+	if (!libcharon_init())
 	{
 		libcharon_deinit();
 		libipsec_deinit();

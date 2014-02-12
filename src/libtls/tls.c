@@ -471,6 +471,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.application = application,
 		.purpose = purpose,
 	);
+	lib->settings->add_fallback(lib->settings, "%s.tls", "libtls", lib->ns);
 
 	this->crypto = tls_crypto_create(&this->public, cache);
 	this->alert = tls_alert_create();

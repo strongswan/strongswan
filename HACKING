@@ -13,8 +13,10 @@ the code, you need the following tools:
     - automake
     - autoconf
     - libtool
+    - pkg-config
     - gettext
     - perl
+    - python
     - lex/flex
     - yacc/bison
     - gperf

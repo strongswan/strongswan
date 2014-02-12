@@ -298,7 +298,7 @@ tnc_pdp_connections_t *tnc_pdp_connections_create(void)
 		.list = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.timeout = lib->settings->get_int(lib->settings,
-				"%s.plugins.tnc-pdp.timeout", DEFAULT_TIMEOUT, charon->name),
+						"%s.plugins.tnc-pdp.timeout", DEFAULT_TIMEOUT, lib->ns),
 	);
 
 	return &this->public;

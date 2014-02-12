@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	int i = 0, limit = 0;
 
 
-	library_init(NULL);
+	library_init(NULL, "crypt_burn");
 	lib->plugins->load(lib->plugins, PLUGINS);
 	atexit(library_deinit);
 

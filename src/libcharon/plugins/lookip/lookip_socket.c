@@ -393,8 +393,8 @@ lookip_socket_t *lookip_socket_create(lookip_listener_t *listener)
 	);
 
 	uri = lib->settings->get_str(lib->settings,
-				"%s.plugins.lookip.socket", "unix://" LOOKIP_SOCKET,
-				charon->name);
+							"%s.plugins.lookip.socket", "unix://" LOOKIP_SOCKET,
+							lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (!this->service)
 	{

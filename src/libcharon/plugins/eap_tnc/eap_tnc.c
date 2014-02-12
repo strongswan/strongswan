@@ -273,10 +273,10 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	);
 
 	max_msg_count = lib->settings->get_int(lib->settings,
-					"%s.plugins.eap-tnc.max_message_count",
-					EAP_TNC_MAX_MESSAGE_COUNT, charon->name);
+						"%s.plugins.eap-tnc.max_message_count",
+						EAP_TNC_MAX_MESSAGE_COUNT, lib->ns);
 	protocol = lib->settings->get_str(lib->settings,
-					"%s.plugins.eap-tnc.protocol", "tnccs-1.1", charon->name);
+						"%s.plugins.eap-tnc.protocol", "tnccs-1.1", lib->ns);
 	if (strcaseeq(protocol, "tnccs-2.0"))
 	{
 		type = TNCCS_2_0;

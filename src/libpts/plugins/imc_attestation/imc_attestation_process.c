@@ -109,8 +109,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			int nonce_len, min_nonce_len;
 
 			nonce_len = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imc-attestation.nonce_len",
-								 DEFAULT_NONCE_LEN);
+								"%s.plugins.imc-attestation.nonce_len",
+								 DEFAULT_NONCE_LEN, lib->ns);
 
 			attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
 			min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
@@ -165,8 +165,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			initiator_nonce = attr_cast->get_initiator_nonce(attr_cast);
 
 			nonce_len = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imc-attestation.nonce_len",
-								 DEFAULT_NONCE_LEN);
+								"%s.plugins.imc-attestation.nonce_len",
+								 DEFAULT_NONCE_LEN, lib->ns);
 			if (nonce_len != initiator_nonce.len)
 			{
 				DBG1(DBG_IMC, "initiator and responder DH nonces "
@@ -428,7 +428,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			}
 
 			use_quote2 = lib->settings->get_bool(lib->settings,
-							"libimcv.plugins.imc-attestation.use_quote2", TRUE);
+							"%s.plugins.imc-attestation.use_quote2", TRUE,
+							lib->ns);
 			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_sig))
 			{
 				DBG1(DBG_IMC, "error occurred during TPM quote operation");

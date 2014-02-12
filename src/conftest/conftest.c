@@ -435,18 +435,18 @@ int main(int argc, char *argv[])
 	char *suite_file = "suite.conf", *test_file = NULL, *preload, *plugins;
 	file_logger_t *logger;
 
-	if (!library_init(NULL))
+	if (!library_init(NULL, "conftest"))
 	{
 		library_deinit();
 		return SS_RC_LIBSTRONGSWAN_INTEGRITY;
 	}
-	if (!libhydra_init("conftest"))
+	if (!libhydra_init())
 	{
 		libhydra_deinit();
 		library_deinit();
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	if (!libcharon_init("conftest"))
+	if (!libcharon_init())
 	{
 		libcharon_deinit();
 		libhydra_deinit();

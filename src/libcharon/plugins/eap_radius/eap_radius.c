@@ -188,7 +188,7 @@ void eap_radius_build_attributes(radius_message_t *request)
 		}
 		if (lib->settings->get_bool(lib->settings,
 									"%s.plugins.eap-radius.station_id_with_port",
-									TRUE, charon->name))
+									TRUE, lib->ns))
 		{
 			station_id_fmt = "%#H";
 		}
@@ -573,12 +573,12 @@ static void process_cfg_attributes(radius_message_t *msg)
 void eap_radius_process_attributes(radius_message_t *message)
 {
 	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.class_group", FALSE, charon->name))
+						"%s.plugins.eap-radius.class_group", FALSE, lib->ns))
 	{
 		process_class(message);
 	}
 	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.filter_id", FALSE, charon->name))
+						"%s.plugins.eap-radius.filter_id", FALSE, lib->ns))
 	{
 		process_filter_id(message);
 	}
@@ -720,10 +720,10 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 		.type = EAP_RADIUS,
 		.eap_start = lib->settings->get_bool(lib->settings,
 									"%s.plugins.eap-radius.eap_start", FALSE,
-									charon->name),
+									lib->ns),
 		.id_prefix = lib->settings->get_str(lib->settings,
 									"%s.plugins.eap-radius.id_prefix", "",
-									charon->name),
+									lib->ns),
 	);
 	this->client = eap_radius_create_client();
 	if (!this->client)

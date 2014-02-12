@@ -545,7 +545,7 @@ processor_t *processor_create()
 	{
 		this->jobs[i] = linked_list_create();
 		this->prio_threads[i] = lib->settings->get_int(lib->settings,
-						"libstrongswan.processor.priority_threads.%N", 0,
+						"%s.processor.priority_threads.%N", 0, lib->ns,
 						job_priority_names, i);
 	}
 

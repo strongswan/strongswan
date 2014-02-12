@@ -181,7 +181,7 @@ static void handle_syslog_identifier(private_daemon_t *this)
 	char *identifier;
 
 	identifier = lib->settings->get_str(lib->settings, "%s.syslog.identifier",
-										NULL, charon->name);
+										NULL, lib->ns);
 	if (identifier)
 	{	/* set identifier, which is prepended to each log line */
 		if (!this->syslog_identifier ||
@@ -292,15 +292,15 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 	sys_logger = add_sys_logger(this, facility, current_loggers);
 	sys_logger->set_options(sys_logger,
 				lib->settings->get_bool(lib->settings, "%s.syslog.%s.ike_name",
-										FALSE, charon->name, facility));
+										FALSE, lib->ns, facility));
 
 	def = lib->settings->get_int(lib->settings, "%s.syslog.%s.default", 1,
-								 charon->name, facility);
+								 lib->ns, facility);
 	for (group = 0; group < DBG_MAX; group++)
 	{
 		sys_logger->set_level(sys_logger, group,
 				lib->settings->get_int(lib->settings, "%s.syslog.%s.%N", def,
-							charon->name, facility, debug_lower_names, group));
+							lib->ns, facility, debug_lower_names, group));
 	}
 	charon->bus->add_logger(charon->bus, &sys_logger->logger);
 }
@@ -318,25 +318,25 @@ static void load_file_logger(private_daemon_t *this, char *filename,
 	char *time_format;
 
 	time_format = lib->settings->get_str(lib->settings,
-					"%s.filelog.%s.time_format", NULL, charon->name, filename);
+						"%s.filelog.%s.time_format", NULL, lib->ns, filename);
 	ike_name = lib->settings->get_bool(lib->settings,
-					"%s.filelog.%s.ike_name", FALSE, charon->name, filename);
+						"%s.filelog.%s.ike_name", FALSE, lib->ns, filename);
 	flush_line = lib->settings->get_bool(lib->settings,
-					"%s.filelog.%s.flush_line", FALSE, charon->name, filename);
+						"%s.filelog.%s.flush_line", FALSE, lib->ns, filename);
 	append = lib->settings->get_bool(lib->settings,
-					"%s.filelog.%s.append", TRUE, charon->name, filename);
+						"%s.filelog.%s.append", TRUE, lib->ns, filename);
 
 	file_logger = add_file_logger(this, filename, current_loggers);
 	file_logger->set_options(file_logger, time_format, ike_name);
 	file_logger->open(file_logger, flush_line, append);
 
 	def = lib->settings->get_int(lib->settings, "%s.filelog.%s.default", 1,
-								 charon->name, filename);
+								 lib->ns, filename);
 	for (group = 0; group < DBG_MAX; group++)
 	{
 		file_logger->set_level(file_logger, group,
 				lib->settings->get_int(lib->settings, "%s.filelog.%s.%N", def,
-							charon->name, filename, debug_lower_names, group));
+							lib->ns, filename, debug_lower_names, group));
 	}
 	charon->bus->add_logger(charon->bus, &file_logger->logger);
 }
@@ -353,7 +353,7 @@ METHOD(daemon_t, load_loggers, void,
 	current_loggers = this->loggers;
 	this->loggers = linked_list_create();
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
-													"%s.syslog", charon->name);
+														"%s.syslog", lib->ns);
 	while (enumerator->enumerate(enumerator, &target))
 	{
 		load_sys_logger(this, target, current_loggers);
@@ -361,7 +361,7 @@ METHOD(daemon_t, load_loggers, void,
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
-													"%s.filelog", charon->name);
+														"%s.filelog", lib->ns);
 	while (enumerator->enumerate(enumerator, &target))
 	{
 		load_file_logger(this, target, current_loggers);
@@ -473,7 +473,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.bus);
 	this->loggers->destroy_function(this->loggers, (void*)logger_entry_destroy);
 	this->mutex->destroy(this->mutex);
-	free((void*)this->public.name);
 	free(this);
 }
 
@@ -483,7 +482,7 @@ METHOD(daemon_t, start, void,
 	/* start the engine, go multithreaded */
 	lib->processor->set_threads(lib->processor,
 						lib->settings->get_int(lib->settings, "%s.threads",
-											   DEFAULT_THREADS, charon->name));
+											   DEFAULT_THREADS, lib->ns));
 }
 
 
@@ -525,7 +524,7 @@ METHOD(daemon_t, initialize, bool,
 				PLUGIN_DEPENDS(RNG, RNG_STRONG),
 				PLUGIN_DEPENDS(CUSTOM, "socket"),
 	};
-	lib->plugins->add_static_features(lib->plugins, charon->name, features,
+	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
 									  countof(features), TRUE);
 
 	/* load plugins, further infrastructure may need it */
@@ -558,7 +557,7 @@ METHOD(daemon_t, initialize, bool,
 /**
  * Create the daemon.
  */
-private_daemon_t *daemon_create(const char *name)
+private_daemon_t *daemon_create()
 {
 	private_daemon_t *this;
 
@@ -569,7 +568,6 @@ private_daemon_t *daemon_create(const char *name)
 			.load_loggers = _load_loggers,
 			.set_level = _set_level,
 			.bus = bus_create(),
-			.name = strdup(name ?: "libcharon"),
 		},
 		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -607,7 +605,7 @@ void libcharon_deinit()
 /**
  * Described in header.
  */
-bool libcharon_init(const char *name)
+bool libcharon_init()
 {
 	private_daemon_t *this;
 
@@ -618,7 +616,7 @@ bool libcharon_init(const char *name)
 		return !this->integrity_failed;
 	}
 
-	this = daemon_create(name);
+	this = daemon_create();
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());

@@ -145,12 +145,12 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 
 	frag_size = lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-tls.fragment_size", MAX_FRAGMENT_LEN,
-					charon->name);
+					lib->ns);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-tls.max_message_count", MAX_MESSAGE_COUNT,
-					charon->name);
+					lib->ns);
 	include_length = lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-tls.include_length", TRUE, charon->name);
+					"%s.plugins.eap-tls.include_length", TRUE, lib->ns);
 	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TLS, NULL, NULL);
 	this->tls_eap = tls_eap_create(EAP_TLS, tls, frag_size, max_msg_count,
 												 include_length);

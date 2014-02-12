@@ -149,7 +149,7 @@ METHOD(eap_method_t, process_server, status_t,
 	/* get XAuth backend to use for credential verification. Default to PAM
 	 * to support legacy EAP-GTC configurations */
 	backend = lib->settings->get_str(lib->settings,
-							"%s.plugins.eap-gtc.backend", "pam", charon->name);
+								"%s.plugins.eap-gtc.backend", "pam", lib->ns);
 	xauth = charon->xauth->create_instance(charon->xauth, backend, XAUTH_SERVER,
 										   this->server, this->peer);
 	if (!xauth)

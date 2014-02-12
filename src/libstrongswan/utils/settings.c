@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -31,6 +31,8 @@
 
 #include "settings.h"
 
+#include "collections/array.h"
+#include "collections/hashtable.h"
 #include "collections/linked_list.h"
 #include "threading/rwlock.h"
 #include "utils/debug.h"
@@ -78,14 +80,19 @@ struct section_t {
 	char *name;
 
 	/**
+	 * fallback sections, as section_t
+	 */
+	array_t *fallbacks;
+
+	/**
 	 * subsections, as section_t
 	 */
-	linked_list_t *sections;
+	array_t *sections;
 
 	/**
 	 * key value pairs, as kv_t
 	 */
-	linked_list_t *kv;
+	array_t *kv;
 };
 
 /**
@@ -134,8 +141,6 @@ static section_t *section_create(char *name)
 	section_t *this;
 	INIT(this,
 		.name = strdupnull(name),
-		.sections = linked_list_create(),
-		.kv = linked_list_create(),
 	);
 	return this;
 }
@@ -145,37 +150,73 @@ static section_t *section_create(char *name)
  */
 static void section_destroy(section_t *this)
 {
-	this->kv->destroy_function(this->kv, (void*)kv_destroy);
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	array_destroy_function(this->sections, (void*)section_destroy, NULL);
+	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
+	array_destroy(this->fallbacks);
 	free(this->name);
 	free(this);
 }
 
 /**
- * Purge contents of a section
+ * Purge contents of a section, returns if section can be safely removed.
  */
-static void section_purge(section_t *this)
+static bool section_purge(section_t *this)
 {
-	this->kv->destroy_function(this->kv, (void*)kv_destroy);
-	this->kv = linked_list_create();
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
-	this->sections = linked_list_create();
+	section_t *current;
+	int i;
+
+	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
+	this->kv = NULL;
+	/* we ensure sections used as fallback, or configured with fallbacks (or
+	 * having any such subsections) are not removed */
+	for (i = array_count(this->sections) - 1; i >= 0; i--)
+	{
+		array_get(this->sections, i, &current);
+		if (section_purge(current))
+		{
+			array_remove(this->sections, i, NULL);
+			section_destroy(current);
+		}
+	}
+	return !this->fallbacks && !array_count(this->sections);
 }
 
 /**
  * callback to find a section by name
  */
-static bool section_find(section_t *this, char *name)
+static int section_find(const void *a, const void *b)
 {
-	return streq(this->name, name);
+	const char *key = a;
+	const section_t *item = b;
+	return strcmp(key, item->name);
+}
+
+/**
+ * callback to sort sections by name
+ */
+static int section_sort(const void *a, const void *b, void *user)
+{
+	const section_t *sa = a, *sb = b;
+	return strcmp(sa->name, sb->name);
 }
 
 /**
  * callback to find a kv pair by key
  */
-static bool kv_find(kv_t *this, char *key)
+static int kv_find(const void *a, const void *b)
 {
-	return streq(this->key, key);
+	const char *key = a;
+	const kv_t *item = b;
+	return strcmp(key, item->key);
+}
+
+/**
+ * callback to sort kv pairs by key
+ */
+static int kv_sort(const void *a, const void *b, void *user)
+{
+	const kv_t *kva = a, *kvb = b;
+	return strcmp(kva->key, kvb->key);
 }
 
 /**
@@ -184,17 +225,16 @@ static bool kv_find(kv_t *this, char *key)
 static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 {
 	va_list copy;
+	char *pos = start;
 	bool res;
-	char *pos;
 
 	va_copy(copy, args);
-	while (start < key)
+	while (TRUE)
 	{
-		pos = strchr(start, '%');
+		pos = memchr(pos, '%', key - pos);
 		if (!pos)
 		{
-			start += strlen(start) + 1;
-			continue;
+			break;
 		}
 		pos++;
 		switch (*pos)
@@ -215,11 +255,7 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 				DBG1(DBG_CFG, "settings with %%%c not supported!", *pos);
 				break;
 		}
-		start = pos;
-		if (*start)
-		{
-			start++;
-		}
+		pos++;
 	}
 	res = vsnprintf(buf, len, key, copy) < len;
 	va_end(copy);
@@ -251,14 +287,17 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		return NULL;
 	}
-	if (section->sections->find_first(section->sections,
-									  (linked_list_match_t)section_find,
-									  (void**)&found, buf) != SUCCESS)
+	if (!strlen(buf))
+	{
+		found = section;
+	}
+	else if (array_bsearch(section->sections, buf, section_find, &found) == -1)
 	{
 		if (ensure)
 		{
 			found = section_create(buf);
-			section->sections->insert_last(section->sections, found);
+			array_insert_create(&section->sections, ARRAY_TAIL, found);
+			array_sort(section->sections, section_sort, NULL);
 		}
 	}
 	if (found && pos)
@@ -269,30 +308,74 @@ static section_t *find_section_buffered(section_t *section,
 }
 
 /**
- * Find a section by a given key (thread-safe).
+ * Find all sections via a given key considering fallbacks, using buffered key,
+ * reusable buffer.
  */
-static section_t *find_section(private_settings_t *this, section_t *section,
-							   char *key, va_list args)
+static void find_sections_buffered(section_t *section, char *start, char *key,
+						va_list args, char *buf, int len, array_t **sections)
 {
-	char buf[128], keybuf[512];
-	section_t *found;
+	section_t *found = NULL, *fallback;
+	char *pos;
+	int i;
 
-	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	if (!section)
 	{
-		return NULL;
+		return;
 	}
-	this->lock->read_lock(this->lock);
-	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf), FALSE);
-	this->lock->unlock(this->lock);
-	return found;
+	pos = strchr(key, '.');
+	if (pos)
+	{
+		*pos = '\0';
+	}
+	if (!print_key(buf, len, start, key, args))
+	{
+		return;
+	}
+	if (pos)
+	{	/* restore so we can follow fallbacks */
+		*pos = '.';
+	}
+	if (!strlen(buf))
+	{
+		found = section;
+	}
+	else
+	{
+		array_bsearch(section->sections, buf, section_find, &found);
+	}
+	if (found)
+	{
+		if (pos)
+		{
+			find_sections_buffered(found, start, pos+1, args, buf, len,
+								   sections);
+		}
+		else
+		{
+			array_insert_create(sections, ARRAY_TAIL, found);
+			for (i = 0; i < array_count(found->fallbacks); i++)
+			{
+				array_get(found->fallbacks, i, &fallback);
+				array_insert_create(sections, ARRAY_TAIL, fallback);
+			}
+		}
+	}
+	if (section->fallbacks)
+	{
+		for (i = 0; i < array_count(section->fallbacks); i++)
+		{
+			array_get(section->fallbacks, i, &fallback);
+			find_sections_buffered(fallback, start, key, args, buf, len,
+								   sections);
+		}
+	}
 }
 
 /**
  * Ensure that the section with the given key exists (thread-safe).
  */
 static section_t *ensure_section(private_settings_t *this, section_t *section,
-								 char *key, va_list args)
+								 const char *key, va_list args)
 {
 	char buf[128], keybuf[512];
 	section_t *found;
@@ -310,13 +393,92 @@ static section_t *ensure_section(private_settings_t *this, section_t *section,
 }
 
 /**
+ * Find a section by a given key with its fallbacks (not thread-safe!).
+ * Sections are returned in depth-first order (array is allocated). NULL is
+ * returned if no sections are found.
+ */
+static array_t *find_sections(private_settings_t *this, section_t *section,
+							  char *key, va_list args)
+{
+	char buf[128], keybuf[512];
+	array_t *sections = NULL;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return NULL;
+	}
+	find_sections_buffered(section, keybuf, keybuf, args, buf,
+						   sizeof(buf), &sections);
+	return sections;
+}
+
+/**
+ * Check if the given fallback section already exists
+ */
+static bool fallback_exists(section_t *section, section_t *fallback)
+{
+	if (section == fallback)
+	{
+		return TRUE;
+	}
+	else if (section->fallbacks)
+	{
+		section_t *existing;
+		int i;
+
+		for (i = 0; i < array_count(section->fallbacks); i++)
+		{
+			array_get(section->fallbacks, i, &existing);
+			if (existing == fallback)
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Ensure that the section with the given key exists and add the given fallback
+ * section (thread-safe).
+ */
+static void add_fallback_to_section(private_settings_t *this,
+							section_t *section, const char *key, va_list args,
+							section_t *fallback)
+{
+	char buf[128], keybuf[512];
+	section_t *found;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return;
+	}
+	this->lock->write_lock(this->lock);
+	found = find_section_buffered(section, keybuf, keybuf, args, buf,
+								  sizeof(buf), TRUE);
+	if (!fallback_exists(found, fallback))
+	{
+		/* to ensure sections referred to as fallback are not purged, we create
+		 * the array there too */
+		if (!fallback->fallbacks)
+		{
+			fallback->fallbacks = array_create(0, 0);
+		}
+		array_insert_create(&found->fallbacks, ARRAY_TAIL, fallback);
+	}
+	this->lock->unlock(this->lock);
+}
+
+/**
  * Find the key/value pair for a key, using buffered key, reusable buffer
  * If "ensure" is TRUE, the sections (and key/value pair) are created if they
  * don't exist.
+ * Fallbacks are only considered if "ensure" is FALSE.
  */
 static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 								 va_list args, char *buf, int len, bool ensure)
 {
+	int i;
 	char *pos;
 	kv_t *kv = NULL;
 	section_t *found = NULL;
@@ -330,25 +492,40 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 	if (pos)
 	{
 		*pos = '\0';
-		pos++;
-
 		if (!print_key(buf, len, start, key, args))
 		{
 			return NULL;
 		}
-		if (section->sections->find_first(section->sections,
-										  (linked_list_match_t)section_find,
-										  (void**)&found, buf) != SUCCESS)
+		/* restore so we can retry for fallbacks */
+		*pos = '.';
+		if (!strlen(buf))
 		{
-			if (!ensure)
-			{
-				return NULL;
-			}
-			found = section_create(buf);
-			section->sections->insert_last(section->sections, found);
+			found = section;
 		}
-		return find_value_buffered(found, start, pos, args, buf, len,
-								   ensure);
+		else if (array_bsearch(section->sections, buf, section_find,
+							   &found) == -1)
+		{
+			if (ensure)
+			{
+				found = section_create(buf);
+				array_insert_create(&section->sections, ARRAY_TAIL, found);
+				array_sort(section->sections, section_sort, NULL);
+			}
+		}
+		if (found)
+		{
+			kv = find_value_buffered(found, start, pos+1, args, buf, len,
+									 ensure);
+		}
+		if (!kv && !ensure && section->fallbacks)
+		{
+			for (i = 0; !kv && i < array_count(section->fallbacks); i++)
+			{
+				array_get(section->fallbacks, i, &found);
+				kv = find_value_buffered(found, start, key, args, buf, len,
+										 ensure);
+			}
+		}
 	}
 	else
 	{
@@ -356,13 +533,22 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-		if (section->kv->find_first(section->kv, (linked_list_match_t)kv_find,
-									(void**)&kv, buf) != SUCCESS)
+		if (array_bsearch(section->kv, buf, kv_find, &kv) == -1)
 		{
 			if (ensure)
 			{
 				kv = kv_create(buf, NULL);
-				section->kv->insert_last(section->kv, kv);
+				array_insert_create(&section->kv, ARRAY_TAIL, kv);
+				array_sort(section->kv, kv_sort, NULL);
+			}
+			else if (section->fallbacks)
+			{
+				for (i = 0; !kv && i < array_count(section->fallbacks); i++)
+				{
+					array_get(section->fallbacks, i, &found);
+					kv = find_value_buffered(found, start, key, args, buf, len,
+											 ensure);
+				}
 			}
 		}
 	}
@@ -429,7 +615,7 @@ static void set_value(private_settings_t *this, section_t *section,
 }
 
 METHOD(settings_t, get_str, char*,
-	   private_settings_t *this, char *key, char *def, ...)
+	private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
 	va_list args;
@@ -470,7 +656,7 @@ inline bool settings_value_as_bool(char *value, bool def)
 }
 
 METHOD(settings_t, get_bool, bool,
-	   private_settings_t *this, char *key, bool def, ...)
+	private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
 	va_list args;
@@ -500,7 +686,7 @@ inline int settings_value_as_int(char *value, int def)
 }
 
 METHOD(settings_t, get_int, int,
-	   private_settings_t *this, char *key, int def, ...)
+	private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	va_list args;
@@ -530,7 +716,7 @@ inline double settings_value_as_double(char *value, double def)
 }
 
 METHOD(settings_t, get_double, double,
-	   private_settings_t *this, char *key, double def, ...)
+	private_settings_t *this, char *key, double def, ...)
 {
 	char *value;
 	va_list args;
@@ -576,7 +762,7 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 }
 
 METHOD(settings_t, get_time, u_int32_t,
-	   private_settings_t *this, char *key, u_int32_t def, ...)
+	private_settings_t *this, char *key, u_int32_t def, ...)
 {
 	char *value;
 	va_list args;
@@ -588,7 +774,7 @@ METHOD(settings_t, get_time, u_int32_t,
 }
 
 METHOD(settings_t, set_str, void,
-	   private_settings_t *this, char *key, char *value, ...)
+	private_settings_t *this, char *key, char *value, ...)
 {
 	va_list args;
 	va_start(args, value);
@@ -597,7 +783,7 @@ METHOD(settings_t, set_str, void,
 }
 
 METHOD(settings_t, set_bool, void,
-	   private_settings_t *this, char *key, bool value, ...)
+	private_settings_t *this, char *key, bool value, ...)
 {
 	va_list args;
 	va_start(args, value);
@@ -606,7 +792,7 @@ METHOD(settings_t, set_bool, void,
 }
 
 METHOD(settings_t, set_int, void,
-	   private_settings_t *this, char *key, int value, ...)
+	private_settings_t *this, char *key, int value, ...)
 {
 	char val[16];
 	va_list args;
@@ -619,7 +805,7 @@ METHOD(settings_t, set_int, void,
 }
 
 METHOD(settings_t, set_double, void,
-	   private_settings_t *this, char *key, double value, ...)
+	private_settings_t *this, char *key, double value, ...)
 {
 	char val[64];
 	va_list args;
@@ -632,7 +818,7 @@ METHOD(settings_t, set_double, void,
 }
 
 METHOD(settings_t, set_time, void,
-	   private_settings_t *this, char *key, u_int32_t value, ...)
+	private_settings_t *this, char *key, u_int32_t value, ...)
 {
 	char val[16];
 	va_list args;
@@ -645,7 +831,7 @@ METHOD(settings_t, set_time, void,
 }
 
 METHOD(settings_t, set_default_str, bool,
-	   private_settings_t *this, char *key, char *value, ...)
+	private_settings_t *this, char *key, char *value, ...)
 {
 	char *old;
 	va_list args;
@@ -665,63 +851,143 @@ METHOD(settings_t, set_default_str, bool,
 }
 
 /**
+ * Data for enumerators
+ */
+typedef struct {
+	/** settings_t instance */
+	private_settings_t *settings;
+	/** sections to enumerate */
+	array_t *sections;
+	/** sections/keys that were already enumerated */
+	hashtable_t *seen;
+} enumerator_data_t;
+
+/**
+ * Destroy enumerator data
+ */
+static void enumerator_destroy(enumerator_data_t *this)
+{
+	this->settings->lock->unlock(this->settings->lock);
+	this->seen->destroy(this->seen);
+	array_destroy(this->sections);
+	free(this);
+}
+
+/**
  * Enumerate section names, not sections
  */
-static bool section_filter(void *null, section_t **in, char **out)
+static bool section_filter(hashtable_t *seen, section_t **in, char **out)
 {
 	*out = (*in)->name;
+	if (seen->get(seen, *out))
+	{
+		return FALSE;
+	}
+	seen->put(seen, *out, *out);
 	return TRUE;
 }
 
-METHOD(settings_t, create_section_enumerator, enumerator_t*,
-	   private_settings_t *this, char *key, ...)
+/**
+ * Enumerate sections of the given section
+ */
+static enumerator_t *section_enumerator(section_t *section,
+										enumerator_data_t *data)
 {
-	section_t *section;
+	return enumerator_create_filter(array_create_enumerator(section->sections),
+				(void*)section_filter, data->seen, NULL);
+}
+
+METHOD(settings_t, create_section_enumerator, enumerator_t*,
+	private_settings_t *this, char *key, ...)
+{
+	enumerator_data_t *data;
+	array_t *sections;
 	va_list args;
 
+	this->lock->read_lock(this->lock);
 	va_start(args, key);
-	section = find_section(this, this->top, key, args);
+	sections = find_sections(this, this->top, key, args);
 	va_end(args);
 
-	if (!section)
+	if (!sections)
 	{
+		this->lock->unlock(this->lock);
 		return enumerator_create_empty();
 	}
-	this->lock->read_lock(this->lock);
-	return enumerator_create_filter(
-				section->sections->create_enumerator(section->sections),
-				(void*)section_filter, this->lock, (void*)this->lock->unlock);
+	INIT(data,
+		.settings = this,
+		.sections = sections,
+		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
+	);
+	return enumerator_create_nested(array_create_enumerator(sections),
+					(void*)section_enumerator, data, (void*)enumerator_destroy);
 }
 
 /**
  * Enumerate key and values, not kv_t entries
  */
-static bool kv_filter(void *null, kv_t **in, char **key,
+static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
 					  void *none, char **value)
 {
 	*key = (*in)->key;
+	if (seen->get(seen, *key))
+	{
+		return FALSE;
+	}
 	*value = (*in)->value;
+	seen->put(seen, *key, *key);
 	return TRUE;
 }
 
+/**
+ * Enumerate key/value pairs of the given section
+ */
+static enumerator_t *kv_enumerator(section_t *section, enumerator_data_t *data)
+{
+	return enumerator_create_filter(array_create_enumerator(section->kv),
+					(void*)kv_filter, data->seen, NULL);
+}
+
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
-	   private_settings_t *this, char *key, ...)
+	private_settings_t *this, char *key, ...)
+{
+	enumerator_data_t *data;
+	array_t *sections;
+	va_list args;
+
+	this->lock->read_lock(this->lock);
+	va_start(args, key);
+	sections = find_sections(this, this->top, key, args);
+	va_end(args);
+
+	if (!sections)
+	{
+		this->lock->unlock(this->lock);
+		return enumerator_create_empty();
+	}
+	INIT(data,
+		.settings = this,
+		.sections = sections,
+		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
+	);
+	return enumerator_create_nested(array_create_enumerator(sections),
+					(void*)kv_enumerator, data, (void*)enumerator_destroy);
+}
+
+METHOD(settings_t, add_fallback, void,
+	private_settings_t *this, const char *key, const char *fallback, ...)
 {
 	section_t *section;
 	va_list args;
 
-	va_start(args, key);
-	section = find_section(this, this->top, key, args);
+	/* find/create the fallback */
+	va_start(args, fallback);
+	section = ensure_section(this, this->top, fallback, args);
 	va_end(args);
 
-	if (!section)
-	{
-		return enumerator_create_empty();
-	}
-	this->lock->read_lock(this->lock);
-	return enumerator_create_filter(
-					section->kv->create_enumerator(section->kv),
-					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
+	va_start(args, fallback);
+	add_fallback_to_section(this, this->top, key, args, section);
+	va_end(args);
 }
 
 /**
@@ -881,15 +1147,15 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 							 section->name);
 						continue;
 					}
-					if (section->sections->find_first(section->sections,
-											(linked_list_match_t)section_find,
-											(void**)&sub, key) != SUCCESS)
+					if (array_bsearch(section->sections, key, section_find,
+									  &sub) == -1)
 					{
 						sub = section_create(key);
 						if (parse_section(contents, file, level, &inner, sub))
 						{
-							section->sections->insert_last(section->sections,
-														   sub);
+							array_insert_create(&section->sections, ARRAY_TAIL,
+												sub);
+							array_sort(section->sections, section_sort, NULL);
 							continue;
 						}
 						section_destroy(sub);
@@ -916,12 +1182,11 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 							 section->name);
 						continue;
 					}
-					if (section->kv->find_first(section->kv,
-								(linked_list_match_t)kv_find,
-								(void**)&kv, key) != SUCCESS)
+					if (array_bsearch(section->kv, key, kv_find, &kv) == -1)
 					{
 						kv = kv_create(key, value);
-						section->kv->insert_last(section->kv, kv);
+						array_insert_create(&section->kv, ARRAY_TAIL, kv);
+						array_sort(section->kv, kv_sort, NULL);
 					}
 					else
 					{	/* replace with the most recently read value */
@@ -1092,37 +1357,37 @@ static void section_extend(section_t *base, section_t *extension)
 	section_t *sec;
 	kv_t *kv;
 
-	enumerator = extension->sections->create_enumerator(extension->sections);
+	enumerator = array_create_enumerator(extension->sections);
 	while (enumerator->enumerate(enumerator, (void**)&sec))
 	{
 		section_t *found;
-		if (base->sections->find_first(base->sections,
-					(linked_list_match_t)section_find, (void**)&found,
-					sec->name) == SUCCESS)
+		if (array_bsearch(base->sections, sec->name, section_find,
+			&found) != -1)
 		{
 			section_extend(found, sec);
 		}
 		else
 		{
-			extension->sections->remove_at(extension->sections, enumerator);
-			base->sections->insert_last(base->sections, sec);
+			array_remove_at(extension->sections, enumerator);
+			array_insert_create(&base->sections, ARRAY_TAIL, sec);
+			array_sort(base->sections, section_sort, NULL);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = extension->kv->create_enumerator(extension->kv);
+	enumerator = array_create_enumerator(extension->kv);
 	while (enumerator->enumerate(enumerator, (void**)&kv))
 	{
 		kv_t *found;
-		if (base->kv->find_first(base->kv, (linked_list_match_t)kv_find,
-					(void**)&found, kv->key) == SUCCESS)
+		if (array_bsearch(base->kv, kv->key, kv_find, &found) != -1)
 		{
 			found->value = kv->value;
 		}
 		else
 		{
-			extension->kv->remove_at(extension->kv, enumerator);
-			base->kv->insert_last(base->kv, kv);
+			array_remove_at(extension->kv, enumerator);
+			array_insert_create(&base->kv, ARRAY_TAIL, kv);
+			array_sort(base->kv, kv_sort, NULL);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1179,13 +1444,13 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 }
 
 METHOD(settings_t, load_files, bool,
-	   private_settings_t *this, char *pattern, bool merge)
+	private_settings_t *this, char *pattern, bool merge)
 {
 	return load_files_internal(this, this->top, pattern, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
-	   private_settings_t *this, char *pattern, bool merge, char *key, ...)
+	private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1202,7 +1467,7 @@ METHOD(settings_t, load_files_section, bool,
 }
 
 METHOD(settings_t, destroy, void,
-	   private_settings_t *this)
+	private_settings_t *this)
 {
 	section_destroy(this->top);
 	this->contents->destroy_function(this->contents, (void*)free);
@@ -1232,6 +1497,7 @@ settings_t *settings_create(char *file)
 			.set_default_str = _set_default_str,
 			.create_section_enumerator = _create_section_enumerator,
 			.create_key_value_enumerator = _create_key_value_enumerator,
+			.add_fallback = _add_fallback,
 			.load_files = _load_files,
 			.load_files_section = _load_files_section,
 			.destroy = _destroy,

@@ -61,7 +61,7 @@ bool tkm_init()
 	ehandler_init();
 
 	ikesock = lib->settings->get_str(lib->settings, "%s.ike_socket", IKE_SOCKET,
-									 charon->name);
+									 lib->ns);
 	if (ike_init(ikesock) != TKM_OK)
 	{
 		tkmlib_final();
@@ -70,7 +70,7 @@ bool tkm_init()
 	DBG1(DBG_DMN, "connected to TKM via socket '%s'", ikesock);
 
 	eessock = lib->settings->get_str(lib->settings, "%s.ees_socket", EES_SOCKET,
-									 charon->name);
+									 lib->ns);
 	ees_server_init(eessock);
 	DBG1(DBG_DMN, "serving EES requests on socket '%s'", eessock);
 

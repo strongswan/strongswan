@@ -734,15 +734,15 @@ dhcp_socket_t *dhcp_socket_create()
 	}
 	this->identity_lease = lib->settings->get_bool(lib->settings,
 								"%s.plugins.dhcp.identity_lease", FALSE,
-								charon->name);
+								lib->ns);
 	this->force_dst = lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.force_server_address", FALSE,
-								charon->name);
+								lib->ns);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.server", "255.255.255.255",
-								charon->name), DHCP_SERVER_PORT);
+								lib->ns), DHCP_SERVER_PORT);
 	iface = lib->settings->get_str(lib->settings, "%s.plugins.dhcp.interface",
-			NULL, charon->name);
+								   NULL, lib->ns);
 	if (!this->dst)
 	{
 		DBG1(DBG_CFG, "configured DHCP server address invalid");

@@ -202,7 +202,7 @@ static private_key_t *load_issuer_key()
 	char *path;
 
 	path = lib->settings->get_str(lib->settings,
-					"%s.plugins.load-tester.issuer_key", NULL, charon->name);
+						"%s.plugins.load-tester.issuer_key", NULL, lib->ns);
 	if (!path)
 	{
 		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
@@ -222,7 +222,7 @@ static certificate_t *load_issuer_cert()
 	char *path;
 
 	path = lib->settings->get_str(lib->settings,
-					"%s.plugins.load-tester.issuer_cert", NULL, charon->name);
+						"%s.plugins.load-tester.issuer_cert", NULL, lib->ns);
 	if (!path)
 	{
 		return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -246,7 +246,7 @@ static void load_ca_certs(private_load_tester_creds_t *this)
 	char *path;
 
 	path = lib->settings->get_str(lib->settings,
-						"%s.plugins.load-tester.ca_dir", NULL, charon->name);
+							"%s.plugins.load-tester.ca_dir", NULL, lib->ns);
 	if (path)
 	{
 		enumerator = enumerator_create_directory(path);
@@ -445,11 +445,11 @@ load_tester_creds_t *load_tester_creds_create()
 	char *pwd, *psk, *digest;
 
 	psk = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.preshared_key", default_psk, charon->name);
+				"%s.plugins.load-tester.preshared_key", default_psk, lib->ns);
 	pwd = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.eap_password", default_pwd, charon->name);
+				"%s.plugins.load-tester.eap_password", default_pwd, lib->ns);
 	digest = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.digest", "sha1", charon->name);
+				"%s.plugins.load-tester.digest", "sha1", lib->ns);
 
 	INIT(this,
 		.public = {

@@ -236,11 +236,11 @@ static void load_addrs(private_load_tester_config_t *this)
 	mem_pool_t *pool;
 
 	this->keep = lib->settings->get_bool(lib->settings,
-						"%s.plugins.load-tester.addrs_keep", FALSE, charon->name);
+						"%s.plugins.load-tester.addrs_keep", FALSE, lib->ns);
 	this->prefix = lib->settings->get_int(lib->settings,
-						"%s.plugins.load-tester.addrs_prefix", 16, charon->name);
+						"%s.plugins.load-tester.addrs_prefix", 16, lib->ns);
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-						"%s.plugins.load-tester.addrs", charon->name);
+						"%s.plugins.load-tester.addrs", lib->ns);
 	while (enumerator->enumerate(enumerator, &iface, &token))
 	{
 		tokens = enumerator_create_token(token, ",", " ");
@@ -917,72 +917,71 @@ load_tester_config_t *load_tester_config_create()
 	);
 
 	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.load-tester.request_virtual_ip", FALSE, charon->name))
+				"%s.plugins.load-tester.request_virtual_ip", FALSE, lib->ns))
 	{
 		this->vip = host_create_from_string("0.0.0.0", 0);
 	}
 	this->pool = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.pool", NULL, charon->name);
+					"%s.plugins.load-tester.pool", NULL, lib->ns);
 	this->initiator = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator", "0.0.0.0", charon->name);
+					"%s.plugins.load-tester.initiator", "0.0.0.0", lib->ns);
 	this->responder = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.responder", "127.0.0.1", charon->name);
+					"%s.plugins.load-tester.responder", "127.0.0.1", lib->ns);
 
 	this->proposal = proposal_create_from_string(PROTO_IKE,
 				lib->settings->get_str(lib->settings,
 					"%s.plugins.load-tester.proposal", "aes128-sha1-modp768",
-					charon->name));
+					lib->ns));
 	if (!this->proposal)
 	{	/* fallback */
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
 	this->esp = proposal_create_from_string(PROTO_ESP,
-			lib->settings->get_str(lib->settings,
-				"%s.plugins.load-tester.esp", "aes128-sha1",
-				charon->name));
+				lib->settings->get_str(lib->settings,
+					"%s.plugins.load-tester.esp", "aes128-sha1", lib->ns));
 	if (!this->esp)
 	{	/* fallback */
 		this->esp = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	}
 
 	this->ike_rekey = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.ike_rekey", 0, charon->name);
+				"%s.plugins.load-tester.ike_rekey", 0, lib->ns);
 	this->child_rekey = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.child_rekey", 600, charon->name);
+				"%s.plugins.load-tester.child_rekey", 600, lib->ns);
 	this->dpd_delay = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.dpd_delay", 0, charon->name);
+				"%s.plugins.load-tester.dpd_delay", 0, lib->ns);
 	this->dpd_timeout = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.dpd_timeout", 0, charon->name);
+				"%s.plugins.load-tester.dpd_timeout", 0, lib->ns);
 
 	this->initiator_auth = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator_auth", "pubkey", charon->name);
+				"%s.plugins.load-tester.initiator_auth", "pubkey", lib->ns);
 	this->responder_auth = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.responder_auth", "pubkey", charon->name);
+				"%s.plugins.load-tester.responder_auth", "pubkey", lib->ns);
 	this->initiator_id = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator_id", NULL, charon->name);
+				"%s.plugins.load-tester.initiator_id", NULL, lib->ns);
 	this->initiator_match = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator_match", NULL, charon->name);
+				"%s.plugins.load-tester.initiator_match", NULL, lib->ns);
 	this->responder_id = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.responder_id", NULL, charon->name);
+				"%s.plugins.load-tester.responder_id", NULL, lib->ns);
 
 	this->mode = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.mode", NULL, charon->name);
+				"%s.plugins.load-tester.mode", NULL, lib->ns);
 	this->initiator_tsi = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator_tsi", NULL, charon->name);
+				"%s.plugins.load-tester.initiator_tsi", NULL, lib->ns);
 	this->responder_tsi =lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.responder_tsi",
-			this->initiator_tsi, charon->name);
+				"%s.plugins.load-tester.responder_tsi",
+				this->initiator_tsi, lib->ns);
 	this->initiator_tsr = lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.initiator_tsr", NULL, charon->name);
+				"%s.plugins.load-tester.initiator_tsr", NULL, lib->ns);
 	this->responder_tsr =lib->settings->get_str(lib->settings,
-			"%s.plugins.load-tester.responder_tsr",
-			this->initiator_tsr, charon->name);
+				"%s.plugins.load-tester.responder_tsr",
+				this->initiator_tsr, lib->ns);
 
 	this->port = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.dynamic_port", 0, charon->name);
+				"%s.plugins.load-tester.dynamic_port", 0, lib->ns);
 	this->version = lib->settings->get_int(lib->settings,
-			"%s.plugins.load-tester.version", IKE_ANY, charon->name);
+				"%s.plugins.load-tester.version", IKE_ANY, lib->ns);
 
 	load_addrs(this);
 

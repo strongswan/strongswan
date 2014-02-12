@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -274,6 +277,149 @@ START_TEST(test_enumerate)
 }
 END_TEST
 
+static int comp_obj(const void *a, const void *b, void *arg)
+{
+	ck_assert_str_eq(arg, "arg");
+	return *(int*)a - *(int*)b;
+}
+
+START_TEST(test_sort_obj)
+{
+	array_t *array;
+	int x[][3] = {
+		{1, 2, 3},
+		{1, 3, 2},
+		{2, 1, 3},
+		{2, 3, 1},
+		{3, 1, 2},
+		{3, 2, 1},
+	};
+	char *arg = "arg";
+	int i, v;
+
+	for (i = 0; i < countof(x); i++)
+	{
+		array = array_create(sizeof(x[i][0]), 0);
+		array_insert(array, ARRAY_TAIL, &x[i][0]);
+		array_insert(array, ARRAY_TAIL, &x[i][1]);
+		array_insert(array, ARRAY_TAIL, &x[i][2]);
+
+		array_sort(array, comp_obj, arg);
+
+		ck_assert(array_get(array, 0, &v));
+		ck_assert_int_eq(v, 1);
+		ck_assert(array_get(array, 1, &v));
+		ck_assert_int_eq(v, 2);
+		ck_assert(array_get(array, 2, &v));
+		ck_assert_int_eq(v, 3);
+
+		array_destroy(array);
+	}
+}
+END_TEST
+
+static int comp_ptr(const void *a, const void *b, void *arg)
+{
+	ck_assert_str_eq(arg, "arg");
+	return strcmp(a, b);
+}
+
+START_TEST(test_sort_ptr)
+{
+	array_t *array;
+	char *x[][3] = {
+		{"a", "b", "c"},
+		{"a", "c", "b"},
+		{"b", "a", "c"},
+		{"b", "c", "a"},
+		{"c", "a", "b"},
+		{"c", "b", "a"},
+	};
+	char *v, *arg = "arg";
+	int i;
+
+	for (i = 0; i < countof(x); i++)
+	{
+		array = array_create(0, 0);
+		array_insert(array, ARRAY_TAIL, x[i][0]);
+		array_insert(array, ARRAY_TAIL, x[i][1]);
+		array_insert(array, ARRAY_TAIL, x[i][2]);
+
+		array_sort(array, comp_ptr, arg);
+
+		ck_assert(array_get(array, 0, &v));
+		ck_assert_str_eq(v, "a");
+		ck_assert(array_get(array, 1, &v));
+		ck_assert_str_eq(v, "b");
+		ck_assert(array_get(array, 2, &v));
+		ck_assert_str_eq(v, "c");
+
+		array_destroy(array);
+	}
+}
+END_TEST
+
+static int comp_search_obj(const void *a, const void *b)
+{
+	return *(int*)a - *(int*)b;
+}
+
+START_TEST(test_bsearch_obj)
+{
+	array_t *array;
+	int x[] = { 3, 2, 1 };
+	int k, v;
+
+	array = array_create(sizeof(x[0]), 0);
+	array_insert(array, ARRAY_TAIL, &x[0]);
+	array_insert(array, ARRAY_TAIL, &x[1]);
+	array_insert(array, ARRAY_TAIL, &x[2]);
+
+	array_sort(array, (void*)comp_search_obj, NULL);
+
+	k = 0;
+	ck_assert_int_eq(array_bsearch(array, &k, comp_search_obj, &v), -1);
+	for (k = 1; k < 4; k++)
+	{
+		ck_assert_int_eq(array_bsearch(array, &k, comp_search_obj, &v), k-1);
+		ck_assert_int_eq(v, k);
+	}
+	k = 4;
+	ck_assert_int_eq(array_bsearch(array, &k, comp_search_obj, &v), -1);
+	array_destroy(array);
+}
+END_TEST
+
+static int comp_search_ptr(const void *a, const void *b)
+{
+	return strcmp(a, b);
+}
+
+START_TEST(test_bsearch_ptr)
+{
+	array_t *array;
+	char *x[] = {"c", "b", "a"};
+	char *v;
+
+	array = array_create(0, 0);
+	array_insert(array, ARRAY_TAIL, x[0]);
+	array_insert(array, ARRAY_TAIL, x[1]);
+	array_insert(array, ARRAY_TAIL, x[2]);
+
+	array_sort(array, (void*)comp_search_ptr, NULL);
+
+	ck_assert_int_eq(array_bsearch(array, "abc", comp_search_ptr, &v), -1);
+	ck_assert_int_eq(array_bsearch(array, "a", comp_search_ptr, &v), 0);
+	ck_assert_str_eq(v, "a");
+	ck_assert_int_eq(array_bsearch(array, "b", comp_search_ptr, &v), 1);
+	ck_assert_str_eq(v, "b");
+	ck_assert_int_eq(array_bsearch(array, "c", comp_search_ptr, &v), 2);
+	ck_assert_str_eq(v, "c");
+
+	array_destroy(array);
+}
+END_TEST
+
 static void invoke(void *data, int idx, void *user)
 {
 	int *y = user, *x = data;
@@ -362,6 +508,16 @@ Suite *array_suite_create()
 
 	tc = tcase_create("enumerate");
 	tcase_add_test(tc, test_enumerate);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sort");
+	tcase_add_test(tc, test_sort_obj);
+	tcase_add_test(tc, test_sort_ptr);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("bsearch");
+	tcase_add_test(tc, test_bsearch_obj);
+	tcase_add_test(tc, test_bsearch_ptr);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("invoke");

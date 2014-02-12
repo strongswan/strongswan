@@ -1063,9 +1063,9 @@ tnccs_t* tnccs_20_create(bool is_server,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.messages = linked_list_create(),
 		.max_batch_len = lib->settings->get_int(lib->settings,
-							"libtnccs.plugins.tnccs-20.max_batch_size", 65522),
+						"%s.plugins.tnccs-20.max_batch_size", 65522, lib->ns),
 		.max_msg_len = lib->settings->get_int(lib->settings,
-							"libtnccs.plugins.tnccs-20.max_message_size", 65490),
+						"%s.plugins.tnccs-20.max_message_size", 65490, lib->ns),
 		.ref = 1,
 	);
 

@@ -1212,7 +1212,7 @@ int main(int argc, char *argv[])
 	atexit(library_deinit);
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "pool"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
@@ -1227,11 +1227,16 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-
-	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database", NULL);
+	/* TODO: make database URI or setting key configurable via command line */
+	uri = lib->settings->get_str(lib->settings,
+			"pool.database",
+			lib->settings->get_str(lib->settings,
+				"charon.plugins.attr-sql.database",
+				lib->settings->get_str(lib->settings,
+					"libhydra.plugins.attr-sql.database", NULL)));
 	if (!uri)
 	{
-		fprintf(stderr, "database URI libhydra.plugins.attr-sql.database not set.\n");
+		fprintf(stderr, "database URI pool.database not set.\n");
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	db = lib->db->create(lib->db, uri);

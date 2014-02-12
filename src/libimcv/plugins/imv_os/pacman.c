@@ -466,12 +466,12 @@ int main(int argc, char *argv[])
 	atexit(cleanup);
 
 	/* initialize library */
-	if (!library_init(NULL))
+	if (!library_init(NULL, "pacman"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
 	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "attest.load", "sqlite")))
+			lib->settings->get_str(lib->settings, "pacman.load", "sqlite")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

@@ -1207,13 +1207,13 @@ crypto_tester_t *crypto_tester_create()
 		.rng = linked_list_create(),
 
 		.required = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.required", FALSE),
+								"%s.crypto_test.required", FALSE, lib->ns),
 		.rng_true = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.rng_true", FALSE),
+								"%s.crypto_test.rng_true", FALSE, lib->ns),
 		.bench_time = lib->settings->get_int(lib->settings,
-								"libstrongswan.crypto_test.bench_time", 50),
+								"%s.crypto_test.bench_time", 50, lib->ns),
 		.bench_size = lib->settings->get_int(lib->settings,
-								"libstrongswan.crypto_test.bench_size", 1024),
+								"%s.crypto_test.bench_size", 1024, lib->ns),
 	);
 
 	/* enforce a block size of 16, should be fine for all algorithms */

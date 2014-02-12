@@ -452,11 +452,11 @@ static bool open_socket(private_eap_radius_dae_t *this)
 
 	host = host_create_from_string(
 				lib->settings->get_str(lib->settings,
-						"%s.plugins.eap-radius.dae.listen", "0.0.0.0",
-						charon->name),
+							"%s.plugins.eap-radius.dae.listen", "0.0.0.0",
+							lib->ns),
 				lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.dae.port", RADIUS_DAE_PORT,
-						charon->name));
+							"%s.plugins.eap-radius.dae.port", RADIUS_DAE_PORT,
+							lib->ns));
 	if (!host)
 	{
 		DBG1(DBG_CFG, "invalid RADIUS DAE listen address");
@@ -504,7 +504,7 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		.secret = {
 			.ptr = lib->settings->get_str(lib->settings,
 									"%s.plugins.eap-radius.dae.secret", NULL,
-									charon->name),
+									lib->ns),
 		},
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),

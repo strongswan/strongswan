@@ -556,7 +556,7 @@ int main(int argc, char *argv[])
 	ctx.in = stdin;
 	ctx.out = stdout;
 
-	library_init(NULL);
+	library_init(NULL, "aes-test");
 	atexit(library_deinit);
 
 	while (true)

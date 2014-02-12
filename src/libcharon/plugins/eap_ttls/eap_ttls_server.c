@@ -80,7 +80,7 @@ static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 									"%s.plugins.eap-ttls.phase2_method", "md5",
-									charon->name);
+									lib->ns);
 	type = eap_type_from_string(eap_type_str);
 	if (type == 0)
 	{
@@ -115,7 +115,7 @@ static status_t start_phase2_tnc(private_eap_ttls_server_t *this,
 	eap_inner_method_t *inner_method;
 
 	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
-						"%s.plugins.eap-ttls.phase2_tnc", FALSE, charon->name))
+							"%s.plugins.eap-ttls.phase2_tnc", FALSE, lib->ns))
 	{
 		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
 		this->method = charon->eap->create_instance(charon->eap, EAP_TNC,
@@ -242,7 +242,7 @@ METHOD(tls_application_t, process, status_t,
 
 		/* Start Phase 2 of EAP-TTLS authentication */
 		if (lib->settings->get_bool(lib->settings,
-				"%s.plugins.eap-ttls.request_peer_auth", FALSE, charon->name))
+					"%s.plugins.eap-ttls.request_peer_auth", FALSE, lib->ns))
 		{
 			return start_phase2_tnc(this, EAP_TLS);
 		}
@@ -301,7 +301,7 @@ METHOD(tls_application_t, build, status_t,
 
 	if (this->method == NULL && this->start_phase2 &&
 		lib->settings->get_bool(lib->settings,
-				"%s.plugins.eap-ttls.phase2_piggyback", FALSE, charon->name))
+					"%s.plugins.eap-ttls.phase2_piggyback", FALSE, lib->ns))
 	{
 		/* generate an EAP Identity request which will be piggybacked right
 		 * onto the TLS Finished message thus initiating EAP-TTLS phase2

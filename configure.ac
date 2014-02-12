@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2013 Tobias Brunner
+# Copyright (C) 2007-2014 Tobias Brunner
 # Copyright (C) 2006-2013 Andreas Steffen
 # Copyright (C) 2006-2013 Martin Willi
 # Hochschule fuer Technik Rapperswil
@@ -302,6 +302,7 @@ AC_PROG_EGREP
 AC_PROG_AWK
 AC_PROG_LEX
 AC_PROG_YACC
+AM_PATH_PYTHON(,,[:])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
@@ -492,6 +493,43 @@ AC_CHECK_FUNC(
 		 AC_DEFINE([HAVE_SYS_GETTID], [], [have syscall(SYS_gettid)])],
 		[AC_MSG_RESULT([no])]
 	)]
+)
+
+AC_CHECK_FUNC(
+	[qsort_r],
+	[
+		AC_DEFINE([HAVE_QSORT_R], [], [have qsort_r()])
+		# set -Werror so that we get an error for "argument ... has
+		# incompatible pointer type" warnings
+		save_CFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -Werror"
+		AC_MSG_CHECKING([for GNU-style qsort_r])
+		AC_COMPILE_IFELSE(
+			[AC_LANG_PROGRAM(
+				[[#define _GNU_SOURCE
+				  #include <stdlib.h>
+				  int cmp (const void *a, const void *b, void *x) { return 0; }]],
+				[[int arr[] = { 0, 1 };
+				  qsort_r(arr, 2, sizeof(int), cmp, arr);]])],
+		[AC_MSG_RESULT([yes]);
+		 AC_DEFINE([HAVE_QSORT_R_GNU], [], [have GNU-style qsort_r()])],
+		[
+			AC_MSG_RESULT([no]);
+			AC_MSG_CHECKING([for BSD-style qsort_r])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM(
+					[[#include <stdlib.h>
+					  int cmp (void *x, const void *a, const void *b) { return 0; }]],
+					[[int arr[] = { 0, 1 };
+					  qsort_r(arr, 2, sizeof(int), arr, cmp);]])],
+			[AC_MSG_RESULT([yes]);
+			 AC_DEFINE([HAVE_QSORT_R_BSD], [], [have BSD-style qsort_r()])],
+			[AC_MSG_RESULT([no]);
+			 AC_MSG_FAILURE([qsort_r has unknown semantics])])
+		])
+		CFLAGS="$save_CFLAGS"
+	],
+	[]
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
@@ -1325,12 +1363,32 @@ if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
 fi
 
+# ====================================================
+#  options for enabled modules (see conf/Makefile.am)
+# ====================================================
+
+strongswan_options=
+
+AM_COND_IF([USE_ATTR_SQL], [strongswan_options=${strongswan_options}" pool"])
+AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging"])
+AM_COND_IF([USE_FILE_CONFIG], [strongswan_options=${strongswan_options}" starter"])
+AM_COND_IF([USE_IMV_ATTESTATION], [strongswan_options=${strongswan_options}" attest"])
+AM_COND_IF([USE_IMCV], [strongswan_options=${strongswan_options}" imcv"])
+AM_COND_IF([USE_IMV_OS], [strongswan_options=${strongswan_options}" pacman"])
+AM_COND_IF([USE_LIBTNCCS], [strongswan_options=${strongswan_options}" tnc"])
+AM_COND_IF([USE_MANAGER], [strongswan_options=${strongswan_options}" manager"])
+AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
+AM_COND_IF([USE_TOOLS], [strongswan_options=${strongswan_options}" tools"])
+
+AC_SUBST(strongswan_options)
+
 # =================
 #  build Makefiles
 # =================
 
 AC_CONFIG_FILES([
 	Makefile
+	conf/Makefile
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile
@@ -1506,9 +1564,10 @@ AC_CONFIG_FILES([
 # =================
 
 AC_CONFIG_FILES([
+	conf/strongswan.conf.5.head
+	conf/strongswan.conf.5.tail
 	man/ipsec.conf.5
 	man/ipsec.secrets.5
-	man/strongswan.conf.5
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/pki.1
 	src/pki/man/pki---gen.1

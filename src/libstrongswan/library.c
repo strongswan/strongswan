@@ -22,6 +22,7 @@
 #include <threading/thread.h>
 #include <utils/identification.h>
 #include <networking/host.h>
+#include <collections/array.h>
 #include <collections/hashtable.h>
 #include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>
@@ -108,7 +109,7 @@ void library_deinit()
 	}
 
 	detailed = lib->settings->get_bool(lib->settings,
-								"libstrongswan.leak_detective.detailed", TRUE);
+								"%s.leak_detective.detailed", TRUE, lib->ns);
 
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
@@ -142,9 +143,11 @@ void library_deinit()
 		lib->leak_detective->destroy(lib->leak_detective);
 	}
 
+	arrays_deinit();
 	threads_deinit();
 	backtrace_deinit();
 
+	free((void*)this->public.ns);
 	free(this);
 	lib = NULL;
 }
@@ -234,7 +237,7 @@ static bool check_memwipe()
 /*
  * see header file
  */
-bool library_init(char *settings)
+bool library_init(char *settings, const char *namespace)
 {
 	private_library_t *this;
 	printf_hook_t *pfh;
@@ -250,6 +253,7 @@ bool library_init(char *settings)
 		.public = {
 			.get = _get,
 			.set = _set,
+			.ns = strdup(namespace ?: "libstrongswan"),
 		},
 		.ref = 1,
 	);
@@ -257,6 +261,7 @@ bool library_init(char *settings)
 
 	backtrace_init();
 	threads_init();
+	arrays_init();
 
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();
@@ -291,6 +296,9 @@ bool library_init(char *settings)
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
 	this->public.settings = settings_create(settings);
+	/* all namespace settings may fall back to libstrongswan */
+	lib->settings->add_fallback(lib->settings, lib->ns, "libstrongswan");
+
 	this->public.hosts = host_resolver_create();
 	this->public.proposal = proposal_keywords_create();
 	this->public.caps = capabilities_create();
@@ -313,7 +321,7 @@ bool library_init(char *settings)
 	}
 
 	if (lib->settings->get_bool(lib->settings,
-								"libstrongswan.integrity_test", FALSE))
+								"%s.integrity_test", FALSE, lib->ns))
 	{
 #ifdef INTEGRITY_TEST
 		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);

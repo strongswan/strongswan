@@ -109,7 +109,7 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 	host_t *host;
 	char *str;
 
-	str = lib->settings->get_str(lib->settings, "%s.%s%d", NULL, hydra->daemon,
+	str = lib->settings->get_str(lib->settings, "%s.%s%d", NULL, lib->ns,
 								 key, nr);
 	if (str)
 	{
@@ -179,7 +179,7 @@ static void load_entries(private_attr_provider_t *this)
 	}
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-											"%s.plugins.attr", hydra->daemon);
+													"%s.plugins.attr", lib->ns);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		configuration_attribute_type_t type;
@@ -190,6 +190,10 @@ static void load_entries(private_attr_provider_t *this)
 		char *pos;
 		int i, mask = -1, family;
 
+		if (streq(key, "load"))
+		{
+			continue;
+		}
 		type = atoi(key);
 		if (!type)
 		{

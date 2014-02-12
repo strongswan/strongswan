@@ -166,7 +166,7 @@ static void init()
 			PLUGIN_PROVIDE(CUSTOM, "pt-tls-client"),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
 	};
-	library_init(NULL);
+	library_init(NULL, "pt-tls-client");
 	libtnccs_init();
 
 	dbg = dbg_pt_tls;

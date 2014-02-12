@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -13,7 +16,14 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for qsort_r() */
+#include <stdlib.h>
+
 #include "array.h"
+
+#ifndef HAVE_QSORT_R
+#include <threading/thread_value.h>
+#endif
 
 /**
  * Data is an allocated block, with potentially unused head and tail:
@@ -42,6 +52,11 @@ struct array_t {
 	/** array elements */
 	void *data;
 };
+
+#ifndef HAVE_QSORT_R
+	/* store data to replicate qsort_r in thread local storage */
+	static thread_value_t *sort_data;
+#endif
 
 /** maximum number of unused head/tail elements before cleanup */
 #define ARRAY_MAX_UNUSED 32
@@ -365,6 +380,113 @@ bool array_remove(array_t *array, int idx, void *data)
 	return TRUE;
 }
 
+typedef struct {
+	/** the array */
+	array_t *array;
+	/** comparison function */
+	int (*cmp)(const void*,const void*,void*);
+	/** optional user arg */
+	void *arg;
+} sort_data_t;
+
+#ifdef HAVE_QSORT_R_GNU
+static int compare_elements(const void *a, const void *b, void *arg)
+#elif  HAVE_QSORT_R_BSD
+static int compare_elements(void *arg, const void *a, const void *b)
+#else /* !HAVE_QSORT_R */
+static int compare_elements(const void *a, const void *b)
+#endif
+{
+#ifdef HAVE_QSORT_R
+	sort_data_t *data = (sort_data_t*)arg;
+#else
+	sort_data_t *data = sort_data->get(sort_data);
+#endif
+
+	if (data->array->esize)
+	{
+		return data->cmp(a, b, data->arg);
+	}
+	return data->cmp(*(void**)a, *(void**)b, data->arg);
+}
+
+void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
+				void *user)
+{
+	if (array)
+	{
+		sort_data_t data = {
+			.array = array,
+			.cmp = cmp,
+			.arg = user,
+		};
+		void *start;
+
+		start = array->data + get_size(array, array->head);
+
+#ifdef HAVE_QSORT_R_GNU
+		qsort_r(start, array->count, get_size(array, 1), compare_elements,
+				&data);
+#elif  HAVE_QSORT_R_BSD
+		qsort_r(start, array->count, get_size(array, 1), &data,
+				compare_elements);
+#else /* !HAVE_QSORT_R */
+		sort_data->set(sort_data, &data);
+		qsort(start, array->count, get_size(array, 1), compare_elements);
+#endif
+	}
+}
+
+typedef struct {
+	/** the array */
+	array_t *array;
+	/** the key */
+	const void *key;
+	/** comparison function */
+	int (*cmp)(const void*,const void*);
+} bsearch_data_t;
+
+static int search_elements(const void *a, const void *b)
+{
+	bsearch_data_t *data = (bsearch_data_t*)a;
+
+	if (data->array->esize)
+	{
+		return data->cmp(data->key, b);
+	}
+	return data->cmp(data->key, *(void**)b);
+}
+
+int array_bsearch(array_t *array, const void *key,
+				  int (*cmp)(const void*,const void*), void *out)
+{
+	int idx = -1;
+
+	if (array)
+	{
+		bsearch_data_t data = {
+			.array = array,
+			.key = key,
+			.cmp = cmp,
+		};
+		void *start, *item;
+
+		start = array->data + get_size(array, array->head);
+
+		item = bsearch(&data, start, array->count, get_size(array, 1),
+					   search_elements);
+		if (item)
+		{
+			if (out)
+			{
+				memcpy(out, item, get_size(array, 1));
+			}
+			idx = (item - start) / get_size(array, 1);
+		}
+	}
+	return idx;
+}
+
 void array_invoke(array_t *array, array_callback_t cb, void *user)
 {
 	if (array)
@@ -426,4 +548,18 @@ void array_destroy_offset(array_t *array, size_t offset)
 {
 	array_invoke_offset(array, offset);
 	array_destroy(array);
+}
+
+void arrays_init()
+{
+#ifndef HAVE_QSORT_R
+	sort_data =  thread_value_create(NULL);
+#endif
+}
+
+void arrays_deinit()
+{
+#ifndef HAVE_QSORT_R
+	sort_data->destroy(sort_data);
+#endif
 }

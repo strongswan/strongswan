@@ -181,8 +181,8 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		full_tags = (flags & TCG_SWID_ATTR_REQ_FLAG_R) == 0;
 
 		swid_directory = lib->settings->get_str(lib->settings,
-								"libimcv.plugins.imc-swid.swid_directory",
-								 SWID_DIRECTORY);
+								"%s.plugins.imc-swid.swid_directory",
+								 SWID_DIRECTORY, lib->ns);
 		swid_inventory = swid_inventory_create(full_tags);
 		if (!swid_inventory->collect(swid_inventory, swid_directory, targets))
 		{

@@ -444,7 +444,7 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
 			{
 				if (!dh_params[i].public.subgroup.len &&
 					lib->settings->get_int(lib->settings,
-								"libstrongswan.dh_exponent_ansi_x9_42", TRUE))
+									"%s.dh_exponent_ansi_x9_42", TRUE, lib->ns))
 				{
 					dh_params[i].public.exp_len = dh_params[i].public.prime.len;
 				}

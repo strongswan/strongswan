@@ -695,7 +695,7 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		.policies = linked_list_create(),
 		.excludes = linked_list_create(),
 		.allow_peer_ts = lib->settings->get_bool(lib->settings,
-				"%s.plugins.kernel-libipsec.allow_peer_ts", FALSE, hydra->daemon),
+					"%s.plugins.kernel-libipsec.allow_peer_ts", FALSE, lib->ns),
 	);
 
 	ipsec->events->register_listener(ipsec->events, &this->ipsec_listener);

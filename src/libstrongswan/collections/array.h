@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -87,7 +90,7 @@ void array_compress(array_t *array);
  * The enumerater enumerates directly over the array element (pass a pointer to
  * element types), unless the array is pointer based. If zero is passed as
  * element size during construction, the enumerator enumerates over the
- * deferenced pointer values.
+ * dereferenced pointer values.
  *
  * @param array			array to create enumerator for, or NULL
  * @return				enumerator, over elements or pointers
@@ -164,6 +167,50 @@ bool array_get(array_t *array, int idx, void *data);
 bool array_remove(array_t *array, int idx, void *data);
 
 /**
+ * Sort the array.
+ *
+ * The comparison function must return an integer less than, equal to, or
+ * greater than zero if the first argument is considered to be respectively less
+ * than, equal to, or greater than the second.  If two elements compare as
+ * equal, their order in the sorted array is undefined.
+ *
+ * The comparison function receives pointers to the array elements (esize != 0)
+ * or the actual pointers (esize = 0). The third argument is the user data
+ * supplied to this function.
+ *
+ * @param array			array to sort, or NULL
+ * @param cmp			comparison function
+ * @param user			user data to pass to comparison function
+ */
+void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
+				void *user);
+
+/**
+ * Binary search of a sorted array.
+ *
+ * The array should be sorted in ascending order according to the given
+ * comparison function.
+ *
+ * The comparison function must return an integer less than, equal to, or
+ * greater than zero if the first argument (the key) is considered to be
+ * respectively less than, equal to, or greater than the second.
+ *
+ * If there are multiple elements that match the key it is not specified which
+ * element is returned.
+ *
+ * The comparison function receives the key object and a pointer to an array
+ * element (esize != 0) or an actual pointer (esize = 0).
+ *
+ * @param array			array to search, or NULL
+ * @param key			key to search for
+ * @param cmp			comparison function
+ * @param data			data to copy element to, or NULL
+ * @return				index of the element if found, -1 if not
+ */
+int array_bsearch(array_t *array, const void *key,
+				  int (*cmp)(const void*,const void*), void *data);
+
+/**
  * Invoke a callback for all array members.
  *
  * @param array			array to traverse, or NULL
@@ -203,5 +250,17 @@ void array_destroy_function(array_t *array, array_callback_t cb, void *user);
  * @param offset		offset of element method, use offsetof()
  */
 void array_destroy_offset(array_t *array, size_t offset);
+
+
+/**
+ * Required on some platforms to initialize thread local value to implement
+ * array_sort().
+ */
+void arrays_init();
+
+/**
+ * Destroys the thread local value if required.
+ */
+void arrays_deinit();
 
 #endif /** ARRAY_H_ @}*/

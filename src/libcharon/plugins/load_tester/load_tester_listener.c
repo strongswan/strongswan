@@ -126,7 +126,7 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on,
 		},
 		.delete_after_established = lib->settings->get_bool(lib->settings,
 					"%s.plugins.load-tester.delete_after_established", FALSE,
-					charon->name),
+					lib->ns),
 		.shutdown_on = shutdown_on,
 		.config = config,
 	);

@@ -269,6 +269,31 @@ struct settings_t {
 												 char *section, ...);
 
 	/**
+	 * Add a fallback for the given section.
+	 *
+	 * Example: When the fallback 'section-two' is configured for
+	 * 'section-one.two' any failed lookup for a section or key in
+	 * 'section-one.two' will result in a lookup for the same section/key
+	 * in 'section-two'.
+	 *
+	 * @note Lookups are depth-first and currently strictly top-down.
+	 * For instance, if app.sec had lib1.sec as fallback and lib1 had lib2 as
+	 * fallback the keys/sections in lib2.sec would not be considered.  But if
+	 * app had lib3 as fallback the contents of lib3.sec would (as app is passed
+	 * during the initial lookup).  In the last example the order during
+	 * enumerations would be app.sec, lib1.sec, lib3.sec.
+	 *
+	 * @note Additional arguments will be applied to both section format
+	 * strings so they must be compatible.
+	 *
+	 * @param section	section for which a fallback is configured, printf style
+	 * @param fallback	fallback section, printf style
+	 * @param ...		argument list for section and fallback
+	 */
+	void (*add_fallback)(settings_t *this, const char *section,
+						 const char *fallback, ...);
+
+	/**
 	 * Load settings from the files matching the given pattern.
 	 *
 	 * If merge is TRUE, existing sections are extended, existing values

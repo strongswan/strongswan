@@ -419,10 +419,10 @@ int main (int argc, char **argv)
 	bool attach_gdb = FALSE;
 	bool load_warning = FALSE;
 
-	library_init(NULL);
+	library_init(NULL, "starter");
 	atexit(library_deinit);
 
-	libhydra_init("starter");
+	libhydra_init();
 	atexit(libhydra_deinit);
 
 	/* parse command line */

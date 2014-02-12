@@ -967,11 +967,11 @@ crypto_factory_t *crypto_factory_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.tester = crypto_tester_create(),
 		.test_on_add = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.on_add", FALSE),
+								"%s.crypto_test.on_add", FALSE, lib->ns),
 		.test_on_create = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.on_create", FALSE),
+								"%s.crypto_test.on_create", FALSE, lib->ns),
 		.bench = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.bench", FALSE),
+								"%s.crypto_test.bench", FALSE, lib->ns),
 	);
 
 	return &this->public;

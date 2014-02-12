@@ -377,14 +377,14 @@ eap_dynamic_t *eap_dynamic_create(identification_t *server,
 		.server = server->clone(server),
 		.types = linked_list_create(),
 		.prefer_peer = lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-dynamic.prefer_peer", FALSE, charon->name),
+						"%s.plugins.eap-dynamic.prefer_peer", FALSE, lib->ns),
 	);
 
 	/* get all supported EAP methods */
 	get_supported_eap_types(this);
 	/* move preferred methods to the front */
 	preferred = lib->settings->get_str(lib->settings,
-					"%s.plugins.eap-dynamic.preferred", NULL, charon->name);
+						"%s.plugins.eap-dynamic.preferred", NULL, lib->ns);
 	if (preferred)
 	{
 		handle_preferred_eap_types(this, preferred);
