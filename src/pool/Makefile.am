@@ -17,7 +17,7 @@ pool_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libhydra/libhydra.la
 
-endif !USE_ATTR_SQL
+endif USE_ATTR_SQL
 
 templatesdir = $(pkgdatadir)/templates/database/sql
 dist_templates_DATA = mysql.sql sqlite.sql
