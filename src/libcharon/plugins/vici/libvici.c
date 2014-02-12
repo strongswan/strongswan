@@ -94,6 +94,8 @@ struct vici_res_t {
 	char *name;
 	/** currently enumerating value */
 	chunk_t value;
+	/** section nesting level of callback parser */
+	int level;
 };
 
 /**
@@ -495,6 +497,7 @@ void* vici_parse_value(vici_res_t *res, int *len)
 			*len = res->value.len;
 			return res->value.ptr;
 		default:
+			*len = 0;
 			errno = EINVAL;
 			return NULL;
 	}
@@ -519,6 +522,98 @@ char* vici_parse_value_str(vici_res_t *res)
 		default:
 			errno = EINVAL;
 			return NULL;
+	}
+}
+
+int vici_parse_cb(vici_res_t *res, vici_parse_section_cb_t section,
+				  vici_parse_value_cb_t kv, vici_parse_value_cb_t li,
+				  void *user)
+{
+	char *name, *list = NULL;
+	void *value;
+	int base, len, ret;
+
+	base = res->level;
+
+	while (TRUE)
+	{
+		switch (vici_parse(res))
+		{
+			case VICI_PARSE_KEY_VALUE:
+				if (res->level == base)
+				{
+					if (kv)
+					{
+						name = vici_parse_name(res);
+						value = vici_parse_value(res, &len);
+						if (name && value)
+						{
+							ret = kv(user, res, name, value, len);
+							if (ret)
+							{
+								return ret;
+							}
+						}
+					}
+				}
+				break;
+			case VICI_PARSE_BEGIN_SECTION:
+				if (res->level++ == base)
+				{
+					if (section)
+					{
+						name = vici_parse_name(res);
+						if (name)
+						{
+							ret = section(user, res, name);
+							if (ret)
+							{
+								return ret;
+							}
+						}
+					}
+				}
+				break;
+			case VICI_PARSE_END_SECTION:
+				if (res->level-- == base)
+				{
+					return 0;
+				}
+				break;
+			case VICI_PARSE_END:
+				res->level = 0;
+				return 0;
+			case VICI_PARSE_BEGIN_LIST:
+				if (res->level == base)
+				{
+					list = vici_parse_name(res);
+				}
+				break;
+			case VICI_PARSE_LIST_ITEM:
+				if (list && li)
+				{
+					value = vici_parse_value(res, &len);
+					if (value)
+					{
+						ret = li(user, res, list, value, len);
+						if (ret)
+						{
+							return ret;
+						}
+					}
+				}
+				break;
+			case VICI_PARSE_END_LIST:
+				if (res->level == base)
+				{
+					list = NULL;
+				}
+				break;
+			case VICI_PARSE_ERROR:
+				res->level = 0;
+				errno = EBADMSG;
+				return 1;
+		}
 	}
 }
 

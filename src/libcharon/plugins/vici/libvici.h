@@ -124,6 +124,29 @@ typedef enum {
 typedef void (*vici_event_cb_t)(void *user, char *name, vici_res_t *msg);
 
 /**
+ * Callback function for key/value and list items, invoked by vici_parse_cb().
+ *
+ * @param user		user data, as passed to vici_parse_cb()
+ * @param res		message currently parsing
+ * @param name		name of key or list
+ * @param value		value buffer
+ * @param len		length of value buffer
+ * @return			0 if parsed successfully
+ */
+typedef int	(*vici_parse_value_cb_t)(void *user, vici_res_t *res, char *name,
+									 void *value, int len);
+
+/**
+ * Callback function for sections, invoked by vici_parse_cb().
+ *
+ * @param user		user data, as passed to vici_parse_cb()
+ * @param res		message currently parsing
+ * @param name		name of the section
+ * @return			0 if parsed successfully
+ */
+typedef int (*vici_parse_section_cb_t)(void *user, vici_res_t *res, char *name);
+
+/**
  * Open a new vici connection.
  *
  * On error, NULL is returned and errno is set appropriately.
@@ -309,6 +332,24 @@ void* vici_parse_value(vici_res_t *res, int *len);
 char* vici_parse_value_str(vici_res_t *res);
 
 /**
+ * Parse a complete message with callbacks.
+ *
+ * Any of the callbacks may be NULL to skip this kind of item. Callbacks are
+ * invoked for the current section level only. To descent into sections, call
+ * vici_parse_cb() from within a section callback.
+ *
+ * @param res		message to parse
+ * @param section	callback invoked for each section
+ * @param kv		callback invoked for key/value pairs
+ * @param li		callback invoked for list items
+ * @param user		user data to pass to callbacks
+ * @return			0 if parsing successful
+ */
+int vici_parse_cb(vici_res_t *res, vici_parse_section_cb_t section,
+				  vici_parse_value_cb_t kv, vici_parse_value_cb_t li,
+				  void *user);
+
+/*
  * Find a blob value in a message for a given key.
  *
  * Sections can be selected by prefixing them separated by dots.
