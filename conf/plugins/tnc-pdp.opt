@@ -14,7 +14,8 @@ charon.plugins.tnc-pdp.radius.port = 1812
 	RADIUS server port the strongSwan PDP is listening on.
 
 charon.plugins.tnc-pdp.radius.secret =
-	Shared RADIUS secret between strongSwan PDP and NAS.
+	Shared RADIUS secret between strongSwan PDP and NAS. If set, make sure to
+	adjust the permissions of the config file accordingly.
 
 charon.plugins.tnc-pdp.server =
 	Name of the strongSwan PDP as contained in the AAA certificate.

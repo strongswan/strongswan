@@ -1,5 +1,6 @@
 medsrv.database =
-	Mediation server database URI.
+	Mediation server database URI. If it contains a password, make
+	sure to adjust the permissions of the config file accordingly.
 
 medsrv.debug = no
 	Debugging in mediation server web application.

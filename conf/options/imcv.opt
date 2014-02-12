@@ -6,7 +6,8 @@ charon.imcv.assessment_result = yes
 	Whether IMVs send a standard IETF Assessment Result attribute.
 
 charon.imcv.database =
-	Global IMV policy database URI.
+	Global IMV policy database URI. If it contains a password, make	sure to
+	adjust the permissions of the config file accordingly.
 
 charon.imcv.os_info.name =
 	Manually set the name of the client OS (e.g. Ubuntu).

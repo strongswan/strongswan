@@ -27,7 +27,8 @@ charon.plugins.eap-radius.dae.port = 3799
 	Port to listen for DAE requests.
 
 charon.plugins.eap-radius.dae.secret
-	Shared secret used to verify/sign DAE messages.
+	Shared secret used to verify/sign DAE messages. If set, make sure to adjust
+	the permissions of the config file accordingly.
 
 charon.plugins.eap-radius.eap_start = no
 	Send EAP-Start instead of EAP-Identity to start RADIUS conversation.
@@ -65,7 +66,8 @@ charon.plugins.eap-radius.port = 1812
 	Port of RADIUS server (authentication).
 
 charon.plugins.eap-radius.secret =
-	Shared secret between RADIUS and NAS.
+	Shared secret between RADIUS and NAS. If set, make sure to adjust the
+	permissions of the config file accordingly.
 
 charon.plugins.eap-radius.server =
 	IP/Hostname of RADIUS server.

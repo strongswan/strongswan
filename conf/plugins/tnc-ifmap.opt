@@ -17,4 +17,5 @@ charon.plugins.tnc-ifmap.server_cert =
 	Path to X.509 certificate file of IF-MAP server.
 
 charon.plugins.tnc-ifmap.username_password =
-	Credentials of IF-MAP client of the form username:password.
+	Credentials of IF-MAP client of the form username:password. If set, make
+	sure to adjust the permissions of the config file accordingly.

@@ -1,5 +1,6 @@
 manager.database =
-	Credential database URI for manager.
+	Credential database URI for manager. If it contains a password, make
+	sure to adjust the permissions of the config file accordingly.
 
 manager.debug = no
 	Enable debugging in manager.
