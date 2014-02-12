@@ -49,6 +49,8 @@ typedef struct {
 	u_int id;
 	/** loglevel */
 	level_t level;
+	/** prevent recursive log */
+	u_int recursive;
 } log_info_t;
 
 /**
@@ -59,27 +61,31 @@ static bool log_vici(log_info_t *info, debug_t group, level_t level,
 {
 	if (level <= info->level)
 	{
-		vici_message_t *message;
-		vici_builder_t *builder;
-
-		builder = vici_builder_create();
-		builder->add_kv(builder, "group", "%N", debug_names, group);
-		builder->add_kv(builder, "level", "%d", level);
-		if (ike_sa)
+		if (info->recursive++ == 0)
 		{
-			builder->add_kv(builder, "ikesa-name", "%s",
-							ike_sa->get_name(ike_sa));
-			builder->add_kv(builder, "ikesa-uniqueid", "%u",
-							ike_sa->get_unique_id(ike_sa));
-		}
-		builder->add_kv(builder, "msg", "%s", text);
+			vici_message_t *message;
+			vici_builder_t *builder;
 
-		message = builder->finalize(builder);
-		if (message)
-		{
-			info->dispatcher->raise_event(info->dispatcher, "control-log",
-										  info->id, message);
+			builder = vici_builder_create();
+			builder->add_kv(builder, "group", "%N", debug_names, group);
+			builder->add_kv(builder, "level", "%d", level);
+			if (ike_sa)
+			{
+				builder->add_kv(builder, "ikesa-name", "%s",
+								ike_sa->get_name(ike_sa));
+				builder->add_kv(builder, "ikesa-uniqueid", "%u",
+								ike_sa->get_unique_id(ike_sa));
+			}
+			builder->add_kv(builder, "msg", "%s", text);
+
+			message = builder->finalize(builder);
+			if (message)
+			{
+				info->dispatcher->raise_event(info->dispatcher, "control-log",
+											  info->id, message);
+			}
 		}
+		info->recursive--;
 	}
 	return TRUE;
 }
