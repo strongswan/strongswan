@@ -131,12 +131,36 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 	return found;
 }
 
+/**
+ * Find a peer/child config from a child config name
+ */
+static child_cfg_t* find_child_cfg(char *name, peer_cfg_t **out)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *peer_cfg;
+	child_cfg_t *child_cfg;
+
+	enumerator = charon->backends->create_peer_cfg_enumerator(
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
+	while (enumerator->enumerate(enumerator, &peer_cfg))
+	{
+		child_cfg = get_child_from_peer(peer_cfg, name);
+		if (child_cfg)
+		{
+			*out = peer_cfg->get_ref(peer_cfg);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return child_cfg;
+}
+
 CALLBACK(initiate, vici_message_t*,
 	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
 {
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
-	enumerator_t *enumerator;
 	char *child;
 	u_int timeout;
 	log_info_t log = {
@@ -152,19 +176,7 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "missing configuration name");
 	}
-	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-											NULL, NULL, NULL, NULL, IKE_ANY);
-	while (enumerator->enumerate(enumerator, &peer_cfg))
-	{
-		child_cfg = get_child_from_peer(peer_cfg, child);
-		if (child_cfg)
-		{
-			peer_cfg->get_ref(peer_cfg);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
+	child_cfg = find_child_cfg(child, &peer_cfg);
 	if (!child_cfg)
 	{
 		return send_reply(this, "CHILD_SA config '%s' not found", child);
