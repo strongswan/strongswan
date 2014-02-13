@@ -75,6 +75,78 @@ START_TEST(test_event)
 }
 END_TEST
 
+#define EVENT_COUNT 500
+
+CALLBACK(raise_cb,  vici_message_t*,
+	vici_dispatcher_t *dispatcher, char *name, u_int id, vici_message_t *req)
+{
+	u_int i;
+
+	for (i = 0; i < EVENT_COUNT; i++)
+	{
+		dispatcher->raise_event(dispatcher, "event", id,
+			vici_message_create_from_args(
+				 VICI_KEY_VALUE, "counter", chunk_from_thing(i),
+				VICI_END));
+	}
+	return vici_message_create_from_args(VICI_END);
+}
+
+CALLBACK(raise_event_cb, void,
+	int *count, char *name, vici_res_t *ev)
+{
+	u_int *value, len;
+
+	ck_assert_str_eq(name, "event");
+	ck_assert(vici_parse(ev) == VICI_PARSE_KEY_VALUE);
+	ck_assert_str_eq(vici_parse_name(ev), "counter");
+	value = vici_parse_value(ev, &len);
+	ck_assert_int_eq(len, sizeof(*value));
+	ck_assert(vici_parse(ev) == VICI_PARSE_END);
+
+	ck_assert_int_eq(*count, *value);
+	(*count)++;
+}
+
+START_TEST(test_raise_events)
+{
+	vici_dispatcher_t *dispatcher;
+	vici_res_t *res;
+	vici_conn_t *conn;
+	int count = 0;
+
+	lib->processor->set_threads(lib->processor, 8);
+
+	dispatcher = vici_dispatcher_create(URI);
+	ck_assert(dispatcher);
+
+	dispatcher->manage_event(dispatcher, "event", TRUE);
+	dispatcher->manage_command(dispatcher, "raise", raise_cb, dispatcher);
+
+	vici_init();
+	conn = vici_connect(URI);
+	ck_assert(conn);
+
+	ck_assert(vici_register(conn, "event", raise_event_cb, &count) == 0);
+
+	res = vici_submit(vici_begin("raise"), conn);
+
+	ck_assert_int_eq(count, EVENT_COUNT);
+	ck_assert(res);
+	vici_free_res(res);
+
+	vici_disconnect(conn);
+
+	dispatcher->manage_event(dispatcher, "event", FALSE);
+	dispatcher->manage_command(dispatcher, "raise", NULL, NULL);
+
+	lib->processor->cancel(lib->processor);
+	dispatcher->destroy(dispatcher);
+
+	vici_deinit();
+}
+END_TEST
+
 START_TEST(test_stress)
 {
 	vici_dispatcher_t *dispatcher;
@@ -134,6 +206,10 @@ Suite *event_suite_create()
 
 	tc = tcase_create("single");
 	tcase_add_test(tc, test_event);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("raise events");
+	tcase_add_test(tc, test_raise_events);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("stress");
