@@ -335,8 +335,8 @@ START_TEST(test_asn1_length)
 
 	/* largest chunk on 32 bit system */
 	a = chunk_from_chars(0x04, 0x84, 0xff, 0xff, 0xff, 0xf9, 0xaa);
-	a.len = 4294967295;
-	ck_assert(asn1_length(&a) == 4294967289);
+	a.len = 4294967295U;
+	ck_assert(asn1_length(&a) == 4294967289U);
 
 }
 END_TEST
