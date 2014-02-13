@@ -311,6 +311,116 @@ CALLBACK(terminate, vici_message_t*,
 	return reply;
 }
 
+/**
+ * Find reqid of an existing CHILD_SA
+ */
+static u_int32_t find_reqid(child_cfg_t *cfg)
+{
+	enumerator_t *enumerator, *children;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
+	u_int32_t reqid;
+
+	reqid = charon->traps->find_reqid(charon->traps, cfg);
+	if (reqid)
+	{	/* already trapped */
+		return reqid;
+	}
+
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
+	while (!reqid && enumerator->enumerate(enumerator, &ike_sa))
+	{
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, &child_sa))
+		{
+			if (streq(cfg->get_name(cfg), child_sa->get_name(child_sa)))
+			{
+				reqid = child_sa->get_reqid(child_sa);
+				break;
+			}
+		}
+		children->destroy(children);
+	}
+	enumerator->destroy(enumerator);
+	return reqid;
+}
+
+CALLBACK(install, vici_message_t*,
+	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
+{
+	child_cfg_t *child_cfg = NULL;
+	peer_cfg_t *peer_cfg;
+	char *child;
+	bool ok;
+
+	child = request->get_str(request, NULL, "child");
+	if (!child)
+	{
+		return send_reply(this, "missing configuration name");
+	}
+	child_cfg = find_child_cfg(child, &peer_cfg);
+	if (!child_cfg)
+	{
+		return send_reply(this, "configuration name not found");
+	}
+	switch (child_cfg->get_mode(child_cfg))
+	{
+		case MODE_PASS:
+		case MODE_DROP:
+			ok = charon->shunts->install(charon->shunts, child_cfg);
+			break;
+		default:
+			ok = charon->traps->install(charon->traps, peer_cfg, child_cfg,
+										find_reqid(child_cfg));
+			break;
+	}
+	peer_cfg->destroy(peer_cfg);
+	child_cfg->destroy(child_cfg);
+
+	return send_reply(this, ok ? NULL : "installing policy '%s' failed", child);
+}
+
+CALLBACK(uninstall, vici_message_t*,
+	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
+{
+	child_sa_t *child_sa;
+	enumerator_t *enumerator;
+	u_int32_t reqid = 0;
+	char *child;
+
+	child = request->get_str(request, NULL, "child");
+	if (!child)
+	{
+		return send_reply(this, "missing configuration name");
+	}
+	if (charon->shunts->uninstall(charon->shunts, child))
+	{
+		return send_reply(this, NULL);
+	}
+
+	enumerator = charon->traps->create_enumerator(charon->traps);
+	while (enumerator->enumerate(enumerator, NULL, &child_sa))
+	{
+		if (streq(child, child_sa->get_name(child_sa)))
+		{
+			reqid = child_sa->get_reqid(child_sa);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (reqid)
+	{
+		if (charon->traps->uninstall(charon->traps, reqid))
+		{
+			return send_reply(this, NULL);
+		}
+		return send_reply(this, "uninstalling policy '%s' failed", child);
+	}
+	return send_reply(this, "policy '%s' not found", child);
+}
+
 static void manage_command(private_vici_control_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -325,6 +435,8 @@ static void manage_commands(private_vici_control_t *this, bool reg)
 {
 	manage_command(this, "initiate", initiate, reg);
 	manage_command(this, "terminate", terminate, reg);
+	manage_command(this, "install", install, reg);
+	manage_command(this, "uninstall", uninstall, reg);
 	this->dispatcher->manage_event(this->dispatcher, "control-log", reg);
 }
 
