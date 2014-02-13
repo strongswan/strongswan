@@ -220,26 +220,27 @@ void process_request(private_vici_dispatcher_t *this, char *name, u_int id,
 {
 	vici_message_t *response = NULL;
 	release_data_t *release;
-
-	INIT(release,
-		.this = this,
-	);
+	command_t *cmd;
 
 	this->mutex->lock(this->mutex);
-	release->cmd = this->cmds->get(this->cmds, name);
-	if (release->cmd)
+	cmd = this->cmds->get(this->cmds, name);
+	if (cmd)
 	{
-		release->cmd->uses++;
+		cmd->uses++;
 	}
 	this->mutex->unlock(this->mutex);
 
-	if (release->cmd)
+	if (cmd)
 	{
+		INIT(release,
+			.this = this,
+			.cmd = cmd,
+		);
+
 		thread_cleanup_push(release_command, release);
 
 		release->request = vici_message_create_from_data(data, FALSE);
-		response = release->cmd->cb(release->cmd->user, release->cmd->name,
-									id, release->request);
+		response = release->cmd->cb(cmd->user, cmd->name, id, release->request);
 
 		thread_cleanup_pop(TRUE);
 
