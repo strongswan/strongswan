@@ -391,7 +391,7 @@ typedef struct {
 
 #ifdef HAVE_QSORT_R_GNU
 static int compare_elements(const void *a, const void *b, void *arg)
-#elif  HAVE_QSORT_R_BSD
+#elif defined(HAVE_QSORT_R_BSD)
 static int compare_elements(void *arg, const void *a, const void *b)
 #else /* !HAVE_QSORT_R */
 static int compare_elements(const void *a, const void *b)
@@ -427,7 +427,7 @@ void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
 #ifdef HAVE_QSORT_R_GNU
 		qsort_r(start, array->count, get_size(array, 1), compare_elements,
 				&data);
-#elif  HAVE_QSORT_R_BSD
+#elif defined(HAVE_QSORT_R_BSD)
 		qsort_r(start, array->count, get_size(array, 1), &data,
 				compare_elements);
 #else /* !HAVE_QSORT_R */
