@@ -1,6 +1,27 @@
 strongswan-5.1.2
 ----------------
 
+- A new default configuration file layout is introduced.  The new default
+  strongswan.conf file mainly includes config snippets from the strongswan.d
+  and strongswan.d/charon directories (the latter containing snippets for all
+  plugins).  The snippets, with commented defaults, are automatically
+  generated and installed, if they don't exist yet.  They are also installed
+  in $prefix/share/strongswan/templates so existing files can be compared to
+  the current defaults.
+
+- As an alternative to the non-extensible charon.load setting, the plugins
+  to load in charon (and optionally other applications) can now be determined
+  via the charon.plugins.<name>.load setting for each plugin (enabled in the
+  new default strongswan.conf file via the charon.load_modular option).
+  The load setting optionally takes a numeric priority value that allows
+  reordering the plugins (otherwise the default plugin order is preserved).
+
+- All strongswan.conf settings that were formerly defined in library specific
+  "global" sections are now application specific (e.g. settings for plugins in
+  libstrongswan.plugins can now be set only for charon in charon.plugins).
+  The old options are still supported, which now allows to define defaults for
+  all applications in the libstrongswan section.
+
 - The ntru libstrongswan plugin supports NTRUEncrypt as a post-quantum
   computer IKE key exchange mechanism. The implementation is based on the
   ntru-crypto library from the NTRUOpenSourceProject. The supported security
@@ -10,6 +31,9 @@ strongswan-5.1.2
 
 - Defined a TPMRA remote attestation workitem and added support for it to the
   Attestation IMV.
+
+- Compatibility issues between IPComp (compress=yes) and leftfirewall=yes as
+  well as multiple subnets in left|rightsubnet have been fixed.
 
 - When enabling its "session" strongswan.conf option, the xauth-pam plugin opens
   and closes a PAM session for each established IKE_SA. Patch courtesy of
