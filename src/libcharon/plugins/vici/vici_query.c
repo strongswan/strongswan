@@ -337,6 +337,151 @@ CALLBACK(list_sas, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Raise a list-policy event for given CHILD_SA
+ */
+static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+	b->begin_section(b, child->get_name(child));
+
+	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
+
+	b->begin_list(b, "local-ts");
+	enumerator = child->create_ts_enumerator(child, TRUE);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		b->add_li(b, "%R", ts);
+	}
+	enumerator->destroy(enumerator);
+	b->end_list(b /* local-ts */);
+
+	b->begin_list(b, "remote-ts");
+	enumerator = child->create_ts_enumerator(child, FALSE);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		b->add_li(b, "%R", ts);
+	}
+	enumerator->destroy(enumerator);
+	b->end_list(b /* remote-ts */);
+
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher, "list-policy", id,
+								  b->finalize(b));
+}
+
+/**
+ * Raise a list-policy event for given CHILD_SA config
+ */
+static void raise_policy_cfg(private_vici_query_t *this, u_int id,
+							 child_cfg_t *cfg)
+{
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	traffic_selector_t *ts;
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+	b->begin_section(b, cfg->get_name(cfg));
+
+	b->add_kv(b, "mode", "%N", ipsec_mode_names, cfg->get_mode(cfg));
+
+	b->begin_list(b, "local-ts");
+	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL);
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		b->add_li(b, "%R", ts);
+	}
+	enumerator->destroy(enumerator);
+	list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
+	b->end_list(b /* local-ts */);
+
+	b->begin_list(b, "remote-ts");
+	list = cfg->get_traffic_selectors(cfg, FALSE, NULL, NULL);
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		b->add_li(b, "%R", ts);
+	}
+	enumerator->destroy(enumerator);
+	list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
+	b->end_list(b /* remote-ts */);
+
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher, "list-policy", id,
+								  b->finalize(b));
+}
+
+CALLBACK(list_policies, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	enumerator_t *enumerator;
+	vici_builder_t *b;
+	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
+	bool drop, pass, trap;
+	char *child;
+
+	drop = request->get_str(request, NULL, "drop") != NULL;
+	pass = request->get_str(request, NULL, "pass") != NULL;
+	trap = request->get_str(request, NULL, "trap") != NULL;
+	child = request->get_str(request, NULL, "child");
+
+	if (trap)
+	{
+		enumerator = charon->traps->create_enumerator(charon->traps);
+		while (enumerator->enumerate(enumerator, NULL, &child_sa))
+		{
+			if (child && !streq(child, child_sa->get_name(child_sa)))
+			{
+				continue;
+			}
+			raise_policy(this, id, child_sa);
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (drop || pass)
+	{
+		enumerator = charon->shunts->create_enumerator(charon->shunts);
+		while (enumerator->enumerate(enumerator, &child_cfg))
+		{
+			if (child && !streq(child, child_cfg->get_name(child_cfg)))
+			{
+				continue;
+			}
+			switch (child_cfg->get_mode(child_cfg))
+			{
+				case MODE_DROP:
+					if (drop)
+					{
+						raise_policy_cfg(this, id, child_cfg);
+					}
+					break;
+				case MODE_PASS:
+					if (pass)
+					{
+						raise_policy_cfg(this, id, child_cfg);
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	b = vici_builder_create();
+	return b->finalize(b);
+}
+
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -371,7 +516,9 @@ static void manage_command(private_vici_query_t *this,
 static void manage_commands(private_vici_query_t *this, bool reg)
 {
 	this->dispatcher->manage_event(this->dispatcher, "list-sa", reg);
+	this->dispatcher->manage_event(this->dispatcher, "list-policy", reg);
 	manage_command(this, "list-sas", list_sas, reg);
+	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "version", version, reg);
 }
 
