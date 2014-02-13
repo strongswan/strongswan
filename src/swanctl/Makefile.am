@@ -4,6 +4,7 @@ swanctl_SOURCES = \
 	command.c command.h \
 	commands/initiate.c \
 	commands/terminate.c \
+	commands/install.c \
 	commands/version.c \
 	commands/list_sas.c \
 	swanctl.c
