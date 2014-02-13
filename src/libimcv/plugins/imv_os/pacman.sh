@@ -13,6 +13,7 @@ DEBIAN_ARCH="binary-amd64 binary-i386"
 PACMAN=/usr/libexec/ipsec/pacman
 PACMAN_LOG="$DIR/$DATE-pacman.log"
 
+mkdir -p $DIR/dists
 cd $DIR/dists
 
 for v in $UBUNTU_VERSIONS
