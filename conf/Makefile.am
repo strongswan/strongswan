@@ -157,10 +157,10 @@ install-data-local: $(plugins_install_src)
 	test -e "$(DESTDIR)$(strongswanconfdir)/strongswan.conf" || $(INSTALL) -m 644 $(srcdir)/strongswan.conf $(DESTDIR)$(strongswanconfdir)/strongswan.conf || true
 	for f in $(options_install_src); do \
 		name=`basename $$f`; \
-		test -f "$(DESTDIR)$(strongswanddir)/$$name" || $(INSTALL) -m 644 -t "$(DESTDIR)$(strongswanddir)" $(srcdir)/$$f || true; \
+		test -f "$(DESTDIR)$(strongswanddir)/$$name" || $(INSTALL) -m 644 "$(srcdir)/$$f" "$(DESTDIR)$(strongswanddir)/$$name" || true; \
 	done
 	for f in $(plugins_install_src); do \
 		name=`basename $$f`; \
 		if test -f "$$f"; then dir=; else dir="$(srcdir)/"; fi; \
-		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 644 -t "$(DESTDIR)$(charonconfdir)" "$$dir$$f" || true; \
+		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 644 "$$dir$$f" "$(DESTDIR)$(charonconfdir)/$$name" || true; \
 	done
