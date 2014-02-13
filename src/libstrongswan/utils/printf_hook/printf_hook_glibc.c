@@ -19,10 +19,10 @@
 #include <utils/utils.h>
 #include <utils/debug.h>
 
-#include <printf.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <printf.h>
 
 typedef struct private_printf_hook_t private_printf_hook_t;
 typedef struct printf_hook_handler_t printf_hook_handler_t;
