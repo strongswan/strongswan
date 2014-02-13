@@ -7,6 +7,7 @@ swanctl_SOURCES = \
 	commands/install.c \
 	commands/version.c \
 	commands/list_sas.c \
+	commands/list_pols.c \
 	swanctl.c
 
 swanctl_LDADD = \
