@@ -160,6 +160,7 @@ METHOD(asn1_parser_t, iterate, bool,
 		DBG1(DBG_ASN, "L%d - %s:  length of ASN.1 object invalid or too large",
 					level, obj.name);
 		this->success = FALSE;
+		goto end;
 	}
 
 	blob1->ptr = blob->ptr;
