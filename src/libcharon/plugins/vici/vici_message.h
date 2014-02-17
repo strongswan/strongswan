@@ -24,6 +24,7 @@
 #include <library.h>
 
 typedef struct vici_message_t vici_message_t;
+typedef struct vici_parse_context_t vici_parse_context_t;
 typedef enum vici_type_t vici_type_t;
 
 /**
@@ -46,6 +47,30 @@ enum vici_type_t {
 	/** end of argument list, no arguments (never encoded) */
 	VICI_END
 };
+
+/**
+ * Callback function for key/value and list items, invoked by parse().
+ *
+ * @param user		user data, as passed to parse()
+ * @param message	message currently parsing
+ * @param name		name of key or list
+ * @param value		parsed value
+ * @return			TRUE if parsed successfully
+ */
+typedef bool (*vici_value_cb_t)(void *user, vici_message_t *message,
+								char *name, chunk_t value);
+
+/**
+ * Callback function for sections, invoked by parse().
+ *
+ * @param user		user data, as passed to parse()
+ * @param message	message currently parsing
+ * @param ctx		parse context, to pass to recursive parse() invocations.
+ * @param name		name of the section
+ * @return			TRUE if parsed successfully
+ */
+typedef bool (*vici_section_cb_t)(void *user, vici_message_t *message,
+								  vici_parse_context_t *ctx, char *name);
 
 /**
  * Names for vici encoding types
@@ -136,6 +161,25 @@ struct vici_message_t {
 	 * @return		message data, points to internal data
 	 */
 	chunk_t (*get_encoding)(vici_message_t *this);
+
+	/**
+	 * Parse a message using callback functions.
+	 *
+	 * Any of the callbacks may be NULL to skip this kind of item. Callbacks are
+	 * invoked for the current section level only. To descent into sections,
+	 * call parse() from within a section callback using the provided parse
+	 * context.
+	 *
+	 * @param ctx		parse context, NULL for root level
+	 * @param section	callback invoked for each section
+	 * @param kv		callback invoked for key/value pairs
+	 * @param li		callback invoked for list items
+	 * @param user		user data to pass to callbacks
+	 * @return			TRUE if parsed successfully
+	 */
+	bool (*parse)(vici_message_t *this, vici_parse_context_t *ctx,
+				  vici_section_cb_t section, vici_value_cb_t kv,
+				  vici_value_cb_t li, void *user);
 
 	/**
 	 * Dump a message text representation to a FILE stream.

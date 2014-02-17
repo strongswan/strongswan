@@ -412,6 +412,100 @@ METHOD(vici_message_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
+/**
+ * Private parse context data
+ */
+struct vici_parse_context_t {
+	/** current section nesting level */
+	int level;
+	/** parse enumerator */
+	enumerator_t *e;
+};
+
+METHOD(vici_message_t, parse, bool,
+	private_vici_message_t *this, vici_parse_context_t *ctx,
+	vici_section_cb_t section, vici_value_cb_t kv, vici_value_cb_t li,
+	void *user)
+{
+	vici_parse_context_t root = {};
+	char *name, *list = NULL;
+	vici_type_t type;
+	chunk_t value;
+	int base;
+	bool ok = TRUE;
+
+	if (!ctx)
+	{
+		ctx = &root;
+		root.e = create_enumerator(this);
+	}
+
+	base = ctx->level;
+
+	while (ok)
+	{
+		ok = ctx->e->enumerate(ctx->e, &type, &name, &value);
+		if (ok)
+		{
+			switch (type)
+			{
+				case VICI_KEY_VALUE:
+					if (ctx->level == base && kv)
+					{
+						name = strdup(name);
+						this->strings->insert_last(this->strings, name);
+						ok = kv(user, &this->public, name, value);
+					}
+					continue;
+				case VICI_LIST_START:
+					if (ctx->level == base)
+					{
+						list = strdup(name);
+						this->strings->insert_last(this->strings, list);
+					}
+					continue;
+				case VICI_LIST_ITEM:
+					if (list && li)
+					{
+						name = strdup(name);
+						this->strings->insert_last(this->strings, name);
+						ok = li(user, &this->public, list, value);
+					}
+					continue;
+				case VICI_LIST_END:
+					if (ctx->level == base)
+					{
+						list = NULL;
+					}
+					continue;
+				case VICI_SECTION_START:
+					if (ctx->level++ == base && section)
+					{
+						name = strdup(name);
+						this->strings->insert_last(this->strings, name);
+						ok = section(user, &this->public, ctx, name);
+					}
+					continue;
+				case VICI_SECTION_END:
+					if (ctx->level-- == base)
+					{
+						break;
+					}
+					continue;
+				case VICI_END:
+					break;
+			}
+		}
+		break;
+	}
+
+	if (ctx == &root)
+	{
+		root.e->destroy(root.e);
+	}
+	return ok;
+}
+
 METHOD(vici_message_t, dump, bool,
 	private_vici_message_t *this, char *label, FILE *out)
 {
@@ -506,6 +600,7 @@ vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 			.get_value = _get_value,
 			.vget_value = _vget_value,
 			.get_encoding = _get_encoding,
+			.parse = _parse,
 			.dump = _dump,
 			.destroy = _destroy,
 		},
