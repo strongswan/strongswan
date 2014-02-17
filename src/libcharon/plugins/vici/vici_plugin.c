@@ -17,6 +17,7 @@
 #include "vici_dispatcher.h"
 #include "vici_query.h"
 #include "vici_control.h"
+#include "vici_config.h"
 
 #include <library.h>
 #include <daemon.h>
@@ -47,6 +48,11 @@ struct private_vici_plugin_t {
 	 * Control commands
 	 */
 	vici_control_t *control;
+
+	/**
+	 * Configuration backend
+	 */
+	vici_config_t *config;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -72,12 +78,20 @@ static bool register_vici(private_vici_plugin_t *this,
 		{
 			this->query = vici_query_create(this->dispatcher);
 			this->control = vici_control_create(this->dispatcher);
+			this->config = vici_config_create(this->dispatcher);
+
+			charon->backends->add_backend(charon->backends,
+										  &this->config->backend);
 			return TRUE;
 		}
 		return FALSE;
 	}
 	else
 	{
+		charon->backends->remove_backend(charon->backends,
+										 &this->config->backend);
+
+		this->config->destroy(this->config);
 		this->control->destroy(this->control);
 		this->query->destroy(this->query);
 		this->dispatcher->destroy(this->dispatcher);

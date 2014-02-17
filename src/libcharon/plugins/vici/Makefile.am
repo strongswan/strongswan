@@ -20,6 +20,7 @@ libstrongswan_vici_la_SOURCES = \
 	vici_dispatcher.h vici_dispatcher.c \
 	vici_query.h vici_query.c \
 	vici_control.h vici_control.c \
+	vici_config.h vici_config.c \
 	vici_plugin.h vici_plugin.c
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
