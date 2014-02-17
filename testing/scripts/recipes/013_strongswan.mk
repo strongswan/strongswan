@@ -80,7 +80,8 @@ CONFIG_OPTS = \
 	--enable-libipsec \
 	--enable-kernel-libipsec \
 	--enable-tkm \
-	--enable-ntru
+	--enable-ntru \
+	--enable-lookip
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
