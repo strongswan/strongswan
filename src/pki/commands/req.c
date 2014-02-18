@@ -122,7 +122,8 @@ static int req()
 		if (!chunk_from_fd(0, &chunk))
 		{
 			fprintf(stderr, "reading private key failed: %s\n", strerror(errno));
-			return 1;
+			error = "";
+			goto end;
 		}
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 									 BUILD_BLOB, chunk, BUILD_END);
