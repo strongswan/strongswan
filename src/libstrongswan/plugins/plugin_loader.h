@@ -67,9 +67,9 @@ struct plugin_loader_t {
 	 * for the plugins first, in the order they were added, then the default
 	 * path follows.
 	 *
-	 * If <ns>.load_modular is enabled (where <ns> is lib->ns) the plugins to
+	 * If \<ns>.load_modular is enabled (where \<ns> is lib->ns) the plugins to
 	 * load are determined via a load option in their respective plugin config
-	 * section e.g. <ns>.plugins.<plugin>.load = <priority|bool>.
+	 * section e.g. \<ns>.plugins.\<plugin>.load = <priority|bool>.
 	 * The oder is determined by the configured priority.  If two plugins have
 	 * the same priority the order as seen in list is preserved.  Plugins not
 	 * found in list are loaded first, in alphabetical order.
