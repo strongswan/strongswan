@@ -138,10 +138,12 @@ static void register_event(private_vici_dispatcher_t *this, char *name,
 
 	if (event)
 	{
+		DBG1(DBG_CFG, "vici client %u registered for: %s", id, name);
 		send_op(this, id, VICI_EVENT_CONFIRM, NULL, NULL);
 	}
 	else
 	{
+		DBG1(DBG_CFG, "vici client %u invalid registration: %s", id, name);
 		send_op(this, id, VICI_EVENT_UNKNOWN, NULL, NULL);
 	}
 }
@@ -174,6 +176,8 @@ static void unregister_event(private_vici_dispatcher_t *this, char *name,
 		enumerator->destroy(enumerator);
 	}
 	this->mutex->unlock(this->mutex);
+
+	DBG1(DBG_CFG, "vici client %u unregistered for: %s", id, name);
 
 	if (found)
 	{
@@ -237,6 +241,8 @@ void process_request(private_vici_dispatcher_t *this, char *name, u_int id,
 			.cmd = cmd,
 		);
 
+		DBG1(DBG_CFG, "vici client %u requests: %s", id, name);
+
 		thread_cleanup_push(release_command, release);
 
 		release->request = vici_message_create_from_data(data, FALSE);
@@ -252,6 +258,7 @@ void process_request(private_vici_dispatcher_t *this, char *name, u_int id,
 	}
 	else
 	{
+		DBG1(DBG_CFG, "vici client %u invalid request: %s", id, name);
 		send_op(this, id, VICI_CMD_UNKNOWN, NULL, NULL);
 	}
 }
@@ -323,6 +330,7 @@ CALLBACK(inbound, void,
 CALLBACK(connect_, void,
 	private_vici_dispatcher_t *this, u_int id)
 {
+	DBG1(DBG_CFG, "vici client %u connected", id);
 }
 
 CALLBACK(disconnect, void,
@@ -349,6 +357,8 @@ CALLBACK(disconnect, void,
 	}
 	events->destroy(events);
 	this->mutex->unlock(this->mutex);
+
+	DBG1(DBG_CFG, "vici client %u disconnected", id);
 }
 
 METHOD(vici_dispatcher_t, manage_command, void,
