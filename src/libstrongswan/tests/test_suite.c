@@ -26,12 +26,12 @@
 static char failure_buf[512];
 
 /**
- * Source file failure occured
+ * Source file failure occurred
  */
 static const char *failure_file;
 
 /**
- * Line of source file failure occured
+ * Line of source file failure occurred
  */
 static int failure_line;
 

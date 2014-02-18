@@ -43,7 +43,7 @@ struct private_fetcher_manager_t {
 };
 
 typedef struct {
-	/** assocaited fetcher construction function */
+	/** associated fetcher construction function */
 	fetcher_constructor_t create;
 	/** URL this fetcher support */
 	char *url;

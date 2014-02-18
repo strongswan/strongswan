@@ -472,7 +472,7 @@ void *memstr(const void *haystack, const char *needle, size_t n);
 char *translate(char *str, const char *from, const char *to);
 
 /**
- * Replaces all occurences of search in the given string with replace.
+ * Replaces all occurrences of search in the given string with replace.
  *
  * Allocates memory only if anything is replaced in the string.  The original
  * string is also returned if any of the arguments are invalid (e.g. if search
@@ -480,7 +480,7 @@ char *translate(char *str, const char *from, const char *to);
  *
  * @param str		original string
  * @param search	string to search for and replace
- * @param replace	string to replace found occurences with
+ * @param replace	string to replace found occurrences with
  * @return			allocated string, if anything got replaced, str otherwise
  */
 char *strreplace(const char *str, const char *search, const char *replace);
@@ -515,7 +515,7 @@ const char *safe_strerror(int errnum);
 /**
  * Close open file descriptors greater than or equal to lowfd.
  *
- * @param lowfd		start closing file descriptoros from here
+ * @param lowfd		start closing file descriptors from here
  */
 void closefrom(int lowfd);
 #endif

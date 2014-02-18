@@ -64,7 +64,7 @@ struct cowfs_t {
  * @param master		read only master file system directory
  * @param host			copy on write host directory
  * @param mount			mountpoint where union is mounted
- * @return				instance, or NULL if FUSE initalization failed
+ * @return				instance, or NULL if FUSE initialization failed
  */
 cowfs_t *cowfs_create(char *master, char *host, char *mount);
 
