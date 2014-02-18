@@ -238,6 +238,7 @@ static job_requeue_t watch(private_watcher_t *this)
 	entry_t *entry;
 	fd_set rd, wr, ex;
 	int maxfd = 0, res;
+	bool rebuild = FALSE;
 
 	FD_ZERO(&rd);
 	FD_ZERO(&wr);
@@ -282,7 +283,7 @@ static job_requeue_t watch(private_watcher_t *this)
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 
-	while (TRUE)
+	while (!rebuild)
 	{
 		char buf[1];
 		bool old;
@@ -308,6 +309,11 @@ static job_requeue_t watch(private_watcher_t *this)
 			enumerator = this->fds->create_enumerator(this->fds);
 			while (enumerator->enumerate(enumerator, &entry))
 			{
+				if (entry->in_callback)
+				{
+					rebuild = TRUE;
+					break;
+				}
 				if (FD_ISSET(entry->fd, &rd) && (entry->events & WATCHER_READ))
 				{
 					DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
@@ -347,6 +353,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			return JOB_REQUEUE_DIRECT;
 		}
 	}
+	return JOB_REQUEUE_DIRECT;
 }
 
 METHOD(watcher_t, add, void,
