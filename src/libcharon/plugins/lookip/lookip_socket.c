@@ -122,6 +122,7 @@ static job_requeue_t disconnect_async(disconnect_data_t *data)
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
+	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -137,7 +138,8 @@ static void disconnect(private_lookip_socket_t *this, stream_t *stream)
 	);
 
 	lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create(disconnect_async, data, free, NULL));
+			(job_t*)callback_job_create((void*)disconnect_async, data,
+										free, NULL));
 }
 
 /**
