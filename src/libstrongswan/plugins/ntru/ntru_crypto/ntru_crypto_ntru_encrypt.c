@@ -42,6 +42,7 @@
 #include "ntru_crypto_ntru_poly.h"
 #
 #include "ntru_trits.h"
+#include "ntru_poly.h"
 
 /* ntru_crypto_ntru_encrypt
  *
@@ -99,7 +100,6 @@ ntru_crypto_ntru_encrypt(
     int16_t                 m1 = 0;
     uint16_t               *scratch_buf = NULL;
     uint16_t               *ringel_buf = NULL;
-    uint16_t               *r_buf = NULL;
     uint8_t                *b_buf = NULL;
     uint8_t                *tmp_buf = NULL;
     bool                    msg_rep_good = FALSE;
@@ -110,6 +110,8 @@ ntru_crypto_ntru_encrypt(
 	ntru_trits_t           *mask;
 	uint8_t                *mask_trits;
 	chunk_t                 seed;
+	ntru_poly_t				*r_poly;
+	uint16_t				*r_indices;
 
     /* check for bad parameters */
 
@@ -186,8 +188,7 @@ ntru_crypto_ntru_encrypt(
 		return NTRU_OUT_OF_MEMORY;
     }
     ringel_buf = scratch_buf + ring_mult_tmp_len;
-    r_buf = ringel_buf + params->N;
-    b_buf = (uint8_t *)(r_buf + (dr << 1));
+    b_buf = (uint8_t *)(ringel_buf + params->N);
     tmp_buf = (uint8_t *)scratch_buf;
 
 	/* set hash algorithm based on security strength */
@@ -225,39 +226,46 @@ ntru_crypto_ntru_encrypt(
             memcpy(ptr, pubkey_packed, params->sec_strength_len);
             ptr += params->sec_strength_len;
 
+			DBG2(DBG_LIB, "generate polynomial r");
 
-            /* generate r */
-            result = ntru_gen_poly(hash_algid,
-                                   params->min_IGF_hash_calls,
-                                   (uint16_t)(ptr - tmp_buf),
-                                   tmp_buf, tmp_buf,
-                                   params->N, params->c_bits,
-                                   params->no_bias_limit,
-                                   params->is_product_form,
-                                   params->dF_r << 1, r_buf);
+			seed = chunk_create(tmp_buf, ptr - tmp_buf);
+			r_poly = ntru_poly_create(hash_algid, seed,
+									  params->c_bits, params->no_bias_limit,
+									  params->N, 2 * params->dF_r,
+									  params->is_product_form);
+			if (!r_poly)
+			{
+			   result = NTRU_MGF1_FAIL;
+			}
         }
 
 		if (result == NTRU_OK)
 		{
-            uint16_t pubkey_packed_len;
+			uint16_t pubkey_packed_len;
 
-            /* unpack the public key */
-            assert(pubkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS);
-            pubkey_packed_len = (params->N * params->q_bits + 7) >> 3;
-            ntru_octets_2_elements(pubkey_packed_len, pubkey_packed,
-                                   params->q_bits, ringel_buf);
+			/* unpack the public key */
+			assert(pubkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS);
+			pubkey_packed_len = (params->N * params->q_bits + 7) >> 3;
+			ntru_octets_2_elements(pubkey_packed_len, pubkey_packed,
+								   params->q_bits, ringel_buf);
 
-            /* form R = h * r */
+			/* form R = h * r */
+			r_indices = r_poly->get_indices(r_poly);
 
-            if (params->is_product_form)
-                ntru_ring_mult_product_indices(ringel_buf, (uint16_t)dr1,
-                                               (uint16_t)dr2, (uint16_t)dr3,
-                                               r_buf, params->N, params->q,
-                                               scratch_buf, ringel_buf);
-            else
-                ntru_ring_mult_indices(ringel_buf, (uint16_t)dr, (uint16_t)dr,
-                                       r_buf, params->N, params->q,
-                                       scratch_buf, ringel_buf);
+			if (params->is_product_form)
+			{
+				ntru_ring_mult_product_indices(ringel_buf, (uint16_t)dr1,
+											   (uint16_t)dr2, (uint16_t)dr3,
+											   r_indices, params->N, params->q,
+											   scratch_buf, ringel_buf);
+			}
+			else
+			{
+				ntru_ring_mult_indices(ringel_buf, (uint16_t)dr, (uint16_t)dr,
+									   r_indices, params->N, params->q,
+									   scratch_buf, ringel_buf);
+			}
+			r_poly->destroy(r_poly);
 
 			/* form R mod 4 */
 			ntru_coeffs_mod4_2_octets(params->N, ringel_buf, tmp_buf);
@@ -451,6 +459,8 @@ ntru_crypto_ntru_decrypt(
 	ntru_trits_t           *mask;
 	uint8_t                *mask_trits;
 	chunk_t                 seed;
+	ntru_poly_t			   *i_poly;
+	uint16_t			   *i_indices;
 
 	/* check for bad parameters */
 	if (!privkey_blob || !ct || !pt_len)
@@ -699,69 +709,74 @@ ntru_crypto_ntru_decrypt(
         ptr += params->sec_strength_len;
 
         /* generate cr */
+		DBG2(DBG_LIB, "generate polynomial i");
 
-        result = ntru_gen_poly(hash_algid,
-                               params->min_IGF_hash_calls,
-                               (uint16_t)(ptr - tmp_buf),
-                               tmp_buf, tmp_buf,
-                               params->N, params->c_bits,
-                               params->no_bias_limit,
-                               params->is_product_form,
-                               params->dF_r << 1, i_buf);
+		seed = chunk_create(tmp_buf, ptr - tmp_buf);
+		i_poly = ntru_poly_create(hash_algid, seed,
+								  params->c_bits, params->no_bias_limit,
+								  params->N, 2 * params->dF_r,
+								  params->is_product_form);
+		if (!i_poly)
+		{
+		   result = NTRU_MGF1_FAIL;
+		}
     }
 
 	if (result == NTRU_OK)
 	{
-
-        /* unpack the public key */
-
-        {
+		/* unpack the public key */
+		{
             uint16_t pubkey_packed_len;
 
-            assert(pubkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS);
-            pubkey_packed_len = (params->N * params->q_bits + 7) >> 3;
-            ntru_octets_2_elements(pubkey_packed_len, pubkey_packed,
-                                   params->q_bits, ringel_buf1);
-        }
+			assert(pubkey_pack_type == NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS);
+			pubkey_packed_len = (params->N * params->q_bits + 7) >> 3;
+			ntru_octets_2_elements(pubkey_packed_len, pubkey_packed,
+								   params->q_bits, ringel_buf1);
+		}
 
-        /* form cR' = h * cr */
+		/* form cR' = h * cr */
+		i_indices = i_poly->get_indices(i_poly);
+		if (params->is_product_form)
+		{
+			ntru_ring_mult_product_indices(ringel_buf1, (uint16_t)dF_r1,
+										   (uint16_t)dF_r2, (uint16_t)dF_r3,
+										   i_indices, params->N, params->q,
+										   scratch_buf, ringel_buf1);
+		}
+		else
+		{
+			ntru_ring_mult_indices(ringel_buf1, (uint16_t)dF_r, (uint16_t)dF_r,
+								   i_indices, params->N, params->q,
+								   scratch_buf, ringel_buf1);
+		}
+		i_poly->destroy(i_poly);
 
-        if (params->is_product_form)
-            ntru_ring_mult_product_indices(ringel_buf1, (uint16_t)dF_r1,
-                                           (uint16_t)dF_r2, (uint16_t)dF_r3,
-                                           i_buf, params->N, params->q,
-                                           scratch_buf, ringel_buf1);
-        else
-            ntru_ring_mult_indices(ringel_buf1, (uint16_t)dF_r, (uint16_t)dF_r,
-                                   i_buf, params->N, params->q,
-                                   scratch_buf, ringel_buf1);
-
-        /* compare cR' to cR */
-
-        for (i = 0; i < params->N; i++) {
-            if (ringel_buf1[i] != ringel_buf2[i])
+		/* compare cR' to cR */
+		for (i = 0; i < params->N; i++)
+		{
+			if (ringel_buf1[i] != ringel_buf2[i])
+			{
                 decryption_ok = FALSE;
-        }
+			}
+		}
 
         /* output plaintext and plaintext length */
-
-        if (decryption_ok)
+		if (decryption_ok)
 		{
-            if (*pt_len < cm_len)
+			if (*pt_len < cm_len)
 			{
 				return NTRU_BUFFER_TOO_SMALL;
 			}
-            memcpy(pt, m_buf, cm_len);
-            *pt_len = cm_len;
+			memcpy(pt, m_buf, cm_len);
+			*pt_len = cm_len;
         }
     }
 
-    /* cleanup */
-
-    memset(scratch_buf, 0, scratch_buf_len);
-    free(scratch_buf);
+	/* cleanup */
+	memset(scratch_buf, 0, scratch_buf_len);
+	free(scratch_buf);
     
-    if (!decryption_ok)
+	if (!decryption_ok)
 	{
 		return NTRU_FAIL;
 	}
@@ -836,13 +851,15 @@ ntru_crypto_ntru_encrypt_keygen(
     uint16_t               *scratch_buf = NULL;
     uint16_t               *ringel_buf1 = NULL;
     uint16_t               *ringel_buf2 = NULL;
-    uint16_t               *F_buf = NULL;
     uint8_t                *tmp_buf = NULL;
     uint16_t                mod_q_mask;
     hash_algorithm_t        hash_algid;
-    uint8_t                 md_len;
     uint16_t                seed_len;
+	chunk_t					seed;
     uint32_t                result = NTRU_OK;
+	ntru_poly_t			   *F_poly = NULL;
+	ntru_poly_t            *g_poly = NULL;
+	uint16_t			   *F_indices, *g_indices;
 
     /* get a pointer to the parameter-set parameters */
 
@@ -907,19 +924,16 @@ ntru_crypto_ntru_encrypt_keygen(
     }
     ringel_buf1 = scratch_buf + (params->N << 1);
     ringel_buf2 = ringel_buf1 + params->N;
-    F_buf = ringel_buf2 + params->N;
     tmp_buf = (uint8_t *)scratch_buf;
 
 	/* set hash algorithm and seed length based on security strength */
     if (params->sec_strength_len <= 20)
 	{
 		hash_algid = HASH_SHA1;
-		md_len = 20;
 	}
 	else
 	{
 		hash_algid = HASH_SHA256;
-		md_len = 32;
 	}
 	seed_len = params->sec_strength_len + 8;
 
@@ -943,81 +957,92 @@ ntru_crypto_ntru_encrypt_keygen(
 
 	if (result == NTRU_OK)
 	{
+		DBG2(DBG_LIB, "generate polynomial F");
 
-        /* generate F */
-        result = ntru_gen_poly(hash_algid,
-                               params->min_IGF_hash_calls,
-                               seed_len, tmp_buf, tmp_buf,
-                               params->N, params->c_bits,
-                               params->no_bias_limit,
-                               params->is_product_form,
-                               params->dF_r << 1, F_buf);
+		seed = chunk_create(tmp_buf, seed_len);
+		F_poly = ntru_poly_create(hash_algid, seed,
+								  params->c_bits, params->no_bias_limit,
+								  params->N, 2 * params->dF_r,
+								  params->is_product_form);
+		if (!F_poly)
+		{
+		   result = NTRU_MGF1_FAIL;
+		}
     }
 
 	if (result == NTRU_OK)
 	{
         uint32_t i;
 
-        memset(ringel_buf1, 0, params->N * sizeof(uint16_t));
+		memset(ringel_buf1, 0, params->N * sizeof(uint16_t));
+		F_indices = F_poly->get_indices(F_poly);
 
-        /* form F as a ring element */
+		/* form F as a ring element */
+		if (params->is_product_form)
+		{
+			uint32_t dF3_offset = (dF1 + dF2) << 1;
 
-        if (params->is_product_form) {
-            uint32_t dF3_offset = (dF1 + dF2) << 1;
+			/* form F1 as a ring element */
+			for (i = 0; i < dF1; i++)
+			{
+				ringel_buf1[F_indices[i]] = 1;
+			}
+			for (; i < (dF1 << 1); i++)
+			{
+				ringel_buf1[F_indices[i]] = mod_q_mask;
+			}
 
-            /* form F1 as a ring element */
+			/* form F1 * F2 */
+			ntru_ring_mult_indices(ringel_buf1, (uint16_t)dF2, (uint16_t)dF2,
+								   F_indices + (dF1 << 1), params->N, params->q,
+								   scratch_buf, ringel_buf1);
 
-            for (i = 0; i < dF1; i++)
-                ringel_buf1[F_buf[i]] = 1;
-            for (; i < (dF1 << 1); i++)
-                ringel_buf1[F_buf[i]] = mod_q_mask;
+			/* form (F1 * F2) + F3 */
+			for (i = 0; i < dF3; i++)
+			{
+				uint16_t index = F_indices[dF3_offset + i];
 
-            /* form F1 * F2 */
+				ringel_buf1[index] = (ringel_buf1[index] + 1) & mod_q_mask;
+			}
+			for (; i < (dF3 << 1); i++)
+			{
+				uint16_t index = F_indices[dF3_offset + i];
 
-            ntru_ring_mult_indices(ringel_buf1, (uint16_t)dF2, (uint16_t)dF2,
-                                   F_buf + (dF1 << 1), params->N, params->q,
-                                   scratch_buf, ringel_buf1);
+				ringel_buf1[index] = (ringel_buf1[index] - 1) & mod_q_mask;
+			}
+		}
+		else
+		{
+			/* form F as a ring element */
+			for (i = 0; i < dF; i++)
+			{
+				ringel_buf1[F_indices[i]] = 1;
+			}
+			for (; i < (dF << 1); i++)
+			{
+				ringel_buf1[F_indices[i]] = mod_q_mask;
+			}
+		}
 
-            /* form (F1 * F2) + F3 */
+		/* form f = 1 + pF */
+		for (i = 0; i < params->N; i++)
+		{
+			ringel_buf1[i] = (ringel_buf1[i] * 3) & mod_q_mask;
+		}
+		ringel_buf1[0] = (ringel_buf1[0] + 1) & mod_q_mask;
 
-            for (i = 0; i < dF3; i++) {
-                uint16_t index = F_buf[dF3_offset + i];
-                ringel_buf1[index] = (ringel_buf1[index] + 1) & mod_q_mask;
-            }
-            for (; i < (dF3 << 1); i++) {
-                uint16_t index = F_buf[dF3_offset + i];
-                ringel_buf1[index] = (ringel_buf1[index] - 1) & mod_q_mask;
-            }
-
-        } else {
-
-            /* form F as a ring element */
-
-            for (i = 0; i < dF; i++)
-                ringel_buf1[F_buf[i]] = 1;
-            for (; i < (dF << 1); i++)
-                ringel_buf1[F_buf[i]] = mod_q_mask;
-        }
-
-        /* form f = 1 + pF */
-
-        for (i = 0; i < params->N; i++)
-            ringel_buf1[i] = (ringel_buf1[i] * 3) & mod_q_mask;
-        ringel_buf1[0] = (ringel_buf1[0] + 1) & mod_q_mask;
-
-        /* find f^-1 in (Z/qZ)[X]/(X^N - 1) */
-
-        if (!ntru_ring_inv(ringel_buf1, params->N, params->q,
-                           scratch_buf, ringel_buf2))
+		/* find f^-1 in (Z/qZ)[X]/(X^N - 1) */
+		if (!ntru_ring_inv(ringel_buf1, params->N, params->q,
+						   scratch_buf, ringel_buf2))
 		{
 			result = NTRU_FAIL;
 		}
-    }
+	}
 
 	if (result == NTRU_OK)
 	{
 
-        /* get random bytes for seed for generating trinary g
+        /* get random bytes for seed for generating trinary polynomial g
          * as a list of indices
          */
         if (!drbg->generate(drbg, params->sec_strength_len * BITS_PER_BYTE,
@@ -1029,53 +1054,52 @@ ntru_crypto_ntru_encrypt_keygen(
 
 	if (result == NTRU_OK)
 	{
-        uint16_t min_IGF_hash_calls =
-            ((((params->dg << 2) + 2) * params->N_bits) + (md_len << 3) - 1) /
-            (md_len << 3);
+		DBG2(DBG_LIB, "generate polynomial g");
 
-        /* generate g */
-
-        result = ntru_gen_poly(hash_algid,
-                               (uint8_t)min_IGF_hash_calls,
-                               seed_len, tmp_buf, tmp_buf,
-                               params->N, params->c_bits,
-                               params->no_bias_limit, FALSE,
-                               (params->dg << 1) + 1, ringel_buf1);
-    }
+		seed = chunk_create(tmp_buf, seed_len);
+		g_poly = ntru_poly_create(hash_algid, seed,
+								  params->c_bits, params->no_bias_limit,
+								  params->N, 2*params->dg + 1, FALSE);
+		if (!g_poly)
+		{
+		   result = NTRU_MGF1_FAIL;
+		}
+   }
 
 	if (result == NTRU_OK)
 	{
-        uint16_t i;
+		uint16_t i;
 
-        /* compute h = p * (f^-1 * g) mod q */
+		/* compute h = p * (f^-1 * g) mod q */
+		g_indices = g_poly->get_indices(g_poly);
+		ntru_ring_mult_indices(ringel_buf2, params->dg + 1, params->dg,
+							   g_indices, params->N, params->q, scratch_buf,
+							   ringel_buf2);
+		g_poly->destroy(g_poly);
 
-        ntru_ring_mult_indices(ringel_buf2, params->dg + 1, params->dg,
-                               ringel_buf1, params->N, params->q, scratch_buf,
-                               ringel_buf2);
+		for (i = 0; i < params->N; i++)
+		{
+			ringel_buf2[i] = (ringel_buf2[i] * 3) & mod_q_mask;
+		}
 
-        for (i = 0; i < params->N; i++)
-            ringel_buf2[i] = (ringel_buf2[i] * 3) & mod_q_mask;
+		/* create public key blob */
+		ntru_crypto_ntru_encrypt_key_create_pubkey_blob(params, ringel_buf2,
+													    pubkey_pack_type,
+														pubkey_blob);
+		*pubkey_blob_len = public_key_blob_len;
 
-        /* create public key blob */
-
-        ntru_crypto_ntru_encrypt_key_create_pubkey_blob(params, ringel_buf2,
-                                                        pubkey_pack_type,
-                                                        pubkey_blob);
-        *pubkey_blob_len = public_key_blob_len;
-
-        /* create private key blob */
-
-        ntru_crypto_ntru_encrypt_key_create_privkey_blob(params, ringel_buf2,
-                                                         F_buf,
-                                                         privkey_pack_type,
-                                                         tmp_buf, privkey_blob);
-        *privkey_blob_len = private_key_blob_len;
+		/* create private key blob */
+		ntru_crypto_ntru_encrypt_key_create_privkey_blob(params, ringel_buf2,
+														 F_indices,
+														 privkey_pack_type,
+														 tmp_buf, privkey_blob);
+		*privkey_blob_len = private_key_blob_len;
     }
 
-    /* cleanup */
-
-    memset(scratch_buf, 0, scratch_buf_len);
-    free(scratch_buf);
-    
-    return result;
+	/* cleanup */
+	DESTROY_IF(F_poly);
+	memset(scratch_buf, 0, scratch_buf_len);
+	free(scratch_buf);
+  
+	return result;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,6 +19,7 @@
 #include <plugins/ntru/ntru_drbg.h>
 #include <plugins/ntru/ntru_mgf1.h>
 #include <plugins/ntru/ntru_trits.h>
+#include <plugins/ntru/ntru_poly.h>
 #include <utils/test.h>
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
@@ -29,6 +30,11 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_mgf1_create, ntru_mgf1_t*,
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
 						  size_t len, hash_algorithm_t alg, chunk_t seed)
+
+IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create, ntru_poly_t*,
+						  hash_algorithm_t alg, chunk_t seed, uint8_t c_bits,
+						  uint16_t limit, uint16_t poly_len,
+						  uint32_t indices_count, bool is_product_form)
 
 /**
  * NTRU parameter sets to test
@@ -295,20 +301,74 @@ START_TEST(test_ntru_drbg_reseed)
 END_TEST
 
 typedef struct {
+	uint8_t c_bits;
+	uint16_t limit;
+	uint16_t poly_len;
+	bool is_product_form;
+	uint32_t indices_count;
+	uint32_t indices_len;
+	uint16_t *indices;
+} poly_test_t;
+
+typedef struct {
 	hash_algorithm_t alg;
 	size_t hash_size;
-	size_t ml1, ml2, ml3;
+	size_t ml1, ml2, ml3, seed_len;
 	chunk_t seed;
 	chunk_t hashed_seed;
 	chunk_t mask;
 	chunk_t trits;
+	poly_test_t poly_test[2];
 } mgf1_test_t;
+
+uint16_t indices_ees439ep1[] = {
+	367, 413,  16, 214, 114, 128,  42, 268, 346, 329, 119, 303, 208, 287, 150,
+	  3,  45, 321, 110, 109, 272, 430,  80, 305,  51, 381, 322, 140, 207, 315,
+	206, 186,  56,   5, 273, 177,  44, 100, 205, 210,  98, 191,   8, 336
+};
+
+uint16_t indices_ees613ep1[] = {
+	245, 391, 251, 428, 301,   2, 176, 296, 461, 224, 590, 215, 250,  91, 395,
+	363,  58, 537, 278, 291, 247,  33, 140, 447, 172, 514, 424, 412,  95,  94,
+	281, 159, 196, 302, 277,  63, 404, 150, 608, 315, 195, 334, 207, 376, 398,
+	  0, 309, 486, 516,  86, 267, 139, 130,  38, 141, 258,  21, 341, 526, 388,
+	194, 116, 138, 524, 547, 383, 542, 406, 270, 438, 240, 445, 527, 168, 320,
+	186, 327, 212, 543,  82, 606, 131, 294, 392, 477, 430, 583, 142, 253, 434,
+	134, 458, 559, 414, 162, 407, 580, 577, 191, 109, 554, 523,  32,  62, 297,
+	283, 268,  54, 539,   5
+};
+
+uint16_t indices_ees743ep1[] = {
+	285,  62, 136, 655, 460,  35, 450, 208, 340, 212,  61, 234, 454,  52, 520,
+	399, 315, 616, 496,  88, 280, 543, 508, 237, 553,  39, 214, 253, 720, 291,
+	586, 615, 635, 596,  62, 499, 301, 176, 271, 659, 372, 185, 621, 350, 683,
+	180, 717, 509, 641, 738, 666, 171, 639, 606, 353, 706, 237, 358, 410, 423,
+	197, 501, 261, 654, 658, 701, 377, 182, 548, 287, 700, 403, 248, 137
+};
+
+uint16_t indices_ees1171ep1[] = {
+	514, 702, 760, 505, 262, 486, 695, 783, 533,  74, 403, 847, 170,1019, 568,
+	676,1057, 277,1021, 238, 203, 884, 124,  87,  65,  93, 131, 881,1102, 133,
+	459, 462,  92,  40,   5,1152,1158, 297, 599, 299,   7, 458, 347, 343, 173,
+   1044, 264, 871, 819, 679, 328, 438, 990, 982, 308,1135, 423, 470, 254, 295,
+   1029, 892, 759, 789, 123, 939, 749, 353,1062, 145, 562, 337, 550, 102, 549,
+	821,1098, 823,  96, 365, 135,1110, 334, 391, 638, 963, 962,1002,1069, 993,
+	983, 649,1056, 399, 385, 715, 582, 799, 161, 512, 629, 979, 250,  37, 213,
+	929, 413, 566, 336, 727, 160, 616,1170, 748, 282,1115, 325, 994, 189, 500,
+	913, 332,1118, 753, 946, 775,  59, 809, 782, 612, 909,1090, 223, 777, 940,
+	866,1032, 471, 298, 969, 192, 411, 721, 476, 910,1045,1027, 812, 352, 487,
+	215, 625, 808, 230, 602, 457, 900, 416, 985, 850, 908, 155, 670, 669,1054,
+	400,1126, 733, 647, 786, 195, 148, 362,1094, 389,1086,1166, 231, 436, 210,
+	333, 824, 785, 826, 658, 472, 639,1046,1028, 519, 422,  80, 924,1089, 547,
+   1157, 579,   2, 508,1040, 998, 902,1058, 600, 220, 805, 945, 140,1117, 179,
+	536, 191
+};
 
 /**
  * MGF1 Mask Generation Function Test Vectors
  */
 mgf1_test_t mgf1_tests[] = {
-	{	HASH_SHA1, 20, 60, 20, 15,
+	{	HASH_SHA1, 20, 60, 20, 15, 24,
 		chunk_from_chars( 
 						0xED, 0xA5, 0xC3, 0xBC, 0xAF, 0xB3, 0x20, 0x7D,
 						0x14, 0xA1, 0x54, 0xF7, 0x8B, 0x37, 0xF2, 0x8D,
@@ -366,9 +426,17 @@ mgf1_test_t mgf1_tests[] = {
 				2, 1, 2, 1, 2,  2, 1, 2, 1, 1,  0, 1, 1, 1, 1,  2, 0, 2, 2, 1,
 				0, 1, 1, 2, 1,  2, 0, 2, 1, 0,  1, 0, 1, 0, 1,  2, 0, 1, 1, 0,
 				0, 1, 1, 2, 0,  2, 2, 0, 0, 0,  1, 1, 0, 1, 0,  1, 1, 0, 1, 1,
-				0, 1, 2, 0, 1,  1, 0, 1, 2, 0,  0, 1, 2, 2, 0,  0, 2, 1, 2)
+				0, 1, 2, 0, 1,  1, 0, 1, 2, 0,  0, 1, 2, 2, 0,  0, 2, 1, 2),
+		{
+			{	9, 439, 439, TRUE, 2*(9 + (8 << 8) + (5 << 16)),
+				countof(indices_ees439ep1), indices_ees439ep1
+			},
+			{	11, 1839, 613, FALSE, 2*55,
+				countof(indices_ees613ep1), indices_ees613ep1
+			}
+		}
 	},
-	{	HASH_SHA256, 32, 64, 32, 33,
+	{	HASH_SHA256, 32, 64, 32, 33, 40,
 		chunk_from_chars(
 						0x52, 0xC5, 0xDD, 0x1E, 0xEF, 0x76, 0x1B, 0x53,
 						0x08, 0xE4, 0x86, 0x3F, 0x91, 0x12, 0x98, 0x69,
@@ -445,7 +513,15 @@ mgf1_test_t mgf1_tests[] = {
 				0, 0, 0, 1, 1,  0, 0, 2, 2, 2,  2, 2, 0, 1, 2,  0, 1, 2, 0, 1,
 				1, 0, 1, 1, 2,  2, 0, 1, 1, 0,  2, 2, 1, 1, 1,  2, 1, 2, 2, 1,
 				1, 0, 1, 0, 2,  2, 1, 0, 2, 2,  2, 2, 2, 1, 0,  2, 2, 2, 1, 2,
-				0, 2, 0, 0, 0,  0, 0, 1, 2, 0,  1, 0, 1)
+				0, 2, 0, 0, 0,  0, 0, 1, 2, 0,  1, 0, 1),
+		{
+			{	13, 8173, 743, TRUE, 2*(11 + (11 << 8) + (15 << 16)),
+				countof(indices_ees743ep1), indices_ees743ep1
+			},
+			{	12, 3513, 1171, FALSE, 2*106,
+				countof(indices_ees1171ep1), indices_ees1171ep1
+			}
+		}
 	}
 };
 
@@ -542,6 +618,40 @@ START_TEST(test_ntru_trits)
 	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
 	ck_assert(chunk_equals(trits, chunk_create(mgf1_tests[_i].trits.ptr, 10)));
 	mask->destroy(mask);
+}
+END_TEST
+
+START_TEST(test_ntru_poly)
+{
+	ntru_poly_t *poly;
+	uint16_t *indices;
+	chunk_t seed;
+	poly_test_t *p;
+	int j, n;
+
+	seed = mgf1_tests[_i].seed;
+	seed.len = mgf1_tests[_i].seed_len;
+
+	p = &mgf1_tests[_i].poly_test[0];
+	poly = ntru_poly_create(HASH_UNKNOWN, seed, p->c_bits, p->limit,
+							p->poly_len, p->indices_count, p->is_product_form);
+	ck_assert(poly == NULL);
+
+	for (n = 0; n < 2; n++)
+	{
+		p = &mgf1_tests[_i].poly_test[n];
+		poly = ntru_poly_create(mgf1_tests[_i].alg, seed, p->c_bits, p->limit,
+								p->poly_len, p->indices_count,
+								p->is_product_form);
+		ck_assert(poly != NULL && poly->get_size(poly) == p->indices_len);
+
+		indices = poly->get_indices(poly);
+		for (j = 0; j < p->indices_len; j++)
+		{
+			ck_assert(indices[j] == p->indices[j]);
+		}
+		poly->destroy(poly);
+	}
 }
 END_TEST
 
@@ -753,6 +863,10 @@ Suite *ntru_suite_create()
 
 	tc = tcase_create("trits");
 	tcase_add_loop_test(tc, test_ntru_trits, 0, countof(mgf1_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("poly");
+	tcase_add_loop_test(tc, test_ntru_poly, 0, countof(mgf1_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ke");

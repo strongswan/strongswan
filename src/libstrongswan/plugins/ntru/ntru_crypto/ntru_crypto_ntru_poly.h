@@ -43,47 +43,6 @@
 
 /* function declarations */
 
-/* ntru_gen_poly
- *
- * Generates polynomials by creating for each polynomial, a list of the
- * indices of the +1 coefficients followed by a list of the indices of
- * the -1 coefficients.
- *
- * If a single polynomial is generated (non-product form), indices_counts
- * contains a single value of the total number of indices (for +1 and -1
- * comefficients combined).
- *
- * If multiple polynomials are generated (for product form), their lists of
- * indices are sequentially stored in the indices buffer.  Each byte of
- * indices_counts contains the total number of indices (for +1 and -1
- * coefficients combined) for a single polynomial, beginning with the
- * low-order byte for the first polynomial.  The high-order byte is unused.
- *
- * Returns NTRU_OK if successful.
- * Returns HASH_BAD_ALG if the algorithm is not supported.
- *
- */
-
-extern uint32_t
-ntru_gen_poly(
-    hash_algorithm_t       hash_algid,      /*  in - hash algorithm ID for
-                                                      IGF-2 */
-    uint8_t                 min_calls,       /*  in - minimum no. of hash
-                                                      calls */
-    uint16_t                seed_len,        /*  in - no. of octets in seed */
-    uint8_t                *seed,            /*  in - pointer to seed */
-    uint8_t                *buf,             /*  in - pointer to working
-                                                      buffer */
-    uint16_t                N,               /*  in - max index + 1 */
-    uint8_t                 c_bits,          /*  in - no. bits for candidate */
-    uint16_t                limit,           /*  in - conversion to index
-                                                      limit */
-    bool                    is_product_form, /*  in - if generating multiple
-                                                      polys */
-    uint32_t                indices_counts,  /*  in - nos. of indices needed */
-    uint16_t               *indices);        /* out - address for indices */
-
-
 /* ntru_poly_check_min_weight
  *
  * Checks that the number of 0, +1, and -1 trinary ring elements meet or exceed

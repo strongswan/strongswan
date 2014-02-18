@@ -66,8 +66,6 @@ typedef struct _NTRU_ENCRYPT_PARAM_SET {
                                                      IGF-2 */
     uint8_t                   m_len_len;          /* no. of octets to hold
                                                      mLenOctets */
-    uint8_t                   min_IGF_hash_calls; /* min. no. of hash calls for
-                                                     IGF-2 */
 } NTRU_ENCRYPT_PARAM_SET;
 
 

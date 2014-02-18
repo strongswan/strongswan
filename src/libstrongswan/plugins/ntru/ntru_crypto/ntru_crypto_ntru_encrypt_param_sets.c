@@ -56,7 +56,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         2005,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        32,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -76,7 +75,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         449,                         /* 2^c - (2^c mod N) */
         9,                           /* c */
         1,                           /* lLen */
-        31,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -96,7 +94,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         2031,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        27,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -116,7 +113,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         7609,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
-        25,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -136,7 +132,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         3787,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
-        15,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -156,7 +151,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         1839,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        16,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -176,7 +170,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         887,                         /* 2^c - (2^c mod N) */
         10,                          /* c */
         1,                           /* lLen */
-        13,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -196,7 +189,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         3513,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
-        20,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -216,7 +208,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         1977,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        11,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -236,7 +227,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         3805,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
-        13,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -256,7 +246,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         7609,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
-        13,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -276,7 +265,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         7495,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
-        17,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -296,8 +284,7 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         2005,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        10,                          /* min. no. of hash calls for IGF-2 */
-    },
+   },
 
     {
         NTRU_EES439EP1,              /* parameter-set id */
@@ -316,7 +303,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         439,                         /* 2^c - (2^c mod N) */
         9,                           /* c */
         1,                           /* lLen */
-        15,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -336,7 +322,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         1779,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
-        12,                          /* min. no. of hash calls for IGF-2 */
     },
 
     {
@@ -356,7 +341,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         8173,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
-        12,                          /* min. no. of hash calls for IGF-2 */
     },
 
 };
