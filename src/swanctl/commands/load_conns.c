@@ -13,9 +13,11 @@
  * for more details.
  */
 
-#include "command.h"
-
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <errno.h>
+
+#include "command.h"
 
 /**
  * Check if we should handle a key as a list of comma separated values
@@ -145,12 +147,102 @@ static bool load_conn(vici_conn_t *conn, settings_t *cfg,
 	return ret;
 }
 
+CALLBACK(list_conn, int,
+	linked_list_t *list, vici_res_t *res, char *name, void *value, int len)
+{
+	if (streq(name, "conns"))
+	{
+		char *str;
+
+		if (asprintf(&str, "%.*s", len, value) != -1)
+		{
+			list->insert_last(list, str);
+		}
+	}
+	return 0;
+}
+
+/**
+ * Create a list of currently loaded connections
+ */
+static linked_list_t* list_conns(vici_conn_t *conn, bool raw)
+{
+	linked_list_t *list;
+	vici_res_t *res;
+
+	list = linked_list_create();
+
+	res = vici_submit(vici_begin("get-conns"), conn);
+	if (res)
+	{
+		if (raw)
+		{
+			vici_dump(res, "get-conns reply", stdout);
+		}
+		vici_parse_cb(res, NULL, NULL, list_conn, list);
+		vici_free_res(res);
+	}
+	return list;
+}
+
+/**
+ * Remove and free a string from a list
+ */
+static void remove_from_list(linked_list_t *list, char *str)
+{
+	enumerator_t *enumerator;
+	char *current;
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (streq(current, str))
+		{
+			list->remove_at(list, enumerator);
+			free(current);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Unload a connection by name
+ */
+static bool unload_conn(vici_conn_t *conn, char *name, bool raw)
+{
+	vici_req_t *req;
+	vici_res_t *res;
+	bool ret = TRUE;
+
+	req = vici_begin("unload-conn");
+	vici_add_key_valuef(req, "name", "%s", name);
+	res = vici_submit(req, conn);
+	if (!res)
+	{
+		fprintf(stderr, "unload-conn request failed: %s\n", strerror(errno));
+		return FALSE;
+	}
+	if (raw)
+	{
+		vici_dump(res, "unload-conn reply", stdout);
+	}
+	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
+	{
+		fprintf(stderr, "unloading connection '%s' failed: %s\n",
+				name, vici_find_str(res, "", "errmsg"));
+		ret = FALSE;
+	}
+	vici_free_res(res);
+	return ret;
+}
+
 static int load_conns(vici_conn_t *conn)
 {
 	bool raw = FALSE;
-	u_int found = 0, loaded = 0;
+	u_int found = 0, loaded = 0, unloaded = 0;
 	char *arg, *section;
 	enumerator_t *enumerator;
+	linked_list_t *conns;
 	settings_t *cfg;
 
 	while (TRUE)
@@ -177,9 +269,12 @@ static int load_conns(vici_conn_t *conn)
 		return EINVAL;
 	}
 
+	conns = list_conns(conn, raw);
+
 	enumerator = cfg->create_section_enumerator(cfg, "connections");
 	while (enumerator->enumerate(enumerator, &section))
 	{
+		remove_from_list(conns, section);
 		found++;
 		if (load_conn(conn, cfg, section, raw))
 		{
@@ -190,22 +285,34 @@ static int load_conns(vici_conn_t *conn)
 
 	cfg->destroy(cfg);
 
+	/* unload all connection in daemon, but not in file */
+	while (conns->remove_first(conns, (void**)&section) == SUCCESS)
+	{
+		if (unload_conn(conn, section, raw))
+		{
+			unloaded++;
+		}
+		free(section);
+	}
+	conns->destroy(conns);
+
 	if (raw)
 	{
 		return 0;
 	}
 	if (found == 0)
 	{
-		printf("no connections found\n");
+		printf("no connections found, %u unloaded\n", unloaded);
 		return 0;
 	}
 	if (loaded == found)
 	{
-		printf("successfully loaded %u connections\n", loaded);
+		printf("successfully loaded %u connections, %u unloaded\n",
+			   loaded, unloaded);
 		return 0;
 	}
-	fprintf(stderr, "loaded %u of %u connections, %u failed to load\n",
-			loaded, found, found - loaded);
+	fprintf(stderr, "loaded %u of %u connections, %u failed to load, "
+			"%u unloaded\n", loaded, found, found - loaded, unloaded);
 	return EINVAL;
 }
 
