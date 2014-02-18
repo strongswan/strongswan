@@ -1488,6 +1488,66 @@ CALLBACK(load_conn, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(unload_conn, vici_message_t*,
+	private_vici_config_t *this, char *name, u_int id, vici_message_t *message)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *cfg;
+	bool found = FALSE;
+	char *conn;
+
+	conn = message->get_str(message, NULL, "name");
+	if (!conn)
+	{
+		return create_reply("missing connection name to unload");
+	}
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->conns->create_enumerator(this->conns);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		if (streq(cfg->get_name(cfg), conn))
+		{
+			this->conns->remove_at(this->conns, enumerator);
+			cfg->destroy(cfg);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	if (!found)
+	{
+		return create_reply("connection '%s' not found for unloading", conn);
+	}
+	return create_reply(NULL);
+}
+
+CALLBACK(get_conns, vici_message_t*,
+	private_vici_config_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	enumerator_t *enumerator;
+	peer_cfg_t *cfg;
+
+	builder = vici_builder_create();
+	builder->begin_list(builder, "conns");
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->conns->create_enumerator(this->conns);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		builder->add_li(builder, "%s", cfg->get_name(cfg));
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	builder->end_list(builder);
+
+	return builder->finalize(builder);
+}
+
 static void manage_command(private_vici_config_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -1501,6 +1561,8 @@ static void manage_command(private_vici_config_t *this,
 static void manage_commands(private_vici_config_t *this, bool reg)
 {
 	manage_command(this, "load-conn", load_conn, reg);
+	manage_command(this, "unload-conn", unload_conn, reg);
+	manage_command(this, "get-conns", get_conns, reg);
 }
 
 METHOD(vici_config_t, destroy, void,
