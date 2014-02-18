@@ -482,6 +482,171 @@ CALLBACK(list_policies, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Build sections for auth configs, local or remote
+ */
+static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
+{
+	enumerator_t *enumerator, *rules;
+	auth_rule_t rule;
+	auth_cfg_t *auth;
+	union {
+		uintptr_t u;
+		identification_t *id;
+		char *str;
+	} v;
+
+	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
+	while (enumerator->enumerate(enumerator, &auth))
+	{
+		b->begin_section(b, local ? "local" : "remote");
+
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			switch (rule)
+			{
+				case AUTH_RULE_AUTH_CLASS:
+					b->add_kv(b, "class", "%N", auth_class_names, v.u);
+					break;
+				case AUTH_RULE_EAP_TYPE:
+					b->add_kv(b, "eap-type", "%N", eap_type_names, v.u);
+					break;
+				case AUTH_RULE_EAP_VENDOR:
+					b->add_kv(b, "eap-vendor", "%u", v.u);
+					break;
+				case AUTH_RULE_XAUTH_BACKEND:
+					b->add_kv(b, "xauth", "%s", v.str);
+					break;
+				case AUTH_RULE_CRL_VALIDATION:
+					b->add_kv(b, "revocation", "%N", cert_validation_names, v.u);
+					break;
+				case AUTH_RULE_IDENTITY:
+					b->add_kv(b, "id", "%Y", v.id);
+					break;
+				case AUTH_RULE_AAA_IDENTITY:
+					b->add_kv(b, "aaa_id", "%Y", v.id);
+					break;
+				case AUTH_RULE_EAP_IDENTITY:
+					b->add_kv(b, "eap_id", "%Y", v.id);
+					break;
+				case AUTH_RULE_XAUTH_IDENTITY:
+					b->add_kv(b, "xauth_id", "%Y", v.id);
+					break;
+				default:
+					break;
+			}
+		}
+		rules->destroy(rules);
+
+		b->end_section(b);
+	}
+	enumerator->destroy(enumerator);
+}
+
+CALLBACK(list_conns, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	enumerator_t *enumerator, *tokens, *selectors, *children;
+	peer_cfg_t *peer_cfg;
+	ike_cfg_t *ike_cfg;
+	child_cfg_t *child_cfg;
+	char *ike, *str;
+	linked_list_t *list;
+	traffic_selector_t *ts;
+	vici_builder_t *b;
+
+	ike = request->get_str(request, NULL, "ike");
+
+	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+											NULL, NULL, NULL, NULL, IKE_ANY);
+	while (enumerator->enumerate(enumerator, &peer_cfg))
+	{
+		if (ike && !streq(ike, peer_cfg->get_name(peer_cfg)))
+		{
+			continue;
+		}
+
+		b = vici_builder_create();
+		b->begin_section(b, peer_cfg->get_name(peer_cfg));
+
+		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+
+		b->begin_list(b, "local_addrs");
+		str = ike_cfg->get_my_addr(ike_cfg);
+		tokens = enumerator_create_token(str, ",", " ");
+		while (tokens->enumerate(tokens, &str))
+		{
+			b->add_li(b, "%s", str);
+		}
+		tokens->destroy(tokens);
+		b->end_list(b);
+
+		b->begin_list(b, "remote_addrs");
+		str = ike_cfg->get_other_addr(ike_cfg);
+		tokens = enumerator_create_token(str, ",", " ");
+		while (tokens->enumerate(tokens, &str))
+		{
+			b->add_li(b, "%s", str);
+		}
+		tokens->destroy(tokens);
+		b->end_list(b);
+
+		b->add_kv(b, "version", "%N", ike_version_names,
+			peer_cfg->get_ike_version(peer_cfg));
+
+		build_auth_cfgs(peer_cfg, TRUE, b);
+		build_auth_cfgs(peer_cfg, FALSE, b);
+
+		b->begin_section(b, "children");
+
+		children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+		while (children->enumerate(children, &child_cfg))
+		{
+			b->begin_section(b, child_cfg->get_name(child_cfg));
+
+			b->add_kv(b, "mode", "%N", ipsec_mode_names,
+				child_cfg->get_mode(child_cfg));
+
+			b->begin_list(b, "local-ts");
+			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+			selectors = list->create_enumerator(list);
+			while (selectors->enumerate(selectors, &ts))
+			{
+				b->add_li(b, "%R", ts);
+			}
+			selectors->destroy(selectors);
+			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
+			b->end_list(b /* local-ts */);
+
+			b->begin_list(b, "remote-ts");
+			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+			selectors = list->create_enumerator(list);
+			while (selectors->enumerate(selectors, &ts))
+			{
+				b->add_li(b, "%R", ts);
+			}
+			selectors->destroy(selectors);
+			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
+			b->end_list(b /* remote-ts */);
+
+			b->end_section(b);
+		}
+		children->destroy(children);
+
+		b->end_section(b); /* children */
+
+		b->end_section(b); /* name */
+
+		this->dispatcher->raise_event(this->dispatcher, "list-conn", id,
+									  b->finalize(b));
+	}
+	enumerator->destroy(enumerator);
+
+	b = vici_builder_create();
+	return b->finalize(b);
+}
+
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -517,8 +682,10 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 {
 	this->dispatcher->manage_event(this->dispatcher, "list-sa", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-policy", reg);
+	this->dispatcher->manage_event(this->dispatcher, "list-conn", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
+	manage_command(this, "list-conns", list_conns, reg);
 	manage_command(this, "version", version, reg);
 }
 
