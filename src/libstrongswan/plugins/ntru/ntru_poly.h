@@ -55,14 +55,12 @@ struct ntru_poly_t {
  * @param seed				seed used by MGF1 to generate trits from
  * @param poly_len			size of the trits polynomial
  * @param c_bits			number of bits for candidate index
- * @param limit				conversion to index limit
  * @param indices_count		number of non-zero indices
  * @param is_product_form	generate multiple polynomials
  */
 ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
-							  uint8_t c_bits, uint16_t limit, 
-    						  uint16_t poly_len, uint32_t indices_count,
-							  bool is_product_form);
+							  uint8_t c_bits, uint16_t poly_len,
+							  uint32_t indices_count, bool is_product_form);
 
 #endif /** NTRU_POLY_H_ @}*/
 

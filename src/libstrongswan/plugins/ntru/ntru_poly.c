@@ -69,14 +69,13 @@ METHOD(ntru_poly_t, destroy, void,
  * Described in header.
  */
 ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
-							  uint8_t c_bits, uint16_t limit, 
-    						  uint16_t poly_len, uint32_t indices_count,
-							  bool is_product_form)
+							  uint8_t c_bits, uint16_t poly_len,
+							  uint32_t indices_count, bool is_product_form)
 {
 	private_ntru_poly_t *this;
 	size_t hash_len, octet_count = 0, i, num_polys, num_indices[3], indices_len;
 	uint8_t octets[HASH_SIZE_SHA512], *used, num_left = 0, num_needed;
-	uint16_t index, left = 0;
+	uint16_t index, limit, left = 0;
 	int poly_i = 0, index_i = 0;
 	ntru_mgf1_t *mgf1;
 
@@ -103,6 +102,7 @@ ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
 		indices_len = indices_count;
 	}
 	used = malloc(poly_len);
+	limit = poly_len * ((1 << c_bits) / poly_len);
 
 	INIT(this,
 		.public = {

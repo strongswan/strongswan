@@ -53,7 +53,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         133,                         /* dg */
         60,                          /* maxMsgLenBytes */
         113,                         /* dm0 */
-        2005,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
     },
@@ -72,7 +71,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         149,                         /* dg */
         67,                          /* maxMsgLenBytes */
         134,                         /* dm0 */
-        449,                         /* 2^c - (2^c mod N) */
         9,                           /* c */
         1,                           /* lLen */
     },
@@ -91,7 +89,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         225,                         /* dg */
         101,                         /* maxMsgLenBytes */
         157,                         /* dm0 */
-        2031,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
     },
@@ -110,7 +107,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         362,                         /* dg */
         170,                         /* maxMsgLenBytes */
         120,                         /* dm0 */
-        7609,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
     },
@@ -129,7 +125,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         180,                         /* dg */
         86,                          /* maxMsgLenBytes */
         49,                          /* dm0 */
-        3787,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
     },
@@ -148,7 +143,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         204,                         /* dg */
         97,                          /* maxMsgLenBytes */
         55,                          /* dm0 */
-        1839,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
     },
@@ -167,7 +161,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         295,                         /* dg */
         141,                         /* maxMsgLenBytes */
         81,                          /* dm0 */
-        887,                         /* 2^c - (2^c mod N) */
         10,                          /* c */
         1,                           /* lLen */
     },
@@ -186,7 +179,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         390,                         /* dg */
         186,                         /* maxMsgLenBytes */
         106,                         /* dm0 */
-        3513,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
     },
@@ -205,7 +197,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         219,                         /* dg */
         108,                         /* maxMsgLenBytes */
         38,                          /* dm0 */
-        1977,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
     },
@@ -224,7 +215,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         253,                         /* dg */
         125,                         /* maxMsgLenBytes */
         42,                          /* dm0 */
-        3805,                        /* 2^c - (2^c mod N) */
         12,                          /* c */
         1,                           /* lLen */
     },
@@ -243,7 +233,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         362,                         /* dg */
         178,                         /* maxMsgLenBytes */
         63,                          /* dm0 */
-        7609,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
     },
@@ -262,7 +251,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         499,                         /* dg */
         247,                         /* maxMsgLenBytes */
         79,                          /* dm0 */
-        7495,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
     },
@@ -281,7 +269,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         133,                         /* dg */
         60,                          /* maxMsgLenBytes */
         136,                         /* m(1)_max */
-        2005,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
    },
@@ -300,7 +287,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         146,                         /* dg */
         65,                          /* maxMsgLenBytes */
         126,                         /* m(1)_max */
-        439,                         /* 2^c - (2^c mod N) */
         9,                           /* c */
         1,                           /* lLen */
     },
@@ -319,7 +305,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         197,                         /* dg */
         86,                          /* maxMsgLenBytes */
         90,                          /* m(1)_max */
-        1779,                        /* 2^c - (2^c mod N) */
         11,                          /* c */
         1,                           /* lLen */
     },
@@ -338,7 +323,6 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
         247,                         /* dg */
         106,                         /* maxMsgLenBytes */
         60,                          /* m(1)_max */
-        8173,                        /* 2^c - (2^c mod N) */
         13,                          /* c */
         1,                           /* lLen */
     },

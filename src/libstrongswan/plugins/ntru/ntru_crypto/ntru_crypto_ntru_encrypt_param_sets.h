@@ -59,8 +59,6 @@ typedef struct _NTRU_ENCRYPT_PARAM_SET {
                                                      octets */
     uint16_t                  min_msg_rep_wt;     /* min. message
                                                      representative weight */
-    uint16_t                  no_bias_limit;      /* limit for no bias in
-                                                     IGF-2 */
     uint8_t                   c_bits;             /* no. bits in candidate for
                                                      deriving an index in
                                                      IGF-2 */
