@@ -136,6 +136,55 @@ CALLBACK(load_cert, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(load_key, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	key_type_t type;
+	private_key_t *key;
+	chunk_t data;
+	char *str;
+
+	str = message->get_str(message, NULL, "type");
+	if (!str)
+	{
+		return create_reply("key type missing");
+	}
+	if (strcaseeq(str, "any"))
+	{
+		type = KEY_ANY;
+	}
+	else if (strcaseeq(str, "rsa"))
+	{
+		type = KEY_RSA;
+	}
+	else if (strcaseeq(str, "ecdsa"))
+	{
+		type = KEY_ECDSA;
+	}
+	else
+	{
+		return create_reply("invalid key type: %s", str);
+	}
+	data = message->get_value(message, chunk_empty, "data");
+	if (!data.len)
+	{
+		return create_reply("key data missing");
+	}
+	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+							 BUILD_BLOB_PEM, data, BUILD_END);
+	if (!key)
+	{
+		return create_reply("parsing %N private key failed",
+							key_type_names, type);
+	}
+
+	DBG1(DBG_CFG, "loaded %N private key", key_type_names, type);
+
+	this->creds->add_key(this->creds, key);
+
+	return create_reply(NULL);
+}
+
 CALLBACK(clear_creds, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
@@ -161,6 +210,7 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 {
 	manage_command(this, "clear-creds", clear_creds, reg);
 	manage_command(this, "load-cert", load_cert, reg);
+	manage_command(this, "load-key", load_key, reg);
 }
 
 METHOD(vici_cred_t, destroy, void,
