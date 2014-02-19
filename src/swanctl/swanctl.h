@@ -51,5 +51,19 @@
  */
 #define SWANCTL_X509ACDIR SWANCTLDIR "/x509ac"
 
+/**
+ * Directory for RSA private keys
+ */
+#define SWANCTL_RSADIR SWANCTLDIR "/rsa"
+
+/**
+ * Directory for ECDSA private keys
+ */
+#define SWANCTL_ECDSADIR SWANCTLDIR "/ecdsa"
+
+/**
+ * Directory for PKCS#8 encoded private keys
+ */
+#define SWANCTL_PKCS8DIR SWANCTLDIR "/pkcs8"
 
 #endif /** SWANCTL_H_ @}*/
