@@ -9,6 +9,7 @@ swanctl_SOURCES = \
 	commands/list_sas.c \
 	commands/list_pols.c \
 	commands/load_conns.c \
+	commands/load_creds.c \
 	swanctl.c swanctl.h
 
 swanctl_LDADD = \

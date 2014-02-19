@@ -26,4 +26,30 @@
  */
 #define SWANCTL_CONF SWANCTLDIR "/swanctl.conf"
 
+/**
+ * Directory for X.509 end entity certs
+ */
+#define SWANCTL_X509DIR SWANCTLDIR "/x509"
+
+/**
+ * Directory for X.509 CA certs
+ */
+#define SWANCTL_X509CADIR SWANCTLDIR "/x509ca"
+
+/**
+ * Directory for X.509 Attribute Authority certs
+ */
+#define SWANCTL_X509AADIR SWANCTLDIR "/x509aa"
+
+/**
+ * Directory for X.509 CRLs
+ */
+#define SWANCTL_X509CRLDIR SWANCTLDIR "/x509crl"
+
+/**
+ * Directory for X.509 Attribute certificates
+ */
+#define SWANCTL_X509ACDIR SWANCTLDIR "/x509ac"
+
+
 #endif /** SWANCTL_H_ @}*/
