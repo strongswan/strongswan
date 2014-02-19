@@ -17,6 +17,7 @@
 #include "vici_dispatcher.h"
 #include "vici_query.h"
 #include "vici_control.h"
+#include "vici_cred.h"
 #include "vici_config.h"
 
 #include <library.h>
@@ -50,6 +51,11 @@ struct private_vici_plugin_t {
 	vici_control_t *control;
 
 	/**
+	 * Credential backend
+	 */
+	vici_cred_t *cred;
+
+	/**
 	 * Configuration backend
 	 */
 	vici_config_t *config;
@@ -78,6 +84,7 @@ static bool register_vici(private_vici_plugin_t *this,
 		{
 			this->query = vici_query_create(this->dispatcher);
 			this->control = vici_control_create(this->dispatcher);
+			this->cred = vici_cred_create(this->dispatcher);
 			this->config = vici_config_create(this->dispatcher);
 
 			charon->backends->add_backend(charon->backends,
@@ -92,6 +99,7 @@ static bool register_vici(private_vici_plugin_t *this,
 										 &this->config->backend);
 
 		this->config->destroy(this->config);
+		this->cred->destroy(this->cred);
 		this->control->destroy(this->control);
 		this->query->destroy(this->query);
 		this->dispatcher->destroy(this->dispatcher);
