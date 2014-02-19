@@ -18,6 +18,7 @@
 #include <errno.h>
 
 #include "command.h"
+#include "swanctl.h"
 
 /**
  * Check if we should handle a key as a list of comma separated values
@@ -262,10 +263,10 @@ static int load_conns(vici_conn_t *conn)
 		break;
 	}
 
-	cfg = settings_create(CONF_FILE);
+	cfg = settings_create(SWANCTL_CONF);
 	if (!cfg)
 	{
-		fprintf(stderr, "parsing '%s' failed\n", CONF_FILE);
+		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
 		return EINVAL;
 	}
 
