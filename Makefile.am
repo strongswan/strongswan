@@ -42,7 +42,7 @@ apidoc :	Doxyfile
 
 cov-reset-common:
 		@rm -rf $(top_builddir)/coverage
-		@find $(top_builddir)/{src,scripts} -name "*.gcda" -delete
+		@find $(top_builddir)/src $(top_builddir)/scripts -name "*.gcda" -delete
 
 if COVERAGE
 cov-reset: cov-reset-common
@@ -72,7 +72,7 @@ coverage:
 endif
 
 clean-local: cov-reset-common
-		@find $(top_builddir)/{src,scripts} -name "*.gcno" -delete
+		@find $(top_builddir)/src $(top_builddir)/scripts -name "*.gcno" -delete
 		@rm -rf apidoc
 
 .PHONY: cov-reset-common cov-reset cov-report coverage
