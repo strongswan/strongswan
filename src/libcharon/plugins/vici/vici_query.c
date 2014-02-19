@@ -493,6 +493,7 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 	union {
 		uintptr_t u;
 		identification_t *id;
+		certificate_t *cert;
 		char *str;
 	} v;
 
@@ -546,6 +547,30 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 			if (rule == AUTH_RULE_GROUP)
 			{
 				b->add_li(b, "%Y", v.id);
+			}
+		}
+		rules->destroy(rules);
+		b->end_list(b);
+
+		b->begin_list(b, "certs");
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			if (rule == AUTH_RULE_SUBJECT_CERT)
+			{
+				b->add_li(b, "%Y", v.cert->get_subject(v.cert));
+			}
+		}
+		rules->destroy(rules);
+		b->end_list(b);
+
+		b->begin_list(b, "cacerts");
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			if (rule == AUTH_RULE_CA_CERT)
+			{
+				b->add_li(b, "%Y", v.cert->get_subject(v.cert));
 			}
 		}
 		rules->destroy(rules);

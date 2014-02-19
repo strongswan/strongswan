@@ -962,6 +962,41 @@ CALLBACK(parse_group, bool,
 }
 
 /**
+ * Parse a certificate; add as auth rule to config
+ */
+static bool parse_cert(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
+{
+	certificate_t *cert;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							  BUILD_BLOB_PEM, v, BUILD_END);
+	if (cert)
+	{
+		cfg->add(cfg, rule, cert);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse subject certificates
+ */
+CALLBACK(parse_certs, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	return parse_cert(cfg, AUTH_RULE_SUBJECT_CERT, v);
+}
+
+/**
+ * Parse CA certificates
+ */
+CALLBACK(parse_cacerts, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	return parse_cert(cfg, AUTH_RULE_CA_CERT, v);
+}
+
+/**
  * Parse revocation status
  */
 CALLBACK(parse_revocation, bool,
@@ -1146,6 +1181,8 @@ CALLBACK(auth_li, bool,
 {
 	parse_rule_t rules[] = {
 		{ "groups",			parse_group,		auth->cfg					},
+		{ "certs",			parse_certs,		auth->cfg					},
+		{ "cacerts",		parse_cacerts,		auth->cfg					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
