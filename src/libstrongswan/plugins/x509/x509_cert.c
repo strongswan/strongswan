@@ -20,13 +20,13 @@
 
 #define _GNU_SOURCE
 
-#include "x509_cert.h"
-
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+
+#include "x509_cert.h"
 
 #include <library.h>
 #include <utils/debug.h>

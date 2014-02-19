@@ -13,11 +13,12 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for stdndup() */
+#include <string.h>
+
 #include "imv_os_database.h"
 
 #include <utils/debug.h>
-
-#include <string.h>
 
 typedef struct private_imv_os_database_t private_imv_os_database_t;
 

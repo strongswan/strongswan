@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for stdndup() */
+#include <string.h>
+
 #include "xauth_manager.h"
 
 #include <collections/linked_list.h>

@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for stdndup() */
+#include <string.h>
+
 #include "ita_attr.h"
 #include "ita_attr_settings.h"
 
@@ -21,8 +24,6 @@
 #include <collections/linked_list.h>
 #include <pen/pen.h>
 #include <utils/debug.h>
-
-#include <string.h>
 
 typedef struct private_ita_attr_settings_t private_ita_attr_settings_t;
 typedef struct entry_t entry_t;
@@ -211,7 +212,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	status = SUCCESS;
 
 end:
-	reader->destroy(reader);	
+	reader->destroy(reader);
 	return status;
 }
 
@@ -227,7 +228,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		this->list->destroy_function(this->list, (void*)free_entry);	
+		this->list->destroy_function(this->list, (void*)free_entry);
 		free(this->value.ptr);
 		free(this);
 	}

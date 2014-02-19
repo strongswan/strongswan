@@ -14,12 +14,12 @@
  * for more details.
  */
 
-#include "ike_cfg.h"
-
+#define _GNU_SOURCE /* for stdndup() */
 #include <string.h>
 
-#include <daemon.h>
+#include "ike_cfg.h"
 
+#include <daemon.h>
 
 ENUM(ike_version_names, IKE_ANY, IKEV2,
 	"IKEv1/2",

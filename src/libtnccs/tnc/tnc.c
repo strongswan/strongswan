@@ -13,13 +13,15 @@
  * for more details.
  */
 
-#include "tnc.h"
-
+#define _GNU_SOURCE /* for stdndup() */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
+
+#include "tnc.h"
 
 #include <utils/lexparser.h>
 #include <utils/debug.h>

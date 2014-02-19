@@ -14,6 +14,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for stdndup() */
+#include <string.h>
+
 #include "imv_attestation_agent.h"
 #include "imv_attestation_state.h"
 #include "imv_attestation_process.h"

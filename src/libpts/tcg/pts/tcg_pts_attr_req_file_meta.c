@@ -13,14 +13,15 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for stdndup() */
+#include <string.h>
+
 #include "tcg_pts_attr_req_file_meta.h"
 
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
-
-#include <string.h>
 
 typedef struct private_tcg_pts_attr_req_file_meta_t private_tcg_pts_attr_req_file_meta_t;
 
