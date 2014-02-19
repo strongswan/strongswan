@@ -13,6 +13,7 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for fmemopen() */
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
