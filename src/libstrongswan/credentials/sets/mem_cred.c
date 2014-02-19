@@ -351,6 +351,44 @@ static void shared_entry_destroy(shared_entry_t *entry)
 }
 
 /**
+ * Check if two shared key entries equal
+ */
+static bool shared_entry_equals(shared_entry_t *a, shared_entry_t *b)
+{
+	enumerator_t *e1, *e2;
+	identification_t *id1, *id2;
+	bool equals = TRUE;
+
+	if (a->shared->get_type(a->shared) != b->shared->get_type(b->shared))
+	{
+		return FALSE;
+	}
+	if (!chunk_equals(a->shared->get_key(a->shared),
+					  b->shared->get_key(b->shared)))
+	{
+		return FALSE;
+	}
+	if (a->owners->get_count(a->owners) != b->owners->get_count(b->owners))
+	{
+		return FALSE;
+	}
+	e1 = a->owners->create_enumerator(a->owners);
+	e2 = b->owners->create_enumerator(b->owners);
+	while (e1->enumerate(e1, &id1) && e2->enumerate(e2, &id2))
+	{
+		if (!id1->equals(id1, id2))
+		{
+			equals = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	return equals;
+}
+
+/**
  * Data for the shared_key enumerator
  */
 typedef struct {
@@ -452,15 +490,30 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 METHOD(mem_cred_t, add_shared_list, void,
 	private_mem_cred_t *this, shared_key_t *shared, linked_list_t* owners)
 {
-	shared_entry_t *entry;
+	shared_entry_t *current, *new;
+	enumerator_t *enumerator;
 
-	INIT(entry,
+	INIT(new,
 		.shared = shared,
 		.owners = owners,
 	);
 
 	this->lock->write_lock(this->lock);
-	this->shared->insert_first(this->shared, entry);
+
+	enumerator = this->shared->create_enumerator(this->shared);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (shared_entry_equals(current, new))
+		{
+			this->shared->remove_at(this->shared, enumerator);
+			shared_entry_destroy(current);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	this->shared->insert_first(this->shared, new);
+
 	this->lock->unlock(this->lock);
 }
 
