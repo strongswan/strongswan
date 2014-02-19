@@ -16,6 +16,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "command.h"
 #include "swanctl.h"
@@ -34,6 +35,28 @@ static bool is_list_key(char *key)
 		"local_ts",
 		"remote_ts",
 		"vips",
+		"groups",
+	};
+	int i;
+
+	for (i = 0; i < countof(keys); i++)
+	{
+		if (strcaseeq(keys[i], key))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Check if we should handle a key as a list of comma separated files
+ */
+static bool is_file_list_key(char *key)
+{
+	char *keys[] = {
+		"certs",
+		"cacerts",
 	};
 	int i;
 
@@ -66,6 +89,49 @@ static void add_list_key(vici_req_t *req, char *key, char *value)
 }
 
 /**
+ * Add a vici list of blobs from a comma separated file list
+ */
+static void add_file_list_key(vici_req_t *req, char *key, char *value)
+{
+	enumerator_t *enumerator;
+	chunk_t *map;
+	char *token, buf[PATH_MAX];
+
+	vici_begin_list(req, key);
+	enumerator = enumerator_create_token(value, ",", " ");
+	while (enumerator->enumerate(enumerator, &token))
+	{
+		if (*token != '/')
+		{
+			if (streq(key, "certs"))
+			{
+				snprintf(buf, sizeof(buf), "%s/%s", SWANCTL_X509DIR, token);
+				token = buf;
+			}
+			if (streq(key, "cacerts"))
+			{
+				snprintf(buf, sizeof(buf), "%s/%s", SWANCTL_X509CADIR, token);
+				token = buf;
+			}
+		}
+
+		map = chunk_map(token, FALSE);
+		if (map)
+		{
+			vici_add_list_item(req, map->ptr, map->len);
+			chunk_unmap(map);
+		}
+		else
+		{
+			fprintf(stderr, "loading certificate '%s' failed: %s\n",
+					token, strerror(errno));
+		}
+	}
+	enumerator->destroy(enumerator);
+	vici_end_list(req);
+}
+
+/**
  * Translate setting key/values from a section into vici key-values/lists
  */
 static void add_key_values(vici_req_t *req, settings_t *cfg, char *section)
@@ -79,6 +145,10 @@ static void add_key_values(vici_req_t *req, settings_t *cfg, char *section)
 		if (is_list_key(key))
 		{
 			add_list_key(req, key, value);
+		}
+		else if (is_file_list_key(key))
+		{
+			add_file_list_key(req, key, value);
 		}
 		else
 		{
