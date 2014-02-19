@@ -243,6 +243,9 @@ static void log_auth(auth_cfg_t *auth)
 			case AUTH_RULE_XAUTH_IDENTITY:
 				DBG2(DBG_CFG, "   xauth_id = %Y", v.id);
 				break;
+			case AUTH_RULE_GROUP:
+				DBG2(DBG_CFG, "   group = %Y", v.id);
+				break;
 			default:
 				break;
 		}
@@ -950,6 +953,15 @@ CALLBACK(parse_xauth_id, bool,
 }
 
 /**
+ * Parse group membership
+ */
+CALLBACK(parse_group, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	return parse_id(cfg, AUTH_RULE_GROUP, v);
+}
+
+/**
  * Parse revocation status
  */
 CALLBACK(parse_revocation, bool,
@@ -1129,6 +1141,17 @@ CALLBACK(child_kv, bool,
 					   &child->request->reply);
 }
 
+CALLBACK(auth_li, bool,
+	auth_data_t *auth, vici_message_t *message, char *name, chunk_t value)
+{
+	parse_rule_t rules[] = {
+		{ "groups",			parse_group,		auth->cfg					},
+	};
+
+	return parse_rules(rules, countof(rules), name, value,
+					   &auth->request->reply);
+}
+
 CALLBACK(auth_kv, bool,
 	auth_data_t *auth, vici_message_t *message, char *name, chunk_t value)
 {
@@ -1272,7 +1295,7 @@ CALLBACK(peer_sn, bool,
 			.cfg = auth_cfg_create(),
 		};
 
-		if (!message->parse(message, ctx, NULL, auth_kv, NULL, &auth))
+		if (!message->parse(message, ctx, NULL, auth_kv, auth_li, &auth))
 		{
 			auth.cfg->destroy(auth.cfg);
 			return FALSE;
