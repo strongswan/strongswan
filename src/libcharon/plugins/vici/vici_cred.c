@@ -185,12 +185,79 @@ CALLBACK(load_key, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(shared_owners, bool,
+	linked_list_t *owners, vici_message_t *message, char *name, chunk_t value)
+{
+	if (streq(name, "owners"))
+	{
+		char buf[256];
+
+		if (!vici_stringify(value, buf, sizeof(buf)))
+		{
+			return FALSE;
+		}
+		owners->insert_last(owners, identification_create_from_string(buf));
+	}
+	return TRUE;
+}
+
+CALLBACK(load_shared, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	shared_key_type_t type;
+	linked_list_t *owners;
+	chunk_t data;
+	char *str;
+
+	str = message->get_str(message, NULL, "type");
+	if (!str)
+	{
+		return create_reply("shared key type missing");
+	}
+	if (strcaseeq(str, "ike"))
+	{
+		type = SHARED_IKE;
+	}
+	else if (strcaseeq(str, "eap"))
+	{
+		type = SHARED_EAP;
+	}
+	else
+	{
+		return create_reply("invalid shared key type: %s", str);
+	}
+	data = message->get_value(message, chunk_empty, "data");
+	if (!data.len)
+	{
+		return create_reply("shared key data missing");
+	}
+
+	owners = linked_list_create();
+	if (!message->parse(message, NULL, NULL, NULL, shared_owners, owners))
+	{
+		owners->destroy_offset(owners, offsetof(identification_t, destroy));
+		return create_reply("parsing shared key owners failed");
+	}
+	if (owners->get_count(owners) == 0)
+	{
+		owners->insert_last(owners, identification_create_from_string("%any"));
+	}
+
+	DBG1(DBG_CFG, "loaded %N shared key", shared_key_type_names, type);
+
+	this->creds->add_shared_list(this->creds,
+						shared_key_create(type, chunk_clone(data)), owners);
+
+	return create_reply(NULL);
+}
+
 CALLBACK(clear_creds, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
 	vici_builder_t *builder;
 
 	this->creds->clear(this->creds);
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
 	builder = vici_builder_create();
 	return builder->finalize(builder);
@@ -211,6 +278,7 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 	manage_command(this, "clear-creds", clear_creds, reg);
 	manage_command(this, "load-cert", load_cert, reg);
 	manage_command(this, "load-key", load_key, reg);
+	manage_command(this, "load-shared", load_shared, reg);
 }
 
 METHOD(vici_cred_t, destroy, void,
