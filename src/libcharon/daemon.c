@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <time.h>
+#include <errno.h>
 
 #include "daemon.h"
 
@@ -476,6 +477,53 @@ static void destroy(private_daemon_t *this)
 	free(this);
 }
 
+/**
+ * Run a set of configured scripts
+ */
+static void run_scripts(private_daemon_t *this, char *verb)
+{
+	enumerator_t *enumerator;
+	char *key, *value, *pos, buf[1024];
+	FILE *cmd;
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+												"%s.%s-scripts", lib->ns, verb);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		DBG1(DBG_DMN, "executing %s script '%s' (%s):", verb, key, value);
+		cmd = popen(value, "r");
+		if (!cmd)
+		{
+			DBG1(DBG_DMN, "executing %s script '%s' (%s) failed: %s",
+				 verb, key, value, strerror(errno));
+			continue;
+		}
+		while (TRUE)
+		{
+			if (!fgets(buf, sizeof(buf), cmd))
+			{
+				if (ferror(cmd))
+				{
+					DBG1(DBG_DMN, "reading from %s script '%s' (%s) failed",
+						 verb, key, value);
+				}
+				break;
+			}
+			else
+			{
+				pos = buf + strlen(buf);
+				if (pos > buf && pos[-1] == '\n')
+				{
+					pos[-1] = '\0';
+				}
+				DBG1(DBG_DMN, "%s: %s", key, buf);
+			}
+		}
+		pclose(cmd);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(daemon_t, start, void,
 	   private_daemon_t *this)
 {
@@ -483,6 +531,8 @@ METHOD(daemon_t, start, void,
 	lib->processor->set_threads(lib->processor,
 						lib->settings->get_int(lib->settings, "%s.threads",
 											   DEFAULT_THREADS, lib->ns));
+
+	run_scripts(this, "start");
 }
 
 
@@ -597,6 +647,8 @@ void libcharon_deinit()
 	{	/* have more users */
 		return;
 	}
+
+	run_scripts(this, "stop");
 
 	destroy(this);
 	charon = NULL;
