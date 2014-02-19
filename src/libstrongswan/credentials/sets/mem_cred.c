@@ -307,8 +307,25 @@ METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 METHOD(mem_cred_t, add_key, void,
 	private_mem_cred_t *this, private_key_t *key)
 {
+	enumerator_t *enumerator;
+	private_key_t *current;
+
 	this->lock->write_lock(this->lock);
+
+	enumerator = this->keys->create_enumerator(this->keys);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->equals(current, key))
+		{
+			this->keys->remove_at(this->keys, enumerator);
+			current->destroy(current);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	this->keys->insert_first(this->keys, key);
+
 	this->lock->unlock(this->lock);
 }
 
