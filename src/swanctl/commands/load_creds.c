@@ -265,6 +265,83 @@ static void load_keys(vici_conn_t *conn, bool raw, bool noprompt,
 }
 
 /**
+ * Load a single secret for ids over VICI
+ */
+static bool load_secret(vici_conn_t *conn, char *type, char *owners,
+						char *value, bool raw)
+{
+	enumerator_t *enumerator;
+	vici_req_t *req;
+	vici_res_t *res;
+	chunk_t data;
+	bool ret = TRUE;
+
+	req = vici_begin("load-shared");
+
+	vici_add_key_valuef(req, "type", "%s", type);
+	vici_begin_list(req, "owners");
+	enumerator = enumerator_create_token(owners, " ", " ");
+	while (enumerator->enumerate(enumerator, &owners))
+	{
+		vici_add_list_itemf(req, "%s", owners);
+	}
+	enumerator->destroy(enumerator);
+	vici_end_list(req);
+
+	if (strcasepfx(value, "0x"))
+	{
+		data = chunk_from_hex(chunk_from_str(value + 2), NULL);
+	}
+	else if (strcasepfx(value, "0s"))
+	{
+		data = chunk_from_base64(chunk_from_str(value + 2), NULL);
+	}
+	else
+	{
+		data = chunk_clone(chunk_from_str(value));
+	}
+	vici_add_key_value(req, "data", data.ptr, data.len);
+	chunk_clear(&data);
+
+	res = vici_submit(req, conn);
+	if (!res)
+	{
+		fprintf(stderr, "load-shared request failed: %s\n", strerror(errno));
+		return FALSE;
+	}
+	if (raw)
+	{
+		vici_dump(res, "load-shared reply", stdout);
+	}
+	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
+	{
+		fprintf(stderr, "loading shared secret failed: %s\n",
+				vici_find_str(res, "", "errmsg"));
+		ret = FALSE;
+	}
+	vici_free_res(res);
+	return ret;
+}
+
+/**
+ * Load secrets from settings section
+ */
+static void load_secrets(vici_conn_t *conn, settings_t *cfg,
+						 char *section, bool raw)
+{
+	enumerator_t *enumerator;
+	char buf[64], *key, *value;
+
+	snprintf(buf, sizeof(buf), "secrets.%s", section);
+	enumerator = cfg->create_key_value_enumerator(cfg, buf);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		load_secret(conn, section, key, value, raw);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Clear all currently loaded credentials
  */
 static bool clear_creds(vici_conn_t *conn, bool raw)
@@ -288,7 +365,9 @@ static bool clear_creds(vici_conn_t *conn, bool raw)
 static int load_creds(vici_conn_t *conn)
 {
 	bool raw = FALSE, clear = FALSE, noprompt = FALSE;
-	char *arg;
+	enumerator_t *enumerator;
+	settings_t *cfg;
+	char *arg, *section;
 
 	while (TRUE)
 	{
@@ -330,6 +409,22 @@ static int load_creds(vici_conn_t *conn)
 	load_keys(conn, raw, noprompt, "rsa", SWANCTL_RSADIR);
 	load_keys(conn, raw, noprompt, "ecdsa", SWANCTL_ECDSADIR);
 	load_keys(conn, raw, noprompt, "any", SWANCTL_PKCS8DIR);
+
+	cfg = settings_create(SWANCTL_CONF);
+	if (!cfg)
+	{
+		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
+		return EINVAL;
+	}
+
+	enumerator = cfg->create_section_enumerator(cfg, "secrets");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		load_secrets(conn, cfg, section, raw);
+	}
+	enumerator->destroy(enumerator);
+
+	cfg->destroy(cfg);
 
 	return 0;
 }
