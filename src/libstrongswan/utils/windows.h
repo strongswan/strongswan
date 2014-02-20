@@ -255,6 +255,12 @@ int dlclose(void *handle);
 int socketpair(int domain, int type, int protocol, int sv[2]);
 
 /**
+ * getpass(3) on Windows consoles
+ */
+char* getpass(const char *prompt);
+#define HAVE_GETPASS
+
+/**
  * Map MSG_DONTWAIT to the reserved, but deprecated MSG_INTERRUPT
  */
 #define MSG_DONTWAIT MSG_INTERRUPT

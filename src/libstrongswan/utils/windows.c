@@ -251,6 +251,65 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 }
 
 /**
+ * See header
+ */
+char* getpass(const char *prompt)
+{
+	static char buf[64] = "";
+	char *pos;
+	HANDLE in, out;
+	DWORD mode, written = 0, total, done;
+
+	out = GetStdHandle(STD_OUTPUT_HANDLE);
+	in = GetStdHandle(STD_INPUT_HANDLE);
+
+	if (out == INVALID_HANDLE_VALUE || in == INVALID_HANDLE_VALUE ||
+		!GetConsoleMode(out, &mode) || !GetConsoleMode(in, &mode))
+	{
+		return NULL;
+	}
+
+	total = strlen(prompt);
+	while (written < total)
+	{
+		if (!WriteConsole(out, prompt + written, total - written, &done, NULL))
+		{
+			return NULL;
+		}
+		written += done;
+	}
+
+	if (!SetConsoleMode(in, mode & ~ENABLE_ECHO_INPUT))
+	{
+		return NULL;
+	}
+
+	while (TRUE)
+	{
+		if (!ReadConsole(in, buf, sizeof(buf), &done, NULL))
+		{
+			SetConsoleMode(in, mode);
+			return NULL;
+		}
+		if (done)
+		{
+			pos = strchr(buf, '\r');
+			if (pos)
+			{
+				*pos = '\0';
+			}
+			break;
+		}
+	}
+	SetConsoleMode(in, mode);
+
+	/* append a newline, as we have no echo during input */
+	WriteConsole(out, "\r\n", 2, &done, NULL);
+
+	return buf;
+}
+
+/**
  * Set errno for a function setting WSA error on failure
  */
 static int wserr(int retval)
