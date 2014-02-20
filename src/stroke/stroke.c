@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <getopt.h>
 
 #include <library.h>
 
@@ -29,6 +30,7 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
+static char *daemon_name = "charon";
 static int output_verbosity = 1; /* CONTROL */
 
 static char* push_string(stroke_msg_t *msg, char *string)
@@ -55,8 +57,8 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 	msg->output_verbosity = output_verbosity;
 
-	uri = lib->settings->get_str(lib->settings, "charon.plugins.stroke.socket",
-								 "unix://" STROKE_SOCKET);
+	uri = lib->settings->get_str(lib->settings, "%s.plugins.stroke.socket",
+								 "unix://" STROKE_SOCKET, daemon_name);
 	stream = lib->streams->connect(lib->streams, uri);
 	if (!stream)
 	{
@@ -373,187 +375,215 @@ static int set_loglevel(char *type, u_int level)
 	return send_stroke_msg(&msg);
 }
 
-static void exit_error(char *error)
+static int usage(char *error)
 {
+	FILE *out = error ? stderr : stdout;
+
+	fprintf(out, "stroke [OPTIONS] command [ARGUMENTS]\n\n");
+	fprintf(out, "Options:\n");
+	fprintf(out, "  -h, --help             print this information.\n");
+	fprintf(out, "  -d, --daemon=NAME      name of the daemon.\n");
+	fprintf(out, "Commands:\n");
+	fprintf(out, "  Add a connection:\n");
+	fprintf(out, "    stroke add NAME MY_ID OTHER_ID MY_ADDR OTHER_ADDR\\\n");
+	fprintf(out, "           MY_NET OTHER_NET\n");
+	fprintf(out, "    where: ID is any IKEv2 ID \n");
+	fprintf(out, "           ADDR is a IPv4 address\n");
+	fprintf(out, "           NET is a IPv4 subnet in CIDR notation\n");
+	fprintf(out, "  Delete a connection:\n");
+	fprintf(out, "    stroke delete NAME\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "  Initiate a connection:\n");
+	fprintf(out, "    stroke up NAME\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "  Initiate a connection without blocking:\n");
+	fprintf(out, "    stroke up-nb NAME\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "  Terminate a connection:\n");
+	fprintf(out, "    stroke down NAME\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "  Terminate a connection without blocking:\n");
+	fprintf(out, "    stroke down-nb NAME\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "  Terminate a connection by remote srcip:\n");
+	fprintf(out, "    stroke down-srcip START [END]\n");
+	fprintf(out, "    where: START and optional END define the clients source IP\n");
+	fprintf(out, "  Set loglevel for a logging type:\n");
+	fprintf(out, "    stroke loglevel TYPE LEVEL\n");
+	fprintf(out, "    where: TYPE is any|dmn|mgr|ike|chd|job|cfg|knl|net|asn|enc|tnc|imc|imv|pts|tls|esp|lib\n");
+	fprintf(out, "           LEVEL is -1|0|1|2|3|4\n");
+	fprintf(out, "  Show connection status:\n");
+	fprintf(out, "    stroke status\n");
+	fprintf(out, "  Show extended status information:\n");
+	fprintf(out, "    stroke statusall\n");
+	fprintf(out, "  Show extended status information without blocking:\n");
+	fprintf(out, "    stroke statusall-nb\n");
+	fprintf(out, "  Show list of authority and attribute certificates:\n");
+	fprintf(out, "    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
+	fprintf(out, "  Show list of end entity certificates, ca info records  and crls:\n");
+	fprintf(out, "    stroke listcerts|listcainfos|listcrls|listall\n");
+	fprintf(out, "  Show list of supported algorithms:\n");
+	fprintf(out, "    stroke listalgs\n");
+	fprintf(out, "  Reload authority and attribute certificates:\n");
+	fprintf(out, "    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
+	fprintf(out, "  Reload secrets and crls:\n");
+	fprintf(out, "    stroke rereadsecrets|rereadcrls|rereadall\n");
+	fprintf(out, "  Purge ocsp cache entries:\n");
+	fprintf(out, "    stroke purgeocsp\n");
+	fprintf(out, "  Purge CRL cache entries:\n");
+	fprintf(out, "    stroke purgecrls\n");
+	fprintf(out, "  Purge X509 cache entries:\n");
+	fprintf(out, "    stroke purgecerts\n");
+	fprintf(out, "  Purge IKE_SAs without a CHILD_SA:\n");
+	fprintf(out, "    stroke purgeike\n");
+	fprintf(out, "  Export credentials to the console:\n");
+	fprintf(out, "    stroke exportx509 DN\n");
+	fprintf(out, "    stroke exportconncert connname\n");
+	fprintf(out, "    stroke exportconnchain connname\n");
+	fprintf(out, "  Show current memory usage:\n");
+	fprintf(out, "    stroke memusage\n");
+	fprintf(out, "  Show leases of a pool:\n");
+	fprintf(out, "    stroke leases [POOL [ADDRESS]]\n");
+	fprintf(out, "  Set username and password for a connection:\n");
+	fprintf(out, "    stroke user-creds NAME USERNAME [PASSWORD]\n");
+	fprintf(out, "    where: NAME is a connection name added with \"stroke add\"\n");
+	fprintf(out, "           USERNAME is the username\n");
+	fprintf(out, "           PASSWORD is the optional password, you'll be asked to enter it if not given\n");
+	fprintf(out, "  Show IKE counters:\n");
+	fprintf(out, "    stroke listcounters [connection-name]\n");
+
 	if (error)
 	{
-		fprintf(stderr, "%s\n", error);
+		fprintf(out, "\nError: %s\n", error);
+		return -1;
 	}
-	exit(-1);
-}
-
-static void exit_usage(char *error)
-{
-	printf("Usage:\n");
-	printf("  Add a connection:\n");
-	printf("    stroke add NAME MY_ID OTHER_ID MY_ADDR OTHER_ADDR\\\n");
-	printf("           MY_NET OTHER_NET\n");
-	printf("    where: ID is any IKEv2 ID \n");
-	printf("           ADDR is a IPv4 address\n");
-	printf("           NET is a IPv4 subnet in CIDR notation\n");
-	printf("  Delete a connection:\n");
-	printf("    stroke delete NAME\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Initiate a connection:\n");
-	printf("    stroke up NAME\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Initiate a connection without blocking:\n");
-	printf("    stroke up-nb NAME\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Terminate a connection:\n");
-	printf("    stroke down NAME\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Terminate a connection without blocking:\n");
-	printf("    stroke down-nb NAME\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Terminate a connection by remote srcip:\n");
-	printf("    stroke down-srcip START [END]\n");
-	printf("    where: START and optional END define the clients source IP\n");
-	printf("  Set loglevel for a logging type:\n");
-	printf("    stroke loglevel TYPE LEVEL\n");
-	printf("    where: TYPE is any|dmn|mgr|ike|chd|job|cfg|knl|net|asn|enc|tnc|imc|imv|pts|tls|esp|lib\n");
-	printf("           LEVEL is -1|0|1|2|3|4\n");
-	printf("  Show connection status:\n");
-	printf("    stroke status\n");
-	printf("  Show extended status information:\n");
-	printf("    stroke statusall\n");
-	printf("  Show extended status information without blocking:\n");
-	printf("    stroke statusall-nb\n");
-	printf("  Show list of authority and attribute certificates:\n");
-	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
-	printf("  Show list of end entity certificates, ca info records  and crls:\n");
-	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
-	printf("  Show list of supported algorithms:\n");
-	printf("    stroke listalgs\n");
-	printf("  Reload authority and attribute certificates:\n");
-	printf("    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
-	printf("  Reload secrets and crls:\n");
-	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
-	printf("  Purge ocsp cache entries:\n");
-	printf("    stroke purgeocsp\n");
-	printf("  Purge CRL cache entries:\n");
-	printf("    stroke purgecrls\n");
-	printf("  Purge X509 cache entries:\n");
-	printf("    stroke purgecerts\n");
-	printf("  Purge IKE_SAs without a CHILD_SA:\n");
-	printf("    stroke purgeike\n");
-	printf("  Export credentials to the console:\n");
-	printf("    stroke exportx509 DN\n");
-	printf("    stroke exportconncert connname\n");
-	printf("    stroke exportconnchain connname\n");
-	printf("  Show current memory usage:\n");
-	printf("    stroke memusage\n");
-	printf("  Show leases of a pool:\n");
-	printf("    stroke leases [POOL [ADDRESS]]\n");
-	printf("  Set username and password for a connection:\n");
-	printf("    stroke user-creds NAME USERNAME [PASSWORD]\n");
-	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("           USERNAME is the username\n");
-	printf("           PASSWORD is the optional password, you'll be asked to enter it if not given\n");
-	printf("  Show IKE counters:\n");
-	printf("    stroke listcounters [connection-name]\n");
-	exit_error(error);
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
 	const stroke_token_t *token;
+	char *cmd;
 	int res = 0;
 
 	library_init(NULL, "stroke");
 	atexit(library_deinit);
 
-	if (argc < 2)
+	while (true)
 	{
-		exit_usage(NULL);
+		struct option long_opts[] = {
+			{"help",		no_argument,		NULL,	'h' },
+			{"daemon",		required_argument,	NULL,	'd' },
+			{0,0,0,0},
+		};
+		switch (getopt_long(argc, argv, "hd:", long_opts, NULL))
+		{
+			case EOF:
+				break;
+			case 'h':
+				return usage(NULL);
+			case 'd':
+				daemon_name = optarg;
+				continue;
+			default:
+				return usage("invalid option");
+		}
+		break;
 	}
 
-	token = in_word_set(argv[1], strlen(argv[1]));
+	if (optind == argc)
+	{
+		return usage("command missing");
+	}
 
+	cmd = argv[optind++];
+	token = in_word_set(cmd, strlen(cmd));
 	if (token == NULL)
 	{
-		exit_usage("unknown keyword");
+		return usage("unknown command");
 	}
+
+	/* make argv/argc only cover positional arguments */
+	argv = &argv[optind];
+	argc = argc - optind;
 
 	switch (token->kw)
 	{
 		case STROKE_ADD:
-			if (argc < 9)
+			if (argc < 7)
 			{
-				exit_usage("\"add\" needs more parameters...");
+				return usage("\"add\" needs more arguments...");
 			}
-			res = add_connection(argv[2],
-								 argv[3], argv[4],
-								 argv[5], argv[6],
-								 argv[7], argv[8]);
+			res = add_connection(argv[0], argv[1], argv[2], argv[3], argv[4],
+								 argv[5], argv[6]);
 			break;
 		case STROKE_DELETE:
 		case STROKE_DEL:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"delete\" needs a connection name");
+				return usage("\"delete\" needs a connection name");
 			}
-			res = del_connection(argv[2]);
+			res = del_connection(argv[0]);
 			break;
 		case STROKE_UP_NOBLK:
 			output_verbosity = -1;
 			/* fall-through */
 		case STROKE_UP:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"up\" needs a connection name");
+				return usage("\"up\" needs a connection name");
 			}
-			res = initiate_connection(argv[2]);
+			res = initiate_connection(argv[0]);
 			break;
 		case STROKE_DOWN_NOBLK:
 			output_verbosity = -1;
 			/* fall-through */
 		case STROKE_DOWN:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"down\" needs a connection name");
+				return usage("\"down\" needs a connection name");
 			}
-			res = terminate_connection(argv[2]);
+			res = terminate_connection(argv[0]);
 			break;
 		case STROKE_DOWN_SRCIP:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"down-srcip\" needs start and optional end address");
+				return usage("\"down-srcip\" needs start and optional end address");
 			}
-			res = terminate_connection_srcip(argv[2], argc > 3 ? argv[3] : NULL);
+			res = terminate_connection_srcip(argv[0], argc > 1 ? argv[1] : NULL);
 			break;
 		case STROKE_REKEY:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"rekey\" needs a connection name");
+				return usage("\"rekey\" needs a connection name");
 			}
-			res = rekey_connection(argv[2]);
+			res = rekey_connection(argv[0]);
 			break;
 		case STROKE_ROUTE:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"route\" needs a connection name");
+				return usage("\"route\" needs a connection name");
 			}
-			res = route_connection(argv[2]);
+			res = route_connection(argv[0]);
 			break;
 		case STROKE_UNROUTE:
-			if (argc < 3)
+			if (argc < 1)
 			{
-				exit_usage("\"unroute\" needs a connection name");
+				return usage("\"unroute\" needs a connection name");
 			}
-			res = unroute_connection(argv[2]);
+			res = unroute_connection(argv[0]);
 			break;
 		case STROKE_LOGLEVEL:
-			if (argc < 4)
+			if (argc < 2)
 			{
-				exit_usage("\"logtype\" needs more parameters...");
+				return usage("\"logtype\" needs more parameters...");
 			}
-			res = set_loglevel(argv[2], atoi(argv[3]));
+			res = set_loglevel(argv[0], atoi(argv[1]));
 			break;
 		case STROKE_STATUS:
 		case STROKE_STATUSALL:
 		case STROKE_STATUSALL_NOBLK:
-			res = show_status(token->kw, argc > 2 ? argv[2] : NULL);
+			res = show_status(token->kw, argc ? argv[0] : NULL);
 			break;
 		case STROKE_LIST_PUBKEYS:
 		case STROKE_LIST_CERTS:
@@ -567,7 +597,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_ALGS:
 		case STROKE_LIST_PLUGINS:
 		case STROKE_LIST_ALL:
-			res = list(token->kw, argc > 2 && streq(argv[2], "--utc"));
+			res = list(token->kw, argc && streq(argv[0], "--utc"));
 			break;
 		case STROKE_REREAD_SECRETS:
 		case STROKE_REREAD_CACERTS:
@@ -587,34 +617,34 @@ int main(int argc, char *argv[])
 		case STROKE_EXPORT_X509:
 		case STROKE_EXPORT_CONN_CERT:
 		case STROKE_EXPORT_CONN_CHAIN:
-			if (argc != 3)
+			if (argc < 1)
 			{
-				exit_usage("\"export\" needs a name");
+				return usage("\"export\" needs a name");
 			}
-			res = export(token->kw, argv[2]);
+			res = export(token->kw, argv[0]);
 			break;
 		case STROKE_LEASES:
-			res = leases(token->kw, argc > 2 ? argv[2] : NULL,
-						 argc > 3 ? argv[3] : NULL);
+			res = leases(token->kw, argc ? argv[0] : NULL,
+						 argc > 1 ? argv[1] : NULL);
 			break;
 		case STROKE_MEMUSAGE:
 			res = memusage();
 			break;
 		case STROKE_USER_CREDS:
-			if (argc < 4)
+			if (argc < 2)
 			{
-				exit_usage("\"user-creds\" needs a connection name, "
+				return usage("\"user-creds\" needs a connection name, "
 						   "username and optionally a password");
 			}
-			res = user_credentials(argv[2], argv[3], argc > 4 ? argv[4] : NULL);
+			res = user_credentials(argv[0], argv[1], argc > 2 ? argv[2] : NULL);
 			break;
 		case STROKE_COUNTERS:
 		case STROKE_COUNTERS_RESET:
 			res = counters(token->kw == STROKE_COUNTERS_RESET,
-						   argc > 2 ? argv[2] : NULL);
+						   argc ? argv[0] : NULL);
 			break;
 		default:
-			exit_usage(NULL);
+			return usage(NULL);
 	}
 	return res;
 }
