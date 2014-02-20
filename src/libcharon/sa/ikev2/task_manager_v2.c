@@ -778,6 +778,15 @@ static status_t process_request(private_task_manager_t *this,
 			case CREATE_CHILD_SA:
 			{	/* FIXME: we should prevent this on mediation connections */
 				bool notify_found = FALSE, ts_found = FALSE;
+
+				if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
+					this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+				{
+					DBG1(DBG_IKE, "received CREATE_CHILD_SA request for "
+						 "unestablished IKE_SA, rejected");
+					return FAILED;
+				}
+
 				enumerator = message->create_payload_enumerator(message);
 				while (enumerator->enumerate(enumerator, &payload))
 				{
