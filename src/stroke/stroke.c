@@ -1,5 +1,5 @@
-/* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2007-2012 Tobias Brunner
+/*
+ * Copyright (C) 2007-2014 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,15 +15,8 @@
  */
 
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <unistd.h>
-#include <dirent.h>
-#include <errno.h>
 #include <stdio.h>
-#include <stddef.h>
 #include <string.h>
 
 #include <library.h>
@@ -56,48 +49,36 @@ static char* push_string(stroke_msg_t *msg, char *string)
 
 static int send_stroke_msg (stroke_msg_t *msg)
 {
-	struct sockaddr_un ctl_addr;
-	int sock, byte_count;
-	char buffer[512], *pass;
-
-	ctl_addr.sun_family = AF_UNIX;
-	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
+	stream_t *stream;
+	char *uri, buffer[512], *pass;
+	int count;
 
 	msg->output_verbosity = output_verbosity;
 
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sock < 0)
+	uri = lib->settings->get_str(lib->settings, "charon.plugins.stroke.socket",
+								 "unix://" STROKE_SOCKET);
+	stream = lib->streams->connect(lib->streams, uri);
+	if (!stream)
 	{
-		fprintf(stderr, "Opening unix socket %s: %s\n", STROKE_SOCKET, strerror(errno));
-		return -1;
-	}
-	if (connect(sock, (struct sockaddr *)&ctl_addr,
-				offsetof(struct sockaddr_un, sun_path) + strlen(ctl_addr.sun_path)) < 0)
-	{
-		fprintf(stderr, "Connect to socket failed: %s\n", strerror(errno));
-		close(sock);
+		fprintf(stderr, "failed to connect to stroke socket '%s'\n", uri);
 		return -1;
 	}
 
-	/* send message */
-	if (write(sock, msg, msg->length) != msg->length)
+	if (!stream->write_all(stream, msg, msg->length))
 	{
-		fprintf(stderr, "writing to socket failed: %s\n", strerror(errno));
-		close(sock);
+		fprintf(stderr, "sending stroke message failed\n");
+		stream->destroy(stream);
 		return -1;
 	}
 
-	while ((byte_count = read(sock, buffer, sizeof(buffer)-1)) > 0)
+	while ((count = stream->read(stream, buffer, sizeof(buffer)-1, TRUE)) > 0)
 	{
-		buffer[byte_count] = '\0';
+		buffer[count] = '\0';
 
 		/* we prompt if we receive a magic keyword */
-		if ((byte_count >= 12 &&
-			 streq(buffer + byte_count - 12, "Passphrase:\n")) ||
-			(byte_count >= 10 &&
-			 streq(buffer + byte_count - 10, "Password:\n")) ||
-			(byte_count >= 5 &&
-			 streq(buffer + byte_count - 5, "PIN:\n")))
+		if ((count >= 12 && streq(buffer + count - 12, "Passphrase:\n")) ||
+			(count >= 10 && streq(buffer + count - 10, "Password:\n")) ||
+			(count >=  5 && streq(buffer + count -  5, "PIN:\n")))
 		{
 			/* remove trailing newline */
 			pass = strrchr(buffer, '\n');
@@ -112,8 +93,8 @@ static int send_stroke_msg (stroke_msg_t *msg)
 #endif
 			if (pass)
 			{
-				ignore_result(write(sock, pass, strlen(pass)));
-				ignore_result(write(sock, "\n", 1));
+				stream->write_all(stream, pass, strlen(pass));
+				stream->write_all(stream, "\n", 1);
 			}
 		}
 		else
@@ -121,12 +102,11 @@ static int send_stroke_msg (stroke_msg_t *msg)
 			printf("%s", buffer);
 		}
 	}
-	if (byte_count < 0)
+	if (count < 0)
 	{
-		fprintf(stderr, "reading from socket failed: %s\n", strerror(errno));
+		fprintf(stderr, "reading stroke response failed\n");
 	}
-
-	close(sock);
+	stream->destroy(stream);
 	return 0;
 }
 
