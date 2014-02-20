@@ -29,7 +29,7 @@
 /**
  * Registered commands.
  */
-command_t cmds[MAX_COMMANDS];
+static command_t cmds[MAX_COMMANDS];
 
 /**
  * active command.
@@ -274,4 +274,3 @@ int command_dispatch(int c, char *v[])
 	}
 	return command_usage(c > 1 ? "invalid operation" : NULL);
 }
-
