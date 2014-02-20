@@ -29,7 +29,11 @@ typedef enum vici_operation_t vici_operation_t;
 /**
  * Default socket URI of vici service
  */
-#define VICI_DEFAULT_URI "unix://" IPSEC_PIDDIR "/charon.vici"
+#ifdef WIN32
+# define VICI_DEFAULT_URI "tcp://127.0.0.1:4502"
+#else
+# define VICI_DEFAULT_URI "unix://" IPSEC_PIDDIR "/charon.vici"
+#endif
 
 /**
  * Kind of vici operation

@@ -61,11 +61,13 @@ static struct {
 	{ "tcp://127.0.0.1:6543",  2 },
 	{ "tcp://127.0.0.1:6543",  3 },
 	{ "tcp://127.0.0.1:6543",  7 },
+#ifndef WIN32
 	{ "unix:///tmp/strongswan-tests-vici-socket", ~0 },
 	{ "unix:///tmp/strongswan-tests-vici-socket",  1 },
 	{ "unix:///tmp/strongswan-tests-vici-socket",  2 },
 	{ "unix:///tmp/strongswan-tests-vici-socket",  3 },
 	{ "unix:///tmp/strongswan-tests-vici-socket",  7 },
+#endif /* !WIN32 */
 };
 
 START_TEST(test_echo)

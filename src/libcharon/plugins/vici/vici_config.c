@@ -24,7 +24,6 @@
 #include <collections/linked_list.h>
 
 #include <stdio.h>
-#include <netdb.h>
 
 /**
  * Magic value for an undefined lifetime

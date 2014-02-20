@@ -43,7 +43,7 @@ typedef struct {
 typedef enum {
 	WAIT_IDLE = 0,
 	WAIT_SUCCESS,
-	WAIT_FAILED,
+	WAIT_FAILURE,
 	WAIT_READ_ERROR,
 } wait_state_t;
 
@@ -242,7 +242,7 @@ CALLBACK(on_read, bool,
 			return wait_result(conn, WAIT_SUCCESS);
 		case VICI_CMD_UNKNOWN:
 		case VICI_EVENT_UNKNOWN:
-			return wait_result(conn, WAIT_FAILED);
+			return wait_result(conn, WAIT_FAILURE);
 		case VICI_CMD_REQUEST:
 		case VICI_EVENT_REGISTER:
 		case VICI_EVENT_UNREGISTER:
@@ -403,7 +403,7 @@ vici_res_t* vici_submit(vici_req_t *req, vici_conn_t *conn)
 		case WAIT_READ_ERROR:
 			errno = conn->error;
 			break;
-		case WAIT_FAILED:
+		case WAIT_FAILURE:
 		default:
 			errno = ENOENT;
 			break;
@@ -712,7 +712,7 @@ int vici_register(vici_conn_t *conn, char *name, vici_event_cb_t cb, void *user)
 		case WAIT_READ_ERROR:
 			errno = conn->error;
 			break;
-		case WAIT_FAILED:
+		case WAIT_FAILURE:
 		default:
 			errno = ENOENT;
 			break;

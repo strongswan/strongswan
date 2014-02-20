@@ -20,7 +20,11 @@
 
 #include <unistd.h>
 
-#define URI "unix:///tmp/strongswan-vici-request-test"
+#ifdef WIN32
+# define URI "tcp://127.0.0.1:6543"
+#else /* !WIN32 */
+# define URI "unix:///tmp/strongswan-vici-request-test"
+#endif /* !WIN32 */
 
 static void encode_section(vici_req_t *req)
 {
