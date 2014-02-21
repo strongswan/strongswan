@@ -1302,15 +1302,15 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 	}
 	else
 	{	/* base relative paths to the directory of the current file */
-		char *dir = strdup(file);
-		dir = dirname(dir);
+		char *path = strdup(file);
+		char *dir = dirname(path);
 		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
 		{
 			DBG1(DBG_LIB, "include pattern too long, ignored");
-			free(dir);
+			free(path);
 			return TRUE;
 		}
-		free(dir);
+		free(path);
 	}
 #ifdef HAVE_GLOB_H
 	{
