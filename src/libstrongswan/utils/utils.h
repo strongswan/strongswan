@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include "enum.h"
+#include "utils/strerror.h"
 
 /**
  * strongSwan program return codes
@@ -493,23 +494,6 @@ char *strreplace(const char *str, const char *search, const char *replace);
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
-
-/**
- * Thread-safe wrapper around strerror and strerror_r.
- *
- * This is required because the first is not thread-safe (on some platforms)
- * and the second uses two different signatures (POSIX/GNU) and is impractical
- * to use anyway.
- *
- * @param errnum	error code (i.e. errno)
- * @return			error message
- */
-const char *safe_strerror(int errnum);
-
-/**
- * Replace usages of strerror(3) with thread-safe variant.
- */
-#define strerror(errnum) safe_strerror(errnum)
 
 #ifndef HAVE_CLOSEFROM
 /**
