@@ -1130,7 +1130,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		}
 		if (line.len > strlen("include ") && strpfx(line.ptr, "include "))
 		{
-			char **expanded, *dir, pattern[PATH_MAX];
+			char **expanded, *path, *dir, pattern[PATH_MAX];
 			u_char *pos;
 
 			if (level > MAX_SECRETS_RECURSION)
@@ -1158,18 +1158,18 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			}
 			else
 			{	/* use directory of current file if relative */
-				dir = strdup(file);
-				dir = dirname(dir);
+				path = strdup(file);
+				dir = dirname(path);
 
 				if (line.len + 1 + strlen(dir) + 1 > sizeof(pattern))
 				{
 					DBG1(DBG_CFG, "include pattern too long, ignored");
-					free(dir);
+					free(path);
 					continue;
 				}
 				snprintf(pattern, sizeof(pattern), "%s/%.*s",
 						 dir, (int)line.len, line.ptr);
-				free(dir);
+				free(path);
 			}
 #ifdef HAVE_GLOB_H
 			{
