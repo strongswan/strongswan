@@ -468,6 +468,57 @@ START_TEST(test_strreplace)
 END_TEST
 
 /*******************************************************************************
+ * path_dirname/basename
+ */
+
+static struct {
+	char *path;
+	char *dir;
+	char *base;
+} path_data[] = {
+	{NULL, ".", "."},
+	{"", ".", "."},
+	{".", ".", "."},
+	{"..", ".", ".."},
+	{"/", "/", "/"},
+	{"//", "/", "/"},
+	{"foo", ".", "foo"},
+	{"f/", ".", "f"},
+	{"foo/", ".", "foo"},
+	{"foo//", ".", "foo"},
+	{"/f", "/", "f"},
+	{"/f/", "/", "f"},
+	{"/foo", "/", "foo"},
+	{"/foo/", "/", "foo"},
+	{"//foo/", "/", "foo"},
+	{"foo/bar", "foo", "bar"},
+	{"foo//bar", "foo", "bar"},
+	{"/foo/bar", "/foo", "bar"},
+	{"/foo/bar/", "/foo", "bar"},
+	{"/foo/bar/baz", "/foo/bar", "baz"},
+};
+
+START_TEST(test_path_dirname)
+{
+	char *dir;
+
+	dir = path_dirname(path_data[_i].path);
+	ck_assert_str_eq(path_data[_i].dir, dir);
+	free(dir);
+}
+END_TEST
+
+START_TEST(test_path_basename)
+{
+	char *base;
+
+	base = path_basename(path_data[_i].path);
+	ck_assert_str_eq(path_data[_i].base, base);
+	free(base);
+}
+END_TEST
+
+/*******************************************************************************
  * time_printf_hook
  */
 
@@ -628,6 +679,11 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("strreplace");
 	tcase_add_loop_test(tc, test_strreplace, 0, countof(strreplace_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("path_dirname/basename");
+	tcase_add_loop_test(tc, test_path_dirname, 0, countof(path_data));
+	tcase_add_loop_test(tc, test_path_basename, 0, countof(path_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hooks");

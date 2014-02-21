@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,8 +14,7 @@
  * for more details.
  */
 
-#include "utils.h"
-
+#define _GNU_SOURCE /* for memrchr */
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +25,8 @@
 #include <dirent.h>
 #include <time.h>
 #include <pthread.h>
+
+#include "utils.h"
 
 #include "collections/enumerator.h"
 #include "utils/debug.h"
@@ -191,6 +192,63 @@ char* strreplace(const char *str, const char *search, const char *replace)
 	while ((found = strstr(pos, search)));
 	strcpy(dst, pos);
 	return res;
+}
+
+/**
+ * Described in header.
+ */
+char* path_dirname(const char *path)
+{
+	char *pos;
+
+	pos = path ? strrchr(path, '/') : NULL;
+
+	if (pos && !pos[1])
+	{	/* if path ends with slashes we have to look beyond them */
+		while (pos > path && *pos == '/')
+		{	/* skip trailing slashes */
+			pos--;
+		}
+		pos = memrchr(path, '/', pos - path + 1);
+	}
+	if (!pos)
+	{
+		return strdup(".");
+	}
+	while (pos > path && *pos == '/')
+	{	/* skip superfluous slashes */
+		pos--;
+	}
+	return strndup(path, pos - path + 1);
+}
+
+/**
+ * Described in header.
+ */
+char* path_basename(const char *path)
+{
+	char *pos, *trail = NULL;
+
+	if (!path || !*path)
+	{
+		return strdup(".");
+	}
+	pos = strrchr(path, '/');
+	if (pos && !pos[1])
+	{	/* if path ends with slashes we have to look beyond them */
+		while (pos > path && *pos == '/')
+		{	/* skip trailing slashes */
+			pos--;
+		}
+		if (pos == path && *pos == '/')
+		{	/* contains only slashes */
+			return strdup("/");
+		}
+		trail = pos + 1;
+		pos = memrchr(path, '/', trail - path);
+	}
+	pos = pos ? pos + 1 : (char*)path;
+	return trail ? strndup(pos, trail - pos) : strdup(pos);
 }
 
 /**
