@@ -188,7 +188,7 @@ static bool policy_start(database_t *db, int session_id)
 	e->destroy(e);
 
 	/* if a device ID with a creation date exists, get all group memberships */
-	if (device_id & created)
+	if (device_id && created)
 	{
 		e = db->query(db,
 				"SELECT group_id FROM groups_members WHERE device_id = ?",
