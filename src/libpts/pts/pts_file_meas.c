@@ -341,9 +341,10 @@ pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
 			success = FALSE;
 			goto end;
 		}
-		filename = use_rel_name ? basename(pathname) : pathname;
+		filename = use_rel_name ? path_basename(pathname) : strdup(pathname);
 		DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
 		add(this, filename, measurement);
+		free(filename);
 	}
 
 end:

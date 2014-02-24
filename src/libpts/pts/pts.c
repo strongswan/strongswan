@@ -627,7 +627,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 			metadata->destroy(metadata);
 			return NULL;
 		}
-		entry->filename = strdup(basename(pathname));
+		entry->filename = path_basename(pathname);
 		metadata->add(metadata, entry);
 	}
 

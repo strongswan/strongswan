@@ -249,7 +249,7 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 	enumerator_t *e;
 	chunk_t hash;
 	status_t status = NOT_FOUND;
-	char *path, *dir, *file;
+	char *dir, *file;
 
 	if (strlen(filename) < 1)
 	{
@@ -257,9 +257,8 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 	}
 
 	/* separate filename into directory and basename components */
-	path = strdup(filename);
-	dir = dirname(path);
-	file = basename(filename);
+	dir = path_dirname(filename);
+	file = path_basename(filename);
 
 	if (*dir == '.')
 	{	/* relative pathname */
@@ -281,7 +280,8 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 				DB_TEXT, dir, DB_INT);
 		if (!e)
 		{
-			free(path);
+			free(file);
+			free(dir);
 			return FAILED;
 		}
 		dir_found = e->enumerate(e, &did);
@@ -289,7 +289,8 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 
 		if (!dir_found)
 		{
-			free(path);
+			free(file);
+			free(dir);
 			return NOT_FOUND;
 		}
 
@@ -301,7 +302,8 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 				DB_TEXT, product, DB_INT, did, DB_TEXT, file, DB_INT, algo,
 				DB_BLOB);
 	}
-	free(path);
+	free(file);
+	free(dir);
 
 	if (!e)
 	{
