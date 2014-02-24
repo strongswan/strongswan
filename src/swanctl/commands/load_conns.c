@@ -214,6 +214,10 @@ static bool load_conn(vici_conn_t *conn, settings_t *cfg,
 				section, vici_find_str(res, "", "errmsg"));
 		ret = FALSE;
 	}
+	else
+	{
+		printf("loaded connection '%s'\n", section);
+	}
 	vici_free_res(res);
 	return ret;
 }

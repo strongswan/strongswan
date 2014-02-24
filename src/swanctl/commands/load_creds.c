@@ -55,6 +55,10 @@ static bool load_cert(vici_conn_t *conn, bool raw, char *dir,
 				dir, vici_find_str(res, "", "errmsg"));
 		ret = FALSE;
 	}
+	else
+	{
+		printf("loaded %s certificate '%s'\n", type, dir);
+	}
 	vici_free_res(res);
 	return ret;
 }
@@ -123,6 +127,10 @@ static bool load_key(vici_conn_t *conn, bool raw, char *dir,
 		fprintf(stderr, "loading '%s' failed: %s\n",
 				dir, vici_find_str(res, "", "errmsg"));
 		ret = FALSE;
+	}
+	else
+	{
+		printf("loaded %s key '%s'\n", type, dir);
 	}
 	vici_free_res(res);
 	return ret;
@@ -274,6 +282,7 @@ static bool load_secret(vici_conn_t *conn, char *type, char *owners,
 	vici_req_t *req;
 	vici_res_t *res;
 	chunk_t data;
+	char *owner;
 	bool ret = TRUE;
 
 	req = vici_begin("load-shared");
@@ -281,9 +290,9 @@ static bool load_secret(vici_conn_t *conn, char *type, char *owners,
 	vici_add_key_valuef(req, "type", "%s", type);
 	vici_begin_list(req, "owners");
 	enumerator = enumerator_create_token(owners, " ", " ");
-	while (enumerator->enumerate(enumerator, &owners))
+	while (enumerator->enumerate(enumerator, &owner))
 	{
-		vici_add_list_itemf(req, "%s", owners);
+		vici_add_list_itemf(req, "%s", owner);
 	}
 	enumerator->destroy(enumerator);
 	vici_end_list(req);
@@ -318,6 +327,17 @@ static bool load_secret(vici_conn_t *conn, char *type, char *owners,
 		fprintf(stderr, "loading shared secret failed: %s\n",
 				vici_find_str(res, "", "errmsg"));
 		ret = FALSE;
+	}
+	else
+	{
+		printf("loaded %s secret for: ", type);
+		enumerator = enumerator_create_token(owners, " ", " ");
+		while (enumerator->enumerate(enumerator, &owner))
+		{
+			printf("'%s' ", owner);
+		}
+		enumerator->destroy(enumerator);
+		printf("\n");
 	}
 	vici_free_res(res);
 	return ret;
