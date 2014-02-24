@@ -684,6 +684,106 @@ CALLBACK(list_conns, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Do we have a private key for given certificate
+ */
+static bool has_privkey(private_vici_query_t *this, certificate_t *cert)
+{
+	private_key_t *private;
+	public_key_t *public;
+	identification_t *keyid;
+	chunk_t chunk;
+	bool found = FALSE;
+
+	public = cert->get_public_key(cert);
+	if (public)
+	{
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
+		{
+			keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
+			private = lib->credmgr->get_private(lib->credmgr,
+								public->get_type(public), keyid, NULL);
+			if (private)
+			{
+				found = TRUE;
+				private->destroy(private);
+			}
+			keyid->destroy(keyid);
+		}
+		public->destroy(public);
+	}
+	return found;
+}
+
+CALLBACK(list_certs, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	enumerator_t *enumerator, *added;
+	linked_list_t *list;
+	certificate_t *cert, *current;
+	chunk_t encoding;
+	identification_t *subject = NULL;
+	certificate_type_t type;
+	vici_builder_t *b;
+	bool found;
+	char *str;
+
+	str = request->get_str(request, "ANY", "type");
+	type = enum_from_name(certificate_type_names, str);
+	if (type == -1)
+	{
+		b = vici_builder_create();
+		return b->finalize(b);
+	}
+	str = request->get_str(request, NULL, "subject");
+	if (str)
+	{
+		subject = identification_create_from_string(str);
+	}
+
+	list = linked_list_create();
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+												type, KEY_ANY, subject, FALSE);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		found = FALSE;
+		added = list->create_enumerator(list);
+		while (added->enumerate(added, &current))
+		{
+			if (current->equals(current, cert))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		added->destroy(added);
+
+		if (!found && cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		{
+			b = vici_builder_create();
+			b->add_kv(b, "type", "%N",
+					  certificate_type_names, cert->get_type(cert));
+			if (has_privkey(this, cert))
+			{
+				b->add_kv(b, "has_privkey", "yes");
+			}
+			b->add(b, VICI_KEY_VALUE, "data", encoding);
+			free(encoding.ptr);
+
+			this->dispatcher->raise_event(this->dispatcher, "list-cert", id,
+										  b->finalize(b));
+			list->insert_last(list, cert->get_ref(cert));
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	list->destroy_offset(list, offsetof(certificate_t, destroy));
+	DESTROY_IF(subject);
+
+	b = vici_builder_create();
+	return b->finalize(b);
+}
+
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -720,9 +820,11 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "list-sa", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-policy", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-conn", reg);
+	this->dispatcher->manage_event(this->dispatcher, "list-cert", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
+	manage_command(this, "list-certs", list_certs, reg);
 	manage_command(this, "version", version, reg);
 }
 
