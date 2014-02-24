@@ -266,19 +266,20 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'F':
 			{
-				char *path = strdup(optarg);
-				char *dir = dirname(path);
-				char *file = basename(optarg);
+				char *dir = path_dirname(optarg);
+				char *file = path_basename(optarg);
 
 				if (*dir != '.')
 				{
 					if (!attest->set_directory(attest, dir, op == OP_ADD))
 					{
-						free(path);
+						free(file);
+						free(dir);
 						exit(EXIT_FAILURE);
 					}
 				}
-				free(path);
+				free(file);
+				free(dir);
 				if (!attest->set_file(attest, file, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);

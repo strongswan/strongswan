@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,8 +14,7 @@
  * for more details.
  */
 
-#include "utils.h"
-
+#define _GNU_SOURCE /* for memrchr */
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +25,8 @@
 #include <dirent.h>
 #include <time.h>
 #include <pthread.h>
+
+#include "utils.h"
 
 #include "collections/enumerator.h"
 #include "utils/debug.h"
@@ -196,6 +197,63 @@ char* strreplace(const char *str, const char *search, const char *replace)
 /**
  * Described in header.
  */
+char* path_dirname(const char *path)
+{
+	char *pos;
+
+	pos = path ? strrchr(path, '/') : NULL;
+
+	if (pos && !pos[1])
+	{	/* if path ends with slashes we have to look beyond them */
+		while (pos > path && *pos == '/')
+		{	/* skip trailing slashes */
+			pos--;
+		}
+		pos = memrchr(path, '/', pos - path + 1);
+	}
+	if (!pos)
+	{
+		return strdup(".");
+	}
+	while (pos > path && *pos == '/')
+	{	/* skip superfluous slashes */
+		pos--;
+	}
+	return strndup(path, pos - path + 1);
+}
+
+/**
+ * Described in header.
+ */
+char* path_basename(const char *path)
+{
+	char *pos, *trail = NULL;
+
+	if (!path || !*path)
+	{
+		return strdup(".");
+	}
+	pos = strrchr(path, '/');
+	if (pos && !pos[1])
+	{	/* if path ends with slashes we have to look beyond them */
+		while (pos > path && *pos == '/')
+		{	/* skip trailing slashes */
+			pos--;
+		}
+		if (pos == path && *pos == '/')
+		{	/* contains only slashes */
+			return strdup("/");
+		}
+		trail = pos + 1;
+		pos = memrchr(path, '/', trail - path);
+	}
+	pos = pos ? pos + 1 : (char*)path;
+	return trail ? strndup(pos, trail - pos) : strdup(pos);
+}
+
+/**
+ * Described in header.
+ */
 bool mkdir_p(const char *path, mode_t mode)
 {
 	int len;
@@ -302,84 +360,6 @@ char* tty_escape_get(int fd, tty_escape_t escape)
 	}
 	return "";
 }
-
-/**
- * The size of the thread-specific error buffer
- */
-#define STRERROR_BUF_LEN 256
-
-/**
- * Key to store thread-specific error buffer
- */
-static pthread_key_t strerror_buf_key;
-
-/**
- * Only initialize the key above once
- */
-static pthread_once_t strerror_buf_key_once = PTHREAD_ONCE_INIT;
-
-/**
- * Create the key used for the thread-specific error buffer
- */
-static void create_strerror_buf_key()
-{
-	pthread_key_create(&strerror_buf_key, free);
-}
-
-/**
- * Retrieve the error buffer assigned to the current thread (or create it)
- */
-static inline char *get_strerror_buf()
-{
-	char *buf;
-
-	pthread_once(&strerror_buf_key_once, create_strerror_buf_key);
-	buf = pthread_getspecific(strerror_buf_key);
-	if (!buf)
-	{
-		buf = malloc(STRERROR_BUF_LEN);
-		pthread_setspecific(strerror_buf_key, buf);
-	}
-	return buf;
-}
-
-#ifdef HAVE_STRERROR_R
-/*
- * Described in header.
- */
-const char *safe_strerror(int errnum)
-{
-	char *buf = get_strerror_buf(), *msg;
-
-#ifdef STRERROR_R_CHAR_P
-	/* char* version which may or may not return the original buffer */
-	msg = strerror_r(errnum, buf, STRERROR_BUF_LEN);
-#else
-	/* int version returns 0 on success */
-	msg = strerror_r(errnum, buf, STRERROR_BUF_LEN) ? "Unknown error" : buf;
-#endif
-	return msg;
-}
-#else /* HAVE_STRERROR_R */
-/* we actually wan't to call strerror(3) below */
-#undef strerror
-/*
- * Described in header.
- */
-const char *safe_strerror(int errnum)
-{
-	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	char *buf = get_strerror_buf();
-
-	/* use a mutex to ensure calling strerror(3) is thread-safe */
-	pthread_mutex_lock(&mutex);
-	strncpy(buf, strerror(errnum), STRERROR_BUF_LEN);
-	pthread_mutex_unlock(&mutex);
-	buf[STRERROR_BUF_LEN - 1] = '\0';
-	return buf;
-}
-#endif /* HAVE_STRERROR_R */
-
 
 #ifndef HAVE_CLOSEFROM
 /**

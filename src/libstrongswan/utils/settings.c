@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1302,8 +1301,7 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 	}
 	else
 	{	/* base relative paths to the directory of the current file */
-		char *dir = strdup(file);
-		dir = dirname(dir);
+		char *dir = path_dirname(file);
 		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
 		{
 			DBG1(DBG_LIB, "include pattern too long, ignored");

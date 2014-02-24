@@ -499,7 +499,7 @@ static bool register_hooks()
 char *whitelist[] = {
 	/* backtraces, including own */
 	"backtrace_create",
-	"safe_strerror",
+	"strerror_safe",
 	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",

@@ -81,7 +81,7 @@ static bool load_configs(char *suite_file, char *test_file)
 	}
 	conftest->test = settings_create(suite_file);
 	conftest->test->load_files(conftest->test, test_file, TRUE);
-	conftest->suite_dir = strdup(dirname(suite_file));
+	conftest->suite_dir = path_dirname(suite_file);
 	return TRUE;
 }
 

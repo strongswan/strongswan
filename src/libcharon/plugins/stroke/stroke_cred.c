@@ -17,7 +17,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
-#include <libgen.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -1158,8 +1157,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			}
 			else
 			{	/* use directory of current file if relative */
-				dir = strdup(file);
-				dir = dirname(dir);
+				dir = path_dirname(file);
 
 				if (line.len + 1 + strlen(dir) + 1 > sizeof(pattern))
 				{

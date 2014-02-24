@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include "enum.h"
+#include "utils/strerror.h"
 
 /**
  * strongSwan program return codes
@@ -486,6 +487,32 @@ char *translate(char *str, const char *from, const char *to);
 char *strreplace(const char *str, const char *search, const char *replace);
 
 /**
+ * Like dirname(3) returns the directory part of the given null-terminated
+ * pathname, up to but not including the final '/' (or '.' if no '/' is found).
+ * Trailing '/' are not counted as part of the pathname.
+ *
+ * The difference is that it does this in a thread-safe manner (i.e. it does not
+ * use static buffers) and does not modify the original path.
+ *
+ * @param path		original pathname
+ * @return			allocated directory component
+ */
+char *path_dirname(const char *path);
+
+/**
+ * Like basename(3) returns the filename part of the given null-terminated path,
+ * i.e. the part following the final '/' (or '.' if path is empty or NULL).
+ * Trailing '/' are not counted as part of the pathname.
+ *
+ * The difference is that it does this in a thread-safe manner (i.e. it does not
+ * use static buffers) and does not modify the original path.
+ *
+ * @param path		original pathname
+ * @return			allocated filename component
+ */
+char *path_basename(const char *path);
+
+/**
  * Creates a directory and all required parent directories.
  *
  * @param path		path to the new directory
@@ -493,23 +520,6 @@ char *strreplace(const char *str, const char *search, const char *replace);
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
-
-/**
- * Thread-safe wrapper around strerror and strerror_r.
- *
- * This is required because the first is not thread-safe (on some platforms)
- * and the second uses two different signatures (POSIX/GNU) and is impractical
- * to use anyway.
- *
- * @param errnum	error code (i.e. errno)
- * @return			error message
- */
-const char *safe_strerror(int errnum);
-
-/**
- * Replace usages of strerror(3) with thread-safe variant.
- */
-#define strerror(errnum) safe_strerror(errnum)
 
 #ifndef HAVE_CLOSEFROM
 /**
