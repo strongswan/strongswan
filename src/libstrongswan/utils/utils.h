@@ -465,6 +465,20 @@ static inline void memwipe(void *ptr, size_t n)
 void *memstr(const void *haystack, const char *needle, size_t n);
 
 /**
+ * Replacement for memrchr(3) if it is not provided by the C library.
+ *
+ * @param s		start of the memory area to search
+ * @param c		character to search
+ * @param n		length of memory area to search
+ * @return		pointer to the found character or NULL
+ */
+void *utils_memrchr(const void *s, int c, size_t n);
+
+#ifndef HAVE_MEMRCHR
+#define memrchr(s,c,n) utils_memrchr(s,c,n)
+#endif
+
+/**
  * Translates the characters in the given string, searching for characters
  * in 'from' and mapping them to characters in 'to'.
  * The two characters sets 'from' and 'to' must contain the same number of

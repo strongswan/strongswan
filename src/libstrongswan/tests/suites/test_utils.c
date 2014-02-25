@@ -346,6 +346,46 @@ START_TEST(test_memstr)
 END_TEST
 
 /*******************************************************************************
+ * utils_memrchr
+ */
+
+static struct {
+	char *s;
+	int c;
+	size_t n;
+	int offset;
+} memrchr_data[] = {
+	{NULL, 'f', 0, -1},
+	{NULL, 'f', 3, -1},
+	{"", 'f', 0, -1},
+	{"", '\0', 1, 0},
+	{"foo", '\0', 3, -1},
+	{"foo", '\0', 4, 3},
+	{"foo", 'f', 3, 0},
+	{"foo", 'o', 3, 2},
+	{"foo", 'o', 2, 1},
+	{"foo", 'o', 1, -1},
+	{"foo", 'o', 0, -1},
+	{"foo", 'x', 3, -1},
+};
+
+START_TEST(test_utils_memrchr)
+{
+	void *ret;
+
+	ret = utils_memrchr(memrchr_data[_i].s, memrchr_data[_i].c, memrchr_data[_i].n);
+	if (memrchr_data[_i].offset >= 0)
+	{
+		ck_assert(ret == memrchr_data[_i].s + memrchr_data[_i].offset);
+	}
+	else
+	{
+		ck_assert(ret == NULL);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * translate
  */
 
@@ -671,6 +711,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("memstr");
 	tcase_add_loop_test(tc, test_memstr, 0, countof(memstr_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("utils_memrchr");
+	tcase_add_loop_test(tc, test_utils_memrchr, 0, countof(memrchr_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("translate");

@@ -103,7 +103,7 @@ void memwipe_noinline(void *ptr, size_t n)
  */
 void *memstr(const void *haystack, const char *needle, size_t n)
 {
-	unsigned const char *pos = haystack;
+	const u_char *pos = haystack;
 	size_t l;
 
 	if (!haystack || !needle || (l = strlen(needle)) == 0)
@@ -113,6 +113,28 @@ void *memstr(const void *haystack, const char *needle, size_t n)
 	for (; n >= l; ++pos, --n)
 	{
 		if (memeq(pos, needle, l))
+		{
+			return (void*)pos;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Described in header.
+ */
+void *utils_memrchr(const void *s, int c, size_t n)
+{
+	const u_char *pos;
+
+	if (!s || !n)
+	{
+		return NULL;
+	}
+
+	for (pos = s + n - 1; pos >= (u_char*)s; pos--)
+	{
+		if (*pos == (u_char)c)
 		{
 			return (void*)pos;
 		}
