@@ -33,8 +33,8 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create, ntru_poly_t*,
 						  hash_algorithm_t alg, chunk_t seed, uint8_t c_bits,
-						  uint16_t poly_len, uint32_t indices_count,
-						  bool is_product_form)
+						  uint16_t N, uint16_t q, uint32_t indices_len_p,
+						  uint32_t indices_len_m, bool is_product_form)
 
 /**
  * NTRU parameter sets to test
@@ -302,10 +302,11 @@ END_TEST
 
 typedef struct {
 	uint8_t c_bits;
-	uint16_t poly_len;
+	uint16_t N;
+	uint16_t q;
 	bool is_product_form;
-	uint32_t indices_count;
 	uint32_t indices_len;
+	uint32_t indices_size;
 	uint16_t *indices;
 } poly_test_t;
 
@@ -427,10 +428,10 @@ mgf1_test_t mgf1_tests[] = {
 				0, 1, 1, 2, 0,  2, 2, 0, 0, 0,  1, 1, 0, 1, 0,  1, 1, 0, 1, 1,
 				0, 1, 2, 0, 1,  1, 0, 1, 2, 0,  0, 1, 2, 2, 0,  0, 2, 1, 2),
 		{
-			{	9, 439, TRUE, 2*(9 + (8 << 8) + (5 << 16)),
+			{	9, 439, 2048, TRUE, 9 + (8 << 8) + (5 << 16),
 				countof(indices_ees439ep1), indices_ees439ep1
 			},
-			{	11, 613, FALSE, 2*55,
+			{	11, 613, 2048, FALSE, 55,
 				countof(indices_ees613ep1), indices_ees613ep1
 			}
 		}
@@ -514,10 +515,10 @@ mgf1_test_t mgf1_tests[] = {
 				1, 0, 1, 0, 2,  2, 1, 0, 2, 2,  2, 2, 2, 1, 0,  2, 2, 2, 1, 2,
 				0, 2, 0, 0, 0,  0, 0, 1, 2, 0,  1, 0, 1),
 		{
-			{	13, 743, TRUE, 2*(11 + (11 << 8) + (15 << 16)),
+			{	13, 743, 2048, TRUE, 11 + (11 << 8) + (15 << 16),
 				countof(indices_ees743ep1), indices_ees743ep1
 			},
-			{	12, 1171, FALSE, 2*106,
+			{	12, 1171, 2048, FALSE, 106,
 				countof(indices_ees1171ep1), indices_ees1171ep1
 			}
 		}
@@ -632,19 +633,21 @@ START_TEST(test_ntru_poly)
 	seed.len = mgf1_tests[_i].seed_len;
 
 	p = &mgf1_tests[_i].poly_test[0];
-	poly = ntru_poly_create(HASH_UNKNOWN, seed, p->c_bits, p->poly_len,
-							p->indices_count, p->is_product_form);
+	poly = ntru_poly_create(HASH_UNKNOWN, seed, p->c_bits, p->N, p->q,
+							p->indices_len, p->indices_len,
+							p->is_product_form);
 	ck_assert(poly == NULL);
 
 	for (n = 0; n < 2; n++)
 	{
 		p = &mgf1_tests[_i].poly_test[n];
-		poly = ntru_poly_create(mgf1_tests[_i].alg, seed, p->c_bits, p->poly_len,
-								p->indices_count, p->is_product_form);
-		ck_assert(poly != NULL && poly->get_size(poly) == p->indices_len);
+		poly = ntru_poly_create(mgf1_tests[_i].alg, seed, p->c_bits, p->N, p->q,
+								p->indices_len, p->indices_len,
+								p->is_product_form);
+		ck_assert(poly != NULL && poly->get_size(poly) == p->indices_size);
 
 		indices = poly->get_indices(poly);
-		for (j = 0; j < p->indices_len; j++)
+		for (j = 0; j < p->indices_size; j++)
 		{
 			ck_assert(indices[j] == p->indices[j]);
 		}

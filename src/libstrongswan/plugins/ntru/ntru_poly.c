@@ -22,6 +22,15 @@
 #include <utils/test.h>
 
 typedef struct private_ntru_poly_t private_ntru_poly_t;
+typedef struct indices_len_t indices_len_t;
+
+/**
+ * Stores number of +1 and -1 coefficients
+ */
+struct indices_len_t {
+	int p;
+	int m;
+};
 
 /**
  * Private data of an ntru_poly_t object.
@@ -34,21 +43,43 @@ struct private_ntru_poly_t {
 	ntru_poly_t public;
 
 	/**
+	 * Ring dimension equal to the number of polynomial coefficients
+	 */
+	uint16_t N;
+
+	/**
+	 * Large modulus
+	 */
+	uint16_t q;
+
+	/**
 	 * Array containing the indices of the non-zero coefficients
 	 */
 	uint16_t *indices;
 
 	/**
-	 * Number of non-zero coefficients
+	 * Number of sparse polynomials
 	 */
-	uint32_t indices_len;
+	int num_polynomials;
+
+	/**
+	 * Number of nonzero coefficients for up to 3 sparse polynomials
+	 */
+	indices_len_t indices_len[3];
 
 };
 
 METHOD(ntru_poly_t, get_size, size_t,
 	private_ntru_poly_t *this)
 {
-	return this->indices_len;
+	int n;
+	size_t size = 0;
+
+	for (n = 0; n < this->num_polynomials; n++)
+	{
+		size += this->indices_len[n].p + this->indices_len[n].m;
+	}
+	return size;
 }
 
 METHOD(ntru_poly_t, get_indices, uint16_t*,
@@ -56,11 +87,113 @@ METHOD(ntru_poly_t, get_indices, uint16_t*,
 {
 	return this->indices;
 }
+/**
+  * Multiplication of polynomial a with a sparse polynomial b given by
+  * the indices of its +1 and -1 coefficients results in polynomial c.
+  * This is a convolution operation
+  */
+static void ring_mult_indices(uint16_t *a, indices_len_t len, uint16_t *indices,
+							  uint16_t N, uint16_t mod_q_mask, uint16_t *c)
+{
+	uint16_t *t;
+	int i, j, k;
+
+	/* allocate and initialize temporary array t */
+	t = malloc(N * sizeof(uint16_t));
+	for (k = 0; k < N; k++)
+	{
+		t[k] = 0;
+	}
+
+	/* t[(i+k)%N] = sum i=0 through N-1 of a[i], for b[k] = -1 */
+	for (j = len.p; j < len.p + len.m; j++)
+	{
+		k = indices[j];
+		for (i = 0; k < N; ++i, ++k)
+		{
+			t[k] += a[i];
+		}
+		for (k = 0; i < N; ++i, ++k)
+		{
+			t[k] += a[i];
+		}
+	}
+
+	/* t[(i+k)%N] = -(sum i=0 through N-1 of a[i] for b[k] = -1) */
+	for (k = 0; k < N; k++)
+	{
+		t[k] = -t[k];
+	}
+
+	/* t[(i+k)%N] += sum i=0 through N-1 of a[i] for b[k] = +1 */
+	for (j = 0; j < len.p; j++)
+	{
+		k = indices[j];
+		for (i = 0; k < N; ++i, ++k)
+		{
+			t[k] += a[i];
+		}
+		for (k = 0; i < N; ++i, ++k)
+		{
+			t[k] += a[i];
+		}
+	}
+
+	/* c = (a * b) mod q */
+	for (k = 0; k < N; k++)
+	{
+		c[k] = t[k] & mod_q_mask;
+	}
+
+	/* cleanup */
+	free(t);
+}
+
+METHOD(ntru_poly_t, ring_mult, void,
+	private_ntru_poly_t *this, uint16_t *a, uint16_t *c)
+{
+	uint16_t *bi = this->indices, mod_q_mask = this->q - 1;
+
+	if (this->num_polynomials == 1)
+	{
+		ring_mult_indices(a, this->indices_len[0], bi, this->N, mod_q_mask, c);
+	}
+	else
+	{
+		uint16_t *t1, *t2;
+		int i;
+
+		/* allocate temporary arrays */
+		t1 = malloc(this->N * sizeof(uint16_t));
+		t2 = malloc(this->N * sizeof(uint16_t));
+
+		/* t1 = a * b1 */
+		ring_mult_indices(a, this->indices_len[0], bi, this->N, mod_q_mask, t1);
+
+		/* t1 = (a * b1) * b2 */
+		bi += this->indices_len[0].p + this->indices_len[0].m;
+		ring_mult_indices(t1, this->indices_len[1], bi, this->N, mod_q_mask, t1);
+
+		/* t2 = a * b3 */
+		bi += this->indices_len[1].p + this->indices_len[1].m;
+		ring_mult_indices(a, this->indices_len[2], bi, this->N, mod_q_mask, t2);
+
+		/* c = (a * b1 * b2) + (a * b3) */
+		for (i = 0; i < this->N; i++)
+		{
+			c[i] = (t1[i] + t2[i]) & mod_q_mask;
+		}
+
+		/* cleanup */
+		free(t1);
+		free(t2);
+	}
+}
 
 METHOD(ntru_poly_t, destroy, void,
 	private_ntru_poly_t *this)
 {
-	memwipe(this->indices, this->indices_len);
+	memwipe(this->indices, get_size(this));
 	free(this->indices);
 	free(this);
 }
@@ -69,14 +202,15 @@ METHOD(ntru_poly_t, destroy, void,
  * Described in header.
  */
 ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
-							  uint8_t c_bits, uint16_t poly_len,
-							  uint32_t indices_count, bool is_product_form)
+							  uint8_t c_bits, uint16_t N, uint16_t q,
+							  uint32_t indices_len_p, uint32_t indices_len_m,
+							  bool is_product_form)
 {
 	private_ntru_poly_t *this;
-	size_t hash_len, octet_count = 0, i, num_polys, num_indices[3], indices_len;
+	size_t hash_len, octet_count = 0, i;
 	uint8_t octets[HASH_SIZE_SHA512], *used, num_left = 0, num_needed;
 	uint16_t index, limit, left = 0;
-	int poly_i = 0, index_i = 0;
+	int n, num_indices, index_i = 0;
 	ntru_mgf1_t *mgf1;
 
 	DBG2(DBG_LIB, "MGF1 is seeded with %u bytes", seed.len);
@@ -87,40 +221,47 @@ ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
 	}
 	i = hash_len = mgf1->get_hash_size(mgf1);
 
-	if (is_product_form)
-	{
-		num_polys = 3;
-		num_indices[0] = 0xff &  indices_count;
-		num_indices[1] = 0xff & (indices_count >> 8);
-		num_indices[2] = 0xff & (indices_count >> 16);
-		indices_len = num_indices[0] + num_indices[1] + num_indices[2];
-	}
-	else
-	{
-		num_polys = 1;
-		num_indices[0] = indices_count;
-		indices_len = indices_count;
-	}
-	used = malloc(poly_len);
-	limit = poly_len * ((1 << c_bits) / poly_len);
-
 	INIT(this,
 		.public = {
 			.get_size = _get_size,
 			.get_indices = _get_indices,
+			.ring_mult = _ring_mult,
 			.destroy = _destroy,
 		},
-		.indices_len = indices_len,
-		.indices = malloc(indices_len * sizeof(uint16_t)),
+		.N = N,
+		.q = q,
 	);
 
-	/* generate indices for all polynomials */
-	while (poly_i < num_polys)
+	if (is_product_form)
 	{
-		memset(used, 0, poly_len);
+		this->num_polynomials = 3;
+		for (n = 0; n < 3; n++)
+		{
+			this->indices_len[n].p = 0xff & indices_len_p;
+			this->indices_len[n].m = 0xff & indices_len_m;
+			indices_len_p >>= 8;
+			indices_len_m >>= 8;
+		}
+	}
+	else
+	{
+		this->num_polynomials = 1;
+		this->indices_len[0].p = indices_len_p;
+		this->indices_len[0].m = indices_len_m;
+	}
+	this->indices = malloc(sizeof(uint16_t) * get_size(this)),
+
+	used = malloc(N);
+	limit = N * ((1 << c_bits) / N);
+
+	/* generate indices for all polynomials */
+	for (n = 0; n < this->num_polynomials; n++)
+	{
+		memset(used, 0, N);
+		num_indices = this->indices_len[n].p + this->indices_len[n].m;
 
 		/* generate indices for a single polynomial */
-		while (num_indices[poly_i])
+		while (num_indices)
 		{
 			/* generate a random candidate index with a size of c_bits */		
 			do
@@ -167,19 +308,18 @@ ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
 			while (index >= limit);
 
 			/* form index and check if unique */
-			index %= poly_len;
+			index %= N;
 			if (!used[index])
 			{
 				used[index] = 1;
 				this->indices[index_i++] = index;
-				num_indices[poly_i]--;
+				num_indices--;
 			}
 		}
-		poly_i++;
 	}
 
 	DBG2(DBG_LIB, "MGF1 generates %u octets to derive %u indices",
-				   octet_count, this->indices_len);
+				   octet_count, get_size(this));
 	mgf1->destroy(mgf1);
 	free(used);
 

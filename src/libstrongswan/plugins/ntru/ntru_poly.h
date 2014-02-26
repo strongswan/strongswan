@@ -43,6 +43,11 @@ struct ntru_poly_t {
 	uint16_t* (*get_indices)(ntru_poly_t *this);
 
 	/**
+	 * @return		array containing the indices of the non-zero coefficients
+	 */
+	void (*ring_mult)(ntru_poly_t *this, uint16_t *a, uint16_t *c);
+
+	/**
 	 * Destroy ntru_poly_t object
 	 */
 	void (*destroy)(ntru_poly_t *this);
@@ -53,14 +58,17 @@ struct ntru_poly_t {
  *
  * @param alg				hash algorithm to be used by MGF1
  * @param seed				seed used by MGF1 to generate trits from
- * @param poly_len			size of the trits polynomial
+ * @param N					ring dimension, number of polynomial coefficients
+ * @param q					large modulus
  * @param c_bits			number of bits for candidate index
- * @param indices_count		number of non-zero indices
+ * @param indices_len_p		number of indices for +1 coefficients
+ * @param indices_len_m		number of indices for -1 coefficients
  * @param is_product_form	generate multiple polynomials
  */
 ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
-							  uint8_t c_bits, uint16_t poly_len,
-							  uint32_t indices_count, bool is_product_form);
+							  uint8_t c_bits, uint16_t N, uint16_t q,
+							  uint32_t indices_len_p, uint32_t indices_len_m,
+							  bool is_product_form);
 
 #endif /** NTRU_POLY_H_ @}*/
 
