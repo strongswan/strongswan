@@ -1,0 +1,38 @@
+language: c
+
+compiler:
+  - gcc
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq bison flex gperf gettext
+  # TODO: modularize this to speed up builds (e.g. call 'test.sh deps' to do this for the current TEST)
+  - sudo apt-get install -qq libgmp-dev libssl-dev libgcrypt11-dev
+  - sudo apt-get install -qq libcurl4-gnutls-dev libsoup2.4-dev
+  - sudo apt-get install -qq libunbound-dev libldns-dev
+  - sudo apt-get install -qq libmysqlclient-dev libsqlite3-dev
+  - sudo apt-get install -qq clearsilver-dev libfcgi-dev
+  - sudo apt-get install -qq libnm-glib-dev libnm-glib-vpn-dev
+  - sudo apt-get install -qq libpcsclite-dev libpam0g-dev
+  - sudo apt-get install -qq binutils-dev libunwind7-dev
+
+script:
+  - ./autogen.sh
+  - ./scripts/test.sh
+
+env:
+  global:
+    - TESTS_REDUCED_KEYLENGTHS=yes
+    - LEAK_DETECTIVE=no
+    - MONOLITHIC=no
+  matrix:
+    - TEST=default
+    - TEST=default MONOLITHIC=yes
+    - TEST=default LEAK_DETECTIVE=yes
+    - TEST=openssl
+    - TEST=openssl LEAK_DETECTIVE=yes
+    # libgcrypt can't be deinitialized so we can't test it with leak detective
+    - TEST=gcrypt
+    - TEST=all
+    - TEST=all MONOLITHIC=yes
+    - TEST=dist
