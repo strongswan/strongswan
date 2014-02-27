@@ -1244,8 +1244,8 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 	fseek(fd, 0, SEEK_END);
 	len = ftell(fd);
 	rewind(fd);
-	text = malloc(len + 1);
-	text[len] = '\0';
+	text = malloc(len + 2);
+	text[len] = text[len + 1] = '\0';
 	if (fread(text, 1, len, fd) != len)
 	{
 		free(text);
