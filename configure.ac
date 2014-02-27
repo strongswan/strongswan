@@ -288,7 +288,20 @@ ARG_DISBL_SET([defaults],       [disable all default plugins (they can be enable
 if test x$defaults = xfalse; then
 	for option in $enabled_by_default; do
 		eval test x\${${option}_given} = xtrue && continue
-		let $option=false
+		eval $option=false
+	done
+fi
+
+# ==============================
+#  option to enable all options
+# ==============================
+
+ARG_ENABL_SET([all],            [enable all plugins and features (they can be disabled with their respective --disable options). Mainly for testing.])
+
+if test x$all_given = xtrue; then
+	for option in $disabled_by_default; do
+		eval test x\${${option}_given} = xtrue && continue
+		eval $option=true
 	done
 fi
 
