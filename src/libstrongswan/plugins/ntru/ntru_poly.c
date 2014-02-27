@@ -58,6 +58,11 @@ struct private_ntru_poly_t {
 	uint16_t *indices;
 
 	/**
+	 * Number of indices of the non-zero coefficients
+	 */
+	size_t num_indices;
+
+	/**
 	 * Number of sparse polynomials
 	 */
 	int num_polynomials;
@@ -72,14 +77,7 @@ struct private_ntru_poly_t {
 METHOD(ntru_poly_t, get_size, size_t,
 	private_ntru_poly_t *this)
 {
-	int n;
-	size_t size = 0;
-
-	for (n = 0; n < this->num_polynomials; n++)
-	{
-		size += this->indices_len[n].p + this->indices_len[n].m;
-	}
-	return size;
+	return this->num_indices;
 }
 
 METHOD(ntru_poly_t, get_indices, uint16_t*,
@@ -241,6 +239,34 @@ METHOD(ntru_poly_t, destroy, void,
 	free(this);
 }
 
+static void init_indices(private_ntru_poly_t *this, bool is_product_form,
+						 uint32_t indices_len_p, uint32_t indices_len_m)
+{
+	int n;
+
+	if (is_product_form)
+	{
+		this->num_polynomials = 3;
+		for (n = 0; n < 3; n++)
+		{
+			this->indices_len[n].p = 0xff & indices_len_p;
+			this->indices_len[n].m = 0xff & indices_len_m;
+			this->num_indices += this->indices_len[n].p +
+								 this->indices_len[n].m;
+			indices_len_p >>= 8;
+			indices_len_m >>= 8;
+		}
+	}
+	else
+	{
+		this->num_polynomials = 1;
+		this->indices_len[0].p = indices_len_p;
+		this->indices_len[0].m = indices_len_m;
+		this->num_indices = indices_len_p + indices_len_m;
+	}
+	this->indices = malloc(sizeof(uint16_t) * this->num_indices);
+}
+
 /*
  * Described in header.
  */
@@ -277,25 +303,7 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 		.q = q,
 	);
 
-	if (is_product_form)
-	{
-		this->num_polynomials = 3;
-		for (n = 0; n < 3; n++)
-		{
-			this->indices_len[n].p = 0xff & indices_len_p;
-			this->indices_len[n].m = 0xff & indices_len_m;
-			indices_len_p >>= 8;
-			indices_len_m >>= 8;
-		}
-	}
-	else
-	{
-		this->num_polynomials = 1;
-		this->indices_len[0].p = indices_len_p;
-		this->indices_len[0].m = indices_len_m;
-	}
-	this->indices = malloc(sizeof(uint16_t) * get_size(this)),
-
+	init_indices(this, is_product_form, indices_len_p, indices_len_m);
 	used = malloc(N);
 	limit = N * ((1 << c_bits) / N);
 
@@ -364,7 +372,7 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 	}
 
 	DBG2(DBG_LIB, "MGF1 generates %u octets to derive %u indices",
-				   octet_count, get_size(this));
+				   octet_count, this->num_indices);
 	mgf1->destroy(mgf1);
 	free(used);
 
@@ -380,7 +388,7 @@ ntru_poly_t *ntru_poly_create_from_data(uint16_t *data, uint16_t N, uint16_t q,
 										bool is_product_form)
 {
 	private_ntru_poly_t *this;
-	int n, i, num_indices;
+	int i;
 
 	INIT(this,
 		.public = {
@@ -394,27 +402,8 @@ ntru_poly_t *ntru_poly_create_from_data(uint16_t *data, uint16_t N, uint16_t q,
 		.q = q,
 	);
 
-	if (is_product_form)
-	{
-		this->num_polynomials = 3;
-		for (n = 0; n < 3; n++)
-		{
-			this->indices_len[n].p = 0xff & indices_len_p;
-			this->indices_len[n].m = 0xff & indices_len_m;
-			indices_len_p >>= 8;
-			indices_len_m >>= 8;
-		}
-	}
-	else
-	{
-		this->num_polynomials = 1;
-		this->indices_len[0].p = indices_len_p;
-		this->indices_len[0].m = indices_len_m;
-	}
-	num_indices = get_size(this);
-
-	this->indices = malloc(sizeof(uint16_t) * num_indices);
-	for (i = 0; i < num_indices; i++)
+	init_indices(this, is_product_form, indices_len_p, indices_len_m);
+	for (i = 0; i < this->num_indices; i++)
 	{
 		this->indices[i] = data[i];
 	}
