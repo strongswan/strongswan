@@ -93,8 +93,6 @@ plugins_install_src = $(charon_plugins:%=plugins/%.conf)
 # has to be defined via autoconf as we can't do it with automake conditionals
 options_install_src = $(strongswan_options:%=options/%.conf)
 
-manparts = strongswan.conf.5.head strongswan.conf.5.main strongswan.conf.5.tail
-
 templates_DATA = strongswan.conf
 optionstemplate_DATA = $(options_install_src)
 pluginstemplate_DATA = $(plugins_install_src)
@@ -136,12 +134,11 @@ $(plugins_install_tmp):
 
 strongswan.conf.5.main: $(alloptions)
 	$(AM_V_GEN) \
-	(cd $(srcdir) && \
-	 $(PYTHON) format-options.py -f man $(alloptions)) > $@
+	cd $(srcdir) && $(PYTHON) format-options.py -f man $(alloptions) > $@
 
-strongswan.conf.5: $(manparts)
+strongswan.conf.5: strongswan.conf.5.head strongswan.conf.5.main strongswan.conf.5.tail
 	$(AM_V_GEN) \
-	cat $(manparts) > $@
+	cat strongswan.conf.5.head $(srcdir)/strongswan.conf.5.main strongswan.conf.5.tail > $@
 
 clean-local:
 	rm -f plugins/*.conf plugins/*.tmp
