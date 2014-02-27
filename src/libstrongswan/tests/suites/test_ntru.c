@@ -752,8 +752,36 @@ START_TEST(test_ntru_ring_mult)
 									  t->indices_len_m, t->is_product_form);
 	ck_assert(poly != NULL);
 
-	c = malloc(sizeof(uint16_t) * t->N);
+	c = malloc(t->N * sizeof(uint16_t));
 	poly->ring_mult(poly, t->a, c);
+
+	for (i = 0; i < t->N; i++)
+	{
+		ck_assert(c[i] == t->c[i]);
+	}
+
+	free(c);
+	poly->destroy(poly);
+}
+END_TEST
+
+int array_tests[] = { 0, 11, 12, 16 };
+
+START_TEST(test_ntru_array)
+{
+	ntru_poly_t *poly;
+	ring_mult_test_t *t;
+	uint16_t *c;
+	int i;
+
+	t = &ring_mult_tests[array_tests[_i]];
+
+	poly = ntru_poly_create_from_data(t->indices, t->N, t->q, t->indices_len_p,
+									  t->indices_len_m, t->is_product_form);
+	ck_assert(poly != NULL);
+
+	c = malloc(t->N * sizeof(uint16_t));
+	poly->get_array(poly, c);
 
 	for (i = 0; i < t->N; i++)
 	{
@@ -981,6 +1009,10 @@ Suite *ntru_suite_create()
 
 	tc = tcase_create("ring_mult");
 	tcase_add_loop_test(tc, test_ntru_ring_mult, 0, countof(ring_mult_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("array");
+	tcase_add_loop_test(tc, test_ntru_array, 0, countof(array_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ke");

@@ -951,57 +951,9 @@ ntru_crypto_ntru_encrypt_keygen(
 
 	if (result == NTRU_OK)
 	{
-        uint32_t i;
+		int i;
 
-		memset(ringel_buf1, 0, params->N * sizeof(uint16_t));
-		F_indices = F_poly->get_indices(F_poly);
-
-		/* form F as a ring element */
-		if (params->is_product_form)
-		{
-			uint32_t dF3_offset = (dF1 + dF2) << 1;
-
-			/* form F1 as a ring element */
-			for (i = 0; i < dF1; i++)
-			{
-				ringel_buf1[F_indices[i]] = 1;
-			}
-			for (; i < (dF1 << 1); i++)
-			{
-				ringel_buf1[F_indices[i]] = mod_q_mask;
-			}
-
-			/* form F1 * F2 */
-			ntru_ring_mult_indices(ringel_buf1, (uint16_t)dF2, (uint16_t)dF2,
-								   F_indices + (dF1 << 1), params->N, params->q,
-								   scratch_buf, ringel_buf1);
-
-			/* form (F1 * F2) + F3 */
-			for (i = 0; i < dF3; i++)
-			{
-				uint16_t index = F_indices[dF3_offset + i];
-
-				ringel_buf1[index] = (ringel_buf1[index] + 1) & mod_q_mask;
-			}
-			for (; i < (dF3 << 1); i++)
-			{
-				uint16_t index = F_indices[dF3_offset + i];
-
-				ringel_buf1[index] = (ringel_buf1[index] - 1) & mod_q_mask;
-			}
-		}
-		else
-		{
-			/* form F as a ring element */
-			for (i = 0; i < dF; i++)
-			{
-				ringel_buf1[F_indices[i]] = 1;
-			}
-			for (; i < (dF << 1); i++)
-			{
-				ringel_buf1[F_indices[i]] = mod_q_mask;
-			}
-		}
+		F_poly->get_array(F_poly, ringel_buf1);
 
 		/* form f = 1 + pF */
 		for (i = 0; i < params->N; i++)
@@ -1065,6 +1017,7 @@ ntru_crypto_ntru_encrypt_keygen(
 		*pubkey_blob_len = public_key_blob_len;
 
 		/* create private key blob */
+		F_indices = F_poly->get_indices(F_poly);
 		ntru_crypto_ntru_encrypt_key_create_privkey_blob(params, ringel_buf2,
 														 F_indices,
 														 privkey_pack_type,

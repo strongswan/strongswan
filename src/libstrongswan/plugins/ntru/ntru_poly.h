@@ -43,6 +43,11 @@ struct ntru_poly_t {
 	uint16_t* (*get_indices)(ntru_poly_t *this);
 
 	/**
+	 * @param array		array containing all N coefficients of the polynomial
+	 */
+	void (*get_array)(ntru_poly_t *this, uint16_t *array);
+
+	/**
 	 * Multiply polynomial a with ntru_poly_t object b having sparse coeffients
 	 * to form result polynomial c = a * b
 	 *

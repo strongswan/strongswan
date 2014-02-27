@@ -55,41 +55,6 @@ ntru_poly_check_min_weight(
     uint8_t  *ringels,              /*  in - pointer to trinary ring elements */
     uint16_t  min_wt);              /*  in - minimum weight */
 
-
-/* ntru_ring_mult_indices
- *
- * Multiplies ring element (polynomial) "a" by ring element (polynomial) "b"
- * to produce ring element (polynomial) "c" in (Z/qZ)[X]/(X^N - 1).
- * This is a convolution operation.
- *
- * Ring element "b" is a sparse trinary polynomial with coefficients -1, 0,
- * and 1.  It is specified by a list, bi, of its nonzero indices containing
- * indices for the bi_P1_len +1 coefficients followed by the indices for the
- * bi_M1_len -1 coefficients.
- * The indices are in the range [0,N).
- *
- * The result array "c" may share the same memory space as input array "a",
- * or input array "b".
- *
- * This assumes q is 2^r where 8 < r < 16, so that overflow of the sum
- * beyond 16 bits does not matter.
- */
-
-extern void
-ntru_ring_mult_indices(
-    uint16_t const *a,          /*  in - pointer to ring element a */
-    uint16_t        bi_P1_len,  /*  in - no. of +1 coefficients in b */
-    uint16_t        bi_M1_len,  /*  in - no. of -1 coefficients in b */
-    uint16_t const *bi,         /*  in - pointer to the list of nonzero
-                                         indices of ring element b,
-                                         containing indices for the +1
-                                         coefficients followed by the
-                                         indices for -1 coefficients */
-    uint16_t        N,          /*  in - no. of coefficients in a, b, c */
-    uint16_t        q,          /*  in - large modulus */
-    uint16_t       *t,          /*  in - temp buffer of N elements */
-    uint16_t       *c);         /* out - address for polynomial c */
-
 /* ntru_ring_mult_coefficients
  *
  * Multiplies ring element (polynomial) "a" by ring element (polynomial) "b"

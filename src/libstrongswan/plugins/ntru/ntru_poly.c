@@ -87,6 +87,7 @@ METHOD(ntru_poly_t, get_indices, uint16_t*,
 {
 	return this->indices;
 }
+
 /**
   * Multiplication of polynomial a with a sparse polynomial b given by
   * the indices of its +1 and -1 coefficients results in polynomial c.
@@ -142,6 +143,52 @@ static void ring_mult_i(uint16_t *a, indices_len_t len, uint16_t *indices,
 	for (k = 0; k < N; k++)
 	{
 		c[k] = t[k] & mod_q_mask;
+	}
+}
+
+METHOD(ntru_poly_t, get_array, void,
+	private_ntru_poly_t *this, uint16_t *array)
+{
+	uint16_t *t, *bi;
+	uint16_t mod_q_mask = this->q - 1;
+	indices_len_t len;
+	int i;
+
+	/* form polynomial F or F1 */
+	memset(array, 0x00, this->N * sizeof(uint16_t));
+	bi = this->indices;
+	len = this->indices_len[0];
+	for (i = 0; i < len.p + len.m; i++)
+	{
+		array[bi[i]] = (i < len.p) ? 1 : mod_q_mask;
+	}
+
+	if (this->num_polynomials == 3)
+	{
+		/* allocate temporary array t */
+		t = malloc(this->N * sizeof(uint16_t));
+
+		/* form F1 * F2 */
+		bi += len.p + len.m;
+		len = this->indices_len[1];
+		ring_mult_i(array, len, bi, this->N, mod_q_mask, t, array);
+
+		/* form (F1 * F2) + F3 */
+		bi += len.p + len.m;
+		len = this->indices_len[2];
+		for (i = 0; i < len.p + len.m; i++)
+		{
+			if (i < len.p)
+			{
+				array[bi[i]] += 1;
+			}
+			else
+			{
+				array[bi[i]] -= 1;
+			}
+			array[bi[i]] &= mod_q_mask;
+		}
+		free(t);
 	}
 }
 
@@ -222,6 +269,7 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 		.public = {
 			.get_size = _get_size,
 			.get_indices = _get_indices,
+			.get_array = _get_array,
 			.ring_mult = _ring_mult,
 			.destroy = _destroy,
 		},
@@ -338,6 +386,7 @@ ntru_poly_t *ntru_poly_create_from_data(uint16_t *data, uint16_t N, uint16_t q,
 		.public = {
 			.get_size = _get_size,
 			.get_indices = _get_indices,
+			.get_array = _get_array,
 			.ring_mult = _ring_mult,
 			.destroy = _destroy,
 		},
