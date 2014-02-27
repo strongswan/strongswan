@@ -38,12 +38,16 @@ struct ntru_poly_t {
 	size_t (*get_size)(ntru_poly_t *this);
 
 	/**
-	 * @return		array containing the indices of the non-zero coefficients
+	 * @return			array containing the indices of the non-zero coefficients
 	 */
 	uint16_t* (*get_indices)(ntru_poly_t *this);
 
 	/**
-	 * @return		array containing the indices of the non-zero coefficients
+	 * Multiply polynomial a with ntru_poly_t object b having sparse coeffients
+	 * to form result polynomial c = a * b
+	 *
+	 * @param a			input polynomial a
+	 * @param b			output polynomial c
 	 */
 	void (*ring_mult)(ntru_poly_t *this, uint16_t *a, uint16_t *c);
 

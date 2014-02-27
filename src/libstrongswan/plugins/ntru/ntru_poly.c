@@ -92,14 +92,13 @@ METHOD(ntru_poly_t, get_indices, uint16_t*,
   * the indices of its +1 and -1 coefficients results in polynomial c.
   * This is a convolution operation
   */
-static void ring_mult_indices(uint16_t *a, indices_len_t len, uint16_t *indices,
-							  uint16_t N, uint16_t mod_q_mask, uint16_t *c)
+static void ring_mult_i(uint16_t *a, indices_len_t len, uint16_t *indices,
+							  uint16_t N, uint16_t mod_q_mask, uint16_t *t,
+							  uint16_t *c)
 {
-	uint16_t *t;
 	int i, j, k;
 
-	/* allocate and initialize temporary array t */
-	t = malloc(N * sizeof(uint16_t));
+	/* initialize temporary array t */
 	for (k = 0; k < N; k++)
 	{
 		t[k] = 0;
@@ -144,56 +143,53 @@ static void ring_mult_indices(uint16_t *a, indices_len_t len, uint16_t *indices,
 	{
 		c[k] = t[k] & mod_q_mask;
 	}
-
-	/* cleanup */
-	free(t);
 }
 
 METHOD(ntru_poly_t, ring_mult, void,
 	private_ntru_poly_t *this, uint16_t *a, uint16_t *c)
 {
-	uint16_t *bi = this->indices, mod_q_mask = this->q - 1;
+	uint16_t *t1, *t2;
+	uint16_t *bi = this->indices;
+	uint16_t mod_q_mask = this->q - 1;
+	int i;
+
+	/* allocate temporary array t1 */
+	t1 = malloc(this->N * sizeof(uint16_t));
 
 	if (this->num_polynomials == 1)
 	{
-		ring_mult_indices(a, this->indices_len[0], bi, this->N, mod_q_mask, c);
+		ring_mult_i(a, this->indices_len[0], bi, this->N, mod_q_mask, t1, c);
 	}
 	else
 	{
-		uint16_t *t1, *t2;
-		int i;
-
-		/* allocate temporary arrays */
-		t1 = malloc(this->N * sizeof(uint16_t));
+		/* allocate temporary array t2 */
 		t2 = malloc(this->N * sizeof(uint16_t));
 
 		/* t1 = a * b1 */
-		ring_mult_indices(a, this->indices_len[0], bi, this->N, mod_q_mask, t1);
+		ring_mult_i(a, this->indices_len[0], bi, this->N, mod_q_mask, t1, t1);
 
 		/* t1 = (a * b1) * b2 */
 		bi += this->indices_len[0].p + this->indices_len[0].m;
-		ring_mult_indices(t1, this->indices_len[1], bi, this->N, mod_q_mask, t1);
+		ring_mult_i(t1, this->indices_len[1], bi, this->N, mod_q_mask, t2, t1);
 
 		/* t2 = a * b3 */
 		bi += this->indices_len[1].p + this->indices_len[1].m;
-		ring_mult_indices(a, this->indices_len[2], bi, this->N, mod_q_mask, t2);
+		ring_mult_i(a, this->indices_len[2], bi, this->N, mod_q_mask, t2, t2);
 
 		/* c = (a * b1 * b2) + (a * b3) */
 		for (i = 0; i < this->N; i++)
 		{
 			c[i] = (t1[i] + t2[i]) & mod_q_mask;
 		}
-
-		/* cleanup */
-		free(t1);
 		free(t2);
 	}
+	free(t1);
 }
 
 METHOD(ntru_poly_t, destroy, void,
 	private_ntru_poly_t *this)
 {
-	memwipe(this->indices, get_size(this));
+	memwipe(this->indices, sizeof(uint16_t) * get_size(this));
 	free(this->indices);
 	free(this);
 }
