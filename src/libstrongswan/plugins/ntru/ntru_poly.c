@@ -239,10 +239,28 @@ METHOD(ntru_poly_t, destroy, void,
 	free(this);
 }
 
-static void init_indices(private_ntru_poly_t *this, bool is_product_form,
-						 uint32_t indices_len_p, uint32_t indices_len_m)
+/**
+ * Creates an empty ntru_poly_t object with space allocated for indices
+ */
+static private_ntru_poly_t* ntru_poly_create(uint16_t N, uint16_t q,
+											 uint32_t indices_len_p,
+											 uint32_t indices_len_m,
+											 bool is_product_form)
 {
+	private_ntru_poly_t *this;
 	int n;
+
+	INIT(this,
+		.public = {
+			.get_size = _get_size,
+			.get_indices = _get_indices,
+			.get_array = _get_array,
+			.ring_mult = _ring_mult,
+			.destroy = _destroy,
+		},
+		.N = N,
+		.q = q,
+	);
 
 	if (is_product_form)
 	{
@@ -265,6 +283,8 @@ static void init_indices(private_ntru_poly_t *this, bool is_product_form,
 		this->num_indices = indices_len_p + indices_len_m;
 	}
 	this->indices = malloc(sizeof(uint16_t) * this->num_indices);
+
+	return this;
 }
 
 /*
@@ -291,19 +311,8 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 	}
 	i = hash_len = mgf1->get_hash_size(mgf1);
 
-	INIT(this,
-		.public = {
-			.get_size = _get_size,
-			.get_indices = _get_indices,
-			.get_array = _get_array,
-			.ring_mult = _ring_mult,
-			.destroy = _destroy,
-		},
-		.N = N,
-		.q = q,
-	);
+	this = ntru_poly_create(N, q, indices_len_p, indices_len_m, is_product_form);
 
-	init_indices(this, is_product_form, indices_len_p, indices_len_m);
 	used = malloc(N);
 	limit = N * ((1 << c_bits) / N);
 
@@ -390,19 +399,8 @@ ntru_poly_t *ntru_poly_create_from_data(uint16_t *data, uint16_t N, uint16_t q,
 	private_ntru_poly_t *this;
 	int i;
 
-	INIT(this,
-		.public = {
-			.get_size = _get_size,
-			.get_indices = _get_indices,
-			.get_array = _get_array,
-			.ring_mult = _ring_mult,
-			.destroy = _destroy,
-		},
-		.N = N,
-		.q = q,
-	);
+	this = ntru_poly_create(N, q, indices_len_p, indices_len_m, is_product_form);
 
-	init_indices(this, is_product_form, indices_len_p, indices_len_m);
 	for (i = 0; i < this->num_indices; i++)
 	{
 		this->indices[i] = data[i];
