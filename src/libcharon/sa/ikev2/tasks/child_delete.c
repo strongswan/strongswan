@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
+#include <sa/ikev2/tasks/child_create.h>
 
 
 typedef struct private_child_delete_t private_child_delete_t;
@@ -313,6 +314,17 @@ METHOD(task_t, build_i, status_t,
 	}
 	log_children(this);
 	build_payloads(this, message);
+
+	if (!this->rekeyed && this->expired)
+	{
+		child_cfg_t *child_cfg;
+
+		DBG1(DBG_IKE, "scheduling CHILD_SA recreate after hard expire");
+		child_cfg = child_sa->get_config(child_sa);
+		this->ike_sa->queue_task(this->ike_sa, (task_t*)
+				child_create_create(this->ike_sa, child_cfg->get_ref(child_cfg),
+									FALSE, NULL, NULL));
+	}
 	return NEED_MORE;
 }
 
