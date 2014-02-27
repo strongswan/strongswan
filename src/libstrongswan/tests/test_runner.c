@@ -185,6 +185,9 @@ static bool pre_test(test_runner_init_t init)
 			"libstrongswan.plugins.random.random",
 			lib->settings->get_str(lib->settings,
 				"libstrongswan.plugins.random.urandom", "/dev/urandom"));
+	/* same for the gcrypt plugin */
+	lib->settings->set_default_str(lib->settings,
+			"libstrongswan.plugins.gcrypt.quick_random", "yes");
 
 	if (lib->leak_detective)
 	{
