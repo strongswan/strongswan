@@ -31,10 +31,15 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_mgf1_create, ntru_mgf1_t*,
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
 						  size_t len, hash_algorithm_t alg, chunk_t seed)
 
-IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create, ntru_poly_t*,
+IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_seed, ntru_poly_t*,
 						  hash_algorithm_t alg, chunk_t seed, uint8_t c_bits,
 						  uint16_t N, uint16_t q, uint32_t indices_len_p,
 						  uint32_t indices_len_m, bool is_product_form)
+
+IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_data, ntru_poly_t*,
+						  u_int16_t *data, uint16_t N, uint16_t q,
+						  uint32_t indices_len_p, uint32_t indices_len_m,
+						  bool is_product_form)
 
 /**
  * NTRU parameter sets to test
@@ -633,17 +638,17 @@ START_TEST(test_ntru_poly)
 	seed.len = mgf1_tests[_i].seed_len;
 
 	p = &mgf1_tests[_i].poly_test[0];
-	poly = ntru_poly_create(HASH_UNKNOWN, seed, p->c_bits, p->N, p->q,
-							p->indices_len, p->indices_len,
-							p->is_product_form);
+	poly = ntru_poly_create_from_seed(HASH_UNKNOWN, seed, p->c_bits, p->N, p->q,
+									  p->indices_len, p->indices_len,
+									  p->is_product_form);
 	ck_assert(poly == NULL);
 
 	for (n = 0; n < 2; n++)
 	{
 		p = &mgf1_tests[_i].poly_test[n];
-		poly = ntru_poly_create(mgf1_tests[_i].alg, seed, p->c_bits, p->N, p->q,
-								p->indices_len, p->indices_len,
-								p->is_product_form);
+		poly = ntru_poly_create_from_seed(mgf1_tests[_i].alg, seed, p->c_bits,
+										  p->N, p->q, p->indices_len,
+										  p->indices_len, p->is_product_form);
 		ck_assert(poly != NULL && poly->get_size(poly) == p->indices_size);
 
 		indices = poly->get_indices(poly);
@@ -653,6 +658,110 @@ START_TEST(test_ntru_poly)
 		}
 		poly->destroy(poly);
 	}
+}
+END_TEST
+
+typedef struct {
+	uint16_t N;
+	uint16_t q;
+	bool is_product_form;
+	uint32_t indices_len_p;
+	uint32_t indices_len_m;
+	uint16_t *indices;
+	uint16_t *a;
+	uint16_t *c;
+} ring_mult_test_t;
+
+uint16_t t1_indices[] = { 1, 6, 5, 3 };
+
+uint16_t t1_a[] = { 1, 0, 0, 0, 0, 0, 0 };
+uint16_t t1_c[] = { 0, 1, 0, 7, 0, 7, 1 };
+
+uint16_t t2_a[] = { 5, 0, 0, 0, 0, 0, 0 };
+uint16_t t2_c[] = { 0, 5, 0, 3, 0, 3, 5 };
+
+uint16_t t3_a[]  = { 4, 0, 0, 0, 0, 0, 0 };
+uint16_t t3_c[]  = { 0, 4, 0, 4, 0, 4, 4 };
+
+uint16_t t4_a[]  = { 0, 6, 0, 0, 0, 0, 0 };
+uint16_t t4_c[]  = { 6, 0, 6, 0, 2, 0, 2 };
+
+uint16_t t5_a[]  = { 4, 6, 0, 0, 0, 0, 0 };
+uint16_t t5_c[]  = { 6, 4, 6, 4, 2, 4, 6 };
+
+uint16_t t6_a[]  = { 0, 0, 3, 0, 0, 0, 0 };
+uint16_t t6_c[]  = { 5, 3, 0, 3, 0, 5, 0 };
+
+uint16_t t7_a[]  = { 4, 6, 3, 0, 0, 0, 0 };
+uint16_t t7_c[]  = { 3, 7, 6, 7, 2, 1, 6 };
+
+uint16_t t8_a[]  = { 0, 0, 0, 7, 0, 0, 0 };
+uint16_t t8_c[]  = { 0, 1, 7, 0, 7, 0, 1 };
+
+uint16_t t9_a[]  = { 4, 6, 3, 7, 0, 0, 0 };
+uint16_t t9_c[]  = { 3, 0, 5, 7, 1, 1, 7 };
+
+uint16_t t10_a[] = { 0, 0, 0, 0, 0, 1, 0 };
+uint16_t t10_c[] = { 0, 7, 0, 7, 1, 0, 1 };
+
+uint16_t t11_a[] = { 4, 6, 3, 7, 0, 1, 0 };
+uint16_t t11_c[] = { 3, 7, 5, 6, 2, 1, 0 };
+
+uint16_t t2_indices[] = { 1, 6, 5, 2, 3 };
+
+uint16_t t12_c[] = { 0, 1, 7, 7, 0, 1, 1 };
+uint16_t t13_c[] = { 0, 1, 7, 7, 0, 7, 1 };
+uint16_t t14_c[] = { 0, 1, 0, 31, 0, 31, 1 };
+uint16_t t15_c[] = { 0, 5, 0, 2043, 0, 2043, 5 };
+uint16_t t16_c[] = { 0, 5, 0, 32763, 0, 32763, 5 };
+
+uint16_t t3_indices[] = { 7, 2, 3, 5, 0, 2, 3, 10, 7, 0, 8, 2 };
+
+uint16_t t17_a[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint16_t t17_c[] = { 7, 1, 0, 1, 1, 7, 0, 7, 7, 7, 2 };
+
+ring_mult_test_t ring_mult_tests[] = {
+	{  7,     8, FALSE, 2, 2, t1_indices, t1_a,  t1_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t2_a,  t2_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t3_a,  t3_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t4_a,  t4_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t5_a,  t5_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t6_a,  t6_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t7_a,  t7_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t8_a,  t8_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t9_a,  t9_c  },
+	{  7,     8, FALSE, 2, 2, t1_indices, t10_a, t10_c },
+	{  7,     8, FALSE, 2, 2, t1_indices, t11_a, t11_c },
+	{  7,     8, FALSE, 3, 2, t2_indices, t1_a,  t12_c },
+	{  7,     8, FALSE, 2, 3, t2_indices, t1_a,  t13_c },
+	{  7,    32, FALSE, 2, 2, t1_indices, t1_a,  t14_c },
+	{  7,  2048, FALSE, 2, 2, t1_indices, t2_a,  t15_c },
+	{  7, 32768, FALSE, 2, 2, t1_indices, t2_a,  t16_c },
+	{ 11,     8, TRUE, 197121, 197121, t3_indices, t17_a,  t17_c },
+};
+
+START_TEST(test_ntru_ring_mult)
+{
+	ntru_poly_t *poly;
+	ring_mult_test_t *t;
+	uint16_t *c;
+	int i;
+
+	t = &ring_mult_tests[_i];
+	poly = ntru_poly_create_from_data(t->indices, t->N, t->q, t->indices_len_p,
+									  t->indices_len_m, t->is_product_form);
+	ck_assert(poly != NULL);
+
+	c = malloc(sizeof(uint16_t) * t->N);
+	poly->ring_mult(poly, t->a, c);
+
+	for (i = 0; i < t->N; i++)
+	{
+		ck_assert(c[i] == t->c[i]);
+	}
+
+	free(c);
+	poly->destroy(poly);
 }
 END_TEST
 
@@ -868,6 +977,10 @@ Suite *ntru_suite_create()
 
 	tc = tcase_create("poly");
 	tcase_add_loop_test(tc, test_ntru_poly, 0, countof(mgf1_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ring_mult");
+	tcase_add_loop_test(tc, test_ntru_ring_mult, 0, countof(ring_mult_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ke");

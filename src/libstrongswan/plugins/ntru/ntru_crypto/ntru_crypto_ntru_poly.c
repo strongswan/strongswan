@@ -122,66 +122,6 @@ ntru_ring_mult_indices(
         c[k] = t[k] & mod_q_mask;
 }
 
-
-/* ntru_ring_mult_product_indices
- *
- * Multiplies ring element (polynomial) "a" by ring element (polynomial) "b"
- * to produce ring element (polynomial) "c" in (Z/qZ)[X]/(X^N - 1).
- * This is a convolution operation.
- *
- * Ring element "b" is represented by the product form b1 * b2 + b3, where
- * b1, b2, and b3 are each a sparse trinary polynomial with coefficients -1,
- * 0, and 1.  It is specified by a list, bi, of the nonzero indices of b1, b2,
- * and b3, containing the indices for the +1 coefficients followed by the
- * indices for the -1 coefficients for each polynomial in that order.
- * The indices are in the range [0,N).
- *
- * The result array "c" may share the same memory space as input array "a",
- * or input array "b".
- *
- * This assumes q is 2^r where 8 < r < 16, so that overflow of the sum
- * beyond 16 bits does not matter.
- */
-
-void
-ntru_ring_mult_product_indices(
-    uint16_t       *a,          /*  in - pointer to ring element a */
-    uint16_t        b1i_len,    /*  in - no. of +1 or -1 coefficients in b1 */
-    uint16_t        b2i_len,    /*  in - no. of +1 or -1 coefficients in b2 */
-    uint16_t        b3i_len,    /*  in - no. of +1 or -1 coefficients in b3 */
-    uint16_t const *bi,         /*  in - pointer to the list of nonzero
-                                         indices of polynomials b1, b2, b3,
-                                         containing indices for the +1
-                                         coefficients followed by the
-                                         indices for -1 coefficients for
-                                         each polynomial */
-    uint16_t        N,          /*  in - no. of coefficients in a, b, c */
-    uint16_t        q,          /*  in - large modulus */
-    uint16_t       *t,          /*  in - temp buffer of 2N elements */
-    uint16_t       *c)          /* out - address for polynomial c */
-{
-    uint16_t *t2 = t + N;
-    uint16_t  mod_q_mask = q - 1;
-    uint16_t  i;
-
-
-    /* t2 = a * b1 */
-    ntru_ring_mult_indices(a, b1i_len, b1i_len, bi, N, q, t, t2);
-
-    /* t2 = (a * b1) * b2 */
-    ntru_ring_mult_indices(t2, b2i_len, b2i_len, bi + (b1i_len << 1), N, q,
-                           t, t2);
-
-    /* t = a * b3 */
-    ntru_ring_mult_indices(a, b3i_len, b3i_len,
-                           bi + ((b1i_len + b2i_len) << 1), N, q, t, t);
-
-    /* c = (a * b1 * b2) + (a * b3) */
-    for (i = 0; i < N; i++)
-        c[i] = (t2[i] + t[i]) & mod_q_mask;
-}
-
-
 /* ntru_ring_mult_coefficients
  *
  * Multiplies ring element (polynomial) "a" by ring element (polynomial) "b"

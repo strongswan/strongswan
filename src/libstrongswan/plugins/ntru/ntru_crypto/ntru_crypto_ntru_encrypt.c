@@ -228,9 +228,10 @@ ntru_crypto_ntru_encrypt(
 			DBG2(DBG_LIB, "generate polynomial r");
 
 			seed = chunk_create(tmp_buf, ptr - tmp_buf);
-			r_poly = ntru_poly_create(hash_algid, seed, params->c_bits,
-									  params->N, params->q, params->dF_r,
-									  params->dF_r, params->is_product_form);
+			r_poly = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+												params->N, params->q,
+												params->dF_r, params->dF_r,
+												params->is_product_form);
 			if (!r_poly)
 			{
 			   result = NTRU_MGF1_FAIL;
@@ -443,7 +444,7 @@ ntru_crypto_ntru_decrypt(
 	ntru_trits_t           *mask;
 	uint8_t                *mask_trits;
 	chunk_t                 seed;
-	ntru_poly_t			   *r_poly;
+	ntru_poly_t			   *F_poly, *r_poly;
 
 	/* check for bad parameters */
 	if (!privkey_blob || !ct || !pt_len)
@@ -557,16 +558,16 @@ ntru_crypto_ntru_decrypt(
      *  a = A in the range [-q/2, q/2)
      *  cm' = a mod p
      */
+	F_poly = ntru_poly_create_from_data(i_buf, params->N, params->q,
+										params->dF_r, params->dF_r,
+									    params->is_product_form);
+	F_poly->ring_mult(F_poly, ringel_buf2, ringel_buf1);
+	F_poly->destroy(F_poly);
 
     cmprime_len = params->N;
     if (params->is_product_form)
 	{
          --cmprime_len;
-        ntru_ring_mult_product_indices(ringel_buf2, (uint16_t)dF_r1,
-                                       (uint16_t)dF_r2, (uint16_t)dF_r3,
-                                       i_buf, params->N, params->q,
-                                       scratch_buf, ringel_buf1);
-
 		for (i = 0; i < cmprime_len; i++)
 		{
 			ringel_buf1[i] = (ringel_buf2[i] + 3 * ringel_buf1[i]) & mod_q_mask;
@@ -587,10 +588,6 @@ ntru_crypto_ntru_decrypt(
 	}
 	else
 	{
-        ntru_ring_mult_indices(ringel_buf2, (uint16_t)dF_r, (uint16_t)dF_r,
-                               i_buf, params->N, params->q,
-                               scratch_buf, ringel_buf1);
-
 		for (i = 0; i < cmprime_len; i++)
 		{
 			ringel_buf1[i] = (ringel_buf2[i] + 3 * ringel_buf1[i]) & mod_q_mask;
@@ -600,7 +597,7 @@ ntru_crypto_ntru_decrypt(
 			}
 			Mtrin_buf[i] = (uint8_t)(ringel_buf1[i] % 3);
 		}
-}
+	}
 
     /* check that the candidate message representative meets minimum weight
      * requirements
@@ -707,9 +704,10 @@ ntru_crypto_ntru_decrypt(
 		DBG2(DBG_LIB, "generate polynomial r");
 
 		seed = chunk_create(tmp_buf, ptr - tmp_buf);
-		r_poly = ntru_poly_create(hash_algid, seed, params->c_bits,
-								  params->N, params->q, params->dF_r,
-								  params->dF_r, params->is_product_form);
+		r_poly = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+											params->N, params->q,
+											params->dF_r, params->dF_r,
+											params->is_product_form);
 		if (!r_poly)
 		{
 		   result = NTRU_MGF1_FAIL;
@@ -941,9 +939,10 @@ ntru_crypto_ntru_encrypt_keygen(
 		DBG2(DBG_LIB, "generate polynomial F");
 
 		seed = chunk_create(tmp_buf, seed_len);
-		F_poly = ntru_poly_create(hash_algid, seed, params->c_bits,
-								  params->N, params->q, params->dF_r,
-								  params->dF_r, params->is_product_form);
+		F_poly = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+											params->N, params->q,
+											params->dF_r, params->dF_r,
+											params->is_product_form);
 		if (!F_poly)
 		{
 		   result = NTRU_MGF1_FAIL;
@@ -1037,9 +1036,9 @@ ntru_crypto_ntru_encrypt_keygen(
 		DBG2(DBG_LIB, "generate polynomial g");
 
 		seed = chunk_create(tmp_buf, seed_len);
-		g_poly = ntru_poly_create(hash_algid, seed, params->c_bits,
-								  params->N, params->q, params->dg + 1,
-								  params->dg, FALSE);
+		g_poly = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+											params->N, params->q,
+											params->dg + 1, params->dg, FALSE);
 		if (!g_poly)
 		{
 		   result = NTRU_MGF1_FAIL;

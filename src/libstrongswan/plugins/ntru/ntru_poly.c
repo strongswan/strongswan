@@ -197,10 +197,11 @@ METHOD(ntru_poly_t, destroy, void,
 /*
  * Described in header.
  */
-ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
-							  uint8_t c_bits, uint16_t N, uint16_t q,
-							  uint32_t indices_len_p, uint32_t indices_len_m,
-							  bool is_product_form)
+ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
+										uint8_t c_bits, uint16_t N, uint16_t q,
+										uint32_t indices_len_p,
+										uint32_t indices_len_m,
+										bool is_product_form)
 {
 	private_ntru_poly_t *this;
 	size_t hash_len, octet_count = 0, i;
@@ -322,4 +323,56 @@ ntru_poly_t *ntru_poly_create(hash_algorithm_t alg, chunk_t seed,
 	return &this->public;
 }
 
-EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create);
+/*
+ * Described in header.
+ */
+ntru_poly_t *ntru_poly_create_from_data(uint16_t *data, uint16_t N, uint16_t q,
+										uint32_t indices_len_p,
+										uint32_t indices_len_m,
+										bool is_product_form)
+{
+	private_ntru_poly_t *this;
+	int n, i, num_indices;
+
+	INIT(this,
+		.public = {
+			.get_size = _get_size,
+			.get_indices = _get_indices,
+			.ring_mult = _ring_mult,
+			.destroy = _destroy,
+		},
+		.N = N,
+		.q = q,
+	);
+
+	if (is_product_form)
+	{
+		this->num_polynomials = 3;
+		for (n = 0; n < 3; n++)
+		{
+			this->indices_len[n].p = 0xff & indices_len_p;
+			this->indices_len[n].m = 0xff & indices_len_m;
+			indices_len_p >>= 8;
+			indices_len_m >>= 8;
+		}
+	}
+	else
+	{
+		this->num_polynomials = 1;
+		this->indices_len[0].p = indices_len_p;
+		this->indices_len[0].m = indices_len_m;
+	}
+	num_indices = get_size(this);
+
+	this->indices = malloc(sizeof(uint16_t) * num_indices);
+	for (i = 0; i < num_indices; i++)
+	{
+		this->indices[i] = data[i];
+	}
+
+	return &this->public;
+}
+
+EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_seed);
+
+EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_data);
