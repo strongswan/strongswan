@@ -65,8 +65,8 @@ static void testable_function_unregister_##fn() \
 /**
  * Import a registered function so that it can be called from tests.
  *
- * @note If the imported function is static (or no conflicting header files
- * are included) ret can be prefixed with static to declare the function static.
+ * The function name is prefixed with TEST_ to avoid clashes when building
+ * monolithically.
  *
  * @note We allocate an arbitrary amount of stack space, hopefully enough for
  * all arguments.
@@ -77,7 +77,7 @@ static void testable_function_unregister_##fn() \
  * @param ...		arguments of the function
  */
 #define IMPORT_FUNCTION_FOR_TESTS(ns, name, ret, ...) \
-ret name(__VA_ARGS__) \
+static ret TEST_##name(__VA_ARGS__) \
 { \
 	void (*fn)() = NULL; \
 	if (testable_functions) \
