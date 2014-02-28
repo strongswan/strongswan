@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -193,7 +193,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 {
 	enumerator_t *e1, *e2;
 	u_int16_t alg1, alg2, ks1, ks2;
-	bool found = FALSE;
+	bool found = FALSE, optional = FALSE;
 
 	if (type == INTEGRITY_ALGORITHM &&
 		selected->get_algorithm(selected, ENCRYPTION_ALGORITHM, &alg1, NULL) &&
@@ -202,12 +202,27 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		/* no integrity algorithm required, we have an AEAD */
 		return TRUE;
 	}
+	if (type == DIFFIE_HELLMAN_GROUP)
+	{
+		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
+	}
 
 	e1 = create_enumerator(this, type);
 	e2 = other->create_enumerator(other, type);
-	if (!e1->enumerate(e1, NULL, NULL) && !e2->enumerate(e2, NULL, NULL))
+	if (!e1->enumerate(e1, NULL, NULL))
 	{
-		found = TRUE;
+		if (!e2->enumerate(e2, &alg2, NULL))
+		{
+			found = TRUE;
+		}
+		else if (optional)
+		{
+			do
+			{	/* if the other peer proposes NONE, we accept the proposal */
+				found = !alg2;
+			}
+			while (!found && e2->enumerate(e2, &alg2, NULL));
+		}
 	}
 
 	e1->destroy(e1);
