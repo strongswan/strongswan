@@ -51,7 +51,7 @@ void testable_function_register(char *name, void *fn);
  * @param fn		function to register
  */
 #define EXPORT_FUNCTION_FOR_TESTS(ns, fn) \
-static void testable_function_register_##fn() __attribute__ ((constructor(2000))); \
+static void testable_function_register_##fn() __attribute__ ((constructor)); \
 static void testable_function_register_##fn() \
 { \
 	testable_function_register(#ns "/" #fn, fn); \
