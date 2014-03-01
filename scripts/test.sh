@@ -9,14 +9,18 @@ cd $TRAVIS_BUILD_DIR
 
 TARGET=check
 
+DEPS="libgmp-dev"
+
 case "$TEST" in
 default)
 	;;
 openssl)
 	CONFIG="--disable-defaults --enable-tools --enable-openssl"
+	DEPS="libssl-dev"
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-tools --enable-gcrypt --enable-pkcs1"
+	DEPS="libgcrypt11-dev"
 	;;
 all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
@@ -29,6 +33,10 @@ all)
 	CONFIG="$CONFIG --disable-vstr"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
 	CONFIG="$CONFIG --disable-coverage"
+	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
+		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
+		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
+		  binutils-dev libunwind7-dev"
 	;;
 dist)
 	TARGET=distcheck
@@ -38,6 +46,11 @@ dist)
 	exit 1
 	;;
 esac
+
+if test "$1" = "deps"; then
+	sudo apt-get install -qq $DEPS
+	exit $?
+fi
 
 CONFIG="$CONFIG
 	--enable-silent-rules
