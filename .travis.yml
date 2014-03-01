@@ -2,6 +2,7 @@ language: c
 
 compiler:
   - gcc
+  - clang
 
 before_install:
   - sudo apt-get update -qq
@@ -35,4 +36,8 @@ env:
     - TEST=gcrypt
     - TEST=all
     - TEST=all MONOLITHIC=yes
-    - TEST=dist
+
+matrix:
+  include:
+    - compiler: gcc
+      env: TEST=dist
