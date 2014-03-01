@@ -94,7 +94,8 @@ START_TEST(test_ntru_drbg_strength)
 	entropy = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	ck_assert(entropy != NULL);
 
-	drbg = TEST_ntru_drbg_create(strengths[_i].requested, chunk_empty, entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, strengths[_i].requested,
+						 chunk_empty, entropy);
 	if (strengths[_i].standard)
 	{
 		ck_assert(drbg != NULL);
@@ -251,7 +252,8 @@ START_TEST(test_ntru_drbg)
 
 	out = chunk_alloc(128);
 	entropy = test_rng_create(drbg_tests[_i].entropy);
-	drbg = TEST_ntru_drbg_create(256, drbg_tests[_i].pers_str, entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, 256, drbg_tests[_i].pers_str,
+						 entropy);
 	ck_assert(drbg != NULL);
 	ck_assert(drbg->reseed(drbg));
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
@@ -273,7 +275,7 @@ START_TEST(test_ntru_drbg_reseed)
 						  "libstrongswan.plugins.ntru.max_drbg_requests", 2);
 	out = chunk_alloc(128);
 	entropy = test_rng_create(drbg_tests[0].entropy);
-	drbg = TEST_ntru_drbg_create(256, chunk_empty, entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, 256, chunk_empty, entropy);
 
 	/* bad output parameters */
 	ck_assert(!drbg->generate(drbg, 256, 0, out.ptr));
@@ -291,13 +293,13 @@ START_TEST(test_ntru_drbg_reseed)
 	drbg->destroy(drbg);
 
 	/* no entropy available for DRBG instantiation */
-	drbg = TEST_ntru_drbg_create(256, chunk_empty, entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, 256, chunk_empty, entropy);
 	ck_assert(drbg == NULL);
 	entropy->destroy(entropy);
 
 	/* one automatic reseeding occurs */
 	entropy = test_rng_create(drbg_tests[0].entropy);
-	drbg = TEST_ntru_drbg_create(256, chunk_empty, entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, 256, chunk_empty, entropy);
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
 	ck_assert(drbg->generate(drbg, 256, 128, out.ptr));
@@ -550,14 +552,17 @@ START_TEST(test_ntru_mgf1)
 	mask2.len = mgf1_tests[_i].ml2;
 	mask3.len = mgf1_tests[_i].ml3;
 
-	mgf1 = TEST_ntru_mgf1_create(HASH_UNKNOWN, mgf1_tests[_i].seed, TRUE);
+	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, HASH_UNKNOWN,
+						 mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1 == NULL);
 
-	mgf1 = TEST_ntru_mgf1_create(mgf1_tests[_i].alg, chunk_empty, TRUE);
+	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
+						 chunk_empty, TRUE);
 	ck_assert(mgf1 == NULL);
 
 	/* return mask in allocated chunk */
-	mgf1 = TEST_ntru_mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
+	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
+						 mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1);
 
 	/* check hash size */
@@ -573,15 +578,16 @@ START_TEST(test_ntru_mgf1)
 	mgf1->destroy(mgf1);
 
 	/* copy mask to pre-allocated buffer */
-	mgf1 = TEST_ntru_mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
+	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
+						 mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1);
 	ck_assert(mgf1->get_mask(mgf1, mgf1_tests[_i].mask.len, mask.ptr));
 	ck_assert(chunk_equals(mask, mgf1_tests[_i].mask));
 	mgf1->destroy(mgf1);
 
 	/* get mask in batches without hashing the seed */
-	mgf1 = TEST_ntru_mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].hashed_seed,
-								 FALSE);
+	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
+						 mgf1_tests[_i].hashed_seed, FALSE);
 	ck_assert(mgf1);
 
 	/* first batch */
@@ -609,16 +615,16 @@ START_TEST(test_ntru_trits)
 	ntru_trits_t *mask;
 	chunk_t trits;
 
-	mask = TEST_ntru_trits_create(mgf1_tests[_i].trits.len, HASH_UNKNOWN,
-								  mgf1_tests[_i].seed);
+	mask = TEST_FUNCTION(ntru, ntru_trits_create, mgf1_tests[_i].trits.len,
+						 HASH_UNKNOWN, mgf1_tests[_i].seed);
 	ck_assert(mask == NULL);
 
-	mask = TEST_ntru_trits_create(mgf1_tests[_i].trits.len, mgf1_tests[_i].alg,
-								  chunk_empty);
+	mask = TEST_FUNCTION(ntru, ntru_trits_create, mgf1_tests[_i].trits.len,
+						 mgf1_tests[_i].alg, chunk_empty);
 	ck_assert(mask == NULL);
 
-	mask = TEST_ntru_trits_create(mgf1_tests[_i].trits.len, mgf1_tests[_i].alg,
-								  mgf1_tests[_i].seed);
+	mask = TEST_FUNCTION(ntru, ntru_trits_create, mgf1_tests[_i].trits.len,
+						 mgf1_tests[_i].alg, mgf1_tests[_i].seed);
 	ck_assert(mask);
 
 	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
@@ -626,7 +632,8 @@ START_TEST(test_ntru_trits)
 	mask->destroy(mask);
 
 	/* generate a multiple of 5 trits */
-	mask = TEST_ntru_trits_create(10, mgf1_tests[_i].alg, mgf1_tests[_i].seed);
+	mask = TEST_FUNCTION(ntru, ntru_trits_create, 10, mgf1_tests[_i].alg,
+						 mgf1_tests[_i].seed);
 	ck_assert(mask);
 
 	trits = chunk_create(mask->get_trits(mask), mask->get_size(mask));
@@ -647,17 +654,17 @@ START_TEST(test_ntru_poly)
 	seed.len = mgf1_tests[_i].seed_len;
 
 	p = &mgf1_tests[_i].poly_test[0];
-	poly = TEST_ntru_poly_create_from_seed(HASH_UNKNOWN, seed, p->c_bits, p->N,
-										   p->q, p->indices_len, p->indices_len,
-										   p->is_product_form);
+	poly = TEST_FUNCTION(ntru, ntru_poly_create_from_seed, HASH_UNKNOWN, seed,
+						 p->c_bits, p->N, p->q, p->indices_len, p->indices_len,
+						 p->is_product_form);
 	ck_assert(poly == NULL);
 
 	for (n = 0; n < 2; n++)
 	{
 		p = &mgf1_tests[_i].poly_test[n];
-		poly = TEST_ntru_poly_create_from_seed(mgf1_tests[_i].alg, seed,
-										p->c_bits, p->N, p->q, p->indices_len,
-										p->indices_len, p->is_product_form);
+		poly = TEST_FUNCTION(ntru, ntru_poly_create_from_seed,
+							mgf1_tests[_i].alg, seed, p->c_bits, p->N, p->q,
+							p->indices_len, p->indices_len, p->is_product_form);
 		ck_assert(poly != NULL && poly->get_size(poly) == p->indices_size);
 
 		indices = poly->get_indices(poly);
@@ -757,8 +764,9 @@ START_TEST(test_ntru_ring_mult)
 	int i;
 
 	t = &ring_mult_tests[_i];
-	poly = TEST_ntru_poly_create_from_data(t->indices, t->N, t->q,
-						t->indices_len_p, t->indices_len_m, t->is_product_form);
+	poly = TEST_FUNCTION(ntru, ntru_poly_create_from_data, t->indices, t->N,
+						 t->q, t->indices_len_p, t->indices_len_m,
+						 t->is_product_form);
 	ck_assert(poly != NULL);
 
 	c = malloc(t->N * sizeof(uint16_t));
@@ -785,8 +793,9 @@ START_TEST(test_ntru_array)
 
 	t = &ring_mult_tests[array_tests[_i]];
 
-	poly = TEST_ntru_poly_create_from_data(t->indices, t->N, t->q,
-						t->indices_len_p, t->indices_len_m, t->is_product_form);
+	poly = TEST_FUNCTION(ntru, ntru_poly_create_from_data, t->indices, t->N,
+						 t->q, t->indices_len_p, t->indices_len_m,
+						 t->is_product_form);
 	ck_assert(poly != NULL);
 
 	c = malloc(t->N * sizeof(uint16_t));
@@ -804,8 +813,8 @@ END_TEST
 
 START_TEST(test_ntru_param_set)
 {
-	ck_assert(TEST_ntru_param_set_get_by_id(-1) == NULL);
-	ck_assert(TEST_ntru_param_set_get_by_id(16) == NULL);
+	ck_assert(TEST_FUNCTION(ntru, ntru_param_set_get_by_id, -1) == NULL);
+	ck_assert(TEST_FUNCTION(ntru, ntru_param_set_get_by_id, 16) == NULL);
 }
 END_TEST
 
@@ -1067,14 +1076,15 @@ START_TEST(test_ntru_privkey)
 	uint32_t strength;
 	chunk_t encoding, privkey_encoding, pubkey_encoding;
 
-	params = TEST_ntru_param_set_get_by_id(privkey_tests[_i].id);
+	params = TEST_FUNCTION(ntru, ntru_param_set_get_by_id,
+						   privkey_tests[_i].id);
 	strength = params->sec_strength_len * BITS_PER_BYTE;
 	entropy = test_rng_create(privkey_tests[_i].entropy);
-	drbg = TEST_ntru_drbg_create(strength, chunk_from_str("IKE NTRU-KE"),
-								 entropy);
+	drbg = TEST_FUNCTION(ntru, ntru_drbg_create, strength,
+						 chunk_from_str("IKE NTRU-KE"), entropy);
 	ck_assert(drbg != NULL);
 
-	privkey = TEST_ntru_private_key_create(drbg, params);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create, drbg, params);
 	ck_assert(privkey);
 
 	privkey_encoding = privkey->get_encoding(privkey);
