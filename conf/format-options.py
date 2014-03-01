@@ -54,6 +54,7 @@ import sys
 import re
 from textwrap import TextWrapper
 from optparse import OptionParser
+from operator import attrgetter
 
 class ConfigOption:
 	"""Representing a configuration option or described section in strongswan.conf"""
@@ -67,9 +68,7 @@ class ConfigOption:
 		self.options = []
 
 	def __cmp__(self, other):
-		if self.section == other.section:
-			return  cmp(self.name, other.name)
-		return 1 if self.section else -1
+		return  cmp(self.name, other.name)
 
 	def add_paragraph(self):
 		"""Adds a new paragraph to the description"""
@@ -246,7 +245,7 @@ class ConfFormatter:
 		self.__print_description(section, indent)
 		print '{0}{1}{2} {{'.format(self.__indent * indent, comment, section.name)
 		print
-		for o in section.options:
+		for o in sorted(section.options, key=attrgetter('section')):
 			if o.section:
 				self.__print_section(o, indent + 1, section.commented)
 			else:
@@ -258,7 +257,7 @@ class ConfFormatter:
 		"""Print a list of options"""
 		if not options:
 			return
-		for option in options:
+		for option in sorted(options, key=attrgetter('section')):
 			if option.section:
 				self.__print_section(option, 0, False)
 			else:
