@@ -13,6 +13,8 @@ DEPS="libgmp-dev"
 
 case "$TEST" in
 default)
+	# should be the default, but lets make sure
+	CONFIG="--with-printf-hooks=glibc"
 	;;
 openssl)
 	CONFIG="--disable-defaults --enable-tools --enable-openssl"
@@ -22,6 +24,9 @@ gcrypt)
 	CONFIG="--disable-defaults --enable-tools --enable-gcrypt --enable-pkcs1"
 	DEPS="libgcrypt11-dev"
 	;;
+printf-builtin)
+	CONFIG="--with-printf-hooks=builtin"
+	;;
 all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
@@ -29,8 +34,6 @@ all)
 			--disable-osx-attr --disable-tkm --disable-uci"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
-	# TODO: add tests for different printf implementations?
-	CONFIG="$CONFIG --disable-vstr"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
 	CONFIG="$CONFIG --disable-coverage"
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev

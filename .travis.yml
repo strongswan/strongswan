@@ -26,6 +26,9 @@ env:
     - TEST=openssl LEAK_DETECTIVE=yes
     # libgcrypt can't be deinitialized so we can't test it with leak detective
     - TEST=gcrypt
+    # we can't test Vstr as negative int args are not properly passed to CBs
+    - TEST=printf-builtin
+    - TEST=printf-builtin LEAK_DETECTIVE=yes
     - TEST=all
     - TEST=all MONOLITHIC=yes
 
