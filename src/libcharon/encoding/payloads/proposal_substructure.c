@@ -361,12 +361,20 @@ METHOD(payload_t, verify, status_t,
 			}
 			break;
 		case PROTO_IKE:
-			if (this->spi.len != 0 && this->spi.len  != 8)
+			if (this->type == PROPOSAL_SUBSTRUCTURE_V1)
 			{
-				DBG1(DBG_ENC, "invalid SPI length in IKE proposal");
-				return FAILED;
+				if (this->spi.len <= 16)
+				{	/* according to RFC 2409, section 3.5 anything between
+					 * 0 and 16 is fine */
+					break;
+				}
 			}
-			break;
+			else if (this->spi.len == 0 || this->spi.len  == 8)
+			{
+				break;
+			}
+			DBG1(DBG_ENC, "invalid SPI length in IKE proposal");
+			return FAILED;
 		default:
 			break;
 	}
