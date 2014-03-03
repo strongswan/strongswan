@@ -528,8 +528,7 @@ AC_CHECK_FUNC(
 			 AC_MSG_FAILURE([qsort_r has unknown semantics])])
 		])
 		CFLAGS="$save_CFLAGS"
-	],
-	[]
+	]
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
