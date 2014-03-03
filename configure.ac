@@ -66,6 +66,7 @@ ARG_WITH_SET([tss],                  [no], [set implementation of the Trusted Co
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
+ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -272,7 +273,6 @@ ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and p
 ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
-ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -685,28 +685,43 @@ AC_RUN_IFELSE([AC_LANG_SOURCE(
 	[AC_MSG_RESULT([no])]
 )
 
-# check for the new register_printf_specifier function with len argument,
-# or the deprecated register_printf_function without
-AC_CHECK_FUNC(
-	[register_printf_specifier],
-	[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
-	[AC_CHECK_FUNC(
-		[register_printf_function],
-		[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
-		[
-			AC_MSG_NOTICE([printf does not support custom format specifiers!])
-			builtin_printf=true
-		]
-	)]
-)
+case "$printf_hooks" in
+auto|builtin|glibc|vstr)
+	;;
+*)
+	AC_MSG_NOTICE([invalid printf hook implementation, defaulting to 'auto'])
+	printf_hooks=auto
+	;;
+esac
 
-if test x$vstr = xtrue; then
-	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
-	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
-	builtin_printf=false
+if test x$printf_hooks = xauto -o x$printf_hooks = xglibc; then
+	# check for the new register_printf_specifier function with len argument,
+	# or the deprecated register_printf_function without
+	AC_CHECK_FUNC(
+		[register_printf_specifier],
+		[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
+		[AC_CHECK_FUNC(
+			[register_printf_function],
+			[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
+			[
+				AC_MSG_NOTICE([printf(3) does not support custom format specifiers!])
+				if test x$printf_hooks = xglibc; then
+					AC_MSG_ERROR([please select a different printf hook implementation])
+				else
+					# fallback to builtin printf hook implementation
+					printf_hooks=builtin
+				fi
+			]
+		)]
+	)
 fi
 
-if test x$builtin_printf = xtrue; then
+if test x$printf_hooks = xvstr; then
+	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
+	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
+fi
+
+if test x$printf_hooks = xbuiltin; then
 	AC_DEFINE([USE_BUILTIN_PRINTF], [], [using builtin printf for printf hooks])
 fi
 
@@ -1354,8 +1369,8 @@ AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
-AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
-AM_CONDITIONAL(USE_BUILTIN_PRINTF, test x$builtin_printf = xtrue)
+AM_CONDITIONAL(USE_VSTR, test x$printf_hooks = xvstr)
+AM_CONDITIONAL(USE_BUILTIN_PRINTF, test x$printf_hooks = xbuiltin)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
