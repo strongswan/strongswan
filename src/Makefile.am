@@ -73,7 +73,11 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += scepclient pki
+  SUBDIRS += scepclient
+endif
+
+if USE_PKI
+  SUBDIRS += pki
 endif
 
 if USE_SWANCTL

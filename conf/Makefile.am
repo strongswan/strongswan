@@ -18,6 +18,7 @@ options = \
 	options/pool.opt \
 	options/starter.opt \
 	options/tnc.opt \
+	options/pki.opt \
 	options/tools.opt
 
 plugins = \
