@@ -1224,7 +1224,7 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 	{
 		if (errno == ENOENT)
 		{
-			DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
+			DBG1(DBG_LIB, "'%s' does not exist, ignored", file);
 			return TRUE;
 		}
 		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
@@ -1287,7 +1287,7 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 
 	if (!strlen(pattern))
 	{
-		DBG2(DBG_LIB, "empty include pattern, ignored");
+		DBG1(DBG_LIB, "empty include pattern, ignored");
 		return TRUE;
 	}
 
@@ -1318,7 +1318,7 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 		status = glob(pat, GLOB_ERR, NULL, &buf);
 		if (status == GLOB_NOMATCH)
 		{
-			DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
+			DBG1(DBG_LIB, "no files found matching '%s', ignored", pat);
 		}
 		else if (status != 0)
 		{
@@ -1509,4 +1509,3 @@ settings_t *settings_create(char *file)
 
 	return &this->public;
 }
-
