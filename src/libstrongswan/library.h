@@ -113,8 +113,8 @@
 #include "utils/capabilities.h"
 #include "utils/integrity_checker.h"
 #include "utils/leak_detective.h"
-#include "utils/settings.h"
 #include "plugins/plugin_loader.h"
+#include "settings/settings.h"
 
 typedef struct library_t library_t;
 

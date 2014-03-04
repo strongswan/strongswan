@@ -17,7 +17,7 @@
 
 #include <unistd.h>
 
-#include <utils/settings.h>
+#include <settings/settings.h>
 #include <utils/chunk.h>
 #include <utils/utils.h>
 #include <collections/linked_list.h>
