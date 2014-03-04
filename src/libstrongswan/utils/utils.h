@@ -84,6 +84,15 @@
 #include "utils/strerror.h"
 
 /**
+ * Directory separator character in paths on this platform
+ */
+#ifdef WIN32
+# define DIRECTORY_SEPARATOR "\\"
+#else
+# define DIRECTORY_SEPARATOR "/"
+#endif
+
+/**
  * Initialize utility functions
  */
 void utils_init();
