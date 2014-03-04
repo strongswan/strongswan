@@ -22,7 +22,11 @@
 #include <utils/utils.h>
 #include <collections/linked_list.h>
 
+#ifdef WIN32
+static char *path = "C:\\Windows\\Temp\\strongswan-settings-test";
+#else
 static char *path = "/tmp/strongswan-settings-test";
+#endif
 static settings_t *settings;
 
 static void create_settings(chunk_t contents)
@@ -522,8 +526,13 @@ START_TEST(test_key_value_enumerator)
 }
 END_TEST
 
-#define include1 "/tmp/strongswan-settings-test-include1"
-#define include2 "/tmp/strongswan-settings-test-include2"
+#ifdef WIN32
+# define include1 "C:\\Windows\\Temp\\strongswan-settings-test-include1"
+# define include2 "C:\\Windows\\Temp\\strongswan-settings-test-include2"
+#else
+# define include1 "/tmp/strongswan-settings-test-include1"
+# define include2 "/tmp/strongswan-settings-test-include2"
+#endif
 
 START_SETUP(setup_include_config)
 {
@@ -675,6 +684,7 @@ START_TEST(test_load_files_section)
 	ck_assert(!settings->load_files_section(settings, include1".conf", TRUE, ""));
 	verify_include();
 
+#ifndef WIN32
 	/* unreadable files are too (only fails when not running as root) */
 	if (getuid() != 0)
 	{
@@ -683,6 +693,7 @@ START_TEST(test_load_files_section)
 		unlink(include1".no");
 		verify_include();
 	}
+#endif
 
 	ck_assert(settings->load_files_section(settings, include2, FALSE, "main"));
 	verify_null("main.key1");
