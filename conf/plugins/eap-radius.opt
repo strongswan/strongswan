@@ -1,6 +1,10 @@
 charon.plugins.eap-radius.accounting = no
 	Send RADIUS accounting information to RADIUS servers.
 
+charon.plugins.eap-radius.accounting_close_on_timeout = yes
+	Close the IKE_SA if there is a timeout during interim RADIUS accounting
+	updates.
+
 charon.plugins.eap-radius.accounting_requires_vip = no
 	If enabled, accounting is disabled unless an IKE_SA has at least one
 	virtual IP.

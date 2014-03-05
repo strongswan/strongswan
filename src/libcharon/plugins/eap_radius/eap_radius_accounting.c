@@ -410,7 +410,12 @@ static job_requeue_t send_interim(interim_data_t *data)
 	{
 		if (!send_message(this, message))
 		{
-			eap_radius_handle_timeout(data->id);
+			if (lib->settings->get_bool(lib->settings,
+							"%s.plugins.eap-radius.accounting_close_on_timeout",
+							TRUE, lib->ns))
+			{
+				eap_radius_handle_timeout(data->id);
+			}
 		}
 		message->destroy(message);
 	}
