@@ -50,6 +50,11 @@ struct private_file_logger_t {
 	FILE *out;
 
 	/**
+	 * Flush after writing a line?
+	 */
+	bool flush_line;
+
+	/**
 	 * Maximum level to log, for each group
 	 */
 	level_t levels[DBG_MAX];
@@ -137,6 +142,12 @@ METHOD(logger_t, log_, void,
 		fprintf(this->out, "%.*s\n", (int)(next - current), current);
 		current = next + 1;
 	}
+#ifndef HAVE_SETLINEBUF
+	if (this->flush_line)
+	{
+		fflush(this->out);
+	}
+#endif /* !HAVE_SETLINEBUF */
 	this->mutex->unlock(this->mutex);
 	this->lock->unlock(this->lock);
 }
@@ -224,6 +235,7 @@ METHOD(file_logger_t, open_, void,
 	this->lock->write_lock(this->lock);
 	close_file(this);
 	this->out = file;
+	this->flush_line = flush_line;
 	this->lock->unlock(this->lock);
 }
 
