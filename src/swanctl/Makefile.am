@@ -20,6 +20,8 @@ swanctl_LDADD = \
 
 swanctl.o :		$(top_builddir)/config.status
 
+EXTRA_DIST = swanctl.conf
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libcharon/plugins/vici \
