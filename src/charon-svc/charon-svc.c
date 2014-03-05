@@ -216,6 +216,32 @@ static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
 }
 
 /**
+ * Switch the working directory to the executable directory
+ */
+static bool switch_workingdir()
+{
+	CHAR path[MAX_PATH], *pos;
+	HMODULE module;
+
+	module = GetModuleHandle(NULL);
+	if (!module)
+	{
+		return FALSE;
+	}
+	if (!GetModuleFileName(module, path, sizeof(path)))
+	{
+		return FALSE;
+	}
+	pos = strrchr(path, '\\');
+	if (!pos)
+	{
+		return FALSE;
+	}
+	*pos = 0;
+	return SetCurrentDirectory(path);
+}
+
+/**
  * Service main routine when running as service
  */
 static void service_main(DWORD dwArgc, LPTSTR *lpszArgv)
@@ -228,7 +254,10 @@ static void service_main(DWORD dwArgc, LPTSTR *lpszArgv)
 	handle = RegisterServiceCtrlHandlerEx(SERVICE_NAME, service_handler, NULL);
 	if (handle)
 	{
-		init_and_run(dwArgc, lpszArgv);
+		if (switch_workingdir())
+		{
+			init_and_run(dwArgc, lpszArgv);
+		}
 	}
 }
 
