@@ -19,6 +19,7 @@
 #include "vici_control.h"
 #include "vici_cred.h"
 #include "vici_config.h"
+#include "vici_logger.h"
 
 #include <library.h>
 #include <daemon.h>
@@ -59,6 +60,11 @@ struct private_vici_plugin_t {
 	 * Configuration backend
 	 */
 	vici_config_t *config;
+
+	/**
+	 * Generic debug logger
+	 */
+	vici_logger_t *logger;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -86,18 +92,22 @@ static bool register_vici(private_vici_plugin_t *this,
 			this->control = vici_control_create(this->dispatcher);
 			this->cred = vici_cred_create(this->dispatcher);
 			this->config = vici_config_create(this->dispatcher);
+			this->logger = vici_logger_create(this->dispatcher);
 
 			charon->backends->add_backend(charon->backends,
 										  &this->config->backend);
+			charon->bus->add_logger(charon->bus, &this->logger->logger);
 			return TRUE;
 		}
 		return FALSE;
 	}
 	else
 	{
+		charon->bus->remove_logger(charon->bus, &this->logger->logger);
 		charon->backends->remove_backend(charon->backends,
 										 &this->config->backend);
 
+		this->logger->destroy(this->logger);
 		this->config->destroy(this->config);
 		this->cred->destroy(this->cred);
 		this->control->destroy(this->control);
