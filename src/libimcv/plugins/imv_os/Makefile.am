@@ -18,9 +18,11 @@ imv_os_la_SOURCES = \
 
 imv_os_la_LDFLAGS = -module -avoid-version -no-undefined
 
+if !USE_WINDOWS
 ipsec_PROGRAMS = pacman
 pacman_SOURCES = pacman.c
 pacman_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 pacman.o :	$(top_builddir)/config.status
 
 EXTRA_DIST = pacman.sh
+endif
