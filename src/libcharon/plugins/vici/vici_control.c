@@ -176,6 +176,9 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "missing configuration name");
 	}
+
+	DBG1(DBG_CFG, "vici initiate '%s'", child);
+
 	child_cfg = find_child_cfg(child, &peer_cfg);
 	if (!child_cfg)
 	{
@@ -220,6 +223,23 @@ CALLBACK(terminate, vici_message_t*,
 	if (!child && !ike && !ike_id && !child_id)
 	{
 		return send_reply(this, "missing terminate selector");
+	}
+
+	if (ike_id)
+	{
+		DBG1(DBG_CFG, "vici terminate IKE_SA #%d", ike_id);
+	}
+	if (child_id)
+	{
+		DBG1(DBG_CFG, "vici terminate CHILD_SA #%d", child_id);
+	}
+	if (ike)
+	{
+		DBG1(DBG_CFG, "vici terminate IKE_SA '%s'", ike);
+	}
+	if (child)
+	{
+		DBG1(DBG_CFG, "vici terminate CHILD_SA '%s'", child);
 	}
 
 	ids = array_create(sizeof(u_int), 0);
@@ -359,6 +379,9 @@ CALLBACK(install, vici_message_t*,
 	{
 		return send_reply(this, "missing configuration name");
 	}
+
+	DBG1(DBG_CFG, "vici install '%s'", child);
+
 	child_cfg = find_child_cfg(child, &peer_cfg);
 	if (!child_cfg)
 	{
@@ -394,6 +417,9 @@ CALLBACK(uninstall, vici_message_t*,
 	{
 		return send_reply(this, "missing configuration name");
 	}
+
+	DBG1(DBG_CFG, "vici uninstall '%s'", child);
+
 	if (charon->shunts->uninstall(charon->shunts, child))
 	{
 		return send_reply(this, NULL);
