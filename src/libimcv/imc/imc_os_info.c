@@ -133,14 +133,16 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 		return FALSE;
 	}
 	*type = OS_TYPE_WINDOWS;
-	if (osvie.wProductType == VER_NT_WORKSTATION)
-	{
-		*name = chunk_clone(chunk_from_str("Client"));
-	}
-	else
-	{
-		*name = chunk_clone(chunk_from_str("Server"));
-	}
+	snprintf(buf, sizeof(buf), "Windows %s %s",
+			 osvie.wProductType == VER_NT_WORKSTATION ? "Client" : "Server",
+#ifdef WIN64
+			 "x86_64"
+#else
+			 "x86"
+#endif
+	);
+	*name = chunk_clone(chunk_from_str(buf));
+
 	snprintf(buf, sizeof(buf), "%d.%d.%d (SP %d.%d)",
 			 osvie.dwMajorVersion, osvie.dwMinorVersion, osvie.dwBuildNumber,
 			 osvie.wServicePackMajor, osvie.wServicePackMinor);
