@@ -278,7 +278,7 @@ static bool policy_stop(database_t *db, int session_id)
 int main(int argc, char *argv[])
 {
 	database_t *db;
-	char *uri, *tnc_session_id;
+	char *uri;
 	int session_id;
 	bool start, success;
 
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
-	if (argc < 2)
+	if (argc < 3)
 	{
 		usage();
 		exit(SS_RC_INITIALIZATION_FAILED);
@@ -318,14 +318,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
-	/* get session ID */
-	tnc_session_id = getenv("TNC_SESSION_ID");
-	if (!tnc_session_id)
-	{
-		fprintf(stderr, "environment variable TNC_SESSION_ID is not defined\n");
-		exit(SS_RC_INITIALIZATION_FAILED);
-	}
-	session_id = atoi(tnc_session_id);
+	session_id = atoi(argv[2]);
 
 	/* attach IMV database */
 	uri = lib->settings->get_str(lib->settings,
