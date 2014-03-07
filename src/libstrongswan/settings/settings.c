@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include "settings.h"
+#include "settings_types.h"
 
 #include "collections/array.h"
 #include "collections/hashtable.h"
@@ -32,186 +33,69 @@
 #include "threading/rwlock.h"
 #include "utils/debug.h"
 
-#define MAX_INCLUSION_LEVEL		10
-
 typedef struct private_settings_t private_settings_t;
-typedef struct section_t section_t;
-typedef struct kv_t kv_t;
 
 /**
- * private data of settings
+ * Parse function provided by the generated parser.
+ */
+bool settings_parser_parse_file(section_t *root, char *name);
+
+/**
+ * Private data of settings
  */
 struct private_settings_t {
 
 	/**
-	 * public functions
+	 * Public interface
 	 */
 	settings_t public;
 
 	/**
-	 * top level section
+	 * Top level section
 	 */
 	section_t *top;
 
 	/**
-	 * contents of loaded files and in-memory settings (char*)
+	 * Contents of replaced settings (char*)
+	 *
+	 * FIXME: This is required because the pointer returned by get_str()
+	 * is not refcounted.  Might cause ever increasing usage stats.
 	 */
-	linked_list_t *contents;
+	array_t *contents;
 
 	/**
-	 * lock to safely access the settings
+	 * Lock to safely access the settings
 	 */
 	rwlock_t *lock;
 };
 
-/**
- * section containing subsections and key value pairs
- */
-struct section_t {
-
-	/**
-	 * name of the section
-	 */
-	char *name;
-
-	/**
-	 * fallback sections, as section_t
-	 */
-	array_t *fallbacks;
-
-	/**
-	 * subsections, as section_t
-	 */
-	array_t *sections;
-
-	/**
-	 * key value pairs, as kv_t
-	 */
-	array_t *kv;
-};
-
-/**
- * Key value pair
- */
-struct kv_t {
-
-	/**
-	 * key string, relative
-	 */
-	char *key;
-
-	/**
-	 * value as string
-	 */
-	char *value;
-};
-
-/**
- * create a key/value pair
- */
-static kv_t *kv_create(char *key, char *value)
+static void kv_destroy(kv_t *kv, int idx, array_t *contents)
 {
-	kv_t *this;
-	INIT(this,
-		.key = strdup(key),
-		.value = value,
-	);
-	return this;
-}
-
-/**
- * destroy a key/value pair
- */
-static void kv_destroy(kv_t *this)
-{
-	free(this->key);
-	free(this);
-}
-
-/**
- * create a section with the given name
- */
-static section_t *section_create(char *name)
-{
-	section_t *this;
-	INIT(this,
-		.name = strdupnull(name),
-	);
-	return this;
-}
-
-/**
- * destroy a section
- */
-static void section_destroy(section_t *this)
-{
-	array_destroy_function(this->sections, (void*)section_destroy, NULL);
-	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
-	array_destroy(this->fallbacks);
-	free(this->name);
-	free(this);
+	settings_kv_destroy(kv, contents);
 }
 
 /**
  * Purge contents of a section, returns if section can be safely removed.
  */
-static bool section_purge(section_t *this)
+static bool section_purge(section_t *this, array_t *contents)
 {
 	section_t *current;
 	int i;
 
-	array_destroy_function(this->kv, (void*)kv_destroy, NULL);
+	array_destroy_function(this->kv, (void*)kv_destroy, contents);
 	this->kv = NULL;
 	/* we ensure sections used as fallback, or configured with fallbacks (or
 	 * having any such subsections) are not removed */
 	for (i = array_count(this->sections) - 1; i >= 0; i--)
 	{
 		array_get(this->sections, i, &current);
-		if (section_purge(current))
+		if (section_purge(current, contents))
 		{
 			array_remove(this->sections, i, NULL);
-			section_destroy(current);
+			settings_section_destroy(current, contents);
 		}
 	}
 	return !this->fallbacks && !array_count(this->sections);
-}
-
-/**
- * callback to find a section by name
- */
-static int section_find(const void *a, const void *b)
-{
-	const char *key = a;
-	const section_t *item = b;
-	return strcmp(key, item->name);
-}
-
-/**
- * callback to sort sections by name
- */
-static int section_sort(const void *a, const void *b, void *user)
-{
-	const section_t *sa = a, *sb = b;
-	return strcmp(sa->name, sb->name);
-}
-
-/**
- * callback to find a kv pair by key
- */
-static int kv_find(const void *a, const void *b)
-{
-	const char *key = a;
-	const kv_t *item = b;
-	return strcmp(key, item->key);
-}
-
-/**
- * callback to sort kv pairs by key
- */
-static int kv_sort(const void *a, const void *b, void *user)
-{
-	const kv_t *kva = a, *kvb = b;
-	return strcmp(kva->key, kvb->key);
 }
 
 /**
@@ -286,13 +170,14 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		found = section;
 	}
-	else if (array_bsearch(section->sections, buf, section_find, &found) == -1)
+	else if (array_bsearch(section->sections, buf, settings_section_find,
+						   &found) == -1)
 	{
 		if (ensure)
 		{
-			found = section_create(buf);
+			found = settings_section_create(strdup(buf));
 			array_insert_create(&section->sections, ARRAY_TAIL, found);
-			array_sort(section->sections, section_sort, NULL);
+			array_sort(section->sections, settings_section_sort, NULL);
 		}
 	}
 	if (found && pos)
@@ -336,7 +221,7 @@ static void find_sections_buffered(section_t *section, char *start, char *key,
 	}
 	else
 	{
-		array_bsearch(section->sections, buf, section_find, &found);
+		array_bsearch(section->sections, buf, settings_section_find, &found);
 	}
 	if (found)
 	{
@@ -497,14 +382,14 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			found = section;
 		}
-		else if (array_bsearch(section->sections, buf, section_find,
+		else if (array_bsearch(section->sections, buf, settings_section_find,
 							   &found) == -1)
 		{
 			if (ensure)
 			{
-				found = section_create(buf);
+				found = settings_section_create(strdup(buf));
 				array_insert_create(&section->sections, ARRAY_TAIL, found);
-				array_sort(section->sections, section_sort, NULL);
+				array_sort(section->sections, settings_section_sort, NULL);
 			}
 		}
 		if (found)
@@ -528,13 +413,13 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-		if (array_bsearch(section->kv, buf, kv_find, &kv) == -1)
+		if (array_bsearch(section->kv, buf, settings_kv_find, &kv) == -1)
 		{
 			if (ensure)
 			{
-				kv = kv_create(buf, NULL);
+				kv = settings_kv_create(strdup(buf), NULL);
 				array_insert_create(&section->kv, ARRAY_TAIL, kv);
-				array_sort(section->kv, kv_sort, NULL);
+				array_sort(section->kv, settings_kv_sort, NULL);
 			}
 			else if (section->fallbacks)
 			{
@@ -594,6 +479,10 @@ static void set_value(private_settings_t *this, section_t *section,
 	{
 		if (!value)
 		{
+			if (kv->value)
+			{
+				array_insert(this->contents, ARRAY_TAIL, kv->value);
+			}
 			kv->value = NULL;
 		}
 		else if (kv->value && (strlen(value) <= strlen(kv->value)))
@@ -601,9 +490,12 @@ static void set_value(private_settings_t *this, section_t *section,
 			strcpy(kv->value, value);
 		}
 		else
-		{	/* otherwise clone the string and store it in the cache */
+		{	/* otherwise clone the string and cache the replaced one */
+			if (kv->value)
+			{
+				array_insert(this->contents, ARRAY_TAIL, kv->value);
+			}
 			kv->value = strdup(value);
-			this->contents->insert_last(this->contents, kv->value);
 		}
 	}
 	this->lock->unlock(this->lock);
@@ -986,411 +878,15 @@ METHOD(settings_t, add_fallback, void,
 }
 
 /**
- * parse text, truncate "skip" chars, delimited by term respecting brackets.
- *
- * Chars in "skip" are truncated at the beginning and the end of the resulting
- * token. "term" contains a list of characters to read up to (first match),
- * while "br" contains bracket counterparts found in "term" to skip.
- */
-static char parse(char **text, char *skip, char *term, char *br, char **token)
-{
-	char *best = NULL;
-	char best_term = '\0';
-
-	/* skip leading chars */
-	while (strchr(skip, **text))
-	{
-		(*text)++;
-		if (!**text)
-		{
-			return 0;
-		}
-	}
-	/* mark begin of subtext */
-	*token = *text;
-	while (*term)
-	{
-		char *pos = *text;
-		int level = 1;
-
-		/* find terminator */
-		while (*pos)
-		{
-			if (*pos == *term)
-			{
-				level--;
-			}
-			else if (br && *pos == *br)
-			{
-				level++;
-			}
-			if (level == 0)
-			{
-				if (best == NULL || best > pos)
-				{
-					best = pos;
-					best_term = *term;
-				}
-				break;
-			}
-			pos++;
-		}
-		/* try next terminator */
-		term++;
-		if (br)
-		{
-			br++;
-		}
-	}
-	if (best)
-	{
-		/* update input */
-		*text = best;
-		/* null trailing bytes */
-		do
-		{
-			*best = '\0';
-			best--;
-		}
-		while (best >= *token && strchr(skip, *best));
-		/* return found terminator */
-		return best_term;
-	}
-	return 0;
-}
-
-/**
- * Check if "text" starts with "pattern".
- * Characters in "skip" are skipped first. If found, TRUE is returned and "text"
- * is modified to point to the character right after "pattern".
- */
-static bool starts_with(char **text, char *skip, char *pattern)
-{
-	char *pos = *text;
-	int len = strlen(pattern);
-	while (strchr(skip, *pos))
-	{
-		pos++;
-		if (!*pos)
-		{
-			return FALSE;
-		}
-	}
-	if (strlen(pos) < len || !strneq(pos, pattern, len))
-	{
-		return FALSE;
-	}
-	*text = pos + len;
-	return TRUE;
-}
-
-/**
- * Check if what follows in "text" is an include statement.
- * If this function returns TRUE, "text" will point to the character right after
- * the include pattern, which is returned in "pattern".
- */
-static bool parse_include(char **text, char **pattern)
-{
-	char *pos = *text;
-	if (!starts_with(&pos, "\n\t ", "include"))
-	{
-		return FALSE;
-	}
-	if (starts_with(&pos, "\t ", "="))
-	{	/* ignore "include = value" */
-		return FALSE;
-	}
-	*text = pos;
-	return parse(text, "\t ", "\n", NULL, pattern) != 0;
-}
-
-/**
- * Forward declaration.
- */
-static bool parse_files(linked_list_t *contents, char *file, int level,
-						char *pattern, section_t *section);
-
-/**
- * Parse a section
- */
-static bool parse_section(linked_list_t *contents, char *file, int level,
-						  char **text, section_t *section)
-{
-	bool finished = FALSE;
-	char *key, *value, *inner;
-
-	while (!finished)
-	{
-		if (parse_include(text, &value))
-		{
-			if (!parse_files(contents, file, level, value, section))
-			{
-				DBG1(DBG_LIB, "failed to include '%s'", value);
-				return FALSE;
-			}
-			continue;
-		}
-		switch (parse(text, "\t\n ", "{=#", NULL, &key))
-		{
-			case '{':
-				if (parse(text, "\t ", "}", "{", &inner))
-				{
-					section_t *sub;
-					if (!strlen(key))
-					{
-						DBG1(DBG_LIB, "skipping section without name in '%s'",
-							 section->name);
-						continue;
-					}
-					if (array_bsearch(section->sections, key, section_find,
-									  &sub) == -1)
-					{
-						sub = section_create(key);
-						if (parse_section(contents, file, level, &inner, sub))
-						{
-							array_insert_create(&section->sections, ARRAY_TAIL,
-												sub);
-							array_sort(section->sections, section_sort, NULL);
-							continue;
-						}
-						section_destroy(sub);
-					}
-					else
-					{	/* extend the existing section */
-						if (parse_section(contents, file, level, &inner, sub))
-						{
-							continue;
-						}
-					}
-					DBG1(DBG_LIB, "parsing subsection '%s' failed", key);
-					break;
-				}
-				DBG1(DBG_LIB, "matching '}' not found near %s", *text);
-				break;
-			case '=':
-				if (parse(text, "\t ", "\n", NULL, &value))
-				{
-					kv_t *kv;
-					if (!strlen(key))
-					{
-						DBG1(DBG_LIB, "skipping value without key in '%s'",
-							 section->name);
-						continue;
-					}
-					if (array_bsearch(section->kv, key, kv_find, &kv) == -1)
-					{
-						kv = kv_create(key, value);
-						array_insert_create(&section->kv, ARRAY_TAIL, kv);
-						array_sort(section->kv, kv_sort, NULL);
-					}
-					else
-					{	/* replace with the most recently read value */
-						kv->value = value;
-					}
-					continue;
-				}
-				DBG1(DBG_LIB, "parsing value failed near %s", *text);
-				break;
-			case '#':
-				parse(text, "", "\n", NULL, &value);
-				continue;
-			default:
-				finished = TRUE;
-				continue;
-		}
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
- * Parse a file and add the settings to the given section.
- */
-static bool parse_file(linked_list_t *contents, char *file, int level,
-					   section_t *section)
-{
-	bool success;
-	char *text, *pos;
-	struct stat st;
-	FILE *fd;
-	int len;
-
-	DBG2(DBG_LIB, "loading config file '%s'", file);
-	if (stat(file, &st) == -1)
-	{
-		if (errno == ENOENT)
-		{
-#ifdef STRONGSWAN_CONF
-			if (streq(file, STRONGSWAN_CONF))
-			{
-				DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
-			}
-			else
-#endif
-			{
-				DBG1(DBG_LIB, "'%s' does not exist, ignored", file);
-			}
-			return TRUE;
-		}
-		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
-		return FALSE;
-	}
-	else if (!S_ISREG(st.st_mode))
-	{
-		DBG1(DBG_LIB, "'%s' is not a regular file", file);
-		return FALSE;
-	}
-	fd = fopen(file, "r");
-	if (fd == NULL)
-	{
-		DBG1(DBG_LIB, "'%s' is not readable", file);
-		return FALSE;
-	}
-	fseek(fd, 0, SEEK_END);
-	len = ftell(fd);
-	rewind(fd);
-	text = malloc(len + 2);
-	text[len] = text[len + 1] = '\0';
-	if (fread(text, 1, len, fd) != len)
-	{
-		free(text);
-		fclose(fd);
-		return FALSE;
-	}
-	fclose(fd);
-
-	pos = text;
-	success = parse_section(contents, file, level, &pos, section);
-	if (!success)
-	{
-		free(text);
-	}
-	else
-	{
-		contents->insert_last(contents, text);
-	}
-	return success;
-}
-
-/**
- * Load the files matching "pattern", which is resolved with glob(3), if
- * available.
- * If the pattern is relative, the directory of "file" is used as base.
- */
-static bool parse_files(linked_list_t *contents, char *file, int level,
-						char *pattern, section_t *section)
-{
-	enumerator_t *enumerator;
-	bool success = TRUE;
-	char pat[PATH_MAX], *expanded;
-
-	if (level > MAX_INCLUSION_LEVEL)
-	{
-		DBG1(DBG_LIB, "maximum level of %d includes reached, ignored",
-			 MAX_INCLUSION_LEVEL);
-		return TRUE;
-	}
-
-	if (!strlen(pattern))
-	{
-		DBG1(DBG_LIB, "empty include pattern, ignored");
-		return TRUE;
-	}
-
-	if (!file || pattern[0] == '/')
-	{	/* absolute path */
-		if (snprintf(pat, sizeof(pat), "%s", pattern) >= sizeof(pat))
-		{
-			DBG1(DBG_LIB, "include pattern too long, ignored");
-			return TRUE;
-		}
-	}
-	else
-	{	/* base relative paths to the directory of the current file */
-		char *dir = path_dirname(file);
-		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
-		{
-			DBG1(DBG_LIB, "include pattern too long, ignored");
-			free(dir);
-			return TRUE;
-		}
-		free(dir);
-	}
-	enumerator = enumerator_create_glob(pat);
-	if (enumerator)
-	{
-		while (enumerator->enumerate(enumerator, &expanded, NULL))
-		{
-			success &= parse_file(contents, expanded, level + 1, section);
-			if (!success)
-			{
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	else
-	{	/* if glob(3) is not available, try to load pattern directly */
-		success = parse_file(contents, pat, level + 1, section);
-	}
-	return success;
-}
-
-/**
- * Recursivly extends "base" with "extension".
- */
-static void section_extend(section_t *base, section_t *extension)
-{
-	enumerator_t *enumerator;
-	section_t *sec;
-	kv_t *kv;
-
-	enumerator = array_create_enumerator(extension->sections);
-	while (enumerator->enumerate(enumerator, (void**)&sec))
-	{
-		section_t *found;
-		if (array_bsearch(base->sections, sec->name, section_find,
-			&found) != -1)
-		{
-			section_extend(found, sec);
-		}
-		else
-		{
-			array_remove_at(extension->sections, enumerator);
-			array_insert_create(&base->sections, ARRAY_TAIL, sec);
-			array_sort(base->sections, section_sort, NULL);
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = array_create_enumerator(extension->kv);
-	while (enumerator->enumerate(enumerator, (void**)&kv))
-	{
-		kv_t *found;
-		if (array_bsearch(base->kv, kv->key, kv_find, &found) != -1)
-		{
-			found->value = kv->value;
-		}
-		else
-		{
-			array_remove_at(extension->kv, enumerator);
-			array_insert_create(&base->kv, ARRAY_TAIL, kv);
-			array_sort(base->kv, kv_sort, NULL);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
  * Load settings from files matching the given file pattern.
  * All sections and values are added relative to "parent".
  * All files (even included ones) have to be loaded successfully.
+ * If merge is FALSE the contents of parent are replaced with the parsed
+ * contents, otherwise they are merged together.
  */
 static bool load_files_internal(private_settings_t *this, section_t *parent,
 								char *pattern, bool merge)
 {
-	char *text;
-	linked_list_t *contents;
 	section_t *section;
 
 	if (pattern == NULL)
@@ -1402,32 +898,23 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 #endif
 	}
 
-	contents = linked_list_create();
-	section = section_create(NULL);
-
-	if (!parse_files(contents, NULL, 0, pattern, section))
+	section = settings_section_create(NULL);
+	if (!settings_parser_parse_file(section, pattern))
 	{
-		contents->destroy_function(contents, (void*)free);
-		section_destroy(section);
+		settings_section_destroy(section, NULL);
 		return FALSE;
 	}
 
 	this->lock->write_lock(this->lock);
 	if (!merge)
 	{
-		section_purge(parent);
+		section_purge(parent, this->contents);
 	}
 	/* extend parent section */
-	section_extend(parent, section);
-	/* move contents of loaded files to main store */
-	while (contents->remove_first(contents, (void**)&text) == SUCCESS)
-	{
-		this->contents->insert_last(this->contents, text);
-	}
+	settings_section_extend(parent, section, this->contents);
 	this->lock->unlock(this->lock);
 
-	section_destroy(section);
-	contents->destroy(contents);
+	settings_section_destroy(section, NULL);
 	return TRUE;
 }
 
@@ -1457,8 +944,8 @@ METHOD(settings_t, load_files_section, bool,
 METHOD(settings_t, destroy, void,
 	private_settings_t *this)
 {
-	section_destroy(this->top);
-	this->contents->destroy_function(this->contents, (void*)free);
+	settings_section_destroy(this->top, NULL);
+	array_destroy_function(this->contents, (void*)free, NULL);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -1490,8 +977,8 @@ settings_t *settings_create(char *file)
 			.load_files_section = _load_files_section,
 			.destroy = _destroy,
 		},
-		.top = section_create(NULL),
-		.contents = linked_list_create(),
+		.top = settings_section_create(NULL),
+		.contents = array_create(0, 0),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
