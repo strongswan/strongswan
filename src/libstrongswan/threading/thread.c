@@ -496,6 +496,8 @@ void threads_deinit()
 	dummy1->destroy(dummy1);
 
 	main_thread->mutex->lock(main_thread->mutex);
+	main_thread->terminated = TRUE;
+	main_thread->detached_or_joined = TRUE;
 	thread_destroy(main_thread);
 	current_thread->destroy(current_thread);
 	id_mutex->destroy(id_mutex);
