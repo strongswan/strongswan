@@ -32,10 +32,17 @@ kv_t *settings_kv_create(char *key, char *value)
 /*
  * Described in header
  */
-void settings_kv_destroy(kv_t *this)
+void settings_kv_destroy(kv_t *this, array_t *contents)
 {
 	free(this->key);
-	free(this->value);
+	if (contents)
+	{
+		array_insert(contents, ARRAY_TAIL, this->value);
+	}
+	else
+	{
+		free(this->value);
+	}
 	free(this);
 }
 
@@ -52,13 +59,23 @@ section_t *settings_section_create(char *name)
 	return this;
 }
 
+static void section_destroy(section_t *section, int idx, array_t *contents)
+{
+	settings_section_destroy(section, contents);
+}
+
+static void kv_destroy(kv_t *kv, int idx, array_t *contents)
+{
+	settings_kv_destroy(kv, contents);
+}
+
 /*
  * Described in header
  */
-void settings_section_destroy(section_t *this)
+void settings_section_destroy(section_t *this, array_t *contents)
 {
-	array_destroy_function(this->sections, (void*)settings_section_destroy, NULL);
-	array_destroy_function(this->kv, (void*)settings_kv_destroy, NULL);
+	array_destroy_function(this->sections, (void*)section_destroy, contents);
+	array_destroy_function(this->kv, (void*)kv_destroy, contents);
 	array_destroy(this->fallbacks);
 	free(this->name);
 	free(this);
@@ -67,7 +84,8 @@ void settings_section_destroy(section_t *this)
 /*
  * Described in header
  */
-void settings_section_extend(section_t *base, section_t *extension)
+void settings_section_extend(section_t *base, section_t *extension,
+							 array_t *contents)
 {
 	enumerator_t *enumerator;
 	section_t *sec;
@@ -80,7 +98,7 @@ void settings_section_extend(section_t *base, section_t *extension)
 		if (array_bsearch(base->sections, sec->name, settings_section_find,
 			&found) != -1)
 		{
-			settings_section_extend(found, sec);
+			settings_section_extend(found, sec, contents);
 		}
 		else
 		{
@@ -97,7 +115,14 @@ void settings_section_extend(section_t *base, section_t *extension)
 		kv_t *found;
 		if (array_bsearch(base->kv, kv->key, settings_kv_find, &found) != -1)
 		{
-			free(found->value);
+			if (contents)
+			{
+				array_insert(contents, ARRAY_TAIL, found->value);
+			}
+			else
+			{
+				free(found->value);
+			}
 			found->value = kv->value;
 			kv->value = NULL;
 		}

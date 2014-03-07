@@ -85,8 +85,8 @@ static void add_setting(parser_helper_t *ctx, kv_t *kv);
 /* properly destroy string tokens that are strdup()ed on error */
 %destructor { free($$); } NAME STRING value valuepart
 /* properly destroy parse results on error */
-%destructor { pop_section(ctx); settings_section_destroy($$); } section_start section
-%destructor { settings_kv_destroy($$); } setting
+%destructor { pop_section(ctx); settings_section_destroy($$, NULL); } section_start section
+%destructor { settings_kv_destroy($$, NULL); } setting
 
 /* there are two shift/reduce conflicts because of the "NAME = NAME" and
  * "NAME {" ambiguity, and the "NAME =" rule) */
@@ -226,8 +226,8 @@ static void add_section(parser_helper_t *ctx, section_t *section)
 	}
 	else
 	{	/* extend the existing section */
-		settings_section_extend(existing, section);
-		settings_section_destroy(section);
+		settings_section_extend(existing, section, NULL);
+		settings_section_destroy(section, NULL);
 	}
 }
 
@@ -251,7 +251,7 @@ static void add_setting(parser_helper_t *ctx, kv_t *kv)
 		free(existing->value);
 		existing->value = kv->value;
 		kv->value = NULL;
-		settings_kv_destroy(kv);
+		settings_kv_destroy(kv, NULL);
 	}
 }
 

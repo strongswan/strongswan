@@ -83,8 +83,9 @@ kv_t *settings_kv_create(char *key, char *value);
  * Destroy a key/value pair.
  *
  * @param this		key/value pair to destroy
+ * @param contents	optional array to store the value in
  */
-void settings_kv_destroy(kv_t *this);
+void settings_kv_destroy(kv_t *this, array_t *contents);
 
 /**
  * Create a section with the given name.
@@ -98,8 +99,9 @@ section_t *settings_section_create(char *name);
  * Destroy a section.
  *
  * @param this		section to destroy
+ * @param contents	optional array to store values of removed key/value pairs
  */
-void settings_section_destroy(section_t *this);
+void settings_section_destroy(section_t *this, array_t *contents);
 
 /**
  * Extend the first section with the values and sub-sections of the second
@@ -108,8 +110,10 @@ void settings_section_destroy(section_t *this);
  *
  * @param base		base section to extend
  * @param extension	section whose data is extracted
+ * @param contents	optional array to store replaced values in
  */
-void settings_section_extend(section_t *base, section_t *extension);
+void settings_section_extend(section_t *base, section_t *extension,
+							 array_t *contents);
 
 /**
  * Callback to find a section by name
