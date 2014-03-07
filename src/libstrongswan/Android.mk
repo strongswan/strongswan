@@ -37,7 +37,8 @@ threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/printf_hook/printf_hook_builtin.c utils/test.c utils/utils/strerror.c
+utils/parser_helper.c utils/test.c utils/utils/strerror.c \
+utils/printf_hook/printf_hook_builtin.c
 
 # adding the plugin source files
 
