@@ -706,6 +706,7 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 	private_imv_attestation_agent_t *this;
 	imv_agent_t *agent;
 	char *hash_alg, *dh_group, *cadir;
+	bool mandatory_dh_groups;
 
 	agent = imv_agent_create(name, msg_types, countof(msg_types), id,
 							 actual_version);
@@ -718,6 +719,8 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 				"%s.plugins.imv-attestation.hash_algorithm", "sha256", lib->ns);
 	dh_group = lib->settings->get_str(lib->settings,
 				"%s.plugins.imv-attestation.dh_group", "ecp256", lib->ns);
+	mandatory_dh_groups = lib->settings->get_bool(lib->settings,
+				"%s.plugins.imv-attestation.mandatory_dh_groups", TRUE, lib->ns);
 	cadir = lib->settings->get_str(lib->settings,
 				"%s.plugins.imv-attestation.cadir", NULL, lib->ns);
 
@@ -742,7 +745,7 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 	libpts_init();
 
 	if (!pts_meas_algo_probe(&this->supported_algorithms) ||
-		!pts_dh_group_probe(&this->supported_dh_groups) ||
+		!pts_dh_group_probe(&this->supported_dh_groups, mandatory_dh_groups) ||
 		!pts_meas_algo_update(hash_alg, &this->supported_algorithms) ||
 		!pts_dh_group_update(dh_group, &this->supported_dh_groups))
 	{

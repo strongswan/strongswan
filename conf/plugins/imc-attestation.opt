@@ -7,6 +7,9 @@ charon.plugins.imc-attestation.aik_cert =
 charon.plugins.imc-attestation.aik_key =
 	AIK public key file.
 
+charon.plugins.imc-attestation.mandatory_dh_groups = yes
+	Enforce mandatory Diffie-Hellman groups.
+
 charon.plugins.imc-attestation.nonce_len = 20
 	DH nonce length.
 

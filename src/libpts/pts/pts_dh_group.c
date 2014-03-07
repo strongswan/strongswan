@@ -20,7 +20,7 @@
 /**
  * Described in header.
  */
-bool pts_dh_group_probe(pts_dh_group_t *dh_groups)
+bool pts_dh_group_probe(pts_dh_group_t *dh_groups, bool mandatory_dh_groups)
 {
 	enumerator_t *enumerator;
 	diffie_hellman_group_t dh_group;
@@ -68,14 +68,23 @@ bool pts_dh_group_probe(pts_dh_group_t *dh_groups)
 
 	if (*dh_groups & PTS_DH_GROUP_IKE19)
 	{
+		/* mandatory PTS DH group is available */
 		return TRUE;
 	}
-	else
+	if (*dh_groups == PTS_DH_GROUP_NONE)
+	{
+		DBG1(DBG_PTS, "no PTS DH group available");
+		return FALSE;
+	}
+	if (mandatory_dh_groups)
 	{
 		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names,
 											ECP_256_BIT);
+		return FALSE;
 	}
-	return FALSE;
+
+	/* at least one optional PTS DH group is available */
+	return TRUE;
 }
 
 /**

@@ -59,10 +59,13 @@ enum pts_dh_group_t {
 /**
  * Probe available PTS Diffie-Hellman groups
  *
- * @param dh_groups			returns set of available DH groups
- * @return					TRUE if mandatory DH groups are available
+ * @param dh_groups				returns set of available DH groups
+ * @param mandatory_dh_groups	if TRUE enforce mandatory PTS DH groups
+ * @return						TRUE if mandatory DH groups are available
+ *								or at least one optional DH group if 
+ *								mandatory_dh_groups is set to FALSE.
  */
-bool pts_dh_group_probe(pts_dh_group_t *dh_groups);
+bool pts_dh_group_probe(pts_dh_group_t *dh_groups, bool mandatory_dh_groups);
 
 /**
  * Update supported Diffie-Hellman groups according to configuration

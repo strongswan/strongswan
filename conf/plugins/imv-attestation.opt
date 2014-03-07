@@ -1,6 +1,9 @@
 charon.plugins.imv-attestation.cadir =
 	Path to directory with AIK cacerts.
 
+charon.plugins.imv-attestation.mandatory_dh_groups = yes
+	Enforce mandatory Diffie-Hellman groups.
+
 charon.plugins.imv-attestation.dh_group = ecp256
 	Preferred Diffie-Hellman group.
 

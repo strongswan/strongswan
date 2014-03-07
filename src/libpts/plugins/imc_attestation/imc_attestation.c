@@ -66,6 +66,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
+	bool mandatory_dh_groups;
+
 	if (imc_attestation)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
@@ -78,8 +80,11 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 
+	mandatory_dh_groups = lib->settings->get_bool(lib->settings,
+			"%s.plugins.imc-attestation.mandatory_dh_groups", TRUE, lib->ns);
+
 	if (!pts_meas_algo_probe(&supported_algorithms) ||
-		!pts_dh_group_probe(&supported_dh_groups))
+		!pts_dh_group_probe(&supported_dh_groups, mandatory_dh_groups))
 	{
 		imc_attestation->destroy(imc_attestation);
 		imc_attestation = NULL;
