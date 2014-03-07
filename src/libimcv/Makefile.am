@@ -60,7 +60,7 @@ ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy
 
 templatesdir = $(pkgdatadir)/templates/database/imv
-dist_templates_DATA = imv/tables.sql imv/data.sql
+dist_templates_DATA = imv/tables.sql imv/tables-mysql.sql imv/data.sql
 
 ipsec_PROGRAMS = imv_policy_manager
 imv_policy_manager_SOURCES = \
