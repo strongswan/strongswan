@@ -241,6 +241,15 @@ char* path_dirname(const char *path)
 	}
 	if (!pos)
 	{
+#ifdef WIN32
+		if (path && strlen(path))
+		{
+			if ((isalpha(path[0]) && path[1] == ':'))
+			{	/* if just a drive letter given, return that as dirname */
+				return chunk_clone(chunk_from_chars(path[0], ':', 0)).ptr;
+			}
+		}
+#endif
 		return strdup(".");
 	}
 	while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
