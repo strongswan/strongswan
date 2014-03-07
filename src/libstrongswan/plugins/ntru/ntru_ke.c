@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,47 +23,25 @@
 #include <utils/debug.h>
 
 typedef struct private_ntru_ke_t private_ntru_ke_t;
-typedef struct param_set_t param_set_t;
-
-/**
- * Defines an NTRU parameter set by ID or OID
- */
-struct param_set_t {
-	ntru_param_set_id_t id;
-	char oid[3];
-	char *name;
-};
 
 /* Best bandwidth and speed, no X9.98 compatibility */
-static param_set_t param_sets_optimum[] = {
-	{ NTRU_EES401EP2,  {0x00, 0x02, 0x10}, "ees401ep2"  },
-	{ NTRU_EES439EP1,  {0x00, 0x03, 0x10}, "ees439ep1"  },
-	{ NTRU_EES593EP1,  {0x00, 0x05, 0x10}, "ees593ep1"  },
-	{ NTRU_EES743EP1,  {0x00, 0x06, 0x10}, "ees743ep1"  }
+static ntru_param_set_id_t param_sets_optimum[] = {
+	NTRU_EES401EP2, NTRU_EES439EP1, NTRU_EES593EP1, NTRU_EES743EP1
 };
 
 /* X9.98/IEEE 1363.1 parameter sets for best speed */
-static param_set_t param_sets_x9_98_speed[] = {
-	{ NTRU_EES659EP1,  {0x00, 0x02, 0x06}, "ees659ep1"  },
-	{ NTRU_EES761EP1,  {0x00, 0x03, 0x05}, "ees761ep1"  },
-	{ NTRU_EES1087EP1, {0x00, 0x05, 0x05}, "ees1087ep1" },
-	{ NTRU_EES1499EP1, {0x00, 0x06, 0x05}, "ees1499ep1" }
+static ntru_param_set_id_t param_sets_x9_98_speed[] = {
+	NTRU_EES659EP1, NTRU_EES761EP1, NTRU_EES1087EP1, NTRU_EES1499EP1
 };
 
 /* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
-static param_set_t param_sets_x9_98_bandwidth[] = {
-	{ NTRU_EES401EP1,  {0x00, 0x02, 0x04}, "ees401ep1"  },
-	{ NTRU_EES449EP1,  {0x00, 0x03, 0x03}, "ees449ep1"  },
-	{ NTRU_EES677EP1,  {0x00, 0x05, 0x03}, "ees677ep1"  },
-	{ NTRU_EES1087EP2, {0x00, 0x06, 0x03}, "ees1087ep2" }
+static ntru_param_set_id_t param_sets_x9_98_bandwidth[] = {
+	NTRU_EES401EP1, NTRU_EES449EP1, NTRU_EES677EP1, NTRU_EES1087EP2
 };
 
 /* X9.98/IEEE 1363.1 parameter sets balancing speed and bandwidth */
-static param_set_t param_sets_x9_98_balance[] = {
-	{ NTRU_EES541EP1,  {0x00, 0x02, 0x05}, "ees541ep1"  },
-	{ NTRU_EES613EP1,  {0x00, 0x03, 0x04}, "ees613ep1"  },
-	{ NTRU_EES887EP1,  {0x00, 0x05, 0x04}, "ees887ep1"  },
-	{ NTRU_EES1171EP1, {0x00, 0x06, 0x04}, "ees1171ep1" }
+static ntru_param_set_id_t param_sets_x9_98_balance[] = {
+	NTRU_EES541EP1, NTRU_EES613EP1, NTRU_EES887EP1, NTRU_EES1171EP1
 };
 
 /**
@@ -83,7 +61,7 @@ struct private_ntru_ke_t {
 	/**
 	 * NTRU Parameter Set
 	 */
-	param_set_t *param_set;
+	ntru_param_set_t *param_set;
 
 	/**
 	 * Cryptographical strength in bits of the NTRU Parameter Set
@@ -310,7 +288,7 @@ METHOD(diffie_hellman_t, destroy, void,
 ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_ntru_ke_t *this;
-	param_set_t *param_sets, *param_set;
+	ntru_param_set_id_t *param_sets, param_set_id;
 	rng_t *entropy;
 	ntru_drbg_t *drbg;
 	char *parameter_set;
@@ -340,25 +318,25 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	{
 		case NTRU_112_BIT:
 			strength = 112;
-			param_set = &param_sets[0];
+			param_set_id = param_sets[0];
 			break;
 		case NTRU_128_BIT:
 			strength = 128;
-			param_set = &param_sets[1];
+			param_set_id = param_sets[1];
 			break;
 		case NTRU_192_BIT:
 			strength = 192;
-			param_set = &param_sets[2];
+			param_set_id = param_sets[2];
 			break;
 		case NTRU_256_BIT:
 			strength = 256;
-			param_set = &param_sets[3];
+			param_set_id = param_sets[3];
 			break;
 		default:
 			return NULL;
 	}
-	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %s selected", strength,
-				   parameter_set, param_set->name);
+	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %N selected", strength,
+				   parameter_set, ntru_param_set_id_names, param_set_id);
 
 	entropy = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!entropy)
@@ -386,7 +364,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 			},
 		},
 		.group = group,
-		.param_set = param_set,
+		.param_set = ntru_param_set_get_by_id(param_set_id),
 		.strength = strength,
 		.entropy = entropy,
 		.drbg = drbg,

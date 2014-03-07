@@ -32,23 +32,29 @@ typedef struct ntru_param_set_t ntru_param_set_t;
  * NTRU encryption parameter set ID list
  */
 enum ntru_param_set_id_t {
+	/* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
 	NTRU_EES401EP1,
 	NTRU_EES449EP1,
 	NTRU_EES677EP1,
 	NTRU_EES1087EP2,
+	/* X9.98/IEEE 1363.1 parameter sets balancing speed and bandwidth */
 	NTRU_EES541EP1,
 	NTRU_EES613EP1,
 	NTRU_EES887EP1,
 	NTRU_EES1171EP1,
+	/* X9.98/IEEE 1363.1 parameter sets for best speed */
 	NTRU_EES659EP1,
 	NTRU_EES761EP1,
 	NTRU_EES1087EP1,
 	NTRU_EES1499EP1,
+	/* Best bandwidth and speed, no X9.98 compatibility */
 	NTRU_EES401EP2,
 	NTRU_EES439EP1,
 	NTRU_EES593EP1,
 	NTRU_EES743EP1,
 };
+
+extern enum_name_t *ntru_param_set_id_names;
 
 /**
  * NTRU encryption parameter set definitions

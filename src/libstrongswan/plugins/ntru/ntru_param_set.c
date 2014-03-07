@@ -17,11 +17,31 @@
 
 #include "ntru_param_set.h"
 
+ENUM(ntru_param_set_id_names, NTRU_EES401EP1, NTRU_EES743EP1,
+	"ees401ep1",
+	"ees449ep1",
+	"ees677ep1",
+	"ees1087ep2",
+	"ees541ep1",
+	"ees613ep1",
+	"ees887ep1",
+	"ees1171ep1",
+	"ees659ep1",
+	"ees761ep1",
+	"ees1087ep1",
+	"ees1499ep1",
+	"ees401ep2",
+	"ees439ep1",
+	"ees593ep1",
+	"ees743ep1"
+);
+
 /**
  * NTRU encryption parameter set definitions
  */
 static ntru_param_set_t ntru_param_sets[] = {
 
+	/* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
     {
         NTRU_EES401EP1,              /* parameter-set id */
         {0x00, 0x02, 0x04},          /* OID */
@@ -94,6 +114,7 @@ static ntru_param_set_t ntru_param_sets[] = {
         1,                           /* lLen */
     },
 
+	/* X9.98/IEEE 1363.1 parameter sets balancing speed and bandwidth */
     {
         NTRU_EES541EP1,              /* parameter-set id */
         {0x00, 0x02, 0x05},          /* OID */
@@ -166,6 +187,7 @@ static ntru_param_set_t ntru_param_sets[] = {
         1,                           /* lLen */
     },
 
+	/* X9.98/IEEE 1363.1 parameter sets for best speed */
     {
         NTRU_EES659EP1,              /* parameter-set id */
         {0x00, 0x02, 0x06},          /* OID */
@@ -238,6 +260,7 @@ static ntru_param_set_t ntru_param_sets[] = {
         1,                           /* lLen */
     },
 
+	/* Best bandwidth and speed, no X9.98 compatibility */
     {
         NTRU_EES401EP2,              /* parameter-set id */
         {0x00, 0x02, 0x10},          /* OID */
