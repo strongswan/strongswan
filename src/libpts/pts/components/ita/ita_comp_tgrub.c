@@ -125,7 +125,8 @@ METHOD(pts_component_t, verify, status_t,
 	pts_pcr_transform_t transform;
 	pts_pcr_t *pcrs;
 	time_t measurement_time;
-	chunk_t measurement, pcr_before, pcr_after;
+	chunk_t pcr_before, pcr_after;
+	chunk_t measurement __attribute__((unused));
 
 	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
@@ -205,4 +206,3 @@ pts_component_t *pts_ita_comp_tgrub_create(u_int32_t depth,
 
 	return &this->public;
 }
-
