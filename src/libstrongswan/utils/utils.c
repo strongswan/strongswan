@@ -229,21 +229,21 @@ char* path_dirname(const char *path)
 {
 	char *pos;
 
-	pos = path ? strrchr(path, '/') : NULL;
+	pos = path ? strrchr(path, DIRECTORY_SEPARATOR[0]) : NULL;
 
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == '/')
+		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		pos = memrchr(path, '/', pos - path + 1);
+		pos = memrchr(path, DIRECTORY_SEPARATOR[0], pos - path + 1);
 	}
 	if (!pos)
 	{
 		return strdup(".");
 	}
-	while (pos > path && *pos == '/')
+	while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 	{	/* skip superfluous slashes */
 		pos--;
 	}
@@ -261,19 +261,19 @@ char* path_basename(const char *path)
 	{
 		return strdup(".");
 	}
-	pos = strrchr(path, '/');
+	pos = strrchr(path, DIRECTORY_SEPARATOR[0]);
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == '/')
+		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		if (pos == path && *pos == '/')
+		if (pos == path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* contains only slashes */
-			return strdup("/");
+			return strdup(DIRECTORY_SEPARATOR);
 		}
 		trail = pos + 1;
-		pos = memrchr(path, '/', trail - path);
+		pos = memrchr(path, DIRECTORY_SEPARATOR[0], trail - path);
 	}
 	pos = pos ? pos + 1 : (char*)path;
 	return trail ? strndup(pos, trail - pos) : strdup(pos);

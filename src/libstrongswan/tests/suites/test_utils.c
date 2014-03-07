@@ -520,6 +520,24 @@ static struct {
 	{"", ".", "."},
 	{".", ".", "."},
 	{"..", ".", ".."},
+#ifdef WIN32
+	{"C:\\", "C:\\", "C:\\"},
+	{"C:\\\\", "C:\\", "C:\\"},
+	{"foo", ".", "foo"},
+	{"f\\", ".", "f"},
+	{"foo\\", ".", "foo"},
+	{"foo\\\\", ".", "foo"},
+	{"C:\\f", "C:\\", "f"},
+	{"C:\\f\\", "\\", "f"},
+	{"C:\\foo", "C:\\", "foo"},
+	{"C:\\foo\\", "C:\\", "foo"},
+	{"foo\\bar", "foo", "bar"},
+	{"foo\\\\bar", "foo", "bar"},
+	{"C:\\foo\\bar", "C:\\foo", "bar"},
+	{"C:\\foo\\bar\\", "C:\\foo", "bar"},
+	{"C:\\foo\\bar\\baz", "C:\\foo\\bar", "baz"},
+	{"\\foo\\bar", "\\foo", "bar"},
+#else /* !WIN32 */
 	{"/", "/", "/"},
 	{"//", "/", "/"},
 	{"foo", ".", "foo"},
@@ -536,6 +554,7 @@ static struct {
 	{"/foo/bar", "/foo", "bar"},
 	{"/foo/bar/", "/foo", "bar"},
 	{"/foo/bar/baz", "/foo/bar", "baz"},
+#endif
 };
 
 START_TEST(test_path_dirname)
