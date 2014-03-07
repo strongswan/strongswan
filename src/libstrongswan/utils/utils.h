@@ -569,6 +569,14 @@ char *path_dirname(const char *path);
 char *path_basename(const char *path);
 
 /**
+ * Check if a given path is absolute.
+ *
+ * @param path		path to check
+ * @return			TRUE if absolute, FALSE if relative
+ */
+bool path_absolute(const char *path);
+
+/**
  * Creates a directory and all required parent directories.
  *
  * @param path		path to the new directory

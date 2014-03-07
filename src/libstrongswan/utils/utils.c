@@ -291,6 +291,33 @@ char* path_basename(const char *path)
 /**
  * Described in header.
  */
+bool path_absolute(const char *path)
+{
+	if (!path)
+	{
+		return FALSE;
+	}
+#ifdef WIN32
+	if (strpfx(path, "\\\\"))
+	{	/* UNC */
+		return TRUE;
+	}
+	if (strlen(path) && isalpha(path[0]) && path[1] == ':')
+	{	/* drive letter */
+		return TRUE;
+	}
+#else /* !WIN32 */
+	if (path[0] == DIRECTORY_SEPARATOR[0])
+	{
+		return TRUE;
+	}
+#endif
+	return FALSE;
+}
+
+/**
+ * Described in header.
+ */
 bool mkdir_p(const char *path, mode_t mode)
 {
 	int len;
