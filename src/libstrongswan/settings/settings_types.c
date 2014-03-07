@@ -1,0 +1,150 @@
+/*
+ * Copyright (C) 2010-2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#include "settings_types.h"
+
+/*
+ * Described in header
+ */
+kv_t *settings_kv_create(char *key, char *value)
+{
+	kv_t *this;
+
+	INIT(this,
+		.key = key,
+		.value = value,
+	);
+	return this;
+}
+
+/*
+ * Described in header
+ */
+void settings_kv_destroy(kv_t *this)
+{
+	free(this->key);
+	free(this->value);
+	free(this);
+}
+
+/*
+ * Described in header
+ */
+section_t *settings_section_create(char *name)
+{
+	section_t *this;
+
+	INIT(this,
+		.name = name,
+	);
+	return this;
+}
+
+/*
+ * Described in header
+ */
+void settings_section_destroy(section_t *this)
+{
+	array_destroy_function(this->sections, (void*)settings_section_destroy, NULL);
+	array_destroy_function(this->kv, (void*)settings_kv_destroy, NULL);
+	array_destroy(this->fallbacks);
+	free(this->name);
+	free(this);
+}
+
+/*
+ * Described in header
+ */
+void settings_section_extend(section_t *base, section_t *extension)
+{
+	enumerator_t *enumerator;
+	section_t *sec;
+	kv_t *kv;
+
+	enumerator = array_create_enumerator(extension->sections);
+	while (enumerator->enumerate(enumerator, (void**)&sec))
+	{
+		section_t *found;
+		if (array_bsearch(base->sections, sec->name, settings_section_find,
+			&found) != -1)
+		{
+			settings_section_extend(found, sec);
+		}
+		else
+		{
+			array_remove_at(extension->sections, enumerator);
+			array_insert_create(&base->sections, ARRAY_TAIL, sec);
+			array_sort(base->sections, settings_section_sort, NULL);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = array_create_enumerator(extension->kv);
+	while (enumerator->enumerate(enumerator, (void**)&kv))
+	{
+		kv_t *found;
+		if (array_bsearch(base->kv, kv->key, settings_kv_find, &found) != -1)
+		{
+			free(found->value);
+			found->value = kv->value;
+			kv->value = NULL;
+		}
+		else
+		{
+			array_remove_at(extension->kv, enumerator);
+			array_insert_create(&base->kv, ARRAY_TAIL, kv);
+			array_sort(base->kv, settings_kv_sort, NULL);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/*
+ * Described in header
+ */
+int settings_section_find(const void *a, const void *b)
+{
+	const char *key = a;
+	const section_t *item = b;
+	return strcmp(key, item->name);
+}
+
+/*
+ * Described in header
+ */
+int settings_section_sort(const void *a, const void *b, void *user)
+{
+	const section_t *sa = a, *sb = b;
+	return strcmp(sa->name, sb->name);
+}
+
+/*
+ * Described in header
+ */
+int settings_kv_find(const void *a, const void *b)
+{
+	const char *key = a;
+	const kv_t *item = b;
+	return strcmp(key, item->key);
+}
+
+/*
+ * Described in header
+ */
+int settings_kv_sort(const void *a, const void *b, void *user)
+{
+	const kv_t *kva = a, *kvb = b;
+	return strcmp(kva->key, kvb->key);
+}

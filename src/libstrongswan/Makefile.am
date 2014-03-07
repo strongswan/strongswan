@@ -30,12 +30,16 @@ networking/streams/stream_service.c networking/streams/stream_manager.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
-selectors/traffic_selector.c settings/settings.c \
-threading/thread.c threading/thread_value.c \
-threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
+selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
+threading/thread.c threading/thread_value.c threading/mutex.c \
+threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/parser_helper.c utils/test.c utils/utils/strerror.c
+
+# private header files
+noinst_HEADERS = \
+settings/settings_types.h
 
 if USE_DEV_HEADERS
 strongswan_includedir = ${dev_headers}
