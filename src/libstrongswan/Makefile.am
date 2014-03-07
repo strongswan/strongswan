@@ -31,6 +31,7 @@ pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
 selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
+settings/settings_parser.y settings/settings_lexer.l \
 threading/thread.c threading/thread_value.c threading/mutex.c \
 threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
@@ -107,6 +108,8 @@ AM_CFLAGS = \
 AM_LDFLAGS = \
 	-no-undefined
 
+AM_YFLAGS = -v -d
+
 if USE_LEAK_DETECTIVE
   AM_CPPFLAGS += -DLEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c
@@ -148,7 +151,8 @@ Android.mk AndroidConfigLocal.h
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
-$(srcdir)/crypto/proposal/proposal_keywords_static.c
+$(srcdir)/crypto/proposal/proposal_keywords_static.c \
+settings/settings_parser.h
 
 MAINTAINERCLEANFILES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
