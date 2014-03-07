@@ -15,6 +15,7 @@
 
 #include "ntru_ke.h"
 #include "ntru_drbg.h"
+#include "ntru_param_set.h"
 
 #include "ntru_crypto/ntru_crypto.h"
 
@@ -28,7 +29,7 @@ typedef struct param_set_t param_set_t;
  * Defines an NTRU parameter set by ID or OID
  */
 struct param_set_t {
-	NTRU_ENCRYPT_PARAM_SET_ID id;
+	ntru_param_set_id_t id;
 	char oid[3];
 	char *name;
 };

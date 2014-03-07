@@ -36,6 +36,7 @@
 
 #include <library.h>
 
+#include "ntru_param_set.h"
 #include "ntru_drbg.h"
 
 #if !defined( NTRUCALL )
@@ -50,28 +51,6 @@
     #define NTRUCALL extern __declspec(dllimport) uint32_t
   #endif
 #endif /* NTRUCALL */
-
-/* parameter set ID list */
-
-typedef enum _NTRU_ENCRYPT_PARAM_SET_ID {
-    NTRU_EES401EP1,
-    NTRU_EES449EP1,
-    NTRU_EES677EP1,
-    NTRU_EES1087EP2,
-    NTRU_EES541EP1,
-    NTRU_EES613EP1,
-    NTRU_EES887EP1,
-    NTRU_EES1171EP1,
-    NTRU_EES659EP1,
-    NTRU_EES761EP1,
-    NTRU_EES1087EP1,
-    NTRU_EES1499EP1,
-    NTRU_EES401EP2,
-    NTRU_EES439EP1,
-    NTRU_EES593EP1,
-    NTRU_EES743EP1,
-} NTRU_ENCRYPT_PARAM_SET_ID;
-
 
 /* error codes */
 
@@ -219,7 +198,7 @@ ntru_crypto_ntru_decrypt(
 NTRUCALL
 ntru_crypto_ntru_encrypt_keygen(
     ntru_drbg_t               *drbg,             /*     in - handle of DRBG */
-    NTRU_ENCRYPT_PARAM_SET_ID  param_set_id,     /*     in - parameter set ID */
+    ntru_param_set_id_t        param_set_id,     /*     in - parameter set ID */
     uint16_t                  *pubkey_blob_len,  /* in/out - no. of octets in
                                                              pubkey_blob, addr
                                                              for no. of octets

@@ -36,11 +36,11 @@
 #include <string.h>
 #include <assert.h>
 #include "ntru_crypto.h"
-#include "ntru_crypto_ntru_encrypt_param_sets.h"
 #include "ntru_crypto_ntru_encrypt_key.h"
 #include "ntru_crypto_ntru_convert.h"
 #include "ntru_crypto_ntru_poly.h"
-#
+
+#include "ntru_param_set.h"
 #include "ntru_trits.h"
 #include "ntru_poly.h"
 
@@ -87,7 +87,7 @@ ntru_crypto_ntru_encrypt(
                                                  no. of octets in ciphertext */
     uint8_t        *ct)              /*    out - address for ciphertext */
 {
-    NTRU_ENCRYPT_PARAM_SET *params = NULL;
+    ntru_param_set_t       *params = NULL;
     uint8_t const          *pubkey_packed = NULL;
     uint8_t                 pubkey_pack_type = 0x00;
     uint16_t                packed_ct_len;
@@ -216,7 +216,7 @@ ntru_crypto_ntru_encrypt(
 		{
 
             /* form sData (OID || m || b || hTrunc) */
-            memcpy(ptr, params->OID, 3);
+            memcpy(ptr, params->oid, 3);
             ptr += 3;
             memcpy(ptr, pt, pt_len);
             ptr += pt_len;
@@ -411,7 +411,7 @@ ntru_crypto_ntru_decrypt(
                                                  no. of octets in plaintext */
     uint8_t       *pt)               /*    out - address for plaintext */
 {
-    NTRU_ENCRYPT_PARAM_SET *params = NULL;
+    ntru_param_set_t       *params = NULL;
     uint8_t const          *privkey_packed = NULL;
     uint8_t const          *pubkey_packed = NULL;
     uint8_t                 privkey_pack_type = 0x00;
@@ -691,7 +691,7 @@ ntru_crypto_ntru_decrypt(
         /* form sData (OID || m || b || hTrunc) */
 
         ptr = tmp_buf;
-        memcpy(ptr, params->OID, 3);
+        memcpy(ptr, params->oid, 3);
         ptr += 3;
         memcpy(ptr, m_buf, cm_len);
         ptr += cm_len;
@@ -803,7 +803,7 @@ ntru_crypto_ntru_decrypt(
 uint32_t
 ntru_crypto_ntru_encrypt_keygen(
     ntru_drbg_t               *drbg,             /*     in - handle of DRBG */
-    NTRU_ENCRYPT_PARAM_SET_ID  param_set_id,     /*     in - parameter set ID */
+    ntru_param_set_id_t        param_set_id,     /*     in - parameter set ID */
     uint16_t                  *pubkey_blob_len,  /* in/out - no. of octets in
                                                              pubkey_blob, addr
                                                              for no. of octets
@@ -817,7 +817,7 @@ ntru_crypto_ntru_encrypt_keygen(
     uint8_t                   *privkey_blob)     /*    out - address for
                                                              private key blob */
 {
-    NTRU_ENCRYPT_PARAM_SET *params = NULL;
+    ntru_param_set_t       *params = NULL;
     uint16_t                public_key_blob_len;
     uint16_t                private_key_blob_len;
     uint8_t                 pubkey_pack_type;
@@ -840,22 +840,20 @@ ntru_crypto_ntru_encrypt_keygen(
 	ntru_poly_t            *g_poly = NULL;
 	uint16_t			   *F_indices;
 
-    /* get a pointer to the parameter-set parameters */
-
-    if ((params = ntru_encrypt_get_params_with_id(param_set_id)) == NULL)
+	/* get a pointer to the parameter-set parameters */
+	params = ntru_param_set_get_by_id(param_set_id);
+	if (!params)
 	{
 		return NTRU_INVALID_PARAMETER_SET;
 	}
 
     /* check for bad parameters */
-
     if (!pubkey_blob_len || !privkey_blob_len)
 	{
 		return NTRU_BAD_PARAMETER;
 	}
 
     /* get public and private key packing types and blob lengths */
-
     ntru_crypto_ntru_encrypt_key_get_blob_params(params, &pubkey_pack_type,
                                                  &public_key_blob_len,
                                                  &privkey_pack_type,

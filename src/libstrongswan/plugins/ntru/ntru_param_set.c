@@ -1,43 +1,26 @@
-/******************************************************************************
- * NTRU Cryptography Reference Source Code
- * Copyright (c) 2009-2013, by Security Innovation, Inc. All rights reserved. 
- *
- * ntru_crypto_ntru_param_sets.c is a component of ntru-crypto.
+/*
+ * Copyright (C) 2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2009-2013  Security Innovation
- * 
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- *****************************************************************************/
- 
-/******************************************************************************
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
  *
- * File: ntru_crypto_ntru_encrypt_param_sets.c
- *
- * Contents: Defines the NTRUEncrypt parameter sets.
- *
- *****************************************************************************/
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
 
-#include <stdlib.h>
-#include <string.h>
-#include "ntru_crypto_ntru_encrypt_param_sets.h"
+#include "ntru_param_set.h"
 
-
-/* parameter sets */
-
-static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
+/**
+ * NTRU encryption parameter set definitions
+ */
+static ntru_param_set_t ntru_param_sets[] = {
 
     {
         NTRU_EES401EP1,              /* parameter-set id */
@@ -329,56 +312,38 @@ static NTRU_ENCRYPT_PARAM_SET ntruParamSets[] = {
 
 };
 
-static size_t numParamSets =
-                sizeof(ntruParamSets)/sizeof(NTRU_ENCRYPT_PARAM_SET);
-
-
-/* functions */
-
-/* ntru_encrypt_get_params_with_id
- *
- * Looks up a set of NTRUEncrypt parameters based on the id of the
- * parameter set.
- *
- * Returns a pointer to the parameter set parameters if successful.
- * Returns NULL if the parameter set cannot be found.
+/**
+ * See header.
  */
-
-NTRU_ENCRYPT_PARAM_SET *
-ntru_encrypt_get_params_with_id(
-    NTRU_ENCRYPT_PARAM_SET_ID id)   /*  in - parameter-set id */
+ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id)
 {
-    size_t i;
+	int i;
 
-    for (i = 0; i < numParamSets; i++) {
-        if (ntruParamSets[i].id == id) {
-            return &(ntruParamSets[i]);
-        }
-    }
-    return NULL;
+	for (i = 0; i < countof(ntru_param_sets); i++)
+	{
+		if (ntru_param_sets[i].id == id)
+		{
+			return &ntru_param_sets[i];
+		}
+	}
+	return NULL;
 }
 
 
-/* ntru_encrypt_get_params_with_OID
- *
- * Looks up a set of NTRUEncrypt parameters based on the OID of the
- * parameter set.
- *
- * Returns a pointer to the parameter set parameters if successful.
- * Returns NULL if the parameter set cannot be found.
+/**
+ * See header.
  */
-
-NTRU_ENCRYPT_PARAM_SET *
-ntru_encrypt_get_params_with_OID(
-    uint8_t const *oid)             /*  in - pointer to parameter-set OID */
+ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid)
 {
-    size_t i;
+	int i;
 
-    for (i = 0; i < numParamSets; i++) {
-        if (!memcmp(ntruParamSets[i].OID, oid, 3)) {
-            return &(ntruParamSets[i]);
-        }
-    }
-    return NULL;
+	for (i = 0; i < countof(ntru_param_sets); i++)
+	{
+		if (memeq(ntru_param_sets[i].oid, oid, 3))
+		{
+			return &ntru_param_sets[i];
+		}
+	}
+	return NULL;
 }
 

@@ -60,7 +60,7 @@ ntru_crypto_ntru_encrypt_key_parse(
                                                          packing type */
     uint8_t                 *privkey_pack_type, /* out - addr for privkey
                                                          packing type */
-    NTRU_ENCRYPT_PARAM_SET **params,            /* out - addr for ptr to
+    ntru_param_set_t       **params,            /* out - addr for ptr to
                                                          parameter set */
     uint8_t const          **pubkey,            /* out - addr for ptr to
                                                          packed pubkey */
@@ -69,14 +69,7 @@ ntru_crypto_ntru_encrypt_key_parse(
 {
     uint8_t tag;
 
-    assert(key_blob_len);
-    assert(key_blob);
-    assert(pubkey_pack_type);
-    assert(params);
-    assert(pubkey);
-
     /* parse key blob based on tag */
-
     tag = key_blob[0];
     switch (tag) {
         case NTRU_ENCRYPT_PUBKEY_TAG:
@@ -110,7 +103,7 @@ ntru_crypto_ntru_encrypt_key_parse(
              */
 
         {
-            NTRU_ENCRYPT_PARAM_SET *p = NULL;
+            ntru_param_set_t *p = NULL;
             uint16_t pubkey_packed_len;
 
             /* check OID length and minimum blob length for tag and OID */
@@ -118,10 +111,12 @@ ntru_crypto_ntru_encrypt_key_parse(
             if ((key_blob_len < 5) || (key_blob[1] != 3))
                 return FALSE;
 
-            /* get a pointer to the parameter set corresponding to the OID */
-
-            if ((p = ntru_encrypt_get_params_with_OID(key_blob + 2)) == NULL)
-                return FALSE;
+			/* get a pointer to the parameter set corresponding to the OID */
+			p = ntru_param_set_get_by_oid(key_blob + 2);
+			if (!p)
+			{
+				return FALSE;
+			}
 
             /* check blob length and assign pointers to blob fields */
 
@@ -203,7 +198,7 @@ ntru_crypto_ntru_encrypt_key_parse(
 
 void
 ntru_crypto_ntru_encrypt_key_get_blob_params(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint8_t                      *pubkey_pack_type,   /* out - addr for pubkey
@@ -260,7 +255,7 @@ ntru_crypto_ntru_encrypt_key_get_blob_params(
 
 void
 ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint16_t const               *pubkey,             /*  in - pointer to the
@@ -278,9 +273,9 @@ ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
     switch (pubkey_pack_type) {
         case NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS:
             *pubkey_blob++ = NTRU_ENCRYPT_PUBKEY_TAG;
-            *pubkey_blob++ = (uint8_t)sizeof(params->OID);
-            memcpy(pubkey_blob, params->OID, sizeof(params->OID));
-            pubkey_blob += sizeof(params->OID);
+            *pubkey_blob++ = (uint8_t)sizeof(params->oid);
+            memcpy(pubkey_blob, params->oid, sizeof(params->oid));
+            pubkey_blob += sizeof(params->oid);
             ntru_elements_2_octets(params->N, pubkey, params->q_bits,
                                    pubkey_blob);
             break;
@@ -297,7 +292,7 @@ ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
 
 void
 ntru_crypto_ntru_encrypt_key_create_privkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint16_t const               *pubkey,             /*  in - pointer to the
@@ -324,9 +319,9 @@ ntru_crypto_ntru_encrypt_key_create_privkey_blob(
             /* format header and packed public key */
 
             *privkey_blob++ = NTRU_ENCRYPT_PRIVKEY_DEFAULT_TAG;
-            *privkey_blob++ = (uint8_t)sizeof(params->OID);
-            memcpy(privkey_blob, params->OID, sizeof(params->OID));
-            privkey_blob += sizeof(params->OID);
+            *privkey_blob++ = (uint8_t)sizeof(params->oid);
+            memcpy(privkey_blob, params->oid, sizeof(params->oid));
+            privkey_blob += sizeof(params->oid);
             ntru_elements_2_octets(params->N, pubkey, params->q_bits,
                                    privkey_blob);
             privkey_blob += (params->N * params->q_bits + 7) >> 3;

@@ -27,8 +27,8 @@
 #define NTRU_CRYPTO_NTRU_ENCRYPT_KEY_H
 
 #include "ntru_crypto_ntru_convert.h"
-#include "ntru_crypto_ntru_encrypt_param_sets.h"
 
+#include "ntru_param_set.h"
 
 /* key-blob definitions */
 
@@ -68,7 +68,7 @@ ntru_crypto_ntru_encrypt_key_parse(
                                                          packing type */
     uint8_t                 *privkey_pack_type, /* out - addr for privkey
                                                          packing type */
-    NTRU_ENCRYPT_PARAM_SET **params,            /* out - addr for ptr to
+    ntru_param_set_t       **params,            /* out - addr for ptr to
                                                          parameter set */
     uint8_t const          **pubkey,            /* out - addr for ptr to
                                                          packed pubkey */
@@ -87,7 +87,7 @@ ntru_crypto_ntru_encrypt_key_parse(
 
 extern void
 ntru_crypto_ntru_encrypt_key_get_blob_params(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint8_t                      *pubkey_pack_type,   /* out - addr for pubkey
@@ -109,7 +109,7 @@ ntru_crypto_ntru_encrypt_key_get_blob_params(
 
 extern void
 ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint16_t const               *pubkey,             /*  in - pointer to the
@@ -128,7 +128,7 @@ ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
 
 extern void
 ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint16_t                      packed_pubkey_len,  /*  in - no. octets in
@@ -148,7 +148,7 @@ ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob(
 
 extern void
 ntru_crypto_ntru_encrypt_key_create_privkey_blob(
-    NTRU_ENCRYPT_PARAM_SET const *params,             /*  in - pointer to
+    ntru_param_set_t             *params,             /*  in - pointer to
                                                                param set
                                                                parameters */
     uint16_t const               *pubkey,             /*  in - pointer to the
