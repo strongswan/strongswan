@@ -221,7 +221,14 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 		return FALSE;
 	}
 	oldmask = umask(mask);
-	fd = fopen(path, "w");
+	fd = fopen(path,
+#ifdef WIN32
+				"wb"
+#else
+				"w"
+#endif
+	);
+
 	if (fd)
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
