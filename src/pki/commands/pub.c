@@ -110,6 +110,7 @@ static int pub()
 	{
 		chunk_t chunk;
 
+		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &chunk))
 		{
 			fprintf(stderr, "reading input failed: %s\n", strerror(errno));
@@ -163,6 +164,7 @@ static int pub()
 		return 1;
 	}
 	public->destroy(public);
+	set_file_mode(stdout, form);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
 		fprintf(stderr, "writing public key failed\n");

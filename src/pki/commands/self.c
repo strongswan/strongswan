@@ -292,6 +292,7 @@ static int self()
 	{
 		chunk_t chunk;
 
+		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &chunk))
 		{
 			fprintf(stderr, "%s: ", strerror(errno));
@@ -360,6 +361,7 @@ static int self()
 		error = "encoding certificate failed";
 		goto end;
 	}
+	set_file_mode(stdout, form);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
 		error = "writing certificate key failed";

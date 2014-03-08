@@ -91,6 +91,7 @@ static int keyid()
 	{
 		chunk_t chunk;
 
+		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &chunk))
 		{
 			fprintf(stderr, "reading input failed: %s\n", strerror(errno));

@@ -58,6 +58,7 @@ static bool write_to_stream(FILE *stream, chunk_t data)
 {
 	size_t len, total = 0;
 
+	set_file_mode(stream, CERT_ASN1_DER);
 	while (total < data.len)
 	{
 		len = fwrite(data.ptr + total, 1, data.len - total, stream);

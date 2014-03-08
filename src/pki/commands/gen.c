@@ -133,6 +133,7 @@ static int gen()
 		return 1;
 	}
 	key->destroy(key);
+	set_file_mode(stdout, form);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
 		fprintf(stderr, "writing private key failed\n");
@@ -163,4 +164,3 @@ static void __attribute__ ((constructor))reg()
 		}
 	});
 }
-

@@ -19,6 +19,7 @@
 
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <utils/debug.h>
 #include <credentials/sets/callback_cred.h>
@@ -151,6 +152,33 @@ bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
 		*na = *nb + span;
 	}
 	return TRUE;
+}
+
+/**
+ * Set output file mode appropriate for credential encoding form on Windows
+ */
+void set_file_mode(FILE *stream, cred_encoding_type_t enc)
+{
+#ifdef WIN32
+	int fd;
+
+	switch (enc)
+	{
+		case CERT_PEM:
+		case PRIVKEY_PEM:
+		case PUBKEY_PEM:
+			/* keep default text mode */
+			return;
+		default:
+			/* switch to binary mode */
+			break;
+	}
+	fd = fileno(stream);
+	if (fd != -1)
+	{
+		_setmode(fd, _O_BINARY);
+	}
+#endif
 }
 
 /**
