@@ -182,7 +182,7 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 #ifdef HAVE_GETPASS
 	secret = getpass(buf);
 #endif
-	if (secret)
+	if (secret && strlen(secret))
 	{
 		if (match_me)
 		{
