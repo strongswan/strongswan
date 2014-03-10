@@ -817,7 +817,7 @@ static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
 					  void *none, char **value)
 {
 	*key = (*in)->key;
-	if (seen->get(seen, *key))
+	if (seen->get(seen, *key) || !(*in)->value)
 	{
 		return FALSE;
 	}
