@@ -543,6 +543,11 @@ char *translate(char *str, const char *from, const char *to);
 char *strreplace(const char *str, const char *search, const char *replace);
 
 /**
+ * Portable function to wait for SIGINT/SIGTERM (or equivalent).
+ */
+void wait_sigint();
+
+/**
  * Like dirname(3) returns the directory part of the given null-terminated
  * pathname, up to but not including the final '/' (or '.' if no '/' is found).
  * Trailing '/' are not counted as part of the pathname.

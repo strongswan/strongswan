@@ -31,12 +31,17 @@
 #include <limits.h>
 #include <dirent.h>
 #include <time.h>
+#ifndef WIN32
+# include <signal.h>
+#endif
 
 #include <library.h>
 #include <utils/debug.h>
 #include <utils/chunk.h>
 #include <collections/enumerator.h>
 #include <threading/spinlock.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
@@ -221,6 +226,84 @@ char* strreplace(const char *str, const char *search, const char *replace)
 	strcpy(dst, pos);
 	return res;
 }
+
+#ifdef WIN32
+
+/**
+ * Flag to indicate signaled wait_sigint()
+ */
+static bool sigint_signaled = FALSE;
+
+/**
+ * Condvar to wait in wait_sigint()
+ */
+static condvar_t *sigint_cond;
+
+/**
+ * Mutex to check signaling()
+ */
+static mutex_t *sigint_mutex;
+
+/**
+ * Control handler to catch ^C
+ */
+static BOOL handler(DWORD dwCtrlType)
+{
+	switch (dwCtrlType)
+	{
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+		case CTRL_CLOSE_EVENT:
+			sigint_mutex->lock(sigint_mutex);
+			sigint_signaled = TRUE;
+			sigint_cond->signal(sigint_cond);
+			sigint_mutex->unlock(sigint_mutex);
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
+ * Windows variant
+ */
+void wait_sigint()
+{
+	SetConsoleCtrlHandler(handler, TRUE);
+
+	sigint_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	sigint_cond = condvar_create(CONDVAR_TYPE_DEFAULT);
+
+	sigint_mutex->lock(sigint_mutex);
+	while (!sigint_signaled)
+	{
+		sigint_cond->wait(sigint_cond, sigint_mutex);
+	}
+	sigint_mutex->unlock(sigint_mutex);
+
+	sigint_mutex->destroy(sigint_mutex);
+	sigint_cond->destroy(sigint_cond);
+}
+
+#else /* !WIN32 */
+
+/**
+ * Unix variant
+ */
+void wait_sigint()
+{
+	sigset_t set;
+	int sig;
+
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+
+	sigprocmask(SIG_BLOCK, &set, NULL);
+	sigwait(&set, &sig);
+}
+
+#endif
 
 /**
  * Described in header.
