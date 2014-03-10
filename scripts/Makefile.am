@@ -5,7 +5,7 @@ AM_CPPFLAGS = \
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \
-	dnssec malloc_speed aes-test
+	dnssec malloc_speed aes-test settings-test
 
 if USE_TLS
   noinst_PROGRAMS += tls_test
@@ -40,6 +40,7 @@ malloc_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
 fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dnssec_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 aes_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+settings_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 key2keyid.o :	$(top_builddir)/config.status
 
