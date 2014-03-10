@@ -20,6 +20,7 @@
 
 #include <daemon.h>
 #include <threading/rwlock.h>
+#include <collections/array.h>
 #include <collections/linked_list.h>
 
 #include <stdio.h>
@@ -338,8 +339,10 @@ typedef struct {
 	char* updown;
 	bool hostaccess;
 	bool ipcomp;
+	bool route;
 	ipsec_mode_t mode;
 	action_t dpd_action;
+	action_t start_action;
 	u_int32_t reqid;
 	u_int32_t tfc;
 	mark_t mark_in;
@@ -1164,6 +1167,7 @@ CALLBACK(child_kv, bool,
 		{ "life_packets",	parse_uint64,		&child->lft.packets.life	},
 		{ "rand_packets",	parse_uint64,		&child->lft.packets.jitter	},
 		{ "dpd_action",		parse_action,		&child->dpd_action			},
+		{ "start_action",	parse_action,		&child->start_action		},
 		{ "ipcomp",			parse_bool,			&child->ipcomp				},
 		{ "inactivity",		parse_time,			&child->inactivity			},
 		{ "reqid",			parse_uint32,		&child->reqid				},
@@ -1258,6 +1262,7 @@ CALLBACK(children_sn, bool,
 		.remote_ts = linked_list_create(),
 		.mode = MODE_TUNNEL,
 		.dpd_action = ACTION_NONE,
+		.start_action = ACTION_NONE,
 	};
 	child_cfg_t *cfg;
 	proposal_t *proposal;
@@ -1288,7 +1293,7 @@ CALLBACK(children_sn, bool,
 	log_child_data(&child, name);
 
 	cfg = child_cfg_create(name, &child.lft, child.updown,
-						child.hostaccess, child.mode, ACTION_NONE,
+						child.hostaccess, child.mode, child.start_action,
 						child.dpd_action, ACTION_NONE, child.ipcomp,
 						child.inactivity, child.reqid, &child.mark_in,
 						&child.mark_out, child.tfc);
@@ -1353,6 +1358,180 @@ CALLBACK(peer_sn, bool,
 }
 
 /**
+ * Find reqid of an existing CHILD_SA
+ */
+static u_int32_t find_reqid(child_cfg_t *cfg)
+{
+	enumerator_t *enumerator, *children;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
+	u_int32_t reqid;
+
+	reqid = charon->traps->find_reqid(charon->traps, cfg);
+	if (reqid)
+	{	/* already trapped */
+		return reqid;
+	}
+
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
+	while (!reqid && enumerator->enumerate(enumerator, &ike_sa))
+	{
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, &child_sa))
+		{
+			if (streq(cfg->get_name(cfg), child_sa->get_name(child_sa)))
+			{
+				reqid = child_sa->get_reqid(child_sa);
+				break;
+			}
+		}
+		children->destroy(children);
+	}
+	enumerator->destroy(enumerator);
+	return reqid;
+}
+
+/**
+ * Perform start actions associated to a child config
+ */
+static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
+							 child_cfg_t *child_cfg)
+{
+	switch (child_cfg->get_start_action(child_cfg))
+	{
+		case ACTION_RESTART:
+			DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
+			charon->controller->initiate(charon->controller,
+					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
+					NULL, NULL, 0);
+			break;
+		case ACTION_ROUTE:
+			DBG1(DBG_CFG, "installing '%s'", child_cfg->get_name(child_cfg));
+			switch (child_cfg->get_mode(child_cfg))
+			{
+				case MODE_PASS:
+				case MODE_DROP:
+					charon->shunts->install(charon->shunts, child_cfg);
+					break;
+				default:
+					charon->traps->install(charon->traps, peer_cfg, child_cfg,
+										   find_reqid(child_cfg));
+					break;
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+/**
+ * Undo start actions associated to a child config
+ */
+static void clear_start_action(private_vici_config_t *this,
+							   child_cfg_t *child_cfg)
+{
+	enumerator_t *enumerator, *children;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
+	u_int32_t reqid = 0, *del;
+	array_t *reqids = NULL;
+	char *name;
+
+	name = child_cfg->get_name(child_cfg);
+	switch (child_cfg->get_start_action(child_cfg))
+	{
+		case ACTION_RESTART:
+			enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
+			while (enumerator->enumerate(enumerator, &ike_sa))
+			{
+				children = ike_sa->create_child_sa_enumerator(ike_sa);
+				while (children->enumerate(children, &child_sa))
+				{
+					reqid = child_sa->get_reqid(child_sa);
+					array_insert_create(&reqids, ARRAY_TAIL, &reqid);
+				}
+				children->destroy(children);
+			}
+			enumerator->destroy(enumerator);
+
+			if (array_count(reqids))
+			{
+				while (array_remove(reqids, ARRAY_HEAD, &del))
+				{
+					DBG1(DBG_CFG, "closing '%s' #%u", name, *del);
+					charon->controller->terminate_child(charon->controller,
+														*del, NULL, NULL, 0);
+				}
+				array_destroy(reqids);
+			}
+			break;
+		case ACTION_ROUTE:
+			DBG1(DBG_CFG, "uninstalling '%s'", name);
+			switch (child_cfg->get_mode(child_cfg))
+			{
+				case MODE_PASS:
+				case MODE_DROP:
+					charon->shunts->uninstall(charon->shunts, name);
+					break;
+				default:
+					enumerator = charon->traps->create_enumerator(charon->traps);
+					while (enumerator->enumerate(enumerator, NULL, &child_sa))
+					{
+						if (streq(name, child_sa->get_name(child_sa)))
+						{
+							reqid = child_sa->get_reqid(child_sa);
+							break;
+						}
+					}
+					enumerator->destroy(enumerator);
+					if (reqid)
+					{
+						charon->traps->uninstall(charon->traps, reqid);
+					}
+					break;
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+/**
+ * Run start actions associated to all child configs of a peer config
+ */
+static void run_start_actions(private_vici_config_t *this, peer_cfg_t *peer_cfg)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *child_cfg;
+
+	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+	while (enumerator->enumerate(enumerator, &child_cfg))
+	{
+		run_start_action(this, peer_cfg, child_cfg);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Undo start actions associated to all child configs of a peer config
+ */
+static void clear_start_actions(private_vici_config_t *this,
+								peer_cfg_t *peer_cfg)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *child_cfg;
+
+	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+	while (enumerator->enumerate(enumerator, &child_cfg))
+	{
+		clear_start_action(this, child_cfg);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Replace children of a peer config by a new config
  */
 static void replace_children(private_vici_config_t *this,
@@ -1365,6 +1544,7 @@ static void replace_children(private_vici_config_t *this,
 	while (enumerator->enumerate(enumerator, &child))
 	{
 		to->remove_child_cfg(to, enumerator);
+		clear_start_action(this, child);
 		child->destroy(child);
 	}
 	enumerator->destroy(enumerator);
@@ -1374,6 +1554,7 @@ static void replace_children(private_vici_config_t *this,
 	{
 		from->remove_child_cfg(from, enumerator);
 		to->add_child_cfg(to, child);
+		run_start_action(this, to, child);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1409,13 +1590,14 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 				DBG1(DBG_CFG, "replaced vici connection: %s",
 					 peer_cfg->get_name(peer_cfg));
 				this->conns->remove_at(this->conns, enumerator);
+				clear_start_actions(this, current);
 				current->destroy(current);
 				this->conns->insert_last(this->conns, peer_cfg);
+				run_start_actions(this, peer_cfg);
 			}
 			merged = TRUE;
 			break;
 		}
-
 	}
 	enumerator->destroy(enumerator);
 
@@ -1423,6 +1605,7 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 	{
 		DBG1(DBG_CFG, "added vici connection: %s", peer_cfg->get_name(peer_cfg));
 		this->conns->insert_last(this->conns, peer_cfg);
+		run_start_actions(this, peer_cfg);
 	}
 
 	this->lock->unlock(this->lock);
