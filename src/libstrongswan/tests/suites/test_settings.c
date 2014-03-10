@@ -39,6 +39,7 @@ START_SETUP(setup_base_config)
 		"	# this gets overridden below\n"
 		"	key2 = val2\n"
 		"	none = \n"
+		"	empty = \"\"\n"
 		"	sub1 {\n"
 		"		key = value\n"
 		"		key2 = value2\n"
@@ -51,7 +52,8 @@ START_SETUP(setup_base_config)
 		"	sub% {\n"
 		"		id = %any\n"
 		"	}\n"
-		"	key2 = with spaces\n"
+		"	key2 = with space\n"
+		"	key3 = \"string with\\nnewline\"\n"
 		"}\n"
 		"out = side\n"
 		"other {\n"
@@ -79,7 +81,9 @@ START_TEST(test_get_str)
 	verify_string("val1", "main.key1");
 	verify_string("val1", "main..key1");
 	verify_string("val1", ".main.key1");
-	verify_string("with spaces", "main.key2");
+	verify_string("", "main.empty");
+	verify_string("with space", "main.key2");
+	verify_string("string with\nnewline", "main.key3");
 	verify_string("value", "main.sub1.key");
 	verify_string("value2", "main.sub1.key2");
 	verify_string("bar", "main.sub1.subsub.foo");
@@ -88,10 +92,8 @@ START_TEST(test_get_str)
 	verify_string("side", "out");
 	verify_string("other val", "other.key1");
 
-	/* FIXME: should this rather be undefined i.e. return the default value? */
-	verify_string("", "main.none");
-
-	verify_null("main.key3");
+	verify_null("main.none");
+	verify_null("main.key4");
 	verify_null("other.sub");
 }
 END_TEST
@@ -125,16 +127,26 @@ START_TEST(test_get_str_printf)
 	 * probably document it at least */
 	verify_null("main.%s%u.key%d", "sub", 1, 2);
 
-	verify_null("%s.%s%d", "main", "key", 3);
+	verify_null("%s.%s%d", "main", "key", 4);
 }
 END_TEST
 
 START_TEST(test_set_str)
 {
+	char *val;
+
+	val = settings->get_str(settings, "main.key1", NULL);
+	ck_assert_str_eq("val1", val);
 	settings->set_str(settings, "main.key1", "val");
 	verify_string("val", "main.key1");
+	/* since it is shorter the pointer we got above points to the new value */
+	ck_assert_str_eq("val", val);
+
 	settings->set_str(settings, "main.key1", "longer value");
 	verify_string("longer value", "main.key1");
+	/* here it gets replaced but the pointer is still valid */
+	ck_assert_str_eq("val", val);
+
 	settings->set_str(settings, "main", "main val");
 	verify_string("main val", "main");
 	settings->set_str(settings, "main.sub1.new", "added");
@@ -183,6 +195,7 @@ START_SETUP(setup_bool_config)
 		"	key7 = disabled\n"
 		"	key8 = 0\n"
 		"	key9 = 5\n"
+		"	empty = \"\"\n"
 		"	none = \n"
 		"	foo = bar\n"
 		"}"));
@@ -203,6 +216,8 @@ START_TEST(test_get_bool)
 	verify_bool(FALSE, TRUE, "main.key7");
 	verify_bool(FALSE, TRUE, "main.key8");
 
+	verify_bool(FALSE, FALSE, "main.empty");
+	verify_bool(TRUE, TRUE, "main.empty");
 	verify_bool(FALSE, FALSE, "main.none");
 	verify_bool(TRUE, TRUE, "main.none");
 	verify_bool(FALSE, FALSE, "main.foo");
@@ -240,6 +255,7 @@ START_SETUP(setup_int_config)
 		"	# gets cut off\n"
 		"	key2 = 5.5\n"
 		"	key3 = -42\n"
+		"	empty = \"\"\n"
 		"	none = \n"
 		"	foo1 = bar\n"
 		"	foo2 = bar13\n"
@@ -257,8 +273,10 @@ START_TEST(test_get_int)
 	verify_int(5, 0, "main.key2");
 	verify_int(-42, 0, "main.key3");
 
+	verify_int(0, 11, "main.empty");
+	verify_int(11, 11, "main.none");
+
 	/* FIXME: do we want this behavior? */
-	verify_int(0, 11, "main.none");
 	verify_int(0, 11, "main.foo1");
 	verify_int(0, 11, "main.foo2");
 	verify_int(13, 11, "main.foo3");
@@ -291,6 +309,7 @@ START_SETUP(setup_double_config)
 		"	key2 = 5.5\n"
 		"	key3 = -42\n"
 		"	key4 = -42.5\n"
+		"	empty = \"\"\n"
 		"	none = \n"
 		"	foo1 = bar\n"
 		"	foo2 = bar13.5\n"
@@ -309,8 +328,10 @@ START_TEST(test_get_double)
 	verify_double(-42, 0, "main.key3");
 	verify_double(-42.5, 0, "main.key4");
 
+	verify_double(0, 11.5, "main.empty");
+	verify_double(11.5, 11.5, "main.none");
+
 	/* FIXME: do we want this behavior? */
-	verify_double(0, 11.5, "main.none");
 	verify_double(0, 11.5, "main.foo1");
 	verify_double(0, 11.5, "main.foo2");
 	verify_double(13.5, 11.5, "main.foo3");
@@ -345,6 +366,7 @@ START_SETUP(setup_time_config)
 		"	key2 = 5m\n"
 		"	key3 = 5h\n"
 		"	key4 = 5d\n"
+		"	empty = \"\"\n"
 		"	none = \n"
 		"	foo1 = bar\n"
 		"	foo2 = bar13\n"
@@ -363,8 +385,10 @@ START_TEST(test_get_time)
 	verify_time(18000, 0, "main.key3");
 	verify_time(432000, 0, "main.key4");
 
+	verify_time(0, 11, "main.empty");
+	verify_time(11, 11, "main.none");
+
 	/* FIXME: do we want this behavior? */
-	verify_time(0, 11, "main.none");
 	verify_time(0, 11, "main.foo1");
 	verify_time(0, 11, "main.foo2");
 	verify_time(13, 11, "main.foo3");
@@ -494,8 +518,8 @@ START_TEST(test_key_value_enumerator)
 {
 	linked_list_t *keys, *values;
 
-	keys = linked_list_create_with_items("key1", "key2", "none", NULL);
-	values = linked_list_create_with_items("val1", "with spaces", "", NULL);
+	keys = linked_list_create_with_items("key1", "key2", "key3", "empty", NULL);
+	values = linked_list_create_with_items("val1", "with space", "string with\nnewline", "", NULL);
 	verify_key_values(keys, values, "main");
 
 	keys = linked_list_create_with_items("key", "key2", "subsub", NULL);
@@ -563,13 +587,14 @@ static void verify_include()
 {
 	verify_string("n1", "main.key1");
 	verify_string("v2", "main.key2");
-	verify_string("", "main.none");
 	verify_string("val", "main.sub1.key");
 	verify_string("v2", "main.sub1.key2");
 	verify_string("val", "main.sub1.sub1.key");
 	verify_string("value", "main.sub1.key3");
 	verify_string("value", "main.sub1.include");
 	verify_string("val3", "main.sub2.sub3");
+
+	verify_null("main.none");
 }
 
 START_TEST(test_include)
@@ -580,13 +605,13 @@ START_TEST(test_include)
 		"	key2 = val2\n"
 		"	none = x\n"
 		"	sub1 {\n"
+		"		include this/does/not/exist.conf\n"
 		"		include = value\n"
 		"		key2 = value2\n"
 		"		include " include2 "\n"
 		"	}\n"
 		"}\n"
-		"# currently there must be a newline after include statements\n"
-		"include " include1 "\n");
+		"include " include1);
 
 	create_settings(contents);
 	verify_include();
@@ -641,11 +666,11 @@ START_TEST(test_load_files_section)
 	ck_assert(settings->load_files_section(settings, include2, TRUE, "main.sub1"));
 	verify_include();
 
-	/* non existing files are no failure */
-	ck_assert(settings->load_files_section(settings, include1".conf", TRUE, ""));
+	/* non existing files are a failure here */
+	ck_assert(!settings->load_files_section(settings, include1".conf", TRUE, ""));
 	verify_include();
 
-	/* unreadable files are */
+	/* unreadable files are too */
 	ck_assert(chunk_write(contents, include1".no", 0444, TRUE));
 	ck_assert(!settings->load_files_section(settings, include1".no", TRUE, ""));
 	unlink(include1".no");
@@ -781,57 +806,86 @@ START_TEST(test_add_fallback_printf)
 }
 END_TEST
 
-START_SETUP(setup_invalid_config)
+
+START_SETUP(setup_string_config)
 {
 	create_settings(chunk_from_str(
-		"# section without name\n"
-		"{\n"
-		"	key1 = val1\n"
-		"}\n"
-		"main {\n"
-		"	key2 = val2\n"
-		"   # value without key\n"
-		"	= val3\n"
-		"	key4 = val4\n"
-		"	# key without value does not change it\n"
-		"	key4\n"
-		"	# subsection without name\n"
-		"	{\n"
-		"		key5 = val5\n"
-		"	}\n"
-		"	# empty include pattern\n"
-		"	include\n"
-		"	key6 = val6\n"
-		"}"));
+		"string = \"  with    accurate\twhitespace\"\n"
+		"special = \"all { special } characters # can be used.\"\n"
+		"unterminated = \"is fine\n"
+		"but = produces a warning\n"
+		"newlines = \"can either be encoded\\nor\\\n"
+		"escaped\"\n"
+		"quotes = \"\\\"and\\\" slashes \\\\ can \\\\ be\" # escaped too\n"
+		"multiple = \"strings\" are \"combined\"\n"
+		));
 }
 END_SETUP
 
-START_TEST(test_invalid)
+START_TEST(test_strings)
 {
-	linked_list_t *keys, *values;
+	verify_string("  with    accurate\twhitespace", "string");
+	verify_string("all { special } characters # can be used.", "special");
+	verify_string("is fine", "unterminated");
+	verify_string("produces a warning", "but");
+	verify_string("can either be encoded\nor\nescaped", "newlines");
+	verify_string("\"and\" slashes \\ can \\ be", "quotes");
+	verify_string("strings are combined", "multiple");
+}
+END_TEST
+
+START_TEST(test_valid)
+{
 	chunk_t contents;
 
-	verify_null("key1");
-	verify_null(".key1");
-	verify_null("%s.key1", "");
-	verify_string("val2", "main.key2");
-	verify_string("val4", "main.key4");
-	verify_null("main..key5");
-	verify_string("val6", "main.key6");
-
-	keys = linked_list_create_with_items("main", NULL);
-	verify_sections(keys, "");
-
-	keys = linked_list_create_with_items(NULL);
-	verify_sections(keys, "main");
-
-	keys = linked_list_create_with_items("key2", "key4", "key6", NULL);
-	values = linked_list_create_with_items("val2", "val4", "val6", NULL);
-	verify_key_values(keys, values, "main");
-
-	/* FIXME: we should probably fix this */
 	contents = chunk_from_str(
-		"requires = newline");
+		"single = value");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "single");
+
+	contents = chunk_from_str(
+		"singleline { single = value }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "singleline.single");
+
+	contents = chunk_from_str(
+		"singleline { sub { sub1 = val1 } single = value }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("val1", "singleline.sub.sub1");
+
+	contents = chunk_from_str(
+		"newline\n { single = value }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "newline.single");
+
+	contents = chunk_from_str(
+		"section {\n"
+		"	include # without pattern produces a warning, but is fine\n"
+		"}\n");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+}
+END_TEST
+
+START_TEST(test_invalid)
+{
+	chunk_t contents;
+
+	contents = chunk_from_str(
+		"{\n"
+		"	no = section name\n"
+		"}\n");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"no {\n"
+		"	= key name\n"
+		"}\n");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
 
@@ -842,7 +896,12 @@ START_TEST(test_invalid)
 	ck_assert(!settings->load_files(settings, path, FALSE));
 
 	contents = chunk_from_str(
-		"singleline { not = valid }\n");
+		"spaces in name {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"only = a single setting = per line");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
 }
@@ -911,8 +970,14 @@ Suite *settings_suite_create()
 	tcase_add_test(tc, test_add_fallback_printf);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("invalid data");
-	tcase_add_checked_fixture(tc, setup_invalid_config, teardown_config);
+	tc = tcase_create("strings");
+	tcase_add_checked_fixture(tc, setup_string_config, teardown_config);
+	tcase_add_test(tc, test_strings);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("valid/invalid data");
+	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
+	tcase_add_test(tc, test_valid);
 	tcase_add_test(tc, test_invalid);
 	suite_add_tcase(s, tc);
 
