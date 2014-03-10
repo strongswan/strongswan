@@ -115,7 +115,7 @@ METHOD(packet_t, skip_bytes, void,
 	return this->packet->skip_bytes(this->packet, bytes);
 }
 
-METHOD(packet_t, clone, packet_t*,
+METHOD(packet_t, clone_, packet_t*,
 	private_esp_packet_t *this)
 {
 	private_esp_packet_t *pkt;
@@ -414,7 +414,7 @@ static private_esp_packet_t *esp_packet_create_internal(packet_t *packet)
 				.get_dscp = _get_dscp,
 				.set_dscp = _set_dscp,
 				.skip_bytes = _skip_bytes,
-				.clone = _clone,
+				.clone = _clone_,
 				.destroy = _destroy,
 			},
 			.get_source = _get_source,
