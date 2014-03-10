@@ -779,7 +779,7 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 			return FALSE;
 		}
 		DBG1(DBG_TNC, "loaded MAP client certificate from '%s'", client_cert);
-		this->creds->add_cert(this->creds, TRUE, cert);
+		cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
 
 		/* load MAP client private key */
 		if (client_key)
