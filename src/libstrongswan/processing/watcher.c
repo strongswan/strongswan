@@ -50,6 +50,11 @@ struct private_watcher_t {
 	bool pending;
 
 	/**
+	 * Is watcher running?
+	 */
+	bool running;
+
+	/**
 	 * Lock to access FD list
 	 */
 	mutex_t *mutex;
@@ -225,6 +230,7 @@ static void activate_all(private_watcher_t *this)
 		entry->in_callback = 0;
 	}
 	enumerator->destroy(enumerator);
+	this->running = FALSE;
 	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 }
@@ -373,6 +379,7 @@ METHOD(watcher_t, add, void,
 	this->fds->insert_last(this->fds, entry);
 	if (this->fds->get_count(this->fds) == 1)
 	{
+		this->running = TRUE;
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
 				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
@@ -400,7 +407,7 @@ METHOD(watcher_t, remove_, void,
 		{
 			if (entry->fd == fd)
 			{
-				if (entry->in_callback)
+				if (this->running && entry->in_callback)
 				{
 					is_in_callback = TRUE;
 					break;
