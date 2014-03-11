@@ -200,7 +200,7 @@ int command_usage(char *error)
 	fprintf(out, "usage:\n");
 	if (active == help_idx)
 	{
-		for (i = 0; cmds[i].cmd; i++)
+		for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 		{
 			fprintf(out, "  pki --%-7s (-%c)  %s\n",
 					cmds[i].cmd, cmds[i].op, cmds[i].description);
