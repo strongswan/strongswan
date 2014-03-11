@@ -1576,16 +1576,20 @@ retry:
 		}
 		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
 	}
-	if (!host)
+	if (nexthop)
 	{
-		return NULL;
+		host = host ?: dest->clone(dest);
 	}
-	if (!nexthop)
+	else
 	{	/* make sure the source address is not virtual and usable */
 		addr_entry_t *entry, lookup = {
 			.ip = host,
 		};
 
+		if (!host)
+		{
+			return NULL;
+		}
 		this->lock->read_lock(this->lock);
 		entry = this->addrs->get_match(this->addrs, &lookup,
 									(void*)addr_map_entry_match_up_and_usable);
