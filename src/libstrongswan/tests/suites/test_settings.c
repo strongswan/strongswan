@@ -133,19 +133,28 @@ END_TEST
 
 START_TEST(test_set_str)
 {
-	char *val;
+	char *val1, *val2;
 
-	val = settings->get_str(settings, "main.key1", NULL);
-	ck_assert_str_eq("val1", val);
+	val1 = settings->get_str(settings, "main.key1", NULL);
+	ck_assert_str_eq("val1", val1);
 	settings->set_str(settings, "main.key1", "val");
 	verify_string("val", "main.key1");
-	/* since it is shorter the pointer we got above points to the new value */
-	ck_assert_str_eq("val", val);
+	/* the pointer we got before is still valid */
+	ck_assert_str_eq("val1", val1);
 
+	val2 = settings->get_str(settings, "main.key1", NULL);
+	ck_assert_str_eq("val", val2);
 	settings->set_str(settings, "main.key1", "longer value");
 	verify_string("longer value", "main.key1");
-	/* here it gets replaced but the pointer is still valid */
-	ck_assert_str_eq("val", val);
+	/* the pointers we got before are still valid */
+	ck_assert_str_eq("val1", val1);
+	ck_assert_str_eq("val", val2);
+
+	val1 = settings->get_str(settings, "main.key1", NULL);
+	settings->set_str(settings, "main.key1", "longer value");
+	val2 = settings->get_str(settings, "main.key1", NULL);
+	/* setting the same string should should get us the same pointer */
+	ck_assert(val1 == val2);
 
 	settings->set_str(settings, "main", "main val");
 	verify_string("main val", "main");

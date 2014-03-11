@@ -88,6 +88,15 @@ kv_t *settings_kv_create(char *key, char *value);
 void settings_kv_destroy(kv_t *this, array_t *contents);
 
 /**
+ * Set the value of the given key/value pair.
+ *
+ * @param kv		key/value pair
+ * @param value		new value (gets adopted), may be NULL
+ * @param contents	optional array to store replaced values in
+ */
+void settings_kv_set(kv_t *kv, char *value, array_t *contents);
+
+/**
  * Add the given key/value pair to the given section.
  *
  * @param section	section to add pair to

@@ -84,6 +84,31 @@ void settings_section_destroy(section_t *this, array_t *contents)
 /*
  * Described in header
  */
+void settings_kv_set(kv_t *kv, char *value, array_t *contents)
+{
+	if (value && kv->value && streq(value, kv->value))
+	{	/* no update required */
+		free(value);
+		return;
+	}
+
+	/* if the new value was shorter we could overwrite the existing one but that
+	 * could lead to reads of partially updated values from other threads that
+	 * have a pointer to the existing value, so we replace it anyway */
+	if (kv->value && contents)
+	{
+		array_insert(contents, ARRAY_TAIL, kv->value);
+	}
+	else
+	{
+		free(kv->value);
+	}
+	kv->value = value;
+}
+
+/*
+ * Described in header
+ */
 void settings_kv_add(section_t *section, kv_t *kv, array_t *contents)
 {
 	kv_t *found;
@@ -95,15 +120,7 @@ void settings_kv_add(section_t *section, kv_t *kv, array_t *contents)
 	}
 	else
 	{
-		if (contents && found->value)
-		{
-			array_insert(contents, ARRAY_TAIL, found->value);
-		}
-		else
-		{
-			free(found->value);
-		}
-		found->value = kv->value;
+		settings_kv_set(found, kv->value, contents);
 		kv->value = NULL;
 		settings_kv_destroy(kv, NULL);
 	}

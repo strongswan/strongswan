@@ -474,26 +474,7 @@ static void set_value(private_settings_t *this, section_t *section,
 							 TRUE);
 	if (kv)
 	{
-		if (!value)
-		{
-			if (kv->value)
-			{
-				array_insert(this->contents, ARRAY_TAIL, kv->value);
-			}
-			kv->value = NULL;
-		}
-		else if (kv->value && (strlen(value) <= strlen(kv->value)))
-		{	/* overwrite in-place, if possible */
-			strcpy(kv->value, value);
-		}
-		else
-		{	/* otherwise clone the string and cache the replaced one */
-			if (kv->value)
-			{
-				array_insert(this->contents, ARRAY_TAIL, kv->value);
-			}
-			kv->value = strdup(value);
-		}
+		settings_kv_set(kv, strdupnull(value), this->contents);
 	}
 	this->lock->unlock(this->lock);
 }
