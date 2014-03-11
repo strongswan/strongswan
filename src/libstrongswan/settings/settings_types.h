@@ -65,9 +65,19 @@ struct section_t {
 	array_t *sections;
 
 	/**
+	 * Subsections in original order, as section_t (pointer to obj in sections).
+	 */
+	array_t *sections_order;
+
+	/**
 	 * Key value pairs, as kv_t.
 	 */
 	array_t *kv;
+
+	/**
+	 * Key value pairs in original order, as kv_t (pointer to obj in kv).
+	 */
+	array_t *kv_order;
 };
 
 /**

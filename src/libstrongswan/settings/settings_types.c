@@ -75,7 +75,9 @@ static void kv_destroy(kv_t *kv, int idx, array_t *contents)
 void settings_section_destroy(section_t *this, array_t *contents)
 {
 	array_destroy_function(this->sections, (void*)section_destroy, contents);
+	array_destroy(this->sections_order);
 	array_destroy_function(this->kv, (void*)kv_destroy, contents);
+	array_destroy(this->kv_order);
 	array_destroy(this->fallbacks);
 	free(this->name);
 	free(this);
@@ -117,6 +119,7 @@ void settings_kv_add(section_t *section, kv_t *kv, array_t *contents)
 	{
 		array_insert_create(&section->kv, ARRAY_TAIL, kv);
 		array_sort(section->kv, settings_kv_sort, NULL);
+		array_insert_create(&section->kv_order, ARRAY_TAIL, kv);
 	}
 	else
 	{
@@ -139,6 +142,7 @@ void settings_section_add(section_t *parent, section_t *section,
 	{
 		array_insert_create(&parent->sections, ARRAY_TAIL, section);
 		array_sort(parent->sections, settings_section_sort, NULL);
+		array_insert_create(&parent->sections_order, ARRAY_TAIL, section);
 	}
 	else
 	{
@@ -156,19 +160,25 @@ void settings_section_extend(section_t *base, section_t *extension,
 	enumerator_t *enumerator;
 	section_t *section;
 	kv_t *kv;
+	int idx;
 
-	enumerator = array_create_enumerator(extension->sections);
+	enumerator = array_create_enumerator(extension->sections_order);
 	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
-		array_remove_at(extension->sections, enumerator);
+		idx = array_bsearch(extension->sections, section->name,
+							settings_section_find, NULL);
+		array_remove(extension->sections, idx, NULL);
+		array_remove_at(extension->sections_order, enumerator);
 		settings_section_add(base, section, contents);
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = array_create_enumerator(extension->kv);
+	enumerator = array_create_enumerator(extension->kv_order);
 	while (enumerator->enumerate(enumerator, (void**)&kv))
 	{
-		array_remove_at(extension->kv, enumerator);
+		idx = array_bsearch(extension->kv, kv->key, settings_kv_find, NULL);
+		array_remove(extension->kv, idx, NULL);
+		array_remove_at(extension->kv_order, enumerator);
 		settings_kv_add(base, kv, contents);
 	}
 	enumerator->destroy(enumerator);

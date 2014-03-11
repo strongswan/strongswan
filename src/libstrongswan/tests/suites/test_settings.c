@@ -420,37 +420,21 @@ START_TEST(test_set_time)
 }
 END_TEST
 
-static bool verify_section(linked_list_t *verifier, char *section)
-{
-	enumerator_t *enumerator;
-	char *current;
-	bool result = FALSE;
-
-	enumerator = verifier->create_enumerator(verifier);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (streq(current, section))
-		{
-			verifier->remove_at(verifier, enumerator);
-			result = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return result;
-}
-
 static void verify_sections(linked_list_t *verifier, char *parent)
 {
-	enumerator_t *enumerator;
-	char *section;
+	enumerator_t *enumerator, *ver;
+	char *section, *current;
 
 	enumerator = settings->create_section_enumerator(settings, parent);
-	while (enumerator->enumerate(enumerator, &section))
+	ver = verifier->create_enumerator(verifier);
+	while (enumerator->enumerate(enumerator, &section) &&
+		   ver->enumerate(ver, &current))
 	{
-		ck_assert(verify_section(verifier, section));
+		ck_assert_str_eq(section, current);
+		verifier->remove_at(verifier, ver);
 	}
 	enumerator->destroy(enumerator);
+	ver->destroy(ver);
 	ck_assert_int_eq(0, verifier->get_count(verifier));
 	verifier->destroy(verifier);
 }
@@ -462,8 +446,8 @@ START_TEST(test_section_enumerator)
 	verifier = linked_list_create_with_items("sub1", "sub%", NULL);
 	verify_sections(verifier, "main");
 
-	settings->set_str(settings, "main.sub2.new", "added");
-	verifier = linked_list_create_with_items("sub1", "sub%", "sub2", NULL);
+	settings->set_str(settings, "main.sub0.new", "added");
+	verifier = linked_list_create_with_items("sub1", "sub%", "sub0", NULL);
 	verify_sections(verifier, "main");
 
 	verifier = linked_list_create_with_items("subsub", NULL);
@@ -480,44 +464,27 @@ START_TEST(test_section_enumerator)
 }
 END_TEST
 
-static bool verify_key_value(linked_list_t *keys, linked_list_t *values,
-							 char *key, char *value)
-{
-	enumerator_t *enum_keys, *enum_values;
-	char *current_key, *current_value;
-	bool result = FALSE;
-
-	enum_keys = keys->create_enumerator(keys);
-	enum_values = values->create_enumerator(values);
-	while (enum_keys->enumerate(enum_keys, &current_key) &&
-		   enum_values->enumerate(enum_values, &current_value))
-	{
-		if (streq(current_key, key))
-		{
-			ck_assert_str_eq(current_value, value);
-			keys->remove_at(keys, enum_keys);
-			values->remove_at(values, enum_values);
-			result = TRUE;
-			break;
-		}
-	}
-	enum_keys->destroy(enum_keys);
-	enum_values->destroy(enum_values);
-	return result;
-}
-
 static void verify_key_values(linked_list_t *keys, linked_list_t *values,
 							  char *parent)
 {
-	enumerator_t *enumerator;
-	char *key, *value;
+	enumerator_t *enumerator, *enum_keys, *enum_values;
+	char *key, *value, *current_key, *current_value;
 
 	enumerator = settings->create_key_value_enumerator(settings, parent);
-	while (enumerator->enumerate(enumerator, &key, &value))
+	enum_keys = keys->create_enumerator(keys);
+	enum_values = values->create_enumerator(values);
+	while (enumerator->enumerate(enumerator, &key, &value) &&
+		   enum_keys->enumerate(enum_keys, &current_key) &&
+		   enum_values->enumerate(enum_values, &current_value))
 	{
-		ck_assert(verify_key_value(keys, values, key, value));
+		ck_assert_str_eq(current_key, key);
+		ck_assert_str_eq(current_value, value);
+		keys->remove_at(keys, enum_keys);
+		values->remove_at(values, enum_values);
 	}
 	enumerator->destroy(enumerator);
+	enum_keys->destroy(enum_keys);
+	enum_values->destroy(enum_values);
 	ck_assert_int_eq(0, keys->get_count(keys));
 	keys->destroy(keys);
 	values->destroy(values);
@@ -527,8 +494,8 @@ START_TEST(test_key_value_enumerator)
 {
 	linked_list_t *keys, *values;
 
-	keys = linked_list_create_with_items("key1", "key2", "key3", "empty", NULL);
-	values = linked_list_create_with_items("val1", "with space", "string with\nnewline", "", NULL);
+	keys = linked_list_create_with_items("key1", "key2", "empty", "key3", NULL);
+	values = linked_list_create_with_items("val1", "with space", "", "string with\nnewline", NULL);
 	verify_key_values(keys, values, "main");
 
 	keys = linked_list_create_with_items("key", "key2", "subsub", NULL);

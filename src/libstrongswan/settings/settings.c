@@ -80,18 +80,23 @@ static void kv_destroy(kv_t *kv, int idx, array_t *contents)
 static bool section_purge(section_t *this, array_t *contents)
 {
 	section_t *current;
-	int i;
+	int i, idx;
 
 	array_destroy_function(this->kv, (void*)kv_destroy, contents);
 	this->kv = NULL;
+	array_destroy(this->kv_order);
+	this->kv_order = NULL;
 	/* we ensure sections used as fallback, or configured with fallbacks (or
 	 * having any such subsections) are not removed */
-	for (i = array_count(this->sections) - 1; i >= 0; i--)
+	for (i = array_count(this->sections_order) - 1; i >= 0; i--)
 	{
 		array_get(this->sections, i, &current);
 		if (section_purge(current, contents))
 		{
-			array_remove(this->sections, i, NULL);
+			array_remove(this->sections_order, i, NULL);
+			idx = array_bsearch(this->sections, current->name,
+								settings_section_find, NULL);
+			array_remove(this->sections, idx, NULL);
 			settings_section_destroy(current, contents);
 		}
 	}
@@ -758,7 +763,8 @@ static bool section_filter(hashtable_t *seen, section_t **in, char **out)
 static enumerator_t *section_enumerator(section_t *section,
 										enumerator_data_t *data)
 {
-	return enumerator_create_filter(array_create_enumerator(section->sections),
+	return enumerator_create_filter(
+			array_create_enumerator(section->sections_order),
 				(void*)section_filter, data->seen, NULL);
 }
 
@@ -809,7 +815,7 @@ static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
  */
 static enumerator_t *kv_enumerator(section_t *section, enumerator_data_t *data)
 {
-	return enumerator_create_filter(array_create_enumerator(section->kv),
+	return enumerator_create_filter(array_create_enumerator(section->kv_order),
 					(void*)kv_filter, data->seen, NULL);
 }
 
