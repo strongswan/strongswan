@@ -176,8 +176,7 @@ static section_t *find_section_buffered(section_t *section,
 		if (ensure)
 		{
 			found = settings_section_create(strdup(buf));
-			array_insert_create(&section->sections, ARRAY_TAIL, found);
-			array_sort(section->sections, settings_section_sort, NULL);
+			settings_section_add(section, found, NULL);
 		}
 	}
 	if (found && pos)
@@ -388,8 +387,7 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 			if (ensure)
 			{
 				found = settings_section_create(strdup(buf));
-				array_insert_create(&section->sections, ARRAY_TAIL, found);
-				array_sort(section->sections, settings_section_sort, NULL);
+				settings_section_add(section, found, NULL);
 			}
 		}
 		if (found)
@@ -418,8 +416,7 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 			if (ensure)
 			{
 				kv = settings_kv_create(strdup(buf), NULL);
-				array_insert_create(&section->kv, ARRAY_TAIL, kv);
-				array_sort(section->kv, settings_kv_sort, NULL);
+				settings_kv_add(section, kv, NULL);
 			}
 			else if (section->fallbacks)
 			{

@@ -35,7 +35,7 @@ kv_t *settings_kv_create(char *key, char *value)
 void settings_kv_destroy(kv_t *this, array_t *contents)
 {
 	free(this->key);
-	if (contents)
+	if (contents && this->value)
 	{
 		array_insert(contents, ARRAY_TAIL, this->value);
 	}
@@ -84,54 +84,75 @@ void settings_section_destroy(section_t *this, array_t *contents)
 /*
  * Described in header
  */
+void settings_kv_add(section_t *section, kv_t *kv, array_t *contents)
+{
+	kv_t *found;
+
+	if (array_bsearch(section->kv, kv->key, settings_kv_find, &found) == -1)
+	{
+		array_insert_create(&section->kv, ARRAY_TAIL, kv);
+		array_sort(section->kv, settings_kv_sort, NULL);
+	}
+	else
+	{
+		if (contents && found->value)
+		{
+			array_insert(contents, ARRAY_TAIL, found->value);
+		}
+		else
+		{
+			free(found->value);
+		}
+		found->value = kv->value;
+		kv->value = NULL;
+		settings_kv_destroy(kv, NULL);
+	}
+}
+
+/*
+ * Described in header
+ */
+void settings_section_add(section_t *parent, section_t *section,
+						  array_t *contents)
+{
+	section_t *found;
+
+	if (array_bsearch(parent->sections, section->name, settings_section_find,
+					  &found) == -1)
+	{
+		array_insert_create(&parent->sections, ARRAY_TAIL, section);
+		array_sort(parent->sections, settings_section_sort, NULL);
+	}
+	else
+	{
+		settings_section_extend(found, section, contents);
+		settings_section_destroy(section, contents);
+	}
+}
+
+/*
+ * Described in header
+ */
 void settings_section_extend(section_t *base, section_t *extension,
 							 array_t *contents)
 {
 	enumerator_t *enumerator;
-	section_t *sec;
+	section_t *section;
 	kv_t *kv;
 
 	enumerator = array_create_enumerator(extension->sections);
-	while (enumerator->enumerate(enumerator, (void**)&sec))
+	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
-		section_t *found;
-		if (array_bsearch(base->sections, sec->name, settings_section_find,
-			&found) != -1)
-		{
-			settings_section_extend(found, sec, contents);
-		}
-		else
-		{
-			array_remove_at(extension->sections, enumerator);
-			array_insert_create(&base->sections, ARRAY_TAIL, sec);
-			array_sort(base->sections, settings_section_sort, NULL);
-		}
+		array_remove_at(extension->sections, enumerator);
+		settings_section_add(base, section, contents);
 	}
 	enumerator->destroy(enumerator);
 
 	enumerator = array_create_enumerator(extension->kv);
 	while (enumerator->enumerate(enumerator, (void**)&kv))
 	{
-		kv_t *found;
-		if (array_bsearch(base->kv, kv->key, settings_kv_find, &found) != -1)
-		{
-			if (contents)
-			{
-				array_insert(contents, ARRAY_TAIL, found->value);
-			}
-			else
-			{
-				free(found->value);
-			}
-			found->value = kv->value;
-			kv->value = NULL;
-		}
-		else
-		{
-			array_remove_at(extension->kv, enumerator);
-			array_insert_create(&base->kv, ARRAY_TAIL, kv);
-			array_sort(base->kv, settings_kv_sort, NULL);
-		}
+		array_remove_at(extension->kv, enumerator);
+		settings_kv_add(base, kv, contents);
 	}
 	enumerator->destroy(enumerator);
 }

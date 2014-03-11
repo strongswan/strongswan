@@ -88,6 +88,15 @@ kv_t *settings_kv_create(char *key, char *value);
 void settings_kv_destroy(kv_t *this, array_t *contents);
 
 /**
+ * Add the given key/value pair to the given section.
+ *
+ * @param section	section to add pair to
+ * @param kv		key/value pair to add (gets adopted)
+ * @param contents	optional array to store replaced values in
+ */
+void settings_kv_add(section_t *section, kv_t *kv, array_t *contents);
+
+/**
  * Create a section with the given name.
  *
  * @param name		name (gets adopted)
@@ -104,9 +113,18 @@ section_t *settings_section_create(char *name);
 void settings_section_destroy(section_t *this, array_t *contents);
 
 /**
+ * Add the given section to the given parent section.
+ *
+ * @param parent	section to add section to
+ * @param section	section to add (gets adopted)
+ * @param contents	optional array to store replaced values in
+ */
+void settings_section_add(section_t *parent, section_t *section,
+						  array_t *contents);
+
+/**
  * Extend the first section with the values and sub-sections of the second
- * section, from where they are consequently moved/removed (but there might
- * still remain some leftovers).
+ * section, from where they are consequently removed.
  *
  * @param base		base section to extend
  * @param extension	section whose data is extracted

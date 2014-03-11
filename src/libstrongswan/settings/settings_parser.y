@@ -215,20 +215,10 @@ static section_t *pop_section(parser_helper_t *ctx)
 static void add_section(parser_helper_t *ctx, section_t *section)
 {
 	array_t *sections = (array_t*)ctx->context;
-	section_t *parent, *existing;
+	section_t *parent;
 
 	array_get(sections, ARRAY_TAIL, &parent);
-	if (array_bsearch(parent->sections, section->name, settings_section_find,
-					  &existing) == -1)
-	{
-		array_insert_create(&parent->sections, ARRAY_TAIL, section);
-		array_sort(parent->sections, settings_section_sort, NULL);
-	}
-	else
-	{	/* extend the existing section */
-		settings_section_extend(existing, section, NULL);
-		settings_section_destroy(section, NULL);
-	}
+	settings_section_add(parent, section, NULL);
 }
 
 /**
@@ -238,21 +228,9 @@ static void add_setting(parser_helper_t *ctx, kv_t *kv)
 {
 	array_t *sections = (array_t*)ctx->context;
 	section_t *section;
-	kv_t *existing;
 
 	array_get(sections, ARRAY_TAIL, &section);
-	if (array_bsearch(section->kv, kv->key, settings_kv_find, &existing) == -1)
-	{
-		array_insert_create(&section->kv, ARRAY_TAIL, kv);
-		array_sort(section->kv, settings_kv_sort, NULL);
-	}
-	else
-	{	/* move value to existing object */
-		free(existing->value);
-		existing->value = kv->value;
-		kv->value = NULL;
-		settings_kv_destroy(kv, NULL);
-	}
+	settings_kv_add(section, kv, NULL);
 }
 
 /**
