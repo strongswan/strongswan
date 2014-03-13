@@ -531,6 +531,7 @@ START_SETUP(setup_include_config)
 		"main {\n"
 		"	key1 = n1\n"
 		"	key2 = n2\n"
+		"	key3 = val3\n"
 		"	none = \n"
 		"	sub1 {\n"
 		"		key3 = value\n"
@@ -563,6 +564,7 @@ static void verify_include()
 {
 	verify_string("n1", "main.key1");
 	verify_string("v2", "main.key2");
+	verify_string("val3", "main.key3");
 	verify_string("val", "main.sub1.key");
 	verify_string("v2", "main.sub1.key2");
 	verify_string("val", "main.sub1.sub1.key");
@@ -600,6 +602,7 @@ START_TEST(test_load_files)
 		"main {\n"
 		"	key1 = val1\n"
 		"	key2 = val2\n"
+		"	key3 = val3\n"
 		"	none = x\n"
 		"	sub1 {\n"
 		"		include = value\n"
@@ -609,7 +612,33 @@ START_TEST(test_load_files)
 		"		}\n"
 		"	}\n"
 		"}");
+	char *val1, *val2, *val3;
 
+	create_settings(contents);
+
+	val1 = settings->get_str(settings, "main.key1", NULL);
+	val2 = settings->get_str(settings, "main.sub1.key2", NULL);
+	/* loading the same file twice should not change anything, with... */
+	ck_assert(settings->load_files(settings, path, TRUE));
+	ck_assert(val1 == settings->get_str(settings, "main.key1", NULL));
+	ck_assert(val2 == settings->get_str(settings, "main.sub1.key2", NULL));
+	/* ...or without merging */
+	ck_assert(settings->load_files(settings, path, FALSE));
+	ck_assert(val1 == settings->get_str(settings, "main.key1", NULL));
+	ck_assert(val2 == settings->get_str(settings, "main.sub1.key2", NULL));
+
+	val1 = settings->get_str(settings, "main.key2", NULL);
+	val2 = settings->get_str(settings, "main.key3", NULL);
+	val3 = settings->get_str(settings, "main.none", NULL);
+	/* only pointers for modified settings should change, but still be valid */
+	ck_assert(settings->load_files(settings, include1, FALSE));
+	ck_assert(val1 != settings->get_str(settings, "main.key2", NULL));
+	ck_assert_str_eq(val1, "val2");
+	ck_assert(val2 == settings->get_str(settings, "main.key3", NULL));
+	ck_assert(val3 != settings->get_str(settings, "main.none", NULL));
+	ck_assert_str_eq(val3, "x");
+
+	settings->destroy(settings);
 	create_settings(contents);
 
 	ck_assert(settings->load_files(settings, include1, TRUE));

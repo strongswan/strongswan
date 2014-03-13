@@ -69,40 +69,6 @@ struct private_settings_t {
 	rwlock_t *lock;
 };
 
-static void kv_destroy(kv_t *kv, int idx, array_t *contents)
-{
-	settings_kv_destroy(kv, contents);
-}
-
-/**
- * Purge contents of a section, returns if section can be safely removed.
- */
-static bool section_purge(section_t *this, array_t *contents)
-{
-	section_t *current;
-	int i, idx;
-
-	array_destroy_function(this->kv, (void*)kv_destroy, contents);
-	this->kv = NULL;
-	array_destroy(this->kv_order);
-	this->kv_order = NULL;
-	/* we ensure sections used as fallback, or configured with fallbacks (or
-	 * having any such subsections) are not removed */
-	for (i = array_count(this->sections_order) - 1; i >= 0; i--)
-	{
-		array_get(this->sections, i, &current);
-		if (section_purge(current, contents))
-		{
-			array_remove(this->sections_order, i, NULL);
-			idx = array_bsearch(this->sections, current->name,
-								settings_section_find, NULL);
-			array_remove(this->sections, idx, NULL);
-			settings_section_destroy(current, contents);
-		}
-	}
-	return !this->fallbacks && !array_count(this->sections);
-}
-
 /**
  * Print a format key, but consume already processed arguments
  */
@@ -890,12 +856,7 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	}
 
 	this->lock->write_lock(this->lock);
-	if (!merge)
-	{
-		section_purge(parent, this->contents);
-	}
-	/* extend parent section */
-	settings_section_extend(parent, section, this->contents);
+	settings_section_extend(parent, section, this->contents, !merge);
 	this->lock->unlock(this->lock);
 
 	settings_section_destroy(section, NULL);

@@ -148,9 +148,11 @@ void settings_section_add(section_t *parent, section_t *section,
  * @param base		base section to extend
  * @param extension	section whose data is extracted
  * @param contents	optional array to store replaced values in
+ * @param purge		TRUE to remove settings and sections not found in the
+ *					extension (unless (sub-)sections have/are fallbacks)
  */
 void settings_section_extend(section_t *base, section_t *extension,
-							 array_t *contents);
+							 array_t *contents, bool purge);
 
 /**
  * Callback to find a section by name
