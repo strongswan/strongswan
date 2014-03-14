@@ -22,6 +22,7 @@
 #include <collections/array.h>
 #include <utils/test.h>
 
+#include <stdlib.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
@@ -60,7 +61,57 @@ static void testable_functions_destroy()
 }
 
 /**
- * Load all available test suites
+ * Destroy a single test suite and associated data
+ */
+static void destroy_suite(test_suite_t *suite)
+{
+	test_case_t *tcase;
+
+	while (array_remove(suite->tcases, 0, &tcase))
+	{
+		array_destroy(tcase->functions);
+		array_destroy(tcase->fixtures);
+	}
+	free(suite);
+}
+
+/**
+ * Removes and destroys test suites that are not selected.
+ */
+static void filter_suites(array_t *loaded)
+{
+	enumerator_t *enumerator, *names;
+	hashtable_t *selected;
+	test_suite_t *suite;
+	char *suites, *name;
+
+	suites = getenv("TESTS_SUITES");
+	if (!suites)
+	{
+		return;
+	}
+	selected = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8);
+	names = enumerator_create_token(suites, ",", " ");
+	while (names->enumerate(names, &name))
+	{
+		selected->put(selected, name, name);
+	}
+	enumerator = array_create_enumerator(loaded);
+	while (enumerator->enumerate(enumerator, &suite))
+	{
+		if (!selected->get(selected, suite->name))
+		{
+			array_remove_at(loaded, enumerator);
+			destroy_suite(suite);
+		}
+	}
+	enumerator->destroy(enumerator);
+	selected->destroy(selected);
+	names->destroy(names);
+}
+
+/**
+ * Load all available test suites, or optionally only selected ones.
  */
 static array_t *load_suites(test_configuration_t configs[],
 							test_runner_init_t init)
@@ -95,6 +146,7 @@ static array_t *load_suites(test_configuration_t configs[],
 			array_insert(suites, -1, configs[i].suite());
 		}
 	}
+	filter_suites(suites);
 
 	if (lib->leak_detective)
 	{
@@ -116,16 +168,10 @@ static array_t *load_suites(test_configuration_t configs[],
 static void unload_suites(array_t *suites)
 {
 	test_suite_t *suite;
-	test_case_t *tcase;
 
 	while (array_remove(suites, 0, &suite))
 	{
-		while (array_remove(suite->tcases, 0, &tcase))
-		{
-			array_destroy(tcase->functions);
-			array_destroy(tcase->fixtures);
-		}
-		free(suite);
+		destroy_suite(suite);
 	}
 	array_destroy(suites);
 }
