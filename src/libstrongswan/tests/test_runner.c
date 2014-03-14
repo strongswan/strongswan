@@ -228,6 +228,9 @@ static bool call_fixture(test_case_t *tcase, bool up)
  */
 static bool pre_test(test_runner_init_t init)
 {
+	level_t level = LEVEL_SILENT;
+	char *verbosity;
+
 	library_init(NULL, "test-runner");
 
 	/* use non-blocking RNG to generate keys fast */
@@ -250,7 +253,12 @@ static bool pre_test(test_runner_init_t init)
 		library_deinit();
 		return FALSE;
 	}
-	dbg_default_set_level(LEVEL_SILENT);
+	verbosity = getenv("TESTS_VERBOSITY");
+	if (verbosity)
+	{
+		level = atoi(verbosity);
+	}
+	dbg_default_set_level(level);
 	return TRUE;
 }
 
