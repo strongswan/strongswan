@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -87,6 +87,9 @@ struct addr_entry_t {
 
 	/** the ip address */
 	host_t *ip;
+
+	/** address flags */
+	u_char flags;
 
 	/** scope of the address */
 	u_char scope;
@@ -467,6 +470,11 @@ struct private_kernel_netlink_net_t {
 	bool rta_prefsrc_for_ipv6;
 
 	/**
+	 * whether to prefer temporary IPv6 addresses over public ones
+	 */
+	bool prefer_temporary_addrs;
+
+	/**
 	 * list with routing tables to be excluded from route lookup
 	 */
 	linked_list_t *rt_exclude;
@@ -653,20 +661,156 @@ static void addr_map_entry_remove(hashtable_t *map, addr_entry_t *addr,
 }
 
 /**
- * get the first non-virtual ip address on the given interface.
- * if a candidate address is given, we first search for that address and if not
- * found return the address as above.
- * returned host is a clone, has to be freed by caller.
+ * Determine the type or scope of the given unicast IP address.  This is not
+ * the same thing returned in rtm_scope/ifa_scope.
  *
- * this->lock must be held when calling this function
+ * We use return values as defined in RFC 6724 (referring to RFC 4291).
+ */
+static u_char get_scope(host_t *ip)
+{
+	chunk_t addr;
+
+	addr = ip->get_address(ip);
+	switch (addr.len)
+	{
+		case 4:
+			/* we use the mapping defined in RFC 6724, 3.2 */
+			if (addr.ptr[0] == 127)
+			{	/* link-local, same as the IPv6 loopback address */
+				return 2;
+			}
+			if (addr.ptr[0] == 169 && addr.ptr[1] == 254)
+			{	/* link-local */
+				return 2;
+			}
+			break;
+		case 16:
+			if (IN6_IS_ADDR_LOOPBACK(addr.ptr))
+			{	/* link-local, according to RFC 4291, 2.5.3 */
+				return 2;
+			}
+			if (IN6_IS_ADDR_LINKLOCAL(addr.ptr))
+			{
+				return 2;
+			}
+			if (IN6_IS_ADDR_SITELOCAL(addr.ptr))
+			{	/* deprecated, according to RFC 4291, 2.5.7 */
+				return 5;
+			}
+			break;
+		default:
+			break;
+	}
+	/* global */
+	return 14;
+}
+
+/**
+ * Returns the length of the common prefix in bits up to the length of a's
+ * prefix, defined by RFC 6724 as the portion of the address not including the
+ * interface ID, which is 64-bit for most unicast addresses (see RFC 4291).
+ */
+static u_char common_prefix(host_t *a, host_t *b)
+{
+	chunk_t aa, ba;
+	u_char byte, bits = 0, match;
+
+	aa = a->get_address(a);
+	ba = b->get_address(b);
+	for (byte = 0; byte < 8; byte++)
+	{
+		if (aa.ptr[byte] != ba.ptr[byte])
+		{
+			match = aa.ptr[byte] ^ ba.ptr[byte];
+			for (bits = 8; match; match >>= 1)
+			{
+				bits--;
+			}
+			break;
+		}
+	}
+	return byte * 8 + bits;
+}
+
+/**
+ * Compare two IP addresses and return TRUE if the second address is the better
+ * choice of the two to reach the destination.
+ * For IPv6 we approximately follow RFC 6724.
+ */
+static bool is_address_better(private_kernel_netlink_net_t *this,
+							  addr_entry_t *a, addr_entry_t *b, host_t *d)
+{
+	u_char sa, sb, sd, pa, pb;
+
+	/* rule 2: prefer appropriate scope */
+	if (d)
+	{
+		sa = get_scope(a->ip);
+		sb = get_scope(b->ip);
+		sd = get_scope(d);
+		if (sa < sb)
+		{
+			return sa < sd;
+		}
+		else if (sb < sa)
+		{
+			return sb >= sd;
+		}
+	}
+	if (a->ip->get_family(a->ip) == AF_INET)
+	{	/* stop here for IPv4, default to addresses found earlier */
+		return FALSE;
+	}
+	/* rule 3: avoid deprecated addresses (RFC 4862) */
+	if ((a->flags & IFA_F_DEPRECATED) != (b->flags & IFA_F_DEPRECATED))
+	{
+		return a->flags & IFA_F_DEPRECATED;
+	}
+	/* rule 4 is not applicable as we don't know if an address is a home or
+	 * care-of addresses.
+	 * rule 5 does not apply as we only compare addresses from one interface
+	 * rule 6 requires a policy table (optionally configurable) to match
+	 * configurable labels
+	 */
+	/* rule 7: prefer temporary addresses (WE REVERSE THIS BY DEFAULT!) */
+	if ((a->flags & IFA_F_TEMPORARY) != (b->flags & IFA_F_TEMPORARY))
+	{
+		if (this->prefer_temporary_addrs)
+		{
+			return b->flags & IFA_F_TEMPORARY;
+		}
+		return a->flags & IFA_F_TEMPORARY;
+	}
+	/* rule 8: use longest matching prefix */
+	if (d)
+	{
+		pa = common_prefix(a->ip, d);
+		pb = common_prefix(b->ip, d);
+		if (pa != pb)
+		{
+			return pb > pa;
+		}
+	}
+	/* default to addresses found earlier */
+	return FALSE;
+}
+
+/**
+ * Get a non-virtual IP address on the given interface.
+ *
+ * If a candidate address is given, we first search for that address and if not
+ * found return the address as above.
+ * Returned host is a clone, has to be freed by caller.
+ *
+ * this->lock must be held when calling this function.
  */
 static host_t *get_interface_address(private_kernel_netlink_net_t *this,
-									 int ifindex, int family, host_t *candidate)
+									 int ifindex, int family, host_t *dest,
+									 host_t *candidate)
 {
 	iface_entry_t *iface;
 	enumerator_t *addrs;
-	addr_entry_t *addr;
-	host_t *ip = NULL;
+	addr_entry_t *addr, *best = NULL;
 
 	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
 								 (void**)&iface, &ifindex) == SUCCESS)
@@ -676,29 +820,25 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 			addrs = iface->addrs->create_enumerator(iface->addrs);
 			while (addrs->enumerate(addrs, &addr))
 			{
-				if (addr->refcount)
-				{	/* ignore virtual IP addresses */
+				if (addr->refcount ||
+					addr->ip->get_family(addr->ip) != family)
+				{	/* ignore virtual IP addresses and ensure family matches */
 					continue;
 				}
-				if (addr->ip->get_family(addr->ip) == family)
+				if (candidate && candidate->ip_equals(candidate, addr->ip))
+				{	/* stop if we find the candidate */
+					best = addr;
+					break;
+				}
+				else if (!best || is_address_better(this, best, addr, dest))
 				{
-					if (!candidate || candidate->ip_equals(candidate, addr->ip))
-					{	/* stop at the first address if we don't search for a
-						 * candidate or if the candidate matches */
-						ip = addr->ip;
-						break;
-					}
-					else if (!ip)
-					{	/* store the first address as fallback if candidate is
-						 * not found */
-						ip = addr->ip;
-					}
+					best = addr;
 				}
 			}
 			addrs->destroy(addrs);
 		}
 	}
-	return ip ? ip->clone(ip) : NULL;
+	return best ? best->ip->clone(best->ip) : NULL;
 }
 
 /**
@@ -989,6 +1129,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				route_ifname = strdup(iface->ifname);
 				INIT(addr,
 					.ip = host->clone(host),
+					.flags = msg->ifa_flags,
 					.scope = msg->ifa_scope,
 				);
 				iface->addrs->insert_last(iface->addrs, addr);
@@ -1076,7 +1217,8 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	}
 	if (!host && rta_oif)
 	{
-		host = get_interface_address(this, rta_oif, msg->rtm_family, NULL);
+		host = get_interface_address(this, rta_oif, msg->rtm_family,
+									 NULL, NULL);
 	}
 	if (!host || is_known_vip(this, host))
 	{	/* ignore routes added for virtual IPs */
@@ -1580,7 +1722,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			else if (route->oif)
 			{	/* no match yet, maybe it is assigned to the same interface */
 				host_t *src = get_interface_address(this, route->oif,
-													msg->rtm_family, candidate);
+											msg->rtm_family, dest, candidate);
 				if (src && src->ip_equals(src, candidate))
 				{
 					route->src_host->destroy(route->src_host);
@@ -1599,7 +1741,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		if (route->oif)
 		{	/* no src, but an interface - get address from it */
 			route->src_host = get_interface_address(this, route->oif,
-													msg->rtm_family, candidate);
+											msg->rtm_family, dest, candidate);
 			if (route->src_host)
 			{	/* we handle this address the same as the one above */
 				if (!candidate ||
@@ -2294,6 +2436,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.install_virtual_ip", TRUE, lib->ns),
 		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
 						"%s.install_virtual_ip_on", NULL, lib->ns),
+		.prefer_temporary_addrs = lib->settings->get_bool(lib->settings,
+						"%s.prefer_temporary_addrs", FALSE, lib->ns),
 		.roam_events = lib->settings->get_bool(lib->settings,
 						"%s.plugins.kernel-netlink.roam_events", TRUE, lib->ns),
 	);
