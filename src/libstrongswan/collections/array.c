@@ -141,7 +141,7 @@ static void remove_tail(array_t *array, int idx)
 	/* move all items after idx one down */
 	memmove(array->data + get_size(array, idx + array->head),
 			array->data + get_size(array, idx + array->head + 1),
-			get_size(array, array->count - idx));
+			get_size(array, array->count - 1 - idx));
 	array->count--;
 	array->tail++;
 }
