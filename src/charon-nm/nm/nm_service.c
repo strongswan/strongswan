@@ -660,6 +660,10 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 					key->destroy(key);
 					return FALSE;
 				}
+				else if (nm_setting_vpn_get_secret(settings, "password"))
+				{
+					return FALSE;
+				}
 			}
 		}
 		else if (streq(method, "smartcard"))
