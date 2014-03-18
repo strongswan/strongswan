@@ -62,4 +62,4 @@ CONFIG="$CONFIG
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
 echo "$ ./configure $CONFIG && make $TARGET"
-./configure $CONFIG && make $TARGET
+./configure $CONFIG && make -j4 $TARGET
