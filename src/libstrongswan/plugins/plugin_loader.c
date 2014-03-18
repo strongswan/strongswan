@@ -1047,6 +1047,7 @@ static char *modular_pluginlist(char *list)
 
 	array_sort(final, (void*)plugin_priority_cmp, NULL);
 
+	plugins = strdup("");
 	enumerator = array_create_enumerator(final);
 	while (enumerator->enumerate(enumerator, &current))
 	{
