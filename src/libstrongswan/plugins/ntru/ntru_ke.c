@@ -16,6 +16,8 @@
 #include "ntru_ke.h"
 #include "ntru_drbg.h"
 #include "ntru_param_set.h"
+#include "ntru_private_key.h"
+#include "ntru_public_key.h"
 
 #include "ntru_crypto/ntru_crypto.h"
 
@@ -71,12 +73,17 @@ struct private_ntru_ke_t {
 	/**
 	 * NTRU Public Key
 	 */
-	chunk_t pub_key;
+	ntru_public_key_t *pubkey;
 
 	/**
 	 * NTRU Private Key
 	 */
-	chunk_t priv_key;
+	ntru_private_key_t *privkey;
+
+	/**
+	 * NTRU Public Key Encoding
+	 */
+	chunk_t pubkey_enc;
 
 	/**
 	 * NTRU encrypted shared secret
@@ -112,8 +119,6 @@ struct private_ntru_ke_t {
 METHOD(diffie_hellman_t, get_my_public_value, void,
 	private_ntru_ke_t *this, chunk_t *value)
 {
-    uint16_t pub_key_len, priv_key_len;
-
 	*value = chunk_empty;
 
 	if (this->responder)
@@ -125,34 +130,21 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	}
 	else
 	{
-		if (this->pub_key.len == 0)
+		if (!this->pubkey)
 		{
-			/* determine the NTRU public and private key sizes */
-			if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set->id,
-								&pub_key_len, NULL,
-				 				&priv_key_len, NULL) != NTRU_OK)
-			{
-				DBG1(DBG_LIB, "error determining NTRU public and private key "
-							  "sizes");
-				return;
-			}
-			this->pub_key  = chunk_alloc(pub_key_len);
-			this->priv_key = chunk_alloc(priv_key_len);
-
 			/* generate a random NTRU public/private key pair */
-		    if (ntru_crypto_ntru_encrypt_keygen(this->drbg, this->param_set->id,
-								&pub_key_len, this->pub_key.ptr,
-				 				&priv_key_len, this->priv_key.ptr) != NTRU_OK)
+			this->privkey = ntru_private_key_create(this->drbg, this->param_set);
+			if (!this->privkey)
 			{
 				DBG1(DBG_LIB, "NTRU keypair generation failed");
-				chunk_free(&this->priv_key);
-				chunk_free(&this->pub_key);
 				return;
 			}
-			DBG3(DBG_LIB, "NTRU public key: %B", &this->pub_key);
-			DBG4(DBG_LIB, "NTRU private key: %B", &this->priv_key);
+			this->pubkey = this->privkey->get_public_key(this->privkey);
+			this->pubkey_enc = this->pubkey->get_encoding(this->pubkey);
+			this->pubkey_enc = chunk_clone(this->pubkey_enc);
+			DBG3(DBG_LIB, "NTRU public key: %B", &this->pubkey_enc);
 		}
-		*value = chunk_clone(this->pub_key);
+		*value = chunk_clone(this->pubkey_enc);
 	}
 }
 
@@ -173,9 +165,9 @@ METHOD(diffie_hellman_t, get_shared_secret, status_t,
 METHOD(diffie_hellman_t, set_other_public_value, void,
 	private_ntru_ke_t *this, chunk_t value)
 {
-	u_int16_t plaintext_len, ciphertext_len;
+	u_int16_t ciphertext_len;
 
-	if (this->priv_key.len)
+	if (this->privkey)
 	{
 		/* initiator decrypting shared secret */
 		if (value.len == 0)
@@ -183,29 +175,14 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			DBG1(DBG_LIB, "empty NTRU ciphertext");
 			return;
 		}
-		this->ciphertext = chunk_clone(value);
-		DBG3(DBG_LIB, "NTRU ciphertext: %B", &this->ciphertext);
-
-		/* determine the size of the maximum plaintext */
-    	if (ntru_crypto_ntru_decrypt(this->priv_key.len, this->priv_key.ptr,
-								this->ciphertext.len, this->ciphertext.ptr,
-								&plaintext_len, NULL) != NTRU_OK)
-		{
-			DBG1(DBG_LIB, "error determining maximum plaintext size");
-			return;
-		}
-		this->shared_secret = chunk_alloc(plaintext_len);
+		DBG3(DBG_LIB, "NTRU ciphertext: %B", &value);
 
 		/* decrypt the shared secret */
-    	if (ntru_crypto_ntru_decrypt(this->priv_key.len, this->priv_key.ptr,
-						this->ciphertext.len, this->ciphertext.ptr,
-						&plaintext_len, this->shared_secret.ptr) != NTRU_OK)
+ 		if (!this->privkey->decrypt(this->privkey, value, &this->shared_secret))
 		{
 			DBG1(DBG_LIB, "NTRU decryption of shared secret failed");
-			chunk_free(&this->shared_secret);
 			return;
 		}
-		this->shared_secret.len = plaintext_len;
 		this->computed = TRUE;
 	}
 	else
@@ -214,17 +191,19 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		this->responder = TRUE;
 
 		/* check the NTRU public key format */
-		if (value.len < 5 || value.ptr[0] != 1 || value.ptr[1] != 3)
+		if (value.len < 5 ||
+			value.ptr[0] != NTRU_PUBKEY_TAG ||
+			value.ptr[1] != NTRU_OID_LEN)
 		{
 			DBG1(DBG_LIB, "received NTRU public key with invalid header");
 			return;
 		}
-		if (!memeq(value.ptr + 2, this->param_set->oid, 3))
+		if (!memeq(value.ptr + 2, this->param_set->oid, NTRU_OID_LEN))
 		{
 			DBG1(DBG_LIB, "received NTRU public key with wrong OID");
 			return;
 		}
-		this->pub_key = chunk_clone(value);
+		this->pubkey_enc = chunk_clone(value);
 
 		/* shared secret size is chosen as twice the cryptographical strength */
 		this->shared_secret = chunk_alloc(2 * this->strength / BITS_PER_BYTE);
@@ -241,7 +220,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 
 		/* determine the size of the ciphertext */
 		if (ntru_crypto_ntru_encrypt(this->drbg,
-							this->pub_key.len,	this->pub_key.ptr,
+							this->pubkey_enc.len, this->pubkey_enc.ptr,
 							this->shared_secret.len, this->shared_secret.ptr,
                             &ciphertext_len, NULL) != NTRU_OK)
 		{
@@ -252,7 +231,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 
 		/* encrypt the shared secret */
 		if (ntru_crypto_ntru_encrypt(this->drbg,
-							this->pub_key.len,	this->pub_key.ptr,
+							this->pubkey_enc.len, this->pubkey_enc.ptr,
 							this->shared_secret.len, this->shared_secret.ptr,
                             &ciphertext_len, this->ciphertext.ptr) != NTRU_OK)
 		{
@@ -273,11 +252,12 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_ntru_ke_t *this)
 {
+	DESTROY_IF(this->privkey);
+	DESTROY_IF(this->pubkey);
 	this->drbg->destroy(this->drbg);
 	this->entropy->destroy(this->entropy);
-	chunk_free(&this->pub_key);
+	chunk_free(&this->pubkey_enc);
 	chunk_free(&this->ciphertext);
-	chunk_clear(&this->priv_key);
 	chunk_clear(&this->shared_secret);
 	free(this);
 }

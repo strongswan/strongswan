@@ -30,19 +30,6 @@
 
 #include "ntru_param_set.h"
 
-/* key-blob definitions */
-
-#define NTRU_ENCRYPT_PUBKEY_TAG           0x01
-#define NTRU_ENCRYPT_PRIVKEY_DEFAULT_TAG  0x02
-#define NTRU_ENCRYPT_PRIVKEY_TRITS_TAG    0xfe
-#define NTRU_ENCRYPT_PRIVKEY_INDICES_TAG  0xff
-
-/* packing types */
-
-#define NTRU_ENCRYPT_KEY_PACKED_COEFFICIENTS    0x01
-#define NTRU_ENCRYPT_KEY_PACKED_INDICES         0x02
-#define NTRU_ENCRYPT_KEY_PACKED_TRITS           0x03
-
 /* function declarations */
 
 
@@ -74,94 +61,5 @@ ntru_crypto_ntru_encrypt_key_parse(
                                                          packed pubkey */
     uint8_t const          **privkey);          /* out - addr for ptr to
                                                          packed privkey */
-
-
-/* ntru_crypto_ntru_encrypt_key_get_blob_params
- *
- * Returns public and private key packing types and blob lengths given
- * a packing format.  For now, only a default packing format exists.
- *
- * Only public-key params may be returned by setting privkey_pack_type
- * and privkey_blob_len to NULL.
- */
-
-extern void
-ntru_crypto_ntru_encrypt_key_get_blob_params(
-    ntru_param_set_t             *params,             /*  in - pointer to
-                                                               param set
-                                                               parameters */
-    uint8_t                      *pubkey_pack_type,   /* out - addr for pubkey
-                                                               packing type */
-    uint16_t                     *pubkey_blob_len,    /* out - addr for no. of
-                                                               bytes in
-                                                               pubkey blob */
-    uint8_t                      *privkey_pack_type,  /* out - addr for privkey
-                                                               packing type */
-    uint16_t                     *privkey_blob_len);  /* out - addr for no. of
-                                                               bytes in
-                                                               privkey blob */
-
-
-/* ntru_crypto_ntru_encrypt_key_create_pubkey_blob
- *
- * Returns a public key blob, packed according to the packing type provided.
- */
-
-extern void
-ntru_crypto_ntru_encrypt_key_create_pubkey_blob(
-    ntru_param_set_t             *params,             /*  in - pointer to
-                                                               param set
-                                                               parameters */
-    uint16_t const               *pubkey,             /*  in - pointer to the
-                                                               coefficients
-                                                               of the pubkey */
-    uint8_t                       pubkey_pack_type,   /* out - addr for pubkey
-                                                               packing type */
-    uint8_t                      *pubkey_blob);       /* out - addr for the
-                                                               pubkey blob */
-
-
-/* ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob
- *
- * Returns a public key blob, recreated from an already-packed public key.
- */
-
-extern void
-ntru_crypto_ntru_encrypt_key_recreate_pubkey_blob(
-    ntru_param_set_t             *params,             /*  in - pointer to
-                                                               param set
-                                                               parameters */
-    uint16_t                      packed_pubkey_len,  /*  in - no. octets in
-                                                               packed pubkey */
-    uint8_t const                *packed_pubkey,      /*  in - pointer to the
-                                                               packed pubkey */
-    uint8_t                       pubkey_pack_type,   /* out - pubkey packing
-                                                               type */
-    uint8_t                      *pubkey_blob);       /* out - addr for the
-                                                               pubkey blob */
-
-
-/* ntru_crypto_ntru_encrypt_key_create_privkey_blob
- *
- * Returns a privlic key blob, packed according to the packing type provided.
- */
-
-extern void
-ntru_crypto_ntru_encrypt_key_create_privkey_blob(
-    ntru_param_set_t             *params,             /*  in - pointer to
-                                                               param set
-                                                               parameters */
-    uint16_t const               *pubkey,             /*  in - pointer to the
-                                                               coefficients
-                                                               of the pubkey */
-    uint16_t const               *privkey,            /*  in - pointer to the
-                                                               indices of the
-                                                               privkey */
-    uint8_t                       privkey_pack_type,  /*  in - privkey packing
-                                                               type */
-    uint8_t                      *buf,                /*  in - temp, N bytes */
-    uint8_t                      *privkey_blob);      /* out - addr for the
-                                                               privkey blob */
-
 
 #endif /* NTRU_CRYPTO_NTRU_ENCRYPT_KEY_H */

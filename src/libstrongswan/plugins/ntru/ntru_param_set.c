@@ -17,6 +17,8 @@
 
 #include "ntru_param_set.h"
 
+#include <utils/test.h>
+
 ENUM(ntru_param_set_id_names, NTRU_EES401EP1, NTRU_EES743EP1,
 	"ees401ep1",
 	"ees449ep1",
@@ -370,3 +372,4 @@ ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid)
 	return NULL;
 }
 
+EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_param_set_get_by_id);
