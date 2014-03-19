@@ -482,6 +482,22 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 							}
 						}
 
+						/* do TPM TRUSTED BOOT measurements */
+						if (strchr(workitem->get_arg_str(workitem), 'T'))
+						{
+							comp_name = pts_comp_func_name_create(PEN_ITA,
+											 PTS_ITA_COMP_FUNC_NAME_TBOOT,
+											PTS_ITA_QUALIFIER_FLAG_KERNEL |
+											PTS_ITA_QUALIFIER_TYPE_TRUSTED);
+							comp = attestation_state->create_component(
+											attestation_state, comp_name,
+											0, this->pts_db);
+							if (!comp)
+							{
+								comp_name->log(comp_name, "unregistered ");
+								comp_name->destroy(comp_name);
+							}
+						}
 						attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_NONCE_REQ);
 						continue;
