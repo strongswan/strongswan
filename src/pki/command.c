@@ -263,7 +263,7 @@ int command_dispatch(int c, char *v[])
 
 	build_opts();
 	op = getopt_long(c, v, command_optstring, command_opts, NULL);
-	for (i = 0; cmds[i].cmd; i++)
+	for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 	{
 		if (cmds[i].op == op)
 		{
