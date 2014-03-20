@@ -73,25 +73,55 @@ u_int32_t plugin_feature_hash(plugin_feature_t *feature)
 			data = chunk_empty;
 			break;
 		case FEATURE_CRYPTER:
+			data = chunk_from_thing(feature->arg.crypter);
+			break;
 		case FEATURE_AEAD:
+			data = chunk_from_thing(feature->arg.aead);
+			break;
 		case FEATURE_SIGNER:
+			data = chunk_from_thing(feature->arg.signer);
+			break;
 		case FEATURE_HASHER:
+			data = chunk_from_thing(feature->arg.hasher);
+			break;
 		case FEATURE_PRF:
+			data = chunk_from_thing(feature->arg.prf);
+			break;
 		case FEATURE_DH:
+			data = chunk_from_thing(feature->arg.dh_group);
+			break;
 		case FEATURE_PRIVKEY:
+			data = chunk_from_thing(feature->arg.privkey);
+			break;
 		case FEATURE_PRIVKEY_GEN:
+			data = chunk_from_thing(feature->arg.privkey_gen);
+			break;
 		case FEATURE_PUBKEY:
+			data = chunk_from_thing(feature->arg.pubkey);
+			break;
 		case FEATURE_PRIVKEY_SIGN:
+			data = chunk_from_thing(feature->arg.privkey_sign);
+			break;
 		case FEATURE_PUBKEY_VERIFY:
+			data = chunk_from_thing(feature->arg.pubkey_verify);
+			break;
 		case FEATURE_PRIVKEY_DECRYPT:
+			data = chunk_from_thing(feature->arg.privkey_decrypt);
+			break;
 		case FEATURE_PUBKEY_ENCRYPT:
+			data = chunk_from_thing(feature->arg.pubkey_encrypt);
+			break;
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
+			data = chunk_from_thing(feature->arg.cert);
+			break;
 		case FEATURE_CONTAINER_DECODE:
 		case FEATURE_CONTAINER_ENCODE:
+			data = chunk_from_thing(feature->arg.container);
+			break;
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
-			data = chunk_from_thing(feature->arg);
+			data = chunk_from_thing(feature->arg.eap);
 			break;
 		case FEATURE_CUSTOM:
 			data = chunk_create(feature->arg.custom,
