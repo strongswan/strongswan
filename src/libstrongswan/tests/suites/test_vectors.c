@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -15,13 +18,15 @@
 
 #include "test_suite.h"
 
-/*******************************************************************************
- * Check if test vectors have been successful during transform registration
- */
+#include <utils/test.h>
+
+IMPORT_FUNCTION_FOR_TESTS(crypto, verify_registered_algorithms, u_int,
+						  crypto_factory_t *factory);
 
 START_TEST(test_vectors)
 {
-	u_int failed = lib->crypto->get_test_vector_failures(lib->crypto);
+	u_int failed = TEST_FUNCTION(crypto, verify_registered_algorithms,
+								 lib->crypto);
 	fail_if(failed > 0, "%u test vectors failed", failed);
 }
 END_TEST

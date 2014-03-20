@@ -15,12 +15,13 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnc-pdp.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnc-pdp.la
+endif
+
 libstrongswan_tnc_pdp_la_LIBADD = \
 	$(top_builddir)/src/libradius/libradius.la \
 	$(top_builddir)/src/libpttls/libpttls.la \
 	$(top_builddir)/src/libtls/libtls.la \
 	$(top_builddir)/src/libtnccs/libtnccs.la
-endif
 
 libstrongswan_tnc_pdp_la_SOURCES = \
 	tnc_pdp_plugin.h tnc_pdp_plugin.c \

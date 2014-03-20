@@ -66,6 +66,7 @@ ARG_WITH_SET([tss],                  [no], [set implementation of the Trusted Co
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
+ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -118,53 +119,56 @@ AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 
 m4_include(m4/macros/enable-disable.m4)
 
-ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
-ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
-ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
-ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
+# crypto plugins
 ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
-ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
+ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
-ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
+ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
+ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
+ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
+ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
+ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
+ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
+ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
 ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
 ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
+ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
+ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
+ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
+ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
+ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
+ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
+ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
 ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
 ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
-ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
-ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
-ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
-ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
-ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
-ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
-ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
-ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
-ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
+ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+# encoding/decoding plugins
+ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
+ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
+ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
 ARG_DISBL_SET([pkcs7],          [disable PKCS7 container support plugin.])
 ARG_DISBL_SET([pkcs8],          [disable PKCS8 private key decoding plugin.])
 ARG_DISBL_SET([pkcs12],         [disable PKCS12 container support plugin.])
-ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
-ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
+ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
-ARG_ENABL_SET([dnscert],        [enable DNSCERT authentication plugin.])
-ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
-ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
-ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
-ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
-ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
-ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
-ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
+ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
+# fetcher/resolver plugins
+ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
+ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
+ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
+# database plugins
 ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
-ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
-ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
-ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
-ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
-ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
-ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
-ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
-ARG_ENABL_SET([unit-tester],    [enable unit tests on IKEv2 daemon startup.])
-ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
+# authentication/credential plugins
+ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
+ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
+ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
+ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
+ARG_ENABL_SET([dnscert],        [enable DNSCERT authentication plugin.])
 ARG_ENABL_SET([eap-sim],        [enable SIM authentication module for EAP.])
 ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
 ARG_ENABL_SET([eap-sim-pcsc],   [enable EAP-SIM backend based on a smartcard reader. Requires libpcsclite.])
@@ -183,17 +187,37 @@ ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
+ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
+ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
+ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
+ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
+ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actually verify or even request any credentials.])
-ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
-ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
-ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
-ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
-ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module. Requires libxml])
-ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
-ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
+# kernel interfaces / sockets
+ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
+ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
+ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
+ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
+ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
+ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+# configuration/control plugins
+ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
+ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
+ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
+ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+# attribute provider/consumer plugins
+ARG_ENABL_SET([android-dns],    [enable Android specific DNS handler.])
+ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
+ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
+ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
+ARG_ENABL_SET([osx-attr],       [enable OS X SystemConfiguration attribute handler.])
+ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
+ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
+# TNC modules/plugins
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
 ARG_ENABL_SET([imv-test],       [enable IMV test module.])
 ARG_ENABL_SET([imc-scanner],    [enable IMC port scanner module.])
@@ -204,67 +228,56 @@ ARG_ENABL_SET([imc-attestation],[enable IMC attestation module.])
 ARG_ENABL_SET([imv-attestation],[enable IMV attestation module.])
 ARG_ENABL_SET([imc-swid],       [enable IMC swid module.])
 ARG_ENABL_SET([imv-swid],       [enable IMV swid module.])
-ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
-ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
-ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
-ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
-ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
-ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
-ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
-ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
+ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
+ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
+ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
+ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module. Requires libxml])
+ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
+ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
+# misc plugins
+ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
+ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
+ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
+ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
+ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
+ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
+ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
+ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
+ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
+ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
+ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
+ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
+ARG_ENABL_SET([unit-tester],    [enable unit tests on IKEv2 daemon startup.])
+ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
+# programs/components
+ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
+ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
+ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
 ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
+ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
-ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
-ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
-ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
+ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
+ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
+ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
+ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
+ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
+# optional features
+ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
 ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
-ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
-ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
-ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
-ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
-ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
-ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
-ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
-ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
-ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
-ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
-ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
-ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
-ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
-ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
-ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
-ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
-ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
-ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
-ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
-ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
-ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
-ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
-ARG_ENABL_SET([osx-attr],       [enable OS X SystemConfiguration attribute handler.])
-ARG_ENABL_SET([android-dns],    [enable Android specific DNS handler.])
-ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
-ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
-ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
-ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
-ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
-ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
-ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
-ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
-ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
-ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
-ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
-ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
-ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
-ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
-ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
-ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
+ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
+ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
+ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
+# compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
-ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
-ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
+ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
+ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
+ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
 # ===================================
 #  option to disable default options
@@ -275,7 +288,20 @@ ARG_DISBL_SET([defaults],       [disable all default plugins (they can be enable
 if test x$defaults = xfalse; then
 	for option in $enabled_by_default; do
 		eval test x\${${option}_given} = xtrue && continue
-		let $option=false
+		eval $option=false
+	done
+fi
+
+# ==============================
+#  option to enable all options
+# ==============================
+
+ARG_ENABL_SET([all],            [enable all plugins and features (they can be disabled with their respective --disable options). Mainly for testing.])
+
+if test x$all_given = xtrue; then
+	for option in $disabled_by_default; do
+		eval test x\${${option}_given} = xtrue && continue
+		eval $option=true
 	done
 fi
 
@@ -659,28 +685,43 @@ AC_RUN_IFELSE([AC_LANG_SOURCE(
 	[AC_MSG_RESULT([no])]
 )
 
-# check for the new register_printf_specifier function with len argument,
-# or the deprecated register_printf_function without
-AC_CHECK_FUNC(
-	[register_printf_specifier],
-	[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
-	[AC_CHECK_FUNC(
-		[register_printf_function],
-		[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
-		[
-			AC_MSG_NOTICE([printf does not support custom format specifiers!])
-			builtin_printf=true
-		]
-	)]
-)
+case "$printf_hooks" in
+auto|builtin|glibc|vstr)
+	;;
+*)
+	AC_MSG_NOTICE([invalid printf hook implementation, defaulting to 'auto'])
+	printf_hooks=auto
+	;;
+esac
 
-if test x$vstr = xtrue; then
-	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
-	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
-	builtin_printf=false
+if test x$printf_hooks = xauto -o x$printf_hooks = xglibc; then
+	# check for the new register_printf_specifier function with len argument,
+	# or the deprecated register_printf_function without
+	AC_CHECK_FUNC(
+		[register_printf_specifier],
+		[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
+		[AC_CHECK_FUNC(
+			[register_printf_function],
+			[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
+			[
+				AC_MSG_NOTICE([printf(3) does not support custom format specifiers!])
+				if test x$printf_hooks = xglibc; then
+					AC_MSG_ERROR([please select a different printf hook implementation])
+				else
+					# fallback to builtin printf hook implementation
+					printf_hooks=builtin
+				fi
+			]
+		)]
+	)
 fi
 
-if test x$builtin_printf = xtrue; then
+if test x$printf_hooks = xvstr; then
+	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
+	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
+fi
+
+if test x$printf_hooks = xbuiltin; then
 	AC_DEFINE([USE_BUILTIN_PRINTF], [], [using builtin printf for printf hooks])
 fi
 
@@ -1328,8 +1369,8 @@ AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
-AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
-AM_CONDITIONAL(USE_BUILTIN_PRINTF, test x$builtin_printf = xtrue)
+AM_CONDITIONAL(USE_VSTR, test x$printf_hooks = xvstr)
+AM_CONDITIONAL(USE_BUILTIN_PRINTF, test x$printf_hooks = xbuiltin)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)

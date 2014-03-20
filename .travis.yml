@@ -1,0 +1,38 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq bison flex gperf gettext
+  - ./scripts/test.sh deps
+
+script:
+  - ./autogen.sh
+  - ./scripts/test.sh
+
+env:
+  global:
+    - TESTS_REDUCED_KEYLENGTHS=yes
+    - LEAK_DETECTIVE=no
+    - MONOLITHIC=no
+  matrix:
+    - TEST=default
+    - TEST=default MONOLITHIC=yes
+    - TEST=default LEAK_DETECTIVE=yes
+    - TEST=openssl
+    - TEST=openssl LEAK_DETECTIVE=yes
+    # libgcrypt can't be deinitialized so we can't test it with leak detective
+    - TEST=gcrypt
+    # we can't test Vstr as negative int args are not properly passed to CBs
+    - TEST=printf-builtin
+    - TEST=printf-builtin LEAK_DETECTIVE=yes
+    - TEST=all
+    - TEST=all MONOLITHIC=yes
+
+matrix:
+  include:
+    - compiler: gcc
+      env: TEST=dist

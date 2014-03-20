@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,6 +20,7 @@
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 #include <crypto/crypto_tester.h>
+#include <utils/test.h>
 
 const char *default_plugin_name = "default";
 
@@ -976,3 +977,39 @@ crypto_factory_t *crypto_factory_create()
 
 	return &this->public;
 }
+
+/**
+ * Manually verify all registered algorithms against test vectors
+ */
+static u_int verify_registered_algorithms(crypto_factory_t *factory)
+{
+	private_crypto_factory_t *this = (private_crypto_factory_t*)factory;
+	enumerator_t *enumerator;
+	entry_t *entry;
+	u_int failures = 0;
+
+#define TEST_ALGORITHMS(test, ...) do { \
+	enumerator = this->test##s->create_enumerator(this->test##s); \
+	while (enumerator->enumerate(enumerator, &entry)) \
+	{ \
+		if (!this->tester->test_##test(this->tester, entry->algo, ##__VA_ARGS__, \
+							entry->create_##test, NULL, entry->plugin_name)) \
+		{ \
+			failures++; \
+		} \
+	} \
+	enumerator->destroy(enumerator); \
+} while (0)
+
+	this->lock->read_lock(this->lock);
+	TEST_ALGORITHMS(crypter, 0);
+	TEST_ALGORITHMS(aead, 0);
+	TEST_ALGORITHMS(signer);
+	TEST_ALGORITHMS(hasher);
+	TEST_ALGORITHMS(prf);
+	TEST_ALGORITHMS(rng);
+	this->lock->unlock(this->lock);
+	return failures;
+}
+
+EXPORT_FUNCTION_FOR_TESTS(crypto, verify_registered_algorithms);

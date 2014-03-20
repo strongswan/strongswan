@@ -22,29 +22,46 @@
  */
 hashtable_t *testable_functions;
 
+/**
+ * The function that actually initializes the hash table above.  Provided
+ * by the test runner.
+ */
+void testable_functions_create() __attribute__((weak));
+
 /*
  * Described in header.
  */
 void testable_function_register(char *name, void *fn)
 {
-	if (testable_functions)
+	bool old = FALSE;
+
+	if (!testable_functions_create)
+	{	/* not linked to the test runner */
+		return;
+	}
+	else if (!fn && !testable_functions)
+	{	/* ignore as testable_functions has already been destroyed */
+		return;
+	}
+
+	if (lib && lib->leak_detective)
 	{
-		bool old = FALSE;
-		if (lib->leak_detective)
-		{
-			old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
-		}
-		if (fn)
-		{
-			testable_functions->put(testable_functions, name, fn);
-		}
-		else
-		{
-			testable_functions->remove(testable_functions, name);
-		}
-		if (lib->leak_detective)
-		{
-			lib->leak_detective->set_state(lib->leak_detective, old);
-		}
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
+	if (!testable_functions)
+	{
+		testable_functions_create();
+	}
+	if (fn)
+	{
+		testable_functions->put(testable_functions, name, fn);
+	}
+	else
+	{
+		testable_functions->remove(testable_functions, name);
+	}
+	if (lib && lib->leak_detective)
+	{
+		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
 }

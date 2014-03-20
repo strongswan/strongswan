@@ -204,16 +204,13 @@ METHOD(crypto_tester_t, test_crypter, bool,
 			continue;
 		}
 
-		tested++;
-		failed = TRUE;
 		crypter = create(alg, vector->key_size);
 		if (!crypter)
-		{
-			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
-				 encryption_algorithm_names, alg, plugin_name,
-				 BITS_PER_BYTE * vector->key_size);
+		{	/* key size not supported */
 			continue;
 		}
+		tested++;
+		failed = TRUE;
 
 		key = chunk_create(vector->key, crypter->get_key_size(crypter));
 		if (!crypter->set_key(crypter, key))

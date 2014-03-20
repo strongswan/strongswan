@@ -51,7 +51,7 @@ void testable_function_register(char *name, void *fn);
  * @param fn		function to register
  */
 #define EXPORT_FUNCTION_FOR_TESTS(ns, fn) \
-static void testable_function_register_##fn() __attribute__ ((constructor(2000))); \
+static void testable_function_register_##fn() __attribute__ ((constructor)); \
 static void testable_function_register_##fn() \
 { \
 	testable_function_register(#ns "/" #fn, fn); \
@@ -65,32 +65,32 @@ static void testable_function_unregister_##fn() \
 /**
  * Import a registered function so that it can be called from tests.
  *
- * @note If the imported function is static (or no conflicting header files
- * are included) ret can be prefixed with static to declare the function static.
- *
- * @note We allocate an arbitrary amount of stack space, hopefully enough for
- * all arguments.
- *
  * @param ns		namespace of the function
  * @param name		name of the function
  * @param ret		return type of the function
  * @param ...		arguments of the function
  */
 #define IMPORT_FUNCTION_FOR_TESTS(ns, name, ret, ...) \
-ret name(__VA_ARGS__) \
-{ \
-	void (*fn)() = NULL; \
-	if (testable_functions) \
+static ret (*TEST_##ns##name)(__VA_ARGS__);
+
+/**
+ * Call a registered function from tests.
+ *
+ * @param ns		namespace of the function
+ * @param name		name of the function
+ * @param ...		arguments for the function
+ */
+#define TEST_FUNCTION(ns, name, ...) \
+({ \
+	if (!TEST_##ns##name && testable_functions) \
 	{ \
-		fn = testable_functions->get(testable_functions, #ns "/" #name); \
+		TEST_##ns##name = testable_functions->get(testable_functions, #ns "/" #name); \
 	} \
-	if (fn) \
+	if (!TEST_##ns##name) \
 	{ \
-		void *args = __builtin_apply_args(); \
-		__builtin_return(__builtin_apply(fn, args, 16*sizeof(void*))); \
+		test_fail_msg(__FILE__, __LINE__, "function " #name " (" #ns ") not found"); \
 	} \
-	test_fail_msg(__FILE__, __LINE__, "function " #name " (" #ns ") not found"); \
-	__builtin_return(NULL); \
-}
+	TEST_##ns##name(__VA_ARGS__); \
+})
 
 #endif /** TEST_H_ @}*/
