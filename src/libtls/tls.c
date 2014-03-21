@@ -218,14 +218,7 @@ METHOD(tls_t, process, status_t,
 	{
 		if (this->input.len == 0)
 		{
-			if (buflen < sizeof(tls_record_t))
-			{
-				DBG2(DBG_TLS, "received incomplete TLS record header");
-				memcpy(&this->head, buf, buflen);
-				this->headpos = buflen;
-				break;
-			}
-			while (TRUE)
+			while (buflen >= sizeof(tls_record_t))
 			{
 				/* try to process records inline */
 				record = buf;
@@ -251,6 +244,13 @@ METHOD(tls_t, process, status_t,
 				{
 					return NEED_MORE;
 				}
+			}
+			if (buflen < sizeof(tls_record_t))
+			{
+				DBG2(DBG_TLS, "received incomplete TLS record header");
+				memcpy(&this->head, buf, buflen);
+				this->headpos = buflen;
+				break;
 			}
 		}
 		len = min(buflen, this->input.len - this->inpos);
