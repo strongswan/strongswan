@@ -1100,16 +1100,19 @@ START_TEST(test_ntru_privkey)
 
 	/* load private key as a packed blob */
 	privkey->destroy(privkey);
-	privkey = ntru_private_key_create_from_data(drbg, chunk_empty);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, chunk_empty);
 	ck_assert(privkey == NULL);
  
 	encoding = chunk_clone(encoding);
 	encoding.ptr[0] = NTRU_PUBKEY_TAG;
-	privkey = ntru_private_key_create_from_data(drbg, encoding);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	ck_assert(privkey == NULL);
 
 	encoding.ptr[0] = NTRU_PRIVKEY_TRITS_TAG;
-	privkey = ntru_private_key_create_from_data(drbg, encoding);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	if (params->is_product_form)
 	{
 		ck_assert(privkey == NULL);
@@ -1121,7 +1124,8 @@ START_TEST(test_ntru_privkey)
 	}
 
 	encoding.ptr[0] = NTRU_PRIVKEY_INDICES_TAG;
-	privkey = ntru_private_key_create_from_data(drbg, encoding);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	if (params->is_product_form)
 	{
 		ck_assert(privkey != NULL);
@@ -1134,16 +1138,19 @@ START_TEST(test_ntru_privkey)
 
 	encoding.ptr[0] = NTRU_PRIVKEY_DEFAULT_TAG;
 	encoding.ptr[1] = NTRU_OID_LEN - 1;
-	privkey = ntru_private_key_create_from_data(drbg, encoding);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	ck_assert(privkey == NULL);
 
 	encoding.ptr[1] = NTRU_OID_LEN;
 	encoding.ptr[2] = 0xff;
-	privkey = ntru_private_key_create_from_data(drbg, encoding);
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	ck_assert(privkey == NULL);
 
 	encoding.ptr[2] = params->oid[0];
-	privkey = ntru_private_key_create_from_data(drbg, encoding); 
+	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
+							drbg, encoding);
 	privkey_encoding = privkey->get_encoding(privkey);
 	ck_assert(chunk_equals(privkey_encoding, encoding));
 	
@@ -1156,7 +1163,8 @@ START_TEST(test_ntru_privkey)
 
 	/* load public key as a packed blob */
 	pubkey->destroy(pubkey);
-	pubkey = ntru_public_key_create_from_data(drbg, encoding);
+	pubkey = TEST_FUNCTION(ntru, ntru_public_key_create_from_data,
+						   drbg, encoding);
 	pubkey_encoding = pubkey->get_encoding(pubkey);
 	ck_assert(chunk_equals(pubkey_encoding, encoding));
 	
