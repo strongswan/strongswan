@@ -36,3 +36,5 @@ V	151119165922Z		23	unknown	/C=CH/O=Linux strongSwan/OU=Virtual VPN Gateway/CN=m
 V	161015124507Z		24	unknown	/C=CH/O=Linux strongSwan/OU=SHA-224/CN=moon.strongswan.org
 V	161015124759Z		25	unknown	/C=CH/O=Linux strongSwan/OU=SHA-384/CN=carol@strongswan.org
 V	161015125030Z		26	unknown	/C=CH/O=Linux strongSwan/OU=SHA-512/CN=dave@strongswan.org
+V	170314064200Z		27	unknown	/C=CH/O=Linux strongSwan/OU=OCSP/CN=carol@strongswan.org
+V	190321135622Z		28	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
