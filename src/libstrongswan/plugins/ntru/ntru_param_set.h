@@ -116,4 +116,3 @@ ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id);
 ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid);
 
 #endif /** NTRU_PARAM_SET_H_ @}*/
-

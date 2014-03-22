@@ -34,6 +34,12 @@ typedef struct ntru_private_key_t ntru_private_key_t;
  */
 struct ntru_private_key_t {
 
+	/**
+	 * Returns NTRU parameter set ID of the private key
+	 *
+	 * @return			NTRU parameter set ID
+	 */
+	ntru_param_set_id_t (*get_id)(ntru_private_key_t *this);
 
 	/**
 	 * Returns the NTRU encryption public key as an encoded binary blob
@@ -73,6 +79,14 @@ struct ntru_private_key_t {
  */
 ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg, ntru_param_set_t *params);
 
+/**
+ * Creates an NTRU encryption private key from encoding
+ *
+ * @param drbg			Deterministic random bit generator
+ * @param data			Encoded NTRU private key
+ */
+ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
+													  chunk_t data);
 
 #endif /** NTRU_PRIVATE_KEY_H_ @}*/
 

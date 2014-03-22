@@ -24,6 +24,7 @@
 typedef struct ntru_public_key_t ntru_public_key_t;
 
 #include "ntru_param_set.h"
+#include "ntru_drbg.h"
 
 #include <library.h>
 
@@ -33,11 +34,28 @@ typedef struct ntru_public_key_t ntru_public_key_t;
 struct ntru_public_key_t {
 
 	/**
+	 * Returns NTRU parameter set ID of the public key
+	 *
+	 * @return			NTRU parameter set ID
+	 */
+	ntru_param_set_id_t (*get_id)(ntru_public_key_t *this);
+
+	/**
 	 * Returns the packed encoding of the NTRU encryption public key
 	 *
 	 * @return			Packed encoding of NTRU encryption public key
 	 */
 	chunk_t (*get_encoding)(ntru_public_key_t *this);
+
+	/**
+	 * Encrypts a plaintext with the NTRU public key
+	 *
+	 * @param ciphertext	Plaintext
+	 * @param plaintext		Ciphertext
+	 * @return				TRUE if encryption was successful
+	 */
+	bool (*encrypt)(ntru_public_key_t *this, chunk_t plaintext,
+					chunk_t *ciphertext);
 
 	/**
 	 * Destroy ntru_public_key_t object
@@ -46,13 +64,24 @@ struct ntru_public_key_t {
 };
 
 /**
- * Creates an NTRU encryption public key
+ * Creates an NTRU encryption public key from coefficients
  *
+ * @param drbg			Deterministic random bit generator
  * @param params		NTRU encryption parameter set to be used
  * @param pubkey		Coefficients of public key polynomial h
  */
-ntru_public_key_t *ntru_public_key_create(ntru_param_set_t *params,
+ntru_public_key_t *ntru_public_key_create(ntru_drbg_t *drbg,
+										  ntru_param_set_t *params,
 										  uint16_t *pubkey);
+
+/**
+ * Creates an NTRU encryption public key from encoding
+ *
+ * @param drbg			Deterministic random bit generator
+ * @param data			Encoded NTRU public key
+ */
+ntru_public_key_t *ntru_public_key_create_from_data(ntru_drbg_t *drbg,
+													chunk_t data);
 
 
 #endif /** NTRU_PUBLIC_KEY_H_ @}*/

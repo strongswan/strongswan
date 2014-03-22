@@ -58,6 +58,13 @@ struct ntru_drbg_t {
 										u_int8_t *out);
 
 	/**
+	 * Get a reference on an ntru_drbg_t object increasing the count by one
+	 *
+	 * @return			reference to the ntru_drbg_t object
+	 */
+	ntru_drbg_t* (*get_ref)(ntru_drbg_t *this);
+
+	/**
 	 * Uninstantiate and destroy the DRBG object
 	 */
 	void (*destroy)(ntru_drbg_t *this);

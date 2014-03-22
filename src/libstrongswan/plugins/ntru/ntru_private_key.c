@@ -18,8 +18,7 @@
 #include "ntru_private_key.h"
 #include "ntru_trits.h"
 #include "ntru_poly.h"
-
-#include "ntru_crypto/ntru_crypto_ntru_convert.h"
+#include "ntru_convert.h"
 
 #include <utils/debug.h>
 #include <utils/test.h>
@@ -56,12 +55,23 @@ struct private_ntru_private_key_t {
 	 */
 	chunk_t encoding;
 
+	/**
+	 * Deterministic Random Bit Generator
+	 */
+	ntru_drbg_t *drbg;
+
 };
+
+METHOD(ntru_private_key_t, get_id, ntru_param_set_id_t,
+	private_ntru_private_key_t *this)
+{
+	return this->params->id;
+}
 
 METHOD(ntru_private_key_t, get_public_key, ntru_public_key_t*,
 	private_ntru_private_key_t *this)
 {
-	return ntru_public_key_create(this->params, this->pubkey);
+	return ntru_public_key_create(this->drbg, this->params, this->pubkey);
 }
 
 /**
@@ -145,9 +155,10 @@ METHOD(ntru_private_key_t, get_encoding, chunk_t,
  * @param min_wt	minimum weight
  * @return			TRUE if minimum weight met or exceeded
  */
-static bool check_min_weight(uint16_t N, uint8_t  *t, uint16_t min_wt)
+bool ntru_check_min_weight(uint16_t N, uint8_t  *t, uint16_t min_wt)
 {
 	uint16_t wt[3];
+	bool success;
 	int i;
 
 	wt[0] = wt[1] = wt[2] = 0;
@@ -156,8 +167,12 @@ static bool check_min_weight(uint16_t N, uint8_t  *t, uint16_t min_wt)
 	{
 		++wt[t[i]];
 	}
+	success = (wt[0] >= min_wt) && (wt[1] >= min_wt) && (wt[2] >= min_wt);
 
-	return (wt[0] >= min_wt) && (wt[1] >= min_wt) && (wt[2] >= min_wt);
+	DBG2(DBG_LIB, "minimum weight = %u, so -1: %u, 0: %u, +1: %u is %sok",
+				   min_wt, wt[2], wt[0], wt[1], success ? "" : "not ");
+
+	return success;
 }
 
 METHOD(ntru_private_key_t, decrypt, bool,
@@ -172,7 +187,7 @@ METHOD(ntru_private_key_t, decrypt, bool,
 	chunk_t seed = chunk_empty;
 	ntru_trits_t *mask;
 	ntru_poly_t *r_poly;
-	bool success = TRUE;
+	bool msg_rep_good, success = TRUE;
 	int i;
 
 	*plaintext = chunk_empty;
@@ -252,16 +267,17 @@ METHOD(ntru_private_key_t, decrypt, bool,
      */
 	if (this->params->is_product_form)
 	{
-		success = (abs(m1) <= this->params->min_msg_rep_wt);
+		msg_rep_good = (abs(m1) <= this->params->min_msg_rep_wt);
 	}
 	else
 	{
-		success = check_min_weight(cmprime_len, Mtrin,
-								   this->params->min_msg_rep_wt);
+		msg_rep_good = ntru_check_min_weight(cmprime_len, Mtrin,
+											 this->params->min_msg_rep_wt);
 	}
-	if (!success)
+	if (!msg_rep_good)
 	{
 		DBG1(DBG_LIB, "decryption failed due to unsufficient minimum weight");
+		success = FALSE;
 	}
 
 	/* form cR = e - cm' mod q */
@@ -397,7 +413,9 @@ METHOD(ntru_private_key_t, decrypt, bool,
 		if (t[i] != t2[i])
 		{
 			DBG1(DBG_LIB, "cR' does not equal cR'");
+			chunk_clear(plaintext);
 			success = FALSE;
+			break;
 		}
 	}
 	memwipe(t, t_len);
@@ -414,6 +432,7 @@ METHOD(ntru_private_key_t, destroy, void,
 	private_ntru_private_key_t *this)
 {
 	DESTROY_IF(this->privkey);
+	this->drbg->destroy(this->drbg);
 	chunk_clear(&this->encoding);
 	free(this->pubkey);
 	free(this);
@@ -622,7 +641,8 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
 /*
  * Described in header.
  */
-ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg, ntru_param_set_t *params)
+ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
+											ntru_param_set_t *params)
 {
 	private_ntru_private_key_t *this;
 	size_t t_len;
@@ -635,6 +655,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg, ntru_param_set_t 
 
 	INIT(this,
 		.public = {
+			.get_id = _get_id,
 			.get_public_key = _get_public_key,
 			.get_encoding = _get_encoding,
 			.decrypt = _decrypt,
@@ -642,6 +663,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg, ntru_param_set_t 
 		},
 		.params = params,
 		.pubkey = malloc(params->N * sizeof(uint16_t)),
+		.drbg = drbg->get_ref(drbg),
 	);
 
 	/* set hash algorithm and seed length based on security strength */
@@ -742,4 +764,129 @@ err:
 	return NULL;
 }
 
+/*
+ * Described in header.
+ */
+ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
+													  chunk_t data)
+{
+	private_ntru_private_key_t *this;
+	size_t header_len, pubkey_packed_len, privkey_packed_len;
+	size_t privkey_packed_trits_len, privkey_packed_indices_len;
+	uint8_t *privkey_packed, tag;
+	uint16_t *indices, dF;
+	ntru_param_set_t *params;
+
+	header_len = 2 + NTRU_OID_LEN;
+
+	/* check the NTRU public key header format */
+	if (data.len < header_len ||
+		!(data.ptr[0] == NTRU_PRIVKEY_DEFAULT_TAG ||
+		  data.ptr[0] == NTRU_PRIVKEY_TRITS_TAG ||
+		  data.ptr[0] == NTRU_PRIVKEY_INDICES_TAG) ||
+		data.ptr[1] != NTRU_OID_LEN)
+	{
+		DBG1(DBG_LIB, "loaded NTRU private key with invalid header");
+		return NULL;
+	}
+	tag = data.ptr[0];
+	params = ntru_param_set_get_by_oid(data.ptr + 2);
+
+	if (!params)
+	{
+		DBG1(DBG_LIB, "loaded NTRU private key with unknown OID");
+		return NULL;
+	}
+
+	pubkey_packed_len = (params->N * params->q_bits + 7) / 8;
+	privkey_packed_trits_len = (params->N + 4) / 5;
+
+	/* check packing type for product-form private keys */
+	if (params->is_product_form &&  tag == NTRU_PRIVKEY_TRITS_TAG)
+	{
+		DBG1(DBG_LIB, "a product-form NTRU private key cannot be trits-encoded");
+		return NULL;
+	}
+
+	/* set packed-key length for packed indices */
+	if (params->is_product_form)
+	{
+		dF = (uint16_t)((params->dF_r & 0xff) +           /* df1 */
+					   ((params->dF_r >>  8) & 0xff) +    /* df2 */
+					   ((params->dF_r >> 16) & 0xff));    /* df3 */
+	}
+	else
+	{
+		dF = (uint16_t)params->dF_r;
+	}
+	privkey_packed_indices_len = (2 * dF * params->N_bits + 7) / 8;
+
+	/* set private-key packing type if defaulted */
+	if (tag == NTRU_PRIVKEY_DEFAULT_TAG)
+	{
+		if (params->is_product_form ||
+            privkey_packed_indices_len <= privkey_packed_trits_len)
+		{
+			tag = NTRU_PRIVKEY_INDICES_TAG;
+		}		
+		else
+		{
+			tag = NTRU_PRIVKEY_TRITS_TAG;
+		}
+	}
+	privkey_packed_len = (tag == NTRU_PRIVKEY_TRITS_TAG) ?
+                		 privkey_packed_trits_len : privkey_packed_indices_len;
+
+	if (data.len < header_len + pubkey_packed_len + privkey_packed_len)
+	{
+		DBG1(DBG_LIB, "loaded NTRU private key with wrong packed key size");
+		return NULL;
+	}
+
+	INIT(this,
+		.public = {
+			.get_id = _get_id,
+			.get_public_key = _get_public_key,
+			.get_encoding = _get_encoding,
+			.decrypt = _decrypt,
+			.destroy = _destroy,
+		},
+		.params = params,
+		.pubkey = malloc(params->N * sizeof(uint16_t)),
+		.encoding = chunk_clone(data),
+		.drbg = drbg->get_ref(drbg),
+	);
+
+	/* unpack the encoded public key */
+	ntru_octets_2_elements(pubkey_packed_len, data.ptr + header_len,
+						   params->q_bits, this->pubkey);
+
+	/* allocate temporary memory for indices */
+	indices = malloc(2 * dF * sizeof(uint16_t));
+
+	/* unpack the private key */
+	privkey_packed = data.ptr + header_len + pubkey_packed_len;	
+	if (tag == NTRU_PRIVKEY_TRITS_TAG)
+	{
+		ntru_packed_trits_2_indices(privkey_packed, params->N,
+									indices, indices + dF);
+    }
+	else
+	{
+        ntru_octets_2_elements(privkey_packed_indices_len, privkey_packed,
+							   params->N_bits, indices);
+    }
+	this->privkey = ntru_poly_create_from_data(indices, params->N, params->q,
+											   params->dF_r, params->dF_r,
+											   params->is_product_form);
+
+	/* cleanup */
+	memwipe(indices, 2 * dF * sizeof(uint16_t));
+	free(indices);
+
+	return &this->public;
+}
+
 EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_private_key_create);
+
+EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_private_key_create_from_data);

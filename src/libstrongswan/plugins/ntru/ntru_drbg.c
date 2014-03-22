@@ -67,6 +67,10 @@ struct private_ntru_drbg_t {
 	 */
 	chunk_t value;
 
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
 };
 
 /**
@@ -180,13 +184,23 @@ METHOD(ntru_drbg_t, generate, bool,
 	return TRUE;
 }
 
+METHOD(ntru_drbg_t, get_ref, ntru_drbg_t*,
+	private_ntru_drbg_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
+}
+
 METHOD(ntru_drbg_t, destroy, void,
 	private_ntru_drbg_t *this)
 {
-	this->hmac->destroy(this->hmac);
-	chunk_clear(&this->key);
-	chunk_clear(&this->value);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		this->hmac->destroy(this->hmac);
+		chunk_clear(&this->key);
+		chunk_clear(&this->value);
+		free(this);
+	}
 }
 
 /*
@@ -238,6 +252,7 @@ ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
 			.get_strength = _get_strength,
 			.reseed = _reseed,
 			.generate = _generate,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.strength = strength,
@@ -247,6 +262,7 @@ ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
 		.value = chunk_alloc(hmac->get_block_size(hmac)),
 		.max_requests = max_requests,
 		.reseed_counter = 1,
+		.ref = 1,
 	);
 
 	memset(this->key.ptr, 0x00, this->key.len);

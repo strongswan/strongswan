@@ -15,8 +15,7 @@
 
 #include "ntru_trits.h"
 #include "ntru_mgf1.h"
-
-#include "ntru_crypto/ntru_crypto_ntru_convert.h"
+#include "ntru_convert.h"
 
 #include <utils/debug.h>
 #include <utils/test.h>
