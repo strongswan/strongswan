@@ -648,8 +648,7 @@ static suite_algs_t *find_suite(tls_cipher_suite_t suite)
 /**
  * Filter a suite list using a transform enumerator
  */
-static void filter_suite(private_tls_crypto_t *this,
-						 suite_algs_t suites[], int *count, int offset,
+static void filter_suite(suite_algs_t suites[], int *count, int offset,
 						 enumerator_t*(*create_enumerator)(crypto_factory_t*))
 {
 	const char *plugin_name;
@@ -721,8 +720,7 @@ static void filter_suite(private_tls_crypto_t *this,
 /**
  * Purge NULL encryption cipher suites from list
  */
-static void filter_null_suites(private_tls_crypto_t *this,
-							   suite_algs_t suites[], int *count)
+static void filter_null_suites(suite_algs_t suites[], int *count)
 {
 	int i, remaining = 0;
 
@@ -975,6 +973,26 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 }
 
 /**
+ * Filter out unsupported suites on given suite array
+ */
+static void filter_unsupported_suites(suite_algs_t suites[], int *count)
+{
+	/* filter suite list by each algorithm */
+	filter_suite(suites, count, offsetof(suite_algs_t, encr),
+				 lib->crypto->create_crypter_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, encr),
+				 lib->crypto->create_aead_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, mac),
+				 lib->crypto->create_signer_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, prf),
+				 lib->crypto->create_prf_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, hash),
+				 lib->crypto->create_hasher_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, dh),
+				 lib->crypto->create_dh_enumerator);
+}
+
+/**
  * Initialize the cipher suite list
  */
 static void build_cipher_suite_list(private_tls_crypto_t *this,
@@ -988,9 +1006,10 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	{
 		suites[i] = suite_algs[i];
 	}
+
 	if (require_encryption)
 	{
-		filter_null_suites(this, suites, &count);
+		filter_null_suites(suites, &count);
 	}
 	if (!this->rsa)
 	{
@@ -1001,19 +1020,7 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 		filter_key_suites(this, suites, &count, KEY_ECDSA);
 	}
 
-	/* filter suite list by each algorithm */
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
-				 lib->crypto->create_crypter_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
-				 lib->crypto->create_aead_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, mac),
-				 lib->crypto->create_signer_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, prf),
-				 lib->crypto->create_prf_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, hash),
-				 lib->crypto->create_hasher_enumerator);
-	filter_suite(this, suites, &count, offsetof(suite_algs_t, dh),
-				 lib->crypto->create_dh_enumerator);
+	filter_unsupported_suites(suites, &count);
 
 	/* filter suites with strongswan.conf options */
 	filter_key_exchange_config_suites(this, suites, &count);
@@ -1843,4 +1850,36 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 			break;
 	}
 	return &this->public;
+}
+
+/**
+ * See header.
+ */
+int tls_crypto_get_supported_suites(bool null, tls_cipher_suite_t **out)
+{
+	suite_algs_t suites[countof(suite_algs)];
+	int count = countof(suite_algs), i;
+
+	/* initialize copy of suite list */
+	for (i = 0; i < count; i++)
+	{
+		suites[i] = suite_algs[i];
+	}
+
+	filter_unsupported_suites(suites, &count);
+
+	if (!null)
+	{
+		filter_null_suites(suites, &count);
+	}
+
+	if (out)
+	{
+		*out = calloc(count, sizeof(tls_cipher_suite_t));
+		for (i = 0; i < count; i++)
+		{
+			(*out)[i] = suites[i].suite;
+		}
+	}
+	return count;
 }
