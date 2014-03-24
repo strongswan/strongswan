@@ -21,3 +21,5 @@ nobase_tls_include_HEADERS = \
 	tls_crypto.h tls_prf.h tls_socket.h tls_eap.h tls_cache.h tls_peer.h \
 	tls_server.h tls_handshake.h tls_application.h tls_aead.h tls.h
 endif
+
+SUBDIRS = . tests

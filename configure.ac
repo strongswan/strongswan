@@ -1495,6 +1495,7 @@ AC_CONFIG_FILES([
 	src/libipsec/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
+	src/libtls/tests/Makefile
 	src/libradius/Makefile
 	src/libtncif/Makefile
 	src/libtnccs/Makefile
