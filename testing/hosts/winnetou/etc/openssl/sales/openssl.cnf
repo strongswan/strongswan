@@ -157,6 +157,7 @@ subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid, issuer:always
 subjectAltName                  = email:$ENV::COMMON_NAME 
 crlDistributionPoints          	= URI:http://crl.strongswan.org/sales.crl
+#authorityInfoAccess             = OCSP;URI:http://ocsp2.strongswan.org:8882
 
 ####################################################################
 
