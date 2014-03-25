@@ -31,6 +31,7 @@ env:
     - TEST=printf-builtin LEAK_DETECTIVE=yes
     - TEST=all
     - TEST=all MONOLITHIC=yes
+    - TEST=all LEAK_DETECTIVE=yes
 
 matrix:
   include:

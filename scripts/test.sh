@@ -32,6 +32,12 @@ all)
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
 			--disable-osx-attr --disable-tkm --disable-uci"
+	if test "$LEAK_DETECTIVE" = "yes"; then
+		# libgcrypt can't be deinitialized
+		CONFIG="$CONFIG --disable-gcrypt"
+		# libunwind causes threads to be cleaned up after LD is disabled
+		CONFIG="$CONFIG --disable-unwind-backtraces"
+	fi
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
