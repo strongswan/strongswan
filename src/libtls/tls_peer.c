@@ -80,6 +80,11 @@ struct private_tls_peer_t {
 	peer_state_t state;
 
 	/**
+	 * TLS version we offered in hello
+	 */
+	tls_version_t hello_version;
+
+	/**
 	 * Hello random data selected by client
 	 */
 	char client_random[32];
@@ -724,6 +729,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 
 	/* TLS version */
 	version = this->tls->get_version(this->tls);
+	this->hello_version = version;
 	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->client_random));
 
@@ -917,7 +923,7 @@ static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 	rng->destroy(rng);
-	htoun16(premaster, TLS_1_2);
+	htoun16(premaster, this->hello_version);
 
 	if (!this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
 									  this->session, this->server,
