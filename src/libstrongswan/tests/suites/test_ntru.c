@@ -1103,7 +1103,7 @@ START_TEST(test_ntru_privkey)
 	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
 							drbg, chunk_empty);
 	ck_assert(privkey == NULL);
- 
+
 	encoding = chunk_clone(encoding);
 	encoding.ptr[0] = NTRU_PUBKEY_TAG;
 	privkey = TEST_FUNCTION(ntru, ntru_private_key_create_from_data,
@@ -1153,7 +1153,7 @@ START_TEST(test_ntru_privkey)
 							drbg, encoding);
 	privkey_encoding = privkey->get_encoding(privkey);
 	ck_assert(chunk_equals(privkey_encoding, encoding));
-	
+
 	pubkey = privkey->get_public_key(privkey);
 	pubkey_encoding = pubkey->get_encoding(pubkey);
 
@@ -1167,10 +1167,12 @@ START_TEST(test_ntru_privkey)
 						   drbg, encoding);
 	pubkey_encoding = pubkey->get_encoding(pubkey);
 	ck_assert(chunk_equals(pubkey_encoding, encoding));
-	
+
 	chunk_free(&encoding);
 	privkey->destroy(privkey);
 	pubkey->destroy(pubkey);
+	drbg->destroy(drbg);
+	entropy->destroy(entropy);
 }
 END_TEST
 
