@@ -447,6 +447,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		case TLS_PURPOSE_EAP_TTLS:
 		case TLS_PURPOSE_EAP_PEAP:
 		case TLS_PURPOSE_GENERIC:
+		case TLS_PURPOSE_GENERIC_NULLOK:
 			break;
 		default:
 			return NULL;

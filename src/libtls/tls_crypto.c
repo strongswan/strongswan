@@ -1846,6 +1846,9 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 		case TLS_PURPOSE_GENERIC:
 			build_cipher_suite_list(this, TRUE);
 			break;
+		case TLS_PURPOSE_GENERIC_NULLOK:
+			build_cipher_suite_list(this, FALSE);
+			break;
 		default:
 			break;
 	}
