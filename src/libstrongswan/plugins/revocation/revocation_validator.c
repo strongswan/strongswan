@@ -93,35 +93,92 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 /**
  * check the signature of an OCSP response
  */
-static bool verify_ocsp(ocsp_response_t *response)
+static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
 	ocsp_response_wrapper_t *wrapper;
 	enumerator_t *enumerator;
-	bool verified = FALSE;
+	x509_t *x509;
+	bool verified = FALSE, found = FALSE;
 
 	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
 	lib->credmgr->add_local_set(lib->credmgr, &wrapper->set, FALSE);
 
 	subject = &response->certificate;
 	responder = subject->get_issuer(subject);
-	enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
+
+	/* check OCSP response using CA or directly delegated OCSP signer */
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr, CERT_X509,
 													KEY_ANY, responder, FALSE);
-	while (enumerator->enumerate(enumerator, &issuer, NULL))
+	while (enumerator->enumerate(enumerator, &issuer))
 	{
+		x509 = (x509_t*)issuer;
+		if (!issuer->get_validity(issuer, NULL, NULL, NULL))
+		{	/* OCSP signer currently invalid */
+			continue;
+		}
+		found = TRUE;
+		if (!ca->equals(ca, issuer))
+		{	/* delegated OCSP signer? */
+			if (!lib->credmgr->issued_by(lib->credmgr, issuer, ca, NULL))
+			{	/* OCSP response not signed by CA, nor delegated OCSP signer */
+				continue;
+			}
+			if (!(x509->get_flags(x509) & X509_OCSP_SIGNER))
+			{	/* delegated OCSP signer does not have OCSP signer flag */
+				continue;
+			}
+		}
 		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 		{
 			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-							 issuer->get_subject(issuer));
+				 issuer->get_subject(issuer));
 			verified = TRUE;
 			break;
 		}
+		DBG1(DBG_CFG, "ocsp response verification failed, "
+			 "invalid signature");
 	}
 	enumerator->destroy(enumerator);
 
+	if (!verified)
+	{
+		/* as fallback, use any locally installed OCSP signer certificate */
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+										CERT_X509, KEY_ANY, responder, TRUE);
+		while (enumerator->enumerate(enumerator, &issuer))
+		{
+			x509 = (x509_t*)issuer;
+			/* while issued_by() accepts both OCSP signer or CA basic
+			 * constraint flags to verify OCSP responses, unrelated but trusted
+			 * OCSP signers must explicitly have the OCSP signer flag set. */
+			if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&
+				issuer->get_validity(issuer, NULL, NULL, NULL))
+			{
+				found = TRUE;
+				if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+				{
+					DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+						 issuer->get_subject(issuer));
+					verified = TRUE;
+					break;
+				}
+				DBG1(DBG_CFG, "ocsp response verification failed, "
+					 "invalid signature");
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
 	lib->credmgr->remove_local_set(lib->credmgr, &wrapper->set);
 	wrapper->destroy(wrapper);
+
+	if (!found)
+	{
+		DBG1(DBG_CFG, "ocsp response verification failed, "
+			 "no signer certificate '%Y' found", responder);
+	}
 	return verified;
 }
 
@@ -140,9 +197,8 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!verify_ocsp(response))
+	if (!verify_ocsp(response, &issuer->interface))
 	{
-		DBG1(DBG_CFG, "ocsp response verification failed");
 		cand->destroy(cand);
 		return best;
 	}
