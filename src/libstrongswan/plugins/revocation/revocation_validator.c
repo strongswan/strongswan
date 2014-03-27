@@ -93,13 +93,12 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 /**
  * check the signature of an OCSP response
  */
-static bool verify_ocsp(ocsp_response_t *response, auth_cfg_t *auth)
+static bool verify_ocsp(ocsp_response_t *response)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
 	ocsp_response_wrapper_t *wrapper;
 	enumerator_t *enumerator;
-	auth_cfg_t *current;
 	bool verified = FALSE;
 
 	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
@@ -109,16 +108,12 @@ static bool verify_ocsp(ocsp_response_t *response, auth_cfg_t *auth)
 	responder = subject->get_issuer(subject);
 	enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 													KEY_ANY, responder, FALSE);
-	while (enumerator->enumerate(enumerator, &issuer, &current))
+	while (enumerator->enumerate(enumerator, &issuer, NULL))
 	{
 		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 		{
 			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
 							 issuer->get_subject(issuer));
-			if (auth)
-			{
-				auth->merge(auth, current, FALSE);
-			}
 			verified = TRUE;
 			break;
 		}
@@ -134,8 +129,8 @@ static bool verify_ocsp(ocsp_response_t *response, auth_cfg_t *auth)
  * Get the better of two OCSP responses, and check for usable OCSP info
  */
 static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
-					x509_t *subject, x509_t *issuer, cert_validation_t *valid,
-					auth_cfg_t *auth, bool cache)
+									  x509_t *subject, x509_t *issuer,
+									  cert_validation_t *valid, bool cache)
 {
 	ocsp_response_t *response;
 	time_t revocation, this_update, next_update, valid_until;
@@ -145,7 +140,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!verify_ocsp(response, auth))
+	if (!verify_ocsp(response))
 	{
 		DBG1(DBG_CFG, "ocsp response verification failed");
 		cand->destroy(cand);
@@ -226,8 +221,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		best = get_better_ocsp(current, best, subject, issuer,
-							   &valid, auth, FALSE);
+		best = get_better_ocsp(current, best, subject, issuer, &valid, FALSE);
 		if (best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached ocsp response");
@@ -254,7 +248,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, auth, TRUE);
+									   &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -276,7 +270,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, auth, TRUE);
+									   &valid, TRUE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -330,25 +324,20 @@ static certificate_t* fetch_crl(char *url)
 /**
  * check the signature of an CRL
  */
-static bool verify_crl(certificate_t *crl, auth_cfg_t *auth)
+static bool verify_crl(certificate_t *crl)
 {
 	certificate_t *issuer;
 	enumerator_t *enumerator;
 	bool verified = FALSE;
-	auth_cfg_t *current;
 
 	enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 										KEY_ANY, crl->get_issuer(crl), FALSE);
-	while (enumerator->enumerate(enumerator, &issuer, &current))
+	while (enumerator->enumerate(enumerator, &issuer, NULL))
 	{
 		if (lib->credmgr->issued_by(lib->credmgr, crl, issuer, NULL))
 		{
 			DBG1(DBG_CFG, "  crl correctly signed by \"%Y\"",
 						   issuer->get_subject(issuer));
-			if (auth)
-			{
-				auth->merge(auth, current, FALSE);
-			}
 			verified = TRUE;
 			break;
 		}
@@ -362,7 +351,7 @@ static bool verify_crl(certificate_t *crl, auth_cfg_t *auth)
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
-					x509_t *subject, cert_validation_t *valid, auth_cfg_t *auth,
+					x509_t *subject, cert_validation_t *valid,
 					bool cache, crl_t *base)
 {
 	enumerator_t *enumerator;
@@ -390,7 +379,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	}
 
 	/* check CRL signature */
-	if (!verify_crl(cand, auth))
+	if (!verify_crl(cand))
 	{
 		DBG1(DBG_CFG, "crl response verification failed");
 		cand->destroy(cand);
@@ -452,8 +441,8 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
  * Find or fetch a certificate for a given crlIssuer
  */
 static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
-								  auth_cfg_t *auth, crl_t *base,
-								  certificate_t **best, bool *uri_found)
+								  crl_t *base, certificate_t **best,
+								  bool *uri_found)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	enumerator_t *enumerator;
@@ -466,8 +455,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		*best = get_better_crl(current, *best, subject, &valid,
-							   auth, FALSE, base);
+		*best = get_better_crl(current, *best, subject, &valid, FALSE, base);
 		if (*best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached crl");
@@ -495,7 +483,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 					continue;
 				}
 				*best = get_better_crl(current, *best, subject,
-									   &valid, auth, TRUE, base);
+									   &valid, TRUE, base);
 				if (*best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -511,7 +499,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
  * Look for a delta CRL for a given base CRL
  */
 static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
-					crl_t *base, cert_validation_t base_valid, auth_cfg_t *auth)
+									crl_t *base, cert_validation_t base_valid)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	certificate_t *best = NULL, *current;
@@ -526,7 +514,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, auth, base, &best, &uri);
+		valid = find_crl(subject, id, base, &best, &uri);
 		id->destroy(id);
 	}
 
@@ -537,7 +525,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, auth, base, &best, &uri);
+			valid = find_crl(subject, cdp->issuer, base, &best, &uri);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -558,8 +546,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 				current->destroy(current);
 				continue;
 			}
-			best = get_better_crl(current, best, subject, &valid,
-								  auth, TRUE, base);
+			best = get_better_crl(current, best, subject, &valid, TRUE, base);
 			if (best && valid != VALIDATION_STALE)
 			{
 				break;
@@ -575,7 +562,6 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	}
 	return base_valid;
 }
-
 
 /**
  * validate a x509 certificate using CRL
@@ -597,7 +583,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, auth, NULL, &best, &uri_found);
+		valid = find_crl(subject, id, NULL, &best, &uri_found);
 		id->destroy(id);
 	}
 
@@ -608,8 +594,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, auth, NULL,
-							 &best, &uri_found);
+			valid = find_crl(subject, cdp->issuer, NULL, &best, &uri_found);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -633,7 +618,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 					continue;
 				}
 				best = get_better_crl(current, best, subject, &valid,
-									  auth, TRUE, NULL);
+									  TRUE, NULL);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -646,7 +631,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	/* look for delta CRLs */
 	if (best && (valid == VALIDATION_GOOD || valid == VALIDATION_STALE))
 	{
-		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid, auth);
+		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid);
 	}
 
 	/* an uri was found, but no result. switch validation state to failed */
