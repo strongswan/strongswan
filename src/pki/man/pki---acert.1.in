@@ -12,6 +12,8 @@ pki \-\-acert \- Issue an attribute certificate
 .BI \-\-issuerkey\~ file |\-\-issuerkeyid\~ hex
 .BI \-\-issuercert\~ file
 .OP \-\-lifetime hours
+.OP \-\-not-before datetime
+.OP \-\-not-after datetime
 .OP \-\-serial hex
 .OP \-\-digest digest
 .OP \-\-outform encoding
@@ -69,7 +71,28 @@ is required.
 Issuer certificate file. Required.
 .TP
 .BI "\-l, \-\-lifetime " hours
-Hours the attribute certificate is valid, default: 24.
+Hours the attribute certificate is valid, default: 24. Ignored if both
+an absolute start and end time are given.
+.TP
+.BI "\-F, \-\-not-before " datetime
+Absolute time when the validity of the AC begins. The datetime format is
+defined by the
+.B \-\-dateform
+option.
+.TP
+.BI "\-T, \-\-not-after " datetime
+Absolute time when the validity of the AC ends. The datetime format is
+defined by the
+.B \-\-dateform
+option.
+.TP
+.BI "\-D, \-\-dateform " form
+strptime(3) format for the
+.B \-\-not\-before
+and
+.B \-\-not\-after
+options, default:
+.B %d.%m.%y %T
 .TP
 .BI "\-s, \-\-serial " hex
 Serial number in hex. It is randomly allocated by default.

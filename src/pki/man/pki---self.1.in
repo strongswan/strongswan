@@ -14,6 +14,8 @@ pki \-\-self \- Create a self-signed certificate
 .BI \-\-dn\~ distinguished-name
 .OP \-\-san subjectAltName
 .OP \-\-lifetime days
+.OP \-\-not-before datetime
+.OP \-\-not-after datetime
 .OP \-\-serial hex
 .OP \-\-flag flag
 .OP \-\-digest digest
@@ -75,7 +77,28 @@ Subject and issuer distinguished name (DN). Required.
 subjectAltName extension to include in certificate. Can be used multiple times.
 .TP
 .BI "\-l, \-\-lifetime " days
-Days the certificate is valid, default: 1095.
+Days the certificate is valid, default: 1095. Ignored if both
+an absolute start and end time are given.
+.TP
+.BI "\-F, \-\-not-before " datetime
+Absolute time when the validity of the certificate begins. The datetime format
+is defined by the
+.B \-\-dateform
+option.
+.TP
+.BI "\-T, \-\-not-after " datetime
+Absolute time when the validity of the certificate ends. The datetime format is
+defined by the
+.B \-\-dateform
+option.
+.TP
+.BI "\-D, \-\-dateform " form
+strptime(3) format for the
+.B \-\-not\-before
+and
+.B \-\-not\-after
+options, default:
+.B %d.%m.%y %T
 .TP
 .BI "\-s, \-\-serial " hex
 Serial number in hex. It is randomly allocated by default.
