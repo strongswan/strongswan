@@ -94,22 +94,6 @@ bool cred_encoding_args(va_list args, ...)
 	return !failed;
 }
 
-/**
- * hashtable hash() function
- */
-static u_int hash(void *key)
-{
-	return (uintptr_t)key;
-}
-
-/**
- * hashtable equals() function
- */
-static bool equals(void *key1, void *key2)
-{
-	return key1 == key2;
-}
-
 METHOD(cred_encoding_t, get_cache, bool,
 	private_cred_encoding_t *this, cred_encoding_type_t type, void *cache,
 	chunk_t *encoding)
@@ -289,7 +273,8 @@ cred_encoding_t *cred_encoding_create()
 
 	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
-		this->cache[type] = hashtable_create(hash, equals, 8);
+		this->cache[type] = hashtable_create(hashtable_hash_ptr,
+											 hashtable_equals_ptr, 8);
 	}
 
 	return &this->public;

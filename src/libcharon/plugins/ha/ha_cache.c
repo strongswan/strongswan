@@ -59,22 +59,6 @@ struct private_ha_cache_t {
 };
 
 /**
- * Hashtable hash function
- */
-static u_int hash(void *key)
-{
-	return (uintptr_t)key;
-}
-
-/**
- * Hashtable equals function
- */
-static bool equals(void *a, void *b)
-{
-	return a == b;
-}
-
-/**
  * Cache entry for an IKE_SA
  */
 typedef struct {
@@ -380,7 +364,7 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 		.count = count,
 		.kernel = kernel,
 		.socket = socket,
-		.cache = hashtable_create(hash, equals, 8),
+		.cache = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 8),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 

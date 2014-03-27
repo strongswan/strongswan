@@ -47,22 +47,6 @@ struct private_dhcp_provider_t {
 };
 
 /**
- * Hashtable hash function
- */
-static u_int hash(void *key)
-{
-	return (uintptr_t)key;
-}
-
-/**
- * Hashtable equals function
- */
-static bool equals(void *a, void *b)
-{
-	return a == b;
-}
-
-/**
  * Hash ID and host to a key
  */
 static uintptr_t hash_id_host(identification_t *id, host_t *host)
@@ -226,7 +210,8 @@ dhcp_provider_t *dhcp_provider_create(dhcp_socket_t *socket)
 		},
 		.socket = socket,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.transactions = hashtable_create(hash, equals, 8),
+		.transactions = hashtable_create(hashtable_hash_ptr,
+										 hashtable_equals_ptr, 8),
 	);
 
 	return &this->public;
