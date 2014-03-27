@@ -165,10 +165,12 @@ crlDistributionPoints          	= URI:http://crl.strongswan.org/strongswan.crl
 
 [ ca_ext ]
 
-basicConstraints               	= critical, CA:TRUE, pathlen:1
+basicConstraints               	= critical, CA:TRUE #, pathlen:1
 keyUsage                        = cRLSign, keyCertSign
 subjectKeyIdentifier		= hash
 authorityKeyIdentifier		= keyid, issuer:always
+#subjectAltName                  = DNS:$ENV::COMMON_NAME
+#extendedKeyUsage               = OCSPSigning
 
 ####################################################################
 
