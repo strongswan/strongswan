@@ -104,10 +104,10 @@ static void destroy_data(void *data)
  * filtered test
  */
 
-static bool filter(void *data, int *v, int *vo, int *w, int *wo,
-				   int *x, int *xo, int *y, int *yo, int *z, int *zo)
+static bool filter(int *data, int **v, int *vo, int **w, int *wo,
+				   int **x, int *xo, int **y, int *yo, int **z, int *zo)
 {
-	int val = *v;
+	int val = **v;
 
 	*vo = val++;
 	*wo = val++;
@@ -118,21 +118,21 @@ static bool filter(void *data, int *v, int *vo, int *w, int *wo,
 	return TRUE;
 }
 
-static bool filter_odd(void *data, int *item, int *out)
+static bool filter_odd(void *data, int **item, int *out)
 {
 	fail_if(data != (void*)101, "data does not match '101' in filter function");
-	*out = *item;
-	return *item % 2 == 0;
+	*out = **item;
+	return **item % 2 == 0;
 }
 
 START_TEST(test_filtered)
 {
-	int round, v, w, x, y, z;
+	int data[5] = {1,2,3,4,5}, round, v, w, x, y, z;
 	linked_list_t *list;
 	enumerator_t *enumerator;
 
-	list = linked_list_create_with_items((void*)1, (void*)2, (void*)3, (void*)4,
-										 (void*)5, NULL);
+	list = linked_list_create_with_items(&data[0], &data[1], &data[2], &data[3],
+										 &data[4], NULL);
 
 	round = 1;
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
@@ -155,12 +155,12 @@ END_TEST
 
 START_TEST(test_filtered_filter)
 {
-	int count, x;
+	int data[5] = {1,2,3,4,5}, count, x;
 	linked_list_t *list;
 	enumerator_t *enumerator;
 
-	list = linked_list_create_with_items((void*)1, (void*)2, (void*)3, (void*)4,
-										 (void*)5, NULL);
+	list = linked_list_create_with_items(&data[0], &data[1], &data[2], &data[3],
+										 &data[4], NULL);
 
 	count = 0;
 	/* should also work without destructor, so set this manually */
