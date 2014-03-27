@@ -33,4 +33,21 @@
  */
 bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type);
 
+/**
+ * Calculate start/end lifetime for certificates.
+ *
+ * If both nbstr and nastr are given, span is ignored. Otherwise missing
+ * arguments are calculated, or assumed to be now.
+ *
+ * @param format	strptime() format, NULL for default: %d.%m.%y %T
+ * @param nbstr		string describing notBefore datetime, or NULL
+ * @param nastr		string describing notAfter datetime, or NULL
+ * @param span		lifetime span, from notBefore to notAfter
+ * @param nb		calculated notBefore time
+ * @param na		calculated notAfter time
+ * @return			TRUE of nb/na calculated successfully
+ */
+bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
+						time_t *nb, time_t *na);
+
 #endif /** PKI_H_ @}*/
