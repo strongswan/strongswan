@@ -29,7 +29,7 @@
 /**
  * Maximum number of options in a command (+3)
  */
-#define MAX_OPTIONS 32
+#define MAX_OPTIONS 36
 
 /**
  * Maximum number of usage summary lines (+1)
