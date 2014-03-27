@@ -30,7 +30,7 @@ struct pair_t {
 	/**
 	 * Key of a hash table item.
 	 */
-	void *key;
+	const void *key;
 
 	/**
 	 * Value of a hash table item.
@@ -51,7 +51,7 @@ struct pair_t {
 /**
  * Creates an empty pair object.
  */
-static inline pair_t *pair_create(void *key, void *value, u_int hash)
+static inline pair_t *pair_create(const void *key, void *value, u_int hash)
 {
 	pair_t *this;
 
@@ -153,7 +153,7 @@ struct private_enumerator_t {
 /*
  * See header.
  */
-u_int hashtable_hash_ptr(void *key)
+u_int hashtable_hash_ptr(const void *key)
 {
 	return chunk_hash(chunk_from_thing(key));
 }
@@ -161,7 +161,7 @@ u_int hashtable_hash_ptr(void *key)
 /*
  * See header.
  */
-u_int hashtable_hash_str(void *key)
+u_int hashtable_hash_str(const void *key)
 {
 	return chunk_hash(chunk_from_str((char*)key));
 }
@@ -169,7 +169,7 @@ u_int hashtable_hash_str(void *key)
 /*
  * See header.
  */
-bool hashtable_equals_ptr(void *key, void *other_key)
+bool hashtable_equals_ptr(const void *key, const void *other_key)
 {
 	return key == other_key;
 }
@@ -177,7 +177,7 @@ bool hashtable_equals_ptr(void *key, void *other_key)
 /*
  * See header.
  */
-bool hashtable_equals_str(void *key, void *other_key)
+bool hashtable_equals_str(const void *key, const void *other_key)
 {
 	return streq(key, other_key);
 }
@@ -250,7 +250,7 @@ static void rehash(private_hashtable_t *this)
 }
 
 METHOD(hashtable_t, put, void*,
-	   private_hashtable_t *this, void *key, void *value)
+	   private_hashtable_t *this, const void *key, void *value)
 {
 	void *old_value = NULL;
 	pair_t *pair;
@@ -284,7 +284,7 @@ METHOD(hashtable_t, put, void*,
 	return old_value;
 }
 
-static void *get_internal(private_hashtable_t *this, void *key,
+static void *get_internal(private_hashtable_t *this, const void *key,
 						  hashtable_equals_t equals)
 {
 	void *value = NULL;
@@ -309,19 +309,19 @@ static void *get_internal(private_hashtable_t *this, void *key,
 }
 
 METHOD(hashtable_t, get, void*,
-	   private_hashtable_t *this, void *key)
+	   private_hashtable_t *this, const void *key)
 {
 	return get_internal(this, key, this->equals);
 }
 
 METHOD(hashtable_t, get_match, void*,
-	   private_hashtable_t *this, void *key, hashtable_equals_t match)
+	   private_hashtable_t *this, const void *key, hashtable_equals_t match)
 {
 	return get_internal(this, key, match);
 }
 
 METHOD(hashtable_t, remove_, void*,
-	   private_hashtable_t *this, void *key)
+	   private_hashtable_t *this, const void *key)
 {
 	void *value = NULL;
 	pair_t *pair, *prev = NULL;
@@ -379,7 +379,7 @@ METHOD(hashtable_t, get_count, u_int,
 }
 
 METHOD(enumerator_t, enumerate, bool,
-	   private_enumerator_t *this, void **key, void **value)
+	   private_enumerator_t *this, const void **key, void **value)
 {
 	while (this->count && this->row < this->table->capacity)
 	{
