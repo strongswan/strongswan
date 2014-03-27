@@ -660,7 +660,6 @@ public class CharonVpnService extends VpnService implements Runnable
 	 */
 	static
 	{
-		System.loadLibrary("crypto");
 		System.loadLibrary("strongswan");
 
 		if (MainActivity.USE_BYOD)
