@@ -39,7 +39,8 @@ static int acert()
 	char *error = NULL, *keyid = NULL;
 	linked_list_t *groups;
 	chunk_t serial = chunk_empty, encoding = chunk_empty;
-	time_t not_before, not_after, lifetime = 24;
+	time_t not_before, not_after, lifetime = 24 * 60 * 60;
+	char *datenb = NULL, *datena = NULL, *dateform = NULL;
 	rng_t *rng;
 	char *arg;
 
@@ -75,12 +76,21 @@ static int acert()
 				keyid = arg;
 				continue;
 			case 'l':
-				lifetime = atoi(arg);
+				lifetime = atoi(arg) * 60 * 60;
 				if (!lifetime)
 				{
 					error = "invalid --lifetime value";
 					goto usage;
 				}
+				continue;
+			case 'D':
+				dateform = arg;
+				continue;
+			case 'F':
+				datenb = arg;
+				continue;
+			case 'T':
+				datena = arg;
 				continue;
 			case 's':
 				hex = arg;
@@ -100,6 +110,14 @@ static int acert()
 		}
 		break;
 	}
+
+	if (!calculate_lifetime(dateform, datenb, datena, lifetime,
+							&not_before, &not_after))
+	{
+		error = "invalid --not-before/after datetime";
+		goto usage;
+	}
+
 	if (!issuercert)
 	{
 		error = "--issuercert is required";
@@ -195,9 +213,6 @@ static int acert()
 		goto end;
 	}
 
-	not_before = time(NULL);
-	not_after = not_before + lifetime * 60 * 60;
-
 	ac = lib->creds->create(lib->creds,
 							CRED_CERTIFICATE, CERT_X509_AC,
 							BUILD_CERT, cert,
@@ -255,7 +270,8 @@ static void __attribute__ ((constructor))reg()
 		acert, 'z', "acert",
 		"issue an attribute certificate",
 		{"[--in file] [--group name]* --issuerkey file|--issuerkeyid hex",
-		 " --issuercert file [--lifetime hours] [--serial hex]",
+		 " --issuercert file [--serial hex] [--lifetime hours]",
+		 " [--not-before datetime] [--not-after datetime] [--dateform form]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -264,8 +280,11 @@ static void __attribute__ ((constructor))reg()
 			{"issuercert",		'c', 1, "issuer certificate file"},
 			{"issuerkey",		'k', 1, "issuer private key file"},
 			{"issuerkeyid",		'x', 1, "keyid on smartcard of issuer private key"},
-			{"lifetime",		'l', 1, "hours the acert is valid, default: 24"},
 			{"serial",			's', 1, "serial number in hex, default: random"},
+			{"lifetime",		'l', 1, "hours the acert is valid, default: 24"},
+			{"not-before",		'F', 1, "date/time the validity of the AC starts"},
+			{"not-after",		'T', 1, "date/time the validity of the AC ends"},
+			{"dateform",		'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
 			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
