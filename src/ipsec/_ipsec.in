@@ -70,7 +70,6 @@ case "$1" in
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
 	echo "	rereadacerts|rereadcrls|rereadall"
 	echo "	purgeocsp|purgecrls|purgecerts|purgeike"
-	echo "	openac"
 	echo "	scepclient"
 	echo "	secrets"
 	echo "	starter"

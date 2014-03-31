@@ -73,7 +73,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient pki
+  SUBDIRS += scepclient pki
 endif
 
 if USE_CONFTEST
