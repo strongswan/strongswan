@@ -202,7 +202,8 @@ METHOD(aead_t, destroy, void,
 /*
  * Described in header
  */
-aead_t *openssl_gcm_create(encryption_algorithm_t algo, size_t key_size)
+aead_t *openssl_gcm_create(encryption_algorithm_t algo,
+						   size_t key_size, size_t salt_size)
 {
 	private_aead_t *this;
 
@@ -234,6 +235,13 @@ aead_t *openssl_gcm_create(encryption_algorithm_t algo, size_t key_size)
 		default:
 			free(this);
 			return NULL;
+	}
+
+	if (salt_size && salt_size != SALT_LEN)
+	{
+		/* currently not supported */
+		free(this);
+		return NULL;
 	}
 
 	switch (algo)

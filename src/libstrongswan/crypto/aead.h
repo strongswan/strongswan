@@ -102,12 +102,21 @@ struct aead_t {
 	/**
 	 * Get the size of the key material (for encryption and authentication).
 	 *
+	 * This includes any additional bytes requires for the implicit nonce part.
+	 * For AEADs based on traditional ciphers, the length is for both
+	 * the integrity and the encryption key in total.
+	 *
 	 * @return				key size in bytes
 	 */
 	size_t (*get_key_size)(aead_t *this);
 
 	/**
 	 * Set the key for encryption and authentication.
+	 *
+	 * If the AEAD uses an implicit nonce, the last part of the key shall
+	 * be the implicit nonce. For AEADs based on traditional ciphers, the
+	 * key shall include both integrity and encryption keys, concatenated
+	 * in that order.
 	 *
 	 * @param key			encryption and authentication key
 	 * @return				TRUE if key set successfully

@@ -46,7 +46,7 @@ typedef crypter_t* (*crypter_constructor_t)(encryption_algorithm_t algo,
  * Constructor function for aead transforms
  */
 typedef aead_t* (*aead_constructor_t)(encryption_algorithm_t algo,
-									  size_t key_size);
+									  size_t key_size, size_t salt_size);
 /**
  * Constructor function for signers
  */
@@ -100,10 +100,12 @@ struct crypto_factory_t {
 	 *
 	 * @param algo			encryption algorithm
 	 * @param key_size		length of the key in bytes
+	 * @param salt_size		size of salt, implicit part of the nonce
 	 * @return				aead_t instance, NULL if not supported
 	 */
 	aead_t* (*create_aead)(crypto_factory_t *this,
-						   encryption_algorithm_t algo, size_t key_size);
+						   encryption_algorithm_t algo,
+						   size_t key_size, size_t salt_size);
 
 	/**
 	 * Create a symmetric signer instance.

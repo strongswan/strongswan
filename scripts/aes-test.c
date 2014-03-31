@@ -313,7 +313,7 @@ static bool do_test_gcm(test_vector_t *test)
 			return FALSE;
 	}
 
-	aead = lib->crypto->create_aead(lib->crypto, alg, test->key.len);
+	aead = lib->crypto->create_aead(lib->crypto, alg, test->key.len, 4);
 	if (!aead)
 	{
 		DBG1(DBG_APP, "algorithm %N or key length (%d bits) not supported",

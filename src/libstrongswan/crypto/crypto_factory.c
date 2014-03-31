@@ -176,7 +176,7 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 
 METHOD(crypto_factory_t, create_aead, aead_t*,
 	private_crypto_factory_t *this, encryption_algorithm_t algo,
-	size_t key_size)
+	size_t key_size, size_t salt_size)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -190,12 +190,12 @@ METHOD(crypto_factory_t, create_aead, aead_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_aead(this->tester, algo, key_size,
-										 entry->create_aead, NULL,
+										 salt_size, entry->create_aead, NULL,
 										 default_plugin_name))
 			{
 				continue;
 			}
-			aead = entry->create_aead(algo, key_size);
+			aead = entry->create_aead(algo, key_size, salt_size);
 			if (aead)
 			{
 				break;
@@ -474,7 +474,7 @@ METHOD(crypto_factory_t, add_aead, bool,
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
-		this->tester->test_aead(this->tester, algo, 0, create,
+		this->tester->test_aead(this->tester, algo, 0, 0, create,
 								this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->aeads, algo, plugin_name, speed, create);
@@ -1003,7 +1003,7 @@ static u_int verify_registered_algorithms(crypto_factory_t *factory)
 
 	this->lock->read_lock(this->lock);
 	TEST_ALGORITHMS(crypter, 0);
-	TEST_ALGORITHMS(aead, 0);
+	TEST_ALGORITHMS(aead, 0, 0);
 	TEST_ALGORITHMS(signer);
 	TEST_ALGORITHMS(hasher);
 	TEST_ALGORITHMS(prf);

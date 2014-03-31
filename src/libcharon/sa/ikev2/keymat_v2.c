@@ -97,10 +97,35 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 {
 	aead_t *aead_i, *aead_r;
 	chunk_t key = chunk_empty;
+	u_int salt_size;
+
+	switch (alg)
+	{
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
+			/* RFC 4106 */
+			salt_size = 4;
+			break;
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+			/* RFC 4309 */
+		case ENCR_CAMELLIA_CCM_ICV8:
+		case ENCR_CAMELLIA_CCM_ICV12:
+		case ENCR_CAMELLIA_CCM_ICV16:
+			/* RFC 5529 */
+			salt_size = 3;
+			break;
+		default:
+			DBG1(DBG_IKE, "nonce size for %N unknown!",
+				 encryption_algorithm_names, alg);
+			return FALSE;
+	}
 
 	/* SK_ei/SK_er used for encryption */
-	aead_i = lib->crypto->create_aead(lib->crypto, alg, key_size / 8);
-	aead_r = lib->crypto->create_aead(lib->crypto, alg, key_size / 8);
+	aead_i = lib->crypto->create_aead(lib->crypto, alg, key_size / 8, salt_size);
+	aead_r = lib->crypto->create_aead(lib->crypto, alg, key_size / 8, salt_size);
 	if (aead_i == NULL || aead_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",

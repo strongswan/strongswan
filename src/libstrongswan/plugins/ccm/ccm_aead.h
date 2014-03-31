@@ -44,8 +44,10 @@ struct ccm_aead_t {
  *
  * @param algo			algorithm to implement, a CCM mode
  * @param key_size		key size in bytes
+ * @param salt_size		size of implicit salt length
  * @return				aead, NULL if not supported
  */
-ccm_aead_t *ccm_aead_create(encryption_algorithm_t algo, size_t key_size);
+ccm_aead_t *ccm_aead_create(encryption_algorithm_t algo, size_t key_size,
+							size_t salt_size);
 
 #endif /** CCM_AEAD_H_ @}*/
