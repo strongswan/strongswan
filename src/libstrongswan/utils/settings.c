@@ -1224,7 +1224,16 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 	{
 		if (errno == ENOENT)
 		{
-			DBG1(DBG_LIB, "'%s' does not exist, ignored", file);
+#ifdef STRONGSWAN_CONF
+			if (streq(file, STRONGSWAN_CONF))
+			{
+				DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
+			}
+			else
+#endif
+			{
+				DBG1(DBG_LIB, "'%s' does not exist, ignored", file);
+			}
 			return TRUE;
 		}
 		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
