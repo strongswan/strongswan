@@ -10,6 +10,9 @@ strongswan-5.1.3
   using the --acert subcommand, while the --print command supports the ac type.
   The openac utility has been removed in favor of the new pki functionality.
 
+- The libtls TLS 1.2 implementation as used by EAP-(T)TLS and other protocols
+  has been extended by AEAD mode support, currently limited to AES-GCM.
+
 
 strongswan-5.1.2
 ----------------
