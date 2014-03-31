@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -238,23 +238,97 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 static void add_device_id(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
-	chunk_t value;
-	char *name;
+	chunk_t value = chunk_empty, keyid;
+	char *name, *device_id, *cert_path;
+	certificate_t *cert = NULL;
+	public_key_t *pubkey;
 
-	name = os->get_type(os) == OS_TYPE_ANDROID ?
-				  "android_id" : "/var/lib/dbus/machine-id";
-	value = os->get_setting(os, name);
+	/* Get the device ID as a character string */
+	device_id = lib->settings->get_str(lib->settings,
+						"%s.plugins.imc-os.device_id", NULL, lib->ns);
+	if (device_id)
+	{
+		value = chunk_clone(chunk_from_str(device_id));
+	}
+
+	if (value.len == 0)
+	{
+		/* Derive the device ID from a raw public key */
+		cert_path = lib->settings->get_str(lib->settings,
+							"%s.plugins.imc-os.device_pubkey", NULL, lib->ns);
+		if (cert_path)
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+									  CERT_TRUSTED_PUBKEY, BUILD_FROM_FILE,
+									  cert_path, BUILD_END);
+			if (cert)
+			{
+				DBG2(DBG_IMC, "loaded device public key from '%s'", cert_path);
+			}
+			else
+			{
+				DBG1(DBG_IMC, "loading device public key from '%s' failed",
+							   cert_path);
+			}
+		}
+
+		if (!cert)
+		{
+			/* Derive the device ID from the public key contained in a certificate */
+			cert_path = lib->settings->get_str(lib->settings,
+								"%s.plugins.imc-os.device_cert", NULL, lib->ns);
+			if (cert_path)
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										  CERT_X509, BUILD_FROM_FILE,
+										  cert_path, BUILD_END);
+				if (cert)
+				{
+					DBG2(DBG_IMC, "loaded device certificate from '%s'", cert_path);
+				}
+				else
+				{
+					DBG1(DBG_IMC, "loading device certificate from '%s' failed",
+								   cert_path);
+				}
+			}
+		}
+
+		/* Compute the SHA-1 keyid of the retrieved device public key */
+		if (cert)
+		{
+			pubkey = cert->get_public_key(cert);
+			if (pubkey)
+			{
+				if (pubkey->get_fingerprint(pubkey, KEYID_PUBKEY_INFO_SHA1,
+											&keyid))
+				{
+					value = chunk_to_hex(keyid, NULL, FALSE);
+				}
+				pubkey->destroy(pubkey);
+			}
+			cert->destroy(cert);
+		}
+	}
+
+	if (value.len == 0)
+	{
+		/* Derive the device ID from some unique OS settings */
+		name = os->get_type(os) == OS_TYPE_ANDROID ?
+					  "android_id" : "/var/lib/dbus/machine-id";
+		value = os->get_setting(os, name);
+
+		/* Trim trailing newline character */
+		if (value.len > 0 && value.ptr[value.len - 1] == '\n')
+		{
+			value.len--;
+		}
+	}
 
 	if (value.len == 0)
 	{
 		DBG1(DBG_IMC, "no device ID available");
 		return;
-	}
-
-	/* trim trailing newline character */
-	if (value.ptr[value.len - 1] == '\n')
-	{
-		value.len--;
 	}
 
 	DBG1(DBG_IMC, "device ID is %.*s", value.len, value.ptr);
