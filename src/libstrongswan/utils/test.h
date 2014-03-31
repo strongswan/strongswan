@@ -82,7 +82,7 @@ static ret (*TEST_##ns##name)(__VA_ARGS__);
  */
 #define TEST_FUNCTION(ns, name, ...) \
 ({ \
-	if (!TEST_##ns##name && testable_functions) \
+	if (testable_functions) \
 	{ \
 		TEST_##ns##name = testable_functions->get(testable_functions, #ns "/" #name); \
 	} \
