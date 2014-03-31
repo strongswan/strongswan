@@ -87,8 +87,8 @@ enum builder_part_t {
 	BUILD_DIGEST_ALG,
 	/** encryption algorithm to use, encryption_algorithm_t */
 	BUILD_ENCRYPTION_ALG,
-	/** a comma-separated list of ietf group attributes, char* */
-	BUILD_IETF_GROUP_ATTR,
+	/** list of AC group memberships, linked_list_t* with char* */
+	BUILD_AC_GROUP_STRINGS,
 	/** a ca certificate, certificate_t* */
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */

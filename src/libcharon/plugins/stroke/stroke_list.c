@@ -31,8 +31,9 @@
 #include <credentials/certificates/ac.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/pgp_certificate.h>
-#include <credentials/ietf_attributes/ietf_attributes.h>
 #include <config/peer_cfg.h>
+#include <asn1/asn1.h>
+#include <asn1/oid.h>
 
 /* warning intervals for list functions */
 #define CERT_WARNING_INTERVAL  30	/* days */
@@ -1027,16 +1028,19 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 {
 	bool first = TRUE;
-	time_t thisUpdate, nextUpdate, now = time(NULL);
-	enumerator_t *enumerator = list->create_enumerator(list);
+	time_t notBefore, notAfter, now = time(NULL);
+	enumerator_t *enumerator;
 	certificate_t *cert;
 
-	while (enumerator->enumerate(enumerator, (void**)&cert))
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &cert))
 	{
 		ac_t *ac = (ac_t*)cert;
+		ac_group_type_t type;
 		identification_t *id;
-		ietf_attributes_t *groups;
+		enumerator_t *groups;
 		chunk_t chunk;
+		bool firstgroup = TRUE;
 
 		if (first)
 		{
@@ -1061,30 +1065,78 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		{
 			fprintf(out, "  hserial:   %#B\n", &chunk);
 		}
-		groups = ac->get_groups(ac);
-		if (groups)
+		groups = ac->create_group_enumerator(ac);
+		while (groups->enumerate(groups, &type, &chunk))
 		{
-			fprintf(out, "  groups:    %s\n", groups->get_string(groups));
-			groups->destroy(groups);
+			int oid;
+			char *str;
+
+			if (firstgroup)
+			{
+				fprintf(out, "  groups:    ");
+				firstgroup = FALSE;
+			}
+			else
+			{
+				fprintf(out, "             ");
+			}
+			switch (type)
+			{
+				case AC_GROUP_TYPE_STRING:
+					fprintf(out, "%.*s", (int)chunk.len, chunk.ptr);
+					break;
+				case AC_GROUP_TYPE_OID:
+					oid = asn1_known_oid(chunk);
+					if (oid == OID_UNKNOWN)
+					{
+						str = asn1_oid_to_string(chunk);
+						if (str)
+						{
+							fprintf(out, "%s", str);
+						}
+						else
+						{
+							fprintf(out, "OID:%#B", &chunk);
+						}
+					}
+					else
+					{
+						fprintf(out, "%s", oid_names[oid].name);
+					}
+					break;
+				case AC_GROUP_TYPE_OCTETS:
+					fprintf(out, "%#B", &chunk);
+					break;
+			}
+			fprintf(out, "\n");
 		}
+		groups->destroy(groups);
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 		chunk  = chunk_skip_zero(ac->get_serial(ac));
 		fprintf(out, "  serial:    %#B\n", &chunk);
 
 		/* list validity */
-		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
-		fprintf(out, "  updates:   this %T\n",  &thisUpdate, utc);
-		fprintf(out, "             next %T, ", &nextUpdate, utc);
-		if (now > nextUpdate)
+		cert->get_validity(cert, &now, &notBefore, &notAfter);
+		fprintf(out, "  validity:  not before %T, ", &notBefore, utc);
+		if (now < notBefore)
 		{
-			fprintf(out, "expired (%V ago)\n", &now, &nextUpdate);
+			fprintf(out, "not valid yet (valid in %V)\n", &now, &notBefore);
+		}
+		else
+		{
+			fprintf(out, "ok\n");
+		}
+		fprintf(out, "             not after  %T, ", &notAfter, utc);
+		if (now > notAfter)
+		{
+			fprintf(out, "expired (%V ago)\n", &now, &notAfter);
 		}
 		else
 		{
 			fprintf(out, "ok");
-			if (now > nextUpdate - AC_WARNING_INTERVAL * 60 * 60 * 24)
+			if (now > notAfter - AC_WARNING_INTERVAL * 60 * 60 * 24)
 			{
-				fprintf(out, " (expires in %V)", &now, &nextUpdate);
+				fprintf(out, " (expires in %V)", &now, &notAfter);
 			}
 			fprintf(out, " \n");
 		}

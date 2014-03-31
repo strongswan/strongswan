@@ -165,6 +165,7 @@ ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysq
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
 # authentication/credential plugins
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
+ARG_ENABL_SET([acert],          [enable X509 attribute certificate checking plugin.])
 ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
 ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
@@ -264,7 +265,7 @@ ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
-ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
+ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
 # optional features
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
@@ -1052,7 +1053,6 @@ charon_plugins=
 starter_plugins=
 pool_plugins=
 attest_plugins=
-openac_plugins=
 scepclient_plugins=
 pki_plugins=
 scripts_plugins=
@@ -1068,7 +1068,7 @@ h_plugins=
 s_plugins=
 t_plugins=
 
-ADD_PLUGIN([test-vectors],         [s charon openac scepclient pki])
+ADD_PLUGIN([test-vectors],         [s charon scepclient pki])
 ADD_PLUGIN([curl],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([soup],                 [s charon scripts nm cmd])
 ADD_PLUGIN([unbound],              [s charon scripts])
@@ -1076,37 +1076,38 @@ ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
 ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
 ADD_PLUGIN([pkcs11],               [s charon pki nm cmd])
-ADD_PLUGIN([aes],                  [s charon openac scepclient pki scripts nm cmd])
-ADD_PLUGIN([des],                  [s charon openac scepclient pki scripts nm cmd])
-ADD_PLUGIN([blowfish],             [s charon openac scepclient pki scripts nm cmd])
-ADD_PLUGIN([rc2],                  [s charon openac scepclient pki scripts nm cmd])
-ADD_PLUGIN([sha1],                 [s charon openac scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([sha2],                 [s charon openac scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([md4],                  [s charon openac manager scepclient pki nm cmd])
-ADD_PLUGIN([md5],                  [s charon openac scepclient pki scripts attest nm cmd])
-ADD_PLUGIN([rdrand],               [s charon openac scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([random],               [s charon openac scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([aes],                  [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([des],                  [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([blowfish],             [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([rc2],                  [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([md4],                  [s charon manager scepclient pki nm cmd])
+ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd])
+ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([random],               [s charon scepclient pki scripts medsrv attest nm cmd])
 ADD_PLUGIN([nonce],                [s charon nm cmd])
-ADD_PLUGIN([x509],                 [s charon openac scepclient pki scripts attest nm cmd])
+ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd])
 ADD_PLUGIN([revocation],           [s charon nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
+ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd])
-ADD_PLUGIN([pkcs1],                [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
-ADD_PLUGIN([pkcs8],                [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pkcs8],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
 ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([padlock],              [s charon])
-ADD_PLUGIN([openssl],              [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
-ADD_PLUGIN([gcrypt],               [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
-ADD_PLUGIN([af-alg],               [s charon openac scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon openac scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
 ADD_PLUGIN([xcbc],                 [s charon nm cmd])
@@ -1188,7 +1189,6 @@ AC_SUBST(charon_plugins)
 AC_SUBST(starter_plugins)
 AC_SUBST(pool_plugins)
 AC_SUBST(attest_plugins)
-AC_SUBST(openac_plugins)
 AC_SUBST(scepclient_plugins)
 AC_SUBST(pki_plugins)
 AC_SUBST(scripts_plugins)
@@ -1229,6 +1229,7 @@ AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
 AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
+AM_CONDITIONAL(USE_ACERT, test x$acert = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PKCS7, test x$pkcs7 = xtrue)
@@ -1454,6 +1455,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/revocation/Makefile
 	src/libstrongswan/plugins/constraints/Makefile
+	src/libstrongswan/plugins/acert/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pkcs7/Makefile
@@ -1582,7 +1584,6 @@ AC_CONFIG_FILES([
 	src/_updown/Makefile
 	src/_updown_espmark/Makefile
 	src/_copyright/Makefile
-	src/openac/Makefile
 	src/scepclient/Makefile
 	src/pki/Makefile
 	src/pki/man/Makefile
@@ -1619,6 +1620,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---req.1
 	src/pki/man/pki---self.1
 	src/pki/man/pki---signcrl.1
+	src/pki/man/pki---acert.1
 	src/pki/man/pki---verify.1
 ])
 

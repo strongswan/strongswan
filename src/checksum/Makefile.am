@@ -100,7 +100,6 @@ if USE_CMD
 endif
 
 if USE_TOOLS
-  exes += $(DESTDIR)$(ipsecdir)/openac
   exes += $(DESTDIR)$(ipsecdir)/scepclient
   exes += $(DESTDIR)$(bindir)/pki
 endif

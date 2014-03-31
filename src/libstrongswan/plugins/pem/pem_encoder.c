@@ -106,6 +106,12 @@ bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 				label = "CERTIFICATE REQUEST";
 				break;
 			}
+			if (cred_encoding_args(args, CRED_PART_X509_AC_ASN1_DER,
+								   &asn1, CRED_PART_END))
+			{
+				label = "ATTRIBUTE CERTIFICATE";
+				break;
+			}
 		default:
 			return FALSE;
 	}
@@ -154,4 +160,3 @@ bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 	encoding->len = pos - encoding->ptr;
 	return TRUE;
 }
-

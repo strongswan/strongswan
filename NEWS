@@ -1,3 +1,16 @@
+strongswan-5.1.3
+----------------
+
+- The acert plugin evaluates X.509 Attribute Certificates. Group membership
+  information encoded as strings can be used to fulfill authorization checks
+  defined with the rightgroups option. Attribute Certificates can be loaded
+  locally or get exchanged in IKEv2 certificate payloads.
+
+- The pki command gained support to generate X.509 Attribute Certificates
+  using the --acert subcommand, while the --print command supports the ac type.
+  The openac utility has been removed in favor of the new pki functionality.
+
+
 strongswan-5.1.2
 ----------------
 

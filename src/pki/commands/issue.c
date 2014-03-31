@@ -72,8 +72,8 @@ static int issue()
 	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
-	time_t lifetime = 1095;
-	time_t not_before, not_after;
+	time_t not_before, not_after, lifetime = 1095 * 24 * 60 * 60;
+	char *datenb = NULL, *datena = NULL, *dateform = NULL;
 	x509_flag_t flags = 0;
 	x509_t *x509;
 	x509_cdp_t *cdp = NULL;
@@ -132,12 +132,21 @@ static int issue()
 				san->insert_last(san, identification_create_from_string(arg));
 				continue;
 			case 'l':
-				lifetime = atoi(arg);
+				lifetime = atoi(arg) * 24 * 60 * 60;
 				if (!lifetime)
 				{
 					error = "invalid --lifetime value";
 					goto usage;
 				}
+				continue;
+			case 'D':
+				dateform = arg;
+				continue;
+			case 'F':
+				datenb = arg;
+				continue;
+			case 'T':
+				datena = arg;
 				continue;
 			case 's':
 				hex = arg;
@@ -285,6 +294,12 @@ static int issue()
 		error = "--cakey or --keyid is required";
 		goto usage;
 	}
+	if (!calculate_lifetime(dateform, datenb, datena, lifetime,
+							&not_before, &not_after))
+	{
+		error = "invalid --not-before/after datetime";
+		goto usage;
+	}
 	if (dn && *dn)
 	{
 		id = identification_create_from_string(dn);
@@ -363,6 +378,7 @@ static int issue()
 			rng->destroy(rng);
 			goto end;
 		}
+		serial.ptr[0] &= 0x7F;
 		rng->destroy(rng);
 	}
 
@@ -453,9 +469,6 @@ static int issue()
 		id = identification_create_from_encoding(ID_DER_ASN1_DN,
 										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
-
-	not_before = time(NULL);
-	not_after = not_before + lifetime * 24 * 60 * 60;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
@@ -552,6 +565,9 @@ static void __attribute__ ((constructor))reg()
 			{"dn",				'd', 1, "distinguished name to include as subject"},
 			{"san",				'a', 1, "subjectAltName to include in certificate"},
 			{"lifetime",		'l', 1, "days the certificate is valid, default: 1095"},
+			{"not-before",		'F', 1, "date/time the validity of the cert starts"},
+			{"not-after",		'T', 1, "date/time the validity of the cert ends"},
+			{"dateform",		'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
 			{"serial",			's', 1, "serial number in hex, default: random"},
 			{"ca",				'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",			'p', 1, "set path length constraint"},

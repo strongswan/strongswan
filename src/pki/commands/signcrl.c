@@ -124,7 +124,8 @@ static int sign_crl()
 	int serial_len = 0;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
-	time_t lifetime = 15;
+	time_t lifetime = 15 * 24 * 60 * 60;
+	char *datetu = NULL, *datenu = NULL, *dateform = NULL;
 	linked_list_t *list, *cdps;
 	enumerator_t *enumerator, *lastenum = NULL;
 	x509_cdp_t *cdp;
@@ -161,12 +162,21 @@ static int sign_crl()
 				lastupdate = arg;
 				continue;
 			case 'l':
-				lifetime = atoi(arg);
+				lifetime = atoi(arg) * 24 * 60 * 60;
 				if (!lifetime)
 				{
-					error = "invalid lifetime";
+					error = "invalid --lifetime value";
 					goto usage;
 				}
+				continue;
+			case 'D':
+				dateform = arg;
+				continue;
+			case 'F':
+				datetu = arg;
+				continue;
+			case 'T':
+				datenu = arg;
 				continue;
 			case 'z':
 				serial_len = read_serial(arg, serial, sizeof(serial));
@@ -275,6 +285,12 @@ static int sign_crl()
 		error = "--cakey or --keyid is required";
 		goto usage;
 	}
+	if (!calculate_lifetime(dateform, datetu, datenu, lifetime,
+							&thisUpdate, &nextUpdate))
+	{
+		error = "invalid --this/next-update datetime";
+		goto usage;
+	}
 
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_FROM_FILE, cacert, BUILD_END);
@@ -320,9 +336,6 @@ static int sign_crl()
 		error = "CA private key does not match CA certificate";
 		goto error;
 	}
-
-	thisUpdate = time(NULL);
-	nextUpdate = thisUpdate + lifetime * 24 * 60 * 60;
 
 	if (basecrl)
 	{
@@ -442,6 +455,9 @@ static void __attribute__ ((constructor))reg()
 			{"cakey",		'k', 1, "CA private key file"},
 			{"cakeyid",		'x', 1, "keyid on smartcard of CA private key"},
 			{"lifetime",	'l', 1, "days the CRL gets a nextUpdate, default: 15"},
+			{"this-update",	'F', 1, "date/time the validity of the CRL starts"},
+			{"next-update",	'T', 1, "date/time the validity of the CRL ends"},
+			{"dateform",	'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
 			{"lastcrl",		'a', 1, "CRL of lastUpdate to copy revocations from"},
 			{"basecrl",		'b', 1, "base CRL to create a delta CRL for"},
 			{"crluri",		'u', 1, "freshest delta CRL URI to include"},

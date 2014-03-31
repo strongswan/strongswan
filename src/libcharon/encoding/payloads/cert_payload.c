@@ -224,6 +224,9 @@ METHOD(cert_payload_t, get_cert, certificate_t*,
 		case ENC_X509_SIGNATURE:
 			type = CERT_X509;
 			break;
+		case ENC_X509_ATTRIBUTE:
+			type = CERT_X509_AC;
+			break;
 		case ENC_CRL:
 			type = CERT_X509_CRL;
 			break;
@@ -333,6 +336,9 @@ cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
 		case CERT_X509:
 			this->encoding = ENC_X509_SIGNATURE;
 			break;
+		case CERT_X509_AC:
+			this->encoding = ENC_X509_ATTRIBUTE;
+			break;
 		default:
 			DBG1(DBG_ENC, "embedding %N certificate in payload failed",
 				 certificate_type_names, cert->get_type(cert));
@@ -380,4 +386,3 @@ cert_payload_t *cert_payload_create_custom(payload_type_t type,
 
 	return &this->public;
 }
-

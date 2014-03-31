@@ -24,9 +24,18 @@
 
 #include <library.h>
 #include <credentials/certificates/certificate.h>
-#include <credentials/ietf_attributes/ietf_attributes.h>
 
 typedef struct ac_t ac_t;
+typedef enum ac_group_type_t ac_group_type_t;
+
+/**
+ * Common group types, from IETF Attributes Syntax
+ */
+enum ac_group_type_t {
+	AC_GROUP_TYPE_OCTETS,
+	AC_GROUP_TYPE_STRING,
+	AC_GROUP_TYPE_OID,
+};
 
 /**
  * X.509 attribute certificate interface.
@@ -70,19 +79,11 @@ struct ac_t {
 	chunk_t (*get_authKeyIdentifier)(ac_t *this);
 
 	/**
-	 * Get the group memberships as a list of IETF attributes
+	 * Create an enumerator of contained Group memberships.
 	 *
-	 * @return			object containing a list of IETF attributes
+	 * @return			enumerator over (ac_group_type_t, chunk_t)
 	 */
-	ietf_attributes_t* (*get_groups)(ac_t *this);
-
-	/**
-	 * @brief Checks if two attribute certificates belong to the same holder
-	 *
-	 * @param that			other attribute certificate
-	 * @return				TRUE if same holder
-	 */
-	bool (*equals_holder) (ac_t *this, ac_t *other);
+	enumerator_t* (*create_group_enumerator)(ac_t *this);
 };
 
 #endif /** AC_H_ @}*/

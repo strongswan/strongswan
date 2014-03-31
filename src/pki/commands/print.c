@@ -16,9 +16,11 @@
 #include "pki.h"
 
 #include <asn1/asn1.h>
+#include <asn1/oid.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
+#include <credentials/certificates/ac.h>
 #include <selectors/traffic_selector.h>
 
 #include <time.h>
@@ -388,6 +390,84 @@ static void print_crl(crl_t *crl)
 }
 
 /**
+ * Print AC specific information
+ */
+static void print_ac(ac_t *ac)
+{
+	ac_group_type_t type;
+	identification_t *id;
+	enumerator_t *groups;
+	chunk_t chunk;
+	bool first = TRUE;
+
+	chunk = chunk_skip_zero(ac->get_serial(ac));
+	printf("serial:    %#B\n", &chunk);
+
+	id = ac->get_holderIssuer(ac);
+	if (id)
+	{
+		printf("hissuer:  \"%Y\"\n", id);
+	}
+	chunk = chunk_skip_zero(ac->get_holderSerial(ac));
+	if (chunk.ptr)
+	{
+		printf("hserial:   %#B\n", &chunk);
+	}
+	groups = ac->create_group_enumerator(ac);
+	while (groups->enumerate(groups, &type, &chunk))
+	{
+		int oid;
+		char *str;
+
+		if (first)
+		{
+			printf("groups:    ");
+			first = FALSE;
+		}
+		else
+		{
+			printf("           ");
+		}
+		switch (type)
+		{
+			case AC_GROUP_TYPE_STRING:
+				printf("%.*s", (int)chunk.len, chunk.ptr);
+				break;
+			case AC_GROUP_TYPE_OID:
+				oid = asn1_known_oid(chunk);
+				if (oid == OID_UNKNOWN)
+				{
+					str = asn1_oid_to_string(chunk);
+					if (str)
+					{
+						printf("%s", str);
+					}
+					else
+					{
+						printf("OID:%#B", &chunk);
+					}
+				}
+				else
+				{
+					printf("%s", oid_names[oid].name);
+				}
+				break;
+			case AC_GROUP_TYPE_OCTETS:
+				printf("%#B", &chunk);
+				break;
+		}
+		printf("\n");
+	}
+	groups->destroy(groups);
+
+	chunk = ac->get_authKeyIdentifier(ac);
+	if (chunk.ptr)
+	{
+		printf("authkey:  %#B\n", &chunk);
+	}
+}
+
+/**
  * Print certificate information
  */
 static void print_cert(certificate_t *cert)
@@ -432,6 +512,9 @@ static void print_cert(certificate_t *cert)
 		case CERT_X509_CRL:
 			print_crl((crl_t*)cert);
 			break;
+		case CERT_X509_AC:
+			print_ac((ac_t*)cert);
+			break;
 		default:
 			printf("parsing certificate subtype %N not implemented\n",
 				   certificate_type_names, cert->get_type(cert));
@@ -471,6 +554,11 @@ static int print()
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509_CRL;
+				}
+				else if (streq(arg, "ac"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_X509_AC;
 				}
 				else if (streq(arg, "pub"))
 				{
@@ -558,7 +646,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509|crl]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509|crl|ac]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},

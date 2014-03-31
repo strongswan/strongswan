@@ -117,6 +117,8 @@ enum auth_rule_t {
 	AUTH_HELPER_SUBJECT_HASH_URL,
 	/** revocation certificate (CRL, OCSP), certificate_t* */
 	AUTH_HELPER_REVOCATION_CERT,
+	/** attribute certificate for authorization decisions, certificate_t */
+	AUTH_HELPER_AC_CERT,
 
 	/** helper to determine the number of elements in this enum */
 	AUTH_RULE_MAX,

@@ -20,7 +20,7 @@ credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c \
 credentials/containers/container.c credentials/containers/pkcs12.c \
-credentials/ietf_attributes/ietf_attributes.c credentials/credential_manager.c \
+credentials/credential_manager.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
