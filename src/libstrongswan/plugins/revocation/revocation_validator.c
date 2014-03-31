@@ -118,7 +118,6 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 		{	/* OCSP signer currently invalid */
 			continue;
 		}
-		found = TRUE;
 		if (!ca->equals(ca, issuer))
 		{	/* delegated OCSP signer? */
 			if (!lib->credmgr->issued_by(lib->credmgr, issuer, ca, NULL))
@@ -130,6 +129,7 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 				continue;
 			}
 		}
+		found = TRUE;
 		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 		{
 			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
