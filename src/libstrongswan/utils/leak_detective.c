@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2014 Tobias Brunner
  * Copyright (C) 2006-2013 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -973,17 +973,20 @@ leak_detective_t *leak_detective_create()
 		},
 	);
 
+	if (getenv("LEAK_DETECTIVE_DISABLE") != NULL)
+	{
+		free(this);
+		return NULL;
+	}
+
 	lock = spinlock_create();
 	thread_disabled = thread_value_create(NULL);
 
 	init_static_allocations();
 
-	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
+	if (register_hooks())
 	{
-		if (register_hooks())
-		{
-			enable_leak_detective();
-		}
+		enable_leak_detective();
 	}
 	return &this->public;
 }

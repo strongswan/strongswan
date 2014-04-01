@@ -265,8 +265,11 @@ bool library_init(char *settings, const char *namespace)
 
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();
-	lib->leak_detective->set_report_cb(lib->leak_detective,
-									   report_leaks, sum_leaks, NULL);
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->set_report_cb(lib->leak_detective,
+										   report_leaks, sum_leaks, NULL);
+	}
 #endif /* LEAK_DETECTIVE */
 
 	pfh = printf_hook_create();
