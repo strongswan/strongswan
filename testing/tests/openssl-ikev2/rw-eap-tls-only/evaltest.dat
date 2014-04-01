@@ -1,7 +1,7 @@
 carol::ipsec status 2> /dev/null::home.*ESTABLISHED::YES
 moon:: ipsec status 2> /dev/null::rw-eap.*ESTABLISHED::YES
 carol::cat /var/log/daemon.log::server requested EAP_TLS authentication::YES
-carol::cat /var/log/daemon.log::negotiated TLS 1.2 using suite TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256::YES
+carol::cat /var/log/daemon.log::negotiated TLS 1.2 using suite TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256::YES
 carol::cat /var/log/daemon.log::allow mutual EAP-only authentication::YES
 carol::cat /var/log/daemon.log::authentication of 'C=CH, O=Linux strongSwan, OU=ECSA 521 bit, CN=moon.strongswan.org' with EAP successful::YES
 moon:: cat /var/log/daemon.log::authentication of 'C=CH, O=Linux strongSwan, OU=ECDSA 256 bit, CN=carol@strongswan.org' with EAP successful::YES
