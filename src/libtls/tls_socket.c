@@ -406,9 +406,11 @@ METHOD(tls_socket_t, destroy, void,
  * See header
  */
 tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
-							identification_t *peer, int fd, tls_cache_t *cache)
+							identification_t *peer, int fd, tls_cache_t *cache,
+							tls_version_t max_version, bool nullok)
 {
 	private_tls_socket_t *this;
+	tls_purpose_t purpose;
 
 	INIT(this,
 		.public = {
@@ -430,13 +432,23 @@ tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
 		.fd = fd,
 	);
 
-	this->tls = tls_create(is_server, server, peer, TLS_PURPOSE_GENERIC,
+	if (nullok)
+	{
+		purpose = TLS_PURPOSE_GENERIC_NULLOK;
+	}
+	else
+	{
+		purpose = TLS_PURPOSE_GENERIC;
+	}
+
+	this->tls = tls_create(is_server, server, peer, purpose,
 						   &this->app.application, cache);
 	if (!this->tls)
 	{
 		free(this);
 		return NULL;
 	}
+	this->tls->set_version(this->tls, max_version);
 
 	return &this->public;
 }

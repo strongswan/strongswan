@@ -105,7 +105,7 @@ static int run_client(host_t *host, identification_t *server,
 			close(fd);
 			return 1;
 		}
-		tls = tls_socket_create(FALSE, server, client, fd, cache);
+		tls = tls_socket_create(FALSE, server, client, fd, cache, TLS_1_2, TRUE);
 		if (!tls)
 		{
 			close(fd);
@@ -162,7 +162,7 @@ static int serve(host_t *host, identification_t *server,
 		}
 		DBG1(DBG_TLS, "%#H connected", host);
 
-		tls = tls_socket_create(TRUE, server, NULL, cfd, cache);
+		tls = tls_socket_create(TRUE, server, NULL, cfd, cache, TLS_1_2, TRUE);
 		if (!tls)
 		{
 			close(fd);

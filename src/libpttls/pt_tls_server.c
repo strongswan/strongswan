@@ -532,7 +532,7 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
 			.destroy = _destroy,
 		},
 		.state = PT_TLS_SERVER_VERSION,
-		.tls = tls_socket_create(TRUE, server, NULL, fd, NULL),
+		.tls = tls_socket_create(TRUE, server, NULL, fd, NULL, TLS_1_2, FALSE),
 		.tnccs = (tls_t*)tnccs,
 		.auth = auth,
 	);

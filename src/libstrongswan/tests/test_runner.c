@@ -315,7 +315,7 @@ static void sum_leaks(report_data_t *data, int count, size_t bytes,
  * Do library cleanup and optionally check for memory leaks
  */
 static bool post_test(test_runner_init_t init, bool check_leaks,
-					  array_t *failures, char *name, int i)
+					  array_t *failures, char *name, int i, int *leaks)
 {
 	report_data_t data = {
 		.failures = failures,
@@ -325,7 +325,15 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 
 	if (init)
 	{
-		init(FALSE);
+		if (test_restore_point())
+		{
+			init(FALSE);
+		}
+		else
+		{
+			library_deinit();
+			return FALSE;
+		}
 	}
 	if (check_leaks && lib->leak_detective)
 	{
@@ -335,7 +343,8 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 	}
 	library_deinit();
 
-	return data.leaks != 0;
+	*leaks = data.leaks;
+	return TRUE;
 }
 
 /**
@@ -407,7 +416,8 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init)
 		{
 			if (pre_test(init))
 			{
-				bool ok = FALSE, leaks = FALSE;
+				bool ok = FALSE;
+				int leaks = 0;
 
 				test_setup_timeout(tcase->timeout);
 
@@ -424,9 +434,11 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init)
 					{
 						call_fixture(tcase, FALSE);
 					}
-
 				}
-				leaks = post_test(init, ok, failures, tfun->name, i);
+				if (!post_test(init, ok, failures, tfun->name, i, &leaks))
+				{
+					ok = FALSE;
+				}
 
 				test_setup_timeout(0);
 

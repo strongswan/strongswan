@@ -572,4 +572,13 @@ struct tls_crypto_t {
  */
 tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache);
 
+/**
+ * Get a list of all supported TLS cipher suites.
+ *
+ * @param null			include supported NULL encryption suites
+ * @param suites		pointer to allocated suites array, to free(), or NULL
+ * @return				number of suites supported
+ */
+int tls_crypto_get_supported_suites(bool null, tls_cipher_suite_t **suites);
+
 #endif /** TLS_CRYPTO_H_ @}*/

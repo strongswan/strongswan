@@ -136,7 +136,8 @@ static inline void test_failure()
 	else
 	{
 		pthread_kill(main_thread, SIGUSR1);
-		/* how can we stop just the thread? longjmp to a restore point? */
+		/* terminate thread to prevent it from going wild */
+		pthread_exit(NULL);
 	}
 }
 
