@@ -140,7 +140,6 @@ tls_aead_t *tls_aead_create_null(integrity_algorithm_t alg)
 		.public = {
 			.encrypt = _encrypt,
 			.decrypt = _decrypt,
-			.get_iv_size = _get_iv_size,
 			.get_mac_key_size = _get_mac_key_size,
 			.get_encr_key_size = _get_encr_key_size,
 			.get_iv_size = _get_iv_size,
