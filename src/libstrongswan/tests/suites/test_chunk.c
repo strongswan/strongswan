@@ -117,10 +117,13 @@ START_TEST(test_chunk_clear)
 	}
 	chunk_clear(&chunk);
 	/* check memory area of freed chunk. We can't use ck_assert() for this
-	 * test directly, as it might allocate data at the freed area. */
-	for (i = 0; i < 64; i++)
+	 * test directly, as it might allocate data at the freed area.  comparing
+	 * two bytes at once reduces the chances of conflicts if memory got
+	 * overwritten already */
+	for (i = 0; i < 64; i += 2)
 	{
-		if (ptr[i] != 0 && ptr[i] == i)
+		if (ptr[i] != 0 && ptr[i] == i &&
+			ptr[i+1] != 0 && ptr[i+1] == i+1)
 		{
 			cleared = FALSE;
 			break;
