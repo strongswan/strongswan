@@ -421,7 +421,7 @@ static void load_aik(private_pts_t *this)
 	cert_path = lib->settings->get_str(lib->settings,
 						"%s.plugins.imc-attestation.aik_cert", NULL, lib->ns);
 	key_path = lib->settings->get_str(lib->settings,
-						"%s.plugins.imc-attestation.aik_key", NULL, lib->ns);
+						"%s.plugins.imc-attestation.aik_pubkey", NULL, lib->ns);
 
 	if (cert_path)
 	{

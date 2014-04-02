@@ -4,7 +4,7 @@ charon.plugins.imc-attestation.aik_blob =
 charon.plugins.imc-attestation.aik_cert =
 	AIK certificate file.
 
-charon.plugins.imc-attestation.aik_key =
+charon.plugins.imc-attestation.aik_pubkey =
 	AIK public key file.
 
 charon.plugins.imc-attestation.mandatory_dh_groups = yes
