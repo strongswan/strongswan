@@ -526,9 +526,10 @@ plugin_t *openssl_plugin_create()
 #ifdef OPENSSL_FIPS
 	if (fips_mode)
 	{
-		if (!FIPS_mode_set(fips_mode))
+		if (FIPS_mode() != fips_mode && !FIPS_mode_set(fips_mode))
 		{
-			DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d)", fips_mode);
+			DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d) from (%d)",
+				 fips_mode, FIPS_mode());
 			return NULL;
 		}
 	}
