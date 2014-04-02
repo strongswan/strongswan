@@ -385,7 +385,7 @@ METHOD(ike_cfg_t, equals, bool,
 		return FALSE;
 	}
 	e1 = this->proposals->create_enumerator(this->proposals);
-	e2 = this->proposals->create_enumerator(this->proposals);
+	e2 = other->proposals->create_enumerator(other->proposals);
 	while (e1->enumerate(e1, &p1) && e2->enumerate(e2, &p2))
 	{
 		if (!p1->equals(p1, p2))
