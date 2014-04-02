@@ -701,7 +701,11 @@ Suite *utils_suite_create()
 	TCase *tc;
 
 	/* force a timezone to match non-UTC conversions */
+#ifdef WIN32
+	_putenv("TZ=GST-1GDT");
+#else
 	setenv("TZ", "Europe/Zurich", 1);
+#endif
 	tzset();
 
 	s = suite_create("utils");
