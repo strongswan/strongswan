@@ -61,7 +61,5 @@ vici_tests_CFLAGS = \
 
 vici_tests_LDFLAGS = @COVERAGE_LDFLAGS@
 vici_tests_LDADD = \
-	$(top_builddir)/src/libcharon/libcharon.la \
-	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libstrongswan/tests/libtest.la

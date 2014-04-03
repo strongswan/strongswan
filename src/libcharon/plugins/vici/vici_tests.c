@@ -32,17 +32,10 @@ static test_configuration_t tests[] = {
 
 static bool test_runner_init(bool init)
 {
-	if (init)
-	{
-		libhydra_init("vici-tests");
-		libcharon_init("vici-tests");
-	}
-	else
+	if (!init)
 	{
 		lib->processor->set_threads(lib->processor, 0);
 		lib->processor->cancel(lib->processor);
-		libcharon_deinit();
-		libhydra_deinit();
 	}
 	return TRUE;
 }

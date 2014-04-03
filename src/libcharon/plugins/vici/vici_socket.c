@@ -15,7 +15,6 @@
 
 #include "vici_socket.h"
 
-#include <daemon.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <threading/thread.h>
