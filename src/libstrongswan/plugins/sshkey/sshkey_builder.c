@@ -140,8 +140,8 @@ static sshkey_public_key_t *load_from_stream(FILE *file)
 	char line[1024], *token;
 
 	while (!public && fgets(line, sizeof(line), file))
-	{	/* the format is: ssh-[rsa|ecdsa-...] <key(base64)> <identifier> */
-		if (!strpfx(line, "ssh-"))
+	{	/* the format is: ssh-rsa|ecdsa-... <key(base64)> <identifier> */
+		if (!strpfx(line, "ssh-rsa") && !strpfx(line, ECDSA_PREFIX))
 		{
 			continue;
 		}

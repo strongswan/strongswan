@@ -27,7 +27,7 @@
 typedef struct sshkey_public_key_t sshkey_public_key_t;
 
 /**
- * Public key implementation supporting RFC 4253 decoding.
+ * Public key implementation supporting RFC 4253/RFC 5656 decoding.
  */
 struct sshkey_public_key_t {
 
