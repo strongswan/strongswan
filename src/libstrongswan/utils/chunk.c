@@ -917,9 +917,16 @@ static u_char static_key[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
  */
 void chunk_hash_seed()
 {
+	static bool seeded = FALSE;
 	ssize_t len;
 	size_t done = 0;
 	int fd;
+
+	if (seeded)
+	{
+		/* just once to have the same seed during the whole process lifetimes */
+		return;
+	}
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd >= 0)
@@ -944,6 +951,7 @@ void chunk_hash_seed()
 			key[done] = (u_char)random();
 		}
 	}
+	seeded = TRUE;
 }
 
 /**

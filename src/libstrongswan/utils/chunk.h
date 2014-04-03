@@ -343,7 +343,8 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
  * Seed initial key for chunk_hash().
  *
  * This call should get invoked once during startup. This is usually done
- * by calling library_init().
+ * by calling library_init(). Calling it multiple times is safe, it gets
+ * executed just once.
  */
 void chunk_hash_seed();
 

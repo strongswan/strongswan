@@ -243,7 +243,6 @@ bool library_init(char *settings, const char *namespace)
 {
 	private_library_t *this;
 	printf_hook_t *pfh;
-	static bool seeded = FALSE;
 
 	if (lib)
 	{	/* already initialized, increase refcount */
@@ -252,13 +251,7 @@ bool library_init(char *settings, const char *namespace)
 		return !this->integrity_failed;
 	}
 
-	if (!seeded)
-	{
-		/* we do this just once to allow hash table lifetimes longer than
-		 * one init/deinit cycle. */
-		seeded = TRUE;
-		chunk_hash_seed();
-	}
+	chunk_hash_seed();
 
 	INIT(this,
 		.public = {

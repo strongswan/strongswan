@@ -44,6 +44,9 @@ void testable_functions_create()
 {
 	if (!testable_functions)
 	{
+		/* as this is executed before chunk_hash() seed initialization used
+		 * by hashtables, we enforce seeding it here. */
+		chunk_hash_seed();
 		testable_functions = hashtable_create(hashtable_hash_str,
 											  hashtable_equals_str, 8);
 	}
