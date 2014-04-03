@@ -35,35 +35,12 @@
 #define TTY(color) tty_escape_get(2, TTY_FG_##color)
 
 /**
- * Initialize the lookup table for testable functions (defined in
- * libstrongswan).  We don't use the constructor attribute as the order can't
- * really be defined (clang does not support it and gcc does not adhere to it in
- * the monolithic build).  The function here is a weak symbol in libstrongswan.
+ * A global symbol indicating libtest linkage
  */
-void testable_functions_create()
-{
-	if (!testable_functions)
-	{
-		/* as this is executed before chunk_hash() seed initialization used
-		 * by hashtables, we enforce seeding it here. */
-		chunk_hash_seed();
-		testable_functions = hashtable_create(hashtable_hash_str,
-											  hashtable_equals_str, 8);
-	}
-}
-
-/**
- * Destroy the lookup table for testable functions
- */
-static void testable_functions_destroy() __attribute__ ((destructor));
-static void testable_functions_destroy()
-{
-	DESTROY_IF(testable_functions);
-	/* if leak detective is enabled plugins are not actually unloaded, which
-	 * means their destructor is called AFTER this one when the process
-	 * terminates, make sure this does not crash */
-	testable_functions = NULL;
-}
+#ifdef WIN32
+__declspec(dllexport)
+#endif
+bool test_runner_available = TRUE;
 
 /**
  * Destroy a single test suite and associated data

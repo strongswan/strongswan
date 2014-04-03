@@ -20,13 +20,23 @@
 /**
  * A collection of testable functions
  */
-hashtable_t *testable_functions;
+static hashtable_t *functions = NULL;
+
+#ifndef WIN32
+bool test_runner_available __attribute__((weak));
+#endif
 
 /**
- * The function that actually initializes the hash table above.  Provided
- * by the test runner.
+ * Check if we have libtest linkage and need testable functions
  */
-void testable_functions_create() __attribute__((weak));
+static bool has_libtest_linkage()
+{
+#ifdef WIN32
+	return dlsym(RTLD_DEFAULT, "test_runner_available");
+#else
+	return test_runner_available;
+#endif
+}
 
 /*
  * Described in header.
@@ -35,33 +45,48 @@ void testable_function_register(char *name, void *fn)
 {
 	bool old = FALSE;
 
-	if (!testable_functions_create)
-	{	/* not linked to the test runner */
-		return;
-	}
-	else if (!fn && !testable_functions)
-	{	/* ignore as testable_functions has already been destroyed */
-		return;
-	}
-
 	if (lib && lib->leak_detective)
 	{
 		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
 	}
-	if (!testable_functions)
+
+	if (has_libtest_linkage())
 	{
-		testable_functions_create();
+		if (!functions)
+		{
+			chunk_hash_seed();
+			functions = hashtable_create(hashtable_hash_str,
+										 hashtable_equals_str, 8);
+		}
+		if (fn)
+		{
+			functions->put(functions, name, fn);
+		}
+		else
+		{
+			functions->remove(functions, name);
+			if (functions->get_count(functions) == 0)
+			{
+				functions->destroy(functions);
+				functions = NULL;
+			}
+		}
 	}
-	if (fn)
-	{
-		testable_functions->put(testable_functions, name, fn);
-	}
-	else
-	{
-		testable_functions->remove(testable_functions, name);
-	}
+
 	if (lib && lib->leak_detective)
 	{
 		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
+}
+
+/*
+ * Described in header.
+ */
+void* testable_function_get(char *name)
+{
+	if (functions)
+	{
+		return functions->get(functions, name);
+	}
+	return NULL;
 }

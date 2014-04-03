@@ -24,19 +24,20 @@
 #include "collections/hashtable.h"
 
 /**
- * Collection of testable functions.
- *
- * @note Is initialized only if libtest is loaded.
- */
-extern hashtable_t *testable_functions;
-
-/**
  * Register a (possibly static) function so that it can be called from tests.
  *
  * @param name		name (namespace/function)
  * @param fn		function to register (set to NULL to unregister)
  */
 void testable_function_register(char *name, void *fn);
+
+/**
+ * Find a previously registered testable function.
+ *
+ * @param name		name (namespace/function)
+ * @return			function, NULL if not found
+ */
+void* testable_function_get(char *name);
 
 /**
  * Macro to automatically register/unregister a function that can be called
@@ -82,10 +83,7 @@ static ret (*TEST_##ns##name)(__VA_ARGS__);
  */
 #define TEST_FUNCTION(ns, name, ...) \
 ({ \
-	if (testable_functions) \
-	{ \
-		TEST_##ns##name = testable_functions->get(testable_functions, #ns "/" #name); \
-	} \
+	TEST_##ns##name = testable_function_get( #ns "/" #name); \
 	if (!TEST_##ns##name) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, "function " #name " (" #ns ") not found"); \
