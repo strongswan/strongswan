@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -47,5 +47,16 @@ struct sshkey_public_key_t {
  * @return 			built key, NULL on failure
  */
 sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args);
+
+/**
+ * Load a public key in RFC 4253 format as certificate.
+ *
+ * Takes a BUILD_FROM_FILE and BUILD_SUBJECT argument.
+ *
+ * @param type		type of the certificate, must be CERT_TRUSTED_PUBKEY
+ * @param args		builder_part_t argument list
+ * @return			built certificate, NULL on failure
+ */
+certificate_t *sshkey_certificate_load(certificate_type_t type, va_list args);
 
 #endif /** SSHKEY_BUILDER_H_ @}*/

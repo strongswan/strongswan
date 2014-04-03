@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -234,4 +234,47 @@ sshkey_public_key_t *sshkey_public_key_load(key_type_t type, va_list args)
 		return load_from_blob(blob);
 	}
 	return NULL;
+}
+
+/**
+ * See header.
+ */
+certificate_t *sshkey_certificate_load(certificate_type_t type, va_list args)
+{
+	certificate_t *cert;
+	public_key_t *key;
+	identification_t *subject = NULL;
+	char *file = NULL;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_FROM_FILE:
+				file = va_arg(args, char*);
+				continue;
+			case BUILD_SUBJECT:
+				subject = va_arg(args, identification_t*);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!file || !subject)
+	{
+		return NULL;
+	}
+	key = (public_key_t*)load_from_file(file);
+	if (!key)
+	{
+		return NULL;
+	}
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							  CERT_TRUSTED_PUBKEY, BUILD_PUBLIC_KEY, key,
+							  BUILD_SUBJECT, subject, BUILD_END);
+	key->destroy(key);
+	return cert;
 }
