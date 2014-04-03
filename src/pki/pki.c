@@ -105,13 +105,12 @@ bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type)
 }
 
 /**
- * See header
+ * Convert a time string to struct tm using strptime format
  */
-bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
-						time_t *nb, time_t *na)
+static bool convert_time(char *str, char *format, struct tm *tm)
 {
-	struct tm tm;
-	time_t now;
+#ifdef HAVE_STRPTIME
+
 	char *end;
 
 	if (!format)
@@ -119,29 +118,84 @@ bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
 		format = "%d.%m.%y %T";
 	}
 
+	end = strptime(str, format, tm);
+	if (end == NULL || *end != '\0')
+	{
+		return FALSE;
+	}
+	return TRUE;
+
+#else /* !HAVE_STRPTIME */
+
+	if (format)
+	{
+		fprintf(stderr, "custom datetime string format not supported\n");
+		return FALSE;
+	}
+
+	if (sscanf(str, "%d.%d.%d %d:%d:%d",
+			   &tm->tm_mday, &tm->tm_mon, &tm->tm_year,
+			   &tm->tm_hour, &tm->tm_min, &tm->tm_sec) != 6)
+	{
+		return FALSE;
+	}
+	/* strptime() interprets two-digit years > 68 as 19xx, do the same here.
+	 * mktime() expects years based on 1900 */
+	if (tm->tm_year <= 68)
+	{
+		tm->tm_year += 100;
+	}
+	else if (tm->tm_year >= 1900)
+	{	/* looks like four digits? */
+		tm->tm_year -= 1900;
+	}
+	/* month is specified from 0-11 */
+	tm->tm_mon--;
+	/* automatically detect daylight saving time */
+	tm->tm_isdst = -1;
+	return TRUE;
+
+#endif /* !HAVE_STRPTIME */
+}
+
+/**
+ * See header
+ */
+bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
+						time_t *nb, time_t *na)
+{
+	struct tm tm;
+	time_t now;
+
 	now = time(NULL);
 
 	localtime_r(&now, &tm);
 	if (nbstr)
 	{
-		end = strptime(nbstr, format, &tm);
-		if (end == NULL || *end != '\0')
+		if (!convert_time(nbstr, format, &tm))
 		{
 			return FALSE;
 		}
 	}
 	*nb = mktime(&tm);
+	if (*nb == -1)
+	{
+		return FALSE;
+	}
 
 	localtime_r(&now, &tm);
 	if (nastr)
 	{
-		end = strptime(nastr, format, &tm);
-		if (end == NULL || *end != '\0')
+		if (!convert_time(nastr, format, &tm))
 		{
 			return FALSE;
 		}
 	}
 	*na = mktime(&tm);
+	if (*na == -1)
+	{
+		return FALSE;
+	}
 
 	if (!nbstr && nastr)
 	{
