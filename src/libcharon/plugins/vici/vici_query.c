@@ -723,7 +723,7 @@ CALLBACK(list_certs, vici_message_t*,
 	certificate_t *cert, *current;
 	chunk_t encoding;
 	identification_t *subject = NULL;
-	certificate_type_t type;
+	int type;
 	vici_builder_t *b;
 	bool found;
 	char *str;
