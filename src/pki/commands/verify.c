@@ -19,32 +19,53 @@
 
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/sets/mem_cred.h>
 
 /**
  * Verify a certificate signature
  */
 static int verify()
 {
-	certificate_t *cert, *ca;
-	char *file = NULL, *cafile = NULL;
-	bool good = FALSE;
-	char *arg;
+	bool trusted = FALSE, valid = FALSE, revoked = FALSE;
+	bool has_ca = FALSE, online = FALSE;
+	certificate_t *cert;
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+	mem_cred_t *creds;
+	char *arg, *file = NULL;
+
+	creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &creds->set);
 
 	while (TRUE)
 	{
 		switch (command_getopt(&arg))
 		{
 			case 'h':
+				creds->destroy(creds);
 				return command_usage(NULL);
 			case 'i':
 				file = arg;
 				continue;
 			case 'c':
-				cafile = arg;
+				cert = lib->creds->create(lib->creds,
+										  CRED_CERTIFICATE, CERT_X509,
+										  BUILD_FROM_FILE, arg, BUILD_END);
+				if (!cert)
+				{
+					fprintf(stderr, "parsing CA certificate failed\n");
+					goto end;
+				}
+				has_ca = TRUE;
+				creds->add_cert(creds, TRUE, cert);
+				continue;
+			case 'o':
+				online = TRUE;
 				continue;
 			case EOF:
 				break;
 			default:
+				creds->destroy(creds);
 				return command_usage("invalid --verify option");
 		}
 		break;
@@ -63,7 +84,7 @@ static int verify()
 		if (!chunk_from_fd(0, &chunk))
 		{
 			fprintf(stderr, "reading certificate failed: %s\n", strerror(errno));
-			return 1;
+			goto end;
 		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB, chunk, BUILD_END);
@@ -72,60 +93,76 @@ static int verify()
 	if (!cert)
 	{
 		fprintf(stderr, "parsing certificate failed\n");
-		return 1;
+		goto end;
 	}
-	if (cafile)
+	creds->add_cert(creds, !has_ca, cert);
+
+	enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
+									KEY_ANY, cert->get_subject(cert), online);
+	if (enumerator->enumerate(enumerator, &cert, &auth))
 	{
-		ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								BUILD_FROM_FILE, cafile, BUILD_END);
-		if (!ca)
-		{
-			fprintf(stderr, "parsing CA certificate failed\n");
-			return 1;
-		}
-	}
-	else
-	{
-		ca = cert;
-	}
-	if (cert->issued_by(cert, ca, NULL))
-	{
+		trusted = TRUE;
 		if (cert->get_validity(cert, NULL, NULL, NULL))
 		{
-			if (cafile)
-			{
-				if (ca->get_validity(ca, NULL, NULL, NULL))
-				{
-					printf("signature good, certificates valid\n");
-					good = TRUE;
-				}
-				else
-				{
-					printf("signature good, CA certificates not valid now\n");
-				}
-			}
-			else
-			{
-				printf("signature good, certificate valid\n");
-				good = TRUE;
-			}
+			printf("certificate trusted, lifetimes valid");
+			valid = TRUE;
 		}
 		else
 		{
-			printf("certificate not valid now\n");
+			printf("certificate trusted, but no valid lifetime");
 		}
+		if (online)
+		{
+			switch ((uintptr_t)auth->get(auth, AUTH_RULE_CRL_VALIDATION))
+			{
+				case VALIDATION_GOOD:
+					printf(", certificate not revoked");
+					break;
+				case VALIDATION_SKIPPED:
+					printf(", no revocation information");
+					break;
+				case VALIDATION_STALE:
+					printf(", revocation information stale");
+					break;
+				case VALIDATION_FAILED:
+					printf(", revocation checking failed");
+					break;
+				case VALIDATION_ON_HOLD:
+					printf(", certificate revocation on hold");
+					revoked = TRUE;
+					break;
+				case VALIDATION_REVOKED:
+					printf(", certificate revoked");
+					revoked = TRUE;
+					break;
+			}
+		}
+		printf("\n");
 	}
-	else
-	{
-		printf("signature invalid\n");
-	}
-	if (cafile)
-	{
-		ca->destroy(ca);
-	}
-	cert->destroy(cert);
+	enumerator->destroy(enumerator);
 
-	return good ? 0 : 2;
+	if (!trusted)
+	{
+		printf("certificate untrusted\n");
+	}
+
+end:
+	lib->credmgr->remove_set(lib->credmgr, &creds->set);
+	creds->destroy(creds);
+
+	if (!trusted)
+	{
+		return 1;
+	}
+	if (!valid)
+	{
+		return 2;
+	}
+	if (revoked)
+	{
+		return 3;
+	}
+	return 0;
 }
 
 /**
@@ -140,7 +177,8 @@ static void __attribute__ ((constructor))reg()
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "X.509 certificate to verify, default: stdin"},
-			{"cacert",	'c', 1, "CA certificate, default: verify self signed"},
+			{"cacert",	'c', 1, "CA certificate for trustchain verification"},
+			{"online",	'o', 0, "enable online CRL/OCSP revocation checking"},
 		}
 	});
 }

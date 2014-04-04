@@ -1160,9 +1160,9 @@ s_plugins=
 t_plugins=
 
 ADD_PLUGIN([test-vectors],         [s charon scepclient pki])
-ADD_PLUGIN([curl],                 [s charon scepclient scripts nm cmd])
-ADD_PLUGIN([winhttp],              [s charon scripts])
-ADD_PLUGIN([soup],                 [s charon scripts nm cmd])
+ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([winhttp],              [s charon pki scripts])
+ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([unbound],              [s charon scripts])
 ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
@@ -1180,7 +1180,7 @@ ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attes
 ADD_PLUGIN([random],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
 ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen])
-ADD_PLUGIN([revocation],           [s charon nm cmd])
+ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd aikgen])
