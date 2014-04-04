@@ -42,25 +42,9 @@ CREATE TABLE file_hashes (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   file INTEGER NOT NULL REFERENCES files(id),
   product INTEGER NOT NULL REFERENCES products(id),
-  device INTEGER DEFAULT 0,
-  key INTEGER DEFAULT 0 REFERENCES keys(id),
+  device INTEGER DEFAULT 0 REFERENCES devices(id),
   algo INTEGER NOT NULL REFERENCES algorithms(id),
   hash BLOB NOT NULL
-);
-
-DROP TABLE IF EXISTS keys;
-CREATE TABLE keys (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  keyid BLOB NOT NULL,
-  owner TEXT NOT NULL
-);
-DROP INDEX IF EXISTS keys_keyid;
-CREATE INDEX keys_keyid ON keys (
-  keyid
-);
-DROP INDEX IF EXISTS keys_owner;
-CREATE INDEX keys_owner ON keys (
-  owner
 );
 
 DROP TABLE IF EXISTS groups;
@@ -159,17 +143,6 @@ CREATE TABLE components (
   qualifier INTEGER DEFAULT 0
 );
 
-
-DROP TABLE IF EXISTS key_component;
-CREATE TABLE key_component (
-  key INTEGER NOT NULL,
-  component INTEGER NOT NULL,
-  depth INTEGER DEFAULT 0,
-  seq_no INTEGER DEFAULT 0,
-  PRIMARY KEY (key, component)
-);
-
-
 DROP TABLE IF EXISTS component_hashes;
 CREATE TABLE component_hashes (
   component INTEGER NOT NULL,
@@ -217,6 +190,7 @@ CREATE TABLE devices (
   description TEXT DEFAULT '',
   value TEXT NOT NULL,
   product INTEGER REFERENCES products(id),
+  trusted INTEGER DEFAULT 0,
   created INTEGER
 );
 DROP INDEX IF EXISTS devices_id;

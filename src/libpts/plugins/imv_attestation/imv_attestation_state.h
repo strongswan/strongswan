@@ -40,10 +40,14 @@ typedef enum imv_meas_error_t imv_meas_error_t;
  * IMV Attestation Flags set for completed actions
  */
 enum imv_attestation_flag_t {
-	IMV_ATTESTATION_FLAG_ATTR_REQ =  (1<<0),
-	IMV_ATTESTATION_FLAG_ALGO =      (1<<1),
-	IMV_ATTESTATION_FLAG_FILE_MEAS = (1<<2),
-	IMV_ATTESTATION_FLAG_REC =       (1<<3)
+	IMV_ATTESTATION_ATTR_PRODUCT_INFO =   (1<<0),
+	IMV_ATTESTATION_ATTR_STRING_VERSION = (1<<1),
+	IMV_ATTESTATION_ATTR_MUST =           (1<<2)-1,
+	IMV_ATTESTATION_ATTR_DEVICE_ID =      (1<<2),
+	IMV_ATTESTATION_ATTR_REQ =            (1<<3),
+	IMV_ATTESTATION_ALGO =                (1<<4),
+	IMV_ATTESTATION_FILE_MEAS =           (1<<5),
+	IMV_ATTESTATION_REC =                 (1<<6)
 };
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ struct private_imv_agent_t {
 	/**
 	 * number of message types registered by IMV
 	 */
-	u_int32_t type_count;
+	uint32_t type_count;
 
 	/**
 	 * ID of IMV as assigned by TNCS
@@ -296,10 +296,7 @@ static bool delete_connection(private_imv_agent_t *this, TNC_ConnectionID id)
 		{
 			found = TRUE;
 			session = state->get_session(state);
-			if (session)
-			{
-				imcv_db->remove_session(imcv_db, session);
-			}
+			imcv_sessions->remove_session(imcv_sessions, session);
 			state->destroy(state);
 			this->connections->remove_at(this->connections, enumerator);
 			break;
@@ -346,7 +343,7 @@ static char* get_str_attribute(private_imv_agent_t *this, TNC_ConnectionID id,
 /**
  * Read an UInt32 attribute
  */
-static u_int32_t get_uint_attribute(private_imv_agent_t *this, TNC_ConnectionID id,
+static uint32_t get_uint_attribute(private_imv_agent_t *this, TNC_ConnectionID id,
 									TNC_AttributeID attribute_id)
 {
 	TNC_UInt32 len;
@@ -370,7 +367,7 @@ static linked_list_t* get_identity_attribute(private_imv_agent_t *this,
 {
 	TNC_UInt32 len;
 	char buf[2048];
-	u_int32_t count;
+	uint32_t count;
 	tncif_identity_t *tnc_id;
 	bio_reader_t *reader;
 	linked_list_t *list;
@@ -415,8 +412,8 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	enumerator_t *enumerator;
 	tncif_identity_t *tnc_id;
 	imv_session_t *session;
-	u_int32_t max_msg_len;
-	u_int32_t ar_id_type = TNC_ID_UNKNOWN;
+	uint32_t max_msg_len;
+	uint32_t ar_id_type = TNC_ID_UNKNOWN;
 	chunk_t ar_id_value = chunk_empty;
 
 	conn_id = state->get_connection_id(state);
@@ -453,7 +450,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	while (enumerator->enumerate(enumerator, &tnc_id))
 	{
 		pen_type_t id_type, subject_type, auth_type;
-		u_int32_t tcg_id_type, tcg_subject_type, tcg_auth_type;
+		uint32_t tcg_id_type, tcg_subject_type, tcg_auth_type;
 		chunk_t id_value;
 
 		id_type = tnc_id->get_identity_type(tnc_id);
@@ -474,30 +471,21 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 			 id_value.len, id_value.ptr,
 			 TNC_Authentication_names, tcg_auth_type);
 
+		/* keep the first access requestor ID */
 		if (first)
 		{
 			ar_id_type = tcg_id_type;
 			ar_id_value = id_value;
-			state->set_ar_id(state, ar_id_type, ar_id_value);
 			first = FALSE;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (imcv_db)
-	{
-		session = imcv_db->add_session(imcv_db, conn_id, ar_id_type, ar_id_value);
-		if (session)
-		{
-			DBG2(DBG_IMV, "  assigned session ID %d",
-				 session->get_session_id(session));
-			state->set_session(state, session);
-		}
-		else
-		{
-			DBG1(DBG_IMV, "  no session ID assigned");
-		}
-	}
+	session = imcv_sessions->add_session(imcv_sessions, conn_id,
+										 ar_id_type, ar_id_value);
+	state->set_session(state, session);
+
+	/* clean up temporary variables */
 	ar_identities->destroy_offset(ar_identities,
 						   offsetof(tncif_identity_t, destroy));
 	free(tnccs_p);
@@ -505,9 +493,11 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	free(t_p);
 	free(t_v);
 
+	/* insert state in connection list */
 	this->connection_lock->write_lock(this->connection_lock);
 	this->connections->insert_last(this->connections, state);
 	this->connection_lock->unlock(this->connection_lock);
+
 	return TNC_RESULT_SUCCESS;
 }
 
@@ -800,7 +790,7 @@ METHOD(imv_agent_t, destroy, void,
  * Described in header.
  */
 imv_agent_t *imv_agent_create(const char *name,
-							  pen_type_t *supported_types, u_int32_t type_count,
+							  pen_type_t *supported_types, uint32_t type_count,
 							  TNC_IMVID id, TNC_Version *actual_version)
 {
 	private_imv_agent_t *this;

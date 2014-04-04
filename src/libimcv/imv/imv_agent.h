@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -205,7 +205,7 @@ struct imv_agent_t {
  *
  */
 imv_agent_t *imv_agent_create(const char *name,
-							  pen_type_t *supported_types, u_int32_t type_count,
+							  pen_type_t *supported_types, uint32_t type_count,
 							  TNC_IMVID id, TNC_Version *actual_version);
 
 #endif /** IMV_AGENT_H_ @}*/

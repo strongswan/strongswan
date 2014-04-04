@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -61,7 +61,7 @@ struct pts_database_t {
 	* Check if an AIK given by its keyid is registered in the database
 	*
 	* @param keyid			AIK keyid (SHA-1 hash of the AIK public key info)
-	* @param kid			Primary key of AIK entry in keys table
+	* @param kid			Primary key of AIK entry in devices table
 	* @return				SUCCESS if AIK is present, FAILED otherwise
 	*/
 	status_t (*check_aik_keyid)(pts_database_t *this, chunk_t keyid, int *kid);

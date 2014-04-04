@@ -41,19 +41,26 @@ struct private_imv_os_database_t {
 };
 
 METHOD(imv_os_database_t, check_packages, status_t,
-	private_imv_os_database_t *this, imv_os_state_t *state,
+	private_imv_os_database_t *this, imv_os_state_t *os_state,
 	enumerator_t *package_enumerator)
 {
+	imv_state_t *state;
+	imv_session_t *session;
+	imv_os_info_t *os_info;
+	os_type_t os_type;
 	char *product, *package, *release, *cur_release;
 	chunk_t name, version;
-	os_type_t os_type;
 	int pid, gid, security, blacklist;
 	int count = 0, count_ok = 0, count_no_match = 0, count_blacklist = 0;
 	enumerator_t *e;
 	status_t status = SUCCESS;
 	bool found, match;
 
-	product = state->get_info(state, &os_type, NULL, NULL);
+	state = &os_state->interface;
+	session = state->get_session(state);
+	os_info = session->get_os_info(session);
+	os_type = os_info->get_type(os_info);
+	product = os_info->get_info(os_info);
 
 	if (os_type == OS_TYPE_ANDROID)
 	{
@@ -143,8 +150,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 					DBG2(DBG_IMV, "package '%s' (%s) is blacklisted",
 								   package, release);
 					count_blacklist++;
-					state->add_bad_package(state, package,
-										   OS_PACKAGE_STATE_BLACKLIST);
+					os_state->add_bad_package(os_state, package,
+											  OS_PACKAGE_STATE_BLACKLIST);
 				}
 				else
 				{
@@ -157,8 +164,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 			{
 				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
 				count_no_match++;
-				state->add_bad_package(state, package,
-									   OS_PACKAGE_STATE_SECURITY);
+				os_state->add_bad_package(os_state, package,
+										  OS_PACKAGE_STATE_SECURITY);
 			}
 		}
 		else
@@ -168,7 +175,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		free(package);
 		free(release);
 	}
-	state->set_count(state, count, count_no_match, count_blacklist, count_ok);
+	os_state->set_count(os_state, count, count_no_match,
+								  count_blacklist, count_ok);
 
 	return status;
 }

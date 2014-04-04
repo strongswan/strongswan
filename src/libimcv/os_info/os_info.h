@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,86 +68,11 @@ enum os_fwd_status_t {
 extern enum_name_t *os_fwd_status_names;
 
 /**
- * Interface for the Operating System (OS) information module
- */
-struct os_info_t {
-
-	/**
-	 * Get the OS type if it can be determined
-	 *
-	 * @return					OS type
-	 */
-	os_type_t (*get_type)(os_info_t *this);
-
-	/**
-	 * Get the OS product name or distribution
-	 *
-	 * @return					OS name
-	 */
-	chunk_t (*get_name)(os_info_t *this);
-
-	/**
-	 * Get the numeric OS version or release
-	 *
-	 * @param major				OS major version number
-	 * @param minor				OS minor version number
-	 */
-	void (*get_numeric_version)(os_info_t *this, u_int32_t *major,
-												 u_int32_t *minor);
-
-	/**
-	 * Get the OS version or release
-	 *
-	 * @return					OS version
-	 */
-	chunk_t (*get_version)(os_info_t *this);
-
-	/**
-	 * Get the OS IPv4 forwarding status
-	 *
-	 * @return					IP forwarding status
-	 */
-	os_fwd_status_t (*get_fwd_status)(os_info_t *this);
-
-	/**
-	 * Get the OS uptime in seconds
-	 *
-	 * @return					OS uptime
-	 */
-	time_t (*get_uptime)(os_info_t *this);
-
-	/**
-	 * Get an OS setting (restricted to /proc, /sys, and /etc)
-	 *
-	 * @param name				name of OS setting
-	 * @return					value of OS setting
-	 */
-	chunk_t (*get_setting)(os_info_t *this, char *name);
-
-	/**
-	 * Enumerates over all installed packages
-	 *
-	 * @return				return package enumerator
-	 */
-	enumerator_t* (*create_package_enumerator)(os_info_t *this);
-
-	/**
-	 * Destroys an os_info_t object.
-	 */
-	void (*destroy)(os_info_t *this);
-};
-
-/**
  * Convert an OS name into an OS enumeration type
  *
- * @param name				OS name
- * @return					OS enumeration type
+ * @param name							OS name
+ * @return								OS enumeration type
  */
 os_type_t os_type_from_name(chunk_t name);
-
-/**
- * Create an os_info_t object
- */
-os_info_t* os_info_create(void);
 
 #endif /** OS_INFO_H_ @}*/

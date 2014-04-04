@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +18,7 @@
 #include "imv/imv_lang_string.h"
 #include "imv/imv_reason_string.h"
 #include "imv/imv_remediation_string.h"
+#include "imv/imv_os_info.h"
 
 #include <tncif_policy.h>
 
@@ -62,22 +63,12 @@ struct private_imv_os_state_t {
 	/**
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	/**
 	 * Flags set for completed actions
 	 */
-	u_int32_t action_flags;
-
-	/**
-	 * Access Requestor ID Type
-	 */
-	u_int32_t ar_id_type;
-
-	/**
-	 * Access Requestor ID Value
-	 */
-	chunk_t ar_id_value;
+	uint32_t action_flags;
 
 	/**
 	 * IMV database session associated with TNCCS connection
@@ -100,32 +91,12 @@ struct private_imv_os_state_t {
 	imv_os_handshake_state_t handshake_state;
 
 	/**
-	 * OS Product Information (concatenation of OS Name and Version)
-	 */
-	char *info;
-
-	/**
-	 * OS Type
-	 */
-	os_type_t type;
-
-	/**
-	 * OS Name
-	 */
-	chunk_t name;
-
-	/**
-	 * OS Version
-	 */
-	chunk_t version;
-
-	/**
 	 * List of blacklisted packages to be removed
 	 */
 	linked_list_t *remove_packages;
 
 	/**
-	 * List of vulnerable packages to be updated
+	 h* List of vulnerable packages to be updated
 	 */
 	linked_list_t *update_packages;
 
@@ -138,11 +109,6 @@ struct private_imv_os_state_t {
 	 * IETF Remediation Instructions String
 	 */
 	imv_remediation_string_t *remediation_string;
-
-	/**
-	 * Dgevice ID
-	 */
-	chunk_t device_id;
 
 	/**
 	 * Number of processed packages
@@ -326,44 +292,27 @@ METHOD(imv_state_t, set_flags, void,
 }
 
 METHOD(imv_state_t, set_max_msg_len, void,
-	private_imv_os_state_t *this, u_int32_t max_msg_len)
+	private_imv_os_state_t *this, uint32_t max_msg_len)
 {
 	this->max_msg_len = max_msg_len;
 }
 
-METHOD(imv_state_t, get_max_msg_len, u_int32_t,
+METHOD(imv_state_t, get_max_msg_len, uint32_t,
 	private_imv_os_state_t *this)
 {
 	return this->max_msg_len;
 }
 
 METHOD(imv_state_t, set_action_flags, void,
-	private_imv_os_state_t *this, u_int32_t flags)
+	private_imv_os_state_t *this, uint32_t flags)
 {
 	this->action_flags |= flags;
 }
 
-METHOD(imv_state_t, get_action_flags, u_int32_t,
+METHOD(imv_state_t, get_action_flags, uint32_t,
 	private_imv_os_state_t *this)
 {
 	return this->action_flags;
-}
-
-METHOD(imv_state_t, set_ar_id, void,
-	private_imv_os_state_t *this, u_int32_t id_type, chunk_t id_value)
-{
-	this->ar_id_type = id_type;
-	this->ar_id_value = chunk_clone(id_value);
-}
-
-METHOD(imv_state_t, get_ar_id, chunk_t,
-	private_imv_os_state_t *this, u_int32_t *id_type)
-{
-	if (id_type)
-	{
-		*id_type = this->ar_id_type;
-	}
-	return this->ar_id_value;
 }
 
 METHOD(imv_state_t, set_session, void,
@@ -440,6 +389,9 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_os_state_t *this, enumerator_t *language_enumerator,
 	chunk_t *string, char **lang_code, char **uri)
 {
+	imv_os_info_t *os_info;
+	bool as_xml = FALSE;
+
 	if (!this->count_update && !this->count_blacklist & !this->os_settings)
 	{
 		return FALSE;
@@ -449,8 +401,12 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 
 	/* Instantiate an IETF Remediation Instructions String object */
 	DESTROY_IF(this->remediation_string);
-	this->remediation_string = imv_remediation_string_create(
-									this->type == OS_TYPE_ANDROID, *lang_code);
+	if (this->session)
+	{
+		os_info = this->session->get_os_info(this->session);
+		as_xml = os_info->get_type(os_info) == OS_TYPE_ANDROID;
+	}
+	this->remediation_string = imv_remediation_string_create(as_xml, *lang_code);
 
 	/* List of blacklisted packages to be removed, if any */
 	if (this->count_blacklist)
@@ -507,11 +463,6 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->remediation_string);
 	this->update_packages->destroy_function(this->update_packages, free);
 	this->remove_packages->destroy_function(this->remove_packages, free);
-	free(this->info);
-	free(this->name.ptr);
-	free(this->version.ptr);
-	free(this->ar_id_value.ptr);
-	free(this->device_id.ptr);
 	free(this);
 }
 
@@ -527,39 +478,6 @@ METHOD(imv_os_state_t, get_handshake_state, imv_os_handshake_state_t,
 	return this->handshake_state;
 }
 
-METHOD(imv_os_state_t, set_info, void,
-	private_imv_os_state_t *this, os_type_t type, chunk_t name, chunk_t version)
-{
-	int len = name.len + 1 + version.len + 1;
-
-	/* OS info is a concatenation of OS name and OS version */
-	free(this->info);
-	this->info = malloc(len);
-	snprintf(this->info, len, "%.*s %.*s", (int)name.len, name.ptr,
-										   (int)version.len, version.ptr);
-	this->type = type;
-	this->name = chunk_clone(name);
-	this->version = chunk_clone(version);
-}
-
-METHOD(imv_os_state_t, get_info, char*,
-	private_imv_os_state_t *this, os_type_t *type, chunk_t *name,
-	chunk_t *version)
-{
-	if (type)
-	{
-		*type = this->type;
-	}
-	if (name)
-	{
-		*name = this->name;
-	}
-	if (version)
-	{
-		*version = this->version;
-	}
-	return this->info;
-}
 
 METHOD(imv_os_state_t, set_count, void,
 	private_imv_os_state_t *this, int count, int count_update,
@@ -591,18 +509,6 @@ METHOD(imv_os_state_t, get_count, void,
 	{
 		*count_ok = this->count_ok;
 	}
-}
-
-METHOD(imv_os_state_t, set_device_id, void,
-	private_imv_os_state_t *this, chunk_t id)
-{
-	this->device_id = chunk_clone(id);
-}
-
-METHOD(imv_os_state_t, get_device_id, chunk_t,
-	private_imv_os_state_t *this)
-{
-	return this->device_id;
 }
 
 METHOD(imv_os_state_t, set_os_settings, void,
@@ -663,8 +569,6 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_action_flags = _set_action_flags,
 				.get_action_flags = _get_action_flags,
-				.set_ar_id = _set_ar_id,
-				.get_ar_id = _get_ar_id,
 				.set_session = _set_session,
 				.get_session = _get_session,
 				.change_state = _change_state,
@@ -677,12 +581,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_handshake_state = _set_handshake_state,
 			.get_handshake_state = _get_handshake_state,
-			.set_info = _set_info,
-			.get_info = _get_info,
 			.set_count = _set_count,
 			.get_count = _get_count,
-			.set_device_id = _set_device_id,
-			.get_device_id = _get_device_id,
 			.set_os_settings = _set_os_settings,
 			.get_os_settings = _get_os_settings,
 			.set_angel_count = _set_angel_count,

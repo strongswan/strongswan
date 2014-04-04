@@ -32,6 +32,11 @@
 pa_tnc_attr_manager_t *imcv_pa_tnc_attributes;
 
 /**
+ * Global list of IMV sessions
+ */
+imv_session_manager_t *imcv_sessions;
+
+/**
  * Global IMV database
  */
 imv_database_t *imcv_db;
@@ -149,9 +154,12 @@ bool libimcv_init(bool is_imv)
 		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_ITA,
 							ita_attr_create_from_data, ita_attr_names);
 
-		/* attach global IMV database */
 		if (is_imv)
 		{
+			/* instantiate global IMV session manager */
+			imcv_sessions = imv_session_manager_create();
+
+			/* instantiate and attach global IMV database if URI is valid */
 			uri = lib->settings->get_str(lib->settings,
 						"%s.imcv.database", NULL, lib->ns);
 			script = lib->settings->get_str(lib->settings,
@@ -181,6 +189,7 @@ void libimcv_deinit(void)
 		DESTROY_IF(imcv_pa_tnc_attributes);
 		imcv_pa_tnc_attributes = NULL;
 		DESTROY_IF(imcv_db);
+		DESTROY_IF(imcv_sessions);
 		DBG1(DBG_LIB, "libimcv terminated");
 	}
 	if (ref_put(&libstrongswan_ref))

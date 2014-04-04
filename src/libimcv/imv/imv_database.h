@@ -56,26 +56,6 @@ struct imv_database_t {
 	 void (*remove_session)(imv_database_t *this, imv_session_t *session);
 
 	/**
-	 * Add product information string to a session database entry
-	 *
-	 * @param session		Session
-	 * @param product		Product information string
-	 * @return				Product ID
-	 */
-	 int (*add_product)(imv_database_t *this, imv_session_t *session,
-						char *product);
-
-	/**
-	 * Add device identification to a session database entry
-	 *
-	 * @param session		Session
-	 * @param device		Device identification
-	 * @return				Device ID
-	 */
-	 int (*add_device)(imv_database_t *this, imv_session_t *session,
-					   chunk_t device);
-
-	/**
 	 * Add final recommendation to a session database entry
 	 *
 	 * @param session		Session

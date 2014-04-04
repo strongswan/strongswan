@@ -63,22 +63,12 @@ struct private_imv_attestation_state_t {
 	/**
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	/**
 	 * Flags set for completed actions
 	 */
-	u_int32_t action_flags;
-
-	/**
-	 * Access Requestor ID Type
-	 */
-	u_int32_t ar_id_type;
-
-	/**
-	 * Access Requestor ID Value
-	 */
-	chunk_t ar_id_value;
+	uint32_t action_flags;
 
 	/**
 	 * IMV database session associated with TNCCS connection
@@ -113,7 +103,7 @@ struct private_imv_attestation_state_t {
 	/**
 	 * Measurement error flags
 	 */
-	u_int32_t measurement_error;
+	uint32_t measurement_error;
 
 	/**
 	 * TNC Reason String
@@ -215,44 +205,27 @@ METHOD(imv_state_t, set_flags, void,
 }
 
 METHOD(imv_state_t, set_max_msg_len, void,
-	private_imv_attestation_state_t *this, u_int32_t max_msg_len)
+	private_imv_attestation_state_t *this, uint32_t max_msg_len)
 {
 	this->max_msg_len = max_msg_len;
 }
 
-METHOD(imv_state_t, get_max_msg_len, u_int32_t,
+METHOD(imv_state_t, get_max_msg_len, uint32_t,
 	private_imv_attestation_state_t *this)
 {
 	return this->max_msg_len;
 }
 
 METHOD(imv_state_t, set_action_flags, void,
-	private_imv_attestation_state_t *this, u_int32_t flags)
+	private_imv_attestation_state_t *this, uint32_t flags)
 {
 	this->action_flags |= flags;
 }
 
-METHOD(imv_state_t, get_action_flags, u_int32_t,
+METHOD(imv_state_t, get_action_flags, uint32_t,
 	private_imv_attestation_state_t *this)
 {
 	return this->action_flags;
-}
-
-METHOD(imv_state_t, set_ar_id, void,
-	private_imv_attestation_state_t *this, u_int32_t id_type, chunk_t id_value)
-{
-	this->ar_id_type = id_type;
-	this->ar_id_value = chunk_clone(id_value);
-}
-
-METHOD(imv_state_t, get_ar_id, chunk_t,
-	private_imv_attestation_state_t *this, u_int32_t *id_type)
-{
-	if (id_type)
-	{
-		*id_type = this->ar_id_type;
-	}
-	return this->ar_id_value;
 }
 
 METHOD(imv_state_t, set_session, void,
@@ -362,7 +335,6 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->reason_string);
 	this->components->destroy_function(this->components, (void *)free_func_comp);
 	this->pts->destroy(this->pts);
-	free(this->ar_id_value.ptr);
 	free(this);
 }
 
@@ -387,7 +359,7 @@ METHOD(imv_attestation_state_t, get_pts, pts_t*,
 
 METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 	private_imv_attestation_state_t *this, pts_comp_func_name_t *name,
-	u_int32_t depth, pts_database_t *pts_db)
+	uint32_t depth, pts_database_t *pts_db)
 {
 	enumerator_t *enumerator;
 	func_comp_t *entry, *new_entry;
@@ -438,7 +410,7 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
  * Enumerate file measurement entries
  */
 static bool entry_filter(void *null, func_comp_t **entry, u_int8_t *flags,
-						 void *i2, u_int32_t *depth,
+						 void *i2, uint32_t *depth,
 						 void *i3, pts_comp_func_name_t **comp_name)
 {
 	pts_component_t *comp;
@@ -482,14 +454,14 @@ METHOD(imv_attestation_state_t, get_component, pts_component_t*,
 	return found;
 }
 
-METHOD(imv_attestation_state_t, get_measurement_error, u_int32_t,
+METHOD(imv_attestation_state_t, get_measurement_error, uint32_t,
 	private_imv_attestation_state_t *this)
 {
 	return this->measurement_error;
 }
 
 METHOD(imv_attestation_state_t, set_measurement_error, void,
-	private_imv_attestation_state_t *this, u_int32_t error)
+	private_imv_attestation_state_t *this, uint32_t error)
 {
 	this->measurement_error |= error;
 }
@@ -529,8 +501,6 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_action_flags = _set_action_flags,
 				.get_action_flags = _get_action_flags,
-				.set_ar_id = _set_ar_id,
-				.get_ar_id = _get_ar_id,
 				.set_session = _set_session,
 				.get_session = _get_session,
 				.change_state = _change_state,

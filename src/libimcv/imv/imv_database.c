@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -47,48 +47,28 @@ struct private_imv_database_t {
 	 */
 	char *script;
 
-	/**
-	 * Session list
-	 */
-	linked_list_t *sessions;
-
-	/**
-	 * mutex used to lock session list
-	 */
-	mutex_t *mutex;
-
 };
 
-METHOD(imv_database_t, add_session, imv_session_t*,
-	private_imv_database_t *this, TNC_ConnectionID conn_id,
-	u_int32_t ar_id_type, chunk_t ar_id_value)
+METHOD(imv_database_t, get_database, database_t*,
+	private_imv_database_t *this)
 {
-	enumerator_t *enumerator, *e;
-	imv_session_t *current, *session = NULL;
-	int ar_id = 0, session_id;
-	u_int created;
+	return this->db;
+}
 
-	this->mutex->lock(this->mutex);
+/**
+ * Create a session entry in the IMV database
+ */
+static bool create_session(private_imv_database_t *this, imv_session_t *session)
+{
+	enumerator_t *e;
+	imv_os_info_t *os_info;
+	chunk_t device_id, ar_id_value;
+	TNC_ConnectionID conn_id;
+	uint32_t ar_id_type;
+	char *product, *device;
+	int session_id = 0, ar_id = 0, pid = 0, did = 0, trusted = 0, created;
 
-	/* check if a session has already been assigned */
-	enumerator = this->sessions->create_enumerator(this->sessions);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (conn_id == current->get_connection_id(current))
-		{
-			session = current;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	/* session already exists */
-	if (session)
-	{
-		this->mutex->unlock(this->mutex);
-		return session->get_ref(session);
-	}
-
+	ar_id_value = session->get_ar_id(session, &ar_id_type);
 	if (ar_id_value.len)
 	{
 		/* get primary key of AR identity if it exists */
@@ -108,46 +88,22 @@ METHOD(imv_database_t, add_session, imv_session_t*,
 				"INSERT INTO identities (type, value) VALUES (?, ?)",
 				 DB_INT, ar_id_type, DB_BLOB, ar_id_value);
 		}
-	}
-	/* create a new session entry */
-	created = time(NULL);
-	this->db->execute(this->db, &session_id,
-				"INSERT INTO sessions (time, connection, identity) "
-				"VALUES (?, ?, ?)",
-				DB_UINT, created, DB_INT, conn_id, DB_INT, ar_id);
-	session = imv_session_create(session_id, conn_id);
-	this->sessions->insert_last(this->sessions, session);
 
-	this->mutex->unlock(this->mutex);
-
-	return session;
-}
-
-METHOD(imv_database_t, remove_session, void,
-	private_imv_database_t *this, imv_session_t *session)
-{
-	enumerator_t *enumerator;
-	imv_session_t *current;
-
-	this->mutex->lock(this->mutex);
-	enumerator = this->sessions->create_enumerator(this->sessions);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (current == session)
+		if (!ar_id)
 		{
-			this->sessions->remove_at(this->sessions, enumerator);
-			break;
+			DBG1(DBG_IMV, "imv_db: registering access requestor failed");
+			return FALSE;
 		}
 	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
-}
 
-METHOD(imv_database_t, add_product, int,
-	private_imv_database_t *this, imv_session_t *session, char *product)
-{
-	enumerator_t *e;
-	int pid = 0;
+	/* get product info string */
+	os_info = session->get_os_info(session);
+	product = os_info->get_info(os_info);
+	if (!product)
+	{
+		DBG1(DBG_IMV, "imv_db: product info is not available");
+		return FALSE;
+	}
 
 	/* get primary key of product info string if it exists */
 	e = this->db->query(this->db,
@@ -164,92 +120,150 @@ METHOD(imv_database_t, add_product, int,
 		this->db->execute(this->db, &pid,
 			"INSERT INTO products (name) VALUES (?)", DB_TEXT, product);
 	}
+
+	if (!pid)
+	{
+		DBG1(DBG_IMV, "imv_db: registering product info failed");
+		return FALSE;
+	}
 	
-	/* add product reference to session */
-	if (pid)
+	/* get device ID string */
+	if (!session->get_device_id(session, &device_id))
 	{
-		this->db->execute(this->db, NULL,
-			"UPDATE sessions SET product = ? WHERE id = ?",
-			 DB_INT, pid, DB_INT, session->get_session_id(session));
+		DBG1(DBG_IMV, "imv_db: device ID is not available");
+		return FALSE;
 	}
+	device = strndup(device_id.ptr, device_id.len);
 
-	return pid;
-}
-
-METHOD(imv_database_t, add_device, int,
-	private_imv_database_t *this, imv_session_t *session, chunk_t device)
-{
-	enumerator_t *e;
-	char *device_str;
-	int pid = 0, did = 0;
-
-	/* get primary key of product from session */
+	/* get primary key of device ID if it exists */
 	e = this->db->query(this->db,
-			"SELECT product FROM sessions WHERE id = ?",
-			 DB_INT, session->get_session_id(session), DB_INT);
+			"SELECT id, trusted FROM devices WHERE value = ? AND product = ?",
+			 DB_TEXT, device, DB_INT, pid, DB_INT, DB_INT);
 	if (e)
 	{
-		e->enumerate(e, &pid);
+		e->enumerate(e, &did, &trusted);
 		e->destroy(e);
 	}
 
-	/* some IMV policy manager expect a text string */
-	device_str = strndup(device.ptr, device.len);
-
-	/* get primary key of device identification if it exists */
-	e = this->db->query(this->db,
-			"SELECT id FROM devices WHERE value = ? AND product = ?",
-			 DB_TEXT, device_str, DB_INT, pid, DB_INT);
-	if (e)
+	/* if device ID is trusted, set trust in session */
+	if (trusted)
 	{
-		e->enumerate(e, &did);
-		e->destroy(e);
+		session->set_device_trust(session, TRUE);
 	}
 
-	/* if device identification has not been found - register it */
+	/* if device ID has not been found - register it */
 	if (!did)
 	{
 		this->db->execute(this->db, &did,
 			"INSERT INTO devices (value, product) VALUES (?, ?)",
-			 DB_TEXT, device_str, DB_INT, pid);
+			 DB_TEXT, device, DB_INT, pid);
 	}
-	free(device_str);
-	
-	/* add device reference to session */
-	if (did)
+	free(device);
+
+	if (!did)
 	{
-		this->db->execute(this->db, NULL,
-			"UPDATE sessions SET device = ? WHERE id = ?",
-			 DB_INT, did, DB_INT, session->get_session_id(session));
+		DBG1(DBG_IMV, "imv_db: registering device ID failed");
+		return FALSE;
 	}
 
-	return did;
+	/* create a new session entry */
+	created = session->get_creation_time(session);
+	conn_id = session->get_connection_id(session);
+	this->db->execute(this->db, &session_id,
+			"INSERT INTO sessions (time, connection, identity, product, device) "
+			"VALUES (?, ?, ?, ?, ?)",
+			DB_INT, created, DB_INT, conn_id, DB_INT, ar_id,
+			DB_INT, pid, DB_INT, did);
+
+	if (session_id)
+	{
+		DBG2(DBG_IMV, "assigned session ID %d to Connection ID %d",
+					   session_id, conn_id);
+	}
+	else
+	{
+		DBG1(DBG_IMV, "imv_db: registering session failed");
+		return FALSE;
+	}
+	session->set_session_id(session, session_id, pid, did);
+
+	return TRUE;
+}
+
+static bool add_workitems(private_imv_database_t *this, imv_session_t *session)
+{
+	char *arg_str;
+	int id, arg_int, rec_fail, rec_noresult;
+	imv_workitem_t *workitem;
+	imv_workitem_type_t type;
+	enumerator_t *e;
+
+	e = this->db->query(this->db,
+			"SELECT id, type, arg_str, arg_int, rec_fail, rec_noresult "
+			"FROM workitems WHERE session = ?",
+			 DB_INT, session->get_session_id(session, NULL, NULL),
+			 DB_INT, DB_INT, DB_TEXT, DB_INT,DB_INT, DB_INT);
+	if (!e)
+	{
+		DBG1(DBG_IMV, "imv_db: no workitem enumerator returned");
+		return FALSE;
+	}
+	while (e->enumerate(e, &id, &type, &arg_str, &arg_int, &rec_fail,
+						   &rec_noresult))
+	{
+		DBG2(DBG_IMV, "%N workitem %d", imv_workitem_type_names, type, id);
+		workitem = imv_workitem_create(id, type, arg_str, arg_int, rec_fail,
+									   rec_noresult);
+		session->insert_workitem(session, workitem);
+	}
+	e->destroy(e);
+
+	return TRUE;
 }
 
 METHOD(imv_database_t, add_recommendation, void,
 	private_imv_database_t *this, imv_session_t *session,
 	TNC_IMV_Action_Recommendation rec)
 {
-	/* add final recommendation to session */
+	/* add final recommendation to session DB entry */
 	this->db->execute(this->db, NULL,
 			"UPDATE sessions SET rec = ? WHERE id = ?",
-			 DB_INT, rec, DB_INT, session->get_session_id(session));
+			 DB_INT, rec, DB_INT, session->get_session_id(session, NULL, NULL));
 }
 
 METHOD(imv_database_t, policy_script, bool,
 	private_imv_database_t *this, imv_session_t *session, bool start)
 {
-	imv_workitem_t *workitem;
-	imv_workitem_type_t type;
-	int id, session_id, arg_int, rec_fail, rec_noresult;
-	enumerator_t *e;
-	char command[512], resp[128], *last, *arg_str;
+	char command[512], resp[128], *last;
 	FILE *shell;
 
-	session_id = session->get_session_id(session);
+	if (start)
+	{
+		if (session->get_policy_started(session))
+		{
+			DBG1(DBG_IMV, "policy script as already been started");
+			return FALSE;
+		}
 
+		/* add product info and device ID to session DB entry */
+		if (!create_session(this, session))
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		if (!session->get_policy_started(session))
+		{
+			DBG1(DBG_IMV, "policy script as already been stopped");
+			return FALSE;
+		}
+	}
+
+	/* call the policy script */
 	snprintf(command, sizeof(command), "2>&1 TNC_SESSION_ID='%d' %s %s",
-			 session_id, this->script, start ? "start" : "stop");
+			 session->get_session_id(session, NULL, NULL), this->script,
+			 start ? "start" : "stop");
 	DBG3(DBG_IMV, "running policy script: %s", command);
 
 	shell = popen(command, "r");
@@ -282,30 +296,16 @@ METHOD(imv_database_t, policy_script, bool,
 	}
 	pclose(shell);
 
-	if (start && !session->get_policy_started(session))
+	if (start)
 	{
-		/* get workitem list generated by policy manager */
-		e = this->db->query(this->db,
-				"SELECT id, type, arg_str, arg_int, rec_fail, rec_noresult "
-				"FROM workitems WHERE session = ?",	DB_INT, session_id,
-				 DB_INT, DB_INT, DB_TEXT, DB_INT,DB_INT, DB_INT);
-		if (!e)
+		/* add workitem list generated by policy manager to session object */
+		if (!add_workitems(this, session))
 		{
-			DBG1(DBG_IMV, "no workitem enumerator returned");
 			return FALSE;
 		}
-		while (e->enumerate(e, &id, &type, &arg_str, &arg_int, &rec_fail,
-							   &rec_noresult))
-		{
-			workitem = imv_workitem_create(id, type, arg_str, arg_int, rec_fail,
-										   rec_noresult);
-			session->insert_workitem(session, workitem);
-		}
-		e->destroy(e);
-
 		session->set_policy_started(session, TRUE);
 	}
-	else if (!start && session->get_policy_started(session))
+	else
 	{
 		session->set_policy_started(session, FALSE);
 	}
@@ -327,19 +327,10 @@ METHOD(imv_database_t, finalize_workitem, bool,
 				DB_INT, workitem->get_id(workitem)) == 1;
 }
 
-METHOD(imv_database_t, get_database, database_t*,
-	private_imv_database_t *this)
-{
-	return this->db;
-}
-
 METHOD(imv_database_t, destroy, void,
 	private_imv_database_t *this)
 {
 	DESTROY_IF(this->db);
-	this->sessions->destroy_offset(this->sessions,
-							offsetof(imv_session_t, destroy));
-	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -352,20 +343,14 @@ imv_database_t *imv_database_create(char *uri, char *script)
 
 	INIT(this,
 		.public = {
-			.add_session = _add_session,
-			.remove_session = _remove_session,
-			.add_product = _add_product,
-			.add_device = _add_device,
-			.add_recommendation = _add_recommendation,
+			.get_database = _get_database,
 			.policy_script = _policy_script,
 			.finalize_workitem = _finalize_workitem,
-			.get_database = _get_database,
+			.add_recommendation = _add_recommendation,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),
 		.script = script,
-		.sessions = linked_list_create(),
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	if (!this->db)

@@ -58,17 +58,7 @@ struct private_imv_test_state_t {
 	/**
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
-	u_int32_t max_msg_len;
-
-	/**
-	 * Access Requestor ID Type
-	 */
-	u_int32_t ar_id_type;
-
-	/**
-	 * Access Requestor ID Value
-	 */
-	chunk_t ar_id_value;
+	uint32_t max_msg_len;
 
 	/**
 	 * IMV database session associated with TNCCS connection
@@ -149,32 +139,15 @@ METHOD(imv_state_t, set_flags, void,
 }
 
 METHOD(imv_state_t, set_max_msg_len, void,
-	private_imv_test_state_t *this, u_int32_t max_msg_len)
+	private_imv_test_state_t *this, uint32_t max_msg_len)
 {
 	this->max_msg_len = max_msg_len;
 }
 
-METHOD(imv_state_t, get_max_msg_len, u_int32_t,
+METHOD(imv_state_t, get_max_msg_len, uint32_t,
 	private_imv_test_state_t *this)
 {
 	return this->max_msg_len;
-}
-
-METHOD(imv_state_t, set_ar_id, void,
-	private_imv_test_state_t *this, u_int32_t id_type, chunk_t id_value)
-{
-	this->ar_id_type = id_type;
-	this->ar_id_value = chunk_clone(id_value);
-}
-
-METHOD(imv_state_t, get_ar_id, chunk_t,
-	private_imv_test_state_t *this, u_int32_t *id_type)
-{
-	if (id_type)
-	{
-		*id_type = this->ar_id_type;
-	}
-	return this->ar_id_value;
 }
 
 METHOD(imv_state_t, set_session, void,
@@ -248,7 +221,6 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	this->imcs->destroy_function(this->imcs, free);
-	free(this->ar_id_value.ptr);
 	free(this);
 }
 
@@ -333,8 +305,6 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
-				.set_ar_id = _set_ar_id,
-				.get_ar_id = _get_ar_id,
 				.set_session = _set_session,
 				.get_session = _get_session,
 				.change_state = _change_state,

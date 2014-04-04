@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -70,45 +70,28 @@ struct imv_state_t {
 	 *
 	 * @param max_msg_len	maximum size of a PA-TNC message
 	 */
-	void (*set_max_msg_len)(imv_state_t *this, u_int32_t max_msg_len);
+	void (*set_max_msg_len)(imv_state_t *this, uint32_t max_msg_len);
 
 	/**
 	 * Get the maximum size of a PA-TNC message for this TNCCS connection
 	 *
 	 * @return				maximum size of a PA-TNC message
 	 */
-	u_int32_t (*get_max_msg_len)(imv_state_t *this);
+	uint32_t (*get_max_msg_len)(imv_state_t *this);
 
 	/**
 	 * Set flags for completed actions
 	 *
 	 * @param flags			Flags to be set
 	 */
-	void (*set_action_flags)(imv_state_t *this, u_int32_t flags);
+	void (*set_action_flags)(imv_state_t *this, uint32_t flags);
 
 	/**
 	 * Get flags set for completed actions
 	 *
 	 * @return				Flags set for completed actions
 	 */
-	u_int32_t (*get_action_flags)(imv_state_t *this);
-
-	/**
-	 * Set Access Requestor ID
-	 *
-	 * @param id_type		Access Requestor TCG Standard ID Type
-	 * @param id_value		Access Requestor TCG Standard ID Value
-	 *
-	 */
-	void (*set_ar_id)(imv_state_t *this, u_int32_t id_type, chunk_t id_value);
-
-	/**
-	 * Get Access Requestor ID
-	 *
-	 * @param id_type		Access Requestor TCG Standard ID Type
-	 * @return				Access Requestor TCG Standard ID Value
-	 */
-	chunk_t (*get_ar_id)(imv_state_t *this, u_int32_t *id_type);
+	uint32_t (*get_action_flags)(imv_state_t *this);
 
 	/**
 	 * Set session associated with TNCCS Connection

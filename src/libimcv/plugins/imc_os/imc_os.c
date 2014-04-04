@@ -17,6 +17,7 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
+#include <imc/imc_os_info.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_default_pwd_enabled.h>
@@ -31,7 +32,6 @@
 #include <ita/ita_attr_settings.h>
 #include <ita/ita_attr_angel.h>
 #include <ita/ita_attr_device_id.h>
-#include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -47,7 +47,7 @@ static pen_type_t msg_types[] = {
 };
 
 static imc_agent_t *imc_os;
-static os_info_t *os;
+static imc_os_info_t *os;
 
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
@@ -69,7 +69,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 
-	os = os_info_create();
+	os = imc_os_info_create();
 	if (!os)
 	{
 		imc_os->destroy(imc_os);

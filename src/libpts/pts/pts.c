@@ -337,15 +337,10 @@ METHOD(pts_t, get_platform_info, char*,
 }
 
 METHOD(pts_t, set_platform_info, void,
-	private_pts_t *this, chunk_t name, chunk_t version)
+	private_pts_t *this, char *info)
 {
-	int len = name.len + 1 + version.len + 1;
-
-	/* platform info is a concatenation of OS name and OS version */
 	free(this->platform_info);
-	this->platform_info = malloc(len);
-	snprintf(this->platform_info, len, "%.*s %.*s", (int)name.len, name.ptr,
-			(int)version.len, version.ptr);
+	this->platform_info = strdup(info);
 }
 
 METHOD(pts_t, get_tpm_version_info, bool,

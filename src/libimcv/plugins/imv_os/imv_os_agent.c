@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -134,7 +134,13 @@ METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 				}
 				session = state->get_session(state);
 				imcv_db->add_recommendation(imcv_db, session, rec);
-				imcv_db->policy_script(imcv_db, session, FALSE);
+				if (session->get_policy_started(session))
+				{
+					if (!imcv_db->policy_script(imcv_db, session, FALSE))
+					{
+						DBG1(DBG_IMV, "error in policy script stop");
+					}
+				}
 			}
 			/* fall through to default state */
 		default:
@@ -150,6 +156,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 {
 	imv_msg_t *out_msg;
 	imv_os_state_t *os_state;
+	imv_session_t *session;
+	imv_os_info_t *os_info = NULL;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t type;
@@ -159,6 +167,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 	bool fatal_error = FALSE, assessment = FALSE;
 
 	os_state = (imv_os_state_t*)state;
+	session = state->get_session(state);
+	os_info = session->get_os_info(session);
 
 	/* parse received PA-TNC message and handle local and remote errors */
 	result = in_msg->receive(in_msg, &fatal_error);
@@ -188,6 +198,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 											IMV_OS_ATTR_PRODUCT_INFORMATION);
 					attr_cast = (ietf_attr_product_info_t*)attr;
 					os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
+					os_info->set_name(os_info, os_name);
+
 					if (vendor_id != PEN_IETF)
 					{
 						DBG1(DBG_IMV, "operating system name is '%.*s' "
@@ -209,6 +221,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 											IMV_OS_ATTR_STRING_VERSION);
 					attr_cast = (ietf_attr_string_version_t*)attr;
 					os_version = attr_cast->get_version(attr_cast, NULL, NULL);
+					os_info->set_version(os_info, os_version);
+
 					if (os_version.len)
 					{
 						DBG1(DBG_IMV, "operating system version is '%.*s'",
@@ -350,8 +364,8 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					state->set_action_flags(state, IMV_OS_ATTR_DEVICE_ID);
 
 					value = attr->get_value(attr);
-					os_state->set_device_id(os_state, value);
 					DBG1(DBG_IMV, "device ID is %.*s", value.len, value.ptr);
+					session->set_device_id(session, value);
 					break;
 				}
 				case ITA_ATTR_START_ANGEL:
@@ -366,25 +380,6 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	/**
-	 * The IETF Product Information and String Version attributes
-	 * are supposed to arrive in the same PA-TNC message
-	 */
-	if (os_name.len && os_version.len)
-	{
-		os_type_t os_type;
-
-		/* set the OS type, name and version */
-		os_type = os_type_from_name(os_name);
-		os_state->set_info(os_state,os_type, os_name, os_version);
-
-		if (imcv_db)
-		{
-			imcv_db->add_product(imcv_db, state->get_session(state),
-					os_state->get_info(os_state, NULL, NULL, NULL));
-		}
-	}
 
 	if (fatal_error)
 	{
@@ -542,56 +537,69 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 	if (handshake_state < IMV_OS_STATE_POLICY_START)
 	{
-		if (((received & IMV_OS_ATTR_PRODUCT_INFORMATION) &&
-			 (received & IMV_OS_ATTR_STRING_VERSION)) &&
-			((received & IMV_OS_ATTR_DEVICE_ID) ||
-			 (handshake_state == IMV_OS_STATE_ATTR_REQ)))
+		if (session->get_policy_started(session))
 		{
-			if (imcv_db)
-			{
-				imcv_db->add_device(imcv_db, session,
-								os_state->get_device_id(os_state));
-
-				/* trigger the policy manager */
-				imcv_db->policy_script(imcv_db, session, TRUE);
-			}
-			else
-			{
-				DBG2(DBG_IMV, "no workitems available - no evaluation possible");
-				state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
-			}
+			/* the policy script has already been started by another IMV */
 			handshake_state = IMV_OS_STATE_POLICY_START;
-		}
-		else if (handshake_state == IMV_OS_STATE_ATTR_REQ)
-		{
-			/**
-			 * both the IETF Product Information and IETF String Version
-			 * attribute should have been present
-			 */
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
-								TNC_IMV_EVALUATION_RESULT_ERROR);
-
-			/* send assessment */
-			result = out_msg->send_assessment(out_msg);
-			out_msg->destroy(out_msg);
-
-			if (result != TNC_RESULT_SUCCESS)
-			{
-				return result;
-			}  
-			return this->agent->provide_recommendation(this->agent, state);
 		}
 		else
 		{
-			handshake_state = IMV_OS_STATE_ATTR_REQ;
+			if (((received & IMV_OS_ATTR_PRODUCT_INFORMATION) &&
+				 (received & IMV_OS_ATTR_STRING_VERSION)) &&
+				((received & IMV_OS_ATTR_DEVICE_ID) ||
+				 (handshake_state == IMV_OS_STATE_ATTR_REQ)))
+			{
+				if (!session->get_device_id(session, NULL))
+				{
+					session->set_device_id(session, chunk_empty);
+				}
+				if (imcv_db)
+				{
+					/* start the policy script */
+					if (!imcv_db->policy_script(imcv_db, session, TRUE))
+					{
+						DBG1(DBG_IMV, "error in policy script start");
+					}
+				}
+				else
+				{
+					DBG2(DBG_IMV, "no workitems available - "
+								  "no evaluation possible");
+					state->set_recommendation(state,
+									TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+									TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+				}
+				handshake_state = IMV_OS_STATE_POLICY_START;
+			}
+			else if (handshake_state == IMV_OS_STATE_ATTR_REQ)
+			{
+				/**
+				 * both the IETF Product Information and IETF String Version
+				 * attribute should have been present
+				 */
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);
+
+				/* send assessment */
+				result = out_msg->send_assessment(out_msg);
+				out_msg->destroy(out_msg);
+
+				if (result != TNC_RESULT_SUCCESS)
+				{
+					return result;
+				}  
+				return this->agent->provide_recommendation(this->agent, state);
+			}
+			else
+			{
+				handshake_state = IMV_OS_STATE_ATTR_REQ;
+			}
 		}
 		os_state->set_handshake_state(os_state, handshake_state);
 	}
 
-	if (handshake_state == IMV_OS_STATE_POLICY_START && session)
+	if (handshake_state == IMV_OS_STATE_POLICY_START)
 	{
 		enumerator = session->create_workitem_enumerator(session);
 		if (enumerator)
@@ -638,7 +646,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		}
 	}
 
-	if (handshake_state == IMV_OS_STATE_WORKITEMS && session)
+	if (handshake_state == IMV_OS_STATE_WORKITEMS)
 	{
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;

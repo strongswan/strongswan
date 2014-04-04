@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -114,10 +115,15 @@ METHOD(pts_database_t, check_aik_keyid, status_t,
 	private_pts_database_t *this, chunk_t keyid, int *kid)
 {
 	enumerator_t *e;
+	chunk_t keyid_hex;
+
+	/* Convert keyid into a hex-encoded string */
+	keyid_hex = chunk_to_hex(keyid, NULL, FALSE);
 
 	/* If the AIK is registered get the primary key */
 	e = this->db->query(this->db,
-				"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
+				"SELECT id FROM devices WHERE name = ?",
+				 DB_TEXT, keyid_hex.ptr, DB_INT);
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned");
@@ -497,7 +503,6 @@ pts_database_t *pts_database_create(imv_database_t *imv_db)
 			.get_pathname = _get_pathname,
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
-			.check_aik_keyid = _check_aik_keyid,
 			.add_file_measurement = _add_file_measurement,
 			.check_file_measurement = _check_file_measurement,
 			.check_comp_measurement = _check_comp_measurement,

@@ -46,10 +46,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							 pts_database_t *pts_db,
 							 credential_manager_t *pts_credmgr)
 {
+	imv_session_t *session;
 	imv_attestation_state_t *attestation_state;
 	pen_type_t attr_type;
 	pts_t *pts;
 
+	session = state->get_session(state);
 	attestation_state = (imv_attestation_state_t*)state;
 	pts = attestation_state->get_pts(attestation_state);
 	attr_type = attr->get_type(attr);
@@ -80,7 +82,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				return FALSE;
 			}
 			pts->set_meas_algorithm(pts, selected_algorithm);
-			state->set_action_flags(state, IMV_ATTESTATION_FLAG_ALGO);
+			state->set_action_flags(state, IMV_ATTESTATION_ALGO);
 			break;
 		}
 		case TCG_PTS_DH_NONCE_PARAMS_RESP:
@@ -157,9 +159,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			tcg_pts_attr_aik_t *attr_cast;
 			certificate_t *aik, *issuer;
 			public_key_t *public;
-			chunk_t keyid;
+			chunk_t keyid, keyid_hex, device_id;
 			enumerator_t *e;
-			bool trusted = FALSE;
+			bool trusted = FALSE, trusted_chain = FALSE;
 
 			attr_cast = (tcg_pts_attr_aik_t*)attr;
 			aik = attr_cast->get_aik(attr_cast);
@@ -170,12 +172,27 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
 				break;
 			}
+
+			/* check trust into public key as stored in the database */
+			public = aik->get_public_key(aik);
+			public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid);
+			DBG1(DBG_IMV, "verifying AIK with keyid %#B", &keyid);
+			keyid_hex = chunk_to_hex(keyid, NULL, FALSE);
+			if (session->get_device_id(session, &device_id) &&
+				chunk_equals(keyid_hex, device_id))
+			{
+				trusted = session->get_device_trust(session);
+			}
+			else
+			{
+				DBG1(DBG_IMV, "device ID unknown or different from AIK keyid");
+			}
+			DBG1(DBG_IMV, "AIK public key is %strusted", trusted ? "" : "not ");
+			public->destroy(public);
+			chunk_free(&keyid_hex);
+
 			if (aik->get_type(aik) == CERT_X509)
 			{
-				public = aik->get_public_key(aik);
-				public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid);
-				DBG1(DBG_IMV, "verifying AIK certificate with keyid %#B", &keyid);
-				public->destroy(public);
 
 				e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
 							KEY_ANY, aik->get_issuer(aik), FALSE);
@@ -183,14 +200,14 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				{
 					if (aik->issued_by(aik, issuer, NULL))
 					{
-						trusted = TRUE;
+						trusted_chain = TRUE;
 						break;
 					}
 				}
 				e->destroy(e);
 				DBG1(DBG_IMV, "AIK certificate is %strusted",
-							   trusted ? "" : "not ");
-				if (!trusted)
+							   trusted_chain ? "" : "not ");
+				if (!trusted || !trusted_chain)
 				{
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);

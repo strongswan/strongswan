@@ -259,7 +259,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
 							 msg_types[0]);
 
-	if (!session)
+	if (!imcv_db)
 	{
 		DBG2(DBG_IMV, "no workitems available - no evaluation possible");
 		state->set_recommendation(state,
@@ -276,7 +276,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		return this->agent->provide_recommendation(this->agent, state);
 	}
 
-	if (handshake_state == IMV_SCANNER_STATE_INIT)
+	if (handshake_state == IMV_SCANNER_STATE_INIT &&
+		session->get_policy_started(session))
 	{
 		enumerator = session->create_workitem_enumerator(session);
 		if (enumerator)

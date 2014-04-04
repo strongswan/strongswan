@@ -90,7 +90,6 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			enumerator_t *enumerator;
 			pts_comp_func_name_t *name;
 			chunk_t keyid;
-			int kid;
 			u_int8_t flags;
 			u_int32_t depth;
 			bool first_component = TRUE;
@@ -98,8 +97,7 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
-			if (!pts->get_aik_keyid(pts, &keyid) ||
-				 pts_db->check_aik_keyid(pts_db, keyid, &kid) != SUCCESS)
+			if (!pts->get_aik_keyid(pts, &keyid))
 			{
 				attestation_state->set_measurement_error(attestation_state,
 									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -78,27 +78,6 @@ struct imv_os_state_t {
 	imv_os_handshake_state_t (*get_handshake_state)(imv_os_state_t *this);
 
 	/**
-	 * Set OS Product Information
-	 *
-	 * @param type			OS type (enumerated)
-	 * @param name			OS name (string)
-	 * @param version		OS version
-	 */
-	void (*set_info)(imv_os_state_t *this, os_type_t os_type,
-					 chunk_t name, chunk_t version);
-
-	/**
-	 * Get OS Product Information
-	 *
-	 * @param type			OS type (enumerated)
-	 * @param name			OS name (string)
-	 * @param version		OS version
-	 * @return				OS name & version as a concatenated string
-	 */
-	char* (*get_info)(imv_os_state_t *this, os_type_t *os_type,
-					  chunk_t *name, chunk_t *version);
-
-	/**
 	 * Set [or with multiple attributes increment] package counters
 	 *
 	 * @param count				Number of processed packages
@@ -119,20 +98,6 @@ struct imv_os_state_t {
 	 */
 	void (*get_count)(imv_os_state_t *this, int *count, int *count_update,
 					  int *count_blacklist, int *count_ok);
-
-	/**
-	 * Set device ID
-	 *
-	 * @param device_id		Device ID
-	 */
-	void (*set_device_id)(imv_os_state_t *this, chunk_t id);
-
-	/**
-	 * Get device ID
-	 *
-	 * @return				Device ID
-	 */
-	chunk_t (*get_device_id)(imv_os_state_t *this);
 
 	/**
 	 * Set OS settings
