@@ -388,12 +388,18 @@
                 0x2E         "id-aes256-GCM"			OID_AES256_GCM
                 0x2F         "id-aes256-CCM"			OID_AES256_CCM
               0x02           "hashalgs"
-                0x01         "id-SHA-256"				OID_SHA256
-                0x02         "id-SHA-384"				OID_SHA384
-                0x03         "id-SHA-512"				OID_SHA512
-                0x04         "id-SHA-224"				OID_SHA224
-                0x05         "id-SHA-512-224"
-                0x06         "id-SHA-512-256"
+                0x01         "id-sha256"				OID_SHA256
+                0x02         "id-sha384"				OID_SHA384
+                0x03         "id-sha512"				OID_SHA512
+                0x04         "id-sha224"				OID_SHA224
+                0x05         "id-sha512-224"
+                0x06         "id-sha512-256"
+                0x07         "id-sha3-224"
+                0x08         "id-sha3-256"
+                0x09         "id-sha3-384"
+                0x0A         "id-sha3-512"
+                0x0B         "id-shake128"
+                0x0C         "id-shake256"
         0x86                 ""
           0xf8               ""
             0x42             "netscape"
