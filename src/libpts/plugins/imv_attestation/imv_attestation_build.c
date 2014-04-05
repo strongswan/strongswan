@@ -90,8 +90,8 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			enumerator_t *enumerator;
 			pts_comp_func_name_t *name;
 			chunk_t keyid;
-			u_int8_t flags;
-			u_int32_t depth;
+			uint8_t flags;
+			uint32_t depth;
 			bool first_component = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,

@@ -409,7 +409,7 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 /**
  * Enumerate file measurement entries
  */
-static bool entry_filter(void *null, func_comp_t **entry, u_int8_t *flags,
+static bool entry_filter(void *null, func_comp_t **entry, uint8_t *flags,
 						 void *i2, uint32_t *depth,
 						 void *i3, pts_comp_func_name_t **comp_name)
 {

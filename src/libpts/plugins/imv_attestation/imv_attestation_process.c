@@ -222,11 +222,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			TNC_IMV_Evaluation_Result eval;
 			TNC_IMV_Action_Recommendation rec;
 			tcg_pts_attr_file_meas_t *attr_cast;
-			u_int16_t request_id;
+			uint16_t request_id;
 			int arg_int, file_count;
 			pts_meas_algorithms_t algo;
 			pts_file_meas_t *measurements;
-			imv_session_t *session;
 			imv_workitem_t *workitem, *found = NULL;
 			imv_workitem_type_t type;
 			char result_str[BUF_LEN], *platform_info;
@@ -234,7 +233,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			enumerator_t *enumerator;
 
 			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-			session = state->get_session(state);
 			algo = pts->get_meas_algorithm(pts);
 			platform_info = pts->get_platform_info(pts);
 			attr_cast = (tcg_pts_attr_file_meas_t*)attr;
@@ -390,7 +388,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			pts_comp_func_name_t *name;
 			pts_comp_evidence_t *evidence;
 			pts_component_t *comp;
-			u_int32_t depth;
+			uint32_t depth;
 			status_t status;
 
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
@@ -415,11 +413,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 		case TCG_PTS_SIMPLE_EVID_FINAL:
 		{
 			tcg_pts_attr_simple_evid_final_t *attr_cast;
-			u_int8_t flags;
+			uint8_t flags;
 			pts_meas_algorithms_t comp_hash_algorithm;
 			chunk_t pcr_comp, tpm_quote_sig, evid_sig;
 			chunk_t pcr_composite, quote_info;
-			imv_session_t *session;
 			imv_workitem_t *workitem;
 			enumerator_t *enumerator;
 			bool use_quote2, use_ver_info;
@@ -470,7 +467,6 @@ quote_error:
 				 */
 				attestation_state->finalize_components(attestation_state);
 
-				session = state->get_session(state);
 				enumerator = session->create_workitem_enumerator(session);
 				while (enumerator->enumerate(enumerator, &workitem))
 				{
@@ -479,7 +475,7 @@ quote_error:
 						TNC_IMV_Action_Recommendation rec;
 						TNC_IMV_Evaluation_Result eval;
 						char *result_str;
-						u_int32_t error;
+						uint32_t error;
 
 						error = attestation_state->get_measurement_error(
 														attestation_state);

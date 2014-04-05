@@ -42,8 +42,8 @@ typedef enum imv_meas_error_t imv_meas_error_t;
 enum imv_attestation_flag_t {
 	IMV_ATTESTATION_ATTR_PRODUCT_INFO =   (1<<0),
 	IMV_ATTESTATION_ATTR_STRING_VERSION = (1<<1),
-	IMV_ATTESTATION_ATTR_MUST =           (1<<2)-1,
 	IMV_ATTESTATION_ATTR_DEVICE_ID =      (1<<2),
+	IMV_ATTESTATION_ATTR_MUST =           (1<<3)-1,
 	IMV_ATTESTATION_ATTR_REQ =            (1<<3),
 	IMV_ATTESTATION_ALGO =                (1<<4),
 	IMV_ATTESTATION_FILE_MEAS =           (1<<5),
@@ -118,7 +118,7 @@ struct imv_attestation_state_t {
 	 */
 	pts_component_t* (*create_component)(imv_attestation_state_t *this,
 										 pts_comp_func_name_t *name,
-										 u_int32_t depth,
+										 uint32_t depth,
 										 pts_database_t *pts_db);
 
 	/**
@@ -148,7 +148,7 @@ struct imv_attestation_state_t {
 	 *
 	 * @return					Measurement error flags
 	 */
-	u_int32_t (*get_measurement_error)(imv_attestation_state_t *this);
+	uint32_t (*get_measurement_error)(imv_attestation_state_t *this);
 
 	/**
 	 * Call if a measurement error is encountered
@@ -156,7 +156,7 @@ struct imv_attestation_state_t {
 	 * @param error				Measurement error type
 	 */
 	void (*set_measurement_error)(imv_attestation_state_t *this,
-								  u_int32_t error);
+								  uint32_t error);
 
 	/**
 	 * Returns a concatenation of File Measurement reason strings

@@ -118,24 +118,25 @@ METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 		case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
-			if (imcv_db && this->agent->get_state(this->agent, id, &state))
+			if (this->agent->get_state(this->agent, id, &state) && imcv_db)
 			{
-				switch (new_state)
-				{
-					case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
-						rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
-						break;
-					case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
-						rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
-						break;
-					case TNC_CONNECTION_STATE_ACCESS_NONE:
-					default:
-						rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
-				}
 				session = state->get_session(state);
-				imcv_db->add_recommendation(imcv_db, session, rec);
+
 				if (session->get_policy_started(session))
 				{
+					switch (new_state)
+					{
+						case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+							rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
+							break;
+						case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+							rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
+							break;
+						case TNC_CONNECTION_STATE_ACCESS_NONE:
+						default:
+							rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
+					}
+					imcv_db->add_recommendation(imcv_db, session, rec);
 					if (!imcv_db->policy_script(imcv_db, session, FALSE))
 					{
 						DBG1(DBG_IMV, "error in policy script stop");
@@ -233,7 +234,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 				case IETF_ATTR_NUMERIC_VERSION:
 				{
 					ietf_attr_numeric_version_t *attr_cast;
-					u_int32_t major, minor;
+					uint32_t major, minor;
 
 					state->set_action_flags(state,
 											IMV_OS_ATTR_NUMERIC_VERSION);
@@ -452,7 +453,7 @@ METHOD(imv_agent_if_t, receive_message_long, TNC_Result,
 /**
  * Build an IETF Attribute Request attribute for missing attributes
  */
-static pa_tnc_attr_t* build_attr_request(u_int32_t received)
+static pa_tnc_attr_t* build_attr_request(uint32_t received)
 {
 	pa_tnc_attr_t *attr;
 	ietf_attr_attr_request_t *attr_cast;
@@ -505,7 +506,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	bool no_workitems = TRUE;
 	enumerator_t *enumerator;
-	u_int32_t received;
+	uint32_t received;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
@@ -568,6 +569,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					state->set_recommendation(state,
 									TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 									TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+					session->set_policy_started(session, TRUE);
 				}
 				handshake_state = IMV_OS_STATE_POLICY_START;
 			}
