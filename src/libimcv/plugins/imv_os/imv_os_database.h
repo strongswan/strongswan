@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -41,18 +41,6 @@ struct imv_os_database_t {
 	 */
 	status_t (*check_packages)(imv_os_database_t *this, imv_os_state_t *state,
 							   enumerator_t *package_enumerator);
-
-	/**
-	 * Set health infos for a given  device
-	 *
-	 * @param sesson_id				Session ID
-	 * @param count					Number of installed packages
-	 * @param count_update			Number of packages to be updated
-	 * @param count_blacklist		Number of blacklisted packages
-	 * @param flags					Various flags, e.g. illegal OS settings
-	 */
-	void (*set_device_info)(imv_os_database_t *this, int session_id, int count,
-							int count_update, int count_blacklist, u_int flags);
 
 	/**
 	 * Destroys an imv_os_database_t object.

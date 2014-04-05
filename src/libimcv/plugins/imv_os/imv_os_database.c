@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 
 	state = &os_state->interface;
 	session = state->get_session(state);
+	session->get_session_id(session, &pid, NULL);
 	os_info = session->get_os_info(session);
 	os_type = os_info->get_type(os_info);
 	product = os_info->get_info(os_info);
@@ -66,23 +67,23 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	{
 		/*no package dependency on Android version */
 		product = enum_to_name(os_type_names, os_type);
+
+		/* Get primary key of product */
+		e = this->db->query(this->db,
+					"SELECT id FROM products WHERE name = ?",
+					DB_TEXT, product, DB_INT);
+		if (!e)
+		{
+			return FAILED;
+		}
+		if (!e->enumerate(e, &pid))
+		{
+			e->destroy(e);
+			return NOT_FOUND;
+		}
+		e->destroy(e);
 	}
 	DBG1(DBG_IMV, "processing installed '%s' packages", product);
-
-	/* Get primary key of product */
-	e = this->db->query(this->db,
-				"SELECT id FROM products WHERE name = ?",
-				DB_TEXT, product, DB_INT);
-	if (!e)
-	{
-		return FAILED;
-	}
-	if (!e->enumerate(e, &pid))
-	{
-		e->destroy(e);
-		return NOT_FOUND;
-	}
-	e->destroy(e);
 
 	while (package_enumerator->enumerate(package_enumerator, &name, &version))
 	{
@@ -181,17 +182,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	return status;
 }
 
-METHOD(imv_os_database_t, set_device_info, void,
-	private_imv_os_database_t *this,  int session_id, int count,
-	int count_update, int count_blacklist, u_int flags)
-{
-	this->db->execute(this->db, NULL,
-			"INSERT INTO device_infos (session, count, count_update, "
-			"count_blacklist, flags) VALUES (?, ?, ?, ?, ?)",
-			 DB_INT, session_id, DB_INT, count, DB_INT, count_update,
-			 DB_INT, count_blacklist, DB_UINT, flags);
-}
-
 METHOD(imv_os_database_t, destroy, void,
 	private_imv_os_database_t *this)
 {
@@ -213,7 +203,6 @@ imv_os_database_t *imv_os_database_create(imv_database_t *imv_db)
 	INIT(this,
 		.public = {
 			.check_packages = _check_packages,
-			.set_device_info = _set_device_info,
 			.destroy = _destroy,
 		},
 		.db = imv_db->get_database(imv_db),
