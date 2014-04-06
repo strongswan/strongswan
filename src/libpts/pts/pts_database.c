@@ -280,20 +280,17 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 				DB_TEXT, dir, DB_INT);
 		if (!e)
 		{
-			free(file);
-			free(dir);
-			return FAILED;
+			status = FAILED;
+			goto err;
 		}
 		dir_found = e->enumerate(e, &did);
 		e->destroy(e);
 
 		if (!dir_found)
 		{
-			free(file);
-			free(dir);
-			return NOT_FOUND;
+			status = NOT_FOUND;
+			goto err;
 		}
-
 		e = this->db->query(this->db,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
@@ -302,12 +299,10 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 				DB_TEXT, product, DB_INT, did, DB_TEXT, file, DB_INT, algo,
 				DB_BLOB);
 	}
-	free(file);
-	free(dir);
-
 	if (!e)
 	{
-		return FAILED;
+		status = FAILED;
+		goto err;
 	}
 	while (e->enumerate(e, &hash))
 	{
@@ -323,6 +318,10 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 		}
 	}
 	e->destroy(e);
+
+err:
+	free(file);
+	free(dir);
 
 	return status;
 }
