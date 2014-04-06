@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -162,19 +163,18 @@ struct pts_t {
 	bool (*calculate_secret) (pts_t *this);
 
 	/**
-	 * Get Platform and OS Info
+	 * Get primary key of platform entry in database
 	 *
 	 * @return					Platform and OS info
 	 */
-	char* (*get_platform_info)(pts_t *this);
+	int (*get_platform_id)(pts_t *this);
 
 	/**
-	 * Set Platform and OS Info
+	 * Set primary key of platform entry in database
 	 *
-	 * @param name				OS name
-	 * @param version			OS version
+	 * @param pid				Primary key of platform entry in database
 	 */
-	void (*set_platform_info)(pts_t *this, char *info);
+	void (*set_platform_id)(pts_t *this, int pid);
 
 	/**
 	 * Get TPM 1.2 Version Info
@@ -202,16 +202,16 @@ struct pts_t {
 	 * Set Attestation Identity Certificate or Public Key
 	 *
 	 * @param aik				AIK Certificate or Public Key
+	 * @param aik_id			Primary key referencing AIK in database
 	 */
-	void (*set_aik)(pts_t *this, certificate_t *aik);
+	void (*set_aik)(pts_t *this, certificate_t *aik, int aik_id);
 
 	/**
-	 * Get SHA-1 Attestation Identity Public Key Info ID
+	 * Get primary key referencing AIK in database
 	 *
-	 * @param keyid				AIK ID
-	 * @return					TRUE if AIK ID exists
+	 * @return					Primary key referencing AIK in database
 	 */
-	bool (*get_aik_keyid)(pts_t *this, chunk_t *keyid);
+	int (*get_aik_id)(pts_t *this);
 
 	/**
 	 * Check whether path is valid file/directory on filesystem

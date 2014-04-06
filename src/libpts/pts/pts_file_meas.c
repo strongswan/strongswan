@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -112,7 +113,7 @@ METHOD(pts_file_meas_t, create_enumerator, enumerator_t*,
 }
 
 METHOD(pts_file_meas_t, check, bool,
-	private_pts_file_meas_t *this, pts_database_t *pts_db, char *product,
+	private_pts_file_meas_t *this, pts_database_t *pts_db, int pid,
 	pts_meas_algorithms_t algo)
 {
 	enumerator_t *enumerator;
@@ -123,7 +124,7 @@ METHOD(pts_file_meas_t, check, bool,
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		status = pts_db->check_file_measurement(pts_db, product, algo,
+		status = pts_db->check_file_measurement(pts_db, pid, algo,
 									entry->measurement, entry->filename);
 		switch (status)
 		{

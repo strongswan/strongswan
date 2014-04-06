@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -88,9 +89,9 @@ struct private_pts_t {
 	chunk_t secret;
 
 	/**
-	 * Platform and OS Info
+	 * Primary key of platform entry in database
 	 */
-	char *platform_info;
+	int platform_id;
 
 	/**
 	 * TRUE if IMC-PTS, FALSE if IMV-PTS
@@ -116,6 +117,11 @@ struct private_pts_t {
 	 * Contains a Attestation Identity Key or Certificate
 	 */
  	certificate_t *aik;
+
+	/**
+	 * Primary key referening AIK in database
+	 */
+	int aik_id;
 
 	/**
 	 * Shadow PCR set
@@ -330,17 +336,16 @@ static void print_tpm_version_info(private_pts_t *this)
 
 #endif /* TSS_TROUSERS */
 
-METHOD(pts_t, get_platform_info, char*,
+METHOD(pts_t, get_platform_id, int,
 	private_pts_t *this)
 {
-	return this->platform_info;
+	return this->platform_id;
 }
 
-METHOD(pts_t, set_platform_info, void,
-	private_pts_t *this, char *info)
+METHOD(pts_t, set_platform_id, void,
+	private_pts_t *this, int pid)
 {
-	free(this->platform_info);
-	this->platform_info = strdup(info);
+	this->platform_id = pid;
 }
 
 METHOD(pts_t, get_tpm_version_info, bool,
@@ -451,37 +456,17 @@ METHOD(pts_t, get_aik, certificate_t*,
 }
 
 METHOD(pts_t, set_aik, void,
-	private_pts_t *this, certificate_t *aik)
+	private_pts_t *this, certificate_t *aik, int aik_id)
 {
 	DESTROY_IF(this->aik);
 	this->aik = aik->get_ref(aik);
+	this->aik_id = aik_id;
 }
 
-METHOD(pts_t, get_aik_keyid, bool,
-	private_pts_t *this, chunk_t *keyid)
+METHOD(pts_t, get_aik_id, int,
+	private_pts_t *this)
 {
-	public_key_t *public;
-	bool success;
-
-	if (!this->aik)
-	{
-		DBG1(DBG_PTS, "no AIK certificate available");
-		return FALSE;
-	}
-	public = this->aik->get_public_key(this->aik);
-	if (!public)
-	{
-		DBG1(DBG_PTS, "no AIK public key available");
-		return FALSE;
-	}
-	success = public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, keyid);
-	if (!success)
-	{
-		DBG1(DBG_PTS, "no SHA-1 AIK public key info ID available");
-	}
-	public->destroy(public);
-
-	return success;
+	return this->aik_id;
 }
 
 METHOD(pts_t, is_path_valid, bool,
@@ -1088,7 +1073,6 @@ METHOD(pts_t, destroy, void,
 	free(this->initiator_nonce.ptr);
 	free(this->responder_nonce.ptr);
 	free(this->secret.ptr);
-	free(this->platform_info);
 	free(this->aik_blob.ptr);
 	free(this->tpm_version_info.ptr);
 	free(this);
@@ -1182,13 +1166,13 @@ pts_t *pts_create(bool is_imc)
 			.get_my_public_value = _get_my_public_value,
 			.set_peer_public_value = _set_peer_public_value,
 			.calculate_secret = _calculate_secret,
-			.get_platform_info = _get_platform_info,
-			.set_platform_info = _set_platform_info,
+			.get_platform_id = _get_platform_id,
+			.set_platform_id = _set_platform_id,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
 			.get_aik = _get_aik,
 			.set_aik = _set_aik,
-			.get_aik_keyid = _get_aik_keyid,
+			.get_aik_id = _get_aik_id,
 			.is_path_valid = _is_path_valid,
 			.get_metadata = _get_metadata,
 			.read_pcr = _read_pcr,

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -65,11 +66,11 @@ struct pts_file_meas_t {
 	 * Check PTS File Measurements against reference value in the database
 	 *
 	 * @param db			PTS Measurement database
-	 * @param product		Software product (os, vpn client, etc.)
+	 * @param pid			Primary key of software product in database
 	 * @param algo			PTS Measurement algorithm used
 	 * @return				TRUE if all measurements agreed
 	 */
-	bool (*check)(pts_file_meas_t *this, pts_database_t *db, char* product,
+	bool (*check)(pts_file_meas_t *this, pts_database_t *db, int pid,
 				  pts_meas_algorithms_t algo);
 
 	/**

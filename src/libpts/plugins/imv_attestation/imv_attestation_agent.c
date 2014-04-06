@@ -391,7 +391,6 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	imv_msg_t *out_msg;
 	imv_state_t *state;
 	imv_session_t *session;
-	imv_os_info_t *os_info;
 	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
 	imv_workitem_t *workitem;
@@ -400,6 +399,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	pts_t *pts;
+	int pid;
 	uint32_t actions;
 	enumerator_t *enumerator;
 
@@ -500,8 +500,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		return TNC_RESULT_SUCCESS;
 	}
 
-	os_info = session->get_os_info(session);
-	pts->set_platform_info(pts, os_info->get_info(os_info));
+	session->get_session_id(session, &pid, NULL);
+	pts->set_platform_id(pts, pid);
 
 	/* create an empty out message - we might need it */
 	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,

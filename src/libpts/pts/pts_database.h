@@ -47,37 +47,20 @@ struct pts_database_t {
 	/**
 	* Get stored measurement hash for single file or directory entries
 	*
-	* @param product		Software product (os, vpn client, etc.)
+	* @param pid	 		Primary key of software product in database
 	* @param algo			Hash algorithm used for measurement
 	* @param is_dir			TRUE if directory was measured
 	* @param id				Primary key of measured file/directory
 	* @return				Enumerator over all matching measurement hashes
 	*/
 	enumerator_t* (*create_file_hash_enumerator)(pts_database_t *this,
-								char *product, pts_meas_algorithms_t algo,
+								int pid, pts_meas_algorithms_t algo,
 								bool is_dir, int id);
-
-	/**
-	* Check if an AIK given by its keyid is registered in the database
-	*
-	* @param keyid			AIK keyid (SHA-1 hash of the AIK public key info)
-	* @param kid			Primary key of AIK entry in devices table
-	* @return				SUCCESS if AIK is present, FAILED otherwise
-	*/
-	status_t (*check_aik_keyid)(pts_database_t *this, chunk_t keyid, int *kid);
-
-	/**
-	* Get functional components to request evidence of
-	*
-	* @param kid			Primary key of AIK entry in keys table
-	* @return				Enumerator over all matching components
-	*/
-	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this, int kid);
 
 	/**
 	* Add PTS file measurement reference value
 	*
-	* @param product		Software product (os, vpn client, etc.)
+	* @param pid			Primary key of software product in database
 	* @param algo			File measurement hash algorithm used
 	* @param measurement	File measurement hash
 	* @param filename		Optional name of the file to be checked
@@ -85,7 +68,7 @@ struct pts_database_t {
 	* @param id				Primary key into direcories/files table
 	* @return				Status
 	*/
-	status_t (*add_file_measurement)(pts_database_t *this, char *product,
+	status_t (*add_file_measurement)(pts_database_t *this, int pid,
 									 pts_meas_algorithms_t algo,
 									 chunk_t measurement, char *filename,
 									 bool is_dir, int id);
@@ -93,13 +76,13 @@ struct pts_database_t {
 	/**
 	* Check PTS file measurement against reference stored in database
 	*
-	* @param product		Software product (os, vpn client, etc.)
+	* @param pid			Primary key of software product in database
 	* @param algo			File measurement hash algorithm used
 	* @param measurement	File measurement hash
 	* @param filename		Optional name of the file to be checked
 	* @return				Status
 	*/
-	status_t (*check_file_measurement)(pts_database_t *this, char *product,
+	status_t (*check_file_measurement)(pts_database_t *this, int pid,
 									   pts_meas_algorithms_t algo,
 									   chunk_t measurement, char *filename);
 
@@ -108,14 +91,14 @@ struct pts_database_t {
 	*
 	* @param measurement	measurement hash
 	* @param cid			Primary key of Component Functional Name entry
-	* @param kid			Primary key of AIK entry in keys table
+	* @param aik_id			Primary key of AIK entry in database
 	* @param seq_no			Measurement sequence number
 	* @param prc			Number of the PCR the measurement was extended into
 	* @param algo			Hash algorithm used for measurement
 	* @return				SUCCESS if check was successful
 	*/
 	status_t (*check_comp_measurement)(pts_database_t *this, chunk_t measurement,
-									   int cid, int kid, int seq_no, int pcr,
+									   int cid, int aik_id, int seq_no, int pcr,
 									   pts_meas_algorithms_t algo);
 
 	/**
@@ -123,40 +106,38 @@ struct pts_database_t {
 	*
 	* @param measurement	Measurement hash
 	* @param cid			Primary key of Component Functional Name entry
-	* @param kid			Primary key of AIK entry in keys table
+	* @param aik_id			Primary key of AIK entry in database
 	* @param seq_no			Measurement sequence number
 	* @param prc			Number of the PCR the measurement was extended into
 	* @param algo			Hash algorithm used for measurement
 	* @return				SUCCESS if INSERT was successful
 	*/
 	status_t (*insert_comp_measurement)(pts_database_t *this, chunk_t measurement,
-										int cid, int kid, int seq_no, int pcr,
+										int cid, int aik_id, int seq_no, int pcr,
 										pts_meas_algorithms_t algo);
 
 	/**
 	* Delete functional component measurements from the database
 	*
 	* @param cid			Primary key of Component Functional Name entry
-	* @param kid			Primary key of AIK entry in keys table
+	* @param aik_id			Primary key of AIK entry in database
 	* @return				number of deleted measurement entries
 	*/
-	int (*delete_comp_measurements)(pts_database_t *this, int cid, int kid);
+	int (*delete_comp_measurements)(pts_database_t *this, int cid, int aik_id);
 
 	/**
 	* Get the number of measurements for a functional component and AIK
 	*
 	* @param comp_name		Component Functional Name
-	* @param keyid			SHA-1 hash of AIK public key info
+	* @param aik_id			Primary key of AIK entry in database
 	* @param algo			Hash algorithm used for measurement
 	* @param cid			Primary key of Component Functional Name entry
-	* @param kid			Primary key of AIK entry in keys table
 	* @param count			measurement count
 	* @return				SUCCESS if COUNT was successful
 	*/
 	status_t (*get_comp_measurement_count)(pts_database_t *this,
-							pts_comp_func_name_t *comp_name, chunk_t keyid,
-							pts_meas_algorithms_t algo, int *cid, int *kid,
-							int *count);
+							pts_comp_func_name_t *comp_name, int aik_id,
+							pts_meas_algorithms_t algo, int *cid, int *count);
 
 	/**
 	* Destroys a pts_database_t object.

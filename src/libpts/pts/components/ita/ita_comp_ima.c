@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -66,11 +66,6 @@ struct pts_ita_comp_ima_t {
 	pts_comp_func_name_t *name;
 
 	/**
-	 * AIK keyid
-	 */
-	chunk_t keyid;
-
-	/**
 	 * Sub-component depth
 	 */
 	u_int32_t depth;
@@ -83,7 +78,7 @@ struct pts_ita_comp_ima_t {
 	/**
 	 * Primary key for AIK database entry
 	 */
-	int kid;
+	int aik_id;
 
 	/**
 	 * Primary key for IMA BIOS Component Functional Name database entry
@@ -613,22 +608,7 @@ METHOD(pts_component_t, verify, status_t,
 	status_t status;
 	char *uri;
 
-	/* some first time initializations */
-	if (!this->keyid.ptr)
-	{
-		if (!pts->get_aik_keyid(pts, &this->keyid))
-		{
-			DBG1(DBG_PTS, "AIK keyid not available");
-			return FAILED;
-		}
-		this->keyid = chunk_clone(this->keyid);
-		if (!this->pts_db)
-		{
-			DBG1(DBG_PTS, "pts database not available");
-			return FAILED;
-		}
-	}
-
+	this->aik_id = pts->get_aik_id(pts);
 	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &pcr,	&algo, &transform,
 											&measurement_time);
@@ -641,8 +621,8 @@ METHOD(pts_component_t, verify, status_t,
 			case IMA_STATE_INIT:
 				this->name->set_qualifier(this->name, qualifier);
 				status = this->pts_db->get_comp_measurement_count(this->pts_db,
-								this->name, this->keyid, algo, &this->bios_cid,
-								&this->kid, &this->bios_count);
+											this->name, this->aik_id, algo,
+											&this->bios_cid, &this->bios_count);
 				this->name->set_qualifier(this->name, PTS_QUALIFIER_UNKNOWN);
 				if (status != SUCCESS)
 				{
@@ -670,8 +650,8 @@ METHOD(pts_component_t, verify, status_t,
 				if (this->is_bios_registering)
 				{
 					status = this->pts_db->insert_comp_measurement(this->pts_db,
-										measurement, this->bios_cid, this->kid,
-										++this->seq_no,	pcr, algo);
+									measurement, this->bios_cid, this->aik_id,
+									++this->seq_no,	pcr, algo);
 					if (status != SUCCESS)
 					{
 						return status;
@@ -681,8 +661,8 @@ METHOD(pts_component_t, verify, status_t,
 				else
 				{
 					status = this->pts_db->check_comp_measurement(this->pts_db,
-										measurement, this->bios_cid, this->kid,
-										++this->seq_no,	pcr, algo);
+									measurement, this->bios_cid, this->aik_id,
+									++this->seq_no,	pcr, algo);
 					if (status == FAILED)
 					{
 						return status;
@@ -711,8 +691,8 @@ METHOD(pts_component_t, verify, status_t,
 			case IMA_STATE_INIT:
 				this->name->set_qualifier(this->name, qualifier);
 				status = this->pts_db->get_comp_measurement_count(this->pts_db,
-										this->name, this->keyid, algo,
-										&this->ima_cid,	&this->kid, &ima_count);
+												this->name, this->aik_id, algo,
+												&this->ima_cid,	&ima_count);
 				this->name->set_qualifier(this->name, PTS_QUALIFIER_UNKNOWN);
 				if (status != SUCCESS)
 				{
@@ -728,7 +708,7 @@ METHOD(pts_component_t, verify, status_t,
 								  "measurement", pen_names, vid, names, name);
 					status = this->pts_db->check_comp_measurement(this->pts_db,
 													measurement, this->ima_cid,
-													this->kid, 1, pcr, algo);
+													this->aik_id, 1, pcr, algo);
 				}
 				else
 				{
@@ -737,7 +717,7 @@ METHOD(pts_component_t, verify, status_t,
 					this->is_ima_registering = TRUE;
 					status = this->pts_db->insert_comp_measurement(this->pts_db,
 													measurement, this->ima_cid,
-										 			this->kid, 1, pcr, algo);
+													this->aik_id, 1, pcr, algo);
 				}
 				this->state = IMA_STATE_RUNTIME;
 
@@ -756,7 +736,7 @@ METHOD(pts_component_t, verify, status_t,
 					return FAILED;
 				}
 				status = this->pts_db->check_file_measurement(this->pts_db,
-												pts->get_platform_info(pts),
+												pts->get_platform_id(pts),
 												PTS_MEAS_ALGO_SHA1_IMA,
 												measurement, uri);
 				switch (status)
@@ -904,14 +884,14 @@ METHOD(pts_component_t, destroy, void,
 		if (this->is_bios_registering)
 		{
 			count = this->pts_db->delete_comp_measurements(this->pts_db,
-													this->bios_cid, this->kid);
+												this->bios_cid, this->aik_id);
 			DBG1(DBG_PTS, "deleted %d registered %N '%N' BIOS evidence "
 						  "measurements", count, pen_names, vid, names, name);
 		}
 		if (this->is_ima_registering)
 		{
 			count = this->pts_db->delete_comp_measurements(this->pts_db,
-													this->ima_cid, this->kid);
+												this->ima_cid, this->aik_id);
 			DBG1(DBG_PTS, "deleted registered %N '%N' boot aggregate evidence "
 						  "measurement", pen_names, vid, names, name);
 		}
@@ -920,7 +900,6 @@ METHOD(pts_component_t, destroy, void,
 		this->ima_list->destroy_function(this->ima_list,
 										 (void *)free_ima_entry);
 		this->name->destroy(this->name);
-		free(this->keyid.ptr);
 		free(this);
 	}
 }

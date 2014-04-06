@@ -89,7 +89,6 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			enumerator_t *enumerator;
 			pts_comp_func_name_t *name;
-			chunk_t keyid;
 			uint8_t flags;
 			uint32_t depth;
 			bool first_component = TRUE;
@@ -97,7 +96,7 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
-			if (!pts->get_aik_keyid(pts, &keyid))
+			if (!pts->get_aik_id(pts))
 			{
 				attestation_state->set_measurement_error(attestation_state,
 									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);

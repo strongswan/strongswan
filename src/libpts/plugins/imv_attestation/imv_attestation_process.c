@@ -160,6 +160,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			certificate_t *aik, *issuer;
 			public_key_t *public;
 			chunk_t keyid, keyid_hex, device_id;
+			int aik_id;
 			enumerator_t *e;
 			bool trusted = FALSE, trusted_chain = FALSE;
 
@@ -214,7 +215,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 					break;
 				}
 			}
-			pts->set_aik(pts, aik);
+			session->get_session_id(session, NULL, &aik_id);
+			pts->set_aik(pts, aik, aik_id);
 			break;
 		}
 		case TCG_PTS_FILE_MEAS:
@@ -228,13 +230,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			pts_file_meas_t *measurements;
 			imv_workitem_t *workitem, *found = NULL;
 			imv_workitem_type_t type;
-			char result_str[BUF_LEN], *platform_info;
+			char result_str[BUF_LEN];
 			bool is_dir, correct;
 			enumerator_t *enumerator;
 
 			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 			algo = pts->get_meas_algorithm(pts);
-			platform_info = pts->get_platform_info(pts);
 			attr_cast = (tcg_pts_attr_file_meas_t*)attr;
 			measurements = attr_cast->get_measurements(attr_cast);
 			request_id = measurements->get_request_id(measurements);
@@ -287,7 +288,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 						/* check hashes from database against measurements */
 						e = pts_db->create_file_hash_enumerator(pts_db,
-										platform_info, algo, is_dir, arg_int);
+											pts->get_platform_id(pts), 
+											algo, is_dir, arg_int);
 						if (!e)
 						{
 							eval = TNC_IMV_EVALUATION_RESULT_ERROR;
@@ -319,8 +321,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 						while (e->enumerate(e, &filename, &measurement))
 						{
 							if (pts_db->add_file_measurement(pts_db,
-									platform_info, algo, measurement, filename,
-									is_dir, arg_int) != SUCCESS)
+									pts->get_platform_id(pts), algo, measurement,
+									filename, is_dir, arg_int) != SUCCESS)
 							{
 								eval = TNC_IMV_EVALUATION_RESULT_ERROR;
 							}
@@ -343,7 +345,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			}
 			else
 			{
-				measurements->check(measurements, pts_db, platform_info, algo);
+				measurements->check(measurements, pts_db,
+									pts->get_platform_id(pts), algo);
 			}
 			break;
 		}

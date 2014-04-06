@@ -1780,22 +1780,6 @@ METHOD(attest_db_t, add, bool,
 {
 	bool success = FALSE;
 
-	/* add key/component pair */
-	if (this->kid && this->cid)
-	{
-		success = this->db->execute(this->db, NULL,
-					"INSERT INTO key_component (key, component, seq_no) "
-					"VALUES (?, ?, ?)",
-					DB_UINT, this->kid, DB_UINT, this->cid,
-					DB_UINT, this->seq_no) == 1;
-
-		printf("key/component pair (%d/%d) %sinserted into database at "
-			   "position %d\n", this->kid, this->cid,
-			    success ? "" : "could not be ", this->seq_no);
-
-		return success;
-	}
-
 	/* add directory or file hash measurement for a given product */
 	if (this->did && this->pid)
 	{
@@ -1866,19 +1850,6 @@ METHOD(attest_db_t, delete, bool,
 				this->pid, this->fid ? this->fid : this->did,
 				success ? "" : "could not be ");
 
-		return success;
-	}
-
-	/* delete key/component pair */
-	if (this->kid && this->cid)
-	{
-		success = this->db->execute(this->db, NULL,
-								"DELETE FROM key_component "
-								"WHERE key = ? AND component = ?",
-								DB_UINT, this->kid, DB_UINT, this->cid) > 0;
-
-		printf("key/component pair (%d/%d) %sdeleted from database\n",
-				this->kid, this->cid, success ? "" : "could not be ");
 		return success;
 	}
 
