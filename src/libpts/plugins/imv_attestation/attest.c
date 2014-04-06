@@ -278,12 +278,14 @@ static void do_args(int argc, char *argv[])
 						exit(EXIT_FAILURE);
 					}
 				}
-				free(file);
 				free(dir);
+
 				if (!attest->set_file(attest, file, op == OP_ADD))
 				{
+					free(file);
 					exit(EXIT_FAILURE);
 				}
+				free(file);
 				continue;
 			}
 			case 'G':
