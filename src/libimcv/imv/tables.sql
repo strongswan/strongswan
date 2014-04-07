@@ -140,18 +140,19 @@ CREATE TABLE components (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   vendor_id INTEGER NOT NULL,
   name INTEGER NOT NULL,
-  qualifier INTEGER DEFAULT 0
+  qualifier INTEGER DEFAULT 0,
+  label TEXT NOT NULL
 );
 
 DROP TABLE IF EXISTS component_hashes;
 CREATE TABLE component_hashes (
-  component INTEGER NOT NULL,
-  key INTEGER NOT NULL,
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  component INTEGER NOT NULL REFERENCES components(id),
+  key INTEGER NOT NULL REFERENCES devices(id),
   seq_no INTEGER NOT NULL,
   pcr INTEGER NOT NULL,
-  algo INTEGER NOT NULL,
-  hash BLOB NOT NULL,
-  PRIMARY KEY(component, key, seq_no, algo)
+  algo INTEGER NOT NULL REFERENCES algorithms(id),
+  hash BLOB NOT NULL
 );
 
 DROP TABLE IF EXISTS packages;

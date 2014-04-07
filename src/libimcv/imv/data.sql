@@ -531,27 +531,27 @@ INSERT INTO versions (
 /* Components */
 
 INSERT INTO components (
-  vendor_id, name, qualifier
+  vendor_id, name, qualifier, label
 ) VALUES (
-  36906, 1, 33  /* ITA TGRUB */
+  36906, 1, 33, 'G'  /* ITA TGRUB */
 );
 
 INSERT INTO components (
-  vendor_id, name, qualifier
+  vendor_id, name, qualifier, label
 ) VALUES (
-  36906, 2, 33  /* ITA TBOOT */
+  36906, 2, 33, 'T'  /* ITA TBOOT */
 );
 
 INSERT INTO components (
-  vendor_id, name, qualifier
+  vendor_id, name, qualifier, label
 ) VALUES (
-  36906, 3, 33  /* ITA IMA - Trusted Platform */
+  36906, 3, 33, 'B' /* ITA IMA - Trusted Platform */
 );
 
 INSERT INTO components (
-  vendor_id, name, qualifier
+  vendor_id, name, qualifier, label
 ) VALUES (
-  36906, 3, 34  /* ITA IMA - Operating System */
+  36906, 3, 34, 'I' /* ITA IMA - Operating System */
 );
 
 /* Groups */
