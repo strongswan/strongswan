@@ -108,7 +108,7 @@ METHOD(ntru_public_key_t, encrypt, bool,
 	uint8_t b[MAX_SEC_STRENGTH_LEN];
 	uint8_t *t2, *Mtrin, *M, *mask_trits, *ptr;
 	uint16_t mod_q_mask, mprime_len = 0;
-	int16_t m1;
+	int16_t m1 = 0;
 	chunk_t seed = chunk_empty;
 	ntru_trits_t *mask;
 	ntru_poly_t *r_poly;
