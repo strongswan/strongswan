@@ -553,7 +553,7 @@ static void free_conditions(FWPM_FILTER_CONDITION0 *conds, int count)
  * Find the callout GUID for given parameters
  */
 static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
-						 GUID *layer, GUID *callout)
+						 GUID *layer, GUID *sublayer, GUID *callout)
 {
 	struct {
 		bool tunnel;
@@ -561,31 +561,40 @@ static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
 		bool inbound;
 		bool forward;
 		const GUID *layer;
+		const GUID *sublayer;
 		const GUID *callout;
 	} map[] = {
-		{ 0, 0, 0, 0, 	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+		{ 0, 0, 0, 0, 	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4, NULL,
 						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4			},
-		{ 0, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
+		{ 0, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4, NULL,
 						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4			},
-		{ 0, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+		{ 0, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6, NULL,
 						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V6			},
-		{ 0, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
+		{ 0, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6, NULL,
 						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V6			},
 		{ 1, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4				},
 		{ 1, 0, 0, 1,	&FWPM_LAYER_IPFORWARD_V4,
+						&FWPM_SUBLAYER_IPSEC_FORWARD_OUTBOUND_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4		},
 		{ 1, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4				},
 		{ 1, 0, 1, 1,	&FWPM_LAYER_IPFORWARD_V4,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4		},
 		{ 1, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6				},
 		{ 1, 1, 0, 1,	&FWPM_LAYER_IPFORWARD_V6,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6		},
 		{ 1, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6				},
 		{ 1, 1, 1, 1,	&FWPM_LAYER_IPFORWARD_V6,
+						&FWPM_SUBLAYER_IPSEC_TUNNEL,
 						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6		},
 	};
 	int i;
@@ -599,6 +608,10 @@ static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
 		{
 			*callout = *map[i].callout;
 			*layer = *map[i].layer;
+			if (map[i].sublayer)
+			{
+				*sublayer = *map[i].sublayer;
+			}
 			return TRUE;
 		}
 	}
@@ -635,7 +648,8 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
 
 	v6 = sp->src->get_type(sp->src) == TS_IPV6_ADDR_RANGE;
 	if (!find_callout(context != NULL, v6, inbound, fwd,
-					  &filter.layerKey, &filter.action.calloutKey))
+					  &filter.layerKey, &filter.subLayerKey,
+					  &filter.action.calloutKey))
 	{
 		return FALSE;
 	}
