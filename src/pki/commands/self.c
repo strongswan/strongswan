@@ -235,6 +235,10 @@ static int self()
 				{
 					flags |= X509_OCSP_SIGNER;
 				}
+				else if (streq(arg, "msSmartcardLogon"))
+				{
+					flags |= X509_MS_SMARTCARD_LOGON;
+				}
 				continue;
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
@@ -406,7 +410,7 @@ static void __attribute__ ((constructor))reg()
 		{" [--in file|--keyid hex] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
+		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--policy-map issuer-oid:subject-oid]",
 		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",

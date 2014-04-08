@@ -140,6 +140,10 @@ static void print_x509(x509_t *x509)
 	{
 		printf("iKEIntermediate ");
 	}
+	if (flags & X509_MS_SMARTCARD_LOGON)
+	{
+		printf("msSmartcardLogon ");
+	}
 	if (flags & X509_SELF_SIGNED)
 	{
 		printf("self-signed ");

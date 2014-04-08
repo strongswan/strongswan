@@ -200,7 +200,7 @@
                   0x04       "msEncryptingFileSystem"
               0x14           "msEnrollmentInfrastructure"
                 0x02         "msCertificateTypeExtension"
-                  0x02       "msSmartcardLogon"
+                  0x02       "msSmartcardLogon"			OID_MS_SMARTCARD_LOGON
                   0x03       "msUPN"					OID_USER_PRINCIPAL_NAME
               0x15           "msCertSrvInfrastructure"
                 0x07         "msCertTemplate"

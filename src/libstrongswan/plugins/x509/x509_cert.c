@@ -758,6 +758,9 @@ static void parse_extendedKeyUsage(chunk_t blob, int level0,
 				case OID_OCSP_SIGNING:
 					this->flags |= X509_OCSP_SIGNER;
 					break;
+				case OID_MS_SMARTCARD_LOGON:
+					this->flags |= X509_MS_SMARTCARD_LOGON;
+					break;
 				default:
 					break;
 			}
@@ -2008,7 +2011,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty, inhibitAnyPolicy = chunk_empty;
-	chunk_t ikeIntermediate = chunk_empty;
+	chunk_t ikeIntermediate = chunk_empty, msSmartcardLogon = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -2139,6 +2142,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		ocspSigning = asn1_build_known_oid(OID_OCSP_SIGNING);
 	}
+	if (cert->flags & X509_MS_SMARTCARD_LOGON)
+	{
+		msSmartcardLogon = asn1_build_known_oid(OID_MS_SMARTCARD_LOGON);
+	}
 
 	if (serverAuth.ptr || clientAuth.ptr || ikeIntermediate.ptr ||
 		ocspSigning.ptr)
@@ -2146,9 +2153,9 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EXTENDED_KEY_USAGE),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
-									asn1_wrap(ASN1_SEQUENCE, "mmmm",
+									asn1_wrap(ASN1_SEQUENCE, "mmmmm",
 										serverAuth, clientAuth, ikeIntermediate,
-										ocspSigning)));
+										ocspSigning, msSmartcardLogon)));
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */

@@ -39,25 +39,27 @@ typedef enum x509_constraint_t x509_constraint_t;
  */
 enum x509_flag_t {
 	/** cert has no constraints */
-	X509_NONE =				0,
+	X509_NONE =	               0,
 	/** cert has CA constraint */
-	X509_CA =				(1<<0),
+	X509_CA =                 (1<<0),
 	/** cert has AA constraint */
-	X509_AA =				(1<<1),
+	X509_AA =                 (1<<1),
 	/** cert has OCSP signer constraint */
-	X509_OCSP_SIGNER =		(1<<2),
+	X509_OCSP_SIGNER =        (1<<2),
 	/** cert has serverAuth key usage */
-	X509_SERVER_AUTH =		(1<<3),
+	X509_SERVER_AUTH =        (1<<3),
 	/** cert has clientAuth key usage */
-	X509_CLIENT_AUTH =		(1<<4),
+	X509_CLIENT_AUTH =        (1<<4),
 	/** cert is self-signed */
-	X509_SELF_SIGNED =		(1<<5),
+	X509_SELF_SIGNED =        (1<<5),
 	/** cert has an ipAddrBlocks extension */
-	X509_IP_ADDR_BLOCKS =	(1<<6),
+	X509_IP_ADDR_BLOCKS =     (1<<6),
 	/** cert has CRL sign key usage */
-	X509_CRL_SIGN =			(1<<7),
+	X509_CRL_SIGN =           (1<<7),
 	/** cert has iKEIntermediate key usage */
-	X509_IKE_INTERMEDIATE =	(1<<8),
+	X509_IKE_INTERMEDIATE =   (1<<8),
+	/** cert has Microsoft Smartcard Logon usage */
+	X509_MS_SMARTCARD_LOGON = (1<<9),
 };
 
 /**

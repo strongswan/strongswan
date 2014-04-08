@@ -251,6 +251,10 @@ static int issue()
 				{
 					flags |= X509_OCSP_SIGNER;
 				}
+				else if (streq(arg, "msSmartcardLogon"))
+				{
+					flags |= X509_MS_SMARTCARD_LOGON;
+				}
 				continue;
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
@@ -549,7 +553,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type pub|pkcs10] --cakey file|--cakeyid hex",
 		 " --cacert file [--dn subject-dn] [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--pathlen len]",
-		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
+		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
 		 "[--crl uri [--crlissuer i]]+ [--ocsp uri]+ [--nc-permitted name]",
 		 "[--nc-excluded name] [--policy-mapping issuer-oid:subject-oid]",
 		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",
