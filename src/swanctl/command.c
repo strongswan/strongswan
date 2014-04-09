@@ -80,7 +80,7 @@ static void build_opts()
 	memset(command_optstring, 0, sizeof(command_optstring));
 	if (active == help_idx)
 	{
-		for (i = 0; cmds[i].cmd; i++)
+		for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 		{
 			command_opts[i].name = cmds[i].cmd;
 			command_opts[i].val = cmds[i].op;
@@ -218,7 +218,7 @@ int command_usage(char *error, ...)
 	fprintf(out, "usage:\n");
 	if (active == help_idx)
 	{
-		for (i = 0; cmds[i].cmd; i++)
+		for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 		{
 			fprintf(out, "  swanctl --%-10s (-%c)  %s\n",
 					cmds[i].cmd, cmds[i].op, cmds[i].description);
@@ -292,7 +292,7 @@ int command_dispatch(int c, char *v[])
 
 	build_opts();
 	op = getopt_long(c, v, command_optstring, command_opts, NULL);
-	for (i = 0; cmds[i].cmd; i++)
+	for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 	{
 		if (cmds[i].op == op)
 		{
