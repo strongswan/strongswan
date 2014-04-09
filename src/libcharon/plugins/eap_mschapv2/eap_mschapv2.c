@@ -792,12 +792,14 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 					 "invalid auth string");
 				goto error;
 			}
+			chunk_free(&auth_string);
 			hex = chunk_create(token, AUTH_RESPONSE_LEN - 2);
 			auth_string = chunk_from_hex(hex, NULL);
 		}
 		else if (strpfx(token, "M="))
 		{
 			token += 2;
+			free(msg);
 			msg = strdup(token);
 		}
 	}
@@ -883,6 +885,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 					 "invalid challenge");
 				goto error;
 			}
+			chunk_free(&challenge);
 			hex = chunk_create(token, 2 * CHALLENGE_LEN);
 			challenge = chunk_from_hex(hex, NULL);
 		}
@@ -893,6 +896,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		else if (strpfx(token, "M="))
 		{
 			token += 2;
+			free(msg);
 			msg = strdup(token);
 		}
 	}
