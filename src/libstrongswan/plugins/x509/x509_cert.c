@@ -2174,7 +2174,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	}
 
 	/* add the keyid authKeyIdentifier for non self-signed certificates */
-	if (sign_key)
+	if (sign_cert)
 	{
 		chunk_t keyid;
 
