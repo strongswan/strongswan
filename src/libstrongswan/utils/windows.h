@@ -281,6 +281,13 @@ char* getpass(const char *prompt);
 #endif
 
 /**
+ * shutdown(2) "how"-aliases, to use Unix variant on Windows
+ */
+#define SHUT_RD SD_RECEIVE
+#define SHUT_WR SD_SEND
+#define SHUT_RDWR SD_BOTH
+
+/**
  * close(2) working for file handles and Winsock sockets
  */
 #define close windows_close
