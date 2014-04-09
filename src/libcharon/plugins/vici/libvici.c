@@ -199,11 +199,25 @@ CALLBACK(on_read, bool,
 {
 	u_int16_t len;
 	u_int8_t op;
+	ssize_t hlen;
 
-	if (!stream->read_all(stream, &len, sizeof(len)))
+	hlen = stream->read(stream, &len, sizeof(len), FALSE);
+	if (hlen <= 0)
 	{
+		if (errno == EWOULDBLOCK)
+		{
+			return TRUE;
+		}
 		return read_error(conn, errno);
 	}
+	if (hlen < sizeof(len))
+	{
+		if (!stream->read_all(stream, ((void*)&len) + hlen, sizeof(len) - hlen))
+		{
+			return read_error(conn, errno);
+		}
+	}
+
 	len = ntohs(len);
 	if (len-- < sizeof(op))
 	{
