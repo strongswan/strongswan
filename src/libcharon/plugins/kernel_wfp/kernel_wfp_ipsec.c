@@ -1326,15 +1326,57 @@ static bool install_route(private_kernel_wfp_ipsec_t *this,
 }
 
 /**
+ * (Un)-install a single route
+ */
+static bool manage_route(private_kernel_wfp_ipsec_t *this,
+						 host_t *local, host_t *remote,
+						 traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+						 bool add)
+{
+	host_t *src, *dst, *gtw;
+	u_int8_t mask;
+	bool done;
+
+	if (!dst_ts->to_subnet(dst_ts, &dst, &mask))
+	{
+		return FALSE;
+	}
+	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
+												src_ts, &src, NULL) != SUCCESS)
+	{
+		dst->destroy(dst);
+		return FALSE;
+	}
+	gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
+											   remote, local);
+	if (add)
+	{
+		done = install_route(this, dst, mask, src, gtw);
+	}
+	else
+	{
+		done = uninstall_route(this, dst, mask, src, gtw);
+	}
+	dst->destroy(dst);
+	src->destroy(src);
+	DESTROY_IF(gtw);
+
+	if (!done)
+	{
+		DBG1(DBG_KNL, "%sinstalling route for policy %R === %R failed",
+			 add ? "" : "un", src_ts, dst_ts);
+	}
+	return done;
+}
+
+/**
  * (Un)-install routes for IPsec policies
  */
 static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 						  bool add)
 {
 	enumerator_t *enumerator;
-	host_t *src, *dst, *gtw;
 	sp_entry_t *sp;
-	u_int8_t mask;
 
 	enumerator = array_create_enumerator(entry->sps);
 	while (enumerator->enumerate(enumerator, &sp))
@@ -1347,45 +1389,11 @@ static bool manage_routes(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		{
 			continue;
 		}
-		if (!sp->dst->to_subnet(sp->dst, &dst, &mask))
+		if (manage_route(this, entry->local, entry->remote,
+						 sp->src, sp->dst, add))
 		{
-			continue;
+			sp->route = add;
 		}
-		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-												sp->src, &src, NULL) != SUCCESS)
-		{
-			dst->destroy(dst);
-			continue;
-		}
-		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
-												   entry->remote, entry->local);
-		if (add)
-		{
-			if (install_route(this, dst, mask, src, gtw))
-			{
-				sp->route = TRUE;
-			}
-			else
-			{
-				DBG1(DBG_KNL, "installing route for policy %R === %R failed",
-					 sp->src, sp->dst);
-			}
-		}
-		else
-		{
-			if (uninstall_route(this, dst, mask, src, gtw))
-			{
-				sp->route = FALSE;
-			}
-			else
-			{
-				DBG1(DBG_KNL, "uninstalling route for policy %R === %R failed",
-					 sp->src, sp->dst);
-			}
-		}
-		dst->destroy(dst);
-		src->destroy(src);
-		DESTROY_IF(gtw);
 	}
 	enumerator->destroy(enumerator);
 
