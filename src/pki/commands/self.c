@@ -114,7 +114,6 @@ static int self()
 			case 'a':
 				san->insert_last(san, identification_create_from_string(arg));
 				continue;
-				continue;
 			case 'l':
 				lifetime = atoi(arg) * 24 * 60 * 60;
 				if (!lifetime)
