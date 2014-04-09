@@ -1440,6 +1440,12 @@ typedef struct {
 	u_int32_t reqid;
 	/** is this a forward policy trap for tunnel mode? */
 	bool fwd;
+	/** do we have installed a route for this trap policy? */
+	bool route;
+	/** local address of associated route */
+	host_t *local;
+	/** remote address of associated route */
+	host_t *remote;
 	/** src traffic selector */
 	traffic_selector_t *src;
 	/** dst traffic selector */
@@ -1453,6 +1459,8 @@ typedef struct {
  */
 static void destroy_trap(trap_t *this)
 {
+	this->local->destroy(this->local);
+	this->remote->destroy(this->remote);
 	this->src->destroy(this->src);
 	this->dst->destroy(this->dst);
 	free(this);
@@ -1699,7 +1707,7 @@ static bool uninstall_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
  * Create and install a new trap entry
  */
 static bool add_trap(private_kernel_wfp_ipsec_t *this,
-					 u_int32_t reqid, bool fwd,
+					 u_int32_t reqid, bool fwd, host_t *local, host_t *remote,
 					 traffic_selector_t *src, traffic_selector_t *dst)
 {
 	trap_t *trap;
@@ -1709,6 +1717,8 @@ static bool add_trap(private_kernel_wfp_ipsec_t *this,
 		.fwd = fwd,
 		.src = src->clone(src),
 		.dst = dst->clone(dst),
+		.local = local->clone(local),
+		.remote = remote->clone(remote),
 	);
 
 	if (!install_trap(this, trap))
@@ -1716,6 +1726,9 @@ static bool add_trap(private_kernel_wfp_ipsec_t *this,
 		destroy_trap(trap);
 		return FALSE;
 	}
+
+	trap->route = manage_route(this, local, remote, src, dst, TRUE);
+
 	this->mutex->lock(this->mutex);
 	this->traps->put(this->traps, trap, trap);
 	this->mutex->unlock(this->mutex);
@@ -1751,6 +1764,11 @@ static bool remove_trap(private_kernel_wfp_ipsec_t *this,
 
 	if (found)
 	{
+		if (trap->route)
+		{
+			trap->route = !manage_route(this, trap->local, trap->remote,
+										src, dst, FALSE);
+		}
 		uninstall_trap(this, found);
 		destroy_trap(found);
 		return TRUE;
@@ -2215,13 +2233,13 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		case POLICY_PRIORITY_DEFAULT:
 			break;
 		case POLICY_PRIORITY_ROUTED:
-			if (!add_trap(this, sa->reqid, FALSE, src_ts, dst_ts))
+			if (!add_trap(this, sa->reqid, FALSE, src, dst, src_ts, dst_ts))
 			{
 				return FAILED;
 			}
 			if (sa->mode == MODE_TUNNEL)
 			{
-				if (!add_trap(this, sa->reqid, TRUE, src_ts, dst_ts))
+				if (!add_trap(this, sa->reqid, TRUE, src, dst, src_ts, dst_ts))
 				{
 					return FAILED;
 				}
