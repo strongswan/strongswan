@@ -1503,8 +1503,10 @@ static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
 
 	if (reqid)
 	{
+		src = src ? src->clone(src) : NULL;
+		dst = dst ? dst->clone(dst) : NULL;
 		hydra->kernel_interface->acquire(hydra->kernel_interface, reqid,
-										 src->clone(src), dst->clone(dst));
+										 src, dst);
 	}
 }
 
