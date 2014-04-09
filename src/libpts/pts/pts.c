@@ -393,7 +393,7 @@ static void load_aik_blob(private_pts_t *this)
 		fseek(fp, 0L, SEEK_SET);
 
 		this->aik_blob = chunk_alloc(aikBlobLen);
-		if (fread(this->aik_blob.ptr, 1, aikBlobLen, fp))
+		if (fread(this->aik_blob.ptr, 1, aikBlobLen, fp) == aikBlobLen)
 		{
 			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", blob_path);
 			DBG3(DBG_PTS, "AIK Blob: %B", &this->aik_blob);
@@ -401,6 +401,7 @@ static void load_aik_blob(private_pts_t *this)
 		else
 		{
 			DBG1(DBG_PTS, "unable to read AIK Blob file '%s'", blob_path);
+			chunk_free(&this->aik_blob);
 		}
 		fclose(fp);
 		return;
