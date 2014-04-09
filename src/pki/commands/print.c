@@ -445,6 +445,7 @@ static void print_ac(ac_t *ac)
 					if (str)
 					{
 						printf("%s", str);
+						free(str);
 					}
 					else
 					{
