@@ -1093,6 +1093,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 						if (str)
 						{
 							fprintf(out, "%s", str);
+							free(str);
 						}
 						else
 						{
