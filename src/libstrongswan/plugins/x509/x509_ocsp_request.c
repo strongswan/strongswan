@@ -252,7 +252,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 {
 	int oid;
 	signature_scheme_t scheme;
-	chunk_t certs, signature, encoding;
+	chunk_t certs = chunk_empty, signature, encoding;
 
 	switch (this->key->get_type(this->key))
 	{
