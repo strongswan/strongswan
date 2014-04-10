@@ -2028,6 +2028,12 @@ METHOD(ike_sa_t, inherit_pre, void,
 	set_peer_cfg(this, other->peer_cfg);
 	set_my_host(this, other->my_host->clone(other->my_host));
 	set_other_host(this, other->other_host->clone(other->other_host));
+
+	/* apply extensions and conditions with a few exceptions */
+	this->extensions = other->extensions;
+	this->conditions = other->conditions;
+	this->conditions &= ~COND_STALE;
+	this->conditions &= ~COND_REAUTHENTICATING;
 }
 
 METHOD(ike_sa_t, inherit_post, void,
