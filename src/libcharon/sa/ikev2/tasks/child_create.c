@@ -1192,6 +1192,12 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_ADDITIONAL_SAS, chunk_empty);
 		return SUCCESS;
 	}
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		DBG1(DBG_IKE, "unable to create CHILD_SA while deleting IKE_SA");
+		message->add_notify(message, TRUE, NO_ADDITIONAL_SAS, chunk_empty);
+		return SUCCESS;
+	}
 
 	if (this->config == NULL)
 	{
