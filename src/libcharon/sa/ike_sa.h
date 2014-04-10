@@ -1020,6 +1020,16 @@ struct ike_sa_t {
 	void (*queue_task)(ike_sa_t *this, task_t *task);
 
 	/**
+	 * Inherit required attributes to new SA before rekeying.
+	 *
+	 * Some properties of the SA must be applied before starting IKE_SA
+	 * rekeying, such as the configuration or support extensions.
+	 *
+	 * @param other			other IKE_SA to inherit from
+	 */
+	void (*inherit_pre)(ike_sa_t *this, ike_sa_t *other);
+
+	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
@@ -1027,7 +1037,7 @@ struct ike_sa_t {
 	 *
 	 * @param other			other IKE SA to inherit from
 	 */
-	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
+	void (*inherit_post) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Reset the IKE_SA, useable when initiating fails

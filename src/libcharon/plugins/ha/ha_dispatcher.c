@@ -245,13 +245,8 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			if (old_sa)
 			{
-				peer_cfg_t *peer_cfg = old_sa->get_peer_cfg(old_sa);
-
-				if (peer_cfg)
-				{
-					ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-					ike_sa->inherit(ike_sa, old_sa);
-				}
+				ike_sa->inherit_pre(ike_sa, old_sa);
+				ike_sa->inherit_post(ike_sa, old_sa);
 				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, old_sa);
 				old_sa = NULL;
@@ -1077,4 +1072,3 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 
 	return &this->public;
 }
-

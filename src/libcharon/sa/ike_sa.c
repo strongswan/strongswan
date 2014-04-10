@@ -2019,7 +2019,18 @@ METHOD(ike_sa_t, queue_task, void,
 	this->task_manager->queue_task(this->task_manager, task);
 }
 
-METHOD(ike_sa_t, inherit, void,
+METHOD(ike_sa_t, inherit_pre, void,
+	private_ike_sa_t *this, ike_sa_t *other_public)
+{
+	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
+
+	/* apply config and hosts */
+	set_peer_cfg(this, other->peer_cfg);
+	set_my_host(this, other->my_host->clone(other->my_host));
+	set_other_host(this, other->other_host->clone(other->other_host));
+}
+
+METHOD(ike_sa_t, inherit_post, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
@@ -2288,7 +2299,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.reestablish = _reestablish,
 			.set_auth_lifetime = _set_auth_lifetime,
 			.roam = _roam,
-			.inherit = _inherit,
+			.inherit_pre = _inherit_pre,
+			.inherit_post = _inherit_post,
 			.generate_message = _generate_message,
 			.reset = _reset,
 			.get_unique_id = _get_unique_id,

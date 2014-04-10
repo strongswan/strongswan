@@ -83,7 +83,7 @@ static void establish_new(private_ike_rekey_t *this)
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
 
-		this->new_sa->inherit(this->new_sa, this->ike_sa);
+		this->new_sa->inherit_post(this->new_sa, this->ike_sa);
 		charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
 		this->new_sa = NULL;
@@ -124,8 +124,6 @@ METHOD(task_t, build_i, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
 	ike_version_t version;
-	peer_cfg_t *peer_cfg;
-	host_t *other_host;
 
 	/* create new SA only on first try */
 	if (this->new_sa == NULL)
@@ -137,10 +135,7 @@ METHOD(task_t, build_i, status_t,
 		{	/* shouldn't happen */
 			return FAILED;
 		}
-		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		other_host = this->ike_sa->get_other_host(this->ike_sa);
-		this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
-		this->new_sa->set_other_host(this->new_sa, other_host->clone(other_host));
+		this->new_sa->inherit_pre(this->new_sa, this->ike_sa);
 		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
@@ -153,7 +148,6 @@ METHOD(task_t, process_r, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
-	peer_cfg_t *peer_cfg;
 	child_sa_t *child_sa;
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
@@ -186,9 +180,7 @@ METHOD(task_t, process_r, status_t,
 	{	/* shouldn't happen */
 		return FAILED;
 	}
-
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
+	this->new_sa->inherit_pre(this->new_sa, this->ike_sa);
 	this->ike_init = ike_init_create(this->new_sa, FALSE, this->ike_sa);
 	this->ike_init->task.process(&this->ike_init->task, message);
 
