@@ -3,7 +3,7 @@
 INSERT INTO devices (                  /*  1 */
   value, product, created  
 ) VALUES (
-  'aabbccddeeff11223344556677889900', 28, 1372330615
+  'aabbccddeeff11223344556677889900', 40, 1372330615
 );
 
 /* Groups Members */

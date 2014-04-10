@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,12 +24,15 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_angel.h>
 
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <utils/debug.h>
 
+#define SWID_GENERATOR	"/usr/local/bin/swid_generator"
 
 /* IMC definitions */
 
@@ -128,12 +131,156 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	return TNC_RESULT_SUCCESS;
 }
 
+/**
+ * Add one or multiple SWID Inventory attributes to the send queue
+ */
+static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
+							   uint32_t request_id, bool full_tags,
+							   swid_inventory_t *targets)
+{
+	pa_tnc_attr_t *attr, *attr_angel;
+	imc_swid_state_t *swid_state;
+	swid_inventory_t *swid_inventory;
+	char *swid_directory, *swid_generator;
+	uint32_t eid_epoch;
+	size_t max_attr_size, attr_size, entry_size;
+	bool first = TRUE, swid_pretty, swid_full;
+	enumerator_t *enumerator;
+
+	swid_directory = lib->settings->get_str(lib->settings,
+								"%s.plugins.imc-swid.swid_directory",
+								 SWID_DIRECTORY, lib->ns);
+	swid_generator = lib->settings->get_str(lib->settings,
+								"%s.plugins.imc-swid.swid_generator",
+								 SWID_GENERATOR, lib->ns);
+	swid_pretty = lib->settings->get_bool(lib->settings,
+								"%s.plugins.imc-swid.swid_pretty",
+								 FALSE, lib->ns);
+	swid_full = lib->settings->get_bool(lib->settings,
+								"%s.plugins.imc-swid.swid_full",
+								 FALSE, lib->ns);
+
+	swid_inventory = swid_inventory_create(full_tags);
+	if (!swid_inventory->collect(swid_inventory, swid_directory, swid_generator,
+								 targets, swid_pretty, swid_full))
+	{
+		swid_inventory->destroy(swid_inventory);
+		attr = swid_error_create(TCG_SWID_ERROR, request_id,
+								 0, "error in SWID tag collection");
+		msg->add_attribute(msg, attr);
+		return FALSE;
+	}
+	DBG1(DBG_IMC, "collected %d SWID tag%s%s",
+		 swid_inventory->get_count(swid_inventory), full_tags ? "" : " ID",
+		 swid_inventory->get_count(swid_inventory) == 1 ? "" : "s");
+
+	swid_state = (imc_swid_state_t*)state;
+	eid_epoch = swid_state->get_eid_epoch(swid_state);
+
+	/**
+	 * Compute the maximum TCG Tag [ID] Inventory attribute size
+	 * leaving space for an additional ITA Angel attribute
+	 */
+	max_attr_size = state->get_max_msg_len(state) -
+					PA_TNC_HEADER_SIZE - PA_TNC_ATTR_HEADER_SIZE;
+
+	if (full_tags)
+	{
+		tcg_swid_attr_tag_inv_t *swid_attr;
+		swid_tag_t *tag;
+		chunk_t encoding, tag_file_path;
+
+		/* At least one TCG Tag Inventory attribute is sent */
+		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE;
+		attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1);
+
+		enumerator = swid_inventory->create_enumerator(swid_inventory);
+		while (enumerator->enumerate(enumerator, &tag))
+		{
+			tag_file_path = tag->get_tag_file_path(tag);
+			encoding = tag->get_encoding(tag);
+			entry_size = 2 + tag_file_path.len + 4 + encoding.len;
+
+			if (attr_size + entry_size > max_attr_size)
+			{
+				if (first)
+				{
+					/**
+					 * Send an ITA Start Angel attribute to the IMV signalling
+					 * that multiple TGC SWID Tag Inventory attributes follow
+					 */
+					attr_angel = ita_attr_angel_create(TRUE);
+					msg->add_attribute(msg, attr_angel);
+					first = FALSE;
+				}
+				msg->add_attribute(msg, attr);
+
+				/* create the next TCG SWID Tag Inventory attribute */
+				attr_size = PA_TNC_ATTR_HEADER_SIZE +
+							TCG_SWID_TAG_INV_MIN_SIZE;
+				attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1);
+			}
+			swid_attr = (tcg_swid_attr_tag_inv_t*)attr;
+			swid_attr->add(swid_attr, tag->get_ref(tag));
+			attr_size += entry_size;
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		tcg_swid_attr_tag_id_inv_t *swid_id_attr;
+		swid_tag_id_t *tag_id;
+		chunk_t tag_creator, unique_sw_id, tag_file_path;
+
+		/* At least one TCG Tag ID Inventory attribute is sent */
+		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_ID_INV_MIN_SIZE;
+		attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
+		swid_id_attr = (tcg_swid_attr_tag_id_inv_t*)attr;
+
+		enumerator = swid_inventory->create_enumerator(swid_inventory);
+		while (enumerator->enumerate(enumerator, &tag_id))
+		{
+			tag_creator = tag_id->get_tag_creator(tag_id);
+			unique_sw_id = tag_id->get_unique_sw_id(tag_id, &tag_file_path);
+			entry_size = 2 + tag_creator.len + 2 + unique_sw_id.len +
+						 2 + tag_file_path.len;
+
+			if (attr_size + entry_size > max_attr_size)
+			{
+				if (first)
+				{
+					/**
+					 * Send an ITA Start Angel attribute to the IMV signalling
+					 * that multiple TGC SWID Tag ID Inventory attributes follow
+					 */
+					attr_angel = ita_attr_angel_create(TRUE);
+					msg->add_attribute(msg, attr_angel);
+					first = FALSE;
+				}
+				msg->add_attribute(msg, attr);
+
+				/* create the next TCG SWID Tag ID Inventory attribute */
+				attr_size = PA_TNC_ATTR_HEADER_SIZE +
+							TCG_SWID_TAG_ID_INV_MIN_SIZE;
+				attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
+			}
+			swid_id_attr = (tcg_swid_attr_tag_id_inv_t*)attr;
+			swid_id_attr->add(swid_id_attr, tag_id->get_ref(tag_id));
+			attr_size += entry_size;
+		}
+		enumerator->destroy(enumerator);
+	}
+	msg->add_attribute(msg, attr);
+	swid_inventory->destroy(swid_inventory);
+
+	return TRUE;
+}
+
 static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 {
 	imc_msg_t *out_msg;
-	imc_swid_state_t *swid_state;
-	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
+	enumerator_t *enumerator;
 	pen_type_t type;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -145,18 +292,16 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		return result;
 	}
 	out_msg = imc_msg_create_as_reply(in_msg);
-	swid_state = (imc_swid_state_t*)state;
 
 	/* analyze PA-TNC attributes */
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		tcg_swid_attr_req_t *attr_req;
-		u_int8_t flags;
-		u_int32_t request_id, eid_epoch;
-		swid_inventory_t *swid_inventory, *targets;
-		char *swid_directory;
+		uint8_t flags;
+		uint32_t request_id;
 		bool full_tags;
+		swid_inventory_t *targets;
 
 		type = attr->get_type(attr);
 
@@ -169,7 +314,6 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		flags = attr_req->get_flags(attr_req);
 		request_id = attr_req->get_request_id(attr_req);
 		targets = attr_req->get_targets(attr_req);
-		eid_epoch = swid_state->get_eid_epoch(swid_state);
 
 		if (flags & (TCG_SWID_ATTR_REQ_FLAG_S | TCG_SWID_ATTR_REQ_FLAG_C))
 		{
@@ -180,33 +324,10 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		}
 		full_tags = (flags & TCG_SWID_ATTR_REQ_FLAG_R) == 0;
 
-		swid_directory = lib->settings->get_str(lib->settings,
-								"%s.plugins.imc-swid.swid_directory",
-								 SWID_DIRECTORY, lib->ns);
-		swid_inventory = swid_inventory_create(full_tags);
-		if (!swid_inventory->collect(swid_inventory, swid_directory, targets))
+		if (!add_swid_inventory(state, out_msg, request_id, full_tags, targets))
 		{
-			swid_inventory->destroy(swid_inventory);
-			attr = swid_error_create(TCG_SWID_ERROR, request_id,
-									 0, "error in SWID tag collection");
-			out_msg->add_attribute(out_msg, attr);
 			break;
 		}
-		DBG1(DBG_IMC, "collected %d SWID tag%s%s",
-			 swid_inventory->get_count(swid_inventory), full_tags ? "" : " ID",
-			 swid_inventory->get_count(swid_inventory) == 1 ? "" : "s");
-
-		if (full_tags)
-		{
-			attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1,
-												swid_inventory);
-		}
-		else
-		{
-			attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1,
-												swid_inventory);
-		}
-		out_msg->add_attribute(out_msg, attr);
 	}
 	enumerator->destroy(enumerator);
 

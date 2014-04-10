@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -34,10 +34,14 @@ struct private_swid_tag_t {
 	chunk_t encoding;
 
 	/**
-	 * Optional Unique Sequence ID
+	 * Optional Tag File Path
 	 */
-	chunk_t unique_seq_id;
+	chunk_t tag_file_path;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(swid_tag_t, get_encoding, chunk_t,
@@ -46,39 +50,51 @@ METHOD(swid_tag_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-METHOD(swid_tag_t, get_unique_seq_id, chunk_t,
+METHOD(swid_tag_t, get_tag_file_path, chunk_t,
 	private_swid_tag_t *this)
 {
-	return this->unique_seq_id;
+	return this->tag_file_path;
+}
+
+METHOD(swid_tag_t, get_ref, swid_tag_t*,
+	private_swid_tag_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 METHOD(swid_tag_t, destroy, void,
 	private_swid_tag_t *this)
 {
-	free(this->encoding.ptr);
-	free(this->unique_seq_id.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->encoding.ptr);
+		free(this->tag_file_path.ptr);
+		free(this);
+	}
 }
 
 /**
  * See header
  */
-swid_tag_t *swid_tag_create(chunk_t encoding, chunk_t unique_seq_id)
+swid_tag_t *swid_tag_create(chunk_t encoding, chunk_t tag_file_path)
 {
 	private_swid_tag_t *this;
 
 	INIT(this,
 		.public = {
 			.get_encoding = _get_encoding,
-			.get_unique_seq_id = _get_unique_seq_id,
+			.get_tag_file_path = _get_tag_file_path,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.encoding = chunk_clone(encoding),
+		.ref = 1,
 	);
 
-	if (unique_seq_id.len > 0)
+	if (tag_file_path.len > 0)
 	{
-		this->unique_seq_id = chunk_clone(unique_seq_id);
+		this->tag_file_path = chunk_clone(tag_file_path);
 	}
 
 	return &this->public;

@@ -95,6 +95,16 @@ struct private_imv_swid_state_t {
 	 */
 	imv_remediation_string_t *remediation_string;
 
+	/**
+	 * Number of processed SWID Tags or SWID Tag IDs
+	 */
+	int count;
+
+	/**
+	 * Angel count
+	 */
+	int angel_count;
+
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -223,6 +233,33 @@ METHOD(imv_swid_state_t, get_handshake_state, imv_swid_handshake_state_t,
 	return this->handshake_state;
 }
 
+METHOD(imv_swid_state_t, set_count, void,
+	private_imv_swid_state_t *this, int count)
+{
+	this->count           += count;
+}
+
+METHOD(imv_swid_state_t, get_count, void,
+	private_imv_swid_state_t *this, int *count)
+{
+	if (count)
+	{
+		*count = this->count;
+	}
+}
+
+METHOD(imv_swid_state_t, set_angel_count, void,
+	private_imv_swid_state_t *this, bool start)
+{
+	this->angel_count += start ? 1 : -1;
+}
+
+METHOD(imv_swid_state_t, get_angel_count, int,
+	private_imv_swid_state_t *this)
+{
+	return this->angel_count;
+}
+
 /**
  * Described in header.
  */
@@ -253,6 +290,10 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_handshake_state = _set_handshake_state,
 			.get_handshake_state = _get_handshake_state,
+			.set_count = _set_count,
+			.get_count = _get_count,
+			.set_angel_count = _set_angel_count,
+			.get_angel_count = _get_angel_count,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,

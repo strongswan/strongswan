@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ typedef struct ietf_attr_installed_packages_t ietf_attr_installed_packages_t;
 #include "ietf_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
+#define IETF_INSTALLED_PACKAGES_MIN_SIZE	4
 
 /**
  * Class implementing the IETF PA-TNC Installed Packages attribute.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -40,8 +40,6 @@ typedef struct package_entry_t package_entry_t;
  *  |  Version Len  |    Package Version Number (Variable Length)   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-
-#define INSTALLED_PACKAGES_MIN_SIZE		4
 
 /**
  * Private data of an ietf_attr_installed_packages_t object.
@@ -132,7 +130,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(INSTALLED_PACKAGES_MIN_SIZE);
+	writer = bio_writer_create(IETF_INSTALLED_PACKAGES_MIN_SIZE);
 	writer->write_uint16(writer, 0x0000);
 	writer->write_uint16(writer, this->packages->get_count(this->packages));
 
@@ -160,7 +158,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	*offset = 0;
 
-	if (this->value.len < INSTALLED_PACKAGES_MIN_SIZE)
+	if (this->value.len < IETF_INSTALLED_PACKAGES_MIN_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for IETF installed packages");
 		return FAILED;
@@ -168,7 +166,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	reader->read_uint16(reader, &reserved);
 	reader->read_uint16(reader, &count);
-	*offset = INSTALLED_PACKAGES_MIN_SIZE;
+	*offset = IETF_INSTALLED_PACKAGES_MIN_SIZE;
 
 	while (reader->remaining(reader))
 	{

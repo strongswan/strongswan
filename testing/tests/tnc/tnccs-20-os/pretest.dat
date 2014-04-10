@@ -15,6 +15,6 @@ carol::sleep 1
 carol::ipsec up home
 dave::ipsec up home
 dave::sleep 1
-moon::ipsec attest --packages --product 'Debian 7.2 x86_64'
+moon::ipsec attest --packages --product 'Debian 7.4 x86_64'
 moon::ipsec attest --sessions
 moon::ipsec attest --devices

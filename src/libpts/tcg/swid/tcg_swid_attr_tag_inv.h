@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ typedef struct tcg_swid_attr_tag_inv_t tcg_swid_attr_tag_inv_t;
 
 #include <pa_tnc/pa_tnc_attr.h>
 
+#define TCG_SWID_TAG_INV_MIN_SIZE	16
+
 /**
  * Class implementing the TCG SWID Tag Inventory attribute
  *
@@ -41,11 +43,17 @@ struct tcg_swid_attr_tag_inv_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 
 	/**
+	 * Add a Tag ID to the attribute
+	 *
+	 * @tag						SWID Tag to be added
+	 */
+	void (*add)(tcg_swid_attr_tag_inv_t *this, swid_tag_t *tag);
+	/**
 	 * Get Request ID
 	 *
 	 * @return					Request ID
 	 */
-	u_int32_t (*get_request_id)(tcg_swid_attr_tag_inv_t *this);
+	uint32_t (*get_request_id)(tcg_swid_attr_tag_inv_t *this);
 
 	/**
 	 * Get Last Event ID
@@ -53,8 +61,8 @@ struct tcg_swid_attr_tag_inv_t {
 	 * @param eid_epoch			Event ID Epoch
 	 * @return					Last Event ID
 	 */
-	u_int32_t (*get_last_eid)(tcg_swid_attr_tag_inv_t *this,
-							  u_int32_t *eid_epoch);
+	uint32_t (*get_last_eid)(tcg_swid_attr_tag_inv_t *this,
+							  uint32_t *eid_epoch);
 
 	/**
 	 * Get Inventory of SWID tags
@@ -71,12 +79,10 @@ struct tcg_swid_attr_tag_inv_t {
  * @param request_id			Copy of the Request ID
  * @param eid_epoch				Event ID Epoch
  * @param eid					Last Event ID
- * @param inventory				SWID Tag Inventory
  */
-pa_tnc_attr_t* tcg_swid_attr_tag_inv_create(u_int32_t request_id,
-											u_int32_t eid_epoch,
-											u_int32_t eid,
-											swid_inventory_t *inventory);
+pa_tnc_attr_t* tcg_swid_attr_tag_inv_create(uint32_t request_id,
+											uint32_t eid_epoch,
+											uint32_t eid);
 
 /**
  * Creates an tcg_swid_attr_tag_inv_t object from received data

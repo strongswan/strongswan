@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -39,12 +39,19 @@ struct swid_tag_id_t {
 	chunk_t (*get_tag_creator)(swid_tag_id_t *this);
 
 	/**
-	 * Get the Unique Software ID and optional Unique Sequence ID
+	 * Get the Unique Software ID and optional Tag File Path
 	 *
-	 * @param				Optional Unique Sequence ID
+	 * @param				Optional Tag File Path
 	 * @return				Unique Software ID
 	 */
-	chunk_t (*get_unique_sw_id)(swid_tag_id_t *this, chunk_t *unique_seq_id);
+	chunk_t (*get_unique_sw_id)(swid_tag_id_t *this, chunk_t *tag_file_path);
+
+	/**
+	 * Get a new reference to the swid_tag_id object
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	swid_tag_id_t* (*get_ref)(swid_tag_id_t *this);
 
 	/**
 	 * Destroys a swid_tag_id_t object.
@@ -58,9 +65,9 @@ struct swid_tag_id_t {
  *
  * @param tag_creator		Tag Creator
  * @param unique_sw_id		Unique Software ID
- * @param unique_seq_id		Unique Sequence ID or empty chunk 
+ * @param tag_file_path		Tag File Path or empty chunk
  */
 swid_tag_id_t* swid_tag_id_create(chunk_t tag_creator, chunk_t unique_sw_id,
-								  chunk_t unique_seq_id);
+								  chunk_t tag_file_path);
 
 #endif /** SWID_TAG_ID_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -39,11 +39,18 @@ struct swid_tag_t {
 	chunk_t (*get_encoding)(swid_tag_t *this);
 
 	/**
-	 * Get th Optional Unique Sequence ID
+	 * Get th Optional Tag File Path
 	 *
-	 * @return				Optional Unique Sequence ID
+	 * @return				Optional Tag File Path
 	 */
-	chunk_t (*get_unique_seq_id)(swid_tag_t *this);
+	chunk_t (*get_tag_file_path)(swid_tag_t *this);
+
+	/**
+	 * Get a new reference to the swid_tag object
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	swid_tag_t* (*get_ref)(swid_tag_t *this);
 
 	/**
 	 * Destroys a swid_tag_t object.
@@ -56,8 +63,8 @@ struct swid_tag_t {
  * Creates a swid_tag_t object
  *
  * @param encoding			XML encoding of SWID tag
- * @param unique_seq_id		Unique Sequence ID or empty chunk 
+ * @param tag_file_path		Tag File Path or empty chunk
  */
-swid_tag_t* swid_tag_create(chunk_t encoding, chunk_t unique_seq_id);
+swid_tag_t* swid_tag_create(chunk_t encoding, chunk_t tag_file_path);
 
 #endif /** SWID_TAG_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_angel.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -89,6 +91,7 @@ METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 							  imv_state_t *state, imv_msg_t *in_msg)
 {
+	imv_swid_state_t *swid_state;
 	imv_msg_t *out_msg;
 	imv_session_t *session;
 	enumerator_t *enumerator;
@@ -103,6 +106,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 		return result;
 	}
 
+	swid_state = (imv_swid_state_t*)state;
 	session = state->get_session(state);
 
 	/* analyze PA-TNC attributes */
@@ -112,7 +116,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;
 		pen_type_t type;
-		u_int32_t request_id, last_eid, eid_epoch;
+		uint32_t request_id, last_eid, eid_epoch;
 		swid_inventory_t *inventory;
 		int tag_count;
 		char result_str[BUF_LEN], *tag_item;
@@ -127,7 +131,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			pen_type_t error_code;
 			chunk_t msg_info, description;
 			bio_reader_t *reader;
-			u_int32_t request_id = 0, max_attr_size;
+			uint32_t request_id = 0, max_attr_size;
 			bool success;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
@@ -166,6 +170,20 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				reader->destroy(reader);
 			}
 		}
+		else if (type.vendor_id == PEN_ITA)
+		{
+			switch (type.type)
+			{
+				case ITA_ATTR_START_ANGEL:
+					swid_state->set_angel_count(swid_state, TRUE);
+					break;
+				case ITA_ATTR_STOP_ANGEL:
+					swid_state->set_angel_count(swid_state, FALSE);
+					break;
+				default:
+					break;
+			}
+		}
 		else if (type.vendor_id != PEN_TCG)
 		{
 			continue;
@@ -193,7 +211,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				{
 					tag_creator = tag_id->get_tag_creator(tag_id);
 					unique_sw_id = tag_id->get_unique_sw_id(tag_id, NULL);
-					DBG3(DBG_IMV, "  %.*s_%.*s.swidtag",
+					DBG3(DBG_IMV, "  %.*s_%.*s",
 						 tag_creator.len, tag_creator.ptr,
 						 unique_sw_id.len, unique_sw_id.ptr);
 				}
@@ -239,6 +257,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			default:
 				continue;
 		 }
+		tag_count = inventory->get_count(inventory);
+		swid_state->set_count(swid_state, tag_count);
 
 		ew = session->create_workitem_enumerator(session);
 		while (ew->enumerate(ew, &workitem))
@@ -257,16 +277,20 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			continue;
 		}
 
-		eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-		tag_count = inventory->get_count(inventory);
-		snprintf(result_str, BUF_LEN, "received inventory of %d SWID %s%s",
-				 tag_count, tag_item, (tag_count == 1) ? "" : "s");
-		session->remove_workitem(session, ew);
-		ew->destroy(ew);
-		rec = found->set_result(found, result_str, eval);
-		state->update_recommendation(state, rec, eval);
-		imcv_db->finalize_workitem(imcv_db, found);
-		found->destroy(found);
+		if (!swid_state->get_angel_count(swid_state))
+		{
+			swid_state->get_count(swid_state, &tag_count);
+			snprintf(result_str, BUF_LEN, "received inventory of %d SWID %s%s",
+					 tag_count, tag_item, (tag_count == 1) ? "" : "s");
+			session->remove_workitem(session, ew);
+			ew->destroy(ew);
+
+			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+			rec = found->set_result(found, result_str, eval);
+			state->update_recommendation(state, rec, eval);
+			imcv_db->finalize_workitem(imcv_db, found);
+			found->destroy(found);
+		}
 	}
 	enumerator->destroy(enumerator);
 
@@ -342,8 +366,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	bool no_workitems = TRUE;
-	u_int32_t request_id;
-	u_int8_t flags;
+	uint32_t request_id;
+	uint8_t flags;
 	enumerator_t *enumerator;
 
 	if (!this->agent->get_state(this->agent, id, &state))

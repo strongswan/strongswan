@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 typedef struct pa_tnc_msg_t pa_tnc_msg_t;
 
 #define PA_TNC_VERSION		0x01
+#define PA_TNC_HEADER_SIZE	8
 
 #include "pa_tnc_attr.h"
 

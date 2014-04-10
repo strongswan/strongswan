@@ -353,11 +353,12 @@ static void add_installed_packages(imc_state_t *state, imc_msg_t *msg)
 	 * Compute the maximum IETF Installed Packages attribute size
 	 * leaving space for an additional ITA Angel attribute
 	 */
-	max_attr_size = state->get_max_msg_len(state) - 8 - 12;
+	max_attr_size = state->get_max_msg_len(state) -
+					PA_TNC_HEADER_SIZE - PA_TNC_ATTR_HEADER_SIZE;
 
 	/* At least one IETF Installed Packages attribute is sent */
 	attr = ietf_attr_installed_packages_create();
-	attr_size = 12 + 4;
+	attr_size = PA_TNC_ATTR_HEADER_SIZE + IETF_INSTALLED_PACKAGES_MIN_SIZE;
 
 	enumerator = os->create_package_enumerator(os);
 	if (enumerator)
@@ -384,7 +385,8 @@ static void add_installed_packages(imc_state_t *state, imc_msg_t *msg)
 
 				/* create the next IETF Installed Packages attribute */
 				attr = ietf_attr_installed_packages_create();
-				attr_size = 12 + 4;
+				attr_size = PA_TNC_ATTR_HEADER_SIZE +
+							IETF_INSTALLED_PACKAGES_MIN_SIZE;
 			}
 			attr_cast = (ietf_attr_installed_packages_t*)attr;
 			attr_cast->add(attr_cast, name, version);

@@ -216,6 +216,30 @@ INSERT INTO products (			/* 36 */
  'Ubuntu 14.04 x86_64'
 );
 
+INSERT INTO products (			/* 37 */
+  name
+) VALUES (
+ 'Debian 7.3 i686'
+);
+
+INSERT INTO products (			/* 38 */
+  name
+) VALUES (
+ 'Debian 7.3 x86_64'
+);
+
+INSERT INTO products (			/* 39 */
+  name
+) VALUES (
+ 'Debian 7.4 i686'
+);
+
+INSERT INTO products (			/* 40 */
+  name
+) VALUES (
+ 'Debian 7.4 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -669,6 +693,18 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 37
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 39
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -694,6 +730,18 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 28
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 38
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 40
 );
 
 INSERT INTO groups_product_defaults (

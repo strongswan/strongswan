@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -63,6 +63,34 @@ struct imv_swid_state_t {
 	 * @return					the handshake state of IMV
 	 */
 	imv_swid_handshake_state_t (*get_handshake_state)(imv_swid_state_t *this);
+
+	/**
+	 * Increase/Decrease the ITA Angel count
+	 *
+	 * @param start			TRUE increases and FALSE decreases count by one
+	 */
+	void (*set_angel_count)(imv_swid_state_t *this, bool start);
+
+	/**
+	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
+	 *
+	 * @param count				Number of received SWID Tags or SWID Tag IDs
+	 */
+	void (*set_count)(imv_swid_state_t *this, int count);
+
+	/**
+	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
+	 *
+	 * @param count				Number of received SWID Tags or SWID Tag IDs
+	 */
+	void (*get_count)(imv_swid_state_t *this, int *count);
+
+	/**
+	 * Get the ITA Angel count
+	 *
+	 * @return				ITA Angel count
+	 */
+	int (*get_angel_count)(imv_swid_state_t *this);
 
 };
 

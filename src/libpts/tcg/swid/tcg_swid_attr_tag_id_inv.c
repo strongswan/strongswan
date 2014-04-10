@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -42,12 +42,11 @@ typedef struct private_tcg_swid_attr_tag_id_inv_t private_tcg_swid_attr_tag_id_i
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |    Unique Software ID Length  |Unique Software ID (var length)|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   Unique Sequence ID Length   |Unique Sequence ID (var length)|
+ *  |      Tag File Path Length     |  Tag File Path (var. length)  |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define SWID_TAG_ID_INV_SIZE			16
-#define SWID_TAG_ID_INV_RESERVED		0x00
+#define TCG_SWID_TAG_ID_INV_RESERVED	0x00
 
 /**
  * Private data of an tcg_swid_attr_tag_id_inv_t object.
@@ -77,17 +76,17 @@ struct private_tcg_swid_attr_tag_id_inv_t {
 	/**
 	 * Request ID
 	 */
-	u_int32_t request_id;
+	uint32_t request_id;
 
 	/**
 	 * Event ID Epoch
 	 */
-	u_int32_t eid_epoch;
+	uint32_t eid_epoch;
 
 	/**
 	 * Last Event ID
 	 */
-	u_int32_t last_eid;
+	uint32_t last_eid;
 
 	/**
 	 * SWID Tag ID Inventory
@@ -129,7 +128,7 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	swid_tag_id_t *tag_id;
-	chunk_t tag_creator, unique_sw_id, unique_seq_id;
+	chunk_t tag_creator, unique_sw_id, tag_file_path;
 	enumerator_t *enumerator;
 
 	if (this->value.ptr)
@@ -137,8 +136,8 @@ METHOD(pa_tnc_attr_t, build, void,
 		return;
 	}
 
-	writer = bio_writer_create(SWID_TAG_ID_INV_SIZE);
-	writer->write_uint8 (writer, SWID_TAG_ID_INV_RESERVED);
+	writer = bio_writer_create(TCG_SWID_TAG_ID_INV_MIN_SIZE);
+	writer->write_uint8 (writer, TCG_SWID_TAG_ID_INV_RESERVED);
 	writer->write_uint24(writer, this->inventory->get_count(this->inventory));
 	writer->write_uint32(writer, this->request_id);
 	writer->write_uint32(writer, this->eid_epoch);
@@ -148,10 +147,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	while (enumerator->enumerate(enumerator, &tag_id))
 	{
 		tag_creator = tag_id->get_tag_creator(tag_id);
-		unique_sw_id = tag_id->get_unique_sw_id(tag_id, &unique_seq_id);
+		unique_sw_id = tag_id->get_unique_sw_id(tag_id, &tag_file_path);
 		writer->write_data16(writer, tag_creator);
 		writer->write_data16(writer, unique_sw_id);
-		writer->write_data16(writer, unique_seq_id);
+		writer->write_data16(writer, tag_file_path);
 	}
 	enumerator->destroy(enumerator);
 
@@ -160,15 +159,15 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_swid_attr_tag_id_inv_t *this, u_int32_t *offset)
+	private_tcg_swid_attr_tag_id_inv_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t tag_id_count;
-	u_int8_t reserved;
-	chunk_t tag_creator, unique_sw_id, unique_seq_id;
+	uint32_t tag_id_count;
+	uint8_t reserved;
+	chunk_t tag_creator, unique_sw_id, tag_file_path;
 	swid_tag_id_t *tag_id;
 
-	if (this->value.len < SWID_TAG_ID_INV_SIZE)
+	if (this->value.len < TCG_SWID_TAG_ID_INV_MIN_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for SWID Tag Identifier Inventory");
 		*offset = 0;
@@ -181,7 +180,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint32(reader, &this->request_id);
 	reader->read_uint32(reader, &this->eid_epoch);
 	reader->read_uint32(reader, &this->last_eid);
-	*offset = SWID_TAG_ID_INV_SIZE;
+	*offset = TCG_SWID_TAG_ID_INV_MIN_SIZE;
 
 	while (tag_id_count--)
 	{
@@ -199,14 +198,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		*offset += 2 + unique_sw_id.len;
 		
-		if (!reader->read_data16(reader, &unique_seq_id))
+		if (!reader->read_data16(reader, &tag_file_path))
 		{
-			DBG1(DBG_TNC, "insufficient data for Unique Sequence ID");
+			DBG1(DBG_TNC, "insufficient data for Tag File Path");
 			return FAILED;
 		}
-		*offset += 2 + unique_seq_id.len;
+		*offset += 2 + tag_file_path.len;
 
-		tag_id = swid_tag_id_create(tag_creator, unique_sw_id, unique_seq_id);
+		tag_id = swid_tag_id_create(tag_creator, unique_sw_id, tag_file_path);
 		this->inventory->add(this->inventory, tag_id);
 	}
 	reader->destroy(reader);
@@ -232,14 +231,20 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(tcg_swid_attr_tag_id_inv_t, get_request_id, u_int32_t,
+METHOD(tcg_swid_attr_tag_id_inv_t, add, void,
+	private_tcg_swid_attr_tag_id_inv_t *this, swid_tag_id_t *tag_id)
+{
+	this->inventory->add(this->inventory, tag_id);
+}
+
+METHOD(tcg_swid_attr_tag_id_inv_t, get_request_id, uint32_t,
 	private_tcg_swid_attr_tag_id_inv_t *this)
 {
 	return this->request_id;
 }
 
-METHOD(tcg_swid_attr_tag_id_inv_t, get_last_eid, u_int32_t,
-	private_tcg_swid_attr_tag_id_inv_t *this, u_int32_t *eid_epoch)
+METHOD(tcg_swid_attr_tag_id_inv_t, get_last_eid, uint32_t,
+	private_tcg_swid_attr_tag_id_inv_t *this, uint32_t *eid_epoch)
 {
 	if (eid_epoch)
 	{
@@ -257,10 +262,9 @@ METHOD(tcg_swid_attr_tag_id_inv_t, get_inventory, swid_inventory_t*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_swid_attr_tag_id_inv_create(u_int32_t request_id,
-											   u_int32_t eid_epoch,
-											   u_int32_t eid,
-											   swid_inventory_t *inventory)
+pa_tnc_attr_t *tcg_swid_attr_tag_id_inv_create(uint32_t request_id,
+											   uint32_t eid_epoch,
+											   uint32_t eid)
 {
 	private_tcg_swid_attr_tag_id_inv_t *this;
 
@@ -276,6 +280,7 @@ pa_tnc_attr_t *tcg_swid_attr_tag_id_inv_create(u_int32_t request_id,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
+			.add = _add,
 			.get_request_id = _get_request_id,
 			.get_last_eid = _get_last_eid,
 			.get_inventory = _get_inventory,
@@ -284,7 +289,7 @@ pa_tnc_attr_t *tcg_swid_attr_tag_id_inv_create(u_int32_t request_id,
 		.request_id = request_id,
 		.eid_epoch = eid_epoch,
 		.last_eid = eid,
-		.inventory = inventory,
+		.inventory = swid_inventory_create(FALSE),
 		.ref = 1,
 	);
 
@@ -311,6 +316,7 @@ pa_tnc_attr_t *tcg_swid_attr_tag_id_inv_create_from_data(chunk_t data)
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
+			.add = _add,
 			.get_request_id = _get_request_id,
 			.get_last_eid = _get_last_eid,
 			.get_inventory = _get_inventory,

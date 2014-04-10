@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
 #include <pen/pen.h>
 #include <utils/debug.h>
 
-
 typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
 
 /**
@@ -38,7 +37,6 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define PA_TNC_HEADER_SIZE	8
 #define PA_TNC_RESERVED		0x000000
 
 /**
@@ -59,7 +57,6 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
 
 #define PA_TNC_ATTR_FLAG_NONE			0x00
 #define PA_TNC_ATTR_FLAG_NOSKIP			(1<<7)
-#define PA_TNC_ATTR_HEADER_SIZE			12
 #define PA_TNC_ATTR_INFO_SIZE			8
 
 /**
@@ -86,7 +83,7 @@ struct private_pa_tnc_msg_t {
 	/**
 	 * Message identifier
 	 */
-	u_int32_t identifier;
+	uint32_t identifier;
 
 	/**
 	 * Current PA-TNC Message size
@@ -139,13 +136,13 @@ METHOD(pa_tnc_msg_t, build, bool,
 	pa_tnc_attr_t *attr;
 	enum_name_t *pa_attr_names;
 	pen_type_t type;
-	u_int8_t flags;
+	uint8_t flags;
 	chunk_t value;
 	nonce_gen_t *ng;
 
 	/* generate a nonce as a message identifier */
 	ng = lib->crypto->create_nonce_gen(lib->crypto);
-	if (!ng || !ng->get_nonce(ng, 4, (u_int8_t*)&this->identifier))
+	if (!ng || !ng->get_nonce(ng, 4, (uint8_t*)&this->identifier))
 	{
 		DBG1(DBG_TNC, "failed to generate random PA-TNC message identifier");
 		DESTROY_IF(ng);
@@ -205,8 +202,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 {
 	bio_reader_t *reader;
 	pa_tnc_attr_t *error;
-	u_int8_t version;
-	u_int32_t reserved, offset, attr_offset;
+	uint8_t version;
+	uint32_t reserved, offset, attr_offset;
 	pen_type_t error_code = { PEN_IETF, PA_ERROR_INVALID_PARAMETER };
 
 	/* process message header */
@@ -237,8 +234,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	while (reader->remaining(reader) >= PA_TNC_ATTR_HEADER_SIZE)
 	{
 		pen_t vendor_id;
-		u_int8_t flags;
-		u_int32_t type, length;
+		uint8_t flags;
+		uint32_t type, length;
 		chunk_t value, attr_info;
 		pa_tnc_attr_t *attr;
 		enum_name_t *pa_attr_names;
@@ -372,7 +369,7 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 			ietf_attr_pa_tnc_error_t *error_attr;
 			pen_type_t error_code;
 			chunk_t msg_info, attr_info;
-			u_int32_t offset;
+			uint32_t offset;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
 			error_code = error_attr->get_error_code(error_attr);
