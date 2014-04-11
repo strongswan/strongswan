@@ -528,7 +528,6 @@ refcount_t ref_get(refcount_t *ref)
 	pthread_mutex_lock(&ref_mutex);
 	current = ++(*ref);
 	pthread_mutex_unlock(&ref_mutex);
-
 	return current;
 }
 
@@ -543,6 +542,19 @@ bool ref_put(refcount_t *ref)
 	more_refs = --(*ref) > 0;
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
+}
+
+/**
+ * Current refcount
+ */
+refcount_t ref_cur(refcount_t *ref)
+{
+	refcount_t current;
+
+	pthread_mutex_lock(&ref_mutex);
+	current = *ref;
+	pthread_mutex_unlock(&ref_mutex);
+	return current;
 }
 
 /**

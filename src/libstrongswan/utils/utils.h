@@ -752,6 +752,7 @@ typedef u_int refcount_t;
 
 #define ref_get(ref) __sync_add_and_fetch(ref, 1)
 #define ref_put(ref) (!__sync_sub_and_fetch(ref, 1))
+#define ref_cur(ref) __sync_fetch_and_add(ref, 0)
 
 #define cas_bool(ptr, oldval, newval) \
 					(__sync_bool_compare_and_swap(ptr, oldval, newval))
@@ -763,7 +764,7 @@ typedef u_int refcount_t;
 /**
  * Get a new reference.
  *
- * Increments the reference counter atomic.
+ * Increments the reference counter atomically.
  *
  * @param ref	pointer to ref counter
  * @return		new value of ref
@@ -773,13 +774,21 @@ refcount_t ref_get(refcount_t *ref);
 /**
  * Put back a unused reference.
  *
- * Decrements the reference counter atomic and
+ * Decrements the reference counter atomically and
  * says if more references available.
  *
  * @param ref	pointer to ref counter
  * @return		TRUE if no more references counted
  */
 bool ref_put(refcount_t *ref);
+
+/**
+ * Get the current value of the reference counter.
+ *
+ * @param ref	pointer to ref counter
+ * @return		current value of ref
+ */
+refcount_t ref_cur(refcount_t *ref);
 
 /**
  * Atomically replace value of ptr with newval if it currently equals oldval.
