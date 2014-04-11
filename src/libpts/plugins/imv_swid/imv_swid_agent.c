@@ -45,6 +45,14 @@ static pen_type_t msg_types[] = {
 };
 
 /**
+ * Flag set when corresponding attribute has been received
+ */
+enum imv_swid_attr_t {
+	IMV_SWID_ATTR_TAG_INV =    (1<<0),
+	IMV_SWID_ATTR_TAG_ID_INV = (1<<1)
+};
+
+/**
  * Private data of an imv_swid_agent_t object.
  */
 struct private_imv_swid_agent_t {
@@ -113,13 +121,11 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		TNC_IMV_Evaluation_Result eval;
-		TNC_IMV_Action_Recommendation rec;
 		pen_type_t type;
 		uint32_t request_id, last_eid, eid_epoch;
 		swid_inventory_t *inventory;
 		int tag_count;
-		char result_str[BUF_LEN], *tag_item;
+		char *tag_item;
 		imv_workitem_t *workitem, *found = NULL;
 		enumerator_t *et, *ew;
 		
@@ -176,12 +182,12 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			{
 				case ITA_ATTR_START_ANGEL:
 					swid_state->set_angel_count(swid_state, TRUE);
-					break;
+					continue;
 				case ITA_ATTR_STOP_ANGEL:
 					swid_state->set_angel_count(swid_state, FALSE);
-					break;
+					continue;
 				default:
-					break;
+					continue;
 			}
 		}
 		else if (type.vendor_id != PEN_TCG)
@@ -196,6 +202,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				tcg_swid_attr_tag_id_inv_t *attr_cast;
 				swid_tag_id_t *tag_id;
 				chunk_t tag_creator, unique_sw_id;
+
+				state->set_action_flags(state, IMV_SWID_ATTR_TAG_ID_INV);
 
 				attr_cast = (tcg_swid_attr_tag_id_inv_t*)attr;
 				request_id = attr_cast->get_request_id(attr_cast);
@@ -230,6 +238,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				swid_tag_t *tag;
 				chunk_t tag_encoding;
 
+				state->set_action_flags(state, IMV_SWID_ATTR_TAG_INV);
+
 				attr_cast = (tcg_swid_attr_tag_inv_t*)attr;
 				request_id = attr_cast->get_request_id(attr_cast);
 				last_eid = attr_cast->get_last_eid(attr_cast, &eid_epoch);
@@ -257,8 +267,6 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			default:
 				continue;
 		 }
-		tag_count = inventory->get_count(inventory);
-		swid_state->set_count(swid_state, tag_count);
 
 		ew = session->create_workitem_enumerator(session);
 		while (ew->enumerate(ew, &workitem))
@@ -269,28 +277,18 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				break;
 			}
 		}
-		if (!found)
+		if (found)
+		{
+			/* accumulate the swid tag [ID] count */
+			tag_count = inventory->get_count(inventory);
+			swid_state->set_count(swid_state, tag_count);
+		}
+		else
 		{
 			DBG1(DBG_IMV, "no workitem found for SWID %s inventory "
 						  "with request ID %d", tag_item, request_id);
-			ew->destroy(ew);
-			continue;
 		}
-
-		if (!swid_state->get_angel_count(swid_state))
-		{
-			swid_state->get_count(swid_state, &tag_count);
-			snprintf(result_str, BUF_LEN, "received inventory of %d SWID %s%s",
-					 tag_count, tag_item, (tag_count == 1) ? "" : "s");
-			session->remove_workitem(session, ew);
-			ew->destroy(ew);
-
-			eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-			rec = found->set_result(found, result_str, eval);
-			state->update_recommendation(state, rec, eval);
-			imcv_db->finalize_workitem(imcv_db, found);
-			found->destroy(found);
-		}
+		ew->destroy(ew);
 	}
 	enumerator->destroy(enumerator);
 
@@ -366,7 +364,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	bool no_workitems = TRUE;
-	uint32_t request_id;
+	uint32_t request_id, received;
 	uint8_t flags;
 	enumerator_t *enumerator;
 
@@ -454,6 +452,40 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 			handshake_state = IMV_SWID_STATE_WORKITEMS;
 			swid_state->set_handshake_state(swid_state, handshake_state);
 		}
+	}
+
+	received = state->get_action_flags(state);
+
+	if (handshake_state == IMV_SWID_STATE_WORKITEMS &&
+	   (received & (IMV_SWID_ATTR_TAG_INV|IMV_SWID_ATTR_TAG_ID_INV)) &&
+		swid_state->get_angel_count(swid_state) <= 0)
+	{
+		TNC_IMV_Evaluation_Result eval;
+		TNC_IMV_Action_Recommendation rec;
+		char result_str[BUF_LEN], *tag_item;
+		int tag_count;
+
+		enumerator = session->create_workitem_enumerator(session);
+		while (enumerator->enumerate(enumerator, &workitem))
+		{
+			if (workitem->get_type(workitem) == IMV_WORKITEM_SWID_TAGS)
+			{
+				swid_state->get_count(swid_state, &tag_count);
+				tag_item = (received & IMV_SWID_ATTR_TAG_INV) ?	"" : " ID";
+				snprintf(result_str, BUF_LEN, "received inventory of %d "
+						"SWID tag%s%s", tag_count, tag_item,
+						(tag_count == 1) ? "" : "s");
+				session->remove_workitem(session, enumerator);
+
+				eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+				rec = workitem->set_result(workitem, result_str, eval);
+				state->update_recommendation(state, rec, eval);
+				imcv_db->finalize_workitem(imcv_db, workitem);
+				workitem->destroy(workitem);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
 
 	/* finalized all workitems ? */

@@ -65,13 +65,6 @@ struct imv_swid_state_t {
 	imv_swid_handshake_state_t (*get_handshake_state)(imv_swid_state_t *this);
 
 	/**
-	 * Increase/Decrease the ITA Angel count
-	 *
-	 * @param start			TRUE increases and FALSE decreases count by one
-	 */
-	void (*set_angel_count)(imv_swid_state_t *this, bool start);
-
-	/**
 	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
 	 *
 	 * @param count				Number of received SWID Tags or SWID Tag IDs
@@ -84,6 +77,13 @@ struct imv_swid_state_t {
 	 * @param count				Number of received SWID Tags or SWID Tag IDs
 	 */
 	void (*get_count)(imv_swid_state_t *this, int *count);
+
+	/**
+	 * Increase/Decrease the ITA Angel count
+	 *
+	 * @param start			TRUE increases and FALSE decreases count by one
+	 */
+	void (*set_angel_count)(imv_swid_state_t *this, bool start);
 
 	/**
 	 * Get the ITA Angel count

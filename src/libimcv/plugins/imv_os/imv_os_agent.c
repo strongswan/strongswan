@@ -671,7 +671,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					int count, count_update, count_blacklist, count_ok;
 
 					if (!(received & IMV_OS_ATTR_INSTALLED_PACKAGES) ||
-						os_state->get_angel_count(os_state))
+						os_state->get_angel_count(os_state) > 0)
 					{
 						continue;
 					}

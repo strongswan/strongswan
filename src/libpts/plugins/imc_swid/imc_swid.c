@@ -273,6 +273,16 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	msg->add_attribute(msg, attr);
 	swid_inventory->destroy(swid_inventory);
 
+	if (!first)
+	{
+		/**
+		 * If we sent an ITA Start Angel attribute in the first place,
+		 * terminate by appending a matching ITA Stop Angel attribute.
+		 */
+		attr_angel = ita_attr_angel_create(FALSE);
+		msg->add_attribute(msg, attr_angel);
+	}
+
 	return TRUE;
 }
 
