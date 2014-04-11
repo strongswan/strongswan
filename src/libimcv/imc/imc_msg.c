@@ -177,11 +177,21 @@ METHOD(imc_msg_t, send_, TNC_Result,
 /**
  * Print a clearly visible assessment header to the log
  */
-static void print_assessment_header(const char *name, TNC_UInt32 id, bool *first)
+static void print_assessment_header(const char *name, TNC_UInt32 dst_id,
+									TNC_UInt32 src_id, bool *first)
 {
 	if (*first)
 	{
-		DBG1(DBG_IMC, "***** assessment of IMC %u \"%s\" *****", id, name);
+		if (src_id == TNC_IMCID_ANY)
+		{
+			DBG1(DBG_IMC, "***** assessment of IMC %u \"%s\" *****",
+						   dst_id, name);
+		}
+		else
+		{
+			DBG1(DBG_IMC, "***** assessment of IMC %u \"%s\" from IMV %u *****",
+						   dst_id, name, src_id);
+		}
 		*first = FALSE;
 	}
 }
@@ -294,7 +304,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			this->state->set_result(this->state, target_imc_id, result);
 
 			print_assessment_header(this->agent->get_name(this->agent),
-									target_imc_id, &first);
+									target_imc_id, this->src_id, &first);
 			DBG1(DBG_IMC, "assessment result is '%N'",
 				 TNC_IMV_Evaluation_Result_names, result);
 		}
@@ -309,7 +319,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			parameters = attr_cast->get_parameters(attr_cast);
 
 			print_assessment_header(this->agent->get_name(this->agent),
-									target_imc_id, &first);
+									target_imc_id, this->src_id, &first);
 			if (parameters_type.vendor_id == PEN_IETF)
 			{
 				switch (parameters_type.type)
