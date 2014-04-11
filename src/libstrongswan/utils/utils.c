@@ -511,7 +511,7 @@ void nop()
 {
 }
 
-#ifndef HAVE_GCC_ATOMIC_OPERATIONS
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
 
 /**
  * We use a single mutex for all refcount variables.
@@ -578,7 +578,7 @@ bool cas_##name(type *ptr, type oldval, type newval) \
 _cas_impl(bool, bool)
 _cas_impl(ptr, void*)
 
-#endif /* HAVE_GCC_ATOMIC_OPERATIONS */
+#endif /* !HAVE_GCC_ATOMIC_OPERATIONS && !HAVE_GCC_SYNC_OPERATIONS */
 
 
 #ifdef HAVE_FMEMOPEN_FALLBACK
