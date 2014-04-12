@@ -30,6 +30,7 @@ typedef struct pts_component_t pts_component_t;
 #include "pts/components/pts_comp_evidence.h"
 
 #include <library.h>
+#include <bio/bio_writer.h>
 
 /**
  * PTS Functional Component Interface 
@@ -85,9 +86,11 @@ struct pts_component_t {
 	 * and check for missing measurements
 	 *
 	 * @param qualifier		PTS Component Functional Name Qualifier
+	 * @param result		writer appending concise measurement result
 	 * @return				TRUE if finalization successful
 	 */
-	bool (*finalize)(pts_component_t *this, u_int8_t qualifier);
+	bool (*finalize)(pts_component_t *this, u_int8_t qualifier,
+					 bio_writer_t *result);
 
 	/**
 	 * Get a new reference to the PTS Functional Component

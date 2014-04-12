@@ -467,15 +467,25 @@ METHOD(imv_attestation_state_t, set_measurement_error, void,
 }
 
 METHOD(imv_attestation_state_t, finalize_components, void,
-	private_imv_attestation_state_t *this)
+	private_imv_attestation_state_t *this, bio_writer_t *result)
 {
 	func_comp_t *entry;
+	bool first = TRUE;
 
 	while (this->components->remove_last(this->components,
 										(void**)&entry) == SUCCESS)
 	{
+		if (first)
+		{
+			first = FALSE;
+		}
+		else
+		{
+			result->write_data(result, chunk_from_str("; "));
+		}
 		if (!entry->comp->finalize(entry->comp,
-								   entry->name->get_qualifier(entry->name)))
+								   entry->name->get_qualifier(entry->name),
+								   result))
 		{
 			set_measurement_error(this, IMV_ATTESTATION_ERROR_COMP_EVID_PEND);
 		}

@@ -29,7 +29,9 @@
 #include <pts/pts.h>
 #include <pts/pts_database.h>
 #include <pts/components/pts_component.h>
+
 #include <library.h>
+#include <bio/bio_writer.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
 typedef enum imv_attestation_flag_t imv_attestation_flag_t;
@@ -140,8 +142,11 @@ struct imv_attestation_state_t {
 	/**
 	 * Tell the Functional Components to finalize any measurement registrations
 	 * and to check if all expected measurements were received
+	 *
+	 * @param result			Writer appending component measurement results
 	 */
-	void (*finalize_components)(imv_attestation_state_t *this);
+	void (*finalize_components)(imv_attestation_state_t *this,
+								bio_writer_t *result);
 
 	/**
 	 * Indicates the types of measurement errors that occurred

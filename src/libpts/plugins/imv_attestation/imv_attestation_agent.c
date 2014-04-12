@@ -767,8 +767,10 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 		TNC_IMV_Action_Recommendation rec;
 		imv_workitem_t *workitem;
 		enumerator_t *enumerator;
-		char *result_str;
 		int pending_file_meas = 0;
+		char *result_str;
+		chunk_t result_buf;
+		bio_writer_t *result;
 
 		enumerator = session->create_workitem_enumerator(session);
 		if (enumerator)
@@ -779,18 +781,25 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 				{
 					continue;
 				}
+				result = bio_writer_create(128);
+
 				switch (workitem->get_type(workitem))
 				{
 					case IMV_WORKITEM_FILE_REF_MEAS:
 					case IMV_WORKITEM_FILE_MEAS:
 					case IMV_WORKITEM_DIR_REF_MEAS:
 					case IMV_WORKITEM_DIR_MEAS:
-						result_str = "Pending file measurements";
+						result_str = "pending file measurements";
 						pending_file_meas++;
 						break;
 					case IMV_WORKITEM_TPM_ATTEST:
-						attestation_state->finalize_components(attestation_state);
-						result_str = "Pending component evidence";
+						attestation_state->finalize_components(attestation_state,
+															   result);
+						result->write_data(result,
+								chunk_from_str("; Pending component evidence"));
+						result->write_uint8(result, '\0');
+						result_buf = result->get_buf(result);
+						result_str = result_buf.ptr;
 						break;
 					default:
 						continue;
@@ -801,6 +810,7 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 				state->update_recommendation(state, rec, eval);
 				imcv_db->finalize_workitem(imcv_db, workitem);
 				workitem->destroy(workitem);
+				result->destroy(result);
 			}
 			enumerator->destroy(enumerator);
 

@@ -798,16 +798,12 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_ima_t *this, u_int8_t qualifier)
+	pts_ita_comp_ima_t *this, u_int8_t qualifier, bio_writer_t *result)
 {
-	u_int32_t vid, name;
-	enum_name_t *names;
+	char result_buf[BUF_LEN];
 	bool success = TRUE;
 
 	this->name->set_qualifier(this->name, qualifier);
-	vid = this->name->get_vendor_id(this->name);
-	name = this->name->get_name(this->name);
-	names = pts_components->get_comp_func_names(pts_components, vid);
 
 	if (qualifier == (PTS_ITA_QUALIFIER_FLAG_KERNEL |
 					  PTS_ITA_QUALIFIER_TYPE_TRUSTED))
@@ -818,15 +814,20 @@ METHOD(pts_component_t, finalize, bool,
 			/* close registration */
 			this->is_bios_registering = FALSE;
 
-			DBG1(DBG_PTS, "registered %d %N '%N' BIOS evidence measurements",
-						   this->seq_no, pen_names, vid, names, name);
+			snprintf(result_buf, BUF_LEN, "registered %d BIOS evidence "
+					 "measurements", this->seq_no);
 		}
 		else if (this->seq_no < this->bios_count)
 		{
-			DBG1(DBG_PTS, "%d of %d %N '%N' BIOS evidence measurements missing",
-						   this->bios_count - this->seq_no, this->bios_count,
-						   pen_names, vid, names, name);
+			snprintf(result_buf, BUF_LEN, "%d of %d BIOS evidence "
+					 "measurements missing", this->bios_count - this->seq_no,
+					 this->bios_count);
 			success = FALSE;
+		}
+		else
+		{
+			snprintf(result_buf, BUF_LEN, "%d BIOS evidence "
+					 "measurements are ok", this->bios_count);
 		}
 	}
 	else if (qualifier == (PTS_ITA_QUALIFIER_FLAG_KERNEL |
@@ -838,25 +839,28 @@ METHOD(pts_component_t, finalize, bool,
 			/* close registration */
 			this->is_ima_registering = FALSE;
 
-			DBG1(DBG_PTS, "registered %N '%N' boot aggregate evidence "
-						  "measurement", pen_names, vid, names, name);
+			snprintf(result_buf, BUF_LEN, "registered boot aggregate "
+					 "evidence measurement");
 		}
-		if (this->count)
+		else if (this->count)
 		{
-			DBG1(DBG_PTS, "processed %d %N '%N' file evidence measurements: "
-						  "%d ok, %d unknown, %d differ, %d failed",
-						   this->count, pen_names, vid, names, name,
-						   this->count_ok, this->count_unknown,
-						   this->count_differ, this->count_failed);
+			snprintf(result_buf, BUF_LEN, "processed %d file evidence "
+					 "measurements: %d ok, %d unknown, %d differ, %d failed",
+					 this->count, this->count_ok, this->count_unknown,
+					 this->count_differ, this->count_failed);
 			success = !this->count_differ && !this->count_failed;
 		}
 	}
 	else
 	{
-		DBG1(DBG_PTS, "unsupported functional component name qualifier");
+		snprintf(result_buf, BUF_LEN, "unsupported functional component name "
+				 "qualifier");
 		success = FALSE;
 	}
 	this->name->set_qualifier(this->name, PTS_QUALIFIER_UNKNOWN);
+
+	DBG1(DBG_PTS, "%s", result_buf);
+	result->write_data(result, chunk_from_str(result_buf));
 
 	return success;
 }
@@ -872,34 +876,30 @@ METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_ima_t *this)
 {
 	int count;
-	u_int32_t vid, name;
-	enum_name_t *names;
 
 	if (ref_put(&this->ref))
 	{
-		vid = this->name->get_vendor_id(this->name);
-		name = this->name->get_name(this->name);
-		names = pts_components->get_comp_func_names(pts_components, vid);
 
 		if (this->is_bios_registering)
 		{
 			count = this->pts_db->delete_comp_measurements(this->pts_db,
 												this->bios_cid, this->aik_id);
-			DBG1(DBG_PTS, "deleted %d registered %N '%N' BIOS evidence "
-						  "measurements", count, pen_names, vid, names, name);
+			DBG1(DBG_PTS, "deleted %d registered BIOS evidence measurements",
+						   count);
 		}
 		if (this->is_ima_registering)
 		{
 			count = this->pts_db->delete_comp_measurements(this->pts_db,
 												this->ima_cid, this->aik_id);
-			DBG1(DBG_PTS, "deleted registered %N '%N' boot aggregate evidence "
-						  "measurement", pen_names, vid, names, name);
+			DBG1(DBG_PTS, "deleted registered boot aggregate evidence "
+						  "measurement");
 		}
 		this->bios_list->destroy_function(this->bios_list,
 										 (void *)free_bios_entry);
 		this->ima_list->destroy_function(this->ima_list,
 										 (void *)free_ima_entry);
 		this->name->destroy(this->name);
+		
 		free(this);
 	}
 }

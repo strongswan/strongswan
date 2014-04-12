@@ -269,30 +269,31 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_tboot_t *this, u_int8_t qualifier)
+	pts_ita_comp_tboot_t *this, u_int8_t qualifier, bio_writer_t *result)
 {
-	u_int32_t vid, name;
-	enum_name_t *names;
-
-	vid = this->name->get_vendor_id(this->name);
-	name = this->name->get_name(this->name);
-	names = pts_components->get_comp_func_names(pts_components, vid);
+	char result_buf[BUF_LEN];
 
 	if (this->is_registering)
 	{
 		/* close registration */
 		this->is_registering = FALSE;
 
-		DBG1(DBG_PTS, "registered %d %N '%N' functional component evidence "
-					  "measurements", this->seq_no, pen_names, vid, names, name);
+		snprintf(result_buf, BUF_LEN, "registered %d evidence measurements",
+				 this->seq_no);
 	}
 	else if (this->seq_no < this->count)
 	{
-		DBG1(DBG_PTS, "%d of %d %N '%N' functional component evidence "
-					  "measurements missing", this->count - this->seq_no,
-					   this->count, pen_names, vid, names, name);
+		snprintf(result_buf, BUF_LEN, "%d of %d evidence measurements "
+				 "missing", this->count - this->seq_no, this->count);
 		return FALSE;
 	}
+	else
+	{
+		snprintf(result_buf, BUF_LEN, "%d evidence measurements are ok",
+				 this->count);
+	}
+	DBG1(DBG_PTS, "%s", result_buf);
+	result->write_data(result, chunk_from_str(result_buf));
 
 	return TRUE;
 }

@@ -419,10 +419,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			uint8_t flags;
 			pts_meas_algorithms_t comp_hash_algorithm;
 			chunk_t pcr_comp, tpm_quote_sig, evid_sig;
-			chunk_t pcr_composite, quote_info;
+			chunk_t pcr_composite, quote_info, result_buf;
 			imv_workitem_t *workitem;
+			imv_reason_string_t *reason_string;
 			enumerator_t *enumerator;
 			bool use_quote2, use_ver_info;
+			bio_writer_t *result;
 
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
 			flags = attr_cast->get_quote_info(attr_cast, &comp_hash_algorithm,
@@ -468,7 +470,9 @@ quote_error:
 				 * Finalize any pending measurement registrations and check
 				 * if all expected component measurements were received
 				 */
-				attestation_state->finalize_components(attestation_state);
+				result = bio_writer_create(128);
+				attestation_state->finalize_components(attestation_state,
+													   result);
 
 				enumerator = session->create_workitem_enumerator(session);
 				while (enumerator->enumerate(enumerator, &workitem))
@@ -477,7 +481,6 @@ quote_error:
 					{
 						TNC_IMV_Action_Recommendation rec;
 						TNC_IMV_Evaluation_Result eval;
-						char *result_str;
 						uint32_t error;
 
 						error = attestation_state->get_measurement_error(
@@ -486,32 +489,33 @@ quote_error:
 									 IMV_ATTESTATION_ERROR_COMP_EVID_PEND |
 									 IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL))
 						{
-							imv_reason_string_t *reason_string;
-							chunk_t result;
-
 							reason_string = imv_reason_string_create("en", ", ");
 							attestation_state->add_comp_evid_reasons(
 											attestation_state, reason_string);
-							result = reason_string->get_encoding(reason_string);
-							result_str = strndup(result.ptr, result.len);
+							result->write_data(result, chunk_from_str("; "));
+							result->write_data(result,
+									reason_string->get_encoding(reason_string));
 							reason_string->destroy(reason_string);
 							eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
 						}
 						else
 						{
-							result_str = strdup("attestation successful");
 							eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 						}
 						session->remove_workitem(session, enumerator);
-						rec = workitem->set_result(workitem, result_str, eval);
+
+						result->write_uint8(result, '\0');
+						result_buf = result->get_buf(result);
+						rec = workitem->set_result(workitem, result_buf.ptr,
+															 eval);
 						state->update_recommendation(state, rec, eval);
 						imcv_db->finalize_workitem(imcv_db, workitem);
 						workitem->destroy(workitem);
-						free(result_str);
 						attestation_state->set_handshake_state(attestation_state,
 													IMV_ATTESTATION_STATE_END);
 						break;
 					}
+					result->destroy(result);
 				}
 				enumerator->destroy(enumerator);
 			}

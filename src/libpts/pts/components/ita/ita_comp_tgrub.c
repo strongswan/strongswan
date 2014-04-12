@@ -49,7 +49,6 @@ struct pts_ita_comp_tgrub_t {
 	 */
 	pts_database_t *pts_db;
 
-
 	/**
 	 * Reference count
 	 */
@@ -155,7 +154,7 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_tgrub_t *this, u_int8_t qualifier)
+	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, bio_writer_t *result)
 {
 	return FALSE;
 }
