@@ -17,8 +17,8 @@ R	111007105811Z	111017123709Z,superseded	10	unknown	/C=CH/O=Linux strongSwan/OU=
 R	111007121250Z	111017123712Z,superseded	11	unknown	/C=CH/O=Linux strongSwan/OU=SHA-384/CN=carol@strongswan.org
 R	111007122112Z	111017123715Z,superseded	12	unknown	/C=CH/O=Linux strongSwan/OU=SHA-512/CN=dave@strongswan.org
 R	120224075857Z	120315063217Z,superseded	13	unknown	/C=CH/O=Linux strongSwan/OU=OCSP/CN=carol@strongswan.org
-V	120425210745Z		14	unknown	/C=CH/O=Linux strongSwan/CN=winnetou.strongswan.org
-V	140406120117Z		15	unknown	/C=CH/O=Linux strongSwan/OU=Research/serialNumber=002/CN=carol@strongswan.org
+R	120425210745Z	140414203104Z,superseded	14	unknown	/C=CH/O=Linux strongSwan/CN=winnetou.strongswan.org
+R	140406120117Z	140414203012Z,superseded	15	unknown	/C=CH/O=Linux strongSwan/OU=Research/serialNumber=002/CN=carol@strongswan.org
 V	140826095904Z		16	unknown	/C=CH/O=Linux strongSwan/CN=sun.strongswan.org
 V	140826100332Z		17	unknown	/C=CH/O=Linux strongSwan/CN=moon.strongswan.org
 V	140826100522Z		18	unknown	/C=CH/O=Linux strongSwan/CN=venus.strongswan.org
@@ -37,4 +37,4 @@ V	161015124507Z		24	unknown	/C=CH/O=Linux strongSwan/OU=SHA-224/CN=moon.strongsw
 V	161015124759Z		25	unknown	/C=CH/O=Linux strongSwan/OU=SHA-384/CN=carol@strongswan.org
 V	161015125030Z		26	unknown	/C=CH/O=Linux strongSwan/OU=SHA-512/CN=dave@strongswan.org
 V	170314064200Z		27	unknown	/C=CH/O=Linux strongSwan/OU=OCSP/CN=carol@strongswan.org
-V	190321135622Z		28	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
+R	190321135622Z	140322135700Z,CACompromise	28	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
