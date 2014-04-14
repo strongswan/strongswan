@@ -156,11 +156,6 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 			unique_sw_id = chunk_create(separator, len - (separator - line));
 			tag_id = swid_tag_id_create(tag_creator, unique_sw_id, tag_file_path);
 			this->list->insert_last(this->list, tag_id);
-
-			if (fgets(line, sizeof(line), file) <= 0)
-			{
-				goto end;
-			}
 		}
 	}
 
