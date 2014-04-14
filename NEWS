@@ -1,6 +1,12 @@
 strongswan-5.1.3
 ----------------
 
+- Fixed an authentication bypass vulnerability triggered by rekeying an
+  unestablished IKEv2 SA while it gets actively initiated.  This allowed an
+  attacker to trick a peer's IKE_SA state to established, without the need to
+  provide any valid authentication credentials.  The vulnerability has been
+  registered as CVE-2014-2338.
+
 - The acert plugin evaluates X.509 Attribute Certificates. Group membership
   information encoded as strings can be used to fulfill authorization checks
   defined with the rightgroups option. Attribute Certificates can be loaded
