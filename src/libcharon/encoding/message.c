@@ -1923,6 +1923,24 @@ static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
 }
 
 /**
+ * Do we accept unencrypted ID/HASH payloads in Main Mode, as seen from
+ * some SonicWall boxes?
+ */
+static bool accept_unencrypted_mm(private_message_t *this, payload_type_t type)
+{
+	if (this->exchange_type == ID_PROT)
+	{
+		if (type == ID_V1 || type == HASH_V1)
+		{
+			return lib->settings->get_bool(lib->settings,
+									"%s.accept_unencrypted_mainmode_messages",
+									FALSE, lib->ns);
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Decrypt payload from the encryption payload
  */
 static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
@@ -1978,7 +1996,8 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			this->exchange_type != AGGRESSIVE)
 		{
 			rule = get_payload_rule(this, type);
-			if (!rule || rule->encrypted)
+			if ((!rule || rule->encrypted) &&
+				!accept_unencrypted_mm(this, type))
 			{
 				DBG1(DBG_ENC, "payload type %N was not encrypted",
 					 payload_type_names, type);
