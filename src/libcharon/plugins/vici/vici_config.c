@@ -1271,12 +1271,15 @@ CALLBACK(children_sn, bool,
 		.lft = {
 			.time = {
 				.life = LFT_UNDEFINED,
+				.jitter = LFT_UNDEFINED,
 			},
 			.bytes = {
 				.life = LFT_UNDEFINED,
+				.jitter = LFT_UNDEFINED,
 			},
 			.packets = {
 				.life = LFT_UNDEFINED,
+				.jitter = LFT_UNDEFINED,
 			},
 		}
 	};
@@ -1318,6 +1321,22 @@ CALLBACK(children_sn, bool,
 	if (child.lft.packets.life == LFT_UNDEFINED)
 	{
 		child.lft.packets.life = child.lft.packets.rekey * 110 / 100;
+	}
+	/* if no rand time defined, use difference of hard and soft */
+	if (child.lft.time.jitter == LFT_UNDEFINED)
+	{
+		child.lft.time.jitter = child.lft.time.life -
+						min(child.lft.time.life, child.lft.time.rekey);
+	}
+	if (child.lft.bytes.jitter == LFT_UNDEFINED)
+	{
+		child.lft.bytes.jitter = child.lft.bytes.life -
+						min(child.lft.bytes.life, child.lft.bytes.rekey);
+	}
+	if (child.lft.packets.jitter == LFT_UNDEFINED)
+	{
+		child.lft.packets.jitter = child.lft.packets.life -
+						min(child.lft.packets.life, child.lft.packets.rekey);
 	}
 
 	log_child_data(&child, name);
@@ -1663,6 +1682,7 @@ CALLBACK(config_sn, bool,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
 		.over_time = LFT_UNDEFINED,
+		.rand_time = LFT_UNDEFINED,
 	};
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
@@ -1707,6 +1727,12 @@ CALLBACK(config_sn, bool,
 	{
 		/* default over_time to 10% of rekey/reauth time if not given */
 		peer.over_time = max(peer.rekey_time, peer.reauth_time) / 10;
+	}
+	if (peer.rand_time == LFT_UNDEFINED)
+	{
+		/* default rand_time to over_time if not given */
+		peer.rand_time = min(peer.over_time,
+							 max(peer.rekey_time, peer.reauth_time) / 2);
 	}
 
 	log_peer_data(&peer);
