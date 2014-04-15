@@ -63,10 +63,11 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 	status_t status = SUCCESS;
 
 	/* Assemble the SWID generator command */
-	snprintf(command, sizeof(command), "%s %s%s%s\n", generator,
-			(this->full_tags)           ? "swid" : "software-id",
-			(this->full_tags && pretty) ? " --pretty" : "",
-			(this->full_tags && full)   ? " --full" : "");
+	snprintf(command, sizeof(command), "%s %s%s%s%s\n", generator,
+			(this->full_tags)            ? "swid" : "software-id",
+			(this->full_tags && pretty)  ? " --pretty" : "",
+			(this->full_tags && !pretty) ? " --doc-separator $'\n\n'" : "",
+			(this->full_tags && full)    ? " --full" : "");
 
 	/* Open a pipe stream for reading the output of the dpkg-query commmand */
 	file = popen(command, "r");
@@ -108,16 +109,18 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 
 			tag_encoding = writer->get_buf(writer);
 
-			/* remove trailing newline if present */
-			if (tag_encoding.len > 0 &&
-				tag_encoding.ptr[tag_encoding.len - 1] == '\n')
+			if (tag_encoding.len > 1)
 			{
-				tag_encoding.len--;
-			}
-			DBG2(DBG_IMC, "  %.*s", tag_encoding.len, tag_encoding.ptr);
+				/* remove trailing newline if present */
+				if (tag_encoding.ptr[tag_encoding.len - 1] == '\n')
+				{
+					tag_encoding.len--;
+				}
+				DBG2(DBG_IMC, "  %.*s", tag_encoding.len, tag_encoding.ptr);
 
-			tag = swid_tag_create(tag_encoding, tag_file_path);
-			this->list->insert_last(this->list, tag);
+				tag = swid_tag_create(tag_encoding, tag_file_path);
+				this->list->insert_last(this->list, tag);
+			}
 			writer->destroy(writer);
 		}
 	}
