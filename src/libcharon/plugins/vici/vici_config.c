@@ -26,6 +26,11 @@
 #include <stdio.h>
 #include <netdb.h>
 
+/**
+ * Magic value for an undefined lifetime
+ */
+#define LFT_UNDEFINED (~(u_int64_t)0)
+
 typedef struct private_vici_config_t private_vici_config_t;
 
 /**
@@ -1263,6 +1268,17 @@ CALLBACK(children_sn, bool,
 		.mode = MODE_TUNNEL,
 		.dpd_action = ACTION_NONE,
 		.start_action = ACTION_NONE,
+		.lft = {
+			.time = {
+				.life = LFT_UNDEFINED,
+			},
+			.bytes = {
+				.life = LFT_UNDEFINED,
+			},
+			.packets = {
+				.life = LFT_UNDEFINED,
+			},
+		}
 	};
 	child_cfg_t *cfg;
 	proposal_t *proposal;
@@ -1288,6 +1304,20 @@ CALLBACK(children_sn, bool,
 	{
 		child.proposals->insert_last(child.proposals,
 									 proposal_create_default(PROTO_ESP));
+	}
+
+	/* if no hard lifetime specified, add one at soft lifetime + 10% */
+	if (child.lft.time.life == LFT_UNDEFINED)
+	{
+		child.lft.time.life = child.lft.time.rekey * 110 / 100;
+	}
+	if (child.lft.bytes.life == LFT_UNDEFINED)
+	{
+		child.lft.bytes.life = child.lft.bytes.rekey * 110 / 100;
+	}
+	if (child.lft.packets.life == LFT_UNDEFINED)
+	{
+		child.lft.packets.life = child.lft.packets.rekey * 110 / 100;
 	}
 
 	log_child_data(&child, name);
@@ -1632,6 +1662,7 @@ CALLBACK(config_sn, bool,
 		.fragmentation = FRAGMENTATION_NO,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
+		.over_time = LFT_UNDEFINED,
 	};
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
@@ -1670,6 +1701,12 @@ CALLBACK(config_sn, bool,
 	if (!peer.remote_addrs)
 	{
 		peer.remote_addrs = strdup("%any");
+	}
+
+	if (peer.over_time == LFT_UNDEFINED)
+	{
+		/* default over_time to 10% of rekey/reauth time if not given */
+		peer.over_time = max(peer.rekey_time, peer.reauth_time) / 10;
 	}
 
 	log_peer_data(&peer);
