@@ -35,6 +35,7 @@ static bool is_list_key(char *key)
 		"local_ts",
 		"remote_ts",
 		"vips",
+		"pools",
 		"groups",
 	};
 	int i;
