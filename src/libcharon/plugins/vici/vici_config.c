@@ -198,6 +198,7 @@ typedef struct {
 	linked_list_t *proposals;
 	linked_list_t *children;
 	linked_list_t *vips;
+	char *pools;
 	u_int64_t reauth_time;
 	u_int64_t rekey_time;
 	u_int64_t over_time;
@@ -331,6 +332,7 @@ static void free_peer_data(peer_data_t *data)
 	data->proposals->destroy_offset(data->proposals,
 									offsetof(proposal_t, destroy));
 	data->vips->destroy_offset(data->vips, offsetof(host_t, destroy));
+	free(data->pools);
 	free(data->local_addrs);
 	free(data->remote_addrs);
 }
@@ -1222,6 +1224,7 @@ CALLBACK(peer_li, bool,
 		{ "remote_addrs",	parse_stringlist,	&peer->remote_addrs			},
 		{ "proposals",		parse_ike_proposal,	peer->proposals				},
 		{ "vips",			parse_hosts,		peer->vips					},
+		{ "pools",			parse_stringlist,	&peer->pools				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1684,12 +1687,14 @@ CALLBACK(config_sn, bool,
 		.over_time = LFT_UNDEFINED,
 		.rand_time = LFT_UNDEFINED,
 	};
+	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	auth_cfg_t *auth_cfg;
 	proposal_t *proposal;
 	host_t *host;
+	char *str;
 
 	DBG2(DBG_CFG, " conn %s:", name);
 
@@ -1772,6 +1777,15 @@ CALLBACK(config_sn, bool,
 	while (peer.vips->remove_first(peer.vips, (void**)&host) == SUCCESS)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, host);
+	}
+	if (peer.pools)
+	{
+		enumerator = enumerator_create_token(peer.pools, ",", " ");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			peer_cfg->add_pool(peer_cfg, str);
+		}
+		enumerator->destroy(enumerator);
 	}
 
 	free_peer_data(&peer);
