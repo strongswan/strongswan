@@ -950,7 +950,7 @@ METHOD(task_t, build_i, status_t,
 	/* check if we want a virtual IP, but don't have one */
 	list = linked_list_create();
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (!this->reqid)
+	if (!this->rekey)
 	{
 		enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
 		while (enumerator->enumerate(enumerator, &vip))
