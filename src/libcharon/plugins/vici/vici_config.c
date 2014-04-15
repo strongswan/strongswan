@@ -1689,6 +1689,7 @@ CALLBACK(config_sn, bool,
 	child_cfg_t *child_cfg;
 	auth_cfg_t *auth_cfg;
 	proposal_t *proposal;
+	host_t *host;
 
 	DBG2(DBG_CFG, " conn %s:", name);
 
@@ -1767,6 +1768,10 @@ CALLBACK(config_sn, bool,
 										(void**)&proposal) == SUCCESS)
 	{
 		ike_cfg->add_proposal(ike_cfg, proposal);
+	}
+	while (peer.vips->remove_first(peer.vips, (void**)&host) == SUCCESS)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host);
 	}
 
 	free_peer_data(&peer);
