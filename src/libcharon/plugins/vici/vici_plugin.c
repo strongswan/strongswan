@@ -19,9 +19,11 @@
 #include "vici_control.h"
 #include "vici_cred.h"
 #include "vici_config.h"
+#include "vici_attribute.h"
 #include "vici_logger.h"
 
 #include <library.h>
+#include <hydra.h>
 #include <daemon.h>
 
 typedef struct private_vici_plugin_t private_vici_plugin_t;
@@ -62,6 +64,11 @@ struct private_vici_plugin_t {
 	vici_config_t *config;
 
 	/**
+	 * IKE attribute backend
+	 */
+	vici_attribute_t *attrs;
+
+	/**
 	 * Generic debug logger
 	 */
 	vici_logger_t *logger;
@@ -92,10 +99,13 @@ static bool register_vici(private_vici_plugin_t *this,
 			this->control = vici_control_create(this->dispatcher);
 			this->cred = vici_cred_create(this->dispatcher);
 			this->config = vici_config_create(this->dispatcher);
+			this->attrs = vici_attribute_create(this->dispatcher);
 			this->logger = vici_logger_create(this->dispatcher);
 
 			charon->backends->add_backend(charon->backends,
 										  &this->config->backend);
+			hydra->attributes->add_provider(hydra->attributes,
+											&this->attrs->provider);
 			charon->bus->add_logger(charon->bus, &this->logger->logger);
 			return TRUE;
 		}
@@ -104,10 +114,13 @@ static bool register_vici(private_vici_plugin_t *this,
 	else
 	{
 		charon->bus->remove_logger(charon->bus, &this->logger->logger);
+		hydra->attributes->remove_provider(hydra->attributes,
+										   &this->attrs->provider);
 		charon->backends->remove_backend(charon->backends,
 										 &this->config->backend);
 
 		this->logger->destroy(this->logger);
+		this->attrs->destroy(this->attrs);
 		this->config->destroy(this->config);
 		this->cred->destroy(this->cred);
 		this->control->destroy(this->control);
