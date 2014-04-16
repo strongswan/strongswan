@@ -265,7 +265,7 @@ static bool find_value(private_vici_message_t *this, chunk_t *value,
 					{
 						break;
 					}
-					break;
+					continue;
 				case VICI_SECTION_END:
 					section--;
 					continue;
