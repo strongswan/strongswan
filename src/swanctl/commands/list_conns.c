@@ -135,12 +135,29 @@ CALLBACK(conn_sn, int,
 	return ret;
 }
 
+CALLBACK(conn_list, int,
+	hashtable_t *sa, vici_res_t *res, char *name, void *value, int len)
+{
+	if (chunk_printable(chunk_create(value, len), NULL, ' '))
+	{
+		if (streq(name, "local_addrs"))
+		{
+			printf("  local:  %.*s\n", len, value);
+		}
+		if (streq(name, "remote_addrs"))
+		{
+			printf("  remote: %.*s\n", len, value);
+		}
+	}
+	return 0;
+}
+
 CALLBACK(conns, int,
 	void *null, vici_res_t *res, char *name)
 {
 	printf("%s: %s\n", name, vici_find_str(res, "", "%s.version", name));
 
-	return vici_parse_cb(res, conn_sn, NULL, NULL, NULL);
+	return vici_parse_cb(res, conn_sn, NULL, conn_list, NULL);
 }
 
 CALLBACK(list_cb, void,
