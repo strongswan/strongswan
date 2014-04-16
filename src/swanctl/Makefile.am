@@ -11,6 +11,7 @@ swanctl_SOURCES = \
 	commands/list_certs.c \
 	commands/load_conns.c \
 	commands/load_creds.c \
+	commands/load_pools.c \
 	commands/log.c \
 	commands/version.c \
 	swanctl.c swanctl.h
