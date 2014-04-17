@@ -241,15 +241,16 @@ class ConfFormatter:
 
 	def __print_section(self, section, indent, commented):
 		"""Print a section with all options"""
-		comment = "# " if commented or section.commented else ""
+		commented = commented or section.commented
+		comment = "# " if commented else ""
 		self.__print_description(section, indent)
 		print '{0}{1}{2} {{'.format(self.__indent * indent, comment, section.name)
 		print
 		for o in sorted(section.options, key=attrgetter('section')):
 			if o.section:
-				self.__print_section(o, indent + 1, section.commented)
+				self.__print_section(o, indent + 1, commented)
 			else:
-				self.__print_option(o, indent + 1, section.commented)
+				self.__print_option(o, indent + 1, commented)
 		print '{0}{1}}}'.format(self.__indent * indent, comment)
 		print
 
