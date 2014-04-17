@@ -23,10 +23,14 @@ swanctl_LDADD = \
 
 swanctl.o :		$(top_builddir)/config.status
 
-EXTRA_DIST = swanctl.conf
-
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libcharon/plugins/vici \
 	-DSWANCTLDIR=\""${swanctldir}\"" \
 	-DPLUGINS=\""${s_plugins}\""
+
+EXTRA_DIST = swanctl.conf
+
+install-data-local: swanctl.conf
+	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)"
+	test -e "$(DESTDIR)$(swanctldir)/swanctl.conf" || $(INSTALL) -m 640 $(srcdir)/swanctl.conf $(DESTDIR)$(swanctldir)/swanctl.conf || true
