@@ -1,0 +1,188 @@
+connections.conn1 { # }
+	An IKE configuration named conn1
+
+connections.conn1.version = 2
+	IKE version to use
+
+connections.conn1.local_addrs = 0.0.0.0
+	List of acceptable local addresses/subnets
+
+connections.conn1.remote_addrs = 192.168.5.1
+	Peer address, additional addresses/subnets as responder
+
+connections.conn1.local_port = 500
+	Local UPD port for IKE
+
+connections.conn1.remote_port = 500
+	Remote UDP port for IKE
+
+connections.conn1.proposals = aes128gcm16-prfsha256-modp2048, default
+	Proposals for IKE, "default" is the default proposal
+
+connections.conn1.vips =
+	Virtual IPs to request, such as 0.0.0.0 or ::
+
+connections.conn1.aggressive = no
+	IKEv1 aggressive mode
+
+connections.conn1.pull = yes
+	Use of pull/push in IKEv1 mode config
+
+connections.conn1.encap = no
+	Enforce UDP encapsulation by faking NAT-D payloads
+
+connections.conn1.mobike = yes
+	Enable IKEv2 MOBIKE
+
+connections.conn1.dpd_delay = 10s
+	Interval of liveness checks
+
+connections.conn1.dpd_timeout = 30s
+	Timeout for DPD checks (IKEV1 only)
+
+connections.conn1.fragmentation = force
+	Use IKEv1 UDP packet fragmentation
+
+connections.conn1.send_certreq = yes
+	Send certificate requests
+
+connections.conn1.send_cert = ifasked
+	Send certificate payloads
+
+connections.conn1.keyingtries = 0
+	Number of retransmission sequences to do before givin up
+
+connections.conn1.unique = no
+	Uniquness policy, never|no|keep|replace|
+
+connections.conn1.reauth_time = 3h
+	Time to schedule IKE reauthentication
+
+connections.conn1.rekey_time = 2h
+	Time to schedule IKE rekeying
+
+connections.conn1.over_time = 10m
+	Hard IKE_SA lifetime if rekey/reauth does not complete
+
+connections.conn1.rand_time = 10m
+	Range of random time to subtract from rekey/rauth times
+
+connections.conn1.pools = pool1
+	Hand out addresses and attributes from pool1 as responder
+
+connections.conn1.vips = 0.0.0.0
+	Request a virtual IP as initiator
+
+connections.conn1.local {}
+	Local authentication, first round
+
+connections.conn1.local.certs = a.pem, xy.der
+	Additional certificates to load
+
+connections.conn1.local.auth = pubkey
+	Authentication to perform locally
+
+connections.conn1.local.id = win@strongswan.org
+	IKE identity for local
+
+connections.conn1.local.eap_id = moon
+	Client EAP-Identity to use
+
+connections.conn1.local.aaa_identity = srv
+	Server side EAP identity to use, EAP-TTLS etc.
+
+connections.conn1.local.xauth_id = moon
+	IKEv1 XAuth username
+
+connections.conn1.remote {}
+	Remote authentication, first round
+
+connections.conn1.remote.id = %any
+	IKE identity for peer
+
+connections.conn1.remote.certs = client.pem
+	List of acceptable peer certificates
+
+connections.conn1.remote.cacert = ca.der
+	List of acceptable CA certificates
+
+connections.conn1.remote.revocation = ifuri
+	Revocation policy, strict|ifuri
+
+connections.conn1.remote.auth = pubkey
+	Authentication to expect from remote
+
+connections.conn1.children.child1 {}
+	First CHILD_SA configuration
+
+connections.conn1.children.child1.ah_proposals = default
+	AH proposals to offer
+
+connections.conn1.children.child1.esp_proposals = aes128gcm16-modp2048, default
+	ESP proposals to offer
+
+connections.conn1.children.child1.local_ts = 192.168.3.0/24
+	Local subnets to tunnel
+
+connections.conn1.children.child1.remote_ts = 192.168.1.0/24
+	Remote subnets to tunnel
+
+connections.conn1.children.child1.updown = path-to-script
+	Updown script to invoke
+
+connections.conn1.children.child1.hostaccess = yes
+	Hostaccess variable to pass to updown
+
+connections.conn1.children.child1.mode = tunnel
+	IPsec mode, tunnel|transport|pass|drop
+
+connections.conn1.children.child1.dpd_action = restart
+	Action to perform on DPD timeout
+
+connections.conn1.children.child1.ipcomp = no
+	Enable IPComp
+
+connections.conn1.children.child1.inactivity = 2m
+	Inactivity timeout before closing CHILD_SA
+
+connections.conn1.children.child1.reqid = 5
+	Fixed reqid to use for this CHILD_SA
+
+connections.conn1.children.child1.mark_in = 1
+	Netfilter mark for input traffic
+
+connections.conn1.children.child1.mark_out = 5/0xffffffff
+	Netfilter mark for output traffic
+
+connections.conn1.children.child1.tfc_padding = 1500
+	Traffic Flow Confidentiality padding
+
+secrets.eap1 { # }
+	EAP secret section
+
+secrets.eap1.secret = testpassword
+	Password for EAP secret
+
+secrets.eap1.id = tester
+	User EAP secret belongs to
+
+secrets.ike-moon { # }
+	IKE secret for moon
+
+secrets.ike-moon.secret = 0x12345678
+	IKE shared secret for moon
+
+secrets.ike-moon.id-local = sun.strongswan.org
+	First identity secret belongs to
+
+secrets.ike-moon.id-remote = moon.strongswan.org
+	Second identity secret belongs to
+
+pools.poolx { # }
+	Section defining an address pool
+
+pools.poolx.addrs = 10.1.2.0/24
+	Define addresses for this pool
+
+pools.poolx.dns = 10.1.1.1, 10.1.2.1
+	Define DNS server addresses associated to pool

@@ -29,7 +29,15 @@ AM_CPPFLAGS = \
 	-DSWANCTLDIR=\""${swanctldir}\"" \
 	-DPLUGINS=\""${s_plugins}\""
 
-EXTRA_DIST = swanctl.conf
+BUILT_SOURCES = swanctl.conf
+EXTRA_DIST = swanctl.opt swanctl.conf
+
+.opt.conf:
+	$(AM_V_GEN) \
+	$(PYTHON) $(top_srcdir)/conf/format-options.py -f conf $< > $(srcdir)/$@
+
+maintainer-clean-local:
+	cd $(srcdir) && rm -f swanctl.conf
 
 install-data-local: swanctl.conf
 	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)"
