@@ -29,8 +29,12 @@ AM_CPPFLAGS = \
 	-DSWANCTLDIR=\""${swanctldir}\"" \
 	-DPLUGINS=\""${s_plugins}\""
 
+man_MANS = \
+	swanctl.conf.5
+
 BUILT_SOURCES = swanctl.conf swanctl.conf.5.main
 EXTRA_DIST = swanctl.opt swanctl.conf swanctl.conf.5.main
+CLEANFILES = $(man_MANS)
 
 .opt.conf:
 	$(AM_V_GEN) \
@@ -39,6 +43,10 @@ EXTRA_DIST = swanctl.opt swanctl.conf swanctl.conf.5.main
 swanctl.conf.5.main: swanctl.opt
 	$(AM_V_GEN) \
 	$(PYTHON) $(top_srcdir)/conf/format-options.py -f man $< > $(srcdir)/$@
+
+swanctl.conf.5: swanctl.conf.5.head swanctl.conf.5.main swanctl.conf.5.tail
+	$(AM_V_GEN) \
+	cat swanctl.conf.5.head $(srcdir)/swanctl.conf.5.main swanctl.conf.5.tail > $@
 
 maintainer-clean-local:
 	cd $(srcdir) && rm -f swanctl.conf swanctl.conf.5.main

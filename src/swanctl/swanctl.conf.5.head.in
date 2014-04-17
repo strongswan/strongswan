@@ -1,0 +1,12 @@
+.TH SWANCTL.CONF 5 "" "@PACKAGE_VERSION@" "strongSwan"
+.SH NAME
+swanctl.conf \- swanctl configuration file
+.SH DESCRIPTION
+Bla bla
+
+For a description of the syntax refer to
+.BR strongswan.conf (5).
+
+.SH SETTINGS
+The following settings can be used to configure IKE and CHILD SAs and
+credentials.
