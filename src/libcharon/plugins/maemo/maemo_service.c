@@ -327,6 +327,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 hostname, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create(this->current, ike_cfg,
 							   CERT_SEND_IF_ASKED,

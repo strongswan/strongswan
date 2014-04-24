@@ -129,6 +129,7 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 	else
 	{
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	}
 	return ike_cfg;
 }

@@ -145,6 +145,7 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 							  FRAGMENTATION_NO, 0),
 	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
+	this->ike->add_proposal(this->ike, proposal_create_default_aead(PROTO_IKE));
 
 	return &this->public;
 }

@@ -106,6 +106,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 address, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	med_cfg = peer_cfg_create(
 		"mediation", ike_cfg,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
@@ -382,6 +383,7 @@ medcli_config_t *medcli_config_create(database_t *db)
 							  FRAGMENTATION_NO, 0),
 	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
+	this->ike->add_proposal(this->ike, proposal_create_default_aead(PROTO_IKE));
 
 	schedule_autoinit(this);
 

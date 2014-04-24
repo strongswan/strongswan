@@ -87,6 +87,7 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 	ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE, "0.0.0.0", local_port,
 							 host, remote_port, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	peer_cfg = peer_cfg_create(name, ike_cfg,
 							   CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */

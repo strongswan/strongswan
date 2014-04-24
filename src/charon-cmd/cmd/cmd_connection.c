@@ -187,6 +187,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	else
 	{
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	}
 	peer_cfg = peer_cfg_create("cmd", ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
