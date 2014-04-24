@@ -1,7 +1,10 @@
 Source: network-manager-strongswan
 Section: net
 Priority: extra
-Maintainer: Martin Willi <martin@strongswan.org>
+Maintainer: strongSwan Maintainers <pkg-swan-devel@lists.alioth.debian.org>
+Uploaders: Rene Mayrhofer <rmayr@debian.org>,
+	Yves-Alexis Perez <corsac@debian.org>,
+	Romain Francoise <rfrancoise@debian.org>
 Build-Depends: cdbs,
 	debhelper (>= 7),
 	network-manager-dev (>= 0.9),
