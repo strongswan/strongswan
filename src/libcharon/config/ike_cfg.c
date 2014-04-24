@@ -281,7 +281,10 @@ METHOD(ike_cfg_t, get_dscp, u_int8_t,
 METHOD(ike_cfg_t, add_proposal, void,
 	private_ike_cfg_t *this, proposal_t *proposal)
 {
-	this->proposals->insert_last(this->proposals, proposal);
+	if (proposal)
+	{
+		this->proposals->insert_last(this->proposals, proposal);
+	}
 }
 
 METHOD(ike_cfg_t, get_proposals, linked_list_t*,
