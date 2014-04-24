@@ -150,7 +150,7 @@ struct private_load_tester_config_t {
 	/**
 	 * incremental numbering of generated configs
 	 */
-	u_int num;
+	refcount_t num;
 
 	/**
 	 * Dynamic source port, if used
@@ -802,7 +802,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 {
 	if (streq(name, "load-test"))
 	{
-		return generate_config(this, this->num++);
+		return generate_config(this, (u_int)ref_get(&this->num));
 	}
 	return NULL;
 }

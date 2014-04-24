@@ -511,7 +511,7 @@ void nop()
 {
 }
 
-#ifndef HAVE_GCC_ATOMIC_OPERATIONS
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
 
 /**
  * We use a single mutex for all refcount variables.
@@ -528,7 +528,6 @@ refcount_t ref_get(refcount_t *ref)
 	pthread_mutex_lock(&ref_mutex);
 	current = ++(*ref);
 	pthread_mutex_unlock(&ref_mutex);
-
 	return current;
 }
 
@@ -543,6 +542,19 @@ bool ref_put(refcount_t *ref)
 	more_refs = --(*ref) > 0;
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
+}
+
+/**
+ * Current refcount
+ */
+refcount_t ref_cur(refcount_t *ref)
+{
+	refcount_t current;
+
+	pthread_mutex_lock(&ref_mutex);
+	current = *ref;
+	pthread_mutex_unlock(&ref_mutex);
+	return current;
 }
 
 /**
@@ -566,7 +578,7 @@ bool cas_##name(type *ptr, type oldval, type newval) \
 _cas_impl(bool, bool)
 _cas_impl(ptr, void*)
 
-#endif /* HAVE_GCC_ATOMIC_OPERATIONS */
+#endif /* !HAVE_GCC_ATOMIC_OPERATIONS && !HAVE_GCC_SYNC_OPERATIONS */
 
 
 #ifdef HAVE_FMEMOPEN_FALLBACK

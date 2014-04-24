@@ -31,14 +31,14 @@ struct private_load_tester_ipsec_t {
 	/**
 	 * faked SPI counter
 	 */
-	u_int32_t spi;
+	refcount_t spi;
 };
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
-	*spi = ++this->spi;
+	*spi = (uint32_t)ref_get(&this->spi);
 	return SUCCESS;
 }
 

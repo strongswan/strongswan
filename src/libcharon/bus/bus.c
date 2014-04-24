@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Tobias Brunner
+ * Copyright (C) 2011-2014 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +22,31 @@
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+
+/**
+ * These operations allow us to speed up the log level checks on some platforms.
+ * In particular if acquiring the read lock is expensive even in the absence of
+ * any writers.
+ *
+ * Note that while holding the read/write lock the read does not have to be
+ * atomic as the write lock must be held to set the level.
+ */
+#ifdef HAVE_GCC_ATOMIC_OPERATIONS
+
+#define skip_level(ptr, level) (__atomic_load_n(ptr, __ATOMIC_RELAXED) < level)
+#define set_level(ptr, val) __atomic_store_n(ptr, val, __ATOMIC_RELAXED)
+
+#elif defined(HAVE_GCC_SYNC_OPERATIONS)
+
+#define skip_level(ptr, level) (__sync_fetch_and_add(ptr, 0) < level)
+#define set_level(ptr, val) __sync_bool_compare_and_swap(ptr, *ptr, val)
+
+#else
+
+#define skip_level(ptr, level) FALSE
+#define set_level(ptr, val) ({ *ptr = val; })
+
+#endif
 
 typedef struct private_bus_t private_bus_t;
 
@@ -173,11 +198,12 @@ static inline void register_logger(private_bus_t *this, debug_t group,
 
 	if (entry->logger->log)
 	{
-		this->max_level[group] = max(this->max_level[group], level);
+		set_level(&this->max_level[group], max(this->max_level[group], level));
 	}
 	if (entry->logger->vlog)
 	{
-		this->max_vlevel[group] = max(this->max_vlevel[group], level);
+		set_level(&this->max_vlevel[group],
+				  max(this->max_vlevel[group], level));
 	}
 }
 
@@ -205,6 +231,7 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 
 	if (found)
 	{
+		level_t level = LEVEL_SILENT, vlevel = LEVEL_SILENT;
 		debug_t group;
 
 		for (group = 0; group < DBG_MAX; group++)
@@ -214,13 +241,19 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 				loggers = this->loggers[group];
 				loggers->remove(loggers, found, NULL);
 
-				this->max_level[group] = LEVEL_SILENT;
-				this->max_vlevel[group] = LEVEL_SILENT;
 				if (loggers->get_first(loggers, (void**)&entry) == SUCCESS)
 				{
-					this->max_level[group] = entry->levels[group];
-					this->max_vlevel[group] = entry->levels[group];
+					if (entry->logger->log)
+					{
+						level = entry->levels[group];
+					}
+					if (entry->logger->vlog)
+					{
+						vlevel = entry->levels[group];
+					}
 				}
+				set_level(&this->max_level[group], level);
+				set_level(&this->max_vlevel[group], vlevel);
 			}
 		}
 		free(found);
@@ -323,6 +356,19 @@ METHOD(bus_t, vlog, void,
 {
 	linked_list_t *loggers;
 	log_data_t data;
+
+	/* NOTE: This is not 100% thread-safe and done here only because it is
+	 * performance critical.  We therefore ignore the following two issues for
+	 * this particular case:  1) We might miss some log messages if another
+	 * thread concurrently increases the log level or registers a new logger.
+	 * 2) We might have to acquire the read lock below even if it wouldn't be
+	 * necessary anymore due to another thread concurrently unregistering a
+	 * logger or reducing the level. */
+	if (skip_level(&this->max_level[group], level) &&
+		skip_level(&this->max_vlevel[group], level))
+	{
+		return;
+	}
 
 	this->log_lock->read_lock(this->log_lock);
 	loggers = this->loggers[group];
