@@ -3,7 +3,7 @@
 DIR="/etc/pts"
 DATE=`date +%Y%m%d-%H%M`
 UBUNTU="http://security.ubuntu.com/ubuntu/dists"
-UBUNTU_VERSIONS="saucy raring quantal precise lucid"
+UBUNTU_VERSIONS="trusty saucy raring quantal precise lucid"
 UBUNTU_DIRS="main multiverse restricted universe"
 UBUNTU_ARCH="binary-amd64 binary-i386"
 DEBIAN="http://security.debian.org/dists"
@@ -43,6 +43,27 @@ do
 	done
   done
 done
+
+for f in trusty-security/binary-amd64/*
+do
+  $PACMAN --product "Ubuntu 14.04 x86_64" --file $f --security >> $PACMAN_LOG
+done
+echo
+for f in trusty-updates/binary-amd64/*
+do
+  $PACMAN --product "Ubuntu 14.04 x86_64" --file $f >> $PACMAN_LOG
+done
+echo
+for f in trusty-security/binary-i386/*
+do
+  $PACMAN --product "Ubuntu 14.04 i686" --file $f --security >> $PACMAN_LOG
+done
+echo
+for f in trusty-updates/binary-i386/*
+do
+  $PACMAN --product "Ubuntu 14.04 i686" --file $f >> $PACMAN_LOG
+done
+echo
 
 for f in saucy-security/binary-amd64/*
 do
