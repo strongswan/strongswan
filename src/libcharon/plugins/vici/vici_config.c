@@ -1350,8 +1350,16 @@ CALLBACK(children_sn, bool,
 	}
 	if (child.proposals->get_count(child.proposals) == 0)
 	{
-		child.proposals->insert_last(child.proposals,
-									 proposal_create_default(PROTO_ESP));
+		proposal = proposal_create_default(PROTO_ESP);
+		if (proposal)
+		{
+			child.proposals->insert_last(child.proposals, proposal);
+		}
+		proposal = proposal_create_default_aead(PROTO_ESP);
+		if (proposal)
+		{
+			child.proposals->insert_last(child.proposals, proposal);
+		}
 	}
 
 	/* if no hard lifetime specified, add one at soft lifetime + 10% */

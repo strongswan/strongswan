@@ -169,6 +169,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
@@ -243,6 +244,7 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
 	this->current->add_child_cfg(this->current, child_cfg);

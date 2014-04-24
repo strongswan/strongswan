@@ -352,6 +352,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 								 TRUE, MODE_TUNNEL, ACTION_NONE, ACTION_NONE,
 								 ACTION_NONE, FALSE, 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "0.0.0.0",

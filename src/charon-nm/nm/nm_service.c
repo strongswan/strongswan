@@ -566,6 +566,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, ipcomp,
 								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
