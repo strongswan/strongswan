@@ -812,6 +812,29 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 /*
  * Describtion in header-file
  */
+proposal_t *proposal_create_default_aead(protocol_id_t protocol)
+{
+	private_proposal_t *this;
+
+	switch (protocol)
+	{
+		case PROTO_IKE:
+			this = (private_proposal_t*)proposal_create(protocol, 0);
+			proposal_add_supported_ike(this, TRUE);
+			return &this->public;
+		case PROTO_ESP:
+			/* we currently don't include any AEAD proposal for ESP, as we
+			 * don't know if our kernel backend actually supports it. */
+			return NULL;
+		case PROTO_AH:
+		default:
+			return NULL;
+	}
+}
+
+/*
+ * Describtion in header-file
+ */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
 {
 	private_proposal_t *this;
