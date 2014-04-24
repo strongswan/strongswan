@@ -73,10 +73,10 @@ struct child_cfg_t {
 	 * Add a proposal to the list.
 	 *
 	 * The proposals are stored by priority, first added
-	 * is the most preferred.
-	 * After add, proposal is owned by child_cfg.
+	 * is the most preferred. It is safe to add NULL as proposal, which has no
+	 * effect. After add, proposal is owned by child_cfg.
 	 *
-	 * @param proposal		proposal to add
+	 * @param proposal		proposal to add, or NULL
 	 */
 	void (*add_proposal) (child_cfg_t *this, proposal_t *proposal);
 
