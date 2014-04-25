@@ -17,8 +17,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.strongswan.android"
-    android:versionCode="18"
-    android:versionName="1.3.3" >
+    android:versionCode="20"
+    android:versionName="1.3.4" >
 
     <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="18" />
 
