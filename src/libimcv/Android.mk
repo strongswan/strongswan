@@ -6,14 +6,17 @@ libimcv_la_SOURCES := \
 	imcv.h imcv.c \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \
 	imc/imc_msg.h imc/imc_msg.c \
+	imc/imc_os_info.h imc/imc_os_info.c \
 	imv/imv_agent.h imv/imv_agent.c imv/imv_state.h \
 	imv/imv_agent_if.h imv/imv_if.h \
 	imv/imv_database.h imv/imv_database.c \
 	imv/imv_msg.h imv/imv_msg.c \
 	imv/imv_lang_string.h imv/imv_lang_string.c \
+	imv/imv_os_info.h imv/imv_os_info.c \
 	imv/imv_reason_string.h imv/imv_reason_string.c \
 	imv/imv_remediation_string.h imv/imv_remediation_string.c \
 	imv/imv_session.h imv/imv_session.c \
+	imv/imv_session_manager.h imv/imv_session_manager.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
