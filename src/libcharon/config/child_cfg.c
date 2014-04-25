@@ -354,11 +354,11 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				{
 					result->remove_at(result, e1);
 					ts1->destroy(ts1);
-					result->reset_enumerator(result, e2);
 					break;
 				}
 			}
 		}
+		result->reset_enumerator(result, e2);
 	}
 	e1->destroy(e1);
 	e2->destroy(e2);
