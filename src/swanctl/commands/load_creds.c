@@ -273,30 +273,44 @@ static void load_keys(vici_conn_t *conn, bool raw, bool noprompt,
 }
 
 /**
- * Load a single secret for ids over VICI
+ * Load a single secret over VICI
  */
-static bool load_secret(vici_conn_t *conn, char *type, char *owners,
-						char *value, bool raw)
+static bool load_secret(vici_conn_t *conn, settings_t *cfg,
+						char *section, bool raw)
 {
 	enumerator_t *enumerator;
 	vici_req_t *req;
 	vici_res_t *res;
 	chunk_t data;
-	char *owner;
+	char *key, *value, buf[128], *type = NULL;
 	bool ret = TRUE;
+	int i;
+	char *types[] = {
+		"eap",
+		"xauth",
+		"ike",
+	};
 
-	req = vici_begin("load-shared");
-
-	vici_add_key_valuef(req, "type", "%s", type);
-	vici_begin_list(req, "owners");
-	enumerator = enumerator_create_token(owners, " ", " ");
-	while (enumerator->enumerate(enumerator, &owner))
+	for (i = 0; i < countof(types); i++)
 	{
-		vici_add_list_itemf(req, "%s", owner);
+		if (strpfx(section, types[i]))
+		{
+			type = types[i];
+			break;
+		}
 	}
-	enumerator->destroy(enumerator);
-	vici_end_list(req);
+	if (!type)
+	{
+		fprintf(stderr, "ignoring unsupported secret '%s'\n", section);
+		return FALSE;
+	}
 
+	value = cfg->get_str(cfg, "secrets.%s.secret", NULL, section);
+	if (!value)
+	{
+		fprintf(stderr, "missing secret in '%s', ignored\n", section);
+		return FALSE;
+	}
 	if (strcasepfx(value, "0x"))
 	{
 		data = chunk_from_hex(chunk_from_str(value + 2), NULL);
@@ -309,8 +323,25 @@ static bool load_secret(vici_conn_t *conn, char *type, char *owners,
 	{
 		data = chunk_clone(chunk_from_str(value));
 	}
+
+	req = vici_begin("load-shared");
+
+	vici_add_key_valuef(req, "type", "%s", type);
 	vici_add_key_value(req, "data", data.ptr, data.len);
 	chunk_clear(&data);
+
+	vici_begin_list(req, "owners");
+	snprintf(buf, sizeof(buf), "secrets.%s", section);
+	enumerator = cfg->create_key_value_enumerator(cfg, buf);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		if (strpfx(key, "id"))
+		{
+			vici_add_list_itemf(req, "%s", value);
+		}
+	}
+	enumerator->destroy(enumerator);
+	vici_end_list(req);
 
 	res = vici_submit(req, conn);
 	if (!res)
@@ -330,35 +361,10 @@ static bool load_secret(vici_conn_t *conn, char *type, char *owners,
 	}
 	else
 	{
-		printf("loaded %s secret for: ", type);
-		enumerator = enumerator_create_token(owners, " ", " ");
-		while (enumerator->enumerate(enumerator, &owner))
-		{
-			printf("'%s' ", owner);
-		}
-		enumerator->destroy(enumerator);
-		printf("\n");
+		printf("loaded %s secret '%s'\n", type, section);
 	}
 	vici_free_res(res);
 	return ret;
-}
-
-/**
- * Load secrets from settings section
- */
-static void load_secrets(vici_conn_t *conn, settings_t *cfg,
-						 char *section, bool raw)
-{
-	enumerator_t *enumerator;
-	char buf[64], *key, *value;
-
-	snprintf(buf, sizeof(buf), "secrets.%s", section);
-	enumerator = cfg->create_key_value_enumerator(cfg, buf);
-	while (enumerator->enumerate(enumerator, &key, &value))
-	{
-		load_secret(conn, section, key, value, raw);
-	}
-	enumerator->destroy(enumerator);
 }
 
 /**
@@ -440,7 +446,7 @@ static int load_creds(vici_conn_t *conn)
 	enumerator = cfg->create_section_enumerator(cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
 	{
-		load_secrets(conn, cfg, section, raw);
+		load_secret(conn, cfg, section, raw);
 	}
 	enumerator->destroy(enumerator);
 
