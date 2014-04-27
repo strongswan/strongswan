@@ -801,6 +801,9 @@ METHOD(pts_component_t, finalize, bool,
 	pts_ita_comp_ima_t *this, u_int8_t qualifier, bio_writer_t *result)
 {
 	char result_buf[BUF_LEN];
+	char *pos = result_buf;
+	size_t len = BUF_LEN;
+	int written;
 	bool success = TRUE;
 
 	this->name->set_qualifier(this->name, qualifier);
@@ -814,20 +817,19 @@ METHOD(pts_component_t, finalize, bool,
 			/* close registration */
 			this->is_bios_registering = FALSE;
 
-			snprintf(result_buf, BUF_LEN, "registered %d BIOS evidence "
-					 "measurements", this->seq_no);
+			snprintf(pos, len, "registered %d BIOS evidence measurements",
+					 this->seq_no);
 		}
 		else if (this->seq_no < this->bios_count)
 		{
-			snprintf(result_buf, BUF_LEN, "%d of %d BIOS evidence "
-					 "measurements missing", this->bios_count - this->seq_no,
-					 this->bios_count);
+			snprintf(pos, len, "%d of %d BIOS evidence measurements missing",
+					 this->bios_count - this->seq_no, this->bios_count);
 			success = FALSE;
 		}
 		else
 		{
-			snprintf(result_buf, BUF_LEN, "%d BIOS evidence "
-					 "measurements are ok", this->bios_count);
+			snprintf(pos, len, "%d BIOS evidence measurements are ok",
+					 this->bios_count);
 		}
 	}
 	else if (qualifier == (PTS_ITA_QUALIFIER_FLAG_KERNEL |
@@ -839,22 +841,27 @@ METHOD(pts_component_t, finalize, bool,
 			/* close registration */
 			this->is_ima_registering = FALSE;
 
-			snprintf(result_buf, BUF_LEN, "registered boot aggregate "
-					 "evidence measurement");
+			written = snprintf(pos, len, "registered boot aggregate evidence "
+							   "measurement; ");
+			pos += written;
+			len -= written;
 		}
-		else if (this->count)
+		if (this->count)
 		{
-			snprintf(result_buf, BUF_LEN, "processed %d file evidence "
-					 "measurements: %d ok, %d unknown, %d differ, %d failed",
+			snprintf(pos, len, "processed %d file evidence measurements: "
+					 "%d ok, %d unknown, %d differ, %d failed",
 					 this->count, this->count_ok, this->count_unknown,
 					 this->count_differ, this->count_failed);
 			success = !this->count_differ && !this->count_failed;
 		}
+		else
+		{
+			snprintf(pos, len, "no boot aggregate evidence measurement");
+		}
 	}
 	else
 	{
-		snprintf(result_buf, BUF_LEN, "unsupported functional component name "
-				 "qualifier");
+		snprintf(pos, len, "unsupported functional component name qualifier");
 		success = FALSE;
 	}
 	this->name->set_qualifier(this->name, PTS_QUALIFIER_UNKNOWN);
