@@ -74,17 +74,16 @@ struct pts_database_t {
 									 bool is_dir, int id);
 
 	/**
-	* Check PTS file measurement against reference stored in database
+	* Get PTS measurement[s] for a given filename stored in database
 	*
 	* @param pid			Primary key of software product in database
 	* @param algo			File measurement hash algorithm used
-	* @param measurement	File measurement hash
-	* @param filename		Optional name of the file to be checked
-	* @return				Status
+	* @param filename		Name of the file to be checked
+	* @return				Enumerator over all matching measurement hashes
 	*/
-	status_t (*check_file_measurement)(pts_database_t *this, int pid,
-									   pts_meas_algorithms_t algo,
-									   chunk_t measurement, char *filename);
+	enumerator_t* (*create_file_meas_enumerator)(pts_database_t *this, int pid,
+												 pts_meas_algorithms_t algo,
+												 char *filename);
 
 	/**
 	* Check a functional component measurement against value stored in database

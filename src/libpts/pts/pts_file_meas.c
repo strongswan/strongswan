@@ -116,16 +116,40 @@ METHOD(pts_file_meas_t, check, bool,
 	private_pts_file_meas_t *this, pts_database_t *pts_db, int pid,
 	pts_meas_algorithms_t algo)
 {
-	enumerator_t *enumerator;
+	enumerator_t *enumerator, *e;
 	entry_t *entry;
+	chunk_t hash;
 	int count_ok = 0, count_not_found = 0, count_differ = 0;
 	status_t status;
 
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		status = pts_db->check_file_measurement(pts_db, pid, algo,
-									entry->measurement, entry->filename);
+		status = NOT_FOUND;
+
+		e = pts_db->create_file_meas_enumerator(pts_db, pid, algo,
+												entry->filename);
+		if (e)
+		{
+			while (e->enumerate(e, &hash))
+			{
+				if (chunk_equals(entry->measurement, hash))
+				{
+					status = SUCCESS;
+					break;
+				}
+				else
+				{
+					status = VERIFY_ERROR;
+				}
+			}
+			e->destroy(e);
+		}
+		else
+		{
+			status = FAILED;
+		}
+
 		switch (status)
 		{
 			case SUCCESS:

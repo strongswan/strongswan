@@ -204,18 +204,16 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 	return status;
 }
 
-METHOD(pts_database_t, check_file_measurement, status_t,
+METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 	private_pts_database_t *this, int pid, pts_meas_algorithms_t algo,
-	chunk_t measurement, char *filename)
+	char *filename)
 {
 	enumerator_t *e;
-	chunk_t hash;
-	status_t status = NOT_FOUND;
 	char *dir, *file;
 
 	if (strlen(filename) < 1)
 	{
-		return INVALID_ARG;
+		return NULL;
 	}
 
 	/* separate filename into directory and basename components */
@@ -228,62 +226,35 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
 				"WHERE fh.product = ? AND f.name = ? AND fh.algo = ?",
-		DB_INT, pid, DB_TEXT, file, DB_INT, algo, DB_BLOB);
+				DB_INT, pid, DB_TEXT, file, DB_INT, algo, DB_BLOB);
 	}
 	else
 	{	/* absolute pathname */
-		bool dir_found;
 		int did;
 
 		/* find directory entry first */
 		e = this->db->query(this->db,
 				"SELECT id FROM directories WHERE path = ?",
 				DB_TEXT, dir, DB_INT);
-		if (!e)
+
+		if (!e || !e->enumerate(e, &did))
 		{
-			status = FAILED;
 			goto err;
 		}
-		dir_found = e->enumerate(e, &did);
 		e->destroy(e);
 
-		if (!dir_found)
-		{
-			status = NOT_FOUND;
-			goto err;
-		}
 		e = this->db->query(this->db,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
 				"WHERE fh.product = ? AND f.dir = ? AND f.name = ? AND fh.algo = ?",
-				DB_INT, pid, DB_INT, did, DB_TEXT, file, DB_INT, algo,
-				DB_BLOB);
+				DB_INT, pid, DB_INT, did, DB_TEXT, file, DB_INT, algo, DB_BLOB);
 	}
-	if (!e)
-	{
-		status = FAILED;
-		goto err;
-	}
-	while (e->enumerate(e, &hash))
-	{
-		/* with relative filenames there might be multiple entries */
-		if (chunk_equals(measurement, hash))
-		{
-			status = SUCCESS;
-			break;
-		}
-		else
-		{
-			status = VERIFY_ERROR;
-		}
-	}
-	e->destroy(e);
 
 err:
 	free(file);
 	free(dir);
 
-	return status;
+	return e;
 }
 
 METHOD(pts_database_t, check_comp_measurement, status_t,
@@ -437,7 +408,7 @@ pts_database_t *pts_database_create(imv_database_t *imv_db)
 			.get_pathname = _get_pathname,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
 			.add_file_measurement = _add_file_measurement,
-			.check_file_measurement = _check_file_measurement,
+			.create_file_meas_enumerator = _create_file_meas_enumerator,
 			.check_comp_measurement = _check_comp_measurement,
 			.insert_comp_measurement = _insert_comp_measurement,
 			.delete_comp_measurements = _delete_comp_measurements,

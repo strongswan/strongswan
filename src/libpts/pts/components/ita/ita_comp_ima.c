@@ -21,6 +21,7 @@
 #include "pts/components/pts_component.h"
 
 #include <utils/debug.h>
+#include <crypto/hashers/hasher.h>
 #include <pen/pen.h>
 
 #include <sys/types.h>
@@ -34,7 +35,12 @@
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
 #define IMA_PCR						10
 #define IMA_TYPE_LEN				3
-#define IMA_FILENAME_LEN_MAX	255
+#define IMA_NG_TYPE_LEN				6
+#define IMA_TYPE_LEN_MAX			10
+#define IMA_ALGO_LEN_MIN			5
+#define IMA_ALGO_LEN_MAX			8
+#define IMA_ALGO_DIGEST_LEN_MAX		IMA_ALGO_LEN_MAX + HASH_SIZE_SHA512
+#define IMA_FILENAME_LEN_MAX		255
 
 typedef struct pts_ita_comp_ima_t pts_ita_comp_ima_t;
 typedef struct bios_entry_t bios_entry_t;
@@ -68,7 +74,7 @@ struct pts_ita_comp_ima_t {
 	/**
 	 * Sub-component depth
 	 */
-	u_int32_t depth;
+	uint32_t depth;
 
 	/**
 	 * PTS measurement database
@@ -175,7 +181,7 @@ struct bios_entry_t {
 	/**
 	 * PCR register
 	 */
-	u_int32_t pcr;
+	uint32_t pcr;
 
 	/**
 	 * SHA1 measurement hash
@@ -194,7 +200,12 @@ struct ima_entry_t {
 	chunk_t measurement;
 
 	/**
-	 * absolute path of executable files or basename of dynamic libraries
+	 * IMA-NG hash algorithm name or NULL
+	 */
+	char *algo;
+
+	/**
+	 * IMA-NG eventname or IMA filename
 	 */
 	char *filename;
 };
@@ -214,6 +225,7 @@ static void free_bios_entry(bios_entry_t *this)
 static void free_ima_entry(ima_entry_t *this)
 {
 	free(this->measurement.ptr);
+	free(this->algo);
 	free(this->filename);
 	free(this);
 }
@@ -224,7 +236,7 @@ static void free_ima_entry(ima_entry_t *this)
 static bool load_bios_measurements(char *file, linked_list_t *list,
 								   time_t *created)
 {
-	u_int32_t pcr, num, len;
+	uint32_t pcr, num, len;
 	bios_entry_t *entry;
 	struct stat st;
 	ssize_t res;
@@ -296,11 +308,15 @@ static bool load_bios_measurements(char *file, linked_list_t *list,
  * update dates
  */
 static bool load_runtime_measurements(char *file, linked_list_t *list,
-									 time_t *created)
+									  time_t *created)
 {
-	u_int32_t pcr, len;
 	ima_entry_t *entry;
-	char type[IMA_TYPE_LEN];
+	uint32_t pcr, type_len, filename_len;
+	uint32_t eventdata_len, algo_digest_len, algo_len;
+	bool ima_ng;
+	char type[IMA_TYPE_LEN_MAX];
+	char algo_digest[IMA_ALGO_DIGEST_LEN_MAX];
+	char *pos, *error = "";
 	struct stat st;
 	ssize_t res;
 	int fd;
@@ -323,7 +339,10 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 
 	while (TRUE)
 	{
+		/* read 32 bit PCR number in host order */
 		res = read(fd, &pcr, 4);
+
+		/* exit if no more measurement data is available */
 		if (res == 0)
 		{
 			DBG2(DBG_PTS, "loaded ima measurements '%s' (%d entries)",
@@ -332,58 +351,161 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 			return TRUE;
 		}
 
+		/* create and initialize new IMA entry */
 		entry = malloc_thing(ima_entry_t);
 		entry->measurement = chunk_alloc(HASH_SIZE_SHA1);
+		entry->algo = NULL;
 		entry->filename = NULL;
 
 		if (res != 4 || pcr != IMA_PCR)
 		{
+			error = "invalid IMA PCR field";
 			break;
 		}
+
+		/* read 20 byte SHA-1 measurement digest */
 		if (read(fd, entry->measurement.ptr, HASH_SIZE_SHA1) != HASH_SIZE_SHA1)
 		{
+			error = "invalid SHA-1 digest field";
 			break;
 		}
-		if (read(fd, &len, 4) != 4 || len != IMA_TYPE_LEN)
+
+		/* read 32 bit length of IMA type string in host order */
+		if (read(fd, &type_len, 4) != 4 || type_len > IMA_TYPE_LEN_MAX)
 		{
+			error = "invalid IMA type field length";
 			break;
 		}
-		if (read(fd, type, IMA_TYPE_LEN) != IMA_TYPE_LEN ||
-			memcmp(type, "ima", IMA_TYPE_LEN))
+
+		/* read and interpret IMA type string */
+		if (read(fd, type, type_len) != type_len)
 		{
+			error = "invalid IMA type field";
 			break;
 		}
-		if (lseek(fd, HASH_SIZE_SHA1, SEEK_CUR) == -1)
+		if (type_len == IMA_NG_TYPE_LEN &&
+			memeq(type, "ima-ng", IMA_NG_TYPE_LEN))
 		{
-			break;
+			ima_ng = TRUE;
 		}
-		if (read(fd, &len, 4) != 4)
+		else if (type_len == IMA_TYPE_LEN &&
+				 memeq(type, "ima", IMA_TYPE_LEN))
 		{
-			break;
+			ima_ng = FALSE;
 		}
-		entry->filename = malloc(len + 1);
-		if (read(fd, entry->filename, len) != len)
+		else
 		{
+			error = "unknown IMA type";
 			break;
 		}
-		entry->filename[len] = '\0';
+
+		if (ima_ng)
+		{
+			/* read the 32 bit length of the event data in host order */
+			if (read(fd, &eventdata_len, 4) != 4 || eventdata_len < 4)
+			{
+				error = "invalid event data field length";
+				break;
+			}
+
+			/* read the 32 bit length of the algo_digest string in host order */
+			if (read(fd, &algo_digest_len, 4) != 4 ||
+				algo_digest_len > IMA_ALGO_DIGEST_LEN_MAX ||
+				eventdata_len < 4 + algo_digest_len + 4)
+			{
+				error = "invalid digest_with_algo field length";
+				break;
+			}
+
+			/* read the IMA algo_digest string */
+			if (read(fd, algo_digest, algo_digest_len) != algo_digest_len)
+			{
+				error = "invalid digest_with_algo field";
+				break;
+			}
+
+			/* extract the hash algorithm name */
+			pos = strchr(algo_digest, '\0');
+			if (!pos)
+			{
+				error = "no algo field";
+				break;
+			}
+			algo_len = pos - algo_digest + 1;
+
+			if (algo_len > IMA_ALGO_LEN_MAX ||
+				algo_len < IMA_ALGO_LEN_MIN || *(pos - 1) != ':')
+			{
+				error = "invalid algo field";
+				break;
+			}
+
+			/* copy and store the hash algorithm name */
+			entry->algo = malloc(algo_len);
+			memcpy(entry->algo, algo_digest, algo_len);
+
+			/* read the 32 bit length of the file name in host order */
+			if (read(fd, &filename_len, 4) != 4 ||
+				eventdata_len != 4 + algo_digest_len + 4 + filename_len)
+			{
+				error = "invalid filename field length";
+				break;
+			}
+
+			/* allocate memory for the file name */
+			entry->filename = malloc(filename_len);
+
+			/* read file name */
+			if (read(fd, entry->filename, filename_len) != filename_len)
+			{
+				error = "invalid filename field";
+				break;
+			}
+		}
+		else
+		{
+			/* skip SHA-1 digest of the file content */
+			if (lseek(fd, HASH_SIZE_SHA1, SEEK_CUR) == -1)
+			{
+				break;
+			}
+
+			/* read the 32 bit length of the file name in host order */
+			if (read(fd, &filename_len, 4) != 4)
+			{
+				error = "invalid filename field length";
+				break;
+			}
+
+			/* allocate memory for the file name */
+			entry->filename = malloc(filename_len + 1);
+
+			/* read file name */
+			if (read(fd, entry->filename, filename_len) != filename_len)
+			{
+				error = "invalid filename field";
+				break;
+			}
+
+			/* terminate the file name with a nul character */
+			entry->filename[filename_len] = '\0';
+		}
 
 		list->insert_last(list, entry);
 	}
 
-	DBG1(DBG_PTS, "loading ima measurements '%s' failed: %s",
-		 file, strerror(errno));
+	DBG1(DBG_PTS, "loading ima measurements '%s' failed: %s", file, error);
 	free_ima_entry(entry);
 	close(fd);
 	return FALSE;
 }
 
 /**
- * Extend measurement into PCR an create evidence
+ * Extend measurement into PCR and create evidence
  */
 static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this,
-									   u_int8_t qualifier, pts_pcr_t *pcrs,
-									   u_int32_t pcr, chunk_t measurement)
+									   uint8_t qualifier, pts_pcr_t *pcrs,
+									   uint32_t pcr, chunk_t measurement)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
@@ -419,15 +541,83 @@ static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this,
 }
 
 /**
+ * Generate an IMA or IMA-NG hash from an event digest and event name
+ *
+ * @param digest		event digest
+ * @param ima_algo		hash algorithm string ("sha1:", "sha256:", etc.)
+ * @param ima_name		event name
+ * @param little_endian	endianness of client platform
+ * @param algo			hash algorithm used by TPM
+ * @param hash_buf		hash value to be compared with TPM measurement
+ */
+static bool ima_hash(chunk_t digest, char *ima_algo, char *ima_name,
+					 bool little_endian, pts_meas_algorithms_t algo,
+					 char *hash_buf)
+{
+	hash_algorithm_t hash_alg;
+	hasher_t *hasher;
+	bool success;
+
+	hash_alg = pts_meas_algo_to_hash(algo);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_PTS, "%N hasher could not be created",
+			 hash_algorithm_short_names, hash_alg);
+		return FALSE;
+	}
+
+	if (ima_algo)
+	{
+		uint32_t d_len, n_len;
+		chunk_t algo_name, event_name, digest_len, name_len;
+
+		/* IMA-NG hash */
+		algo_name  = chunk_create(ima_algo, strlen(ima_algo) + 1);
+		event_name = chunk_create(ima_name, strlen(ima_name) + 1);
+
+		d_len = algo_name.len + digest.len;
+		digest_len = chunk_create((uint8_t*)&d_len, sizeof(d_len));
+		/* TODO handle endianness of both client and server platforms */
+
+		n_len = event_name.len;
+		name_len = chunk_create((uint8_t*)&n_len, sizeof(n_len));
+		/* TODO handle endianness of both client and server platforms */
+
+		success = hasher->get_hash(hasher, digest_len, NULL) &&
+				  hasher->get_hash(hasher, algo_name, NULL) &&
+				  hasher->get_hash(hasher, digest, NULL) &&
+				  hasher->get_hash(hasher, name_len, NULL) &&
+				  hasher->get_hash(hasher, event_name, hash_buf);
+	}
+	else
+	{
+		u_char filename_buffer[IMA_FILENAME_LEN_MAX + 1];
+		chunk_t file_name;
+
+		/* IMA legacy hash */
+		memset(filename_buffer, 0, sizeof(filename_buffer));
+		strncpy(filename_buffer, ima_name, IMA_FILENAME_LEN_MAX);
+		file_name = chunk_create (filename_buffer, sizeof(filename_buffer));
+
+		success = hasher->get_hash(hasher, digest, NULL) &&
+				  hasher->get_hash(hasher, file_name, hash_buf);
+	}
+	hasher->destroy(hasher);
+
+	return success;
+}
+
+/**
  * Compute and check boot aggregate value by hashing PCR0 to PCR7
  */
-static bool check_boot_aggregate(pts_pcr_t *pcrs, chunk_t measurement)
+static bool check_boot_aggregate(pts_pcr_t *pcrs, chunk_t measurement,
+								 char *algo)
 {
-	u_int32_t i;
-	u_char filename_buffer[IMA_FILENAME_LEN_MAX + 1];
 	u_char pcr_buffer[HASH_SIZE_SHA1];
-	chunk_t file_name, boot_aggregate;
+	chunk_t boot_aggregate;
 	hasher_t *hasher;
+	uint32_t i;
 	bool success, pcr_ok = TRUE;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -443,17 +633,18 @@ static bool check_boot_aggregate(pts_pcr_t *pcrs, chunk_t measurement)
 	}
 	if (pcr_ok)
 	{
-		boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
-		memset(filename_buffer, 0, sizeof(filename_buffer));
-		strcpy(filename_buffer, "boot_aggregate");
-		file_name = chunk_create (filename_buffer, sizeof(filename_buffer));
-
-		pcr_ok = hasher->get_hash(hasher, chunk_empty, pcr_buffer) &&
-				 hasher->get_hash(hasher, boot_aggregate, NULL) &&
-				 hasher->get_hash(hasher, file_name, boot_aggregate.ptr);
+		pcr_ok = hasher->get_hash(hasher, chunk_empty, pcr_buffer);
 	}
 	hasher->destroy(hasher);
 
+	if (pcr_ok)
+	{
+		boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
+
+		/* TODO handle endianness of client platform */
+		pcr_ok = ima_hash(boot_aggregate, algo, "boot_aggregate",
+						  TRUE, PTS_MEAS_ALGO_SHA1, pcr_buffer);
+	}
 	if (pcr_ok)
 	{
 		success = chunk_equals(boot_aggregate, measurement);
@@ -474,26 +665,28 @@ METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
 	return this->name;
 }
 
-METHOD(pts_component_t, get_evidence_flags, u_int8_t,
+METHOD(pts_component_t, get_evidence_flags, uint8_t,
 	pts_ita_comp_ima_t *this)
 {
 	return PTS_REQ_FUNC_COMP_EVID_PCR;
 }
 
-METHOD(pts_component_t, get_depth, u_int32_t,
+METHOD(pts_component_t, get_depth, uint32_t,
 	pts_ita_comp_ima_t *this)
 {
 	return this->depth;
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_ima_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_ita_comp_ima_t *this, uint8_t qualifier, pts_t *pts,
 	pts_comp_evidence_t **evidence)
 {
 	bios_entry_t *bios_entry;
 	ima_entry_t *ima_entry;
 	pts_pcr_t *pcrs;
 	pts_comp_evidence_t *evid = NULL;
+	size_t algo_len, name_len;
+	char *uri;
 	status_t status;
 
 	pcrs = pts->get_pcrs(pts);
@@ -555,7 +748,8 @@ METHOD(pts_component_t, measure, status_t,
 				}
 				if (this->state == IMA_STATE_BOOT_AGGREGATE && this->bios_count)
 				{
-					if (!check_boot_aggregate(pcrs, ima_entry->measurement))
+					if (!check_boot_aggregate(pcrs, ima_entry->measurement,
+													ima_entry->algo))
 					{
 						return FAILED;
 					}
@@ -564,10 +758,24 @@ METHOD(pts_component_t, measure, status_t,
 								  ima_entry->measurement);
 				if (evid)
 				{
+					if (ima_entry->algo)
+					{
+						algo_len = strlen(ima_entry->algo);
+						name_len = strlen(ima_entry->filename);
+						uri = malloc(algo_len + name_len + 1);
+						memcpy(uri, ima_entry->algo, algo_len);
+						strcpy(uri + algo_len, ima_entry->filename);
+					}
+					else
+					{
+						uri = strdup(ima_entry->filename);
+					}
 					evid->set_validation(evid, PTS_COMP_EVID_VALIDATION_PASSED,
-											   ima_entry->filename);
+											   uri);
+					free(uri);
 				}
 				free(ima_entry->filename);
+				free(ima_entry->algo);
 				free(ima_entry);
 
 				this->state = this->ima_list->get_count(this->ima_list) ?
@@ -593,20 +801,75 @@ METHOD(pts_component_t, measure, status_t,
 			SUCCESS : NEED_MORE;
 }
 
+/**
+ * Parse a validation URI of the form <hash algorithm>:<event name>
+ * into its components
+ */
+static pts_meas_algorithms_t parse_validation_uri(pts_comp_evidence_t *evidence,
+								char **ima_name, char **ima_algo, char *algo_buf)
+{
+    pts_meas_algorithms_t hash_algo;
+	char *uri, *pos, *algo, *name;
+
+	evidence->get_validation(evidence, &uri);
+
+	/* IMA-NG format? */
+	pos = strchr(uri, ':');
+	if (pos && (pos - uri + 1) < IMA_ALGO_LEN_MAX)
+	{
+		memset(algo_buf, '\0', IMA_ALGO_LEN_MAX);
+		memcpy(algo_buf, uri, pos - uri + 1);
+		algo = algo_buf;
+		name = pos + 1;
+
+		if (streq(algo, "sha1:") || streq(algo, ":"))
+		{
+			hash_algo = PTS_MEAS_ALGO_SHA1;
+		}
+		else if (streq(algo, "sha256:"))
+		{
+			hash_algo = PTS_MEAS_ALGO_SHA256;
+		}
+		else if (streq(algo, "sha384:"))
+		{
+			hash_algo = PTS_MEAS_ALGO_SHA384;
+		}
+		else
+		{
+			hash_algo = PTS_MEAS_ALGO_NONE;
+		}
+	}
+	else
+	{
+		algo = NULL;
+		name = uri;
+		hash_algo = PTS_MEAS_ALGO_SHA1;
+	}
+
+	if (ima_name)
+	{
+		*ima_name = name;
+	}
+	if (ima_algo)
+	{
+		*ima_algo = algo;
+	}
+
+	return hash_algo;
+}
+
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_ima_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_ita_comp_ima_t *this, uint8_t qualifier, pts_t *pts,
 	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
-	u_int32_t pcr, vid, name;
-	enum_name_t *names;
+	uint32_t pcr;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	pts_pcr_t *pcrs;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 	status_t status;
-	char *uri;
 
 	this->aik_id = pts->get_aik_id(pts);
 	pcrs = pts->get_pcrs(pts);
@@ -628,19 +891,15 @@ METHOD(pts_component_t, verify, status_t,
 				{
 					return status;
 				}
-				vid = this->name->get_vendor_id(this->name);
-				name = this->name->get_name(this->name);
-				names = pts_components->get_comp_func_names(pts_components, vid);
 
 				if (this->bios_count)
 				{
-					DBG1(DBG_PTS, "checking %d %N '%N' BIOS evidence measurements",
-								   this->bios_count, pen_names, vid, names, name);
+					DBG1(DBG_PTS, "checking %d BIOS evidence measurements",
+								   this->bios_count);
 				}
 				else
 				{
-					DBG1(DBG_PTS, "registering %N '%N' BIOS evidence measurements",
-								   pen_names, vid, names, name);
+					DBG1(DBG_PTS, "registering BIOS evidence measurements");
 					this->is_bios_registering = TRUE;
 				}
 
@@ -677,13 +936,34 @@ METHOD(pts_component_t, verify, status_t,
 						   PTS_ITA_QUALIFIER_TYPE_OS))
 	{
 		int ima_count;
+		char *ima_algo, *ima_name;
+		char algo_buf[IMA_ALGO_LEN_MAX];
+		pts_meas_algorithms_t hash_algo;
+
+		hash_algo = parse_validation_uri(evidence, &ima_name, &ima_algo,
+										 algo_buf);
 
 		switch (this->state)
 		{
 			case IMA_STATE_BIOS:
-				if (!check_boot_aggregate(pcrs, measurement))
+				this->state = IMA_STATE_RUNTIME;
+
+				if (!streq(ima_name, "boot_aggregate"))
 				{
-					this->state = IMA_STATE_RUNTIME;
+					DBG1(DBG_PTS, "ima: name must be 'boot_aggregate' "
+								  "but is '%s'", ima_name);
+					return FAILED;
+				}
+				if (hash_algo != PTS_MEAS_ALGO_SHA1)
+				{
+					DBG1(DBG_PTS, "ima: boot_aggregate algorithm must be %N "
+								  "but is %N",
+								   pts_meas_algorithm_names, PTS_MEAS_ALGO_SHA1,
+								   pts_meas_algorithm_names, hash_algo);
+					return FAILED;
+				}
+				if (!check_boot_aggregate(pcrs, measurement, ima_algo))
+				{
 					return FAILED;
 				}
 				this->state = IMA_STATE_INIT;
@@ -698,22 +978,19 @@ METHOD(pts_component_t, verify, status_t,
 				{
 					return status;
 				}
-				vid = this->name->get_vendor_id(this->name);
-				name = this->name->get_name(this->name);
-				names = pts_components->get_comp_func_names(pts_components, vid);
 
 				if (ima_count)
 				{
-					DBG1(DBG_PTS, "checking %N '%N' boot aggregate evidence "
-								  "measurement", pen_names, vid, names, name);
+					DBG1(DBG_PTS, "checking boot aggregate evidence "
+								  "measurement");
 					status = this->pts_db->check_comp_measurement(this->pts_db,
 													measurement, this->ima_cid,
 													this->aik_id, 1, pcr, algo);
 				}
 				else
 				{
-					DBG1(DBG_PTS, "registering %N '%N' boot aggregate evidence "
-								   "measurement", pen_names, vid, names, name);
+					DBG1(DBG_PTS, "registering boot aggregate evidence "
+								  "measurement");
 					this->is_ima_registering = TRUE;
 					status = this->pts_db->insert_comp_measurement(this->pts_db,
 													measurement, this->ima_cid,
@@ -727,42 +1004,77 @@ METHOD(pts_component_t, verify, status_t,
 				}
 				break;
 			case IMA_STATE_RUNTIME:
+			{
+				status_t status = NOT_FOUND;
+				uint8_t hash_buf[HASH_SIZE_SHA512];
+				chunk_t digest, hash;
+				enumerator_t *e;
+
 				this->count++;
-				if (evidence->get_validation(evidence, &uri) !=
+				if (evidence->get_validation(evidence, NULL) !=
 					PTS_COMP_EVID_VALIDATION_PASSED)
 				{
-					DBG1(DBG_PTS, "policy URI could no be retrieved");
+					DBG1(DBG_PTS, "evidence validation failed");
 					this->count_failed++;
 					return FAILED;
 				}
-				status = this->pts_db->check_file_measurement(this->pts_db,
+				hash = chunk_create(hash_buf, pts_meas_algo_hash_size(algo));
+
+				e = this->pts_db->create_file_meas_enumerator(this->pts_db,
 												pts->get_platform_id(pts),
-												PTS_MEAS_ALGO_SHA1_IMA,
-												measurement, uri);
+												hash_algo, ima_name);
+				if (e)
+				{
+					while (e->enumerate(e, &digest))
+					{
+						if (!ima_hash(digest, ima_algo, ima_name,
+									  FALSE, algo, hash_buf))
+						{
+							status = FAILED;
+							break;
+						}
+						if (chunk_equals(measurement, hash))
+						{
+							status = SUCCESS;
+							break;
+						}
+						else
+						{
+							status = VERIFY_ERROR;
+						}
+					}
+					e->destroy(e);
+				}
+				else
+				{
+					status = FAILED;
+				}
+
 				switch (status)
 				{
 					case SUCCESS:
 						DBG3(DBG_PTS, "%#B for '%s' is ok",
-									   &measurement, uri);
+									   &measurement, ima_name);
 						this->count_ok++;
 						break;
 					case NOT_FOUND:
 						DBG2(DBG_PTS, "%#B for '%s' not found",
-									   &measurement, uri);
+									   &measurement, ima_name);
 						this->count_unknown++;
 						break;
 					case VERIFY_ERROR:
 						DBG1(DBG_PTS, "%#B for '%s' differs",
-									   &measurement, uri);
+									   &measurement, ima_name);
 						this->count_differ++;
 						break;
 					case FAILED:
 					default:
 						DBG1(DBG_PTS, "%#B for '%s' failed",
-									   &measurement, uri);
+									   &measurement, ima_name);
 						this->count_failed++;
 				}
 				break;
+			}
 			default:
 				return FAILED;
 		}
@@ -798,7 +1110,7 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_ima_t *this, u_int8_t qualifier, bio_writer_t *result)
+	pts_ita_comp_ima_t *this, uint8_t qualifier, bio_writer_t *result)
 {
 	char result_buf[BUF_LEN];
 	char *pos = result_buf;
@@ -914,7 +1226,7 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_ima_create(u_int32_t depth,
+pts_component_t *pts_ita_comp_ima_create(uint32_t depth,
 										 pts_database_t *pts_db)
 {
 	pts_ita_comp_ima_t *this;
