@@ -30,6 +30,7 @@ AM_CPPFLAGS = \
 	-DPLUGINS=\""${s_plugins}\""
 
 man_MANS = \
+	swanctl.8 \
 	swanctl.conf.5
 
 BUILT_SOURCES = swanctl.conf swanctl.conf.5.main

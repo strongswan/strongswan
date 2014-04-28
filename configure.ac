@@ -1639,6 +1639,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---signcrl.1
 	src/pki/man/pki---acert.1
 	src/pki/man/pki---verify.1
+	src/swanctl/swanctl.8
 	src/swanctl/swanctl.conf.5.head
 	src/swanctl/swanctl.conf.5.tail
 ])
