@@ -14,10 +14,10 @@ A client connects to this service to access functionality. It may send an
 arbitrary number of packets over the connection before closing it.
 
 To exchange data, the transport protocol is segmented into byte sequences.
-Each byte sequence is prefixed by a 16-bit length header in network order,
-followed by the data. The maximum segment length is 65535 bytes, and the length
-field contains the length of the data only, not including the length field
-itself.
+Each byte sequence is prefixed by a 32-bit length header in network order,
+followed by the data. The maximum segment length is currently limited to 512KB
+of data, and the length field contains the length of the data only, not
+including the length field itself.
 
 The order of byte sequences must be strict, byte sequences must arrive in the
 same order as sent.

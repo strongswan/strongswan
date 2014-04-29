@@ -95,11 +95,11 @@ typedef struct {
 	/** bytes of length header sent/received */
 	u_char hdrlen;
 	/** bytes of length header */
-	char hdr[sizeof(u_int16_t)];
+	char hdr[sizeof(u_int32_t)];
 	/** send/receive buffer on heap */
 	chunk_t buf;
 	/** bytes sent/received in buffer */
-	u_int16_t done;
+	u_int32_t done;
 } msg_buf_t;
 
 /**
@@ -397,6 +397,7 @@ CALLBACK(on_write, bool,
 static bool do_read(private_vici_socket_t *this, entry_t *entry,
 					stream_t *stream)
 {
+	u_int32_t msglen;
 	ssize_t len;
 
 	/* assemble the length header first */
@@ -420,8 +421,15 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 		entry->in.hdrlen += len;
 		if (entry->in.hdrlen == sizeof(entry->in.hdr))
 		{
+			msglen = untoh32(entry->in.hdr);
+			if (msglen > VICI_MESSAGE_SIZE_MAX)
+			{
+				DBG1(DBG_CFG, "vici message length %u exceeds %u bytes limit, "
+					 "ignored", msglen, VICI_MESSAGE_SIZE_MAX);
+				return FALSE;
+			}
 			/* header complete, continue with data */
-			entry->in.buf = chunk_alloc(untoh16(entry->in.hdr));
+			entry->in.buf = chunk_alloc(msglen);
 		}
 	}
 
@@ -584,7 +592,7 @@ CALLBACK(enable_writer, job_requeue_t,
 METHOD(vici_socket_t, send_, void,
 	private_vici_socket_t *this, u_int id, chunk_t msg)
 {
-	if (msg.len <= (u_int16_t)~0)
+	if (msg.len <= VICI_MESSAGE_SIZE_MAX)
 	{
 		entry_selector_t *sel;
 		msg_buf_t *out;
@@ -596,7 +604,7 @@ METHOD(vici_socket_t, send_, void,
 			INIT(out,
 				.buf = msg,
 			);
-			htoun16(out->hdr, msg.len);
+			htoun32(out->hdr, msg.len);
 
 			array_insert(entry->out, ARRAY_TAIL, out);
 			if (array_count(entry->out) == 1)
@@ -619,7 +627,8 @@ METHOD(vici_socket_t, send_, void,
 	}
 	else
 	{
-		DBG1(DBG_CFG, "vici message exceeds maximum size, discarded");
+		DBG1(DBG_CFG, "vici message size %zu exceeds maximum size of %u, "
+			 "discarded", msg.len, VICI_MESSAGE_SIZE_MAX);
 		chunk_clear(&msg);
 	}
 }

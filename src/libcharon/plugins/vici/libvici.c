@@ -16,6 +16,7 @@
 #include "libvici.h"
 #include "vici_builder.h"
 #include "vici_dispatcher.h"
+#include "vici_socket.h"
 
 #include <library.h>
 #include <threading/mutex.h>
@@ -122,7 +123,7 @@ static bool read_error(vici_conn_t *conn, int err)
 /**
  * Handle a command response message
  */
-static bool handle_response(vici_conn_t *conn, u_int16_t len)
+static bool handle_response(vici_conn_t *conn, u_int32_t len)
 {
 	chunk_t buf;
 
@@ -139,7 +140,7 @@ static bool handle_response(vici_conn_t *conn, u_int16_t len)
 /**
  * Dispatch received event message
  */
-static bool handle_event(vici_conn_t *conn, u_int16_t len)
+static bool handle_event(vici_conn_t *conn, u_int32_t len)
 {
 	vici_message_t *message;
 	event_t *event;
@@ -197,7 +198,7 @@ static bool handle_event(vici_conn_t *conn, u_int16_t len)
 CALLBACK(on_read, bool,
 	vici_conn_t *conn, stream_t *stream)
 {
-	u_int16_t len;
+	u_int32_t len;
 	u_int8_t op;
 	ssize_t hlen;
 
@@ -218,7 +219,11 @@ CALLBACK(on_read, bool,
 		}
 	}
 
-	len = ntohs(len);
+	len = ntohl(len);
+	if (len > VICI_MESSAGE_SIZE_MAX)
+	{
+		return read_error(conn, EBADMSG);
+	}
 	if (len-- < sizeof(op))
 	{
 		return read_error(conn, EBADMSG);
@@ -353,7 +358,7 @@ vici_res_t* vici_submit(vici_req_t *req, vici_conn_t *conn)
 	vici_message_t *message;
 	vici_res_t *res;
 	chunk_t data;
-	u_int16_t len;
+	u_int32_t len;
 	u_int8_t namelen, op;
 
 	message = req->b->finalize(req->b);
@@ -366,7 +371,7 @@ vici_res_t* vici_submit(vici_req_t *req, vici_conn_t *conn)
 	op = VICI_CMD_REQUEST;
 	namelen = strlen(req->name);
 	data = message->get_encoding(message);
-	len = htons(sizeof(op) + sizeof(namelen) + namelen + data.len);
+	len = htonl(sizeof(op) + sizeof(namelen) + namelen + data.len);
 
 	if (!conn->stream->write_all(conn->stream, &len, sizeof(len)) ||
 		!conn->stream->write_all(conn->stream, &op, sizeof(op)) ||
@@ -679,13 +684,13 @@ void vici_free_res(vici_res_t *res)
 int vici_register(vici_conn_t *conn, char *name, vici_event_cb_t cb, void *user)
 {
 	event_t *event;
-	u_int16_t len;
+	u_int32_t len;
 	u_int8_t namelen, op;
 	int ret = 1;
 
 	op = cb ? VICI_EVENT_REGISTER : VICI_EVENT_UNREGISTER;
 	namelen = strlen(name);
-	len = htons(sizeof(op) + sizeof(namelen) + namelen);
+	len = htonl(sizeof(op) + sizeof(namelen) + namelen);
 	if (!conn->stream->write_all(conn->stream, &len, sizeof(len)) ||
 		!conn->stream->write_all(conn->stream, &op, sizeof(op)) ||
 		!conn->stream->write_all(conn->stream, &namelen, sizeof(namelen)) ||
