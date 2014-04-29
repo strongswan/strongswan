@@ -36,6 +36,11 @@
  */
 #define LFT_DEFAULT_IKE_REKEY (4 * 60 * 60)
 
+/**
+ * Default CHILD rekey time
+ */
+#define LFT_DEFAULT_CHILD_REKEY (1 * 60 * 60)
+
 typedef struct private_vici_config_t private_vici_config_t;
 
 /**
@@ -1278,6 +1283,7 @@ CALLBACK(children_sn, bool,
 		.start_action = ACTION_NONE,
 		.lft = {
 			.time = {
+				.rekey = LFT_DEFAULT_CHILD_REKEY,
 				.life = LFT_UNDEFINED,
 				.jitter = LFT_UNDEFINED,
 			},
