@@ -694,6 +694,87 @@ START_TEST(test_load_files_section)
 }
 END_TEST
 
+START_TEST(test_order_kv)
+{
+	chunk_t base = chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	key3 = val3\n"
+		"}");
+	chunk_t include = chunk_from_str(
+		"main {\n"
+		"	key0 = val0\n"
+		"	key3 = val3\n"
+		"	key1 = val1\n"
+		"}");
+	linked_list_t *keys, *values;
+
+	create_settings(base);
+	ck_assert(chunk_write(include, include1, 0022, TRUE));
+
+	keys = linked_list_create_with_items("key1", "key2", "key3", NULL);
+	values = linked_list_create_with_items("val1", "val2", "val3", NULL);
+	verify_key_values(keys, values, "main");
+
+	/* the original order is maintained if the settings are merged */
+	ck_assert(settings->load_files(settings, include1, TRUE));
+	keys = linked_list_create_with_items("key1", "key2", "key3", "key0", NULL);
+	values = linked_list_create_with_items("val1", "val2", "val3", "val0", NULL);
+	verify_key_values(keys, values, "main");
+
+	/* but the new order is adopted if the settings are replaced */
+	ck_assert(settings->load_files(settings, include1, FALSE));
+	keys = linked_list_create_with_items("key0", "key3", "key1", NULL);
+	values = linked_list_create_with_items("val0", "val3", "val1", NULL);
+	verify_key_values(keys, values, "main");
+
+	unlink(include1);
+}
+END_TEST
+
+START_TEST(test_order_section)
+{
+	chunk_t base = chunk_from_str(
+		"main {\n"
+		"	sub1 {\n"
+		"	}\n"
+		"	sub2 {\n"
+		"	}\n"
+		"	sub3 {\n"
+		"	}\n"
+		"}");
+	chunk_t include = chunk_from_str(
+		"main {\n"
+		"	sub0 {\n"
+		"	}\n"
+		"	sub3 {\n"
+		"	}\n"
+		"	sub1 {\n"
+		"	}\n"
+		"}");
+	linked_list_t *sections;
+
+	create_settings(base);
+	ck_assert(chunk_write(include, include1, 0022, TRUE));
+
+	sections = linked_list_create_with_items("sub1", "sub2", "sub3", NULL);
+	verify_sections(sections, "main");
+
+	/* the original order is maintained if the settings are merged */
+	ck_assert(settings->load_files(settings, include1, TRUE));
+	sections = linked_list_create_with_items("sub1", "sub2", "sub3", "sub0", NULL);
+	verify_sections(sections, "main");
+
+	/* but the new order is adopted if the settings are replaced */
+	ck_assert(settings->load_files(settings, include1, FALSE));
+	sections = linked_list_create_with_items("sub0", "sub3", "sub1", NULL);
+	verify_sections(sections, "main");
+
+	unlink(include1);
+}
+END_TEST
+
 START_SETUP(setup_fallback_config)
 {
 	create_settings(chunk_from_str(
@@ -810,7 +891,6 @@ START_TEST(test_add_fallback_printf)
 	verify_string("subsubval1", "main.sub2.subsub.subkey1");
 }
 END_TEST
-
 
 START_SETUP(setup_string_config)
 {
@@ -967,6 +1047,8 @@ Suite *settings_suite_create()
 	tcase_add_test(tc, test_include);
 	tcase_add_test(tc, test_load_files);
 	tcase_add_test(tc, test_load_files_section);
+	tcase_add_test(tc, test_order_kv);
+	tcase_add_test(tc, test_order_section);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fallback");

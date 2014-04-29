@@ -199,10 +199,13 @@ void settings_section_extend(section_t *base, section_t *extension,
 	enumerator_t *enumerator;
 	section_t *section;
 	kv_t *kv;
+	array_t *sections = NULL, *kvs = NULL;
 	int idx;
 
 	if (purge)
-	{	/* remove sections and settings in base not found in extension */
+	{	/* remove sections and settings in base not found in extension, the
+		 * others are removed too (from the _order list) so they can be inserted
+		 * in the order found in extension */
 		enumerator = array_create_enumerator(base->sections_order);
 		while (enumerator->enumerate(enumerator, (void**)&section))
 		{
@@ -212,32 +215,49 @@ void settings_section_extend(section_t *base, section_t *extension,
 				idx = array_bsearch(base->sections, section->name,
 									settings_section_find, NULL);
 				if (section_purge(section, contents))
-				{
+				{	/* only remove them if we can purge them */
 					array_remove(base->sections, idx, NULL);
 					array_remove_at(base->sections_order, enumerator);
 					settings_section_destroy(section, contents);
 				}
 			}
+			else
+			{
+				array_remove_at(base->sections_order, enumerator);
+				array_insert_create(&sections, ARRAY_TAIL, section);
+				array_sort(sections, settings_section_sort, NULL);
+			}
 		}
 		enumerator->destroy(enumerator);
 
-		enumerator = array_create_enumerator(base->kv_order);
-		while (enumerator->enumerate(enumerator, (void**)&kv))
+		while (array_remove(base->kv_order, 0, &kv))
 		{
 			if (array_bsearch(extension->kv, kv->key, settings_kv_find,
 							  NULL) == -1)
 			{
 				idx = array_bsearch(base->kv, kv->key, settings_kv_find, NULL);
 				array_remove(base->kv, idx, NULL);
-				array_remove_at(base->kv_order, enumerator);
 				settings_kv_destroy(kv, contents);
 			}
+			else
+			{
+				array_insert_create(&kvs, ARRAY_TAIL, kv);
+				array_sort(kvs, settings_kv_sort, NULL);
+			}
 		}
-		enumerator->destroy(enumerator);
 	}
 
 	while (array_remove(extension->sections_order, 0, &section))
 	{
+		idx = array_bsearch(sections, section->name,
+							settings_section_find, NULL);
+		if (idx != -1)
+		{
+			section_t *existing;
+
+			array_remove(sections, idx, &existing);
+			array_insert(base->sections_order, ARRAY_TAIL, existing);
+		}
 		idx = array_bsearch(extension->sections, section->name,
 							settings_section_find, NULL);
 		array_remove(extension->sections, idx, NULL);
@@ -246,10 +266,20 @@ void settings_section_extend(section_t *base, section_t *extension,
 
 	while (array_remove(extension->kv_order, 0, &kv))
 	{
+		idx = array_bsearch(kvs, kv->key, settings_kv_find, NULL);
+		if (idx != -1)
+		{
+			kv_t *existing;
+
+			array_remove(kvs, idx, &existing);
+			array_insert(base->kv_order, ARRAY_TAIL, existing);
+		}
 		idx = array_bsearch(extension->kv, kv->key, settings_kv_find, NULL);
 		array_remove(extension->kv, idx, NULL);
 		settings_kv_add(base, kv, contents);
 	}
+	array_destroy(sections);
+	array_destroy(kvs);
 }
 
 /*
