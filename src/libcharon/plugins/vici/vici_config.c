@@ -1025,12 +1025,16 @@ CALLBACK(parse_revocation, bool,
 	enum_map_t map[] = {
 		{ "strict",		VALIDATION_GOOD		},
 		{ "ifuri",		VALIDATION_SKIPPED	},
+		{ "relaxed",	VALIDATION_FAILED	},
 	};
 	int d;
 
 	if (parse_map(map, countof(map), &d, v))
 	{
-		cfg->add(cfg, AUTH_RULE_CRL_VALIDATION, d);
+		if (d != VALIDATION_FAILED)
+		{
+			cfg->add(cfg, AUTH_RULE_CRL_VALIDATION, d);
+		}
 		return TRUE;
 	}
 	return FALSE;
