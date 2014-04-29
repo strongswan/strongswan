@@ -1153,22 +1153,22 @@ METHOD(pts_component_t, finalize, bool,
 			/* close registration */
 			this->is_ima_registering = FALSE;
 
-			written = snprintf(pos, len, "registered boot aggregate evidence "
-							   "measurement; ");
+			written = snprintf(pos, len, "registered IMA boot aggregate "
+							   "evidence measurement; ");
 			pos += written;
 			len -= written;
 		}
 		if (this->count)
 		{
-			snprintf(pos, len, "processed %d file evidence measurements: "
+			snprintf(pos, len, "processed %d IMA file evidence measurements: "
 					 "%d ok, %d unknown, %d differ, %d failed",
 					 this->count, this->count_ok, this->count_unknown,
 					 this->count_differ, this->count_failed);
-			success = !this->count_differ && !this->count_failed;
 		}
 		else
 		{
-			snprintf(pos, len, "no boot aggregate evidence measurement");
+			snprintf(pos, len, "no IMA file evidence measurements");
+            success = FALSE;
 		}
 	}
 	else

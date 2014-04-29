@@ -796,7 +796,7 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 						attestation_state->finalize_components(attestation_state,
 															   result);
 						result->write_data(result,
-								chunk_from_str("; Pending component evidence"));
+								chunk_from_str("; pending component evidence"));
 						result->write_uint8(result, '\0');
 						result_buf = result->get_buf(result);
 						result_str = result_buf.ptr;
