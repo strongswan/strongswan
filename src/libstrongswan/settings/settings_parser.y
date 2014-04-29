@@ -255,7 +255,16 @@ bool settings_parser_parse_file(section_t *root, char *name)
 	helper->file_include(helper, name);
 	if (!settings_parser_open_next_file(helper))
 	{
-		DBG1(DBG_CFG, "failed to open config file '%s'", name);
+#ifdef STRONGSWAN_CONF
+		if (streq(name, STRONGSWAN_CONF))
+		{
+			DBG2(DBG_CFG, "failed to open config file '%s'", name);
+		}
+		else
+#endif
+		{
+			DBG1(DBG_CFG, "failed to open config file '%s'", name);
+		}
 	}
 	else
 	{

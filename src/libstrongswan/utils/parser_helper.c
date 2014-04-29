@@ -111,7 +111,7 @@ METHOD(parser_helper_t, file_next, parser_helper_file_t*,
 				array_insert(this->files, ARRAY_TAIL, next);
 				return &next->public;
 			}
-			PARSER_DBG1(&this->public, "unable to open '%s'", name);
+			PARSER_DBG2(&this->public, "unable to open '%s'", name);
 			parser_helper_file_destroy(next);
 		}
 		file->matches->destroy(file->matches);
