@@ -31,6 +31,11 @@
  */
 #define LFT_UNDEFINED (~(u_int64_t)0)
 
+/**
+ * Default IKE rekey time
+ */
+#define LFT_DEFAULT_IKE_REKEY (4 * 60 * 60)
+
 typedef struct private_vici_config_t private_vici_config_t;
 
 /**
@@ -1684,6 +1689,7 @@ CALLBACK(config_sn, bool,
 		.fragmentation = FRAGMENTATION_NO,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
+		.rekey_time = LFT_DEFAULT_IKE_REKEY,
 		.over_time = LFT_UNDEFINED,
 		.rand_time = LFT_UNDEFINED,
 	};
