@@ -39,11 +39,11 @@ CLEANFILES = $(man_MANS)
 
 .opt.conf:
 	$(AM_V_GEN) \
-	$(PYTHON) $(top_srcdir)/conf/format-options.py -f conf $< > $(srcdir)/$@
+	$(PYTHON) $(top_srcdir)/conf/format-options.py -n -f conf $< > $(srcdir)/$@
 
 swanctl.conf.5.main: swanctl.opt
 	$(AM_V_GEN) \
-	$(PYTHON) $(top_srcdir)/conf/format-options.py -f man $< > $(srcdir)/$@
+	$(PYTHON) $(top_srcdir)/conf/format-options.py -n -f man $< > $(srcdir)/$@
 
 swanctl.conf.5: swanctl.conf.5.head swanctl.conf.5.main swanctl.conf.5.tail
 	$(AM_V_GEN) \
