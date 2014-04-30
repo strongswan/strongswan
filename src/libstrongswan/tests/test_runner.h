@@ -64,7 +64,13 @@ struct test_configuration_t {
 /**
  * Run test configuration.
  *
- * The configs array must be terminated with a NULL element.
+ * The configs array must be terminated with a NULL element. The following
+ * environment variables are currently supported:
+ *
+ * - TESTS_VERBOSITY: Numerical loglevel for debug log
+ * - TESTS_STRONGSWAN_CONF: Specify a path to a custom strongswan.conf
+ * - TESTS_SUITES: Run specific test suites only
+ * - TESTS_REDUCED_KEYLENGTHS: Test minimal keylengths for public key tests only
  *
  * @param name			name of test runner
  * @param config		test suite constructors with dependencies

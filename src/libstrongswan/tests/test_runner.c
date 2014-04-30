@@ -26,6 +26,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
+#include <stdlib.h>
 
 /**
  * Get a tty color escape character for stderr
@@ -114,13 +115,13 @@ static void filter_suites(array_t *loaded)
  * Load all available test suites, or optionally only selected ones.
  */
 static array_t *load_suites(test_configuration_t configs[],
-							test_runner_init_t init)
+							test_runner_init_t init, char *cfg)
 {
 	array_t *suites;
 	bool old = FALSE;
 	int i;
 
-	library_init(NULL, "test-runner");
+	library_init(cfg, "test-runner");
 
 	test_setup_handler();
 
@@ -226,12 +227,12 @@ static bool call_fixture(test_case_t *tcase, bool up)
 /**
  * Test initialization, initializes libstrongswan for the next run
  */
-static bool pre_test(test_runner_init_t init)
+static bool pre_test(test_runner_init_t init, char *cfg)
 {
 	level_t level = LEVEL_SILENT;
 	char *verbosity;
 
-	library_init(NULL, "test-runner");
+	library_init(cfg, "test-runner");
 
 	/* use non-blocking RNG to generate keys fast */
 	lib->settings->set_default_str(lib->settings,
@@ -395,7 +396,7 @@ static void print_failures(array_t *failures)
 /**
  * Run a single test case with fixtures
  */
-static bool run_case(test_case_t *tcase, test_runner_init_t init)
+static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 {
 	enumerator_t *enumerator;
 	test_function_t *tfun;
@@ -414,7 +415,7 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init)
 
 		for (i = tfun->start; i < tfun->end; i++)
 		{
-			if (pre_test(init))
+			if (pre_test(init, cfg))
 			{
 				bool ok = FALSE;
 				int leaks = 0;
@@ -483,7 +484,7 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init)
 /**
  * Run a single test suite
  */
-static bool run_suite(test_suite_t *suite, test_runner_init_t init)
+static bool run_suite(test_suite_t *suite, test_runner_init_t init, char *cfg)
 {
 	enumerator_t *enumerator;
 	test_case_t *tcase;
@@ -494,7 +495,7 @@ static bool run_suite(test_suite_t *suite, test_runner_init_t init)
 	enumerator = array_create_enumerator(suite->tcases);
 	while (enumerator->enumerate(enumerator, &tcase))
 	{
-		if (run_case(tcase, init))
+		if (run_case(tcase, init, cfg))
 		{
 			passed++;
 		}
@@ -522,11 +523,14 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	test_suite_t *suite;
 	enumerator_t *enumerator;
 	int passed = 0, result;
+	char *cfg;
 
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
 
-	suites = load_suites(configs, init);
+	cfg = getenv("TESTS_STRONGSWAN_CONF");
+
+	suites = load_suites(configs, init, cfg);
 	if (!suites)
 	{
 		return EXIT_FAILURE;
@@ -537,7 +541,7 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	enumerator = array_create_enumerator(suites);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if (run_suite(suite, init))
+		if (run_suite(suite, init, cfg))
 		{
 			passed++;
 		}
