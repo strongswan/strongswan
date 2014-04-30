@@ -101,13 +101,15 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 				case DB_TEXT:
 				{
 					const char *text = va_arg(*args, const char*);
-					res = sqlite3_bind_text(stmt, i, text, -1, SQLITE_STATIC);
+					res = sqlite3_bind_text(stmt, i, text, -1,
+											SQLITE_TRANSIENT);
 					break;
 				}
 				case DB_BLOB:
 				{
 					chunk_t c = va_arg(*args, chunk_t);
-					res = sqlite3_bind_blob(stmt, i, c.ptr, c.len, SQLITE_STATIC);
+					res = sqlite3_bind_blob(stmt, i, c.ptr, c.len,
+											SQLITE_TRANSIENT);
 					break;
 				}
 				case DB_DOUBLE:
