@@ -682,7 +682,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					snprintf(result_str, BUF_LEN, "processed %d packages: "
 							"%d not updated, %d blacklisted, %d ok, "
-							"%d not found",
+							"%d unknown",
 							count, count_update, count_blacklist, count_ok,
 							count - count_update - count_blacklist - count_ok);
 					break;
