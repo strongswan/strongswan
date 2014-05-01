@@ -9,6 +9,9 @@ strongswan-5.2.0
 - All IMVs now share the access requestor ID, device ID and product info
   of an access requestor via a common imv_session object.
 
+- The Attestation IMC/IMV pair supports the IMA-NG measurement format
+  introduced with the Linux 3.13 kernel.
+
 
 strongswan-5.1.3
 ----------------
