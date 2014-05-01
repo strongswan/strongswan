@@ -202,12 +202,12 @@ CALLBACK(terminate, vici_message_t*,
 	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
 {
 	enumerator_t *enumerator, *isas, *csas;
-	char *child, *ike;
+	char *child, *ike, *errmsg = NULL;
 	u_int timeout, child_id, ike_id, current, *del, done = 0;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	array_t *ids;
-	vici_message_t *reply;
+	vici_builder_t *builder;
 	log_info_t log = {
 		.dispatcher = this->dispatcher,
 		.id = id,
@@ -307,28 +307,31 @@ CALLBACK(terminate, vici_message_t*,
 	}
 	enumerator->destroy(enumerator);
 
+	builder = vici_builder_create();
 	if (array_count(ids) == 0)
 	{
-		reply = send_reply(this, "no matching SAs to terminate found");
+		errmsg = "no matching SAs to terminate found";
 	}
 	else if (done < array_count(ids))
 	{
 		if (array_count(ids) == 1)
 		{
-			reply = send_reply(this, "terminating SA failed");
+			errmsg = "terminating SA failed";
 		}
 		else
 		{
-			reply = send_reply(this, "terminated %u of %u SAs",
-							   done, array_count(ids));
+			errmsg = "not all matching SAs could be terminated";
 		}
 	}
-	else
+	builder->add_kv(builder, "success", errmsg ? "no" : "yes");
+	builder->add_kv(builder, "matches", "%u", array_count(ids));
+	builder->add_kv(builder, "terminated", "%u", done);
+	if (errmsg)
 	{
-		reply = send_reply(this, NULL);
+		builder->add_kv(builder, "errmsg", "%s", errmsg);
 	}
 	array_destroy(ids);
-	return reply;
+	return builder->finalize(builder);
 }
 
 /**
