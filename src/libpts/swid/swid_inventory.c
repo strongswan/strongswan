@@ -148,7 +148,7 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 			separator = strchr(line, '_');
 			if (!separator)
 			{
-				DBG1(DBG_IMC, "separatation of regid from unique software ID "
+				DBG1(DBG_IMC, "separation of regid from unique software ID "
 							  "failed");
 				status = FAILED;
 				goto end;
