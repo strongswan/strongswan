@@ -129,10 +129,19 @@ static void register_event(private_vici_dispatcher_t *this, char *name,
 	event_t *event;
 
 	this->mutex->lock(this->mutex);
-	event = this->events->get(this->events, name);
-	if (event)
+	while (TRUE)
 	{
-		array_insert(event->clients, ARRAY_TAIL, &id);
+		event = this->events->get(this->events, name);
+		if (!event)
+		{
+			break;
+		}
+		if (!event->uses)
+		{
+			array_insert(event->clients, ARRAY_TAIL, &id);
+			break;
+		}
+		this->cond->wait(this->cond, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
 
@@ -160,20 +169,29 @@ static void unregister_event(private_vici_dispatcher_t *this, char *name,
 	bool found = FALSE;
 
 	this->mutex->lock(this->mutex);
-	event = this->events->get(this->events, name);
-	if (event)
+	while (TRUE)
 	{
-		enumerator = array_create_enumerator(event->clients);
-		while (enumerator->enumerate(enumerator, &current))
+		event = this->events->get(this->events, name);
+		if (!event)
 		{
-			if (*current == id)
-			{
-				array_remove_at(event->clients, enumerator);
-				found = TRUE;
-				break;
-			}
+			break;
 		}
-		enumerator->destroy(enumerator);
+		if (!event->uses)
+		{
+			enumerator = array_create_enumerator(event->clients);
+			while (enumerator->enumerate(enumerator, &current))
+			{
+				if (*current == id)
+				{
+					array_remove_at(event->clients, enumerator);
+					found = TRUE;
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+			break;
+		}
+		this->cond->wait(this->cond, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
 
@@ -340,11 +358,15 @@ CALLBACK(disconnect, void,
 	event_t *event;
 	u_int *current;
 
-	/* deregister all clients */
+	/* deregister client from all events */
 	this->mutex->lock(this->mutex);
 	events = this->events->create_enumerator(this->events);
 	while (events->enumerate(events, NULL, &event))
 	{
+		while (event->uses)
+		{
+			this->cond->wait(this->cond, this->mutex);
+		}
 		ids = array_create_enumerator(event->clients);
 		while (ids->enumerate(ids, &current))
 		{
