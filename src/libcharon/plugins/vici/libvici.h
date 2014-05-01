@@ -28,8 +28,8 @@
  * - vici_connect(): Connect to a vici service
  * - vici_disconnect(): Disconnect from a vici service
  *
- * Library initialization is basically required to set up libstrongswan and
- * a small thread pool. Initialize libstrongswan manually instead.
+ * Library initialization implicitly initializes libstrongswan and a small
+ * thread pool.
  *
  * Connecting requires an uri, which is currently either a UNIX socket path
  * prefixed with unix://, or a hostname:port touple prefixed with tcp://.
@@ -269,6 +269,8 @@ void vici_free_req(vici_req_t *req);
 /**
  * Dump a message text representation to a FILE stream.
  *
+ * On error, errno is set appropriately.
+ *
  * @param res		response message to dump
  * @param label		a label to print for this message
  * @param out		FILE to dump to
@@ -292,6 +294,8 @@ vici_parse_t vici_parse(vici_res_t *res);
  *
  * The string is valid until vici_free_res() is called.
  *
+ * On error, errno is set appropriately.
+ *
  * @param res		response message to parse
  * @return			name tag / key, NULL on error
  */
@@ -314,7 +318,13 @@ int vici_parse_name_eq(vici_res_t *res, char *name);
  *
  * This call is valid only after vici_parse() returned VICI_PARSE_KEY_VALUE or
  * VICI_PARSE_LIST_ITEM.
+ *
  * The string is valid until vici_free_res() is called.
+ *
+ * On error, errno is set appropriately.
+ *
+ * @param len		pointer receiving value length
+ * @return			pointer to value, NULL on error
  */
 void* vici_parse_value(vici_res_t *res, int *len);
 
@@ -323,8 +333,11 @@ void* vici_parse_value(vici_res_t *res, int *len);
  *
  * This call is valid only after vici_parse() returned VICI_PARSE_KEY_VALUE or
  * VICI_PARSE_LIST_ITEM.
+ *
  * This call is successful only if the value contains no non-printable
  * characters. The string is valid until vici_free_res() is called.
+ *
+ * On error, errno is set appropriately.
  *
  * @param res		response message to parse
  * @return			value as string, NULL on error
@@ -337,6 +350,8 @@ char* vici_parse_value_str(vici_res_t *res);
  * Any of the callbacks may be NULL to skip this kind of item. Callbacks are
  * invoked for the current section level only. To descent into sections, call
  * vici_parse_cb() from within a section callback.
+ *
+ * On error, errno is set appropriately.
  *
  * @param res		message to parse
  * @param section	callback invoked for each section
