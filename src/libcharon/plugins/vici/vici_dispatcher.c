@@ -437,23 +437,23 @@ METHOD(vici_dispatcher_t, raise_event, void,
 	if (event)
 	{
 		event->uses++;
-	}
-	this->mutex->unlock(this->mutex);
+		this->mutex->unlock(this->mutex);
 
-	enumerator = array_create_enumerator(event->clients);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (id == 0 || id == *current)
+		enumerator = array_create_enumerator(event->clients);
+		while (enumerator->enumerate(enumerator, &current))
 		{
-			send_op(this, *current, VICI_EVENT, name, message);
+			if (id == 0 || id == *current)
+			{
+				send_op(this, *current, VICI_EVENT, name, message);
+			}
 		}
-	}
-	enumerator->destroy(enumerator);
+		enumerator->destroy(enumerator);
 
-	this->mutex->lock(this->mutex);
-	if (--event->uses == 0)
-	{
-		this->cond->broadcast(this->cond);
+		this->mutex->lock(this->mutex);
+		if (--event->uses == 0)
+		{
+			this->cond->broadcast(this->cond);
+		}
 	}
 	this->mutex->unlock(this->mutex);
 
