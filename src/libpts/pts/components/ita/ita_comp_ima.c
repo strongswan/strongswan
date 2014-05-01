@@ -869,7 +869,7 @@ METHOD(pts_component_t, verify, status_t,
 	pts_pcr_t *pcrs;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
-	status_t status;
+	status_t status = NOT_FOUND;
 
 	this->aik_id = pts->get_aik_id(pts);
 	pcrs = pts->get_pcrs(pts);
@@ -1005,7 +1005,6 @@ METHOD(pts_component_t, verify, status_t,
 				break;
 			case IMA_STATE_RUNTIME:
 			{
-				status_t status = NOT_FOUND;
 				uint8_t hash_buf[HASH_SIZE_SHA512];
 				chunk_t digest, hash;
 				enumerator_t *e;
