@@ -1,7 +1,7 @@
 #! @IPSEC_SHELL@
 # prefix command to run stuff from our programs directory
 # Copyright (C) 1998-2002  Henry Spencer.
-# Copyright (C) 2006 Andreas Steffen
+# Copyright (C) 2006-2014 Andreas Steffen
 # Copyright (C) 2006 Martin Willi
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -316,6 +316,10 @@ update)
 pki)
 	shift
 	exec $IPSEC_BINDIR/pki "$@"
+	;;
+aikgen)
+	shift
+	exec $IPSEC_BINDIR/aikgen "$@"
 	;;
 version|--version)
 	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"

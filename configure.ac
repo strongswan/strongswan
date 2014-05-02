@@ -266,6 +266,7 @@ ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
+ARG_ENABL_SET([aikgen],         [enable AIK generator.])
 # optional features
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
@@ -1078,6 +1079,7 @@ manager_plugins=
 medsrv_plugins=
 nm_plugins=
 cmd_plugins=
+aikgen_plugins=
 
 # location specific lists for checksumming,
 # for src/libcharon, src/libhydra, src/libstrongswan and src/libtnccs
@@ -1098,19 +1100,19 @@ ADD_PLUGIN([aes],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon scepclient pki scripts nm cmd])
-ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([md4],                  [s charon manager scepclient pki nm cmd])
-ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd])
-ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([random],               [s charon scepclient pki scripts medsrv attest nm cmd])
-ADD_PLUGIN([nonce],                [s charon nm cmd])
-ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd])
+ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd aikgen])
+ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([random],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
+ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([revocation],           [s charon nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([acert],                [s charon])
-ADD_PLUGIN([pubkey],               [s charon cmd])
-ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pubkey],               [s charon cmd aikgen])
+ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([pkcs8],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
@@ -1119,13 +1121,13 @@ ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([padlock],              [s charon])
-ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd])
-ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd])
-ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd])
+ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
 ADD_PLUGIN([xcbc],                 [s charon nm cmd])
@@ -1214,6 +1216,7 @@ AC_SUBST(manager_plugins)
 AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
 AC_SUBST(cmd_plugins)
+AC_SUBST(aikgen_plugins)
 
 AC_SUBST(c_plugins)
 AC_SUBST(h_plugins)
@@ -1378,7 +1381,7 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
@@ -1395,12 +1398,13 @@ AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
-AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers)
+AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers -o x$aikgen = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
+AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
 
 # ========================
 #  set global definitions
@@ -1604,6 +1608,7 @@ AC_CONFIG_FILES([
 	src/_updown_espmark/Makefile
 	src/_copyright/Makefile
 	src/scepclient/Makefile
+	src/aikgen/Makefile
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
