@@ -30,8 +30,8 @@ static bool build_pub(chunk_t *encoding, va_list args)
 						   CRED_PART_RSA_PUB_EXP, &e, CRED_PART_END))
 	{
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_wrap(ASN1_INTEGER, "c", n),
-						asn1_wrap(ASN1_INTEGER, "c", e));
+						asn1_integer("c", n),
+						asn1_integer("c", e));
 		return TRUE;
 	}
 	return FALSE;
@@ -51,8 +51,29 @@ static bool build_pub_info(chunk_t *encoding, va_list args)
 						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 						asn1_bitstring("m",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
-								asn1_wrap(ASN1_INTEGER, "c", n),
-								asn1_wrap(ASN1_INTEGER, "c", e))));
+								asn1_integer("c", n),
+								asn1_integer("c", e))));
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Encode the RSA modulus of a public key only
+ */
+static bool build_pub_modulus(chunk_t *encoding, va_list args)
+{
+	chunk_t n;
+
+	if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n, CRED_PART_END))
+	{
+		/* remove preceding zero bytes */
+		while (n.len > 0 && *n.ptr == 0x00)
+		{
+			n.ptr++;
+			n.len--;
+		}
+		*encoding = chunk_clone(n);
 		return TRUE;
 	}
 	return FALSE;
@@ -73,14 +94,14 @@ static bool build_priv(chunk_t *encoding, va_list args)
 	{
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "cmmssssss",
 						ASN1_INTEGER_0,
-						asn1_wrap(ASN1_INTEGER, "c", n),
-						asn1_wrap(ASN1_INTEGER, "c", e),
-						asn1_wrap(ASN1_INTEGER, "c", d),
-						asn1_wrap(ASN1_INTEGER, "c", p),
-						asn1_wrap(ASN1_INTEGER, "c", q),
-						asn1_wrap(ASN1_INTEGER, "c", exp1),
-						asn1_wrap(ASN1_INTEGER, "c", exp2),
-						asn1_wrap(ASN1_INTEGER, "c", coeff));
+						asn1_integer("c", n),
+						asn1_integer("c", e),
+						asn1_integer("c", d),
+						asn1_integer("c", p),
+						asn1_integer("c", q),
+						asn1_integer("c", exp1),
+						asn1_integer("c", exp2),
+						asn1_integer("c", coeff));
 		return TRUE;
 	}
 	return FALSE;
@@ -151,6 +172,8 @@ bool pkcs1_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 			return build_pub(encoding, args);
 		case PUBKEY_SPKI_ASN1_DER:
 			return build_pub_info(encoding, args);
+		case PUBKEY_RSA_MODULUS:
+			return build_pub_modulus(encoding, args);
 		case PRIVKEY_ASN1_DER:
 			return build_priv(encoding, args);
 		default:
