@@ -668,25 +668,6 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([no])]
 )
 
-AC_MSG_CHECKING([for GCC __atomic operations])
-AC_RUN_IFELSE([AC_LANG_SOURCE(
-	[[
-			int main() {
-			int ref = 1, val;
-			__atomic_fetch_add(&ref, 1, __ATOMIC_RELAXED);
-			val = __atomic_sub_fetch(&ref, 1, __ATOMIC_RELAXED);
-			__atomic_compare_exchange_n(&ref, &val, 0, 0, __ATOMIC_RELAXED,
-										__ATOMIC_RELAXED);
-			return ref;
-		}
-	]])],
-	[AC_MSG_RESULT([yes]);
-	 AC_DEFINE([HAVE_GCC_ATOMIC_OPERATIONS], [],
-		   [have GCC __atomic_* operations])],
-	[AC_MSG_RESULT([no])],
-	[AC_MSG_RESULT([no])]
-)
-
 AC_MSG_CHECKING([for GCC __sync operations])
 AC_RUN_IFELSE([AC_LANG_SOURCE(
 	[[

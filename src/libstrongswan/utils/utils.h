@@ -748,6 +748,13 @@ static inline size_t round_down(size_t size, size_t alignment)
  */
 typedef u_int refcount_t;
 
+/* use __atomic* built-ins with GCC 4.7 and newer */
+#ifdef __GNUC__
+# if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 6))
+#  define HAVE_GCC_ATOMIC_OPERATIONS
+# endif
+#endif
+
 #ifdef HAVE_GCC_ATOMIC_OPERATIONS
 
 #define ref_get(ref) __atomic_add_fetch(ref, 1, __ATOMIC_RELAXED)
