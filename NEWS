@@ -12,6 +12,8 @@ strongswan-5.2.0
 - The Attestation IMC/IMV pair supports the IMA-NG measurement format
   introduced with the Linux 3.13 kernel.
 
+- The aikgen tool generates an Attestation Identity Key bound to a TPM.
+
 
 strongswan-5.1.3
 ----------------
