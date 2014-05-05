@@ -394,14 +394,24 @@ static status_t atodn(char *src, chunk_t *dn)
 	asn1_t rdn_type;
 	state_t state = SEARCH_OID;
 	status_t status = SUCCESS;
+	char sep = '\0';
 
 	do
 	{
 		switch (state)
 		{
 			case SEARCH_OID:
-				if (*src != ' ' && *src != '/' && *src !=  ',' && *src != '\0')
+				if (!sep && *src == '/')
+				{	/* use / as separator if the string starts with a slash */
+					sep = '/';
+					break;
+				}
+				if (*src != ' ' && *src != '\0')
 				{
+					if (!sep)
+					{	/* use , as separator by default */
+						sep = ',';
+					}
 					oid.ptr = src;
 					oid.len = 1;
 					state = READ_OID;
@@ -441,7 +451,7 @@ static status_t atodn(char *src, chunk_t *dn)
 				{
 					break;
 				}
-				else if (*src != ',' && *src != '/' && *src != '\0')
+				else if (*src != sep && *src != '\0')
 				{
 					name.ptr = src;
 					name.len = 1;
@@ -454,7 +464,7 @@ static status_t atodn(char *src, chunk_t *dn)
 				state = READ_NAME;
 				/* fall-through */
 			case READ_NAME:
-				if (*src != ',' && *src != '/' && *src != '\0')
+				if (*src != sep && *src != '\0')
 				{
 					name.len++;
 					if (*src == ' ')

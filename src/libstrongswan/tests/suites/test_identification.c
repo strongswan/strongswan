@@ -376,14 +376,14 @@ START_TEST(test_equals)
 							 "C=CH, E=moon@strongswan.org, CN=moon");
 
 	ck_assert(id_equals(a, "C=CH, E=moon@strongswan.org, CN=moon"));
-	ck_assert(id_equals(a, "C==CH, E==moon@strongswan.org,,, CN==moon"));
+	ck_assert(id_equals(a, "C==CH , E==moon@strongswan.org , CN==moon"));
 	ck_assert(id_equals(a, "  C=CH, E=moon@strongswan.org, CN=moon  "));
 	ck_assert(id_equals(a, "C=ch, E=moon@STRONGSWAN.ORG, CN=Moon"));
 	ck_assert(id_equals(a, "/C=CH/E=moon@strongswan.org/CN=moon"));
-	ck_assert(id_equals(a, "C=CH/E=moon@strongswan.org/CN=moon"));
-	ck_assert(id_equals(a, "C=CH/E=moon@strongswan.org,CN=moon"));
-	ck_assert(id_equals(a, "C=CH / E=moon@strongswan.org , CN=moon"));
+	ck_assert(id_equals(a, " / C=CH / E=moon@strongswan.org / CN=moon"));
 
+	ck_assert(!id_equals(a, "C=CH/E=moon@strongswan.org/CN=moon"));
+	ck_assert(!id_equals(a, "C=CH/E=moon@strongswan.org,CN=moon"));
 	ck_assert(!id_equals(a, "C=CH E=moon@strongswan.org CN=moon"));
 	ck_assert(!id_equals(a, "C=CN, E=moon@strongswan.org, CN=moon"));
 	ck_assert(!id_equals(a, "E=moon@strongswan.org, C=CH, CN=moon"));
