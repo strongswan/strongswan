@@ -905,7 +905,7 @@ pts_component_t *pts_ita_comp_ima_create(uint32_t depth,
 		.depth = depth,
 		.pts_db = pts_db,
 		.pcr_info = lib->settings->get_bool(lib->settings,
-						"%s.plugins.imc-attestation.pcr_info", TRUE, lib->ns),
+						"%s.plugins.imc-attestation.pcr_info", FALSE, lib->ns),
 		.ref = 1,
 	);
 
