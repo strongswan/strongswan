@@ -1709,7 +1709,6 @@ CALLBACK(config_sn, bool,
 		.pull = TRUE,
 		.send_cert = CERT_SEND_IF_ASKED,
 		.version = IKE_ANY,
-		.local_port = IKEV2_UDP_PORT,
 		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_NO,
 		.unique = UNIQUE_NO,
@@ -1758,6 +1757,10 @@ CALLBACK(config_sn, bool,
 	if (!peer.remote_addrs)
 	{
 		peer.remote_addrs = strdup("%any");
+	}
+	if (!peer.local_port)
+	{
+		peer.local_port = charon->socket->get_port(charon->socket, FALSE);
 	}
 
 	if (peer.over_time == LFT_UNDEFINED)
