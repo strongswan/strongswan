@@ -532,7 +532,7 @@ char* vici_parse_value_str(vici_res_t *res)
 		case VICI_KEY_VALUE:
 			if (!chunk_printable(res->value, NULL, 0))
 			{
-				errno = EINVAL;
+				errno = EBADMSG;
 				return NULL;
 			}
 			val = strndup(res->value.ptr, res->value.len);

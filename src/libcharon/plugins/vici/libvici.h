@@ -247,8 +247,12 @@ void vici_end_list(vici_req_t *req);
 /**
  * Submit a request message, and wait for response.
  *
- * On error, NULL is returned an errno is set appropriately. The request
- * messages gets cleaned up by this call and gets invalid.
+ * The request messages gets cleaned up by this call and gets invalid.
+ * On error, NULL is returned an errno is set to:
+ * - EINVAL if the request is invalid/incomplete
+ * - ENOENT if the command is unknown
+ * - EBADMSG if the response is invalid
+ * - Any other IO related errno
  *
  * @param req		request message to send
  * @param conn		connection context to send message over
@@ -269,7 +273,8 @@ void vici_free_req(vici_req_t *req);
 /**
  * Dump a message text representation to a FILE stream.
  *
- * On error, errno is set appropriately.
+ * On error, errno is set to:
+ * - EBADMSG if the message is invalid
  *
  * @param res		response message to dump
  * @param label		a label to print for this message
@@ -294,7 +299,8 @@ vici_parse_t vici_parse(vici_res_t *res);
  *
  * The string is valid until vici_free_res() is called.
  *
- * On error, errno is set appropriately.
+ * On error, errno is set to:
+ *- EINVAL if not in valid parser state
  *
  * @param res		response message to parse
  * @return			name tag / key, NULL on error
@@ -321,7 +327,8 @@ int vici_parse_name_eq(vici_res_t *res, char *name);
  *
  * The string is valid until vici_free_res() is called.
  *
- * On error, errno is set appropriately.
+ * On error, errno is set to:
+ * - EINVAL if not in valid parser state
  *
  * @param len		pointer receiving value length
  * @return			pointer to value, NULL on error
@@ -337,7 +344,9 @@ void* vici_parse_value(vici_res_t *res, int *len);
  * This call is successful only if the value contains no non-printable
  * characters. The string is valid until vici_free_res() is called.
  *
- * On error, errno is set appropriately.
+ * On error, errno is set to:
+ * - EBADMSG if value is not a printable string
+ * - EINVAL if not in valid parser state
  *
  * @param res		response message to parse
  * @return			value as string, NULL on error
@@ -351,7 +360,9 @@ char* vici_parse_value_str(vici_res_t *res);
  * invoked for the current section level only. To descent into sections, call
  * vici_parse_cb() from within a section callback.
  *
- * On error, errno is set appropriately.
+ * On error, errno is set to:
+ * - EBADMSG if message encoding invalid
+ * - Any other errno set by the invoked callbacks
  *
  * @param res		message to parse
  * @param section	callback invoked for each section
@@ -417,7 +428,11 @@ void vici_free_res(vici_res_t *res);
  * (Un-)Register for events of a given kind.
  *
  * Events callbacks get invoked by a different thread from the libstrongswan
- * thread pool. On failure, errno is set appropriately.
+ * thread pool.
+ * On failure, errno is set to:
+ * - ENOENT if the event name is unknown
+ * - EBADMSG if the response is invalid
+ * - Any other IO related errno
  *
  * @param conn		connection context
  * @param name		name of event messages to register to
