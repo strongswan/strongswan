@@ -391,7 +391,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, data->mode);
 	DBG2(DBG_CFG, "   dpd_action = %N", action_names, data->dpd_action);
 	DBG2(DBG_CFG, "   reqid = %u", data->reqid);
-	DBG2(DBG_CFG, "   tfc = %u", data->tfc);
+	DBG2(DBG_CFG, "   tfc = %d", data->tfc);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 data->mark_in.value, data->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
@@ -871,6 +871,20 @@ CALLBACK(parse_mark, bool,
 }
 
 /**
+ * Parse TFC padding option
+ */
+CALLBACK(parse_tfc, bool,
+	u_int32_t *out, chunk_t v)
+{
+	if (chunk_equals(v, chunk_from_str("mtu")))
+	{
+		*out = -1;
+		return TRUE;
+	}
+	return parse_uint32(out, v);
+}
+
+/**
  * Parse authentication config
  */
 CALLBACK(parse_auth, bool,
@@ -1195,7 +1209,7 @@ CALLBACK(child_kv, bool,
 		{ "reqid",			parse_uint32,		&child->reqid				},
 		{ "mark_in",		parse_mark,			&child->mark_in				},
 		{ "mark_out",		parse_mark,			&child->mark_out			},
-		{ "tfc_padding",	parse_uint32,		&child->tfc					},
+		{ "tfc_padding",	parse_tfc,			&child->tfc					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
