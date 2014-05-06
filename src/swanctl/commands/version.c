@@ -22,7 +22,7 @@ static int version(vici_conn_t *conn)
 	vici_req_t *req;
 	vici_res_t *res;
 	char *arg;
-	bool raw = FALSE;
+	bool raw = FALSE, daemon = FALSE;;
 
 	while (TRUE)
 	{
@@ -33,12 +33,21 @@ static int version(vici_conn_t *conn)
 			case 'r':
 				raw = TRUE;
 				continue;
+			case 'd':
+				daemon = TRUE;
+				continue;
 			case EOF:
 				break;
 			default:
 				return command_usage("invalid --terminate option");
 		}
 		break;
+	}
+
+	if (!daemon)
+	{
+		printf("strongSwan swanctl %s\n", VERSION);
+		return 0;
 	}
 
 	req = vici_begin("version");
@@ -71,10 +80,11 @@ static int version(vici_conn_t *conn)
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		version, 'v', "version", "show daemon version information",
+		version, 'v', "version", "show version information",
 		{"[--raw]"},
 		{
 			{"help",		'h', 0, "show usage information"},
+			{"daemon",		'd', 0, "query daemon version"},
 			{"raw",			'r', 0, "dump raw response message"},
 		}
 	});
