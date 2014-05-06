@@ -700,6 +700,7 @@ CALLBACK(parse_action, bool,
 		{ "start",		ACTION_RESTART	},
 		{ "restart",	ACTION_RESTART	},
 		{ "route",		ACTION_ROUTE	},
+		{ "trap",		ACTION_ROUTE	},
 		{ "none",		ACTION_NONE		},
 		{ "clear",		ACTION_NONE		},
 	};
