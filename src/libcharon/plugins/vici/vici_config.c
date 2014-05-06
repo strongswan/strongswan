@@ -1531,8 +1531,11 @@ static void clear_start_action(private_vici_config_t *this,
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
-					reqid = child_sa->get_reqid(child_sa);
-					array_insert_create(&reqids, ARRAY_TAIL, &reqid);
+					if (streq(name, child_sa->get_name(child_sa)))
+					{
+						reqid = child_sa->get_reqid(child_sa);
+						array_insert_create(&reqids, ARRAY_TAIL, &reqid);
+					}
 				}
 				children->destroy(children);
 			}
