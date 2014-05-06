@@ -207,7 +207,10 @@ CALLBACK(load_shared, vici_message_t*,
 	shared_key_type_t type;
 	linked_list_t *owners;
 	chunk_t data;
-	char *str;
+	char *str, buf[512] = "";
+	enumerator_t *enumerator;
+	identification_t *owner;
+	int len;
 
 	str = message->get_str(message, NULL, "type");
 	if (!str)
@@ -243,7 +246,20 @@ CALLBACK(load_shared, vici_message_t*,
 		owners->insert_last(owners, identification_create_from_string("%any"));
 	}
 
-	DBG1(DBG_CFG, "loaded %N shared key", shared_key_type_names, type);
+	enumerator = owners->create_enumerator(owners);
+	while (enumerator->enumerate(enumerator, &owner))
+	{
+		len = strlen(buf);
+		if (len < sizeof(buf))
+		{
+			snprintf(buf + len, sizeof(buf) - len, "%s'%Y'",
+					 len ? ", " : "", owner);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	DBG1(DBG_CFG, "loaded %N shared key for: %s",
+		 shared_key_type_names, type, buf);
 
 	this->creds->add_shared_list(this->creds,
 						shared_key_create(type, chunk_clone(data)), owners);
