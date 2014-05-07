@@ -50,6 +50,11 @@ struct private_watcher_t {
 	bool pending;
 
 	/**
+	 * Is watcher running?
+	 */
+	bool running;
+
+	/**
 	 * Lock to access FD list
 	 */
 	mutex_t *mutex;
@@ -225,6 +230,7 @@ static void activate_all(private_watcher_t *this)
 		entry->in_callback = 0;
 	}
 	enumerator->destroy(enumerator);
+	this->running = FALSE;
 	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 }
@@ -238,6 +244,7 @@ static job_requeue_t watch(private_watcher_t *this)
 	entry_t *entry;
 	fd_set rd, wr, ex;
 	int maxfd = 0, res;
+	bool rebuild = FALSE;
 
 	FD_ZERO(&rd);
 	FD_ZERO(&wr);
@@ -282,7 +289,7 @@ static job_requeue_t watch(private_watcher_t *this)
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 
-	while (TRUE)
+	while (!rebuild)
 	{
 		char buf[1];
 		bool old;
@@ -308,6 +315,11 @@ static job_requeue_t watch(private_watcher_t *this)
 			enumerator = this->fds->create_enumerator(this->fds);
 			while (enumerator->enumerate(enumerator, &entry))
 			{
+				if (entry->in_callback)
+				{
+					rebuild = TRUE;
+					break;
+				}
 				if (FD_ISSET(entry->fd, &rd) && (entry->events & WATCHER_READ))
 				{
 					DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
@@ -347,6 +359,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			return JOB_REQUEUE_DIRECT;
 		}
 	}
+	return JOB_REQUEUE_DIRECT;
 }
 
 METHOD(watcher_t, add, void,
@@ -366,6 +379,7 @@ METHOD(watcher_t, add, void,
 	this->fds->insert_last(this->fds, entry);
 	if (this->fds->get_count(this->fds) == 1)
 	{
+		this->running = TRUE;
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
 				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
@@ -393,7 +407,7 @@ METHOD(watcher_t, remove_, void,
 		{
 			if (entry->fd == fd)
 			{
-				if (entry->in_callback)
+				if (this->running && entry->in_callback)
 				{
 					is_in_callback = TRUE;
 					break;

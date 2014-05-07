@@ -202,6 +202,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_VICI
+  SUBDIRS += plugins/vici
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/vici/libstrongswan-vici.la
+endif
+endif
+
 if USE_SMP
   SUBDIRS += plugins/smp
 if MONOLITHIC

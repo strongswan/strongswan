@@ -1,6 +1,12 @@
 strongswan-5.2.0
 ----------------
 
+- The new vici plugin provides a Versatile IKE Configuration Interface for
+  charon. Using the stable IPC interface, external applications can configure,
+  control and monitor the IKE daemon. Instead of scripting the ipsec tool
+  and generating ipsec.conf, third party applications can use the new interface
+  for more control and better reliability.
+
 - The SWID IMC can extract all installed packages from the dpkg (Debian,
   Ubuntu, etc.) or rpm (Fedora, RedHat, etc) package managers, respectively,
   using the swidGenerator (https://github.com/tnc-ba/swidGenerator) which

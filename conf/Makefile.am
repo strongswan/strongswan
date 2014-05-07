@@ -78,6 +78,7 @@ plugins = \
 	plugins/tnccs-20.opt \
 	plugins/unbound.opt \
 	plugins/updown.opt \
+	plugins/vici.opt \
 	plugins/whitelist.opt \
 	plugins/xauth-eap.opt \
 	plugins/xauth-pam.opt
