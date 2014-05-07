@@ -113,6 +113,10 @@ METHOD(fetcher_manager_t, fetch, status_t,
 					good = fetcher->set_option(fetcher, opt,
 											va_arg(args, fetcher_callback_t));
 					continue;
+				case FETCH_RESPONSE_CODE:
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, u_int*));
+					continue;
 				case FETCH_SOURCEIP:
 					host = va_arg(args, host_t*);
 					if (host && !host->is_anyaddr(host))
