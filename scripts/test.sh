@@ -31,7 +31,7 @@ all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
-			--disable-osx-attr --disable-tkm --disable-uci"
+			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen"
 	if test "$LEAK_DETECTIVE" = "yes"; then
 		# libgcrypt can't be deinitialized
 		CONFIG="$CONFIG --disable-gcrypt"
