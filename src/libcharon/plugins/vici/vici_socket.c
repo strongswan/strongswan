@@ -514,7 +514,8 @@ CALLBACK(on_read, bool,
 		{
 			disconnect(this, entry->id);
 		}
-		else if (entry->in.buf.len == entry->in.done)
+		else if (entry->in.hdrlen == sizeof(entry->in.hdr) &&
+				 entry->in.buf.len == entry->in.done)
 		{
 			array_insert(entry->queue, ARRAY_TAIL, &entry->in.buf);
 			entry->in.buf = chunk_empty;
