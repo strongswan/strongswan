@@ -76,6 +76,10 @@ if USE_TOOLS
   SUBDIRS += scepclient pki
 endif
 
+if USE_SWANCTL
+  SUBDIRS += swanctl
+endif
+
 if USE_CONFTEST
   SUBDIRS += conftest
 endif

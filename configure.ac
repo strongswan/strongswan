@@ -56,6 +56,7 @@ ARG_WITH_SUBST([ipseclibdir],        [${libdir%/}/ipsec], [set installation path
 ARG_WITH_SUBST([plugindir],          [${ipseclibdir%/}/plugins], [set the installation path of plugins])
 ARG_WITH_SUBST([imcvdir],            [${ipseclibdir%/}/imcvs], [set the installation path of IMC and IMV dynamic librariers])
 ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory the NM backend uses to look up trusted root certificates])
+ARG_WITH_SUBST([swanctldir],         [${sysconfdir}/swanctl], [base directory for swanctl configuration files and credentials])
 ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
@@ -265,6 +266,7 @@ ARG_ENABL_SET([medcli],         [enable mediation client configuration database 
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
 ARG_ENABL_SET([aikgen],         [enable AIK generator.])
@@ -397,6 +399,10 @@ if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse; then
 		sha1=true;
 	fi
+fi
+
+if test x$swanctl = xtrue; then
+	vici=true
 fi
 
 if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
@@ -1389,6 +1395,7 @@ AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
+AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
 
 # ========================
 #  set global definitions
@@ -1605,6 +1612,7 @@ AC_CONFIG_FILES([
 	src/checksum/Makefile
 	src/conftest/Makefile
 	src/pt-tls-client/Makefile
+	src/swanctl/Makefile
 	scripts/Makefile
 	testing/Makefile
 ])
@@ -1631,6 +1639,9 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---signcrl.1
 	src/pki/man/pki---acert.1
 	src/pki/man/pki---verify.1
+	src/swanctl/swanctl.8
+	src/swanctl/swanctl.conf.5.head
+	src/swanctl/swanctl.conf.5.tail
 ])
 
 AC_OUTPUT

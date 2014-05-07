@@ -92,8 +92,9 @@ class ConfigOption:
 
 class Parser:
 	"""Parses one or more files of configuration options"""
-	def __init__(self):
+	def __init__(self, sort = True):
 		self.options = []
+		self.sort = sort
 
 	def parse(self, file):
 		"""Parses the given file and adds all options to the internal store"""
@@ -145,7 +146,8 @@ class Parser:
 			found.adopt(option)
 		else:
 			parent.options.append(option)
-			parent.options.sort()
+			if self.sort:
+				parent.options.sort()
 
 	def __get_option(self, parts, create = False):
 		"""Searches/Creates the option (section) based on a list of section names"""
@@ -160,7 +162,8 @@ class Parser:
 					break
 				option = ConfigOption(fullname, section = True)
 				options.append(option)
-				options.sort()
+				if self.sort:
+					options.sort()
 			options = option.options
 		return option
 
@@ -241,15 +244,16 @@ class ConfFormatter:
 
 	def __print_section(self, section, indent, commented):
 		"""Print a section with all options"""
-		comment = "# " if commented or section.commented else ""
+		commented = commented or section.commented
+		comment = "# " if commented else ""
 		self.__print_description(section, indent)
 		print '{0}{1}{2} {{'.format(self.__indent * indent, comment, section.name)
 		print
 		for o in sorted(section.options, key=attrgetter('section')):
 			if o.section:
-				self.__print_section(o, indent + 1, section.commented)
+				self.__print_section(o, indent + 1, commented)
 			else:
-				self.__print_option(o, indent + 1, section.commented)
+				self.__print_option(o, indent + 1, commented)
 		print '{0}{1}}}'.format(self.__indent * indent, comment)
 		print
 
@@ -309,9 +313,12 @@ options.add_option("-f", "--format", dest="format", type="choice", choices=["con
 options.add_option("-r", "--root", dest="root", metavar="NAME",
 				   help="root section of which options are printed, "
 				   "if not found everything is printed")
+options.add_option("-n", "--nosort", action="store_false", dest="sort",
+				   default=True, help="do not sort sections alphabetically")
+
 (opts, args) = options.parse_args()
 
-parser = Parser()
+parser = Parser(opts.sort)
 if len(args):
 	for filename in args:
 		try:

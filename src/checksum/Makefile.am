@@ -104,6 +104,10 @@ if USE_TOOLS
   exes += $(DESTDIR)$(bindir)/pki
 endif
 
+if USE_SWANCTL
+  exes += $(DESTDIR)$(sbindir)/swanctl
+endif
+
 if USE_ATTR_SQL
   exes += $(DESTDIR)$(ipsecdir)/pool
 endif
