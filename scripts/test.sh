@@ -11,6 +11,8 @@ TARGET=check
 
 DEPS="libgmp-dev"
 
+CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror"
+
 case "$TEST" in
 default)
 	# should be the default, but lets make sure
@@ -69,4 +71,4 @@ CONFIG="$CONFIG
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
 echo "$ ./configure $CONFIG && make $TARGET"
-./configure $CONFIG && make -j4 $TARGET
+CFLAGS="$CFLAGS" ./configure $CONFIG && make -j4 $TARGET
