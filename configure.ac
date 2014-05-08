@@ -609,7 +609,7 @@ AC_COMPILE_IFELSE(
 		[[#include <sys/types.h>
 		  #include <sys/socket.h>
 		  #include <netinet/in.h>]],
-		[[struct in6_addr in6;
+		[[struct in6_addr in6 __attribute__((unused));
 		  in6 = in6addr_any;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IN6ADDR_ANY], [], [have struct in6_addr in6addr_any])],
