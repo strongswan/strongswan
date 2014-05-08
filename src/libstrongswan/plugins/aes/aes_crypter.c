@@ -49,89 +49,28 @@ struct private_aes_crypter_t {
 	/**
 	 * Number of words in the key input block.
 	 */
-	u_int32_t    aes_Nkey;
+	u_int32_t aes_Nkey;
 
 	/**
 	 * The number of cipher rounds.
 	 */
-	u_int32_t    aes_Nrnd;
+	u_int32_t aes_Nrnd;
 
 	/**
 	* The encryption key schedule.
 	*/
-	u_int32_t    aes_e_key[AES_KS_LENGTH];
+	u_int32_t aes_e_key[AES_KS_LENGTH];
 
 	/**
 	* The decryption key schedule.
 	*/
-	u_int32_t    aes_d_key[AES_KS_LENGTH];
+	u_int32_t aes_d_key[AES_KS_LENGTH];
 
 	/**
 	* Key size of this AES cypher object.
 	*/
-	u_int32_t    key_size;
+	u_int32_t key_size;
 };
-
-
-/* ugly macro stuff */
-
-/* 1.  Define UNROLL for full loop unrolling in encryption and decryption.
- * 2.  Define PARTIAL_UNROLL to unroll two loops in encryption and decryption.
- * 3.  Define FIXED_TABLES for compiled rather than dynamic tables.
- * 4.  Define FF_TABLES to use tables for field multiplies and inverses.
- *     Do not enable this without understanding stack space requirements.
- * 5.  Define ARRAYS to use arrays to hold the local state block. If this
- *     is not defined, individually declared 32-bit words are used.
- * 6.  Define FAST_VARIABLE if a high speed variable block implementation
- *     is needed (essentially three separate fixed block size code sequences)
- * 7.  Define either ONE_TABLE or FOUR_TABLES for a fast table driven
- *     version using 1 table (2 kbytes of table space) or 4 tables (8
- *     kbytes of table space) for higher speed.
- * 8.  Define either ONE_LR_TABLE or FOUR_LR_TABLES for a further speed
- *     increase by using tables for the last rounds but with more table
- *     space (2 or 8 kbytes extra).
- * 9.  If neither ONE_TABLE nor FOUR_TABLES is defined, a compact but
- *     slower version is provided.
- * 10. If fast decryption key scheduling is needed define ONE_IM_TABLE
- *     or FOUR_IM_TABLES for higher speed (2 or 8 kbytes extra).
- */
-
-#define UNROLL
-//#define PARTIAL_UNROLL
-
-#define FIXED_TABLES
-//#define FF_TABLES
-//#define ARRAYS
-#define FAST_VARIABLE
-
-//#define ONE_TABLE
-#define FOUR_TABLES
-
-//#define ONE_LR_TABLE
-#define FOUR_LR_TABLES
-
-//#define ONE_IM_TABLE
-#define FOUR_IM_TABLES
-
-#if defined(UNROLL) && defined (PARTIAL_UNROLL)
-#error both UNROLL and PARTIAL_UNROLL are defined
-#endif
-
-#if defined(ONE_TABLE) && defined (FOUR_TABLES)
-#error both ONE_TABLE and FOUR_TABLES are defined
-#endif
-
-#if defined(ONE_LR_TABLE) && defined (FOUR_LR_TABLES)
-#error both ONE_LR_TABLE and FOUR_LR_TABLES are defined
-#endif
-
-#if defined(ONE_IM_TABLE) && defined (FOUR_IM_TABLES)
-#error both ONE_IM_TABLE and FOUR_IM_TABLES are defined
-#endif
-
-#if defined(AES_BLOCK_SIZE) && AES_BLOCK_SIZE != 16 && AES_BLOCK_SIZE != 24 && AES_BLOCK_SIZE != 32
-#error an illegal block size has been specified
-#endif
 
 /**
  * Rotates bytes within words by n positions, moving bytes
@@ -179,31 +118,6 @@ struct private_aes_crypter_t {
 #define const_word_out(x,v)   ((const unsigned char *)(x))[0]=(v),((const unsigned char *)(x))[1]=((v)>>8),((const unsigned char *)(x))[2]=((v)>>16),((const unsigned char *)(x))[3]=((v)>>24)
 #endif
 
-// Disable at least some poor combinations of options
-
-#if !defined(ONE_TABLE) && !defined(FOUR_TABLES)
-#define FIXED_TABLES
-#undef  UNROLL
-#undef  ONE_LR_TABLE
-#undef  FOUR_LR_TABLES
-#undef  ONE_IM_TABLE
-#undef  FOUR_IM_TABLES
-#elif !defined(FOUR_TABLES)
-#ifdef  FOUR_LR_TABLES
-#undef  FOUR_LR_TABLES
-#define ONE_LR_TABLE
-#endif
-#ifdef  FOUR_IM_TABLES
-#undef  FOUR_IM_TABLES
-#define ONE_IM_TABLE
-#endif
-#elif !defined(AES_BLOCK_SIZE)
-#if defined(UNROLL)
-#define PARTIAL_UNROLL
-#undef UNROLL
-#endif
-#endif
-
 // the finite field modular polynomial and elements
 
 #define ff_poly 0x011b
@@ -227,84 +141,6 @@ struct private_aes_crypter_t {
 // perform column mix operation on four bytes in parallel
 
 #define fwd_mcol(x) (f2 = FFmulX(x), f2 ^ upr(x ^ f2,3) ^ upr(x,2) ^ upr(x,1))
-
-#if defined(FIXED_TABLES)
-
-// the S-Box table
-
-static const unsigned char s_box[256] =
-{
-    0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
-    0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
-    0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
-    0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
-    0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc,
-    0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
-    0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a,
-    0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
-    0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0,
-    0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
-    0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b,
-    0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
-    0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85,
-    0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
-    0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5,
-    0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
-    0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17,
-    0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
-    0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88,
-    0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
-    0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c,
-    0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
-    0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9,
-    0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
-    0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6,
-    0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
-    0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e,
-    0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
-    0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94,
-    0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
-    0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68,
-    0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
-};
-
-// the inverse S-Box table
-
-static const unsigned char inv_s_box[256] =
-{
-    0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38,
-    0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
-    0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87,
-    0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
-    0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d,
-    0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
-    0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2,
-    0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25,
-    0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16,
-    0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92,
-    0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda,
-    0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84,
-    0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a,
-    0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06,
-    0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02,
-    0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
-    0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea,
-    0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73,
-    0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85,
-    0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e,
-    0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89,
-    0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b,
-    0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20,
-    0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4,
-    0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31,
-    0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f,
-    0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d,
-    0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
-    0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0,
-    0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
-    0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26,
-    0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
-};
 
 #define w0(p)          0x000000##p
 
@@ -342,8 +178,6 @@ static const u_int32_t rcon_tab[29] =
 #define w1(p)        0x0000##p##00
 #define w2(p)        0x00##p##0000
 #define w3(p)        0x##p##000000
-
-#if defined(FIXED_TABLES) && (defined(ONE_TABLE) || defined(FOUR_TABLES))
 
 //  data for forward tables (other than last round)
 
@@ -486,10 +320,6 @@ static const u_int32_t rcon_tab[29] =
 #undef  r
 #define r   r0
 
-#if defined(ONE_TABLE)
-static const u_int32_t ft_tab[256] =
-    {   f_table };
-#elif defined(FOUR_TABLES)
 static const u_int32_t ft_tab[4][256] =
 {   {   f_table },
 #undef  r
@@ -502,14 +332,9 @@ static const u_int32_t ft_tab[4][256] =
 #define r   r3
     {   f_table }
 };
-#endif
 
 #undef  r
 #define r   r0
-#if defined(ONE_TABLE)
-static const u_int32_t it_tab[256] =
-    {   i_table };
-#elif defined(FOUR_TABLES)
 static const u_int32_t it_tab[4][256] =
 {   {   i_table },
 #undef  r
@@ -522,13 +347,6 @@ static const u_int32_t it_tab[4][256] =
 #define r   r3
     {   i_table }
 };
-#endif
-
-#endif
-
-#if defined(FIXED_TABLES) && (defined(ONE_LR_TABLE) || defined(FOUR_LR_TABLES))
-
-//  data for inverse tables (last round)
 
 #define li_table    \
     w(52), w(09), w(6a), w(d5), w(30), w(36), w(a5), w(38),\
@@ -568,10 +386,6 @@ static const u_int32_t it_tab[4][256] =
 
 #undef  r
 #define r(p,q,r,s)  w0(q)
-#if defined(ONE_LR_TABLE)
-static const u_int32_t fl_tab[256] =
-    {   f_table     };
-#elif defined(FOUR_LR_TABLES)
 static const u_int32_t fl_tab[4][256] =
 {   {   f_table    },
 #undef  r
@@ -584,14 +398,9 @@ static const u_int32_t fl_tab[4][256] =
 #define r(p,q,r,s)   w3(q)
     {   f_table    }
 };
-#endif
 
 #undef  w
 #define w   w0
-#if defined(ONE_LR_TABLE)
-static const u_int32_t il_tab[256] =
-    {   li_table    };
-#elif defined(FOUR_LR_TABLES)
 static const u_int32_t il_tab[4][256] =
 {   {   li_table    },
 #undef  w
@@ -604,11 +413,6 @@ static const u_int32_t il_tab[4][256] =
 #define w   w3
     {   li_table    }
 };
-#endif
-
-#endif
-
-#if defined(FIXED_TABLES) && (defined(ONE_IM_TABLE) || defined(FOUR_IM_TABLES))
 
 #define m_table \
     r(00,00,00,00), r(0b,0d,09,0e), r(16,1a,12,1c), r(1d,17,1b,12),\
@@ -679,10 +483,6 @@ static const u_int32_t il_tab[4][256] =
 #undef r
 #define r   r0
 
-#if defined(ONE_IM_TABLE)
-static const u_int32_t im_tab[256] =
-    {   m_table };
-#elif defined(FOUR_IM_TABLES)
 static const u_int32_t im_tab[4][256] =
 {   {   m_table },
 #undef  r
@@ -695,212 +495,6 @@ static const u_int32_t im_tab[4][256] =
 #define r   r3
     {   m_table }
 };
-#endif
-
-#endif
-
-#else
-
-static int tab_gen = 0;
-
-static unsigned char  s_box[256];            // the S box
-static unsigned char  inv_s_box[256];        // the inverse S box
-static u_int32_t  rcon_tab[AES_RC_LENGTH];   // table of round constants
-
-#if defined(ONE_TABLE)
-static u_int32_t  ft_tab[256];
-static u_int32_t  it_tab[256];
-#elif defined(FOUR_TABLES)
-static u_int32_t  ft_tab[4][256];
-static u_int32_t  it_tab[4][256];
-#endif
-
-#if defined(ONE_LR_TABLE)
-static u_int32_t  fl_tab[256];
-static u_int32_t  il_tab[256];
-#elif defined(FOUR_LR_TABLES)
-static u_int32_t  fl_tab[4][256];
-static u_int32_t  il_tab[4][256];
-#endif
-
-#if defined(ONE_IM_TABLE)
-static u_int32_t  im_tab[256];
-#elif defined(FOUR_IM_TABLES)
-static u_int32_t  im_tab[4][256];
-#endif
-
-// Generate the tables for the dynamic table option
-
-#if !defined(FF_TABLES)
-
-// It will generally be sensible to use tables to compute finite
-// field multiplies and inverses but where memory is scarse this
-// code might sometimes be better.
-
-// return 2 ^ (n - 1) where n is the bit number of the highest bit
-// set in x with x in the range 1 < x < 0x00000200.   This form is
-// used so that locals within FFinv can be bytes rather than words
-
-static unsigned char hibit(const u_int32_t x)
-{   unsigned char r = (unsigned char)((x >> 1) | (x >> 2));
-
-    r |= (r >> 2);
-    r |= (r >> 4);
-    return (r + 1) >> 1;
-}
-
-// return the inverse of the finite field element x
-
-static unsigned char FFinv(const unsigned char x)
-{   unsigned char    p1 = x, p2 = 0x1b, n1 = hibit(x), n2 = 0x80, v1 = 1, v2 = 0;
-
-    if(x < 2) return x;
-
-    for(;;)
-    {
-        if(!n1) return v1;
-
-        while(n2 >= n1)
-        {
-            n2 /= n1; p2 ^= p1 * n2; v2 ^= v1 * n2; n2 = hibit(p2);
-        }
-
-        if(!n2) return v2;
-
-        while(n1 >= n2)
-        {
-            n1 /= n2; p1 ^= p2 * n1; v1 ^= v2 * n1; n1 = hibit(p1);
-        }
-    }
-}
-
-// define the finite field multiplies required for Rijndael
-
-#define FFmul02(x)  ((((x) & 0x7f) << 1) ^ ((x) & 0x80 ? 0x1b : 0))
-#define FFmul03(x)  ((x) ^ FFmul02(x))
-#define FFmul09(x)  ((x) ^ FFmul02(FFmul02(FFmul02(x))))
-#define FFmul0b(x)  ((x) ^ FFmul02((x) ^ FFmul02(FFmul02(x))))
-#define FFmul0d(x)  ((x) ^ FFmul02(FFmul02((x) ^ FFmul02(x))))
-#define FFmul0e(x)  FFmul02((x) ^ FFmul02((x) ^ FFmul02(x)))
-
-#else
-
-#define FFinv(x)    ((x) ? pow[255 - log[x]]: 0)
-
-#define FFmul02(x) (x ? pow[log[x] + 0x19] : 0)
-#define FFmul03(x) (x ? pow[log[x] + 0x01] : 0)
-#define FFmul09(x) (x ? pow[log[x] + 0xc7] : 0)
-#define FFmul0b(x) (x ? pow[log[x] + 0x68] : 0)
-#define FFmul0d(x) (x ? pow[log[x] + 0xee] : 0)
-#define FFmul0e(x) (x ? pow[log[x] + 0xdf] : 0)
-
-#endif
-
-// The forward and inverse affine transformations used in the S-box
-
-#define fwd_affine(x) \
-    (w = (u_int32_t)x, w ^= (w<<1)^(w<<2)^(w<<3)^(w<<4), 0x63^(unsigned char)(w^(w>>8)))
-
-#define inv_affine(x) \
-    (w = (u_int32_t)x, w = (w<<1)^(w<<3)^(w<<6), 0x05^(unsigned char)(w^(w>>8)))
-
-static void gen_tabs(void)
-{   u_int32_t  i, w;
-
-#if defined(FF_TABLES)
-
-    unsigned char  pow[512], log[256];
-
-    // log and power tables for GF(2^8) finite field with
-    // 0x011b as modular polynomial - the simplest primitive
-    // root is 0x03, used here to generate the tables
-
-    i = 0; w = 1;
-    do
-    {
-        pow[i] = (unsigned char)w;
-        pow[i + 255] = (unsigned char)w;
-        log[w] = (unsigned char)i++;
-        w ^=  (w << 1) ^ (w & ff_hi ? ff_poly : 0);
-    }
-    while (w != 1);
-
-#endif
-
-    for(i = 0, w = 1; i < AES_RC_LENGTH; ++i)
-    {
-        rcon_tab[i] = bytes2word(w, 0, 0, 0);
-        w = (w << 1) ^ (w & ff_hi ? ff_poly : 0);
-    }
-
-    for(i = 0; i < 256; ++i)
-    {   unsigned char    b;
-
-        s_box[i] = b = fwd_affine(FFinv((unsigned char)i));
-
-        w = bytes2word(b, 0, 0, 0);
-#if defined(ONE_LR_TABLE)
-        fl_tab[i] = w;
-#elif defined(FOUR_LR_TABLES)
-        fl_tab[0][i] = w;
-        fl_tab[1][i] = upr(w,1);
-        fl_tab[2][i] = upr(w,2);
-        fl_tab[3][i] = upr(w,3);
-#endif
-        w = bytes2word(FFmul02(b), b, b, FFmul03(b));
-#if defined(ONE_TABLE)
-        ft_tab[i] = w;
-#elif defined(FOUR_TABLES)
-        ft_tab[0][i] = w;
-        ft_tab[1][i] = upr(w,1);
-        ft_tab[2][i] = upr(w,2);
-        ft_tab[3][i] = upr(w,3);
-#endif
-        inv_s_box[i] = b = FFinv(inv_affine((unsigned char)i));
-
-        w = bytes2word(b, 0, 0, 0);
-#if defined(ONE_LR_TABLE)
-        il_tab[i] = w;
-#elif defined(FOUR_LR_TABLES)
-        il_tab[0][i] = w;
-        il_tab[1][i] = upr(w,1);
-        il_tab[2][i] = upr(w,2);
-        il_tab[3][i] = upr(w,3);
-#endif
-        w = bytes2word(FFmul0e(b), FFmul09(b), FFmul0d(b), FFmul0b(b));
-#if defined(ONE_TABLE)
-        it_tab[i] = w;
-#elif defined(FOUR_TABLES)
-        it_tab[0][i] = w;
-        it_tab[1][i] = upr(w,1);
-        it_tab[2][i] = upr(w,2);
-        it_tab[3][i] = upr(w,3);
-#endif
-#if defined(ONE_IM_TABLE)
-        im_tab[b] = w;
-#elif defined(FOUR_IM_TABLES)
-        im_tab[0][b] = w;
-        im_tab[1][b] = upr(w,1);
-        im_tab[2][b] = upr(w,2);
-        im_tab[3][b] = upr(w,3);
-#endif
-
-    }
-}
-
-#endif
-
-#define no_table(x,box,vf,rf,c) bytes2word( \
-    box[bval(vf(x,0,c),rf(0,c))], \
-    box[bval(vf(x,1,c),rf(1,c))], \
-    box[bval(vf(x,2,c),rf(2,c))], \
-    box[bval(vf(x,3,c),rf(3,c))])
-
-#define one_table(x,op,tab,vf,rf,c) \
- (     tab[bval(vf(x,0,c),rf(0,c))] \
-  ^ op(tab[bval(vf(x,1,c),rf(1,c))],1) \
-  ^ op(tab[bval(vf(x,2,c),rf(2,c))],2) \
-  ^ op(tab[bval(vf(x,3,c),rf(3,c))],3))
 
 #define four_tables(x,tab,vf,rf,c) \
  (  tab[0][bval(vf(x,0,c),rf(0,c))] \
@@ -912,23 +506,8 @@ static void gen_tabs(void)
 #define rf1(r,c)    (r)
 #define rf2(r,c)    ((r-c)&3)
 
-#if defined(FOUR_LR_TABLES)
 #define ls_box(x,c)     four_tables(x,fl_tab,vf1,rf2,c)
-#elif defined(ONE_LR_TABLE)
-#define ls_box(x,c)     one_table(x,upr,fl_tab,vf1,rf2,c)
-#else
-#define ls_box(x,c)     no_table(x,s_box,vf1,rf2,c)
-#endif
-
-#if defined(FOUR_IM_TABLES)
 #define inv_mcol(x)     four_tables(x,im_tab,vf1,rf1,0)
-#elif defined(ONE_IM_TABLE)
-#define inv_mcol(x)     one_table(x,upr,im_tab,vf1,rf1,0)
-#else
-#define inv_mcol(x) \
-    (f9 = (x),f2 = FFmulX(f9), f4 = FFmulX(f2), f8 = FFmulX(f4), f9 ^= f8, \
-    f2 ^= f4 ^ f8 ^ upr(f2 ^ f9,3) ^ upr(f4 ^ f9,2) ^ upr(f9,1))
-#endif
 
 #define nc   (AES_BLOCK_SIZE/4)
 
@@ -954,23 +533,7 @@ static void gen_tabs(void)
 #define mix(d,s)    mx(d,s); mx(d,s); mx(d,s); mx(d,s); \
                     mx(d,s); mx(d,s); mx(d,s); mx(d,s)
 #else
-
-#define cpy(d,s) \
-switch(nc) \
-{   case 8: cp(d,s); cp(d,s); \
-    case 6: cp(d,s); cp(d,s); \
-    case 4: cp(d,s); cp(d,s); \
-            cp(d,s); cp(d,s); \
-}
-
-#define mix(d,s) \
-switch(nc) \
-{   case 8: mx(d,s); mx(d,s); \
-    case 6: mx(d,s); mx(d,s); \
-    case 4: mx(d,s); mx(d,s); \
-            mx(d,s); mx(d,s); \
-}
-
+#error bad AES_BLOCK_SIZE
 #endif
 
 // y = output word, x = input word, r = row, c = column
@@ -1072,27 +635,10 @@ switch(nc) \
 #define si(y,x,k,c) s(y,c) = const_word_in(x + 4 * c) ^ k[c]
 #define so(y,x,c)   word_out(y + 4 * c, s(x,c))
 
-#if defined(FOUR_TABLES)
 #define fwd_rnd(y,x,k,c)    s(y,c)= (k)[c] ^ four_tables(x,ft_tab,fwd_var,rf1,c)
 #define inv_rnd(y,x,k,c)    s(y,c)= (k)[c] ^ four_tables(x,it_tab,inv_var,rf1,c)
-#elif defined(ONE_TABLE)
-#define fwd_rnd(y,x,k,c)    s(y,c)= (k)[c] ^ one_table(x,upr,ft_tab,fwd_var,rf1,c)
-#define inv_rnd(y,x,k,c)    s(y,c)= (k)[c] ^ one_table(x,upr,it_tab,inv_var,rf1,c)
-#else
-#define fwd_rnd(y,x,k,c)    s(y,c) = fwd_mcol(no_table(x,s_box,fwd_var,rf1,c)) ^ (k)[c]
-#define inv_rnd(y,x,k,c)    s(y,c) = inv_mcol(no_table(x,inv_s_box,inv_var,rf1,c) ^ (k)[c])
-#endif
-
-#if defined(FOUR_LR_TABLES)
 #define fwd_lrnd(y,x,k,c)   s(y,c)= (k)[c] ^ four_tables(x,fl_tab,fwd_var,rf1,c)
 #define inv_lrnd(y,x,k,c)   s(y,c)= (k)[c] ^ four_tables(x,il_tab,inv_var,rf1,c)
-#elif defined(ONE_LR_TABLE)
-#define fwd_lrnd(y,x,k,c)   s(y,c)= (k)[c] ^ one_table(x,ups,fl_tab,fwd_var,rf1,c)
-#define inv_lrnd(y,x,k,c)   s(y,c)= (k)[c] ^ one_table(x,ups,il_tab,inv_var,rf1,c)
-#else
-#define fwd_lrnd(y,x,k,c)   s(y,c) = no_table(x,s_box,fwd_var,rf1,c) ^ (k)[c]
-#define inv_lrnd(y,x,k,c)   s(y,c) = no_table(x,inv_s_box,inv_var,rf1,c) ^ (k)[c]
-#endif
 
 #if AES_BLOCK_SIZE == 16
 
@@ -1160,175 +706,83 @@ switch(nc) \
 #define round(rm,y,x,k) rm(y,x,k,0); rm(y,x,k,1); rm(y,x,k,2); rm(y,x,k,3); \
                         rm(y,x,k,4); rm(y,x,k,5); rm(y,x,k,6); rm(y,x,k,7)
 #else
-
-#define state_in(y,x,k) \
-switch(nc) \
-{   case 8: si(y,x,k,7); si(y,x,k,6); \
-    case 6: si(y,x,k,5); si(y,x,k,4); \
-    case 4: si(y,x,k,3); si(y,x,k,2); \
-            si(y,x,k,1); si(y,x,k,0); \
-}
-
-#define state_out(y,x) \
-switch(nc) \
-{   case 8: so(y,x,7); so(y,x,6); \
-    case 6: so(y,x,5); so(y,x,4); \
-    case 4: so(y,x,3); so(y,x,2); \
-            so(y,x,1); so(y,x,0); \
-}
-
-#if defined(FAST_VARIABLE)
-
-#define round(rm,y,x,k) \
-switch(nc) \
-{   case 8: rm(y,x,k,7); rm(y,x,k,6); \
-            rm(y,x,k,5); rm(y,x,k,4); \
-            rm(y,x,k,3); rm(y,x,k,2); \
-            rm(y,x,k,1); rm(y,x,k,0); \
-            break; \
-    case 6: rm(y,x,k,5); rm(y,x,k,4); \
-            rm(y,x,k,3); rm(y,x,k,2); \
-            rm(y,x,k,1); rm(y,x,k,0); \
-            break; \
-    case 4: rm(y,x,k,3); rm(y,x,k,2); \
-            rm(y,x,k,1); rm(y,x,k,0); \
-            break; \
-}
-#else
-
-#define round(rm,y,x,k) \
-switch(nc) \
-{   case 8: rm(y,x,k,7); rm(y,x,k,6); \
-    case 6: rm(y,x,k,5); rm(y,x,k,4); \
-    case 4: rm(y,x,k,3); rm(y,x,k,2); \
-            rm(y,x,k,1); rm(y,x,k,0); \
-}
-
+#error invalid AES_BLOCK_SIZE
 #endif
 
-#endif
 #endif
 
 /**
  * Encrypt a single block of data.
  */
-static void encrypt_block(const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
-{   u_int32_t        locals(b0, b1);
-    const u_int32_t  *kp = this->aes_e_key;
+static void encrypt_block(const private_aes_crypter_t *this,
+						  const unsigned char in_blk[], unsigned char out_blk[])
+{
+	u_int32_t locals(b0, b1);
+	const u_int32_t *kp = this->aes_e_key;
 
-#if !defined(ONE_TABLE) && !defined(FOUR_TABLES)
-    u_int32_t        f2;
-#endif
+	state_in(b0, in_blk, kp); kp += nc;
 
-    state_in(b0, in_blk, kp); kp += nc;
+	switch(this->aes_Nrnd)
+	{
+		case 14:
+			round(fwd_rnd,  b1, b0, kp         );
+			round(fwd_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
+			/* fall */
+		case 12:
+			round(fwd_rnd,  b1, b0, kp         );
+			round(fwd_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
+			/* fall */
+		case 10:
+			round(fwd_rnd,  b1, b0, kp         );
+			round(fwd_rnd,  b0, b1, kp +     nc);
+			round(fwd_rnd,  b1, b0, kp + 2 * nc);
+			round(fwd_rnd,  b0, b1, kp + 3 * nc);
+			round(fwd_rnd,  b1, b0, kp + 4 * nc);
+			round(fwd_rnd,  b0, b1, kp + 5 * nc);
+			round(fwd_rnd,  b1, b0, kp + 6 * nc);
+			round(fwd_rnd,  b0, b1, kp + 7 * nc);
+			round(fwd_rnd,  b1, b0, kp + 8 * nc);
+			round(fwd_lrnd, b0, b1, kp + 9 * nc);
+	}
 
-#if defined(UNROLL)
-
-    switch(this->aes_Nrnd)
-    {
-    case 14:    round(fwd_rnd,  b1, b0, kp         );
-                round(fwd_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
-    case 12:    round(fwd_rnd,  b1, b0, kp         );
-                round(fwd_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
-    case 10:    round(fwd_rnd,  b1, b0, kp         );
-                round(fwd_rnd,  b0, b1, kp +     nc);
-                round(fwd_rnd,  b1, b0, kp + 2 * nc);
-                round(fwd_rnd,  b0, b1, kp + 3 * nc);
-                round(fwd_rnd,  b1, b0, kp + 4 * nc);
-                round(fwd_rnd,  b0, b1, kp + 5 * nc);
-                round(fwd_rnd,  b1, b0, kp + 6 * nc);
-                round(fwd_rnd,  b0, b1, kp + 7 * nc);
-                round(fwd_rnd,  b1, b0, kp + 8 * nc);
-                round(fwd_lrnd, b0, b1, kp + 9 * nc);
-    }
-
-#elif defined(PARTIAL_UNROLL)
-    {   u_int32_t    rnd;
-
-        for(rnd = 0; rnd < (this->aes_Nrnd >> 1) - 1; ++rnd)
-        {
-            round(fwd_rnd, b1, b0, kp);
-            round(fwd_rnd, b0, b1, kp + nc); kp += 2 * nc;
-        }
-
-        round(fwd_rnd,  b1, b0, kp);
-        round(fwd_lrnd, b0, b1, kp + nc);
-    }
-#else
-    {   u_int32_t    rnd;
-
-        for(rnd = 0; rnd < this->aes_Nrnd - 1; ++rnd)
-        {
-            round(fwd_rnd, b1, b0, kp);
-            l_copy(b0, b1); kp += nc;
-        }
-
-        round(fwd_lrnd, b0, b1, kp);
-    }
-#endif
-
-    state_out(out_blk, b0);
+	state_out(out_blk, b0);
 }
 
 /**
  * Decrypt a single block of data.
  */
-static void decrypt_block(const private_aes_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
-{   u_int32_t        locals(b0, b1);
-    const u_int32_t  *kp = this->aes_d_key;
+static void decrypt_block(const private_aes_crypter_t *this,
+						  const unsigned char in_blk[], unsigned char out_blk[])
+{
+	u_int32_t locals(b0, b1);
+	const u_int32_t *kp = this->aes_d_key;
 
-#if !defined(ONE_TABLE) && !defined(FOUR_TABLES)
-    u_int32_t        f2, f4, f8, f9;
-#endif
+	state_in(b0, in_blk, kp); kp += nc;
 
-    state_in(b0, in_blk, kp); kp += nc;
+	switch(this->aes_Nrnd)
+	{
+		case 14:
+			round(inv_rnd,  b1, b0, kp         );
+			round(inv_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
+			/* fall */
+		case 12:
+			round(inv_rnd,  b1, b0, kp         );
+			round(inv_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
+			/* fall */
+		case 10:
+			round(inv_rnd,  b1, b0, kp         );
+			round(inv_rnd,  b0, b1, kp +     nc);
+			round(inv_rnd,  b1, b0, kp + 2 * nc);
+			round(inv_rnd,  b0, b1, kp + 3 * nc);
+			round(inv_rnd,  b1, b0, kp + 4 * nc);
+			round(inv_rnd,  b0, b1, kp + 5 * nc);
+			round(inv_rnd,  b1, b0, kp + 6 * nc);
+			round(inv_rnd,  b0, b1, kp + 7 * nc);
+			round(inv_rnd,  b1, b0, kp + 8 * nc);
+			round(inv_lrnd, b0, b1, kp + 9 * nc);
+	}
 
-#if defined(UNROLL)
-
-    switch(this->aes_Nrnd)
-    {
-    case 14:    round(inv_rnd,  b1, b0, kp         );
-                round(inv_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
-    case 12:    round(inv_rnd,  b1, b0, kp         );
-                round(inv_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
-    case 10:    round(inv_rnd,  b1, b0, kp         );
-                round(inv_rnd,  b0, b1, kp +     nc);
-                round(inv_rnd,  b1, b0, kp + 2 * nc);
-                round(inv_rnd,  b0, b1, kp + 3 * nc);
-                round(inv_rnd,  b1, b0, kp + 4 * nc);
-                round(inv_rnd,  b0, b1, kp + 5 * nc);
-                round(inv_rnd,  b1, b0, kp + 6 * nc);
-                round(inv_rnd,  b0, b1, kp + 7 * nc);
-                round(inv_rnd,  b1, b0, kp + 8 * nc);
-                round(inv_lrnd, b0, b1, kp + 9 * nc);
-    }
-
-#elif defined(PARTIAL_UNROLL)
-    {   u_int32_t    rnd;
-
-        for(rnd = 0; rnd < (this->aes_Nrnd >> 1) - 1; ++rnd)
-        {
-            round(inv_rnd, b1, b0, kp);
-            round(inv_rnd, b0, b1, kp + nc); kp += 2 * nc;
-        }
-
-        round(inv_rnd,  b1, b0, kp);
-        round(inv_lrnd, b0, b1, kp + nc);
-    }
-#else
-    {   u_int32_t    rnd;
-
-        for(rnd = 0; rnd < this->aes_Nrnd - 1; ++rnd)
-        {
-            round(inv_rnd, b1, b0, kp);
-            l_copy(b0, b1); kp += nc;
-        }
-
-        round(inv_lrnd, b0, b1, kp);
-    }
-#endif
-
-    state_out(out_blk, b0);
+	state_out(out_blk, b0);
 }
 
 METHOD(crypter_t, decrypt, bool,
@@ -1503,14 +957,7 @@ METHOD(crypter_t, set_key, bool,
 
 		for(i = 1; i < this->aes_Nrnd; ++i)
 		{
-#if defined(ONE_TABLE) || defined(FOUR_TABLES)
-#if !defined(ONE_IM_TABLE) && !defined(FOUR_IM_TABLES)
-			u_int32_t    f2, f4, f8, f9;
-#endif
 			mix(kt, kf);
-#else
-			cpy(kt, kf);
-#endif
 			kt -= 2 * nc;
 		}
 		cpy(kt, kf);
@@ -1548,10 +995,6 @@ aes_crypter_t *aes_crypter_create(encryption_algorithm_t algo, size_t key_size)
 		default:
 			return NULL;
 	}
-
-	#if !defined(FIXED_TABLES)
-	if(!tab_gen) { gen_tabs(); tab_gen = 1; }
-	#endif
 
 	INIT(this,
 		.public = {
