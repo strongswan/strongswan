@@ -896,7 +896,7 @@ int main(int argc, char **argv)
 					}
 					hash = hasher_algorithm_from_integrity(token->algorithm,
 														   NULL);
-					if (hash == OID_UNKNOWN)
+					if (hash == (hash_algorithm_t)OID_UNKNOWN)
 					{
 						usage("invalid algorithm specified");
 					}
