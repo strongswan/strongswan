@@ -759,7 +759,8 @@ AC_MSG_CHECKING([for working __attribute__((packed))])
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM([], [[
 		struct test { char a; short b; } __attribute__((packed));
-		char x[sizeof(struct test) == sizeof(char) + sizeof(short) ? 1 : -1];
+		char x[sizeof(struct test) == sizeof(char) + sizeof(short) ? 1 : -1]
+			__attribute__((unused));
 		return 0;
 	]])],
 	[AC_MSG_RESULT([yes])],
