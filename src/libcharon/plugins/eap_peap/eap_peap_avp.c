@@ -25,8 +25,6 @@ static const chunk_t MS_AVP_Success = chunk_from_chars(
 											0x80, 0x03, 0x00, 0x02, 0x00, 0x01);
 static const chunk_t MS_AVP_Failure = chunk_from_chars(
 											0x80, 0x03, 0x00, 0x02, 0x00, 0x02);
-static const chunk_t MS_SoH_Request = chunk_from_chars(
-			  0x00, 0x01, 0x37, 0x00, 0x00, 0x00, 0x21, 0x00, 0x02, 0x00, 0x00);
 
 typedef struct private_eap_peap_avp_t private_eap_peap_avp_t;
 
@@ -64,19 +62,6 @@ METHOD(eap_peap_avp_t, build, void,
 		writer->write_uint8(writer, EAP_MSTLV);
 		avp_data = (pkt->code == EAP_SUCCESS) ? MS_AVP_Success : MS_AVP_Failure;
 	}
-	/**
-	 * Still trying to form a correct MS SoH Request
-	 *
-	else if (pkt->type == EAP_MSCHAPV2)
-	{
-		code = (this->is_server) ? EAP_REQUEST : EAP_RESPONSE;
-		writer->write_uint8(writer, code);
-		writer->write_uint8(writer, pkt->identifier);
-		writer->write_uint16(writer, 16);
-		writer->write_uint8(writer, EAP_EXPANDED);
-		avp_data = MS_SoH_Request;
-	}
-	*/
 	else
 	{
 		avp_data = chunk_skip(data, 4);
