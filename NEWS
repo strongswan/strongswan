@@ -7,6 +7,11 @@ strongswan-5.2.0
   and generating ipsec.conf, third party applications can use the new interface
   for more control and better reliability.
 
+- Built upon the libvici client library, swanctl implements the first user of
+  the VICI interface. Together with a swanctl.conf configuration file,
+  connections can be defined, loaded and managed. swanctl provides a portable,
+  complete IKE configuration and control interface for the command line.
+
 - The SWID IMC can extract all installed packages from the dpkg (Debian,
   Ubuntu, etc.) or rpm (Fedora, RedHat, etc) package managers, respectively,
   using the swidGenerator (https://github.com/tnc-ba/swidGenerator) which
