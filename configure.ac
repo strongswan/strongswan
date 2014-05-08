@@ -750,7 +750,6 @@ AC_COMPILE_IFELSE(
 	[
 		AC_MSG_RESULT([no])
 		openssl_lib=crypto
-		AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])
 	]
 )
 AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
@@ -765,6 +764,26 @@ AC_COMPILE_IFELSE(
 	]])],
 	[AC_MSG_RESULT([yes])],
 	[AC_MSG_RESULT([no]); AC_MSG_ERROR([__attribute__((packed)) does not work])]
+)
+
+AC_MSG_CHECKING([clang])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[], [[
+		 #ifndef __clang__
+		 # error not using LLVM clang
+		 #endif
+		]])],
+	[
+		AC_MSG_RESULT([yes])
+	],
+	[
+		AC_MSG_RESULT([no])
+		# GCC, but not MinGW requires -rdynamic for plugins
+		if test x$windows != xtrue; then
+			AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])
+		fi
+	]
 )
 
 if test x$printf_hooks = xvstr; then
