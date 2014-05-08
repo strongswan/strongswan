@@ -172,14 +172,14 @@ struct private_tls_t {
 	size_t outpos;
 
 	/**
-	 * Partial TLS record header received
-	 */
-	tls_record_t head;
-
-	/**
 	 * Position in partially received record header
 	 */
 	size_t headpos;
+
+	/**
+	 * Partial TLS record header received
+	 */
+	tls_record_t head;
 };
 
 /**
