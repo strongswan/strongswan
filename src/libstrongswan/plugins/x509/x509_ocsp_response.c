@@ -129,25 +129,6 @@ typedef struct {
 /* our OCSP response version implementation */
 #define OCSP_BASIC_RESPONSE_VERSION 1
 
-/* some OCSP specific prefabricated ASN.1 constants */
-static const chunk_t ASN1_nonce_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2B, 0x06,
-				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
-);
-static const chunk_t ASN1_response_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2B, 0x06,
-				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
-);
-static const chunk_t ASN1_response_content = chunk_from_chars(
-	0x04, 0x0D,
-		  0x30, 0x0B,
-				0x06, 0x09,
-				0x2B, 0x06,
-				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
-);
-
 METHOD(ocsp_response_t, get_status, cert_validation_t,
 	private_x509_ocsp_response_t *this, x509_t *subject, x509_t *issuer,
 	time_t *revocation_time, crl_reason_t *revocation_reason,
@@ -889,4 +870,3 @@ x509_ocsp_response_t *x509_ocsp_response_load(certificate_type_t type,
 	}
 	return NULL;
 }
-
