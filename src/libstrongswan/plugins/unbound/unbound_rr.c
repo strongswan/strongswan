@@ -135,8 +135,8 @@ unbound_rr_t *unbound_rr_create_frm_ldns_rr(ldns_rr *rr)
 		return NULL;
 	}
 
-	this->type = ldns_rr_get_type(rr);
-	this->class = ldns_rr_get_class(rr);
+	this->type = (rr_type_t)ldns_rr_get_type(rr);
+	this->class = (rr_class_t)ldns_rr_get_class(rr);
 	this->ttl = ldns_rr_ttl(rr);
 	for(i = 0; i < ldns_rr_rd_count(rr); i++)
 	{
