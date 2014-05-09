@@ -916,6 +916,7 @@ METHOD(child_sa_t, update, status_t,
 							this->other_addr, this->my_addr, other, me,
 							this->encap, encap, this->mark_in) == NOT_SUPPORTED)
 			{
+				set_state(this, old);
 				return NOT_SUPPORTED;
 			}
 		}
@@ -929,6 +930,7 @@ METHOD(child_sa_t, update, status_t,
 							this->my_addr, this->other_addr, me, other,
 							this->encap, encap, this->mark_out) == NOT_SUPPORTED)
 			{
+				set_state(this, old);
 				return NOT_SUPPORTED;
 			}
 		}
