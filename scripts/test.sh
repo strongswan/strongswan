@@ -58,7 +58,7 @@ win)
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
-			--enable-pki --enable-swanctl"
+			--enable-pki --enable-swanctl --enable-socket-win"
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
