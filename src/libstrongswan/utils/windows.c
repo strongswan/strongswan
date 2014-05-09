@@ -322,9 +322,13 @@ static int wserr(int retval)
 				errno = EBADF;
 				break;
 			case WSAENETDOWN:
+				errno = ENETDOWN;
+				break;
 			case WSAENETRESET:
+				errno = ENETRESET;
+				break;
 			case WSAESHUTDOWN:
-				errno = EPIPE;
+				errno = ECONNABORTED;
 				break;
 			case WSAEACCES:
 				errno = EACCES;
@@ -333,37 +337,43 @@ static int wserr(int retval)
 				errno = EINTR;
 				break;
 			case WSAEINPROGRESS:
-				errno = EBUSY;
+				errno = EINPROGRESS;
 				break;
 			case WSAEFAULT:
 				errno = EFAULT;
 				break;
 			case WSAENOBUFS:
-				errno = ENOMEM;
+				errno = ENOBUFS;
 				break;
 			case WSAENOTSOCK:
-				errno = EINVAL;
+				errno = ENOTSOCK;
 				break;
 			case WSAEOPNOTSUPP:
-				errno = ENOSYS;
+				errno = EOPNOTSUPP;
 				break;
 			case WSAEWOULDBLOCK:
 				errno = EWOULDBLOCK;
 				break;
 			case WSAEMSGSIZE:
-				errno = ENOSPC;
+				errno = EMSGSIZE;
 				break;
 			case WSAEINVAL:
 				errno = EINVAL;
 				break;
 			case WSAENOTCONN:
+				errno = ENOTCONN;
+				break;
 			case WSAEHOSTUNREACH:
+				errno = EHOSTUNREACH;
+				break;
 			case WSAECONNABORTED:
+				errno = ECONNABORTED;
+				break;
 			case WSAECONNRESET:
-				errno = EIO;
+				errno = ECONNRESET;
 				break;
 			case WSAETIMEDOUT:
-				errno = ESRCH;
+				errno = ETIMEDOUT;
 				break;
 			default:
 				errno = ENOENT;

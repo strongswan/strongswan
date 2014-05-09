@@ -266,21 +266,6 @@ char* getpass(const char *prompt);
 #define MSG_DONTWAIT MSG_INTERRUPT
 
 /**
- * EWOULDBLOCK is EAGAIN on other systems as well
- */
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK EAGAIN
-#endif
-
-/**
- * ECONNRESET is mapped to something arbitrary. It is returned by
- * stream->read_all() but should not be mapped from a send/recv WSA error.
- */
-#ifndef ECONNRESET
-#define ECONNRESET ENXIO
-#endif
-
-/**
  * shutdown(2) "how"-aliases, to use Unix variant on Windows
  */
 #define SHUT_RD SD_RECEIVE
@@ -318,6 +303,135 @@ ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags);
 #define sendto windows_send
 ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
+
+/**
+ * MinGW does provide extended errno values. Windows itself knowns them
+ * for POSIX compatibility; we define them as well.
+ */
+#ifndef EADDRINUSE
+#define EADDRINUSE			100
+#endif
+#ifndef EADDRNOTAVAIL
+#define EADDRNOTAVAIL		101
+#endif
+#ifndef EAFNOSUPPORT
+#define EAFNOSUPPORT		102
+#endif
+#ifndef EALREADY
+#define EALREADY			103
+#endif
+#ifndef EBADMSG
+#define EBADMSG				104
+#endif
+#ifndef ECANCELED
+#define ECANCELED			105
+#endif
+#ifndef ECONNABORTED
+#define ECONNABORTED		106
+#endif
+#ifndef ECONNREFUSED
+#define ECONNREFUSED		107
+#endif
+#ifndef ECONNRESET
+#define ECONNRESET			108
+#endif
+#ifndef EDESTADDRREQ
+#define EDESTADDRREQ		109
+#endif
+#ifndef EHOSTUNREACH
+#define EHOSTUNREACH		110
+#endif
+#ifndef EIDRM
+#define EIDRM				111
+#endif
+#ifndef EINPROGRESS
+#define EINPROGRESS			112
+#endif
+#ifndef EISCONN
+#define EISCONN				113
+#endif
+#ifndef ELOOP
+#define ELOOP				114
+#endif
+#ifndef EMSGSIZE
+#define EMSGSIZE			115
+#endif
+#ifndef ENETDOWN
+#define ENETDOWN			116
+#endif
+#ifndef ENETRESET
+#define ENETRESET			117
+#endif
+#ifndef ENETUNREACH
+#define ENETUNREACH			118
+#endif
+#ifndef ENOBUFS
+#define ENOBUFS				119
+#endif
+#ifndef ENODATA
+#define ENODATA				120
+#endif
+#ifndef ENOLINK
+#define ENOLINK				121
+#endif
+#ifndef ENOMSG
+#define ENOMSG				122
+#endif
+#ifndef ENOPROTOOPT
+#define ENOPROTOOPT			123
+#endif
+#ifndef ENOSR
+#define ENOSR				124
+#endif
+#ifndef ENOSTR
+#define ENOSTR				125
+#endif
+#ifndef ENOTCONN
+#define ENOTCONN			126
+#endif
+#ifndef ENOTRECOVERABLE
+#define ENOTRECOVERABLE		127
+#endif
+#ifndef ENOTSOCK
+#define ENOTSOCK			128
+#endif
+#ifndef ENOTSUP
+#define ENOTSUP				129
+#endif
+#ifndef EOPNOTSUPP
+#define EOPNOTSUPP			130
+#endif
+#ifndef EOTHER
+#define EOTHER				131
+#endif
+#ifndef EOVERFLOW
+#define EOVERFLOW			132
+#endif
+#ifndef EOWNERDEAD
+#define EOWNERDEAD			133
+#endif
+#ifndef EPROTO
+#define EPROTO				134
+#endif
+#ifndef EPROTONOSUPPORT
+#define EPROTONOSUPPORT		135
+#endif
+#ifndef EPROTOTYPE
+#define EPROTOTYPE			136
+#endif
+#ifndef ETIME
+#define ETIME				137
+#endif
+#ifndef ETIMEDOUT
+#define ETIMEDOUT			138
+#endif
+#ifndef ETXTBSY
+#define ETXTBSY				139
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK			140
+#endif
+
 
 /* Windows does not support "ll" format printf length modifiers. Mingw
  * therefore maps these to the Windows specific I64 length modifier. That
