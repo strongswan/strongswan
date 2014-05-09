@@ -28,3 +28,6 @@ ipsecdump_SOURCES = \
 ipsecdump_LDADD = \
 	libstrongswan-kernel-wfp.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
+
+
+EXTRA_DIST = mingw-w64-4.8.1.diff
