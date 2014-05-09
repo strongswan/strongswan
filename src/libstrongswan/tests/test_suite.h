@@ -237,6 +237,12 @@ void test_fail_vmsg(const char *file, int line, char *fmt, va_list args);
 void test_fail_msg(const char *file, int line, char *fmt, ...);
 
 /**
+ * Let a test fail if one of the worker threads has failed (only if called from
+ * the main thread).
+ */
+void test_fail_if_worker_failed();
+
+/**
  * Check if two integers equal, fail test if not
  *
  * @param a			first integer
@@ -246,6 +252,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 ({ \
 	typeof(a) _a = a; \
 	typeof(b) _b = b; \
+	test_fail_if_worker_failed(); \
 	if (_a != _b) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, #a " != " #b " (%d != %d)", _a, _b); \
@@ -262,6 +269,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 ({ \
 	char* _a = (char*)a; \
 	char* _b = (char*)b; \
+	test_fail_if_worker_failed(); \
 	if (!_a || !_b || !streq(_a, _b)) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, \
@@ -279,6 +287,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 ({ \
 	chunk_t _a = (chunk_t)a; \
 	chunk_t _b = (chunk_t)b; \
+	test_fail_if_worker_failed(); \
 	if (_a.len != _b.len || !memeq(a.ptr, b.ptr, a.len)) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, \
@@ -293,6 +302,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
  */
 #define test_assert(x) \
 ({ \
+	test_fail_if_worker_failed(); \
 	if (!(x)) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, #x); \
@@ -308,6 +318,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
  */
 #define test_assert_msg(x, fmt, ...) \
 ({ \
+	test_fail_if_worker_failed(); \
 	if (!(x)) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, #x ": " fmt, ##__VA_ARGS__); \
@@ -327,6 +338,7 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 #define fail(fmt, ...) test_fail_msg(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define fail_if(x, fmt, ...) \
 ({ \
+	test_fail_if_worker_failed(); \
 	if (x) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, #x ": " fmt, ##__VA_ARGS__); \
@@ -341,10 +353,10 @@ void test_fail_msg(const char *file, int line, char *fmt, ...);
 #define tcase_set_timeout test_case_set_timeout
 #define suite_add_tcase test_suite_add_case
 #define START_TEST(name) static void name (int _i) {
-#define END_TEST }
+#define END_TEST test_fail_if_worker_failed(); }
 #define START_SETUP(name) static void name() {
-#define END_SETUP }
+#define END_SETUP test_fail_if_worker_failed(); }
 #define START_TEARDOWN(name) static void name() {
-#define END_TEARDOWN }
+#define END_TEARDOWN test_fail_if_worker_failed(); }
 
 #endif /** TEST_SUITE_H_ @}*/
