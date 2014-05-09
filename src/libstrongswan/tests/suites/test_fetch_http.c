@@ -159,25 +159,30 @@ static bool servicing(void *data, stream_t *stream)
 	/* response headers */
 	snprintf(buf, sizeof(buf), "HTTP/1.%u %u OK\r\n", test->minor, test->code);
 	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+
+	/* if the response code indicates an error the following write operations
+	 * might fail because the client already terminated the TCP connection */
+#define may_fail(test, op) ck_assert(op || !HTTP_SUCCESS(test->code))
+
 	t = time(NULL);
 	gmtime_r(&t, &tm);
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %T %z", &tm);
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Server: strongSwan unit test\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 
 	/* rest of response headers */
 	snprintf(buf, sizeof(buf), "Content-Type: text/plain\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Content-Length: %u\r\n", test->res_len);
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Connection: close\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 
 	/* response body */
-	ck_assert(stream->write_all(stream, test->res, test->res_len));
+	may_fail(test, stream->write_all(stream, test->res, test->res_len));
 	return FALSE;
 }
 
