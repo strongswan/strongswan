@@ -79,6 +79,11 @@ struct private_attest_db_t {
 	int fid;
 
 	/**
+	 * Directory where file measurement are to be taken
+	 */
+	char *meas_dir;
+
+	/**
 	 *  AIK to be queried
 	 */
 	chunk_t key;
@@ -468,6 +473,22 @@ METHOD(attest_db_t, set_fid, bool,
 		e->destroy(e);
 	}
 	return this->fid > 0;
+}
+
+METHOD(attest_db_t, set_meas_directory, bool,
+	private_attest_db_t *this, char *dir)
+{
+	size_t len;
+
+	/* remove trailing '/' character if not root directory */
+	len = strlen(dir);
+	if (len > 1 && dir[len-1] == '/')
+	{
+		dir[len-1] = '\0';
+	}
+	this->meas_dir = strdup(dir);
+
+	return TRUE;
 }
 
 METHOD(attest_db_t, set_key, bool,
@@ -1568,12 +1589,13 @@ METHOD(attest_db_t, list_sessions, void,
  */
 static bool insert_file_hash(private_attest_db_t *this,
 							 pts_meas_algorithms_t algo,
-							 chunk_t measurement, int fid, bool ima,
+							 chunk_t measurement, int fid,
 							 int *hashes_added, int *hashes_updated)
 {
 	enumerator_t *e;
 	chunk_t hash;
 	char *label;
+	bool insert = TRUE, update = FALSE;
 
 	label = "could not be created";
 
@@ -1581,46 +1603,50 @@ static bool insert_file_hash(private_attest_db_t *this,
 		"SELECT hash FROM file_hashes WHERE algo = ? "
 		"AND file = ? AND product = ? AND device = 0",
 		DB_INT, algo, DB_UINT, fid, DB_UINT, this->pid, DB_BLOB);
+
 	if (!e)
 	{
 		printf("file_hashes query failed\n");
 		return FALSE;
 	}
-	if (e->enumerate(e, &hash))
+
+	while (e->enumerate(e, &hash))
 	{
+		update = TRUE;
+
 		if (chunk_equals(measurement, hash))
 		{
 			label = "exists and equals";
-		}
-		else
-		{
-			if (this->db->execute(this->db, NULL,
-				"UPDATE file_hashes SET hash = ? WHERE algo = ? "
-				"AND file = ? AND product = ? and device = 0",
-				DB_BLOB, measurement, DB_INT, algo, DB_UINT, fid,
-				DB_UINT, this->pid) == 1)
-			{
-				label = "updated";
-				(*hashes_updated)++;
-			}
+			insert = FALSE;
+			break;
 		}
 	}
-	else
+	e->destroy(e);
+
+	if (insert)
 	{
 		if (this->db->execute(this->db, NULL,
 			"INSERT INTO file_hashes "
 			"(file, product, device, algo, hash) "
 			"VALUES (?, ?, 0, ?, ?)",
 			DB_UINT, fid, DB_UINT, this->pid,
-			DB_INT, algo, DB_BLOB, measurement) == 1)
+			DB_INT, algo, DB_BLOB, measurement) != 1)
+		{
+			printf("file_hash insertion failed\n");
+			return FALSE;
+		}
+		if (update)
+		{
+			label = "updated";
+			(*hashes_updated)++;
+		}
+		else
 		{
 			label = "created";
 			(*hashes_added)++;
 		}
 	}
-	e->destroy(e);
-
-	printf("     %#B - %s%s\n", &measurement, ima ? "ima - " : "", label);
+	printf("     %#B - %s\n", &measurement, label);
 	return TRUE;
 }
 
@@ -1629,33 +1655,23 @@ static bool insert_file_hash(private_attest_db_t *this,
  */
 static bool add_hash(private_attest_db_t *this)
 {
-	char *pathname, *filename, *sep, *label, *pos;
-	char ima_buffer[IMA_MAX_NAME_LEN + 1];
-	chunk_t measurement, ima_template;
+	char *pathname, *filename, *sep, *label;
 	pts_file_meas_t *measurements;
+	chunk_t measurement;
 	hasher_t *hasher = NULL;
-	bool ima = FALSE;
 	int fid, files_added = 0, hashes_added = 0, hashes_updated = 0;
-	int len, ima_hashes_added = 0, ima_hashes_updated = 0;
 	enumerator_t *enumerator, *e;
 
-	if (this->algo == PTS_MEAS_ALGO_SHA1_IMA)
+	if (!this->meas_dir)
 	{
-		ima = TRUE;
-		this->algo = PTS_MEAS_ALGO_SHA1;
-		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (!hasher)
-		{
-			printf("could not create hasher\n");
-			return FALSE;
-		}
+		this->meas_dir = strdup(this->dir);
 	}
-	sep = streq(this->dir, "/") ? "" : "/";
+	sep = streq(this->meas_dir, "/") ? "" : "/";
 
 	if (this->fid)
 	{
 		/* build pathname from directory path and relative filename */
-		if (asprintf(&pathname, "%s%s%s", this->dir, sep, this->file) == -1)
+		if (asprintf(&pathname, "%s%s%s", this->meas_dir, sep, this->file) == -1)
 		{
 			return FALSE;
 		}
@@ -1665,7 +1681,7 @@ static bool add_hash(private_attest_db_t *this)
 	}
 	else
 	{
-		measurements = pts_file_meas_create_from_path(0, this->dir, TRUE,
+		measurements = pts_file_meas_create_from_path(0, this->meas_dir, TRUE,
 													  TRUE, this->algo);
 	}
 	if (!measurements)
@@ -1717,59 +1733,18 @@ static bool add_hash(private_attest_db_t *this)
 		printf("%4d: %s - %s\n", fid, filename, label);
 
 		/* compute file measurement hash */
-		if (!insert_file_hash(this, this->algo, measurement, fid, FALSE,
+		if (!insert_file_hash(this, this->algo, measurement, fid,
 							  &hashes_added, &hashes_updated))
-		{
-			break;
-		}
-		if (!ima)
-		{
-			continue;
-		}
-
-		/* compute IMA template hash */
-		pos = ima_buffer;
-		len = IMA_MAX_NAME_LEN;
-		if (!this->relative)
-		{
-			strncpy(pos, this->dir, len);
-			len = max(0, len - strlen(this->dir));
-			pos = ima_buffer + IMA_MAX_NAME_LEN - len;
-			strncpy(pos, sep, len);
-			len = max(0, len - strlen(sep));
-			pos = ima_buffer + IMA_MAX_NAME_LEN - len;
-		}
-		strncpy(pos, filename, len);
-		ima_buffer[IMA_MAX_NAME_LEN] = '\0';
-		ima_template = chunk_create(ima_buffer, sizeof(ima_buffer));
-		if (!hasher->get_hash(hasher, measurement, NULL) ||
-			!hasher->get_hash(hasher, ima_template, measurement.ptr))
-		{
-			printf("could not compute IMA template hash\n");
-			break;
-		}
-		if (!insert_file_hash(this, PTS_MEAS_ALGO_SHA1_IMA, measurement, fid,
-							  TRUE, &ima_hashes_added, &ima_hashes_updated))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	printf("%d measurements, added %d new files, %d file hashes",
-		    measurements->get_file_count(measurements), files_added,
-			hashes_added);
-	if (ima)
-	{
-		printf(", %d ima hashes", ima_hashes_added);
-		hasher->destroy(hasher);
-	}
-	printf(", updated %d file hashes", hashes_updated);
-	if (ima)
-	{
-		printf(", %d ima hashes", ima_hashes_updated);
-	}
-	printf("\n");
+	printf("%d measurements, added %d new files, %d file hashes, "
+		   "updated %d file hashes\n",
+			measurements->get_file_count(measurements),
+		    files_added, hashes_added, hashes_updated);
 	measurements->destroy(measurements);
 
 	return TRUE;
@@ -1941,6 +1916,7 @@ METHOD(attest_db_t, destroy, void,
 	free(this->version);
 	free(this->file);
 	free(this->dir);
+	free(this->meas_dir);
 	free(this->owner);
 	free(this->key.ptr);
 	free(this);
@@ -1961,6 +1937,7 @@ attest_db_t *attest_db_create(char *uri)
 			.set_did = _set_did,
 			.set_file = _set_file,
 			.set_fid = _set_fid,
+			.set_meas_directory = _set_meas_directory,
 			.set_key = _set_key,
 			.set_kid = _set_kid,
 			.set_package = _set_package,

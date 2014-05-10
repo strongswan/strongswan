@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -82,6 +82,14 @@ struct attest_db_t {
 	 * @return				TRUE if successful
 	 */
 	bool (*set_fid)(attest_db_t *this, int fid);
+
+	/**
+	 * Set path to directory where file[s] are to be measured
+	 *
+	 * @param meas_dir		measurement directory
+	 * @return				TRUE if successful
+	 */
+	bool (*set_meas_directory)(attest_db_t *this, char *dir);
 
 	/**
 	 * Set functional component to be queried

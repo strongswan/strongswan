@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,10 +28,7 @@ ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA256, PTS_MEAS_ALGO_SHA256,
 ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA1, PTS_MEAS_ALGO_SHA1,
 									PTS_MEAS_ALGO_SHA256,
 	"SHA1");
-ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA1_IMA, PTS_MEAS_ALGO_SHA1_IMA,
-									PTS_MEAS_ALGO_SHA1,
-	"SHA1-IMA");
-ENUM_END(pts_meas_algorithm_names,  PTS_MEAS_ALGO_SHA1_IMA);
+ENUM_END(pts_meas_algorithm_names,  PTS_MEAS_ALGO_SHA1);
 
 /**
  * Described in header.

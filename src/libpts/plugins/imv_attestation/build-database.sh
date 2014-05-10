@@ -66,6 +66,12 @@ do
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/samba
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/sasl2
 
+  ipsec attest --add --product "$p" --$hash --file /init \
+                     --measdir /usr/share/initramfs-tools
+
+  ipsec attest --add --product "$p" --$hash --file /scripts/functions \
+                     --measdir /usr/share/initramfs-tools/scripts
+
   for file in `find /usr/lib/evolution-data-server -name *.so`
   do
     ipsec attest --add --product "$p" --$hash --file $file
