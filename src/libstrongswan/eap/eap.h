@@ -67,6 +67,7 @@ enum eap_type_t {
 	EAP_MSCHAPV2 = 26,
 	EAP_MSTLV = 33,
 	EAP_TNC = 38,
+	EAP_PT_EAP = 54,
 	EAP_EXPANDED = 254,
 	EAP_EXPERIMENTAL = 255,
 	/** not a method, but an implementation providing different methods */

@@ -57,7 +57,9 @@ ENUM_NEXT(eap_type_names, EAP_MSTLV, EAP_MSTLV, EAP_MSCHAPV2,
 	"EAP_MSTLV");
 ENUM_NEXT(eap_type_names, EAP_TNC, EAP_TNC, EAP_MSTLV,
 	"EAP_TNC");
-ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
+ENUM_NEXT(eap_type_names, EAP_PT_EAP, EAP_PT_EAP, EAP_TNC,
+	"EAP_PT_EAP");
+ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_PT_EAP,
 	"EAP_EXPANDED",
 	"EAP_EXPERIMENTAL",
 	"EAP_RADIUS",
@@ -86,7 +88,9 @@ ENUM_NEXT(eap_type_short_names, EAP_MSTLV, EAP_MSTLV, EAP_MSCHAPV2,
 	"MSTLV");
 ENUM_NEXT(eap_type_short_names, EAP_TNC, EAP_TNC, EAP_MSTLV,
 	"TNC");
-ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
+ENUM_NEXT(eap_type_short_names, EAP_PT_EAP, EAP_PT_EAP, EAP_TNC,
+	"PT");
+ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_PT_EAP,
 	"EXP",
 	"XP",
 	"RAD",
@@ -114,6 +118,7 @@ eap_type_t eap_type_from_string(char *name)
 		{"peap",		EAP_PEAP},
 		{"mschapv2",	EAP_MSCHAPV2},
 		{"tnc",			EAP_TNC},
+		{"pt",			EAP_PT_EAP},
 		{"dynamic",		EAP_DYNAMIC},
 		{"radius",		EAP_RADIUS},
 	};
@@ -136,7 +141,7 @@ eap_vendor_type_t *eap_vendor_type_from_string(char *str)
 	enumerator_t *enumerator;
 	eap_vendor_type_t *result = NULL;
 	eap_type_t type = 0;
-	u_int32_t vendor = 0;
+	uint32_t vendor = 0;
 	char *part, *end;
 
 	/* parse EAP method string of the form: [eap-]type[-vendor] */

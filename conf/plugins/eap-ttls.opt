@@ -16,5 +16,8 @@ charon.plugins.eap-ttls.phase2_piggyback = no
 charon.plugins.eap-ttls.phase2_tnc = no
 	Start phase2 EAP TNC protocol after successful client authentication.
 
+charon.plugins.eap-ttls.phase2_tnc_method = pt
+	Phase2 EAP TNC transport protocol (_pt_ as IETF standard or legacy _tnc_)
+
 charon.plugins.eap-ttls.request_peer_auth = no
 	Request peer authentication based on a client certificate.

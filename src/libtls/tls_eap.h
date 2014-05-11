@@ -66,7 +66,7 @@ struct tls_eap_t {
 	 *
 	 * @return				identifier
 	 */
-	u_int8_t (*get_identifier)(tls_eap_t *this);
+	uint8_t (*get_identifier)(tls_eap_t *this);
 
 	/**
 	 * Set the EAP identifier to a deterministic value, overwriting
@@ -74,7 +74,7 @@ struct tls_eap_t {
 	 *
 	 * @param identifier	EAP identifier
 	 */
-	void (*set_identifier) (tls_eap_t *this, u_int8_t identifier);
+	void (*set_identifier) (tls_eap_t *this, uint8_t identifier);
 
 	/**
 	 * Destroy a tls_eap_t.
