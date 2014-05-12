@@ -25,6 +25,9 @@ strongswan-5.2.0
 
 - The aikgen tool generates an Attestation Identity Key bound to a TPM.
 
+- Implemented the PT-EAP transport protocol (RFC 7171) for Trusted Network
+  Connect..
+
 
 strongswan-5.1.3
 ----------------
