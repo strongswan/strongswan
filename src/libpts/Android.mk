@@ -16,6 +16,8 @@ libpts_la_SOURCES := \
 	pts/pts_file_meas.h pts/pts_file_meas.c \
 	pts/pts_file_meta.h pts/pts_file_meta.c \
 	pts/pts_file_type.h pts/pts_file_type.c \
+	pts/pts_ima_bios_list.h pts/pts_ima_bios_list.c \
+	pts/pts_ima_event_list.h pts/pts_ima_event_list.c \
 	pts/pts_meas_algo.h pts/pts_meas_algo.c \
 	pts/components/pts_component.h \
 	pts/components/pts_component_manager.h pts/components/pts_component_manager.c \
