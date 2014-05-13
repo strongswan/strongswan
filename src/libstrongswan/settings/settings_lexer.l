@@ -14,9 +14,9 @@
  * for more details.
  */
 
-#include "settings_parser.h"
-
 #include <utils/parser_helper.h>
+
+#include "settings_parser.h"
 
 bool settings_parser_open_next_file(parser_helper_t *ctx);
 

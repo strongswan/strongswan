@@ -17,12 +17,12 @@
 #define _GNU_SOURCE /* for asprintf() */
 #include <stdio.h>
 
-#include "settings_parser.h"
-
 #include <library.h>
 #include <collections/array.h>
 #include <settings/settings_types.h>
 #include <utils/parser_helper.h>
+
+#include "settings_parser.h"
 
 #define YYDEBUG 1
 
