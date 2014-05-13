@@ -50,9 +50,13 @@ static void add_section(parser_helper_t *ctx, section_t *section);
 static void add_setting(parser_helper_t *ctx, kv_t *kv);
 
 /**
- * Make sure the generated parser code passes the correct object to the lexer
+ * Make sure to call lexer with the proper context
  */
-#define YYLEX_PARAM ctx->scanner
+#undef yylex
+static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
+{
+	return settings_parser_lex(lvalp, ctx->scanner);
+}
 
 %}
 %debug
@@ -65,7 +69,7 @@ static void add_setting(parser_helper_t *ctx, kv_t *kv);
 %name-prefix "settings_parser_"
 
 /* interact properly with the reentrant lexer */
-%lex-param {void *scanner}
+%lex-param {parser_helper_t *ctx}
 %parse-param {parser_helper_t *ctx}
 
 /* types for terminal symbols... (can't use the typedef'd types) */
