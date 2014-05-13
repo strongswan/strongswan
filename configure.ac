@@ -203,7 +203,6 @@ ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actua
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
-ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
 ARG_ENABL_SET([kernel-iph],     [enable the Windows IP Helper based networking backend.])
 ARG_ENABL_SET([kernel-wfp],     [enable the Windows Filtering Platform IPsec backend.])
@@ -1222,7 +1221,6 @@ ADD_PLUGIN([kernel-wfp],           [c charon])
 ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
-ADD_PLUGIN([kernel-klips],         [h charon starter])
 ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
 ADD_PLUGIN([resolve],              [h charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
@@ -1442,7 +1440,6 @@ AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 # ---------------
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
-AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
@@ -1601,7 +1598,6 @@ AC_CONFIG_FILES([
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
 	src/libhydra/plugins/attr_sql/Makefile
-	src/libhydra/plugins/kernel_klips/Makefile
 	src/libhydra/plugins/kernel_netlink/Makefile
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile

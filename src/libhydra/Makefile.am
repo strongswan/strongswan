@@ -66,13 +66,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_KERNEL_KLIPS
-  SUBDIRS += plugins/kernel_klips
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/kernel_klips/libstrongswan-kernel-klips.la
-endif
-endif
-
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
 if MONOLITHIC
