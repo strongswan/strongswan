@@ -67,8 +67,8 @@ class ConfigOption:
 		self.desc = []
 		self.options = []
 
-	def __cmp__(self, other):
-		return  cmp(self.name, other.name)
+	def __lt__(self, other):
+		return  self.name < other.name
 
 	def add_paragraph(self):
 		"""Adds a new paragraph to the description"""
