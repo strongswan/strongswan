@@ -135,8 +135,8 @@
 #define SOL_UDP IPPROTO_UDP
 #endif
 
-/** default priority of installed policies */
-#define PRIO_BASE 512
+/** base priority for installed policies */
+#define PRIO_BASE 384
 
 #ifdef __APPLE__
 /** from xnu/bsd/net/pfkeyv2.h */
@@ -583,6 +583,9 @@ static inline u_int32_t get_priority(policy_entry_t *policy,
 			priority <<= 1;
 			/* fall-through */
 		case POLICY_PRIORITY_DEFAULT:
+			priority <<= 1;
+			/* fall-trough */
+		case POLICY_PRIORITY_PASS:
 			break;
 	}
 	/* calculate priority based on selector size, small size = high prio */
