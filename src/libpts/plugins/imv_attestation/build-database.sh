@@ -39,46 +39,25 @@ do
 
   ipsec attest --add --product "$p" --$hash --file /lib64/ld-linux-x86-64.so.2
 
+  for file in `find /usr/lib -name *.so`
+  do
+    ipsec attest --add --product "$p" --$hash --file $file
+  done
+
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/accountsservice
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/at-spi2-core
   ipsec attest --add --product "$p" --$hash --file /usr/lib/avahi/avahi-daemon-check-dns.sh
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/compiz
   ipsec attest --add --product "$p" --$hash --file /usr/lib/dbus-1.0/dbus-daemon-launch-helper
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/gvfs
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/libvirt/connection-driver
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/nautilus/extensions-3.0
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/NetworkManager
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/pm-utils/power.d
   ipsec attest --add --product "$p" --$hash --file /usr/lib/policykit-1/polkitd
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/pulse-4.0/modules
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/python3.4/lib-dynload
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/rsyslog
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/ubuntu-release-upgrader
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/unity-settings-daemon-1.0
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/update-notifier
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/xorg/modules
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/xorg/modules/drivers
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/xorg/modules/extensions
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/xorg/modules/input
 
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/alsa-lib
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/colord-plugins
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/dri
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/gconv
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/gvfs
-  ipsec attest --add --product "$p" --$hash --file /usr/lib/$a/libgedit-private.so
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/libproxy/0.4.11/modules
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/gedit/plugins
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/gio/modules
   ipsec attest --add --product "$p" --$hash --file /usr/lib/$a/mesa/libGL.so.1.2.0
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/ModemManager
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/NetworkManager
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/nss
-  ipsec attest --add --product "$p" --$hash --file /usr/lib/$a/polkit-1/extensions/libnullbackend.so
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/pkcs11
-  ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/pulseaudio
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/samba
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/$a/sasl2
 
@@ -89,26 +68,6 @@ do
 
   ipsec attest --add --product "$p" --$hash --file /scripts/functions \
                      --measdir /usr/share/initramfs-tools/scripts
-
-  for file in `find /usr/lib/evolution-data-server -name *.so`
-  do
-    ipsec attest --add --product "$p" --$hash --file $file
-  done
-
-  for file in `find /usr/lib/python3/dist-packages -name *.so`
-  do
-    ipsec attest --add --product "$p" --$hash --file $file
-  done
-
-  for file in /usr/lib/firefox/*.so
-  do
-    ipsec attest --add --product "$p" --$hash --file $file
-  done
-
-  for file in /usr/lib/thunderbird/*.so
-  do
-    ipsec attest --add --product "$p" --$hash --file $file
-  done
 
   for file in `find /lib/modules/$k -name *.ko`
   do
