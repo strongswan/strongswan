@@ -22,7 +22,7 @@
 #include <collections/linked_list.h>
 
 /** Base priority for installed policies */
-#define PRIO_BASE 512
+#define PRIO_BASE 384
 
 typedef struct private_ipsec_policy_mgr_t private_ipsec_policy_mgr_t;
 
@@ -88,6 +88,9 @@ static u_int32_t calculate_priority(policy_priority_t policy_priority,
 			priority <<= 1;
 			/* fall-through */
 		case POLICY_PRIORITY_DEFAULT:
+			priority <<= 1;
+			/* fall-through */
+		case POLICY_PRIORITY_PASS:
 			break;
 	}
 	/* calculate priority based on selector size, small size = high prio */
