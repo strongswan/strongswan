@@ -502,7 +502,7 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 	else
 	{
 		DBG1(DBG_IKE, "%s traffic selector missing in configuration",
-			 local ? "local" : "local");
+			 local ? "local" : "remote");
 		ts = NULL;
 	}
 	list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
