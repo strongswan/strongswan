@@ -21,6 +21,7 @@
 #ifndef PARSER_HELPER_H_
 #define PARSER_HELPER_H_
 
+#include <utils/debug.h>
 #include <collections/array.h>
 #include <bio/bio_writer.h>
 
@@ -129,9 +130,25 @@ struct parser_helper_t {
  */
 void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...);
 
-#define PARSER_DBG1(ctx, fmt, ...) parser_helper_log(1, ctx, fmt, ##__VA_ARGS__)
-#define PARSER_DBG2(ctx, fmt, ...) parser_helper_log(2, ctx, fmt, ##__VA_ARGS__)
-#define PARSER_DBG3(ctx, fmt, ...) parser_helper_log(3, ctx, fmt, ##__VA_ARGS__)
+#if DEBUG_LEVEL >= 1
+# define PARSER_DBG1(ctx, fmt, ...) parser_helper_log(1, ctx, fmt, ##__VA_ARGS__)
+#endif
+#if DEBUG_LEVEL >= 2
+# define PARSER_DBG2(ctx, fmt, ...) parser_helper_log(2, ctx, fmt, ##__VA_ARGS__)
+#endif
+#if DEBUG_LEVEL >= 3
+# define PARSER_DBG3(ctx, fmt, ...) parser_helper_log(3, ctx, fmt, ##__VA_ARGS__)
+#endif
+
+#ifndef PARSER_DBG1
+# define PARSER_DBG1(...) {}
+#endif
+#ifndef PARSER_DBG2
+# define PARSER_DBG2(...) {}
+#endif
+#ifndef PARSER_DBG3
+# define PARSER_DBG3(...) {}
+#endif
 
 /**
  * Create a parser helper object
