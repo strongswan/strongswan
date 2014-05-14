@@ -15,6 +15,7 @@
 
 #include <limits.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "parser_helper.h"
 
@@ -194,6 +195,32 @@ METHOD(parser_helper_t, destroy, void,
 	array_destroy_function(this->files, (void*)parser_helper_file_destroy, NULL);
 	this->writer->destroy(this->writer);
 	free(this);
+}
+
+/**
+ * Described in header
+ */
+void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...)
+{
+	parser_helper_file_t *file;
+	char msg[8192];
+	va_list args;
+	int line;
+
+	va_start(args, fmt);
+	vsnprintf(msg, sizeof(msg), fmt, args);
+	va_end(args);
+
+	file = ctx->file_current(ctx);
+	line = ctx->get_lineno ? ctx->get_lineno(ctx->scanner) : 0;
+	if (file)
+	{
+		dbg(DBG_CFG, level, "%s:%d: %s", file->name, line, msg);
+	}
+	else
+	{
+		dbg(DBG_CFG, level, "%s", msg);
+	}
 }
 
 /**

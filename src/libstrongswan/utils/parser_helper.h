@@ -148,15 +148,7 @@ struct parser_helper_file_t {
  * @param fmt		error message format
  * @param ...		additional arguments
  */
-#define parser_helper_log(level, ctx, fmt, ...) ({ \
-	parser_helper_file_t *_file = (ctx)->file_current(ctx); \
-	int _line = (ctx)->get_lineno ? (ctx)->get_lineno((ctx)->scanner) : 0; \
-	if (_file) {\
-		DBG##level(DBG_CFG, "%s:%d: " fmt, _file->name, _line, ##__VA_ARGS__); \
-	} else { \
-		DBG##level(DBG_CFG, fmt, ##__VA_ARGS__); \
-	} \
-})
+void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...);
 
 #define PARSER_DBG1(ctx, fmt, ...) parser_helper_log(1, ctx, fmt, ##__VA_ARGS__)
 #define PARSER_DBG2(ctx, fmt, ...) parser_helper_log(2, ctx, fmt, ##__VA_ARGS__)
