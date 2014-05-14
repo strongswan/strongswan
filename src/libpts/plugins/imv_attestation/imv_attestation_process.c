@@ -515,9 +515,9 @@ quote_error:
 													IMV_ATTESTATION_STATE_END);
 						break;
 					}
-					result->destroy(result);
 				}
 				enumerator->destroy(enumerator);
+				result->destroy(result);
 			}
 
 			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))
