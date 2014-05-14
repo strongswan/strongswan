@@ -360,6 +360,7 @@ typedef struct {
 	ipsec_mode_t mode;
 	action_t dpd_action;
 	action_t start_action;
+	action_t close_action;
 	u_int32_t reqid;
 	u_int32_t tfc;
 	mark_t mark_in;
@@ -390,6 +391,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   ipcomp = %u", data->ipcomp);
 	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, data->mode);
 	DBG2(DBG_CFG, "   dpd_action = %N", action_names, data->dpd_action);
+	DBG2(DBG_CFG, "   start_action = %N", action_names, data->start_action);
+	DBG2(DBG_CFG, "   close_action = %N", action_names, data->close_action);
 	DBG2(DBG_CFG, "   reqid = %u", data->reqid);
 	DBG2(DBG_CFG, "   tfc = %d", data->tfc);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
@@ -1204,6 +1207,7 @@ CALLBACK(child_kv, bool,
 		{ "rand_packets",	parse_uint64,		&child->lft.packets.jitter	},
 		{ "dpd_action",		parse_action,		&child->dpd_action			},
 		{ "start_action",	parse_action,		&child->start_action		},
+		{ "close_action",	parse_action,		&child->close_action		},
 		{ "ipcomp",			parse_bool,			&child->ipcomp				},
 		{ "inactivity",		parse_time,			&child->inactivity			},
 		{ "reqid",			parse_uint32,		&child->reqid				},
@@ -1300,6 +1304,7 @@ CALLBACK(children_sn, bool,
 		.mode = MODE_TUNNEL,
 		.dpd_action = ACTION_NONE,
 		.start_action = ACTION_NONE,
+		.close_action = ACTION_NONE,
 		.lft = {
 			.time = {
 				.rekey = LFT_DEFAULT_CHILD_REKEY,
@@ -1376,7 +1381,7 @@ CALLBACK(children_sn, bool,
 
 	cfg = child_cfg_create(name, &child.lft, child.updown,
 						child.hostaccess, child.mode, child.start_action,
-						child.dpd_action, ACTION_NONE, child.ipcomp,
+						child.dpd_action, child.close_action, child.ipcomp,
 						child.inactivity, child.reqid, &child.mark_in,
 						&child.mark_out, child.tfc);
 
