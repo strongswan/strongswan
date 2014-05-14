@@ -839,13 +839,9 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 {
 	section_t *section;
 
-	if (pattern == NULL)
-	{
-#ifdef STRONGSWAN_CONF
-		pattern = STRONGSWAN_CONF;
-#else
+	if (pattern == NULL || !pattern[0])
+	{	/* TODO: Clear parent if merge is FALSE? */
 		return FALSE;
-#endif
 	}
 
 	section = settings_section_create(NULL);

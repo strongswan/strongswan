@@ -343,7 +343,9 @@ struct settings_t {
 /**
  * Load settings from a file.
  *
- * @param file			file to read settings from, NULL for default
+ * @note If parsing the file fails the object is still created.
+ *
+ * @param file			optional file to read settings from
  * @return				settings object
  */
 settings_t *settings_create(char *file);

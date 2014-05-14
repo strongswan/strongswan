@@ -298,6 +298,13 @@ bool library_init(char *settings, const char *namespace)
 
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
+
+#ifdef STRONGSWAN_CONF
+	if (!settings)
+	{
+		settings = STRONGSWAN_CONF;
+	}
+#endif
 	this->public.settings = settings_create(settings);
 	/* all namespace settings may fall back to libstrongswan */
 	lib->settings->add_fallback(lib->settings, lib->ns, "libstrongswan");
