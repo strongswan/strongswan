@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	}
 	dbg_default_set_level(0);
 	lib->processor->set_threads(lib->processor, 4);
-	dbg_default_set_level(0);
+	dbg_default_set_level(1);
 
 	return command_dispatch(argc, argv);
 }
