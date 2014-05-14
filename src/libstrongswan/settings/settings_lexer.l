@@ -163,7 +163,7 @@ static void include_files(parser_helper_t *ctx);
  */
 bool settings_parser_open_next_file(parser_helper_t *ctx)
 {
-	parser_helper_file_t *file;
+	FILE *file;
 
 	file = ctx->file_next(ctx);
 	if (!file)
@@ -171,9 +171,9 @@ bool settings_parser_open_next_file(parser_helper_t *ctx)
 		return FALSE;
 	}
 
-	settings_parser_set_in(file->file, ctx->scanner);
+	settings_parser_set_in(file, ctx->scanner);
 	settings_parser_push_buffer_state(
-			settings_parser__create_buffer(file->file, YY_BUF_SIZE,
+			settings_parser__create_buffer(file, YY_BUF_SIZE,
 										   ctx->scanner), ctx->scanner);
 	return TRUE;
 }

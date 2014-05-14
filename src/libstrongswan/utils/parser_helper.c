@@ -22,7 +22,7 @@
 #include <collections/array.h>
 
 typedef struct private_parser_helper_t private_parser_helper_t;
-typedef struct private_parser_helper_file_t private_parser_helper_file_t;
+typedef struct parser_helper_file_t parser_helper_file_t;
 
 struct private_parser_helper_t {
 
@@ -32,7 +32,7 @@ struct private_parser_helper_t {
 	parser_helper_t public;
 
 	/**
-	 * Stack of included files, as private_parser_helper_file_t.
+	 * Stack of included files, as parser_helper_file_t.
 	 */
 	array_t *files;
 
@@ -42,12 +42,17 @@ struct private_parser_helper_t {
 	bio_writer_t *writer;
 };
 
-struct private_parser_helper_file_t {
+struct parser_helper_file_t {
 
 	/**
-	 * File data.
+	 * File name
 	 */
-	parser_helper_file_t public;
+	char *name;
+
+	/**
+	 * File stream
+	 */
+	FILE *file;
 
 	/**
 	 * Enumerator of paths matching the most recent inclusion pattern.
@@ -58,34 +63,36 @@ struct private_parser_helper_file_t {
 /**
  * Destroy the given file data.
  */
-static void parser_helper_file_destroy(private_parser_helper_file_t *this)
+static void parser_helper_file_destroy(parser_helper_file_t *this)
 {
-	if (this->public.file)
+	if (this->file)
 	{
-		fclose(this->public.file);
+		fclose(this->file);
 	}
-	free(this->public.name);
+	free(this->name);
 	DESTROY_IF(this->matches);
 	free(this);
 }
 
-METHOD(parser_helper_t, file_current, parser_helper_file_t*,
-	private_parser_helper_t *this)
+/**
+ * Returns the current file, if any.
+ */
+static parser_helper_file_t *current_file(private_parser_helper_t *this)
 {
-	private_parser_helper_file_t *file;
+	parser_helper_file_t *file;
 
 	array_get(this->files, ARRAY_TAIL, &file);
-	if (file->public.name)
+	if (file->name)
 	{
-		return &file->public;
+		return file;
 	}
 	return NULL;
 }
 
-METHOD(parser_helper_t, file_next, parser_helper_file_t*,
+METHOD(parser_helper_t, file_next, FILE*,
 	private_parser_helper_t *this)
 {
-	private_parser_helper_file_t *file, *next;
+	parser_helper_file_t *file, *next;
 	char *name;
 
 	array_get(this->files, ARRAY_TAIL, &file);
@@ -101,16 +108,14 @@ METHOD(parser_helper_t, file_next, parser_helper_file_t*,
 		while (file->matches->enumerate(file->matches, &name, NULL))
 		{
 			INIT(next,
-				.public = {
-					.name = strdup(name),
-					.file = fopen(name, "r"),
-				},
+				.name = strdup(name),
+				.file = fopen(name, "r"),
 			);
 
-			if (next->public.file)
+			if (next->file)
 			{
 				array_insert(this->files, ARRAY_TAIL, next);
-				return &next->public;
+				return next->file;
 			}
 			PARSER_DBG2(&this->public, "unable to open '%s'", name);
 			parser_helper_file_destroy(next);
@@ -124,7 +129,7 @@ METHOD(parser_helper_t, file_next, parser_helper_file_t*,
 METHOD(parser_helper_t, file_include, void,
 	private_parser_helper_t *this, char *pattern)
 {
-	private_parser_helper_file_t *file;
+	parser_helper_file_t *file;
 	char pat[PATH_MAX];
 
 	array_get(this->files, ARRAY_TAIL, &file);
@@ -135,7 +140,7 @@ METHOD(parser_helper_t, file_include, void,
 		return;
 	}
 
-	if (!file->public.name || pattern[0] == '/')
+	if (!file->name || pattern[0] == '/')
 	{	/* absolute path */
 		if (snprintf(pat, sizeof(pat), "%s", pattern) >= sizeof(pat))
 		{
@@ -146,7 +151,7 @@ METHOD(parser_helper_t, file_include, void,
 	}
 	else
 	{	/* base relative paths to the directory of the current file */
-		char *dir = path_dirname(file->public.name);
+		char *dir = path_dirname(file->name);
 		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
 		{
 			PARSER_DBG1(&this->public, "include pattern too long, ignored");
@@ -202,6 +207,7 @@ METHOD(parser_helper_t, destroy, void,
  */
 void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...)
 {
+	private_parser_helper_t *this = (private_parser_helper_t*)ctx;
 	parser_helper_file_t *file;
 	char msg[8192];
 	va_list args;
@@ -211,7 +217,7 @@ void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...)
 	vsnprintf(msg, sizeof(msg), fmt, args);
 	va_end(args);
 
-	file = ctx->file_current(ctx);
+	file = current_file(this);
 	line = ctx->get_lineno ? ctx->get_lineno(ctx->scanner) : 0;
 	if (file)
 	{
@@ -229,12 +235,11 @@ void parser_helper_log(int level, parser_helper_t *ctx, char *fmt, ...)
 parser_helper_t *parser_helper_create(void *context)
 {
 	private_parser_helper_t *this;
-	private_parser_helper_file_t *sentinel;
+	parser_helper_file_t *sentinel;
 
 	INIT(this,
 		.public = {
 			.context = context,
-			.file_current = _file_current,
 			.file_include = _file_include,
 			.file_next = _file_next,
 			.string_init = _string_init,
@@ -247,9 +252,7 @@ parser_helper_t *parser_helper_create(void *context)
 	);
 
 	INIT(sentinel,
-		.public = {
-			.name = NULL,
-		},
+		.name = NULL,
 	);
 	array_insert(this->files, ARRAY_TAIL, sentinel);
 

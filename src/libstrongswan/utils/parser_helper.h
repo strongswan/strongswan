@@ -25,7 +25,6 @@
 #include <bio/bio_writer.h>
 
 typedef struct parser_helper_t parser_helper_t;
-typedef struct parser_helper_file_t parser_helper_file_t;
 
 /**
  * Helper class for flex/bison based parsers.
@@ -59,13 +58,6 @@ struct parser_helper_t {
 	int (*get_lineno)(void *scanner);
 
 	/**
-	 * Get the current file.
-	 *
-	 * @return			current file, or NULL
-	 */
-	parser_helper_file_t *(*file_current)(parser_helper_t *this);
-
-	/**
 	 * Resolves the given include pattern, relative to the location of the
 	 * current file.
 	 *
@@ -89,8 +81,8 @@ struct parser_helper_t {
 	 * then call this method to check if there are more files to include for
 	 * the most recent call to file_include(), if so, call
 	 * @code
-	 * PREFIXset_in(file->file, helper->scanner);
-	 * PREFIXpush_buffer_state(PREFIX_create_buffer(file->file, YY_BUF_SIZE,
+	 * PREFIXset_in(file, helper->scanner);
+	 * PREFIXpush_buffer_state(PREFIX_create_buffer(file, YY_BUF_SIZE,
 	 * 						helper->scanner), helper->scanner);
 	 * @endcode
 	 *
@@ -99,7 +91,7 @@ struct parser_helper_t {
 	 *
 	 * @return			next file to process, or NULL (see comment)
 	 */
-	parser_helper_file_t *(*file_next)(parser_helper_t *this);
+	FILE *(*file_next)(parser_helper_t *this);
 
 	/**
 	 * Start parsing a string, discards any currently stored data.
@@ -125,19 +117,6 @@ struct parser_helper_t {
 	 * Destroy this instance.
 	 */
 	void (*destroy)(parser_helper_t *this);
-};
-
-struct parser_helper_file_t {
-
-	/**
-	 * File name
-	 */
-	char *name;
-
-	/**
-	 * File stream
-	 */
-	FILE *file;
 };
 
 /**
