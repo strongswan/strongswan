@@ -16,7 +16,10 @@
 
 /**
  * @defgroup settings settings
- * @{ @ingroup utils
+ * @ingroup libstrongswan
+ *
+ * @defgroup settings_t settings
+ * @{ @ingroup settings
  */
 
 #ifndef SETTINGS_H_
@@ -24,7 +27,7 @@
 
 typedef struct settings_t settings_t;
 
-#include "utils.h"
+#include "utils/utils.h"
 #include "collections/enumerator.h"
 
 /**
@@ -340,7 +343,9 @@ struct settings_t {
 /**
  * Load settings from a file.
  *
- * @param file			file to read settings from, NULL for default
+ * @note If parsing the file fails the object is still created.
+ *
+ * @param file			optional file to read settings from
  * @return				settings object
  */
 settings_t *settings_create(char *file);

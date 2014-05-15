@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -69,7 +70,9 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
  * This enumerator_t.enumerate() function returns a (to the directory) relative
  * filename (as a char*), an absolute filename (as a char*) and a file status
  * (to a struct stat), which all may be NULL. "." and ".." entries are
- * skipped. Example:
+ * skipped.
+ *
+ * Example:
  *
  * @code
 	char *rel, *abs;
@@ -94,6 +97,38 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
  * @return 			the directory enumerator, NULL on failure
  */
 enumerator_t* enumerator_create_directory(const char *path);
+
+/**
+ * Create an enumerator over files/directories matching a file pattern.
+ *
+ * This enumerator_t.enumerate() function returns the filename (as a char*),
+ * and a file status (to a struct stat), which both may be NULL.
+ *
+ * Example:
+ *
+ * @code
+	char *file;
+	struct stat st;
+	enumerator_t *e;
+
+	e = enumerator_create_glob("/etc/ipsec.*.conf");
+	if (e)
+	{
+		while (e->enumerate(e, &file, &st))
+		{
+			if (S_ISREG(st.st_mode))
+			{
+				printf("%s\n", file);
+			}
+		}
+		e->destroy(e);
+	}
+   @endcode
+ *
+ * @param pattern	file pattern to match
+ * @return 			the enumerator, NULL if not supported
+ */
+enumerator_t* enumerator_create_glob(const char *pattern);
 
 /**
  * Create an enumerator over tokens of a string.

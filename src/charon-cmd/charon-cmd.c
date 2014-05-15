@@ -126,12 +126,15 @@ static int run()
 			{
 				DBG1(DBG_DMN, "signal of type SIGHUP received. Reloading "
 					 "configuration");
-				if (lib->settings->load_files(lib->settings, NULL, FALSE))
+#ifdef STRONGSWAN_CONF
+				if (lib->settings->load_files(lib->settings, STRONGSWAN_CONF,
+											  FALSE))
 				{
 					charon->load_loggers(charon, levels, TRUE);
 					lib->plugins->reload(lib->plugins, NULL);
 				}
 				else
+#endif
 				{
 					DBG1(DBG_DMN, "reloading config failed, keeping old");
 				}

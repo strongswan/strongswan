@@ -168,7 +168,7 @@ array_t *array_create(u_int esize, u_int8_t reserve)
 	);
 	if (array->tail)
 	{
-		array->data = malloc(array->tail * array->esize);
+		array->data = malloc(get_size(array, array->tail));
 	}
 	return array;
 }

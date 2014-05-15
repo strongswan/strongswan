@@ -30,12 +30,17 @@ networking/streams/stream_service.c networking/streams/stream_manager.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
-selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
-threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
+selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
+settings/settings_parser.y settings/settings_lexer.l \
+threading/thread.c threading/thread_value.c threading/mutex.c \
+threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/settings.c utils/test.c \
-utils/utils/strerror.c
+utils/parser_helper.c utils/test.c utils/utils/strerror.c
+
+# private header files
+noinst_HEADERS = \
+settings/settings_types.h
 
 if USE_DEV_HEADERS
 strongswan_includedir = ${dev_headers}
@@ -75,14 +80,14 @@ resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h processing/watcher.h selectors/traffic_selector.h \
-threading/thread.h threading/thread_value.h \
+settings/settings.h threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
-utils/settings.h utils/test.h utils/integrity_checker.h \
+utils/parser_helper.h utils/test.h utils/integrity_checker.h \
 utils/utils/strerror.h
 endif
 
@@ -102,6 +107,8 @@ AM_CFLAGS = \
 
 AM_LDFLAGS = \
 	-no-undefined
+
+AM_YFLAGS = -v -d
 
 if USE_LEAK_DETECTIVE
   AM_CPPFLAGS += -DLEAK_DETECTIVE
@@ -144,7 +151,8 @@ Android.mk AndroidConfigLocal.h
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
-$(srcdir)/crypto/proposal/proposal_keywords_static.c
+$(srcdir)/crypto/proposal/proposal_keywords_static.c \
+settings/settings_parser.h
 
 MAINTAINERCLEANFILES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \

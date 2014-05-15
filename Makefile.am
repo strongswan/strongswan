@@ -55,7 +55,7 @@ cov-report:
 		lcov -r $(top_builddir)/coverage/coverage.info '*/tests/*' \
 			 -o $(top_builddir)/coverage/coverage.cleaned.info \
 			 --rc lcov_branch_coverage=1
-		genhtml --num-spaces 4 --legend --branch-coverage \
+		genhtml --num-spaces 4 --legend --branch-coverage --ignore-errors source \
 				-t "$(PACKAGE_STRING)" \
 				-o $(top_builddir)/coverage/html \
 				-p `readlink -m $(abs_top_srcdir)`/src \
