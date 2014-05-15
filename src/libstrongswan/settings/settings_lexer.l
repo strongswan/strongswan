@@ -24,8 +24,6 @@ static void include_files(parser_helper_t *ctx);
 
 %}
 %option debug
-%option perf-report
-
 %option warn
 
 /* use start conditions stack */
