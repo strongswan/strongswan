@@ -82,12 +82,22 @@ static void include_files(parser_helper_t *ctx);
 <inc>{
 	/* we allow all characters except #, } and spaces, they can be escaped */
 	<<EOF>>				|
-	\n|#.*\n			|
-	[\t ]				{
-		if (*yytext && yytext[strlen(yytext) - 1] == '\n')
-		{	/* put the newline back to fix the line numbers */
-			unput('\n');
-			yy_set_bol(0);
+	[#}\n\t ]			{
+		if (*yytext)
+		{
+			switch (yytext[0])
+			{
+				case '\n':
+					/* put the newline back to fix the line numbers */
+					unput('\n');
+					yy_set_bol(0);
+					break;
+				case '#':
+				case '}':
+					/* these are parsed outside of this start condition */
+					unput(yytext[0]);
+					break;
+			}
 		}
 		include_files(yyextra);
 		yy_pop_state(yyscanner);
