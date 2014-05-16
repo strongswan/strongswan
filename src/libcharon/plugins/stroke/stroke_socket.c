@@ -584,8 +584,7 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	}
 	else
 	{
-		group = enum_from_name(debug_names, msg->loglevel.type);
-		if ((int)group < 0)
+		if (!enum_from_name(debug_names, msg->loglevel.type, &group))
 		{
 			fprintf(out, "unknown type '%s'!\n", msg->loglevel.type);
 			return;

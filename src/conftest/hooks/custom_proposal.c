@@ -79,8 +79,7 @@ static linked_list_t* load_proposals(private_custom_proposal_t *this,
 			type = strtoul(key, &end, 10);
 			if (end == key || errno)
 			{
-				type = enum_from_name(transform_type_names, key);
-				if (type == -1)
+				if (!enum_from_name(transform_type_names, key, &type))
 				{
 					DBG1(DBG_CFG, "unknown transform: '%s', skipped", key);
 					continue;

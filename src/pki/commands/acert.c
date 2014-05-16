@@ -53,8 +53,7 @@ static int acert()
 			case 'h':
 				goto usage;
 			case 'g':
-				digest = enum_from_name(hash_algorithm_short_names, arg);
-				if (digest == -1)
+				if (!enum_from_name(hash_algorithm_short_names, arg, &digest))
 				{
 					error = "invalid --digest type";
 					goto usage;

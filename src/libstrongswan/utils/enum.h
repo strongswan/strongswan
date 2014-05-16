@@ -120,9 +120,30 @@ char *enum_to_name(enum_name_t *e, int val);
  *
  * @param e		enum names for this enum value
  * @param name	name to get enum value for
- * @return		enum value, -1 if not found
+ * @þaram valp	variable sized pointer receiving value
+ * @return		TRUE if enum name found, FALSE otherwise
  */
-int enum_from_name(enum_name_t *e, char *name);
+#define enum_from_name(e, name, valp) ({ \
+	int _val; \
+	int _found = enum_from_name_as_int(e, name, &_val); \
+	if (_found) \
+	{ \
+		*(valp) = _val; \
+	} \
+	_found; })
+
+/**
+ * Convert a enum string back to its enum value, integer pointer variant.
+ *
+ * This variant takes integer pointer only, use enum_from_name() to pass
+ * enum type pointers for the result.
+ *
+ * @param e		enum names for this enum value
+ * @param name	name to get enum value for
+ * @þaram val	integer pointer receiving value
+ * @return		TRUE if enum name found, FALSE otherwise
+ */
+bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val);
 
 /**
  * printf hook function for enum_names_t.

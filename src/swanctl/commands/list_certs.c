@@ -556,10 +556,10 @@ CALLBACK(list_cb, void,
 		bool has_privkey;
 
 		buf = vici_find(res, &len, "data");
-		type = enum_from_name(certificate_type_names,
-							  vici_find_str(res, "ANY", "type"));
 		has_privkey = streq(vici_find_str(res, "no", "has_privkey"), "yes");
-		if (type != -1 && type != CERT_ANY && buf)
+		if (enum_from_name(certificate_type_names,
+						   vici_find_str(res, "ANY", "type"), &type) &&
+			type != CERT_ANY && buf)
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 									BUILD_BLOB_ASN1_DER, chunk_create(buf, len),

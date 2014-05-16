@@ -460,10 +460,9 @@ static void add_ts(private_cmd_connection_t *this,
  */
 static void set_profile(private_cmd_connection_t *this, char *name)
 {
-	int profile;
+	profile_t profile;
 
-	profile = enum_from_name(profile_names, name);
-	if (profile == -1)
+	if (!enum_from_name(profile_names, name, &profile))
 	{
 		DBG1(DBG_CFG, "unknown connection profile: %s", name);
 		exit(1);
