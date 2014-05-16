@@ -15,7 +15,6 @@
 
 #include "test_suite.h"
 
-#include <utils/enum.h>
 #include <utils/utils.h>
 
 /*******************************************************************************

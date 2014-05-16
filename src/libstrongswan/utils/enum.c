@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include <library.h>
+#include <utils/utils.h>
 
 #include "enum.h"
 
