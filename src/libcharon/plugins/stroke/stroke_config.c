@@ -174,10 +174,12 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 	if (ike_cfg)
 	{
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(proto));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(proto));
 	}
 	else
 	{
 		child_cfg->add_proposal(child_cfg, proposal_create_default(proto));
+		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(proto));
 	}
 }
 

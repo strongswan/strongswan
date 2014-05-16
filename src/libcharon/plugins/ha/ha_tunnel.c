@@ -207,6 +207,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 remote, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	peer_cfg = peer_cfg_create("ha", ike_cfg, CERT_NEVER_SEND,
 						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, FALSE,
 						TRUE, 30, 0, FALSE, NULL, NULL);
@@ -235,6 +236,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	this->backend.cfg = peer_cfg;

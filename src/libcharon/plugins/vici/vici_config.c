@@ -442,17 +442,24 @@ static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
 	if (strcaseeq("default", buf))
 	{
 		proposal = proposal_create_default(proto);
+		if (proposal)
+		{
+			list->insert_last(list, proposal);
+		}
+		proposal = proposal_create_default_aead(proto);
+		if (proposal)
+		{
+			list->insert_last(list, proposal);
+		}
+		return TRUE;
 	}
-	else
+	proposal = proposal_create_from_string(proto, buf);
+	if (proposal)
 	{
-		proposal = proposal_create_from_string(proto, buf);
+		list->insert_last(list, proposal);
+		return TRUE;
 	}
-	if (!proposal)
-	{
-		return FALSE;
-	}
-	list->insert_last(list, proposal);
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -1343,8 +1350,16 @@ CALLBACK(children_sn, bool,
 	}
 	if (child.proposals->get_count(child.proposals) == 0)
 	{
-		child.proposals->insert_last(child.proposals,
-									 proposal_create_default(PROTO_ESP));
+		proposal = proposal_create_default(PROTO_ESP);
+		if (proposal)
+		{
+			child.proposals->insert_last(child.proposals, proposal);
+		}
+		proposal = proposal_create_default_aead(PROTO_ESP);
+		if (proposal)
+		{
+			child.proposals->insert_last(child.proposals, proposal);
+		}
 	}
 
 	/* if no hard lifetime specified, add one at soft lifetime + 10% */
@@ -1755,8 +1770,16 @@ CALLBACK(config_sn, bool,
 	}
 	if (peer.proposals->get_count(peer.proposals) == 0)
 	{
-		peer.proposals->insert_last(peer.proposals,
-									proposal_create_default(PROTO_IKE));
+		proposal = proposal_create_default(PROTO_IKE);
+		if (proposal)
+		{
+			peer.proposals->insert_last(peer.proposals, proposal);
+		}
+		proposal = proposal_create_default_aead(PROTO_IKE);
+		if (proposal)
+		{
+			peer.proposals->insert_last(peer.proposals, proposal);
+		}
 	}
 	if (!peer.local_addrs)
 	{

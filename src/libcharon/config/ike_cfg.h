@@ -148,9 +148,10 @@ struct ike_cfg_t {
 	 * Adds a proposal to the list.
 	 *
 	 * The first added proposal has the highest priority, the last
-	 * added the lowest.
+	 * added the lowest. It is safe to add NULL as proposal, which has no
+	 * effect.
 	 *
-	 * @param proposal		proposal to add
+	 * @param proposal		proposal to add, or NULL
 	 */
 	void (*add_proposal) (ike_cfg_t *this, proposal_t *proposal);
 

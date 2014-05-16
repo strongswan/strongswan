@@ -153,6 +153,7 @@ static void add_esp_proposals(private_sql_config_t *this,
 	if (use_default)
 	{
 		child->add_proposal(child, proposal_create_default(PROTO_ESP));
+		child->add_proposal(child, proposal_create_default_aead(PROTO_ESP));
 	}
 }
 
@@ -242,6 +243,7 @@ static void add_ike_proposals(private_sql_config_t *this,
 	if (use_default)
 	{
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	}
 }
 

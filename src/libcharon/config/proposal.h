@@ -196,6 +196,14 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number);
 proposal_t *proposal_create_default(protocol_id_t protocol);
 
 /**
+ * Create a default proposal for supported AEAD algorithms
+ *
+ * @param protocol			protocol, such as PROTO_ESP
+ * @return					proposal_t object, NULL if none supported
+ */
+proposal_t *proposal_create_default_aead(protocol_id_t protocol);
+
+/**
  * Create a proposal from a string identifying the algorithms.
  *
  * The string is in the same form as a in the ipsec.conf file.
