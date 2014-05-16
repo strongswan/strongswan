@@ -24,7 +24,7 @@
 
 typedef enum configuration_attribute_type_t configuration_attribute_type_t;
 
-#include <utils/enum.h>
+#include <utils/utils.h>
 
 /**
  * Type of the attribute, as in IKEv2 RFC 3.15.1 or IKEv1 ModeConfig.

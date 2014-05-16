@@ -452,7 +452,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_ECDSA_STRENGTH:
 			return (void*)0;
 		case AUTH_RULE_SIGNATURE_SCHEME:
-			return HASH_UNKNOWN;
+			return (void*)HASH_UNKNOWN;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
 			return (void*)VALIDATION_FAILED;

@@ -362,8 +362,7 @@ static linked_list_t* parse_selector(char *selector)
 			vendor = atoi(token);
 			token = pos;
 		}
-		type = enum_from_name(radius_attribute_type_names, token);
-		if (type == -1)
+		if (!enum_from_name(radius_attribute_type_names, token, &type))
 		{
 			type = atoi(token);
 		}

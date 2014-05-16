@@ -23,7 +23,7 @@
 
 typedef enum transform_type_t transform_type_t;
 
-#include <utils/enum.h>
+#include <utils/utils.h>
 
 /**
  * Type of a transform, as in IKEv2 RFC 3.3.2.

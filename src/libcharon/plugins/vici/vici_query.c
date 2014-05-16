@@ -729,8 +729,7 @@ CALLBACK(list_certs, vici_message_t*,
 	char *str;
 
 	str = request->get_str(request, "ANY", "type");
-	type = enum_from_name(certificate_type_names, str);
-	if (type == -1)
+	if (!enum_from_name(certificate_type_names, str, &type))
 	{
 		b = vici_builder_create();
 		return b->finalize(b);

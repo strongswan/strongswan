@@ -65,8 +65,7 @@ METHOD(listener_t, message, bool,
 			type = atoi(name);
 			if (!type)
 			{
-				type = enum_from_name(payload_type_short_names, name);
-				if (type == -1)
+				if (!enum_from_name(payload_type_short_names, name, &type))
 				{
 					DBG1(DBG_CFG, "invalid payload name '%s'", name);
 					break;

@@ -128,9 +128,8 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 	error_type_name = xmlGetProp(node, "type");
 	if (error_type_name)
 	{
-		this->error_type = enum_from_name(tnccs_error_type_names,
-										  error_type_name);
-		if (this->error_type == -1)
+		if (!enum_from_name(tnccs_error_type_names, error_type_name,
+							&this->error_type))
 		{
 			this->error_type = TNCCS_ERROR_OTHER;
 		}

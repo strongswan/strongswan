@@ -17,7 +17,7 @@
 #include "pgp_builder.h"
 #include "pgp_utils.h"
 
-#include <utils/enum.h>
+#include <utils/utils.h>
 #include <utils/debug.h>
 #include <credentials/keys/private_key.h>
 
@@ -273,4 +273,3 @@ private_key_t *pgp_private_key_load(key_type_t type, va_list args)
 			return NULL;
 	}
 }
-

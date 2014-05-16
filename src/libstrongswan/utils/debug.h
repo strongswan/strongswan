@@ -26,7 +26,7 @@ typedef enum level_t level_t;
 
 #include <stdio.h>
 
-#include "utils/enum.h"
+#include <utils/utils.h>
 
 /**
  * Debug message group.

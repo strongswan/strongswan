@@ -465,7 +465,6 @@ load_tester_creds_t *load_tester_creds_create()
 		.private = load_issuer_key(),
 		.ca = load_issuer_cert(),
 		.cas = linked_list_create(),
-		.digest = enum_from_name(hash_algorithm_short_names, digest),
 		.psk = shared_key_create(SHARED_IKE,
 								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
@@ -477,7 +476,7 @@ load_tester_creds_t *load_tester_creds_create()
 		this->cas->insert_last(this->cas, this->ca->get_ref(this->ca));
 	}
 
-	if (this->digest == -1)
+	if (!enum_from_name(hash_algorithm_short_names, digest, &this->digest))
 	{
 		DBG1(DBG_CFG, "invalid load-tester digest: '%s', using sha1", digest);
 		this->digest = HASH_SHA1;
@@ -487,4 +486,3 @@ load_tester_creds_t *load_tester_creds_create()
 
 	return &this->public;
 }
-

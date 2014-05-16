@@ -23,7 +23,7 @@ static int manage_policy(vici_conn_t *conn, char *label)
 	vici_res_t *res;
 	bool raw = FALSE;
 	char *arg, *child = NULL;
-	int ret;
+	int ret = 0;
 
 	while (TRUE)
 	{

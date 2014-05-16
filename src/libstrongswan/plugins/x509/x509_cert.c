@@ -217,10 +217,6 @@ struct private_x509_cert_t {
 	refcount_t ref;
 };
 
-static const chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
-	0x06, 0x03, 0x55, 0x1D, 0x11
-);
-
 /**
  * Destroy a CertificateDistributionPoint
  */
@@ -2611,4 +2607,3 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 	destroy(cert);
 	return NULL;
 }
-

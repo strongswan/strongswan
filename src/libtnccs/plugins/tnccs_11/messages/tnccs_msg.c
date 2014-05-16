@@ -41,7 +41,7 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors)
 	char *error_msg, buf[BUF_LEN];
 	tnccs_error_type_t error_type = TNCCS_ERROR_MALFORMED_BATCH;
 	tnccs_msg_t *msg;
-	tnccs_msg_type_t type = IMC_IMV_MSG;
+	tnccs_msg_type_t type = IMC_IMV_MSG, nametype;
 
 	if (streq((char*)node->name, "IMC-IMV-Message"))
 	{
@@ -103,7 +103,8 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors)
 				error_msg = "node is not in the TNCCS message namespace";
 				goto fatal;
 			}
-			if (type != enum_from_name(tnccs_msg_type_names, (char*)cur->name))
+			if (!enum_from_name(tnccs_msg_type_names, cur->name, &nametype) ||
+				type != nametype)
 			{
 				error_msg = buf;
 				snprintf(buf, BUF_LEN, "expected '%N' node but was '%s'",
@@ -137,4 +138,3 @@ fatal:
 	errors->insert_last(errors, msg);
 	return NULL;
 }
-

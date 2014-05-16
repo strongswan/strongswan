@@ -29,9 +29,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include "enum.h"
-#include "utils/strerror.h"
-
 /**
  * strongSwan program return codes
  */
@@ -72,6 +69,9 @@
 #ifndef TRUE
 # define TRUE  true
 #endif /* TRUE */
+
+#include "enum.h"
+#include "utils/strerror.h"
 
 /**
  * Helper function that compares two strings for equality

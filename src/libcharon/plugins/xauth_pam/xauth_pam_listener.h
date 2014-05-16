@@ -26,7 +26,7 @@
  * @{ @ingroup xauth_pam
  */
 
-#ifndef XAUTH_PAM_LISENER_H_
+#ifndef XAUTH_PAM_LISTENER_H_
 #define XAUTH_PAM_LISTENER_H_
 
 typedef struct xauth_pam_listener_t xauth_pam_listener_t;

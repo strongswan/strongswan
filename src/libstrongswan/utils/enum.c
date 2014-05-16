@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include <library.h>
+#include <utils/utils.h>
 
 #include "enum.h"
 
@@ -39,7 +40,7 @@ char *enum_to_name(enum_name_t *e, int val)
 /**
  * See header.
  */
-int enum_from_name(enum_name_t *e, char *name)
+bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val)
 {
 	do
 	{
@@ -49,12 +50,13 @@ int enum_from_name(enum_name_t *e, char *name)
 		{
 			if (name && strcaseeq(name, e->names[i]))
 			{
-				return e->first + i;
+				*val = e->first + i;
+				return TRUE;
 			}
 		}
 	}
 	while ((e = e->next));
-	return -1;
+	return FALSE;
 }
 
 /**

@@ -15,7 +15,6 @@
 
 #include "test_suite.h"
 
-#include <utils/enum.h>
 #include <utils/utils.h>
 
 /*******************************************************************************
@@ -121,41 +120,50 @@ END_TEST
  */
 
 static struct {
+	bool found;
 	int val;
 	char *str;
 } enum_tests_cont[] = {
-	{CONT1, "CONT1"},
-	{CONT2, "CONT2"},
-	{CONT2, "CoNt2"},
-	{CONT3, "CONT3"},
-	{CONT4, "CONT4"},
-	{CONT5, "CONT5"},
-	{-1, "asdf"},
-	{-1, ""},
-	{-1, NULL},
+	{TRUE, CONT1, "CONT1"},
+	{TRUE, CONT2, "CONT2"},
+	{TRUE, CONT2, "CoNt2"},
+	{TRUE, CONT3, "CONT3"},
+	{TRUE, CONT4, "CONT4"},
+	{TRUE, CONT5, "CONT5"},
+	{FALSE, 0, "asdf"},
+	{FALSE, 0, ""},
+	{FALSE, 0, NULL},
 }, enum_tests_split[] = {
-	{SPLIT1, "SPLIT1"},
-	{SPLIT1, "split1"},
-	{SPLIT2, "SPLIT2"},
-	{SPLIT2, "SpLiT2"},
-	{SPLIT3, "SPLIT3"},
-	{SPLIT4, "SPLIT4"},
-	{SPLIT5, "SPLIT5"},
-	{-1, "asdf"},
-	{-1, ""},
-	{-1, NULL},
+	{TRUE, SPLIT1, "SPLIT1"},
+	{TRUE, SPLIT1, "split1"},
+	{TRUE, SPLIT2, "SPLIT2"},
+	{TRUE, SPLIT2, "SpLiT2"},
+	{TRUE, SPLIT3, "SPLIT3"},
+	{TRUE, SPLIT4, "SPLIT4"},
+	{TRUE, SPLIT5, "SPLIT5"},
+	{FALSE, 0, "asdf"},
+	{FALSE, 0, ""},
+	{FALSE, 0, NULL},
 };
 
 START_TEST(test_enum_from_name_cont)
 {
-	int val = enum_from_name(test_enum_cont_names, enum_tests_cont[_i].str);
+	int val = 0;
+	bool found;
+
+	found = enum_from_name(test_enum_cont_names, enum_tests_cont[_i].str, &val);
+	ck_assert(enum_tests_cont[_i].found == found);
 	ck_assert_int_eq(val, enum_tests_cont[_i].val);
 }
 END_TEST
 
 START_TEST(test_enum_from_name_split)
 {
-	int val = enum_from_name(test_enum_split_names, enum_tests_split[_i].str);
+	int val = 0;
+	bool found;
+
+	found = enum_from_name(test_enum_split_names, enum_tests_split[_i].str, &val);
+	ck_assert(enum_tests_split[_i].found == found);
 	ck_assert_int_eq(val, enum_tests_split[_i].val);
 }
 END_TEST

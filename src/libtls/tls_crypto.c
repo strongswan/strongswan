@@ -959,8 +959,8 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 			enumerator = enumerator_create_token(config, ",", " ");
 			while (enumerator->enumerate(enumerator, &token))
 			{
-				suite = enum_from_name(tls_cipher_suite_names, token);
-				if (suite == suites[i].suite)
+				if (enum_from_name(tls_cipher_suite_names, token, &suite) &&
+					suite == suites[i].suite)
 				{
 					suites[remaining++] = suites[i];
 					break;
