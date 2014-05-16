@@ -675,11 +675,14 @@ START_TEST(test_load_files_section)
 	ck_assert(!settings->load_files_section(settings, include1".conf", TRUE, ""));
 	verify_include();
 
-	/* unreadable files are too */
-	ck_assert(chunk_write(contents, include1".no", 0444, TRUE));
-	ck_assert(!settings->load_files_section(settings, include1".no", TRUE, ""));
-	unlink(include1".no");
-	verify_include();
+	/* unreadable files are too (only fails when not running as root) */
+	if (getuid() != 0)
+	{
+		ck_assert(chunk_write(contents, include1".no", 0444, TRUE));
+		ck_assert(!settings->load_files_section(settings, include1".no", TRUE, ""));
+		unlink(include1".no");
+		verify_include();
+	}
 
 	ck_assert(settings->load_files_section(settings, include2, FALSE, "main"));
 	verify_null("main.key1");
