@@ -627,7 +627,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 /**
  * Add supported IKE algorithms to proposal
  */
-static void proposal_add_supported_ike(private_proposal_t *this, bool aead)
+static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 {
 	enumerator_t *enumerator;
 	encryption_algorithm_t encryption;
@@ -662,6 +662,11 @@ static void proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			}
 		}
 		enumerator->destroy(enumerator);
+
+		if (!array_count(this->transforms))
+		{
+			return FALSE;
+		}
 	}
 	else
 	{
@@ -690,6 +695,11 @@ static void proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			}
 		}
 		enumerator->destroy(enumerator);
+
+		if (!array_count(this->transforms))
+		{
+			return FALSE;
+		}
 
 		enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
 		while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
@@ -772,6 +782,8 @@ static void proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	return TRUE;
 }
 
 /*
@@ -784,7 +796,11 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			proposal_add_supported_ike(this, FALSE);
+			if (!proposal_add_supported_ike(this, FALSE))
+			{
+				destroy(this);
+				return NULL;
+			}
 			break;
 		case PROTO_ESP:
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
@@ -820,7 +836,11 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 	{
 		case PROTO_IKE:
 			this = (private_proposal_t*)proposal_create(protocol, 0);
-			proposal_add_supported_ike(this, TRUE);
+			if (!proposal_add_supported_ike(this, TRUE))
+			{
+				destroy(this);
+				return NULL;
+			}
 			return &this->public;
 		case PROTO_ESP:
 			/* we currently don't include any AEAD proposal for ESP, as we
