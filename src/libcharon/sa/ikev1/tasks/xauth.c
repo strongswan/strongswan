@@ -463,12 +463,6 @@ METHOD(task_t, process_i, status_t,
 			return NEED_MORE;
 		case SUCCESS:
 			id = this->xauth->get_identity(this->xauth);
-			if (this->user && !id->matches(id, this->user))
-			{
-				DBG1(DBG_IKE, "XAuth username '%Y' does not match to "
-					 "configured username '%Y'", id, this->user);
-				break;
-			}
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' successful", id);
 			if (add_auth_cfg(this, id, FALSE) && allowed(this))
 			{
