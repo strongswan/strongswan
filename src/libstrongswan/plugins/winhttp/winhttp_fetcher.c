@@ -72,6 +72,11 @@ struct private_winhttp_fetcher_t {
 	 * Timeout for operations, in ms
 	 */
 	u_long timeout;
+
+	/**
+	 * User pointer to store HTTP status code to
+	 */
+	u_int *result;
 };
 
 /**
@@ -115,10 +120,31 @@ static bool read_result(private_winhttp_fetcher_t *this, HINTERNET request,
 {
 	DWORD received;
 	char buf[1024];
+	u_int32_t code;
+	DWORD codelen = sizeof(code);
 
 	if (!WinHttpReceiveResponse(request, NULL))
 	{
 		DBG1(DBG_LIB, "reading HTTP response header failed: %u", GetLastError());
+		return FALSE;
+	}
+	if (!WinHttpQueryHeaders(request,
+				WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+				NULL, &code, &codelen, NULL))
+	{
+		DBG1(DBG_LIB, "reading HTTP status code failed: %u", GetLastError());
+		return FALSE;
+	}
+	if (this->result)
+	{
+		*this->result = code;
+	}
+	if (code < 200 || code >= 300)
+	{	/* non-successful HTTP status code */
+		if (!this->result)
+		{
+			DBG1(DBG_LIB, "HTTP request failed with status %u", code);
+		}
 		return FALSE;
 	}
 	if (this->cb == fetcher_default_callback)
@@ -207,6 +233,11 @@ METHOD(fetcher_t, fetch, status_t,
 		method = L"GET";
 	}
 
+	if (this->result)
+	{	/* zero-initialize for early failures */
+		*this->result = 0;
+	}
+
 	if (parse_uri(this, uri, host, countof(host), path, countof(path),
 				  &flags, &port))
 	{
@@ -290,6 +321,9 @@ METHOD(fetcher_t, set_option, bool,
 			break;
 		case FETCH_CALLBACK:
 			this->cb = va_arg(args, fetcher_callback_t);
+			break;
+		case FETCH_RESPONSE_CODE:
+			this->result = va_arg(args, u_int*);
 			break;
 		case FETCH_SOURCEIP:
 			/* not supported, FALL */
