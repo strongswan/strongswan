@@ -1215,6 +1215,8 @@ static void *cleanup_cancel_run(void *data)
 {
 	thread_cancelability(FALSE);
 
+	barrier_wait(barrier);
+
 	thread_cleanup_push(cleanup3, data);
 	thread_cleanup_push(cleanup2, data);
 	thread_cleanup_push(cleanup1, data);
@@ -1234,11 +1236,13 @@ START_TEST(test_cleanup_cancel)
 	uintptr_t values[THREADS];
 	int i;
 
+	barrier = barrier_create(THREADS+1);
 	for (i = 0; i < THREADS; i++)
 	{
 		values[i] = 1;
 		threads[i] = thread_create(cleanup_cancel_run, &values[i]);
 	}
+	barrier_wait(barrier);
 	for (i = 0; i < THREADS; i++)
 	{
 		threads[i]->cancel(threads[i]);
@@ -1248,6 +1252,7 @@ START_TEST(test_cleanup_cancel)
 		threads[i]->join(threads[i]);
 		ck_assert_int_eq(values[i], 4);
 	}
+	barrier_destroy(barrier);
 }
 END_TEST
 
