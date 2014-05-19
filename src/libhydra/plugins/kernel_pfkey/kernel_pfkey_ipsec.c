@@ -35,6 +35,7 @@
  * THE SOFTWARE.
  */
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -45,7 +46,6 @@
 #ifdef HAVE_NET_PFKEYV2_H
 #include <net/pfkeyv2.h>
 #else
-#include <stdint.h>
 #include <linux/pfkeyv2.h>
 #endif
 
