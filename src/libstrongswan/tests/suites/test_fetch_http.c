@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <time.h>
 
+#define HTTP_SUCCESS(status) ((status) >= 200 && (status) < 300)
+
 /**
  * HTTP test definition
  */
@@ -42,6 +44,8 @@ typedef struct {
 	void *res;
 	/* length of response data */
 	int res_len;
+	/* status code, defaults to 200 */
+	u_int code;
 } test_service_t;
 
 static char large[] = {
@@ -147,40 +151,50 @@ static bool servicing(void *data, stream_t *stream)
 		ck_assert(memeq(body, test->req, test->req_len));
 	}
 
+	if (!test->code)
+	{
+		test->code = 200;
+	}
+
 	/* response headers */
-	snprintf(buf, sizeof(buf), "HTTP/1.%u 200 OK\r\n", test->minor);
+	snprintf(buf, sizeof(buf), "HTTP/1.%u %u OK\r\n", test->minor, test->code);
 	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+
+	/* if the response code indicates an error the following write operations
+	 * might fail because the client already terminated the TCP connection */
+#define may_fail(test, op) ck_assert(op || !HTTP_SUCCESS(test->code))
+
 	t = time(NULL);
 	gmtime_r(&t, &tm);
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %T %z", &tm);
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Server: strongSwan unit test\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 
 	/* rest of response headers */
 	snprintf(buf, sizeof(buf), "Content-Type: text/plain\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Content-Length: %u\r\n", test->res_len);
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Connection: close\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "\r\n");
-	ck_assert(stream->write_all(stream, buf, strlen(buf)));
+	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 
 	/* response body */
-	ck_assert(stream->write_all(stream, test->res, test->res_len));
+	may_fail(test, stream->write_all(stream, test->res, test->res_len));
 	return FALSE;
 }
 
 static test_service_t gtests[] = {
 	{ "GET", 1, "127.0.0.1", 6543, "/a/test/?b=c", NULL,
-	  NULL, 0, "\x12\x34", 2 },
+	  NULL, 0, "\x12\x34", 2, 0 },
 	{ "GET", 0, "localhost", 6543, "/", NULL,
-	  NULL, 0, NULL, 0 },
+	  NULL, 0, NULL, 0, 0 },
 	{ "GET", 0, "127.0.0.1", 6543, "/largefile", NULL,
-	  NULL, 0, large, sizeof(large) },
+	  NULL, 0, large, sizeof(large), 0 },
 	{ "GET", 1, "[::1]", 6543, "/ipv6-url", NULL,
-	  NULL, 0, "\x00\r\n\r\x00testdatablabla", 20 },
+	  NULL, 0, "\x00\r\n\r\x00testdatablabla", 20, 0 },
 };
 
 START_TEST(test_get)
@@ -215,11 +229,11 @@ END_TEST
 
 static test_service_t ptests[] = {
 	{ "POST", 1, "127.0.0.1", 6543, "/a/test/?b=c", "application/binary",
-	  "\x23\x45", 2, "\x12\x34", 2 },
+	  "\x23\x45", 2, "\x12\x34", 2, 0 },
 	{ "POST", 0, "localhost", 6543, "/largefile", "application/x-large",
-	  large, sizeof(large), large, sizeof(large) },
+	  large, sizeof(large), large, sizeof(large), 0 },
 	{ "POST", 1, "[::1]", 6543, "/ipv6-url", "text/plain",
-	  "\x00\r\n\r\x00testdatablabla", 20, "\x00\r\n\r\x00testdatablabla", 20 },
+	  "\x00\r\n\r\x00testdatablabla", 20, "\x00\r\n\r\x00testdatablabla", 20, 0 },
 };
 
 START_TEST(test_post)
@@ -254,6 +268,42 @@ START_TEST(test_post)
 }
 END_TEST
 
+
+static test_service_t rtests[] = {
+	{ "GET", 1, "localhost", 6544, "/", NULL, NULL, 0, NULL, 0, 200 },
+	{ "GET", 1, "localhost", 6544, "/", NULL, NULL, 0, NULL, 0, 204 },
+	{ "GET", 1, "localhost", 6544, "/", NULL, NULL, 0, NULL, 0, 400 },
+	{ "GET", 1, "localhost", 6544, "/", NULL, NULL, 0, NULL, 0, 404 },
+	{ "GET", 1, "localhost", 6544, "/", NULL, NULL, 0, NULL, 0, 500 },
+};
+
+START_TEST(test_response_code)
+{
+	stream_service_t *service;
+	status_t status;
+	chunk_t data;
+	char uri[256];
+	u_int code;
+
+	lib->processor->set_threads(lib->processor, 8);
+
+	snprintf(uri, sizeof(uri), "tcp://%s:%u", rtests[_i].host, rtests[_i].port);
+	service = lib->streams->create_service(lib->streams, uri, 1);
+	ck_assert(service != NULL);
+	service->on_accept(service, servicing, &rtests[_i], JOB_PRIO_HIGH, 0);
+
+	snprintf(uri, sizeof(uri), "http://%s:%u%s",
+			 rtests[_i].host, rtests[_i].port, rtests[_i].path);
+	status = lib->fetcher->fetch(lib->fetcher, uri, &data,
+								 FETCH_RESPONSE_CODE, &code, FETCH_END);
+	ck_assert_int_eq(status, HTTP_SUCCESS(rtests[_i].code) ? SUCCESS : FAILED);
+	ck_assert_int_eq(code, rtests[_i].code);
+	free(data.ptr);
+
+	service->destroy(service);
+}
+END_TEST
+
 Suite *fetch_http_suite_create()
 {
 	Suite *s;
@@ -267,6 +317,10 @@ Suite *fetch_http_suite_create()
 
 	tc = tcase_create("POST");
 	tcase_add_loop_test(tc, test_post, 0, countof(ptests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("response code");
+	tcase_add_loop_test(tc, test_response_code, 0, countof(rtests));
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -82,6 +82,12 @@ enum fetcher_option_t {
 	FETCH_TIMEOUT,
 
 	/**
+	 * Sets a pointer to a variable that receives the request's response code.
+	 * Additional argument is a u_int*.
+	 */
+	FETCH_RESPONSE_CODE,
+
+	/**
 	 * Callback to invoke with each chunk of data.
 	 * Additional argument fetch_callback_t.
 	 * If this option is not given, the fetcher_default_callback is used,

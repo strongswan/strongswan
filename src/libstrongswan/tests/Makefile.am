@@ -52,7 +52,7 @@ tests_SOURCES = tests.h tests.c \
 tests_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \
-  -DPLUGINDIR=\""$(top_builddir)/src/libstrongswan/plugins\"" \
+  -DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
   -DPLUGINS=\""${s_plugins}\"" \
   @COVERAGE_CFLAGS@
 

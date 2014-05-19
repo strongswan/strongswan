@@ -63,6 +63,11 @@ struct private_soup_fetcher_t {
 	 * Fetcher callback function
 	 */
 	fetcher_callback_t cb;
+
+	/**
+	 * Response status
+	 */
+	u_int *result;
 };
 
 /**
@@ -119,12 +124,16 @@ METHOD(fetcher_t, fetch, status_t,
 
 	DBG2(DBG_LIB, "sending http request to '%s'...", uri);
 	soup_session_send_message(data.session, message);
+	if (this->result)
+	{
+		*this->result = message->status_code;
+	}
 	if (SOUP_STATUS_IS_SUCCESSFUL(message->status_code))
 	{
 		status = SUCCESS;
 	}
-	else
-	{
+	else if (!this->result)
+	{	/* only log an error if the code is not returned */
 		DBG1(DBG_LIB, "HTTP request failed: %s", message->reason_phrase);
 	}
 	g_object_unref(G_OBJECT(message));
@@ -156,6 +165,9 @@ METHOD(fetcher_t, set_option, bool,
 			break;
 		case FETCH_CALLBACK:
 			this->cb = va_arg(args, fetcher_callback_t);
+			break;
+		case FETCH_RESPONSE_CODE:
+			this->result = va_arg(args, u_int*);
 			break;
 		default:
 			supported = FALSE;

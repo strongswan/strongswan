@@ -41,6 +41,11 @@ static int failure_line;
 static backtrace_t *failure_backtrace;
 
 /**
+ * Flag to indicate if a worker thread failed
+ */
+static bool worker_failed;
+
+/**
  * Longjump restore point when failing
  */
 sigjmp_buf test_restore_point_env;
@@ -170,6 +175,17 @@ void test_fail_msg(const char *file, int line, char *fmt, ...)
 }
 
 /**
+ * See header.
+ */
+void test_fail_if_worker_failed()
+{
+	if (pthread_self() == main_thread && worker_failed)
+	{
+		test_failure();
+	}
+}
+
+/**
  * Signal handler catching critical and alarm signals
  */
 static void test_sighandler(int signal)
@@ -180,8 +196,9 @@ static void test_sighandler(int signal)
 	switch (signal)
 	{
 		case SIGUSR1:
-			/* a different thread failed, abort test */
-			return test_failure();
+			/* a different thread failed, abort test at the next opportunity */
+			worker_failed = TRUE;
+			return;
 		case SIGSEGV:
 			signame = "SIGSEGV";
 			break;
@@ -251,6 +268,8 @@ void test_setup_timeout(int s)
 	sigaction(SIGUSR1, &action, NULL);
 
 	alarm(s);
+
+	worker_failed = FALSE;
 }
 
 /**
