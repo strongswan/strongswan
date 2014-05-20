@@ -187,11 +187,17 @@ static bool call_fixture(test_case_t *tcase, bool up)
 		{
 			if (up)
 			{
-				fixture->setup();
+				if (fixture->setup)
+				{
+					fixture->setup();
+				}
 			}
 			else
 			{
-				fixture->teardown();
+				if (fixture->teardown)
+				{
+					fixture->teardown();
+				}
 			}
 		}
 		else
