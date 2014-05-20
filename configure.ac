@@ -1701,6 +1701,7 @@ AC_CONFIG_FILES([
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile
+	src/starter/tests/Makefile
 	src/_updown/Makefile
 	src/_updown_espmark/Makefile
 	src/_copyright/Makefile

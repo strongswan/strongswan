@@ -1,3 +1,5 @@
+SUBDIRS = . tests
+
 ipsec_PROGRAMS = starter
 starter_SOURCES = \
 starter.c files.h \
