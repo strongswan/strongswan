@@ -17,13 +17,6 @@
 
 #include "keywords.h"
 
-typedef struct kw_entry kw_entry_t;
-
-struct kw_entry {
-	char *name;
-	kw_token_t token;
-};
-
 typedef struct kw_list kw_list_t;
 
 struct kw_list {
