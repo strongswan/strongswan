@@ -44,15 +44,22 @@ do
     ipsec attest --add --product "$p" --$hash --file $file
   done
 
+  for file in `find /usr/lib -name *service`
+  do
+    ipsec attest --add --product "$p" --$hash --file $file
+  done
+
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/accountsservice
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/at-spi2-core
   ipsec attest --add --product "$p" --$hash --file /usr/lib/avahi/avahi-daemon-check-dns.sh
   ipsec attest --add --product "$p" --$hash --file /usr/lib/dbus-1.0/dbus-daemon-launch-helper
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/gvfs
+  ipsec attest --add --product "$p" --$hash --file /usr/lib/firefox/firefox
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/NetworkManager
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/pm-utils/power.d
   ipsec attest --add --product "$p" --$hash --file /usr/lib/policykit-1/polkitd
+  ipsec attest --add --product "$p" --$hash --file /usr/lib/thunderbird/thunderbird
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/ubuntu-release-upgrader
   ipsec attest --add --product "$p" --$hash --dir  /usr/lib/update-notifier
 
