@@ -36,7 +36,6 @@ typedef enum {
 	ARG_UBIN,
 	ARG_PCNT,
 	ARG_STR,
-	ARG_LST,
 	ARG_MISC
 } arg_t;
 
@@ -219,60 +218,6 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_END_DEPRECATED */                                   },
 };
 
-static void free_list(char **list)
-{
-	char **s;
-
-	for (s = list; *s; s++)
-	{
-		free(*s);
-	}
-	free(list);
-}
-
-char** new_list(char *value)
-{
-	char *val, *b, *e, *end, **ret;
-	int count;
-
-	val = strdupnull(value);
-	if (!val)
-	{
-		return NULL;
-	}
-	end = val + strlen(val);
-	for (b = val, count = 0; b < end;)
-	{
-		for (e = b; ((*e != ' ') && (*e != '\0')); e++);
-		*e = '\0';
-		if (e != b)
-		{
-			count++;
-		}
-		b = e + 1;
-	}
-	if (count == 0)
-	{
-		free(val);
-		return NULL;
-	}
-	ret = (char **)malloc((count+1) * sizeof(char *));
-
-	for (b = val, count = 0; b < end; )
-	{
-		for (e = b; (*e != '\0'); e++);
-		if (e != b)
-		{
-			ret[count++] = strdupnull(b);
-		}
-		b = e + 1;
-	}
-	ret[count] = NULL;
-	free(val);
-	return ret;
-}
-
-
 /*
  * assigns an argument value to a struct field
  */
@@ -309,7 +254,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 	*seen |= SEEN_KW(token, first);
 
 	/* is there a keyword list? */
-	if (list != NULL && token_info[token].type != ARG_LST)
+	if (list != NULL)
 	{
 		bool match = FALSE;
 
@@ -460,7 +405,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 				 kw->value);
 			return FALSE;
 		}
-	case ARG_STR:
+		case ARG_STR:
 		{
 			char **cp = (char **)p;
 
@@ -469,47 +414,10 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 			/* assign the new string */
 			*cp = strdupnull(kw->value);
+			break;
 		}
-		break;
-	case ARG_LST:
-		{
-			char ***listp = (char ***)p;
-
-			/* free any existing list */
-			if (*listp != NULL)
-			{
-				free_list(*listp);
-			}
-			/* create a new list and assign values */
-			*listp = new_list(kw->value);
-
-			/* is there a keyword list? */
-			if (list != NULL)
-			{
-				char ** lst;
-
-				for (lst = *listp; lst && *lst; lst++)
-				{
-					bool match = FALSE;
-
-					list = token_info[token].list;
-
-					while (*list != NULL && !match)
-					{
-						match = streq(*lst, *list++);
-					}
-					if (!match)
-					{
-						DBG1(DBG_APP, "# bad value: %s=%s",
-							 kw->entry->name, *lst);
-						return FALSE;
-					}
-				}
-			}
-		}
-		/* fall through */
-	default:
-		return TRUE;
+		default:
+			return TRUE;
 	}
 
 	*assigned = TRUE;
@@ -537,17 +445,6 @@ void free_args(kw_token_t first, kw_token_t last, char *base)
 				*cp = NULL;
 			}
 			break;
-		case ARG_LST:
-			{
-				char ***listp = (char ***)p;
-
-				if (*listp != NULL)
-				{
-					free_list(*listp);
-					*listp = NULL;
-				 }
-			}
-			break;
 		default:
 			break;
 		}
@@ -571,33 +468,6 @@ void clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 			*cp1 = strdupnull(*cp2);
 		}
 	}
-}
-
-static bool cmp_list(char **list1, char **list2)
-{
-	if ((list1 == NULL) && (list2 == NULL))
-	{
-		return TRUE;
-	}
-	if ((list1 == NULL) || (list2 == NULL))
-	{
-		return FALSE;
-	}
-
-	for ( ; *list1 && *list2; list1++, list2++)
-	{
-		if (strcmp(*list1,*list2) != 0)
-		{
-			return FALSE;
-		}
-	}
-
-	if ((*list1 != NULL) || (*list2 != NULL))
-	{
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
 /*
@@ -691,17 +561,6 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 					break;
 				}
 				if (*cp1 == NULL || *cp2 == NULL || strcmp(*cp1, *cp2) != 0)
-				{
-					return FALSE;
-				}
-			}
-			break;
-		case ARG_LST:
-			{
-				char ***listp1 = (char ***)p1;
-				char ***listp2 = (char ***)p2;
-
-				if (!cmp_list(*listp1, *listp2))
 				{
 					return FALSE;
 				}
