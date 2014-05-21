@@ -2,7 +2,3 @@ starter
 parser/lexer.c
 parser/parser.[ch]
 parser/parser.output
-lexer.c
-parser.h
-parser.c
-parser.output

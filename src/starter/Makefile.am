@@ -4,8 +4,7 @@ ipsec_PROGRAMS = starter
 starter_SOURCES = \
 starter.c files.h \
 parser/parser.y parser/lexer.l parser/conf_parser.c parser/conf_parser.h \
-parser.y lexer.l ipsec-parser.h args.c args.h \
-confread.c confread.h keywords.c keywords.h cmp.c cmp.h \
+args.c args.h confread.c confread.h keywords.c keywords.h cmp.c cmp.h \
 invokecharon.c invokecharon.h starterstroke.c starterstroke.h \
 netkey.c netkey.h klips.c klips.h
 
@@ -34,7 +33,7 @@ starter_LDADD = \
 
 EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c
-BUILT_SOURCES = keywords.c parser.h parser/parser.h
+BUILT_SOURCES = keywords.c parser/parser.h
 
 if USE_CHARON
   AM_CPPFLAGS += -DSTART_CHARON
