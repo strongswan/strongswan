@@ -207,25 +207,83 @@ CREATE TABLE identities (
   UNIQUE (type, value)
 );
 
-DROP TABLE IF EXISTS regids;
-CREATE TABLE regids (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL
+DROP TABLE IF EXISTS "swid_entities"
+CREATE TABLE "swid_entities" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "name" VARCHAR(255) NOT NULL,
+  "regid" VARCHAR(255) NOT NULL
 );
-DROP INDEX IF EXISTS regids_name;
-CREATE INDEX regids_name ON regids (
-  name
+DROP INDEX IF EXISTS "swid_entities_name";
+DROP INDEX IF EXISTS "swid_entities_regid";
+CREATE INDEX "swid_entities_name" ON "swid_entities" (
+  "name"
 );
-
-DROP TABLE IF EXISTS tags;
-CREATE TABLE tags (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  regid INTEGER NOT NULL REFERENCES regids(id),
-  unique_sw_id TEXT NOT NULL,
-  value TEXT
-);
-DROP INDEX IF EXISTS tags_name;
-CREATE INDEX tags_unique_sw_id ON tags (
-  unique_sw_id
+CREATE INDEX "swid_entities_regid" ON "swid_entities" (
+  "regid"
 );
 
+DROP TABLE IF EXISTS "swid_entityroles";
+CREATE TABLE "swid_entityroles" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "tag_id" INTEGER NOT NULL REFERENCES "swid_tags" ("id"),
+  "entity_id" INTEGER NOT NULL,
+  "role" SMALLINT UNSIGNED NOT NULL
+);
+DROP INDEX if EXISTS "swid_entityroles_tag_id";
+DROP INDEX IF EXISTS "swid_entityroles_tag_entity_id";
+CREATE INDEX "swid_entityroles_tag_id" ON "swid_entityroles" (
+  "tag_id"
+);
+CREATE INDEX "swid_entityroles_entity_id" ON "swid_entityroles" (
+  "entity_id"
+);
+
+DROP TABLE IF EXISTS "swid_tags";
+CREATE TABLE "swid_tags" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "package_name" VARCHAR(255) NOT NULL,
+  "version" VARCHAR(255) NOT NULL,
+  "unique_id" VARCHAR(255) NOT NULL,
+  "swid_xml" TEXT NOT NULL,
+  "software_id" VARCHAR(255) NOT NULL
+);
+DROP INDEX if EXISTS "swid_tags_unique_id";
+DROP INDEX IF EXISTS "swid_tags_package_name";
+CREATE INDEX "swid_tags_unique_id" ON "swid_tags" (
+  "unique_id"
+);
+CREATE INDEX "swid_tags_package_name" ON "swid_tags" (
+  "package_name"
+);
+
+DROP TABLE IF EXISTS "swid_tags_files";
+CREATE TABLE "swid_tags_files" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "tag_id" INTEGER NOT NULL,
+  "file_id" INTEGER NOT NULL REFERENCES "files" ("id"),
+  UNIQUE ("tag_id", "file_id")
+);
+DROP INDEX IF EXISTS "swid_tags_files_file_id";
+DROP INDEX IF EXISTS "swid_tags_files_tag_id";
+CREATE INDEX "swid_tags_files_file_id" ON "swid_tags_files" (
+  "file_id"
+);
+CREATE INDEX "swid_tags_files_tag_id" ON "swid_tags_files" (
+  "tag_id"
+);
+
+DROP TABLE IF EXISTS "swid_tags_sessions";
+CREATE TABLE "swid_tags_sessions" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "tag_id" INTEGER NOT NULL,
+  "session_id" INTEGER NOT NULL REFERENCES "sessions" ("id"),
+  UNIQUE ("tag_id", "session_id")
+);
+DROP INDEX IF EXISTS "swid_tags_sessions_tag_id";
+DROP INDEX IF EXISTS "swid_tags_sessions_session_id";
+CREATE INDEX "swid_tags_sessions_tag_id" ON "swid_tags_sessions" (
+  "tag_id"
+);
+CREATE INDEX "swid_tags_sessions_session_id" ON "swid_tags_sessions" (
+"session_id"
+);
