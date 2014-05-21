@@ -1,6 +1,6 @@
-/* automatic handling of confread struct arguments
+/*
  * Copyright (C) 2006 Andreas Steffen
- * Hochschule fuer Technik Rapperswil, Switzerland
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,15 +17,11 @@
 #define _ARGS_H_
 
 #include "keywords.h"
-#include "ipsec-parser.h"
 
-extern bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw
-	, char *base, bool *assigned);
-extern void free_args(kw_token_t first, kw_token_t last, char *base);
-extern void clone_args(kw_token_t first, kw_token_t last, char *base1
-	, char *base2);
-extern bool cmp_args(kw_token_t first, kw_token_t last, char *base1
-	, char *base2);
+bool assign_arg(kw_token_t token, kw_token_t first, char *key, char *value,
+				void *base, bool *assigned);
+void free_args(kw_token_t first, kw_token_t last, void *base);
+bool cmp_args(kw_token_t first, kw_token_t last, void *base1, void *base2);
 
 #endif /* _ARGS_H_ */
 
