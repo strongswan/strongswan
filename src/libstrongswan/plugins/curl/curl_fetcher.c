@@ -108,7 +108,7 @@ METHOD(fetcher_t, fetch, status_t,
 		goto out;
 	}
 	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, error);
-	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
+	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, FALSE);
 	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
 	if (this->timeout)
 	{
@@ -129,25 +129,16 @@ METHOD(fetcher_t, fetch, status_t,
 			status = NOT_SUPPORTED;
 			break;
 		case CURLE_OK:
+			curl_easy_getinfo(this->curl, CURLINFO_RESPONSE_CODE,
+							  &result);
 			if (this->result)
 			{
-				curl_easy_getinfo(this->curl, CURLINFO_RESPONSE_CODE,
-								  &result);
 				*this->result = result;
 			}
-			status = SUCCESS;
+			status = (result >= 200 && result < 300) ? SUCCESS : FAILED;
 			break;
 		default:
-			if (this->result)
-			{	/* don't log an error in this case */
-				curl_easy_getinfo(this->curl, CURLINFO_RESPONSE_CODE,
-								  &result);
-				*this->result = result;
-			}
-			else
-			{
-				DBG1(DBG_LIB, "libcurl http request failed: %s", error);
-			}
+			DBG1(DBG_LIB, "libcurl http request failed: %s", error);
 			status = FAILED;
 			break;
 	}
