@@ -57,17 +57,19 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 {
 	FILE *file;
 	char command[512], line[2048];
+	char entity_name = "strongSwan Project";
 	chunk_t tag_creator, unique_sw_id, tag_file_path = chunk_empty;
 	swid_tag_id_t *tag_id;
 	swid_tag_t *tag;
 	status_t status = SUCCESS;
 
 	/* Assemble the SWID generator command */
-	snprintf(command, sizeof(command), "%s %s%s%s%s\n", generator,
-			(this->full_tags)            ? "swid" : "software-id",
-			(this->full_tags && pretty)  ? " --pretty" : "",
-			(this->full_tags && !pretty) ? " --doc-separator $'\n\n'" : "",
-			(this->full_tags && full)    ? " --full" : "");
+	snprintf(command, sizeof(command), "%s %s %s%s%s%s\n", generator,
+			(this->full_tags)                ? "swid" : "software-id",
+			(this->full_tags && entity_name) ? entity_name : "",
+			(this->full_tags && pretty)      ? " --pretty" : "",
+			(this->full_tags && !pretty)     ? " --doc-separator $'\n\n'" : "",
+			(this->full_tags && full)        ? " --full" : "");
 
 	/* Open a pipe stream for reading the output of the dpkg-query commmand */
 	file = popen(command, "r");
