@@ -12,10 +12,12 @@ imcv_LTLIBRARIES = imv-swid.la
 imv_swid_la_LIBADD = \
 	$(top_builddir)/src/libimcv/libimcv.la \
 	$(top_builddir)/src/libpts/libpts.la \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	-ljson
 
 imv_swid_la_SOURCES = \
 	imv_swid.c imv_swid_state.h imv_swid_state.c \
-	imv_swid_agent.h imv_swid_agent.c
+	imv_swid_agent.h imv_swid_agent.c \
+	imv_swid_rest.h imv_swid_rest.c
 
 imv_swid_la_LDFLAGS = -module -avoid-version -no-undefined

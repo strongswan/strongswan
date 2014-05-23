@@ -25,7 +25,10 @@
 #define IMV_SWID_STATE_H_
 
 #include <imv/imv_state.h>
+#include <swid/swid_inventory.h>
 #include <library.h>
+
+#include <json/json.h>
 
 typedef struct imv_swid_state_t imv_swid_state_t;
 typedef enum imv_swid_handshake_state_t imv_swid_handshake_state_t;
@@ -65,30 +68,60 @@ struct imv_swid_state_t {
 	imv_swid_handshake_state_t (*get_handshake_state)(imv_swid_state_t *this);
 
 	/**
-	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
+	 * Set the SWID request ID
 	 *
-	 * @param count				Number of received SWID Tags or SWID Tag IDs
+	 * @param request_id		SWID request ID to be set
 	 */
-	void (*set_count)(imv_swid_state_t *this, int count);
+	void (*set_request_id)(imv_swid_state_t *this, uint32_t request_id);
+
+	/**
+	 * Get the SWID request ID
+	 *
+	 * @return					SWID request ID
+	 */
+	uint32_t (*get_request_id)(imv_swid_state_t *this);
+
+    /**
+     * Set or extend the SWID Tag ID inventory in the state
+     *
+     * @param inventory			SWID Tags ID inventory to be added
+     */
+    void (*set_swid_inventory)(imv_swid_state_t *this, swid_inventory_t *inventory);
+
+   /**
+     * Get the encoding of the complete SWID Tag ID inventory
+     *
+     * @return			       SWID Tags ID inventory as a JSON array
+     */
+    json_object* (*get_swid_inventory)(imv_swid_state_t *this);
 
 	/**
 	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
 	 *
-	 * @param count				Number of received SWID Tags or SWID Tag IDs
+	 * @param tag_id_count		Number of received SWID Tag IDs
+	 * @param tag_count			Number of received SWID Tags
 	 */
-	void (*get_count)(imv_swid_state_t *this, int *count);
+	void (*set_count)(imv_swid_state_t *this, int tag_id_count, int tag_count);
+
+	/**
+	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
+	 *
+	 * @param tag_id_count		Number of received SWID Tag IDs
+	 * @param tag_count			Number of received SWID Tags
+	 */
+	void (*get_count)(imv_swid_state_t *this, int *tag_id_count, int *tag_count);
 
 	/**
 	 * Increase/Decrease the ITA Angel count
 	 *
-	 * @param start			TRUE increases and FALSE decreases count by one
+	 * @param start				TRUE increases and FALSE decreases count by one
 	 */
 	void (*set_angel_count)(imv_swid_state_t *this, bool start);
 
 	/**
 	 * Get the ITA Angel count
 	 *
-	 * @return				ITA Angel count
+	 * @return					ITA Angel count
 	 */
 	int (*get_angel_count)(imv_swid_state_t *this);
 
