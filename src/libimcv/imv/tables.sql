@@ -249,11 +249,15 @@ CREATE TABLE "swid_tags" (
 );
 DROP INDEX if EXISTS "swid_tags_unique_id";
 DROP INDEX IF EXISTS "swid_tags_package_name";
+DROP INDEX IF EXISTS "swid_tags_software_id";
 CREATE INDEX "swid_tags_unique_id" ON "swid_tags" (
   "unique_id"
 );
 CREATE INDEX "swid_tags_package_name" ON "swid_tags" (
   "package_name"
+);
+CREATE INDEX "swid_tags_software_id" ON "swid_tags" (
+  "software_id"
 );
 
 DROP TABLE IF EXISTS "swid_tags_files";
