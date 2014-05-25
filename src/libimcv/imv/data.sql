@@ -240,6 +240,54 @@ INSERT INTO products (			/* 40 */
  'Debian 7.4 x86_64'
 );
 
+INSERT INTO products (			/* 41 */
+  name
+) VALUES (
+ 'Debian 7.5 i686'
+);
+
+INSERT INTO products (			/* 42 */
+  name
+) VALUES (
+ 'Debian 7.5 x86_64'
+);
+
+INSERT INTO products (			/* 43 */
+  name
+) VALUES (
+ 'Debian 7.0 armv6l'
+);
+
+INSERT INTO products (			/* 44 */
+  name
+) VALUES (
+ 'Debian 7.1 armv6l'
+);
+
+INSERT INTO products (			/* 45 */
+  name
+) VALUES (
+ 'Debian 7.2 armv6l'
+);
+
+INSERT INTO products (			/* 46 */
+  name
+) VALUES (
+ 'Debian 7.3 armv6l'
+);
+
+INSERT INTO products (			/* 47 */
+  name
+) VALUES (
+ 'Debian 7.4 armv6l'
+);
+
+INSERT INTO products (			/* 48 */
+  name
+) VALUES (
+ 'Debian 7.5 armv6l'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -365,12 +413,6 @@ INSERT INTO files (				/*  6 */
 );
 
 /* Algorithms */
-
-INSERT INTO algorithms (
-  id, name
-) VALUES (
-  65536, 'SHA1-IMA' 
-);
 
 INSERT INTO algorithms (
   id, name
@@ -658,6 +700,12 @@ INSERT INTO groups (            /* 13 */
   'TPM BIOS/IMA'
 );
 
+INSERT INTO groups (			/* 14 */
+  name, parent
+) VALUES (
+  'Debian armv6l', 2
+);
+
 /* Default Product Groups */
 
 INSERT INTO groups_product_defaults (
@@ -705,6 +753,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 41
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -742,6 +796,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 40
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 42
 );
 
 INSERT INTO groups_product_defaults (
@@ -892,6 +952,42 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 34
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 43
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 44
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 45
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 46
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 47
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  14, 48
 );
 
 /* Policies */
