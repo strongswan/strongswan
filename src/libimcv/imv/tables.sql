@@ -207,7 +207,7 @@ CREATE TABLE identities (
   UNIQUE (type, value)
 );
 
-DROP TABLE IF EXISTS "swid_entities"
+DROP TABLE IF EXISTS "swid_entities";
 CREATE TABLE "swid_entities" (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   "name" VARCHAR(255) NOT NULL,
