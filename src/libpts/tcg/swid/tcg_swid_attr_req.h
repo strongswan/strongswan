@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,8 @@
 
 #ifndef TCG_SWID_ATTR_REQ_H_
 #define TCG_SWID_ATTR_REQ_H_
+
+#define TCG_SWID_REQ_MIN_SIZE	12
 
 typedef struct tcg_swid_attr_req_t tcg_swid_attr_req_t;
 typedef enum tcg_swid_attr_req_flag_t tcg_swid_attr_req_flag_t;

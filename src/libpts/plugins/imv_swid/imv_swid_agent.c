@@ -467,6 +467,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		char result_str[BUF_LEN], *error_str = "", *command;
 		char *target, *separator;
 		int tag_id_count, tag_count, i;
+		size_t max_attr_size, attr_size, entry_size;
 		chunk_t tag_creator, unique_sw_id;
 		json_object *jrequest, *jresponse, *jvalue;
 		tcg_swid_attr_req_t *cast_attr;
@@ -535,9 +536,15 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					json_object_put(jresponse);
 					break;
 				}
+
+				/* Compute the maximum TCG SWID Request attribute size */
+				max_attr_size = state->get_max_msg_len(state) -
+								PA_TNC_HEADER_SIZE;
+
+				/* Create the [first] TCG SWID Request attribute */
+				attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_REQ_MIN_SIZE;			
 				attr = tcg_swid_attr_req_create(TCG_SWID_ATTR_REQ_FLAG_NONE,
 								swid_state->get_request_id(swid_state), 0);
-				cast_attr = (tcg_swid_attr_req_t*)attr;
 
 				tag_id_count = json_object_array_length(jresponse);
 				DBG1(DBG_IMV, "%d SWID tag targets", tag_id_count);
@@ -569,6 +576,19 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 												tag_creator.len - 1);
 					tag_id = swid_tag_id_create(tag_creator, unique_sw_id,
 												chunk_empty);
+					entry_size = 2 + tag_creator.len + 2 + unique_sw_id.len;
+
+					/* Have we reached the maximum attribute size? */
+					if (attr_size + entry_size > max_attr_size)
+					{
+						out_msg->add_attribute(out_msg, attr);
+						attr_size = PA_TNC_ATTR_HEADER_SIZE + 
+									TCG_SWID_REQ_MIN_SIZE;			
+						attr = tcg_swid_attr_req_create(
+									TCG_SWID_ATTR_REQ_FLAG_NONE,
+									swid_state->get_request_id(swid_state), 0);
+					}
+					cast_attr = (tcg_swid_attr_req_t*)attr;
 					cast_attr->add_target(cast_attr, tag_id);
 				}
 				json_object_put(jresponse);

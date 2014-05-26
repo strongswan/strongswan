@@ -44,7 +44,6 @@ typedef struct private_tcg_swid_attr_req_t private_tcg_swid_attr_req_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define SWID_REQ_SIZE					12
 #define SWID_REQ_RESERVED_MASK			0x03
 
 /**
@@ -135,7 +134,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		return;
 	}
 
-	writer = bio_writer_create(SWID_REQ_SIZE);
+	writer = bio_writer_create(TCG_SWID_REQ_MIN_SIZE);
 	writer->write_uint8 (writer, this->flags);
 	writer->write_uint24(writer, this->targets->get_count(this->targets));
 	writer->write_uint32(writer, this->request_id);
@@ -163,7 +162,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t tag_creator, unique_sw_id;
 	swid_tag_id_t *tag_id;
 
-	if (this->value.len < SWID_REQ_SIZE)
+	if (this->value.len < TCG_SWID_REQ_MIN_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for SWID Request");
 		*offset = 0;
@@ -181,7 +180,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset = 4;
 		return FAILED;
 	}
-	*offset = SWID_REQ_SIZE;
+	*offset = TCG_SWID_REQ_MIN_SIZE;
 
 	this->flags &= SWID_REQ_RESERVED_MASK;
 

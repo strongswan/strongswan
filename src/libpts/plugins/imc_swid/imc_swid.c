@@ -178,7 +178,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	eid_epoch = swid_state->get_eid_epoch(swid_state);
 
 	/**
-	 * Compute the maximum TCG Tag [ID] Inventory attribute size
+	 * Compute the maximum TCG SWID Tag [ID] Inventory attribute size
 	 * leaving space for an additional ITA Angel attribute
 	 */
 	max_attr_size = state->get_max_msg_len(state) -
