@@ -799,6 +799,11 @@ if test x$tss = xtrousers; then
 	AC_DEFINE([TSS_TROUSERS], [], [use TrouSerS library libtspi as TSS implementation])
 fi
 
+if test x$imv_swid = xtrue; then
+	AC_CHECK_LIB([json],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([JSON library libjson not found])],[])
+	AC_CHECK_HEADER([json/json.h],,[AC_MSG_ERROR([JSON header json/json.h not found!])])
+fi
+
 if test x$dumm = xtrue; then
 	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
 	AC_SUBST(gtk_CFLAGS)
