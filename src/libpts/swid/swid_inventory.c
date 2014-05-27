@@ -96,7 +96,7 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 			{
 				tag_encoding.len--;
 			}
-			DBG2(DBG_IMC, "  %.*s", tag_encoding.len, tag_encoding.ptr);
+			DBG3(DBG_IMC, "  %.*s", tag_encoding.len, tag_encoding.ptr);
 
 			tag = swid_tag_create(tag_encoding, tag_file_path);
 			this->list->insert_last(this->list, tag);
@@ -132,7 +132,7 @@ static status_t read_swid_tag_ids(private_swid_inventory_t *this, FILE *file)
 		{
 			len--;
 		}
-		DBG2(DBG_IMC, "  %.*s", len, line);
+		DBG3(DBG_IMC, "  %.*s", len, line);
 
 		separator = strchr(line, '_');
 		if (!separator)
