@@ -40,7 +40,7 @@
 /**
  * Maximum size of a PT-TLS message
  */
-#define PT_TLS_MAX_MESSAGE_LEN	 8 * TLS_MAX_FRAGMENT_LEN - PT_TLS_HEADER_LEN
+#define PT_TLS_MAX_MESSAGE_LEN	128 * TLS_MAX_FRAGMENT_LEN - PT_TLS_HEADER_LEN
 
 /**
  * Default PT-TLS port

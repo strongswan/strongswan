@@ -1040,14 +1040,14 @@ tnccs_t* tnccs_20_create(bool is_server,
 	{
 		case TNC_IFT_TLS_2_0:
 		case TNC_IFT_TLS_1_0:
-			default_max_batch_size = 8 * TLS_MAX_FRAGMENT_LEN - 16;
+			default_max_batch_size = 128 * TLS_MAX_FRAGMENT_LEN - 16;
 			break;
 		case TNC_IFT_EAP_2_0:
 		case TNC_IFT_EAP_1_1:
 		case TNC_IFT_EAP_1_0:
 		case TNC_IFT_UNKNOWN:
 		default:
-			default_max_batch_size = 4 * TLS_MAX_FRAGMENT_LEN - 14;
+			default_max_batch_size =   4 * TLS_MAX_FRAGMENT_LEN - 14;
 			break;
 	}
 
