@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010-2013 Martin Willi, revosec AG
- * Copyright (C) 2013 Andreas Steffen, HSR Hochschule für Technik Rapperswil
+ * Copyright (C) 2013-2014 Andreas Steffen
+ * HSR Hochschule für Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 #include <pt_tls.h>
 #include <pt_tls_client.h>
@@ -35,12 +37,13 @@
 /**
  * Print usage information
  */
-static void usage(FILE *out, char *cmd)
+static void usage(FILE *out)
 {
-	fprintf(out, "usage:\n");
-	fprintf(out, "  %s --connect <address> [--port <port>] [--cert <file>]+\n", cmd);
-	fprintf(out, "               [--client <client-id>] [--secret <password>]\n");
-	fprintf(out, "	             [--optionsfrom <filename>]\n");
+	fprintf(out,
+		"Usage: pt-tls  --connect <hostname|address> [--port <port>]\n"
+		"              [--cert <file>]+ [--key <file>]\n"
+		"              [--client <client-id>] [--secret <password>]\n"
+		"              [--optionsfrom <filename>] [--quiet] [--debug <level>]\n");
 }
 
 /**
@@ -121,20 +124,63 @@ static bool load_key(char *filename)
 }
 
 /**
- * Debug level
+ * Logging and debug level
  */
-static level_t pt_tls_level = 1;
+static bool log_to_stderr = TRUE;
+static bool log_to_syslog = TRUE;
+static level_t default_loglevel = 1;
 
 static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 {
-	if (level <= pt_tls_level)
-	{
-		va_list args;
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
 
-		va_start(args, fmt);
-		vfprintf(stderr, fmt, args);
-		fprintf(stderr, "\n");
-		va_end(args);
+	if (level <= default_loglevel)
+	{
+		if (log_to_stderr)
+		{
+			va_start(args, fmt);
+			vfprintf(stderr, fmt, args);
+			va_end(args);
+			fprintf(stderr, "\n");
+		}
+		if (log_to_syslog)
+		{
+			/* write in memory buffer first */
+			va_start(args, fmt);
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+			va_end(args);
+
+			/* do a syslog with every line */
+			while (current)
+			{
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(LOG_INFO, "%s\n", current);
+				current = next;
+			}
+		}
+	}
+}
+
+/**
+ * Initialize logging to stderr/syslog
+ */
+static void init_log(const char *program)
+{
+	dbg = dbg_pt_tls;
+
+	if (log_to_stderr)
+	{
+		setbuf(stderr, NULL);
+	}
+	if (log_to_syslog)
+	{
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
 	}
 }
 
@@ -169,7 +215,7 @@ static void init()
 	library_init(NULL, "pt-tls-client");
 	libtnccs_init();
 
-	dbg = dbg_pt_tls;
+	init_log("pt-tls-client");
 	options = options_create();
 
 	lib->plugins->add_static_features(lib->plugins, "pt-tls-client", features,
@@ -204,6 +250,7 @@ int main(int argc, char *argv[])
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
+			{"quiet",		no_argument,			NULL,		'q' },
 			{"debug",		required_argument,		NULL,		'd' },
 			{"optionsfrom",	required_argument,		NULL,		'+' },
 			{0,0,0,0 }
@@ -212,56 +259,59 @@ int main(int argc, char *argv[])
 		{
 			case EOF:
 				break;
-			case 'h':
-				usage(stdout, argv[0]);
+			case 'h':			/* --help */
+				usage(stdout);
 				return 0;
-			case 'x':
+			case 'x':			/* --cert <file> */
 				if (!load_certificate(optarg))
 				{
 					return 1;
 				}
 				continue;
-			case 'k':
+			case 'k':			/* --key <file> */
 				if (!load_key(optarg))
 				{
 					return 1;
 				}
 				continue;
-			case 'c':
+			case 'c':			/* --connect <hostname|address> */
 				if (address)
 				{
-					usage(stderr, argv[0]);
+					usage(stderr);
 					return 1;
 				}
 				address = optarg;
 				continue;
-			case 'i':
+			case 'i':			/* --client <client-id> */
 				identity = optarg;
 				continue;
-			case 's':
+			case 's':			/* --secret <password> */
 				secret = optarg;
 				continue;
-			case 'p':
+			case 'p':			/* --port <port> */
 				port = atoi(optarg);
 				continue;
-			case 'd':
-				pt_tls_level = atoi(optarg);
+			case 'q':       	/* --quiet */
+				log_to_stderr = FALSE;
 				continue;
-			case '+':	/* --optionsfrom <filename> */
+			case 'd':			/* --debug <level> */
+				default_loglevel = atoi(optarg);
+				continue;
+			case '+':			/* --optionsfrom <filename> */
 				if (!options->from(options, optarg, &argc, &argv, optind))
 				{
 					return 1;
 				}
 				continue;
 			default:
-				usage(stderr, argv[0]);
+				usage(stderr);
 				return 1;
 		}
 		break;
 	}
 	if (!address)
 	{
-		usage(stderr, argv[0]);
+		usage(stderr);
 		return 1;
 	}
 	if (secret)
