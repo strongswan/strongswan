@@ -29,6 +29,9 @@ typedef struct pb_tnc_batch_t pb_tnc_batch_t;
 
 #include <library.h>
 
+#define PB_TNC_BATCH_HEADER_SIZE	 8
+#define PB_TNC_MSG_HEADER_SIZE		12
+
 /**
   * PB-TNC Batch Types as defined in section 4.1 of RFC 5793
  */

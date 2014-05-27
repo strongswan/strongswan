@@ -117,7 +117,7 @@ METHOD(pb_tnc_msg_t, build, void,
 	}
 
 	/* build message header */
-	writer = bio_writer_create(64);
+	writer = bio_writer_create(PB_PA_MSG_HEADER_SIZE);
 	writer->write_uint8 (writer, this->excl ? PA_FLAG_EXCL : PA_FLAG_NONE);
 	writer->write_uint24(writer, this->subtype.vendor_id);
 	writer->write_uint32(writer, this->subtype.type);

@@ -16,6 +16,7 @@
 
 #include "pb_tnc_batch.h"
 #include "messages/ietf/pb_error_msg.h"
+#include "messages/ietf/pb_pa_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <tnc/tnccs/tnccs.h>
@@ -51,7 +52,6 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_BATCH_FLAG_NONE		0x00
 #define PB_TNC_BATCH_FLAG_D			(1<<7)
-#define PB_TNC_BATCH_HEADER_SIZE	8
 
 /**
  *   PB-TNC Message (see section 4.2 of RFC 5793)
@@ -71,7 +71,6 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_FLAG_NONE			0x00
 #define PB_TNC_FLAG_NOSKIP			(1<<7)
-#define PB_TNC_HEADER_SIZE			12
 
 #define PB_TNC_RESERVED_MSG_TYPE	0xffffffff
 
@@ -148,7 +147,7 @@ METHOD(pb_tnc_batch_t, add_msg, bool,
 
 	msg->build(msg);
 	msg_value = msg->get_encoding(msg);
-	msg_len = PB_TNC_HEADER_SIZE + msg_value.len;
+	msg_len = PB_TNC_MSG_HEADER_SIZE + msg_value.len;
 
 	if (this->batch_len + msg_len > this->max_batch_len)
 	{
@@ -201,7 +200,7 @@ METHOD(pb_tnc_batch_t, build, void,
 
 		/* build PB-TNC message */
 		msg_value = msg->get_encoding(msg);
-		msg_len = PB_TNC_HEADER_SIZE + msg_value.len;
+		msg_len = PB_TNC_MSG_HEADER_SIZE + msg_value.len;
 		msg_type = msg->get_type(msg);
 		switch (msg_type.vendor_id)
 		{
@@ -339,7 +338,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 	data = chunk_skip(this->encoding, this->offset);
 
-	if (data.len < PB_TNC_HEADER_SIZE)
+	if (data.len < PB_TNC_MSG_HEADER_SIZE)
 	{
 		DBG1(DBG_TNC, "%u bytes insufficient to parse PB-TNC message header",
 					  data.len);
@@ -403,7 +402,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	}
 	else
 	{
-		if (msg_len < PB_TNC_HEADER_SIZE)
+		if (msg_len < PB_TNC_MSG_HEADER_SIZE)
 		{
 			DBG1(DBG_TNC, "%u bytes too small for PB-TNC message length",
 						   msg_len);
@@ -475,7 +474,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	DBG2(DBG_TNC, "processing %N/%N message (%u bytes)", pen_names, vendor_id,
 		 msg_type_names, msg_type, msg_len);
 	data.len = msg_len;
-	msg_value = chunk_skip(data, PB_TNC_HEADER_SIZE);
+	msg_value = chunk_skip(data, PB_TNC_MSG_HEADER_SIZE);
 	msg_pen_type = pen_type_create(vendor_id, msg_type);
 	pb_tnc_msg = pb_tnc_msg_create_from_data(msg_pen_type, msg_value);
 

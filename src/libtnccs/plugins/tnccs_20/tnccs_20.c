@@ -1032,6 +1032,38 @@ tnccs_t* tnccs_20_create(bool is_server,
 						 tnc_ift_type_t transport, tnccs_cb_t cb)
 {
 	private_tnccs_20_t *this;
+	size_t max_batch_size, default_max_batch_size;
+	size_t max_message_size, default_max_message_size;
+
+	/* Determine the maximum PB-TNC batch size and PA-TNC message size */
+	switch (transport)
+	{
+		case TNC_IFT_TLS_2_0:
+		case TNC_IFT_TLS_1_0:
+			default_max_batch_size = 8 * TLS_MAX_FRAGMENT_LEN - 16;
+			break;
+		case TNC_IFT_EAP_2_0:
+		case TNC_IFT_EAP_1_1:
+		case TNC_IFT_EAP_1_0:
+		case TNC_IFT_UNKNOWN:
+		default:
+			default_max_batch_size = 4 * TLS_MAX_FRAGMENT_LEN - 14;
+			break;
+	}
+
+	max_batch_size = min(default_max_batch_size,
+						lib->settings->get_int(lib->settings,
+								"%s.plugins.tnccs-20.max_batch_size",
+								 default_max_batch_size, lib->ns));
+
+	default_max_message_size = max_batch_size - PB_TNC_BATCH_HEADER_SIZE
+											  - PB_TNC_MSG_HEADER_SIZE
+											  - PB_PA_MSG_HEADER_SIZE;
+
+	max_message_size = min(default_max_message_size,
+							lib->settings->get_int(lib->settings,
+								"%s.plugins.tnccs-20.max_message_size",
+								 default_max_message_size, lib->ns));
 
 	INIT(this,
 		.public = {
@@ -1062,10 +1094,8 @@ tnccs_t* tnccs_20_create(bool is_server,
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.messages = linked_list_create(),
-		.max_batch_len = lib->settings->get_int(lib->settings,
-						"%s.plugins.tnccs-20.max_batch_size", 65522, lib->ns),
-		.max_msg_len = lib->settings->get_int(lib->settings,
-						"%s.plugins.tnccs-20.max_message_size", 65490, lib->ns),
+		.max_batch_len = max_batch_size,
+		.max_msg_len = max_message_size,
 		.ref = 1,
 	);
 

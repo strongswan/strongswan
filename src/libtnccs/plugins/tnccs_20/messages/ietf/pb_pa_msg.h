@@ -27,6 +27,8 @@ typedef struct pb_pa_msg_t pb_pa_msg_t;
 
 #include <pen/pen.h>
 
+#define PB_PA_MSG_HEADER_SIZE	12
+
 /**
  * Class representing the PB-PA message type.
  */
