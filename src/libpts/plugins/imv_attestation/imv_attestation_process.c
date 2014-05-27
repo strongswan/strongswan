@@ -142,6 +142,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			{
 				return FALSE;
 			}
+			state->set_action_flags(state, IMV_ATTESTATION_DH_NONCE);
 			break;
 		}
 		case TCG_PTS_TPM_VERSION_INFO:
