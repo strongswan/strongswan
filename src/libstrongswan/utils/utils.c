@@ -24,13 +24,12 @@
 #include <limits.h>
 #include <dirent.h>
 #include <time.h>
-#include <pthread.h>
 
-#include "utils.h"
-
-#include "collections/enumerator.h"
-#include "utils/debug.h"
-#include "utils/chunk.h"
+#include <library.h>
+#include <utils/debug.h>
+#include <utils/chunk.h>
+#include <collections/enumerator.h>
+#include <threading/spinlock.h>
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
@@ -46,28 +45,6 @@ ENUM(status_names, SUCCESS, NEED_MORE,
 	"DESTROY_ME",
 	"NEED_MORE",
 );
-
-/**
- * See header
- */
-void utils_init()
-{
-#ifdef WIN32
-	windows_init();
-#endif /* WIN32 */
-	strerror_init();
-}
-
-/**
- * See header
- */
-void utils_deinit()
-{
-#ifdef WIN32
-	windows_deinit();
-#endif /* WIN32 */
-	strerror_deinit();
-}
 
 /**
  * Described in header.
@@ -547,9 +524,9 @@ void nop()
 #if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
 
 /**
- * We use a single mutex for all refcount variables.
+ * Spinlock for ref_get/put
  */
-static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
+static spinlock_t *ref_lock;
 
 /**
  * Increase refcount
@@ -558,9 +535,10 @@ refcount_t ref_get(refcount_t *ref)
 {
 	refcount_t current;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	current = ++(*ref);
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
+
 	return current;
 }
 
@@ -571,9 +549,9 @@ bool ref_put(refcount_t *ref)
 {
 	bool more_refs;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	more_refs = --(*ref) > 0;
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
 	return !more_refs;
 }
 
@@ -584,16 +562,17 @@ refcount_t ref_cur(refcount_t *ref)
 {
 	refcount_t current;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	current = *ref;
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
+
 	return current;
 }
 
 /**
- * Single mutex for all compare and swap operations.
+ * Spinlock for all compare and swap operations.
  */
-static pthread_mutex_t cas_mutex = PTHREAD_MUTEX_INITIALIZER;
+static spinlock_t *cas_lock;
 
 /**
  * Compare and swap if equal to old value
@@ -602,9 +581,9 @@ static pthread_mutex_t cas_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool cas_##name(type *ptr, type oldval, type newval) \
 { \
 	bool swapped; \
-	pthread_mutex_lock(&cas_mutex); \
+	cas_lock->lock(cas_lock); \
 	if ((swapped = (*ptr == oldval))) { *ptr = newval; } \
-	pthread_mutex_unlock(&cas_mutex); \
+	cas_lock->unlock(cas_lock); \
 	return swapped; \
 }
 
@@ -657,6 +636,40 @@ FILE *fmemopen(void *buf, size_t size, const char *mode)
 }
 
 #endif /* FMEMOPEN fallback*/
+
+/**
+ * See header
+ */
+void utils_init()
+{
+#ifdef WIN32
+	windows_init();
+#endif
+
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
+	ref_lock = spinlock_create();
+	cas_lock = spinlock_create();
+#endif
+
+	strerror_init();
+}
+
+/**
+ * See header
+ */
+void utils_deinit()
+{
+#ifdef WIN32
+	windows_deinit();
+#endif
+
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
+	ref_lock->destroy(ref_lock);
+	cas_lock->destroy(cas_lock);
+#endif
+
+	strerror_deinit();
+}
 
 /**
  * Described in header.
