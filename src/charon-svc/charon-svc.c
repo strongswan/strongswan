@@ -46,6 +46,12 @@ static HANDLE event;
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 
 /**
+ * Forward declaration
+ */
+static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
+							 LPVOID lpEventData, LPVOID lpContext);
+
+/**
  * Logging hook for library logs, using stderr output
  */
 static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
@@ -103,9 +109,90 @@ static void update_status(DWORD state)
 }
 
 /**
- * Initialize and run charon
+ * Control handler for console
  */
-static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv)
+static BOOL console_handler(DWORD dwCtrlType)
+{
+	switch (dwCtrlType)
+	{
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+		case CTRL_CLOSE_EVENT:
+			DBG1(DBG_DMN, "application is stopping, cleaning up");
+			if (status.dwCurrentState == SERVICE_RUNNING)
+			{
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
+								   dwCtrlType);
+			}
+			/* signal main thread to clean up */
+			SetEvent(event);
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
+ * Service handler function
+ */
+static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
+							 LPVOID lpEventData, LPVOID lpContext)
+{
+	switch (dwControl)
+	{
+		case SERVICE_CONTROL_STOP:
+		case SERVICE_CONTROL_SHUTDOWN:
+			DBG1(DBG_DMN, "service is stopping, cleaning up");
+			if (status.dwCurrentState == SERVICE_RUNNING)
+			{
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
+								   dwControl);
+			}
+			/* signal main thread to clean up */
+			SetEvent(event);
+			return NO_ERROR;
+		case SERVICE_CONTROL_INTERROGATE:
+			return NO_ERROR;
+		default:
+			return ERROR_CALL_NOT_IMPLEMENTED;
+	}
+}
+
+/**
+ * Wait for console program shutdown
+ */
+static int console_wait()
+{
+	update_status(SERVICE_RUNNING);
+
+	if (WaitForSingleObjectEx(event, INFINITE, TRUE) != WAIT_OBJECT_0)
+	{
+		return 2;
+	}
+	return 0;
+}
+
+/**
+ * Wait for service shutdown
+ */
+static int service_wait()
+{
+	/* service is initialized, we now accept control requests */
+	status.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+	update_status(SERVICE_RUNNING);
+	status.dwControlsAccepted = 0;
+
+	if (WaitForSingleObjectEx(event, INFINITE, TRUE) != WAIT_OBJECT_0)
+	{
+		return 2;
+	}
+	return 0;
+}
+
+/**
+ * Initialize and run charon using a wait function
+ */
+static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv, int (*wait)())
 {
 	level_t levels[DBG_MAX];
 	int i;
@@ -138,11 +225,7 @@ static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv)
 
 						charon->start(charon);
 
-						status.dwWin32ExitCode = 0;
-						update_status(SERVICE_RUNNING);
-
-						/* main thread goes to sleep */
-						WaitForSingleObjectEx(event, INFINITE, TRUE);
+						status.dwWin32ExitCode = wait();
 					}
 					update_status(SERVICE_STOP_PENDING);
 					libcharon_deinit();
@@ -160,30 +243,6 @@ static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv)
 }
 
 /**
- * Control handler for console
- */
-static BOOL console_handler(DWORD dwCtrlType)
-{
-	switch (dwCtrlType)
-	{
-		case CTRL_C_EVENT:
-		case CTRL_BREAK_EVENT:
-		case CTRL_CLOSE_EVENT:
-			DBG1(DBG_DMN, "application is stopping, cleaning up");
-			if (status.dwCurrentState == SERVICE_RUNNING)
-			{
-				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
-								   dwCtrlType);
-			}
-			/* signal main thread to clean up */
-			SetEvent(event);
-			return TRUE;
-		default:
-			return FALSE;
-	}
-}
-
-/**
  * Main routine when running from console
  */
 static void console_main(DWORD dwArgc, LPTSTR *lpszArgv)
@@ -192,34 +251,8 @@ static void console_main(DWORD dwArgc, LPTSTR *lpszArgv)
 
 	if (SetConsoleCtrlHandler(console_handler, TRUE))
 	{
-		init_and_run(dwArgc, lpszArgv);
+		init_and_run(dwArgc, lpszArgv, console_wait);
 		SetConsoleCtrlHandler(console_handler, FALSE);
-	}
-}
-
-/**
- * Service handler function
- */
-static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
-							 LPVOID lpEventData, LPVOID lpContext)
-{
-	switch (dwControl)
-	{
-		case SERVICE_CONTROL_STOP:
-		case SERVICE_CONTROL_SHUTDOWN:
-			DBG1(DBG_DMN, "service is stopping, cleaning up");
-			if (status.dwCurrentState == SERVICE_RUNNING)
-			{
-				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
-								   dwControl);
-			}
-			/* signal main thread to clean up */
-			SetEvent(event);
-			return NO_ERROR;
-		case SERVICE_CONTROL_INTERROGATE:
-			return NO_ERROR;
-		default:
-			return ERROR_CALL_NOT_IMPLEMENTED;
 	}
 }
 
@@ -256,7 +289,6 @@ static void service_main(DWORD dwArgc, LPTSTR *lpszArgv)
 {
 	memset(&status, 0, sizeof(status));
 	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-	status.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 	status.dwWin32ExitCode = 1;
 
 	handle = RegisterServiceCtrlHandlerEx(SERVICE_NAME, service_handler, NULL);
@@ -264,7 +296,7 @@ static void service_main(DWORD dwArgc, LPTSTR *lpszArgv)
 	{
 		if (switch_workingdir())
 		{
-			init_and_run(dwArgc, lpszArgv);
+			init_and_run(dwArgc, lpszArgv, service_wait);
 		}
 	}
 }
