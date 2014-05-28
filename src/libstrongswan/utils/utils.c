@@ -55,6 +55,7 @@ void utils_init()
 #ifdef WIN32
 	windows_init();
 #endif /* WIN32 */
+	strerror_init();
 }
 
 /**
@@ -65,6 +66,7 @@ void utils_deinit()
 #ifdef WIN32
 	windows_deinit();
 #endif /* WIN32 */
+	strerror_deinit();
 }
 
 /**

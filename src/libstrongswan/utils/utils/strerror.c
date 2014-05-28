@@ -15,7 +15,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+
+#include <library.h>
+#include <threading/thread_value.h>
+#include <threading/spinlock.h>
 
 #include "strerror.h"
 
@@ -25,22 +28,16 @@
 #define STRERROR_BUF_LEN 256
 
 /**
- * Key to store thread-specific error buffer
+ * Thread specific strerror buffer, as char*
  */
-static pthread_key_t strerror_buf_key;
+static thread_value_t *strerror_buf;
 
+#ifndef HAVE_STRERROR_R
 /**
- * Only initialize the key above once
+ * Lock to access strerror() safely
  */
-static pthread_once_t strerror_buf_key_once = PTHREAD_ONCE_INIT;
-
-/**
- * Create the key used for the thread-specific error buffer
- */
-static void create_strerror_buf_key()
-{
-	pthread_key_create(&strerror_buf_key, free);
-}
+static spinlock_t *strerror_lock;
+#endif /* HAVE_STRERROR_R */
 
 /**
  * Retrieve the error buffer assigned to the current thread (or create it)
@@ -48,50 +45,103 @@ static void create_strerror_buf_key()
 static inline char *get_strerror_buf()
 {
 	char *buf;
+	bool old = FALSE;
 
-	pthread_once(&strerror_buf_key_once, create_strerror_buf_key);
-	buf = pthread_getspecific(strerror_buf_key);
+	if (!strerror_buf)
+	{
+		return NULL;
+	}
+
+	buf = strerror_buf->get(strerror_buf);
 	if (!buf)
 	{
+		if (lib->leak_detective)
+		{
+			old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+		}
 		buf = malloc(STRERROR_BUF_LEN);
-		pthread_setspecific(strerror_buf_key, buf);
+		strerror_buf->set(strerror_buf, buf);
+		if (lib->leak_detective)
+		{
+			lib->leak_detective->set_state(lib->leak_detective, old);
+		}
 	}
 	return buf;
 }
 
-#ifdef HAVE_STRERROR_R
+/**
+ * Use real strerror() below
+ */
+#undef strerror
+
 /*
  * Described in header.
  */
 const char *strerror_safe(int errnum)
 {
-	char *buf = get_strerror_buf(), *msg;
+	char *buf, *msg;
 
-#ifdef STRERROR_R_CHAR_P
+	buf = get_strerror_buf();
+	if (!buf)
+	{
+		/* library not initialized? fallback */
+		return strerror(errnum);
+	}
+#ifdef HAVE_STRERROR_R
+# ifdef STRERROR_R_CHAR_P
 	/* char* version which may or may not return the original buffer */
 	msg = strerror_r(errnum, buf, STRERROR_BUF_LEN);
-#else
+# else
 	/* int version returns 0 on success */
 	msg = strerror_r(errnum, buf, STRERROR_BUF_LEN) ? "Unknown error" : buf;
-#endif
+# endif
+#else /* HAVE_STRERROR_R */
+	/* use a lock to ensure calling strerror(3) is thread-safe */
+	strerror_lock->lock(strerror_lock);
+	msg = strncpy(buf, strerror(errnum), STRERROR_BUF_LEN);
+	strerror_lock->unlock(strerror_lock);
+	buf[STRERROR_BUF_LEN - 1] = '\0';
+#endif /* HAVE_STRERROR_R */
 	return msg;
 }
-#else /* HAVE_STRERROR_R */
-/* we actually wan't to call strerror(3) below */
-#undef strerror
-/*
- * Described in header.
- */
-const char *strerror_safe(int errnum)
-{
-	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	char *buf = get_strerror_buf();
 
-	/* use a mutex to ensure calling strerror(3) is thread-safe */
-	pthread_mutex_lock(&mutex);
-	strncpy(buf, strerror(errnum), STRERROR_BUF_LEN);
-	pthread_mutex_unlock(&mutex);
-	buf[STRERROR_BUF_LEN - 1] = '\0';
-	return buf;
+/**
+ * free() with disabled leak detective
+ */
+static void free_no_ld(void *buf)
+{
+	bool old = FALSE;
+
+	if (lib->leak_detective)
+	{
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
+	free(buf);
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->set_state(lib->leak_detective, old);
+	}
 }
-#endif /* HAVE_STRERROR_R */
+
+/**
+ * See header
+ */
+void strerror_init()
+{
+	strerror_buf = thread_value_create(free_no_ld);
+#ifndef HAVE_STRERROR_R
+	strerror_lock = spinlock_create();
+#endif
+}
+
+/**
+ * See header
+ */
+void strerror_deinit()
+{
+	strerror_buf->destroy(strerror_buf);
+	strerror_buf = NULL;
+#ifndef HAVE_STRERROR_R
+	strerror_lock->destroy(strerror_lock);
+#endif
+}
