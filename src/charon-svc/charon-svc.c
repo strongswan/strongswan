@@ -170,7 +170,11 @@ static BOOL console_handler(DWORD dwCtrlType)
 		case CTRL_BREAK_EVENT:
 		case CTRL_CLOSE_EVENT:
 			DBG1(DBG_DMN, "application is stopping, cleaning up");
-			charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, dwCtrlType);
+			if (status.dwCurrentState == SERVICE_RUNNING)
+			{
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
+								   dwCtrlType);
+			}
 			/* signal main thread to clean up */
 			SetEvent(event);
 			return TRUE;
@@ -204,7 +208,11 @@ static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
 		case SERVICE_CONTROL_STOP:
 		case SERVICE_CONTROL_SHUTDOWN:
 			DBG1(DBG_DMN, "service is stopping, cleaning up");
-			charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, dwControl);
+			if (status.dwCurrentState == SERVICE_RUNNING)
+			{
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL,
+								   dwControl);
+			}
 			/* signal main thread to clean up */
 			SetEvent(event);
 			return NO_ERROR;
