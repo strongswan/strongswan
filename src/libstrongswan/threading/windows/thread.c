@@ -88,9 +88,14 @@ struct private_thread_t {
 	bool cancelability;
 
 	/**
-	 * Has the thread been cancelled
+	 * Has the thread been cancelled by thread->cancel()?
 	 */
 	bool canceled;
+
+	/**
+	 * Did we schedule an APC to docancel()?
+	 */
+	bool cancel_pending;
 
 	/**
 	 * Active condition variable thread is waiting in, if any
@@ -357,10 +362,14 @@ METHOD(thread_t, cancel, void,
 	if (this->cancelability)
 	{
 		threads_lock->lock(threads_lock);
-		QueueUserAPC((void*)docancel, this->handle, (uintptr_t)this);
-		if (this->condvar)
+		if (!this->cancel_pending)
 		{
-			WakeAllConditionVariable(this->condvar);
+			this->cancel_pending = TRUE;
+			QueueUserAPC((void*)docancel, this->handle, (uintptr_t)this);
+			if (this->condvar)
+			{
+				WakeAllConditionVariable(this->condvar);
+			}
 		}
 		threads_lock->unlock(threads_lock);
 	}
