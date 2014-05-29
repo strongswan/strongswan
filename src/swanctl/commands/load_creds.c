@@ -144,13 +144,15 @@ CALLBACK(password_cb, shared_key_t*,
 	identification_t *me, identification_t *other,
 	id_match_t *match_me, id_match_t *match_other)
 {
-	char *pwd;
+	char *pwd = NULL;
 
 	if (type != SHARED_PRIVATE_KEY_PASS)
 	{
 		return NULL;
 	}
+#ifdef HAVE_GETPASS
 	pwd = getpass(prompt);
+#endif
 	if (!pwd || strlen(pwd) == 0)
 	{
 		return NULL;

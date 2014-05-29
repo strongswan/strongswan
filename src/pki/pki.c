@@ -165,7 +165,7 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 						identification_t *me, identification_t *other,
 						id_match_t *match_me, id_match_t *match_other)
 {
-	char buf[64], *label, *secret;
+	char buf[64], *label, *secret = NULL;
 
 	switch (type)
 	{
@@ -179,7 +179,9 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 			return NULL;
 	}
 	snprintf(buf, sizeof(buf), "%s: ", label);
+#ifdef HAVE_GETPASS
 	secret = getpass(buf);
+#endif
 	if (secret)
 	{
 		if (match_me)
