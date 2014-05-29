@@ -40,7 +40,7 @@ pa_tnc_attr_t* swid_error_create(swid_error_code_t code, u_int32_t request_id,
 	writer->write_uint32(writer, request_id);
 	if (code == TCG_SWID_RESPONSE_TOO_LARGE)
 	{
-		writer->write_uint16(writer, max_attr_size);
+		writer->write_uint32(writer, max_attr_size);
 	}
 	if (description)
 	{
