@@ -138,7 +138,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 							   uint32_t request_id, bool full_tags,
 							   swid_inventory_t *targets)
 {
-	pa_tnc_attr_t *attr, *attr_angel;
+	pa_tnc_attr_t *attr, *attr_angel, *attr_error;
 	imc_swid_state_t *swid_state;
 	swid_inventory_t *swid_inventory;
 	char *swid_directory, *swid_generator;
@@ -165,9 +165,9 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 								 targets, swid_pretty, swid_full))
 	{
 		swid_inventory->destroy(swid_inventory);
-		attr = swid_error_create(TCG_SWID_ERROR, request_id,
+		attr_error = swid_error_create(TCG_SWID_ERROR, request_id,
 								 0, "error in SWID tag collection");
-		msg->add_attribute(msg, attr);
+		msg->add_attribute(msg, attr_error);
 		return FALSE;
 	}
 	DBG1(DBG_IMC, "collected %d SWID tag%s%s",
@@ -200,6 +200,17 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 			tag_file_path = tag->get_tag_file_path(tag);
 			encoding = tag->get_encoding(tag);
 			entry_size = 2 + tag_file_path.len + 4 + encoding.len;
+
+			/* Check for oversize tags that cannot be transported */
+			if (PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE +
+				entry_size > max_attr_size)
+			{
+				attr_error = swid_error_create(TCG_SWID_RESPONSE_TOO_LARGE,
+											   request_id, max_attr_size,
+											   "oversize SWID tag omitted");
+				msg->add_attribute(msg, attr_error);
+				continue;
+			}
 
 			if (attr_size + entry_size > max_attr_size)
 			{
