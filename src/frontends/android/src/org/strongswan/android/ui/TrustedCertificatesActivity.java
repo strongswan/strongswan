@@ -15,11 +15,14 @@
 
 package org.strongswan.android.ui;
 
+import java.security.KeyStore;
+
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
+import org.strongswan.android.ui.CertificateDeleteConfirmationDialog.OnCertificateDeleteListener;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
@@ -31,9 +34,10 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
+public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener, OnCertificateDeleteListener
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
+	private static final String DIALOG_TAG = "Dialog";
 	private boolean mSelect;
 
 	@Override
@@ -112,6 +116,35 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 			intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
 			setResult(Activity.RESULT_OK, intent);
 			finish();
+		}
+		else
+		{
+			TrustedCertificatesTabListener listener;
+			listener = (TrustedCertificatesTabListener)getActionBar().getSelectedTab().getTag();
+			if (listener.mTag == "local")
+			{
+				Bundle args = new Bundle();
+				args.putString(CertificateDeleteConfirmationDialog.ALIAS, selected.getAlias());
+				CertificateDeleteConfirmationDialog dialog = new CertificateDeleteConfirmationDialog();
+				dialog.setArguments(args);
+				dialog.show(this.getFragmentManager(), DIALOG_TAG);
+			}
+		}
+	}
+
+	@Override
+	public void onDelete(String alias)
+	{
+		try
+		{
+			KeyStore store = KeyStore.getInstance("LocalCertificateStore");
+			store.load(null, null);
+			store.deleteEntry(alias);
+			reloadCertificates();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
 		}
 	}
 

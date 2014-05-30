@@ -79,6 +79,8 @@
     <string name="system_tab">System</string>
     <string name="user_tab">Benutzer</string>
     <string name="local_tab">Importiert</string>
+    <string name="delete_certificate_question">Zertifikat löschen?</string>
+    <string name="delete_certificate">Das Zertifikat wird permanent entfernt!</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>
