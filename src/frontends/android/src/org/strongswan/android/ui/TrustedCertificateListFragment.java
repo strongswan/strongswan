@@ -123,6 +123,18 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		return true;
 	}
 
+	/**
+	 * Reset the loader of this list fragment
+	 */
+	public void reset()
+	{
+		if (isResumed())
+		{
+			setListShown(false);
+		}
+		getLoaderManager().restartLoader(0, null, this);
+	}
+
 	@Override
 	public Loader<List<TrustedCertificateEntry>> onCreateLoader(int id, Bundle args)
 	{	/* we don't need the id as we have only one loader */

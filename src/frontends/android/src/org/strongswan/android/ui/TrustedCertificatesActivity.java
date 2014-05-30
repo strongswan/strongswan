@@ -27,11 +27,9 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 
 public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
 {
@@ -42,25 +40,31 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.trusted_certificates_activity);
 
 		ActionBar actionBar = getActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
+		TrustedCertificatesTabListener listener;
+		listener = new TrustedCertificatesTabListener(this, "system", TrustedCertificateSource.SYSTEM);
 		actionBar.addTab(actionBar
 			.newTab()
 			.setText(R.string.system_tab)
-			.setTabListener(new TrustedCertificatesTabListener(this, "system", TrustedCertificateSource.SYSTEM)));
+			.setTag(listener)
+			.setTabListener(listener));
+		listener = new TrustedCertificatesTabListener(this, "user", TrustedCertificateSource.USER);
 		actionBar.addTab(actionBar
 			.newTab()
 			.setText(R.string.user_tab)
-			.setTabListener(new TrustedCertificatesTabListener(this, "user", TrustedCertificateSource.USER)));
+			.setTag(listener)
+			.setTabListener(listener));
+		listener = new TrustedCertificatesTabListener(this, "local", TrustedCertificateSource.LOCAL);
 		actionBar.addTab(actionBar
 			.newTab()
 			.setText(R.string.local_tab)
-			.setTabListener(new TrustedCertificatesTabListener(this, "local", TrustedCertificateSource.LOCAL)));
+			.setTag(listener)
+			.setTabListener(listener));
 
 		if (savedInstanceState != null)
 		{
@@ -92,7 +96,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 				finish();
 				return true;
 			case R.id.menu_reload_certs:
-				new ReloadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+				reloadCertificates();
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -108,6 +112,17 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 			intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
 			setResult(Activity.RESULT_OK, intent);
 			finish();
+		}
+	}
+
+	private void reloadCertificates()
+	{
+		TrustedCertificateManager.getInstance().reset();
+		for (int i = 0; i < getActionBar().getTabCount(); i++)
+		{
+			Tab tab = getActionBar().getTabAt(i);
+			TrustedCertificatesTabListener listener = (TrustedCertificatesTabListener)tab.getTag();
+			listener.reset();
 		}
 	}
 
@@ -164,27 +179,13 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		{
 			/* nothing to be done */
 		}
-	}
 
-	/**
-	 * Class that reloads the cached CA certificates.
-	 */
-	private class ReloadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
-	{
-		@Override
-		protected void onPreExecute()
+		public void reset()
 		{
-			setProgressBarIndeterminateVisibility(true);
-		}
-		@Override
-		protected TrustedCertificateManager doInBackground(Void... params)
-		{
-			return TrustedCertificateManager.getInstance().reset().load();
-		}
-		@Override
-		protected void onPostExecute(TrustedCertificateManager result)
-		{
-			setProgressBarIndeterminateVisibility(false);
+			if (mFragment != null)
+			{
+				((TrustedCertificateListFragment)mFragment).reset();
+			}
 		}
 	}
 }
