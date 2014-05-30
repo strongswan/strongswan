@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -21,6 +21,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -33,12 +34,28 @@ public class TrustedCertificateManager
 	private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
 	private Hashtable<String, X509Certificate> mCACerts = new Hashtable<String, X509Certificate>();
 	private boolean mLoaded;
+	private final ArrayList<KeyStore> mKeyStores = new ArrayList<KeyStore>();
 
 	/**
 	 * Private constructor to prevent instantiation from other classes.
 	 */
 	private TrustedCertificateManager()
 	{
+		for (String name : new String[] { "LocalCertificateStore", "AndroidCAStore" })
+		{
+			KeyStore store;
+			try
+			{
+				store = KeyStore.getInstance(name);
+				store.load(null,null);
+				mKeyStores.add(store);
+			}
+			catch (Exception e)
+			{
+				Log.e(TAG, "Unable to load KeyStore: " + name);
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
@@ -96,29 +113,23 @@ public class TrustedCertificateManager
 	private void loadCertificates()
 	{
 		Log.d(TAG, "Load cached CA certificates");
-		try
+		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
+		for (KeyStore store : this.mKeyStores)
 		{
-			KeyStore store = KeyStore.getInstance("AndroidCAStore");
-			store.load(null, null);
-			this.mCACerts = fetchCertificates(store);
-			this.mLoaded = true;
-			Log.d(TAG, "Cached CA certificates loaded");
+			fetchCertificates(certs, store);
 		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-			this.mCACerts = new Hashtable<String, X509Certificate>();
-		}
+		this.mCACerts = certs;
+		this.mLoaded = true;
+		Log.d(TAG, "Cached CA certificates loaded");
 	}
 
 	/**
 	 * Load all X.509 certificates from the given KeyStore.
+	 * @param certs Hashtable to store certificates in
 	 * @param store KeyStore to load certificates from
-	 * @return Hashtable mapping aliases to certificates
 	 */
-	private Hashtable<String, X509Certificate> fetchCertificates(KeyStore store)
+	private void fetchCertificates(Hashtable<String, X509Certificate> certs, KeyStore store)
 	{
-		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
 		try
 		{
 			Enumeration<String> aliases = store.aliases();
@@ -137,7 +148,6 @@ public class TrustedCertificateManager
 		{
 			ex.printStackTrace();
 		}
-		return certs;
 	}
 
 	/**
@@ -157,27 +167,28 @@ public class TrustedCertificateManager
 		else
 		{	/* if we cannot get the lock load it directly from the KeyStore,
 			 * should be fast for a single certificate */
-			try
+			for (KeyStore store : this.mKeyStores)
 			{
-				KeyStore store = KeyStore.getInstance("AndroidCAStore");
-				store.load(null, null);
-				Certificate cert = store.getCertificate(alias);
-				if (cert != null && cert instanceof X509Certificate)
+				try
 				{
-					certificate = (X509Certificate)cert;
+					Certificate cert = store.getCertificate(alias);
+					if (cert != null && cert instanceof X509Certificate)
+					{
+						certificate = (X509Certificate)cert;
+						break;
+					}
+				}
+				catch (KeyStoreException e)
+				{
+					e.printStackTrace();
 				}
 			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
-
 		}
 		return certificate;
 	}
 
 	/**
-	 * Get all CA certificates (from the system and user keystore).
+	 * Get all CA certificates (from all keystores).
 	 * @return Hashtable mapping aliases to certificates
 	 */
 	@SuppressWarnings("unchecked")
@@ -196,17 +207,7 @@ public class TrustedCertificateManager
 	 */
 	public Hashtable<String, X509Certificate> getSystemCACertificates()
 	{
-		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
-		this.mLock.readLock().lock();
-		for (String alias : this.mCACerts.keySet())
-		{
-			if (alias.startsWith("system:"))
-			{
-				certs.put(alias, this.mCACerts.get(alias));
-			}
-		}
-		this.mLock.readLock().unlock();
-		return certs;
+		return getCertificates("system:");
 	}
 
 	/**
@@ -215,11 +216,30 @@ public class TrustedCertificateManager
 	 */
 	public Hashtable<String, X509Certificate> getUserCACertificates()
 	{
+		return getCertificates("user:");
+	}
+
+	/**
+	 * Get only the local CA certificates installed by the user.
+	 * @return Hashtable mapping aliases to certificates
+	 */
+	public Hashtable<String, X509Certificate> getLocalCACertificates()
+	{
+		return getCertificates("local:");
+	}
+
+	/**
+	 * Get all certificates whose aliases start with the given prefix.
+	 * @param prefix prefix to filter certificates
+	 * @return Hashtable mapping aliases to certificates
+	 */
+	private Hashtable<String, X509Certificate> getCertificates(String prefix)
+	{
 		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
 		this.mLock.readLock().lock();
 		for (String alias : this.mCACerts.keySet())
 		{
-			if (alias.startsWith("user:"))
+			if (alias.startsWith(prefix))
 			{
 				certs.put(alias, this.mCACerts.get(alias));
 			}
