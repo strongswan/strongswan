@@ -299,12 +299,12 @@ METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
 
 	method_id = (*env)->GetMethodID(env,
 						android_charonvpnservice_class,
-						"getTrustedCertificates", "(Ljava/lang/String;)[[B");
+						"getTrustedCertificates", "()[[B");
 	if (!method_id)
 	{
 		goto failed;
 	}
-	jcerts = (*env)->CallObjectMethod(env, this->vpn_service, method_id, NULL);
+	jcerts = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
 	if (!jcerts || androidjni_exception_occurred(env))
 	{
 		goto failed;
