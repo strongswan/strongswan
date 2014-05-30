@@ -15,12 +15,20 @@
 
 package org.strongswan.android.logic;
 
+import java.security.Security;
+
+import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
+
 import android.app.Application;
 import android.content.Context;
 
 public class StrongSwanApplication extends Application
 {
 	private static Context mContext;
+
+	static {
+		Security.addProvider(new LocalCertificateKeyStoreProvider());
+	}
 
 	@Override
 	public void onCreate()
