@@ -17,6 +17,7 @@ package org.strongswan.android.ui;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
 
@@ -26,8 +27,11 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
+import android.view.Window;
 
 public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
 {
@@ -38,6 +42,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.trusted_certificates_activity);
 
 		ActionBar actionBar = getActionBar();
@@ -72,12 +77,22 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	}
 
 	@Override
+	public boolean onCreateOptionsMenu(Menu menu)
+	{
+		getMenuInflater().inflate(R.menu.certificates, menu);
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
 		switch (item.getItemId())
 		{
 			case android.R.id.home:
 				finish();
+				return true;
+			case R.id.menu_reload_certs:
+				new ReloadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -148,6 +163,28 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		public void onTabReselected(Tab tab, FragmentTransaction ft)
 		{
 			/* nothing to be done */
+		}
+	}
+
+	/**
+	 * Class that reloads the cached CA certificates.
+	 */
+	private class ReloadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
+	{
+		@Override
+		protected void onPreExecute()
+		{
+			setProgressBarIndeterminateVisibility(true);
+		}
+		@Override
+		protected TrustedCertificateManager doInBackground(Void... params)
+		{
+			return TrustedCertificateManager.getInstance().reload();
+		}
+		@Override
+		protected void onPostExecute(TrustedCertificateManager result)
+		{
+			setProgressBarIndeterminateVisibility(false);
 		}
 	}
 }

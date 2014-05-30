@@ -17,7 +17,6 @@
     <!-- Application -->
     <string name="app_name">Клиент strongSwan VPN</string>
     <string name="main_activity_name">strongSwan</string>
-    <string name="reload_trusted_certs">Обновить сертификат CA</string>
     <string name="show_log">Журнал</string>
     <string name="search">Поиск</string>
     <string name="vpn_not_supported_title">VPN не поддерживается</string>
@@ -73,6 +72,7 @@
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">Сертификаты CA</string>
     <string name="no_certificates">Нет доступных сертификатов</string>
+    <string name="reload_trusted_certs">Обновить сертификат CA</string>
     <string name="system_tab">Система</string>
     <string name="user_tab">Пользователь</string>
     <string name="local_tab">Imported</string>
