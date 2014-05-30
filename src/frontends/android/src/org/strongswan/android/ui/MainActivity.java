@@ -101,7 +101,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		bar.setDisplayShowTitleEnabled(false);
 
 		/* load CA certificates in a background task */
-		new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, false);
+		new LoadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 	}
 
 	@Override
@@ -140,8 +140,9 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	{
 		switch (item.getItemId())
 		{
-			case R.id.menu_reload_certs:
-				new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, true);
+			case R.id.menu_manage_certs:
+				Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
+				startActivity(certIntent);
 				return true;
 			case R.id.menu_show_log:
 				Intent logIntent = new Intent(this, LogActivity.class);
@@ -280,9 +281,9 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	}
 
 	/**
-	 * Class that loads or reloads the cached CA certificates.
+	 * Class that loads the cached CA certificates.
 	 */
-	private class CertificateLoadTask extends AsyncTask<Boolean, Void, TrustedCertificateManager>
+	private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
 	{
 		@Override
 		protected void onPreExecute()
@@ -290,12 +291,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 			setProgressBarIndeterminateVisibility(true);
 		}
 		@Override
-		protected TrustedCertificateManager doInBackground(Boolean... params)
+		protected TrustedCertificateManager doInBackground(Void... params)
 		{
-			if (params.length > 0 && params[0])
-			{	/* force a reload of the certificates */
-				return TrustedCertificateManager.getInstance().reload();
-			}
 			return TrustedCertificateManager.getInstance().load();
 		}
 		@Override
