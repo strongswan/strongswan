@@ -31,6 +31,8 @@ import android.view.MenuItem;
 
 public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
 {
+	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
+
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{

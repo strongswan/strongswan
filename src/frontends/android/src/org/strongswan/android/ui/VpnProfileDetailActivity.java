@@ -147,6 +147,7 @@ public class VpnProfileDetailActivity extends Activity
 			public void onClick(View v)
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, TrustedCertificatesActivity.class);
+				intent.setAction(TrustedCertificatesActivity.SELECT_CERTIFICATE);
 				startActivityForResult(intent, SELECT_TRUSTED_CERTIFICATE);
 			}
 		});
