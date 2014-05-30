@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import android.view.MenuItem;
 public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
+	private boolean mSelect;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -60,6 +61,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		{
 			actionBar.setSelectedNavigationItem(savedInstanceState.getInt("tab", 0));
 		}
+		mSelect = SELECT_CERTIFICATE.equals(getIntent().getAction());
 	}
 
 	@Override
@@ -84,11 +86,14 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	@Override
 	public void onTrustedCertificateSelected(TrustedCertificateEntry selected)
 	{
-		/* the user selected a certificate, return to calling activity */
-		Intent intent = new Intent();
-		intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
-		setResult(Activity.RESULT_OK, intent);
-		finish();
+		if (mSelect)
+		{
+			/* the user selected a certificate, return to calling activity */
+			Intent intent = new Intent();
+			intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
+			setResult(Activity.RESULT_OK, intent);
+			finish();
+		}
 	}
 
 	public static class TrustedCertificatesTabListener implements ActionBar.TabListener
