@@ -20,11 +20,11 @@ package org.strongswan.android.ui;
 import java.security.cert.X509Certificate;
 
 import org.strongswan.android.R;
-import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.security.TrustedCertificateEntry;
 
 import android.app.Activity;
 import android.app.AlertDialog;

@@ -16,8 +16,8 @@
 package org.strongswan.android.ui;
 
 import org.strongswan.android.R;
-import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.security.TrustedCertificateEntry;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;

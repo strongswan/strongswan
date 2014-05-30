@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import org.strongswan.android.R;
-import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
 
 import android.app.Activity;
