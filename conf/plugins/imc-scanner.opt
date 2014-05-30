@@ -1,2 +1,2 @@
-charon.plugins.imc-scanner.push_info = yes
+libimcv.plugins.imc-scanner.push_info = yes
 	Send open listening ports without being prompted.

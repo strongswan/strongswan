@@ -1,32 +1,32 @@
-charon.plugins.imv-attestation.cadir =
+libimcv.plugins.imv-attestation.cadir =
 	Path to directory with AIK cacerts.
 
-charon.plugins.imv-attestation.mandatory_dh_groups = yes
+libimcv.plugins.imv-attestation.mandatory_dh_groups = yes
 	Enforce mandatory Diffie-Hellman groups.
 
-charon.plugins.imv-attestation.dh_group = ecp256
+libimcv.plugins.imv-attestation.dh_group = ecp256
 	Preferred Diffie-Hellman group.
 
-charon.plugins.imv-attestation.hash_algorithm = sha256
+libimcv.plugins.imv-attestation.hash_algorithm = sha256
 	Preferred measurement hash algorithm.
 
-charon.plugins.imv-attestation.min_nonce_len = 0
+libimcv.plugins.imv-attestation.min_nonce_len = 0
 	DH minimum nonce length.
 
-charon.plugins.imc-attestation.pcr17_after
+libimcv.plugins.imc-attestation.pcr17_after
 	Dummy data if the TBOOT log is not retrieved.
 
-charon.plugins.imc-attestation.pcr17_before
+libimcv.plugins.imc-attestation.pcr17_before
 	Dummy data if the TBOOT log is not retrieved.
 
-charon.plugins.imc-attestation.pcr17_meas
+libimcv.plugins.imc-attestation.pcr17_meas
 	Dummy data if the TBOOT log is not retrieved.
 
-charon.plugins.imc-attestation.pcr18_after
+libimcv.plugins.imc-attestation.pcr18_after
 	Dummy data if the TBOOT log is not retrieved.
 
-charon.plugins.imc-attestation.pcr18_before
+libimcv.plugins.imc-attestation.pcr18_before
 	Dummy data if the TBOOT log is not retrieved.
 
-charon.plugins.imc-attestation.pcr18_meas
+libimcv.plugins.imc-attestation.pcr18_meas
 	Dummy data if the TBOOT log is not retrieved.
