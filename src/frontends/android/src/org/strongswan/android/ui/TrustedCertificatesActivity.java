@@ -179,7 +179,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		@Override
 		protected TrustedCertificateManager doInBackground(Void... params)
 		{
-			return TrustedCertificateManager.getInstance().reload();
+			return TrustedCertificateManager.getInstance().reset().load();
 		}
 		@Override
 		protected void onPostExecute(TrustedCertificateManager result)

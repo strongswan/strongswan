@@ -33,6 +33,7 @@ public class TrustedCertificateManager
 	private static final String TAG = TrustedCertificateManager.class.getSimpleName();
 	private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
 	private Hashtable<String, X509Certificate> mCACerts = new Hashtable<String, X509Certificate>();
+	private volatile boolean mReload;
 	private boolean mLoaded;
 	private final ArrayList<KeyStore> mKeyStores = new ArrayList<KeyStore>();
 
@@ -94,16 +95,14 @@ public class TrustedCertificateManager
 	}
 
 	/**
-	 * Forces a load/reload of the cached CA certificates.
-	 * As this takes a while it should be called asynchronously.
+	 * Invalidates the current load state so that the next call to load()
+	 * will force a reload of the cached CA certificates.
 	 * @return reference to itself
 	 */
-	public TrustedCertificateManager reload()
+	public TrustedCertificateManager reset()
 	{
-		Log.d(TAG, "Force reload of cached CA certificates");
-		this.mLock.writeLock().lock();
-		loadCertificates();
-		this.mLock.writeLock().unlock();
+		Log.d(TAG, "Force reload of cached CA certificates on next load");
+		this.mReload = true;
 		return this;
 	}
 
@@ -117,8 +116,9 @@ public class TrustedCertificateManager
 	{
 		Log.d(TAG, "Ensure cached CA certificates are loaded");
 		this.mLock.writeLock().lock();
-		if (!this.mLoaded)
+		if (!this.mLoaded || this.mReload)
 		{
+			this.mReload = false;
 			loadCertificates();
 		}
 		this.mLock.writeLock().unlock();
