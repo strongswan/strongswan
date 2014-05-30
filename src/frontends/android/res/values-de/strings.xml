@@ -81,6 +81,9 @@
     <string name="local_tab">Importiert</string>
     <string name="delete_certificate_question">Zertifikat löschen?</string>
     <string name="delete_certificate">Das Zertifikat wird permanent entfernt!</string>
+    <string name="import_certificate">Zertifikat importieren</string>
+    <string name="cert_imported_successfully">Zertifikat erfolgreich importiert</string>
+    <string name="cert_import_failed">Zertifikat-Import fehlgeschlagen</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>

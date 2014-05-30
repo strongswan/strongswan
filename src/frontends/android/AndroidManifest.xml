@@ -67,6 +67,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.TrustedCertificateImportActivity"
+            android:label="@string/import_certificate" >
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-x509-ca-cert" />
+                <data android:mimeType="application/x-x509-server-cert" />
+                <data android:mimeType="application/x-pem-file" />
+                <data android:mimeType="application/pkix-cert" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".logic.VpnStateService"
