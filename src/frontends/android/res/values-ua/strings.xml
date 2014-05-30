@@ -76,6 +76,7 @@
     <string name="no_certificates">Немає сертифікатів</string>
     <string name="system_tab">Система</string>
     <string name="user_tab">Користувач</string>
+    <string name="local_tab">Imported</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Статус:</string>

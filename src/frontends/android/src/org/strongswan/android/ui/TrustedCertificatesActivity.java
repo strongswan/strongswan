@@ -17,6 +17,7 @@ package org.strongswan.android.ui;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
 
 import android.app.ActionBar;
@@ -43,11 +44,15 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		actionBar.addTab(actionBar
 			.newTab()
 			.setText(R.string.system_tab)
-			.setTabListener(new TrustedCertificatesTabListener(this, "system", false)));
+			.setTabListener(new TrustedCertificatesTabListener(this, "system", TrustedCertificateSource.SYSTEM)));
 		actionBar.addTab(actionBar
 			.newTab()
 			.setText(R.string.user_tab)
-			.setTabListener(new TrustedCertificatesTabListener(this, "user", true)));
+			.setTabListener(new TrustedCertificatesTabListener(this, "user", TrustedCertificateSource.USER)));
+		actionBar.addTab(actionBar
+			.newTab()
+			.setText(R.string.local_tab)
+			.setTabListener(new TrustedCertificatesTabListener(this, "local", TrustedCertificateSource.LOCAL)));
 
 		if (savedInstanceState != null)
 		{
@@ -87,13 +92,13 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	public static class TrustedCertificatesTabListener implements ActionBar.TabListener
 	{
 		private final String mTag;
-		private final boolean mUser;
+		private final TrustedCertificateSource mSource;
 		private Fragment mFragment;
 
-		public TrustedCertificatesTabListener(Activity activity, String tag, boolean user)
+		public TrustedCertificatesTabListener(Activity activity, String tag, TrustedCertificateSource source)
 		{
 			mTag = tag;
-			mUser = user;
+			mSource = source;
 			/* check to see if we already have a fragment for this tab, probably
 			 * from a previously saved state. if so, deactivate it, because the
 			 * initial state is that no tab is shown */
@@ -112,10 +117,9 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 			if (mFragment == null)
 			{
 				mFragment = new TrustedCertificateListFragment();
-				if (mUser)
-				{	/* use non empty arguments to indicate this */
-					mFragment.setArguments(new Bundle());
-				}
+				Bundle args = new Bundle();
+				args.putSerializable(TrustedCertificateListFragment.EXTRA_CERTIFICATE_SOURCE, mSource);
+				mFragment.setArguments(args);
 				ft.add(android.R.id.content, mFragment, mTag);
 			}
 			else

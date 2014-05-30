@@ -78,6 +78,7 @@
     <string name="no_certificates">No certificates</string>
     <string name="system_tab">System</string>
     <string name="user_tab">User</string>
+    <string name="local_tab">Imported</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>

@@ -75,6 +75,7 @@
     <string name="no_certificates">Нет доступных сертификатов</string>
     <string name="system_tab">Система</string>
     <string name="user_tab">Пользователь</string>
+    <string name="local_tab">Imported</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Статус:</string>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -46,9 +46,10 @@ import android.widget.SearchView.OnQueryTextListener;
 
 public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
+	public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
 	private OnTrustedCertificateSelectedListener mListener;
 	private TrustedCertificateAdapter mAdapter;
-	private boolean mUser;
+	private TrustedCertificateSource mSource = TrustedCertificateSource.SYSTEM;
 
 	/**
 	 * The activity containing this fragment should implement this interface
@@ -70,8 +71,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 
 		setListShown(false);
 
-		/* non empty arguments mean we list user certificate */
-		mUser = getArguments() != null;
+		Bundle arguments = getArguments();
+		if (arguments != null)
+		{
+			mSource = (TrustedCertificateSource)arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE);
+		}
 
 		getLoaderManager().initLoader(0, null, this);
 	}
@@ -122,7 +126,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	@Override
 	public Loader<List<TrustedCertificateEntry>> onCreateLoader(int id, Bundle args)
 	{	/* we don't need the id as we have only one loader */
-		return new CertificateListLoader(getActivity(), mUser);
+		return new CertificateListLoader(getActivity(), mSource);
 	}
 
 	@Override
@@ -158,22 +162,21 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public static class CertificateListLoader extends AsyncTaskLoader<List<TrustedCertificateEntry>>
 	{
 		private List<TrustedCertificateEntry> mData;
-		private final boolean mUser;
+		private final TrustedCertificateSource mSource;
 
-		public CertificateListLoader(Context context, boolean user)
+		public CertificateListLoader(Context context, TrustedCertificateSource source)
 		{
 			super(context);
-			mUser = user;
+			mSource = source;
 		}
 
 		@Override
 		public List<TrustedCertificateEntry> loadInBackground()
 		{
 			TrustedCertificateManager certman = TrustedCertificateManager.getInstance().load();
-			Hashtable<String,X509Certificate> certificates;
+			Hashtable<String,X509Certificate> certificates = certman.getCACertificates(mSource);
 			List<TrustedCertificateEntry> selected;
 
-			certificates = mUser ? certman.getCACertificates(TrustedCertificateSource.USER) : certman.getCACertificates(TrustedCertificateSource.SYSTEM);
 			selected = new ArrayList<TrustedCertificateEntry>();
 			for (Entry<String, X509Certificate> entry : certificates.entrySet())
 			{
