@@ -213,9 +213,10 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				inventory = attr_cast->get_inventory(attr_cast);
 				tag_id_count = inventory->get_count(inventory);
 
-				DBG2(DBG_IMV, "received SWID tag ID inventory with %d items "
+				DBG2(DBG_IMV, "received SWID tag ID inventory with %d item%s "
 							  "for request %d at eid %d of epoch 0x%08x",
-							   tag_id_count, request_id, last_eid, eid_epoch);
+							   tag_id_count, (tag_id_count == 1) ? "" : "s",
+							   request_id, last_eid, eid_epoch);
 
 				if (request_id == swid_state->get_request_id(swid_state))
 				{
@@ -247,9 +248,10 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				inventory = attr_cast->get_inventory(attr_cast);
 				tag_count = inventory->get_count(inventory);
 
-				DBG2(DBG_IMV, "received SWID tag inventory with %d items for "
+				DBG2(DBG_IMV, "received SWID tag inventory with %d item%s for "
 							  "request %d at eid %d of epoch 0x%08x",
-							   tag_count, request_id, last_eid, eid_epoch);
+							   tag_count, (tag_count == 1) ? "" : "s",
+							   request_id, last_eid, eid_epoch);
 
 
 				if (request_id == swid_state->get_request_id(swid_state))
@@ -474,7 +476,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		swid_tag_id_t *tag_id;
 		status_t status = SUCCESS;
 
-		if (this->rest_api)
+		if (this->rest_api && (received & IMV_SWID_ATTR_TAG_ID_INV))
 		{
 			if (asprintf(&command, "sessions/%d/swid_measurement/",
 						 session->get_session_id(session, NULL, NULL)) < 0)
@@ -547,7 +549,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								swid_state->get_request_id(swid_state), 0);
 
 				tag_id_count = json_object_array_length(jresponse);
-				DBG1(DBG_IMV, "%d SWID tag targets", tag_id_count);
+				DBG1(DBG_IMV, "%d SWID tag target%s", tag_id_count,
+							  (tag_id_count == 1) ? "" : "s");
 
 				for (i = 0; i < tag_id_count; i++)
 				{
@@ -675,6 +678,7 @@ imv_agent_if_t *imv_swid_agent_create(const char *name, TNC_IMVID id,
 	private_imv_swid_agent_t *this;
 	imv_agent_t *agent;
 	char *rest_api_uri;
+	u_int rest_api_timeout;
 
 	agent = imv_agent_create(name, msg_types, countof(msg_types), id,
 							 actual_version);
@@ -698,9 +702,11 @@ imv_agent_if_t *imv_swid_agent_create(const char *name, TNC_IMVID id,
 
 	rest_api_uri = lib->settings->get_str(lib->settings,
 						"%s.plugins.imv-swid.rest_api_uri", NULL, lib->ns);
+	rest_api_timeout = lib->settings->get_int(lib->settings,
+						"%s.plugins.imv-swid.rest_api_timeout", 120, lib->ns);
 	if (rest_api_uri)
 	{
-		this->rest_api = imv_swid_rest_create(rest_api_uri);
+		this->rest_api = imv_swid_rest_create(rest_api_uri, rest_api_timeout);
 	}
 	libpts_init();
 

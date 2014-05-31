@@ -56,7 +56,8 @@ struct imv_swid_rest_t {
  * Create an imv_swid_rest_t instance
  *
  * @param uri			REST URI (http://username:password@hostname[:port]/api/)
+ * @param timeout		Timeout of the REST connection
  */
-imv_swid_rest_t* imv_swid_rest_create(char *uri);
+imv_swid_rest_t* imv_swid_rest_create(char *uri, u_int timeout);
 
 #endif /** IMV_SWID_REST_H_ @}*/

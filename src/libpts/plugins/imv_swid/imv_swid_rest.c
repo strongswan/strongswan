@@ -35,6 +35,11 @@ struct private_imv_swid_rest_t {
 	 */
 	char *uri;
 
+	/**
+	 * Timeout of REST API connection
+	 */
+	u_int timeout;
+
 };
 
 #define HTTP_STATUS_CODE_PRECONDITION_FAILED	412
@@ -45,7 +50,6 @@ METHOD(imv_swid_rest_t, post, status_t,
 {
 	struct json_tokener *tokener;
 	chunk_t data, response = chunk_empty;
-	u_int timeout = 30;
 	status_t status;
 	char *uri;
 	int code;
@@ -57,7 +61,7 @@ METHOD(imv_swid_rest_t, post, status_t,
 	data = chunk_from_str(json_object_to_json_string(jrequest));
 
 	status = lib->fetcher->fetch(lib->fetcher, uri, &response,
-				FETCH_TIMEOUT, timeout,
+				FETCH_TIMEOUT, this->timeout,
 				FETCH_REQUEST_DATA, data,
 				FETCH_REQUEST_TYPE, "application/json; charset=utf-8",
 				FETCH_REQUEST_HEADER, "Accept: application/json",
@@ -70,8 +74,10 @@ METHOD(imv_swid_rest_t, post, status_t,
 	{
 		return 	SUCCESS;
 	}
+
 	if (code != HTTP_STATUS_CODE_PRECONDITION_FAILED || !response.ptr)
 	{
+		DBG2(DBG_IMV, "REST http request failed with status code: %d", code);
 		return FAILED;
 	}
 
@@ -97,7 +103,7 @@ METHOD(imv_swid_rest_t, destroy, void,
 /**
  * Described in header.
  */
-imv_swid_rest_t *imv_swid_rest_create(char *uri)
+imv_swid_rest_t *imv_swid_rest_create(char *uri, u_int timeout)
 {
 	private_imv_swid_rest_t *this;
 
@@ -107,6 +113,7 @@ imv_swid_rest_t *imv_swid_rest_create(char *uri)
 			.destroy = _destroy,
 		},
 		.uri = strdup(uri),
+		.timeout = timeout,
 	);
 
 	return &this->public;
