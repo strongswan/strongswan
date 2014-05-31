@@ -60,11 +60,13 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 	swid_tag_t *tag;
 	bio_writer_t *writer;
 	chunk_t tag_encoding, tag_file_path = chunk_empty;
-	bool more_tags = TRUE, end_of_tag;
-	char line[131072];
+	bool more_tags = TRUE, last_newline, end_of_tag;
+	char line[8192];
+	size_t len;
 
 	while (more_tags)
 	{
+		last_newline = TRUE;
 		end_of_tag = FALSE;
 		writer = bio_writer_create(512);
 		do
@@ -75,14 +77,17 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 				end_of_tag = TRUE;
 				break;
 			}
-			if (line[0] == '\n')
+			len = strlen(line);
+
+			if (last_newline && line[0] == '\n')
 			{
 				end_of_tag = TRUE;
 				break;
 			}
 			else
 			{
-				writer->write_data(writer, chunk_from_str(line));
+				last_newline = (line[len-1] == '\n');
+				writer->write_data(writer, chunk_create(line, len));
 			}
 		}
 		while (!end_of_tag);
@@ -155,6 +160,8 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 	FILE *file;
 	char command[BUF_LEN];
 	char entity_name[] = "strongSwan Project";
+	char doc_separator[] = "'\n\n'";
+
 	status_t status = SUCCESS;
 
 	if (targets->get_count(targets) == 0)
@@ -163,7 +170,8 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 		if (this->full_tags)
 		{
 			snprintf(command, BUF_LEN, "%s swid --entity-name \"%s\" "
-					 "--doc-separator $'\n\n'%s%s", generator, entity_name,
+					 "--doc-separator %s%s%s",
+					 generator, entity_name, doc_separator,
 					 pretty ? " --pretty" : "", full ? " --full" : "");
 		}
 		else
