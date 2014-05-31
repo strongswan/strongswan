@@ -30,6 +30,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,6 +39,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
 	private static final String DIALOG_TAG = "Dialog";
+	private static final int IMPORT_CERTIFICATE = 0;
 	private boolean mSelect;
 
 	@Override
@@ -92,6 +94,16 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	}
 
 	@Override
+	public boolean onPrepareOptionsMenu(Menu menu)
+	{
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)
+		{
+			menu.removeItem(R.id.menu_import_certificate);
+		}
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
 		switch (item.getItemId())
@@ -102,8 +114,27 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 			case R.id.menu_reload_certs:
 				reloadCertificates();
 				return true;
+			case R.id.menu_import_certificate:
+				Intent intent = new Intent(this, TrustedCertificateImportActivity.class);
+				startActivityForResult(intent, IMPORT_CERTIFICATE);
+				return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data)
+	{
+		switch (requestCode)
+		{
+			case IMPORT_CERTIFICATE:
+				if (resultCode == Activity.RESULT_OK)
+				{
+					reloadCertificates();
+				}
+				return;
+		}
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 
 	@Override
