@@ -12,7 +12,7 @@
 10.1.0.254	uml1.strongswan.org	uml1
 10.2.0.254	uml1.strongswan.org	uml2
 
-10.1.0.10	alice.strongswan.org	alice aaa.strongswan.org
+10.1.0.10	alice.strongswan.org	alice aaa.strongswan.org tnc.strongswan.org
 10.1.0.20	venus.strongswan.org	venus
 10.1.0.30	carol2.strongswan.org	carol2
 10.1.0.40	dave2.strongswan.org	dave2
