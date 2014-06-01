@@ -491,20 +491,41 @@ do
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
 
-	    for command in statusall listall
-	    do
-		ssh $SSHCONF $HOSTLOGIN ipsec $command \
-		    > $TESTRESULTDIR/${host}.$command 2>/dev/null
-	    done
+		scp $SSHCONF $HOSTLOGIN:/etc/strongswan.conf \
+		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
 
-	    for file in strongswan.conf ipsec.conf ipsec.secrets
-	    do
-		scp $SSHCONF $HOSTLOGIN:/etc/$file \
-		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
-	    done
+		if [ $SUBDIR = "swanctl" ]
+		then
+			scp $SSHCONF $HOSTLOGIN:/etc/swanctl/swanctl.conf \
+			$TESTRESULTDIR/${host}.swanctl.conf  > /dev/null 2>&1
 
-	    scp $SSHCONF $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
-		$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-conns \
+			    > $TESTRESULTDIR/${host}.swanctl.conns 2>/dev/null
+
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-certs \
+			    > $TESTRESULTDIR/${host}.swanctl.certs 2>/dev/null
+
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-sas \
+			    > $TESTRESULTDIR/${host}.swanctl.sas 2>/dev/null
+
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pools \
+			    > $TESTRESULTDIR/${host}.swanctl.pools 2>/dev/null
+		else
+		    for file in ipsec.conf ipsec.secrets
+		    do
+				scp $SSHCONF $HOSTLOGIN:/etc/$file \
+			    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
+		    done
+
+		    for command in statusall listall
+		    do
+				ssh $SSHCONF $HOSTLOGIN ipsec $command \
+			    > $TESTRESULTDIR/${host}.$command 2>/dev/null
+		    done
+
+		    scp $SSHCONF $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
+			$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
+		fi
 
 	    ssh $SSHCONF $HOSTLOGIN ip -s xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
@@ -515,7 +536,43 @@ do
 	    ssh $SSHCONF $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
-	    cat >> $TESTRESULTDIR/index.html <<@EOF
+
+		if [ $SUBDIR = "swanctl" ]
+		then
+		    cat >> $TESTRESULTDIR/index.html <<@EOF
+    <h3>$host</h3>
+      <table border="0" cellspacing="0" width="600">
+      <tr>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.swanctl.conf">swanctl.conf</a></li>
+	    <li><a href="$host.swanctl.conns">swanctl --list-conns</a></li>
+	    <li><a href="$host.swanctl.certs">swanctl --list-certs</a></li>
+	    <li><a href="$host.strongswan.conf">strongswan.conf</a></li>
+	  </ul>
+	</td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.swanctl.sas">swanctl --list-sas</a></li>
+	    <li><a href="$host.swanctl.pools">swanctl --list-pools</a></li>
+	    <li><a href="$host.auth.log">auth.log</a></li>
+	    <li><a href="$host.daemon.log">daemon.log</a></li>
+	  </ul>
+      </td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.ip.policy">ip -s xfrm policy</a></li>
+	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
+	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
+	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
+	  </ul>
+      </td>
+    </tr>
+    </table>
+@EOF
+
+		else
+		    cat >> $TESTRESULTDIR/index.html <<@EOF
     <h3>$host</h3>
       <table border="0" cellspacing="0" width="600">
       <tr>
@@ -546,7 +603,7 @@ do
     </tr>
     </table>
 @EOF
-
+		fi
 	done
 
 	for host in $RADIUSHOSTS
