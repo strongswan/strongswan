@@ -21,7 +21,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef HAVE_SYSLOG
 #include <syslog.h>
+#endif
 
 #include <pt_tls.h>
 #include <pt_tls_client.h>
@@ -126,13 +128,13 @@ static bool load_key(char *filename)
  * Logging and debug level
  */
 static bool log_to_stderr = TRUE;
+#ifdef HAVE_SYSLOG
 static bool log_to_syslog = TRUE;
+#endif /* HAVE_SYSLOG */
 static level_t default_loglevel = 1;
 
 static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 {
-	char buffer[8192];
-	char *current = buffer, *next;
 	va_list args;
 
 	if (level <= default_loglevel)
@@ -144,8 +146,12 @@ static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 			va_end(args);
 			fprintf(stderr, "\n");
 		}
+#ifdef HAVE_SYSLOG
 		if (log_to_syslog)
 		{
+			char buffer[8192];
+			char *current = buffer, *next;
+
 			/* write in memory buffer first */
 			va_start(args, fmt);
 			vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -163,6 +169,7 @@ static void dbg_pt_tls(debug_t group, level_t level, char *fmt, ...)
 				current = next;
 			}
 		}
+#endif /* HAVE_SYSLOG */
 	}
 }
 
@@ -177,10 +184,12 @@ static void init_log(const char *program)
 	{
 		setbuf(stderr, NULL);
 	}
+#ifdef HAVE_SYSLOG
 	if (log_to_syslog)
 	{
 		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
 	}
+#endif /* HAVE_SYSLOG */
 }
 
 /**
