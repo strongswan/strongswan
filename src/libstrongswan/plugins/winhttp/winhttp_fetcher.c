@@ -177,6 +177,7 @@ static bool read_result(private_winhttp_fetcher_t *this, HINTERNET request,
  */
 static bool parse_uri(private_winhttp_fetcher_t *this, char *uri,
 					  LPWSTR host, int hostlen, LPWSTR path, int pathlen,
+					  LPWSTR user, int userlen, LPWSTR pass, int passlen,
 					  DWORD *flags, INTERNET_PORT *port)
 {
 	WCHAR wuri[512], extra[256];
@@ -186,6 +187,10 @@ static bool parse_uri(private_winhttp_fetcher_t *this, char *uri,
 		.dwHostNameLength = hostlen,
 		.lpszUrlPath = path,
 		.dwUrlPathLength = pathlen,
+		.lpszUserName = user,
+		.dwUserNameLength = userlen,
+		.lpszPassword = pass,
+		.dwPasswordLength = passlen,
 		.lpszExtraInfo = extra,
 		.dwExtraInfoLength = countof(extra),
 	};
@@ -215,6 +220,20 @@ static bool parse_uri(private_winhttp_fetcher_t *this, char *uri,
 	return TRUE;
 }
 
+/**
+ * Set credentials for basic authentication, if given
+ */
+static bool set_credentials(private_winhttp_fetcher_t *this,
+							HINTERNET *request, LPWSTR user, LPWSTR pass)
+{
+	if (!wcslen(user) && !wcslen(pass))
+	{	/* skip */
+		return TRUE;
+	}
+	return WinHttpSetCredentials(request, WINHTTP_AUTH_TARGET_SERVER,
+								 WINHTTP_AUTH_SCHEME_BASIC, user, pass, NULL);
+}
+
 METHOD(fetcher_t, fetch, status_t,
 	private_winhttp_fetcher_t *this, char *uri, void *userdata)
 {
@@ -222,7 +241,7 @@ METHOD(fetcher_t, fetch, status_t,
 	status_t status = FAILED;
 	DWORD flags = 0;
 	HINTERNET connection, request;
-	WCHAR host[256], path[512], *method;
+	WCHAR host[256], path[512], user[256], pass[256], *method;
 
 	if (this->request.len)
 	{
@@ -239,7 +258,7 @@ METHOD(fetcher_t, fetch, status_t,
 	}
 
 	if (parse_uri(this, uri, host, countof(host), path, countof(path),
-				  &flags, &port))
+				  user, countof(user), pass, countof(pass), &flags, &port))
 	{
 		connection = WinHttpConnect(this->session, host, port, 0);
 		if (connection)
@@ -249,7 +268,8 @@ METHOD(fetcher_t, fetch, status_t,
 										 WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
 			if (request)
 			{
-				if (send_request(this, request) &&
+				if (set_credentials(this, request, user, pass) &&
+					send_request(this, request) &&
 					read_result(this, request, userdata))
 				{
 					status = SUCCESS;
