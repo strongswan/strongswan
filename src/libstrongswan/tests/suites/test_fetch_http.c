@@ -281,7 +281,7 @@ START_TEST(test_response_code)
 {
 	stream_service_t *service;
 	status_t status;
-	chunk_t data;
+	chunk_t data = chunk_empty;
 	char uri[256];
 	u_int code;
 
