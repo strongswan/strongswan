@@ -58,7 +58,7 @@ METHOD(imv_swid_rest_t, post, status_t,
 	{
 		return FAILED;
 	}
-	data = chunk_from_str(json_object_to_json_string(jrequest));
+	data = chunk_from_str((char*)json_object_to_json_string(jrequest));
 
 	status = lib->fetcher->fetch(lib->fetcher, uri, &response,
 				FETCH_TIMEOUT, this->timeout,

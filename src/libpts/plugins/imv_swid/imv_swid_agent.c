@@ -562,7 +562,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 						json_object_put(jresponse);
 						break;
 					}
-					target = json_object_get_string(jvalue);
+					target = (char*)json_object_get_string(jvalue);
 					DBG1(DBG_IMV, "  %s", target);
 
 					/* Separate target into tag_creator and unique_sw_id */
