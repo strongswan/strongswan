@@ -746,6 +746,11 @@ AC_COMPILE_IFELSE(
 		windows=true
 		openssl_lib=eay32
 		AC_SUBST(PTHREADLIB, "")
+		# explicitly disable ms-bitfields, as it breaks __attribute__((packed))
+		case "$CFLAGS" in
+			*ms-bitfields*) ;;
+			*) CFLAGS="$CFLAGS -mno-ms-bitfields" ;;
+		esac
 	],
 	[
 		AC_MSG_RESULT([no])
