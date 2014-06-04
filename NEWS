@@ -1,6 +1,14 @@
 strongswan-5.2.0
 ----------------
 
+- strongSwan has been ported to the Windows platform. Using a MinGW toolchain,
+  many parts of the strongSwan codebase run natively on Windows 7 / 2008 R2
+  and newer releases. charon-svc implements a Windows IKE service based on
+  libcharon, the kernel-iph and kernel-wfp plugins act as networking and IPsec
+  backend on the Windows platform. socket-win provides a native IKE socket
+  implementation, while winhttp fetches CRL and OCSP information using the
+  WinHTTP API.
+
 - The new vici plugin provides a Versatile IKE Configuration Interface for
   charon. Using the stable IPC interface, external applications can configure,
   control and monitor the IKE daemon. Instead of scripting the ipsec tool
