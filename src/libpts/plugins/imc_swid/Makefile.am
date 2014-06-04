@@ -25,7 +25,7 @@ AM_CPPFLAGS = \
 	-DSWID_DIRECTORY=\"${prefix}/share\"
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 imcv_LTLIBRARIES = imc-swid.la
 

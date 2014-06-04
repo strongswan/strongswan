@@ -227,7 +227,7 @@ METHOD(endpoint_notify_t, build_notify, notify_payload_t*,
 	chunk_t data;
 	notify_payload_t *notify;
 
-	notify = notify_payload_create(NOTIFY);
+	notify = notify_payload_create(PLV2_NOTIFY);
 	notify->set_notify_type(notify, ME_ENDPOINT);
 	data = build_notification_data(this);
 	notify->set_notification_data(notify, data);

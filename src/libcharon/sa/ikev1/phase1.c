@@ -648,7 +648,7 @@ METHOD(phase1_t, save_sa_payload, bool,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == SECURITY_ASSOCIATION_V1)
+		if (payload->get_type(payload) == PLV1_SECURITY_ASSOCIATION)
 		{
 			sa = payload;
 			break;
@@ -682,7 +682,7 @@ METHOD(phase1_t, add_nonce_ke, bool,
 	nonce_gen_t *nonceg;
 	chunk_t nonce;
 
-	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE, this->dh);
 	message->add_payload(message, &ke_payload->payload_interface);
 
 	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
@@ -699,7 +699,7 @@ METHOD(phase1_t, add_nonce_ke, bool,
 	}
 	nonceg->destroy(nonceg);
 
-	nonce_payload = nonce_payload_create(NONCE_V1);
+	nonce_payload = nonce_payload_create(PLV1_NONCE);
 	nonce_payload->set_nonce(nonce_payload, nonce);
 	message->add_payload(message, &nonce_payload->payload_interface);
 
@@ -720,7 +720,7 @@ METHOD(phase1_t, get_nonce_ke, bool,
 	nonce_payload_t *nonce_payload;
 	ke_payload_t *ke_payload;
 
-	ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE_V1);
+	ke_payload = (ke_payload_t*)message->get_payload(message, PLV1_KEY_EXCHANGE);
 	if (!ke_payload)
 	{
 		DBG1(DBG_IKE, "KE payload missing in message");
@@ -729,7 +729,7 @@ METHOD(phase1_t, get_nonce_ke, bool,
 	this->dh_value = chunk_clone(ke_payload->get_key_exchange_data(ke_payload));
 	this->dh->set_other_public_value(this->dh, this->dh_value);
 
-	nonce_payload = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	nonce_payload = (nonce_payload_t*)message->get_payload(message, PLV1_NONCE);
 	if (!nonce_payload)
 	{
 		DBG1(DBG_IKE, "NONCE payload missing in message");

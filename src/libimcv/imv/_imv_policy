@@ -20,18 +20,20 @@
 # that, and use the "libimcv.policy_script = " option in strongswan.conf
 # to make strongSwan use yours instead of this default one.
 
-# Environment variables that this script gets 
+# Passed arguments
 #
-#    TNC_SESSION_ID 
-#         unique session ID used as a reference by the policy 
-#         manager. 
+#    $1
+#         action
+#    $2
+#         unique session ID used as a reference by the policy
+#         manager.
 #
 case "$1" in
 start)
-	echo "start session $TNC_SESSION_ID"
+	echo "start session $2"
 	;;
 stop)
-	echo "stop session $TNC_SESSION_ID"
+	echo "stop session $2"
 	;;
 *)	echo "$0: unknown command '$1'"
 	exit 1

@@ -168,13 +168,13 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_traffic_selector_substructure_t *this)
 {
-	return TRAFFIC_SELECTOR_SUBSTRUCTURE;
+	return PLV2_TRAFFIC_SELECTOR_SUBSTRUCTURE;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
 	private_traffic_selector_substructure_t *this)
 {
-	return NO_PAYLOAD;
+	return PL_NONE;
 }
 
 METHOD(payload_t, set_next_type, void,

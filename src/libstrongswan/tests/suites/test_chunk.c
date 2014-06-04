@@ -790,7 +790,11 @@ END_TEST
 START_TEST(test_chunk_map)
 {
 	chunk_t *map, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+#ifdef WIN32
+	char *path = "C:\\Windows\\Temp\\strongswan-chunk-map-test";
+#else
 	char *path = "/tmp/strongswan-chunk-map-test";
+#endif
 
 	ck_assert(chunk_write(contents, path, 022, TRUE));
 
@@ -827,7 +831,11 @@ END_TEST
 START_TEST(test_chunk_from_fd_file)
 {
 	chunk_t in, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+#ifdef WIN32
+	char *path = "C:\\Windows\\Temp\\strongswan-chunk-fd-test";
+#else
 	char *path = "/tmp/strongswan-chunk-fd-test";
+#endif
 	int fd;
 
 	ck_assert(chunk_write(contents, path, 022, TRUE));
@@ -849,7 +857,7 @@ START_TEST(test_chunk_from_fd_skt)
 	int s[2];
 
 	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, s) == 0);
-	ck_assert(write(s[1], contents.ptr, contents.len) == contents.len);
+	ck_assert_int_eq(send(s[1], contents.ptr, contents.len, 0), contents.len);
 	close(s[1]);
 	ck_assert_msg(chunk_from_fd(s[0], &in), "%s", strerror(errno));
 	close(s[0]);
@@ -866,7 +874,7 @@ void *chunk_from_fd_run(void *data)
 
 	for (i = 0; i < FROM_FD_COUNT; i++)
 	{
-		ck_assert(write(fd, &i, sizeof(i)) == sizeof(i));
+		ck_assert(send(fd, &i, sizeof(i), 0) == sizeof(i));
 	}
 	close(fd);
 	return NULL;

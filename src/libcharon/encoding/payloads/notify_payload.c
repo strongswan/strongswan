@@ -302,7 +302,7 @@ struct private_notify_payload_t {
 	chunk_t notify_data;
 
 	/**
-	 * Type of payload, NOTIFY or NOTIFY_V1
+	 * Type of payload, PLV2_NOTIFY or PLV1_NOTIFY
 	 */
 	payload_type_t type;
 };
@@ -427,7 +427,7 @@ METHOD(payload_t, verify, status_t,
 	{
 		case INVALID_KE_PAYLOAD:
 		{
-			if (this->type == NOTIFY && this->notify_data.len != 2)
+			if (this->type == PLV2_NOTIFY && this->notify_data.len != 2)
 			{
 				bad_length = TRUE;
 			}
@@ -447,7 +447,7 @@ METHOD(payload_t, verify, status_t,
 		case INVALID_MAJOR_VERSION:
 		case NO_PROPOSAL_CHOSEN:
 		{
-			if (this->type == NOTIFY && this->notify_data.len != 0)
+			if (this->type == PLV2_NOTIFY && this->notify_data.len != 0)
 			{
 				bad_length = TRUE;
 			}
@@ -531,7 +531,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_notify_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == NOTIFY)
+	if (this->type == PLV2_NOTIFY)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -543,7 +543,7 @@ METHOD(payload_t, get_encoding_rules, int,
 METHOD(payload_t, get_header_length, int,
 	private_notify_payload_t *this)
 {
-	if (this->type == NOTIFY)
+	if (this->type == PLV2_NOTIFY)
 	{
 		return 8 + this->spi_size;
 	}
@@ -726,7 +726,7 @@ notify_payload_t *notify_payload_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.doi = IKEV1_DOI_IPSEC,
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.type = type,
 	);
 	compute_length(this);

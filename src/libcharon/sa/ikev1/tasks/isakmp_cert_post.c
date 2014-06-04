@@ -68,7 +68,7 @@ static bool use_certs(private_isakmp_cert_post_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == SECURITY_ASSOCIATION_V1)
+		if (payload->get_type(payload) == PLV1_SECURITY_ASSOCIATION)
 		{
 			sa_payload_t *sa_payload = (sa_payload_t*)payload;
 
@@ -132,7 +132,7 @@ static void build_certs(private_isakmp_cert_post_t *this, message_t *message)
 			{
 				break;
 			}
-			payload = cert_payload_create_from_cert(CERTIFICATE_V1, cert);
+			payload = cert_payload_create_from_cert(PLV1_CERTIFICATE, cert);
 			if (!payload)
 			{
 				break;
@@ -146,7 +146,7 @@ static void build_certs(private_isakmp_cert_post_t *this, message_t *message)
 			{
 				if (type == AUTH_RULE_IM_CERT)
 				{
-					payload = cert_payload_create_from_cert(CERTIFICATE_V1, cert);
+					payload = cert_payload_create_from_cert(PLV1_CERTIFICATE, cert);
 					if (payload)
 					{
 						DBG1(DBG_IKE, "sending issuer cert \"%Y\"",

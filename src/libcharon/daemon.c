@@ -19,9 +19,12 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <time.h>
 #include <errno.h>
+
+#ifdef HAVE_SYSLOG
+#include <syslog.h>
+#endif
 
 #include "daemon.h"
 
@@ -179,6 +182,7 @@ static bool logger_entry_match(logger_entry_t *this, char *target, bool *file)
  */
 static void handle_syslog_identifier(private_daemon_t *this)
 {
+#ifdef HAVE_SYSLOG
 	char *identifier;
 
 	identifier = lib->settings->get_str(lib->settings, "%s.syslog.identifier",
@@ -198,6 +202,7 @@ static void handle_syslog_identifier(private_daemon_t *this)
 		closelog();
 		this->syslog_identifier = NULL;
 	}
+#endif /* HAVE_SYSLOG */
 }
 
 /**
@@ -206,6 +211,7 @@ static void handle_syslog_identifier(private_daemon_t *this)
  */
 static int get_syslog_facility(char *facility)
 {
+#ifdef HAVE_SYSLOG
 	if (streq(facility, "daemon"))
 	{
 		return LOG_DAEMON;
@@ -214,6 +220,7 @@ static int get_syslog_facility(char *facility)
 	{
 		return LOG_AUTHPRIV;
 	}
+#endif /* HAVE_SYSLOG */
 	return -1;
 }
 
@@ -237,10 +244,12 @@ static logger_entry_t *get_logger_entry(char *target, bool is_file_logger,
 		{
 			entry->logger.file = file_logger_create(target);
 		}
+#ifdef HAVE_SYSLOG
 		else
 		{
 			entry->logger.sys = sys_logger_create(get_syslog_facility(target));
 		}
+#endif /* HAVE_SYSLOG */
 	}
 	else
 	{
@@ -381,18 +390,27 @@ METHOD(daemon_t, load_loggers, void,
 
 		for (group = 0; group < DBG_MAX; group++)
 		{
-			sys_logger->set_level(sys_logger, group, levels[group]);
+			if (sys_logger)
+			{
+				sys_logger->set_level(sys_logger, group, levels[group]);
+			}
 			if (to_stderr)
 			{
 				file_logger->set_level(file_logger, group, levels[group]);
 			}
 		}
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
+		if (sys_logger)
+		{
+			charon->bus->add_logger(charon->bus, &sys_logger->logger);
+		}
 		charon->bus->add_logger(charon->bus, &file_logger->logger);
 
 		sys_logger = add_sys_logger(this, "auth", current_loggers);
-		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
+		if (sys_logger)
+		{
+			sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
+			charon->bus->add_logger(charon->bus, &sys_logger->logger);
+		}
 	}
 	/* unregister and destroy any unused remaining loggers */
 	current_loggers->destroy_function(current_loggers,

@@ -16,7 +16,6 @@
 
 #include "test_suite.h"
 
-#include <sched.h>
 #include <unistd.h>
 
 #include <threading/thread.h>

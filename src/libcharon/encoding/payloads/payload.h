@@ -45,195 +45,195 @@ enum payload_type_t {
 	/**
 	 * End of payload list in next_payload
 	 */
-	NO_PAYLOAD = 0,
+	PL_NONE = 0,
 
 	/**
 	 * The security association (SA) payload containing proposals.
 	 */
-	SECURITY_ASSOCIATION_V1 = 1,
+	PLV1_SECURITY_ASSOCIATION = 1,
 
 	/**
 	 * The proposal payload, containing transforms.
 	 */
-	PROPOSAL_V1 = 2,
+	PLV1_PROPOSAL = 2,
 
 	/**
 	 * The transform payload.
 	 */
-	TRANSFORM_V1 = 3,
+	PLV1_TRANSFORM = 3,
 
 	/**
 	 * The key exchange (KE) payload containing diffie-hellman values.
 	 */
-	KEY_EXCHANGE_V1 = 4,
+	PLV1_KEY_EXCHANGE = 4,
 
 	/**
 	 * ID payload.
 	 */
-	ID_V1 = 5,
+	PLV1_ID = 5,
 
 	/**
 	 * Certificate payload with certificates (CERT).
 	 */
-	CERTIFICATE_V1 = 6,
+	PLV1_CERTIFICATE = 6,
 
 	/**
 	 * Certificate request payload.
 	 */
-	CERTIFICATE_REQUEST_V1 = 7,
+	PLV1_CERTREQ = 7,
 
 	/**
 	 * Hash payload.
 	 */
-	HASH_V1 = 8,
+	PLV1_HASH = 8,
 
 	/**
 	 * Signature payload
 	 */
-	SIGNATURE_V1 = 9,
+	PLV1_SIGNATURE = 9,
 
 	/**
 	 * Nonce payload.
 	 */
-	NONCE_V1 = 10,
+	PLV1_NONCE = 10,
 
 	/**
 	 * Notification payload.
 	 */
-	NOTIFY_V1 = 11,
+	PLV1_NOTIFY = 11,
 
 	/**
 	 * Delete payload.
 	 */
-	DELETE_V1 = 12,
+	PLV1_DELETE = 12,
 
 	/**
 	 * Vendor id payload.
 	 */
-	VENDOR_ID_V1 = 13,
+	PLV1_VENDOR_ID = 13,
 
 	/**
 	 * Attribute payload (ISAKMP Mode Config, aka configuration payload.
 	 */
-	CONFIGURATION_V1 = 14,
+	PLV1_CONFIGURATION = 14,
 
 	/**
 	 * NAT discovery payload (NAT-D).
 	 */
-	NAT_D_V1 = 20,
+	PLV1_NAT_D = 20,
 
 	/**
 	 * NAT original address payload (NAT-OA).
 	 */
-	NAT_OA_V1 = 21,
+	PLV1_NAT_OA = 21,
 
 	/**
 	 * The security association (SA) payload containing proposals.
 	 */
-	SECURITY_ASSOCIATION = 33,
+	PLV2_SECURITY_ASSOCIATION = 33,
 
 	/**
 	 * The key exchange (KE) payload containing diffie-hellman values.
 	 */
-	KEY_EXCHANGE = 34,
+	PLV2_KEY_EXCHANGE = 34,
 
 	/**
 	 * Identification for the original initiator (IDi).
 	 */
-	ID_INITIATOR = 35,
+	PLV2_ID_INITIATOR = 35,
 
 	/**
 	 * Identification for the original responder (IDr).
 	 */
-	ID_RESPONDER = 36,
+	PLV2_ID_RESPONDER = 36,
 
 	/**
 	 * Certificate payload with certificates (CERT).
 	 */
-	CERTIFICATE = 37,
+	PLV2_CERTIFICATE = 37,
 
 	/**
 	 * Certificate request payload (CERTREQ).
 	 */
-	CERTIFICATE_REQUEST = 38,
+	PLV2_CERTREQ = 38,
 
 	/**
 	 * Authentication payload contains auth data (AUTH).
 	 */
-	AUTHENTICATION = 39,
+	PLV2_AUTH = 39,
 
 	/**
 	 * Nonces, for initiator and responder (Ni, Nr, N)
 	 */
-	NONCE = 40,
+	PLV2_NONCE = 40,
 
 	/**
 	 * Notify paylaod (N).
 	 */
-	NOTIFY = 41,
+	PLV2_NOTIFY = 41,
 
 	/**
 	 * Delete payload (D)
 	 */
-	DELETE = 42,
+	PLV2_DELETE = 42,
 
 	/**
 	 * Vendor id paylpoad (V).
 	 */
-	VENDOR_ID = 43,
+	PLV2_VENDOR_ID = 43,
 
 	/**
 	 * Traffic selector for the original initiator (TSi).
 	 */
-	TRAFFIC_SELECTOR_INITIATOR = 44,
+	PLV2_TS_INITIATOR = 44,
 
 	/**
 	 * Traffic selector for the original responser (TSr).
 	 */
-	TRAFFIC_SELECTOR_RESPONDER = 45,
+	PLV2_TS_RESPONDER = 45,
 
 	/**
 	 * Encryption payload, contains other payloads (E).
 	 */
-	ENCRYPTED = 46,
+	PLV2_ENCRYPTED = 46,
 
 	/**
 	 * Configuration payload (CP).
 	 */
-	CONFIGURATION = 47,
+	PLV2_CONFIGURATION = 47,
 
 	/**
 	 * Extensible authentication payload (EAP).
 	 */
-	EXTENSIBLE_AUTHENTICATION = 48,
+	PLV2_EAP = 48,
 
 	/**
 	 * Generic Secure Password Method (GSPM).
 	 */
-	GENERIC_SECURE_PASSWORD_METHOD = 49,
+	PLV2_GSPM = 49,
 
 #ifdef ME
 	/**
 	 * Identification payload for peers has a value from
 	 * the PRIVATE USE space.
 	 */
-	ID_PEER = 128,
+	PLV2_ID_PEER = 128,
 #endif /* ME */
 
 	/**
 	 * NAT discovery payload (NAT-D) (drafts).
 	 */
-	NAT_D_DRAFT_00_03_V1 = 130,
+	PLV1_NAT_D_DRAFT_00_03 = 130,
 
 	/**
 	 * NAT original address payload (NAT-OA) (drafts).
 	 */
-	NAT_OA_DRAFT_00_03_V1 = 131,
+	PLV1_NAT_OA_DRAFT_00_03 = 131,
 
 	/**
 	 * IKE fragment (proprietary IKEv1 extension)
 	 */
-	FRAGMENT_V1 = 132,
+	PLV1_FRAGMENT = 132,
 
 	/**
 	 * Header has a value of PRIVATE USE space.
@@ -241,57 +241,57 @@ enum payload_type_t {
 	 * This type and all the following are never sent over wire and are
 	 * used internally only.
 	 */
-	HEADER = 256,
+	PL_HEADER = 256,
 
 	/**
-	 * PROPOSAL_SUBSTRUCTURE, IKEv2 proposals in a SA payload.
+	 * PLV2_PROPOSAL_SUBSTRUCTURE, IKEv2 proposals in a SA payload.
 	 */
-	PROPOSAL_SUBSTRUCTURE,
+	PLV2_PROPOSAL_SUBSTRUCTURE,
 
 	/**
-	 * PROPOSAL_SUBSTRUCTURE_V1, IKEv1 proposals in a SA payload.
+	 * PLV1_PROPOSAL_SUBSTRUCTURE, IKEv1 proposals in a SA payload.
 	 */
-	PROPOSAL_SUBSTRUCTURE_V1,
+	PLV1_PROPOSAL_SUBSTRUCTURE,
 
 	/**
-	 * TRANSFORM_SUBSTRUCTURE, IKEv2 transforms in a proposal substructure.
+	 * PLV2_TRANSFORM_SUBSTRUCTURE, IKEv2 transforms in a proposal substructure.
 	 */
-	TRANSFORM_SUBSTRUCTURE,
+	PLV2_TRANSFORM_SUBSTRUCTURE,
 
 	/**
-	 * TRANSFORM_SUBSTRUCTURE_V1, IKEv1 transforms in a proposal substructure.
+	 * PLV1_TRANSFORM_SUBSTRUCTURE, IKEv1 transforms in a proposal substructure.
 	 */
-	TRANSFORM_SUBSTRUCTURE_V1,
+	PLV1_TRANSFORM_SUBSTRUCTURE,
 
 	/**
-	 * TRANSFORM_ATTRIBUTE, IKEv2 attribute in a transform.
+	 * PLV2_TRANSFORM_ATTRIBUTE, IKEv2 attribute in a transform.
 	 */
-	TRANSFORM_ATTRIBUTE,
+	PLV2_TRANSFORM_ATTRIBUTE,
 
 	/**
-	 * TRANSFORM_ATTRIBUTE_V1, IKEv1 attribute in a transform.
+	 * PLV1_TRANSFORM_ATTRIBUTE, IKEv1 attribute in a transform.
 	 */
-	TRANSFORM_ATTRIBUTE_V1,
+	PLV1_TRANSFORM_ATTRIBUTE,
 
 	/**
-	 * TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic selector in a TS payload.
+	 * PLV2_TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic selector in a TS payload.
 	 */
-	TRAFFIC_SELECTOR_SUBSTRUCTURE,
+	PLV2_TRAFFIC_SELECTOR_SUBSTRUCTURE,
 
 	/**
-	 * CONFIGURATION_ATTRIBUTE, IKEv2 attribute in a configuration payload.
+	 * PLV2_CONFIGURATION_ATTRIBUTE, IKEv2 attribute in a configuration payload.
 	 */
-	CONFIGURATION_ATTRIBUTE,
+	PLV2_CONFIGURATION_ATTRIBUTE,
 
 	/**
-	 * CONFIGURATION_ATTRIBUTE_V1, IKEv1 attribute in a configuration payload.
+	 * PLV1_CONFIGURATION_ATTRIBUTE, IKEv1 attribute in a configuration payload.
 	 */
-	CONFIGURATION_ATTRIBUTE_V1,
+	PLV1_CONFIGURATION_ATTRIBUTE,
 
 	/**
 	 * This is not really a payload, but rather the complete IKEv1 message.
 	 */
-	ENCRYPTED_V1,
+	PLV1_ENCRYPTED,
 };
 
 /**
@@ -336,7 +336,7 @@ struct payload_t {
 	payload_type_t (*get_type) (payload_t *this);
 
 	/**
-	 * Get type of next payload or NO_PAYLOAD (0) if this is the last one.
+	 * Get type of next payload or PL_NONE (0) if this is the last one.
 	 *
 	 * @return				type of next payload
 	 */

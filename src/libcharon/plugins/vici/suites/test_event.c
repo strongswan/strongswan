@@ -20,7 +20,11 @@
 
 #include <unistd.h>
 
-#define URI "unix:///tmp/strongswan-vici-event-test"
+#ifdef WIN32
+# define URI "tcp://127.0.0.1:6543"
+#else /* !WIN32 */
+# define URI "unix:///tmp/strongswan-vici-event-test"
+#endif /* !WIN32 */
 
 static void event_cb(void *user, char *name, vici_res_t *ev)
 {

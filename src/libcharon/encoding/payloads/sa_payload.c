@@ -101,7 +101,7 @@ static encoding_rule_t encodings_v1[] = {
 	/* Situation*/
 	{ U_INT_32,			offsetof(private_sa_payload_t, situation)		},
 	/* Proposals are stored in a proposal substructure list */
-	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1,
+	{ PAYLOAD_LIST + PLV1_PROPOSAL_SUBSTRUCTURE,
 						offsetof(private_sa_payload_t, proposals)		},
 };
 
@@ -140,7 +140,7 @@ static encoding_rule_t encodings_v2[] = {
 	/* Length of the whole SA payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)		},
 	/* Proposals are stored in a proposal substructure list */
-	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE,
+	{ PAYLOAD_LIST + PLV2_PROPOSAL_SUBSTRUCTURE,
 						offsetof(private_sa_payload_t, proposals)			},
 };
 
@@ -164,7 +164,7 @@ METHOD(payload_t, verify, status_t,
 	enumerator_t *enumerator;
 	proposal_substructure_t *substruct;
 
-	if (this->type == SECURITY_ASSOCIATION)
+	if (this->type == PLV2_SECURITY_ASSOCIATION)
 	{
 		expected_number = 1;
 	}
@@ -196,7 +196,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_sa_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == SECURITY_ASSOCIATION_V1)
+	if (this->type == PLV1_SECURITY_ASSOCIATION)
 	{
 		*rules = encodings_v1;
 		return countof(encodings_v1);
@@ -208,7 +208,7 @@ METHOD(payload_t, get_encoding_rules, int,
 METHOD(payload_t, get_header_length, int,
 	private_sa_payload_t *this)
 {
-	if (this->type == SECURITY_ASSOCIATION_V1)
+	if (this->type == PLV1_SECURITY_ASSOCIATION)
 	{
 		return 12;
 	}
@@ -295,7 +295,7 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	proposal_substructure_t *substruct;
 	linked_list_t *substructs, *list;
 
-	if (this->type == SECURITY_ASSOCIATION_V1)
+	if (this->type == PLV1_SECURITY_ASSOCIATION)
 	{	/* IKEv1 proposals start with 0 */
 		struct_number = ignore_struct_number = -1;
 	}
@@ -502,7 +502,7 @@ sa_payload_t *sa_payload_create(payload_type_t type)
 			.get_encap_mode = _get_encap_mode,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.proposals = linked_list_create(),
 		.type = type,
 		/* for IKEv1 only */
@@ -524,7 +524,7 @@ sa_payload_t *sa_payload_create_from_proposals_v2(linked_list_t *proposals)
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 
-	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
+	this = (private_sa_payload_t*)sa_payload_create(PLV2_SECURITY_ASSOCIATION);
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
@@ -542,7 +542,7 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal)
 {
 	private_sa_payload_t *this;
 
-	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
+	this = (private_sa_payload_t*)sa_payload_create(PLV2_SECURITY_ASSOCIATION);
 	add_proposal_v2(this, proposal);
 
 	return &this->public;
@@ -560,7 +560,7 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 	proposal_substructure_t *substruct;
 	private_sa_payload_t *this;
 
-	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
+	this = (private_sa_payload_t*)sa_payload_create(PLV1_SECURITY_ASSOCIATION);
 
 	if (!proposals || !proposals->get_count(proposals))
 	{

@@ -66,7 +66,7 @@ struct private_certreq_payload_t {
 	chunk_t data;
 
 	/**
-	 * Payload type CERTIFICATE_REQUEST or CERTIFICATE_REQUEST_V1
+	 * Payload type PLV2_CERTREQ or PLV1_CERTREQ
 	 */
 	payload_type_t type;
 };
@@ -111,7 +111,7 @@ static encoding_rule_t encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_certreq_payload_t *this)
 {
-	if (this->type == CERTIFICATE_REQUEST &&
+	if (this->type == PLV2_CERTREQ &&
 		this->encoding == ENC_X509_SIGNATURE)
 	{
 		if (this->data.len % HASH_SIZE_SHA1)
@@ -218,7 +218,7 @@ METHOD(certreq_payload_t, create_keyid_enumerator, enumerator_t*,
 {
 	keyid_enumerator_t *enumerator;
 
-	if (this->type == CERTIFICATE_REQUEST_V1)
+	if (this->type == PLV1_CERTREQ)
 	{
 		return enumerator_create_empty();
 	}
@@ -276,7 +276,7 @@ certreq_payload_t *certreq_payload_create(payload_type_t type)
 			.destroy = _destroy,
 			.get_dn = _get_dn,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);
@@ -291,7 +291,7 @@ certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 	private_certreq_payload_t *this;
 
 	this = (private_certreq_payload_t*)
-					certreq_payload_create(CERTIFICATE_REQUEST);
+					certreq_payload_create(PLV2_CERTREQ);
 	switch (type)
 	{
 		case CERT_X509:
@@ -314,7 +314,7 @@ certreq_payload_t *certreq_payload_create_dn(identification_t *id)
 	private_certreq_payload_t *this;
 
 	this = (private_certreq_payload_t*)
-					certreq_payload_create(CERTIFICATE_REQUEST_V1);
+					certreq_payload_create(PLV1_CERTREQ);
 
 	this->encoding = ENC_X509_SIGNATURE;
 	this->data = chunk_clone(id->get_encoding(id));

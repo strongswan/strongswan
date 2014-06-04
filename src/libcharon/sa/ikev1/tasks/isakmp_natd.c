@@ -117,9 +117,9 @@ static payload_type_t get_nat_d_payload_type(ike_sa_t *ike_sa)
 {
 	if (ike_sa->supports_extension(ike_sa, EXT_NATT_DRAFT_02_03))
 	{
-		return NAT_D_DRAFT_00_03_V1;
+		return PLV1_NAT_D_DRAFT_00_03;
 	}
-	return NAT_D_V1;
+	return PLV1_NAT_D;
 }
 
 /**
@@ -269,8 +269,8 @@ static void process_payloads(private_isakmp_natd_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) != NAT_D_V1 &&
-			payload->get_type(payload) != NAT_D_DRAFT_00_03_V1)
+		if (payload->get_type(payload) != PLV1_NAT_D &&
+			payload->get_type(payload) != PLV1_NAT_D_DRAFT_00_03)
 		{
 			continue;
 		}
@@ -334,7 +334,7 @@ METHOD(task_t, build_i, status_t,
 		case ID_PROT:
 		{	/* add NAT-D payloads to the second request, need to process
 			 * those by the responder contained in the second response */
-			if (message->get_payload(message, SECURITY_ASSOCIATION_V1))
+			if (message->get_payload(message, PLV1_SECURITY_ASSOCIATION))
 			{	/* wait for the second exchange */
 				return NEED_MORE;
 			}
@@ -362,7 +362,7 @@ METHOD(task_t, process_i, status_t,
 		case ID_PROT:
 		{	/* process NAT-D payloads in the second response, added them in the
 			 * second request already, so we're done afterwards */
-			if (message->get_payload(message, SECURITY_ASSOCIATION_V1))
+			if (message->get_payload(message, PLV1_SECURITY_ASSOCIATION))
 			{	/* wait for the second exchange */
 				return NEED_MORE;
 			}
@@ -407,7 +407,7 @@ METHOD(task_t, process_r, status_t,
 		case ID_PROT:
 		{	/* process NAT-D payloads in the second request, need to add ours
 			 * to the second response */
-			if (message->get_payload(message, SECURITY_ASSOCIATION_V1))
+			if (message->get_payload(message, PLV1_SECURITY_ASSOCIATION))
 			{	/* wait for the second exchange */
 				return NEED_MORE;
 			}
@@ -428,7 +428,7 @@ METHOD(task_t, build_r, status_t,
 		case ID_PROT:
 		{	/* add NAT-D payloads to second response, already processed those
 			 * contained in the second request */
-			if (message->get_payload(message, SECURITY_ASSOCIATION_V1))
+			if (message->get_payload(message, PLV1_SECURITY_ASSOCIATION))
 			{	/* wait for the second exchange */
 				return NEED_MORE;
 			}

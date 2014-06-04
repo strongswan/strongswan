@@ -24,8 +24,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <pthread.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "chunk.h"
 
@@ -221,7 +221,14 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 		return FALSE;
 	}
 	oldmask = umask(mask);
-	fd = fopen(path, "w");
+	fd = fopen(path,
+#ifdef WIN32
+				"wb"
+#else
+				"w"
+#endif
+	);
+
 	if (fd)
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
@@ -269,6 +276,12 @@ bool chunk_from_fd(int fd, chunk_t *out)
 	while (TRUE)
 	{
 		len = read(fd, buf + total, bufsize - total);
+#ifdef WIN32
+		if (len == -1 && errno == EBADF)
+		{	/* operating on a Winsock socket? */
+			len = recv(fd, buf + total, bufsize - total, 0);
+		}
+#endif
 		if (len < 0)
 		{
 			free(buf);
@@ -327,10 +340,15 @@ chunk_t *chunk_map(char *path, bool wr)
 {
 	mmaped_chunk_t *chunk;
 	struct stat sb;
-	int tmp;
+	int tmp, flags;
+
+	flags = wr ? O_RDWR : O_RDONLY;
+#ifdef WIN32
+	flags |= O_BINARY;
+#endif
 
 	INIT(chunk,
-		.fd = open(path, wr ? O_RDWR : O_RDONLY),
+		.fd = open(path, flags),
 		.wr = wr,
 	);
 
@@ -884,9 +902,9 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key)
 }
 
 /**
- * Secret key allocated randomly during first use.
+ * Secret key allocated randomly with chunk_hash_seed().
  */
-static u_char key[16];
+static u_char key[16] = {};
 
 /**
  * Static key used in case predictable hash values are required.
@@ -895,19 +913,20 @@ static u_char static_key[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 							  0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 /**
- * Only allocate the key once
+ * See header
  */
-static pthread_once_t key_allocated = PTHREAD_ONCE_INIT;
-
-/**
- * Allocate a key on first use, we do this manually to avoid dependencies on
- * plugins.
- */
-static void allocate_key()
+void chunk_hash_seed()
 {
+	static bool seeded = FALSE;
 	ssize_t len;
 	size_t done = 0;
 	int fd;
+
+	if (seeded)
+	{
+		/* just once to have the same seed during the whole process lifetimes */
+		return;
+	}
 
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd >= 0)
@@ -932,6 +951,7 @@ static void allocate_key()
 			key[done] = (u_char)random();
 		}
 	}
+	seeded = TRUE;
 }
 
 /**
@@ -939,7 +959,6 @@ static void allocate_key()
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
-	pthread_once(&key_allocated, allocate_key);
 	/* we could use a mac of the previous hash, but this is faster */
 	return chunk_mac_inc(chunk, key, ((u_int64_t)hash) << 32 | hash);
 }
@@ -949,7 +968,6 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
  */
 u_int32_t chunk_hash(chunk_t chunk)
 {
-	pthread_once(&key_allocated, allocate_key);
 	return chunk_mac(chunk, key);
 }
 

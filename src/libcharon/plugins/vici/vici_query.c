@@ -17,7 +17,9 @@
 #include "vici_builder.h"
 
 #include <inttypes.h>
+#ifndef WIN32
 #include <sys/utsname.h>
+#endif
 
 #include <daemon.h>
 
@@ -786,7 +788,6 @@ CALLBACK(list_certs, vici_message_t*,
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
-	struct utsname utsname;
 	vici_builder_t *b;
 
 	b = vici_builder_create();
@@ -794,13 +795,40 @@ CALLBACK(version, vici_message_t*,
 	b->add_kv(b, "daemon", "%s", lib->ns);
 	b->add_kv(b, "version", "%s", VERSION);
 
-	if (uname(&utsname) == 0)
+#ifdef WIN32
 	{
-		b->add_kv(b, "sysname", "%s", utsname.sysname);
-		b->add_kv(b, "release", "%s", utsname.release);
-		b->add_kv(b, "machine", "%s", utsname.machine);
-	}
+		OSVERSIONINFOEX osvie;
 
+		memset(&osvie, 0, sizeof(osvie));
+		osvie.dwOSVersionInfoSize = sizeof(osvie);
+
+		if (GetVersionEx((LPOSVERSIONINFO)&osvie))
+		{
+			b->add_kv(b, "sysname", "Windows %s",
+				osvie.wProductType == VER_NT_WORKSTATION ? "Client" : "Server");
+			b->add_kv(b, "release", "%d.%d.%d (SP %d.%d)",
+				osvie.dwMajorVersion, osvie.dwMinorVersion, osvie.dwBuildNumber,
+				osvie.wServicePackMajor, osvie.wServicePackMinor);
+			b->add_kv(b, "machine", "%s",
+#ifdef WIN64
+				"x86_64");
+#else
+				"x86");
+#endif /* !WIN64 */
+		}
+	}
+#else /* !WIN32 */
+	{
+		struct utsname utsname;
+
+		if (uname(&utsname) == 0)
+		{
+			b->add_kv(b, "sysname", "%s", utsname.sysname);
+			b->add_kv(b, "release", "%s", utsname.release);
+			b->add_kv(b, "machine", "%s", utsname.machine);
+		}
+	}
+#endif /* !WIN32 */
 	return b->finalize(b);
 }
 

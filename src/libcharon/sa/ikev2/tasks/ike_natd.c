@@ -172,7 +172,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 	{
 		return NULL;
 	}
-	notify = notify_payload_create(NOTIFY);
+	notify = notify_payload_create(PLV2_NOTIFY);
 	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, hash);
 	chunk_free(&hash);
@@ -206,7 +206,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) != NOTIFY)
+		if (payload->get_type(payload) != PLV2_NOTIFY)
 		{
 			continue;
 		}
@@ -381,7 +381,7 @@ METHOD(task_t, build_r, status_t,
 
 	/* only add notifies on successful responses. */
 	if (message->get_exchange_type(message) == IKE_SA_INIT &&
-		message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
+		message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
 		return SUCCESS;
 	}

@@ -1,7 +1,7 @@
 
 AM_CPPFLAGS = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = $(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-keychain.la

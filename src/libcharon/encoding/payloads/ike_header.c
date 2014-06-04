@@ -262,7 +262,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_ike_header_t *this)
 {
-	return HEADER;
+	return PL_HEADER;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,

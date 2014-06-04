@@ -3,7 +3,7 @@ AM_CPPFLAGS = \
 	-DFIPS_MODE=${fips_mode}
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-openssl.la
@@ -32,4 +32,4 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_gcm.c openssl_gcm.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
-libstrongswan_openssl_la_LIBADD  = -lcrypto
+libstrongswan_openssl_la_LIBADD  = $(OPENSSL_LIB)

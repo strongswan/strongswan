@@ -50,4 +50,9 @@ bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type);
 bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
 						time_t *nb, time_t *na);
 
+/**
+ * Set output file mode appropriate for credential encoding form on Windows
+ */
+void set_file_mode(FILE *stream, cred_encoding_type_t enc);
+
 #endif /** PKI_H_ @}*/

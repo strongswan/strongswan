@@ -22,6 +22,10 @@
 #include <bio/bio_reader.h>
 
 #ifdef TSS_TROUSERS
+#ifdef _BASETSD_H_
+/* MinGW defines _BASETSD_H_, but TSS checks for _BASETSD_H */
+# define _BASETSD_H
+#endif
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 #else
@@ -35,7 +39,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/utsname.h>
 #include <libgen.h>
 #include <unistd.h>
 #include <errno.h>
@@ -302,29 +305,23 @@ METHOD(pts_t, calculate_secret, bool,
  */
 static void print_tpm_version_info(private_pts_t *this)
 {
-	TPM_CAP_VERSION_INFO versionInfo;
-	UINT64 offset = 0;
-	TSS_RESULT result;
+	TPM_CAP_VERSION_INFO *info;
 
-	result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset,
-						this->tpm_version_info.ptr, &versionInfo);
-	if (result != TSS_SUCCESS)
+	info = (TPM_CAP_VERSION_INFO*)this->tpm_version_info.ptr;
+
+	if (this->tpm_version_info.len >=
+			sizeof(*info) - sizeof(info->vendorSpecific))
 	{
-		DBG1(DBG_PTS, "could not parse tpm version info: tss error 0x%x",
-			 result);
+		DBG2(DBG_PTS, "TPM Version Info: Chip Version: %u.%u.%u.%u, "
+			 "Spec Level: %u, Errata Rev: %u, Vendor ID: %.4s",
+			 info->version.major, info->version.minor,
+			 info->version.revMajor, info->version.revMinor,
+			 untoh16(&info->specLevel), info->errataRev, info->tpmVendorID);
 	}
 	else
 	{
-		DBG2(DBG_PTS, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
-					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s [%.*s]",
-					  versionInfo.version.major, versionInfo.version.minor,
-					  versionInfo.version.revMajor, versionInfo.version.revMinor,
-					  versionInfo.specLevel, versionInfo.errataRev,
-					  versionInfo.tpmVendorID, versionInfo.vendorSpecificSize,
-					  versionInfo.vendorSpecificSize ?
-					  (char*)versionInfo.vendorSpecific : "");
+		DBG1(DBG_PTS, "could not parse tpm version info");
 	}
-	free(versionInfo.vendorSpecific);
 }
 
 #else
@@ -372,42 +369,31 @@ METHOD(pts_t, set_tpm_version_info, void,
  */
 static void load_aik_blob(private_pts_t *this)
 {
-	char *blob_path;
-	FILE *fp;
-	u_int32_t aikBlobLen;
+	char *path;
+	chunk_t *map;
 
-	blob_path = lib->settings->get_str(lib->settings,
+	path = lib->settings->get_str(lib->settings,
 						"%s.plugins.imc-attestation.aik_blob", NULL, lib->ns);
-
-	if (blob_path)
+	if (path)
 	{
-		/* Read aik key blob from a file */
-		if ((fp = fopen(blob_path, "r")) == NULL)
+		map = chunk_map(path, FALSE);
+		if (map)
 		{
-			DBG1(DBG_PTS, "unable to open AIK Blob file: %s", blob_path);
-			return;
-		}
-
-		fseek(fp, 0, SEEK_END);
-		aikBlobLen = ftell(fp);
-		fseek(fp, 0L, SEEK_SET);
-
-		this->aik_blob = chunk_alloc(aikBlobLen);
-		if (fread(this->aik_blob.ptr, 1, aikBlobLen, fp) == aikBlobLen)
-		{
-			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", blob_path);
-			DBG3(DBG_PTS, "AIK Blob: %B", &this->aik_blob);
+			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", path);
+			DBG3(DBG_PTS, "AIK Blob: %B", map);
+			this->aik_blob = chunk_clone(*map);
+			chunk_unmap(map);
 		}
 		else
 		{
-			DBG1(DBG_PTS, "unable to read AIK Blob file '%s'", blob_path);
-			chunk_free(&this->aik_blob);
+			DBG1(DBG_PTS, "unable to map AIK Blob file '%s': %s",
+				 path, strerror(errno));
 		}
-		fclose(fp);
-		return;
 	}
-
-	DBG1(DBG_PTS, "AIK Blob is not available");
+	else
+	{
+		DBG1(DBG_PTS, "AIK Blob is not available");
+	}
 }
 
 /**
@@ -537,6 +523,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	{
 		this->type = PTS_FILE_FIFO;
 	}
+#ifndef WIN32
 	else if (S_ISLNK(st.st_mode))
 	{
 		this->type = PTS_FILE_SYM_LINK;
@@ -545,6 +532,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	{
 		this->type = PTS_FILE_SOCKET;
 	}
+#endif /* WIN32 */
 	else
 	{
 		this->type = PTS_FILE_OTHER;
@@ -624,7 +612,8 @@ METHOD(pts_t, read_pcr, bool,
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
-	chunk_t rgbPcrValue;
+	BYTE *buf;
+	UINT32 len;
 
 	bool success = FALSE;
 
@@ -645,12 +634,12 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
-	result = Tspi_TPM_PcrRead(hTPM, pcr_num, (UINT32*)&rgbPcrValue.len, &rgbPcrValue.ptr);
+	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &len, &buf);
 	if (result != TSS_SUCCESS)
 	{
 		goto err;
 	}
-	*pcr_value = chunk_clone(rgbPcrValue);
+	*pcr_value = chunk_clone(chunk_create(buf, len));
 	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, pcr_value);
 	success = TRUE;
 

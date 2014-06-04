@@ -171,7 +171,7 @@ METHOD(task_t, build_i, status_t,
 	config = this->child_sa->get_config(this->child_sa);
 
 	/* we just need the rekey notify ... */
-	notify = notify_payload_create_from_protocol_and_type(NOTIFY,
+	notify = notify_payload_create_from_protocol_and_type(PLV2_NOTIFY,
 													this->protocol, REKEY_SA);
 	notify->set_spi(notify, this->spi);
 	message->add_payload(message, (payload_t*)notify);
@@ -228,7 +228,7 @@ METHOD(task_t, build_r, status_t,
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
 
-	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
+	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
 		/* rekeying failed, reuse old child */
 		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
@@ -332,7 +332,7 @@ METHOD(task_t, process_i, status_t,
 		this->child_create->task.migrate(&this->child_create->task, this->ike_sa);
 		return NEED_MORE;
 	}
-	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
+	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
 		/* establishing new child failed, reuse old. but not when we
 		 * received a delete in the meantime */

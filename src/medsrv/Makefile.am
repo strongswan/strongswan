@@ -18,7 +18,7 @@ AM_CPPFLAGS = \
 	-DPLUGINS=\""${medsrv_plugins}\""
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 medsrv_templatesdir = ${medsrvdir}/templates

@@ -102,16 +102,18 @@ static void add_file_list_key(vici_req_t *req, char *key, char *value)
 	enumerator = enumerator_create_token(value, ",", " ");
 	while (enumerator->enumerate(enumerator, &token))
 	{
-		if (*token != '/')
+		if (!path_absolute(token))
 		{
 			if (streq(key, "certs"))
 			{
-				snprintf(buf, sizeof(buf), "%s/%s", SWANCTL_X509DIR, token);
+				snprintf(buf, sizeof(buf), "%s%s%s",
+						 SWANCTL_X509DIR, DIRECTORY_SEPARATOR, token);
 				token = buf;
 			}
 			if (streq(key, "cacerts"))
 			{
-				snprintf(buf, sizeof(buf), "%s/%s", SWANCTL_X509CADIR, token);
+				snprintf(buf, sizeof(buf), "%s%s%s",
+						 SWANCTL_X509CADIR, DIRECTORY_SEPARATOR, token);
 				token = buf;
 			}
 		}

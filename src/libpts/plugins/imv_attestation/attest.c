@@ -19,8 +19,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <syslog.h>
 #include <libgen.h>
+#ifdef HAVE_SYSLOG
+# include <syslog.h>
+#endif
 
 #include <library.h>
 #include <utils/debug.h>
@@ -43,9 +45,6 @@ static bool stderr_quiet = TRUE;
  */
 static void attest_dbg(debug_t group, level_t level, char *fmt, ...)
 {
-	int priority = LOG_INFO;
-	char buffer[8192];
-	char *current = buffer, *next;
 	va_list args;
 
 	if (level <= debug_level)
@@ -58,22 +57,30 @@ static void attest_dbg(debug_t group, level_t level, char *fmt, ...)
 			va_end(args);
 		}
 
-		/* write in memory buffer first */
-		va_start(args, fmt);
-		vsnprintf(buffer, sizeof(buffer), fmt, args);
-		va_end(args);
-
-		/* do a syslog with every line */
-		while (current)
+#ifdef HAVE_SYSLOG
 		{
-			next = strchr(current, '\n');
-			if (next)
+			int priority = LOG_INFO;
+			char buffer[8192];
+			char *current = buffer, *next;
+
+			/* write in memory buffer first */
+			va_start(args, fmt);
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+			va_end(args);
+
+			/* do a syslog with every line */
+			while (current)
 			{
-				*(next++) = '\0';
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(priority, "%s\n", current);
+				current = next;
 			}
-			syslog(priority, "%s\n", current);
-			current = next;
 		}
+#endif /* HAVE_SYSLOG */
 	}
 }
 
@@ -91,7 +98,9 @@ static void cleanup(void)
 	attest->destroy(attest);
 	libpts_deinit();
 	libimcv_deinit();
+#ifdef HAVE_SYSLOG
 	closelog();
+#endif
 }
 
 static void do_args(int argc, char *argv[])
@@ -440,7 +449,9 @@ int main(int argc, char *argv[])
 
 	/* enable attest debugging hook */
 	dbg = attest_dbg;
+#ifdef HAVE_SYSLOG
 	openlog("attest", 0, LOG_DEBUG);
+#endif
 
 	atexit(library_deinit);
 
@@ -474,4 +485,3 @@ int main(int argc, char *argv[])
 
 	exit(EXIT_SUCCESS);
 }
-

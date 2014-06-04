@@ -14,11 +14,11 @@
  * for more details.
  */
 
+#include "mysql_database.h"
+
 #define _GNU_SOURCE
 #include <string.h>
 #include <mysql.h>
-
-#include "mysql_database.h"
 
 #include <utils/debug.h>
 #include <utils/chunk.h>
@@ -730,7 +730,7 @@ static bool finalize_transaction(private_mysql_database_t *this,
 	return TRUE;
 }
 
-METHOD(database_t, commit, bool,
+METHOD(database_t, commit_, bool,
 	private_mysql_database_t *this)
 {
 	return finalize_transaction(this, FALSE);
@@ -768,7 +768,7 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 	/**
 	 * parse mysql://username:pass@host:port/database uri
 	 */
-	username = strdupa(uri + 8);
+	username = strdup(uri + 8);
 	pos = strchr(username, ':');
 	if (pos)
 	{
@@ -800,10 +800,12 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 				this->password = strdup(password);
 				this->database = strdup(database);
 				this->port = atoi(port);
+				free(username);
 				return TRUE;
 			}
 		}
 	}
+	free(username);
 	DBG1(DBG_LIB, "parsing MySQL database uri '%s' failed", uri);
 	return FALSE;
 }
@@ -828,7 +830,7 @@ mysql_database_t *mysql_database_create(char *uri)
 				.query = _query,
 				.execute = _execute,
 				.transaction = _transaction,
-				.commit = _commit,
+				.commit = _commit_,
 				.rollback = _rollback,
 				.get_driver = _get_driver,
 				.destroy = _destroy,

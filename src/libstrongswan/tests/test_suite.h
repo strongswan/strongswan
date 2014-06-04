@@ -174,7 +174,11 @@ void test_suite_add_case(test_suite_t *suite, test_case_t *tcase);
 /**
  * sigjmp restore point used by test_restore_point
  */
+#ifdef WIN32
+extern jmp_buf test_restore_point_env;
+#else
 extern sigjmp_buf test_restore_point_env;
+#endif
 
 /**
  * Set or return from an execution restore point
@@ -185,7 +189,11 @@ extern sigjmp_buf test_restore_point_env;
  *
  * @return			TRUE if restore point set, FALSE when restored
  */
-#define test_restore_point() (sigsetjmp(test_restore_point_env, 1) == 0)
+#ifdef WIN32
+# define test_restore_point() (setjmp(test_restore_point_env) == 0)
+#else
+# define test_restore_point() (sigsetjmp(test_restore_point_env, 1) == 0)
+#endif
 
 /**
  * Set up signal handlers for test cases

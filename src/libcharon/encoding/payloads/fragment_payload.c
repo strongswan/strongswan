@@ -124,7 +124,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_fragment_payload_t *this)
 {
-	return FRAGMENT_V1;
+	return PLV1_FRAGMENT;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -201,7 +201,7 @@ fragment_payload_t *fragment_payload_create()
 			.get_data = _get_data,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 	);
 	this->payload_length = get_header_length(this);
 	return &this->public;

@@ -315,7 +315,7 @@ cert_payload_t *cert_payload_create(payload_type_t type)
 			.get_url = _get_url,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);
@@ -363,7 +363,7 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 {
 	private_cert_payload_t *this;
 
-	this = (private_cert_payload_t*)cert_payload_create(CERTIFICATE);
+	this = (private_cert_payload_t*)cert_payload_create(PLV2_CERTIFICATE);
 	this->encoding = ENC_X509_HASH_AND_URL;
 	this->data = chunk_cat("cc", hash, chunk_create(url, strlen(url)));
 	this->payload_length = get_header_length(this) + this->data.len;

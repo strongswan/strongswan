@@ -85,7 +85,7 @@ METHOD(listener_t, message, bool,
 		enumerator = message->create_payload_enumerator(message);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			if (payload->get_type(payload) == SECURITY_ASSOCIATION)
+			if (payload->get_type(payload) == PLV2_SECURITY_ASSOCIATION)
 			{
 				sa = (sa_payload_t*)payload;
 				list = sa->get_proposals(sa);

@@ -15,7 +15,7 @@
 
 #include "os_info.h"
 
-ENUM(os_type_names, OS_TYPE_UNKNOWN, OS_TYPE_ANDROID,
+ENUM(os_type_names, OS_TYPE_UNKNOWN, OS_TYPE_WINDOWS,
 	"Unknown",
 	"Debian",
 	"Ubuntu",
@@ -24,7 +24,8 @@ ENUM(os_type_names, OS_TYPE_UNKNOWN, OS_TYPE_ANDROID,
 	"CentOS",
 	"SUSE",
 	"Gentoo",
-	"Android"
+	"Android",
+	"Windows",
 );
 
 ENUM(os_fwd_status_names, OS_FWD_DISABLED, OS_FWD_UNKNOWN,

@@ -1104,6 +1104,128 @@ int builtin_vprintf(const char *format, va_list ap)
 	return builtin_vfprintf(stdout, format, ap);
 }
 
+#ifdef WIN32
+/**
+ * Set TTY color on Windows consoles
+ */
+static void set_console_color(HANDLE handle, int color)
+{
+	CONSOLE_SCREEN_BUFFER_INFO info;
+	struct {
+		/* escape code */
+		int color;
+		/* windows console color combination */
+		WORD attributes;
+	} maps[] = {
+		{ 30,	0															},
+		{ 31,	FOREGROUND_RED 												},
+		{ 32,	FOREGROUND_GREEN											},
+		{ 33,	FOREGROUND_GREEN | FOREGROUND_RED							},
+		{ 34,	FOREGROUND_BLUE | FOREGROUND_INTENSITY						},
+		{ 35,	FOREGROUND_RED | FOREGROUND_BLUE							},
+		{ 36,	FOREGROUND_GREEN | FOREGROUND_BLUE							},
+		{ 37,	FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED			},
+		{ 39,	FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED			},
+		{ 40,	0															},
+		{ 41,	BACKGROUND_RED												},
+		{ 42,	BACKGROUND_GREEN											},
+		{ 43,	BACKGROUND_GREEN | BACKGROUND_RED							},
+		{ 44,	BACKGROUND_BLUE												},
+		{ 45,	BACKGROUND_RED | BACKGROUND_BLUE							},
+		{ 46,	BACKGROUND_GREEN | BACKGROUND_BLUE							},
+		{ 47,	BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED			},
+		{ 49,	0															},
+	};
+	int i;
+
+	if (GetConsoleScreenBufferInfo(handle, &info))
+	{
+		if (color < 40)
+		{
+			info.wAttributes &= ~(FOREGROUND_BLUE | FOREGROUND_GREEN |
+								  FOREGROUND_RED | FOREGROUND_INTENSITY);
+		}
+		else
+		{
+			info.wAttributes &= ~(BACKGROUND_BLUE | BACKGROUND_GREEN |
+								  BACKGROUND_RED | BACKGROUND_INTENSITY);
+		}
+		for (i = 0; i < countof(maps); i++)
+		{
+			if (maps[i].color == color)
+			{
+				info.wAttributes |= maps[i].attributes;
+				SetConsoleTextAttribute(handle, info.wAttributes);
+				break;
+			}
+		}
+	}
+}
+
+int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
+{
+	char buf[PRINTF_BUF_LEN], *pos, *stop;
+	HANDLE handle;
+	int len, total;
+	DWORD clen, mode;
+
+	total = len = builtin_vsnprintf(buf, sizeof(buf), format, ap);
+	switch (fileno(stream))
+	{
+		case 1:
+			handle = GetStdHandle(STD_OUTPUT_HANDLE);
+			break;
+		case 2:
+			handle = GetStdHandle(STD_ERROR_HANDLE);
+			break;
+		default:
+			handle = INVALID_HANDLE_VALUE;
+			break;
+	}
+	/* GetConsoleMode fails if output redirected */
+	if (handle == INVALID_HANDLE_VALUE || !GetConsoleMode(handle, &mode))
+	{
+		return fwrite(buf, 1, len, stream);
+	}
+	while (len)
+	{
+		pos = &buf[total - len];
+		if (len > 4)
+		{
+			if (pos[0] == '\e' && pos[1] == '[' && pos[4] == 'm')
+			{
+				if (isdigit(pos[3]))
+				{
+					if (pos[2] == '3' || pos[2] == '4')
+					{
+						set_console_color(handle,
+									(pos[2] - '0') * 10 + pos[3] - '0');
+						len -= 5;
+						continue;
+					}
+				}
+			}
+		}
+		stop = memchr(pos + 1, '\e', len);
+		if (stop)
+		{
+			clen = stop - pos;
+		}
+		else
+		{
+			clen = len;
+		}
+		if (clen && !WriteConsole(handle, pos, clen, &clen, NULL))
+		{
+			break;
+		}
+		len -= clen;
+	}
+	return total - len;
+}
+
+#else /* !WIN32 */
+
 int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 {
 	char buf[PRINTF_BUF_LEN];
@@ -1112,6 +1234,8 @@ int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 	len = builtin_vsnprintf(buf, sizeof(buf), format, ap);
 	return fwrite(buf, 1, len, stream);
 }
+
+#endif /* !WIN32 */
 
 int builtin_vsprintf(char *str, const char *format, va_list ap)
 {

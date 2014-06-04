@@ -52,10 +52,10 @@ static imc_os_info_t *os;
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
-							  TNC_Version min_version,
-							  TNC_Version max_version,
-							  TNC_Version *actual_version)
+TNC_Result TNC_IMC_API TNC_IMC_Initialize(TNC_IMCID imc_id,
+										  TNC_Version min_version,
+										  TNC_Version max_version,
+										  TNC_Version *actual_version)
 {
 	if (imc_os)
 	{
@@ -89,9 +89,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 /**
  * see section 3.8.2 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
-										  TNC_ConnectionID connection_id,
-										  TNC_ConnectionState new_state)
+TNC_Result TNC_IMC_API TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
+				TNC_ConnectionID connection_id, TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
 
@@ -446,8 +445,8 @@ static void add_settings(enumerator_t *enumerator, imc_msg_t *msg)
 /**
  * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id)
+TNC_Result TNC_IMC_API TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
+											  TNC_ConnectionID connection_id)
 {
 	imc_state_t *state;
 	imc_msg_t *out_msg;
@@ -594,11 +593,11 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
  * see section 3.8.4 of TCG TNC IF-IMC Specification 1.3
 
  */
-TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id,
-								  TNC_BufferReference msg,
-								  TNC_UInt32 msg_len,
-								  TNC_MessageType msg_type)
+TNC_Result TNC_IMC_API TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
+											  TNC_ConnectionID connection_id,
+											  TNC_BufferReference msg,
+											  TNC_UInt32 msg_len,
+											  TNC_MessageType msg_type)
 {
 	imc_state_t *state;
 	imc_msg_t *in_msg;
@@ -624,15 +623,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 /**
  * see section 3.8.6 of TCG TNC IF-IMV Specification 1.3
  */
-TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
-									  TNC_ConnectionID connection_id,
-									  TNC_UInt32 msg_flags,
-									  TNC_BufferReference msg,
-									  TNC_UInt32 msg_len,
-									  TNC_VendorID msg_vid,
-									  TNC_MessageSubtype msg_subtype,
-									  TNC_UInt32 src_imv_id,
-									  TNC_UInt32 dst_imc_id)
+TNC_Result TNC_IMC_API TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
+												  TNC_ConnectionID connection_id,
+												  TNC_UInt32 msg_flags,
+												  TNC_BufferReference msg,
+												  TNC_UInt32 msg_len,
+												  TNC_VendorID msg_vid,
+												  TNC_MessageSubtype msg_subtype,
+												  TNC_UInt32 src_imv_id,
+												  TNC_UInt32 dst_imc_id)
 {
 	imc_state_t *state;
 	imc_msg_t *in_msg;
@@ -659,8 +658,8 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 /**
  * see section 3.8.7 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
-							   TNC_ConnectionID connection_id)
+TNC_Result TNC_IMC_API TNC_IMC_BatchEnding(TNC_IMCID imc_id,
+										   TNC_ConnectionID connection_id)
 {
 	if (!imc_os)
 	{
@@ -673,7 +672,7 @@ TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
 /**
  * see section 3.8.8 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
+TNC_Result TNC_IMC_API TNC_IMC_Terminate(TNC_IMCID imc_id)
 {
 	if (!imc_os)
 	{
@@ -692,8 +691,8 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 /**
  * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.3
  */
-TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
-									   TNC_TNCC_BindFunctionPointer bind_function)
+TNC_Result TNC_IMC_API TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
+									TNC_TNCC_BindFunctionPointer bind_function)
 {
 	if (!imc_os)
 	{

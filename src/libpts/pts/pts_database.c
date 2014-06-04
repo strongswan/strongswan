@@ -48,7 +48,7 @@ METHOD(pts_database_t, get_pathname, char*,
 	private_pts_database_t *this, bool is_dir, int id)
 {
 	enumerator_t *e;
-	char *path, *name, *pathname;
+	char *path, *name, *sep, *pathname = NULL;
 
 	if (is_dir)
 	{
@@ -70,11 +70,21 @@ METHOD(pts_database_t, get_pathname, char*,
 				"SELECT d.path, f.name FROM files AS f "
 				"JOIN directories AS d ON d.id = f.dir WHERE f.id = ?",
 				 DB_INT, id, DB_TEXT, DB_TEXT);
-		if (!e || !e->enumerate(e, &path, &name) ||
-			asprintf(&pathname, "%s%s%s",
-					 path, streq(path, "/") ? "" : "/", name) == -1)
+		if (e && e->enumerate(e, &path, &name))
 		{
-			pathname = NULL;
+			if (path[0] == '/')
+			{	/* Unix style absolute path */
+				sep = "/";
+			}
+			else
+			{	/* Windows absolute path */
+				sep = "\\";
+			}
+			if (asprintf(&pathname, "%s%s%s",
+						 path, streq(path, "/") ? "" : sep, name) == -1)
+			{
+				pathname = NULL;
+			}
 		}
 	}
 	DESTROY_IF(e);
@@ -420,4 +430,3 @@ pts_database_t *pts_database_create(imv_database_t *imv_db)
 
 	return &this->public;
 }
-

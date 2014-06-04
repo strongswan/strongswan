@@ -450,7 +450,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	keymat_v2_t *keymat;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
-														 AUTHENTICATION);
+														 PLV2_AUTH);
 	if (!auth_payload)
 	{
 		DBG1(DBG_IKE, "AUTH payload missing");
@@ -532,7 +532,7 @@ METHOD(authenticator_t, process_server, status_t,
 	else
 	{
 		eap_payload = (eap_payload_t*)message->get_payload(message,
-													EXTENSIBLE_AUTHENTICATION);
+													PLV2_EAP);
 		if (!eap_payload)
 		{
 			return FAILED;
@@ -590,7 +590,7 @@ METHOD(authenticator_t, process_client, status_t,
 	}
 
 	eap_payload = (eap_payload_t*)message->get_payload(message,
-													EXTENSIBLE_AUTHENTICATION);
+													PLV2_EAP);
 	if (eap_payload)
 	{
 		switch (eap_payload->get_code(eap_payload))

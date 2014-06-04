@@ -73,10 +73,11 @@ static int logcmd(vici_conn_t *conn)
 		fprintf(stderr, "registering for log failed: %s\n", strerror(errno));
 		return errno;
 	}
-	while (TRUE)
-	{
-		sleep(1);
-	}
+
+	wait_sigint();
+
+	fprintf(stderr, "disconnecting...\n");
+
 	return 0;
 }
 

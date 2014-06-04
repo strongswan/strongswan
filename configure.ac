@@ -265,13 +265,16 @@ ARG_ENABL_SET([manager],        [enable web management console (proof of concept
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
+ARG_DISBL_SET([pki],            [disable pki certificate utility.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([svc],            [enable charon Windows service.])
 ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
-ARG_DISBL_SET([tools],          [disable additional utilities (scepclient and pki).])
+ARG_DISBL_SET([tools],          [disable additional utilities (scepclient).])
 ARG_ENABL_SET([aikgen],         [enable AIK generator.])
 # optional features
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
+ARG_ENABL_SET([dbghelp-backtraces],[use dbghlp.dll on Windows to create and print backtraces for memory leaks and segfaults.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
 ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
@@ -567,7 +570,13 @@ AC_CHECK_FUNC(
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
-AC_CHECK_FUNCS(fmemopen funopen mmap memrchr)
+AC_CHECK_FUNCS(fmemopen funopen mmap memrchr setlinebuf strptime)
+
+AC_CHECK_FUNC([syslog], [
+	AC_DEFINE([HAVE_SYSLOG], [], [have syslog(3) and friends])
+	syslog=true
+])
+AM_CONDITIONAL(USE_SYSLOG, [test "x$syslog" = xtrue])
 
 AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h linux/fib_rules.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
@@ -600,7 +609,7 @@ AC_COMPILE_IFELSE(
 		[[#include <sys/types.h>
 		  #include <sys/socket.h>
 		  #include <netinet/in.h>]],
-		[[struct in6_addr in6;
+		[[struct in6_addr in6 __attribute__((unused));
 		  in6 = in6addr_any;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IN6ADDR_ANY], [], [have struct in6_addr in6addr_any])],
@@ -723,6 +732,65 @@ if test x$printf_hooks = xauto -o x$printf_hooks = xglibc; then
 		)]
 	)
 fi
+
+AC_MSG_CHECKING([for Windows target])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <windows.h>]],
+		[[#ifndef WIN32
+		  # error WIN32 undefined
+		  #endif
+		]])],
+	[
+		AC_MSG_RESULT([yes])
+		windows=true
+		openssl_lib=eay32
+		AC_SUBST(PTHREADLIB, "")
+		# explicitly disable ms-bitfields, as it breaks __attribute__((packed))
+		case "$CFLAGS" in
+			*ms-bitfields*) ;;
+			*) CFLAGS="$CFLAGS -mno-ms-bitfields" ;;
+		esac
+	],
+	[
+		AC_MSG_RESULT([no])
+		openssl_lib=crypto
+	]
+)
+AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
+AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
+
+AC_MSG_CHECKING([for working __attribute__((packed))])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM([], [[
+		struct test { char a; short b; } __attribute__((packed));
+		char x[sizeof(struct test) == sizeof(char) + sizeof(short) ? 1 : -1]
+			__attribute__((unused));
+		return 0;
+	]])],
+	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no]); AC_MSG_ERROR([__attribute__((packed)) does not work])]
+)
+
+AC_MSG_CHECKING([clang])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[], [[
+		 #ifndef __clang__
+		 # error not using LLVM clang
+		 #endif
+		]])],
+	[
+		AC_MSG_RESULT([yes])
+	],
+	[
+		AC_MSG_RESULT([no])
+		# GCC, but not MinGW requires -rdynamic for plugins
+		if test x$windows != xtrue; then
+			AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])
+		fi
+	]
+)
 
 if test x$printf_hooks = xvstr; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
@@ -870,12 +938,18 @@ if test x$fast = xtrue; then
 fi
 
 if test x$mysql = xtrue; then
-	AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
-	if test x$MYSQLCONFIG = x; then
-		AC_MSG_ERROR([mysql_config not found!])
+	if test "x$windows" = xtrue; then
+		AC_CHECK_HEADER([mysql.h],,[AC_MSG_ERROR([MySQL header file mysql.h not found!])])
+		AC_CHECK_LIB([mysql],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([MySQL library not found!])],[])
+		AC_SUBST(MYSQLLIB, -lmysql)
+	else
+		AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+		if test x$MYSQLCONFIG = x; then
+			AC_MSG_ERROR([mysql_config not found!])
+		fi
+		AC_SUBST(MYSQLLIB, `$MYSQLCONFIG --libs_r`)
+		AC_SUBST(MYSQLCFLAG, `$MYSQLCONFIG --cflags`)
 	fi
-	AC_SUBST(MYSQLLIB, `$MYSQLCONFIG --libs_r`)
-	AC_SUBST(MYSQLCFLAG, `$MYSQLCONFIG --cflags`)
 fi
 
 if test x$sqlite = xtrue; then
@@ -904,7 +978,7 @@ if test x$sqlite = xtrue; then
 fi
 
 if test x$openssl = xtrue; then
-	AC_CHECK_LIB([crypto],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL crypto library not found])],[])
+	AC_CHECK_LIB([$openssl_lib],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL lib$openssl_lib not found])],[])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
@@ -1373,12 +1447,13 @@ AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_ADNS, test x$adns = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
+AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
-AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
@@ -1397,10 +1472,12 @@ AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers -o x$aikgen = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
+AM_CONDITIONAL(USE_DBGHELP, test x$dbghelp_backtraces = xtrue)
 AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
 AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
+AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
 
 # ========================
 #  set global definitions
@@ -1438,6 +1515,7 @@ AM_COND_IF([USE_LIBTNCCS], [strongswan_options=${strongswan_options}" tnc"])
 AM_COND_IF([USE_MANAGER], [strongswan_options=${strongswan_options}" manager"])
 AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
 AM_COND_IF([USE_TOOLS], [strongswan_options=${strongswan_options}" tools"])
+AM_COND_IF([USE_PKI], [strongswan_options=${strongswan_options}" pki"])
 
 AC_SUBST(strongswan_options)
 
@@ -1540,6 +1618,7 @@ AC_CONFIG_FILES([
 	src/charon-nm/Makefile
 	src/charon-tkm/Makefile
 	src/charon-cmd/Makefile
+	src/charon-svc/Makefile
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile

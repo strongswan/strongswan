@@ -60,7 +60,7 @@ struct private_nonce_payload_t {
 	chunk_t nonce;
 
 	/**
-	 * Payload type, NONCE or NONCE_V1
+	 * Payload type, PLV2_NONCE or PLV1_NONCE
 	 */
 	payload_type_t type;
 };
@@ -110,12 +110,12 @@ METHOD(payload_t, verify, status_t,
 	{
 		bad_length = TRUE;
 	}
-	if (this->type == NONCE &&
+	if (this->type == PLV2_NONCE &&
 		this->nonce.len < 16)
 	{
 		bad_length = TRUE;
 	}
-	if (this->type == NONCE_V1 &&
+	if (this->type == PLV1_NONCE &&
 		this->nonce.len < 8)
 	{
 		bad_length = TRUE;
@@ -209,7 +209,7 @@ nonce_payload_t *nonce_payload_create(payload_type_t type)
 			.get_nonce = _get_nonce,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);

@@ -219,7 +219,7 @@ METHOD(imv_session_t, create_workitem_enumerator, enumerator_t*,
 {
 	if (!this->policy_started)
 	{
-		return NULL;
+		return enumerator_create_empty();
 	}
 	return this->workitems->create_enumerator(this->workitems);
 }

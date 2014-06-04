@@ -17,7 +17,6 @@
 
 #include <library.h>
 
-#include <sched.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -48,7 +47,7 @@ START_TEST(test_read)
 
 	for (c = 'a'; c <= 'z'; c++)
 	{
-		ck_assert_int_eq(write(fd[1], &c, 1), 1);
+		ck_assert_int_eq(send(fd[1], &c, 1, 0), 1);
 		while (testbuf[0] != c)
 		{
 			sched_yield();
@@ -84,7 +83,7 @@ START_TEST(test_write)
 
 	lib->watcher->add(lib->watcher, fd[1], WATCHER_WRITE, writecb, &in);
 
-	ck_assert_int_eq(read(fd[0], &out, 1), 1);
+	ck_assert_int_eq(recv(fd[0], &out, 1, 0), 1);
 	ck_assert_int_eq(out, in);
 
 	lib->watcher->remove(lib->watcher, fd[1]);
@@ -123,7 +122,7 @@ START_TEST(test_multiread)
 	{
 		for (in = 'a'; in <= 'z'; in++)
 		{
-			ck_assert_int_eq(write(fd[i][1], &in, 1), 1);
+			ck_assert_int_eq(send(fd[i][1], &in, 1, 0), 1);
 			while (out[i] != in)
 			{
 				sched_yield();
@@ -171,7 +170,7 @@ START_TEST(test_multiwrite)
 	{
 		for (i = 0; i < countof(fd); i++)
 		{
-			ck_assert_int_eq(read(fd[i][0], &out, 1), 1);
+			ck_assert_int_eq(recv(fd[i][0], &out, 1, 0), 1);
 			ck_assert_int_eq(out, i);
 		}
 	}

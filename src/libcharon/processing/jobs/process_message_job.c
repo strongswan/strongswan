@@ -51,7 +51,7 @@ METHOD(job_t, execute, job_requeue_t,
 	/* if this is an unencrypted INFORMATIONAL exchange it is likely a
 	 * connectivity check. */
 	if (this->message->get_exchange_type(this->message) == INFORMATIONAL &&
-		this->message->get_first_payload_type(this->message) != ENCRYPTED)
+		this->message->get_first_payload_type(this->message) != PLV2_ENCRYPTED)
 	{
 		/* theoretically this could also be an error message
 		 * see RFC 4306, section 1.5. */

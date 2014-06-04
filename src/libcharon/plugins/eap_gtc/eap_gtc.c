@@ -161,11 +161,11 @@ METHOD(eap_method_t, process_server, status_t,
 	{
 		/* assume that "out" contains username/password attributes */
 		co->destroy(co);
-		ci = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
+		ci = cp_payload_create_type(PLV1_CONFIGURATION, CFG_REPLY);
 		ci->add_attribute(ci, configuration_attribute_create_chunk(
-					CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, user));
+					PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_NAME, user));
 		ci->add_attribute(ci, configuration_attribute_create_chunk(
-					CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, pass));
+					PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_PASSWORD, pass));
 		switch (xauth->process(xauth, ci, &co))
 		{
 			case SUCCESS:

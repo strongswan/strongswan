@@ -25,18 +25,29 @@ credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
 ipsec/ipsec_types.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
-networking/tun_device.c networking/streams/stream.c \
-networking/streams/stream_service.c networking/streams/stream_manager.c \
+networking/tun_device.c networking/streams/stream_manager.c \
+networking/streams/stream.c networking/streams/stream_service.c \
+networking/streams/stream_tcp.c networking/streams/stream_service_tcp.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
 selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
 settings/settings_parser.y settings/settings_lexer.l \
-threading/thread.c threading/thread_value.c threading/mutex.c \
-threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/parser_helper.c utils/test.c utils/utils/strerror.c
+
+if !USE_WINDOWS
+  libstrongswan_la_SOURCES += \
+    threading/thread.c \
+    threading/thread_value.c \
+    threading/mutex.c \
+    threading/rwlock.c \
+    threading/spinlock.c \
+    threading/semaphore.c \
+    networking/streams/stream_unix.c \
+    networking/streams/stream_service_unix.c
+endif
 
 # private header files
 noinst_HEADERS = \
@@ -74,26 +85,29 @@ database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h networking/streams/stream.h \
+networking/streams/stream_unix.h networking/streams/stream_service_unix.h \
+networking/streams/stream_tcp.h networking/streams/stream_service_tcp.h \
 networking/streams/stream_service.h networking/streams/stream_manager.h \
 resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
 resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h processing/watcher.h selectors/traffic_selector.h \
-settings/settings.h threading/thread.h threading/thread_value.h \
+settings/settings.h threading/thread_value.h \
+threading/thread.h threading/windows/thread.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
-utils/parser_helper.h utils/test.h utils/integrity_checker.h \
+utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/windows.h \
 utils/utils/strerror.h
 endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
+libstrongswan_la_LIBADD = $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
@@ -109,6 +123,25 @@ AM_LDFLAGS = \
 	-no-undefined
 
 AM_YFLAGS = -v -d
+
+if USE_WINDOWS
+  libstrongswan_la_LIBADD += -lws2_32
+  libstrongswan_la_SOURCES += \
+    threading/windows/thread.c \
+    threading/windows/thread_value.c \
+    threading/windows/mutex.c \
+    threading/windows/rwlock.c \
+    threading/windows/spinlock.c \
+    threading/windows/semaphore.c \
+    utils/windows.c
+else
+  libstrongswan_la_LIBADD += $(PTHREADLIB)
+endif
+
+if USE_DBGHELP
+  libstrongswan_la_LIBADD += -ldbghelp
+  AM_CPPFLAGS += -DHAVE_DBGHELP
+endif
 
 if USE_LEAK_DETECTIVE
   AM_CPPFLAGS += -DLEAK_DETECTIVE

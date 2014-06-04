@@ -92,7 +92,7 @@ METHOD(task_t, build, status_t,
 		if (vids[i].extension == EXT_STRONGSWAN && strongswan)
 		{
 			DBG2(DBG_IKE, "sending %s vendor ID", vids[i].desc);
-			vid = vendor_id_payload_create_data(VENDOR_ID,
+			vid = vendor_id_payload_create_data(PLV2_VENDOR_ID,
 										chunk_clone(get_vid_data(&vids[i])));
 			message->add_payload(message, &vid->payload_interface);
 		}
@@ -111,7 +111,7 @@ METHOD(task_t, process, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == VENDOR_ID)
+		if (payload->get_type(payload) == PLV2_VENDOR_ID)
 		{
 			vendor_id_payload_t *vid;
 			chunk_t data;

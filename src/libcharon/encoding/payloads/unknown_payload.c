@@ -184,7 +184,7 @@ unknown_payload_t *unknown_payload_create(payload_type_t type)
 			.get_data = _get_data,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.type = type,
 	);

@@ -33,6 +33,16 @@
 const char *strerror_safe(int errnum);
 
 /**
+ * Initialize strerror_safe()
+ */
+void strerror_init();
+
+/**
+ * Deinitialize strerror_safe()
+ */
+void strerror_deinit();
+
+/**
  * Replace usages of strerror(3) with thread-safe variant.
  */
 #define strerror(errnum) strerror_safe(errnum)

@@ -508,34 +508,55 @@ START_TEST(test_strreplace)
 END_TEST
 
 /*******************************************************************************
- * path_dirname/basename
+ * path_dirname/basename/absolute
  */
 
 static struct {
 	char *path;
 	char *dir;
 	char *base;
+	bool absolute;
 } path_data[] = {
-	{NULL, ".", "."},
-	{"", ".", "."},
-	{".", ".", "."},
-	{"..", ".", ".."},
-	{"/", "/", "/"},
-	{"//", "/", "/"},
-	{"foo", ".", "foo"},
-	{"f/", ".", "f"},
-	{"foo/", ".", "foo"},
-	{"foo//", ".", "foo"},
-	{"/f", "/", "f"},
-	{"/f/", "/", "f"},
-	{"/foo", "/", "foo"},
-	{"/foo/", "/", "foo"},
-	{"//foo/", "/", "foo"},
-	{"foo/bar", "foo", "bar"},
-	{"foo//bar", "foo", "bar"},
-	{"/foo/bar", "/foo", "bar"},
-	{"/foo/bar/", "/foo", "bar"},
-	{"/foo/bar/baz", "/foo/bar", "baz"},
+	{NULL, ".", ".", FALSE},
+	{"", ".", ".", FALSE},
+	{".", ".", ".", FALSE},
+	{"..", ".", "..", FALSE},
+#ifdef WIN32
+	{"C:\\", "C:", "C:", TRUE},
+	{"X:\\\\", "X:", "X:", TRUE},
+	{"foo", ".", "foo", FALSE},
+	{"f\\", ".", "f", FALSE},
+	{"foo\\", ".", "foo", FALSE},
+	{"foo\\\\", ".", "foo", FALSE},
+	{"d:\\f", "d:", "f", TRUE},
+	{"C:\\f\\", "C:", "f", TRUE},
+	{"C:\\foo", "C:", "foo", TRUE},
+	{"C:\\foo\\", "C:", "foo", TRUE},
+	{"foo\\bar", "foo", "bar", FALSE},
+	{"foo\\\\bar", "foo", "bar", FALSE},
+	{"C:\\foo\\bar", "C:\\foo", "bar", TRUE},
+	{"C:\\foo\\bar\\", "C:\\foo", "bar", TRUE},
+	{"C:\\foo\\bar\\baz", "C:\\foo\\bar", "baz", TRUE},
+	{"\\foo\\bar", "\\foo", "bar", FALSE},
+	{"\\\\foo\\bar", "\\\\foo", "bar", TRUE},
+#else /* !WIN32 */
+	{"/", "/", "/", TRUE},
+	{"//", "/", "/", TRUE},
+	{"foo", ".", "foo", FALSE},
+	{"f/", ".", "f", FALSE},
+	{"foo/", ".", "foo", FALSE},
+	{"foo//", ".", "foo", FALSE},
+	{"/f", "/", "f", TRUE},
+	{"/f/", "/", "f", TRUE},
+	{"/foo", "/", "foo", TRUE},
+	{"/foo/", "/", "foo", TRUE},
+	{"//foo/", "/", "foo", TRUE},
+	{"foo/bar", "foo", "bar", FALSE},
+	{"foo//bar", "foo", "bar", FALSE},
+	{"/foo/bar", "/foo", "bar", TRUE},
+	{"/foo/bar/", "/foo", "bar", TRUE},
+	{"/foo/bar/baz", "/foo/bar", "baz", TRUE},
+#endif
 };
 
 START_TEST(test_path_dirname)
@@ -555,6 +576,12 @@ START_TEST(test_path_basename)
 	base = path_basename(path_data[_i].path);
 	ck_assert_str_eq(path_data[_i].base, base);
 	free(base);
+}
+END_TEST
+
+START_TEST(test_path_absolute)
+{
+	ck_assert(path_data[_i].absolute == path_absolute(path_data[_i].path));
 }
 END_TEST
 
@@ -674,7 +701,11 @@ Suite *utils_suite_create()
 	TCase *tc;
 
 	/* force a timezone to match non-UTC conversions */
+#ifdef WIN32
+	_putenv("TZ=GST-1GDT");
+#else
 	setenv("TZ", "Europe/Zurich", 1);
+#endif
 	tzset();
 
 	s = suite_create("utils");
@@ -725,9 +756,16 @@ Suite *utils_suite_create()
 	tcase_add_loop_test(tc, test_strreplace, 0, countof(strreplace_data));
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("path_dirname/basename");
+	tc = tcase_create("path_dirname");
 	tcase_add_loop_test(tc, test_path_dirname, 0, countof(path_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("path_basename");
 	tcase_add_loop_test(tc, test_path_basename, 0, countof(path_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("path_absolute");
+	tcase_add_loop_test(tc, test_path_absolute, 0, countof(path_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("printf_hooks");

@@ -88,7 +88,7 @@ struct private_proposal_substructure_t {
 	linked_list_t *transforms;
 
 	/**
-	 * Type of this payload, PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
+	 * Type of this payload, PLV2_PROPOSAL_SUBSTRUCTURE or PLV1_PROPOSAL_SUBSTRUCTURE
 	 */
 	payload_type_t type;
 };
@@ -114,7 +114,7 @@ static encoding_rule_t encodings_v1[] = {
 	/* SPI is a chunk of variable size*/
 	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
 	/* Transforms are stored in a transform substructure list */
-	{ PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE_V1,
+	{ PAYLOAD_LIST + PLV1_TRANSFORM_SUBSTRUCTURE,
 						offsetof(private_proposal_substructure_t, transforms)		},
 };
 
@@ -139,7 +139,7 @@ static encoding_rule_t encodings_v2[] = {
 	/* SPI is a chunk of variable size*/
 	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
 	/* Transforms are stored in a transform substructure list */
-	{ PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE,
+	{ PAYLOAD_LIST + PLV2_TRANSFORM_SUBSTRUCTURE,
 						offsetof(private_proposal_substructure_t, transforms)		},
 };
 
@@ -329,7 +329,7 @@ METHOD(payload_t, verify, status_t,
 	enumerator_t *enumerator;
 	payload_t *current;
 
-	if (this->next_payload != NO_PAYLOAD && this->next_payload != 2)
+	if (this->next_payload != PL_NONE && this->next_payload != 2)
 	{
 		/* must be 0 or 2 */
 		DBG1(DBG_ENC, "inconsistent next payload");
@@ -361,7 +361,7 @@ METHOD(payload_t, verify, status_t,
 			}
 			break;
 		case PROTO_IKE:
-			if (this->type == PROPOSAL_SUBSTRUCTURE_V1)
+			if (this->type == PLV1_PROPOSAL_SUBSTRUCTURE)
 			{
 				if (this->spi.len <= 16)
 				{	/* according to RFC 2409, section 3.5 anything between
@@ -397,7 +397,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_proposal_substructure_t *this, encoding_rule_t **rules)
 {
-	if (this->type == PROPOSAL_SUBSTRUCTURE)
+	if (this->type == PLV2_PROPOSAL_SUBSTRUCTURE)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -1028,7 +1028,7 @@ METHOD(proposal_substructure_t, get_proposals, void,
 			proposal->set_spi(proposal, spi);
 			proposals->insert_last(proposals, proposal);
 		}
-		if (this->type == PROPOSAL_SUBSTRUCTURE)
+		if (this->type == PLV2_PROPOSAL_SUBSTRUCTURE)
 		{
 			add_to_proposal_v2(proposal, transform);
 		}
@@ -1266,7 +1266,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.get_encap_mode = _get_encap_mode,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.transforms = linked_list_create(),
 		.type = type,
 	);
@@ -1286,7 +1286,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	u_int16_t alg, key_size;
 	enumerator_t *enumerator;
 
-	transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
+	transform = transform_substructure_create_type(PLV1_TRANSFORM_SUBSTRUCTURE,
 												number, IKEV1_TRANSID_KEY_IKE);
 
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
@@ -1296,12 +1296,12 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 		if (alg)
 		{
 			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+				transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 									TATTR_PH1_ENCRYPTION_ALGORITHM, alg));
 			if (key_size)
 			{
 				transform->add_transform_attribute(transform,
-					transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+					transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 										TATTR_PH1_KEY_LENGTH, key_size));
 			}
 			break;
@@ -1317,7 +1317,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 		if (alg)
 		{
 			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+				transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 									TATTR_PH1_HASH_ALGORITHM, alg));
 			break;
 		}
@@ -1328,19 +1328,19 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 								TATTR_PH1_GROUP, alg));
 	}
 	enumerator->destroy(enumerator);
 
 	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+		transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH1_AUTH_METHOD, get_ikev1_auth(method)));
 	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+		transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH1_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
 	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+		transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH1_LIFE_DURATION, lifetime));
 
 	add_transform_substructure(this, transform);
@@ -1366,11 +1366,11 @@ static void set_from_proposal_v1(private_proposal_substructure_t *this,
 		if (alg)
 		{
 			transform = transform_substructure_create_type(
-									TRANSFORM_SUBSTRUCTURE_V1, number, alg);
+									PLV1_TRANSFORM_SUBSTRUCTURE, number, alg);
 			if (key_size)
 			{
 				transform->add_transform_attribute(transform,
-					transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+					transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 											TATTR_PH2_KEY_LENGTH, key_size));
 			}
 		}
@@ -1386,10 +1386,10 @@ static void set_from_proposal_v1(private_proposal_substructure_t *this,
 			if (!transform)
 			{
 				transform = transform_substructure_create_type(
-									TRANSFORM_SUBSTRUCTURE_V1, number, alg);
+									PLV1_TRANSFORM_SUBSTRUCTURE, number, alg);
 			}
 			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+				transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 									TATTR_PH2_AUTH_ALGORITHM, alg));
 		}
 	}
@@ -1404,30 +1404,30 @@ static void set_from_proposal_v1(private_proposal_substructure_t *this,
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 									TATTR_PH2_GROUP, alg));
 	}
 	enumerator->destroy(enumerator);
 
 	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+		transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_ENCAP_MODE, get_ikev1_mode(mode, udp)));
 	if (lifetime)
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_DURATION, lifetime));
 	}
 	if (lifebytes)
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_KILOBYTES));
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_DURATION, lifebytes / 1000));
 	}
 
@@ -1448,12 +1448,12 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE,
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
 												ENCRYPTION_ALGORITHM, alg);
 		if (key_size)
 		{
 			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(TRANSFORM_ATTRIBUTE,
+				transform_attribute_create_value(PLV2_TRANSFORM_ATTRIBUTE,
 											TATTR_IKEV2_KEY_LENGTH, key_size));
 		}
 		add_transform_substructure(this, transform);
@@ -1464,7 +1464,7 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE,
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
 												INTEGRITY_ALGORITHM, alg);
 		add_transform_substructure(this, transform);
 	}
@@ -1474,7 +1474,7 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, PSEUDO_RANDOM_FUNCTION);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE,
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
 												PSEUDO_RANDOM_FUNCTION, alg);
 		add_transform_substructure(this, transform);
 	}
@@ -1484,7 +1484,7 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
 	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE,
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
 												DIFFIE_HELLMAN_GROUP, alg);
 		add_transform_substructure(this, transform);
 	}
@@ -1494,7 +1494,7 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, EXTENDED_SEQUENCE_NUMBERS);
 	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE,
+		transform = transform_substructure_create_type(PLV2_TRANSFORM_SUBSTRUCTURE,
 												EXTENDED_SEQUENCE_NUMBERS, alg);
 		add_transform_substructure(this, transform);
 	}
@@ -1543,7 +1543,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 	private_proposal_substructure_t *this;
 
 	this = (private_proposal_substructure_t*)
-							proposal_substructure_create(SECURITY_ASSOCIATION);
+							proposal_substructure_create(PLV2_SECURITY_ASSOCIATION);
 	set_from_proposal_v2(this, proposal);
 	set_data(this, proposal);
 
@@ -1560,7 +1560,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 	private_proposal_substructure_t *this;
 
 	this = (private_proposal_substructure_t*)
-						proposal_substructure_create(PROPOSAL_SUBSTRUCTURE_V1);
+						proposal_substructure_create(PLV1_PROPOSAL_SUBSTRUCTURE);
 	switch (proposal->get_protocol(proposal))
 	{
 		case PROTO_IKE:
@@ -1636,31 +1636,31 @@ proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 
 
 	this = (private_proposal_substructure_t*)
-						proposal_substructure_create(PROPOSAL_SUBSTRUCTURE_V1);
+						proposal_substructure_create(PLV1_PROPOSAL_SUBSTRUCTURE);
 
 	/* we currently support DEFLATE only */
-	transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
+	transform = transform_substructure_create_type(PLV1_TRANSFORM_SUBSTRUCTURE,
 												   1, IKEV1_IPCOMP_DEFLATE);
 
 	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+		transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_ENCAP_MODE, get_ikev1_mode(mode, udp)));
 	if (lifetime)
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_DURATION, lifetime));
 	}
 	if (lifebytes)
 	{
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_KILOBYTES));
 		transform->add_transform_attribute(transform,
-			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+			transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
 							TATTR_PH2_SA_LIFE_DURATION, lifebytes / 1000));
 	}
 

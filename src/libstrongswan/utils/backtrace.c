@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2006-2013 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2013 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,19 +16,28 @@
 
 #define _GNU_SOURCE
 
-#ifdef HAVE_DLADDR
-# include <dlfcn.h>
-#endif /* HAVE_DLADDR */
-
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
-
+#ifdef HAVE_DBGHELP
+# include <winsock2.h>
+# include <windows.h>
+# include <dbghelp.h>
+#endif /* HAVE_DBGHELP */
 #include <string.h>
 
 #include "backtrace.h"
 
 #include <utils/debug.h>
+
+#ifdef WIN32
+# include <psapi.h>
+/* missing in MinGW */
+WINBOOL K32GetModuleInformation(HANDLE hProcess, HMODULE hModule,
+								LPMODULEINFO lpmodinfo, DWORD cb);
+DWORD K32GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule,
+							  LPTSTR lpFilename, DWORD nSize);
+#endif
 
 typedef struct private_backtrace_t private_backtrace_t;
 
@@ -79,12 +89,10 @@ static void println(FILE *file, char *format, ...)
 	va_end(args);
 }
 
-#ifdef HAVE_DLADDR
-
 /**
  * Same as tty_escape_get(), but for a potentially NULL FILE*
  */
-static char* esc(FILE *file, tty_escape_t escape)
+static inline char* esc(FILE *file, tty_escape_t escape)
 {
 	if (file)
 	{
@@ -92,6 +100,35 @@ static char* esc(FILE *file, tty_escape_t escape)
 	}
 	return "";
 }
+
+#ifdef HAVE_DBGHELP
+
+#include <dbghelp.h>
+#include <threading/mutex.h>
+
+/**
+ * Mutex to access non-thread-safe dbghelp functions
+ */
+static mutex_t *dbghelp_mutex;
+
+void backtrace_init()
+{
+	SymSetOptions(SYMOPT_LOAD_LINES);
+	SymInitialize(GetCurrentProcess(), NULL, TRUE);
+	dbghelp_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+}
+
+void backtrace_deinit()
+{
+	dbghelp_mutex->destroy(dbghelp_mutex);
+	SymCleanup(GetCurrentProcess());
+}
+
+#elif defined(HAVE_DLADDR) || defined(HAVE_BFD_H)
+
+#ifdef HAVE_DLADDR
+#include <dlfcn.h>
+#endif
 
 #ifdef HAVE_BFD_H
 
@@ -352,7 +389,6 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 	snprintf(buf, sizeof(buf), "addr2line -e %s %p", filename, ptr);
 #endif /* __APPLE__ */
 
-
 	output = popen(buf, "r");
 	if (output)
 	{
@@ -375,7 +411,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 
 #endif /* HAVE_BFD_H */
 
-#else /* !HAVE_DLADDR */
+#else /* !HAVE_DLADDR && !HAVE_DBGHELP */
 
 void backtrace_init() {}
 void backtrace_deinit() {}
@@ -385,7 +421,7 @@ void backtrace_deinit() {}
 METHOD(backtrace_t, log_, void,
 	private_backtrace_t *this, FILE *file, bool detailed)
 {
-#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H)
+#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H) || defined(WIN32)
 	size_t i;
 	char **strings = NULL;
 
@@ -425,7 +461,84 @@ METHOD(backtrace_t, log_, void,
 			}
 		}
 		else
-#endif /* HAVE_DLADDR */
+#elif defined(HAVE_DBGHELP)
+		struct {
+			SYMBOL_INFO hdr;
+			char buf[128];
+		} symbol;
+		char filename[MAX_PATH];
+		HINSTANCE module;
+		HANDLE process;
+		DWORD64 displace, frame;
+
+		process = GetCurrentProcess();
+		frame = (uintptr_t)this->frames[i];
+
+		memset(&symbol, 0, sizeof(symbol));
+		symbol.hdr.SizeOfStruct = sizeof(symbol.hdr);
+		symbol.hdr.MaxNameLen = sizeof(symbol.buf) - 1;
+
+		dbghelp_mutex->lock(dbghelp_mutex);
+
+		module = (HINSTANCE)SymGetModuleBase64(process, frame);
+
+		if (module && GetModuleFileName(module, filename, sizeof(filename)))
+		{
+			if (SymFromAddr(process, frame, &displace, &symbol.hdr) &&
+				symbol.hdr.Name)
+			{
+				println(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]",
+						esc(file, TTY_FG_YELLOW), filename,
+						esc(file, TTY_FG_DEF), (void*)module,
+						esc(file, TTY_FG_RED), symbol.hdr.Name,
+						esc(file, TTY_FG_DEF), displace,
+						this->frames[i]);
+			}
+			else
+			{
+				println(file, "  %s%s%s @ %p [%p]",
+						esc(file, TTY_FG_YELLOW), filename,
+						esc(file, TTY_FG_DEF), (void*)module, this->frames[i]);
+			}
+			if (detailed)
+			{
+				IMAGEHLP_LINE64 line;
+				DWORD off;
+
+				memset(&line, 0, sizeof(line));
+				line.SizeOfStruct = sizeof(line);
+
+				if (SymGetLineFromAddr64(process, frame, &off, &line))
+				{
+
+					println(file, "    -> %s%s:%u%s", esc(file, TTY_FG_GREEN),
+							line.FileName, line.LineNumber,
+							esc(file, TTY_FG_DEF));
+				}
+			}
+		}
+		else
+#elif defined(WIN32)
+		HMODULE module;
+		MODULEINFO info;
+		char filename[MAX_PATH];
+
+		if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+						this->frames[i], &module) &&
+			K32GetModuleInformation(GetCurrentProcess(), module,
+						&info, sizeof(info)) &&
+			K32GetModuleFileNameExA(GetCurrentProcess(), module,
+						filename, sizeof(filename)))
+		{
+			println(file, "  %s%s%s @ %p [%p]",
+					esc(file, TTY_FG_YELLOW), filename,
+					esc(file, TTY_FG_DEF), info.lpBaseOfDll, this->frames[i]);
+#ifdef HAVE_BFD_H
+			print_sourceline(file, filename, this->frames[i], info.lpBaseOfDll);
+#endif /* HAVE_BFD_H */
+		}
+		else
+#endif /* HAVE_DLADDR/HAVE_DBGHELP */
 		{
 #ifdef HAVE_BACKTRACE
 			if (!strings)
@@ -442,10 +555,13 @@ METHOD(backtrace_t, log_, void,
 				println(file, "    %p", this->frames[i]);
 			}
 		}
+#ifdef HAVE_DBGHELP
+		dbghelp_mutex->unlock(dbghelp_mutex);
+#endif
 	}
 	free(strings);
 #else /* !HAVE_BACKTRACE && !HAVE_LIBUNWIND_H */
-	println(file, "no support for backtrace()/libunwind");
+	println(file, "no support for capturing backtraces");
 #endif /* HAVE_BACKTRACE/HAVE_LIBUNWIND_H */
 }
 
@@ -470,7 +586,43 @@ METHOD(backtrace_t, contains_function, bool,
 			}
 		}
 	}
-#endif /* HAVE_DLADDR */
+#elif defined(HAVE_DBGHELP)
+	int i, j;
+	HANDLE process;
+
+	process = GetCurrentProcess();
+
+	dbghelp_mutex->lock(dbghelp_mutex);
+
+	for (i = 0; i < this->frame_count; i++)
+	{
+		struct {
+			SYMBOL_INFO hdr;
+			char buf[128];
+		} symbol;
+
+		memset(&symbol, 0, sizeof(symbol));
+		symbol.hdr.SizeOfStruct = sizeof(symbol.hdr);
+		symbol.hdr.MaxNameLen = sizeof(symbol.buf) - 1;
+
+		if (SymFromAddr(process, (DWORD64)this->frames[i], NULL, &symbol.hdr))
+		{
+			if (symbol.hdr.Name)
+			{
+				for (j = 0; j < count; j++)
+				{
+					if (streq(symbol.hdr.Name, function[j]))
+					{
+						dbghelp_mutex->unlock(dbghelp_mutex);
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+
+	dbghelp_mutex->unlock(dbghelp_mutex);
+#endif /* HAVE_DLADDR/HAVE_DBGHELP */
 	return FALSE;
 }
 
@@ -584,6 +736,66 @@ static inline int backtrace_unwind(void **frames, int count)
 }
 #endif /* HAVE_UNWIND */
 
+#ifdef HAVE_DBGHELP
+
+/**
+ * Windows dbghelp variant for glibc backtrace()
+ */
+static inline int backtrace_win(void **frames, int count)
+{
+	STACKFRAME frame;
+	HANDLE process, thread;
+	DWORD machine;
+	CONTEXT context;
+	int got = 0;
+
+	memset(&frame, 0, sizeof(frame));
+	memset(&context, 0, sizeof(context));
+
+	process = GetCurrentProcess();
+	thread = GetCurrentThread();
+
+#ifdef __x86_64
+	machine = IMAGE_FILE_MACHINE_AMD64;
+
+	frame.AddrPC.Offset = context.Rip;
+	frame.AddrPC.Mode = AddrModeFlat;
+	frame.AddrStack.Offset = context.Rsp;
+	frame.AddrStack.Mode = AddrModeFlat;
+	frame.AddrFrame.Offset = context.Rbp;
+	frame.AddrFrame.Mode = AddrModeFlat;
+#else /* x86 */
+	machine = IMAGE_FILE_MACHINE_I386;
+
+	frame.AddrPC.Offset = context.Eip;
+	frame.AddrPC.Mode = AddrModeFlat;
+	frame.AddrStack.Offset = context.Esp;
+	frame.AddrStack.Mode = AddrModeFlat;
+	frame.AddrFrame.Offset = context.Ebp;
+	frame.AddrFrame.Mode = AddrModeFlat;
+#endif /* x86_64/x86 */
+
+	dbghelp_mutex->lock(dbghelp_mutex);
+
+	RtlCaptureContext(&context);
+
+	while (got < count)
+	{
+		if (!StackWalk64(machine, process, thread, &frame, &context,
+						 NULL, SymFunctionTableAccess, SymGetModuleBase, NULL))
+		{
+			break;
+		}
+		frames[got++] = (void*)frame.AddrPC.Offset;
+	}
+
+	dbghelp_mutex->unlock(dbghelp_mutex);
+
+	return got;
+}
+
+#endif /* HAVE_DBGHELP */
+
 /**
  * Get implementation methods of backtrace_t
  */
@@ -612,7 +824,12 @@ backtrace_t *backtrace_create(int skip)
 	frame_count = backtrace_unwind(frames, countof(frames));
 #elif defined(HAVE_BACKTRACE)
 	frame_count = backtrace(frames, countof(frames));
-#endif /* HAVE_BACKTRACE */
+#elif defined(HAVE_DBGHELP)
+	frame_count = backtrace_win(frames, countof(frames));
+#elif defined(WIN32)
+	frame_count = CaptureStackBackTrace(skip, countof(frames), frames, NULL);
+	skip = 0;
+#endif
 	frame_count = max(frame_count - skip, 0);
 	this = malloc(sizeof(private_backtrace_t) + frame_count * sizeof(void*));
 	memcpy(this->frames, frames + skip, frame_count * sizeof(void*));

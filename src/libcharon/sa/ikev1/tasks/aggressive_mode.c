@@ -133,7 +133,7 @@ static bool has_notify_errors(private_aggressive_mode_t *this, message_t *messag
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY_V1)
+		if (payload->get_type(payload) == PLV1_NOTIFY)
 		{
 			notify_payload_t *notify;
 			notify_type_t type;
@@ -167,7 +167,7 @@ static status_t send_notify(private_aggressive_mode_t *this, notify_type_t type)
 	u_int64_t spi_i, spi_r;
 	chunk_t spi;
 
-	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+	notify = notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
 														  PROTO_IKE, type);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
@@ -276,7 +276,7 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
-			id_payload = id_payload_create_from_identification(ID_V1, id);
+			id_payload = id_payload_create_from_identification(PLV1_ID, id);
 			this->id_data = id_payload->get_encoded(id_payload);
 			message->add_payload(message, &id_payload->payload_interface);
 
@@ -389,7 +389,7 @@ METHOD(task_t, process_r, status_t,
 									   message->get_source(message), TRUE);
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
-													SECURITY_ASSOCIATION_V1);
+													PLV1_SECURITY_ASSOCIATION);
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "SA payload missing");
@@ -448,7 +448,7 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
-			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
+			id_payload = (id_payload_t*)message->get_payload(message, PLV1_ID);
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDii payload missing");
@@ -588,7 +588,7 @@ METHOD(task_t, build_r, status_t,
 		}
 		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
-		id_payload = id_payload_create_from_identification(ID_V1, id);
+		id_payload = id_payload_create_from_identification(PLV1_ID, id);
 		message->add_payload(message, &id_payload->payload_interface);
 
 		if (!this->ph1->build_auth(this->ph1, this->method, message,
@@ -614,7 +614,7 @@ METHOD(task_t, process_i, status_t,
 		u_int32_t lifetime;
 
 		sa_payload = (sa_payload_t*)message->get_payload(message,
-												SECURITY_ASSOCIATION_V1);
+												PLV1_SECURITY_ASSOCIATION);
 		if (!sa_payload)
 		{
 			DBG1(DBG_IKE, "SA payload missing");
@@ -654,7 +654,7 @@ METHOD(task_t, process_i, status_t,
 			return send_notify(this, NO_PROPOSAL_CHOSEN);
 		}
 
-		id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
+		id_payload = (id_payload_t*)message->get_payload(message, PLV1_ID);
 		if (!id_payload)
 		{
 			DBG1(DBG_IKE, "IDir payload missing");

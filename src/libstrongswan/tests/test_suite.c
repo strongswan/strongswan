@@ -18,7 +18,11 @@
 #include <signal.h>
 #include <unistd.h>
 
+#ifndef WIN32
 #include <pthread.h>
+#endif
+
+#include <threading/thread.h>
 
 /**
  * Failure message buf
@@ -44,11 +48,6 @@ static backtrace_t *failure_backtrace;
  * Flag to indicate if a worker thread failed
  */
 static bool worker_failed;
-
-/**
- * Longjump restore point when failing
- */
-sigjmp_buf test_restore_point_env;
 
 /**
  * See header.
@@ -124,6 +123,169 @@ void test_suite_add_case(test_suite_t *suite, test_case_t *tcase)
 	array_insert(suite->tcases, -1, tcase);
 }
 
+#ifdef WIN32
+
+/**
+ * Longjump restore point when failing
+ */
+jmp_buf test_restore_point_env;
+
+/**
+ * Thread ID of main thread
+ */
+static DWORD main_thread;
+
+/**
+ * APC routine invoked by main thread on worker failure
+ */
+static void set_worker_failure(ULONG_PTR dwParam)
+{
+	worker_failed = TRUE;
+}
+
+/**
+ * Let test case fail
+ */
+static void test_failure()
+{
+	if (GetCurrentThreadId() == main_thread)
+	{
+		longjmp(test_restore_point_env, 1);
+	}
+	else
+	{
+		HANDLE *thread;
+
+		thread = OpenThread(THREAD_SET_CONTEXT, FALSE, main_thread);
+		if (thread)
+		{
+			QueueUserAPC(set_worker_failure, thread, (uintptr_t)NULL);
+			CloseHandle(thread);
+		}
+		thread_exit(NULL);
+	}
+}
+
+/**
+ * See header.
+ */
+void test_fail_if_worker_failed()
+{
+	if (GetCurrentThreadId() == main_thread && worker_failed)
+	{
+		test_failure();
+	}
+}
+
+/**
+ * Vectored exception handler
+ */
+static long eh_handler(PEXCEPTION_POINTERS ei)
+{
+	char *ename;
+	bool old = FALSE;
+
+	switch (ei->ExceptionRecord->ExceptionCode)
+	{
+		case EXCEPTION_ACCESS_VIOLATION:
+			ename = "ACCESS_VIOLATION";
+			break;
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+			ename = "ARRAY_BOUNDS_EXCEEDED";
+			break;
+		case EXCEPTION_DATATYPE_MISALIGNMENT:
+			ename = "DATATYPE_MISALIGNMENT";
+			break;
+		case EXCEPTION_FLT_DENORMAL_OPERAND:
+			ename = "FLT_DENORMAL_OPERAND";
+			break;
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+			ename = "FLT_DIVIDE_BY_ZERO";
+			break;
+		case EXCEPTION_FLT_INEXACT_RESULT:
+			ename = "FLT_INEXACT_RESULT";
+			break;
+		case EXCEPTION_FLT_INVALID_OPERATION:
+			ename = "FLT_INVALID_OPERATION";
+			break;
+		case EXCEPTION_FLT_OVERFLOW:
+			ename = "FLT_OVERFLOW";
+			break;
+		case EXCEPTION_FLT_STACK_CHECK:
+			ename = "FLT_STACK_CHECK";
+			break;
+		case EXCEPTION_FLT_UNDERFLOW:
+			ename = "FLT_UNDERFLOW";
+			break;
+		case EXCEPTION_ILLEGAL_INSTRUCTION:
+			ename = "ILLEGAL_INSTRUCTION";
+			break;
+		case EXCEPTION_IN_PAGE_ERROR:
+			ename = "IN_PAGE_ERROR";
+			break;
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:
+			ename = "INT_DIVIDE_BY_ZERO";
+			break;
+		case EXCEPTION_INT_OVERFLOW:
+			ename = "INT_OVERFLOW";
+			break;
+		case EXCEPTION_INVALID_DISPOSITION:
+			ename = "INVALID_DISPOSITION";
+			break;
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+			ename = "NONCONTINUABLE_EXCEPTION";
+			break;
+		case EXCEPTION_PRIV_INSTRUCTION:
+			ename = "PRIV_INSTRUCTION";
+			break;
+		case EXCEPTION_STACK_OVERFLOW:
+			ename = "STACK_OVERFLOW";
+			break;
+		default:
+			return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	if (lib->leak_detective)
+	{
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
+	failure_backtrace = backtrace_create(5);
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->set_state(lib->leak_detective, old);
+	}
+	failure_line = 0;
+	test_fail_msg(NULL, 0, "%s exception", ename);
+	/* not reached */
+	return EXCEPTION_CONTINUE_EXECUTION;
+}
+
+/**
+ * See header.
+ */
+void test_setup_handler()
+{
+	main_thread = GetCurrentThreadId();
+	AddVectoredExceptionHandler(0, eh_handler);
+}
+
+/**
+ * See header.
+ */
+void test_setup_timeout(int s)
+{
+	/* TODO: currently not supported. SetTimer()? */
+
+	worker_failed = FALSE;
+}
+
+#else /* !WIN32 */
+
+/**
+ * Longjump restore point when failing
+ */
+sigjmp_buf test_restore_point_env;
+
 /**
  * Main thread performing tests
  */
@@ -144,34 +306,6 @@ static inline void test_failure()
 		/* terminate thread to prevent it from going wild */
 		pthread_exit(NULL);
 	}
-}
-
-/**
- * See header.
- */
-void test_fail_vmsg(const char *file, int line, char *fmt, va_list args)
-{
-	vsnprintf(failure_buf, sizeof(failure_buf), fmt, args);
-	failure_line = line;
-	failure_file = file;
-
-	test_failure();
-}
-
-/**
- * See header.
- */
-void test_fail_msg(const char *file, int line, char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vsnprintf(failure_buf, sizeof(failure_buf), fmt, args);
-	failure_line = line;
-	failure_file = file;
-	va_end(args);
-
-	test_failure();
 }
 
 /**
@@ -270,6 +404,35 @@ void test_setup_timeout(int s)
 	alarm(s);
 
 	worker_failed = FALSE;
+}
+
+#endif /* !WIN32 */
+
+/**
+ * See header.
+ */
+void test_fail_vmsg(const char *file, int line, char *fmt, va_list args)
+{
+	vsnprintf(failure_buf, sizeof(failure_buf), fmt, args);
+	failure_line = line;
+	failure_file = file;
+
+	test_failure();
+}
+/**
+ * See header.
+ */
+void test_fail_msg(const char *file, int line, char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(failure_buf, sizeof(failure_buf), fmt, args);
+	failure_line = line;
+	failure_file = file;
+	va_end(args);
+
+	test_failure();
 }
 
 /**

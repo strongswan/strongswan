@@ -23,6 +23,7 @@ libtool
 .dirstamp
 *.l[ao]
 *.[ao]
+*.exe
 y.tab.[ch]
 lex.yy.c
 *keywords.c

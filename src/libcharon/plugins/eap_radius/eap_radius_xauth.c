@@ -87,12 +87,12 @@ static bool build_round(private_eap_radius_xauth_t *this, cp_payload_t *cp)
 		return FALSE;
 	}
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
-					CONFIGURATION_ATTRIBUTE_V1, this->round.type, chunk_empty));
+					PLV1_CONFIGURATION_ATTRIBUTE, this->round.type, chunk_empty));
 
 	if (this->round.message && strlen(this->round.message))
 	{
 		cp->add_attribute(cp, configuration_attribute_create_chunk(
-					CONFIGURATION_ATTRIBUTE_V1, XAUTH_MESSAGE,
+					PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_MESSAGE,
 					chunk_from_str(this->round.message)));
 	}
 	return TRUE;
@@ -103,10 +103,10 @@ METHOD(xauth_method_t, initiate, status_t,
 {
 	cp_payload_t *cp;
 
-	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	cp = cp_payload_create_type(PLV1_CONFIGURATION, CFG_REQUEST);
 	/* first message always comes with username */
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk_empty));
+				PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_NAME, chunk_empty));
 
 	if (build_round(this, cp))
 	{
@@ -211,7 +211,7 @@ METHOD(xauth_method_t, process, status_t,
 	{
 		return verify_radius(this);
 	}
-	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	cp = cp_payload_create_type(PLV1_CONFIGURATION, CFG_REQUEST);
 	if (build_round(this, cp))
 	{
 		*out = cp;

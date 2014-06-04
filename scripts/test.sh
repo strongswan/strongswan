@@ -11,6 +11,8 @@ TARGET=check
 
 DEPS="libgmp-dev"
 
+CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror"
+
 case "$TEST" in
 default)
 	# should be the default, but lets make sure
@@ -31,7 +33,8 @@ all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
-			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen"
+			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
+			--disable-svc --disable-dbghelp-backtraces"
 	if test "$LEAK_DETECTIVE" = "yes"; then
 		# libgcrypt can't be deinitialized
 		CONFIG="$CONFIG --disable-gcrypt"
@@ -46,6 +49,22 @@ all)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
 		  binutils-dev libunwind7-dev libjson0-dev"
+	;;
+win)
+	CONFIG="--host=x86_64-w64-mingw32 --disable-defaults --enable-svc --enable-ikev2
+			--enable-ikev1 --enable-static --enable-test-vectors --enable-nonce
+			--enable-constraints --enable-revocation --enable-pem --enable-pkcs1
+			--enable-pkcs8 --enable-x509 --enable-pubkey --enable-acert
+			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
+			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
+			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
+			--enable-pki --enable-swanctl"
+	# no make check for Windows binaries
+	TARGET=
+	CFLAGS="$CFLAGS -mno-ms-bitfields"
+	DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 gcc-mingw-w64-base
+		  mingw-w64-dev"
+	CC="x86_64-w64-mingw32-gcc"
 	;;
 dist)
 	TARGET=distcheck
@@ -67,5 +86,5 @@ CONFIG="$CONFIG
 	--enable-monolithic=${MONOLITHIC-no}
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
-echo "$ ./configure $CONFIG && make $TARGET"
-./configure $CONFIG && make -j4 $TARGET
+echo "$ CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make $TARGET"
+CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make -j4 $TARGET

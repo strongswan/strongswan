@@ -69,7 +69,7 @@ struct private_ke_payload_t {
 	chunk_t key_exchange_data;
 
 	/**
-	 * Payload type, KEY_EXCHANGE or KEY_EXCHANGE_V1
+	 * Payload type, PLV2_KEY_EXCHANGE or PLV1_KEY_EXCHANGE
 	 */
 	payload_type_t type;
 };
@@ -148,7 +148,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_ke_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == KEY_EXCHANGE)
+	if (this->type == PLV2_KEY_EXCHANGE)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -160,7 +160,7 @@ METHOD(payload_t, get_encoding_rules, int,
 METHOD(payload_t, get_header_length, int,
 	private_ke_payload_t *this)
 {
-	if (this->type == KEY_EXCHANGE)
+	if (this->type == PLV2_KEY_EXCHANGE)
 	{
 		return 8;
 	}
@@ -233,7 +233,7 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 			.get_dh_group_number = _get_dh_group_number,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.dh_group_number = MODP_NONE,
 		.type = type,
 	);

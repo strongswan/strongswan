@@ -73,13 +73,13 @@ struct private_transform_substructure_t {
 	linked_list_t *attributes;
 
 	/**
-	 * Payload type, TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
+	 * Payload type, PLV2_TRANSFORM_SUBSTRUCTURE or PLV1_TRANSFORM_SUBSTRUCTURE
 	 */
 	payload_type_t type;
 };
 
 /**
- * Encoding rules for TRANSFORM_SUBSTRUCTURE
+ * Encoding rules for PLV2_TRANSFORM_SUBSTRUCTURE
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -95,12 +95,12 @@ static encoding_rule_t encodings_v2[] = {
 	/* transform identifier, as used by IKEv2 */
 	{ U_INT_16,			offsetof(private_transform_substructure_t, transform_id_v2)	},
 	/* Attributes in a transform attribute list */
-	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE,
+	{ PAYLOAD_LIST + PLV2_TRANSFORM_ATTRIBUTE,
 						offsetof(private_transform_substructure_t, attributes)		}
 };
 
 /**
- * Encoding rules for TRANSFORM_SUBSTRUCTURE_V1
+ * Encoding rules for PLV1_TRANSFORM_SUBSTRUCTURE
  */
 static encoding_rule_t encodings_v1[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -117,7 +117,7 @@ static encoding_rule_t encodings_v1[] = {
 	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[1])		},
 	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[2])		},
 	/* Attributes in a transform attribute list */
-	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1,
+	{ PAYLOAD_LIST + PLV1_TRANSFORM_ATTRIBUTE,
 						offsetof(private_transform_substructure_t, attributes)		}
 };
 
@@ -142,7 +142,7 @@ METHOD(payload_t, verify, status_t,
 	enumerator_t *enumerator;
 	payload_t *attribute;
 
-	if (this->next_payload != NO_PAYLOAD && this->next_payload != 3)
+	if (this->next_payload != PL_NONE && this->next_payload != 3)
 	{
 		DBG1(DBG_ENC, "inconsistent next payload");
 		return FAILED;
@@ -167,7 +167,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_transform_substructure_t *this, encoding_rule_t **rules)
 {
-	if (this->type == TRANSFORM_SUBSTRUCTURE)
+	if (this->type == PLV2_TRANSFORM_SUBSTRUCTURE)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -244,7 +244,7 @@ METHOD(transform_substructure_t, get_transform_type_or_number, u_int8_t,
 METHOD(transform_substructure_t, get_transform_id, u_int16_t,
 	private_transform_substructure_t *this)
 {
-	if (this->type == TRANSFORM_SUBSTRUCTURE)
+	if (this->type == PLV2_TRANSFORM_SUBSTRUCTURE)
 	{
 		return this->transform_id_v2;
 	}
@@ -291,7 +291,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.transform_length = get_header_length(this),
 		.attributes = linked_list_create(),
 		.type = type,
@@ -310,7 +310,7 @@ transform_substructure_t *transform_substructure_create_type(payload_type_t type
 	this = (private_transform_substructure_t*)transform_substructure_create(type);
 
 	this->transform_ton = type_or_number;
-	if (type == TRANSFORM_SUBSTRUCTURE)
+	if (type == PLV2_TRANSFORM_SUBSTRUCTURE)
 	{
 		this->transform_id_v2 = id;
 	}

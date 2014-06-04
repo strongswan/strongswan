@@ -196,6 +196,7 @@ static int acert()
 	}
 	else
 	{
+		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &encoding))
 		{
 			fprintf(stderr, "%s: ", strerror(errno));
@@ -232,6 +233,7 @@ static int acert()
 		error = "encoding attribute certificate failed";
 		goto end;
 	}
+	set_file_mode(stdout, form);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
 		error = "writing attribute certificate key failed";

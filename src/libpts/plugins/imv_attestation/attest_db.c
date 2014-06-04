@@ -198,6 +198,21 @@ char* print_cfn(pts_comp_func_name_t *cfn)
 	return buf;
 }
 
+/**
+ * Get the directory separator to append to a path
+ */
+static const char* get_separator(const char *path)
+{
+	if (streq(path, DIRECTORY_SEPARATOR))
+	{	/* root directory on Unix file system, no separator */
+		return "";
+	}
+	else
+	{	/* non-root or Windows path, use system specific separator */
+		return DIRECTORY_SEPARATOR;
+	}
+}
+
 METHOD(attest_db_t, set_component, bool,
 	private_attest_db_t *this, char *comp, bool create)
 {
@@ -314,9 +329,9 @@ METHOD(attest_db_t, set_directory, bool,
 		return FALSE;
 	}
 
-	/* remove trailing '/' character if not root directory */
+	/* remove trailing '/' or '\' character if not root directory */
 	len = strlen(dir);
-	if (len > 1 && dir[len-1] == '/')
+	if (len > 1 && dir[len-1] == DIRECTORY_SEPARATOR[0])
 	{
 		dir[len-1] = '\0';
 	}
@@ -390,7 +405,6 @@ METHOD(attest_db_t, set_file, bool,
 	private_attest_db_t *this, char *file, bool create)
 {
 	int fid;
-	char *sep;
 	enumerator_t *e;
 
 	if (this->file)
@@ -404,7 +418,6 @@ METHOD(attest_db_t, set_file, bool,
 	{
 		return TRUE;
 	}
-	sep = streq(this->dir, "/") ? "" : "/";
 	e = this->db->query(this->db, "SELECT id FROM files "
 						"WHERE dir = ? AND name = ?",
 						DB_INT, this->did, DB_TEXT, file, DB_INT);
@@ -423,7 +436,8 @@ METHOD(attest_db_t, set_file, bool,
 
 	if (!create)
 	{
-		printf("file '%s%s%s' not found in database\n", this->dir, sep, file);
+		printf("file '%s%s%s' not found in database\n",
+			   this->dir, get_separator(this->dir), file);
 		return FALSE;
 	}
 
@@ -434,8 +448,8 @@ METHOD(attest_db_t, set_file, bool,
 	{
 		this->fid = fid;
 	}
-	printf("file '%s%s%s' %sinserted into database\n", this->dir, sep, file,
-		   this->fid ? "" : "could not be ");
+	printf("file '%s%s%s' %sinserted into database\n", this->dir,
+		   get_separator(this->dir), file, this->fid ? "" : "could not be ");
 
 	return this->fid > 0;
 }
@@ -1318,7 +1332,7 @@ METHOD(attest_db_t, list_hashes, void,
 			printf("%d %N value%s found for file '%s%s%s'\n", count,
 				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", this->dir,
-				   streq(this->dir, "/") ? "" : "/", this->file);
+				   get_separator(this->dir), this->file);
 		}
 	}
 	else if (this->file)
@@ -1655,7 +1669,8 @@ static bool insert_file_hash(private_attest_db_t *this,
  */
 static bool add_hash(private_attest_db_t *this)
 {
-	char *pathname, *filename, *sep, *label;
+	char *pathname, *filename, *label;
+	const char *sep;
 	pts_file_meas_t *measurements;
 	chunk_t measurement;
 	hasher_t *hasher = NULL;
@@ -1666,7 +1681,7 @@ static bool add_hash(private_attest_db_t *this)
 	{
 		this->meas_dir = strdup(this->dir);
 	}
-	sep = streq(this->meas_dir, "/") ? "" : "/";
+	sep = get_separator(this->meas_dir);
 
 	if (this->fid)
 	{
@@ -1803,8 +1818,8 @@ METHOD(attest_db_t, delete, bool,
 								DB_UINT, this->algo, DB_UINT, this->pid,
 								DB_UINT, this->fid) > 0;
 
-		printf("%4d: %s%s%s\n", this->fid, this->dir,
-				streq(this->dir, "/") ? "" : "/", this->file);
+		printf("%4d: %s%s%s\n", this->fid, this->dir, get_separator(this->dir),
+				this->file);
 		printf("%N value for product '%s' %sdeleted from database\n",
 				pts_meas_algorithm_names, this->algo, this->product,
 				success ? "" : "could not be ");
@@ -1846,7 +1861,7 @@ METHOD(attest_db_t, delete, bool,
 								DB_UINT, this->fid) > 0;
 
 		printf("file '%s%s%s' %sdeleted from database\n", this->dir,
-			   streq(this->dir, "/") ? "" : "/", this->file,
+			   get_separator(this->dir), this->file,
 			   success ? "" : "could not be ");
 		return success;
 	}

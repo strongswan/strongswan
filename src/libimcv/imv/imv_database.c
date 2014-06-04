@@ -126,7 +126,7 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 		DBG1(DBG_IMV, "imv_db: registering product info failed");
 		return FALSE;
 	}
-	
+
 	/* get device ID string */
 	if (!session->get_device_id(session, &device_id))
 	{
@@ -261,9 +261,9 @@ METHOD(imv_database_t, policy_script, bool,
 	}
 
 	/* call the policy script */
-	snprintf(command, sizeof(command), "2>&1 TNC_SESSION_ID='%d' %s %s",
-			 session->get_session_id(session, NULL, NULL), this->script,
-			 start ? "start" : "stop");
+	snprintf(command, sizeof(command), "2>&1 %s %s %d",
+			 this->script, start ? "start" : "stop",
+			 session->get_session_id(session, NULL, NULL));
 	DBG3(DBG_IMV, "running policy script: %s", command);
 
 	shell = popen(command, "r");
@@ -363,4 +363,3 @@ imv_database_t *imv_database_create(char *uri, char *script)
 
 	return &this->public;
 }
-

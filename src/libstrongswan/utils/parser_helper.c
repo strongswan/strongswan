@@ -140,7 +140,7 @@ METHOD(parser_helper_t, file_include, void,
 		return;
 	}
 
-	if (!file->name || pattern[0] == '/')
+	if (!file->name || path_absolute(pattern))
 	{	/* absolute path */
 		if (snprintf(pat, sizeof(pat), "%s", pattern) >= sizeof(pat))
 		{
@@ -152,7 +152,8 @@ METHOD(parser_helper_t, file_include, void,
 	else
 	{	/* base relative paths to the directory of the current file */
 		char *dir = path_dirname(file->name);
-		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
+		if (snprintf(pat, sizeof(pat), "%s%s%s", dir, DIRECTORY_SEPARATOR,
+					 pattern) >= sizeof(pat))
 		{
 			PARSER_DBG1(&this->public, "include pattern too long, ignored");
 			free(dir);

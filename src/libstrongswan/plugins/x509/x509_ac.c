@@ -754,17 +754,22 @@ static chunk_t build_attr_cert_info(private_x509_ac_t *this)
 /**
  * build an X.509 attribute certificate
  */
-static chunk_t build_ac(private_x509_ac_t *this)
+static bool build_ac(private_x509_ac_t *this)
 {
 	chunk_t signatureValue, attributeCertificateInfo;
 
 	attributeCertificateInfo = build_attr_cert_info(this);
-	this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
-						  attributeCertificateInfo, &signatureValue);
-	return asn1_wrap(ASN1_SEQUENCE, "mmm",
-				attributeCertificateInfo,
-				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
-				asn1_bitstring("m", signatureValue));
+	if (!this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
+							   attributeCertificateInfo, &signatureValue))
+	{
+		free(attributeCertificateInfo.ptr);
+		return FALSE;
+	}
+	this->encoding = asn1_wrap(ASN1_SEQUENCE, "mmm",
+						attributeCertificateInfo,
+						asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
+						asn1_bitstring("m", signatureValue));
+	return TRUE;
 }
 
 METHOD(ac_t, get_serial, chunk_t,
@@ -1154,8 +1159,10 @@ x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 		ac->holderCert->get_type(ac->holderCert) == CERT_X509 &&
 		ac->signerCert->get_type(ac->signerCert) == CERT_X509)
 	{
-		ac->encoding = build_ac(ac);
-		return &ac->public;
+		if (build_ac(ac))
+		{
+			return &ac->public;
+		}
 	}
 	destroy(ac);
 	return NULL;

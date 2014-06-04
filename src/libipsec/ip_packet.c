@@ -95,7 +95,7 @@ METHOD(ip_packet_t, get_next_header, u_int8_t,
 	return this->next_header;
 }
 
-METHOD(ip_packet_t, clone, ip_packet_t*,
+METHOD(ip_packet_t, clone_, ip_packet_t*,
 	private_ip_packet_t *this)
 {
 	return ip_packet_create(chunk_clone(this->packet));
@@ -183,7 +183,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			.get_destination = _get_destination,
 			.get_next_header = _get_next_header,
 			.get_encoding = _get_encoding,
-			.clone = _clone,
+			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.src = src,

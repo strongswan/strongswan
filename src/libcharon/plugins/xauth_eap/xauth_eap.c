@@ -163,11 +163,11 @@ METHOD(xauth_method_t, initiate, status_t,
 {
 	cp_payload_t *cp;
 
-	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	cp = cp_payload_create_type(PLV1_CONFIGURATION, CFG_REQUEST);
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk_empty));
+				PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_NAME, chunk_empty));
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
-				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, chunk_empty));
+				PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_PASSWORD, chunk_empty));
 	*out = cp;
 	return NEED_MORE;
 }

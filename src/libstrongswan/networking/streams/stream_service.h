@@ -23,7 +23,6 @@
 
 typedef struct stream_service_t stream_service_t;
 
-#include <library.h>
 #include <processing/jobs/job.h>
 #include <networking/streams/stream.h>
 
@@ -82,23 +81,5 @@ struct stream_service_t {
  * @return			stream_service instance
  */
 stream_service_t *stream_service_create_from_fd(int fd);
-
-/**
- * Create a service instance for UNIX sockets.
- *
- * @param uri		UNIX socket specific URI, must start with "unix://"
- * @param backlog	size of the backlog queue, as passed to listen()
- * @return			stream_service instance, NULL on failure
- */
-stream_service_t *stream_service_create_unix(char *uri, int backlog);
-
-/**
- * Create a service instance for TCP sockets.
- *
- * @param uri		TCP socket specific URI, must start with "tcp://"
- * @param backlog	size of the backlog queue, as passed to listen()
- * @return			stream_service instance, NULL on failure
- */
-stream_service_t *stream_service_create_tcp(char *uri, int backlog);
 
 #endif /** STREAM_SERVICE_H_ @}*/

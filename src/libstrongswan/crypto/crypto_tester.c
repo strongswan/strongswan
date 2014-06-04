@@ -14,8 +14,10 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-#include <dlfcn.h>
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif
 #include <time.h>
 
 #include "crypto_tester.h"
@@ -102,7 +104,7 @@ static const char* get_name(void *sym)
 	return "unknown";
 }
 
-#ifdef CLOCK_THREAD_CPUTIME_ID
+#if defined(CLOCK_THREAD_CPUTIME_ID) && defined(HAVE_CLOCK_GETTIME)
 
 /**
  * Start a benchmark timer

@@ -55,7 +55,7 @@ static void set_bit(private_set_reserved_t *this, message_t *message,
 	payload_t *payload;
 	bool *bit;
 
-	if (type == HEADER)
+	if (type == PL_HEADER)
 	{
 		message->set_reserved_header_bit(message, nr);
 		DBG1(DBG_CFG, "setting reserved bit %d of %N",
@@ -91,7 +91,7 @@ static void set_byte(private_set_reserved_t *this, message_t *message,
 	payload_t *payload;
 	u_int8_t *byte;
 
-	if (type == TRANSFORM_SUBSTRUCTURE || type == PROPOSAL_SUBSTRUCTURE)
+	if (type == PLV2_TRANSFORM_SUBSTRUCTURE || type == PLV2_PROPOSAL_SUBSTRUCTURE)
 	{
 		enumerator_t *transforms, *proposals;
 		transform_substructure_t *transform;
@@ -101,13 +101,13 @@ static void set_byte(private_set_reserved_t *this, message_t *message,
 		payloads = message->create_payload_enumerator(message);
 		while (payloads->enumerate(payloads, &payload))
 		{
-			if (payload->get_type(payload) == SECURITY_ASSOCIATION)
+			if (payload->get_type(payload) == PLV2_SECURITY_ASSOCIATION)
 			{
 				sa = (sa_payload_t*)payload;
 				proposals = sa->create_substructure_enumerator(sa);
 				while (proposals->enumerate(proposals, &proposal))
 				{
-					if (type == PROPOSAL_SUBSTRUCTURE)
+					if (type == PLV2_PROPOSAL_SUBSTRUCTURE)
 					{
 						byte = payload_get_field(&proposal->payload_interface,
 												 RESERVED_BYTE, nr);
@@ -118,7 +118,7 @@ static void set_byte(private_set_reserved_t *this, message_t *message,
 							*byte = byteval;
 						}
 					}
-					else if (type == TRANSFORM_SUBSTRUCTURE)
+					else if (type == PLV2_TRANSFORM_SUBSTRUCTURE)
 					{
 						transforms = proposal->create_substructure_enumerator(
 																	proposal);

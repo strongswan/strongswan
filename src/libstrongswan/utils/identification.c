@@ -15,15 +15,12 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "identification.h"
 
+#include <utils/utils.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>

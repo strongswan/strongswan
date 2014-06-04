@@ -271,7 +271,7 @@ static bool check_cookie(private_receiver_t *this, message_t *message)
 	if (data.len <
 		 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
 		 sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher) ||
-		*(data.ptr + 16) != NOTIFY ||
+		*(data.ptr + 16) != PLV2_NOTIFY ||
 		*(u_int16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
 	{
 		/* no cookie found */

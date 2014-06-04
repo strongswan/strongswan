@@ -281,7 +281,7 @@ struct notify_payload_t {
 /**
  * Creates an empty notify_payload_t object
  *
- * @param type		payload type, NOTIFY or NOTIFY_V1
+ * @param type		payload type, PLV2_NOTIFY or PLV1_NOTIFY
  * @return			created notify_payload_t object
  */
 notify_payload_t *notify_payload_create(payload_type_t type);
@@ -289,7 +289,7 @@ notify_payload_t *notify_payload_create(payload_type_t type);
 /**
  * Creates an notify_payload_t object of specific type for specific protocol id.
  *
- * @param type					payload type, NOTIFY or NOTIFY_V1
+ * @param type					payload type, PLV2_NOTIFY or PLV1_NOTIFY
  * @param protocol				protocol id (IKE, AH or ESP)
  * @param notify				type of notify
  * @return						notify_payload_t object

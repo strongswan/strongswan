@@ -40,6 +40,7 @@ enum os_type_t {
 	OS_TYPE_SUSE,
 	OS_TYPE_GENTOO,
 	OS_TYPE_ANDROID,
+	OS_TYPE_WINDOWS,
 	OS_TYPE_ROOF
 };
 

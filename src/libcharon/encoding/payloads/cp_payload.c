@@ -82,7 +82,7 @@ struct private_cp_payload_t {
 	u_int8_t cfg_type;
 
 	/**
-	 * CONFIGURATION or CONFIGURATION_V1
+	 * PLV2_CONFIGURATION or PLV1_CONFIGURATION
 	 */
 	payload_type_t type;
 };
@@ -111,7 +111,7 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[2])},
 	/* list of configuration attributes in a list */
-	{ PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE,
+	{ PAYLOAD_LIST + PLV2_CONFIGURATION_ATTRIBUTE,
 						offsetof(private_cp_payload_t, attributes)		},
 };
 
@@ -152,7 +152,7 @@ static encoding_rule_t encodings_v1[] = {
 	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[0])},
 	{ U_INT_16,			offsetof(private_cp_payload_t, identifier)},
 	/* list of configuration attributes in a list */
-	{ PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE_V1,
+	{ PAYLOAD_LIST + PLV1_CONFIGURATION_ATTRIBUTE,
 						offsetof(private_cp_payload_t, attributes)		},
 };
 
@@ -193,7 +193,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_cp_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == CONFIGURATION)
+	if (this->type == PLV2_CONFIGURATION)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -314,7 +314,7 @@ cp_payload_t *cp_payload_create_type(payload_type_t type, config_type_t cfg_type
 			.set_identifier = _set_identifier,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.attributes = linked_list_create(),
 		.cfg_type = cfg_type,

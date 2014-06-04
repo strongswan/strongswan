@@ -78,7 +78,7 @@ struct private_delete_payload_t {
 	chunk_t spis;
 
 	/**
-	 * Payload type, DELETE or DELETE_V1
+	 * Payload type, PLV2_DELETE or PLV1_DELETE
 	 */
 	payload_type_t type;
 };
@@ -178,7 +178,7 @@ METHOD(payload_t, verify, status_t,
 			break;
 		case PROTO_IKE:
 		case 0:
-			if (this->type == DELETE)
+			if (this->type == PLV2_DELETE)
 			{	/* IKEv2 deletion has no spi assigned! */
 				if (this->spi_size != 0)
 				{
@@ -206,7 +206,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_delete_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == DELETE)
+	if (this->type == PLV2_DELETE)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
@@ -218,7 +218,7 @@ METHOD(payload_t, get_encoding_rules, int,
 METHOD(payload_t, get_header_length, int,
 	private_delete_payload_t *this)
 {
-	if (this->type == DELETE)
+	if (this->type == PLV2_DELETE)
 	{
 		return 8;
 	}
@@ -355,7 +355,7 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 			.create_spi_enumerator = _create_spi_enumerator,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.protocol_id = protocol_id,
 		.doi = IKEV1_DOI_IPSEC,
 		.type = type,
@@ -364,7 +364,7 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 
 	if (protocol_id == PROTO_IKE)
 	{
-		if (type == DELETE_V1)
+		if (type == PLV1_DELETE)
 		{
 			this->spi_size = 16;
 		}

@@ -4,7 +4,7 @@ AM_CPPFLAGS = \
 	-DDEV_URANDOM=\"${urandom_device}\"
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-random.la

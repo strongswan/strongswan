@@ -30,6 +30,8 @@
 #include <alloca.h>
 #endif
 
+#include <utils/utils.h>
+
 typedef struct chunk_t chunk_t;
 
 /**
@@ -336,6 +338,15 @@ bool chunk_increment(chunk_t chunk);
  * @return				TRUE if all characters in chunk are printable
  */
 bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
+
+/**
+ * Seed initial key for chunk_hash().
+ *
+ * This call should get invoked once during startup. This is usually done
+ * by calling library_init(). Calling it multiple times is safe, it gets
+ * executed just once.
+ */
+void chunk_hash_seed();
 
 /**
  * Computes a 32 bit hash of the given chunk.

@@ -103,7 +103,7 @@ static encoding_rule_t encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[2])},
 	/* wrapped list of traffic selectors substructures */
-	{ PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE,
+	{ PAYLOAD_LIST + PLV2_TRAFFIC_SELECTOR_SUBSTRUCTURE,
 						offsetof(private_ts_payload_t, substrs)			},
 };
 
@@ -164,9 +164,9 @@ METHOD(payload_t, get_type, payload_type_t,
 {
 	if (this->is_initiator)
 	{
-		return TRAFFIC_SELECTOR_INITIATOR;
+		return PLV2_TS_INITIATOR;
 	}
-	return TRAFFIC_SELECTOR_RESPONDER;
+	return PLV2_TS_RESPONDER;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -269,7 +269,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 			.get_traffic_selectors = _get_traffic_selectors,
 			.destroy = _destroy,
 		},
-		.next_payload = NO_PAYLOAD,
+		.next_payload = PL_NONE,
 		.payload_length = get_header_length(this),
 		.is_initiator = is_initiator,
 		.substrs = linked_list_create(),

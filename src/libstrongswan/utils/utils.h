@@ -26,8 +26,18 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <sys/time.h>
-#include <arpa/inet.h>
 #include <string.h>
+
+#ifdef WIN32
+# include "windows.h"
+#else
+# define _GNU_SOURCE
+# include <arpa/inet.h>
+# include <sys/socket.h>
+# include <netdb.h>
+# include <netinet/in.h>
+# include <sched.h>
+#endif
 
 /**
  * strongSwan program return codes
@@ -72,6 +82,25 @@
 
 #include "enum.h"
 #include "utils/strerror.h"
+
+/**
+ * Directory separator character in paths on this platform
+ */
+#ifdef WIN32
+# define DIRECTORY_SEPARATOR "\\"
+#else
+# define DIRECTORY_SEPARATOR "/"
+#endif
+
+/**
+ * Initialize utility functions
+ */
+void utils_init();
+
+/**
+ * Deinitialize utility functions
+ */
+void utils_deinit();
 
 /**
  * Helper function that compares two strings for equality
@@ -273,7 +302,7 @@ static inline bool memeq(const void *x, const void *y, size_t len)
  * TODO: since the uintXX_t types are defined by the C99 standard we should
  * probably use those anyway
  */
-#ifdef __sun
+#if defined __sun || defined WIN32
         #include <stdint.h>
         typedef uint8_t         u_int8_t;
         typedef uint16_t        u_int16_t;
@@ -514,6 +543,11 @@ char *translate(char *str, const char *from, const char *to);
 char *strreplace(const char *str, const char *search, const char *replace);
 
 /**
+ * Portable function to wait for SIGINT/SIGTERM (or equivalent).
+ */
+void wait_sigint();
+
+/**
  * Like dirname(3) returns the directory part of the given null-terminated
  * pathname, up to but not including the final '/' (or '.' if no '/' is found).
  * Trailing '/' are not counted as part of the pathname.
@@ -538,6 +572,14 @@ char *path_dirname(const char *path);
  * @return			allocated filename component
  */
 char *path_basename(const char *path);
+
+/**
+ * Check if a given path is absolute.
+ *
+ * @param path		path to check
+ * @return			TRUE if absolute, FALSE if relative
+ */
+bool path_absolute(const char *path);
 
 /**
  * Creates a directory and all required parent directories.

@@ -15,6 +15,13 @@
  */
 
 #define _GNU_SOURCE /* for memrchr */
+#ifdef WIN32
+/* for GetTickCount64, Windows 7 */
+# define _WIN32_WINNT 0x0601
+#endif
+
+#include "utils.h"
+
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
@@ -24,13 +31,17 @@
 #include <limits.h>
 #include <dirent.h>
 #include <time.h>
-#include <pthread.h>
+#ifndef WIN32
+# include <signal.h>
+#endif
 
-#include "utils.h"
-
-#include "collections/enumerator.h"
-#include "utils/debug.h"
-#include "utils/chunk.h"
+#include <library.h>
+#include <utils/debug.h>
+#include <utils/chunk.h>
+#include <collections/enumerator.h>
+#include <threading/spinlock.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
@@ -216,6 +227,84 @@ char* strreplace(const char *str, const char *search, const char *replace)
 	return res;
 }
 
+#ifdef WIN32
+
+/**
+ * Flag to indicate signaled wait_sigint()
+ */
+static bool sigint_signaled = FALSE;
+
+/**
+ * Condvar to wait in wait_sigint()
+ */
+static condvar_t *sigint_cond;
+
+/**
+ * Mutex to check signaling()
+ */
+static mutex_t *sigint_mutex;
+
+/**
+ * Control handler to catch ^C
+ */
+static BOOL handler(DWORD dwCtrlType)
+{
+	switch (dwCtrlType)
+	{
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+		case CTRL_CLOSE_EVENT:
+			sigint_mutex->lock(sigint_mutex);
+			sigint_signaled = TRUE;
+			sigint_cond->signal(sigint_cond);
+			sigint_mutex->unlock(sigint_mutex);
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
+ * Windows variant
+ */
+void wait_sigint()
+{
+	SetConsoleCtrlHandler(handler, TRUE);
+
+	sigint_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	sigint_cond = condvar_create(CONDVAR_TYPE_DEFAULT);
+
+	sigint_mutex->lock(sigint_mutex);
+	while (!sigint_signaled)
+	{
+		sigint_cond->wait(sigint_cond, sigint_mutex);
+	}
+	sigint_mutex->unlock(sigint_mutex);
+
+	sigint_mutex->destroy(sigint_mutex);
+	sigint_cond->destroy(sigint_cond);
+}
+
+#else /* !WIN32 */
+
+/**
+ * Unix variant
+ */
+void wait_sigint()
+{
+	sigset_t set;
+	int sig;
+
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+
+	sigprocmask(SIG_BLOCK, &set, NULL);
+	sigwait(&set, &sig);
+}
+
+#endif
+
 /**
  * Described in header.
  */
@@ -223,21 +312,30 @@ char* path_dirname(const char *path)
 {
 	char *pos;
 
-	pos = path ? strrchr(path, '/') : NULL;
+	pos = path ? strrchr(path, DIRECTORY_SEPARATOR[0]) : NULL;
 
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == '/')
+		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		pos = memrchr(path, '/', pos - path + 1);
+		pos = memrchr(path, DIRECTORY_SEPARATOR[0], pos - path + 1);
 	}
 	if (!pos)
 	{
+#ifdef WIN32
+		if (path && strlen(path))
+		{
+			if ((isalpha(path[0]) && path[1] == ':'))
+			{	/* if just a drive letter given, return that as dirname */
+				return chunk_clone(chunk_from_chars(path[0], ':', 0)).ptr;
+			}
+		}
+#endif
 		return strdup(".");
 	}
-	while (pos > path && *pos == '/')
+	while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 	{	/* skip superfluous slashes */
 		pos--;
 	}
@@ -255,22 +353,49 @@ char* path_basename(const char *path)
 	{
 		return strdup(".");
 	}
-	pos = strrchr(path, '/');
+	pos = strrchr(path, DIRECTORY_SEPARATOR[0]);
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == '/')
+		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		if (pos == path && *pos == '/')
+		if (pos == path && *pos == DIRECTORY_SEPARATOR[0])
 		{	/* contains only slashes */
-			return strdup("/");
+			return strdup(DIRECTORY_SEPARATOR);
 		}
 		trail = pos + 1;
-		pos = memrchr(path, '/', trail - path);
+		pos = memrchr(path, DIRECTORY_SEPARATOR[0], trail - path);
 	}
 	pos = pos ? pos + 1 : (char*)path;
 	return trail ? strndup(pos, trail - pos) : strdup(pos);
+}
+
+/**
+ * Described in header.
+ */
+bool path_absolute(const char *path)
+{
+	if (!path)
+	{
+		return FALSE;
+	}
+#ifdef WIN32
+	if (strpfx(path, "\\\\"))
+	{	/* UNC */
+		return TRUE;
+	}
+	if (strlen(path) && isalpha(path[0]) && path[1] == ':')
+	{	/* drive letter */
+		return TRUE;
+	}
+#else /* !WIN32 */
+	if (path[0] == DIRECTORY_SEPARATOR[0])
+	{
+		return TRUE;
+	}
+#endif
+	return FALSE;
 }
 
 /**
@@ -307,7 +432,11 @@ bool mkdir_p(const char *path, mode_t mode)
 		*pos = '\0';
 		if (access(full, F_OK) < 0)
 		{
+#ifdef WIN32
+			if (_mkdir(full) < 0)
+#else
 			if (mkdir(full, mode) < 0)
+#endif
 			{
 				DBG1(DBG_LIB, "failed to create directory %s", full);
 				return FALSE;
@@ -359,6 +488,9 @@ char* tty_escape_get(int fd, tty_escape_t escape)
 		case TTY_BOLD:
 		case TTY_UNDERLINE:
 		case TTY_BLINKING:
+#ifdef WIN32
+			return "";
+#endif
 		case TTY_FG_BLACK:
 		case TTY_FG_RED:
 		case TTY_FG_GREEN:
@@ -378,7 +510,7 @@ char* tty_escape_get(int fd, tty_escape_t escape)
 		case TTY_BG_WHITE:
 		case TTY_BG_DEF:
 			return enum_to_name(tty_color_names, escape);
-		/* warn if a excape code is missing */
+		/* warn if a escape code is missing */
 	}
 	return "";
 }
@@ -414,7 +546,11 @@ void closefrom(int lowfd)
 	}
 
 	/* ...fall back to closing all fds otherwise */
+#ifdef WIN32
+	maxfd = _getmaxstdio();
+#else
 	maxfd = (int)sysconf(_SC_OPEN_MAX);
+#endif
 	if (maxfd < 0)
 	{
 		maxfd = 256;
@@ -431,6 +567,19 @@ void closefrom(int lowfd)
  */
 time_t time_monotonic(timeval_t *tv)
 {
+#ifdef WIN32
+	ULONGLONG ms;
+	time_t s;
+
+	ms = GetTickCount64();
+	s = ms / 1000;
+	if (tv)
+	{
+		tv->tv_sec = s;
+		tv->tv_usec = (ms - (s * 1000)) * 1000;
+	}
+	return s;
+#else /* !WIN32 */
 #if defined(HAVE_CLOCK_GETTIME) && \
 	(defined(HAVE_CONDATTR_CLOCK_MONOTONIC) || \
 	 defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC))
@@ -462,6 +611,7 @@ time_t time_monotonic(timeval_t *tv)
 		return -1;
 	}
 	return tv->tv_sec;
+#endif /* !WIN32 */
 }
 
 /**
@@ -514,9 +664,9 @@ void nop()
 #if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
 
 /**
- * We use a single mutex for all refcount variables.
+ * Spinlock for ref_get/put
  */
-static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
+static spinlock_t *ref_lock;
 
 /**
  * Increase refcount
@@ -525,9 +675,10 @@ refcount_t ref_get(refcount_t *ref)
 {
 	refcount_t current;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	current = ++(*ref);
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
+
 	return current;
 }
 
@@ -538,9 +689,9 @@ bool ref_put(refcount_t *ref)
 {
 	bool more_refs;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	more_refs = --(*ref) > 0;
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
 	return !more_refs;
 }
 
@@ -551,16 +702,17 @@ refcount_t ref_cur(refcount_t *ref)
 {
 	refcount_t current;
 
-	pthread_mutex_lock(&ref_mutex);
+	ref_lock->lock(ref_lock);
 	current = *ref;
-	pthread_mutex_unlock(&ref_mutex);
+	ref_lock->unlock(ref_lock);
+
 	return current;
 }
 
 /**
- * Single mutex for all compare and swap operations.
+ * Spinlock for all compare and swap operations.
  */
-static pthread_mutex_t cas_mutex = PTHREAD_MUTEX_INITIALIZER;
+static spinlock_t *cas_lock;
 
 /**
  * Compare and swap if equal to old value
@@ -569,9 +721,9 @@ static pthread_mutex_t cas_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool cas_##name(type *ptr, type oldval, type newval) \
 { \
 	bool swapped; \
-	pthread_mutex_lock(&cas_mutex); \
+	cas_lock->lock(cas_lock); \
 	if ((swapped = (*ptr == oldval))) { *ptr = newval; } \
-	pthread_mutex_unlock(&cas_mutex); \
+	cas_lock->unlock(cas_lock); \
 	return swapped; \
 }
 
@@ -626,6 +778,40 @@ FILE *fmemopen(void *buf, size_t size, const char *mode)
 #endif /* FMEMOPEN fallback*/
 
 /**
+ * See header
+ */
+void utils_init()
+{
+#ifdef WIN32
+	windows_init();
+#endif
+
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
+	ref_lock = spinlock_create();
+	cas_lock = spinlock_create();
+#endif
+
+	strerror_init();
+}
+
+/**
+ * See header
+ */
+void utils_deinit()
+{
+#ifdef WIN32
+	windows_deinit();
+#endif
+
+#if !defined(HAVE_GCC_ATOMIC_OPERATIONS) && !defined(HAVE_GCC_SYNC_OPERATIONS)
+	ref_lock->destroy(ref_lock);
+	cas_lock->destroy(cas_lock);
+#endif
+
+	strerror_deinit();
+}
+
+/**
  * Described in header.
  */
 int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
@@ -637,20 +823,23 @@ int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	};
 	time_t *time = *((time_t**)(args[0]));
 	bool utc = *((int*)(args[1]));
-	struct tm t;
+	struct tm t, *ret = NULL;
 
-	if (*time == UNDEFINED_TIME)
+	if (*time != UNDEFINED_TIME)
+	{
+		if (utc)
+		{
+			ret = gmtime_r(time, &t);
+		}
+		else
+		{
+			ret = localtime_r(time, &t);
+		}
+	}
+	if (ret == NULL)
 	{
 		return print_in_hook(data, "--- -- --:--:--%s----",
 							 utc ? " UTC " : " ");
-	}
-	if (utc)
-	{
-		gmtime_r(time, &t);
-	}
-	else
-	{
-		localtime_r(time, &t);
 	}
 	return print_in_hook(data, "%s %02d %02d:%02d:%02d%s%04d",
 						 months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,

@@ -76,7 +76,7 @@ struct delete_payload_t {
 /**
  * Creates an empty delete_payload_t object.
  *
- * @param type			DELETE or DELETE_V1
+ * @param type			PLV2_DELETE or PLV1_DELETE
  * @param protocol_id	protocol, such as AH|ESP
  * @return 				delete_payload_t object
  */

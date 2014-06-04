@@ -971,7 +971,7 @@ static bool get_init_hash(private_ike_sa_manager_t *this, message_t *message,
 	{	/* this might be the case when flush() has been called */
 		return FALSE;
 	}
-	if (message->get_first_payload_type(message) == FRAGMENT_V1)
+	if (message->get_first_payload_type(message) == PLV1_FRAGMENT)
 	{	/* only hash the source IP, port and SPI for fragmented init messages */
 		u_int16_t port;
 		u_int64_t spi;
@@ -1313,7 +1313,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 			ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			entry->checked_out = TRUE;
-			if (message->get_first_payload_type(message) != FRAGMENT_V1)
+			if (message->get_first_payload_type(message) != PLV1_FRAGMENT)
 			{
 				entry->processing = get_message_id_or_hash(message);
 			}

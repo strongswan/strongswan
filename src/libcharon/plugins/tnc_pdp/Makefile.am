@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libpttls
 
 AM_CFLAGS = \
-	-rdynamic
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnc-pdp.la

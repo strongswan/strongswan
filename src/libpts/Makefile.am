@@ -13,6 +13,10 @@ libpts_la_LIBADD = \
 	$(top_builddir)/src/libtncif/libtncif.la \
 	$(top_builddir)/src/libimcv/libimcv.la
 
+if USE_WINDOWS
+  libpts_la_LIBADD += -lws2_32
+endif
+
 if USE_TROUSERS
   libpts_la_LIBADD += -ltspi
 endif

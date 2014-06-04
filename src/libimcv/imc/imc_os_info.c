@@ -13,9 +13,13 @@
  * for more details.
  */
 
+/* for GetTickCount64, Windows 7 */
+#ifdef WIN32
+# define _WIN32_WINNT 0x0601
+#endif
+
 #include "imc_os_info.h"
 
-#include <sys/utsname.h>
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -85,6 +89,71 @@ METHOD(imc_os_info_t, get_version, chunk_t,
 {
 	return this->version;
 }
+
+#ifdef WIN32
+
+METHOD(imc_os_info_t, get_fwd_status, os_fwd_status_t,
+	private_imc_os_info_t *this)
+{
+	return OS_FWD_UNKNOWN;
+}
+
+METHOD(imc_os_info_t, get_uptime, time_t,
+	private_imc_os_info_t *this)
+{
+	return GetTickCount64() / 1000;
+}
+
+METHOD(imc_os_info_t, get_setting, chunk_t,
+	private_imc_os_info_t *this, char *name)
+{
+	return chunk_empty;
+}
+
+METHOD(imc_os_info_t, create_package_enumerator, enumerator_t*,
+	private_imc_os_info_t *this)
+{
+	return NULL;
+}
+
+/**
+ * Determine Windows release
+ */
+static bool extract_platform_info(os_type_t *type, chunk_t *name,
+								  chunk_t *version)
+{
+	OSVERSIONINFOEX osvie;
+	char buf[64];
+
+	memset(&osvie, 0, sizeof(osvie));
+	osvie.dwOSVersionInfoSize = sizeof(osvie);
+
+	if (!GetVersionEx((LPOSVERSIONINFO)&osvie))
+	{
+		return FALSE;
+	}
+	*type = OS_TYPE_WINDOWS;
+	snprintf(buf, sizeof(buf), "Windows %s %s",
+			 osvie.wProductType == VER_NT_WORKSTATION ? "Client" : "Server",
+#ifdef WIN64
+			 "x86_64"
+#else
+			 "x86"
+#endif
+	);
+	*name = chunk_clone(chunk_from_str(buf));
+
+	snprintf(buf, sizeof(buf), "%d.%d.%d (SP %d.%d)",
+			 osvie.dwMajorVersion, osvie.dwMinorVersion, osvie.dwBuildNumber,
+			 osvie.wServicePackMajor, osvie.wServicePackMinor);
+	*version = chunk_clone(chunk_from_str(buf));
+
+	return TRUE;
+}
+
+#else /* !WIN32 */
+
+#include <sys/utsname.h>
 
 METHOD(imc_os_info_t, get_fwd_status, os_fwd_status_t,
 	private_imc_os_info_t *this)
@@ -294,15 +363,6 @@ METHOD(imc_os_info_t, create_package_enumerator, enumerator_t*,
 	return (enumerator_t*)enumerator;
 }
 
-
-METHOD(imc_os_info_t, destroy, void,
-	private_imc_os_info_t *this)
-{
-	free(this->name.ptr);
-	free(this->version.ptr);
-	free(this);
-}
-
 #define RELEASE_LSB		0
 #define RELEASE_DEBIAN	1
 
@@ -503,6 +563,16 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 	memcpy(pos, uninfo.machine, strlen(uninfo.machine));
 
 	return TRUE;
+}
+
+#endif /* !WIN32 */
+
+METHOD(imc_os_info_t, destroy, void,
+	private_imc_os_info_t *this)
+{
+	free(this->name.ptr);
+	free(this->version.ptr);
+	free(this);
 }
 
 /**

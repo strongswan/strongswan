@@ -89,7 +89,7 @@ typedef struct {
 typedef struct {
 	/** payload type */
 	payload_type_t type;
-	/** notify type, if payload == NOTIFY */
+	/** notify type, if payload == PLV2_NOTIFY */
 	notify_type_t notify;
 } payload_order_t;
 
@@ -120,11 +120,11 @@ typedef struct {
  */
 static payload_rule_t ike_sa_init_i_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
-	{NONCE,							1,	1,						FALSE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
+	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
+	{PLV2_NONCE,					1,	1,						FALSE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 };
 
 /**
@@ -132,14 +132,14 @@ static payload_rule_t ike_sa_init_i_rules[] = {
  */
 static payload_order_t ike_sa_init_i_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						COOKIE},
-	{SECURITY_ASSOCIATION,			0},
-	{KEY_EXCHANGE,					0},
-	{NONCE,							0},
-	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
-	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
-	{NOTIFY,						0},
-	{VENDOR_ID,						0},
+	{PLV2_NOTIFY,					COOKIE},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_NONCE,					0},
+	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
+	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
+	{PLV2_NOTIFY,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 
 /**
@@ -147,12 +147,12 @@ static payload_order_t ike_sa_init_i_order[] = {
  */
 static payload_rule_t ike_sa_init_r_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	FALSE,	TRUE},
-	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
-	{NONCE,							1,	1,						FALSE,	FALSE},
-	{CERTIFICATE_REQUEST,			0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	TRUE},
+	{PLV2_SECURITY_ASSOCIATION,		1,	1,						FALSE,	FALSE},
+	{PLV2_KEY_EXCHANGE,				1,	1,						FALSE,	FALSE},
+	{PLV2_NONCE,					1,	1,						FALSE,	FALSE},
+	{PLV2_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 };
 
 /**
@@ -160,15 +160,15 @@ static payload_rule_t ike_sa_init_r_rules[] = {
  */
 static payload_order_t ike_sa_init_r_order[] = {
 /*	payload type					notify type */
-	{SECURITY_ASSOCIATION,			0},
-	{KEY_EXCHANGE,					0},
-	{NONCE,							0},
-	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
-	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
-	{NOTIFY,						HTTP_CERT_LOOKUP_SUPPORTED},
-	{CERTIFICATE_REQUEST,			0},
-	{NOTIFY,						0},
-	{VENDOR_ID,						0},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_NONCE,					0},
+	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
+	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
+	{PLV2_NOTIFY,					HTTP_CERT_LOOKUP_SUPPORTED},
+	{PLV2_CERTREQ,					0},
+	{PLV2_NOTIFY,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 
 /**
@@ -176,24 +176,24 @@ static payload_order_t ike_sa_init_r_order[] = {
  */
 static payload_rule_t ike_auth_i_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
-	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
-	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
-	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
-	{CERTIFICATE_REQUEST,			0,	MAX_CERTREQ_PAYLOADS,	TRUE,	FALSE},
-	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_EAP,						0,	1,						TRUE,	TRUE},
+	{PLV2_AUTH,						0,	1,						TRUE,	TRUE},
+	{PLV2_ID_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_CERTIFICATE,				0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_ID_RESPONDER,				0,	1,						TRUE,	FALSE},
 #ifdef ME
-	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		0,	1,						TRUE,	FALSE},
+	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
 #else
-	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		0,	1,						TRUE,	FALSE},
+	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
 #endif /* ME */
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -201,28 +201,28 @@ static payload_rule_t ike_auth_i_rules[] = {
  */
 static payload_order_t ike_auth_i_order[] = {
 /*	payload type					notify type */
-	{ID_INITIATOR,					0},
-	{CERTIFICATE,					0},
-	{NOTIFY,						INITIAL_CONTACT},
-	{NOTIFY,						HTTP_CERT_LOOKUP_SUPPORTED},
-	{CERTIFICATE_REQUEST,			0},
-	{ID_RESPONDER,					0},
-	{AUTHENTICATION,				0},
-	{EXTENSIBLE_AUTHENTICATION,		0},
-	{CONFIGURATION,					0},
-	{NOTIFY,						IPCOMP_SUPPORTED},
-	{NOTIFY,						USE_TRANSPORT_MODE},
-	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
-	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
-	{SECURITY_ASSOCIATION,			0},
-	{TRAFFIC_SELECTOR_INITIATOR,	0},
-	{TRAFFIC_SELECTOR_RESPONDER,	0},
-	{NOTIFY,						MOBIKE_SUPPORTED},
-	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
-	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
-	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
-	{NOTIFY,						0},
-	{VENDOR_ID,						0},
+	{PLV2_ID_INITIATOR,				0},
+	{PLV2_CERTIFICATE,				0},
+	{PLV2_NOTIFY,					INITIAL_CONTACT},
+	{PLV2_NOTIFY,					HTTP_CERT_LOOKUP_SUPPORTED},
+	{PLV2_CERTREQ,					0},
+	{PLV2_ID_RESPONDER,				0},
+	{PLV2_AUTH,						0},
+	{PLV2_EAP,						0},
+	{PLV2_CONFIGURATION,			0},
+	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
+	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
+	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
+	{PLV2_NOTIFY,					NON_FIRST_FRAGMENTS_ALSO},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_TS_INITIATOR,				0},
+	{PLV2_TS_RESPONDER,				0},
+	{PLV2_NOTIFY,					MOBIKE_SUPPORTED},
+	{PLV2_NOTIFY,					ADDITIONAL_IP4_ADDRESS},
+	{PLV2_NOTIFY,					ADDITIONAL_IP6_ADDRESS},
+	{PLV2_NOTIFY,					NO_ADDITIONAL_ADDRESSES},
+	{PLV2_NOTIFY,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 
 /**
@@ -230,16 +230,16 @@ static payload_order_t ike_auth_i_order[] = {
  */
 static payload_rule_t ike_auth_r_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
-	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
-	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
-	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
-	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{PLV2_EAP,						0,	1,						TRUE,	TRUE},
+	{PLV2_AUTH,						0,	1,						TRUE,	TRUE},
+	{PLV2_CERTIFICATE,				0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_ID_RESPONDER,				0,	1,						TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		0,	1,						TRUE,	FALSE},
+	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -247,25 +247,25 @@ static payload_rule_t ike_auth_r_rules[] = {
  */
 static payload_order_t ike_auth_r_order[] = {
 /*	payload type					notify type */
-	{ID_RESPONDER,					0},
-	{CERTIFICATE,					0},
-	{AUTHENTICATION,				0},
-	{EXTENSIBLE_AUTHENTICATION,		0},
-	{CONFIGURATION,					0},
-	{NOTIFY,						IPCOMP_SUPPORTED},
-	{NOTIFY,						USE_TRANSPORT_MODE},
-	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
-	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
-	{SECURITY_ASSOCIATION,			0},
-	{TRAFFIC_SELECTOR_INITIATOR,	0},
-	{TRAFFIC_SELECTOR_RESPONDER,	0},
-	{NOTIFY,						AUTH_LIFETIME},
-	{NOTIFY,						MOBIKE_SUPPORTED},
-	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
-	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
-	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
-	{NOTIFY,						0},
-	{VENDOR_ID,						0},
+	{PLV2_ID_RESPONDER,				0},
+	{PLV2_CERTIFICATE,				0},
+	{PLV2_AUTH,						0},
+	{PLV2_EAP,						0},
+	{PLV2_CONFIGURATION,			0},
+	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
+	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
+	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
+	{PLV2_NOTIFY,					NON_FIRST_FRAGMENTS_ALSO},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_TS_INITIATOR,				0},
+	{PLV2_TS_RESPONDER,				0},
+	{PLV2_NOTIFY,					AUTH_LIFETIME},
+	{PLV2_NOTIFY,					MOBIKE_SUPPORTED},
+	{PLV2_NOTIFY,					ADDITIONAL_IP4_ADDRESS},
+	{PLV2_NOTIFY,					ADDITIONAL_IP6_ADDRESS},
+	{PLV2_NOTIFY,					NO_ADDITIONAL_ADDRESSES},
+	{PLV2_NOTIFY,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 
 /**
@@ -273,10 +273,10 @@ static payload_order_t ike_auth_r_order[] = {
  */
 static payload_rule_t informational_i_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -284,13 +284,13 @@ static payload_rule_t informational_i_rules[] = {
  */
 static payload_order_t informational_i_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						UPDATE_SA_ADDRESSES},
-	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
-	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
-	{NOTIFY,						COOKIE2},
-	{NOTIFY,						0},
-	{DELETE,						0},
-	{CONFIGURATION,					0},
+	{PLV2_NOTIFY,					UPDATE_SA_ADDRESSES},
+	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
+	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
+	{PLV2_NOTIFY,					COOKIE2},
+	{PLV2_NOTIFY,					0},
+	{PLV2_DELETE,					0},
+	{PLV2_CONFIGURATION,			0},
 };
 
 /**
@@ -298,10 +298,10 @@ static payload_order_t informational_i_order[] = {
  */
 static payload_rule_t informational_r_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -309,13 +309,13 @@ static payload_rule_t informational_r_rules[] = {
  */
 static payload_order_t informational_r_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						UPDATE_SA_ADDRESSES},
-	{NOTIFY,						NAT_DETECTION_SOURCE_IP},
-	{NOTIFY,						NAT_DETECTION_DESTINATION_IP},
-	{NOTIFY,						COOKIE2},
-	{NOTIFY,						0},
-	{DELETE,						0},
-	{CONFIGURATION,					0},
+	{PLV2_NOTIFY,					UPDATE_SA_ADDRESSES},
+	{PLV2_NOTIFY,					NAT_DETECTION_SOURCE_IP},
+	{PLV2_NOTIFY,					NAT_DETECTION_DESTINATION_IP},
+	{PLV2_NOTIFY,					COOKIE2},
+	{PLV2_NOTIFY,					0},
+	{PLV2_DELETE,					0},
+	{PLV2_CONFIGURATION,			0},
 };
 
 /**
@@ -323,14 +323,14 @@ static payload_order_t informational_r_order[] = {
  */
 static payload_rule_t create_child_sa_i_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
-	{NONCE,							1,	1,						TRUE,	FALSE},
-	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
+	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
+	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -338,17 +338,17 @@ static payload_rule_t create_child_sa_i_rules[] = {
  */
 static payload_order_t create_child_sa_i_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						REKEY_SA},
-	{NOTIFY,						IPCOMP_SUPPORTED},
-	{NOTIFY,						USE_TRANSPORT_MODE},
-	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
-	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
-	{SECURITY_ASSOCIATION,			0},
-	{NONCE,							0},
-	{KEY_EXCHANGE,					0},
-	{TRAFFIC_SELECTOR_INITIATOR,	0},
-	{TRAFFIC_SELECTOR_RESPONDER,	0},
-	{NOTIFY,						0},
+	{PLV2_NOTIFY,					REKEY_SA},
+	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
+	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
+	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
+	{PLV2_NOTIFY,					NON_FIRST_FRAGMENTS_ALSO},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_NONCE,					0},
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_TS_INITIATOR,				0},
+	{PLV2_TS_RESPONDER,				0},
+	{PLV2_NOTIFY,					0},
 };
 
 /**
@@ -356,14 +356,14 @@ static payload_order_t create_child_sa_i_order[] = {
  */
 static payload_rule_t create_child_sa_r_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{SECURITY_ASSOCIATION,			1,	1,						TRUE,	FALSE},
-	{NONCE,							1,	1,						TRUE,	FALSE},
-	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
-	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
-	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
+	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
+	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
+	{PLV2_TS_RESPONDER,				0,	1,						TRUE,	FALSE},
+	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -371,17 +371,17 @@ static payload_rule_t create_child_sa_r_rules[] = {
  */
 static payload_order_t create_child_sa_r_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						IPCOMP_SUPPORTED},
-	{NOTIFY,						USE_TRANSPORT_MODE},
-	{NOTIFY,						ESP_TFC_PADDING_NOT_SUPPORTED},
-	{NOTIFY,						NON_FIRST_FRAGMENTS_ALSO},
-	{SECURITY_ASSOCIATION,			0},
-	{NONCE,							0},
-	{KEY_EXCHANGE,					0},
-	{TRAFFIC_SELECTOR_INITIATOR,	0},
-	{TRAFFIC_SELECTOR_RESPONDER,	0},
-	{NOTIFY,						ADDITIONAL_TS_POSSIBLE},
-	{NOTIFY,						0},
+	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
+	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
+	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
+	{PLV2_NOTIFY,					NON_FIRST_FRAGMENTS_ALSO},
+	{PLV2_SECURITY_ASSOCIATION,		0},
+	{PLV2_NONCE,					0},
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_TS_INITIATOR,				0},
+	{PLV2_TS_RESPONDER,				0},
+	{PLV2_NOTIFY,					ADDITIONAL_TS_POSSIBLE},
+	{PLV2_NOTIFY,					0},
 };
 
 #ifdef ME
@@ -390,9 +390,9 @@ static payload_order_t create_child_sa_r_order[] = {
  */
 static payload_rule_t me_connect_i_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{ID_PEER,						1,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{PLV2_ID_PEER,					1,	1,						TRUE,	FALSE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
 };
 
 /**
@@ -400,9 +400,9 @@ static payload_rule_t me_connect_i_rules[] = {
  */
 static payload_order_t me_connect_i_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						0},
-	{ID_PEER,						0},
-	{VENDOR_ID,						0},
+	{PLV2_NOTIFY,					0},
+	{PLV2_ID_PEER,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 
 /**
@@ -410,8 +410,8 @@ static payload_order_t me_connect_i_order[] = {
  */
 static payload_rule_t me_connect_r_rules[] = {
 /*	payload type					min	max						encr	suff */
-	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{PLV2_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
 };
 
 /**
@@ -419,8 +419,8 @@ static payload_rule_t me_connect_r_rules[] = {
  */
 static payload_order_t me_connect_r_order[] = {
 /*	payload type					notify type */
-	{NOTIFY,						0},
-	{VENDOR_ID,						0},
+	{PLV2_NOTIFY,					0},
+	{PLV2_VENDOR_ID,				0},
 };
 #endif /* ME */
 
@@ -429,284 +429,284 @@ static payload_order_t me_connect_r_order[] = {
  * Message rule for ID_PROT from initiator.
  */
 static payload_rule_t id_prot_i_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
-	{NONCE_V1,					0,	1,						FALSE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
-	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
-	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{ID_V1,						0,	1,						TRUE,	FALSE},
-	{CERTIFICATE_V1,			0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
-	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
-	{HASH_V1,					0,	1,						TRUE,	FALSE},
-	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	1,						FALSE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						FALSE,	FALSE},
+	{PLV1_NONCE,					0,	1,						FALSE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NAT_D,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_NAT_D_DRAFT_00_03,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_ID,						0,	1,						TRUE,	FALSE},
+	{PLV1_CERTIFICATE,				0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
+	{PLV1_SIGNATURE,				0,	1,						TRUE,	FALSE},
+	{PLV1_HASH,						0,	1,						TRUE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
  * payload order for ID_PROT from initiator.
  */
 static payload_order_t id_prot_i_order[] = {
-/*	payload type				notify type */
-	{SECURITY_ASSOCIATION_V1,	0},
-	{KEY_EXCHANGE_V1,			0},
-	{NONCE_V1,					0},
-	{ID_V1,						0},
-	{CERTIFICATE_V1,			0},
-	{SIGNATURE_V1,				0},
-	{HASH_V1,					0},
-	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{NAT_D_V1,					0},
-	{NAT_D_DRAFT_00_03_V1,		0},
-	{FRAGMENT_V1,				0},
+/*	payload type					notify type */
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_NONCE,					0},
+	{PLV1_ID,						0},
+	{PLV1_CERTIFICATE,				0},
+	{PLV1_SIGNATURE,				0},
+	{PLV1_HASH,						0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_NAT_D,					0},
+	{PLV1_NAT_D_DRAFT_00_03,		0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
  * Message rule for ID_PROT from responder.
  */
 static payload_rule_t id_prot_r_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
-	{NONCE_V1,					0,	1,						FALSE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
-	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
-	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{ID_V1,						0,	1,						TRUE,	FALSE},
-	{CERTIFICATE_V1,			0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
-	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
-	{HASH_V1,					0,	1,						TRUE,	FALSE},
-	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	1,						FALSE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						FALSE,	FALSE},
+	{PLV1_NONCE,					0,	1,						FALSE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NAT_D,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_NAT_D_DRAFT_00_03,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_ID,						0,	1,						TRUE,	FALSE},
+	{PLV1_CERTIFICATE,				0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
+	{PLV1_SIGNATURE,				0,	1,						TRUE,	FALSE},
+	{PLV1_HASH,						0,	1,						TRUE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
  * payload order for ID_PROT from responder.
  */
 static payload_order_t id_prot_r_order[] = {
-/*	payload type				notify type */
-	{SECURITY_ASSOCIATION_V1,	0},
-	{KEY_EXCHANGE_V1,			0},
-	{NONCE_V1,					0},
-	{ID_V1,						0},
-	{CERTIFICATE_V1,			0},
-	{SIGNATURE_V1,				0},
-	{HASH_V1,					0},
-	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{NAT_D_V1,					0},
-	{NAT_D_DRAFT_00_03_V1,		0},
-	{FRAGMENT_V1,				0},
+/*	payload type					notify type */
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_NONCE,					0},
+	{PLV1_ID,						0},
+	{PLV1_CERTIFICATE,				0},
+	{PLV1_SIGNATURE,				0},
+	{PLV1_HASH,						0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_NAT_D,					0},
+	{PLV1_NAT_D_DRAFT_00_03,		0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
  * Message rule for AGGRESSIVE from initiator.
  */
 static payload_rule_t aggressive_i_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
-	{NONCE_V1,					0,	1,						FALSE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
-	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
-	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{ID_V1,						0,	1,						FALSE,	FALSE},
-	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
-	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
-	{HASH_V1,					0,	1,						TRUE,	FALSE},
-	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	1,						FALSE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						FALSE,	FALSE},
+	{PLV1_NONCE,					0,	1,						FALSE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NAT_D,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_NAT_D_DRAFT_00_03,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_ID,						0,	1,						FALSE,	FALSE},
+	{PLV1_CERTIFICATE,				0,	1,						TRUE,	FALSE},
+	{PLV1_SIGNATURE,				0,	1,						TRUE,	FALSE},
+	{PLV1_HASH,						0,	1,						TRUE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
  * payload order for AGGRESSIVE from initiator.
  */
 static payload_order_t aggressive_i_order[] = {
-/*	payload type				notify type */
-	{SECURITY_ASSOCIATION_V1,	0},
-	{KEY_EXCHANGE_V1,			0},
-	{NONCE_V1,					0},
-	{ID_V1,						0},
-	{CERTIFICATE_V1,			0},
-	{NAT_D_V1,					0},
-	{NAT_D_DRAFT_00_03_V1,		0},
-	{SIGNATURE_V1,				0},
-	{HASH_V1,					0},
-	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{FRAGMENT_V1,				0},
+/*	payload type					notify type */
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_NONCE,					0},
+	{PLV1_ID,						0},
+	{PLV1_CERTIFICATE,				0},
+	{PLV1_NAT_D,					0},
+	{PLV1_NAT_D_DRAFT_00_03,		0},
+	{PLV1_SIGNATURE,				0},
+	{PLV1_HASH,						0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
  * Message rule for AGGRESSIVE from responder.
  */
 static payload_rule_t aggressive_r_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
-	{NONCE_V1,					0,	1,						FALSE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
-	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
-	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
-	{ID_V1,						0,	1,						FALSE,	FALSE},
-	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
-	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
-	{HASH_V1,					0,	1,						FALSE,	FALSE},
-	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	1,						FALSE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						FALSE,	FALSE},
+	{PLV1_NONCE,					0,	1,						FALSE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_CERTREQ,					0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NAT_D,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_NAT_D_DRAFT_00_03,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{PLV1_ID,						0,	1,						FALSE,	FALSE},
+	{PLV1_CERTIFICATE,				0,	1,						FALSE,	FALSE},
+	{PLV1_SIGNATURE,				0,	1,						FALSE,	FALSE},
+	{PLV1_HASH,						0,	1,						FALSE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
  * payload order for AGGRESSIVE from responder.
  */
 static payload_order_t aggressive_r_order[] = {
-/*	payload type				notify type */
-	{SECURITY_ASSOCIATION_V1,	0},
-	{KEY_EXCHANGE_V1,			0},
-	{NONCE_V1,					0},
-	{ID_V1,						0},
-	{CERTIFICATE_V1,			0},
-	{NAT_D_V1,					0},
-	{NAT_D_DRAFT_00_03_V1,		0},
-	{SIGNATURE_V1,				0},
-	{HASH_V1,					0},
-	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{FRAGMENT_V1,				0},
+/*	payload type					notify type */
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_NONCE,					0},
+	{PLV1_ID,						0},
+	{PLV1_CERTIFICATE,				0},
+	{PLV1_NAT_D,					0},
+	{PLV1_NAT_D_DRAFT_00_03,		0},
+	{PLV1_SIGNATURE,				0},
+	{PLV1_HASH,						0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
  * Message rule for INFORMATIONAL_V1 from initiator.
  */
 static payload_rule_t informational_i_rules_v1[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
  * payload order for INFORMATIONAL_V1 from initiator.
  */
 static payload_order_t informational_i_order_v1[] = {
-/*	payload type				notify type */
-	{NOTIFY_V1,					0},
-	{DELETE_V1,					0},
-	{VENDOR_ID_V1,				0},
+/*	payload type					notify type */
+	{PLV1_NOTIFY,					0},
+	{PLV1_DELETE,					0},
+	{PLV1_VENDOR_ID,				0},
 };
 
 /**
  * Message rule for INFORMATIONAL_V1 from responder.
  */
 static payload_rule_t informational_r_rules_v1[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
  * payload order for INFORMATIONAL_V1 from responder.
  */
 static payload_order_t informational_r_order_v1[] = {
-/*	payload type				notify type */
-	{NOTIFY_V1,					0},
-	{DELETE_V1,					0},
-	{VENDOR_ID_V1,				0},
+/*	payload type					notify type */
+	{PLV1_NOTIFY,					0},
+	{PLV1_DELETE,					0},
+	{PLV1_VENDOR_ID,				0},
 };
 
 /**
  * Message rule for QUICK_MODE from initiator.
  */
 static payload_rule_t quick_mode_i_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
-	{HASH_V1,					0,	1,						TRUE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
-	{NONCE_V1,					0,	1,						TRUE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
-	{ID_V1,						0,	2,						TRUE,	FALSE},
-	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
-	{NAT_OA_DRAFT_00_03_V1,		0,	2,						TRUE,	FALSE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV1_HASH,						0,	1,						TRUE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	2,						TRUE,	FALSE},
+	{PLV1_NONCE,					0,	1,						TRUE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+	{PLV1_ID,						0,	2,						TRUE,	FALSE},
+	{PLV1_NAT_OA,					0,	2,						TRUE,	FALSE},
+	{PLV1_NAT_OA_DRAFT_00_03,		0,	2,						TRUE,	FALSE},
 };
 
 /**
  * payload order for QUICK_MODE from initiator.
  */
 static payload_order_t quick_mode_i_order[] = {
-/*	payload type				notify type */
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{HASH_V1,					0},
-	{SECURITY_ASSOCIATION_V1,	0},
-	{NONCE_V1,					0},
-	{KEY_EXCHANGE_V1,			0},
-	{ID_V1,						0},
-	{NAT_OA_V1,					0},
-	{NAT_OA_DRAFT_00_03_V1,		0},
+/*	payload type					notify type */
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_HASH,						0},
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_NONCE,					0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_ID,						0},
+	{PLV1_NAT_OA,					0},
+	{PLV1_NAT_OA_DRAFT_00_03,		0},
 };
 
 /**
  * Message rule for QUICK_MODE from responder.
  */
 static payload_rule_t quick_mode_r_rules[] = {
-/*	payload type				min	max						encr	suff */
-	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
-	{HASH_V1,					0,	1,						TRUE,	FALSE},
-	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
-	{NONCE_V1,					0,	1,						TRUE,	FALSE},
-	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
-	{ID_V1,						0,	2,						TRUE,	FALSE},
-	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
-	{NAT_OA_DRAFT_00_03_V1,		0,	2,						TRUE,	FALSE},
+/*	payload type					min	max						encr	suff */
+	{PLV1_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV1_VENDOR_ID,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{PLV1_HASH,						0,	1,						TRUE,	FALSE},
+	{PLV1_SECURITY_ASSOCIATION,		0,	2,						TRUE,	FALSE},
+	{PLV1_NONCE,					0,	1,						TRUE,	FALSE},
+	{PLV1_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
+	{PLV1_ID,						0,	2,						TRUE,	FALSE},
+	{PLV1_NAT_OA,					0,	2,						TRUE,	FALSE},
+	{PLV1_NAT_OA_DRAFT_00_03,		0,	2,						TRUE,	FALSE},
 };
 
 /**
  * payload order for QUICK_MODE from responder.
  */
 static payload_order_t quick_mode_r_order[] = {
-/*	payload type				notify type */
-	{NOTIFY_V1,					0},
-	{VENDOR_ID_V1,				0},
-	{HASH_V1,					0},
-	{SECURITY_ASSOCIATION_V1,	0},
-	{NONCE_V1,					0},
-	{KEY_EXCHANGE_V1,			0},
-	{ID_V1,						0},
-	{NAT_OA_V1,					0},
-	{NAT_OA_DRAFT_00_03_V1,		0},
+/*	payload type					notify type */
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
+	{PLV1_HASH,						0},
+	{PLV1_SECURITY_ASSOCIATION,		0},
+	{PLV1_NONCE,					0},
+	{PLV1_KEY_EXCHANGE,				0},
+	{PLV1_ID,						0},
+	{PLV1_NAT_OA,					0},
+	{PLV1_NAT_OA_DRAFT_00_03,		0},
 };
 
 /**
  * Message rule for TRANSACTION.
  */
 static payload_rule_t transaction_payload_rules_v1[] = {
-/*	payload type				min	max	encr	suff */
-	{HASH_V1,					0,	1,	TRUE,	FALSE},
-	{CONFIGURATION_V1,			1,	1,	FALSE,	FALSE},
+/*	payload type					min	max	encr	suff */
+	{PLV1_HASH,						0,	1,	TRUE,	FALSE},
+	{PLV1_CONFIGURATION,			1,	1,	FALSE,	FALSE},
 };
 
 /**
  * Payload order for TRANSACTION.
  */
 static payload_order_t transaction_payload_order_v1[] = {
-/*	payload type			notify type */
-	{HASH_V1,					0},
-	{CONFIGURATION_V1,			0},
+/*	payload type					notify type */
+	{PLV1_HASH,						0},
+	{PLV1_CONFIGURATION,			0},
 };
 
 #endif /* USE_IKEV1 */
@@ -1063,7 +1063,7 @@ METHOD(message_t, add_payload, void,
 	{
 		this->first_payload = payload->get_type(payload);
 	}
-	payload->set_next_type(payload, NO_PAYLOAD);
+	payload->set_next_type(payload, PL_NONE);
 	this->payloads->insert_last(this->payloads, payload);
 
 	DBG2(DBG_ENC ,"added payload of type %N to message",
@@ -1086,11 +1086,11 @@ METHOD(message_t, add_notify, void,
 	}
 	if (this->major_version == IKEV2_MAJOR_VERSION)
 	{
-		notify = notify_payload_create(NOTIFY);
+		notify = notify_payload_create(PLV2_NOTIFY);
 	}
 	else
 	{
-		notify = notify_payload_create(NOTIFY_V1);
+		notify = notify_payload_create(PLV1_NOTIFY);
 	}
 	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, data);
@@ -1162,8 +1162,8 @@ METHOD(message_t, get_notify, notify_payload_t*,
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY ||
-			payload->get_type(payload) == NOTIFY_V1)
+		if (payload->get_type(payload) == PLV2_NOTIFY ||
+			payload->get_type(payload) == PLV1_NOTIFY)
 		{
 			notify = (notify_payload_t*)payload;
 			if (notify->get_notify_type(notify) == type)
@@ -1212,8 +1212,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		}
 		pos += written;
 		len -= written;
-		if (payload->get_type(payload) == NOTIFY ||
-			payload->get_type(payload) == NOTIFY_V1)
+		if (payload->get_type(payload) == PLV2_NOTIFY ||
+			payload->get_type(payload) == PLV1_NOTIFY)
 		{
 			notify_payload_t *notify;
 			notify_type_t type;
@@ -1239,7 +1239,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			pos += written;
 			len -= written;
 		}
-		if (payload->get_type(payload) == EXTENSIBLE_AUTHENTICATION)
+		if (payload->get_type(payload) == PLV2_EAP)
 		{
 			eap_payload_t *eap = (eap_payload_t*)payload;
 			u_int32_t vendor;
@@ -1268,8 +1268,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			pos += written;
 			len -= written;
 		}
-		if (payload->get_type(payload) == CONFIGURATION ||
-			payload->get_type(payload) == CONFIGURATION_V1)
+		if (payload->get_type(payload) == PLV2_CONFIGURATION ||
+			payload->get_type(payload) == PLV1_CONFIGURATION)
 		{
 			cp_payload_t *cp = (cp_payload_t*)payload;
 			enumerator_t *attributes;
@@ -1365,7 +1365,7 @@ static void order_payloads(private_message_t *this)
 				notify = (notify_payload_t*)payload;
 
 				/**... and check notify for type. */
-				if (order.type != NOTIFY || order.notify == 0 ||
+				if (order.type != PLV2_NOTIFY || order.notify == 0 ||
 					order.notify == notify->get_notify_type(notify))
 				{
 					list->remove_at(list, enumerator);
@@ -1410,11 +1410,11 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 
 	if (this->is_encrypted)
 	{
-		encryption = encryption_payload_create(ENCRYPTED_V1);
+		encryption = encryption_payload_create(PLV1_ENCRYPTED);
 	}
 	else
 	{
-		encryption = encryption_payload_create(ENCRYPTED);
+		encryption = encryption_payload_create(PLV2_ENCRYPTED);
 	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
@@ -1500,7 +1500,7 @@ METHOD(message_t, generate, status_t,
 		{	/* insert a HASH payload as first payload */
 			hash_payload_t *hash_payload;
 
-			hash_payload = hash_payload_create(HASH_V1);
+			hash_payload = hash_payload_create(PLV1_HASH);
 			hash_payload->set_hash(hash_payload, hash);
 			this->payloads->insert_first(this->payloads, hash_payload);
 			if (this->exchange_type == INFORMATIONAL_V1)
@@ -1598,7 +1598,7 @@ METHOD(message_t, generate, status_t,
 	}
 	else
 	{
-		next_type = encryption ? ENCRYPTED : NO_PAYLOAD;
+		next_type = encryption ? PLV2_ENCRYPTED : PL_NONE;
 	}
 	payload->set_next_type(payload, next_type);
 	generator->generate_payload(generator, payload);
@@ -1683,7 +1683,7 @@ METHOD(message_t, parse_header, status_t,
 	DBG2(DBG_ENC, "parsing header of message");
 
 	this->parser->reset_context(this->parser);
-	status = this->parser->parse_payload(this->parser, HEADER,
+	status = this->parser->parse_payload(this->parser, PL_HEADER,
 										 (payload_t**)&ike_header);
 	if (status != SUCCESS)
 	{
@@ -1722,7 +1722,7 @@ METHOD(message_t, parse_header, status_t,
 	}
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
-	if (this->first_payload == FRAGMENT_V1 && this->is_encrypted)
+	if (this->first_payload == PLV1_FRAGMENT && this->is_encrypted)
 	{	/* racoon sets the encryted bit when sending a fragment, but these
 		 * messages are really not encrypted */
 		this->is_encrypted = FALSE;
@@ -1752,7 +1752,7 @@ static bool is_connectivity_check(private_message_t *this, payload_t *payload)
 {
 #ifdef ME
 	if (this->exchange_type == INFORMATIONAL &&
-		payload->get_type(payload) == NOTIFY)
+		payload->get_type(payload) == PLV2_NOTIFY)
 	{
 		notify_payload_t *notify = (notify_payload_t*)payload;
 
@@ -1784,7 +1784,7 @@ static status_t parse_payloads(private_message_t *this)
 		 * payload which is then handled just like a regular payload */
 		encryption_payload_t *encryption;
 
-		status = this->parser->parse_payload(this->parser, ENCRYPTED_V1,
+		status = this->parser->parse_payload(this->parser, PLV1_ENCRYPTED,
 											 (payload_t**)&encryption);
 		if (status != SUCCESS)
 		{
@@ -1797,7 +1797,7 @@ static status_t parse_payloads(private_message_t *this)
 		return SUCCESS;
 	}
 
-	while (type != NO_PAYLOAD)
+	while (type != PL_NONE)
 	{
 		DBG2(DBG_ENC, "starting parsing a %N payload",
 			 payload_type_names, type);
@@ -1826,7 +1826,7 @@ static status_t parse_payloads(private_message_t *this)
 
 		/* an encrypted payload is the last one, so STOP here. decryption is
 		 * done later */
-		if (type == ENCRYPTED)
+		if (type == PLV2_ENCRYPTED)
 		{
 			DBG2(DBG_ENC, "%N payload found, stop parsing",
 				 payload_type_names, type);
@@ -1930,7 +1930,7 @@ static bool accept_unencrypted_mm(private_message_t *this, payload_type_t type)
 {
 	if (this->exchange_type == ID_PROT)
 	{
-		if (type == ID_V1 || type == HASH_V1)
+		if (type == PLV1_ID || type == PLV1_HASH)
 		{
 			return lib->settings->get_bool(lib->settings,
 									"%s.accept_unencrypted_mainmode_messages",
@@ -1959,7 +1959,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 
 		DBG2(DBG_ENC, "process payload of type %N", payload_type_names, type);
 
-		if (type == ENCRYPTED || type == ENCRYPTED_V1)
+		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
 		{
 			encryption_payload_t *encryption;
 
@@ -2116,7 +2116,7 @@ METHOD(message_t, parse_body, status_t,
 			hash_payload_t *hash_payload;
 			chunk_t other_hash;
 
-			if (this->first_payload != HASH_V1)
+			if (this->first_payload != PLV1_HASH)
 			{
 				if (this->exchange_type == INFORMATIONAL_V1)
 				{
@@ -2130,7 +2130,7 @@ METHOD(message_t, parse_body, status_t,
 				chunk_free(&hash);
 				return VERIFY_ERROR;
 			}
-			hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
+			hash_payload = (hash_payload_t*)get_payload(this, PLV1_HASH);
 			other_hash = hash_payload->get_hash(hash_payload);
 			DBG3(DBG_ENC, "HASH received %B\nHASH expected %B",
 				 &other_hash, &hash);
@@ -2211,7 +2211,7 @@ message_t *message_create_from_packet(packet_t *packet)
 		},
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 		.is_request = TRUE,
-		.first_payload = NO_PAYLOAD,
+		.first_payload = PL_NONE,
 		.packet = packet,
 		.payloads = linked_list_create(),
 		.parser = parser_create(packet->get_data(packet)),

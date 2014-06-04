@@ -15,16 +15,15 @@
  * for more details.
  */
 
-#include <arpa/inet.h>
 #include <string.h>
-#include <netdb.h>
 #include <stdio.h>
 
 #include "traffic_selector.h"
 
-#include <collections/linked_list.h>
-#include <utils/identification.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
+#include <utils/identification.h>
+#include <collections/linked_list.h>
 
 #define NON_SUBNET_ADDRESS_RANGE	255
 
