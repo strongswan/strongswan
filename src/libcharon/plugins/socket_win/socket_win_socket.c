@@ -19,6 +19,7 @@
 #include "socket_win_socket.h"
 
 #include <library.h>
+#include <hydra.h>
 #include <threading/thread.h>
 #include <daemon.h>
 
@@ -423,6 +424,16 @@ static SOCKET open_socket(private_socket_win_socket_t *this, int i)
 		DBG1(DBG_NET, "unable to set IP6_PKTINFO: %d", WSAGetLastError());
 		closesocket(s);
 		return INVALID_SOCKET;
+	}
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												s, AF_INET))
+	{
+		DBG1(DBG_NET, "installing IPv4 IKE bypass policy failed");
+	}
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												s, AF_INET6))
+	{
+		DBG1(DBG_NET, "installing IPv6 IKE bypass policy failed");
 	}
 	return s;
 }

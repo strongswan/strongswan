@@ -69,6 +69,8 @@ enum kernel_feature_t {
 	KERNEL_REQUIRE_EXCLUDE_ROUTE = (1<<1),
 	/** IPsec implementation requires UDP encapsulation of ESP packets */
 	KERNEL_REQUIRE_UDP_ENCAPSULATION = (1<<2),
+	/** IPsec backend does not require a policy reinstall on SA updates */
+	KERNEL_NO_POLICY_UPDATES = (1<<3),
 };
 
 /**

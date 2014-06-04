@@ -13,54 +13,55 @@
  * for more details.
  */
 
-#include "socket_win_plugin.h"
-#include "socket_win_socket.h"
+#include "kernel_wfp_plugin.h"
+#include "kernel_wfp_ipsec.h"
 
 #include <daemon.h>
 
-typedef struct private_socket_win_plugin_t private_socket_win_plugin_t;
+typedef struct private_kernel_wfp_plugin_t private_kernel_wfp_plugin_t;
 
 /**
- * Private data of socket plugin
+ * Private data of kernel-wfp plugin
  */
-struct private_socket_win_plugin_t {
+struct private_kernel_wfp_plugin_t {
 
 	/**
 	 * Implements plugin interface
 	 */
-	socket_win_plugin_t public;
+	kernel_wfp_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_socket_win_plugin_t *this)
+	private_kernel_wfp_plugin_t *this)
 {
-	return "socket-win";
-}
-
-METHOD(plugin_t, destroy, void,
-	private_socket_win_plugin_t *this)
-{
-	free(this);
+	return "kernel-wfp";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_socket_win_plugin_t *this, plugin_feature_t *features[])
+	private_kernel_wfp_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK(socket_register, socket_win_socket_create),
-			PLUGIN_PROVIDE(CUSTOM, "socket"),
-				PLUGIN_DEPENDS(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_wfp_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+				PLUGIN_DEPENDS(RNG, RNG_STRONG),
 	};
 	*features = f;
 	return countof(f);
 }
 
-/**
- * Create instance of socket-win plugin
- */
-plugin_t *socket_win_plugin_create()
+METHOD(plugin_t, destroy, void,
+	private_kernel_wfp_plugin_t *this)
 {
-	private_socket_win_plugin_t *this;
+	free(this);
+}
+
+/*
+ * see header file
+ */
+plugin_t *kernel_wfp_plugin_create()
+{
+	private_kernel_wfp_plugin_t *this;
 
 	INIT(this,
 		.public = {

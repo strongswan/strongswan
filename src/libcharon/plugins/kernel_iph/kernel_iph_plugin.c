@@ -13,54 +13,54 @@
  * for more details.
  */
 
-#include "socket_win_plugin.h"
-#include "socket_win_socket.h"
 
-#include <daemon.h>
+#include "kernel_iph_plugin.h"
+#include "kernel_iph_net.h"
 
-typedef struct private_socket_win_plugin_t private_socket_win_plugin_t;
+#include <hydra.h>
+
+typedef struct private_kernel_iph_plugin_t private_kernel_iph_plugin_t;
 
 /**
- * Private data of socket plugin
+ * Private data of kernel iph plugin
  */
-struct private_socket_win_plugin_t {
+struct private_kernel_iph_plugin_t {
 
 	/**
 	 * Implements plugin interface
 	 */
-	socket_win_plugin_t public;
+	kernel_iph_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_socket_win_plugin_t *this)
+	private_kernel_iph_plugin_t *this)
 {
-	return "socket-win";
-}
-
-METHOD(plugin_t, destroy, void,
-	private_socket_win_plugin_t *this)
-{
-	free(this);
+	return "kernel-iph";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_socket_win_plugin_t *this, plugin_feature_t *features[])
+	private_kernel_iph_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK(socket_register, socket_win_socket_create),
-			PLUGIN_PROVIDE(CUSTOM, "socket"),
-				PLUGIN_DEPENDS(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_iph_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 	};
 	*features = f;
 	return countof(f);
 }
 
-/**
- * Create instance of socket-win plugin
- */
-plugin_t *socket_win_plugin_create()
+METHOD(plugin_t, destroy, void,
+	private_kernel_iph_plugin_t *this)
 {
-	private_socket_win_plugin_t *this;
+	free(this);
+}
+
+/*
+ * See header file
+ */
+plugin_t *kernel_iph_plugin_create()
+{
+	private_kernel_iph_plugin_t *this;
 
 	INIT(this,
 		.public = {
