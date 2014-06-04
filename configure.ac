@@ -161,6 +161,7 @@ ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via l
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
 ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
 ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
+ARG_ENABL_SET([winhttp],        [enable WinHTTP based HTTP/HTTPS fetching plugin.])
 # database plugins
 ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
@@ -1159,8 +1160,9 @@ s_plugins=
 t_plugins=
 
 ADD_PLUGIN([test-vectors],         [s charon scepclient pki])
-ADD_PLUGIN([curl],                 [s charon scepclient scripts nm cmd])
-ADD_PLUGIN([soup],                 [s charon scripts nm cmd])
+ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([winhttp],              [s charon pki scripts])
+ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([unbound],              [s charon scripts])
 ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
@@ -1178,7 +1180,7 @@ ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attes
 ADD_PLUGIN([random],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
 ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen])
-ADD_PLUGIN([revocation],           [s charon nm cmd])
+ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd aikgen])
@@ -1305,6 +1307,7 @@ AC_SUBST(t_plugins)
 # -----------------------
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
+AM_CONDITIONAL(USE_WINHTTP, test x$winhttp = xtrue)
 AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
 AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
@@ -1571,6 +1574,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/sshkey/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
+	src/libstrongswan/plugins/winhttp/Makefile
 	src/libstrongswan/plugins/unbound/Makefile
 	src/libstrongswan/plugins/soup/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
