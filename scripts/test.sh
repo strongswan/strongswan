@@ -34,7 +34,7 @@ all)
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
 			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
-			--disable-svc --disable-dbghelp-backtraces"
+			--disable-svc --disable-dbghelp-backtraces --disable-socket-win"
 	if test "$LEAK_DETECTIVE" = "yes"; then
 		# libgcrypt can't be deinitialized
 		CONFIG="$CONFIG --disable-gcrypt"
@@ -58,7 +58,7 @@ win)
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
-			--enable-pki --enable-swanctl"
+			--enable-pki --enable-swanctl --enable-socket-win"
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"

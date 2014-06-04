@@ -195,6 +195,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SOCKET_WIN
+  SUBDIRS += plugins/socket_win
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/socket_win/libstrongswan-socket-win.la
+endif
+endif
+
 if USE_FARP
   SUBDIRS += plugins/farp
 if MONOLITHIC
