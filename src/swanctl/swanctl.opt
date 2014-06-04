@@ -664,11 +664,17 @@ connections.<conn>.children.<child>.close_action = none
 	failures. Use trap policies to reliably re-create failed CHILD_SAs.
 
 secrets { # }
-	Section defining secrets for IKE and EAP/XAuth authentication.
+	Section defining secrets for IKE/EAP/XAuth authentication and private
+	key decryption.
 
-	Section defining secrets for IKE and EAP/XAuth authentication. The
-	**secrets** section takes sub-sections having a specific prefix which
-	defines the secret type.
+	Section defining secrets for IKE/EAP/XAuth authentication and private key
+	decryption. The **secrets** section takes sub-sections having a specific
+	prefix which defines the secret type.
+
+	It is not recommended to define any private key decryption passphrases,
+	as then there is no real security benefit in having encrypted keys. Either
+	store the key unencrypted, or enter the keys manually when loading
+	credentials.
 
 secrets.eap<suffix> { # }
 	EAP secret section for a specific secret.
@@ -717,6 +723,33 @@ secrets.ike<suffix>.id<suffix> =
 	IKE identity the IKE preshared secret belongs to. Multiple unique identities
 	may be specified, each having an _id_ prefix, if a secret is shared between
 	multiple peers.
+
+secrets.rsa<suffix> { # }
+	Private key decryption passphrase for a key in the _rsa_ folder.
+
+secrets.rsa<suffix>.file =
+	File name in the _rsa_ folder for which this passphrase should be used.
+
+secrets.rsa<suffix>.secret
+	Value of decryption passphrase for RSA key.
+
+secrets.ecdsa<suffix> { # }
+	Private key decryption passphrase for a key in the _ecdsa_ folder.
+
+secrets.ecdsa<suffix>.file =
+	File name in the _ecdsa_ folder for which this passphrase should be used.
+
+secrets.ecdsa<suffix>.secret
+	Value of decryption passphrase for ECDSA key.
+
+secrets.pkcs8<suffix> { # }
+	Private key decryption passphrase for a key in the _pkcs8_ folder.
+
+secrets.pkcs8<suffix>.file =
+	File name in the _pkcs8_ folder for which this passphrase should be used.
+
+secrets.pkcs8<suffix>.secret
+	Value of decryption passphrase for PKCS#8 key.
 
 pools { # }
 	Section defining named pools.

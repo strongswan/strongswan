@@ -22,6 +22,7 @@
 #include "command.h"
 #include "swanctl.h"
 
+#include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
 
 /**
@@ -172,7 +173,7 @@ CALLBACK(password_cb, shared_key_t*,
 }
 
 /**
- * Try to parse a potentially encrypted private key
+ * Try to parse a potentially encrypted private key using password prompt
  */
 static private_key_t* decrypt_key(char *name, char *type, chunk_t encoding)
 {
@@ -205,20 +206,101 @@ static private_key_t* decrypt_key(char *name, char *type, chunk_t encoding)
 }
 
 /**
+ * Try to parse a potentially encrypted private key using configured secret
+ */
+static private_key_t* decrypt_key_with_config(settings_t *cfg, char *name,
+											  char *type, chunk_t encoding)
+{	key_type_t kt = KEY_ANY;
+	enumerator_t *enumerator, *secrets;
+	char *section, *key, *value, *file, buf[128];
+	shared_key_t *shared;
+	private_key_t *private = NULL;
+	mem_cred_t *mem = NULL;
+
+	if (streq(type, "rsa"))
+	{
+		kt = KEY_RSA;
+	}
+	else if (streq(type, "ecdsa"))
+	{
+		kt = KEY_ECDSA;
+	}
+	else
+	{
+		type = "pkcs8";
+	}
+
+	/* load all secrets for this key type */
+	enumerator = cfg->create_section_enumerator(cfg, "secrets");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		if (strpfx(section, type))
+		{
+			file = cfg->get_str(cfg, "secrets.%s.file", NULL, section);
+			if (file && strcaseeq(file, name))
+			{
+				snprintf(buf, sizeof(buf), "secrets.%s", section);
+				secrets = cfg->create_key_value_enumerator(cfg, buf);
+				while (secrets->enumerate(secrets, &key, &value))
+				{
+					if (strpfx(key, "secret"))
+					{
+						if (!mem)
+						{
+							mem = mem_cred_create();
+						}
+						shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
+											chunk_clone(chunk_from_str(value)));
+						mem->add_shared(mem, shared, NULL);
+					}
+				}
+				secrets->destroy(secrets);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (mem)
+	{
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
+
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, kt,
+									 BUILD_BLOB_PEM, encoding, BUILD_END);
+
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+
+		if (!private)
+		{
+			fprintf(stderr, "configured decryption secret for '%s' invalid\n",
+					name);
+		}
+
+		mem->destroy(mem);
+	}
+
+	return private;
+}
+
+/**
  * Try to decrypt and load a private key
  */
-static bool load_encrypted_key(vici_conn_t *conn, command_format_options_t format,
-							   char *rel, char *path, char *type, chunk_t data)
+static bool load_encrypted_key(vici_conn_t *conn,
+							   command_format_options_t format, settings_t *cfg,
+							   char *rel, char *path, char *type, bool noprompt,
+							   chunk_t data)
 {
 	private_key_t *private;
 	bool loaded = FALSE;
 	chunk_t encoding;
 
-	private = decrypt_key(rel, type, data);
+	private = decrypt_key_with_config(cfg, rel, type, data);
+	if (!private && !noprompt)
+	{
+		private = decrypt_key(rel, type, data);
+	}
 	if (private)
 	{
-		if (private->get_encoding(private, PRIVKEY_ASN1_DER,
-								  &encoding))
+		if (private->get_encoding(private, PRIVKEY_ASN1_DER, &encoding))
 		{
 			switch (private->get_type(private))
 			{
@@ -242,7 +324,7 @@ static bool load_encrypted_key(vici_conn_t *conn, command_format_options_t forma
  * Load private keys from a directory
  */
 static void load_keys(vici_conn_t *conn, command_format_options_t format,
-					  bool noprompt, char *type, char *dir)
+					  bool noprompt, settings_t *cfg, char *type, char *dir)
 {
 	enumerator_t *enumerator;
 	struct stat st;
@@ -259,8 +341,8 @@ static void load_keys(vici_conn_t *conn, command_format_options_t format,
 				map = chunk_map(path, FALSE);
 				if (map)
 				{
-					if (noprompt ||
-						!load_encrypted_key(conn, format, rel, path, type, *map))
+					if (!load_encrypted_key(conn, format, cfg, rel, path, type,
+											noprompt, *map))
 					{
 						load_key(conn, format, path, type, *map);
 					}
@@ -294,6 +376,9 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 		"eap",
 		"xauth",
 		"ike",
+		"rsa",
+		"ecdsa",
+		"pkcs8",
 	};
 
 	for (i = 0; i < countof(types); i++)
@@ -308,6 +393,10 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 	{
 		fprintf(stderr, "ignoring unsupported secret '%s'\n", section);
 		return FALSE;
+	}
+	if (!streq(type, "eap") && !streq(type, "xauth") && !streq(type, "ike"))
+	{	/* skip non-shared secrets */
+		return TRUE;
 	}
 
 	value = cfg->get_str(cfg, "secrets.%s.secret", NULL, section);
@@ -437,22 +526,22 @@ static int load_creds(vici_conn_t *conn)
 		}
 	}
 
-	load_certs(conn, format, "x509", SWANCTL_X509DIR);
-	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
-	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
-	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
-	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
-
-	load_keys(conn, format, noprompt, "rsa", SWANCTL_RSADIR);
-	load_keys(conn, format, noprompt, "ecdsa", SWANCTL_ECDSADIR);
-	load_keys(conn, format, noprompt, "any", SWANCTL_PKCS8DIR);
-
 	cfg = settings_create(SWANCTL_CONF);
 	if (!cfg)
 	{
 		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
 		return EINVAL;
 	}
+
+	load_certs(conn, format, "x509", SWANCTL_X509DIR);
+	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
+	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
+	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
+	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
+
+	load_keys(conn, format, noprompt, cfg, "rsa", SWANCTL_RSADIR);
+	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
+	load_keys(conn, format, noprompt, cfg, "any", SWANCTL_PKCS8DIR);
 
 	enumerator = cfg->create_section_enumerator(cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
