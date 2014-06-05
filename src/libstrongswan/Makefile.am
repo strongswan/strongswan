@@ -125,7 +125,7 @@ AM_LDFLAGS = \
 AM_YFLAGS = -v -d
 
 if USE_WINDOWS
-  libstrongswan_la_LIBADD += -lws2_32
+  libstrongswan_la_LIBADD += -lws2_32 -lpsapi
   libstrongswan_la_SOURCES += \
     threading/windows/thread.c \
     threading/windows/thread_value.c \
