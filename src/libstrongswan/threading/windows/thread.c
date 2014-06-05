@@ -378,8 +378,10 @@ void thread_set_active_condvar(CONDITION_VARIABLE *condvar)
 /**
  * APC to cancel a thread
  */
-static void docancel(private_thread_t *this)
+static void WINAPI docancel(ULONG_PTR dwParam)
 {
+	private_thread_t *this = (private_thread_t*)dwParam;
+
 	/* make sure cancel() does not access this anymore */
 	threads_lock->lock(threads_lock);
 	threads_lock->unlock(threads_lock);
@@ -398,7 +400,7 @@ METHOD(thread_t, cancel, void,
 		if (!this->cancel_pending)
 		{
 			this->cancel_pending = TRUE;
-			QueueUserAPC((void*)docancel, this->handle, (uintptr_t)this);
+			QueueUserAPC(docancel, this->handle, (uintptr_t)this);
 			if (this->condvar)
 			{
 				WakeAllConditionVariable(this->condvar);

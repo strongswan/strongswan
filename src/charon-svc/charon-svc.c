@@ -48,8 +48,8 @@ extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 /**
  * Forward declaration
  */
-static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
-							 LPVOID lpEventData, LPVOID lpContext);
+static DWORD WINAPI service_handler(DWORD dwControl, DWORD dwEventType,
+									LPVOID lpEventData, LPVOID lpContext);
 
 /**
  * Logging hook for library logs, using stderr output
@@ -111,7 +111,7 @@ static void update_status(DWORD state)
 /**
  * Control handler for console
  */
-static BOOL console_handler(DWORD dwCtrlType)
+static BOOL WINAPI console_handler(DWORD dwCtrlType)
 {
 	switch (dwCtrlType)
 	{
@@ -135,8 +135,8 @@ static BOOL console_handler(DWORD dwCtrlType)
 /**
  * Service handler function
  */
-static DWORD service_handler(DWORD dwControl, DWORD dwEventType,
-							 LPVOID lpEventData, LPVOID lpContext)
+static DWORD WINAPI service_handler(DWORD dwControl, DWORD dwEventType,
+									LPVOID lpEventData, LPVOID lpContext)
 {
 	switch (dwControl)
 	{
@@ -285,7 +285,7 @@ static bool switch_workingdir()
 /**
  * Service main routine when running as service
  */
-static void service_main(DWORD dwArgc, LPTSTR *lpszArgv)
+static void WINAPI service_main(DWORD dwArgc, LPTSTR *lpszArgv)
 {
 	memset(&status, 0, sizeof(status));
 	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;

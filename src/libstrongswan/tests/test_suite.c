@@ -138,7 +138,7 @@ static DWORD main_thread;
 /**
  * APC routine invoked by main thread on worker failure
  */
-static void set_worker_failure(ULONG_PTR dwParam)
+static void WINAPI set_worker_failure(ULONG_PTR dwParam)
 {
 	worker_failed = TRUE;
 }
@@ -180,7 +180,7 @@ void test_fail_if_worker_failed()
 /**
  * Vectored exception handler
  */
-static long eh_handler(PEXCEPTION_POINTERS ei)
+static long WINAPI eh_handler(PEXCEPTION_POINTERS ei)
 {
 	char *ename;
 	bool old = FALSE;

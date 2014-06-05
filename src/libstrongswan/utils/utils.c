@@ -247,7 +247,7 @@ static mutex_t *sigint_mutex;
 /**
  * Control handler to catch ^C
  */
-static BOOL handler(DWORD dwCtrlType)
+static BOOL WINAPI handler(DWORD dwCtrlType)
 {
 	switch (dwCtrlType)
 	{
