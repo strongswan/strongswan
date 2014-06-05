@@ -69,7 +69,8 @@
         </activity>
         <activity
             android:name=".ui.TrustedCertificateImportActivity"
-            android:label="@string/import_certificate" >
+            android:label="@string/import_certificate"
+            android:theme="@android:style/Theme.Holo.Dialog.NoActionBar" >
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
