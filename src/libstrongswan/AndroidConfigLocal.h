@@ -20,5 +20,3 @@
  * actually defined. */
 
 #undef HAVE_BACKTRACE
-#undef HAVE_DLADDR
-
