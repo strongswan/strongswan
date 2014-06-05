@@ -274,6 +274,21 @@ static inline void *memset_noop(void *s, int c, size_t n)
 						   *(this) = (typeof(*(this))){ __VA_ARGS__ }; }
 
 /**
+ * Object allocation/initialization macro, with extra allocated bytes at tail.
+ *
+ * The extra space gets zero-initialized.
+ *
+ * @param this		pointer to object to allocate memory for
+ * @param extra		number of bytes to allocate at end of this
+ * @param ...		initializer
+ */
+#define INIT_EXTRA(this, extra, ...) { \
+						typeof(extra) _extra = (extra); \
+						(this) = malloc(sizeof(*(this)) + _extra); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; \
+						memset((this) + 1, 0, _extra); }
+
+/**
  * Method declaration/definition macro, providing private and public interface.
  *
  * Defines a method name with this as first parameter and a return value ret,
