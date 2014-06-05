@@ -38,4 +38,6 @@ matrix:
     - compiler: gcc
       env: TEST=dist
     - compiler: gcc
-      env: TEST=win MONOLITHIC=yes
+      env: TEST=win64 MONOLITHIC=yes
+    - compiler: gcc
+      env: TEST=win32 MONOLITHIC=yes
