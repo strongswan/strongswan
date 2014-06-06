@@ -39,7 +39,7 @@ typedef struct message_t message_t;
  *
  * The message handles parsing and generation of payloads
  * via parser_t/generator_t. Encryption is done transparently
- * via the encryption_payload_t. A set of rules for messages
+ * via the encrypted_payload_t. A set of rules for messages
  * and payloads does check parsed messages.
  */
 struct message_t {

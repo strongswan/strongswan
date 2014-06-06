@@ -19,7 +19,7 @@
 #include <netinet/udp.h>
 
 #include <encoding/payloads/cert_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
 
 typedef struct private_ike_auth_fill_t private_ike_auth_fill_t;
 

@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "encryption_payload.h"
+#include "encrypted_payload.h"
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
@@ -27,22 +27,18 @@
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 
-typedef struct private_encryption_payload_t private_encryption_payload_t;
+typedef struct private_encrypted_payload_t private_encrypted_payload_t;
 
-/**
- * Private data of an encryption_payload_t' Object.
- *
- */
-struct private_encryption_payload_t {
+struct private_encrypted_payload_t {
 
 	/**
-	 * Public encryption_payload_t interface.
+	 * Public encrypted_payload_t interface.
 	 */
-	encryption_payload_t public;
+	encrypted_payload_t public;
 
 	/**
-	 * There is no next payload for an encryption payload,
-	 * since encryption payload MUST be the last one.
+	 * There is no next payload for an encrypted payload,
+	 * since encrypted payload MUST be the last one.
 	 * next_payload means here the first payload of the
 	 * contained, encrypted payload.
 	 */
@@ -80,20 +76,20 @@ struct private_encryption_payload_t {
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-Encryption Payload.
+ * Encoding rules to parse or generate a IKEv2-Encrypted Payload.
  *
  * The defined offsets are the positions in a object of type
- * private_encryption_payload_t.
+ * private_encrypted_payload_t.
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_encryption_payload_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_encrypted_payload_t, next_payload)	},
 	/* Critical and 7 reserved bits, all stored for reconstruction */
-	{ U_INT_8,			offsetof(private_encryption_payload_t, flags)			},
-	/* Length of the whole encryption payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_encryption_payload_t, payload_length)	},
+	{ U_INT_8,			offsetof(private_encrypted_payload_t, flags)			},
+	/* Length of the whole encrypted payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_encrypted_payload_t, payload_length)	},
 	/* encrypted data, stored in a chunk. contains iv, data, padding */
-	{ CHUNK_DATA,		offsetof(private_encryption_payload_t, encrypted)		},
+	{ CHUNK_DATA,		offsetof(private_encrypted_payload_t, encrypted)		},
 };
 
 /*
@@ -119,11 +115,11 @@ static encoding_rule_t encodings_v2[] = {
  * Encoding rules to parse or generate a complete encrypted IKEv1 message.
  *
  * The defined offsets are the positions in a object of type
- * private_encryption_payload_t.
+ * private_encrypted_payload_t.
  */
 static encoding_rule_t encodings_v1[] = {
 	/* encrypted data, stored in a chunk */
-	{ ENCRYPTED_DATA,	offsetof(private_encryption_payload_t, encrypted)		},
+	{ ENCRYPTED_DATA,	offsetof(private_encrypted_payload_t, encrypted)		},
 };
 
 /*
@@ -137,13 +133,13 @@ static encoding_rule_t encodings_v1[] = {
 */
 
 METHOD(payload_t, verify, status_t,
-	private_encryption_payload_t *this)
+	private_encrypted_payload_t *this)
 {
 	return SUCCESS;
 }
 
 METHOD(payload_t, get_encoding_rules, int,
-	private_encryption_payload_t *this, encoding_rule_t **rules)
+	private_encrypted_payload_t *this, encoding_rule_t **rules)
 {
 	if (this->type == PLV2_ENCRYPTED)
 	{
@@ -155,7 +151,7 @@ METHOD(payload_t, get_encoding_rules, int,
 }
 
 METHOD(payload_t, get_header_length, int,
-	private_encryption_payload_t *this)
+	private_encrypted_payload_t *this)
 {
 	if (this->type == PLV2_ENCRYPTED)
 	{
@@ -165,19 +161,19 @@ METHOD(payload_t, get_header_length, int,
 }
 
 METHOD(payload_t, get_type, payload_type_t,
-	private_encryption_payload_t *this)
+	private_encrypted_payload_t *this)
 {
 	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
-	private_encryption_payload_t *this)
+	private_encrypted_payload_t *this)
 {
 	return this->next_payload;
 }
 
 METHOD(payload_t, set_next_type, void,
-	private_encryption_payload_t *this, payload_type_t type)
+	private_encrypted_payload_t *this, payload_type_t type)
 {
 	/* the next payload is set during add, still allow this for IKEv1 */
 	this->next_payload = type;
@@ -186,7 +182,7 @@ METHOD(payload_t, set_next_type, void,
 /**
  * Compute the length of the whole payload
  */
-static void compute_length(private_encryption_payload_t *this)
+static void compute_length(private_encrypted_payload_t *this)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -220,15 +216,15 @@ static void compute_length(private_encryption_payload_t *this)
 	this->payload_length = length;
 }
 
-METHOD2(payload_t, encryption_payload_t, get_length, size_t,
-	private_encryption_payload_t *this)
+METHOD2(payload_t, encrypted_payload_t, get_length, size_t,
+	private_encrypted_payload_t *this)
 {
 	compute_length(this);
 	return this->payload_length;
 }
 
-METHOD(encryption_payload_t, add_payload, void,
-	private_encryption_payload_t *this, payload_t *payload)
+METHOD(encrypted_payload_t, add_payload, void,
+	private_encrypted_payload_t *this, payload_t *payload)
 {
 	payload_t *last_payload;
 
@@ -246,8 +242,8 @@ METHOD(encryption_payload_t, add_payload, void,
 	compute_length(this);
 }
 
-METHOD(encryption_payload_t, remove_payload, payload_t *,
-	private_encryption_payload_t *this)
+METHOD(encrypted_payload_t, remove_payload, payload_t *,
+	private_encrypted_payload_t *this)
 {
 	payload_t *payload;
 
@@ -262,7 +258,7 @@ METHOD(encryption_payload_t, remove_payload, payload_t *,
 /**
  * Generate payload before encryption
  */
-static chunk_t generate(private_encryption_payload_t *this,
+static chunk_t generate(private_encrypted_payload_t *this,
 						generator_t *generator)
 {
 	payload_t *current, *next;
@@ -285,16 +281,16 @@ static chunk_t generate(private_encryption_payload_t *this,
 		generator->generate_payload(generator, current);
 
 		chunk = generator->get_chunk(generator, &lenpos);
-		DBG2(DBG_ENC, "generated content in encryption payload");
+		DBG2(DBG_ENC, "generated content in encrypted payload");
 	}
 	enumerator->destroy(enumerator);
 	return chunk;
 }
 
 /**
- * Append the encryption payload header to the associated data
+ * Append the encrypted payload header to the associated data
  */
-static chunk_t append_header(private_encryption_payload_t *this, chunk_t assoc)
+static chunk_t append_header(private_encrypted_payload_t *this, chunk_t assoc)
 {
 	struct {
 		u_int8_t next_payload;
@@ -308,8 +304,8 @@ static chunk_t append_header(private_encryption_payload_t *this, chunk_t assoc)
 	return chunk_cat("cc", assoc, chunk_from_thing(header));
 }
 
-METHOD(encryption_payload_t, encrypt, status_t,
-	private_encryption_payload_t *this, u_int64_t mid, chunk_t assoc)
+METHOD(encrypted_payload_t, encrypt, status_t,
+	private_encrypted_payload_t *this, u_int64_t mid, chunk_t assoc)
 {
 	chunk_t iv, plain, padding, icv, crypt;
 	generator_t *generator;
@@ -319,21 +315,21 @@ METHOD(encryption_payload_t, encrypt, status_t,
 
 	if (this->aead == NULL)
 	{
-		DBG1(DBG_ENC, "encrypting encryption payload failed, transform missing");
+		DBG1(DBG_ENC, "encrypting encrypted payload failed, transform missing");
 		return INVALID_STATE;
 	}
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
-		DBG1(DBG_ENC, "encrypting encryption payload failed, no RNG found");
+		DBG1(DBG_ENC, "encrypting encrypted payload failed, no RNG found");
 		return NOT_SUPPORTED;
 	}
 
 	iv_gen = this->aead->get_iv_gen(this->aead);
 	if (!iv_gen)
 	{
-		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV generator");
+		DBG1(DBG_ENC, "encrypting encrypted payload failed, no IV generator");
 		return NOT_SUPPORTED;
 	}
 
@@ -367,7 +363,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	if (!iv_gen->get_iv(iv_gen, mid, iv.len, iv.ptr) ||
 		!rng->get_bytes(rng, padding.len - 1, padding.ptr))
 	{
-		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV or padding");
+		DBG1(DBG_ENC, "encrypting encrypted payload failed, no IV or padding");
 		rng->destroy(rng);
 		free(assoc.ptr);
 		return FAILED;
@@ -375,7 +371,7 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	padding.ptr[padding.len - 1] = padding.len - 1;
 	rng->destroy(rng);
 
-	DBG3(DBG_ENC, "encryption payload encryption:");
+	DBG3(DBG_ENC, "encrypted payload encryption:");
 	DBG3(DBG_ENC, "IV %B", &iv);
 	DBG3(DBG_ENC, "plain %B", &plain);
 	DBG3(DBG_ENC, "padding %B", &padding);
@@ -395,8 +391,8 @@ METHOD(encryption_payload_t, encrypt, status_t,
 	return SUCCESS;
 }
 
-METHOD(encryption_payload_t, encrypt_v1, status_t,
-	private_encryption_payload_t *this, u_int64_t mid, chunk_t iv)
+METHOD(encrypted_payload_t, encrypt_v1, status_t,
+	private_encrypted_payload_t *this, u_int64_t mid, chunk_t iv)
 {
 	generator_t *generator;
 	chunk_t plain, padding;
@@ -441,7 +437,7 @@ METHOD(encryption_payload_t, encrypt_v1, status_t,
 /**
  * Parse the payloads after decryption.
  */
-static status_t parse(private_encryption_payload_t *this, chunk_t plain)
+static status_t parse(private_encrypted_payload_t *this, chunk_t plain)
 {
 	parser_t *parser;
 	payload_type_t type;
@@ -476,19 +472,19 @@ static status_t parse(private_encryption_payload_t *this, chunk_t plain)
 		this->payloads->insert_last(this->payloads, payload);
 	}
 	parser->destroy(parser);
-	DBG2(DBG_ENC, "parsed content of encryption payload");
+	DBG2(DBG_ENC, "parsed content of encrypted payload");
 	return SUCCESS;
 }
 
-METHOD(encryption_payload_t, decrypt, status_t,
-	private_encryption_payload_t *this, chunk_t assoc)
+METHOD(encrypted_payload_t, decrypt, status_t,
+	private_encrypted_payload_t *this, chunk_t assoc)
 {
 	chunk_t iv, plain, padding, icv, crypt;
 	size_t bs;
 
 	if (this->aead == NULL)
 	{
-		DBG1(DBG_ENC, "decrypting encryption payload failed, transform missing");
+		DBG1(DBG_ENC, "decrypting encrypted payload failed, transform missing");
 		return INVALID_STATE;
 	}
 
@@ -511,13 +507,13 @@ METHOD(encryption_payload_t, decrypt, status_t,
 	if (iv.len + icv.len > this->encrypted.len ||
 		(crypt.len - icv.len) % bs)
 	{
-		DBG1(DBG_ENC, "decrypting encryption payload failed, invalid length");
+		DBG1(DBG_ENC, "decrypting encrypted payload failed, invalid length");
 		return FAILED;
 	}
 
 	assoc = append_header(this, assoc);
 
-	DBG3(DBG_ENC, "encryption payload decryption:");
+	DBG3(DBG_ENC, "encrypted payload decryption:");
 	DBG3(DBG_ENC, "IV %B", &iv);
 	DBG3(DBG_ENC, "encrypted %B", &crypt);
 	DBG3(DBG_ENC, "ICV %B", &icv);
@@ -525,7 +521,7 @@ METHOD(encryption_payload_t, decrypt, status_t,
 
 	if (!this->aead->decrypt(this->aead, crypt, assoc, iv, NULL))
 	{
-		DBG1(DBG_ENC, "verifying encryption payload integrity failed");
+		DBG1(DBG_ENC, "verifying encrypted payload integrity failed");
 		free(assoc.ptr);
 		return FAILED;
 	}
@@ -535,7 +531,7 @@ METHOD(encryption_payload_t, decrypt, status_t,
 	padding.len = plain.ptr[plain.len - 1] + 1;
 	if (padding.len > plain.len)
 	{
-		DBG1(DBG_ENC, "decrypting encryption payload failed, "
+		DBG1(DBG_ENC, "decrypting encrypted payload failed, "
 			 "padding invalid %B", &crypt);
 		return PARSE_ERROR;
 	}
@@ -548,8 +544,8 @@ METHOD(encryption_payload_t, decrypt, status_t,
 	return parse(this, plain);
 }
 
-METHOD(encryption_payload_t, decrypt_v1, status_t,
-	private_encryption_payload_t *this, chunk_t iv)
+METHOD(encrypted_payload_t, decrypt_v1, status_t,
+	private_encrypted_payload_t *this, chunk_t iv)
 {
 	if (this->aead == NULL)
 	{
@@ -578,14 +574,14 @@ METHOD(encryption_payload_t, decrypt_v1, status_t,
 	return parse(this, this->encrypted);
 }
 
-METHOD(encryption_payload_t, set_transform, void,
-	private_encryption_payload_t *this, aead_t* aead)
+METHOD(encrypted_payload_t, set_transform, void,
+	private_encrypted_payload_t *this, aead_t* aead)
 {
 	this->aead = aead;
 }
 
-METHOD2(payload_t, encryption_payload_t, destroy, void,
-	private_encryption_payload_t *this)
+METHOD2(payload_t, encrypted_payload_t, destroy, void,
+	private_encrypted_payload_t *this)
 {
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
 	free(this->encrypted.ptr);
@@ -595,9 +591,9 @@ METHOD2(payload_t, encryption_payload_t, destroy, void,
 /*
  * Described in header
  */
-encryption_payload_t *encryption_payload_create(payload_type_t type)
+encrypted_payload_t *encrypted_payload_create(payload_type_t type)
 {
-	private_encryption_payload_t *this;
+	private_encrypted_payload_t *this;
 
 	INIT(this,
 		.public = {

@@ -28,7 +28,7 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
@@ -244,7 +244,7 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)eap_payload_create();
 		case PLV2_ENCRYPTED:
 		case PLV1_ENCRYPTED:
-			return (payload_t*)encryption_payload_create(type);
+			return (payload_t*)encrypted_payload_create(type);
 		case PLV1_FRAGMENT:
 			return (payload_t*)fragment_payload_create();
 		default:

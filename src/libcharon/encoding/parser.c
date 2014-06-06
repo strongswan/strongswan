@@ -32,7 +32,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/notify_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>

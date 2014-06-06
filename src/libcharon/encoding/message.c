@@ -30,7 +30,7 @@
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/hash_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
 
@@ -1392,11 +1392,11 @@ static void order_payloads(private_message_t *this)
 }
 
 /**
- * Wrap payloads in an encryption payload
+ * Wrap payloads in an encrypted payload
  */
-static encryption_payload_t* wrap_payloads(private_message_t *this)
+static encrypted_payload_t* wrap_payloads(private_message_t *this)
 {
-	encryption_payload_t *encryption;
+	encrypted_payload_t *encryption;
 	linked_list_t *payloads;
 	payload_t *current;
 
@@ -1410,11 +1410,11 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 
 	if (this->is_encrypted)
 	{
-		encryption = encryption_payload_create(PLV1_ENCRYPTED);
+		encryption = encrypted_payload_create(PLV1_ENCRYPTED);
 	}
 	else
 	{
-		encryption = encryption_payload_create(PLV2_ENCRYPTED);
+		encryption = encrypted_payload_create(PLV2_ENCRYPTED);
 	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
@@ -1459,7 +1459,7 @@ METHOD(message_t, generate, status_t,
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next;
-	encryption_payload_t *encryption = NULL;
+	encrypted_payload_t *encryption = NULL;
 	payload_type_t next_type;
 	enumerator_t *enumerator;
 	aead_t *aead = NULL;
@@ -1780,9 +1780,9 @@ static status_t parse_payloads(private_message_t *this)
 	status_t status;
 
 	if (this->is_encrypted)
-	{	/* wrap the whole encrypted IKEv1 message in a special encryption
+	{	/* wrap the whole encrypted IKEv1 message in a special encrypted
 		 * payload which is then handled just like a regular payload */
-		encryption_payload_t *encryption;
+		encrypted_payload_t *encryption;
 
 		status = this->parser->parse_payload(this->parser, PLV1_ENCRYPTED,
 											 (payload_t**)&encryption);
@@ -1841,7 +1841,7 @@ static status_t parse_payloads(private_message_t *this)
  * Decrypt an encrypted payload and extract all contained payloads.
  */
 static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
-						payload_t *previous, encryption_payload_t *encryption)
+						payload_t *previous, encrypted_payload_t *encryption)
 {
 	payload_t *encrypted;
 	payload_type_t type;
@@ -1941,7 +1941,7 @@ static bool accept_unencrypted_mm(private_message_t *this, payload_type_t type)
 }
 
 /**
- * Decrypt payload from the encryption payload
+ * Decrypt payload from the encrypted payload
  */
 static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 {
@@ -1961,7 +1961,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 
 		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
 		{
-			encryption_payload_t *encryption;
+			encrypted_payload_t *encryption;
 
 			if (was_encrypted)
 			{
@@ -1972,7 +1972,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			}
 
 			DBG2(DBG_ENC, "found an encrypted payload");
-			encryption = (encryption_payload_t*)payload;
+			encryption = (encrypted_payload_t*)payload;
 			this->payloads->remove_at(this->payloads, enumerator);
 
 			if (enumerator->enumerate(enumerator, NULL))

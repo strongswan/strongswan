@@ -16,23 +16,23 @@
  */
 
 /**
- * @defgroup encryption_payload encryption_payload
+ * @defgroup encrypted_payload encrypted_payload
  * @{ @ingroup payloads
  */
 
-#ifndef ENCRYPTION_PAYLOAD_H_
-#define ENCRYPTION_PAYLOAD_H_
+#ifndef ENCRYPTED_PAYLOAD_H_
+#define ENCRYPTED_PAYLOAD_H_
 
-typedef struct encryption_payload_t encryption_payload_t;
+typedef struct encrypted_payload_t encrypted_payload_t;
 
 #include <library.h>
 #include <crypto/aead.h>
 #include <encoding/payloads/payload.h>
 
 /**
- * The encryption payload as described in RFC section 3.14.
+ * The encrypted payload as described in RFC section 3.14.
  */
-struct encryption_payload_t {
+struct encrypted_payload_t {
 
 	/**
 	 * Implements payload_t interface.
@@ -44,14 +44,14 @@ struct encryption_payload_t {
 	 *
 	 * @return			(expected) payload length
 	 */
-	size_t (*get_length)(encryption_payload_t *this);
+	size_t (*get_length)(encrypted_payload_t *this);
 
 	/**
 	 * Adds a payload to this encryption payload.
 	 *
 	 * @param payload		payload_t object to add
 	 */
-	void (*add_payload) (encryption_payload_t *this, payload_t *payload);
+	void (*add_payload) (encrypted_payload_t *this, payload_t *payload);
 
 	/**
 	 * Remove the first payload in the list
@@ -59,14 +59,14 @@ struct encryption_payload_t {
 	 * @param payload		removed payload
 	 * @return				payload, NULL if none left
 	 */
-	payload_t* (*remove_payload)(encryption_payload_t *this);
+	payload_t* (*remove_payload)(encrypted_payload_t *this);
 
 	/**
 	 * Set the AEAD transform to use.
 	 *
 	 * @param aead		aead transform to use
 	 */
-	void (*set_transform) (encryption_payload_t *this, aead_t *aead);
+	void (*set_transform) (encrypted_payload_t *this, aead_t *aead);
 
 	/**
 	 * Generate, encrypt and sign contained payloads.
@@ -78,7 +78,7 @@ struct encryption_payload_t {
 	 * 						- FAILED if encryption failed
 	 * 						- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*encrypt) (encryption_payload_t *this, u_int64_t mid,
+	status_t (*encrypt) (encrypted_payload_t *this, u_int64_t mid,
 						 chunk_t assoc);
 
 	/**
@@ -92,20 +92,20 @@ struct encryption_payload_t {
 	 * 						- FAILED if integrity check failed
 	 * 						- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*decrypt) (encryption_payload_t *this, chunk_t assoc);
+	status_t (*decrypt) (encrypted_payload_t *this, chunk_t assoc);
 
 	/**
-	 * Destroys an encryption_payload_t object.
+	 * Destroys an encrypted_payload_t object.
 	 */
-	void (*destroy) (encryption_payload_t *this);
+	void (*destroy) (encrypted_payload_t *this);
 };
 
 /**
- * Creates an empty encryption_payload_t object.
+ * Creates an empty encrypted_payload_t object.
  *
  * @param type		PLV2_ENCRYPTED or PLV1_ENCRYPTED
- * @return			encryption_payload_t object
+ * @return			encrypted_payload_t object
  */
-encryption_payload_t *encryption_payload_create(payload_type_t type);
+encrypted_payload_t *encrypted_payload_create(payload_type_t type);
 
-#endif /** ENCRYPTION_PAYLOAD_H_ @}*/
+#endif /** ENCRYPTED_PAYLOAD_H_ @}*/

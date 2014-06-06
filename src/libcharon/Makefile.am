@@ -23,7 +23,7 @@ encoding/payloads/cp_payload.c encoding/payloads/cp_payload.h \
 encoding/payloads/delete_payload.c encoding/payloads/delete_payload.h \
 encoding/payloads/eap_payload.c encoding/payloads/eap_payload.h \
 encoding/payloads/encodings.c encoding/payloads/encodings.h \
-encoding/payloads/encryption_payload.c encoding/payloads/encryption_payload.h \
+encoding/payloads/encrypted_payload.c encoding/payloads/encrypted_payload.h \
 encoding/payloads/id_payload.c encoding/payloads/id_payload.h \
 encoding/payloads/ike_header.c encoding/payloads/ike_header.h \
 encoding/payloads/ke_payload.c  encoding/payloads/ke_payload.h \

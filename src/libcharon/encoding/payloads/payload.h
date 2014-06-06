@@ -193,7 +193,7 @@ enum payload_type_t {
 	PLV2_TS_RESPONDER = 45,
 
 	/**
-	 * Encryption payload, contains other payloads (E).
+	 * Encrypted payload, contains other payloads (E).
 	 */
 	PLV2_ENCRYPTED = 46,
 
