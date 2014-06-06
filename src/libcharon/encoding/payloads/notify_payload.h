@@ -147,6 +147,10 @@ enum notify_type_t {
 	ERX_SUPPORTED = 16427,
 	/* IFOM capability, 3GPP TS 24.303, annex B.2 */
 	IFOM_CAPABILITY = 16428,
+	/* SENDER_REQUEST_ID (draft-yeung-g-ikev2) */
+	SENDER_REQUEST_ID = 16429,
+	/* IKEv2 fragmentation supported, RFC 7383 */
+	FRAGMENTATION_SUPPORTED = 16430,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
