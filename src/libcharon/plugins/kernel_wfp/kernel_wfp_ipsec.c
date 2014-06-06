@@ -1545,9 +1545,9 @@ static traffic_selector_t *addr2ts(FWP_IP_VERSION version, void *data,
 /**
  * FwpmNetEventSubscribe0() callback
  */
-static void event_callback(private_kernel_wfp_ipsec_t *this,
-						   const FWPM_NET_EVENT1 *event)
+static void WINAPI event_callback(void *user, const FWPM_NET_EVENT1 *event)
 {
+	private_kernel_wfp_ipsec_t *this = user;
 	traffic_selector_t *local = NULL, *remote = NULL;
 	u_int8_t protocol = 0;
 	u_int16_t from_local = 0, to_local = 65535;
@@ -1610,7 +1610,7 @@ static bool register_events(private_kernel_wfp_ipsec_t *this)
 	DWORD res;
 
 	res = FwpmNetEventSubscribe0(this->handle, &subscription,
-								 (void*)event_callback, this, &this->event);
+								 event_callback, this, &this->event);
 	if (res != ERROR_SUCCESS)
 	{
 		DBG1(DBG_KNL, "registering for WFP events failed: 0x%08x", res);

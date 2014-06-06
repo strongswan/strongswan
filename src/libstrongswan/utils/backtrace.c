@@ -33,10 +33,18 @@
 #ifdef WIN32
 # include <psapi.h>
 /* missing in MinGW */
+#ifdef WIN64
+#ifndef GetModuleInformation
 WINBOOL K32GetModuleInformation(HANDLE hProcess, HMODULE hModule,
 								LPMODULEINFO lpmodinfo, DWORD cb);
+#define GetModuleInformation K32GetModuleInformation
+#endif /* !GetModuleInformation */
+#ifndef GetModuleFileNameEx
 DWORD K32GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule,
 							  LPTSTR lpFilename, DWORD nSize);
+#define GetModuleFileNameEx K32GetModuleFileNameExA
+#endif /* !GetModuleFileNameEx */
+#endif /* WIN64 */
 #endif
 
 typedef struct private_backtrace_t private_backtrace_t;
@@ -525,9 +533,9 @@ METHOD(backtrace_t, log_, void,
 
 		if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
 						this->frames[i], &module) &&
-			K32GetModuleInformation(GetCurrentProcess(), module,
+			GetModuleInformation(GetCurrentProcess(), module,
 						&info, sizeof(info)) &&
-			K32GetModuleFileNameExA(GetCurrentProcess(), module,
+			GetModuleFileNameEx(GetCurrentProcess(), module,
 						filename, sizeof(filename)))
 		{
 			println(file, "  %s%s%s @ %p [%p]",

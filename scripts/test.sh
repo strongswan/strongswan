@@ -51,8 +51,8 @@ all)
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
 		  binutils-dev libunwind7-dev libjson0-dev"
 	;;
-win)
-	CONFIG="--host=x86_64-w64-mingw32 --disable-defaults --enable-svc --enable-ikev2
+win*)
+	CONFIG="--disable-defaults --enable-svc --enable-ikev2
 			--enable-ikev1 --enable-static --enable-test-vectors --enable-nonce
 			--enable-constraints --enable-revocation --enable-pem --enable-pkcs1
 			--enable-pkcs8 --enable-x509 --enable-pubkey --enable-acert
@@ -63,9 +63,19 @@ win)
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
-	DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 gcc-mingw-w64-base
-		  mingw-w64-dev"
-	CC="x86_64-w64-mingw32-gcc"
+	DEPS="gcc-mingw-w64-base mingw-w64-dev"
+	case "$TEST" in
+	win64)
+		CONFIG="--host=x86_64-w64-mingw32 $CONFIG"
+		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 $DEPS"
+		CC="x86_64-w64-mingw32-gcc"
+		;;
+	win32)
+		CONFIG="--host=i686-w64-mingw32 $CONFIG"
+		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 $DEPS"
+		CC="i686-w64-mingw32-gcc"
+		;;
+	esac
 	;;
 dist)
 	TARGET=distcheck

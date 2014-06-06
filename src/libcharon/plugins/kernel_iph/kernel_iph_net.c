@@ -355,9 +355,11 @@ typedef struct {
 /**
  * NotifyIpInterfaceChange() callback
  */
-static void change_interface(private_kernel_iph_net_t *this,
-					MIB_IPINTERFACE_ROW_FIXUP *row, MIB_NOTIFICATION_TYPE type)
+static void WINAPI change_interface(void *user, PMIB_IPINTERFACE_ROW row_badal,
+									MIB_NOTIFICATION_TYPE type)
 {
+	private_kernel_iph_net_t *this = user;
+	MIB_IPINTERFACE_ROW_FIXUP* row = (MIB_IPINTERFACE_ROW_FIXUP*)row_badal;
 	IP_ADAPTER_ADDRESSES addrs[64], *current;
 	ULONG res, size = sizeof(addrs);
 
@@ -757,7 +759,8 @@ kernel_iph_net_t *kernel_iph_net_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
 	);
-
+	/* PIPINTERFACE_CHANGE_CALLBACK is not using WINAPI in MinGW, which seems
+	 * to be wrong. Force a cast to our WINAPI call */
 	res = NotifyIpInterfaceChange(AF_UNSPEC, (void*)change_interface,
 								  this, TRUE, &this->changes);
 	if (res != NO_ERROR)

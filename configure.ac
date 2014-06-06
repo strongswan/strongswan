@@ -459,12 +459,6 @@ AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
 )
 AC_SUBST(SOCKLIB)
 
-# FreeBSD has clock_gettime in libc, Linux needs librt
-LIBS=""
-AC_SEARCH_LIBS(clock_gettime, rt, [RTLIB=$LIBS])
-AC_CHECK_FUNCS(clock_gettime)
-AC_SUBST(RTLIB)
-
 # Android has pthread_* functions in bionic (libc), others need libpthread
 LIBS=""
 AC_SEARCH_LIBS(pthread_create, pthread, [PTHREADLIB=$LIBS])
@@ -759,6 +753,17 @@ AC_COMPILE_IFELSE(
 	[
 		AC_MSG_RESULT([no])
 		openssl_lib=crypto
+
+		# check for clock_gettime() on non-Windows only. Otherwise this
+		# check might find clock_gettime() in libwinpthread, but we don't want
+		# to link against it.
+		saved_LIBS=$LIBS
+		# FreeBSD has clock_gettime in libc, Linux needs librt
+		LIBS=""
+		AC_SEARCH_LIBS(clock_gettime, rt, [RTLIB=$LIBS])
+		AC_CHECK_FUNCS(clock_gettime)
+		AC_SUBST(RTLIB)
+		LIBS=$saved_LIBS
 	]
 )
 AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
