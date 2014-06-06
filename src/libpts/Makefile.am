@@ -73,6 +73,8 @@ libpts_la_SOURCES = \
 	tcg/swid/tcg_swid_attr_tag_id_inv.h tcg/swid/tcg_swid_attr_tag_id_inv.c \
 	tcg/swid/tcg_swid_attr_tag_inv.h tcg/swid/tcg_swid_attr_tag_inv.c
 
+EXTRA_DIST = Android.mk
+
 SUBDIRS = .
 
 if USE_IMC_ATTESTATION

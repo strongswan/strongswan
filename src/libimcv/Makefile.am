@@ -57,7 +57,7 @@ libimcv_la_SOURCES = \
 	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c
 
 ipsec_SCRIPTS = imv/_imv_policy
-EXTRA_DIST = imv/_imv_policy
+EXTRA_DIST = imv/_imv_policy Android.mk
 
 templatesdir = $(pkgdatadir)/templates/database/imv
 dist_templates_DATA = imv/tables.sql imv/tables-mysql.sql imv/data.sql
