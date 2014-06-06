@@ -113,6 +113,11 @@ struct private_imv_swid_state_t {
 	int tag_count;
 
 	/**
+	 * Top level JSON object
+	 */
+	json_object *jobj;
+
+	/**
 	 * JSON array containing an inventory of SWID Tag IDs
 	 */
 	json_object *jarray;
@@ -232,7 +237,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_swid_state_t *this)
 {
-	json_object_put(this->jarray);
+	json_object_put(this->jobj);
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
@@ -293,7 +298,7 @@ METHOD(imv_swid_state_t, set_swid_inventory, void,
 METHOD(imv_swid_state_t, get_swid_inventory, json_object*,
 	private_imv_swid_state_t *this)
 {
-	return this->jarray;
+	return this->jobj;
 }
 
 METHOD(imv_swid_state_t, set_count, void,
@@ -371,8 +376,11 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.jobj = json_object_new_object(),
 		.jarray = json_object_new_array(),
 	);
+
+	json_object_object_add(this->jobj, "data", this->jarray);
 
 	return &this->public.interface;
 }

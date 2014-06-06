@@ -235,7 +235,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				tcg_swid_attr_tag_inv_t *attr_cast;
 				swid_tag_t *tag;
 				chunk_t tag_encoding;
-				json_object *jarray, *jstring;
+				json_object *jobj, *jarray, *jstring;
 				char *tag_str;
 				int tag_count;
 				enumerator_t *e;
@@ -260,7 +260,9 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 
 					if (this->rest_api)
 					{
+						jobj = json_object_new_object();
 						jarray = json_object_new_array();
+						json_object_object_add(jobj, "data", jarray);
 
 						e = inventory->create_enumerator(inventory);
 						while (e->enumerate(e, &tag))
@@ -275,11 +277,11 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 						e->destroy(e);
 
 						if (this->rest_api->post(this->rest_api,
-								"swid/add-tags/", jarray, NULL) != SUCCESS)
+								"swid/add-tags/", jobj, NULL) != SUCCESS)
 						{
 							DBG1(DBG_IMV, "error in REST API add-tags request");
 						}
-						json_object_put(jarray);
+						json_object_put(jobj);
 					}
 				}
 				else
@@ -478,7 +480,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 		if (this->rest_api && (received & IMV_SWID_ATTR_TAG_ID_INV))
 		{
-			if (asprintf(&command, "sessions/%d/swid_measurement/",
+			if (asprintf(&command, "sessions/%d/swid-measurement/",
 						 session->get_session_id(session, NULL, NULL)) < 0)
 			{
 				error_str = "allocation of command string failed";
@@ -491,7 +493,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 											  jrequest, &jresponse);
 				if (status == FAILED)
 				{
-					error_str = "error in REST API swid_measurement request";
+					error_str = "error in REST API swid-measurement request";
 				}
 				free(command);
 			}
