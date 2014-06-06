@@ -128,7 +128,7 @@ enum ike_extension_t {
 	EXT_NATT_DRAFT_02_03 = (1<<10),
 
 	/**
-	 * peer support proprietary IKE fragmentation
+	 * peer supports proprietary IKEv1 or standardized IKEv2 fragmentation
 	 */
 	EXT_IKE_FRAGMENTATION = (1<<11),
 };
