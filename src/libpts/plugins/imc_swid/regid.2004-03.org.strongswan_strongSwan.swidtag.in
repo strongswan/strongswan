@@ -8,13 +8,5 @@
   <Entity
     name="strongSwan Project"
     regid="regid.2004-03.org.strongswan"
-    role="tagcreator"/>
-  <Entity
-    name="strongSwan Project"
-    regid="regid.2004-03.org.strongswan"
-    role="publisher"/>
-  <Entity
-    name="strongSwan Project"
-    regid="regid.2004-03.org.strongswan"
-    role="licensor"/>
+    role="publisher licensor tagcreator"/>
 </SoftwareIdentity>

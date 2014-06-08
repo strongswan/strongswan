@@ -159,7 +159,6 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 {
 	FILE *file;
 	char command[BUF_LEN];
-	char entity_name[] = "strongSwan Project";
 	char doc_separator[] = "'\n\n'";
 
 	status_t status = SUCCESS;
@@ -169,10 +168,9 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 		/* Assemble the SWID generator command */
 		if (this->full_tags)
 		{
-			snprintf(command, BUF_LEN, "%s swid --entity-name \"%s\" "
-					 "--doc-separator %s%s%s",
-					 generator, entity_name, doc_separator,
-					 pretty ? " --pretty" : "", full ? " --full" : "");
+			snprintf(command, BUF_LEN, "%s swid --doc-separator %s%s%s",
+					 generator, doc_separator, pretty ? " --pretty" : "",
+											   full   ? " --full"   : "");
 		}
 		else
 		{
@@ -217,11 +215,9 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 					 unique_sw_id.len, unique_sw_id.ptr);
 
 			/* Assemble the SWID generator command */
-			snprintf(command, BUF_LEN, "%s swid --software-id %s "
-					 "--entity-name \"%s\"%s%s",
-					 generator, software_id, entity_name,
-					 pretty ? " --pretty" : "",
-					 full   ? " --full" : "");
+			snprintf(command, BUF_LEN, "%s swid --software-id %s%s%s",
+					 generator, software_id, pretty ? " --pretty" : "",
+											 full   ? " --full"   : "");
 
 			/* Open a pipe stream for reading the SWID generator output */
 			file = popen(command, "r");
