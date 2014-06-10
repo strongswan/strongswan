@@ -288,6 +288,18 @@ INSERT INTO products (			/* 48 */
  'Debian 7.5 armv6l'
 );
 
+INSERT INTO products (			/* 49 */
+  name
+) VALUES (
+ 'Android 4.3'
+);
+
+INSERT INTO products (			/* 50 */
+  name
+) VALUES (
+ 'Android 4.4.3'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -952,6 +964,18 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 34
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 49
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 50
 );
 
 INSERT INTO groups_product_defaults (
