@@ -1,0 +1,34 @@
+carol::swanctl --list-sas 2> /dev/null::home: #1, ESTABLISHED, IKEv2::YES
+dave:: swanctl --list-sas 2> /dev/null::home: #1, ESTABLISHED, IKEv2::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::rw: #1, ESTABLISHED, IKEv2::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::rw: #2, ESTABLISHED, IKEv2::YES
+carol::swanctl --list-sas 2> /dev/null::local.*carol@strongswan.org.*192.168.0.100::YES
+carol::swanctl --list-sas 2> /dev/null::remote.*moon.strongswan.org.*192.168.0.1::YES
+dave:: swanctl --list-sas 2> /dev/null::local.*dave@strongswan.org.*192.168.0.200::YES
+dave:: swanctl --list-sas 2> /dev/null::remote.*moon.strongswan.org.*192.168.0.1::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::local.*moon.strongswan.org.*192.168.0.1::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::remote.*carol@strongswan.org.*192.168.0.100::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::local.*moon.strongswan.org.*192.168.0.1::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::remote.*dave@strongswan.org.*192.168.0.200::YES
+carol::swanctl --list-sas 2> /dev/null::AES_CBC-128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048::YES
+dave:: swanctl --list-sas 2> /dev/null::AES_CBC-128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::AES_CBC-128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::AES_CBC-128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048::YES
+carol::swanctl --list-sas 2> /dev/null::home: #1, INSTALLED, TUNNEL, ESP:AES_GCM_16-128::YES
+dave:: swanctl --list-sas 2> /dev/null::home: #1, INSTALLED, TUNNEL, ESP:AES_GCM_16-128::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::net: #1, INSTALLED, TUNNEL, ESP:AES_GCM_16-128::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::net: #2, INSTALLED, TUNNEL, ESP:AES_GCM_16-128::YES
+carol::swanctl --list-sas 2> /dev/null::local.*192.168.0.100/32::YES
+carol::swanctl --list-sas 2> /dev/null::remote 10.1.0.0/16::YES
+dave:: swanctl --list-sas 2> /dev/null::local.*192.168.0.200/32::YES
+dave:: swanctl --list-sas 2> /dev/null::remote 10.1.0.0/16::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::local.*10.1.0.0/16::YES
+moon:: swanctl --list-sas --ike-id 1 2> /dev/null::remote 192.168.0.100/32::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::local.*10.1.0.0/16::YES
+moon:: swanctl --list-sas --ike-id 2 2> /dev/null::remote 192.168.0.200/32::YES
+alice::ping -c 1 192.168.0.100::64 bytes from 192.168.0.100: icmp_req=1::YES
+alice::ping -c 1 192.168.0.200::64 bytes from 192.168.0.200: icmp_req=1::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
+moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
