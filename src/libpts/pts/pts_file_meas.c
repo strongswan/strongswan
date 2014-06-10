@@ -184,47 +184,75 @@ METHOD(pts_file_meas_t, check, bool,
 METHOD(pts_file_meas_t, verify, bool,
 	private_pts_file_meas_t *this, enumerator_t *e_hash, bool is_dir)
 {
+	int fid, fid_last = 0;
 	char *filename;
 	chunk_t measurement;
 	entry_t *entry;
-	enumerator_t *enumerator;
-	bool found, success = TRUE;
+	enumerator_t *enumerator = NULL;
+	bool found = FALSE, match = FALSE, success = TRUE;
 
-	while (e_hash->enumerate(e_hash, &filename, &measurement))
+	while (e_hash->enumerate(e_hash, &fid, &filename, &measurement))
 	{
-		found = FALSE;
-
-		enumerator = this->list->create_enumerator(this->list);
-		while (enumerator->enumerate(enumerator, &entry))
+		if (fid != fid_last)
 		{
-			if (!is_dir || streq(filename, entry->filename))
+			if (found && !match)
 			{
-				found = TRUE;
-				break;
+				/* no matching hash value found for last filename */
+				success = FALSE;
+				DBG1(DBG_PTS, "  %#B for '%s' is incorrect",
+					 &entry->measurement, entry->filename);
+				enumerator->destroy(enumerator);
+			}
+
+			/* get a new filename from the database */
+			found = FALSE;
+			match = FALSE;
+			fid_last = fid;
+
+			/**
+			 * check if we find an entry for this filename
+			 * in the PTS measurement list
+			*/
+			enumerator = this->list->create_enumerator(this->list);
+			while (enumerator->enumerate(enumerator, &entry))
+			{
+				if (!is_dir || streq(filename, entry->filename))
+				{
+					found = TRUE;
+					break;
+				}
+			}
+
+			/* no PTS measurement returned for this filename */ 
+			if (!found)
+			{
+				success = FALSE;
+				DBG1(DBG_PTS, "  no measurement found for '%s'", filename);
+				enumerator->destroy(enumerator);
 			}
 		}
-		enumerator->destroy(enumerator);
 
-		if (!found)
+		if (found && !match)
 		{
-			DBG1(DBG_PTS, "  no measurement found for '%s'", filename);
-			success = FALSE;
-			continue;
-		}
-		if (chunk_equals(measurement, entry->measurement))
-		{
-			DBG2(DBG_PTS, "  %#B for '%s' is ok", &measurement, filename);
-		}
-		else
-		{
-			DBG1(DBG_PTS, "  %#B for '%s' is incorrect", &measurement, filename);
-			success = FALSE;
-		}
-		if (!is_dir)
-		{
-			break;
+			if (chunk_equals(measurement, entry->measurement))
+			{
+				match = TRUE;
+				DBG2(DBG_PTS, "  %#B for '%s' is ok",
+					 &entry->measurement, entry->filename);
+				enumerator->destroy(enumerator);
+			}
 		}
 	}
+
+	if (found && !match)
+	{
+		/* no matching hash value found for the very last filename */
+		success = FALSE;
+		DBG1(DBG_PTS, "  %#B for '%s' is incorrect",
+			 &entry->measurement, entry->filename);
+			enumerator->destroy(enumerator);
+	}
+	
 	return success;
 }
 

@@ -101,20 +101,20 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	if (is_dir)
 	{
 		e = this->db->query(this->db,
-				"SELECT f.name, fh.hash FROM file_hashes AS fh "
+				"SELECT f.id, f.name, fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
 				"JOIN directories as d ON d.id = f.dir "
 				"WHERE fh.product = ? AND fh.algo = ? AND d.id = ? "
 				"ORDER BY f.name",
-				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_TEXT, DB_BLOB);
+				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_BLOB);
 	}
 	else
 	{
 		e = this->db->query(this->db,
-				"SELECT f.name, fh.hash FROM file_hashes AS fh "
+				"SELECT f.id, f.name, fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
 				"WHERE fh.product = ? AND fh.algo = ? AND fh.file = ?",
-				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_TEXT, DB_BLOB);
+				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_BLOB);
 	}
 	return e;
 }
