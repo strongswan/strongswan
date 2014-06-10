@@ -212,7 +212,7 @@ CALLBACK(ike_sa, int,
 
 		if (ike->get(ike, "established"))
 		{
-			printf("  established %s ago", ike->get(ike, "established"));
+			printf("  established %ss ago", ike->get(ike, "established"));
 			if (ike->get(ike, "rekey-time"))
 			{
 				printf(", rekeying in %ss", ike->get(ike, "rekey-time"));
