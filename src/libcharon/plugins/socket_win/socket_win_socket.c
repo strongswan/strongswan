@@ -88,10 +88,9 @@ struct private_socket_win_socket_t {
 METHOD(socket_t, receiver, status_t,
 	private_socket_win_socket_t *this, packet_t **out)
 {
-	WSAOVERLAPPED overlapped[SOCKET_COUNT] = {};
 	char buf[this->max_packet], cbuf[128];
 	bool old;
-	DWORD i, len, flags, err;
+	DWORD i, len, err;
 	WSAMSG msg;
 	WSABUF data;
 	WSACMSGHDR *cmsg;
@@ -110,25 +109,7 @@ METHOD(socket_t, receiver, status_t,
 	msg.Control.buf = cbuf;
 	msg.Control.len = sizeof(cbuf);
 
-	for (i = 0; i < SOCKET_COUNT; i++)
-	{
-		overlapped[i].hEvent = this->events[i];
-
-		if (this->socks[i] != INVALID_SOCKET)
-		{
-			if (this->WSARecvMsg(this->socks[i], &msg, NULL,
-								 &overlapped[i], NULL) == SOCKET_ERROR)
-			{
-				err = WSAGetLastError();
-				if (err != WSA_IO_PENDING)
-				{
-					DBG1(DBG_NET, "reading from socket failed: %d", err);
-					return FAILED;
-				}
-			}
-		}
-	}
-
+	/* wait for socket events */
 	old = thread_cancelability(TRUE);
 	i = WSAWaitForMultipleEvents(SOCKET_COUNT, this->events,
 								 FALSE, INFINITE, TRUE);
@@ -143,8 +124,8 @@ METHOD(socket_t, receiver, status_t,
 	/* WSAEvents must be reset manually */
 	WSAResetEvent(this->events[i]);
 
-	if (!WSAGetOverlappedResult(this->socks[i], &overlapped[i],
-								&len, FALSE, &flags))
+	if (this->WSARecvMsg(this->socks[i], &msg, &len,
+						 NULL, NULL) == SOCKET_ERROR)
 	{
 		err = WSAGetLastError();
 		/* ignore WSAECONNRESET; this is returned for any ICMP port unreachable,
@@ -152,16 +133,11 @@ METHOD(socket_t, receiver, status_t,
 		 * we try to receive. */
 		if (err != WSAECONNRESET)
 		{
-			DBG1(DBG_NET, "getting socket result failed: %d", err);
+			DBG1(DBG_NET, "reading from socket failed: %d", WSAGetLastError());
 		}
 		return FAILED;
 	}
 
-	if (len >= sizeof(buf))
-	{
-		DBG1(DBG_NET, "receive buffer too small, packet discarded");
-		return FAILED;
-	}
 	DBG3(DBG_NET, "received packet %b", buf, (int)len);
 
 	for (cmsg = WSA_CMSG_FIRSTHDR(&msg); dst == NULL && cmsg != NULL;
@@ -370,8 +346,7 @@ static SOCKET open_socket(private_socket_win_socket_t *this, int i)
 	DWORD dwon = TRUE;
 	SOCKET s;
 
-	s = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP,
-				  NULL, 0, WSA_FLAG_OVERLAPPED);
+	s = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, 0);
 	if (s == INVALID_SOCKET)
 	{
 		DBG1(DBG_NET, "creating socket failed: %d", WSAGetLastError());
@@ -498,6 +473,13 @@ socket_win_socket_t *socket_win_socket_create()
 			this->socks[i] == INVALID_SOCKET)
 		{
 			DBG1(DBG_NET, "creating socket failed: %d", WSAGetLastError());
+			destroy(this);
+			return NULL;
+		}
+		if (WSAEventSelect(this->socks[i], this->events[i],
+						   FD_READ) == SOCKET_ERROR)
+		{
+			DBG1(DBG_NET, "WSAEventSelect() failed: %d", WSAGetLastError());
 			destroy(this);
 			return NULL;
 		}
