@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -23,6 +23,7 @@
 #include "message.h"
 
 #include <library.h>
+#include <collections/array.h>
 #include <daemon.h>
 #include <sa/ikev1/keymat_v1.h>
 #include <encoding/generator.h>
@@ -33,6 +34,7 @@
 #include <encoding/payloads/encrypted_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/fragment_payload.h>
 
 /**
  * Max number of notify payloads per IKEv2 message
@@ -1652,6 +1654,107 @@ METHOD(message_t, generate, status_t,
 	return SUCCESS;
 }
 
+/**
+ * Creates a (basic) clone of the given message
+ */
+static message_t *clone_message(private_message_t *this)
+{
+	message_t *message;
+	host_t *src, *dst;
+
+	src = this->packet->get_source(this->packet);
+	dst = this->packet->get_destination(this->packet);
+
+	message = message_create(this->major_version, this->minor_version);
+	message->set_message_id(message, this->message_id);
+	message->set_request(message, this->is_request);
+	message->set_source(message, src->clone(src));
+	message->set_destination(message, dst->clone(dst));
+	message->set_exchange_type(message, this->exchange_type);
+	return message;
+}
+
+/**
+ * Create a single fragment with the given data
+ */
+static message_t *create_fragment(private_message_t *this, u_int8_t num,
+								  bool last, chunk_t data)
+{
+	fragment_payload_t *fragment;
+	message_t *message;
+
+	fragment = fragment_payload_create_from_data(num, last, data);
+	message = clone_message(this);
+	message->add_payload(message, (payload_t*)fragment);
+	return message;
+}
+
+/**
+ * Destroy all messages in the given array
+ */
+CALLBACK(destroy_fragments, void,
+	array_t *fragments)
+{
+	array_destroy_offset(fragments, offsetof(message_t, destroy));
+}
+
+METHOD(message_t, fragment, status_t,
+	private_message_t *this, size_t frag_len, enumerator_t **fragments)
+{
+	array_t *messages;
+	message_t *fragment;
+	u_int8_t num, count;
+	host_t *src, *dst;
+	chunk_t data;
+	size_t len;
+
+	if (!is_encoded(this) || this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		return INVALID_STATE;
+	}
+
+	src = this->packet->get_source(this->packet);
+	dst = this->packet->get_destination(this->packet);
+	if (!frag_len)
+	{
+		frag_len = (src->get_family(src) == AF_INET) ? 576 : 1280;
+	}
+	/* frag_len is the complete IP datagram length, account for overhead (we
+	 * assume no IP options/extension headers are used) */
+	frag_len -= (src->get_family(src) == AF_INET) ? 20 : 40;
+	/* 8 (UDP header) + 28 (IKE header) */
+	frag_len -= 36;
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{	/* reduce length due to non-ESP marker */
+		frag_len -= 4;
+	}
+
+	data = this->packet->get_data(this->packet);
+	if (data.len <= frag_len)
+	{
+		return ALREADY_DONE;
+	}
+	/* overhead for the fragmentation payload header */
+	frag_len -= 8;
+
+	count = data.len / frag_len + (data.len % frag_len ? 1 : 0);
+	messages = array_create(0, count);
+	DBG2(DBG_ENC, "splitting IKE message with length of %zu bytes into "
+		 "%hhu fragments", data.len, count);
+	for (num = 1; num <= count; num++)
+	{
+		len = min(data.len, frag_len);
+		fragment = create_fragment(this, num, num == count,
+								   chunk_create(data.ptr, len));
+		array_insert(messages, ARRAY_TAIL, fragment);
+		data = chunk_skip(data, len);
+	}
+	*fragments = enumerator_create_cleaner(array_create_enumerator(messages),
+										   destroy_fragments, messages);
+	return SUCCESS;
+}
+
 METHOD(message_t, get_packet, packet_t*,
 	private_message_t *this)
 {
@@ -2195,6 +2298,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.disable_sort = _disable_sort,
 			.generate = _generate,
 			.is_encoded = _is_encoded,
+			.fragment = _fragment,
 			.set_source = _set_source,
 			.get_source = _get_source,
 			.set_destination = _set_destination,

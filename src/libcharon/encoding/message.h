@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -263,6 +263,25 @@ struct message_t {
 	 * @return			TRUE if message has been encoded
 	 */
 	bool (*is_encoded)(message_t *this);
+
+	/**
+	 * Split the (generated) message into fragments of the given size (total IP
+	 * datagram length).
+	 *
+	 * @note Only supported for IKEv1 at the moment.
+	 *
+	 * @param frag_len	fragment length (maximum total IP datagram length), 0
+	 *					for default value depending on address family
+	 * @param fragments	receives an enumerator with message_t* (not generated),
+	 *					which are owned by the enumerator
+	 * @return
+	 *					- SUCCESS if message could be fragmented
+	 *					- ALREADY_DONE if message does not need to be fragmented
+	 *					- INVALID_STATE if message was not generated or is IKEv2
+	 *					- FAILED if fragmentation failed
+	 */
+	status_t (*fragment)(message_t *this, size_t frag_len,
+						 enumerator_t **fragments);
 
 	/**
 	 * Gets the source host informations.

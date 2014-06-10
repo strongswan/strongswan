@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Tobias Brunner
+ * Copyright (C) 2007-2014 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -40,6 +40,7 @@
 
 #include <encoding/payloads/fragment_payload.h>
 #include <bio/bio_writer.h>
+#include <collections/array.h>
 
 /**
  * Number of old messages hashes we keep for retransmission.
@@ -54,15 +55,6 @@
  * Maximum packet size for fragmented packets (same as in sockets)
  */
 #define MAX_PACKET 10000
-
-/**
- * Maximum size of fragment data when sending packets (currently the same is
- * used for IPv4 and IPv6, even though the latter has a higher minimum datagram
- * size).  576 (= min. IPv4) - 20 (= IP header) - 8 (= UDP header) -
- *  - 28 (= IKE header) - 8 (= fragment header) = 512
- * This is reduced by 4 in case of NAT-T (due to the non-ESP marker).
- */
-#define MAX_FRAGMENT_SIZE 512
 
 /**
  * First sequence number of responding packets.
@@ -127,9 +119,9 @@ struct private_task_manager_t {
 		u_int32_t hash;
 
 		/**
-		 * packet for retransmission
+		 * packet(s) for retransmission
 		 */
-		packet_t *packet;
+		array_t *packets;
 
 		/**
 		 * Sequence number of the last sent message
@@ -173,9 +165,9 @@ struct private_task_manager_t {
 		u_int retransmitted;
 
 		/**
-		 * packet for retransmission
+		 * packet(s) for retransmission
 		 */
-		packet_t *packet;
+		array_t *packets;
 
 		/**
 		 * type of the initiated exchange
@@ -304,6 +296,19 @@ static void clear_fragments(private_task_manager_t *this, u_int16_t id)
 	this->frag.id = id;
 }
 
+/**
+ * Reset retransmission packet list
+ */
+static void clear_packets(array_t *array)
+{
+	packet_t *packet;
+
+	while (array_remove(array, ARRAY_TAIL, &packet))
+	{
+		packet->destroy(packet);
+	}
+}
+
 METHOD(task_manager_t, flush_queue, void,
 	private_task_manager_t *this, task_queue_t queue)
 {
@@ -321,8 +326,7 @@ METHOD(task_manager_t, flush_queue, void,
 			list = this->active_tasks;
 			/* cancel pending retransmits */
 			this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-			DESTROY_IF(this->initiating.packet);
-			this->initiating.packet = NULL;
+			clear_packets(this->initiating.packets);
 			break;
 		case TASK_QUEUE_PASSIVE:
 			list = this->passive_tasks;
@@ -373,45 +377,39 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 }
 
 /**
- * Send a single fragment with the given data
+ * Send packets in the given array (they get cloned)
  */
-static bool send_fragment(private_task_manager_t *this, bool request,
-					host_t *src, host_t *dst, fragment_payload_t *fragment)
+static void send_packets(private_task_manager_t *this, array_t *packets)
 {
-	message_t *message;
+	enumerator_t *enumerator;
 	packet_t *packet;
-	status_t status;
 
-	message = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
-	/* other implementations seem to just use 0 as message ID, so here we go */
-	message->set_message_id(message, 0);
-	message->set_request(message, request);
-	message->set_source(message, src->clone(src));
-	message->set_destination(message, dst->clone(dst));
-	message->set_exchange_type(message, this->frag.exchange);
-	message->add_payload(message, (payload_t*)fragment);
-
-	status = this->ike_sa->generate_message(this->ike_sa, message, &packet);
-	if (status != SUCCESS)
+	enumerator = array_create_enumerator(packets);
+	while (enumerator->enumerate(enumerator, &packet))
 	{
-		DBG1(DBG_IKE, "failed to generate IKE fragment");
-		message->destroy(message);
-		return FALSE;
+		charon->sender->send(charon->sender, packet->clone(packet));
 	}
-	charon->sender->send(charon->sender, packet);
-	message->destroy(message);
-	return TRUE;
+	enumerator->destroy(enumerator);
 }
 
 /**
- * Send a packet, if supported and required do so in fragments
+ * Generates the given message and stores packet(s) in the given array
  */
-static bool send_packet(private_task_manager_t *this, bool request,
-						packet_t *packet)
+static bool generate_message(private_task_manager_t *this, message_t *message,
+							 array_t **packets)
 {
-	bool use_frags = FALSE;
+	bool use_frags = FALSE, result = TRUE;
 	ike_cfg_t *ike_cfg;
-	chunk_t data;
+	enumerator_t *fragments;
+	message_t *fragment;
+	packet_t *packet;
+	status_t status;
+
+	if (this->ike_sa->generate_message(this->ike_sa, message,
+									   &packet) != SUCCESS)
+	{
+		return FALSE;
+	}
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (ike_cfg)
@@ -423,60 +421,61 @@ static bool send_packet(private_task_manager_t *this, bool request,
 				break;
 			case FRAGMENTATION_YES:
 				use_frags = this->ike_sa->supports_extension(this->ike_sa,
-														EXT_IKE_FRAGMENTATION);
+													EXT_IKE_FRAGMENTATION);
 				break;
 			default:
 				break;
 		}
 	}
-	data = packet->get_data(packet);
-	if (data.len > this->frag.size && use_frags)
+
+	if (!use_frags)
 	{
-		fragment_payload_t *fragment;
-		u_int8_t num, count;
-		size_t len, frag_size;
-		host_t *src, *dst;
-
-		src = packet->get_source(packet);
-		dst = packet->get_destination(packet);
-
-		frag_size = this->frag.size;
-		if (dst->get_port(dst) != IKEV2_UDP_PORT &&
-			src->get_port(src) != IKEV2_UDP_PORT)
-		{	/* reduce size due to non-ESP marker */
-			frag_size -= 4;
-		}
-		count = data.len / frag_size + (data.len % frag_size ? 1 : 0);
-
-		DBG1(DBG_IKE, "sending IKE message with length of %zu bytes in "
-			 "%hhu fragments", data.len, count);
-		for (num = 1; num <= count; num++)
-		{
-			len = min(data.len, frag_size);
-			fragment = fragment_payload_create_from_data(num, num == count,
-												chunk_create(data.ptr, len));
-			if (!send_fragment(this, request, src, dst, fragment))
-			{
-				packet->destroy(packet);
-				return FALSE;
-			}
-			data = chunk_skip(data, len);
-		}
-		packet->destroy(packet);
+		array_insert_create(packets, ARRAY_TAIL, packet);
 		return TRUE;
 	}
-	charon->sender->send(charon->sender, packet);
-	return TRUE;
+	/* other implementations seem to just use 0 as message ID, so here we go */
+	message->set_message_id(message, 0);
+	/* always use the initial message type for fragments */
+	message->set_exchange_type(message, this->frag.exchange);
+	status = message->fragment(message, this->frag.size, &fragments);
+	if (status == ALREADY_DONE)
+	{
+		array_insert_create(packets, ARRAY_TAIL, packet);
+		return TRUE;
+	}
+	else if (status != SUCCESS)
+	{
+		packet->destroy(packet);
+		return FALSE;
+	}
+	packet->destroy(packet);
+
+	while (fragments->enumerate(fragments, &fragment))
+	{
+		status = this->ike_sa->generate_message(this->ike_sa, fragment,
+												&packet);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_IKE, "failed to generate IKE fragment");
+			result = FALSE;
+			break;
+		}
+		array_insert_create(packets, ARRAY_TAIL, packet);
+	}
+	fragments->destroy(fragments);
+	return result;
 }
 
 /**
- * Retransmit a packet, either as initiator or as responder
+ * Retransmit a packet (or its fragments)
  */
-static status_t retransmit_packet(private_task_manager_t *this, bool request,
-			u_int32_t seqnr, u_int mid, u_int retransmitted, packet_t *packet)
+static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
+							u_int mid, u_int retransmitted, array_t *packets)
 {
+	packet_t *packet;
 	u_int32_t t;
 
+	array_get(packets, 0, &packet);
 	if (retransmitted > this->retransmit_tries)
 	{
 		DBG1(DBG_IKE, "giving up after %u retransmits", retransmitted - 1);
@@ -492,10 +491,7 @@ static status_t retransmit_packet(private_task_manager_t *this, bool request,
 			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
 	}
-	if (!send_packet(this, request, packet->clone(packet)))
-	{
-		return DESTROY_ME;
-	}
+	send_packets(this, packets);
 	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
 			retransmit_job_create(seqnr, this->ike_sa->get_id(this->ike_sa)), t);
 	return NEED_MORE;
@@ -506,20 +502,22 @@ METHOD(task_manager_t, retransmit, status_t,
 {
 	status_t status = SUCCESS;
 
-	if (seqnr == this->initiating.seqnr && this->initiating.packet)
+	if (seqnr == this->initiating.seqnr &&
+		array_count(this->initiating.packets))
 	{
-		status = retransmit_packet(this, TRUE, seqnr, this->initiating.mid,
-					this->initiating.retransmitted, this->initiating.packet);
+		status = retransmit_packet(this, seqnr, this->initiating.mid,
+					this->initiating.retransmitted, this->initiating.packets);
 		if (status == NEED_MORE)
 		{
 			this->initiating.retransmitted++;
 			status = SUCCESS;
 		}
 	}
-	if (seqnr == this->responding.seqnr && this->responding.packet)
+	if (seqnr == this->responding.seqnr &&
+		array_count(this->responding.packets))
 	{
-		status = retransmit_packet(this, FALSE, seqnr, this->responding.mid,
-					this->responding.retransmitted, this->responding.packet);
+		status = retransmit_packet(this, seqnr, this->responding.mid,
+					this->responding.retransmitted, this->responding.packets);
 		if (status == NEED_MORE)
 		{
 			this->responding.retransmitted++;
@@ -586,7 +584,6 @@ METHOD(task_manager_t, initiate, status_t,
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
 	bool new_mid = FALSE, expect_response = FALSE, cancelled = FALSE, keep = FALSE;
 
@@ -790,10 +787,8 @@ METHOD(task_manager_t, initiate, status_t,
 		return initiate(this);
 	}
 
-	DESTROY_IF(this->initiating.packet);
-	status = this->ike_sa->generate_message(this->ike_sa, message,
-											&this->initiating.packet);
-	if (status != SUCCESS)
+	clear_packets(this->initiating.packets);
+	if (!generate_message(this, message, &this->initiating.packets))
 	{
 		/* message generation failed. There is nothing more to do than to
 		 * close the SA */
@@ -811,13 +806,12 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	if (keep)
 	{	/* keep the packet for retransmission, the responder might request it */
-		send_packet(this, TRUE,
-					this->initiating.packet->clone(this->initiating.packet));
+		send_packets(this, this->initiating.packets);
 	}
 	else
 	{
-		send_packet(this, TRUE, this->initiating.packet);
-		this->initiating.packet = NULL;
+		send_packets(this, this->initiating.packets);
+		clear_packets(this->initiating.packets);
 	}
 	message->destroy(message);
 
@@ -848,7 +842,6 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message_t *message;
 	host_t *me, *other;
 	bool delete = FALSE, cancelled = FALSE, expect_request = FALSE;
-	status_t status;
 
 	me = request->get_destination(request);
 	other = request->get_source(request);
@@ -900,28 +893,25 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	}
 	enumerator->destroy(enumerator);
 
-	DESTROY_IF(this->responding.packet);
-	this->responding.packet = NULL;
+	clear_packets(this->responding.packets);
 	if (cancelled)
 	{
 		message->destroy(message);
 		return initiate(this);
 	}
-	status = this->ike_sa->generate_message(this->ike_sa, message,
-											&this->responding.packet);
-	message->destroy(message);
-	if (status != SUCCESS)
+	if (!generate_message(this, message, &this->responding.packets))
 	{
+		message->destroy(message);
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
+	message->destroy(message);
 
 	if (expect_request && !delete)
 	{
 		return retransmit(this, this->responding.seqnr);
 	}
-	send_packet(this, FALSE,
-				this->responding.packet->clone(this->responding.packet));
+	send_packets(this, this->responding.packets);
 	if (delete)
 	{
 		return DESTROY_ME;
@@ -937,7 +927,7 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 						notify_type_t type)
 {
 	message_t *response;
-	packet_t *packet;
+	array_t *packets = NULL;
 	host_t *me, *other;
 	u_int32_t mid;
 
@@ -973,11 +963,12 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 	}
 	response->set_source(response, me->clone(me));
 	response->set_destination(response, other->clone(other));
-	if (this->ike_sa->generate_message(this->ike_sa, response,
-									   &packet) == SUCCESS)
+	if (generate_message(this, response, &packets))
 	{
-		send_packet(this, TRUE, packet);
+		send_packets(this, packets);
 	}
+	clear_packets(packets);
+	array_destroy(packets);
 	response->destroy(response);
 }
 
@@ -1164,8 +1155,7 @@ static status_t process_request(private_task_manager_t *this,
 	else
 	{	/* We don't send a response, so don't retransmit one if we get
 		 * the same message again. */
-		DESTROY_IF(this->responding.packet);
-		this->responding.packet = NULL;
+		clear_packets(this->responding.packets);
 	}
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0 &&
 		this->queued_tasks->get_count(this->queued_tasks) > 0)
@@ -1237,8 +1227,7 @@ static status_t process_response(private_task_manager_t *this,
 	enumerator->destroy(enumerator);
 
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	DESTROY_IF(this->initiating.packet);
-	this->initiating.packet = NULL;
+	clear_packets(this->initiating.packets);
 
 	if (this->queued && this->active_tasks->get_count(this->active_tasks) == 0)
 	{
@@ -1435,15 +1424,14 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (this->initiating.old_hashes[i] == hash)
 		{
-			if (this->initiating.packet &&
+			if (array_count(this->initiating.packets) &&
 				i == (this->initiating.old_hash_pos % MAX_OLD_HASHES) &&
 				(msg->get_exchange_type(msg) == QUICK_MODE ||
 				 msg->get_exchange_type(msg) == AGGRESSIVE))
 			{
 				DBG1(DBG_IKE, "received retransmit of response with ID %u, "
 					 "resending last request", mid);
-				send_packet(this, TRUE,
-					this->initiating.packet->clone(this->initiating.packet));
+				send_packets(this, this->initiating.packets);
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "received retransmit of response with ID %u, "
@@ -1484,20 +1472,18 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (hash == this->responding.hash)
 		{
-			if (this->responding.packet)
+			if (array_count(this->responding.packets))
 			{
 				DBG1(DBG_IKE, "received retransmit of request with ID %u, "
 					 "retransmitting response", mid);
-				send_packet(this, FALSE,
-						this->responding.packet->clone(this->responding.packet));
+				send_packets(this, this->responding.packets);
 			}
-			else if (this->initiating.packet &&
+			else if (array_count(this->initiating.packets) &&
 					 this->initiating.type == INFORMATIONAL_V1)
 			{
 				DBG1(DBG_IKE, "received retransmit of DPD request, "
 					 "retransmitting response");
-				send_packet(this, TRUE,
-						this->initiating.packet->clone(this->initiating.packet));
+				send_packets(this, this->initiating.packets);
 			}
 			else
 			{
@@ -1984,12 +1970,10 @@ METHOD(task_manager_t, reset, void,
 	task_t *task;
 
 	/* reset message counters and retransmit packets */
-	DESTROY_IF(this->responding.packet);
-	DESTROY_IF(this->initiating.packet);
-	this->responding.packet = NULL;
+	clear_packets(this->responding.packets);
+	clear_packets(this->initiating.packets);
 	this->responding.seqnr = RESPONDING_SEQ;
 	this->responding.retransmitted = 0;
-	this->initiating.packet = NULL;
 	this->initiating.mid = 0;
 	this->initiating.seqnr = 0;
 	this->initiating.retransmitted = 0;
@@ -2048,8 +2032,10 @@ METHOD(task_manager_t, destroy, void,
 	clear_fragments(this, 0);
 
 	DESTROY_IF(this->queued);
-	DESTROY_IF(this->responding.packet);
-	DESTROY_IF(this->initiating.packet);
+	clear_packets(this->responding.packets);
+	array_destroy(this->responding.packets);
+	clear_packets(this->initiating.packets);
+	array_destroy(this->initiating.packets);
 	DESTROY_IF(this->rng);
 	free(this);
 }
@@ -2099,7 +2085,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.max_packet = lib->settings->get_int(lib->settings,
 						"%s.max_packet", MAX_PACKET, lib->ns),
 			.size = lib->settings->get_int(lib->settings,
-						"%s.fragment_size", MAX_FRAGMENT_SIZE, lib->ns),
+						"%s.fragment_size", 0, lib->ns),
 		},
 		.ike_sa = ike_sa,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
