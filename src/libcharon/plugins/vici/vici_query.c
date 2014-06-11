@@ -918,6 +918,59 @@ CALLBACK(stats, vici_message_t*,
 	{
 		lib->leak_detective->usage(lib->leak_detective, NULL, sum_usage, b);
 	}
+#ifdef WIN32
+	else
+	{
+		DWORD lasterr = ERROR_INVALID_HANDLE;
+		HANDLE heaps[32];
+		int i, count;
+		char buf[16];
+		size_t total = 0;
+		int allocs = 0;
+
+		b->begin_section(b, "mem");
+		count = GetProcessHeaps(countof(heaps), heaps);
+		for (i = 0; i < count; i++)
+		{
+			PROCESS_HEAP_ENTRY entry = {};
+			size_t heap_total = 0;
+			int heap_allocs = 0;
+
+			if (HeapLock(heaps[i]))
+			{
+				while (HeapWalk(heaps[i], &entry))
+				{
+					if (entry.wFlags & PROCESS_HEAP_ENTRY_BUSY)
+					{
+						heap_total += entry.cbData;
+						heap_allocs++;
+					}
+				}
+				lasterr = GetLastError();
+				HeapUnlock(heaps[i]);
+			}
+			if (lasterr != ERROR_NO_MORE_ITEMS)
+			{
+				break;
+			}
+			snprintf(buf, sizeof(buf), "heap-%d", i);
+			b->begin_section(b, buf);
+			b->add_kv(b, "total", "%zu", heap_total);
+			b->add_kv(b, "allocs", "%d", heap_allocs);
+			b->end_section(b);
+
+			total += heap_total;
+			allocs += heap_allocs;
+		}
+		if (lasterr == ERROR_NO_MORE_ITEMS)
+		{
+			b->add_kv(b, "total", "%zu", total);
+			b->add_kv(b, "allocs", "%d", allocs);
+		}
+		b->end_section(b);
+	}
+#endif
+
 #ifdef HAVE_MALLINFO
 	{
 		struct mallinfo mi = mallinfo();
