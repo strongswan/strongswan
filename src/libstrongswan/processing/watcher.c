@@ -260,8 +260,10 @@ static job_requeue_t watch(private_watcher_t *this)
 	FD_ZERO(&ex);
 
 	this->mutex->lock(this->mutex);
+
 	if (this->fds->get_count(this->fds) == 0)
 	{
+		this->running = FALSE;
 		this->mutex->unlock(this->mutex);
 		return JOB_REQUEUE_NONE;
 	}
@@ -405,7 +407,7 @@ METHOD(watcher_t, add, void,
 
 	this->mutex->lock(this->mutex);
 	this->fds->insert_last(this->fds, entry);
-	if (this->fds->get_count(this->fds) == 1)
+	if (!this->running)
 	{
 		this->running = TRUE;
 		lib->processor->queue_job(lib->processor,
