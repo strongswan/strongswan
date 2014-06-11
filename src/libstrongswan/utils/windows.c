@@ -316,74 +316,66 @@ static int wserr(int retval)
 {
 	if (retval < 0)
 	{
-		switch (WSAGetLastError())
+		static const struct {
+			DWORD wsa;
+			int err;
+		} map[] = {
+			{ WSANOTINITIALISED,			EBADF						},
+			{ WSAENETDOWN,					ENETDOWN					},
+			{ WSAENETRESET,					ENETRESET					},
+			{ WSAECONNABORTED,				ECONNABORTED				},
+			{ WSAESHUTDOWN,					ECONNABORTED				},
+			{ WSAEACCES,					EACCES						},
+			{ WSAEINTR,						EINTR						},
+			{ WSAEINPROGRESS,				EINPROGRESS					},
+			{ WSAEFAULT,					EFAULT						},
+			{ WSAENOBUFS,					ENOBUFS						},
+			{ WSAENOTSOCK,					ENOTSOCK					},
+			{ WSAEOPNOTSUPP,				EOPNOTSUPP					},
+			{ WSAEWOULDBLOCK,				EWOULDBLOCK					},
+			{ WSAEMSGSIZE,					EMSGSIZE					},
+			{ WSAEINVAL,					EINVAL						},
+			{ WSAENOTCONN,					ENOTCONN					},
+			{ WSAEHOSTUNREACH,				EHOSTUNREACH				},
+			{ WSAENETUNREACH,				ENETUNREACH					},
+			{ WSAECONNABORTED,				ECONNABORTED				},
+			{ WSAECONNRESET,				ECONNRESET					},
+			{ WSAETIMEDOUT,					ETIMEDOUT					},
+			{ WSAEMFILE,					EMFILE						},
+			{ WSAEALREADY,					EALREADY					},
+			{ WSAEDESTADDRREQ,				EDESTADDRREQ				},
+			{ WSAEISCONN,					EISCONN						},
+			{ WSAEOPNOTSUPP,				EOPNOTSUPP					},
+			{ WSAEPROTOTYPE,				EPROTOTYPE					},
+			{ WSAENOPROTOOPT,				ENOPROTOOPT					},
+			{ WSAEPROTONOSUPPORT,			EPROTONOSUPPORT				},
+			{ WSAEPFNOSUPPORT,				EPROTONOSUPPORT				},
+			{ WSAEAFNOSUPPORT,				EAFNOSUPPORT				},
+			{ WSAEADDRNOTAVAIL,				EADDRNOTAVAIL				},
+			{ WSAEADDRINUSE,				EADDRINUSE					},
+			{ WSAETIMEDOUT,					ETIMEDOUT					},
+			{ WSAECONNREFUSED,				ECONNREFUSED				},
+			{ WSAELOOP,						ELOOP						},
+			{ WSAENAMETOOLONG,				ENAMETOOLONG				},
+			{ WSAENOTEMPTY,					ENOTEMPTY					},
+			{ WSAEPROTOTYPE,				EPROTOTYPE					},
+			{ WSAVERNOTSUPPORTED,			ENOTSUP						},
+		};
+		DWORD wsa, i;
+
+		wsa = WSAGetLastError();
+		for (i = 0; i < countof(map); i++)
 		{
-			case WSANOTINITIALISED:
-				errno = EBADF;
-				break;
-			case WSAENETDOWN:
-				errno = ENETDOWN;
-				break;
-			case WSAENETRESET:
-				errno = ENETRESET;
-				break;
-			case WSAESHUTDOWN:
-				errno = ECONNABORTED;
-				break;
-			case WSAEACCES:
-				errno = EACCES;
-				break;
-			case WSAEINTR:
-				errno = EINTR;
-				break;
-			case WSAEINPROGRESS:
-				errno = EINPROGRESS;
-				break;
-			case WSAEFAULT:
-				errno = EFAULT;
-				break;
-			case WSAENOBUFS:
-				errno = ENOBUFS;
-				break;
-			case WSAENOTSOCK:
-				errno = ENOTSOCK;
-				break;
-			case WSAEOPNOTSUPP:
-				errno = EOPNOTSUPP;
-				break;
-			case WSAEWOULDBLOCK:
-				errno = EWOULDBLOCK;
-				break;
-			case WSAEMSGSIZE:
-				errno = EMSGSIZE;
-				break;
-			case WSAEINVAL:
-				errno = EINVAL;
-				break;
-			case WSAENOTCONN:
-				errno = ENOTCONN;
-				break;
-			case WSAEHOSTUNREACH:
-				errno = EHOSTUNREACH;
-				break;
-			case WSAECONNABORTED:
-				errno = ECONNABORTED;
-				break;
-			case WSAECONNRESET:
-				errno = ECONNRESET;
-				break;
-			case WSAETIMEDOUT:
-				errno = ETIMEDOUT;
-				break;
-			default:
-				errno = ENOENT;
-				break;
+			if (map[i].wsa == wsa)
+			{
+				errno = map[i].err;
+				return retval;
+			}
 		}
+		errno = ENOENT;
+		return retval;
 	}
-	else
-	{
-		errno = 0;
-	}
+	errno = 0;
 	return retval;
 }
 
@@ -398,6 +390,90 @@ static bool check_dontwait(int *flags)
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * See header
+ */
+#undef shutdown
+int windows_shutdown(int sockfd, int how)
+{
+	return wserr(shutdown(sockfd, how));
+}
+
+/**
+ * See header
+ */
+#undef accept
+int windows_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	return wserr(accept(sockfd, addr, addrlen));
+}
+
+/**
+ * See header
+ */
+#undef bind
+int windows_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	return wserr(bind(sockfd, addr, addrlen));
+}
+
+/**
+ * See header
+ */
+#undef connect
+int windows_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	return wserr(connect(sockfd, addr, addrlen));
+}
+
+/**
+ * See header
+ */
+#undef getsockname
+int windows_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	return wserr(getsockname(sockfd, addr, addrlen));
+}
+
+/**
+ * See header
+ */
+#undef getsockopt
+int windows_getsockopt(int sockfd, int level, int optname,
+					   void *optval, socklen_t *optlen)
+{
+	return wserr(getsockopt(sockfd, level, optname, optval, optlen));
+}
+
+/**
+ * See header
+ */
+#undef setsockopt
+int windows_setsockopt(int sockfd, int level, int optname,
+					   const void *optval, socklen_t optlen)
+{
+	return wserr(setsockopt(sockfd, level, optname, optval, optlen));
+}
+
+/**
+ * See header
+ */
+#undef socket
+int windows_socket(int domain, int type, int protocol)
+{
+	return wserr(socket(domain, type, protocol));
+}
+
+/**
+ * See header
+ */
+#undef select
+int windows_select(int nfds, fd_set *readfds, fd_set *writefds,
+				   fd_set *exceptfds, struct timeval *timeout)
+{
+	return wserr(select(nfds, readfds, writefds, exceptfds, timeout));
 }
 
 /**

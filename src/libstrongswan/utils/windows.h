@@ -273,6 +273,63 @@ char* getpass(const char *prompt);
 #define SHUT_RDWR SD_BOTH
 
 /**
+ * shutdown(2) setting errno
+ */
+#define shutdown windows_shutdown
+int windows_shutdown(int sockfd, int how);
+
+/**
+ * accept(2) setting errno
+ */
+#define accept windows_accept
+int windows_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+/**
+ * bind(2) setting errno
+ */
+#define bind windows_bind
+int windows_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * connect(2) setting errno
+ */
+#define connect windows_connect
+int windows_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * getsockname(2) setting errno
+ */
+#define getsockname windows_getsockname
+int windows_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+/**
+ * getsockopt(2) setting errno
+ */
+#define getsockopt windows_getsockopt
+int windows_getsockopt(int sockfd, int level, int optname,
+					   void *optval, socklen_t *optlen);
+
+/**
+ * setsockopt(2) setting errno
+ */
+#define setsockopt windows_setsockopt
+int windows_setsockopt(int sockfd, int level, int optname,
+					   const void *optval, socklen_t optlen);
+
+/**
+ * socket(2) setting errno
+ */
+#define socket windows_socket
+int windows_socket(int domain, int type, int protocol);
+
+/**
+ * select(2) setting errno
+ */
+#define select windows_select
+int windows_select(int nfds, fd_set *readfds, fd_set *writefds,
+				   fd_set *exceptfds, struct timeval *timeout);
+
+/**
  * close(2) working for file handles and Winsock sockets
  */
 #define close windows_close
