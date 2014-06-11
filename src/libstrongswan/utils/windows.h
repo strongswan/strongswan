@@ -362,6 +362,15 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
 
 /**
+ * strerror_r(2) replacement, XSI variant
+ */
+static inline int strerror_r(int errnum, char *buf, size_t buflen)
+{
+	return strerror_s(buf, buflen, errnum);
+}
+#define HAVE_STRERROR_R /* but not STRERROR_R_CHAR_P */
+
+/**
  * MinGW does provide extended errno values. Windows itself knowns them
  * for POSIX compatibility; we define them as well.
  */
