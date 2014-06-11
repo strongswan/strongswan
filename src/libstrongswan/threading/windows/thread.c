@@ -246,36 +246,6 @@ void* thread_tls_remove(void *key)
 }
 
 /**
- * See header.
- */
-void thread_tls_remove_all(void *key)
-{
-	private_thread_t *thread;
-	enumerator_t *enumerator;
-	void *value;
-	bool old;
-
-	old = set_leak_detective(FALSE);
-	threads_lock->lock(threads_lock);
-
-	enumerator = threads->create_enumerator(threads);
-	while (enumerator->enumerate(enumerator, NULL, &thread))
-	{
-		value = thread->tls->remove(thread->tls, key);
-		if (value)
-		{
-			set_leak_detective(old);
-			thread_tls_cleanup(value);
-			set_leak_detective(FALSE);
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	threads_lock->unlock(threads_lock);
-	set_leak_detective(old);
-}
-
-/**
  * Thread cleanup data
  */
 typedef struct {
@@ -632,6 +602,50 @@ void thread_exit(void *val)
 
 	end_thread(this);
 	ExitThread(0);
+}
+
+/**
+ * Clean up thread data while it detaches
+ */
+static void cleanup_tls()
+{
+	private_thread_t *this;
+	bool old;
+
+	old = set_leak_detective(FALSE);
+	threads_lock->lock(threads_lock);
+
+	this = threads->remove(threads, (void*)(uintptr_t)GetCurrentThreadId());
+
+	threads_lock->unlock(threads_lock);
+	set_leak_detective(old);
+
+	if (this)
+	{
+		/* If the thread exited, but has not been joined, it is in terminated
+		 * state. We must not mangle it, as we target externally spawned
+		 * threads only. */
+		if (!this->terminated && !this->detached)
+		{
+			destroy(this);
+		}
+	}
+}
+
+/**
+ * DllMain called for dll events
+ */
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+	switch (fdwReason)
+	{
+		case DLL_THREAD_DETACH:
+			cleanup_tls();
+			break;
+		default:
+			break;
+	}
+	return TRUE;
 }
 
 /*

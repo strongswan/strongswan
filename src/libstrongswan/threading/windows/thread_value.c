@@ -104,7 +104,13 @@ METHOD(thread_value_t, tls_get, void*,
 METHOD(thread_value_t, tls_destroy, void,
 	private_thread_value_t *this)
 {
-	thread_tls_remove_all(this);
+	entry_t *entry;
+
+	entry = thread_tls_remove(this);
+	if (entry)
+	{
+		thread_tls_cleanup(entry);
+	}
 	free(this);
 }
 
