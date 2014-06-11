@@ -362,6 +362,12 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
 
 /**
+ * strerror_s, but supporting POSIX compatiblity errno >= 100
+ */
+#define strerror_s strerror_s_extended
+int strerror_s_extended(char *buf, size_t buflen, int errnum);
+
+/**
  * strerror_r(2) replacement, XSI variant
  */
 static inline int strerror_r(int errnum, char *buf, size_t buflen)

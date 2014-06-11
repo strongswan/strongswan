@@ -310,6 +310,66 @@ char* getpass(const char *prompt)
 }
 
 /**
+ * See header.
+ */
+#undef strerror_s
+int strerror_s_extended(char *buf, size_t buflen, int errnum)
+{
+	const char *errstr [] = {
+		/* EADDRINUSE */		"Address in use",
+		/* EADDRNOTAVAIL */		"Address not available",
+		/* EAFNOSUPPORT */		"Address family not supported",
+		/* EALREADY */			"Connection already in progress",
+		/* EBADMSG */			"Bad message",
+		/* ECANCELED */			"Operation canceled",
+		/* ECONNABORTED */		"Connection aborted",
+		/* ECONNREFUSED */		"Connection refused",
+		/* ECONNRESET */		"Connection reset",
+		/* EDESTADDRREQ */		"Destination address required",
+		/* EHOSTUNREACH */		"Host is unreachable",
+		/* EIDRM */				"Identifier removed",
+		/* EINPROGRESS */		"Operation in progress",
+		/* EISCONN */			"Socket is connected",
+		/* ELOOP */				"Too many levels of symbolic links",
+		/* EMSGSIZE */			"Message too large",
+		/* ENETDOWN */			"Network is down",
+		/* ENETRESET */			"Connection aborted by network",
+		/* ENETUNREACH */		"Network unreachable",
+		/* ENOBUFS */			"No buffer space available",
+		/* ENODATA */			"No message is available",
+		/* ENOLINK */			"No link",
+		/* ENOMSG */			"No message of the desired type",
+		/* ENOPROTOOPT */		"Protocol not available",
+		/* ENOSR */				"No stream resources",
+		/* ENOSTR */			"Not a stream",
+		/* ENOTCONN */			"The socket is not connected",
+		/* ENOTRECOVERABLE */	"State not recoverable",
+		/* ENOTSOCK */			"Not a socket",
+		/* ENOTSUP */			"Not supported",
+		/* EOPNOTSUPP */		"Operation not supported on socket",
+		/* EOTHER */			"Other error",
+		/* EOVERFLOW */			"Value too large to be stored in data type",
+		/* EOWNERDEAD */		"Previous owner died",
+		/* EPROTO */			"Protocol error",
+		/* EPROTONOSUPPORT */	"Protocol not supported",
+		/* EPROTOTYPE */		"Protocol wrong type for socket",
+		/* ETIME */				"Timeout",
+		/* ETIMEDOUT */			"Connection timed out",
+		/* ETXTBSY */			"Text file busy",
+		/* EWOULDBLOCK */		"Operation would block",
+	};
+	int offset = EADDRINUSE;
+
+	if (errnum < offset || errnum > offset + countof(errstr))
+	{
+		return strerror_s(buf, buflen, errnum);
+	}
+	strncpy(buf, errstr[errnum - offset], buflen);
+	buf[buflen - 1] = '\0';
+	return 0;
+}
+
+/**
  * Set errno for a function setting WSA error on failure
  */
 static int wserr(int retval)
