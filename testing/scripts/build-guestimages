@@ -51,10 +51,7 @@ do
 	if [ "$host" = "alice" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/tnc" 0
-		execute "mkdir $LOOPDIR/etc/strongTNC" 0
 		execute "mkdir $LOOPDIR/etc/pts" 0
-		execute_chroot "chgrp www-data /etc/strongTNC" 0
-		execute_chroot "chmod g+w /etc/strongTNC" 0
 		execute_chroot "chgrp www-data /etc/pts" 0
 		execute_chroot "chmod g+w /etc/pts" 0
 	fi

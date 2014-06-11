@@ -18,6 +18,8 @@ WSGIPythonPath /var/www/tnc
     WSGIApplicationGroup %{GLOBAL}
     WSGIPassAuthorization On
 
+    Alias /static/ /var/www/tnc/static/
+
     ErrorLog ${APACHE_LOG_DIR}/tnc/error.log
     LogLevel warn
     CustomLog ${APACHE_LOG_DIR}/tnc/access.log combined

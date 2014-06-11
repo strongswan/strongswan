@@ -9,6 +9,7 @@ dave::echo aabbccddeeff11223344556677889900 > /var/lib/dbus/machine-id
 alice::sed -i "s/NOW/`date +%s`/g" /etc/pts/data1.sql
 alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql data.sql /etc/pts/data1.sql | sqlite3 /etc/pts/config.db
 alice::chgrp www-data /etc/pts/config.db; chmod g+w /etc/pts/config.db
+alice::/var/www/tnc/manage.py setpassword strongSwan strongSwan
 alice::service apache2 start
 alice::ipsec start
 moon::ipsec start
