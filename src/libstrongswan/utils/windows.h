@@ -362,6 +362,11 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
 
 /**
+ * Declaration missing on older WinGW
+ */
+_CRTIMP errno_t strerror_s(char *buf, size_t size, int errnum);
+
+/**
  * strerror_s, but supporting POSIX compatiblity errno >= 100
  */
 #define strerror_s strerror_s_extended
