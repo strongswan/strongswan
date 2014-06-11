@@ -36,6 +36,25 @@ public class TrustedCertificateManager
 	private boolean mLoaded;
 	private final ArrayList<KeyStore> mKeyStores = new ArrayList<KeyStore>();
 
+	public enum TrustedCertificateSource
+	{
+		SYSTEM("system:"),
+		USER("user:"),
+		LOCAL("local:");
+
+		private final String mPrefix;
+
+		private TrustedCertificateSource(String prefix)
+		{
+			mPrefix = prefix;
+		}
+
+		private String getPrefix()
+		{
+			return mPrefix;
+		}
+	}
+
 	/**
 	 * Private constructor to prevent instantiation from other classes.
 	 */
@@ -202,44 +221,17 @@ public class TrustedCertificateManager
 	}
 
 	/**
-	 * Get only the system-wide CA certificates.
+	 * Get all certificates from the given source.
+	 * @param source type to filter certificates
 	 * @return Hashtable mapping aliases to certificates
 	 */
-	public Hashtable<String, X509Certificate> getSystemCACertificates()
-	{
-		return getCertificates("system:");
-	}
-
-	/**
-	 * Get only the CA certificates installed by the user.
-	 * @return Hashtable mapping aliases to certificates
-	 */
-	public Hashtable<String, X509Certificate> getUserCACertificates()
-	{
-		return getCertificates("user:");
-	}
-
-	/**
-	 * Get only the local CA certificates installed by the user.
-	 * @return Hashtable mapping aliases to certificates
-	 */
-	public Hashtable<String, X509Certificate> getLocalCACertificates()
-	{
-		return getCertificates("local:");
-	}
-
-	/**
-	 * Get all certificates whose aliases start with the given prefix.
-	 * @param prefix prefix to filter certificates
-	 * @return Hashtable mapping aliases to certificates
-	 */
-	private Hashtable<String, X509Certificate> getCertificates(String prefix)
+	public Hashtable<String, X509Certificate> getCACertificates(TrustedCertificateSource source)
 	{
 		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
 		this.mLock.readLock().lock();
 		for (String alias : this.mCACerts.keySet())
 		{
-			if (alias.startsWith(prefix))
+			if (alias.startsWith(source.getPrefix()))
 			{
 				certs.put(alias, this.mCACerts.get(alias));
 			}

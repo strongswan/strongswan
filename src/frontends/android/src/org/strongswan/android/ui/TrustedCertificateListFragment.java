@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
 
@@ -172,7 +173,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			Hashtable<String,X509Certificate> certificates;
 			List<TrustedCertificateEntry> selected;
 
-			certificates = mUser ? certman.getUserCACertificates() : certman.getSystemCACertificates();
+			certificates = mUser ? certman.getCACertificates(TrustedCertificateSource.USER) : certman.getCACertificates(TrustedCertificateSource.SYSTEM);
 			selected = new ArrayList<TrustedCertificateEntry>();
 			for (Entry<String, X509Certificate> entry : certificates.entrySet())
 			{
