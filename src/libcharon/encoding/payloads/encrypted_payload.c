@@ -24,7 +24,6 @@
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
 #include <collections/linked_list.h>
-#include <encoding/generator.h>
 #include <encoding/parser.h>
 
 typedef struct private_encrypted_payload_t private_encrypted_payload_t;
@@ -296,6 +295,12 @@ static chunk_t generate(private_encrypted_payload_t *this,
 	}
 	enumerator->destroy(enumerator);
 	return chunk;
+}
+
+METHOD(encrypted_payload_t, generate_payloads, void,
+	private_encrypted_payload_t *this, generator_t *generator)
+{
+	generate(this, generator);
 }
 
 /**
@@ -646,6 +651,7 @@ encrypted_payload_t *encrypted_payload_create(payload_type_t type)
 			.get_length = _get_length,
 			.add_payload = _add_payload,
 			.remove_payload = _remove_payload,
+			.generate_payloads = _generate_payloads,
 			.set_transform = _set_transform,
 			.encrypt = _encrypt,
 			.decrypt = _decrypt,

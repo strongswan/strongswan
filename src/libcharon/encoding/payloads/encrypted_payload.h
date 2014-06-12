@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
@@ -28,6 +29,7 @@ typedef struct encrypted_payload_t encrypted_payload_t;
 #include <library.h>
 #include <crypto/aead.h>
 #include <encoding/payloads/payload.h>
+#include <encoding/generator.h>
 
 /**
  * The encrypted payload as described in RFC section 3.14.
@@ -60,6 +62,14 @@ struct encrypted_payload_t {
 	 * @return				payload, NULL if none left
 	 */
 	payload_t* (*remove_payload)(encrypted_payload_t *this);
+
+	/**
+	 * Uses the given generator to generate the contained payloads.
+	 *
+	 * @param generator		generator used to generate the contained payloads
+	 */
+	void (*generate_payloads)(encrypted_payload_t *this,
+							  generator_t *generator);
 
 	/**
 	 * Set the AEAD transform to use.
