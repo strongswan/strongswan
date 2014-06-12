@@ -1650,7 +1650,10 @@ METHOD(message_t, generate, status_t,
 		}
 	}
 	generator->destroy(generator);
-	*packet = this->packet->clone(this->packet);
+	if (packet)
+	{
+		*packet = this->packet->clone(this->packet);
+	}
 	return SUCCESS;
 }
 
