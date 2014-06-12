@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -251,6 +251,11 @@ struct private_ike_sa_t {
 	 * Flush auth configs once established?
 	 */
 	bool flush_auth_cfg;
+
+	/**
+	 * Maximum length of a single fragment, 0 for address-specific defaults
+	 */
+	size_t fragment_size;
 };
 
 /**
@@ -990,6 +995,61 @@ METHOD(ike_sa_t, generate_message, status_t,
 	{
 		set_dscp(this, *packet);
 		charon->bus->message(charon->bus, message, FALSE, FALSE);
+	}
+	return status;
+}
+
+static bool filter_fragments(private_ike_sa_t *this, packet_t **fragment,
+							 packet_t **packet)
+{
+	*packet = (*fragment)->clone(*fragment);
+	set_dscp(this, *packet);
+	return TRUE;
+}
+
+METHOD(ike_sa_t, generate_message_fragmented, status_t,
+	private_ike_sa_t *this, message_t *message, enumerator_t **packets)
+{
+	enumerator_t *fragments;
+	packet_t *packet;
+	status_t status;
+	bool use_frags = FALSE;
+
+	if (this->ike_cfg && this->version == IKEV1)
+	{
+		switch (this->ike_cfg->fragmentation(this->ike_cfg))
+		{
+			case FRAGMENTATION_FORCE:
+				use_frags = TRUE;
+				break;
+			case FRAGMENTATION_YES:
+				use_frags = supports_extension(this, EXT_IKE_FRAGMENTATION);
+				break;
+			default:
+				break;
+		}
+	}
+	if (!use_frags)
+	{
+		status = generate_message(this, message, &packet);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+		*packets = enumerator_create_single(packet, NULL);
+		return SUCCESS;
+	}
+
+	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
+	message->set_ike_sa_id(message, this->ike_sa_id);
+	charon->bus->message(charon->bus, message, FALSE, TRUE);
+	status = message->fragment(message, this->keymat, this->fragment_size,
+							   &fragments);
+	if (status == SUCCESS)
+	{
+		charon->bus->message(charon->bus, message, FALSE, FALSE);
+		*packets = enumerator_create_filter(fragments, (void*)filter_fragments,
+											this, NULL);
 	}
 	return status;
 }
@@ -2362,6 +2422,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.inherit_pre = _inherit_pre,
 			.inherit_post = _inherit_post,
 			.generate_message = _generate_message,
+			.generate_message_fragmented = _generate_message_fragmented,
 			.reset = _reset,
 			.get_unique_id = _get_unique_id,
 			.add_virtual_ip = _add_virtual_ip,
@@ -2407,6 +2468,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 								"%s.retry_initiate_interval", 0, lib->ns),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
 								"%s.flush_auth_cfg", FALSE, lib->ns),
+		.fragment_size = lib->settings->get_int(lib->settings,
+								"%s.fragment_size", 0, lib->ns),
 	);
 
 	if (version == IKEV2)

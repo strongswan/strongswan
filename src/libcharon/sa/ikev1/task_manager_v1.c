@@ -208,18 +208,6 @@ struct private_task_manager_t {
 		 */
 		size_t max_packet;
 
-		/**
-		 * Maximum length of a single fragment (when sending)
-		 */
-		size_t size;
-
-		/**
-		 * The exchange type we use for fragments. Always the initial type even
-		 * for fragmented quick mode or transaction messages (i.e. either
-		 * ID_PROT or AGGRESSIVE)
-		 */
-		exchange_type_t exchange;
-
 	} frag;
 
 	/**
@@ -398,52 +386,20 @@ static void send_packets(private_task_manager_t *this, array_t *packets)
 static bool generate_message(private_task_manager_t *this, message_t *message,
 							 array_t **packets)
 {
-	bool use_frags = FALSE, result = TRUE;
-	ike_cfg_t *ike_cfg;
 	enumerator_t *fragments;
-	packet_t *packet;
-	status_t status;
+	packet_t *fragment;
 
-	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
-	if (ike_cfg)
-	{
-		switch (ike_cfg->fragmentation(ike_cfg))
-		{
-			case FRAGMENTATION_FORCE:
-				use_frags = TRUE;
-				break;
-			case FRAGMENTATION_YES:
-				use_frags = this->ike_sa->supports_extension(this->ike_sa,
-													EXT_IKE_FRAGMENTATION);
-				break;
-			default:
-				break;
-		}
-	}
-
-	if (!use_frags)
-	{
-		if (this->ike_sa->generate_message(this->ike_sa, message,
-										   &packet) != SUCCESS)
-		{
-			return FALSE;
-		}
-		array_insert_create(packets, ARRAY_TAIL, packet);
-		return TRUE;
-	}
-	message->set_ike_sa_id(message, this->ike_sa->get_id(this->ike_sa));
-	status = message->fragment(message, this->ike_sa->get_keymat(this->ike_sa),
-							   this->frag.size, &fragments);
-	if (status != SUCCESS)
+	if (this->ike_sa->generate_message_fragmented(this->ike_sa, message,
+												  &fragments) != SUCCESS)
 	{
 		return FALSE;
 	}
-	while (fragments->enumerate(fragments, &packet))
+	while (fragments->enumerate(fragments, &fragment))
 	{
-		array_insert_create(packets, ARRAY_TAIL, packet->clone(packet));
+		array_insert_create(packets, ARRAY_TAIL, fragment);
 	}
 	fragments->destroy(fragments);
-	return result;
+	return TRUE;
 }
 
 /**
@@ -1046,7 +1002,6 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)isakmp_natd_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				this->frag.exchange = AGGRESSIVE;
 				break;
 			case QUICK_MODE:
 				if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
@@ -1623,7 +1578,6 @@ METHOD(task_manager_t, queue_ike, void,
 		{
 			queue_task(this, (task_t*)aggressive_mode_create(this->ike_sa, TRUE));
 		}
-		this->frag.exchange = AGGRESSIVE;
 	}
 	else
 	{
@@ -2061,11 +2015,8 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.seqnr = RESPONDING_SEQ,
 		},
 		.frag = {
-			.exchange = ID_PROT,
 			.max_packet = lib->settings->get_int(lib->settings,
 						"%s.max_packet", MAX_PACKET, lib->ns),
-			.size = lib->settings->get_int(lib->settings,
-						"%s.fragment_size", 0, lib->ns),
 		},
 		.ike_sa = ike_sa,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),

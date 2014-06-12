@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -756,7 +756,7 @@ struct ike_sa_t {
 	status_t (*roam)(ike_sa_t *this, bool address);
 
 	/**
-	 * Processes a incoming IKEv2-Message.
+	 * Processes an incoming IKE message.
 	 *
 	 * Message processing may fail. If a critical failure occurs,
 	 * process_message() return DESTROY_ME. Then the caller must
@@ -768,10 +768,10 @@ struct ike_sa_t {
 	 *						- FAILED
 	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	status_t (*process_message) (ike_sa_t *this, message_t *message);
+	status_t (*process_message)(ike_sa_t *this, message_t *message);
 
 	/**
-	 * Generate a IKE message to send it to the peer.
+	 * Generate an IKE message to send it to the peer.
 	 *
 	 * This method generates all payloads in the message and encrypts/signs
 	 * the packet.
@@ -783,8 +783,26 @@ struct ike_sa_t {
 	 *						- FAILED
 	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	status_t (*generate_message) (ike_sa_t *this, message_t *message,
-								  packet_t **packet);
+	status_t (*generate_message)(ike_sa_t *this, message_t *message,
+								 packet_t **packet);
+
+	/**
+	 * Generate an IKE message to send it to the peer. If enabled and supported
+	 * it will be fragmented.
+	 *
+	 * This method generates all payloads in the message and encrypts/signs
+	 * the packet/fragments.
+	 *
+	 * @param message		message to generate
+	 * @param packets		enumerator of generated packet_t* (are not destroyed
+	 *						with the enumerator)
+	 * @return
+	 *						- SUCCESS
+	 *						- FAILED
+	 *						- DESTROY_ME if this IKE_SA MUST be deleted
+	 */
+	status_t (*generate_message_fragmented)(ike_sa_t *this, message_t *message,
+											enumerator_t **packets);
 
 	/**
 	 * Retransmits a request.
