@@ -40,7 +40,7 @@ static int list_pools(vici_conn_t *conn)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool raw = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg;
 	int ret = 0;
 
@@ -50,8 +50,11 @@ static int list_pools(vici_conn_t *conn)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -68,9 +71,10 @@ static int list_pools(vici_conn_t *conn)
 		fprintf(stderr, "get-pools request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "get-pools reply", stdout);
+		vici_dump(res, "get-pools reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else
 	{
@@ -87,10 +91,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_pools, 'A', "list-pools", "list loaded pool configurations",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

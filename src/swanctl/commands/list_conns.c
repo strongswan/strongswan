@@ -161,11 +161,12 @@ CALLBACK(conns, int,
 }
 
 CALLBACK(list_cb, void,
-	bool *raw, char *name, vici_res_t *res)
+	command_format_options_t *format, char *name, vici_res_t *res)
 {
-	if (*raw)
+	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-conn event", stdout);
+		vici_dump(res, "list-conn event", *format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else
 	{
@@ -180,7 +181,7 @@ static int list_conns(vici_conn_t *conn)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool raw = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg;
 
 	while (TRUE)
@@ -189,8 +190,11 @@ static int list_conns(vici_conn_t *conn)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -199,7 +203,7 @@ static int list_conns(vici_conn_t *conn)
 		}
 		break;
 	}
-	if (vici_register(conn, "list-conn", list_cb, &raw) != 0)
+	if (vici_register(conn, "list-conn", list_cb, &format) != 0)
 	{
 		fprintf(stderr, "registering for connections failed: %s\n",
 				strerror(errno));
@@ -212,9 +216,10 @@ static int list_conns(vici_conn_t *conn)
 		fprintf(stderr, "list-conns request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-conns reply", stdout);
+		vici_dump(res, "list-conns reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	vici_free_res(res);
 	return 0;
@@ -227,10 +232,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_conns, 'L', "list-conns", "list loaded configurations",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

@@ -67,7 +67,7 @@ static void add_key_values(vici_req_t *req, settings_t *cfg, char *section)
  * Load a pool configuration
  */
 static bool load_pool(vici_conn_t *conn, settings_t *cfg,
-					  char *section, bool raw)
+					  char *section, command_format_options_t format)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -88,9 +88,10 @@ static bool load_pool(vici_conn_t *conn, settings_t *cfg,
 		fprintf(stderr, "load-pool request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "load-pool reply", stdout);
+		vici_dump(res, "load-pool reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -116,7 +117,8 @@ CALLBACK(list_pool, int,
 /**
  * Create a list of currently loaded pools
  */
-static linked_list_t* list_pools(vici_conn_t *conn, bool raw)
+static linked_list_t* list_pools(vici_conn_t *conn,
+								 command_format_options_t format)
 {
 	linked_list_t *list;
 	vici_res_t *res;
@@ -126,9 +128,10 @@ static linked_list_t* list_pools(vici_conn_t *conn, bool raw)
 	res = vici_submit(vici_begin("get-pools"), conn);
 	if (res)
 	{
-		if (raw)
+		if (format & COMMAND_FORMAT_RAW)
 		{
-			vici_dump(res, "get-pools reply", stdout);
+			vici_dump(res, "get-pools reply", format & COMMAND_FORMAT_PRETTY,
+					  stdout);
 		}
 		vici_parse_cb(res, list_pool, NULL, NULL, list);
 		vici_free_res(res);
@@ -159,7 +162,8 @@ static void remove_from_list(linked_list_t *list, char *str)
 /**
  * Unload a pool by name
  */
-static bool unload_pool(vici_conn_t *conn, char *name, bool raw)
+static bool unload_pool(vici_conn_t *conn, char *name,
+						command_format_options_t format)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -173,9 +177,10 @@ static bool unload_pool(vici_conn_t *conn, char *name, bool raw)
 		fprintf(stderr, "unload-pool request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "unload-pool reply", stdout);
+		vici_dump(res, "unload-pool reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -189,7 +194,7 @@ static bool unload_pool(vici_conn_t *conn, char *name, bool raw)
 
 static int load_pools(vici_conn_t *conn)
 {
-	bool raw = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	u_int found = 0, loaded = 0, unloaded = 0;
 	char *arg, *section;
 	enumerator_t *enumerator;
@@ -202,8 +207,11 @@ static int load_pools(vici_conn_t *conn)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -220,14 +228,14 @@ static int load_pools(vici_conn_t *conn)
 		return EINVAL;
 	}
 
-	pools = list_pools(conn, raw);
+	pools = list_pools(conn, format);
 
 	enumerator = cfg->create_section_enumerator(cfg, "pools");
 	while (enumerator->enumerate(enumerator, &section))
 	{
 		remove_from_list(pools, section);
 		found++;
-		if (load_pool(conn, cfg, section, raw))
+		if (load_pool(conn, cfg, section, format))
 		{
 			loaded++;
 		}
@@ -239,7 +247,7 @@ static int load_pools(vici_conn_t *conn)
 	/* unload all pools in daemon, but not in file */
 	while (pools->remove_first(pools, (void**)&section) == SUCCESS)
 	{
-		if (unload_pool(conn, section, raw))
+		if (unload_pool(conn, section, format))
 		{
 			unloaded++;
 		}
@@ -247,7 +255,7 @@ static int load_pools(vici_conn_t *conn)
 	}
 	pools->destroy(pools);
 
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
 		return 0;
 	}
@@ -274,10 +282,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_pools, 'a', "load-pools", "(re-)load pool configuration",
-		{"[--raw]"},
+		{"[--raw|--pretty"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

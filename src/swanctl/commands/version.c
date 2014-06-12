@@ -22,7 +22,8 @@ static int version(vici_conn_t *conn)
 	vici_req_t *req;
 	vici_res_t *res;
 	char *arg;
-	bool raw = FALSE, daemon = FALSE;;
+	bool daemon = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 
 	while (TRUE)
 	{
@@ -30,8 +31,11 @@ static int version(vici_conn_t *conn)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case 'd':
 				daemon = TRUE;
@@ -57,9 +61,9 @@ static int version(vici_conn_t *conn)
 		fprintf(stderr, "version request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "version reply", stdout);
+		vici_dump(res, "version reply", format & COMMAND_FORMAT_PRETTY, stdout);
 	}
 	else
 	{
@@ -81,11 +85,12 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		version, 'v', "version", "show version information",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"daemon",		'd', 0, "query daemon version"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

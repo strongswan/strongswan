@@ -31,21 +31,24 @@ typedef enum vici_type_t vici_type_t;
  * Vici message encoding types
  */
 enum vici_type_t {
+	/** never used in an argument list, needed by dump as initial value */
+	VICI_START =         0,
+
 	/** begin of new section, argument is section name as char* */
-	VICI_SECTION_START = 0,
+	VICI_SECTION_START = 1,
 	/** end of current section, no arguments */
-	VICI_SECTION_END,
+	VICI_SECTION_END =   2,
 	/** key/value, arguments are key as char*, value as chunk_t */
-	VICI_KEY_VALUE,
+	VICI_KEY_VALUE =     3,
 	/** list start, argument is list name as char* */
-	VICI_LIST_START,
+	VICI_LIST_START =    4,
 	/** list item, argument is item value as chunk_t */
-	VICI_LIST_ITEM,
+	VICI_LIST_ITEM =     5,
 	/** end of list, no arguments */
-	VICI_LIST_END,
+	VICI_LIST_END =      6,
 
 	/** end of argument list, no arguments (never encoded) */
-	VICI_END
+	VICI_END =           7
 };
 
 /**
@@ -184,11 +187,12 @@ struct vici_message_t {
 	/**
 	 * Dump a message text representation to a FILE stream.
 	 *
-	 * @param label	label to print for message
-	 * @param out	FILE stream to dump to
-	 * @return		TRUE if message valid
+	 * @param label		label to print for message
+	 * @param pretty	use pretty print with indentation
+	 * @param out		FILE stream to dump to
+	 * @return			TRUE if message valid
 	 */
-	bool (*dump)(vici_message_t *this, char *label, FILE *out);
+	bool (*dump)(vici_message_t *this, char *label, bool pretty, FILE *out);
 
 	/**
 	 * Destroy a vici_message_t.

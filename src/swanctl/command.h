@@ -41,7 +41,7 @@
 
 typedef struct command_t command_t;
 typedef struct command_option_t command_option_t;
-typedef enum command_type_t command_type_t;
+typedef enum command_format_options_t command_format_options_t;
 
 /**
  * Option specification
@@ -73,6 +73,16 @@ struct command_t {
 	char *line[MAX_LINES];
 	/** list of options the command accepts */
 	command_option_t options[MAX_OPTIONS];
+};
+
+/**
+ * Command format options
+*/
+enum command_format_options_t {
+	COMMAND_FORMAT_NONE   = 0,
+	COMMAND_FORMAT_RAW    = (1<<0),
+	COMMAND_FORMAT_PRETTY = (1<<1),
+	COMMAND_FORMAT_PEM    = (1<<2),
 };
 
 /**

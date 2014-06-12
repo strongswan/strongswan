@@ -19,11 +19,11 @@
 #include <unistd.h>
 
 CALLBACK(log_cb, void,
-	bool *raw, char *name, vici_res_t *msg)
+	command_format_options_t *format, char *name, vici_res_t *msg)
 {
-	if (*raw)
+	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(msg, "log", stdout);
+		vici_dump(msg, "log", *format & COMMAND_FORMAT_PRETTY, stdout);
 	}
 	else
 	{
@@ -48,7 +48,7 @@ CALLBACK(log_cb, void,
 
 static int logcmd(vici_conn_t *conn)
 {
-	bool raw = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg;
 
 	while (TRUE)
@@ -57,8 +57,11 @@ static int logcmd(vici_conn_t *conn)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -68,7 +71,7 @@ static int logcmd(vici_conn_t *conn)
 		break;
 	}
 
-	if (vici_register(conn, "log", log_cb, &raw) != 0)
+	if (vici_register(conn, "log", log_cb, &format) != 0)
 	{
 		fprintf(stderr, "registering for log failed: %s\n", strerror(errno));
 		return errno;
@@ -88,10 +91,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		logcmd, 'T', "log", "trace logging output",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

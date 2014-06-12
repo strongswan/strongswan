@@ -438,9 +438,9 @@ void vici_free_req(vici_req_t *req)
 	free(req);
 }
 
-int vici_dump(vici_res_t *res, char *label, FILE *out)
+int vici_dump(vici_res_t *res, char *label, bool pretty, FILE *out)
 {
-	if (res->message->dump(res->message, label, out))
+	if (res->message->dump(res->message, label, pretty, out))
 	{
 		return 0;
 	}

@@ -21,7 +21,7 @@ static int manage_policy(vici_conn_t *conn, char *label)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool raw = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *child = NULL;
 	int ret = 0;
 
@@ -31,8 +31,11 @@ static int manage_policy(vici_conn_t *conn, char *label)
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_RAW;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_PRETTY;
 				continue;
 			case 'c':
 				child = arg;
@@ -55,10 +58,10 @@ static int manage_policy(vici_conn_t *conn, char *label)
 		fprintf(stderr, "%s request failed: %s\n", label, strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
 		puts(label);
-		vici_dump(res, " reply", stdout);
+		vici_dump(res, " reply", format & COMMAND_FORMAT_PRETTY, stdout);
 	}
 	else
 	{
@@ -94,11 +97,12 @@ static void __attribute__ ((constructor))reg_uninstall()
 {
 	command_register((command_t) {
 		uninstall, 'u', "uninstall", "uninstall a trap or shunt policy",
-		{"--child <name> [--raw]"},
+		{"--child <name> [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "CHILD_SA configuration to uninstall"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }
@@ -110,11 +114,12 @@ static void __attribute__ ((constructor))reg_install()
 {
 	command_register((command_t) {
 		install, 'p', "install", "install a trap or shunt policy",
-		{"--child <name> [--raw]"},
+		{"--child <name> [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "CHILD_SA configuration to install"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

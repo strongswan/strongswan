@@ -27,8 +27,8 @@
 /**
  * Load a single certificate over vici
  */
-static bool load_cert(vici_conn_t *conn, bool raw, char *dir,
-					  char *type, chunk_t data)
+static bool load_cert(vici_conn_t *conn, command_format_options_t format,
+					  char *dir, char *type, chunk_t data)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -45,9 +45,10 @@ static bool load_cert(vici_conn_t *conn, bool raw, char *dir,
 		fprintf(stderr, "load-cert request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "load-cert reply", stdout);
+		vici_dump(res, "load-cert reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -66,7 +67,8 @@ static bool load_cert(vici_conn_t *conn, bool raw, char *dir,
 /**
  * Load certficiates from a directory
  */
-static void load_certs(vici_conn_t *conn, bool raw, char *type, char *dir)
+static void load_certs(vici_conn_t *conn, command_format_options_t format,
+					   char *type, char *dir)
 {
 	enumerator_t *enumerator;
 	struct stat st;
@@ -83,7 +85,7 @@ static void load_certs(vici_conn_t *conn, bool raw, char *type, char *dir)
 				map = chunk_map(path, FALSE);
 				if (map)
 				{
-					load_cert(conn, raw, path, type, *map);
+					load_cert(conn, format, path, type, *map);
 					chunk_unmap(map);
 				}
 				else
@@ -100,8 +102,8 @@ static void load_certs(vici_conn_t *conn, bool raw, char *type, char *dir)
 /**
  * Load a single private key over vici
  */
-static bool load_key(vici_conn_t *conn, bool raw, char *dir,
-					  char *type, chunk_t data)
+static bool load_key(vici_conn_t *conn, command_format_options_t format,
+					 char *dir, char *type, chunk_t data)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -118,9 +120,10 @@ static bool load_key(vici_conn_t *conn, bool raw, char *dir,
 		fprintf(stderr, "load-key request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "load-key reply", stdout);
+		vici_dump(res, "load-key reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -204,7 +207,7 @@ static private_key_t* decrypt_key(char *name, char *type, chunk_t encoding)
 /**
  * Try to decrypt and load a private key
  */
-static bool load_encrypted_key(vici_conn_t *conn, bool raw,
+static bool load_encrypted_key(vici_conn_t *conn, command_format_options_t format,
 							   char *rel, char *path, char *type, chunk_t data)
 {
 	private_key_t *private;
@@ -220,10 +223,10 @@ static bool load_encrypted_key(vici_conn_t *conn, bool raw,
 			switch (private->get_type(private))
 			{
 				case KEY_RSA:
-					loaded = load_key(conn, raw, path, "rsa", encoding);
+					loaded = load_key(conn, format, path, "rsa", encoding);
 					break;
 				case KEY_ECDSA:
-					loaded = load_key(conn, raw, path, "ecdsa", encoding);
+					loaded = load_key(conn, format, path, "ecdsa", encoding);
 					break;
 				default:
 					break;
@@ -238,8 +241,8 @@ static bool load_encrypted_key(vici_conn_t *conn, bool raw,
 /**
  * Load private keys from a directory
  */
-static void load_keys(vici_conn_t *conn, bool raw, bool noprompt,
-					  char *type, char *dir)
+static void load_keys(vici_conn_t *conn, command_format_options_t format,
+					  bool noprompt, char *type, char *dir)
 {
 	enumerator_t *enumerator;
 	struct stat st;
@@ -257,9 +260,9 @@ static void load_keys(vici_conn_t *conn, bool raw, bool noprompt,
 				if (map)
 				{
 					if (noprompt ||
-						!load_encrypted_key(conn, raw, rel, path, type, *map))
+						!load_encrypted_key(conn, format, rel, path, type, *map))
 					{
-						load_key(conn, raw, path, type, *map);
+						load_key(conn, format, path, type, *map);
 					}
 					chunk_unmap(map);
 				}
@@ -278,7 +281,7 @@ static void load_keys(vici_conn_t *conn, bool raw, bool noprompt,
  * Load a single secret over VICI
  */
 static bool load_secret(vici_conn_t *conn, settings_t *cfg,
-						char *section, bool raw)
+						char *section, command_format_options_t format)
 {
 	enumerator_t *enumerator;
 	vici_req_t *req;
@@ -351,9 +354,10 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 		fprintf(stderr, "load-shared request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "load-shared reply", stdout);
+		vici_dump(res, "load-shared reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -372,7 +376,7 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 /**
  * Clear all currently loaded credentials
  */
-static bool clear_creds(vici_conn_t *conn, bool raw)
+static bool clear_creds(vici_conn_t *conn, command_format_options_t format)
 {
 	vici_res_t *res;
 
@@ -382,9 +386,10 @@ static bool clear_creds(vici_conn_t *conn, bool raw)
 		fprintf(stderr, "clear-creds request failed: %s\n", strerror(errno));
 		return FALSE;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "clear-creds reply", stdout);
+		vici_dump(res, "clear-creds reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	vici_free_res(res);
 	return TRUE;
@@ -392,7 +397,8 @@ static bool clear_creds(vici_conn_t *conn, bool raw)
 
 static int load_creds(vici_conn_t *conn)
 {
-	bool raw = FALSE, clear = FALSE, noprompt = FALSE;
+	bool clear = FALSE, noprompt = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	enumerator_t *enumerator;
 	settings_t *cfg;
 	char *arg, *section;
@@ -409,8 +415,11 @@ static int load_creds(vici_conn_t *conn)
 			case 'n':
 				noprompt = TRUE;
 				continue;
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -422,21 +431,21 @@ static int load_creds(vici_conn_t *conn)
 
 	if (clear)
 	{
-		if (!clear_creds(conn, raw))
+		if (!clear_creds(conn, format))
 		{
 			return ECONNREFUSED;
 		}
 	}
 
-	load_certs(conn, raw, "x509", SWANCTL_X509DIR);
-	load_certs(conn, raw, "x509ca", SWANCTL_X509CADIR);
-	load_certs(conn, raw, "x509aa", SWANCTL_X509AADIR);
-	load_certs(conn, raw, "x509crl", SWANCTL_X509CRLDIR);
-	load_certs(conn, raw, "x509ac", SWANCTL_X509ACDIR);
+	load_certs(conn, format, "x509", SWANCTL_X509DIR);
+	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
+	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
+	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
+	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
 
-	load_keys(conn, raw, noprompt, "rsa", SWANCTL_RSADIR);
-	load_keys(conn, raw, noprompt, "ecdsa", SWANCTL_ECDSADIR);
-	load_keys(conn, raw, noprompt, "any", SWANCTL_PKCS8DIR);
+	load_keys(conn, format, noprompt, "rsa", SWANCTL_RSADIR);
+	load_keys(conn, format, noprompt, "ecdsa", SWANCTL_ECDSADIR);
+	load_keys(conn, format, noprompt, "any", SWANCTL_PKCS8DIR);
 
 	cfg = settings_create(SWANCTL_CONF);
 	if (!cfg)
@@ -448,7 +457,7 @@ static int load_creds(vici_conn_t *conn)
 	enumerator = cfg->create_section_enumerator(cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
 	{
-		load_secret(conn, cfg, section, raw);
+		load_secret(conn, cfg, section, format);
 	}
 	enumerator->destroy(enumerator);
 
@@ -464,12 +473,13 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_creds, 's', "load-creds", "(re-)load credentials",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"clear",		'c', 0, "clear previously loaded credentials"},
 			{"noprompt",	'n', 0, "do not prompt for passwords"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

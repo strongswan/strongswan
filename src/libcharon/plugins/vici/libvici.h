@@ -75,6 +75,8 @@
 
 #include <stdio.h>
 
+#include <utils/utils.h>
+
 /**
  * Opaque vici connection contex.
  */
@@ -278,10 +280,11 @@ void vici_free_req(vici_req_t *req);
  *
  * @param res		response message to dump
  * @param label		a label to print for this message
+ * @param pretty	use pretty print with indentation
  * @param out		FILE to dump to
  * @return			0 if dumped complete message, 1 on error
  */
-int vici_dump(vici_res_t *res, char *label, FILE *out);
+int vici_dump(vici_res_t *res, char *label, bool pretty, FILE *out);
 
 /**
  * Parse next element from a vici response message.

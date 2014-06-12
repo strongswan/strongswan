@@ -260,11 +260,12 @@ CALLBACK(ike_sas, int,
 }
 
 CALLBACK(list_cb, void,
-	bool *raw, char *name, vici_res_t *res)
+	command_format_options_t *format, char *name, vici_res_t *res)
 {
-	if (*raw)
+	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-sa event", stdout);
+		vici_dump(res, "list-sa event", *format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else
 	{
@@ -279,7 +280,8 @@ static int list_sas(vici_conn_t *conn)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool raw = FALSE, noblock = FALSE;
+	bool noblock = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *ike = NULL;
 	int ike_id = 0;
 
@@ -298,8 +300,11 @@ static int list_sas(vici_conn_t *conn)
 			case 'n':
 				noblock = TRUE;
 				continue;
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -308,7 +313,7 @@ static int list_sas(vici_conn_t *conn)
 		}
 		break;
 	}
-	if (vici_register(conn, "list-sa", list_cb, &raw) != 0)
+	if (vici_register(conn, "list-sa", list_cb, &format) != 0)
 	{
 		fprintf(stderr, "registering for SAs failed: %s\n", strerror(errno));
 		return errno;
@@ -332,9 +337,10 @@ static int list_sas(vici_conn_t *conn)
 		fprintf(stderr, "list-sas request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-sas reply", stdout);
+		vici_dump(res, "list-sas reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	vici_free_res(res);
 	return 0;
@@ -347,13 +353,14 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_sas, 'l', "list-sas", "list currently active IKE_SAs",
-		{"[--raw]"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"ike",			'i', 1, "filter IKE_SAs by name"},
 			{"ike-id",		'I', 1, "filter IKE_SAs by unique identifier"},
 			{"noblock",		'n', 0, "don't wait for IKE_SAs in use"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

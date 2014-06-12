@@ -28,11 +28,6 @@
 
 #include "command.h"
 
-typedef enum {
-	FORMAT_RAW = (1<<0),
-	FORMAT_PEM = (1<<1),
-} format_options_t;
-
 /**
  * Print PEM encoding of a certificate
  */
@@ -541,11 +536,12 @@ static void print_cert(certificate_t *cert, bool has_privkey)
 }
 
 CALLBACK(list_cb, void,
-	format_options_t *format, char *name, vici_res_t *res)
+	command_format_options_t *format, char *name, vici_res_t *res)
 {
-	if (*format & FORMAT_RAW)
+	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-cert event", stdout);
+		vici_dump(res, "list-cert event", *format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else
 	{
@@ -566,7 +562,7 @@ CALLBACK(list_cb, void,
 									BUILD_END);
 			if (cert)
 			{
-				if (*format & FORMAT_PEM)
+				if (*format & COMMAND_FORMAT_PEM)
 				{
 					print_pem(cert);
 				}
@@ -592,7 +588,7 @@ static int list_certs(vici_conn_t *conn)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	format_options_t format = 0;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *subject = NULL, *type = NULL;
 
 	while (TRUE)
@@ -608,10 +604,13 @@ static int list_certs(vici_conn_t *conn)
 				type = arg;
 				continue;
 			case 'p':
-				format |= FORMAT_PEM;
+				format |= COMMAND_FORMAT_PEM;
 				continue;
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				format |= FORMAT_RAW;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -641,9 +640,10 @@ static int list_certs(vici_conn_t *conn)
 		fprintf(stderr, "list-certs request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (format & FORMAT_RAW)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-certs reply", stdout);
+		vici_dump(res, "list-certs reply", format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	vici_free_res(res);
 	return 0;
@@ -656,13 +656,15 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_certs, 'x', "list-certs", "list stored certificates",
-		{"[--subject <dn/san>] [--type X509|X509_AC|X509_CRL] [--pem] [--raw]"},
+		{"[--subject <dn/san>] [--type X509|X509_AC|X509_CRL] [--pem] "
+		 "[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"subject",		's', 1, "filter by certificate subject"},
 			{"type",		't', 1, "filter by certificate type"},
 			{"pem",			'p', 0, "print PEM encoding of certificate"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }

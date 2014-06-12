@@ -49,7 +49,8 @@ struct private_vici_message_t {
 	linked_list_t *strings;
 };
 
-ENUM(vici_type_names, VICI_SECTION_START, VICI_END,
+ENUM(vici_type_names, VICI_START, VICI_END,
+	"start",
 	"section-start",
 	"section-end",
 	"key-value",
@@ -449,6 +450,9 @@ METHOD(vici_message_t, parse, bool,
 		{
 			switch (type)
 			{
+				case VICI_START:
+					/* should never occur */
+					continue;
 				case VICI_KEY_VALUE:
 					if (ctx->level == base && kv)
 					{
@@ -507,15 +511,31 @@ METHOD(vici_message_t, parse, bool,
 }
 
 METHOD(vici_message_t, dump, bool,
-	private_vici_message_t *this, char *label, FILE *out)
+	private_vici_message_t *this, char *label, bool pretty, FILE *out)
 {
 	enumerator_t *enumerator;
-	int ident = 0, delta = 2;
-	vici_type_t type;
-	char *name;
+	int ident = 0, delta;
+	vici_type_t type, last_type = VICI_START;
+	char *name, *term, *sep, *separ, *assign;
 	chunk_t value;
 
-	fprintf(out, "%s {\n", label);
+	/* pretty print uses indentation on multiple lines */
+	if (pretty)
+	{
+		delta  = 2;
+		term   = "\n";
+		separ  = "";
+		assign = " = ";
+	}
+	else
+	{
+		delta  = 0;
+		term   = "";
+		separ  = " ";
+		assign = "=";
+	}
+
+	fprintf(out, "%s {%s", label, term);
 	ident += delta;
 
 	enumerator = create_enumerator(this);
@@ -523,43 +543,54 @@ METHOD(vici_message_t, dump, bool,
 	{
 		switch (type)
 		{
+			case VICI_START:
+				/* should never occur */
+				break;
 			case VICI_SECTION_START:
-				fprintf(out, "%*s%s {\n", ident, "", name);
+				sep = (last_type != VICI_SECTION_START &&
+					   last_type != VICI_START) ? separ : "";
+				fprintf(out, "%*s%s%s {%s", ident, "", sep, name, term);
 				ident += delta;
 				break;
 			case VICI_SECTION_END:
 				ident -= delta;
-				fprintf(out, "%*s}\n", ident, "");
+				fprintf(out, "%*s}%s", ident, "", term);
 				break;
 			case VICI_KEY_VALUE:
+				sep = (last_type != VICI_SECTION_START &&
+					   last_type != VICI_START) ? separ : "";
 				if (chunk_printable(value, NULL, ' '))
 				{
-					fprintf(out, "%*s%s = %.*s\n",
-							ident, "", name, (int)value.len, value.ptr);
+					fprintf(out, "%*s%s%s%s%.*s%s", ident, "", sep, name,
+							assign, (int)value.len, value.ptr, term);
 				}
 				else
 				{
-					fprintf(out, "%*s%s = 0x%+#B\n",
-							ident, "", name, &value);
+					fprintf(out, "%*s%s%s%s0x%+#B%s", ident, "", sep, name,
+							assign, &value, term);
 				}
 				break;
 			case VICI_LIST_START:
-				fprintf(out, "%*s%s = [\n", ident, "", name);
+				sep = (last_type != VICI_SECTION_START &&
+					   last_type != VICI_START) ? separ : "";
+				fprintf(out, "%*s%s%s%s[%s", ident, "", sep, name, assign, term);
 				ident += delta;
 				break;
 			case VICI_LIST_END:
 				ident -= delta;
-				fprintf(out, "%*s]\n", ident, "");
+				fprintf(out, "%*s]%s", ident, "", term);
 				break;
 			case VICI_LIST_ITEM:
+				sep = (last_type != VICI_LIST_START) ? separ : "";
 				if (chunk_printable(value, NULL, ' '))
 				{
-					fprintf(out, "%*s%.*s\n",
-							ident, "", (int)value.len, value.ptr);
+					fprintf(out, "%*s%s%.*s%s", ident, "", sep,
+							(int)value.len, value.ptr, term);
 				}
 				else
 				{
-					fprintf(out, "%*s 0x%+#B\n", ident, "", &value);
+					fprintf(out, "%*s%s0x%+#B%s", ident, "", sep,
+							&value, term);
 				}
 				break;
 			case VICI_END:
@@ -567,6 +598,7 @@ METHOD(vici_message_t, dump, bool,
 				enumerator->destroy(enumerator);
 				return TRUE;
 		}
+		last_type = type;
 	}
 	enumerator->destroy(enumerator);
 	return FALSE;

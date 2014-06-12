@@ -93,11 +93,12 @@ CALLBACK(policies, int,
 }
 
 CALLBACK(list_cb, void,
-	bool *raw, char *name, vici_res_t *res)
+	command_format_options_t *format, char *name, vici_res_t *res)
 {
-	if (*raw)
+	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-policy event", stdout);
+		vici_dump(res, "list-policy event", *format & COMMAND_FORMAT_PRETTY,
+				  stdout);
 	}
 	else
 	{
@@ -112,7 +113,8 @@ static int list_pols(vici_conn_t *conn)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool raw = FALSE, trap = FALSE, drop = FALSE, pass = FALSE;
+	bool trap = FALSE, drop = FALSE, pass = FALSE;
+	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *child = NULL;
 
 	while (TRUE)
@@ -133,8 +135,11 @@ static int list_pols(vici_conn_t *conn)
 			case 'p':
 				pass = TRUE;
 				continue;
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
 			case 'r':
-				raw = TRUE;
+				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case EOF:
 				break;
@@ -147,7 +152,7 @@ static int list_pols(vici_conn_t *conn)
 	{
 		trap = drop = pass = TRUE;
 	}
-	if (vici_register(conn, "list-policy", list_cb, &raw) != 0)
+	if (vici_register(conn, "list-policy", list_cb, &format) != 0)
 	{
 		fprintf(stderr, "registering for policies failed: %s\n",
 				strerror(errno));
@@ -176,9 +181,9 @@ static int list_pols(vici_conn_t *conn)
 		fprintf(stderr, "list-policies request failed: %s\n", strerror(errno));
 		return errno;
 	}
-	if (raw)
+	if (format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-policies reply", stdout);
+		vici_dump(res, "list-policies reply", format & COMMAND_FORMAT_PRETTY, stdout);
 	}
 	vici_free_res(res);
 	return 0;
@@ -191,7 +196,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_pols, 'P', "list-pols", "list currently installed policies",
-		{"[--child <name>] [--trap] [--drop] [--pass] [--raw]"},
+		{"[--child <name>] [--trap] [--drop] [--pass] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "filter policies by CHILD_SA config name"},
@@ -199,6 +204,7 @@ static void __attribute__ ((constructor))reg()
 			{"drop",		'd', 0, "list drop policies"},
 			{"pass",		'p', 0, "list bypass policies"},
 			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
 	});
 }
