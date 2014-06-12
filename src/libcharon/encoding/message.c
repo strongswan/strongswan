@@ -1406,6 +1406,12 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	return buf;
 }
 
+METHOD(message_t, disable_sort, void,
+	private_message_t *this)
+{
+	this->sort_disabled = TRUE;
+}
+
 /**
  * reorder payloads depending on reordering rules
  */
@@ -1474,7 +1480,7 @@ static void order_payloads(private_message_t *this)
  */
 static encrypted_payload_t* wrap_payloads(private_message_t *this)
 {
-	encrypted_payload_t *encryption;
+	encrypted_payload_t *encrypted;
 	linked_list_t *payloads;
 	payload_t *current;
 
@@ -1488,11 +1494,11 @@ static encrypted_payload_t* wrap_payloads(private_message_t *this)
 
 	if (this->is_encrypted)
 	{
-		encryption = encrypted_payload_create(PLV1_ENCRYPTED);
+		encrypted = encrypted_payload_create(PLV1_ENCRYPTED);
 	}
 	else
 	{
-		encryption = encrypted_payload_create(PLV2_ENCRYPTED);
+		encrypted = encrypted_payload_create(PLV2_ENCRYPTED);
 	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
@@ -1510,7 +1516,7 @@ static encrypted_payload_t* wrap_payloads(private_message_t *this)
 		{	/* encryption is forced for IKEv1 */
 			DBG2(DBG_ENC, "insert payload %N into encrypted payload",
 				 payload_type_names, type);
-			encryption->add_payload(encryption, current);
+			encrypted->add_payload(encrypted, current);
 		}
 		else
 		{
@@ -1521,111 +1527,17 @@ static encrypted_payload_t* wrap_payloads(private_message_t *this)
 	}
 	payloads->destroy(payloads);
 
-	return encryption;
+	return encrypted;
 }
 
-METHOD(message_t, disable_sort, void,
-	private_message_t *this)
+/**
+ * Creates the IKE header for this message
+ */
+static ike_header_t *create_header(private_message_t *this)
 {
-	this->sort_disabled = TRUE;
-}
-
-METHOD(message_t, generate, status_t,
-	private_message_t *this, keymat_t *keymat, packet_t **packet)
-{
-	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-	generator_t *generator;
 	ike_header_t *ike_header;
-	payload_t *payload, *next;
-	encrypted_payload_t *encryption = NULL;
-	payload_type_t next_type;
-	enumerator_t *enumerator;
-	aead_t *aead = NULL;
-	chunk_t chunk, hash = chunk_empty;
-	char str[BUF_LEN];
-	u_int32_t *lenpos;
-	bool encrypted = FALSE, *reserved;
+	bool *reserved;
 	int i;
-
-	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
-	{
-		DBG1(DBG_ENC, "exchange type is not defined");
-		return INVALID_STATE;
-	}
-
-	if (this->packet->get_source(this->packet) == NULL ||
-		this->packet->get_destination(this->packet) == NULL)
-	{
-		DBG1(DBG_ENC, "source/destination not defined");
-		return INVALID_STATE;
-	}
-
-	this->rule = get_message_rule(this);
-	if (!this->rule)
-	{
-		DBG1(DBG_ENC, "no message rules specified for this message type");
-		return NOT_SUPPORTED;
-	}
-
-	if (!this->sort_disabled)
-	{
-		order_payloads(this);
-	}
-	if (keymat && keymat->get_version(keymat) == IKEV1)
-	{
-		/* get a hash for this message, if any is required */
-		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
-		{	/* insert a HASH payload as first payload */
-			hash_payload_t *hash_payload;
-
-			hash_payload = hash_payload_create(PLV1_HASH);
-			hash_payload->set_hash(hash_payload, hash);
-			this->payloads->insert_first(this->payloads, hash_payload);
-			if (this->exchange_type == INFORMATIONAL_V1)
-			{
-				this->is_encrypted = encrypted = TRUE;
-			}
-			chunk_free(&hash);
-		}
-	}
-	if (this->major_version == IKEV2_MAJOR_VERSION)
-	{
-		encrypted = this->rule->encrypted;
-	}
-	else if (!encrypted)
-	{
-		/* If at least one payload requires encryption, encrypt the message.
-		 * If no key material is available, the flag will be reset below. */
-		enumerator = this->payloads->create_enumerator(this->payloads);
-		while (enumerator->enumerate(enumerator, (void**)&payload))
-		{
-			payload_rule_t *rule;
-
-			rule = get_payload_rule(this, payload->get_type(payload));
-			if (rule && rule->encrypted)
-			{
-				this->is_encrypted = encrypted = TRUE;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-
-	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
-
-	if (keymat)
-	{
-		aead = keymat->get_aead(keymat, FALSE);
-	}
-	if (aead && encrypted)
-	{
-		encryption = wrap_payloads(this);
-	}
-	else
-	{
-		DBG2(DBG_ENC, "not encrypting payloads");
-		this->is_encrypted = FALSE;
-	}
 
 	ike_header = ike_header_create_version(this->major_version,
 										   this->minor_version);
@@ -1656,10 +1568,117 @@ METHOD(message_t, generate, status_t,
 			*reserved = this->reserved[i];
 		}
 	}
+	return ike_header;
+}
 
-	generator = generator_create();
+/**
+ * Generates the message, if needed, wraps the payloads in an encrypted payload.
+ *
+ * The generator and the possible enrypted payload are returned.  The latter
+ * is not yet encrypted (but the transform is set).  It is also not added to
+ * the payload list (so unless there are unencrypted payloads that list will
+ * be empty afterwards).
+ */
+static status_t generate_message(private_message_t *this, keymat_t *keymat,
+				generator_t **out_generator, encrypted_payload_t **encrypted)
+{
+	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+	generator_t *generator;
+	payload_type_t next_type;
+	enumerator_t *enumerator;
+	aead_t *aead = NULL;
+	chunk_t hash = chunk_empty;
+	char str[BUF_LEN];
+	ike_header_t *ike_header;
+	payload_t *payload, *next;
+	bool encrypting = FALSE;
+
+	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
+	{
+		DBG1(DBG_ENC, "exchange type is not defined");
+		return INVALID_STATE;
+	}
+
+	if (this->packet->get_source(this->packet) == NULL ||
+		this->packet->get_destination(this->packet) == NULL)
+	{
+		DBG1(DBG_ENC, "source/destination not defined");
+		return INVALID_STATE;
+	}
+
+	this->rule = get_message_rule(this);
+	if (!this->rule)
+	{
+		DBG1(DBG_ENC, "no message rules specified for this message type");
+		return NOT_SUPPORTED;
+	}
+
+	if (!this->sort_disabled)
+	{
+		order_payloads(this);
+	}
+
+	if (keymat && keymat->get_version(keymat) == IKEV1)
+	{
+		/* get a hash for this message, if any is required */
+		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
+		{	/* insert a HASH payload as first payload */
+			hash_payload_t *hash_payload;
+
+			hash_payload = hash_payload_create(PLV1_HASH);
+			hash_payload->set_hash(hash_payload, hash);
+			this->payloads->insert_first(this->payloads, hash_payload);
+			if (this->exchange_type == INFORMATIONAL_V1)
+			{
+				this->is_encrypted = encrypting = TRUE;
+			}
+			chunk_free(&hash);
+		}
+	}
+
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		encrypting = this->rule->encrypted;
+	}
+	else if (!encrypting)
+	{
+		/* If at least one payload requires encryption, encrypt the message.
+		 * If no key material is available, the flag will be reset below. */
+		enumerator = this->payloads->create_enumerator(this->payloads);
+		while (enumerator->enumerate(enumerator, (void**)&payload))
+		{
+			payload_rule_t *rule;
+
+			rule = get_payload_rule(this, payload->get_type(payload));
+			if (rule && rule->encrypted)
+			{
+				this->is_encrypted = encrypting = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
+
+	if (keymat)
+	{
+		aead = keymat->get_aead(keymat, FALSE);
+	}
+	if (aead && encrypting)
+	{
+		*encrypted = wrap_payloads(this);
+		(*encrypted)->set_transform(*encrypted, aead);
+	}
+	else
+	{
+		DBG2(DBG_ENC, "not encrypting payloads");
+		this->is_encrypted = FALSE;
+	}
 
 	/* generate all payloads with proper next type */
+	*out_generator = generator = generator_create();
+	ike_header = create_header(this);
 	payload = (payload_t*)ike_header;
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &next))
@@ -1671,41 +1690,54 @@ METHOD(message_t, generate, status_t,
 	enumerator->destroy(enumerator);
 	if (this->is_encrypted)
 	{	/* for encrypted IKEv1 messages */
-		next_type = encryption->payload_interface.get_next_type(
-														(payload_t*)encryption);
+		next_type = (*encrypted)->payload_interface.get_next_type(
+														(payload_t*)*encrypted);
 	}
 	else
 	{
-		next_type = encryption ? PLV2_ENCRYPTED : PL_NONE;
+		next_type = (*encrypted) ? PLV2_ENCRYPTED : PL_NONE;
 	}
 	payload->set_next_type(payload, next_type);
 	generator->generate_payload(generator, payload);
 	ike_header->destroy(ike_header);
+	return SUCCESS;
+}
 
-	if (encryption)
-	{	/* set_transform() has to be called before get_length() */
-		encryption->set_transform(encryption, aead);
+/**
+ * Encrypts and adds the encrypted payload (if any) to the payload list and
+ * finalizes the message generation.  Destroys the given generator.
+ */
+static status_t finalize_message(private_message_t *this, keymat_t *keymat,
+						generator_t *generator, encrypted_payload_t *encrypted)
+{
+	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+	chunk_t chunk;
+	u_int32_t *lenpos;
+
+	if (encrypted)
+	{
 		if (this->is_encrypted)
 		{	/* for IKEv1 instead of associated data we provide the IV */
 			if (!keymat_v1->get_iv(keymat_v1, this->message_id, &chunk))
 			{
 				generator->destroy(generator);
+				encrypted->destroy(encrypted);
 				return FAILED;
 			}
 		}
 		else
-		{	/* build associated data (without header of encryption payload) */
+		{	/* build associated data (without header of encrypted payload) */
 			chunk = generator->get_chunk(generator, &lenpos);
-			/* fill in length, including encryption payload */
-			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
+			/* fill in length, including encrypted payload */
+			htoun32(lenpos, chunk.len + encrypted->get_length(encrypted));
 		}
-		this->payloads->insert_last(this->payloads, encryption);
-		if (encryption->encrypt(encryption, this->message_id, chunk) != SUCCESS)
+		this->payloads->insert_last(this->payloads, encrypted);
+		if (encrypted->encrypt(encrypted, this->message_id, chunk) != SUCCESS)
 		{
 			generator->destroy(generator);
 			return INVALID_STATE;
 		}
-		generator->generate_payload(generator, &encryption->payload_interface);
+		generator->generate_payload(generator, &encrypted->payload_interface);
 	}
 	chunk = generator->get_chunk(generator, &lenpos);
 	htoun32(lenpos, chunk.len);
@@ -1714,8 +1746,10 @@ METHOD(message_t, generate, status_t,
 	{
 		/* update the IV for the next IKEv1 message */
 		chunk_t last_block;
+		aead_t *aead;
 		size_t bs;
 
+		aead = keymat->get_aead(keymat, FALSE);
 		bs = aead->get_block_size(aead);
 		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
 		if (!keymat_v1->update_iv(keymat_v1, this->message_id, last_block) ||
@@ -1726,6 +1760,27 @@ METHOD(message_t, generate, status_t,
 		}
 	}
 	generator->destroy(generator);
+	return SUCCESS;
+}
+
+METHOD(message_t, generate, status_t,
+	private_message_t *this, keymat_t *keymat, packet_t **packet)
+{
+	generator_t *generator = NULL;
+	encrypted_payload_t *encrypted = NULL;
+	status_t status;
+
+	status = generate_message(this, keymat, &generator, &encrypted);
+	if (status != SUCCESS)
+	{
+		DESTROY_IF(generator);
+		return status;
+	}
+	status = finalize_message(this, keymat, generator, encrypted);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 	if (packet)
 	{
 		*packet = this->packet->clone(this->packet);
