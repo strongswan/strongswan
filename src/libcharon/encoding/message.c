@@ -878,6 +878,11 @@ struct private_message_t {
 	packet_t *packet;
 
 	/**
+	 * Array of generated fragments (if any), as packet_t*.
+	 */
+	array_t *fragments;
+
+	/**
 	 * Linked List where payload data are stored in.
 	 */
 	linked_list_t *payloads;
@@ -1049,6 +1054,12 @@ METHOD(message_t, is_encoded, bool,
 	private_message_t *this)
 {
 	return this->packet->get_data(this->packet).ptr != NULL;
+}
+
+METHOD(message_t, is_fragmented, bool,
+	private_message_t *this)
+{
+	return array_count(this->fragments) > 0;
 }
 
 METHOD(message_t, add_payload, void,
@@ -1340,6 +1351,8 @@ static void order_payloads(private_message_t *this)
 	linked_list_t *list;
 	payload_t *payload;
 	int i;
+
+	DBG2(DBG_ENC, "order payloads in message");
 
 	/* move to temp list */
 	list = linked_list_create();
@@ -1669,6 +1682,7 @@ static message_t *clone_message(private_message_t *this)
 	dst = this->packet->get_destination(this->packet);
 
 	message = message_create(this->major_version, this->minor_version);
+	message->set_ike_sa_id(message, this->ike_sa_id);
 	message->set_message_id(message, this->message_id);
 	message->set_request(message, this->is_request);
 	message->set_source(message, src->clone(src));
@@ -1685,35 +1699,63 @@ static message_t *create_fragment(private_message_t *this, u_int8_t num,
 {
 	fragment_payload_t *fragment;
 	message_t *message;
+	peer_cfg_t *peer_cfg;
+	ike_sa_t *ike_sa;
 
 	fragment = fragment_payload_create_from_data(num, last, data);
 	message = clone_message(this);
+	/* other implementations seem to just use 0 as message ID, so here we go */
+	message->set_message_id(message, 0);
+	/* always use the initial message type for fragments, even for quick mode
+	 * or transaction messages. */
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa && (peer_cfg = ike_sa->get_peer_cfg(ike_sa)) &&
+		peer_cfg->use_aggressive(peer_cfg))
+	{
+		message->set_exchange_type(message, AGGRESSIVE);
+	}
+	else
+	{
+		message->set_exchange_type(message, ID_PROT);
+	}
 	message->add_payload(message, (payload_t*)fragment);
 	return message;
 }
 
 /**
- * Destroy all messages in the given array
+ * Destroy all fragments
  */
-CALLBACK(destroy_fragments, void,
-	array_t *fragments)
+static void clear_fragments(private_message_t *this)
 {
-	array_destroy_offset(fragments, offsetof(message_t, destroy));
+	array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
+	this->fragments = NULL;
 }
 
 METHOD(message_t, fragment, status_t,
-	private_message_t *this, size_t frag_len, enumerator_t **fragments)
+	private_message_t *this, keymat_t *keymat, size_t frag_len,
+	enumerator_t **fragments)
 {
-	array_t *messages;
 	message_t *fragment;
+	packet_t *packet;
 	u_int8_t num, count;
 	host_t *src, *dst;
 	chunk_t data;
+	status_t status;
 	size_t len;
 
-	if (!is_encoded(this) || this->major_version == IKEV2_MAJOR_VERSION)
+	if (this->major_version == IKEV2_MAJOR_VERSION)
 	{
 		return INVALID_STATE;
+	}
+	clear_fragments(this);
+
+	if (!is_encoded(this))
+	{
+		status = generate(this, keymat, NULL);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
 	}
 
 	src = this->packet->get_source(this->packet);
@@ -1736,13 +1778,14 @@ METHOD(message_t, fragment, status_t,
 	data = this->packet->get_data(this->packet);
 	if (data.len <= frag_len)
 	{
-		return ALREADY_DONE;
+		*fragments = enumerator_create_single(this->packet, NULL);
+		return SUCCESS;
 	}
 	/* overhead for the fragmentation payload header */
 	frag_len -= 8;
 
 	count = data.len / frag_len + (data.len % frag_len ? 1 : 0);
-	messages = array_create(0, count);
+	this->fragments = array_create(0, count);
 	DBG2(DBG_ENC, "splitting IKE message with length of %zu bytes into "
 		 "%hhu fragments", data.len, count);
 	for (num = 1; num <= count; num++)
@@ -1750,32 +1793,37 @@ METHOD(message_t, fragment, status_t,
 		len = min(data.len, frag_len);
 		fragment = create_fragment(this, num, num == count,
 								   chunk_create(data.ptr, len));
-		array_insert(messages, ARRAY_TAIL, fragment);
+		status = fragment->generate(fragment, keymat, &packet);
+		fragment->destroy(fragment);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "failed to generate IKE fragment");
+			clear_fragments(this);
+			return FAILED;
+		}
+		array_insert(this->fragments, ARRAY_TAIL, packet);
 		data = chunk_skip(data, len);
 	}
-	*fragments = enumerator_create_cleaner(array_create_enumerator(messages),
-										   destroy_fragments, messages);
+	*fragments = array_create_enumerator(this->fragments);
 	return SUCCESS;
 }
 
 METHOD(message_t, get_packet, packet_t*,
 	private_message_t *this)
 {
-	if (this->packet == NULL)
-	{
-		return NULL;
-	}
 	return this->packet->clone(this->packet);
 }
 
 METHOD(message_t, get_packet_data, chunk_t,
 	private_message_t *this)
 {
-	if (this->packet == NULL)
-	{
-		return chunk_empty;
-	}
 	return this->packet->get_data(this->packet);
+}
+
+METHOD(message_t, get_fragments, enumerator_t*,
+	private_message_t *this)
+{
+	return array_create_enumerator(this->fragments);
 }
 
 METHOD(message_t, parse_header, status_t,
@@ -2264,6 +2312,7 @@ METHOD(message_t, destroy, void,
 {
 	DESTROY_IF(this->ike_sa_id);
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
+	array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
 	this->packet->destroy(this->packet);
 	this->parser->destroy(this->parser);
 	free(this);
@@ -2301,6 +2350,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.disable_sort = _disable_sort,
 			.generate = _generate,
 			.is_encoded = _is_encoded,
+			.is_fragmented = _is_fragmented,
 			.fragment = _fragment,
 			.set_source = _set_source,
 			.get_source = _get_source,
@@ -2314,6 +2364,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.parse_body = _parse_body,
 			.get_packet = _get_packet,
 			.get_packet_data = _get_packet_data,
+			.get_fragments = _get_fragments,
 			.destroy = _destroy,
 		},
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,

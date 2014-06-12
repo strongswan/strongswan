@@ -401,15 +401,8 @@ static bool generate_message(private_task_manager_t *this, message_t *message,
 	bool use_frags = FALSE, result = TRUE;
 	ike_cfg_t *ike_cfg;
 	enumerator_t *fragments;
-	message_t *fragment;
 	packet_t *packet;
 	status_t status;
-
-	if (this->ike_sa->generate_message(this->ike_sa, message,
-									   &packet) != SUCCESS)
-	{
-		return FALSE;
-	}
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (ike_cfg)
@@ -430,37 +423,24 @@ static bool generate_message(private_task_manager_t *this, message_t *message,
 
 	if (!use_frags)
 	{
-		array_insert_create(packets, ARRAY_TAIL, packet);
-		return TRUE;
-	}
-	/* other implementations seem to just use 0 as message ID, so here we go */
-	message->set_message_id(message, 0);
-	/* always use the initial message type for fragments */
-	message->set_exchange_type(message, this->frag.exchange);
-	status = message->fragment(message, this->frag.size, &fragments);
-	if (status == ALREADY_DONE)
-	{
-		array_insert_create(packets, ARRAY_TAIL, packet);
-		return TRUE;
-	}
-	else if (status != SUCCESS)
-	{
-		packet->destroy(packet);
-		return FALSE;
-	}
-	packet->destroy(packet);
-
-	while (fragments->enumerate(fragments, &fragment))
-	{
-		status = this->ike_sa->generate_message(this->ike_sa, fragment,
-												&packet);
-		if (status != SUCCESS)
+		if (this->ike_sa->generate_message(this->ike_sa, message,
+										   &packet) != SUCCESS)
 		{
-			DBG1(DBG_IKE, "failed to generate IKE fragment");
-			result = FALSE;
-			break;
+			return FALSE;
 		}
 		array_insert_create(packets, ARRAY_TAIL, packet);
+		return TRUE;
+	}
+	message->set_ike_sa_id(message, this->ike_sa->get_id(this->ike_sa));
+	status = message->fragment(message, this->ike_sa->get_keymat(this->ike_sa),
+							   this->frag.size, &fragments);
+	if (status != SUCCESS)
+	{
+		return FALSE;
+	}
+	while (fragments->enumerate(fragments, &packet))
+	{
+		array_insert_create(packets, ARRAY_TAIL, packet->clone(packet));
 	}
 	fragments->destroy(fragments);
 	return result;

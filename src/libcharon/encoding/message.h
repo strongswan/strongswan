@@ -265,23 +265,36 @@ struct message_t {
 	bool (*is_encoded)(message_t *this);
 
 	/**
-	 * Split the (generated) message into fragments of the given size (total IP
+	 * Generates the message split into fragments of the given size (total IP
 	 * datagram length).
 	 *
 	 * @note Only supported for IKEv1 at the moment.
 	 *
+	 * @param keymat	keymat to encrypt/sign message(s)
 	 * @param frag_len	fragment length (maximum total IP datagram length), 0
 	 *					for default value depending on address family
-	 * @param fragments	receives an enumerator with message_t* (not generated),
+	 * @param fragments	receives an enumerator with generated packet_t*,
 	 *					which are owned by the enumerator
 	 * @return
 	 *					- SUCCESS if message could be fragmented
-	 *					- ALREADY_DONE if message does not need to be fragmented
-	 *					- INVALID_STATE if message was not generated or is IKEv2
+	 *					- INVALID_STATE if message is IKEv2
 	 *					- FAILED if fragmentation failed
+	 *					- and the possible return values of generate()
 	 */
-	status_t (*fragment)(message_t *this, size_t frag_len,
+	status_t (*fragment)(message_t *this, keymat_t *keymat, size_t frag_len,
 						 enumerator_t **fragments);
+
+	/**
+	 * Check if the message has been encoded and fragmented using fragment(),
+	 * and whether there actually resulted fragments (if not is_encoded() will
+	 * be TRUE).
+	 *
+	 * The packets of individual fragments can be retrieved with
+	 * get_fragments().
+	 *
+	 * @return			TRUE if message has been encoded and fragmented
+	 */
+	bool (*is_fragmented)(message_t *this);
 
 	/**
 	 * Gets the source host informations.
@@ -356,11 +369,11 @@ struct message_t {
 	notify_payload_t* (*get_notify)(message_t *this, notify_type_t type);
 
 	/**
-	 * Returns a clone of the internal stored packet_t object.
+	 * Returns a clone of the internally stored packet_t object.
 	 *
 	 * @return			packet_t object as clone of internal one
 	 */
-	packet_t * (*get_packet) (message_t *this);
+	packet_t *(*get_packet) (message_t *this);
 
 	/**
 	 * Returns a chunk pointing to internal packet_t data.
@@ -368,6 +381,13 @@ struct message_t {
 	 * @return			packet data.
 	 */
 	chunk_t (*get_packet_data) (message_t *this);
+
+	/**
+	 * Returns internally stored packet_t* objects for each fragment.
+	 *
+	 * @return			enumerator internal packet_t* objects
+	 */
+	enumerator_t *(*get_fragments)(message_t *this);
 
 	/**
 	 * Destroys a message and all including objects.
