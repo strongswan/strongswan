@@ -1,7 +1,7 @@
 /*
+ * Copyright (C) 2011-2014 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
- * Copyright (C) 2011 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -180,13 +180,30 @@ METHOD(payload_t, set_next_type, void,
 }
 
 /**
+ * Get length of encryption/integrity overhead for the given plaintext length
+ */
+static size_t compute_overhead(aead_t *aead, size_t len)
+{
+	size_t bs, overhead;
+
+	/* padding */
+	bs = aead->get_block_size(aead);
+	overhead = bs - (len % bs);
+	/* add iv */
+	overhead += aead->get_iv_size(aead);
+	/* add icv */
+	overhead += aead->get_icv_size(aead);
+	return overhead;
+}
+
+/**
  * Compute the length of the whole payload
  */
 static void compute_length(private_encrypted_payload_t *this)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	size_t bs, length = 0;
+	size_t length = 0;
 
 	if (this->encrypted.len)
 	{
@@ -203,13 +220,7 @@ static void compute_length(private_encrypted_payload_t *this)
 
 		if (this->aead)
 		{
-			/* append padding */
-			bs = this->aead->get_block_size(this->aead);
-			length += bs - (length % bs);
-			/* add iv */
-			length += this->aead->get_iv_size(this->aead);
-			/* add icv */
-			length += this->aead->get_icv_size(this->aead);
+			length += compute_overhead(this->aead, length);
 		}
 	}
 	length += get_header_length(this);
@@ -304,44 +315,36 @@ static chunk_t append_header(private_encrypted_payload_t *this, chunk_t assoc)
 	return chunk_cat("cc", assoc, chunk_from_thing(header));
 }
 
-METHOD(encrypted_payload_t, encrypt, status_t,
-	private_encrypted_payload_t *this, u_int64_t mid, chunk_t assoc)
+/**
+ * Encrypts the data in plain and returns it in an allocated chunk.
+ */
+static status_t encrypt_content(char *label, aead_t *aead, u_int64_t mid,
+							chunk_t plain, chunk_t assoc, chunk_t *encrypted)
 {
-	chunk_t iv, plain, padding, icv, crypt;
-	generator_t *generator;
+	chunk_t iv, padding, icv, crypt;
 	iv_gen_t *iv_gen;
 	rng_t *rng;
 	size_t bs;
 
-	if (this->aead == NULL)
-	{
-		DBG1(DBG_ENC, "encrypting encrypted payload failed, transform missing");
-		return INVALID_STATE;
-	}
-
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
-		DBG1(DBG_ENC, "encrypting encrypted payload failed, no RNG found");
+		DBG1(DBG_ENC, "encrypting %s failed, no RNG found", label);
 		return NOT_SUPPORTED;
 	}
 
-	iv_gen = this->aead->get_iv_gen(this->aead);
+	iv_gen = aead->get_iv_gen(aead);
 	if (!iv_gen)
 	{
-		DBG1(DBG_ENC, "encrypting encrypted payload failed, no IV generator");
+		DBG1(DBG_ENC, "encrypting %s failed, no IV generator", label);
 		return NOT_SUPPORTED;
 	}
 
-	assoc = append_header(this, assoc);
-
-	generator = generator_create();
-	plain = generate(this, generator);
-	bs = this->aead->get_block_size(this->aead);
+	bs = aead->get_block_size(aead);
 	/* we need at least one byte padding to store the padding length */
 	padding.len = bs - (plain.len % bs);
-	iv.len = this->aead->get_iv_size(this->aead);
-	icv.len = this->aead->get_icv_size(this->aead);
+	iv.len = aead->get_iv_size(aead);
+	icv.len = aead->get_icv_size(aead);
 
 	/* prepare data to authenticate-encrypt:
 	 * | IV | plain | padding | ICV |
@@ -350,45 +353,62 @@ METHOD(encrypted_payload_t, encrypt, status_t,
 	 *              v          /
 	 *     assoc -> + ------->/
 	 */
-	free(this->encrypted.ptr);
-	this->encrypted = chunk_alloc(iv.len + plain.len + padding.len + icv.len);
-	iv.ptr = this->encrypted.ptr;
+	*encrypted = chunk_alloc(iv.len + plain.len + padding.len + icv.len);
+	iv.ptr = encrypted->ptr;
 	memcpy(iv.ptr + iv.len, plain.ptr, plain.len);
 	plain.ptr = iv.ptr + iv.len;
 	padding.ptr = plain.ptr + plain.len;
 	icv.ptr = padding.ptr + padding.len;
 	crypt = chunk_create(plain.ptr, plain.len + padding.len);
-	generator->destroy(generator);
 
 	if (!iv_gen->get_iv(iv_gen, mid, iv.len, iv.ptr) ||
 		!rng->get_bytes(rng, padding.len - 1, padding.ptr))
 	{
-		DBG1(DBG_ENC, "encrypting encrypted payload failed, no IV or padding");
+		DBG1(DBG_ENC, "encrypting %s failed, no IV or padding", label);
 		rng->destroy(rng);
-		free(assoc.ptr);
+
 		return FAILED;
 	}
 	padding.ptr[padding.len - 1] = padding.len - 1;
 	rng->destroy(rng);
 
-	DBG3(DBG_ENC, "encrypted payload encryption:");
+	DBG3(DBG_ENC, "%s encryption:", label);
 	DBG3(DBG_ENC, "IV %B", &iv);
 	DBG3(DBG_ENC, "plain %B", &plain);
 	DBG3(DBG_ENC, "padding %B", &padding);
 	DBG3(DBG_ENC, "assoc %B", &assoc);
 
-	if (!this->aead->encrypt(this->aead, crypt, assoc, iv, NULL))
+	if (!aead->encrypt(aead, crypt, assoc, iv, NULL))
 	{
-		free(assoc.ptr);
 		return FAILED;
 	}
-
 	DBG3(DBG_ENC, "encrypted %B", &crypt);
 	DBG3(DBG_ENC, "ICV %B", &icv);
-
-	free(assoc.ptr);
-
 	return SUCCESS;
+}
+
+METHOD(encrypted_payload_t, encrypt, status_t,
+	private_encrypted_payload_t *this, u_int64_t mid, chunk_t assoc)
+{
+	generator_t *generator;
+	chunk_t plain;
+	status_t status;
+
+	if (this->aead == NULL)
+	{
+		DBG1(DBG_ENC, "encrypting encrypted payload failed, transform missing");
+		return INVALID_STATE;
+	}
+
+	free(this->encrypted.ptr);
+	generator = generator_create();
+	plain = generate(this, generator);
+	assoc = append_header(this, assoc);
+	status = encrypt_content("encrypted payload", this->aead, mid, plain, assoc,
+							 &this->encrypted);
+	generator->destroy(generator);
+	free(assoc.ptr);
+	return status;
 }
 
 METHOD(encrypted_payload_t, encrypt_v1, status_t,
@@ -476,17 +496,15 @@ static status_t parse(private_encrypted_payload_t *this, chunk_t plain)
 	return SUCCESS;
 }
 
-METHOD(encrypted_payload_t, decrypt, status_t,
-	private_encrypted_payload_t *this, chunk_t assoc)
+/**
+ * Decrypts the given data in-place and returns a chunk pointing to the
+ * resulting plaintext.
+ */
+static status_t decrypt_content(char *label, aead_t *aead, chunk_t encrypted,
+								chunk_t assoc, chunk_t *plain)
 {
-	chunk_t iv, plain, padding, icv, crypt;
+	chunk_t iv, padding, icv, crypt;
 	size_t bs;
-
-	if (this->aead == NULL)
-	{
-		DBG1(DBG_ENC, "decrypting encrypted payload failed, transform missing");
-		return INVALID_STATE;
-	}
 
 	/* prepare data to authenticate-decrypt:
 	 * | IV | plain | padding | ICV |
@@ -495,52 +513,70 @@ METHOD(encrypted_payload_t, decrypt, status_t,
 	 *              v          /
 	 *     assoc -> + ------->/
 	 */
-
-	bs = this->aead->get_block_size(this->aead);
-	iv.len = this->aead->get_iv_size(this->aead);
-	iv.ptr = this->encrypted.ptr;
-	icv.len = this->aead->get_icv_size(this->aead);
-	icv.ptr = this->encrypted.ptr + this->encrypted.len - icv.len;
+	bs = aead->get_block_size(aead);
+	iv.len = aead->get_iv_size(aead);
+	iv.ptr = encrypted.ptr;
+	icv.len = aead->get_icv_size(aead);
+	icv.ptr = encrypted.ptr + encrypted.len - icv.len;
 	crypt.ptr = iv.ptr + iv.len;
-	crypt.len = this->encrypted.len - iv.len;
+	crypt.len = encrypted.len - iv.len;
 
-	if (iv.len + icv.len > this->encrypted.len ||
+	if (iv.len + icv.len > encrypted.len ||
 		(crypt.len - icv.len) % bs)
 	{
-		DBG1(DBG_ENC, "decrypting encrypted payload failed, invalid length");
+		DBG1(DBG_ENC, "decrypting %s payload failed, invalid length", label);
 		return FAILED;
 	}
 
-	assoc = append_header(this, assoc);
-
-	DBG3(DBG_ENC, "encrypted payload decryption:");
+	DBG3(DBG_ENC, "%s decryption:", label);
 	DBG3(DBG_ENC, "IV %B", &iv);
 	DBG3(DBG_ENC, "encrypted %B", &crypt);
 	DBG3(DBG_ENC, "ICV %B", &icv);
 	DBG3(DBG_ENC, "assoc %B", &assoc);
 
-	if (!this->aead->decrypt(this->aead, crypt, assoc, iv, NULL))
+	if (!aead->decrypt(aead, crypt, assoc, iv, NULL))
 	{
-		DBG1(DBG_ENC, "verifying encrypted payload integrity failed");
-		free(assoc.ptr);
+		DBG1(DBG_ENC, "verifying %s integrity failed", label);
 		return FAILED;
 	}
-	free(assoc.ptr);
 
-	plain = chunk_create(crypt.ptr, crypt.len - icv.len);
-	padding.len = plain.ptr[plain.len - 1] + 1;
-	if (padding.len > plain.len)
+	*plain = chunk_create(crypt.ptr, crypt.len - icv.len);
+	padding.len = plain->ptr[plain->len - 1] + 1;
+	if (padding.len > plain->len)
 	{
-		DBG1(DBG_ENC, "decrypting encrypted payload failed, "
-			 "padding invalid %B", &crypt);
+		DBG1(DBG_ENC, "decrypting %s failed, padding invalid %B", label,
+			 &crypt);
 		return PARSE_ERROR;
 	}
-	plain.len -= padding.len;
-	padding.ptr = plain.ptr + plain.len;
+	plain->len -= padding.len;
+	padding.ptr = plain->ptr + plain->len;
 
-	DBG3(DBG_ENC, "plain %B", &plain);
+	DBG3(DBG_ENC, "plain %B", plain);
 	DBG3(DBG_ENC, "padding %B", &padding);
+	return SUCCESS;
+}
 
+METHOD(encrypted_payload_t, decrypt, status_t,
+	private_encrypted_payload_t *this, chunk_t assoc)
+{
+	chunk_t plain;
+	status_t status;
+
+	if (this->aead == NULL)
+	{
+		DBG1(DBG_ENC, "decrypting encrypted payload failed, transform missing");
+		return INVALID_STATE;
+	}
+
+	assoc = append_header(this, assoc);
+	status = decrypt_content("encrypted payload", this->aead, this->encrypted,
+							 assoc, &plain);
+	free(assoc.ptr);
+
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 	return parse(this, plain);
 }
 
