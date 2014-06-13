@@ -38,8 +38,6 @@
 #include <processing/jobs/dpd_timeout_job.h>
 #include <processing/jobs/process_message_job.h>
 
-#include <encoding/payloads/fragment_payload.h>
-#include <bio/bio_writer.h>
 #include <collections/array.h>
 
 /**
@@ -50,11 +48,6 @@
  * could be considered as a reply to the newer request.
  */
 #define MAX_OLD_HASHES 2
-
-/**
- * Maximum packet size for fragmented packets (same as in sockets)
- */
-#define MAX_PACKET 10000
 
 /**
  * First sequence number of responding packets.
@@ -177,38 +170,9 @@ struct private_task_manager_t {
 	} initiating;
 
 	/**
-	 * Data used to reassemble a fragmented message
+	 * Message we are currently defragmenting, if any (only one at a time)
 	 */
-	struct {
-
-		/**
-		 * Fragment ID (currently only one is supported at a time)
-		 */
-		u_int16_t id;
-
-		/**
-		 * The number of the last fragment (in case we receive the fragments out
-		 * of order), since the first starts with 1 this defines the number of
-		 * fragments we expect
-		 */
-		u_int8_t last;
-
-		/**
-		 * List of fragments (fragment_t*)
-		 */
-		linked_list_t *list;
-
-		/**
-		 * Length of all currently received fragments
-		 */
-		size_t len;
-
-		/**
-		 * Maximum length of a fragmented packet
-		 */
-		size_t max_packet;
-
-	} frag;
+	message_t *defrag;
 
 	/**
 	 * List of queued tasks not yet in action
@@ -255,34 +219,6 @@ struct private_task_manager_t {
 	 */
 	u_int32_t dpd_recv;
 };
-
-/**
- * A single fragment within a fragmented message
- */
-typedef struct {
-
-	/** fragment number */
-	u_int8_t num;
-
-	/** fragment data */
-	chunk_t data;
-
-} fragment_t;
-
-static void fragment_destroy(fragment_t *this)
-{
-	chunk_free(&this->data);
-	free(this);
-}
-
-static void clear_fragments(private_task_manager_t *this, u_int16_t id)
-{
-	DESTROY_FUNCTION_IF(this->frag.list, (void*)fragment_destroy);
-	this->frag.list = NULL;
-	this->frag.last = 0;
-	this->frag.len = 0;
-	this->frag.id = id;
-}
 
 /**
  * Reset retransmission packet list
@@ -1182,107 +1118,23 @@ static status_t process_response(private_task_manager_t *this,
 
 static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 {
-	fragment_payload_t *payload;
-	enumerator_t *enumerator;
-	fragment_t *fragment;
-	status_t status = SUCCESS;
-	chunk_t data;
-	u_int8_t num;
+	status_t status;
 
-	payload = (fragment_payload_t*)msg->get_payload(msg, PLV1_FRAGMENT);
-	if (!payload)
+	if (!this->defrag)
 	{
-		return FAILED;
-	}
-
-	if (!this->frag.list || this->frag.id != payload->get_id(payload))
-	{
-		clear_fragments(this, payload->get_id(payload));
-		this->frag.list = linked_list_create();
-	}
-
-	num = payload->get_number(payload);
-	if (!this->frag.last && payload->is_last(payload))
-	{
-		this->frag.last = num;
-	}
-
-	enumerator = this->frag.list->create_enumerator(this->frag.list);
-	while (enumerator->enumerate(enumerator, &fragment))
-	{
-		if (fragment->num == num)
-		{	/* ignore a duplicate fragment */
-			DBG1(DBG_IKE, "received duplicate fragment #%hhu", num);
-			enumerator->destroy(enumerator);
-			return NEED_MORE;
-		}
-		if (fragment->num > num)
+		this->defrag = message_create_defrag(msg);
+		if (!this->defrag)
 		{
-			break;
+			return FAILED;
 		}
 	}
-
-	data = payload->get_data(payload);
-	this->frag.len += data.len;
-	if (this->frag.len > this->frag.max_packet)
+	status = this->defrag->add_fragment(this->defrag, msg);
+	if (status == SUCCESS)
 	{
-		DBG1(DBG_IKE, "fragmented IKE message is too large");
-		enumerator->destroy(enumerator);
-		clear_fragments(this, 0);
-		return FAILED;
-	}
-
-	INIT(fragment,
-		.num = num,
-		.data = chunk_clone(data),
-	);
-
-	this->frag.list->insert_before(this->frag.list, enumerator, fragment);
-	enumerator->destroy(enumerator);
-
-	if (this->frag.list->get_count(this->frag.list) == this->frag.last)
-	{
-		message_t *message;
-		packet_t *pkt;
-		host_t *src, *dst;
-		bio_writer_t *writer;
-
-		writer = bio_writer_create(this->frag.len);
-		DBG1(DBG_IKE, "received fragment #%hhu, reassembling fragmented IKE "
-			 "message", num);
-		enumerator = this->frag.list->create_enumerator(this->frag.list);
-		while (enumerator->enumerate(enumerator, &fragment))
-		{
-			writer->write_data(writer, fragment->data);
-		}
-		enumerator->destroy(enumerator);
-
-		src = msg->get_source(msg);
-		dst = msg->get_destination(msg);
-		pkt = packet_create_from_data(src->clone(src), dst->clone(dst),
-									  writer->extract_buf(writer));
-		writer->destroy(writer);
-
-		message = message_create_from_packet(pkt);
-		if (message->parse_header(message) != SUCCESS)
-		{
-			DBG1(DBG_IKE, "failed to parse header of reassembled IKE message");
-			message->destroy(message);
-			status = FAILED;
-		}
-		else
-		{
-			lib->processor->queue_job(lib->processor,
-								(job_t*)process_message_job_create(message));
-			status = NEED_MORE;
-
-		}
-		clear_fragments(this, 0);
-	}
-	else
-	{	/* there are some fragments missing */
-		DBG1(DBG_IKE, "received fragment #%hhu, waiting for complete IKE "
-			 "message", num);
+		lib->processor->queue_job(lib->processor,
+							(job_t*)process_message_job_create(this->defrag));
+		this->defrag = NULL;
+		/* do not process the last fragment */
 		status = NEED_MORE;
 	}
 	return status;
@@ -1912,7 +1764,8 @@ METHOD(task_manager_t, reset, void,
 	this->initiating.seqnr = 0;
 	this->initiating.retransmitted = 0;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	clear_fragments(this, 0);
+	DESTROY_IF(this->defrag);
+	this->defrag = NULL;
 	if (initiate != UINT_MAX)
 	{
 		this->dpd_send = initiate;
@@ -1963,7 +1816,7 @@ METHOD(task_manager_t, destroy, void,
 	this->active_tasks->destroy(this->active_tasks);
 	this->queued_tasks->destroy(this->queued_tasks);
 	this->passive_tasks->destroy(this->passive_tasks);
-	clear_fragments(this, 0);
+	DESTROY_IF(this->defrag);
 
 	DESTROY_IF(this->queued);
 	clear_packets(this->responding.packets);
@@ -2013,10 +1866,6 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 		},
 		.responding = {
 			.seqnr = RESPONDING_SEQ,
-		},
-		.frag = {
-			.max_packet = lib->settings->get_int(lib->settings,
-						"%s.max_packet", MAX_PACKET, lib->ns),
 		},
 		.ike_sa = ike_sa,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),

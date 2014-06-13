@@ -23,6 +23,7 @@
 #include "message.h"
 
 #include <library.h>
+#include <bio/bio_writer.h>
 #include <collections/array.h>
 #include <daemon.h>
 #include <sa/ikev1/keymat_v1.h>
@@ -65,6 +66,11 @@
  * Max number of NAT-D payloads per IKEv1 message
  */
 #define MAX_NAT_D_PAYLOADS 10
+
+/**
+ * Maximum packet size for fragmented packets (same as in sockets)
+ */
+#define MAX_PACKET 10000
 
 /**
  * A payload rule defines the rules for a payload
@@ -804,6 +810,29 @@ static message_rule_t message_rules[] = {
 #endif /* USE_IKEV1 */
 };
 
+/**
+ * Data for fragment reassembly.
+ */
+typedef struct {
+
+	/**
+	 * For IKEv1 the number of the last fragment (in case we receive them out
+	 * of order), since the first one starts with 1 this defines the number of
+	 * fragments we expect.
+	 */
+	u_int8_t last;
+
+	/**
+	 * Length of all currently received fragments.
+	 */
+	size_t len;
+
+	/**
+	 * Maximum length of a fragmented packet.
+	 */
+	size_t max_packet;
+
+} fragment_data_t;
 
 typedef struct private_message_t private_message_t;
 
@@ -879,6 +908,7 @@ struct private_message_t {
 
 	/**
 	 * Array of generated fragments (if any), as packet_t*.
+	 * If defragmenting (frag != NULL) this contains fragment_t*
 	 */
 	array_t *fragments;
 
@@ -896,7 +926,40 @@ struct private_message_t {
 	 * The message rule for this message instance
 	 */
 	message_rule_t *rule;
+
+	/**
+	 * Data used to reassemble a fragmented message
+	 */
+	fragment_data_t *frag;
 };
+
+/**
+ * A single fragment within a fragmented message
+ */
+typedef struct {
+
+	/** fragment number */
+	u_int8_t num;
+
+	/** fragment data */
+	chunk_t data;
+
+} fragment_t;
+
+static void fragment_destroy(fragment_t *this)
+{
+	chunk_free(&this->data);
+	free(this);
+}
+
+static void reset_defrag(private_message_t *this, u_int16_t id)
+{
+	array_destroy_function(this->fragments, (void*)fragment_destroy, NULL);
+	this->fragments = NULL;
+	this->message_id = id;
+	this->frag->last = 0;
+	this->frag->len = 0;
+}
 
 /**
  * Get the message rule that applies to this message
@@ -1877,7 +1940,7 @@ METHOD(message_t, parse_header, status_t,
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
 	if (this->first_payload == PLV1_FRAGMENT && this->is_encrypted)
-	{	/* racoon sets the encryted bit when sending a fragment, but these
+	{	/* racoon sets the encrypted bit when sending a fragment, but these
 		 * messages are really not encrypted */
 		this->is_encrypted = FALSE;
 	}
@@ -2307,14 +2370,121 @@ METHOD(message_t, parse_body, status_t,
 	return SUCCESS;
 }
 
+METHOD(message_t, add_fragment, status_t,
+	private_message_t *this, message_t *message)
+{
+	fragment_payload_t *payload;
+	fragment_t *fragment;
+	bio_writer_t *writer;
+	host_t *src, *dst;
+	chunk_t data;
+	u_int8_t num;
+	int i, insert_at = -1;
+
+	if (!this->frag)
+	{
+		return INVALID_STATE;
+	}
+	payload = (fragment_payload_t*)message->get_payload(message, PLV1_FRAGMENT);
+	if (!payload)
+	{
+		return INVALID_ARG;
+	}
+	if (!this->fragments || this->message_id != payload->get_id(payload))
+	{
+		reset_defrag(this, payload->get_id(payload));
+		/* we don't know the total number of fragments */
+		this->fragments = array_create(0, 0);
+	}
+
+	num = payload->get_number(payload);
+	if (!this->frag->last && payload->is_last(payload))
+	{
+		this->frag->last = num;
+	}
+
+	for (i = 0; i < array_count(this->fragments); i++)
+	{
+		array_get(this->fragments, i, &fragment);
+		if (fragment->num == num)
+		{
+			/* ignore a duplicate fragment */
+			DBG1(DBG_ENC, "received duplicate fragment #%hhu", num);
+			return NEED_MORE;
+		}
+		if (fragment->num > num)
+		{
+			insert_at = i;
+			break;
+		}
+	}
+	data = payload->get_data(payload);
+	this->frag->len += data.len;
+	if (this->frag->len > this->frag->max_packet)
+	{
+		DBG1(DBG_ENC, "fragmented IKE message is too large");
+		reset_defrag(this, 0);
+		return FAILED;
+	}
+	INIT(fragment,
+		.num = num,
+		.data = chunk_clone(data),
+	);
+	array_insert(this->fragments, insert_at, fragment);
+
+	if (this->frag->last < array_count(this->fragments))
+	{
+		/* there are some fragments missing */
+		DBG1(DBG_ENC, "received fragment #%hhu, waiting for complete IKE "
+			 "message", num);
+		return NEED_MORE;
+	}
+
+	writer = bio_writer_create(this->frag->len);
+	DBG1(DBG_ENC, "received fragment #%hhu, reassembling fragmented IKE "
+		 "message", num);
+
+	for (i = 0; i < array_count(this->fragments); i++)
+	{
+		array_get(this->fragments, i, &fragment);
+		writer->write_data(writer, fragment->data);
+	}
+	src = message->get_source(message);
+	dst = message->get_destination(message);
+	this->packet->set_source(this->packet, src->clone(src));
+	this->packet->set_destination(this->packet, dst->clone(dst));
+	this->packet->set_data(this->packet, writer->extract_buf(writer));
+	writer->destroy(writer);
+	this->parser->destroy(this->parser);
+	this->parser = parser_create(this->packet->get_data(this->packet));
+	reset_defrag(this, 0);
+	free(this->frag);
+	this->frag = NULL;
+
+	if (parse_header(this) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "failed to parse header of reassembled IKE message");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 METHOD(message_t, destroy, void,
 	private_message_t *this)
 {
 	DESTROY_IF(this->ike_sa_id);
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
-	array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
 	this->packet->destroy(this->packet);
 	this->parser->destroy(this->parser);
+	if (this->frag)
+	{
+		reset_defrag(this, 0);
+		free(this->frag);
+	}
+	else
+	{
+		array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
+	}
 	free(this);
 }
 
@@ -2352,6 +2522,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.is_encoded = _is_encoded,
 			.is_fragmented = _is_fragmented,
 			.fragment = _fragment,
+			.add_fragment = _add_fragment,
 			.set_source = _set_source,
 			.get_source = _get_source,
 			.set_destination = _set_destination,
@@ -2389,4 +2560,25 @@ message_t *message_create(int major, int minor)
 	this->set_minor_version(this, minor);
 
 	return this;
+}
+
+/*
+ * Described in header.
+ */
+message_t *message_create_defrag(message_t *fragment)
+{
+	private_message_t *this;
+
+	if (!fragment->get_payload(fragment, PLV1_FRAGMENT))
+	{
+		return NULL;
+	}
+	this = (private_message_t*)message_create(
+										fragment->get_major_version(fragment),
+										fragment->get_minor_version(fragment));
+	INIT(this->frag,
+		.max_packet = lib->settings->get_int(lib->settings,
+										"%s.max_packet", MAX_PACKET, lib->ns),
+	);
+	return &this->public;
 }
