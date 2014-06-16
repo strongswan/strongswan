@@ -585,6 +585,16 @@ METHOD(encrypted_payload_t, decrypt, status_t,
 	return parse(this, plain);
 }
 
+METHOD(encrypted_payload_t, decrypt_plain, status_t,
+	private_encrypted_payload_t *this, chunk_t assoc)
+{
+	if (!this->encrypted.ptr)
+	{
+		return FAILED;
+	}
+	return parse(this, this->encrypted);
+}
+
 METHOD(encrypted_payload_t, decrypt_v1, status_t,
 	private_encrypted_payload_t *this, chunk_t iv)
 {
@@ -668,6 +678,23 @@ encrypted_payload_t *encrypted_payload_create(payload_type_t type)
 		this->public.encrypt = _encrypt_v1;
 		this->public.decrypt = _decrypt_v1;
 	}
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+encrypted_payload_t *encrypted_payload_create_from_plain(payload_type_t next,
+														 chunk_t plain)
+{
+	private_encrypted_payload_t *this;
+
+	this = (private_encrypted_payload_t*)encrypted_payload_create(PLV2_ENCRYPTED);
+	this->public.decrypt = _decrypt_plain;
+	this->next_payload = next;
+	this->encrypted = plain;
+	compute_length(this);
 
 	return &this->public;
 }

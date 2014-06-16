@@ -118,4 +118,15 @@ struct encrypted_payload_t {
  */
 encrypted_payload_t *encrypted_payload_create(payload_type_t type);
 
+/**
+ * Creates an encrypted payload with the given plain text data and next payload
+ * type.
+ *
+ * @param next		next payload type
+ * @param plain		plaintext data (gets adopted)
+ * @return			encrypted_payload_t object
+ */
+encrypted_payload_t *encrypted_payload_create_from_plain(payload_type_t next,
+														 chunk_t plain);
+
 #endif /** ENCRYPTED_PAYLOAD_H_ @}*/
