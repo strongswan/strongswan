@@ -1480,16 +1480,29 @@ static void order_payloads(private_message_t *this)
  */
 static encrypted_payload_t* wrap_payloads(private_message_t *this)
 {
-	encrypted_payload_t *encrypted;
+	encrypted_payload_t *encrypted = NULL;
 	linked_list_t *payloads;
 	payload_t *current;
 
-	/* copy all payloads in a temporary list */
+	/* move all payloads to a temporary list */
 	payloads = linked_list_create();
 	while (this->payloads->remove_first(this->payloads,
 										(void**)&current) == SUCCESS)
 	{
-		payloads->insert_last(payloads, current);
+		if (current->get_type(current) == PLV2_FRAGMENT)
+		{	/* treat encrypted fragment payload as encrypted payload */
+			encrypted = (encrypted_payload_t*)current;
+		}
+		else
+		{
+			payloads->insert_last(payloads, current);
+		}
+	}
+	if (encrypted)
+	{	/* simply adopt all the unencrypted payloads */
+		this->payloads->destroy(this->payloads);
+		this->payloads = payloads;
+		return encrypted;
 	}
 
 	if (this->is_encrypted)
@@ -1688,14 +1701,17 @@ static status_t generate_message(private_message_t *this, keymat_t *keymat,
 		payload = next;
 	}
 	enumerator->destroy(enumerator);
+
+	next_type = PL_NONE;
 	if (this->is_encrypted)
 	{	/* for encrypted IKEv1 messages */
 		next_type = (*encrypted)->payload_interface.get_next_type(
 														(payload_t*)*encrypted);
 	}
-	else
-	{
-		next_type = (*encrypted) ? PLV2_ENCRYPTED : PL_NONE;
+	else if (*encrypted)
+	{	/* use proper IKEv2 encrypted (fragment) payload type */
+		next_type = (*encrypted)->payload_interface.get_type(
+														(payload_t*)*encrypted);
 	}
 	payload->set_next_type(payload, next_type);
 	generator->generate_payload(generator, payload);
@@ -2096,9 +2112,9 @@ static status_t parse_payloads(private_message_t *this)
 			 payload_type_names, type);
 		this->payloads->insert_last(this->payloads, payload);
 
-		/* an encrypted payload is the last one, so STOP here. decryption is
-		 * done later */
-		if (type == PLV2_ENCRYPTED)
+		/* an encrypted (fragment) payload MUST be the last one, so STOP here.
+		 * decryption is done later */
+		if (type == PLV2_ENCRYPTED || type == PLV2_FRAGMENT)
 		{
 			DBG2(DBG_ENC, "%N payload found, stop parsing",
 				 payload_type_names, type);
@@ -2195,6 +2211,41 @@ static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
 }
 
 /**
+ * Decrypt an encrypted fragment payload.
+ */
+static status_t decrypt_fragment(private_message_t *this, keymat_t *keymat,
+								 encrypted_fragment_payload_t *fragment)
+{
+	encrypted_payload_t *encrypted = (encrypted_payload_t*)fragment;
+	chunk_t chunk;
+	aead_t *aead;
+	size_t bs;
+
+	if (!keymat)
+	{
+		DBG1(DBG_ENC, "found encrypted fragment payload, but no keymat");
+		return INVALID_ARG;
+	}
+	aead = keymat->get_aead(keymat, TRUE);
+	if (!aead)
+	{
+		DBG1(DBG_ENC, "found encrypted fragment payload, but no transform set");
+		return INVALID_ARG;
+	}
+	bs = aead->get_block_size(aead);
+	encrypted->set_transform(encrypted, aead);
+	chunk = this->packet->get_data(this->packet);
+	if (chunk.len < encrypted->get_length(encrypted) ||
+		chunk.len < bs)
+	{
+		DBG1(DBG_ENC, "invalid payload length");
+		return VERIFY_ERROR;
+	}
+	chunk.len -= encrypted->get_length(encrypted);
+	return encrypted->decrypt(encrypted, chunk);
+}
+
+/**
  * Do we accept unencrypted ID/HASH payloads in Main Mode, as seen from
  * some SonicWall boxes?
  */
@@ -2222,7 +2273,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 	payload_rule_t *rule;
 	payload_type_t type;
 	status_t status = SUCCESS;
-	bool was_encrypted = FALSE;
+	char *was_encrypted = NULL;
 
 	enumerator = this->payloads->create_enumerator(this->payloads);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -2231,17 +2282,21 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 
 		DBG2(DBG_ENC, "process payload of type %N", payload_type_names, type);
 
-		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
+		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED ||
+			type == PLV2_FRAGMENT)
 		{
-			encrypted_payload_t *encryption;
-
 			if (was_encrypted)
 			{
-				DBG1(DBG_ENC, "encrypted payload can't contain other payloads "
-					 "of type %N", payload_type_names, type);
+				DBG1(DBG_ENC, "%s can't contain other payloads of type %N",
+					 was_encrypted, payload_type_names, type);
 				status = VERIFY_ERROR;
 				break;
 			}
+		}
+
+		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
+		{
+			encrypted_payload_t *encryption;
 
 			DBG2(DBG_ENC, "found an encrypted payload");
 			encryption = (encrypted_payload_t*)payload;
@@ -2260,7 +2315,27 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{
 				break;
 			}
-			was_encrypted = TRUE;
+			was_encrypted = "encrypted payload";
+		}
+		else if (type == PLV2_FRAGMENT)
+		{
+			encrypted_fragment_payload_t *fragment;
+
+			DBG2(DBG_ENC, "found an encrypted fragment payload");
+			fragment = (encrypted_fragment_payload_t*)payload;
+
+			if (enumerator->enumerate(enumerator, NULL))
+			{
+				DBG1(DBG_ENC, "encrypted fragment payload is not last payload");
+				status = VERIFY_ERROR;
+				break;
+			}
+			status = decrypt_fragment(this, keymat, fragment);
+			if (status != SUCCESS)
+			{
+				break;
+			}
+			was_encrypted = "encrypted fragment payload";
 		}
 
 		if (payload_is_known(type) && !was_encrypted &&
