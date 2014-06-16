@@ -268,8 +268,6 @@ struct message_t {
 	 * Generates the message split into fragments of the given size (total IP
 	 * datagram length).
 	 *
-	 * @note Only supported for IKEv1 at the moment.
-	 *
 	 * @param keymat	keymat to encrypt/sign message(s)
 	 * @param frag_len	fragment length (maximum total IP datagram length), 0
 	 *					for default value depending on address family
@@ -277,7 +275,6 @@ struct message_t {
 	 *					which are owned by the enumerator
 	 * @return
 	 *					- SUCCESS if message could be fragmented
-	 *					- INVALID_STATE if message is IKEv2
 	 *					- FAILED if fragmentation failed
 	 *					- and the possible return values of generate()
 	 */
@@ -302,8 +299,6 @@ struct message_t {
 	 *
 	 * Once the message is completed it should be processed like any other
 	 * inbound message.
-	 *
-	 * @note Only supported for IKEv1 at the moment.
 	 *
 	 * @param fragment	fragment to add
 	 * @return
