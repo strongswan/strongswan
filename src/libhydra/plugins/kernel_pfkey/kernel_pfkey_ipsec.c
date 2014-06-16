@@ -1677,7 +1677,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 	else
 	{
-		sa->sadb_sa_replay = 32;
+		sa->sadb_sa_replay = min(replay_window, 32);
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
 		sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 	}
