@@ -235,6 +235,20 @@ struct child_cfg_t {
 	u_int32_t (*get_tfc)(child_cfg_t *this);
 
 	/**
+	 * Get anti-replay window size
+	 *
+	 * @return				anti-replay window size
+	 */
+	u_int32_t (*get_replay_window)(child_cfg_t *this);
+
+	/**
+	 * Set anti-replay window size
+	 *
+	 * @param window		anti-replay window size
+	 */
+	void (*set_replay_window)(child_cfg_t *this, u_int32_t window);
+
+	/**
 	 * Sets two options needed for Mobile IPv6 interoperability.
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
