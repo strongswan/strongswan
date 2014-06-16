@@ -91,8 +91,9 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool _initiator, bool encap, bool esn, bool inbound,
+	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	bool _initiator, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
 	esa_info_t esa;
