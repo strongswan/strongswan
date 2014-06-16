@@ -1015,7 +1015,7 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 	status_t status;
 	bool use_frags = FALSE;
 
-	if (this->ike_cfg && this->version == IKEV1)
+	if (this->ike_cfg)
 	{
 		switch (this->ike_cfg->fragmentation(this->ike_cfg))
 		{
