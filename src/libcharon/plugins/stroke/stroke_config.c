@@ -1151,6 +1151,10 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				map_action(msg->add_conn.close_action), msg->add_conn.ipcomp,
 				msg->add_conn.inactivity, msg->add_conn.reqid,
 				&mark_in, &mark_out, msg->add_conn.tfc);
+	if (msg->add_conn.replay_window != -1)
+	{
+		child_cfg->set_replay_window(child_cfg, msg->add_conn.replay_window);
+	}
 	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,
 											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);

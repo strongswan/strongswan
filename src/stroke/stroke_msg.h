@@ -304,6 +304,7 @@ struct stroke_msg_t {
 				u_int32_t mask;
 			} mark_in, mark_out;
 			stroke_end_t me, other;
+			u_int32_t replay_window;
 		} add_conn;
 
 		/* data for STR_ADD_CA */

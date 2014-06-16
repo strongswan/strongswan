@@ -34,6 +34,7 @@
 #define SA_REPLACEMENT_MARGIN_DEFAULT  540 /* 9 minutes */
 #define SA_REPLACEMENT_FUZZ_DEFAULT    100 /* 100% of margin */
 #define SA_REPLACEMENT_RETRIES_DEFAULT   3
+#define SA_REPLAY_WINDOW_DEFAULT        -1 /* use charon.replay_window */
 
 static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 static const char esp_defaults[] = "aes128-sha1,3des-sha1";
@@ -132,6 +133,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.install_policy        = TRUE;
 	cfg->conn_default.dpd_delay             =  30; /* seconds */
 	cfg->conn_default.dpd_timeout           = 150; /* seconds */
+	cfg->conn_default.replay_window         = SA_REPLAY_WINDOW_DEFAULT;
 
 	cfg->conn_default.left.seen  = SEEN_NONE;
 	cfg->conn_default.right.seen = SEEN_NONE;
