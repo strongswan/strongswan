@@ -40,6 +40,11 @@
  */
 #define LFT_DEFAULT_CHILD_REKEY (1 * 60 * 60)
 
+/**
+ * Undefined replay window
+ */
+#define REPLAY_UNDEFINED (~(u_int32_t)0)
+
 typedef struct private_vici_config_t private_vici_config_t;
 
 /**
@@ -357,6 +362,7 @@ typedef struct {
 	bool ipcomp;
 	bool route;
 	ipsec_mode_t mode;
+	u_int32_t replay_window;
 	action_t dpd_action;
 	action_t start_action;
 	action_t close_action;
@@ -389,6 +395,10 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   hostaccess = %u", data->hostaccess);
 	DBG2(DBG_CFG, "   ipcomp = %u", data->ipcomp);
 	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, data->mode);
+	if (data->replay_window != REPLAY_UNDEFINED)
+	{
+		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
+	}
 	DBG2(DBG_CFG, "   dpd_action = %N", action_names, data->dpd_action);
 	DBG2(DBG_CFG, "   start_action = %N", action_names, data->start_action);
 	DBG2(DBG_CFG, "   close_action = %N", action_names, data->close_action);
@@ -1202,6 +1212,7 @@ CALLBACK(child_kv, bool,
 		{ "updown",			parse_string,		&child->updown				},
 		{ "hostaccess",		parse_bool,			&child->hostaccess			},
 		{ "mode",			parse_mode,			&child->mode				},
+		{ "replay_window",	parse_uint32,		&child->replay_window		},
 		{ "rekey_time",		parse_time,			&child->lft.time.rekey		},
 		{ "life_time",		parse_time,			&child->lft.time.life		},
 		{ "rand_time",		parse_time,			&child->lft.time.jitter		},
@@ -1308,6 +1319,7 @@ CALLBACK(children_sn, bool,
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
 		.mode = MODE_TUNNEL,
+		.replay_window = REPLAY_UNDEFINED,
 		.dpd_action = ACTION_NONE,
 		.start_action = ACTION_NONE,
 		.close_action = ACTION_NONE,
@@ -1399,6 +1411,10 @@ CALLBACK(children_sn, bool,
 						child.inactivity, child.reqid, &child.mark_in,
 						&child.mark_out, child.tfc);
 
+	if (child.replay_window != REPLAY_UNDEFINED)
+	{
+		cfg->set_replay_window(cfg, child.replay_window);
+	}
 	while (child.local_ts->remove_first(child.local_ts,
 										(void**)&ts) == SUCCESS)
 	{
