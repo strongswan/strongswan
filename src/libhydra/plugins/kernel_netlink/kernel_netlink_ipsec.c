@@ -73,9 +73,6 @@
 /** Default priority of installed policies */
 #define PRIO_BASE 512
 
-/** Default replay window size, if not set using charon.replay_window */
-#define DEFAULT_REPLAY_WINDOW 32
-
 /** Default lifetime of an acquire XFRM state (in seconds) */
 #define DEFAULT_ACQUIRE_LIFETIME 165
 
@@ -316,16 +313,6 @@ struct private_kernel_netlink_ipsec_t {
 	 * Whether to track the history of a policy
 	 */
 	bool policy_history;
-
-	/**
-	 * Size of the replay window, in packets (= bits)
-	 */
-	u_int32_t replay_window;
-
-	/**
-	 * Size of the replay window bitmap, in number of __u32 blocks
-	 */
-	u_int32_t replay_bmp;
 };
 
 typedef struct route_entry_t route_entry_t;
@@ -628,14 +615,6 @@ static inline u_int32_t get_priority(policy_entry_t *policy,
 	priority += policy->sel.sport_mask || policy->sel.dport_mask ? 0 : 2;
 	priority += policy->sel.proto ? 0 : 1;
 	return priority;
-}
-
-/**
- * Return the length of the ESN bitmap
- */
-static inline size_t esn_bmp_len(private_kernel_netlink_ipsec_t *this)
-{
-	return this->replay_bmp * sizeof(u_int32_t);
 }
 
 /**
@@ -1481,23 +1460,24 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	if (protocol != IPPROTO_COMP)
 	{
-		if (esn || this->replay_window > DEFAULT_REPLAY_WINDOW)
+		if (esn || replay_window > 32)
 		{
 			/* for ESN or larger replay windows we need the new
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
 			struct xfrm_replay_state_esn *replay;
+			u_int32_t bmp_size;
 
+			bmp_size = round_up(replay_window, sizeof(u_int32_t) * 8) / 8;
 			replay = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
-									 sizeof(*replay) + esn_bmp_len(this));
+									 sizeof(*replay) + bmp_size);
 			if (!replay)
 			{
 				goto failed;
 			}
 			/* bmp_len contains number uf __u32's */
-			replay->bmp_len = this->replay_bmp;
-			replay->replay_window = this->replay_window;
-			DBG2(DBG_KNL, "  using replay window of %u packets",
-				 this->replay_window);
+			replay->bmp_len = bmp_size / sizeof(u_int32_t);
+			replay->replay_window = replay_window;
+			DBG2(DBG_KNL, "  using replay window of %u packets", replay_window);
 
 			if (esn)
 			{
@@ -1507,9 +1487,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 		else
 		{
-			DBG2(DBG_KNL, "  using replay window of %u packets",
-				 this->replay_window);
-			sa->replay_window = this->replay_window;
+			DBG2(DBG_KNL, "  using replay window of %u packets", replay_window);
+			sa->replay_window = replay_window;
 		}
 	}
 
@@ -1543,6 +1522,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 							 u_int32_t spi, u_int8_t protocol,
 							 host_t *dst, mark_t mark,
 							 struct xfrm_replay_state_esn **replay_esn,
+							 u_int32_t *replay_esn_len,
 							 struct xfrm_replay_state **replay)
 {
 	netlink_buf_t request;
@@ -1619,9 +1599,10 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 				break;
 			}
 			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
-				RTA_PAYLOAD(rta) >= sizeof(**replay_esn) + esn_bmp_len(this))
+				RTA_PAYLOAD(rta) >= sizeof(**replay_esn))
 			{
 				*replay_esn = malloc(RTA_PAYLOAD(rta));
+				*replay_esn_len = RTA_PAYLOAD(rta);
 				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
 				break;
 			}
@@ -1805,6 +1786,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_encap_tmpl* tmpl = NULL;
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
+	u_int32_t replay_esn_len;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
@@ -1869,7 +1851,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		goto failed;
 	}
 
-	get_replay_state(this, spi, protocol, dst, mark, &replay_esn, &replay);
+	get_replay_state(this, spi, protocol, dst, mark, &replay_esn, &replay_esn_len, &replay);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
@@ -1937,12 +1919,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		struct xfrm_replay_state_esn *state;
 
 		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
-								sizeof(*state) + esn_bmp_len(this));
+								replay_esn_len);
 		if (!state)
 		{
 			goto failed;
 		}
-		memcpy(state, replay_esn, sizeof(*state) + esn_bmp_len(this));
+		memcpy(state, replay_esn, replay_esn_len);
 	}
 	else if (replay)
 	{
@@ -2687,12 +2669,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.policy_history = TRUE,
 		.install_routes = lib->settings->get_bool(lib->settings,
 							"%s.install_routes", TRUE, lib->ns),
-		.replay_window = lib->settings->get_int(lib->settings,
-							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 	);
-
-	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
-													(sizeof(u_int32_t) * 8);
 
 	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
