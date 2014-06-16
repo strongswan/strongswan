@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "encrypted_payload.h"
+#include "encrypted_fragment_payload.h"
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
@@ -27,6 +28,7 @@
 #include <encoding/parser.h>
 
 typedef struct private_encrypted_payload_t private_encrypted_payload_t;
+typedef struct private_encrypted_fragment_payload_t private_encrypted_fragment_payload_t;
 
 struct private_encrypted_payload_t {
 
@@ -72,6 +74,56 @@ struct private_encrypted_payload_t {
 	 * Type of payload, PLV2_ENCRYPTED or PLV1_ENCRYPTED
 	 */
 	payload_type_t type;
+};
+
+struct private_encrypted_fragment_payload_t {
+
+	/**
+	 * Public interface.
+	 */
+	encrypted_fragment_payload_t public;
+
+	/**
+	 * The first fragment contains the type of the first payload contained in
+	 * the original encrypted payload, for all other fragments it MUST be set
+	 * to zero.
+	 */
+	u_int8_t next_payload;
+
+	/**
+	 * Flags, including reserved bits
+	 */
+	u_int8_t flags;
+
+	/**
+	 * Length of this payload
+	 */
+	u_int16_t payload_length;
+
+	/**
+	 * Chunk containing the IV, plain, padding and ICV.
+	 */
+	chunk_t encrypted;
+
+	/**
+	 * Fragment number
+	 */
+	u_int16_t fragment_number;
+
+	/**
+	 * Total fragments
+	 */
+	u_int16_t total_fragments;
+
+	/**
+	 * AEAD transform to use
+	 */
+	aead_t *aead;
+
+	/**
+	 * Chunk containing the plain packet data.
+	 */
+	chunk_t plain;
 };
 
 /**
@@ -128,6 +180,47 @@ static encoding_rule_t encodings_v1[] = {
       !                    Encrypted IKE Payloads                     !
       +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !               !             Padding (0-255 octets)            !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Encoding rules to parse or generate an IKEv2-Encrypted Fragment Payload.
+ *
+ * The defined offsets are the positions in a object of type
+ * private_encrypted_payload_t.
+ */
+static encoding_rule_t encodings_fragment[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_encrypted_fragment_payload_t, next_payload)	},
+	/* Critical and 7 reserved bits, all stored for reconstruction */
+	{ U_INT_8,			offsetof(private_encrypted_fragment_payload_t, flags)			},
+	/* Length of the whole encryption payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_encrypted_fragment_payload_t, payload_length)	},
+	/* Fragment number */
+	{ U_INT_16,			offsetof(private_encrypted_fragment_payload_t, fragment_number)	},
+	/* Total number of fragments */
+	{ U_INT_16,			offsetof(private_encrypted_fragment_payload_t, total_fragments)	},
+	/* encrypted data, stored in a chunk. contains iv, data, padding */
+	{ CHUNK_DATA,		offsetof(private_encrypted_fragment_payload_t, encrypted)		},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !C!  RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !        Fragment Number        |        Total Fragments        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                     Initialization Vector                     !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                    Encrypted IKE Payloads                     !
+      +               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !               !             Padding (0-255 octets)            !
+      +-+-+-+-+-+-+-+-+                               +-+-+-+-+-+-+-+-+
+      !                                               !  Pad Length   !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ~                    Integrity Checksum Data                    ~
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
@@ -695,6 +788,235 @@ encrypted_payload_t *encrypted_payload_create_from_plain(payload_type_t next,
 	this->next_payload = next;
 	this->encrypted = plain;
 	compute_length(this);
+
+	return &this->public;
+}
+
+METHOD(payload_t, frag_verify, status_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	if (!this->fragment_number || !this->total_fragments ||
+		this->fragment_number > this->total_fragments)
+	{
+		DBG1(DBG_ENC, "invalid fragment number (%u) or total fragments (%u)",
+			 this->fragment_number, this->total_fragments);
+		return FAILED;
+	}
+	if (this->fragment_number > 1 && this->next_payload != 0)
+	{
+		DBG1(DBG_ENC, "invalid next payload (%u) for fragment %u, ignored",
+			 this->next_payload, this->fragment_number);
+		this->next_payload = 0;
+	}
+	return SUCCESS;
+}
+
+METHOD(payload_t, frag_get_encoding_rules, int,
+	private_encrypted_fragment_payload_t *this, encoding_rule_t **rules)
+{
+	*rules = encodings_fragment;
+	return countof(encodings_fragment);
+}
+
+METHOD(payload_t, frag_get_header_length, int,
+	private_encrypted_fragment_payload_t *this)
+{
+	return 8;
+}
+
+METHOD(payload_t, frag_get_type, payload_type_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	return PLV2_FRAGMENT;
+}
+
+METHOD(payload_t, frag_get_next_type, payload_type_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	return this->next_payload;
+}
+
+METHOD(payload_t, frag_set_next_type, void,
+	private_encrypted_fragment_payload_t *this, payload_type_t type)
+{
+	if (this->fragment_number == 1 && this->next_payload == PL_NONE)
+	{
+		this->next_payload = type;
+	}
+}
+
+METHOD2(payload_t, encrypted_payload_t, frag_get_length, size_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	if (this->encrypted.len)
+	{
+		this->payload_length = this->encrypted.len;
+	}
+	else
+	{
+		this->payload_length = this->plain.len;
+
+		if (this->aead)
+		{
+			this->payload_length += compute_overhead(this->aead,
+													 this->payload_length);
+		}
+	}
+	this->payload_length += frag_get_header_length(this);
+	return this->payload_length;
+}
+
+METHOD(encrypted_fragment_payload_t, get_fragment_number, u_int16_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	return this->fragment_number;
+}
+
+METHOD(encrypted_fragment_payload_t, get_total_fragments, u_int16_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	return this->total_fragments;
+}
+
+METHOD(encrypted_fragment_payload_t, frag_get_content, chunk_t,
+	private_encrypted_fragment_payload_t *this)
+{
+	return this->plain;
+}
+
+METHOD(encrypted_payload_t, frag_add_payload, void,
+	private_encrypted_fragment_payload_t *this, payload_t* payload)
+{
+	payload->destroy(payload);
+}
+
+METHOD(encrypted_payload_t, frag_set_transform, void,
+	private_encrypted_fragment_payload_t *this, aead_t* aead)
+{
+	this->aead = aead;
+}
+
+/**
+ * Append the encrypted fragment payload header to the associated data
+ */
+static chunk_t append_header_frag(private_encrypted_fragment_payload_t *this,
+								  chunk_t assoc)
+{
+	struct {
+		u_int8_t next_payload;
+		u_int8_t flags;
+		u_int16_t length;
+		u_int16_t fragment_number;
+		u_int16_t total_fragments;
+	} __attribute__((packed)) header = {
+		.next_payload = this->next_payload,
+		.flags = this->flags,
+		.length = htons(frag_get_length(this)),
+		.fragment_number = htons(this->fragment_number),
+		.total_fragments = htons(this->total_fragments),
+	};
+	return chunk_cat("cc", assoc, chunk_from_thing(header));
+}
+
+METHOD(encrypted_payload_t, frag_encrypt, status_t,
+	private_encrypted_fragment_payload_t *this, u_int64_t mid, chunk_t assoc)
+{
+	status_t status;
+
+	if (!this->aead)
+	{
+		DBG1(DBG_ENC, "encrypting encrypted fragment payload failed, "
+			 "transform missing");
+		return INVALID_STATE;
+	}
+	free(this->encrypted.ptr);
+	assoc = append_header_frag(this, assoc);
+	status = encrypt_content("encrypted fragment payload", this->aead, mid,
+							 this->plain, assoc, &this->encrypted);
+	free(assoc.ptr);
+	return status;
+}
+
+METHOD(encrypted_payload_t, frag_decrypt, status_t,
+	private_encrypted_fragment_payload_t *this, chunk_t assoc)
+{
+	status_t status;
+
+	if (!this->aead)
+	{
+		DBG1(DBG_ENC, "decrypting encrypted fragment payload failed, "
+			 "transform missing");
+		return INVALID_STATE;
+	}
+	free(this->plain.ptr);
+	assoc = append_header_frag(this, assoc);
+	status = decrypt_content("encrypted fragment payload", this->aead,
+							 this->encrypted, assoc, &this->plain);
+	this->plain = chunk_clone(this->plain);
+	free(assoc.ptr);
+	return status;
+}
+
+METHOD2(payload_t, encrypted_payload_t, frag_destroy, void,
+	private_encrypted_fragment_payload_t *this)
+{
+	free(this->encrypted.ptr);
+	free(this->plain.ptr);
+	free(this);
+}
+
+/*
+ * Described in header
+ */
+encrypted_fragment_payload_t *encrypted_fragment_payload_create()
+{
+	private_encrypted_fragment_payload_t *this;
+
+	INIT(this,
+		.public = {
+			.encrypted = {
+				.payload_interface = {
+					.verify = _frag_verify,
+					.get_encoding_rules = _frag_get_encoding_rules,
+					.get_header_length = _frag_get_header_length,
+					.get_length = _frag_get_length,
+					.get_next_type = _frag_get_next_type,
+					.set_next_type = _frag_set_next_type,
+					.get_type = _frag_get_type,
+					.destroy = _frag_destroy,
+				},
+				.get_length = _frag_get_length,
+				.add_payload = _frag_add_payload,
+				.remove_payload = (void*)return_null,
+				.generate_payloads = nop,
+				.set_transform = _frag_set_transform,
+				.encrypt = _frag_encrypt,
+				.decrypt = _frag_decrypt,
+				.destroy = _frag_destroy,
+			},
+			.get_fragment_number = _get_fragment_number,
+			.get_total_fragments = _get_total_fragments,
+			.get_content = _frag_get_content,
+		},
+		.next_payload = PL_NONE,
+	);
+	this->payload_length = frag_get_header_length(this);
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+encrypted_fragment_payload_t *encrypted_fragment_payload_create_from_data(
+								u_int16_t num, u_int16_t total, chunk_t plain)
+{
+	private_encrypted_fragment_payload_t *this;
+
+	this = (private_encrypted_fragment_payload_t*)encrypted_fragment_payload_create();
+	this->fragment_number = num;
+	this->total_fragments = total;
+	this->plain = chunk_clone(plain);
 
 	return &this->public;
 }

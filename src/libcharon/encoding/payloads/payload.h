@@ -212,6 +212,26 @@ enum payload_type_t {
 	 */
 	PLV2_GSPM = 49,
 
+	/**
+	 * Group Identification (draft-yeung-g-ikev2)
+	 */
+	PLV2_IDG = 50,
+
+	/**
+	 * Group Security Association (draft-yeung-g-ikev2)
+	 */
+	PLV2_GSA = 51,
+
+	/**
+	 * Key Download (draft-yeung-g-ikev2)
+	 */
+	PLV2_KD = 52,
+
+	/**
+	 * Encrypted fragment payload (SKF), RFC 7383
+	 */
+	PLV2_FRAGMENT = 53,
+
 #ifdef ME
 	/**
 	 * Identification payload for peers has a value from
@@ -231,7 +251,7 @@ enum payload_type_t {
 	PLV1_NAT_OA_DRAFT_00_03 = 131,
 
 	/**
-	 * IKE fragment (proprietary IKEv1 extension)
+	 * IKEv1 fragment (proprietary IKEv1 extension)
 	 */
 	PLV1_FRAGMENT = 132,
 
