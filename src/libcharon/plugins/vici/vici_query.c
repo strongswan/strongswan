@@ -17,8 +17,12 @@
 #include "vici_builder.h"
 
 #include <inttypes.h>
+#include <time.h>
 #ifndef WIN32
 #include <sys/utsname.h>
+#endif
+#ifdef HAVE_MALLINFO
+#include <malloc.h>
 #endif
 
 #include <daemon.h>
@@ -39,6 +43,11 @@ struct private_vici_query_t {
 	 * Dispatcher
 	 */
 	vici_dispatcher_t *dispatcher;
+
+	/**
+	 * Daemon startup timestamp
+	 */
+	time_t uptime;
 };
 
 /**
@@ -832,6 +841,152 @@ CALLBACK(version, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Callback function for memusage summary
+ */
+CALLBACK(sum_usage, void,
+	vici_builder_t *b, int count, size_t bytes, int whitelisted)
+{
+	b->begin_section(b, "mem");
+	b->add_kv(b, "total", "%zu", bytes);
+	b->add_kv(b, "allocs", "%d", count);
+	b->end_section(b);
+}
+
+CALLBACK(stats, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	vici_builder_t *b;
+	enumerator_t *enumerator;
+	plugin_t *plugin;
+	time_t since, now;
+	int i;
+
+	b = vici_builder_create();
+
+	now = time_monotonic(NULL);
+	since = time(NULL) - (now - this->uptime);
+
+	b->begin_section(b, "uptime");
+	b->add_kv(b, "running", "%V", &now, &this->uptime);
+	b->add_kv(b, "since", "%T", &since, FALSE);
+	b->end_section(b);
+
+	b->begin_section(b, "workers");
+	b->add_kv(b, "total", "%d",
+		lib->processor->get_total_threads(lib->processor));
+	b->add_kv(b, "idle", "%d",
+		lib->processor->get_idle_threads(lib->processor));
+	b->begin_section(b, "active");
+	for (i = 0; i < JOB_PRIO_MAX; i++)
+	{
+		b->add_kv(b, enum_to_name(job_priority_names, i), "%d",
+			lib->processor->get_working_threads(lib->processor, i));
+	}
+	b->end_section(b);
+	b->end_section(b);
+
+	b->begin_section(b, "queues");
+	for (i = 0; i < JOB_PRIO_MAX; i++)
+	{
+		b->add_kv(b, enum_to_name(job_priority_names, i), "%d",
+			lib->processor->get_job_load(lib->processor, i));
+	}
+	b->end_section(b);
+
+	b->add_kv(b, "scheduled", "%d",
+		lib->scheduler->get_job_load(lib->scheduler));
+
+	b->begin_section(b, "ikesas");
+	b->add_kv(b, "total", "%u",
+		charon->ike_sa_manager->get_count(charon->ike_sa_manager));
+	b->add_kv(b, "half-open", "%u",
+		charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
+													NULL));
+	b->end_section(b);
+
+	b->begin_list(b, "plugins");
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (enumerator->enumerate(enumerator, &plugin, NULL))
+	{
+		b->add_li(b, "%s", plugin->get_name(plugin));
+	}
+	enumerator->destroy(enumerator);
+	b->end_list(b);
+
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->usage(lib->leak_detective, NULL, sum_usage, b);
+	}
+#ifdef WIN32
+	else
+	{
+		DWORD lasterr = ERROR_INVALID_HANDLE;
+		HANDLE heaps[32];
+		int i, count;
+		char buf[16];
+		size_t total = 0;
+		int allocs = 0;
+
+		b->begin_section(b, "mem");
+		count = GetProcessHeaps(countof(heaps), heaps);
+		for (i = 0; i < count; i++)
+		{
+			PROCESS_HEAP_ENTRY entry = {};
+			size_t heap_total = 0;
+			int heap_allocs = 0;
+
+			if (HeapLock(heaps[i]))
+			{
+				while (HeapWalk(heaps[i], &entry))
+				{
+					if (entry.wFlags & PROCESS_HEAP_ENTRY_BUSY)
+					{
+						heap_total += entry.cbData;
+						heap_allocs++;
+					}
+				}
+				lasterr = GetLastError();
+				HeapUnlock(heaps[i]);
+			}
+			if (lasterr != ERROR_NO_MORE_ITEMS)
+			{
+				break;
+			}
+			snprintf(buf, sizeof(buf), "heap-%d", i);
+			b->begin_section(b, buf);
+			b->add_kv(b, "total", "%zu", heap_total);
+			b->add_kv(b, "allocs", "%d", heap_allocs);
+			b->end_section(b);
+
+			total += heap_total;
+			allocs += heap_allocs;
+		}
+		if (lasterr == ERROR_NO_MORE_ITEMS)
+		{
+			b->add_kv(b, "total", "%zu", total);
+			b->add_kv(b, "allocs", "%d", allocs);
+		}
+		b->end_section(b);
+	}
+#endif
+
+#ifdef HAVE_MALLINFO
+	{
+		struct mallinfo mi = mallinfo();
+
+		b->begin_section(b, "mallinfo");
+		b->add_kv(b, "sbrk", "%d", mi.arena);
+		b->add_kv(b, "mmap", "%d", mi.hblkhd);
+		b->add_kv(b, "used", "%d", mi.uordblks);
+		b->add_kv(b, "free", "%d", mi.fordblks);
+		b->end_section(b);
+	}
+#endif /* HAVE_MALLINFO */
+
+	return b->finalize(b);
+}
+
 static void manage_command(private_vici_query_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -853,6 +1008,7 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	manage_command(this, "list-conns", list_conns, reg);
 	manage_command(this, "list-certs", list_certs, reg);
 	manage_command(this, "version", version, reg);
+	manage_command(this, "stats", stats, reg);
 }
 
 METHOD(vici_query_t, destroy, void,
@@ -874,6 +1030,7 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
+		.uptime = time_monotonic(NULL),
 	);
 
 	manage_commands(this, TRUE);
