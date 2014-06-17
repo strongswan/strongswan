@@ -629,6 +629,13 @@ connections.<conn>.children.<child>.tfc_padding = 0
 	The default value of 0 disables TFC padding, the special value _mtu_ adds
 	TFC padding to create a packet size equal to the Path Maximum Transfer Unit.
 
+connections.<conn>.children.<child>.replay_window = 32
+	IPsec replay window to configure for this CHILD_SA.
+
+	IPsec replay window to configure for this CHILD_SA. Larger values than the
+	default of 32 are supported using the Netlink backend only, a value of 0
+	disables IPsec replay protection.
+
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).
 
