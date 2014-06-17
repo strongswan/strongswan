@@ -1615,8 +1615,9 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int8_t protocol, u_int32_t reqid, mark_t mark, u_int32_t tfc,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, bool initiator, bool encap, bool esn,
-	bool inbound, traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	bool initiator, bool encap, bool esn, bool inbound,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1633,7 +1634,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
 			   tfc, &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED,
-			   chunk_empty, mode, ipcomp, 0, FALSE, FALSE, FALSE, inbound,
+			   chunk_empty, mode, ipcomp, 0, 0, FALSE, FALSE, FALSE, inbound,
 			   NULL, NULL);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
@@ -1676,7 +1677,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 	else
 	{
-		sa->sadb_sa_replay = 32;
+		sa->sadb_sa_replay = min(replay_window, 32);
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
 		sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 	}

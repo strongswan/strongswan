@@ -101,6 +101,7 @@ struct kernel_ipsec_t {
 	 * @param mode			mode of the SA (tunnel, transport)
 	 * @param ipcomp		IPComp transform to use
 	 * @param cpi			CPI for IPComp
+	 * @param replay_window	anti-replay window size
 	 * @param initiator		TRUE if initiator of the exchange creating this SA
 	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param esn			TRUE to use Extended Sequence Numbers
@@ -116,6 +117,7 @@ struct kernel_ipsec_t {
 						u_int16_t enc_alg, chunk_t enc_key,
 						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+						u_int32_t replay_window,
 						bool initiator, bool encap, bool esn, bool inbound,
 						traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
 
