@@ -40,6 +40,10 @@ strongswan-5.2.0
 - Implemented the PT-EAP transport protocol (RFC 7171) for Trusted Network
   Connect.
 
+- The ipsec.conf replay_window option defines connection specific IPsec replay
+  windows. Original patch courtesy of Zheng Zhong and Christophe Gouault from
+  6Wind.
+
 
 strongswan-5.1.3
 ----------------
