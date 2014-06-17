@@ -273,6 +273,63 @@ char* getpass(const char *prompt);
 #define SHUT_RDWR SD_BOTH
 
 /**
+ * shutdown(2) setting errno
+ */
+#define shutdown windows_shutdown
+int windows_shutdown(int sockfd, int how);
+
+/**
+ * accept(2) setting errno
+ */
+#define accept windows_accept
+int windows_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+/**
+ * bind(2) setting errno
+ */
+#define bind windows_bind
+int windows_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * connect(2) setting errno
+ */
+#define connect windows_connect
+int windows_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * getsockname(2) setting errno
+ */
+#define getsockname windows_getsockname
+int windows_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+/**
+ * getsockopt(2) setting errno
+ */
+#define getsockopt windows_getsockopt
+int windows_getsockopt(int sockfd, int level, int optname,
+					   void *optval, socklen_t *optlen);
+
+/**
+ * setsockopt(2) setting errno
+ */
+#define setsockopt windows_setsockopt
+int windows_setsockopt(int sockfd, int level, int optname,
+					   const void *optval, socklen_t optlen);
+
+/**
+ * socket(2) setting errno
+ */
+#define socket windows_socket
+int windows_socket(int domain, int type, int protocol);
+
+/**
+ * select(2) setting errno
+ */
+#define select windows_select
+int windows_select(int nfds, fd_set *readfds, fd_set *writefds,
+				   fd_set *exceptfds, struct timeval *timeout);
+
+/**
  * close(2) working for file handles and Winsock sockets
  */
 #define close windows_close
@@ -303,6 +360,26 @@ ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags);
 #define sendto windows_send
 ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
+
+/**
+ * Declaration missing on older WinGW
+ */
+_CRTIMP errno_t strerror_s(char *buf, size_t size, int errnum);
+
+/**
+ * strerror_s, but supporting POSIX compatiblity errno >= 100
+ */
+#define strerror_s strerror_s_extended
+int strerror_s_extended(char *buf, size_t buflen, int errnum);
+
+/**
+ * strerror_r(2) replacement, XSI variant
+ */
+static inline int strerror_r(int errnum, char *buf, size_t buflen)
+{
+	return strerror_s(buf, buflen, errnum);
+}
+#define HAVE_STRERROR_R /* but not STRERROR_R_CHAR_P */
 
 /**
  * MinGW does provide extended errno values. Windows itself knowns them
