@@ -139,11 +139,8 @@ static void handle_attribute(private_mode_config_t *this,
 	handler = hydra->attributes->handle(hydra->attributes,
 							this->ike_sa->get_other_id(this->ike_sa), handler,
 							ca->get_type(ca), ca->get_chunk(ca));
-	if (handler)
-	{
-		this->ike_sa->add_configuration_attribute(this->ike_sa,
-				handler, ca->get_type(ca), ca->get_chunk(ca));
-	}
+	this->ike_sa->add_configuration_attribute(this->ike_sa,
+							handler, ca->get_type(ca), ca->get_chunk(ca));
 }
 
 /**
@@ -396,6 +393,8 @@ static status_t build_set(private_mode_config_t *this, message_t *message)
 	any4->destroy(any4);
 	any6->destroy(any6);
 
+	charon->bus->assign_vips(charon->bus, this->ike_sa, TRUE);
+
 	/* query registered providers for additional attributes to include */
 	pools = linked_list_create_from_enumerator(
 									config->create_pool_enumerator(config));
@@ -442,6 +441,8 @@ static void install_vips(private_mode_config_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	charon->bus->handle_vips(charon->bus, this->ike_sa, TRUE);
 }
 
 METHOD(task_t, process_r, status_t,
@@ -504,6 +505,8 @@ static status_t build_reply(private_mode_config_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	charon->bus->assign_vips(charon->bus, this->ike_sa, TRUE);
 
 	/* query registered providers for additional attributes to include */
 	enumerator = hydra->attributes->create_responder_enumerator(

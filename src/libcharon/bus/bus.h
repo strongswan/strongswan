@@ -412,6 +412,14 @@ struct bus_t {
 	void (*assign_vips)(bus_t *this, ike_sa_t *ike_sa, bool assign);
 
 	/**
+	 * Virtual IP handler hook.
+	 *
+	 * @param ike_sa	IKE_SA the VIPs/attributes got handled on
+	 * @param assign	TRUE after installing attributes, FALSE on release
+	 */
+	void (*handle_vips)(bus_t *this, ike_sa_t *ike_sa, bool handle);
+
+	/**
 	 * Destroy the event bus.
 	 */
 	void (*destroy) (bus_t *this);
