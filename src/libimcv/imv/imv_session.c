@@ -217,10 +217,6 @@ METHOD(imv_session_t, remove_workitem, void,
 METHOD(imv_session_t, create_workitem_enumerator, enumerator_t*,
 	private_imv_session_t *this)
 {
-	if (!this->policy_started)
-	{
-		return enumerator_create_empty();
-	}
 	return this->workitems->create_enumerator(this->workitems);
 }
 
