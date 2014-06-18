@@ -86,10 +86,12 @@ struct kernel_net_t {
 	 * for the given source to dest.
 	 *
 	 * @param dest			target destination address
+	 * @param prefix		prefix length if dest is a subnet, -1 for auto
 	 * @param src			source address to check, or NULL
 	 * @return				next hop address, NULL if unreachable
 	 */
-	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, host_t *src);
+	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, int prefix,
+						   host_t *src);
 
 	/**
 	 * Get the interface name of a local address. Interfaces that are down or

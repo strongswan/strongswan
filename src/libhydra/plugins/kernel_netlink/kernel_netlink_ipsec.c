@@ -2137,7 +2137,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			/* get the nexthop to src (src as we are in POLICY_FWD) */
 			route->gateway = hydra->kernel_interface->get_nexthop(
 											hydra->kernel_interface, ipsec->src,
-											ipsec->dst);
+											-1, ipsec->dst);
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 

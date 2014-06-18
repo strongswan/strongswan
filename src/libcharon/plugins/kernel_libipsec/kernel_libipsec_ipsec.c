@@ -314,7 +314,7 @@ static void add_exclude_route(private_kernel_libipsec_ipsec_t *this,
 	{
 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
 		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
-												   dst, NULL);
+												   dst, -1, NULL);
 		if (gtw)
 		{
 			char *if_name = NULL;
@@ -445,7 +445,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 #ifndef __linux__
 	/* on Linux we cant't install a gateway */
 	route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, dst, src);
+										hydra->kernel_interface, dst, -1, src);
 #endif
 
 	if (policy->route)

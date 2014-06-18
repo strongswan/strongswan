@@ -1348,7 +1348,7 @@ static bool manage_route(private_kernel_wfp_ipsec_t *this,
 		return FALSE;
 	}
 	gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
-											   remote, local);
+											   remote, -1, local);
 	if (add)
 	{
 		done = install_route(this, dst, mask, src, gtw);
