@@ -79,7 +79,7 @@ static void include_files(parser_helper_t *ctx);
 	yy_push_state(str, yyscanner);
 }
 
-[^\"#= \t\n]+			{
+(@#)?[^\"#= \t\n]+			{
 	yylval->s = strdup(yytext);
 	return STRING;
 }
