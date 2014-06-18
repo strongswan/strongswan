@@ -140,6 +140,159 @@ START_TEST(test_create_rng)
 }
 END_TEST
 
+static diffie_hellman_t *dh_create(char *plugin)
+{
+	return (diffie_hellman_t*)plugin;
+}
+
+static diffie_hellman_t *dh_create_modp1024(diffie_hellman_group_t group, ...)
+{
+	ck_assert(group == MODP_1024_BIT);
+	return dh_create("plugin1");
+}
+
+static diffie_hellman_t *dh_create_modp1024_second(diffie_hellman_group_t group,
+												   ...)
+{
+	ck_assert(group == MODP_1024_BIT);
+	return dh_create("plugin2");
+}
+
+static diffie_hellman_t *dh_create_modp2048(diffie_hellman_group_t group, ...)
+{
+	ck_assert(group == MODP_2048_BIT);
+	return dh_create("plugin1");
+}
+
+static diffie_hellman_t *dh_create_modp2048_second(diffie_hellman_group_t group,
+												   ...)
+{
+	ck_assert(group == MODP_2048_BIT);
+	return dh_create("plugin2");
+}
+
+static struct {
+	char *exp1024;
+	char *exp2048;
+	struct {
+		diffie_hellman_group_t g;
+		dh_constructor_t create;
+		char *plugin;
+	} data[4];
+} dh_data[] = {
+	{ NULL, NULL, {
+		{ MODP_NONE, NULL, NULL }
+	}},
+	{ "plugin1", NULL, {
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_NONE, NULL, NULL }
+	}},
+	{ "plugin1", NULL, {
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_1024_BIT, dh_create_modp1024_second, "plugin2" },
+		{ MODP_NONE, NULL, NULL }
+	}},
+	{ "plugin2", NULL, {
+		{ MODP_1024_BIT, dh_create_modp1024_second, "plugin2" },
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_NONE, NULL, NULL }
+	}},
+	{ "plugin1", "plugin1", {
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_2048_BIT, dh_create_modp2048, "plugin1" },
+		{ MODP_NONE, NULL }
+	}},
+	{ "plugin1", "plugin1", {
+		{ MODP_2048_BIT, dh_create_modp2048, "plugin1" },
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_NONE, NULL }
+	}},
+	{ "plugin1", "plugin1", {
+		{ MODP_2048_BIT, dh_create_modp2048, "plugin1" },
+		{ MODP_2048_BIT, dh_create_modp2048_second, "plugin2" },
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_NONE, NULL }
+	}},
+	{ "plugin1", "plugin2", {
+		{ MODP_2048_BIT, dh_create_modp2048_second, "plugin2" },
+		{ MODP_2048_BIT, dh_create_modp2048, "plugin1" },
+		{ MODP_1024_BIT, dh_create_modp1024, "plugin1" },
+		{ MODP_NONE, NULL }
+	}},
+};
+
+static void verify_dh(crypto_factory_t *factory, diffie_hellman_group_t request,
+					  char *expected)
+{
+	char *plugin;
+
+	plugin = (char*)factory->create_dh(factory, request);
+	if (!expected)
+	{
+		ck_assert(!plugin);
+	}
+	else
+	{
+		ck_assert(plugin);
+		ck_assert_str_eq(expected, plugin);
+	}
+}
+
+START_TEST(test_create_dh)
+{
+	enumerator_t *enumerator;
+	crypto_factory_t *factory;
+	diffie_hellman_group_t group;
+	char *plugin;
+	int i, len = 0;
+
+
+	factory = crypto_factory_create();
+	for (i = 0; dh_data[_i].data[i].g != MODP_NONE; i++)
+	{
+		ck_assert(factory->add_dh(factory, dh_data[_i].data[i].g,
+								  dh_data[_i].data[i].plugin,
+								  dh_data[_i].data[i].create));
+	}
+	verify_dh(factory, MODP_1024_BIT, dh_data[_i].exp1024);
+	verify_dh(factory, MODP_2048_BIT, dh_data[_i].exp2048);
+
+	len = countof(dh_data[_i].data);
+	enumerator = factory->create_dh_enumerator(factory);
+	for (i = 0; enumerator->enumerate(enumerator, &group, &plugin) && i < len;)
+	{
+		ck_assert_int_eq(dh_data[_i].data[i].g, group);
+		while (dh_data[_i].data[i].g == group)
+		{	/* skip other entries by the same group */
+			i++;
+		}
+		switch (group)
+		{
+			case MODP_1024_BIT:
+				ck_assert(dh_data[_i].exp1024);
+				ck_assert_str_eq(dh_data[_i].exp1024, plugin);
+				break;
+			case MODP_2048_BIT:
+				ck_assert(dh_data[_i].exp2048);
+				ck_assert_str_eq(dh_data[_i].exp2048, plugin);
+				break;
+			default:
+				fail("unexpected DH group");
+				break;
+		}
+	}
+	ck_assert(!enumerator->enumerate(enumerator));
+	ck_assert_int_eq(dh_data[_i].data[i].g, MODP_NONE);
+	enumerator->destroy(enumerator);
+
+	for (i = 0; dh_data[_i].data[i].g != MODP_NONE; i++)
+	{
+		factory->remove_dh(factory, dh_data[_i].data[i].create);
+	}
+	factory->destroy(factory);
+}
+END_TEST
+
 Suite *crypto_factory_suite_create()
 {
 	Suite *s;
@@ -149,6 +302,10 @@ Suite *crypto_factory_suite_create()
 
 	tc = tcase_create("create_rng");
 	tcase_add_loop_test(tc, test_create_rng, 0, countof(rng_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("create_dh");
+	tcase_add_loop_test(tc, test_create_dh, 0, countof(dh_data));
 	suite_add_tcase(s, tc);
 
 	return s;
