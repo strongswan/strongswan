@@ -505,11 +505,17 @@ do
 		    ssh $SSHCONF $HOSTLOGIN swanctl --list-certs \
 			    > $TESTRESULTDIR/${host}.swanctl.certs 2>/dev/null
 
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pools \
+			    > $TESTRESULTDIR/${host}.swanctl.pools 2>/dev/null
+
 		    ssh $SSHCONF $HOSTLOGIN swanctl --list-sas \
 			    > $TESTRESULTDIR/${host}.swanctl.sas 2>/dev/null
 
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pools \
-			    > $TESTRESULTDIR/${host}.swanctl.pools 2>/dev/null
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pols \
+			    > $TESTRESULTDIR/${host}.swanctl.pols 2>/dev/null
+
+		    ssh $SSHCONF $HOSTLOGIN swanctl --stats \
+			    > $TESTRESULTDIR/${host}.swanctl.stats 2>/dev/null
 		else
 		    for file in ipsec.conf ipsec.secrets
 		    do
@@ -548,13 +554,15 @@ do
 	    <li><a href="$host.swanctl.conf">swanctl.conf</a></li>
 	    <li><a href="$host.swanctl.conns">swanctl --list-conns</a></li>
 	    <li><a href="$host.swanctl.certs">swanctl --list-certs</a></li>
+	    <li><a href="$host.swanctl.pools">swanctl --list-pools</a></li>
 	    <li><a href="$host.strongswan.conf">strongswan.conf</a></li>
 	  </ul>
 	</td>
 	<td valign="top">
 	  <ul>
 	    <li><a href="$host.swanctl.sas">swanctl --list-sas</a></li>
-	    <li><a href="$host.swanctl.pools">swanctl --list-pools</a></li>
+	    <li><a href="$host.swanctl.pols">swanctl --list-pols</a></li>
+	    <li><a href="$host.swanctl.stats">swanctl --stats</a></li>
 	    <li><a href="$host.auth.log">auth.log</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
@@ -566,6 +574,7 @@ do
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
 	  </ul>
+	  &nbsp;
       </td>
     </tr>
     </table>
