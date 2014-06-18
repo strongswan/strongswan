@@ -639,7 +639,6 @@ METHOD(child_sa_t, install, status_t,
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
-	u_int32_t replay_window = 0;
 
 	/* now we have to decide which spi to use. Use self allocated, if "in",
 	 * or the one in the proposal, if not "in" (others). Additionally,
@@ -654,9 +653,6 @@ METHOD(child_sa_t, install, status_t,
 		}
 		this->my_spi = spi;
 		this->my_cpi = cpi;
-
-		/* required on inbound SA only */
-		replay_window = this->config->get_replay_window(this->config);
 	}
 	else
 	{
@@ -726,8 +722,8 @@ METHOD(child_sa_t, install, status_t,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
-				this->ipcomp, cpi, replay_window, initiator, this->encap,
-				esn, update, src_ts, dst_ts);
+				this->ipcomp, cpi, this->config->get_replay_window(this->config),
+				initiator, this->encap, esn, update, src_ts, dst_ts);
 
 	free(lifetime);
 
