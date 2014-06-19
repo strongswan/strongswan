@@ -391,7 +391,9 @@ METHOD(bus_t, vlog, void,
 		{
 			len++;
 			data.message = malloc(len);
-			len = vsnprintf(data.message, len, format, args);
+			va_copy(data.args, args);
+			len = vsnprintf(data.message, len, format, data.args);
+			va_end(data.args);
 		}
 		if (len > 0)
 		{
