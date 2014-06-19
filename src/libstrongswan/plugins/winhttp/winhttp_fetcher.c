@@ -280,7 +280,7 @@ METHOD(fetcher_t, fetch, status_t,
 			{
 				DBG1(DBG_LIB, "opening request failed: %u", GetLastError());
 			}
-			WinHttpCloseHandle(connect);
+			WinHttpCloseHandle(connection);
 		}
 		else
 		{
