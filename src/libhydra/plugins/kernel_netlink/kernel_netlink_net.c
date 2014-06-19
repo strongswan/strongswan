@@ -1460,9 +1460,10 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
- * check if an address (chunk) addr is in subnet (net with net_len net bits)
+ * check if an address or net (addr with prefix net bits) is in
+ * subnet (net with net_len net bits)
  */
-static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
+static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
 {
 	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
 	int byte = 0;
@@ -1471,7 +1472,7 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 	{	/* any address matches a /0 network */
 		return TRUE;
 	}
-	if (addr.len != net.len || net_len > 8 * net.len )
+	if (addr.len != net.len || net_len > 8 * net.len || prefix < net_len)
 	{
 		return FALSE;
 	}
@@ -1587,7 +1588,8 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
-						 bool nexthop, host_t *candidate, u_int recursion)
+						 int prefix, bool nexthop, host_t *candidate,
+						 u_int recursion)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
@@ -1598,18 +1600,25 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	rt_entry_t *route = NULL, *best = NULL;
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
+	bool match_net;
+	int family;
 
 	if (recursion > MAX_ROUTE_RECURSION)
 	{
 		return NULL;
 	}
+	chunk = dest->get_address(dest);
+	len = chunk.len * 8;
+	prefix = prefix < 0 ? len : min(prefix, len);
+	match_net = prefix != len;
 
 	memset(&request, 0, sizeof(request));
 
+	family = dest->get_family(dest);
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
-	if (dest->get_family(dest) == AF_INET || this->rta_prefsrc_for_ipv6 ||
-		this->routing_table)
+	if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
+		this->routing_table || match_net)
 	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
 		 * as we want to ignore routes with virtual IPs we cannot use DUMP
 		 * if these routes are not installed in a separate table */
@@ -1619,19 +1628,22 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
-	msg->rtm_family = dest->get_family(dest);
+	msg->rtm_family = family;
 	if (candidate)
 	{
 		chunk = candidate->get_address(candidate);
 		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
 	}
-	chunk = dest->get_address(dest);
-	netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+	if (!match_net)
+	{
+		chunk = dest->get_address(dest);
+		netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+	}
 
 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
 	{
-		DBG2(DBG_KNL, "getting %s to reach %H failed",
-			 nexthop ? "nexthop" : "address", dest);
+		DBG2(DBG_KNL, "getting %s to reach %H/%d failed",
+			 nexthop ? "nexthop" : "address", dest, prefix);
 		return NULL;
 	}
 	routes = linked_list_create();
@@ -1666,7 +1678,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* interface is down */
 					continue;
 				}
-				if (!addr_in_subnet(chunk, route->dst, route->dst_len))
+				if (!addr_in_subnet(chunk, prefix, route->dst, route->dst_len))
 				{	/* route destination does not contain dest */
 					continue;
 				}
@@ -1761,7 +1773,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			gtw = host_create_from_chunk(msg->rtm_family, route->gtw, 0);
 			if (gtw && !gtw->ip_equals(gtw, dest))
 			{
-				route->src_host = get_route(this, gtw, FALSE, candidate,
+				route->src_host = get_route(this, gtw, -1, FALSE, candidate,
 											recursion + 1);
 			}
 			DESTROY_IF(gtw);
@@ -1785,7 +1797,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		{
 			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
 		}
-		addr = addr ?: dest->clone(dest);
+		if (!addr && !match_net)
+		{	/* fallback to destination address */
+			addr = dest->clone(dest);
+		}
 	}
 	else
 	{
@@ -1800,13 +1815,13 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	if (addr)
 	{
-		DBG2(DBG_KNL, "using %H as %s to reach %H", addr,
-			 nexthop ? "nexthop" : "address", dest);
+		DBG2(DBG_KNL, "using %H as %s to reach %H/%d", addr,
+			 nexthop ? "nexthop" : "address", dest, prefix);
 	}
 	else if (!recursion)
 	{
-		DBG2(DBG_KNL, "no %s found to reach %H",
-			 nexthop ? "nexthop" : "address", dest);
+		DBG2(DBG_KNL, "no %s found to reach %H/%d",
+			 nexthop ? "nexthop" : "address", dest, prefix);
 	}
 	return addr;
 }
@@ -1814,13 +1829,13 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, dest, FALSE, src, 0);
+	return get_route(this, dest, -1, FALSE, src, 0);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
+	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src)
 {
-	return get_route(this, dest, TRUE, src, 0);
+	return get_route(this, dest, prefix, TRUE, src, 0);
 }
 
 /**

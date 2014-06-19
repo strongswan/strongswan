@@ -2135,9 +2135,20 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 				fwd->dst_ts, &route->src_ip, NULL) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD) */
-			route->gateway = hydra->kernel_interface->get_nexthop(
+			if (!ipsec->src->is_anyaddr(ipsec->src))
+			{
+				route->gateway = hydra->kernel_interface->get_nexthop(
 											hydra->kernel_interface, ipsec->src,
-											ipsec->dst);
+											-1, ipsec->dst);
+			}
+			else
+			{	/* for shunt policies */
+				iface = xfrm2host(policy->sel.family, &policy->sel.saddr, 0);
+				route->gateway = hydra->kernel_interface->get_nexthop(
+										hydra->kernel_interface, iface,
+										policy->sel.prefixlen_s, route->src_ip);
+				iface->destroy(iface);
+			}
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 
