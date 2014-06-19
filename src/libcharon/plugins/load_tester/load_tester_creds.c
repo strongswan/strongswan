@@ -68,6 +68,11 @@ struct private_load_tester_creds_t {
 	 * Password for EAP
 	 */
 	shared_key_t *pwd;
+
+	/**
+	 * List of certificate distribution points to include in generated certs
+	 */
+	linked_list_t *cdps;
 };
 
 /**
@@ -377,6 +382,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 									BUILD_NOT_BEFORE_TIME, now - 60 * 60 * 24,
 									BUILD_NOT_AFTER_TIME, now + 60 * 60 * 24,
 									BUILD_SERIAL, chunk_from_thing(serial),
+									BUILD_CRL_DISTRIBUTION_POINTS, this->cdps,
 									BUILD_END);
 		peer_key->destroy(peer_key);
 		sans->destroy(sans);
@@ -436,13 +442,14 @@ METHOD(load_tester_creds_t, destroy, void,
 	DESTROY_IF(this->ca);
 	this->psk->destroy(this->psk);
 	this->pwd->destroy(this->pwd);
+	this->cdps->destroy_function(this->cdps, free);
 	free(this);
 }
 
 load_tester_creds_t *load_tester_creds_create()
 {
 	private_load_tester_creds_t *this;
-	char *pwd, *psk, *digest;
+	char *pwd, *psk, *digest, *crl;
 
 	psk = lib->settings->get_str(lib->settings,
 				"%s.plugins.load-tester.preshared_key", default_psk, lib->ns);
@@ -450,6 +457,8 @@ load_tester_creds_t *load_tester_creds_create()
 				"%s.plugins.load-tester.eap_password", default_pwd, lib->ns);
 	digest = lib->settings->get_str(lib->settings,
 				"%s.plugins.load-tester.digest", "sha1", lib->ns);
+	crl = lib->settings->get_str(lib->settings,
+				"%s.plugins.load-tester.crl", NULL, lib->ns);
 
 	INIT(this,
 		.public = {
@@ -465,6 +474,7 @@ load_tester_creds_t *load_tester_creds_create()
 		.private = load_issuer_key(),
 		.ca = load_issuer_cert(),
 		.cas = linked_list_create(),
+		.cdps = linked_list_create(),
 		.psk = shared_key_create(SHARED_IKE,
 								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
@@ -480,6 +490,16 @@ load_tester_creds_t *load_tester_creds_create()
 	{
 		DBG1(DBG_CFG, "invalid load-tester digest: '%s', using sha1", digest);
 		this->digest = HASH_SHA1;
+	}
+
+	if (crl)
+	{
+		x509_cdp_t *cdp;
+
+		INIT(cdp,
+			.uri = crl,
+		);
+		this->cdps->insert_last(this->cdps, cdp);
 	}
 
 	load_ca_certs(this);
