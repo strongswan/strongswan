@@ -3,10 +3,14 @@ SUBDIRS = . tests
 ipsec_PROGRAMS = starter
 starter_SOURCES = \
 starter.c files.h \
-parser/parser.y parser/lexer.l parser/conf_parser.c parser/conf_parser.h \
 args.c args.h confread.c confread.h keywords.c keywords.h cmp.c cmp.h \
 invokecharon.c invokecharon.h starterstroke.c starterstroke.h \
 netkey.c netkey.h klips.c klips.h
+
+# parser is also used by tests
+noinst_LTLIBRARIES = libstarter.la
+libstarter_la_SOURCES = \
+parser/parser.y parser/lexer.l parser/conf_parser.c parser/conf_parser.h
 
 AM_CPPFLAGS = \
 	-I${linux_headers} \
@@ -29,6 +33,7 @@ AM_YFLAGS = -v -d
 starter_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libhydra/libhydra.la \
+	libstarter.la \
 	$(SOCKLIB) $(PTHREADLIB)
 
 EXTRA_DIST = keywords.txt ipsec.conf Android.mk
