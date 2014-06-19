@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Andreas Steffen
+ * Copyright (C) 2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,15 +13,31 @@
  * for more details.
  */
 
-#ifndef _ARGS_H_
-#define _ARGS_H_
+#include <test_runner.h>
 
-#include "keywords.h"
+/* declare test suite constructors */
+#define TEST_SUITE(x) test_suite_t* x();
+#include "starter_tests.h"
+#undef TEST_SUITE
 
-bool assign_arg(kw_token_t token, kw_token_t first, char *key, char *value,
-				void *base, bool *assigned);
-void free_args(kw_token_t first, kw_token_t last, void *base);
-bool cmp_args(kw_token_t first, kw_token_t last, void *base1, void *base2);
+static test_configuration_t tests[] = {
+#define TEST_SUITE(x) \
+	{ .suite = x, },
+#include "starter_tests.h"
+	{ .suite = NULL, }
+};
 
-#endif /* _ARGS_H_ */
+static bool test_runner_init(bool init)
+{
+	if (!init)
+	{
+		lib->processor->set_threads(lib->processor, 0);
+		lib->processor->cancel(lib->processor);
+	}
+	return TRUE;
+}
 
+int main(int argc, char *argv[])
+{
+	return test_runner_run("stroke", tests, test_runner_init);
+}

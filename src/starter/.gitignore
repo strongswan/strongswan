@@ -1,5 +1,4 @@
 starter
-lexer.c
-parser.h
-parser.c
-parser.output
+parser/lexer.c
+parser/parser.[ch]
+parser/parser.output

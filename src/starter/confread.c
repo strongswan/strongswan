@@ -1,4 +1,7 @@
-/* strongSwan IPsec config file parser
+/*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,6 +31,7 @@
 #include "confread.h"
 #include "args.h"
 #include "files.h"
+#include "parser/conf_parser.h"
 
 #define IKE_LIFETIME_DEFAULT         10800 /* 3 hours */
 #define IPSEC_LIFETIME_DEFAULT        3600 /* 1 hour */
@@ -40,6 +44,11 @@ static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 static const char esp_defaults[] = "aes128-sha1,3des-sha1";
 
 static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
+
+/**
+ * Provided by GPERF
+ */
+extern kw_entry_t *in_word_set (char *str, unsigned int len);
 
 static bool daemon_exists(char *daemon, char *path)
 {
@@ -55,24 +64,21 @@ static bool daemon_exists(char *daemon, char *path)
 /**
  * Process deprecated keywords
  */
-static bool is_deprecated(kw_token_t token, kw_list_t *kw, char *name)
+static bool is_deprecated(kw_token_t token, char *name, char *conn)
 {
 	switch (token)
 	{
 		case KW_SETUP_DEPRECATED:
 		case KW_PKCS11_DEPRECATED:
-			DBG1(DBG_APP, "# deprecated keyword '%s' in config setup",
-				 kw->entry->name);
+			DBG1(DBG_APP, "# deprecated keyword '%s' in config setup", name);
 			break;
 		case KW_CONN_DEPRECATED:
 		case KW_END_DEPRECATED:
 		case KW_PFS_DEPRECATED:
-			DBG1(DBG_APP, "# deprecated keyword '%s' in conn '%s'",
-				 kw->entry->name, name);
+			DBG1(DBG_APP, "# deprecated keyword '%s' in conn '%s'", name, conn);
 			break;
 		case KW_CA_DEPRECATED:
-			DBG1(DBG_APP, "# deprecated keyword '%s' in ca '%s'",
-				 kw->entry->name, name);
+			DBG1(DBG_APP, "# deprecated keyword '%s' in ca '%s'", name, conn);
 			break;
 		default:
 			return FALSE;
@@ -81,11 +87,11 @@ static bool is_deprecated(kw_token_t token, kw_list_t *kw, char *name)
 	switch (token)
 	{
 		case KW_PKCS11_DEPRECATED:
-			DBG1(DBG_APP, "  use the 'pkcs11' plugin instead", kw->entry->name);
+			DBG1(DBG_APP, "  use the 'pkcs11' plugin instead");
 			break;
 		case KW_PFS_DEPRECATED:
 			DBG1(DBG_APP, "  PFS is enabled by specifying a DH group in the "
-				 "'esp' cipher suite", kw->entry->name);
+				 "'esp' cipher suite");
 			break;
 		default:
 			break;
@@ -93,101 +99,54 @@ static bool is_deprecated(kw_token_t token, kw_list_t *kw, char *name)
 	return TRUE;
 }
 
-static void default_values(starter_config_t *cfg)
+/*
+ * parse config setup section
+ */
+static void load_setup(starter_config_t *cfg, conf_parser_t *parser)
 {
-	if (cfg == NULL)
-		return;
-
-	memset(cfg, 0, sizeof(struct starter_config));
-
-	/* is there enough space for all seen flags? */
-	assert(KW_SETUP_LAST - KW_SETUP_FIRST <
-		sizeof(cfg->setup.seen) * BITS_PER_BYTE);
-	assert(KW_CONN_LAST  - KW_CONN_FIRST <
-		sizeof(cfg->conn_default.seen) * BITS_PER_BYTE);
-	assert(KW_END_LAST - KW_END_FIRST <
-		sizeof(cfg->conn_default.right.seen) * BITS_PER_BYTE);
-	assert(KW_CA_LAST - KW_CA_FIRST <
-		sizeof(cfg->ca_default.seen) * BITS_PER_BYTE);
-
-	cfg->setup.seen        = SEEN_NONE;
-	cfg->setup.uniqueids   = TRUE;
-
-#ifdef START_CHARON
-	cfg->setup.charonstart = TRUE;
-#endif
-
-	cfg->conn_default.seen    = SEEN_NONE;
-	cfg->conn_default.startup = STARTUP_NO;
-	cfg->conn_default.state   = STATE_IGNORE;
-	cfg->conn_default.mode    = MODE_TUNNEL;
-	cfg->conn_default.options = SA_OPTION_MOBIKE;
-
-	cfg->conn_default.ike                   = strdupnull(ike_defaults);
-	cfg->conn_default.esp                   = strdupnull(esp_defaults);
-	cfg->conn_default.sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
-	cfg->conn_default.sa_ipsec_life_seconds = IPSEC_LIFETIME_DEFAULT;
-	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
-	cfg->conn_default.sa_rekey_fuzz         = SA_REPLACEMENT_FUZZ_DEFAULT;
-	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
-	cfg->conn_default.install_policy        = TRUE;
-	cfg->conn_default.dpd_delay             =  30; /* seconds */
-	cfg->conn_default.dpd_timeout           = 150; /* seconds */
-	cfg->conn_default.replay_window         = SA_REPLAY_WINDOW_DEFAULT;
-
-	cfg->conn_default.left.seen  = SEEN_NONE;
-	cfg->conn_default.right.seen = SEEN_NONE;
-
-	cfg->conn_default.left.sendcert  = CERT_SEND_IF_ASKED;
-	cfg->conn_default.right.sendcert = CERT_SEND_IF_ASKED;
-
-	cfg->conn_default.left.ikeport = 500;
-	cfg->conn_default.right.ikeport = 500;
-
-	cfg->conn_default.left.to_port = 0xffff;
-	cfg->conn_default.right.to_port = 0xffff;
-
-	cfg->ca_default.seen = SEEN_NONE;
-}
-
-#define KW_SA_OPTION_FLAG(sy, sn, fl) \
-		if (streq(kw->value, sy)) { conn->options |= fl; } \
-		else if (streq(kw->value, sn)) { conn->options &= ~fl; } \
-		else { DBG1(DBG_APP, "# bad option value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
-
-static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
-{
-	kw_list_t *kw;
+	enumerator_t *enumerator;
+	dictionary_t *dict;
+	kw_entry_t *entry;
+	char *key, *value;
 
 	DBG2(DBG_APP, "Loading config setup");
-
-	for (kw = cfgp->config_setup; kw; kw = kw->next)
+	dict = parser->get_section(parser, CONF_PARSER_CONFIG_SETUP, NULL);
+	if (!dict)
+	{
+		return;
+	}
+	enumerator = dict->create_enumerator(dict);
+	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		bool assigned = FALSE;
 
-		kw_token_t token = kw->entry->token;
-
-		if ((int)token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
+		entry = in_word_set(key, strlen(key));
+		if (!entry)
 		{
-			DBG1(DBG_APP, "# unsupported keyword '%s' in config setup",
-				 kw->entry->name);
+			DBG1(DBG_APP, "# unknown keyword '%s'", key);
+			cfg->non_fatal_err++;
+			continue;
+		}
+		if ((int)entry->token < KW_SETUP_FIRST || entry->token > KW_SETUP_LAST)
+		{
+			DBG1(DBG_APP, "# unsupported keyword '%s' in config setup", key);
 			cfg->err++;
 			continue;
 		}
-
-		if (is_deprecated(token, kw, ""))
+		if (is_deprecated(entry->token, key, ""))
 		{
 			cfg->non_fatal_err++;
 			continue;
 		}
-
-		if (!assign_arg(token, KW_SETUP_FIRST, kw, (char *)cfg, &assigned))
+		if (!assign_arg(entry->token, KW_SETUP_FIRST, key, value, cfg,
+						&assigned))
 		{
 			DBG1(DBG_APP, "  bad argument value in config setup");
 			cfg->err++;
-			continue;
 		}
 	}
+	enumerator->destroy(enumerator);
+	dict->destroy(dict);
 
 	/* verify the executables are actually available */
 #ifdef START_CHARON
@@ -198,292 +157,321 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 #endif
 }
 
+/*
+ * parse a ca section
+ */
+static void load_ca(starter_ca_t *ca, starter_config_t *cfg,
+					conf_parser_t *parser)
+{
+	enumerator_t *enumerator;
+	dictionary_t *dict;
+	kw_entry_t *entry;
+	kw_token_t token;
+	char *key, *value;
+
+	DBG2(DBG_APP, "Loading ca '%s'", ca->name);
+	dict = parser->get_section(parser, CONF_PARSER_CA, ca->name);
+	if (!dict)
+	{
+		return;
+	}
+	enumerator = dict->create_enumerator(dict);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		bool assigned = FALSE;
+
+		entry = in_word_set(key, strlen(key));
+		if (!entry)
+		{
+			DBG1(DBG_APP, "# unknown keyword '%s'", key);
+			cfg->non_fatal_err++;
+			continue;
+		}
+		token = entry->token;
+		if (token == KW_AUTO)
+		{
+			token = KW_CA_SETUP;
+		}
+		if (token < KW_CA_FIRST || token > KW_CA_LAST)
+		{
+			DBG1(DBG_APP, "# unsupported keyword '%s' in ca '%s'",
+				 key, ca->name);
+			cfg->err++;
+			continue;
+		}
+		if (is_deprecated(token, key, ca->name))
+		{
+			cfg->non_fatal_err++;
+			continue;
+		}
+		if (!assign_arg(token, KW_CA_FIRST, key, value, ca, &assigned))
+		{
+			DBG1(DBG_APP, "  bad argument value in ca '%s'", ca->name);
+			cfg->err++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	dict->destroy(dict);
+
+	/* treat 'route' and 'start' as 'add' */
+	if (ca->startup != STARTUP_NO)
+	{
+		ca->startup = STARTUP_ADD;
+	}
+}
+
+/*
+ * set some default values
+ */
+static void conn_defaults(starter_conn_t *conn)
+{
+	conn->startup = STARTUP_NO;
+	conn->state   = STATE_IGNORE;
+	conn->mode    = MODE_TUNNEL;
+	conn->options = SA_OPTION_MOBIKE;
+
+	conn->ike                   = strdupnull(ike_defaults);
+	/* esp defaults are set after parsing the conn section */
+	conn->sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
+	conn->sa_ipsec_life_seconds = IPSEC_LIFETIME_DEFAULT;
+	conn->sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
+	conn->sa_rekey_fuzz         = SA_REPLACEMENT_FUZZ_DEFAULT;
+	conn->sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
+	conn->install_policy        = TRUE;
+	conn->dpd_delay             =  30; /* seconds */
+	conn->dpd_timeout           = 150; /* seconds */
+	conn->replay_window         = SA_REPLAY_WINDOW_DEFAULT;
+
+	conn->left.sendcert = CERT_SEND_IF_ASKED;
+	conn->right.sendcert = CERT_SEND_IF_ASKED;
+
+	conn->left.ikeport = 500;
+	conn->right.ikeport = 500;
+
+	conn->left.to_port = 0xffff;
+	conn->right.to_port = 0xffff;
+}
+
+/*
+ * parse left|right specific options
+ */
 static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
-				   kw_list_t *kw, char *conn_name, starter_config_t *cfg)
+				   char *key, char *value, starter_config_t *cfg)
 {
 	bool assigned = FALSE;
 
-	char *name  = kw->entry->name;
-	char *value = kw->value;
-
-	if (is_deprecated(token, kw, conn_name))
+	if (is_deprecated(token, key, conn->name))
 	{
 		cfg->non_fatal_err++;
 		return;
 	}
 
-	if (!assign_arg(token, KW_END_FIRST, kw, (char *)end, &assigned))
+	if (!assign_arg(token, KW_END_FIRST, key, value, end, &assigned))
+	{
 		goto err;
+	}
 
 	/* post processing of some keywords that were assigned automatically */
 	switch (token)
 	{
-	case KW_HOST:
-		if (value && strlen(value) > 0 && value[0] == '%')
-		{
-			if (streq(value, "%defaultroute"))
+		case KW_HOST:
+			if (value && strlen(value) > 0 && value[0] == '%')
 			{
-				value = "%any";
+				if (streq(value, "%defaultroute"))
+				{
+					value = "%any";
+				}
+				if (!streq(value, "%any") && !streq(value, "%any4") &&
+					!streq(value, "%any6"))
+				{	/* allow_any prefix */
+					end->allow_any = TRUE;
+					value++;
+				}
 			}
-			if (!streq(value, "%any") && !streq(value, "%any4") &&
-				!streq(value, "%any6"))
-			{	/* allow_any prefix */
-				end->allow_any = TRUE;
-				value++;
+			free(end->host);
+			end->host = strdupnull(value);
+			break;
+		case KW_SOURCEIP:
+			conn->mode = MODE_TUNNEL;
+			conn->proxy_mode = FALSE;
+			break;
+		case KW_SENDCERT:
+			if (end->sendcert == CERT_YES_SEND)
+			{
+				end->sendcert = CERT_ALWAYS_SEND;
 			}
-		}
-		free(end->host);
-		end->host = strdupnull(value);
-		break;
-	case KW_SOURCEIP:
-		conn->mode = MODE_TUNNEL;
-		conn->proxy_mode = FALSE;
-		break;
-	case KW_SENDCERT:
-		if (end->sendcert == CERT_YES_SEND)
-		{
-			end->sendcert = CERT_ALWAYS_SEND;
-		}
-		else if (end->sendcert == CERT_NO_SEND)
-		{
-			end->sendcert = CERT_NEVER_SEND;
-		}
-		break;
-	default:
-		break;
+			else if (end->sendcert == CERT_NO_SEND)
+			{
+				end->sendcert = CERT_NEVER_SEND;
+			}
+			break;
+		default:
+			break;
 	}
 
 	if (assigned)
+	{
 		return;
+	}
 
 	/* individual processing of keywords that were not assigned automatically */
 	switch (token)
 	{
-	case KW_PROTOPORT:
-	{
-		struct protoent *proto;
-		struct servent *svc;
-		char *sep, *port = "", *endptr;
-		long int p;
-
-		sep = strchr(value, '/');
-		if (sep)
-		{	/* protocol/port */
-			*sep = '\0';
-			port = sep + 1;
-		}
-
-		if (streq(value, "%any"))
+		case KW_PROTOPORT:
 		{
-			end->protocol = 0;
-		}
-		else
-		{
-			proto = getprotobyname(value);
-			if (proto)
+			struct protoent *proto;
+			struct servent *svc;
+			char *sep, *port = "", *endptr;
+			long int p;
+
+			sep = strchr(value, '/');
+			if (sep)
+			{	/* protocol/port */
+				*sep = '\0';
+				port = sep + 1;
+			}
+
+			if (streq(value, "%any"))
 			{
-				end->protocol = proto->p_proto;
+				end->protocol = 0;
 			}
 			else
 			{
-				p = strtol(value, &endptr, 0);
-				if ((*value && *endptr) || p < 0 || p > 0xff)
+				proto = getprotobyname(value);
+				if (proto)
 				{
-					DBG1(DBG_APP, "# bad protocol: %s=%s", name, value);
-					goto err;
+					end->protocol = proto->p_proto;
 				}
-				end->protocol = (u_int8_t)p;
-			}
-		}
-		if (streq(port, "%any"))
-		{
-			end->from_port = 0;
-			end->to_port = 0xffff;
-		}
-		else if (streq(port, "%opaque"))
-		{
-			end->from_port = 0xffff;
-			end->to_port = 0;
-		}
-		else if (*port)
-		{
-			svc = getservbyname(port, NULL);
-			if (svc)
-			{
-				end->from_port = end->to_port = ntohs(svc->s_port);
-			}
-			else
-			{
-				p = strtol(port, &endptr, 0);
-				if (p < 0 || p > 0xffff)
+				else
 				{
-					DBG1(DBG_APP, "# bad port: %s=%s", name, port);
-					goto err;
+					p = strtol(value, &endptr, 0);
+					if ((*value && *endptr) || p < 0 || p > 0xff)
+					{
+						DBG1(DBG_APP, "# bad protocol: %s=%s", key, value);
+						goto err;
+					}
+					end->protocol = (u_int8_t)p;
 				}
-				end->from_port = p;
-				if (*endptr == '-')
+			}
+			if (streq(port, "%any"))
+			{
+				end->from_port = 0;
+				end->to_port = 0xffff;
+			}
+			else if (streq(port, "%opaque"))
+			{
+				end->from_port = 0xffff;
+				end->to_port = 0;
+			}
+			else if (*port)
+			{
+				svc = getservbyname(port, NULL);
+				if (svc)
 				{
-					port = endptr + 1;
+					end->from_port = end->to_port = ntohs(svc->s_port);
+				}
+				else
+				{
 					p = strtol(port, &endptr, 0);
 					if (p < 0 || p > 0xffff)
 					{
-						DBG1(DBG_APP, "# bad port: %s=%s", name, port);
+						DBG1(DBG_APP, "# bad port: %s=%s", key, port);
+						goto err;
+					}
+					end->from_port = p;
+					if (*endptr == '-')
+					{
+						port = endptr + 1;
+						p = strtol(port, &endptr, 0);
+						if (p < 0 || p > 0xffff)
+						{
+							DBG1(DBG_APP, "# bad port: %s=%s", key, port);
+							goto err;
+						}
+					}
+					end->to_port = p;
+					if (*endptr)
+					{
+						DBG1(DBG_APP, "# bad port: %s=%s", key, port);
 						goto err;
 					}
 				}
-				end->to_port = p;
-				if (*endptr)
-				{
-					DBG1(DBG_APP, "# bad port: %s=%s", name, port);
-					goto err;
-				}
 			}
+			if (sep)
+			{	/* restore the original text in case also= is used */
+				*sep = '/';
+			}
+			break;
 		}
-		if (sep)
-		{	/* restore the original text in case also= is used */
-			*sep = '/';
-		}
-		break;
-	}
-	default:
-		break;
+		default:
+			break;
 	}
 	return;
 
 err:
-	DBG1(DBG_APP, "  bad argument value in conn '%s'", conn_name);
+	DBG1(DBG_APP, "  bad argument value in conn '%s'", conn->name);
 	cfg->err++;
 }
 
 /*
- * handles left|rightfirewall and left|rightupdown parameters
+ * macro to handle simple flags
  */
-static void handle_firewall(const char *label, starter_end_t *end,
-							starter_config_t *cfg)
-{
-	if (end->firewall && (end->seen & SEEN_KW(KW_FIREWALL, KW_END_FIRST)))
-	{
-		if (end->updown != NULL)
-		{
-			DBG1(DBG_APP, "# cannot have both %sfirewall and %supdown", label,
-				 label);
-			cfg->err++;
-		}
-		else
-		{
-			end->updown = strdupnull(firewall_defaults);
-			end->firewall = FALSE;
-		}
-	}
-}
+#define KW_SA_OPTION_FLAG(sy, sn, fl) \
+		if (streq(value, sy)) { conn->options |= fl; } \
+		else if (streq(value, sn)) { conn->options &= ~fl; } \
+		else { DBG1(DBG_APP, "# bad option value: %s=%s", key, value); cfg->err++; }
 
 /*
- * parse a conn section
+ * parse settings not handled by the simple argument parser
  */
-static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
+static void handle_keyword(kw_token_t token, starter_conn_t *conn, char *key,
+						   char *value, starter_config_t *cfg)
 {
-	char *conn_name = (conn->name == NULL)? "%default":conn->name;
-
-	for ( ; kw; kw = kw->next)
+	if ((token == KW_ESP && conn->ah) || (token == KW_AH && conn->esp))
 	{
-		bool assigned = FALSE;
-
-		kw_token_t token = kw->entry->token;
-
-		if (token >= KW_LEFT_FIRST && token <= KW_LEFT_LAST)
-		{
-			kw_end(conn, &conn->left, token - KW_LEFT_FIRST + KW_END_FIRST
-				,  kw, conn_name, cfg);
-			continue;
-		}
-		else if (token >= KW_RIGHT_FIRST && token <= KW_RIGHT_LAST)
-		{
-			kw_end(conn, &conn->right, token - KW_RIGHT_FIRST + KW_END_FIRST
-				 , kw, conn_name, cfg);
-			continue;
-		}
-
-		if (token == KW_AUTO)
-		{
-			token = KW_CONN_SETUP;
-		}
-		else if (token == KW_ALSO)
-		{
-			if (cfg->parse_also)
-			{
-				also_t *also = malloc_thing(also_t);
-
-				also->name = strdupnull(kw->value);
-				also->next = conn->also;
-				conn->also = also;
-
-				DBG2(DBG_APP, "  also=%s", kw->value);
-			}
-			continue;
-		}
-
-		if (token < KW_CONN_FIRST || token > KW_CONN_LAST)
-		{
-			DBG1(DBG_APP, "# unsupported keyword '%s' in conn '%s'",
-				 kw->entry->name, conn_name);
-			cfg->err++;
-			continue;
-		}
-
-		if (is_deprecated(token, kw, conn_name))
-		{
-			cfg->non_fatal_err++;
-			continue;
-		}
-
-		if (!assign_arg(token, KW_CONN_FIRST, kw, (char *)conn, &assigned))
-		{
-			DBG1(DBG_APP, "  bad argument value in conn '%s'", conn_name);
-			cfg->err++;
-			continue;
-		}
-
-		if (assigned)
-			continue;
-
-		switch (token)
-		{
+		DBG1(DBG_APP, "# can't have both 'ah' and 'esp' options");
+		cfg->err++;
+		return;
+	}
+	switch (token)
+	{
 		case KW_TYPE:
+		{
 			conn->mode = MODE_TRANSPORT;
 			conn->proxy_mode = FALSE;
-			if (streq(kw->value, "tunnel"))
+			if (streq(value, "tunnel"))
 			{
 				conn->mode = MODE_TUNNEL;
 			}
-			else if (streq(kw->value, "beet"))
+			else if (streq(value, "beet"))
 			{
 				conn->mode = MODE_BEET;
 			}
-			else if (streq(kw->value, "transport_proxy"))
+			else if (streq(value, "transport_proxy"))
 			{
 				conn->mode = MODE_TRANSPORT;
 				conn->proxy_mode = TRUE;
 			}
-			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
+			else if (streq(value, "passthrough") || streq(value, "pass"))
 			{
 				conn->mode = MODE_PASS;
 			}
-			else if (streq(kw->value, "drop") || streq(kw->value, "reject"))
+			else if (streq(value, "drop") || streq(value, "reject"))
 			{
 				conn->mode = MODE_DROP;
 			}
-			else if (!streq(kw->value, "transport"))
+			else if (!streq(value, "transport"))
 			{
-				DBG1(DBG_APP, "# bad policy value: %s=%s", kw->entry->name,
-					 kw->value);
+				DBG1(DBG_APP, "# bad policy value: %s=%s", key, value);
 				cfg->err++;
 			}
 			break;
+		}
 		case KW_COMPRESS:
 			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_COMPRESS)
 			break;
 		case KW_MARK:
-			if (!mark_from_string(kw->value, &conn->mark_in))
+			if (!mark_from_string(value, &conn->mark_in))
 			{
 				cfg->err++;
 				break;
@@ -491,19 +479,19 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			conn->mark_out = conn->mark_in;
 			break;
 		case KW_MARK_IN:
-			if (!mark_from_string(kw->value, &conn->mark_in))
+			if (!mark_from_string(value, &conn->mark_in))
 			{
 				cfg->err++;
 			}
 			break;
 		case KW_MARK_OUT:
-			if (!mark_from_string(kw->value, &conn->mark_out))
+			if (!mark_from_string(value, &conn->mark_out))
 			{
 				cfg->err++;
 			}
 			break;
 		case KW_TFC:
-			if (streq(kw->value, "%mtu"))
+			if (streq(value, "%mtu"))
 			{
 				conn->tfc = -1;
 			}
@@ -511,17 +499,16 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			{
 				char *endptr;
 
-				conn->tfc = strtoul(kw->value, &endptr, 10);
+				conn->tfc = strtoul(value, &endptr, 10);
 				if (*endptr != '\0')
 				{
-					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
-						 kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", key, value);
 					cfg->err++;
 				}
 			}
 			break;
 		case KW_KEYINGTRIES:
-			if (streq(kw->value, "%forever"))
+			if (streq(value, "%forever"))
 			{
 				conn->sa_keying_tries = 0;
 			}
@@ -529,11 +516,10 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			{
 				char *endptr;
 
-				conn->sa_keying_tries = strtoul(kw->value, &endptr, 10);
+				conn->sa_keying_tries = strtoul(value, &endptr, 10);
 				if (*endptr != '\0')
 				{
-					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
-						 kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", key, value);
 					cfg->err++;
 				}
 			}
@@ -558,219 +544,120 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			break;
 		default:
 			break;
+	}
+}
+
+/*
+ * handles left|rightfirewall and left|rightupdown parameters
+ */
+static void handle_firewall(const char *label, starter_end_t *end,
+							starter_config_t *cfg)
+{
+	if (end->firewall)
+	{
+		if (end->updown != NULL)
+		{
+			DBG1(DBG_APP, "# cannot have both %sfirewall and %supdown", label,
+				 label);
+			cfg->err++;
+		}
+		else
+		{
+			end->updown = strdupnull(firewall_defaults);
+			end->firewall = FALSE;
 		}
 	}
-
-	handle_firewall("left", &conn->left, cfg);
-	handle_firewall("right", &conn->right, cfg);
 }
 
 /*
- * initialize a conn object with the default conn
+ * parse a conn section
  */
-static void conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
+static void load_conn(starter_conn_t *conn, starter_config_t *cfg,
+					  conf_parser_t *parser)
 {
-	memcpy(conn, def, sizeof(starter_conn_t));
-	conn->name = strdupnull(name);
+	enumerator_t *enumerator;
+	dictionary_t *dict;
+	kw_entry_t *entry;
+	kw_token_t token;
+	char *key, *value;
 
-	clone_args(KW_CONN_FIRST, KW_CONN_LAST, (char *)conn, (char *)def);
-	clone_args(KW_END_FIRST, KW_END_LAST, (char *)&conn->left, (char *)&def->left);
-	clone_args(KW_END_FIRST, KW_END_LAST, (char *)&conn->right, (char *)&def->right);
-}
-
-/*
- * parse a ca section
- */
-static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
-{
-	char *ca_name = (ca->name == NULL)? "%default":ca->name;
-
-	for ( ; kw; kw = kw->next)
+	DBG2(DBG_APP, "Loading conn '%s'", conn->name);
+	dict = parser->get_section(parser, CONF_PARSER_CONN, conn->name);
+	if (!dict)
+	{
+		return;
+	}
+	enumerator = dict->create_enumerator(dict);
+	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		bool assigned = FALSE;
 
-		kw_token_t token = kw->entry->token;
-
-		if (token == KW_AUTO)
+		entry = in_word_set(key, strlen(key));
+		if (!entry)
 		{
-			token = KW_CA_SETUP;
-		}
-		else if (token == KW_ALSO)
-		{
-			if (cfg->parse_also)
-			{
-				also_t *also = malloc_thing(also_t);
-
-				also->name = strdupnull(kw->value);
-				also->next = ca->also;
-				ca->also = also;
-
-				DBG2(DBG_APP, "  also=%s", kw->value);
-			}
+			DBG1(DBG_APP, "# unknown keyword '%s'", key);
+			cfg->non_fatal_err++;
 			continue;
 		}
-
-		if (token < KW_CA_FIRST || token > KW_CA_LAST)
+		token = entry->token;
+		if (token >= KW_LEFT_FIRST && token <= KW_LEFT_LAST)
 		{
-			DBG1(DBG_APP, "# unsupported keyword '%s' in ca '%s'",
-				 kw->entry->name, ca_name);
+			kw_end(conn, &conn->left, token - KW_LEFT_FIRST + KW_END_FIRST,
+				   key, value, cfg);
+			continue;
+		}
+		else if (token >= KW_RIGHT_FIRST && token <= KW_RIGHT_LAST)
+		{
+			kw_end(conn, &conn->right, token - KW_RIGHT_FIRST + KW_END_FIRST,
+				   key, value, cfg);
+			continue;
+		}
+		if (token == KW_AUTO)
+		{
+			token = KW_CONN_SETUP;
+		}
+		if (token < KW_CONN_FIRST || token > KW_CONN_LAST)
+		{
+			DBG1(DBG_APP, "# unsupported keyword '%s' in conn '%s'",
+				 key, conn->name);
 			cfg->err++;
 			continue;
 		}
-
-		if (is_deprecated(token, kw, ca_name))
+		if (is_deprecated(token, key, conn->name))
 		{
 			cfg->non_fatal_err++;
 			continue;
 		}
-
-		if (!assign_arg(token, KW_CA_FIRST, kw, (char *)ca, &assigned))
+		if (!assign_arg(token, KW_CONN_FIRST, key, value, conn,
+						&assigned))
 		{
-			DBG1(DBG_APP, "  bad argument value in ca '%s'", ca_name);
+			DBG1(DBG_APP, "  bad argument value in conn '%s'", conn->name);
 			cfg->err++;
+			continue;
+		}
+		if (!assigned)
+		{
+			handle_keyword(token, conn, key, value, cfg);
 		}
 	}
+	enumerator->destroy(enumerator);
+	dict->destroy(dict);
 
-	/* treat 'route' and 'start' as 'add' */
-	if (ca->startup != STARTUP_NO)
-		ca->startup = STARTUP_ADD;
-}
+	handle_firewall("left", &conn->left, cfg);
+	handle_firewall("right", &conn->right, cfg);
 
-/*
- * initialize a ca object with the default ca
- */
-static void ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
-{
-	memcpy(ca, def, sizeof(starter_ca_t));
-	ca->name = strdupnull(name);
-
-	clone_args(KW_CA_FIRST, KW_CA_LAST, (char *)ca, (char *)def);
-}
-
-static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
-								 starter_config_t *cfg);
-
-static void load_also_conns(starter_conn_t *conn, also_t *also,
-							starter_config_t *cfg)
-{
-	while (also != NULL)
+	if (!conn->esp && !conn->ah)
 	{
-		kw_list_t *kw = find_also_conn(also->name, conn, cfg);
-
-		if (kw == NULL)
-		{
-			DBG1(DBG_APP, "  conn '%s' cannot include '%s'", conn->name,
-				 also->name);
-		}
-		else
-		{
-			DBG2(DBG_APP, "conn '%s' includes '%s'", conn->name, also->name);
-			/* only load if no error occurred in the first round */
-			if (cfg->err == 0)
-				load_conn(conn, kw, cfg);
-		}
-		also = also->next;
+		conn->esp = strdupnull(esp_defaults);
 	}
 }
 
 /*
- * find a conn included by also
+ * free the memory used by a starter_ca_t object
  */
-static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
-								 starter_config_t *cfg)
+static void confread_free_ca(starter_ca_t *ca)
 {
-	starter_conn_t *c = cfg->conn_first;
-
-	while (c != NULL)
-	{
-		if (streq(name, c->name))
-		{
-			if (conn->visit == c->visit)
-			{
-				DBG1(DBG_APP, "# detected also loop");
-				cfg->err++;
-				return NULL;
-			}
-			c->visit = conn->visit;
-			load_also_conns(conn, c->also, cfg);
-			return c->kw;
-		}
-		c = c->next;
-	}
-
-	DBG1(DBG_APP, "# also '%s' not found", name);
-	cfg->err++;
-	return NULL;
-}
-
-static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
-							   starter_config_t *cfg);
-
-static void load_also_cas(starter_ca_t *ca, also_t *also, starter_config_t *cfg)
-{
-	while (also != NULL)
-	{
-		kw_list_t *kw = find_also_ca(also->name, ca, cfg);
-
-		if (kw == NULL)
-		{
-			DBG1(DBG_APP, "  ca '%s' cannot include '%s'", ca->name,
-				 also->name);
-		}
-		else
-		{
-			DBG2(DBG_APP, "ca '%s' includes '%s'", ca->name, also->name);
-			/* only load if no error occurred in the first round */
-			if (cfg->err == 0)
-			load_ca(ca, kw, cfg);
-		}
-		also = also->next;
-	}
-}
-
-/*
- * find a ca included by also
- */
-static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
-							   starter_config_t *cfg)
-{
-	starter_ca_t *c = cfg->ca_first;
-
-	while (c != NULL)
-	{
-		if (streq(name, c->name))
-		{
-			if (ca->visit == c->visit)
-			{
-				DBG1(DBG_APP, "# detected also loop");
-				cfg->err++;
-				return NULL;
-			}
-			c->visit = ca->visit;
-			load_also_cas(ca, c->also, cfg);
-			return c->kw;
-		}
-		c = c->next;
-	}
-
-	DBG1(DBG_APP, "# also '%s' not found", name);
-	cfg->err++;
-	return NULL;
-}
-
-/*
- * free the memory used by also_t objects
- */
-static void free_also(also_t *head)
-{
-	while (head != NULL)
-	{
-		also_t *also = head;
-
-		head = also->next;
-		free(also->name);
-		free(also);
-	}
+	free_args(KW_CA_NAME, KW_CA_LAST, (char *)ca);
 }
 
 /*
@@ -781,17 +668,6 @@ static void confread_free_conn(starter_conn_t *conn)
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
 	free_args(KW_CONN_NAME, KW_CONN_LAST, (char *)conn);
-	free_also(conn->also);
-}
-
-/*
- * free the memory used by a starter_ca_t object
- */
-static void
-confread_free_ca(starter_ca_t *ca)
-{
-	free_args(KW_CA_NAME, KW_CA_LAST, (char *)ca);
-	free_also(ca->also);
 }
 
 /*
@@ -804,8 +680,6 @@ void confread_free(starter_config_t *cfg)
 
 	free_args(KW_SETUP_FIRST, KW_SETUP_LAST, (char *)cfg);
 
-	confread_free_conn(&cfg->conn_default);
-
 	while (conn != NULL)
 	{
 		starter_conn_t *conn_aux = conn;
@@ -814,8 +688,6 @@ void confread_free(starter_config_t *cfg)
 		confread_free_conn(conn_aux);
 		free(conn_aux);
 	}
-
-	confread_free_ca(&cfg->ca_default);
 
 	while (ca != NULL)
 	{
@@ -834,170 +706,108 @@ void confread_free(starter_config_t *cfg)
  */
 starter_config_t* confread_load(const char *file)
 {
+	conf_parser_t *parser;
 	starter_config_t *cfg = NULL;
-	config_parsed_t  *cfgp;
-	section_list_t   *sconn, *sca;
-	starter_conn_t   *conn;
-	starter_ca_t     *ca;
-
+	enumerator_t *enumerator;
 	u_int total_err;
-	u_int visit	= 0;
+	char *name;
 
-	/* load IPSec configuration file  */
-	cfgp = parser_load_conf(file);
-	if (!cfgp)
+	parser = conf_parser_create(file);
+	if (!parser->parse(parser))
 	{
+		parser->destroy(parser);
 		return NULL;
 	}
-	cfg = malloc_thing(starter_config_t);
 
-	/* set default values */
-	default_values(cfg);
+	INIT(cfg,
+		.setup = {
+			.uniqueids = TRUE,
+
+		}
+	);
+#ifdef START_CHARON
+	cfg->setup.charonstart = TRUE;
+#endif
 
 	/* load config setup section */
-	load_setup(cfg, cfgp);
+	load_setup(cfg, parser);
 
-	/* in the first round parse also statements */
-	cfg->parse_also = TRUE;
-
-	/* find %default ca section */
-	for (sca = cfgp->ca_first; sca; sca = sca->next)
+	/* load ca sections */
+	enumerator = parser->get_sections(parser, CONF_PARSER_CA);
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		if (streq(sca->name, "%default"))
-		{
-			DBG2(DBG_APP, "Loading ca %%default");
-			load_ca(&cfg->ca_default, sca->kw, cfg);
-		}
-	}
+		u_int previous_err = cfg->err;
+		starter_ca_t *ca;
 
-	/* parameters defined in ca %default sections can be overloads */
-	cfg->ca_default.seen = SEEN_NONE;
+		INIT(ca,
+			.name = strdup(name),
+		);
+		load_ca(ca, cfg, parser);
 
-	/* load other ca sections */
-	for (sca = cfgp->ca_first; sca; sca = sca->next)
-	{
-		u_int previous_err;
-
-		/* skip %default ca section */
-		if (streq(sca->name, "%default"))
-			continue;
-
-		DBG2(DBG_APP, "Loading ca '%s'", sca->name);
-		ca = malloc_thing(starter_ca_t);
-
-		ca_default(sca->name, ca, &cfg->ca_default);
-		ca->kw =  sca->kw;
-		ca->next = NULL;
-
-		previous_err = cfg->err;
-		load_ca(ca, ca->kw, cfg);
 		if (cfg->err > previous_err)
 		{
-			/* errors occurred - free the ca */
 			confread_free_ca(ca);
 			cfg->non_fatal_err += cfg->err - previous_err;
 			cfg->err = previous_err;
 		}
 		else
 		{
-			/* success - insert the ca into the chained list */
 			if (cfg->ca_last)
+			{
 				cfg->ca_last->next = ca;
+			}
 			cfg->ca_last = ca;
 			if (!cfg->ca_first)
+			{
 				cfg->ca_first = ca;
+			}
+			if (ca->startup != STARTUP_NO)
+			{
+				ca->state = STATE_TO_ADD;
+			}
 		}
 	}
+	enumerator->destroy(enumerator);
 
-	for (ca = cfg->ca_first; ca; ca = ca->next)
+	/* load conn sections */
+	enumerator = parser->get_sections(parser, CONF_PARSER_CONN);
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		also_t *also = ca->also;
+		u_int previous_err = cfg->err;
+		starter_conn_t *conn;
 
-		while (also != NULL)
-		{
-			kw_list_t *kw = find_also_ca(also->name, cfg->ca_first, cfg);
+		INIT(conn,
+			.name = strdup(name),
+		);
+		conn_defaults(conn);
+		load_conn(conn, cfg, parser);
 
-			load_ca(ca, kw, cfg);
-			also = also->next;
-		}
-
-		if (ca->startup != STARTUP_NO)
-			ca->state = STATE_TO_ADD;
-	}
-
-	/* find %default conn sections */
-	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
-	{
-		if (streq(sconn->name, "%default"))
-		{
-			DBG2(DBG_APP, "Loading conn %%default");
-			load_conn(&cfg->conn_default, sconn->kw, cfg);
-		}
-	}
-
-	/* parameters defined in conn %default sections can be overloaded */
-	cfg->conn_default.seen       = SEEN_NONE;
-	cfg->conn_default.right.seen = SEEN_NONE;
-	cfg->conn_default.left.seen  = SEEN_NONE;
-
-	/* load other conn sections */
-	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
-	{
-		u_int previous_err;
-
-		/* skip %default conn section */
-		if (streq(sconn->name, "%default"))
-			continue;
-
-		DBG2(DBG_APP, "Loading conn '%s'", sconn->name);
-		conn = malloc_thing(starter_conn_t);
-
-		conn_default(sconn->name, conn, &cfg->conn_default);
-		conn->kw =  sconn->kw;
-		conn->next = NULL;
-
-		previous_err = cfg->err;
-		load_conn(conn, conn->kw, cfg);
 		if (cfg->err > previous_err)
 		{
-			/* error occurred - free the conn */
 			confread_free_conn(conn);
 			cfg->non_fatal_err += cfg->err - previous_err;
 			cfg->err = previous_err;
 		}
 		else
 		{
-			/* success - insert the conn into the chained list */
 			if (cfg->conn_last)
+			{
 				cfg->conn_last->next = conn;
+			}
 			cfg->conn_last = conn;
 			if (!cfg->conn_first)
+			{
 				cfg->conn_first = conn;
+			}
+			if (conn->startup != STARTUP_NO)
+			{
+				conn->state = STATE_TO_ADD;
+			}
 		}
 	}
+	enumerator->destroy(enumerator);
 
-	/* in the second round do not parse also statements */
-	cfg->parse_also = FALSE;
-
-	for (ca = cfg->ca_first; ca; ca = ca->next)
-	{
-		ca->visit = ++visit;
-		load_also_cas(ca, ca->also, cfg);
-
-		if (ca->startup != STARTUP_NO)
-			ca->state = STATE_TO_ADD;
-	}
-
-	for (conn = cfg->conn_first; conn; conn = conn->next)
-	{
-		conn->visit = ++visit;
-		load_also_conns(conn, conn->also, cfg);
-
-		if (conn->startup != STARTUP_NO)
-			conn->state = STATE_TO_ADD;
-	}
-
-	parser_free_conf(cfgp);
+	parser->destroy(parser);
 
 	total_err = cfg->err + cfg->non_fatal_err;
 	if (total_err > 0)
@@ -1005,6 +815,5 @@ starter_config_t* confread_load(const char *file)
 		DBG1(DBG_APP, "### %d parsing error%s (%d fatal) ###",
 			 total_err, (total_err > 1)?"s":"", cfg->err);
 	}
-
 	return cfg;
 }

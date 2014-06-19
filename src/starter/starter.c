@@ -418,6 +418,7 @@ int main (int argc, char **argv)
 	bool no_fork = FALSE;
 	bool attach_gdb = FALSE;
 	bool load_warning = FALSE;
+	bool conftest = FALSE;
 
 	library_init(NULL, "starter");
 	atexit(library_deinit);
@@ -467,6 +468,10 @@ int main (int argc, char **argv)
 		{
 			config_file = argv[++i];
 		}
+		else if (streq(argv[i], "--conftest"))
+		{
+			conftest = TRUE;
+		}
 		else
 		{
 			usage(argv[0]);
@@ -484,6 +489,28 @@ int main (int argc, char **argv)
 	}
 
 	init_log("ipsec_starter");
+
+	if (conftest)
+	{
+		int status = LSB_RC_SUCCESS;
+
+		cfg = confread_load(config_file);
+		if (cfg == NULL || cfg->err > 0)
+		{
+			DBG1(DBG_APP, "config invalid!");
+			status = LSB_RC_INVALID_ARGUMENT;
+		}
+		else
+		{
+			DBG1(DBG_APP, "config OK");
+		}
+		if (cfg)
+		{
+			confread_free(cfg);
+		}
+		cleanup();
+		exit(status);
+	}
 
 	DBG1(DBG_APP, "Starting %sSwan "VERSION" IPsec [starter]...",
 		lib->settings->get_bool(lib->settings,

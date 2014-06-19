@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Andreas Steffen
+ * Copyright (C) 2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,15 +13,4 @@
  * for more details.
  */
 
-#ifndef _ARGS_H_
-#define _ARGS_H_
-
-#include "keywords.h"
-
-bool assign_arg(kw_token_t token, kw_token_t first, char *key, char *value,
-				void *base, bool *assigned);
-void free_args(kw_token_t first, kw_token_t last, void *base);
-bool cmp_args(kw_token_t first, kw_token_t last, void *base1, void *base2);
-
-#endif /* _ARGS_H_ */
-
+TEST_SUITE(parser_suite_create)

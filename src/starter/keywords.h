@@ -16,7 +16,10 @@
 #ifndef _KEYWORDS_H_
 #define _KEYWORDS_H_
 
-typedef enum {
+typedef enum kw_token_t kw_token_t;
+typedef struct kw_entry_t kw_entry_t;
+
+enum kw_token_t {
 	/* config setup keywords */
 	KW_CHARONDEBUG,
 	KW_UNIQUEIDS,
@@ -185,6 +188,11 @@ typedef enum {
 	KW_ALSO,
 	KW_AUTO,
 
-} kw_token_t;
+};
+
+struct kw_entry_t {
+	char *name;
+	kw_token_t token;
+};
 
 #endif /* _KEYWORDS_H_ */

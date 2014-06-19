@@ -1,6 +1,7 @@
-/* automatic handling of confread struct arguments
+/*
+ * Copyright (C) 2014 Tobias Brunner
  * Copyright (C) 2006 Andreas Steffen
- * Hochschule fuer Technik Rapperswil, Switzerland
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,7 +21,6 @@
 #include <library.h>
 #include <utils/debug.h>
 
-#include "keywords.h"
 #include "confread.h"
 #include "args.h"
 
@@ -36,7 +36,6 @@ typedef enum {
 	ARG_UBIN,
 	ARG_PCNT,
 	ARG_STR,
-	ARG_LST,
 	ARG_MISC
 } arg_t;
 
@@ -219,123 +218,48 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_END_DEPRECATED */                                   },
 };
 
-static void free_list(char **list)
-{
-	char **s;
-
-	for (s = list; *s; s++)
-	{
-		free(*s);
-	}
-	free(list);
-}
-
-char** new_list(char *value)
-{
-	char *val, *b, *e, *end, **ret;
-	int count;
-
-	val = strdupnull(value);
-	if (!val)
-	{
-		return NULL;
-	}
-	end = val + strlen(val);
-	for (b = val, count = 0; b < end;)
-	{
-		for (e = b; ((*e != ' ') && (*e != '\0')); e++);
-		*e = '\0';
-		if (e != b)
-		{
-			count++;
-		}
-		b = e + 1;
-	}
-	if (count == 0)
-	{
-		free(val);
-		return NULL;
-	}
-	ret = (char **)malloc((count+1) * sizeof(char *));
-
-	for (b = val, count = 0; b < end; )
-	{
-		for (e = b; (*e != '\0'); e++);
-		if (e != b)
-		{
-			ret[count++] = strdupnull(b);
-		}
-		b = e + 1;
-	}
-	ret[count] = NULL;
-	free(val);
-	return ret;
-}
-
-
 /*
  * assigns an argument value to a struct field
  */
-bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
-				bool *assigned)
+bool assign_arg(kw_token_t token, kw_token_t first, char *key, char *value,
+				void *base, bool *assigned)
 {
-	char *p = base + token_info[token].offset;
+	char *p = (char*)base + token_info[token].offset;
 	const char **list = token_info[token].list;
-
 	int index = -1;  /* used for enumeration arguments */
-
-	seen_t *seen = (seen_t*)base; /* seen flags are at the top of the struct */
 
 	*assigned = FALSE;
 
-	DBG3(DBG_APP, "  %s=%s", kw->entry->name, kw->value);
-
-	if (*seen & SEEN_KW(token, first))
-	{
-		DBG1(DBG_APP, "# duplicate '%s' option", kw->entry->name);
-		return FALSE;
-	}
-
-	if (token == KW_ESP || token == KW_AH)
-	{
-		if (*seen & (SEEN_KW(KW_ESP, first) | SEEN_KW(KW_AH, first)))
-		{
-			DBG1(DBG_APP, "# can't have both 'ah' and 'esp' options");
-			return FALSE;
-		}
-	}
-
-	/* set flag that this argument has been seen */
-	*seen |= SEEN_KW(token, first);
+	DBG3(DBG_APP, "  %s=%s", key, value);
 
 	/* is there a keyword list? */
-	if (list != NULL && token_info[token].type != ARG_LST)
+	if (list != NULL)
 	{
 		bool match = FALSE;
 
 		while (*list != NULL && !match)
 		{
 			index++;
-			match = streq(kw->value, *list++);
+			match = streq(value, *list++);
 		}
 		if (!match)
 		{
-			DBG1(DBG_APP, "# bad value: %s=%s", kw->entry->name, kw->value);
+			DBG1(DBG_APP, "# bad value: %s=%s", key, value);
 			return FALSE;
 		}
 	}
 
 	switch (token_info[token].type)
 	{
-	case ARG_NONE:
-		DBG1(DBG_APP, "# option '%s' not supported yet", kw->entry->name);
-		return FALSE;
-	case ARG_ENUM:
+		case ARG_NONE:
+			DBG1(DBG_APP, "# option '%s' not supported yet", key);
+			return FALSE;
+		case ARG_ENUM:
 		{
 			if (index < 0)
 			{
 				DBG1(DBG_APP, "# bad enumeration value: %s=%s (%d)",
-					 kw->entry->name, kw->value, index);
+					 key, value, index);
 				return FALSE;
 			}
 
@@ -345,93 +269,86 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 				*b = (index > 0);
 			}
 			else
-			{
+			{	/* FIXME: this is not entirely correct as the args are enums */
 				int *i = (int *)p;
 				*i = index;
 			}
+			break;
 		}
-		break;
-
-	case ARG_UINT:
+		case ARG_UINT:
 		{
 			char *endptr;
 			u_int *u = (u_int *)p;
 
-			*u = strtoul(kw->value, &endptr, 10);
+			*u = strtoul(value, &endptr, 10);
 
 			if (*endptr != '\0')
 			{
-				DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
-					 kw->value);
+				DBG1(DBG_APP, "# bad integer value: %s=%s", key, value);
 				return FALSE;
 			}
+			break;
 		}
-		break;
-	case ARG_ULNG:
-	case ARG_PCNT:
+		case ARG_ULNG:
+		case ARG_PCNT:
 		{
 			char *endptr;
 			unsigned long *l = (unsigned long *)p;
 
-			*l = strtoul(kw->value, &endptr, 10);
+			*l = strtoul(value, &endptr, 10);
 
 			if (token_info[token].type == ARG_ULNG)
 			{
 				if (*endptr != '\0')
 				{
-					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
-						 kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", key, value);
 					return FALSE;
 				}
 			}
 			else
 			{
-				if ((*endptr != '%') || (endptr[1] != '\0') || endptr == kw->value)
+				if ((*endptr != '%') || (endptr[1] != '\0') || endptr == value)
 				{
-					DBG1(DBG_APP, "# bad percent value: %s=%s", kw->entry->name,
-						 kw->value);
+					DBG1(DBG_APP, "# bad percent value: %s=%s", key, value);
 					return FALSE;
 				}
 			}
-
+			break;
 		}
-		break;
-	case ARG_ULLI:
+		case ARG_ULLI:
 		{
 			char *endptr;
 			unsigned long long *ll = (unsigned long long *)p;
 
-			*ll = strtoull(kw->value, &endptr, 10);
+			*ll = strtoull(value, &endptr, 10);
 
 			if (*endptr != '\0')
 			{
-				DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
-					 kw->value);
+				DBG1(DBG_APP, "# bad integer value: %s=%s", key, value);
 				return FALSE;
 			}
+			break;
 		}
-		break;
-	case ARG_UBIN:
+		case ARG_UBIN:
 		{
 			char *endptr;
 			u_int *u = (u_int *)p;
 
-			*u = strtoul(kw->value, &endptr, 2);
+			*u = strtoul(value, &endptr, 2);
 
 			if (*endptr != '\0')
 			{
-				DBG1(DBG_APP, "# bad binary value: %s=%s", kw->entry->name,
-					 kw->value);
+				DBG1(DBG_APP, "# bad binary value: %s=%s", key, value);
 				return FALSE;
 			}
+			break;
 		}
-		break;
-	case ARG_TIME:
+		case ARG_TIME:
 		{
 			char *endptr;
 			time_t *t = (time_t *)p;
 
-			*t = strtoul(kw->value, &endptr, 10);
+			*t = strtoul(value, &endptr, 10);
 
 			/* time in seconds? */
 			if (*endptr == '\0' || (*endptr == 's' && endptr[1] == '\0'))
@@ -456,60 +373,21 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 					break;
 				}
 			}
-			DBG1(DBG_APP, "# bad duration value: %s=%s", kw->entry->name,
-				 kw->value);
+			DBG1(DBG_APP, "# bad duration value: %s=%s", key, value);
 			return FALSE;
 		}
-	case ARG_STR:
+		case ARG_STR:
 		{
 			char **cp = (char **)p;
 
 			/* free any existing string */
 			free(*cp);
-
 			/* assign the new string */
-			*cp = strdupnull(kw->value);
+			*cp = strdupnull(value);
+			break;
 		}
-		break;
-	case ARG_LST:
-		{
-			char ***listp = (char ***)p;
-
-			/* free any existing list */
-			if (*listp != NULL)
-			{
-				free_list(*listp);
-			}
-			/* create a new list and assign values */
-			*listp = new_list(kw->value);
-
-			/* is there a keyword list? */
-			if (list != NULL)
-			{
-				char ** lst;
-
-				for (lst = *listp; lst && *lst; lst++)
-				{
-					bool match = FALSE;
-
-					list = token_info[token].list;
-
-					while (*list != NULL && !match)
-					{
-						match = streq(*lst, *list++);
-					}
-					if (!match)
-					{
-						DBG1(DBG_APP, "# bad value: %s=%s",
-							 kw->entry->name, *lst);
-						return FALSE;
-					}
-				}
-			}
-		}
-		/* fall through */
-	default:
-		return TRUE;
+		default:
+			return TRUE;
 	}
 
 	*assigned = TRUE;
@@ -519,124 +397,69 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 /*
  *  frees all dynamically allocated arguments in a struct
  */
-void free_args(kw_token_t first, kw_token_t last, char *base)
+void free_args(kw_token_t first, kw_token_t last, void *base)
 {
 	kw_token_t token;
 
 	for (token = first; token <= last; token++)
 	{
-		char *p = base + token_info[token].offset;
+		char *p = (char*)base + token_info[token].offset;
 
 		switch (token_info[token].type)
 		{
-		case ARG_STR:
+			case ARG_STR:
 			{
 				char **cp = (char **)p;
 
 				free(*cp);
 				*cp = NULL;
+				break;
 			}
-			break;
-		case ARG_LST:
-			{
-				char ***listp = (char ***)p;
-
-				if (*listp != NULL)
-				{
-					free_list(*listp);
-					*listp = NULL;
-				 }
-			}
-			break;
-		default:
-			break;
+			default:
+				break;
 		}
 	}
-}
-
-/*
- *  clone all dynamically allocated arguments in a struct
- */
-void clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
-{
-	kw_token_t token;
-
-	for (token = first; token <= last; token++)
-	{
-		if (token_info[token].type == ARG_STR)
-		{
-			char **cp1 = (char **)(base1 + token_info[token].offset);
-			char **cp2 = (char **)(base2 + token_info[token].offset);
-
-			*cp1 = strdupnull(*cp2);
-		}
-	}
-}
-
-static bool cmp_list(char **list1, char **list2)
-{
-	if ((list1 == NULL) && (list2 == NULL))
-	{
-		return TRUE;
-	}
-	if ((list1 == NULL) || (list2 == NULL))
-	{
-		return FALSE;
-	}
-
-	for ( ; *list1 && *list2; list1++, list2++)
-	{
-		if (strcmp(*list1,*list2) != 0)
-		{
-			return FALSE;
-		}
-	}
-
-	if ((*list1 != NULL) || (*list2 != NULL))
-	{
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
 /*
  *  compare all arguments in a struct
  */
-bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
+bool cmp_args(kw_token_t first, kw_token_t last, void *base1, void *base2)
 {
 	kw_token_t token;
 
 	for (token = first; token <= last; token++)
 	{
-		char *p1 = base1 + token_info[token].offset;
-		char *p2 = base2 + token_info[token].offset;
+		char *p1 = (char*)base1 + token_info[token].offset;
+		char *p2 = (char*)base2 + token_info[token].offset;
 
 		switch (token_info[token].type)
 		{
-		case ARG_ENUM:
-			if (token_info[token].list == LST_bool)
+			case ARG_ENUM:
 			{
-				bool *b1 = (bool *)p1;
-				bool *b2 = (bool *)p2;
-
-				if (*b1 != *b2)
+				if (token_info[token].list == LST_bool)
 				{
-					return FALSE;
-				}
-			}
-			else
-			{
-				int *i1 = (int *)p1;
-				int *i2 = (int *)p2;
+					bool *b1 = (bool *)p1;
+					bool *b2 = (bool *)p2;
 
-				if (*i1 != *i2)
-				{
-					return FALSE;
+					if (*b1 != *b2)
+					{
+						return FALSE;
+					}
 				}
+				else
+				{
+					int *i1 = (int *)p1;
+					int *i2 = (int *)p2;
+
+					if (*i1 != *i2)
+					{
+						return FALSE;
+					}
+				}
+				break;
 			}
-			break;
-		case ARG_UINT:
+			case ARG_UINT:
 			{
 				u_int *u1 = (u_int *)p1;
 				u_int *u2 = (u_int *)p2;
@@ -645,10 +468,10 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				{
 					return FALSE;
 				}
+				break;
 			}
-			break;
-		case ARG_ULNG:
-		case ARG_PCNT:
+			case ARG_ULNG:
+			case ARG_PCNT:
 			{
 				unsigned long *l1 = (unsigned long *)p1;
 				unsigned long *l2 = (unsigned long *)p2;
@@ -657,9 +480,9 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				{
 					return FALSE;
 				}
+				break;
 			}
-			break;
-		case ARG_ULLI:
+			case ARG_ULLI:
 			{
 				unsigned long long *ll1 = (unsigned long long *)p1;
 				unsigned long long *ll2 = (unsigned long long *)p2;
@@ -668,9 +491,9 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				{
 					return FALSE;
 				}
+				break;
 			}
-			break;
-		case ARG_TIME:
+			case ARG_TIME:
 			{
 				time_t *t1 = (time_t *)p1;
 				time_t *t2 = (time_t *)p2;
@@ -679,9 +502,9 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				{
 					return FALSE;
 				}
+				break;
 			}
-			break;
-		case ARG_STR:
+			case ARG_STR:
 			{
 				char **cp1 = (char **)p1;
 				char **cp2 = (char **)p2;
@@ -694,21 +517,10 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				{
 					return FALSE;
 				}
+				break;
 			}
-			break;
-		case ARG_LST:
-			{
-				char ***listp1 = (char ***)p1;
-				char ***listp2 = (char ***)p2;
-
-				if (!cmp_list(*listp1, *listp2))
-				{
-					return FALSE;
-				}
-			}
-			break;
-		default:
-			break;
+			default:
+				break;
 		}
 	}
 	return TRUE;
