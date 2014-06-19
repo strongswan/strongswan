@@ -90,7 +90,9 @@ enum policy_type_t {
  * High-level priority of a policy.
  */
 enum policy_priority_t {
-	/** Default priority */
+	/** Priority for passthrough policies */
+	POLICY_PRIORITY_PASS,
+	/** Priority for regular IPsec policies */
 	POLICY_PRIORITY_DEFAULT,
 	/** Priority for trap policies */
 	POLICY_PRIORITY_ROUTED,

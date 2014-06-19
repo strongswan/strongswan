@@ -49,11 +49,24 @@ static bool install_shunt_policy(child_cfg_t *child)
 	traffic_selector_t *my_ts, *other_ts;
 	host_t *host_any;
 	policy_type_t policy_type;
+	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
-	policy_type = (child->get_mode(child) == MODE_PASS) ?
-											 POLICY_PASS : POLICY_DROP;
+	switch (child->get_mode(child))
+	{
+		case MODE_PASS:
+			policy_type = POLICY_PASS;
+			policy_prio = POLICY_PRIORITY_PASS;
+			break;
+		case MODE_DROP:
+			policy_type = POLICY_DROP;
+			policy_prio = POLICY_PRIORITY_FALLBACK;
+			break;
+		default:
+			return FALSE;
+	}
+
 	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
 	host_any = host_create_any(AF_INET);
@@ -70,21 +83,21 @@ static bool install_shunt_policy(child_cfg_t *child)
 								hydra->kernel_interface, host_any, host_any,
 								my_ts, other_ts, POLICY_OUT, policy_type,
 								&sa, child->get_mark(child, FALSE),
-								POLICY_PRIORITY_DEFAULT);
+								policy_prio);
 
 			/* install in policy */
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_IN, policy_type,
 								&sa, child->get_mark(child, TRUE),
-								POLICY_PRIORITY_DEFAULT);
+								policy_prio);
 
 			/* install forward policy */
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_FWD, policy_type,
 								&sa, child->get_mark(child, TRUE),
-								POLICY_PRIORITY_DEFAULT);
+								policy_prio);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
@@ -137,7 +150,20 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	enumerator_t *e_my_ts, *e_other_ts;
 	linked_list_t *my_ts_list, *other_ts_list;
 	traffic_selector_t *my_ts, *other_ts;
+	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
+
+	switch (child->get_mode(child))
+	{
+		case MODE_PASS:
+			policy_prio = POLICY_PRIORITY_PASS;
+			break;
+		case MODE_DROP:
+			policy_prio = POLICY_PRIORITY_FALLBACK;
+			break;
+		default:
+			return;
+	}
 
 	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
@@ -153,19 +179,19 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, my_ts, other_ts,
 							POLICY_OUT, 0, child->get_mark(child, FALSE),
-							POLICY_PRIORITY_DEFAULT);
+							policy_prio);
 
 			/* uninstall in policy */
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, other_ts, my_ts,
 							POLICY_IN, 0, child->get_mark(child, TRUE),
-							POLICY_PRIORITY_DEFAULT);
+							policy_prio);
 
 			/* uninstall forward policy */
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, other_ts, my_ts,
 							POLICY_FWD, 0, child->get_mark(child, TRUE),
-							POLICY_PRIORITY_DEFAULT);
+							policy_prio);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
@@ -249,4 +275,3 @@ shunt_manager_t *shunt_manager_create()
 
 	return &this->public;
 }
-

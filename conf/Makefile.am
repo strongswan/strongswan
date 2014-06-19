@@ -56,7 +56,6 @@ plugins = \
 	plugins/imv-test.opt \
 	plugins/ipseckey.opt \
 	plugins/led.opt \
-	plugins/kernel-klips.opt \
 	plugins/kernel-libipsec.opt \
 	plugins/kernel-netlink.opt \
 	plugins/kernel-pfroute.opt \
