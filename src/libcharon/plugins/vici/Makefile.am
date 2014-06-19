@@ -32,7 +32,7 @@ libstrongswan_vici_la_LDFLAGS = -module -avoid-version
 EXTRA_DIST = README.md
 
 
-lib_LTLIBRARIES = libvici.la
+ipseclib_LTLIBRARIES = libvici.la
 
 libvici_la_SOURCES = \
 	vici_message.c vici_message.h \
