@@ -392,10 +392,10 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 /**
  * Insert an algorithm entry to a list
  *
- * Entries are sorted by algorithm identifier (which is important for RNGs)
- * while maintaining the order in which algorithms were added, unless they were
+ * Entries maintain the order in which algorithms were added, unless they were
  * benchmarked and speed is provided, which then is used to order entries of
  * the same algorithm.
+ * An exception are RNG entries, which are sorted by algorithm identifier.
  */
 static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 					  int algo, const char *plugin_name,
@@ -403,6 +403,7 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *current;
+	bool sort = (list == this->rngs), found = FALSE;
 
 	INIT(entry,
 		.algo = algo,
@@ -415,12 +416,19 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->algo > algo)
+		if (sort && current->algo > algo)
 		{
 			break;
 		}
-		else if (current->algo == algo && speed &&
-				 current->speed < speed)
+		else if (current->algo == algo)
+		{
+			if (speed > current->speed)
+			{
+				break;
+			}
+			found = TRUE;
+		}
+		else if (found)
 		{
 			break;
 		}
