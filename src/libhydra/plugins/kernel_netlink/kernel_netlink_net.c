@@ -1868,6 +1868,17 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 	netlink_add_attribute(hdr, IFA_LOCAL, chunk, sizeof(request));
 
+	if (ip->get_family(ip) == AF_INET6 && this->rta_prefsrc_for_ipv6)
+	{	/* if source routes are possible we let the virtual IP get deprecated
+		 * immediately (but mark it as valid forever) so it gets only used if
+		 * forced by our route, and not by the default IPv6 address selection */
+		struct ifa_cacheinfo cache = {
+			.ifa_valid = 0xFFFFFFFF,
+			.ifa_prefered = 0,
+		};
+		netlink_add_attribute(hdr, IFA_CACHEINFO, chunk_from_thing(cache),
+							  sizeof(request));
+	}
 	return this->socket->send_ack(this->socket, hdr);
 }
 
