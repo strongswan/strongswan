@@ -348,7 +348,9 @@ METHOD(task_manager_t, retransmit, status_t,
 			}
 			if (!mobike)
 			{
-				send_packets(this, this->initiating.packets, NULL, NULL);
+				send_packets(this, this->initiating.packets,
+							 this->ike_sa->get_my_host(this->ike_sa),
+							 this->ike_sa->get_other_host(this->ike_sa));
 			}
 			else
 			{
