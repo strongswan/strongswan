@@ -291,3 +291,17 @@ CREATE INDEX "swid_tags_sessions_tag_id" ON "swid_tags_sessions" (
 CREATE INDEX "swid_tags_sessions_session_id" ON "swid_tags_sessions" (
 "session_id"
 );
+
+DROP TABLE IF EXISTS "swid_tagstats";
+CREATE TABLE "swid_tagstats" (
+  "id" integer NOT NULL PRIMARY KEY,
+  "tag_id" integer NOT NULL REFERENCES "swid_tags" ("id"),
+  "device_id" integer NOT NULL REFERENCES "devices" ("id"),
+  "first_seen_id" integer NOT NULL REFERENCES "sessions" ("id"),
+  "last_seen_id" integer NOT NULL REFERENCES "sessions" ("id"),
+  UNIQUE ("tag_id", "device_id")
+);
+CREATE INDEX "swid_tagstats_tag_id" ON "swid_tagstats" ("tag_id");
+CREATE INDEX "swid_tagstats_device_id" ON "swid_tagstats" ("device_id");
+CREATE INDEX "swid_tagstats_first_seen_id" ON "swid_tagstats" ("first_seen_id");
+CREATE INDEX "swid_tagstats_last_seen_id" ON "swid_tagstats" ("last_seen_id");
