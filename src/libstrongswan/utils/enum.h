@@ -120,7 +120,7 @@ char *enum_to_name(enum_name_t *e, int val);
  *
  * @param e		enum names for this enum value
  * @param name	name to get enum value for
- * @þaram valp	variable sized pointer receiving value
+ * @param valp	variable sized pointer receiving value
  * @return		TRUE if enum name found, FALSE otherwise
  */
 #define enum_from_name(e, name, valp) ({ \
@@ -140,7 +140,7 @@ char *enum_to_name(enum_name_t *e, int val);
  *
  * @param e		enum names for this enum value
  * @param name	name to get enum value for
- * @þaram val	integer pointer receiving value
+ * @param val	integer pointer receiving value
  * @return		TRUE if enum name found, FALSE otherwise
  */
 bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val);
