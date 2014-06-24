@@ -167,13 +167,45 @@ static inline bool memeq(const void *x, const void *y, size_t len)
 }
 
 /**
+ * Calling memcpy() with NULL pointers, even with n == 0, results in undefined
+ * behavior according to the C standard.  This version is guaranteed to not
+ * access the pointers if n is 0.
+ */
+static inline void *memcpy_noop(void *dst, const void *src, size_t n)
+{
+	return n ? memcpy(dst, src, n) : dst;
+}
+#define memcpy(d,s,n) memcpy_noop(d,s,n)
+
+/**
+ * Calling memmove() with NULL pointers, even with n == 0, results in undefined
+ * behavior according to the C standard.  This version is guaranteed to not
+ * access the pointers if n is 0.
+ */
+static inline void *memmove_noop(void *dst, const void *src, size_t n)
+{
+	return n ? memmove(dst, src, n) : dst;
+}
+#define memmove(d,s,n) memmove_noop(d,s,n)
+
+/**
+ * Calling memset() with a NULL pointer, even with n == 0, results in undefined
+ * behavior according to the C standard.  This version is guaranteed to not
+ * access the pointer if n is 0.
+ */
+static inline void *memset_noop(void *s, int c, size_t n)
+{
+	return n ? memset(s, c, n) : s;
+}
+#define memset(s,c,n) memset_noop(s,c,n)
+
+/**
  * Macro gives back larger of two values.
  */
 #define max(x,y) ({ \
 	typeof(x) _x = (x); \
 	typeof(y) _y = (y); \
 	_x > _y ? _x : _y; })
-
 
 /**
  * Macro gives back smaller of two values.
