@@ -26,6 +26,8 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include <hydra.h>
 #include <daemon.h>
@@ -232,6 +234,14 @@ static bool check_pidfile()
 	pidfile = fopen(PID_FILE, "w");
 	if (pidfile)
 	{
+		int fd;
+
+		fd = fileno(pidfile);
+		if (fd == -1 || fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
+		{
+			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
+				 strerror(errno));
+		}
 		ignore_result(fchown(fileno(pidfile),
 							 lib->caps->get_uid(lib->caps),
 							 lib->caps->get_gid(lib->caps)));
