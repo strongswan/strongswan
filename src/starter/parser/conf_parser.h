@@ -14,6 +14,8 @@
  */
 
 /**
+ * @defgroup starter starter
+ *
  * @defgroup conf_parser conf_parser
  * @{ @ingroup starter
  */
@@ -37,12 +39,12 @@ enum conf_parser_section_t {
 	CONF_PARSER_CONFIG_SETUP,
 
 	/**
-	 * conn <name>
+	 * conn _name_
 	 */
 	CONF_PARSER_CONN,
 
 	/**
-	 * ca <name>
+	 * ca _name_
 	 */
 	CONF_PARSER_CA,
 };
