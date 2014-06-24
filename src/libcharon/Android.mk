@@ -7,7 +7,6 @@ bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/logger.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
-bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
@@ -122,6 +121,9 @@ sa/ikev1/tasks/quick_delete.c sa/ikev1/tasks/quick_delete.h \
 sa/ikev1/tasks/mode_config.c sa/ikev1/tasks/mode_config.h \
 processing/jobs/dpd_timeout_job.c processing/jobs/dpd_timeout_job.h \
 processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
+
+libcharon_la_SOURCES += \
+    bus/listeners/sys_logger.c bus/listeners/sys_logger.h
 
 LOCAL_SRC_FILES := $(filter %.c,$(libcharon_la_SOURCES))
 
