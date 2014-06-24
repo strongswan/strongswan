@@ -31,7 +31,7 @@
 /**
  * Set active condvar of a thread before waiting in it.
  *
- * @param cv		active condition variable, NULL to unset
+ * @param condvar	active condition variable, NULL to unset
  */
 void thread_set_active_condvar(CONDITION_VARIABLE *condvar);
 
