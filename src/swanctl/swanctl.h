@@ -15,7 +15,7 @@
 
 /**
  * @defgroup swanctl swanctl
- * @{ @ingroup swanctl
+ * @{
  */
 
 #ifndef SWANCTL_H_
