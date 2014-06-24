@@ -333,6 +333,7 @@ int vici_parse_name_eq(vici_res_t *res, char *name);
  * On error, errno is set to:
  * - EINVAL if not in valid parser state
  *
+ * @param res		response message to parse
  * @param len		pointer receiving value length
  * @return			pointer to value, NULL on error
  */
