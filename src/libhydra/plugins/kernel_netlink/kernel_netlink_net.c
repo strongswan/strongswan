@@ -685,15 +685,15 @@ static u_char get_scope(host_t *ip)
 			}
 			break;
 		case 16:
-			if (IN6_IS_ADDR_LOOPBACK(addr.ptr))
+			if (IN6_IS_ADDR_LOOPBACK((struct in6_addr*)addr.ptr))
 			{	/* link-local, according to RFC 4291, 2.5.3 */
 				return 2;
 			}
-			if (IN6_IS_ADDR_LINKLOCAL(addr.ptr))
+			if (IN6_IS_ADDR_LINKLOCAL((struct in6_addr*)addr.ptr))
 			{
 				return 2;
 			}
-			if (IN6_IS_ADDR_SITELOCAL(addr.ptr))
+			if (IN6_IS_ADDR_SITELOCAL((struct in6_addr*)addr.ptr))
 			{	/* deprecated, according to RFC 4291, 2.5.7 */
 				return 5;
 			}
