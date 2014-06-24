@@ -241,7 +241,7 @@ vici_message_t *vici_message_create_from_args(vici_type_t type, ...);
 bool vici_stringify(chunk_t chunk, char *buf, size_t size);
 
 /**
- * Verify the occurence of a given type for given section/list nesting
+ * Verify the occurrence of a given type for given section/list nesting
  */
 bool vici_verify_type(vici_type_t type, u_int section, bool list);
 

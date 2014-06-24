@@ -309,7 +309,7 @@ connections.<conn>.local<suffix>.aaa_id = remote-id
 	This identity may differ from the IKE identity, especially when EAP
 	authentication is delegated from the IKE responder to an AAA backend.
 
-	For EAP-(T)TLS, this defines the identity for wich the server must provide
+	For EAP-(T)TLS, this defines the identity for which the server must provide
 	a certificate in the TLS exchange.
 
 connections.<conn>.local<suffix>.xauth_id = id

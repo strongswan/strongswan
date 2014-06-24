@@ -68,7 +68,7 @@ anymore. The server confirms event registration using EVENT_CONFIRM, or
 indicates that there is no such event source with EVENT_UNKNOWN.
 
 Events may get raised at any time while registered, even during an active
-request command. This mechanism is used to feed continous data during a request,
+request command. This mechanism is used to feed continuous data during a request,
 for example.
 
 ## Message format ##

@@ -28,7 +28,7 @@ typedef struct bios_entry_t bios_entry_t;
 typedef enum event_type_t event_type_t;
 
 enum event_type_t {
-	/* BIOS Events (TCG PC Client Specification for Convential BIOS 1.21) */
+	/* BIOS Events (TCG PC Client Specification for Conventional BIOS 1.21) */
 	EV_PREBOOT_CERT =                  0x00000000,
 	EV_POST_CODE =                     0x00000001,
 	EV_UNUSED =                        0x00000002,
