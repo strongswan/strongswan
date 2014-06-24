@@ -45,7 +45,7 @@ struct tcg_swid_attr_tag_inv_t {
 	/**
 	 * Add a Tag ID to the attribute
 	 *
-	 * @tag						SWID Tag to be added
+	 * @param tag				SWID Tag to be added
 	 */
 	void (*add)(tcg_swid_attr_tag_inv_t *this, swid_tag_t *tag);
 	/**
