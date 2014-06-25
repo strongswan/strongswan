@@ -278,6 +278,32 @@ static inline void *memset_noop(void *s, int c, size_t n)
 	static ret _cb_##name(param1, ##__VA_ARGS__)
 
 /**
+ * This macro allows counting the number of arguments passed to a macro.
+ * Combined with the VA_ARGS_DISPATCH() macro this can be used to implement
+ * macro overloading based on the number of arguments.
+ * 0 to 10 arguments are currently supported.
+ */
+#define VA_ARGS_NUM(...) _VA_ARGS_NUM(0,##__VA_ARGS__,10,9,8,7,6,5,4,3,2,1,0)
+#define _VA_ARGS_NUM(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,NUM,...) NUM
+
+/**
+ * This macro can be used to dispatch a macro call based on the number of given
+ * arguments, for instance:
+ *
+ * @code
+ * #define MY_MACRO(...) VA_ARGS_DISPATCH(MY_MACRO, __VA_ARGS__)(__VA_ARGS__)
+ * #define MY_MACRO1(arg) one_arg(arg)
+ * #define MY_MACRO2(arg1,arg2) two_args(arg1,arg2)
+ * @endcode
+ *
+ * MY_MACRO() can now be called with either one or two arguments, which will
+ * resolve to one_arg(arg) or two_args(arg1,arg2), respectively.
+ */
+#define VA_ARGS_DISPATCH(func, ...) _VA_ARGS_DISPATCH(func, VA_ARGS_NUM(__VA_ARGS__))
+#define _VA_ARGS_DISPATCH(func, num) __VA_ARGS_DISPATCH(func, num)
+#define __VA_ARGS_DISPATCH(func, num) func ## num
+
+/**
  * Architecture independent bitfield definition helpers (at least with GCC).
  *
  * Defines a bitfield with a type t and a fixed size of bitfield members, e.g.:
