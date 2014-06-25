@@ -26,6 +26,7 @@
 #include <direct.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 /* undef Windows variants evaluating values more than once */
 #undef min
