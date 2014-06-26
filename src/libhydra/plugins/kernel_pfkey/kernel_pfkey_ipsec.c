@@ -2230,19 +2230,22 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	{
 		route->gateway = hydra->kernel_interface->get_nexthop(
 									hydra->kernel_interface, dst, -1, src);
+
+		/* if the IP is virtual, we install the route over the interface it has
+		 * been installed on. Otherwise we use the interface we use for IKE, as
+		 * this is required for example on Linux. */
+		if (is_virtual)
+		{
+			src = route->src_ip;
+		}
 	}
 	else
 	{	/* for shunt policies */
 		route->gateway = hydra->kernel_interface->get_nexthop(
 									hydra->kernel_interface, policy->src.net,
 									policy->src.mask, route->src_ip);
-	}
 
-	/* if the IP is virtual, we install the route over the interface it has
-	 * been installed on. Otherwise we use the interface we use for IKE, as
-	 * this is required for example on Linux. */
-	if (is_virtual)
-	{
+		/* we don't have a source address, use the address we found */
 		src = route->src_ip;
 	}
 
