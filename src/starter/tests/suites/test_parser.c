@@ -372,6 +372,49 @@ START_TEST(test_refcounting)
 }
 END_TEST
 
+START_TEST(test_default)
+{
+	enumerator_t *enumerator;
+	dictionary_t *dict;
+	char *name;
+
+	create_parser(chunk_from_str(
+		"conn %default\n"
+		"	key=valdef\n"
+		"	unset=set\n"
+		"conn A\n"
+		"	key=vala\n"
+		"	unset=\n"
+		"conn B\n"
+		"	keyb=valb\n"
+		""));
+
+	ck_assert(parser->parse(parser));
+	dict = parser->get_section(parser, CONF_PARSER_CONN, "%default");
+	ck_assert(!dict);
+	enumerator = parser->get_sections(parser, CONF_PARSER_CONN);
+	ck_assert(enumerator);
+	ck_assert(enumerator->enumerate(enumerator, &name));
+	ck_assert_str_eq("A", name);
+	ck_assert(enumerator->enumerate(enumerator, &name));
+	ck_assert_str_eq("B", name);
+	ck_assert(!enumerator->enumerate(enumerator, &name));
+	enumerator->destroy(enumerator);
+
+	dict = parser->get_section(parser, CONF_PARSER_CONN, "A");
+	ck_assert(dict);
+	ck_assert_str_eq("vala", dict->get(dict, "key"));
+	ck_assert(!dict->get(dict, "unset"));
+	dict->destroy(dict);
+	dict = parser->get_section(parser, CONF_PARSER_CONN, "B");
+	ck_assert(dict);
+	ck_assert_str_eq("valdef", dict->get(dict, "key"));
+	ck_assert_str_eq("valb", dict->get(dict, "keyb"));
+	ck_assert_str_eq("set", dict->get(dict, "unset"));
+	dict->destroy(dict);
+}
+END_TEST
+
 START_TEST(test_also)
 {
 	dictionary_t *dict;
@@ -515,6 +558,11 @@ Suite *parser_suite_create()
 
 	tc = tcase_create("refcounting");
 	tcase_add_test(tc, test_refcounting);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("%default");
+	tcase_add_checked_fixture(tc, NULL, teardown_parser);
+	tcase_add_test(tc, test_default);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("also=");

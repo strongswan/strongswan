@@ -292,12 +292,20 @@ static dictionary_t *section_dictionary_create(private_conf_parser_t *parser,
 
 static bool conn_filter(void *unused, section_t **section, char **name)
 {
+	if (streq((*section)->name, "%default"))
+	{
+		return FALSE;
+	}
 	*name = (*section)->name;
 	return TRUE;
 }
 
 static bool ca_filter(void *unused, void *key, char **name, section_t **section)
 {
+	if (streq((*section)->name, "%default"))
+	{
+		return FALSE;
+	}
 	*name = (*section)->name;
 	return TRUE;
 }
@@ -326,6 +334,10 @@ METHOD(conf_parser_t, get_section, dictionary_t*,
 {
 	section_t *section = NULL;
 
+	if (name && streq(name, "%default"))
+	{
+		return NULL;
+	}
 	switch (type)
 	{
 		case CONF_PARSER_CONFIG_SETUP:
