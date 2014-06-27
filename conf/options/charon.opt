@@ -275,6 +275,14 @@ charon.send_delay_type = 0
 charon.send_vendor_id = no
 	Send strongSwan vendor ID payload
 
+charon.start-scripts {}
+	Section containing a list of scripts (name = path) that are executed when
+	the daemon is started.
+
+charon.stop-scripts {}
+	Section containing a list of scripts (name = path) that are executed when
+	the daemon is terminated.
+
 charon.threads = 16
 	Number of worker threads in charon.
 
