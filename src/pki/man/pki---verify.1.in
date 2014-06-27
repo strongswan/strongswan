@@ -10,6 +10,7 @@ pki \-\-verify \- Verify a certificate using a CA certificate
 .OP \-\-in file
 .OP \-\-cacert file
 .OP \-\-debug level
+.OP \-\-online
 .YS
 .
 .SY pki\ \-\-verify
@@ -44,12 +45,17 @@ Read command line options from \fIfile\fR.
 X.509 certificate to verify. If not given it is read from \fISTDIN\fR.
 .TP
 .BI "\-c, \-\-cacert " file
-CA certificate to use. If not given the certificate is assumed to be
-self-signed.
+CA certificate to use for trustchain verification. If not given the certificate
+is assumed to be self\-signed.
+.TP
+.BI "\-o, \-\-online
+Enable online CRL/OCSP revocation checking.
 .
 .SH "EXIT STATUS"
-The exit status is 0 if the certificate was verified successfully, and 2 if
-the verification failed.
+The exit status is 0 if the certificate was verified successfully, 1 if the
+certificate is untrusted, 2 if the certificate's lifetimes are invalid, and 3
+if the certificate was verified successfully but the online revocation check
+indicated that it has been revoked.
 .
 .SH "SEE ALSO"
 .
