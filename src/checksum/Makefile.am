@@ -101,6 +101,9 @@ endif
 
 if USE_TOOLS
   exes += $(DESTDIR)$(ipsecdir)/scepclient
+endif
+
+if USE_PKI
   exes += $(DESTDIR)$(bindir)/pki
 endif
 
