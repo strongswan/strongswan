@@ -20,6 +20,7 @@ options = \
 	options/pool.opt \
 	options/scepclient.opt \
 	options/starter.opt \
+	options/swanctl.opt \
 	options/tnc.opt
 
 plugins = \
