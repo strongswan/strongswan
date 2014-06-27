@@ -300,6 +300,12 @@ INSERT INTO products (			/* 50 */
  'Android 4.4.3'
 );
 
+INSERT INTO products (			/* 51 */
+  name
+) VALUES (
+ 'Android 4.4.4'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -976,6 +982,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   3, 50
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  3, 51
 );
 
 INSERT INTO groups_product_defaults (
