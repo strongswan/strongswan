@@ -8,6 +8,7 @@ optionstemplatedir = $(templatesdir)/strongswan.d
 pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
+	options/aikgen.opt \
 	options/attest.opt \
 	options/charon.opt \
 	options/charon-logging.opt \

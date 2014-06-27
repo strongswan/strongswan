@@ -1519,6 +1519,7 @@ fi
 
 strongswan_options=
 
+AM_COND_IF([USE_AIKGEN], [strongswan_options=${strongswan_options}" aikgen"])
 AM_COND_IF([USE_ATTR_SQL], [strongswan_options=${strongswan_options}" pool"])
 AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging"])
 AM_COND_IF([USE_FILE_CONFIG], [strongswan_options=${strongswan_options}" starter"])
