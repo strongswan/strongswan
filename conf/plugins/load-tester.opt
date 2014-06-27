@@ -20,6 +20,10 @@ charon.plugins.load-tester.ca_dir =
 charon.plugins.load-tester.child_rekey = 600
 	Seconds to start CHILD_SA rekeying after setup.
 
+charon.plugins.load-tester.crl
+	URI to a CRL to include as certificate distribution point in generated
+	certificates.
+
 charon.plugins.load-tester.delay = 0
 	Delay between initiatons for each thread.
 
