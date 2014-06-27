@@ -19,11 +19,11 @@ default)
 	CONFIG="--with-printf-hooks=glibc"
 	;;
 openssl)
-	CONFIG="--disable-defaults --enable-tools --enable-openssl"
+	CONFIG="--disable-defaults --enable-pki --enable-openssl"
 	DEPS="libssl-dev"
 	;;
 gcrypt)
-	CONFIG="--disable-defaults --enable-tools --enable-gcrypt --enable-pkcs1"
+	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
 	DEPS="libgcrypt11-dev"
 	;;
 printf-builtin)

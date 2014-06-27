@@ -15,11 +15,11 @@ options = \
 	options/manager.opt \
 	options/medsrv.opt \
 	options/pacman.opt \
-	options/pool.opt \
-	options/starter.opt \
-	options/tnc.opt \
 	options/pki.opt \
-	options/tools.opt
+	options/pool.opt \
+	options/scepclient.opt \
+	options/starter.opt \
+	options/tnc.opt
 
 plugins = \
 	plugins/android_log.opt \

@@ -304,7 +304,7 @@ Compile time options required depend on the test suite. A minimalistic
 strongSwan build with the OpenSSL crypto backend can be configured with:
 
 ./configure --sysconfdir=/etc --disable-pluto --disable-scripts \
-  --disable-tools --disable-aes --disable-des --disable-md5 \
+  --disable-scepclient --disable-aes --disable-des --disable-md5 \
   --disable-sha1 --disable-sha2 --disable-fips-prf --disable-gmp \
   --disable-pubkey --disable-pgp --disable-dnskey --disable-updown \
   --disable-attr --disable-resolve --enable-openssl --enable-conftest \

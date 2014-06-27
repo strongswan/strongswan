@@ -23,7 +23,7 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CONFIG_OPTIONS = \
 	--prefix=/usr --sysconfdir=/etc \
-	--disable-tools --disable-scripts \
+	--disable-scepclient --disable-pki --disable-scripts \
 	--disable-fips-prf --disable-pubkey --disable-attr \
 	--disable-constraints --disable-revocation \
 	--disable-sha1 --disable-sha2 --disable-aes --disable-des \
@@ -55,11 +55,11 @@ endif
 
 config.status: configure
 	dh_testdir
-	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info $(CONFIG_OPTIONS) CFLAGS="$(CFLAGS)" 
+	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info $(CONFIG_OPTIONS) CFLAGS="$(CFLAGS)"
 	#LDFLAGS="-Wl,-z,defs"
 
 
-#Architecture 
+#Architecture
 build: build-arch build-indep
 
 build-arch: build-arch-stamp
@@ -86,7 +86,7 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
 
-	dh_clean 
+	dh_clean
 
 install: build
 	dh_testdir
@@ -108,8 +108,8 @@ binary-common:
 	dh_installdocs
 	dh_installexamples
 #	dh_installmenu
-#	dh_installdebconf	
-#	dh_installlogrotate	
+#	dh_installdebconf
+#	dh_installlogrotate
 #	dh_installemacsen
 #	dh_installpam
 #	dh_installmime
@@ -120,7 +120,7 @@ binary-common:
 	dh_installman
 	dh_link
 	dh_strip
-	dh_compress 
+	dh_compress
 	dh_fixperms
 #	dh_perl
 	dh_makeshlibs

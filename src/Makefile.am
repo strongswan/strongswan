@@ -72,7 +72,7 @@ if USE_UPDOWN
   SUBDIRS += _updown _updown_espmark
 endif
 
-if USE_TOOLS
+if USE_SCEPCLIENT
   SUBDIRS += scepclient
 endif
 
