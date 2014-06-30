@@ -1049,6 +1049,15 @@ below.
 synonym for
 .BR margintime .
 .TP
+.BR replay_window " = " \-1 " | <number>"
+The IPsec replay window size for this connection. With the default of \-1
+the value configured with
+.I charon.replay_window
+in
+.BR strongswan.conf (5)
+is used. Larger values than 32 are supported using the Netlink backend only,
+a value of 0 disables IPsec replay protection.
+.TP
 .BR reqid " = <number>"
 sets the reqid for a given connection to a pre-configured fixed value.
 .TP
