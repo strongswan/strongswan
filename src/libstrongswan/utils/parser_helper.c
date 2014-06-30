@@ -96,7 +96,7 @@ METHOD(parser_helper_t, file_next, FILE*,
 	char *name;
 
 	array_get(this->files, ARRAY_TAIL, &file);
-	if (!file->matches)
+	if (!file->matches && file->name)
 	{
 		array_remove(this->files, ARRAY_TAIL, NULL);
 		parser_helper_file_destroy(file);
