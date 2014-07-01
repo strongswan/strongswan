@@ -298,7 +298,7 @@ pts_ima_event_list_t* pts_ima_event_list_create(char *file)
 			}
 
 			/* read the 32 bit length of the file name in host order */
-			if (read(fd, &name_len, 4) != 4)
+			if (read(fd, &name_len, 4) != 4 || name_len == UINT32_MAX)
 			{
 				error = "invalid filename field length";
 				break;
