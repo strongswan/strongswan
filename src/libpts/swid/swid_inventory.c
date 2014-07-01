@@ -71,7 +71,7 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 		writer = bio_writer_create(512);
 		do
 		{
-			if (fgets(line, sizeof(line), file) <= 0)
+			if (!fgets(line, sizeof(line), file))
 			{
 				more_tags = FALSE;
 				end_of_tag = TRUE;
@@ -126,7 +126,7 @@ static status_t read_swid_tag_ids(private_swid_inventory_t *this, FILE *file)
 		char *separator;
 		size_t len;
 
-		if (fgets(line, sizeof(line), file) <= 0)
+		if (!fgets(line, sizeof(line), file))
 		{
 			return SUCCESS;
 		}
@@ -201,7 +201,7 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 	{
 		swid_tag_id_t *tag_id;
 		enumerator_t *enumerator;
-		
+
 		enumerator = targets->create_enumerator(targets);
 		while (enumerator->enumerate(enumerator, &tag_id))
 		{
