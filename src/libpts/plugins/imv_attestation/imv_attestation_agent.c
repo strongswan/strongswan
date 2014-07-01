@@ -802,6 +802,7 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 						result_str = result_buf.ptr;
 						break;
 					default:
+						result->destroy(result);
 						continue;
 				}
 				session->remove_workitem(session, enumerator);
