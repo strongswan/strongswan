@@ -28,6 +28,7 @@
 
 #include <errno.h>
 #include <gcrypt.h>
+#include <pthread.h>
 
 typedef struct private_gcrypt_plugin_t private_gcrypt_plugin_t;
 
@@ -43,55 +44,9 @@ struct private_gcrypt_plugin_t {
 };
 
 /**
- * gcrypt mutex initialization wrapper
+ * Define gcrypt multi-threading callbacks as gcry_threads_pthread
  */
-static int mutex_init(void **lock)
-{
-	*lock = mutex_create(MUTEX_TYPE_DEFAULT);
-	return 0;
-}
-
-/**
- * gcrypt mutex cleanup wrapper
- */
-static int mutex_destroy(void **lock)
-{
-	mutex_t *mutex = *lock;
-
-	mutex->destroy(mutex);
-	return 0;
-}
-
-/**
- * gcrypt mutex lock wrapper
- */
-static int mutex_lock(void **lock)
-{
-	mutex_t *mutex = *lock;
-
-	mutex->lock(mutex);
-	return 0;
-}
-
-/**
- * gcrypt mutex unlock wrapper
- */
-static int mutex_unlock(void **lock)
-{
-	mutex_t *mutex = *lock;
-
-	mutex->unlock(mutex);
-	return 0;
-}
-
-/**
- * gcrypt locking functions using our mutex_t
- */
-static struct gcry_thread_cbs thread_functions = {
-	GCRY_THREAD_OPTION_USER, NULL,
-	mutex_init, mutex_destroy, mutex_lock, mutex_unlock,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-};
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 METHOD(plugin_t, get_name, char*,
 	private_gcrypt_plugin_t *this)
@@ -184,7 +139,7 @@ plugin_t *gcrypt_plugin_create()
 {
 	private_gcrypt_plugin_t *this;
 
-	gcry_control(GCRYCTL_SET_THREAD_CBS, &thread_functions);
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 
 	if (!gcry_check_version(GCRYPT_VERSION))
 	{
@@ -213,4 +168,3 @@ plugin_t *gcrypt_plugin_create()
 
 	return &this->public.plugin;
 }
-
