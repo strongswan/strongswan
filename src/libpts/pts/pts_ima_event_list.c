@@ -252,7 +252,7 @@ pts_ima_event_list_t* pts_ima_event_list_create(char *file)
 			}
 
 			/* extract the hash algorithm name */
-			pos = strchr(algo_digest, '\0');
+			pos = memchr(algo_digest, '\0', algo_digest_len);
 			if (!pos)
 			{
 				error = "no algo field";
