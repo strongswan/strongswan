@@ -362,7 +362,7 @@ int strerror_s_extended(char *buf, size_t buflen, int errnum)
 	};
 	int offset = EADDRINUSE;
 
-	if (errnum < offset || errnum > offset + countof(errstr))
+	if (errnum < offset || errnum >= offset + countof(errstr))
 	{
 		return strerror_s(buf, buflen, errnum);
 	}
