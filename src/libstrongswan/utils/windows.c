@@ -230,7 +230,7 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 		connect(c, (struct sockaddr*)&addr, sizeof(addr)) == 0)
 	{
 		sc = accept(s, NULL, NULL);
-		if (sc > 0)
+		if (sc >= 0)
 		{
 			closesocket(s);
 			s = sc;
