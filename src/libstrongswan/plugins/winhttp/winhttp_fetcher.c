@@ -211,7 +211,7 @@ static bool parse_uri(private_winhttp_fetcher_t *this, char *uri,
 	}
 	if (comps.dwExtraInfoLength)
 	{
-		wcsncat(path, extra, countof(path) - comps.dwUrlPathLength - 1);
+		wcsncat(path, extra, pathlen - comps.dwUrlPathLength - 1);
 	}
 	if (comps.nPort)
 	{
