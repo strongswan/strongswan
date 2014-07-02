@@ -291,6 +291,8 @@ char* getpass(const char *prompt)
 			SetConsoleMode(in, mode);
 			return NULL;
 		}
+		buf[sizeof(buf)-1] = '\0';
+
 		if (done)
 		{
 			pos = strchr(buf, '\r');
