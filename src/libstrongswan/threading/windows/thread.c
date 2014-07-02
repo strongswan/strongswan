@@ -146,7 +146,7 @@ static void put_thread(private_thread_t *this)
 	old = set_leak_detective(FALSE);
 	threads_lock->lock(threads_lock);
 
-	this = threads->put(threads, (void*)(uintptr_t)this->id, this);
+	threads->put(threads, (void*)(uintptr_t)this->id, this);
 
 	threads_lock->unlock(threads_lock);
 	set_leak_detective(old);
