@@ -492,8 +492,7 @@ METHOD(backtrace_t, log_, void,
 
 		if (module && GetModuleFileName(module, filename, sizeof(filename)))
 		{
-			if (SymFromAddr(process, frame, &displace, &symbol.hdr) &&
-				symbol.hdr.Name)
+			if (SymFromAddr(process, frame, &displace, &symbol.hdr))
 			{
 				println(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]",
 						esc(file, TTY_FG_YELLOW), filename,
@@ -615,15 +614,12 @@ METHOD(backtrace_t, contains_function, bool,
 
 		if (SymFromAddr(process, (DWORD64)this->frames[i], NULL, &symbol.hdr))
 		{
-			if (symbol.hdr.Name)
+			for (j = 0; j < count; j++)
 			{
-				for (j = 0; j < count; j++)
+				if (streq(symbol.hdr.Name, function[j]))
 				{
-					if (streq(symbol.hdr.Name, function[j]))
-					{
-						dbghelp_mutex->unlock(dbghelp_mutex);
-						return TRUE;
-					}
+					dbghelp_mutex->unlock(dbghelp_mutex);
+					return TRUE;
 				}
 			}
 		}
