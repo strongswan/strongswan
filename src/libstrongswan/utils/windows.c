@@ -221,7 +221,7 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 	c = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (c == -1)
 	{
-		closesocket(c);
+		closesocket(s);
 		return -1;
 	}
 	if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) == 0 &&
