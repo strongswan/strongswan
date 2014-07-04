@@ -177,7 +177,7 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_3DES,					"des3_ede"			},
 /*	{ENCR_RC5,					"***"				}, */
 /*	{ENCR_IDEA,					"***"				}, */
-	{ENCR_CAST,					"cast128"			},
+	{ENCR_CAST,					"cast5"				},
 	{ENCR_BLOWFISH,				"blowfish"			},
 /*	{ENCR_3IDEA,				"***"				}, */
 /*	{ENCR_DES_IV32,				"***"				}, */
