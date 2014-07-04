@@ -356,7 +356,8 @@ static inline void *memset_noop(void *s, int c, size_t n)
 /**
  * Get the number of elements in an array
  */
-#define countof(array) (sizeof(array)/sizeof(array[0]))
+#define countof(array) (sizeof(array)/sizeof((array)[0]) \
+						+ BUILD_ASSERT_ARRAY(array))
 
 /**
  * Ignore result of functions tagged with warn_unused_result attributes
