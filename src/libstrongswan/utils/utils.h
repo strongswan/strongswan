@@ -60,6 +60,20 @@
 #define BUF_LEN 512
 
 /**
+ * Build assertion macro for integer expressions, evaluates to 0
+ */
+#define BUILD_ASSERT(x) (sizeof(char[(x) ? 0 : -1]))
+
+/**
+ * Build time check to assert a is an array, evaluates to 0
+ *
+ * The address of an array element has a pointer type, which is not compatible
+ * to the array type.
+ */
+#define BUILD_ASSERT_ARRAY(a) \
+		BUILD_ASSERT(!__builtin_types_compatible_p(typeof(a), typeof(&(a)[0])))
+
+/**
  * General purpose boolean type.
  */
 #ifdef HAVE_STDBOOL_H
