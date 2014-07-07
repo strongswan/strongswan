@@ -175,6 +175,9 @@ static inline void *memcpy_noop(void *dst, const void *src, size_t n)
 {
 	return n ? memcpy(dst, src, n) : dst;
 }
+#ifdef memcpy
+# undef memcpy
+#endif
 #define memcpy(d,s,n) memcpy_noop(d,s,n)
 
 /**
@@ -186,6 +189,9 @@ static inline void *memmove_noop(void *dst, const void *src, size_t n)
 {
 	return n ? memmove(dst, src, n) : dst;
 }
+#ifdef memmove
+# undef memmove
+#endif
 #define memmove(d,s,n) memmove_noop(d,s,n)
 
 /**
@@ -197,6 +203,9 @@ static inline void *memset_noop(void *s, int c, size_t n)
 {
 	return n ? memset(s, c, n) : s;
 }
+#ifdef memset
+# undef memset
+#endif
 #define memset(s,c,n) memset_noop(s,c,n)
 
 /**
