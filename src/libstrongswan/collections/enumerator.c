@@ -171,8 +171,8 @@ typedef struct {
 	enumerator_t public;
 	/** glob data */
 	glob_t glob;
-	/** current match */
-	char **match;
+	/** iteration count */
+	u_int pos;
 	/** absolute path of current file */
 	char full[PATH_MAX];
 } glob_enum_t;
@@ -191,12 +191,13 @@ static void destroy_glob_enum(glob_enum_t *this)
  */
 static bool enumerate_glob_enum(glob_enum_t *this, char **file, struct stat *st)
 {
-	char *match = *(++this->match);
+	char *match;
 
-	if (!match)
+	if (this->pos >= this->glob.gl_pathc)
 	{
 		return FALSE;
 	}
+	match = this->glob.gl_pathv[this->pos++];
 	if (file)
 	{
 		*file = match;
@@ -231,12 +232,9 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 			.enumerate = (void*)enumerate_glob_enum,
 			.destroy = (void*)destroy_glob_enum,
 		},
-		.glob = {
-			.gl_offs = 1, /* reserve one slot so we can enumerate easily */
-		}
 	);
 
-	status = glob(pattern, GLOB_DOOFFS | GLOB_ERR, NULL, &this->glob);
+	status = glob(pattern, GLOB_ERR, NULL, &this->glob);
 	if (status == GLOB_NOMATCH)
 	{
 		DBG1(DBG_LIB, "no files found matching '%s'", pattern);
@@ -246,7 +244,6 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 		DBG1(DBG_LIB, "expanding file pattern '%s' failed: %s", pattern,
 			 strerror(errno));
 	}
-	this->match = this->glob.gl_pathv;
 	return &this->public;
 }
 
