@@ -25,9 +25,10 @@ strongswan-5.2.0
   of SWID tags and Software IDs with the strongTNC policy manager.
 
 - The SWID IMC can extract all installed packages from the dpkg (Debian,
-  Ubuntu, etc.) or rpm (Fedora, RedHat, etc) package managers, respectively,
-  using the swidGenerator (https://github.com/tnc-ba/swidGenerator) which
-  generates SWID tags according to the new ISO/IEC 19770-2:2014 standard.
+  Ubuntu, Linux Mint etc.), rpm (Fedora, RedHat, OpenSUSE, etc.), or
+  pacman (Arch Linux, Manjaro, etc.) package managers, respectively, using the
+  swidGenerator (https://github.com/strongswan/swidGenerator) which generates
+  SWID tags according to the new ISO/IEC 19770-2:2014 standard.
 
 - All IMVs now share the access requestor ID, device ID and product info
   of an access requestor via a common imv_session object.
