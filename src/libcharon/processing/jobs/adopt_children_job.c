@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <hydra.h>
+#include <collections/array.h>
 
 typedef struct private_adopt_children_job_t private_adopt_children_job_t;
 
@@ -34,11 +35,17 @@ struct private_adopt_children_job_t {
 	 * IKE_SA id to adopt children from
 	 */
 	ike_sa_id_t *id;
+
+	/**
+	 * Tasks queued for execution
+	 */
+	array_t *tasks;
 };
 
 METHOD(job_t, destroy, void,
 	private_adopt_children_job_t *this)
 {
+	array_destroy_offset(this->tasks, offsetof(task_t, destroy));
 	this->id->destroy(this->id);
 	free(this);
 }
@@ -149,6 +156,32 @@ METHOD(job_t, execute, job_requeue_t,
 			}
 		}
 		children->destroy_offset(children, offsetof(child_sa_t, destroy));
+
+		if (array_count(this->tasks))
+		{
+			ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+													  this->id);
+			if (ike_sa)
+			{
+				task_t *task;
+
+				while (array_remove(this->tasks, ARRAY_HEAD, &task))
+				{
+					task->migrate(task, ike_sa);
+					ike_sa->queue_task(ike_sa, task);
+				}
+				if (ike_sa->initiate(ike_sa, NULL, 0, NULL, NULL) == DESTROY_ME)
+				{
+					charon->ike_sa_manager->checkin_and_destroy(
+											charon->ike_sa_manager, ike_sa);
+				}
+				else
+				{
+					charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+													ike_sa);
+				}
+			}
+		}
 	}
 	return JOB_REQUEUE_NONE;
 }
@@ -157,6 +190,12 @@ METHOD(job_t, get_priority, job_priority_t,
 	private_adopt_children_job_t *this)
 {
 	return JOB_PRIO_HIGH;
+}
+
+METHOD(adopt_children_job_t, queue_task, void,
+	private_adopt_children_job_t *this, task_t *task)
+{
+	array_insert_create(&this->tasks, ARRAY_TAIL, task);
 }
 
 /**
@@ -173,6 +212,7 @@ adopt_children_job_t *adopt_children_job_create(ike_sa_id_t *id)
 				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
+			.queue_task = _queue_task,
 		},
 		.id = id->clone(id),
 	);
