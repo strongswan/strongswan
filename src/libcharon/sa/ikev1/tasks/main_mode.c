@@ -480,6 +480,7 @@ METHOD(task_t, build_r, status_t,
 			id_payload_t *id_payload;
 			identification_t *id;
 			adopt_children_job_t *job = NULL;
+			xauth_t *xauth = NULL;
 
 			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
 			if (!id)
@@ -503,8 +504,8 @@ METHOD(task_t, build_r, status_t,
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_HYBRID_INIT_RSA:
-					this->ike_sa->queue_task(this->ike_sa,
-									(task_t*)xauth_create(this->ike_sa, TRUE));
+					xauth = xauth_create(this->ike_sa, TRUE);
+					this->ike_sa->queue_task(this->ike_sa, (task_t*)xauth);
 					break;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
@@ -543,6 +544,10 @@ METHOD(task_t, build_r, status_t,
 					{
 						job->queue_task(job, (task_t*)
 								mode_config_create(this->ike_sa, TRUE, FALSE));
+					}
+					else if (xauth)
+					{
+						xauth->queue_mode_config_push(xauth);
 					}
 					else
 					{
