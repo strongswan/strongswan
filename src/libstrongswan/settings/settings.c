@@ -509,11 +509,13 @@ METHOD(settings_t, get_bool, bool,
 inline int settings_value_as_int(char *value, int def)
 {
 	int intval;
+	char *end;
+
 	if (value)
 	{
 		errno = 0;
-		intval = strtol(value, NULL, 10);
-		if (errno == 0)
+		intval = strtol(value, &end, 10);
+		if (errno == 0 && *end == 0 && end != value)
 		{
 			return intval;
 		}
@@ -539,11 +541,13 @@ METHOD(settings_t, get_int, int,
 inline double settings_value_as_double(char *value, double def)
 {
 	double dval;
+	char *end;
+
 	if (value)
 	{
 		errno = 0;
-		dval = strtod(value, NULL);
-		if (errno == 0)
+		dval = strtod(value, &end);
+		if (errno == 0 && *end == 0 && end != value)
 		{
 			return dval;
 		}
@@ -574,6 +578,10 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 	{
 		errno = 0;
 		timeval = strtoul(value, &endptr, 10);
+		if (endptr == value)
+		{
+			return def;
+		}
 		if (errno == 0)
 		{
 			switch (*endptr)
@@ -588,8 +596,10 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 					timeval *= 60;
 					break;
 				case 's':		/* time in seconds */
-				default:
+				case '\0':
 					break;
+				default:
+					return def;
 			}
 			return timeval;
 		}

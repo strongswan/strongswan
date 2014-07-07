@@ -265,7 +265,6 @@ START_SETUP(setup_int_config)
 	create_settings(chunk_from_str(
 		"main {\n"
 		"	key1 = 5\n"
-		"	# gets cut off\n"
 		"	key2 = 5.5\n"
 		"	key3 = -42\n"
 		"	empty = \"\"\n"
@@ -283,16 +282,14 @@ END_SETUP
 START_TEST(test_get_int)
 {
 	verify_int(5, 0, "main.key1");
-	verify_int(5, 0, "main.key2");
+	verify_int(0, 0, "main.key2");
 	verify_int(-42, 0, "main.key3");
 
-	verify_int(0, 11, "main.empty");
+	verify_int(11, 11, "main.empty");
 	verify_int(11, 11, "main.none");
-
-	/* FIXME: do we want this behavior? */
-	verify_int(0, 11, "main.foo1");
-	verify_int(0, 11, "main.foo2");
-	verify_int(13, 11, "main.foo3");
+	verify_int(11, 11, "main.foo1");
+	verify_int(11, 11, "main.foo2");
+	verify_int(11, 11, "main.foo3");
 
 	verify_int(13, 13, "main.key4");
 	verify_int(-13, -13, "main");
@@ -341,13 +338,11 @@ START_TEST(test_get_double)
 	verify_double(-42, 0, "main.key3");
 	verify_double(-42.5, 0, "main.key4");
 
-	verify_double(0, 11.5, "main.empty");
+	verify_double(11.5, 11.5, "main.empty");
 	verify_double(11.5, 11.5, "main.none");
-
-	/* FIXME: do we want this behavior? */
-	verify_double(0, 11.5, "main.foo1");
-	verify_double(0, 11.5, "main.foo2");
-	verify_double(13.5, 11.5, "main.foo3");
+	verify_double(11.5, 11.5, "main.foo1");
+	verify_double(11.5, 11.5, "main.foo2");
+	verify_double(11.5, 11.5, "main.foo3");
 
 	verify_double(11.5, 11.5, "main.key5");
 	verify_double(-11.5, -11.5, "main");
@@ -375,6 +370,7 @@ START_SETUP(setup_time_config)
 {
 	create_settings(chunk_from_str(
 		"main {\n"
+		"	key0 = 5\n"
 		"	key1 = 5s\n"
 		"	key2 = 5m\n"
 		"	key3 = 5h\n"
@@ -393,18 +389,17 @@ END_SETUP
 
 START_TEST(test_get_time)
 {
+	verify_time(5, 0, "main.key0");
 	verify_time(5, 0, "main.key1");
 	verify_time(300, 0, "main.key2");
 	verify_time(18000, 0, "main.key3");
 	verify_time(432000, 0, "main.key4");
 
-	verify_time(0, 11, "main.empty");
+	verify_time(11, 11, "main.empty");
 	verify_time(11, 11, "main.none");
-
-	/* FIXME: do we want this behavior? */
-	verify_time(0, 11, "main.foo1");
-	verify_time(0, 11, "main.foo2");
-	verify_time(13, 11, "main.foo3");
+	verify_time(11, 11, "main.foo1");
+	verify_time(11, 11, "main.foo2");
+	verify_time(11, 11, "main.foo3");
 
 	verify_time(11, 11, "main.key5");
 	verify_time(11, 11, "main");
