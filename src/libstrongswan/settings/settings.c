@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "settings.h"
 #include "settings_types.h"
@@ -584,6 +585,10 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 		}
 		if (errno == 0)
 		{
+			while (isspace(*endptr))
+			{
+				endptr++;
+			}
 			switch (*endptr)
 			{
 				case 'd':		/* time in days */
