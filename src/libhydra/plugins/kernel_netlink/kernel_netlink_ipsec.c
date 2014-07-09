@@ -1065,7 +1065,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_ALLOCSPI;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userspi_info));
@@ -1214,7 +1214,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}  (mark "
 				  "%u/0x%08x)", ntohl(spi), reqid, mark.value, mark.mask);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = inbound ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
@@ -1521,7 +1521,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	status = SUCCESS;
 
 failed:
-	memwipe(request, sizeof(request));
+	memwipe(&request, sizeof(request));
 	return status;
 }
 
@@ -1549,7 +1549,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
 				   ntohl(spi));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETAE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_aevent_id));
@@ -1641,7 +1641,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%08x)",
 				   ntohl(spi), mark.value, mark.mask);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
@@ -1744,7 +1744,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%08x)",
 				   ntohl(spi), mark.value, mark.mask);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_DELSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
@@ -1813,7 +1813,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update", ntohl(spi));
 
 	/* query the existing SA first */
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
@@ -1876,7 +1876,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 				   ntohl(spi), src, dst, new_src, new_dst);
 	/* copy over the SA from out to request */
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
@@ -1967,7 +1967,7 @@ failed:
 	free(replay);
 	free(replay_esn);
 	memwipe(out, len);
-	memwipe(request, sizeof(request));
+	memwipe(&request, sizeof(request));
 	free(out);
 
 	return status;
@@ -1984,7 +1984,7 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 
 	DBG2(DBG_KNL, "flushing all SAD entries");
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_FLUSHSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_flush));
@@ -2020,7 +2020,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	memcpy(&clone, policy, sizeof(policy_entry_t));
 
 	memset(&request, 0, sizeof(request));
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
@@ -2344,7 +2344,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 				   src_ts, dst_ts, policy_dir_names, direction,
 				   mark.value, mark.mask);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
@@ -2501,7 +2501,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_DELPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
@@ -2560,7 +2560,7 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 
 	DBG2(DBG_KNL, "flushing all policies from SPD");
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_FLUSHPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(0); /* no data associated */

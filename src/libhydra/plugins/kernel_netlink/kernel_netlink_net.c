@@ -1625,7 +1625,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	memset(&request, 0, sizeof(request));
 
 	family = dest->get_family(dest);
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
 		this->routing_table || match_net)
@@ -1864,7 +1864,7 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 	chunk = ip->get_address(ip);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
 	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
@@ -2092,7 +2092,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
 	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -2221,7 +2221,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 
 	memset(&request, 0, sizeof(request));
 
-	in = (struct nlmsghdr*)&request;
+	in = &request.hdr;
 	in->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
 	in->nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT;
 	msg = (struct rtgenmsg*)NLMSG_DATA(in);
@@ -2308,7 +2308,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	char *fwmark;
 
 	memset(&request, 0, sizeof(request));
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = nlmsg_type;
 	if (nlmsg_type == RTM_NEWRULE)
