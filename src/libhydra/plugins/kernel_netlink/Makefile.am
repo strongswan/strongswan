@@ -29,6 +29,7 @@ check_PROGRAMS = $(TESTS)
 
 tests_SOURCES = \
 	tests.h tests.c \
+	suites/test_socket.c \
 	kernel_netlink_shared.c
 
 tests_CFLAGS = \
