@@ -219,7 +219,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 METHOD(netlink_socket_t, destroy, void,
 	private_netlink_socket_t *this)
 {
-	if (this->socket > 0)
+	if (this->socket != -1)
 	{
 		close(this->socket);
 	}
@@ -233,7 +233,9 @@ METHOD(netlink_socket_t, destroy, void,
 netlink_socket_t *netlink_socket_create(int protocol)
 {
 	private_netlink_socket_t *this;
-	struct sockaddr_nl addr;
+	struct sockaddr_nl addr = {
+		.nl_family = AF_NETLINK,
+	};
 
 	INIT(this,
 		.public = {
@@ -243,21 +245,16 @@ netlink_socket_t *netlink_socket_create(int protocol)
 		},
 		.seq = 200,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.socket = socket(AF_NETLINK, SOCK_RAW, protocol),
 		.protocol = protocol,
 	);
 
-	memset(&addr, 0, sizeof(addr));
-	addr.nl_family = AF_NETLINK;
-
-	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
-	if (this->socket < 0)
+	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create netlink socket");
 		destroy(this);
 		return NULL;
 	}
-
-	addr.nl_groups = 0;
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		DBG1(DBG_KNL, "unable to bind netlink socket");
