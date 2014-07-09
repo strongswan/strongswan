@@ -65,7 +65,7 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
 	size_t *out_len)
 {
-	int len, addr_len;
+	int len;
 	struct sockaddr_nl addr;
 	chunk_t result = chunk_empty, tmp;
 	struct nlmsghdr *msg, peek;
@@ -113,14 +113,7 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 		tmp.ptr = buf;
 		msg = (struct nlmsghdr*)tmp.ptr;
 
-		memset(&addr, 0, sizeof(addr));
-		addr.nl_family = AF_NETLINK;
-		addr.nl_pid = getpid();
-		addr.nl_groups = 0;
-		addr_len = sizeof(addr);
-
-		len = recvfrom(this->socket, tmp.ptr, tmp.len, 0,
-					   (struct sockaddr*)&addr, &addr_len);
+		len = recv(this->socket, tmp.ptr, tmp.len, 0);
 
 		if (len < 0)
 		{
@@ -161,8 +154,7 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 
 		/* NLM_F_MULTI flag does not seem to be set correctly, we use sequence
 		 * numbers to detect multi header messages */
-		len = recvfrom(this->socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT,
-					   (struct sockaddr*)&addr, &addr_len);
+		len = recv(this->socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT);
 
 		if (len == sizeof(peek) && peek.nlmsg_seq == this->seq)
 		{
