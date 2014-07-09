@@ -2,7 +2,7 @@
 
 PKG = swidGenerator
 ZIP = $(PKG)-master.zip
-SRC = https://github.com/tnc-ba/$(PKG)/archive/master.zip
+SRC = https://github.com/strongswan/$(PKG)/archive/master.zip
 
 all: install
 
