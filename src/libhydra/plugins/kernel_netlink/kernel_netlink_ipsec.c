@@ -816,7 +816,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	u_int32_t reqid = 0;
 	int proto = 0;
 
-	acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
+	acquire = NLMSG_DATA(hdr);
 	rta = XFRM_RTA(hdr, struct xfrm_user_acquire);
 	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_user_acquire);
 
@@ -862,7 +862,7 @@ static void process_expire(private_kernel_netlink_ipsec_t *this,
 	u_int32_t spi, reqid;
 	u_int8_t protocol;
 
-	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+	expire = NLMSG_DATA(hdr);
 	protocol = expire->state.id.proto;
 	spi = expire->state.id.spi;
 	reqid = expire->state.reqid;
@@ -896,7 +896,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this,
 	u_int32_t reqid = 0;
 	policy_dir_t dir;
 
-	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id = NLMSG_DATA(hdr);
 	rta     = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
 	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_userpolicy_id);
 
@@ -963,7 +963,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 	struct xfrm_user_mapping *mapping;
 	u_int32_t spi, reqid;
 
-	mapping = (struct xfrm_user_mapping*)NLMSG_DATA(hdr);
+	mapping = NLMSG_DATA(hdr);
 	spi = mapping->id.spi;
 	reqid = mapping->reqid;
 
@@ -1070,7 +1070,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	hdr->nlmsg_type = XFRM_MSG_ALLOCSPI;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userspi_info));
 
-	userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
+	userspi = NLMSG_DATA(hdr);
 	host2xfrm(src, &userspi->info.saddr);
 	host2xfrm(dst, &userspi->info.id.daddr);
 	userspi->info.id.proto = proto;
@@ -1219,7 +1219,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	hdr->nlmsg_type = inbound ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 
-	sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+	sa = NLMSG_DATA(hdr);
 	host2xfrm(src, &sa->saddr);
 	host2xfrm(dst, &sa->id.daddr);
 	sa->id.spi = spi;
@@ -1554,7 +1554,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	hdr->nlmsg_type = XFRM_MSG_GETAE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_aevent_id));
 
-	aevent_id = (struct xfrm_aevent_id*)NLMSG_DATA(hdr);
+	aevent_id = NLMSG_DATA(hdr);
 	aevent_id->flags = XFRM_AE_RVAL;
 
 	host2xfrm(dst, &aevent_id->sa_id.daddr);
@@ -1646,7 +1646,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
-	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id = NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = protocol;
@@ -1666,7 +1666,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 			{
 				case XFRM_MSG_NEWSA:
 				{
-					sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+					sa = NLMSG_DATA(hdr);
 					break;
 				}
 				case NLMSG_ERROR:
@@ -1749,7 +1749,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	hdr->nlmsg_type = XFRM_MSG_DELSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
-	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id = NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = protocol;
@@ -1818,7 +1818,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
-	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id = NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = protocol;
@@ -1989,7 +1989,7 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	hdr->nlmsg_type = XFRM_MSG_FLUSHSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_flush));
 
-	flush = (struct xfrm_usersa_flush*)NLMSG_DATA(hdr);
+	flush = NLMSG_DATA(hdr);
 	flush->proto = IPSEC_PROTO_ANY;
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -2025,7 +2025,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	hdr->nlmsg_type = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
 
-	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
+	policy_info = NLMSG_DATA(hdr);
 	policy_info->sel = policy->sel;
 	policy_info->dir = policy->direction;
 
@@ -2349,7 +2349,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
-	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id = NLMSG_DATA(hdr);
 	policy_id->sel = ts2selector(src_ts, dst_ts);
 	policy_id->dir = direction;
 
@@ -2367,7 +2367,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 			{
 				case XFRM_MSG_NEWPOLICY:
 				{
-					policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
+					policy = NLMSG_DATA(hdr);
 					break;
 				}
 				case NLMSG_ERROR:
@@ -2506,7 +2506,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	hdr->nlmsg_type = XFRM_MSG_DELPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
-	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id = NLMSG_DATA(hdr);
 	policy_id->sel = current->sel;
 	policy_id->dir = direction;
 

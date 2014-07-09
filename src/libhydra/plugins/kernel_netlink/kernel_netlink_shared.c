@@ -197,7 +197,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 		{
 			case NLMSG_ERROR:
 			{
-				struct nlmsgerr* err = (struct nlmsgerr*)NLMSG_DATA(hdr);
+				struct nlmsgerr* err = NLMSG_DATA(hdr);
 
 				if (err->error)
 				{
