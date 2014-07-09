@@ -65,10 +65,13 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
 	size_t *out_len)
 {
-	int len;
+	union {
+		struct nlmsghdr hdr;
+		u_char bytes[4096];
+	} response;
 	struct sockaddr_nl addr;
-	chunk_t result = chunk_empty, tmp;
-	struct nlmsghdr *msg, peek;
+	chunk_t result = chunk_empty;
+	int len;
 
 	this->mutex->lock(this->mutex);
 
@@ -82,11 +85,9 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 
 	if (this->protocol == NETLINK_XFRM)
 	{
-		chunk_t in_chunk = { (u_char*)in, in->nlmsg_len };
-
-		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &in_chunk);
+		DBG3(DBG_KNL, "sending %N: %b",
+			 xfrm_msg_names, in->nlmsg_type, in, in->nlmsg_len);
 	}
-
 	while (TRUE)
 	{
 		len = sendto(this->socket, in, in->nlmsg_len, 0,
@@ -108,13 +109,7 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 
 	while (TRUE)
 	{
-		char buf[4096];
-		tmp.len = sizeof(buf);
-		tmp.ptr = buf;
-		msg = (struct nlmsghdr*)tmp.ptr;
-
-		len = recv(this->socket, tmp.ptr, tmp.len, 0);
-
+		len = recv(this->socket, &response, sizeof(response), 0);
 		if (len < 0)
 		{
 			if (errno == EINTR)
@@ -128,17 +123,17 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 			free(result.ptr);
 			return FAILED;
 		}
-		if (!NLMSG_OK(msg, len))
+		if (!NLMSG_OK(&response.hdr, len))
 		{
 			DBG1(DBG_KNL, "received corrupted netlink message");
 			this->mutex->unlock(this->mutex);
 			free(result.ptr);
 			return FAILED;
 		}
-		if (msg->nlmsg_seq != this->seq)
+		if (response.hdr.nlmsg_seq != this->seq)
 		{
 			DBG1(DBG_KNL, "received invalid netlink sequence number");
-			if (msg->nlmsg_seq < this->seq)
+			if (response.hdr.nlmsg_seq < this->seq)
 			{
 				continue;
 			}
@@ -147,16 +142,13 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 			return FAILED;
 		}
 
-		tmp.len = len;
-		result.ptr = realloc(result.ptr, result.len + tmp.len);
-		memcpy(result.ptr + result.len, tmp.ptr, tmp.len);
-		result.len += tmp.len;
+		result = chunk_cat("mc", result, chunk_create(response.bytes, len));
 
 		/* NLM_F_MULTI flag does not seem to be set correctly, we use sequence
 		 * numbers to detect multi header messages */
-		len = recv(this->socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT);
-
-		if (len == sizeof(peek) && peek.nlmsg_seq == this->seq)
+		len = recv(this->socket, &response.hdr, sizeof(response.hdr),
+				   MSG_PEEK | MSG_DONTWAIT);
+		if (len == sizeof(response.hdr) && response.hdr.nlmsg_seq == this->seq)
 		{
 			/* seems to be multipart */
 			continue;
