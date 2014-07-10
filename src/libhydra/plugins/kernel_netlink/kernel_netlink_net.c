@@ -78,6 +78,27 @@
 #define ROUTING_TABLE_PRIO 0
 #endif
 
+ENUM(rt_msg_names, RTM_NEWLINK, RTM_GETRULE,
+	"RTM_NEWLINK",
+	"RTM_DELLINK",
+	"RTM_GETLINK",
+	"RTM_SETLINK",
+	"RTM_NEWADDR",
+	"RTM_DELADDR",
+	"RTM_GETADDR",
+	"31",
+	"RTM_NEWROUTE",
+	"RTM_DELROUTE",
+	"RTM_GETROUTE",
+	"35",
+	"RTM_NEWNEIGH",
+	"RTM_DELNEIGH",
+	"RTM_GETNEIGH",
+	"RTM_NEWRULE",
+	"RTM_DELRULE",
+	"RTM_GETRULE",
+);
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -2469,7 +2490,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				.destroy = _destroy,
 			},
 		},
-		.socket = netlink_socket_create(NETLINK_ROUTE, NULL),
+		.socket = netlink_socket_create(NETLINK_ROUTE, rt_msg_names),
 		.rt_exclude = linked_list_create(),
 		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
 								   (hashtable_equals_t)route_entry_equals, 16),
