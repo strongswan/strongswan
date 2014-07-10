@@ -2469,7 +2469,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				.destroy = _destroy,
 			},
 		},
-		.socket = netlink_socket_create(NETLINK_ROUTE),
+		.socket = netlink_socket_create(NETLINK_ROUTE, NULL),
 		.rt_exclude = linked_list_create(),
 		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
 								   (hashtable_equals_t)route_entry_equals, 16),

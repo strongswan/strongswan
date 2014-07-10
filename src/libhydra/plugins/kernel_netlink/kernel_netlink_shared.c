@@ -46,14 +46,14 @@ struct private_netlink_socket_t {
 	int seq;
 
 	/**
-	 * netlink socket protocol
-	 */
-	int protocol;
-
-	/**
 	 * netlink socket
 	 */
 	int socket;
+
+	/**
+	 * Enum names for Netlink messages
+	 */
+	enum_name_t *names;
 };
 
 /**
@@ -83,10 +83,10 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
 
-	if (this->protocol == NETLINK_XFRM)
+	if (this->names)
 	{
 		DBG3(DBG_KNL, "sending %N: %b",
-			 xfrm_msg_names, in->nlmsg_type, in, in->nlmsg_len);
+			 this->names, in->nlmsg_type, in, in->nlmsg_len);
 	}
 	while (TRUE)
 	{
@@ -230,7 +230,7 @@ METHOD(netlink_socket_t, destroy, void,
 /**
  * Described in header.
  */
-netlink_socket_t *netlink_socket_create(int protocol)
+netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names)
 {
 	private_netlink_socket_t *this;
 	struct sockaddr_nl addr = {
@@ -246,7 +246,7 @@ netlink_socket_t *netlink_socket_create(int protocol)
 		.seq = 200,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.socket = socket(AF_NETLINK, SOCK_RAW, protocol),
-		.protocol = protocol,
+		.names = names,
 	);
 
 	if (this->socket == -1)
