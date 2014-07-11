@@ -58,38 +58,55 @@ static void destroy_suite(test_suite_t *suite)
 }
 
 /**
- * Removes and destroys test suites that are not selected.
+ * Filter loaded test suites, either remove suites listed (exclude=TRUE), or all
+ * that are not listed (exclude=FALSE).
  */
-static void filter_suites(array_t *loaded)
+static void apply_filter(array_t *loaded, char *filter, bool exclude)
 {
 	enumerator_t *enumerator, *names;
-	hashtable_t *selected;
+	hashtable_t *listed;
 	test_suite_t *suite;
-	char *suites, *name;
+	char *name;
 
-	suites = getenv("TESTS_SUITES");
-	if (!suites)
-	{
-		return;
-	}
-	selected = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8);
-	names = enumerator_create_token(suites, ",", " ");
+	listed = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8);
+	names = enumerator_create_token(filter, ",", " ");
 	while (names->enumerate(names, &name))
 	{
-		selected->put(selected, name, name);
+		listed->put(listed, name, name);
 	}
 	enumerator = array_create_enumerator(loaded);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if (!selected->get(selected, suite->name))
+		if ((exclude && listed->get(listed, suite->name)) ||
+			(!exclude && !listed->get(listed, suite->name)))
 		{
 			array_remove_at(loaded, enumerator);
 			destroy_suite(suite);
 		}
 	}
 	enumerator->destroy(enumerator);
-	selected->destroy(selected);
+	listed->destroy(listed);
 	names->destroy(names);
+}
+
+/**
+ * Removes and destroys test suites that are not selected or
+ * explicitly excluded.
+ */
+static void filter_suites(array_t *loaded)
+{
+	char *filter;
+
+	filter = getenv("TESTS_SUITES");
+	if (filter)
+	{
+		apply_filter(loaded, filter, FALSE);
+	}
+	filter = getenv("TESTS_SUITES_EXCLUDE");
+	if (filter)
+	{
+		apply_filter(loaded, filter, TRUE);
+	}
 }
 
 /**
