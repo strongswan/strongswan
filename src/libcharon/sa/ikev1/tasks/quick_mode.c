@@ -1117,9 +1117,20 @@ METHOD(task_t, process_r, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
-			if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
-				has_notify_errors(this, message))
+			if (has_notify_errors(this, message))
 			{
+				return SUCCESS;
+			}
+			if (message->get_exchange_type(message) == INFORMATIONAL_V1)
+			{
+				if (message->get_payload(message, PLV1_DELETE))
+				{
+					/* If the DELETE for a Quick Mode follows immediately
+					 * after rekeying, we might receive it before the
+					 * third completing Quick Mode message. Ignore it, as
+					 * it gets handled by a separately queued delete task. */
+					return NEED_MORE;
+				}
 				return SUCCESS;
 			}
 			if (!install(this))
@@ -1198,6 +1209,14 @@ METHOD(task_t, build_r, status_t,
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
 		}
+		case QM_NEGOTIATED:
+			if (message->get_exchange_type(message) == INFORMATIONAL_V1)
+			{
+				/* skip INFORMATIONAL response if we received a INFORMATIONAL
+				 * delete, see process_r() */
+				return ALREADY_DONE;
+			}
+			/* fall */
 		default:
 			return FAILED;
 	}
