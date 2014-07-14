@@ -381,14 +381,8 @@ METHOD(listener_t, child_updown, bool,
 		}
 		else
 		{
-			if (ike_sa->has_condition(ike_sa, COND_REAUTHENTICATING))
-			{	/* we ignore this during reauthentication */
-				return TRUE;
-			}
-			close_tun_device(this);
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_DOWN);
-			return FALSE;
 		}
 	}
 	return TRUE;
