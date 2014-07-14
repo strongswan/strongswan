@@ -313,6 +313,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private void clearError()
 	{
+		if (mService != null)
+		{
+			mService.disconnect();
+		}
 		mDismissedConnectionID = mErrorConnectionID;
 		updateView();
 	}

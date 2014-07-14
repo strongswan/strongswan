@@ -322,9 +322,8 @@ public class CharonVpnService extends VpnService implements Runnable
 	}
 
 	/**
-	 * Set an error on the state service and disconnect the current connection.
-	 * This is not done by calling stopCurrentConnection() above, but instead
-	 * is done asynchronously via state service.
+	 * Set an error on the state service. Called by the handler thread and any
+	 * of charon's threads.
 	 *
 	 * @param error error state
 	 */
@@ -337,7 +336,6 @@ public class CharonVpnService extends VpnService implements Runnable
 				if (!mIsDisconnecting)
 				{
 					mService.setError(error);
-					mService.disconnect();
 				}
 			}
 		}
