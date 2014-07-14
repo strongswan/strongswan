@@ -211,9 +211,11 @@ CALLBACK(watch, bool,
 	return TRUE;
 }
 
-METHOD(netlink_socket_t, netlink_send, status_t,
-	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
-	size_t *out_len)
+/**
+ * Send a netlink request, try once
+ */
+static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
+						  struct nlmsghdr **out, size_t *out_len)
 {
 	struct nlmsghdr *hdr;
 	chunk_t result = {};
@@ -275,6 +277,38 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	*out = (struct nlmsghdr*)result.ptr;
 
 	return SUCCESS;
+}
+
+METHOD(netlink_socket_t, netlink_send, status_t,
+	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
+	size_t *out_len)
+{
+	while (TRUE)
+	{
+		struct nlmsghdr *hdr;
+		status_t status;
+		size_t len;
+
+		status = send_once(this, in, &hdr, &len);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+		if (hdr->nlmsg_type == NLMSG_ERROR)
+		{
+			struct nlmsgerr* err;
+
+			err = NLMSG_DATA(hdr);
+			if (err->error == -EBUSY)
+			{
+				free(hdr);
+				continue;
+			}
+		}
+		*out = hdr;
+		*out_len = len;
+		return SUCCESS;
+	}
 }
 
 METHOD(netlink_socket_t, netlink_send_ack, status_t,
