@@ -354,7 +354,10 @@ public class CharonVpnService extends VpnService implements Runnable
 		switch (status)
 		{
 			case STATE_CHILD_SA_DOWN:
-				/* we ignore this as we use closeaction=restart */
+				if (!mIsDisconnecting)
+				{
+					setState(State.CONNECTING);
+				}
 				break;
 			case STATE_CHILD_SA_UP:
 				setState(State.CONNECTED);
