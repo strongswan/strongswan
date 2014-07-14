@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,6 +22,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
 #ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
 #endif
@@ -111,12 +113,55 @@ METHOD(ip_packet_t, destroy, void,
 }
 
 /**
+ * Parse transport protocol header
+ */
+static bool parse_transport_header(chunk_t packet, u_int8_t proto,
+								   u_int16_t *sport, u_int16_t *dport)
+{
+	switch (proto)
+	{
+		case IPPROTO_UDP:
+		{
+			struct udphdr *udp;
+
+			if (packet.len < sizeof(*udp))
+			{
+				DBG1(DBG_ESP, "UDP packet too short");
+				return FALSE;
+			}
+			udp = (struct udphdr*)packet.ptr;
+			*sport = ntohs(udp->source);
+			*dport = ntohs(udp->dest);
+			break;
+		}
+		case IPPROTO_TCP:
+		{
+			struct tcphdr *tcp;
+
+			if (packet.len < sizeof(*tcp))
+			{
+				DBG1(DBG_ESP, "TCP packet too short");
+				return FALSE;
+			}
+			tcp = (struct tcphdr*)packet.ptr;
+			*sport = ntohs(tcp->source);
+			*dport = ntohs(tcp->dest);
+			break;
+		}
+		default:
+			break;
+	}
+	return TRUE;
+}
+
+/**
  * Described in header.
  */
 ip_packet_t *ip_packet_create(chunk_t packet)
 {
 	private_ip_packet_t *this;
 	u_int8_t version, next_header;
+	u_int16_t sport = 0, dport = 0;
 	host_t *src, *dst;
 
 	if (packet.len < 1)
@@ -142,10 +187,15 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, untoh16(&ip->ip_len));
 
+			if (!parse_transport_header(chunk_skip(packet, ip->ip_hl * 4),
+										ip->ip_p, &sport, &dport))
+			{
+				goto failed;
+			}
 			src = host_create_from_chunk(AF_INET,
-										 chunk_from_thing(ip->ip_src), 0);
+										 chunk_from_thing(ip->ip_src), sport);
 			dst = host_create_from_chunk(AF_INET,
-										 chunk_from_thing(ip->ip_dst), 0);
+										 chunk_from_thing(ip->ip_dst), dport);
 			next_header = ip->ip_p;
 			break;
 		}
@@ -154,7 +204,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 		{
 			struct ip6_hdr *ip;
 
-			if (packet.len < sizeof(struct ip6_hdr))
+			if (packet.len < sizeof(*ip))
 			{
 				DBG1(DBG_ESP, "IPv6 packet too short");
 				goto failed;
@@ -162,11 +212,17 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			ip = (struct ip6_hdr*)packet.ptr;
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, untoh16(&ip->ip6_plen));
-
+			/* we only handle packets without extension headers, just skip the
+			 * basic IPv6 header */
+			if (!parse_transport_header(chunk_skip(packet, 40), ip->ip6_nxt,
+										&sport, &dport))
+			{
+				goto failed;
+			}
 			src = host_create_from_chunk(AF_INET6,
-										 chunk_from_thing(ip->ip6_src), 0);
+										 chunk_from_thing(ip->ip6_src), sport);
 			dst = host_create_from_chunk(AF_INET6,
-										 chunk_from_thing(ip->ip6_dst), 0);
+										 chunk_from_thing(ip->ip6_dst), dport);
 			next_header = ip->ip6_nxt;
 			break;
 		}
