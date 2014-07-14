@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -52,8 +52,9 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
-import android.widget.TwoLineListItem;
+import android.widget.TextView;
 
 public class VpnProfileDetailActivity extends Activity
 {
@@ -73,10 +74,10 @@ public class VpnProfileDetailActivity extends Activity
 	private EditText mUsername;
 	private EditText mPassword;
 	private ViewGroup mUserCertificate;
-	private TwoLineListItem mSelectUserCert;
+	private RelativeLayout mSelectUserCert;
 	private CheckBox mCheckAuto;
-	private TwoLineListItem mSelectCert;
-	private TwoLineListItem mTncNotice;
+	private RelativeLayout mSelectCert;
+	private RelativeLayout mTncNotice;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -94,17 +95,17 @@ public class VpnProfileDetailActivity extends Activity
 		mName = (EditText)findViewById(R.id.name);
 		mGateway = (EditText)findViewById(R.id.gateway);
 		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
-		mTncNotice = (TwoLineListItem)findViewById(R.id.tnc_notice);
+		mTncNotice = (RelativeLayout)findViewById(R.id.tnc_notice);
 
 		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
 		mUsername = (EditText)findViewById(R.id.username);
 		mPassword = (EditText)findViewById(R.id.password);
 
 		mUserCertificate = (ViewGroup)findViewById(R.id.user_certificate_group);
-		mSelectUserCert = (TwoLineListItem)findViewById(R.id.select_user_certificate);
+		mSelectUserCert = (RelativeLayout)findViewById(R.id.select_user_certificate);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
-		mSelectCert = (TwoLineListItem)findViewById(R.id.select_certificate);
+		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -122,8 +123,8 @@ public class VpnProfileDetailActivity extends Activity
 			}
 		});
 
-		mTncNotice.getText1().setText(R.string.tnc_notice_title);
-		mTncNotice.getText2().setText(R.string.tnc_notice_subtitle);
+		((TextView)mTncNotice.findViewById(android.R.id.text1)).setText(R.string.tnc_notice_title);
+		((TextView)mTncNotice.findViewById(android.R.id.text2)).setText(R.string.tnc_notice_subtitle);
 		mTncNotice.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v)
@@ -247,19 +248,19 @@ public class VpnProfileDetailActivity extends Activity
 		{
 			if (mUserCertLoading != null)
 			{
-				mSelectUserCert.getText1().setText(mUserCertLoading);
-				mSelectUserCert.getText2().setText(R.string.loading);
+				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertLoading);
+				((TextView)mSelectUserCert.findViewById(android.R.id.text2)).setText(R.string.loading);
 			}
 			else if (mUserCertEntry != null)
 			{	/* clear any errors and set the new data */
-				mSelectUserCert.getText1().setError(null);
-				mSelectUserCert.getText1().setText(mUserCertEntry.getAlias());
-				mSelectUserCert.getText2().setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
+				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError(null);
+				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertEntry.getAlias());
+				((TextView)mSelectUserCert.findViewById(android.R.id.text2)).setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
 			}
 			else
 			{
-				mSelectUserCert.getText1().setText(R.string.profile_user_select_certificate_label);
-				mSelectUserCert.getText2().setText(R.string.profile_user_select_certificate);
+				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(R.string.profile_user_select_certificate_label);
+				((TextView)mSelectUserCert.findViewById(android.R.id.text2)).setText(R.string.profile_user_select_certificate);
 			}
 		}
 	}
@@ -296,13 +297,13 @@ public class VpnProfileDetailActivity extends Activity
 
 			if (mCertEntry != null)
 			{
-				mSelectCert.getText1().setText(mCertEntry.getSubjectPrimary());
-				mSelectCert.getText2().setText(mCertEntry.getSubjectSecondary());
+				((TextView)mSelectCert.findViewById(android.R.id.text1)).setText(mCertEntry.getSubjectPrimary());
+				((TextView)mSelectCert.findViewById(android.R.id.text2)).setText(mCertEntry.getSubjectSecondary());
 			}
 			else
 			{
-				mSelectCert.getText1().setText(R.string.profile_ca_select_certificate_label);
-				mSelectCert.getText2().setText(R.string.profile_ca_select_certificate);
+				((TextView)mSelectCert.findViewById(android.R.id.text1)).setText(R.string.profile_ca_select_certificate_label);
+				((TextView)mSelectCert.findViewById(android.R.id.text2)).setText(R.string.profile_ca_select_certificate);
 			}
 		}
 		else
@@ -358,7 +359,7 @@ public class VpnProfileDetailActivity extends Activity
 		}
 		if (mVpnType.getRequiresCertificate() && mUserCertEntry == null)
 		{	/* let's show an error icon */
-			mSelectUserCert.getText1().setError("");
+			((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
 			valid = false;
 		}
 		if (!mCheckAuto.isChecked() && mCertEntry == null)
@@ -546,7 +547,7 @@ public class VpnProfileDetailActivity extends Activity
 			}
 			else
 			{	/* previously selected certificate is not here anymore */
-				mSelectUserCert.getText1().setError("");
+				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
 				mUserCertEntry = null;
 			}
 			mUserCertLoading = null;
