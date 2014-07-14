@@ -42,7 +42,7 @@ typedef struct private_tcg_swid_attr_tag_id_inv_t private_tcg_swid_attr_tag_id_i
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |    Unique Software ID Length  |Unique Software ID (var length)|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |      Tag File Path Length     |  Tag File Path (var. length)  |
+ *  |       Instance ID Length      | Instance ID (variable length) |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -128,7 +128,7 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	swid_tag_id_t *tag_id;
-	chunk_t tag_creator, unique_sw_id, tag_file_path;
+	chunk_t tag_creator, unique_sw_id, instance_id;
 	enumerator_t *enumerator;
 
 	if (this->value.ptr)
@@ -147,10 +147,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	while (enumerator->enumerate(enumerator, &tag_id))
 	{
 		tag_creator = tag_id->get_tag_creator(tag_id);
-		unique_sw_id = tag_id->get_unique_sw_id(tag_id, &tag_file_path);
+		unique_sw_id = tag_id->get_unique_sw_id(tag_id, &instance_id);
 		writer->write_data16(writer, tag_creator);
 		writer->write_data16(writer, unique_sw_id);
-		writer->write_data16(writer, tag_file_path);
+		writer->write_data16(writer, instance_id);
 	}
 	enumerator->destroy(enumerator);
 
@@ -164,7 +164,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	uint32_t tag_id_count;
 	uint8_t reserved;
-	chunk_t tag_creator, unique_sw_id, tag_file_path;
+	chunk_t tag_creator, unique_sw_id, instance_id;
 	swid_tag_id_t *tag_id;
 
 	if (this->value.len < TCG_SWID_TAG_ID_INV_MIN_SIZE)
@@ -198,14 +198,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		*offset += 2 + unique_sw_id.len;
 		
-		if (!reader->read_data16(reader, &tag_file_path))
+		if (!reader->read_data16(reader, &instance_id))
 		{
-			DBG1(DBG_TNC, "insufficient data for Tag File Path");
+			DBG1(DBG_TNC, "insufficient data for Instance ID");
 			return FAILED;
 		}
-		*offset += 2 + tag_file_path.len;
+		*offset += 2 + instance_id.len;
 
-		tag_id = swid_tag_id_create(tag_creator, unique_sw_id, tag_file_path);
+		tag_id = swid_tag_id_create(tag_creator, unique_sw_id, instance_id);
 		this->inventory->add(this->inventory, tag_id);
 	}
 	reader->destroy(reader);

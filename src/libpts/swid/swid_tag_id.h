@@ -41,10 +41,10 @@ struct swid_tag_id_t {
 	/**
 	 * Get the Unique Software ID and optional Tag File Path
 	 *
-	 * @param				Optional Tag File Path
+	 * @param instance_id	Optional Tag Identifier Instance ID
 	 * @return				Unique Software ID
 	 */
-	chunk_t (*get_unique_sw_id)(swid_tag_id_t *this, chunk_t *tag_file_path);
+	chunk_t (*get_unique_sw_id)(swid_tag_id_t *this, chunk_t *instance_id);
 
 	/**
 	 * Get a new reference to the swid_tag_id object
@@ -65,9 +65,9 @@ struct swid_tag_id_t {
  *
  * @param tag_creator		Tag Creator
  * @param unique_sw_id		Unique Software ID
- * @param tag_file_path		Tag File Path or empty chunk
+ * @param instance_id		Tag Identifier Instance ID or empty chunk
  */
 swid_tag_id_t* swid_tag_id_create(chunk_t tag_creator, chunk_t unique_sw_id,
-								  chunk_t tag_file_path);
+								  chunk_t instance_id);
 
 #endif /** SWID_TAG_ID_H_ @}*/

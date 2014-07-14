@@ -188,7 +188,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	{
 		tcg_swid_attr_tag_inv_t *swid_attr;
 		swid_tag_t *tag;
-		chunk_t encoding, tag_file_path;
+		chunk_t encoding, instance_id;
 
 		/* At least one TCG Tag Inventory attribute is sent */
 		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE;
@@ -197,9 +197,9 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 		enumerator = swid_inventory->create_enumerator(swid_inventory);
 		while (enumerator->enumerate(enumerator, &tag))
 		{
-			tag_file_path = tag->get_tag_file_path(tag);
+			instance_id = tag->get_instance_id(tag);
 			encoding = tag->get_encoding(tag);
-			entry_size = 2 + tag_file_path.len + 4 + encoding.len;
+			entry_size = 2 + instance_id.len + 4 + encoding.len;
 
 			/* Check for oversize tags that cannot be transported */
 			if (PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE +
@@ -241,7 +241,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	{
 		tcg_swid_attr_tag_id_inv_t *swid_id_attr;
 		swid_tag_id_t *tag_id;
-		chunk_t tag_creator, unique_sw_id, tag_file_path;
+		chunk_t tag_creator, unique_sw_id, instance_id;
 
 		/* At least one TCG Tag ID Inventory attribute is sent */
 		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_ID_INV_MIN_SIZE;
@@ -252,9 +252,9 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 		while (enumerator->enumerate(enumerator, &tag_id))
 		{
 			tag_creator = tag_id->get_tag_creator(tag_id);
-			unique_sw_id = tag_id->get_unique_sw_id(tag_id, &tag_file_path);
+			unique_sw_id = tag_id->get_unique_sw_id(tag_id, &instance_id);
 			entry_size = 2 + tag_creator.len + 2 + unique_sw_id.len +
-						 2 + tag_file_path.len;
+						 2 + instance_id.len;
 
 			if (attr_size + entry_size > max_attr_size)
 			{

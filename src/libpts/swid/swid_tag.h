@@ -39,11 +39,11 @@ struct swid_tag_t {
 	chunk_t (*get_encoding)(swid_tag_t *this);
 
 	/**
-	 * Get th Optional Tag File Path
+	 * Get the optional Tag Identifier Instance ID
 	 *
-	 * @return				Optional Tag File Path
+	 * @return				Optional Tag Identifier Instance ID
 	 */
-	chunk_t (*get_tag_file_path)(swid_tag_t *this);
+	chunk_t (*get_instance_id)(swid_tag_t *this);
 
 	/**
 	 * Get a new reference to the swid_tag object
@@ -63,8 +63,8 @@ struct swid_tag_t {
  * Creates a swid_tag_t object
  *
  * @param encoding			XML encoding of SWID tag
- * @param tag_file_path		Tag File Path or empty chunk
+ * @param instance_id		Tag Identifier Instance ID or empty chunk
  */
-swid_tag_t* swid_tag_create(chunk_t encoding, chunk_t tag_file_path);
+swid_tag_t* swid_tag_create(chunk_t encoding, chunk_t instance_id);
 
 #endif /** SWID_TAG_H_ @}*/

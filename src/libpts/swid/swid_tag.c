@@ -34,9 +34,9 @@ struct private_swid_tag_t {
 	chunk_t encoding;
 
 	/**
-	 * Optional Tag File Path
+	 * Optional Tag Identifier Instance ID
 	 */
-	chunk_t tag_file_path;
+	chunk_t instance_id;
 
 	/**
 	 * Reference count
@@ -50,10 +50,10 @@ METHOD(swid_tag_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-METHOD(swid_tag_t, get_tag_file_path, chunk_t,
+METHOD(swid_tag_t, get_instance_id, chunk_t,
 	private_swid_tag_t *this)
 {
-	return this->tag_file_path;
+	return this->instance_id;
 }
 
 METHOD(swid_tag_t, get_ref, swid_tag_t*,
@@ -69,7 +69,7 @@ METHOD(swid_tag_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		free(this->encoding.ptr);
-		free(this->tag_file_path.ptr);
+		free(this->instance_id.ptr);
 		free(this);
 	}
 }
@@ -77,14 +77,14 @@ METHOD(swid_tag_t, destroy, void,
 /**
  * See header
  */
-swid_tag_t *swid_tag_create(chunk_t encoding, chunk_t tag_file_path)
+swid_tag_t *swid_tag_create(chunk_t encoding, chunk_t instance_id)
 {
 	private_swid_tag_t *this;
 
 	INIT(this,
 		.public = {
 			.get_encoding = _get_encoding,
-			.get_tag_file_path = _get_tag_file_path,
+			.get_instance_id = _get_instance_id,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
@@ -92,9 +92,9 @@ swid_tag_t *swid_tag_create(chunk_t encoding, chunk_t tag_file_path)
 		.ref = 1,
 	);
 
-	if (tag_file_path.len > 0)
+	if (instance_id.len > 0)
 	{
-		this->tag_file_path = chunk_clone(tag_file_path);
+		this->instance_id = chunk_clone(instance_id);
 	}
 
 	return &this->public;

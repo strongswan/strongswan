@@ -39,9 +39,9 @@ struct private_swid_tag_id_t {
 	chunk_t unique_sw_id;
 
 	/**
-	 * Tag File Path
+	 * Optional Tag Identifier Instance ID
 	 */
-	chunk_t tag_file_path;
+	chunk_t instance_id;
 
 	/**
 	 * Reference count
@@ -56,11 +56,11 @@ METHOD(swid_tag_id_t, get_tag_creator, chunk_t,
 }
 
 METHOD(swid_tag_id_t, get_unique_sw_id, chunk_t,
-	private_swid_tag_id_t *this, chunk_t *tag_file_path)
+	private_swid_tag_id_t *this, chunk_t *instance_id)
 {
-	if (tag_file_path)
+	if (instance_id)
 	{
-		*tag_file_path = this->tag_file_path;
+		*instance_id = this->instance_id;
 	}
 	return this->unique_sw_id;
 }
@@ -79,7 +79,7 @@ METHOD(swid_tag_id_t, destroy, void,
 	{
 		free(this->tag_creator.ptr);
 		free(this->unique_sw_id.ptr);
-		free(this->tag_file_path.ptr);
+		free(this->instance_id.ptr);
 		free(this);
 	}
 }
@@ -88,7 +88,7 @@ METHOD(swid_tag_id_t, destroy, void,
  * See header
  */
 swid_tag_id_t *swid_tag_id_create(chunk_t tag_creator, chunk_t unique_sw_id,
-								  chunk_t tag_file_path)
+								  chunk_t instance_id)
 {
 	private_swid_tag_id_t *this;
 
@@ -104,9 +104,9 @@ swid_tag_id_t *swid_tag_id_create(chunk_t tag_creator, chunk_t unique_sw_id,
 		.ref = 1,
 	);
 
-	if (tag_file_path.len > 0)
+	if (instance_id.len > 0)
 	{
-		this->tag_file_path = chunk_clone(tag_file_path);
+		this->instance_id = chunk_clone(instance_id);
 	}
 
 	return &this->public;

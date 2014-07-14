@@ -38,7 +38,7 @@ typedef struct private_tcg_swid_attr_tag_inv_t private_tcg_swid_attr_tag_inv_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                           Last EID                            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |    Tag File Path Length       |  Tag File Path (var length)   |
+ *  |      Instance ID Length       |   Instance ID (var. length)   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                          Tag Length                           |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -145,7 +145,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->inventory->create_enumerator(this->inventory);
 	while (enumerator->enumerate(enumerator, &tag))
 	{
-		writer->write_data16(writer, tag->get_tag_file_path(tag));
+		writer->write_data16(writer, tag->get_instance_id(tag));
 		writer->write_data32(writer, tag->get_encoding(tag));
 	}
 	enumerator->destroy(enumerator);
@@ -160,7 +160,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	uint32_t tag_count;
 	uint8_t reserved;
-	chunk_t tag_encoding, tag_file_path;
+	chunk_t tag_encoding, instance_id;
 	swid_tag_t *tag;
 
 	if (this->value.len < TCG_SWID_TAG_INV_MIN_SIZE)
@@ -180,12 +180,12 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	while (tag_count--)
 	{
-		if (!reader->read_data16(reader, &tag_file_path))
+		if (!reader->read_data16(reader, &instance_id))
 		{
-			DBG1(DBG_TNC, "insufficient data for Tag File Path");
+			DBG1(DBG_TNC, "insufficient data for Instance ID");
 			return FAILED;
 		}
-		*offset += 2 + tag_file_path.len;
+		*offset += 2 + instance_id.len;
 
 		if (!reader->read_data32(reader, &tag_encoding))
 		{
@@ -194,7 +194,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		*offset += 4 + tag_encoding.len;
 
-		tag = swid_tag_create(tag_encoding, tag_file_path);
+		tag = swid_tag_create(tag_encoding, instance_id);
 		this->inventory->add(this->inventory, tag);
 	}
 	reader->destroy(reader);
