@@ -349,7 +349,7 @@ connections.<conn>.remote<suffix>.certs =
 	The certificates may use a relative path from the **swanctl** _x509_
 	directory, or an absolute path.
 
-connections.<conn>.remote<suffix>.cacert =
+connections.<conn>.remote<suffix>.cacerts =
 	Comma separated list of CA certificates to accept for authentication.
 
 	Comma separated list of CA certificates to accept for authentication.
