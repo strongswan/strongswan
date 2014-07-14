@@ -795,8 +795,9 @@ or
 prefix in front of 0x or 0s, the public key is expected to be in either
 the RFC 3110 (not the full RR, only RSA key part) or RFC 4253 public key format,
 respectively.
-Also accepted is the path to a file containing the public key in PEM or DER
-encoding.
+Also accepted is the path to a file containing the public key in PEM, DER or SSH
+encoding. Both absolute paths or paths relative to \fI/etc/ipsec.d/certs\fP
+are accepted.
 .TP
 .BR leftsendcert " = never | no | " ifasked " | always | yes"
 Accepted values are
