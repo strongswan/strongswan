@@ -78,6 +78,16 @@ struct private_netlink_socket_t {
 };
 
 /**
+ * #definable hook to simulate request message loss
+ */
+#ifdef NETLINK_MSG_LOSS_HOOK
+bool NETLINK_MSG_LOSS_HOOK(struct nlmsghdr *msg);
+#define msg_loss_hook(msg) NETLINK_MSG_LOSS_HOOK(msg)
+#else
+#define msg_loss_hook(msg) FALSE
+#endif
+
+/**
  * Request entry the answer for a waiting thread is collected in
  */
 typedef struct {
@@ -108,6 +118,11 @@ static bool write_msg(private_netlink_socket_t *this, struct nlmsghdr *msg)
 		.nl_family = AF_NETLINK,
 	};
 	int len;
+
+	if (msg_loss_hook(msg))
+	{
+		return TRUE;
+	}
 
 	while (TRUE)
 	{
