@@ -41,6 +41,37 @@ bool netlink_msg_loss(struct nlmsghdr *hdr)
 START_TEST(test_echo)
 {
 	netlink_socket_t *s;
+	struct nlmsghdr *out;
+	struct rtmsg *msg;
+	char dst[] = {
+		127,0,0,1
+	};
+	size_t len;
+	netlink_buf_t request = {
+		.hdr = {
+			.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)),
+			.nlmsg_flags = NLM_F_REQUEST,
+			.nlmsg_type = RTM_GETROUTE,
+		},
+	};
+
+	msg = NLMSG_DATA(&request.hdr);
+	msg->rtm_family = AF_INET;
+	netlink_add_attribute(&request.hdr, RTA_DST,
+						  chunk_from_thing(dst), sizeof(request));
+
+	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+
+	ck_assert(s->send(s, &request.hdr, &out, &len) == SUCCESS);
+	ck_assert_int_eq(out->nlmsg_type, RTM_NEWROUTE);
+	free(out);
+	s->destroy(s);
+}
+END_TEST
+
+START_TEST(test_echo_dump)
+{
+	netlink_socket_t *s;
 	struct nlmsghdr *out, *current;
 	struct rtgenmsg *msg;
 	size_t len;
@@ -74,6 +105,38 @@ START_TEST(test_echo)
 END_TEST
 
 CALLBACK(stress, void*,
+	netlink_socket_t *s)
+{
+	struct nlmsghdr *out;
+	struct rtmsg *msg;
+	char dst[] = {
+		127,0,0,1
+	};
+	size_t len;
+	int i;
+	netlink_buf_t request = {
+		.hdr = {
+			.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)),
+			.nlmsg_flags = NLM_F_REQUEST,
+			.nlmsg_type = RTM_GETROUTE,
+		},
+	};
+
+	for (i = 0; i < 10; i++)
+	{
+		msg = NLMSG_DATA(&request.hdr);
+		msg->rtm_family = AF_INET;
+		netlink_add_attribute(&request.hdr, RTA_DST,
+							  chunk_from_thing(dst), sizeof(request));
+
+		ck_assert(s->send(s, &request.hdr, &out, &len) == SUCCESS);
+		ck_assert_int_eq(out->nlmsg_type, RTM_NEWROUTE);
+		free(out);
+	}
+	return NULL;
+}
+
+CALLBACK(stress_dump, void*,
 	netlink_socket_t *s)
 {
 	struct nlmsghdr *out, *current;
@@ -120,6 +183,25 @@ START_TEST(test_stress)
 	for (i = 0; i < countof(threads); i++)
 	{
 		threads[i] = thread_create(stress, s);
+	}
+	for (i = 0; i < countof(threads); i++)
+	{
+		threads[i]->join(threads[i]);
+	}
+	s->destroy(s);
+}
+END_TEST
+
+START_TEST(test_stress_dump)
+{
+	thread_t *threads[10];
+	netlink_socket_t *s;
+	int i;
+
+	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	for (i = 0; i < countof(threads); i++)
+	{
+		threads[i] = thread_create(stress_dump, s);
 	}
 	for (i = 0; i < countof(threads); i++)
 	{
@@ -203,10 +285,12 @@ Suite *socket_suite_create()
 
 	tc = tcase_create("echo");
 	tcase_add_test(tc, test_echo);
+	tcase_add_test(tc, test_echo_dump);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("stress");
 	tcase_add_test(tc, test_stress);
+	tcase_add_test(tc, test_stress_dump);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("retransmit");
