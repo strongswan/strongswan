@@ -412,6 +412,31 @@ u_int32_t chunk_hash_static_inc(chunk_t chunk, u_int32_t hash);
 u_int64_t chunk_mac(chunk_t chunk, u_char *key);
 
 /**
+ * Calculate the Internet Checksum according to RFC 1071 for the given chunk.
+ *
+ * If the result is used with chunk_internet_checksum_inc() and the data length
+ * is not a multiple of 16 bit the checksum bytes have to be swapped to
+ * compensate the even/odd alignment.
+ *
+ * @param chunk			data to process
+ * @return				checksum (one's complement, network order)
+ */
+u_int16_t chunk_internet_checksum(chunk_t data);
+
+/**
+ * Extend the given Internet Checksum (one's complement, in network byte order)
+ * with the given data.
+ *
+ * If data is not a multiple of 16 bits the checksum may have to be swapped to
+ * compensate even/odd alignment (see chunk_internet_checksum()).
+ *
+ * @param chunk			data to process
+ * @param checksum		previous checksum (one's complement, network order)
+ * @return				checksum (one's complement, network order)
+ */
+u_int16_t chunk_internet_checksum_inc(chunk_t data, u_int16_t checksum);
+
+/**
  * printf hook function for chunk_t.
  *
  * Arguments are:

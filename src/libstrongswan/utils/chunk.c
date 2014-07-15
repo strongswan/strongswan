@@ -990,6 +990,37 @@ u_int32_t chunk_hash_static(chunk_t chunk)
 /**
  * Described in header.
  */
+u_int16_t chunk_internet_checksum_inc(chunk_t data, u_int16_t checksum)
+{
+	u_int32_t sum = ntohs(~checksum);
+
+	while (data.len > 1)
+	{
+		sum += untoh16(data.ptr);
+		data = chunk_skip(data, 2);
+	}
+	if (data.len)
+	{
+		sum += (u_int16_t)*data.ptr << 8;
+	}
+	while (sum >> 16)
+	{
+		sum = (sum & 0xffff) + (sum >> 16);
+	}
+	return htons(~sum);
+}
+
+/**
+ * Described in header.
+ */
+u_int16_t chunk_internet_checksum(chunk_t data)
+{
+	return chunk_internet_checksum_inc(data, 0xffff);
+}
+
+/**
+ * Described in header.
+ */
 int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					  const void *const *args)
 {

@@ -784,6 +784,51 @@ START_TEST(test_chunk_hash_static)
 END_TEST
 
 /*******************************************************************************
+ * test for chunk_internet_checksum[_inc]()
+ */
+
+START_TEST(test_chunk_internet_checksum)
+{
+	chunk_t chunk;
+	u_int16_t sum;
+
+	chunk = chunk_from_chars(0x45,0x00,0x00,0x30,0x44,0x22,0x40,0x00,0x80,0x06,
+							 0x00,0x00,0x8c,0x7c,0x19,0xac,0xae,0x24,0x1e,0x2b);
+
+	sum = chunk_internet_checksum(chunk);
+	ck_assert_int_eq(0x442e, ntohs(sum));
+
+	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 10));
+	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+10, 10), sum);
+	ck_assert_int_eq(0x442e, ntohs(sum));
+
+	/* need to compensate for even/odd alignment */
+	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 9));
+	sum = ntohs(sum);
+	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+9, 11), sum);
+	sum = ntohs(sum);
+	ck_assert_int_eq(0x442e, ntohs(sum));
+
+	chunk = chunk_from_chars(0x45,0x00,0x00,0x30,0x44,0x22,0x40,0x00,0x80,0x06,
+							 0x00,0x00,0x8c,0x7c,0x19,0xac,0xae,0x24,0x1e);
+
+	sum = chunk_internet_checksum(chunk);
+	ck_assert_int_eq(0x4459, ntohs(sum));
+
+	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 10));
+	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+10, 9), sum);
+	ck_assert_int_eq(0x4459, ntohs(sum));
+
+	/* need to compensate for even/odd alignment */
+	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 9));
+	sum = ntohs(sum);
+	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+9, 10), sum);
+	sum = ntohs(sum);
+	ck_assert_int_eq(0x4459, ntohs(sum));
+}
+END_TEST
+
+/*******************************************************************************
  * test for chunk_map and friends
  */
 
@@ -1016,6 +1061,10 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_hash_static");
 	tcase_add_test(tc, test_chunk_hash_static);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_internet_checksum");
+	tcase_add_test(tc, test_chunk_internet_checksum);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("chunk_map");
