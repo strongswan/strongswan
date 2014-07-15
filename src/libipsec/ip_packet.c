@@ -435,3 +435,21 @@ ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
 			return NULL;
 	}
 }
+
+/**
+ * Described in header.
+ */
+ip_packet_t *ip_packet_create_udp_from_data(host_t *src, host_t *dst,
+											chunk_t data)
+{
+	struct udphdr udp = {
+		.len = htons(8 + data.len),
+		.check = 0,
+	};
+	ip_packet_t *packet;
+
+	data = chunk_cat("cc", chunk_from_thing(udp), data);
+	packet = ip_packet_create_from_data(src, dst, IPPROTO_UDP, data);
+	chunk_free(&data);
+	return packet;
+}

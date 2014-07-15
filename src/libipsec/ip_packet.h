@@ -115,4 +115,15 @@ ip_packet_t *ip_packet_create(chunk_t packet);
 ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
 										u_int8_t next_header, chunk_t data);
 
+/**
+ * Encode a UDP packet from the given data.
+ *
+ * @param src			source address and port (cloned)
+ * @param dst			destination address and port (cloned)
+ * @param data			UDP data (cloned)
+ * @return				ip_packet_t instance, or NULL if invalid
+ */
+ip_packet_t *ip_packet_create_udp_from_data(host_t *src, host_t *dst,
+											chunk_t data);
+
 #endif /** IP_PACKET_H_ @}*/
