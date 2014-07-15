@@ -35,6 +35,7 @@ tests_SOURCES = \
 tests_CFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libstrongswan/tests \
+	-DNETLINK_MSG_LOSS_HOOK=netlink_msg_loss \
 	@COVERAGE_CFLAGS@
 
 tests_LDFLAGS = @COVERAGE_LDFLAGS@

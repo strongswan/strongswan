@@ -19,6 +19,25 @@
 
 #include "../kernel_netlink_shared.h"
 
+/**
+ * Netlink message drop configuration
+ */
+static int drop_interval = 0;
+
+/**
+ * Netlink message drop hook
+ */
+bool netlink_msg_loss(struct nlmsghdr *hdr)
+{
+	static refcount_t i;
+
+	if (drop_interval)
+	{
+		return ref_get(&i) % drop_interval == drop_interval - 1;
+	}
+	return FALSE;
+}
+
 START_TEST(test_echo)
 {
 	netlink_socket_t *s;
@@ -110,6 +129,71 @@ START_TEST(test_stress)
 }
 END_TEST
 
+START_TEST(test_retransmit_success)
+{
+	netlink_socket_t *s;
+	struct nlmsghdr *out;
+	struct rtgenmsg *msg;
+	size_t len;
+	netlink_buf_t request = {
+		.hdr = {
+			.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg)),
+			.nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT,
+			.nlmsg_type = RTM_GETLINK,
+		},
+	};
+
+	drop_interval = 2;
+
+	lib->settings->set_int(lib->settings,
+							"%s.plugins.kernel-netlink.timeout", 100, lib->ns);
+	lib->settings->set_int(lib->settings,
+							"%s.plugins.kernel-netlink.retries", 1, lib->ns);
+
+	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	msg = NLMSG_DATA(&request.hdr);
+	msg->rtgen_family = AF_UNSPEC;
+
+	ck_assert(s->send(s, &request.hdr, &out, &len) == SUCCESS);
+	free(out);
+	s->destroy(s);
+
+	drop_interval = 0;
+}
+END_TEST
+
+START_TEST(test_retransmit_fail)
+{
+	netlink_socket_t *s;
+	struct nlmsghdr *out;
+	struct rtgenmsg *msg;
+	size_t len;
+	netlink_buf_t request = {
+		.hdr = {
+			.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg)),
+			.nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT,
+			.nlmsg_type = RTM_GETLINK,
+		},
+	};
+
+	drop_interval = 1;
+
+	lib->settings->set_int(lib->settings,
+							"%s.plugins.kernel-netlink.timeout", 50, lib->ns);
+	lib->settings->set_int(lib->settings,
+							"%s.plugins.kernel-netlink.retries", 3, lib->ns);
+
+	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	msg = NLMSG_DATA(&request.hdr);
+	msg->rtgen_family = AF_UNSPEC;
+
+	ck_assert(s->send(s, &request.hdr, &out, &len) == OUT_OF_RES);
+	s->destroy(s);
+
+	drop_interval = 0;
+}
+END_TEST
+
 Suite *socket_suite_create()
 {
 	Suite *s;
@@ -123,6 +207,11 @@ Suite *socket_suite_create()
 
 	tc = tcase_create("stress");
 	tcase_add_test(tc, test_stress);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("retransmit");
+	tcase_add_test(tc, test_retransmit_success);
+	tcase_add_test(tc, test_retransmit_fail);
 	suite_add_tcase(s, tc);
 
 	return s;
