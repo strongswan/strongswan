@@ -56,6 +56,11 @@ struct private_ip_packet_t {
 	chunk_t packet;
 
 	/**
+	 * IP payload (points into packet)
+	 */
+	chunk_t payload;
+
+	/**
 	 * IP version
 	 */
 	u_int8_t version;
@@ -89,6 +94,12 @@ METHOD(ip_packet_t, get_encoding, chunk_t,
 	private_ip_packet_t *this)
 {
 	return this->packet;
+}
+
+METHOD(ip_packet_t, get_payload, chunk_t,
+	private_ip_packet_t *this)
+{
+	return this->payload;
 }
 
 METHOD(ip_packet_t, get_next_header, u_int8_t,
@@ -163,6 +174,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 	u_int8_t version, next_header;
 	u_int16_t sport = 0, dport = 0;
 	host_t *src, *dst;
+	chunk_t payload;
 
 	if (packet.len < 1)
 	{
@@ -186,9 +198,8 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			ip = (struct ip*)packet.ptr;
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, untoh16(&ip->ip_len));
-
-			if (!parse_transport_header(chunk_skip(packet, ip->ip_hl * 4),
-										ip->ip_p, &sport, &dport))
+			payload = chunk_skip(packet, ip->ip_hl * 4);
+			if (!parse_transport_header(payload, ip->ip_p, &sport, &dport))
 			{
 				goto failed;
 			}
@@ -214,8 +225,8 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			packet.len = min(packet.len, untoh16(&ip->ip6_plen));
 			/* we only handle packets without extension headers, just skip the
 			 * basic IPv6 header */
-			if (!parse_transport_header(chunk_skip(packet, 40), ip->ip6_nxt,
-										&sport, &dport))
+			payload = chunk_skip(packet, 40);
+			if (!parse_transport_header(payload, ip->ip6_nxt, &sport, &dport))
 			{
 				goto failed;
 			}
@@ -239,12 +250,14 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			.get_destination = _get_destination,
 			.get_next_header = _get_next_header,
 			.get_encoding = _get_encoding,
+			.get_payload = _get_payload,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.src = src,
 		.dst = dst,
 		.packet = packet,
+		.payload = payload,
 		.version = version,
 		.next_header = next_header,
 	);

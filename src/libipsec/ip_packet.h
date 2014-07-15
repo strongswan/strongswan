@@ -68,6 +68,13 @@ struct ip_packet_t {
 	chunk_t (*get_encoding)(ip_packet_t *this);
 
 	/**
+	 * Get only the payload
+	 *
+	 * @return				IP payload (internal data)
+	 */
+	chunk_t (*get_payload)(ip_packet_t *this);
+
+	/**
 	 * Clone the IP packet
 	 *
 	 * @return				clone of the packet
