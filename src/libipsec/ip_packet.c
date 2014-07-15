@@ -317,12 +317,15 @@ static u_int16_t pseudo_header_checksum(host_t *src, host_t *dst,
 }
 
 /**
- * Calculate transport header checksums
+ * Apply transport ports and calculate header checksums
  */
-static void fix_transport_checksum(host_t *src, host_t *dst, u_int8_t proto,
-								   chunk_t payload)
+static void fix_transport_header(host_t *src, host_t *dst, u_int8_t proto,
+								 chunk_t payload)
 {
-	u_int16_t sum = 0;
+	u_int16_t sum = 0, sport, dport;
+
+	sport = src->get_port(src);
+	dport = dst->get_port(dst);
 
 	switch (proto)
 	{
@@ -335,6 +338,14 @@ static void fix_transport_checksum(host_t *src, host_t *dst, u_int8_t proto,
 				return;
 			}
 			udp = (struct udphdr*)payload.ptr;
+			if (sport != 0)
+			{
+				udp->source = htons(sport);
+			}
+			if (dport != 0)
+			{
+				udp->dest = htons(dport);
+			}
 			udp->check = 0;
 			sum = pseudo_header_checksum(src, dst, proto, payload);
 			udp->check = chunk_internet_checksum_inc(payload, sum);
@@ -349,6 +360,14 @@ static void fix_transport_checksum(host_t *src, host_t *dst, u_int8_t proto,
 				return;
 			}
 			tcp = (struct tcphdr*)payload.ptr;
+			if (sport != 0)
+			{
+				tcp->source = htons(sport);
+			}
+			if (dport != 0)
+			{
+				tcp->dest = htons(dport);
+			}
 			tcp->check = 0;
 			sum = pseudo_header_checksum(src, dst, proto, payload);
 			tcp->check = chunk_internet_checksum_inc(payload, sum);
@@ -391,8 +410,7 @@ ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
 			ip.ip_sum = chunk_internet_checksum(chunk_from_thing(ip));
 
 			packet = chunk_cat("cc", chunk_from_thing(ip), data);
-			fix_transport_checksum(src, dst, next_header,
-								   chunk_skip(packet, 20));
+			fix_transport_header(src, dst, next_header, chunk_skip(packet, 20));
 			return ip_packet_create(packet);
 		}
 #ifdef HAVE_NETINET_IP6_H
@@ -408,8 +426,7 @@ ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
 			memcpy(&ip.ip6_dst, dst->get_address(dst).ptr, sizeof(ip.ip6_dst));
 
 			packet = chunk_cat("cc", chunk_from_thing(ip), data);
-			fix_transport_checksum(src, dst, next_header,
-								   chunk_skip(packet, 40));
+			fix_transport_header(src, dst, next_header, chunk_skip(packet, 40));
 			return ip_packet_create(packet);
 		}
 #endif /* HAVE_NETINET_IP6_H */

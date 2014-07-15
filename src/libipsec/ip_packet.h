@@ -103,8 +103,11 @@ ip_packet_t *ip_packet_create(chunk_t packet);
 /**
  * Encode an IP packet from the given data.
  *
- * @param src			source address (cloned)
- * @param dst			destination address (cloned)
+ * If src and/or dst have ports set they are applied to UDP/TCP headers found
+ * in the packet.
+ *
+ * @param src			source address and optional port (cloned)
+ * @param dst			destination address and optional port (cloned)
  * @param next_header	the protocol (IPv4) or next header (IPv6)
  * @param data			complete data after basic IP header (cloned)
  * @return				ip_packet_t instance, or NULL if invalid
