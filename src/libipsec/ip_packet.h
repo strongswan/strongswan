@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -92,5 +92,17 @@ struct ip_packet_t {
  * @return				ip_packet_t instance, or NULL if invalid
  */
 ip_packet_t *ip_packet_create(chunk_t packet);
+
+/**
+ * Encode an IP packet from the given data.
+ *
+ * @param src			source address (cloned)
+ * @param dst			destination address (cloned)
+ * @param next_header	the protocol (IPv4) or next header (IPv6)
+ * @param data			complete data after basic IP header (cloned)
+ * @return				ip_packet_t instance, or NULL if invalid
+ */
+ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
+										u_int8_t next_header, chunk_t data);
 
 #endif /** IP_PACKET_H_ @}*/

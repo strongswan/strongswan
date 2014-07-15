@@ -254,3 +254,154 @@ failed:
 	chunk_free(&packet);
 	return NULL;
 }
+
+/**
+ * Calculate the checksum for the pseudo IP header
+ */
+static u_int16_t pseudo_header_checksum(host_t *src, host_t *dst,
+										u_int8_t proto, chunk_t payload)
+{
+	switch (src->get_family(src))
+	{
+		case AF_INET:
+		{
+			struct __attribute__((packed)) {
+				u_int32_t src;
+				u_int32_t dst;
+				u_char zero;
+				u_char proto;
+				u_int16_t len;
+			} pseudo = {
+				.proto = proto,
+				.len = htons(payload.len),
+			};
+			memcpy(&pseudo.src, src->get_address(src).ptr,
+				   sizeof(pseudo.src));
+			memcpy(&pseudo.dst, dst->get_address(dst).ptr,
+				   sizeof(pseudo.dst));
+			return chunk_internet_checksum(chunk_from_thing(pseudo));
+		}
+		case AF_INET6:
+		{
+			struct __attribute__((packed)) {
+				u_char src[16];
+				u_char dst[16];
+				u_int32_t len;
+				u_char zero[3];
+				u_char next_header;
+			} pseudo = {
+				.next_header = proto,
+				.len = htons(payload.len),
+			};
+			memcpy(&pseudo.src, src->get_address(src).ptr,
+				   sizeof(pseudo.src));
+			memcpy(&pseudo.dst, dst->get_address(dst).ptr,
+				   sizeof(pseudo.dst));
+			return chunk_internet_checksum(chunk_from_thing(pseudo));
+		}
+	}
+	return 0xffff;
+}
+
+/**
+ * Calculate transport header checksums
+ */
+static void fix_transport_checksum(host_t *src, host_t *dst, u_int8_t proto,
+								   chunk_t payload)
+{
+	u_int16_t sum = 0;
+
+	switch (proto)
+	{
+		case IPPROTO_UDP:
+		{
+			struct udphdr *udp;
+
+			if (payload.len < sizeof(*udp))
+			{
+				return;
+			}
+			udp = (struct udphdr*)payload.ptr;
+			udp->check = 0;
+			sum = pseudo_header_checksum(src, dst, proto, payload);
+			udp->check = chunk_internet_checksum_inc(payload, sum);
+			break;
+		}
+		case IPPROTO_TCP:
+		{
+			struct tcphdr *tcp;
+
+			if (payload.len < sizeof(*tcp))
+			{
+				return;
+			}
+			tcp = (struct tcphdr*)payload.ptr;
+			tcp->check = 0;
+			sum = pseudo_header_checksum(src, dst, proto, payload);
+			tcp->check = chunk_internet_checksum_inc(payload, sum);
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+/**
+ * Described in header.
+ */
+ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
+										u_int8_t next_header, chunk_t data)
+{
+	chunk_t packet;
+	int family;
+
+	family = src->get_family(src);
+	if (family != dst->get_family(dst))
+	{
+		DBG1(DBG_ESP, "address family does not match");
+		return NULL;
+	}
+
+	switch (family)
+	{
+		case AF_INET:
+		{
+			struct ip ip = {
+				.ip_v = 4,
+				.ip_hl = 5,
+				.ip_len = htons(20 + data.len),
+				.ip_ttl = 0x80,
+				.ip_p = next_header,
+			};
+			memcpy(&ip.ip_src, src->get_address(src).ptr, sizeof(ip.ip_src));
+			memcpy(&ip.ip_dst, dst->get_address(dst).ptr, sizeof(ip.ip_dst));
+			ip.ip_sum = chunk_internet_checksum(chunk_from_thing(ip));
+
+			packet = chunk_cat("cc", chunk_from_thing(ip), data);
+			fix_transport_checksum(src, dst, next_header,
+								   chunk_skip(packet, 20));
+			return ip_packet_create(packet);
+		}
+#ifdef HAVE_NETINET_IP6_H
+		case AF_INET6:
+		{
+			struct ip6_hdr ip = {
+				.ip6_flow = htonl(6),
+				.ip6_plen = htons(40 + data.len),
+				.ip6_nxt = next_header,
+				.ip6_hlim = 0x80,
+			};
+			memcpy(&ip.ip6_src, src->get_address(src).ptr, sizeof(ip.ip6_src));
+			memcpy(&ip.ip6_dst, dst->get_address(dst).ptr, sizeof(ip.ip6_dst));
+
+			packet = chunk_cat("cc", chunk_from_thing(ip), data);
+			fix_transport_checksum(src, dst, next_header,
+								   chunk_skip(packet, 40));
+			return ip_packet_create(packet);
+		}
+#endif /* HAVE_NETINET_IP6_H */
+		default:
+			DBG1(DBG_ESP, "unsupported address family");
+			return NULL;
+	}
+}
