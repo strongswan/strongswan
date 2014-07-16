@@ -350,6 +350,36 @@ static bool setup_tun_device(private_android_service_t *this,
 }
 
 /**
+ * Setup a new TUN device based on the existing one, but without DNS server.
+ */
+static bool setup_tun_device_without_dns(private_android_service_t *this)
+{
+	vpnservice_builder_t *builder;
+	int tunfd;
+
+	DBG1(DBG_DMN, "setting up TUN device without DNS");
+
+	builder = charonservice->get_vpnservice_builder(charonservice);
+
+	tunfd = builder->establish_no_dns(builder);
+	if (tunfd == -1)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	if (this->tunfd > 0)
+	{	/* close previously opened TUN device, this should always be the case */
+		close(this->tunfd);
+	}
+	this->tunfd = tunfd;
+	this->lock->unlock(this->lock);
+
+	DBG1(DBG_DMN, "successfully created TUN device without DNS");
+	return TRUE;
+}
+
+/**
  * Close the current tun device
  */
 static void close_tun_device(private_android_service_t *this)
@@ -479,6 +509,14 @@ METHOD(listener_t, ike_reestablish_pre, bool,
 		this->lock->write_lock(this->lock);
 		this->use_dns_proxy = TRUE;
 		this->lock->unlock(this->lock);
+		/* if DNS servers are installed that are only reachable through the VPN
+		 * the DNS proxy doesn't help, so uninstall DNS servers */
+		if (!setup_tun_device_without_dns(this))
+		{
+			DBG1(DBG_DMN, "failed to setup TUN device without DNS");
+			charonservice->update_status(charonservice,
+										 CHARONSERVICE_GENERIC_ERROR);
+		}
 	}
 	return TRUE;
 }
