@@ -69,25 +69,29 @@ struct ietf_attr_pa_tnc_error_t {
 	chunk_t (*get_msg_info)(ietf_attr_pa_tnc_error_t *this);
 
 	/**
-	 * Get first 8 bytes of unsupported PA-TNC attribute
+	 * Get flags, vendor ID and type of unsupported PA-TNC attribute
 	 *
-	 * @return				PA-TNC attribute info
+	 * @param flags			PA-TNC attribute flags
+	 * @return				PA-TNC attribute vendor ID and type
 	 */
-	chunk_t (*get_attr_info)(ietf_attr_pa_tnc_error_t *this);
+	pen_type_t (*get_unsupported_attr)(ietf_attr_pa_tnc_error_t *this,
+									   uint8_t *flags);
 
 	/**
-	 * Set first 8 bytes of unsupported PA-TNC attribute
+	 * Set flags, vendor ID and type of unsupported PA-TNC attribute
 	 *
-	 * @param attr_info		PA-TNC message info
+	 * @param flags			PA-TNC attribute flags
+	 * @param attr_info		PA-TNC attribute vendor ID and type
 	 */
-	void (*set_attr_info)(ietf_attr_pa_tnc_error_t *this, chunk_t attr_info);
+	void (*set_unsupported_attr)(ietf_attr_pa_tnc_error_t *this, uint8_t flags,
+								 pen_type_t type);
 
 	/**
 	 * Get the PA-TNC error offset
 	 *
 	 * @return				PA-TNC error offset
 	 */
-	u_int32_t (*get_offset)(ietf_attr_pa_tnc_error_t *this);
+	uint32_t (*get_offset)(ietf_attr_pa_tnc_error_t *this);
 
 };
 
@@ -111,7 +115,7 @@ pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_type_t error_code,
  */
 pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 														 chunk_t header,
-														 u_int32_t error_offset);
+														 uint32_t error_offset);
 
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from received data

@@ -236,13 +236,12 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		pen_t vendor_id;
 		uint8_t flags;
 		uint32_t type, length;
-		chunk_t value, attr_info;
+		chunk_t value;
 		pa_tnc_attr_t *attr;
 		enum_name_t *pa_attr_names;
 		ietf_attr_pa_tnc_error_t *error_attr;
+		pen_type_t unsupported_type;
 
-		attr_info = reader->peek(reader);
-		attr_info.len = PA_TNC_ATTR_INFO_SIZE;
 		reader->read_uint8 (reader, &flags);
 		reader->read_uint24(reader, &vendor_id);
 		reader->read_uint32(reader, &type);
@@ -297,23 +296,21 @@ METHOD(pa_tnc_msg_t, process, status_t,
 											  vendor_id, type, value);
 		if (!attr)
 		{
-			if (flags & PA_TNC_ATTR_FLAG_NOSKIP)
-			{
-				DBG1(DBG_TNC, "unsupported PA-TNC attribute with NOSKIP flag");
-				error_code = pen_type_create(PEN_IETF,
-											 PA_ERROR_ATTR_TYPE_NOT_SUPPORTED);
-				error = ietf_attr_pa_tnc_error_create(error_code,
-							this->encoding);
-				error_attr = (ietf_attr_pa_tnc_error_t*)error;
-				error_attr->set_attr_info(error_attr, attr_info);
-				goto err;
-			}
-			else
+			if (!(flags & PA_TNC_ATTR_FLAG_NOSKIP))
 			{
 				DBG1(DBG_TNC, "skipping unsupported PA-TNC attribute");
 				offset += length;
 				continue;
 			}
+
+			DBG1(DBG_TNC, "unsupported PA-TNC attribute with NOSKIP flag");
+			unsupported_type = pen_type_create(vendor_id, type);
+			error_code = pen_type_create(PEN_IETF,
+										 PA_ERROR_ATTR_TYPE_NOT_SUPPORTED);
+			error = ietf_attr_pa_tnc_error_create(error_code, this->encoding);
+			error_attr = (ietf_attr_pa_tnc_error_t*)error;
+			error_attr->set_unsupported_attr(error_attr, flags, unsupported_type);
+			goto err;
 		}
 
 		if (attr->process(attr, &attr_offset) != SUCCESS)
@@ -355,8 +352,10 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 	private_pa_tnc_msg_t *this)
 {
 	enumerator_t *enumerator;
+	enum_name_t *pa_attr_names;
 	pa_tnc_attr_t *attr;
-	pen_type_t type;
+	pen_type_t type, unsupported_type;
+	uint8_t flags;
 	bool fatal_error = FALSE;
 
 	enumerator = this->attributes->create_enumerator(this->attributes);
@@ -368,7 +367,7 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 		{
 			ietf_attr_pa_tnc_error_t *error_attr;
 			pen_type_t error_code;
-			chunk_t msg_info, attr_info;
+			chunk_t msg_info;
 			uint32_t offset;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
@@ -391,8 +390,28 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 					DBG1(DBG_TNC, "  occurred at offset of %u bytes", offset);
 					break;
 				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
-					attr_info = error_attr->get_attr_info(error_attr);
-					DBG1(DBG_TNC, "  unsupported attribute %#B", &attr_info);
+					unsupported_type =
+						error_attr->get_unsupported_attr(error_attr, &flags);
+					pa_attr_names =
+						imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													unsupported_type.vendor_id);
+					if (pa_attr_names)
+					{
+						DBG1(DBG_TNC, "  unsupported attribute type '%N/%N' "
+							 "0x%06x/0x%08x, flags 0x%02x",
+							 pen_names, unsupported_type.vendor_id,
+							 pa_attr_names, unsupported_type.type,
+							 unsupported_type.vendor_id, unsupported_type.type,
+							 flags);
+					}
+					else
+					{
+						DBG1(DBG_TNC, "  unsupported attribute type '%N' "
+							 "0x%06x/0x%08x, flags 0x%02x",
+							 pen_names, unsupported_type.vendor_id,
+							 unsupported_type.vendor_id, unsupported_type.type,
+							 flags);
+					}
 					break;
 				default:
 					break;
