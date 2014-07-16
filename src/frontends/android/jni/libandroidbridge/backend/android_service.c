@@ -445,10 +445,11 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, ike_reestablish, bool,
-	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+METHOD(listener_t, ike_reestablish_post, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
+	bool initiated)
 {
-	if (this->ike_sa == old)
+	if (this->ike_sa == old && initiated)
 	{
 		this->ike_sa = new;
 		/* re-register hook to detect initiation failures */
@@ -655,7 +656,7 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
-				.ike_reestablish = _ike_reestablish,
+				.ike_reestablish_post = _ike_reestablish_post,
 				.ike_updown = _ike_updown,
 				.child_updown = _child_updown,
 				.alert = _alert,

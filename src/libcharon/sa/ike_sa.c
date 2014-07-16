@@ -1650,6 +1650,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	new->set_other_host(new, host->clone(host));
 	host = this->my_host;
 	new->set_my_host(new, host->clone(host));
+	charon->bus->ike_reestablish_pre(charon->bus, &this->public, new);
 	/* resolve hosts but use the old addresses above as fallback */
 	resolve_hosts((private_ike_sa_t*)new);
 	/* if we already have a virtual IP, we reuse it */
@@ -1734,12 +1735,15 @@ METHOD(ike_sa_t, reestablish, status_t,
 
 	if (status == DESTROY_ME)
 	{
+		charon->bus->ike_reestablish_post(charon->bus, &this->public, new,
+										  FALSE);
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
 		status = FAILED;
 	}
 	else
 	{
-		charon->bus->ike_reestablish(charon->bus, &this->public, new);
+		charon->bus->ike_reestablish_post(charon->bus, &this->public, new,
+										  TRUE);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 		status = SUCCESS;
 	}
