@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "android_service.h"
+#include "android_dns_proxy.h"
 #include "../charonservice.h"
 #include "../vpnservice_builder.h"
 
@@ -83,6 +84,15 @@ struct private_android_service_t {
 	 */
 	int tunfd;
 
+	/**
+	 * DNS proxy
+	 */
+	android_dns_proxy_t *dns_proxy;
+
+	/**
+	 * Whether to use the DNS proxy or not
+	 */
+	bool use_dns_proxy;
 };
 
 /**
@@ -143,7 +153,7 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	fd_set set;
 	ssize_t len;
 	int tunfd;
-	bool old;
+	bool old, dns_proxy;
 	timeval_t tv = {
 		/* check every second if tunfd is still valid */
 		.tv_sec = 1,
@@ -159,6 +169,8 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	}
 	tunfd = this->tunfd;
 	FD_SET(tunfd, &set);
+	/* cache this while we have the lock */
+	dns_proxy = this->use_dns_proxy;
 	this->lock->unlock(this->lock);
 
 	old = thread_cancelability(TRUE);
@@ -192,7 +204,10 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	packet = ip_packet_create(raw);
 	if (packet)
 	{
-		ipsec->processor->queue_outbound(ipsec->processor, packet);
+		if (!dns_proxy || !this->dns_proxy->handle(this->dns_proxy, packet))
+		{
+			ipsec->processor->queue_outbound(ipsec->processor, packet);
+		}
 	}
 	else
 	{
@@ -324,6 +339,8 @@ static bool setup_tun_device(private_android_service_t *this,
 									  (ipsec_inbound_cb_t)deliver_plain, this);
 		ipsec->processor->register_outbound(ipsec->processor,
 									   (ipsec_outbound_cb_t)send_esp, NULL);
+		this->dns_proxy->register_cb(this->dns_proxy,
+								(dns_proxy_response_cb_t)deliver_plain, this);
 
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
@@ -349,6 +366,8 @@ static void close_tun_device(private_android_service_t *this)
 	this->tunfd = -1;
 	this->lock->unlock(this->lock);
 
+	this->dns_proxy->unregister_cb(this->dns_proxy,
+								(dns_proxy_response_cb_t)deliver_plain);
 	ipsec->processor->unregister_outbound(ipsec->processor,
 										 (ipsec_outbound_cb_t)send_esp);
 	ipsec->processor->unregister_inbound(ipsec->processor,
@@ -368,6 +387,11 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
+			/* CHILD_SA is up so we can disable the DNS proxy we enabled to
+			 * reestablish the SA */
+			this->lock->write_lock(this->lock);
+			this->use_dns_proxy = FALSE;
+			this->lock->unlock(this->lock);
 			if (!setup_tun_device(this, ike_sa, child_sa))
 			{
 				DBG1(DBG_DMN, "failed to setup TUN device");
@@ -445,6 +469,20 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_reestablish_pre, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		/* enable DNS proxy so hosts are properly resolved while the TUN device
+		 * is still active */
+		this->lock->write_lock(this->lock);
+		this->use_dns_proxy = TRUE;
+		this->lock->unlock(this->lock);
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, ike_reestablish_post, bool,
 	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
 	bool initiated)
@@ -459,7 +497,6 @@ METHOD(listener_t, ike_reestablish_post, bool,
 		 * get ignored and thus we trigger the event here */
 		charonservice->update_status(charonservice,
 									 CHARONSERVICE_CHILD_STATE_DOWN);
-		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
 }
@@ -631,6 +668,7 @@ METHOD(android_service_t, destroy, void,
 	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	/* make sure the tun device is actually closed */
 	close_tun_device(this);
+	this->dns_proxy->destroy(this->dns_proxy);
 	this->lock->destroy(this->lock);
 	free(this->type);
 	free(this->gateway);
@@ -656,6 +694,7 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
+				.ike_reestablish_pre = _ike_reestablish_pre,
 				.ike_reestablish_post = _ike_reestablish_post,
 				.ike_updown = _ike_updown,
 				.child_updown = _child_updown,
@@ -664,6 +703,7 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.dns_proxy = android_dns_proxy_create(),
 		.username = username,
 		.password = password,
 		.gateway = gateway,
