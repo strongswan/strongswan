@@ -18,6 +18,7 @@
 #include <netinet/udp.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 #include "android_dns_proxy.h"
 
@@ -59,6 +60,11 @@ struct private_android_dns_proxy_t {
 	 * Lock used to synchronize access to the private members
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Hostnames to filter queries by
+	 */
+	hashtable_t *hostnames;
 };
 
 /**
@@ -211,6 +217,88 @@ CALLBACK(handle_timeout, job_requeue_t,
 	return JOB_RESCHEDULE(SOCKET_TIMEOUT - diff);
 }
 
+/**
+ * DNS header and masks to access flags
+ */
+typedef struct __attribute__((packed)) {
+	u_int16_t id;
+	u_int16_t flags;
+#define DNS_QR_MASK 0x8000
+#define DNS_OPCODE_MASK 0x7800
+	u_int16_t qdcount;
+	u_int16_t ancount;
+	u_int16_t nscount;
+	u_int16_t arcount;
+} dns_header_t;
+
+/**
+ * Extract the hostname in the question section data points to.
+ * Hostnames can be at most 255 characters (including dots separating labels),
+ * each label must be between 1 and 63 characters.
+ * The format is [len][label][len][label], followed by a null byte to indicate
+ * the null label of the root.
+ */
+static char *extract_hostname(chunk_t data)
+{
+	char *hostname, *pos, *end;
+	u_int8_t label;
+
+	if (!data.len || data.len > 255)
+	{
+		return NULL;
+	}
+	label = *data.ptr;
+	data = chunk_skip(data, 1);
+	hostname = strndup(data.ptr, data.len);
+	/* replace all label lengths with dots */
+	pos = hostname + label;
+	end = hostname + strlen(hostname);
+	while (pos < end)
+	{
+		label = *pos;
+		*pos++ = '.';
+		pos += label;
+	}
+	return hostname;
+}
+
+/**
+ * Check if the DNS query is for one of the allowed hostnames
+ */
+static bool check_hostname(private_android_dns_proxy_t *this, chunk_t data)
+{
+	dns_header_t *dns;
+	char *hostname;
+	bool success = FALSE;
+
+	this->lock->read_lock(this->lock);
+	if (!this->hostnames->get_count(this->hostnames))
+	{
+		this->lock->unlock(this->lock);
+		return TRUE;
+	}
+	if (data.len < sizeof(dns_header_t))
+	{
+		this->lock->unlock(this->lock);
+		return FALSE;
+	}
+	dns = (dns_header_t*)data.ptr;
+	if ((ntohs(dns->flags) & DNS_QR_MASK) == 0 &&
+		(ntohs(dns->flags) & DNS_OPCODE_MASK) == 0 &&
+		 dns->qdcount)
+	{
+		data = chunk_skip(data, sizeof(dns_header_t));
+		hostname = extract_hostname(data);
+		if (hostname && this->hostnames->get(this->hostnames, hostname))
+		{
+			success = TRUE;
+		}
+		free(hostname);
+	}
+	this->lock->unlock(this->lock);
+	return success;
+}
+
 METHOD(android_dns_proxy_t, handle, bool,
 	private_android_dns_proxy_t *this, ip_packet_t *packet)
 {
@@ -225,6 +313,13 @@ METHOD(android_dns_proxy_t, handle, bool,
 	dst = packet->get_destination(packet);
 	if (dst->get_port(dst) != 53)
 	{	/* no DNS packet */
+		return FALSE;
+	}
+	data = packet->get_payload(packet);
+	/* remove UDP header */
+	data = chunk_skip(data, 8);
+	if (!check_hostname(this, data))
+	{
 		return FALSE;
 	}
 	src = packet->get_source(packet);
@@ -246,9 +341,6 @@ METHOD(android_dns_proxy_t, handle, bool,
 					NULL, (callback_job_cancel_t)return_false), SOCKET_TIMEOUT);
 	}
 	skt->last_use = time_monotonic(NULL);
-	data = packet->get_payload(packet);
-	/* remove UDP header */
-	data = chunk_skip(data, 8);
 	if (sendto(skt->fd, data.ptr, data.len, 0, dst->get_sockaddr(dst),
 			   *dst->get_sockaddr_len(dst)) != data.len)
 	{
@@ -278,9 +370,22 @@ METHOD(android_dns_proxy_t, unregister_cb, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(android_dns_proxy_t, add_hostname, void,
+	private_android_dns_proxy_t *this, char *hostname)
+{
+	char *existing;
+
+	hostname = strdup(hostname);
+	this->lock->write_lock(this->lock);
+	existing = this->hostnames->put(this->hostnames, hostname, hostname);
+	this->lock->unlock(this->lock);
+	free(existing);
+}
+
 METHOD(android_dns_proxy_t, destroy, void,
 	private_android_dns_proxy_t *this)
 {
+	this->hostnames->destroy_function(this->hostnames, (void*)free);
 	this->sockets->destroy_function(this->sockets, (void*)socket_destroy);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -298,10 +403,13 @@ android_dns_proxy_t *android_dns_proxy_create()
 			.handle = _handle,
 			.register_cb = _register_cb,
 			.unregister_cb = _unregister_cb,
+			.add_hostname = _add_hostname,
 			.destroy = _destroy,
 		},
 		.sockets = hashtable_create((hashtable_hash_t)socket_hash,
 									(hashtable_equals_t)socket_equals, 4),
+		.hostnames = hashtable_create(hashtable_hash_str,
+									  hashtable_equals_str, 4),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

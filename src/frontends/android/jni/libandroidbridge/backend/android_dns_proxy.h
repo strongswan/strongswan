@@ -64,6 +64,14 @@ struct android_dns_proxy_t {
 	void (*unregister_cb)(android_dns_proxy_t *this, dns_proxy_response_cb_t cb);
 
 	/**
+	 * Add a hostname for which queries are proxied.  If at least one hostname
+	 * is configured DNS queries for others will not be handled.
+	 *
+	 * @param hostname		hostname to add (gets cloned)
+	 */
+	void (*add_hostname)(android_dns_proxy_t *this, char *hostname);
+
+	/**
 	 * Destroy an instance.
 	 */
 	void (*destroy)(android_dns_proxy_t *this);
