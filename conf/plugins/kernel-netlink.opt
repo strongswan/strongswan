@@ -13,6 +13,17 @@ charon.plugins.kernel-netlink.mss = 0
 charon.plugins.kernel-netlink.mtu = 0
 	MTU to set on installed routes, 0 to disable.
 
+charon.plugins.kernel-netlink.parallel_route = no
+	Whether to perform concurrent Netlink ROUTE queries on a single socket.
+
+	Whether to perform concurrent Netlink ROUTE queries on a single socket.
+	While parallel queries can improve throughput, it has more overhead. On
+	vanilla Linux, DUMP queries fail with EBUSY and must be retried, further
+	decreasing performance.
+
+charon.plugins.kernel-netlink.parallel_xfrm = no
+	Whether to perform concurrent Netlink XFRM queries on a single socket.
+
 charon.plugins.kernel-netlink.roam_events = yes
 	Whether to trigger roam events when interfaces, addresses or routes change.
 
@@ -24,6 +35,12 @@ charon.plugins.kernel-netlink.set_proto_port_transport_sa = no
 	mode IPsec SAs in the kernel. While doing so enforces policies for inbound
 	traffic, it also prevents the use of a single IPsec SA by more than one
 	traffic selector.
+
+charon.plugins.kernel-netlink.retries = 0
+	Number of Netlink message retransmissions to send on timeout.
+
+charon.plugins.kernel-netlink.timeout = 0
+	Netlink message retransmission timeout, 0 to disable retransmissions.
 
 charon.plugins.kernel-netlink.xfrm_acq_expires = 165
 	Lifetime of XFRM acquire state in kernel.
