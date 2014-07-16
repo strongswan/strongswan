@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -76,6 +76,13 @@ struct vpnservice_builder_t {
 	 * @return					the TUN file descriptor, -1 if failed
 	 */
 	int (*establish)(vpnservice_builder_t *this);
+
+	/**
+	 * Build the TUN device without DNS related data
+	 *
+	 * @return					the TUN file descriptor, -1 if failed
+	 */
+	int (*establish_no_dns)(vpnservice_builder_t *this);
 
 	/**
 	 * Destroy a vpnservice_builder
