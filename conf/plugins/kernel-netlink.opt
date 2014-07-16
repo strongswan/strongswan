@@ -24,6 +24,15 @@ charon.plugins.kernel-netlink.parallel_route = no
 charon.plugins.kernel-netlink.parallel_xfrm = no
 	Whether to perform concurrent Netlink XFRM queries on a single socket.
 
+charon.plugins.kernel-netlink.port_bypass = no
+	Whether to use port or socket based IKE XFRM bypass policies.
+
+	Whether to use port or socket based IKE XFRM bypass policies.
+	IKE bypass policies are used to exempt IKE traffic from XFRM processing.
+	The default socket based policies are directly tied to the IKE UDP sockets,
+	port based policies use global XFRM bypass policies for the used IKE UDP
+	ports.
+
 charon.plugins.kernel-netlink.roam_events = yes
 	Whether to trigger roam events when interfaces, addresses or routes change.
 

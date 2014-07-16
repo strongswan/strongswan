@@ -38,6 +38,7 @@
 #include <hydra.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
+#include <collections/array.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
 
@@ -319,6 +320,11 @@ struct private_kernel_netlink_ipsec_t {
 	 * Whether to track the history of a policy
 	 */
 	bool policy_history;
+
+	/**
+	 * Installed port based IKE bypass policies, as bypass_t
+	 */
+	array_t *bypass;
 };
 
 typedef struct route_entry_t route_entry_t;
@@ -2576,9 +2582,11 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 	return SUCCESS;
 }
 
-
-METHOD(kernel_ipsec_t, bypass_socket, bool,
-	private_kernel_netlink_ipsec_t *this, int fd, int family)
+/**
+ * Bypass socket using a per-socket policy
+ */
+static bool add_socket_bypass(private_kernel_netlink_ipsec_t *this,
+							  int fd, int family)
 {
 	struct xfrm_userpolicy_info policy;
 	u_int sol, ipsec_policy;
@@ -2618,6 +2626,152 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	return TRUE;
 }
 
+/**
+ * Port based IKE bypass policy
+ */
+typedef struct {
+	/** address family */
+	int family;
+	/** layer 4 protocol */
+	int proto;
+	/** port number, network order */
+	u_int16_t port;
+} bypass_t;
+
+/**
+ * Add or remove a bypass policy from/to kernel
+ */
+static bool manage_bypass(private_kernel_netlink_ipsec_t *this,
+						  int type, policy_dir_t dir, bypass_t *bypass)
+{
+	netlink_buf_t request;
+	struct xfrm_selector *sel;
+	struct nlmsghdr *hdr;
+
+	memset(&request, 0, sizeof(request));
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = type;
+
+	if (type == XFRM_MSG_NEWPOLICY)
+	{
+		struct xfrm_userpolicy_info *policy;
+
+		hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
+
+		policy = NLMSG_DATA(hdr);
+		policy->dir = dir;
+		policy->priority = 32;
+		policy->action = XFRM_POLICY_ALLOW;
+		policy->share = XFRM_SHARE_ANY;
+
+		policy->lft.soft_byte_limit = XFRM_INF;
+		policy->lft.soft_packet_limit = XFRM_INF;
+		policy->lft.hard_byte_limit = XFRM_INF;
+		policy->lft.hard_packet_limit = XFRM_INF;
+
+		sel = &policy->sel;
+	}
+	else /* XFRM_MSG_DELPOLICY */
+	{
+		struct xfrm_userpolicy_id *policy;
+
+		hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
+
+		policy = NLMSG_DATA(hdr);
+		policy->dir = dir;
+
+		sel = &policy->sel;
+	}
+
+	sel->family = bypass->family;
+	sel->proto = bypass->proto;
+	if (dir == POLICY_IN)
+	{
+		sel->dport = bypass->port;
+		sel->dport_mask = 0xffff;
+	}
+	else
+	{
+		sel->sport = bypass->port;
+		sel->sport_mask = 0xffff;
+	}
+	return this->socket_xfrm->send_ack(this->socket_xfrm, hdr) == SUCCESS;
+}
+
+/**
+ * Bypass socket using a port-based bypass policy
+ */
+static bool add_port_bypass(private_kernel_netlink_ipsec_t *this,
+							int fd, int family)
+{
+	union {
+		struct sockaddr sa;
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	} saddr;
+	socklen_t len;
+	bypass_t bypass = {
+		.family = family,
+	};
+
+	len = sizeof(saddr);
+	if (getsockname(fd, &saddr.sa, &len) != 0)
+	{
+		return FALSE;
+	}
+	len = sizeof(bypass.proto);
+	if (getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &bypass.proto, &len) != 0)
+	{
+		return FALSE;
+	}
+	switch (family)
+	{
+		case AF_INET:
+			bypass.port = saddr.in.sin_port;
+			break;
+		case AF_INET6:
+			bypass.port = saddr.in6.sin6_port;
+			break;
+		default:
+			return FALSE;
+	}
+
+	if (!manage_bypass(this, XFRM_MSG_NEWPOLICY, POLICY_IN, &bypass))
+	{
+		return FALSE;
+	}
+	if (!manage_bypass(this, XFRM_MSG_NEWPOLICY, POLICY_OUT, &bypass))
+	{
+		manage_bypass(this, XFRM_MSG_DELPOLICY, POLICY_IN, &bypass);
+		return FALSE;
+	}
+	array_insert(this->bypass, ARRAY_TAIL, &bypass);
+
+	return TRUE;
+}
+
+/**
+ * Remove installed port based bypass policy
+ */
+static void remove_port_bypass(bypass_t *bypass, int idx,
+							   private_kernel_netlink_ipsec_t *this)
+{
+	manage_bypass(this, XFRM_MSG_DELPOLICY, POLICY_OUT, bypass);
+	manage_bypass(this, XFRM_MSG_DELPOLICY, POLICY_IN, bypass);
+}
+
+METHOD(kernel_ipsec_t, bypass_socket, bool,
+	private_kernel_netlink_ipsec_t *this, int fd, int family)
+{
+	if (lib->settings->get_bool(lib->settings,
+					"%s.plugins.kernel-netlink.port_bypass", FALSE, lib->ns))
+	{
+		return add_port_bypass(this, fd, family);
+	}
+	return add_socket_bypass(this, fd, family);
+}
+
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 	private_kernel_netlink_ipsec_t *this, int fd, int family, u_int16_t port)
 {
@@ -2637,6 +2791,8 @@ METHOD(kernel_ipsec_t, destroy, void,
 	enumerator_t *enumerator;
 	policy_entry_t *policy;
 
+	array_destroy_function(this->bypass,
+						   (array_callback_t)remove_port_bypass, this);
 	if (this->socket_xfrm_events > 0)
 	{
 		lib->watcher->remove(lib->watcher, this->socket_xfrm_events);
@@ -2688,6 +2844,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 									 (hashtable_equals_t)policy_equals, 32),
 		.sas = hashtable_create((hashtable_hash_t)ipsec_sa_hash,
 								(hashtable_equals_t)ipsec_sa_equals, 32),
+		.bypass = array_create(sizeof(bypass_t), 0),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.policy_history = TRUE,
 		.install_routes = lib->settings->get_bool(lib->settings,
