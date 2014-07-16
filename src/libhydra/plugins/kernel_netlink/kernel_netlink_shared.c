@@ -75,6 +75,11 @@ struct private_netlink_socket_t {
 	 * Number of times to repeat timed out queries
 	 */
 	u_int retries;
+
+	/**
+	 * Use parallel netlink queries
+	 */
+	bool parallel;
 };
 
 /**
@@ -290,7 +295,8 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 
 	while (!entry->complete)
 	{
-		if (lib->watcher->get_state(lib->watcher) == WATCHER_RUNNING)
+		if (this->parallel &&
+			lib->watcher->get_state(lib->watcher) == WATCHER_RUNNING)
 		{
 			if (this->timeout)
 			{
@@ -450,7 +456,10 @@ METHOD(netlink_socket_t, destroy, void,
 {
 	if (this->socket != -1)
 	{
-		lib->watcher->remove(lib->watcher, this->socket);
+		if (this->parallel)
+		{
+			lib->watcher->remove(lib->watcher, this->socket);
+		}
 		close(this->socket);
 	}
 	this->entries->destroy(this->entries);
@@ -461,7 +470,8 @@ METHOD(netlink_socket_t, destroy, void,
 /**
  * Described in header.
  */
-netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names)
+netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
+										bool parallel)
 {
 	private_netlink_socket_t *this;
 	struct sockaddr_nl addr = {
@@ -483,6 +493,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names)
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.retries", 0, lib->ns),
+		.parallel = parallel,
 	);
 
 	if (this->socket == -1)
@@ -497,8 +508,10 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names)
 		destroy(this);
 		return NULL;
 	}
-
-	lib->watcher->add(lib->watcher, this->socket, WATCHER_READ, watch, this);
+	if (this->parallel)
+	{
+		lib->watcher->add(lib->watcher, this->socket, WATCHER_READ, watch, this);
+	}
 
 	return &this->public;
 }

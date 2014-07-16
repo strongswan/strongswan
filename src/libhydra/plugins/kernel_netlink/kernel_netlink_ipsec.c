@@ -2711,7 +2711,9 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		fclose(f);
 	}
 
-	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM, xfrm_msg_names);
+	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM, xfrm_msg_names,
+				lib->settings->get_bool(lib->settings,
+					"%s.plugins.kernel-netlink.parallel_xfrm", FALSE, lib->ns));
 	if (!this->socket_xfrm)
 	{
 		destroy(this);

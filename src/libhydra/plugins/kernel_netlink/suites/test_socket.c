@@ -60,7 +60,7 @@ START_TEST(test_echo)
 	netlink_add_attribute(&request.hdr, RTA_DST,
 						  chunk_from_thing(dst), sizeof(request));
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 
 	ck_assert(s->send(s, &request.hdr, &out, &len) == SUCCESS);
 	ck_assert_int_eq(out->nlmsg_type, RTM_NEWROUTE);
@@ -83,7 +83,7 @@ START_TEST(test_echo_dump)
 		},
 	};
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 	msg = NLMSG_DATA(&request.hdr);
 	msg->rtgen_family = AF_UNSPEC;
 
@@ -179,7 +179,7 @@ START_TEST(test_stress)
 	netlink_socket_t *s;
 	int i;
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 	for (i = 0; i < countof(threads); i++)
 	{
 		threads[i] = thread_create(stress, s);
@@ -198,7 +198,7 @@ START_TEST(test_stress_dump)
 	netlink_socket_t *s;
 	int i;
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 	for (i = 0; i < countof(threads); i++)
 	{
 		threads[i] = thread_create(stress_dump, s);
@@ -232,7 +232,7 @@ START_TEST(test_retransmit_success)
 	lib->settings->set_int(lib->settings,
 							"%s.plugins.kernel-netlink.retries", 1, lib->ns);
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 	msg = NLMSG_DATA(&request.hdr);
 	msg->rtgen_family = AF_UNSPEC;
 
@@ -265,7 +265,7 @@ START_TEST(test_retransmit_fail)
 	lib->settings->set_int(lib->settings,
 							"%s.plugins.kernel-netlink.retries", 3, lib->ns);
 
-	s = netlink_socket_create(NETLINK_ROUTE, NULL);
+	s = netlink_socket_create(NETLINK_ROUTE, NULL, _i != 0);
 	msg = NLMSG_DATA(&request.hdr);
 	msg->rtgen_family = AF_UNSPEC;
 
@@ -284,18 +284,18 @@ Suite *socket_suite_create()
 	s = suite_create("netlink socket");
 
 	tc = tcase_create("echo");
-	tcase_add_test(tc, test_echo);
-	tcase_add_test(tc, test_echo_dump);
+	tcase_add_loop_test(tc, test_echo, 0, 2);
+	tcase_add_loop_test(tc, test_echo_dump, 0, 2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("stress");
-	tcase_add_test(tc, test_stress);
-	tcase_add_test(tc, test_stress_dump);
+	tcase_add_loop_test(tc, test_stress, 0, 2);
+	tcase_add_loop_test(tc, test_stress_dump, 0, 2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("retransmit");
-	tcase_add_test(tc, test_retransmit_success);
-	tcase_add_test(tc, test_retransmit_fail);
+	tcase_add_loop_test(tc, test_retransmit_success, 0, 2);
+	tcase_add_loop_test(tc, test_retransmit_fail, 0, 2);
 	suite_add_tcase(s, tc);
 
 	return s;
