@@ -749,6 +749,8 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.type = type,
 		.tunfd = -1,
 	);
+	/* only allow queries for the VPN gateway */
+	this->dns_proxy->add_hostname(this->dns_proxy, gateway);
 
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 
