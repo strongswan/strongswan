@@ -351,5 +351,7 @@ bool library_init(char *settings, const char *namespace)
 #endif /* INTEGRITY_TEST */
 	}
 
+	diffie_hellman_init();
+
 	return !this->integrity_failed;
 }

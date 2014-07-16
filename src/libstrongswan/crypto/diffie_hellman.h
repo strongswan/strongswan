@@ -149,7 +149,15 @@ struct diffie_hellman_params_t {
 };
 
 /**
+ * Initialize diffie hellman parameters during startup.
+ */
+void diffie_hellman_init();
+
+/**
  * Get the parameters associated with the specified diffie hellman group.
+ *
+ * Before calling this method, use diffie_hellman_init() to initialize the
+ * DH group table. This is usually done by library_init().
  *
  * @param group			DH group
  * @return				The parameters or NULL, if the group is not supported
