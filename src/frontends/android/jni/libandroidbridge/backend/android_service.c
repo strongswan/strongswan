@@ -502,6 +502,23 @@ METHOD(listener_t, alert, bool,
 							(callback_job_cb_t)terminate, id, free,
 							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
 				}
+				else
+				{
+					peer_cfg_t *peer_cfg;
+					u_int32_t tries, try;
+
+					/* when reestablishing and if keyingtries is not %forever
+					 * the IKE_SA is destroyed after the set number of tries,
+					 * so notify the GUI */
+					peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+					tries = peer_cfg->get_keyingtries(peer_cfg);
+					try = va_arg(args, u_int32_t);
+					if (tries != 0 && try == tries-1)
+					{
+						charonservice->update_status(charonservice,
+											CHARONSERVICE_UNREACHABLE_ERROR);
+					}
+				}
 				this->lock->unlock(this->lock);
 				break;
 			default:
