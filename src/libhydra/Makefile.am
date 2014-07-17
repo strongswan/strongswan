@@ -21,8 +21,7 @@ endif
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
-	-DPLUGINDIR=\"${plugindir}\" \
-	-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+	-DPLUGINDIR=\"${plugindir}\"
 
 AM_LDFLAGS = \
   -no-undefined
