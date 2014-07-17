@@ -524,8 +524,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 #ifdef USE_IKEV2
 			send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
 						INVALID_MAJOR_VERSION, chunk_empty);
-#endif /* USE_IKEV2 */
-#ifdef USE_IKEV1
+#elif defined(USE_IKEV1)
 			send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
 						INVALID_MAJOR_VERSION, chunk_empty);
 #endif /* USE_IKEV1 */
@@ -684,4 +683,3 @@ receiver_t *receiver_create()
 
 	return &this->public;
 }
-
