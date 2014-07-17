@@ -73,7 +73,6 @@ if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 fi
 ARG_WITH_SET([systemdsystemunitdir], [$systemdsystemunitdir_default], [directory for systemd service files])
-AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno])
 AC_SUBST(systemdsystemunitdir)
 
 AC_ARG_WITH(
@@ -273,6 +272,7 @@ ARG_DISBL_SET([pki],            [disable pki certificate utility.])
 ARG_DISBL_SET([scepclient],     [disable SCEP client tool.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([svc],            [enable charon Windows service.])
+ARG_ENABL_SET([systemd],        [enable systemd specific IKE daemon charon-systemd.])
 ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 # optional features
@@ -1467,9 +1467,9 @@ AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCEPCLIENT, test x$scepclient = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
-AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
@@ -1494,6 +1494,8 @@ AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
 AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
 AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
+AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
+AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
 
 # ========================
 #  set global definitions
@@ -1637,6 +1639,7 @@ AC_CONFIG_FILES([
 	src/charon-tkm/Makefile
 	src/charon-cmd/Makefile
 	src/charon-svc/Makefile
+	src/charon-systemd/Makefile
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile

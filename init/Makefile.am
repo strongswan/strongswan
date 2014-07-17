@@ -1,6 +1,6 @@
 
 SUBDIRS =
 
-if HAVE_SYSTEMD
+if USE_LEGACY_SYSTEMD
   SUBDIRS += systemd
 endif
