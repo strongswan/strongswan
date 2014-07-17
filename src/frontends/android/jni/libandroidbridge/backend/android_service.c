@@ -407,6 +407,17 @@ static void close_tun_device(private_android_service_t *this)
 	close(tunfd);
 }
 
+/**
+ * Terminate the IKE_SA with the given unique ID
+ */
+CALLBACK(terminate, job_requeue_t,
+	u_int32_t *id)
+{
+	charon->controller->terminate_ike(charon->controller, *id,
+									  controller_cb_empty, NULL, 0);
+	return JOB_REQUEUE_NONE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -476,9 +487,20 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_INIT_UNREACHABLE:
 				this->lock->read_lock(this->lock);
 				if (this->tunfd < 0)
-				{	/* only handle this if we are not reestablishing the SA */
+				{
+					u_int32_t *id = malloc_thing(u_int32_t);
+
+					/* always fail if we are not able to initiate the IKE_SA
+					 * initially */
 					charonservice->update_status(charonservice,
 											CHARONSERVICE_UNREACHABLE_ERROR);
+					/* terminate the IKE_SA so no further keying tries are
+					 * attempted */
+					*id = ike_sa->get_unique_id(ike_sa);
+					lib->processor->queue_job(lib->processor,
+						(job_t*)callback_job_create_with_prio(
+							(callback_job_cb_t)terminate, id, free,
+							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
 				}
 				this->lock->unlock(this->lock);
 				break;
