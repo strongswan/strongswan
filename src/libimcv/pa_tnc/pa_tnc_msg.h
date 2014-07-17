@@ -68,9 +68,11 @@ struct pa_tnc_msg_t {
 	/**
 	 * Process all IETF standard error PA-TNC attributes
 	 *
-	 * @return					TRUE if at least one error attribute processed
+	 * @param non_fatal_types	list of non fatal unsupported attribute types
+	 * @return					TRUE if at least one fatal error processed
 	 */
-	bool (*process_ietf_std_errors)(pa_tnc_msg_t *this);
+	bool (*process_ietf_std_errors)(pa_tnc_msg_t *this,
+								    linked_list_t *non_fatal_types);
 
 	/**
 	 * Enumerates over all PA-TNC attributes

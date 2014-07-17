@@ -65,6 +65,11 @@ struct private_imv_agent_t {
 	linked_list_t *additional_ids;
 
 	/**
+	 * list of non-fatal unsupported PA-TNC attribute types
+	 */
+	linked_list_t *non_fatal_attr_types;
+
+	/**
 	 * list of TNCS connection entries
 	 */
 	linked_list_t *connections;
@@ -772,11 +777,29 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
+METHOD(imv_agent_t, add_non_fatal_attr_type, void,
+	private_imv_agent_t *this, pen_type_t type)
+{
+	pen_type_t *type_p;
+
+	type_p = malloc_thing(pen_type_t);
+	*type_p = type;
+	this->non_fatal_attr_types->insert_last(this->non_fatal_attr_types, type_p);
+}
+
+METHOD(imv_agent_t, get_non_fatal_attr_types, linked_list_t*,
+	private_imv_agent_t *this)
+{
+	return this->non_fatal_attr_types;
+}
+
 METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
 	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
 	this->additional_ids->destroy(this->additional_ids);
+	this->non_fatal_attr_types->destroy_function(this->non_fatal_attr_types,
+												 free);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
 	this->connection_lock->destroy(this->connection_lock);
@@ -815,6 +838,8 @@ imv_agent_t *imv_agent_create(const char *name,
 			.create_id_enumerator = _create_id_enumerator,
 			.create_language_enumerator = _create_language_enumerator,
 			.provide_recommendation = _provide_recommendation,
+			.add_non_fatal_attr_type = _add_non_fatal_attr_type,
+			.get_non_fatal_attr_types = _get_non_fatal_attr_types,
 			.destroy = _destroy,
 		},
 		.name = name,
@@ -822,6 +847,7 @@ imv_agent_t *imv_agent_create(const char *name,
 		.type_count = type_count,
 		.id = id,
 		.additional_ids = linked_list_create(),
+		.non_fatal_attr_types = linked_list_create(),
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);

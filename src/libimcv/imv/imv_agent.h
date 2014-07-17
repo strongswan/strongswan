@@ -189,6 +189,16 @@ struct imv_agent_t {
 	TNC_Result (*provide_recommendation)(imv_agent_t *this, imv_state_t* state);
 
 	/**
+	 * Add an item to the list of non-fatal unsupported PA-TNC attribute types
+	 */
+	void (*add_non_fatal_attr_type)(imv_agent_t *this, pen_type_t type);
+
+	/**
+	 * Get a list of non-fatal unsupported PA-TNC attribute types
+	 */
+	linked_list_t* (*get_non_fatal_attr_types)(imv_agent_t *this);
+
+	/**
 	 * Destroys an imv_agent_t object
 	 */
 	void (*destroy)(imv_agent_t *this);

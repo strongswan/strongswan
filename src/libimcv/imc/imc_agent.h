@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -170,6 +170,16 @@ struct imc_agent_t {
 	 * Create an enumerator for the additional IMC IDs
 	 */
 	enumerator_t* (*create_id_enumerator)(imc_agent_t *this);
+
+	/**
+	 * Add an item to the list of non-fatal unsupported PA-TNC attribute types
+	 */
+	void (*add_non_fatal_attr_type)(imc_agent_t *this, pen_type_t type);
+
+	/**
+	 * Get a list of non-fatal unsupported PA-TNC attribute types
+	 */
+	linked_list_t* (*get_non_fatal_attr_types)(imc_agent_t *this);
 
 	/**
 	 * Destroys an imc_agent_t object

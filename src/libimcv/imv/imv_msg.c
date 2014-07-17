@@ -248,6 +248,7 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 METHOD(imv_msg_t, receive, TNC_Result,
 	private_imv_msg_t *this, bool *fatal_error)
 {
+	linked_list_t *non_fatal_types;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	chunk_t msg;
@@ -313,7 +314,9 @@ METHOD(imv_msg_t, receive, TNC_Result,
 	}
 
 	/* preprocess any received IETF standard error attributes */
-	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg);
+	non_fatal_types = this->agent->get_non_fatal_attr_types(this->agent);
+	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg,
+														 non_fatal_types);
 
 	return TNC_RESULT_SUCCESS;
 }

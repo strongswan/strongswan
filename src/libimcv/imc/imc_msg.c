@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -210,6 +210,7 @@ static void print_assessment_trailer(bool first)
 METHOD(imc_msg_t, receive, TNC_Result,
 	private_imc_msg_t *this, bool *fatal_error)
 {
+	linked_list_t *non_fatal_types;
 	TNC_UInt32 target_imc_id;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
@@ -282,7 +283,9 @@ METHOD(imc_msg_t, receive, TNC_Result,
 					 this->dst_id : this->agent->get_id(this->agent);
 
 	/* preprocess any received IETF standard error attributes */
-	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg);
+	non_fatal_types = this->agent->get_non_fatal_attr_types(this->agent);
+	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg,
+														 non_fatal_types);
 
 	/* preprocess any received IETF assessment result attribute */
 	enumerator = this->pa_msg->create_attribute_enumerator(this->pa_msg);

@@ -349,26 +349,27 @@ err:
 }
 
 METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
-	private_pa_tnc_msg_t *this)
+	private_pa_tnc_msg_t *this, linked_list_t *non_fatal_types)
 {
-	enumerator_t *enumerator;
+	enumerator_t *e1, *e2;
 	enum_name_t *pa_attr_names;
 	pa_tnc_attr_t *attr;
 	pen_type_t type, unsupported_type;
 	uint8_t flags;
 	bool fatal_error = FALSE;
 
-	enumerator = this->attributes->create_enumerator(this->attributes);
-	while (enumerator->enumerate(enumerator, &attr))
+	e1 = this->attributes->create_enumerator(this->attributes);
+	while (e1->enumerate(e1, &attr))
 	{
 		type = attr->get_type(attr);
 
 		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
 		{
 			ietf_attr_pa_tnc_error_t *error_attr;
-			pen_type_t error_code;
+			pen_type_t error_code, *non_fatal_type;
 			chunk_t msg_info;
 			uint32_t offset;
+			bool fatal_current_error = TRUE;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
 			error_code = error_attr->get_error_code(error_attr);
@@ -412,14 +413,27 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 							 unsupported_type.vendor_id, unsupported_type.type,
 							 flags);
 					}
+					e2 = non_fatal_types->create_enumerator(non_fatal_types);
+					while (e2->enumerate(e2, &non_fatal_type))
+					{
+						if (pen_type_equals(unsupported_type, *non_fatal_type))
+						{
+							fatal_current_error = FALSE;
+							break;
+						}
+					}
+					e2->destroy(e2);
 					break;
 				default:
 					break;
 			}
-			fatal_error = TRUE;
+			if (fatal_current_error)
+			{
+				fatal_error = TRUE;
+			}
 		}
 	}
-	enumerator->destroy(enumerator);
+	e1->destroy(e1);
 
 	return fatal_error;
 }
