@@ -146,23 +146,40 @@ METHOD(listener_t, narrow, bool,
 	if (ike_sa->get_version(ike_sa) == IKEV1 &&
 		ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
 	{
-		switch (type)
+		/* depending on who initiates a rekeying the hooks will not match the
+		 * roles in the IKE_SA */
+		if (ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
 		{
-			case NARROW_INITIATOR_PRE_AUTH:
-				narrow_pre(remote, "other");
-				break;
-			case NARROW_INITIATOR_POST_AUTH:
-				narrow_initiator(this, ike_sa,
-								 child_sa->get_config(child_sa), remote);
-				break;
-			case NARROW_RESPONDER:
-				narrow_pre(local, "us");
-				break;
-			case NARROW_RESPONDER_POST:
-				narrow_responder_post(child_sa->get_config(child_sa), local);
-				break;
-			default:
-				break;
+			switch (type)
+			{
+				case NARROW_INITIATOR_PRE_AUTH:
+				case NARROW_RESPONDER:
+					narrow_pre(remote, "other");
+					break;
+				case NARROW_INITIATOR_POST_AUTH:
+				case NARROW_RESPONDER_POST:
+					narrow_initiator(this, ike_sa,
+									 child_sa->get_config(child_sa), remote);
+					break;
+				default:
+					break;
+			}
+		}
+		else
+		{
+			switch (type)
+			{
+				case NARROW_INITIATOR_PRE_AUTH:
+				case NARROW_RESPONDER:
+					narrow_pre(local, "us");
+					break;
+				case NARROW_INITIATOR_POST_AUTH:
+				case NARROW_RESPONDER_POST:
+					narrow_responder_post(child_sa->get_config(child_sa), local);
+					break;
+				default:
+					break;
+			}
 		}
 	}
 	return TRUE;
