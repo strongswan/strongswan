@@ -147,6 +147,11 @@ struct library_t {
 	const char *ns;
 
 	/**
+	 * Main configuration file passed to library_init(), the default, or NULL
+	 */
+	char *conf;
+
+	/**
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
