@@ -16,6 +16,7 @@ swanctl_SOURCES = \
 	commands/log.c \
 	commands/version.c \
 	commands/stats.c \
+	commands/reload_settings.c \
 	swanctl.c swanctl.h
 
 swanctl_LDADD = \

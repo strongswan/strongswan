@@ -77,6 +77,9 @@ trace logging output
 .B "\-S, \-\-stats"
 show daemon infos and statistics
 .TP
+.B "\-r, \-\-reload-settings"
+reload strongswan.conf(5) configuration
+.TP
 .B "\-v, \-\-version"
 show daemon version information
 .TP
