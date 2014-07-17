@@ -23,6 +23,7 @@
 #include <library.h>
 #include <utils/debug.h>
 
+#include "thread.h"
 #include "condvar.h"
 #include "mutex.h"
 #include "lock_profiler.h"
@@ -70,7 +71,7 @@ struct private_r_mutex_t {
 	/**
 	 * thread which currently owns mutex
 	 */
-	pthread_t thread;
+	thread_t *thread;
 
 	/**
 	 * times the current thread locked the mutex
@@ -125,16 +126,16 @@ METHOD(mutex_t, unlock, void,
 METHOD(mutex_t, lock_r, void,
 	private_r_mutex_t *this)
 {
-	pthread_t self = pthread_self();
+	thread_t *self = thread_current();
 
-	if (pthread_equal(this->thread, self))
+	if (cas_ptr(&this->thread, self, self))
 	{
 		this->times++;
 	}
 	else
 	{
 		lock(&this->generic);
-		this->thread = self;
+		cas_ptr(&this->thread, NULL, self);
 		this->times = 1;
 	}
 }
@@ -144,7 +145,7 @@ METHOD(mutex_t, unlock_r, void,
 {
 	if (--this->times == 0)
 	{
-		memset(&this->thread, 0, sizeof(this->thread));
+		cas_ptr(&this->thread, thread_current(), NULL);
 		unlock(&this->generic);
 	}
 }
@@ -220,14 +221,15 @@ METHOD(condvar_t, wait_, void,
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
+		thread_t *self = thread_current();
 		u_int times;
 
 		/* keep track of the number of times this thread locked the mutex */
 		times = recursive->times;
 		/* mutex owner gets cleared during condvar wait */
-		memset(&recursive->thread, 0, sizeof(recursive->thread));
+		cas_ptr(&recursive->thread, self, NULL);
 		pthread_cond_wait(&this->condvar, &mutex->mutex);
-		recursive->thread = pthread_self();
+		cas_ptr(&recursive->thread, NULL, self);
 		recursive->times = times;
 	}
 	else
@@ -253,13 +255,14 @@ METHOD(condvar_t, timed_wait_abs, bool,
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
+		thread_t *self = thread_current();
 		u_int times;
 
 		times = recursive->times;
-		memset(&recursive->thread, 0, sizeof(recursive->thread));
+		cas_ptr(&recursive->thread, self, NULL);
 		timed_out = pthread_cond_timedwait(&this->condvar, &mutex->mutex,
 										   &ts) == ETIMEDOUT;
-		recursive->thread = pthread_self();
+		cas_ptr(&recursive->thread, NULL, self);
 		recursive->times = times;
 	}
 	else
