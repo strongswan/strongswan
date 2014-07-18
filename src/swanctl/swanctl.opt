@@ -194,6 +194,11 @@ connections.<conn>.unique = no
 	EAP or XAuth authentication is involved, the EAP-Identity or XAuth username
 	is used to enforce the uniqueness policy instead.
 
+	On initiators this setting specifies whether an INITIAL_CONTACT notify is
+	sent during IKE_AUTH if no existing connection is found with the remote
+	peer (determined by the identities of the first authentication round).
+	Only if set to _keep_ or _replace_ will the client send a notify.
+
 connections.<conn>.reauth_time = 0s
 	Time to schedule IKE reauthentication.
 
