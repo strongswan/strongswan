@@ -658,6 +658,7 @@ static void load_conn(starter_conn_t *conn, starter_config_t *cfg,
 static void confread_free_ca(starter_ca_t *ca)
 {
 	free_args(KW_CA_NAME, KW_CA_LAST, (char *)ca);
+	free(ca);
 }
 
 /*
@@ -668,6 +669,7 @@ static void confread_free_conn(starter_conn_t *conn)
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
 	free_args(KW_CONN_NAME, KW_CONN_LAST, (char *)conn);
+	free(conn);
 }
 
 /*
@@ -686,7 +688,6 @@ void confread_free(starter_config_t *cfg)
 
 		conn = conn->next;
 		confread_free_conn(conn_aux);
-		free(conn_aux);
 	}
 
 	while (ca != NULL)
@@ -695,7 +696,6 @@ void confread_free(starter_config_t *cfg)
 
 		ca = ca->next;
 		confread_free_ca(ca_aux);
-		free(ca_aux);
 	}
 
 	free(cfg);
@@ -746,6 +746,9 @@ starter_config_t* confread_load(const char *file)
 
 		if (cfg->err > previous_err)
 		{
+			total_err = cfg->err - previous_err;
+			DBG1(DBG_APP, "# ignored ca '%s' due to %d parsing error%s", name,
+				 total_err, (total_err > 1) ? "s" : "");
 			confread_free_ca(ca);
 			cfg->non_fatal_err += cfg->err - previous_err;
 			cfg->err = previous_err;
@@ -784,6 +787,9 @@ starter_config_t* confread_load(const char *file)
 
 		if (cfg->err > previous_err)
 		{
+			total_err = cfg->err - previous_err;
+			DBG1(DBG_APP, "# ignored conn '%s' due to %d parsing error%s", name,
+				 total_err, (total_err > 1) ? "s" : "");
 			confread_free_conn(conn);
 			cfg->non_fatal_err += cfg->err - previous_err;
 			cfg->err = previous_err;
