@@ -76,6 +76,11 @@ struct private_stream_service_t {
 	 * Condvar to wait for callback termination
 	 */
 	condvar_t *condvar;
+
+	/**
+	 * TRUE when the service is terminated
+	 */
+	bool terminated;
 };
 
 /**
@@ -105,7 +110,7 @@ static void destroy_async_data(async_data_t *data)
 	private_stream_service_t *this = data->this;
 
 	this->mutex->lock(this->mutex);
-	if (this->active-- == this->cncrncy)
+	if (this->active-- == this->cncrncy && !this->terminated)
 	{
 		/* leaving concurrency limit, restart accept()ing. */
 		lib->watcher->add(lib->watcher, this->fd,
@@ -154,7 +159,7 @@ static bool watch(private_stream_service_t *this, int fd, watcher_event_t event)
 		.this = this,
 	);
 
-	if (data->fd != -1)
+	if (data->fd != -1 && !this->terminated)
 	{
 		this->mutex->lock(this->mutex);
 		if (++this->active == this->cncrncy)
@@ -213,6 +218,9 @@ METHOD(stream_service_t, on_accept, void,
 METHOD(stream_service_t, destroy, void,
 	private_stream_service_t *this)
 {
+	this->mutex->lock(this->mutex);
+	this->terminated = TRUE;
+	this->mutex->unlock(this->mutex);
 	on_accept(this, NULL, NULL, this->prio, this->cncrncy);
 	close(this->fd);
 	this->mutex->destroy(this->mutex);
