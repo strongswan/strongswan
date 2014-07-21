@@ -93,6 +93,11 @@ typedef struct {
 } async_data_t;
 
 /**
+ * Forward declaration
+ */
+static bool watch(private_stream_service_t *this, int fd, watcher_event_t event);
+
+/**
  * Clean up accept data
  */
 static void destroy_async_data(async_data_t *data)
@@ -103,8 +108,8 @@ static void destroy_async_data(async_data_t *data)
 	if (this->active-- == this->cncrncy)
 	{
 		/* leaving concurrency limit, restart accept()ing. */
-		this->public.on_accept(&this->public, this->cb, this->data,
-							   this->prio, this->cncrncy);
+		lib->watcher->add(lib->watcher, this->fd,
+						  WATCHER_READ, (watcher_cb_t)watch, this);
 	}
 	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
