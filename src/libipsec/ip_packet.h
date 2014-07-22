@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,6 +68,13 @@ struct ip_packet_t {
 	chunk_t (*get_encoding)(ip_packet_t *this);
 
 	/**
+	 * Get only the payload
+	 *
+	 * @return				IP payload (internal data)
+	 */
+	chunk_t (*get_payload)(ip_packet_t *this);
+
+	/**
 	 * Clone the IP packet
 	 *
 	 * @return				clone of the packet
@@ -92,5 +99,31 @@ struct ip_packet_t {
  * @return				ip_packet_t instance, or NULL if invalid
  */
 ip_packet_t *ip_packet_create(chunk_t packet);
+
+/**
+ * Encode an IP packet from the given data.
+ *
+ * If src and/or dst have ports set they are applied to UDP/TCP headers found
+ * in the packet.
+ *
+ * @param src			source address and optional port (cloned)
+ * @param dst			destination address and optional port (cloned)
+ * @param next_header	the protocol (IPv4) or next header (IPv6)
+ * @param data			complete data after basic IP header (cloned)
+ * @return				ip_packet_t instance, or NULL if invalid
+ */
+ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
+										u_int8_t next_header, chunk_t data);
+
+/**
+ * Encode a UDP packet from the given data.
+ *
+ * @param src			source address and port (cloned)
+ * @param dst			destination address and port (cloned)
+ * @param data			UDP data (cloned)
+ * @return				ip_packet_t instance, or NULL if invalid
+ */
+ip_packet_t *ip_packet_create_udp_from_data(host_t *src, host_t *dst,
+											chunk_t data);
 
 #endif /** IP_PACKET_H_ @}*/

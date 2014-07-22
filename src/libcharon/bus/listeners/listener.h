@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011-2014 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -129,14 +130,29 @@ struct listener_t {
 	/**
 	 * Hook called when an initiator reestablishes an IKE_SA.
 	 *
-	 * This is invoked right before the new IKE_SA is checked in after
-	 * initiating it.  It is not invoked on the responder.
+	 * This is invoked right after creating the new IKE_SA and setting the
+	 * peer_cfg (and the old hosts), but before resolving the hosts anew.
+	 * It is not invoked on the responder.
 	 *
 	 * @param old		IKE_SA getting reestablished (is destroyed)
 	 * @param new		new IKE_SA replacing old (gets established)
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
-	bool (*ike_reestablish)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
+	bool (*ike_reestablish_pre)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
+
+	/**
+	 * Hook called when an initiator reestablishes an IKE_SA.
+	 *
+	 * This is invoked right before the new IKE_SA is checked in after
+	 * initiating it.  It is not invoked on the responder.
+	 *
+	 * @param old		IKE_SA getting reestablished (is destroyed)
+	 * @param new		new IKE_SA replacing old (gets established)
+	 * @param initiated TRUE if initiation was successful, FALSE otherwise
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_reestablish_post)(listener_t *this, ike_sa_t *old,
+								 ike_sa_t *new, bool initiated);
 
 	/**
 	 * Hook called when a CHILD_SA gets up or down.

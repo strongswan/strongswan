@@ -755,7 +755,7 @@ METHOD(bus_t, ike_rekey, void,
 	this->mutex->unlock(this->mutex);
 }
 
-METHOD(bus_t, ike_reestablish, void,
+METHOD(bus_t, ike_reestablish_pre, void,
 	private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 {
 	enumerator_t *enumerator;
@@ -766,12 +766,40 @@ METHOD(bus_t, ike_reestablish, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->calling || !entry->listener->ike_reestablish)
+		if (entry->calling || !entry->listener->ike_reestablish_pre)
 		{
 			continue;
 		}
 		entry->calling++;
-		keep = entry->listener->ike_reestablish(entry->listener, old, new);
+		keep = entry->listener->ike_reestablish_pre(entry->listener, old, new);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(bus_t, ike_reestablish_post, void,
+	private_bus_t *this, ike_sa_t *old, ike_sa_t *new, bool initiated)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_reestablish_post)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_reestablish_post(entry->listener, old, new,
+													 initiated);
 		entry->calling--;
 		if (!keep)
 		{
@@ -978,7 +1006,8 @@ bus_t *bus_create()
 			.child_keys = _child_keys,
 			.ike_updown = _ike_updown,
 			.ike_rekey = _ike_rekey,
-			.ike_reestablish = _ike_reestablish,
+			.ike_reestablish_pre = _ike_reestablish_pre,
+			.ike_reestablish_post = _ike_reestablish_post,
 			.child_updown = _child_updown,
 			.child_rekey = _child_rekey,
 			.authorize = _authorize,

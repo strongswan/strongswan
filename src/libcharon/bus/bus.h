@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -380,12 +380,23 @@ struct bus_t {
 	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
 
 	/**
-	 * IKE_SA reestablishing hook.
+	 * IKE_SA reestablishing hook (before resolving hosts).
 	 *
 	 * @param old		reestablished and obsolete IKE_SA
 	 * @param new		new IKE_SA replacing old
 	 */
-	void (*ike_reestablish)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
+	void (*ike_reestablish_pre)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
+
+	/**
+	 * IKE_SA reestablishing hook (after configuring and initiating the new
+	 * IKE_SA).
+	 *
+	 * @param old		reestablished and obsolete IKE_SA
+	 * @param new		new IKE_SA replacing old
+	 * @param initiated	TRUE if initiated successfully, FALSE otherwise
+	 */
+	void (*ike_reestablish_post)(bus_t *this, ike_sa_t *old, ike_sa_t *new,
+								 bool initiated);
 
 	/**
 	 * CHILD_SA up/down hook.

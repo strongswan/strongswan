@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -197,8 +197,10 @@ failed:
 	return FALSE;
 }
 
-METHOD(vpnservice_builder_t, establish, int,
-	private_vpnservice_builder_t *this)
+/**
+ * Establish or reestablish the TUN device
+ */
+static int establish_internal(private_vpnservice_builder_t *this, char *method)
 {
 	JNIEnv *env;
 	jmethodID method_id;
@@ -209,7 +211,7 @@ METHOD(vpnservice_builder_t, establish, int,
 	DBG2(DBG_LIB, "builder: building TUN device");
 
 	method_id = (*env)->GetMethodID(env, android_charonvpnservice_builder_class,
-									"establish", "()I");
+									method, "()I");
 	if (!method_id)
 	{
 		goto failed;
@@ -227,6 +229,18 @@ failed:
 	androidjni_exception_occurred(env);
 	androidjni_detach_thread();
 	return -1;
+}
+
+METHOD(vpnservice_builder_t, establish, int,
+	private_vpnservice_builder_t *this)
+{
+	return establish_internal(this, "establish");
+}
+
+METHOD(vpnservice_builder_t, establish_no_dns, int,
+	private_vpnservice_builder_t *this)
+{
+	return establish_internal(this, "establishNoDns");
 }
 
 METHOD(vpnservice_builder_t, destroy, void,
@@ -252,6 +266,7 @@ vpnservice_builder_t *vpnservice_builder_create(jobject builder)
 			.add_dns = _add_dns,
 			.set_mtu = _set_mtu,
 			.establish = _establish,
+			.establish_no_dns = _establish_no_dns,
 			.destroy = _destroy,
 		},
 	);

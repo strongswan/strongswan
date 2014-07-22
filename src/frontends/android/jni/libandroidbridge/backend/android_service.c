@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "android_service.h"
+#include "android_dns_proxy.h"
 #include "../charonservice.h"
 #include "../vpnservice_builder.h"
 
@@ -83,6 +84,15 @@ struct private_android_service_t {
 	 */
 	int tunfd;
 
+	/**
+	 * DNS proxy
+	 */
+	android_dns_proxy_t *dns_proxy;
+
+	/**
+	 * Whether to use the DNS proxy or not
+	 */
+	bool use_dns_proxy;
 };
 
 /**
@@ -143,7 +153,7 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	fd_set set;
 	ssize_t len;
 	int tunfd;
-	bool old;
+	bool old, dns_proxy;
 	timeval_t tv = {
 		/* check every second if tunfd is still valid */
 		.tv_sec = 1,
@@ -159,6 +169,8 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	}
 	tunfd = this->tunfd;
 	FD_SET(tunfd, &set);
+	/* cache this while we have the lock */
+	dns_proxy = this->use_dns_proxy;
 	this->lock->unlock(this->lock);
 
 	old = thread_cancelability(TRUE);
@@ -192,7 +204,10 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	packet = ip_packet_create(raw);
 	if (packet)
 	{
-		ipsec->processor->queue_outbound(ipsec->processor, packet);
+		if (!dns_proxy || !this->dns_proxy->handle(this->dns_proxy, packet))
+		{
+			ipsec->processor->queue_outbound(ipsec->processor, packet);
+		}
 	}
 	else
 	{
@@ -324,11 +339,43 @@ static bool setup_tun_device(private_android_service_t *this,
 									  (ipsec_inbound_cb_t)deliver_plain, this);
 		ipsec->processor->register_outbound(ipsec->processor,
 									   (ipsec_outbound_cb_t)send_esp, NULL);
+		this->dns_proxy->register_cb(this->dns_proxy,
+								(dns_proxy_response_cb_t)deliver_plain, this);
 
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
 									NULL, (callback_job_cancel_t)return_false));
 	}
+	return TRUE;
+}
+
+/**
+ * Setup a new TUN device based on the existing one, but without DNS server.
+ */
+static bool setup_tun_device_without_dns(private_android_service_t *this)
+{
+	vpnservice_builder_t *builder;
+	int tunfd;
+
+	DBG1(DBG_DMN, "setting up TUN device without DNS");
+
+	builder = charonservice->get_vpnservice_builder(charonservice);
+
+	tunfd = builder->establish_no_dns(builder);
+	if (tunfd == -1)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	if (this->tunfd > 0)
+	{	/* close previously opened TUN device, this should always be the case */
+		close(this->tunfd);
+	}
+	this->tunfd = tunfd;
+	this->lock->unlock(this->lock);
+
+	DBG1(DBG_DMN, "successfully created TUN device without DNS");
 	return TRUE;
 }
 
@@ -349,6 +396,8 @@ static void close_tun_device(private_android_service_t *this)
 	this->tunfd = -1;
 	this->lock->unlock(this->lock);
 
+	this->dns_proxy->unregister_cb(this->dns_proxy,
+								(dns_proxy_response_cb_t)deliver_plain);
 	ipsec->processor->unregister_outbound(ipsec->processor,
 										 (ipsec_outbound_cb_t)send_esp);
 	ipsec->processor->unregister_inbound(ipsec->processor,
@@ -356,6 +405,17 @@ static void close_tun_device(private_android_service_t *this)
 	charon->receiver->del_esp_cb(charon->receiver,
 								(receiver_esp_cb_t)receiver_esp_cb);
 	close(tunfd);
+}
+
+/**
+ * Terminate the IKE_SA with the given unique ID
+ */
+CALLBACK(terminate, job_requeue_t,
+	u_int32_t *id)
+{
+	charon->controller->terminate_ike(charon->controller, *id,
+									  controller_cb_empty, NULL, 0);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(listener_t, child_updown, bool,
@@ -368,6 +428,11 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
+			/* CHILD_SA is up so we can disable the DNS proxy we enabled to
+			 * reestablish the SA */
+			this->lock->write_lock(this->lock);
+			this->use_dns_proxy = FALSE;
+			this->lock->unlock(this->lock);
 			if (!setup_tun_device(this, ike_sa, child_sa))
 			{
 				DBG1(DBG_DMN, "failed to setup TUN device");
@@ -422,9 +487,37 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_INIT_UNREACHABLE:
 				this->lock->read_lock(this->lock);
 				if (this->tunfd < 0)
-				{	/* only handle this if we are not reestablishing the SA */
+				{
+					u_int32_t *id = malloc_thing(u_int32_t);
+
+					/* always fail if we are not able to initiate the IKE_SA
+					 * initially */
 					charonservice->update_status(charonservice,
 											CHARONSERVICE_UNREACHABLE_ERROR);
+					/* terminate the IKE_SA so no further keying tries are
+					 * attempted */
+					*id = ike_sa->get_unique_id(ike_sa);
+					lib->processor->queue_job(lib->processor,
+						(job_t*)callback_job_create_with_prio(
+							(callback_job_cb_t)terminate, id, free,
+							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
+				}
+				else
+				{
+					peer_cfg_t *peer_cfg;
+					u_int32_t tries, try;
+
+					/* when reestablishing and if keyingtries is not %forever
+					 * the IKE_SA is destroyed after the set number of tries,
+					 * so notify the GUI */
+					peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+					tries = peer_cfg->get_keyingtries(peer_cfg);
+					try = va_arg(args, u_int32_t);
+					if (tries != 0 && try == tries-1)
+					{
+						charonservice->update_status(charonservice,
+											CHARONSERVICE_UNREACHABLE_ERROR);
+					}
 				}
 				this->lock->unlock(this->lock);
 				break;
@@ -445,10 +538,33 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, ike_reestablish, bool,
+METHOD(listener_t, ike_reestablish_pre, bool,
 	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
 {
 	if (this->ike_sa == old)
+	{
+		/* enable DNS proxy so hosts are properly resolved while the TUN device
+		 * is still active */
+		this->lock->write_lock(this->lock);
+		this->use_dns_proxy = TRUE;
+		this->lock->unlock(this->lock);
+		/* if DNS servers are installed that are only reachable through the VPN
+		 * the DNS proxy doesn't help, so uninstall DNS servers */
+		if (!setup_tun_device_without_dns(this))
+		{
+			DBG1(DBG_DMN, "failed to setup TUN device without DNS");
+			charonservice->update_status(charonservice,
+										 CHARONSERVICE_GENERIC_ERROR);
+		}
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_reestablish_post, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
+	bool initiated)
+{
+	if (this->ike_sa == old && initiated)
 	{
 		this->ike_sa = new;
 		/* re-register hook to detect initiation failures */
@@ -458,7 +574,6 @@ METHOD(listener_t, ike_reestablish, bool,
 		 * get ignored and thus we trigger the event here */
 		charonservice->update_status(charonservice,
 									 CHARONSERVICE_CHILD_STATE_DOWN);
-		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
 }
@@ -630,6 +745,7 @@ METHOD(android_service_t, destroy, void,
 	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	/* make sure the tun device is actually closed */
 	close_tun_device(this);
+	this->dns_proxy->destroy(this->dns_proxy);
 	this->lock->destroy(this->lock);
 	free(this->type);
 	free(this->gateway);
@@ -655,7 +771,8 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
-				.ike_reestablish = _ike_reestablish,
+				.ike_reestablish_pre = _ike_reestablish_pre,
+				.ike_reestablish_post = _ike_reestablish_post,
 				.ike_updown = _ike_updown,
 				.child_updown = _child_updown,
 				.alert = _alert,
@@ -663,6 +780,7 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.dns_proxy = android_dns_proxy_create(),
 		.username = username,
 		.password = password,
 		.gateway = gateway,
@@ -670,6 +788,8 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.type = type,
 		.tunfd = -1,
 	);
+	/* only allow queries for the VPN gateway */
+	this->dns_proxy->add_hostname(this->dns_proxy, gateway);
 
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 

@@ -22,6 +22,7 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -526,11 +527,14 @@ public class CharonVpnService extends VpnService implements Runnable
 	{
 		private final String mName;
 		private VpnService.Builder mBuilder;
+		private BuilderCache mCache;
+		private BuilderCache mEstablishedCache;
 
 		public BuilderAdapter(String name)
 		{
 			mName = name;
 			mBuilder = createBuilder(name);
+			mCache = new BuilderCache();
 		}
 
 		private VpnService.Builder createBuilder(String name)
@@ -553,6 +557,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			try
 			{
 				mBuilder.addAddress(address, prefixLength);
+				mCache.addAddress(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -579,6 +584,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			try
 			{
 				mBuilder.addRoute(address, prefixLength);
+				mCache.addRoute(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -605,6 +611,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			try
 			{
 				mBuilder.setMtu(mtu);
+				mCache.setMtu(mtu);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -632,7 +639,86 @@ public class CharonVpnService extends VpnService implements Runnable
 			/* now that the TUN device is created we don't need the current
 			 * builder anymore, but we might need another when reestablishing */
 			mBuilder = createBuilder(mName);
+			mEstablishedCache = mCache;
+			mCache = new BuilderCache();
 			return fd.detachFd();
+		}
+
+		public synchronized int establishNoDns()
+		{
+			ParcelFileDescriptor fd;
+
+			if (mEstablishedCache == null)
+			{
+				return -1;
+			}
+			try
+			{
+				Builder builder = createBuilder(mName);
+				mEstablishedCache.applyData(builder);
+				fd = builder.establish();
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+				return -1;
+			}
+			if (fd == null)
+			{
+				return -1;
+			}
+			return fd.detachFd();
+		}
+	}
+
+	/**
+	 * Cache non DNS related information so we can recreate the builder without
+	 * that information when reestablishing IKE_SAs
+	 */
+	public class BuilderCache
+	{
+		private final List<PrefixedAddress> mAddresses = new ArrayList<PrefixedAddress>();
+		private final List<PrefixedAddress> mRoutes = new ArrayList<PrefixedAddress>();
+		private int mMtu;
+
+		public void addAddress(String address, int prefixLength)
+		{
+			mAddresses.add(new PrefixedAddress(address, prefixLength));
+		}
+
+		public void addRoute(String address, int prefixLength)
+		{
+			mRoutes.add(new PrefixedAddress(address, prefixLength));
+		}
+
+		public void setMtu(int mtu)
+		{
+			mMtu = mtu;
+		}
+
+		public void applyData(VpnService.Builder builder)
+		{
+			for (PrefixedAddress address : mAddresses)
+			{
+				builder.addAddress(address.mAddress, address.mPrefix);
+			}
+			for (PrefixedAddress route : mRoutes)
+			{
+				builder.addRoute(route.mAddress, route.mPrefix);
+			}
+			builder.setMtu(mMtu);
+		}
+
+		private class PrefixedAddress
+		{
+			public String mAddress;
+			public int mPrefix;
+
+			public PrefixedAddress(String address, int prefix)
+			{
+				this.mAddress = address;
+				this.mPrefix = prefix;
+			}
 		}
 	}
 
