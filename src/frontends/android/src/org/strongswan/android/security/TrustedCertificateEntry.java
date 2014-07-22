@@ -13,7 +13,7 @@
  * for more details.
  */
 
-package org.strongswan.android.data;
+package org.strongswan.android.security;
 
 import java.security.cert.X509Certificate;
 

@@ -20,7 +20,6 @@
     <!-- Application -->
     <string name="app_name">strongSwan VPN Client</string>
     <string name="main_activity_name">strongSwan</string>
-    <string name="reload_trusted_certs">Reload CA certificates</string>
     <string name="show_log">View log</string>
     <string name="search">Search</string>
     <string name="vpn_not_supported_title">VPN not supported</string>
@@ -76,8 +75,15 @@
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">CA certificates</string>
     <string name="no_certificates">No certificates</string>
+    <string name="reload_trusted_certs">Reload CA certificates</string>
     <string name="system_tab">System</string>
     <string name="user_tab">User</string>
+    <string name="local_tab">Imported</string>
+    <string name="delete_certificate_question">Delete certificate?</string>
+    <string name="delete_certificate">The certificate will be permanently removed!</string>
+    <string name="import_certificate">Import certificate</string>
+    <string name="cert_imported_successfully">Certificate successfully imported</string>
+    <string name="cert_import_failed">Failed to import certificate</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>

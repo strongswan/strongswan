@@ -419,24 +419,18 @@ public class CharonVpnService extends VpnService implements Runnable
 	 * Function called via JNI to generate a list of DER encoded CA certificates
 	 * as byte array.
 	 *
-	 * @param hash optional alias (only hash part), if given matching certificates are returned
 	 * @return a list of DER encoded CA certificates
 	 */
-	private byte[][] getTrustedCertificates(String hash)
+	private byte[][] getTrustedCertificates()
 	{
 		ArrayList<byte[]> certs = new ArrayList<byte[]>();
 		TrustedCertificateManager certman = TrustedCertificateManager.getInstance();
 		try
 		{
-			if (hash != null)
+			String alias = this.mCurrentCertificateAlias;
+			if (alias != null)
 			{
-				String alias = "user:" + hash + ".0";
 				X509Certificate cert = certman.getCACertificateFromAlias(alias);
-				if (cert == null)
-				{
-					alias = "system:" + hash + ".0";
-					cert = certman.getCACertificateFromAlias(alias);
-				}
 				if (cert == null)
 				{
 					return null;
@@ -445,22 +439,9 @@ public class CharonVpnService extends VpnService implements Runnable
 			}
 			else
 			{
-				String alias = this.mCurrentCertificateAlias;
-				if (alias != null)
+				for (X509Certificate cert : certman.getAllCACertificates().values())
 				{
-					X509Certificate cert = certman.getCACertificateFromAlias(alias);
-					if (cert == null)
-					{
-						return null;
-					}
 					certs.add(cert.getEncoded());
-				}
-				else
-				{
-					for (X509Certificate cert : certman.getAllCACertificates().values())
-					{
-						certs.add(cert.getEncoded());
-					}
 				}
 			}
 		}

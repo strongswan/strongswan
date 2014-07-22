@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,6 +17,7 @@
 
 #include "../android_jni.h"
 #include <utils/debug.h>
+#include <asn1/asn1.h>
 
 typedef struct private_private_key_t private_private_key_t;
 
@@ -57,35 +58,62 @@ METHOD(private_key_t, sign, bool,
 {
 	JNIEnv *env;
 	jmethodID method_id;
-	const char *method;
+	const char *method = NULL;
 	jstring jmethod;
 	jobject jsignature;
 	jbyteArray jdata, jsigarray;
 
-	switch (scheme)
+	switch (this->pubkey->get_type(this->pubkey))
 	{
-		case SIGN_RSA_EMSA_PKCS1_MD5:
-			method = "MD5withRSA";
+		case KEY_RSA:
+			switch (scheme)
+			{
+				case SIGN_RSA_EMSA_PKCS1_MD5:
+					method = "MD5withRSA";
+					break;
+				case SIGN_RSA_EMSA_PKCS1_SHA1:
+					method = "SHA1withRSA";
+					break;
+				case SIGN_RSA_EMSA_PKCS1_SHA224:
+					method = "SHA224withRSA";
+					break;
+				case SIGN_RSA_EMSA_PKCS1_SHA256:
+					method = "SHA256withRSA";
+					break;
+				case SIGN_RSA_EMSA_PKCS1_SHA384:
+					method = "SHA384withRSA";
+					break;
+				case SIGN_RSA_EMSA_PKCS1_SHA512:
+					method = "SHA512withRSA";
+					break;
+				default:
+					break;
+			}
 			break;
-		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			method = "SHA1withRSA";
-			break;
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			method = "SHA224withRSA";
-			break;
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			method = "SHA256withRSA";
-			break;
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			method = "SHA384withRSA";
-			break;
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			method = "SHA512withRSA";
+		case KEY_ECDSA:
+			switch (scheme)
+			{
+				case SIGN_ECDSA_256:
+					method = "SHA256withECDSA";
+					break;
+				case SIGN_ECDSA_384:
+					method = "SHA384withECDSA";
+					break;
+				case SIGN_ECDSA_521:
+					method = "SHA512withECDSA";
+					break;
+				default:
+					break;
+			}
 			break;
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported via JNI",
-				 signature_scheme_names, scheme);
-			return FALSE;
+			break;
+	}
+	if (!method)
+	{
+		DBG1(DBG_LIB, "signature scheme %N not supported via JNI",
+			 signature_scheme_names, scheme);
+		return FALSE;
 	}
 
 	androidjni_attach_thread(&env);
@@ -142,7 +170,54 @@ METHOD(private_key_t, sign, bool,
 	{
 		goto failed;
 	}
-	*signature = chunk_from_byte_array(env, jsigarray);
+	if (this->pubkey->get_type(this->pubkey) == KEY_ECDSA)
+	{
+		chunk_t encoded, parse, r, s;
+		size_t len = 0;
+
+		switch (scheme)
+		{
+			case SIGN_ECDSA_256:
+				len = 32;
+				break;
+			case SIGN_ECDSA_384:
+				len = 48;
+				break;
+			case SIGN_ECDSA_521:
+				len = 66;
+				break;
+			default:
+				break;
+		}
+
+		/* we get an ASN.1 encoded sequence of integers r and s */
+		parse = encoded = chunk_from_byte_array(env, jsigarray);
+		if (asn1_unwrap(&parse, &parse) != ASN1_SEQUENCE ||
+			asn1_unwrap(&parse, &r) != ASN1_INTEGER ||
+			asn1_unwrap(&parse, &s) != ASN1_INTEGER)
+		{
+			chunk_free(&encoded);
+			goto failed;
+		}
+		r = chunk_skip_zero(r);
+		s = chunk_skip_zero(s);
+		if (r.len > len || s.len > len)
+		{
+			chunk_free(&encoded);
+			goto failed;
+		}
+
+		/* concatenate r and s (forced to the defined length) */
+		*signature = chunk_alloc(2*len);
+		memset(signature->ptr, 0, signature->len);
+		memcpy(signature->ptr + (len - r.len), r.ptr, r.len);
+		memcpy(signature->ptr + len + (len - s.len), s.ptr, s.len);
+		chunk_free(&encoded);
+	}
+	else
+	{
+		*signature = chunk_from_byte_array(env, jsigarray);
+	}
 	androidjni_detach_thread();
 	return TRUE;
 
@@ -157,7 +232,7 @@ failed:
 METHOD(private_key_t, get_type, key_type_t,
 	private_private_key_t *this)
 {
-	return KEY_RSA;
+	return this->pubkey->get_type(this->pubkey);
 }
 
 METHOD(private_key_t, decrypt, bool,
