@@ -1246,6 +1246,8 @@ METHOD(task_manager_t, process_message, status_t,
 METHOD(task_manager_t, queue_task, void,
 	private_task_manager_t *this, task_t *task)
 {
+	int pos = ARRAY_TAIL;
+
 	if (task->get_type(task) == TASK_IKE_MOBIKE)
 	{	/*  there is no need to queue more than one mobike task */
 		enumerator_t *enumerator;
@@ -1262,9 +1264,12 @@ METHOD(task_manager_t, queue_task, void,
 			}
 		}
 		enumerator->destroy(enumerator);
+		/* insert MOBIKE tasks first as we currently might not have a usable
+		 * path to initiate any other tasks */
+		pos = ARRAY_HEAD;
 	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
-	array_insert(this->queued_tasks, ARRAY_TAIL, task);
+	array_insert(this->queued_tasks, pos, task);
 }
 
 /**
