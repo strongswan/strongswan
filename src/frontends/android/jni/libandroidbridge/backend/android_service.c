@@ -381,14 +381,8 @@ METHOD(listener_t, child_updown, bool,
 		}
 		else
 		{
-			if (ike_sa->has_condition(ike_sa, COND_REAUTHENTICATING))
-			{	/* we ignore this during reauthentication */
-				return TRUE;
-			}
-			close_tun_device(this);
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_DOWN);
-			return FALSE;
 		}
 	}
 	return TRUE;
@@ -398,7 +392,8 @@ METHOD(listener_t, ike_updown, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, bool up)
 {
 	/* this callback is only registered during initiation, so if the IKE_SA
-	 * goes down we assume an authentication error */
+	 * goes down we assume some kind of authentication error, more specific
+	 * errors are catched in the alert() handler */
 	if (this->ike_sa == ike_sa && !up)
 	{
 		charonservice->update_status(charonservice,
@@ -458,6 +453,11 @@ METHOD(listener_t, ike_reestablish, bool,
 		this->ike_sa = new;
 		/* re-register hook to detect initiation failures */
 		this->public.listener.ike_updown = _ike_updown;
+		/* if the IKE_SA got deleted by the responder we get the child_down()
+		 * event on the old IKE_SA after this hook has been called, so they
+		 * get ignored and thus we trigger the event here */
+		charonservice->update_status(charonservice,
+									 CHARONSERVICE_CHILD_STATE_DOWN);
 		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
