@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -77,6 +77,11 @@ struct private_ike_mobike_t {
 	 * additional addresses got updated
 	 */
 	bool addresses_updated;
+
+	/**
+	 * whether the pending updates counter was increased
+	 */
+	bool pending_update;
 };
 
 /**
@@ -481,9 +486,7 @@ METHOD(task_t, process_i, status_t,
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
-		u_int32_t updates = this->ike_sa->get_pending_updates(this->ike_sa) - 1;
-		this->ike_sa->set_pending_updates(this->ike_sa, updates);
-		if (updates > 0)
+		if (this->ike_sa->get_pending_updates(this->ike_sa) > 1)
 		{
 			/* newer update queued, ignore this one */
 			return SUCCESS;
@@ -560,7 +563,6 @@ METHOD(task_t, process_i, status_t,
 					this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				}
 				this->check = FALSE;
-				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
 			}
 		}
@@ -573,8 +575,12 @@ METHOD(ike_mobike_t, addresses, void,
 	   private_ike_mobike_t *this)
 {
 	this->address = TRUE;
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, roam, void,
@@ -582,8 +588,12 @@ METHOD(ike_mobike_t, roam, void,
 {
 	this->check = TRUE;
 	this->address = address;
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, dpd, void,
@@ -593,8 +603,12 @@ METHOD(ike_mobike_t, dpd, void,
 	{
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	}
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, is_probing, bool,
@@ -623,6 +637,11 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	   private_ike_mobike_t *this)
 {
+	if (this->pending_update)
+	{
+		this->ike_sa->set_pending_updates(this->ike_sa,
+						this->ike_sa->get_pending_updates(this->ike_sa) - 1);
+	}
 	chunk_free(&this->cookie2);
 	if (this->natd)
 	{
