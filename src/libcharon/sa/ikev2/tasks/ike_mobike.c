@@ -632,6 +632,11 @@ METHOD(task_t, migrate, void,
 	{
 		this->natd->task.migrate(&this->natd->task, ike_sa);
 	}
+	if (this->pending_update)
+	{
+		this->ike_sa->set_pending_updates(this->ike_sa,
+						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(task_t, destroy, void,
