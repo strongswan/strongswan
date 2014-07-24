@@ -22,11 +22,36 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <netinet/tcp.h>
 #ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
 #endif
+
+/**
+ * TCP header, defined here because platforms disagree regarding member names
+ * and unfortunately Android does not define a variant with BSD names.
+ */
+struct tcphdr {
+	u_int16_t source;
+	u_int16_t dest;
+	u_int32_t seq;
+	u_int32_t ack_seq;
+	u_int16_t flags;
+	u_int16_t window;
+	u_int16_t check;
+	u_int16_t urg_ptr;
+} __attribute__((packed));
+
+/**
+ * UDP header, similar to the TCP header the system headers disagree on member
+ * names.  Linux uses a union and on Android we could define __FAVOR_BSD to get
+ * the BSD member names, but this is simpler and more consistent with the above.
+ */
+struct udphdr {
+	u_int16_t source;
+	u_int16_t dest;
+	u_int16_t len;
+	u_int16_t check;
+} __attribute__((packed));
 
 typedef struct private_ip_packet_t private_ip_packet_t;
 
