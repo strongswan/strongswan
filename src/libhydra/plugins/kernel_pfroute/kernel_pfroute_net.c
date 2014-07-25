@@ -876,6 +876,37 @@ static void process_link(private_kernel_pfroute_net_t *this,
 }
 
 /**
+ * Process an RTM_IFANNOUNCE message from the kernel
+ */
+static void process_announce(private_kernel_pfroute_net_t *this,
+							 struct if_announcemsghdr *msg)
+{
+	enumerator_t *enumerator;
+	iface_entry_t *iface;
+
+	if (msg->ifan_what != IFAN_DEPARTURE)
+	{
+		/* we handle new interfaces in process_link() */
+		return;
+	}
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &iface))
+	{
+		if (iface->ifindex == msg->ifan_index)
+		{
+			DBG1(DBG_KNL, "interface %s disappeared", iface->ifname);
+			this->ifaces->remove_at(this->ifaces, enumerator);
+			iface_entry_destroy(iface);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
+/**
  * Process an RTM_*ROUTE message from the kernel
  */
 static void process_route(private_kernel_pfroute_net_t *this,
@@ -895,6 +926,7 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 			struct rt_msghdr rtm;
 			struct if_msghdr ifm;
 			struct ifa_msghdr ifam;
+			struct if_announcemsghdr ifanm;
 		};
 		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
 	} msg;
@@ -935,6 +967,9 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 		case RTM_IFINFO:
 			hdrlen = sizeof(msg.ifm);
 			break;
+		case RTM_IFANNOUNCE:
+			hdrlen = sizeof(msg.ifanm);
+			break;
 		case RTM_ADD:
 		case RTM_DELETE:
 		case RTM_GET:
@@ -956,6 +991,9 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 			break;
 		case RTM_IFINFO:
 			process_link(this, &msg.ifm);
+			break;
+		case RTM_IFANNOUNCE:
+			process_announce(this, &msg.ifanm);
 			break;
 		case RTM_ADD:
 		case RTM_DELETE:
