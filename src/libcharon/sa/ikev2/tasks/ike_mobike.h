@@ -79,6 +79,11 @@ struct ike_mobike_t {
 	 * @return				TRUE if task is probing
 	 */
 	bool (*is_probing)(ike_mobike_t *this);
+
+	/**
+	 * Enable probing for routability.
+	 */
+	void (*enable_probing)(ike_mobike_t *this);
 };
 
 /**

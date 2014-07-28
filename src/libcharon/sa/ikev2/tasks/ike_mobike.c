@@ -630,6 +630,12 @@ METHOD(ike_mobike_t, is_probing, bool,
 	return this->check;
 }
 
+METHOD(ike_mobike_t, enable_probing, void,
+	private_ike_mobike_t *this)
+{
+	this->check = TRUE;
+}
+
 METHOD(task_t, get_type, task_type_t,
 	   private_ike_mobike_t *this)
 {
@@ -687,6 +693,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 			.dpd = _dpd,
 			.transmit = _transmit,
 			.is_probing = _is_probing,
+			.enable_probing = _enable_probing,
 		},
 		.ike_sa = ike_sa,
 		.initiator = initiator,
