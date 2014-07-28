@@ -161,13 +161,13 @@ connections.<conn>.send_certreq = yes
 	of the initial IKE packets.
 
 connections.<conn>.send_cert = ifasked
-	Send certificate payloads (_yes_, _no_ or _ifasked_).
+	Send certificate payloads (_always_, _never_ or _ifasked_).
 
 	Send certificate payloads when using certificate authentication. With the
 	default of _ifasked_ the daemon sends certificate payloads only if
-	certificate requests have been received. _no_ disables sending of
-	certificate payloads, _yes_ always sends certificate payloads whenever
-	certificate authentication is used.
+	certificate requests have been received. _never_ disables sending of
+	certificate payloads altogether, _always_ causes certificate payloads to be
+	sent unconditionally whenever certificate authentication is used.
 
 connections.<conn>.keyingtries = 1
 	Number of retransmission sequences to perform during initial connect.
