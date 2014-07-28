@@ -313,10 +313,24 @@ METHOD(ike_mobike_t, transmit, void,
 	enumerator_t *enumerator;
 	ike_cfg_t *ike_cfg;
 	packet_t *copy;
+	int family = AF_UNSPEC;
 
 	if (!this->check)
 	{
 		return;
+	}
+
+	switch (charon->socket->supported_families(charon->socket))
+	{
+		case SOCKET_FAMILY_IPV4:
+			family = AF_INET;
+			break;
+		case SOCKET_FAMILY_IPV6:
+			family = AF_INET6;
+			break;
+		case SOCKET_FAMILY_BOTH:
+		case SOCKET_FAMILY_NONE:
+			break;
 	}
 
 	me_old = this->ike_sa->get_my_host(this->ike_sa);
@@ -326,15 +340,14 @@ METHOD(ike_mobike_t, transmit, void,
 	enumerator = this->ike_sa->create_peer_address_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&other))
 	{
+		if (family != AF_UNSPEC && other->get_family(other) != family)
+		{
+			continue;
+		}
 		me = hydra->kernel_interface->get_source_addr(
 										hydra->kernel_interface, other, NULL);
 		if (me)
 		{
-			if (me->get_family(me) != other->get_family(other))
-			{
-				me->destroy(me);
-				continue;
-			}
 			/* reuse port for an active address, 4500 otherwise */
 			apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg), TRUE);
 			other = other->clone(other);
