@@ -120,6 +120,11 @@ struct private_task_manager_t {
 		 */
 		exchange_type_t type;
 
+		/**
+		 * TRUE if exchange was deferred because no path was available
+		 */
+		bool deferred;
+
 	} initiating;
 
 	/**
@@ -289,7 +294,14 @@ METHOD(task_manager_t, retransmit, status_t,
 				DBG1(DBG_IKE, "path probing attempt %d",
 					 this->initiating.retransmitted);
 			}
-			mobike->transmit(mobike, this->initiating.packet);
+			if (!mobike->transmit(mobike, this->initiating.packet))
+			{
+				DBG1(DBG_IKE, "no route found to reach peer, path probing "
+					 "deferred");
+				this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
+				this->initiating.deferred = TRUE;
+				return SUCCESS;
+			}
 		}
 
 		this->initiating.retransmitted++;
@@ -315,6 +327,12 @@ METHOD(task_manager_t, initiate, status_t,
 		DBG2(DBG_IKE, "delaying task initiation, %N exchange in progress",
 				exchange_type_names, this->initiating.type);
 		/* do not initiate if we already have a message in the air */
+		if (this->initiating.deferred)
+		{	/* re-initiate deferred exchange */
+			this->initiating.deferred = FALSE;
+			this->initiating.retransmitted = 0;
+			return retransmit(this, this->initiating.mid);
+		}
 		return SUCCESS;
 	}
 
@@ -458,6 +476,7 @@ METHOD(task_manager_t, initiate, status_t,
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
+	this->initiating.deferred = FALSE;
 
 	enumerator = array_create_enumerator(this->active_tasks);
 	while (enumerator->enumerate(enumerator, &task))
