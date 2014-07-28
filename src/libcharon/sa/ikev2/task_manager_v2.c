@@ -1373,7 +1373,25 @@ METHOD(task_manager_t, queue_mobike, void,
 	mobike = ike_mobike_create(this->ike_sa, TRUE);
 	if (roam)
 	{
+		enumerator_t *enumerator;
+		task_t *current;
+
 		mobike->roam(mobike, address);
+
+		/* enable path probing for a currently active MOBIKE task.  This might
+		 * not be the case if an address appeared on a new interface while the
+		 * current address is not working but has not yet disappeared. */
+		enumerator = array_create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (current->get_type(current) == TASK_IKE_MOBIKE)
+			{
+				ike_mobike_t *active = (ike_mobike_t*)current;
+				active->enable_probing(active);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
 	else
 	{
