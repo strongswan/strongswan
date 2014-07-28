@@ -241,16 +241,12 @@ METHOD(task_manager_t, retransmit, status_t,
 			if (task->get_type(task) == TASK_IKE_MOBIKE)
 			{
 				mobike = (ike_mobike_t*)task;
-				if (!mobike->is_probing(mobike))
-				{
-					mobike = NULL;
-				}
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 
-		if (mobike == NULL)
+		if (!mobike || !mobike->is_probing(mobike))
 		{
 			if (this->initiating.retransmitted <= this->retransmit_tries)
 			{
@@ -273,8 +269,19 @@ METHOD(task_manager_t, retransmit, status_t,
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND,
 								   this->initiating.packet);
 			}
-			packet = this->initiating.packet->clone(this->initiating.packet);
-			charon->sender->send(charon->sender, packet);
+			if (!mobike)
+			{
+				packet = this->initiating.packet->clone(this->initiating.packet);
+				charon->sender->send(charon->sender, packet);
+			}
+			else if (!mobike->transmit(mobike, this->initiating.packet))
+			{
+				DBG1(DBG_IKE, "no route found to reach peer, MOBIKE update "
+					 "deferred");
+				this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
+				this->initiating.deferred = TRUE;
+				return SUCCESS;
+			}
 		}
 		else
 		{	/* for routeability checks, we use a more aggressive behavior */
