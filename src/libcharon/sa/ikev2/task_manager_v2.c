@@ -274,13 +274,20 @@ METHOD(task_manager_t, retransmit, status_t,
 				packet = this->initiating.packet->clone(this->initiating.packet);
 				charon->sender->send(charon->sender, packet);
 			}
-			else if (!mobike->transmit(mobike, this->initiating.packet))
+			else
 			{
-				DBG1(DBG_IKE, "no route found to reach peer, MOBIKE update "
-					 "deferred");
-				this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
-				this->initiating.deferred = TRUE;
-				return SUCCESS;
+				if (!mobike->transmit(mobike, this->initiating.packet))
+				{
+					DBG1(DBG_IKE, "no route found to reach peer, MOBIKE update "
+						 "deferred");
+					this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
+					this->initiating.deferred = TRUE;
+					return SUCCESS;
+				}
+				else if (mobike->is_probing(mobike))
+				{
+					timeout = ROUTEABILITY_CHECK_INTERVAL;
+				}
 			}
 		}
 		else
