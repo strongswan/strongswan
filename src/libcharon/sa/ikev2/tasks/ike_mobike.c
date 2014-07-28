@@ -316,9 +316,25 @@ METHOD(ike_mobike_t, transmit, bool,
 	int family = AF_UNSPEC;
 	bool found = FALSE;
 
+	me_old = this->ike_sa->get_my_host(this->ike_sa);
+	other_old = this->ike_sa->get_other_host(this->ike_sa);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+
 	if (!this->check)
 	{
-		return TRUE;
+		me = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													  other_old, me_old);
+		if (me)
+		{
+			if (me->ip_equals(me, me_old))
+			{
+				charon->sender->send(charon->sender, packet->clone(packet));
+				me->destroy(me);
+				return TRUE;
+			}
+			me->destroy(me);
+		}
+		this->check = TRUE;
 	}
 
 	switch (charon->socket->supported_families(charon->socket))
@@ -333,10 +349,6 @@ METHOD(ike_mobike_t, transmit, bool,
 		case SOCKET_FAMILY_NONE:
 			break;
 	}
-
-	me_old = this->ike_sa->get_my_host(this->ike_sa);
-	other_old = this->ike_sa->get_other_host(this->ike_sa);
-	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	enumerator = this->ike_sa->create_peer_address_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&other))
