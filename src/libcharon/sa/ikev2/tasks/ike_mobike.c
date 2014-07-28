@@ -306,7 +306,7 @@ static void apply_port(host_t *host, host_t *old, u_int16_t port, bool local)
 	host->set_port(host, port);
 }
 
-METHOD(ike_mobike_t, transmit, void,
+METHOD(ike_mobike_t, transmit, bool,
 	   private_ike_mobike_t *this, packet_t *packet)
 {
 	host_t *me, *other, *me_old, *other_old;
@@ -314,10 +314,11 @@ METHOD(ike_mobike_t, transmit, void,
 	ike_cfg_t *ike_cfg;
 	packet_t *copy;
 	int family = AF_UNSPEC;
+	bool found = FALSE;
 
 	if (!this->check)
 	{
-		return;
+		return TRUE;
 	}
 
 	switch (charon->socket->supported_families(charon->socket))
@@ -357,9 +358,11 @@ METHOD(ike_mobike_t, transmit, void,
 			copy->set_source(copy, me);
 			copy->set_destination(copy, other);
 			charon->sender->send(charon->sender, copy);
+			found = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	return found;
 }
 
 METHOD(task_t, build_i, status_t,

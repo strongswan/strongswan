@@ -70,8 +70,9 @@ struct ike_mobike_t {
 	 * probing.
 	 *
 	 * @param packet		the packet to transmit
+	 * @return				TRUE if transmitted, FALSE if no path found
 	 */
-	void (*transmit)(ike_mobike_t *this, packet_t *packet);
+	bool (*transmit)(ike_mobike_t *this, packet_t *packet);
 
 	/**
 	 * Check if this task is probing for routability.
