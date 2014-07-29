@@ -622,9 +622,9 @@ if MONOLITHIC
 endif
 endif
 
-if USE_EXTERNAL_AUTHORIZATION
-  SUBDIRS += plugins/external_authorization
+if USE_EXT_AUTH
+  SUBDIRS += plugins/ext_auth
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/external_authorization/libstrongswan-external-authorization.la
+  libcharon_la_LIBADD += plugins/ext_auth/libstrongswan-external-authorization.la
 endif
 endif

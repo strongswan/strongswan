@@ -33,6 +33,6 @@ struct external_authorization_listener_t {
 /**
  * Create a external_authorization_listener instance.
  */
-external_authorization_listener_t *external_authorization_listener_create();
+external_authorization_listener_t *external_authorization_listener_create(char* program_path);
 
 #endif /** EXTERNAL_AUTHORIZATION_LISTENER_H_ @}*/

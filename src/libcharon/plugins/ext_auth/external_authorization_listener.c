@@ -18,11 +18,6 @@ struct private_external_authorization_listener_t {
 	external_authorization_listener_t public;
 
 	/**
-	 * External authorization enabled
-	 */
-	bool enabled;
-
-	/**
 	 * Path to authorization script
 	 */
 	char *path;
@@ -34,19 +29,6 @@ METHOD(listener_t, authorize, bool,
 {
 	int authorized = 0;
 
-	if(!this->enabled)
-	{
-		DBG2(DBG_CFG, "external-authorization is disabled");
-		*success = TRUE;
-		return TRUE;
-	}
-	/* check if path is empty string or NULL */
-	if (!strcmp(this->path, "") || this->path == NULL)
-	{
-		DBG1(DBG_CFG, "ERROR: no authorization script specified");
-		*success = FALSE;
-		return FALSE;
-	}
 	if (final)
 	{
 		identification_t *peer_id;
@@ -102,7 +84,7 @@ METHOD(external_authorization_listener_t, set_path, void,
 /**
  * See header
  */
-external_authorization_listener_t *external_authorization_listener_create()
+external_authorization_listener_t *external_authorization_listener_create(char* program_path)
 {
 	private_external_authorization_listener_t *this;
 
@@ -114,7 +96,7 @@ external_authorization_listener_t *external_authorization_listener_create()
 			.set_active = _set_active,
 		},
 		.enabled = lib->settings->get_bool(lib->settings, "%s.plugins.external-authorization.enable", FALSE, lib->ns),
-		.path = lib->settings->get_str(lib->settings, "%s.plugins.external-authorization.path", "", lib->ns),
+		.path = program_path;
 	);
 
 	return &this->public;

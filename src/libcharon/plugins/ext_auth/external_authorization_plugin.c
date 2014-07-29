@@ -33,10 +33,14 @@ METHOD(plugin_t, get_name, char*,
  */
 static bool plugin_cb(private_external_authorization_plugin_t *this,
 					  plugin_feature_t *feature, bool reg, void *cb_data)
-{
+{	
 	if (reg)
 	{
-		charon->bus->add_listener(charon->bus, &this->listener->listener);
+		/* check if path is empty string or NULL */
+		if(this->path == NULL || !strcmp(this->path, ""))
+		{
+			charon->bus->add_listener(charon->bus, &this->listener->listener);
+		}
 	}
 	else
 	{
@@ -70,6 +74,7 @@ plugin_t *external_authorization_plugin_create()
 				.get_features = _get_features,
 			},
 		},
+		.path = lib->settings->get_str(lib->settings, "%s.plugins.external-authorization.path", "", lib->ns),
 		.listener = external_authorization_listener_create(),
 	);
 
