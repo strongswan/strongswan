@@ -20,6 +20,11 @@ struct private_external_authorization_plugin_t {
 	 * Listener verifying peers during authorization
 	 */
 	external_authorization_listener_t *listener;
+
+	/**
+	 * Path to authorization program
+	 */
+	char *path;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -75,7 +80,7 @@ plugin_t *external_authorization_plugin_create()
 			},
 		},
 		.path = lib->settings->get_str(lib->settings, "%s.plugins.external-authorization.path", "", lib->ns),
-		.listener = external_authorization_listener_create(),
+		.listener = external_authorization_listener_create(this->path),
 	);
 
 	return &this->public.plugin;

@@ -18,7 +18,7 @@ struct private_external_authorization_listener_t {
 	external_authorization_listener_t public;
 
 	/**
-	 * Path to authorization script
+	 * Path to authorization program
 	 */
 	char *path;
 };
@@ -65,14 +65,6 @@ METHOD(listener_t, authorize, bool,
 	return TRUE;
 }
 
-METHOD(external_authorization_listener_t, set_active, void,
-	private_external_authorization_listener_t *this, bool enable)
-{
-	DBG1(DBG_CFG, "external_authorization functionality %s%sabled",
-		(this->enabled == enable) ? "was already " : "", enable ? "en" : "dis");
-	this->enabled = enable;
-}
-
 METHOD(external_authorization_listener_t, set_path, void,
 	private_external_authorization_listener_t *this, char* path)
 {
@@ -93,10 +85,8 @@ external_authorization_listener_t *external_authorization_listener_create(char* 
 			.listener = {
 				.authorize = _authorize,
 			},
-			.set_active = _set_active,
 		},
-		.enabled = lib->settings->get_bool(lib->settings, "%s.plugins.external-authorization.enable", FALSE, lib->ns),
-		.path = program_path;
+		.path = program_path,
 	);
 
 	return &this->public;
