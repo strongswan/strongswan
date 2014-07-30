@@ -60,44 +60,45 @@ METHOD(listener_t, authorize, bool,
 		my_id = ike_sa->get_my_id(ike_sa);
 		peer_id = ike_sa->get_other_id(ike_sa);
 		eap_peer_id = ike_sa->get_other_eap_id(ike_sa);
-		if ( (peer_id && my_id && peer_id->equals(peer_id, my_id)) || (eap_peer_id && my_id && eap_peer_id->equals(eap_peer_id, my_id)) )
+		if( peer_id == NULL || eap_peer_id == NULL )
+		{
+			DBG1(DBG_CFG, "Fatal Error!, empty identities");
+			*success = FALSE;
+			return FALSE;
+		}
+		if ( (peer_id && my_id && peer_id->equals(peer_id, my_id)) || 
+			(eap_peer_id && my_id && eap_peer_id->equals(eap_peer_id, my_id)) )
 		{
 			DBG2(DBG_CFG, "called for my_id: '%Y'", my_id);
 			*success = TRUE;
 			return TRUE;
 		}
-		/*if eap_peer_id doesn't equal peer_id then we are called after an EAP round*/
-		if (!eap_peer_id->equals(eap_peer_id, peer_id))
+		/*if eap_peer_id doesn't equal peer_id then we are called after an EAP round, else generic XAuth*/
 		{
 			char id_buf[512];
-			char cmd_buf[1024];
-			DBG2(DBG_CFG, "peer identity received: '%Y'", eap_peer_id);
-			snprintf(id_buf, sizeof(id_buf), "%Y", eap_peer_id);
+			char cmd_buf[2048];
+			identification_t* generic_id = 
+				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id;
+			memset(id_buf, 0, sizeof(id_buf));
+			memset(cmd_buf, 0, sizeof(cmd_buf));
+			DBG2(DBG_CFG, "peer identity received: '%Y'", generic_id);
+			snprintf(id_buf, sizeof(id_buf) - 1, "%Y", generic_id);
 			DBG2(DBG_CFG, "calling program: %s", this->path);
-			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" \"%s\"", this->path, (char*)id_buf);
-			authorized = WEXITSTATUS(system(cmd_buf));
-			DBG2(DBG_CFG, "script returned: %d", authorized);
-		}
-		/*else it is an XAuth round, make sure peer_id isn't NULL*/
-		else if (peer_id)
-		{
-			char id_buf[512];
-			char cmd_buf[1024];
-			DBG2(DBG_CFG, "peer identity received: '%Y'", peer_id);
-			snprintf(id_buf, sizeof(id_buf), "%Y", peer_id);
-			DBG2(DBG_CFG, "calling program: %s", this->path);
-			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" \"%s\"", this->path, (char*)id_buf);
+			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" %s \"%s\"", this->path,
+				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? "eap" : "ike", (char*)id_buf);
 			authorized = WEXITSTATUS(system(cmd_buf));
 			DBG2(DBG_CFG, "script returned: %d", authorized);
 		}
 		if (authorized == 0)
 		{
-			DBG2(DBG_CFG, "peer identity '%Y' authorized", (!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
+			DBG2(DBG_CFG, "peer identity '%Y' authorized", 
+				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
 			*success = TRUE;
 		}
 		else
 		{
-			DBG1(DBG_CFG, "peer identity '%Y' not authorized", (!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
+			DBG1(DBG_CFG, "peer identity '%Y' not authorized",
+				 (!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
 			*success = FALSE;
 		}
 	}
