@@ -125,6 +125,8 @@ static int open_socket(int family)
 												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy for proxy socket failed");
+		close(skt);
+		return -1;
 	}
 	return skt;
 }
