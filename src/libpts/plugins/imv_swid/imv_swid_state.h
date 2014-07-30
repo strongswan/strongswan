@@ -28,7 +28,7 @@
 #include <swid/swid_inventory.h>
 #include <library.h>
 
-#include <json/json.h>
+#include <json.h>
 
 typedef struct imv_swid_state_t imv_swid_state_t;
 typedef enum imv_swid_handshake_state_t imv_swid_handshake_state_t;

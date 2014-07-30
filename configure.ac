@@ -876,8 +876,10 @@ if test x$tss = xtrousers; then
 fi
 
 if test x$imv_swid = xtrue; then
-	AC_CHECK_LIB([json],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([JSON library libjson not found])],[])
-	AC_CHECK_HEADER([json/json.h],,[AC_MSG_ERROR([JSON header json/json.h not found!])])
+	PKG_CHECK_MODULES(json, [json-c], [],
+		[PKG_CHECK_MODULES(json, [json])])
+	AC_SUBST(json_CFLAGS)
+	AC_SUBST(json_LIBS)
 fi
 
 if test x$dumm = xtrue; then

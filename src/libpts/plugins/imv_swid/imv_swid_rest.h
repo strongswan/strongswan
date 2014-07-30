@@ -26,7 +26,7 @@
 
 #include <library.h>
 
-#include <json/json.h>
+#include <json.h>
 
 typedef struct imv_swid_rest_t imv_swid_rest_t;
 
