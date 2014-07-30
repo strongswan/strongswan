@@ -73,7 +73,7 @@ METHOD(listener_t, authorize, bool,
 			DBG2(DBG_CFG, "peer identity received: '%Y'", eap_peer_id);
 			snprintf(id_buf, sizeof(id_buf), "%Y", eap_peer_id);
 			DBG2(DBG_CFG, "calling program: %s", this->path);
-			snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", this->path, (char*)id_buf);
+			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" \"%s\"", this->path, (char*)id_buf);
 			authorized = WEXITSTATUS(system(cmd_buf));
 			DBG2(DBG_CFG, "script returned: %d", authorized);
 		}
@@ -84,7 +84,7 @@ METHOD(listener_t, authorize, bool,
 			DBG2(DBG_CFG, "peer identity received: '%Y'", peer_id);
 			snprintf(id_buf, sizeof(id_buf), "%Y", peer_id);
 			DBG2(DBG_CFG, "calling program: %s", this->path);
-			snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", this->path, (char*)id_buf);
+			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" \"%s\"", this->path, (char*)id_buf);
 			authorized = WEXITSTATUS(system(cmd_buf));
 			DBG2(DBG_CFG, "script returned: %d", authorized);
 		}
