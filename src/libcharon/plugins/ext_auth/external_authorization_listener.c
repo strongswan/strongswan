@@ -55,9 +55,9 @@ METHOD(listener_t, authorize, bool,
 
 	if (final)
 	{
-		identification_t *my_id;
-		identification_t *peer_id;
-		identification_t *eap_peer_id;
+		identification_t *my_id = NULL;
+		identification_t *peer_id = NULL;
+		identification_t *eap_peer_id = NULL;
 		my_id = ike_sa->get_my_id(ike_sa);
 		peer_id = ike_sa->get_other_id(ike_sa);
 		eap_peer_id = ike_sa->get_other_eap_id(ike_sa);
@@ -79,7 +79,7 @@ METHOD(listener_t, authorize, bool,
 			char id_buf[512];
 			char cmd_buf[2048];
 			char prog_out[1024];
-			FILE* fp;
+			FILE* fp = NULL;
 			identification_t* generic_id = 
 				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id;
 			memset(id_buf, 0, sizeof(id_buf));
