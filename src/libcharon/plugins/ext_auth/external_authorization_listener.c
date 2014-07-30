@@ -54,12 +54,12 @@ METHOD(listener_t, authorize, bool,
 
 	if (final)
 	{
-		identification_t *eap_peer_id;
-		identification_t *peer_id;
 		identification_t *my_id;
+		identification_t *peer_id;
+		identification_t *eap_peer_id;
 		my_id = ike_sa->get_my_id(ike_sa);
-		eap_peer_id = ike_sa->get_other_id(ike_sa);
 		peer_id = ike_sa->get_other_id(ike_sa);
+		eap_peer_id = ike_sa->get_other_eap_id(ike_sa);
 		if ( (peer_id && my_id && peer_id->equals(peer_id, my_id)) || (eap_peer_id && my_id && eap_peer_id->equals(eap_peer_id, my_id)) )
 		{
 			DBG2(DBG_CFG, "called for my_id: '%Y'", my_id);
@@ -100,13 +100,6 @@ METHOD(listener_t, authorize, bool,
 		}
 	}
 	return TRUE;
-}
-
-METHOD(external_authorization_listener_t, set_path, void,
-	private_external_authorization_listener_t *this, char* path)
-{
-	DBG1(DBG_CFG, "New authorization script: %s", path);
-	this->path = path;
 }
 
 
