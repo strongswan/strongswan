@@ -621,3 +621,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_noauth/libstrongswan-xauth-noauth.la
 endif
 endif
+
+if USE_EXT_AUTH
+  SUBDIRS += plugins/ext_auth
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/ext_auth/libstrongswan-external-authorization.la
+endif
+endif
