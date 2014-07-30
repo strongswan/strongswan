@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <daemon.h>
 #include <printf.h>
+#include <stdio.h>
 #include <sys/wait.h>
 
 typedef struct private_external_authorization_listener_t private_external_authorization_listener_t;
@@ -77,16 +78,31 @@ METHOD(listener_t, authorize, bool,
 		{
 			char id_buf[512];
 			char cmd_buf[2048];
+			char prog_out[1024];
+			FILE* fp;
 			identification_t* generic_id = 
 				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id;
 			memset(id_buf, 0, sizeof(id_buf));
 			memset(cmd_buf, 0, sizeof(cmd_buf));
+			memset(cmd_buf, 0, sizeof(prog_out));
 			DBG2(DBG_CFG, "peer identity received: '%Y'", generic_id);
 			snprintf(id_buf, sizeof(id_buf) - 1, "%Y", generic_id);
 			DBG2(DBG_CFG, "calling program: %s", this->path);
-			snprintf(cmd_buf, sizeof(cmd_buf), "\"%s\" %s \"%s\"", this->path,
+			snprintf(cmd_buf, sizeof(cmd_buf) - 1, "\"%s\" %s \"%s\"", this->path,
 				(!eap_peer_id->equals(eap_peer_id, peer_id)) ? "eap" : "ike", (char*)id_buf);
-			authorized = WEXITSTATUS(system(cmd_buf));
+			fp = popen(cmd_buf, "r");
+			if ( fp == NULL )
+			{
+				*success = FALSE;
+				DBG1(DBG_CFG, "Fatal Error!, could not execute program (check permissions?)");
+				return FALSE;
+			}
+			setvbuf(fp, NULL, _IONBF, 0);
+			while (fgets(prog_out, sizeof(prog_out), fp) != NULL)
+			{
+				DBG2(DBG_CFG, prog_out);
+			}
+			authorized = WEXITSTATUS(pclose(fp));
 			DBG2(DBG_CFG, "script returned: %d", authorized);
 		}
 		if (authorized == 0)
