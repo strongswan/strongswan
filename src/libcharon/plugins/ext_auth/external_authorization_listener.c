@@ -66,7 +66,8 @@ METHOD(listener_t, authorize, bool,
 			*success = TRUE;
 			return TRUE;
 		}
-		if (eap_peer_id)
+		/*if eap_peer_id doesn't equal peer_id then we are called after an EAP round*/
+		if (!eap_peer_id->equals(eap_peer_id, peer_id))
 		{
 			char id_buf[512];
 			char cmd_buf[1024];
@@ -77,6 +78,7 @@ METHOD(listener_t, authorize, bool,
 			authorized = WEXITSTATUS(system(cmd_buf));
 			DBG2(DBG_CFG, "script returned: %d", authorized);
 		}
+		/*else it is an XAuth round, make sure peer_id isn't NULL*/
 		else if (peer_id)
 		{
 			char id_buf[512];
@@ -90,12 +92,12 @@ METHOD(listener_t, authorize, bool,
 		}
 		if (authorized == 0)
 		{
-			DBG2(DBG_CFG, "peer identity '%Y' authorized", (eap_peer_id != NULL) ? eap_peer_id : peer_id);
+			DBG2(DBG_CFG, "peer identity '%Y' authorized", (!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
 			*success = TRUE;
 		}
 		else
 		{
-			DBG1(DBG_CFG, "peer identity '%Y' not authorized", (eap_peer_id != NULL) ? eap_peer_id : peer_id);
+			DBG1(DBG_CFG, "peer identity '%Y' not authorized", (!eap_peer_id->equals(eap_peer_id, peer_id)) ? eap_peer_id : peer_id);
 			*success = FALSE;
 		}
 	}
