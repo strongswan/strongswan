@@ -139,6 +139,23 @@ static void narrow_responder_post(child_cfg_t *child_cfg, linked_list_t *local)
 	configured->destroy(configured);
 }
 
+/**
+ * Check if any Split-Include attributes are active on this IKE_SA
+ */
+static bool has_split_includes(private_unity_narrow_t *this, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	bool has;
+
+	enumerator = this->handler->create_include_enumerator(this->handler,
+												ike_sa->get_unique_id(ike_sa));
+	has = enumerator->enumerate(enumerator, &ts);
+	enumerator->destroy(enumerator);
+
+	return has;
+}
+
 METHOD(listener_t, narrow, bool,
 	private_unity_narrow_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	narrow_hook_t type, linked_list_t *local, linked_list_t *remote)
@@ -154,7 +171,10 @@ METHOD(listener_t, narrow, bool,
 			{
 				case NARROW_INITIATOR_PRE_AUTH:
 				case NARROW_RESPONDER:
-					narrow_pre(remote, "other");
+					if (has_split_includes(this, ike_sa))
+					{
+						narrow_pre(remote, "other");
+					}
 					break;
 				case NARROW_INITIATOR_POST_AUTH:
 				case NARROW_RESPONDER_POST:
