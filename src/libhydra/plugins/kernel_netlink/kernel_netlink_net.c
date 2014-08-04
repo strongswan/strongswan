@@ -478,6 +478,11 @@ struct private_kernel_netlink_net_t {
 	 * list with routing tables to be excluded from route lookup
 	 */
 	linked_list_t *rt_exclude;
+
+	/**
+	 * MTU to set on installed routes
+	 */
+	u_int32_t mtu;
 };
 
 /**
@@ -2055,6 +2060,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct rtmsg *msg;
+	struct rtattr *rta;
 	int ifindex;
 	chunk_t chunk;
 
@@ -2106,6 +2112,17 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	chunk.ptr = (char*)&ifindex;
 	chunk.len = sizeof(ifindex);
 	netlink_add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
+
+	if (this->mtu)
+	{
+		chunk = chunk_alloca(RTA_LENGTH(sizeof(struct rtattr) +
+										sizeof(u_int32_t)));
+		rta = (struct rtattr*)chunk.ptr;
+		rta->rta_type = RTAX_MTU;
+		rta->rta_len = chunk.len;
+		memcpy(RTA_DATA(rta), &this->mtu, sizeof(u_int32_t));
+		netlink_add_attribute(hdr, RTA_METRICS, chunk, sizeof(request));
+	}
 
 	return this->socket->send_ack(this->socket, hdr);
 }
@@ -2466,6 +2483,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.prefer_temporary_addrs", FALSE, lib->ns),
 		.roam_events = lib->settings->get_bool(lib->settings,
 						"%s.plugins.kernel-netlink.roam_events", TRUE, lib->ns),
+		.mtu = lib->settings->get_int(lib->settings,
+						"%s.plugins.kernel-netlink.mtu", 0, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);

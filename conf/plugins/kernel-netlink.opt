@@ -7,6 +7,9 @@ charon.plugins.kernel-netlink.fwmark =
 	inverts the meaning (i.e. the rule only applies to packets that don't match
 	the mark).
 
+charon.plugins.kernel-netlink.mtu = 0
+	MTU to set on installed routes, 0 to disable.
+
 charon.plugins.kernel-netlink.roam_events = yes
 	Whether to trigger roam events when interfaces, addresses or routes change.
 
