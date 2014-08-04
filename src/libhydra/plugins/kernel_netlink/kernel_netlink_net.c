@@ -483,6 +483,11 @@ struct private_kernel_netlink_net_t {
 	 * MTU to set on installed routes
 	 */
 	u_int32_t mtu;
+
+	/**
+	 * MSS to set on installed routes
+	 */
+	u_int32_t mss;
 };
 
 /**
@@ -2113,14 +2118,27 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	chunk.len = sizeof(ifindex);
 	netlink_add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
 
-	if (this->mtu)
+	if (this->mtu || this->mss)
 	{
-		chunk = chunk_alloca(RTA_LENGTH(sizeof(struct rtattr) +
-										sizeof(u_int32_t)));
+		chunk = chunk_alloca(RTA_LENGTH((sizeof(struct rtattr) +
+										 sizeof(u_int32_t)) * 2));
+		chunk.len = 0;
 		rta = (struct rtattr*)chunk.ptr;
-		rta->rta_type = RTAX_MTU;
-		rta->rta_len = chunk.len;
-		memcpy(RTA_DATA(rta), &this->mtu, sizeof(u_int32_t));
+		if (this->mtu)
+		{
+			rta->rta_type = RTAX_MTU;
+			rta->rta_len = RTA_LENGTH(sizeof(u_int32_t));
+			memcpy(RTA_DATA(rta), &this->mtu, sizeof(u_int32_t));
+			chunk.len = rta->rta_len;
+		}
+		if (this->mss)
+		{
+			rta = (struct rtattr*)(chunk.ptr + RTA_ALIGN(chunk.len));
+			rta->rta_type = RTAX_ADVMSS;
+			rta->rta_len = RTA_LENGTH(sizeof(u_int32_t));
+			memcpy(RTA_DATA(rta), &this->mss, sizeof(u_int32_t));
+			chunk.len = RTA_ALIGN(chunk.len) + rta->rta_len;
+		}
 		netlink_add_attribute(hdr, RTA_METRICS, chunk, sizeof(request));
 	}
 
@@ -2485,6 +2503,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.plugins.kernel-netlink.roam_events", TRUE, lib->ns),
 		.mtu = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.mtu", 0, lib->ns),
+		.mss = lib->settings->get_int(lib->settings,
+						"%s.plugins.kernel-netlink.mss", 0, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
