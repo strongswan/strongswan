@@ -139,7 +139,7 @@ chunk_t asn1_oid_from_string(char *str)
 	while (enumerator->enumerate(enumerator, &str))
 	{
 		val = strtoul(str, &end, 10);
-		if (end == str || pos > buf_len-4)
+		if (end == str || pos > buf_len-5)
 		{
 			pos = 0;
 			break;
