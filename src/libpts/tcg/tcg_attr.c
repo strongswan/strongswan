@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -33,6 +34,7 @@
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
+#include "tcg/seg/tcg_seg_attr_max_size.h"
 
 ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 							TCG_SCAP_SUMMARY_RESULTS,
@@ -50,9 +52,17 @@ ENUM_NEXT(tcg_attr_names,	TCG_SWID_REQUEST,
 	"SWID Tag Identifier Events",
 	"SWID Tag Inventory",
 	"SWID Tag Events");
+ENUM_NEXT(tcg_attr_names,	TCG_SEG_MAX_ATTR_SIZE_REQ,
+							TCG_SEG_CANCEL_SEG_EXCH,
+							TCG_SWID_TAG_EVENTS,
+	"Max Attribute Size Request",
+	"Max Attribute Size Response",
+	"Attribute Segment Envelope",
+	"Next Segment Request",
+	"Cancel Segment Exchange");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_REQ_FUNC_COMP_EVID,
 							TCG_PTS_REQ_FUNC_COMP_EVID,
-							TCG_SWID_TAG_EVENTS,
+							TCG_SEG_CANCEL_SEG_EXCH,
 	"Request Functional Component Evidence");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_GEN_ATTEST_EVID,
 							TCG_PTS_GEN_ATTEST_EVID,
@@ -181,6 +191,10 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_swid_attr_tag_id_inv_create_from_data(value);
 		case TCG_SWID_TAG_INVENTORY:
 			return tcg_swid_attr_tag_inv_create_from_data(value);
+		case TCG_SEG_MAX_ATTR_SIZE_REQ:
+			return tcg_seg_attr_max_size_create_from_data(value, TRUE);
+		case TCG_SEG_MAX_ATTR_SIZE_RESP:
+			return tcg_seg_attr_max_size_create_from_data(value, FALSE);
 		case TCG_PTS_REQ_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 		case TCG_PTS_PROTO_CAPS:

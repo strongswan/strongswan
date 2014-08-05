@@ -68,9 +68,14 @@ struct private_imv_swid_state_t {
 	uint32_t action_flags;
 
 	/**
-	 * IMV database session associatied with TNCCS connection
+	 * IMV database session associated with TNCCS connection
 	 */
 	imv_session_t *session;
+
+	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
 
 	/**
 	 * IMV action recommendation
@@ -190,6 +195,12 @@ METHOD(imv_state_t, get_session, imv_session_t*,
 	return this->session;
 }
 
+METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
+	private_imv_swid_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imv_state_t, change_state, void,
 	private_imv_swid_state_t *this, TNC_ConnectionState new_state)
 {
@@ -241,6 +252,7 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
+	this->contracts->destroy(this->contracts);
 	free(this);
 }
 
@@ -353,6 +365,7 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 				.get_action_flags = _get_action_flags,
 				.set_session = _set_session,
 				.get_session= _get_session,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -376,6 +389,7 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.contracts = seg_contract_manager_create(),
 		.jobj = json_object_new_object(),
 		.jarray = json_object_new_array(),
 	);

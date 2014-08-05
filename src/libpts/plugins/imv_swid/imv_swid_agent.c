@@ -23,6 +23,8 @@
 #include "libpts.h"
 #include "swid/swid_error.h"
 #include "swid/swid_inventory.h"
+#include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
@@ -42,6 +44,8 @@
 #include <bio/bio_reader.h>
 
 typedef struct private_imv_swid_agent_t private_imv_swid_agent_t;
+
+#define SWID_MAX_ATTR_SIZE	1000000000
 
 /* Subscribed PA-TNC message subtypes */
 static pen_type_t msg_types[] = {
@@ -411,6 +415,12 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	if (handshake_state == IMV_SWID_STATE_INIT &&
 		session->get_policy_started(session))
 	{
+		size_t max_attr_size = SWID_MAX_ATTR_SIZE;
+		size_t max_seg_size;
+		seg_contract_t *contract;
+		seg_contract_manager_t *contracts;
+		char buf[BUF_LEN];
+
 		enumerator = session->create_workitem_enumerator(session);
 		if (enumerator)
 		{
@@ -435,6 +445,25 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					flags |= TCG_SWID_ATTR_REQ_FLAG_C;
 				}
+
+				/* Determine maximum PA-TNC attribute segment size */
+				max_seg_size = state->get_max_msg_len(state)
+								- PA_TNC_HEADER_SIZE 
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_SEG_ENV_HEADER;
+
+				/* Announce support of PA-TNC segmentation to IMC */
+				contract = seg_contract_create(msg_types[0], max_attr_size,
+									max_seg_size, TRUE, imv_id, FALSE);
+				contract->get_info_string(contract, buf, BUF_LEN);
+				DBG2(DBG_IMV, "%s", buf);
+				contracts = state->get_contracts(state);
+				contracts->add_contract(contracts, contract);
+				attr = tcg_seg_attr_max_size_create(max_attr_size,
+													max_seg_size, TRUE);
+				out_msg->add_attribute(out_msg, attr);
+
+				/* Issue a SWID request */
 				request_id = workitem->get_id(workitem);
 				swid_state->set_request_id(swid_state, request_id);
 				attr = tcg_swid_attr_req_create(flags, request_id, 0);
@@ -442,7 +471,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				workitem->set_imv_id(workitem, imv_id);
 				no_workitems = FALSE;
 				DBG2(DBG_IMV, "IMV %d issues SWID request %d",
-						 imv_id, request_id);
+							   imv_id, request_id);
 				break;
 			}
 			enumerator->destroy(enumerator);
@@ -688,6 +717,8 @@ imv_agent_if_t *imv_swid_agent_create(const char *name, TNC_IMVID id,
 	{
 		return NULL;
 	}
+	agent->add_non_fatal_attr_type(agent,
+				pen_type_create(PEN_TCG, TCG_SEG_MAX_ATTR_SIZE_REQ));
 
 	INIT(this,
 		.public = {

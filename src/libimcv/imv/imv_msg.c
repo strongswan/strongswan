@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,10 @@
 #include "ietf/ietf_attr_remediation_instr.h"
 
 #include <tncif_names.h>
+#include <tncif_pa_subtypes.h>
+
+#include <tcg/seg/tcg_seg_attr_max_size.h>
+#include <tcg/seg/tcg_seg_attr_seg_env.h>
 
 #include <pen/pen.h>
 #include <collections/linked_list.h>
@@ -248,6 +252,7 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 METHOD(imv_msg_t, receive, TNC_Result,
 	private_imv_msg_t *this, bool *fatal_error)
 {
+	TNC_Result result = TNC_RESULT_SUCCESS;
 	linked_list_t *non_fatal_types;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
@@ -288,7 +293,6 @@ METHOD(imv_msg_t, receive, TNC_Result,
 		case VERIFY_ERROR:
 		{
 			imv_msg_t *error_msg;
-			TNC_Result result;
 
 			error_msg = imv_msg_create_as_reply(&this->public);
 
@@ -313,12 +317,111 @@ METHOD(imv_msg_t, receive, TNC_Result,
 			return TNC_RESULT_FATAL;
 	}
 
+	/* process any IF-M segmentation contracts */
+	enumerator = this->pa_msg->create_attribute_enumerator(this->pa_msg);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		uint32_t max_attr_size, max_seg_size, my_max_attr_size, my_max_seg_size;
+		tcg_seg_attr_max_size_t *attr_cast;
+		imv_msg_t *out_msg;
+		seg_contract_t *contract;
+		seg_contract_manager_t *contracts;
+		char buf[BUF_LEN];
+		pen_type_t type;
+
+		type = attr->get_type(attr);
+
+		if (type.vendor_id != PEN_TCG)
+		{
+			continue;
+		}
+
+		if (type.type == TCG_SEG_MAX_ATTR_SIZE_REQ)
+		{
+			attr_cast = (tcg_seg_attr_max_size_t*)attr;
+			attr_cast->get_attr_size(attr_cast, &max_attr_size, &max_seg_size);
+
+			contracts = this->state->get_contracts(this->state);
+			contract = contracts->get_contract(contracts, this->msg_type, FALSE);
+			if (contract)
+			{
+				contract->set_max_size(contract, max_attr_size, max_seg_size);
+			}
+			else
+			{
+				contract = seg_contract_create(this->msg_type, max_attr_size,
+									max_seg_size, FALSE, this->src_id, FALSE);
+				contracts->add_contract(contracts, contract);
+			}
+			contract->get_info_string(contract, buf, BUF_LEN);
+			DBG2(DBG_IMV, "%s", buf);
+
+			/* Determine maximum PA-TNC attribute segment size */
+			my_max_seg_size = this->state->get_max_msg_len(this->state)
+								- PA_TNC_HEADER_SIZE
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_SEG_ENV_HEADER
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_MAX_SIZE_SIZE;
+
+			/* If segmentation is not prohibited select lower segment size */
+			if (max_seg_size != SEG_CONTRACT_NO_FRAGMENTATION &&
+				max_seg_size > my_max_seg_size)
+			{
+				max_seg_size = my_max_seg_size;
+				contract->set_max_size(contract, max_attr_size, max_seg_size);
+				contract->get_info_string(contract, buf, BUF_LEN);
+				DBG2(DBG_IMV, "  lowered maximum segment size to %u bytes",
+					 max_seg_size);
+			}
+
+			/* Send Maximum Attribute Size Response */
+			out_msg = imv_msg_create_as_reply(&this->public);
+			attr = tcg_seg_attr_max_size_create(max_attr_size,
+												max_seg_size, FALSE);
+			out_msg->add_attribute(out_msg, attr);
+			result = out_msg->send(out_msg, TRUE);
+			out_msg->destroy(out_msg);
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				break;
+			}
+		}
+		else if (type.type == TCG_SEG_MAX_ATTR_SIZE_RESP)
+		{
+			attr_cast = (tcg_seg_attr_max_size_t*)attr;
+			attr_cast->get_attr_size(attr_cast, &max_attr_size, &max_seg_size);
+
+			contracts = this->state->get_contracts(this->state);
+			contract = contracts->get_contract(contracts, this->msg_type, TRUE);
+			if (contract)
+			{
+				contract->get_max_size(contract, &my_max_attr_size,
+												 &my_max_seg_size);
+				if (my_max_seg_size != SEG_CONTRACT_NO_FRAGMENTATION &&
+					my_max_seg_size > max_seg_size)
+				{
+					my_max_seg_size = max_seg_size;
+					contract->set_max_size(contract, my_max_attr_size,
+													 my_max_seg_size);
+					contract->get_info_string(contract, buf, BUF_LEN);
+					DBG2(DBG_IMV, "%s", buf);
+				}
+			}
+			else
+			{
+				/* TODO no request pending */
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	/* preprocess any received IETF standard error attributes */
 	non_fatal_types = this->agent->get_non_fatal_attr_types(this->agent);
 	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg,
 														 non_fatal_types);
 
-	return TNC_RESULT_SUCCESS;
+	return result;
 }
 
 METHOD(imv_msg_t, get_attribute_count, int,

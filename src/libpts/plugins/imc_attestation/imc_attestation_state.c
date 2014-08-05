@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -66,6 +67,11 @@ struct private_imc_attestation_state_t {
 	u_int32_t max_msg_len;
 
 	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
+
+	/**
 	 * PTS object
 	 */
 	pts_t *pts;
@@ -119,6 +125,12 @@ METHOD(imc_state_t, get_max_msg_len, u_int32_t,
 	return this->max_msg_len;
 }
 
+METHOD(imc_state_t, get_contracts, seg_contract_manager_t*,
+	private_imc_attestation_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imc_state_t, change_state, void,
 	private_imc_attestation_state_t *this, TNC_ConnectionState new_state)
 {
@@ -151,6 +163,7 @@ METHOD(imc_state_t, destroy, void,
 							offsetof(pts_component_t, destroy));
 	this->list->destroy_offset(this->list,
 							offsetof(pts_comp_evidence_t, destroy));
+	this->contracts->destroy(this->contracts);
 	free(this);
 }
 
@@ -220,6 +233,7 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.set_result = _set_result,
 				.get_result = _get_result,
@@ -233,6 +247,7 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.result = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
+		.contracts = seg_contract_manager_create(),
 		.pts = pts_create(TRUE),
 		.components = linked_list_create(),
 		.list = linked_list_create(),

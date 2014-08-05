@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -64,6 +64,11 @@ struct private_imv_test_state_t {
 	 * IMV database session associated with TNCCS connection
 	 */
 	imv_session_t *session;
+
+	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
 
 	/**
 	 * IMV action recommendation
@@ -162,6 +167,12 @@ METHOD(imv_state_t, get_session, imv_session_t*,
 	return this->session;
 }
 
+METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
+	private_imv_test_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imv_state_t, change_state, void,
 	private_imv_test_state_t *this, TNC_ConnectionState new_state)
 {
@@ -220,6 +231,7 @@ METHOD(imv_state_t, destroy, void,
 {
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
+	this->contracts->destroy(this->contracts);
 	this->imcs->destroy_function(this->imcs, free);
 	free(this);
 }
@@ -307,6 +319,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.get_max_msg_len = _get_max_msg_len,
 				.set_session = _set_session,
 				.get_session = _get_session,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -323,6 +336,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.contracts = seg_contract_manager_create(),
 		.imcs = linked_list_create(),
 	);
 

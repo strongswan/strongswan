@@ -71,6 +71,11 @@ struct private_imv_scanner_state_t {
 	imv_session_t *session;
 
 	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
+
+	/**
 	 * IMV action recommendation
 	 */
 	TNC_IMV_Action_Recommendation rec;
@@ -211,6 +216,12 @@ METHOD(imv_state_t, get_session, imv_session_t*,
 	return this->session;
 }
 
+METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
+	private_imv_scanner_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imv_state_t, change_state, void,
 	private_imv_scanner_state_t *this, TNC_ConnectionState new_state)
 {
@@ -299,6 +310,7 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
 	DESTROY_IF(&this->port_filter_attr->pa_tnc_attribute);
+	this->contracts->destroy(this->contracts);
 	this->violating_ports->destroy_function(this->violating_ports, free);
 	free(this);
 }
@@ -354,6 +366,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.get_action_flags = _get_action_flags,
 				.set_session = _set_session,
 				.get_session= _get_session,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -372,6 +385,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.contracts = seg_contract_manager_create(),
 		.violating_ports = linked_list_create(),
 	);
 

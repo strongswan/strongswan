@@ -1,6 +1,7 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libtncif
+	-I$(top_srcdir)/src/libtncif \
+	-I$(top_srcdir)/src/libpts
 
 ipseclib_LTLIBRARIES = libimcv.la
 
@@ -54,7 +55,9 @@ libimcv_la_SOURCES = \
 	os_info/os_info.h os_info/os_info.c \
 	pa_tnc/pa_tnc_attr.h \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
-	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c
+	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c \
+	seg_contract/seg_contract.h seg_contract/seg_contract.c \
+	seg_contract/seg_contract_manager.h seg_contract/seg_contract_manager.c
 
 ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy Android.mk

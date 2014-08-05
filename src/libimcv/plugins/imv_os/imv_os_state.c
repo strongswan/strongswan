@@ -76,6 +76,11 @@ struct private_imv_os_state_t {
 	imv_session_t *session;
 
 	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
+
+	/**
 	 * IMV action recommendation
 	 */
 	TNC_IMV_Action_Recommendation rec;
@@ -327,6 +332,12 @@ METHOD(imv_state_t, get_session, imv_session_t*,
 	return this->session;
 }
 
+METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
+	private_imv_os_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imv_state_t, get_recommendation, void,
 	private_imv_os_state_t *this, TNC_IMV_Action_Recommendation *rec,
 								  TNC_IMV_Evaluation_Result *eval)
@@ -461,6 +472,7 @@ METHOD(imv_state_t, destroy, void,
 	DESTROY_IF(this->session);
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
+	this->contracts->destroy(this->contracts);
 	this->update_packages->destroy_function(this->update_packages, free);
 	this->remove_packages->destroy_function(this->remove_packages, free);
 	free(this);
@@ -571,6 +583,7 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.get_action_flags = _get_action_flags,
 				.set_session = _set_session,
 				.get_session = _get_session,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
@@ -593,6 +606,7 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.contracts = seg_contract_manager_create(),
 		.update_packages = linked_list_create(),
 		.remove_packages = linked_list_create(),
 	);

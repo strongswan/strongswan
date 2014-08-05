@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -45,6 +45,13 @@ enum tcg_attr_t {
 	TCG_SWID_TAG_ID_EVENTS =              0x00000013,
 	TCG_SWID_TAG_INVENTORY =              0x00000014,
 	TCG_SWID_TAG_EVENTS =                 0x00000015,
+
+	/* IF-M Attribute Segmentation */
+	TCG_SEG_MAX_ATTR_SIZE_REQ =           0x00000021,
+	TCG_SEG_MAX_ATTR_SIZE_RESP =          0x00000022,
+	TCG_SEG_ATTR_SEG_ENV =                0x00000023,
+	TCG_SEG_NEXT_SEG_REQ =                0x00000024,
+	TCG_SEG_CANCEL_SEG_EXCH =             0x00000025,
 
 	/* PTS Protocol Negotiations */
 	TCG_PTS_REQ_PROTO_CAPS =              0x01000000,

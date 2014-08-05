@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,8 @@
 
 #ifndef IMC_STATE_H_
 #define IMC_STATE_H_
+
+#include "seg_contract/seg_contract_manager.h"
 
 #include <tncif.h>
 #include <tncifimv.h>
@@ -78,6 +80,13 @@ struct imc_state_t {
 	 * @return				maximum size of a PA-TNC message
 	 */
 	u_int32_t (*get_max_msg_len)(imc_state_t *this);
+
+	/**
+	 * Get attribute segmentation contracts associated with TNCCS Connection
+	 *
+	 * @return				contracts associated with TNCCS Connection
+	 */
+	seg_contract_manager_t* (*get_contracts)(imc_state_t *this);
 
 	/**
 	 * Change the connection state

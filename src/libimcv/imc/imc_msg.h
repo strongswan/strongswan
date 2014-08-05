@@ -65,10 +65,12 @@ struct imc_msg_t {
 	/**
 	 * Processes a received PA-TNC message
 	 *
+	 * @param out_msg			outgoing PA-TN message
 	 * @param fatal_error		TRUE if IMV sent a fatal error message
 	 * @return					TNC result code
 	 */
-	TNC_Result (*receive)(imc_msg_t *this, bool *fatal_error);
+	TNC_Result (*receive)(imc_msg_t *this, imc_msg_t *out_msg,
+						  bool *fatal_error);
 
 	/**
 	 * Add a PA-TNC attribute to the send queue

@@ -23,6 +23,7 @@
 #define IMV_STATE_H_
 
 #include "imv_session.h"
+#include "seg_contract/seg_contract_manager.h"
 
 #include <tncifimv.h>
 
@@ -106,6 +107,13 @@ struct imv_state_t {
 	 * @return				Session associated with TNCCS Connection
 	 */
 	imv_session_t* (*get_session)(imv_state_t *this);
+
+	/**
+	 * Get attribute segmentation contracts associated with TNCCS Connection
+	 *
+	 * @return				Contracts associated with TNCCS Connection
+	 */
+	seg_contract_manager_t* (*get_contracts)(imv_state_t *this);
 
 	/**
 	 * Change the connection state
