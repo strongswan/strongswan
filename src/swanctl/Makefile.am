@@ -10,9 +10,10 @@ swanctl_SOURCES = \
 	commands/list_conns.c \
 	commands/list_certs.c \
 	commands/list_pools.c \
-	commands/load_conns.c \
-	commands/load_creds.c \
-	commands/load_pools.c \
+	commands/load_all.c \
+	commands/load_conns.c commands/load_conns.h \
+	commands/load_creds.c commands/load_creds.h \
+	commands/load_pools.c commands/load_pools.h \
 	commands/log.c \
 	commands/version.c \
 	commands/stats.c \

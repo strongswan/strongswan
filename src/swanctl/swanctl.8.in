@@ -62,6 +62,9 @@ list stored certificates
 .B "\-A, \-\-list\-pools"
 list loaded pool configurations
 .TP
+.B "\-q, \-\-load\-all"
+(re\-)load credentials, pools and connections
+.TP
 .B "\-c, \-\-load\-conns"
 (re\-)load connection configuration
 .TP
