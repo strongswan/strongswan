@@ -577,7 +577,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_creds, 's', "load-creds", "(re-)load credentials",
-		{"[--raw|--pretty]"},
+		{"[--raw|--pretty] [--clear] [--noprompt]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"clear",		'c', 0, "clear previously loaded credentials"},
