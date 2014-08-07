@@ -297,7 +297,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_pools, 'a', "load-pools", "(re-)load pool configuration",
-		{"[--raw|--pretty"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
