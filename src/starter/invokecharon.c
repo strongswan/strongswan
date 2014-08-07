@@ -201,6 +201,11 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		default:
 			/* father */
 			_charon_pid = pid;
+			if (attach_gdb)
+			{
+				/* don't monitor pid file if gdb is attached */
+				return 0;
+			}
 			for (i = 0; i < 500 && _charon_pid; i++)
 			{
 				/* wait for charon for a maximum of 500 x 20 ms = 10 s */
