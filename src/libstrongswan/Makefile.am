@@ -313,6 +313,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CURVE25519
+  SUBDIRS += plugins/curve25519
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/curve25519/libstrongswan-curve25519.la
+endif
+endif
+
 if USE_RDRAND
   SUBDIRS += plugins/rdrand
 if MONOLITHIC

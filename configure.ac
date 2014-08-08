@@ -133,6 +133,7 @@ ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin
 ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
 ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_ENABL_SET([curve25519],     [enable Curve25519 Diffie-Hellman plugin.])
 ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
 ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
 ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
@@ -1357,6 +1358,7 @@ ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager meds
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([curve25519],           [s charon scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
 ADD_PLUGIN([chapoly],              [s charon scripts nm cmd])
@@ -1491,6 +1493,7 @@ AM_CONDITIONAL(USE_SHA3, test x$sha3 = xtrue)
 AM_CONDITIONAL(USE_MGF1, test x$mgf1 = xtrue)
 AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
+AM_CONDITIONAL(USE_CURVE25519, test x$curve25519 = xtrue)
 AM_CONDITIONAL(USE_RDRAND, test x$rdrand = xtrue)
 AM_CONDITIONAL(USE_AESNI, test x$aesni = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
@@ -1748,6 +1751,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/mgf1/Makefile
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
+	src/libstrongswan/plugins/curve25519/Makefile
 	src/libstrongswan/plugins/rdrand/Makefile
 	src/libstrongswan/plugins/aesni/Makefile
 	src/libstrongswan/plugins/random/Makefile
