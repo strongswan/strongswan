@@ -46,6 +46,7 @@ struct {
 	{"ecp521",			ECP_521_BIT},
 	{"ecp192",			ECP_192_BIT},
 	{"ecp224",			ECP_224_BIT},
+	{"curve25519",		CURVE_25519},
 };
 
 static void start_timing(struct timespec *start)
