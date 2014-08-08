@@ -66,7 +66,7 @@ static double end_timing(struct timespec *start)
 static void run_test(diffie_hellman_group_t group, int rounds)
 {
 	diffie_hellman_t *l[rounds], *r;
-	chunk_t chunk;
+	chunk_t chunk, chunks[rounds];
 	struct timespec timing;
 	int round;
 
@@ -85,14 +85,14 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	for (round = 0; round < rounds; round++)
 	{
 		l[round] = lib->crypto->create_dh(lib->crypto, group);
+		assert(l[round]->get_my_public_value(l[round], &chunks[round]));
 	}
 	printf("A = g^a/s: %8.1f", rounds / end_timing(&timing));
 
 	for (round = 0; round < rounds; round++)
 	{
-		assert(l[round]->get_my_public_value(l[round], &chunk));
-		assert(r->set_other_public_value(r, chunk));
-		chunk_free(&chunk);
+		assert(r->set_other_public_value(r, chunks[round]));
+		chunk_free(&chunks[round]);
 	}
 
 	assert(r->get_my_public_value(r, &chunk));
