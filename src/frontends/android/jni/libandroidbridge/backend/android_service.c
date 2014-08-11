@@ -484,6 +484,12 @@ METHOD(listener_t, alert, bool,
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
 				break;
+			case ALERT_KEEP_ON_CHILD_SA_FAILURE:
+				/* because close_ike_on_child_failure is set this is only
+				 * triggered when CHILD_SA rekeying failed */
+				charonservice->update_status(charonservice,
+											 CHARONSERVICE_GENERIC_ERROR);
+				break;
 			case ALERT_PEER_INIT_UNREACHABLE:
 				this->lock->read_lock(this->lock);
 				if (this->tunfd < 0)
