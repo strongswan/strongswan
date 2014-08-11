@@ -726,8 +726,18 @@ static job_requeue_t initiate(private_android_service_t *this)
 	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
 								 ACTION_NONE, ACTION_RESTART, ACTION_RESTART,
 								 FALSE, 0, 0, NULL, NULL, 0);
-	/* create an ESP proposal with the algorithms currently supported by
-	 * libipsec, no PFS for now */
+	/* create ESP proposals with and without DH groups, let responder decide
+	 * if PFS is used */
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128gcm16-aes256gcm16-ecp256"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128-sha256-ecp256-modp3072"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes256-sha384-ecp521-modp8192"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
+							"ecp256-ecp384-ecp521-"
+							"modp2048-modp3072-modp4096-modp1024"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128gcm16-aes256gcm16"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
