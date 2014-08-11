@@ -418,6 +418,31 @@ CALLBACK(terminate, job_requeue_t,
 	return JOB_REQUEUE_NONE;
 }
 
+/**
+ * Reestablish the IKE_SA with the given unique ID
+ */
+CALLBACK(reestablish, job_requeue_t,
+	u_int32_t *id)
+{
+	ike_sa_t *ike_sa;
+
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													*id, FALSE);
+	if (ike_sa)
+	{
+		if (ike_sa->reauth(ike_sa) == DESTROY_ME)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+	}
+	return JOB_REQUEUE_NONE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -485,11 +510,19 @@ METHOD(listener_t, alert, bool,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
 				break;
 			case ALERT_KEEP_ON_CHILD_SA_FAILURE:
+			{
+				u_int32_t *id = malloc_thing(u_int32_t);
+
 				/* because close_ike_on_child_failure is set this is only
-				 * triggered when CHILD_SA rekeying failed */
-				charonservice->update_status(charonservice,
-											 CHARONSERVICE_GENERIC_ERROR);
+				 * triggered when CHILD_SA rekeying failed. reestablish it in
+				 * the hope that the initial setup works again. */
+				*id = ike_sa->get_unique_id(ike_sa);
+				lib->processor->queue_job(lib->processor,
+					(job_t*)callback_job_create_with_prio(
+						(callback_job_cb_t)reestablish, id, free,
+						(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
 				break;
+			}
 			case ALERT_PEER_INIT_UNREACHABLE:
 				this->lock->read_lock(this->lock);
 				if (this->tunfd < 0)
