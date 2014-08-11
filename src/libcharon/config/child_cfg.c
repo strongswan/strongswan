@@ -163,6 +163,11 @@ METHOD(child_cfg_t, add_proposal, void,
 	}
 }
 
+static bool match_proposal(proposal_t *item, proposal_t *proposal)
+{
+	return item->equals(item, proposal);
+}
+
 METHOD(child_cfg_t, get_proposals, linked_list_t*,
 	private_child_cfg_t *this, bool strip_dh)
 {
@@ -177,6 +182,12 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 		if (strip_dh)
 		{
 			current->strip_dh(current, MODP_NONE);
+		}
+		if (proposals->find_first(proposals, (linked_list_match_t)match_proposal,
+								  NULL, current) == SUCCESS)
+		{
+			current->destroy(current);
+			continue;
 		}
 		proposals->insert_last(proposals, current);
 	}
