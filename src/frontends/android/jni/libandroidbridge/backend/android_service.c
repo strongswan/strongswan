@@ -673,8 +673,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth_cfg_t *auth;
 	lifetime_cfg_t lifetime = {
 		.time = {
-			.life = 10800, /* 3h */
-			.rekey = 10200, /* 2h50min */
+			.life = 3600, /* 1h */
+			.rekey = 3000, /* 50min */
 			.jitter = 300 /* 5min */
 		}
 	};
