@@ -1487,6 +1487,14 @@ METHOD(ike_sa_t, reauth, status_t,
 	{
 		return INVALID_STATE;
 	}
+	if (this->state == IKE_CONNECTING)
+	{
+		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
+			 get_name(this), this->unique_id);
+		reset(this);
+		this->task_manager->queue_ike(this->task_manager);
+		return this->task_manager->initiate(this->task_manager);
+	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
