@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/xfrm.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -62,6 +63,11 @@ struct private_netlink_socket_t {
 	int socket;
 
 	/**
+	 * Netlink protocol
+	 */
+	int protocol;
+
+	/**
 	 * Enum names for Netlink messages
 	 */
 	enum_name_t *names;
@@ -80,6 +86,11 @@ struct private_netlink_socket_t {
 	 * Use parallel netlink queries
 	 */
 	bool parallel;
+
+	/**
+	 * Ignore errors potentially resulting from a retransmission
+	 */
+	bool ignore_retransmit_errors;
 };
 
 /**
@@ -348,6 +359,69 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	return SUCCESS;
 }
 
+/**
+ * Ignore errors for message types that might have completed previously
+ */
+static void ignore_retransmit_error(private_netlink_socket_t *this,
+									struct nlmsgerr *err, int type)
+{
+	switch (err->error)
+	{
+		case -EEXIST:
+			switch (this->protocol)
+			{
+				case NETLINK_XFRM:
+					switch (type)
+					{
+						case XFRM_MSG_NEWPOLICY:
+						case XFRM_MSG_NEWSA:
+							err->error = 0;
+							break;
+					}
+					break;
+				case NETLINK_ROUTE:
+					switch (type)
+					{
+						case RTM_NEWADDR:
+						case RTM_NEWLINK:
+						case RTM_NEWNEIGH:
+						case RTM_NEWROUTE:
+						case RTM_NEWRULE:
+							err->error = 0;
+							break;
+					}
+					break;
+			}
+			break;
+		case -ENOENT:
+			switch (this->protocol)
+			{
+				case NETLINK_XFRM:
+					switch (type)
+					{
+						case XFRM_MSG_DELPOLICY:
+						case XFRM_MSG_DELSA:
+							err->error = 0;
+							break;
+					}
+					break;
+				case NETLINK_ROUTE:
+					switch (type)
+					{
+						case RTM_DELADDR:
+						case RTM_DELLINK:
+						case RTM_DELNEIGH:
+						case RTM_DELROUTE:
+						case RTM_DELRULE:
+							err->error = 0;
+							break;
+					}
+					break;
+			}
+			break;
+	}
+}
+
 METHOD(netlink_socket_t, netlink_send, status_t,
 	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
 	size_t *out_len)
@@ -388,6 +462,10 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 				free(hdr);
 				try--;
 				continue;
+			}
+			if (this->ignore_retransmit_errors && try > 0)
+			{
+				ignore_retransmit_error(this, err, in->nlmsg_type);
 			}
 		}
 		*out = hdr;
@@ -488,11 +566,15 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.socket = socket(AF_NETLINK, SOCK_RAW, protocol),
 		.entries = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
+		.protocol = protocol,
 		.names = names,
 		.timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.retries", 0, lib->ns),
+		.ignore_retransmit_errors = lib->settings->get_bool(lib->settings,
+							"%s.plugins.kernel-netlink.ignore_retransmit_errors",
+							FALSE, lib->ns),
 		.parallel = parallel,
 	);
 
