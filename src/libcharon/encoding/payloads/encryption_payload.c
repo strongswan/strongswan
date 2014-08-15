@@ -424,6 +424,7 @@ METHOD(encryption_payload_t, encrypt_v1, status_t,
 	generator->destroy(generator);
 
 	DBG3(DBG_ENC, "encrypting payloads:");
+	DBG3(DBG_ENC, "IV %B", &iv);
 	DBG3(DBG_ENC, "plain %B", &plain);
 	DBG3(DBG_ENC, "padding %B", &padding);
 
