@@ -1632,7 +1632,7 @@ METHOD(message_t, generate, status_t,
 	chunk = generator->get_chunk(generator, &lenpos);
 	htoun32(lenpos, chunk.len);
 	this->packet->set_data(this->packet, chunk_clone(chunk));
-	if (this->is_encrypted)
+	if (this->is_encrypted && this->exchange_type != INFORMATIONAL_V1)
 	{
 		/* update the IV for the next IKEv1 message */
 		chunk_t last_block;
@@ -2142,7 +2142,7 @@ METHOD(message_t, parse_body, status_t,
 			}
 			chunk_free(&hash);
 		}
-		if (this->is_encrypted)
+		if (this->is_encrypted && this->exchange_type != INFORMATIONAL_V1)
 		{	/* message verified, confirm IV */
 			if (!keymat_v1->confirm_iv(keymat_v1, this->message_id))
 			{
