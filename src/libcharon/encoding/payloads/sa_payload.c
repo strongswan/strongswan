@@ -369,7 +369,7 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 		}
 		if (proposal_number != current_proposal)
 		{	/* start of a new proposal */
-			if (espah && ipcomp)
+			if (espah && ipcomp && ipcomp->get_cpi(ipcomp, NULL))
 			{	/* previous proposal is valid */
 				break;
 			}
