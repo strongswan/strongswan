@@ -1518,8 +1518,7 @@ retry:
 			{	/* timed out? */
 				break;
 			}
-			if (this->reply->rtm_msglen < sizeof(*this->reply) ||
-				msg.hdr.rtm_seq != this->reply->rtm_seq)
+			if (!this->reply)
 			{
 				continue;
 			}
@@ -1559,6 +1558,8 @@ retry:
 	{
 		failed = TRUE;
 	}
+	free(this->reply);
+	this->reply = NULL;
 	/* signal completion of query to a waiting thread */
 	this->waiting_seq = 0;
 	this->condvar->signal(this->condvar);
