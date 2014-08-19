@@ -82,8 +82,10 @@ struct seg_contract_t {
 	 *
 	 * @param buf				String buffer of at least size len
 	 * @param len				Size of string buffer
+	 * @param request			TRUE if contract request, FALSE if response
 	 */
-	void (*get_info_string)(seg_contract_t *this, char *buf, size_t len);
+	void (*get_info_string)(seg_contract_t *this, char *buf, size_t len,
+							bool request);
 
 	/**
 	 * Destroys a seg_contract_t object.

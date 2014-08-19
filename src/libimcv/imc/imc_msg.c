@@ -305,7 +305,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 									max_seg_size, FALSE, this->src_id, TRUE);
 				contracts->add_contract(contracts, contract);
 			}
-			contract->get_info_string(contract, buf, BUF_LEN);
+			contract->get_info_string(contract, buf, BUF_LEN, TRUE);
 			DBG2(DBG_IMC, "%s", buf);
 
 			/* Determine maximum PA-TNC attribute segment size */
@@ -348,7 +348,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 					my_max_seg_size = max_seg_size;
 					contract->set_max_size(contract, my_max_attr_size,
 													 my_max_seg_size);
-					contract->get_info_string(contract, buf, BUF_LEN);
+					contract->get_info_string(contract, buf, BUF_LEN, FALSE);
 					DBG2(DBG_IMC, "%s", buf);
 				}
 			}

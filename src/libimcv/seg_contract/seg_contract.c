@@ -110,7 +110,7 @@ METHOD(seg_contract_t, is_null, bool,
 }
 
 METHOD(seg_contract_t, get_info_string, void,
-	private_seg_contract_t *this, char *buf, size_t len)
+	private_seg_contract_t *this, char *buf, size_t len, bool request)
 {
 	enum_name_t *pa_subtype_names;
 	uint32_t msg_vid, msg_subtype;
@@ -120,7 +120,7 @@ METHOD(seg_contract_t, get_info_string, void,
 	/* nul-terminate the string buffer */
 	buf[--len] = '\0';
 
-	if (this->is_issuer)
+	if (this->is_issuer && request)
 	{
 		written = snprintf(pos, len, "%s %d requests",
 						  this->is_imc ? "IMC" : "IMV", this->issuer_id);
@@ -136,8 +136,8 @@ METHOD(seg_contract_t, get_info_string, void,
 	pos += written;
 	len -= written;
 
-	written = snprintf(pos, len, " a %ssegmentation contract ",
-					   this->is_null ? "null" : "");
+	written = snprintf(pos, len, " a %ssegmentation contract%s ",
+					   this->is_null ? "null" : "", request ? "" : " response");
 	if (written < 0 || written > len)
 	{
 		return;

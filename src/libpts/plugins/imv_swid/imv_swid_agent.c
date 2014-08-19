@@ -455,7 +455,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				/* Announce support of PA-TNC segmentation to IMC */
 				contract = seg_contract_create(msg_types[0], max_attr_size,
 									max_seg_size, TRUE, imv_id, FALSE);
-				contract->get_info_string(contract, buf, BUF_LEN);
+				contract->get_info_string(contract, buf, BUF_LEN, TRUE);
 				DBG2(DBG_IMV, "%s", buf);
 				contracts = state->get_contracts(state);
 				contracts->add_contract(contracts, contract);
