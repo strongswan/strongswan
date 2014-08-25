@@ -310,6 +310,12 @@ struct private_kernel_netlink_ipsec_t {
 	bool install_routes;
 
 	/**
+	 * Whether to set protocol and ports on selector installed with transport
+	 * mode IPsec SAs
+	 */
+	bool proto_port_transport;
+
+	/**
 	 * Whether to track the history of a policy
 	 */
 	bool policy_history;
@@ -1235,12 +1241,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			if (src_ts && dst_ts)
 			{
 				sa->sel = ts2selector(src_ts, dst_ts);
-				/* don't install proto/port on SA. This would break
-				 * potential secondary SAs for the same address using a
-				 * different prot/port. */
-				sa->sel.proto = 0;
-				sa->sel.dport = sa->sel.dport_mask = 0;
-				sa->sel.sport = sa->sel.sport_mask = 0;
+				if (!this->proto_port_transport)
+				{
+					/* don't install proto/port on SA. This would break
+					 * potential secondary SAs for the same address using a
+					 * different prot/port. */
+					sa->sel.proto = 0;
+					sa->sel.dport = sa->sel.dport_mask = 0;
+					sa->sel.sport = sa->sel.sport_mask = 0;
+				}
 			}
 			break;
 		default:
@@ -2683,6 +2692,9 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.policy_history = TRUE,
 		.install_routes = lib->settings->get_bool(lib->settings,
 							"%s.install_routes", TRUE, lib->ns),
+		.proto_port_transport = lib->settings->get_bool(lib->settings,
+						"%s.plugins.kernel-netlink.set_proto_port_transport_sa",
+						FALSE, lib->ns),
 	);
 
 	if (streq(lib->ns, "starter"))
