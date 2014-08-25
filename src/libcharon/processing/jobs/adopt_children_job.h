@@ -24,6 +24,7 @@
 #include <library.h>
 #include <processing/jobs/job.h>
 #include <sa/ike_sa_id.h>
+#include <sa/task.h>
 
 typedef struct adopt_children_job_t adopt_children_job_t;
 
@@ -36,6 +37,13 @@ struct adopt_children_job_t {
 	 * Implements job_t.
 	 */
 	job_t job_interface;
+
+	/**
+	 * Queue a job for execution after completing migration.
+	 *
+	 * @param task			task to queue for execution
+	 */
+	void (*queue_task)(adopt_children_job_t *this, task_t *task);
 };
 
 /**
