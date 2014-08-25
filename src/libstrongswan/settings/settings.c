@@ -856,7 +856,7 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 
 	if (pattern == NULL || !pattern[0])
 	{	/* TODO: Clear parent if merge is FALSE? */
-		return FALSE;
+		return TRUE;
 	}
 
 	section = settings_section_create(NULL);
