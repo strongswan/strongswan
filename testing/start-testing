@@ -17,6 +17,7 @@ echo "Starting test environment"
 
 check_commands kvm virsh
 
+[ -f $KNLSRC ] || die "Kernel $KNLSRC not found"
 log_action "Deploying kernel $KERNEL"
 execute "ln -fs $KNLSRC $KNLTARGET"
 
