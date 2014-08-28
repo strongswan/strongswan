@@ -28,6 +28,9 @@ typedef struct pa_tnc_attr_t pa_tnc_attr_t;
 
 #define PA_TNC_ATTR_HEADER_SIZE		12
 
+#define PA_TNC_ATTR_FLAG_NONE		0x00
+#define PA_TNC_ATTR_FLAG_NOSKIP		(1<<7)
+
 /**
  * Interface for an RFC 5792 PA-TNC Posture Attribute.
  *

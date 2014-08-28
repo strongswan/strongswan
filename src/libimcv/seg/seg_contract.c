@@ -14,16 +14,19 @@
  */
 
 #include "seg_contract.h"
+#include "seg_env.h"
 
 #include <utils/debug.h>
+#include <bio/bio_writer.h>
 
 #include <tncif_pa_subtypes.h>
+
+#include <tcg/seg/tcg_seg_attr_seg_env.h>
 
 typedef struct private_seg_contract_t private_seg_contract_t;
 
 /**
  * Private data of a seg_contract_t object.
- *
  */
 struct private_seg_contract_t {
 
@@ -46,6 +49,17 @@ struct private_seg_contract_t {
 	 * Maximum PA-TNC attribute segment size
 	 */
 	uint32_t max_seg_size;
+
+	/**
+	 * Maximum PA-TNC attribute segment size
+	 */
+	uint32_t last_base_attr_id;
+
+	/**
+	 * List of attribute segment envelopes
+	 */
+
+	linked_list_t *seg_envs;
 
 	/**
 	 * Is this a null contract?
@@ -96,6 +110,154 @@ METHOD(seg_contract_t, get_max_size, void,
 		*max_seg_size = this->max_seg_size;
 	}
 }
+
+METHOD(seg_contract_t, check_size, bool,
+	private_seg_contract_t *this, pa_tnc_attr_t *attr, bool *oversize)
+{
+	chunk_t attr_value;
+	size_t attr_len;
+
+	*oversize = FALSE;
+
+	if (this->is_null)
+	{
+		/* null segmentation contract */
+		return FALSE;
+	}
+	attr->build(attr);
+	attr_value = attr->get_value(attr);
+	attr_len = PA_TNC_ATTR_HEADER_SIZE + attr_value.len;
+
+	if (attr_len > this->max_attr_size)
+	{
+		/* oversize attribute */
+		*oversize = TRUE;
+		return FALSE;
+	}
+	if (this->max_seg_size == SEG_CONTRACT_NO_FRAGMENTATION)
+	{
+		/* no fragmentation wanted */
+		return FALSE;
+	}
+	return attr_value.len > this->max_seg_size + TCG_SEG_ATTR_SEG_ENV_HEADER;
+}
+
+METHOD(seg_contract_t, first_segment, pa_tnc_attr_t*,
+	private_seg_contract_t *this, pa_tnc_attr_t *attr)
+{
+	seg_env_t *seg_env;
+
+	seg_env = seg_env_create(++this->last_base_attr_id, attr,
+							 this->max_seg_size);
+	if (!seg_env)
+	{
+		return NULL;
+	}
+	this->seg_envs->insert_last(this->seg_envs, seg_env);
+
+	return seg_env->first_segment(seg_env);
+}
+
+METHOD(seg_contract_t, next_segment, pa_tnc_attr_t*,
+	private_seg_contract_t *this, uint32_t base_attr_id)
+{
+	pa_tnc_attr_t *seg_env_attr = NULL;
+	seg_env_t *seg_env;
+	bool last_segment = FALSE;
+	enumerator_t *enumerator;
+
+	enumerator = this->seg_envs->create_enumerator(this->seg_envs);
+	while (enumerator->enumerate(enumerator, &seg_env))
+	{
+		if (seg_env->get_base_attr_id(seg_env) == base_attr_id)
+		{
+			seg_env_attr = seg_env->next_segment(seg_env, &last_segment);
+			if (!seg_env_attr)
+			{
+				break;
+			}
+			if (last_segment)
+			{
+				this->seg_envs->remove_at(this->seg_envs, enumerator);
+				seg_env->destroy(seg_env);
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return seg_env_attr;
+}
+
+METHOD(seg_contract_t, add_segment, pa_tnc_attr_t*,
+	private_seg_contract_t *this, pa_tnc_attr_t *attr, pa_tnc_attr_t **error,
+	bool *more)
+{
+	tcg_seg_attr_seg_env_t *seg_env_attr;
+	seg_env_t *current, *seg_env = NULL;
+	pa_tnc_attr_t *base_attr;
+	uint32_t base_attr_id;
+	uint8_t flags;
+	chunk_t segment_data;
+	enumerator_t *enumerator;
+
+	seg_env_attr = (tcg_seg_attr_seg_env_t*)attr;
+	base_attr_id = seg_env_attr->get_base_attr_id(seg_env_attr);
+	segment_data = seg_env_attr->get_segment(seg_env_attr, &flags);
+	*more = flags & SEG_ENV_FLAG_MORE;
+	*error = NULL;
+
+	enumerator = this->seg_envs->create_enumerator(this->seg_envs);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->get_base_attr_id(current) == base_attr_id)
+		{
+			seg_env = current;
+			if (!(*more))
+			{
+				this->seg_envs->remove_at(this->seg_envs, enumerator);
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (flags & SEG_ENV_FLAG_START)
+	{
+		if (seg_env)
+		{
+			DBG1(DBG_TNC, "base attribute ID %d is already in use",
+						   base_attr_id);
+			return NULL;
+		}
+		DBG2(DBG_TNC, "received first segment for base attribute ID %d "
+					  "(%d bytes)", base_attr_id, segment_data.len);
+		seg_env = seg_env_create_from_data(base_attr_id, segment_data,
+										   this->max_seg_size);
+		this->seg_envs->insert_last(this->seg_envs, seg_env);
+	}
+	else
+	{
+		if (!seg_env)
+		{
+			DBG1(DBG_TNC, "base attribute ID %d not found", base_attr_id);
+			return NULL;
+		}
+		DBG2(DBG_TNC, "received %s segment for base attribute ID %d "
+					  "(%d bytes)", (*more) ? "next" : "last", base_attr_id,
+					   segment_data.len);
+		seg_env->add_segment(seg_env, segment_data);
+	}
+	if (*more)
+	{
+		return NULL;
+	}
+	base_attr = seg_env->get_base_attr(seg_env, error);
+	seg_env->destroy(seg_env);
+
+	return base_attr;
+}
+
 
 METHOD(seg_contract_t, is_issuer, bool,
 	private_seg_contract_t *this)
@@ -206,6 +368,7 @@ METHOD(seg_contract_t, get_info_string, void,
 METHOD(seg_contract_t, destroy, void,
 	private_seg_contract_t *this)
 {
+	this->seg_envs->destroy_offset(this->seg_envs, offsetof(seg_env_t, destroy));
 	free(this);
 }
 
@@ -225,6 +388,10 @@ seg_contract_t *seg_contract_create(pen_type_t msg_type,
 			.get_msg_type = _get_msg_type,
 			.set_max_size = _set_max_size,
 			.get_max_size = _get_max_size,
+			.check_size = _check_size,
+			.first_segment = _first_segment,
+			.next_segment = _next_segment,
+			.add_segment = _add_segment,
 			.is_issuer = _is_issuer,
 			.is_null = _is_null,
 			.get_info_string = _get_info_string,
@@ -233,6 +400,7 @@ seg_contract_t *seg_contract_create(pen_type_t msg_type,
 		.msg_type = msg_type,
 		.max_attr_size = max_attr_size,
 		.max_seg_size = max_seg_size,
+		.seg_envs = linked_list_create(),
 		.is_issuer = is_issuer,
 		.issuer_id = issuer_id,
 		.is_imc = is_imc,

@@ -241,43 +241,15 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	{
 		tcg_swid_attr_tag_id_inv_t *swid_id_attr;
 		swid_tag_id_t *tag_id;
-		chunk_t tag_creator, unique_sw_id, instance_id;
 
-		/* At least one TCG Tag ID Inventory attribute is sent */
-		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_ID_INV_MIN_SIZE;
+		/* Send a TCG Tag ID Inventory attribute */
 		attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
 		swid_id_attr = (tcg_swid_attr_tag_id_inv_t*)attr;
 
 		enumerator = swid_inventory->create_enumerator(swid_inventory);
 		while (enumerator->enumerate(enumerator, &tag_id))
 		{
-			tag_creator = tag_id->get_tag_creator(tag_id);
-			unique_sw_id = tag_id->get_unique_sw_id(tag_id, &instance_id);
-			entry_size = 2 + tag_creator.len + 2 + unique_sw_id.len +
-						 2 + instance_id.len;
-
-			if (attr_size + entry_size > max_attr_size)
-			{
-				if (first)
-				{
-					/**
-					 * Send an ITA Start Angel attribute to the IMV signalling
-					 * that multiple TGC SWID Tag ID Inventory attributes follow
-					 */
-					attr_angel = ita_attr_angel_create(TRUE);
-					msg->add_attribute(msg, attr_angel);
-					first = FALSE;
-				}
-				msg->add_attribute(msg, attr);
-
-				/* create the next TCG SWID Tag ID Inventory attribute */
-				attr_size = PA_TNC_ATTR_HEADER_SIZE +
-							TCG_SWID_TAG_ID_INV_MIN_SIZE;
-				attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
-			}
-			swid_id_attr = (tcg_swid_attr_tag_id_inv_t*)attr;
 			swid_id_attr->add(swid_id_attr, tag_id->get_ref(tag_id));
-			attr_size += entry_size;
 		}
 		enumerator->destroy(enumerator);
 	}

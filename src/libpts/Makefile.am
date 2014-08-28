@@ -70,7 +70,8 @@ libpts_la_SOURCES = \
 	tcg/pts/tcg_pts_attr_req_file_meta.h tcg/pts/tcg_pts_attr_req_file_meta.c \
 	tcg/pts/tcg_pts_attr_unix_file_meta.h tcg/pts/tcg_pts_attr_unix_file_meta.c \
 	tcg/seg/tcg_seg_attr_max_size.h tcg/seg/tcg_seg_attr_max_size.c \
-	tcg/seg/tcg_seg_attr_seg_env.h \
+	tcg/seg/tcg_seg_attr_seg_env.h tcg/seg/tcg_seg_attr_seg_env.c \
+	tcg/seg/tcg_seg_attr_next_seg.h tcg/seg/tcg_seg_attr_next_seg.c \
 	tcg/swid/tcg_swid_attr_req.h tcg/swid/tcg_swid_attr_req.c \
 	tcg/swid/tcg_swid_attr_tag_id_inv.h tcg/swid/tcg_swid_attr_tag_id_inv.c \
 	tcg/swid/tcg_swid_attr_tag_inv.h tcg/swid/tcg_swid_attr_tag_inv.c

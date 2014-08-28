@@ -23,7 +23,7 @@
 #define IMV_STATE_H_
 
 #include "imv_session.h"
-#include "seg_contract/seg_contract_manager.h"
+#include "seg/seg_contract_manager.h"
 
 #include <tncifimv.h>
 

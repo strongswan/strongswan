@@ -35,6 +35,8 @@
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
+#include "tcg/seg/tcg_seg_attr_next_seg.h"
 
 ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 							TCG_SCAP_SUMMARY_RESULTS,
@@ -195,6 +197,10 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_seg_attr_max_size_create_from_data(value, TRUE);
 		case TCG_SEG_MAX_ATTR_SIZE_RESP:
 			return tcg_seg_attr_max_size_create_from_data(value, FALSE);
+		case TCG_SEG_ATTR_SEG_ENV:
+			return tcg_seg_attr_seg_env_create_from_data(value);
+		case TCG_SEG_NEXT_SEG_REQ:
+			return tcg_seg_attr_next_seg_create_from_data(value);
 		case TCG_PTS_REQ_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 		case TCG_PTS_PROTO_CAPS:

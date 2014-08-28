@@ -22,7 +22,7 @@
 #ifndef IMC_STATE_H_
 #define IMC_STATE_H_
 
-#include "seg_contract/seg_contract_manager.h"
+#include "seg/seg_contract_manager.h"
 
 #include <tncif.h>
 #include <tncifimv.h>

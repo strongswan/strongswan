@@ -56,8 +56,9 @@ libimcv_la_SOURCES = \
 	pa_tnc/pa_tnc_attr.h \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c \
-	seg_contract/seg_contract.h seg_contract/seg_contract.c \
-	seg_contract/seg_contract_manager.h seg_contract/seg_contract_manager.c
+	seg/seg_contract.h seg/seg_contract.c \
+	seg/seg_contract_manager.h seg/seg_contract_manager.c \
+	seg/seg_env.h seg/seg_env.c
 
 ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy Android.mk

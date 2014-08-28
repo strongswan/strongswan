@@ -25,6 +25,9 @@ typedef struct pa_tnc_msg_t pa_tnc_msg_t;
 
 #define PA_TNC_VERSION		0x01
 #define PA_TNC_HEADER_SIZE	8
+#define PA_TNC_RESERVED		0x000000
+
+
 
 #include "pa_tnc_attr.h"
 

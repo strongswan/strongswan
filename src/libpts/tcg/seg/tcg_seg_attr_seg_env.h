@@ -37,22 +37,37 @@ struct tcg_seg_attr_seg_env_t {
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
 
+	/**
+	 * Get enveloped attribute segment
+	 *
+	 * @param flags			Segmentation flags
+	 * @return				Segment
+	 */
+	chunk_t (*get_segment)(tcg_seg_attr_seg_env_t *this, uint8_t *flags);
+
+	/**
+	 * Get Base Attribute ID
+	 *
+	 * @return				Base Attribute ID
+	 */
+	uint32_t (*get_base_attr_id)(tcg_seg_attr_seg_env_t *this);
+
 };
 
 /**
  * Creates an tcg_seg_attr_seg_env_t object
  *
- * @param max_attr_size		Maximum IF-M attribute size in octets
- * @param max_seg_size		Maximum IF-M attribute segment size in octets
- * @param request			TRUE for a request, FALSE for a response
+ * @param segment			Attribute segment
+ * @param flags				Segmentation flags
+ * @param base_attr_id		Base Attribute ID
  */
-pa_tnc_attr_t* tcg_seg_attr_seg_env_create(chunk_t segment, uint8_t flags);
+pa_tnc_attr_t* tcg_seg_attr_seg_env_create(chunk_t segment, uint8_t flags,
+										   uint32_t base_attr_id);
 
 /**
  * Creates an tcg_seg_attr_seg_env_t object from received data
  *
  * @param value				unparsed attribute value
- * @param request			TRUE for a request, FALSE for a response
  */
 pa_tnc_attr_t* tcg_seg_attr_seg_env_create_from_data(chunk_t value);
 
