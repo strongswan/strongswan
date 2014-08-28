@@ -1279,7 +1279,7 @@ METHOD(credential_manager_t, add_validator, void,
 	private_credential_manager_t *this, cert_validator_t *vdtr)
 {
 	this->lock->write_lock(this->lock);
-	this->sets->insert_last(this->validators, vdtr);
+	this->validators->insert_last(this->validators, vdtr);
 	this->lock->unlock(this->lock);
 }
 
