@@ -79,7 +79,12 @@ plugin_t *curl_plugin_create()
 		},
 	);
 
-	res = curl_global_init(CURL_GLOBAL_NOTHING);
+	res = curl_global_init(CURL_GLOBAL_SSL);
+	if (res != CURLE_OK)
+	{
+		/* no SSL support? Try without */
+		res = curl_global_init(CURL_GLOBAL_NOTHING);
+	}
 	if (res != CURLE_OK)
 	{
 		DBG1(DBG_LIB, "global libcurl initializing failed: %s",
