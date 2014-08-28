@@ -32,7 +32,60 @@ struct private_curl_plugin_t {
 	 * public functions
 	 */
 	curl_plugin_t public;
+
+	/**
+	 * Supported features, CURL protocols + 1
+	 */
+	plugin_feature_t *features;
+
+	/**
+	 * Number of supported features
+	 */
+	int count;
 };
+
+/**
+ * Append a feature to supported feature list
+ */
+static void add_feature(private_curl_plugin_t *this, plugin_feature_t f)
+{
+	this->features = realloc(this->features, ++this->count * sizeof(f));
+	this->features[this->count - 1] = f;
+}
+
+/**
+ * Get supported protocols, build plugin feature set
+ */
+static bool query_protocols(private_curl_plugin_t *this)
+{
+	static char *protos[] = {
+		/* protocols we are interested in, suffixed with "://" */
+		"file://", "http://", "https://", "ftp://",
+	};
+	curl_version_info_data *info;
+	int i, j;
+
+	add_feature(this, PLUGIN_REGISTER(FETCHER, curl_fetcher_create));
+
+	info = curl_version_info(CURLVERSION_NOW);
+
+	for (i = 0; info->protocols[i]; i++)
+	{
+		for (j = 0; j < countof(protos); j++)
+		{
+			if (strlen(info->protocols[i]) == strlen(protos[j]) - strlen("://"))
+			{
+				if (strneq(info->protocols[i], protos[j],
+						   strlen(protos[j]) - strlen("://")))
+				{
+					add_feature(this, PLUGIN_PROVIDE(FETCHER, protos[j]));
+				}
+			}
+		}
+	}
+
+	return this->count > 1;
+}
 
 METHOD(plugin_t, get_name, char*,
 	private_curl_plugin_t *this)
@@ -43,21 +96,15 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, get_features, int,
 	private_curl_plugin_t *this, plugin_feature_t *features[])
 {
-	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(FETCHER, curl_fetcher_create),
-			PLUGIN_PROVIDE(FETCHER, "file://"),
-			PLUGIN_PROVIDE(FETCHER, "http://"),
-			PLUGIN_PROVIDE(FETCHER, "https://"),
-			PLUGIN_PROVIDE(FETCHER, "ftp://"),
-	};
-	*features = f;
-	return countof(f);
+	*features = this->features;
+	return this->count;
 }
 
 METHOD(plugin_t, destroy, void,
 	private_curl_plugin_t *this)
 {
 	curl_global_cleanup();
+	free(this->features);
 	free(this);
 }
 
@@ -92,6 +139,13 @@ plugin_t *curl_plugin_create()
 		destroy(this);
 		return NULL;
 	}
+
+	if (!query_protocols(this))
+	{
+		DBG1(DBG_LIB, "no usable CURL protocols found, curl disabled");
+		destroy(this);
+		return NULL;
+	}
+
 	return &this->public.plugin;
 }
-
