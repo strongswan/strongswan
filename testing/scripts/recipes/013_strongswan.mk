@@ -5,6 +5,15 @@ PKG = strongswan-$(PV)
 TAR = $(PKG).tar.bz2
 SRC = http://download.strongswan.org/$(TAR)
 
+# can be passed to load sources from a directory instead of a tarball
+ifneq ($(origin SRCDIR), undefined)
+DIR = $(SRCDIR)
+BUILDDIR ?= $(SRCDIR)
+endif
+DIR ?= .
+# can be passed if not building in the source directory
+BUILDDIR ?= $(PKG)
+
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
 CONFIG_OPTS = \
@@ -94,11 +103,11 @@ $(TAR):
 $(PKG): $(TAR)
 	tar xfj $(TAR)
 
-configure: $(PKG)
-	cd $(PKG) && ./configure $(CONFIG_OPTS)
+configure: $(BUILDDIR)
+	cd $(BUILDDIR) && $(DIR)/configure $(CONFIG_OPTS)
 
 build: configure
-	cd $(PKG) && make -j $(NUM_CPUS)
+	cd $(BUILDDIR) && make -j $(NUM_CPUS)
 
 install: build
-	cd $(PKG) && make install
+	cd $(BUILDDIR) && make install
