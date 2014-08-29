@@ -171,14 +171,16 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 	session = state->get_session(state);
 	os_info = session->get_os_info(session);
 
+	/* generate an outgoing PA-TNC message - we might need it */
+	out_msg = imv_msg_create_as_reply(in_msg);
+
 	/* parse received PA-TNC message and handle local and remote errors */
-	result = in_msg->receive(in_msg, &fatal_error);
+	result = in_msg->receive(in_msg,out_msg, &fatal_error);
 	if (result != TNC_RESULT_SUCCESS)
 	{
+		out_msg->destroy(out_msg);
 		return result;
 	}
-
-	out_msg = imv_msg_create_as_reply(in_msg);
 
 	/* analyze PA-TNC attributes */
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
@@ -394,20 +396,20 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 	{
 		os_state->set_handshake_state(os_state, IMV_OS_STATE_END);
 		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		if (result != TNC_RESULT_SUCCESS)
+		if (result == TNC_RESULT_SUCCESS)
 		{
-			return result;
+			result = this->agent->provide_recommendation(this->agent, state);
 		}
-		return this->agent->provide_recommendation(this->agent, state);
 	}
-
-	/* send PA-TNC message with excl flag set */
-	result = out_msg->send(out_msg, TRUE);
+	else
+	{
+		/* send PA-TNC message with the EXCL flag set */
+		result = out_msg->send(out_msg, TRUE);
+	}
 	out_msg->destroy(out_msg);
 
 	return result;
- }
+}
 
 METHOD(imv_agent_if_t, receive_message, TNC_Result,
 	private_imv_os_agent_t *this, TNC_ConnectionID id,

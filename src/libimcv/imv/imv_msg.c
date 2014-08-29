@@ -268,7 +268,7 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 }
 
 METHOD(imv_msg_t, receive, TNC_Result,
-	private_imv_msg_t *this, bool *fatal_error)
+	private_imv_msg_t *this, imv_msg_t *out_msg, bool *fatal_error)
 {
 	TNC_Result result = TNC_RESULT_SUCCESS;
 	linked_list_t *non_fatal_types;
@@ -310,25 +310,13 @@ METHOD(imv_msg_t, receive, TNC_Result,
 			break;
 		case VERIFY_ERROR:
 		{
-			imv_msg_t *error_msg;
-
-			error_msg = imv_msg_create_as_reply(&this->public);
-
 			/* extract and copy by reference all error attributes */
 			enumerator = this->pa_msg->create_error_enumerator(this->pa_msg);
 			while (enumerator->enumerate(enumerator, &attr))
 			{
-				error_msg->add_attribute(error_msg, attr->get_ref(attr));
+				out_msg->add_attribute(out_msg, attr->get_ref(attr));
 			}
 			enumerator->destroy(enumerator);
-
-			/*
-			 * send the PA-TNC message containing all error attributes
-			 * with the excl flag set
-			 */
-			result = error_msg->send(error_msg, TRUE);
-			error_msg->destroy(error_msg);
-			return result;
 		}
 		case FAILED:
 		default:
@@ -340,7 +328,6 @@ METHOD(imv_msg_t, receive, TNC_Result,
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		uint32_t max_attr_size, max_seg_size, my_max_attr_size, my_max_seg_size;
-		imv_msg_t *out_msg;
 		seg_contract_manager_t *contracts;
 		seg_contract_t *contract;
 		char buf[BUF_LEN];
@@ -399,17 +386,10 @@ METHOD(imv_msg_t, receive, TNC_Result,
 						 max_seg_size);
 				}
 
-				/* Send Maximum Attribute Size Response */
-				out_msg = imv_msg_create_as_reply(&this->public);
+				/* Add Maximum Attribute Size Response attribute */
 				attr = tcg_seg_attr_max_size_create(max_attr_size,
 													max_seg_size, FALSE);
 				out_msg->add_attribute(out_msg, attr);
-				result = out_msg->send(out_msg, TRUE);
-				out_msg->destroy(out_msg);
-				if (result != TNC_RESULT_SUCCESS)
-				{
-					break;
-				}
 				break;
 			}
 			case TCG_SEG_MAX_ATTR_SIZE_RESP:
@@ -463,10 +443,7 @@ METHOD(imv_msg_t, receive, TNC_Result,
 				attr = contract->add_segment(contract, attr, &error, &more);
 				if (error)
 				{
-					out_msg = imv_msg_create_as_reply(&this->public);
 					out_msg->add_attribute(out_msg, error);
-					result = out_msg->send(out_msg, TRUE);
-					out_msg->destroy(out_msg);
 				}
 				if (attr)
 				{
@@ -475,11 +452,8 @@ METHOD(imv_msg_t, receive, TNC_Result,
 				if (more)
 				{
 					/* Send Next Segment Request */
-					out_msg = imv_msg_create_as_reply(&this->public);
 					attr = tcg_seg_attr_next_seg_create(base_attr_id, FALSE);
 					out_msg->add_attribute(out_msg, attr);
-					result = out_msg->send(out_msg, TRUE);
-					out_msg->destroy(out_msg);
 				}
 				break;
 			}
@@ -496,21 +470,20 @@ METHOD(imv_msg_t, receive, TNC_Result,
 				if (!contract)
 				{
 					/* TODO no contract - generate error message */
-					DBG2(DBG_IMV, "no contract for received next segment "
+					DBG1(DBG_IMV, "no contract for received next segment "
 						 "request with base attribute ID %u", base_attr_id);
 					continue;
 				}
 				attr = contract->next_segment(contract, base_attr_id);
 				if (attr)
 				{
-					out_msg = imv_msg_create_as_reply(&this->public);
 					out_msg->add_attribute(out_msg, attr);
-					result = out_msg->send(out_msg, TRUE);
-					out_msg->destroy(out_msg);
 				}
 				else
 				{
 					/* TODO no more segments - generate error message */
+					DBG1(DBG_IMV, "no more segments found for "
+						 "base attribute ID %u", base_attr_id);
 				}
 				break;
 			}

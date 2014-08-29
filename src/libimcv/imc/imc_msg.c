@@ -435,7 +435,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				if (!contract)
 				{
 					/* TODO no contract - generate error message */
-					DBG2(DBG_IMC, "no contract for received next segment "
+					DBG1(DBG_IMC, "no contract for received next segment "
 						 "request with base attribute ID %u", base_attr_id);
 					continue;
 				}

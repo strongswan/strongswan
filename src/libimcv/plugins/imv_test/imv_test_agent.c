@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -94,10 +94,14 @@ static TNC_Result receive_msg(private_imv_test_agent_t *this, imv_state_t *state
 	int rounds;
 	bool fatal_error = FALSE, received_command = FALSE, retry = FALSE;
 
+	/* generate an outgoing PA-TNC message - we might need it */
+	out_msg = imv_msg_create_as_reply(in_msg);
+
 	/* parse received PA-TNC message and handle local and remote errors */
-	result = in_msg->receive(in_msg, &fatal_error);
+	result = in_msg->receive(in_msg, out_msg, &fatal_error);
 	if (result != TNC_RESULT_SUCCESS)
 	{
+		out_msg->destroy(out_msg);
 		return result;
 	}
 
@@ -172,14 +176,12 @@ static TNC_Result receive_msg(private_imv_test_agent_t *this, imv_state_t *state
 		state->set_recommendation(state,
 							TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 							TNC_IMV_EVALUATION_RESULT_ERROR);
-		out_msg = imv_msg_create_as_reply(in_msg);
 		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		if (result != TNC_RESULT_SUCCESS)
+		if (result == TNC_RESULT_SUCCESS)
 		{
-			return result;
+			result = this->agent->provide_recommendation(this->agent, state);
 		}
-		return this->agent->provide_recommendation(this->agent, state);
+		return result;
 	}
 
 	/* request a handshake retry ? */
@@ -195,7 +197,6 @@ static TNC_Result receive_msg(private_imv_test_agent_t *this, imv_state_t *state
 	/* repeat the measurement ? */
 	if (test_state->another_round(test_state, in_msg->get_src_id(in_msg)))
 	{
-		out_msg = imv_msg_create_as_reply(in_msg);
 		attr = ita_attr_command_create("repeat");
 		out_msg->add_attribute(out_msg, attr);
 
@@ -208,19 +209,20 @@ static TNC_Result receive_msg(private_imv_test_agent_t *this, imv_state_t *state
 
 	if (received_command)
 	{
-		out_msg = imv_msg_create_as_reply(in_msg);
 		result = out_msg->send_assessment(out_msg);
-		out_msg->destroy(out_msg);
-		if (result != TNC_RESULT_SUCCESS)
+		if (result == TNC_RESULT_SUCCESS)
 		{
-			return result;
+			result = this->agent->provide_recommendation(this->agent, state);
 		}
-		return this->agent->provide_recommendation(this->agent, state);
 	}
 	else
 	{
-		return TNC_RESULT_SUCCESS;
+		/* send PA-TNC message with the EXCL flag set */
+		result = out_msg->send(out_msg, TRUE);
 	}
+	out_msg->destroy(out_msg);
+
+	return result;
  }
 
 METHOD(imv_agent_if_t, receive_message, TNC_Result,
