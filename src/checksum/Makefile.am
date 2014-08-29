@@ -81,11 +81,6 @@ if USE_IMCV
   libs += $(DESTDIR)$(ipseclibdir)/libimcv.so
 endif
 
-if USE_PTS
-  deps += $(top_builddir)/src/libpts/libpts.la
-  libs += $(DESTDIR)$(ipseclibdir)/libpts.so
-endif
-
 if USE_CHARON
   deps += $(top_builddir)/src/libcharon/libcharon.la
   libs += $(DESTDIR)$(ipseclibdir)/libcharon.so

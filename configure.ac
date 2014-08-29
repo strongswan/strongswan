@@ -397,10 +397,6 @@ if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$i
 	imcv=true;
 fi
 
-if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue; then
-	pts=true;
-fi
-
 if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse; then
 		sha1=true;
@@ -1500,7 +1496,6 @@ AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
-AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers -o x$aikgen = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
@@ -1640,11 +1635,6 @@ AC_CONFIG_FILES([
 	src/libtnccs/plugins/tnccs_20/Makefile
 	src/libtnccs/plugins/tnccs_dynamic/Makefile
 	src/libpttls/Makefile
-	src/libpts/Makefile
-	src/libpts/plugins/imc_attestation/Makefile
-	src/libpts/plugins/imv_attestation/Makefile
-	src/libpts/plugins/imc_swid/Makefile
-	src/libpts/plugins/imv_swid/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile
@@ -1652,6 +1642,10 @@ AC_CONFIG_FILES([
 	src/libimcv/plugins/imv_scanner/Makefile
 	src/libimcv/plugins/imc_os/Makefile
 	src/libimcv/plugins/imv_os/Makefile
+	src/libimcv/plugins/imc_attestation/Makefile
+	src/libimcv/plugins/imv_attestation/Makefile
+	src/libimcv/plugins/imc_swid/Makefile
+	src/libimcv/plugins/imv_swid/Makefile
 	src/charon/Makefile
 	src/charon-nm/Makefile
 	src/charon-tkm/Makefile

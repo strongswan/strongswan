@@ -16,7 +16,7 @@
 #include "ita_comp_tboot.h"
 #include "ita_comp_func_name.h"
 
-#include "libpts.h"
+#include "imcv.h"
 #include "pts/components/pts_component.h"
 
 #include <utils/debug.h>
@@ -215,7 +215,7 @@ METHOD(pts_component_t, verify, status_t,
 	}
 	vid = this->name->get_vendor_id(this->name);
 	name = this->name->get_name(this->name);
-	names = pts_components->get_comp_func_names(pts_components, vid);
+	names = imcv_pts_components->get_comp_func_names(imcv_pts_components, vid);
 
 	if (this->count)
 	{
@@ -320,7 +320,8 @@ METHOD(pts_component_t, destroy, void,
 												this->cid, this->aik_id);
 			vid = this->name->get_vendor_id(this->name);
 			name = this->name->get_name(this->name);
-			names = pts_components->get_comp_func_names(pts_components, vid);
+			names = imcv_pts_components->get_comp_func_names(imcv_pts_components,
+												vid);
 			DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
 				 "evidence measurements", count, pen_names, vid, names, name);
 		}

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup imv_attestation imv_attestation
- * @ingroup libpts_plugins
+ * @ingroup libimcv_plugins
  *
  * @defgroup imv_attestation_state_t imv_attestation_state
  * @{ @ingroup imv_attestation

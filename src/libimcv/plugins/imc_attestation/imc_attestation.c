@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,14 +24,10 @@
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <ietf/ietf_attr_assess_result.h>
-#include <os_info/os_info.h>
-
-#include <libpts.h>
-
-#include <pts/pts_error.h>
-
 #include <tcg/pts/tcg_pts_attr_proto_caps.h>
 #include <tcg/pts/tcg_pts_attr_meas_algo.h>
+#include <os_info/os_info.h>
+#include <pts/pts_error.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -90,7 +87,6 @@ TNC_Result TNC_IMC_API TNC_IMC_Initialize(TNC_IMCID imc_id,
 		imc_attestation = NULL;
 		return TNC_RESULT_FATAL;
 	}
-	libpts_init();
 
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
@@ -318,9 +314,6 @@ TNC_Result TNC_IMC_API TNC_IMC_Terminate(TNC_IMCID imc_id)
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-
-	libpts_deinit();
-
 	imc_attestation->destroy(imc_attestation);
 	imc_attestation = NULL;
 

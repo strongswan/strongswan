@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  *
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include "libpts.h"
+#include "imcv.h"
 #include "pts/components/pts_comp_func_name.h"
 
 #include <utils/debug.h>
@@ -108,9 +108,12 @@ METHOD(pts_comp_func_name_t, log_, void,
 	char flags[8];
 	int type;
 
-	names = pts_components->get_comp_func_names(pts_components, this->vid);
-	types = pts_components->get_qualifier_type_names(pts_components, this->vid);
-	type =  pts_components->get_qualifier(pts_components, &this->public, flags);
+	names = imcv_pts_components->get_comp_func_names(imcv_pts_components,
+											this->vid);
+	types = imcv_pts_components->get_qualifier_type_names(imcv_pts_components,
+											this->vid);
+	type =  imcv_pts_components->get_qualifier(imcv_pts_components,
+											&this->public, flags);
 
 	if (names && types)
 	{

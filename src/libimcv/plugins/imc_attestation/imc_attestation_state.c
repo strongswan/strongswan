@@ -16,7 +16,7 @@
 
 #include "imc_attestation_state.h"
 
-#include <libpts.h>
+#include <imcv.h>
 
 #include <tncif_names.h>
 
@@ -194,7 +194,8 @@ METHOD(imc_attestation_state_t, create_component, pts_component_t*,
 
 	if (!found)
 	{
-		component = pts_components->create(pts_components, name, depth, NULL);
+		component = imcv_pts_components->create(imcv_pts_components,
+												name, depth, NULL);
 		if (!component)
 		{
 			return NULL;

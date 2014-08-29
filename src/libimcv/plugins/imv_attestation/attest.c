@@ -28,7 +28,6 @@
 #include <utils/debug.h>
 
 #include <imcv.h>
-#include <libpts.h>
 #include <pts/pts_meas_algo.h>
 
 #include "attest_db.h"
@@ -96,7 +95,6 @@ attest_db_t *attest;
 static void cleanup(void)
 {
 	attest->destroy(attest);
-	libpts_deinit();
 	libimcv_deinit();
 #ifdef HAVE_SYSLOG
 	closelog();
@@ -479,7 +477,6 @@ int main(int argc, char *argv[])
 	}
 	atexit(cleanup);
 	libimcv_init(FALSE);
-	libpts_init();
 
 	do_args(argc, argv);
 

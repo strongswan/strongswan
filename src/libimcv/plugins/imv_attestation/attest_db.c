@@ -23,7 +23,7 @@
 
 #include "attest_db.h"
 
-#include "libpts.h"
+#include "imcv.h"
 #include "pts/pts_meas_algo.h"
 #include "pts/pts_file_meas.h"
 #include "pts/components/pts_comp_func_name.h"
@@ -187,9 +187,10 @@ char* print_cfn(pts_comp_func_name_t *cfn)
 	qualifier = cfn->get_qualifier(cfn);
 	n = snprintf(buf, BUF_LEN, "0x%06x/0x%08x-0x%02x", vid, name, qualifier);
 
-	names = pts_components->get_comp_func_names(pts_components, vid);
-	types = pts_components->get_qualifier_type_names(pts_components, vid);
-	type =  pts_components->get_qualifier(pts_components, cfn, flags);
+	names = imcv_pts_components->get_comp_func_names(imcv_pts_components, vid);
+	types = imcv_pts_components->get_qualifier_type_names(imcv_pts_components,
+														  vid);
+	type =  imcv_pts_components->get_qualifier(imcv_pts_components, cfn, flags);
 	if (names && types)
 	{
 		n = snprintf(buf + n, BUF_LEN - n, " %N/%N [%s] %N",

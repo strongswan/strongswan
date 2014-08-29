@@ -40,10 +40,6 @@ if USE_IMCV
   SUBDIRS += libimcv
 endif
 
-if USE_PTS
-  SUBDIRS += libpts
-endif
-
 if USE_LIBCHARON
   SUBDIRS += libcharon
 endif

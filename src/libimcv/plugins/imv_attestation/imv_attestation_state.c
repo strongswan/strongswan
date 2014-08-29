@@ -16,8 +16,7 @@
 
 #include "imv_attestation_state.h"
 
-#include <libpts.h>
-
+#include <imcv.h>
 #include <imv/imv_lang_string.h>
 #include "imv/imv_reason_string.h"
 
@@ -404,7 +403,8 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 	}
 	else
 	{
-		component = pts_components->create(pts_components, name, depth, pts_db);
+		component = imcv_pts_components->create(imcv_pts_components,
+												name, depth, pts_db);
 		if (!component)
 		{
 			/* unsupported component */

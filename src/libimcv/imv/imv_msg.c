@@ -18,13 +18,12 @@
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_assess_result.h"
 #include "ietf/ietf_attr_remediation_instr.h"
+#include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
+#include "tcg/seg/tcg_seg_attr_next_seg.h"
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
-
-#include <tcg/seg/tcg_seg_attr_max_size.h>
-#include <tcg/seg/tcg_seg_attr_seg_env.h>
-#include <tcg/seg/tcg_seg_attr_next_seg.h>
 
 #include <pen/pen.h>
 #include <collections/linked_list.h>

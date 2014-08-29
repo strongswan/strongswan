@@ -20,21 +20,19 @@
 #include "imv_swid_state.h"
 #include "imv_swid_rest.h"
 
-#include "libpts.h"
-#include "swid/swid_error.h"
-#include "swid/swid_inventory.h"
+#include <imcv.h>
+#include <imv/imv_agent.h>
+#include <imv/imv_msg.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_angel.h>
 #include "tcg/seg/tcg_seg_attr_max_size.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
-
-#include <imcv.h>
-#include <ietf/ietf_attr_pa_tnc_error.h>
-#include <imv/imv_agent.h>
-#include <imv/imv_msg.h>
-#include <ita/ita_attr.h>
-#include <ita/ita_attr_angel.h>
+#include "swid/swid_error.h"
+#include "swid/swid_inventory.h"
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -704,7 +702,6 @@ METHOD(imv_agent_if_t, destroy, void,
 	DESTROY_IF(this->rest_api);
 	this->agent->destroy(this->agent);
 	free(this);
-	libpts_deinit();
 }
 
 /**
@@ -748,7 +745,6 @@ imv_agent_if_t *imv_swid_agent_create(const char *name, TNC_IMVID id,
 	{
 		this->rest_api = imv_swid_rest_create(rest_api_uri, rest_api_timeout);
 	}
-	libpts_init();
 
 	return &this->public;
 }

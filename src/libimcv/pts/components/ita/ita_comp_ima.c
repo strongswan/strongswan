@@ -16,7 +16,7 @@
 #include "ita_comp_ima.h"
 #include "ita_comp_func_name.h"
 
-#include "libpts.h"
+#include "imcv.h"
 #include "pts/pts_pcr.h"
 #include "pts/pts_ima_bios_list.h"
 #include "pts/pts_ima_event_list.h"

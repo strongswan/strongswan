@@ -15,17 +15,15 @@
 
 #include "imc_swid_state.h"
 
-#include "libpts.h"
-#include "swid/swid_inventory.h"
-#include "swid/swid_error.h"
-#include "tcg/swid/tcg_swid_attr_req.h"
-#include "tcg/swid/tcg_swid_attr_tag_inv.h"
-#include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
-
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_angel.h>
+#include "tcg/swid/tcg_swid_attr_req.h"
+#include "tcg/swid/tcg_swid_attr_tag_inv.h"
+#include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
+#include "swid/swid_inventory.h"
+#include "swid/swid_error.h"
 
 #include <tncif_pa_subtypes.h>
 
@@ -63,9 +61,6 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-
-	libpts_init();
-
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
 		DBG1(DBG_IMC, "no common IF-IMC version");
@@ -431,9 +426,6 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-
-	libpts_deinit();
-
 	imc_swid->destroy(imc_swid);
 	imc_swid = NULL;
 

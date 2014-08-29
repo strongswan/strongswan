@@ -15,13 +15,12 @@
 
 #include "seg_contract.h"
 #include "seg_env.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 
 #include <utils/debug.h>
 #include <bio/bio_writer.h>
 
 #include <tncif_pa_subtypes.h>
-
-#include <tcg/seg/tcg_seg_attr_seg_env.h>
 
 typedef struct private_seg_contract_t private_seg_contract_t;
 

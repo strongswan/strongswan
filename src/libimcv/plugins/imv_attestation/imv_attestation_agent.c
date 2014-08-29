@@ -34,19 +34,15 @@
 #include <ietf/ietf_attr_string_version.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_device_id.h>
-
-#include <libpts.h>
-
-#include <pts/pts.h>
-#include <pts/pts_database.h>
-#include <pts/pts_creds.h>
-#include <pts/components/ita/ita_comp_func_name.h>
-
 #include <tcg/tcg_attr.h>
 #include <tcg/pts/tcg_pts_attr_meas_algo.h>
 #include <tcg/pts/tcg_pts_attr_proto_caps.h>
 #include <tcg/pts/tcg_pts_attr_req_file_meas.h>
 #include <tcg/pts/tcg_pts_attr_req_file_meta.h>
+#include <pts/pts.h>
+#include <pts/pts_database.h>
+#include <pts/pts_creds.h>
+#include <pts/components/ita/ita_comp_func_name.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -842,7 +838,6 @@ METHOD(imv_agent_if_t, destroy, void,
 	DESTROY_IF(this->pts_credmgr);
 	DESTROY_IF(this->agent);
 	free(this);
-	libpts_deinit();
 }
 
 /**
@@ -889,8 +884,6 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 		.pts_creds = pts_creds_create(cadir),
 		.pts_db = pts_database_create(imcv_db),
 	);
-
-	libpts_init();
 
 	if (!pts_meas_algo_probe(&this->supported_algorithms) ||
 		!pts_dh_group_probe(&this->supported_dh_groups, mandatory_dh_groups) ||

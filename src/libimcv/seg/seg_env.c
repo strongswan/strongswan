@@ -17,12 +17,11 @@
 
 #include "imcv.h"
 #include "pa_tnc/pa_tnc_msg.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 
 #include <utils/debug.h>
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
-
-#include <tcg/seg/tcg_seg_attr_seg_env.h>
 
 #define BASE_ATTR_ID_PREFIX	0xFF
 

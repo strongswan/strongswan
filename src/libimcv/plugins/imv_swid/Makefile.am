@@ -1,8 +1,7 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libimcv \
-	-I$(top_srcdir)/src/libpts
+	-I$(top_srcdir)/src/libimcv
 
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS) $(json_CFLAGS)
@@ -11,7 +10,6 @@ imcv_LTLIBRARIES = imv-swid.la
 
 imv_swid_la_LIBADD = \
 	$(top_builddir)/src/libimcv/libimcv.la \
-	$(top_builddir)/src/libpts/libpts.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(json_LIBS)
 
