@@ -361,16 +361,16 @@ bool array_remove(array_t *array, int idx, void *data)
 	{
 		return FALSE;
 	}
+	if (idx < 0)
+	{
+		idx = array_count(array) - 1;
+	}
 	if (idx > array_count(array) / 2)
 	{
 		remove_tail(array, idx);
 	}
 	else
 	{
-		if (idx < 0)
-		{
-			idx = array_count(array) - 1;
-		}
 		remove_head(array, idx);
 	}
 	if (array->head + array->tail > ARRAY_MAX_UNUSED)
