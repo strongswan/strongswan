@@ -171,3 +171,28 @@ endif
 if USE_IMV_SWID
   SUBDIRS += plugins/imv_swid
 endif
+
+TESTS = imcv_tests
+
+check_PROGRAMS = $(TESTS)
+
+imcv_tests_SOURCES = \
+	ita/ita_attr_command.c \
+	pa_tnc/pa_tnc_attr_manager.c \
+	seg/seg_env.c seg/seg_contract.c \
+	suites/test_imcv_seg.c \
+	ietf/ietf_attr_pa_tnc_error.c \
+	tcg/seg/tcg_seg_attr_seg_env.c \
+	imcv.c imcv_tests.h imcv_tests.c
+
+imcv_tests_CFLAGS = \
+	-I$(top_srcdir)/src/libimcv \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libstrongswan/tests \
+	@COVERAGE_CFLAGS@
+
+imcv_tests_LDFLAGS = @COVERAGE_LDFLAGS@
+imcv_tests_LDADD = \
+	$(top_builddir)/src/libimcv/libimcv.la \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libstrongswan/tests/libtest.la
