@@ -91,8 +91,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	this->value = chunk_create(this->command, strlen(this->command));
-	this->value = chunk_clone(this->value);
+	this->value = chunk_clone(chunk_from_str(this->command));
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
