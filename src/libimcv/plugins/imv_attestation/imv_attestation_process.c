@@ -218,6 +218,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			}
 			session->get_session_id(session, NULL, &aik_id);
 			pts->set_aik(pts, aik, aik_id);
+			state->set_action_flags(state, IMV_ATTESTATION_AIK);
 			break;
 		}
 		case TCG_PTS_FILE_MEAS:

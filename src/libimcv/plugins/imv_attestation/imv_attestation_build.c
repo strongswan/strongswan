@@ -98,6 +98,11 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			uint32_t depth;
 			bool first_component = TRUE;
 
+			if (!(state->get_action_flags(state) & IMV_ATTESTATION_AIK))
+			{
+				break;
+			}
+
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 

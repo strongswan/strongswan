@@ -49,8 +49,9 @@ enum imv_attestation_flag_t {
 	IMV_ATTESTATION_ATTR_REQ =            (1<<3),
 	IMV_ATTESTATION_ALGO =                (1<<4),
 	IMV_ATTESTATION_DH_NONCE =            (1<<5),
-	IMV_ATTESTATION_FILE_MEAS =           (1<<6),
-	IMV_ATTESTATION_REC =                 (1<<7)
+	IMV_ATTESTATION_AIK =                 (1<<6),
+	IMV_ATTESTATION_FILE_MEAS =           (1<<7),
+	IMV_ATTESTATION_REC =                 (1<<8)
 };
 
 /**
