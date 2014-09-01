@@ -32,7 +32,7 @@ typedef struct private_tcg_swid_attr_req_t private_tcg_swid_attr_req_t;
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |Reserved |C|S|R|                   Tag ID Count                |
+ *  |R|S|C| Reserved|                   Tag ID Count                |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                          Request ID                           |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -44,7 +44,7 @@ typedef struct private_tcg_swid_attr_req_t private_tcg_swid_attr_req_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define SWID_REQ_RESERVED_MASK			0x03
+#define SWID_REQ_RESERVED_MASK			0xE0
 
 /**
  * Private data of an tcg_swid_attr_req_t object.

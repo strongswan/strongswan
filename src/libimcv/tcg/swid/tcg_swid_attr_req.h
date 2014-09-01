@@ -28,9 +28,9 @@ typedef enum tcg_swid_attr_req_flag_t tcg_swid_attr_req_flag_t;
 
 enum tcg_swid_attr_req_flag_t {
 	TCG_SWID_ATTR_REQ_FLAG_NONE = 0,
-	TCG_SWID_ATTR_REQ_FLAG_R =   (1 << 0),
-	TCG_SWID_ATTR_REQ_FLAG_S =   (1 << 1),
-	TCG_SWID_ATTR_REQ_FLAG_C =   (1 << 2)
+	TCG_SWID_ATTR_REQ_FLAG_R =   (1 << 7),
+	TCG_SWID_ATTR_REQ_FLAG_S =   (1 << 6),
+	TCG_SWID_ATTR_REQ_FLAG_C =   (1 << 5)
 };
 
 #include "tcg/tcg_attr.h"
