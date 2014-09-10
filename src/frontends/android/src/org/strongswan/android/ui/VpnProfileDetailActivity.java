@@ -23,6 +23,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
+import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
 
@@ -240,11 +241,11 @@ public class VpnProfileDetailActivity extends Activity
 	 */
 	private void updateCredentialView()
 	{
-		mUsernamePassword.setVisibility(mVpnType.getRequiresUsernamePassword() ? View.VISIBLE : View.GONE);
-		mUserCertificate.setVisibility(mVpnType.getRequiresCertificate() ? View.VISIBLE : View.GONE);
-		mTncNotice.setVisibility(mVpnType.getEnableBYOD() ? View.VISIBLE : View.GONE);
+		mUsernamePassword.setVisibility(mVpnType.has(VpnTypeFeature.USER_PASS) ? View.VISIBLE : View.GONE);
+		mUserCertificate.setVisibility(mVpnType.has(VpnTypeFeature.CERTIFICATE) ? View.VISIBLE : View.GONE);
+		mTncNotice.setVisibility(mVpnType.has(VpnTypeFeature.BYOD) ? View.VISIBLE : View.GONE);
 
-		if (mVpnType.getRequiresCertificate())
+		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
 			if (mUserCertLoading != null)
 			{
@@ -349,7 +350,7 @@ public class VpnProfileDetailActivity extends Activity
 			mGateway.setError(getString(R.string.alert_text_no_input_gateway));
 			valid = false;
 		}
-		if (mVpnType.getRequiresUsernamePassword())
+		if (mVpnType.has(VpnTypeFeature.USER_PASS))
 		{
 			if (mUsername.getText().toString().trim().isEmpty())
 			{
@@ -357,7 +358,7 @@ public class VpnProfileDetailActivity extends Activity
 				valid = false;
 			}
 		}
-		if (mVpnType.getRequiresCertificate() && mUserCertEntry == null)
+		if (mVpnType.has(VpnTypeFeature.CERTIFICATE) && mUserCertEntry == null)
 		{	/* let's show an error icon */
 			((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
 			valid = false;
@@ -381,14 +382,14 @@ public class VpnProfileDetailActivity extends Activity
 		mProfile.setName(name.isEmpty() ? gateway : name);
 		mProfile.setGateway(gateway);
 		mProfile.setVpnType(mVpnType);
-		if (mVpnType.getRequiresUsernamePassword())
+		if (mVpnType.has(VpnTypeFeature.USER_PASS))
 		{
 			mProfile.setUsername(mUsername.getText().toString().trim());
 			String password = mPassword.getText().toString().trim();
 			password = password.isEmpty() ? null : password;
 			mProfile.setPassword(password);
 		}
-		if (mVpnType.getRequiresCertificate())
+		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
 			mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
 		}

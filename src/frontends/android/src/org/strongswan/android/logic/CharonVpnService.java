@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
@@ -211,7 +212,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().getEnableBYOD()))
+						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
 							initiate(mCurrentProfile.getVpnType().getIdentifier(),
