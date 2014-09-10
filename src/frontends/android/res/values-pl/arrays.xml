@@ -19,6 +19,7 @@
         <item>IKEv2 EAP (użytkownik/hasło)</item>
         <item>IKEv2 certyfikat</item>
         <item>IKEv2 certyfikat + EAP (użytkownik/hasło)</item>
+        <item>IKEv2 EAP-TLS (certyfikat)</item>
         <item>IKEv2 EAP-TNC (użytkownik/hasło)</item>
     </string-array>
 </resources>
