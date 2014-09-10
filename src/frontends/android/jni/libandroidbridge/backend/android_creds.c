@@ -92,7 +92,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 {
 	enumerator_t *enumerator;
 
-	if (!trusted || (cert != CERT_ANY && cert != CERT_X509))
+	if (cert != CERT_ANY && cert != CERT_X509)
 	{
 		return NULL;
 	}
