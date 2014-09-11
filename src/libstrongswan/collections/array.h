@@ -100,6 +100,11 @@ enumerator_t* array_create_enumerator(array_t *array);
 /**
  * Remove an element at enumerator position.
  *
+ * @warning For **value based** arrays don't use the pointer returned by
+ * enumerate() anymore after calling this function.  For performance reasons
+ * that pointer will point to internal data structures that get modified when
+ * this function is called.
+ *
  * @param array			array to remove element in
  * @param enumerator	enumerator position, from array_create_enumerator()
  */
