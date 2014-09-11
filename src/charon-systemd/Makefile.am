@@ -15,4 +15,4 @@ charon_systemd_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
-	-lsystemd-daemon -lm $(PTHREADLIB) $(DLLIB)
+	-lsystemd-daemon -lsystemd-journal -lm $(PTHREADLIB) $(DLLIB)
