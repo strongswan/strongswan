@@ -869,6 +869,16 @@ if test x$xml = xtrue; then
 	AC_SUBST(xml_LIBS)
 fi
 
+if test x$systemd = xtrue; then
+	PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
+	AC_SUBST(systemd_daemon_CFLAGS)
+	AC_SUBST(systemd_daemon_LIBS)
+
+	PKG_CHECK_MODULES(systemd_journal, [libsystemd-journal])
+	AC_SUBST(systemd_journal_CFLAGS)
+	AC_SUBST(systemd_journal_LIBS)
+fi
+
 if test x$tss = xtrousers; then
 	AC_CHECK_LIB([tspi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])],[])
 	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
