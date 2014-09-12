@@ -543,7 +543,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 	charonservice = &this->public;
 
 	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
-									  countof(features), TRUE);
+									  countof(features), TRUE, NULL, NULL);
 
 #ifdef USE_BYOD
 	if (byod)
@@ -556,7 +556,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 		};
 
 		lib->plugins->add_static_features(lib->plugins, "android-byod",
-								byod_features, countof(byod_features), TRUE);
+					byod_features, countof(byod_features), TRUE, NULL, NULL);
 	}
 #endif
 }

@@ -227,7 +227,7 @@ static void init()
 	options = options_create();
 
 	lib->plugins->add_static_features(lib->plugins, "pt-tls-client", features,
-									  countof(features), TRUE);
+									  countof(features), TRUE, NULL, NULL);
 	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "pt-tls-client.load", PLUGINS)))
 	{

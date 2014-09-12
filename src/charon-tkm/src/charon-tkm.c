@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
-			countof(features), TRUE);
+			countof(features), TRUE, NULL, NULL);
 
 	if (!register_dh_mapping())
 	{
