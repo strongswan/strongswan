@@ -337,7 +337,7 @@ static bool algo_list_equals(private_proposal_t *this, proposal_t *other,
 			break;
 		}
 	}
-	if (e2->enumerate(e2, &alg2, ks2))
+	if (e2->enumerate(e2, &alg2, &ks2))
 	{
 		/* other has more algs */
 		equals = FALSE;
@@ -594,7 +594,7 @@ METHOD(proposal_t, destroy, void,
 }
 
 /*
- * Describtion in header-file
+ * Described in header
  */
 proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 {
@@ -787,7 +787,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 }
 
 /*
- * Describtion in header-file
+ * Described in header
  */
 proposal_t *proposal_create_default(protocol_id_t protocol)
 {
@@ -826,7 +826,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 }
 
 /*
- * Describtion in header-file
+ * Described in header
  */
 proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 {
@@ -853,7 +853,7 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 }
 
 /*
- * Describtion in header-file
+ * Described in header
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
 {
