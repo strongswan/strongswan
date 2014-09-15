@@ -1895,6 +1895,13 @@ static void clear_fragments(private_message_t *this)
 	this->fragments = NULL;
 }
 
+/**
+ * Reduce the fragment length but ensure it stays > 0
+ */
+#define REDUCE_FRAG_LEN(fl, amount) ({ \
+	fl = max(1, (ssize_t)fl - (amount)); \
+})
+
 METHOD(message_t, fragment, status_t,
 	private_message_t *this, keymat_t *keymat, size_t frag_len,
 	enumerator_t **fragments)
@@ -1919,13 +1926,13 @@ METHOD(message_t, fragment, status_t,
 	}
 	/* frag_len is the complete IP datagram length, account for overhead (we
 	 * assume no IP options/extension headers are used) */
-	frag_len -= (src->get_family(src) == AF_INET) ? 20 : 40;
+	REDUCE_FRAG_LEN(frag_len, (src->get_family(src) == AF_INET) ? 20 : 40);
 	/* 8 (UDP header) */
-	frag_len -= 8;
+	REDUCE_FRAG_LEN(frag_len, 8);
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
 	{	/* reduce length due to non-ESP marker */
-		frag_len -= 4;
+		REDUCE_FRAG_LEN(frag_len, 4);
 	}
 
 	if (is_encoded(this))
@@ -1969,7 +1976,7 @@ METHOD(message_t, fragment, status_t,
 	/* frag_len denoted the maximum IKE message size so far, later on it will
 	 * denote the maximum content size of a fragment payload, therefore,
 	 * account for IKE header */
-	frag_len -= 28;
+	REDUCE_FRAG_LEN(frag_len, 28);
 
 	if (this->major_version == IKEV1_MAJOR_VERSION)
 	{
@@ -1984,7 +1991,7 @@ METHOD(message_t, fragment, status_t,
 			generator = NULL;
 		}
 		/* overhead for the fragmentation payload header */
-		frag_len -= 8;
+		REDUCE_FRAG_LEN(frag_len, 8);
 	}
 	else
 	{
@@ -2008,10 +2015,13 @@ METHOD(message_t, fragment, status_t,
 		}
 		aead = keymat->get_aead(keymat, FALSE);
 		/* overhead for the encrypted fragment payload */
-		frag_len -= aead->get_iv_size(aead) + aead->get_icv_size(aead);
-		frag_len -= 8 /* header */;
+		REDUCE_FRAG_LEN(frag_len, aead->get_iv_size(aead));
+		REDUCE_FRAG_LEN(frag_len, aead->get_icv_size(aead));
+		/* header */
+		REDUCE_FRAG_LEN(frag_len, 8);
 		/* padding and padding length */
-		frag_len = round_down(frag_len, aead->get_block_size(aead)) - 1;
+		frag_len = round_down(frag_len, aead->get_block_size(aead));
+		REDUCE_FRAG_LEN(frag_len, 1);
 		/* TODO-FRAG: if there are unencrypted payloads, should we account for
 		 * their length in the first fragment? we still would have to add
 		 * an encrypted fragment payload (albeit empty), even so we couldn't
