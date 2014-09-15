@@ -870,6 +870,13 @@ if test x$xml = xtrue; then
 fi
 
 if test x$systemd = xtrue; then
+	AC_MSG_CHECKING([for systemd system unit directory])
+	if test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno; then
+		AC_MSG_RESULT([$systemdsystemunitdir])
+	else
+		AC_MSG_ERROR([not found (try --with-systemdsystemunitdir)])
+	fi
+
 	PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
 	AC_SUBST(systemd_daemon_CFLAGS)
 	AC_SUBST(systemd_daemon_LIBS)
