@@ -77,6 +77,26 @@ struct private_kernel_iph_net_t {
 };
 
 /**
+ * Interface address entry
+ */
+typedef struct {
+	/** address */
+	host_t *ip;
+	/** is virtual installed by us? */
+	bool virtual;
+} addr_t;
+
+/**
+ * Clean up an addr_t
+ */
+CALLBACK(addr_destroy, void,
+	addr_t *this)
+{
+	this->ip->destroy(this->ip);
+	free(this);
+}
+
+/**
  * Interface entry
  */
 typedef struct  {
@@ -90,7 +110,7 @@ typedef struct  {
 	DWORD iftype;
 	/** interface status */
 	IF_OPER_STATUS status;
-	/** list of known addresses, as host_t */
+	/** list of known addresses, as addr_t */
 	linked_list_t *addrs;
 } iface_t;
 
@@ -99,7 +119,7 @@ typedef struct  {
  */
 static void iface_destroy(iface_t *this)
 {
-	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
+	this->addrs->destroy_function(this->addrs, addr_destroy);
 	free(this->ifname);
 	free(this->ifdesc);
 	free(this);
@@ -163,7 +183,8 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 	IP_ADAPTER_UNICAST_ADDRESS *current;
 	enumerator_t *enumerator;
 	linked_list_t *list;
-	host_t *host, *old;
+	host_t *host;
+	addr_t *aentry;
 	bool changes = FALSE;
 
 	list = entry->addrs;
@@ -185,21 +206,27 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 		host = host_create_from_sockaddr(current->Address.lpSockaddr);
 		if (host)
 		{
-			bool found = FALSE;
+			addr_t *found = FALSE;
 
 			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &old))
+			while (enumerator->enumerate(enumerator, &aentry))
 			{
-				if (host->ip_equals(host, old))
+				if (host->ip_equals(host, aentry->ip))
 				{
 					list->remove_at(list, enumerator);
-					old->destroy(old);
-					found = TRUE;
+					found = aentry;
+					break;
 				}
 			}
 			enumerator->destroy(enumerator);
 
-			entry->addrs->insert_last(entry->addrs, host);
+			if (!found)
+			{
+				INIT(found,
+					.ip = host->clone(host),
+				);
+			}
+			entry->addrs->insert_last(entry->addrs, found);
 
 			if (!found && log)
 			{
@@ -207,18 +234,19 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 					 host, entry->ifindex, entry->ifdesc);
 				changes = TRUE;
 			}
+			host->destroy(host);
 		}
 	}
 
-	while (list->remove_first(list, (void**)&old) == SUCCESS)
+	while (list->remove_first(list, (void**)&aentry) == SUCCESS)
 	{
 		if (log)
 		{
 			DBG1(DBG_KNL, "%H disappeared from interface %u '%s'",
-				 old, entry->ifindex, entry->ifdesc);
+				 aentry->ip, entry->ifindex, entry->ifdesc);
 			changes = TRUE;
 		}
-		old->destroy(old);
+		addr_destroy(aentry);
 	}
 	list->destroy(list);
 
@@ -413,15 +441,15 @@ static iface_t* address2entry(private_kernel_iph_net_t *this, host_t *ip)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_t *entry, *found = NULL;
-	host_t *host;
+	addr_t *addr;
 
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (!found && ifaces->enumerate(ifaces, &entry))
 	{
 		addrs = entry->addrs->create_enumerator(entry->addrs);
-		while (!found && addrs->enumerate(addrs, &host))
+		while (!found && addrs->enumerate(addrs, &addr))
 		{
-			if (host->ip_equals(host, ip))
+			if (ip->ip_equals(ip, addr->ip))
 			{
 				found = entry;
 			}
@@ -491,9 +519,11 @@ typedef struct {
 } addr_enumerator_t;
 
 METHOD(enumerator_t, addr_enumerate, bool,
+
 	addr_enumerator_t *this, host_t **host)
 {
 	iface_t *entry;
+	addr_t *addr;
 
 	while (TRUE)
 	{
@@ -515,8 +545,13 @@ METHOD(enumerator_t, addr_enumerate, bool,
 			}
 			this->addrs = entry->addrs->create_enumerator(entry->addrs);
 		}
-		if (this->addrs->enumerate(this->addrs, host))
+		if (this->addrs->enumerate(this->addrs, &addr))
 		{
+			if (addr->virtual && (this->which & ADDR_TYPE_REGULAR))
+			{
+				continue;
+			}
+			*host = addr->ip;
 			return TRUE;
 		}
 		this->addrs->destroy(this->addrs);
@@ -524,7 +559,7 @@ METHOD(enumerator_t, addr_enumerate, bool,
 	}
 }
 
-METHOD(enumerator_t, addr_destroy, void,
+METHOD(enumerator_t, addr_enumerator_destroy, void,
 	addr_enumerator_t *this)
 {
 	DESTROY_IF(this->addrs);
@@ -538,18 +573,12 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 {
 	addr_enumerator_t *enumerator;
 
-	if (!(which & ADDR_TYPE_REGULAR))
-	{
-		/* we currently have no virtual, but regular IPs only */
-		return enumerator_create_empty();
-	}
-
 	this->mutex->lock(this->mutex);
 
 	INIT(enumerator,
 		.public = {
 			.enumerate = (void*)_addr_enumerate,
-			.destroy = _addr_destroy,
+			.destroy = _addr_enumerator_destroy,
 		},
 		.which = which,
 		.ifaces = this->ifaces->create_enumerator(this->ifaces),
