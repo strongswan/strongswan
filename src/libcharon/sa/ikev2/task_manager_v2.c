@@ -235,16 +235,19 @@ METHOD(task_manager_t, retransmit, status_t,
 		ike_mobike_t *mobike = NULL;
 
 		/* check if we are retransmitting a MOBIKE routability check */
-		enumerator = array_create_enumerator(this->active_tasks);
-		while (enumerator->enumerate(enumerator, (void*)&task))
+		if (this->initiating.type == INFORMATIONAL)
 		{
-			if (task->get_type(task) == TASK_IKE_MOBIKE)
+			enumerator = array_create_enumerator(this->active_tasks);
+			while (enumerator->enumerate(enumerator, (void*)&task))
 			{
-				mobike = (ike_mobike_t*)task;
-				break;
+				if (task->get_type(task) == TASK_IKE_MOBIKE)
+				{
+					mobike = (ike_mobike_t*)task;
+					break;
+				}
 			}
+			enumerator->destroy(enumerator);
 		}
-		enumerator->destroy(enumerator);
 
 		if (!mobike || !mobike->is_probing(mobike))
 		{
