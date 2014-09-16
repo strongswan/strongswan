@@ -931,6 +931,11 @@ struct private_message_t {
 };
 
 /**
+ * Maximum number of fragments we will handle
+ */
+#define MAX_FRAGMENTS 255
+
+/**
  * A single fragment within a fragmented message
  */
 typedef struct {
@@ -2779,7 +2784,12 @@ METHOD(message_t, add_fragment_v2, status_t,
 	}
 	encrypted_fragment = (encrypted_fragment_payload_t*)payload;
 	total = encrypted_fragment->get_total_fragments(encrypted_fragment);
-
+	if (total > MAX_FRAGMENTS)
+	{
+		DBG1(DBG_IKE, "maximum fragment count exceeded");
+		reset_defrag(this);
+		return FAILED;
+	}
 	if (!this->fragments || total > this->frag->last)
 	{
 		reset_defrag(this);
