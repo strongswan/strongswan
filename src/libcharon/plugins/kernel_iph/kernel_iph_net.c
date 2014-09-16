@@ -433,6 +433,31 @@ static iface_t* address2entry(private_kernel_iph_net_t *this, host_t *ip)
 	return found;
 }
 
+/**
+ * Find an interface index by interface name
+ */
+static DWORD ifname2index(private_kernel_iph_net_t *this, char *name)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (streq(name, entry->ifname))
+		{
+			ifindex = entry->ifindex;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
+}
+
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_iph_net_t *this, host_t* ip, char **name)
 {
@@ -629,23 +654,9 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 		.Metric = 10,
 		.Protocol = MIB_IPPROTO_NETMGMT,
 	};
-	enumerator_t *enumerator;
-	iface_t *entry;
 	ULONG ret;
 
-	this->mutex->lock(this->mutex);
-	enumerator = this->ifaces->create_enumerator(this->ifaces);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (streq(name, entry->ifname))
-		{
-			row.InterfaceIndex = entry->ifindex;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
-
+	row.InterfaceIndex = ifname2index(this, name);
 	if (!row.InterfaceIndex)
 	{
 		return NOT_FOUND;
