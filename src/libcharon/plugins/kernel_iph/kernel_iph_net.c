@@ -175,6 +175,70 @@ static void fire_roam_event(private_kernel_iph_net_t *this, bool address)
 }
 
 /**
+ * Add an address entry to a named interface, return ifindex
+ */
+static DWORD add_addr(private_kernel_iph_net_t *this, char *name, host_t *ip,
+					  bool virtual)
+{
+	enumerator_t *enumerator;
+	addr_t *addr;
+	iface_t *iface;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &iface))
+	{
+		if (streq(name, iface->ifname))
+		{
+			INIT(addr,
+				.ip = ip->clone(ip),
+				.virtual = virtual,
+			);
+			iface->addrs->insert_last(iface->addrs, addr);
+			ifindex = iface->ifindex;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
+}
+
+/**
+ * Remove address entry from named interface, return ifindex
+ */
+static DWORD remove_addr(private_kernel_iph_net_t *this, host_t *ip)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_t *iface;
+	addr_t *addr;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (!ifindex && ifaces->enumerate(ifaces, &iface))
+	{
+		addrs = iface->addrs->create_enumerator(iface->addrs);
+		while (!ifindex && addrs->enumerate(addrs, &addr))
+		{
+			if (ip->ip_equals(ip, addr->ip))
+			{
+				iface->addrs->remove_at(iface->addrs, addrs);
+				addr_destroy(addr);
+				ifindex = iface->ifindex;
+			}
+		}
+		addrs->destroy(addrs);
+	}
+	ifaces->destroy(ifaces);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
+}
+
+/**
  * Update addresses for an iface entry
  */
 static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
@@ -653,18 +717,91 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
-METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
-	char *iface_name)
+/**
+ * Missing declaration
+ */
+long WINAPI InitializeUnicastIpAddressEntry(MIB_UNICASTIPADDRESS_ROW *row);
+
+/**
+ * Create a MIB unicast row from a host
+ */
+static void host2unicast(host_t *host, int prefix, MIB_UNICASTIPADDRESS_ROW *row)
 {
-	return NOT_SUPPORTED;
+	InitializeUnicastIpAddressEntry(row);
+
+	row->Address.si_family = host->get_family(host);
+	memcpy(&row->Address, host->get_sockaddr(host),
+		   *host->get_sockaddr_len(host));
+
+	row->PrefixOrigin = IpPrefixOriginOther;
+	row->SuffixOrigin = IpSuffixOriginOther;
+	/* don't change the default route to this address */
+	row->SkipAsSource = TRUE;
+	if (prefix == -1)
+	{
+		if (row->Address.si_family == AF_INET)
+		{
+			row->OnLinkPrefixLength = 32;
+		}
+		else
+		{
+			row->OnLinkPrefixLength = 128;
+		}
+	}
+	else
+	{
+		row->OnLinkPrefixLength = prefix;
+	}
+}
+
+METHOD(kernel_net_t, add_ip, status_t,
+	private_kernel_iph_net_t *this, host_t *vip, int prefix, char *name)
+{
+	MIB_UNICASTIPADDRESS_ROW row;
+	u_long status;
+
+	host2unicast(vip, prefix, &row);
+
+	row.InterfaceIndex = add_addr(this, name, vip, TRUE);
+	if (!row.InterfaceIndex)
+	{
+		DBG1(DBG_KNL, "interface '%s' not found", name);
+		return NOT_FOUND;
+	}
+
+	status = CreateUnicastIpAddressEntry(&row);
+	if (status != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "creating IPH address entry failed: %lu", status);
+		remove_addr(this, vip);
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
-	bool wait)
+	private_kernel_iph_net_t *this, host_t *vip, int prefix, bool wait)
 {
-	return NOT_SUPPORTED;
+	MIB_UNICASTIPADDRESS_ROW row;
+	u_long status;
+
+	host2unicast(vip, prefix, &row);
+
+	row.InterfaceIndex = remove_addr(this, vip);
+	if (!row.InterfaceIndex)
+	{
+		DBG1(DBG_KNL, "virtual IP %H not found", vip);
+		return NOT_FOUND;
+	}
+
+	status = DeleteUnicastIpAddressEntry(&row);
+	if (status != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "deleting IPH address entry failed: %lu", status);
+		return FAILED;
+	}
+
+	return SUCCESS;
 }
 
 /**
