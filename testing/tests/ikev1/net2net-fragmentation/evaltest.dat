@@ -1,7 +1,7 @@
 moon::cat /var/log/daemon.log::received FRAGMENTATION vendor ID::YES
 sun::cat /var/log/daemon.log::received FRAGMENTATION vendor ID::YES
-moon::cat /var/log/daemon.log::sending IKE message with length of 1468 bytes in 2 fragments::YES
-sun::cat /var/log/daemon.log::sending IKE message with length of 1388 bytes in 2 fragments::YES
+moon::cat /var/log/daemon.log::splitting IKE message with length of 1468 bytes into 2 fragments::YES
+sun::cat /var/log/daemon.log::splitting IKE message with length of 1388 bytes into 2 fragments::YES
 moon::cat /var/log/daemon.log::received fragment #1, waiting for complete IKE message::YES
 moon::cat /var/log/daemon.log::received fragment #2, reassembling fragmented IKE message::YES
 sun::cat /var/log/daemon.log::received fragment #1, waiting for complete IKE message::YES
