@@ -736,7 +736,7 @@ static void host2unicast(host_t *host, int prefix, MIB_UNICASTIPADDRESS_ROW *row
 	row->PrefixOrigin = IpPrefixOriginOther;
 	row->SuffixOrigin = IpSuffixOriginOther;
 	/* don't change the default route to this address */
-	row->SkipAsSource = TRUE;
+	row->SkipAsSource = FALSE;
 	if (prefix == -1)
 	{
 		if (row->Address.si_family == AF_INET)
@@ -759,6 +759,9 @@ METHOD(kernel_net_t, add_ip, status_t,
 {
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
+
+	/* name of the MS Loopback adapter */
+	name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
 
 	host2unicast(vip, prefix, &row);
 
@@ -865,8 +868,8 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 	}
 	if (gtw)
 	{
-		memcpy(&row.NextHop, gtw->get_sockaddr(gtw),
-			   *gtw->get_sockaddr_len(gtw));
+		/*memcpy(&row.NextHop, gtw->get_sockaddr(gtw),
+			   *gtw->get_sockaddr_len(gtw));*/
 	}
 
 	if (add)
