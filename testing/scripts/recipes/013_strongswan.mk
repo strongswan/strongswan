@@ -110,4 +110,4 @@ build: configure
 	cd $(BUILDDIR) && make -j $(NUM_CPUS)
 
 install: build
-	cd $(BUILDDIR) && make install
+	cd $(BUILDDIR) && make -j install
