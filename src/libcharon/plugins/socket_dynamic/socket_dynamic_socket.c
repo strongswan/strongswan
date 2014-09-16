@@ -42,9 +42,6 @@
 #include <threading/rwlock.h>
 #include <collections/hashtable.h>
 
-/* Maximum size of a packet */
-#define MAX_PACKET 10000
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
@@ -668,7 +665,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.max_packet = lib->settings->get_int(lib->settings,
-										"%s.max_packet", MAX_PACKET, lib->ns),
+								"%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
 	);
 
 	if (pipe(this->notify) != 0)

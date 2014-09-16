@@ -69,11 +69,6 @@
 #define MAX_NAT_D_PAYLOADS 10
 
 /**
- * Maximum packet size for fragmented packets (same as in sockets)
- */
-#define MAX_PACKET 10000
-
-/**
  * A payload rule defines the rules for a payload
  * in a specific message rule. It defines if and how
  * many times a payload must/can occur in a message
@@ -2956,7 +2951,7 @@ message_t *message_create_defrag(message_t *fragment)
 	}
 	INIT(this->frag,
 		.max_packet = lib->settings->get_int(lib->settings,
-										"%s.max_packet", MAX_PACKET, lib->ns),
+								"%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
 	);
 	return &this->public;
 }
