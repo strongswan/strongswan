@@ -822,6 +822,27 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 	};
 	ULONG ret;
 
+	/* if route is 0.0.0.0/0, we can't install it, as it would
+	 * overwrite the default route. Instead, we add two routes:
+	 * 0.0.0.0/1 and 128.0.0.0/1 */
+	if (prefixlen == 0)
+	{
+		chunk_t half;
+		status_t status;
+
+		half = chunk_alloca(dst.len);
+		memset(half.ptr, 0, half.len);
+		prefixlen = 1;
+
+		status = manage_route(this, add, half, prefixlen, gtw, name);
+		if (status == SUCCESS)
+		{
+			half.ptr[0] |= 0x80;
+			status = manage_route(this, add, half, prefixlen, gtw, name);
+		}
+		return status;
+	}
+
 	row.InterfaceIndex = ifname2index(this, name);
 	if (!row.InterfaceIndex)
 	{
