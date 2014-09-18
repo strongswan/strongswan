@@ -15,7 +15,7 @@
 # for more details.
 
 # define a minimum PATH environment in case it is not set
-PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@:@IPSEC_BINDIR@"
+PATH="${PATH:-/sbin:/bin:/usr/sbin:/usr/bin}:@IPSEC_SBINDIR@:@IPSEC_BINDIR@"
 export PATH
 
 # set daemon name
