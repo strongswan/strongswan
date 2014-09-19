@@ -74,6 +74,9 @@ list loaded pool configurations
 .B "\-T, \-\-log"
 trace logging output
 .TP
+.B "\-S, \-\-stats"
+show daemon infos and statistics
+.TP
 .B "\-v, \-\-version"
 show daemon version information
 .TP
