@@ -56,7 +56,7 @@ maintainer-clean-local:
 	cd $(srcdir) && rm -f swanctl.conf swanctl.conf.5.main
 
 install-data-local: swanctl.conf
-	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)"
+	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509ca" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509ca" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509aa" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509aa" || true
