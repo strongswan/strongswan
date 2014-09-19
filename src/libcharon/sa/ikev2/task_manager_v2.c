@@ -382,19 +382,9 @@ METHOD(task_manager_t, initiate, status_t,
 				}
 				break;
 			case IKE_ESTABLISHED:
-				if (activate_task(this, TASK_CHILD_CREATE))
-				{
-					exchange = CREATE_CHILD_SA;
-					break;
-				}
-				if (activate_task(this, TASK_CHILD_DELETE))
+				if (activate_task(this, TASK_IKE_MOBIKE))
 				{
 					exchange = INFORMATIONAL;
-					break;
-				}
-				if (activate_task(this, TASK_CHILD_REKEY))
-				{
-					exchange = CREATE_CHILD_SA;
 					break;
 				}
 				if (activate_task(this, TASK_IKE_DELETE))
@@ -402,9 +392,9 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, TASK_IKE_REKEY))
+				if (activate_task(this, TASK_CHILD_DELETE))
 				{
-					exchange = CREATE_CHILD_SA;
+					exchange = INFORMATIONAL;
 					break;
 				}
 				if (activate_task(this, TASK_IKE_REAUTH))
@@ -412,9 +402,19 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, TASK_IKE_MOBIKE))
+				if (activate_task(this, TASK_CHILD_CREATE))
 				{
-					exchange = INFORMATIONAL;
+					exchange = CREATE_CHILD_SA;
+					break;
+				}
+				if (activate_task(this, TASK_CHILD_REKEY))
+				{
+					exchange = CREATE_CHILD_SA;
+					break;
+				}
+				if (activate_task(this, TASK_IKE_REKEY))
+				{
+					exchange = CREATE_CHILD_SA;
 					break;
 				}
 				if (activate_task(this, TASK_IKE_DPD))
