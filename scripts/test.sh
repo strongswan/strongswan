@@ -34,6 +34,7 @@ all)
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
 			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
+			--disable-systemd
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	if test "$LEAK_DETECTIVE" = "yes"; then

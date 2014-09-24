@@ -174,5 +174,5 @@ void nm_backend_register()
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
 	};
 	lib->plugins->add_static_features(lib->plugins, "nm-backend", features,
-									  countof(features), TRUE);
+									  countof(features), TRUE, NULL, NULL);
 }

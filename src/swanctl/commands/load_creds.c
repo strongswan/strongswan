@@ -21,6 +21,7 @@
 
 #include "command.h"
 #include "swanctl.h"
+#include "load_creds.h"
 
 #include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
@@ -484,13 +485,50 @@ static bool clear_creds(vici_conn_t *conn, command_format_options_t format)
 	return TRUE;
 }
 
+/**
+ * See header.
+ */
+int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
+				   settings_t *cfg, bool clear, bool noprompt)
+{
+	enumerator_t *enumerator;
+	char *section;
+
+	if (clear)
+	{
+		if (!clear_creds(conn, format))
+		{
+			return ECONNREFUSED;
+		}
+	}
+
+	load_certs(conn, format, "x509", SWANCTL_X509DIR);
+	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
+	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
+	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
+	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
+
+	load_keys(conn, format, noprompt, cfg, "rsa", SWANCTL_RSADIR);
+	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
+	load_keys(conn, format, noprompt, cfg, "any", SWANCTL_PKCS8DIR);
+
+	enumerator = cfg->create_section_enumerator(cfg, "secrets");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		load_secret(conn, cfg, section, format);
+	}
+	enumerator->destroy(enumerator);
+
+	return 0;
+}
+
 static int load_creds(vici_conn_t *conn)
 {
 	bool clear = FALSE, noprompt = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
-	enumerator_t *enumerator;
 	settings_t *cfg;
-	char *arg, *section;
+	char *arg;
+	int ret;
 
 	while (TRUE)
 	{
@@ -518,14 +556,6 @@ static int load_creds(vici_conn_t *conn)
 		break;
 	}
 
-	if (clear)
-	{
-		if (!clear_creds(conn, format))
-		{
-			return ECONNREFUSED;
-		}
-	}
-
 	cfg = settings_create(SWANCTL_CONF);
 	if (!cfg)
 	{
@@ -533,26 +563,11 @@ static int load_creds(vici_conn_t *conn)
 		return EINVAL;
 	}
 
-	load_certs(conn, format, "x509", SWANCTL_X509DIR);
-	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
-	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
-	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
-	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
-
-	load_keys(conn, format, noprompt, cfg, "rsa", SWANCTL_RSADIR);
-	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
-	load_keys(conn, format, noprompt, cfg, "any", SWANCTL_PKCS8DIR);
-
-	enumerator = cfg->create_section_enumerator(cfg, "secrets");
-	while (enumerator->enumerate(enumerator, &section))
-	{
-		load_secret(conn, cfg, section, format);
-	}
-	enumerator->destroy(enumerator);
+	ret = load_creds_cfg(conn, format, cfg, clear, noprompt);
 
 	cfg->destroy(cfg);
 
-	return 0;
+	return ret;
 }
 
 /**
@@ -562,7 +577,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_creds, 's', "load-creds", "(re-)load credentials",
-		{"[--raw|--pretty]"},
+		{"[--raw|--pretty] [--clear] [--noprompt]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"clear",		'c', 0, "clear previously loaded credentials"},

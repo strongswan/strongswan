@@ -218,6 +218,16 @@ typedef struct {
 	char *name;
 
 	/**
+	 * Optional reload function for features
+	 */
+	bool (*reload)(void *data);
+
+	/**
+	 * User data to pass to reload function
+	 */
+	void *reload_data;
+
+	/**
 	 * Static plugin features
 	 */
 	plugin_feature_t *features;
@@ -242,6 +252,16 @@ METHOD(plugin_t, get_static_features, int,
 	return this->count;
 }
 
+METHOD(plugin_t, static_reload, bool,
+	static_features_t *this)
+{
+	if (this->reload)
+	{
+		return this->reload(this->reload_data);
+	}
+	return FALSE;
+}
+
 METHOD(plugin_t, static_destroy, void,
 	static_features_t *this)
 {
@@ -254,7 +274,8 @@ METHOD(plugin_t, static_destroy, void,
  * Create a wrapper around static plugin features.
  */
 static plugin_t *static_features_create(const char *name,
-										plugin_feature_t features[], int count)
+										plugin_feature_t features[], int count,
+										bool (*reload)(void*), void *reload_data)
 {
 	static_features_t *this;
 
@@ -262,9 +283,12 @@ static plugin_t *static_features_create(const char *name,
 		.public = {
 			.get_name = _get_static_name,
 			.get_features = _get_static_features,
+			.reload = _static_reload,
 			.destroy = _static_destroy,
 		},
 		.name = strdup(name),
+		.reload = reload,
+		.reload_data = reload_data,
 		.features = calloc(count, sizeof(plugin_feature_t)),
 		.count = count,
 	);
@@ -904,12 +928,13 @@ static void purge_plugins(private_plugin_loader_t *this)
 
 METHOD(plugin_loader_t, add_static_features, void,
 	private_plugin_loader_t *this, const char *name,
-	plugin_feature_t features[], int count, bool critical)
+	plugin_feature_t features[], int count, bool critical,
+	bool (*reload)(void*), void *reload_data)
 {
 	plugin_entry_t *entry;
 	plugin_t *plugin;
 
-	plugin = static_features_create(name, features, count);
+	plugin = static_features_create(name, features, count, reload, reload_data);
 
 	INIT(entry,
 		.plugin = plugin,

@@ -44,6 +44,9 @@ struct plugin_loader_t {
 	 * If critical is TRUE load() will fail if any of the added features could
 	 * not be loaded.
 	 *
+	 * If a reload callback function is given, it gets invoked for the
+	 * registered feature set when reload() is invoked on the plugin_loader.
+	 *
 	 * @note The name should be unique otherwise a plugin with the same name is
 	 * not loaded.
 	 *
@@ -51,10 +54,13 @@ struct plugin_loader_t {
 	 * @param features		array of plugin features
 	 * @param count			number of features in the array
 	 * @param critical		TRUE if the features are critical
+	 * @param reload		feature reload callback, or NULL
+	 * @param reload_data	user data to pass to reload callback
 	 */
 	void (*add_static_features) (plugin_loader_t *this, const char *name,
 								 struct plugin_feature_t *features, int count,
-								 bool critical);
+								 bool critical, bool (*reload)(void*),
+								 void *reload_data);
 
 	/**
 	 * Load a list of plugins.

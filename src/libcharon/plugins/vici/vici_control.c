@@ -450,6 +450,17 @@ CALLBACK(uninstall, vici_message_t*,
 	return send_reply(this, "policy '%s' not found", child);
 }
 
+CALLBACK(reload_settings, vici_message_t*,
+	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
+{
+	if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
+	{
+		lib->plugins->reload(lib->plugins, NULL);
+		return send_reply(this, NULL);
+	}
+	return send_reply(this, "reloading '%s' failed", lib->conf);
+}
+
 static void manage_command(private_vici_control_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -466,6 +477,7 @@ static void manage_commands(private_vici_control_t *this, bool reg)
 	manage_command(this, "terminate", terminate, reg);
 	manage_command(this, "install", install, reg);
 	manage_command(this, "uninstall", uninstall, reg);
+	manage_command(this, "reload-settings", reload_settings, reg);
 	this->dispatcher->manage_event(this->dispatcher, "control-log", reg);
 }
 

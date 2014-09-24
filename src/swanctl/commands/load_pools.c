@@ -20,6 +20,7 @@
 
 #include "command.h"
 #include "swanctl.h"
+#include "load_pools.h"
 
 /**
  * Add a vici list from a comma separated string value
@@ -192,41 +193,16 @@ static bool unload_pool(vici_conn_t *conn, char *name,
 	return ret;
 }
 
-static int load_pools(vici_conn_t *conn)
+/**
+ * See header.
+ */
+int load_pools_cfg(vici_conn_t *conn, command_format_options_t format,
+				   settings_t *cfg)
 {
-	command_format_options_t format = COMMAND_FORMAT_NONE;
 	u_int found = 0, loaded = 0, unloaded = 0;
-	char *arg, *section;
+	char *section;
 	enumerator_t *enumerator;
 	linked_list_t *pools;
-	settings_t *cfg;
-
-	while (TRUE)
-	{
-		switch (command_getopt(&arg))
-		{
-			case 'h':
-				return command_usage(NULL);
-			case 'P':
-				format |= COMMAND_FORMAT_PRETTY;
-				/* fall through to raw */
-			case 'r':
-				format |= COMMAND_FORMAT_RAW;
-				continue;
-			case EOF:
-				break;
-			default:
-				return command_usage("invalid --load-pools option");
-		}
-		break;
-	}
-
-	cfg = settings_create(SWANCTL_CONF);
-	if (!cfg)
-	{
-		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
-		return EINVAL;
-	}
 
 	pools = list_pools(conn, format);
 
@@ -241,8 +217,6 @@ static int load_pools(vici_conn_t *conn)
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	cfg->destroy(cfg);
 
 	/* unload all pools in daemon, but not in file */
 	while (pools->remove_first(pools, (void**)&section) == SUCCESS)
@@ -275,6 +249,47 @@ static int load_pools(vici_conn_t *conn)
 	return EINVAL;
 }
 
+static int load_pools(vici_conn_t *conn)
+{
+	command_format_options_t format = COMMAND_FORMAT_NONE;
+	settings_t *cfg;
+	char *arg;
+	int ret;
+
+	while (TRUE)
+	{
+		switch (command_getopt(&arg))
+		{
+			case 'h':
+				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
+			case 'r':
+				format |= COMMAND_FORMAT_RAW;
+				continue;
+			case EOF:
+				break;
+			default:
+				return command_usage("invalid --load-pools option");
+		}
+		break;
+	}
+
+	cfg = settings_create(SWANCTL_CONF);
+	if (!cfg)
+	{
+		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
+		return EINVAL;
+	}
+
+	ret = load_pools_cfg(conn, format, cfg);
+
+	cfg->destroy(cfg);
+
+	return ret;
+}
+
 /**
  * Register the command.
  */
@@ -282,7 +297,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		load_pools, 'a', "load-pools", "(re-)load pool configuration",
-		{"[--raw|--pretty"},
+		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},

@@ -12,6 +12,7 @@ options = \
 	options/attest.opt \
 	options/charon.opt \
 	options/charon-logging.opt \
+	options/charon-systemd.opt \
 	options/imcv.opt \
 	options/manager.opt \
 	options/medsrv.opt \

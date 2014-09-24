@@ -593,7 +593,7 @@ METHOD(daemon_t, initialize, bool,
 				PLUGIN_DEPENDS(CUSTOM, "socket"),
 	};
 	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
-									  countof(features), TRUE);
+									  countof(features), TRUE, NULL, NULL);
 
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, plugins))
