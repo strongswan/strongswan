@@ -561,6 +561,8 @@ char *whitelist[] = {
 	"ECDSA_do_sign_ex",
 	"ECDSA_verify",
 	"RSA_new_method",
+	/* OpenSSL libssl */
+	"SSL_COMP_get_compression_methods",
 	/* NSPR */
 	"PR_CallOnce",
 	/* libapr */
