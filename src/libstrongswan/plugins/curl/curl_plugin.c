@@ -54,15 +54,52 @@ static void add_feature(private_curl_plugin_t *this, plugin_feature_t f)
 }
 
 /**
+ * Try to add a feature, and the appropriate SSL dependencies
+ */
+static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
+								 char *proto, plugin_feature_t f)
+{
+	/* http://curl.haxx.se/libcurl/c/libcurl-tutorial.html#Multi-threading */
+	if (strpfx(ssl, "OpenSSL"))
+	{
+		add_feature(this, f);
+		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "openssl-threading"));
+	}
+	else if (strpfx(ssl, "GnuTLS"))
+	{
+		add_feature(this, f);
+		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "gcrypt-threading"));
+	}
+	else if (strpfx(ssl, "NSS"))
+	{
+		add_feature(this, f);
+	}
+	else
+	{
+		DBG1(DBG_LIB, "curl SSL backend '%s' not supported, %s disabled",
+			 ssl, proto);
+	}
+}
+
+/**
  * Get supported protocols, build plugin feature set
  */
 static bool query_protocols(private_curl_plugin_t *this)
 {
-	static char *protos[] = {
-		/* protocols we are interested in, suffixed with "://" */
-		"file://", "http://", "https://", "ftp://",
+
+	struct {
+		/* protocol we are interested in, suffixed with "://" */
+		char *name;
+		/* require SSL library initialization? */
+		bool ssl;
+	} protos[] = {
+		{ "file://",		FALSE,	},
+		{ "http://",		FALSE,	},
+		{ "https://",		TRUE,	},
+		{ "ftp://",			FALSE,	},
 	};
 	curl_version_info_data *info;
+	char *name;
 	int i, j;
 
 	add_feature(this, PLUGIN_REGISTER(FETCHER, curl_fetcher_create));
@@ -73,12 +110,21 @@ static bool query_protocols(private_curl_plugin_t *this)
 	{
 		for (j = 0; j < countof(protos); j++)
 		{
-			if (strlen(info->protocols[i]) == strlen(protos[j]) - strlen("://"))
+			name = protos[j].name;
+			if (strlen(info->protocols[i]) == strlen(name) - strlen("://"))
 			{
-				if (strneq(info->protocols[i], protos[j],
-						   strlen(protos[j]) - strlen("://")))
+				if (strneq(info->protocols[i], name,
+						   strlen(name) - strlen("://")))
 				{
-					add_feature(this, PLUGIN_PROVIDE(FETCHER, protos[j]));
+					if (protos[j].ssl)
+					{
+						add_feature_with_ssl(this, info->ssl_version, name,
+									PLUGIN_PROVIDE(FETCHER, name));
+					}
+					else
+					{
+						add_feature(this, PLUGIN_PROVIDE(FETCHER, name));
+					}
 				}
 			}
 		}
