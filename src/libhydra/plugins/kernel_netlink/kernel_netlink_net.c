@@ -78,6 +78,27 @@
 #define ROUTING_TABLE_PRIO 0
 #endif
 
+ENUM(rt_msg_names, RTM_NEWLINK, RTM_GETRULE,
+	"RTM_NEWLINK",
+	"RTM_DELLINK",
+	"RTM_GETLINK",
+	"RTM_SETLINK",
+	"RTM_NEWADDR",
+	"RTM_DELADDR",
+	"RTM_GETADDR",
+	"31",
+	"RTM_NEWROUTE",
+	"RTM_DELROUTE",
+	"RTM_GETROUTE",
+	"35",
+	"RTM_NEWNEIGH",
+	"RTM_DELNEIGH",
+	"RTM_GETNEIGH",
+	"RTM_NEWRULE",
+	"RTM_DELRULE",
+	"RTM_GETRULE",
+);
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -938,7 +959,7 @@ static void addr_entry_unregister(addr_entry_t *addr, iface_entry_t *iface,
 static void process_link(private_kernel_netlink_net_t *this,
 						 struct nlmsghdr *hdr, bool event)
 {
-	struct ifinfomsg* msg = (struct ifinfomsg*)(NLMSG_DATA(hdr));
+	struct ifinfomsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = IFLA_RTA(msg);
 	size_t rtasize = IFLA_PAYLOAD (hdr);
 	enumerator_t *enumerator;
@@ -1040,7 +1061,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 static void process_addr(private_kernel_netlink_net_t *this,
 						 struct nlmsghdr *hdr, bool event)
 {
-	struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
+	struct ifaddrmsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = IFA_RTA(msg);
 	size_t rtasize = IFA_PAYLOAD (hdr);
 	host_t *host = NULL;
@@ -1183,7 +1204,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
  */
 static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *hdr)
 {
-	struct rtmsg* msg = (struct rtmsg*)(NLMSG_DATA(hdr));
+	struct rtmsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = RTM_RTA(msg);
 	size_t rtasize = RTM_PAYLOAD(hdr);
 	u_int32_t rta_oif = 0;
@@ -1540,7 +1561,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 	struct rtmsg *msg;
 	size_t rtasize;
 
-	msg = (struct rtmsg*)(NLMSG_DATA(hdr));
+	msg = NLMSG_DATA(hdr);
 	rta = RTM_RTA(msg);
 	rtasize = RTM_PAYLOAD(hdr);
 
@@ -1625,7 +1646,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	memset(&request, 0, sizeof(request));
 
 	family = dest->get_family(dest);
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
 		this->routing_table || match_net)
@@ -1637,7 +1658,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	hdr->nlmsg_type = RTM_GETROUTE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
-	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg = NLMSG_DATA(hdr);
 	msg->rtm_family = family;
 	if (candidate)
 	{
@@ -1864,12 +1885,12 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 	chunk = ip->get_address(ip);
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
 	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 
-	msg = (struct ifaddrmsg*)NLMSG_DATA(hdr);
+	msg = NLMSG_DATA(hdr);
 	msg->ifa_family = ip->get_family(ip);
 	msg->ifa_flags = 0;
 	msg->ifa_prefixlen = prefix < 0 ? chunk.len * 8 : prefix;
@@ -2092,12 +2113,12 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
 	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
-	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg = NLMSG_DATA(hdr);
 	msg->rtm_family = src_ip->get_family(src_ip);
 	msg->rtm_dst_len = prefixlen;
 	msg->rtm_table = this->routing_table;
@@ -2221,10 +2242,10 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 
 	memset(&request, 0, sizeof(request));
 
-	in = (struct nlmsghdr*)&request;
+	in = &request.hdr;
 	in->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
 	in->nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT;
-	msg = (struct rtgenmsg*)NLMSG_DATA(in);
+	msg = NLMSG_DATA(in);
 	msg->rtgen_family = AF_UNSPEC;
 
 	/* get all links */
@@ -2308,7 +2329,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	char *fwmark;
 
 	memset(&request, 0, sizeof(request));
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = nlmsg_type;
 	if (nlmsg_type == RTM_NEWRULE)
@@ -2317,7 +2338,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	}
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
-	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg = NLMSG_DATA(hdr);
 	msg->rtm_table = table;
 	msg->rtm_family = family;
 	msg->rtm_protocol = RTPROT_BOOT;
@@ -2469,7 +2490,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				.destroy = _destroy,
 			},
 		},
-		.socket = netlink_socket_create(NETLINK_ROUTE),
+		.socket = netlink_socket_create(NETLINK_ROUTE, rt_msg_names),
 		.rt_exclude = linked_list_create(),
 		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
 								   (hashtable_equals_t)route_entry_equals, 16),

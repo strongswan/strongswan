@@ -52,9 +52,9 @@ struct private_watcher_t {
 	bool pending;
 
 	/**
-	 * Is watcher running?
+	 * Running state of watcher
 	 */
-	bool running;
+	watcher_state_t state;
 
 	/**
 	 * Lock to access FD list
@@ -239,7 +239,7 @@ static void activate_all(private_watcher_t *this)
 		entry->in_callback = 0;
 	}
 	enumerator->destroy(enumerator);
-	this->running = FALSE;
+	this->state = WATCHER_STOPPED;
 	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 }
@@ -263,9 +263,13 @@ static job_requeue_t watch(private_watcher_t *this)
 
 	if (this->fds->get_count(this->fds) == 0)
 	{
-		this->running = FALSE;
+		this->state = WATCHER_STOPPED;
 		this->mutex->unlock(this->mutex);
 		return JOB_REQUEUE_NONE;
+	}
+	if (this->state == WATCHER_QUEUED)
+	{
+		this->state = WATCHER_RUNNING;
 	}
 
 	if (this->notify[0] != -1)
@@ -407,9 +411,9 @@ METHOD(watcher_t, add, void,
 
 	this->mutex->lock(this->mutex);
 	this->fds->insert_last(this->fds, entry);
-	if (!this->running)
+	if (this->state == WATCHER_STOPPED)
 	{
-		this->running = TRUE;
+		this->state = WATCHER_QUEUED;
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
 				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
@@ -437,7 +441,7 @@ METHOD(watcher_t, remove_, void,
 		{
 			if (entry->fd == fd)
 			{
-				if (this->running && entry->in_callback)
+				if (this->state != WATCHER_STOPPED && entry->in_callback)
 				{
 					is_in_callback = TRUE;
 					break;
@@ -456,6 +460,18 @@ METHOD(watcher_t, remove_, void,
 
 	update(this);
 	this->mutex->unlock(this->mutex);
+}
+
+METHOD(watcher_t, get_state, watcher_state_t,
+	private_watcher_t *this)
+{
+	watcher_state_t state;
+
+	this->mutex->lock(this->mutex);
+	state = this->state;
+	this->mutex->unlock(this->mutex);
+
+	return state;
 }
 
 METHOD(watcher_t, destroy, void,
@@ -535,6 +551,7 @@ watcher_t *watcher_create()
 		.public = {
 			.add = _add,
 			.remove = _remove_,
+			.get_state = _get_state,
 			.destroy = _destroy,
 		},
 		.fds = linked_list_create(),
@@ -542,6 +559,7 @@ watcher_t *watcher_create()
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.jobs = linked_list_create(),
 		.notify = {-1, -1},
+		.state = WATCHER_STOPPED,
 	);
 
 	if (!create_notify(this))

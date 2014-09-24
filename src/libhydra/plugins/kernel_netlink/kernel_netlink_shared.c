@@ -46,14 +46,14 @@ struct private_netlink_socket_t {
 	int seq;
 
 	/**
-	 * netlink socket protocol
-	 */
-	int protocol;
-
-	/**
 	 * netlink socket
 	 */
 	int socket;
+
+	/**
+	 * Enum names for Netlink messages
+	 */
+	enum_name_t *names;
 };
 
 /**
@@ -65,10 +65,13 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
 	size_t *out_len)
 {
-	int len, addr_len;
+	union {
+		struct nlmsghdr hdr;
+		u_char bytes[4096];
+	} response;
 	struct sockaddr_nl addr;
-	chunk_t result = chunk_empty, tmp;
-	struct nlmsghdr *msg, peek;
+	chunk_t result = chunk_empty;
+	int len;
 
 	this->mutex->lock(this->mutex);
 
@@ -80,13 +83,11 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
 
-	if (this->protocol == NETLINK_XFRM)
+	if (this->names)
 	{
-		chunk_t in_chunk = { (u_char*)in, in->nlmsg_len };
-
-		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &in_chunk);
+		DBG3(DBG_KNL, "sending %N: %b",
+			 this->names, in->nlmsg_type, in, in->nlmsg_len);
 	}
-
 	while (TRUE)
 	{
 		len = sendto(this->socket, in, in->nlmsg_len, 0,
@@ -108,20 +109,7 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 
 	while (TRUE)
 	{
-		char buf[4096];
-		tmp.len = sizeof(buf);
-		tmp.ptr = buf;
-		msg = (struct nlmsghdr*)tmp.ptr;
-
-		memset(&addr, 0, sizeof(addr));
-		addr.nl_family = AF_NETLINK;
-		addr.nl_pid = getpid();
-		addr.nl_groups = 0;
-		addr_len = sizeof(addr);
-
-		len = recvfrom(this->socket, tmp.ptr, tmp.len, 0,
-					   (struct sockaddr*)&addr, &addr_len);
-
+		len = recv(this->socket, &response, sizeof(response), 0);
 		if (len < 0)
 		{
 			if (errno == EINTR)
@@ -135,17 +123,17 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 			free(result.ptr);
 			return FAILED;
 		}
-		if (!NLMSG_OK(msg, len))
+		if (!NLMSG_OK(&response.hdr, len))
 		{
 			DBG1(DBG_KNL, "received corrupted netlink message");
 			this->mutex->unlock(this->mutex);
 			free(result.ptr);
 			return FAILED;
 		}
-		if (msg->nlmsg_seq != this->seq)
+		if (response.hdr.nlmsg_seq != this->seq)
 		{
 			DBG1(DBG_KNL, "received invalid netlink sequence number");
-			if (msg->nlmsg_seq < this->seq)
+			if (response.hdr.nlmsg_seq < this->seq)
 			{
 				continue;
 			}
@@ -154,17 +142,13 @@ METHOD(netlink_socket_t, netlink_send, status_t,
 			return FAILED;
 		}
 
-		tmp.len = len;
-		result.ptr = realloc(result.ptr, result.len + tmp.len);
-		memcpy(result.ptr + result.len, tmp.ptr, tmp.len);
-		result.len += tmp.len;
+		result = chunk_cat("mc", result, chunk_create(response.bytes, len));
 
 		/* NLM_F_MULTI flag does not seem to be set correctly, we use sequence
 		 * numbers to detect multi header messages */
-		len = recvfrom(this->socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT,
-					   (struct sockaddr*)&addr, &addr_len);
-
-		if (len == sizeof(peek) && peek.nlmsg_seq == this->seq)
+		len = recv(this->socket, &response.hdr, sizeof(response.hdr),
+				   MSG_PEEK | MSG_DONTWAIT);
+		if (len == sizeof(response.hdr) && response.hdr.nlmsg_seq == this->seq)
 		{
 			/* seems to be multipart */
 			continue;
@@ -197,7 +181,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 		{
 			case NLMSG_ERROR:
 			{
-				struct nlmsgerr* err = (struct nlmsgerr*)NLMSG_DATA(hdr);
+				struct nlmsgerr* err = NLMSG_DATA(hdr);
 
 				if (err->error)
 				{
@@ -235,7 +219,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 METHOD(netlink_socket_t, destroy, void,
 	private_netlink_socket_t *this)
 {
-	if (this->socket > 0)
+	if (this->socket != -1)
 	{
 		close(this->socket);
 	}
@@ -246,10 +230,12 @@ METHOD(netlink_socket_t, destroy, void,
 /**
  * Described in header.
  */
-netlink_socket_t *netlink_socket_create(int protocol)
+netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names)
 {
 	private_netlink_socket_t *this;
-	struct sockaddr_nl addr;
+	struct sockaddr_nl addr = {
+		.nl_family = AF_NETLINK,
+	};
 
 	INIT(this,
 		.public = {
@@ -259,21 +245,16 @@ netlink_socket_t *netlink_socket_create(int protocol)
 		},
 		.seq = 200,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.protocol = protocol,
+		.socket = socket(AF_NETLINK, SOCK_RAW, protocol),
+		.names = names,
 	);
 
-	memset(&addr, 0, sizeof(addr));
-	addr.nl_family = AF_NETLINK;
-
-	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
-	if (this->socket < 0)
+	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create netlink socket");
 		destroy(this);
 		return NULL;
 	}
-
-	addr.nl_groups = 0;
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		DBG1(DBG_KNL, "unable to bind netlink socket");

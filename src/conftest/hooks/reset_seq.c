@@ -108,7 +108,7 @@ static job_requeue_t reset_cb(struct reset_cb_data_t *data)
 
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)request;
+	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_REPLACE;
 	hdr->nlmsg_seq = 201;
 	hdr->nlmsg_pid = getpid();
