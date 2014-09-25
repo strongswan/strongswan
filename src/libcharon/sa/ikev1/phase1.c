@@ -536,6 +536,7 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 	enumerator_t *enumerator;
 	peer_cfg_t *current;
 	host_t *me, *other;
+	int unusable = 0;
 
 	if (this->peer_cfg)
 	{	/* try to find an alternative config */
@@ -571,6 +572,10 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 				this->candidates->insert_last(this->candidates, current);
 			}
 		}
+		else
+		{
+			unusable++;
+		}
 	}
 	enumerator->destroy(enumerator);
 
@@ -579,6 +584,13 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 		DBG1(DBG_CFG, "selected peer config \"%s\"",
 			 this->peer_cfg->get_name(this->peer_cfg));
 		return this->peer_cfg->get_ref(this->peer_cfg);
+	}
+	if (unusable)
+	{
+		DBG1(DBG_IKE, "found %d matching config%s, but none allows %N "
+			 "authentication using %s Mode", unusable, unusable > 1 ? "s" : "",
+			 auth_method_names, method, aggressive ? "Aggressive" : "Main");
+		return NULL;
 	}
 	DBG1(DBG_IKE, "no peer config found");
 	return NULL;
