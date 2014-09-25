@@ -102,7 +102,7 @@ enum ike_extension_t {
 	EXT_EAP_ONLY_AUTHENTICATION = (1<<5),
 
 	/**
-	 * peer is probably a Windows 7 RAS client
+	 * peer is probably a Windows RAS client
 	 */
 	EXT_MS_WINDOWS = (1<<6),
 

@@ -15,7 +15,7 @@
  */
 
 /*
- * Copyright (C) 2012 Volker Rümelin
+ * Copyright (C) 2012-2014 Volker Rümelin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -106,9 +106,14 @@ static struct {
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 
 	/* Proprietary IKE fragmentation extension. Capabilities are handled
-	 * specially on receipt of this VID. */
+	 * specially on receipt of this VID. Windows peers send this VID
+	 * without capabilities, but accept it with and without capabilities. */
 	{ "FRAGMENTATION", EXT_IKE_FRAGMENTATION, FALSE, 20,
 	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3\x80\x00\x00\x00"},
+
+	/* Windows peers send this VID and a version number */
+	{ "MS NT5 ISAKMPOAKLEY", EXT_MS_WINDOWS, FALSE, 20,
+	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x00"},
 
 }, vendor_natt_ids[] = {
 
@@ -167,15 +172,27 @@ static struct {
  */
 static const u_int32_t fragmentation_ike = 0x80000000;
 
-/**
- * Check if the given vendor ID indicate support for fragmentation
- */
-static bool fragmentation_supported(chunk_t data, int i)
+static bool is_known_vid(chunk_t data, int i)
 {
-	if (vendor_ids[i].extension  == EXT_IKE_FRAGMENTATION &&
-		data.len == 20 && memeq(data.ptr, vendor_ids[i].id, 16))
+	switch (vendor_ids[i].extension)
 	{
-		return untoh32(&data.ptr[16]) & fragmentation_ike;
+		case EXT_IKE_FRAGMENTATION:
+			if (data.len >= 16 && memeq(data.ptr, vendor_ids[i].id, 16))
+			{
+				switch (data.len)
+				{
+					case 16:
+						return TRUE;
+					case 20:
+						return untoh32(&data.ptr[16]) & fragmentation_ike;
+				}
+			}
+			break;
+		case EXT_MS_WINDOWS:
+			return data.len == 20 && memeq(data.ptr, vendor_ids[i].id, 16);
+		default:
+			return chunk_equals(data, chunk_create(vendor_ids[i].id,
+												   vendor_ids[i].len));
 	}
 	return FALSE;
 }
@@ -251,9 +268,7 @@ static void process(private_isakmp_vendor_t *this, message_t *message)
 
 			for (i = 0; i < countof(vendor_ids); i++)
 			{
-				if (chunk_equals(data, chunk_create(vendor_ids[i].id,
-													vendor_ids[i].len)) ||
-					fragmentation_supported(data, i))
+				if (is_known_vid(data, i))
 				{
 					DBG1(DBG_IKE, "received %s vendor ID", vendor_ids[i].desc);
 					if (vendor_ids[i].extension)
