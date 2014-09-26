@@ -96,8 +96,10 @@ extern enum_name_t *tcg_attr_names;
  * Create a TCG PA-TNC attribute from data
  *
  * @param type				attribute type
- * @param value				attribute value
+ * @param length			attribute length
+ * @param value				attribute value or segment
  */
-pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value);
+pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, size_t length,
+										 chunk_t value);
 
 #endif /** TCG_ATTR_H_ @}*/

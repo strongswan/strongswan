@@ -60,8 +60,9 @@ pa_tnc_attr_t* ita_attr_settings_create(void);
 /**
  * Creates an ita_attr_settings_t object from received data
  *
- * @param value				binary value blob
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* ita_attr_settings_create_from_data(chunk_t value);
+pa_tnc_attr_t* ita_attr_settings_create_from_data(size_t length, chunk_t value);
 
 #endif /** ITA_ATTR_SETTINGS_H_ @}*/

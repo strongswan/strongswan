@@ -28,7 +28,8 @@ typedef struct pa_tnc_attr_manager_t pa_tnc_attr_manager_t;
 #include <library.h>
 #include <bio/bio_reader.h>
 
-typedef pa_tnc_attr_t* (*pa_tnc_attr_create_t)(u_int32_t type, chunk_t value);
+typedef pa_tnc_attr_t* (*pa_tnc_attr_create_t)(u_int32_t type, size_t length,
+											   chunk_t value);
 
 /**
  * Manages PA-TNC attributes for arbitrary PENs

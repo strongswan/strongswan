@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -62,7 +62,13 @@ struct private_tcg_swid_attr_req_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -151,6 +157,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator->destroy(enumerator);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -162,10 +169,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t tag_creator, unique_sw_id;
 	swid_tag_id_t *tag_id;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < TCG_SWID_REQ_MIN_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for SWID Request");
-		*offset = 0;
 		return FAILED;
 	}
 
@@ -296,7 +308,7 @@ pa_tnc_attr_t *tcg_swid_attr_req_create(u_int8_t flags, u_int32_t request_id,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_swid_attr_req_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_swid_attr_req_create_from_data(size_t length, chunk_t data)
 {
 	private_tcg_swid_attr_req_t *this;
 
@@ -319,6 +331,7 @@ pa_tnc_attr_t *tcg_swid_attr_req_create_from_data(chunk_t data)
 			.get_targets = _get_targets,
 		},
 		.type = { PEN_TCG, TCG_SWID_REQUEST },
+		.length = length,
 		.value = chunk_clone(data),
 		.targets = swid_inventory_create(FALSE),
 		.ref = 1,

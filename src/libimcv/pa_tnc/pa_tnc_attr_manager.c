@@ -176,8 +176,9 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 						msg_info, *offset + PA_TNC_ATTR_INFO_SIZE);
 		return NULL;
 	}
+	length -= PA_TNC_ATTR_HEADER_SIZE;
 
-	if (!reader->read_data(reader, length - PA_TNC_ATTR_HEADER_SIZE, &value))
+	if (!reader->read_data(reader, length, &value))
 	{
 		DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
 		*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
@@ -207,7 +208,7 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 		{
 			if (entry->attr_create)
 			{
-				attr = entry->attr_create(type, value);
+				attr = entry->attr_create(type, length, value);
 			}
 			break;
 		}

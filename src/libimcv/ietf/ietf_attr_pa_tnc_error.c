@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -113,7 +113,12 @@ struct private_ietf_attr_pa_tnc_error_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -214,6 +219,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		}
 	}
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -224,10 +230,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	uint8_t reserved;
 	uint32_t vendor_id, type;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < PA_ERROR_HEADER_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PA-TNC error header");
-		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -417,11 +428,13 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
+pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(size_t length,
+													   chunk_t data)
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
 	this = create_generic();
+	this->length = length;
 	this->value = chunk_clone(data);
 
 	return &this->public.pa_tnc_attribute;

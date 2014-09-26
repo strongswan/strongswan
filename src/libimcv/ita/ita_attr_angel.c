@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -132,7 +132,7 @@ pa_tnc_attr_t *ita_attr_angel_create(bool start)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_angel_create_from_data(bool start, chunk_t data)
+pa_tnc_attr_t *ita_attr_angel_create_from_data(bool start)
 {
 	private_ita_attr_angel_t *this;
 

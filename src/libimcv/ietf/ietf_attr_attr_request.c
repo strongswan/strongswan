@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -59,7 +59,12 @@ struct private_ietf_attr_attr_request_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -126,6 +131,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator->destroy(enumerator);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -150,11 +156,17 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int8_t reserved;
 	int count;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
+
 	count = this->value.len / ATTR_REQUEST_ENTRY_SIZE;
 	if (this->value.len != ATTR_REQUEST_ENTRY_SIZE * count)
 	{
 		DBG1(DBG_TNC, "incorrect attribute length for IETF attribute request");
-		*offset = 0;
 		return FAILED;
 	}
 
@@ -246,7 +258,8 @@ pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(chunk_t data)
+pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(size_t length,
+													   chunk_t data)
 {
 	private_ietf_attr_attr_request_t *this;
 
@@ -266,6 +279,7 @@ pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(chunk_t data)
 			.create_enumerator = _create_enumerator,
 		},
 		.type = { PEN_IETF, IETF_ATTR_ATTRIBUTE_REQUEST },
+		.length = length,
 		.value = chunk_clone(data),
 		.list = linked_list_create(),
 		.ref = 1,

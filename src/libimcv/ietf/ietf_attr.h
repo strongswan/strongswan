@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -56,8 +56,10 @@ extern enum_name_t *ietf_attr_names;
  * Create an IETF PA-TNC attribute from data
  *
  * @param type				attribute type
- * @param value				attribute value
+ * @param length			attribute length
+ * @param value				attribute value or segment
  */
-pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value);
+pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, size_t length,
+										  chunk_t value);
 
 #endif /** IETF_ATTR_H_ @}*/

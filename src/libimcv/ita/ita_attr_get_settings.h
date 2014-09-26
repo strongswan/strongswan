@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -61,8 +61,10 @@ pa_tnc_attr_t* ita_attr_get_settings_create(char *name);
 /**
  * Creates an ita_attr_get_settings_t object from received data
  *
- * @param value				binary value blob
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* ita_attr_get_settings_create_from_data(chunk_t value);
+pa_tnc_attr_t* ita_attr_get_settings_create_from_data(size_t length,
+													  chunk_t value);
 
 #endif /** ITA_ATTR_GET_SETTINGS_H_ @}*/

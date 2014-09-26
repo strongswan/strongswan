@@ -57,7 +57,12 @@ struct private_ietf_attr_installed_packages_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -143,6 +148,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator->destroy(enumerator);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -158,6 +164,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	*offset = 0;
 
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < IETF_INSTALLED_PACKAGES_MIN_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for IETF installed packages");
@@ -300,9 +310,11 @@ pa_tnc_attr_t *ietf_attr_installed_packages_create(void)
 }
 
 /**
- * Described in header.
+ * Described in header.		.length = length,
+
  */
-pa_tnc_attr_t *ietf_attr_installed_packages_create_from_data(chunk_t data)
+pa_tnc_attr_t *ietf_attr_installed_packages_create_from_data(size_t length,
+															 chunk_t data)
 {
 	private_ietf_attr_installed_packages_t *this;
 
@@ -322,6 +334,7 @@ pa_tnc_attr_t *ietf_attr_installed_packages_create_from_data(chunk_t data)
 			.create_enumerator = _create_enumerator,
 		},
 		.type = {PEN_IETF, IETF_ATTR_INSTALLED_PACKAGES },
+		.length = length,
 		.value = chunk_clone(data),
 		.packages = linked_list_create(),
 		.ref = 1,

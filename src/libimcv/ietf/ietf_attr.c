@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -47,34 +47,35 @@ ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
 /**
  * See header
  */
-pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
+pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, size_t length,
+										  chunk_t value)
 {
 	switch (type)
 	{
 		case IETF_ATTR_ATTRIBUTE_REQUEST:
-			return ietf_attr_attr_request_create_from_data(value);
+			return ietf_attr_attr_request_create_from_data(length, value);
 		case IETF_ATTR_PRODUCT_INFORMATION:
-			return ietf_attr_product_info_create_from_data(value);
+			return ietf_attr_product_info_create_from_data(length, value);
 		case IETF_ATTR_NUMERIC_VERSION:
-			return ietf_attr_numeric_version_create_from_data(value);
+			return ietf_attr_numeric_version_create_from_data(length, value);
 		case IETF_ATTR_STRING_VERSION:
-			return ietf_attr_string_version_create_from_data(value);
+			return ietf_attr_string_version_create_from_data(length, value);
 		case IETF_ATTR_OPERATIONAL_STATUS:
-			return ietf_attr_op_status_create_from_data(value);
+			return ietf_attr_op_status_create_from_data(length, value);
 		case IETF_ATTR_PORT_FILTER:
-			return ietf_attr_port_filter_create_from_data(value);
+			return ietf_attr_port_filter_create_from_data(length, value);
 		case IETF_ATTR_INSTALLED_PACKAGES:
-			return ietf_attr_installed_packages_create_from_data(value);
+			return ietf_attr_installed_packages_create_from_data(length, value);
 		case IETF_ATTR_PA_TNC_ERROR:
-			return ietf_attr_pa_tnc_error_create_from_data(value);
+			return ietf_attr_pa_tnc_error_create_from_data(length, value);
 		case IETF_ATTR_ASSESSMENT_RESULT:
-			return ietf_attr_assess_result_create_from_data(value);
+			return ietf_attr_assess_result_create_from_data(length, value);
 		case IETF_ATTR_REMEDIATION_INSTRUCTIONS:
-			return ietf_attr_remediation_instr_create_from_data(value);
+			return ietf_attr_remediation_instr_create_from_data(length, value);
 		case IETF_ATTR_FORWARDING_ENABLED:
-			return ietf_attr_fwd_enabled_create_from_data(value);
+			return ietf_attr_fwd_enabled_create_from_data(length, value);
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
-			return ietf_attr_default_pwd_enabled_create_from_data(value);
+			return ietf_attr_default_pwd_enabled_create_from_data(length, value);
 		case IETF_ATTR_TESTING:
 		case IETF_ATTR_RESERVED:
 		default:

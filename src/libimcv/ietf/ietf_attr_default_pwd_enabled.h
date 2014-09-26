@@ -56,8 +56,10 @@ pa_tnc_attr_t* ietf_attr_default_pwd_enabled_create(bool status);
 /**
  * Creates an ietf_attr_default_pwd_enabled_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* ietf_attr_default_pwd_enabled_create_from_data(chunk_t value);
+pa_tnc_attr_t* ietf_attr_default_pwd_enabled_create_from_data(size_t length,
+															  chunk_t value);
 
 #endif /** IETF_ATTR_PWD_ENABLED_H_ @}*/

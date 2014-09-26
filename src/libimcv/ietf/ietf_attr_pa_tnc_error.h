@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -120,8 +120,10 @@ pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_from_data(chunk_t value);
+pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_from_data(size_t length,
+													   chunk_t value);
 
 #endif /** IETF_ATTR_PA_TNC_ERROR_H_ @}*/

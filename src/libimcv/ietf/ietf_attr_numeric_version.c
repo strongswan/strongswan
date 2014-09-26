@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -56,7 +56,12 @@ struct private_ietf_attr_numeric_version_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -138,6 +143,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->service_pack_minor);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -146,10 +152,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < NUMERIC_VERSION_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for IETF numeric version");
-		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -253,7 +264,8 @@ pa_tnc_attr_t *ietf_attr_numeric_version_create(u_int32_t major, u_int32_t minor
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_numeric_version_create_from_data(chunk_t data)
+pa_tnc_attr_t *ietf_attr_numeric_version_create_from_data(size_t length,
+														  chunk_t data)
 {
 	private_ietf_attr_numeric_version_t *this;
 
@@ -274,6 +286,7 @@ pa_tnc_attr_t *ietf_attr_numeric_version_create_from_data(chunk_t data)
 			.get_service_pack = _get_service_pack,
 		},
 		.type = { PEN_IETF, IETF_ATTR_NUMERIC_VERSION },
+		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

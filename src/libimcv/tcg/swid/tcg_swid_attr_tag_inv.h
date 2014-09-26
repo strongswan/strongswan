@@ -87,8 +87,10 @@ pa_tnc_attr_t* tcg_swid_attr_tag_inv_create(uint32_t request_id,
 /**
  * Creates an tcg_swid_attr_tag_inv_t object from received data
  *
- * @param value					unparsed attribute value
+ * @param length				Total length of attribute value
+ * @param value					Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* tcg_swid_attr_tag_inv_create_from_data(chunk_t value);
+pa_tnc_attr_t* tcg_swid_attr_tag_inv_create_from_data(size_t length,
+													  chunk_t value);
 
 #endif /** TCG_SWID_ATTR_TAG_INV_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -102,8 +102,10 @@ pa_tnc_attr_t* ietf_attr_remediation_instr_create_from_string(chunk_t string,
 /**
  * Creates an ietf_attr_remediation_instr_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* ietf_attr_remediation_instr_create_from_data(chunk_t value);
+pa_tnc_attr_t* ietf_attr_remediation_instr_create_from_data(size_t length,
+															chunk_t value);
 
 #endif /** IETF_ATTR_REMEDIATION_INSTR_H_ @}*/

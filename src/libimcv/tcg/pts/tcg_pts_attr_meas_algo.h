@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -59,10 +60,12 @@ pa_tnc_attr_t* tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 /**
  * Creates an tcg_pts_attr_meas_algo_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  * @param selection			TRUE if a selection
  */
-pa_tnc_attr_t* tcg_pts_attr_meas_algo_create_from_data(chunk_t value,
+pa_tnc_attr_t* tcg_pts_attr_meas_algo_create_from_data(size_t length,
+													   chunk_t value,
 													   bool selection);
 
 #endif /** TCG_PTS_ATTR_MEAS_ALGO_H_ @}*/

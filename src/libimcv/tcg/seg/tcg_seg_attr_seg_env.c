@@ -51,7 +51,12 @@ struct private_tcg_seg_attr_seg_env_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -109,6 +114,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_seg_attr_seg_env_t *this)
 {
 	/* constructor already allocated and built value */
+	this->length = this->value.len;
 	return;
 }
 
@@ -117,11 +123,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		DBG1(DBG_TNC, "segmentation not allowed for %N", tcg_attr_names,
+														 this->type.type);
+		return FAILED;
+	}
 	if (this->value.len < TCG_SEG_ATTR_SEG_ENV_HEADER)
 	{
 		DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
 												  this->type.type);
-		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -206,7 +219,8 @@ pa_tnc_attr_t* tcg_seg_attr_seg_env_create(chunk_t segment, uint8_t flags,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_seg_attr_seg_env_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_seg_attr_seg_env_create_from_data(size_t length,
+													 chunk_t data)
 {
 	private_tcg_seg_attr_seg_env_t *this;
 
@@ -226,6 +240,7 @@ pa_tnc_attr_t *tcg_seg_attr_seg_env_create_from_data(chunk_t data)
 			.get_segment = _get_segment,
 		},
 		.type = { PEN_TCG, TCG_SEG_ATTR_SEG_ENV },
+		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -69,7 +70,12 @@ struct private_tcg_pts_attr_file_meas_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -155,6 +161,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -169,10 +176,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	char buf[BUF_LEN];
 	status_t status = FAILED;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < PTS_FILE_MEAS_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS file measurement header");
-		*offset = 0;
 		return FAILED;
 	}
 
@@ -268,7 +280,8 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(size_t length,
+													   chunk_t data)
 {
 	private_tcg_pts_attr_file_meas_t *this;
 
@@ -287,6 +300,7 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(chunk_t data)
 			.get_measurements = _get_measurements,
 		},
 		.type = { PEN_TCG, TCG_PTS_FILE_MEAS },
+		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

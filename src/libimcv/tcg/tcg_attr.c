@@ -183,62 +183,73 @@ ENUM_END(tcg_attr_names,	TCG_PTS_AIK);
 /**
  * See header
  */
-pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
+pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, size_t length, chunk_t value)
 {
 	switch (type)
 	{
 		case TCG_SWID_REQUEST:
-			return tcg_swid_attr_req_create_from_data(value);
+			return tcg_swid_attr_req_create_from_data(length, value);
 		case TCG_SWID_TAG_ID_INVENTORY:
-			return tcg_swid_attr_tag_id_inv_create_from_data(value);
+			return tcg_swid_attr_tag_id_inv_create_from_data(length, value);
 		case TCG_SWID_TAG_INVENTORY:
-			return tcg_swid_attr_tag_inv_create_from_data(value);
+			return tcg_swid_attr_tag_inv_create_from_data(length, value);
 		case TCG_SEG_MAX_ATTR_SIZE_REQ:
-			return tcg_seg_attr_max_size_create_from_data(value, TRUE);
+			return tcg_seg_attr_max_size_create_from_data(length, value, TRUE);
 		case TCG_SEG_MAX_ATTR_SIZE_RESP:
-			return tcg_seg_attr_max_size_create_from_data(value, FALSE);
+			return tcg_seg_attr_max_size_create_from_data(length, value, FALSE);
 		case TCG_SEG_ATTR_SEG_ENV:
-			return tcg_seg_attr_seg_env_create_from_data(value);
+			return tcg_seg_attr_seg_env_create_from_data(length, value);
 		case TCG_SEG_NEXT_SEG_REQ:
-			return tcg_seg_attr_next_seg_create_from_data(value);
+			return tcg_seg_attr_next_seg_create_from_data(length, value);
 		case TCG_PTS_REQ_PROTO_CAPS:
-			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
+			return tcg_pts_attr_proto_caps_create_from_data(length, value,
+															TRUE);
 		case TCG_PTS_PROTO_CAPS:
-			return tcg_pts_attr_proto_caps_create_from_data(value, FALSE);
+			return tcg_pts_attr_proto_caps_create_from_data(length, value,
+															FALSE);
 		case TCG_PTS_DH_NONCE_PARAMS_REQ:
-			return tcg_pts_attr_dh_nonce_params_req_create_from_data(value);
+			return tcg_pts_attr_dh_nonce_params_req_create_from_data(length,
+																	 value);
 		case TCG_PTS_DH_NONCE_PARAMS_RESP:
-			return tcg_pts_attr_dh_nonce_params_resp_create_from_data(value);
+			return tcg_pts_attr_dh_nonce_params_resp_create_from_data(length,
+																	  value);
 		case TCG_PTS_DH_NONCE_FINISH:
-			return tcg_pts_attr_dh_nonce_finish_create_from_data(value);
+			return tcg_pts_attr_dh_nonce_finish_create_from_data(length, value);
 		case TCG_PTS_MEAS_ALGO:
-			return tcg_pts_attr_meas_algo_create_from_data(value, FALSE);
+			return tcg_pts_attr_meas_algo_create_from_data(length, value,
+														   FALSE);
 		case TCG_PTS_MEAS_ALGO_SELECTION:
-			return tcg_pts_attr_meas_algo_create_from_data(value, TRUE);
+			return tcg_pts_attr_meas_algo_create_from_data(length, value,
+														   TRUE);
 		case TCG_PTS_GET_TPM_VERSION_INFO:
-			return tcg_pts_attr_get_tpm_version_info_create_from_data(value);
+			return tcg_pts_attr_get_tpm_version_info_create_from_data(length,
+																	  value);
 		case TCG_PTS_TPM_VERSION_INFO:
-			return tcg_pts_attr_tpm_version_info_create_from_data(value);
+			return tcg_pts_attr_tpm_version_info_create_from_data(length,
+																  value);
 		case TCG_PTS_GET_AIK:
-			return tcg_pts_attr_get_aik_create_from_data(value);
+			return tcg_pts_attr_get_aik_create_from_data(length, value);
 		case TCG_PTS_AIK:
-			return tcg_pts_attr_aik_create_from_data(value);
+			return tcg_pts_attr_aik_create_from_data(length, value);
 		case TCG_PTS_REQ_FUNC_COMP_EVID:
-			return tcg_pts_attr_req_func_comp_evid_create_from_data(value);
+			return tcg_pts_attr_req_func_comp_evid_create_from_data(length,
+																	value);
 		case TCG_PTS_GEN_ATTEST_EVID:
-			return tcg_pts_attr_gen_attest_evid_create_from_data(value);
+			return tcg_pts_attr_gen_attest_evid_create_from_data(length, value);
 		case TCG_PTS_SIMPLE_COMP_EVID:
-			return tcg_pts_attr_simple_comp_evid_create_from_data(value);
+			return tcg_pts_attr_simple_comp_evid_create_from_data(length,
+																  value);
 		case TCG_PTS_SIMPLE_EVID_FINAL:
-			return tcg_pts_attr_simple_evid_final_create_from_data(value);
+			return tcg_pts_attr_simple_evid_final_create_from_data(length,
+																   value);
 		case TCG_PTS_REQ_FILE_MEAS:
-			return tcg_pts_attr_req_file_meas_create_from_data(value);
+			return tcg_pts_attr_req_file_meas_create_from_data(length, value);
 		case TCG_PTS_FILE_MEAS:
-			return tcg_pts_attr_file_meas_create_from_data(value);
+			return tcg_pts_attr_file_meas_create_from_data(length, value);
 		case TCG_PTS_REQ_FILE_META:
-			return tcg_pts_attr_req_file_meta_create_from_data(value);
+			return tcg_pts_attr_req_file_meta_create_from_data(length, value);
 		case TCG_PTS_UNIX_FILE_META:
-			return tcg_pts_attr_unix_file_meta_create_from_data(value);
+			return tcg_pts_attr_unix_file_meta_create_from_data(length, value);
 		/* unsupported TCG/SWID attributes */
 		case TCG_SWID_TAG_ID_EVENTS:
 		case TCG_SWID_TAG_EVENTS:

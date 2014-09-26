@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -38,7 +38,12 @@ struct private_ita_attr_dummy_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -89,15 +94,19 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	this->value = chunk_alloc(this->size);
+	this->value = chunk_alloc(this->length);
 	memset(this->value.ptr, 0xdd, this->value.len);
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_ita_attr_dummy_t *this, u_int32_t *offset)
 {
-	this->size = this->value.len;
+	*offset = 0;
 
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	return SUCCESS;
 }
 
@@ -121,13 +130,13 @@ METHOD(pa_tnc_attr_t, destroy, void,
 METHOD(ita_attr_dummy_t, get_size, int,
 	private_ita_attr_dummy_t *this)
 {
-	return this->size;
+	return this->length;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_dummy_create(int size)
+pa_tnc_attr_t *ita_attr_dummy_create(size_t size)
 {
 	private_ita_attr_dummy_t *this;
 
@@ -146,7 +155,7 @@ pa_tnc_attr_t *ita_attr_dummy_create(int size)
 			.get_size = _get_size,
 		},
 		.type = { PEN_ITA, ITA_ATTR_DUMMY },
-		.size = size,
+		.length = size,
 		.ref = 1,
 	);
 
@@ -156,7 +165,7 @@ pa_tnc_attr_t *ita_attr_dummy_create(int size)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_dummy_create_from_data(chunk_t data)
+pa_tnc_attr_t *ita_attr_dummy_create_from_data(size_t length, chunk_t data)
 {
 	private_ita_attr_dummy_t *this;
 
@@ -175,6 +184,7 @@ pa_tnc_attr_t *ita_attr_dummy_create_from_data(chunk_t data)
 			.get_size = _get_size,
 		},
 		.type = { PEN_ITA, ITA_ATTR_DUMMY },
+		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

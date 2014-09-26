@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -58,7 +59,12 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -129,6 +135,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_data  (writer, this->initiator_nonce);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -139,10 +146,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int8_t reserved, nonce_len;
 	u_int16_t hash_algo;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		return NEED_MORE;
+	}
 	if (this->value.len < PTS_DH_NONCE_FINISH_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS DH Nonce Finish");
-		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -236,7 +248,8 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(chunk_t value)
+pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(size_t length,
+															 chunk_t value)
 {
 	private_tcg_pts_attr_dh_nonce_finish_t *this;
 
@@ -257,6 +270,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(chunk_t value)
 			.get_initiator_value = _get_initiator_value,
 		},
 		.type = { PEN_TCG, TCG_PTS_DH_NONCE_FINISH },
+		.length = length,
 		.value = chunk_clone(value),
 		.ref = 1,
 	);

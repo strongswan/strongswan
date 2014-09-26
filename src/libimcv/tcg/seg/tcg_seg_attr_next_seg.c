@@ -54,7 +54,12 @@ struct private_tcg_seg_attr_next_seg_t {
 	pen_type_t type;
 
 	/**
-	 * Attribute value
+	 * Length of attribute value
+	 */
+	size_t length;
+
+	/**
+	 * Attribute value or segment
 	 */
 	chunk_t value;
 
@@ -118,6 +123,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint24(writer, this->base_attr_id);
 
 	this->value = writer->extract_buf(writer);
+	this->length = this->value.len;
 	writer->destroy(writer);
 }
 
@@ -127,11 +133,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	uint8_t flags;
 
+	*offset = 0;
+
+	if (this->value.len < this->length)
+	{
+		DBG1(DBG_TNC, "segmentation not allowed for %N", tcg_attr_names,
+														 this->type.type);
+		return FAILED;
+	}
 	if (this->value.len < TCG_SEG_ATTR_NEXT_SEG_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
 												  this->type.type);
-		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -207,7 +220,8 @@ pa_tnc_attr_t* tcg_seg_attr_next_seg_create(uint32_t base_attr_id, bool cancel)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_seg_attr_next_seg_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_seg_attr_next_seg_create_from_data(size_t length,
+													  chunk_t data)
 {
 	private_tcg_seg_attr_next_seg_t *this;
 
@@ -227,6 +241,7 @@ pa_tnc_attr_t *tcg_seg_attr_next_seg_create_from_data(chunk_t data)
 			.get_cancel_flag = _get_cancel_flag,
 		},
 		.type = { PEN_TCG, TCG_SEG_NEXT_SEG_REQ },
+		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

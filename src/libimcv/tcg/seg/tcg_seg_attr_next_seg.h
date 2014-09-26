@@ -64,8 +64,10 @@ pa_tnc_attr_t* tcg_seg_attr_next_seg_create(uint32_t base_attr_id, bool cancel);
 /**
  * Creates an tcg_seg_attr_next_seg_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param length			Total length of attribute value
+ * @param value				Unparsed attribute value (might be a segment)
  */
-pa_tnc_attr_t* tcg_seg_attr_next_seg_create_from_data(chunk_t value);
+pa_tnc_attr_t* tcg_seg_attr_next_seg_create_from_data(size_t length,
+													  chunk_t value);
 
 #endif /** TCG_SEG_ATTR_NEXT_SEG_H_ @}*/
