@@ -2720,10 +2720,12 @@ static bool add_port_bypass(private_kernel_netlink_ipsec_t *this,
 	{
 		return FALSE;
 	}
+#ifdef SO_PROTOCOL /* since 2.6.32 */
 	len = sizeof(bypass.proto);
 	if (getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &bypass.proto, &len) != 0)
-	{
-		return FALSE;
+#endif
+	{	/* assume UDP if SO_PROTOCOL not supported */
+		bypass.proto = IPPROTO_UDP;
 	}
 	switch (family)
 	{
