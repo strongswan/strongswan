@@ -263,7 +263,7 @@ bool library_init(char *settings, const char *namespace)
 			.get = _get,
 			.set = _set,
 			.ns = strdup(namespace ?: "libstrongswan"),
-			.conf = strdupnull(settings ?: STRONGSWAN_CONF),
+			.conf = strdupnull(settings ?: (getenv("STRONGSWAN_CONF") ?: STRONGSWAN_CONF)),
 		},
 		.ref = 1,
 	);
