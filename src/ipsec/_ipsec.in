@@ -128,16 +128,6 @@ down-srcip)
 	fi
 	exit "$rc"
 	;;
-listcards|rereadgroups)
-	op="$1"
-	shift
-	if [ -e $IPSEC_CHARON_PID ]
-	then
-		exit 3
-	else
-		exit 7
-	fi
-	;;
 leases)
 	op="$1"
 	rc=7
