@@ -84,12 +84,12 @@ The message encoding consists of a sequence of elements. Each element starts
 with the element type, optionally followed by an element name and/or an element
 value. Currently the following message element types are defined:
 
-* _SECTION_START = 0_: Begin a new section having a name
-* _SECTION_END = 1_: End a previously started section
-* _KEY_VALUE = 2_: Define a value for a named key in the current section
-* _LIST_START = 3_: Begin a named list for list items
-* _LIST_ITEM = 4_: Define an unnamed item value in the current list
-* _LIST_END = 5_: End a previously started list
+* _SECTION_START = 1_: Begin a new section having a name
+* _SECTION_END = 2_: End a previously started section
+* _KEY_VALUE = 3_: Define a value for a named key in the current section
+* _LIST_START = 4_: Begin a named list for list items
+* _LIST_ITEM = 5_: Define an unnamed item value in the current list
+* _LIST_END = 6_: End a previously started list
 
 Types are encoded as 8-bit values. Types having a name (SECTION_START,
 KEY_VALUE and LIST_START) have an ASCII string following the type, which itself
