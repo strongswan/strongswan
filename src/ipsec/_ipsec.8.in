@@ -96,6 +96,11 @@ terminates IKE SA instance \fIn\fP of connection \fIname\fP.
 terminates all IKE SA instances of connection \fIname\fP.
 .
 .TP
+.BI "down-srcip <" start "> [<" end ">]"
+terminates all IKE SA instances with clients having virtual IPs in the range
+.IR start - end .
+.
+.TP
 .BI "route " name
 tells the IKE daemon to insert an IPsec policy in the kernel
 for connection \fIname\fP. The first payload packet matching the IPsec policy
@@ -116,6 +121,11 @@ returns detailed status information either on connection
 \fIname\fP or if the argument is lacking, on all connections.
 .
 .SS LIST COMMANDS
+.
+.TP
+.BI "leases [<" poolname "> [<" address ">]]"
+returns the status of all or the selected IP address pool (or even a single
+virtual IP address).
 .
 .TP
 .B "listalgs"
@@ -242,7 +252,7 @@ resets global or connection specific counters.
 purges all cached certificates.
 .
 .TP
-.B "purgecrl"
+.B "purgecrls"
 purges all cached CRLs.
 .
 .TP
