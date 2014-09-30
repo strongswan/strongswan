@@ -489,7 +489,8 @@ int main (int argc, char **argv)
 	}
 	if (!config_file)
 	{
-		config_file = CONFIG_FILE;
+		config_file = lib->settings->get_str(lib->settings,
+											 "starter.config_file", CONFIG_FILE);
 	}
 
 	init_log("ipsec_starter");
