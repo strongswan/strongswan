@@ -340,12 +340,8 @@ path="$IPSEC_DIR/$cmd"
 
 if [ ! -x "$path" ]
 then
-    path="$IPSEC_DIR/$cmd"
-    if [ ! -x "$path" ]
-    then
 	echo "$0: unknown IPsec command \`$cmd' (\`$IPSEC_SCRIPT --help' for list)" >&2
 	exit 2
-    fi
 fi
 
 exec $path "$@"
