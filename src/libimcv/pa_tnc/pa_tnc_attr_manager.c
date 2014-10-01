@@ -120,14 +120,12 @@ METHOD(pa_tnc_attr_manager_t, get_names, enum_name_t*,
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define PA_TNC_ATTR_INFO_SIZE			8
-
 METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
-	private_pa_tnc_attr_manager_t *this, bio_reader_t *reader, uint32_t *offset,
-	chunk_t msg_info, pa_tnc_attr_t **error)
+	private_pa_tnc_attr_manager_t *this, bio_reader_t *reader, bool segmented,
+	uint32_t *offset, chunk_t msg_info, pa_tnc_attr_t **error)
 {
 	uint8_t flags;
-	uint32_t type, length, attr_offset;
+	uint32_t type, length, value_len;
 	chunk_t value;
 	ietf_attr_pa_tnc_error_t *error_attr;
 	pen_t vendor_id;
@@ -177,8 +175,9 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 		return NULL;
 	}
 	length -= PA_TNC_ATTR_HEADER_SIZE;
+	value_len = segmented ? reader->remaining(reader) : length;
 
-	if (!reader->read_data(reader, length, &value))
+	if (!reader->read_data(reader, value_len, &value))
 	{
 		DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
 		*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
@@ -220,7 +219,7 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 		if (!(flags & PA_TNC_ATTR_FLAG_NOSKIP))
 		{
 			DBG1(DBG_TNC, "skipping unsupported PA-TNC attribute");
-			offset += length;
+			(*offset) += PA_TNC_ATTR_HEADER_SIZE + length;
 			return NULL;
 		}
 
@@ -232,21 +231,7 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 		error_attr->set_unsupported_attr(error_attr, flags, unsupported_type);
 		return NULL;
 	}
-	if (attr->process(attr, &attr_offset) != SUCCESS)
-	{
-		attr->destroy(attr);
-		attr = NULL;
-		if (vendor_id == PEN_IETF && type == IETF_ATTR_PA_TNC_ERROR)
-		{
-			/* error while processing a PA-TNC error attribute - abort */
-			return NULL;
-		}
-		error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
-		*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
-					msg_info, *offset + PA_TNC_ATTR_HEADER_SIZE + attr_offset);
-		return NULL;
-	}
-	(*offset) += length;
+	(*offset) += PA_TNC_ATTR_HEADER_SIZE;
 
 	return attr;
 }

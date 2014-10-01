@@ -17,6 +17,7 @@
 
 #include "imcv.h"
 #include "pa_tnc/pa_tnc_msg.h"
+#include "ietf/ietf_attr_pa_tnc_error.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 
 #include <utils/debug.h>
@@ -48,19 +49,24 @@ struct private_seg_env_t {
 	pa_tnc_attr_t *base_attr;
 
 	/**
+	 * Base Attribute Info to be used for PA-TNC error messages
+	 */
+	u_char base_attr_info[8];
+
+	/**
+	 * Base Attribute needs more segment data
+	 */
+	bool need_more;
+
+	/**
+	 * Pointer to remaining attribute data to be sent
+	 */
+	chunk_t data;
+
+	/**
 	 * Maximum PA-TNC attribute segment size
 	 */
 	uint32_t max_seg_size;
-
-	/**
-	 * TRUE if attribute is assembled from data
-	 */
-	bool from_data;
-
-	/**
-	 * Remaining attribute data to be sent or received data being accumulated
-	 */
-	chunk_t data;
 
 };
 
@@ -71,33 +77,15 @@ METHOD(seg_env_t, get_base_attr_id, uint32_t,
 }
 
 METHOD(seg_env_t, get_base_attr, pa_tnc_attr_t*,
-	private_seg_env_t *this, pa_tnc_attr_t** error)
+	private_seg_env_t *this)
 {
-	*error = NULL;
+	return this->need_more ? NULL : this->base_attr->get_ref(this->base_attr);
+}
 
-	if (!this->base_attr)
-	{
-		bio_writer_t *writer;
-		bio_reader_t *reader;
-		chunk_t msg_info;
-		uint32_t offset = 0;
-
-		writer = bio_writer_create(8);
-		writer->write_uint8 (writer, PA_TNC_VERSION);
-		writer->write_uint24(writer, PA_TNC_RESERVED);
-		writer->write_uint8 (writer, BASE_ATTR_ID_PREFIX);
-		writer->write_uint24(writer, this->base_attr_id);
-		msg_info = writer->extract_buf(writer);
-		writer->destroy(writer);
-
-		reader = bio_reader_create(this->data);
-		this->base_attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
-										reader, &offset, msg_info, error);
-		chunk_free(&msg_info);
-		reader->destroy(reader);
-	}
-		
-	return this->base_attr ? this->base_attr->get_ref(this->base_attr) : NULL;
+METHOD(seg_env_t, get_base_attr_info, chunk_t,
+	private_seg_env_t *this)
+{
+	return chunk_create(this->base_attr_info, 8);
 }
 
 METHOD(seg_env_t, first_segment, pa_tnc_attr_t*,
@@ -175,19 +163,44 @@ METHOD(seg_env_t, next_segment, pa_tnc_attr_t*,
 	return seg_env_attr;
 }
 
-METHOD(seg_env_t, add_segment, void,
-	private_seg_env_t *this, chunk_t segment_data)
+METHOD(seg_env_t, add_segment, bool,
+	private_seg_env_t *this, chunk_t segment, pa_tnc_attr_t **error)
 {
-	this->data = chunk_cat("mc", this->data, segment_data);
+	pen_type_t type, error_code;
+	uint32_t attr_offset;
+	chunk_t msg_info;
+	status_t status;
+
+	/* not all attributes might have implemented the add_segment method */
+	if (!this->base_attr->add_segment)
+	{
+		return FALSE;
+	}
+	this->base_attr->add_segment(this->base_attr, segment);
+	status = this->base_attr->process(this->base_attr, &attr_offset);
+
+	if (status != SUCCESS && status != NEED_MORE)
+	{
+		type = this->base_attr->get_type(this->base_attr);
+		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
+		{
+			/* error while processing a PA-TNC error attribute - abort */
+			return FALSE;
+		}
+		error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+		msg_info = get_base_attr_info(this);
+		*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+					msg_info, PA_TNC_ATTR_HEADER_SIZE + attr_offset);
+		return FALSE;
+	}
+	this->need_more = (status == NEED_MORE);
+
+	return TRUE;
 }
 
 METHOD(seg_env_t, destroy, void,
 	private_seg_env_t *this)
 {
-	if (this->from_data)
-	{
-		chunk_free(&this->data);
-	}
 	DESTROY_IF(this->base_attr);
 	free(this);
 }
@@ -218,6 +231,7 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
 		.public = {
 			.get_base_attr_id = _get_base_attr_id,
 			.get_base_attr = _get_base_attr,
+			.get_base_attr_info = _get_base_attr_info,
 			.first_segment = _first_segment,
 			.next_segment = _next_segment,
 			.add_segment = _add_segment,
@@ -236,14 +250,20 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
  * See header
  */
 seg_env_t *seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
-									uint32_t max_seg_size)
+									uint32_t max_seg_size, pa_tnc_attr_t** error)
 {
 	private_seg_env_t *this;
+	pen_type_t type, error_code;
+	bio_reader_t *reader;
+	chunk_t msg_info;
+	uint32_t offset = 0, attr_offset;
+	status_t status;
 
 	INIT(this,
 		.public = {
 			.get_base_attr_id = _get_base_attr_id,
 			.get_base_attr = _get_base_attr,
+			.get_base_attr_info = _get_base_attr_info,
 			.first_segment = _first_segment,
 			.next_segment = _next_segment,
 			.add_segment = _add_segment,
@@ -251,9 +271,40 @@ seg_env_t *seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
 		},
 		.base_attr_id = base_attr_id,
 		.max_seg_size = max_seg_size,
-		.data = chunk_clone(data),
-		.from_data = TRUE,
 	);
+
+	/* create info field to be used by PA-TNC error messages */
+	memset(this->base_attr_info, 0xff, 4);
+	htoun32(this->base_attr_info + 4, base_attr_id);
+	msg_info = get_base_attr_info(this);
+
+	/* extract from base attribute segment from data */
+	reader = bio_reader_create(data);
+	this->base_attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
+									 reader, TRUE, &offset, msg_info, error);
+	reader->destroy(reader);
+
+	if (!this->base_attr)
+	{
+		destroy(this);
+		return NULL;
+	}
+	status = this->base_attr->process(this->base_attr, &attr_offset);
+
+	if (status != SUCCESS && status != NEED_MORE)
+	{
+		type = this->base_attr->get_type(this->base_attr);
+		if (!(type.vendor_id == PEN_IETF &&
+			  type.type == IETF_ATTR_PA_TNC_ERROR))
+		{
+			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+			*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						msg_info, PA_TNC_ATTR_HEADER_SIZE + attr_offset);
+		}
+		destroy(this);
+		return NULL;
+	}
+	this->need_more = (status == NEED_MORE);
 
 	return &this->public;
 }

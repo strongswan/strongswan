@@ -50,12 +50,18 @@ struct seg_env_t {
 	uint32_t (*get_base_attr_id)(seg_env_t *this);
 
 	/**
-	 * Get Base Attribute
+	 * Get Base Attribute if it contains processed [incremental] data
 	 *
-	 * @param error			Error attribute if an error occurred or NULL
 	 * @return				Base Attribute (must be destroyed) or NULL
 	 */
-	pa_tnc_attr_t* (*get_base_attr)(seg_env_t *this, pa_tnc_attr_t **error);
+	pa_tnc_attr_t* (*get_base_attr)(seg_env_t *this);
+
+	/**
+	 * Base Attribute Info to be used by PA-TNC error messages
+	 *
+	 * @return				Message info string
+	 */
+	chunk_t (*get_base_attr_info)(seg_env_t *this);
 
 	/**
 	 * Generate the first segment envelope of the base attribute
@@ -76,8 +82,11 @@ struct seg_env_t {
 	 * Generate the first segment envelope of the base attribute
 	 *
 	 * @param segment		Attribute segment to be added
+	 * @param error			Error attribute if a parsing error occurred
+	 * return				TRUE if segment was successfully added
 	 */
-	void (*add_segment)(seg_env_t *this, chunk_t segment);
+	bool (*add_segment)(seg_env_t *this, chunk_t segment,
+						pa_tnc_attr_t** error);
 
 	/**
 	 * Destroys a seg_env_t object.
@@ -101,8 +110,10 @@ seg_env_t* seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
  * @param base_attr_id		Base Attribute ID
  * @param data				First attribute segment
  * @param max_seg_size		Maximum segment size
+ * @param error				Error attribute if a parsing error occurred
  */
 seg_env_t* seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
-									uint32_t max_seg_size);
+									uint32_t max_seg_size,
+									pa_tnc_attr_t** error);
 
 #endif /** SEG_ENV_H_ @}*/

@@ -15,6 +15,7 @@
 
 #include "seg_contract.h"
 #include "seg_env.h"
+#include "ietf/ietf_attr_pa_tnc_error.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 
 #include <utils/debug.h>
@@ -195,9 +196,10 @@ METHOD(seg_contract_t, add_segment, pa_tnc_attr_t*,
 	tcg_seg_attr_seg_env_t *seg_env_attr;
 	seg_env_t *current, *seg_env = NULL;
 	pa_tnc_attr_t *base_attr;
+	pen_type_t error_code;
 	uint32_t base_attr_id;
 	uint8_t flags;
-	chunk_t segment_data;
+	chunk_t segment_data, msg_info;
 	enumerator_t *enumerator;
 
 	seg_env_attr = (tcg_seg_attr_seg_env_t*)attr;
@@ -212,10 +214,7 @@ METHOD(seg_contract_t, add_segment, pa_tnc_attr_t*,
 		if (current->get_base_attr_id(current) == base_attr_id)
 		{
 			seg_env = current;
-			if (!(*more))
-			{
-				this->seg_envs->remove_at(this->seg_envs, enumerator);
-			}
+			this->seg_envs->remove_at(this->seg_envs, enumerator);
 			break;
 		}
 	}
@@ -227,13 +226,17 @@ METHOD(seg_contract_t, add_segment, pa_tnc_attr_t*,
 		{
 			DBG1(DBG_TNC, "base attribute ID %d is already in use",
 						   base_attr_id);
+			this->seg_envs->insert_last(this->seg_envs, seg_env);
 			return NULL;
 		}
 		DBG2(DBG_TNC, "received first segment for base attribute ID %d "
 					  "(%d bytes)", base_attr_id, segment_data.len);
 		seg_env = seg_env_create_from_data(base_attr_id, segment_data,
-										   this->max_seg_size);
-		this->seg_envs->insert_last(this->seg_envs, seg_env);
+										   this->max_seg_size, error);
+		if (!seg_env)
+		{
+			return NULL;
+		}
 	}
 	else
 	{
@@ -245,18 +248,35 @@ METHOD(seg_contract_t, add_segment, pa_tnc_attr_t*,
 		DBG2(DBG_TNC, "received %s segment for base attribute ID %d "
 					  "(%d bytes)", (*more) ? "next" : "last", base_attr_id,
 					   segment_data.len);
-		seg_env->add_segment(seg_env, segment_data);
+		if (!seg_env->add_segment(seg_env, segment_data, error))
+		{
+			seg_env->destroy(seg_env);
+			return NULL;
+		}
 	}
+	base_attr = seg_env->get_base_attr(seg_env);
+
 	if (*more)
 	{
-		return NULL;
+		/* reinsert into list since more segments are to come */
+		this->seg_envs->insert_last(this->seg_envs, seg_env);
 	}
-	base_attr = seg_env->get_base_attr(seg_env, error);
-	seg_env->destroy(seg_env);
-
+	else
+	{
+		/* added the last segment */
+		if (!base_attr)
+		{
+			/* base attribute waits for more data */
+			DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
+			msg_info = seg_env->get_base_attr_info(seg_env);
+			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+			*error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+										msg_info, PA_TNC_ATTR_INFO_SIZE);
+		}
+		seg_env->destroy(seg_env);
+	}
 	return base_attr;
 }
-
 
 METHOD(seg_contract_t, is_issuer, bool,
 	private_seg_contract_t *this)

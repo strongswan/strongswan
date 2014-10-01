@@ -26,6 +26,7 @@ typedef struct pa_tnc_attr_t pa_tnc_attr_t;
 #include <library.h>
 #include <pen/pen.h>
 
+#define PA_TNC_ATTR_INFO_SIZE		 8
 #define PA_TNC_ATTR_HEADER_SIZE		12
 
 #define PA_TNC_ATTR_FLAG_NONE		0x00
@@ -73,10 +74,17 @@ struct pa_tnc_attr_t {
 	/**
 	 * Process the value of an PA-TNC attribute to extract its parameters
 	 *
-	 * @param					relative error offset within attribute body
+	 * @param offset			relative error offset within attribute body
 	 * @return					result status
 	 */
 	status_t (*process)(pa_tnc_attr_t *this, uint32_t *offset);
+
+	/**
+	 * Add a data segment to an attribute allowing incremental processing
+	 *
+	 * @param segment			data segment to be appended
+	 */
+	void (*add_segment)(pa_tnc_attr_t *this, chunk_t segment);
 
 	/**
 	 * Get a new reference to the PA-TNC attribute

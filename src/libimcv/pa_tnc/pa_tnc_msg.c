@@ -37,6 +37,8 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
+#define PA_TNC_RESERVED		0x000000
+
 /**
  * Private data of a pa_tnc_msg_t object.
  *
@@ -187,8 +189,10 @@ METHOD(pa_tnc_msg_t, process, status_t,
 {
 	bio_reader_t *reader;
 	pa_tnc_attr_t *attr, *error;
+	pen_type_t attr_type;
+	chunk_t attr_value;
 	uint8_t version;
-	uint32_t reserved, offset;
+	uint32_t reserved, offset, attr_offset;
 	pen_type_t error_code = { PEN_IETF, PA_ERROR_INVALID_PARAMETER };
 
 	/* process message header */
@@ -219,15 +223,32 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	while (reader->remaining(reader) > 0)
 	{
 		attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
-							reader, &offset, this->encoding, &error);
-		if (error)
+							reader, FALSE, &offset, this->encoding, &error);
+		if (!attr)
 		{
 			goto err;
 		}
-		if (attr)
+		attr_value = attr->get_value(attr);
+		attr_type  = attr->get_type(attr);
+
+		if (attr->process(attr, &attr_offset) != SUCCESS)
 		{
-			this->attributes->insert_last(this->attributes, attr);
+			attr->destroy(attr);
+
+			if (attr_type.vendor_id == PEN_IETF &&
+				attr_type.type == IETF_ATTR_PA_TNC_ERROR)
+			{
+				/* suppress error while processing a PA-TNC error attribute */
+				offset += attr_value.len;
+				continue;
+			}
+			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+									this->encoding, offset + attr_offset);
+			goto err;
 		}
+		offset += attr_value.len;
+		this->attributes->insert_last(this->attributes, attr);
 	}
 	reader->destroy(reader);
 	return SUCCESS;

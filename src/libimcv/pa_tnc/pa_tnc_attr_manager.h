@@ -66,13 +66,14 @@ struct pa_tnc_attr_manager_t {
 	 * Create and pre-parse a PA-TNC attribute object from data
 	 *
 	 * @param reader		PA-TNC attribute as encoded data
+	 * @param segmented		TRUE if attribute is segmented
 	 * @param offset		Offset in bytes where an error has been found
 	 * @param msg_info		Message info added to an error attribute
 	 * @param error			Error attribute if an error occurred
 	 * @return				PA-TNC attribute object if supported, NULL else
 	 */
 	pa_tnc_attr_t* (*create)(pa_tnc_attr_manager_t *this, bio_reader_t *reader,
-							 uint32_t *offset, chunk_t msg_info,
+							 bool segmented, uint32_t *offset, chunk_t msg_info,
 							 pa_tnc_attr_t **error);
 
 	/**
