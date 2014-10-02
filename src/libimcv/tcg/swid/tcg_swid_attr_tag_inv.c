@@ -69,9 +69,19 @@ struct private_tcg_swid_attr_tag_inv_t {
 	size_t length;
 
 	/**
-	 * Attribute value or segment
+	 * Offset up to which attribute value has been processed
+	 */
+	size_t offset;
+
+	/**
+	 * Current position of attribute value pointer
 	 */
 	chunk_t value;
+
+	/**
+	 * Contains complete attribute or current segment
+	 */
+	chunk_t segment;
 
 	/**
 	 * Noskip flag
@@ -92,6 +102,11 @@ struct private_tcg_swid_attr_tag_inv_t {
 	 * Last Event ID
 	 */
 	uint32_t last_eid;
+
+	/**
+	 * Number of SWID Tags in attribute
+	 */
+	uint32_t tag_count;
 
 	/**
 	 * SWID Tag Inventory
@@ -156,6 +171,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator->destroy(enumerator);
 
 	this->value = writer->extract_buf(writer);
+	this->segment = this->value;
 	this->length = this->value.len;
 	writer->destroy(writer);
 }
@@ -164,59 +180,73 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_swid_attr_tag_inv_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	uint32_t tag_count;
 	uint8_t reserved;
 	chunk_t tag_encoding, instance_id;
 	swid_tag_t *tag;
+	status_t status = NEED_MORE;
 
-	*offset = 0;
-
-	if (this->value.len < this->length)
+	if (this->offset == 0)
 	{
-		return NEED_MORE;
-	}
-	if (this->value.len < TCG_SWID_TAG_INV_MIN_SIZE)
-	{
-		DBG1(DBG_TNC, "insufficient data for SWID Tag Inventory");
-		return FAILED;
+		if (this->length < TCG_SWID_TAG_INV_MIN_SIZE)
+		{
+			DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
+													  this->type.type);
+			*offset = this->offset;
+			return FAILED;
+		}
+		if (this->value.len < TCG_SWID_TAG_INV_MIN_SIZE)
+		{
+			return NEED_MORE;
+		}
+		reader = bio_reader_create(this->value);
+		reader->read_uint8 (reader, &reserved);
+		reader->read_uint24(reader, &this->tag_count);
+		reader->read_uint32(reader, &this->request_id);
+		reader->read_uint32(reader, &this->eid_epoch);
+		reader->read_uint32(reader, &this->last_eid);
+		this->offset = TCG_SWID_TAG_INV_MIN_SIZE;
+		this->value = reader->peek(reader);
+		reader->destroy(reader);
 	}
 
 	reader = bio_reader_create(this->value);
-	reader->read_uint8 (reader, &reserved);
-	reader->read_uint24(reader, &tag_count);
-	reader->read_uint32(reader, &this->request_id);
-	reader->read_uint32(reader, &this->eid_epoch);
-	reader->read_uint32(reader, &this->last_eid);
-	*offset = TCG_SWID_TAG_INV_MIN_SIZE;
 
-	while (tag_count--)
+	while (this->tag_count)
 	{
-		if (!reader->read_data16(reader, &instance_id))
+		if (!reader->read_data16(reader, &instance_id) ||
+			!reader->read_data32(reader, &tag_encoding))
 		{
-			DBG1(DBG_TNC, "insufficient data for Instance ID");
-			return FAILED;
+			goto end;
 		}
-		*offset += 2 + instance_id.len;
-
-		if (!reader->read_data32(reader, &tag_encoding))
-		{
-			DBG1(DBG_TNC, "insufficient data for Tag");
-			return FAILED;
-		}
-		*offset += 4 + tag_encoding.len;
-
 		tag = swid_tag_create(tag_encoding, instance_id);
 		this->inventory->add(this->inventory, tag);
-	}
-	reader->destroy(reader);
+		this->offset += this->value.len - reader->remaining(reader);
+		this->value = reader->peek(reader);
 
-	return SUCCESS;
+		/* at least one tag was processed */
+		status = SUCCESS;
+		this->tag_count--;
+	}
+
+	if (this->length != this->offset)
+	{
+		DBG1(DBG_TNC, "inconsistent length for %N", tcg_attr_names,
+													this->type.type);
+		*offset = this->offset;
+		status = FAILED;
+	}
+
+end:
+	reader->destroy(reader);
+	return status;
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
 	private_tcg_swid_attr_tag_inv_t *this, chunk_t segment)
 {
-	this->value = chunk_cat("mc", this->value, segment);
+	this->value = chunk_cat("cc", this->value, segment);
+	chunk_free(&this->segment);
+	this->segment = this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
@@ -232,7 +262,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		this->inventory->destroy(this->inventory);
-		free(this->value.ptr);
+		free(this->segment.ptr);
 		free(this);
 	}
 }
@@ -259,10 +289,23 @@ METHOD(tcg_swid_attr_tag_inv_t, get_last_eid, uint32_t,
 	return this->last_eid;
 }
 
+METHOD(tcg_swid_attr_tag_inv_t, get_tag_count, uint32_t,
+	private_tcg_swid_attr_tag_inv_t *this)
+{
+	return this->tag_count;
+}
+
 METHOD(tcg_swid_attr_tag_inv_t, get_inventory, swid_inventory_t*,
 	private_tcg_swid_attr_tag_inv_t *this)
 {
 	return this->inventory;
+}
+
+METHOD(tcg_swid_attr_tag_inv_t, clear_inventory, void,
+	private_tcg_swid_attr_tag_inv_t *this)
+{
+	this->inventory->destroy(this->inventory);
+	this->inventory = swid_inventory_create(TRUE);
 }
 
 /**
@@ -289,7 +332,9 @@ pa_tnc_attr_t *tcg_swid_attr_tag_inv_create(uint32_t request_id,
 			.add = _add,
 			.get_request_id = _get_request_id,
 			.get_last_eid = _get_last_eid,
+			.get_tag_count = _get_tag_count,
 			.get_inventory = _get_inventory,
+			.clear_inventory = _clear_inventory,
 		},
 		.type = { PEN_TCG, TCG_SWID_TAG_INVENTORY },
 		.request_id = request_id,
@@ -326,14 +371,19 @@ pa_tnc_attr_t *tcg_swid_attr_tag_inv_create_from_data(size_t length,
 			.add = _add,
 			.get_request_id = _get_request_id,
 			.get_last_eid = _get_last_eid,
+			.get_tag_count = _get_tag_count,
 			.get_inventory = _get_inventory,
+			.clear_inventory = _clear_inventory,
 		},
 		.type = { PEN_TCG, TCG_SWID_TAG_INVENTORY },
 		.length = length,
-		.value = chunk_clone(data),
+		.segment = chunk_clone(data),
 		.inventory = swid_inventory_create(TRUE),
 		.ref = 1,
 	);
+
+	/* received either complete attribute value or first segment */
+	this->value = this->segment;
 
 	return &this->public.pa_tnc_attribute;
 }

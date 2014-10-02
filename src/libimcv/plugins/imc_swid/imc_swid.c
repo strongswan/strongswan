@@ -17,8 +17,6 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
-#include <ita/ita_attr.h>
-#include <ita/ita_attr_angel.h>
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
@@ -133,13 +131,12 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 							   uint32_t request_id, bool full_tags,
 							   swid_inventory_t *targets)
 {
-	pa_tnc_attr_t *attr, *attr_angel, *attr_error;
+	pa_tnc_attr_t *attr, *attr_error;
 	imc_swid_state_t *swid_state;
 	swid_inventory_t *swid_inventory;
 	char *swid_directory, *swid_generator;
 	uint32_t eid_epoch;
-	size_t max_attr_size, attr_size, entry_size;
-	bool first = TRUE, swid_pretty, swid_full;
+	bool swid_pretty, swid_full;
 	enumerator_t *enumerator;
 
 	swid_directory = lib->settings->get_str(lib->settings,
@@ -172,63 +169,19 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	swid_state = (imc_swid_state_t*)state;
 	eid_epoch = swid_state->get_eid_epoch(swid_state);
 
-	/**
-	 * Compute the maximum TCG SWID Tag [ID] Inventory attribute size
-	 * leaving space for an additional ITA Angel attribute
-	 */
-	max_attr_size = state->get_max_msg_len(state) -
-					PA_TNC_HEADER_SIZE - PA_TNC_ATTR_HEADER_SIZE;
-
 	if (full_tags)
 	{
 		tcg_swid_attr_tag_inv_t *swid_attr;
 		swid_tag_t *tag;
-		chunk_t encoding, instance_id;
 
-		/* At least one TCG Tag Inventory attribute is sent */
-		attr_size = PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE;
+		/* Send a TCG SWID Tag Inventory attribute */
 		attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1);
+		swid_attr = (tcg_swid_attr_tag_inv_t*)attr;
 
 		enumerator = swid_inventory->create_enumerator(swid_inventory);
 		while (enumerator->enumerate(enumerator, &tag))
 		{
-			instance_id = tag->get_instance_id(tag);
-			encoding = tag->get_encoding(tag);
-			entry_size = 2 + instance_id.len + 4 + encoding.len;
-
-			/* Check for oversize tags that cannot be transported */
-			if (PA_TNC_ATTR_HEADER_SIZE + TCG_SWID_TAG_INV_MIN_SIZE +
-				entry_size > max_attr_size)
-			{
-				attr_error = swid_error_create(TCG_SWID_RESPONSE_TOO_LARGE,
-											   request_id, max_attr_size,
-											   "oversize SWID tag omitted");
-				msg->add_attribute(msg, attr_error);
-				continue;
-			}
-
-			if (attr_size + entry_size > max_attr_size)
-			{
-				if (first)
-				{
-					/**
-					 * Send an ITA Start Angel attribute to the IMV signalling
-					 * that multiple TGC SWID Tag Inventory attributes follow
-					 */
-					attr_angel = ita_attr_angel_create(TRUE);
-					msg->add_attribute(msg, attr_angel);
-					first = FALSE;
-				}
-				msg->add_attribute(msg, attr);
-
-				/* create the next TCG SWID Tag Inventory attribute */
-				attr_size = PA_TNC_ATTR_HEADER_SIZE +
-							TCG_SWID_TAG_INV_MIN_SIZE;
-				attr = tcg_swid_attr_tag_inv_create(request_id, eid_epoch, 1);
-			}
-			swid_attr = (tcg_swid_attr_tag_inv_t*)attr;
 			swid_attr->add(swid_attr, tag->get_ref(tag));
-			attr_size += entry_size;
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -237,7 +190,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 		tcg_swid_attr_tag_id_inv_t *swid_id_attr;
 		swid_tag_id_t *tag_id;
 
-		/* Send a TCG Tag ID Inventory attribute */
+		/* Send a TCG SWID Tag ID Inventory attribute */
 		attr = tcg_swid_attr_tag_id_inv_create(request_id, eid_epoch, 1);
 		swid_id_attr = (tcg_swid_attr_tag_id_inv_t*)attr;
 
@@ -248,18 +201,9 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 		}
 		enumerator->destroy(enumerator);
 	}
+
 	msg->add_attribute(msg, attr);
 	swid_inventory->destroy(swid_inventory);
-
-	if (!first)
-	{
-		/**
-		 * If we sent an ITA Start Angel attribute in the first place,
-		 * terminate by appending a matching ITA Stop Angel attribute.
-		 */
-		attr_angel = ita_attr_angel_create(FALSE);
-		msg->add_attribute(msg, attr_angel);
-	}
 
 	return TRUE;
 }

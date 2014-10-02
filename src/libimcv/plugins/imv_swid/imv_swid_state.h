@@ -96,6 +96,20 @@ struct imv_swid_state_t {
     json_object* (*get_swid_inventory)(imv_swid_state_t *this);
 
 	/**
+	 * Set the number of still missing SWID Tags or Tag IDs
+	 *
+	 * @param count				Number of missing SWID Tags or Tag IDs
+	 */
+	void (*set_missing)(imv_swid_state_t *this, uint32_t count);
+
+	/**
+	 * Get the number of still missing SWID Tags or Tag IDs
+	 *
+	 * @result					Number of missing SWID Tags or Tag IDs
+	 */
+	uint32_t (*get_missing)(imv_swid_state_t *this);
+
+	/**
 	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
 	 *
 	 * @param tag_id_count		Number of received SWID Tag IDs
@@ -110,21 +124,6 @@ struct imv_swid_state_t {
 	 * @param tag_count			Number of received SWID Tags
 	 */
 	void (*get_count)(imv_swid_state_t *this, int *tag_id_count, int *tag_count);
-
-	/**
-	 * Increase/Decrease the ITA Angel count
-	 *
-	 * @param start				TRUE increases and FALSE decreases count by one
-	 */
-	void (*set_angel_count)(imv_swid_state_t *this, bool start);
-
-	/**
-	 * Get the ITA Angel count
-	 *
-	 * @return					ITA Angel count
-	 */
-	int (*get_angel_count)(imv_swid_state_t *this);
-
 };
 
 /**

@@ -24,8 +24,6 @@
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
-#include <ita/ita_attr.h>
-#include <ita/ita_attr_angel.h>
 #include "tcg/seg/tcg_seg_attr_max_size.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
@@ -185,20 +183,6 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				reader->destroy(reader);
 			}
 		}
-		else if (type.vendor_id == PEN_ITA)
-		{
-			switch (type.type)
-			{
-				case ITA_ATTR_START_ANGEL:
-					swid_state->set_angel_count(swid_state, TRUE);
-					continue;
-				case ITA_ATTR_STOP_ANGEL:
-					swid_state->set_angel_count(swid_state, FALSE);
-					continue;
-				default:
-					continue;
-			}
-		}
 		else if (type.vendor_id != PEN_TCG)
 		{
 			continue;
@@ -209,6 +193,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 			case TCG_SWID_TAG_ID_INVENTORY:
 			{
 				tcg_swid_attr_tag_id_inv_t *attr_cast;
+				uint32_t missing;
 				int tag_id_count;
 
 				state->set_action_flags(state, IMV_SWID_ATTR_TAG_ID_INV);
@@ -218,11 +203,14 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				last_eid = attr_cast->get_last_eid(attr_cast, &eid_epoch);
 				inventory = attr_cast->get_inventory(attr_cast);
 				tag_id_count = inventory->get_count(inventory);
+				missing = attr_cast->get_tag_id_count(attr_cast);
+				swid_state->set_missing(swid_state, missing);
 
 				DBG2(DBG_IMV, "received SWID tag ID inventory with %d item%s "
-							  "for request %d at eid %d of epoch 0x%08x",
-							   tag_id_count, (tag_id_count == 1) ? "" : "s",
-							   request_id, last_eid, eid_epoch);
+					 "for request %d at eid %d of epoch 0x%08x, %d item%s to "
+					 "follow", tag_id_count, (tag_id_count == 1) ? "" : "s",
+					 request_id, last_eid, eid_epoch, missing,
+					 (missing == 1) ? "" : "s");
 
 				if (request_id == swid_state->get_request_id(swid_state))
 				{
@@ -234,6 +222,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 					DBG1(DBG_IMV, "no workitem found for SWID tag ID inventory "
 								  "with request ID %d", request_id);
 				}
+				attr_cast->clear_inventory(attr_cast);
 				break;
 			 }
 			case TCG_SWID_TAG_INVENTORY:
@@ -243,6 +232,7 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				chunk_t tag_encoding;
 				json_object *jobj, *jarray, *jstring;
 				char *tag_str;
+				uint32_t missing;
 				int tag_count;
 				enumerator_t *e;
 
@@ -253,12 +243,13 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				last_eid = attr_cast->get_last_eid(attr_cast, &eid_epoch);
 				inventory = attr_cast->get_inventory(attr_cast);
 				tag_count = inventory->get_count(inventory);
+				missing = attr_cast->get_tag_count(attr_cast);
+				swid_state->set_missing(swid_state, missing);
 
 				DBG2(DBG_IMV, "received SWID tag inventory with %d item%s for "
-							  "request %d at eid %d of epoch 0x%08x",
-							   tag_count, (tag_count == 1) ? "" : "s",
-							   request_id, last_eid, eid_epoch);
-
+					 "request %d at eid %d of epoch 0x%08x, %d item%s to follow",
+					 tag_count, (tag_count == 1) ? "" : "s", request_id,
+					 last_eid, eid_epoch, missing, (missing == 1) ? "" : "s");
 
 				if (request_id == swid_state->get_request_id(swid_state))
 				{
@@ -295,9 +286,11 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 					DBG1(DBG_IMV, "no workitem found for SWID tag inventory "
 								  "with request ID %d", request_id);
 				}
+				attr_cast->clear_inventory(attr_cast);
+				break;
 			}
 			default:
-				continue;
+				break;
 		 }
 	}
 	enumerator->destroy(enumerator);
@@ -498,7 +491,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 	if (handshake_state == IMV_SWID_STATE_WORKITEMS &&
 	   (received & (IMV_SWID_ATTR_TAG_INV|IMV_SWID_ATTR_TAG_ID_INV)) &&
-		swid_state->get_angel_count(swid_state) <= 0)
+		swid_state->get_missing(swid_state) == 0)
 	{
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;

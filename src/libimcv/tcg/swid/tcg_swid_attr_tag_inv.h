@@ -65,11 +65,23 @@ struct tcg_swid_attr_tag_inv_t {
 							  uint32_t *eid_epoch);
 
 	/**
+	 * Get count of remaining SWID tags
+	 *
+	 * @return					SWID Tag count
+	 */
+	uint32_t (*get_tag_count)(tcg_swid_attr_tag_inv_t *this);
+
+	/**
 	 * Get Inventory of SWID tags
 	 *
 	 * @result					SWID Tag Inventory
 	 */
 	swid_inventory_t* (*get_inventory)(tcg_swid_attr_tag_inv_t *this);
+
+	/**
+	 * Remove all SWID Tags from the Inventory
+	 */
+	void (*clear_inventory)(tcg_swid_attr_tag_inv_t *this);
 
 };
 

@@ -118,6 +118,11 @@ struct private_imv_swid_state_t {
 	int tag_count;
 
 	/**
+	 * Number of missing SWID Tags or Tag IDs
+	 */
+	uint32_t missing;
+
+	/**
 	 * Top level JSON object
 	 */
 	json_object *jobj;
@@ -126,11 +131,6 @@ struct private_imv_swid_state_t {
 	 * JSON array containing an inventory of SWID Tag IDs
 	 */
 	json_object *jarray;
-
-	/**
-	 * Angel count
-	 */
-	int angel_count;
 
 };
 
@@ -313,6 +313,18 @@ METHOD(imv_swid_state_t, get_swid_inventory, json_object*,
 	return this->jobj;
 }
 
+METHOD(imv_swid_state_t, set_missing, void,
+	private_imv_swid_state_t *this, uint32_t count)
+{
+	this->missing = count;
+}
+
+METHOD(imv_swid_state_t, get_missing, uint32_t,
+	private_imv_swid_state_t *this)
+{
+	return this->missing;
+}
+
 METHOD(imv_swid_state_t, set_count, void,
 	private_imv_swid_state_t *this, int tag_id_count, int tag_count)
 {
@@ -331,18 +343,6 @@ METHOD(imv_swid_state_t, get_count, void,
 	{
 		*tag_count = this->tag_count;
 	}
-}
-
-METHOD(imv_swid_state_t, set_angel_count, void,
-	private_imv_swid_state_t *this, bool start)
-{
-	this->angel_count += start ? 1 : -1;
-}
-
-METHOD(imv_swid_state_t, get_angel_count, int,
-	private_imv_swid_state_t *this)
-{
-	return this->angel_count;
 }
 
 /**
@@ -380,10 +380,10 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 			.get_request_id = _get_request_id,
 			.set_swid_inventory = _set_swid_inventory,
 			.get_swid_inventory = _get_swid_inventory,
+			.set_missing = _set_missing,
+			.get_missing = _get_missing,
 			.set_count = _set_count,
 			.get_count = _get_count,
-			.set_angel_count = _set_angel_count,
-			.get_angel_count = _get_angel_count,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
