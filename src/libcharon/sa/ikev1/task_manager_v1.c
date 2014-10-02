@@ -1593,13 +1593,6 @@ METHOD(task_manager_t, process_message, status_t,
 	return SUCCESS;
 }
 
-METHOD(task_manager_t, queue_task, void,
-	private_task_manager_t *this, task_t *task)
-{
-	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
-	this->queued_tasks->insert_last(this->queued_tasks, task);
-}
-
 /**
  * Check if a given task has been queued already
  */
@@ -1620,6 +1613,28 @@ static bool has_queued(private_task_manager_t *this, task_type_t type)
 	}
 	enumerator->destroy(enumerator);
 	return found;
+}
+
+METHOD(task_manager_t, queue_task, void,
+	private_task_manager_t *this, task_t *task)
+{
+	task_type_t type = task->get_type(task);
+
+	switch (type)
+	{
+		case TASK_MODE_CONFIG:
+		case TASK_XAUTH:
+			if (has_queued(this, type))
+			{
+				task->destroy(task);
+				return;
+			}
+			break;
+		default:
+			break;
+	}
+	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
+	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
 METHOD(task_manager_t, queue_ike, void,
