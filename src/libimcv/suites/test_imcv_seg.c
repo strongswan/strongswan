@@ -74,9 +74,8 @@ START_TEST(test_imcv_seg_env)
 	else
 	{
 		ck_assert(seg_env->get_base_attr_id(seg_env) == id);
-		base_attr1 = seg_env->get_base_attr(seg_env, &error);
+		base_attr1 = seg_env->get_base_attr(seg_env);
 		ck_assert(base_attr == base_attr1);
-		ck_assert(error == NULL);
 		base_attr1->destroy(base_attr1);
 
 		for (n = 0; n <= seg_env_tests[_i].next_segs; n++)
@@ -118,7 +117,7 @@ START_TEST(test_imcv_seg_env)
 			ck_assert(seg_env_attr->get_base_attr_id(seg_env_attr) == id);
 
 			/* create parse segment envelope attribute from data */
-			attr1 = tcg_seg_attr_seg_env_create_from_data(value);
+			attr1 = tcg_seg_attr_seg_env_create_from_data(value.len, value);
 			ck_assert(attr1->process(attr1, &offset) == SUCCESS);
 			attr->destroy(attr);
 
@@ -132,21 +131,20 @@ START_TEST(test_imcv_seg_env)
 			{
 				ck_assert(flags == (SEG_ENV_FLAG_MORE | SEG_ENV_FLAG_START));
 				seg_env1 = seg_env_create_from_data(base_attr_id, segment,
-													max_seg_size);
+													max_seg_size, &error);
 			}
 			else
 			{
 				ck_assert(flags == last_seg ? SEG_ENV_FLAG_NONE :
 											  SEG_ENV_FLAG_MORE);
-				seg_env1->add_segment(seg_env1, segment);
+				seg_env1->add_segment(seg_env1, segment, &error);
 			}
 			attr1->destroy(attr1);
 		}
 
 		/* check reconstructed base attribute */
-		base_attr1 = seg_env1->get_base_attr(seg_env1, &error);
+		base_attr1 = seg_env1->get_base_attr(seg_env1);
 		ck_assert(base_attr1);
-		ck_assert(error == NULL);
 		type = base_attr1->get_type(base_attr1);
 		ck_assert(type.vendor_id == PEN_ITA);
 		ck_assert(type.type == ITA_ATTR_COMMAND);
@@ -168,7 +166,7 @@ START_TEST(test_imcv_seg_env_special)
 	tcg_seg_attr_seg_env_t *seg_env_attr;
 	pen_type_t type;
 	seg_env_t *seg_env;
-	chunk_t segment;
+	chunk_t segment, value;
 	uint32_t max_seg_size = 47;
 	uint32_t last_seg_size = 1;
 	uint32_t offset = 12;
@@ -210,13 +208,14 @@ START_TEST(test_imcv_seg_env_special)
 	ck_assert(seg_env->next_segment(seg_env, NULL) == NULL);
 
 	/* create and parse a too short segment envelope attribute */
-	attr1 = tcg_seg_attr_seg_env_create_from_data(chunk_empty);
+	attr1 = tcg_seg_attr_seg_env_create_from_data(0, chunk_empty);
 	ck_assert(attr1->process(attr1, &offset) == FAILED);
 	ck_assert(offset == 0);
 	attr1->destroy(attr1);
 
 	/* create and parse correct segment envelope attribute */
-	attr1 = tcg_seg_attr_seg_env_create_from_data(attr->get_value(attr));
+	value = attr->get_value(attr);
+	attr1 = tcg_seg_attr_seg_env_create_from_data(value.len, value);
 	ck_assert(attr1->process(attr1, &offset) == SUCCESS);
 	type = attr1->get_type(attr1);
 	ck_assert(type.vendor_id == PEN_TCG);
@@ -233,13 +232,10 @@ END_TEST
 static struct {
 	pa_tnc_error_code_t error_code;
 	chunk_t segment;
-} invalid_tests[] = {
+} env_invalid_tests[] = {
 	{ PA_ERROR_INVALID_PARAMETER, { NULL, 0 } },
 	{ PA_ERROR_INVALID_PARAMETER, chunk_from_chars(
 		0x00, 0xff, 0xff, 0xf0, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x0a)
-	},
-	{ PA_ERROR_INVALID_PARAMETER, chunk_from_chars(
-		0x00, 0x00, 0x90, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0d)
 	},
 	{ PA_ERROR_INVALID_PARAMETER, chunk_from_chars(
 		0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0c)
@@ -265,14 +261,14 @@ START_TEST(test_imcv_seg_env_invalid)
 {
 	seg_env_t *seg_env;
 	pen_type_t error_code;
-	pa_tnc_attr_t *base_attr, *error;
+	pa_tnc_attr_t*error;
 	ietf_attr_pa_tnc_error_t *error_attr;
 
 	libimcv_init(FALSE);
-	seg_env = seg_env_create_from_data(id, invalid_tests[_i].segment, 20);
-	base_attr = seg_env->get_base_attr(seg_env, &error);
-	ck_assert(base_attr == NULL);
-	if (invalid_tests[_i].error_code == PA_ERROR_RESERVED)
+	seg_env = seg_env_create_from_data(id, env_invalid_tests[_i].segment, 20,
+									   &error);
+	ck_assert(seg_env == NULL);
+	if (env_invalid_tests[_i].error_code == PA_ERROR_RESERVED)
 	{
 		ck_assert(error == NULL);
 	}
@@ -283,10 +279,9 @@ START_TEST(test_imcv_seg_env_invalid)
 		error_attr = (ietf_attr_pa_tnc_error_t*)error;
 		error_code = error_attr->get_error_code(error_attr);
 		ck_assert(error_code.vendor_id == PEN_IETF);
-		ck_assert(error_code.type == invalid_tests[_i].error_code);
+		ck_assert(error_code.type == env_invalid_tests[_i].error_code);
 		error->destroy(error);
 	}
-	seg_env->destroy(seg_env);
 	libimcv_deinit();
 }
 END_TEST
@@ -530,6 +525,108 @@ START_TEST(test_imcv_seg_contract_special)
 }
 END_TEST
 
+static struct {
+	bool err_f;
+	chunk_t frag_f;
+	bool err_n;
+	bool base_attr;
+	chunk_t frag_n;
+} contract_invalid_tests[] = {
+	{ FALSE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x01, 0x00, 0x00, 0x90, 0x2a, 0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x0d),
+	  FALSE, TRUE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x01, 0x01 )
+	},
+	{ FALSE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x02, 0x00, 0x00, 0x90, 0x2a, 0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x0e),
+	  TRUE, FALSE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x02, 0x01 )
+	},
+	{ TRUE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x03, 0x00, 0x00, 0x55, 0x97, 0x00, 0x00, 0x00, 0x23,
+		0x00, 0x00, 0x00, 0x0d),
+	  FALSE, FALSE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x03, 0x01 )
+	},
+	{ FALSE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
+		0x00, 0x00, 0x00, 0x14),
+	  FALSE, FALSE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 )
+	},
+	{ FALSE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x05, 0x00, 0x00, 0x90, 0x2a, 0x00, 0x00, 0x00, 0x03,
+		0x00, 0x00, 0x00, 0x0f),
+	  TRUE, FALSE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x05, 0x00, 0x02, 0x01 )
+	},
+	{ FALSE, chunk_from_chars(
+		0xc0, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+		0x00, 0x00, 0x00, 0x11),
+	  TRUE, FALSE, chunk_from_chars(
+		0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0xff )
+	}
+};
+
+START_TEST(test_imcv_seg_contract_invalid)
+{
+	uint32_t max_seg_size = 12, max_attr_size = 100, issuer_id = 1;
+	pen_type_t msg_type = { PEN_ITA, PA_SUBTYPE_ITA_TEST };
+	pa_tnc_attr_t *attr_f, *attr_n, *base_attr, *error;
+	chunk_t value_f, value_n;
+	seg_contract_t *contract;
+	uint32_t offset;
+	bool more;
+
+	libimcv_init(FALSE);
+	value_f = contract_invalid_tests[_i].frag_f;
+	value_n = contract_invalid_tests[_i].frag_n;
+	attr_f = tcg_seg_attr_seg_env_create_from_data(value_f.len, value_f);
+	attr_n = tcg_seg_attr_seg_env_create_from_data(value_n.len, value_n);
+	ck_assert(attr_f->process(attr_f, &offset) == SUCCESS);
+	ck_assert(attr_n->process(attr_n, &offset) == SUCCESS);
+
+	contract = seg_contract_create(msg_type, max_attr_size, max_seg_size,
+									 TRUE, issuer_id, FALSE);
+	base_attr = contract->add_segment(contract, attr_f, &error, &more);
+	ck_assert(base_attr == NULL);
+	
+	if (contract_invalid_tests[_i].err_f)
+	{
+		ck_assert(error);
+		error->destroy(error);
+	}
+	else
+	{
+		ck_assert(error == NULL);
+		ck_assert(more);
+		base_attr = contract->add_segment(contract, attr_n, &error, &more);
+		if (contract_invalid_tests[_i].err_n)
+		{
+			ck_assert(error);
+			error->destroy(error);
+		}
+		else
+		{
+			ck_assert(error == NULL);
+		}
+		if (contract_invalid_tests[_i].base_attr)
+		{
+			ck_assert(base_attr);
+			base_attr->destroy(base_attr);
+		}
+	}
+
+	/* cleanup */
+	attr_f->destroy(attr_f);
+	attr_n->destroy(attr_n);
+	contract->destroy(contract);
+	libimcv_deinit();
+}
+END_TEST
+
 Suite *imcv_seg_suite_create()
 {
 	Suite *s;
@@ -546,7 +643,8 @@ Suite *imcv_seg_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("env_invalid");
-	tcase_add_loop_test(tc, test_imcv_seg_env_invalid, 0, countof(invalid_tests));
+	tcase_add_loop_test(tc, test_imcv_seg_env_invalid, 0,
+						countof(env_invalid_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("contract");
@@ -555,6 +653,11 @@ Suite *imcv_seg_suite_create()
 
 	tc = tcase_create("contract_special");
 	tcase_add_test(tc, test_imcv_seg_contract_special);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("contract_invalid");
+	tcase_add_loop_test(tc, test_imcv_seg_contract_invalid, 0,
+						countof(contract_invalid_tests));
 	suite_add_tcase(s, tc);
 
 	return s;
