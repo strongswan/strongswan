@@ -23,7 +23,13 @@ START_TEST(test_retval_true)
 {
 	process_t *process;
 	char *argv[] = {
+#ifdef WIN32
+		"C:\\Windows\\system32\\cmd.exe",
+		"/C",
+		"exit 0",
+#else
 		"/bin/true",
+#endif
 		NULL
 	};
 	int retval;
@@ -39,7 +45,13 @@ START_TEST(test_retval_false)
 {
 	process_t *process;
 	char *argv[] = {
+#ifdef WIN32
+		"C:\\Windows\\system32\\cmd.exe",
+		"/C",
+		"exit 1",
+#else
 		"/bin/false",
+#endif
 		NULL
 	};
 	int retval;
@@ -69,7 +81,11 @@ START_TEST(test_echo)
 {
 	process_t *process;
 	char *argv[] = {
+#ifdef WIN32
+		"C:\\Windows\\system32\\more.com",
+#else
 		"/bin/cat",
+#endif
 		NULL
 	};
 	int retval, in, out;
@@ -94,9 +110,15 @@ START_TEST(test_echo_err)
 {
 	process_t *process;
 	char *argv[] = {
+#ifdef WIN32
+		"C:\\Windows\\system32\\cmd.exe",
+		"/C",
+		"1>&2 C:\\Windows\\system32\\more.com",
+#else
 		"/bin/sh",
 		"-c",
 		"1>&2 /bin/cat",
+#endif
 		NULL
 	};
 	int retval, in, err;
@@ -121,9 +143,15 @@ START_TEST(test_env)
 {
 	process_t *process;
 	char *argv[] = {
+#ifdef WIN32
+		"C:\\Windows\\system32\\cmd.exe",
+		"/C",
+		"echo %A% %B%",
+#else
 		"/bin/sh",
 		"-c",
 		"echo -n $A $B",
+#endif
 		NULL
 	};
 	char *envp[] = {
@@ -137,7 +165,11 @@ START_TEST(test_env)
 	process = process_start(argv, envp, NULL, &out, NULL, TRUE);
 	ck_assert(process != NULL);
 	ck_assert(read(out, buf, sizeof(buf)) > 0);
+#ifdef WIN32
+	ck_assert_str_eq(buf, "atest bstring\r\n");
+#else
 	ck_assert_str_eq(buf, "atest bstring");
+#endif
 	ck_assert(close(out) == 0);
 	ck_assert(process->wait(process, &retval));
 	ck_assert_int_eq(retval, 0);
