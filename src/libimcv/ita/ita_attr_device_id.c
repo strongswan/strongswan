@@ -100,6 +100,12 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, add_segment, void,
+	private_ita_attr_device_id_t *this, chunk_t segment)
+{
+	this->value = chunk_cat("mc", this->value, segment);
+}
+
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
 	private_ita_attr_device_id_t *this)
 {
@@ -133,6 +139,7 @@ pa_tnc_attr_t *ita_attr_device_id_create_from_data(size_t length, chunk_t value)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
