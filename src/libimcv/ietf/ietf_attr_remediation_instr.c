@@ -228,6 +228,12 @@ end:
 	return status;
 }
 
+METHOD(pa_tnc_attr_t, add_segment, void,
+	private_ietf_attr_remediation_instr_t *this, chunk_t segment)
+{
+	this->value = chunk_cat("mc", this->value, segment);
+}
+
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
 	private_ietf_attr_remediation_instr_t *this)
 {
@@ -285,6 +291,7 @@ pa_tnc_attr_t *ietf_attr_remediation_instr_create(pen_type_t parameters_type,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
@@ -352,6 +359,7 @@ pa_tnc_attr_t *ietf_attr_remediation_instr_create_from_data(size_t length,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
