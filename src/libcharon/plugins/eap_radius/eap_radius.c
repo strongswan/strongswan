@@ -414,6 +414,30 @@ static void add_unity_attribute(eap_radius_provider_t *provider, u_int32_t id,
 }
 
 /**
+ * Add a DNS/NBNS configuration attribute
+ */
+static void add_nameserver_attribute(eap_radius_provider_t *provider,
+									 u_int32_t id, int type, chunk_t data)
+{
+	/* these are from different vendors, but there is currently no conflict */
+	switch (type)
+	{
+		case  5: /* CVPN3000-Primary-DNS */
+		case  6: /* CVPN3000-Secondary-DNS */
+		case 28: /* MS-Primary-DNS-Server */
+		case 29: /* MS-Secondary-DNS-Server */
+			provider->add_attribute(provider, id, INTERNAL_IP4_DNS, data);
+			break;
+		case  7: /* CVPN3000-Primary-WINS */
+		case  8: /* CVPN3000-Secondary-WINS */
+		case 30: /* MS-Primary-NBNS-Server */
+		case 31: /* MS-Secondary-NBNS-Server */
+			provider->add_attribute(provider, id, INTERNAL_IP4_NBNS, data);
+			break;
+	}
+}
+
+/**
  * Add a UNITY_LOCAL_LAN or UNITY_SPLIT_INCLUDE attribute
  */
 static void add_unity_split_attribute(eap_radius_provider_t *provider,
@@ -515,6 +539,16 @@ static void process_cfg_attributes(radius_message_t *msg)
 			{
 				switch (type)
 				{
+					case  5: /* CVPN3000-Primary-DNS */
+					case  6: /* CVPN3000-Secondary-DNS */
+					case  7: /* CVPN3000-Primary-WINS */
+					case  8: /* CVPN3000-Secondary-WINS */
+						if (data.len == 4)
+						{
+							add_nameserver_attribute(provider,
+									ike_sa->get_unique_id(ike_sa), type, data);
+						}
+						break;
 					case 15: /* CVPN3000-IPSec-Banner1 */
 					case 28: /* CVPN3000-IPSec-Default-Domain */
 					case 29: /* CVPN3000-IPSec-Split-DNS-Names */
@@ -543,6 +577,22 @@ static void process_cfg_attributes(radius_message_t *msg)
 						}
 						break;
 					default:
+						break;
+				}
+			}
+			if (vendor == PEN_MICROSOFT)
+			{
+				switch (type)
+				{
+					case 28: /* MS-Primary-DNS-Server */
+					case 29: /* MS-Secondary-DNS-Server */
+					case 30: /* MS-Primary-NBNS-Server */
+					case 31: /* MS-Secondary-NBNS-Server */
+						if (data.len == 4)
+						{
+							add_nameserver_attribute(provider,
+									ike_sa->get_unique_id(ike_sa), type, data);
+						}
 						break;
 				}
 			}

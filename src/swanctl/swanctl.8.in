@@ -62,6 +62,9 @@ list stored certificates
 .B "\-A, \-\-list\-pools"
 list loaded pool configurations
 .TP
+.B "\-q, \-\-load\-all"
+(re\-)load credentials, pools and connections
+.TP
 .B "\-c, \-\-load\-conns"
 (re\-)load connection configuration
 .TP
@@ -73,6 +76,12 @@ list loaded pool configurations
 .TP
 .B "\-T, \-\-log"
 trace logging output
+.TP
+.B "\-S, \-\-stats"
+show daemon infos and statistics
+.TP
+.B "\-r, \-\-reload-settings"
+reload strongswan.conf(5) configuration
 .TP
 .B "\-v, \-\-version"
 show daemon version information

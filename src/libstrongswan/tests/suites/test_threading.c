@@ -980,7 +980,8 @@ START_TEST(test_detach)
 		sched_yield();
 	}
 	/* no checks done here, but we check that thread state gets cleaned
-	 * up with leak detective. */
+	 * up with leak detective. give the threads time to clean up. */
+	usleep(10000);
 }
 END_TEST
 
@@ -1015,7 +1016,8 @@ START_TEST(test_detach_exit)
 		sched_yield();
 	}
 	/* no checks done here, but we check that thread state gets cleaned
-	 * up with leak detective. */
+	 * up with leak detective. give the threads time to clean up. */
+	usleep(10000);
 }
 END_TEST
 

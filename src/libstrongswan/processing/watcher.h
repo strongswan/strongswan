@@ -23,6 +23,7 @@
 
 typedef struct watcher_t watcher_t;
 typedef enum watcher_event_t watcher_event_t;
+typedef enum watcher_state_t watcher_state_t;
 
 #include <library.h>
 
@@ -57,6 +58,18 @@ enum watcher_event_t {
 };
 
 /**
+ * State the watcher currently is in
+ */
+enum watcher_state_t {
+	/** no watcher thread running or queued */
+	WATCHER_STOPPED = 0,
+	/** a job has been queued for watching, but not yet started */
+	WATCHER_QUEUED,
+	/** a watcher thread is active, dispatching socket events */
+	WATCHER_RUNNING,
+};
+
+/**
  * Watch multiple file descriptors using select().
  */
 struct watcher_t {
@@ -84,6 +97,13 @@ struct watcher_t {
 	 * @param fd		file descriptor to stop watching
 	 */
 	void (*remove)(watcher_t *this, int fd);
+
+	/**
+	 * Get the current watcher state
+	 *
+	 * @reutrn			currently active watcher state
+	 */
+	watcher_state_t (*get_state)(watcher_t *this);
 
 	/**
 	 * Destroy a watcher_t.

@@ -29,6 +29,10 @@
 
 #define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
 
+#ifndef STRONGSWAN_CONF
+#define STRONGSWAN_CONF NULL
+#endif
+
 typedef struct private_library_t private_library_t;
 
 /**
@@ -149,6 +153,7 @@ void library_deinit()
 	utils_deinit();
 	threads_deinit();
 
+	free(this->public.conf);
 	free((void*)this->public.ns);
 	free(this);
 	lib = NULL;
@@ -258,6 +263,7 @@ bool library_init(char *settings, const char *namespace)
 			.get = _get,
 			.set = _set,
 			.ns = strdup(namespace ?: "libstrongswan"),
+			.conf = strdupnull(settings ?: (getenv("STRONGSWAN_CONF") ?: STRONGSWAN_CONF)),
 		},
 		.ref = 1,
 	);
@@ -304,13 +310,7 @@ bool library_init(char *settings, const char *namespace)
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
 
-#ifdef STRONGSWAN_CONF
-	if (!settings)
-	{
-		settings = STRONGSWAN_CONF;
-	}
-#endif
-	this->public.settings = settings_create(settings);
+	this->public.settings = settings_create(this->public.conf);
 	/* all namespace settings may fall back to libstrongswan */
 	lib->settings->add_fallback(lib->settings, lib->ns, "libstrongswan");
 
@@ -350,6 +350,8 @@ bool library_init(char *settings, const char *namespace)
 		this->integrity_failed = TRUE;
 #endif /* INTEGRITY_TEST */
 	}
+
+	diffie_hellman_init();
 
 	return !this->integrity_failed;
 }

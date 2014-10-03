@@ -86,6 +86,7 @@ METHOD(fetcher_t, fetch, status_t,
 	private_curl_fetcher_t *this, char *uri, void *userdata)
 {
 	char error[CURL_ERROR_SIZE], *enc_uri;
+	CURLcode curl_status;
 	status_t status;
 	long result = 0;
 	cb_data_t data = {
@@ -123,7 +124,8 @@ METHOD(fetcher_t, fetch, status_t,
 	}
 
 	DBG2(DBG_LIB, "  sending http request to '%s'...", uri);
-	switch (curl_easy_perform(this->curl))
+	curl_status = curl_easy_perform(this->curl);
+	switch (curl_status)
 	{
 		case CURLE_UNSUPPORTED_PROTOCOL:
 			status = NOT_SUPPORTED;
@@ -138,7 +140,8 @@ METHOD(fetcher_t, fetch, status_t,
 			status = (result >= 200 && result < 300) ? SUCCESS : FAILED;
 			break;
 		default:
-			DBG1(DBG_LIB, "libcurl http request failed: %s", error);
+			DBG1(DBG_LIB, "libcurl http request failed [%d]: %s", curl_status,
+				 error);
 			status = FAILED;
 			break;
 	}

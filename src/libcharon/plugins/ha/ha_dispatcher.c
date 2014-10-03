@@ -437,11 +437,13 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				pools->destroy(pools);
 			}
 		}
+#ifdef USE_IKEV1
 		if (ike_sa->get_version(ike_sa) == IKEV1)
 		{
 			lib->processor->queue_job(lib->processor, (job_t*)
 							adopt_children_job_create(ike_sa->get_id(ike_sa)));
 		}
+#endif /* USE_IKEV1 */
 		this->cache->cache(this->cache, ike_sa, message);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}

@@ -8,6 +8,9 @@ charon.plugins.stroke.max_concurrent = 4
 charon.plugins.stroke.prevent_loglevel_changes = no
 	If enabled log level changes via stroke socket are not allowed.
 
+charon.plugins.stroke.secrets_file = ${sysconfdir}/ipsec.secrets
+	Location of the ipsec.secrets file
+
 charon.plugins.stroke.socket = unix://${piddir}/charon.ctl
 	Socket provided by the stroke plugin.
 

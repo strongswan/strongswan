@@ -1978,8 +1978,8 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	}
 	if (packets)
 	{
-		/* not supported by PF_KEY */
-		*packets = 0;
+		/* at least on Linux and FreeBSD this contains the number of packets */
+		*packets = response.lft_current->sadb_lifetime_allocations;
 	}
 	if (time)
 	{

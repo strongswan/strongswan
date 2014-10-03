@@ -64,7 +64,7 @@ static bool test_runner_init(bool init)
 				PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 		};
 		lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
-										  countof(features), TRUE);
+										  countof(features), TRUE, NULL, NULL);
 
 		lib->settings->set_int(lib->settings, "%s.dh_mapping.%d", 1,
 							   lib->ns, MODP_3072_BIT);

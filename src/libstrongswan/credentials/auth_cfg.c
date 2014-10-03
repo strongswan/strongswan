@@ -998,8 +998,8 @@ METHOD(auth_cfg_t, purge, void,
 	{
 		if (!keep_ca || entry->type != AUTH_RULE_CA_CERT)
 		{
-			array_remove_at(this->entries, enumerator);
 			destroy_entry_value(entry);
+			array_remove_at(this->entries, enumerator);
 		}
 	}
 	enumerator->destroy(enumerator);

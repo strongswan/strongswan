@@ -21,7 +21,6 @@
 #ifndef OS_INFO_H_
 #define OS_INFO_H_
 
-typedef struct os_info_t os_info_t;
 typedef enum os_type_t os_type_t;
 typedef enum os_fwd_status_t os_fwd_status_t;
 typedef enum os_package_state_t os_package_state_t;

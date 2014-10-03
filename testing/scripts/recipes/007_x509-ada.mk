@@ -2,7 +2,7 @@
 
 PKG = x509-ada
 SRC = http://git.codelabs.ch/git/$(PKG).git
-REV = v0.1
+REV = v0.1.1
 
 PREFIX = /usr/local/ada
 

@@ -65,6 +65,11 @@ struct private_stroke_cred_t {
 	stroke_cred_t public;
 
 	/**
+	 * secrets file with credential information
+	 */
+	char *secrets_file;
+
+	/**
 	 * credentials
 	 */
 	mem_cred_t *creds;
@@ -1297,7 +1302,7 @@ METHOD(stroke_cred_t, reread, void,
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
 		DBG1(DBG_CFG, "rereading secrets");
-		load_secrets(this, NULL, SECRETS_FILE, 0, prompt);
+		load_secrets(this, NULL, this->secrets_file, 0, prompt);
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
@@ -1370,6 +1375,9 @@ stroke_cred_t *stroke_cred_create()
 			.cachecrl = _cachecrl,
 			.destroy = _destroy,
 		},
+		.secrets_file = lib->settings->get_str(lib->settings,
+								"%s.plugins.stroke.secrets_file", SECRETS_FILE,
+								lib->ns),
 		.creds = mem_cred_create(),
 	);
 
@@ -1380,7 +1388,7 @@ stroke_cred_t *stroke_cred_create()
 						FALSE, lib->ns);
 
 	load_certs(this);
-	load_secrets(this, NULL, SECRETS_FILE, 0, NULL);
+	load_secrets(this, NULL, this->secrets_file, 0, NULL);
 
 	return &this->public;
 }

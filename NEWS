@@ -1,3 +1,12 @@
+strongswan-5.2.1
+----------------
+
+- The new charon-systemd IKE daemon implements an IKE daemon tailored for use
+  with systemd. It avoids the dependency on ipsec starter and uses swanctl
+  as configuration backend, building a simple and lightweight solution. It
+  supports native systemd journal logging.
+
+
 strongswan-5.2.0
 ----------------
 

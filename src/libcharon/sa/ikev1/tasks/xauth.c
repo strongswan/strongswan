@@ -19,6 +19,7 @@
 #include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
 #include <processing/jobs/adopt_children_job.h>
+#include <sa/ikev1/tasks/mode_config.h>
 
 typedef struct private_xauth_t private_xauth_t;
 
@@ -74,6 +75,11 @@ struct private_xauth_t {
 	 * status of Xauth exchange
 	 */
 	xauth_status_t status;
+
+	/**
+	 * Queue a Mode Config Push mode after completing XAuth?
+	 */
+	bool mode_config_push;
 };
 
 /**
@@ -290,6 +296,7 @@ METHOD(task_t, process_i_status, status_t,
 	private_xauth_t *this, message_t *message)
 {
 	cp_payload_t *cp;
+	adopt_children_job_t *job;
 
 	cp = (cp_payload_t*)message->get_payload(message, PLV1_CONFIGURATION);
 	if (!cp || cp->get_type(cp) != CFG_ACK)
@@ -307,8 +314,13 @@ METHOD(task_t, process_i_status, status_t,
 		return FAILED;
 	}
 	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
-	lib->processor->queue_job(lib->processor, (job_t*)
-				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
+	job = adopt_children_job_create(this->ike_sa->get_id(this->ike_sa));
+	if (this->mode_config_push)
+	{
+		job->queue_task(job,
+				(task_t*)mode_config_create(this->ike_sa, TRUE, FALSE));
+	}
+	lib->processor->queue_job(lib->processor, (job_t*)job);
 	return SUCCESS;
 }
 
@@ -511,6 +523,12 @@ METHOD(task_t, migrate, void,
 	}
 }
 
+METHOD(xauth_t, queue_mode_config_push, void,
+	private_xauth_t *this)
+{
+	this->mode_config_push = TRUE;
+}
+
 METHOD(task_t, destroy, void,
 	private_xauth_t *this)
 {
@@ -533,6 +551,7 @@ xauth_t *xauth_create(ike_sa_t *ike_sa, bool initiator)
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.queue_mode_config_push = _queue_mode_config_push,
 		},
 		.initiator = initiator,
 		.ike_sa = ike_sa,

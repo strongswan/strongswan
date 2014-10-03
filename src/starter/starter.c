@@ -261,10 +261,14 @@ static void fatal_signal_handler(int signal)
 #ifdef GENERATE_SELFCERT
 static void generate_selfcert()
 {
+	const char *secrets_file;
 	struct stat stb;
 
+	secrets_file = lib->settings->get_str(lib->settings,
+							"charon.plugins.stroke.secrets_file", SECRETS_FILE);
+
 	/* if ipsec.secrets file is missing then generate RSA default key pair */
-	if (stat(SECRETS_FILE, &stb) != 0)
+	if (stat(secrets_file, &stb) != 0)
 	{
 		mode_t oldmask;
 		FILE *f;
@@ -302,7 +306,7 @@ static void generate_selfcert()
 		/* ipsec.secrets is root readable only */
 		oldmask = umask(0066);
 
-		f = fopen(SECRETS_FILE, "w");
+		f = fopen(secrets_file, "w");
 		if (f)
 		{
 			fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
@@ -310,7 +314,7 @@ static void generate_selfcert()
 			fprintf(f, ": RSA myKey.der\n");
 			fclose(f);
 		}
-		ignore_result(chown(SECRETS_FILE, uid, gid));
+		ignore_result(chown(secrets_file, uid, gid));
 		umask(oldmask);
 	}
 }
@@ -485,7 +489,8 @@ int main (int argc, char **argv)
 	}
 	if (!config_file)
 	{
-		config_file = CONFIG_FILE;
+		config_file = lib->settings->get_str(lib->settings,
+											 "starter.config_file", CONFIG_FILE);
 	}
 
 	init_log("ipsec_starter");
@@ -612,7 +617,6 @@ int main (int argc, char **argv)
 				int fnull;
 
 				close_log();
-				closefrom(3);
 
 				fnull = open("/dev/null", O_RDWR);
 				if (fnull >= 0)

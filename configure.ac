@@ -73,7 +73,6 @@ if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 fi
 ARG_WITH_SET([systemdsystemunitdir], [$systemdsystemunitdir_default], [directory for systemd service files])
-AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno])
 AC_SUBST(systemdsystemunitdir)
 
 AC_ARG_WITH(
@@ -274,6 +273,7 @@ ARG_DISBL_SET([pki],            [disable pki certificate utility.])
 ARG_DISBL_SET([scepclient],     [disable SCEP client tool.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([svc],            [enable charon Windows service.])
+ARG_ENABL_SET([systemd],        [enable systemd specific IKE daemon charon-systemd.])
 ARG_ENABL_SET([swanctl],        [enable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 # optional features
@@ -576,9 +576,9 @@ AC_CHECK_FUNC([syslog], [
 ])
 AM_CONDITIONAL(USE_SYSLOG, [test "x$syslog" = xtrue])
 
-AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h linux/fib_rules.h)
+AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
-AC_CHECK_HEADERS(netinet/ip6.h, [], [],
+AC_CHECK_HEADERS([netinet/ip6.h linux/fib_rules.h], [], [],
 [
 	#include <sys/types.h>
 	#include <netinet/in.h>
@@ -868,6 +868,23 @@ if test x$xml = xtrue; then
 	PKG_CHECK_MODULES(xml, [libxml-2.0])
 	AC_SUBST(xml_CFLAGS)
 	AC_SUBST(xml_LIBS)
+fi
+
+if test x$systemd = xtrue; then
+	AC_MSG_CHECKING([for systemd system unit directory])
+	if test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno; then
+		AC_MSG_RESULT([$systemdsystemunitdir])
+	else
+		AC_MSG_ERROR([not found (try --with-systemdsystemunitdir)])
+	fi
+
+	PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
+	AC_SUBST(systemd_daemon_CFLAGS)
+	AC_SUBST(systemd_daemon_LIBS)
+
+	PKG_CHECK_MODULES(systemd_journal, [libsystemd-journal])
+	AC_SUBST(systemd_journal_CFLAGS)
+	AC_SUBST(systemd_journal_LIBS)
 fi
 
 if test x$tss = xtrousers; then
@@ -1167,9 +1184,6 @@ s_plugins=
 t_plugins=
 
 ADD_PLUGIN([test-vectors],         [s charon scepclient pki])
-ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
-ADD_PLUGIN([winhttp],              [s charon pki scripts])
-ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([unbound],              [s charon scripts])
 ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
@@ -1216,6 +1230,9 @@ ADD_PLUGIN([ctr],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
+ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([winhttp],              [s charon pki scripts])
+ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([attr],                 [h charon])
 ADD_PLUGIN([attr-sql],             [h charon])
 ADD_PLUGIN([load-tester],          [c charon])
@@ -1470,9 +1487,9 @@ AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCEPCLIENT, test x$scepclient = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
-AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
@@ -1497,6 +1514,8 @@ AM_CONDITIONAL(USE_CMD, test x$cmd = xtrue)
 AM_CONDITIONAL(USE_AIKGEN, test x$aikgen = xtrue)
 AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
 AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
+AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
+AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
 
 # ========================
 #  set global definitions
@@ -1550,6 +1569,7 @@ AC_CONFIG_FILES([
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile
+	init/systemd-swanctl/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
@@ -1640,6 +1660,7 @@ AC_CONFIG_FILES([
 	src/charon-tkm/Makefile
 	src/charon-cmd/Makefile
 	src/charon-svc/Makefile
+	src/charon-systemd/Makefile
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile

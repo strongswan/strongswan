@@ -1487,6 +1487,14 @@ METHOD(ike_sa_t, reauth, status_t,
 	{
 		return INVALID_STATE;
 	}
+	if (this->state == IKE_CONNECTING)
+	{
+		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
+			 get_name(this), this->unique_id);
+		reset(this);
+		this->task_manager->queue_ike(this->task_manager);
+		return this->task_manager->initiate(this->task_manager);
+	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
@@ -1903,11 +1911,29 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 	bool valid = FALSE;
 	enumerator_t *enumerator;
 	host_t *src = NULL, *addr;
+	int family = AF_UNSPEC;
+
+	switch (charon->socket->supported_families(charon->socket))
+	{
+		case SOCKET_FAMILY_IPV4:
+			family = AF_INET;
+			break;
+		case SOCKET_FAMILY_IPV6:
+			family = AF_INET6;
+			break;
+		case SOCKET_FAMILY_BOTH:
+		case SOCKET_FAMILY_NONE:
+			break;
+	}
 
 	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
 	enumerator = create_peer_address_enumerator(this);
 	while (enumerator->enumerate(enumerator, &addr))
 	{
+		if (family != AF_UNSPEC && addr->get_family(addr) != family)
+		{
+			continue;
+		}
 		DBG1(DBG_IKE, "looking for a route to %H ...", addr);
 		src = hydra->kernel_interface->get_source_addr(
 										hydra->kernel_interface, addr, NULL);

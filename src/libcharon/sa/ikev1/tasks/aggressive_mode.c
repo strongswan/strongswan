@@ -475,6 +475,9 @@ METHOD(task_t, process_r, status_t,
 		}
 		case AM_AUTH:
 		{
+			adopt_children_job_t *job = NULL;
+			xauth_t *xauth = NULL;
+
 			while (TRUE)
 			{
 				if (this->ph1->verify_auth(this->ph1, this->method, message,
@@ -504,8 +507,8 @@ METHOD(task_t, process_r, status_t,
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_HYBRID_INIT_RSA:
-					this->ike_sa->queue_task(this->ike_sa,
-									(task_t*)xauth_create(this->ike_sa, TRUE));
+					xauth = xauth_create(this->ike_sa, TRUE);
+					this->ike_sa->queue_task(this->ike_sa, (task_t*)xauth);
 					break;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
@@ -524,9 +527,8 @@ METHOD(task_t, process_r, status_t,
 					{
 						return send_delete(this);
 					}
-					lib->processor->queue_job(lib->processor, (job_t*)
-									adopt_children_job_create(
-										this->ike_sa->get_id(this->ike_sa)));
+					job = adopt_children_job_create(
+											this->ike_sa->get_id(this->ike_sa));
 					break;
 			}
 			/* check for and prepare mode config push/pull */
@@ -542,9 +544,25 @@ METHOD(task_t, process_r, status_t,
 			{
 				if (!this->peer_cfg->use_pull_mode(this->peer_cfg))
 				{
-					this->ike_sa->queue_task(this->ike_sa,
-						(task_t*)mode_config_create(this->ike_sa, TRUE, FALSE));
+					if (job)
+					{
+						job->queue_task(job, (task_t*)
+								mode_config_create(this->ike_sa, TRUE, FALSE));
+					}
+					else if (xauth)
+					{
+						xauth->queue_mode_config_push(xauth);
+					}
+					else
+					{
+						this->ike_sa->queue_task(this->ike_sa, (task_t*)
+								mode_config_create(this->ike_sa, TRUE, FALSE));
+					}
 				}
+			}
+			if (job)
+			{
+				lib->processor->queue_job(lib->processor, (job_t*)job);
 			}
 			return SUCCESS;
 		}

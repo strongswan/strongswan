@@ -70,6 +70,7 @@ struct test_configuration_t {
  * - TESTS_VERBOSITY: Numerical loglevel for debug log
  * - TESTS_STRONGSWAN_CONF: Specify a path to a custom strongswan.conf
  * - TESTS_SUITES: Run specific test suites only
+ * - TESTS_SUITES_EXCLUDE: Don't run specific test suites
  * - TESTS_REDUCED_KEYLENGTHS: Test minimal keylengths for public key tests only
  *
  * @param name			name of test runner

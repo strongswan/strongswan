@@ -58,6 +58,8 @@ METHOD(plugin_t, get_features, int,
 	private_gcrypt_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		/* we provide threading-safe initialization of libgcrypt */
+		PLUGIN_PROVIDE(CUSTOM, "gcrypt-threading"),
 		/* crypters */
 		PLUGIN_REGISTER(CRYPTER, gcrypt_crypter_create),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CTR, 16),

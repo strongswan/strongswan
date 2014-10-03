@@ -20,6 +20,7 @@
 
 #include "command.h"
 #include "swanctl.h"
+#include "load_conns.h"
 
 /**
  * Check if we should handle a key as a list of comma separated values
@@ -319,41 +320,16 @@ static bool unload_conn(vici_conn_t *conn, char *name,
 	return ret;
 }
 
-static int load_conns(vici_conn_t *conn)
+/**
+ * See header.
+ */
+int load_conns_cfg(vici_conn_t *conn, command_format_options_t format,
+				   settings_t *cfg)
 {
 	u_int found = 0, loaded = 0, unloaded = 0;
-	command_format_options_t format = COMMAND_FORMAT_NONE;
-	char *arg, *section;
+	char *section;
 	enumerator_t *enumerator;
 	linked_list_t *conns;
-	settings_t *cfg;
-
-	while (TRUE)
-	{
-		switch (command_getopt(&arg))
-		{
-			case 'h':
-				return command_usage(NULL);
-			case 'P':
-				format |= COMMAND_FORMAT_PRETTY;
-				/* fall through to raw */
-			case 'r':
-				format |= COMMAND_FORMAT_RAW;
-				continue;
-			case EOF:
-				break;
-			default:
-				return command_usage("invalid --load-conns option");
-		}
-		break;
-	}
-
-	cfg = settings_create(SWANCTL_CONF);
-	if (!cfg)
-	{
-		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
-		return EINVAL;
-	}
 
 	conns = list_conns(conn, format);
 
@@ -368,8 +344,6 @@ static int load_conns(vici_conn_t *conn)
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	cfg->destroy(cfg);
 
 	/* unload all connection in daemon, but not in file */
 	while (conns->remove_first(conns, (void**)&section) == SUCCESS)
@@ -400,6 +374,47 @@ static int load_conns(vici_conn_t *conn)
 	fprintf(stderr, "loaded %u of %u connections, %u failed to load, "
 			"%u unloaded\n", loaded, found, found - loaded, unloaded);
 	return EINVAL;
+}
+
+static int load_conns(vici_conn_t *conn)
+{
+	command_format_options_t format = COMMAND_FORMAT_NONE;
+	settings_t *cfg;
+	char *arg;
+	int ret;
+
+	while (TRUE)
+	{
+		switch (command_getopt(&arg))
+		{
+			case 'h':
+				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
+			case 'r':
+				format |= COMMAND_FORMAT_RAW;
+				continue;
+			case EOF:
+				break;
+			default:
+				return command_usage("invalid --load-conns option");
+		}
+		break;
+	}
+
+	cfg = settings_create(SWANCTL_CONF);
+	if (!cfg)
+	{
+		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
+		return EINVAL;
+	}
+
+	ret = load_conns_cfg(conn, format, cfg);
+
+	cfg->destroy(cfg);
+
+	return ret;
 }
 
 /**

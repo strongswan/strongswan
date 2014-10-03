@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Tobias Brunner
+ * Copyright (C) 2010-2014 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -77,6 +77,11 @@ struct private_ike_mobike_t {
 	 * additional addresses got updated
 	 */
 	bool addresses_updated;
+
+	/**
+	 * whether the pending updates counter was increased
+	 */
+	bool pending_update;
 };
 
 /**
@@ -301,35 +306,61 @@ static void apply_port(host_t *host, host_t *old, u_int16_t port, bool local)
 	host->set_port(host, port);
 }
 
-METHOD(ike_mobike_t, transmit, void,
+METHOD(ike_mobike_t, transmit, bool,
 	   private_ike_mobike_t *this, packet_t *packet)
 {
 	host_t *me, *other, *me_old, *other_old;
 	enumerator_t *enumerator;
 	ike_cfg_t *ike_cfg;
 	packet_t *copy;
-
-	if (!this->check)
-	{
-		return;
-	}
+	int family = AF_UNSPEC;
+	bool found = FALSE;
 
 	me_old = this->ike_sa->get_my_host(this->ike_sa);
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
+	if (!this->check)
+	{
+		me = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													  other_old, me_old);
+		if (me)
+		{
+			if (me->ip_equals(me, me_old))
+			{
+				charon->sender->send(charon->sender, packet->clone(packet));
+				me->destroy(me);
+				return TRUE;
+			}
+			me->destroy(me);
+		}
+		this->check = TRUE;
+	}
+
+	switch (charon->socket->supported_families(charon->socket))
+	{
+		case SOCKET_FAMILY_IPV4:
+			family = AF_INET;
+			break;
+		case SOCKET_FAMILY_IPV6:
+			family = AF_INET6;
+			break;
+		case SOCKET_FAMILY_BOTH:
+		case SOCKET_FAMILY_NONE:
+			break;
+	}
+
 	enumerator = this->ike_sa->create_peer_address_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&other))
 	{
+		if (family != AF_UNSPEC && other->get_family(other) != family)
+		{
+			continue;
+		}
 		me = hydra->kernel_interface->get_source_addr(
 										hydra->kernel_interface, other, NULL);
 		if (me)
 		{
-			if (me->get_family(me) != other->get_family(other))
-			{
-				me->destroy(me);
-				continue;
-			}
 			/* reuse port for an active address, 4500 otherwise */
 			apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg), TRUE);
 			other = other->clone(other);
@@ -339,9 +370,11 @@ METHOD(ike_mobike_t, transmit, void,
 			copy->set_source(copy, me);
 			copy->set_destination(copy, other);
 			charon->sender->send(charon->sender, copy);
+			found = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	return found;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -481,9 +514,7 @@ METHOD(task_t, process_i, status_t,
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
-		u_int32_t updates = this->ike_sa->get_pending_updates(this->ike_sa) - 1;
-		this->ike_sa->set_pending_updates(this->ike_sa, updates);
-		if (updates > 0)
+		if (this->ike_sa->get_pending_updates(this->ike_sa) > 1)
 		{
 			/* newer update queued, ignore this one */
 			return SUCCESS;
@@ -560,7 +591,6 @@ METHOD(task_t, process_i, status_t,
 					this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				}
 				this->check = FALSE;
-				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
 			}
 		}
@@ -573,8 +603,12 @@ METHOD(ike_mobike_t, addresses, void,
 	   private_ike_mobike_t *this)
 {
 	this->address = TRUE;
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, roam, void,
@@ -582,8 +616,12 @@ METHOD(ike_mobike_t, roam, void,
 {
 	this->check = TRUE;
 	this->address = address;
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, dpd, void,
@@ -593,14 +631,24 @@ METHOD(ike_mobike_t, dpd, void,
 	{
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	}
-	this->ike_sa->set_pending_updates(this->ike_sa,
+	if (!this->pending_update)
+	{
+		this->pending_update = TRUE;
+		this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(ike_mobike_t, is_probing, bool,
 	   private_ike_mobike_t *this)
 {
 	return this->check;
+}
+
+METHOD(ike_mobike_t, enable_probing, void,
+	private_ike_mobike_t *this)
+{
+	this->check = TRUE;
 }
 
 METHOD(task_t, get_type, task_type_t,
@@ -618,11 +666,21 @@ METHOD(task_t, migrate, void,
 	{
 		this->natd->task.migrate(&this->natd->task, ike_sa);
 	}
+	if (this->pending_update)
+	{
+		this->ike_sa->set_pending_updates(this->ike_sa,
+						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+	}
 }
 
 METHOD(task_t, destroy, void,
 	   private_ike_mobike_t *this)
 {
+	if (this->pending_update)
+	{
+		this->ike_sa->set_pending_updates(this->ike_sa,
+						this->ike_sa->get_pending_updates(this->ike_sa) - 1);
+	}
 	chunk_free(&this->cookie2);
 	if (this->natd)
 	{
@@ -650,6 +708,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 			.dpd = _dpd,
 			.transmit = _transmit,
 			.is_probing = _is_probing,
+			.enable_probing = _enable_probing,
 		},
 		.ike_sa = ike_sa,
 		.initiator = initiator,

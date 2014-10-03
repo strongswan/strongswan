@@ -159,7 +159,8 @@ int register_dh_mapping()
 	}
 	enumerator->destroy(enumerator);
 
-	lib->plugins->add_static_features(lib->plugins, "tkm-dh", f, countof(f), TRUE);
+	lib->plugins->add_static_features(lib->plugins, "tkm-dh", f, countof(f),
+									  TRUE, NULL, NULL);
 
 	if (count > 0)
 	{

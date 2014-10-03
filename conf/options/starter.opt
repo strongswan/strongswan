@@ -1,3 +1,6 @@
+starter.config_file = ${sysconfdir}/ipsec.conf
+	Location of the ipsec.conf file
+
 starter.load =
 	Plugins to load in starter.
 

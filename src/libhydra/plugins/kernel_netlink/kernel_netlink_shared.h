@@ -26,7 +26,10 @@
  * 1024 byte is currently sufficient for all operations. Some platform
  * require an enforced aligment to four bytes (e.g. ARM).
  */
-typedef u_char netlink_buf_t[1024] __attribute__((aligned(RTA_ALIGNTO)));
+typedef union {
+	struct nlmsghdr hdr;
+	u_char bytes[1024];
+} netlink_buf_t __attribute__((aligned(RTA_ALIGNTO)));
 
 typedef struct netlink_socket_t netlink_socket_t;
 
@@ -61,9 +64,10 @@ struct netlink_socket_t {
 /**
  * Create a netlink_socket_t object.
  *
- * @param	protocol	protocol type (e.g. NETLINK_XFRM or NETLINK_ROUTE)
+ * @param protocol	protocol type (e.g. NETLINK_XFRM or NETLINK_ROUTE)
+ * @param names		optional enum names for Netlink messages
  */
-netlink_socket_t *netlink_socket_create(int protocol);
+netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names);
 
 /**
  * Creates an rtattr and adds it to the given netlink message.

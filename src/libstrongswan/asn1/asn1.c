@@ -123,6 +123,24 @@ chunk_t asn1_build_known_oid(int n)
 	return oid;
 }
 
+/**
+ * Returns the number of bytes required to encode the given OID node
+ */
+static int bytes_required(u_int val)
+{
+	int shift, required = 1;
+
+	/* sufficient to handle 32 bit node numbers */
+	for (shift = 28; shift; shift -= 7)
+	{
+		if (val >> shift)
+		{	/* do not encode leading zeroes */
+			required++;
+		}
+	}
+	return required;
+}
+
 /*
  * Defined in header.
  */
@@ -132,14 +150,15 @@ chunk_t asn1_oid_from_string(char *str)
 	size_t buf_len = 64;
 	u_char buf[buf_len];
 	char *end;
-	int i = 0, pos = 0, shift;
-	u_int val, shifted_val, first = 0;
+	int i = 0, pos = 0, req, shift;
+	u_int val, first = 0;
 
 	enumerator = enumerator_create_token(str, ".", "");
 	while (enumerator->enumerate(enumerator, &str))
 	{
 		val = strtoul(str, &end, 10);
-		if (end == str || pos > buf_len-4)
+		req = bytes_required(val);
+		if (end == str || pos + req > buf_len)
 		{
 			pos = 0;
 			break;
@@ -153,15 +172,9 @@ chunk_t asn1_oid_from_string(char *str)
 				buf[pos++] = first * 40 + val;
 				break;
 			default:
-				shift = 28;		/* sufficient to handle 32 bit node numbers */
-				while (shift)
+				for (shift = (req - 1) * 7; shift; shift -= 7)
 				{
-					shifted_val = val >> shift;
-					shift -= 7;
-					if (shifted_val)	/* do not encode leading zeroes */
-					{
-						buf[pos++] = 0x80 | (shifted_val & 0x7F);
-					}
+					buf[pos++] = 0x80 | ((val >> shift) & 0x7F);
 				}
 				buf[pos++] = val & 0x7F;
 		}

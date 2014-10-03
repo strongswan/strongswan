@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -296,7 +296,7 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	linked_list_t *substructs, *list;
 
 	if (this->type == PLV1_SECURITY_ASSOCIATION)
-	{	/* IKEv1 proposals start with 0 */
+	{	/* IKEv1 proposals may start with 0 or 1 (or any other number really) */
 		struct_number = ignore_struct_number = -1;
 	}
 
@@ -309,17 +309,22 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &substruct))
 	{
+		int current_number = substruct->get_proposal_number(substruct);
+
 		/* check if a proposal has a single protocol */
-		if (substruct->get_proposal_number(substruct) == struct_number)
+		if (current_number == struct_number)
 		{
 			if (ignore_struct_number < struct_number)
-			{	/* remove an already added, if first of series */
+			{	/* remove an already added substruct, if first of series */
 				substructs->remove_last(substructs, (void**)&substruct);
 				ignore_struct_number = struct_number;
 			}
 			continue;
 		}
-		struct_number++;
+		/* for IKEv1 the numbers don't have to be consecutive, for IKEv2 they do
+		 * but since we don't really care for the actual number we accept them
+		 * anyway. we already verified that they increase monotonically. */
+		struct_number = current_number;
 		substructs->insert_last(substructs, substruct);
 	}
 	enumerator->destroy(enumerator);
@@ -364,7 +369,7 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 		}
 		if (proposal_number != current_proposal)
 		{	/* start of a new proposal */
-			if (espah && ipcomp)
+			if (espah && ipcomp && ipcomp->get_cpi(ipcomp, NULL))
 			{	/* previous proposal is valid */
 				break;
 			}

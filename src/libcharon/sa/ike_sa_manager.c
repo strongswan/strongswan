@@ -384,11 +384,6 @@ struct private_ike_sa_manager_t {
 	rng_t *rng;
 
 	/**
-	 * SHA1 hasher for IKE_SA_INIT retransmit detection
-	 */
-	hasher_t *hasher;
-
-	/**
 	 * reuse existing IKE_SAs in checkout_by_config
 	 */
 	bool reuse_ikesa;
@@ -962,49 +957,39 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
  *
  * @returns TRUE on success
  */
-static bool get_init_hash(private_ike_sa_manager_t *this, message_t *message,
-						  chunk_t *hash)
+static bool get_init_hash(hasher_t *hasher, message_t *message, chunk_t *hash)
 {
 	host_t *src;
 
-	if (!this->hasher)
-	{	/* this might be the case when flush() has been called */
-		return FALSE;
-	}
 	if (message->get_first_payload_type(message) == PLV1_FRAGMENT)
 	{	/* only hash the source IP, port and SPI for fragmented init messages */
 		u_int16_t port;
 		u_int64_t spi;
 
 		src = message->get_source(message);
-		if (!this->hasher->allocate_hash(this->hasher,
-										 src->get_address(src), NULL))
+		if (!hasher->allocate_hash(hasher, src->get_address(src), NULL))
 		{
 			return FALSE;
 		}
 		port = src->get_port(src);
-		if (!this->hasher->allocate_hash(this->hasher,
-										 chunk_from_thing(port), NULL))
+		if (!hasher->allocate_hash(hasher, chunk_from_thing(port), NULL))
 		{
 			return FALSE;
 		}
 		spi = message->get_initiator_spi(message);
-		return this->hasher->allocate_hash(this->hasher,
-										   chunk_from_thing(spi), hash);
+		return hasher->allocate_hash(hasher, chunk_from_thing(spi), hash);
 	}
 	if (message->get_exchange_type(message) == ID_PROT)
 	{	/* include the source for Main Mode as the hash will be the same if
 		 * SPIs are reused by two initiators that use the same proposal */
 		src = message->get_source(message);
 
-		if (!this->hasher->allocate_hash(this->hasher,
-										 src->get_address(src), NULL))
+		if (!hasher->allocate_hash(hasher, src->get_address(src), NULL))
 		{
 			return FALSE;
 		}
 	}
-	return this->hasher->allocate_hash(this->hasher,
-									   message->get_packet_data(message), hash);
+	return hasher->allocate_hash(hasher, message->get_packet_data(message), hash);
 }
 
 /**
@@ -1227,15 +1212,19 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	if (is_init)
 	{
+		hasher_t *hasher;
 		u_int64_t our_spi;
 		chunk_t hash;
 
-		if (!get_init_hash(this, message, &hash))
+		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (!hasher || !get_init_hash(hasher, message, &hash))
 		{
 			DBG1(DBG_MGR, "ignoring message, failed to hash message");
+			DESTROY_IF(hasher);
 			id->destroy(id);
 			return NULL;
 		}
+		hasher->destroy(hasher);
 
 		/* ensure this is not a retransmit of an already handled init message */
 		switch (check_and_put_init_hash(this, hash, &our_spi))
@@ -2058,8 +2047,6 @@ METHOD(ike_sa_manager_t, flush, void,
 
 	this->rng->destroy(this->rng);
 	this->rng = NULL;
-	this->hasher->destroy(this->hasher);
-	this->hasher = NULL;
 }
 
 METHOD(ike_sa_manager_t, destroy, void,
@@ -2134,18 +2121,10 @@ ike_sa_manager_t *ike_sa_manager_create()
 		},
 	);
 
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (this->hasher == NULL)
-	{
-		DBG1(DBG_MGR, "manager initialization failed, no hasher supported");
-		free(this);
-		return NULL;
-	}
 	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (this->rng == NULL)
 	{
 		DBG1(DBG_MGR, "manager initialization failed, no RNG supported");
-		this->hasher->destroy(this->hasher);
 		free(this);
 		return NULL;
 	}

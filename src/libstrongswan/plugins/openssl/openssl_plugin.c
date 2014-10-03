@@ -266,6 +266,8 @@ METHOD(plugin_t, get_features, int,
 	private_openssl_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		/* we provide OpenSSL threading callbacks */
+		PLUGIN_PROVIDE(CUSTOM, "openssl-threading"),
 		/* crypters */
 		PLUGIN_REGISTER(CRYPTER, openssl_crypter_create),
 #ifndef OPENSSL_NO_AES

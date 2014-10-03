@@ -10,12 +10,14 @@ swanctl_SOURCES = \
 	commands/list_conns.c \
 	commands/list_certs.c \
 	commands/list_pools.c \
-	commands/load_conns.c \
-	commands/load_creds.c \
-	commands/load_pools.c \
+	commands/load_all.c \
+	commands/load_conns.c commands/load_conns.h \
+	commands/load_creds.c commands/load_creds.h \
+	commands/load_pools.c commands/load_pools.h \
 	commands/log.c \
 	commands/version.c \
 	commands/stats.c \
+	commands/reload_settings.c \
 	swanctl.c swanctl.h
 
 swanctl_LDADD = \
@@ -54,7 +56,7 @@ maintainer-clean-local:
 	cd $(srcdir) && rm -f swanctl.conf swanctl.conf.5.main
 
 install-data-local: swanctl.conf
-	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)"
+	test -e "$(DESTDIR)$(swanctldir)" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509ca" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509ca" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509aa" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509aa" || true

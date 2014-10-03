@@ -139,6 +139,23 @@ static void narrow_responder_post(child_cfg_t *child_cfg, linked_list_t *local)
 	configured->destroy(configured);
 }
 
+/**
+ * Check if any Split-Include attributes are active on this IKE_SA
+ */
+static bool has_split_includes(private_unity_narrow_t *this, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	bool has;
+
+	enumerator = this->handler->create_include_enumerator(this->handler,
+												ike_sa->get_unique_id(ike_sa));
+	has = enumerator->enumerate(enumerator, &ts);
+	enumerator->destroy(enumerator);
+
+	return has;
+}
+
 METHOD(listener_t, narrow, bool,
 	private_unity_narrow_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	narrow_hook_t type, linked_list_t *local, linked_list_t *remote)
@@ -146,23 +163,43 @@ METHOD(listener_t, narrow, bool,
 	if (ike_sa->get_version(ike_sa) == IKEV1 &&
 		ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
 	{
-		switch (type)
+		/* depending on who initiates a rekeying the hooks will not match the
+		 * roles in the IKE_SA */
+		if (ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
 		{
-			case NARROW_INITIATOR_PRE_AUTH:
-				narrow_pre(remote, "other");
-				break;
-			case NARROW_INITIATOR_POST_AUTH:
-				narrow_initiator(this, ike_sa,
-								 child_sa->get_config(child_sa), remote);
-				break;
-			case NARROW_RESPONDER:
-				narrow_pre(local, "us");
-				break;
-			case NARROW_RESPONDER_POST:
-				narrow_responder_post(child_sa->get_config(child_sa), local);
-				break;
-			default:
-				break;
+			switch (type)
+			{
+				case NARROW_INITIATOR_PRE_AUTH:
+				case NARROW_RESPONDER:
+					if (has_split_includes(this, ike_sa))
+					{
+						narrow_pre(remote, "other");
+					}
+					break;
+				case NARROW_INITIATOR_POST_AUTH:
+				case NARROW_RESPONDER_POST:
+					narrow_initiator(this, ike_sa,
+									 child_sa->get_config(child_sa), remote);
+					break;
+				default:
+					break;
+			}
+		}
+		else
+		{
+			switch (type)
+			{
+				case NARROW_INITIATOR_PRE_AUTH:
+				case NARROW_RESPONDER:
+					narrow_pre(local, "us");
+					break;
+				case NARROW_INITIATOR_POST_AUTH:
+				case NARROW_RESPONDER_POST:
+					narrow_responder_post(child_sa->get_config(child_sa), local);
+					break;
+				default:
+					break;
+			}
 		}
 	}
 	return TRUE;

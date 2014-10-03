@@ -60,6 +60,10 @@ if USE_CHARON
   SUBDIRS += charon
 endif
 
+if USE_SYSTEMD
+  SUBDIRS += charon-systemd
+endif
+
 if USE_NM
   SUBDIRS += charon-nm
 endif
