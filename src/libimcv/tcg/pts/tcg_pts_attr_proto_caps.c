@@ -148,6 +148,19 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, add_segment, void,
+	private_tcg_pts_attr_proto_caps_t *this, chunk_t segment)
+{
+	this->value = chunk_cat("mc", this->value, segment);
+}
+
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_proto_caps_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_proto_caps_t *this)
 {
@@ -156,13 +169,6 @@ METHOD(pa_tnc_attr_t, destroy, void,
 		free(this->value.ptr);
 		free(this);
 	}
-}
-
-METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_tcg_pts_attr_proto_caps_t *this)
-{
-	ref_get(&this->ref);
-	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(tcg_pts_attr_proto_caps_t, get_flags, pts_proto_caps_flag_t,
@@ -188,6 +194,7 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
@@ -220,6 +227,7 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(size_t length,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},

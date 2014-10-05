@@ -171,11 +171,6 @@ METHOD(seg_env_t, add_segment, bool,
 	chunk_t msg_info;
 	status_t status;
 
-	/* not all attributes might have implemented the add_segment method */
-	if (!this->base_attr->add_segment)
-	{
-		return FALSE;
-	}
 	this->base_attr->add_segment(this->base_attr, segment);
 	status = this->base_attr->process(this->base_attr, &attr_offset);
 
