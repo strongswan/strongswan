@@ -203,7 +203,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	while (this->count)
 	{
-		if (!reader->read_data8(reader, &name))
+		if (!reader->read_data8(reader, &name) ||
+			!reader->read_data8(reader, &version))
 		{
 			goto end;
 		}
@@ -215,21 +216,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			status = FAILED;
 			goto end;
 		}
-		this->offset += 1 + name.len;
-
-		if (!reader->read_data8(reader, &version))
-		{
-			goto end;
-		}
 		pos = memchr(version.ptr, '\0', version.len);
 		if (pos)
 		{
 			DBG1(DBG_TNC, "nul termination in IETF installed package version");
-			*offset = this->offset + 1 + (pos - version.ptr);
+			*offset = this->offset + 1 + name.len + 1 + (pos - version.ptr);
 			status = FAILED;
 			goto end;
 		}
-		this->offset += 1 + version.len;
+		this->offset += this->value.len - reader->remaining(reader);
 		this->value = reader->peek(reader);
 
 		entry = malloc_thing(package_entry_t);
@@ -326,7 +321,7 @@ METHOD(ietf_attr_installed_packages_t, clear_packages, void,
 {
 	package_entry_t *entry;
 
-	while (this->packages->remove_first(this->packages,(void**)&entry))
+	while (this->packages->remove_first(this->packages,(void**)&entry) == SUCCESS)
 	{
 		free_package_entry(entry);
 	}

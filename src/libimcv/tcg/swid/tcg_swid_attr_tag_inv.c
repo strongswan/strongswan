@@ -189,8 +189,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		if (this->length < TCG_SWID_TAG_INV_MIN_SIZE)
 		{
-			DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
-													  this->type.type);
+			DBG1(DBG_TNC, "insufficient data for %N/%N", pen_names, PEN_TCG,
+						   tcg_attr_names, this->type.type);
 			*offset = this->offset;
 			return FAILED;
 		}
@@ -230,8 +230,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	if (this->length != this->offset)
 	{
-		DBG1(DBG_TNC, "inconsistent length for %N", tcg_attr_names,
-													this->type.type);
+		DBG1(DBG_TNC, "inconsistent length for %N/%N", pen_names, PEN_TCG,
+					   tcg_attr_names, this->type.type);
 		*offset = this->offset;
 		status = FAILED;
 	}
