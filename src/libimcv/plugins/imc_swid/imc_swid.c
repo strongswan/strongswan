@@ -17,6 +17,8 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
+#include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "tcg/swid/tcg_swid_attr_req.h"
 #include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
@@ -110,6 +112,14 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
 	imc_state_t *state;
+	imc_msg_t *out_msg;
+	pa_tnc_attr_t *attr;
+	seg_contract_t *contract;
+	seg_contract_manager_t *contracts;
+	size_t max_attr_size = SWID_MAX_ATTR_SIZE;
+	size_t max_seg_size;
+	char buf[BUF_LEN];
+	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imc_swid)
 	{
@@ -121,7 +131,30 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 
-	return TNC_RESULT_SUCCESS;
+	/* Determine maximum PA-TNC attribute segment size */
+	max_seg_size = state->get_max_msg_len(state) - PA_TNC_HEADER_SIZE
+												 - PA_TNC_ATTR_HEADER_SIZE
+												 - TCG_SEG_ATTR_SEG_ENV_HEADER
+												 - PA_TNC_ATTR_HEADER_SIZE
+												 - TCG_SEG_ATTR_MAX_SIZE_SIZE;
+
+	/* Announce support of PA-TNC segmentation to IMV */
+	contract = seg_contract_create(msg_types[0], max_attr_size, max_seg_size,
+									 TRUE, imc_id, TRUE);
+	contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+	DBG2(DBG_IMC, "%s", buf);
+	contracts = state->get_contracts(state);
+	contracts->add_contract(contracts, contract);
+	attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
+
+	/* send PA-TNC message with the excl flag not set */
+	out_msg = imc_msg_create(imc_swid, state, connection_id, imc_id,
+							 TNC_IMVID_ANY, msg_types[0]);
+	out_msg->add_attribute(out_msg, attr);
+	result = out_msg->send(out_msg, FALSE);
+	out_msg->destroy(out_msg);
+
+	return result;
 }
 
 /**

@@ -23,6 +23,9 @@
 
 #include <library.h>
 
+/* Maximum size of a SWID Tag Inventory: 100 MB */
+#define SWID_MAX_ATTR_SIZE	100000000
+
 typedef struct swid_inventory_t swid_inventory_t;
 
 /**
