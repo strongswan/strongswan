@@ -56,6 +56,18 @@ struct ietf_attr_installed_packages_t {
 	 */
 	enumerator_t* (*create_enumerator)(ietf_attr_installed_packages_t *this);
 
+	/**
+	 * Number of Installed Packages still missing
+	 *
+	 * @return				Number of missing installed packages
+	 */
+	uint16_t (*get_count)(ietf_attr_installed_packages_t *this);
+
+	/**
+	 * Remove all Installed Packages from list
+	 */
+	void (*clear_packages)(ietf_attr_installed_packages_t *this);
+
 };
 
 /**

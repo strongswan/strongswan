@@ -114,18 +114,18 @@ struct imv_os_state_t {
 	u_int (*get_os_settings)(imv_os_state_t *this);
 
 	/**
-	 * Increase/Decrease the ITA Angel count
+	 * Set number of installed packages still missing
 	 *
-	 * @param start			TRUE increases and FALSE decreases count by one
+	 * @param missing		Number of missing installed packages
 	 */
-	void (*set_angel_count)(imv_os_state_t *this, bool start);
+	void (*set_missing)(imv_os_state_t *this, uint16_t missing);
 
 	/**
-	 * Get the ITA Angel count
+	 * Get number of installed packages still missing
 	 *
-	 * @return				ITA Angel count
+	 * @return				Number of missing installed packages
 	 */
-	int (*get_angel_count)(imv_os_state_t *this);
+	uint16_t (*get_missing)(imv_os_state_t *this);
 
 	/**
 	 * Store a bad package that has to be updated or removed

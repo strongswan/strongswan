@@ -141,9 +141,9 @@ struct private_imv_os_state_t {
 	u_int os_settings;
 
 	/**
-	 * Angel count
+	 * Number of installed packages still missing
 	 */
-	int angel_count;
+	uint16_t missing;
 
 };
 
@@ -535,16 +535,16 @@ METHOD(imv_os_state_t, get_os_settings, u_int,
 	return this->os_settings;
 }
 
-METHOD(imv_os_state_t, set_angel_count, void,
-	private_imv_os_state_t *this, bool start)
+METHOD(imv_os_state_t, set_missing, void,
+	private_imv_os_state_t *this, uint16_t missing)
 {
-	this->angel_count += start ? 1 : -1;
+	this->missing = missing;
 }
 
-METHOD(imv_os_state_t, get_angel_count, int,
+METHOD(imv_os_state_t, get_missing, uint16_t,
 	private_imv_os_state_t *this)
 {
-	return this->angel_count;
+	return this->missing;
 }
 
 METHOD(imv_os_state_t, add_bad_package, void,
@@ -598,8 +598,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_count = _get_count,
 			.set_os_settings = _set_os_settings,
 			.get_os_settings = _get_os_settings,
-			.set_angel_count = _set_angel_count,
-			.get_angel_count = _get_angel_count,
+			.set_missing = _set_missing,
+			.get_missing = _get_missing,
 			.add_bad_package = _add_bad_package,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,

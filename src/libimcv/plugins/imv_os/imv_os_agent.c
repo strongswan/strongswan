@@ -37,14 +37,17 @@
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
-#include <ita/ita_attr_angel.h>
 #include <ita/ita_attr_device_id.h>
+#include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <utils/debug.h>
+
+#define INSTALLED_PACKAGES_MAX_ATTR_SIZE	100000000
 
 typedef struct private_imv_os_agent_t private_imv_os_agent_t;
 typedef enum imv_os_attr_t imv_os_attr_t;
@@ -166,6 +169,7 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
+	uint16_t missing;
 
 	os_state = (imv_os_state_t*)state;
 	session = state->get_session(state);
@@ -325,6 +329,9 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 						assessment = TRUE;
 					}
+					missing = attr_cast->get_count(attr_cast);
+					os_state->set_missing(os_state, missing);
+					attr_cast->clear_packages(attr_cast);
 					break;
 				}
 				default:
@@ -371,12 +378,6 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 					session->set_device_id(session, value);
 					break;
 				}
-				case ITA_ATTR_START_ANGEL:
-					os_state->set_angel_count(os_state, TRUE);
-					break;
-				case ITA_ATTR_STOP_ANGEL:
-					os_state->set_angel_count(os_state, FALSE);
-					break;
 				default:
 					break;
 			}
@@ -531,6 +532,30 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 	if (handshake_state == IMV_OS_STATE_INIT)
 	{
+		size_t max_attr_size = INSTALLED_PACKAGES_MAX_ATTR_SIZE;
+		size_t max_seg_size;
+		seg_contract_t *contract;
+		seg_contract_manager_t *contracts;
+		char buf[BUF_LEN];
+
+		/* Determine maximum PA-TNC attribute segment size */
+		max_seg_size = state->get_max_msg_len(state)
+								- PA_TNC_HEADER_SIZE 
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_SEG_ENV_HEADER
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_MAX_SIZE_SIZE;
+
+		/* Announce support of PA-TNC segmentation to IMC */
+		contract = seg_contract_create(msg_types[0], max_attr_size,
+										max_seg_size, TRUE, imv_id, FALSE);
+		contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+		DBG2(DBG_IMV, "%s", buf);
+		contracts = state->get_contracts(state);
+		contracts->add_contract(contracts, contract);
+		attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
+		out_msg->add_attribute(out_msg, attr);
+
 		if ((received & IMV_OS_ATTR_MUST) != IMV_OS_ATTR_MUST)
 		{
 			/* create attribute request for missing mandatory attributes */
@@ -673,7 +698,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					int count, count_update, count_blacklist, count_ok;
 
 					if (!(received & IMV_OS_ATTR_INSTALLED_PACKAGES) ||
-						os_state->get_angel_count(os_state) > 0)
+						os_state->get_missing(os_state) > 0)
 					{
 						continue;
 					}

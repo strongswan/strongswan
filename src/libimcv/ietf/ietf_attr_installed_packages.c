@@ -62,14 +62,29 @@ struct private_ietf_attr_installed_packages_t {
 	size_t length;
 
 	/**
-	 * Attribute value or segment
+	 * Offset up to which attribute value has been processed
+	 */
+	size_t offset;
+
+	/**
+	 * Current position of attribute value pointer
 	 */
 	chunk_t value;
+
+	/**
+	 * Contains complete attribute or current segment
+	 */
+	chunk_t segment;
 
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
+
+	/**
+	 * Number of Installed Packages in attribute
+	 */
+	uint16_t count;
 
 	/**
 	 * List of Installed Package entries
@@ -148,6 +163,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator->destroy(enumerator);
 
 	this->value = writer->extract_buf(writer);
+	this->segment = this->value;
 	this->length = this->value.len;
 	writer->destroy(writer);
 }
@@ -157,70 +173,82 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	package_entry_t *entry;
-	status_t status = FAILED;
+	status_t status = NEED_MORE;
 	chunk_t name, version;
-	u_int16_t reserved, count;
+	u_int16_t reserved;
 	u_char *pos;
 
-	*offset = 0;
+	if (this->offset == 0)
+	{	
+		if (this->length < IETF_INSTALLED_PACKAGES_MIN_SIZE)
+		{
+			DBG1(DBG_TNC, "insufficient data for %N/%N", pen_names, PEN_IETF,
+						   ietf_attr_names, this->type.type);
+			*offset = this->offset;
+			return FAILED;
+		}
+		if (this->value.len < IETF_INSTALLED_PACKAGES_MIN_SIZE)
+		{
+			return NEED_MORE;
+		}
+		reader = bio_reader_create(this->value);
+		reader->read_uint16(reader, &reserved);
+		reader->read_uint16(reader, &this->count);
+		this->offset = IETF_INSTALLED_PACKAGES_MIN_SIZE;
+		this->value = reader->peek(reader);
+		reader->destroy(reader);
+	}
 
-	if (this->value.len < this->length)
-	{
-		return NEED_MORE;
-	}
-	if (this->value.len < IETF_INSTALLED_PACKAGES_MIN_SIZE)
-	{
-		DBG1(DBG_TNC, "insufficient data for IETF installed packages");
-		return FAILED;
-	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint16(reader, &reserved);
-	reader->read_uint16(reader, &count);
-	*offset = IETF_INSTALLED_PACKAGES_MIN_SIZE;
 
-	while (reader->remaining(reader))
+	while (this->count)
 	{
 		if (!reader->read_data8(reader, &name))
 		{
-			DBG1(DBG_TNC, "insufficient data for IETF installed package name");
 			goto end;
 		}
 		pos = memchr(name.ptr, '\0', name.len);
 		if (pos)
 		{
 			DBG1(DBG_TNC, "nul termination in IETF installed package name");
-			*offset += 1 + (pos - name.ptr);
+			*offset = this->offset + 1 + (pos - name.ptr);
+			status = FAILED;
 			goto end;
 		}
-		*offset += 1 + name.len;
+		this->offset += 1 + name.len;
 
 		if (!reader->read_data8(reader, &version))
 		{
-			DBG1(DBG_TNC, "insufficient data for IETF installed package version");
 			goto end;
 		}
 		pos = memchr(version.ptr, '\0', version.len);
 		if (pos)
 		{
 			DBG1(DBG_TNC, "nul termination in IETF installed package version");
-			*offset += 1 + (pos - version.ptr);
+			*offset = this->offset + 1 + (pos - version.ptr);
+			status = FAILED;
 			goto end;
 		}
-		*offset += 1 + version.len;
+		this->offset += 1 + version.len;
+		this->value = reader->peek(reader);
 
 		entry = malloc_thing(package_entry_t);
 		entry->name = chunk_clone(name);
 		entry->version = chunk_clone(version);
 		this->packages->insert_last(this->packages, entry);
+
+		/* at least one tag ID was processed */
+		status = SUCCESS;
+		this->count--;
 	}
 
-	if (count != this->packages->get_count(this->packages))
+	if (this->length != this->offset)
 	{
-		DBG1(DBG_TNC, "IETF installed package count unequal to "
-					  "number of included packages");
-		goto end;
+		DBG1(DBG_TNC, "inconsistent length for %N/%N", pen_names, PEN_IETF,
+					   ietf_attr_names, this->type.type);
+		*offset = this->offset;
+		status = FAILED;
 	}
-	status = SUCCESS;
 
 end:
 	reader->destroy(reader);
@@ -230,7 +258,9 @@ end:
 METHOD(pa_tnc_attr_t, add_segment, void,
 	private_ietf_attr_installed_packages_t *this, chunk_t segment)
 {
-	this->value = chunk_cat("mc", this->value, segment);
+	this->value = chunk_cat("cc", this->value, segment);
+	chunk_free(&this->segment);
+	this->segment = this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
@@ -246,7 +276,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		this->packages->destroy_function(this->packages, (void*)free_package_entry);
-		free(this->value.ptr);
+		free(this->segment.ptr);
 		free(this);
 	}
 }
@@ -285,6 +315,23 @@ METHOD(ietf_attr_installed_packages_t, create_enumerator, enumerator_t*,
 						(void*)package_filter, NULL, NULL);
 }
 
+METHOD(ietf_attr_installed_packages_t, get_count, uint16_t,
+	private_ietf_attr_installed_packages_t *this)
+{
+	return this->count;
+}
+
+METHOD(ietf_attr_installed_packages_t, clear_packages, void,
+	private_ietf_attr_installed_packages_t *this)
+{
+	package_entry_t *entry;
+
+	while (this->packages->remove_first(this->packages,(void**)&entry))
+	{
+		free_package_entry(entry);
+	}
+}
+
 /**
  * Described in header.
  */
@@ -307,6 +354,8 @@ pa_tnc_attr_t *ietf_attr_installed_packages_create(void)
 			},
 			.add = _add,
 			.create_enumerator = _create_enumerator,
+			.get_count = _get_count,
+			.clear_packages = _clear_packages,
 		},
 		.type = { PEN_IETF, IETF_ATTR_INSTALLED_PACKAGES },
 		.packages = linked_list_create(),
@@ -340,13 +389,18 @@ pa_tnc_attr_t *ietf_attr_installed_packages_create_from_data(size_t length,
 			},
 			.add = _add,
 			.create_enumerator = _create_enumerator,
+			.get_count = _get_count,
+			.clear_packages = _clear_packages,
 		},
 		.type = {PEN_IETF, IETF_ATTR_INSTALLED_PACKAGES },
 		.length = length,
-		.value = chunk_clone(data),
+		.segment = chunk_clone(data),
 		.packages = linked_list_create(),
 		.ref = 1,
 	);
+
+	/* received either complete attribute value or first segment */
+	this->value = this->segment;
 
 	return &this->public.pa_tnc_attribute;
 }
