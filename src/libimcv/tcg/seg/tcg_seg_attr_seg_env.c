@@ -127,14 +127,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	if (this->value.len < this->length)
 	{
-		DBG1(DBG_TNC, "segmentation not allowed for %N", tcg_attr_names,
-														 this->type.type);
+		DBG1(DBG_TNC, "segmentation not allowed for %N/%N", pen_names, PEN_TCG,
+					   tcg_attr_names, this->type.type);
 		return FAILED;
 	}
 	if (this->value.len < TCG_SEG_ATTR_SEG_ENV_HEADER)
 	{
-		DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
-												  this->type.type);
+		DBG1(DBG_TNC, "insufficient data for %N/%N", pen_names, PEN_TCG,
+					   tcg_attr_names, this->type.type);
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -145,6 +145,19 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, add_segment, void,
+	private_tcg_seg_attr_seg_env_t *this, chunk_t segment)
+{
+	/* no segments are expected */
+}
+
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_seg_attr_seg_env_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_seg_attr_seg_env_t *this)
 {
@@ -153,13 +166,6 @@ METHOD(pa_tnc_attr_t, destroy, void,
 		free(this->value.ptr);
 		free(this);
 	}
-}
-
-METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_tcg_seg_attr_seg_env_t *this)
-{
-	ref_get(&this->ref);
-	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(tcg_seg_attr_seg_env_t, get_segment, chunk_t,
@@ -195,6 +201,7 @@ pa_tnc_attr_t* tcg_seg_attr_seg_env_create(chunk_t segment, uint8_t flags,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
@@ -233,6 +240,7 @@ pa_tnc_attr_t *tcg_seg_attr_seg_env_create_from_data(size_t length,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.add_segment = _add_segment,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
