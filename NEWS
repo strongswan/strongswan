@@ -11,6 +11,9 @@ strongswan-5.2.1
   and IETF/Installed Packages attributes can be processed incrementally on a
   per segment basis.
 
+- The new ext-auth plugin calls an external script to implement custom IKE_SA
+  authorization logic, courtesy of Vyronas Tsingaras.
+
 
 strongswan-5.2.0
 ----------------
