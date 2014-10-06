@@ -189,6 +189,7 @@ ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
+ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization script.])
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
 ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
@@ -1285,6 +1286,7 @@ ADD_PLUGIN([android-dns],          [c charon])
 ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
 ADD_PLUGIN([whitelist],            [c charon])
+ADD_PLUGIN([ext-auth],             [c charon])
 ADD_PLUGIN([lookip],               [c charon])
 ADD_PLUGIN([error-notify],         [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
@@ -1396,6 +1398,7 @@ AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
 AM_CONDITIONAL(USE_KERNEL_WFP, test x$kernel_wfp = xtrue)
 AM_CONDITIONAL(USE_KERNEL_IPH, test x$kernel_iph = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
+AM_CONDITIONAL(USE_EXT_AUTH, test x$ext_auth = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
@@ -1695,6 +1698,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/kernel_wfp/Makefile
 	src/libcharon/plugins/kernel_iph/Makefile
 	src/libcharon/plugins/whitelist/Makefile
+	src/libcharon/plugins/ext_auth/Makefile
 	src/libcharon/plugins/lookip/Makefile
 	src/libcharon/plugins/error_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile

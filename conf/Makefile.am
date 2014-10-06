@@ -45,6 +45,7 @@ plugins = \
 	plugins/eap-tnc.opt \
 	plugins/eap-ttls.opt \
 	plugins/error-notify.opt \
+	plugins/ext-auth.opt \
 	plugins/gcrypt.opt \
 	plugins/ha.opt \
 	plugins/imc-attestation.opt \

@@ -258,6 +258,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EXT_AUTH
+  SUBDIRS += plugins/ext_auth
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/ext_auth/libstrongswan-ext-auth.la
+endif
+endif
+
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
 if MONOLITHIC
