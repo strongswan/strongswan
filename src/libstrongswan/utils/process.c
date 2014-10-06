@@ -13,11 +13,16 @@
  * for more details.
  */
 
+/* vasprintf() */
+#define _GNU_SOURCE
 #include "process.h"
 
+#include <library.h>
 #include <utils/debug.h>
 
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 typedef struct private_process_t private_process_t;
 
@@ -216,6 +221,35 @@ process_t* process_start(char *const argv[], char *const envp[],
 			}
 			return &this->public;
 	}
+}
+
+/**
+ * See header
+ */
+process_t* process_start_shell(char *const envp[], int *in, int *out, int *err,
+							   char *fmt, ...)
+{
+	char *argv[] = {
+		"/bin/sh",
+		"-c",
+		NULL,
+		NULL
+	};
+	process_t *process;
+	va_list args;
+	int len;
+
+	va_start(args, fmt);
+	len = vasprintf(&argv[2], fmt, args);
+	va_end(args);
+	if (len < 0)
+	{
+		return NULL;
+	}
+
+	process = process_start(argv, envp, in, out, err, TRUE);
+	free(argv[2]);
+	return process;
 }
 
 #else /* WIN32 */
@@ -509,6 +543,49 @@ process_t* process_start(char *const argv[], char *const envp[],
 	this->out[PIPE_READ] = NULL;
 	this->err[PIPE_READ] = NULL;
 	return &this->public;
+}
+
+/**
+ * See header
+ */
+process_t* process_start_shell(char *const envp[], int *in, int *out, int *err,
+							   char *fmt, ...)
+{
+	char path[MAX_PATH], *exe = "system32\\cmd.exe";
+	char *argv[] = {
+		path,
+		"/C",
+		NULL,
+		NULL
+	};
+	process_t *process;
+	va_list args;
+	int len;
+
+	len = GetSystemWindowsDirectory(path, sizeof(path));
+	if (len == 0 || len >= sizeof(path) - strlen(exe))
+	{
+		DBG1(DBG_LIB, "resolving Windows directory failed: 0x%08x",
+			 GetLastError());
+		return NULL;
+	}
+	if (path[len + 1] != '\\')
+	{
+		strncat(path, "\\", sizeof(path) - len++);
+	}
+	strncat(path, exe, sizeof(path) - len);
+
+	va_start(args, fmt);
+	len = vasprintf(&argv[2], fmt, args);
+	va_end(args);
+	if (len < 0)
+	{
+		return NULL;
+	}
+
+	process = process_start(argv, envp, in, out, err, TRUE);
+	free(argv[2]);
+	return process;
 }
 
 #endif /* WIN32 */

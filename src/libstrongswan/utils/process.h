@@ -77,4 +77,21 @@ struct process_t {
 process_t* process_start(char *const argv[], char *const envp[],
 						 int *in, int *out, int *err, bool close_all);
 
+/**
+ * Spawn a command in a shell child process.
+ *
+ * Same as process_start(), but passes a single command to a shell, such as
+ * "sh -c". See process_start() for I/O redirection notes.
+ *
+ * @param envp		NULL terminated list of environment variables
+ * @param in		pipe fd returned for redirecting data to child stdin
+ * @param out		pipe fd returned to redirect child stdout data to
+ * @param err		pipe fd returned to redirect child stderr data to
+ * @param fmt		printf format string for command
+ * @param ...		arguments for fmt
+ * @return			process, NULL on failure
+ */
+process_t* process_start_shell(char *const envp[], int *in, int *out, int *err,
+							   char *fmt, ...);
+
 #endif /** PROCESS_H_ @}*/

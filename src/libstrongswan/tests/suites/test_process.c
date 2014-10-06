@@ -176,6 +176,18 @@ START_TEST(test_env)
 }
 END_TEST
 
+START_TEST(test_shell)
+{
+	process_t *process;
+	int retval;
+
+	process = process_start_shell(NULL, NULL, NULL, NULL, "exit %d", 3);
+	ck_assert(process != NULL);
+	ck_assert(process->wait(process, &retval));
+	ck_assert_int_eq(retval, 3);
+}
+END_TEST
+
 Suite *process_suite_create()
 {
 	Suite *s;
@@ -199,6 +211,10 @@ Suite *process_suite_create()
 
 	tc = tcase_create("env");
 	tcase_add_test(tc, test_env);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("shell");
+	tcase_add_test(tc, test_shell);
 	suite_add_tcase(s, tc);
 
 	return s;
