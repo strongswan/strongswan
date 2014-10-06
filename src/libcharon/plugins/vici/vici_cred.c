@@ -270,13 +270,10 @@ CALLBACK(load_shared, vici_message_t*,
 CALLBACK(clear_creds, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
-	vici_builder_t *builder;
-
 	this->creds->clear(this->creds);
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
-	builder = vici_builder_create();
-	return builder->finalize(builder);
+	return create_reply(NULL);
 }
 
 static void manage_command(private_vici_cred_t *this,
