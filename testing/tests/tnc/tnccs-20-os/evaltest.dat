@@ -6,10 +6,10 @@ dave:: cat /var/log/daemon.log::PB-TNC access recommendation is 'Quarantined'::Y
 dave:: cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
 dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 dave:: cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
-moon:: ipsec attest --sessions 2> /dev/null::Debian 7.5 x86_64.*carol@strongswan.org - allow::YES
+moon:: ipsec attest --sessions 2> /dev/null::Debian.*x86_64.*carol@strongswan.org - allow::YES
 moon:: cat /var/log/daemon.log::added group membership 'allow'::YES
 moon:: cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
-moon:: ipsec attest --sessions 2> /dev/null::Debian 7.5 x86_64.*dave@strongswan.org - isolate::YES
+moon:: ipsec attest --sessions 2> /dev/null::Debian.*x86_64.*dave@strongswan.org - isolate::YES
 moon:: cat /var/log/daemon.log::added group membership 'isolate'::YES
 moon:: cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP successful::YES
 moon:: ipsec statusall 2> /dev/null::rw-allow.*10.1.0.0/28 === 192.168.0.100/32::YES
