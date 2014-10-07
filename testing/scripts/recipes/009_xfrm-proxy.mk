@@ -8,14 +8,16 @@ export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
 all: install
 
-.$(PKG)-cloned:
+$(PKG):
 	git clone $(SRC) $(PKG)
-	cd $(PKG) && git checkout $(REV)
+
+.$(PKG)-cloned-$(REV): $(PKG)
+	cd $(PKG) && git fetch && git checkout $(REV)
 	@touch $@
 
-.$(PKG)-built: .$(PKG)-cloned
+.$(PKG)-built-$(REV): .$(PKG)-cloned-$(REV)
 	cd $(PKG) && make
 	@touch $@
 
-install: .$(PKG)-built
+install: .$(PKG)-built-$(REV)
 	cd $(PKG) && make install

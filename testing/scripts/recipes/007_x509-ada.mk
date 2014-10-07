@@ -8,14 +8,16 @@ PREFIX = /usr/local/ada
 
 all: install
 
-.$(PKG)-cloned:
+$(PKG):
 	git clone $(SRC) $(PKG)
-	cd $(PKG) && git checkout $(REV)
+
+.$(PKG)-cloned-$(REV): $(PKG)
+	cd $(PKG) && git fetch && git checkout $(REV)
 	@touch $@
 
-.$(PKG)-built: .$(PKG)-cloned
+.$(PKG)-built-$(REV): .$(PKG)-cloned-$(REV)
 	cd $(PKG) && make tests && make
 	@touch $@
 
-install: .$(PKG)-built
+install: .$(PKG)-built-$(REV)
 	cd $(PKG) && make PREFIX=$(PREFIX) install
