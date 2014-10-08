@@ -1727,6 +1727,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/vici/Makefile
+	src/libcharon/plugins/vici/ruby/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/unit_tester/Makefile
