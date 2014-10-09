@@ -754,7 +754,9 @@ void vici_init()
 	library_init(NULL, "vici");
 	if (lib->processor->get_total_threads(lib->processor) < 4)
 	{
+		dbg_default_set_level(0);
 		lib->processor->set_threads(lib->processor, 4);
+		dbg_default_set_level(1);
 	}
 }
 
