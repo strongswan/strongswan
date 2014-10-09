@@ -23,6 +23,7 @@ static int stats(vici_conn_t *conn)
 	vici_res_t *res;
 	char *arg;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
+	int ret;
 
 	while (TRUE)
 	{
@@ -48,8 +49,9 @@ static int stats(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "stats request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

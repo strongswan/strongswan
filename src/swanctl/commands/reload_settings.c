@@ -49,8 +49,9 @@ static int reload_settings(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "reload-settings request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

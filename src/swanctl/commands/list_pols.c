@@ -116,6 +116,7 @@ static int list_pols(vici_conn_t *conn)
 	bool trap = FALSE, drop = FALSE, pass = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *child = NULL;
+	int ret;
 
 	while (TRUE)
 	{
@@ -154,9 +155,10 @@ static int list_pols(vici_conn_t *conn)
 	}
 	if (vici_register(conn, "list-policy", list_cb, &format) != 0)
 	{
+		ret = errno;
 		fprintf(stderr, "registering for policies failed: %s\n",
 				strerror(errno));
-		return errno;
+		return ret;
 	}
 	req = vici_begin("list-policies");
 	if (child)
@@ -178,8 +180,9 @@ static int list_pols(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "list-policies request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

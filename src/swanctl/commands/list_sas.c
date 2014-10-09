@@ -283,7 +283,7 @@ static int list_sas(vici_conn_t *conn)
 	bool noblock = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *ike = NULL;
-	int ike_id = 0;
+	int ike_id = 0, ret;
 
 	while (TRUE)
 	{
@@ -315,8 +315,9 @@ static int list_sas(vici_conn_t *conn)
 	}
 	if (vici_register(conn, "list-sa", list_cb, &format) != 0)
 	{
+		ret = errno;
 		fprintf(stderr, "registering for SAs failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	req = vici_begin("list-sas");
 	if (ike)
@@ -334,8 +335,9 @@ static int list_sas(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "list-sas request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{
