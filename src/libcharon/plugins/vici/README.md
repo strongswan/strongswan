@@ -680,5 +680,119 @@ the vici protocol. It builds upon libstrongswan, but provides a stable API
 to implement client applications in the C programming language. libvici uses
 the libstrongswan thread pool to deliver event messages asynchronously.
 
-More information about the libvici API is available in the libvici.h header
-file.
+## Connecting to the daemon ##
+
+This example shows how to connect to the daemon using the default URI, and
+then perform proper cleanup:
+
+	#include <stdio.h>
+	#include <errno.h>
+	#include <string.h>
+
+	#include <libvici.h>
+
+	int main(int argc, char *argv[])
+	{
+		vici_conn_t *conn;
+		int ret = 0;
+
+		vici_init();
+		conn = vici_connect(NULL);
+		if (conn)
+		{
+			/* do stuff */
+			vici_disconnect(conn);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "connecting failed: %s\n", strerror(errno));
+		}
+		vici_deinit();
+		return ret;
+	}
+
+## A simple client request ##
+
+In the following example, a simple _version_ request is issued to the daemon
+and the result is printed:
+
+	int get_version(vici_conn_t *conn)
+	{
+		vici_req_t *req;
+		vici_res_t *res;
+		int ret = 0;
+
+		req = vici_begin("version");
+		res = vici_submit(req, conn);
+		if (res)
+		{
+			printf("%s %s (%s, %s, %s)\n",
+				vici_find_str(res, "", "daemon"),
+				vici_find_str(res, "", "version"),
+				vici_find_str(res, "", "sysname"),
+				vici_find_str(res, "", "release"),
+				vici_find_str(res, "", "machine"));
+			vici_free_res(res);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "version request failed: %s\n", strerror(errno));
+		}
+		return ret;
+	}
+
+## A request with event streaming and callback parsing ##
+
+In this more advanced example, the _list-conns_ command is used to stream
+loaded connections with the _list-conn_ event. The event message is parsed
+with a simple callback to print the connection name:
+
+	int conn_cb(void *null, vici_res_t *res, char *name)
+	{
+		printf("%s\n", name);
+		return 0;
+	}
+
+	void list_cb(void *null, char *name, vici_res_t *res)
+	{
+		if (vici_parse_cb(res, conn_cb, NULL, NULL, NULL) != 0)
+		{
+			fprintf(stderr, "parsing failed: %s\n", strerror(errno));
+		}
+	}
+
+	int list_conns(vici_conn_t *conn)
+	{
+		vici_req_t *req;
+		vici_res_t *res;
+		int ret = 0;
+
+		if (vici_register(conn, "list-conn", list_cb, NULL) == 0)
+		{
+			req = vici_begin("list-conns");
+			res = vici_submit(req, conn);
+			if (res)
+			{
+				vici_free_res(res);
+			}
+			else
+			{
+				ret = errno;
+				fprintf(stderr, "request failed: %s\n", strerror(errno));
+			}
+			vici_register(conn, "list-conn", NULL, NULL);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "registration failed: %s\n", strerror(errno));
+		}
+		return ret;
+	}
+
+## API documentation ##
+
+More information about the libvici API is available in the _libvici.h_ header
+file or the generated Doxygen documentation.
