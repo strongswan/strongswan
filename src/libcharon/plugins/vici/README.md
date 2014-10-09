@@ -796,3 +796,61 @@ with a simple callback to print the connection name:
 
 More information about the libvici API is available in the _libvici.h_ header
 file or the generated Doxygen documentation.
+
+# vici ruby gem #
+
+The _vici ruby gem_ is a pure ruby implementation of the VICI protocol to
+implement client applications. It is provided in the _ruby_ subdirectory, and
+gets built and installed if strongSwan has been _./configure_'d with
+_--enable-vici_ and _--enable-ruby-gems_.
+
+The _Connection_ class from the _Vici_ module provides the high level interface,
+the underlying classes are usually not required to build ruby applications
+using VICI. The _Connection_ class provides methods for the supported VICI
+commands and an event listening mechanism.
+
+To represent the VICI message data tree, the gem converts the binary encoding
+to ruby data types. The _Connection_ class takes and returns ruby objects for
+the exchanged message data:
+ * Sections get encoded as Hash, containing other sections as Hash, or
+ * Key/Values, where the values are Strings as Hash values
+ * Lists get encoded as Arrays with String values
+Non-String values that are not a Hash nor an Array get converted with .to_s
+during encoding.
+
+## Connecting to the daemon ##
+
+To create a connection to the daemon, a socket must be passed to the
+_Connection_ constructor. There is no default, but on Unix systems usually
+a Unix socket over _/var/run/charon.vici_ is used:
+
+	require "vici"
+	require "socket"
+
+	v = Vici::Connection.new(UNIXSocket.new("/var/run/charon.vici"))
+
+## A simple client request ##
+
+An example to print the daemon version information is as simple as:
+
+	x = v.version
+	puts "%s %s (%s, %s, %s)" % [
+		x["daemon"], x["version"], x["sysname"], x["release"], x["machine"]
+	]
+
+## A request with closure invocation ##
+
+The _Connection_ class takes care of event streaming by invoking a closure
+for each event. The following example lists all loaded connections using the
+_list-conns_ command and implicitly the _list-conn_ event:
+
+	v.list_conns { |conn|
+		conn.each { |key, value|
+			puts key
+		}
+	}
+
+## API documentation ##
+
+For more details about the ruby gem refer to the comments in the gem source
+code or the generated documentation.
