@@ -762,5 +762,6 @@ void vici_init()
 
 void vici_deinit()
 {
+	lib->processor->cancel(lib->processor);
 	library_deinit();
 }
