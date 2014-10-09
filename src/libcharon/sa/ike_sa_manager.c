@@ -1783,7 +1783,10 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 	if (is_ikev1_reauth(duplicate, host))
 	{
 		/* looks like a reauthentication attempt */
-		adopt_children(duplicate, new);
+		if (!new->has_condition(new, COND_INIT_CONTACT_SEEN))
+		{
+			adopt_children(duplicate, new);
+		}
 		/* For IKEv1 we have to delay the delete for the old IKE_SA. Some
 		 * peers need to complete the new SA first, otherwise the quick modes
 		 * might get lost. */
