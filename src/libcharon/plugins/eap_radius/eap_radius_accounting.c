@@ -488,6 +488,16 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	message->add(message, RAT_ACCT_SESSION_ID,
 				 chunk_create(entry->sid, strlen(entry->sid)));
 
+	if (!entry->interim.interval)
+	{
+		entry->interim.interval = lib->settings->get_time(lib->settings,
+					"%s.plugins.eap-radius.accounting_interval", 0, lib->ns);
+		if (entry->interim.interval)
+		{
+			DBG1(DBG_CFG, "scheduling RADIUS Interim-Updates every %us",
+				 entry->interim.interval);
+		}
+	}
 	schedule_interim(this, entry);
 	this->mutex->unlock(this->mutex);
 

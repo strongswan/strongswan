@@ -5,12 +5,16 @@ charon.plugins.eap-radius.accounting_close_on_timeout = yes
 	Close the IKE_SA if there is a timeout during interim RADIUS accounting
 	updates.
 
+charon.plugins.eap-radius.accounting_interval = 0
+	Interval for interim RADIUS accounting updates, if not specified by the
+	RADIUS server in the Access-Accept message.
+
 charon.plugins.eap-radius.accounting_requires_vip = no
 	If enabled, accounting is disabled unless an IKE_SA has at least one
 	virtual IP.
 
 charon.plugins.eap-radius.class_group = no
-	Use class attributes in RADIUS-Accept messages as group membership
+	Use class attributes in Access-Accept messages as group membership
 	information.
 
 	Use the _class_ attribute sent in the RADIUS-Accept message as group
