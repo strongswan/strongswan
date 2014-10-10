@@ -6,6 +6,9 @@ strongswan-5.2.1
   as configuration backend, building a simple and lightweight solution. It
   supports native systemd journal logging.
 
+- Support for IKEv2 fragmentation as per RFC 7383 has been added.  Like IKEv1
+  fragmentation it can be enabled by setting fragmentation=yes in ipsec.conf.
+
 - Support of the TCG TNC IF-M Attribute Segmentation specification proposal.
   All attributes can be segmented. Additionally TCG/SWID Tag, TCG/SWID Tag ID
   and IETF/Installed Packages attributes can be processed incrementally on a
