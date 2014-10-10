@@ -29,6 +29,11 @@ typedef struct packet_t packet_t;
 #include <networking/host.h>
 
 /**
+ * Maximum packet size we handle by default
+ */
+#define PACKET_MAX_DEFAULT 10000
+
+/**
  * Abstraction of an IP/UDP-Packet, contains data, sender and receiver.
  */
 struct packet_t {

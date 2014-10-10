@@ -25,9 +25,6 @@
 
 #include <mswsock.h>
 
-/* Maximum size of a packet */
-#define MAX_PACKET 10000
-
 /* number of sockets in use */
 #define SOCKET_COUNT 2
 
@@ -458,7 +455,7 @@ socket_win_socket_t *socket_win_socket_create()
 							"%s.port_nat_t", CHARON_NATT_PORT, lib->ns),
 		},
 		.max_packet = lib->settings->get_int(lib->settings,
-							"%s.max_packet", MAX_PACKET, lib->ns),
+							"%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
 	);
 
 	for (i = 0; i < SOCKET_COUNT; i++)

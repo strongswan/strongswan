@@ -1302,8 +1302,9 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 			ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			entry->checked_out = TRUE;
-			if (message->get_first_payload_type(message) != PLV1_FRAGMENT)
-			{
+			if (message->get_first_payload_type(message) != PLV1_FRAGMENT &&
+				message->get_first_payload_type(message) != PLV2_FRAGMENT)
+			{	/* TODO-FRAG: this fails if there are unencrypted payloads */
 				entry->processing = get_message_id_or_hash(message);
 			}
 			if (ike_id->get_responder_spi(ike_id) == 0)

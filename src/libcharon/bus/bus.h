@@ -101,9 +101,11 @@ enum alert_t {
 	/** received IKE message with invalid body, argument is message_t*,
 	 *  followed by a status_t result returned by message_t.parse_body(). */
 	ALERT_PARSE_ERROR_BODY,
-	/** sending a retransmit for a message, argument is packet_t */
+	/** sending a retransmit for a message, argument is packet_t, if the message
+	 *  got fragmented only the first fragment is passed */
 	ALERT_RETRANSMIT_SEND,
-	/** sending retransmits timed out, argument is packet_t, if available */
+	/** sending retransmits timed out, argument is packet_t, if available and if
+	 *  the message got fragmented only the first fragment is passed */
 	ALERT_RETRANSMIT_SEND_TIMEOUT,
 	/** received a retransmit for a message, argument is message_t */
 	ALERT_RETRANSMIT_RECEIVE,

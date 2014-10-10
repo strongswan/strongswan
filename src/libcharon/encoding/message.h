@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -39,7 +39,7 @@ typedef struct message_t message_t;
  *
  * The message handles parsing and generation of payloads
  * via parser_t/generator_t. Encryption is done transparently
- * via the encryption_payload_t. A set of rules for messages
+ * via the encrypted_payload_t. A set of rules for messages
  * and payloads does check parsed messages.
  */
 struct message_t {
@@ -265,6 +265,53 @@ struct message_t {
 	bool (*is_encoded)(message_t *this);
 
 	/**
+	 * Generates the message split into fragments of the given size (total IP
+	 * datagram length).
+	 *
+	 * @param keymat	keymat to encrypt/sign message(s)
+	 * @param frag_len	fragment length (maximum total IP datagram length), 0
+	 *					for default value depending on address family
+	 * @param fragments	receives an enumerator with generated packet_t*,
+	 *					which are owned by the enumerator
+	 * @return
+	 *					- SUCCESS if message could be fragmented
+	 *					- FAILED if fragmentation failed
+	 *					- and the possible return values of generate()
+	 */
+	status_t (*fragment)(message_t *this, keymat_t *keymat, size_t frag_len,
+						 enumerator_t **fragments);
+
+	/**
+	 * Check if the message has been encoded and fragmented using fragment(),
+	 * and whether there actually resulted fragments (if not is_encoded() will
+	 * be TRUE).
+	 *
+	 * The packets of individual fragments can be retrieved with
+	 * get_fragments().
+	 *
+	 * @return			TRUE if message has been encoded and fragmented
+	 */
+	bool (*is_fragmented)(message_t *this);
+
+	/**
+	 * Add a fragment to the message if it was created with
+	 * message_create_defrag().
+	 *
+	 * Once the message is completed it should be processed like any other
+	 * inbound message.
+	 *
+	 * @param fragment	fragment to add
+	 * @return
+	 *					- SUCCESS if message was reassembled
+	 *					- NEED_MORE if not all fragments have yet been received
+	 *					- FAILED if reassembling failed
+	 *					- INVALID_ARG if fragment is invalid for some reason
+	 *					- INVALID_STATE if message was not created using
+	 *					  message_create_defrag()
+	 */
+	status_t (*add_fragment)(message_t *this, message_t *fragment);
+
+	/**
 	 * Gets the source host informations.
 	 *
 	 * @warning Returned host_t object is not getting cloned,
@@ -337,11 +384,11 @@ struct message_t {
 	notify_payload_t* (*get_notify)(message_t *this, notify_type_t type);
 
 	/**
-	 * Returns a clone of the internal stored packet_t object.
+	 * Returns a clone of the internally stored packet_t object.
 	 *
 	 * @return			packet_t object as clone of internal one
 	 */
-	packet_t * (*get_packet) (message_t *this);
+	packet_t *(*get_packet) (message_t *this);
 
 	/**
 	 * Returns a chunk pointing to internal packet_t data.
@@ -349,6 +396,13 @@ struct message_t {
 	 * @return			packet data.
 	 */
 	chunk_t (*get_packet_data) (message_t *this);
+
+	/**
+	 * Returns internally stored packet_t* objects for each fragment.
+	 *
+	 * @return			enumerator internal packet_t* objects
+	 */
+	enumerator_t *(*get_fragments)(message_t *this);
 
 	/**
 	 * Destroys a message and all including objects.
@@ -379,5 +433,15 @@ message_t *message_create_from_packet(packet_t *packet);
  * @return				message_t object
  */
 message_t *message_create(int major, int minor);
+
+/**
+ * Creates a message_t object that is used to reassemble fragmented messages.
+ *
+ * Use add_fragment() to add fragments.
+ *
+ * @param fragment		initial fragment (is not added)
+ * @return				message_t object, NULL if fragment is not actually one
+ */
+message_t *message_create_defrag(message_t *fragment);
 
 #endif /** MESSAGE_H_ @}*/

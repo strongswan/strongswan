@@ -161,6 +161,19 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_payload(message, (payload_t*)ke_payload);
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}
+
+	/* negotiate fragmentation if we are not rekeying */
+	if (!this->old_sa &&
+		 this->config->fragmentation(this->config) != FRAGMENTATION_NO)
+	{
+		if (this->initiator ||
+			this->ike_sa->supports_extension(this->ike_sa,
+											 EXT_IKE_FRAGMENTATION))
+		{
+			message->add_notify(message, FALSE, FRAGMENTATION_SUPPORTED,
+								chunk_empty);
+		}
+	}
 }
 
 /**
@@ -219,6 +232,16 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 
 				this->other_nonce = nonce_payload->get_nonce(nonce_payload);
 				break;
+			}
+			case PLV2_NOTIFY:
+			{
+				notify_payload_t *notify = (notify_payload_t*)payload;
+
+				if (notify->get_notify_type(notify) == FRAGMENTATION_SUPPORTED)
+				{
+					this->ike_sa->enable_extension(this->ike_sa,
+												   EXT_IKE_FRAGMENTATION);
+				}
 			}
 			default:
 				break;

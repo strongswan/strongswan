@@ -45,9 +45,6 @@
 #include <daemon.h>
 #include <threading/thread.h>
 
-/* Maximum size of a packet */
-#define MAX_PACKET 10000
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
@@ -739,7 +736,7 @@ socket_default_socket_t *socket_default_socket_create()
 		.natt = lib->settings->get_int(lib->settings,
 							"%s.port_nat_t", CHARON_NATT_PORT, lib->ns),
 		.max_packet = lib->settings->get_int(lib->settings,
-							"%s.max_packet", MAX_PACKET, lib->ns),
+							"%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
 		.set_source = lib->settings->get_bool(lib->settings,
 							"%s.plugins.socket-default.set_source", TRUE,
 							lib->ns),

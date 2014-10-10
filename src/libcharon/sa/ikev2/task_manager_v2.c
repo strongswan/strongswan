@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Tobias Brunner
+ * Copyright (C) 2007-2014 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -90,9 +90,14 @@ struct private_task_manager_t {
 		u_int32_t mid;
 
 		/**
-		 * packet for retransmission
+		 * packet(s) for retransmission
 		 */
-		packet_t *packet;
+		array_t *packets;
+
+		/**
+		 * Helper to defragment the request
+		 */
+		message_t *defrag;
 
 	} responding;
 
@@ -111,9 +116,9 @@ struct private_task_manager_t {
 		u_int retransmitted;
 
 		/**
-		 * packet for retransmission
+		 * packet(s) for retransmission
 		 */
-		packet_t *packet;
+		array_t *packets;
 
 		/**
 		 * type of the initated exchange
@@ -124,6 +129,11 @@ struct private_task_manager_t {
 		 * TRUE if exchange was deferred because no path was available
 		 */
 		bool deferred;
+
+		/**
+		 * Helper to defragment the response
+		 */
+		message_t *defrag;
 
 	} initiating;
 
@@ -162,6 +172,19 @@ struct private_task_manager_t {
 	 */
 	double retransmit_base;
 };
+
+/**
+ * Reset retransmission packet list
+ */
+static void clear_packets(array_t *array)
+{
+	packet_t *packet;
+
+	while (array_remove(array, ARRAY_TAIL, &packet))
+	{
+		packet->destroy(packet);
+	}
+}
 
 METHOD(task_manager_t, flush_queue, void,
 	private_task_manager_t *this, task_queue_t queue)
@@ -222,10 +245,60 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	return found;
 }
 
+/**
+ * Send packets in the given array (they get cloned). Optionally, the
+ * source and destination addresses are changed before sending it.
+ */
+static void send_packets(private_task_manager_t *this, array_t *packets,
+						 host_t *src, host_t *dst)
+{
+	packet_t *packet, *clone;
+	int i;
+
+	for (i = 0; i < array_count(packets); i++)
+	{
+		array_get(packets, i, &packet);
+		clone = packet->clone(packet);
+		if (src)
+		{
+			clone->set_source(clone, src->clone(src));
+		}
+		if (dst)
+		{
+			clone->set_destination(clone, dst->clone(dst));
+		}
+		charon->sender->send(charon->sender, clone);
+	}
+}
+
+/**
+ * Generates the given message and stores packet(s) in the given array
+ */
+static bool generate_message(private_task_manager_t *this, message_t *message,
+							 array_t **packets)
+{
+	enumerator_t *fragments;
+	packet_t *fragment;
+
+	if (this->ike_sa->generate_message_fragmented(this->ike_sa, message,
+												  &fragments) != SUCCESS)
+	{
+		return FALSE;
+	}
+	while (fragments->enumerate(fragments, &fragment))
+	{
+		array_insert_create(packets, ARRAY_TAIL, fragment);
+	}
+	fragments->destroy(fragments);
+	array_compress(*packets);
+	return TRUE;
+}
+
 METHOD(task_manager_t, retransmit, status_t,
 	private_task_manager_t *this, u_int32_t message_id)
 {
-	if (this->initiating.packet && message_id == this->initiating.mid)
+	if (message_id == this->initiating.mid &&
+		array_count(this->initiating.packets))
 	{
 		u_int32_t timeout;
 		job_t *job;
@@ -233,6 +306,8 @@ METHOD(task_manager_t, retransmit, status_t,
 		packet_t *packet;
 		task_t *task;
 		ike_mobike_t *mobike = NULL;
+
+		array_get(this->initiating.packets, 0, &packet);
 
 		/* check if we are retransmitting a MOBIKE routability check */
 		if (this->initiating.type == INFORMATIONAL)
@@ -261,7 +336,7 @@ METHOD(task_manager_t, retransmit, status_t,
 				DBG1(DBG_IKE, "giving up after %d retransmits",
 					 this->initiating.retransmitted - 1);
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT,
-								   this->initiating.packet);
+								   packet);
 				return DESTROY_ME;
 			}
 
@@ -269,17 +344,17 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
 					 this->initiating.retransmitted, message_id);
-				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND,
-								   this->initiating.packet);
+				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
 			}
 			if (!mobike)
 			{
-				packet = this->initiating.packet->clone(this->initiating.packet);
-				charon->sender->send(charon->sender, packet);
+				send_packets(this, this->initiating.packets,
+							 this->ike_sa->get_my_host(this->ike_sa),
+							 this->ike_sa->get_other_host(this->ike_sa));
 			}
 			else
 			{
-				if (!mobike->transmit(mobike, this->initiating.packet))
+				if (!mobike->transmit(mobike, packet))
 				{
 					DBG1(DBG_IKE, "no route found to reach peer, MOBIKE update "
 						 "deferred");
@@ -311,7 +386,9 @@ METHOD(task_manager_t, retransmit, status_t,
 				DBG1(DBG_IKE, "path probing attempt %d",
 					 this->initiating.retransmitted);
 			}
-			if (!mobike->transmit(mobike, this->initiating.packet))
+			/* TODO-FRAG: presumably these small packets are not fragmented,
+			 * we should maybe ensure this is the case when generating them */
+			if (!mobike->transmit(mobike, packet))
 			{
 				DBG1(DBG_IKE, "no route found to reach peer, path probing "
 					 "deferred");
@@ -336,7 +413,6 @@ METHOD(task_manager_t, initiate, status_t,
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	status_t status;
 	exchange_type_t exchange = 0;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
@@ -529,9 +605,7 @@ METHOD(task_manager_t, initiate, status_t,
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
 
-	status = this->ike_sa->generate_message(this->ike_sa, message,
-											&this->initiating.packet);
-	if (status != SUCCESS)
+	if (!generate_message(this, message, &this->initiating.packets))
 	{
 		/* message generation failed. There is nothing more to do than to
 		 * close the SA */
@@ -603,8 +677,7 @@ static status_t process_response(private_task_manager_t *this,
 
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	this->initiating.packet->destroy(this->initiating.packet);
-	this->initiating.packet = NULL;
+	clear_packets(this->initiating.packets);
 
 	array_compress(this->active_tasks);
 
@@ -672,8 +745,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	host_t *me, *other;
 	bool delete = FALSE, hook = FALSE;
 	ike_sa_id_t *id = NULL;
-	u_int64_t responder_spi;
-	status_t status;
+	u_int64_t responder_spi = 0;
+	bool result;
 
 	me = request->get_destination(request);
 	other = request->get_source(request);
@@ -735,23 +808,20 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	}
 
 	/* message complete, send it */
-	DESTROY_IF(this->responding.packet);
-	this->responding.packet = NULL;
-	status = this->ike_sa->generate_message(this->ike_sa, message,
-											&this->responding.packet);
+	clear_packets(this->responding.packets);
+	result = generate_message(this, message, &this->responding.packets);
 	message->destroy(message);
 	if (id)
 	{
 		id->set_responder_spi(id, responder_spi);
 	}
-	if (status != SUCCESS)
+	if (!result)
 	{
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
 
-	charon->sender->send(charon->sender,
-						 this->responding.packet->clone(this->responding.packet));
+	send_packets(this, this->responding.packets, NULL, NULL);
 	if (delete)
 	{
 		if (hook)
@@ -1000,6 +1070,48 @@ METHOD(task_manager_t, incr_mid, void,
 }
 
 /**
+ * Handle the given IKE fragment, if it is one.
+ *
+ * Returns SUCCESS if the message is not a fragment, and NEED_MORE if it was
+ * handled properly.  Error states are  returned if the fragment was invalid or
+ * the reassembled message could not have been processed properly.
+ */
+static status_t handle_fragment(private_task_manager_t *this,
+								message_t **defrag, message_t *msg)
+{
+	message_t *reassembled;
+	status_t status;
+
+	if (!msg->get_payload(msg, PLV2_FRAGMENT))
+	{
+		return SUCCESS;
+	}
+	if (!*defrag)
+	{
+		*defrag = message_create_defrag(msg);
+		if (!*defrag)
+		{
+			return FAILED;
+		}
+	}
+	status = (*defrag)->add_fragment(*defrag, msg);
+	if (status == SUCCESS)
+	{
+		/* reinject the reassembled message */
+		reassembled = *defrag;
+		*defrag = NULL;
+		status = this->ike_sa->process_message(this->ike_sa, reassembled);
+		if (status == SUCCESS)
+		{
+			/* avoid processing the last fragment */
+			status = NEED_MORE;
+		}
+		reassembled->destroy(reassembled);
+	}
+	return status;
+}
+
+/**
  * Send a notify back to the sender
  */
 static void send_notify_response(private_task_manager_t *this,
@@ -1192,6 +1304,11 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* with MOBIKE, we do no implicit updates */
 				this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 			}
+			status = handle_fragment(this, &this->responding.defrag, msg);
+			if (status != SUCCESS)
+			{
+				return status;
+			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
 			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
@@ -1204,20 +1321,19 @@ METHOD(task_manager_t, process_message, status_t,
 			}
 			this->responding.mid++;
 		}
-		else if ((mid == this->responding.mid - 1) && this->responding.packet)
+		else if ((mid == this->responding.mid - 1) &&
+				 array_count(this->responding.packets))
 		{
-			packet_t *clone;
-			host_t *host;
-
+			status = handle_fragment(this, &this->responding.defrag, msg);
+			if (status != SUCCESS)
+			{
+				return status;
+			}
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
 			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
-			clone = this->responding.packet->clone(this->responding.packet);
-			host = msg->get_destination(msg);
-			clone->set_source(clone, host->clone(host));
-			host = msg->get_source(msg);
-			clone->set_destination(clone, host->clone(host));
-			charon->sender->send(charon->sender, clone);
+			send_packets(this, this->responding.packets,
+						 msg->get_destination(msg), msg->get_source(msg));
 		}
 		else
 		{
@@ -1244,6 +1360,11 @@ METHOD(task_manager_t, process_message, status_t,
 					this->ike_sa->update_hosts(this->ike_sa, me, NULL, mid == 0);
 					this->ike_sa->update_hosts(this->ike_sa, NULL, other, FALSE);
 				}
+			}
+			status = handle_fragment(this, &this->initiating.defrag, msg);
+			if (status != SUCCESS)
+			{
+				return status;
 			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
 			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
@@ -1539,10 +1660,12 @@ METHOD(task_manager_t, reset, void,
 	task_t *task;
 
 	/* reset message counters and retransmit packets */
-	DESTROY_IF(this->responding.packet);
-	DESTROY_IF(this->initiating.packet);
-	this->responding.packet = NULL;
-	this->initiating.packet = NULL;
+	clear_packets(this->responding.packets);
+	clear_packets(this->initiating.packets);
+	DESTROY_IF(this->responding.defrag);
+	DESTROY_IF(this->initiating.defrag);
+	this->responding.defrag = NULL;
+	this->initiating.defrag = NULL;
 	if (initiate != UINT_MAX)
 	{
 		this->initiating.mid = initiate;
@@ -1596,8 +1719,12 @@ METHOD(task_manager_t, destroy, void,
 	array_destroy(this->queued_tasks);
 	array_destroy(this->passive_tasks);
 
-	DESTROY_IF(this->responding.packet);
-	DESTROY_IF(this->initiating.packet);
+	clear_packets(this->responding.packets);
+	array_destroy(this->responding.packets);
+	clear_packets(this->initiating.packets);
+	array_destroy(this->initiating.packets);
+	DESTROY_IF(this->responding.defrag);
+	DESTROY_IF(this->initiating.defrag);
 	free(this);
 }
 

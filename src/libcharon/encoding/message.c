@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -23,6 +23,8 @@
 #include "message.h"
 
 #include <library.h>
+#include <bio/bio_writer.h>
+#include <collections/array.h>
 #include <daemon.h>
 #include <sa/ikev1/keymat_v1.h>
 #include <encoding/generator.h>
@@ -30,9 +32,11 @@
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/hash_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
+#include <encoding/payloads/encrypted_fragment_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/fragment_payload.h>
 
 /**
  * Max number of notify payloads per IKEv2 message
@@ -802,6 +806,30 @@ static message_rule_t message_rules[] = {
 #endif /* USE_IKEV1 */
 };
 
+/**
+ * Data for fragment reassembly.
+ */
+typedef struct {
+
+	/**
+	 * For IKEv1 the number of the last fragment (in case we receive them out
+	 * of order), since the first one starts with 1 this defines the number of
+	 * fragments we expect.
+	 * For IKEv2 we store the total number of fragment we received last.
+	 */
+	u_int16_t last;
+
+	/**
+	 * Length of all currently received fragments.
+	 */
+	size_t len;
+
+	/**
+	 * Maximum length of a fragmented packet.
+	 */
+	size_t max_packet;
+
+} fragment_data_t;
 
 typedef struct private_message_t private_message_t;
 
@@ -876,6 +904,12 @@ struct private_message_t {
 	packet_t *packet;
 
 	/**
+	 * Array of generated fragments (if any), as packet_t*.
+	 * If defragmenting (i.e. frag != NULL) this contains fragment_t*
+	 */
+	array_t *fragments;
+
+	/**
 	 * Linked List where payload data are stored in.
 	 */
 	linked_list_t *payloads;
@@ -889,7 +923,44 @@ struct private_message_t {
 	 * The message rule for this message instance
 	 */
 	message_rule_t *rule;
+
+	/**
+	 * Data used to reassemble a fragmented message
+	 */
+	fragment_data_t *frag;
 };
+
+/**
+ * Maximum number of fragments we will handle
+ */
+#define MAX_FRAGMENTS 255
+
+/**
+ * A single fragment within a fragmented message
+ */
+typedef struct {
+
+	/** fragment number */
+	u_int8_t num;
+
+	/** fragment data */
+	chunk_t data;
+
+} fragment_t;
+
+static void fragment_destroy(fragment_t *this)
+{
+	chunk_free(&this->data);
+	free(this);
+}
+
+static void reset_defrag(private_message_t *this)
+{
+	array_destroy_function(this->fragments, (void*)fragment_destroy, NULL);
+	this->fragments = NULL;
+	this->frag->last = 0;
+	this->frag->len = 0;
+}
 
 /**
  * Get the message rule that applies to this message
@@ -1047,6 +1118,12 @@ METHOD(message_t, is_encoded, bool,
 	private_message_t *this)
 {
 	return this->packet->get_data(this->packet).ptr != NULL;
+}
+
+METHOD(message_t, is_fragmented, bool,
+	private_message_t *this)
+{
+	return array_count(this->fragments) > 0;
 }
 
 METHOD(message_t, add_payload, void,
@@ -1330,6 +1407,12 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	return buf;
 }
 
+METHOD(message_t, disable_sort, void,
+	private_message_t *this)
+{
+	this->sort_disabled = TRUE;
+}
+
 /**
  * reorder payloads depending on reordering rules
  */
@@ -1338,6 +1421,8 @@ static void order_payloads(private_message_t *this)
 	linked_list_t *list;
 	payload_t *payload;
 	int i;
+
+	DBG2(DBG_ENC, "order payloads in message");
 
 	/* move to temp list */
 	list = linked_list_create();
@@ -1392,29 +1477,42 @@ static void order_payloads(private_message_t *this)
 }
 
 /**
- * Wrap payloads in an encryption payload
+ * Wrap payloads in an encrypted payload
  */
-static encryption_payload_t* wrap_payloads(private_message_t *this)
+static encrypted_payload_t* wrap_payloads(private_message_t *this)
 {
-	encryption_payload_t *encryption;
+	encrypted_payload_t *encrypted = NULL;
 	linked_list_t *payloads;
 	payload_t *current;
 
-	/* copy all payloads in a temporary list */
+	/* move all payloads to a temporary list */
 	payloads = linked_list_create();
 	while (this->payloads->remove_first(this->payloads,
 										(void**)&current) == SUCCESS)
 	{
-		payloads->insert_last(payloads, current);
+		if (current->get_type(current) == PLV2_FRAGMENT)
+		{	/* treat encrypted fragment payload as encrypted payload */
+			encrypted = (encrypted_payload_t*)current;
+		}
+		else
+		{
+			payloads->insert_last(payloads, current);
+		}
+	}
+	if (encrypted)
+	{	/* simply adopt all the unencrypted payloads */
+		this->payloads->destroy(this->payloads);
+		this->payloads = payloads;
+		return encrypted;
 	}
 
 	if (this->is_encrypted)
 	{
-		encryption = encryption_payload_create(PLV1_ENCRYPTED);
+		encrypted = encrypted_payload_create(PLV1_ENCRYPTED);
 	}
 	else
 	{
-		encryption = encryption_payload_create(PLV2_ENCRYPTED);
+		encrypted = encrypted_payload_create(PLV2_ENCRYPTED);
 	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
@@ -1432,7 +1530,7 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 		{	/* encryption is forced for IKEv1 */
 			DBG2(DBG_ENC, "insert payload %N into encrypted payload",
 				 payload_type_names, type);
-			encryption->add_payload(encryption, current);
+			encrypted->add_payload(encrypted, current);
 		}
 		else
 		{
@@ -1443,111 +1541,17 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 	}
 	payloads->destroy(payloads);
 
-	return encryption;
+	return encrypted;
 }
 
-METHOD(message_t, disable_sort, void,
-	private_message_t *this)
+/**
+ * Creates the IKE header for this message
+ */
+static ike_header_t *create_header(private_message_t *this)
 {
-	this->sort_disabled = TRUE;
-}
-
-METHOD(message_t, generate, status_t,
-	private_message_t *this, keymat_t *keymat, packet_t **packet)
-{
-	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-	generator_t *generator;
 	ike_header_t *ike_header;
-	payload_t *payload, *next;
-	encryption_payload_t *encryption = NULL;
-	payload_type_t next_type;
-	enumerator_t *enumerator;
-	aead_t *aead = NULL;
-	chunk_t chunk, hash = chunk_empty;
-	char str[BUF_LEN];
-	u_int32_t *lenpos;
-	bool encrypted = FALSE, *reserved;
+	bool *reserved;
 	int i;
-
-	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
-	{
-		DBG1(DBG_ENC, "exchange type is not defined");
-		return INVALID_STATE;
-	}
-
-	if (this->packet->get_source(this->packet) == NULL ||
-		this->packet->get_destination(this->packet) == NULL)
-	{
-		DBG1(DBG_ENC, "source/destination not defined");
-		return INVALID_STATE;
-	}
-
-	this->rule = get_message_rule(this);
-	if (!this->rule)
-	{
-		DBG1(DBG_ENC, "no message rules specified for this message type");
-		return NOT_SUPPORTED;
-	}
-
-	if (!this->sort_disabled)
-	{
-		order_payloads(this);
-	}
-	if (keymat && keymat->get_version(keymat) == IKEV1)
-	{
-		/* get a hash for this message, if any is required */
-		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
-		{	/* insert a HASH payload as first payload */
-			hash_payload_t *hash_payload;
-
-			hash_payload = hash_payload_create(PLV1_HASH);
-			hash_payload->set_hash(hash_payload, hash);
-			this->payloads->insert_first(this->payloads, hash_payload);
-			if (this->exchange_type == INFORMATIONAL_V1)
-			{
-				this->is_encrypted = encrypted = TRUE;
-			}
-			chunk_free(&hash);
-		}
-	}
-	if (this->major_version == IKEV2_MAJOR_VERSION)
-	{
-		encrypted = this->rule->encrypted;
-	}
-	else if (!encrypted)
-	{
-		/* If at least one payload requires encryption, encrypt the message.
-		 * If no key material is available, the flag will be reset below. */
-		enumerator = this->payloads->create_enumerator(this->payloads);
-		while (enumerator->enumerate(enumerator, (void**)&payload))
-		{
-			payload_rule_t *rule;
-
-			rule = get_payload_rule(this, payload->get_type(payload));
-			if (rule && rule->encrypted)
-			{
-				this->is_encrypted = encrypted = TRUE;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-
-	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
-
-	if (keymat)
-	{
-		aead = keymat->get_aead(keymat, FALSE);
-	}
-	if (aead && encrypted)
-	{
-		encryption = wrap_payloads(this);
-	}
-	else
-	{
-		DBG2(DBG_ENC, "not encrypting payloads");
-		this->is_encrypted = FALSE;
-	}
 
 	ike_header = ike_header_create_version(this->major_version,
 										   this->minor_version);
@@ -1578,10 +1582,117 @@ METHOD(message_t, generate, status_t,
 			*reserved = this->reserved[i];
 		}
 	}
+	return ike_header;
+}
 
-	generator = generator_create();
+/**
+ * Generates the message, if needed, wraps the payloads in an encrypted payload.
+ *
+ * The generator and the possible enrypted payload are returned.  The latter
+ * is not yet encrypted (but the transform is set).  It is also not added to
+ * the payload list (so unless there are unencrypted payloads that list will
+ * be empty afterwards).
+ */
+static status_t generate_message(private_message_t *this, keymat_t *keymat,
+				generator_t **out_generator, encrypted_payload_t **encrypted)
+{
+	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+	generator_t *generator;
+	payload_type_t next_type;
+	enumerator_t *enumerator;
+	aead_t *aead = NULL;
+	chunk_t hash = chunk_empty;
+	char str[BUF_LEN];
+	ike_header_t *ike_header;
+	payload_t *payload, *next;
+	bool encrypting = FALSE;
+
+	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
+	{
+		DBG1(DBG_ENC, "exchange type is not defined");
+		return INVALID_STATE;
+	}
+
+	if (this->packet->get_source(this->packet) == NULL ||
+		this->packet->get_destination(this->packet) == NULL)
+	{
+		DBG1(DBG_ENC, "source/destination not defined");
+		return INVALID_STATE;
+	}
+
+	this->rule = get_message_rule(this);
+	if (!this->rule)
+	{
+		DBG1(DBG_ENC, "no message rules specified for this message type");
+		return NOT_SUPPORTED;
+	}
+
+	if (!this->sort_disabled)
+	{
+		order_payloads(this);
+	}
+
+	if (keymat && keymat->get_version(keymat) == IKEV1)
+	{
+		/* get a hash for this message, if any is required */
+		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
+		{	/* insert a HASH payload as first payload */
+			hash_payload_t *hash_payload;
+
+			hash_payload = hash_payload_create(PLV1_HASH);
+			hash_payload->set_hash(hash_payload, hash);
+			this->payloads->insert_first(this->payloads, hash_payload);
+			if (this->exchange_type == INFORMATIONAL_V1)
+			{
+				this->is_encrypted = encrypting = TRUE;
+			}
+			chunk_free(&hash);
+		}
+	}
+
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		encrypting = this->rule->encrypted;
+	}
+	else if (!encrypting)
+	{
+		/* If at least one payload requires encryption, encrypt the message.
+		 * If no key material is available, the flag will be reset below. */
+		enumerator = this->payloads->create_enumerator(this->payloads);
+		while (enumerator->enumerate(enumerator, (void**)&payload))
+		{
+			payload_rule_t *rule;
+
+			rule = get_payload_rule(this, payload->get_type(payload));
+			if (rule && rule->encrypted)
+			{
+				this->is_encrypted = encrypting = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
+
+	if (keymat)
+	{
+		aead = keymat->get_aead(keymat, FALSE);
+	}
+	if (aead && encrypting)
+	{
+		*encrypted = wrap_payloads(this);
+		(*encrypted)->set_transform(*encrypted, aead);
+	}
+	else
+	{
+		DBG2(DBG_ENC, "not encrypting payloads");
+		this->is_encrypted = FALSE;
+	}
 
 	/* generate all payloads with proper next type */
+	*out_generator = generator = generator_create();
+	ike_header = create_header(this);
 	payload = (payload_t*)ike_header;
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &next))
@@ -1591,43 +1702,59 @@ METHOD(message_t, generate, status_t,
 		payload = next;
 	}
 	enumerator->destroy(enumerator);
+
+	next_type = PL_NONE;
 	if (this->is_encrypted)
 	{	/* for encrypted IKEv1 messages */
-		next_type = encryption->payload_interface.get_next_type(
-														(payload_t*)encryption);
+		next_type = (*encrypted)->payload_interface.get_next_type(
+														(payload_t*)*encrypted);
 	}
-	else
-	{
-		next_type = encryption ? PLV2_ENCRYPTED : PL_NONE;
+	else if (*encrypted)
+	{	/* use proper IKEv2 encrypted (fragment) payload type */
+		next_type = (*encrypted)->payload_interface.get_type(
+														(payload_t*)*encrypted);
 	}
 	payload->set_next_type(payload, next_type);
 	generator->generate_payload(generator, payload);
 	ike_header->destroy(ike_header);
+	return SUCCESS;
+}
 
-	if (encryption)
-	{	/* set_transform() has to be called before get_length() */
-		encryption->set_transform(encryption, aead);
+/**
+ * Encrypts and adds the encrypted payload (if any) to the payload list and
+ * finalizes the message generation.  Destroys the given generator.
+ */
+static status_t finalize_message(private_message_t *this, keymat_t *keymat,
+						generator_t *generator, encrypted_payload_t *encrypted)
+{
+	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+	chunk_t chunk;
+	u_int32_t *lenpos;
+
+	if (encrypted)
+	{
 		if (this->is_encrypted)
 		{	/* for IKEv1 instead of associated data we provide the IV */
 			if (!keymat_v1->get_iv(keymat_v1, this->message_id, &chunk))
 			{
 				generator->destroy(generator);
+				encrypted->destroy(encrypted);
 				return FAILED;
 			}
 		}
 		else
-		{	/* build associated data (without header of encryption payload) */
+		{	/* build associated data (without header of encrypted payload) */
 			chunk = generator->get_chunk(generator, &lenpos);
-			/* fill in length, including encryption payload */
-			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
+			/* fill in length, including encrypted payload */
+			htoun32(lenpos, chunk.len + encrypted->get_length(encrypted));
 		}
-		this->payloads->insert_last(this->payloads, encryption);
-		if (encryption->encrypt(encryption, this->message_id, chunk) != SUCCESS)
+		this->payloads->insert_last(this->payloads, encrypted);
+		if (encrypted->encrypt(encrypted, this->message_id, chunk) != SUCCESS)
 		{
 			generator->destroy(generator);
 			return INVALID_STATE;
 		}
-		generator->generate_payload(generator, &encryption->payload_interface);
+		generator->generate_payload(generator, &encrypted->payload_interface);
 	}
 	chunk = generator->get_chunk(generator, &lenpos);
 	htoun32(lenpos, chunk.len);
@@ -1636,8 +1763,10 @@ METHOD(message_t, generate, status_t,
 	{
 		/* update the IV for the next IKEv1 message */
 		chunk_t last_block;
+		aead_t *aead;
 		size_t bs;
 
+		aead = keymat->get_aead(keymat, FALSE);
 		bs = aead->get_block_size(aead);
 		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
 		if (!keymat_v1->update_iv(keymat_v1, this->message_id, last_block) ||
@@ -1648,28 +1777,299 @@ METHOD(message_t, generate, status_t,
 		}
 	}
 	generator->destroy(generator);
-	*packet = this->packet->clone(this->packet);
+	return SUCCESS;
+}
+
+METHOD(message_t, generate, status_t,
+	private_message_t *this, keymat_t *keymat, packet_t **packet)
+{
+	generator_t *generator = NULL;
+	encrypted_payload_t *encrypted = NULL;
+	status_t status;
+
+	status = generate_message(this, keymat, &generator, &encrypted);
+	if (status != SUCCESS)
+	{
+		DESTROY_IF(generator);
+		return status;
+	}
+	status = finalize_message(this, keymat, generator, encrypted);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	if (packet)
+	{
+		*packet = this->packet->clone(this->packet);
+	}
+	return SUCCESS;
+}
+
+/**
+ * Creates a (basic) clone of the given message
+ */
+static message_t *clone_message(private_message_t *this)
+{
+	message_t *message;
+	host_t *src, *dst;
+
+	src = this->packet->get_source(this->packet);
+	dst = this->packet->get_destination(this->packet);
+
+	message = message_create(this->major_version, this->minor_version);
+	message->set_ike_sa_id(message, this->ike_sa_id);
+	message->set_message_id(message, this->message_id);
+	message->set_request(message, this->is_request);
+	message->set_source(message, src->clone(src));
+	message->set_destination(message, dst->clone(dst));
+	message->set_exchange_type(message, this->exchange_type);
+	memcpy(((private_message_t*)message)->reserved, this->reserved,
+		   sizeof(this->reserved));
+	return message;
+}
+
+/**
+ * Create a single fragment with the given data
+ */
+static message_t *create_fragment(private_message_t *this, payload_type_t next,
+								  u_int16_t num, u_int16_t count, chunk_t data)
+{
+	enumerator_t *enumerator;
+	payload_t *fragment, *payload;
+	message_t *message;
+	peer_cfg_t *peer_cfg;
+	ike_sa_t *ike_sa;
+
+	message = clone_message(this);
+	if (this->major_version == IKEV1_MAJOR_VERSION)
+	{
+		/* other implementations seem to just use 0 as message ID, so here we go */
+		message->set_message_id(message, 0);
+		/* always use the initial message type for fragments, even for quick mode
+		 * or transaction messages. */
+		ike_sa = charon->bus->get_sa(charon->bus);
+		if (ike_sa && (peer_cfg = ike_sa->get_peer_cfg(ike_sa)) &&
+			peer_cfg->use_aggressive(peer_cfg))
+		{
+			message->set_exchange_type(message, AGGRESSIVE);
+		}
+		else
+		{
+			message->set_exchange_type(message, ID_PROT);
+		}
+		fragment = (payload_t*)fragment_payload_create_from_data(
+													num, num == count, data);
+	}
+	else
+	{
+		fragment = (payload_t*)encrypted_fragment_payload_create_from_data(
+													num, count, data);
+		if (num == 1)
+		{
+			/* only in the first fragment is this set to the type of the first
+			 * payload in the encrypted payload */
+			fragment->set_next_type(fragment, next);
+			/* move unencrypted payloads to the first fragment */
+			enumerator = this->payloads->create_enumerator(this->payloads);
+			while (enumerator->enumerate(enumerator, &payload))
+			{
+				if (payload->get_type(payload) != PLV2_ENCRYPTED)
+				{
+					this->payloads->remove_at(this->payloads, enumerator);
+					message->add_payload(message, payload);
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+	}
+	message->add_payload(message, (payload_t*)fragment);
+	return message;
+}
+
+/**
+ * Destroy all fragments
+ */
+static void clear_fragments(private_message_t *this)
+{
+	array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
+	this->fragments = NULL;
+}
+
+/**
+ * Reduce the fragment length but ensure it stays > 0
+ */
+#define REDUCE_FRAG_LEN(fl, amount) ({ \
+	fl = max(1, (ssize_t)fl - (amount)); \
+})
+
+METHOD(message_t, fragment, status_t,
+	private_message_t *this, keymat_t *keymat, size_t frag_len,
+	enumerator_t **fragments)
+{
+	encrypted_payload_t *encrypted = NULL;
+	generator_t *generator = NULL;
+	message_t *fragment;
+	packet_t *packet;
+	payload_type_t next = PL_NONE;
+	u_int16_t num, count;
+	host_t *src, *dst;
+	chunk_t data;
+	status_t status;
+	u_int32_t *lenpos;
+	size_t len;
+
+	src = this->packet->get_source(this->packet);
+	dst = this->packet->get_destination(this->packet);
+	if (!frag_len)
+	{
+		frag_len = (src->get_family(src) == AF_INET) ? 576 : 1280;
+	}
+	/* frag_len is the complete IP datagram length, account for overhead (we
+	 * assume no IP options/extension headers are used) */
+	REDUCE_FRAG_LEN(frag_len, (src->get_family(src) == AF_INET) ? 20 : 40);
+	/* 8 (UDP header) */
+	REDUCE_FRAG_LEN(frag_len, 8);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{	/* reduce length due to non-ESP marker */
+		REDUCE_FRAG_LEN(frag_len, 4);
+	}
+
+	if (is_encoded(this))
+	{
+		if (this->major_version == IKEV2_MAJOR_VERSION)
+		{
+			encrypted = (encrypted_payload_t*)get_payload(this, PLV2_ENCRYPTED);
+		}
+		data = this->packet->get_data(this->packet);
+		len = data.len;
+	}
+	else
+	{
+		status = generate_message(this, keymat, &generator, &encrypted);
+		if (status != SUCCESS)
+		{
+			DESTROY_IF(generator);
+			return status;
+		}
+		data = generator->get_chunk(generator, &lenpos);
+		len = data.len + (encrypted ? encrypted->get_length(encrypted) : 0);
+	}
+
+	/* check if we actually need to fragment the message and if we have an
+	 * encrypted payload for IKEv2 */
+	if (len <= frag_len ||
+	   (this->major_version == IKEV2_MAJOR_VERSION && !encrypted))
+	{
+		if (generator)
+		{
+			status = finalize_message(this, keymat, generator, encrypted);
+			if (status != SUCCESS)
+			{
+				return status;
+			}
+		}
+		*fragments = enumerator_create_single(this->packet, NULL);
+		return SUCCESS;
+	}
+
+	/* frag_len denoted the maximum IKE message size so far, later on it will
+	 * denote the maximum content size of a fragment payload, therefore,
+	 * account for IKE header */
+	REDUCE_FRAG_LEN(frag_len, 28);
+
+	if (this->major_version == IKEV1_MAJOR_VERSION)
+	{
+		if (generator)
+		{
+			status = finalize_message(this, keymat, generator, encrypted);
+			if (status != SUCCESS)
+			{
+				return status;
+			}
+			data = this->packet->get_data(this->packet);
+			generator = NULL;
+		}
+		/* overhead for the fragmentation payload header */
+		REDUCE_FRAG_LEN(frag_len, 8);
+	}
+	else
+	{
+		aead_t *aead;
+
+		if (generator)
+		{
+			generator->destroy(generator);
+			generator = generator_create();
+		}
+		else
+		{	/* do not log again if it was generated previously */
+			generator = generator_create_no_dbg();
+		}
+		next = encrypted->payload_interface.get_next_type((payload_t*)encrypted);
+		encrypted->generate_payloads(encrypted, generator);
+		data = generator->get_chunk(generator, &lenpos);
+		if (!is_encoded(this))
+		{
+			encrypted->destroy(encrypted);
+		}
+		aead = keymat->get_aead(keymat, FALSE);
+		/* overhead for the encrypted fragment payload */
+		REDUCE_FRAG_LEN(frag_len, aead->get_iv_size(aead));
+		REDUCE_FRAG_LEN(frag_len, aead->get_icv_size(aead));
+		/* header */
+		REDUCE_FRAG_LEN(frag_len, 8);
+		/* padding and padding length */
+		frag_len = round_down(frag_len, aead->get_block_size(aead));
+		REDUCE_FRAG_LEN(frag_len, 1);
+		/* TODO-FRAG: if there are unencrypted payloads, should we account for
+		 * their length in the first fragment? we still would have to add
+		 * an encrypted fragment payload (albeit empty), even so we couldn't
+		 * prevent IP fragmentation in every case */
+	}
+
+	count = data.len / frag_len + (data.len % frag_len ? 1 : 0);
+	this->fragments = array_create(0, count);
+	DBG1(DBG_ENC, "splitting IKE message with length of %zu bytes into "
+		 "%hu fragments", len, count);
+	for (num = 1; num <= count; num++)
+	{
+		len = min(data.len, frag_len);
+		fragment = create_fragment(this, next, num, count,
+								   chunk_create(data.ptr, len));
+		status = fragment->generate(fragment, keymat, &packet);
+		fragment->destroy(fragment);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "failed to generate IKE fragment");
+			clear_fragments(this);
+			DESTROY_IF(generator);
+			return FAILED;
+		}
+		array_insert(this->fragments, ARRAY_TAIL, packet);
+		data = chunk_skip(data, len);
+	}
+	*fragments = array_create_enumerator(this->fragments);
+	DESTROY_IF(generator);
 	return SUCCESS;
 }
 
 METHOD(message_t, get_packet, packet_t*,
 	private_message_t *this)
 {
-	if (this->packet == NULL)
-	{
-		return NULL;
-	}
 	return this->packet->clone(this->packet);
 }
 
 METHOD(message_t, get_packet_data, chunk_t,
 	private_message_t *this)
 {
-	if (this->packet == NULL)
-	{
-		return chunk_empty;
-	}
 	return this->packet->get_data(this->packet);
+}
+
+METHOD(message_t, get_fragments, enumerator_t*,
+	private_message_t *this)
+{
+	return array_create_enumerator(this->fragments);
 }
 
 METHOD(message_t, parse_header, status_t,
@@ -1682,6 +2082,10 @@ METHOD(message_t, parse_header, status_t,
 
 	DBG2(DBG_ENC, "parsing header of message");
 
+	if (!this->parser)
+	{	/* reassembled IKEv2 message, header is inherited from fragments */
+		return SUCCESS;
+	}
 	this->parser->reset_context(this->parser);
 	status = this->parser->parse_payload(this->parser, PL_HEADER,
 										 (payload_t**)&ike_header);
@@ -1723,7 +2127,7 @@ METHOD(message_t, parse_header, status_t,
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
 	if (this->first_payload == PLV1_FRAGMENT && this->is_encrypted)
-	{	/* racoon sets the encryted bit when sending a fragment, but these
+	{	/* racoon sets the encrypted bit when sending a fragment, but these
 		 * messages are really not encrypted */
 		this->is_encrypted = FALSE;
 	}
@@ -1780,9 +2184,9 @@ static status_t parse_payloads(private_message_t *this)
 	status_t status;
 
 	if (this->is_encrypted)
-	{	/* wrap the whole encrypted IKEv1 message in a special encryption
+	{	/* wrap the whole encrypted IKEv1 message in a special encrypted
 		 * payload which is then handled just like a regular payload */
-		encryption_payload_t *encryption;
+		encrypted_payload_t *encryption;
 
 		status = this->parser->parse_payload(this->parser, PLV1_ENCRYPTED,
 											 (payload_t**)&encryption);
@@ -1824,9 +2228,9 @@ static status_t parse_payloads(private_message_t *this)
 			 payload_type_names, type);
 		this->payloads->insert_last(this->payloads, payload);
 
-		/* an encrypted payload is the last one, so STOP here. decryption is
-		 * done later */
-		if (type == PLV2_ENCRYPTED)
+		/* an encrypted (fragment) payload MUST be the last one, so STOP here.
+		 * decryption is done later */
+		if (type == PLV2_ENCRYPTED || type == PLV2_FRAGMENT)
 		{
 			DBG2(DBG_ENC, "%N payload found, stop parsing",
 				 payload_type_names, type);
@@ -1841,7 +2245,7 @@ static status_t parse_payloads(private_message_t *this)
  * Decrypt an encrypted payload and extract all contained payloads.
  */
 static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
-						payload_t *previous, encryption_payload_t *encryption)
+						payload_t *previous, encrypted_payload_t *encryption)
 {
 	payload_t *encrypted;
 	payload_type_t type;
@@ -1861,42 +2265,51 @@ static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
 		DBG1(DBG_ENC, "found encrypted payload, but no transform set");
 		return INVALID_ARG;
 	}
-	bs = aead->get_block_size(aead);
-	encryption->set_transform(encryption, aead);
-	chunk = this->packet->get_data(this->packet);
-	if (chunk.len < encryption->get_length(encryption) ||
-		chunk.len < bs)
+	if (!this->parser)
 	{
-		DBG1(DBG_ENC, "invalid payload length");
-		return VERIFY_ERROR;
+		/* reassembled IKEv2 messages are already decrypted, we still call
+		 * decrypt() to parse the contained payloads */
+		status = encryption->decrypt(encryption, chunk_empty);
 	}
-	if (keymat->get_version(keymat) == IKEV1)
-	{	/* instead of associated data we provide the IV, we also update
-		 * the IV with the last encrypted block */
-		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-		chunk_t iv;
-
-		if (keymat_v1->get_iv(keymat_v1, this->message_id, &iv))
+	else
+	{
+		bs = aead->get_block_size(aead);
+		encryption->set_transform(encryption, aead);
+		chunk = this->packet->get_data(this->packet);
+		if (chunk.len < encryption->get_length(encryption) ||
+			chunk.len < bs)
 		{
-			status = encryption->decrypt(encryption, iv);
-			if (status == SUCCESS)
+			DBG1(DBG_ENC, "invalid payload length");
+			return VERIFY_ERROR;
+		}
+		if (keymat->get_version(keymat) == IKEV1)
+		{	/* instead of associated data we provide the IV, we also update
+			 * the IV with the last encrypted block */
+			keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+			chunk_t iv;
+
+			if (keymat_v1->get_iv(keymat_v1, this->message_id, &iv))
 			{
-				if (!keymat_v1->update_iv(keymat_v1, this->message_id,
-						chunk_create(chunk.ptr + chunk.len - bs, bs)))
+				status = encryption->decrypt(encryption, iv);
+				if (status == SUCCESS)
 				{
-					status = FAILED;
+					if (!keymat_v1->update_iv(keymat_v1, this->message_id,
+							chunk_create(chunk.ptr + chunk.len - bs, bs)))
+					{
+						status = FAILED;
+					}
 				}
+			}
+			else
+			{
+				status = FAILED;
 			}
 		}
 		else
 		{
-			status = FAILED;
+			chunk.len -= encryption->get_length(encryption);
+			status = encryption->decrypt(encryption, chunk);
 		}
-	}
-	else
-	{
-		chunk.len -= encryption->get_length(encryption);
-		status = encryption->decrypt(encryption, chunk);
 	}
 	if (status != SUCCESS)
 	{
@@ -1923,6 +2336,41 @@ static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
 }
 
 /**
+ * Decrypt an encrypted fragment payload.
+ */
+static status_t decrypt_fragment(private_message_t *this, keymat_t *keymat,
+								 encrypted_fragment_payload_t *fragment)
+{
+	encrypted_payload_t *encrypted = (encrypted_payload_t*)fragment;
+	chunk_t chunk;
+	aead_t *aead;
+	size_t bs;
+
+	if (!keymat)
+	{
+		DBG1(DBG_ENC, "found encrypted fragment payload, but no keymat");
+		return INVALID_ARG;
+	}
+	aead = keymat->get_aead(keymat, TRUE);
+	if (!aead)
+	{
+		DBG1(DBG_ENC, "found encrypted fragment payload, but no transform set");
+		return INVALID_ARG;
+	}
+	bs = aead->get_block_size(aead);
+	encrypted->set_transform(encrypted, aead);
+	chunk = this->packet->get_data(this->packet);
+	if (chunk.len < encrypted->get_length(encrypted) ||
+		chunk.len < bs)
+	{
+		DBG1(DBG_ENC, "invalid payload length");
+		return VERIFY_ERROR;
+	}
+	chunk.len -= encrypted->get_length(encrypted);
+	return encrypted->decrypt(encrypted, chunk);
+}
+
+/**
  * Do we accept unencrypted ID/HASH payloads in Main Mode, as seen from
  * some SonicWall boxes?
  */
@@ -1941,7 +2389,7 @@ static bool accept_unencrypted_mm(private_message_t *this, payload_type_t type)
 }
 
 /**
- * Decrypt payload from the encryption payload
+ * Decrypt payload from the encrypted payload
  */
 static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 {
@@ -1950,7 +2398,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 	payload_rule_t *rule;
 	payload_type_t type;
 	status_t status = SUCCESS;
-	bool was_encrypted = FALSE;
+	char *was_encrypted = NULL;
 
 	enumerator = this->payloads->create_enumerator(this->payloads);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -1959,20 +2407,24 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 
 		DBG2(DBG_ENC, "process payload of type %N", payload_type_names, type);
 
-		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
+		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED ||
+			type == PLV2_FRAGMENT)
 		{
-			encryption_payload_t *encryption;
-
 			if (was_encrypted)
 			{
-				DBG1(DBG_ENC, "encrypted payload can't contain other payloads "
-					 "of type %N", payload_type_names, type);
+				DBG1(DBG_ENC, "%s can't contain other payloads of type %N",
+					 was_encrypted, payload_type_names, type);
 				status = VERIFY_ERROR;
 				break;
 			}
+		}
+
+		if (type == PLV2_ENCRYPTED || type == PLV1_ENCRYPTED)
+		{
+			encrypted_payload_t *encryption;
 
 			DBG2(DBG_ENC, "found an encrypted payload");
-			encryption = (encryption_payload_t*)payload;
+			encryption = (encrypted_payload_t*)payload;
 			this->payloads->remove_at(this->payloads, enumerator);
 
 			if (enumerator->enumerate(enumerator, NULL))
@@ -1988,7 +2440,27 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{
 				break;
 			}
-			was_encrypted = TRUE;
+			was_encrypted = "encrypted payload";
+		}
+		else if (type == PLV2_FRAGMENT)
+		{
+			encrypted_fragment_payload_t *fragment;
+
+			DBG2(DBG_ENC, "found an encrypted fragment payload");
+			fragment = (encrypted_fragment_payload_t*)payload;
+
+			if (enumerator->enumerate(enumerator, NULL))
+			{
+				DBG1(DBG_ENC, "encrypted fragment payload is not last payload");
+				status = VERIFY_ERROR;
+				break;
+			}
+			status = decrypt_fragment(this, keymat, fragment);
+			if (status != SUCCESS)
+			{
+				break;
+			}
+			was_encrypted = "encrypted fragment payload";
 		}
 
 		if (payload_is_known(type) && !was_encrypted &&
@@ -2085,10 +2557,15 @@ METHOD(message_t, parse_body, status_t,
 		return NOT_SUPPORTED;
 	}
 
-	status = parse_payloads(this);
-	if (status != SUCCESS)
-	{	/* error is already logged */
-		return status;
+	/* reassembled IKEv2 messages are already parsed (except for the payloads
+	 * contained in the encrypted payload, which are handled below) */
+	if (this->parser)
+	{
+		status = parse_payloads(this);
+		if (status != SUCCESS)
+		{	/* error is already logged */
+			return status;
+		}
 	}
 
 	status = decrypt_payloads(this, keymat);
@@ -2153,13 +2630,234 @@ METHOD(message_t, parse_body, status_t,
 	return SUCCESS;
 }
 
+/**
+ * Store the fragment data for the fragment with the given fragment number.
+ */
+static status_t add_fragment(private_message_t *this, u_int16_t num,
+							 chunk_t data)
+{
+	fragment_t *fragment;
+	int i, insert_at = -1;
+
+	for (i = 0; i < array_count(this->fragments); i++)
+	{
+		array_get(this->fragments, i, &fragment);
+		if (fragment->num == num)
+		{
+			/* ignore a duplicate fragment */
+			DBG1(DBG_ENC, "received duplicate fragment #%hu", num);
+			return NEED_MORE;
+		}
+		if (fragment->num > num)
+		{
+			insert_at = i;
+			break;
+		}
+	}
+	this->frag->len += data.len;
+	if (this->frag->len > this->frag->max_packet)
+	{
+		DBG1(DBG_ENC, "fragmented IKE message is too large");
+		reset_defrag(this);
+		return FAILED;
+	}
+	INIT(fragment,
+		.num = num,
+		.data = chunk_clone(data),
+	);
+	array_insert(this->fragments, insert_at, fragment);
+	return SUCCESS;
+}
+
+/**
+ * Merge the cached fragment data and resets the defragmentation state.
+ * Also updates the IP addresses to those of the last received fragment.
+ */
+static chunk_t merge_fragments(private_message_t *this, message_t *last)
+{
+	fragment_t *fragment;
+	bio_writer_t *writer;
+	host_t *src, *dst;
+	chunk_t data;
+	int i;
+
+	writer = bio_writer_create(this->frag->len);
+	for (i = 0; i < array_count(this->fragments); i++)
+	{
+		array_get(this->fragments, i, &fragment);
+		writer->write_data(writer, fragment->data);
+	}
+	data = writer->extract_buf(writer);
+	writer->destroy(writer);
+
+	/* set addresses to those of the last fragment we received */
+	src = last->get_source(last);
+	dst = last->get_destination(last);
+	this->packet->set_source(this->packet, src->clone(src));
+	this->packet->set_destination(this->packet, dst->clone(dst));
+
+	reset_defrag(this);
+	free(this->frag);
+	this->frag = NULL;
+	return data;
+}
+
+METHOD(message_t, add_fragment_v1, status_t,
+	private_message_t *this, message_t *message)
+{
+	fragment_payload_t *payload;
+	chunk_t data;
+	u_int8_t num;
+	status_t status;
+
+	if (!this->frag)
+	{
+		return INVALID_STATE;
+	}
+	payload = (fragment_payload_t*)message->get_payload(message, PLV1_FRAGMENT);
+	if (!payload)
+	{
+		return INVALID_ARG;
+	}
+	if (!this->fragments || this->message_id != payload->get_id(payload))
+	{
+		reset_defrag(this);
+		this->message_id = payload->get_id(payload);
+		/* we don't know the total number of fragments, assume something */
+		this->fragments = array_create(0, 4);
+	}
+
+	num = payload->get_number(payload);
+	data = payload->get_data(payload);
+	if (!this->frag->last && payload->is_last(payload))
+	{
+		this->frag->last = num;
+	}
+	status = add_fragment(this, num, data);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
+	if (array_count(this->fragments) != this->frag->last)
+	{
+		/* there are some fragments missing */
+		DBG1(DBG_ENC, "received fragment #%hhu, waiting for complete IKE "
+			 "message", num);
+		return NEED_MORE;
+	}
+
+	DBG1(DBG_ENC, "received fragment #%hhu, reassembling fragmented IKE "
+		 "message", num);
+
+	data = merge_fragments(this, message);
+	this->packet->set_data(this->packet, data);
+	this->parser = parser_create(data);
+
+	if (parse_header(this) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "failed to parse header of reassembled IKE message");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+METHOD(message_t, add_fragment_v2, status_t,
+	private_message_t *this, message_t *message)
+{
+	encrypted_fragment_payload_t *encrypted_fragment;
+	encrypted_payload_t *encrypted;
+	payload_t *payload;
+	enumerator_t *enumerator;
+	chunk_t data;
+	u_int16_t total, num;
+	status_t status;
+
+	if (!this->frag)
+	{
+		return INVALID_STATE;
+	}
+	payload = message->get_payload(message, PLV2_FRAGMENT);
+	if (!payload || this->message_id != message->get_message_id(message))
+	{
+		return INVALID_ARG;
+	}
+	encrypted_fragment = (encrypted_fragment_payload_t*)payload;
+	total = encrypted_fragment->get_total_fragments(encrypted_fragment);
+	if (total > MAX_FRAGMENTS)
+	{
+		DBG1(DBG_IKE, "maximum fragment count exceeded");
+		reset_defrag(this);
+		return FAILED;
+	}
+	if (!this->fragments || total > this->frag->last)
+	{
+		reset_defrag(this);
+		this->frag->last = total;
+		this->fragments = array_create(0, total);
+	}
+	num = encrypted_fragment->get_fragment_number(encrypted_fragment);
+	data = encrypted_fragment->get_content(encrypted_fragment);
+	status = add_fragment(this, num, data);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
+	if (num == 1)
+	{
+		/* the first fragment denotes the payload type of the first payload in
+		 * the original encrypted payload, cache that */
+		this->first_payload = payload->get_next_type(payload);
+		/* move all unencrypted payloads contained in the first fragment */
+		enumerator = message->create_payload_enumerator(message);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			if (payload->get_type(payload) != PLV2_FRAGMENT)
+			{
+				message->remove_payload_at(message, enumerator);
+				this->payloads->insert_last(this->payloads, payload);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (array_count(this->fragments) != total)
+	{
+		/* there are some fragments missing */
+		DBG1(DBG_ENC, "received fragment #%hu of %hu, waiting for complete IKE "
+			 "message", num, total);
+		return NEED_MORE;
+	}
+
+	DBG1(DBG_ENC, "received fragment #%hu of %hu, reassembling fragmented IKE "
+		 "message", num, total);
+
+	data = merge_fragments(this, message);
+	encrypted = encrypted_payload_create_from_plain(this->first_payload, data);
+	this->payloads->insert_last(this->payloads, encrypted);
+	/* update next payload type (could be an unencrypted payload) */
+	this->payloads->get_first(this->payloads, (void**)&payload);
+	this->first_payload = payload->get_type(payload);
+	return SUCCESS;
+}
+
 METHOD(message_t, destroy, void,
 	private_message_t *this)
 {
 	DESTROY_IF(this->ike_sa_id);
+	DESTROY_IF(this->parser);
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
 	this->packet->destroy(this->packet);
-	this->parser->destroy(this->parser);
+	if (this->frag)
+	{
+		reset_defrag(this);
+		free(this->frag);
+	}
+	else
+	{
+		array_destroy_offset(this->fragments, offsetof(packet_t, destroy));
+	}
 	free(this);
 }
 
@@ -2195,6 +2893,9 @@ message_t *message_create_from_packet(packet_t *packet)
 			.disable_sort = _disable_sort,
 			.generate = _generate,
 			.is_encoded = _is_encoded,
+			.is_fragmented = _is_fragmented,
+			.fragment = _fragment,
+			.add_fragment = _add_fragment_v2,
 			.set_source = _set_source,
 			.get_source = _get_source,
 			.set_destination = _set_destination,
@@ -2207,6 +2908,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.parse_body = _parse_body,
 			.get_packet = _get_packet,
 			.get_packet_data = _get_packet_data,
+			.get_fragments = _get_fragments,
 			.destroy = _destroy,
 		},
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
@@ -2231,4 +2933,35 @@ message_t *message_create(int major, int minor)
 	this->set_minor_version(this, minor);
 
 	return this;
+}
+
+/*
+ * Described in header.
+ */
+message_t *message_create_defrag(message_t *fragment)
+{
+	private_message_t *this;
+
+	if (!fragment->get_payload(fragment, PLV1_FRAGMENT) &&
+		!fragment->get_payload(fragment, PLV2_FRAGMENT))
+	{
+		return NULL;
+	}
+	this = (private_message_t*)clone_message((private_message_t*)fragment);
+	/* we don't need a parser for IKEv2, the one for IKEv1 is created after
+	 * reassembling the original message */
+	this->parser->destroy(this->parser);
+	this->parser = NULL;
+	if (fragment->get_major_version(fragment) == IKEV1_MAJOR_VERSION)
+	{
+		/* we store the fragment ID in the message ID field, which should be
+		 * zero for fragments, but make sure */
+		this->message_id = 0;
+		this->public.add_fragment = _add_fragment_v1;
+	}
+	INIT(this->frag,
+		.max_packet = lib->settings->get_int(lib->settings,
+								"%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
+	);
+	return &this->public;
 }

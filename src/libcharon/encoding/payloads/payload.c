@@ -28,7 +28,8 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
-#include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/encrypted_payload.h>
+#include <encoding/payloads/encrypted_fragment_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
@@ -59,7 +60,7 @@ ENUM_NEXT(payload_type_names, PLV1_SECURITY_ASSOCIATION, PLV1_CONFIGURATION, PL_
 ENUM_NEXT(payload_type_names, PLV1_NAT_D, PLV1_NAT_OA, PLV1_CONFIGURATION,
 	"NAT_D_V1",
 	"NAT_OA_V1");
-ENUM_NEXT(payload_type_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_NAT_OA,
+ENUM_NEXT(payload_type_names, PLV2_SECURITY_ASSOCIATION, PLV2_FRAGMENT, PLV1_NAT_OA,
 	"SECURITY_ASSOCIATION",
 	"KEY_EXCHANGE",
 	"ID_INITIATOR",
@@ -76,16 +77,20 @@ ENUM_NEXT(payload_type_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_NAT_OA,
 	"ENCRYPTED",
 	"CONFIGURATION",
 	"EAP",
-	"GSPM");
+	"GSPM",
+	"GROUP_ID",
+	"GROUP_SECURITY_ASSOCIATION",
+	"KEY_DOWNLOAD",
+	"ENCRYPTED_FRAGMENT");
 #ifdef ME
-ENUM_NEXT(payload_type_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_GSPM,
+ENUM_NEXT(payload_type_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_FRAGMENT,
 	"ID_PEER");
 ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_ID_PEER,
 	"NAT_D_DRAFT_V1",
 	"NAT_OA_DRAFT_V1",
 	"FRAGMENT");
 #else
-ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_GSPM,
+ENUM_NEXT(payload_type_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_FRAGMENT,
 	"NAT_D_DRAFT_V1",
 	"NAT_OA_DRAFT_V1",
 	"FRAGMENT");
@@ -125,7 +130,7 @@ ENUM_NEXT(payload_type_short_names, PLV1_SECURITY_ASSOCIATION, PLV1_CONFIGURATIO
 ENUM_NEXT(payload_type_short_names, PLV1_NAT_D, PLV1_NAT_OA, PLV1_CONFIGURATION,
 	"NAT-D",
 	"NAT-OA");
-ENUM_NEXT(payload_type_short_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_NAT_OA,
+ENUM_NEXT(payload_type_short_names, PLV2_SECURITY_ASSOCIATION, PLV2_FRAGMENT, PLV1_NAT_OA,
 	"SA",
 	"KE",
 	"IDi",
@@ -142,16 +147,20 @@ ENUM_NEXT(payload_type_short_names, PLV2_SECURITY_ASSOCIATION, PLV2_GSPM, PLV1_N
 	"E",
 	"CP",
 	"EAP",
-	"GSPM");
+	"GSPM",
+	"IDg",
+	"GSA",
+	"KD",
+	"EF");
 #ifdef ME
-ENUM_NEXT(payload_type_short_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_GSPM,
+ENUM_NEXT(payload_type_short_names, PLV2_ID_PEER, PLV2_ID_PEER, PLV2_FRAGMENT,
 	"IDp");
 ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_ID_PEER,
 	"NAT-D",
 	"NAT-OA",
 	"FRAG");
 #else
-ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_GSPM,
+ENUM_NEXT(payload_type_short_names, PLV1_NAT_D_DRAFT_00_03, PLV1_FRAGMENT, PLV2_FRAGMENT,
 	"NAT-D",
 	"NAT-OA",
 	"FRAG");
@@ -244,9 +253,11 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)eap_payload_create();
 		case PLV2_ENCRYPTED:
 		case PLV1_ENCRYPTED:
-			return (payload_t*)encryption_payload_create(type);
+			return (payload_t*)encrypted_payload_create(type);
 		case PLV1_FRAGMENT:
 			return (payload_t*)fragment_payload_create();
+		case PLV2_FRAGMENT:
+			return (payload_t*)encrypted_fragment_payload_create();
 		default:
 			return (payload_t*)unknown_payload_create(type);
 	}
@@ -261,15 +272,19 @@ bool payload_is_known(payload_type_t type)
 	{
 		return TRUE;
 	}
-	if (type >= PLV2_SECURITY_ASSOCIATION && type <= PLV2_EAP)
-	{
-		return TRUE;
-	}
 	if (type >= PLV1_SECURITY_ASSOCIATION && type <= PLV1_CONFIGURATION)
 	{
 		return TRUE;
 	}
 	if (type >= PLV1_NAT_D && type <= PLV1_NAT_OA)
+	{
+		return TRUE;
+	}
+	if (type >= PLV2_SECURITY_ASSOCIATION && type <= PLV2_EAP)
+	{
+		return TRUE;
+	}
+	if (type == PLV2_FRAGMENT)
 	{
 		return TRUE;
 	}
