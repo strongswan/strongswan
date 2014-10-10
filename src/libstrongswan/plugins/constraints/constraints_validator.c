@@ -298,8 +298,7 @@ static bool has_policy(x509_t *issuer, chunk_t oid)
 /**
  * Check certificatePolicies.
  */
-static bool check_policy(x509_t *subject, x509_t *issuer, bool check,
-						 auth_cfg_t *auth)
+static bool check_policy(x509_t *subject, x509_t *issuer)
 {
 	certificate_t *cert = (certificate_t*)subject;
 	x509_policy_mapping_t *mapping;
@@ -323,33 +322,85 @@ static bool check_policy(x509_t *subject, x509_t *issuer, bool check,
 	}
 	enumerator->destroy(enumerator);
 
-	if (check)
+	enumerator = subject->create_cert_policy_enumerator(subject);
+	while (enumerator->enumerate(enumerator, &policy))
 	{
-		enumerator = subject->create_cert_policy_enumerator(subject);
-		while (enumerator->enumerate(enumerator, &policy))
+		if (!has_policy(issuer, policy->oid))
 		{
-			if (!has_policy(issuer, policy->oid))
-			{
-				oid = asn1_oid_to_string(policy->oid);
-				DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
-					 oid, cert->get_issuer(cert));
-				free(oid);
-				enumerator->destroy(enumerator);
-				return FALSE;
-			}
-			if (auth)
-			{
-				oid = asn1_oid_to_string(policy->oid);
-				if (oid)
-				{
-					auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
-				}
-			}
+			oid = asn1_oid_to_string(policy->oid);
+			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
+				 oid, cert->get_issuer(cert));
+			free(oid);
+			enumerator->destroy(enumerator);
+			return FALSE;
 		}
-		enumerator->destroy(enumerator);
 	}
+	enumerator->destroy(enumerator);
 
 	return TRUE;
+}
+
+/**
+ * Check if a given policy is valid under a trustchain
+ */
+static bool is_policy_valid(linked_list_t *chain, chunk_t oid)
+{
+	x509_policy_mapping_t *mapping;
+	x509_cert_policy_t *policy;
+	x509_t *issuer;
+	enumerator_t *issuers, *policies, *mappings;
+	bool found = TRUE;
+
+	issuers = chain->create_enumerator(chain);
+	while (issuers->enumerate(issuers, &issuer))
+	{
+		int maxmap = 8;
+
+		while (found)
+		{
+			found = FALSE;
+
+			policies = issuer->create_cert_policy_enumerator(issuer);
+			while (policies->enumerate(policies, &policy))
+			{
+				if (chunk_equals(oid, policy->oid) ||
+					chunk_equals(any_policy, policy->oid))
+				{
+					found = TRUE;
+					break;
+				}
+			}
+			policies->destroy(policies);
+			if (found)
+			{
+				break;
+			}
+			/* fall back to a mapped policy */
+			mappings = issuer->create_policy_mapping_enumerator(issuer);
+			while (mappings->enumerate(mappings, &mapping))
+			{
+				if (chunk_equals(mapping->subject, oid))
+				{
+					oid = mapping->issuer;
+					found = TRUE;
+					break;
+				}
+			}
+			mappings->destroy(mappings);
+			if (--maxmap == 0)
+			{
+				found = FALSE;
+				break;
+			}
+		}
+		if (!found)
+		{
+			break;
+		}
+	}
+	issuers->destroy(issuers);
+
+	return found;
 }
 
 /**
@@ -364,7 +415,7 @@ static bool has_policy_chain(linked_list_t *chain, x509_t *subject, int len)
 	enumerator = chain->create_enumerator(chain);
 	while (len-- > 0 && enumerator->enumerate(enumerator, &issuer))
 	{
-		if (!check_policy(subject, issuer, TRUE, NULL))
+		if (!check_policy(subject, issuer))
 		{
 			valid = FALSE;
 			break;
@@ -450,6 +501,7 @@ static bool check_policy_constraints(x509_t *issuer, u_int pathlen,
 	{
 		if (subject->get_type(subject) == CERT_X509)
 		{
+			x509_cert_policy_t *policy;
 			enumerator_t *enumerator;
 			linked_list_t *chain;
 			certificate_t *cert;
@@ -457,6 +509,7 @@ static bool check_policy_constraints(x509_t *issuer, u_int pathlen,
 			x509_t *x509;
 			int len = 0;
 			u_int expl, inh;
+			char *oid;
 
 			/* prepare trustchain to validate */
 			chain = linked_list_create();
@@ -517,6 +570,31 @@ static bool check_policy_constraints(x509_t *issuer, u_int pathlen,
 			}
 			enumerator->destroy(enumerator);
 
+			if (valid)
+			{
+				x509 = (x509_t*)subject;
+
+				enumerator = x509->create_cert_policy_enumerator(x509);
+				while (enumerator->enumerate(enumerator, &policy))
+				{
+					oid = asn1_oid_to_string(policy->oid);
+					if (oid)
+					{
+						if (is_policy_valid(chain, policy->oid))
+						{
+							auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
+						}
+						else
+						{
+							DBG1(DBG_CFG, "certificate policy %s for '%Y' "
+								 "not allowed by trustchain, ignored",
+								 oid, subject->get_subject(subject));
+							free(oid);
+						}
+					}
+				}
+				enumerator->destroy(enumerator);
+			}
 			chain->destroy(chain);
 		}
 	}
@@ -538,12 +616,6 @@ METHOD(cert_validator_t, validate, bool,
 			return FALSE;
 		}
 		if (!check_name_constraints(subject, (x509_t*)issuer))
-		{
-			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
-									subject);
-			return FALSE;
-		}
-		if (!check_policy((x509_t*)subject, (x509_t*)issuer, !pathlen, auth))
 		{
 			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
 									subject);
