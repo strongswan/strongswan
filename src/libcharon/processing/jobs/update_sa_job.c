@@ -63,12 +63,7 @@ METHOD(job_t, execute, job_requeue_t,
 	}
 	else
 	{
-		/* we update only if other host is NATed, but not our */
-		if (ike_sa->has_condition(ike_sa, COND_NAT_THERE) &&
-			!ike_sa->has_condition(ike_sa, COND_NAT_HERE))
-		{
-			ike_sa->update_hosts(ike_sa, NULL, this->new, FALSE);
-		}
+		ike_sa->update_hosts(ike_sa, NULL, this->new, FALSE);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	return JOB_REQUEUE_NONE;
