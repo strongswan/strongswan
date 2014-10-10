@@ -936,11 +936,14 @@ METHOD(ike_sa_t, update_hosts, void,
 			update = TRUE;
 		}
 
-		if (!other->equals(other, this->other_host))
+		if (!other->equals(other, this->other_host) &&
+			(force || has_condition(this, COND_NAT_THERE)))
 		{
-			/* update others address if we are NOT NATed */
-			if ((has_condition(this, COND_NAT_THERE) &&
-				 !has_condition(this, COND_NAT_HERE)) || force )
+			/* only update other's address if we are behind a static NAT,
+			 * which we assume is the case if we are not initiator */
+			if (force ||
+				(!has_condition(this, COND_NAT_HERE) ||
+				 !has_condition(this, COND_ORIGINAL_INITIATOR)))
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;
