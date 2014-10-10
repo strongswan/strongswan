@@ -7,7 +7,7 @@
   <os>
     <type arch='x86_64' machine='pc'>hvm</type>
 	<kernel>/var/run/kvm-swan-kernel</kernel>
-    <cmdline>root=/dev/vda1 loglevel=1</cmdline>
+    <cmdline>root=/dev/vda1 loglevel=1 console=hvc0</cmdline>
     <boot dev='hd'/>
   </os>
   <features>
@@ -53,7 +53,7 @@
       <target port='0'/>
     </serial>
     <console type='pty'>
-      <target type='serial' port='0'/>
+      <target type='virtio' port='0'/>
     </console>
     <input type='tablet' bus='usb'/>
     <input type='mouse' bus='ps2'/>
