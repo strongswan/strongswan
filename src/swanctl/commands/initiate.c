@@ -71,8 +71,9 @@ static int initiate(vici_conn_t *conn)
 
 	if (vici_register(conn, "control-log", log_cb, &format) != 0)
 	{
+		ret = errno;
 		fprintf(stderr, "registering for log failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	req = vici_begin("initiate");
 	if (child)
@@ -87,8 +88,9 @@ static int initiate(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "initiate request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

@@ -50,6 +50,7 @@ static int logcmd(vici_conn_t *conn)
 {
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg;
+	int ret;
 
 	while (TRUE)
 	{
@@ -73,8 +74,9 @@ static int logcmd(vici_conn_t *conn)
 
 	if (vici_register(conn, "log", log_cb, &format) != 0)
 	{
+		ret = errno;
 		fprintf(stderr, "registering for log failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 
 	wait_sigint();

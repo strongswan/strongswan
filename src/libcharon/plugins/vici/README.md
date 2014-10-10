@@ -84,12 +84,12 @@ The message encoding consists of a sequence of elements. Each element starts
 with the element type, optionally followed by an element name and/or an element
 value. Currently the following message element types are defined:
 
-* _SECTION_START = 0_: Begin a new section having a name
-* _SECTION_END = 1_: End a previously started section
-* _KEY_VALUE = 2_: Define a value for a named key in the current section
-* _LIST_START = 3_: Begin a named list for list items
-* _LIST_ITEM = 4_: Define an unnamed item value in the current list
-* _LIST_END = 5_: End a previously started list
+* _SECTION_START = 1_: Begin a new section having a name
+* _SECTION_END = 2_: End a previously started section
+* _KEY_VALUE = 3_: Define a value for a named key in the current section
+* _LIST_START = 4_: Begin a named list for list items
+* _LIST_ITEM = 5_: Define an unnamed item value in the current list
+* _LIST_END = 6_: End a previously started list
 
 Types are encoded as 8-bit values. Types having a name (SECTION_START,
 KEY_VALUE and LIST_START) have an ASCII string following the type, which itself
@@ -103,7 +103,8 @@ the length field itself.
 
 The interpretation of any value is not defined by the message format; it can
 take arbitrary blobs. The application may specify types for specific keys, such
-as strings or integer representations.
+as strings or integer representations. The vici plugin currently uses
+non-null terminated strings as values only; numbers get encoded as strings.
 
 ### Sections ###
 
@@ -165,6 +166,513 @@ the following C array:
 		1,
 	};
 
+## Client-initiated commands ##
+
+Based on the packet layer, VICI implements commands requested by the client
+and responded to by the server using named _CMD_REQUEST_ and _CMD_RESPONSE_
+packets wrapping messages. The request message may contain command arguments,
+the response message the reply.
+
+Some commands use response streaming, that is, a request triggers a series of
+events to consecutively stream data to the client before the response message
+completes the stream. A client must register for the appropriate event to
+receive the stream, and unregister after the response has been received.
+
+The following client issued commands with the appropriate command input and
+output messages are currently defined:
+
+### version() ###
+
+Returns daemon and system specific version information.
+
+	{} => {
+		daemon = <IKE daemon name>
+		version = <strongSwan version>
+		sysname = <operating system name>
+		release = <operating system release>
+		machine = <hardware identifier>
+	}
+
+### stats() ###
+
+Returns IKE daemon statistics and load information.
+
+	{} => {
+		uptime = {
+			running = <relative uptime in human-readable form>
+			since = <absolute startup time>
+		}
+		workers = {
+			total = <total number of worker threads>
+			idle = <worker threads currently idle>
+			active = {
+				critical = <threads processing "critical" priority jobs>
+				high = <threads processing "high" priority jobs>
+				medium = <threads processing "medium" priority jobs>
+				low = <threads processing "low" priority jobs>
+			}
+		}
+		queues = {
+			critical = <jobs queued with "critical" priority>
+			high = <jobs queued with "high" priority>
+			medium = <jobs queued with "medium" priority>
+			low = <jobs queued with "low" priority>
+		}
+		scheduled = <number of jobs scheduled for timed execution>
+		ikesas = {
+			total = <total number of IKE_SAs active>
+			half-open = <number of IKE_SAs in half-open state>
+		}
+		plugins = [
+			<names of loaded plugins>
+		]
+		mem = { # available if built with leak-detective or on Windows
+			total = <total heap memory usage in bytes>
+			allocs = <total heap allocation blocks>
+			<heap-name>* = { # on Windows only
+				total = <heap memory usage in bytes by this heap>
+				allocs = <allocated blocks for this heap>
+			}
+		}
+		mallinfo = { # available with mallinfo() support
+			sbrk = <non-mmaped space available>
+			mmap = <mmaped space available>
+			used = <total number of bytes used>
+			free = <available but unused bytes>
+		}
+	}
+
+### reload-settings() ###
+
+Reloads _strongswan.conf_ settings and all plugins supporting configuration
+reload.
+
+	{} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### initiate() ###
+
+Initiates an SA while streaming _control-log_ events.
+
+	{
+		child = <CHILD_SA configuration name to initiate>
+		timeout = <timeout in seconds before returning>
+		loglevel = <loglevel to issue "control-log" events for>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure or timeout>
+	}
+
+### terminate() ###
+
+Terminates an SA while streaming _control-log_ events.
+
+	{
+		child = <terminate a CHILD_SA by configuration name>
+		ike = <terminate an IKE_SA by configuration name>
+		child_id = <terminate a CHILD_SA by its reqid>
+		ike_id = <terminate an IKE_SA by its unique id>
+		timeout = <timeout in seconds before returning>
+		loglevel = <loglevel to issue "control-log" events for>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure or timeout>
+	}
+
+### install() ###
+
+Install a trap, drop or bypass policy defined by a CHILD_SA config.
+
+	{
+		child = <CHILD_SA configuration name to install>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### uninstall() ###
+
+Uninstall a trap, drop or bypass policy defined by a CHILD_SA config.
+
+	{
+		child = <CHILD_SA configuration name to install>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### list-sas() ###
+
+Lists currently active IKE_SAs and associated CHILD_SAs by streaming _list-sa_
+events.
+
+	{
+		noblock = <use non-blocking mode if key is set>
+		ike = <filter listed IKE_SAs by its name>
+		ike_id = <filter listed IKE_SA by its unique id>
+	} => {
+		# completes after streaming list-sa events
+	}
+
+### list-policies() ###
+
+List currently installed trap, drop and bypass policies by streaming
+_list-policy_ events.
+
+	{
+		drop = <set to yes to list drop policies>
+		pass = <set to yes to list bypass policies>
+		trap = <set to yes to list trap policies>
+		child = <filter by CHILD_SA configuration name>
+	} => {
+		# completes after streaming list-sa events
+	}
+
+### list-conns() ###
+
+List currently loaded connections by streaming _list-conn_ events. This
+call includes all connections known by the daemon, not only those loaded
+over vici.
+
+	{
+		ike = <list connections matching a given configuration name only>
+	} => {
+		# completes after streaming list-conn events
+	}
+
+### get-conns() ###
+
+Return a list of connection names loaded exclusively over vici, not including
+connections found in other backends.
+
+	{} => {
+		conns = [
+			<list of connection names>
+		]
+	}
+
+### list-certs() ###
+
+List currently loaded certificates by streaming _list-cert_ events. This
+call includes all certificates known by the daemon, not only those loaded
+over vici.
+
+	{
+		type = <certificate type to filter for, or ANY>
+		subject = <set to list only certificates having subject>
+	} => {
+		# completes after streaming list-cert events
+	}
+
+### load-conn() ###
+
+Load a single connection definition into the daemon. An existing connection
+with the same name gets updated or replaced.
+
+	{
+		<IKE_SA config name> = {
+			# IKE configuration parameters with authentication and CHILD_SA
+			# subsections. Refer to swanctl.conf(5) for details.
+		} => {
+			success = <yes or no>
+			errmsg = <error string on failure>
+		}
+	}
+
+### unload-conn() ###
+
+Unload a previously loaded connection definition by name.
+
+	{
+		name = <IKE_SA config name>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### load-cert() ###
+
+Load a certificate into the daemon.
+
+	{
+		type = <certificate type, X509|X509CA|X509AA|X509CRL|X509AC>
+		data = <PEM or DER encoded certificate data>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### load-key() ###
+
+Load a private key into the daemon.
+
+	{
+		type = <private key type, RSA|ECDSA>
+		data = <PEM or DER encoded key data>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### load-shared() ###
+
+Load a shared IKE PSK, EAP or XAuth secret into the daemon.
+
+	{
+		type = <private key type, IKE|EAP|XAUTH>
+		data = <raw shared key data>
+		owners = [
+			<list of shared key owner identities>
+		]
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### clear-creds() ###
+
+Clear all loaded certificate, private key and shared key credentials. This
+affects only credentials loaded over vici, but additionally flushes the
+credential cache.
+
+	{} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### load-pool() ###
+
+Load an in-memory virtual IP and configuration attribute pool. Existing
+pools with the same name get updated, if possible.
+
+	{
+		<pool name> = {
+			addrs = <subnet of virtual IP pool addresses>
+			<attribute type>* = [
+				# attribute type is one of address, dns, nbns, dhcp, netmask,
+				# server, subnet, split_include, split_exclude or a numerical
+				# attribute type identifier.
+				<list of attributes for type>
+			]
+		}
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### unload-pool() ###
+
+Unload a previously loaded virtual IP and configuration attribute pool.
+Unloading fails for pools with leases currently online.
+
+	{
+		name = <virtual IP address pool to delete>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### get-pools() ###
+
+List the currently loaded pools.
+
+	{} => {
+		<pool name>* = {
+			base = <virtual IP pool base address>
+			size = <total number of addresses in the pool>
+			online = <number of leases online>
+			offline = <number of leases offline>
+		}
+	}
+
+## Server-issued events ##
+
+Based on the packet layer, the vici plugin raises event messages using named
+EVENT packets wrapping messages. The message contains event details.
+
+### log ###
+
+The _log_ event is issued to registered clients for each debug log message.
+This event is not associated with a command.
+
+	{
+		group = <subsystem identifier for debug message>
+		level = <log level, 0-4>
+		thread = <numerical thread identifier issuing the log message>
+		ikesa-name = <name of IKE_SA, if log is associated with any>
+		ikesa-uniqued = <unique identifier of IKE_A, if log associated with any>
+		msg = <log message text>
+	}
+
+### control-log ###
+
+The _control-log_ event is issued for log events during active _initiate_ or
+_terminate_ commands. It is issued only to clients currently having such
+a command active.
+
+	{
+		group = <subsystem identifier for debug message>
+		level = <log level, 0-4>
+		ikesa-name = <name of IKE_SA, if log associated with any>
+		ikesa-uniqued = <unique identifier of IKE_A, if log associated with any>
+		msg = <log message text>
+	}
+
+### list-sa ###
+
+The _list-sa_ event is issued to stream IKE_SAs during an active _list-sas_
+command.
+
+	{
+		<IKE_SA config name> = {
+			uniqueid = <IKE_SA unique identifier>
+			version = <IKE version, 1 or 2>
+			state = <IKE_SA state name>
+			local-host = <local IKE endpoint address>
+			local-id = <local IKE identity>
+			remote-host = <remote IKE endpoint address>
+			remote-id = <remote IKE identity>
+			remote-xauth-id = <remote XAuth identity, if XAuth-authenticated>
+			remote-eap-id = <remote EAP identity, if EAP-authenticated>
+			initiator = <yes, if initiator of IKE_SA>
+			initiator-spi = <hex encoded initiator SPI / cookie>
+			responder-spi = <hex encoded responder SPI / cookie>
+			encr-alg = <IKE encryption algorithm string>
+			encr-keysize = <key size for encr-alg, if applicable>
+			integ-alg = <IKE integrity algorithm string>
+			integ-keysize = <key size for encr-alg, if applicable>
+			prf-alg = <IKE pseudo random function string>
+			dh-group = <IKE Diffie-Hellman group string>
+			established = <seconds the IKE_SA has been established>
+			rekey-time = <seconds before IKE_SA gets rekeyed>
+			reauth-time = <seconds before IKE_SA gets re-authenticated>
+			tasks-queued = [
+				<list of currently queued tasks for execution>
+			]
+			tasks-active = [
+				<list of tasks currently initiating actively>
+			]
+			tasks-passive = [
+				<list of tasks currently handling passively>
+			]
+			child-sas = {
+				<child-sa-name>* = {
+					reqid = <reqid of CHILD_SA>
+					state = <state string of CHILD_SA>
+					mode = <IPsec mode, tunnel|transport|beet>
+					protocol = <IPsec protocol AH|ESP>
+					encap = <yes if using UDP encapsulation>
+					spi-in = <hex encoded inbound SPI>
+					spi-out = <hex encoded outbound SPI>
+					cpi-in = <hex encoded inbound CPI, if using compression>
+					cpi-out = <hex encoded outbound CPI, if using compression>
+					encr-alg = <ESP encryption algorithm name, if any>
+					encr-keysize = <ESP encryption key size, if applicable>
+					integ-alg = <ESP or AH integrity algorithm name, if any>
+					integ-keysize = <ESP or AH integrity key size, if applicable>
+					prf-alg = <CHILD_SA pseudo random function name>
+					dh-group = <CHILD_SA PFS rekeying DH group name, if any>
+					esn = <1 if using extended sequence numbers>
+					bytes-in = <number of input bytes processed>
+					packets-in = <number of input packets processed>
+					use-in = <seconds since last inbound packet, if any>
+					bytes-out = <number of output bytes processed>
+					packets-out = <number of output packets processed>
+					use-out = <seconds since last outbound packet, if any>
+					rekey-time = <seconds before CHILD_SA gets rekeyed>
+					life-time = <seconds before CHILD_SA expires>
+					install-time = <seconds the CHILD_SA has been installed>
+					local-ts = [
+						<list of local traffic selectors>
+					]
+					remote-ts = [
+						<list of remote traffic selectors>
+					]
+				}
+			}
+		}
+	}
+
+### list-policy ###
+
+The _list-policy_ event is issued to stream installed policies during an active
+_list-policies_ command.
+
+	{
+		<child-sa-config-name> = {
+			mode = <policy mode, tunnel|transport|pass|drop>
+			local-ts = [
+				<list of local traffic selectors>
+			]
+			remote-ts = [
+				<list of remote traffic selectors>
+			]
+		}
+	}
+
+### list-conn ###
+
+The _list-conn_ event is issued to stream loaded connection during an active
+_list-conns_ command.
+
+	{
+		<IKE_SA connection name> = {
+			local_addrs = [
+				<list of valid local IKE endpoint addresses>
+			]
+			remote_addrs = [
+				<list of valid remote IKE endpoint addresses>
+			]
+			version = <IKE version as string, IKEv1|IKEv2 or 0 for any>
+
+			local*, remote* = { # multiple local and remote auth sections
+				class = <authentication type>
+				eap-type = <EAP type to authenticate if when using EAP>
+				eap-vendor = <EAP vendor for type, if any>
+				xauth = <xauth backend name>
+				revocation = <revocation policy>
+				id = <IKE identity>
+				aaa_id = <AAA authentication backend identity>
+				eap_id = <EAP identity for authentication>
+				xauth_id = <XAuth username for authentication>
+				groups = [
+					<group membership required to use connection>
+				]
+				certs = [
+					<certificates allowed for authentication>
+				]
+				cacerts = [
+					<CA certificates allowed for authentication>
+				]
+			}
+			children = {
+				<CHILD_SA config name>* = {
+					mode = <IPsec mode>
+					local-ts = [
+						<list of local traffic selectors>
+					]
+					remote-ts = [
+						<list of remote traffic selectors>
+					]
+				}
+			}
+		}
+	}
+
+### list-cert ###
+
+The _list-cert_ event is issued to stream loaded certificates during an active
+_list-certs_ command.
+
+	{
+		type = <certificate type>
+		has_privkey = <set if a private key for the certificate is available>
+		data = <ASN1 encoded certificate data>
+	}
+
+
 # libvici C client library #
 
 libvici is the reference implementation of a C client library implementing
@@ -172,5 +680,177 @@ the vici protocol. It builds upon libstrongswan, but provides a stable API
 to implement client applications in the C programming language. libvici uses
 the libstrongswan thread pool to deliver event messages asynchronously.
 
-More information about the libvici API is available in the libvici.h header
-file.
+## Connecting to the daemon ##
+
+This example shows how to connect to the daemon using the default URI, and
+then perform proper cleanup:
+
+	#include <stdio.h>
+	#include <errno.h>
+	#include <string.h>
+
+	#include <libvici.h>
+
+	int main(int argc, char *argv[])
+	{
+		vici_conn_t *conn;
+		int ret = 0;
+
+		vici_init();
+		conn = vici_connect(NULL);
+		if (conn)
+		{
+			/* do stuff */
+			vici_disconnect(conn);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "connecting failed: %s\n", strerror(errno));
+		}
+		vici_deinit();
+		return ret;
+	}
+
+## A simple client request ##
+
+In the following example, a simple _version_ request is issued to the daemon
+and the result is printed:
+
+	int get_version(vici_conn_t *conn)
+	{
+		vici_req_t *req;
+		vici_res_t *res;
+		int ret = 0;
+
+		req = vici_begin("version");
+		res = vici_submit(req, conn);
+		if (res)
+		{
+			printf("%s %s (%s, %s, %s)\n",
+				vici_find_str(res, "", "daemon"),
+				vici_find_str(res, "", "version"),
+				vici_find_str(res, "", "sysname"),
+				vici_find_str(res, "", "release"),
+				vici_find_str(res, "", "machine"));
+			vici_free_res(res);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "version request failed: %s\n", strerror(errno));
+		}
+		return ret;
+	}
+
+## A request with event streaming and callback parsing ##
+
+In this more advanced example, the _list-conns_ command is used to stream
+loaded connections with the _list-conn_ event. The event message is parsed
+with a simple callback to print the connection name:
+
+	int conn_cb(void *null, vici_res_t *res, char *name)
+	{
+		printf("%s\n", name);
+		return 0;
+	}
+
+	void list_cb(void *null, char *name, vici_res_t *res)
+	{
+		if (vici_parse_cb(res, conn_cb, NULL, NULL, NULL) != 0)
+		{
+			fprintf(stderr, "parsing failed: %s\n", strerror(errno));
+		}
+	}
+
+	int list_conns(vici_conn_t *conn)
+	{
+		vici_req_t *req;
+		vici_res_t *res;
+		int ret = 0;
+
+		if (vici_register(conn, "list-conn", list_cb, NULL) == 0)
+		{
+			req = vici_begin("list-conns");
+			res = vici_submit(req, conn);
+			if (res)
+			{
+				vici_free_res(res);
+			}
+			else
+			{
+				ret = errno;
+				fprintf(stderr, "request failed: %s\n", strerror(errno));
+			}
+			vici_register(conn, "list-conn", NULL, NULL);
+		}
+		else
+		{
+			ret = errno;
+			fprintf(stderr, "registration failed: %s\n", strerror(errno));
+		}
+		return ret;
+	}
+
+## API documentation ##
+
+More information about the libvici API is available in the _libvici.h_ header
+file or the generated Doxygen documentation.
+
+# vici ruby gem #
+
+The _vici ruby gem_ is a pure ruby implementation of the VICI protocol to
+implement client applications. It is provided in the _ruby_ subdirectory, and
+gets built and installed if strongSwan has been _./configure_'d with
+_--enable-vici_ and _--enable-ruby-gems_.
+
+The _Connection_ class from the _Vici_ module provides the high level interface,
+the underlying classes are usually not required to build ruby applications
+using VICI. The _Connection_ class provides methods for the supported VICI
+commands and an event listening mechanism.
+
+To represent the VICI message data tree, the gem converts the binary encoding
+to ruby data types. The _Connection_ class takes and returns ruby objects for
+the exchanged message data:
+ * Sections get encoded as Hash, containing other sections as Hash, or
+ * Key/Values, where the values are Strings as Hash values
+ * Lists get encoded as Arrays with String values
+Non-String values that are not a Hash nor an Array get converted with .to_s
+during encoding.
+
+## Connecting to the daemon ##
+
+To create a connection to the daemon, a socket must be passed to the
+_Connection_ constructor. There is no default, but on Unix systems usually
+a Unix socket over _/var/run/charon.vici_ is used:
+
+	require "vici"
+	require "socket"
+
+	v = Vici::Connection.new(UNIXSocket.new("/var/run/charon.vici"))
+
+## A simple client request ##
+
+An example to print the daemon version information is as simple as:
+
+	x = v.version
+	puts "%s %s (%s, %s, %s)" % [
+		x["daemon"], x["version"], x["sysname"], x["release"], x["machine"]
+	]
+
+## A request with closure invocation ##
+
+The _Connection_ class takes care of event streaming by invoking a closure
+for each event. The following example lists all loaded connections using the
+_list-conns_ command and implicitly the _list-conn_ event:
+
+	v.list_conns { |conn|
+		conn.each { |key, value|
+			puts key
+		}
+	}
+
+## API documentation ##
+
+For more details about the ruby gem refer to the comments in the gem source
+code or the generated documentation.

@@ -67,3 +67,10 @@ vici_tests_LDFLAGS = @COVERAGE_LDFLAGS@
 vici_tests_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libstrongswan/tests/libtest.la
+
+
+SUBDIRS =
+
+if USE_RUBY_GEMS
+SUBDIRS += ruby
+endif

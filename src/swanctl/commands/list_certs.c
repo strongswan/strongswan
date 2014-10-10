@@ -590,6 +590,7 @@ static int list_certs(vici_conn_t *conn)
 	vici_res_t *res;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *subject = NULL, *type = NULL;
+	int ret;
 
 	while (TRUE)
 	{
@@ -621,9 +622,10 @@ static int list_certs(vici_conn_t *conn)
 	}
 	if (vici_register(conn, "list-cert", list_cb, &format) != 0)
 	{
+		ret = errno;
 		fprintf(stderr, "registering for certificates failed: %s\n",
 				strerror(errno));
-		return errno;
+		return ret;
 	}
 	req = vici_begin("list-certs");
 	if (type)
@@ -637,8 +639,9 @@ static int list_certs(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "list-certs request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

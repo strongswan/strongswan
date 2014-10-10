@@ -68,6 +68,7 @@ ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Cur
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
+ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -285,6 +286,7 @@ ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and p
 ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
+ARG_ENABL_SET([ruby-gems],      [enable installation of provided ruby gems.])
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -1152,6 +1154,17 @@ if test x$coverage = xtrue; then
 	CFLAGS="${CFLAGS} -g -O0"
 fi
 
+if test x$ruby_gems = xtrue; then
+	AC_PATH_PROG([GEM], [gem], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+	if test x$GEM = x; then
+		AC_MSG_ERROR(RubyGems package manager not found)
+	fi
+	if test "x$rubygemdir" = "xgem environment gemdir"; then
+		rubygemdir=$($GEM environment gemdir)
+	fi
+	AC_SUBST(RUBYGEMDIR, "$rubygemdir")
+fi
+
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
@@ -1511,6 +1524,7 @@ AM_CONDITIONAL(USE_SWANCTL, test x$swanctl = xtrue)
 AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
 AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
 AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
+AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
 
 # ========================
 #  set global definitions
@@ -1713,6 +1727,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/vici/Makefile
+	src/libcharon/plugins/vici/ruby/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/unit_tester/Makefile

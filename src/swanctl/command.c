@@ -267,9 +267,10 @@ static int call_command(command_t *cmd)
 	conn = vici_connect(uri);
 	if (!conn)
 	{
+		ret = errno;
 		command_usage("connecting to '%s' URI failed: %s",
 					  uri ?: "default", strerror(errno));
-		return errno;
+		return ret;
 	}
 	ret = cmd->call(conn);
 	vici_disconnect(conn);

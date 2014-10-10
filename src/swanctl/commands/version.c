@@ -24,6 +24,7 @@ static int version(vici_conn_t *conn)
 	char *arg;
 	bool daemon = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
+	int ret;
 
 	while (TRUE)
 	{
@@ -58,8 +59,9 @@ static int version(vici_conn_t *conn)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "version request failed: %s\n", strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

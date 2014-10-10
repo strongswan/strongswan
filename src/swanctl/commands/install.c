@@ -55,8 +55,9 @@ static int manage_policy(vici_conn_t *conn, char *label)
 	res = vici_submit(req, conn);
 	if (!res)
 	{
+		ret = errno;
 		fprintf(stderr, "%s request failed: %s\n", label, strerror(errno));
-		return errno;
+		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{

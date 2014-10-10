@@ -75,8 +75,6 @@
 
 #include <stdio.h>
 
-#include <utils/utils.h>
-
 /**
  * Opaque vici connection contex.
  */
@@ -284,7 +282,7 @@ void vici_free_req(vici_req_t *req);
  * @param out		FILE to dump to
  * @return			0 if dumped complete message, 1 on error
  */
-int vici_dump(vici_res_t *res, char *label, bool pretty, FILE *out);
+int vici_dump(vici_res_t *res, char *label, int pretty, FILE *out);
 
 /**
  * Parse next element from a vici response message.
