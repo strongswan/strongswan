@@ -156,6 +156,18 @@ check_commands()
 	done
 }
 
+# check if any of the given virtual guests are running
+# $* - names of guests to check
+running_any()
+{
+	command -v virsh >/dev/null || return 1
+	for host in $*
+	do
+		virsh list --name | grep "^$host$" >/dev/null && return 0
+	done
+	return 1
+}
+
 #############################################
 # search and replace strings throughout a
 # whole directory

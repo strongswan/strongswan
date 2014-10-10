@@ -12,6 +12,7 @@ SWANDIR=${1:+$(readlink -f $1)}
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 [ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
 [ -f "$ROOTIMG" ] || die "Root image $ROOTIMG not found"
+running_any $STRONGSWANHOSTS && die "Please stop test environment before running $0"
 
 [ -f $SWANDIR/src/libstrongswan/asn1/oid.txt ] || die "strongSwan not found in $SWANDIR"
 

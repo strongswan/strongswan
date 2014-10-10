@@ -25,6 +25,7 @@ HOSTSDIR=$DIR/../hosts
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 [ -f $ROOTIMG ] || die "Root image $ROOTIMG not found"
 [ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"
+running_any $STRONGSWANHOSTS && die "Please stop test environment before running $0"
 
 check_commands partprobe qemu-img qemu-nbd
 
