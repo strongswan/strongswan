@@ -17,6 +17,11 @@ strongswan-5.2.1
 - The new ext-auth plugin calls an external script to implement custom IKE_SA
   authorization logic, courtesy of Vyronas Tsingaras.
 
+- For the vici plugin a ruby gem has been added to allow ruby applications
+  to control or monitor the IKE daemon. The vici documentation has been updated
+  to include a description of the available operations and some simple examples
+  using both the libvici C interface and the ruby gem.
+
 
 strongswan-5.2.0
 ----------------
