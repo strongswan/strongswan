@@ -180,6 +180,7 @@ imcv_tests_SOURCES = \
 	ita/ita_attr_command.c \
 	pa_tnc/pa_tnc_attr_manager.c \
 	seg/seg_env.c seg/seg_contract.c \
+	seg/seg_contract_manager.c \
 	suites/test_imcv_seg.c \
 	ietf/ietf_attr_pa_tnc_error.c \
 	tcg/seg/tcg_seg_attr_seg_env.c \
