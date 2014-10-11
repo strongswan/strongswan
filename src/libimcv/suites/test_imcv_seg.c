@@ -19,6 +19,7 @@
 #include <pa_tnc/pa_tnc_attr.h>
 #include <seg/seg_env.h>
 #include <seg/seg_contract.h>
+#include <seg/seg_contract_manager.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
@@ -627,6 +628,75 @@ START_TEST(test_imcv_seg_contract_invalid)
 }
 END_TEST
 
+START_TEST(test_imcv_seg_contract_mgr)
+{
+	char buf[BUF_LEN];
+	uint32_t max_seg_size = 12, max_attr_size = 100;
+	pen_type_t msg_type1 = { PEN_ITA, PA_SUBTYPE_ITA_TEST };
+	pen_type_t msg_type2 = { PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM };
+	seg_contract_manager_t *contracts;
+	seg_contract_t *cx, *c1, *c2, *c3, *c4;
+
+	contracts = seg_contract_manager_create();
+
+	/* add contract template as issuer */
+	c1 = seg_contract_create(msg_type1, max_attr_size, max_seg_size, 
+							 TRUE, 1, FALSE);
+	c1->get_info_string(c1, buf, BUF_LEN, TRUE);
+
+	contracts->add_contract(contracts, c1);
+		
+	/* received contract request for msg_type1 as responder */
+	cx = contracts->get_contract(contracts, msg_type1, FALSE, 2);
+	ck_assert(cx == NULL);
+
+	/* add directed contract as responder */
+	c2 = seg_contract_create(msg_type1, max_attr_size, max_seg_size, 
+							 FALSE, 2, FALSE);
+	c2->set_responder(c2, 1);
+	c2->get_info_string(c2, buf, BUF_LEN, TRUE);
+	contracts->add_contract(contracts, c2);
+
+	/* retrieve this contract */
+	cx = contracts->get_contract(contracts, msg_type1, FALSE, 2);
+	ck_assert(cx == c2);
+
+	/* received directed contract response as issuer */
+	cx = contracts->get_contract(contracts, msg_type1, TRUE, 3);
+	ck_assert(cx == NULL);
+
+	/* get contract template */
+	cx = contracts->get_contract(contracts, msg_type1, TRUE, TNC_IMCID_ANY);
+	ck_assert(cx == c1);
+
+	/* clone the contract template and as it as a directed contract */
+	c3 = cx->clone(cx);
+	c3->set_responder(c3, 3);
+	c3->get_info_string(c3, buf, BUF_LEN, FALSE);
+	contracts->add_contract(contracts, c3);
+
+	/* retrieve this contract */
+	cx = contracts->get_contract(contracts, msg_type1, TRUE, 3);
+	ck_assert(cx == c3);
+
+	/* received contract request for msg_type2 as responder */
+	cx = contracts->get_contract(contracts, msg_type2, FALSE, 2);
+	ck_assert(cx == NULL);
+
+	/* add directed contract as responder */
+	c4 = seg_contract_create(msg_type2, max_attr_size, max_seg_size, 
+							 FALSE, 2, FALSE);
+	c4->set_responder(c4, 1);
+	contracts->add_contract(contracts, c4);
+
+	/* retrieve this contract */
+	cx = contracts->get_contract(contracts, msg_type2, FALSE, 2);
+	ck_assert(cx == c4);
+
+	contracts->destroy(contracts);
+}
+END_TEST
+
 Suite *imcv_seg_suite_create()
 {
 	Suite *s;
@@ -658,6 +728,10 @@ Suite *imcv_seg_suite_create()
 	tc = tcase_create("contract_invalid");
 	tcase_add_loop_test(tc, test_imcv_seg_contract_invalid, 0,
 						countof(contract_invalid_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("contract_mgr");
+	tcase_add_test(tc, test_imcv_seg_contract_mgr);
 	suite_add_tcase(s, tc);
 
 	return s;
