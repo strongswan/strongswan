@@ -117,7 +117,8 @@ METHOD(imc_msg_t, send_, TNC_Result,
 
 	/* Get IF-M segmentation contract for this subtype if any */
 	contracts = this->state->get_contracts(this->state);
-	contract = contracts->get_contract(contracts, this->msg_type, FALSE);
+	contract = contracts->get_contract(contracts, this->msg_type,
+									   FALSE, this->dst_id);
 
 	while (this->attr_list->get_count(this->attr_list))
 	{
@@ -287,6 +288,10 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			return TNC_RESULT_FATAL;
 	}
 
+	/* determine target IMC ID */
+	target_imc_id = (this->dst_id != TNC_IMCID_ANY) ?
+					 this->dst_id : this->agent->get_id(this->agent);
+
 	/* process any IF-M segmentation contracts */
 	enumerator = this->pa_msg->create_attribute_enumerator(this->pa_msg);
 	while (enumerator->enumerate(enumerator, &attr))
@@ -316,7 +321,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				attr_cast->get_attr_size(attr_cast, &max_attr_size,
 													&max_seg_size);
 				contract = contracts->get_contract(contracts, this->msg_type,
-															  FALSE);
+												   FALSE, this->src_id);
 				if (contract)
 				{
 					contract->set_max_size(contract, max_attr_size,
@@ -326,6 +331,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				{
 					contract = seg_contract_create(this->msg_type, max_attr_size,
 									max_seg_size, FALSE, this->src_id, TRUE);
+					contract->set_responder(contract, target_imc_id);
 					contracts->add_contract(contracts, contract);
 				}
 				contract->get_info_string(contract, buf, BUF_LEN, TRUE);
@@ -364,7 +370,18 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				attr_cast->get_attr_size(attr_cast, &max_attr_size,
 													&max_seg_size);
 				contract = contracts->get_contract(contracts, this->msg_type,
-															  TRUE);
+												   TRUE, this->src_id);
+				if (!contract)
+				{
+					contract = contracts->get_contract(contracts, this->msg_type,
+													   TRUE, TNC_IMCID_ANY);
+					if (contract)
+					{
+						contract = contract->clone(contract);
+						contract->set_responder(contract, this->src_id);
+						contracts->add_contract(contracts, contract);
+					}
+				}
 				if (contract)
 				{
 					contract->get_max_size(contract, &my_max_attr_size,
@@ -397,7 +414,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				base_attr_id = seg_env_attr->get_base_attr_id(seg_env_attr);
 
 				contract = contracts->get_contract(contracts, this->msg_type,
-															  TRUE);
+												   TRUE, this->src_id);
 				if (!contract)
 				{
 					DBG2(DBG_IMC, "no contract for received attribute segment "
@@ -430,7 +447,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				base_attr_id = attr_cast->get_base_attr_id(attr_cast);
 
 				contract = contracts->get_contract(contracts, this->msg_type,
-															  FALSE);
+												   FALSE, this->src_id);
 				if (!contract)
 				{
 					/* TODO no contract - generate error message */
@@ -456,10 +473,6 @@ METHOD(imc_msg_t, receive, TNC_Result,
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	/* determine target IMC ID */
-	target_imc_id = (this->dst_id != TNC_IMCID_ANY) ?
-					 this->dst_id : this->agent->get_id(this->agent);
 
 	/* preprocess any received IETF standard error attributes */
 	non_fatal_types = this->agent->get_non_fatal_attr_types(this->agent);

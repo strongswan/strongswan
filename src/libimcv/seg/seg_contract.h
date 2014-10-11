@@ -118,6 +118,34 @@ struct seg_contract_t {
 	bool (*is_null)(seg_contract_t *this);
 
 	/**
+	 * Set the responder ID
+	 *
+	 * @param responder		IMC or IMV ID of responder
+	 */
+	void (*set_responder)(seg_contract_t *this, TNC_UInt32 responder);
+
+	/**
+	 * Get the responder ID
+	 *
+	 * @return				IMC or IMV ID of responder
+	 */
+	TNC_UInt32 (*get_responder)(seg_contract_t *this);
+
+	/**
+	 * Get the issuer ID
+	 *
+	 * @return				IMC or IMV ID of issuer
+	 */
+	TNC_UInt32 (*get_issuer)(seg_contract_t *this);
+
+	/**
+	 * Clone a contract
+	 *
+	 * @return				Cloned contract
+	 */
+	seg_contract_t* (*clone)(seg_contract_t *this);
+
+	/**
 	 * Get an info string about the contract
 	 *
 	 * @param buf			String buffer of at least size len

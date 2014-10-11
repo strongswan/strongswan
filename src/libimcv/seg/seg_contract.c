@@ -72,9 +72,14 @@ struct private_seg_contract_t {
 	bool is_issuer;
 
 	/**
-	 * Issuer ID (either IMV ID or IMC ID)
+	 * Issuer ID (either IMV or IMC ID)
 	 */
 	TNC_UInt32 issuer_id;
+
+	/**
+	 * Responder ID (either IMC or IMV ID)
+	 */
+	TNC_UInt32 responder_id;
 
 	/**
 	 * IMC/IMV role
@@ -290,6 +295,36 @@ METHOD(seg_contract_t, is_null, bool,
 	return this->is_null;
 }
 
+METHOD(seg_contract_t, set_responder, void,
+	private_seg_contract_t *this, TNC_UInt32 responder_id)
+{
+	this->responder_id = responder_id;
+}
+
+METHOD(seg_contract_t, get_responder, TNC_UInt32,
+	private_seg_contract_t *this)
+{
+	return this->responder_id;
+}
+
+METHOD(seg_contract_t, get_issuer, TNC_UInt32,
+	private_seg_contract_t *this)
+{
+	return this->issuer_id;
+}
+
+METHOD(seg_contract_t, clone_, seg_contract_t*,
+	private_seg_contract_t *this)
+{
+	private_seg_contract_t *clone;
+
+	clone = malloc_thing(private_seg_contract_t);
+	memcpy(clone, this, sizeof(private_seg_contract_t));
+	clone->seg_envs = linked_list_create();
+
+	return &clone->public;
+}
+
 METHOD(seg_contract_t, get_info_string, void,
 	private_seg_contract_t *this, char *buf, size_t len, bool request)
 {
@@ -308,7 +343,10 @@ METHOD(seg_contract_t, get_info_string, void,
 	}
 	else
 	{
-		written = snprintf(pos, len, "received");
+		written = snprintf(pos, len, "%s %d received",
+						   this->is_imc ? "IMC" : "IMV",
+						   this->is_issuer ? this->issuer_id :
+											 this->responder_id);
 	}
 	if (written < 0 || written > len)
 	{
@@ -318,7 +356,8 @@ METHOD(seg_contract_t, get_info_string, void,
 	len -= written;
 
 	written = snprintf(pos, len, " a %ssegmentation contract%s ",
-					   this->is_null ? "null" : "", request ? "" : " response");
+					   this->is_null ? "null" : "", request ?
+					  (this->is_issuer ? "" : " request") : " response");
 	if (written < 0 || written > len)
 	{
 		return;
@@ -326,10 +365,13 @@ METHOD(seg_contract_t, get_info_string, void,
 	pos += written;
 	len -= written;
 
-	if (!this->is_issuer && this->issuer_id != TNC_IMVID_ANY)
+	if ((!this->is_issuer && this->issuer_id != TNC_IMVID_ANY) ||
+		( this->is_issuer && this->responder_id != TNC_IMVID_ANY))
 	{
 		written = snprintf(pos, len, "from %s %d ",
-						   this->is_imc ? "IMV" : "IMC", this->issuer_id);
+						   this->is_imc ? "IMV" : "IMC",
+						   this->is_issuer ? this->responder_id :
+											 this->issuer_id);
 		if (written < 0 || written > len)
 		{
 			return;
@@ -413,6 +455,10 @@ seg_contract_t *seg_contract_create(pen_type_t msg_type,
 			.add_segment = _add_segment,
 			.is_issuer = _is_issuer,
 			.is_null = _is_null,
+			.set_responder = _set_responder,
+			.get_responder = _get_responder,
+			.get_issuer = _get_issuer,
+			.clone = _clone_,
 			.get_info_string = _get_info_string,
 			.destroy = _destroy,
 		},
@@ -422,6 +468,7 @@ seg_contract_t *seg_contract_create(pen_type_t msg_type,
 		.seg_envs = linked_list_create(),
 		.is_issuer = is_issuer,
 		.issuer_id = issuer_id,
+		.responder_id = is_imc ? TNC_IMVID_ANY : TNC_IMCID_ANY,
 		.is_imc = is_imc,
 		.is_null = max_attr_size == SEG_CONTRACT_MAX_SIZE_VALUE &&
 				   max_seg_size  == SEG_CONTRACT_MAX_SIZE_VALUE,

@@ -43,9 +43,11 @@ struct seg_contract_manager_t {
 	 *
 	 * @param msg_type			PA-TNC message type governed by contract
 	 * @param is_issuer			If TRUE get only issuer contracts
+	 * @param id				Match either issuer or responder ID
 	 */
 	seg_contract_t* (*get_contract)(seg_contract_manager_t *this,
-									pen_type_t msg_type, bool is_issuer);
+									pen_type_t msg_type, bool is_issuer,
+									TNC_UInt32 id);
 
 	/**
 	 * Destroys a seg_contract_manager_t object.

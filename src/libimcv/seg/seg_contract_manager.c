@@ -42,7 +42,8 @@ METHOD(seg_contract_manager_t, add_contract, void,
 }
 
 METHOD(seg_contract_manager_t, get_contract, seg_contract_t*,
-	private_seg_contract_manager_t *this, pen_type_t msg_type, bool is_issuer)
+	private_seg_contract_manager_t *this, pen_type_t msg_type, bool is_issuer,
+	TNC_UInt32 id)
 {
 	enumerator_t *enumerator;
 	seg_contract_t *contract, *found = NULL;
@@ -51,7 +52,9 @@ METHOD(seg_contract_manager_t, get_contract, seg_contract_t*,
 	while (enumerator->enumerate(enumerator, &contract))
 	{
 		if (contract->is_issuer(contract) == is_issuer &&
-			pen_type_equals(contract->get_msg_type(contract), msg_type))
+			pen_type_equals(contract->get_msg_type(contract), msg_type) &&
+			id == (is_issuer ? contract->get_responder(contract) :
+							   contract->get_issuer(contract)))
 		{
 			found = contract;
 			break;
