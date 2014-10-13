@@ -1,7 +1,6 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libpts \
 	-DIPSEC_SCRIPT=\"${ipsec_script}\"
 
 ipseclib_LTLIBRARIES = libimcv.la
