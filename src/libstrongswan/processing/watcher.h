@@ -101,7 +101,7 @@ struct watcher_t {
 	/**
 	 * Get the current watcher state
 	 *
-	 * @reutrn			currently active watcher state
+	 * @return			currently active watcher state
 	 */
 	watcher_state_t (*get_state)(watcher_t *this);
 
