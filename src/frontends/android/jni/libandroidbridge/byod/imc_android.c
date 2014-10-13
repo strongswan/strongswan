@@ -504,13 +504,15 @@ static TNC_Result receive_message(imc_android_state_t *state, imc_msg_t *in_msg)
 	TNC_Result result;
 	bool fatal_error = FALSE;
 
+	out_msg = imc_msg_create_as_reply(in_msg);
+
 	/* parse received PA-TNC message and handle local and remote errors */
-	result = in_msg->receive(in_msg, &fatal_error);
+	result = in_msg->receive(in_msg, out_msg, &fatal_error);
 	if (result != TNC_RESULT_SUCCESS)
 	{
+		out_msg->destroy(out_msg);
 		return result;
 	}
-	out_msg = imc_msg_create_as_reply(in_msg);
 
 	/* analyze PA-TNC attributes */
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
