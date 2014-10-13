@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 	}
 	if (!lookup_uid_gid())
 	{
-		sd_notifyf(0, "STATUS=unkown uid/gid");
+		sd_notifyf(0, "STATUS=unknown uid/gid");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
 	charon->load_loggers(charon, NULL, FALSE);
