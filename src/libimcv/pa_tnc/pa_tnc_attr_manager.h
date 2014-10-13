@@ -77,6 +77,17 @@ struct pa_tnc_attr_manager_t {
 							 pa_tnc_attr_t **error);
 
 	/**
+	 * Generically construct a PA-TNC attribute from type and data
+	 *
+	 * @param vendor_id		Private Enterprise Number (PEN)
+	 * @param type			PA-TNC attribute type
+	 * @param value			PA-TNC attribute value as encoded data
+	 * @return				PA-TNC attribute object if supported, NULL else
+	 */
+	pa_tnc_attr_t* (*construct)(pa_tnc_attr_manager_t *this, pen_t vendor_id,
+								uint32_t type, chunk_t value);
+
+	/**
 	 * Destroys a pa_tnc_attr_manager_t object.
 	 */
 	void (*destroy)(pa_tnc_attr_manager_t *this);

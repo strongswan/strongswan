@@ -236,6 +236,45 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 	return attr;
 }
 
+METHOD(pa_tnc_attr_manager_t, construct, pa_tnc_attr_t*,
+	private_pa_tnc_attr_manager_t *this, pen_t vendor_id, uint32_t type,
+	chunk_t value)
+{
+	enum_name_t *pa_attr_names;
+	pa_tnc_attr_t *attr = NULL;
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  vendor_id);
+	if (pa_attr_names)
+	{
+		DBG2(DBG_TNC, "generating PA-TNC attribute type '%N/%N' "
+					  "0x%06x/0x%08x", pen_names, vendor_id,
+					   pa_attr_names, type, vendor_id, type);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "generating PA-TNC attribute type '%N' "
+					  "0x%06x/0x%08x", pen_names, vendor_id,
+					   vendor_id, type);
+	}
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->vendor_id == vendor_id)
+		{
+			if (entry->attr_create)
+			{
+				attr = entry->attr_create(type, value.len, value);
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return attr;
+}
+
 METHOD(pa_tnc_attr_manager_t, destroy, void,
 	private_pa_tnc_attr_manager_t *this)
 {
@@ -256,6 +295,7 @@ pa_tnc_attr_manager_t *pa_tnc_attr_manager_create(void)
 			.remove_vendor = _remove_vendor,
 			.get_names = _get_names,
 			.create = _create,
+			.construct = _construct,
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),
