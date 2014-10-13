@@ -32,6 +32,10 @@
 #include <syslog.h>
 #endif
 
+#ifndef IPSEC_SCRIPT
+#define IPSEC_SCRIPT "ipsec"
+#endif
+
 #define IMCV_DEBUG_LEVEL			1
 #define IMCV_DEFAULT_POLICY_SCRIPT	IPSEC_SCRIPT " _imv_policy"
 
