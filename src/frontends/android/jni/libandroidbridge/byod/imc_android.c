@@ -250,9 +250,8 @@ static pa_tnc_attr_t *get_measurement(pen_type_t attr_type, enumerator_t *args)
 	{
 		goto failed;
 	}
-	attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
-										  attr_type.vendor_id, attr_type.type,
-										  data);
+	attr = imcv_pa_tnc_attributes->construct(imcv_pa_tnc_attributes,
+									attr_type.vendor_id, attr_type.type, data);
 	(*env)->ReleaseByteArrayElements(env, jmeasurement, data.ptr, JNI_ABORT);
 	androidjni_detach_thread();
 	return attr;
