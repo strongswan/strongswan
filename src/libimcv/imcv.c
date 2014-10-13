@@ -33,7 +33,7 @@
 #endif
 
 #define IMCV_DEBUG_LEVEL			1
-#define IMCV_DEFAULT_POLICY_SCRIPT	"ipsec _imv_policy"
+#define IMCV_DEFAULT_POLICY_SCRIPT	IPSEC_SCRIPT " _imv_policy"
 
 
 /**
