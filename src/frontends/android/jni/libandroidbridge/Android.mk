@@ -34,7 +34,6 @@ LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/libimcv \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libtnccs \
-	$(strongswan_PATH)/src/libpts \
 	$(strongswan_PATH)/src/libtls
 endif
 
@@ -58,7 +57,7 @@ LOCAL_LDLIBS := -llog
 LOCAL_SHARED_LIBRARIES := libstrongswan libhydra libipsec libcharon
 
 ifneq ($(strongswan_USE_BYOD),)
-LOCAL_SHARED_LIBRARIES += libimcv libtncif libtnccs libpts
+LOCAL_SHARED_LIBRARIES += libimcv libtncif libtnccs
 endif
 
 include $(BUILD_SHARED_LIBRARY)

@@ -21,7 +21,6 @@
 #include "../charonservice.h"
 
 #include <tnc/tnc.h>
-#include <libpts.h>
 #include <imcv.h>
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
@@ -89,8 +88,6 @@ static TNC_Result tnc_imc_initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-
-	libpts_init();
 
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
@@ -643,7 +640,6 @@ static TNC_Result tnc_imc_terminate(TNC_IMCID imc_id)
 	}
 	imc_android->destroy(imc_android);
 	imc_android = NULL;
-	libpts_deinit();
 	return TNC_RESULT_SUCCESS;
 }
 

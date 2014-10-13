@@ -77,8 +77,7 @@ ifneq ($(strongswan_USE_BYOD),)
 strongswan_BUILD += \
 	strongswan/src/libtnccs \
 	strongswan/src/libtncif \
-	strongswan/src/libimcv \
-	strongswan/src/libpts
+	strongswan/src/libimcv
 endif
 
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
