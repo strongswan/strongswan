@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_attr tcg_attr
- * @{ @ingroup libpts
+ * @{ @ingroup libimcv
  */
 
 #ifndef TCG_ATTR_H_

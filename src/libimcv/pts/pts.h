@@ -16,7 +16,7 @@
 
 /**
  * @defgroup pts pts
- * @{ @ingroup libpts
+ * @{ @ingroup libimcv
  */
 
 #ifndef PTS_H_

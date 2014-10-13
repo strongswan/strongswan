@@ -15,7 +15,7 @@
 
 /**
  * @defgroup swid_tag swid_tag
- * @{ @ingroup swid
+ * @{ @ingroup libimcv_swid
  */
 
 #ifndef SWID_TAG_H_

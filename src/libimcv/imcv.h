@@ -27,6 +27,12 @@
  * @defgroup libimcv_plugins plugins
  * @ingroup libimcv
  *
+ * @defgroup libimcv_seg seg
+ * @ingroup libimcv
+ *
+ * @defgroup libimcv_swid swid
+ * @ingroup libimcv
+ *
  * @addtogroup libimcv
  * @{
  */

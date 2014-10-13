@@ -15,7 +15,7 @@
 
 /**
  * @defgroup swid_inventory swid_inventory
- * @{ @ingroup pts
+ * @{ @ingroup libimcv_swid
  */
 
 #ifndef SWID_INVENTORY_H_

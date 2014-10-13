@@ -15,7 +15,7 @@
 
 /**
  * @defgroup attest_db_t attest_db
- * @{ @ingroup libpts
+ * @{ @ingroup libimcv
  */
 
 #ifndef ATTEST_DB_H_

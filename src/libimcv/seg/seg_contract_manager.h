@@ -15,7 +15,7 @@
 
 /**
  * @defgroup seg_contract_manager seg_contract_manager
- * @{ @ingroup libimcv
+ * @{ @ingroup libimcv_seg
  */
 
 #ifndef SEG_CONTRACT_MANAGER_H_

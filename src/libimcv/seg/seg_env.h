@@ -15,7 +15,7 @@
 
 /**
  * @defgroup seg_env seg_env
- * @{ @ingroup libimcv
+ * @{ @ingroup libimcv_seg
  */
 
 #ifndef SEG_ENV_H_

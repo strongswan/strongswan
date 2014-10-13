@@ -15,7 +15,7 @@
 
 /**
  * @defgroup imc_os_info imc_os_info
- * @{ @ingroup libimcv
+ * @{ @ingroup libimcv_imc
  */
 
 #ifndef IMC_OS_INFO_H_

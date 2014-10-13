@@ -15,7 +15,7 @@
 
 /**
  * @defgroup seg_contract seg_contract
- * @{ @ingroup libimcv
+ * @{ @ingroup libimcv_seg
  */
 
 #ifndef SEG_CONTRACT_H_
@@ -106,7 +106,7 @@ struct seg_contract_t {
 	 * Get contract role
 	 *
 	 * @return				TRUE:  contracting party (issuer),
-	 *						FALSE: contracted party 
+	 *						FALSE: contracted party
 	 */
 	bool (*is_issuer)(seg_contract_t *this);
 
@@ -162,7 +162,7 @@ struct seg_contract_t {
 };
 
 /**
- * Create a PA-TNC attribute segmentation contract 
+ * Create a PA-TNC attribute segmentation contract
  *
  * @param msg_type			PA-TNC message type
  * @param max_attr_size		Maximum PA-TNC attribute size in octets

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup swid_error swid_error
- * @{ @ingroup swid
+ * @{ @ingroup libimcv_swid
  */
 
 #ifndef SWID_ERROR_H_
