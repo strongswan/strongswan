@@ -58,6 +58,7 @@ win*)
 			--enable-constraints --enable-revocation --enable-pem --enable-pkcs1
 			--enable-pkcs8 --enable-x509 --enable-pubkey --enable-acert
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
+			--enable-updown --enable-ext-auth
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
 			--enable-pki --enable-swanctl --enable-socket-win"
