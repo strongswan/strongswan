@@ -875,6 +875,8 @@ static void process_link(private_kernel_pfroute_net_t *this,
 	}
 }
 
+#ifdef HAVE_RTM_IFANNOUNCE
+
 /**
  * Process an RTM_IFANNOUNCE message from the kernel
  */
@@ -906,6 +908,8 @@ static void process_announce(private_kernel_pfroute_net_t *this,
 	this->lock->unlock(this->lock);
 }
 
+#endif /* HAVE_RTM_IFANNOUNCE */
+
 /**
  * Process an RTM_*ROUTE message from the kernel
  */
@@ -926,7 +930,9 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 			struct rt_msghdr rtm;
 			struct if_msghdr ifm;
 			struct ifa_msghdr ifam;
+#ifdef HAVE_RTM_IFANNOUNCE
 			struct if_announcemsghdr ifanm;
+#endif
 		};
 		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
 	} msg;
@@ -967,9 +973,11 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 		case RTM_IFINFO:
 			hdrlen = sizeof(msg.ifm);
 			break;
+#ifdef HAVE_RTM_IFANNOUNCE
 		case RTM_IFANNOUNCE:
 			hdrlen = sizeof(msg.ifanm);
 			break;
+#endif /* HAVE_RTM_IFANNOUNCE */
 		case RTM_ADD:
 		case RTM_DELETE:
 		case RTM_GET:
@@ -992,9 +1000,11 @@ static bool receive_events(private_kernel_pfroute_net_t *this, int fd,
 		case RTM_IFINFO:
 			process_link(this, &msg.ifm);
 			break;
+#ifdef HAVE_RTM_IFANNOUNCE
 		case RTM_IFANNOUNCE:
 			process_announce(this, &msg.ifanm);
 			break;
+#endif /* HAVE_RTM_IFANNOUNCE */
 		case RTM_ADD:
 		case RTM_DELETE:
 			process_route(this, &msg.rtm);

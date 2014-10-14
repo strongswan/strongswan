@@ -629,6 +629,18 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([no])]
 )
 
+AC_MSG_CHECKING([for RTM_IFANNOUNCE])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/socket.h>
+		  #include <net/if.h>
+		  #include <net/route.h>]],
+		[[return RTM_IFANNOUNCE;]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_RTM_IFANNOUNCE], [], [have PF_ROUTE RTM_IFANNOUNCE defined])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_MSG_CHECKING([for IPSEC_MODE_BEET])
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM(
