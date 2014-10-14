@@ -65,11 +65,14 @@ static char keydata[] = {
 };
 
 /**
- * Issue a certificate with given certificate policy and flags
+ * Issue a certificate fr given policy, including extended flags
  */
-static certificate_t* create_cert(certificate_t *ca, char *subject,
-								  char *oid, x509_flag_t flags,
-								  char *map_s, char *map_i)
+static certificate_t* create_cert_ext(certificate_t *ca, char *subject,
+									  char *oid, x509_flag_t flags,
+									  char *map_s, char *map_i,
+									  u_int require_explicit,
+									  u_int inhibit_mapping,
+									  u_int inhibit_any)
 {
 	private_key_t *privkey;
 	public_key_t *pubkey;
@@ -110,6 +113,9 @@ static certificate_t* create_cert(certificate_t *ca, char *subject,
 						BUILD_CERTIFICATE_POLICIES, policies,
 						BUILD_POLICY_MAPPINGS, maps,
 						BUILD_SIGNING_CERT, ca,
+						BUILD_POLICY_REQUIRE_EXPLICIT, require_explicit,
+						BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
+						BUILD_POLICY_INHIBIT_ANY, inhibit_any,
 						BUILD_END);
 	ck_assert(cert);
 	id->destroy(id);
@@ -122,6 +128,18 @@ static certificate_t* create_cert(certificate_t *ca, char *subject,
 	free(map.issuer.ptr);
 
 	return cert;
+}
+
+/**
+ * Issue a certificate with given certificate policy and flags
+ */
+static certificate_t* create_cert(certificate_t *ca, char *subject,
+								  char *oid, x509_flag_t flags,
+								  char *map_s, char *map_i)
+{
+	return create_cert_ext(ca, subject, oid, flags, map_s, map_i,
+						   X509_NO_CONSTRAINT, X509_NO_CONSTRAINT,
+						   X509_NO_CONSTRAINT);
 }
 
 /**
@@ -159,6 +177,23 @@ static bool check_oid(identification_t *subject, char *oid)
 	certs->destroy(certs);
 
 	return found;
+}
+
+/**
+ * Check if a certificate with given subject has a valid trustchain
+ */
+static bool check_trust(identification_t *subject)
+{
+	enumerator_t *certs;
+	certificate_t *cert;
+	bool trusted;
+
+	certs = lib->credmgr->create_trusted_enumerator(lib->credmgr, KEY_ANY,
+													subject, FALSE);
+	trusted = certs->enumerate(certs, &cert, NULL);
+	certs->destroy(certs);
+
+	return trusted;
 }
 
 static mem_cred_t *creds;
@@ -424,6 +459,44 @@ START_TEST(test_invalid_mapping_nopolicy)
 }
 END_TEST
 
+START_TEST(test_inhibit_mapping_good)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", extended, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, 1, X509_NO_CONSTRAINT);
+	im = create_cert(ca, "CN=IM", extended, X509_CA, baseline, extended);
+	sj = create_cert(im, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_mapping_bad)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", extended, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, 1, X509_NO_CONSTRAINT);
+	i1 = create_cert(ca, "CN=IM1", extended, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, baseline, extended);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* TODO: we currently reject the certificate completely, but should
+	 * actually just invalidate the policy not mapped properly */
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
 Suite *certpolicy_suite_create()
 {
 	Suite *s;
@@ -464,6 +537,12 @@ Suite *certpolicy_suite_create()
 	tcase_add_test(tc, test_invalid_mapping_loop);
 	tcase_add_test(tc, test_invalid_mapping_notallowed);
 	tcase_add_test(tc, test_invalid_mapping_nopolicy);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("inhibit policy mapping");
+	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_test(tc, test_inhibit_mapping_good);
+	tcase_add_test(tc, test_inhibit_mapping_bad);
 	suite_add_tcase(s, tc);
 
 	return s;
