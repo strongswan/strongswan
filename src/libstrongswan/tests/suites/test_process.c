@@ -28,7 +28,9 @@ START_TEST(test_retval_true)
 		"/C",
 		"exit 0",
 #else
-		"/bin/true",
+		"/bin/sh",
+		"-c",
+		"true",
 #endif
 		NULL
 	};
@@ -50,7 +52,9 @@ START_TEST(test_retval_false)
 		"/C",
 		"exit 1",
 #else
-		"/bin/false",
+		"/bin/sh",
+		"-c",
+		"false",
 #endif
 		NULL
 	};
@@ -84,7 +88,9 @@ START_TEST(test_echo)
 #ifdef WIN32
 		"C:\\Windows\\system32\\more.com",
 #else
-		"/bin/cat",
+		"/bin/sh",
+		"-c",
+		"cat",
 #endif
 		NULL
 	};
@@ -117,7 +123,7 @@ START_TEST(test_echo_err)
 #else
 		"/bin/sh",
 		"-c",
-		"1>&2 /bin/cat",
+		"1>&2 cat",
 #endif
 		NULL
 	};
