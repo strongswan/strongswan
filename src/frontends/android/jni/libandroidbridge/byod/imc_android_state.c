@@ -63,6 +63,11 @@ struct private_imc_android_state_t {
 	u_int32_t max_msg_len;
 
 	/**
+	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
+	 */
+	seg_contract_manager_t *contracts;
+
+	/**
 	 * TCG Platform Trust Service (PTS)
 	 */
 	pts_t *pts;
@@ -105,6 +110,12 @@ METHOD(imc_state_t, get_max_msg_len, u_int32_t,
 	return this->max_msg_len;
 }
 
+METHOD(imc_state_t, get_contracts, seg_contract_manager_t*,
+	private_imc_android_state_t *this)
+{
+	return this->contracts;
+}
+
 METHOD(imc_state_t, change_state, void,
 	private_imc_android_state_t *this, TNC_ConnectionState new_state)
 {
@@ -130,6 +141,7 @@ METHOD(imc_state_t, get_result, bool,
 METHOD(imc_state_t, destroy, void,
 	private_imc_android_state_t *this)
 {
+	this->contracts->destroy(this->contracts);
 	this->pts->destroy(this->pts);
 	free(this);
 }
@@ -156,6 +168,7 @@ imc_state_t *imc_android_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
+				.get_contracts = _get_contracts,
 				.change_state = _change_state,
 				.set_result = _set_result,
 				.get_result = _get_result,
@@ -166,6 +179,7 @@ imc_state_t *imc_android_state_create(TNC_ConnectionID connection_id)
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.result = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.contracts = seg_contract_manager_create(),
 		.pts = pts_create(TRUE),
 	);
 
