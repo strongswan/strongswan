@@ -1,3 +1,5 @@
+EXTRA_DIST = vici.gemspec.in lib/vici.rb
+
 vici.gemspec: $(srcdir)/vici.gemspec.in
 	$(AM_V_GEN) sed \
 	-e "s:@GEM_VERSION@:$(PACKAGE_VERSION):" \
