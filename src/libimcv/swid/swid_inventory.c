@@ -60,28 +60,25 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 	swid_tag_t *tag;
 	bio_writer_t *writer;
 	chunk_t tag_encoding, tag_file_path = chunk_empty;
-	bool more_tags = TRUE, last_newline, end_of_tag;
+	bool more_tags = TRUE, last_newline;
 	char line[8192];
 	size_t len;
 
 	while (more_tags)
 	{
 		last_newline = TRUE;
-		end_of_tag = FALSE;
 		writer = bio_writer_create(512);
-		do
+		while (TRUE)
 		{
 			if (!fgets(line, sizeof(line), file))
 			{
 				more_tags = FALSE;
-				end_of_tag = TRUE;
 				break;
 			}
 			len = strlen(line);
 
 			if (last_newline && line[0] == '\n')
 			{
-				end_of_tag = TRUE;
 				break;
 			}
 			else
@@ -90,7 +87,6 @@ static status_t read_swid_tags(private_swid_inventory_t *this, FILE *file)
 				writer->write_data(writer, chunk_create(line, len));
 			}
 		}
-		while (!end_of_tag);
 
 		tag_encoding = writer->get_buf(writer);
 
