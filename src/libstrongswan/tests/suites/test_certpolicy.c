@@ -497,6 +497,44 @@ START_TEST(test_inhibit_mapping_bad)
 }
 END_TEST
 
+START_TEST(test_inhibit_any_good)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, X509_NO_CONSTRAINT, 1);
+	im = create_cert(ca, "CN=IM", anyPolicy, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_any_bad)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, X509_NO_CONSTRAINT, 1);
+	i1 = create_cert(ca, "CN=IM1", anyPolicy, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", anyPolicy, X509_CA, NULL, NULL);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* TODO: we currently reject the certificate completely, but should
+	 * actually just invalidate the policy relying on inhibited anyPolicy */
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
 Suite *certpolicy_suite_create()
 {
 	Suite *s;
@@ -543,6 +581,12 @@ Suite *certpolicy_suite_create()
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_test(tc, test_inhibit_mapping_good);
 	tcase_add_test(tc, test_inhibit_mapping_bad);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("inhibit any policy");
+	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_test(tc, test_inhibit_any_good);
+	tcase_add_test(tc, test_inhibit_any_bad);
 	suite_add_tcase(s, tc);
 
 	return s;
