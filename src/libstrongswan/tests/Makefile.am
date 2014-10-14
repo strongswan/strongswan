@@ -41,6 +41,7 @@ tests_SOURCES = tests.h tests.c \
   suites/test_ecdsa.c \
   suites/test_rsa.c \
   suites/test_certpolicy.c \
+  suites/test_certnames.c \
   suites/test_host.c \
   suites/test_hasher.c \
   suites/test_crypter.c \
