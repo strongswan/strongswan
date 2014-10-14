@@ -535,6 +535,44 @@ START_TEST(test_inhibit_any_bad)
 }
 END_TEST
 
+START_TEST(test_require_explicit_good)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 1, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_require_explicit_bad)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 1, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	i1 = create_cert(ca, "CN=IM1", extended, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, NULL, NULL);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* TODO: we currently reject the certificate completely, but should
+	 * actually just invalidate the policy violating requireExplicit */
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
 Suite *certpolicy_suite_create()
 {
 	Suite *s;
@@ -587,6 +625,12 @@ Suite *certpolicy_suite_create()
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_test(tc, test_inhibit_any_good);
 	tcase_add_test(tc, test_inhibit_any_bad);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("require explicit policy");
+	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_test(tc, test_require_explicit_good);
+	tcase_add_test(tc, test_require_explicit_bad);
 	suite_add_tcase(s, tc);
 
 	return s;
