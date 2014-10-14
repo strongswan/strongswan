@@ -355,6 +355,10 @@ METHOD(vici_message_t, vget_int, int,
 	found = find_value(this, &value, fmt, args);
 	if (found)
 	{
+		if (value.len == 0)
+		{
+			return def;
+		}
 		if (chunk_printable(value, NULL, 0))
 		{
 			snprintf(buf, sizeof(buf), "%.*s", (int)value.len, value.ptr);

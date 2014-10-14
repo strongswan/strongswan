@@ -347,7 +347,7 @@ START_TEST(test_get_int)
 	ck_assert_int_eq(m->get_int(m, 2, "section1.key2"), 0x12);
 	ck_assert_int_eq(m->get_int(m, 2, "section1.section2.key3"), -1);
 	ck_assert_int_eq(m->get_int(m, 2, "section1.key4"), 2);
-	ck_assert_int_eq(m->get_int(m, 2, "key5"), 0);
+	ck_assert_int_eq(m->get_int(m, 2, "key5"), 2);
 	ck_assert_int_eq(m->get_int(m, 2, "nonexistent"), 2);
 	ck_assert_int_eq(m->get_int(m, 2, "n.o.n.e.x.i.s.t.e.n.t"), 2);
 
