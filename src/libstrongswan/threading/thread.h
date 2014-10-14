@@ -189,4 +189,32 @@ void threads_init();
  */
 void threads_deinit();
 
+
+#ifdef __APPLE__
+
+/*
+ * While select() is a cancellation point, it seems that OS X does not honor
+ * pending cancellation points when entering the function. We manually test for
+ * and honor pending cancellation requests, but this obviously can't prevent
+ * some race conditions where the the cancellation happens after the check,
+ * but before the select.
+ */
+static inline int precancellable_select(int nfds, fd_set *restrict readfds,
+						fd_set *restrict writefds, fd_set *restrict errorfds,
+						struct timeval *restrict timeout)
+{
+	if (thread_cancelability(TRUE))
+	{
+		thread_cancellation_point();
+	}
+	else
+	{
+		thread_cancelability(FALSE);
+	}
+	return select(nfds, readfds, writefds, errorfds, timeout);
+}
+#define select precancellable_select
+
+#endif /* __APPLE__ */
+
 #endif /** THREADING_THREAD_H_ @} */
