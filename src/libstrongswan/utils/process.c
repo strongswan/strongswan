@@ -40,6 +40,7 @@ enum {
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 /**
  * Private data of an process_t object.
