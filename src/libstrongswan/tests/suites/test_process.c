@@ -156,7 +156,7 @@ START_TEST(test_env)
 #else
 		"/bin/sh",
 		"-c",
-		"echo -n $A $B",
+		"/bin/echo -n $A $B",
 #endif
 		NULL
 	};
