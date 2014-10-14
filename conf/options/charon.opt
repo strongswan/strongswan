@@ -86,9 +86,10 @@ charon.flush_auth_cfg = no
 	certificates.
 
 charon.fragment_size = 0
-	Maximum size (complete IP datagram size in bytes) of a sent fragment when
-	using the proprietary IKEv1	fragmentation extension (0 for address family
-	specific default values). If specified this limit is used for IPv4 and IPv6.
+	Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
+	when using proprietary IKEv1 or standardized IKEv2 fragmentation (0 for
+	address family specific	default values). If specified this limit is used
+	for both IPv4 and IPv6.
 
 charon.group
 	Name of the group the daemon changes to after startup.
