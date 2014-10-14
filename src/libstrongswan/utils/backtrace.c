@@ -319,6 +319,7 @@ static bfd_entry_t *get_bfd_entry(char *filename)
 			if (size == 0)
 			{
 				size = bfd_get_dynamic_symtab_upper_bound(entry->abfd);
+				dynamic = TRUE;
 			}
 			if (size >= 0)
 			{
