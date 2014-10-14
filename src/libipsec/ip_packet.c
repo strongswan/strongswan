@@ -247,7 +247,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			}
 			ip = (struct ip6_hdr*)packet.ptr;
 			/* remove any RFC 4303 TFC extra padding */
-			packet.len = min(packet.len, untoh16(&ip->ip6_plen));
+			packet.len = min(packet.len, 40 + untoh16(&ip->ip6_plen));
 			/* we only handle packets without extension headers, just skip the
 			 * basic IPv6 header */
 			payload = chunk_skip(packet, 40);
