@@ -45,12 +45,11 @@ struct ipsec_sa_mgr_t {
 	 * @param src			source address of the SA
 	 * @param dst			destination address of the SA
 	 * @param protocol		protocol of the SA (only ESP supported)
-	 * @param reqid			reqid for the SA
 	 * @param spi			the allocated SPI
 	 * @return				SUCCESS of operation successful
 	 */
 	status_t (*get_spi)(ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
-						u_int8_t protocol, u_int32_t reqid, u_int32_t *spi);
+						u_int8_t protocol, u_int32_t *spi);
 
 	/**
 	 * Add a new SA

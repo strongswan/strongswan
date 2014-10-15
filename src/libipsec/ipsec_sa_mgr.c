@@ -396,11 +396,9 @@ static bool allocate_spi(private_ipsec_sa_mgr_t *this, u_int32_t spi)
 
 METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int8_t protocol,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	u_int32_t spi_new;
-
-	DBG2(DBG_ESP, "allocating SPI for reqid {%u}", reqid);
 
 	this->mutex->lock(this->mutex);
 	if (!this->rng)
@@ -420,7 +418,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 								 (u_int8_t*)&spi_new))
 		{
 			this->mutex->unlock(this->mutex);
-			DBG1(DBG_ESP, "failed to allocate SPI for reqid {%u}", reqid);
+			DBG1(DBG_ESP, "failed to allocate SPI");
 			return FAILED;
 		}
 		/* make sure the SPI is valid (not in range 0-255) */
@@ -432,7 +430,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 
 	*spi = spi_new;
 
-	DBG2(DBG_ESP, "allocated SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_ESP, "allocated SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
