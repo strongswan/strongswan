@@ -82,6 +82,7 @@ METHOD(tls_aead_t, encrypt, bool,
 	assoc = chunk_from_thing(hdr);
 	if (!this->aead->encrypt(this->aead, plain, assoc, iv, NULL))
 	{
+		chunk_free(&encrypted);
 		return FALSE;
 	}
 	chunk_free(data);
