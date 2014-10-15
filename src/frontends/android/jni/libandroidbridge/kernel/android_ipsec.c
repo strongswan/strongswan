@@ -71,8 +71,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 {
 	return ipsec->sas->add_sa(ipsec->sas, src, dst, spi, protocol, reqid, mark,
 							  tfc, lifetime, enc_alg, enc_key, int_alg, int_key,
-							  mode, ipcomp, cpi, initiator, encap, esn, inbound,
-							  src_ts, dst_ts);
+							  mode, ipcomp, cpi, initiator, encap, esn, inbound);
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
