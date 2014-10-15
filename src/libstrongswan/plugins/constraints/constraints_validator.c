@@ -52,16 +52,67 @@ static bool check_pathlen(x509_t *issuer, int pathlen)
 }
 
 /**
- * Check if a FQDN/RFC822 constraint matches (suffix match)
+ * Check if a FQDN constraint matches
  */
-static bool suffix_matches(identification_t *constraint, identification_t *id)
+static bool fqdn_matches(identification_t *constraint, identification_t *id)
 {
-	chunk_t c, i;
+	chunk_t c, i, diff;
 
 	c = constraint->get_encoding(constraint);
 	i = id->get_encoding(id);
 
-	return i.len >= c.len && chunk_equals(c, chunk_skip(i, i.len - c.len));
+	if (!c.len || i.len < c.len)
+	{
+		return FALSE;
+	}
+	diff = chunk_create(i.ptr, i.len - c.len);
+	if (!chunk_equals(c, chunk_skip(i, diff.len)))
+	{
+		return FALSE;
+	}
+	if (!diff.len)
+	{
+		return TRUE;
+	}
+	if (c.ptr[0] == '.' || diff.ptr[diff.len - 1] == '.')
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Check if a RFC822 constraint matches
+ */
+static bool email_matches(identification_t *constraint, identification_t *id)
+{
+	chunk_t c, i, diff;
+
+	c = constraint->get_encoding(constraint);
+	i = id->get_encoding(id);
+
+	if (!c.len || i.len < c.len)
+	{
+		return FALSE;
+	}
+	if (memchr(c.ptr, '@', c.len))
+	{	/* constraint is a full email address */
+		return chunk_equals(c, i);
+	}
+	diff = chunk_create(i.ptr, i.len - c.len);
+	if (!diff.len || !chunk_equals(c, chunk_skip(i, diff.len)))
+	{
+		return FALSE;
+	}
+	if (c.ptr[0] == '.')
+	{	/* constraint is domain, suffix match */
+		return TRUE;
+	}
+	if (diff.ptr[diff.len - 1] == '@')
+	{	/* constraint is host specific, only username can be appended */
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -121,8 +172,10 @@ static bool name_constraint_matches(identification_t *constraint,
 			switch (type)
 			{
 				case ID_FQDN:
+					matches = fqdn_matches(constraint, id);
+					break;
 				case ID_RFC822_ADDR:
-					matches = suffix_matches(constraint, id);
+					matches = email_matches(constraint, id);
 					break;
 				case ID_DER_ASN1_DN:
 					matches = dn_matches(constraint, id);
@@ -151,7 +204,7 @@ static bool name_constraint_inherited(identification_t *constraint,
 									  x509_t *x509, bool permitted)
 {
 	enumerator_t *enumerator;
-	identification_t *id;
+	identification_t *id, *a, *b;
 	bool inherited = FALSE;
 	id_type_t type;
 
@@ -166,28 +219,26 @@ static bool name_constraint_inherited(identification_t *constraint,
 	{
 		if (id->get_type(id) == type)
 		{
+			if (permitted)
+			{	/* permitted constraint can be narrowed */
+				a = constraint;
+				b = id;
+			}
+			else
+			{	/* excluded constraint can be widened */
+				a = id;
+				b = constraint;
+			}
 			switch (type)
 			{
 				case ID_FQDN:
+					inherited = fqdn_matches(a, b);
+					break;
 				case ID_RFC822_ADDR:
-					if (permitted)
-					{	/* permitted constraint can be narrowed */
-						inherited = suffix_matches(constraint, id);
-					}
-					else
-					{	/* excluded constraint can be widened */
-						inherited = suffix_matches(id, constraint);
-					}
+					inherited = email_matches(a, b);
 					break;
 				case ID_DER_ASN1_DN:
-					if (permitted)
-					{
-						inherited = dn_matches(constraint, id);
-					}
-					else
-					{
-						inherited = dn_matches(id, constraint);
-					}
+					inherited = dn_matches(a, b);
 					break;
 				default:
 					DBG1(DBG_CFG, "%N NameConstraint matching not implemented",
