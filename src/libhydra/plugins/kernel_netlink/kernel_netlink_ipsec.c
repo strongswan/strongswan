@@ -1066,7 +1066,7 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
  */
 static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out;
@@ -1086,7 +1086,6 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	host2xfrm(dst, &userspi->info.id.daddr);
 	userspi->info.id.proto = proto;
 	userspi->info.mode = XFRM_MODE_TUNNEL;
-	userspi->info.reqid = reqid;
 	userspi->info.family = src->get_family(src);
 	userspi->min = min;
 	userspi->max = max;
@@ -1133,39 +1132,35 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, protocol,
-						 0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
+						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get SPI");
 		return FAILED;
 	}
 
-	DBG2(DBG_KNL, "got SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_KNL, "got SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
 
-	DBG2(DBG_KNL, "getting CPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, IPPROTO_COMP,
-						 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
+						 0x100, 0xEFFF, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get CPI");
 		return FAILED;
 	}
 
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 
-	DBG2(DBG_KNL, "got CPI %.4x for reqid {%u}", ntohs(*cpi), reqid);
+	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
 }
 

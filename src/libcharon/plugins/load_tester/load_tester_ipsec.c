@@ -36,7 +36,7 @@ struct private_load_tester_ipsec_t {
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
 	*spi = (uint32_t)ref_get(&this->spi);
 	return SUCCESS;
@@ -44,7 +44,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	return FAILED;
 }

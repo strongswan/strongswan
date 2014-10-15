@@ -155,24 +155,24 @@ METHOD(kernel_interface_t, get_features, kernel_feature_t,
 
 METHOD(kernel_interface_t, get_spi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->ipsec->get_spi(this->ipsec, src, dst, protocol, reqid, spi);
+	return this->ipsec->get_spi(this->ipsec, src, dst, protocol, spi);
 }
 
 METHOD(kernel_interface_t, get_cpi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->ipsec->get_cpi(this->ipsec, src, dst, reqid, cpi);
+	return this->ipsec->get_cpi(this->ipsec, src, dst, cpi);
 }
 
 METHOD(kernel_interface_t, add_sa, status_t,

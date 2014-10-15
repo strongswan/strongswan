@@ -58,24 +58,22 @@ struct kernel_ipsec_t {
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param protocol	protocol for SA (ESP/AH)
-	 * @param reqid		unique ID for this SA
 	 * @param spi		allocated spi
-	 * @return				SUCCESS if operation completed
+	 * @return			SUCCESS if operation completed
 	 */
 	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
-						u_int8_t protocol, u_int32_t reqid, u_int32_t *spi);
+						u_int8_t protocol, u_int32_t *spi);
 
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
 	 *
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
-	 * @param reqid		unique ID for the corresponding SA
 	 * @param cpi		allocated cpi
-	 * @return				SUCCESS if operation completed
+	 * @return			SUCCESS if operation completed
 	 */
 	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
-						u_int32_t reqid, u_int16_t *cpi);
+						u_int16_t *cpi);
 
 	/**
 	 * Add an SA to the SAD.

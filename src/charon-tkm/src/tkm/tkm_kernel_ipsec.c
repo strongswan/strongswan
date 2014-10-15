@@ -60,7 +60,7 @@ struct private_tkm_kernel_ipsec_t {
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
 	bool result;
 
@@ -74,7 +74,6 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 		}
 	}
 
-	DBG1(DBG_KNL, "getting SPI for reqid {%u}", reqid);
 	result = this->rng->get_bytes(this->rng, sizeof(u_int32_t),
 								  (u_int8_t *)spi);
 	return result ? SUCCESS : FAILED;
@@ -82,7 +81,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }

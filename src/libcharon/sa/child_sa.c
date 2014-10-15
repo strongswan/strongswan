@@ -603,7 +603,7 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 {
 	if (hydra->kernel_interface->get_spi(hydra->kernel_interface,
 										 this->other_addr, this->my_addr,
-										 proto_ike2ip(protocol), this->reqid,
+										 proto_ike2ip(protocol),
 										 &this->my_spi) == SUCCESS)
 	{
 		/* if we allocate a SPI, but then are unable to establish the SA, we
@@ -619,7 +619,7 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 {
 	if (hydra->kernel_interface->get_cpi(hydra->kernel_interface,
 										 this->other_addr, this->my_addr,
-										 this->reqid, &this->my_cpi) == SUCCESS)
+										 &this->my_cpi) == SUCCESS)
 	{
 		return this->my_cpi;
 	}

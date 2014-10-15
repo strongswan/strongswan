@@ -1518,7 +1518,7 @@ static bool receive_events(private_kernel_pfkey_ipsec_t *this, int fd,
 
 static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1539,7 +1539,6 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
 	sa2->sadb_x_sa2_exttype = SADB_X_EXT_SA2;
 	sa2->sadb_x_sa2_len = PFKEY_LEN(sizeof(struct sadb_spirange));
-	sa2->sadb_x_sa2_reqid = reqid;
 	PFKEY_EXT_ADD(msg, sa2);
 
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
@@ -1577,39 +1576,37 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, protocol,
-						 0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
+						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get SPI");
 		return FAILED;
 	}
 
-	DBG2(DBG_KNL, "got SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_KNL, "got SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
 
-	DBG2(DBG_KNL, "getting CPI for reqid {%u}", reqid);
+	DBG2(DBG_KNL, "getting CPI");
 
 	if (get_spi_internal(this, src, dst, IPPROTO_COMP,
-						 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
+						 0x100, 0xEFFF, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get CPI");
 		return FAILED;
 	}
 
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 
-	DBG2(DBG_KNL, "got CPI %.4x for reqid {%u}", ntohs(*cpi), reqid);
+	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
 }
 

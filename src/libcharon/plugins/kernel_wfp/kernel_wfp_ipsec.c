@@ -1981,7 +1981,7 @@ static u_int permute(u_int x, u_int p)
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
 	/* To avoid sequencial SPIs, we use a one-to-one permuation function on
 	 * an incrementing counter, that is a full period PRNG for the range we
@@ -1998,7 +1998,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }
