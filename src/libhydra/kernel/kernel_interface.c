@@ -182,7 +182,7 @@ METHOD(kernel_interface_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
 	if (!this->ipsec)
 	{

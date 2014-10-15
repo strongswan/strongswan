@@ -633,7 +633,7 @@ METHOD(child_sa_t, install, status_t,
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
-	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
+	linked_list_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
 	u_int32_t tfc = 0;
@@ -705,18 +705,16 @@ METHOD(child_sa_t, install, status_t,
 		lifetime->time.rekey = 0;
 	}
 
-	/* BEET requires the bound address from the traffic selectors.
-	 * TODO: We add just the first traffic selector for now, as the
-	 * kernel accepts a single TS per SA only */
+	/* BEET requires the bound address from the traffic selectors */
 	if (inbound)
 	{
-		my_ts->get_first(my_ts, (void**)&dst_ts);
-		other_ts->get_first(other_ts, (void**)&src_ts);
+		dst_ts = my_ts;
+		src_ts = other_ts;
 	}
 	else
 	{
-		my_ts->get_first(my_ts, (void**)&src_ts);
-		other_ts->get_first(other_ts, (void**)&dst_ts);
+		src_ts = my_ts;
+		dst_ts = other_ts;
 	}
 
 	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,

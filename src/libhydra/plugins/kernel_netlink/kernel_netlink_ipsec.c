@@ -1191,7 +1191,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
+	linked_list_t* src_ts, linked_list_t* dst_ts)
 {
 	netlink_buf_t request;
 	char *alg_name;
@@ -1199,6 +1199,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;
 	ipsec_mode_t original_mode = mode;
+	traffic_selector_t *first_src_ts, *first_dst_ts;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
@@ -1244,9 +1245,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 * selector can be installed other traffic would get dropped */
 				break;
 			}
-			if (src_ts && dst_ts)
+			if (src_ts->get_first(src_ts, (void**)&first_src_ts) == SUCCESS &&
+				dst_ts->get_first(dst_ts, (void**)&first_dst_ts) == SUCCESS)
 			{
-				sa->sel = ts2selector(src_ts, dst_ts);
+				sa->sel = ts2selector(first_src_ts, first_dst_ts);
 				if (!this->proto_port_transport)
 				{
 					/* don't install proto/port on SA. This would break
