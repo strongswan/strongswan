@@ -66,6 +66,22 @@ static void print_key(private_key_t *key)
 }
 
 /**
+ * Get a prefix for a named constraint identity type
+ */
+static char* get_type_pfx(identification_t *id)
+{
+	switch (id->get_type(id))
+	{
+		case ID_RFC822_ADDR:
+			return "email:";
+		case ID_FQDN:
+			return "dns:";
+		default:
+			return "";
+	}
+}
+
+/**
  * Print X509 specific certificate information
  */
 static void print_x509(x509_t *x509)
@@ -202,7 +218,7 @@ static void print_x509(x509_t *x509)
 			printf("Permitted NameConstraints:\n");
 			first = FALSE;
 		}
-		printf("           %Y\n", id);
+		printf("           %s%Y\n", get_type_pfx(id), id);
 	}
 	enumerator->destroy(enumerator);
 	first = TRUE;
@@ -214,7 +230,7 @@ static void print_x509(x509_t *x509)
 			printf("Excluded NameConstraints:\n");
 			first = FALSE;
 		}
-		printf("           %Y\n", id);
+		printf("           %s%Y\n", get_type_pfx(id), id);
 	}
 	enumerator->destroy(enumerator);
 
