@@ -91,7 +91,6 @@ METHOD(tls_aead_t, encrypt, bool,
 	/* encrypt inline */
 	if (!this->crypter->encrypt(this->crypter, *data, iv, NULL))
 	{
-		free(data->ptr);
 		return FALSE;
 	}
 	/* prepend IV */
