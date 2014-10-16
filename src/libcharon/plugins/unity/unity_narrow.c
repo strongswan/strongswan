@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -16,6 +19,8 @@
 #include "unity_narrow.h"
 
 #include <daemon.h>
+#include <encoding/payloads/id_payload.h>
+#include <collections/hashtable.h>
 
 typedef struct private_unity_narrow_t private_unity_narrow_t;
 
@@ -33,6 +38,11 @@ struct private_unity_narrow_t {
 	 * Unity attribute handler
 	 */
 	unity_handler_t *handler;
+
+	/**
+	 * IKE_SAs for which we received 0.0.0.0/0 as remote traffic selector
+	 */
+	hashtable_t *wildcard_ts;
 };
 
 /**
@@ -191,11 +201,19 @@ METHOD(listener_t, narrow, bool,
 			{
 				case NARROW_INITIATOR_PRE_AUTH:
 				case NARROW_RESPONDER:
-					narrow_pre(local, "us");
+					if (this->wildcard_ts->get(this->wildcard_ts, ike_sa))
+					{
+						narrow_pre(local, "us");
+
+					}
 					break;
 				case NARROW_INITIATOR_POST_AUTH:
 				case NARROW_RESPONDER_POST:
-					narrow_responder_post(child_sa->get_config(child_sa), local);
+					if (this->wildcard_ts->get(this->wildcard_ts, ike_sa))
+					{
+						narrow_responder_post(child_sa->get_config(child_sa),
+											  local);
+					}
 					break;
 				default:
 					break;
@@ -205,9 +223,69 @@ METHOD(listener_t, narrow, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, message, bool,
+	private_unity_narrow_t *this, ike_sa_t *ike_sa, message_t *message,
+	bool incoming, bool plain)
+{
+	traffic_selector_t *tsr = NULL, *wildcard;
+	enumerator_t *enumerator;
+	id_payload_t *id_payload;
+	payload_t *payload;
+	bool first = TRUE;
+
+	if (!incoming || !plain ||
+		message->get_exchange_type(message) != QUICK_MODE ||
+		!ike_sa || !ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
+	{
+		return TRUE;
+	}
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == PLV1_ID)
+		{
+			if (!first)
+			{
+				id_payload = (id_payload_t*)payload;
+				tsr = id_payload->get_ts(id_payload);
+				break;
+			}
+			first = FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!tsr)
+	{
+		return TRUE;
+	}
+	wildcard = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+	if (tsr->equals(tsr, wildcard))
+	{
+		this->wildcard_ts->put(this->wildcard_ts, ike_sa, ike_sa);
+	}
+	else
+	{
+		this->wildcard_ts->remove(this->wildcard_ts, ike_sa);
+	}
+	wildcard->destroy(wildcard);
+	tsr->destroy(tsr);
+	return TRUE;
+}
+
+METHOD(listener_t, ike_updown, bool,
+	private_unity_narrow_t *this, ike_sa_t *ike_sa, bool up)
+{
+	if (!up)
+	{
+		this->wildcard_ts->remove(this->wildcard_ts, ike_sa);
+	}
+	return TRUE;
+}
+
 METHOD(unity_narrow_t, destroy, void,
 	private_unity_narrow_t *this)
 {
+	this->wildcard_ts->destroy(this->wildcard_ts);
 	free(this);
 }
 
@@ -222,10 +300,14 @@ unity_narrow_t *unity_narrow_create(unity_handler_t *handler)
 		.public = {
 			.listener = {
 				.narrow = _narrow,
+				.message = _message,
+				.ike_updown = _ike_updown,
 			},
 			.destroy = _destroy,
 		},
 		.handler = handler,
+		.wildcard_ts = hashtable_create(hashtable_hash_ptr,
+										hashtable_equals_ptr, 4),
 	);
 
 	return &this->public;
