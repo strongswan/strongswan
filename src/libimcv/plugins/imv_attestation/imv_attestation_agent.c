@@ -39,6 +39,8 @@
 #include <tcg/pts/tcg_pts_attr_proto_caps.h>
 #include <tcg/pts/tcg_pts_attr_req_file_meas.h>
 #include <tcg/pts/tcg_pts_attr_req_file_meta.h>
+#include "tcg/seg/tcg_seg_attr_max_size.h"
+#include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include <pts/pts.h>
 #include <pts/pts_database.h>
 #include <pts/pts_creds.h>
@@ -50,6 +52,8 @@
 #include <utils/debug.h>
 #include <credentials/credential_manager.h>
 #include <collections/linked_list.h>
+
+#define FILE_MEAS_MAX_ATTR_SIZE	100000000
 
 typedef struct private_imv_attestation_agent_t private_imv_attestation_agent_t;
 
@@ -465,11 +469,34 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 	if (handshake_state == IMV_ATTESTATION_STATE_INIT)
 	{
+		size_t max_attr_size = FILE_MEAS_MAX_ATTR_SIZE;
+		size_t max_seg_size;
+		seg_contract_t *contract;
+		seg_contract_manager_t *contracts;
 		pa_tnc_attr_t *attr;
 		pts_proto_caps_flag_t flags;
+		char buf[BUF_LEN];
 
 		out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
 								 msg_types[0]);
+
+		/* Determine maximum PA-TNC attribute segment size */
+		max_seg_size = state->get_max_msg_len(state)
+								- PA_TNC_HEADER_SIZE
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_SEG_ENV_HEADER
+								- PA_TNC_ATTR_HEADER_SIZE
+								- TCG_SEG_ATTR_MAX_SIZE_SIZE;
+
+		/* Announce support of PA-TNC segmentation to IMC */
+		contract = seg_contract_create(msg_types[0], max_attr_size,
+										max_seg_size, TRUE, imv_id, FALSE);
+		contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+		DBG2(DBG_IMV, "%s", buf);
+		contracts = state->get_contracts(state);
+		contracts->add_contract(contracts, contract);
+		attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
+		out_msg->add_attribute(out_msg, attr);
 
 		/* Send Request Protocol Capabilities attribute */
 		flags = pts->get_proto_caps(pts);
