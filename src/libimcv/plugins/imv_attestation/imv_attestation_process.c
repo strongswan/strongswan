@@ -530,6 +530,9 @@ quote_error:
 			}
 			break;
 		}
+		case TCG_SEG_MAX_ATTR_SIZE_RESP:
+		case TCG_SEG_ATTR_SEG_ENV:
+			break;
 
 		/* TODO: Not implemented yet */
 		case TCG_PTS_INTEG_MEAS_LOG:
@@ -555,8 +558,8 @@ quote_error:
 		case TCG_PTS_REQ_FILE_MEAS:
 		case TCG_PTS_REQ_INTEG_MEAS_LOG:
 		default:
-			DBG1(DBG_IMV, "received unsupported attribute '%N'",
-				 tcg_attr_names, attr->get_type(attr));
+			DBG1(DBG_IMV, "received unsupported attribute '%N/%N'",
+				 pen_names, PEN_TCG, tcg_attr_names, attr_type.type);
 			break;
 	}
 	return TRUE;

@@ -446,6 +446,10 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			msg->add_attribute(msg, attr);
 			break;
 		}
+		case TCG_SEG_MAX_ATTR_SIZE_REQ:
+		case TCG_SEG_NEXT_SEG_REQ:
+			break;
+
 		/* TODO: Not implemented yet */
 		case TCG_PTS_REQ_INTEG_MEAS_LOG:
 		/* Attributes using XML */
@@ -468,8 +472,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 		case TCG_PTS_FILE_MEAS:
 		case TCG_PTS_INTEG_MEAS_LOG:
 		default:
-			DBG1(DBG_IMC, "received unsupported attribute '%N'",
-				tcg_attr_names, attr->get_type(attr));
+			DBG1(DBG_IMC, "received unsupported attribute '%N/%N'",
+				 pen_names, PEN_TCG, tcg_attr_names, attr_type.type);
 			break;
 	}
 	return TRUE;
