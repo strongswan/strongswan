@@ -639,7 +639,6 @@ METHOD(child_sa_t, install, status_t,
 	u_int32_t tfc = 0;
 	host_t *src, *dst;
 	status_t status;
-	bool update = FALSE;
 
 	/* now we have to decide which spi to use. Use self allocated, if "in",
 	 * or the one in the proposal, if not "in" (others). Additionally,
@@ -648,10 +647,6 @@ METHOD(child_sa_t, install, status_t,
 	{
 		dst = this->my_addr;
 		src = this->other_addr;
-		if (this->my_spi == spi)
-		{	/* alloc_spi has been called, do an SA update */
-			update = TRUE;
-		}
 		this->my_spi = spi;
 		this->my_cpi = cpi;
 	}
@@ -722,7 +717,7 @@ METHOD(child_sa_t, install, status_t,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->config->get_replay_window(this->config),
-				initiator, this->encap, esn, update, src_ts, dst_ts);
+				initiator, this->encap, esn, inbound, src_ts, dst_ts);
 
 	free(lifetime);
 
