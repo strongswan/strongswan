@@ -75,14 +75,39 @@ struct private_tcg_pts_attr_file_meas_t {
 	size_t length;
 
 	/**
-	 * Attribute value or segment
+	 * Offset up to which attribute value has been processed
+	 */
+	size_t offset;
+
+	/**
+	 * Current position of attribute value pointer
 	 */
 	chunk_t value;
+
+	/**
+	 * Contains complete attribute or current segment
+	 */
+	chunk_t segment;
 
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
+
+	/**
+	 * Request ID
+	 */
+	uint16_t request_id;
+
+	/**
+	 * Measurement Length
+	 */
+	uint16_t meas_len;
+
+	/**
+	 * Number of Files in attribute
+	 */
+	uint64_t count;
 
 	/**
 	 * PTS File Measurements
@@ -124,7 +149,7 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	u_int64_t number_of_files;
+	u_int64_t count;
 	u_int16_t request_id;
 	char *filename;
 	chunk_t measurement;
@@ -134,11 +159,11 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	number_of_files = this->measurements->get_file_count(this->measurements);
+	count = this->measurements->get_file_count(this->measurements);
 	request_id = this->measurements->get_request_id(this->measurements);
 
 	writer = bio_writer_create(PTS_FILE_MEAS_SIZE);
-	writer->write_uint64(writer, number_of_files);
+	writer->write_uint64(writer, count);
 	writer->write_uint16(writer, request_id);
 
 	enumerator = this->measurements->create_enumerator(this->measurements);
@@ -161,6 +186,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 
 	this->value = writer->extract_buf(writer);
+	this->segment = this->value;
 	this->length = this->value.len;
 	writer->destroy(writer);
 }
@@ -169,53 +195,59 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_file_meas_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int64_t number_of_files;
-	u_int16_t request_id, meas_len;
 	chunk_t measurement, filename;
-	size_t len;
+	status_t status = NEED_MORE;
 	char buf[BUF_LEN];
-	status_t status = FAILED;
+	size_t len;
 
-	*offset = 0;
-
-	if (this->value.len < this->length)
+	if (this->offset == 0)
 	{
-		return NEED_MORE;
-	}
-	if (this->value.len < PTS_FILE_MEAS_SIZE)
-	{
-		DBG1(DBG_TNC, "insufficient data for PTS file measurement header");
-		return FAILED;
+		if (this->length < PTS_FILE_MEAS_SIZE)
+		{
+			DBG1(DBG_TNC, "insufficient data for %N/%N", pen_names, PEN_TCG,
+						   tcg_attr_names, this->type.type);
+			*offset = this->offset;
+			return FAILED;
+		}
+		if (this->value.len < PTS_FILE_MEAS_SIZE)
+		{
+			return NEED_MORE;
+		}
+		reader = bio_reader_create(this->value);
+		reader->read_uint64(reader, &this->count);
+		reader->read_uint16(reader, &this->request_id);
+		reader->read_uint16(reader, &this->meas_len);
+		this->offset = PTS_FILE_MEAS_SIZE;
+		this->value = reader->peek(reader);
+		reader->destroy(reader);
 	}
 
+	this->measurements = pts_file_meas_create(this->request_id);
 	reader = bio_reader_create(this->value);
-	reader->read_uint64(reader, &number_of_files);
-	reader->read_uint16(reader, &request_id);
-	reader->read_uint16(reader, &meas_len);
-	*offset = PTS_FILE_MEAS_SIZE;
 
-	this->measurements = pts_file_meas_create(request_id);
-
-	while (number_of_files--)
+	while (this->count)
 	{
-		if (!reader->read_data(reader, meas_len, &measurement))
+		if (!reader->read_data(reader, this->meas_len, &measurement) ||
+			!reader->read_data16(reader, &filename))
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS file measurement");
 			goto end;
 		}
-		*offset += meas_len;
-
-		if (!reader->read_data16(reader, &filename))
-		{
-			DBG1(DBG_TNC, "insufficient data for filename");
-			goto end;
-		}
-		*offset += 2 + filename.len;
+		this->offset += this->value.len - reader->remaining(reader);
+		this->value = reader->peek(reader);
 
 		len = min(filename.len, BUF_LEN-1);
 		memcpy(buf, filename.ptr, len);
 		buf[len] = '\0';
 		this->measurements->add(this->measurements, buf, measurement);
+		this->count--;
+	}
+
+	if (this->length != this->offset)
+	{
+		DBG1(DBG_TNC, "inconsistent length for %N/%N", pen_names, PEN_TCG,
+					   tcg_attr_names, this->type.type);
+		*offset = this->offset;
+		status = FAILED;
 	}
 	status = SUCCESS;
 
@@ -227,7 +259,9 @@ end:
 METHOD(pa_tnc_attr_t, add_segment, void,
 	private_tcg_pts_attr_file_meas_t *this, chunk_t segment)
 {
-	this->value = chunk_cat("mc", this->value, segment);
+	this->value = chunk_cat("cc", this->value, segment);
+	chunk_free(&this->segment);
+	this->segment = this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
@@ -242,7 +276,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		DESTROY_IF(this->measurements);
-		free(this->value.ptr);
+		free(this->segment.ptr);
 		free(this);
 	}
 }
@@ -274,8 +308,11 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 				.destroy = _destroy,
 			},
 			.get_measurements = _get_measurements,
+			.get_count = _get_count,
 		},
 		.type = { PEN_TCG, TCG_PTS_FILE_MEAS },
+		.request_id = measurements->get_request_id(measurements),
+		.count = measurements->get_file_count(measurements),
 		.measurements = measurements,
 		.ref = 1,
 	);
@@ -309,9 +346,12 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(size_t length,
 		},
 		.type = { PEN_TCG, TCG_PTS_FILE_MEAS },
 		.length = length,
-		.value = chunk_clone(data),
+		.segment = chunk_clone(data),
 		.ref = 1,
 	);
+
+	/* received either complete attribute value or first segment */
+	this->value = this->segment;
 
 	return &this->public.pa_tnc_attribute;
 }
