@@ -1522,7 +1522,6 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
-	struct sadb_x_sa2 *sa2;
 	struct sadb_spirange *range;
 	pfkey_msg_t response;
 	u_int32_t received_spi = 0;
@@ -1535,11 +1534,6 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_type = SADB_GETSPI;
 	msg->sadb_msg_satype = proto2satype(proto);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-
-	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
-	sa2->sadb_x_sa2_exttype = SADB_X_EXT_SA2;
-	sa2->sadb_x_sa2_len = PFKEY_LEN(sizeof(struct sadb_spirange));
-	PFKEY_EXT_ADD(msg, sa2);
 
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
@@ -1641,6 +1635,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		mode = MODE_TRANSPORT;
 	}
 
+	if (inbound)
+	{
+		/* As we didn't know the reqid during SPI allocation, we used reqid
+		 * zero. Unfortunately we can't SADB_UPDATE to the new reqid, hence we
+		 * have to delete the SPI allocation state manually. The reqid
+		 * selector does not count for that, therefore we have to delete
+		 * that state before installing the new SA to avoid deleting the
+		 * the new state after installing it. */
+		mark_t zeromark = {0, 0};
+
+		if (this->public.interface.del_sa(&this->public.interface,
+					src, dst, spi, protocol, 0, zeromark) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "deleting SPI allocation SA failed");
+		}
+	}
+
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}",
@@ -1648,7 +1659,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
-	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
+	msg->sadb_msg_type = SADB_ADD;
 	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
