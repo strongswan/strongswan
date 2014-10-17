@@ -96,6 +96,10 @@ encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size)
 			alg = ENCR_CAMELLIA_CBC;
 			alg_key_size = 256;
 			break;
+		case OID_BLOWFISH_CBC:
+			alg = ENCR_BLOWFISH;
+			alg_key_size = 0;
+			break;
 		default:
 			alg = ENCR_UNDEFINED;
 			alg_key_size = 0;
@@ -153,6 +157,9 @@ int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size)
 				default:
 					oid = OID_UNKNOWN;
 			}
+			break;
+		case ENCR_BLOWFISH:
+			oid = OID_BLOWFISH_CBC;
 			break;
 		default:
 			oid = OID_UNKNOWN;

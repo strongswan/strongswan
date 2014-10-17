@@ -227,6 +227,10 @@
                   0x02       ""
                     0x02     ""
                       0x4B   "TCGID"					OID_TCGID
+          0x97               ""
+            0x55             ""
+              0x01           ""
+                0x02         "blowfish-cbc"				OID_BLOWFISH_CBC
           0xC1               ""
             0x16             "ntruCryptosystems"
               0x01           "eess"
