@@ -308,7 +308,6 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 				.destroy = _destroy,
 			},
 			.get_measurements = _get_measurements,
-			.get_count = _get_count,
 		},
 		.type = { PEN_TCG, TCG_PTS_FILE_MEAS },
 		.request_id = measurements->get_request_id(measurements),
