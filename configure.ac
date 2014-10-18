@@ -1,7 +1,7 @@
 #
 # Copyright (C) 2007-2014 Tobias Brunner
-# Copyright (C) 2006-2013 Andreas Steffen
-# Copyright (C) 2006-2013 Martin Willi
+# Copyright (C) 2006-2014 Andreas Steffen
+# Copyright (C) 2006-2014 Martin Willi
 # Hochschule fuer Technik Rapperswil
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.2.1rc1])
+AC_INIT([strongSwan],[5.2.1])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
