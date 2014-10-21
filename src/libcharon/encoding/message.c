@@ -2155,6 +2155,8 @@ METHOD(message_t, parse_header, status_t,
 	}
 	ike_header->destroy(ike_header);
 
+	this->parser->set_major_version(this->parser, this->major_version);
+
 	DBG2(DBG_ENC, "parsed a %N %s header", exchange_type_names,
 		 this->exchange_type, this->major_version == IKEV1_MAJOR_VERSION ?
 		 "message" : (this->is_request ? "request" : "response"));

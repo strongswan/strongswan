@@ -29,7 +29,7 @@ typedef struct parser_t parser_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * A parser_t class to parse IKEv2 payloads.
+ * A parser_t class to parse IKE payloads.
  *
  * A parser is used for parsing one chunk of data. Multiple
  * payloads can be parsed out of the chunk using parse_payload.
@@ -50,7 +50,8 @@ struct parser_t {
 	 * 						- SUCCESSFUL if succeeded,
 	 * 						- PARSE_ERROR if corrupted/invalid data found
 	 */
-	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
+	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type,
+							   payload_t **payload);
 
 	/**
 	 * Gets the remaining byte count which is not currently parsed.
@@ -61,6 +62,13 @@ struct parser_t {
 	 * Resets the current parser context.
 	 */
 	void (*reset_context) (parser_t *this);
+
+	/**
+	 * Set the major IKE version.
+	 *
+	 * @param major_version	the major IKE version
+	 */
+	void (*set_major_version) (parser_t *this, u_int8_t major_version);
 
 	/**
 	 * Destroys a parser_t object.

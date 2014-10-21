@@ -59,6 +59,11 @@ struct private_parser_t {
 	parser_t public;
 
 	/**
+	 * major IKE version
+	 */
+	u_int8_t major_version;
+
+	/**
 	 * Current bit for reading in input data.
 	 */
 	u_int8_t bit_pos;
@@ -369,7 +374,14 @@ METHOD(parser_t, parse_payload, status_t,
 	encoding_rule_t *rule;
 
 	/* create instance of the payload to parse */
-	pld = payload_create(payload_type);
+	if (payload_is_known(payload_type, this->major_version))
+	{
+		pld = payload_create(payload_type);
+	}
+	else
+	{
+		pld = (payload_t*)unknown_payload_create(payload_type);
+	}
 
 	DBG2(DBG_ENC, "parsing %N payload, %d bytes left",
 		 payload_type_names, payload_type, this->input_roof - this->byte_pos);
@@ -629,6 +641,12 @@ METHOD(parser_t, reset_context, void,
 	this->bit_pos = 0;
 }
 
+METHOD(parser_t, set_major_version, void,
+	private_parser_t *this, u_int8_t major_version)
+{
+	this->major_version = major_version;
+}
+
 METHOD(parser_t, destroy, void,
 	private_parser_t *this)
 {
@@ -646,6 +664,7 @@ parser_t *parser_create(chunk_t data)
 		.public = {
 			.parse_payload = _parse_payload,
 			.reset_context = _reset_context,
+			.set_major_version = _set_major_version,
 			.get_remaining_byte_count = _get_remaining_byte_count,
 			.destroy = _destroy,
 		},

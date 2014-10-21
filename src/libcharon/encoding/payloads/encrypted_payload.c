@@ -561,6 +561,7 @@ static status_t parse(private_encrypted_payload_t *this, chunk_t plain)
 	payload_type_t type;
 
 	parser = parser_create(plain);
+	parser->set_major_version(parser, this->type == PLV1_ENCRYPTED ? 1 : 2);
 	type = this->next_payload;
 	while (type != PL_NONE)
 	{
