@@ -266,37 +266,51 @@ payload_t *payload_create(payload_type_t type)
 /**
  * See header.
  */
-bool payload_is_known(payload_type_t type)
+bool payload_is_known(payload_type_t type, u_int8_t maj_ver)
 {
 	if (type == PL_HEADER)
 	{
 		return TRUE;
 	}
-	if (type >= PLV1_SECURITY_ASSOCIATION && type <= PLV1_CONFIGURATION)
+	switch (maj_ver)
 	{
-		return TRUE;
-	}
-	if (type >= PLV1_NAT_D && type <= PLV1_NAT_OA)
-	{
-		return TRUE;
-	}
-	if (type >= PLV2_SECURITY_ASSOCIATION && type <= PLV2_EAP)
-	{
-		return TRUE;
-	}
-	if (type == PLV2_FRAGMENT)
-	{
-		return TRUE;
-	}
+		case 0:
+		case IKEV1_MAJOR_VERSION:
+			if (type >= PLV1_SECURITY_ASSOCIATION && type <= PLV1_CONFIGURATION)
+			{
+				return TRUE;
+			}
+			if (type >= PLV1_NAT_D && type <= PLV1_NAT_OA)
+			{
+				return TRUE;
+			}
+			if (type >= PLV1_NAT_D_DRAFT_00_03 && type <= PLV1_FRAGMENT)
+			{
+				return TRUE;
+			}
+			if (maj_ver)
+			{
+				break;
+			}
+			/* fall-through */
+		case IKEV2_MAJOR_VERSION:
+			if (type >= PLV2_SECURITY_ASSOCIATION && type <= PLV2_EAP)
+			{
+				return TRUE;
+			}
+			if (type == PLV2_FRAGMENT)
+			{
+				return TRUE;
+			}
 #ifdef ME
-	if (type == PLV2_ID_PEER)
-	{
-		return TRUE;
-	}
+			if (type == PLV2_ID_PEER)
+			{
+				return TRUE;
+			}
 #endif
-	if (type >= PLV1_NAT_D_DRAFT_00_03 && type <= PLV1_FRAGMENT)
-	{
-		return TRUE;
+			break;
+		default:
+			break;
 	}
 	return FALSE;
 }

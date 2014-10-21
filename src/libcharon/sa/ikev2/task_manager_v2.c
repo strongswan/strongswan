@@ -1170,7 +1170,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		{
 			unknown = (unknown_payload_t*)payload;
 			type = payload->get_type(payload);
-			if (!payload_is_known(type) &&
+			if (!payload_is_known(type, msg->get_major_version(msg)) &&
 				unknown->is_critical(unknown))
 			{
 				DBG1(DBG_ENC, "payload type %N is not supported, "
