@@ -101,6 +101,11 @@ struct private_child_sa_t {
 	u_int32_t reqid;
 
 	/**
+	 * Did we allocate/confirm and must release the reqid?
+	 */
+	bool reqid_allocated;
+
+	/**
 	 * inbound mark used for this child_sa
 	 */
 	mark_t mark_in;
@@ -676,6 +681,18 @@ METHOD(child_sa_t, install, status_t,
 	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
 								  &esn, NULL);
 
+	if (!this->reqid_allocated)
+	{
+		status = hydra->kernel_interface->alloc_reqid(hydra->kernel_interface,
+							my_ts, other_ts, &this->mark_in, &this->mark_out,
+							&this->reqid);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+		this->reqid_allocated = TRUE;
+	}
+
 	lifetime = this->config->get_lifetime(this->config);
 
 	now = time_monotonic(NULL);
@@ -791,6 +808,19 @@ METHOD(child_sa_t, add_policies, status_t,
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
+
+	if (!this->reqid_allocated)
+	{
+		/* trap policy, get or confirm reqid */
+		status = hydra->kernel_interface->alloc_reqid(
+							hydra->kernel_interface, my_ts_list, other_ts_list,
+							&this->mark_in, &this->mark_out, &this->reqid);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+		this->reqid_allocated = TRUE;
+	}
 
 	/* apply traffic selectors */
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
@@ -1100,6 +1130,15 @@ METHOD(child_sa_t, destroy, void,
 		enumerator->destroy(enumerator);
 	}
 
+	if (this->reqid_allocated)
+	{
+		if (hydra->kernel_interface->release_reqid(hydra->kernel_interface,
+						this->reqid, this->mark_in, this->mark_out) != SUCCESS)
+		{
+			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
+		}
+	}
+
 	array_destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 	array_destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->my_addr->destroy(this->my_addr);
@@ -1150,7 +1189,6 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
-	static refcount_t reqid = 0;
 	private_child_sa_t *this;
 
 	INIT(this,
@@ -1208,7 +1246,13 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 
 	if (!this->reqid)
 	{
-		/* reuse old reqid if we are rekeying an existing CHILD_SA */
+		/* reuse old reqid if we are rekeying an existing CHILD_SA. While the
+		 * reqid cache would find the same reqid for our selectors, this does
+		 * not work in a special case: If an SA is triggered by a trap policy,
+		 * but the negotiated SA gets narrowed, we still must reuse the same
+		 * reqid to succesfully "trigger" the SA on the kernel level. Rekeying
+		 * such an SA requires an explicit reqid, as the cache currently knows
+		 * the original selectors only for that reqid. */
 		if (rekey)
 		{
 			this->reqid = rekey;
@@ -1216,20 +1260,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		else
 		{
 			this->reqid = charon->traps->find_reqid(charon->traps, config);
-			if (!this->reqid)
-			{
-				this->reqid = ref_get(&reqid);
-			}
 		}
-	}
-
-	if (this->mark_in.value == MARK_REQID)
-	{
-		this->mark_in.value = this->reqid;
-	}
-	if (this->mark_out.value == MARK_REQID)
-	{
-		this->mark_out.value = this->reqid;
 	}
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
