@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,14 +18,15 @@
 
 #include "public_key.h"
 
-ENUM(key_type_names, KEY_ANY, KEY_DSA,
+ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"ANY",
 	"RSA",
 	"ECDSA",
-	"DSA"
+	"DSA",
+	"BLISS"
 );
 
-ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ECDSA_521,
+ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_IV_SHA384,
 	"UNKNOWN",
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
@@ -41,6 +43,8 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ECDSA_521,
 	"ECDSA-256",
 	"ECDSA-384",
 	"ECDSA-521",
+	"BLISS-I_SHA256",
+	"BLISS-IV_SHA384",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,

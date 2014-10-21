@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +43,8 @@ enum key_type_t {
 	KEY_ECDSA = 2,
 	/** DSA */
 	KEY_DSA   = 3,
+	/** BLISS */
+	KEY_BLISS = 4,
 	/** ElGamal, ... */
 };
 
@@ -90,6 +93,10 @@ enum signature_scheme_t {
 	SIGN_ECDSA_384,
 	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
 	SIGN_ECDSA_521,
+	/** BLISS-I with SHA-256                                           */
+	SIGN_BLISS_I_SHA256,
+	/** BLISS-IV with SHA-384                                          */
+	SIGN_BLISS_IV_SHA384,
 };
 
 /**

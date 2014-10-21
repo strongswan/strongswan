@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +43,10 @@ static int gen()
 				else if (streq(arg, "ecdsa"))
 				{
 					type = KEY_ECDSA;
+				}
+				else if (streq(arg, "bliss"))
+				{
+					type = KEY_BLISS;
 				}
 				else
 				{
@@ -95,6 +100,9 @@ static int gen()
 				break;
 			case KEY_ECDSA:
 				size = 384;
+				break;
+			case KEY_BLISS:
+				size = 1;
 				break;
 			default:
 				break;
@@ -151,12 +159,12 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"  [--type rsa|ecdsa] [--size bits] [--safe-primes]",
+		{"  [--type rsa|ecdsa|bliss] [--size bits] [--safe-primes]",
 		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
-			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
+			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384, bliss 1"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
 			{"shares",		'n', 1, "number of private rsa key shares"},
 			{"threshold",	'l', 1, "minimum number of participating rsa key shares"},
