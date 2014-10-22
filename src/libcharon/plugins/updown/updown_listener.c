@@ -243,6 +243,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	me = ike_sa->get_my_host(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
 
+	push_env(envp, countof(envp), "PATH=%s", getenv("PATH"));
 	push_env(envp, countof(envp), "PLUTO_VERSION=1.1");
 	is_host = my_ts->is_host(my_ts, me);
 	if (is_host)
