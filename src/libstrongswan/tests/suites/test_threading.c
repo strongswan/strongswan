@@ -553,6 +553,49 @@ START_TEST(test_rwlock)
 }
 END_TEST
 
+static void *rwlock_try_run(void *param)
+{
+	if (rwlock->try_write_lock(rwlock))
+	{
+		rwlock->unlock(rwlock);
+		return param;
+	}
+	return NULL;
+}
+
+START_TEST(test_rwlock_try)
+{
+	uintptr_t magic = 0xcafebabe;
+	thread_t *thread;
+
+	rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+
+	thread = thread_create(rwlock_try_run, (void*)magic);
+	ck_assert_int_eq((uintptr_t)thread->join(thread), magic);
+
+	rwlock->read_lock(rwlock);
+	thread = thread_create(rwlock_try_run, (void*)magic);
+	ck_assert(thread->join(thread) == NULL);
+	rwlock->unlock(rwlock);
+
+	rwlock->read_lock(rwlock);
+	rwlock->read_lock(rwlock);
+	rwlock->read_lock(rwlock);
+	thread = thread_create(rwlock_try_run, (void*)magic);
+	ck_assert(thread->join(thread) == NULL);
+	rwlock->unlock(rwlock);
+	rwlock->unlock(rwlock);
+	rwlock->unlock(rwlock);
+
+	rwlock->write_lock(rwlock);
+	thread = thread_create(rwlock_try_run, (void*)magic);
+	ck_assert(thread->join(thread) == NULL);
+	rwlock->unlock(rwlock);
+
+	rwlock->destroy(rwlock);
+}
+END_TEST
+
 /**
  * Rwlock condvar
  */
@@ -1423,6 +1466,7 @@ Suite *threading_suite_create()
 
 	tc = tcase_create("rwlock");
 	tcase_add_test(tc, test_rwlock);
+	tcase_add_test(tc, test_rwlock_try);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("rwlock condvar");
