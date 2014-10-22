@@ -787,6 +787,11 @@ END_TEST
  * test for chunk_internet_checksum[_inc]()
  */
 
+static inline u_int16_t compensate_alignment(u_int16_t val)
+{
+	return ((val & 0xff) << 8) | (val >> 8);
+}
+
 START_TEST(test_chunk_internet_checksum)
 {
 	chunk_t chunk;
@@ -804,9 +809,9 @@ START_TEST(test_chunk_internet_checksum)
 
 	/* need to compensate for even/odd alignment */
 	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 9));
-	sum = ntohs(sum);
+	sum = compensate_alignment(sum);
 	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+9, 11), sum);
-	sum = ntohs(sum);
+	sum = compensate_alignment(sum);
 	ck_assert_int_eq(0x442e, ntohs(sum));
 
 	chunk = chunk_from_chars(0x45,0x00,0x00,0x30,0x44,0x22,0x40,0x00,0x80,0x06,
@@ -821,9 +826,9 @@ START_TEST(test_chunk_internet_checksum)
 
 	/* need to compensate for even/odd alignment */
 	sum = chunk_internet_checksum(chunk_create(chunk.ptr, 9));
-	sum = ntohs(sum);
+	sum = compensate_alignment(sum);
 	sum = chunk_internet_checksum_inc(chunk_create(chunk.ptr+9, 10), sum);
-	sum = ntohs(sum);
+	sum = compensate_alignment(sum);
 	ck_assert_int_eq(0x4459, ntohs(sum));
 }
 END_TEST
