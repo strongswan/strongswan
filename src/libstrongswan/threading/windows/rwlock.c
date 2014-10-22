@@ -85,8 +85,6 @@ METHOD(rwlock_t, write_lock, void,
 METHOD(rwlock_t, try_write_lock, bool,
 	private_rwlock_t *this)
 {
-	/* TODO: causes random failures and segfaults. Bug? */
-	return FALSE;
 	return TryAcquireSRWLockExclusive(&this->srw);
 }
 
