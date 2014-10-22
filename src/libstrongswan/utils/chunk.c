@@ -992,7 +992,7 @@ u_int32_t chunk_hash_static(chunk_t chunk)
  */
 u_int16_t chunk_internet_checksum_inc(chunk_t data, u_int16_t checksum)
 {
-	u_int32_t sum = ntohs(~checksum);
+	u_int32_t sum = ntohs((u_int16_t)~checksum);
 
 	while (data.len > 1)
 	{
