@@ -126,6 +126,16 @@ struct child_sa_t {
 	u_int32_t (*get_reqid)(child_sa_t *this);
 
 	/**
+	 * Get the unique numerical identifier for this CHILD_SA.
+	 *
+	 * While the same reqid might be shared between multiple SAs, the unique_id
+	 * is truly unique for all CHILD_SA instances.
+	 *
+	 * @return			unique CHILD_SA identifier
+	 */
+	u_int32_t (*get_unique_id)(child_sa_t *this);
+
+	/**
 	 * Get the config used to set up this child sa.
 	 *
 	 * @return			child_cfg

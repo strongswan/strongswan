@@ -105,6 +105,11 @@ struct private_child_sa_t {
 	 */
 	bool reqid_allocated;
 
+	/*
+	 * Unique CHILD_SA identifier
+	 */
+	u_int32_t unique_id;
+
 	/**
 	 * inbound mark used for this child_sa
 	 */
@@ -232,6 +237,12 @@ METHOD(child_sa_t, get_reqid, u_int32_t,
 	   private_child_sa_t *this)
 {
 	return this->reqid;
+}
+
+METHOD(child_sa_t, get_unique_id, u_int32_t,
+	private_child_sa_t *this)
+{
+	return this->unique_id;
 }
 
 METHOD(child_sa_t, get_config, child_cfg_t*,
@@ -1190,11 +1201,13 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
 	private_child_sa_t *this;
+	static refcount_t unique_id = 0;
 
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
 			.get_reqid = _get_reqid,
+			.get_unique_id = _get_unique_id,
 			.get_config = _get_config,
 			.get_state = _get_state,
 			.set_state = _set_state,
@@ -1236,6 +1249,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.close_action = config->get_close_action(config),
 		.dpd_action = config->get_dpd_action(config),
 		.reqid = config->get_reqid(config),
+		.unique_id = ref_get(&unique_id),
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
