@@ -191,3 +191,11 @@ static void include_files(parser_helper_t *ctx)
 
 	settings_parser_open_next_file(ctx);
 }
+
+/**
+ * Load the given string to be parsed next
+ */
+void settings_parser_load_string(parser_helper_t *ctx, const char *content)
+{
+	settings_parser__scan_string(content, ctx->scanner);
+}
