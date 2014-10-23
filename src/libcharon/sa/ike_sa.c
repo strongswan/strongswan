@@ -964,6 +964,10 @@ METHOD(ike_sa_t, update_hosts, void,
 		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, &child_sa))
 		{
+			charon->child_sa_manager->remove(charon->child_sa_manager, child_sa);
+			charon->child_sa_manager->add(charon->child_sa_manager,
+										  child_sa, &this->public);
+
 			if (child_sa->update(child_sa, this->my_host, this->other_host,
 					vips, has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
 			{
@@ -971,6 +975,7 @@ METHOD(ike_sa_t, update_hosts, void,
 						child_sa->get_protocol(child_sa),
 						child_sa->get_spi(child_sa, TRUE));
 			}
+
 		}
 		enumerator->destroy(enumerator);
 
@@ -1444,6 +1449,8 @@ METHOD(ike_sa_t, add_child_sa, void,
 	private_ike_sa_t *this, child_sa_t *child_sa)
 {
 	array_insert_create(&this->child_sas, ARRAY_TAIL, child_sa);
+	charon->child_sa_manager->add(charon->child_sa_manager,
+								  child_sa, &this->public);
 }
 
 METHOD(ike_sa_t, get_child_sa, child_sa_t*,
@@ -1471,16 +1478,58 @@ METHOD(ike_sa_t, get_child_count, int,
 	return array_count(this->child_sas);
 }
 
+/**
+ * Private data of a create_child_sa_enumerator()
+ */
+typedef struct {
+	/** implements enumerator */
+	enumerator_t public;
+	/** inner array enumerator */
+	enumerator_t *inner;
+	/** current item */
+	child_sa_t *current;
+} child_enumerator_t;
+
+METHOD(enumerator_t, child_enumerate, bool,
+	child_enumerator_t *this, child_sa_t **child_sa)
+{
+	if (this->inner->enumerate(this->inner, &this->current))
+	{
+		*child_sa = this->current;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(enumerator_t, child_enumerator_destroy, void,
+	child_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
 METHOD(ike_sa_t, create_child_sa_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	return array_create_enumerator(this->child_sas);
+	child_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_child_enumerate,
+			.destroy = _child_enumerator_destroy,
+		},
+		.inner = array_create_enumerator(this->child_sas),
+	);
+	return &enumerator->public;
 }
 
 METHOD(ike_sa_t, remove_child_sa, void,
 	private_ike_sa_t *this, enumerator_t *enumerator)
 {
-	array_remove_at(this->child_sas, enumerator);
+	child_enumerator_t *ce = (child_enumerator_t*)enumerator;
+
+	charon->child_sa_manager->remove(charon->child_sa_manager, ce->current);
+	array_remove_at(this->child_sas, ce->inner);
 }
 
 METHOD(ike_sa_t, rekey_child_sa, status_t,
@@ -1513,13 +1562,13 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 	child_sa_t *child_sa;
 	status_t status = NOT_FOUND;
 
-	enumerator = array_create_enumerator(this->child_sas);
+	enumerator = create_child_sa_enumerator(this);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_protocol(child_sa) == protocol &&
 			child_sa->get_spi(child_sa, TRUE) == spi)
 		{
-			array_remove_at(this->child_sas, enumerator);
+			remove_child_sa(this, enumerator);
 			child_sa->destroy(child_sa);
 			status = SUCCESS;
 			break;
@@ -1771,7 +1820,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #endif /* ME */
 	{
 		/* handle existing CHILD_SAs */
-		enumerator = array_create_enumerator(this->child_sas);
+		enumerator = create_child_sa_enumerator(this);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (has_condition(this, COND_REAUTHENTICATING))
@@ -1780,7 +1829,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 				{
 					case CHILD_ROUTED:
 					{	/* move routed child directly */
-						array_remove_at(this->child_sas, enumerator);
+						remove_child_sa(this, enumerator);
 						new->add_child_sa(new, child_sa);
 						action = ACTION_NONE;
 						break;
@@ -2251,7 +2300,8 @@ METHOD(ike_sa_t, inherit_post, void,
 	/* adopt all children */
 	while (array_remove(other->child_sas, ARRAY_HEAD, &child_sa))
 	{
-		array_insert_create(&this->child_sas, ARRAY_TAIL, child_sa);
+		charon->child_sa_manager->remove(charon->child_sa_manager, child_sa);
+		add_child_sa(this, child_sa);
 	}
 
 	/* move pending tasks to the new IKE_SA */
@@ -2305,6 +2355,7 @@ METHOD(ike_sa_t, destroy, void,
 	 * routes that the CHILD_SA tries to uninstall. */
 	while (array_remove(this->child_sas, ARRAY_TAIL, &child_sa))
 	{
+		charon->child_sa_manager->remove(charon->child_sa_manager, child_sa);
 		child_sa->destroy(child_sa);
 	}
 	while (array_remove(this->my_vips, ARRAY_TAIL, &vip))

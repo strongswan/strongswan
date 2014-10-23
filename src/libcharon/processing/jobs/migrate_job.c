@@ -82,6 +82,7 @@ METHOD(job_t, execute, job_requeue_t,
 		enumerator_t *children, *enumerator;
 		child_sa_t *child_sa;
 		host_t *host;
+		status_t status;
 		linked_list_t *vips;
 
 		children = ike_sa->create_child_sa_enumerator(ike_sa);
@@ -113,11 +114,21 @@ METHOD(job_t, execute, job_requeue_t,
 		}
 		enumerator->destroy(enumerator);
 
-		if (child_sa->update(child_sa, this->local, this->remote, vips,
-				ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+		status = child_sa->update(child_sa, this->local, this->remote, vips,
+								  ike_sa->has_condition(ike_sa, COND_NAT_ANY));
+		switch (status)
 		{
-			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-								   child_sa->get_spi(child_sa, TRUE));
+			case NOT_SUPPORTED:
+				ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+									   child_sa->get_spi(child_sa, TRUE));
+				break;
+			case SUCCESS:
+				charon->child_sa_manager->remove(charon->child_sa_manager,
+												 child_sa);
+				charon->child_sa_manager->add(charon->child_sa_manager,
+											  child_sa, ike_sa);
+			default:
+				break;
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		vips->destroy(vips);
