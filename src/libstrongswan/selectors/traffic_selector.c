@@ -685,6 +685,17 @@ METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 	}
 }
 
+METHOD(traffic_selector_t, hash, u_int,
+	private_traffic_selector_t *this, u_int hash)
+{
+	return chunk_hash_inc(get_from_address(this),
+			chunk_hash_inc(get_to_address(this),
+			 chunk_hash_inc(chunk_from_thing(this->from_port),
+			  chunk_hash_inc(chunk_from_thing(this->to_port),
+			   chunk_hash_inc(chunk_from_thing(this->protocol),
+				hash)))));
+}
+
 METHOD(traffic_selector_t, destroy, void,
 	private_traffic_selector_t *this)
 {
@@ -974,6 +985,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 			.set_address = _set_address,
 			.to_subnet = _to_subnet,
 			.clone = _clone_,
+			.hash = _hash,
 			.destroy = _destroy,
 		},
 		.from_port = from_port,

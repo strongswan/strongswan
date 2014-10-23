@@ -221,6 +221,14 @@ struct traffic_selector_t {
 	bool (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
 
 	/**
+	 * Create a hash value for the traffic selector.
+	 *
+	 * @param inc		optional value for incremental hashing
+	 * @return			calculated hash value for the traffic selector
+	 */
+	u_int (*hash)(traffic_selector_t *this, u_int inc);
+
+	/**
 	 * Destroys the ts object
 	 */
 	void (*destroy) (traffic_selector_t *this);
