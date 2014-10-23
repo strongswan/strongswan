@@ -535,9 +535,7 @@ END_TEST
 # define include2 "/tmp/strongswan-settings-test-include2"
 #endif
 
-START_SETUP(setup_include_config)
-{
-	chunk_t inc1 = chunk_from_str(
+static char *include_content1 =
 		"main {\n"
 		"	key1 = n1\n"
 		"	key2 = n2\n"
@@ -550,14 +548,17 @@ START_SETUP(setup_include_config)
 		"		sub3 = val3\n"
 		"	}\n"
 		"	include " include2 "\n"
-		"}");
-	chunk_t inc2 = chunk_from_str(
+		"}";
+static char *include_content2 =
 		"key2 = v2\n"
 		"sub1 {\n"
 		"	key = val\n"
-		"}");
-	ck_assert(chunk_write(inc1, include1, 0022, TRUE));
-	ck_assert(chunk_write(inc2, include2, 0022, TRUE));
+		"}";
+
+START_SETUP(setup_include_config)
+{
+	ck_assert(chunk_write(chunk_from_str(include_content1), include1, 0022, TRUE));
+	ck_assert(chunk_write(chunk_from_str(include_content2), include2, 0022, TRUE));
 }
 END_SETUP
 
@@ -787,6 +788,104 @@ START_TEST(test_order_section)
 	verify_sections(sections, "main");
 
 	unlink(include1);
+}
+END_TEST
+
+
+START_TEST(test_load_string)
+{
+	char *content =
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	key3 = val3\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = v2\n"
+		"		sub1 {\n"
+		"			key = val\n"
+		"		}\n"
+		"	}\n"
+		"}";
+	char *val1, *val2, *val3;
+
+	settings = settings_create_string(content);
+
+	val1 = settings->get_str(settings, "main.key1", NULL);
+	val2 = settings->get_str(settings, "main.sub1.key2", NULL);
+	/* loading the same content twice should not change anything, with... */
+	ck_assert(settings->load_string(settings, content, TRUE));
+	ck_assert(val1 == settings->get_str(settings, "main.key1", NULL));
+	ck_assert(val2 == settings->get_str(settings, "main.sub1.key2", NULL));
+	/* ...or without merging */
+	ck_assert(settings->load_string(settings, content, FALSE));
+	ck_assert(val1 == settings->get_str(settings, "main.key1", NULL));
+	ck_assert(val2 == settings->get_str(settings, "main.sub1.key2", NULL));
+
+	val1 = settings->get_str(settings, "main.key2", NULL);
+	val2 = settings->get_str(settings, "main.key3", NULL);
+	val3 = settings->get_str(settings, "main.none", NULL);
+	/* only pointers for modified settings should change, but still be valid */
+	ck_assert(settings->load_string(settings, include_content1, FALSE));
+	ck_assert(val1 != settings->get_str(settings, "main.key2", NULL));
+	ck_assert_str_eq(val1, "val2");
+	ck_assert(val2 == settings->get_str(settings, "main.key3", NULL));
+	ck_assert(val3 != settings->get_str(settings, "main.none", NULL));
+	ck_assert_str_eq(val3, "x");
+
+	settings->destroy(settings);
+	settings = settings_create_string(content);
+	ck_assert(settings);
+
+	ck_assert(settings->load_string(settings, include_content1, TRUE));
+	verify_include();
+
+	ck_assert(settings->load_string(settings, include_content2, FALSE));
+	verify_null("main.key1");
+	verify_string("v2", "key2");
+	verify_string("val", "sub1.key");
+	verify_null("main.sub1.key3");
+}
+END_TEST
+
+
+START_TEST(test_load_string_section)
+{
+	char *content =
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"	}\n"
+		"}";
+
+	settings = settings_create_string(content);
+
+	ck_assert(settings->load_string_section(settings, include_content1, TRUE, ""));
+	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub1"));
+	verify_include();
+
+	/* invalid strings are a failure */
+	ck_assert(!settings->load_string_section(settings, "conf {", TRUE, ""));
+	/* NULL or empty strings are OK though */
+	ck_assert(settings->load_string_section(settings, "", TRUE, ""));
+	ck_assert(settings->load_string_section(settings, NULL, TRUE, ""));
+	verify_include();
+
+	ck_assert(settings->load_string_section(settings, include_content2, FALSE, "main"));
+	verify_null("main.key1");
+	verify_string("v2", "main.key2");
+	verify_string("val", "main.sub1.key");
+	verify_null("main.sub1.key3");
+	verify_null("main.sub2.sub3");
+
+	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub2"));
+	verify_string("v2", "main.sub2.key2");
+	verify_string("val", "main.sub2.sub1.key");
 }
 END_TEST
 
@@ -1067,6 +1166,12 @@ Suite *settings_suite_create()
 	tcase_add_test(tc, test_load_files_section);
 	tcase_add_test(tc, test_order_kv);
 	tcase_add_test(tc, test_order_section);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("load_string[_section]");
+	tcase_add_checked_fixture(tc, setup_include_config, teardown_config);
+	tcase_add_test(tc, test_load_string);
+	tcase_add_test(tc, test_load_string_section);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fallback");
