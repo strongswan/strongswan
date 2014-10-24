@@ -830,6 +830,15 @@ static void process_link(private_kernel_pfroute_net_t *this,
 					DBG1(DBG_KNL, "interface %s deactivated", iface->ifname);
 				}
 			}
+#ifdef __APPLE__
+			/* There seems to be a race condition on 10.10, where we get
+			 * the RTM_IFINFO, but getifaddrs() does not return the virtual
+			 * IP installed on a tun device, but we also don't get a
+			 * RTM_NEWADDR. We therefore could miss the new address, letting
+			 * virtual IP installation fail. Delaying getifaddrs() helps,
+			 * but is obviously not a clean fix. */
+			usleep(50000);
+#endif
 			iface->flags = msg->ifm_flags;
 			repopulate_iface(this, iface);
 			found = TRUE;
