@@ -143,6 +143,7 @@ METHOD(cert_cache_t, issued_by, bool,
 	private_cert_cache_t *this, certificate_t *subject, certificate_t *issuer,
 	signature_scheme_t *schemep)
 {
+	certificate_t *cached_issuer = NULL;
 	relation_t *found = NULL, *current;
 	signature_scheme_t scheme;
 	int i;
@@ -154,39 +155,41 @@ METHOD(cert_cache_t, issued_by, bool,
 		current->lock->read_lock(current->lock);
 		if (current->subject)
 		{
-			/* check for equal issuer */
 			if (issuer->equals(issuer, current->issuer))
 			{
-				/* reuse issuer instance in cache() */
-				issuer = current->issuer;
 				if (subject->equals(subject, current->subject))
 				{
-					/* write hit counter is not locked, but not critical */
 					current->hits++;
-					found = current;;
+					found = current;
 					if (schemep)
 					{
 						*schemep = current->scheme;
 					}
+				}
+				else if (!cached_issuer)
+				{
+					cached_issuer = current->issuer->get_ref(current->issuer);
 				}
 			}
 		}
 		current->lock->unlock(current->lock);
 		if (found)
 		{
+			DESTROY_IF(cached_issuer);
 			return TRUE;
 		}
 	}
-	/* no cache hit, check and cache signature */
 	if (subject->issued_by(subject, issuer, &scheme))
 	{
-		cache(this, subject, issuer, scheme);
+		cache(this, subject, cached_issuer ?: issuer, scheme);
 		if (schemep)
 		{
 			*schemep = scheme;
 		}
+		DESTROY_IF(cached_issuer);
 		return TRUE;
 	}
+	DESTROY_IF(cached_issuer);
 	return FALSE;
 }
 
