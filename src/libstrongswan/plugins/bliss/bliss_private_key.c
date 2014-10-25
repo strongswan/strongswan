@@ -14,6 +14,10 @@
  */
 
 #include "bliss_private_key.h"
+#include "bliss_fft.h"
+
+#define _GNU_SOURCE
+#include <stdlib.h>
 
 typedef struct private_bliss_private_key_t private_bliss_private_key_t;
 
@@ -149,12 +153,257 @@ static private_bliss_private_key_t *bliss_private_key_create_empty(void)
 }
 
 /**
+ * Compute the scalar product of a vector x with a negative wrapped vector y
+ */
+static int16_t wrapped_product(int16_t *x, int16_t *y, int n, int shift)
+{
+	int16_t product = 0;
+	int i;
+
+	for (i = 0; i < n - shift; i++)
+	{
+		product += x[i] * y[i + shift];
+	}
+	for (i = n - shift; i < n; i++)
+	{
+		product -= x[i] * y[i + shift - n];
+	}
+	return product;
+}
+
+/**
+ * Apply a negative wrapped rotation to a vector x
+ */
+static void wrap(int16_t *x, int n, int shift, int16_t *x_wrapped)
+{
+	int i;
+
+	for (i = 0; i < n - shift; i++)
+	{
+		x_wrapped[i + shift] = x[i];
+	}
+	for (i = n - shift; i < n; i++)
+	{
+		x_wrapped[i + shift - n] = -x[i];
+	}
+}
+
+static int compare(const int16_t *a, const int16_t *b)
+{
+	int16_t temp = *a - *b;
+
+	if (temp > 0)
+	{
+		return 1;
+	}
+	else if (temp < 0)
+	{
+		return -1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+/**
+ * Compute the Nk(S) norm of S = (s1, s2)
+ */
+static uint32_t nks_norm(int16_t *s1, int16_t *s2, int n)
+{
+	int16_t t[n], t_wrapped[n], max_kappa[n];
+	uint32_t nks = 0;
+	int i, j, kappa = 23;
+
+	for (i = 0; i < n; i++)
+	{
+		t[i] = wrapped_product(s1, s1, n, i) + wrapped_product(s2, s2, n, i);
+		DBG1(DBG_LIB, "t[%d] = %5d", i, t[i]);
+	}
+
+	for (i = 0; i < n; i++)
+	{
+		wrap(t, n, i, t_wrapped);
+		qsort(t_wrapped, n, sizeof(int16_t), (__compar_fn_t)compare);
+		max_kappa[i] = 0;
+
+		for (j = 1; j <= kappa; j++)
+		{
+			max_kappa[i] += t_wrapped[n - j];
+		}
+		DBG1(DBG_LIB, "max_kappa[%d] = %5d", i, max_kappa[i]);
+	}
+	qsort(max_kappa, n, sizeof(int16_t), (__compar_fn_t)compare);
+
+	for (i = 1; i <= kappa; i++)
+	{
+		nks += max_kappa[n - i];
+	}
+	return nks;
+}
+
+/**
+ * Compute the inverse x1 of x modulo q as x^(-1) = x^(q-2) mod q
+ */
+static uint32_t invert(uint32_t x, uint16_t q)
+{
+	uint32_t x1, x2;
+	uint16_t q2;
+	int i, i_max;
+
+	q2 = q - 2;
+	x1 = (q2 & 1) ? x : 1;
+	x2 = x;
+	i_max = 15;
+
+	while ((q2 & (1 << i_max)) == 0)
+	{
+		i_max--;
+	}
+	for (i = 1; i <= i_max; i++)
+	{
+		x2 = (x2 * x2) % q;
+
+		if (q2 & (1 << i))
+		{
+			x1 = (x1 * x2) % q;
+		}
+	}
+
+	return x1;
+}
+
+/**
  * See header.
  */
 bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 {
 	private_bliss_private_key_t *this;
 	u_int key_size = 1;
+	int i;
+	uint32_t *a, *A, *F, *G, nks;
+	uint16_t q, n, l2_norm;
+	bliss_fft_t *fft;
+
+	int16_t f[] = {
+		 0,  0,  0,  0,  1,  1,  0, -1,  0,  1, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0, -1,  0,  0,  0, -1,  1,  0,  0, 
+		 1,  1, -1,  0,  1,  1,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  1,  0, -1,  0, -1,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		-1,  0,  1,  0,  1,  0,  0,  0,  0,  0, 
+		 0,  0,  1,  0,  0,  1,  0, -1,  0,  0, 
+		 0, -1,  0,  0,  1, -1,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  1,  0,  0,  0,  0,  0, 
+
+		 0,  0,  0,  0,  0,  1,  0, -1,  0,  1, 
+		 1, -1,  0,  1,  0,  1,  0,  0,  1,  0, 
+		-1,  0,  0,  0,  1, -1,  1,  0,  1,  0, 
+		 0,  0,  0, -1, -1,  0,  0,  0, -1,  0, 
+		-1,  0,  0,  0,  1,  0,  1,  0,  0,  1, 
+		 0, -1,  0,  0,  0, -1,  0, -1,  0,  0, 
+		-1,  0,  0, -1,  1,  1, -1,  0,  0, -1, 
+		 0,  0,  1, -1,  0, -1,  0,  0,  1,  0, 
+		 0,  1,  1,  0,  0,  0, -1,  0,  0, -1, 
+		 0,  0,  0, -1,  1,  0,  0, -1,  0,  1, 
+
+		 0,  0,  1, -1, -1,  0,  0,  0,  0,  1, 
+		 0,  0,  0,  0,  0,  0,  0,  0, -1,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  1, 
+		 1,  0, -1,  0,  0,  0,  0,  0,  1,  0, 
+		 0,  1,  0,  1,  0,  0,  0,  0,  0,  1, 
+		 0,  0,  0,  0,  0,  1,  0,  0, -1,  0, 
+		 1, -1,  0,  0,  0,  0,  1,  0, -1,  0, 
+		-1,  0, -1,  1,  0,  0,  1,  1,  0,  0, 
+		 0,  0,  0,  0,  0,  1,  0,  0, -1,  0, 
+		 0,  1, -1,  0,  1,  0,  0,  0,  1, -1, 
+
+		-1,  0,  0,  0, -1,  0,  1,  0,  0,  0, 
+		 0,  0,  1, -1,  1,  0,  0,  0,  0,  0, 
+		 0, -1,  0,  1,  0,  0,  0,  0,  0, -1, 
+		 0,  0,  0,  0,  0,  0,  0,  1,  0,  1, 
+		 0,  0,  0,  0, -1,  1,  0,  0,  0,  0, 
+		 0,  0,  0,  0, -1,  0,  0,  0,  0,  1, 
+		 0, -1,  0,  0,  0,  1,  0,  1, -1,  1, 
+		 0,  0,  0,  0,  1,  1,  0,  1,  0,  0, 
+		 0, -1,  1,  0,  1, -1,  0,  0, -1,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+
+		 0,  0,  1,  0,  0,  0,  0,  0, -1,  0, 
+		 0, -1,  0,  0,  0,  1,  0,  0,  0,  1, 
+		 0,  0,  0,  0,  0,  0,  0, -1,  0,  0, 
+		 0,  0, -1,  1,  0,  1,  0,  0, -1,  0, 
+		 0, -1,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		-1,  0,  0,  1,  0, -1,  1,  0,  1,  0, 
+		-1,  1,  0,  0,  0,  0,  0,  0,  0, -1, 
+		 0,  0,  0,  0,  0,  1,  1,  0, -1,  0, 
+		-1,  0,  0,  0, -1, -1,  0,  0,  0,  0, 
+
+		 0,  0, -1, -1,  0,  1, -1,  0,  0,  0, 
+		 0, -1
+	};
+
+int16_t g[] = {
+		-1,  0,  0,  0,  0,  0,  0,  0,  1,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  1,  1,  0, 
+		 1,  0,  0,  0,  1,  0, -1,  0,  0,  0, 
+		 0,  0,  0,  0, -1,  1,  0,  0,  0,  0, 
+		 0,  0, -1,  1,  0,  0,  0,  0,  0, -1, 
+		-1,  0, -1,  0,  1, -1,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  1, -1,  0,  0,  1,  0, 
+		 0,  1,  0, -1,  1,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0, -1,  1,  0, -1,  0,  1, 
+		 0,  1,  0,  0,  1,  0, -1,  1,  0,  0, 
+
+		 0,  0,  0,  0,  0,  0,  1,  1,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  1,  0, 
+		 0,  0,  0,  0,  0,  0,  1,  0,  0,  1, 
+		 1,  1,  1,  0,  0,  0,  0,  0, -1,  0, 
+		 1,  1,  0,  0,  1,  0, -1,  1,  0,  0, 
+		-1,  0,  0, -1,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0, -1,  0, -1,  1,  0,  0, -1, 
+		 0,  0, -1,  0,  0,  0,  0,  0,  0, -1, 
+		 0,  0,  1,  0,  0,  0,  0, -1,  0,  1, 
+		 0,  0, -1,  0,  0,  0,  0,  0,  0,  0, 
+
+		 0,  0,  0,  0,  0,  0,  0,  1,  0,  1, 
+		 1,  0, -1,  0,  0,  0,  0,  1,  1,  0, 
+		 0, -1,  1,  1,  0,  0,  0, -1,  1,  0, 
+		 0,  1,  0,  0,  0,  0, -1,  1,  0,  0, 
+		-1,  0,  1,  0,  0,  0, -1, -1,  0,  0, 
+		 0, -1,  1,  1,  0,  1,  0,  0,  0,  0, 
+		 0,  0,  1,  0,  0,  1,  1,  1,  1,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  1,  0,  0,  0,  0,  1, 
+		 0, -1, -1,  0, -1,  0, -1, -1,  1, -1, 
+
+		-1,  0,  0,  0, -1,  0,  0,  0,  0,  0, 
+		-1,  1,  0, -1,  0,  0,  0,  0,  0,  0, 
+		 1,  0,  0,  0,  0,  0, -1,  0,  0, -1, 
+		 1,  0,  0, -1,  0,  0,  0,  0,  0, -1, 
+		 0,  0, -1,  0,  0,  0, -1,  0,  0,  0, 
+		 0,  0,  0,  1,  1,  0,  0,  0,  0,  0, 
+		-1,  0,  0,  0,  0,  0, -1,  0,  0,  0, 
+		 1,  1,  1,  0,  0,  0,  0, -1, -1,  0, 
+		-1,  0,  1,  0,  0,  0,  0,  0, -1,  0, 
+		-1,  0,  0,  0,  0,  1,  0,  0, -1, -1, 
+
+		 1,  0,  0,  0,  0,  0,  0,  0, -1,  0, 
+		 0,  0,  1, -1,  0,  0,  1,  0,  0,  1, 
+		-1,  0,  1,  0,  1,  1,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0, -1,  0,  0,  0,  0,  1,  1,  0,  0, 
+		 1,  0, -1,  0,  0,  1,  1,  0,  0,  0, 
+		 0,  0, -1,  0,  0,  0,  0,  0,  1,  0, 
+		 0,  0,  1, -1, -1,  0,  0,  0,  0,  1, 
+		-1, -1,  1,  0,  0,  0,  0,  0,  0,  1, 
+		 0,  0,  0,  1,  0,  0,  0,  1,  1,  0, 
+
+		-1,  0,  1,  0,  0,  0,  0,  0,  0,  0, 
+		 0, -1 
+};
 
 	while (TRUE)
 	{
@@ -179,6 +428,61 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 
 	this = bliss_private_key_create_empty();
 	this->key_size = key_size;
+
+	/* We derive the public key from the private key using the FFT */
+	fft = bliss_fft_create(&bliss_fft_12289_512);
+	n = fft->get_size(fft);
+	q = fft->get_modulus(fft);
+
+	/* Compute 2g + 1 */
+	for (i = 0; i < n; i++)
+	{
+		g[i] *= 2;
+	}
+	g[0] += 1;
+
+	l2_norm = wrapped_product(f, f, n, 0) + wrapped_product(g, g, n, 0);
+	nks = nks_norm(f, g, n);
+	DBG1(DBG_LIB, "L2 norm of s1||s2: %d, Nk(S) = %u", l2_norm, nks);
+
+	F = malloc(n * sizeof(uint32_t));
+	G = malloc(n * sizeof(uint32_t));
+	A = malloc(n * sizeof(uint32_t));
+	a = malloc(n * sizeof(uint32_t));
+
+	/* Convert signed arrays to unsigned arrays before FFT */
+	for (i = 0; i < n; i++)
+	{
+		F[i] = (f[i] < 0) ? f[i] + q : f[i];
+		G[i] = (g[i] < 0) ? g[i] + q : g[i];
+	}
+	fft->transform(fft, F, F, FALSE);
+	fft->transform(fft, G, G, FALSE);
+
+	for (i = 0; i < n; i++)
+	{
+		if (F[i] == 0)
+		{
+			DBG1(DBG_LIB, "F[%d] is zero", i);
+		}
+		A[i] = invert(F[i], q);
+		A[i] = (G[i] * A[i]) % q;
+	}
+	fft->transform(fft, A, a, TRUE);
+
+	DBG1(DBG_LIB, "   i   f   g     a     F     G     A");
+	for (i = 0; i < n; i++)
+	{
+		DBG1(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
+			 i, f[i], g[i], a[i], F[i], G[i], A[i]);
+	}
+
+	/* Cleanup */
+	fft->destroy(fft);
+	free(a);
+	free(A);
+	free(F);
+	free(G);
 
 	return &this->public;
 }

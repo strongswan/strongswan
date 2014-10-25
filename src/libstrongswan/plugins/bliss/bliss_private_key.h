@@ -15,7 +15,7 @@
 
 /**
  * @defgroup bliss_private_key bliss_private_key
- * @{ @ingroup gmp_p
+ * @{ @ingroup bliss_p
  */
 
 #ifndef BLISS_PRIVATE_KEY_H_
