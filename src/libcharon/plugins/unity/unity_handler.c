@@ -210,7 +210,7 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 	host_t *host;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													entry->sa, FALSE);
+													entry->sa);
 	if (ike_sa)
 	{
 		create_shunt_name(ike_sa, entry->ts, name, sizeof(name));

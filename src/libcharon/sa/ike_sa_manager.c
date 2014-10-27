@@ -1383,54 +1383,35 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 }
 
 METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
-	private_ike_sa_manager_t *this, u_int32_t id, bool child)
+	private_ike_sa_manager_t *this, u_int32_t id)
 {
-	enumerator_t *enumerator, *children;
+	enumerator_t *enumerator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
-	child_sa_t *child_sa;
 	u_int segment;
 
-	DBG2(DBG_MGR, "checkout IKE_SA by ID");
+	DBG2(DBG_MGR, "checkout IKE_SA by ID %u", id);
 
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		if (wait_for_entry(this, entry, segment))
 		{
-			/* look for a child with such a reqid ... */
-			if (child)
+			if (entry->ike_sa->get_unique_id(entry->ike_sa) == id)
 			{
-				children = entry->ike_sa->create_child_sa_enumerator(entry->ike_sa);
-				while (children->enumerate(children, (void**)&child_sa))
-				{
-					if (child_sa->get_reqid(child_sa) == id)
-					{
-						ike_sa = entry->ike_sa;
-						break;
-					}
-				}
-				children->destroy(children);
-			}
-			else /* ... or for a IKE_SA with such a unique id */
-			{
-				if (entry->ike_sa->get_unique_id(entry->ike_sa) == id)
-				{
-					ike_sa = entry->ike_sa;
-				}
-			}
-			/* got one, return */
-			if (ike_sa)
-			{
+				ike_sa = entry->ike_sa;
 				entry->checked_out = TRUE;
-				DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
-						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 				break;
 			}
 		}
 	}
 	enumerator->destroy(enumerator);
 
+	if (ike_sa)
+	{
+		DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
+			 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }

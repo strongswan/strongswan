@@ -426,8 +426,7 @@ CALLBACK(reestablish, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													*id, FALSE);
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager, *id);
 	if (ike_sa)
 	{
 		if (ike_sa->reauth(ike_sa) == DESTROY_ME)

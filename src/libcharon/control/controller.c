@@ -449,7 +449,7 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	ike_sa_t *ike_sa;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													unique_id, FALSE);
+													unique_id);
 	if (!ike_sa)
 	{
 		DBG1(DBG_IKE, "unable to terminate IKE_SA: ID %d not found", unique_id);

@@ -129,19 +129,15 @@ struct ike_sa_manager_t {
 	/**
 	 * Check out an IKE_SA a unique ID.
 	 *
-	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID.
-	 * These checkout function uses, depending
-	 * on the child parameter, the unique ID of the IKE_SA or the reqid
-	 * of one of a IKE_SAs CHILD_SA.
+	 * Every IKE_SA is uniquely identified by a numerical ID. This checkout
+	 * function uses the unique ID of the IKE_SA to check it out.
 	 *
 	 * @param id				unique ID of the object
-	 * @param child				TRUE to use CHILD, FALSE to use IKE_SA
 	 * @return
 	 * 							- checked out IKE_SA, if found
 	 * 							- NULL, if not found
 	 */
-	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, u_int32_t id,
-								 bool child);
+	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, u_int32_t id);
 
 	/**
 	 * Check out an IKE_SA by the policy/connection name.
