@@ -973,23 +973,29 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 							struct nlmsghdr *hdr)
 {
 	struct xfrm_user_mapping *mapping;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 
 	mapping = NLMSG_DATA(hdr);
 	spi = mapping->id.spi;
-	reqid = mapping->reqid;
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_MAPPING");
 
 	if (mapping->id.proto == IPPROTO_ESP)
 	{
-		host_t *host;
-		host = xfrm2host(mapping->id.family, &mapping->new_saddr,
-						 mapping->new_sport);
-		if (host)
+		host_t *dst, *new;
+
+		dst = xfrm2host(mapping->id.family, &mapping->id.daddr, 0);
+		if (dst)
 		{
-			hydra->kernel_interface->mapping(hydra->kernel_interface, reqid,
-											 spi, host);
+			new = xfrm2host(mapping->id.family, &mapping->new_saddr,
+							mapping->new_sport);
+			if (new)
+			{
+				hydra->kernel_interface->mapping(hydra->kernel_interface,
+												 IPPROTO_ESP, spi, dst, new);
+				new->destroy(new);
+			}
+			dst->destroy(dst);
 		}
 	}
 }

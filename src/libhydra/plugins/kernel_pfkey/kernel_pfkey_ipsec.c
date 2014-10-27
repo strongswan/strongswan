@@ -1388,9 +1388,9 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 	sockaddr_t *sa;
-	host_t *host;
+	host_t *dst, *new;
 
 	DBG2(DBG_KNL, "received an SADB_X_NAT_T_NEW_MAPPING");
 
@@ -1408,7 +1408,6 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	spi = response.sa->sadb_sa_spi;
-	reqid = response.x_sa2->sadb_x_sa2_reqid;
 
 	if (satype2proto(msg->sadb_msg_satype) != IPPROTO_ESP)
 	{
@@ -1416,6 +1415,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	sa = (sockaddr_t*)(response.dst + 1);
+	dst = host_create_from_sockaddr(sa);
 	switch (sa->sa_family)
 	{
 		case AF_INET:
@@ -1433,12 +1433,16 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 		default:
 			break;
 	}
-
-	host = host_create_from_sockaddr(sa);
-	if (host)
+	if (dst)
 	{
-		hydra->kernel_interface->mapping(hydra->kernel_interface, reqid,
-										 spi, host);
+		new = host_create_from_sockaddr(sa);
+		if (new)
+		{
+			hydra->kernel_interface->mapping(hydra->kernel_interface,
+											 IPPROTO_ESP, spi, dst, new);
+			new->destroy(new);
+		}
+		dst->destroy(dst);
 	}
 }
 #endif /*SADB_X_NAT_T_NEW_MAPPING*/

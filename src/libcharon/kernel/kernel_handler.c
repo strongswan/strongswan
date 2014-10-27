@@ -94,14 +94,16 @@ METHOD(kernel_listener_t, expire, bool,
 }
 
 METHOD(kernel_listener_t, mapping, bool,
-	private_kernel_handler_t *this, u_int32_t reqid, u_int32_t spi,
-	host_t *remote)
+	private_kernel_handler_t *this, u_int8_t protocol, u_int32_t spi,
+	host_t *dst, host_t *remote)
 {
-	DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and reqid {%u} "
-		 "changed, queuing update job", ntohl(spi), reqid);
+	protocol_id_t proto = proto_ip2ike(protocol);
+
+	DBG1(DBG_KNL, "NAT mappings of CHILD_SA %N/0x%08x/%H changed, "
+		 "queuing update job", protocol_id_names, proto, ntohl(spi), dst);
 
 	lib->processor->queue_job(lib->processor,
-							  (job_t*)update_sa_job_create(reqid, remote));
+						(job_t*)update_sa_job_create(proto, spi, dst, remote));
 	return TRUE;
 }
 

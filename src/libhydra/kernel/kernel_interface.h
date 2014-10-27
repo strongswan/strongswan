@@ -570,12 +570,13 @@ struct kernel_interface_t {
 	/**
 	 * Raise a mapping event.
 	 *
-	 * @param reqid			reqid of the SA
+	 * @param protocol		protocol of affected SA
 	 * @param spi			spi of the SA
+	 * @param dst			original destination address of SA
 	 * @param remote		new remote host
 	 */
-	void (*mapping)(kernel_interface_t *this, u_int32_t reqid, u_int32_t spi,
-					host_t *remote);
+	void (*mapping)(kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+					host_t *dst, host_t *remote);
 
 	/**
 	 * Raise a migrate event.

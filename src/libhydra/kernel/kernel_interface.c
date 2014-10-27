@@ -836,17 +836,18 @@ METHOD(kernel_interface_t, expire, void,
 }
 
 METHOD(kernel_interface_t, mapping, void,
-	private_kernel_interface_t *this, u_int32_t reqid, u_int32_t spi,
-	host_t *remote)
+	private_kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+	host_t *dst, host_t *remote)
 {
 	kernel_listener_t *listener;
 	enumerator_t *enumerator;
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
 		if (listener->mapping &&
-			!listener->mapping(listener, reqid, spi, remote))
+			!listener->mapping(listener, protocol, spi, dst, remote))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
 		}

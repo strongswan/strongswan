@@ -61,13 +61,14 @@ struct kernel_listener_t {
 	/**
 	 * Hook called if the NAT mappings of an IPsec SA changed.
 	 *
-	 * @param reqid			reqid of the SA
+	 * @param protocol		IPsec protocol of affected SA
 	 * @param spi			spi of the SA
+	 * @param dst			old destinatino address of SA
 	 * @param remote		new remote host
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
-	bool (*mapping)(kernel_listener_t *this, u_int32_t reqid, u_int32_t spi,
-					host_t *remote);
+	bool (*mapping)(kernel_listener_t *this, u_int8_t protocol, u_int32_t spi,
+					host_t *dst, host_t *remote);
 
 	/**
 	 * Hook called if a migrate event for a policy is received.
