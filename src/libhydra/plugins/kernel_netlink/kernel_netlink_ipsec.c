@@ -870,25 +870,26 @@ static void process_expire(private_kernel_netlink_ipsec_t *this,
 						   struct nlmsghdr *hdr)
 {
 	struct xfrm_user_expire *expire;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 	u_int8_t protocol;
+	host_t *dst;
 
 	expire = NLMSG_DATA(hdr);
 	protocol = expire->state.id.proto;
 	spi = expire->state.id.spi;
-	reqid = expire->state.reqid;
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
 
-	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
+	if (protocol == IPPROTO_ESP || protocol == IPPROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and "
-					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
-		return;
+		dst = xfrm2host(expire->state.family, &expire->state.id.daddr, 0);
+		if (dst)
+		{
+			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+											spi, dst, expire->hard != 0);
+			dst->destroy(dst);
+		}
 	}
-
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, expire->hard != 0);
 }
 
 /**

@@ -72,23 +72,23 @@ METHOD(kernel_listener_t, acquire, bool,
 }
 
 METHOD(kernel_listener_t, expire, bool,
-	private_kernel_handler_t *this, u_int32_t reqid, u_int8_t protocol,
-	u_int32_t spi, bool hard)
+	private_kernel_handler_t *this, u_int8_t protocol, u_int32_t spi,
+	host_t *dst, bool hard)
 {
 	protocol_id_t proto = proto_ip2ike(protocol);
 
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%u}",
-		 hard ? "delete" : "rekey", protocol_id_names, proto, ntohl(spi), reqid);
+	DBG1(DBG_KNL, "creating %s job for CHILD_SA %N/0x%08x/%H",
+		 hard ? "delete" : "rekey", protocol_id_names, proto, ntohl(spi), dst);
 
 	if (hard)
 	{
 		lib->processor->queue_job(lib->processor,
-				(job_t*)delete_child_sa_job_create(reqid, proto, spi, hard));
+				(job_t*)delete_child_sa_job_create(proto, spi, dst, hard));
 	}
 	else
 	{
 		lib->processor->queue_job(lib->processor,
-				(job_t*)rekey_child_sa_job_create(reqid, proto, spi));
+				(job_t*)rekey_child_sa_job_create(proto, spi, dst));
 	}
 	return TRUE;
 }

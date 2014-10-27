@@ -35,14 +35,12 @@ struct ipsec_event_listener_t {
 	/**
 	 * Called when the lifetime of an IPsec SA expired
 	 *
-	 * @param reqid			reqid of the expired SA
 	 * @param protocol		protocol of the expired SA
 	 * @param spi			spi of the expired SA
+	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE if this is a hard expire, FALSE otherwise
 	 */
-	void (*expire)(u_int32_t reqid, u_int8_t protocol, u_int32_t spi,
-				   bool hard);
-
+	void (*expire)(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard);
 };
 
 #endif /** IPSEC_EVENT_LISTENER_H_ @}*/

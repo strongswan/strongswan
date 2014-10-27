@@ -194,8 +194,8 @@ METHOD(ipsec_sa_t, expire, void,
 		if (!this->hard_expired)
 		{
 			this->hard_expired = TRUE;
-			ipsec->events->expire(ipsec->events, this->reqid, this->protocol,
-								  this->spi, TRUE);
+			ipsec->events->expire(ipsec->events, this->protocol, this->spi,
+								  this->dst, TRUE);
 		}
 	}
 	else
@@ -203,8 +203,8 @@ METHOD(ipsec_sa_t, expire, void,
 		if (!this->hard_expired && !this->soft_expired)
 		{
 			this->soft_expired = TRUE;
-			ipsec->events->expire(ipsec->events, this->reqid, this->protocol,
-								  this->spi, FALSE);
+			ipsec->events->expire(ipsec->events, this->protocol, this->spi,
+								  this->dst, FALSE);
 		}
 	}
 }

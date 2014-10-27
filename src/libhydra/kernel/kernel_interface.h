@@ -559,13 +559,13 @@ struct kernel_interface_t {
 	/**
 	 * Raise an expire event.
 	 *
-	 * @param reqid			reqid of the expired SA
 	 * @param protocol		protocol of the expired SA
 	 * @param spi			spi of the expired SA
+	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE if it is a hard expire, FALSE otherwise
 	 */
-	void (*expire)(kernel_interface_t *this, u_int32_t reqid,
-				   u_int8_t protocol, u_int32_t spi, bool hard);
+	void (*expire)(kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+				   host_t *dst, bool hard);
 
 	/**
 	 * Raise a mapping event.

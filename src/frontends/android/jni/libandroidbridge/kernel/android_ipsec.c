@@ -40,10 +40,10 @@ struct private_kernel_android_ipsec_t {
 /**
  * Callback registrered with libipsec.
  */
-void expire(u_int32_t reqid, u_int8_t protocol, u_int32_t spi, bool hard)
+static void expire(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard)
 {
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, hard);
+	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+									spi, dst, hard);
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,

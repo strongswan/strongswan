@@ -24,15 +24,11 @@ typedef struct private_rekey_child_sa_job_t private_rekey_child_sa_job_t;
  * Private data of an rekey_child_sa_job_t object.
  */
 struct private_rekey_child_sa_job_t {
+
 	/**
 	 * Public rekey_child_sa_job_t interface.
 	 */
 	rekey_child_sa_job_t public;
-
-	/**
-	 * reqid of the child to rekey
-	 */
-	u_int32_t reqid;
 
 	/**
 	 * protocol of the CHILD_SA (ESP/AH)
@@ -43,11 +39,17 @@ struct private_rekey_child_sa_job_t {
 	 * inbound SPI of the CHILD_SA
 	 */
 	u_int32_t spi;
+
+	/**
+	 * SA destination address
+	 */
+	host_t *dst;
 };
 
 METHOD(job_t, destroy, void,
 	private_rekey_child_sa_job_t *this)
 {
+	this->dst->destroy(this->dst);
 	free(this);
 }
 
@@ -56,12 +58,12 @@ METHOD(job_t, execute, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													this->reqid, TRUE);
+	ike_sa = charon->child_sa_manager->checkout(charon->child_sa_manager,
+									this->protocol, this->spi, this->dst, NULL);
 	if (ike_sa == NULL)
 	{
-		DBG2(DBG_JOB, "CHILD_SA with reqid %d not found for rekeying",
-			 this->reqid);
+		DBG1(DBG_JOB, "CHILD_SA %N/0x%08x/%H not found for rekey",
+			 protocol_id_names, this->protocol, htonl(this->spi), this->dst);
 	}
 	else
 	{
@@ -80,9 +82,8 @@ METHOD(job_t, get_priority, job_priority_t,
 /*
  * Described in header
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid,
-												protocol_id_t protocol,
-												u_int32_t spi)
+rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol,
+												u_int32_t spi, host_t *dst)
 {
 	private_rekey_child_sa_job_t *this;
 
@@ -94,9 +95,9 @@ rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid,
 				.destroy = _destroy,
 			},
 		},
-		.reqid = reqid,
 		.protocol = protocol,
 		.spi = spi,
+		.dst = dst->clone(dst),
 	);
 
 	return &this->public;

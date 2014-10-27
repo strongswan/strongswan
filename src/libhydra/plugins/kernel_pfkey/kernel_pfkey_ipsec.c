@@ -1296,7 +1296,8 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 {
 	pfkey_msg_t response;
 	u_int8_t protocol;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
+	host_t *dst;
 	bool hard;
 
 	DBG2(DBG_KNL, "received an SADB_EXPIRE");
@@ -1309,18 +1310,18 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 
 	protocol = satype2proto(msg->sadb_msg_satype);
 	spi = response.sa->sadb_sa_spi;
-	reqid = response.x_sa2->sadb_x_sa2_reqid;
 	hard = response.lft_hard != NULL;
 
-	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
+	if (protocol == IPPROTO_ESP || protocol == IPPROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring SADB_EXPIRE for SA with SPI %.8x and "
-					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
-		return;
+		dst = host_create_from_sockaddr((sockaddr_t*)(response.dst + 1));
+		if (dst)
+		{
+			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+											spi, dst, hard);
+			dst->destroy(dst);
+		}
 	}
-
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, hard);
 }
 
 #ifdef SADB_X_MIGRATE
