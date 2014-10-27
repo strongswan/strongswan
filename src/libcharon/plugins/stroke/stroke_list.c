@@ -214,11 +214,12 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	config = child_sa->get_config(child_sa);
 	now = time_monotonic(NULL);
 
-	fprintf(out, "%12s{%d}:  %N, %N%s",
-			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+	fprintf(out, "%12s{%d}:  %N, %N%s, reqid %u",
+			child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
 			ipsec_mode_names, child_sa->get_mode(child_sa),
-			config->use_proxy_mode(config) ? "_PROXY" : "");
+			config->use_proxy_mode(config) ? "_PROXY" : "",
+			child_sa->get_reqid(child_sa));
 
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
@@ -238,7 +239,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 		if (all)
 		{
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa),
-					child_sa->get_reqid(child_sa));
+					child_sa->get_unique_id(child_sa));
 
 			proposal = child_sa->get_proposal(child_sa);
 			if (proposal)
@@ -333,7 +334,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	other_ts = linked_list_create_from_enumerator(
 							child_sa->create_ts_enumerator(child_sa, FALSE));
 	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
-			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 			my_ts, other_ts);
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
