@@ -352,7 +352,7 @@ METHOD(stroke_control_t, terminate, void,
 				if (streq(name, child_sa->get_name(child_sa)))
 				{
 					child_list->insert_last(child_list,
-							(void*)(uintptr_t)child_sa->get_reqid(child_sa));
+							(void*)(uintptr_t)child_sa->get_unique_id(child_sa));
 					if (!all)
 					{
 						break;

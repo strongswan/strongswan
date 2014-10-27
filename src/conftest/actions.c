@@ -236,7 +236,7 @@ static job_requeue_t close_child(char *config)
 		{
 			if (streq(config, child_sa->get_name(child_sa)))
 			{
-				id = child_sa->get_reqid(child_sa);
+				id = child_sa->get_unique_id(child_sa);
 				break;
 			}
 		}

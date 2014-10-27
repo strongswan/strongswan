@@ -264,11 +264,11 @@ CALLBACK(terminate, vici_message_t*,
 				{
 					continue;
 				}
-				if (child_id && child_sa->get_reqid(child_sa) != child_id)
+				if (child_id && child_sa->get_unique_id(child_sa) != child_id)
 				{
 					continue;
 				}
-				current = child_sa->get_reqid(child_sa);
+				current = child_sa->get_unique_id(child_sa);
 				array_insert(ids, ARRAY_TAIL, &current);
 			}
 			csas->destroy(csas);
