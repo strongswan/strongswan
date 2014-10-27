@@ -782,11 +782,11 @@ pools.<name> { # }
 	Section defining a single pool with a unique name.
 
 pools.<name>.addrs =
-	Subnet defining addresses allocated in pool.
+	Addresses allocated in pool.
 
-	Subnet defining addresses allocated in pool. Accepts a single CIDR subnet
-	defining the pool to allocate addresses from. Pools must be unique and
-	non-overlapping.
+	Subnet or range defining addresses allocated in pool. Accepts a single CIDR
+	subnet defining the pool to allocate addresses from, or an address range
+	(<from>-<to>).  Pools must be unique and non-overlapping.
 
 pools.<name>.<attr> =
 	Comma separated list of additional attributes from type <attr>.
