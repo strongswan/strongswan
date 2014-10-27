@@ -206,8 +206,8 @@ static void schedule_inactivity_timeout(private_quick_mode_t *this)
 		close_ike = lib->settings->get_bool(lib->settings,
 									"%s.inactivity_close_ike", FALSE, lib->ns);
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
-									  timeout, close_ike), timeout);
+			inactivity_job_create(this->child_sa->get_unique_id(this->child_sa),
+								  timeout, close_ike), timeout);
 	}
 }
 
@@ -406,10 +406,7 @@ static bool install(private_quick_mode_t *this)
 	{
 		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
 	}
-	if (!this->rekey)
-	{
-		schedule_inactivity_timeout(this);
-	}
+	schedule_inactivity_timeout(this);
 	this->child_sa = NULL;
 	return TRUE;
 }

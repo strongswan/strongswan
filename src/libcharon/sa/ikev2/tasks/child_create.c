@@ -296,7 +296,7 @@ static bool allocate_spi(private_child_create_t *this)
  */
 static void schedule_inactivity_timeout(private_child_create_t *this)
 {
-	u_int32_t timeout;
+	u_int32_t timeout, id;
 	bool close_ike;
 
 	timeout = this->config->get_inactivity(this->config);
@@ -304,9 +304,9 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
 									"%s.inactivity_close_ike", FALSE, lib->ns);
+		id = this->child_sa->get_unique_id(this->child_sa);
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
-									  timeout, close_ike), timeout);
+						inactivity_job_create(id, timeout, close_ike), timeout);
 	}
 }
 
@@ -693,10 +693,7 @@ static status_t select_and_install(private_child_create_t *this,
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
 
-	if (!this->rekey)
-	{	/* a rekeyed SA uses the same reqid, no need for a new job */
-		schedule_inactivity_timeout(this);
-	}
+	schedule_inactivity_timeout(this);
 
 	my_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
