@@ -528,6 +528,34 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 /*
  * Described in header.
  */
+bool host_create_from_range(char *string, host_t **from, host_t **to)
+{
+	char *pos;
+
+	pos = strchr(string, '-');
+	if (!pos)
+	{
+		return FALSE;
+	}
+	*to = host_create_from_string(pos + 1, 0);
+	if (!*to)
+	{
+		return FALSE;
+	}
+	pos = strndup(string, pos - string);
+	*from = host_create_from_string_and_family(pos, (*to)->get_family(*to), 0);
+	free(pos);
+	if (!*from)
+	{
+		(*to)->destroy(*to);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header.
+ */
 host_t *host_create_from_subnet(char *string, int *bits)
 {
 	char *pos, buf[64];
