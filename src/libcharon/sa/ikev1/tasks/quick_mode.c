@@ -385,7 +385,7 @@ static bool install(private_quick_mode_t *this)
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 		 this->child_sa->get_name(this->child_sa),
-		 this->child_sa->get_reqid(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
 		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
 
@@ -986,7 +986,8 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 															FALSE).value;
 						child_sa->set_state(child_sa, CHILD_REKEYING);
 						DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
-							 child_sa->get_name(child_sa), this->reqid);
+							 child_sa->get_name(child_sa),
+							 child_sa->get_unique_id(child_sa));
 					}
 					policies->destroy(policies);
 				break;

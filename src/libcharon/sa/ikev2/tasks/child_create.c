@@ -703,7 +703,7 @@ static status_t select_and_install(private_child_create_t *this,
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 		 this->child_sa->get_name(this->child_sa),
-		 this->child_sa->get_reqid(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
 		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
 

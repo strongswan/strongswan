@@ -1596,7 +1596,8 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 				child_sa->get_lifetime(child_sa, FALSE))
 		{
 			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
-				 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+				 child_sa->get_name(child_sa),
+				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;
 			break;
 		}

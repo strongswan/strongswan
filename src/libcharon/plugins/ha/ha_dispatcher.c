@@ -836,7 +836,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 
 	DBG1(DBG_CFG, "installed HA CHILD_SA %s{%d} %#R=== %#R "
 		"(segment in: %d%s, out: %d%s)", child_sa->get_name(child_sa),
-		child_sa->get_reqid(child_sa), local_ts, remote_ts,
+		child_sa->get_unique_id(child_sa), local_ts, remote_ts,
 		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
 		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
 	child_sa->add_policies(child_sa, local_ts, remote_ts);

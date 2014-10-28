@@ -285,7 +285,7 @@ static bool setup_tun_device(private_android_service_t *this,
 	int tunfd;
 
 	DBG1(DBG_DMN, "setting up TUN device for CHILD_SA %s{%u}",
-		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+		 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa));
 
 	builder = charonservice->get_vpnservice_builder(charonservice);
 
