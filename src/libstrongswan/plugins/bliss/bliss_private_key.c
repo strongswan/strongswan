@@ -14,6 +14,7 @@
  */
 
 #include "bliss_private_key.h"
+#include "bliss_param_set.h"
 #include "bliss_fft.h"
 
 #define _GNU_SOURCE
@@ -30,11 +31,10 @@ struct private_bliss_private_key_t {
 	 */
 	bliss_private_key_t public;
 
-
 	/**
-	 * BLISS type
+	 * BLISS signature parameter set
 	 */
-	u_int key_size;
+	bliss_param_set_t *set;
 
 	/**
 	 * reference count
@@ -77,7 +77,7 @@ METHOD(private_key_t, decrypt, bool,
 METHOD(private_key_t, get_keysize, int,
 	private_bliss_private_key_t *this)
 {
-	return this->key_size;
+	return this->set->strength;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,
@@ -209,16 +209,15 @@ static int compare(const int16_t *a, const int16_t *b)
 /**
  * Compute the Nk(S) norm of S = (s1, s2)
  */
-static uint32_t nks_norm(int16_t *s1, int16_t *s2, int n)
+static uint32_t nks_norm(int16_t *s1, int16_t *s2, int n, uint16_t kappa)
 {
 	int16_t t[n], t_wrapped[n], max_kappa[n];
 	uint32_t nks = 0;
-	int i, j, kappa = 23;
+	int i, j;
 
 	for (i = 0; i < n; i++)
 	{
 		t[i] = wrapped_product(s1, s1, n, i) + wrapped_product(s2, s2, n, i);
-		DBG1(DBG_LIB, "t[%d] = %5d", i, t[i]);
 	}
 
 	for (i = 0; i < n; i++)
@@ -231,7 +230,6 @@ static uint32_t nks_norm(int16_t *s1, int16_t *s2, int n)
 		{
 			max_kappa[i] += t_wrapped[n - j];
 		}
-		DBG1(DBG_LIB, "max_kappa[%d] = %5d", i, max_kappa[i]);
 	}
 	qsort(max_kappa, n, sizeof(int16_t), (__compar_fn_t)compare);
 
@@ -283,9 +281,10 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	int i;
 	uint32_t *a, *A, *F, *G, nks;
 	uint16_t q, n, l2_norm;
+	bliss_param_set_t *set;
 	bliss_fft_t *fft;
 
-	int16_t f[] = {
+	int16_t f_bliss1[] = {
 		 0,  0,  0,  0,  1,  1,  0, -1,  0,  1, 
 		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
 		 0,  0, -1,  0,  0,  0, -1,  1,  0,  0, 
@@ -345,7 +344,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 		 0, -1
 	};
 
-int16_t g[] = {
+int16_t g_bliss1[] = {
 		-1,  0,  0,  0,  0,  0,  0,  0,  1,  0, 
 		 0,  0,  0,  0,  0,  0,  0,  1,  1,  0, 
 		 1,  0,  0,  0,  1,  0, -1,  0,  0,  0, 
@@ -405,6 +404,125 @@ int16_t g[] = {
 		 0, -1 
 };
 
+	int16_t f[] = {
+		 0, -1, -1,  0,  0,  1, -1, -1,  0,  0, 
+		 0,  0,  1,  1,  0,  0,  0,  1, -1,  1, 
+		-2,  1,  0,  0, -1,  0,  0,  0, -1,  0, 
+		 0, -1,  0,  1,  1, -1,  0,  1, -2, -1, 
+		 1,  0,  0,  0,  0, -1, -1,  0,  1,  2, 
+		 0,  0,  1,  0, -1,  0,  1,  1,  1,  0, 
+		 2, -1,  0,  0,  1,  0,  0, -1,  0,  0, 
+		 0,  0,  1,  0,  0, -1,  0, -1, -1,  0, 
+		 0,  0,  0, -1, -2, -1, -1, -1,  1,  0, 
+		 0,  1,  0,  1, -1, -1,  0,  0,  0,  1, 
+
+		 0, -1,  1,  1,  1,  0, -1,  0,  0, -1, 
+		 0,  1, -1,  1, -2,  0,  1,  1, -1,  0, 
+		 1, -1, -2,  0,  0, -1,  0,  0,  1,  0, 
+		 0,  0,  1, -1,  1, -2,  0,  0, -1,  1, 
+		 0,  0, -1, -1,  0, -1,  0,  0,  0,  0, 
+		-1,  0,  1, -1,  1,  0, -1,  1,  0,  1, 
+		 1,  0,  0, -1,  0,  1,  1,  0, -1,  1, 
+		 1,  1,  2,  0,  0,  1,  0,  1,  0,  0, 
+		-1, -1,  0, -2,  0, -1,  0,  0, -1,  1, 
+		-1, -2,  0,  2,  0, -1,  2,  1,  0,  1, 
+
+		 1,  1,  1,  0, -1,  1, -1,  1,  1, -1, 
+		 0,  1,  1,  1,  0,  0,  0,  0,  1,  0, 
+		-2,  0,  1,  1,  0, -1, -1,  1,  0,  1, 
+		-2,  1,  1, -1,  1,  0,  0,  1, -1, -1, 
+		 1,  0,  1,  1,  1, -1,  0, -1,  0,  0, 
+		 0,  0,  1,  0,  0, -1,  0,  0,  0,  0, 
+		 1, -1,  2, -1,  1,  0,  0,  1,  0,  0, 
+		 0, -1, -1,  2,  1,  1,  0, -1,  0, -1, 
+		 0,  0,  0,  0,  0,  0,  0, -1, -1,  0, 
+		 0,  0,  0, -1,  0,  1,  1,  1, -1,  0, 
+
+		-1,  1,  0,  1,  0,  0,  0,  1,  0, -1, 
+		 0,  0,  1, -2,  0,  0,  0,  0, -1,  1, 
+		 0,  1,  0,  0,  0, -1,  0,  1,  0, -1, 
+		 0,  1, -1,  0,  0,  1,  0,  0,  0,  0, 
+		 1, -1,  0, -2,  0,  0,  2,  0, -1, -1, 
+		-1,  1,  1,  0,  1, -1,  1,  2, -1,  1, 
+		-1,  0,  1, -2,  0,  0, -1,  2, -1,  0, 
+		-1,  0, -1,  0,  1, -2,  0,  2,  0,  0, 
+		 1, -1,  1, -1,  1,  0,  1,  1, -1,  0, 
+		 0,  0, -1, -1,  0,  0,  0, -1, -2,  0, 
+
+		 0,  0,  1, -2,  0,  0,  1,  1,  0, -1, 
+		 0,  0,  0,  0,  0,  1,  0,  0,  0,  0, 
+		 0,  0, -1,  0,  0,  0,  1,  0,  0,  0, 
+		 1,  2,  0, -1,  0,  0,  1,  0,  0,  0, 
+		-1,  0,  0,  1, -1,  0, -1,  0,  0, -1, 
+		-1, -1,  2,  0,  0,  0, -1,  0,  2,  0, 
+		-1,  0, -1,  0, -1,  1,  0,  0,  0,  0, 
+		-1,  2,  0,  1,  0,  0, -1,  0,  0,  0, 
+		 1, -1, -1,  0,  0, -1,  0, -1,  1, -1, 
+		 1,  0, -1, -1,  1,  1,  0,  0,  0,  0, 
+
+		 0,  0,  0,  1, -1,  0,  0,  0,  0,  0, 
+		 0,  0 
+	};
+int16_t g[] = {
+		 0,  2,  1,  0, -1,  1,  1,  1, -1, -1, 
+		 1,  2,  0,  0,  0, -1,  0, -1,  1,  0, 
+		 1, -1,  1,  0,  0,  0, -1, -1,  1,  0, 
+		-1,  1,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  1, -1, -1, -1, -1,  0,  0,  0,  0, 
+		 0, -1,  0, -1, -2,  0,  0,  1,  0, -1, 
+		-1, -1, -1, -1,  2,  1, -1,  0, -1,  0, 
+		 0,  1,  1,  0,  1,  0,  0,  0, -1,  1, 
+		 0,  1,  0,  0,  0,  1,  0,  0,  0,  0, 
+		 0, -1,  0,  0,  0, -1,  0,  0,  0,  0, 
+
+		 0,  1, -2,  1,  1, -1,  1,  1,  0,  1, 
+		 0,  0,  1,  0,  0,  0, -1,  0,  0,  0, 
+		 0,  0,  1,  0,  1, -1,  0,  0,  0,  1, 
+		 1,  1,  0,  0,  1,  0,  0,  1,  1,  1, 
+		 0,  0,  0, -1,  0, -1, -2,  1,  0,  1, 
+		 0, -1, -2,  1,  0,  0, -1,  0,  0,  0, 
+		 0,  0,  1,  0,  1, -1,  1,  1, -1,  0, 
+		 0,  0,  1, -1,  1,  1, -2, -1,  1,  0, 
+		-2,  0,  0,  0,  1,  1,  2,  0,  2,  1, 
+		 1,  0,  1,  0, -1,  1,  0,  0,  0, -1, 
+
+		-1, -1,  0,  0, -1,  1,  0,  1,  0, -1, 
+		 0,  0,  2,  1,  0,  0,  1, -2, -1,  0, 
+		 1,  0, -1,  1, -1,  0,  1, -1, -1,  1, 
+		 0,  0, -1, -1, -1,  0,  0,  1, -2, -1, 
+		 0, -1,  1, -1,  1, -1,  0, -1, -1,  1, 
+		 0,  1, -1,  0,  2,  1, -1,  0, -2,  0, 
+		-1,  0,  0,  1,  0, -1,  1,  1,  0,  0, 
+		 0, -1, -2,  1,  0,  0,  2,  0, -1,  0, 
+		 1,  1,  0, -1,  0,  0, -1, -1, -1,  0, 
+		 0, -1,  0,  0,  0,  0,  1,  0, -1, -1, 
+
+		 1, -1,  0,  0,  1,  0, -1,  1,  0,  1, 
+		 0,  1,  1,  1, -1,  0,  0,  1,  0, -1, 
+		 0, -1,  0,  0,  0, -1, -1,  0,  0,  0, 
+		-1, -1,  0,  1,  0,  0,  0,  1,  0,  0, 
+		 1,  1, -1,  0,  0,  0, -1,  0,  1,  1, 
+		 0,  1,  0,  1,  0, -1, -1,  0,  0,  0, 
+		 2, -1,  0,  0, -1,  1, -1, -2, -1,  0, 
+		 0,  1,  0,  1,  1,  0,  0,  0, -1,  2, 
+		 0, -1,  0,  0,  0, -1, -1, -1,  0,  1, 
+		-2,  0,  0,  1, -1,  0,  0,  0,  1,  1, 
+
+		 1,  1,  0, -1,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0, -2,  0,  0,  0, 
+		 2,  1,  0,  0,  0,  0,  1,  0,  0, -1, 
+		 1, -2,  0,  0,  1,  1,  1,  0, -2,  0, 
+		-1,  0,  1,  2,  1,  0,  0, -2,  0, -1, 
+		-1,  0,  1,  0,  1,  0,  1,  0, -1, -1, 
+		 2,  0,  1, -1,  0,  1,  0,  0,  0, -1, 
+		 1,  0,  1, -1,  0,  0,  0,  0,  0, -1, 
+		 0,  0,  1, -1,  0,  0,  1,  1,  0,  0, 
+		 0,  1, -1,  0, -1, -2, -1,  0,  0, -2, 
+
+		 0, -1,  0,  0,  0, -1,  1,  0,  1,  1, 
+		-1,  0
+	};
+
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
@@ -421,18 +539,27 @@ int16_t g[] = {
 	}
 
 	/* Only BLISS-I and BLISS-IV are supported */
-	if (key_size != 1 && key_size != 4)
+	set = bliss_param_set_get_by_id(key_size);
+	if (!set)
 	{
+		DBG1(DBG_LIB, "BLISS parameter set %u not supported");
 		return NULL;
 	}
 
+	/* Some shortcuts for often used variables */
+	n = set->n;
+	q = set->q;
+
+	if (set->fft_params->n != n || set->fft_params->q != q)
+	{
+		DBG1(DBG_LIB, "FFT parameters do not match BLISS parameters");
+		return NULL;
+	}
 	this = bliss_private_key_create_empty();
-	this->key_size = key_size;
+	this->set = set;
 
 	/* We derive the public key from the private key using the FFT */
-	fft = bliss_fft_create(&bliss_fft_12289_512);
-	n = fft->get_size(fft);
-	q = fft->get_modulus(fft);
+	fft = bliss_fft_create(set->fft_params);
 
 	/* Compute 2g + 1 */
 	for (i = 0; i < n; i++)
@@ -442,8 +569,9 @@ int16_t g[] = {
 	g[0] += 1;
 
 	l2_norm = wrapped_product(f, f, n, 0) + wrapped_product(g, g, n, 0);
-	nks = nks_norm(f, g, n);
-	DBG1(DBG_LIB, "L2 norm of s1||s2: %d, Nk(S) = %u", l2_norm, nks);
+	nks = nks_norm(f, g, n, set->kappa);
+	DBG2(DBG_LIB, "L2 norm of s1||s2: %d, Nk(S): %u (%u max)",
+		 l2_norm, nks, set->nks_max);
 
 	F = malloc(n * sizeof(uint32_t));
 	G = malloc(n * sizeof(uint32_t));
@@ -470,10 +598,10 @@ int16_t g[] = {
 	}
 	fft->transform(fft, A, a, TRUE);
 
-	DBG1(DBG_LIB, "   i   f   g     a     F     G     A");
+	DBG4(DBG_LIB, "   i   f   g     a     F     G     A");
 	for (i = 0; i < n; i++)
 	{
-		DBG1(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
+		DBG4(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
 			 i, f[i], g[i], a[i], F[i], G[i], A[i]);
 	}
 

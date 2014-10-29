@@ -1,0 +1,121 @@
+/*
+ * Copyright (C) 2014 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+/**
+ * @defgroup bliss_param_set bliss_param_set
+ * @{ @ingroup bliss_p
+ */
+
+#ifndef BLISS_PARAM_SET_H_
+#define BLISS_PARAM_SET_H_
+
+typedef enum bliss_param_set_id_t bliss_param_set_id_t;
+typedef struct bliss_param_set_t bliss_param_set_t;
+
+#include "bliss_fft_params.h"
+
+#include <library.h>
+
+/**
+ * BLISS signature parameter set ID list
+ */
+enum bliss_param_set_id_t {
+	BLISS_I =   1,
+	BLISS_II =  2,
+	BLISS_III = 3,
+	BLISS_IV =  4
+};
+
+extern enum_name_t *bliss_param_set_id_names;
+
+/**
+ * BLISS
+ */
+struct bliss_param_set_t {
+
+	/**
+	 * BLISS parameter set ID
+	 */
+	bliss_param_set_id_t id;
+
+	/**
+	 * BLISS parameter set OID
+	 */
+	int oid;
+
+	/**
+	 * Security strength in bits
+	 */
+	uint16_t strength;
+
+	/**
+	 * Prime modulus
+	 */
+	uint16_t q;
+
+	/**
+	 * Ring dimension equal to the number of polynomial coefficients
+	 */
+	uint16_t n;
+
+	/**
+	 * Number of bits in n
+	 */
+	uint16_t n_bits;
+
+	/**
+	 * FFT parameters
+	 */
+	bliss_fft_params_t *fft_params;
+
+	/**
+	 * Number of [-1, +1] secret key coefficients
+	 */
+	uint16_t non_zero1;
+
+	/**
+	 * Number of [-2, +2] secret key coefficients
+	 */
+	uint16_t non_zero2;
+
+	/**
+	 * Number of secret key terms that go into Nk(S) norm
+	 */
+	uint16_t kappa;
+
+	/**
+	 * Maximum Nk(S) tolerable NK(S) norm
+	 */
+	uint32_t nks_max;
+
+};
+
+/**
+ * Get BLISS signature parameter set by BLISS parameter set ID
+ *
+ * @param id	BLISS parameter set ID
+ * @return		BLISS parameter set
+*/
+bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id);
+
+/**
+ * Get BLISS signature parameter set by BLISS parameter set OID
+ *
+ * @param oid	BLISS parameter set OID
+ * @return		BLISS parameter set
+*/
+bliss_param_set_t* bliss_param_set_get_by_oid(int oid);
+
+#endif /** BLISS_PARAM_SET_H_ @}*/

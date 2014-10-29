@@ -13,6 +13,7 @@ endif
 
 libstrongswan_bliss_la_SOURCES = \
 	bliss_plugin.h bliss_plugin.c \
+	bliss_param_set.h bliss_param_set.c \
 	bliss_private_key.h bliss_private_key.c \
 	bliss_public_key.h bliss_public_key.c \
 	bliss_fft.h bliss_fft.c \
