@@ -178,6 +178,12 @@ static struct {
 		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01) }},
 	{ "email:tester",			ID_RFC822_ADDR,	{ .type = ENC_STRING,
 		.data.s = "tester" }},
+	{ "{1}:#c0a80101",			ID_IPV4_ADDR,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01) }},
+	{ "{0x02}:tester",			ID_FQDN,		{ .type = ENC_STRING,
+		.data.s = "tester" }},
+	{ "{99}:somedata",			99,				{ .type = ENC_STRING,
+		.data.s = "somedata" }},
 };
 
 START_TEST(test_from_string)

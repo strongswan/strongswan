@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "identification.h"
 
@@ -970,6 +971,39 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 	return NULL;
 }
 
+/**
+ * Create an identity for a specific type, determined by a numerical prefix
+ *
+ * The prefix is of the form "{x}:", where x denotes the numerical identity
+ * type.
+ */
+static private_identification_t* create_from_string_with_num_type(char *str)
+{
+	private_identification_t *this;
+	u_long type;
+
+	if (*str++ != '{')
+	{
+		return NULL;
+	}
+	errno = 0;
+	type = strtoul(str, &str, 0);
+	if (errno || *str++ != '}' || *str++ != ':')
+	{
+		return NULL;
+	}
+	this = identification_create(type);
+	if (*str == '#')
+	{
+		this->encoded = chunk_from_hex(chunk_from_str(str + 1), NULL);
+	}
+	else
+	{
+		this->encoded = chunk_clone(chunk_from_str(str));
+	}
+	return this;
+}
+
 /*
  * Described in header.
  */
@@ -983,6 +1017,11 @@ identification_t *identification_create_from_string(char *string)
 		string = "%any";
 	}
 	this = create_from_string_with_prefix_type(string);
+	if (this)
+	{
+		return &this->public;
+	}
+	this = create_from_string_with_num_type(string);
 	if (this)
 	{
 		return &this->public;
