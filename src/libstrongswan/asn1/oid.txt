@@ -208,6 +208,16 @@
             0xA0             ""
               0x2A           "ITA"
                 0x01         "strongSwan"				OID_STRONGSWAN
+                0x02         "cps"
+                0x03         "e-voting"
+                0x05         "BLISS"
+                  0x01       "keyType"
+                    0x01     "blissPublicKey"			OID_BLISS
+                  0x02       "parameters"
+                    0x01     "BLISS-I"					OID_BLISS_I
+                    0x02     "BLISS-II"					OID_BLISS_II
+                    0x03     "BLISS-III"				OID_BLISS_III
+                    0x04     "BLISS-IV"					OID_BLISS_IV
           0x89               ""
             0x31             ""
               0x01           ""
