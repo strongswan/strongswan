@@ -302,6 +302,12 @@ struct identification_t {
  * N, G, I, dnQualifier, ID, EN, EmployeeNumber, E, Email, emailAddress, UN,
  * unstructuredName, TCGID.
  *
+ * To skip automatic type detection the following prefixes may be used to
+ * enforce a specific type: ipv4:, ipv6:, rfc822:, email:, userfqdn:, fqdn:,
+ * dns:, asn1dn:, asn1gn: and keyid:. If a # follows the :, the remaining data
+ * is interpreted as hex encoded binary data for that ID, otherwise the raw
+ * string following the prefix is used as identity data, without conversion.
+ *
  * This constructor never returns NULL. If it does not find a suitable
  * conversion function, it will copy the string to an ID_KEY_ID.
  *
