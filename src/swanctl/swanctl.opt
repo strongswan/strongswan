@@ -303,6 +303,22 @@ connections.<conn>.local<suffix>.id =
 	authentication, the IKE identity must be contained in the certificate,
 	either as subject or as subjectAltName.
 
+	The identity can be an IP address, a fully-qualified domain name, an email
+	address or a Distinguished Name for which the ID type is determined
+	automatically and the string is converted to the appropriate encoding. To
+	enforce a specific identity type, a prefix may be used, followed by a colon
+	(:). If the number sign (#) follows the colon, the remaining data is
+	interpreted as hex encoding, otherwise the string is used as-is as the
+	identification data. Note that this implies that no conversion is performed
+	for non-string identities. For example, _ipv4:10.0.0.1_ does not create a
+	valid ID_IPV4_ADDR IKE identity, as it does not get converted to binary
+	0x0a000001. Instead, one could use _ipv4:#0a000001_ to get a valid identity,
+	but just using the implicit type with automatic conversion is usually
+	simpler. The same applies to the ASN1 encoded types. The following prefixes
+	are known: _ipv4_, _ipv6_, _rfc822_, _email_, _userfqdn_, _fqdn_, _dns_,
+	_asn1dn_, _asn1gn_ and _keyid_. Custom type prefixes may be specified by
+	surrounding the numerical type value by curly brackets.
+
 connections.<conn>.local<suffix>.eap_id = id
 	Client EAP-Identity to use in EAP-Identity exchange and the EAP method.
 
@@ -335,9 +351,8 @@ connections.<conn>.remote<suffix> {}
 connections.<conn>.remote<suffix>.id = %any
 	IKE identity to expect for authentication round.
 
-	IKE identity to expect for authentication round. When using certificate
-	authentication, the IKE identity must be contained in the certificate,
-	either as subject or as subjectAltName.
+	IKE identity to expect for authentication round. Refer to the _local_ _id_
+	section for details.
 
 connections.<conn>.remote<suffix>.groups =
 	Authorization group memberships to require.
