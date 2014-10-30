@@ -15,8 +15,7 @@ dave::tcpdump::IP sun.strongswan.org > dave.strongswan.org: ESP::YES
 sun::cat /tmp/tkm.log::RSA private key '/etc/tkm/sunKey.der' loaded::YES
 sun::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.2 <-> 192.168.0.100 \]::YES
 sun::cat /tmp/tkm.log::Adding policy \[ 2, 192.168.0.2 <-> 192.168.0.200 \]::YES
-sun::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
-sun::cat /tmp/tkm.log::Checked CA certificate of CC context 2::YES
+sun::cat /tmp/tkm.log | grep "Checked CA certificate of CC context 1" | wc -l::2::YES
 sun::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 sun::cat /tmp/tkm.log::Authentication of ISA context 2 successful::YES
 sun::cat /tmp/tkm.log::Adding SA \[ 1, 192.168.0.2 <-> 192.168.0.100, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
