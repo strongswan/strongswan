@@ -240,6 +240,8 @@ METHOD(listener_t, authorize, bool,
 		return TRUE;
 	}
 
+	*success = FALSE;
+
 	keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
 	isa_id = keymat->get_isa_id(keymat);
 	DBG1(DBG_IKE, "TKM authorize listener called for ISA context %llu", isa_id);
@@ -248,28 +250,26 @@ METHOD(listener_t, authorize, bool,
 	if (!cc_id)
 	{
 		DBG1(DBG_IKE, "unable to acquire CC context id");
-		*success = FALSE;
 		return TRUE;
 	}
 	if (!build_cert_chain(ike_sa, cc_id))
 	{
 		DBG1(DBG_IKE, "unable to build certificate chain");
-		*success = FALSE;
-		return TRUE;
+		goto cc_reset;
 	}
 
 	auth = keymat->get_auth_payload(keymat);
 	if (!auth->ptr)
 	{
 		DBG1(DBG_IKE, "no AUTHENTICATION data available");
-		*success = FALSE;
+		goto cc_reset;
 	}
 
 	other_init_msg = keymat->get_peer_init_msg(keymat);
 	if (!other_init_msg->ptr)
 	{
 		DBG1(DBG_IKE, "no peer init message available");
-		*success = FALSE;
+		goto cc_reset;
 	}
 
 	chunk_to_sequence(auth, &signature, sizeof(signature_type));
@@ -279,7 +279,7 @@ METHOD(listener_t, authorize, bool,
 	{
 		DBG1(DBG_IKE, "TKM based authentication failed"
 			 " for ISA context %llu", isa_id);
-		*success = FALSE;
+		goto cc_reset;
 	}
 	else
 	{
@@ -288,7 +288,13 @@ METHOD(listener_t, authorize, bool,
 		*success = TRUE;
 	}
 
-	return TRUE;
+cc_reset:
+	if (ike_cc_reset(cc_id) != TKM_OK)
+	{
+		DBG1(DBG_IKE, "unable to reset CC context %llu", cc_id);
+	}
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_CC, cc_id);
+	return TRUE; /* stay registered */
 }
 
 METHOD(listener_t, message, bool,
