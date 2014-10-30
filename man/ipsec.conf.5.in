@@ -750,10 +750,35 @@ defaults to
 .B left
 or the subject of the certificate configured with
 .BR leftcert .
-Can be an IP address, a fully-qualified domain name, an email address, or
-a keyid. If
+If
 .B leftcert
 is configured the identity has to be confirmed by the certificate.
+
+Can be an IP address, a fully-qualified domain name, an email address or a
+Distinguished Name for which the ID type is determined automatically and the
+string is converted to the appropriate encoding. To enforce a specific identity
+type, a prefix may be used, followed by a colon (:). If the number sign (#)
+follows the colon, the remaining data is interpreted as hex encoding, otherwise
+the string is used as-is as the identification data. Note that this implies
+that no conversion is performed for non-string identities. For example,
+\fIipv4:10.0.0.1\fP does not create a valid ID_IPV4_ADDR IKE identity, as it
+does not get converted to binary 0x0a000001. Instead, one could use
+\fIipv4:#0a000001\fP to get a valid identity, but just using the implicit type
+with automatic conversion is usually simpler. The same applies to the ASN1
+encoded types. The following prefixes are known:
+.BR ipv4 ,
+.BR ipv6 ,
+.BR rfc822 ,
+.BR email ,
+.BR userfqdn ,
+.BR fqdn ,
+.BR dns ,
+.BR asn1dn ,
+.B asn1gn
+and
+.BR keyid .
+Custom type prefixes may be specified by surrounding the numerical type value by
+curly brackets.
 
 For IKEv2 and
 .B rightid

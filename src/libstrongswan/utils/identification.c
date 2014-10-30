@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "identification.h"
 
@@ -927,6 +928,82 @@ static private_identification_t *identification_create(id_type_t type)
 	return this;
 }
 
+/**
+ * Create an identity for a specific type, determined by prefix
+ */
+static private_identification_t* create_from_string_with_prefix_type(char *str)
+{
+	struct {
+		const char *str;
+		id_type_t type;
+	} prefixes[] = {
+		{ "ipv4:",			ID_IPV4_ADDR			},
+		{ "ipv6:",			ID_IPV6_ADDR			},
+		{ "rfc822:",		ID_RFC822_ADDR			},
+		{ "email:",			ID_RFC822_ADDR			},
+		{ "userfqdn:",		ID_USER_FQDN			},
+		{ "fqdn:",			ID_FQDN					},
+		{ "dns:",			ID_FQDN					},
+		{ "asn1dn:",		ID_DER_ASN1_DN			},
+		{ "asn1gn:",		ID_DER_ASN1_GN			},
+		{ "keyid:",			ID_KEY_ID				},
+	};
+	private_identification_t *this;
+	int i;
+
+	for (i = 0; i < countof(prefixes); i++)
+	{
+		if (strcasepfx(str, prefixes[i].str))
+		{
+			this = identification_create(prefixes[i].type);
+			str += strlen(prefixes[i].str);
+			if (*str == '#')
+			{
+				this->encoded = chunk_from_hex(chunk_from_str(str + 1), NULL);
+			}
+			else
+			{
+				this->encoded = chunk_clone(chunk_from_str(str));
+			}
+			return this;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Create an identity for a specific type, determined by a numerical prefix
+ *
+ * The prefix is of the form "{x}:", where x denotes the numerical identity
+ * type.
+ */
+static private_identification_t* create_from_string_with_num_type(char *str)
+{
+	private_identification_t *this;
+	u_long type;
+
+	if (*str++ != '{')
+	{
+		return NULL;
+	}
+	errno = 0;
+	type = strtoul(str, &str, 0);
+	if (errno || *str++ != '}' || *str++ != ':')
+	{
+		return NULL;
+	}
+	this = identification_create(type);
+	if (*str == '#')
+	{
+		this->encoded = chunk_from_hex(chunk_from_str(str + 1), NULL);
+	}
+	else
+	{
+		this->encoded = chunk_clone(chunk_from_str(str));
+	}
+	return this;
+}
+
 /*
  * Described in header.
  */
@@ -938,6 +1015,16 @@ identification_t *identification_create_from_string(char *string)
 	if (string == NULL)
 	{
 		string = "%any";
+	}
+	this = create_from_string_with_prefix_type(string);
+	if (this)
+	{
+		return &this->public;
+	}
+	this = create_from_string_with_num_type(string);
+	if (this)
+	{
+		return &this->public;
 	}
 	if (strchr(string, '=') != NULL)
 	{
