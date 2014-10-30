@@ -78,3 +78,8 @@ if MONOLITHIC
   libhydra_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
 endif
 endif
+
+if MONOLITHIC
+  SUBDIRS += .
+endif
+SUBDIRS += tests

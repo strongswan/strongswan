@@ -47,6 +47,11 @@ struct private_mem_pool_t {
 	host_t *base;
 
 	/**
+	 * whether base is the network id of the subnet on which the pool is based
+	 */
+	bool base_is_network_id;
+
+	/**
 	 * size of the pool
 	 */
 	u_int size;
@@ -306,7 +311,7 @@ static int get_new(private_mem_pool_t *this, identification_t *id)
 			this->leases->put(this->leases, entry->id, entry);
 		}
 		/* assigning offset, starting by 1 */
-		offset = ++this->unused;
+		offset = ++this->unused + (this->base_is_network_id ? 1 : 0);
 		array_insert(entry->online, ARRAY_TAIL, &offset);
 		DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
 	}
@@ -580,18 +585,39 @@ static private_mem_pool_t *create_generic(char *name)
 }
 
 /**
+ * Check if the given host is the network ID of a subnet, that is, if hostbits
+ * are zero.  Since we limit pools to 2^31 addresses we only have to check the
+ * last 4 bytes.
+ */
+static u_int network_id_diff(host_t *host, int hostbits)
+{
+	u_int32_t last;
+	chunk_t addr;
+
+	if (!hostbits)
+	{
+		return 0;
+	}
+	addr = host->get_address(host);
+	last = untoh32(addr.ptr + addr.len - sizeof(last));
+	hostbits = sizeof(last) * 8 - hostbits;
+	return (last << hostbits) >> hostbits;
+}
+
+/**
  * Described in header
  */
 mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 {
 	private_mem_pool_t *this;
+	u_int diff;
 	int addr_bits;
 
 	this = create_generic(name);
 	if (base)
 	{
 		addr_bits = base->get_family(base) == AF_INET ? 32 : 128;
-		bits = max(0, min(bits, base->get_family(base) == AF_INET ? 32 : 128));
+		bits = max(0, min(bits, addr_bits));
 		/* net bits -> host bits */
 		bits = addr_bits - bits;
 		if (bits > POOL_LIMIT)
@@ -601,15 +627,31 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 				 base, addr_bits - bits);
 		}
 		this->size = 1 << bits;
+		this->base = base->clone(base);
 
 		if (this->size > 2)
-		{	/* do not use first and last addresses of a block */
-			this->unused++;
-			this->size -= 2;
+		{
+			/* if base is the network id we later skip the first address,
+			 * otherwise adjust the size to represent the actual number
+			 * of assignable addresses */
+			diff = network_id_diff(base, bits);
+			if (!diff)
+			{
+				this->base_is_network_id = TRUE;
+				this->size--;
+			}
+			else
+			{
+				this->size -= diff;
+			}
+			/* skip the last address (broadcast) of the subnet */
+			this->size--;
 		}
-		this->base = base->clone(base);
+		else if (network_id_diff(base, bits))
+		{	/* only serve the second address of the subnet */
+			this->size--;
+		}
 	}
-
 	return &this->public;
 }
 

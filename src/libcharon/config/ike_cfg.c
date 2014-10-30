@@ -459,25 +459,10 @@ static traffic_selector_t* make_range(char *str)
 {
 	traffic_selector_t *ts;
 	ts_type_t type;
-	char *pos;
 	host_t *from, *to;
 
-	pos = strchr(str, '-');
-	if (!pos)
+	if (!host_create_from_range(str, &from, &to))
 	{
-		return NULL;
-	}
-	to = host_create_from_string(pos + 1, 0);
-	if (!to)
-	{
-		return NULL;
-	}
-	str = strndup(str, pos - str);
-	from = host_create_from_string_and_family(str, to->get_family(to), 0);
-	free(str);
-	if (!from)
-	{
-		to->destroy(to);
 		return NULL;
 	}
 	if (to->get_family(to) == AF_INET)

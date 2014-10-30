@@ -400,6 +400,90 @@ START_TEST(test_create_from_subnet_v6)
 END_TEST
 
 /*******************************************************************************
+ * host_create_from_range
+ */
+
+static const chunk_t addr_v4_to = chunk_from_chars(0xc0, 0xa8, 0x00, 0x05);
+static const chunk_t addr_v6_to = chunk_from_chars(0xfe, 0xc1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+												   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05);
+
+static void verify_range(char *str, int family, chunk_t from_addr,
+						 chunk_t to_addr)
+{
+	host_t *from, *to;
+
+	if (!family)
+	{
+		ck_assert(!host_create_from_range(str, &from, &to));
+	}
+	else
+	{
+		ck_assert(host_create_from_range(str, &from, &to));
+		verify_address(from, from_addr, family, 0);
+		verify_address(to, to_addr, family, 0);
+		from->destroy(from);
+		to->destroy(to);
+	}
+}
+
+START_TEST(test_create_from_range_v4)
+{
+	host_t *from, *to;
+
+	ck_assert(host_create_from_range("0.0.0.0-0.0.0.0", &from, &to));
+	verify_any(from, AF_INET, 0);
+	verify_any(to, AF_INET, 0);
+	from->destroy(from);
+	to->destroy(to);
+
+	verify_range("192.168.0.1-192.168.0.1", AF_INET, addr_v4, addr_v4);
+	verify_range("192.168.0.1-192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1- 192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1 -192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1 - 192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.5-192.168.0.1", AF_INET, addr_v4_to, addr_v4);
+
+	verify_range("192.168.0.1", 0, chunk_empty, chunk_empty);
+	verify_range("192.168.0.1-", 0, chunk_empty, chunk_empty);
+	verify_range("-192.168.0.1", 0, chunk_empty, chunk_empty);
+	verify_range("192.168.0.1-192", 0, chunk_empty, chunk_empty);
+	verify_range("192.168.0.1-192.168", 0, chunk_empty, chunk_empty);
+	verify_range("192.168.0.1-192.168.0", 0, chunk_empty, chunk_empty);
+	verify_range("foo.b.a.r", 0, chunk_empty, chunk_empty);
+	verify_range("foo.b.a.r-b.a.r.f", 0, chunk_empty, chunk_empty);
+}
+END_TEST
+
+START_TEST(test_create_from_range_v6)
+{
+	host_t *from, *to;
+
+	ck_assert(host_create_from_range("::-::", &from, &to));
+	verify_any(from, AF_INET6, 0);
+	verify_any(to, AF_INET6, 0);
+	from->destroy(from);
+	to->destroy(to);
+
+	verify_range("fec1::1-fec1::1", AF_INET6, addr_v6, addr_v6);
+	verify_range("fec1::1-fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1- fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1 -fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1 - fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::5-fec1::1", AF_INET6, addr_v6_to, addr_v6);
+
+	verify_range("fec1::1", 0, chunk_empty, chunk_empty);
+	verify_range("fec1::1-", 0, chunk_empty, chunk_empty);
+	verify_range("-fec1::1", 0, chunk_empty, chunk_empty);
+	verify_range("fec1::1-fec1", 0, chunk_empty, chunk_empty);
+	verify_range("foo::bar", 0, chunk_empty, chunk_empty);
+	verify_range("foo::bar-bar::foo", 0, chunk_empty, chunk_empty);
+
+	verify_range("fec1::1-192.168.0.1", 0, chunk_empty, chunk_empty);
+	verify_range("192.168.0.1-fec1::1", 0, chunk_empty, chunk_empty);
+}
+END_TEST
+
+/*******************************************************************************
  * host_create_netmask
  */
 
@@ -625,6 +709,11 @@ Suite *host_suite_create()
 	tc = tcase_create("host_create_from_subnet");
 	tcase_add_test(tc, test_create_from_subnet_v4);
 	tcase_add_test(tc, test_create_from_subnet_v6);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("host_create_from_range");
+	tcase_add_test(tc, test_create_from_range_v4);
+	tcase_add_test(tc, test_create_from_range_v6);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("host_create_netmask");

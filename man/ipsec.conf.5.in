@@ -853,13 +853,15 @@ an address of the given address family will be requested explicitly.
 If an IP address is configured, it will be requested from the responder,
 which is free to respond with a different address.
 .TP
-.BR rightsourceip " = %config | <network>/<netmask> | %poolname"
+.BR rightsourceip " = %config | <network>/<netmask> | <from>-<to> | %poolname"
 Comma separated list of internal source IPs to use in a tunnel for the remote
 peer. If the value is
 .B %config
 on the responder side, the initiator must propose an address which is then
 echoed back. Also supported are address pools expressed as
 \fInetwork\fB/\fInetmask\fR
+and
+\fIfrom\fB-\fIto\fR
 or the use of an external IP address pool using %\fIpoolname\fR,
 where \fIpoolname\fR is the name of the IP address pool used for the lookup.
 .TP

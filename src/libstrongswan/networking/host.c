@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2014 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -523,6 +523,42 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 	}
 	update_sa_len(this);
 	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+bool host_create_from_range(char *string, host_t **from, host_t **to)
+{
+	char *sep, *pos;
+
+	sep = strchr(string, '-');
+	if (!sep)
+	{
+		return FALSE;
+	}
+	for (pos = sep+1; *pos && *pos == ' '; pos++)
+	{
+		/* trim spaces before to address*/
+	}
+	*to = host_create_from_string(pos, 0);
+	if (!*to)
+	{
+		return FALSE;
+	}
+	for (pos = sep-1; pos > string && *pos == ' '; pos--)
+	{
+		/* trim spaces behind from address */
+	}
+	pos = strndup(string, pos - string + 1);
+	*from = host_create_from_string_and_family(pos, (*to)->get_family(*to), 0);
+	free(pos);
+	if (!*from)
+	{
+		(*to)->destroy(*to);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /*

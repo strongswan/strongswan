@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -355,6 +358,24 @@ static vici_message_t* create_reply(char *fmt, ...)
 }
 
 /**
+ * Parse a range definition of an address pool
+ */
+static mem_pool_t *create_pool_range(char *name, char *buf)
+{
+	mem_pool_t *pool;
+	host_t *from, *to;
+
+	if (!host_create_from_range(buf, &from, &to))
+	{
+		return NULL;
+	}
+	pool = mem_pool_create_range(name, from, to);
+	from->destroy(from);
+	to->destroy(to);
+	return pool;
+}
+
+/**
  * Parse callback data, passed to each callback
  */
 typedef struct {
@@ -490,7 +511,8 @@ CALLBACK(pool_kv, bool,
 	if (streq(name, "addrs"))
 	{
 		char buf[128];
-		host_t *base;
+		mem_pool_t *pool;
+		host_t *base = NULL;
 		int bits;
 
 		if (data->pool->vips)
@@ -503,14 +525,22 @@ CALLBACK(pool_kv, bool,
 			data->request->reply = create_reply("invalid addrs value");
 			return FALSE;
 		}
-		base = host_create_from_subnet(buf, &bits);
-		if (!base)
+		pool = create_pool_range(data->name, buf);
+		if (!pool)
+		{
+			base = host_create_from_subnet(buf, &bits);
+			if (base)
+			{
+				pool = mem_pool_create(data->name, base, bits);
+				base->destroy(base);
+			}
+		}
+		if (!pool)
 		{
 			data->request->reply = create_reply("invalid addrs value: %s", buf);
 			return FALSE;
 		}
-		data->pool->vips = mem_pool_create(data->name, base, bits);
-		base->destroy(base);
+		data->pool->vips = pool;
 		return TRUE;
 	}
 	data->request->reply = create_reply("invalid attribute: %s", name);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -667,6 +667,24 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 }
 
 /**
+ * build a mem_pool_t from an address range
+ */
+static mem_pool_t *create_pool_range(char *str)
+{
+	mem_pool_t *pool;
+	host_t *from, *to;
+
+	if (!host_create_from_range(str, &from, &to))
+	{
+		return NULL;
+	}
+	pool = mem_pool_create_range(str, from, to);
+	from->destroy(from);
+	to->destroy(to);
+	return pool;
+}
+
+/**
  * build a peer_cfg from a stroke msg
  */
 static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
@@ -789,17 +807,25 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			}
 			else
 			{
-				/* in-memory pool, named using CIDR notation */
+				/* in-memory pool, using range or CIDR notation */
+				mem_pool_t *pool;
 				host_t *base;
 				int bits;
 
-				base = host_create_from_subnet(token, &bits);
-				if (base)
+				pool = create_pool_range(token);
+				if (!pool)
 				{
-					this->attributes->add_pool(this->attributes,
-										mem_pool_create(token, base, bits));
+					base = host_create_from_subnet(token, &bits);
+					if (base)
+					{
+						pool = mem_pool_create(token, base, bits);
+						base->destroy(base);
+					}
+				}
+				if (pool)
+				{
+					this->attributes->add_pool(this->attributes, pool);
 					peer_cfg->add_pool(peer_cfg, token);
-					base->destroy(base);
 				}
 				else
 				{
