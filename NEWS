@@ -1,3 +1,12 @@
+strongswan-5.2.2
+----------------
+
+- The left/rightid options in ipsec.conf, or any other identity in strongSwan,
+  now accept prefixes to enforce an explicit type, such as email: or fqdn:.
+  Note that no conversion is done for the remaining string, refer to
+  ipsec.conf(5) for details.
+
+
 strongswan-5.2.1
 ----------------
 
