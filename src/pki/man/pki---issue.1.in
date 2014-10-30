@@ -147,10 +147,22 @@ times.
 Set path length constraint.
 .TP
 .BI "\-n, \-\-nc-permitted " name
-Add permitted NameConstraint extension to certificate.
+Add permitted NameConstraint extension to certificate. For DNS or email
+constraints, the identity type is not always detectable by the given name. Use
+the
+.B dns:
+or
+.B email:
+prefix to force a constraint type.
 .TP
 .BI "\-N, \-\-nc-excluded " name
-Add excluded NameConstraint extension to certificate.
+Add excluded NameConstraint extension to certificate. For DNS or email
+constraints, the identity type is not always detectable by the given name. Use
+the
+.B dns:
+or
+.B email:
+prefix to force a constraint type.
 .TP
 .BI "\-M, \-\-policy-mapping " issuer-oid:subject-oid
 Add policyMapping from issuer to subject OID.
