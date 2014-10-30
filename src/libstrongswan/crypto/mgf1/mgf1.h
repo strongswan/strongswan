@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,14 +14,14 @@
  */
 
 /**
- * @defgroup ntru_mgf1 ntru_mgf1
+ * @defgroup mgf1 mgf1
  * @{ @ingroup ntru_p
  */
 
-#ifndef NTRU_MGF1_H_
-#define NTRU_MGF1_H_
+#ifndef MGF1_H_
+#define MGF1_H_
 
-typedef struct ntru_mgf1_t ntru_mgf1_t;
+typedef struct mgf1_t mgf1_t;
 
 #include <library.h>
 
@@ -29,14 +29,14 @@ typedef struct ntru_mgf1_t ntru_mgf1_t;
  * Implements the PKCS#1 MGF1 Mask Generation Function based on a hash function
  * defined in section 10.2.1 of RFC 2437 
  */
-struct ntru_mgf1_t {
+struct mgf1_t {
 
 	/**
 	 * Get the hash size of the underlying hash function
 	 *
 	 * @return			hash size in bytes
 	 */
-	size_t (*get_hash_size)(ntru_mgf1_t *this);
+	size_t (*get_hash_size)(mgf1_t *this);
 
 	/**
 	 * Generate a mask pattern and copy it to an output buffer
@@ -46,7 +46,7 @@ struct ntru_mgf1_t {
 	 * @param mask		output buffer of minimum size mask_len
 	 * @return			TRUE if successful
 	 */
-	bool (*get_mask)(ntru_mgf1_t *this, size_t mask_len, u_char *mask);
+	bool (*get_mask)(mgf1_t *this, size_t mask_len, u_char *mask);
 
 	/**
 	 * Generate a mask pattern and return it in an allocated chunk
@@ -55,12 +55,12 @@ struct ntru_mgf1_t {
 	 * @param mask		chunk containing generated mask
 	 * @return			TRUE if successful
 	 */
-	bool (*allocate_mask)(ntru_mgf1_t *this, size_t mask_len, chunk_t *mask);
+	bool (*allocate_mask)(mgf1_t *this, size_t mask_len, chunk_t *mask);
 
 	/**
 	 * Destroy the MGF1 object
 	 */
-	void (*destroy)(ntru_mgf1_t *this);
+	void (*destroy)(mgf1_t *this);
 };
 
 /**
@@ -70,8 +70,8 @@ struct ntru_mgf1_t {
  * @param seed			seed used by MGF1 to generate mask from
  * @param hash_seed		hash seed before using it as a seed from MGF1
  */
-ntru_mgf1_t *ntru_mgf1_create(hash_algorithm_t alg, chunk_t seed,
+mgf1_t *mgf1_create(hash_algorithm_t alg, chunk_t seed,
 							  bool hash_seed);
 
-#endif /** NTRU_MGF1_H_ @}*/
+#endif /** MGF1_H_ @}*/
 

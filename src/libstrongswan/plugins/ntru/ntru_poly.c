@@ -16,8 +16,8 @@
  */
 
 #include "ntru_poly.h"
-#include "ntru_mgf1.h"
 
+#include <crypto/mgf1/mgf1.h>
 #include <utils/debug.h>
 #include <utils/test.h>
 
@@ -301,10 +301,10 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 	uint8_t octets[HASH_SIZE_SHA512], *used, num_left = 0, num_needed;
 	uint16_t index, limit, left = 0;
 	int n, num_indices, index_i = 0;
-	ntru_mgf1_t *mgf1;
+	mgf1_t *mgf1;
 
 	DBG2(DBG_LIB, "MGF1 is seeded with %u bytes", seed.len);
-	mgf1 = ntru_mgf1_create(alg, seed, TRUE);
+	mgf1 = mgf1_create(alg, seed, TRUE);
 	if (!mgf1)
 	{
 	    return NULL;

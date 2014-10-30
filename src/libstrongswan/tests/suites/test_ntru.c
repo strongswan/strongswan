@@ -16,19 +16,16 @@
 #include "test_suite.h"
 
 #include <tests/utils/test_rng.h>
+#include <utils/test.h>
+#include <crypto/mgf1/mgf1.h>
 #include <plugins/ntru/ntru_drbg.h>
-#include <plugins/ntru/ntru_mgf1.h>
 #include <plugins/ntru/ntru_trits.h>
 #include <plugins/ntru/ntru_poly.h>
 #include <plugins/ntru/ntru_param_set.h>
 #include <plugins/ntru/ntru_private_key.h>
-#include <utils/test.h>
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
 						  u_int32_t strength, chunk_t pers_str, rng_t *entropy)
-
-IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_mgf1_create, ntru_mgf1_t*,
-						  hash_algorithm_t alg, chunk_t seed, bool hash_seed)
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
 						  size_t len, hash_algorithm_t alg, chunk_t seed)
@@ -546,9 +543,9 @@ mgf1_test_t mgf1_tests[] = {
 	}
 };
 
-START_TEST(test_ntru_mgf1)
+START_TEST(ntru_test_mgf1)
 {
-	ntru_mgf1_t *mgf1;
+	mgf1_t *mgf1;
 	chunk_t mask, mask1, mask2, mask3;
 
 	mask1 = mgf1_tests[_i].mask;
@@ -558,17 +555,14 @@ START_TEST(test_ntru_mgf1)
 	mask2.len = mgf1_tests[_i].ml2;
 	mask3.len = mgf1_tests[_i].ml3;
 
-	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, HASH_UNKNOWN,
-						 mgf1_tests[_i].seed, TRUE);
+	mgf1 = mgf1_create(HASH_UNKNOWN, mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1 == NULL);
 
-	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
-						 chunk_empty, TRUE);
+	mgf1 = mgf1_create(mgf1_tests[_i].alg, chunk_empty, TRUE);
 	ck_assert(mgf1 == NULL);
 
 	/* return mask in allocated chunk */
-	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
-						 mgf1_tests[_i].seed, TRUE);
+	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1);
 
 	/* check hash size */
@@ -584,16 +578,14 @@ START_TEST(test_ntru_mgf1)
 	mgf1->destroy(mgf1);
 
 	/* copy mask to pre-allocated buffer */
-	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
-						 mgf1_tests[_i].seed, TRUE);
+	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
 	ck_assert(mgf1);
 	ck_assert(mgf1->get_mask(mgf1, mgf1_tests[_i].mask.len, mask.ptr));
 	ck_assert(chunk_equals(mask, mgf1_tests[_i].mask));
 	mgf1->destroy(mgf1);
 
 	/* get mask in batches without hashing the seed */
-	mgf1 = TEST_FUNCTION(ntru, ntru_mgf1_create, mgf1_tests[_i].alg,
-						 mgf1_tests[_i].hashed_seed, FALSE);
+	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].hashed_seed, FALSE);
 	ck_assert(mgf1);
 
 	/* first batch */
@@ -1371,7 +1363,7 @@ Suite *ntru_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("mgf1");
-	tcase_add_loop_test(tc, test_ntru_mgf1, 0, countof(mgf1_tests));
+	tcase_add_loop_test(tc, ntru_test_mgf1, 0, countof(mgf1_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("trits");

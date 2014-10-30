@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,23 +13,23 @@
  * for more details.
  */
 
-#include "ntru_mgf1.h"
+#include "mgf1.h"
 
-#include <crypto/hashers/hasher.h>
-#include <utils/debug.h>
-#include <utils/test.h>
+#include "crypto/hashers/hasher.h"
+#include "utils/debug.h"
+#include "utils/test.h"
 
-typedef struct private_ntru_mgf1_t private_ntru_mgf1_t;
+typedef struct private_mgf1_t private_mgf1_t;
 
 /**
- * Private data of an ntru_mgf1_t object.
+ * Private data of an mgf1_t object.
  */
-struct private_ntru_mgf1_t {
+struct private_mgf1_t {
 
 	/**
-	 * Public ntru_mgf1_t interface.
+	 * Public mgf1_t interface.
 	 */
-	ntru_mgf1_t public;
+	mgf1_t public;
 
 	/**
 	 * Hasher the MGF1 Mask Generation Function is based on
@@ -58,14 +58,14 @@ struct private_ntru_mgf1_t {
 
 };
 
-METHOD(ntru_mgf1_t, get_hash_size, size_t,
-	private_ntru_mgf1_t *this)
+METHOD(mgf1_t, get_hash_size, size_t,
+	private_mgf1_t *this)
 {
 	return this->hasher->get_hash_size(this->hasher);
 }
 
-METHOD(ntru_mgf1_t, get_mask, bool,
-	private_ntru_mgf1_t *this, size_t mask_len, u_char *mask)
+METHOD(mgf1_t, get_mask, bool,
+	private_mgf1_t *this, size_t mask_len, u_char *mask)
 {
 	u_char buf[HASH_SIZE_SHA512];
 	size_t hash_len;
@@ -102,8 +102,8 @@ METHOD(ntru_mgf1_t, get_mask, bool,
 	return TRUE;
 }
 
-METHOD(ntru_mgf1_t, allocate_mask, bool,
-	private_ntru_mgf1_t *this, size_t mask_len, chunk_t *mask)
+METHOD(mgf1_t, allocate_mask, bool,
+	private_mgf1_t *this, size_t mask_len, chunk_t *mask)
 {
 	if (mask_len == 0)
 	{
@@ -115,8 +115,8 @@ METHOD(ntru_mgf1_t, allocate_mask, bool,
 	return get_mask(this, mask_len, mask->ptr);
 }
 
-METHOD(ntru_mgf1_t, destroy, void,
-	private_ntru_mgf1_t *this)
+METHOD(mgf1_t, destroy, void,
+	private_mgf1_t *this)
 {
 	this->hasher->destroy(this->hasher);
 	chunk_clear(&this->state);
@@ -126,10 +126,10 @@ METHOD(ntru_mgf1_t, destroy, void,
 /*
  * Described in header.
  */
-ntru_mgf1_t *ntru_mgf1_create(hash_algorithm_t alg, chunk_t seed,
+mgf1_t *mgf1_create(hash_algorithm_t alg, chunk_t seed,
 							  bool hash_seed)
 {
-	private_ntru_mgf1_t *this;
+	private_mgf1_t *this;
 	hasher_t *hasher;
 	size_t state_len;
 
@@ -178,5 +178,3 @@ ntru_mgf1_t *ntru_mgf1_create(hash_algorithm_t alg, chunk_t seed,
 
 	return &this->public;
 }
-
-EXPORT_FUNCTION_FOR_TESTS(ntru, ntru_mgf1_create);

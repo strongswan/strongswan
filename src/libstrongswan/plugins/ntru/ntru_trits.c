@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,9 +14,9 @@
  */
 
 #include "ntru_trits.h"
-#include "ntru_mgf1.h"
 #include "ntru_convert.h"
 
+#include <crypto/mgf1/mgf1.h>
 #include <utils/debug.h>
 #include <utils/test.h>
 
@@ -72,10 +72,10 @@ ntru_trits_t *ntru_trits_create(size_t len, hash_algorithm_t alg, chunk_t seed)
 	private_ntru_trits_t *this;
 	uint8_t octets[HASH_SIZE_SHA512], buf[5], *trits;
 	size_t hash_len, octet_count = 0, trits_needed, i;
-	ntru_mgf1_t *mgf1;
+	mgf1_t *mgf1;
 
 	DBG2(DBG_LIB, "MGF1 is seeded with %u bytes", seed.len);
-	mgf1 = ntru_mgf1_create(alg, seed, TRUE);
+	mgf1 = mgf1_create(alg, seed, TRUE);
 	if (!mgf1)
 	{
 	    return NULL;

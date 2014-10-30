@@ -16,7 +16,6 @@ libstrongswan_ntru_la_SOURCES = \
 	ntru_convert.h ntru_convert.c \
 	ntru_drbg.h ntru_drbg.c \
 	ntru_ke.h ntru_ke.c \
-	ntru_mgf1.h ntru_mgf1.c \
 	ntru_param_set.h ntru_param_set.c \
 	ntru_poly.h ntru_poly.c \
 	ntru_public_key.h ntru_public_key.c \
