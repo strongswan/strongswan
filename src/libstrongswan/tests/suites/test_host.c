@@ -438,14 +438,17 @@ START_TEST(test_create_from_range_v4)
 
 	verify_range("192.168.0.1-192.168.0.1", AF_INET, addr_v4, addr_v4);
 	verify_range("192.168.0.1-192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1- 192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1 -192.168.0.5", AF_INET, addr_v4, addr_v4_to);
+	verify_range("192.168.0.1 - 192.168.0.5", AF_INET, addr_v4, addr_v4_to);
 	verify_range("192.168.0.5-192.168.0.1", AF_INET, addr_v4_to, addr_v4);
 
 	verify_range("192.168.0.1", 0, chunk_empty, chunk_empty);
 	verify_range("192.168.0.1-", 0, chunk_empty, chunk_empty);
+	verify_range("-192.168.0.1", 0, chunk_empty, chunk_empty);
 	verify_range("192.168.0.1-192", 0, chunk_empty, chunk_empty);
 	verify_range("192.168.0.1-192.168", 0, chunk_empty, chunk_empty);
 	verify_range("192.168.0.1-192.168.0", 0, chunk_empty, chunk_empty);
-	verify_range("192.168.0.1 - 192.168.0.5", 0, chunk_empty, chunk_empty);
 	verify_range("foo.b.a.r", 0, chunk_empty, chunk_empty);
 	verify_range("foo.b.a.r-b.a.r.f", 0, chunk_empty, chunk_empty);
 }
@@ -463,12 +466,15 @@ START_TEST(test_create_from_range_v6)
 
 	verify_range("fec1::1-fec1::1", AF_INET6, addr_v6, addr_v6);
 	verify_range("fec1::1-fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1- fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1 -fec1::5", AF_INET6, addr_v6, addr_v6_to);
+	verify_range("fec1::1 - fec1::5", AF_INET6, addr_v6, addr_v6_to);
 	verify_range("fec1::5-fec1::1", AF_INET6, addr_v6_to, addr_v6);
 
 	verify_range("fec1::1", 0, chunk_empty, chunk_empty);
 	verify_range("fec1::1-", 0, chunk_empty, chunk_empty);
+	verify_range("-fec1::1", 0, chunk_empty, chunk_empty);
 	verify_range("fec1::1-fec1", 0, chunk_empty, chunk_empty);
-	verify_range("fec1::1 - fec1::5", 0, chunk_empty, chunk_empty);
 	verify_range("foo::bar", 0, chunk_empty, chunk_empty);
 	verify_range("foo::bar-bar::foo", 0, chunk_empty, chunk_empty);
 
