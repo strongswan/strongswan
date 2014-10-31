@@ -399,10 +399,12 @@ static const struct {
 	pseudo_random_function_t prf;
 } integ_prf_map[] = {
 	{AUTH_HMAC_SHA1_96,					PRF_HMAC_SHA1					},
+	{AUTH_HMAC_SHA1_160,				PRF_HMAC_SHA1					},
 	{AUTH_HMAC_SHA2_256_128,			PRF_HMAC_SHA2_256				},
 	{AUTH_HMAC_SHA2_384_192,			PRF_HMAC_SHA2_384				},
 	{AUTH_HMAC_SHA2_512_256,			PRF_HMAC_SHA2_512				},
 	{AUTH_HMAC_MD5_96,					PRF_HMAC_MD5					},
+	{AUTH_HMAC_MD5_128,					PRF_HMAC_MD5					},
 	{AUTH_AES_XCBC_96,					PRF_AES128_XCBC					},
 	{AUTH_CAMELLIA_XCBC_96,				PRF_CAMELLIA128_XCBC			},
 	{AUTH_AES_CMAC_96,					PRF_AES128_CMAC					},
