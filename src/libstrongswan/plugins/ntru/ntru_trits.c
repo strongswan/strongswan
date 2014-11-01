@@ -74,7 +74,8 @@ ntru_trits_t *ntru_trits_create(size_t len, hash_algorithm_t alg, chunk_t seed)
 	size_t hash_len, octet_count = 0, trits_needed, i;
 	mgf1_t *mgf1;
 
-	DBG2(DBG_LIB, "MGF1 is seeded with %u bytes", seed.len);
+	DBG2(DBG_LIB, "mgf1 based on %N is seeded with %u octets",
+		 hash_algorithm_short_names, alg, seed.len);
 	mgf1 = mgf1_create(alg, seed, TRUE);
 	if (!mgf1)
 	{
@@ -122,7 +123,7 @@ ntru_trits_t *ntru_trits_create(size_t len, hash_algorithm_t alg, chunk_t seed)
 		}
 		i++;
 	}
-	DBG2(DBG_LIB, "MGF1 generates %u octets to extract %u trits",
+	DBG2(DBG_LIB, "mgf1 generated %u octets to extract %u trits",
 				   octet_count, len);
 	mgf1->destroy(mgf1);
 
