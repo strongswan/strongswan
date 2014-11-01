@@ -68,7 +68,7 @@ struct mgf1_t {
  *
  * @param alg			hash algorithm to be used by MGF1
  * @param seed			seed used by MGF1 to generate mask from
- * @param hash_seed		hash seed before using it as a seed from MGF1
+ * @param hash_seed		hash seed before using it as a seed for MGF1
  */
 mgf1_t *mgf1_create(hash_algorithm_t alg, chunk_t seed,
 							  bool hash_seed);
