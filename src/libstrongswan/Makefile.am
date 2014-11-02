@@ -546,13 +546,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_BLISS
-  SUBDIRS += plugins/bliss
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/bliss/libstrongswan-bliss.la
-endif
-endif
-
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
@@ -564,3 +557,12 @@ if MONOLITHIC
   SUBDIRS += .
 endif
 SUBDIRS += tests
+
+if USE_BLISS
+  SUBDIRS += plugins/bliss
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/bliss/libstrongswan-bliss.la
+endif
+endif
+
+
