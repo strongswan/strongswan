@@ -303,6 +303,18 @@ METHOD(listener_t, child_state_change, bool,
 						/* proper delete */
 						this->status = SUCCESS;
 						break;
+					case CHILD_RETRYING:
+						/* retrying with a different DH group; survive another
+						 * initiation round */
+						this->status = NEED_MORE;
+						return TRUE;
+					case CHILD_CREATED:
+						if (this->status == NEED_MORE)
+						{
+							this->status = FAILED;
+							return TRUE;
+						}
+						break;
 					default:
 						break;
 				}
