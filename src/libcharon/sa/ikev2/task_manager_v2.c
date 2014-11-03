@@ -171,6 +171,11 @@ struct private_task_manager_t {
 	 * Base to calculate retransmission timeout
 	 */
 	double retransmit_base;
+
+	/**
+	 * Use make-before-break instead of break-before-make reauth?
+	 */
+	bool make_before_break;
 };
 
 /**
@@ -1505,9 +1510,78 @@ METHOD(task_manager_t, queue_ike_rekey, void,
 	queue_task(this, (task_t*)ike_rekey_create(this->ike_sa, TRUE));
 }
 
+/**
+ * Start reauthentication using make-before-break
+ */
+static void trigger_mbb_reauth(private_task_manager_t *this)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	child_cfg_t *cfg;
+	ike_sa_t *new;
+	host_t *host;
+	task_t *task;
+
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+								this->ike_sa->get_version(this->ike_sa), TRUE);
+	if (!new)
+	{	/* shouldn't happen */
+		return;
+	}
+
+	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
+	host = this->ike_sa->get_other_host(this->ike_sa);
+	new->set_other_host(new, host->clone(host));
+	host = this->ike_sa->get_my_host(this->ike_sa);
+	new->set_my_host(new, host->clone(host));
+	enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa, TRUE);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		new->add_virtual_ip(new, TRUE, host);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		cfg = child_sa->get_config(child_sa);
+		new->queue_task(new, &child_create_create(new, cfg->get_ref(cfg),
+												  FALSE, NULL, NULL)->task);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = array_create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE)
+		{
+			task->migrate(task, new);
+			new->queue_task(new, task);
+			array_remove_at(this->queued_tasks, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
+	}
+	charon->bus->set_sa(charon->bus, this->ike_sa);
+}
+
 METHOD(task_manager_t, queue_ike_reauth, void,
 	private_task_manager_t *this)
 {
+	if (this->make_before_break)
+	{
+		return trigger_mbb_reauth(this);
+	}
 	queue_task(this, (task_t*)ike_reauth_create(this->ike_sa));
 }
 
@@ -1773,6 +1847,8 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 					"%s.retransmit_timeout", RETRANSMIT_TIMEOUT, lib->ns),
 		.retransmit_base = lib->settings->get_double(lib->settings,
 					"%s.retransmit_base", RETRANSMIT_BASE, lib->ns),
+		.make_before_break = lib->settings->get_bool(lib->settings,
+					"%s.make_before_break", FALSE, lib->ns),
 	);
 
 	return &this->public;

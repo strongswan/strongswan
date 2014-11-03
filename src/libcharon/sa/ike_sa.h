@@ -936,8 +936,9 @@ struct ike_sa_t {
 	/**
 	 * Reauthenticate the IKE_SA.
 	 *
-	 * Create a completely new IKE_SA with authentication, recreates all children
-	 * within the IKE_SA, closes this IKE_SA.
+	 * Triggers a new IKE_SA that replaces this one. IKEv1 implicitly inherits
+	 * all Quick Modes, while IKEv2 recreates all active and queued CHILD_SAs
+	 * in the new IKE_SA.
 	 *
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
