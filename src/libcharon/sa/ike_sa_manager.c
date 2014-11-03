@@ -1744,15 +1744,6 @@ static void adopt_children(ike_sa_t *old, ike_sa_t *new)
 }
 
 /**
- * Check if the replaced IKE_SA might get reauthenticated from host
- */
-static bool is_ikev1_reauth(ike_sa_t *duplicate, host_t *host)
-{
-	return duplicate->get_version(duplicate) == IKEV1 &&
-		   host->equals(host, duplicate->get_other_host(duplicate));
-}
-
-/**
  * Delete an existing IKE_SA due to a unique replace policy
  */
 static status_t enforce_replace(private_ike_sa_manager_t *this,
@@ -1761,16 +1752,19 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 {
 	charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
 
-	if (is_ikev1_reauth(duplicate, host))
+	if (host->equals(host, duplicate->get_other_host(duplicate)))
 	{
 		/* looks like a reauthentication attempt */
 		if (!new->has_condition(new, COND_INIT_CONTACT_SEEN))
 		{
+			/* IKEv1 implicitly takes over children, IKEv2 recreates them
+			 * explicitly. */
 			adopt_children(duplicate, new);
 		}
 		/* For IKEv1 we have to delay the delete for the old IKE_SA. Some
 		 * peers need to complete the new SA first, otherwise the quick modes
-		 * might get lost. */
+		 * might get lost. For IKEv2 we do the same, as we want overlapping
+		 * CHILD_SAs to keep connectivity up. */
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 			delete_ike_sa_job_create(duplicate->get_id(duplicate), TRUE), 10);
 		return SUCCESS;
@@ -1835,7 +1829,9 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 													 other, other_host);
 							break;
 						case UNIQUE_KEEP:
-							if (!is_ikev1_reauth(duplicate, other_host))
+							/* potential reauthentication? */
+							if (!other_host->equals(other_host,
+										duplicate->get_other_host(duplicate)))
 							{
 								cancel = TRUE;
 								/* we keep the first IKE_SA and delete all
