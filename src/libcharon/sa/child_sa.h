@@ -68,6 +68,11 @@ enum child_sa_state_t {
 	CHILD_REKEYING,
 
 	/**
+	 * CHILD_SA negotiation failed, but gets retried
+	 */
+	CHILD_RETRYING,
+
+	/**
 	 * CHILD_SA in progress of delete
 	 */
 	CHILD_DELETING,

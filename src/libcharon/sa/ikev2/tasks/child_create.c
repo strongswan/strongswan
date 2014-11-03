@@ -1408,6 +1408,7 @@ METHOD(task_t, process_i, status_t,
 						 this->dh_group, diffie_hellman_group_names, group);
 					this->retry = TRUE;
 					this->dh_group = group;
+					this->child_sa->set_state(this->child_sa, CHILD_RETRYING);
 					this->public.task.migrate(&this->public.task, this->ike_sa);
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
