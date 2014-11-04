@@ -1,6 +1,7 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
 	-DRESOLV_CONF=\"${resolv_conf}\"
 
 AM_CFLAGS = \

@@ -630,3 +630,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_noauth/libstrongswan-xauth-noauth.la
 endif
 endif
+
+if USE_RESOLVE
+  SUBDIRS += plugins/resolve
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
+endif
+endif

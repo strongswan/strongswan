@@ -374,4 +374,3 @@ resolve_handler_t *resolve_handler_create()
 
 	return &this->public;
 }
-

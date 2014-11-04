@@ -1265,7 +1265,7 @@ ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
 ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
-ADD_PLUGIN([resolve],              [h charon cmd])
+ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
 ADD_PLUGIN([socket-win],           [c charon])
@@ -1481,6 +1481,7 @@ AM_CONDITIONAL(USE_SOCKET_WIN, test x$socket_win = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
+AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 #  hydra plugins
 # ---------------
@@ -1489,7 +1490,6 @@ AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
-AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 #  other options
 # ---------------
@@ -1654,7 +1654,6 @@ AC_CONFIG_FILES([
 	src/libhydra/plugins/kernel_netlink/Makefile
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
-	src/libhydra/plugins/resolve/Makefile
 	src/libhydra/tests/Makefile
 	src/libipsec/Makefile
 	src/libsimaka/Makefile
@@ -1750,6 +1749,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/unit_tester/Makefile
 	src/libcharon/plugins/load_tester/Makefile
+	src/libcharon/plugins/resolve/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

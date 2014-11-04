@@ -99,4 +99,3 @@ plugin_t *resolve_plugin_create()
 
 	return &this->public.plugin;
 }
-

@@ -72,13 +72,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_RESOLVE
-  SUBDIRS += plugins/resolve
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
-endif
-endif
-
 if MONOLITHIC
   SUBDIRS += .
 endif
