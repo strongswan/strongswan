@@ -425,15 +425,15 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 	{
 		this->net_handler = android_net_create();
 		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
-		hydra->attributes->add_handler(hydra->attributes,
-									   &this->attr->handler);
+		charon->attributes->add_handler(charon->attributes,
+										&this->attr->handler);
 	}
 	else
 	{
 		this->net_handler->destroy(this->net_handler);
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-		hydra->attributes->remove_handler(hydra->attributes,
-										  &this->attr->handler);
+		charon->attributes->remove_handler(charon->attributes,
+										   &this->attr->handler);
 		if (this->service)
 		{
 			this->service->destroy(this->service);

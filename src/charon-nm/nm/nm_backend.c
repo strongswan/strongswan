@@ -18,7 +18,6 @@
 #include "nm_creds.h"
 #include "nm_handler.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -97,7 +96,8 @@ static void nm_backend_deinit()
 		g_object_unref(this->plugin);
 	}
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	charon->attributes->remove_handler(charon->attributes,
+									   &this->handler->handler);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
 	free(this);
@@ -130,7 +130,7 @@ static bool nm_backend_init()
 	this->plugin = nm_strongswan_plugin_new(this->creds, this->handler);
 	nm_backend = this;
 
-	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+	charon->attributes->add_handler(charon->attributes, &this->handler->handler);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	if (!this->plugin)
 	{

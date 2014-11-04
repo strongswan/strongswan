@@ -2346,8 +2346,8 @@ METHOD(ike_sa_t, destroy, void,
 	{
 		if (entry.handler)
 		{
-			hydra->attributes->release(hydra->attributes, entry.handler,
-									   this->other_id, entry.type, entry.data);
+			charon->attributes->release(charon->attributes, entry.handler,
+										this->other_id, entry.type, entry.data);
 		}
 		free(entry.data.ptr);
 	}
@@ -2377,7 +2377,8 @@ METHOD(ike_sa_t, destroy, void,
 			id = get_other_eap_id(this);
 			pools = linked_list_create_from_enumerator(
 						this->peer_cfg->create_pool_enumerator(this->peer_cfg));
-			hydra->attributes->release_address(hydra->attributes, pools, vip, id);
+			charon->attributes->release_address(charon->attributes,
+												pools, vip, id);
 			pools->destroy(pools);
 		}
 		vip->destroy(vip);

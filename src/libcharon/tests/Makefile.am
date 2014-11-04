@@ -3,6 +3,7 @@ TESTS = libcharon_tests
 check_PROGRAMS = $(TESTS)
 
 libcharon_tests_SOURCES = \
+  suites/test_mem_pool.c \
   libcharon_tests.h libcharon_tests.c
 
 libcharon_tests_CFLAGS = \

@@ -345,4 +345,3 @@ attribute_manager_t *attribute_manager_create()
 
 	return &this->public;
 }
-

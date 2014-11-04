@@ -477,6 +477,7 @@ static void destroy(private_daemon_t *this)
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 	lib->plugins->unload(lib->plugins);
+	DESTROY_IF(this->public.attributes);
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.shunts);
@@ -644,6 +645,7 @@ private_daemon_t *daemon_create()
 		.ref = 1,
 	);
 	charon = &this->public;
+	this->public.attributes = attribute_manager_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.xauth = xauth_manager_create();

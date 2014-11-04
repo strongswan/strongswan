@@ -16,7 +16,6 @@
 #include "android_dns_plugin.h"
 #include "android_dns_handler.h"
 
-#include <hydra.h>
 #include <daemon.h>
 
 typedef struct private_android_dns_plugin_t private_android_dns_plugin_t;
@@ -51,13 +50,13 @@ static bool plugin_cb(private_android_dns_plugin_t *this,
 {
 	if (reg)
 	{
-		hydra->attributes->add_handler(hydra->attributes,
-									   &this->handler->handler);
+		charon->attributes->add_handler(charon->attributes,
+										&this->handler->handler);
 	}
 	else
 	{
-		hydra->attributes->remove_handler(hydra->attributes,
-										  &this->handler->handler);
+		charon->attributes->remove_handler(charon->attributes,
+										   &this->handler->handler);
 	}
 	return TRUE;
 }

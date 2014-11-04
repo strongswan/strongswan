@@ -19,7 +19,6 @@
 #include "unity_provider.h"
 
 #include <daemon.h>
-#include <hydra.h>
 
 typedef struct private_unity_plugin_t private_unity_plugin_t;
 
@@ -63,19 +62,19 @@ static bool plugin_cb(private_unity_plugin_t *this,
 {
 	if (reg)
 	{
-		hydra->attributes->add_handler(hydra->attributes,
-									   &this->handler->handler);
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->provider->provider);
+		charon->attributes->add_handler(charon->attributes,
+										&this->handler->handler);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->provider->provider);
 		charon->bus->add_listener(charon->bus, &this->narrower->listener);
 	}
 	else
 	{
 		charon->bus->remove_listener(charon->bus, &this->narrower->listener);
-		hydra->attributes->remove_handler(hydra->attributes,
-										  &this->handler->handler);
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->provider->provider);
+		charon->attributes->remove_handler(charon->attributes,
+										   &this->handler->handler);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->provider->provider);
 
 	}
 	return TRUE;

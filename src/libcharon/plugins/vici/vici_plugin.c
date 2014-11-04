@@ -23,7 +23,6 @@
 #include "vici_logger.h"
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 
 typedef struct private_vici_plugin_t private_vici_plugin_t;
@@ -104,8 +103,8 @@ static bool register_vici(private_vici_plugin_t *this,
 
 			charon->backends->add_backend(charon->backends,
 										  &this->config->backend);
-			hydra->attributes->add_provider(hydra->attributes,
-											&this->attrs->provider);
+			charon->attributes->add_provider(charon->attributes,
+											 &this->attrs->provider);
 			charon->bus->add_logger(charon->bus, &this->logger->logger);
 			return TRUE;
 		}
@@ -114,8 +113,8 @@ static bool register_vici(private_vici_plugin_t *this,
 	else
 	{
 		charon->bus->remove_logger(charon->bus, &this->logger->logger);
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->attrs->provider);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->attrs->provider);
 		charon->backends->remove_backend(charon->backends,
 										 &this->config->backend);
 

@@ -19,6 +19,9 @@
 /**
  * @defgroup libcharon libcharon
  *
+ * @defgroup attributes attributes
+ * @ingroup libcharon
+ *
  * @defgroup bus bus
  * @ingroup libcharon
  *
@@ -152,6 +155,7 @@
 
 typedef struct daemon_t daemon_t;
 
+#include <attributes/attribute_manager.h>
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
@@ -244,6 +248,11 @@ struct daemon_t {
 	 * The Receiver-Thread.
 	 */
 	receiver_t *receiver;
+
+	/**
+	 * Manager for IKE configuration attributes
+	 */
+	attribute_manager_t *attributes;
 
 	/**
 	 * The signaling bus.

@@ -57,7 +57,6 @@ void libhydra_deinit()
 		return;
 	}
 
-	this->public.attributes->destroy(this->public.attributes);
 	this->public.kernel_interface->destroy(this->public.kernel_interface);
 	free(this);
 	hydra = NULL;
@@ -78,9 +77,6 @@ bool libhydra_init()
 	}
 
 	INIT(this,
-		.public = {
-			.attributes = attribute_manager_create(),
-		},
 		.ref = 1,
 	);
 	hydra = &this->public;

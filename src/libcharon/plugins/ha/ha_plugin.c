@@ -25,7 +25,6 @@
 #include "ha_attribute.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <config/child_cfg.h>
 
 typedef struct private_ha_plugin_t private_ha_plugin_t;
@@ -108,13 +107,13 @@ static bool plugin_cb(private_ha_plugin_t *this,
 		charon->bus->add_listener(charon->bus, &this->segments->listener);
 		charon->bus->add_listener(charon->bus, &this->ike->listener);
 		charon->bus->add_listener(charon->bus, &this->child->listener);
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->attr->provider);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->attr->provider);
 	}
 	else
 	{
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->attr->provider);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->attr->provider);
 		charon->bus->remove_listener(charon->bus, &this->segments->listener);
 		charon->bus->remove_listener(charon->bus, &this->ike->listener);
 		charon->bus->remove_listener(charon->bus, &this->child->listener);
@@ -224,4 +223,3 @@ plugin_t *ha_plugin_create()
 
 	return &this->public.plugin;
 }
-

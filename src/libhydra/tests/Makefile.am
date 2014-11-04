@@ -3,7 +3,6 @@ TESTS = hydra_tests
 check_PROGRAMS = $(TESTS)
 
 hydra_tests_SOURCES = \
-  suites/test_mem_pool.c \
   hydra_tests.h hydra_tests.c
 
 hydra_tests_CFLAGS = \

@@ -17,7 +17,7 @@
 
 #include <library.h>
 #include <threading/thread.h>
-#include <hydra.h>
+#include <daemon.h>
 
 #define ALLOCS 1000
 #define THREADS 20
@@ -44,8 +44,8 @@ static void* testing(void *thread)
 	/* allocate addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		addr[i] = hydra->attributes->acquire_address(hydra->attributes,
-													 pools, id[i], NULL);
+		addr[i] = charon->attributes->acquire_address(charon->attributes,
+													  pools, id[i], NULL);
 		if (!addr[i])
 		{
 			pools->destroy(pools);
@@ -56,8 +56,8 @@ static void* testing(void *thread)
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		hydra->attributes->release_address(hydra->attributes,
-										   pools, addr[i], id[i]);
+		charon->attributes->release_address(charon->attributes,
+											pools, addr[i], id[i]);
 	}
 
 	pools->destroy(pools);
@@ -97,4 +97,3 @@ bool test_pool()
 	}
 	return TRUE;
 }
-
