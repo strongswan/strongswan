@@ -345,7 +345,7 @@ METHOD(payload_t, verify, status_t,
 	switch (this->protocol_id)
 	{
 		case PROTO_IPCOMP:
-			if (this->spi.len != 2)
+			if (this->spi.len != 2 && this->spi.len != 4)
 			{
 				DBG1(DBG_ENC, "invalid CPI length in IPCOMP proposal");
 				return FAILED;
@@ -536,7 +536,7 @@ METHOD(proposal_substructure_t, get_cpi, bool,
 		{
 			if (cpi)
 			{
-				*cpi = *((u_int16_t*)this->spi.ptr);
+				*cpi = htons(untoh16(this->spi.ptr + this->spi.len - 2));
 			}
 			enumerator->destroy(enumerator);
 			return TRUE;
