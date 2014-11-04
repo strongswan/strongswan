@@ -609,6 +609,11 @@ METHOD(task_manager_t, initiate, status_t,
 
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
+	if (this->initiating.type == EXCHANGE_TYPE_UNDEFINED)
+	{
+		message->destroy(message);
+		return SUCCESS;
+	}
 
 	if (!generate_message(this, message, &this->initiating.packets))
 	{
