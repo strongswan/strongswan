@@ -24,6 +24,8 @@
 #include "attribute_provider.h"
 #include "attribute_handler.h"
 
+#include <sa/ike_sa.h>
+
 typedef struct attribute_manager_t attribute_manager_t;
 
 /**
@@ -40,12 +42,12 @@ struct attribute_manager_t {
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
 	 * @param pools			list of pool names (char*) to acquire from
-	 * @param id			peer identity to get address forua
+	 * @param ike_sa		associated IKE_SA for which an address is requested
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_manager_t *this,
-							   linked_list_t *pool, identification_t *id,
+							   linked_list_t *pool, ike_sa_t *ike_sa,
 							   host_t *requested);
 
 	/**
@@ -53,23 +55,23 @@ struct attribute_manager_t {
 	 *
 	 * @param pools			list of pool names (char*) to release to
 	 * @param address		address to release
-	 * @param id			peer identity to get address for
+	 * @param ike_sa		associated IKE_SA for which an address is released
 	 * @return				TRUE if address released to pool
 	 */
 	bool (*release_address)(attribute_manager_t *this,
 							linked_list_t *pools, host_t *address,
-							identification_t *id);
+							ike_sa_t *ike_sa);
 
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
 	 * @param pool			list of pools names (char*) to query attributes from
-	 * @param id			peer identity to hand out attributes to
+	 * @param ike_sa		associated IKE_SA for which attributes are requested
 	 * @param vip			list of virtual IPs (host_t*) to assign to peer
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_responder_enumerator)(attribute_manager_t *this,
-									linked_list_t *pool, identification_t *id,
+									linked_list_t *pool, ike_sa_t *ike_sa,
 									linked_list_t *vips);
 
 	/**

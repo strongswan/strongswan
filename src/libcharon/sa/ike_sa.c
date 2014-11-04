@@ -2372,13 +2372,11 @@ METHOD(ike_sa_t, destroy, void,
 		if (this->peer_cfg)
 		{
 			linked_list_t *pools;
-			identification_t *id;
 
-			id = get_other_eap_id(this);
 			pools = linked_list_create_from_enumerator(
 						this->peer_cfg->create_pool_enumerator(this->peer_cfg));
 			charon->attributes->release_address(charon->attributes,
-												pools, vip, id);
+												pools, vip, &this->public);
 			pools->destroy(pools);
 		}
 		vip->destroy(vip);

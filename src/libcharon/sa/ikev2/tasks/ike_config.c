@@ -352,7 +352,7 @@ METHOD(task_t, build_r, status_t,
 			DBG1(DBG_IKE, "peer requested virtual IP %H", requested);
 
 			found = charon->attributes->acquire_address(charon->attributes,
-														pools, id, requested);
+												pools, this->ike_sa, requested);
 			if (found)
 			{
 				DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
@@ -398,7 +398,7 @@ METHOD(task_t, build_r, status_t,
 
 		/* query registered providers for additional attributes to include */
 		enumerator = charon->attributes->create_responder_enumerator(
-											charon->attributes, pools, id, vips);
+								charon->attributes, pools, this->ike_sa, vips);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)

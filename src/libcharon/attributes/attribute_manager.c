@@ -53,19 +53,22 @@ struct private_attribute_manager_t {
 typedef struct {
 	/** attribute group pools */
 	linked_list_t *pools;
-	/** server/peer identity */
-	identification_t *id;
+	/** associated IKE_SA */
+	ike_sa_t *ike_sa;
 	/** requesting/assigned virtual IPs */
 	linked_list_t *vips;
 } enum_data_t;
 
 METHOD(attribute_manager_t, acquire_address, host_t*,
 	private_attribute_manager_t *this, linked_list_t *pools,
-	identification_t *id, host_t *requested)
+	ike_sa_t *ike_sa, host_t *requested)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
+	identification_t *id;
 	host_t *host = NULL;
+
+	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
@@ -85,11 +88,14 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 
 METHOD(attribute_manager_t, release_address, bool,
 	private_attribute_manager_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
+	identification_t *id;
 	bool found = FALSE;
+
+	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
@@ -113,19 +119,22 @@ METHOD(attribute_manager_t, release_address, bool,
 static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
+	identification_t *id;
+
+	id = data->ike_sa->get_other_eap_id(data->ike_sa);
 	return provider->create_attribute_enumerator(provider, data->pools,
-												 data->id, data->vips);
+												 id, data->vips);
 }
 
 METHOD(attribute_manager_t, create_responder_enumerator, enumerator_t*,
 	private_attribute_manager_t *this, linked_list_t *pools,
-	identification_t *id, linked_list_t *vips)
+	ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	enum_data_t *data;
 
 	INIT(data,
 		.pools = pools,
-		.id = id,
+		.ike_sa = ike_sa,
 		.vips = vips,
 	);
 	this->lock->read_lock(this->lock);

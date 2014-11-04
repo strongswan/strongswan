@@ -372,11 +372,11 @@ static status_t build_set(private_mode_config_t *this, message_t *message)
 		pools = linked_list_create_with_items(name, NULL);
 		/* try IPv4, then IPv6 */
 		found = charon->attributes->acquire_address(charon->attributes,
-													pools, id, any4);
+													pools, this->ike_sa, any4);
 		if (!found)
 		{
 			found = charon->attributes->acquire_address(charon->attributes,
-														pools, id, any6);
+													pools, this->ike_sa, any6);
 		}
 		pools->destroy(pools);
 		if (found)
@@ -398,7 +398,7 @@ static status_t build_set(private_mode_config_t *this, message_t *message)
 	pools = linked_list_create_from_enumerator(
 									config->create_pool_enumerator(config));
 	enumerator = charon->attributes->create_responder_enumerator(
-									charon->attributes, pools, id, this->vips);
+						charon->attributes, pools, this->ike_sa, this->vips);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		add_attribute(this, cp, type, value, NULL);
@@ -489,7 +489,7 @@ static status_t build_reply(private_mode_config_t *this, message_t *message)
 		DBG1(DBG_IKE, "peer requested virtual IP %H", requested);
 
 		found = charon->attributes->acquire_address(charon->attributes,
-													pools, id, requested);
+											pools, this->ike_sa, requested);
 		if (found)
 		{
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
@@ -509,7 +509,7 @@ static status_t build_reply(private_mode_config_t *this, message_t *message)
 
 	/* query registered providers for additional attributes to include */
 	enumerator = charon->attributes->create_responder_enumerator(
-											charon->attributes, pools, id, vips);
+								charon->attributes, pools, this->ike_sa, vips);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		cp->add_attribute(cp,
