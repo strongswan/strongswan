@@ -212,7 +212,7 @@
                 0x03         "e-voting"
                 0x05         "BLISS"
                   0x01       "keyType"
-                    0x01     "blissPublicKey"			OID_BLISS
+                    0x01     "blissPublicKey"			OID_BLISS_PUBLICKEY
                   0x02       "parameters"
                     0x01     "BLISS-I"					OID_BLISS_I
                     0x02     "BLISS-II"					OID_BLISS_II

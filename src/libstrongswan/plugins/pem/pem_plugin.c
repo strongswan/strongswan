@@ -60,6 +60,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRIVKEY, KEY_DSA),
 				PLUGIN_DEPENDS(PRIVKEY, KEY_DSA),
 				PLUGIN_SDEPEND(HASHER, HASH_MD5),
+		PLUGIN_REGISTER(PRIVKEY, pem_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_BLISS),
+				PLUGIN_DEPENDS(PRIVKEY, KEY_BLISS),
 
 		/* public key PEM decoding */
 		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
@@ -74,6 +77,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_DSA),
 				PLUGIN_DEPENDS(PUBKEY, KEY_DSA),
+		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_BLISS),
 
 		/* certificate PEM decoding */
 		PLUGIN_REGISTER(CERT_DECODE, pem_certificate_load, FALSE),
