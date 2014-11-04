@@ -29,6 +29,7 @@
 #include <sa/ikev2/tasks/ike_cert_post.h>
 #include <sa/ikev2/tasks/ike_rekey.h>
 #include <sa/ikev2/tasks/ike_reauth.h>
+#include <sa/ikev2/tasks/ike_reauth_complete.h>
 #include <sa/ikev2/tasks/ike_delete.h>
 #include <sa/ikev2/tasks/ike_config.h>
 #include <sa/ikev2/tasks/ike_dpd.h>
@@ -515,6 +516,11 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 #endif /* ME */
+				if (activate_task(this, TASK_IKE_REAUTH_COMPLETE))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
 			case IKE_REKEYING:
 				if (activate_task(this, TASK_IKE_DELETE))
 				{
@@ -1569,6 +1575,8 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 
 	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
 	{
+		new->queue_task(new, (task_t*)ike_reauth_complete_create(new,
+										this->ike_sa->get_id(this->ike_sa)));
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
