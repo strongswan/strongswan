@@ -92,38 +92,37 @@ struct attribute_manager_t {
 	/**
 	 * Handle a configuration attribute by passing them to the handlers.
 	 *
-	 * @param server		server from which the attribute was received
+	 * @param ike_sa		associated IKE_SA to handle an attribute for
 	 * @param handler		handler we requested the attribute for, if any
 	 * @param type			type of configuration attribute
 	 * @param data			associated attribute data
 	 * @return				handler which handled this attribute, NULL if none
 	 */
 	attribute_handler_t* (*handle)(attribute_manager_t *this,
-						identification_t *server, attribute_handler_t *handler,
+						ike_sa_t *ike_sa, attribute_handler_t *handler,
 						configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Release an attribute previously handle()d by a handler.
 	 *
-	 * @param handler		handler returned by handle() for this attribute
+	 * @param ike_sa		associated IKE_SA to release an attribute for
 	 * @param server		server from which the attribute was received
 	 * @param type			type of attribute to release
 	 * @param data			associated attribute data
 	 */
 	void (*release)(attribute_manager_t *this, attribute_handler_t *handler,
-						identification_t *server,
-						configuration_attribute_type_t type,
+						ike_sa_t *ike_sa, configuration_attribute_type_t type,
 						chunk_t data);
 
 	/**
 	 * Create an enumerator over attributes to request from server.
 	 *
-	 * @param id			server identity to hand out attributes to
+	 * @param ike_sa		associated IKE_SA to request attributes for
 	 * @param vip			list of virtual IPs (host_t*) going to request
 	 * @return				enumerator (attribute_handler_t, ca_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_initiator_enumerator)(attribute_manager_t *this,
-									identification_t *id, linked_list_t *vips);
+									ike_sa_t *ike_sa, linked_list_t *vips);
 
 	/**
 	 * Register an attribute handler to the manager.

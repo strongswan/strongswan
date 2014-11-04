@@ -162,12 +162,15 @@ METHOD(attribute_manager_t, remove_provider, void,
 }
 
 METHOD(attribute_manager_t, handle, attribute_handler_t*,
-	private_attribute_manager_t *this, identification_t *server,
+	private_attribute_manager_t *this, ike_sa_t *ike_sa,
 	attribute_handler_t *handler, configuration_attribute_type_t type,
 	chunk_t data)
 {
 	enumerator_t *enumerator;
+	identification_t *server;
 	attribute_handler_t *current, *handled = NULL;
+
+	server = ike_sa->get_other_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 
@@ -207,10 +210,13 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 
 METHOD(attribute_manager_t, release, void,
 	private_attribute_manager_t *this, attribute_handler_t *handler,
-	identification_t *server, configuration_attribute_type_t type, chunk_t data)
+	ike_sa_t *ike_sa, configuration_attribute_type_t type, chunk_t data)
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current;
+	identification_t *server;
+
+	server = ike_sa->get_other_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->handlers->create_enumerator(this->handlers);
@@ -240,8 +246,8 @@ typedef struct {
 	enumerator_t *outer;
 	/** inner enumerator over current handlers attributes */
 	enumerator_t *inner;
-	/** server ID we want attributes for */
-	identification_t *id;
+	/** IKE_SA to request attributes for */
+	ike_sa_t *ike_sa;
 	/** virtual IPs we are requesting along with attriubutes */
 	linked_list_t *vips;
 } initiator_enumerator_t;
@@ -254,6 +260,10 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 								configuration_attribute_type_t *type,
 								chunk_t *value)
 {
+	identification_t *id;
+
+	id = this->ike_sa->get_other_id(this->ike_sa);
+
 	/* enumerate inner attributes using outer handler enumerator */
 	while (!this->inner || !this->inner->enumerate(this->inner, type, value))
 	{
@@ -263,7 +273,7 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 		}
 		DESTROY_IF(this->inner);
 		this->inner = this->handler->create_attribute_enumerator(this->handler,
-														this->id, this->vips);
+															id, this->vips);
 	}
 	/* inject the handler as additional attribute */
 	*handler = this->handler;
@@ -282,7 +292,7 @@ static void initiator_destroy(initiator_enumerator_t *this)
 }
 
 METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
-	private_attribute_manager_t *this, identification_t *id, linked_list_t *vips)
+	private_attribute_manager_t *this, ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	initiator_enumerator_t *enumerator;
 
@@ -294,7 +304,7 @@ METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
 			.destroy = (void*)initiator_destroy,
 		},
 		.this = this,
-		.id = id,
+		.ike_sa = ike_sa,
 		.vips = vips,
 		.outer = this->handlers->create_enumerator(this->handlers),
 	);

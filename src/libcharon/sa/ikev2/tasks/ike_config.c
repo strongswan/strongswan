@@ -127,8 +127,7 @@ static void handle_attribute(private_ike_config_t *this,
 
 	/* and pass it to the handle function */
 	handler = charon->attributes->handle(charon->attributes,
-							this->ike_sa->get_other_id(this->ike_sa), handler,
-							ca->get_type(ca), ca->get_chunk(ca));
+					this->ike_sa, handler, ca->get_type(ca), ca->get_chunk(ca));
 	this->ike_sa->add_configuration_attribute(this->ike_sa,
 							handler, ca->get_type(ca), ca->get_chunk(ca));
 }
@@ -274,8 +273,7 @@ METHOD(task_t, build_i, status_t,
 		}
 
 		enumerator = charon->attributes->create_initiator_enumerator(
-								charon->attributes,
-								this->ike_sa->get_other_id(this->ike_sa), vips);
+										charon->attributes, this->ike_sa, vips);
 		while (enumerator->enumerate(enumerator, &handler, &type, &data))
 		{
 			configuration_attribute_t *ca;

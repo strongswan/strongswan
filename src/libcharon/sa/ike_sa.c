@@ -2347,7 +2347,7 @@ METHOD(ike_sa_t, destroy, void,
 		if (entry.handler)
 		{
 			charon->attributes->release(charon->attributes, entry.handler,
-										this->other_id, entry.type, entry.data);
+										&this->public, entry.type, entry.data);
 		}
 		free(entry.data.ptr);
 	}
