@@ -158,10 +158,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 	chunk_t data)
 {
 	enumerator_t *enumerator;
-	identification_t *server;
 	attribute_handler_t *current, *handled = NULL;
-
-	server = ike_sa->get_other_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 
@@ -169,7 +166,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current == handler && current->handle(current, server, type, data))
+		if (current == handler && current->handle(current, ike_sa, type, data))
 		{
 			handled = current;
 			break;
@@ -181,7 +178,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 		enumerator = this->handlers->create_enumerator(this->handlers);
 		while (enumerator->enumerate(enumerator, &current))
 		{
-			if (current->handle(current, server, type, data))
+			if (current->handle(current, ike_sa, type, data))
 			{
 				handled = current;
 				break;
@@ -205,9 +202,6 @@ METHOD(attribute_manager_t, release, void,
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current;
-	identification_t *server;
-
-	server = ike_sa->get_other_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->handlers->create_enumerator(this->handlers);
@@ -215,7 +209,7 @@ METHOD(attribute_manager_t, release, void,
 	{
 		if (current == handler)
 		{
-			current->release(current, server, type, data);
+			current->release(current, ike_sa, type, data);
 			break;
 		}
 	}
@@ -251,10 +245,6 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 								configuration_attribute_type_t *type,
 								chunk_t *value)
 {
-	identification_t *id;
-
-	id = this->ike_sa->get_other_id(this->ike_sa);
-
 	/* enumerate inner attributes using outer handler enumerator */
 	while (!this->inner || !this->inner->enumerate(this->inner, type, value))
 	{
@@ -264,7 +254,7 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 		}
 		DESTROY_IF(this->inner);
 		this->inner = this->handler->create_attribute_enumerator(this->handler,
-															id, this->vips);
+													this->ike_sa, this->vips);
 	}
 	/* inject the handler as additional attribute */
 	*handler = this->handler;

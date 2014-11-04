@@ -41,7 +41,7 @@ struct private_nm_handler_t {
 };
 
 METHOD(attribute_handler_t, handle, bool,
-	private_nm_handler_t *this, identification_t *server,
+	private_nm_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	linked_list_t *list;
@@ -92,7 +92,7 @@ static bool enumerate_dns(enumerator_t *this,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_nm_handler_t *this, identification_t *server, linked_list_t *vips)
+	private_nm_handler_t *this, ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	if (vips->get_count(vips))
 	{
@@ -185,4 +185,3 @@ nm_handler_t *nm_handler_create()
 
 	return &this->public;
 }
-

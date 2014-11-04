@@ -94,10 +94,9 @@ static bool attr_filter(void *lock, host_t **in,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_stroke_handler_t *this, identification_t *server,
+	private_stroke_handler_t *this, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
-	ike_sa_t *ike_sa;
 	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
 	attributes_t *attr;

@@ -317,7 +317,7 @@ static bool remove_exclude(private_unity_handler_t *this, chunk_t data)
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_unity_handler_t *this, identification_t *id,
+	private_unity_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -332,7 +332,7 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_unity_handler_t *this, identification_t *server,
+	private_unity_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -380,10 +380,9 @@ METHOD(enumerator_t, enumerate_attributes, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	unity_handler_t *this, identification_t *id, linked_list_t *vips)
+	unity_handler_t *this, ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	attribute_enumerator_t *enumerator;
-	ike_sa_t *ike_sa;
 
 	ike_sa = charon->bus->get_sa(charon->bus);
 	if (!ike_sa || ike_sa->get_version(ike_sa) != IKEV1 ||
