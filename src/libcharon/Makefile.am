@@ -637,3 +637,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
 endif
 endif
+
+if USE_ATTR
+  SUBDIRS += plugins/attr
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/attr/libstrongswan-attr.la
+endif
+endif

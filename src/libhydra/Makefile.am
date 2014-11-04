@@ -37,13 +37,6 @@ else
 SUBDIRS = .
 endif
 
-if USE_ATTR
-  SUBDIRS += plugins/attr
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/attr/libstrongswan-attr.la
-endif
-endif
-
 if USE_ATTR_SQL
   SUBDIRS += plugins/attr_sql
 if MONOLITHIC
