@@ -644,3 +644,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/attr/libstrongswan-attr.la
 endif
 endif
+
+if USE_ATTR_SQL
+  SUBDIRS += plugins/attr_sql
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
+endif
+endif

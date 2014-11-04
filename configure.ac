@@ -1257,7 +1257,7 @@ ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
 ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
 ADD_PLUGIN([attr],                 [c charon])
-ADD_PLUGIN([attr-sql],             [h charon])
+ADD_PLUGIN([attr-sql],             [c charon])
 ADD_PLUGIN([load-tester],          [c charon])
 ADD_PLUGIN([kernel-libipsec],      [c charon cmd])
 ADD_PLUGIN([kernel-wfp],           [c charon])
@@ -1483,10 +1483,10 @@ AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 
 #  hydra plugins
 # ---------------
-AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
@@ -1649,7 +1649,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libhydra/Makefile
-	src/libhydra/plugins/attr_sql/Makefile
 	src/libhydra/plugins/kernel_netlink/Makefile
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
@@ -1750,6 +1749,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/load_tester/Makefile
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/attr/Makefile
+	src/libcharon/plugins/attr_sql/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile
