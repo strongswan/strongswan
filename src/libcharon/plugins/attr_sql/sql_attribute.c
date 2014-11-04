@@ -46,10 +46,13 @@ struct private_sql_attribute_t {
 /**
  * lookup/insert an identity
  */
-static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
+static u_int get_identity(private_sql_attribute_t *this, ike_sa_t *ike_sa)
 {
+	identification_t *id;
 	enumerator_t *e;
 	u_int row;
+
+	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->db->transaction(this->db, TRUE);
 	/* look for peer identity in the identities table */
@@ -243,7 +246,7 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_sql_attribute_t *this, linked_list_t *pools, identification_t *id,
+	private_sql_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	host_t *requested)
 {
 	enumerator_t *enumerator;
@@ -252,7 +255,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	char *name;
 	int family;
 
-	identity = get_identity(this, id);
+	identity = get_identity(this, ike_sa);
 	if (identity)
 	{
 		family = requested->get_family(requested);
@@ -296,7 +299,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 
 METHOD(attribute_provider_t, release_address, bool,
 	private_sql_attribute_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	u_int pool, timeout;
@@ -338,7 +341,7 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_sql_attribute_t *this, linked_list_t *pools, identification_t *id,
+	private_sql_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	enumerator_t *attr_enumerator = NULL;
@@ -350,9 +353,9 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		char *name;
 
 		/* in a first step check for attributes that match name and id */
-		if (id)
+		if (ike_sa)
 		{
-			u_int identity = get_identity(this, id);
+			u_int identity = get_identity(this, ike_sa);
 
 			pool_enumerator = pools->create_enumerator(pools);
 			while (pool_enumerator->enumerate(pool_enumerator, &name))

@@ -120,10 +120,13 @@ static host_t *find_addr(private_stroke_attribute_t *this, linked_list_t *pools,
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_stroke_attribute_t *this, linked_list_t *pools, identification_t *id,
+	private_stroke_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	host_t *requested)
 {
+	identification_t *id;
 	host_t *addr;
+
+	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 
@@ -144,12 +147,15 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 
 METHOD(attribute_provider_t, release_address, bool,
 	private_stroke_attribute_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
+	identification_t *id;
 	mem_pool_t *pool;
 	bool found = FALSE;
 	char *name;
+
+	id = ike_sa->get_other_eap_id(ike_sa);
 
 	enumerator = pools->create_enumerator(pools);
 	this->lock->read_lock(this->lock);
@@ -197,9 +203,8 @@ static bool attr_filter(void *lock, host_t **in,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_stroke_attribute_t *this, linked_list_t *pools,
-	identification_t *id, linked_list_t *vips)
+	ike_sa_t *ike_sa, linked_list_t *vips)
 {
-	ike_sa_t *ike_sa;
 	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
 	attributes_t *attr;
@@ -413,4 +418,3 @@ stroke_attribute_t *stroke_attribute_create()
 
 	return &this->public;
 }
-

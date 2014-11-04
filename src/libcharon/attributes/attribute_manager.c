@@ -65,16 +65,13 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
-	identification_t *id;
 	host_t *host = NULL;
-
-	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		host = current->acquire_address(current, pools, id, requested);
+		host = current->acquire_address(current, pools, ike_sa, requested);
 		if (host)
 		{
 			break;
@@ -92,16 +89,13 @@ METHOD(attribute_manager_t, release_address, bool,
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
-	identification_t *id;
 	bool found = FALSE;
-
-	id = ike_sa->get_other_eap_id(ike_sa);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->release_address(current, pools, address, id))
+		if (current->release_address(current, pools, address, ike_sa))
 		{
 			found = TRUE;
 			break;
@@ -119,11 +113,8 @@ METHOD(attribute_manager_t, release_address, bool,
 static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
-	identification_t *id;
-
-	id = data->ike_sa->get_other_eap_id(data->ike_sa);
 	return provider->create_attribute_enumerator(provider, data->pools,
-												 id, data->vips);
+												 data->ike_sa, data->vips);
 }
 
 METHOD(attribute_manager_t, create_responder_enumerator, enumerator_t*,

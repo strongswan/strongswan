@@ -135,19 +135,17 @@ static bool use_ts(traffic_selector_t *ts)
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_unity_provider_t *this, linked_list_t *pools, identification_t *id,
+	private_unity_provider_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	attribute_enumerator_t *attr_enum;
 	enumerator_t *enumerator;
 	linked_list_t *list, *current;
 	traffic_selector_t *ts;
-	ike_sa_t *ike_sa;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa || ike_sa->get_version(ike_sa) != IKEV1 ||
+	if (ike_sa->get_version(ike_sa) != IKEV1 ||
 		!ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY) ||
 		!vips->get_count(vips))
 	{
