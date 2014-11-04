@@ -618,7 +618,7 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &pool))
 	{
-		found = pool->acquire_address(pool, id, requested, MEM_POOL_NEW);
+		found = pool->acquire_address(pool, id, requested, MEM_POOL_NEW, NULL);
 		if (found)
 		{
 			iface = (char*)pool->get_name(pool);

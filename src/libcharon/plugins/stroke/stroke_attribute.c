@@ -94,7 +94,7 @@ static mem_pool_t *find_pool(private_stroke_attribute_t *this, char *name)
  */
 static host_t *find_addr(private_stroke_attribute_t *this, linked_list_t *pools,
 						 identification_t *id, host_t *requested,
-						 mem_pool_op_t operation)
+						 mem_pool_op_t operation, host_t *peer)
 {
 	host_t *addr = NULL;
 	enumerator_t *enumerator;
@@ -107,7 +107,7 @@ static host_t *find_addr(private_stroke_attribute_t *this, linked_list_t *pools,
 		pool = find_pool(this, name);
 		if (pool)
 		{
-			addr = pool->acquire_address(pool, id, requested, operation);
+			addr = pool->acquire_address(pool, id, requested, operation, peer);
 			if (addr)
 			{
 				break;
@@ -124,19 +124,20 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	host_t *requested)
 {
 	identification_t *id;
-	host_t *addr;
+	host_t *addr, *peer;
 
 	id = ike_sa->get_other_eap_id(ike_sa);
+	peer = ike_sa->get_other_host(ike_sa);
 
 	this->lock->read_lock(this->lock);
 
-	addr = find_addr(this, pools, id, requested, MEM_POOL_EXISTING);
+	addr = find_addr(this, pools, id, requested, MEM_POOL_EXISTING, peer);
 	if (!addr)
 	{
-		addr = find_addr(this, pools, id, requested, MEM_POOL_NEW);
+		addr = find_addr(this, pools, id, requested, MEM_POOL_NEW, peer);
 		if (!addr)
 		{
-			addr = find_addr(this, pools, id, requested, MEM_POOL_REASSIGN);
+			addr = find_addr(this, pools, id, requested, MEM_POOL_REASSIGN, peer);
 		}
 	}
 

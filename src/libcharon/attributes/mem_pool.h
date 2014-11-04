@@ -87,13 +87,21 @@ struct mem_pool_t {
 	 * acquire a new lease (MEM_POOL_NEW), and if the pool is full once again
 	 * to assign an existing offline lease (MEM_POOL_REASSIGN).
 	 *
+	 * If the same identity requests a virtual IP that is already assigned to
+	 * it, the peer address and port is used to check if it is the same client
+	 * instance that is connecting. If this is true, the request is considered
+	 * a request for a reauthentication attempt, and the same virtual IP gets
+	 * assigned to the peer.
+	 *
 	 * @param id		the id to acquire an address for
 	 * @param requested	acquire this address, if possible
 	 * @param operation	acquire operation to perform, see above
+	 * @param peer		optional remote IKE address and port
 	 * @return			the acquired address
 	 */
 	host_t* (*acquire_address)(mem_pool_t *this, identification_t *id,
-							   host_t *requested, mem_pool_op_t operation);
+							   host_t *requested, mem_pool_op_t operation,
+							   host_t *peer);
 
 	/**
 	 * Release a previously acquired address.
