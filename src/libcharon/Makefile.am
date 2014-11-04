@@ -600,13 +600,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_UNIT_TESTS
-  SUBDIRS += plugins/unit_tester
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/unit_tester/libstrongswan-unit-tester.la
-endif
-endif
-
 if USE_XAUTH_GENERIC
   SUBDIRS += plugins/xauth_generic
 if MONOLITHIC

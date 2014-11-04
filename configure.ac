@@ -257,7 +257,6 @@ ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
 ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
-ARG_ENABL_SET([unit-tester],    [enable unit tests on IKEv2 daemon startup.])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 # programs/components
 ARG_ENABL_SET([aikgen],         [enable AIK generator.])
@@ -1326,7 +1325,6 @@ ADD_PLUGIN([maemo],                [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
-ADD_PLUGIN([unit-tester],          [c charon])
 
 AC_SUBST(charon_plugins)
 AC_SUBST(starter_plugins)
@@ -1419,7 +1417,6 @@ AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
-AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tester = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
@@ -1745,7 +1742,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/vici/ruby/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
-	src/libcharon/plugins/unit_tester/Makefile
 	src/libcharon/plugins/load_tester/Makefile
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/attr/Makefile
