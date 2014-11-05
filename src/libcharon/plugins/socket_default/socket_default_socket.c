@@ -150,66 +150,40 @@ METHOD(socket_t, receiver, status_t,
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
-	int bytes_read = 0;
+	int i, bytes_read = 0, selected = -1;
 	bool oldstate;
-
-	fd_set rfds;
-	int max_fd = 0, selected = 0;
 	u_int16_t port = 0;
+	struct pollfd pfd[] = {
+		{ .fd = this->ipv4,			.events = POLLIN },
+		{ .fd = this->ipv4_natt,	.events = POLLIN },
+		{ .fd = this->ipv6,			.events = POLLIN },
+		{ .fd = this->ipv6_natt,	.events = POLLIN },
+	};
+	int ports[] = {
+		/* port numbers assocaited to pollfds */
+		this->port, this->natt, this->port, this->natt,
+	};
 
-	FD_ZERO(&rfds);
-
-	if (this->ipv4 != -1)
-	{
-		FD_SET(this->ipv4, &rfds);
-		max_fd = max(max_fd, this->ipv4);
-	}
-	if (this->ipv4_natt != -1)
-	{
-		FD_SET(this->ipv4_natt, &rfds);
-		max_fd = max(max_fd, this->ipv4_natt);
-	}
-	if (this->ipv6 != -1)
-	{
-		FD_SET(this->ipv6, &rfds);
-		max_fd = max(max_fd, this->ipv6);
-	}
-	if (this->ipv6_natt != -1)
-	{
-		FD_SET(this->ipv6_natt, &rfds);
-		max_fd = max(max_fd, this->ipv6_natt);
-	}
 
 	DBG2(DBG_NET, "waiting for data on sockets");
 	oldstate = thread_cancelability(TRUE);
-	if (select(max_fd + 1, &rfds, NULL, NULL, NULL) <= 0)
+	if (poll(pfd, countof(pfd), -1) <= 0)
 	{
 		thread_cancelability(oldstate);
 		return FAILED;
 	}
 	thread_cancelability(oldstate);
 
-	if (this->ipv4 != -1 && FD_ISSET(this->ipv4, &rfds))
+	for (i = 0; i < countof(pfd); i++)
 	{
-		port = this->port;
-		selected = this->ipv4;
+		if (pfd[i].revents & POLLIN)
+		{
+			selected = pfd[i].fd;
+			port = ports[i];
+			break;
+		}
 	}
-	if (this->ipv4_natt != -1 && FD_ISSET(this->ipv4_natt, &rfds))
-	{
-		port = this->natt;
-		selected = this->ipv4_natt;
-	}
-	if (this->ipv6 != -1 && FD_ISSET(this->ipv6, &rfds))
-	{
-		port = this->port;
-		selected = this->ipv6;
-	}
-	if (this->ipv6_natt != -1 && FD_ISSET(this->ipv6_natt, &rfds))
-	{
-		port = this->natt;
-		selected = this->ipv6_natt;
-	}
-	if (selected)
+	if (selected != -1)
 	{
 		struct msghdr msg;
 		struct cmsghdr *cmsgptr;
