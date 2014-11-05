@@ -347,31 +347,20 @@ METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
 	ssize_t len;
-	fd_set set;
 	bool old;
 
-	FD_ZERO(&set);
-	FD_SET(this->tunfd, &set);
-
-	old = thread_cancelability(TRUE);
-	len = select(this->tunfd + 1, &set, NULL, NULL, NULL);
-	thread_cancelability(old);
-
-	if (len < 0)
-	{
-		DBG1(DBG_LIB, "select on TUN device %s failed: %s", this->if_name,
-			 strerror(errno));
-		return FALSE;
-	}
-	/* FIXME: this is quite expensive for lots of small packets, copy from
-	 * local buffer instead? */
 	*packet = chunk_alloc(get_mtu(this));
+
+	thread_cleanup_push(free, packet->ptr);
+	old = thread_cancelability(TRUE);
 	len = read(this->tunfd, packet->ptr, packet->len);
+	thread_cancelability(old);
+	thread_cleanup_pop(FALSE);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "reading from TUN device %s failed: %s", this->if_name,
 			 strerror(errno));
-		chunk_free(packet);
+		free(packet->ptr);
 		return FALSE;
 	}
 	packet->len = len;
