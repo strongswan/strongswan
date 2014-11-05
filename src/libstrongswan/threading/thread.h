@@ -215,6 +215,26 @@ static inline int precancellable_select(int nfds, fd_set *restrict readfds,
 }
 #define select precancellable_select
 
+#include <poll.h>
+
+/*
+ * The same as to select(2) applies to poll(2)
+ */
+static inline int precancellable_poll(struct pollfd fds[], nfds_t nfds,
+									  int timeout)
+{
+	if (thread_cancelability(TRUE))
+	{
+		thread_cancellation_point();
+	}
+	else
+	{
+		thread_cancelability(FALSE);
+	}
+	return poll(fds, nfds, timeout);
+}
+#define poll precancellable_poll
+
 #endif /* __APPLE__ */
 
 #endif /** THREADING_THREAD_H_ @} */
