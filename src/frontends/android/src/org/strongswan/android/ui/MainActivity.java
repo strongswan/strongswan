@@ -20,6 +20,7 @@ package org.strongswan.android.ui;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.CharonVpnService;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.VpnStateService;
@@ -219,7 +220,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
 		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
-		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().getRequiresUsernamePassword());
+		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));
 		profileInfo.putString(PROFILE_NAME, profile.getName());
 
 		removeFragmentByTag(DIALOG_TAG);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,45 +15,44 @@
 
 package org.strongswan.android.data;
 
+import java.util.EnumSet;
+
 public enum VpnType
 {
 	/* the order here must match the items in R.array.vpn_types */
-	IKEV2_EAP("ikev2-eap", true, false),
-	IKEV2_CERT("ikev2-cert", false, true),
-	IKEV2_CERT_EAP("ikev2-cert-eap", true, true),
-	IKEV2_BYOD_EAP("ikev2-byod-eap", true, false, true);
-
-	private String mIdentifier;
-	private boolean mCertificate;
-	private boolean mUsernamePassword;
-	private boolean mBYOD;
+	IKEV2_EAP("ikev2-eap", EnumSet.of(VpnTypeFeature.USER_PASS)),
+	IKEV2_CERT("ikev2-cert", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
+	IKEV2_CERT_EAP("ikev2-cert-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.CERTIFICATE)),
+	IKEV2_EAP_TLS("ikev2-eap-tls", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
+	IKEV2_BYOD_EAP("ikev2-byod-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.CERTIFICATE, VpnTypeFeature.BYOD));
 
 	/**
-	 * Enum which provides additional information about the supported VPN types.
-	 *
-	 * @param id identifier used to store and transmit this specific type
-	 * @param userpass true if username and password are required
-	 * @param certificate true if a client certificate is required
+	 * Features of a VPN type.
 	 */
-	VpnType(String id, boolean userpass, boolean certificate)
+	public enum VpnTypeFeature
 	{
-		this(id, userpass, certificate, false);
+		/** client certificate is required */
+		CERTIFICATE,
+		/** username and password are required */
+		USER_PASS,
+		/** enable BYOD features */
+		BYOD;
 	}
 
+	private String mIdentifier;
+	private EnumSet<VpnTypeFeature> mFeatures;
+
 	/**
 	 * Enum which provides additional information about the supported VPN types.
 	 *
 	 * @param id identifier used to store and transmit this specific type
-	 * @param userpass true if username and password are required
+	 * @param features of the given VPN type
 	 * @param certificate true if a client certificate is required
-	 * @param byod true to enable BYOD features
 	 */
-	VpnType(String id, boolean userpass, boolean certificate, boolean byod)
+	VpnType(String id, EnumSet<VpnTypeFeature> features)
 	{
 		mIdentifier = id;
-		mUsernamePassword = userpass;
-		mCertificate = certificate;
-		mBYOD = byod;
+		mFeatures = features;
 	}
 
 	/**
@@ -66,33 +65,13 @@ public enum VpnType
 	}
 
 	/**
-	 * Whether username and password are required for this type of VPN.
+	 * Checks whether a feature is supported/required by this type of VPN.
 	 *
-	 * @return true if username and password are required
+	 * @return true if the feature is supported/required
 	 */
-	public boolean getRequiresUsernamePassword()
+	public boolean has(VpnTypeFeature feature)
 	{
-		return mUsernamePassword;
-	}
-
-	/**
-	 * Whether a certificate is required for this type of VPN.
-	 *
-	 * @return true if a certificate is required
-	 */
-	public boolean getRequiresCertificate()
-	{
-		return mCertificate;
-	}
-
-	/**
-	 * Whether BYOD features should be enabled.
-	 *
-	 * @return true if BYOD features are to be enabled
-	 */
-	public boolean getEnableBYOD()
-	{
-		return mBYOD;
+		return mFeatures.contains(feature);
 	}
 
 	/**
