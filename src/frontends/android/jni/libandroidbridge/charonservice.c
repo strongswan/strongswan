@@ -44,6 +44,7 @@
 #define ANDROID_RETRASNMIT_TRIES 3
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
+#define ANDROID_FRAGMENT_SIZE 1400
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -465,6 +466,8 @@ static void set_options(char *logfile)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
+	lib->settings->set_int(lib->settings,
+					"charon.fragment_size", ANDROID_FRAGMENT_SIZE);
 	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
 	/* setting the source address breaks the VpnService.protect() function which
