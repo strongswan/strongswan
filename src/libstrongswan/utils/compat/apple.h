@@ -39,21 +39,27 @@
  * calls to select(2).
  */
 
-#define WRAP_WITH_SELECT(func, socket, ...)\
-	fd_set rfds; FD_ZERO(&rfds); FD_SET(socket, &rfds);\
-	if (select(socket + 1, &rfds, NULL, NULL, NULL) <= 0) { return -1; }\
+#define WRAP_WITH_POLL(func, socket, ...) \
+	struct pollfd pfd = { \
+		.fd = socket, \
+		.events = POLLIN, \
+	}; \
+	if (poll(&pfd, 1, -1) <= 0) \
+	{\
+		return -1; \
+	}\
 	return func(socket, __VA_ARGS__)
 
 static inline int cancellable_accept(int socket, struct sockaddr *address,
 									 socklen_t *address_len)
 {
-	WRAP_WITH_SELECT(accept, socket, address, address_len);
+	WRAP_WITH_POLL(accept, socket, address, address_len);
 }
 #define accept cancellable_accept
 static inline int cancellable_recvfrom(int socket, void *buffer, size_t length,
 				int flags, struct sockaddr *address, socklen_t *address_len)
 {
-	WRAP_WITH_SELECT(recvfrom, socket, buffer, length, flags, address, address_len);
+	WRAP_WITH_POLL(recvfrom, socket, buffer, length, flags, address, address_len);
 }
 #define recvfrom cancellable_recvfrom
 
