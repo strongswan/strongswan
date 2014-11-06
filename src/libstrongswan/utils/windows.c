@@ -13,6 +13,9 @@
  * for more details.
  */
 
+/* WSAPoll() */
+#define _WIN32_WINNT 0x0600
+
 #include "utils.h"
 
 #include <errno.h>
@@ -638,4 +641,12 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
+}
+
+/**
+ * See header
+ */
+int poll(struct pollfd *fds, int nfds, int timeout)
+{
+	return wserr(WSAPoll(fds, nfds, timeout));
 }

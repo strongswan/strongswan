@@ -37,6 +37,7 @@
 # include <netdb.h>
 # include <netinet/in.h>
 # include <sched.h>
+# include <poll.h>
 #endif
 
 /**
