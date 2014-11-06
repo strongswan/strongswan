@@ -662,6 +662,22 @@ ssize_t windows_read(int fd, void *buf, size_t count)
 /**
  * See header
  */
+#undef write
+ssize_t windows_write(int fd, void *buf, size_t count)
+{
+	ssize_t ret;
+
+	ret = send(fd, buf, count, 0);
+	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	{
+		ret = write(fd, buf, count);
+	}
+	return ret;
+}
+
+/**
+ * See header
+ */
 int poll(struct pollfd *fds, int nfds, int timeout)
 {
 	return wserr(WSAPoll(fds, nfds, timeout));
