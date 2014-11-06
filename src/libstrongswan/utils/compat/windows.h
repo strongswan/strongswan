@@ -15,7 +15,7 @@
 
 /**
  * @defgroup windows windows
- * @{ @ingroup utils
+ * @{ @ingroup compat
  */
 
 #ifndef WINDOWS_H_

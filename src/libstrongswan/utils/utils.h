@@ -29,7 +29,7 @@
 #include <string.h>
 
 #ifdef WIN32
-# include "windows.h"
+# include "compat/windows.h"
 #else
 # define _GNU_SOURCE
 # include <arpa/inet.h>

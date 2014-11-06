@@ -16,7 +16,7 @@
 /* WSAPoll() */
 #define _WIN32_WINNT 0x0600
 
-#include "utils.h"
+#include <utils/utils.h>
 
 #include <errno.h>
 
