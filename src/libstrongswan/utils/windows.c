@@ -646,6 +646,22 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 /**
  * See header
  */
+#undef read
+ssize_t windows_read(int fd, void *buf, size_t count)
+{
+	ssize_t ret;
+
+	ret = recv(fd, buf, count, 0);
+	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	{
+		ret = read(fd, buf, count);
+	}
+	return ret;
+}
+
+/**
+ * See header
+ */
 int poll(struct pollfd *fds, int nfds, int timeout)
 {
 	return wserr(WSAPoll(fds, nfds, timeout));

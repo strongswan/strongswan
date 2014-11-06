@@ -362,6 +362,15 @@ ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags);
 ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
 
+/**
+ * read(2) working on files and sockets, cancellable on sockets only
+ *
+ * On Windows, there does not seem to be a way how a cancellable read can
+ * be implemented on Low level I/O functions for files, _pipe()s or stdio.
+ */
+#define read windows_read
+ssize_t windows_read(int fd, void *buf, size_t count);
+
 #if _WIN32_WINNT < 0x0600
 /**
  * Define pollfd and flags on our own if not specified
