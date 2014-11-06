@@ -97,6 +97,9 @@
 
 #include "enum.h"
 #include "utils/strerror.h"
+#ifdef __APPLE__
+# include "compat/apple.h"
+#endif
 
 /**
  * Directory separator character in paths on this platform
