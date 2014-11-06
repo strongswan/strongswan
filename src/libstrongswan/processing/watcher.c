@@ -118,11 +118,7 @@ static void update(private_watcher_t *this)
 	this->pending = TRUE;
 	if (this->notify[1] != -1)
 	{
-#ifdef WIN32
-		if (send(this->notify[1], buf, sizeof(buf), 0) == -1)
-#else
 		if (write(this->notify[1], buf, sizeof(buf)) == -1)
-#endif
 		{
 			DBG1(DBG_JOB, "notifying watcher failed: %s", strerror(errno));
 		}
@@ -338,11 +334,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			{
 				while (TRUE)
 				{
-#ifdef WIN32
-					len = recv(this->notify[0], buf, sizeof(buf), 0);
-#else
 					len = read(this->notify[0], buf, sizeof(buf));
-#endif
 					if (len == -1)
 					{
 						if (errno != EAGAIN && errno != EWOULDBLOCK)
