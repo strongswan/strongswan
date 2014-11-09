@@ -88,10 +88,10 @@ METHOD(private_key_t, sign, bool,
 {
 	switch (scheme)
 	{
-		case SIGN_BLISS_I_SHA256:
-			return FALSE;
-		case SIGN_BLISS_IV_SHA384:
-			return FALSE;
+		case SIGN_BLISS_WITH_SHA512:
+			DBG2(DBG_LIB, "empty signature");
+			*signature = chunk_empty;
+			return TRUE;
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported with BLISS",
 				 signature_scheme_names, scheme);

@@ -59,9 +59,7 @@ METHOD(public_key_t, verify, bool,
 {
 	switch (scheme)
 	{
-		case SIGN_BLISS_I_SHA256:
-			return FALSE;
-		case SIGN_BLISS_IV_SHA384:
+		case SIGN_BLISS_WITH_SHA512:
 			return FALSE;
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported by BLISS",

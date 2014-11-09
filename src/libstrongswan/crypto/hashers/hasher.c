@@ -323,6 +323,14 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
+		case KEY_BLISS:
+			switch (alg)
+			{
+				case HASH_SHA512:
+					return OID_BLISS_WITH_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
 		default:
 			return OID_UNKNOWN;
 	}
