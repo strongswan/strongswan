@@ -31,7 +31,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 
 	/* BLISS-I scheme */
     {
-        .id = BLISS_I, 
+        .id = BLISS_I,
 		.oid = OID_BLISS_I,
 		.strength = 128,
 		.q = 12289,
@@ -44,9 +44,24 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.nks_max = 46479,
       },
 
+	/* BLISS-III scheme */
+    {
+        .id = BLISS_III,
+		.oid = OID_BLISS_III,
+		.strength = 160,
+		.q = 12289,
+		.n = 512,
+		.n_bits = 9,
+		.fft_params = &bliss_fft_12289_512,
+		.non_zero1 = 216,
+		.non_zero2 = 16,
+		.kappa = 30,
+		.nks_max = 128626,
+      },
+
 	/* BLISS-IV scheme */
     {
-        .id = BLISS_IV, 
+        .id = BLISS_IV,
 		.oid = OID_BLISS_IV,
 		.strength = 192,
 		.q = 12289,
