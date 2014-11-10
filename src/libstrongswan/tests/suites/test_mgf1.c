@@ -27,7 +27,7 @@ typedef struct {
 	chunk_t seed;
 	chunk_t hashed_seed;
 	chunk_t mask;
-	uint32_t bits[15];
+	uint32_t bits[20];
 } mgf1_test_t;
 
 /**
@@ -70,7 +70,8 @@ mgf1_test_t mgf1_tests[] = {
 						0x4D, 0x29, 0x0B, 0xCE, 0xA6, 0x21, 0xB5, 0x5C,
 						0x71, 0x66, 0x2F, 0x70, 0x35, 0xD8, 0x8A, 0x92,
 						0x33, 0xF0, 0x16, 0xD4, 0x0E, 0x43, 0x8A, 0x14),
-		{ 0, 0, 0, 4, 1, 1, 46, 103, 38, 411, 848, 57, 3540, 4058, 12403 },
+		{ 0, 0, 0, 4, 1, 1, 46, 103, 38, 411, 848, 57, 3540, 4058, 12403,
+		  0x63, 0x2B, 0xC9, 0x17, 0x56 },
 	},
 	{	HASH_SHA256, 32, 64, 32, 33, 40,
 		chunk_from_chars(
@@ -119,7 +120,8 @@ mgf1_test_t mgf1_tests[] = {
 						0x2B, 0x3C, 0x91, 0x3A, 0x32, 0xF8, 0xB2, 0xC6,
 						0x44, 0x4D, 0xCD, 0xB6, 0x54, 0x5F, 0x81, 0x95,
 						0x59, 0xA1, 0xE5, 0x4E, 0xA5, 0x0A, 0x4A, 0x42),
-		 { 0, 1, 3, 4, 4, 12, 32, 36, 253, 331, 2, 1640, 503, 6924, 580 }
+		 { 0, 1, 3, 4, 4, 12, 32, 36, 253, 331, 2, 1640, 503, 6924, 580,
+		   0xCB, 0x35, 0x3C, 0xDC, 0xAD }
 	}
 };
 
@@ -192,6 +194,7 @@ START_TEST(mgf1_test_bitspender)
 {
 	mgf1_bitspender_t *bitspender;
 	uint32_t bits;
+	uint8_t byte;
 	int j;
 
 	bitspender = mgf1_bitspender_create(HASH_UNKNOWN,
@@ -204,13 +207,20 @@ START_TEST(mgf1_test_bitspender)
 
 	for (j = 0; j < 15; j++)
 	{
-		bits = bitspender->get_bits(bitspender, j);
+		ck_assert(bitspender->get_bits(bitspender, j, &bits));
 		DBG1(DBG_LIB, "bits[%d] = %u, bits = %u", j, mgf1_tests[_i].bits[j],
 					   bits);
 		ck_assert(bits == mgf1_tests[_i].bits[j]);
 	}
-	bits = bitspender->get_bits(bitspender, 32);
-	ck_assert(bits == MGF1_BITSPENDER_ERROR);
+	ck_assert(!bitspender->get_bits(bitspender, 33, &bits));
+
+	for (j = 15; j < 20; j++)
+	{
+		ck_assert(bitspender->get_byte(bitspender, &byte));
+		DBG1(DBG_LIB, "bits[%d] = 0x%02x, byte = 0x%02x", j,
+				   mgf1_tests[_i].bits[j], byte);
+		ck_assert(byte == mgf1_tests[_i].bits[j]);
+	}
 
 	bitspender->destroy(bitspender);
 }

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mgf1_bitspender mgf1_bitspender
- * @{ @ingroup bliss_p
+ * @{ @ingroup mgf1_p
  */
 
 #ifndef MGF1_BITSPENDER_H_
@@ -26,20 +26,27 @@
 
 typedef struct mgf1_bitspender_t mgf1_bitspender_t;
 
-#define MGF1_BITSPENDER_ERROR	0xffffffff
-
 /**
- * Generates a given number of pseudo-random bits at a time using MFG1
+ * Generates a given number of pseudo-random bits at a time using MGF1
  */
 struct mgf1_bitspender_t {
 
 	/**
 	 * Get pseudo-random bits
 	 *
-	 * @param bits_needed	Number of needed bits (1..31)
-	 * @result				Return between 1 and 31 pseudo-random bits
+	 * @param bits_needed	Number of needed bits (1..32)
+	 * @param bits			Pseudo-random bits
+	 * @result				FALSE if internal MGF1 error occurred
 	 */
-	uint32_t (*get_bits)(mgf1_bitspender_t *this, int bits_needed);
+	bool (*get_bits)(mgf1_bitspender_t *this, int bits_needed, uint32_t *bits);
+
+	/**
+	 * Get a pseudo-random byte
+	 *
+	 * @param byte			Pseudo-random byte
+	 * @result				FALSE if internal MGF1 error occurred
+	 */
+	bool (*get_byte)(mgf1_bitspender_t *this, uint8_t *byte);
 
 	/**
 	 * Destroy mgf1_bitspender_t object

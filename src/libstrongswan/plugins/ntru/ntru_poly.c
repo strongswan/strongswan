@@ -323,8 +323,7 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 			/* generate a random candidate index with a size of c_bits */		
 			do
 			{
-				index = bitspender->get_bits(bitspender, c_bits);
-				if (index == MGF1_BITSPENDER_ERROR)
+				if (!bitspender->get_bits(bitspender, c_bits, &index))
 				{
 					bitspender->destroy(bitspender);
 					destroy(this);

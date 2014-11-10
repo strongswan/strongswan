@@ -62,19 +62,30 @@ struct private_mgf1_bitspender_t {
 	 * Number of available bits
 	 */
 	int bits_left;
+
+	/**
+	 * Byte storage (accomodates up to 4 bytes)
+	 */
+	uint8_t bytes[4];
+
+	/**
+	 * Number of available bytes
+	 */
+	int bytes_left;
+
 };
 
-METHOD(mgf1_bitspender_t, get_bits, uint32_t,
-	private_mgf1_bitspender_t *this, int bits_needed)
+METHOD(mgf1_bitspender_t, get_bits, bool,
+	private_mgf1_bitspender_t *this, int bits_needed, uint32_t *bits)
 {
-	uint32_t bits = 0x00000000;
 	int bits_now;
 	
-	if (bits_needed > 31)
+	if (bits_needed > 32)
 	{
 		/* too many bits requested */
-		return MGF1_BITSPENDER_ERROR;
+		return FALSE;
 	}
+	*bits = 0x00000000;
 
 	while (bits_needed)
 	{
@@ -87,7 +98,7 @@ METHOD(mgf1_bitspender_t, get_bits, uint32_t,
 													  this->octets))
 				{
 					/* no block available */
-					return MGF1_BITSPENDER_ERROR;
+					return FALSE;
 				}
 				this->octets_left = this->hash_len;
 				this->octets_count += this->hash_len;
@@ -102,22 +113,46 @@ METHOD(mgf1_bitspender_t, get_bits, uint32_t,
 			bits_now = this->bits_left;
 			this->bits_left = 0;
 			bits_needed -= bits_now;
-			bits <<= bits_now;
-			bits |= this->bits;
+			*bits <<= bits_now;
+			*bits |= this->bits;
 		}
 		else
 		{
 			bits_now = bits_needed;
 			this->bits_left -= bits_needed;
 			bits_needed = 0;
-			bits <<= bits_now;
-			bits |= this->bits >> this->bits_left;
+			*bits <<= bits_now;
+			*bits |= this->bits >> this->bits_left;
 			this->bits &= 0xffffffff >> (32 - this->bits_left);
 		}
 	}
-	return bits;
+	return TRUE;
 }
 
+METHOD(mgf1_bitspender_t, get_byte, bool,
+	private_mgf1_bitspender_t *this, uint8_t *byte)
+{
+	if (this->bytes_left == 0)
+	{
+		if (this->octets_left == 0)
+		{
+			/* get another block from MGF1 */
+			if (!this->mgf1->get_mask(this->mgf1, this->hash_len, this->octets))
+			{
+				/* no block available */
+				return FALSE;
+			}
+			this->octets_left = this->hash_len;
+			this->octets_count += this->hash_len;
+		}
+		memcpy(this->bytes, this->octets + this->hash_len -	this->octets_left, 4);
+		this->bytes_left = 4;
+		this->octets_left -= 4;
+	}
+	*byte = this->bytes[4 - this->bytes_left--];
+
+	return TRUE;				
+}
 
 METHOD(mgf1_bitspender_t, destroy, void,
 	private_mgf1_bitspender_t *this)
@@ -148,6 +183,7 @@ mgf1_bitspender_t *mgf1_bitspender_create(hash_algorithm_t alg, chunk_t seed,
 	INIT(this,
 		.public = {
 			.get_bits = _get_bits,
+			.get_byte = _get_byte,
 			.destroy = _destroy,
 		},
 		.mgf1 = mgf1,
