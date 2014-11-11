@@ -100,6 +100,31 @@ struct bliss_param_set_t {
 	 */
 	uint32_t nks_max;
 
+	/**
+	 *  k_sigma = ceiling[ sqrt(2*ln 2) * sigma ]
+	 */
+	uint16_t k_sigma;
+
+	/**
+	 *  Number of bits in k_sigma
+	 */
+	uint16_t k_sigma_bits;
+
+	/**
+	 * Coefficients for Bernoulli sampling with exponential biases
+	 */
+	uint8_t *c;
+
+	/**
+	 * Number of columns in Bernoulli coefficient table
+	 */
+	size_t c_cols;
+
+	/**
+	 * Number of rows in Bernoulli coefficient table
+	 */
+	size_t c_rows;
+
 };
 
 /**

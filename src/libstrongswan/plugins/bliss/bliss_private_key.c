@@ -15,6 +15,7 @@
 
 #include "bliss_private_key.h"
 #include "bliss_param_set.h"
+#include "bliss_sampler.h"
 #include "bliss_fft.h"
 
 #include <crypto/mgf1/mgf1_bitspender.h>
@@ -82,6 +83,88 @@ METHOD(private_key_t, get_type, key_type_t,
 	return KEY_BLISS;
 }
 
+static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
+								   chunk_t data, chunk_t *signature)
+{
+	rng_t *rng;
+	hash_algorithm_t alg;
+	bliss_sampler_t *sampler;
+	int i, count_max = 100000000;
+	int hist_len = 20000, hist_len2 = hist_len / 2;
+	int32_t x, hist[hist_len];
+	double mean = 0, sigma2 = 0;
+	uint8_t seed_buf[32];
+	size_t seed_len;
+	chunk_t seed;
+
+	/* Set MGF1 hash algorithm and seed length based on security strength */
+	if (this->set->strength > 160)
+	{
+		alg = HASH_SHA256;
+		seed_len = HASH_SIZE_SHA256;
+	}
+	else
+	{
+		alg = HASH_SHA1;
+		seed_len = HASH_SIZE_SHA1;
+	}
+	seed = chunk_create(seed_buf, seed_len);
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+	if (!rng)
+	{
+		return FALSE;
+	}
+	if (!rng->get_bytes(rng, seed_len, seed_buf))
+	{
+		rng->destroy(rng);
+		return FALSE;
+	}
+	rng->destroy(rng);
+
+	sampler = bliss_sampler_create(alg, seed, this->set);
+	if (!sampler)
+	{
+		return FALSE;
+	}
+
+	for (i = 0; i < hist_len; i++)
+	{
+		hist[i] = 0;
+	}
+
+	for (i = 0; i < count_max; i++)
+	{
+		if (!sampler->gaussian(sampler, &x))
+		{
+			sampler->destroy(sampler);
+			return FALSE;
+		}
+		hist[hist_len2 + x]++;
+	}
+	for (i = 0; i < hist_len; i++)
+	{
+		if (hist[i])
+		{
+			x = i - hist_len2;
+			DBG2(DBG_LIB, "hist[%4d] = %7u", x, hist[i]);
+			mean   += (double)hist[i] * x;
+			sigma2 += (double)hist[i] * x * x;
+		}
+	}
+	mean   /= (double)count_max;
+	sigma2 /= (double)count_max;
+	sigma2 -=  mean * mean;
+	DBG2(DBG_LIB, "mean = %6.4f, sigma2 = %7.2f ", mean, sigma2);
+
+	sampler->destroy(sampler);
+
+	DBG2(DBG_LIB, "empty signature");
+	*signature = chunk_empty;
+
+	return TRUE;
+}
+
 METHOD(private_key_t, sign, bool,
 	private_bliss_private_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t *signature)
@@ -89,9 +172,7 @@ METHOD(private_key_t, sign, bool,
 	switch (scheme)
 	{
 		case SIGN_BLISS_WITH_SHA512:
-			DBG2(DBG_LIB, "empty signature");
-			*signature = chunk_empty;
-			return TRUE;
+			return sign_bliss_with_sha512(this, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported with BLISS",
 				 signature_scheme_names, scheme);
@@ -153,7 +234,6 @@ METHOD(private_key_t, get_encoding, bool,
 							asn1_simple_object(ASN1_OCTET_STRING, s1_chunk),
 							asn1_simple_object(ASN1_OCTET_STRING, s2_chunk)
 						);
-
 			if (type == PRIVKEY_PEM)
 			{
 				chunk_t asn1_encoding = *encoding;
@@ -380,8 +460,7 @@ static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
 	non_zero = this->set->non_zero1;
 	while (non_zero)
 	{
-		index = bitspender->get_bits(bitspender, this->set->n_bits);
-		if (index == MGF1_BITSPENDER_ERROR)
+		if (!bitspender->get_bits(bitspender, this->set->n_bits, &index))
 		{
 			free(vector);
 			return NULL;
@@ -391,8 +470,7 @@ static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
 			continue;
 		}
 
-		sign = bitspender->get_bits(bitspender, 1);
-		if (sign == MGF1_BITSPENDER_ERROR)
+		if (!bitspender->get_bits(bitspender, 1, &sign))
 		{
 			free(vector);
 			return NULL;
@@ -404,8 +482,7 @@ static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
 	non_zero = this->set->non_zero2;
 	while (non_zero)
 	{
-		index = bitspender->get_bits(bitspender, this->set->n_bits);
-		if (index == MGF1_BITSPENDER_ERROR)
+		if (!bitspender->get_bits(bitspender, this->set->n_bits, &index))
 		{
 			free(vector);
 			return NULL;
@@ -415,13 +492,12 @@ static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
 			continue;
 		}
 
-		sign = bitspender->get_bits(bitspender, 1);
-		if (sign == MGF1_BITSPENDER_ERROR)
+		if (!bitspender->get_bits(bitspender, 1, &sign))
 		{
 			free(vector);
 			return NULL;
 		}
-		vector[index] = bitspender->get_bits(bitspender, 1) ? 2 : -2;
+		vector[index] = sign ? 2 : -2;
 		non_zero--;
 	}
 	bitspender->destroy(bitspender);
@@ -539,7 +615,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	/* Only BLISS-I and BLISS-IV are currently supported */
+	/* Only BLISS-I, BLISS-III and BLISS-IV are currently supported */
 	set = bliss_param_set_get_by_id(key_size);
 	if (!set)
 	{
