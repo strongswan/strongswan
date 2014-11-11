@@ -342,9 +342,13 @@ static int get_reassigned(private_mem_pool_t *this, identification_t *id)
 
 	if (offset)
 	{
-		entry = entry_create(id);
+		entry = this->leases->get(this->leases, id);
+		if (!entry)
+		{
+			entry = entry_create(id);
+			this->leases->put(this->leases, entry->id, entry);
+		}
 		array_insert(entry->online, ARRAY_TAIL, &offset);
-		this->leases->put(this->leases, entry->id, entry);
 	}
 	return offset;
 }
