@@ -1,7 +1,7 @@
 alice::ipsec status 2> /dev/null::nat-t.*ESTABLISHED.*alice@strongswan.org.*sun.strongswan.org::YES
 venus::ipsec status 2> /dev/null::nat-t.*ESTABLISHED.*venus.strongswan.org.*sun.strongswan.org::YES
-alice::ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL, ESP in UDP::YES
-venus::ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL, ESP in UDP::YES
+alice::ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL.*ESP in UDP::YES
+venus::ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL.*ESP in UDP::YES
 sun::  ipsec status 2> /dev/null::alice.*ESTABLISHED.*sun.strongswan.org.*alice@strongswan.org::YES
 sun::  ipsec status 2> /dev/null::venus.*ESTABLISHED.*sun.strongswan.org.*venus.strongswan.org::YES
 sun::  ipsec statusall 2> /dev/null::alice.*10.2.0.0/16 === 10.1.0.0/25::YES
