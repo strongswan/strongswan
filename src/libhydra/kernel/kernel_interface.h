@@ -122,6 +122,42 @@ struct kernel_interface_t {
 						u_int16_t *cpi);
 
 	/**
+	 * Allocate or confirm a reqid to use for a given SA pair.
+	 *
+	 * Each returned reqid by a successful call to alloc_reqid() must be
+	 * released using release_reqid().
+	 *
+	 * The reqid parameter is an in/out parameter. If it points to non-zero,
+	 * the reqid is confirmed and registered for use. If it points to zero,
+	 * a reqid is allocated for the given selectors, and returned to reqid.
+	 *
+	 * The passed mark values get updated to the reqid value if they are set
+	 * to the magic value MARK_REQID.
+	 *
+	 * @param local_ts	traffic selectors of local side for SA
+	 * @param remote_ts	traffic selectors of remote side for SA
+	 * @param mark_in	inbound mark on SA
+	 * @param mark_out	outbound mark on SA
+	 * @param reqid		allocated reqid
+	 * @return			SUCCESS if reqid allocated
+	 */
+	status_t (*alloc_reqid)(kernel_interface_t *this,
+							linked_list_t *local_ts, linked_list_t *remote_ts,
+							mark_t *mark_in, mark_t *mark_out,
+							u_int32_t *reqid);
+
+	/**
+	 * Release a previously allocated reqid.
+	 *
+	 * @param reqid		reqid to release
+	 * @param mark_in	inbound mark on SA
+	 * @param mark_out	outbound mark on SA
+	 * @return			SUCCESS if reqid released
+	 */
+	status_t (*release_reqid)(kernel_interface_t *this, u_int32_t reqid,
+							  mark_t mark_in, mark_t mark_out);
+
+	/**
 	 * Add an SA to the SAD.
 	 *
 	 * This function does install a single SA for a single protocol in one
@@ -131,7 +167,7 @@ struct kernel_interface_t {
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param reqid			unique ID for this SA
+	 * @param reqid			reqid for this SA
 	 * @param mark			optional mark for this SA
 	 * @param tfc			Traffic Flow Confidentiality padding for this SA
 	 * @param lifetime		lifetime_cfg_t for this SA

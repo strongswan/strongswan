@@ -43,6 +43,8 @@
 #include <utils/debug.h>
 #include <threading/mutex.h>
 #include <collections/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/array.h>
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
@@ -115,6 +117,16 @@ struct private_kernel_interface_t {
 	linked_list_t *listeners;
 
 	/**
+	 * Reqid entries indexed by reqids
+	 */
+	hashtable_t *reqids;
+
+	/**
+	 * Reqid entries indexed by traffic selectors
+	 */
+	hashtable_t *reqids_by_ts;
+
+	/**
 	 * mutex for algorithm mappings
 	 */
 	mutex_t *mutex_algs;
@@ -173,6 +185,278 @@ METHOD(kernel_interface_t, get_cpi, status_t,
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->get_cpi(this->ipsec, src, dst, cpi);
+}
+
+/**
+ * Reqid mapping entry
+ */
+typedef struct {
+	/** allocated reqid */
+	u_int32_t reqid;
+	/** references to this entry */
+	u_int refs;
+	/** inbound mark used for SA */
+	mark_t mark_in;
+	/** outbound mark used for SA */
+	mark_t mark_out;
+	/** local traffic selectors */
+	array_t *local;
+	/** remote traffic selectors */
+	array_t *remote;
+} reqid_entry_t;
+
+/**
+ * Destroy a reqid mapping entry
+ */
+static void reqid_entry_destroy(reqid_entry_t *entry)
+{
+	array_destroy_offset(entry->local, offsetof(traffic_selector_t, destroy));
+	array_destroy_offset(entry->remote, offsetof(traffic_selector_t, destroy));
+	free(entry);
+}
+
+/**
+ * Hashtable hash function for reqid entries using reqid as key
+ */
+static u_int hash_reqid(reqid_entry_t *entry)
+{
+	return chunk_hash_inc(chunk_from_thing(entry->reqid),
+				chunk_hash_inc(chunk_from_thing(entry->mark_in),
+					chunk_hash(chunk_from_thing(entry->mark_out))));
+}
+
+/**
+ * Hashtable equals function for reqid entries using reqid as key
+ */
+static bool equals_reqid(reqid_entry_t *a, reqid_entry_t *b)
+{
+	return a->reqid == b->reqid &&
+		   a->mark_in.value == b->mark_in.value &&
+		   a->mark_in.mask == b->mark_in.mask &&
+		   a->mark_out.value == b->mark_out.value &&
+		   a->mark_out.mask == b->mark_out.mask;
+}
+
+/**
+ * Hash an array of traffic selectors
+ */
+static u_int hash_ts_array(array_t *array, u_int hash)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+
+	enumerator = array_create_enumerator(array);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		hash = ts->hash(ts, hash);
+	}
+	enumerator->destroy(enumerator);
+
+	return hash;
+}
+
+/**
+ * Hashtable hash function for reqid entries using traffic selectors as key
+ */
+static u_int hash_reqid_by_ts(reqid_entry_t *entry)
+{
+	return hash_ts_array(entry->local, hash_ts_array(entry->remote, 0));
+}
+
+/**
+ * Compare two array with traffic selectors for equality
+ */
+static bool ts_array_equals(array_t *a, array_t *b)
+{
+	traffic_selector_t *tsa, *tsb;
+	enumerator_t *ae, *be;
+	bool equal = TRUE;
+
+	if (array_count(a) != array_count(b))
+	{
+		return FALSE;
+	}
+
+	ae = array_create_enumerator(a);
+	be = array_create_enumerator(b);
+	while (equal && ae->enumerate(ae, &tsa) && be->enumerate(be, &tsb))
+	{
+		equal = tsa->equals(tsa, tsb);
+	}
+	ae->destroy(ae);
+	be->destroy(be);
+
+	return equal;
+}
+
+/**
+ * Check if mark b matches to a, optionally with reqid match
+ */
+static bool mark_matches(mark_t a, mark_t b, u_int32_t reqid)
+{
+	if (a.value == b.value)
+	{
+		return TRUE;
+	}
+	if (a.value == MARK_REQID && b.value == reqid)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Hashtable equals function for reqid entries using traffic selectors as key
+ */
+static bool equals_reqid_by_ts(reqid_entry_t *a, reqid_entry_t *b)
+{
+	if (ts_array_equals(a->local, b->local) &&
+		ts_array_equals(a->remote, b->remote) &&
+		a->mark_in.mask == b->mark_in.mask &&
+		a->mark_out.mask == b->mark_out.mask)
+	{
+		if (mark_matches(a->mark_in, b->mark_in, a->reqid) &&
+			mark_matches(a->mark_out, b->mark_out, a->reqid))
+		{
+			return TRUE;
+		}
+		if (mark_matches(b->mark_in, a->mark_in, b->reqid) &&
+			mark_matches(b->mark_out, a->mark_out, b->reqid))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Create an array from copied traffic selector list items
+ */
+static array_t *array_from_ts_list(linked_list_t *list)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	array_t *array;
+
+	array = array_create(0, 0);
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		array_insert(array, ARRAY_TAIL, ts->clone(ts));
+	}
+	enumerator->destroy(enumerator);
+
+	return array;
+}
+
+METHOD(kernel_interface_t, alloc_reqid, status_t,
+	private_kernel_interface_t *this,
+	linked_list_t *local_ts, linked_list_t *remote_ts,
+	mark_t *mark_in, mark_t *mark_out, u_int32_t *reqid)
+{
+	static u_int32_t counter = 0;
+	reqid_entry_t *entry = NULL, *tmpl;
+	status_t status = SUCCESS;
+
+	INIT(tmpl,
+		.local = array_from_ts_list(local_ts),
+		.remote = array_from_ts_list(remote_ts),
+		.mark_in = *mark_in,
+		.mark_out = *mark_out,
+		.reqid = *reqid,
+	);
+
+	this->mutex->lock(this->mutex);
+	if (tmpl->reqid)
+	{
+		/* search by reqid if given */
+		if (tmpl->mark_in.value == MARK_REQID)
+		{
+			tmpl->mark_in.value = tmpl->reqid;
+		}
+		if (tmpl->mark_out.value == MARK_REQID)
+		{
+			tmpl->mark_out.value = tmpl->reqid;
+		}
+		entry = this->reqids->get(this->reqids, tmpl);
+	}
+	if (entry)
+	{
+		/* we don't require a traffic selector match for explicit reqids,
+		 * as we wan't to reuse a reqid for trap-triggered policies that
+		 * got narrowed during negotiation. */
+		reqid_entry_destroy(tmpl);
+	}
+	else
+	{
+		/* search by traffic selectors. We do the search with MARK_REQID
+		 * wildcards (if any), and update the marks if we find any match */
+		entry = this->reqids_by_ts->get(this->reqids_by_ts, tmpl);
+		if (entry)
+		{
+			reqid_entry_destroy(tmpl);
+		}
+		else
+		{
+			/* none found, create a new entry, allocating a reqid */
+			entry = tmpl;
+			entry->reqid = ++counter;
+			if (entry->mark_in.value == MARK_REQID)
+			{
+				entry->mark_in.value = entry->reqid;
+			}
+			if (entry->mark_out.value == MARK_REQID)
+			{
+				entry->mark_out.value = entry->reqid;
+			}
+			this->reqids_by_ts->put(this->reqids_by_ts, entry, entry);
+			this->reqids->put(this->reqids, entry, entry);
+		}
+		*reqid = entry->reqid;
+	}
+	*mark_in = entry->mark_in;
+	*mark_out = entry->mark_out;
+	entry->refs++;
+	this->mutex->unlock(this->mutex);
+
+	return status;
+}
+
+METHOD(kernel_interface_t, release_reqid, status_t,
+	private_kernel_interface_t *this, u_int32_t reqid,
+	mark_t mark_in, mark_t mark_out)
+{
+	reqid_entry_t *entry, tmpl = {
+		.reqid = reqid,
+		.mark_in = mark_in,
+		.mark_out = mark_out,
+	};
+
+	this->mutex->lock(this->mutex);
+	entry = this->reqids->remove(this->reqids, &tmpl);
+	if (entry)
+	{
+		if (--entry->refs == 0)
+		{
+			entry = this->reqids_by_ts->remove(this->reqids_by_ts, entry);
+			if (entry)
+			{
+				reqid_entry_destroy(entry);
+			}
+		}
+		else
+		{
+			this->reqids->put(this->reqids, entry, entry);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (entry)
+	{
+		return SUCCESS;
+	}
+	return NOT_FOUND;
 }
 
 METHOD(kernel_interface_t, add_sa, status_t,
@@ -733,6 +1017,8 @@ METHOD(kernel_interface_t, destroy, void,
 	DESTROY_IF(this->ipsec);
 	DESTROY_IF(this->net);
 	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
+	this->reqids->destroy(this->reqids);
+	this->reqids_by_ts->destroy(this->reqids_by_ts);
 	this->listeners->destroy(this->listeners);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -751,6 +1037,8 @@ kernel_interface_t *kernel_interface_create()
 			.get_features = _get_features,
 			.get_spi = _get_spi,
 			.get_cpi = _get_cpi,
+			.alloc_reqid = _alloc_reqid,
+			.release_reqid = _release_reqid,
 			.add_sa = _add_sa,
 			.update_sa = _update_sa,
 			.query_sa = _query_sa,
@@ -795,6 +1083,10 @@ kernel_interface_t *kernel_interface_create()
 		.listeners = linked_list_create(),
 		.mutex_algs = mutex_create(MUTEX_TYPE_DEFAULT),
 		.algorithms = linked_list_create(),
+		.reqids = hashtable_create((hashtable_hash_t)hash_reqid,
+								   (hashtable_equals_t)equals_reqid, 8),
+		.reqids_by_ts = hashtable_create((hashtable_hash_t)hash_reqid_by_ts,
+								   (hashtable_equals_t)equals_reqid_by_ts, 8),
 	);
 
 	ifaces = lib->settings->get_str(lib->settings,
