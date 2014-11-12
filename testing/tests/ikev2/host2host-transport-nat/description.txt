@@ -9,5 +9,6 @@ rules that let pass the decrypted IP packets. In order to test the host-to-host 
 dropped when the IPsec policies are consulted (increases the <em>XfrmInTmplMismatch</em> counter
 in <em>/proc/net/xfrm_stat</em>).</li>
 <li>A similar issue arises when <b>venus</b> also establishes an IPsec <b>transport-mode</b> connection to
-<b>sun</b>, due to the conflicting IPsec policies <b>sun</b> declines such a connection.</li>
+<b>sun</b>. Due to the conflicting IPsec policies <b>sun</b> will use the newer SA from
+<b>venus</b> to send traffic to the common transport mode address.</li>
 </ol>

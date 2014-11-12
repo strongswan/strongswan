@@ -10,3 +10,4 @@ sun::ipsec start
 alice::expect-connection nat-t
 venus::expect-connection nat-t
 alice::ipsec up nat-t
+venus::ipsec up nat-t
