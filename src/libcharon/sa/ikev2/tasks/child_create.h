@@ -52,6 +52,14 @@ struct child_create_t {
 	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
 
 	/**
+	 * Use specific mark values to override configuration.
+	 *
+	 * @param in		inbound mark value
+	 * @param out		outbound mark value
+	 */
+	void (*use_marks)(child_create_t *this, u_int in, u_int out);
+
+	/**
 	 * Get the lower of the two nonces, used for rekey collisions.
 	 *
 	 * @return			lower nonce

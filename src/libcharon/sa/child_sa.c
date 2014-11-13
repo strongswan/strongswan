@@ -695,7 +695,7 @@ METHOD(child_sa_t, install, status_t,
 	if (!this->reqid_allocated)
 	{
 		status = hydra->kernel_interface->alloc_reqid(hydra->kernel_interface,
-							my_ts, other_ts, &this->mark_in, &this->mark_out,
+							my_ts, other_ts, this->mark_in, this->mark_out,
 							&this->reqid);
 		if (status != SUCCESS)
 		{
@@ -825,7 +825,7 @@ METHOD(child_sa_t, add_policies, status_t,
 		/* trap policy, get or confirm reqid */
 		status = hydra->kernel_interface->alloc_reqid(
 							hydra->kernel_interface, my_ts_list, other_ts_list,
-							&this->mark_in, &this->mark_out, &this->reqid);
+							this->mark_in, this->mark_out, &this->reqid);
 		if (status != SUCCESS)
 		{
 			return status;
@@ -1198,10 +1198,11 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
  * Described in header.
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
-							 child_cfg_t *config, u_int32_t rekey, bool encap)
+							 child_cfg_t *config, u_int32_t rekey, bool encap,
+							 u_int mark_in, u_int mark_out)
 {
 	private_child_sa_t *this;
-	static refcount_t unique_id = 0;
+	static refcount_t unique_id = 0, unique_mark = 0, mark;
 
 	INIT(this,
 		.public = {
@@ -1257,6 +1258,28 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 
 	this->config = config;
 	config->get_ref(config);
+
+	if (mark_in)
+	{
+		this->mark_in.value = mark_in;
+	}
+	if (mark_out)
+	{
+		this->mark_out.value = mark_out;
+	}
+	if (this->mark_in.value == MARK_UNIQUE ||
+		this->mark_out.value == MARK_UNIQUE)
+	{
+		mark = ref_get(&unique_mark);
+		if (this->mark_in.value == MARK_UNIQUE)
+		{
+			this->mark_in.value = mark;
+		}
+		if (this->mark_out.value == MARK_UNIQUE)
+		{
+			this->mark_out.value = mark;
+		}
+	}
 
 	if (!this->reqid)
 	{

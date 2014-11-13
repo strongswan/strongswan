@@ -184,6 +184,9 @@ METHOD(task_t, build_i, status_t,
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
+	this->child_create->use_marks(this->child_create,
+						this->child_sa->get_mark(this->child_sa, TRUE).value,
+						this->child_sa->get_mark(this->child_sa, FALSE).value);
 
 	if (this->child_create->task.build(&this->child_create->task,
 									   message) != NEED_MORE)
@@ -224,6 +227,9 @@ METHOD(task_t, build_r, status_t,
 	/* let the CHILD_CREATE task build the response */
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
+	this->child_create->use_marks(this->child_create,
+						this->child_sa->get_mark(this->child_sa, TRUE).value,
+						this->child_sa->get_mark(this->child_sa, FALSE).value);
 	config = this->child_sa->get_config(this->child_sa);
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);

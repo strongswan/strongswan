@@ -45,6 +45,14 @@ struct quick_mode_t {
 	void (*use_reqid)(quick_mode_t *this, u_int32_t reqid);
 
 	/**
+	 * Use specific mark values, overriding configuration.
+	 *
+	 * @param in			inbound mark value
+	 * @param out			outbound mark value
+	 */
+	void (*use_marks)(quick_mode_t *this, u_int in, u_int out);
+
+	/**
 	 * Set the SPI of the old SA, if rekeying.
 	 *
 	 * @param spi			spi of SA to rekey

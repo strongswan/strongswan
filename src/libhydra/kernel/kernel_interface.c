@@ -260,7 +260,9 @@ static u_int hash_ts_array(array_t *array, u_int hash)
  */
 static u_int hash_reqid_by_ts(reqid_entry_t *entry)
 {
-	return hash_ts_array(entry->local, hash_ts_array(entry->remote, 0));
+	return hash_ts_array(entry->local, hash_ts_array(entry->remote,
+			chunk_hash_inc(chunk_from_thing(entry->mark_in),
+				chunk_hash(chunk_from_thing(entry->mark_out)))));
 }
 
 /**
@@ -290,43 +292,16 @@ static bool ts_array_equals(array_t *a, array_t *b)
 }
 
 /**
- * Check if mark b matches to a, optionally with reqid match
- */
-static bool mark_matches(mark_t a, mark_t b, u_int32_t reqid)
-{
-	if (a.value == b.value)
-	{
-		return TRUE;
-	}
-	if (a.value == MARK_REQID && b.value == reqid)
-	{
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * Hashtable equals function for reqid entries using traffic selectors as key
  */
 static bool equals_reqid_by_ts(reqid_entry_t *a, reqid_entry_t *b)
 {
-	if (ts_array_equals(a->local, b->local) &&
-		ts_array_equals(a->remote, b->remote) &&
-		a->mark_in.mask == b->mark_in.mask &&
-		a->mark_out.mask == b->mark_out.mask)
-	{
-		if (mark_matches(a->mark_in, b->mark_in, a->reqid) &&
-			mark_matches(a->mark_out, b->mark_out, a->reqid))
-		{
-			return TRUE;
-		}
-		if (mark_matches(b->mark_in, a->mark_in, b->reqid) &&
-			mark_matches(b->mark_out, a->mark_out, b->reqid))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
+	return ts_array_equals(a->local, b->local) &&
+		   ts_array_equals(a->remote, b->remote) &&
+		   a->mark_in.value == b->mark_in.value &&
+		   a->mark_in.mask == b->mark_in.mask &&
+		   a->mark_out.value == b->mark_out.value &&
+		   a->mark_out.mask == b->mark_out.mask;
 }
 
 /**
@@ -353,7 +328,7 @@ static array_t *array_from_ts_list(linked_list_t *list)
 METHOD(kernel_interface_t, alloc_reqid, status_t,
 	private_kernel_interface_t *this,
 	linked_list_t *local_ts, linked_list_t *remote_ts,
-	mark_t *mark_in, mark_t *mark_out, u_int32_t *reqid)
+	mark_t mark_in, mark_t mark_out, u_int32_t *reqid)
 {
 	static u_int32_t counter = 0;
 	reqid_entry_t *entry = NULL, *tmpl;
@@ -362,8 +337,8 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	INIT(tmpl,
 		.local = array_from_ts_list(local_ts),
 		.remote = array_from_ts_list(remote_ts),
-		.mark_in = *mark_in,
-		.mark_out = *mark_out,
+		.mark_in = mark_in,
+		.mark_out = mark_out,
 		.reqid = *reqid,
 	);
 
@@ -371,14 +346,6 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	if (tmpl->reqid)
 	{
 		/* search by reqid if given */
-		if (tmpl->mark_in.value == MARK_REQID)
-		{
-			tmpl->mark_in.value = tmpl->reqid;
-		}
-		if (tmpl->mark_out.value == MARK_REQID)
-		{
-			tmpl->mark_out.value = tmpl->reqid;
-		}
 		entry = this->reqids->get(this->reqids, tmpl);
 	}
 	if (entry)
@@ -390,8 +357,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	}
 	else
 	{
-		/* search by traffic selectors. We do the search with MARK_REQID
-		 * wildcards (if any), and update the marks if we find any match */
+		/* search by traffic selectors */
 		entry = this->reqids_by_ts->get(this->reqids_by_ts, tmpl);
 		if (entry)
 		{
@@ -402,21 +368,11 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 			/* none found, create a new entry, allocating a reqid */
 			entry = tmpl;
 			entry->reqid = ++counter;
-			if (entry->mark_in.value == MARK_REQID)
-			{
-				entry->mark_in.value = entry->reqid;
-			}
-			if (entry->mark_out.value == MARK_REQID)
-			{
-				entry->mark_out.value = entry->reqid;
-			}
 			this->reqids_by_ts->put(this->reqids_by_ts, entry, entry);
 			this->reqids->put(this->reqids, entry, entry);
 		}
 		*reqid = entry->reqid;
 	}
-	*mark_in = entry->mark_in;
-	*mark_out = entry->mark_out;
 	entry->refs++;
 	this->mutex->unlock(this->mutex);
 

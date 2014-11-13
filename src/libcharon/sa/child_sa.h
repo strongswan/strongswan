@@ -394,9 +394,12 @@ struct child_sa_t {
  * @param config			config to use for this CHILD_SA
  * @param reqid				reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
+ * @param mark_in			explicit inbound mark value to use, 0 for config
+ * @param mark_out			explicit outbound mark value to use, 0 for config
  * @return					child_sa_t object
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
-							 u_int32_t reqid, bool encap);
+							 u_int32_t reqid, bool encap,
+							 u_int mark_in, u_int mark_out);
 
 #endif /** CHILD_SA_H_ @}*/

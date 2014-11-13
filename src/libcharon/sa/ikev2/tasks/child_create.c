@@ -160,6 +160,16 @@ struct private_child_create_t {
 	u_int32_t reqid;
 
 	/**
+	 * Explicit inbound mark value
+	 */
+	u_int mark_in;
+
+	/**
+	 * Explicit outbound mark value
+	 */
+	u_int mark_out;
+
+	/**
 	 * CHILD_SA which gets established
 	 */
 	child_sa_t *child_sa;
@@ -996,7 +1006,8 @@ METHOD(task_t, build_i, status_t,
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
+			this->mark_in, this->mark_out);
 
 	if (!allocate_spi(this))
 	{
@@ -1241,7 +1252,8 @@ METHOD(task_t, build_r, status_t,
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
+			this->mark_in, this->mark_out);
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{
@@ -1478,6 +1490,13 @@ METHOD(child_create_t, use_reqid, void,
 	this->reqid = reqid;
 }
 
+METHOD(child_create_t, use_marks, void,
+	private_child_create_t *this, u_int in, u_int out)
+{
+	this->mark_in = in;
+	this->mark_out = out;
+}
+
 METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
 {
@@ -1545,6 +1564,8 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->reqid = 0;
+	this->mark_in = 0;
+	this->mark_out = 0;
 	this->established = FALSE;
 }
 
@@ -1593,6 +1614,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.set_config = _set_config,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
+			.use_marks = _use_marks,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,

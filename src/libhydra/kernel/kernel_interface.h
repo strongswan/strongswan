@@ -131,9 +131,6 @@ struct kernel_interface_t {
 	 * the reqid is confirmed and registered for use. If it points to zero,
 	 * a reqid is allocated for the given selectors, and returned to reqid.
 	 *
-	 * The passed mark values get updated to the reqid value if they are set
-	 * to the magic value MARK_REQID.
-	 *
 	 * @param local_ts	traffic selectors of local side for SA
 	 * @param remote_ts	traffic selectors of remote side for SA
 	 * @param mark_in	inbound mark on SA
@@ -143,7 +140,7 @@ struct kernel_interface_t {
 	 */
 	status_t (*alloc_reqid)(kernel_interface_t *this,
 							linked_list_t *local_ts, linked_list_t *remote_ts,
-							mark_t *mark_in, mark_t *mark_out,
+							mark_t mark_in, mark_t mark_out,
 							u_int32_t *reqid);
 
 	/**
