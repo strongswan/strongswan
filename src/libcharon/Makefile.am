@@ -209,6 +209,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CONNMARK
+  SUBDIRS += plugins/connmark
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/connmark/libstrongswan-connmark.la
+endif
+endif
+
 if USE_FARP
   SUBDIRS += plugins/farp
 if MONOLITHIC
