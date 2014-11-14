@@ -14,6 +14,7 @@
  */
 
 #include "connmark_plugin.h"
+#include "connmark_listener.h"
 
 #include <daemon.h>
 
@@ -28,6 +29,11 @@ struct private_connmark_plugin_t {
 	 * implements plugin interface
 	 */
 	connmark_plugin_t public;
+
+	/**
+	 * Listener installing netfilter rules
+	 */
+	connmark_listener_t *listener;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -42,6 +48,14 @@ METHOD(plugin_t, get_name, char*,
 static bool plugin_cb(private_connmark_plugin_t *this,
 					  plugin_feature_t *feature, bool reg, void *cb_data)
 {
+	if (reg)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
+	else
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	}
 	return TRUE;
 }
 
@@ -59,6 +73,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_connmark_plugin_t *this)
 {
+	this->listener->destroy(this->listener);
 	free(this);
 }
 
@@ -69,6 +84,12 @@ plugin_t *connmark_plugin_create()
 {
 	private_connmark_plugin_t *this;
 
+	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	{
+		DBG1(DBG_NET, "connmark plugin requires CAP_NET_ADMIN capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
@@ -77,6 +98,7 @@ plugin_t *connmark_plugin_create()
 				.destroy = _destroy,
 			},
 		},
+		.listener = connmark_listener_create(),
 	);
 
 	return &this->public.plugin;

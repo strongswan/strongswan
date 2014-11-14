@@ -13,6 +13,8 @@ plugin_LTLIBRARIES = libstrongswan-connmark.la
 endif
 
 libstrongswan_connmark_la_SOURCES = \
+	connmark_listener.h connmark_listener.c \
 	connmark_plugin.h connmark_plugin.c
 
 libstrongswan_connmark_la_LDFLAGS = -module -avoid-version
+libstrongswan_connmark_la_LIBADD = -lip4tc
