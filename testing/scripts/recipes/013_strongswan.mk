@@ -70,6 +70,7 @@ CONFIG_OPTS = \
 	--enable-socket-dynamic \
 	--enable-dhcp \
 	--enable-farp \
+	--enable-connmark \
 	--enable-addrblock \
 	--enable-ctr \
 	--enable-ccm \
