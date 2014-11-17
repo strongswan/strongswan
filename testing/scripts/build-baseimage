@@ -21,7 +21,7 @@ INC=$INC,less,acpid,acpi-support-base,libldns-dev,libunbound-dev,dnsutils,screen
 INC=$INC,gnat,gprbuild,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
 INC=$INC,libalog0.4.1-base-dev,hostapd,libsoup2.4-dev,ca-certificates,unzip
 INC=$INC,python,python-setuptools,python-dev,python-pip
-INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi
+INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9"
 INC=$INC,${SERVICES// /,}
 
