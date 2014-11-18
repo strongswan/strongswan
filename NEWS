@@ -6,6 +6,12 @@
   as any previous strongSwan release) it must be explicitly enabled using
   the charon.make_before_break strongswan.conf option.
 
+- The new connmark plugin allows a host to bind conntrack flows to a specific
+  CHILD_SA by applying and restoring the SA mark to conntrack entries. This
+  allows a peer to handle multiple transport mode connections coming over the
+  same NAT device for client-initiated flows. A common use case is to protect
+  L2TP/IPsec, as supported by some systems.
+
 
 strongswan-5.2.2
 ----------------
