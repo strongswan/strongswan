@@ -66,6 +66,11 @@ struct bliss_param_set_t {
 	uint16_t q;
 
 	/**
+	 * Inverse of (q + 2) mod 2q
+	 */
+	uint16_t q2_inv;
+
+	/**
 	 * Ring dimension equal to the number of polynomial coefficients
 	 */
 	uint16_t n;
@@ -125,6 +130,30 @@ struct bliss_param_set_t {
 	 */
 	size_t c_rows;
 
+	/**
+	 * Number of bits to be dropped after rounding
+	 */
+	uint16_t d;
+
+	/**
+	 * Modulus p = floor(2q / 2^d) applied after bit dropping
+	 */
+	uint16_t p;
+
+	/**
+	 * M = sigma^2 / alpha_rejection^2
+	 */
+	uint32_t M;
+
+	/**
+	 * B_infinity bound
+	 */
+	uint16_t B_inf;
+
+	/**
+	 * B_verify bound
+	 */
+	uint32_t B_l2;
 };
 
 /**

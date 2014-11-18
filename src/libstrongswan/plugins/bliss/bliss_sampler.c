@@ -81,6 +81,42 @@ METHOD(bliss_sampler_t, bernoulli_exp, bool,
 	return TRUE;
 }
 
+METHOD(bliss_sampler_t, bernoulli_cosh, bool,
+	private_bliss_sampler_t *this, int32_t x, bool *accepted)
+{
+	uint32_t u;
+
+	x = 2 * (x < 0 ? -x : x);
+
+	while (TRUE)
+	{
+		if (!bernoulli_exp(this, x, accepted))
+		{
+			return FALSE;
+		}
+		if (*accepted)
+		{
+			return TRUE;
+		}
+		if (!this->bitspender->get_bits(this->bitspender, 1, &u))
+		{
+			return FALSE;
+		}
+		if (u)
+		{
+			continue;
+		}
+		if (!bernoulli_exp(this, x, accepted))
+		{
+			return FALSE;
+		}
+		if (!(*accepted))
+		{
+			return TRUE;
+		}
+	}
+}
+
 #define MAX_SAMPLE_INDEX	16
 
 METHOD(bliss_sampler_t, pos_binary, bool,
@@ -160,6 +196,20 @@ METHOD(bliss_sampler_t, gaussian, bool,
 	return TRUE;
 }
 
+METHOD(bliss_sampler_t, sign, bool,
+	private_bliss_sampler_t *this, bool *positive)
+{
+	uint32_t u;
+
+	if (!this->bitspender->get_bits(this->bitspender, 1, &u))
+	{
+		return FALSE;
+	}
+	*positive = u;
+
+	return TRUE;
+}
+
 METHOD(bliss_sampler_t, destroy, void,
 	private_bliss_sampler_t *this)
 {
@@ -186,8 +236,10 @@ bliss_sampler_t *bliss_sampler_create(hash_algorithm_t alg, chunk_t seed,
 	INIT(this,
 		.public = {
 			.bernoulli_exp = _bernoulli_exp,
+			.bernoulli_cosh = _bernoulli_cosh,
 			.pos_binary = _pos_binary,
 			.gaussian = _gaussian,
+			.sign = _sign,
 			.destroy = _destroy,
 		},
 		.set = set,

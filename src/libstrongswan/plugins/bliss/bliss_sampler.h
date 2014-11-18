@@ -43,6 +43,15 @@ struct bliss_sampler_t {
 	bool (*bernoulli_exp)(bliss_sampler_t *this, uint32_t x, bool *accepted);
 
 	/**
+	 * Sample according to 1/cosh(x/sigma^2)
+	 *
+	 * @param x			Value to be sampled
+	 * @param accepted	TRUE if value is accepted, FALSE if rejected
+	 * @result			TRUE if sampling was successful
+	 */
+	bool (*bernoulli_cosh)(bliss_sampler_t *this, int32_t x, bool *accepted);
+
+	/**
 	 * Sample according to 2^(-x^2) for positive x
 	 *
 	 * @param x			Generated value
@@ -57,6 +66,14 @@ struct bliss_sampler_t {
 	 * @result			TRUE if sampling was successful
 	 */
 	bool (*gaussian)(bliss_sampler_t *this, int32_t *z);
+
+	/**
+	 * Sample the sign according to the binary distribution
+	 *
+	 * @param positive	TRUE if positive
+	 * @result			TRUE if sampling was successful
+	 */
+	bool (*sign)(bliss_sampler_t *this, bool *positive);
 
 	/**
 	 * Destroy bliss_sampler_t object

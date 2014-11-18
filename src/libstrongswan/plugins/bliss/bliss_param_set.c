@@ -123,6 +123,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.oid = OID_BLISS_I,
 		.strength = 128,
 		.q = 12289,
+		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
 		.fft_params = &bliss_fft_12289_512,
@@ -134,7 +135,12 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.k_sigma_bits = 8,
 		.c = c_bliss_i,
 		.c_cols = 16,
-		.c_rows = 21
+		.c_rows = 21,
+		.d = 10,
+		.p = 24,
+		.M = 46539,
+		.B_inf = 2100,
+		.B_l2 = 12872 * 12872
       },
 
 	/* BLISS-III scheme */
@@ -143,6 +149,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.oid = OID_BLISS_III,
 		.strength = 160,
 		.q = 12289,
+		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
 		.fft_params = &bliss_fft_12289_512,
@@ -154,7 +161,12 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.k_sigma_bits = 9,
 		.c = c_bliss_iii,
 		.c_cols = 16,
-		.c_rows = 21
+		.c_rows = 21,
+		.d = 9,
+		.p = 48,
+		.M = 128113,
+		.B_inf = 1760,
+		.B_l2 = 10206 * 10206
       },
 
 	/* BLISS-IV scheme */
@@ -163,6 +175,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.oid = OID_BLISS_IV,
 		.strength = 192,
 		.q = 12289,
+		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
 		.fft_params = &bliss_fft_12289_512,
@@ -174,7 +187,12 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.k_sigma_bits = 9,
 		.c = c_bliss_iv,
 		.c_cols = 16,
-		.c_rows = 22
+		.c_rows = 22,
+		.d = 8,
+		.p = 96,
+		.M = 244186,
+		.B_inf = 1613,
+		.B_l2 = 9901 * 9901
      }
 };
 

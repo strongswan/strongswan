@@ -15,6 +15,9 @@
 
 #include "bliss_public_key.h"
 #include "bliss_param_set.h"
+#include "bliss_signature.h"
+#include "bliss_fft.h"
+#include "bliss_utils.h"
 
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
@@ -53,6 +56,134 @@ METHOD(public_key_t, get_type, key_type_t,
 	return KEY_BLISS;
 }
 
+/**
+ * Verify a BLISS signature based on a SHA-512 hash
+ */
+static bool verify_bliss_with_sha512(private_bliss_public_key_t *this,
+									 chunk_t data, chunk_t signature)
+{
+	int i, n;
+	int32_t *z1, *u;
+	int16_t *ud, *z2d;
+	uint16_t q, q2, p, *c_indices, *indices;
+	uint32_t *az;
+	uint8_t data_hash_buf[HASH_SIZE_SHA512];
+	chunk_t data_hash = { data_hash_buf, sizeof(data_hash_buf) };
+	hasher_t *hasher;
+	bliss_fft_t *fft;
+	bliss_signature_t *sig;
+	bool success = FALSE;
+
+	/* Create data hash */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher )
+	{
+		return FALSE;
+	}
+	if (!hasher->get_hash(hasher, data, data_hash_buf))
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+
+	sig = bliss_signature_create_from_data(this->set, signature);
+	if (!sig)
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+	sig->get_parameters(sig, &z1, &z2d, &c_indices);
+
+	if (!bliss_utils_check_norms(this->set, z1, z2d))
+	{
+		hasher->destroy(hasher);
+		sig->destroy(sig);
+		return FALSE;
+	}
+
+	/* Initialize a couple of needed variables */
+	n  = this->set->n;
+	q  = this->set->q;
+	p  = this->set->p;
+	q2 = 2 * q;
+	az  = malloc(n * sizeof(uint32_t));
+	u   = malloc(n * sizeof(int32_t));
+	ud  = malloc(n * sizeof(int16_t));
+	indices   = malloc(this->set->kappa * sizeof(uint16_t));
+
+	for (i = 0; i < n; i++)
+	{
+		az[i] = z1[i] < 0 ? q + z1[i] : z1[i];
+	}
+	fft = bliss_fft_create(this->set->fft_params);
+	fft->transform(fft, this->a, A, FALSE);
+	fft->transform(fft, az, az, FALSE);
+
+	for (i = 0; i < n; i++)
+	{
+		az[i] = (A[i] * az[i]) % q;
+	}
+	fft->transform(fft, az, az, TRUE);
+
+	for (i = 0; i < n; i++)
+	{
+		u[i] = (2 * this->set->q2_inv * az[i]) % q2;
+	}
+
+	for (i = 0; i < this->set->kappa; i++)
+	{
+		u[c_indices[i]] = (u[c_indices[i]] + q * this->set->q2_inv) % q2;
+	}
+	bliss_utils_round_and_drop(this->set, u, ud);
+
+	for (i = 0; i < n; i++)
+	{
+		ud[i] += z2d[i];
+		if (ud[i] < 0)
+		{
+			ud[i] += p;
+		}
+		else if (ud[i] >= p)
+		{
+			ud[i] -= p;
+		}
+	}
+
+	/* Detailed debugging information */
+	DBG3(DBG_LIB, "  i    u[i]  ud[i] z2d[i]");
+	for (i = 0; i < n; i++)
+	{
+		DBG3(DBG_LIB, "%3d  %6d   %4d  %4d", i, u[i], ud[i], z2d[i]);
+	}
+
+	if (!bliss_utils_generate_c(hasher, data_hash, ud, n, this->set->kappa,
+								indices))
+	{
+		goto end;
+	}
+
+	for (i = 0; i < this->set->kappa; i++)
+	{
+		if (indices[i] != c_indices[i])
+		{
+			goto end;
+		}
+	}
+	success = TRUE;
+
+end:
+	/* cleanup */
+	hasher->destroy(hasher);
+	sig->destroy(sig);
+	fft->destroy(fft);
+	free(az);
+	free(u);
+	free(ud);
+	free(indices);
+
+	return success;
+}
+
 METHOD(public_key_t, verify, bool,
 	private_bliss_public_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t signature)
@@ -60,7 +191,7 @@ METHOD(public_key_t, verify, bool,
 	switch (scheme)
 	{
 		case SIGN_BLISS_WITH_SHA512:
-			return FALSE;
+			return verify_bliss_with_sha512(this, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported by BLISS",
 				 signature_scheme_names, scheme);
@@ -83,111 +214,13 @@ METHOD(public_key_t, get_keysize, int,
 	return this->set->strength;
 }
 
-/**
- * Parse an ASN.1 OCTET STRING into an array of public key coefficients
- */
-uint32_t* bliss_public_key_from_asn1(chunk_t object, int n)
-{
-	uint32_t *pubkey;
-	uint16_t coeff;
-	u_char *pos;
-	int i;
-
-	pubkey = malloc(n * sizeof(uint32_t));
-	pos = object.ptr;
-
-	for (i = 0; i < n; i++)
-	{
-		coeff = untoh16(pos);
-		pubkey[i] = (uint32_t)coeff;
-		pos += 2;
-	}
-
-	return pubkey;
-}
-
-/**
- * Encode a raw BLISS subjectPublicKey in ASN.1 DER format
- */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, int n)
-{
-	u_char *pos;
-	chunk_t encoding;
-	int i;
-
-	pos = asn1_build_object(&encoding, ASN1_OCTET_STRING, 2 * n);
-
-	for (i = 0; i < n; i++)
-	{
-		htoun16(pos, (uint16_t)pubkey[i]);
-		pos += 2;
-	}
-
-	return encoding;
-}
-
-/**
- * Encode a BLISS subjectPublicKeyInfo record in ASN.1 DER format
- */
-chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n)
-{
-	chunk_t encoding, pubkey_encoding;
-
-	pubkey_encoding = bliss_public_key_encode(pubkey, n);
-
-	encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_build_known_oid(OID_BLISS_PUBLICKEY),
-						asn1_build_known_oid(oid)),
-					asn1_bitstring("m", pubkey_encoding));
-
-	return encoding;
-}
-
-/**
- * Generate a BLISS public key fingerprint
- */
-bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
-								  cred_encoding_type_t type, chunk_t *fp)
-{
-	hasher_t *hasher;
-	chunk_t key;
-
-	switch (type)
-	{
-		case KEYID_PUBKEY_SHA1:
-			key = bliss_public_key_encode(pubkey, n);
-			break;
-		case KEYID_PUBKEY_INFO_SHA1:
-			key = bliss_public_key_info_encode(oid, pubkey, n);
-			break;
-		default:
-			return FALSE;
-	}
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher || !hasher->allocate_hash(hasher, key, fp))
-	{
-		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
-		DESTROY_IF(hasher);
-		free(key.ptr);
-
-		return FALSE;
-	}
-	hasher->destroy(hasher);
-	free(key.ptr);
-
-	return TRUE;
-}
-
 METHOD(public_key_t, get_encoding, bool,
 	private_bliss_public_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
 {
 	bool success = TRUE;
 
-	*encoding = bliss_public_key_info_encode(this->set->oid, this->a,
-											 this->set->n);
+	*encoding = bliss_public_key_info_encode(this->set->oid, this->a, this->set->n);
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -358,3 +391,101 @@ end:
 
 	return &this->public;
 }
+
+/**
+ * See header.
+ */
+uint32_t* bliss_public_key_from_asn1(chunk_t object, int n)
+{
+	uint32_t *pubkey;
+	uint16_t coeff;
+	u_char *pos;
+	int i;
+
+	pubkey = malloc(n * sizeof(uint32_t));
+	pos = object.ptr;
+
+	for (i = 0; i < n; i++)
+	{
+		coeff = untoh16(pos);
+		pubkey[i] = (uint32_t)coeff;
+		pos += 2;
+	}
+
+	return pubkey;
+}
+
+/**
+ * See header.
+ */
+chunk_t bliss_public_key_encode(uint32_t *pubkey, int n)
+{
+	u_char *pos;
+	chunk_t encoding;
+	int i;
+
+	pos = asn1_build_object(&encoding, ASN1_OCTET_STRING, 2 * n);
+
+	for (i = 0; i < n; i++)
+	{
+		htoun16(pos, (uint16_t)pubkey[i]);
+		pos += 2;
+	}
+
+	return encoding;
+}
+
+/**
+ * See header.
+ */
+chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n)
+{
+	chunk_t encoding, pubkey_encoding;
+
+	pubkey_encoding = bliss_public_key_encode(pubkey, n);
+
+	encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_BLISS_PUBLICKEY),
+						asn1_build_known_oid(oid)),
+					asn1_bitstring("m", pubkey_encoding));
+
+	return encoding;
+}
+
+/**
+ * See header.
+ */
+bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
+								  cred_encoding_type_t type, chunk_t *fp)
+{
+	hasher_t *hasher;
+	chunk_t key;
+
+	switch (type)
+	{
+		case KEYID_PUBKEY_SHA1:
+			key = bliss_public_key_encode(pubkey, n);
+			break;
+		case KEYID_PUBKEY_INFO_SHA1:
+			key = bliss_public_key_info_encode(oid, pubkey, n);
+			break;
+		default:
+			return FALSE;
+	}
+
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher || !hasher->allocate_hash(hasher, key, fp))
+	{
+		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
+		DESTROY_IF(hasher);
+		free(key.ptr);
+
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+	free(key.ptr);
+
+	return TRUE;
+}
+

@@ -14,8 +14,11 @@
  */
 
 #include "bliss_private_key.h"
+#include "bliss_public_key.h"
 #include "bliss_param_set.h"
+#include "bliss_utils.h"
 #include "bliss_sampler.h"
+#include "bliss_signature.h"
 #include "bliss_fft.h"
 
 #include <crypto/mgf1/mgf1_bitspender.h>
@@ -28,19 +31,7 @@
 
 typedef struct private_bliss_private_key_t private_bliss_private_key_t;
 
-#define SECRET_KEY_TRIALS_MAX	30
-
-/**
- * Functions shared with bliss_public_key class
- */
-extern uint32_t* bliss_public_key_from_asn1(chunk_t object, int n);
-
-extern chunk_t bliss_public_key_encode(uint32_t *pubkey, int n);
-
-extern chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n);
-
-extern bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
-										 cred_encoding_type_t type, chunk_t *fp);
+#define SECRET_KEY_TRIALS_MAX	50
 
 /**
  * Private data of a bliss_private_key_t object.
@@ -83,19 +74,72 @@ METHOD(private_key_t, get_type, key_type_t,
 	return KEY_BLISS;
 }
 
+/**
+ * Multiply secret vector s with binary challenge vector c
+ */
+static void multiply_by_c(int8_t *s, int n, uint16_t *c_indices,
+						  uint16_t kappa, int32_t *product)
+{
+	int i, j, index;
+
+	for (i = 0; i < n; i++)
+	{
+		product[i] = 0;
+
+		for (j = 0; j < kappa; j++)
+		{
+			index = c_indices[j];
+			if (i - index < 0)
+			{
+				product[i] -= s[i - index + n];
+			}
+			else
+			{
+				product[i] += s[i - index];
+			}
+		}
+	}
+}
+
+/**
+ * Compute a BLISS signature based on a SHA-512 hash
+ */
 static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 								   chunk_t data, chunk_t *signature)
 {
 	rng_t *rng;
 	hash_algorithm_t alg;
-	bliss_sampler_t *sampler;
-	int i, count_max = 100000000;
-	int hist_len = 20000, hist_len2 = hist_len / 2;
-	int32_t x, hist[hist_len];
-	double mean = 0, sigma2 = 0;
-	uint8_t seed_buf[32];
+	hasher_t *hasher;
+	bliss_fft_t *fft;
+	bliss_signature_t *sig;
+	bliss_sampler_t *sampler = NULL;
+	uint8_t seed_buf[32], data_hash_buf[HASH_SIZE_SHA512];
+	uint16_t q, q2, p, p2, *c_indices, tests = 0;
+	uint32_t *A, *ay;
+	int32_t *y1, *y2, *z1, *z2, *u, *s1c, *s2c;
+	int32_t y1_min, y1i, y1_max, y2_min, y2i, y2_max, scalar, norm, ui;
+	int16_t *ud, *uz2d, *z2d, value;
+	int i, n;
 	size_t seed_len;
+	double mean1 = 0, mean2 = 0, sigma1 = 0, sigma2 = 0;
 	chunk_t seed;
+	chunk_t data_hash = { data_hash_buf, sizeof(data_hash_buf) };
+	bool accepted, positive, success = FALSE;
+
+	/* Initialize signature */
+	*signature = chunk_empty;
+
+	/* Create data hash */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher )
+	{
+		return FALSE;
+	}
+	if (!hasher->get_hash(hasher, data, data_hash_buf))
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
 
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
@@ -110,59 +154,245 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	}
 	seed = chunk_create(seed_buf, seed_len);
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
 	{
-		return FALSE;
-	}
-	if (!rng->get_bytes(rng, seed_len, seed_buf))
-	{
-		rng->destroy(rng);
-		return FALSE;
-	}
-	rng->destroy(rng);
-
-	sampler = bliss_sampler_create(alg, seed, this->set);
-	if (!sampler)
-	{
+		hasher->destroy(hasher);
 		return FALSE;
 	}
 
-	for (i = 0; i < hist_len; i++)
-	{
-		hist[i] = 0;
-	}
+	/* Initialize a couple of needed variables */
+	n  = this->set->n;
+	q  = this->set->q;
+	p  = this->set->p;
+	q2 = 2 * q;
+	p2 = p / 2;
+	A    = malloc(n * sizeof(uint32_t));
+	ay   = malloc(n * sizeof(uint32_t));
+	z2   = malloc(n * sizeof(int32_t));
+	s1c  = malloc(n * sizeof(int32_t));
+	s2c  = malloc(n * sizeof(int32_t));
+	u    = malloc(n * sizeof(int32_t));
+	uz2d = malloc(n * sizeof(int16_t));
 
-	for (i = 0; i < count_max; i++)
+	sig = bliss_signature_create(this->set);
+	sig->get_parameters(sig, &z1, &z2d, &c_indices);
+	y1 = z1;
+	y2 = z2;
+	ud = z2d;
+
+	fft = bliss_fft_create(this->set->fft_params);
+	fft->transform(fft, this->a, A, FALSE);
+
+	while (true)
 	{
-		if (!sampler->gaussian(sampler, &x))
+		tests++;
+
+		if (!rng->get_bytes(rng, seed_len, seed_buf))
 		{
-			sampler->destroy(sampler);
-			return FALSE;
+			goto end;
 		}
-		hist[hist_len2 + x]++;
-	}
-	for (i = 0; i < hist_len; i++)
-	{
-		if (hist[i])
-		{
-			x = i - hist_len2;
-			DBG2(DBG_LIB, "hist[%4d] = %7u", x, hist[i]);
-			mean   += (double)hist[i] * x;
-			sigma2 += (double)hist[i] * x * x;
-		}
-	}
-	mean   /= (double)count_max;
-	sigma2 /= (double)count_max;
-	sigma2 -=  mean * mean;
-	DBG2(DBG_LIB, "mean = %6.4f, sigma2 = %7.2f ", mean, sigma2);
+		DESTROY_IF(sampler);
 
+		sampler = bliss_sampler_create(alg, seed, this->set);
+		if (!sampler)
+		{
+			goto end;
+		}
+
+		/* Gaussian sampling for vectors y1 and y2 */
+		for (i = 0; i < n; i++)
+		{
+			if (!sampler->gaussian(sampler, &y1i) ||
+				!sampler->gaussian(sampler, &y2i))
+			{
+				goto end;
+			}
+			y1[i] = y1i;
+			y2[i] = y2i;
+
+			/* Collect statistical data on rejection sampling */
+			if (i == 0)
+			{
+				y1_min = y1_max = y1i;
+				y2_min = y2_max = y2i;
+			}
+			else
+			{
+				if (y1i < y1_min)
+				{
+					y1_min = y1i;
+				}
+				else if (y1i > y1_max)
+				{
+					y1_max = y1i;
+				}
+				if (y2i < y2_min)
+				{
+					y2_min = y2i;
+				}
+				else if (y2i > y2_max)
+				{
+					y2_max = y2i;
+				}
+			}
+			mean1 += y1i;
+			mean2 += y2i;
+			sigma1 += y1i * y1i;
+			sigma2 += y2i * y2i;
+
+			ay[i] = y1i < 0 ? q + y1i : y1i;
+		}
+
+		/* Compute statistics on vectors y1 and y2 */
+		mean1 /= n;
+		mean2 /= n;
+		sigma1 /= n;
+		sigma2 /= n;
+		sigma2 -= mean1 * mean1;
+		sigma2 -= mean2 * mean2;
+		DBG2(DBG_LIB, "y1 = %d..%d (sigma2 = %5.0f, mean = %4.1f)",
+					   y1_min, y1_max, sigma1, mean1);
+		DBG2(DBG_LIB, "y2 = %d..%d (sigma2 = %5.0f, mean = %4.1f)",
+					   y2_min, y2_max, sigma2, mean2);
+
+		fft->transform(fft, ay, ay, FALSE);
+
+		for (i = 0; i < n; i++)
+		{
+			ay[i] = (A[i] * ay[i]) % q;
+		}
+		fft->transform(fft, ay, ay, TRUE);
+
+		for (i = 0; i < n; i++)
+		{
+			ui = 2 * this->set->q2_inv * (int32_t)ay[i] + y2[i];
+			u[i] = ((ui < 0) ? q2 + ui : ui) % q2;
+		}
+		bliss_utils_round_and_drop(this->set, u, ud);
+
+		/* Detailed debugging information */
+		DBG3(DBG_LIB, "  i    u[i]  ud[i]");
+		for (i = 0; i < n; i++)
+		{
+			DBG3(DBG_LIB, "%3d  %6d   %4d", i, u[i], ud[i]);
+		}
+
+		if (!bliss_utils_generate_c(hasher, data_hash, ud, n, this->set->kappa,
+									c_indices))
+		{
+			goto end;
+		}
+
+		/* Compute s*c */
+		multiply_by_c(this->s1, n, c_indices, this->set->kappa, s1c);
+		multiply_by_c(this->s2, n, c_indices, this->set->kappa, s2c);
+
+		/* Reject with probability 1/(M*exp(-norm^2/2*sigma^2)) */
+		norm = bliss_utils_scalar_product(s1c, s1c, n) +
+			   bliss_utils_scalar_product(s2c, s2c, n);
+
+		if (!sampler->bernoulli_exp(sampler, this->set->M - norm, &accepted))
+		{
+			goto end;
+		}
+		DBG2(DBG_LIB, "norm2(s1*c) + norm2(s2*c) = %u, %s",
+					   norm, accepted ? "accepted" : "rejected");
+		if (!accepted)
+		{
+			continue;
+		}
+
+		/* Compute z */
+		if (!sampler->sign(sampler, &positive))
+		{
+			goto end;
+		}
+		for (i = 0; i < n; i++)
+		{
+			if (positive)
+			{
+				z1[i] = y1[i] + s1c[i];
+				z2[i] = y2[i] + s2c[i];
+			}
+			else
+			{
+				z1[i] = y1[i] - s1c[i];
+				z2[i] = y2[i] - s2c[i];
+			}
+		}
+		/* Reject with probability 1/cosh(scalar/sigma^2) */
+		scalar = bliss_utils_scalar_product(z1, s1c, n) +
+				 bliss_utils_scalar_product(z2, s2c, n);
+
+		if (!sampler->bernoulli_cosh(sampler, scalar, &accepted))
+		{
+			goto end;
+		}
+		DBG2(DBG_LIB, "scalar(z1,s1*c) + scalar(z2,s2*c) = %d, %s",
+					   scalar, accepted ? "accepted" : "rejected");
+		if (!accepted)
+		{
+			continue;
+		}
+
+		/* Compute z2 with dropped bits */
+		for (i = 0; i < n; i++)
+		{
+			u[i] -= z2[i];
+			if (u[i] < 0)
+			{
+				u[i] += q2;
+			}
+			else if (u[i] >= q2)
+			{
+				u[i] -= q2;
+			}
+		}
+		bliss_utils_round_and_drop(this->set, u, uz2d);
+
+		for (i = 0; i < n; i++)
+		{
+			value = ud[i] - uz2d[i];
+			if (value <= -p2)
+			{
+				value += p;
+			}
+			else if (value > p2)
+			{
+				value -= p;
+			}
+			z2d[i] = value;
+		}
+
+		if (!bliss_utils_check_norms(this->set, z1, z2d))
+		{
+			continue;
+		}
+		DBG2(DBG_LIB, "signature generation needed %u round%s", tests,
+					  (tests == 1) ? "" : "s");
+		break;
+	}
+	success = TRUE;
+
+	*signature = sig->get_encoding(sig);
+
+end:
+	/* cleanup */
 	sampler->destroy(sampler);
+	hasher->destroy(hasher);
+	sig->destroy(sig);
+	fft->destroy(fft);
+	rng->destroy(rng);
+	free(A);
+	free(ay);
+	free(z2);
+	free(s1c);
+	free(s2c);
+	free(u);
+	free(uz2d);
 
-	DBG2(DBG_LIB, "empty signature");
-	*signature = chunk_empty;
-
-	return TRUE;
+	return success;
 }
 
 METHOD(private_key_t, sign, bool,
@@ -201,8 +431,7 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	public_key_t *public;
 	chunk_t pubkey;
 
-	pubkey = bliss_public_key_info_encode(this->set->oid, this->a,
-										  this->set->n);
+	pubkey = bliss_public_key_info_encode(this->set->oid, this->a, this->set->n);
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_BLISS,
 								BUILD_BLOB_ASN1_DER, pubkey, BUILD_END);
 	free(pubkey.ptr);

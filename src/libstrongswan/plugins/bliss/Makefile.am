@@ -16,6 +16,8 @@ libstrongswan_bliss_la_SOURCES = \
 	bliss_param_set.h bliss_param_set.c \
 	bliss_private_key.h bliss_private_key.c \
 	bliss_public_key.h bliss_public_key.c \
+	bliss_signature.h bliss_signature.c \
+	bliss_utils.h bliss_utils.c \
 	bliss_fft.h bliss_fft.c \
 	bliss_fft_params.h bliss_fft_params.c \
 	bliss_sampler.h bliss_sampler.c
