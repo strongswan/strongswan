@@ -243,6 +243,25 @@ module Vici
     end
 
     ##
+    # Receive data from socket, until len bytes read
+    def recv_all(len)
+      encoding = ""
+      while encoding.length < len do
+        encoding << @socket.recv(len - encoding.length)
+      end
+      encoding
+    end
+
+    ##
+    # Send data to socket, until all bytes sent
+    def send_all(encoding)
+      len = 0
+      while len < encoding.length do
+        len += @socket.send(encoding[len..-1], 0)
+      end
+    end
+
+    ##
     # Write a packet prefixed by its length over the transport socket. Type
     # specifies the message, the optional label and message get appended.
     def write(type, label, message)
@@ -253,15 +272,15 @@ module Vici
       if message
         encoding << message.encoding
       end
-      @socket.send([encoding.length + 1, type].pack("Nc") + encoding, 0)
+      send_all([encoding.length + 1, type].pack("Nc") + encoding)
     end
 
     ##
     # Read a packet from the transport socket. Returns the packet type, and
     # if available in the packet a label and the contained message.
     def read
-      len = @socket.recv(4).unpack("N")[0]
-      encoding = @socket.recv(len)
+      len = recv_all(4).unpack("N")[0]
+      encoding = recv_all(len)
       type = encoding.unpack("c")[0]
       len = 1
       case type
