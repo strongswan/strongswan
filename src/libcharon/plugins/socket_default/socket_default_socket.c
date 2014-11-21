@@ -141,6 +141,11 @@ struct private_socket_default_socket_t {
 	 * TRUE if the source address should be set on outbound packets
 	 */
 	bool set_source;
+
+	/**
+	 * A counter to implement round-robin selection of read sockets
+	 */
+	u_int rr_counter;
 };
 
 METHOD(socket_t, receiver, status_t,
@@ -150,7 +155,7 @@ METHOD(socket_t, receiver, status_t,
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
-	int i, bytes_read = 0, selected = -1;
+	int i, rr, index, bytes_read = 0, selected = -1;
 	bool oldstate;
 	u_int16_t port = 0;
 	struct pollfd pfd[] = {
@@ -164,7 +169,6 @@ METHOD(socket_t, receiver, status_t,
 		this->port, this->natt, this->port, this->natt,
 	};
 
-
 	DBG2(DBG_NET, "waiting for data on sockets");
 	oldstate = thread_cancelability(TRUE);
 	if (poll(pfd, countof(pfd), -1) <= 0)
@@ -174,12 +178,16 @@ METHOD(socket_t, receiver, status_t,
 	}
 	thread_cancelability(oldstate);
 
+	rr = this->rr_counter++;
 	for (i = 0; i < countof(pfd); i++)
 	{
-		if (pfd[i].revents & POLLIN)
+		/* To serve all ports with equal priority, we use a round-robin
+		 * scheme to choose the one to process in this invocation */
+		index = (rr + i) % countof(pfd);
+		if (pfd[index].revents & POLLIN)
 		{
-			selected = pfd[i].fd;
-			port = ports[i];
+			selected = pfd[index].fd;
+			port = ports[index];
 			break;
 		}
 	}
