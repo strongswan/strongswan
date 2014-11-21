@@ -66,8 +66,10 @@ struct netlink_socket_t {
  *
  * @param protocol	protocol type (e.g. NETLINK_XFRM or NETLINK_ROUTE)
  * @param names		optional enum names for Netlink messages
+ * @param parallel	support parallel queries on this Netlink socket
  */
-netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names);
+netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
+										bool parallel);
 
 /**
  * Creates an rtattr and adds it to the given netlink message.
