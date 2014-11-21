@@ -346,29 +346,27 @@ METHOD(tun_device_t, write_packet, bool,
 METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
+	chunk_t data;
 	ssize_t len;
 	bool old;
 
-	*packet = chunk_alloc(get_mtu(this));
+	data = chunk_alloca(get_mtu(this));
 
-	thread_cleanup_push(free, packet->ptr);
 	old = thread_cancelability(TRUE);
-	len = read(this->tunfd, packet->ptr, packet->len);
+	len = read(this->tunfd, data.ptr, data.len);
 	thread_cancelability(old);
-	thread_cleanup_pop(FALSE);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "reading from TUN device %s failed: %s", this->if_name,
 			 strerror(errno));
-		free(packet->ptr);
 		return FALSE;
 	}
-	packet->len = len;
+	data.len = len;
 #ifdef __APPLE__
 	/* UTUN's prepend packets with a 32-bit protocol number */
-	packet->len -= sizeof(u_int32_t);
-	memmove(packet->ptr, packet->ptr + sizeof(u_int32_t), packet->len);
+	data = chunk_skip(data, sizeof(u_int32_t));
 #endif
+	*packet = chunk_clone(data);
 	return TRUE;
 }
 
