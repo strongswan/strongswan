@@ -163,6 +163,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			case CHILD_CREATED:
 			case CHILD_REKEYING:
+			case CHILD_RETRYING;
 			case CHILD_DELETING:
 				/* we do not allow rekeying while we have children in-progress */
 				DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
