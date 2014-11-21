@@ -13,7 +13,10 @@
  * for more details.
  */
 
-#include "utils.h"
+/* WSAPoll() */
+#define _WIN32_WINNT 0x0600
+
+#include <utils/utils.h>
 
 #include <errno.h>
 
@@ -638,4 +641,44 @@ ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 		ioctlsocket(sockfd, FIONBIO, &off);
 	}
 	return outlen;
+}
+
+/**
+ * See header
+ */
+#undef read
+ssize_t windows_read(int fd, void *buf, size_t count)
+{
+	ssize_t ret;
+
+	ret = recv(fd, buf, count, 0);
+	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	{
+		ret = read(fd, buf, count);
+	}
+	return ret;
+}
+
+/**
+ * See header
+ */
+#undef write
+ssize_t windows_write(int fd, void *buf, size_t count)
+{
+	ssize_t ret;
+
+	ret = send(fd, buf, count, 0);
+	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	{
+		ret = write(fd, buf, count);
+	}
+	return ret;
+}
+
+/**
+ * See header
+ */
+int poll(struct pollfd *fds, int nfds, int timeout)
+{
+	return wserr(WSAPoll(fds, nfds, timeout));
 }

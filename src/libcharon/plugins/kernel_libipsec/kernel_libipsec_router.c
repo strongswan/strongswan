@@ -131,35 +131,6 @@ static void deliver_plain(private_kernel_libipsec_router_t *this,
 }
 
 /**
- * Create an FD set covering all TUN devices and the read end of the notify pipe
- */
-static int collect_fds(private_kernel_libipsec_router_t *this, fd_set *fds)
-{
-	enumerator_t *enumerator;
-	tun_entry_t *entry;
-	int maxfd;
-
-	FD_ZERO(fds);
-	FD_SET(this->notify[0], fds);
-	maxfd = this->notify[0];
-
-	FD_SET(this->tun.fd, fds);
-	maxfd = max(maxfd, this->tun.fd);
-
-	this->lock->read_lock(this->lock);
-	enumerator = this->tuns->create_enumerator(this->tuns);
-	while (enumerator->enumerate(enumerator, NULL, &entry))
-	{
-		FD_SET(entry->fd, fds);
-		maxfd = max(maxfd, entry->fd);
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-
-	return maxfd + 1;
-}
-
-/**
  * Read and process outbound plaintext packet for the given TUN device
  */
 static void process_plain(tun_device_t *tun)
@@ -183,14 +154,73 @@ static void process_plain(tun_device_t *tun)
 }
 
 /**
- * Handle waiting data for any TUN device
+ * Find flagged revents in a pollfd set by fd
  */
-static void handle_tuns(private_kernel_libipsec_router_t *this, fd_set *fds)
+static int find_revents(struct pollfd *pfd, int count, int fd)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+	{
+		if (pfd[i].fd == fd)
+		{
+			return pfd[i].revents;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Job handling outbound plaintext packets
+ */
+static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 {
 	enumerator_t *enumerator;
 	tun_entry_t *entry;
+	bool oldstate;
+	int count = 0;
+	char buf[1];
+	struct pollfd *pfd;
 
-	if (FD_ISSET(this->tun.fd, fds))
+	this->lock->read_lock(this->lock);
+
+	pfd = alloca(sizeof(*pfd) * (this->tuns->get_count(this->tuns) + 2));
+	pfd[count].fd = this->notify[0];
+	pfd[count].events = POLLIN;
+	count++;
+	pfd[count].fd = this->tun.fd;
+	pfd[count].events = POLLIN;
+	count++;
+
+	enumerator = this->tuns->create_enumerator(this->tuns);
+	while (enumerator->enumerate(enumerator, NULL, &entry))
+	{
+		pfd[count].fd = entry->fd;
+		pfd[count].events = POLLIN;
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	oldstate = thread_cancelability(TRUE);
+	if (poll(pfd, count, -1) <= 0)
+	{
+		thread_cancelability(oldstate);
+		return JOB_REQUEUE_FAIR;
+	}
+	thread_cancelability(oldstate);
+
+	if (pfd[0].revents & POLLIN)
+	{
+		/* list of TUN devices changed, read notification data, rebuild FDs */
+		while (read(this->notify[0], &buf, sizeof(buf)) == sizeof(buf))
+		{
+			/* nop */
+		}
+		return JOB_REQUEUE_DIRECT;
+	}
+
+	if (pfd[1].revents & POLLIN)
 	{
 		process_plain(this->tun.tun);
 	}
@@ -199,42 +229,14 @@ static void handle_tuns(private_kernel_libipsec_router_t *this, fd_set *fds)
 	enumerator = this->tuns->create_enumerator(this->tuns);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (FD_ISSET(entry->fd, fds))
+		if (find_revents(pfd, count, entry->fd) & POLLIN)
 		{
 			process_plain(entry->tun);
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-}
 
-/**
- * Job handling outbound plaintext packets
- */
-static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
-{
-	bool oldstate;
-	fd_set fds;
-	int maxfd;
-
-	maxfd = collect_fds(this, &fds);
-
-	oldstate = thread_cancelability(TRUE);
-	if (select(maxfd, &fds, NULL, NULL, NULL) <= 0)
-	{
-		thread_cancelability(oldstate);
-		return JOB_REQUEUE_FAIR;
-	}
-	thread_cancelability(oldstate);
-
-	if (FD_ISSET(this->notify[0], &fds))
-	{	/* list of TUN devices changed, read notification data, rebuild FDs */
-		char buf[1];
-		while (read(this->notify[0], &buf, sizeof(buf)) == sizeof(buf));
-		return JOB_REQUEUE_DIRECT;
-	}
-
-	handle_tuns(this, &fds);
 	return JOB_REQUEUE_DIRECT;
 }
 

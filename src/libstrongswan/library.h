@@ -79,6 +79,9 @@
  *
  * @defgroup utils utils
  * @ingroup libstrongswan
+ *
+ * @defgroup compat compat
+ * @ingroup utils
  */
 
 /**

@@ -21,40 +21,9 @@
 #ifndef THREADING_THREAD_H_
 #define THREADING_THREAD_H_
 
+#include <utils/utils.h>
+
 typedef struct thread_t thread_t;
-
-#ifdef __APPLE__
-/* thread_create is a syscall used to create Mach kernel threads and although
- * there are no errors or warnings during compilation or linkage the dynamic
- * linker does not use our implementation, therefore we rename it here
- */
-#define thread_create(main, arg) strongswan_thread_create(main, arg)
-
-/* on Mac OS X 10.5 several system calls we use are no cancellation points.
- * fortunately, select isn't one of them, so we wrap some of the others with
- * calls to select(2).
- */
-#include <sys/socket.h>
-#include <sys/select.h>
-
-#define WRAP_WITH_SELECT(func, socket, ...)\
-	fd_set rfds; FD_ZERO(&rfds); FD_SET(socket, &rfds);\
-	if (select(socket + 1, &rfds, NULL, NULL, NULL) <= 0) { return -1; }\
-	return func(socket, __VA_ARGS__)
-
-static inline int cancellable_accept(int socket, struct sockaddr *address,
-									 socklen_t *address_len)
-{
-	WRAP_WITH_SELECT(accept, socket, address, address_len);
-}
-#define accept cancellable_accept
-static inline int cancellable_recvfrom(int socket, void *buffer, size_t length,
-				int flags, struct sockaddr *address, socklen_t *address_len)
-{
-	WRAP_WITH_SELECT(recvfrom, socket, buffer, length, flags, address, address_len);
-}
-#define recvfrom cancellable_recvfrom
-#endif /* __APPLE__ */
 
 /**
  * Main function of a thread.
@@ -188,33 +157,5 @@ void threads_init();
  * Called by the main thread to deinitialize the thread management.
  */
 void threads_deinit();
-
-
-#ifdef __APPLE__
-
-/*
- * While select() is a cancellation point, it seems that OS X does not honor
- * pending cancellation points when entering the function. We manually test for
- * and honor pending cancellation requests, but this obviously can't prevent
- * some race conditions where the the cancellation happens after the check,
- * but before the select.
- */
-static inline int precancellable_select(int nfds, fd_set *restrict readfds,
-						fd_set *restrict writefds, fd_set *restrict errorfds,
-						struct timeval *restrict timeout)
-{
-	if (thread_cancelability(TRUE))
-	{
-		thread_cancellation_point();
-	}
-	else
-	{
-		thread_cancelability(FALSE);
-	}
-	return select(nfds, readfds, writefds, errorfds, timeout);
-}
-#define select precancellable_select
-
-#endif /* __APPLE__ */
 
 #endif /** THREADING_THREAD_H_ @} */

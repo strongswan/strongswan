@@ -1175,6 +1175,191 @@ START_TEST(test_cancel_point)
 }
 END_TEST
 
+static void close_fd_ptr(void *fd)
+{
+	close(*(int*)fd);
+}
+
+static void cancellation_recv()
+{
+	int sv[2];
+	char buf[1];
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+	thread_cleanup_push(close_fd_ptr, &sv[0]);
+	thread_cleanup_push(close_fd_ptr, &sv[1]);
+
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		ck_assert(recv(sv[0], buf, sizeof(buf), 0) == 1);
+	}
+}
+
+static void cancellation_read()
+{
+	int sv[2];
+	char buf[1];
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+	thread_cleanup_push(close_fd_ptr, &sv[0]);
+	thread_cleanup_push(close_fd_ptr, &sv[1]);
+
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		ck_assert(read(sv[0], buf, sizeof(buf)) == 1);
+	}
+}
+
+static void cancellation_select()
+{
+	int sv[2];
+	fd_set set;
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+	thread_cleanup_push(close_fd_ptr, &sv[0]);
+	thread_cleanup_push(close_fd_ptr, &sv[1]);
+
+	FD_ZERO(&set);
+	FD_SET(sv[0], &set);
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		ck_assert(select(sv[0] + 1, &set, NULL, NULL, NULL) == 1);
+	}
+}
+
+static void cancellation_poll()
+{
+	int sv[2];
+	struct pollfd pfd;
+
+	ck_assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+	thread_cleanup_push(close_fd_ptr, &sv[0]);
+	thread_cleanup_push(close_fd_ptr, &sv[1]);
+
+	pfd.fd = sv[0];
+	pfd.events = POLLIN;
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		ck_assert(poll(&pfd, 1, -1) == 1);
+	}
+}
+
+static void cancellation_accept()
+{
+	host_t *host;
+	int fd, c;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	ck_assert(fd >= 0);
+	host = host_create_from_string("127.0.0.1", 0);
+	ck_assert_msg(bind(fd, host->get_sockaddr(host),
+					   *host->get_sockaddr_len(host)) == 0, "%m");
+	host->destroy(host);
+	ck_assert(listen(fd, 5) == 0);
+
+	thread_cleanup_push(close_fd_ptr, &fd);
+
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		c = accept(fd, NULL, NULL);
+		ck_assert(c >= 0);
+		close(c);
+	}
+}
+
+static void cancellation_cond()
+{
+	mutex_t *mutex;
+	condvar_t *cond;
+
+	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	cond = condvar_create(CONDVAR_TYPE_DEFAULT);
+	mutex->lock(mutex);
+
+	thread_cleanup_push((void*)mutex->destroy, mutex);
+	thread_cleanup_push((void*)cond->destroy, cond);
+
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		cond->wait(cond, mutex);
+	}
+}
+
+static void cancellation_rwcond()
+{
+	rwlock_t *lock;
+	rwlock_condvar_t *cond;
+
+	lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	cond = rwlock_condvar_create();
+	lock->write_lock(lock);
+
+	thread_cleanup_push((void*)lock->destroy, lock);
+	thread_cleanup_push((void*)cond->destroy, cond);
+
+	thread_cancelability(TRUE);
+	while (TRUE)
+	{
+		cond->wait(cond, lock);
+	}
+}
+
+static void (*cancellation_points[])() = {
+	cancellation_read,
+	cancellation_recv,
+	cancellation_select,
+	cancellation_poll,
+	cancellation_accept,
+	cancellation_cond,
+	cancellation_rwcond,
+};
+
+static void* run_cancellation_point(void (*fn)())
+{
+	fn();
+	return NULL;
+}
+
+static void* run_cancellation_point_pre(void (*fn)())
+{
+	usleep(5000);
+	fn();
+	return NULL;
+}
+
+START_TEST(test_cancellation_point)
+{
+	thread_t *thread;
+
+	thread = thread_create((void*)run_cancellation_point,
+						   cancellation_points[_i]);
+	usleep(5000);
+	thread->cancel(thread);
+	thread->join(thread);
+}
+END_TEST
+
+START_TEST(test_cancellation_point_pre)
+{
+	thread_t *thread;
+
+	thread = thread_create((void*)run_cancellation_point_pre,
+						   cancellation_points[_i]);
+	thread->cancel(thread);
+	thread->join(thread);
+}
+END_TEST
+
 static void cleanup1(void *data)
 {
 	uintptr_t *value = (uintptr_t*)data;
@@ -1498,6 +1683,13 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_cancel);
 	tcase_add_test(tc, test_cancel_onoff);
 	tcase_add_test(tc, test_cancel_point);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("thread cancellation point");
+	tcase_add_loop_test(tc, test_cancellation_point,
+						0, countof(cancellation_points));
+	tcase_add_loop_test(tc, test_cancellation_point_pre,
+						0, countof(cancellation_points));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread cleanup");

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup windows windows
- * @{ @ingroup utils
+ * @{ @ingroup compat
  */
 
 #ifndef WINDOWS_H_
@@ -361,6 +361,49 @@ ssize_t windows_send(int sockfd, const void *buf, size_t len, int flags);
 #define sendto windows_send
 ssize_t windows_sendto(int sockfd, const void *buf, size_t len, int flags,
 					   const struct sockaddr *dest_addr, socklen_t addrlen);
+
+/**
+ * read(2) working on files and sockets, cancellable on sockets only
+ *
+ * On Windows, there does not seem to be a way how a cancellable read can
+ * be implemented on Low level I/O functions for files, _pipe()s or stdio.
+ */
+#define read windows_read
+ssize_t windows_read(int fd, void *buf, size_t count);
+
+/**
+ * write(2) working on files and sockets
+ */
+#define write windows_write
+ssize_t windows_write(int fd, void *buf, size_t count);
+
+#if _WIN32_WINNT < 0x0600
+/**
+ * Define pollfd and flags on our own if not specified
+ */
+struct pollfd {
+	SOCKET fd;
+	short events;
+	short revents;
+};
+enum {
+	POLLERR =		0x0001,
+	POLLHUP =		0x0002,
+	POLLNVAL =		0x0004,
+	POLLWRNORM =	0x0010,
+	POLLWRBAND =	0x0020,
+	POLLPRI =		0x0400,
+	POLLRDNORM =	0x0100,
+	POLLRDBAND =	0x0200,
+	POLLIN =		POLLRDNORM | POLLRDBAND,
+	POLLOUT =		POLLWRNORM,
+};
+#endif /* _WIN32_WINNT < 0x0600 */
+
+/**
+ * poll(2), implemented using Winsock2 WSAPoll()
+ */
+int poll(struct pollfd *fds, int nfds, int timeout);
 
 /**
  * Declaration missing on older WinGW

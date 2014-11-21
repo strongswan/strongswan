@@ -29,7 +29,7 @@
 #include <string.h>
 
 #ifdef WIN32
-# include "windows.h"
+# include "compat/windows.h"
 #else
 # define _GNU_SOURCE
 # include <arpa/inet.h>
@@ -37,6 +37,7 @@
 # include <netdb.h>
 # include <netinet/in.h>
 # include <sched.h>
+# include <poll.h>
 #endif
 
 /**
@@ -96,6 +97,9 @@
 
 #include "enum.h"
 #include "utils/strerror.h"
+#ifdef __APPLE__
+# include "compat/apple.h"
+#endif
 
 /**
  * Directory separator character in paths on this platform

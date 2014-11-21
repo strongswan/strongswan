@@ -346,40 +346,27 @@ METHOD(tun_device_t, write_packet, bool,
 METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
+	chunk_t data;
 	ssize_t len;
-	fd_set set;
 	bool old;
 
-	FD_ZERO(&set);
-	FD_SET(this->tunfd, &set);
+	data = chunk_alloca(get_mtu(this));
 
 	old = thread_cancelability(TRUE);
-	len = select(this->tunfd + 1, &set, NULL, NULL, NULL);
+	len = read(this->tunfd, data.ptr, data.len);
 	thread_cancelability(old);
-
-	if (len < 0)
-	{
-		DBG1(DBG_LIB, "select on TUN device %s failed: %s", this->if_name,
-			 strerror(errno));
-		return FALSE;
-	}
-	/* FIXME: this is quite expensive for lots of small packets, copy from
-	 * local buffer instead? */
-	*packet = chunk_alloc(get_mtu(this));
-	len = read(this->tunfd, packet->ptr, packet->len);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "reading from TUN device %s failed: %s", this->if_name,
 			 strerror(errno));
-		chunk_free(packet);
 		return FALSE;
 	}
-	packet->len = len;
+	data.len = len;
 #ifdef __APPLE__
 	/* UTUN's prepend packets with a 32-bit protocol number */
-	packet->len -= sizeof(u_int32_t);
-	memmove(packet->ptr, packet->ptr + sizeof(u_int32_t), packet->len);
+	data = chunk_skip(data, sizeof(u_int32_t));
 #endif
+	*packet = chunk_clone(data);
 	return TRUE;
 }
 

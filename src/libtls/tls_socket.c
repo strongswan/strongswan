@@ -291,25 +291,24 @@ METHOD(tls_socket_t, splice, bool,
 	private_tls_socket_t *this, int rfd, int wfd)
 {
 	char buf[PLAIN_BUF_SIZE], *pos;
-	fd_set set;
 	ssize_t in, out;
 	bool old, plain_eof = FALSE, crypto_eof = FALSE;
+	struct pollfd pfd[] = {
+		{ .fd = this->fd,	.events = POLLIN, },
+		{ .fd = rfd,		.events = POLLIN, },
+	};
 
 	while (!plain_eof && !crypto_eof)
 	{
-		FD_ZERO(&set);
-		FD_SET(rfd, &set);
-		FD_SET(this->fd, &set);
-
 		old = thread_cancelability(TRUE);
-		in = select(max(rfd, this->fd) + 1, &set, NULL, NULL, NULL);
+		in = poll(pfd, countof(pfd), -1);
 		thread_cancelability(old);
 		if (in == -1)
 		{
 			DBG1(DBG_TLS, "TLS select error: %s", strerror(errno));
 			return FALSE;
 		}
-		while (!plain_eof && FD_ISSET(this->fd, &set))
+		while (!plain_eof && pfd[0].revents & POLLIN)
 		{
 			in = read_(this, buf, sizeof(buf), FALSE);
 			switch (in)
@@ -342,7 +341,7 @@ METHOD(tls_socket_t, splice, bool,
 			}
 			break;
 		}
-		if (!crypto_eof && FD_ISSET(rfd, &set))
+		if (!crypto_eof && pfd[1].revents & POLLIN)
 		{
 			in = read(rfd, buf, sizeof(buf));
 			switch (in)
