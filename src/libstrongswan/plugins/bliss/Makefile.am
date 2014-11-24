@@ -30,13 +30,22 @@ check_PROGRAMS = $(TESTS)
 
 bliss_tests_SOURCES = \
 	suites/test_bliss_fft.c \
+	suites/test_bliss_sign.c \
 	bliss_fft_params.c \
 	bliss_fft.c \
+	bliss_private_key.c \
+	bliss_public_key.c \
+	bliss_param_set.c \
+	bliss_sampler.c \
+	bliss_signature.c \
+	bliss_utils.c \
 	bliss_tests.h bliss_tests.c
 
 bliss_tests_CFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libstrongswan/tests \
+	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
+	-DPLUGINS=\""${s_plugins}\"" \
 	@COVERAGE_CFLAGS@
 
 bliss_tests_LDFLAGS = @COVERAGE_LDFLAGS@

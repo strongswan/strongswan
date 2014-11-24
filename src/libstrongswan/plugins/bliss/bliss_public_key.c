@@ -166,6 +166,7 @@ static bool verify_bliss_with_sha512(private_bliss_public_key_t *this,
 	{
 		if (indices[i] != c_indices[i])
 		{
+			DBG1(DBG_LIB, "signature verification failed");
 			goto end;
 		}
 	}

@@ -14,4 +14,5 @@
  */
 
 TEST_SUITE(bliss_fft_suite_create)
+TEST_SUITE(bliss_sign_suite_create)
 
