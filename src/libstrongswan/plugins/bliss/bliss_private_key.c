@@ -58,9 +58,9 @@ struct private_bliss_private_key_t {
 	int8_t *s2;
 
 	/**
-	 * BLISS public key a (coefficients of polynomial (2g + 1)/f)
+	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
 	 */
-	uint32_t *a;
+	uint32_t *A;
 
 	/**
 	 * reference count
@@ -115,7 +115,7 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	bliss_sampler_t *sampler = NULL;
 	uint8_t seed_buf[32], data_hash_buf[HASH_SIZE_SHA512];
 	uint16_t q, q2, p, p2, *c_indices, tests = 0;
-	uint32_t *A, *ay;
+	uint32_t *ay;
 	int32_t *y1, *y2, *z1, *z2, *u, *s1c, *s2c;
 	int32_t y1_min, y1i, y1_max, y2_min, y2i, y2_max, scalar, norm, ui;
 	int16_t *ud, *uz2d, *z2d, value;
@@ -167,7 +167,6 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	p  = this->set->p;
 	q2 = 2 * q;
 	p2 = p / 2;
-	A    = malloc(n * sizeof(uint32_t));
 	ay   = malloc(n * sizeof(uint32_t));
 	z2   = malloc(n * sizeof(int32_t));
 	s1c  = malloc(n * sizeof(int32_t));
@@ -182,7 +181,6 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	ud = z2d;
 
 	fft = bliss_fft_create(this->set->fft_params);
-	fft->transform(fft, this->a, A, FALSE);
 
 	while (true)
 	{
@@ -260,7 +258,7 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 
 		for (i = 0; i < n; i++)
 		{
-			ay[i] = (A[i] * ay[i]) % q;
+			ay[i] = (this->A[i] * ay[i]) % q;
 		}
 		fft->transform(fft, ay, ay, TRUE);
 
@@ -384,7 +382,6 @@ end:
 	sig->destroy(sig);
 	fft->destroy(fft);
 	rng->destroy(rng);
-	free(A);
 	free(ay);
 	free(z2);
 	free(s1c);
@@ -431,7 +428,7 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	public_key_t *public;
 	chunk_t pubkey;
 
-	pubkey = bliss_public_key_info_encode(this->set->oid, this->a, this->set->n);
+	pubkey = bliss_public_key_info_encode(this->set->oid, this->A, this->set->n);
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_BLISS,
 								BUILD_BLOB_ASN1_DER, pubkey, BUILD_END);
 	free(pubkey.ptr);
@@ -451,7 +448,7 @@ METHOD(private_key_t, get_encoding, bool,
 			chunk_t s1_chunk, s2_chunk, pubkey;
 			bool success = TRUE;
 
-			pubkey = bliss_public_key_encode(this->a, this->set->n);
+			pubkey = bliss_public_key_encode(this->A, this->set->n);
 
 			/* Build private key as two polynomials with 8 bit coefficients */
 			s1_chunk = chunk_create(this->s1, this->set->n);
@@ -488,7 +485,7 @@ METHOD(private_key_t, get_fingerprint, bool,
 	{
 		return TRUE;
 	}
-	success = bliss_public_key_fingerprint(this->set->oid, this->a,
+	success = bliss_public_key_fingerprint(this->set->oid, this->A,
 										   this->set->n, type, fp);
 	lib->encoding->cache(lib->encoding, type, this, *fp);
 
@@ -510,7 +507,7 @@ METHOD(private_key_t, destroy, void,
 		lib->encoding->clear_cache(lib->encoding, this);
 		free(this->s1);
 		free(this->s2);
-		free(this->a);
+		free(this->A);
 		free(this);
 	}
 }
@@ -822,7 +819,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	private_bliss_private_key_t *this;
 	u_int key_size = 1;
 	int i, n, trials = 0;
-	uint32_t *A, *S1, *S2;
+	uint32_t *S1, *S2, *a;
 	uint16_t q;
 	bool success = FALSE;
 	bliss_param_set_t *set;
@@ -870,8 +867,8 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	/* Some vectors needed to derive the publi key */
 	S1 = malloc(n * sizeof(uint32_t));
 	S2 = malloc(n * sizeof(uint32_t));
-	A = malloc(n * sizeof(uint32_t));
-	this->a = malloc(n * sizeof(uint32_t));
+	a  = malloc(n * sizeof(uint32_t));
+	this->A = malloc(n * sizeof(uint32_t));
 
 	/* Instantiate a true random generator */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
@@ -906,8 +903,8 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 				success = FALSE;
 				break;
 			}
-			A[i] = invert(S1[i], q);
-			A[i] = (S2[i] * A[i]) % q;
+			this->A[i] = invert(S1[i], q);
+			this->A[i] = (S2[i] * this->A[i]) % q;
 		}
 	}
 	while (!success && trials < SECRET_KEY_TRIALS_MAX);
@@ -917,13 +914,13 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 
 	if (success)
 	{
-		fft->transform(fft, A, this->a, TRUE);
+		fft->transform(fft, this->A, a, TRUE);
 
 		DBG4(DBG_LIB, "   i   f   g     a     F     G     A");
 		for (i = 0; i < n; i++)
 		{
 			DBG4(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
-				 i, this->s1[i], this->s2[i], this->a[i], S1[i], S2[i], A[i]);
+				 i, this->s1[i], this->s2[i], a[i], S1[i], S2[i], this->A[i]);
 		}
 	}
 	else
@@ -934,9 +931,9 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	/* Cleanup */
 	fft->destroy(fft);
 	rng->destroy(rng);
-	free(A);
 	free(S1);
 	free(S2);
+	free(a);
 
 	return success ? &this->public : NULL;
 }
@@ -1013,7 +1010,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				{
 					goto end;
 				}
-				this->a = bliss_public_key_from_asn1(object, this->set->n);
+				this->A = bliss_public_key_from_asn1(object, this->set->n);
 				break;
 			case PRIV_KEY_SECRET1:
 				if (object.len != this->set->n)

@@ -40,9 +40,9 @@ struct private_bliss_public_key_t {
 	bliss_param_set_t *set;
 
 	/**
-	 * BLISS public key a (coefficients of polynomial (2g + 1)/f)
+	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
 	 */
-	uint32_t *a;
+	uint32_t *A;
 
 	/**
 	 * reference counter
@@ -116,12 +116,11 @@ static bool verify_bliss_with_sha512(private_bliss_public_key_t *this,
 		az[i] = z1[i] < 0 ? q + z1[i] : z1[i];
 	}
 	fft = bliss_fft_create(this->set->fft_params);
-	fft->transform(fft, this->a, A, FALSE);
 	fft->transform(fft, az, az, FALSE);
 
 	for (i = 0; i < n; i++)
 	{
-		az[i] = (A[i] * az[i]) % q;
+		az[i] = (this->A[i] * az[i]) % q;
 	}
 	fft->transform(fft, az, az, TRUE);
 
@@ -221,7 +220,7 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 
-	*encoding = bliss_public_key_info_encode(this->set->oid, this->a, this->set->n);
+	*encoding = bliss_public_key_info_encode(this->set->oid, this->A, this->set->n);
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -244,7 +243,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 	{
 		return TRUE;
 	}
-	success = bliss_public_key_fingerprint(this->set->oid, this->a,
+	success = bliss_public_key_fingerprint(this->set->oid, this->A,
 										   this->set->n, type, fp);
 	lib->encoding->cache(lib->encoding, type, this, *fp);
 
@@ -264,7 +263,7 @@ METHOD(public_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
-		free(this->a);
+		free(this->A);
 		free(this);
 	}
 }
@@ -376,7 +375,7 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 				{
 					goto end;
 				}
-				this->a = bliss_public_key_from_asn1(object, this->set->n);
+				this->A = bliss_public_key_from_asn1(object, this->set->n);
 				break;
 		}
 	}
