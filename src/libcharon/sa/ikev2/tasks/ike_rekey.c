@@ -210,6 +210,12 @@ METHOD(task_t, build_r, status_t,
 	this->public.task.build = _build_r_delete;
 	this->public.task.process = _process_r_delete;
 
+	/* the peer does have to delete the IKE_SA. If it does not, we get a
+	 * unusable IKE_SA in REKEYING state without a replacement. We consider
+	 * this a timeout condition by the peer, and trigger a delete actively. */
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+		delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE), 90);
+
 	return NEED_MORE;
 }
 
