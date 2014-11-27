@@ -1583,8 +1583,20 @@ static void WINAPI event_callback(void *user, const FWPM_NET_EVENT1 *event)
 			acquire(this, event->classifyDrop->filterId, local, remote);
 			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE:
+			DBG1(DBG_KNL, "WFP MM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeMmFailure->failureErrorCode,
+				 event->ikeMmFailure->mmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE:
+			DBG1(DBG_KNL, "WFP QM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeQmFailure->failureErrorCode,
+				 event->ikeQmFailure->qmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE:
+			DBG1(DBG_KNL, "WFP EM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeEmFailure->failureErrorCode,
+				 event->ikeEmFailure->qmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP:
 			DBG1(DBG_KNL, "IPsec kernel drop: %R === %R, error 0x%08x, "
 				 "SPI 0x%08x, %s filterId %llu", local, remote,
