@@ -651,8 +651,8 @@ ssize_t windows_read(int fd, void *buf, size_t count)
 {
 	ssize_t ret;
 
-	ret = recv(fd, buf, count, 0);
-	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	ret = wserr(recv(fd, buf, count, 0));
+	if (ret == -1 && errno == ENOTSOCK)
 	{
 		ret = read(fd, buf, count);
 	}
@@ -667,8 +667,8 @@ ssize_t windows_write(int fd, void *buf, size_t count)
 {
 	ssize_t ret;
 
-	ret = send(fd, buf, count, 0);
-	if (ret == -1 && WSAGetLastError() == WSAENOTSOCK)
+	ret = wserr(send(fd, buf, count, 0));
+	if (ret == -1 && errno == ENOTSOCK)
 	{
 		ret = write(fd, buf, count);
 	}
