@@ -14,6 +14,7 @@
  */
 
 #include "bliss_signature.h"
+#include "bliss_bitpacker.h"
 
 
 typedef struct private_bliss_signature_t private_bliss_signature_t;
@@ -47,44 +48,41 @@ struct private_bliss_signature_t {
 	 */
 	uint16_t *c_indices;
 
-	/**
-	 * Compressed encoding of BLISS signature
-	 */
-	chunk_t encoding;
-
 };
 
 METHOD(bliss_signature_t, get_encoding, chunk_t,
 	private_bliss_signature_t *this)
 {
-	if (this->encoding.len == 0)
+	bliss_bitpacker_t *packer;
+	uint16_t z2d_bits;
+	chunk_t encoding;
+	int i;
+
+	z2d_bits = this->set->z1_bits - this->set->d;
+
+	packer = bliss_bitpacker_create(this->set->n * this->set->z1_bits +
+									this->set->n * z2d_bits +
+									this->set->kappa * this->set->n_bits);
+
+	for (i = 0; i < this->set->n; i++)
 	{
-		uint8_t *pos;
-		int i;
-
-		this->encoding = chunk_alloc(this->set->kappa * sizeof(uint16_t) +
-									 this->set->n * sizeof(int16_t) +
-									 this->set->n * sizeof(int8_t)),
-		pos = this->encoding.ptr;
-
-		for (i = 0; i < this->set->kappa; i++)
-		{
-			htoun16(pos, this->c_indices[i]);
-			pos += 2;
-		}
-		for (i = 0; i < this->set->n; i++)
-		{
-			htoun16(pos, (uint16_t)this->z1[i]);
-			pos += 2;
-		}
-		for (i = 0; i < this->set->n; i++)
-		{
-			*pos++ = (uint8_t)this->z2d[i];
-		}
-		DBG2(DBG_LIB, "generated BLISS signature (%u bytes)", 
-					   this->encoding.len);
+		packer->write_bits(packer, this->z1[i], this->set->z1_bits);
 	}
-	return chunk_clone(this->encoding);
+	for (i = 0; i < this->set->n; i++)
+	{
+		packer->write_bits(packer, this->z2d[i], z2d_bits);
+	}
+	for (i = 0; i < this->set->kappa; i++)
+	{
+		packer->write_bits(packer, this->c_indices[i], this->set->n_bits);
+	}
+	encoding = packer->extract_buf(packer);
+
+	DBG2(DBG_LIB, "generated BLISS signature (%u bits encoded in %u bytes)",
+				   packer->get_bits(packer), encoding.len);
+	packer->destroy(packer);
+
+	return encoding;
 }
 
 METHOD(bliss_signature_t, get_parameters, void,
@@ -102,7 +100,6 @@ METHOD(bliss_signature_t, destroy, void,
 	free(this->z1);
 	free(this->z2d);
 	free(this->c_indices);
-	free(this->encoding.ptr);
 	free(this);
 }
 
@@ -135,11 +132,16 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 													chunk_t encoding)
 {
 	private_bliss_signature_t *this;
-	uint8_t *pos;
+	bliss_bitpacker_t *packer;
+	uint32_t z1_sign, z1_mask;
+	uint16_t z2d_sign, z2d_mask, value, z1_bits, z2d_bits;
 	int i;
 
-	if (encoding.len != set->kappa * sizeof(uint16_t) +
-						set->n * sizeof(int16_t) + set->n * sizeof(int8_t))
+	z1_bits  = set->z1_bits;
+	z2d_bits = set->z1_bits - set->d;
+
+	if (8 * encoding.len < set->n * set->z1_bits + set->n * z2d_bits +
+						   set->kappa * set->n_bits)
 	{
 		DBG1(DBG_LIB, "incorrect BLISS signature size");
 		return NULL;
@@ -155,25 +157,33 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 		.z1  = malloc(set->n * sizeof(int32_t)),
 		.z2d = malloc(set->n * sizeof(int16_t)),
 		.c_indices = malloc(set->n * sizeof(uint16_t)),
-		.encoding = chunk_clone(encoding),
 	);
 
-	pos = encoding.ptr;
+	packer = bliss_bitpacker_create_from_data(encoding);
 
+	z1_sign =   1 << (z1_bits - 1);
+	z1_mask = ((1 << (32 - z1_bits)) - 1) << z1_bits;
+
+	for (i = 0; i < set->n; i++)
+	{
+		packer->read_bits(packer, &value, z1_bits);
+		this->z1[i] = value & z1_sign ? value | z1_mask : value;
+	}
+
+	z2d_sign =   1 << (z2d_bits - 1);
+	z2d_mask = ((1 << (16 - z2d_bits)) - 1) << z2d_bits;
+
+	for (i = 0; i < set->n; i++)
+	{
+		packer->read_bits(packer, &value, z2d_bits);
+		this->z2d[i] = value & z2d_sign ? value | z2d_mask : value;
+	}
 	for (i = 0; i < set->kappa; i++)
 	{
-		this->c_indices[i] = untoh16(pos);
-		pos += 2;
+		packer->read_bits(packer, &value, set->n_bits);
+		this->c_indices[i] = value;
 	}
-	for (i = 0; i < set->n; i++)
-	{
-		this->z1[i] = (int16_t)untoh16(pos);
-		pos += 2;
-	}
-	for (i = 0; i < set->n; i++)
-	{
-		this->z2d[i] = (int8_t)(*pos++);
-	}
+	packer->destroy(packer);
 
 	return &this->public;
 }

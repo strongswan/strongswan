@@ -131,7 +131,12 @@ struct bliss_param_set_t {
 	size_t c_rows;
 
 	/**
-	 * Number of bits to be dropped after rounding
+	 * Number of bits in z1
+	 */
+	uint16_t z1_bits;
+
+	/**
+	 * Number of z2 bits to be dropped after rounding
 	 */
 	uint16_t d;
 

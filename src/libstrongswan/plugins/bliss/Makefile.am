@@ -18,6 +18,7 @@ libstrongswan_bliss_la_SOURCES = \
 	bliss_public_key.h bliss_public_key.c \
 	bliss_signature.h bliss_signature.c \
 	bliss_utils.h bliss_utils.c \
+	bliss_bitpacker.h bliss_bitpacker.c \
 	bliss_fft.h bliss_fft.c \
 	bliss_fft_params.h bliss_fft_params.c \
 	bliss_sampler.h bliss_sampler.c
@@ -30,6 +31,7 @@ check_PROGRAMS = $(TESTS)
 
 bliss_tests_SOURCES = \
 	suites/test_bliss_fft.c \
+	suites/test_bliss_bitpacker.c \
 	suites/test_bliss_sign.c \
 	bliss_fft_params.c \
 	bliss_fft.c \
@@ -39,6 +41,7 @@ bliss_tests_SOURCES = \
 	bliss_sampler.c \
 	bliss_signature.c \
 	bliss_utils.c \
+	bliss_bitpacker.c \
 	bliss_tests.h bliss_tests.c
 
 bliss_tests_CFLAGS = \
