@@ -430,7 +430,7 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	public_key_t *public;
 	chunk_t pubkey;
 
-	pubkey = bliss_public_key_info_encode(this->set->oid, this->A, this->set->n);
+	pubkey = bliss_public_key_info_encode(this->set->oid, this->A, this->set);
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_BLISS,
 								BUILD_BLOB_ASN1_DER, pubkey, BUILD_END);
 	free(pubkey.ptr);
@@ -450,7 +450,7 @@ METHOD(private_key_t, get_encoding, bool,
 			chunk_t s1_chunk, s2_chunk, pubkey;
 			bool success = TRUE;
 
-			pubkey = bliss_public_key_encode(this->A, this->set->n);
+			pubkey = bliss_public_key_encode(this->A, this->set);
 
 			/* Build private key as two polynomials with 8 bit coefficients */
 			s1_chunk = chunk_create(this->s1, this->set->n);
@@ -458,7 +458,7 @@ METHOD(private_key_t, get_encoding, bool,
 
 			*encoding = asn1_wrap(ASN1_SEQUENCE, "mmss",
 							asn1_build_known_oid(this->set->oid),
-							pubkey,
+							asn1_bitstring("m", pubkey),
 							asn1_simple_object(ASN1_OCTET_STRING, s1_chunk),
 							asn1_simple_object(ASN1_OCTET_STRING, s2_chunk)
 						);
@@ -488,7 +488,7 @@ METHOD(private_key_t, get_fingerprint, bool,
 		return TRUE;
 	}
 	success = bliss_public_key_fingerprint(this->set->oid, this->A,
-										   this->set->n, type, fp);
+										   this->set, type, fp);
 	lib->encoding->cache(lib->encoding, type, this, *fp);
 
 	return success;
@@ -950,7 +950,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 static const asn1Object_t privkeyObjects[] = {
 	{ 0, "BLISSPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
 	{ 1,   "keyType",			ASN1_OID,          ASN1_BODY }, /*  1 */
-	{ 1,   "public",			ASN1_OCTET_STRING, ASN1_BODY }, /*  2 */
+	{ 1,   "public",			ASN1_BIT_STRING,   ASN1_BODY }, /*  2 */
 	{ 1,   "secret1",			ASN1_OCTET_STRING, ASN1_BODY }, /*  3 */
 	{ 1,   "secret2",			ASN1_OCTET_STRING, ASN1_BODY }, /*  4 */
 	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
@@ -1012,11 +1012,10 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				}
 				break;
 			case PRIV_KEY_PUBLIC:
-				if (object.len != 2*this->set->n)
+				if (!bliss_public_key_from_asn1(object, this->set, &this->A))
 				{
 					goto end;
 				}
-				this->A = bliss_public_key_from_asn1(object, this->set->n);
 				break;
 			case PRIV_KEY_SECRET1:
 				if (object.len != this->set->n)

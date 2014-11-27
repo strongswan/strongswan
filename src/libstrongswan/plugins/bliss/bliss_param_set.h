@@ -66,6 +66,11 @@ struct bliss_param_set_t {
 	uint16_t q;
 
 	/**
+	 * Number of bits in q
+	 */
+	uint16_t q_bits;
+
+	/**
 	 * Inverse of (q + 2) mod 2q
 	 */
 	uint16_t q2_inv;

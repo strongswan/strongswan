@@ -14,8 +14,8 @@
  */
 
 #include "bliss_public_key.h"
-#include "bliss_param_set.h"
 #include "bliss_signature.h"
+#include "bliss_bitpacker.h"
 #include "bliss_fft.h"
 #include "bliss_utils.h"
 
@@ -220,7 +220,7 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 
-	*encoding = bliss_public_key_info_encode(this->set->oid, this->A, this->set->n);
+	*encoding = bliss_public_key_info_encode(this->set->oid, this->A, this->set);
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -244,7 +244,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 		return TRUE;
 	}
 	success = bliss_public_key_fingerprint(this->set->oid, this->A,
-										   this->set->n, type, fp);
+										   this->set, type, fp);
 	lib->encoding->cache(lib->encoding, type, this, *fp);
 
 	return success;
@@ -361,21 +361,10 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 				break;
 			}
 			case BLISS_SUBJECT_PUBLIC_KEY:
-				if (object.len > 0 && *object.ptr == 0x00)
-				{
-					/* skip initial bit string octet defining 0 unused bits */
-					object = chunk_skip(object, 1);
-				}
-				if (!asn1_parse_simple_object(&object, ASN1_OCTET_STRING,
-						parser->get_level(parser)+1, "blissPublicKey"))
+				if (!bliss_public_key_from_asn1(object, this->set, &this->A))
 				{
 					goto end;
 				}
-				if (object.len != 2*this->set->n)
-				{
-					goto end;
-				}
-				this->A = bliss_public_key_from_asn1(object, this->set->n);
 				break;
 		}
 	}
@@ -395,42 +384,51 @@ end:
 /**
  * See header.
  */
-uint32_t* bliss_public_key_from_asn1(chunk_t object, int n)
+bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
+								uint32_t **pubkey)
 {
-	uint32_t *pubkey;
-	uint16_t coeff;
-	u_char *pos;
+	bliss_bitpacker_t *packer;
+	uint16_t coefficient;
 	int i;
 
-	pubkey = malloc(n * sizeof(uint32_t));
-	pos = object.ptr;
+	/* skip initial bit string octet defining unused bits */
+	object = chunk_skip(object, 1);
 
-	for (i = 0; i < n; i++)
+	if (8 * object.len < set->n * set->q_bits)
 	{
-		coeff = untoh16(pos);
-		pubkey[i] = (uint32_t)coeff;
-		pos += 2;
+		return FALSE;
 	}
+	*pubkey = malloc(set->n * sizeof(uint32_t));
 
-	return pubkey;
+	packer = bliss_bitpacker_create_from_data(object);
+
+	for (i = 0; i < set->n; i++)
+	{
+		packer->read_bits(packer, &coefficient, set->q_bits);
+		(*pubkey)[i] = (uint32_t)coefficient;
+	}
+	packer->destroy(packer);
+
+	return TRUE;
 }
 
 /**
  * See header.
  */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, int n)
+chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set)
 {
-	u_char *pos;
+	bliss_bitpacker_t *packer;
 	chunk_t encoding;
 	int i;
 
-	pos = asn1_build_object(&encoding, ASN1_OCTET_STRING, 2 * n);
+	packer = bliss_bitpacker_create(set->n * set->q_bits);
 
-	for (i = 0; i < n; i++)
+	for (i = 0; i < set->n; i++)
 	{
-		htoun16(pos, (uint16_t)pubkey[i]);
-		pos += 2;
+		packer->write_bits(packer, pubkey[i], set->q_bits);
 	}
+	encoding = packer->extract_buf(packer);
+	packer->destroy(packer);
 
 	return encoding;
 }
@@ -438,11 +436,12 @@ chunk_t bliss_public_key_encode(uint32_t *pubkey, int n)
 /**
  * See header.
  */
-chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n)
+chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
+									 bliss_param_set_t *set)
 {
 	chunk_t encoding, pubkey_encoding;
 
-	pubkey_encoding = bliss_public_key_encode(pubkey, n);
+	pubkey_encoding = bliss_public_key_encode(pubkey, set);
 
 	encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
 					asn1_wrap(ASN1_SEQUENCE, "mm",
@@ -456,7 +455,8 @@ chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n)
 /**
  * See header.
  */
-bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
+bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey,
+								  bliss_param_set_t *set,
 								  cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;
@@ -465,10 +465,10 @@ bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
-			key = bliss_public_key_encode(pubkey, n);
+			key = bliss_public_key_encode(pubkey, set);
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			key = bliss_public_key_info_encode(oid, pubkey, n);
+			key = bliss_public_key_info_encode(oid, pubkey, set);
 			break;
 		default:
 			return FALSE;

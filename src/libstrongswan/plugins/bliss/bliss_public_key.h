@@ -21,6 +21,8 @@
 #ifndef BLISS_PUBLIC_KEY_H_
 #define BLISS_PUBLIC_KEY_H_
 
+#include "bliss_param_set.h"
+
 #include <credentials/builder.h>
 #include <credentials/cred_encoding.h>
 #include <credentials/keys/public_key.h>
@@ -52,44 +54,48 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args);
 /* The following functions are shared with the bliss_private_key class */
 
 /**
- * Parse an ASN.1 OCTET STRING into an array of public key coefficients
+ * Parse an ASN.1 BIT STRING into an array of public key coefficients
  *
- * @param object	ASN.1 encoded subjectPublicKey
- * @param n			number of public key coefficients
- * @result			coefficients of public key vector
+ * @param data		packed subjectPublicKey
+ * @param set		BLISS parameter set for public key vector
+ * @param pubkey	coefficients of public key vector
+ * @return			TRUE if parsing successful
  */
-uint32_t* bliss_public_key_from_asn1(chunk_t object, int n);
+bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
+								uint32_t **pubkey);
 
 /**
  * Encode a raw BLISS subjectPublicKey in ASN.1 DER format
  *
  * @param			coefficients of public key vector
- * @param n			number of public key coefficients
+ * @param set		BLISS parameter set for the public key vector
  * @result			ASN.1 encoded subjectPublicKey
  */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, int n);
+chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set);
 
 /**
  * Encode a BLISS subjectPublicKeyInfo record in ASN.1 DER format
  *
  * @param oid		BLISS public key type OID
  * @param pubkey	coefficients of public key vector
- * @param n			number of public key coefficients
+ * @param n			BLISS parameter set for the public key vector
  * @result			ASN.1 encoded subjectPublicKeyInfo record
  */
-chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey, int n);
+chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
+									 bliss_param_set_t *set);
 
 /**
  * Generate a BLISS public key fingerprint
  *
  * @param oid		BLISS public key type OID
  * @param pubkey	coefficients of public key vector
- * @param n			number of public key coefficients
+ * @param n			BLISS parameter set for the public key vector
  * @param type		type of fingerprint to be generated
  * @param fp		generated fingerprint (must be freed by caller)
  * @result			TRUE if generation was successful
  */
-bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey, int n,
+bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey,
+								  bliss_param_set_t *set,
 								  cred_encoding_type_t type, chunk_t *fp);
 
 #endif /** BLISS_PUBLIC_KEY_H_ @}*/
