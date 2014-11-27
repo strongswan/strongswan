@@ -382,10 +382,12 @@ end:
 	sig->destroy(sig);
 	fft->destroy(fft);
 	rng->destroy(rng);
-	free(ay);
-	free(z2);
+	memwipe(s1c, n * sizeof(int32_t));
+	memwipe(s2c, n * sizeof(int32_t));
 	free(s1c);
 	free(s2c);
+	free(ay);
+	free(z2);
 	free(u);
 	free(uz2d);
 
@@ -505,6 +507,8 @@ METHOD(private_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
+		memwipe(this->s1, this->set->n * sizeof(int8_t));
+		memwipe(this->s2, this->set->n * sizeof(int8_t));
 		free(this->s1);
 		free(this->s2);
 		free(this->A);
@@ -931,6 +935,8 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	/* Cleanup */
 	fft->destroy(fft);
 	rng->destroy(rng);
+	memwipe(S1, n * sizeof(uint32_t));
+	memwipe(S2, n * sizeof(uint32_t));
 	free(S1);
 	free(S2);
 	free(a);
