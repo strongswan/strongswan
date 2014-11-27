@@ -1465,7 +1465,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				}
 				break;
 			case X509_OBJ_SIGNATURE:
-				this->signature = object;
+				this->signature = chunk_skip(object, 1);
 				break;
 			default:
 				break;
