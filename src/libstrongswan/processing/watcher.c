@@ -255,6 +255,26 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 }
 
 /**
+ * Check if entry is waiting for a specific event, and if it got signaled
+ */
+static bool entry_ready(entry_t *entry, watcher_event_t event, int revents)
+{
+	if (entry->events & event)
+	{
+		switch (event)
+		{
+			case WATCHER_READ:
+				return (revents & (POLLIN | POLLHUP | POLLNVAL)) != 0;
+			case WATCHER_WRITE:
+				return (revents & (POLLOUT | POLLHUP | POLLNVAL)) != 0;
+			case WATCHER_EXCEPT:
+				return (revents & (POLLERR | POLLHUP | POLLNVAL)) != 0;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Dispatching function
  */
 static job_requeue_t watch(private_watcher_t *this)
@@ -320,7 +340,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		ssize_t len;
 		job_t *job;
 
-		DBG2(DBG_JOB, "watcher going to select()");
+		DBG2(DBG_JOB, "watcher going to poll() %d fds", count);
 		thread_cleanup_push((void*)activate_all, this);
 		old = thread_cancelability(TRUE);
 
@@ -360,20 +380,23 @@ static job_requeue_t watch(private_watcher_t *this)
 					break;
 				}
 				revents = find_revents(pfd, count, entry->fd);
-				if ((revents & POLLIN) && (entry->events & WATCHER_READ))
-				{
-					DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
-					notify(this, entry, WATCHER_READ);
-				}
-				if ((revents & POLLOUT) && (entry->events & WATCHER_WRITE))
-				{
-					DBG2(DBG_JOB, "watched FD %d ready to write", entry->fd);
-					notify(this, entry, WATCHER_WRITE);
-				}
-				if ((revents & POLLERR) && (entry->events & WATCHER_EXCEPT))
+				if (entry_ready(entry, WATCHER_EXCEPT, revents))
 				{
 					DBG2(DBG_JOB, "watched FD %d has exception", entry->fd);
 					notify(this, entry, WATCHER_EXCEPT);
+				}
+				else
+				{
+					if (entry_ready(entry, WATCHER_READ, revents))
+					{
+						DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
+						notify(this, entry, WATCHER_READ);
+					}
+					if (entry_ready(entry, WATCHER_WRITE, revents))
+					{
+						DBG2(DBG_JOB, "watched FD %d ready to write", entry->fd);
+						notify(this, entry, WATCHER_WRITE);
+					}
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -394,7 +417,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		{
 			if (!this->pending && errno != EINTR)
 			{	/* complain only if no pending updates */
-				DBG1(DBG_JOB, "watcher select() error: %s", strerror(errno));
+				DBG1(DBG_JOB, "watcher poll() error: %s", strerror(errno));
 			}
 			return JOB_REQUEUE_DIRECT;
 		}
