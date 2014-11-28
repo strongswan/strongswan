@@ -92,7 +92,8 @@ CONFIG_OPTS = \
 	--enable-tkm \
 	--enable-ntru \
 	--enable-lookip \
-	--enable-swanctl
+	--enable-swanctl \
+	--enable-bliss
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

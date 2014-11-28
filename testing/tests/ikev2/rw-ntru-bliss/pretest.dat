@@ -1,0 +1,13 @@
+moon::iptables-restore < /etc/iptables.rules
+carol::iptables-restore < /etc/iptables.rules
+dave::iptables-restore < /etc/iptables.rules
+moon::rm /etc/ipsec.d/cacerts/strongswanCert.pem
+carol::rm /etc/ipsec.d/cacerts/strongswanCert.pem
+dave::rm /etc/ipsec.d/cacerts/strongswanCert.pem
+carol::ipsec start
+dave::ipsec start
+moon::ipsec start
+carol::sleep 2 
+carol::ipsec up home
+dave::ipsec up home
+carol::sleep 1
