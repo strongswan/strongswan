@@ -335,6 +335,11 @@ static int sign_crl()
 		error = "CA private key does not match CA certificate";
 		goto error;
 	}
+	if (private->get_type(private) == KEY_BLISS)
+	{
+		/* currently only SHA-512 is supported */
+		digest = HASH_SHA512;
+	}
 
 	if (basecrl)
 	{

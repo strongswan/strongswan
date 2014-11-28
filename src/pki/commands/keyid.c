@@ -52,6 +52,11 @@ static int keyid()
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
+				else if (streq(arg, "bliss-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_BLISS;
+				}
 				else if (streq(arg, "pub"))
 				{
 					type = CRED_PUBLIC_KEY;
@@ -164,7 +169,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|pkcs10|x509]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|bliss-priv|pub|pkcs10|x509]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},

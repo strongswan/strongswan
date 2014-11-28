@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007 Andreas Steffen
+ * Copyright (C) 2007-2014 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
@@ -537,7 +537,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 												parser->get_level(parser)+1, NULL);
 				break;
 			case BASIC_RESPONSE_SIGNATURE:
-				this->signature = object;
+				this->signature = chunk_skip(object, 1);
 				break;
 			case BASIC_RESPONSE_CERTIFICATE:
 			{

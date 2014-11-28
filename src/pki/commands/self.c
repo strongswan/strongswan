@@ -92,7 +92,6 @@ static int self()
 				else if (streq(arg, "bliss"))
 				{
 					type = KEY_BLISS;
-					digest = HASH_SHA512;
 				}
 				else
 				{
@@ -263,6 +262,11 @@ static int self()
 		break;
 	}
 
+	if (type == KEY_BLISS)
+	{
+		/* currently only SHA-512 is supported */
+		digest = HASH_SHA512;
+	}
 	if (!dn)
 	{
 		error = "--dn is required";

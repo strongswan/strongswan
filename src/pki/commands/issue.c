@@ -287,6 +287,7 @@ static int issue()
 		}
 		break;
 	}
+
 	if (!cacert)
 	{
 		error = "--cacert is required";
@@ -362,6 +363,11 @@ static int issue()
 	}
 	public->destroy(public);
 
+	if (private->get_type(private) == KEY_BLISS)
+	{
+		/* currently only SHA-512 is supported */
+		digest = HASH_SHA512;
+	}
 	if (hex)
 	{
 		serial = chunk_from_hex(chunk_create(hex, strlen(hex)), NULL);

@@ -57,6 +57,10 @@ static int req()
 				{
 					type = KEY_ECDSA;
 				}
+				else if (streq(arg, "bliss"))
+				{
+					type = KEY_BLISS;
+				}
 				else
 				{
 					error = "invalid input type";
@@ -98,6 +102,11 @@ static int req()
 		break;
 	}
 
+	if (type == KEY_BLISS)
+	{
+		/* currently only SHA-512 is supported */
+		digest = HASH_SHA512;
+	}
 	if (!dn)
 	{
 		error = "--dn is required";
@@ -185,7 +194,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
-		{"  [--in file] [--type rsa|ecdsa] --dn distinguished-name",
+		{"  [--in file] [--type rsa|ecdsa|bliss] --dn distinguished-name",
 		 "[--san subjectAltName]+ [--password challengePassword]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{

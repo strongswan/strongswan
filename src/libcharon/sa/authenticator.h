@@ -80,6 +80,16 @@ enum auth_method_t {
 	AUTH_GSPM = 12,
 
 	/**
+	 * NULL Authentication Method as specified in draft-ietf-ipsecme-ikev2-null-auth
+	 */
+	AUTH_NULL = 13,
+
+	/**
+	 * BLISS Authentication Method
+	 */
+	AUTH_BLISS = 220,
+
+	/**
 	 * IKEv1 initiator XAUTH with PSK, outside of IANA range
 	 */
 	AUTH_XAUTH_INIT_PSK = 256,

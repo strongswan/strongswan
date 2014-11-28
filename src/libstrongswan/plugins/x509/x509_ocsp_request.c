@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007 Andreas Steffen
+ * Copyright (C) 2007-2014 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
@@ -264,6 +264,10 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 		case KEY_ECDSA:
 			oid = OID_ECDSA_WITH_SHA1;
 			scheme = SIGN_ECDSA_WITH_SHA1_DER;
+			break;
+		case KEY_BLISS:
+			oid = OID_BLISS_WITH_SHA512;
+			scheme = SIGN_BLISS_WITH_SHA512;
 			break;
 		default:
 			DBG1(DBG_LIB, "unable to sign OCSP request, %N signature not "

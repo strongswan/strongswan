@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
- * Copyright (C) 2002-2009 Andreas Steffen
+ * Copyright (C) 2002-2014 Andreas Steffen
  * Copyright (C) 2009 Martin Willi
  *
  * HSR Hochschule fuer Technik Rapperswil
@@ -557,7 +557,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 				}
 				break;
 			case AC_OBJ_SIGNATURE:
-				this->signature = object;
+				this->signature = chunk_skip(object, 1);
 				break;
 			default:
 				break;

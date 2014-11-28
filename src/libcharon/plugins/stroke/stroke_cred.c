@@ -1124,6 +1124,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 	while (fetchline(src, &line))
 	{
 		chunk_t ids, token;
+		key_type_t key_type;
 		shared_key_type_t type;
 
 		line_nr++;
@@ -1222,10 +1223,22 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			DBG1(DBG_CFG, "line %d: missing token", line_nr);
 			break;
 		}
-		if (match("RSA", &token) || match("ECDSA", &token))
+		if (match("RSA", &token) || match("ECDSA", &token) ||
+			match("BLISS", &token))
 		{
-			if (!load_private(secrets, line, line_nr, prompt,
-							  match("RSA", &token) ? KEY_RSA : KEY_ECDSA))
+			if (match("RSA", &token))
+			{
+				key_type = KEY_RSA;
+			}
+			else if (match("ECDSA", &token))
+			{
+				key_type = KEY_ECDSA;
+			}
+			else
+			{
+				key_type = KEY_BLISS;
+			}
+			if (!load_private(secrets, line, line_nr, prompt, key_type))
 			{
 				break;
 			}
@@ -1256,8 +1269,8 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		}
 		else
 		{
-			DBG1(DBG_CFG, "line %d: token must be either "
-				 "RSA, ECDSA, P12, PIN, PSK, EAP, XAUTH or NTLM", line_nr);
+			DBG1(DBG_CFG, "line %d: token must be either RSA, ECDSA, BLISS, "
+						  "P12, PIN, PSK, EAP, XAUTH or NTLM", line_nr);
 			break;
 		}
 	}
