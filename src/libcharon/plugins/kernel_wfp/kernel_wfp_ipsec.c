@@ -190,10 +190,14 @@ typedef struct {
 	u_int64_t provider;
 	/** WFP allocated LUID for SA context */
 	u_int64_t sa_id;
-	/** WFP allocated LUID for tunnel mode IP-IP-v4 filter */
-	u_int64_t policy_ip_ipv4;
-	/** WFP allocated LUID for tunnel mode IP-IPv6 filter */
-	u_int64_t policy_ip_ipv6;
+	/** WFP allocated LUID for tunnel mode IP-IPv4 inbound filter */
+	u_int64_t ip_ipv4_in;
+	/** WFP allocated LUID for tunnel mode IP-IPv4 outbound filter */
+	u_int64_t ip_ipv4_out;
+	/** WFP allocated LUID for tunnel mode IP-IPv6 inbound filter */
+	u_int64_t ip_ipv6_in;
+	/** WFP allocated LUID for tunnel mode IP-IPv6 outbound filter */
+	u_int64_t ip_ipv6_out;
 } entry_t;
 
 /**
@@ -291,13 +295,21 @@ static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
  */
 static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
-	if (entry->policy_ip_ipv4)
+	if (entry->ip_ipv4_in)
 	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_ip_ipv4);
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv4_in);
 	}
-	if (entry->policy_ip_ipv6)
+	if (entry->ip_ipv4_out)
 	{
-		FwpmFilterDeleteById0(this->handle, entry->policy_ip_ipv6);
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv4_out);
+	}
+	if (entry->ip_ipv6_in)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv6_in);
+	}
+	if (entry->ip_ipv6_out)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv6_out);
 	}
 	if (entry->sa_id)
 	{
@@ -725,7 +737,7 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
  */
 static bool install_ipip_ale(private_kernel_wfp_ipsec_t *this,
 							 host_t *local, host_t *remote, GUID *context,
-							 int proto, u_int64_t *filter_id)
+							 bool inbound, int proto, u_int64_t *filter_id)
 {
 	traffic_selector_t *lts, *rts;
 	FWPM_FILTER_CONDITION0 *conds = NULL;
@@ -739,13 +751,17 @@ static bool install_ipip_ale(private_kernel_wfp_ipsec_t *this,
 		.action = {
 			.type = FWP_ACTION_CALLOUT_TERMINATING,
 		},
-		.flags = FWPM_FILTER_FLAG_HAS_PROVIDER_CONTEXT,
-		.providerKey = (GUID*)&this->provider.providerKey,
-		.providerContextKey = *context,
 	};
 
+	if (context)
+	{
+		filter.flags |= FWPM_FILTER_FLAG_HAS_PROVIDER_CONTEXT;
+		filter.providerKey = (GUID*)&this->provider.providerKey;
+		filter.providerContextKey = *context;
+	}
+
 	v6 = local->get_family(local) == AF_INET6;
-	if (!find_callout(TRUE, v6, TRUE, FALSE, TRUE, &filter.layerKey,
+	if (!find_callout(TRUE, v6, inbound, FALSE, TRUE, &filter.layerKey,
 					  &filter.subLayerKey, &filter.action.calloutKey))
 	{
 		return FALSE;
@@ -773,7 +789,8 @@ static bool install_ipip_ale(private_kernel_wfp_ipsec_t *this,
 	free_conditions(conds, count);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "installing IP-IP ALE WFP filter failed: 0x%08x", res);
+		DBG1(DBG_KNL, "installing IP-IPv%d %s ALE WFP filter failed: 0x%08x",
+			 v6 ? 6 : 4, inbound ? "inbound" : "outbound", res);
 		return FALSE;
 	}
 	return TRUE;
@@ -847,7 +864,12 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 		if (has_v4)
 		{
 			if (!install_ipip_ale(this, entry->local, entry->remote, context,
-								  IPPROTO_IPIP, &entry->policy_ip_ipv4))
+								  TRUE, IPPROTO_IPIP, &entry->ip_ipv4_in))
+			{
+				return FALSE;
+			}
+			if (!install_ipip_ale(this, entry->local, entry->remote, NULL,
+								  FALSE, IPPROTO_IPIP, &entry->ip_ipv4_out))
 			{
 				return FALSE;
 			}
@@ -855,7 +877,12 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 		if (has_v6)
 		{
 			if (!install_ipip_ale(this, entry->local, entry->remote, context,
-								  IPPROTO_IPV6, &entry->policy_ip_ipv6))
+								  TRUE, IPPROTO_IPV6, &entry->ip_ipv6_in))
+			{
+				return FALSE;
+			}
+			if (!install_ipip_ale(this, entry->local, entry->remote, NULL,
+								  FALSE, IPPROTO_IPV6, &entry->ip_ipv6_out))
 			{
 				return FALSE;
 			}
