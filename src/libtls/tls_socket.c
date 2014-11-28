@@ -308,7 +308,7 @@ METHOD(tls_socket_t, splice, bool,
 			DBG1(DBG_TLS, "TLS select error: %s", strerror(errno));
 			return FALSE;
 		}
-		while (!plain_eof && pfd[0].revents & POLLIN)
+		while (!plain_eof && pfd[0].revents & (POLLIN | POLLHUP | POLLNVAL))
 		{
 			in = read_(this, buf, sizeof(buf), FALSE);
 			switch (in)
@@ -341,7 +341,7 @@ METHOD(tls_socket_t, splice, bool,
 			}
 			break;
 		}
-		if (!crypto_eof && pfd[1].revents & POLLIN)
+		if (!crypto_eof && pfd[1].revents & (POLLIN | POLLHUP | POLLNVAL))
 		{
 			in = read(rfd, buf, sizeof(buf));
 			switch (in)
