@@ -6,6 +6,10 @@ strongswan-5.2.2
   Note that no conversion is done for the remaining string, refer to
   ipsec.conf(5) for details.
 
+- The post-quantum "Bimodal Lattice Signature Scheme (BLISS) can be used as
+  an IKEv2 public key authentication method. The pki tool offers full support
+  for the generation of BLISS key pairs and certificates.
+
 
 strongswan-5.2.1
 ----------------
