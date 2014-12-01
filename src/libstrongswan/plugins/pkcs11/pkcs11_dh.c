@@ -47,7 +47,7 @@ struct private_pkcs11_dh_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	u_int16_t group;
+	diffie_hellman_group_t group;
 
 	/**
 	 * Handle for own private value

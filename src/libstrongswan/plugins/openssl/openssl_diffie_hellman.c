@@ -38,7 +38,7 @@ struct private_openssl_diffie_hellman_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	u_int16_t group;
+	diffie_hellman_group_t group;
 
 	/**
 	 * Diffie Hellman object

@@ -63,12 +63,14 @@ enum diffie_hellman_group_t {
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL = 1024,
 	/** MODP group with custom generator/prime */
-	MODP_CUSTOM = 1025,
 	/** Parameters defined by IEEE 1363.1, in PRIVATE USE */
 	NTRU_112_BIT = 1030,
 	NTRU_128_BIT = 1031,
 	NTRU_192_BIT = 1032,
-	NTRU_256_BIT = 1033
+	NTRU_256_BIT = 1033,
+	/** internally used DH group with additional parameters g and p, outside
+	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
+	MODP_CUSTOM = 65536,
 };
 
 /**

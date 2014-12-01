@@ -40,7 +40,7 @@ struct private_openssl_ec_diffie_hellman_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	u_int16_t group;
+	diffie_hellman_group_t group;
 
 	/**
 	 * EC private (public) key
