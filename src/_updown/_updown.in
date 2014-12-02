@@ -128,7 +128,7 @@
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@sbindir@"
 export PATH
 
-# uncomment to log VPN connections
+# comment to disable logging VPN connections to syslog
 VPN_LOGGING=1
 #
 # tag put in front of each log entry:
