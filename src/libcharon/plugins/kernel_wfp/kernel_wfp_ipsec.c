@@ -26,6 +26,8 @@
 #include <collections/hashtable.h>
 #include <processing/jobs/callback_job.h>
 
+#define IPPROTO_IPIP 4
+#define IPPROTO_IPV6 41
 
 typedef struct private_kernel_wfp_ipsec_t private_kernel_wfp_ipsec_t;
 
@@ -188,6 +190,14 @@ typedef struct {
 	u_int64_t provider;
 	/** WFP allocated LUID for SA context */
 	u_int64_t sa_id;
+	/** WFP allocated LUID for tunnel mode IP-IPv4 inbound filter */
+	u_int64_t ip_ipv4_in;
+	/** WFP allocated LUID for tunnel mode IP-IPv4 outbound filter */
+	u_int64_t ip_ipv4_out;
+	/** WFP allocated LUID for tunnel mode IP-IPv6 inbound filter */
+	u_int64_t ip_ipv6_in;
+	/** WFP allocated LUID for tunnel mode IP-IPv6 outbound filter */
+	u_int64_t ip_ipv6_out;
 } entry_t;
 
 /**
@@ -285,6 +295,22 @@ static void cleanup_policies(private_kernel_wfp_ipsec_t *this, entry_t *entry)
  */
 static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 {
+	if (entry->ip_ipv4_in)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv4_in);
+	}
+	if (entry->ip_ipv4_out)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv4_out);
+	}
+	if (entry->ip_ipv6_in)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv6_in);
+	}
+	if (entry->ip_ipv6_out)
+	{
+		FwpmFilterDeleteById0(this->handle, entry->ip_ipv6_out);
+	}
 	if (entry->sa_id)
 	{
 		IPsecSaContextDeleteById0(this->handle, entry->sa_id);
@@ -553,49 +579,58 @@ static void free_conditions(FWPM_FILTER_CONDITION0 *conds, int count)
  * Find the callout GUID for given parameters
  */
 static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
-						 GUID *layer, GUID *sublayer, GUID *callout)
+						 bool ale, GUID *layer, GUID *sublayer, GUID *callout)
 {
 	struct {
 		bool tunnel;
 		bool v6;
 		bool inbound;
 		bool forward;
+		bool ale;
 		const GUID *layer;
 		const GUID *sublayer;
 		const GUID *callout;
 	} map[] = {
-		{ 0, 0, 0, 0, 	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4, NULL,
-						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4			},
-		{ 0, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4, NULL,
-						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4			},
-		{ 0, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6, NULL,
-						&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V6			},
-		{ 0, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6, NULL,
-						&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V6			},
-		{ 1, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4				},
-		{ 1, 0, 0, 1,	&FWPM_LAYER_IPFORWARD_V4,
-						&FWPM_SUBLAYER_IPSEC_FORWARD_OUTBOUND_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4		},
-		{ 1, 0, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4				},
-		{ 1, 0, 1, 1,	&FWPM_LAYER_IPFORWARD_V4,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4		},
-		{ 1, 1, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6				},
-		{ 1, 1, 0, 1,	&FWPM_LAYER_IPFORWARD_V6,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6		},
-		{ 1, 1, 1, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6				},
-		{ 1, 1, 1, 1,	&FWPM_LAYER_IPFORWARD_V6,
-						&FWPM_SUBLAYER_IPSEC_TUNNEL,
-						&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6		},
+		{ 0, 0, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4, NULL,
+							&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V4		},
+		{ 0, 0, 1, 0, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4, NULL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V4		},
+		{ 0, 1, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6, NULL,
+							&FWPM_CALLOUT_IPSEC_OUTBOUND_TRANSPORT_V6		},
+		{ 0, 1, 1, 0, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6, NULL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TRANSPORT_V6		},
+		{ 1, 0, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V4,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V4			},
+		{ 1, 0, 0, 1, 0,	&FWPM_LAYER_IPFORWARD_V4,
+							&FWPM_SUBLAYER_IPSEC_FORWARD_OUTBOUND_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V4	},
+		{ 1, 0, 1, 0, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V4,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V4			},
+		{ 1, 0, 1, 1, 0,	&FWPM_LAYER_IPFORWARD_V4,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V4	},
+		{ 1, 0, 0, 0, 1,	&FWPM_LAYER_ALE_AUTH_CONNECT_V4, NULL,
+							&FWPM_CALLOUT_IPSEC_ALE_CONNECT_V4				},
+		{ 1, 0, 1, 0, 1,	&FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, NULL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_ALE_ACCEPT_V4},
+		{ 1, 1, 0, 0, 0,	&FWPM_LAYER_OUTBOUND_TRANSPORT_V6,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_OUTBOUND_TUNNEL_V6			},
+		{ 1, 1, 0, 1, 0,	&FWPM_LAYER_IPFORWARD_V6,
+							&FWPM_SUBLAYER_IPSEC_FORWARD_OUTBOUND_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_FORWARD_OUTBOUND_TUNNEL_V6	},
+		{ 1, 1, 1, 0, 0,	&FWPM_LAYER_INBOUND_TRANSPORT_V6,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_V6			},
+		{ 1, 1, 1, 1, 0,	&FWPM_LAYER_IPFORWARD_V6,
+							&FWPM_SUBLAYER_IPSEC_TUNNEL,
+							&FWPM_CALLOUT_IPSEC_FORWARD_INBOUND_TUNNEL_V6	},
+		{ 1, 1, 0, 0, 1,	&FWPM_LAYER_ALE_AUTH_CONNECT_V6, NULL,
+							&FWPM_CALLOUT_IPSEC_ALE_CONNECT_V6				},
+		{ 1, 1, 1, 0, 1,	&FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, NULL,
+							&FWPM_CALLOUT_IPSEC_INBOUND_TUNNEL_ALE_ACCEPT_V6},
 	};
 	int i;
 
@@ -604,7 +639,8 @@ static bool find_callout(bool tunnel, bool v6, bool inbound, bool forward,
 		if (tunnel == map[i].tunnel &&
 			v6 == map[i].v6 &&
 			inbound == map[i].inbound &&
-			forward == map[i].forward)
+			forward == map[i].forward &&
+			ale == map[i].ale)
 		{
 			*callout = *map[i].callout;
 			*layer = *map[i].layer;
@@ -647,7 +683,7 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
 	}
 
 	v6 = sp->src->get_type(sp->src) == TS_IPV6_ADDR_RANGE;
-	if (!find_callout(context != NULL, v6, inbound, fwd,
+	if (!find_callout(context != NULL, v6, inbound, fwd, FALSE,
 					  &filter.layerKey, &filter.subLayerKey,
 					  &filter.action.calloutKey))
 	{
@@ -688,8 +724,73 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
 	free_conditions(conds, count);
 	if (res != ERROR_SUCCESS)
 	{
-		DBG1(DBG_KNL, "installing %s%sbound WFP filter failed: 0x%08x",
-			 fwd ? "forward " : "", inbound ? "in" : "out", res);
+		DBG1(DBG_KNL, "installing IPv%d %s%sbound %s WFP filter failed: 0x%08x",
+			 v6 ? 6 : 4, fwd ? "forward " : "", inbound ? "in" : "out",
+			 context ? "tunnel" : "transport", res);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Install an IP-IP allow filter for SA specific hosts
+ */
+static bool install_ipip_ale(private_kernel_wfp_ipsec_t *this,
+							 host_t *local, host_t *remote, GUID *context,
+							 bool inbound, int proto, u_int64_t *filter_id)
+{
+	traffic_selector_t *lts, *rts;
+	FWPM_FILTER_CONDITION0 *conds = NULL;
+	int count = 0;
+	bool v6;
+	DWORD res;
+	FWPM_FILTER0 filter = {
+		.displayData = {
+			.name = L"charon IPsec IP-in-IP ALE policy",
+		},
+		.action = {
+			.type = FWP_ACTION_CALLOUT_TERMINATING,
+		},
+	};
+
+	if (context)
+	{
+		filter.flags |= FWPM_FILTER_FLAG_HAS_PROVIDER_CONTEXT;
+		filter.providerKey = (GUID*)&this->provider.providerKey;
+		filter.providerContextKey = *context;
+	}
+
+	v6 = local->get_family(local) == AF_INET6;
+	if (!find_callout(TRUE, v6, inbound, FALSE, TRUE, &filter.layerKey,
+					  &filter.subLayerKey, &filter.action.calloutKey))
+	{
+		return FALSE;
+	}
+
+	lts = traffic_selector_create_from_subnet(local->clone(local),
+											v6 ? 128 : 32 , proto, 0, 65535);
+	rts = traffic_selector_create_from_subnet(remote->clone(remote),
+											v6 ? 128 : 32 , proto, 0, 65535);
+	if (!ts2condition(lts, &FWPM_CONDITION_IP_LOCAL_ADDRESS, &conds, &count) ||
+		!ts2condition(rts, &FWPM_CONDITION_IP_REMOTE_ADDRESS, &conds, &count))
+	{
+		free_conditions(conds, count);
+		lts->destroy(lts);
+		rts->destroy(rts);
+		return FALSE;
+	}
+	lts->destroy(lts);
+	rts->destroy(rts);
+
+	filter.numFilterConditions = count;
+	filter.filterCondition = conds;
+
+	res = FwpmFilterAdd0(this->handle, &filter, NULL, filter_id);
+	free_conditions(conds, count);
+	if (res != ERROR_SUCCESS)
+	{
+		DBG1(DBG_KNL, "installing IP-IPv%d %s ALE WFP filter failed: 0x%08x",
+			 v6 ? 6 : 4, inbound ? "inbound" : "outbound", res);
 		return FALSE;
 	}
 	return TRUE;
@@ -703,10 +804,21 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 {
 	enumerator_t *enumerator;
 	sp_entry_t *sp;
+	bool has_v4 = FALSE, has_v6 = FALSE;
 
 	enumerator = array_create_enumerator(entry->sps);
 	while (enumerator->enumerate(enumerator, &sp))
 	{
+		switch (sp->src->get_type(sp->src))
+		{
+			case TS_IPV4_ADDR_RANGE:
+				has_v4 = TRUE;
+				break;
+			case TS_IPV6_ADDR_RANGE:
+				has_v6 = TRUE;
+				break;
+		}
+
 		/* inbound policy */
 		if (!install_sp(this, sp, context, TRUE, FALSE, &sp->policy_in))
 		{
@@ -719,21 +831,22 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}
+
 		if (context)
 		{
 			if (!sp->src->is_host(sp->src, entry->local) ||
 				!sp->dst->is_host(sp->dst, entry->remote))
 			{
 				/* inbound forward policy, from decapsulation */
-				if (!install_sp(this, sp, context,
-								TRUE, TRUE, &sp->policy_fwd_in))
+				if (!install_sp(this, sp, context, TRUE, TRUE,
+								&sp->policy_fwd_in))
 				{
 					enumerator->destroy(enumerator);
 					return FALSE;
 				}
 				/* outbound forward policy, to encapsulate */
-				if (!install_sp(this, sp, context,
-								FALSE, TRUE, &sp->policy_fwd_out))
+				if (!install_sp(this, sp, context, FALSE, TRUE,
+								&sp->policy_fwd_out))
 				{
 					enumerator->destroy(enumerator);
 					return FALSE;
@@ -743,6 +856,38 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (context)
+	{
+		/* In tunnel mode, Windows does firewall filtering on decrypted but
+		 * non-unwrapped packets: It sees them as IP-in-IP packets. When using
+		 * a default-drop policy, we need to allow such packets explicitly. */
+		if (has_v4)
+		{
+			if (!install_ipip_ale(this, entry->local, entry->remote, context,
+								  TRUE, IPPROTO_IPIP, &entry->ip_ipv4_in))
+			{
+				return FALSE;
+			}
+			if (!install_ipip_ale(this, entry->local, entry->remote, NULL,
+								  FALSE, IPPROTO_IPIP, &entry->ip_ipv4_out))
+			{
+				return FALSE;
+			}
+		}
+		if (has_v6)
+		{
+			if (!install_ipip_ale(this, entry->local, entry->remote, context,
+								  TRUE, IPPROTO_IPV6, &entry->ip_ipv6_in))
+			{
+				return FALSE;
+			}
+			if (!install_ipip_ale(this, entry->local, entry->remote, NULL,
+								  FALSE, IPPROTO_IPV6, &entry->ip_ipv6_out))
+			{
+				return FALSE;
+			}
+		}
+	}
 	return TRUE;
 }
 
@@ -1583,8 +1728,20 @@ static void WINAPI event_callback(void *user, const FWPM_NET_EVENT1 *event)
 			acquire(this, event->classifyDrop->filterId, local, remote);
 			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_MM_FAILURE:
+			DBG1(DBG_KNL, "WFP MM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeMmFailure->failureErrorCode,
+				 event->ikeMmFailure->mmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_QM_FAILURE:
+			DBG1(DBG_KNL, "WFP QM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeQmFailure->failureErrorCode,
+				 event->ikeQmFailure->qmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IKEEXT_EM_FAILURE:
+			DBG1(DBG_KNL, "WFP EM failure: %R === %R, 0x%08x, filterId %llu",
+				 local, remote, event->ikeEmFailure->failureErrorCode,
+				 event->ikeEmFailure->qmFilterId);
+			break;
 		case FWPM_NET_EVENT_TYPE_IPSEC_KERNEL_DROP:
 			DBG1(DBG_KNL, "IPsec kernel drop: %R === %R, error 0x%08x, "
 				 "SPI 0x%08x, %s filterId %llu", local, remote,
