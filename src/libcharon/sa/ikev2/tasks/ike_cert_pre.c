@@ -229,12 +229,12 @@ static void process_x509(cert_payload_t *payload, auth_cfg_t *auth,
 			return;
 		}
 		url = strdup(url);
-		if (first)
+		if (*first)
 		{	/* first URL is for an end entity certificate */
 			DBG1(DBG_IKE, "received hash-and-url for end entity cert \"%s\"",
 				 url);
 			auth->add(auth, AUTH_HELPER_SUBJECT_HASH_URL, url);
-			first = FALSE;
+			*first = FALSE;
 		}
 		else
 		{
