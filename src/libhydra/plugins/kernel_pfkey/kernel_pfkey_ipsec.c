@@ -1680,7 +1680,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 	else
 	{
+		/* Linux interprets sadb_sa_replay as number of packets/bits in the
+		 * replay window, whereas on BSD it's the size of the window in bytes */
+#ifdef __linux__
 		sa->sadb_sa_replay = min(replay_window, 32);
+#else
+		sa->sadb_sa_replay = (replay_window + 7) / 8;
+#endif
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
 		sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 	}
