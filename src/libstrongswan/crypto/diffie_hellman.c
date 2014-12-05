@@ -439,7 +439,7 @@ void diffie_hellman_init()
 {
 	int i;
 
-	if (lib->settings->get_int(lib->settings,
+	if (lib->settings->get_bool(lib->settings,
 					"%s.dh_exponent_ansi_x9_42", TRUE, lib->ns))
 	{
 		for (i = 0; i < countof(dh_params); i++)
@@ -463,7 +463,7 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
 			if (!dh_params[i].public.exp_len)
 			{
 				if (!dh_params[i].public.subgroup.len &&
-					lib->settings->get_int(lib->settings,
+					lib->settings->get_bool(lib->settings,
 									"%s.dh_exponent_ansi_x9_42", TRUE, lib->ns))
 				{
 					dh_params[i].public.exp_len = dh_params[i].public.prime.len;
