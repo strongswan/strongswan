@@ -13,6 +13,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/signcrl.c \
 	commands/acert.c \
 	commands/pkcs7.c \
+	commands/pkcs12.c \
 	commands/verify.c
 
 pki_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la

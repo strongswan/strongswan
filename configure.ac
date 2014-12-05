@@ -1790,6 +1790,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---issue.1
 	src/pki/man/pki---keyid.1
 	src/pki/man/pki---pkcs7.1
+	src/pki/man/pki---pkcs12.1
 	src/pki/man/pki---print.1
 	src/pki/man/pki---pub.1
 	src/pki/man/pki---req.1
