@@ -12,6 +12,13 @@
   same NAT device for client-initiated flows. A common use case is to protect
   L2TP/IPsec, as supported by some systems.
 
+- The forecast plugin can forward broadcast and multicast messages between
+  connected clients and a LAN. For CHILD_SA using unique marks, it sets up
+  the required Netfilter rules and uses a multicast/broadcast listener that
+  forwards such messages to all connected clients. This plugin is designed for
+  Windows 7 IKEv2 clients, which announces its services over the tunnel if the
+  negotiated IPsec policy allows it.
+
 
 strongswan-5.2.2
 ----------------
