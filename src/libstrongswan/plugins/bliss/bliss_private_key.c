@@ -118,7 +118,8 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	uint16_t q, q2, p, p2, *c_indices, tests = 0;
 	uint32_t *ay;
 	int32_t *y1, *y2, *z1, *z2, *u, *s1c, *s2c;
-	int32_t y1_min, y1i, y1_max, y2_min, y2i, y2_max, scalar, norm, ui;
+	int32_t y1_min = 0, y1i, y1_max = 0, y2_min = 0, y2i, y2_max = 0;
+	int32_t scalar, norm, ui;
 	int16_t *ud, *uz2d, *z2d, value;
 	int i, n;
 	size_t seed_len;
