@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +23,7 @@
 #include <fcntl.h>
 
 #include <utils/debug.h>
+#include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
 
 /**
@@ -241,6 +243,13 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc)
 static callback_cred_t *cb_set;
 
 /**
+ * Credential set to cache entered secrets
+ */
+static mem_cred_t *cb_creds;
+
+static shared_key_type_t prompted;
+
+/**
  * Callback function to receive credentials
  */
 static shared_key_t* cb(void *data, shared_key_type_t type,
@@ -248,7 +257,12 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 						id_match_t *match_me, id_match_t *match_other)
 {
 	char buf[64], *label, *secret = NULL;
+	shared_key_t *shared;
 
+	if (prompted == type)
+	{
+		return NULL;
+	}
 	switch (type)
 	{
 		case SHARED_PIN:
@@ -266,6 +280,7 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 #endif
 	if (secret && strlen(secret))
 	{
+		prompted = type;
 		if (match_me)
 		{
 			*match_me = ID_MATCH_PERFECT;
@@ -274,8 +289,10 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 		{
 			*match_other = ID_MATCH_NONE;
 		}
-		return shared_key_create(type,
-							chunk_clone(chunk_create(secret, strlen(secret))));
+		shared = shared_key_create(type, chunk_clone(chunk_from_str(secret)));
+		/* cache password in case it is required more than once */
+		cb_creds->add_shared(cb_creds, shared, NULL);
+		return shared->get_ref(shared);
 	}
 	return NULL;
 }
@@ -287,6 +304,8 @@ static void add_callback()
 {
 	cb_set = callback_cred_create_shared(cb, NULL);
 	lib->credmgr->add_set(lib->credmgr, &cb_set->set);
+	cb_creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &cb_creds->set);
 }
 
 /**
@@ -294,6 +313,8 @@ static void add_callback()
  */
 static void remove_callback()
 {
+	lib->credmgr->remove_set(lib->credmgr, &cb_creds->set);
+	cb_creds->destroy(cb_creds);
 	lib->credmgr->remove_set(lib->credmgr, &cb_set->set);
 	cb_set->destroy(cb_set);
 }
