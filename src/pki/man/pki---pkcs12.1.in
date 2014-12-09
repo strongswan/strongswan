@@ -7,7 +7,7 @@ pki \-\-pkcs12 \- Provides PKCS#12 functions
 .SH "SYNOPSIS"
 .
 .SY pki\ \-\-pkcs12
-.BR \-\-show
+.BR \-\-list
 .OP \-\-in file
 .OP \-\-debug level
 .YS
@@ -40,8 +40,8 @@ Set debug level, default: 1.
 .BI "\-+, \-\-options " file
 Read command line options from \fIfile\fR.
 .TP
-.BI "\-p, \-\-show"
-Show information about PKCS#12 container, list certificates and keys.
+.BI "\-l, \-\-list"
+List certificates and keys contained in a PKCS#12 container.
 .TP
 .BI "\-i, \-\-in " file
 PKCS#12 input file. If not given the input is read from \fISTDIN\fR.

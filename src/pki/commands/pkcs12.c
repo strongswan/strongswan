@@ -28,9 +28,9 @@ static int show(pkcs12_t *pkcs12)
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	private_key_t *key;
+	int index = 1;
 
-	printf("PKCS#12 contents:\n");
-
+	printf("Certificates:\n");
 	enumerator = pkcs12->create_cert_enumerator(pkcs12);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
@@ -38,18 +38,21 @@ static int show(pkcs12_t *pkcs12)
 
 		if (x509->get_flags(x509) & X509_CA)
 		{
-			printf("  CA certificate \"%Y\"\n", cert->get_subject(cert));
+			printf("[%2d] \"%Y\" (CA)\n", index++, cert->get_subject(cert));
 		}
 		else
 		{
-			printf("  Certificate \"%Y\"\n", cert->get_subject(cert));
+			printf("[%2d] \"%Y\"\n", index++, cert->get_subject(cert));
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	printf("Private keys:\n");
 	enumerator = pkcs12->create_key_enumerator(pkcs12);
 	while (enumerator->enumerate(enumerator, &key))
 	{
-		printf("  %N private key\n", key_type_names, key->get_type(key));
+		printf("[%2d] %N %d bits\n", index++, key_type_names,
+			   key->get_type(key), key->get_keysize(key));
 	}
 	enumerator->destroy(enumerator);
 	return 0;
@@ -65,7 +68,7 @@ static int pkcs12()
 	int res = 1;
 	enum {
 		OP_NONE,
-		OP_SHOW,
+		OP_LIST,
 	} op = OP_NONE;
 
 	while (TRUE)
@@ -77,12 +80,12 @@ static int pkcs12()
 			case 'i':
 				file = arg;
 				continue;
-			case 'p':
+			case 'l':
 				if (op != OP_NONE)
 				{
 					goto invalid;
 				}
-				op = OP_SHOW;
+				op = OP_LIST;
 				continue;
 			case EOF:
 				break;
@@ -93,7 +96,7 @@ static int pkcs12()
 		break;
 	}
 
-	if (op != OP_SHOW)
+	if (op != OP_LIST)
 	{
 		return command_usage(NULL);
 	}
@@ -140,11 +143,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		pkcs12, 'u', "pkcs12", "PKCS#12 functions",
-		{"--show [--in file]"},
+		{"--list [--in file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
-			{"show",	'p', 0, "show info about PKCS#12, print certificates and keys"},
 			{"in",		'i', 1, "input file, default: stdin"},
+			{"list",	'l', 0, "list certificates and keys"},
 		}
 	});
 }
