@@ -133,8 +133,8 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 {
 	private_bliss_signature_t *this;
 	bliss_bitpacker_t *packer;
-	uint32_t z1_sign, z1_mask;
-	uint16_t z2d_sign, z2d_mask, value, z1_bits, z2d_bits;
+	uint32_t z1_sign, z1_mask, value;
+	uint16_t z2d_sign, z2d_mask, z1_bits, z2d_bits;
 	int i;
 
 	z1_bits  = set->z1_bits;

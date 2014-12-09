@@ -45,7 +45,7 @@ struct bliss_bitpacker_t {
 	 * @param bits		Number of bits to be written
 	 * @result			TRUE if value could be written into buffer
 	 */
-	bool (*write_bits)(bliss_bitpacker_t *this, uint16_t value, size_t bits);
+	bool (*write_bits)(bliss_bitpacker_t *this, uint32_t value, size_t bits);
 
 
 	/**
@@ -55,7 +55,7 @@ struct bliss_bitpacker_t {
 	 * @param bits		Number of bits to be read
 	 * @result			TRUE if value could be read from buffer
 	 */
-	bool (*read_bits)(bliss_bitpacker_t *this, uint16_t *value, size_t bits);
+	bool (*read_bits)(bliss_bitpacker_t *this, uint32_t *value, size_t bits);
 
 	/**
 	 * Detach the internal octet buffer and return it

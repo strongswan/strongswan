@@ -17,7 +17,7 @@
 
 #include <bliss_bitpacker.h>
 
-static uint16_t bits[] = { 0, 1, 2, 3, 4, 7, 1, 14, 2, 29, 3, 28, 67};
+static uint32_t bits[] = { 0, 1, 2, 3, 4, 7, 1, 14, 2, 29, 3, 28, 67};
 
 static chunk_t packed_bits = chunk_from_chars(0x6e, 0x71, 0xe1, 0x74,
 											  0x37, 0x21, 0x80);
@@ -30,7 +30,7 @@ START_TEST(test_bliss_sign_bitpacker_write)
 
 	packer = bliss_bitpacker_create(49);
 
-	ck_assert(!packer->write_bits(packer, 0, 17));
+	ck_assert(!packer->write_bits(packer, 0, 33));
 
 	for (i = 0; i < countof(bits); i++)
 	{
@@ -47,20 +47,20 @@ END_TEST
 
 START_TEST(test_bliss_sign_bitpacker_read)
 {
-	uint16_t value;
+	uint32_t value;
 	bliss_bitpacker_t *packer;
 	int i;
 
 	packer = bliss_bitpacker_create_from_data(packed_bits);
 
-	ck_assert(!packer->read_bits(packer, &value, 17));
+	ck_assert(!packer->read_bits(packer, &value, 33));
 
 	for (i = 0; i < countof(bits); i++)
 	{
 		ck_assert(packer->read_bits(packer, &value, 1 + i/2));
 		ck_assert_int_eq(value, bits[i]);
 	}
-	ck_assert(!packer->read_bits(packer, &value, 16));
+	ck_assert(!packer->read_bits(packer, &value, 32));
 
 	packer->destroy(packer);
 }
@@ -69,17 +69,18 @@ END_TEST
 START_TEST(test_bliss_sign_bitpacker_fail)
 {
 	bliss_bitpacker_t *packer;
-	uint16_t value;
+	uint32_t value;
 
-	packer = bliss_bitpacker_create(16);
-	ck_assert(!packer->write_bits(packer, 0, 17));
-	ck_assert( packer->write_bits(packer, 0x7f01, 15));
+	packer = bliss_bitpacker_create(32);
+	ck_assert(!packer->write_bits(packer, 0, 33));
+	ck_assert( packer->write_bits(packer, 0x7f2a3b01, 31));
 	ck_assert(!packer->write_bits(packer, 3,  2));
 	packer->destroy(packer);
 
-	packer = bliss_bitpacker_create_from_data(chunk_from_chars(0x7f, 0x01));
-	ck_assert(!packer->read_bits(packer, &value, 17));
-	ck_assert( packer->read_bits(packer, &value, 15));
+	packer = bliss_bitpacker_create_from_data(
+							chunk_from_chars(0x7f, 0x2a, 0x3b, 0x01));
+	ck_assert(!packer->read_bits(packer, &value, 33));
+	ck_assert( packer->read_bits(packer, &value, 31));
 	ck_assert(!packer->read_bits(packer, &value,  2));
 	packer->destroy(packer);
 }

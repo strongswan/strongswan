@@ -32,9 +32,9 @@ struct private_bliss_bitpacker_t {
 	size_t bits;
 
 	/**
-	 * Bit buffer for up to 16 bits
+	 * Bit buffer for up to 32 bits
 	 */
-	uint16_t bits_buf;
+	uint32_t bits_buf;
 
 	/**
 	 * Bits left in the bit buffer
@@ -60,9 +60,9 @@ METHOD(bliss_bitpacker_t, get_bits, size_t,
 }
 
 METHOD(bliss_bitpacker_t, write_bits, bool,
-	private_bliss_bitpacker_t *this, uint16_t value, size_t bits)
+	private_bliss_bitpacker_t *this, uint32_t value, size_t bits)
 {
-	if (bits > 16)
+	if (bits > 32)
 	{
 		return FALSE;
 	}
@@ -82,21 +82,21 @@ METHOD(bliss_bitpacker_t, write_bits, bool,
 		value &= (1 << (bits - this->bits_left)) - 1;
 		bits -= this->bits_left;
 
-		if (this->pos.len < 4)
+		if (this->pos.len < 8)
 		{
 			return FALSE;
 		}
-		htoun16(this->pos.ptr, this->bits_buf);
-		this->pos = chunk_skip(this->pos, 2);
+		htoun32(this->pos.ptr, this->bits_buf);
+		this->pos = chunk_skip(this->pos, 4);
 		this->bits_buf = 0;
-		this->bits_left = 16;
+		this->bits_left = 32;
 	}
 }
 
 METHOD(bliss_bitpacker_t, read_bits, bool,
-	private_bliss_bitpacker_t *this, uint16_t *value, size_t bits)
+	private_bliss_bitpacker_t *this, uint32_t *value, size_t bits)
 {
-	if (bits > 16)
+	if (bits > 32)
 	{
 		return FALSE;
 	}
@@ -106,13 +106,13 @@ METHOD(bliss_bitpacker_t, read_bits, bool,
 	{
 		if (this->bits_left == 0)
 		{
-			if (this->pos.len < 2)
+			if (this->pos.len < 4)
 			{
 				return FALSE;
 			}
-			this->bits_buf = untoh16(this->pos.ptr);
-			this->pos = chunk_skip(this->pos, 2);
-			this->bits_left = 16;
+			this->bits_buf = untoh32(this->pos.ptr);
+			this->pos = chunk_skip(this->pos, 4);
+			this->bits_left = 32;
 		}
 		if (bits <= this->bits_left)
 		{
@@ -133,8 +133,8 @@ METHOD(bliss_bitpacker_t, extract_buf, chunk_t,
 {
 	chunk_t buf;
 
-	htoun16(this->pos.ptr, this->bits_buf);
-	this->pos.len -= 2;
+	htoun32(this->pos.ptr, this->bits_buf);
+	this->pos.len -= 4;
 	buf = this->buf;
 	buf.len = this->buf.len - this->pos.len - this->bits_left/8;
 	this->buf = this->pos = chunk_empty;
@@ -164,8 +164,8 @@ bliss_bitpacker_t *bliss_bitpacker_create(size_t max_bits)
 			.extract_buf = _extract_buf,
 			.destroy = _destroy,
 		},
-		.bits_left = 16,
-		.buf = chunk_alloc(round_up(max_bits, 16)/8),
+		.bits_left = 32,
+		.buf = chunk_alloc(round_up(max_bits, 32)/8),
 	);
 
 	this->pos = this->buf;
@@ -189,14 +189,11 @@ bliss_bitpacker_t *bliss_bitpacker_create_from_data(chunk_t data)
 			.destroy = _destroy,
 		},
 		.bits = 8 * data.len,
-		.buf = chunk_alloc(round_up(data.len, 2)),
+		.buf = chunk_alloc(round_up(data.len, 4)),
 	);
 
+	memset(this->buf.ptr + this->buf.len - 4, 0x00, 4);
 	memcpy(this->buf.ptr, data.ptr, data.len);
-	if (this->buf.len > data.len)
-	{
-		*(this->buf.ptr + data.len) = 0x00;
-	}
 	this->pos = this->buf;
 
 	return &this->public;

@@ -388,7 +388,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 								uint32_t **pubkey)
 {
 	bliss_bitpacker_t *packer;
-	uint16_t coefficient;
+	uint32_t coefficient;
 	int i;
 
 	/* skip initial bit string octet defining unused bits */
@@ -405,7 +405,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 	for (i = 0; i < set->n; i++)
 	{
 		packer->read_bits(packer, &coefficient, set->q_bits);
-		(*pubkey)[i] = (uint32_t)coefficient;
+		(*pubkey)[i] = coefficient;
 	}
 	packer->destroy(packer);
 
