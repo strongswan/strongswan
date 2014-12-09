@@ -25,6 +25,7 @@ typedef enum bliss_param_set_id_t bliss_param_set_id_t;
 typedef struct bliss_param_set_t bliss_param_set_t;
 
 #include "bliss_fft_params.h"
+#include "bliss_huffman_code.h"
 
 #include <library.h>
 
@@ -111,6 +112,11 @@ struct bliss_param_set_t {
 	uint32_t nks_max;
 
 	/**
+	 * Standard deviation sigma
+	 */
+	uint16_t sigma;
+
+	/**
 	 *  k_sigma = ceiling[ sqrt(2*ln 2) * sigma ]
 	 */
 	uint16_t k_sigma;
@@ -164,6 +170,7 @@ struct bliss_param_set_t {
 	 * B_verify bound
 	 */
 	uint32_t B_l2;
+
 };
 
 /**

@@ -21,9 +21,30 @@ libstrongswan_bliss_la_SOURCES = \
 	bliss_bitpacker.h bliss_bitpacker.c \
 	bliss_fft.h bliss_fft.c \
 	bliss_fft_params.h bliss_fft_params.c \
+	bliss_huffman_code.h bliss_huffman_code.c \
+	bliss_huffman_code_1.c bliss_huffman_code_3.c bliss_huffman_code_4.c \
 	bliss_sampler.h bliss_sampler.c
 
 libstrongswan_bliss_la_LDFLAGS = -module -avoid-version
+
+noinst_PROGRAMS = bliss_huffman
+
+bliss_huffman_SOURCES = bliss_huffman.c
+bliss_huffman_LDADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la -lm \
+	bliss_param_set.o bliss_fft_params.o
+
+bliss_huffman_code_1.c :	bliss_huffman bliss_huffman_code.h
+	$(AM_V_GEN) \
+	./bliss_huffman 1 8 > $@
+
+bliss_huffman_code_3.c :	bliss_huffman bliss_huffman_code.h
+	$(AM_V_GEN) \
+	./bliss_huffman 3 16 > $@
+
+bliss_huffman_code_4.c :	bliss_huffman bliss_huffman_code.h
+	$(AM_V_GEN) \
+	./bliss_huffman 4 32 > $@
 
 TESTS = bliss_tests
 
