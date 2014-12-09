@@ -755,6 +755,33 @@ METHOD(bus_t, ike_rekey, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, ike_update, void,
+	private_bus_t *this, ike_sa_t *ike_sa, bool local, host_t *new)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_update)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_update(entry->listener, ike_sa, local, new);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, ike_reestablish_pre, void,
 	private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 {
@@ -1006,6 +1033,7 @@ bus_t *bus_create()
 			.child_keys = _child_keys,
 			.ike_updown = _ike_updown,
 			.ike_rekey = _ike_rekey,
+			.ike_update = _ike_update,
 			.ike_reestablish_pre = _ike_reestablish_pre,
 			.ike_reestablish_post = _ike_reestablish_post,
 			.child_updown = _child_updown,

@@ -128,6 +128,17 @@ struct listener_t {
 	bool (*ike_rekey)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
 
 	/**
+	 * Hook called for IKE_SA peer endpoint updates.
+	 *
+	 * @param ike_sa	updated IKE_SA, having old endpoints set
+	 * @param local		TRUE if local endpoint gets updated, FALSE for remote
+	 * @param new		new endpoint address and port
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_update)(listener_t *this, ike_sa_t *ike_sa,
+					   bool local, host_t *new);
+
+	/**
 	 * Hook called when an initiator reestablishes an IKE_SA.
 	 *
 	 * This is invoked right after creating the new IKE_SA and setting the

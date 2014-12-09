@@ -382,6 +382,15 @@ struct bus_t {
 	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
 
 	/**
+	 * IKE_SA peer endpoint update hook.
+	 *
+	 * @param ike_sa	updated IKE_SA, having old endpoints set
+	 * @param local		TRUE if local endpoint gets updated, FALSE for remote
+	 * @param new		new endpoint address and port
+	 */
+	void (*ike_update)(bus_t *this, ike_sa_t *ike_sa, bool local, host_t *new);
+
+	/**
 	 * IKE_SA reestablishing hook (before resolving hosts).
 	 *
 	 * @param old		reestablished and obsolete IKE_SA
