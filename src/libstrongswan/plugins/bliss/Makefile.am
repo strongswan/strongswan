@@ -32,6 +32,7 @@ check_PROGRAMS = $(TESTS)
 bliss_tests_SOURCES = \
 	suites/test_bliss_fft.c \
 	suites/test_bliss_bitpacker.c \
+	suites/test_bliss_sampler.c \
 	suites/test_bliss_sign.c \
 	bliss_fft_params.c \
 	bliss_fft.c \
