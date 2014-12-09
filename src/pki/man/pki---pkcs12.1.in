@@ -13,6 +13,13 @@ pki \-\-pkcs12 \- Provides PKCS#12 functions
 .YS
 .
 .SY pki\ \-\-pkcs12
+.BI \-\-export\~ index
+.OP \-\-in file
+.OP \-\-outform encoding
+.OP \-\-debug level
+.YS
+.
+.SY pki\ \-\-pkcs12
 .BI \-\-options\~ file
 .YS
 .
@@ -42,6 +49,10 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-l, \-\-list"
 List certificates and keys contained in a PKCS#12 container.
+.TP
+.BI "\-e, \-\-export " index
+Export the credential with the given \fIindex\fR.  Use \fI\-\-list\fR to
+determine the index of certificates and keys.
 .TP
 .BI "\-i, \-\-in " file
 PKCS#12 input file. If not given the input is read from \fISTDIN\fR.

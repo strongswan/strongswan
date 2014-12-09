@@ -58,17 +58,88 @@ static int show(pkcs12_t *pkcs12)
 	return 0;
 }
 
+static int export(pkcs12_t *pkcs12, int index, char *outform)
+{
+	cred_encoding_type_t form;
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	private_key_t *key;
+	chunk_t encoding;
+	int i = 1;
+
+	enumerator = pkcs12->create_cert_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		if (i++ == index)
+		{
+			form = CERT_ASN1_DER;
+			if (outform && !get_form(outform, &form, CRED_CERTIFICATE))
+			{
+				return command_usage("invalid output format");
+			}
+			if (cert->get_encoding(cert, form, &encoding))
+			{
+				set_file_mode(stdout, form);
+				if (fwrite(encoding.ptr, encoding.len, 1, stdout) == 1)
+				{
+					free(encoding.ptr);
+					enumerator->destroy(enumerator);
+					return 0;
+				}
+				free(encoding.ptr);
+			}
+			fprintf(stderr, "certificate export failed\n");
+			enumerator->destroy(enumerator);
+			return 1;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = pkcs12->create_key_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &key))
+	{
+		if (i++ == index)
+		{
+			form = PRIVKEY_ASN1_DER;
+			if (outform && !get_form(outform, &form, CRED_PRIVATE_KEY))
+			{
+				return command_usage("invalid output format");
+			}
+			if (key->get_encoding(key, form, &encoding))
+			{
+				set_file_mode(stdout, form);
+				if (fwrite(encoding.ptr, encoding.len, 1, stdout) == 1)
+				{
+					free(encoding.ptr);
+					enumerator->destroy(enumerator);
+					return 0;
+				}
+				free(encoding.ptr);
+			}
+			fprintf(stderr, "private key export failed\n");
+			enumerator->destroy(enumerator);
+			return 0;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	fprintf(stderr, "invalid index %d\n", index);
+	return 1;
+}
+
+
 /**
  * Handle PKCs#12 containers
  */
 static int pkcs12()
 {
-	char *arg, *file = NULL;
+	char *arg, *file = NULL, *outform = NULL;
 	pkcs12_t *p12 = NULL;
-	int res = 1;
+	int res = 1, index = 0;
 	enum {
 		OP_NONE,
 		OP_LIST,
+		OP_EXPORT,
 	} op = OP_NONE;
 
 	while (TRUE)
@@ -87,6 +158,17 @@ static int pkcs12()
 				}
 				op = OP_LIST;
 				continue;
+			case 'e':
+				if (op != OP_NONE)
+				{
+					goto invalid;
+				}
+				op = OP_EXPORT;
+				index = atoi(arg);
+				continue;
+			case 'f':
+				outform = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -94,11 +176,6 @@ static int pkcs12()
 				return command_usage("invalid --pkcs12 option");
 		}
 		break;
-	}
-
-	if (op != OP_LIST)
-	{
-		return command_usage(NULL);
 	}
 
 	if (file)
@@ -127,7 +204,19 @@ static int pkcs12()
 		goto end;
 	}
 
-	res = show(p12);
+	switch (op)
+	{
+		case OP_LIST:
+			res = show(p12);
+			break;
+		case OP_EXPORT:
+			res = export(p12, index, outform);
+			break;
+		default:
+			p12->container.destroy(&p12->container);
+			return command_usage(NULL);
+	}
+
 end:
 	if (p12)
 	{
@@ -143,11 +232,14 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		pkcs12, 'u', "pkcs12", "PKCS#12 functions",
-		{"--list [--in file]"},
+		{"--export index|--list [--in file]",
+		 "[--outform der|pem|dnskey|sshkey]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"list",	'l', 0, "list certificates and keys"},
+			{"export",	'e', 1, "export the credential with the given index"},
+			{"outform",	'f', 1, "encoding of extracted public key, default: der"},
 		}
 	});
 }
