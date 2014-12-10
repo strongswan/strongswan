@@ -19,6 +19,7 @@
 #include "bliss_utils.h"
 #include "bliss_sampler.h"
 #include "bliss_signature.h"
+#include "bliss_bitpacker.h"
 #include "bliss_fft.h"
 
 #include <crypto/mgf1/mgf1_bitspender.h>
@@ -447,20 +448,47 @@ METHOD(private_key_t, get_encoding, bool,
 		case PRIVKEY_ASN1_DER:
 		case PRIVKEY_PEM:
 		{
-			chunk_t s1_chunk, s2_chunk, pubkey;
+			chunk_t s1, s2, pubkey;
+			bliss_bitpacker_t *packer;
+			size_t s_bits;
+			int8_t value;
 			bool success = TRUE;
+			int i;
 
 			pubkey = bliss_public_key_encode(this->A, this->set);
 
-			/* Build private key as two polynomials with 8 bit coefficients */
-			s1_chunk = chunk_create(this->s1, this->set->n);
-			s2_chunk = chunk_create(this->s2, this->set->n);
+			/* Use either 2 or 3 bits per array element */
+			s_bits = 2 + (this->set->non_zero2 > 0);
+
+			/* Encode secret s1 */
+			packer = bliss_bitpacker_create(s_bits * this->set->n);
+			for (i = 0; i < this->set->n; i++)
+			{
+				packer->write_bits(packer, this->s1[i], s_bits);
+			}
+			s1 = packer->extract_buf(packer);
+			packer->destroy(packer);
+
+			/* Encode secret s2 */
+			packer = bliss_bitpacker_create(s_bits * this->set->n);
+			for (i = 0; i < this->set->n; i++)
+			{
+				value = this->s2[i];
+				if (i == 0)
+				{
+					value -= 1;
+				}
+				value /= 2;
+				packer->write_bits(packer, value, s_bits);
+			}
+			s2 = packer->extract_buf(packer);
+			packer->destroy(packer);
 
 			*encoding = asn1_wrap(ASN1_SEQUENCE, "mmss",
 							asn1_build_known_oid(this->set->oid),
 							asn1_bitstring("m", pubkey),
-							asn1_simple_object(ASN1_OCTET_STRING, s1_chunk),
-							asn1_simple_object(ASN1_OCTET_STRING, s2_chunk)
+							asn1_bitstring("m", s1),
+							asn1_bitstring("m", s2)
 						);
 			if (type == PRIVKEY_PEM)
 			{
@@ -948,12 +976,12 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
  * ASN.1 definition of a BLISS private key
  */
 static const asn1Object_t privkeyObjects[] = {
-	{ 0, "BLISSPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "keyType",			ASN1_OID,          ASN1_BODY }, /*  1 */
-	{ 1,   "public",			ASN1_BIT_STRING,   ASN1_BODY }, /*  2 */
-	{ 1,   "secret1",			ASN1_OCTET_STRING, ASN1_BODY }, /*  3 */
-	{ 1,   "secret2",			ASN1_OCTET_STRING, ASN1_BODY }, /*  4 */
-	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
+	{ 0, "BLISSPrivateKey",		ASN1_SEQUENCE,   ASN1_NONE }, /*  0 */
+	{ 1,   "keyType",			ASN1_OID,        ASN1_BODY }, /*  1 */
+	{ 1,   "public",			ASN1_BIT_STRING, ASN1_BODY }, /*  2 */
+	{ 1,   "secret1",			ASN1_BIT_STRING, ASN1_BODY }, /*  3 */
+	{ 1,   "secret2",			ASN1_BIT_STRING, ASN1_BODY }, /*  4 */
+	{ 0, "exit",				ASN1_EOC,        ASN1_EXIT }
 };
 #define PRIV_KEY_TYPE			1
 #define PRIV_KEY_PUBLIC			2
@@ -967,9 +995,12 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 {
 	private_bliss_private_key_t *this;
 	chunk_t key = chunk_empty, object;
+	bliss_bitpacker_t *packer;
 	asn1_parser_t *parser;
+	size_t s_bits = 0;
+	uint32_t s_sign, s_mask, value;
 	bool success = FALSE;
-	int objectID, oid;
+	int objectID, oid, i;
 
 	while (TRUE)
 	{
@@ -1010,6 +1041,11 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				{
 					goto end;
 				}
+
+				/* Use either 2 or 3 bits per array element */
+				s_bits = 2 + (this->set->non_zero2 > 0);
+				s_sign = 1 << (s_bits - 1);
+				s_mask = ((1 << (32 - s_bits)) - 1) << s_bits;
 				break;
 			case PRIV_KEY_PUBLIC:
 				if (!bliss_public_key_from_asn1(object, this->set, &this->A))
@@ -1018,20 +1054,42 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				}
 				break;
 			case PRIV_KEY_SECRET1:
-				if (object.len != this->set->n)
+				if (object.len != 1 + (s_bits * this->set->n + 7)/8)
 				{
 					goto end;
 				}
 				this->s1 = malloc(this->set->n);
-				memcpy(this->s1, object.ptr, object.len);
+
+				/* Skip unused bits octet */
+				object = chunk_skip(object, 1);
+				packer = bliss_bitpacker_create_from_data(object);
+				for (i = 0; i < this->set->n; i++)
+				{
+					packer->read_bits(packer, &value, s_bits);
+					this->s1[i] = value & s_sign ? value | s_mask : value;
+				}
+				packer->destroy(packer);
 				break;
 			case PRIV_KEY_SECRET2:
-				if (object.len != this->set->n)
+				if (object.len != 1 + (s_bits * this->set->n + 7)/8)
 				{
 					goto end;
 				}
 				this->s2 = malloc(this->set->n);
-				memcpy(this->s2, object.ptr, object.len);
+
+				/* Skip unused bits octet */
+				object = chunk_skip(object, 1);
+				packer = bliss_bitpacker_create_from_data(object);
+				for (i = 0; i < this->set->n; i++)
+				{
+					packer->read_bits(packer, &value, s_bits);
+					this->s2[i] = 2*(value & s_sign ? value | s_mask : value);
+					if (i == 0)
+					{
+						this->s2[0] += 1;
+					}
+				}
+				packer->destroy(packer);
 				break;
 		}
 	}
