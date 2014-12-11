@@ -81,16 +81,14 @@ static double code_node(node_t *node, int *index, uint8_t bits, uint32_t code)
 
 }
 
-#define NO_NODE		-1
-#define NO_TUPLE	-1
-
 static void write_node(node_t *node)
 {
 	int16_t node_0, node_1, tuple;
 
-	node_0 = node->l ? node->l->index : NO_NODE;
-	node_1 = node->r ? node->r->index : NO_NODE;
-	tuple = node->tuple ? node->tuple->index : NO_TUPLE;
+	node_0 = node->l ? node->l->index : BLISS_HUFFMAN_CODE_NO_NODE;
+	node_1 = node->r ? node->r->index : BLISS_HUFFMAN_CODE_NO_NODE;
+	tuple = node->tuple ? node->tuple->index : BLISS_HUFFMAN_CODE_NO_TUPLE;
+
 	printf("\t{ %3d, %3d, %3d },  /* %3d: ", node_0, node_1, tuple, node->index);
 
 	if (node->tuple)

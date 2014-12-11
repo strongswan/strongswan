@@ -34,6 +34,9 @@ struct bliss_huffman_code_tuple_t {
 	uint16_t bits;
 };
 
+#define BLISS_HUFFMAN_CODE_NO_TUPLE		-1
+#define BLISS_HUFFMAN_CODE_NO_NODE		-1
+
 struct bliss_huffman_code_node_t {
 	int16_t node_0;
 	int16_t node_1;

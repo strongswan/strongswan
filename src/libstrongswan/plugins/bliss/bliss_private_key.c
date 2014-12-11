@@ -369,13 +369,18 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 		{
 			continue;
 		}
+
+		*signature = sig->get_encoding(sig);
+		if (signature->len == 0)
+		{
+			DBG1(DBG_LIB, "inefficient Huffman coding of signature");
+			continue;
+		}
 		DBG2(DBG_LIB, "signature generation needed %u round%s", tests,
 					  (tests == 1) ? "" : "s");
 		break;
 	}
 	success = TRUE;
-
-	*signature = sig->get_encoding(sig);
 
 end:
 	/* cleanup */

@@ -15,6 +15,7 @@
 
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
+#include "bliss_huffman_coder.h"
 
 
 typedef struct private_bliss_signature_t private_bliss_signature_t;
@@ -54,34 +55,61 @@ METHOD(bliss_signature_t, get_encoding, chunk_t,
 	private_bliss_signature_t *this)
 {
 	bliss_bitpacker_t *packer;
+	bliss_huffman_coder_t *coder;
+	bliss_huffman_code_t *code;
+	int32_t z1;
+	uint32_t z1_sign;
 	uint16_t z2d_bits;
-	chunk_t encoding;
+	chunk_t encoding = chunk_empty;
 	int i;
 
 	z2d_bits = this->set->z1_bits - this->set->d;
 
+	/* Get Huffman code for this BLISS parameter set */
+	code = bliss_huffman_code_get_by_id(this->set->id);
+	if (!code)
+	{
+		DBG1(DBG_LIB, "no Huffman code found for parameter set %N",
+			 bliss_param_set_id_names, this->set->id);
+		return chunk_empty;
+	}
+
 	packer = bliss_bitpacker_create(this->set->n * this->set->z1_bits +
 									this->set->n * z2d_bits +
 									this->set->kappa * this->set->n_bits);
+	coder = bliss_huffman_coder_create(code, packer);
 
 	for (i = 0; i < this->set->n; i++)
 	{
-		packer->write_bits(packer, this->z1[i], this->set->z1_bits);
-	}
-	for (i = 0; i < this->set->n; i++)
-	{
-		packer->write_bits(packer, this->z2d[i], z2d_bits);
+		/* determine and remove the sign of z1[i]*/
+		z1_sign = this->z1[i] < 0;
+		z1 = z1_sign ? -this->z1[i] : this->z1[i];
+
+		if (!packer->write_bits(packer, z1_sign, 1) ||
+			!packer->write_bits(packer, z1 & 0xff, 8) ||
+			!coder->encode(coder, z1 >> 8, this->z2d[i]))
+		{
+			goto end;
+		}
 	}
 	for (i = 0; i < this->set->kappa; i++)
 	{
-		packer->write_bits(packer, this->c_indices[i], this->set->n_bits);
+		if (!packer->write_bits(packer, this->c_indices[i], this->set->n_bits))
+		{
+			goto end;
+		}
 	}
 	encoding = packer->extract_buf(packer);
 
+	DBG2(DBG_LIB, "efficiency of Huffman coder is %6.4f bits/tuple (%u bits)",
+				   coder->get_bits(coder)/(double)(this->set->n), 
+				   coder->get_bits(coder));
 	DBG2(DBG_LIB, "generated BLISS signature (%u bits encoded in %u bytes)",
 				   packer->get_bits(packer), encoding.len);
-	packer->destroy(packer);
 
+	end:
+	coder->destroy(coder);
+	packer->destroy(packer);
 	return encoding;
 }
 
@@ -133,17 +161,19 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 {
 	private_bliss_signature_t *this;
 	bliss_bitpacker_t *packer;
-	uint32_t z1_sign, z1_mask, value;
-	uint16_t z2d_sign, z2d_mask, z1_bits, z2d_bits;
+	bliss_huffman_coder_t *coder;
+	bliss_huffman_code_t *code;
+	uint32_t z1_sign, z1_low, value;
+	int32_t z1;
+	int16_t z2;
 	int i;
 
-	z1_bits  = set->z1_bits;
-	z2d_bits = set->z1_bits - set->d;
-
-	if (8 * encoding.len < set->n * set->z1_bits + set->n * z2d_bits +
-						   set->kappa * set->n_bits)
+	/* Get Huffman code for this BLISS parameter set */
+	code = bliss_huffman_code_get_by_id(set->id);
+	if (!code)
 	{
-		DBG1(DBG_LIB, "incorrect BLISS signature size");
+		DBG1(DBG_LIB, "no Huffman code found for parameter set %N",
+			 bliss_param_set_id_names, set->id);
 		return NULL;
 	}
 
@@ -160,27 +190,33 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 	);
 
 	packer = bliss_bitpacker_create_from_data(encoding);
-
-	z1_sign =   1 << (z1_bits - 1);
-	z1_mask = ((1 << (32 - z1_bits)) - 1) << z1_bits;
+	coder = bliss_huffman_coder_create(code, packer);
 
 	for (i = 0; i < set->n; i++)
 	{
-		packer->read_bits(packer, &value, z1_bits);
-		this->z1[i] = value & z1_sign ? value | z1_mask : value;
+		if (!packer->read_bits(packer, &z1_sign, 1) ||
+			!packer->read_bits(packer, &z1_low, 8) ||
+			!coder->decode(coder, &z1, &z2))
+		{
+			coder->destroy(coder);
+			packer->destroy(packer);
+			destroy(this);
+			return NULL;
+		}
+		z1 = (z1 << 8) + z1_low;
+		this->z1[i] = z1_sign ? -z1 : z1;
+		this->z2d[i] = z2;
 	}
+	coder->destroy(coder);
 
-	z2d_sign =   1 << (z2d_bits - 1);
-	z2d_mask = ((1 << (16 - z2d_bits)) - 1) << z2d_bits;
-
-	for (i = 0; i < set->n; i++)
-	{
-		packer->read_bits(packer, &value, z2d_bits);
-		this->z2d[i] = value & z2d_sign ? value | z2d_mask : value;
-	}
 	for (i = 0; i < set->kappa; i++)
 	{
-		packer->read_bits(packer, &value, set->n_bits);
+		if (!packer->read_bits(packer, &value, set->n_bits))
+		{
+			packer->destroy(packer);
+			destroy(this);
+			return NULL;
+		}
 		this->c_indices[i] = value;
 	}
 	packer->destroy(packer);

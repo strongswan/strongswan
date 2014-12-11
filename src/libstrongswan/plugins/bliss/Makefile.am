@@ -23,6 +23,7 @@ libbliss_la_SOURCES = \
 	bliss_fft.h bliss_fft.c \
 	bliss_huffman_code.h bliss_huffman_code.c \
 	bliss_huffman_code_1.c bliss_huffman_code_3.c bliss_huffman_code_4.c \
+	bliss_huffman_coder.h bliss_huffman_coder.c \
 	bliss_sampler.h bliss_sampler.c
 libbliss_la_LIBADD = libbliss-params.la
 
