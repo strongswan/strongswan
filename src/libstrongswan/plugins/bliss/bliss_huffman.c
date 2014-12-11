@@ -110,13 +110,8 @@ static void write_node(node_t *node)
 	}
 }
 
-static void write_code_tables(int bliss_type, int n_z1, int n_z2, node_t *nodes,
-							  tuple_t **tuples)
+static void write_header(void)
 {
-	int index, i, k;
-	uint32_t bit;
-	double code_length;
-
 	printf("/*\n");
 	printf(" * Copyright (C) 2014 Andreas Steffen\n");
 	printf(" * HSR Hochschule fuer Technik Rapperswil\n");
@@ -127,6 +122,15 @@ static void write_code_tables(int bliss_type, int n_z1, int n_z2, node_t *nodes,
 		   " bliss_huffman utility\n");
 	printf(" * Do not edit manually!\n");
 	printf(" */\n\n");
+};
+
+static void write_code_tables(int bliss_type, int n_z1, int n_z2, node_t *nodes,
+							  tuple_t **tuples)
+{
+	int index, i, k;
+	uint32_t bit;
+	double code_length;
+
 	printf("#include \"bliss_huffman_code.h\"\n\n");
 
 	printf("static bliss_huffman_code_node_t nodes[] = {\n");
@@ -237,6 +241,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "bliss type %d unsupported\n");
 		exit(1);
 	}
+	write_header();
+	printf("/*\n");
+	printf(" * Design: sigma = %u\n", set->sigma);
+	printf(" *\n");
 
 	t = 1/(sqrt(2) * set->sigma);
 
@@ -256,17 +264,16 @@ int main(int argc, char *argv[])
 	}
 
 	/* Normalize and print the probability distribution for z1 */
-	fprintf(stderr, "i   p_z1[i]\n");
+	printf(" *   i  p_z1[i]\n");
 	x0 = 0;
 
 	for (i = 0; i < i_top; i++)
 	{
 		p_z1[i] /= p_sum;
-		fprintf(stderr, "%1d   %18.16f     %4.0f .. %4.0f\n", i, p_z1[i],
-						x0, x_z1[i]);
+		printf(" *  %2d  %18.16f      %4.0f .. %4.0f\n", i, p_z1[i], x0, x_z1[i]);
 		x0 = x_z1[i];
 	}
-	fprintf(stderr, "\n");
+	printf(" *\n");
 
 	/* Probability distribution for z2 */
 	dx = 1 << set->d;
@@ -292,31 +299,31 @@ int main(int argc, char *argv[])
 	}
 
 	/* Print the probability distribution for z2 */
-	fprintf(stderr, " k  p_z2[k]  dx = %d\n", dx);
+	printf(" *   k  p_z2[k]  dx = %d\n", dx);
 
 	for (k = 1 - k_top; k < k_top; k++)
 	{
 
-		fprintf(stderr, "%2d  %18.16f  ",k, p_z2[abs(k)]);
+		printf(" *  %2d  %18.16f  ",k, p_z2[abs(k)]);
 		if (k < 0)
 		{
-			fprintf(stderr, "%7.1f ..%7.1f\n", -x_z2[-k], -x_z2[-k-1]);
+			printf(" %7.1f ..%7.1f\n", -x_z2[-k], -x_z2[-k-1]);
 		}
 		else if (k == 0)
 		{
-			fprintf(stderr, "%7.1f ..%7.1f\n", -x_z2[k], x_z2[k]);
+			printf(" %7.1f ..%7.1f\n", -x_z2[k], x_z2[k]);
 		}
 		else
 		{
-			fprintf(stderr, "%7.1f ..%7.1f\n", x_z2[k-1], x_z2[k]);
+			printf(" %7.1f ..%7.1f\n", x_z2[k-1], x_z2[k]);
 		}
 	}
-	fprintf(stderr, "\n");
+	printf(" *\n");
 
 	/* Compute probabilities of tuples (z1, z2) */
 	INIT(node_list);
 	node_last = node_list;
-	fprintf(stderr, "(i, k)  p\n");
+	printf(" *  (i, k)  p\n");
 	p_sum =0;
 	index = 0;
 
@@ -325,7 +332,7 @@ int main(int argc, char *argv[])
 		for (k = 1 - k_top; k < k_top; k++)
 		{
 			p = p_z1[i] * p_z2[abs(k)];
-			fprintf(stderr, "(%1d,%2d)  %18.16f\n", i, k, p);
+			printf(" *  (%1d,%2d)  %18.16f\n", i, k, p);
 			p_sum += p;
 			entropy += -log(p) * p;
 
@@ -343,10 +350,14 @@ int main(int argc, char *argv[])
 			node_last->next = node;
 			node_last = node;
 		}
+		printf(" *\n");
 	}
 	entropy /= log(2);
-	fprintf(stderr, "        %18.16f, entropy = %6.4f bits/tuple (%d bits)\n\n",
-							 p_sum, entropy, (int)(512 * entropy));
+	printf(" *  p_sum   %18.16f\n", p_sum);
+	printf(" *\n");
+	printf(" * entropy = %6.4f bits/tuple (%d bits)\n",
+			   entropy, (int)(512 * entropy));
+	printf(" */\n\n");
 
 	/* Build Huffman tree */
 	while (node_list->next != node_last)
