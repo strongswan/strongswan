@@ -149,19 +149,26 @@ static void load_configs(private_eap_radius_plugin_t *this)
 			continue;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
-				"%s.plugins.eap-radius.servers.%s.nas_identifier", "strongSwan",
+				"%s.plugins.eap-radius.servers.%s.nas_identifier",
+					lib->settings->get_str(lib->settings,
+						"%s.plugins.eap-radius.nas_identifier", "strongSwan",
+						lib->ns),
 				lib->ns, section);
 		auth_port = lib->settings->get_int(lib->settings,
 			"%s.plugins.eap-radius.servers.%s.auth_port",
 				lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-radius.servers.%s.port",
-					AUTH_PORT, lib->ns, section),
+						lib->settings->get_int(lib->settings,
+							"%s.plugins.eap-radius.port", AUTH_PORT, lib->ns),
+					lib->ns, section),
 			lib->ns, section);
 		acct_port = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.acct_port", ACCT_PORT,
 				lib->ns, section);
 		sockets = lib->settings->get_int(lib->settings,
-				"%s.plugins.eap-radius.servers.%s.sockets", 1,
+				"%s.plugins.eap-radius.servers.%s.sockets",
+					lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.sockets", 1, lib->ns),
 				lib->ns, section);
 		preference = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.preference", 0,
