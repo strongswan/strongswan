@@ -206,6 +206,13 @@ METHOD(vici_builder_t, end_list, void,
 	add(this, VICI_LIST_END);
 }
 
+METHOD(vici_builder_t, destroy, void,
+	private_vici_builder_t *this)
+{
+	this->writer->destroy(this->writer);
+	free(this);
+}
+
 METHOD(vici_builder_t, finalize, vici_message_t*,
 	private_vici_builder_t *this)
 {
@@ -215,14 +222,12 @@ METHOD(vici_builder_t, finalize, vici_message_t*,
 	{
 		DBG1(DBG_ENC, "vici builder error: %u errors (section: %u, list %u)",
 			 this->error, this->section, this->list);
-		this->writer->destroy(this->writer);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 	product = vici_message_create_from_data(
 								this->writer->extract_buf(this->writer), TRUE);
-	this->writer->destroy(this->writer);
-	free(this);
+	destroy(this);
 	return product;
 }
 
@@ -245,6 +250,7 @@ vici_builder_t *vici_builder_create()
 			.begin_list = _begin_list,
 			.end_list = _end_list,
 			.finalize = _finalize,
+			.destroy = _destroy,
 		},
 		.writer = bio_writer_create(0),
 	);

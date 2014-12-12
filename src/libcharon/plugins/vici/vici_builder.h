@@ -119,6 +119,14 @@ struct vici_builder_t {
 	 * @return		vici message, NULL on error
 	 */
 	vici_message_t* (*finalize)(vici_builder_t *this);
+
+	/**
+	 * Destroy a vici builder without finalization.
+	 *
+	 * Note that finalize() already destroys the message, and calling destroy()
+	 * is required only if the message does not get finalize()d.
+	 */
+	void (*destroy)(vici_builder_t *this);
 };
 
 /**
