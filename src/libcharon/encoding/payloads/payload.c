@@ -268,7 +268,7 @@ payload_t *payload_create(payload_type_t type)
  */
 bool payload_is_known(payload_type_t type, u_int8_t maj_ver)
 {
-	if (type == PL_HEADER)
+	if (type >= PL_HEADER)
 	{
 		return TRUE;
 	}
