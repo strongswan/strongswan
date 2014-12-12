@@ -1004,7 +1004,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 	bliss_bitpacker_t *packer;
 	asn1_parser_t *parser;
 	size_t s_bits = 0;
-	uint32_t s_sign, s_mask = 0, value;
+	uint32_t s_sign = 0x02, s_mask = 0xfffffffc, value;
 	bool success = FALSE;
 	int objectID, oid, i;
 
