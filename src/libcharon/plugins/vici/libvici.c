@@ -427,14 +427,8 @@ vici_res_t* vici_submit(vici_req_t *req, vici_conn_t *conn)
 
 void vici_free_req(vici_req_t *req)
 {
-	vici_message_t *message;
-
 	free(req->name);
-	message = req->b->finalize(req->b);
-	if (message)
-	{
-		message->destroy(message);
-	}
+	req->b->destroy(req->b);
 	free(req);
 }
 
