@@ -1750,6 +1750,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/attr/Makefile
 	src/libcharon/plugins/attr_sql/Makefile
+	src/libcharon/tests/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile
