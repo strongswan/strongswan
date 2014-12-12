@@ -34,6 +34,10 @@
 /* Mach uses a semaphore_create() call, use a different name for ours */
 #define semaphore_create(x) strongswan_semaphore_create(x)
 
+/* forward declaration, see below */
+static inline int precancellable_poll(struct pollfd fds[], nfds_t nfds,
+									  int timeout);
+
 /* on Mac OS X 10.5 several system calls we use are no cancellation points.
  * fortunately, select isn't one of them, so we wrap some of the others with
  * calls to select(2).
@@ -44,7 +48,7 @@
 		.fd = socket, \
 		.events = POLLIN, \
 	}; \
-	if (poll(&pfd, 1, -1) <= 0) \
+	if (precancellable_poll(&pfd, 1, -1) <= 0) \
 	{\
 		return -1; \
 	}\
