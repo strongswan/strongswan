@@ -245,8 +245,10 @@ METHOD(public_key_t, get_fingerprint, bool,
 	}
 	success = bliss_public_key_fingerprint(this->set->oid, this->A,
 										   this->set, type, fp);
-	lib->encoding->cache(lib->encoding, type, this, *fp);
-
+	if (success)
+	{
+		lib->encoding->cache(lib->encoding, type, this, *fp);
+	}
 	return success;
 }
 
