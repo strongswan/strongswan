@@ -1004,7 +1004,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 	bliss_bitpacker_t *packer;
 	asn1_parser_t *parser;
 	size_t s_bits = 0;
-	uint32_t s_sign, s_mask, value;
+	uint32_t s_sign, s_mask = 0, value;
 	bool success = FALSE;
 	int objectID, oid, i;
 
@@ -1072,7 +1072,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				for (i = 0; i < this->set->n; i++)
 				{
 					packer->read_bits(packer, &value, s_bits);
-					this->s1[i] = value & s_sign ? value | s_mask : value;
+					this->s1[i] = (value & s_sign) ? value | s_mask : value;
 				}
 				packer->destroy(packer);
 				break;
@@ -1089,7 +1089,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				for (i = 0; i < this->set->n; i++)
 				{
 					packer->read_bits(packer, &value, s_bits);
-					this->s2[i] = 2*(value & s_sign ? value | s_mask : value);
+					this->s2[i] = 2*((value & s_sign) ? value | s_mask : value);
 					if (i == 0)
 					{
 						this->s2[0] += 1;
