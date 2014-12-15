@@ -133,7 +133,7 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 
 	/* Create data hash */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
-	if (!hasher )
+	if (!hasher)
 	{
 		return FALSE;
 	}
@@ -384,7 +384,7 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 
 end:
 	/* cleanup */
-	sampler->destroy(sampler);
+	DESTROY_IF(sampler);
 	hasher->destroy(hasher);
 	sig->destroy(sig);
 	fft->destroy(fft);
