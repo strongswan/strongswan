@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
 	set = bliss_param_set_get_by_id(bliss_type);
 	if (!set)
 	{
-		fprintf(stderr, "bliss type %d unsupported\n");
+		fprintf(stderr, "bliss type %d unsupported\n", bliss_type);
 		exit(1);
 	}
 	write_header();
