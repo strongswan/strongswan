@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
 	/* Probability distribution for z2 */
 	dx = 1 << set->d;
 	k_top = 1 + set->B_inf / dx;
-	x = (double)(dx/2) - 0.5;
+	x = (dx >> 1) - 0.5;
 	p_sum = 0;
 
 	for (k = 0; k < k_top; k++)
