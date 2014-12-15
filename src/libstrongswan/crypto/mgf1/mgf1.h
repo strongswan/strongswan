@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mgf1 mgf1
- * @{ @ingroup ntru_p
+ * @{ @ingroup crypto
  */
 
 #ifndef MGF1_H_
@@ -27,7 +27,7 @@ typedef struct mgf1_t mgf1_t;
 
 /**
  * Implements the PKCS#1 MGF1 Mask Generation Function based on a hash function
- * defined in section 10.2.1 of RFC 2437 
+ * defined in section 10.2.1 of RFC 2437
  */
 struct mgf1_t {
 

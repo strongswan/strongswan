@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mgf1_bitspender mgf1_bitspender
- * @{ @ingroup mgf1_p
+ * @{ @ingroup mgf1
  */
 
 #ifndef MGF1_BITSPENDER_H_
@@ -56,7 +56,7 @@ struct mgf1_bitspender_t {
 
 /**
  * Create a mgf1_bitspender_t object
- * 
+ *
  * @param alg				Hash algorithm to be used with MGF1
  * @param seed				Seed used to initialize MGF1
  * @param hash_seed			Hash seed before using it as a seed for MFG1
