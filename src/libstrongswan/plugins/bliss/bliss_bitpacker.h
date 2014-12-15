@@ -71,14 +71,14 @@ struct bliss_bitpacker_t {
 /**
  * Create a bliss_bitpacker_t object for writing
  *
- * @param bits			Total number of bits to be stored 
+ * @param max_bits		Total number of bits to be stored
  */
 bliss_bitpacker_t* bliss_bitpacker_create(size_t max_bits);
 
 /**
  * Create a bliss_bitpacker_t object for reading
  *
- * @param data			Packed array of bits 
+ * @param data			Packed array of bits
  */
 bliss_bitpacker_t* bliss_bitpacker_create_from_data(chunk_t data);
 

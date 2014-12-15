@@ -56,7 +56,7 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args);
 /**
  * Parse an ASN.1 BIT STRING into an array of public key coefficients
  *
- * @param data		packed subjectPublicKey
+ * @param object	packed subjectPublicKey
  * @param set		BLISS parameter set for public key vector
  * @param pubkey	coefficients of public key vector
  * @return			TRUE if parsing successful
@@ -67,7 +67,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 /**
  * Encode a raw BLISS subjectPublicKey in ASN.1 DER format
  *
- * @param			coefficients of public key vector
+ * @param pubkey	coefficients of public key vector
  * @param set		BLISS parameter set for the public key vector
  * @result			ASN.1 encoded subjectPublicKey
  */
@@ -78,7 +78,7 @@ chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set);
  *
  * @param oid		BLISS public key type OID
  * @param pubkey	coefficients of public key vector
- * @param n			BLISS parameter set for the public key vector
+ * @param set		BLISS parameter set for the public key vector
  * @result			ASN.1 encoded subjectPublicKeyInfo record
  */
 chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
@@ -89,7 +89,7 @@ chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
  *
  * @param oid		BLISS public key type OID
  * @param pubkey	coefficients of public key vector
- * @param n			BLISS parameter set for the public key vector
+ * @param set		BLISS parameter set for the public key vector
  * @param type		type of fingerprint to be generated
  * @param fp		generated fingerprint (must be freed by caller)
  * @result			TRUE if generation was successful
