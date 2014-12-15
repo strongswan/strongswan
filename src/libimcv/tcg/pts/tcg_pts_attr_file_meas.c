@@ -242,6 +242,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		this->count--;
 	}
 
+	status = SUCCESS;
+
 	if (this->length != this->offset)
 	{
 		DBG1(DBG_TNC, "inconsistent length for %N/%N", pen_names, PEN_TCG,
@@ -249,7 +251,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset = this->offset;
 		status = FAILED;
 	}
-	status = SUCCESS;
 
 end:
 	reader->destroy(reader);
