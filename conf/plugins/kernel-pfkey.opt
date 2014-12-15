@@ -1,0 +1,7 @@
+charon.plugins.kernel-pfkey.events_buffer_size = 0
+	Size of the receive buffer for the event socket (0 for default size).
+
+	Size of the receive buffer for the event socket (0 for default size).
+	Because events are received asynchronously installing e.g. lots of policies
+	may require a larger buffer than the default on certain platforms in order
+	to receive all messages.

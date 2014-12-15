@@ -2988,6 +2988,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 {
 	private_kernel_pfkey_ipsec_t *this;
 	bool register_for_events = TRUE;
+	int rcv_buffer;
 
 	INIT(this,
 		.public = {
@@ -3042,6 +3043,18 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 			DBG1(DBG_KNL, "unable to create PF_KEY event socket");
 			destroy(this);
 			return NULL;
+		}
+
+		rcv_buffer = lib->settings->get_int(lib->settings,
+					"%s.plugins.kernel-pfkey.events_buffer_size", 0, lib->ns);
+		if (rcv_buffer > 0)
+		{
+			if (setsockopt(this->socket_events, SOL_SOCKET, SO_RCVBUF,
+						   &rcv_buffer, sizeof(rcv_buffer)) == -1)
+			{
+				DBG1(DBG_KNL, "unable to set receive buffer size on PF_KEY "
+					 "event socket: %s", strerror(errno));
+			}
 		}
 
 		/* register the event socket */
