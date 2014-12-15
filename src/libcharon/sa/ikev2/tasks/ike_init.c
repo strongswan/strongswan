@@ -183,6 +183,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
+	ke_payload_t *ke_payload = NULL;
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -211,19 +212,9 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			}
 			case PLV2_KEY_EXCHANGE:
 			{
-				ke_payload_t *ke_payload = (ke_payload_t*)payload;
+				ke_payload = (ke_payload_t*)payload;
 
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-				if (!this->initiator)
-				{
-					this->dh = this->keymat->keymat.create_dh(
-										&this->keymat->keymat, this->dh_group);
-				}
-				if (this->dh)
-				{
-					this->dh->set_other_public_value(this->dh,
-								ke_payload->get_key_exchange_data(ke_payload));
-				}
 				break;
 			}
 			case PLV2_NONCE:
@@ -248,6 +239,21 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (ke_payload && this->proposal &&
+		this->proposal->has_dh_group(this->proposal, this->dh_group))
+	{
+		if (!this->initiator)
+		{
+			this->dh = this->keymat->keymat.create_dh(
+								&this->keymat->keymat, this->dh_group);
+		}
+		if (this->dh)
+		{
+			this->dh->set_other_public_value(this->dh,
+								ke_payload->get_key_exchange_data(ke_payload));
+		}
+	}
 }
 
 METHOD(task_t, build_i, status_t,
