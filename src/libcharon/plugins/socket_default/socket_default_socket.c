@@ -165,7 +165,7 @@ METHOD(socket_t, receiver, status_t,
 		{ .fd = this->ipv6_natt,	.events = POLLIN },
 	};
 	int ports[] = {
-		/* port numbers assocaited to pollfds */
+		/* port numbers associated to pollfds */
 		this->port, this->natt, this->port, this->natt,
 	};
 

@@ -322,7 +322,7 @@ struct private_kernel_netlink_ipsec_t {
 	bool policy_history;
 
 	/**
-	 * Wheter to always use UPDATE to install policies
+	 * Whether to always use UPDATE to install policies
 	 */
 	bool policy_update;
 

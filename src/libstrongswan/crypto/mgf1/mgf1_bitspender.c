@@ -54,7 +54,7 @@ struct private_mgf1_bitspender_t {
 	int octets_left;
 
 	/**
-	 * Bit storage (accomodates up to 32 bits)
+	 * Bit storage (accommodates up to 32 bits)
 	 */
 	uint32_t bits;
 
@@ -64,7 +64,7 @@ struct private_mgf1_bitspender_t {
 	int bits_left;
 
 	/**
-	 * Byte storage (accomodates up to 4 bytes)
+	 * Byte storage (accommodates up to 4 bytes)
 	 */
 	uint8_t bytes[4];
 
