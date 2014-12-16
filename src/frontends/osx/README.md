@@ -4,8 +4,8 @@
 
 The strongSwan OS X App consists of two components:
 
-* A frontend to configure and control connections
-* A privileged helper daemon, controlled using XPC, called charon-xpc
+* A frontend App to configure and control connections (under strongSwan)
+* A privileged helper daemon, controlled using XPC (under charon-xpc)
 
 The privileged helper daemon gets installed automatically using SMJobBless
 functionality on its first use, and gets started automatically by Launchd when
@@ -13,10 +13,10 @@ needed.
 
 charon-xpc is a special build linking statically against strongSwan components.
 
-charon-xpc sources are not part of the official strongSwan distribution. Build
-the charon-xpc tarball with:
+charon-xpc and the App sources are currently not part of the official strongSwan
+distribution. Build the charon-xpc tarball with:
 
-    git archive -o charon-xpc-$(grep AC_INIT configure.ac | \
+    git archive -o osx-sources-$(grep AC_INIT configure.ac | \
                                 cut -d '[' -f3 | cut -d ']' -f1).tar.bz2 \
         HEAD src/frontends/osx
 
@@ -25,7 +25,7 @@ the charon-xpc tarball with:
 Before building the Xcode project, the strongSwan base tree must be built using
 a monolithic and static build. This can be achieved on OS X by using:
 
-    CFLAGS="-O2 -Wall -Wno-format -Wno-pointer-sign -Wno-deprecated-declarations" \
+    CFLAGS="-O2 -g -Wall -Wno-format -Wno-pointer-sign -Wno-deprecated-declarations" \
     ./configure --enable-monolithic --disable-shared --enable-static \
         --disable-defaults \
         --enable-openssl --enable-kernel-libipsec --enable-kernel-pfroute \
@@ -38,11 +38,17 @@ a monolithic and static build. This can be achieved on OS X by using:
 followed by calling make (no need to make install).
 
 Building charon-xpc using the Xcode project yields a single binary without
-any non OS X dependencies.
+any non OS X dependencies. The strongSwan target in the same project builds
+the App and integrates charon-xpc for the deployment.
 
 Both charon-xpc and the App must be code-signed to allow the installation of
-the privileged helper. git-grep for "Joe Developer" to change the signing
-identity.
+the privileged helper. By default both targets use the _Developer ID: *_
+wildcard to use the first usable code signing identity. Both the App and
+charon-xpc require a hardcoded certificate subject under
+_strongSwan/strongSwan-Info.plist_ respectively
+_charon-xpc/charon-xpc-Info.plist_. Update the _org.strongswan.charon-xpc_
+_SMPrivilegedExecutables_ in the App and _SMAuthorizedClients_ in charon-xpc
+with your code signing certificate identity.
 
 ## XPC application protocol ##
 
