@@ -22,6 +22,8 @@
 #ifndef TASK_H_
 #define TASK_H_
 
+#include <utils/utils.h>
+
 typedef enum task_type_t task_type_t;
 typedef struct task_t task_t;
 
