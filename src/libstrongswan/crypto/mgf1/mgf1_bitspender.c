@@ -79,13 +79,19 @@ METHOD(mgf1_bitspender_t, get_bits, bool,
 	private_mgf1_bitspender_t *this, int bits_needed, uint32_t *bits)
 {
 	int bits_now;
-	
+
+	*bits = 0x00000000;
+
+	if (bits_needed == 0)
+	{
+		/* trivial */
+		return TRUE;
+	}
 	if (bits_needed > 32)
 	{
 		/* too many bits requested */
 		return FALSE;
 	}
-	*bits = 0x00000000;
 
 	while (bits_needed)
 	{
@@ -113,17 +119,25 @@ METHOD(mgf1_bitspender_t, get_bits, bool,
 			bits_now = this->bits_left;
 			this->bits_left = 0;
 			bits_needed -= bits_now;
-			*bits <<= bits_now;
-			*bits |= this->bits;
 		}
 		else
 		{
 			bits_now = bits_needed;
 			this->bits_left -= bits_needed;
 			bits_needed = 0;
+		}
+		if (bits_now == 32)
+		{
+			*bits = this->bits;
+		}
+		else
+		{
 			*bits <<= bits_now;
 			*bits |= this->bits >> this->bits_left;
-			this->bits &= 0xffffffff >> (32 - this->bits_left);
+			if (this->bits_left)
+			{
+				this->bits &= 0xffffffff >> (32 - this->bits_left);
+			}
 		}
 	}
 	return TRUE;
@@ -151,7 +165,7 @@ METHOD(mgf1_bitspender_t, get_byte, bool,
 	}
 	*byte = this->bytes[4 - this->bytes_left--];
 
-	return TRUE;				
+	return TRUE;
 }
 
 METHOD(mgf1_bitspender_t, destroy, void,

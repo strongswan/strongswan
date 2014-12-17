@@ -391,12 +391,15 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 {
 	bliss_bitpacker_t *packer;
 	uint32_t coefficient;
+	uint16_t needed_bits;
 	int i;
 
 	/* skip initial bit string octet defining unused bits */
 	object = chunk_skip(object, 1);
 
-	if (8 * object.len < set->n * set->q_bits)
+	needed_bits = set->n * set->q_bits;
+
+	if (8 * object.len < needed_bits)
 	{
 		return FALSE;
 	}

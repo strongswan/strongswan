@@ -62,12 +62,19 @@ METHOD(bliss_bitpacker_t, get_bits, size_t,
 METHOD(bliss_bitpacker_t, write_bits, bool,
 	private_bliss_bitpacker_t *this, uint32_t value, size_t bits)
 {
+	if (bits == 0)
+	{
+		return TRUE;
+	}
 	if (bits > 32)
 	{
 		return FALSE;
 	}
+	if (bits < 32)
+	{
+		value &= (1 << bits) - 1;
+	}
 	this->bits += bits;
-	value &= (1 << bits) - 1;
 
 	while (TRUE)
 	{
@@ -152,7 +159,7 @@ METHOD(bliss_bitpacker_t, destroy, void,
 /**
  * See header.
  */
-bliss_bitpacker_t *bliss_bitpacker_create(size_t max_bits)
+bliss_bitpacker_t *bliss_bitpacker_create(uint16_t max_bits)
 {
 	private_bliss_bitpacker_t *this;
 

@@ -73,7 +73,7 @@ struct bliss_bitpacker_t {
  *
  * @param max_bits		Total number of bits to be stored
  */
-bliss_bitpacker_t* bliss_bitpacker_create(size_t max_bits);
+bliss_bitpacker_t* bliss_bitpacker_create(uint16_t max_bits);
 
 /**
  * Create a bliss_bitpacker_t object for reading
