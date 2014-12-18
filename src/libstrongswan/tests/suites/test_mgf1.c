@@ -27,7 +27,7 @@ typedef struct {
 	chunk_t seed;
 	chunk_t hashed_seed;
 	chunk_t mask;
-	uint32_t bits[20];
+	uint32_t bits[22];
 } mgf1_test_t;
 
 /**
@@ -71,7 +71,7 @@ mgf1_test_t mgf1_tests[] = {
 						0x71, 0x66, 0x2F, 0x70, 0x35, 0xD8, 0x8A, 0x92,
 						0x33, 0xF0, 0x16, 0xD4, 0x0E, 0x43, 0x8A, 0x14),
 		{ 0, 0, 0, 4, 1, 1, 46, 103, 38, 411, 848, 57, 3540, 4058, 12403,
-		  0x63, 0x2B, 0xC9, 0x17, 0x56 },
+		  0x63, 0x2B, 0xC9, 0x17, 0x56, 669409, 0xA407A43B },
 	},
 	{	HASH_SHA256, 32, 64, 32, 33, 40,
 		chunk_from_chars(
@@ -121,7 +121,7 @@ mgf1_test_t mgf1_tests[] = {
 						0x44, 0x4D, 0xCD, 0xB6, 0x54, 0x5F, 0x81, 0x95,
 						0x59, 0xA1, 0xE5, 0x4E, 0xA5, 0x0A, 0x4A, 0x42),
 		 { 0, 1, 3, 4, 4, 12, 32, 36, 253, 331, 2, 1640, 503, 6924, 580,
-		   0xCB, 0x35, 0x3C, 0xDC, 0xAD }
+		   0xCB, 0x35, 0x3C, 0xDC, 0xAD, 922950, 0x0DD1AA64 }
 	}
 };
 
@@ -221,6 +221,18 @@ START_TEST(mgf1_test_bitspender)
 				   mgf1_tests[_i].bits[j], byte);
 		ck_assert(byte == mgf1_tests[_i].bits[j]);
 	}
+
+	j = 20; /* 23 remaining bits */
+	ck_assert(bitspender->get_bits(bitspender, 23, &bits));
+	DBG1(DBG_LIB, "bits[%d] = %u, bits = %u", j,
+				   mgf1_tests[_i].bits[j], bits);
+	ck_assert(bits == mgf1_tests[_i].bits[j]);
+
+	j = 21; /* 32 aligned bits */
+	ck_assert(bitspender->get_bits(bitspender, 32, &bits));
+	DBG1(DBG_LIB, "bits[%d] = 0x%08x, bits = 0x%08x", j,
+				   mgf1_tests[_i].bits[j], bits);
+	ck_assert(bits == mgf1_tests[_i].bits[j]);
 
 	bitspender->destroy(bitspender);
 }

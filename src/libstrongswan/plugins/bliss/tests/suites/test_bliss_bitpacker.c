@@ -17,10 +17,11 @@
 
 #include <bliss_bitpacker.h>
 
-static uint32_t bits[] = { 0, 1, 2, 3, 4, 7, 1, 14, 2, 29, 3, 28, 67};
+static uint32_t bits[] = { 0, 1, 2, 3, 4, 7, 1, 14, 2, 29, 3, 28, 67, 0x2fe3a9c1};
 
 static chunk_t packed_bits = chunk_from_chars(0x6e, 0x71, 0xe1, 0x74,
-											  0x37, 0x21, 0x80);
+											  0x37, 0x21, 0x97, 0xf1,
+											  0xd4, 0xe0, 0x80);
 
 START_TEST(test_bliss_sign_bitpacker_write)
 {
@@ -28,16 +29,16 @@ START_TEST(test_bliss_sign_bitpacker_write)
 	bliss_bitpacker_t *packer;
 	int i;
 
-	packer = bliss_bitpacker_create(49);
+	packer = bliss_bitpacker_create(81);
 
-	ck_assert(!packer->write_bits(packer, 0, 33));
-
-	for (i = 0; i < countof(bits); i++)
+	for (i = 0; i < 13; i++)
 	{
 		ck_assert(packer->write_bits(packer, bits[i], 1 + i/2));
 	}
+	ck_assert(packer->write_bits(packer, bits[13], 32));
+
 	buf = packer->extract_buf(packer);
-	ck_assert_int_eq(packer->get_bits(packer), 49);
+	ck_assert_int_eq(packer->get_bits(packer), 81);
 	ck_assert_chunk_eq(buf, packed_bits);
 
 	packer->destroy(packer);
@@ -55,12 +56,13 @@ START_TEST(test_bliss_sign_bitpacker_read)
 
 	ck_assert(!packer->read_bits(packer, &value, 33));
 
-	for (i = 0; i < countof(bits); i++)
+	for (i = 0; i < 13; i++)
 	{
 		ck_assert(packer->read_bits(packer, &value, 1 + i/2));
 		ck_assert_int_eq(value, bits[i]);
 	}
-	ck_assert(!packer->read_bits(packer, &value, 32));
+	ck_assert(packer->read_bits(packer, &value, 32));
+	ck_assert_int_eq(value, bits[13]);
 
 	packer->destroy(packer);
 }
@@ -72,6 +74,7 @@ START_TEST(test_bliss_sign_bitpacker_fail)
 	uint32_t value;
 
 	packer = bliss_bitpacker_create(32);
+	ck_assert( packer->write_bits(packer, 0xff, 0));
 	ck_assert(!packer->write_bits(packer, 0, 33));
 	ck_assert( packer->write_bits(packer, 0x7f2a3b01, 31));
 	ck_assert(!packer->write_bits(packer, 3,  2));
