@@ -5,6 +5,7 @@ sun::ipsec status 2> /dev/null::host-host.*INSTALLED, TRANSPORT::YES
 moon::ping -c 1 PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_req=1::YES
 sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
 sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES
+moon::cat /var/log/daemon.log::ees: acquire received for reqid 1::YES
 moon::cat /tmp/tkm.log::RSA private key '/etc/tkm/moonKey.der' loaded::YES
 moon::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.1 <-> 192.168.0.2 \]::YES
 moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
