@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -55,6 +55,11 @@ struct sad_entry_t {
 	 * ESA identifier.
 	 */
 	esa_id_type esa_id;
+
+	/**
+	 * Reqid.
+	 */
+	u_int32_t reqid;
 
 	/**
 	 * Source address of CHILD SA.
@@ -119,6 +124,7 @@ static bool sad_entry_equal(sad_entry_t * const left, sad_entry_t * const right)
 		return FALSE;
 	}
 	return left->esa_id == right->esa_id &&
+		   left->reqid == right->reqid &&
 		   left->src->ip_equals(left->src, right->src) &&
 		   left->dst->ip_equals(left->dst, right->dst) &&
 		   left->spi == right->spi && left->proto == right->proto;
@@ -126,14 +132,15 @@ static bool sad_entry_equal(sad_entry_t * const left, sad_entry_t * const right)
 
 METHOD(tkm_kernel_sad_t, insert, bool,
 	private_tkm_kernel_sad_t * const this, const esa_id_type esa_id,
-	const host_t * const src, const host_t * const dst, const u_int32_t spi,
-	const u_int8_t proto)
+	const u_int32_t reqid, const host_t * const src, const host_t * const dst,
+	const u_int32_t spi, const u_int8_t proto)
 {
 	status_t result;
 	sad_entry_t *new_entry;
 
 	INIT(new_entry,
 		 .esa_id = esa_id,
+		 .reqid = reqid,
 		 .src = (host_t *)src,
 		 .dst = (host_t *)dst,
 		 .spi = spi,
@@ -146,8 +153,9 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 									new_entry);
 	if (result == NOT_FOUND)
 	{
-		DBG3(DBG_KNL, "inserting SAD entry (esa: %llu, src: %H, dst: %H, "
-			 "spi: %x, proto: %u)", esa_id, src, dst, ntohl(spi), proto);
+		DBG3(DBG_KNL, "inserting SAD entry (esa: %llu, reqid: %u, src: %H, "
+			 "dst: %H, spi: %x, proto: %u)", esa_id, reqid, src, dst,
+			 ntohl(spi), proto);
 		new_entry->src = src->clone((host_t *)src);
 		new_entry->dst = dst->clone((host_t *)dst);
 		this->data->insert_last(this->data, new_entry);

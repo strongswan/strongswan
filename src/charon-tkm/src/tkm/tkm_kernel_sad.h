@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -37,6 +37,7 @@ struct tkm_kernel_sad_t {
 	 * Insert new SAD entry with specified parameters.
 	 *
 	 * @param esa_id		ESP SA context identifier
+	 * @param reqid			reqid of the SA
 	 * @param src			source address of CHILD SA
 	 * @param dst			destination address of CHILD SA
 	 * @param spi			SPI of CHILD SA
@@ -44,8 +45,9 @@ struct tkm_kernel_sad_t {
 	 * @return				TRUE if entry was inserted, FALSE otherwise
 	 */
 	bool (*insert)(tkm_kernel_sad_t * const this, const esa_id_type esa_id,
-				   const host_t * const src, const host_t * const dst,
-				   const u_int32_t spi, const u_int8_t proto);
+				   const u_int32_t reqid, const host_t * const src,
+				   const host_t * const dst, const u_int32_t spi,
+				   const u_int8_t proto);
 
 	/**
 	 * Get ESA id for entry with given parameters.

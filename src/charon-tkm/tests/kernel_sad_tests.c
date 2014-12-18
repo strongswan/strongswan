@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -34,7 +34,7 @@ START_TEST(test_insert)
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
 
-	fail_unless(sad->insert(sad, 1, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 1, 2, addr, addr, 42, 50),
 				"Error inserting SAD entry");
 
 	sad->destroy(sad);
@@ -47,9 +47,9 @@ START_TEST(test_insert_duplicate)
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
 
-	fail_unless(sad->insert(sad, 1, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 1, 2, addr, addr, 42, 50),
 				"Error inserting SAD entry");
-	fail_if(sad->insert(sad, 1, addr, addr, 42, 50),
+	fail_if(sad->insert(sad, 1, 2, addr, addr, 42, 50),
 			"Expected error inserting duplicate entry");
 
 	sad->destroy(sad);
@@ -61,7 +61,7 @@ START_TEST(test_get_esa_id)
 {
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
-	fail_unless(sad->insert(sad, 23, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 42, 50),
 				"Error inserting SAD entry");
 	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 23,
 				"Error getting esa id");
@@ -85,7 +85,7 @@ START_TEST(test_remove)
 {
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
-	fail_unless(sad->insert(sad, 23, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 42, 50),
 				"Error inserting SAD entry");
 	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 23,
 				"Error getting esa id");
