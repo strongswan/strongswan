@@ -1,6 +1,14 @@
 strongswan-5.2.2
 ----------------
 
+- Fixed a denial-of-service vulnerability triggered by an IKEv2 Key Exchange
+  payload that contains the Diffie-Hellman group 1025.  This identifier was
+  used internally for DH groups with custom generator and prime.  Because
+  these arguments are missing when creating DH objects based on the KE payload
+  an invalid pointer dereference occurred.  This allowed an attacker to crash
+  the IKE daemon with a single IKE_SA_INIT message containing such a KE
+  payload.  The vulnerability has been registered as CVE-2014-9221.
+
 - The left/rightid options in ipsec.conf, or any other identity in strongSwan,
   now accept prefixes to enforce an explicit type, such as email: or fqdn:.
   Note that no conversion is done for the remaining string, refer to
