@@ -451,6 +451,7 @@ METHOD(certificate_t, issued_by, bool,
 	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
+	chunk_t keyid = chunk_empty;
 
 	/* check if issuer is an X.509 CA certificate */
 	if (issuer->get_type(issuer) != CERT_X509)
@@ -462,6 +463,23 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
+	/* compare keyIdentifiers if available, otherwise use DNs */
+	if (this->authKeyIdentifier.ptr)
+	{
+		keyid = x509->get_subjectKeyIdentifier(x509);
+		if (keyid.len && !chunk_equals(keyid, this->authKeyIdentifier))
+		{
+			return FALSE;
+		}
+	}
+	if (!keyid.len)
+	{
+		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
+		{
+			return FALSE;
+		}
+	}
+
 	scheme = signature_scheme_from_oid(this->algorithm);
 	if (scheme == SIGN_UNKNOWN)
 	{
@@ -471,27 +489,6 @@ METHOD(certificate_t, issued_by, bool,
 	if (!key)
 	{
 		return FALSE;
-	}
-
-	/* compare keyIdentifiers if available, otherwise use DNs */
-	if (this->authKeyIdentifier.ptr)
-	{
-		chunk_t fingerprint;
-
-		if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
-			!chunk_equals(fingerprint, this->authKeyIdentifier))
-		{
-			key->destroy(key);
-			return FALSE;
-		}
-	}
-	else
-	{
-		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
-		{
-			key->destroy(key);
-			return FALSE;
-		}
 	}
 	valid = key->verify(key, scheme, this->tbsCertList, this->signature);
 	key->destroy(key);
