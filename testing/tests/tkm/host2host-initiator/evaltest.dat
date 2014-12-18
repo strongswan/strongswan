@@ -10,3 +10,7 @@ moon::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.1 <-> 192.168.0.2 \]::YES
 moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
 moon::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 moon::cat /tmp/tkm.log::Adding SA \[ 1, 192.168.0.1 <-> 192.168.0.2, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
+moon::DAEMON_NAME=charon-tkm ipsec down conn1 && sleep 1::no output expected::NO
+moon::cat /var/log/daemon.log::deleting child SA (esa: 1, spi:.*)::YES
+moon::cat /tmp/tkm.log::Resetting ESA context 1::YES
+moon::cat /tmp/tkm.log::Deleting SA \[ 1, 192.168.0.1 <=> 192.168.0.2, SPI_in.*, SPI_out.* \]::YES
