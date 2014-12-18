@@ -123,6 +123,29 @@ static void segv_handler(int signal)
 }
 
 /**
+ * PF_ROUTE for some reason does not send an event for the first address
+ * installed after a fresh boot. Fix this by installing a fake tun address
+ * just to remove it afterwards.
+ */
+static void fixup_pf_route()
+{
+	tun_device_t *tun;
+	host_t *host;
+
+	tun = tun_device_create(NULL);
+	if (tun)
+	{
+		if (tun->up(tun))
+		{
+			host = host_create_from_string("127.0.0.99", 0);
+			tun->set_address(tun, host, 32);
+			host->destroy(host);
+		}
+		tun->destroy(tun);
+	}
+}
+
+/**
  * Main function, starts the daemon.
  */
 int main(int argc, char *argv[])
@@ -204,5 +227,6 @@ int main(int argc, char *argv[])
 	atexit(dispatcher_cleanup);
 
 	charon->start(charon);
+	fixup_pf_route();
 	return run();
 }

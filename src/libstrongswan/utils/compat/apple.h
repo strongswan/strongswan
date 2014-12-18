@@ -34,6 +34,12 @@
 /* Mach uses a semaphore_create() call, use a different name for ours */
 #define semaphore_create(x) strongswan_semaphore_create(x)
 
+/* Since OS X 10.10 XPC includes some additional conflicting Mach types */
+#define host_t strongswan_host_t
+#define processor_t strongswan_processor_t
+#define task_t strongswan_task_t
+#define thread_t strongswan_thread_t
+
 /* forward declaration, see below */
 static inline int precancellable_poll(struct pollfd fds[], nfds_t nfds,
 									  int timeout);

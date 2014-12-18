@@ -24,15 +24,15 @@
 #ifndef HOST_H_
 #define HOST_H_
 
+#include <utils/utils.h>
+#include <utils/chunk.h>
+
 typedef enum host_diff_t host_diff_t;
 typedef struct host_t host_t;
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
-
-#include <utils/utils.h>
-#include <utils/chunk.h>
 
 /**
  * Representates a Host

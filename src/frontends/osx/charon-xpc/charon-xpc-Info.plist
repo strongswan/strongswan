@@ -12,7 +12,7 @@
 	<string>1.0</string>
 	<key>SMAuthorizedClients</key>
 	<array>
-		<string>identifier org.strongswan.osx and certificate leaf[subject.CN] = "Joe Developer"</string>
+		<string>identifier org.strongswan.osx and certificate leaf[subject.CN] = "Developer ID Application: revosec AG (SRXT3TB2PY)"</string>
 	</array>
 </dict>
 </plist>
