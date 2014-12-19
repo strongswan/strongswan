@@ -75,6 +75,7 @@ static int export(pkcs12_t *pkcs12, int index, char *outform)
 			form = CERT_ASN1_DER;
 			if (outform && !get_form(outform, &form, CRED_CERTIFICATE))
 			{
+				enumerator->destroy(enumerator);
 				return command_usage("invalid output format");
 			}
 			if (cert->get_encoding(cert, form, &encoding))
@@ -103,6 +104,7 @@ static int export(pkcs12_t *pkcs12, int index, char *outform)
 			form = PRIVKEY_ASN1_DER;
 			if (outform && !get_form(outform, &form, CRED_PRIVATE_KEY))
 			{
+				enumerator->destroy(enumerator);
 				return command_usage("invalid output format");
 			}
 			if (key->get_encoding(key, form, &encoding))
