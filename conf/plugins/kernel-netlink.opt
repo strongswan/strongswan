@@ -24,6 +24,9 @@ charon.plugins.kernel-netlink.parallel_route = no
 charon.plugins.kernel-netlink.parallel_xfrm = no
 	Whether to perform concurrent Netlink XFRM queries on a single socket.
 
+charon.plugins.kernel-netlink.policy_update = no
+	Whether to always use XFRM_MSG_UPDPOLICY to install policies.
+
 charon.plugins.kernel-netlink.port_bypass = no
 	Whether to use port or socket based IKE XFRM bypass policies.
 
@@ -50,6 +53,9 @@ charon.plugins.kernel-netlink.retries = 0
 
 charon.plugins.kernel-netlink.timeout = 0
 	Netlink message retransmission timeout, 0 to disable retransmissions.
+
+charon.plugins.kernel-netlink.ignore_retransmit_errors = no
+	Whether to ignore errors potentially resulting from a retransmission.
 
 charon.plugins.kernel-netlink.xfrm_acq_expires = 165
 	Lifetime of XFRM acquire state in kernel.
