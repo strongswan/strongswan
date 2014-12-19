@@ -184,13 +184,13 @@ METHOD(tkm_kernel_sad_t, get_esa_id, esa_id_type,
 	if (res == SUCCESS && entry)
 	{
 		id = entry->esa_id;
-		DBG3(DBG_KNL, "getting ESA id of SAD entry (esa: %llu, src: %H, "
-			 "dst: %H, spi: %x, proto: %u)", id, src, dst, ntohl(spi),
-			 proto);
+		DBG3(DBG_KNL, "returning ESA id %llu of SAD entry (src: %H, dst: %H, "
+			 "spi: %x, proto: %u)", id, src, dst, ntohl(spi), proto);
 	}
 	else
 	{
-		DBG3(DBG_KNL, "no SAD entry found");
+		DBG3(DBG_KNL, "no SAD entry found for src %H, dst %H, spi %x, proto %u",
+			 src, dst, ntohl(spi), proto);
 	}
 	this->mutex->unlock(this->mutex);
 	return id;
