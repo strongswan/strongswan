@@ -19,11 +19,12 @@
 #include <tkm/constants.h>
 #include <tkm/types.h>
 
+#include "tkm.h"
 #include "ees_callbacks.h"
 
 void charon_esa_acquire(result_type *res, const sp_id_type sp_id)
 {
-	DBG1(DBG_KNL, "ees: acquire received for reqid {%d}", sp_id);
+	DBG1(DBG_KNL, "ees: acquire received for reqid %u", sp_id);
 	hydra->kernel_interface->acquire(hydra->kernel_interface, sp_id, NULL,
 									 NULL);
 	*res = TKM_OK;
@@ -33,10 +34,19 @@ void charon_esa_expire(result_type *res, const sp_id_type sp_id,
 					   const esp_spi_type spi_rem, const protocol_type protocol,
 					   const expiry_flag_type hard)
 {
-	host_t *dst = NULL;
+	host_t *dst;
 
-	DBG1(DBG_KNL, "ees: expire received for reqid {%d}", sp_id);
+	dst = tkm->sad->get_dst_host(tkm->sad, sp_id, spi_rem, protocol);
+	*res = TKM_OK;
+	if (dst == NULL)
+	{
+		DBG3(DBG_KNL, "ees: destination host not found for reqid %u, spi %x, "
+			 "proto %u", sp_id, ntohl(spi_rem), protocol);
+		return;
+	}
+
+	DBG1(DBG_KNL, "ees: expire received for reqid %u, spi %x, dst %H", sp_id,
+		 ntohl(spi_rem), dst);
 	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
 									spi_rem, dst, hard != 0);
-	*res = TKM_OK;
 }
