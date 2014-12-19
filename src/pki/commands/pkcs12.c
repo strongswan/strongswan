@@ -235,13 +235,13 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pkcs12, 'u', "pkcs12", "PKCS#12 functions",
 		{"--export index|--list [--in file]",
-		 "[--outform der|pem|dnskey|sshkey]"},
+		 "[--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"list",	'l', 0, "list certificates and keys"},
 			{"export",	'e', 1, "export the credential with the given index"},
-			{"outform",	'f', 1, "encoding of extracted public key, default: der"},
+			{"outform",	'f', 1, "encoding of exported credentials, default: der"},
 		}
 	});
 }
