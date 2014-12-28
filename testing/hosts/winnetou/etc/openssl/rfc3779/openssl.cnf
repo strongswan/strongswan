@@ -40,7 +40,7 @@ x509_extensions = host_ext		  # The extensions to add to the cert
 
 crl_extensions	= crl_ext  		  # The extensions to add to the CRL
 
-default_days    = 1825                    # how long to certify for
+default_days    = 1820                    # how long to certify for
 default_crl_days= 30			  # how long before next CRL
 default_md      = sha256                  # which md to use.
 preserve        = no                      # keep passed DN ordering
@@ -153,6 +153,13 @@ sbgp-ipAddrBlock = critical, @host-addr-section
 
 [host-addr-section]
 
+#moon networks
+#IPv4.0 = 192.168.0.1
+#IPv4.1 = 10.1.0.0/16
+#IPv6.0 = fec0::1
+#IPv6.1 = fec1::/16
+
+#sun networks
 IPv4.0 = 192.168.0.2
 IPv4.1 = 10.2.0.0/16
 IPv6.0 = fec0::2
@@ -176,6 +183,12 @@ sbgp-ipAddrBlock = critical, @user-addr-section
 
 [user-addr-section]
 
+#carol networks
+#IPv4.0 = 192.168.0.100
+#IPv4.1 = 10.3.0.1
+#IPv6.0 = fec0::10
+
+#dave networks
 IPv4.0 = 192.168.0.200
 IPv4.1 = 10.3.0.2
 IPv6.0 = fec0::20
