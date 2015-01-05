@@ -1,6 +1,5 @@
 ipsec_SCRIPTS = _updown
 CLEANFILES = _updown
-dist_man8_MANS = _updown.8
 EXTRA_DIST = _updown.in
 
 _updown : _updown.in
