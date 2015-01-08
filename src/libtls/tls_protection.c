@@ -101,14 +101,13 @@ METHOD(tls_protection_t, build, status_t,
 	status_t status;
 
 	status = this->compression->build(this->compression, type, data);
-	if (*type == TLS_CHANGE_CIPHER_SPEC)
-	{
-		this->seq_out = 0;
-		return status;
-	}
-
 	if (status == NEED_MORE)
 	{
+		if (*type == TLS_CHANGE_CIPHER_SPEC)
+		{
+			this->seq_out = 0;
+			return status;
+		}
 		if (this->aead_out)
 		{
 			if (!this->aead_out->encrypt(this->aead_out, this->version,
