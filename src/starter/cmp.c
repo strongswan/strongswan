@@ -45,7 +45,7 @@ bool starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 	VARCMP(mark_in.value);
 	VARCMP(mark_in.mask);
 	VARCMP(mark_out.value);
-	VARCMP(mark_in.mask);
+	VARCMP(mark_out.mask);
 	VARCMP(tfc);
 	VARCMP(sa_keying_tries);
 
