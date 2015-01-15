@@ -1538,6 +1538,7 @@ typedef struct {
 	u_int8_t dst_len;
 	u_int32_t table;
 	u_int32_t oif;
+	u_int32_t priority;
 } rt_entry_t;
 
 /**
@@ -1573,6 +1574,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 		route->dst_len = msg->rtm_dst_len;
 		route->table = msg->rtm_table;
 		route->oif = 0;
+		route->priority = 0;
 	}
 	else
 	{
@@ -1599,6 +1601,12 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 				if (RTA_PAYLOAD(rta) == sizeof(route->oif))
 				{
 					route->oif = *(u_int32_t*)RTA_DATA(rta);
+				}
+				break;
+			case RTA_PRIORITY:
+				if (RTA_PAYLOAD(rta) == sizeof(route->priority))
+				{
+					route->priority = *(u_int32_t*)RTA_DATA(rta);
 				}
 				break;
 #ifdef HAVE_RTA_TABLE
@@ -1724,11 +1732,16 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					route->src_host = src;
 				}
-				/* insert route, sorted by decreasing network prefix */
+				/* insert route, sorted by priority and network prefix */
 				enumerator = routes->create_enumerator(routes);
 				while (enumerator->enumerate(enumerator, &other))
 				{
-					if (route->dst_len > other->dst_len)
+					if (route->priority < other->priority)
+					{
+						break;
+					}
+					if (route->priority == other->priority &&
+						route->dst_len > other->dst_len)
 					{
 						break;
 					}
