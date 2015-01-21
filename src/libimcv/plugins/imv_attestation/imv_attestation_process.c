@@ -198,7 +198,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 				e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
 							KEY_ANY, aik->get_issuer(aik), FALSE);
-				while (e->enumerate(e, &issuer))
+				while (e->enumerate(e, &issuer, NULL))
 				{
 					if (aik->issued_by(aik, issuer, NULL))
 					{
