@@ -58,6 +58,39 @@ ENUM_NEXT(test_enum_split_names, SPLIT5, SPLIT5, SPLIT4,
 ENUM_END(test_enum_split_names, SPLIT5);
 
 /*******************************************************************************
+ * enum flags
+ */
+enum {
+	FLAG1 = (1 << 0),
+	FLAG2 = (1 << 1),
+	FLAG3 = (1 << 2),
+	FLAG4 = (1 << 3),
+	FLAG5 = (1 << 4),
+	FLAG6 = (1 << 5),
+	FLAG7 = (1 << 6),
+	FLAG8 = (1 << 7),
+	FLAG9 = (1 << 8),
+	FLAG10 = (1 << 9),
+	FLAG11 = (1 << 10),
+	FLAG12 = (1 << 11),
+} test_enum_flags;
+
+ENUM_FLAGS(test_enum_flags_names, FLAG1, FLAG5,
+	"FLAG1", "FLAG2", "FLAG3", "FLAG4", "FLAG5");
+
+ENUM_FLAGS(test_enum_flags_incomplete_names, FLAG3, FLAG4,
+	"FLAG3", "FLAG4");
+
+ENUM_FLAGS(test_enum_flags_null_names, FLAG1, FLAG4,
+	"FLAG1", NULL, "FLAG3", NULL);
+
+ENUM_FLAGS(test_enum_flags_overflow_names, FLAG1, FLAG12,
+	"OVERFLOWFLAGLONGNAME1",  "OVERFLOWFLAGLONGNAME2",  "OVERFLOWFLAGLONGNAME3",
+	"OVERFLOWFLAGLONGNAME4",  "OVERFLOWFLAGLONGNAME5",  "OVERFLOWFLAGLONGNAME6",
+	"OVERFLOWFLAGLONGNAME7",  "OVERFLOWFLAGLONGNAME8",  "OVERFLOWFLAGLONGNAME9",
+	"OVERFLOWFLAGLONGNAME10", "OVERFLOWFLAGLONGNAME11", "OVERFLOWFLAGLONGNAME12");
+
+/*******************************************************************************
  * enum_to_name
  */
 
@@ -198,11 +231,52 @@ static struct {
 	{256, "(256)"},
 };
 
+/*******************************************************************************
+ * flag_to_name
+ */
+
+static struct {
+	int val;
+	char *str;
+} printf_tests_flags[] = {
+	{0, "(unset)"},
+	{FLAG1, "FLAG1"},
+	{FLAG2, "FLAG2"},
+	{FLAG3, "FLAG3"},
+	{FLAG4, "FLAG4"},
+	{FLAG5, "FLAG5"},
+	{FLAG1 | FLAG3, "FLAG1 | FLAG3"},
+	{FLAG1 | FLAG3 | 32, "FLAG1 | FLAG3 | (0x20)"},
+	{FLAG1 | FLAG3 | 32 | 64, "FLAG1 | FLAG3 | (0x20) | (0x40)"},
+	{0x20, "(0x20)"},
+	{0x80000000, "(0x80000000)"},
+	{0xFFFFF, "FLAG1 | FLAG2 | FLAG3 | FLAG4 | "
+			  "FLAG5 | (0x20) | (0x40) | (0x80) | "
+			 "(0x100) | (0x200) | (0x400) | (0x800) | "
+			 "(0x1000) | (0x2000) | (0x4000) | (0x8000) | "
+			 "(0x10000) | (0x20000) | (0x40000) | (0x80000)"},
+}, printf_tests_flags_incomplete[] = {
+	{FLAG1, "(0x1)"},
+	{FLAG1 | FLAG2 | FLAG3, "(0x1) | (0x2) | FLAG3"},
+	{FLAG3 | FLAG4 | FLAG5, "FLAG3 | FLAG4 | (0x10)"},
+}, printf_tests_flags_null[] = {
+	{FLAG1 | FLAG2 | FLAG3 | FLAG4, "FLAG1 | FLAG3"},
+}, printf_tests_flags_overflow[] = {
+	{0xFFFFFFFF, "(0xFFFFFFFF)"},
+}, printf_tests_flags_noflagenum[] = {
+	{-1, "(-1)"},
+	{6435, "(6435)"},
+}, enum_flags_to_string_tests[] = {
+	{-1, NULL},
+	{6435, NULL},
+};
+
 START_TEST(test_enum_printf_hook_cont)
 {
 	char buf[128];
 
-	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, printf_tests_cont[_i].val);
+	snprintf(buf, sizeof(buf), "%N",
+			 test_enum_cont_names, printf_tests_cont[_i].val);
 	ck_assert_str_eq(printf_tests_cont[_i].str, buf);
 }
 END_TEST
@@ -211,8 +285,86 @@ START_TEST(test_enum_printf_hook_split)
 {
 	char buf[128];
 
-	snprintf(buf, sizeof(buf), "%N", test_enum_split_names, printf_tests_split[_i].val);
+	snprintf(buf, sizeof(buf), "%N",
+			 test_enum_split_names, printf_tests_split[_i].val);
 	ck_assert_str_eq(printf_tests_split[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_printf_hook_flags)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_names,
+			 printf_tests_flags[_i].val);
+	ck_assert_str_eq(printf_tests_flags[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_printf_hook_flags_incomplete)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_incomplete_names,
+			 printf_tests_flags_incomplete[_i].val);
+	ck_assert_str_eq(printf_tests_flags_incomplete[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_printf_hook_flags_null)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names,
+			 printf_tests_flags_null[_i].val);
+	ck_assert_str_eq(printf_tests_flags_null[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_printf_hook_flags_overflow)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_overflow_names,
+			 printf_tests_flags_overflow[_i].val);
+	ck_assert_str_eq(printf_tests_flags_overflow[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_printf_hook_flags_noflagenum)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names,
+			 printf_tests_flags_noflagenum[_i].val);
+	ck_assert_str_eq(printf_tests_flags_noflagenum[_i].str, buf);
+}
+END_TEST
+
+START_TEST(test_enum_flags_to_string)
+{
+	char buf[1], *str;
+
+	str = enum_flags_to_string(test_enum_flags_names,
+			enum_flags_to_string_tests[_i].val, buf, sizeof(buf));
+	if (str)
+	{
+		ck_assert_str_eq(enum_flags_to_string_tests[_i].str, str);
+	}
+	else
+	{
+		ck_assert(str == enum_flags_to_string_tests[_i].str);
+	}
+}
+END_TEST
+
+START_TEST(test_enum_flags_to_string_noflagenum)
+{
+	char buf[1024];
+
+	enum_flags_to_string(test_enum_cont_names,
+			printf_tests_flags_noflagenum[_i].val, buf, sizeof(buf));
+	ck_assert_str_eq(printf_tests_flags_noflagenum[_i].str, buf);
 }
 END_TEST
 
@@ -246,9 +398,19 @@ Suite *enum_suite_create()
 	tcase_add_loop_test(tc, test_enum_from_name_split, 0, countof(enum_tests_split));
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("enum_flags_to_string");
+	tcase_add_loop_test(tc, test_enum_flags_to_string, 0, countof(enum_flags_to_string_tests));
+	tcase_add_loop_test(tc, test_enum_flags_to_string_noflagenum, 0, countof(printf_tests_flags_noflagenum));
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("enum_printf_hook");
 	tcase_add_loop_test(tc, test_enum_printf_hook_cont, 0, countof(printf_tests_cont));
 	tcase_add_loop_test(tc, test_enum_printf_hook_split, 0, countof(printf_tests_split));
+	tcase_add_loop_test(tc, test_enum_printf_hook_flags, 0, countof(printf_tests_flags));
+	tcase_add_loop_test(tc, test_enum_printf_hook_flags_incomplete, 0, countof(printf_tests_flags_incomplete));
+	tcase_add_loop_test(tc, test_enum_printf_hook_flags_null, 0, countof(printf_tests_flags_null));
+	tcase_add_loop_test(tc, test_enum_printf_hook_flags_overflow, 0, countof(printf_tests_flags_overflow));
+	tcase_add_loop_test(tc, test_enum_printf_hook_flags_noflagenum, 0, countof(printf_tests_flags_noflagenum));
 	tcase_add_test(tc, test_enum_printf_hook_width);
 	suite_add_tcase(s, tc);
 

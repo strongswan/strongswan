@@ -60,20 +60,103 @@ bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val)
 }
 
 /**
+ * Get the position of a flag name using offset calculation
+ */
+static int find_flag_pos(u_int val, u_int first)
+{
+	int offset = 0;
+
+	while (val != 0x01)
+	{
+		val = val >> 1;
+		offset++;
+	}
+	return first - offset;
+}
+
+/**
  * Described in header.
+ */
+char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
+{
+	char *pos = buf, *delim = "";
+	int i, wr;
+
+	if (e->next != ENUM_FLAG_MAGIC)
+	{
+		if (snprintf(buf, len, "(%d)", (int)val) >= len)
+		{
+			return NULL;
+		}
+		return buf;
+	}
+
+	if (snprintf(buf, len, "(unset)") >= len)
+	{
+		return NULL;
+	}
+
+	for (i = 0; val; i++)
+	{
+		u_int flag = 1 << i;
+
+		if (val & flag)
+		{
+			char *name = NULL, hex[32];
+
+			if (flag >= (u_int)e->first && flag <= (u_int)e->last)
+			{
+				name = e->names[find_flag_pos(e->first, i)];
+			}
+			else
+			{
+				snprintf(hex, sizeof(hex), "(0x%X)", flag);
+				name = hex;
+			}
+			if (name)
+			{
+				wr = snprintf(pos, len, "%s%s", delim, name);
+				if (wr >= len)
+				{
+					return NULL;
+				}
+				len -= wr;
+				pos += wr;
+				delim = " | ";
+			}
+			val &= ~flag;
+		}
+	}
+	return buf;
+}
+
+/**
+ * See header.
  */
 int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
 {
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
 	int val = *((int*)(args[1]));
-	char *name, buf[32];
+	char *name, buf[512];
 
-	name = enum_to_name(ed, val);
-	if (name == NULL)
+	if (ed->next == ENUM_FLAG_MAGIC)
 	{
-		snprintf(buf, sizeof(buf), "(%d)", val);
-		name = buf;
+		name = enum_flags_to_string(ed, val, buf, sizeof(buf));
+		if (name == NULL)
+		{
+			snprintf(buf, sizeof(buf), "(0x%X)", val);
+			name = buf;
+		}
+	}
+	else
+	{
+		name = enum_to_name(ed, val);
+		if (name == NULL)
+		{
+			snprintf(buf, sizeof(buf), "(%d)", val);
+			name = buf;
+		}
 	}
 	if (spec->minus)
 	{
