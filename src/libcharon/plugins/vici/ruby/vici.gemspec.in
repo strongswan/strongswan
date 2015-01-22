@@ -2,7 +2,7 @@ Gem::Specification.new do |s|
   s.name          = "vici"
   s.version       = "@GEM_VERSION@"
   s.authors       = ["Martin Willi"]
-  s.email         = ["martin@strongswan.ch"]
+  s.email         = ["martin@strongswan.org"]
   s.description   = %q{
      The strongSwan VICI protocol allows external application to monitor,
      configure and control the IKE daemon charon. This ruby gem provides a
