@@ -394,6 +394,28 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 				}
 			}
 		}
+		else if (strpfx(str, "xauth"))
+		{	/* XAuth, use a username */
+			class = AUTH_CLASS_XAUTH;
+			if (*(str + strlen("xauth")) == '-')
+			{
+				auth->add(auth, AUTH_RULE_XAUTH_BACKEND, str + strlen("xauth-"));
+			}
+			if (!id)
+			{
+				if (local && num)
+				{
+					snprintf(buf, sizeof(buf), "cli-%.6d-%.2d", num, rnd);
+					id = identification_create_from_string(buf);
+				}
+				else
+				{
+					id = identification_create_from_encoding(ID_ANY, chunk_empty);
+				}
+			}
+			/* additionally set the ID as XAuth identity */
+			auth->add(auth, AUTH_RULE_XAUTH_IDENTITY, id->clone(id));
+		}
 		else
 		{
 			if (!streq(str, "pubkey"))
