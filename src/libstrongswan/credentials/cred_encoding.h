@@ -98,6 +98,8 @@ enum cred_encoding_type_t {
 	CERT_PEM,
 	/** PGP Packet encoded certificate */
 	CERT_PGP_PKT,
+	/** IPv6 CGA parameters */
+	CERT_CGA_ENCODING,
 
 	CRED_ENCODING_MAX,
 };
