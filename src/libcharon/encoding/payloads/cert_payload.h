@@ -48,6 +48,8 @@ enum cert_encoding_t {
 	ENC_X509_HASH_AND_URL =			12,
 	ENC_X509_HASH_AND_URL_BUNDLE =	13,
 	ENC_OCSP_CONTENT =				14,  /* from RFC 4806 */
+	/* private use */
+	ENC_CGA_PARAMS =			   201,
 };
 
 /**

@@ -23,7 +23,7 @@
 
 #include "cert_payload.h"
 
-ENUM(cert_encoding_names, ENC_PKCS7_WRAPPED_X509, ENC_OCSP_CONTENT,
+ENUM_BEGIN(cert_encoding_names, ENC_PKCS7_WRAPPED_X509, ENC_OCSP_CONTENT,
 	"ENC_PKCS7_WRAPPED_X509",
 	"ENC_PGP",
 	"ENC_DNS_SIGNED_KEY",
@@ -39,6 +39,10 @@ ENUM(cert_encoding_names, ENC_PKCS7_WRAPPED_X509, ENC_OCSP_CONTENT,
 	"ENC_X509_HASH_AND_URL_BUNDLE",
 	"ENC_OCSP_CONTENT",
 );
+ENUM_NEXT(cert_encoding_names, ENC_CGA_PARAMS, ENC_CGA_PARAMS, ENC_OCSP_CONTENT,
+	"ENC_CGA_PARAMS",
+);
+ENUM_END(cert_encoding_names, ENC_CGA_PARAMS);
 
 typedef struct private_cert_payload_t private_cert_payload_t;
 
