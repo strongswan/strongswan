@@ -509,23 +509,26 @@ static void print_cert(certificate_t *cert)
 	printf("issuer:   \"%Y\"\n", cert->get_issuer(cert));
 
 	cert->get_validity(cert, &now, &notBefore, &notAfter);
-	printf("validity:  not before %T, ", &notBefore, FALSE);
-	if (now < notBefore)
+	if (notBefore != UNDEFINED_TIME || notAfter != UNDEFINED_TIME)
 	{
-		printf("not valid yet (valid in %V)\n", &now, &notBefore);
-	}
-	else
-	{
-		printf("ok\n");
-	}
-	printf("           not after  %T, ", &notAfter, FALSE);
-	if (now > notAfter)
-	{
-		printf("expired (%V ago)\n", &now, &notAfter);
-	}
-	else
-	{
-		printf("ok (expires in %V)\n", &now, &notAfter);
+		printf("validity:  not before %T, ", &notBefore, FALSE);
+		if (now < notBefore)
+		{
+			printf("not valid yet (valid in %V)\n", &now, &notBefore);
+		}
+		else
+		{
+			printf("ok\n");
+		}
+		printf("           not after  %T, ", &notAfter, FALSE);
+		if (now > notAfter)
+		{
+			printf("expired (%V ago)\n", &now, &notAfter);
+		}
+		else
+		{
+			printf("ok (expires in %V)\n", &now, &notAfter);
+		}
 	}
 
 	switch (cert->get_type(cert))
