@@ -284,6 +284,30 @@ static void process_ac(cert_payload_t *payload, auth_cfg_t *auth)
 }
 
 /**
+ * Process CGA parameters
+ */
+static void process_cga(private_ike_cert_pre_t *this,
+						cert_payload_t *payload, auth_cfg_t *auth)
+{
+	certificate_t *cert;
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+	{
+		cert = payload->get_cert(payload);
+		if (cert)
+		{
+			DBG1(DBG_IKE, "received CGA parameters for \"%Y\"",
+				 cert->get_subject(cert));
+			auth->add(auth, AUTH_HELPER_SUBJECT_CERT, cert);
+		}
+	}
+	else
+	{
+		DBG1(DBG_ENC, "ignoring CGA parameters");
+	}
+}
+
+/**
  * Process certificate payloads
  */
 static void process_certs(private_ike_cert_pre_t *this, message_t *message)
@@ -324,6 +348,9 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					break;
 				case ENC_X509_ATTRIBUTE:
 					process_ac(cert_payload, auth);
+					break;
+				case ENC_CGA_PARAMS:
+					process_cga(this, cert_payload, auth);
 					break;
 				case ENC_PKCS7_WRAPPED_X509:
 				case ENC_PGP:
