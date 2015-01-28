@@ -126,7 +126,14 @@ static bool add_subject_cert(private_ike_cert_post_t *this, auth_cfg_t *auth,
 	}
 	DBG1(DBG_IKE, "sending end entity cert \"%Y\"", cert->get_subject(cert));
 	message->add_payload(message, (payload_t*)payload);
-	return TRUE;
+	switch (cert->get_type(cert))
+	{
+		case CERT_CGA_PARAMS:
+			/* do not send a trust chain */
+			return FALSE;
+		default:
+			return TRUE;
+	}
 }
 
 /**
