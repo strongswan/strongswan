@@ -151,6 +151,10 @@ enum builder_part_t {
 	BUILD_SHARES,
 	/** minimum number of participating private key shares */
 	BUILD_THRESHOLD,
+	/** IPv6 CGA network prefix (RFC 3972), 8 bytes chunk_t */
+	BUILD_CGA_PREFIX,
+	/** IPv6 CGA brute force difficulty Sec (RFC 3972), as int */
+	BUILD_CGA_SEC,
 	/** end of variable argument builder list */
 	BUILD_END,
 };
