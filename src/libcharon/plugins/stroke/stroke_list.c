@@ -882,6 +882,38 @@ static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
 }
 
 /**
+ * list CGA parameters
+ */
+static void stroke_list_cga(linked_list_t *list, FILE *out)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	bool first = TRUE;
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		public_key_t *public;
+
+		if (first)
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of CGA parameters:\n");
+			first = FALSE;
+		}
+		fprintf(out, "\n");
+		fprintf(out, "  CGA:       %Y\n", cert->get_subject(cert));
+		public = cert->get_public_key(cert);
+		if (public)
+		{
+			list_public_key(public, out);
+			public->destroy(public);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * list all X.509 certificates matching the flags
  */
 static void stroke_list_certs(linked_list_t *list, char *label,
@@ -1451,6 +1483,14 @@ METHOD(stroke_list_t, list, void,
 
 		stroke_list_pgp(pgp_list, msg->list.utc, out);
 		pgp_list->destroy_offset(pgp_list, offsetof(certificate_t, destroy));
+	}
+	if (msg->list.flags & LIST_CERTS)
+	{
+		linked_list_t *cgas;
+
+		cgas = create_unique_cert_list(CERT_CGA_PARAMS);
+		stroke_list_cga(cgas, out);
+		cgas->destroy_offset(cgas, offsetof(certificate_t, destroy));
 	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
