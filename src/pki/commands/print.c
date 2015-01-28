@@ -492,6 +492,26 @@ static void print_ac(ac_t *ac)
 }
 
 /**
+ * Print CGA parameters
+ */
+static void print_cga(certificate_t *cert)
+{
+	identification_t *subject;
+	chunk_t addr;
+	u_int sec;
+
+	subject = cert->get_subject(cert);
+	addr = subject->get_encoding(subject);
+
+	if (addr.len == 16)
+	{
+		sec = (addr.ptr[8] & 0xE0);
+		sec >>= 5;
+		printf("Sec:       %u\n", sec);
+	}
+}
+
+/**
  * Print certificate information
  */
 static void print_cert(certificate_t *cert)
@@ -542,6 +562,9 @@ static void print_cert(certificate_t *cert)
 		case CERT_X509_AC:
 			print_ac((ac_t*)cert);
 			break;
+		case CERT_CGA_PARAMS:
+			print_cga(cert);
+			break;
 		default:
 			printf("parsing certificate subtype %N not implemented\n",
 				   certificate_type_names, cert->get_type(cert));
@@ -586,6 +609,11 @@ static int print()
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509_AC;
+				}
+				else if (streq(arg, "cga"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_CGA_PARAMS;
 				}
 				else if (streq(arg, "pub"))
 				{
@@ -679,7 +707,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|bliss-priv|pub|x509|crl|ac]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|bliss-priv|pub|x509|crl|ac|cga]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
