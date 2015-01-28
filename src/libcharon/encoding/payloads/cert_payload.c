@@ -234,6 +234,9 @@ METHOD(cert_payload_t, get_cert, certificate_t*,
 		case ENC_CRL:
 			type = CERT_X509_CRL;
 			break;
+		case ENC_CGA_PARAMS:
+			return lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							CERT_CGA_PARAMS, BUILD_BLOB, this->data, BUILD_END);
 		default:
 			return NULL;
 	}
