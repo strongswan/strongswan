@@ -172,6 +172,21 @@ static certificate_t *load_from_smartcard(smartcard_format_t format,
 	return cred;
 }
 
+/**
+ * Check if a file has an absolute path, if not prepend a base directory
+ */
+static void make_absolute(char *buf, size_t bufsize, char *base, char *file)
+{
+	if (*file == '/')
+	{
+		snprintf(buf, bufsize, "%s", file);
+	}
+	else
+	{
+		snprintf(buf, bufsize, "%s/%s", base, file);
+	}
+}
+
 METHOD(stroke_cred_t, load_ca, certificate_t*,
 	private_stroke_cred_t *this, char *filename)
 {
@@ -193,15 +208,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 	}
 	else
 	{
-		if (*filename == '/')
-		{
-			snprintf(path, sizeof(path), "%s", filename);
-		}
-		else
-		{
-			snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
-		}
-
+		make_absolute(path, sizeof(path), CA_CERTIFICATE_DIR, filename);
 		if (this->force_ca_cert)
 		{	/* we treat this certificate as a CA certificate even if it has no
 			 * CA basic constraint */
@@ -257,15 +264,7 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 	}
 	else
 	{
-		if (*filename == '/')
-		{
-			snprintf(path, sizeof(path), "%s", filename);
-		}
-		else
-		{
-			snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
-		}
-
+		make_absolute(path, sizeof(path), CERTIFICATE_DIR, filename);
 		cert = lib->creds->create(lib->creds,
 								  CRED_CERTIFICATE, CERT_ANY,
 								  BUILD_FROM_FILE, path,
@@ -343,15 +342,7 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 	}
 	else
 	{
-		if (*filename == '/')
-		{
-			snprintf(path, sizeof(path), "%s", filename);
-		}
-		else
-		{
-			snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
-		}
-
+		make_absolute(path, sizeof(path), CERTIFICATE_DIR, filename);
 		cert = lib->creds->create(lib->creds,
 								  CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
 								  BUILD_FROM_FILE, path,
@@ -379,14 +370,7 @@ METHOD(stroke_cred_t, load_cga, certificate_t*,
 	certificate_t *cert;
 	char path[PATH_MAX];
 
-	if (*filename == '/')
-	{
-		snprintf(path, sizeof(path), "%s", filename);
-	}
-	else
-	{
-		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
-	}
+	make_absolute(path, sizeof(path), CERTIFICATE_DIR, filename);
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_CGA_PARAMS,
 							  BUILD_FROM_FILE, path, BUILD_END);
 	if (cert)
