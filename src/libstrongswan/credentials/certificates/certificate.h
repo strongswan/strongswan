@@ -52,6 +52,8 @@ enum certificate_type_t {
 	CERT_PKCS10_REQUEST,
 	/** PGP certificate */
 	CERT_GPG,
+	/** IPv6 CGA parameters, RFC3972 */
+	CERT_CGA_PARAMS,
 };
 
 /**
