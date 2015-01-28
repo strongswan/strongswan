@@ -29,6 +29,7 @@ plugins = \
 	plugins/attr.opt \
 	plugins/attr-sql.opt \
 	plugins/certexpire.opt \
+	plugins/cga.opt \
 	plugins/coupling.opt \
 	plugins/dhcp.opt \
 	plugins/dnscert.opt \

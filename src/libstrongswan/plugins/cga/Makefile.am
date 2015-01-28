@@ -12,6 +12,7 @@ endif
 
 libstrongswan_cga_la_SOURCES = \
 	cga_cert.h cga_cert.c \
+	cga_trust.h cga_trust.c \
 	cga_plugin.h cga_plugin.c
 
 libstrongswan_cga_la_LDFLAGS = -module -avoid-version

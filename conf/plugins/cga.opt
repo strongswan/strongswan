@@ -1,0 +1,9 @@
+charon.plugins.cga.trust = no
+	Whether to trust CGA verified IPv6 identities.
+
+	If set to yes, any CGA verified IPv6 identity is trusted and allows a
+	peer to authenticate with that identity. As anybody can generate a CGA
+	for a given public key, any peer can successfully authenticate with that
+	CGA. To exclude CGA authenticated IDs from specific connection definitions,
+	public key constraints may be used. Because of the security implications,
+	CGA trust is disabled by default.

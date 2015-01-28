@@ -15,6 +15,7 @@
 
 #include "cga_plugin.h"
 #include "cga_cert.h"
+#include "cga_trust.h"
 
 #include <library.h>
 
@@ -29,6 +30,11 @@ struct private_cga_plugin_t {
 	 * Public functions
 	 */
 	cga_plugin_t public;
+
+	/**
+	 * Credential set providing a virtual CGA trust anchor
+	 */
+	cga_trust_t *trust;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -54,9 +60,24 @@ METHOD(plugin_t, get_features, int,
 	return countof(f);
 }
 
+METHOD(plugin_t, reload, bool,
+	private_cga_plugin_t *this)
+{
+	lib->credmgr->remove_set(lib->credmgr, &this->trust->set);
+	lib->credmgr->flush_cache(lib->credmgr, CERT_CGA_PARAMS);
+	if (lib->settings->get_bool(lib->settings,
+								"%s.plugins.cga.trust", FALSE, lib->ns))
+	{
+		lib->credmgr->add_set(lib->credmgr, &this->trust->set);
+	}
+	return TRUE;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_cga_plugin_t *this)
 {
+	lib->credmgr->remove_set(lib->credmgr, &this->trust->set);
+	this->trust->destroy(this->trust);
 	free(this);
 }
 
@@ -72,10 +93,14 @@ plugin_t *cga_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},
+		.trust = cga_trust_create(),
 	);
+
+	reload(this);
 
 	return &this->public.plugin;
 }
