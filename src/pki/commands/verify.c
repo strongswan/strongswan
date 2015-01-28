@@ -28,6 +28,7 @@ static int verify()
 {
 	bool trusted = FALSE, valid = FALSE, revoked = FALSE;
 	bool has_ca = FALSE, online = FALSE;
+	certificate_type_t type = CERT_X509;
 	certificate_t *cert;
 	enumerator_t *enumerator;
 	auth_cfg_t *auth;
@@ -47,9 +48,24 @@ static int verify()
 			case 'i':
 				file = arg;
 				continue;
+			case 't':
+				if (streq(arg, "x509"))
+				{
+					type = CERT_X509;
+				}
+				else if (streq(arg, "cga"))
+				{
+					type = CERT_CGA_PARAMS;
+					/* we require the CGA trust anchor */
+					has_ca = TRUE;
+				}
+				else
+				{
+					return command_usage( "invalid input type");
+				}
+				continue;
 			case 'c':
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509,
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 										  BUILD_FROM_FILE, arg, BUILD_END);
 				if (!cert)
 				{
@@ -73,7 +89,7 @@ static int verify()
 
 	if (file)
 	{
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 								  BUILD_FROM_FILE, file, BUILD_END);
 	}
 	else
@@ -86,7 +102,7 @@ static int verify()
 			fprintf(stderr, "reading certificate failed: %s\n", strerror(errno));
 			goto end;
 		}
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 								  BUILD_BLOB, chunk, BUILD_END);
 		free(chunk.ptr);
 	}
@@ -173,10 +189,11 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		verify, 'v', "verify",
 		"verify a certificate using the CA certificate",
-		{"[--in file] [--cacert file]"},
+		{"[--in file] [--type x509|cga] [--cacert file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "X.509 certificate to verify, default: stdin"},
+			{"in",		'i', 1, "certificate to verify, default: stdin"},
+			{"type",	't', 1, "type of input certificate, default: x509"},
 			{"cacert",	'c', 1, "CA certificate for trustchain verification"},
 			{"online",	'o', 0, "enable online CRL/OCSP revocation checking"},
 		}
