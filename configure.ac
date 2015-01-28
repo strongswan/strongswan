@@ -147,6 +147,7 @@ ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
 ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
 # encoding/decoding plugins
+ARG_ENABL_SET([cga],            [enable IPv6 Cryptographically Generated Address plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
@@ -1237,6 +1238,7 @@ ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([pkcs8],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
+ADD_PLUGIN([cga],                  [s charon pki])
 ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
@@ -1389,6 +1391,7 @@ AM_CONDITIONAL(USE_PKCS7, test x$pkcs7 = xtrue)
 AM_CONDITIONAL(USE_PKCS8, test x$pkcs8 = xtrue)
 AM_CONDITIONAL(USE_PKCS12, test x$pkcs12 = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
+AM_CONDITIONAL(USE_CGA, test x$cga = xtrue)
 AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
 AM_CONDITIONAL(USE_SSHKEY, test x$sshkey = xtrue)
 AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
@@ -1632,6 +1635,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/pkcs8/Makefile
 	src/libstrongswan/plugins/pkcs12/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
+	src/libstrongswan/plugins/cga/Makefile
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/sshkey/Makefile
 	src/libstrongswan/plugins/pem/Makefile

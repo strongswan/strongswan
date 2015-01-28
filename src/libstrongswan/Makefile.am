@@ -399,6 +399,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CGA
+  SUBDIRS += plugins/cga
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/cga/libstrongswan-cga.la
+endif
+endif
+
 if USE_DNSKEY
   SUBDIRS += plugins/dnskey
 if MONOLITHIC
