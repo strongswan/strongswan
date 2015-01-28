@@ -95,6 +95,8 @@ enum signature_scheme_t {
 	SIGN_ECDSA_521,
 	/** BLISS with SHA-512                                             */
 	SIGN_BLISS_WITH_SHA512,
+	/** CGA verified using SHA1 */
+	SIGN_CGA_SHA1,
 };
 
 /**

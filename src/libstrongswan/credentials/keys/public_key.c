@@ -26,7 +26,7 @@ ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"BLISS"
 );
 
-ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA512,
+ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_CGA_SHA1,
 	"UNKNOWN",
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
@@ -44,6 +44,7 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA512,
 	"ECDSA-384",
 	"ECDSA-521",
 	"BLISS_WITH_SHA512",
+	"CGA_SHA1",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,
@@ -140,4 +141,3 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_UNKNOWN;
 	}
 }
-
