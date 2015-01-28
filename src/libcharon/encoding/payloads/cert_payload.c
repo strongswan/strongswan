@@ -333,15 +333,22 @@ cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
 											  certificate_t *cert)
 {
 	private_cert_payload_t *this;
+	cred_encoding_type_t encoding;
 
 	this = (private_cert_payload_t*)cert_payload_create(type);
 	switch (cert->get_type(cert))
 	{
 		case CERT_X509:
 			this->encoding = ENC_X509_SIGNATURE;
+			encoding = CERT_ASN1_DER;
 			break;
 		case CERT_X509_AC:
 			this->encoding = ENC_X509_ATTRIBUTE;
+			encoding = CERT_ASN1_DER;
+			break;
+		case CERT_CGA_PARAMS:
+			this->encoding = ENC_CGA_PARAMS;
+			encoding = CERT_CGA_ENCODING;
 			break;
 		default:
 			DBG1(DBG_ENC, "embedding %N certificate in payload failed",
@@ -349,7 +356,7 @@ cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
 			free(this);
 			return NULL;
 	}
-	if (!cert->get_encoding(cert, CERT_ASN1_DER, &this->data))
+	if (!cert->get_encoding(cert, encoding, &this->data))
 	{
 		DBG1(DBG_ENC, "encoding certificate for cert payload failed");
 		free(this);
