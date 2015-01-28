@@ -73,6 +73,11 @@ static int pub()
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509;
 				}
+				else if (streq(arg, "cga"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_CGA_PARAMS;
+				}
 				else
 				{
 					return command_usage("invalid input type");
@@ -188,7 +193,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
-		{"[--in file|--keyid hex] [--type rsa|ecdsa|bliss|pub|pkcs10|x509]",
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|bliss|pub|pkcs10|x509|cga]",
 		 "[--outform der|pem|dnskey|sshkey]"},
 		{
 			{"help",	'h', 0, "show usage information"},
