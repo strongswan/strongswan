@@ -76,6 +76,14 @@ struct stroke_cred_t {
 								  identification_t *identity);
 
 	/**
+	 * Load CGA parameters from file.
+	 *
+	 * @param filename		file to read CGA parameters from
+	 * @return				CGA parameters, as certificate
+	 */
+	certificate_t* (*load_cga)(stroke_cred_t *this, char *filename);
+
+	/**
 	 * Add a shared secret to serve through the credential_set.
 	 *
 	 * @param shared		shared key to add, gets owned

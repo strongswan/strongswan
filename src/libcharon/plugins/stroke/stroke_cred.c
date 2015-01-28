@@ -373,6 +373,33 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 	return NULL;
 }
 
+METHOD(stroke_cred_t, load_cga, certificate_t*,
+	private_stroke_cred_t *this, char *filename)
+{
+	certificate_t *cert;
+	char path[PATH_MAX];
+
+	if (*filename == '/')
+	{
+		snprintf(path, sizeof(path), "%s", filename);
+	}
+	else
+	{
+		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
+	}
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_CGA_PARAMS,
+							  BUILD_FROM_FILE, path, BUILD_END);
+	if (cert)
+	{
+		cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+		DBG1(DBG_CFG, "  loaded CGA parameters \"%Y\" from '%s'",
+			 cert->get_subject(cert), filename);
+		return cert;
+	}
+	DBG1(DBG_CFG, "  loading CGA parameters from '%s' failed", filename);
+	return NULL;
+}
+
 /**
  * load trusted certificates from a directory
  */
@@ -1384,6 +1411,7 @@ stroke_cred_t *stroke_cred_create()
 			.load_ca = _load_ca,
 			.load_peer = _load_peer,
 			.load_pubkey = _load_pubkey,
+			.load_cga = _load_cga,
 			.add_shared = _add_shared,
 			.cachecrl = _cachecrl,
 			.destroy = _destroy,

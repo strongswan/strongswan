@@ -486,7 +486,14 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator = enumerator_create_token(cert, ",", " ");
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			certificate = this->cred->load_peer(this->cred, cert);
+			if (strpfx(cert, "cga:"))
+			{
+				certificate = this->cred->load_cga(this->cred, cert + 4);
+			}
+			else
+			{
+				certificate = this->cred->load_peer(this->cred, cert);
+			}
 			if (certificate)
 			{
 				if (local)
