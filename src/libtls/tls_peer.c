@@ -324,6 +324,7 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
 		while (enumerator->enumerate(enumerator, &current, &auth))
 		{
 			public = current->get_ref(current);
+			this->server_auth->merge(this->server_auth, auth, FALSE);
 			break;
 		}
 		enumerator->destroy(enumerator);

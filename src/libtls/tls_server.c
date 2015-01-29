@@ -551,6 +551,7 @@ static status_t process_cert_verify(private_tls_server_t *this,
 		sig->destroy(sig);
 		if (verified)
 		{
+			this->peer_auth->merge(this->peer_auth, auth, FALSE);
 			break;
 		}
 		DBG1(DBG_TLS, "signature verification failed, trying another key");
