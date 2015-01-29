@@ -77,6 +77,13 @@ struct tls_eap_t {
 	void (*set_identifier) (tls_eap_t *this, uint8_t identifier);
 
 	/**
+	 * Get the authentication details after completing the handshake.
+	 *
+	 * @return				authentication details, internal data
+	 */
+	auth_cfg_t* (*get_auth)(tls_eap_t *this);
+
+	/**
 	 * Destroy a tls_eap_t.
 	 */
 	void (*destroy)(tls_eap_t *this);
