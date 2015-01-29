@@ -614,7 +614,9 @@ Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific
 EAP methods are defined in the form
 .B eap-type-vendor
 .RB "(e.g. " eap-7-12345 ).
-For
+To specify signature and trust chain constraints for EAP-(T)TLS, append a colon
+to the EAP method, followed by the key type/size and hash algorithm as discussed
+above. For
 .B xauth,
 an XAuth authentication backend can be specified, such as
 .B xauth-generic
