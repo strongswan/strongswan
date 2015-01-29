@@ -522,6 +522,13 @@ METHOD(authenticator_t, process_server, status_t,
 		{
 			return FAILED;
 		}
+		if (this->method->get_auth)
+		{
+			auth_cfg_t *auth;
+
+			auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+			auth->merge(auth, this->method->get_auth(this->method), FALSE);
+		}
 		return NEED_MORE;
 	}
 
