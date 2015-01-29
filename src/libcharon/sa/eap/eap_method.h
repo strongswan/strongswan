@@ -137,6 +137,18 @@ struct eap_method_t {
 	void (*set_identifier) (eap_method_t *this, u_int8_t identifier);
 
 	/**
+	 * Get authentication details performed by this EAP method.
+	 *
+	 * After EAP completion, the auth data contains additional information
+	 * of the authentication process, used certificates etc.
+	 * This method is optional to implement, but if it is, it must return
+	 * a valid auth_cfg.
+	 *
+	 * @return				auth method, internal data
+	 */
+	auth_cfg_t* (*get_auth)(eap_method_t *this);
+
+	/**
 	 * Destroys a eap_method_t object.
 	 */
 	void (*destroy) (eap_method_t *this);
