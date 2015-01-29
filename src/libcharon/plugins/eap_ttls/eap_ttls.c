@@ -111,6 +111,12 @@ METHOD(eap_method_t, is_mutual, bool,
 	return TRUE;
 }
 
+METHOD(eap_method_t, get_auth, auth_cfg_t*,
+	private_eap_ttls_t *this)
+{
+	return this->tls_eap->get_auth(this->tls_eap);
+}
+
 METHOD(eap_method_t, destroy, void,
 	private_eap_ttls_t *this)
 {
@@ -141,6 +147,7 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 				.get_identifier = _get_identifier,
 				.set_identifier = _set_identifier,
 				.get_msk = _get_msk,
+				.get_auth = _get_auth,
 				.destroy = _destroy,
 			},
 		},
