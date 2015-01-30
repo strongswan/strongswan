@@ -67,6 +67,7 @@ plugins = \
 	plugins/kernel-pfroute.opt \
 	plugins/load-tester.opt \
 	plugins/lookip.opt \
+	plugins/narrowid.opt \
 	plugins/ntru.opt \
 	plugins/openssl.opt \
 	plugins/pkcs11.opt \

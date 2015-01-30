@@ -608,6 +608,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NARROWID
+  SUBDIRS += plugins/narrowid
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/narrowid/libstrongswan-narrowid.la
+endif
+endif
+
 if USE_UNITY
   SUBDIRS += plugins/unity
 if MONOLITHIC

@@ -194,6 +194,7 @@ ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization script.])
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
+ARG_ENABL_SET([narrowid],       [enables plugin narrowing remote traffic selectors to authenticated IDs.])
 ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
@@ -1336,6 +1337,7 @@ ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([maemo],                [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
+ADD_PLUGIN([narrowid],             [c charon])
 ADD_PLUGIN([unity],                [c charon])
 
 AC_SUBST(charon_plugins)
@@ -1492,6 +1494,7 @@ AM_CONDITIONAL(USE_CONNMARK, test x$connmark = xtrue)
 AM_CONDITIONAL(USE_FORECAST, test x$forecast = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
+AM_CONDITIONAL(USE_NARROWID, test x$narrowid = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
@@ -1735,6 +1738,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/medsrv/Makefile
 	src/libcharon/plugins/medcli/Makefile
 	src/libcharon/plugins/addrblock/Makefile
+	src/libcharon/plugins/narrowid/Makefile
 	src/libcharon/plugins/unity/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile

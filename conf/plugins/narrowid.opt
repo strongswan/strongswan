@@ -1,0 +1,7 @@
+charon.plugins.narrowid.configs =
+	Space separated list of CHILD_SA configurations to do narrowing for.
+
+	For matching CHILD_SA configuration names, the plugin narrows the remote
+	traffic selectors to any succesfully authenticated IPv4 or IPv6 IKE
+	identity. Multiple configurations can be separated by spaces, no narrowing
+	is done if the option is not set.
