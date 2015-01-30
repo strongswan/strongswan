@@ -321,6 +321,7 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA256,		KEY_RSA,	},
 			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA384,		KEY_RSA,	},
 			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA512,		KEY_RSA,	},
+			{ "cgasha1",	SIGN_CGA_SHA1,					KEY_RSA,	},
 			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	},
 			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	},
 			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	},
@@ -328,6 +329,7 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
 			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
 			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
+			{ "cgasha1",	SIGN_CGA_SHA1,					KEY_ECDSA,	},
 		};
 
 		if (rsa_len || ecdsa_len)
