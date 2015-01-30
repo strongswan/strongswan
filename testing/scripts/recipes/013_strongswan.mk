@@ -73,6 +73,7 @@ CONFIG_OPTS = \
 	--enable-connmark \
 	--enable-forecast \
 	--enable-addrblock \
+	--enable-narrowid \
 	--enable-ctr \
 	--enable-ccm \
 	--enable-gcm \
