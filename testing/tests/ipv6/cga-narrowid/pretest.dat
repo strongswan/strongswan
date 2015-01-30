@@ -1,0 +1,7 @@
+moon::"ip addr add fec1:\:2c1d:3461:a532:ba48 dev eth1"
+sun::"ip addr add fec2:\:3840:e1ae:500c:c55f dev eth1"
+moon::ipsec start
+sun::ipsec start
+moon::expect-connection cga-tunnel
+sun::expect-connection cga-tunnel
+moon::ipsec up cga-tunnel

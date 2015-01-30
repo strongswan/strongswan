@@ -1,0 +1,7 @@
+moon:: ipsec status 2> /dev/null::cga-tunnel.*ESTABLISHED::YES
+sun::  ipsec status 2> /dev/null::cga-tunnel.*ESTABLISHED::YES
+moon:: ipsec status 2> /dev/null::cga-tunnel.*INSTALLED::YES
+sun::  ipsec status 2> /dev/null::cga-tunnel.*INSTALLED::YES
+moon::ping6 -c 1 fec2:\:3840:e1ae:500c:c55f::64 bytes from fec2:\:3840:e1ae:500c:c55f: icmp_seq=1::YES
+sun::tcpdump::IP6 fec1:\:2c1d:3461:a532:ba48 > fec2:\:3840:e1ae:500c:c55f: ESP::YES
+sun::tcpdump::IP6 fec2:\:3840:e1ae:500c:c55f > fec1:\:2c1d:3461:a532:ba48: ESP::YES

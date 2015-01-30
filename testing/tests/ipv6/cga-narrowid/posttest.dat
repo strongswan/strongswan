@@ -1,0 +1,4 @@
+moon::ipsec stop
+sun::ipsec stop
+moon::"ip addr del fec1:\:2c1d:3461:a532:ba48 dev eth1"
+sun::"ip addr del fec2:\:3840:e1ae:500c:c55f dev eth1"

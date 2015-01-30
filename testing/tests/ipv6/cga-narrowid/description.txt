@@ -1,0 +1,14 @@
+An ESP tunnel mode connection between the hosts <b>moon</b> and <b>sun</b> is
+set up for Cryptographically Generated Addresses (RFC 3972). While the peers
+communicate over ordinary IPv4 addresses, they exchange traffic selectors based
+on inner IPv6 CGA addresses.
+</p>
+<p>To establish trust in CGA addresses, the CGA plugin <i>trust</i> option is
+set in <i>strongswan.conf</i>. To recognize the private use CGA parameters
+certificate exchange, the peers exchange strongSwan vendor ID payloads.
+</p>
+<p>As the peers do not know the inner IPv6 CGA address of each other, they use
+the <i>narrowid</i> plugin. The plugin futher narrows the allowed prefix to
+the CGA each peer successfully authenticated. To enable narrowing for the
+connection, the <i>configs</i> option is set accordingly in
+<i>strongswan.conf</i>.
