@@ -1,0 +1,7 @@
+An IPv6 ESP transport connection between the hosts <b>moon</b> and <b>sun</b> is
+set up using Cryptographically Generated Addresses (RFC 3972). Both peers send
+the RSA based CGA parameters in certificate payloads to authenticate each other.
+</p>
+<p>To establish trust in CGA addresses, the CGA plugin <i>trust</i> option is
+set in <i>strongswan.conf</i>. To recognize the private use CGA parameters
+certificate exchange, the peers exchange strongSwan vendor ID payloads.

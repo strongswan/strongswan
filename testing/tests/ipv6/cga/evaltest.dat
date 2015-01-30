@@ -1,0 +1,7 @@
+moon:: ipsec status 2> /dev/null::host-host.*ESTABLISHED::YES
+sun::  ipsec status 2> /dev/null::host-host.*ESTABLISHED::YES
+moon:: ipsec status 2> /dev/null::host-host.*INSTALLED::YES
+sun::  ipsec status 2> /dev/null::host-host.*INSTALLED::YES
+moon::ping6 -c 1 fec0:\:3c93:f0e5:6eb8:8cf5::64 bytes from fec0:\:3c93:f0e5:6eb8:8cf5: icmp_seq=1::YES
+sun::tcpdump::IP6 fec0:\:208a:4d90:2951:1c97 > fec0:\:3c93:f0e5:6eb8:8cf5: ESP::YES
+sun::tcpdump::IP6 fec0:\:3c93:f0e5:6eb8:8cf5 > fec0:\:208a:4d90:2951:1c97: ESP::YES

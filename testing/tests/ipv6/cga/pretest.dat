@@ -1,0 +1,7 @@
+moon::"ip addr add fec0:\:208a:4d90:2951:1c97 dev eth0"
+sun::"ip addr add fec0:\:3c93:f0e5:6eb8:8cf5 dev eth0"
+moon::ipsec start
+sun::ipsec start
+moon::expect-connection host-host
+sun::expect-connection host-host
+moon::ipsec up host-host
