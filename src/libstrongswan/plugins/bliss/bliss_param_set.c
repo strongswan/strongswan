@@ -17,11 +17,15 @@
 
 #include <asn1/oid.h>
 
-ENUM(bliss_param_set_id_names, BLISS_I, BLISS_IV,
+ENUM(bliss_param_set_id_names, BLISS_I, BLISS_B_IV,
 	"BLISS-I",
 	"BLISS-II",
 	"BLISS-III",
-	"BLISS-IV"
+	"BLISS-IV",
+	"BLISS-B-I",
+	"BLISS-B-II",
+	"BLISS-B-III",
+	"BLISS-B-IV"
 );
 
 /**
@@ -118,8 +122,8 @@ static uint8_t c_bliss_iv[] = {
 static bliss_param_set_t bliss_param_sets[] = {
 
 	/* BLISS-I scheme */
-    {
-        .id = BLISS_I,
+	{
+		.id = BLISS_I,
 		.oid = OID_BLISS_I,
 		.strength = 128,
 		.q = 12289,
@@ -132,6 +136,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.non_zero2 = 0,
 		.kappa = 23,
 		.nks_max = 46479,
+		.p_max = 0,     /* not needed */
 		.sigma = 215,
 		.k_sigma = 254,
 		.k_sigma_bits = 8,
@@ -141,14 +146,14 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.z1_bits = 12,
 		.d = 10,
 		.p = 24,
-		.M = 46539,
-		.B_inf = 2047, /* reduced from 2100 due to 12 bit z1 encoding */
+		.M = 46539,     /* with alpha = 1.000 */
+		.B_inf = 2047,  /* reduced from 2100 due to 12 bit z1 encoding */
 		.B_l2 = 12872 * 12872
-      },
+	},
 
 	/* BLISS-III scheme */
-    {
-        .id = BLISS_III,
+	{
+		.id = BLISS_III,
 		.oid = OID_BLISS_III,
 		.strength = 160,
 		.q = 12289,
@@ -161,6 +166,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.non_zero2 = 16,
 		.kappa = 30,
 		.nks_max = 128626,
+		.p_max = 0,     /* not needed */
 		.sigma = 250,
 		.k_sigma = 295,
 		.k_sigma_bits = 9,
@@ -170,14 +176,14 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.z1_bits = 12,
 		.d = 9,
 		.p = 48,
-		.M = 128113,
+		.M = 128113,    /* with alpha = 0.700 */
 		.B_inf = 1760,
 		.B_l2 = 10206 * 10206
-      },
+	},
 
 	/* BLISS-IV scheme */
-    {
-        .id = BLISS_IV,
+	{
+		.id = BLISS_IV,
 		.oid = OID_BLISS_IV,
 		.strength = 192,
 		.q = 12289,
@@ -190,6 +196,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.non_zero2 = 31,
 		.kappa = 39,
 		.nks_max = 244669,
+		.p_max = 0,     /* not needed */
 		.sigma = 271,
 		.k_sigma = 320,
 		.k_sigma_bits = 9,
@@ -199,10 +206,101 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.z1_bits = 12,
 		.d = 8,
 		.p = 96,
-		.M = 244186,
+		.M = 244186,    /* with alpha = 0.550 */
 		.B_inf = 1613,
 		.B_l2 = 9901 * 9901
-     }
+	},
+
+	/* BLISS-B-I scheme */
+	{
+		.id = BLISS_B_I,
+		.oid = OID_BLISS_B_I,
+		.strength = 128,
+		.q = 12289,
+		.q_bits = 14,
+		.q2_inv = 6145,
+		.n = 512,
+		.n_bits = 9,
+		.fft_params = &bliss_fft_12289_512,
+		.non_zero1 = 154,
+		.non_zero2 = 0,
+		.kappa = 23,
+		.nks_max = 0,   /* not needed */
+		.p_max = 17825,
+		.sigma = 215,
+		.k_sigma = 254,
+		.k_sigma_bits = 8,
+		.c = c_bliss_i,
+		.c_cols = 16,
+		.c_rows = 21,
+		.z1_bits = 12,
+		.d = 10,
+		.p = 24,
+		.M = 17954,     /* with alpha = 1.610 */
+		.B_inf = 2047,  /* reduced from 2100 due to 12 bit z1 encoding */
+		.B_l2 = 12872 * 12872
+	},
+
+	/* BLISS-B-III scheme */
+	{
+		.id = BLISS_B_III,
+		.oid = OID_BLISS_B_III,
+		.strength = 160,
+		.q = 12289,
+		.q_bits = 14,
+		.q2_inv = 6145,
+		.n = 512,
+		.n_bits = 9,
+		.fft_params = &bliss_fft_12289_512,
+		.non_zero1 = 216,
+		.non_zero2 = 16,
+		.kappa = 30,
+		.nks_max = 0,   /* not needed */
+		.p_max = 42270,
+		.sigma = 250,
+		.k_sigma = 295,
+		.k_sigma_bits = 9,
+		.c = c_bliss_iii,
+		.c_cols = 16,
+		.c_rows = 21,
+		.z1_bits = 12,
+		.d = 9,
+		.p = 48,
+		.M = 42455,     /* with alpha = 1.216 */
+		.B_inf = 1760,
+		.B_l2 = 10206 * 10206
+	},
+
+	/* BLISS-B-IV scheme */
+	{
+		.id = BLISS_B_IV,
+		.oid = OID_BLISS_B_IV,
+		.strength = 192,
+		.q = 12289,
+		.q_bits = 14,
+		.q2_inv = 6145,
+		.n = 512,
+		.n_bits = 9,
+		.fft_params = &bliss_fft_12289_512,
+		.non_zero1 = 231,
+		.non_zero2 = 31,
+		.kappa = 39,
+		.nks_max = 0,   /* not needed */
+		.p_max = 69576,
+		.sigma = 271,
+		.k_sigma = 320,
+		.k_sigma_bits = 9,
+		.c = c_bliss_iv,
+		.c_cols = 16,
+		.c_rows = 22,
+		.z1_bits = 12,
+		.d = 8,
+		.p = 96,
+		.M = 70034,     /* with alpha = 1.027 */
+		.B_inf = 1613,
+		.B_l2 = 9901 * 9901
+	}
+
 };
 
 /**

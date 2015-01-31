@@ -103,6 +103,61 @@ static void multiply_by_c(int8_t *s, int n, uint16_t *c_indices,
 }
 
 /**
+ * BLISS-B GreedySC algorithm
+ */
+static void greedy_sc(int8_t *s1, int8_t *s2, int n, uint16_t *c_indices,
+					  uint16_t kappa, int32_t *v1, int32_t *v2)
+{
+	int i, j, index;
+	int32_t sign;
+
+	for (i = 0; i < n; i++)
+	{
+		v1[i] = v2[i] = 0;
+	}
+	for (j = 0; j < kappa; j++)
+	{
+		index = c_indices[j];
+		sign = 0;
+
+		for (i = 0; i < index; i++)
+		{
+			sign -= (v1[i] * s1[i - index + n] + v2[i] * s2[i - index + n]);
+		}
+		for (i = index; i < n; i++)
+		{
+			sign += (v1[i] * s1[i - index] + v2[i] * s2[i - index]);
+		}
+		for (i = 0; i < index; i++)
+		{
+			if (sign > 0)
+			{
+				v1[i] += s1[i - index + n];
+				v2[i] += s2[i - index + n];
+			}
+			else
+			{
+				v1[i] -= s1[i - index + n];
+				v2[i] -= s2[i - index + n];
+			}
+		}
+		for (i = index; i < n; i++)
+		{
+			if (sign > 0)
+			{
+				v1[i] -= s1[i - index];
+				v2[i] -= s2[i - index];
+			}
+			else
+			{
+				v1[i] += s1[i - index];
+				v2[i] += s2[i - index];
+			}
+		}
+	}
+}
+
+/**
  * Compute a BLISS signature based on a SHA-512 hash
  */
 static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
@@ -126,7 +181,7 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	double mean1 = 0, mean2 = 0, sigma1 = 0, sigma2 = 0;
 	chunk_t seed;
 	chunk_t data_hash = { data_hash_buf, sizeof(data_hash_buf) };
-	bool accepted, positive, success = FALSE;
+	bool accepted, positive, success = FALSE, use_bliss_b;
 
 	/* Initialize signature */
 	*signature = chunk_empty;
@@ -183,6 +238,23 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	ud = z2d;
 
 	fft = bliss_fft_create(this->set->fft_params);
+
+	/* Use of the enhanced BLISS-B signature algorithm? */
+	switch (this->set->id)
+	{
+		case BLISS_I:
+		case BLISS_II:
+		case BLISS_III:
+		case BLISS_IV:
+			use_bliss_b = FALSE;
+			break;
+		case BLISS_B_I:
+		case BLISS_B_II:
+		case BLISS_B_III:
+		case BLISS_B_IV:
+			use_bliss_b = TRUE;
+			break;
+	}
 
 	while (true)
 	{
@@ -284,20 +356,48 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 			goto end;
 		}
 
-		/* Compute s*c */
-		multiply_by_c(this->s1, n, c_indices, this->set->kappa, s1c);
-		multiply_by_c(this->s2, n, c_indices, this->set->kappa, s2c);
+		if (use_bliss_b)
+		{
+			/* Compute v = (s1c, s2c) with the GreedySC algorithm */
+			greedy_sc(this->s1, this->s2, n, c_indices, this->set->kappa,
+					  s1c, s2c);
 
-		/* Reject with probability 1/(M*exp(-norm^2/2*sigma^2)) */
-		norm = bliss_utils_scalar_product(s1c, s1c, n) +
-			   bliss_utils_scalar_product(s2c, s2c, n);
+			/* Compute norm = ||v||^2 = ||Sc'||^2 */
+			norm = bliss_utils_scalar_product(s1c, s1c, n) +
+				   bliss_utils_scalar_product(s2c, s2c, n);
+
+			/* Just in case. ||v||^2 <= P_max should always be fulfilled */
+			if (norm > this->set->p_max)
+			{
+				goto end;
+			}
+		}
+		else
+		{
+			/* Compute s*c */
+			multiply_by_c(this->s1, n, c_indices, this->set->kappa, s1c);
+			multiply_by_c(this->s2, n, c_indices, this->set->kappa, s2c);
+
+			/* Compute norm = |Sc||^2 */
+			norm = bliss_utils_scalar_product(s1c, s1c, n) +
+				   bliss_utils_scalar_product(s2c, s2c, n);
+		}
 
 		if (!sampler->bernoulli_exp(sampler, this->set->M - norm, &accepted))
 		{
 			goto end;
 		}
-		DBG2(DBG_LIB, "norm2(s1*c) + norm2(s2*c) = %u, %s",
-					   norm, accepted ? "accepted" : "rejected");
+		if (use_bliss_b)
+		{
+			DBG2(DBG_LIB, "norm2(s1*c') + norm2(s2*c') = %u (%u max), %s",
+				 norm, this->set->p_max, accepted ? "accepted" : "rejected");
+
+		}
+		else
+		{
+			DBG2(DBG_LIB, "norm2(s1*c) + norm2(s2*c) = %u, %s",
+				 norm, accepted ? "accepted" : "rejected");
+		}
 		if (!accepted)
 		{
 			continue;
@@ -523,8 +623,10 @@ METHOD(private_key_t, get_fingerprint, bool,
 	}
 	success = bliss_public_key_fingerprint(this->set->oid, this->A,
 										   this->set, type, fp);
-	lib->encoding->cache(lib->encoding, type, this, *fp);
-
+	if (success)
+	{
+		lib->encoding->cache(lib->encoding, type, this, *fp);
+	}
 	return success;
 }
 
@@ -834,16 +936,34 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 
 		l2_norm = wrapped_product(f, f, n, 0) +  wrapped_product(g, g, n, 0);
 		nks = nks_norm(f, g, n, this->set->kappa);
-		DBG2(DBG_LIB, "l2 norm of s1||s2: %d, Nk(S): %u (%u max)",
-					   l2_norm, nks, this->set->nks_max);
-		if (nks < this->set->nks_max)
+
+		switch (this->set->id)
 		{
-			*s1 = f;
-			*s2 = g;
-			return TRUE;
+			case BLISS_I:
+			case BLISS_II:
+			case BLISS_III:
+			case BLISS_IV:
+				DBG2(DBG_LIB, "l2 norm of s1||s2: %d, Nk(S): %u (%u max)",
+							   l2_norm, nks, this->set->nks_max);
+				if (nks < this->set->nks_max)
+				{
+					*s1 = f;
+					*s2 = g;
+					return TRUE;
+				}
+				free(f);
+				free(g);
+				break;
+			case BLISS_B_I:
+			case BLISS_B_II:
+			case BLISS_B_III:
+			case BLISS_B_IV:
+				DBG2(DBG_LIB, "l2 norm of s1||s2: %d, Nk(S): %u",
+							   l2_norm, nks);
+				*s1 = f;
+				*s2 = g;
+				return TRUE;
 		}
-		free(f);
-		free(g);
 	}
 
 	return FALSE;
@@ -855,7 +975,7 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 {
 	private_bliss_private_key_t *this;
-	u_int key_size = 1;
+	u_int key_size = BLISS_B_I;
 	int i, n, trials = 0;
 	uint32_t *S1, *S2, *a;
 	uint16_t q;
@@ -879,11 +999,33 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	/* Only BLISS-I, BLISS-III and BLISS-IV are currently supported */
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.bliss.use_bliss_b",
+								TRUE, lib->ns))
+	{
+		switch (key_size)
+		{
+			case BLISS_I:
+				key_size = BLISS_B_I;
+				break;
+			case BLISS_II:
+				key_size = BLISS_B_II;
+				break;
+			case BLISS_III:
+				key_size = BLISS_B_III;
+				break;
+			case BLISS_IV:
+				key_size = BLISS_B_IV;
+				break;
+			default:
+				break;
+		}
+	}
+
+	/* Only BLISS or BLISS-B types I, III, or IV are currently supported */
 	set = bliss_param_set_get_by_id(key_size);
 	if (!set)
 	{
-		DBG1(DBG_LIB, "BLISS parameter set %u not supported");
+		DBG1(DBG_LIB, "BLISS parameter set %u not supported", key_size);
 		return NULL;
 	}
 
@@ -1004,6 +1146,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 	bliss_bitpacker_t *packer;
 	asn1_parser_t *parser;
 	size_t s_bits = 0;
+	int8_t s, s_min, s_max;
 	uint32_t s_sign = 0x02, s_mask = 0xfffffffc, value;
 	bool success = FALSE;
 	int objectID, oid, i;
@@ -1047,9 +1190,36 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				{
 					goto end;
 				}
-
-				/* Use either 2 or 3 bits per array element */
-				s_bits = 2 + (this->set->non_zero2 > 0);
+				if (lib->settings->get_bool(lib->settings,
+							"%s.plugins.bliss.use_bliss_b",TRUE, lib->ns))
+				{
+					switch (this->set->id)
+					{
+						case BLISS_I:
+							this->set = bliss_param_set_get_by_id(BLISS_B_I);
+							break;
+						case BLISS_III:
+							this->set = bliss_param_set_get_by_id(BLISS_B_III);
+							break;
+						case BLISS_IV:
+							this->set = bliss_param_set_get_by_id(BLISS_B_IV);
+							break;
+						default:
+							break;
+					}
+				}
+				if (this->set->non_zero2)
+				{
+					s_min = -2;
+					s_max =  2;
+					s_bits = 3;
+				}
+				else
+				{
+					s_min = -1;
+					s_max =  1;
+					s_bits = 2;
+				}
 				s_sign = 1 << (s_bits - 1);
 				s_mask = ((1 << (32 - s_bits)) - 1) << s_bits;
 				break;
@@ -1072,7 +1242,13 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				for (i = 0; i < this->set->n; i++)
 				{
 					packer->read_bits(packer, &value, s_bits);
-					this->s1[i] = (value & s_sign) ? value | s_mask : value;
+					s = (value & s_sign) ? value | s_mask : value;
+					if (s < s_min || s > s_max)
+					{
+						packer->destroy(packer);
+						goto end;
+					}
+					this->s1[i] = s;
 				}
 				packer->destroy(packer);
 				break;
@@ -1089,7 +1265,13 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				for (i = 0; i < this->set->n; i++)
 				{
 					packer->read_bits(packer, &value, s_bits);
-					this->s2[i] = 2*((value & s_sign) ? value | s_mask : value);
+					s = (value & s_sign) ? value | s_mask : value;
+					if (s < s_min || s > s_max)
+					{
+						packer->destroy(packer);
+						goto end;
+					}
+					this->s2[i] = 2 * s;
 					if (i == 0)
 					{
 						this->s2[0] += 1;

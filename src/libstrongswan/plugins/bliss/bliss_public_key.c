@@ -410,6 +410,11 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 	for (i = 0; i < set->n; i++)
 	{
 		packer->read_bits(packer, &coefficient, set->q_bits);
+		if (coefficient >= set->q)
+		{
+			packer->destroy(packer);
+			return FALSE;
+		}
 		(*pubkey)[i] = coefficient;
 	}
 	packer->destroy(packer);

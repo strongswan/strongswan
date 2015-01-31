@@ -33,10 +33,14 @@ typedef struct bliss_param_set_t bliss_param_set_t;
  * BLISS signature parameter set ID list
  */
 enum bliss_param_set_id_t {
-	BLISS_I =   1,
-	BLISS_II =  2,
-	BLISS_III = 3,
-	BLISS_IV =  4
+	BLISS_I =     1,
+	BLISS_II =    2,
+	BLISS_III =   3,
+	BLISS_IV =    4,
+	BLISS_B_I =   5,
+	BLISS_B_II =  6,
+	BLISS_B_III = 7,
+	BLISS_B_IV =  8
 };
 
 extern enum_name_t *bliss_param_set_id_names;
@@ -107,9 +111,14 @@ struct bliss_param_set_t {
 	uint16_t kappa;
 
 	/**
-	 * Maximum Nk(S) tolerable NK(S) norm
+	 * Maximum Nk(S) tolerable NK(S) norm (BLISS only)
 	 */
 	uint32_t nks_max;
+
+	/**
+	 * Maximum value Pmax for ||Sc'||^2 norm (BLISS-B only)
+	 */
+	uint32_t p_max;
 
 	/**
 	 * Standard deviation sigma

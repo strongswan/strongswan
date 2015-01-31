@@ -177,6 +177,12 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 		return NULL;
 	}
 
+	if (encoding.len == 0)
+	{
+		DBG1(DBG_LIB, "zero length BLISS signature");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.get_encoding = _get_encoding,
@@ -198,6 +204,7 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 			!packer->read_bits(packer, &z1_low, 8) ||
 			!coder->decode(coder, &z1, &z2))
 		{
+			DBG1(DBG_LIB, "truncated BLISS signature encoding of z1/z2");
 			coder->destroy(coder);
 			packer->destroy(packer);
 			destroy(this);
@@ -213,6 +220,7 @@ bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
 	{
 		if (!packer->read_bits(packer, &value, set->n_bits))
 		{
+			DBG1(DBG_LIB, "truncated BLISS signature encoding of c_indices");
 			packer->destroy(packer);
 			destroy(this);
 			return NULL;

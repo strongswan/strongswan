@@ -218,6 +218,10 @@
                     0x02     "BLISS-II"					OID_BLISS_II
                     0x03     "BLISS-III"				OID_BLISS_III
                     0x04     "BLISS-IV"					OID_BLISS_IV
+                    0x05     "BLISS-B-I"				OID_BLISS_B_I
+                    0x06     "BLISS-B-II"				OID_BLISS_B_II
+                    0x07     "BLISS-B_III"				OID_BLISS_B_III
+                    0x08     "BLISS-B_IV"				OID_BLISS_B_IV
                   0x03       "blissSigType"
                     0x01     "BLISS-with-SHA512"		OID_BLISS_WITH_SHA512
           0x89               ""
