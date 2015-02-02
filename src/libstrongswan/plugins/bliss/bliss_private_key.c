@@ -643,10 +643,16 @@ METHOD(private_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
-		memwipe(this->s1, this->set->n * sizeof(int8_t));
-		memwipe(this->s2, this->set->n * sizeof(int8_t));
-		free(this->s1);
-		free(this->s2);
+		if (this->s1)
+		{
+			memwipe(this->s1, this->set->n * sizeof(int8_t));
+			free(this->s1);
+		}
+		if (this->s2)
+		{
+			memwipe(this->s2, this->set->n * sizeof(int8_t));
+			free(this->s2);
+		}
 		free(this->A);
 		free(this);
 	}
