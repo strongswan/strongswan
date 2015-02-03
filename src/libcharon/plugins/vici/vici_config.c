@@ -1831,9 +1831,17 @@ CALLBACK(config_sn, bool,
 	}
 	if (peer.rand_time == LFT_UNDEFINED)
 	{
-		/* default rand_time to over_time if not given */
-		peer.rand_time = min(peer.over_time,
-							 max(peer.rekey_time, peer.reauth_time) / 2);
+		/* default rand_time to over_time if not given, but don't make it
+		 * longer than half of rekey/rauth time */
+		if (peer.rekey_time && peer.reauth_time)
+		{
+			peer.rand_time = min(peer.rekey_time, peer.reauth_time);
+		}
+		else
+		{
+			peer.rand_time = max(peer.rekey_time, peer.reauth_time);
+		}
+		peer.rand_time = min(peer.over_time, peer.rand_time / 2);
 	}
 
 	log_peer_data(&peer);
