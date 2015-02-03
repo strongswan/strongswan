@@ -1751,7 +1751,8 @@ CALLBACK(config_sn, bool,
 		.fragmentation = FRAGMENTATION_NO,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
-		.rekey_time = LFT_DEFAULT_IKE_REKEY,
+		.rekey_time = LFT_UNDEFINED,
+		.reauth_time = LFT_UNDEFINED,
 		.over_time = LFT_UNDEFINED,
 		.rand_time = LFT_UNDEFINED,
 	};
@@ -1809,6 +1810,20 @@ CALLBACK(config_sn, bool,
 		peer.local_port = charon->socket->get_port(charon->socket, FALSE);
 	}
 
+	if (peer.rekey_time == LFT_UNDEFINED && peer.reauth_time == LFT_UNDEFINED)
+	{
+		/* apply a default rekey time if no rekey/reauth time set */
+		peer.rekey_time = LFT_DEFAULT_IKE_REKEY;
+		peer.reauth_time = 0;
+	}
+	if (peer.rekey_time == LFT_UNDEFINED)
+	{
+		peer.rekey_time = 0;
+	}
+	if (peer.reauth_time == LFT_UNDEFINED)
+	{
+		peer.reauth_time = 0;
+	}
 	if (peer.over_time == LFT_UNDEFINED)
 	{
 		/* default over_time to 10% of rekey/reauth time if not given */
