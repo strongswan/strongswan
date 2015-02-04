@@ -96,7 +96,8 @@ static void pool_destroy(pool_t *pool)
  * Find an existing or not yet existing lease
  */
 static host_t *find_addr(private_vici_attribute_t *this, linked_list_t *pools,
-					identification_t *id, host_t *requested, mem_pool_op_t op)
+						 identification_t *id, host_t *requested,
+						 mem_pool_op_t op, host_t *peer)
 {
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
@@ -109,7 +110,8 @@ static host_t *find_addr(private_vici_attribute_t *this, linked_list_t *pools,
 		pool = this->pools->get(this->pools, name);
 		if (pool)
 		{
-			addr = pool->vips->acquire_address(pool->vips, id, requested, op);
+			addr = pool->vips->acquire_address(pool->vips, id, requested,
+											   op, peer);
 			if (addr)
 			{
 				break;
@@ -126,19 +128,20 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	host_t *requested)
 {
 	identification_t *id;
-	host_t *addr;
+	host_t *addr, *peer;
 
 	id = ike_sa->get_other_eap_id(ike_sa);
+	peer = ike_sa->get_other_host(ike_sa);
 
 	this->lock->read_lock(this->lock);
 
-	addr = find_addr(this, pools, id, requested, MEM_POOL_EXISTING);
+	addr = find_addr(this, pools, id, requested, MEM_POOL_EXISTING, peer);
 	if (!addr)
 	{
-		addr = find_addr(this, pools, id, requested, MEM_POOL_NEW);
+		addr = find_addr(this, pools, id, requested, MEM_POOL_NEW, peer);
 		if (!addr)
 		{
-			addr = find_addr(this, pools, id, requested, MEM_POOL_REASSIGN);
+			addr = find_addr(this, pools, id, requested, MEM_POOL_REASSIGN, peer);
 		}
 	}
 

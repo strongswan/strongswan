@@ -43,7 +43,7 @@ static void assert_acquire(mem_pool_t *pool, char *requested, char *expected,
 	id = identification_create_from_string("tester");
 	req = host_create_from_string(requested, 0);
 
-	acquired = pool->acquire_address(pool, id, req, operation);
+	acquired = pool->acquire_address(pool, id, req, operation, NULL);
 	assert_host(expected, acquired);
 	DESTROY_IF(acquired);
 

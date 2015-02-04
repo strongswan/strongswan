@@ -196,9 +196,15 @@ charon.load_modular = no
 charon.max_packet = 10000
 	Maximum packet size accepted by charon.
 
-charon.mem-pool.reassign_online = no
-	Reassign an online IP address lease from an in-memory address pool if a
-	client with the same identity requests it explicitly.
+charon.make_before_break = no
+	Initiate IKEv2 reauthentication with a make-before-break scheme.
+
+	Initiate IKEv2 reauthentication with a make-before-break instead of a
+	break-before-make scheme. Make-before-break uses overlapping IKE and
+	CHILD_SA during reauthentication by first recreating all new SAs before
+	deleting the old ones. This behavior can be beneficial to avoid connectivity
+	gaps during reauthentication, but requires support for overlapping SAs by
+	the peer. strongSwan can handle such overlapping SAs since version 5.3.0.
 
 charon.multiple_authentication = yes
 	Enable multiple authentication exchanges (RFC 4739).
