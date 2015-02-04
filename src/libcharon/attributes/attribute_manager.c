@@ -53,15 +53,15 @@ struct private_attribute_manager_t {
 typedef struct {
 	/** attribute group pools */
 	linked_list_t *pools;
-	/** server/peer identity */
-	identification_t *id;
+	/** associated IKE_SA */
+	ike_sa_t *ike_sa;
 	/** requesting/assigned virtual IPs */
 	linked_list_t *vips;
 } enum_data_t;
 
 METHOD(attribute_manager_t, acquire_address, host_t*,
 	private_attribute_manager_t *this, linked_list_t *pools,
-	identification_t *id, host_t *requested)
+	ike_sa_t *ike_sa, host_t *requested)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
@@ -71,7 +71,7 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		host = current->acquire_address(current, pools, id, requested);
+		host = current->acquire_address(current, pools, ike_sa, requested);
 		if (host)
 		{
 			break;
@@ -85,7 +85,7 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 
 METHOD(attribute_manager_t, release_address, bool,
 	private_attribute_manager_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
@@ -95,7 +95,7 @@ METHOD(attribute_manager_t, release_address, bool,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->release_address(current, pools, address, id))
+		if (current->release_address(current, pools, address, ike_sa))
 		{
 			found = TRUE;
 			break;
@@ -114,18 +114,18 @@ static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
 	return provider->create_attribute_enumerator(provider, data->pools,
-												 data->id, data->vips);
+												 data->ike_sa, data->vips);
 }
 
 METHOD(attribute_manager_t, create_responder_enumerator, enumerator_t*,
 	private_attribute_manager_t *this, linked_list_t *pools,
-	identification_t *id, linked_list_t *vips)
+	ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	enum_data_t *data;
 
 	INIT(data,
 		.pools = pools,
-		.id = id,
+		.ike_sa = ike_sa,
 		.vips = vips,
 	);
 	this->lock->read_lock(this->lock);
@@ -153,7 +153,7 @@ METHOD(attribute_manager_t, remove_provider, void,
 }
 
 METHOD(attribute_manager_t, handle, attribute_handler_t*,
-	private_attribute_manager_t *this, identification_t *server,
+	private_attribute_manager_t *this, ike_sa_t *ike_sa,
 	attribute_handler_t *handler, configuration_attribute_type_t type,
 	chunk_t data)
 {
@@ -166,7 +166,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current == handler && current->handle(current, server, type, data))
+		if (current == handler && current->handle(current, ike_sa, type, data))
 		{
 			handled = current;
 			break;
@@ -178,7 +178,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 		enumerator = this->handlers->create_enumerator(this->handlers);
 		while (enumerator->enumerate(enumerator, &current))
 		{
-			if (current->handle(current, server, type, data))
+			if (current->handle(current, ike_sa, type, data))
 			{
 				handled = current;
 				break;
@@ -198,7 +198,7 @@ METHOD(attribute_manager_t, handle, attribute_handler_t*,
 
 METHOD(attribute_manager_t, release, void,
 	private_attribute_manager_t *this, attribute_handler_t *handler,
-	identification_t *server, configuration_attribute_type_t type, chunk_t data)
+	ike_sa_t *ike_sa, configuration_attribute_type_t type, chunk_t data)
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current;
@@ -209,7 +209,7 @@ METHOD(attribute_manager_t, release, void,
 	{
 		if (current == handler)
 		{
-			current->release(current, server, type, data);
+			current->release(current, ike_sa, type, data);
 			break;
 		}
 	}
@@ -231,8 +231,8 @@ typedef struct {
 	enumerator_t *outer;
 	/** inner enumerator over current handlers attributes */
 	enumerator_t *inner;
-	/** server ID we want attributes for */
-	identification_t *id;
+	/** IKE_SA to request attributes for */
+	ike_sa_t *ike_sa;
 	/** virtual IPs we are requesting along with attriubutes */
 	linked_list_t *vips;
 } initiator_enumerator_t;
@@ -254,7 +254,7 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 		}
 		DESTROY_IF(this->inner);
 		this->inner = this->handler->create_attribute_enumerator(this->handler,
-														this->id, this->vips);
+													this->ike_sa, this->vips);
 	}
 	/* inject the handler as additional attribute */
 	*handler = this->handler;
@@ -273,7 +273,7 @@ static void initiator_destroy(initiator_enumerator_t *this)
 }
 
 METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
-	private_attribute_manager_t *this, identification_t *id, linked_list_t *vips)
+	private_attribute_manager_t *this, ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	initiator_enumerator_t *enumerator;
 
@@ -285,7 +285,7 @@ METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
 			.destroy = (void*)initiator_destroy,
 		},
 		.this = this,
-		.id = id,
+		.ike_sa = ike_sa,
 		.vips = vips,
 		.outer = this->handlers->create_enumerator(this->handlers),
 	);
@@ -345,4 +345,3 @@ attribute_manager_t *attribute_manager_create()
 
 	return &this->public;
 }
-

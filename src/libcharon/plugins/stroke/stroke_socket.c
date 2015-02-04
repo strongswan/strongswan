@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <hydra.h>
 #include <daemon.h>
 
 #include "stroke_config.h"
@@ -747,8 +746,10 @@ METHOD(stroke_socket_t, destroy, void,
 	lib->credmgr->remove_set(lib->credmgr, &this->ca->set);
 	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	charon->attributes->remove_provider(charon->attributes,
+										&this->attribute->provider);
+	charon->attributes->remove_handler(charon->attributes,
+									   &this->handler->handler);
 	charon->bus->remove_listener(charon->bus, &this->counter->listener);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
@@ -790,8 +791,10 @@ stroke_socket_t *stroke_socket_create()
 	lib->credmgr->add_set(lib->credmgr, &this->ca->set);
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
-	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+	charon->attributes->add_provider(charon->attributes,
+									 &this->attribute->provider);
+	charon->attributes->add_handler(charon->attributes,
+									&this->handler->handler);
 	charon->bus->add_listener(charon->bus, &this->counter->listener);
 
 	max_concurrent = lib->settings->get_int(lib->settings,

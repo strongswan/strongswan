@@ -16,9 +16,6 @@
 /**
  * @defgroup libhydra libhydra
  *
- * @defgroup attributes attributes
- * @ingroup libhydra
- *
  * @defgroup hkernel kernel
  * @ingroup libhydra
  *
@@ -34,7 +31,6 @@
 
 typedef struct hydra_t hydra_t;
 
-#include <attributes/attribute_manager.h>
 #include <kernel/kernel_interface.h>
 
 #include <library.h>
@@ -43,11 +39,6 @@ typedef struct hydra_t hydra_t;
  * IKE Daemon support object.
  */
 struct hydra_t {
-
-	/**
-	 * manager for payload attributes
-	 */
-	attribute_manager_t *attributes;
 
 	/**
 	 * kernel interface to communicate with kernel

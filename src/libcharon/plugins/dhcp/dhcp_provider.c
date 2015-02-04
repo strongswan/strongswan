@@ -66,10 +66,11 @@ static uintptr_t hash_transaction(dhcp_transaction_t *transaction)
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_dhcp_provider_t *this, linked_list_t *pools,
-	identification_t *id, host_t *requested)
+	ike_sa_t *ike_sa, host_t *requested)
 {
 	dhcp_transaction_t *transaction, *old;
 	enumerator_t *enumerator;
+	identification_t *id;
 	char *pool;
 	host_t *vip = NULL;
 
@@ -77,6 +78,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	{
 		return NULL;
 	}
+	id = ike_sa->get_other_eap_id(ike_sa);
 	enumerator = pools->create_enumerator(pools);
 	while (enumerator->enumerate(enumerator, &pool))
 	{
@@ -104,10 +106,11 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 
 METHOD(attribute_provider_t, release_address, bool,
 	private_dhcp_provider_t *this, linked_list_t *pools,
-	host_t *address, identification_t *id)
+	host_t *address, ike_sa_t *ike_sa)
 {
 	dhcp_transaction_t *transaction;
 	enumerator_t *enumerator;
+	identification_t *id;
 	bool found = FALSE;
 	char *pool;
 
@@ -115,6 +118,7 @@ METHOD(attribute_provider_t, release_address, bool,
 	{
 		return FALSE;
 	}
+	id = ike_sa->get_other_eap_id(ike_sa);
 	enumerator = pools->create_enumerator(pools);
 	while (enumerator->enumerate(enumerator, &pool))
 	{
@@ -139,11 +143,12 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_dhcp_provider_t *this, linked_list_t *pools, identification_t *id,
+	private_dhcp_provider_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	dhcp_transaction_t *transaction = NULL;
 	enumerator_t *enumerator;
+	identification_t *id;
 	host_t *vip;
 
 	if (pools->find_first(pools, (linked_list_match_t)streq,
@@ -152,6 +157,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		return NULL;
 	}
 
+	id = ike_sa->get_other_eap_id(ike_sa);
 	this->mutex->lock(this->mutex);
 	enumerator = vips->create_enumerator(vips);
 	while (enumerator->enumerate(enumerator, &vip))

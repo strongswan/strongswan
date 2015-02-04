@@ -128,7 +128,7 @@ static bool set_dns_server(private_android_dns_handler_t *this, int index,
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_android_dns_handler_t *this, identification_t *id,
+	private_android_dns_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -158,7 +158,7 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_android_dns_handler_t *this, identification_t *server,
+	private_android_dns_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	if (type == INTERNAL_IP4_DNS)
@@ -192,7 +192,7 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	private_android_dns_handler_t *this, identification_t *id,
+	private_android_dns_handler_t *this, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	enumerator_t *enumerator;
@@ -232,4 +232,3 @@ android_dns_handler_t *android_dns_handler_create()
 
 	return &this->public;
 }
-

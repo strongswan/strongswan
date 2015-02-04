@@ -185,9 +185,10 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_resolve_handler_t *this, identification_t *server,
+	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
+	identification_t *server;
 	host_t *addr;
 	bool handled;
 
@@ -208,6 +209,7 @@ METHOD(attribute_handler_t, handle, bool,
 		DESTROY_IF(addr);
 		return FALSE;
 	}
+	server = ike_sa->get_other_id(ike_sa);
 
 	this->mutex->lock(this->mutex);
 	if (this->use_resolvconf)
@@ -229,9 +231,10 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_resolve_handler_t *this, identification_t *server,
+	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
+	identification_t *server;
 	host_t *addr;
 	int family;
 
@@ -247,6 +250,7 @@ METHOD(attribute_handler_t, release, void,
 			return;
 	}
 	addr = host_create_from_chunk(family, data, 0);
+	server = ike_sa->get_other_id(ike_sa);
 
 	this->mutex->lock(this->mutex);
 	if (this->use_resolvconf)
@@ -319,7 +323,7 @@ static bool has_host_family(linked_list_t *list, int family)
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_resolve_handler_t *this, identification_t *server,
+	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	attribute_enumerator_t *enumerator;
@@ -374,4 +378,3 @@ resolve_handler_t *resolve_handler_create()
 
 	return &this->public;
 }
-

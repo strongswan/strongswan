@@ -257,7 +257,6 @@ ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
 ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
-ARG_ENABL_SET([unit-tester],    [enable unit tests on IKEv2 daemon startup.])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 # programs/components
 ARG_ENABL_SET([aikgen],         [enable AIK generator.])
@@ -1256,8 +1255,8 @@ ADD_PLUGIN([winhttp],              [s charon pki scripts])
 ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
 ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
-ADD_PLUGIN([attr],                 [h charon])
-ADD_PLUGIN([attr-sql],             [h charon])
+ADD_PLUGIN([attr],                 [c charon])
+ADD_PLUGIN([attr-sql],             [c charon])
 ADD_PLUGIN([load-tester],          [c charon])
 ADD_PLUGIN([kernel-libipsec],      [c charon cmd])
 ADD_PLUGIN([kernel-wfp],           [c charon])
@@ -1265,7 +1264,7 @@ ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
 ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
-ADD_PLUGIN([resolve],              [h charon cmd])
+ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
 ADD_PLUGIN([socket-win],           [c charon])
@@ -1326,7 +1325,6 @@ ADD_PLUGIN([maemo],                [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
-ADD_PLUGIN([unit-tester],          [c charon])
 
 AC_SUBST(charon_plugins)
 AC_SUBST(starter_plugins)
@@ -1419,7 +1417,6 @@ AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
-AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tester = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
@@ -1481,15 +1478,15 @@ AM_CONDITIONAL(USE_SOCKET_WIN, test x$socket_win = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
+AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
+AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 
 #  hydra plugins
 # ---------------
-AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
-AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
-AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 #  other options
 # ---------------
@@ -1649,12 +1646,9 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libhydra/Makefile
-	src/libhydra/plugins/attr/Makefile
-	src/libhydra/plugins/attr_sql/Makefile
 	src/libhydra/plugins/kernel_netlink/Makefile
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
-	src/libhydra/plugins/resolve/Makefile
 	src/libhydra/tests/Makefile
 	src/libipsec/Makefile
 	src/libsimaka/Makefile
@@ -1748,8 +1742,11 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/vici/ruby/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
-	src/libcharon/plugins/unit_tester/Makefile
 	src/libcharon/plugins/load_tester/Makefile
+	src/libcharon/plugins/resolve/Makefile
+	src/libcharon/plugins/attr/Makefile
+	src/libcharon/plugins/attr_sql/Makefile
+	src/libcharon/tests/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

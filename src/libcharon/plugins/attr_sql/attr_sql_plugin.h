@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Martin Willi
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup attr attr
- * @ingroup hplugins
+ * @defgroup attr_sql attr_sql
+ * @ingroup cplugins
  *
- * @defgroup attr_plugin attr_plugin
- * @{ @ingroup attr
+ * @defgroup sql_plugin sql_plugin
+ * @{ @ingroup attr_sql
  */
 
-#ifndef ATTR_PLUGIN_H_
-#define ATTR_PLUGIN_H_
+#ifndef ATTR_SQL_PLUGIN_H_
+#define ATTR_SQL_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct attr_plugin_t attr_plugin_t;
+typedef struct attr_sql_plugin_t attr_sql_plugin_t;
 
 /**
- * Plugin providing configuration attribute through strongswan.conf.
+ * SQL database attribute configuration plugin
  */
-struct attr_plugin_t {
+struct attr_sql_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -39,4 +39,4 @@ struct attr_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /** ATTR_PLUGIN_H_ @}*/
+#endif /** ATTR_SQL_PLUGIN_H_ @}*/

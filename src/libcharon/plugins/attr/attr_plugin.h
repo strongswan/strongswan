@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,31 +14,29 @@
  */
 
 /**
- * @defgroup unit_tester unit_tester
- * @{ @ingroup cplugins
+ * @defgroup attr attr
+ * @ingroup cplugins
+ *
+ * @defgroup attr_plugin attr_plugin
+ * @{ @ingroup attr
  */
 
-#ifndef UNIT_TESTER_H_
-#define UNIT_TESTER_H_
+#ifndef ATTR_PLUGIN_H_
+#define ATTR_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct unit_tester_t unit_tester_t;
+typedef struct attr_plugin_t attr_plugin_t;
 
 /**
- * Unit testing plugin.
- *
- * The unit testing plugin runs tests on plugin initialization. Tests are
- * defined in tests.h using the DEFINE_TEST macro. Implementation of the
- * tests is done in the tests folder. Each test has uses a function which
- * returns TRUE for success or FALSE for failure.
+ * Plugin providing configuration attribute through strongswan.conf.
  */
-struct unit_tester_t {
+struct attr_plugin_t {
 
 	/**
-	 * Implements the plugin interface.
+	 * implements plugin interface
 	 */
 	plugin_t plugin;
 };
 
-#endif /** UNIT_TESTER_H_ @}*/
+#endif /** ATTR_PLUGIN_H_ @}*/

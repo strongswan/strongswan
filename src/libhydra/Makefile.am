@@ -2,10 +2,6 @@ ipseclib_LTLIBRARIES = libhydra.la
 
 libhydra_la_SOURCES = \
 hydra.c hydra.h \
-attributes/attributes.c attributes/attributes.h \
-attributes/attribute_provider.h attributes/attribute_handler.h \
-attributes/attribute_manager.c attributes/attribute_manager.h \
-attributes/mem_pool.c attributes/mem_pool.h \
 kernel/kernel_interface.c kernel/kernel_interface.h \
 kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
 kernel/kernel_net.c kernel/kernel_net.h \
@@ -37,20 +33,6 @@ else
 SUBDIRS = .
 endif
 
-if USE_ATTR
-  SUBDIRS += plugins/attr
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/attr/libstrongswan-attr.la
-endif
-endif
-
-if USE_ATTR_SQL
-  SUBDIRS += plugins/attr_sql
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
-endif
-endif
-
 if USE_KERNEL_PFKEY
   SUBDIRS += plugins/kernel_pfkey
 if MONOLITHIC
@@ -69,13 +51,6 @@ if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
 if MONOLITHIC
   libhydra_la_LIBADD += plugins/kernel_netlink/libstrongswan-kernel-netlink.la
-endif
-endif
-
-if USE_RESOLVE
-  SUBDIRS += plugins/resolve
-if MONOLITHIC
-  libhydra_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
 endif
 endif
 

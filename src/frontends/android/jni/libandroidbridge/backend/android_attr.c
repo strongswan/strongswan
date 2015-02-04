@@ -36,7 +36,7 @@ struct private_android_attr_t {
 };
 
 METHOD(attribute_handler_t, handle, bool,
-	private_android_attr_t *this, identification_t *server,
+	private_android_attr_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	vpnservice_builder_t *builder;
@@ -67,7 +67,7 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_android_attr_t *this, identification_t *server,
+	private_android_attr_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	/* DNS servers cannot be removed from an existing TUN device */
@@ -92,7 +92,7 @@ METHOD(enumerator_t, enumerate_dns4, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_android_attr_t *this, identification_t *server, linked_list_t *vips)
+	private_android_attr_t *this, ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	enumerator_t *enumerator;
 
@@ -129,4 +129,3 @@ android_attr_t *android_attr_create()
 
 	return &this->public;
 }
-

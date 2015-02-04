@@ -311,19 +311,13 @@ METHOD(listener_t, ike_rekey, bool,
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_eap_radius_provider_t *this, linked_list_t *pools,
-	identification_t *id, host_t *requested)
+	ike_sa_t *ike_sa, host_t *requested)
 {
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
-	ike_sa_t *ike_sa;
 	uintptr_t sa;
 	char *name;
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa)
-	{
-		return NULL;
-	}
 	sa = ike_sa->get_unique_id(ike_sa);
 
 	enumerator = pools->create_enumerator(pools);
@@ -348,19 +342,13 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 
 METHOD(attribute_provider_t, release_address, bool,
 	private_eap_radius_provider_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	host_t *found = NULL;
-	ike_sa_t *ike_sa;
 	uintptr_t sa;
 	char *name;
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa)
-	{
-		return FALSE;
-	}
 	sa = ike_sa->get_unique_id(ike_sa);
 
 	enumerator = pools->create_enumerator(pools);
@@ -428,18 +416,12 @@ METHOD(enumerator_t, attribute_destroy, void,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_eap_radius_provider_t *this, linked_list_t *pools,
-	identification_t *id, linked_list_t *vips)
+	ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	attribute_enumerator_t *enumerator;
 	attr_t *attr;
-	ike_sa_t *ike_sa;
 	uintptr_t sa;
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa)
-	{
-		return NULL;
-	}
 	sa = ike_sa->get_unique_id(ike_sa);
 
 	INIT(enumerator,

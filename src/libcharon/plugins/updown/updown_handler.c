@@ -62,19 +62,13 @@ static void attributes_destroy(attributes_t *this)
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_updown_handler_t *this, identification_t *server,
+	private_updown_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	attributes_t *current, *attr = NULL;
 	enumerator_t *enumerator;
-	ike_sa_t *ike_sa;
 	host_t *host;
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (!ike_sa)
-	{
-		return FALSE;
-	}
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
@@ -117,12 +111,11 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_updown_handler_t *this, identification_t *server,
+	private_updown_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	attributes_t *attr;
 	enumerator_t *enumerator, *servers;
-	ike_sa_t *ike_sa;
 	host_t *host;
 	bool found = FALSE;
 	int family;
@@ -139,43 +132,39 @@ METHOD(attribute_handler_t, release, void,
 			return;
 	}
 
-	ike_sa = charon->bus->get_sa(charon->bus);
-	if (ike_sa)
+	this->lock->write_lock(this->lock);
+	enumerator = this->attrs->create_enumerator(this->attrs);
+	while (enumerator->enumerate(enumerator, &attr))
 	{
-		this->lock->write_lock(this->lock);
-		enumerator = this->attrs->create_enumerator(this->attrs);
-		while (enumerator->enumerate(enumerator, &attr))
+		if (attr->id == ike_sa->get_unique_id(ike_sa))
 		{
-			if (attr->id == ike_sa->get_unique_id(ike_sa))
+			servers = attr->dns->create_enumerator(attr->dns);
+			while (servers->enumerate(servers, &host))
 			{
-				servers = attr->dns->create_enumerator(attr->dns);
-				while (servers->enumerate(servers, &host))
+				if (host->get_family(host) == family &&
+					chunk_equals(data, host->get_address(host)))
 				{
-					if (host->get_family(host) == family &&
-						chunk_equals(data, host->get_address(host)))
-					{
-						attr->dns->remove_at(attr->dns, servers);
-						host->destroy(host);
-						found = TRUE;
-						break;
-					}
-				}
-				servers->destroy(servers);
-				if (attr->dns->get_count(attr->dns) == 0)
-				{
-					this->attrs->remove_at(this->attrs, enumerator);
-					attributes_destroy(attr);
+					attr->dns->remove_at(attr->dns, servers);
+					host->destroy(host);
+					found = TRUE;
 					break;
 				}
 			}
-			if (found)
+			servers->destroy(servers);
+			if (attr->dns->get_count(attr->dns) == 0)
 			{
+				this->attrs->remove_at(this->attrs, enumerator);
+				attributes_destroy(attr);
 				break;
 			}
 		}
-		enumerator->destroy(enumerator);
-		this->lock->unlock(this->lock);
+		if (found)
+		{
+			break;
+		}
 	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 METHOD(updown_handler_t, create_dns_enumerator, enumerator_t*,

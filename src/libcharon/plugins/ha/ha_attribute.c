@@ -170,7 +170,7 @@ static bool responsible_for(private_ha_attribute_t *this, int bit)
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_ha_attribute_t *this, linked_list_t *pools, identification_t *id,
+	private_ha_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	host_t *requested)
 {
 	enumerator_t *enumerator;
@@ -233,7 +233,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 
 METHOD(attribute_provider_t, release_address, bool,
 	private_ha_attribute_t *this, linked_list_t *pools, host_t *address,
-	identification_t *id)
+	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	pool_t *pool;

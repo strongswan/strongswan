@@ -21,13 +21,13 @@
 #ifndef ATTRIBUTE_HANDLER_H_
 #define ATTRIBUTE_HANDLER_H_
 
+typedef struct attribute_handler_t attribute_handler_t;
+
+#include <sa/ike_sa.h>
 #include <utils/chunk.h>
-#include <utils/identification.h>
 #include <collections/linked_list.h>
 
 #include "attributes.h"
-
-typedef struct attribute_handler_t attribute_handler_t;
 
 /**
  * Interface to handle configuration payload attributes.
@@ -40,12 +40,12 @@ struct attribute_handler_t {
 	 * After receiving a configuration attriubte, it is passed to each
 	 * attribute handler until it is handled.
 	 *
-	 * @param server	server from which the attribute was received
+	 * @param ike_sa	IKE_SA under which attribute is received
 	 * @param type		type of configuration attribute to handle
 	 * @param data		associated attribute data
 	 * @return			TRUE if attribute handled
 	 */
-	bool (*handle)(attribute_handler_t *this, identification_t *server,
+	bool (*handle)(attribute_handler_t *this, ike_sa_t *ike_sa,
 				   configuration_attribute_type_t type, chunk_t data);
 
 	/**
@@ -54,19 +54,23 @@ struct attribute_handler_t {
 	 * A handler that handle()d an attribute gets a call to release() when the
 	 * connection gets closed. Depending on the implementation, this is required
 	 * to remove the attribute.
+	 *
+	 * @param ike_sa	IKE_SA which releases attribute
+	 * @param type		type of configuration attribute to release
+	 * @param data		associated attribute data
 	 */
-	void (*release)(attribute_handler_t *this, identification_t *server,
+	void (*release)(attribute_handler_t *this, ike_sa_t *ike_sa,
 					configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Enumerate attributes to request from a server.
 	 *
-	 * @param server		server identity to request attributes from
+	 * @param ike_sa		IKE_SA to request attributes for
 	 * @param vips			list of virtual IPs (host_t*) we are requesting
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_attribute_enumerator)(attribute_handler_t *this,
-								identification_t *server, linked_list_t *vips);
+										ike_sa_t *ike_sa, linked_list_t *vips);
 };
 
 #endif /** ATTRIBUTE_HANDLER_H_ @}*/

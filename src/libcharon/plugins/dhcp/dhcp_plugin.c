@@ -18,7 +18,6 @@
 
 #include "dhcp_plugin.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <plugins/plugin_feature.h>
 
@@ -69,13 +68,13 @@ static bool plugin_cb(private_dhcp_plugin_t *this,
 			return FALSE;
 		}
 		this->provider = dhcp_provider_create(this->socket);
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->provider->provider);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->provider->provider);
 	}
 	else
 	{
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->provider->provider);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->provider->provider);
 		this->provider->destroy(this->provider);
 		this->socket->destroy(this->socket);
 	}

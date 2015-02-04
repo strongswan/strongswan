@@ -16,7 +16,7 @@
 #include "attr_plugin.h"
 #include "attr_provider.h"
 
-#include <hydra.h>
+#include <daemon.h>
 
 typedef struct private_attr_plugin_t private_attr_plugin_t;
 
@@ -50,13 +50,13 @@ static bool plugin_cb(private_attr_plugin_t *this,
 {
 	if (reg)
 	{
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->provider->provider);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->provider->provider);
 	}
 	else
 	{
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->provider->provider);
+		charon->attributes->remove_provider(charon->attributes,
+										    &this->provider->provider);
 	}
 	return TRUE;
 }

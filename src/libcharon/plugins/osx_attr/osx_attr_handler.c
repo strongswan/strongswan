@@ -169,7 +169,7 @@ static bool manage_dns(int family, chunk_t data, bool add)
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_osx_attr_handler_t *this, identification_t *id,
+	private_osx_attr_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -182,7 +182,7 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_osx_attr_handler_t *this, identification_t *server,
+	private_osx_attr_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -206,7 +206,7 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	private_osx_attr_handler_t *this, identification_t *id,
+	private_osx_attr_handler_t *this, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	enumerator_t *enumerator;

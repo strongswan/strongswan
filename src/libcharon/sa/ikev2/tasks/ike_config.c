@@ -17,7 +17,6 @@
 #include "ike_config.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
 
 typedef struct private_ike_config_t private_ike_config_t;
@@ -127,9 +126,8 @@ static void handle_attribute(private_ike_config_t *this,
 	enumerator->destroy(enumerator);
 
 	/* and pass it to the handle function */
-	handler = hydra->attributes->handle(hydra->attributes,
-							this->ike_sa->get_other_id(this->ike_sa), handler,
-							ca->get_type(ca), ca->get_chunk(ca));
+	handler = charon->attributes->handle(charon->attributes,
+					this->ike_sa, handler, ca->get_type(ca), ca->get_chunk(ca));
 	this->ike_sa->add_configuration_attribute(this->ike_sa,
 							handler, ca->get_type(ca), ca->get_chunk(ca));
 }
@@ -274,9 +272,8 @@ METHOD(task_t, build_i, status_t,
 			enumerator->destroy(enumerator);
 		}
 
-		enumerator = hydra->attributes->create_initiator_enumerator(
-								hydra->attributes,
-								this->ike_sa->get_other_id(this->ike_sa), vips);
+		enumerator = charon->attributes->create_initiator_enumerator(
+										charon->attributes, this->ike_sa, vips);
 		while (enumerator->enumerate(enumerator, &handler, &type, &data))
 		{
 			configuration_attribute_t *ca;
@@ -352,8 +349,8 @@ METHOD(task_t, build_r, status_t,
 			/* query all pools until we get an address */
 			DBG1(DBG_IKE, "peer requested virtual IP %H", requested);
 
-			found = hydra->attributes->acquire_address(hydra->attributes,
-													   pools, id, requested);
+			found = charon->attributes->acquire_address(charon->attributes,
+												pools, this->ike_sa, requested);
 			if (found)
 			{
 				DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
@@ -398,8 +395,8 @@ METHOD(task_t, build_r, status_t,
 		}
 
 		/* query registered providers for additional attributes to include */
-		enumerator = hydra->attributes->create_responder_enumerator(
-											hydra->attributes, pools, id, vips);
+		enumerator = charon->attributes->create_responder_enumerator(
+								charon->attributes, pools, this->ike_sa, vips);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)

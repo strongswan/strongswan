@@ -18,7 +18,6 @@
 #include "updown_handler.h"
 
 #include <daemon.h>
-#include <hydra.h>
 
 typedef struct private_updown_plugin_t private_updown_plugin_t;
 
@@ -61,8 +60,8 @@ static bool plugin_cb(private_updown_plugin_t *this,
 							"%s.plugins.updown.dns_handler", FALSE, lib->ns))
 		{
 			this->handler = updown_handler_create();
-			hydra->attributes->add_handler(hydra->attributes,
-										   &this->handler->handler);
+			charon->attributes->add_handler(charon->attributes,
+											&this->handler->handler);
 		}
 		this->listener = updown_listener_create(this->handler);
 		charon->bus->add_listener(charon->bus, &this->listener->listener);
@@ -74,8 +73,8 @@ static bool plugin_cb(private_updown_plugin_t *this,
 		if (this->handler)
 		{
 			this->handler->destroy(this->handler);
-			hydra->attributes->remove_handler(hydra->attributes,
-											  &this->handler->handler);
+			charon->attributes->remove_handler(charon->attributes,
+											   &this->handler->handler);
 		}
 	}
 	return TRUE;

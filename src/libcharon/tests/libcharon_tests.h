@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014 Martin Willi
+ * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,18 +13,4 @@
  * for more details.
  */
 
-/**
- * @defgroup tests tests
- * @{ @ingroup unit_tester
- */
-
-DEFINE_TEST("auth cfg", test_auth_cfg, FALSE)
-DEFINE_TEST("CURL get", test_curl_get, FALSE)
-DEFINE_TEST("MySQL operations", test_mysql, FALSE)
-DEFINE_TEST("SQLite operations", test_sqlite, FALSE)
-DEFINE_TEST("X509 certificate", test_cert_x509, FALSE)
-DEFINE_TEST("Mediation database key fetch", test_med_db, FALSE)
-DEFINE_TEST("IP pool", test_pool, FALSE)
-DEFINE_TEST("SSH agent", test_agent, FALSE)
-
-/** @}*/
+TEST_SUITE(mem_pool_suite_create)

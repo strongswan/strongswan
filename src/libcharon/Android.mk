@@ -3,6 +3,10 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 libcharon_la_SOURCES := \
+attributes/attributes.c attributes/attributes.h \
+attributes/attribute_provider.h attributes/attribute_handler.h \
+attributes/attribute_manager.c attributes/attribute_manager.h \
+attributes/mem_pool.c attributes/mem_pool.h \
 bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/logger.h \

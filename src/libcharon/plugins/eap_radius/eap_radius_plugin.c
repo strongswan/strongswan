@@ -26,7 +26,7 @@
 #include <radius_client.h>
 #include <radius_config.h>
 
-#include <hydra.h>
+#include <daemon.h>
 #include <threading/rwlock.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -218,13 +218,13 @@ static bool plugin_cb(private_eap_radius_plugin_t *this,
 		{
 			charon->bus->add_listener(charon->bus, &this->forward->listener);
 		}
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->provider->provider);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->provider->provider);
 	}
 	else
 	{
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->provider->provider);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->provider->provider);
 		if (this->forward)
 		{
 			charon->bus->remove_listener(charon->bus, &this->forward->listener);

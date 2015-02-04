@@ -18,7 +18,7 @@
 
 #include <time.h>
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
@@ -78,7 +78,7 @@ static bool attr_enum_filter(void *null, attribute_entry_t **in,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_attr_provider_t *this, linked_list_t *pools,
-	identification_t *id, linked_list_t *vips)
+	ike_sa_t *ike_sa, linked_list_t *vips)
 {
 	if (vips->get_count(vips))
 	{

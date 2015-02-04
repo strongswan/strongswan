@@ -1,18 +1,21 @@
-TESTS = hydra_tests
+TESTS = libcharon_tests
 
 check_PROGRAMS = $(TESTS)
 
-hydra_tests_SOURCES = \
-  hydra_tests.h hydra_tests.c
+libcharon_tests_SOURCES = \
+  suites/test_mem_pool.c \
+  libcharon_tests.h libcharon_tests.c
 
-hydra_tests_CFLAGS = \
+libcharon_tests_CFLAGS = \
+  -I$(top_srcdir)/src/libcharon \
   -I$(top_srcdir)/src/libhydra \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \
   @COVERAGE_CFLAGS@
 
-hydra_tests_LDFLAGS = @COVERAGE_LDFLAGS@
-hydra_tests_LDADD = \
+libcharon_tests_LDFLAGS = @COVERAGE_LDFLAGS@
+libcharon_tests_LDADD = \
+  $(top_builddir)/src/libcharon/libcharon.la \
   $(top_builddir)/src/libhydra/libhydra.la \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
   $(top_builddir)/src/libstrongswan/tests/libtest.la

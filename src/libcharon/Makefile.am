@@ -1,6 +1,10 @@
 ipseclib_LTLIBRARIES = libcharon.la
 
 libcharon_la_SOURCES = \
+attributes/attributes.c attributes/attributes.h \
+attributes/attribute_provider.h attributes/attribute_handler.h \
+attributes/attribute_manager.c attributes/attribute_manager.h \
+attributes/mem_pool.c attributes/mem_pool.h \
 bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/logger.h \
@@ -596,13 +600,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_UNIT_TESTS
-  SUBDIRS += plugins/unit_tester
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/unit_tester/libstrongswan-unit-tester.la
-endif
-endif
-
 if USE_XAUTH_GENERIC
   SUBDIRS += plugins/xauth_generic
 if MONOLITHIC
@@ -630,3 +627,29 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_noauth/libstrongswan-xauth-noauth.la
 endif
 endif
+
+if USE_RESOLVE
+  SUBDIRS += plugins/resolve
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
+endif
+endif
+
+if USE_ATTR
+  SUBDIRS += plugins/attr
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/attr/libstrongswan-attr.la
+endif
+endif
+
+if USE_ATTR_SQL
+  SUBDIRS += plugins/attr_sql
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
+endif
+endif
+
+if MONOLITHIC
+  SUBDIRS += .
+endif
+SUBDIRS += tests

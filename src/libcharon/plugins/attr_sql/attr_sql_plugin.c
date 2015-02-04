@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <plugins/plugin_feature.h>
 
@@ -75,13 +75,13 @@ static bool open_database(private_attr_sql_plugin_t *this,
 			return FALSE;
 		}
 		this->attribute = sql_attribute_create(this->db);
-		hydra->attributes->add_provider(hydra->attributes,
-										&this->attribute->provider);
+		charon->attributes->add_provider(charon->attributes,
+										 &this->attribute->provider);
 	}
 	else
 	{
-		hydra->attributes->remove_provider(hydra->attributes,
-										   &this->attribute->provider);
+		charon->attributes->remove_provider(charon->attributes,
+											&this->attribute->provider);
 		this->attribute->destroy(this->attribute);
 		this->db->destroy(this->db);
 	}
