@@ -196,9 +196,26 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	status_t status = SUCCESS;
+	linked_list_t *children;
+	struct {
+		protocol_id_t protocol;
+		u_int32_t spi;
+	} *info;
 
+	children = linked_list_create();
 	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		INIT(info,
+			.protocol = child_sa->get_protocol(child_sa),
+			.spi = child_sa->get_spi(child_sa, TRUE),
+		);
+		children->insert_last(children, info);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = children->create_enumerator(children);
+	while (enumerator->enumerate(enumerator, &info))
 	{
 		if (ike_sa->supports_extension(ike_sa, EXT_MS_WINDOWS) &&
 			ike_sa->has_condition(ike_sa, COND_NAT_THERE))
@@ -207,17 +224,13 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 			 * with an "invalid situation" error. We just close the CHILD_SA,
 			 * Windows will reestablish it immediately if required. */
 			DBG1(DBG_CFG, "resyncing CHILD_SA using a delete");
-			status = ike_sa->delete_child_sa(ike_sa,
-											 child_sa->get_protocol(child_sa),
-											 child_sa->get_spi(child_sa, TRUE),
+			status = ike_sa->delete_child_sa(ike_sa, info->protocol, info->spi,
 											 FALSE);
 		}
 		else
 		{
 			DBG1(DBG_CFG, "resyncing CHILD_SA using a rekey");
-			status = ike_sa->rekey_child_sa(ike_sa,
-											child_sa->get_protocol(child_sa),
-											child_sa->get_spi(child_sa, TRUE));
+			status = ike_sa->rekey_child_sa(ike_sa, info->protocol, info->spi);
 		}
 		if (status == DESTROY_ME)
 		{
@@ -225,6 +238,8 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 		}
 	}
 	enumerator->destroy(enumerator);
+	children->destroy_function(children, free);
+
 	return status;
 }
 
