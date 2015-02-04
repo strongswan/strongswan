@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -26,7 +26,6 @@
 #include "tkm_utils.h"
 #include "tkm_types.h"
 #include "tkm_keymat.h"
-#include "tkm_kernel_sad.h"
 #include "tkm_kernel_ipsec.h"
 
 /** From linux/in.h */
@@ -50,11 +49,6 @@ struct private_tkm_kernel_ipsec_t {
 	 * RNG used for SPI generation.
 	 */
 	rng_t *rng;
-
-	/**
-	 * CHILD/ESP SA database.
-	 */
-	tkm_kernel_sad_t *sad;
 
 };
 
@@ -142,7 +136,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
-	if (!this->sad->insert(this->sad, esa_id, peer, local, spi_loc, protocol))
+	if (!tkm->sad->insert(tkm->sad, reqid, esa_id, local, peer, spi_rem,
+						  protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
 		goto sad_failure;
@@ -206,7 +201,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	return SUCCESS;
 
 failure:
-	this->sad->remove(this->sad, esa_id);
+	tkm->sad->remove(tkm->sad, esa_id);
 sad_failure:
 	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
 	chunk_free(&esa.nonce_i);
@@ -228,7 +223,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 {
 	esa_id_type esa_id;
 
-	esa_id = this->sad->get_esa_id(this->sad, src, dst, spi, protocol);
+	esa_id = tkm->sad->get_esa_id(tkm->sad, src, dst, spi, protocol);
 	if (esa_id)
 	{
 		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
@@ -238,7 +233,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 			DBG1(DBG_KNL, "child SA (%llu) deletion failed", esa_id);
 			return FAILED;
 		}
-		this->sad->remove(this->sad, esa_id);
+		tkm->sad->remove(tkm->sad, esa_id);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
 	}
 	return SUCCESS;
@@ -349,7 +344,6 @@ METHOD(kernel_ipsec_t, destroy, void,
 	private_tkm_kernel_ipsec_t *this)
 {
 	DESTROY_IF(this->rng);
-	DESTROY_IF(this->sad);
 	free(this);
 }
 
@@ -379,15 +373,7 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
-		.sad = tkm_kernel_sad_create(),
 	);
-
-	if (!this->sad)
-	{
-		DBG1(DBG_KNL, "unable to create SAD");
-		destroy(this);
-		return NULL;
-	}
 
 	return &this->public;
 }

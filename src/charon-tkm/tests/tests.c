@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -53,7 +53,7 @@ static bool test_runner_init(bool init)
 		libhydra_init();
 		libcharon_init();
 		lib->settings->set_int(lib->settings,
-							   "test_runner.filelog.stdout.default", 0);
+							   "test-runner.filelog.stdout.default", 0);
 		charon->load_loggers(charon, NULL, FALSE);
 
 		/* Register TKM specific plugins */

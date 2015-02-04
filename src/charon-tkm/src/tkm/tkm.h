@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -72,6 +72,7 @@
 
 #include "tkm_id_manager.h"
 #include "tkm_chunk_map.h"
+#include "tkm_kernel_sad.h"
 
 typedef struct tkm_t tkm_t;
 
@@ -89,6 +90,11 @@ struct tkm_t {
 	 * Chunk-to-ID mappings.
 	 */
 	tkm_chunk_map_t *chunk_map;
+
+	/**
+	 * CHILD/ESP SA database.
+	 */
+	tkm_kernel_sad_t *sad;
 
 };
 

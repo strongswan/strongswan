@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -95,6 +95,7 @@ bool tkm_init()
 		.public = {
 			.idmgr = tkm_id_manager_create(limits),
 			.chunk_map = tkm_chunk_map_create(),
+			.sad = tkm_kernel_sad_create(),
 		},
 	);
 	tkm = &this->public;
@@ -114,6 +115,7 @@ void tkm_deinit()
 	private_tkm_t *this = (private_tkm_t*)tkm;
 	this->public.idmgr->destroy(this->public.idmgr);
 	this->public.chunk_map->destroy(this->public.chunk_map);
+	this->public.sad->destroy(this->public.sad);
 
 	ees_server_finalize();
 
