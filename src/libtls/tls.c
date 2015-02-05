@@ -487,7 +487,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 										this->alert, peer, server)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake, this->alert,
-												   this->application);
+												   this->application, purpose);
 	this->compression = tls_compression_create(this->fragmentation, this->alert);
 	this->protection = tls_protection_create(this->compression, this->alert);
 	this->crypto->set_protection(this->crypto, this->protection);

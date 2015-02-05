@@ -80,9 +80,11 @@ struct tls_fragmentation_t {
  * @param handshake			upper layer handshake protocol
  * @param alert				TLS alert handler
  * @param application		upper layer application data or NULL
+ * @param purpose			type of context this TLS stack is running in
  * @return					TLS fragmentation layer
  */
 tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake,
-							tls_alert_t *alert, tls_application_t *application);
+							tls_alert_t *alert, tls_application_t *application,
+							tls_purpose_t purpose);
 
 #endif /** TLS_FRAGMENTATION_H_ @}*/
