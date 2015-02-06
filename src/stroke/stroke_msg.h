@@ -32,7 +32,7 @@
  */
 #define STROKE_SOCKET IPSEC_PIDDIR "/charon.ctl"
 
-#define STROKE_BUF_LEN		2048
+#define STROKE_BUF_LEN		4096
 
 typedef enum list_flag_t list_flag_t;
 
