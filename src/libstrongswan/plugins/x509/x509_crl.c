@@ -462,17 +462,26 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
-	/* get the public key of the issuer */
+	scheme = signature_scheme_from_oid(this->algorithm);
+	if (scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
 	key = issuer->get_public_key(issuer);
+	if (!key)
+	{
+		return FALSE;
+	}
 
 	/* compare keyIdentifiers if available, otherwise use DNs */
-	if (this->authKeyIdentifier.ptr && key)
+	if (this->authKeyIdentifier.ptr)
 	{
 		chunk_t fingerprint;
 
 		if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
+			key->destroy(key);
 			return FALSE;
 		}
 	}
@@ -480,16 +489,9 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
 		{
+			key->destroy(key);
 			return FALSE;
 		}
-	}
-
-	/* determine signature scheme */
-	scheme = signature_scheme_from_oid(this->algorithm);
-
-	if (scheme == SIGN_UNKNOWN || key == NULL)
-	{
-		return FALSE;
 	}
 	valid = key->verify(key, scheme, this->tbsCertList, this->signature);
 	key->destroy(key);
