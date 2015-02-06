@@ -70,9 +70,19 @@ struct private_stroke_cred_t {
 	char *secrets_file;
 
 	/**
-	 * credentials
+	 * credentials: end entity certs, attribute certs, CRLs, etc.
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * CA certificates
+	 */
+	mem_cred_t *cacerts;
+
+	/**
+	 * Attribute Authority certificates
+	 */
+	mem_cred_t *aacerts;
 
 	/**
 	 * ignore missing CA basic constraint (i.e. treat all certificates in
@@ -405,7 +415,7 @@ static void load_x509_ca(private_stroke_cred_t *this, char *file)
 		{
 			DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
 				 cert->get_subject(cert), file);
-			this->creds->add_cert(this->creds, TRUE, cert);
+			this->cacerts->add_cert(this->cacerts, TRUE, cert);
 		}
 	}
 	else
@@ -428,7 +438,7 @@ static void load_x509_aa(private_stroke_cred_t *this, char *file)
 	{
 		DBG1(DBG_CFG, "  loaded AA certificate \"%Y\" from '%s'",
 			 cert->get_subject(cert), file);
-		this->creds->add_cert(this->creds, TRUE, cert);
+		this->aacerts->add_cert(this->aacerts, TRUE, cert);
 	}
 	else
 	{
@@ -1409,7 +1419,11 @@ METHOD(stroke_cred_t, add_shared, void,
 METHOD(stroke_cred_t, destroy, void,
 	private_stroke_cred_t *this)
 {
+	lib->credmgr->remove_set(lib->credmgr, &this->aacerts->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->cacerts->set);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	this->aacerts->destroy(this->aacerts);
+	this->cacerts->destroy(this->cacerts);
 	this->creds->destroy(this->creds);
 	free(this);
 }
@@ -1442,9 +1456,13 @@ stroke_cred_t *stroke_cred_create()
 								"%s.plugins.stroke.secrets_file", SECRETS_FILE,
 								lib->ns),
 		.creds = mem_cred_create(),
+		.cacerts = mem_cred_create(),
+		.aacerts = mem_cred_create(),
 	);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->cacerts->set);
+	lib->credmgr->add_set(lib->credmgr, &this->aacerts->set);
 
 	this->force_ca_cert = lib->settings->get_bool(lib->settings,
 						"%s.plugins.stroke.ignore_missing_ca_basic_constraint",
