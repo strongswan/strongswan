@@ -59,6 +59,18 @@ struct mem_cred_t {
 								   certificate_t *cert);
 
 	/**
+	 * Get an existing reference to the same certificate.
+	 *
+	 * Searches for the same certficate in the set, and returns a reference
+	 * to it, destroying the passed certificate. If the passed certificate
+	 * is not found, it is just returned.
+	 *
+	 * @param cert			certificate to look up
+	 * @return				the same certificate, potentially different instance
+	 */
+	certificate_t* (*get_cert_ref)(mem_cred_t *this, certificate_t *cert);
+
+	/**
 	 * Add an X.509 CRL to the credential set.
 	 *
 	 * @param crl			CRL, gets owned by set
