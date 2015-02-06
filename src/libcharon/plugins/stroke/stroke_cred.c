@@ -1381,6 +1381,8 @@ METHOD(stroke_cred_t, reread, void,
 	{
 		DBG1(DBG_CFG, "rereading ca certificates from '%s'",
 			 CA_CERTIFICATE_DIR);
+		this->cacerts->clear(this->cacerts);
+		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
 		load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA);
 	}
 	if (msg->reread.flags & REREAD_OCSPCERTS)
@@ -1394,6 +1396,8 @@ METHOD(stroke_cred_t, reread, void,
 	{
 		DBG1(DBG_CFG, "rereading aa certificates from '%s'",
 			 AA_CERTIFICATE_DIR);
+		this->aacerts->clear(this->aacerts);
+		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
 		load_certdir(this, AA_CERTIFICATE_DIR, CERT_X509, X509_AA);
 	}
 	if (msg->reread.flags & REREAD_ACERTS)
