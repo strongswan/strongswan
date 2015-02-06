@@ -241,7 +241,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 		}
 		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
 			 cert->get_subject(cert), filename);
-		return this->creds->add_cert_ref(this->creds, TRUE, cert);
+		return this->creds->get_cert_ref(this->creds, cert);
 	}
 	return NULL;
 }
