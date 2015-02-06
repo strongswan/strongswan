@@ -374,133 +374,183 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 }
 
 /**
+ * Load a CA certificate  from disk
+ */
+static void load_x509_ca(private_stroke_cred_t *this, char *file)
+{
+	certificate_t *cert;
+
+	if (this->force_ca_cert)
+	{	/* treat certificate as CA cert even it has no CA basic constraint */
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, file,
+								  BUILD_X509_FLAG, X509_CA, BUILD_END);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, file, BUILD_END);
+	}
+	if (cert)
+	{
+		x509_t *x509 = (x509_t*)cert;
+
+		if (!(x509->get_flags(x509) & X509_CA))
+		{
+			DBG1(DBG_CFG, "  ca certificate \"%Y\" lacks ca basic constraint, "
+				 "discarded", cert->get_subject(cert));
+			cert->destroy(cert);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
+				 cert->get_subject(cert), file);
+			this->creds->add_cert(this->creds, TRUE, cert);
+		}
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading ca certificate from '%s' failed", file);
+	}
+}
+
+/**
+ * Load AA certificate with flags from disk
+ */
+static void load_x509_aa(private_stroke_cred_t *this, char *file)
+{
+	certificate_t *cert;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							  BUILD_FROM_FILE, file,
+							  BUILD_X509_FLAG, X509_AA, BUILD_END);
+	if (cert)
+	{
+		DBG1(DBG_CFG, "  loaded AA certificate \"%Y\" from '%s'",
+			 cert->get_subject(cert), file);
+		this->creds->add_cert(this->creds, TRUE, cert);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading AA certificate from '%s' failed", file);
+	}
+}
+
+/**
+ * Load a certificate with flags from disk
+ */
+static void load_x509(private_stroke_cred_t *this, char *file, x509_flag_t flag)
+{
+	certificate_t *cert;
+
+	/* for all other flags, we add them to the certificate. */
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							  BUILD_FROM_FILE, file,
+							  BUILD_X509_FLAG, flag, BUILD_END);
+	if (cert)
+	{
+		DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
+			 cert->get_subject(cert), file);
+		this->creds->add_cert(this->creds, TRUE, cert);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading certificate from '%s' failed", file);
+	}
+}
+
+/**
+ * Load a CRL from a file
+ */
+static void load_x509_crl(private_stroke_cred_t *this, char *file)
+{
+	certificate_t *cert;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+							  BUILD_FROM_FILE, file, BUILD_END);
+	if (cert)
+	{
+		this->creds->add_crl(this->creds, (crl_t*)cert);
+		DBG1(DBG_CFG, "  loaded crl from '%s'",  file);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading crl from '%s' failed", file);
+	}
+}
+
+/**
+ * Load an attribute certificate from a file
+ */
+static void load_x509_ac(private_stroke_cred_t *this, char *file)
+{
+	certificate_t *cert;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+							  BUILD_FROM_FILE, file, BUILD_END);
+	if (cert)
+	{
+		DBG1(DBG_CFG, "  loaded attribute certificate from '%s'", file);
+		this->creds->add_cert(this->creds, FALSE, cert);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading attribute certificate from '%s' failed", file);
+	}
+}
+
+/**
  * load trusted certificates from a directory
  */
 static void load_certdir(private_stroke_cred_t *this, char *path,
 						 certificate_type_t type, x509_flag_t flag)
 {
+	enumerator_t *enumerator;
 	struct stat st;
 	char *file;
 
-	enumerator_t *enumerator = enumerator_create_directory(path);
-
-	if (!enumerator)
+	enumerator = enumerator_create_directory(path);
+	if (enumerator)
+	{
+		while (enumerator->enumerate(enumerator, NULL, &file, &st))
+		{
+			if (!S_ISREG(st.st_mode))
+			{
+				/* skip special file */
+				continue;
+			}
+			switch (type)
+			{
+				case CERT_X509:
+					if (flag & X509_CA)
+					{
+						load_x509_ca(this, file);
+					}
+					else if (flag & X509_AA)
+					{
+						load_x509_aa(this, file);
+					}
+					else
+					{
+						load_x509(this, file, flag);
+					}
+					break;
+				case CERT_X509_CRL:
+					load_x509_crl(this, file);
+					break;
+				case CERT_X509_AC:
+					load_x509_ac(this, file);
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
 	{
 		DBG1(DBG_CFG, "  reading directory failed");
-		return;
 	}
-
-	while (enumerator->enumerate(enumerator, NULL, &file, &st))
-	{
-		certificate_t *cert;
-
-		if (!S_ISREG(st.st_mode))
-		{
-			/* skip special file */
-			continue;
-		}
-		switch (type)
-		{
-			case CERT_X509:
-				if (flag & X509_CA)
-				{
-					if (this->force_ca_cert)
-					{	/* treat this certificate as CA cert even it has no
-						 * CA basic constraint */
-						cert = lib->creds->create(lib->creds,
-										CRED_CERTIFICATE, CERT_X509,
-										BUILD_FROM_FILE, file, BUILD_X509_FLAG,
-										X509_CA, BUILD_END);
-					}
-					else
-					{
-						cert = lib->creds->create(lib->creds,
-										CRED_CERTIFICATE, CERT_X509,
-										BUILD_FROM_FILE, file, BUILD_END);
-					}
-					if (cert)
-					{
-						x509_t *x509 = (x509_t*)cert;
-
-						if (!(x509->get_flags(x509) & X509_CA))
-						{
-							DBG1(DBG_CFG, "  ca certificate \"%Y\" lacks "
-								 "ca basic constraint, discarded",
-								 cert->get_subject(cert));
-							cert->destroy(cert);
-							cert = NULL;
-						}
-						else
-						{
-							DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" "
-								 "from '%s'", cert->get_subject(cert), file);
-						}
-					}
-					else
-					{
-						DBG1(DBG_CFG, "  loading ca certificate from '%s' "
-									  "failed", file);
-					}
-				}
-				else
-				{	/* for all other flags, we add them to the certificate. */
-					cert = lib->creds->create(lib->creds,
-										CRED_CERTIFICATE, CERT_X509,
-										BUILD_FROM_FILE, file,
-										BUILD_X509_FLAG, flag, BUILD_END);
-					if (cert)
-					{
-						DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
-									  cert->get_subject(cert), file);
-					}
-					else
-					{
-						DBG1(DBG_CFG, "  loading certificate from '%s' "
-									  "failed", file);
-					}
-				}
-				if (cert)
-				{
-					this->creds->add_cert(this->creds, TRUE, cert);
-				}
-				break;
-			case CERT_X509_CRL:
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509_CRL,
-										  BUILD_FROM_FILE, file,
-										  BUILD_END);
-				if (cert)
-				{
-					this->creds->add_crl(this->creds, (crl_t*)cert);
-					DBG1(DBG_CFG, "  loaded crl from '%s'",  file);
-				}
-				else
-				{
-					DBG1(DBG_CFG, "  loading crl from '%s' failed", file);
-				}
-				break;
-			case CERT_X509_AC:
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509_AC,
-										  BUILD_FROM_FILE, file,
-										  BUILD_END);
-				if (cert)
-				{
-					this->creds->add_cert(this->creds, FALSE, cert);
-					DBG1(DBG_CFG, "  loaded attribute certificate from '%s'",
-								  file);
-				}
-				else
-				{
-					DBG1(DBG_CFG, "  loading attribute certificate from '%s' "
-								  "failed", file);
-				}
-				break;
-			default:
-				break;
-		}
-	}
-	enumerator->destroy(enumerator);
 }
 
 METHOD(stroke_cred_t, cache_cert, void,
