@@ -210,15 +210,18 @@ flushes and rereads all secrets defined in \fIipsec.secrets\fP.
 .
 .TP
 .B "rereadcacerts"
-reads all certificate files contained in the \fI/etc/ipsec.d/cacerts\fP
-directory and adds them to the list of Certification Authority (CA)
-certificates.
+removes previously loaded CA certificates, reads all certificate files
+contained in the \fI/etc/ipsec.d/cacerts\fP directory and adds them to the list
+of Certification Authority (CA) certificates. This does not affect certificates
+explicitly defined in a
+.BR ipsec.conf (5)
+ca section, which may be separately updated using the \fBupdate\fP command.
 .
 .TP
 .B "rereadaacerts"
-reads all certificate files contained in the \fI/etc/ipsec.d/aacerts\fP
-directory and adds them to the list of Authorization Authority (AA)
-certificates.
+removes previously loaded AA certificates, reads all certificate files
+contained in the \fI/etc/ipsec.d/aacerts\fP directory and adds them to the list
+of Authorization Authority (AA) certificates.
 .
 .TP
 .B "rereadocspcerts"
