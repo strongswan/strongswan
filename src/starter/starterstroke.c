@@ -35,8 +35,14 @@ static char* push_string(stroke_msg_t *msg, char *string)
 {
 	unsigned long string_start = msg->length;
 
-	if (string == NULL || msg->length + strlen(string) >= sizeof(stroke_msg_t))
+	if (string == NULL)
 	{
+		return NULL;
+	}
+	else if ((size_t)msg->length + strlen(string) >= sizeof(stroke_msg_t))
+	{
+		/* set invalid length to fail during message send */
+		msg->length = ~0;
 		return NULL;
 	}
 	else
@@ -52,6 +58,12 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	stream_t *stream;
 	char *uri, buffer[64];
 	int count;
+
+	if (msg->length > sizeof(stroke_msg_t))
+	{
+		DBG1(DBG_APP, "stroke message exceeds buffer size");
+		return -1;
+	}
 
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
