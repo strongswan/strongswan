@@ -213,6 +213,10 @@ static void add_initial_contact(private_main_mode_t *this, message_t *message,
 {
 	identification_t *idr;
 	host_t *host;
+	notify_payload_t *notify;
+	ike_sa_id_t *ike_sa_id;
+	u_int64_t spi_i, spi_r;
+	chunk_t spi;
 
 	idr = this->ph1->get_id(this->ph1, this->peer_cfg, FALSE);
 	if (idr && !idr->contains_wildcards(idr))
@@ -224,8 +228,15 @@ static void add_initial_contact(private_main_mode_t *this, message_t *message,
 			if (!charon->ike_sa_manager->has_contact(charon->ike_sa_manager,
 										idi, idr, host->get_family(host)))
 			{
-				message->add_notify(message, FALSE, INITIAL_CONTACT_IKEV1,
-									chunk_empty);
+				notify = notify_payload_create_from_protocol_and_type(
+								PLV1_NOTIFY, PROTO_IKE, INITIAL_CONTACT_IKEV1);
+				ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+				spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
+				spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
+				spi = chunk_cata("cc", chunk_from_thing(spi_i),
+								 chunk_from_thing(spi_r));
+				notify->set_spi_data(notify, spi);
+				message->add_payload(message, (payload_t*)notify);
 			}
 		}
 	}
