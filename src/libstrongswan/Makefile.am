@@ -429,6 +429,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_FILES
+  SUBDIRS += plugins/files
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/files/libstrongswan-files.la
+endif
+endif
+
 if USE_WINHTTP
   SUBDIRS += plugins/winhttp
 if MONOLITHIC

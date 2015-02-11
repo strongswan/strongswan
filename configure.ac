@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2014 Tobias Brunner
+# Copyright (C) 2007-2015 Tobias Brunner
 # Copyright (C) 2006-2014 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 # Hochschule fuer Technik Rapperswil
@@ -159,6 +159,7 @@ ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
 # fetcher/resolver plugins
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([files],          [enable simple file:// URI fetcher.])
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
 ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
 ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
@@ -1259,6 +1260,7 @@ ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
 ADD_PLUGIN([bliss],                [s charon pki scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon scepclient pki scripts nm cmd])
+ADD_PLUGIN([files],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([winhttp],              [s charon pki scripts])
 ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
@@ -1362,6 +1364,7 @@ AC_SUBST(t_plugins)
 # -----------------------
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
+AM_CONDITIONAL(USE_FILES, test x$files = xtrue)
 AM_CONDITIONAL(USE_WINHTTP, test x$winhttp = xtrue)
 AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
 AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
@@ -1636,6 +1639,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/sshkey/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
+	src/libstrongswan/plugins/files/Makefile
 	src/libstrongswan/plugins/winhttp/Makefile
 	src/libstrongswan/plugins/unbound/Makefile
 	src/libstrongswan/plugins/soup/Makefile
