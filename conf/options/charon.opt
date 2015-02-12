@@ -196,6 +196,10 @@ charon.load_modular = no
 charon.max_packet = 10000
 	Maximum packet size accepted by charon.
 
+charon.mem-pool.reassign_online = no
+	Reassign an online IP address lease from an in-memory address pool if a
+	client with the same identity requests it explicitly.
+
 charon.multiple_authentication = yes
 	Enable multiple authentication exchanges (RFC 4739).
 
