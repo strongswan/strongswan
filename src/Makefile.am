@@ -69,7 +69,7 @@ if USE_STROKE
 endif
 
 if USE_UPDOWN
-  SUBDIRS += _updown _updown_espmark
+  SUBDIRS += _updown
 endif
 
 if USE_SCEPCLIENT

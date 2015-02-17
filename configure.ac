@@ -1766,7 +1766,6 @@ AC_CONFIG_FILES([
 	src/starter/Makefile
 	src/starter/tests/Makefile
 	src/_updown/Makefile
-	src/_updown_espmark/Makefile
 	src/_copyright/Makefile
 	src/scepclient/Makefile
 	src/aikgen/Makefile
