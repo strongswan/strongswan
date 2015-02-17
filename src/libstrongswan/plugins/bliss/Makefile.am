@@ -27,9 +27,6 @@ libbliss_la_SOURCES = \
 	bliss_sampler.h bliss_sampler.c
 libbliss_la_LIBADD = libbliss-params.la
 
-CLEANFILES = \
-	bliss_huffman_code_1.c bliss_huffman_code_3.c bliss_huffman_code_4.c
-
 if MONOLITHIC
 noinst_LTLIBRARIES += libstrongswan-bliss.la
 else
@@ -48,14 +45,10 @@ noinst_PROGRAMS = bliss_huffman
 bliss_huffman_SOURCES = bliss_huffman.c
 bliss_huffman_LDADD = -lm libbliss-params.la
 
-bliss_huffman_code_1.c :	bliss_huffman bliss_huffman_code.h
+recreate-bliss-huffman :	bliss_huffman bliss_huffman_code.h
 	$(AM_V_GEN) \
-	./bliss_huffman 1 8 > $@ 2>/dev/null
-
-bliss_huffman_code_3.c :	bliss_huffman bliss_huffman_code.h
+	./bliss_huffman 1  8 > $(srcdir)/bliss_huffman_code_1.c 2>/dev/null
 	$(AM_V_GEN) \
-	./bliss_huffman 3 16 > $@ 2>/dev/null
-
-bliss_huffman_code_4.c :	bliss_huffman bliss_huffman_code.h
+	./bliss_huffman 3 16 > $(srcdir)/bliss_huffman_code_3.c 2>/dev/null
 	$(AM_V_GEN) \
-	./bliss_huffman 4 32 > $@ 2>/dev/null
+	./bliss_huffman 4 32 > $(srcdir)/bliss_huffman_code_4.c 2>/dev/null
