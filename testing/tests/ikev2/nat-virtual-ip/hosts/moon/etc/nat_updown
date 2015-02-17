@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 # NAT updown script
 #
 # Copyright (C) 2010 Andreas Steffen <andreas.steffen@strongswan.org>
@@ -13,8 +13,6 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-# things that this script gets (from ipsec_pluto(8) man page)
-#
 #      PLUTO_VERSION
 #              indicates  what  version of this interface is being
 #              used.  This document describes version  1.1.   This
@@ -32,15 +30,20 @@
 #              is the name of the  connection  for  which  we  are
 #              routing.
 #
-#       PLUTO_NEXT_HOP
-#              is the next hop to which packets bound for the peer
-#              must be sent.
-#
 #       PLUTO_INTERFACE
 #              is the name of the ipsec interface to be used.
 #
 #       PLUTO_REQID
-#              is the requid of the ESP policy
+#              is the requid of the AH|ESP policy
+#
+#       PLUTO_PROTO
+#              is the negotiated IPsec protocol, ah|esp
+#
+#       PLUTO_IPCOMP
+#              is not empty if IPComp was negotiated
+#
+#       PLUTO_UNIQUEID
+#              is the unique identifier of the associated IKE_SA
 #
 #       PLUTO_ME
 #              is the IP address of our host.
@@ -54,25 +57,21 @@
 #              host's own IP address / max (where max  is  32  for
 #              IPv4 and 128 for IPv6).
 #
-#       PLUTO_MY_CLIENT_NET
-#              is the IP address of our client net.  If the client
-#              is just the host, this will be the  host's  own  IP
-#              address.
-#
-#       PLUTO_MY_CLIENT_MASK
-#              is  the  mask for our client net.  If the client is
-#              just the host, this will be 255.255.255.255.
-#
 #       PLUTO_MY_SOURCEIP
-#              if non-empty, then the source address for the route will be
-#              set to this IP address.
+#       PLUTO_MY_SOURCEIP4_$i
+#       PLUTO_MY_SOURCEIP6_$i
+#              contains IPv4/IPv6 virtual IP received from a responder,
+#              $i enumerates from 1 to the number of IP per address family.
+#              PLUTO_MY_SOURCEIP is a legacy variable and equals to the first
+#              virtual IP, IPv4 or IPv6.
 #
 #       PLUTO_MY_PROTOCOL
 #              is the IP protocol that will be transported.
 #
 #       PLUTO_MY_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on our side.
+#              restricted on our side.  For ICMP/ICMPv6 this contains the
+#              message type, and PLUTO_PEER_PORT the message code.
 #
 #       PLUTO_PEER
 #              is the IP address of our peer.
@@ -80,31 +79,38 @@
 #       PLUTO_PEER_ID
 #              is the ID of our peer.
 #
-#       PLUTO_PEER_CA
-#              is the CA which issued the cert of our peer.
-#
 #       PLUTO_PEER_CLIENT
 #              is the IP address / count of the peer's client sub-
 #              net.   If the client is just the peer, this will be
 #              the peer's own IP address / max (where  max  is  32
 #              for IPv4 and 128 for IPv6).
 #
-#       PLUTO_PEER_CLIENT_NET
-#              is the IP address of the peer's client net.  If the
-#              client is just the peer, this will  be  the  peer's
-#              own IP address.
-#
-#       PLUTO_PEER_CLIENT_MASK
-#              is  the  mask  for  the  peer's client net.  If the
-#              client   is   just   the   peer,   this   will   be
-#              255.255.255.255.
-#
 #       PLUTO_PEER_PROTOCOL
 #              is the IP protocol that will be transported.
 #
 #       PLUTO_PEER_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on the peer side.
+#              restricted on the peer side.  For ICMP/ICMPv6 this contains the
+#              message code, and PLUTO_MY_PORT the message type.
+#
+#       PLUTO_XAUTH_ID
+#              is an optional user ID employed by the XAUTH protocol
+#
+#       PLUTO_MARK_IN
+#              is an optional XFRM mark set on the inbound IPsec SA
+#
+#       PLUTO_MARK_OUT
+#              is an optional XFRM mark set on the outbound IPsec SA
+#
+#       PLUTO_UDP_ENC
+#              contains the remote UDP port in the case of ESP_IN_UDP
+#              encapsulation
+#
+#       PLUTO_DNS4_$i
+#       PLUTO_DNS6_$i
+#              contains IPv4/IPv6 DNS server attribute received from a
+#              responder, $i enumerates from 1 to the number of servers per
+#              address family.
 #
 
 # define a minimum PATH environment in case it is not set
@@ -129,22 +135,22 @@ up-client:)
 	# If you are doing a custom version, firewall commands go here.
 	iptables -A FORWARD -i eth1 -o $PLUTO_INTERFACE -s PH_IP_ALICE \
 	    -d $PLUTO_PEER_CLIENT -j ACCEPT
-        iptables -A FORWARD -o eth1 -i $PLUTO_INTERFACE -d PH_IP_ALICE \
-            -s $PLUTO_PEER_CLIENT -j ACCEPT
+	iptables -A FORWARD -o eth1 -i $PLUTO_INTERFACE -d PH_IP_ALICE \
+	    -s $PLUTO_PEER_CLIENT -j ACCEPT
 	iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -s PH_IP_ALICE \
 	    -d $PLUTO_PEER_CLIENT -j SNAT --to-source $PLUTO_MY_SOURCEIP
-	echo "inserted NAT rule mapping PH_IP_ALICE to virtual IP $PLUTO_MY_SOURCEIP" >&2 
+	echo "inserted NAT rule mapping PH_IP_ALICE to virtual IP $PLUTO_MY_SOURCEIP" >&2
 	;;
 down-client:)
 	# connection to my client subnet going down
 	# If you are doing a custom version, firewall commands go here.
-        iptables -D FORWARD -i eth1 -o $PLUTO_INTERFACE -s PH_IP_ALICE \
-            -d $PLUTO_PEER_CLIENT -j ACCEPT
-        iptables -D FORWARD -o eth1 -i $PLUTO_INTERFACE -d PH_IP_ALICE \
-            -s $PLUTO_PEER_CLIENT -j ACCEPT
-         iptables -t nat -D POSTROUTING -o $PLUTO_INTERFACE -s PH_IP_ALICE \
-            -d $PLUTO_PEER_CLIENT -j SNAT --to-source $PLUTO_MY_SOURCEIP
-        echo "deleted NAT rule mapping PH_IP_ALICE to virtual IP $PLUTO_MY_SOURCEIP" >&2    
+	iptables -D FORWARD -i eth1 -o $PLUTO_INTERFACE -s PH_IP_ALICE \
+	    -d $PLUTO_PEER_CLIENT -j ACCEPT
+	iptables -D FORWARD -o eth1 -i $PLUTO_INTERFACE -d PH_IP_ALICE \
+	    -s $PLUTO_PEER_CLIENT -j ACCEPT
+	iptables -t nat -D POSTROUTING -o $PLUTO_INTERFACE -s PH_IP_ALICE \
+	    -d $PLUTO_PEER_CLIENT -j SNAT --to-source $PLUTO_MY_SOURCEIP
+	echo "deleted NAT rule mapping PH_IP_ALICE to virtual IP $PLUTO_MY_SOURCEIP" >&2
 	;;
 *)	echo "$0: unknown verb \`$PLUTO_VERB' or parameter \`$1'" >&2
 	exit 1

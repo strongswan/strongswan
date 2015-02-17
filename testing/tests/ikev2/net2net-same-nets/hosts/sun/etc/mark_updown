@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 # updown script setting inbound marks on ESP traffic in the mangle chain
 #
 # Copyright (C) 2003-2004 Nigel Meteringham
@@ -22,8 +22,6 @@
 # that, and use the (left/right)updown parameters in ipsec.conf to make
 # strongSwan use yours instead of this default one.
 
-# things that this script gets (from ipsec_pluto(8) man page)
-#
 #      PLUTO_VERSION
 #              indicates  what  version of this interface is being
 #              used.  This document describes version  1.1.   This
@@ -41,15 +39,20 @@
 #              is the name of the  connection  for  which  we  are
 #              routing.
 #
-#       PLUTO_NEXT_HOP
-#              is the next hop to which packets bound for the peer
-#              must be sent.
-#
 #       PLUTO_INTERFACE
 #              is the name of the ipsec interface to be used.
 #
 #       PLUTO_REQID
-#              is the requid of the ESP policy
+#              is the requid of the AH|ESP policy
+#
+#       PLUTO_PROTO
+#              is the negotiated IPsec protocol, ah|esp
+#
+#       PLUTO_IPCOMP
+#              is not empty if IPComp was negotiated
+#
+#       PLUTO_UNIQUEID
+#              is the unique identifier of the associated IKE_SA
 #
 #       PLUTO_ME
 #              is the IP address of our host.
@@ -62,15 +65,6 @@
 #              the  client  is  just  the  host,  this will be the
 #              host's own IP address / max (where max  is  32  for
 #              IPv4 and 128 for IPv6).
-#
-#       PLUTO_MY_CLIENT_NET
-#              is the IP address of our client net.  If the client
-#              is just the host, this will be the  host's  own  IP
-#              address.
-#
-#       PLUTO_MY_CLIENT_MASK
-#              is  the  mask for our client net.  If the client is
-#              just the host, this will be 255.255.255.255.
 #
 #       PLUTO_MY_SOURCEIP
 #       PLUTO_MY_SOURCEIP4_$i
@@ -85,7 +79,8 @@
 #
 #       PLUTO_MY_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on our side.
+#              restricted on our side.  For ICMP/ICMPv6 this contains the
+#              message type, and PLUTO_PEER_PORT the message code.
 #
 #       PLUTO_PEER
 #              is the IP address of our peer.
@@ -93,31 +88,19 @@
 #       PLUTO_PEER_ID
 #              is the ID of our peer.
 #
-#       PLUTO_PEER_CA
-#              is the CA which issued the cert of our peer.
-#
 #       PLUTO_PEER_CLIENT
 #              is the IP address / count of the peer's client sub-
 #              net.   If the client is just the peer, this will be
 #              the peer's own IP address / max (where  max  is  32
 #              for IPv4 and 128 for IPv6).
 #
-#       PLUTO_PEER_CLIENT_NET
-#              is the IP address of the peer's client net.  If the
-#              client is just the peer, this will  be  the  peer's
-#              own IP address.
-#
-#       PLUTO_PEER_CLIENT_MASK
-#              is  the  mask  for  the  peer's client net.  If the
-#              client   is   just   the   peer,   this   will   be
-#              255.255.255.255.
-#
 #       PLUTO_PEER_PROTOCOL
 #              is the IP protocol that will be transported.
 #
 #       PLUTO_PEER_PORT
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
-#              restricted on the peer side.
+#              restricted on the peer side.  For ICMP/ICMPv6 this contains the
+#              message code, and PLUTO_MY_PORT the message type.
 #
 #       PLUTO_XAUTH_ID
 #              is an optional user ID employed by the XAUTH protocol
@@ -186,7 +169,6 @@ fi
 PLUTO_MY_ID=`printf "$PLUTO_MY_ID"`
 PLUTO_PEER_ID=`printf "$PLUTO_PEER_ID"`
 
-# the big choice
 case "$PLUTO_VERB:$1" in
 up-client:)
 	# connection to my client subnet coming up
