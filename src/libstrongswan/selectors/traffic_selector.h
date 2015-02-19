@@ -249,6 +249,17 @@ static inline u_int8_t traffic_selector_icmp_code(u_int16_t port)
 }
 
 /**
+ * Compare two traffic selectors, usable as sort function
+ *
+ * @param a				first selector to compare
+ * @param b				second selector to compare
+ * @param opts			optional sort options, currently unused
+ * @return				> 0 if a > b, 0 if a == b, < 0 if a < b
+ */
+int traffic_selector_cmp(traffic_selector_t *a, traffic_selector_t *b,
+						 void *opts);
+
+/**
  * Create a new traffic selector using human readable params.
  *
  * If protocol is ICMP or ICMPv6 the ports are interpreted as follows:  If they
