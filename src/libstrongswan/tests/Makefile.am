@@ -29,6 +29,7 @@ tests_SOURCES = tests.h tests.c \
   suites/test_enum.c \
   suites/test_hashtable.c \
   suites/test_identification.c \
+  suites/test_traffic_selector.c \
   suites/test_threading.c \
   suites/test_process.c \
   suites/test_watcher.c \
