@@ -43,15 +43,11 @@ struct rekey_child_sa_job_t {
 /**
  * Creates a job of type REKEY_CHILD_SA.
  *
- * The CHILD_SA is identified by its protocol (AH/ESP) and its
- * inbound SPI.
- *
- * @param reqid		reqid of the CHILD_SA to rekey
  * @param protocol	protocol of the CHILD_SA
  * @param spi		security parameter index of the CHILD_SA
+ * @param dst		SA destination address
  * @return			rekey_child_sa_job_t object
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid,
-												protocol_id_t protocol,
-												u_int32_t spi);
+rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol,
+												u_int32_t spi, host_t *dst);
 #endif /** REKEY_CHILD_SA_JOB_H_ @}*/

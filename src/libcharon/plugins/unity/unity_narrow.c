@@ -75,7 +75,7 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 	enumerator_t *enumerator;
 
 	enumerator = this->handler->create_include_enumerator(this->handler,
-											ike_sa->get_unique_id(ike_sa));
+											ike_sa->get_id(ike_sa));
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (orig == NULL)
@@ -159,7 +159,7 @@ static bool has_split_includes(private_unity_narrow_t *this, ike_sa_t *ike_sa)
 	bool has;
 
 	enumerator = this->handler->create_include_enumerator(this->handler,
-												ike_sa->get_unique_id(ike_sa));
+												ike_sa->get_id(ike_sa));
 	has = enumerator->enumerate(enumerator, &ts);
 	enumerator->destroy(enumerator);
 

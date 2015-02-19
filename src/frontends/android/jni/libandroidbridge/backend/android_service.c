@@ -285,7 +285,7 @@ static bool setup_tun_device(private_android_service_t *this,
 	int tunfd;
 
 	DBG1(DBG_DMN, "setting up TUN device for CHILD_SA %s{%u}",
-		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+		 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa));
 
 	builder = charonservice->get_vpnservice_builder(charonservice);
 
@@ -426,8 +426,7 @@ CALLBACK(reestablish, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													*id, FALSE);
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager, *id);
 	if (ike_sa)
 	{
 		if (ike_sa->reauth(ike_sa) == DESTROY_ME)

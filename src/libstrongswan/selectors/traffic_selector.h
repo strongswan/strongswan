@@ -221,6 +221,14 @@ struct traffic_selector_t {
 	bool (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
 
 	/**
+	 * Create a hash value for the traffic selector.
+	 *
+	 * @param inc		optional value for incremental hashing
+	 * @return			calculated hash value for the traffic selector
+	 */
+	u_int (*hash)(traffic_selector_t *this, u_int inc);
+
+	/**
 	 * Destroys the ts object
 	 */
 	void (*destroy) (traffic_selector_t *this);
@@ -247,6 +255,17 @@ static inline u_int8_t traffic_selector_icmp_code(u_int16_t port)
 {
 	return port & 0xff;
 }
+
+/**
+ * Compare two traffic selectors, usable as sort function
+ *
+ * @param a				first selector to compare
+ * @param b				second selector to compare
+ * @param opts			optional sort options, currently unused
+ * @return				> 0 if a > b, 0 if a == b, < 0 if a < b
+ */
+int traffic_selector_cmp(traffic_selector_t *a, traffic_selector_t *b,
+						 void *opts);
 
 /**
  * Create a new traffic selector using human readable params.

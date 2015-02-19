@@ -1296,7 +1296,8 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 {
 	pfkey_msg_t response;
 	u_int8_t protocol;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
+	host_t *dst;
 	bool hard;
 
 	DBG2(DBG_KNL, "received an SADB_EXPIRE");
@@ -1309,18 +1310,18 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 
 	protocol = satype2proto(msg->sadb_msg_satype);
 	spi = response.sa->sadb_sa_spi;
-	reqid = response.x_sa2->sadb_x_sa2_reqid;
 	hard = response.lft_hard != NULL;
 
-	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
+	if (protocol == IPPROTO_ESP || protocol == IPPROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring SADB_EXPIRE for SA with SPI %.8x and "
-					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
-		return;
+		dst = host_create_from_sockaddr((sockaddr_t*)(response.dst + 1));
+		if (dst)
+		{
+			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+											spi, dst, hard);
+			dst->destroy(dst);
+		}
 	}
-
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, hard);
 }
 
 #ifdef SADB_X_MIGRATE
@@ -1387,9 +1388,9 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 	sockaddr_t *sa;
-	host_t *host;
+	host_t *dst, *new;
 
 	DBG2(DBG_KNL, "received an SADB_X_NAT_T_NEW_MAPPING");
 
@@ -1407,7 +1408,6 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	spi = response.sa->sadb_sa_spi;
-	reqid = response.x_sa2->sadb_x_sa2_reqid;
 
 	if (satype2proto(msg->sadb_msg_satype) != IPPROTO_ESP)
 	{
@@ -1415,6 +1415,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	sa = (sockaddr_t*)(response.dst + 1);
+	dst = host_create_from_sockaddr(sa);
 	switch (sa->sa_family)
 	{
 		case AF_INET:
@@ -1432,12 +1433,16 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 		default:
 			break;
 	}
-
-	host = host_create_from_sockaddr(sa);
-	if (host)
+	if (dst)
 	{
-		hydra->kernel_interface->mapping(hydra->kernel_interface, reqid,
-										 spi, host);
+		new = host_create_from_sockaddr(sa);
+		if (new)
+		{
+			hydra->kernel_interface->mapping(hydra->kernel_interface,
+											 IPPROTO_ESP, spi, dst, new);
+			new->destroy(new);
+		}
+		dst->destroy(dst);
 	}
 }
 #endif /*SADB_X_NAT_T_NEW_MAPPING*/
@@ -1518,11 +1523,10 @@ static bool receive_events(private_kernel_pfkey_ipsec_t *this, int fd,
 
 static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
-	struct sadb_x_sa2 *sa2;
 	struct sadb_spirange *range;
 	pfkey_msg_t response;
 	u_int32_t received_spi = 0;
@@ -1535,12 +1539,6 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_type = SADB_GETSPI;
 	msg->sadb_msg_satype = proto2satype(proto);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-
-	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
-	sa2->sadb_x_sa2_exttype = SADB_X_EXT_SA2;
-	sa2->sadb_x_sa2_len = PFKEY_LEN(sizeof(struct sadb_spirange));
-	sa2->sadb_x_sa2_reqid = reqid;
-	PFKEY_EXT_ADD(msg, sa2);
 
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
@@ -1577,39 +1575,37 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, protocol,
-						 0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
+						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get SPI");
 		return FAILED;
 	}
 
-	DBG2(DBG_KNL, "got SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_KNL, "got SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
 
-	DBG2(DBG_KNL, "getting CPI for reqid {%u}", reqid);
+	DBG2(DBG_KNL, "getting CPI");
 
 	if (get_spi_internal(this, src, dst, IPPROTO_COMP,
-						 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
+						 0x100, 0xEFFF, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get CPI");
 		return FAILED;
 	}
 
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 
-	DBG2(DBG_KNL, "got CPI %.4x for reqid {%u}", ntohs(*cpi), reqid);
+	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
 }
 
@@ -1620,7 +1616,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1644,6 +1640,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		mode = MODE_TRANSPORT;
 	}
 
+	if (inbound)
+	{
+		/* As we didn't know the reqid during SPI allocation, we used reqid
+		 * zero. Unfortunately we can't SADB_UPDATE to the new reqid, hence we
+		 * have to delete the SPI allocation state manually. The reqid
+		 * selector does not count for that, therefore we have to delete
+		 * that state before installing the new SA to avoid deleting the
+		 * the new state after installing it. */
+		mark_t zeromark = {0, 0};
+
+		if (this->public.interface.del_sa(&this->public.interface,
+					src, dst, spi, protocol, 0, zeromark) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "deleting SPI allocation SA failed");
+		}
+	}
+
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}",
@@ -1651,7 +1664,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
-	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
+	msg->sadb_msg_type = SADB_ADD;
 	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 

@@ -480,6 +480,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.shunts);
+	DESTROY_IF(this->public.child_sa_manager);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
@@ -606,6 +607,7 @@ METHOD(daemon_t, initialize, bool,
 	{
 		return FALSE;
 	}
+	this->public.child_sa_manager = child_sa_manager_create();
 
 	/* Queue start_action job */
 	lib->processor->queue_job(lib->processor, (job_t*)start_action_job_create());

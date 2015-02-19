@@ -449,41 +449,9 @@ METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 }
 
 METHOD(traffic_selector_t, equals, bool,
-	private_traffic_selector_t *this, traffic_selector_t *other_public)
+	private_traffic_selector_t *this, traffic_selector_t *other)
 {
-	private_traffic_selector_t *other;
-
-	other = (private_traffic_selector_t*)other_public;
-	if (this->type != other->type)
-	{
-		return FALSE;
-	}
-	if (!(this->from_port == other->from_port &&
-		  this->to_port == other->to_port &&
-		  this->protocol == other->protocol))
-	{
-		return FALSE;
-	}
-	switch (this->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-			if (memeq(this->from4, other->from4, sizeof(this->from4)) &&
-				memeq(this->to4, other->to4, sizeof(this->to4)))
-			{
-				return TRUE;
-			}
-			break;
-		case TS_IPV6_ADDR_RANGE:
-			if (memeq(this->from6, other->from6, sizeof(this->from6)) &&
-				memeq(this->to6, other->to6, sizeof(this->to6)))
-			{
-				return TRUE;
-			}
-			break;
-		default:
-			break;
-	}
-	return FALSE;
+	return traffic_selector_cmp(&this->public, other, NULL) == 0;
 }
 
 METHOD(traffic_selector_t, get_from_address, chunk_t,
@@ -717,10 +685,94 @@ METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 	}
 }
 
+METHOD(traffic_selector_t, hash, u_int,
+	private_traffic_selector_t *this, u_int hash)
+{
+	return chunk_hash_inc(get_from_address(this),
+			chunk_hash_inc(get_to_address(this),
+			 chunk_hash_inc(chunk_from_thing(this->from_port),
+			  chunk_hash_inc(chunk_from_thing(this->to_port),
+			   chunk_hash_inc(chunk_from_thing(this->protocol),
+				hash)))));
+}
+
 METHOD(traffic_selector_t, destroy, void,
 	private_traffic_selector_t *this)
 {
 	free(this);
+}
+
+/**
+ * Compare two integers
+ */
+static int compare_int(int a, int b)
+{
+	return a - b;
+}
+
+/*
+ * See header
+ */
+int traffic_selector_cmp(traffic_selector_t *a_pub, traffic_selector_t *b_pub,
+						 void *opts)
+{
+	private_traffic_selector_t *a, *b;
+	int res;
+
+	a = (private_traffic_selector_t*)a_pub;
+	b = (private_traffic_selector_t*)b_pub;
+
+	/* IPv4 before IPv6 */
+	res = compare_int(a->type, b->type);
+	if (res)
+	{
+		return res;
+	}
+	switch (a->type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+			/* lower starting subnets first */
+			res = memcmp(a->from4, b->from4, sizeof(a->from4));
+			if (res)
+			{
+				return res;
+			}
+			/* larger subnets first */
+			res = memcmp(b->to4, a->to4, sizeof(a->to4));
+			if (res)
+			{
+				return res;
+			}
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			res = memcmp(a->from6, b->from6, sizeof(a->from6));
+			if (res)
+			{
+				return res;
+			}
+			res = memcmp(b->to6, a->to6, sizeof(a->to6));
+			if (res)
+			{
+				return res;
+			}
+			break;
+		default:
+			return 1;
+	}
+	/* lower protocols first */
+	res = compare_int(a->protocol, b->protocol);
+	if (res)
+	{
+		return res;
+	}
+	/* lower starting ports first */
+	res = compare_int(a->from_port, b->from_port);
+	if (res)
+	{
+		return res;
+	}
+	/* larger port ranges first */
+	return compare_int(b->to_port, a->to_port);
 }
 
 /*
@@ -933,6 +985,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 			.set_address = _set_address,
 			.to_subnet = _to_subnet,
 			.clone = _clone_,
+			.hash = _hash,
 			.destroy = _destroy,
 		},
 		.from_port = from_port,

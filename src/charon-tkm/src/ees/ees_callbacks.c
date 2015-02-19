@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Reto Buerki
+ * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,8 +33,10 @@ void charon_esa_expire(result_type *res, const sp_id_type sp_id,
 					   const esp_spi_type spi_rem, const protocol_type protocol,
 					   const expiry_flag_type hard)
 {
+	host_t *dst = NULL;
+
 	DBG1(DBG_KNL, "ees: expire received for reqid {%d}", sp_id);
-	hydra->kernel_interface->expire(hydra->kernel_interface, sp_id, protocol,
-									spi_rem, hard != 0);
+	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+									spi_rem, dst, hard != 0);
 	*res = TKM_OK;
 }

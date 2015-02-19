@@ -158,6 +158,7 @@ typedef struct daemon_t daemon_t;
 #include <control/controller.h>
 #include <bus/bus.h>
 #include <sa/ike_sa_manager.h>
+#include <sa/child_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
@@ -213,6 +214,11 @@ struct daemon_t {
 	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
+
+	/**
+	 * A child_sa_manager_t instance.
+	 */
+	child_sa_manager_t *child_sa_manager;
 
 	/**
 	 * Manager for triggering policies, called traps

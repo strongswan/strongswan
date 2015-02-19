@@ -50,8 +50,8 @@ struct private_unity_handler_t {
  * Traffic selector entry for networks to include under a given IKE_SA
  */
 typedef struct {
-	/** associated IKE_SA, unique ID */
-	u_int32_t sa;
+	/** associated IKE_SA COOKIEs */
+	ike_sa_id_t *id;
 	/** traffic selector to include/exclude */
 	traffic_selector_t *ts;
 } entry_t;
@@ -61,6 +61,7 @@ typedef struct {
  */
 static void entry_destroy(entry_t *this)
 {
+	this->id->destroy(this->id);
 	this->ts->destroy(this->ts);
 	free(this);
 }
@@ -131,9 +132,10 @@ static bool add_include(private_unity_handler_t *this, chunk_t data)
 	while (list->remove_first(list, (void**)&ts) == SUCCESS)
 	{
 		INIT(entry,
-			.sa = ike_sa->get_unique_id(ike_sa),
+			.id = ike_sa->get_id(ike_sa),
 			.ts = ts,
 		);
+		entry->id = entry->id->clone(entry->id);
 
 		this->mutex->lock(this->mutex);
 		this->include->insert_last(this->include, entry);
@@ -171,7 +173,7 @@ static bool remove_include(private_unity_handler_t *this, chunk_t data)
 		enumerator = this->include->create_enumerator(this->include);
 		while (enumerator->enumerate(enumerator, &entry))
 		{
-			if (entry->sa == ike_sa->get_unique_id(ike_sa) &&
+			if (entry->id->equals(entry->id, ike_sa->get_id(ike_sa)) &&
 				ts->equals(ts, entry->ts))
 			{
 				this->include->remove_at(this->include, enumerator);
@@ -209,8 +211,7 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 	char name[128];
 	host_t *host;
 
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													entry->sa, FALSE);
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, entry->id);
 	if (ike_sa)
 	{
 		create_shunt_name(ike_sa, entry->ts, name, sizeof(name));
@@ -267,9 +268,10 @@ static bool add_exclude(private_unity_handler_t *this, chunk_t data)
 	while (list->remove_first(list, (void**)&ts) == SUCCESS)
 	{
 		INIT(entry,
-			.sa = ike_sa->get_unique_id(ike_sa),
+			.id = ike_sa->get_id(ike_sa),
 			.ts = ts,
 		);
+		entry->id = entry->id->clone(entry->id);
 
 		/* we can't install the shunt policy yet, as we don't know the virtual IP.
 		 * Defer installation using an async callback. */
@@ -402,7 +404,7 @@ typedef struct {
 	/** mutex to unlock */
 	mutex_t *mutex;
 	/** IKE_SA ID to filter for */
-	u_int32_t id;
+	ike_sa_id_t *id;
 } include_filter_t;
 
 /**
@@ -411,7 +413,7 @@ typedef struct {
 static bool include_filter(include_filter_t *data,
 						   entry_t **entry, traffic_selector_t **ts)
 {
-	if ((*entry)->sa == data->id)
+	if (data->id->equals(data->id, (*entry)->id))
 	{
 		*ts = (*entry)->ts;
 		return TRUE;
@@ -429,7 +431,7 @@ static void destroy_filter(include_filter_t *data)
 }
 
 METHOD(unity_handler_t, create_include_enumerator, enumerator_t*,
-	private_unity_handler_t *this, u_int32_t id)
+	private_unity_handler_t *this, ike_sa_id_t *id)
 {
 	include_filter_t *data;
 

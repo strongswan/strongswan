@@ -65,9 +65,9 @@ typedef struct {
 	} type;
 
 	/**
-	 * Reqid of the SA, if any
+	 * Protocol of the SA
 	 */
-	u_int32_t reqid;
+	u_int8_t protocol;
 
 	/**
 	 * SPI of the SA, if any
@@ -75,13 +75,16 @@ typedef struct {
 	u_int32_t spi;
 
 	/**
+	 * SA destination address
+	 */
+	host_t *dst;
+
+	/**
 	 * Additional data for specific event types
 	 */
 	union {
 
 		struct {
-			/** Protocol of the SA */
-			u_int8_t protocol;
 			/** TRUE in case of a hard expire */
 			bool hard;
 		} expire;
@@ -89,6 +92,15 @@ typedef struct {
 	} data;
 
 } ipsec_event_t;
+
+/**
+ * Destroy IPsec event data
+ */
+static void ipsec_event_destroy(ipsec_event_t *event)
+{
+	event->dst->destroy(event->dst);
+	free(event);
+}
 
 /**
  * Dequeue events and relay them to listeners
@@ -110,31 +122,31 @@ static job_requeue_t handle_events(private_ipsec_event_relay_t *this)
 			case IPSEC_EVENT_EXPIRE:
 				if (current->expire)
 				{
-					current->expire(event->reqid, event->data.expire.protocol,
-									event->spi, event->data.expire.hard);
+					current->expire(event->protocol, event->spi, event->dst,
+									event->data.expire.hard);
 				}
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	free(event);
+	ipsec_event_destroy(event);
 	return JOB_REQUEUE_DIRECT;
 }
 
 METHOD(ipsec_event_relay_t, expire, void,
-	private_ipsec_event_relay_t *this, u_int32_t reqid, u_int8_t protocol,
-	u_int32_t spi, bool hard)
+	private_ipsec_event_relay_t *this, u_int8_t protocol, u_int32_t spi,
+	host_t *dst, bool hard)
 {
 	ipsec_event_t *event;
 
 	INIT(event,
 		.type = IPSEC_EVENT_EXPIRE,
-		.reqid = reqid,
+		.protocol = protocol,
 		.spi = spi,
+		.dst = dst->clone(dst),
 		.data = {
 			.expire = {
-				.protocol = protocol,
 				.hard = hard,
 			},
 		},

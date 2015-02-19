@@ -396,11 +396,9 @@ static bool allocate_spi(private_ipsec_sa_mgr_t *this, u_int32_t spi)
 
 METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int8_t protocol,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	u_int32_t spi_new;
-
-	DBG2(DBG_ESP, "allocating SPI for reqid {%u}", reqid);
 
 	this->mutex->lock(this->mutex);
 	if (!this->rng)
@@ -420,7 +418,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 								 (u_int8_t*)&spi_new))
 		{
 			this->mutex->unlock(this->mutex);
-			DBG1(DBG_ESP, "failed to allocate SPI for reqid {%u}", reqid);
+			DBG1(DBG_ESP, "failed to allocate SPI");
 			return FAILED;
 		}
 		/* make sure the SPI is valid (not in range 0-255) */
@@ -432,7 +430,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 
 	*spi = spi_new;
 
-	DBG2(DBG_ESP, "allocated SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_ESP, "allocated SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
@@ -441,8 +439,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	u_int8_t protocol, u_int32_t reqid,	mark_t mark, u_int32_t tfc,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound)
 {
 	ipsec_sa_entry_t *entry;
 	ipsec_sa_t *sa_new;
@@ -456,7 +453,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 
 	sa_new = ipsec_sa_create(spi, src, dst, protocol, reqid, mark, tfc,
 							 lifetime, enc_alg, enc_key, int_alg, int_key, mode,
-							 ipcomp, cpi, encap, esn, inbound, src_ts, dst_ts);
+							 ipcomp, cpi, encap, esn, inbound);
 	if (!sa_new)
 	{
 		DBG1(DBG_ESP, "failed to create SAD entry");

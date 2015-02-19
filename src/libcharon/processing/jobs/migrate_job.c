@@ -70,29 +70,34 @@ METHOD(job_t, destroy, void,
 METHOD(job_t, execute, job_requeue_t,
 	private_migrate_job_t *this)
 {
-	ike_sa_t *ike_sa = NULL;
+	enumerator_t *ike_sas, *children;
+	ike_sa_t *ike_sa;
 
-	if (this->reqid)
+	ike_sas = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager,
+														TRUE);
+	while (ike_sas->enumerate(ike_sas, &ike_sa))
 	{
-		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-														this->reqid, TRUE);
-	}
-	if (ike_sa)
-	{
-		enumerator_t *children, *enumerator;
-		child_sa_t *child_sa;
-		host_t *host;
+		child_sa_t *current, *child_sa = NULL;
 		linked_list_t *vips;
+		status_t status;
+		host_t *host;
 
 		children = ike_sa->create_child_sa_enumerator(ike_sa);
-		while (children->enumerate(children, (void**)&child_sa))
+		while (children->enumerate(children, &current))
 		{
-			if (child_sa->get_reqid(child_sa) == this->reqid)
+			if (current->get_reqid(current) == this->reqid)
 			{
+				child_sa = current;
 				break;
 			}
 		}
 		children->destroy(children);
+
+		if (!child_sa)
+		{
+			continue;
+		}
+
 		DBG2(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
 
 		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
@@ -105,27 +110,28 @@ METHOD(job_t, execute, job_requeue_t,
 		host->set_port(host, IKEV2_UDP_PORT);
 		ike_sa->set_other_host(ike_sa, host);
 
-		vips = linked_list_create();
-		enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
-		while (enumerator->enumerate(enumerator, &host))
-		{
-			vips->insert_last(vips, host);
-		}
-		enumerator->destroy(enumerator);
+		vips = linked_list_create_from_enumerator(
+							ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE));
 
-		if (child_sa->update(child_sa, this->local, this->remote, vips,
-				ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+		status = child_sa->update(child_sa, this->local, this->remote, vips,
+								  ike_sa->has_condition(ike_sa, COND_NAT_ANY));
+		switch (status)
 		{
-			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-								   child_sa->get_spi(child_sa, TRUE));
+			case NOT_SUPPORTED:
+				ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+									   child_sa->get_spi(child_sa, TRUE));
+				break;
+			case SUCCESS:
+				charon->child_sa_manager->remove(charon->child_sa_manager,
+												 child_sa);
+				charon->child_sa_manager->add(charon->child_sa_manager,
+											  child_sa, ike_sa);
+			default:
+				break;
 		}
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		vips->destroy(vips);
 	}
-	else
-	{
-		DBG1(DBG_JOB, "no CHILD_SA found with reqid {%d}", this->reqid);
-	}
+	ike_sas->destroy(ike_sas);
 	return JOB_REQUEUE_NONE;
 }
 

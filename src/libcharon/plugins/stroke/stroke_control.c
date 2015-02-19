@@ -352,7 +352,7 @@ METHOD(stroke_control_t, terminate, void,
 				if (streq(name, child_sa->get_name(child_sa)))
 				{
 					child_list->insert_last(child_list,
-							(void*)(uintptr_t)child_sa->get_reqid(child_sa));
+							(void*)(uintptr_t)child_sa->get_unique_id(child_sa));
 					if (!all)
 					{
 						break;
@@ -432,13 +432,13 @@ METHOD(stroke_control_t, rekey, void,
 			while (children->enumerate(children, (void**)&child_sa))
 			{
 				if ((name && streq(name, child_sa->get_name(child_sa))) ||
-					(id && id == child_sa->get_reqid(child_sa)))
+					(id && id == child_sa->get_unique_id(child_sa)))
 				{
 					lib->processor->queue_job(lib->processor,
 						(job_t*)rekey_child_sa_job_create(
-								child_sa->get_reqid(child_sa),
 								child_sa->get_protocol(child_sa),
-								child_sa->get_spi(child_sa, TRUE)));
+								child_sa->get_spi(child_sa, TRUE),
+								ike_sa->get_my_host(ike_sa)));
 					if (!all)
 					{
 						finished = TRUE;

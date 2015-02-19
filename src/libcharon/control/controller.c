@@ -449,7 +449,7 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	ike_sa_t *ike_sa;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													unique_id, FALSE);
+													unique_id);
 	if (!ike_sa)
 	{
 		DBG1(DBG_IKE, "unable to terminate IKE_SA: ID %d not found", unique_id);
@@ -534,17 +534,15 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
-	u_int32_t reqid = listener->id;
-	enumerator_t *enumerator;
+	u_int32_t id = listener->id;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
 
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);
+	ike_sa = charon->child_sa_manager->checkout_by_id(charon->child_sa_manager,
+													  id, &child_sa);
 	if (!ike_sa)
 	{
-		DBG1(DBG_IKE, "unable to terminate, CHILD_SA with ID %d not found",
-			 reqid);
+		DBG1(DBG_IKE, "unable to terminate, CHILD_SA with ID %d not found", id);
 		listener->status = NOT_FOUND;
 		/* release listener */
 		listener_done(listener);
@@ -554,22 +552,10 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
 
-	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
-	{
-		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
-			child_sa->get_reqid(child_sa) == reqid)
-		{
-			break;
-		}
-		child_sa = NULL;
-	}
-	enumerator->destroy(enumerator);
-
-	if (!child_sa)
+	if (child_sa->get_state(child_sa) == CHILD_ROUTED)
 	{
 		DBG1(DBG_IKE, "unable to terminate, established "
-			 "CHILD_SA with ID %d not found", reqid);
+			 "CHILD_SA with ID %d not found", id);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		listener->status = NOT_FOUND;
 		/* release listener */
@@ -596,7 +582,7 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 }
 
 METHOD(controller_t, terminate_child, status_t,
-	controller_t *this, u_int32_t reqid,
+	controller_t *this, u_int32_t unique_id,
 	controller_cb_t callback, void *param, u_int timeout)
 {
 	interface_job_t *job;
@@ -617,7 +603,7 @@ METHOD(controller_t, terminate_child, status_t,
 				.param = param,
 			},
 			.status = FAILED,
-			.id = reqid,
+			.id = unique_id,
 			.lock = spinlock_create(),
 		},
 		.public = {

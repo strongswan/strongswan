@@ -559,6 +559,7 @@ command.
 			]
 			child-sas = {
 				<child-sa-name>* = {
+					uniqueid = <unique CHILD_SA identifier>
 					reqid = <reqid of CHILD_SA>
 					state = <state string of CHILD_SA>
 					mode = <IPsec mode, tunnel|transport|beet>

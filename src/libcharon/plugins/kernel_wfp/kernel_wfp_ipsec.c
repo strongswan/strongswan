@@ -1981,7 +1981,7 @@ static u_int permute(u_int x, u_int p)
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
 	/* To avoid sequencial SPIs, we use a one-to-one permuation function on
 	 * an incrementing counter, that is a full period PRNG for the range we
@@ -1998,7 +1998,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }
@@ -2032,9 +2032,8 @@ static void expire_data_destroy(expire_data_t *data)
 static job_requeue_t expire_job(expire_data_t *data)
 {
 	private_kernel_wfp_ipsec_t *this = data->this;
-	u_int32_t reqid = 0;
 	u_int8_t protocol;
-	entry_t *entry;
+	entry_t *entry = NULL;
 	sa_entry_t key = {
 		.spi = data->spi,
 		.dst = data->dst,
@@ -2048,7 +2047,6 @@ static job_requeue_t expire_job(expire_data_t *data)
 		if (entry)
 		{
 			protocol = entry->isa.protocol;
-			reqid = entry->reqid;
 			if (entry->osa.dst)
 			{
 				key.dst = entry->osa.dst;
@@ -2065,15 +2063,14 @@ static job_requeue_t expire_job(expire_data_t *data)
 		if (entry)
 		{
 			protocol = entry->isa.protocol;
-			reqid = entry->reqid;
 		}
 		this->mutex->unlock(this->mutex);
 	}
 
-	if (reqid)
+	if (entry)
 	{
-		hydra->kernel_interface->expire(hydra->kernel_interface,
-										reqid, protocol, data->spi, data->hard);
+		hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+										data->spi, data->dst, data->hard);
 	}
 
 	return JOB_REQUEUE_NONE;
@@ -2107,7 +2104,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
 	host_t *local, *remote;
 	entry_t *entry;

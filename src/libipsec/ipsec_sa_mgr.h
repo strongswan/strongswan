@@ -45,12 +45,11 @@ struct ipsec_sa_mgr_t {
 	 * @param src			source address of the SA
 	 * @param dst			destination address of the SA
 	 * @param protocol		protocol of the SA (only ESP supported)
-	 * @param reqid			reqid for the SA
 	 * @param spi			the allocated SPI
 	 * @return				SUCCESS of operation successful
 	 */
 	status_t (*get_spi)(ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
-						u_int8_t protocol, u_int32_t reqid, u_int32_t *spi);
+						u_int8_t protocol, u_int32_t *spi);
 
 	/**
 	 * Add a new SA
@@ -74,8 +73,6 @@ struct ipsec_sa_mgr_t {
 	 * @param encap			enable UDP encapsulation (must be TRUE)
 	 * @param esn			Extended Sequence Numbers (currently not supported)
 	 * @param inbound		TRUE if this is an inbound SA, FALSE otherwise
-	 * @param src_ts		source traffic selector
-	 * @param dst_ts		destination traffic selector
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa)(ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
@@ -84,8 +81,7 @@ struct ipsec_sa_mgr_t {
 					   u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg,
 					   chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
 					   u_int16_t cpi, bool initiator, bool encap, bool esn,
-					   bool inbound, traffic_selector_t *src_ts,
-					   traffic_selector_t *dst_ts);
+					   bool inbound);
 
 	/**
 	 * Update the hosts on an installed SA.

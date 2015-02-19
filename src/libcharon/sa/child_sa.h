@@ -126,6 +126,16 @@ struct child_sa_t {
 	u_int32_t (*get_reqid)(child_sa_t *this);
 
 	/**
+	 * Get the unique numerical identifier for this CHILD_SA.
+	 *
+	 * While the same reqid might be shared between multiple SAs, the unique_id
+	 * is truly unique for all CHILD_SA instances.
+	 *
+	 * @return			unique CHILD_SA identifier
+	 */
+	u_int32_t (*get_unique_id)(child_sa_t *this);
+
+	/**
 	 * Get the config used to set up this child sa.
 	 *
 	 * @return			child_cfg
@@ -384,9 +394,12 @@ struct child_sa_t {
  * @param config			config to use for this CHILD_SA
  * @param reqid				reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
+ * @param mark_in			explicit inbound mark value to use, 0 for config
+ * @param mark_out			explicit outbound mark value to use, 0 for config
  * @return					child_sa_t object
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
-							 u_int32_t reqid, bool encap);
+							 u_int32_t reqid, bool encap,
+							 u_int mark_in, u_int mark_out);
 
 #endif /** CHILD_SA_H_ @}*/

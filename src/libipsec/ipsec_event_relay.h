@@ -38,13 +38,13 @@ struct ipsec_event_relay_t {
 	/**
 	 * Raise an expire event.
 	 *
-	 * @param reqid			reqid of the expired IPsec SA
 	 * @param protocol		protocol (e.g ESP) of the expired SA
 	 * @param spi			SPI of the expired SA
+	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE for a hard expire, FALSE otherwise
 	 */
-	void (*expire)(ipsec_event_relay_t *this, u_int32_t reqid,
-				   u_int8_t protocol, u_int32_t spi, bool hard);
+	void (*expire)(ipsec_event_relay_t *this, u_int8_t protocol, u_int32_t spi,
+				   host_t *dst, bool hard);
 
 	/**
 	 * Register a listener to events raised by this manager

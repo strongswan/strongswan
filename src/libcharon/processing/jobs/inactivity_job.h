@@ -42,12 +42,12 @@ struct inactivity_job_t {
 /**
  * Create a inactivity_job instance.
  *
- * @param reqid		reqid of CHILD_SA to check for inactivity
+ * @param unique_id	unique CHILD_SA identifier to check for inactivity
  * @param timeout	inactivity timeout in s
  * @param close_ike	close IKE_SA if the last remaining CHILD_SA is inactive?
  * @return			inactivity checking job
  */
-inactivity_job_t *inactivity_job_create(u_int32_t reqid, u_int32_t timeout,
+inactivity_job_t *inactivity_job_create(u_int32_t unique_id, u_int32_t timeout,
 										bool close_ike);
 
 #endif /** INACTIVITY_JOB_H_ @}*/

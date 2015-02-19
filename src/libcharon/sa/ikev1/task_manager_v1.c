@@ -1596,7 +1596,8 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 				child_sa->get_lifetime(child_sa, FALSE))
 		{
 			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
-				 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+				 child_sa->get_name(child_sa),
+				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;
 			break;
 		}
@@ -1647,6 +1648,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 			task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg),
 				get_first_ts(child_sa, TRUE), get_first_ts(child_sa, FALSE));
 			task->use_reqid(task, child_sa->get_reqid(child_sa));
+			task->use_marks(task, child_sa->get_mark(child_sa, TRUE).value,
+							child_sa->get_mark(child_sa, FALSE).value);
 			task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
 			queue_task(this, &task->task);

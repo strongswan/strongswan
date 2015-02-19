@@ -49,25 +49,26 @@ struct kernel_listener_t {
 	/**
 	 * Hook called if an exire event for an IPsec SA is received.
 	 *
-	 * @param reqid			reqid of the expired SA
 	 * @param protocol		protocol of the expired SA
 	 * @param spi			spi of the expired SA
+	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE if it is a hard expire, FALSE otherwise
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
-	bool (*expire)(kernel_listener_t *this, u_int32_t reqid,
-				   u_int8_t protocol, u_int32_t spi, bool hard);
+	bool (*expire)(kernel_listener_t *this, u_int8_t protocol, u_int32_t spi,
+				   host_t *dst, bool hard);
 
 	/**
 	 * Hook called if the NAT mappings of an IPsec SA changed.
 	 *
-	 * @param reqid			reqid of the SA
+	 * @param protocol		IPsec protocol of affected SA
 	 * @param spi			spi of the SA
+	 * @param dst			old destinatino address of SA
 	 * @param remote		new remote host
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
-	bool (*mapping)(kernel_listener_t *this, u_int32_t reqid, u_int32_t spi,
-					host_t *remote);
+	bool (*mapping)(kernel_listener_t *this, u_int8_t protocol, u_int32_t spi,
+					host_t *dst, host_t *remote);
 
 	/**
 	 * Hook called if a migrate event for a policy is received.

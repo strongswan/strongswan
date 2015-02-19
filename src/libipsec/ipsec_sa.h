@@ -197,8 +197,6 @@ struct ipsec_sa_t {
  * @param encap			enable UDP encapsulation (must be TRUE)
  * @param esn			Extended Sequence Numbers (currently not supported)
  * @param inbound		TRUE if this is an inbound SA, FALSE otherwise
- * @param src_ts		source traffic selector
- * @param dst_ts		destination traffic selector
  * @return				the IPsec SA, or NULL if the creation failed
  */
 ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
@@ -207,8 +205,6 @@ ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
 							u_int16_t enc_alg, chunk_t enc_key,
 							u_int16_t int_alg, chunk_t int_key,
 							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-							bool encap, bool esn, bool inbound,
-							traffic_selector_t *src_ts,
-							traffic_selector_t *dst_ts);
+							bool encap, bool esn, bool inbound);
 
 #endif /** IPSEC_SA_H_ @}*/

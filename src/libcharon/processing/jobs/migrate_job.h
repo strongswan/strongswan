@@ -46,7 +46,7 @@ struct migrate_job_t {
  *
  * We use the reqid or the traffic selectors to find a matching CHILD_SA.
  *
- * @param reqid		reqid of the CHILD_SA to acquire
+ * @param reqid		reqid of the CHILD_SA to migrate
  * @param src_ts	source traffic selector to be used in the policy
  * @param dst_ts	destination traffic selector to be used in the policy
  * @param dir		direction of the policy (in|out)

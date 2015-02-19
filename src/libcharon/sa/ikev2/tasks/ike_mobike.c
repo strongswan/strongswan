@@ -256,6 +256,7 @@ static void update_children(private_ike_mobike_t *this)
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	linked_list_t *vips;
+	status_t status;
 	host_t *host;
 
 	vips = linked_list_create();
@@ -270,15 +271,25 @@ static void update_children(private_ike_mobike_t *this)
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
-		if (child_sa->update(child_sa,
-				this->ike_sa->get_my_host(this->ike_sa),
-				this->ike_sa->get_other_host(this->ike_sa), vips,
-				this->ike_sa->has_condition(this->ike_sa,
-											COND_NAT_ANY)) == NOT_SUPPORTED)
+		status = child_sa->update(child_sa,
+					this->ike_sa->get_my_host(this->ike_sa),
+					this->ike_sa->get_other_host(this->ike_sa), vips,
+					this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+		switch (status)
 		{
-			this->ike_sa->rekey_child_sa(this->ike_sa,
-					child_sa->get_protocol(child_sa),
-					child_sa->get_spi(child_sa, TRUE));
+			case NOT_SUPPORTED:
+				this->ike_sa->rekey_child_sa(this->ike_sa,
+											 child_sa->get_protocol(child_sa),
+											 child_sa->get_spi(child_sa, TRUE));
+				break;
+			case SUCCESS:
+				charon->child_sa_manager->remove(charon->child_sa_manager,
+												 child_sa);
+				charon->child_sa_manager->add(charon->child_sa_manager,
+											  child_sa, this->ike_sa);
+				break;
+			default:
+				break;
 		}
 	}
 	enumerator->destroy(enumerator);

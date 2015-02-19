@@ -222,10 +222,10 @@ static inline bool policy_entry_equals(policy_entry_t *a,
 /**
  * Expiration callback
  */
-static void expire(u_int32_t reqid, u_int8_t protocol, u_int32_t spi, bool hard)
+static void expire(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard)
 {
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, hard);
+	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+									spi, dst, hard);
 }
 
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
@@ -236,14 +236,14 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
-	return ipsec->sas->get_spi(ipsec->sas, src, dst, protocol, reqid, spi);
+	return ipsec->sas->get_spi(ipsec->sas, src, dst, protocol, spi);
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }
@@ -255,12 +255,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
 	return ipsec->sas->add_sa(ipsec->sas, src, dst, spi, protocol, reqid, mark,
 							  tfc, lifetime, enc_alg, enc_key, int_alg, int_key,
-							  mode, ipcomp, cpi, initiator, encap, esn, inbound,
-							  src_ts, dst_ts);
+							  mode, ipcomp, cpi, initiator, encap, esn, inbound);
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,

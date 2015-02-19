@@ -21,6 +21,7 @@
 #ifndef UNITY_HANDLER_H_
 #define UNITY_HANDLER_H_
 
+#include <sa/ike_sa_id.h>
 #include <attributes/attribute_handler.h>
 
 typedef struct unity_handler_t unity_handler_t;
@@ -38,11 +39,11 @@ struct unity_handler_t {
 	/**
 	 * Create an enumerator over Split-Include attributes received for an IKE_SA.
 	 *
-	 * @param id			IKE_SA unique ID to get Split-Includes for
+	 * @param id			IKE_SA ID to get Split-Includes for
 	 * @return				enumerator over traffic_selector_t*
 	 */
 	enumerator_t* (*create_include_enumerator)(unity_handler_t *this,
-											   u_int32_t id);
+											   ike_sa_id_t *id);
 
 	/**
 	 * Destroy a unity_handler_t.

@@ -169,9 +169,9 @@ struct mark_t {
 };
 
 /**
- * Special mark value that uses the reqid of the CHILD_SA as mark
+ * Special mark value that uses a unique mark for each CHILD_SA
  */
-#define MARK_REQID (0xFFFFFFFF)
+#define MARK_UNIQUE (0xFFFFFFFF)
 
 /**
  * Try to parse a mark_t from the given string of the form mark[/mask].

@@ -160,6 +160,16 @@ struct private_child_create_t {
 	u_int32_t reqid;
 
 	/**
+	 * Explicit inbound mark value
+	 */
+	u_int mark_in;
+
+	/**
+	 * Explicit outbound mark value
+	 */
+	u_int mark_out;
+
+	/**
 	 * CHILD_SA which gets established
 	 */
 	child_sa_t *child_sa;
@@ -286,7 +296,7 @@ static bool allocate_spi(private_child_create_t *this)
  */
 static void schedule_inactivity_timeout(private_child_create_t *this)
 {
-	u_int32_t timeout;
+	u_int32_t timeout, id;
 	bool close_ike;
 
 	timeout = this->config->get_inactivity(this->config);
@@ -294,9 +304,9 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
 									"%s.inactivity_close_ike", FALSE, lib->ns);
+		id = this->child_sa->get_unique_id(this->child_sa);
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
-									  timeout, close_ike), timeout);
+						inactivity_job_create(id, timeout, close_ike), timeout);
 	}
 }
 
@@ -683,10 +693,7 @@ static status_t select_and_install(private_child_create_t *this,
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
 
-	if (!this->rekey)
-	{	/* a rekeyed SA uses the same reqid, no need for a new job */
-		schedule_inactivity_timeout(this);
-	}
+	schedule_inactivity_timeout(this);
 
 	my_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
@@ -696,7 +703,7 @@ static status_t select_and_install(private_child_create_t *this,
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
 		 this->child_sa->get_name(this->child_sa),
-		 this->child_sa->get_reqid(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
 		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
 
@@ -996,7 +1003,8 @@ METHOD(task_t, build_i, status_t,
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
+			this->mark_in, this->mark_out);
 
 	if (!allocate_spi(this))
 	{
@@ -1241,7 +1249,8 @@ METHOD(task_t, build_r, status_t,
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
+			this->mark_in, this->mark_out);
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{
@@ -1478,6 +1487,13 @@ METHOD(child_create_t, use_reqid, void,
 	this->reqid = reqid;
 }
 
+METHOD(child_create_t, use_marks, void,
+	private_child_create_t *this, u_int in, u_int out)
+{
+	this->mark_in = in;
+	this->mark_out = out;
+}
+
 METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
 {
@@ -1545,6 +1561,8 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->reqid = 0;
+	this->mark_in = 0;
+	this->mark_out = 0;
 	this->established = FALSE;
 }
 
@@ -1593,6 +1611,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.set_config = _set_config,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
+			.use_marks = _use_marks,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,

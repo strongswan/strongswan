@@ -870,25 +870,26 @@ static void process_expire(private_kernel_netlink_ipsec_t *this,
 						   struct nlmsghdr *hdr)
 {
 	struct xfrm_user_expire *expire;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 	u_int8_t protocol;
+	host_t *dst;
 
 	expire = NLMSG_DATA(hdr);
 	protocol = expire->state.id.proto;
 	spi = expire->state.id.spi;
-	reqid = expire->state.reqid;
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
 
-	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
+	if (protocol == IPPROTO_ESP || protocol == IPPROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and "
-					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
-		return;
+		dst = xfrm2host(expire->state.family, &expire->state.id.daddr, 0);
+		if (dst)
+		{
+			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
+											spi, dst, expire->hard != 0);
+			dst->destroy(dst);
+		}
 	}
-
-	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
-									spi, expire->hard != 0);
 }
 
 /**
@@ -972,23 +973,29 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 							struct nlmsghdr *hdr)
 {
 	struct xfrm_user_mapping *mapping;
-	u_int32_t spi, reqid;
+	u_int32_t spi;
 
 	mapping = NLMSG_DATA(hdr);
 	spi = mapping->id.spi;
-	reqid = mapping->reqid;
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_MAPPING");
 
 	if (mapping->id.proto == IPPROTO_ESP)
 	{
-		host_t *host;
-		host = xfrm2host(mapping->id.family, &mapping->new_saddr,
-						 mapping->new_sport);
-		if (host)
+		host_t *dst, *new;
+
+		dst = xfrm2host(mapping->id.family, &mapping->id.daddr, 0);
+		if (dst)
 		{
-			hydra->kernel_interface->mapping(hydra->kernel_interface, reqid,
-											 spi, host);
+			new = xfrm2host(mapping->id.family, &mapping->new_saddr,
+							mapping->new_sport);
+			if (new)
+			{
+				hydra->kernel_interface->mapping(hydra->kernel_interface,
+												 IPPROTO_ESP, spi, dst, new);
+				new->destroy(new);
+			}
+			dst->destroy(dst);
 		}
 	}
 }
@@ -1066,7 +1073,7 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
  */
 static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t reqid, u_int32_t *spi)
+	u_int32_t *spi)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out;
@@ -1086,7 +1093,6 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	host2xfrm(dst, &userspi->info.id.daddr);
 	userspi->info.id.proto = proto;
 	userspi->info.mode = XFRM_MODE_TUNNEL;
-	userspi->info.reqid = reqid;
 	userspi->info.family = src->get_family(src);
 	userspi->min = min;
 	userspi->max = max;
@@ -1133,39 +1139,35 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t *spi)
 {
-	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, protocol,
-						 0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
+						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get SPI");
 		return FAILED;
 	}
 
-	DBG2(DBG_KNL, "got SPI %.8x for reqid {%u}", ntohl(*spi), reqid);
+	DBG2(DBG_KNL, "got SPI %.8x", ntohl(*spi));
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t reqid, u_int16_t *cpi)
+	u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
 
-	DBG2(DBG_KNL, "getting CPI for reqid {%u}", reqid);
-
 	if (get_spi_internal(this, src, dst, IPPROTO_COMP,
-						 0x100, 0xEFFF, reqid, &received_spi) != SUCCESS)
+						 0x100, 0xEFFF, &received_spi) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to get CPI for reqid {%u}", reqid);
+		DBG1(DBG_KNL, "unable to get CPI");
 		return FAILED;
 	}
 
 	*cpi = htons((u_int16_t)ntohl(received_spi));
 
-	DBG2(DBG_KNL, "got CPI %.4x for reqid {%u}", ntohs(*cpi), reqid);
+	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
 }
 
@@ -1196,7 +1198,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound,
-	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
+	linked_list_t* src_ts, linked_list_t* dst_ts)
 {
 	netlink_buf_t request;
 	char *alg_name;
@@ -1204,6 +1206,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;
 	ipsec_mode_t original_mode = mode;
+	traffic_selector_t *first_src_ts, *first_dst_ts;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
@@ -1249,9 +1252,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 * selector can be installed other traffic would get dropped */
 				break;
 			}
-			if (src_ts && dst_ts)
+			if (src_ts->get_first(src_ts, (void**)&first_src_ts) == SUCCESS &&
+				dst_ts->get_first(dst_ts, (void**)&first_dst_ts) == SUCCESS)
 			{
-				sa->sel = ts2selector(src_ts, dst_ts);
+				sa->sel = ts2selector(first_src_ts, first_dst_ts);
 				if (!this->proto_port_transport)
 				{
 					/* don't install proto/port on SA. This would break

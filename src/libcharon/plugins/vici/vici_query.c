@@ -63,6 +63,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 
+	b->add_kv(b, "uniqueid", "%u", child->get_unique_id(child));
 	b->add_kv(b, "reqid", "%u", child->get_reqid(child));
 	b->add_kv(b, "state", "%N", child_sa_state_names, child->get_state(child));
 	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
