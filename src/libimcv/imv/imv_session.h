@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -70,12 +70,11 @@ struct imv_session_t {
 	time_t (*get_creation_time)(imv_session_t *this);
 
 	/**
-	 * Get Access Requestor ID
+	 * Get list of Access Requestor identities
 	 *
-	 * @param id_type		Access Requestor TCG Standard ID Type
-	 * @return				Access Requestor TCG Standard ID Value
+	 * @return				List of Access Requestor identities
 	 */
-	chunk_t (*get_ar_id)(imv_session_t *this, uint32_t *id_type);
+	enumerator_t* (*create_ar_identities_enumerator)(imv_session_t *this);
 
 	/**
 	 * Get OS Information
@@ -172,10 +171,9 @@ struct imv_session_t {
  *
  * @param id				Associated Connection ID
  * @param created			Session creation time
- * @param ar_id_type		Access Requestor ID type
- * @param ar_id_value		Access Requestor ID value
+ * @param ar_identities		List of Access Requestor identities
  */
 imv_session_t* imv_session_create(TNC_ConnectionID id, time_t created,
-								  uint32_t ar_id_type, chunk_t ar_id_value);
+								  linked_list_t *ar_identities);
 
 #endif /**  IMV_SESSION_H_ @}*/

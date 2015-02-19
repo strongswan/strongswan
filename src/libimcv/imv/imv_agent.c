@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -412,14 +412,10 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 {
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
-	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE, first = TRUE;
+	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
 	linked_list_t *ar_identities;
-	enumerator_t *enumerator;
-	tncif_identity_t *tnc_id;
 	imv_session_t *session;
 	uint32_t max_msg_len;
-	uint32_t ar_id_type = TNC_ID_UNKNOWN;
-	chunk_t ar_id_value = chunk_empty;
 
 	conn_id = state->get_connection_id(state);
 	if (find_connection(this, conn_id))
@@ -431,15 +427,24 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	}
 
 	/* Get and display attributes from TNCS via IF-IMV */
-	has_long = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_LONG_TYPES);
-	has_excl = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
-	has_soh  = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_SOH);
-	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL);
-	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
-	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
-	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
-	max_msg_len = get_uint_attribute(this, conn_id, TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE);
-	ar_identities = get_identity_attribute(this, conn_id, TNC_ATTRIBUTEID_AR_IDENTITIES);
+	has_long = get_bool_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_HAS_LONG_TYPES);
+	has_excl = get_bool_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
+	has_soh  = get_bool_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_HAS_SOH);
+	tnccs_p = get_str_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL);
+	tnccs_v = get_str_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_IFTNCCS_VERSION);
+	t_p = get_str_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_IFT_PROTOCOL);
+	t_v = get_str_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_IFT_VERSION);
+	max_msg_len = get_uint_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE);
+	ar_identities = get_identity_attribute(this, conn_id,
+									TNC_ATTRIBUTEID_AR_IDENTITIES);
 
 	state->set_flags(state, has_long, has_excl);
 	state->set_max_msg_len(state, max_msg_len);
@@ -451,48 +456,9 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	DBG2(DBG_IMV, "  over %s %s with maximum PA-TNC message size of %u bytes",
 				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
 
-	enumerator = ar_identities->create_enumerator(ar_identities);
-	while (enumerator->enumerate(enumerator, &tnc_id))
-	{
-		pen_type_t id_type, subject_type, auth_type;
-		uint32_t tcg_id_type, tcg_subject_type, tcg_auth_type;
-		chunk_t id_value;
-
-		id_type = tnc_id->get_identity_type(tnc_id);
-		id_value = tnc_id->get_identity_value(tnc_id);
-		subject_type = tnc_id->get_subject_type(tnc_id);
-		auth_type = tnc_id->get_auth_type(tnc_id);
-
-		tcg_id_type =      (id_type.vendor_id == PEN_TCG) ?
-							id_type.type : TNC_ID_UNKNOWN;
-		tcg_subject_type = (subject_type.vendor_id == PEN_TCG) ?
-							subject_type.type : TNC_SUBJECT_UNKNOWN;
-		tcg_auth_type =    (auth_type.vendor_id == PEN_TCG) ?
-							auth_type.type : TNC_AUTH_UNKNOWN;
-
-
-		DBG2(DBG_IMV, "  %N AR identity '%.*s' authenticated by %N",
-			 TNC_Subject_names, tcg_subject_type,
-			 id_value.len, id_value.ptr,
-			 TNC_Authentication_names, tcg_auth_type);
-
-		/* keep the first access requestor ID */
-		if (first)
-		{
-			ar_id_type = tcg_id_type;
-			ar_id_value = id_value;
-			first = FALSE;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	session = imcv_sessions->add_session(imcv_sessions, conn_id,
-										 ar_id_type, ar_id_value);
+	session = imcv_sessions->add_session(imcv_sessions, conn_id, ar_identities);
 	state->set_session(state, session);
 
-	/* clean up temporary variables */
-	ar_identities->destroy_offset(ar_identities,
-						   offsetof(tncif_identity_t, destroy));
 	free(tnccs_p);
 	free(tnccs_v);
 	free(t_p);

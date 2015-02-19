@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -87,6 +87,20 @@ struct tnccs_t {
 	tls_t tls;
 
 	/**
+	 * Get server IP address
+	 *
+	 * @return				Server IP address
+	 */
+	host_t* (*get_server_ip)(tnccs_t *this);
+
+	/**
+	 * Get peer IP address
+	 *
+	 * @return				Peer IP address
+	 */
+	host_t* (*get_peer_ip)(tnccs_t *this);
+
+	/**
 	 * Get underlying TNC IF-T transport protocol
 	 *
 	 * @return				TNC IF-T transport protocol
@@ -135,15 +149,19 @@ struct tnccs_t {
  * Constructor definition for a pluggable TNCCS protocol implementation.
  *
  * @param is_server		TRUE if TNC Server, FALSE if TNC Client
- * @param server		Server identity
- * @param peer			Client identity
+ * @param server_id		Server identity
+ * @param peer_id		Client identity
+ * @param server_ip		Server IP address
+ * @param peer_ip		Client IP address
  * @param transport		Underlying TNC IF-T transport protocol used
  * @param cb			Callback function if TNC Server, NULL if TNC Client
  * @return				implementation of the tnccs_t interface
  */
 typedef tnccs_t *(*tnccs_constructor_t)(bool is_server,
-										identification_t *server,
-										identification_t *peer,
+										identification_t *server_id,
+										identification_t *peer_id,
+										host_t *server_ip,
+										host_t *peer_ip,
 										tnc_ift_type_t transport,
 										tnccs_cb_t cb);
 

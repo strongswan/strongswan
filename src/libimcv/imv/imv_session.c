@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,6 +14,8 @@
  */
 
 #include "imv_session.h"
+
+#include <tncif_identity.h>
 
 #include <utils/debug.h>
 
@@ -55,14 +57,9 @@ struct private_imv_session_t {
 	time_t created;
 
 	/**
-	 * Access Requestor ID type
+	 * List of Access Requestor identities
 	 */
-	uint32_t ar_id_type;
-
-	/**
-	 * Access Requestor ID value
-	 */
-	chunk_t ar_id_value;
+	linked_list_t *ar_identities;
 
 	/**
 	 * OS information
@@ -130,14 +127,10 @@ METHOD(imv_session_t, get_creation_time, time_t,
 	return this->created;
 }
 
-METHOD(imv_session_t, get_ar_id, chunk_t,
-	private_imv_session_t *this, uint32_t *ar_id_type)
+METHOD(imv_session_t, create_ar_identities_enumerator, enumerator_t*,
+	private_imv_session_t *this)
 {
-	if (ar_id_type)
-	{
-		*ar_id_type = this->ar_id_type;
-	}
-	return this->ar_id_value;
+	return this->ar_identities->create_enumerator(this->ar_identities);
 }
 
 METHOD(imv_session_t, get_os_info, imv_os_info_t*,
@@ -256,7 +249,8 @@ METHOD(imv_session_t, destroy, void,
 		this->workitems->destroy_offset(this->workitems,
 								 offsetof(imv_workitem_t, destroy));
 		this->os_info->destroy(this->os_info);
-		free(this->ar_id_value.ptr);
+		this->ar_identities->destroy_offset(this->ar_identities,
+									 offsetof(tncif_identity_t, destroy));
 		free(this->device_id.ptr);
 		free(this);
 	}
@@ -266,7 +260,7 @@ METHOD(imv_session_t, destroy, void,
  * See header
  */
 imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
-								  uint32_t ar_id_type, chunk_t ar_id_value)
+								  linked_list_t *ar_identities)
 {
 	private_imv_session_t *this;
 
@@ -276,7 +270,7 @@ imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
 			.get_session_id = _get_session_id,
 			.get_connection_id = _get_connection_id,
 			.get_creation_time = _get_creation_time,
-			.get_ar_id = _get_ar_id,
+			.create_ar_identities_enumerator = _create_ar_identities_enumerator,
 			.get_os_info = _get_os_info,
 			.set_device_id = _set_device_id,
 			.get_device_id = _get_device_id,
@@ -293,8 +287,7 @@ imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
 		},
 		.conn_id = conn_id,
 		.created = created,
-		.ar_id_type = ar_id_type,
-		.ar_id_value = chunk_clone(ar_id_value),
+		.ar_identities = ar_identities,
 		.os_info = imv_os_info_create(),
 		.workitems = linked_list_create(),
 		.ref = 1,

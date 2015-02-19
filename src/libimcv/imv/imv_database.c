@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,8 @@
 #include <time.h>
 
 #include "imv_database.h"
+
+#include <tncif_identity.h>
 
 #include <utils/debug.h>
 #include <threading/mutex.h>
@@ -60,41 +62,14 @@ METHOD(imv_database_t, get_database, database_t*,
  */
 static bool create_session(private_imv_database_t *this, imv_session_t *session)
 {
-	enumerator_t *e;
+	enumerator_t *enumerator, *e;
 	imv_os_info_t *os_info;
-	chunk_t device_id, ar_id_value;
+	chunk_t device_id;
+	tncif_identity_t *tnc_id;
 	TNC_ConnectionID conn_id;
-	uint32_t ar_id_type;
 	char *product, *device;
-	int session_id = 0, ar_id = 0, pid = 0, did = 0, trusted = 0, created;
-
-	ar_id_value = session->get_ar_id(session, &ar_id_type);
-	if (ar_id_value.len)
-	{
-		/* get primary key of AR identity if it exists */
-		e = this->db->query(this->db,
-				"SELECT id FROM identities WHERE type = ? AND value = ?",
-				DB_INT, ar_id_type, DB_BLOB, ar_id_value, DB_INT);
-		if (e)
-		{
-			e->enumerate(e, &ar_id);
-			e->destroy(e);
-		}
-
-		/* if AR identity has not been found - register it */
-		if (!ar_id)
-		{
-			this->db->execute(this->db, &ar_id,
-				"INSERT INTO identities (type, value) VALUES (?, ?)",
-				 DB_INT, ar_id_type, DB_BLOB, ar_id_value);
-		}
-
-		if (!ar_id)
-		{
-			DBG1(DBG_IMV, "imv_db: registering access requestor failed");
-			return FALSE;
-		}
-	}
+	int session_id = 0, pid = 0, did = 0, trusted = 0, created;
+	bool first = TRUE, success = TRUE;
 
 	/* get product info string */
 	os_info = session->get_os_info(session);
@@ -170,10 +145,9 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 	created = session->get_creation_time(session);
 	conn_id = session->get_connection_id(session);
 	this->db->execute(this->db, &session_id,
-			"INSERT INTO sessions (time, connection, identity, product, device) "
-			"VALUES (?, ?, ?, ?, ?)",
-			DB_INT, created, DB_INT, conn_id, DB_INT, ar_id,
-			DB_INT, pid, DB_INT, did);
+			"INSERT INTO sessions (time, connection, product, device) "
+			"VALUES (?, ?, ?, ?)",
+			DB_INT, created, DB_INT, conn_id, DB_INT, pid, DB_INT, did);
 
 	if (session_id)
 	{
@@ -187,7 +161,68 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 	}
 	session->set_session_id(session, session_id, pid, did);
 
-	return TRUE;
+	enumerator = session->create_ar_identities_enumerator(session);
+	while (enumerator->enumerate(enumerator, &tnc_id))
+	{
+		pen_type_t ar_id_type;
+		chunk_t ar_id_value;
+		int ar_id = 0, si_id = 0;
+
+		ar_id_type = tnc_id->get_identity_type(tnc_id);
+		ar_id_value = tnc_id->get_identity_value(tnc_id);
+
+		if (ar_id_type.vendor_id != PEN_TCG || ar_id_value.len == 0)
+		{
+			continue;
+		}
+
+		/* get primary key of AR identity if it exists */
+		e = this->db->query(this->db,
+				"SELECT id FROM identities WHERE type = ? AND value = ?",
+				DB_INT, ar_id_type.type, DB_BLOB, ar_id_value, DB_INT);
+		if (e)
+		{
+			e->enumerate(e, &ar_id);
+			e->destroy(e);
+		}
+
+		/* if AR identity has not been found - register it */
+		if (!ar_id)
+		{
+			this->db->execute(this->db, &ar_id,
+				"INSERT INTO identities (type, value) VALUES (?, ?)",
+				 DB_INT, ar_id_type.type, DB_BLOB, ar_id_value);
+		}
+		if (!ar_id)
+		{
+			DBG1(DBG_IMV, "imv_db: registering access requestor failed");
+			success = FALSE;
+			break;
+		}
+
+		this->db->execute(this->db, &si_id,
+				"INSERT INTO sessions_identities (session_id, identity_id) "
+				"VALUES (?, ?)",
+				 DB_INT, session_id, DB_INT, ar_id);
+
+		if (!si_id)
+		{
+			DBG1(DBG_IMV, "imv_db: assigning identity to session failed");
+			success = FALSE;
+			break;
+		}
+
+		if (first)
+		{
+			this->db->execute(this->db, NULL,
+				"UPDATE sessions SET identity = ? WHERE id = ?",
+				 DB_INT, ar_id, DB_INT, session_id);
+			first = FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return success;
 }
 
 static bool add_workitems(private_imv_database_t *this, imv_session_t *session)

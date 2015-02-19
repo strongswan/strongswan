@@ -127,7 +127,8 @@ imv_policy_manager_SOURCES = \
 	imv/imv_policy_manager.c \
 	imv/imv_policy_manager_usage.h imv/imv_policy_manager_usage.c
 imv_policy_manager_LDADD = \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libtncif/libtncif.la
 #imv/imv_policy_manager.o :	$(top_builddir)/config.status
 
 SUBDIRS = .

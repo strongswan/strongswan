@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,6 +31,7 @@
 extern enum_name_t *TNC_Connection_State_names;
 extern enum_name_t *TNC_IMV_Action_Recommendation_names;
 extern enum_name_t *TNC_IMV_Evaluation_Result_names;
+extern enum_name_t *TNC_Identity_names;
 extern enum_name_t *TNC_Subject_names;
 extern enum_name_t *TNC_Authentication_names;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -256,6 +256,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	private_eap_tnc_t *this;
 	int max_msg_count;
 	char* protocol;
+	ike_sa_t *ike_sa;
+	host_t *server_ip, *peer_ip;
 	tnccs_t *tnccs;
 	tnccs_type_t tnccs_type;
 
@@ -302,8 +304,28 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
+
+	/* Determine IP addresses of server and peer */
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa)
+	{
+		DBG1(DBG_TNC, "%N constructor did not find IKE_SA",
+					   eap_type_names, type);
+		return NULL;
+	}
+	if (is_server)
+	{
+		server_ip = ike_sa->get_my_host(ike_sa);
+		peer_ip = ike_sa->get_other_host(ike_sa);
+	}
+	else
+	{
+		peer_ip = ike_sa->get_my_host(ike_sa);
+		server_ip = ike_sa->get_other_host(ike_sa);
+	}
+
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, tnccs_type,
-						is_server, server, peer,
+						is_server, server, peer, server_ip, peer_ip,
 						(type == EAP_TNC) ? TNC_IFT_EAP_1_1 : TNC_IFT_EAP_2_0,
 						is_server ? enforce_recommendation : NULL);
 	if (!tnccs)

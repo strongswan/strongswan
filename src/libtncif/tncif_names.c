@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -44,6 +44,18 @@ ENUM(TNC_IMV_Evaluation_Result_names,
 	"non-compliant major",
 	"error",
 	"don't know"
+);
+
+ENUM(TNC_Identity_names,
+	TNC_ID_UNKNOWN,
+	TNC_ID_X500_DN,
+	"unknown",
+	"IPv4 address",
+	"IPv6 address",
+	"FQDN",
+	"email address",
+	"username",
+	"X.500 DN"
 );
 
 ENUM(TNC_Subject_names,

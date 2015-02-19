@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Sansar Choinyanbuu
- * Copyright (C) 2010-2013 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -60,12 +60,22 @@ struct private_tnccs_20_t {
 	/**
 	 * Server identity
 	 */
-	identification_t *server;
+	identification_t *server_id;
 
 	/**
 	 * Client identity
 	 */
-	identification_t *peer;
+	identification_t *peer_id;
+
+	/**
+	 * Server IP address
+	 */
+	host_t *server_ip;
+
+	/**
+	 * Client IP address
+	 */
+	host_t *peer_ip;
 
 	/**
 	 * Underlying TNC IF-T transport protocol
@@ -923,20 +933,20 @@ METHOD(tls_t, is_server, bool,
 METHOD(tls_t, get_server_id, identification_t*,
 	private_tnccs_20_t *this)
 {
-	return this->server;
+	return this->server_id;
 }
 
 METHOD(tls_t, set_peer_id, void,
 	private_tnccs_20_t *this, identification_t *id)
 {
-	DESTROY_IF(this->peer);
-	this->peer = id->clone(id);
+	DESTROY_IF(this->peer_id);
+	this->peer_id = id->clone(id);
 }
 
 METHOD(tls_t, get_peer_id, identification_t*,
 	private_tnccs_20_t *this)
 {
-	return this->peer;
+	return this->peer_id;
 }
 
 METHOD(tls_t, get_purpose, tls_purpose_t,
@@ -974,8 +984,10 @@ METHOD(tls_t, destroy, void,
 	{
 		tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
 												  this->is_server);
-		this->server->destroy(this->server);
-		this->peer->destroy(this->peer);
+		this->server_id->destroy(this->server_id);
+		this->peer_id->destroy(this->peer_id);
+		this->server_ip->destroy(this->server_ip);
+		this->peer_ip->destroy(this->peer_ip);
 		this->state_machine->destroy(this->state_machine);
 		this->mutex->destroy(this->mutex);
 		this->messages->destroy_offset(this->messages,
@@ -983,6 +995,18 @@ METHOD(tls_t, destroy, void,
 		free(this->pdp_server.ptr);
 		free(this);
 	}
+}
+
+METHOD(tnccs_t, get_server_ip, host_t*,
+	private_tnccs_20_t *this)
+{
+	return this->server_ip;
+}
+
+METHOD(tnccs_t, get_peer_ip, host_t*,
+	private_tnccs_20_t *this)
+{
+	return this->peer_ip;
 }
 
 METHOD(tnccs_t, get_transport, tnc_ift_type_t,
@@ -1027,9 +1051,10 @@ METHOD(tnccs_t, get_ref, tnccs_t*,
 /**
  * See header
  */
-tnccs_t* tnccs_20_create(bool is_server,
-						 identification_t *server, identification_t *peer,
-						 tnc_ift_type_t transport, tnccs_cb_t cb)
+tnccs_t* tnccs_20_create(bool is_server, identification_t *server_id,
+						 identification_t *peer_id, host_t *server_ip,
+						 host_t *peer_ip, tnc_ift_type_t transport,
+						 tnccs_cb_t cb)
 {
 	private_tnccs_20_t *this;
 	size_t max_batch_size, default_max_batch_size;
@@ -1079,6 +1104,8 @@ tnccs_t* tnccs_20_create(bool is_server,
 				.get_eap_msk = _get_eap_msk,
 				.destroy = _destroy,
 			},
+			.get_server_ip = _get_server_ip,
+			.get_peer_ip = _get_peer_ip,
 			.get_transport = _get_transport,
 			.set_transport = _set_transport,
 			.get_auth_type = _get_auth_type,
@@ -1087,8 +1114,10 @@ tnccs_t* tnccs_20_create(bool is_server,
 			.get_ref = _get_ref,
 		},
 		.is_server = is_server,
-		.server = server->clone(server),
-		.peer = peer->clone(peer),
+		.server_id = server_id->clone(server_id),
+		.peer_id = peer_id->clone(peer_id),
+		.server_ip = server_ip->clone(server_ip),
+		.peer_ip = peer_ip->clone(peer_ip),
 		.transport = transport,
 		.callback = cb,
 		.state_machine = pb_tnc_state_machine_create(is_server),

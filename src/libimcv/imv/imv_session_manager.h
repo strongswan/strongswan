@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -39,13 +39,12 @@ struct imv_session_manager_t {
 	 * Create or get a session associated with a TNCCS connection
 	 *
 	 * @param conn_id		TNCCS Connection ID
-	 * @param ar_id_type	Access Requestor identity type
-	 * @param ar_id_value	Access Requestor identity value
+	 * @param ar_identities	List of Access Requestor identities
 	 * @return				Session associated with TNCCS Connection
 	 */
 	 imv_session_t* (*add_session)(imv_session_manager_t *this,
 								   TNC_ConnectionID conn_id,
-								   uint32_t ar_id_type, chunk_t ar_id_value);
+								   linked_list_t *ar_identities);
 
 	/**
 	 * Remove a session

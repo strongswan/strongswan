@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Andreas Steffen
+ * Copyright (C) 2012-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -646,8 +646,8 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	int pt_tls_fd;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
-	identification_t *peer;
-	host_t *host;
+	identification_t *client_id;
+	host_t *server_ip, *client_ip;
 	pt_tls_server_t *pt_tls;
 	tnccs_t *tnccs;
 	pt_tls_auth_t auth = PT_TLS_AUTH_TLS_OR_SASL;
@@ -658,17 +658,22 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 		DBG1(DBG_TNC, "accepting PT-TLS stream failed: %s", strerror(errno));
 		return FALSE;
 	}
-	host = host_create_from_sockaddr((sockaddr_t*)&addr);
-	DBG1(DBG_TNC, "accepting PT-TLS stream from %H", host);
-	host->destroy(host);
+	client_ip = host_create_from_sockaddr((sockaddr_t*)&addr);
+	DBG1(DBG_TNC, "accepting PT-TLS stream from %H", client_ip);
 
-	/* At this moment the peer identity is not known yet */
-	peer = identification_create_from_encoding(ID_ANY, chunk_empty),
+	/* Currently we do not determine the IP address of the server interface */
+	server_ip = host_create_any(client_ip->get_family(client_ip));
+
+	/* At this moment the client identity is not known yet */
+	client_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, TNCCS_2_0, TRUE,
-										this->server, peer, TNC_IFT_TLS_2_0,
+										this->server, client_id, server_ip,
+										client_ip, TNC_IFT_TLS_2_0,
 										(tnccs_cb_t)get_recommendation);
-	peer->destroy(peer);
+	client_id->destroy(client_id);
+	server_ip->destroy(server_ip);
+	client_ip->destroy(client_ip);
 
 	if (!tnccs)
 	{

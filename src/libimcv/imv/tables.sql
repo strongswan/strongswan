@@ -104,6 +104,14 @@ CREATE TABLE sessions (
   rec INTEGER DEFAULT 3
 );
 
+DROP TABLE IF EXISTS sessions_identities;
+CREATE TABLE sessions_identities (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL REFERENCES sessions(id),
+  identity_id INTEGER NOT NULL REFERENCES identities(id),
+  UNIQUE (session_id, identity_id)
+);
+
 DROP TABLE IF EXISTS workitems;
 CREATE TABLE workitems (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

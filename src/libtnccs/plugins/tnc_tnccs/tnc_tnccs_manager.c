@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -169,8 +169,8 @@ METHOD(tnccs_manager_t, remove_method, void,
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server,
-	identification_t *server, identification_t *peer, tnc_ift_type_t transport,
-	tnccs_cb_t cb)
+	identification_t *server_id, identification_t *peer_id, host_t *server_ip,
+	host_t *peer_ip, tnc_ift_type_t transport, tnccs_cb_t cb)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -182,7 +182,8 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	{
 		if (type == entry->type)
 		{
-			protocol = entry->constructor(is_server, server, peer, transport, cb);
+			protocol = entry->constructor(is_server, server_id, peer_id,
+										  server_ip, peer_ip, transport, cb);
 			if (protocol)
 			{
 				break;
@@ -716,7 +717,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 		case TNC_ATTRIBUTEID_AR_IDENTITIES:
 		{
 			linked_list_t *list;
-			identification_t *peer;
+			identification_t *peer_id;
+			host_t *peer_ip;
 			tnccs_t *tnccs;
 			tncif_identity_t *tnc_id;
 			u_int32_t id_type, subject_type;
@@ -726,10 +728,11 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 
 			list = linked_list_create();
 			tnccs = entry->tnccs;
-			peer = tnccs->tls.get_peer_id(&tnccs->tls);
-			if (peer)
+
+			peer_id = tnccs->tls.get_peer_id(&tnccs->tls);
+			if (peer_id)
 			{
-				switch (peer->get_type(peer))
+				switch (peer_id->get_type(peer_id))
 				{
 					case ID_IPV4_ADDR:
 						id_type = TNC_ID_IPV4_ADDR;
@@ -756,7 +759,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						subject_type = TNC_SUBJECT_UNKNOWN;
 				}
 				if (id_type != TNC_ID_UNKNOWN &&
-					asprintf(&id_str, "%Y", peer) >= 0)
+					asprintf(&id_str, "%Y", peer_id) >= 0)
 				{
 					id_value = chunk_from_str(id_str);
 					tnc_id = tncif_identity_create(
@@ -764,6 +767,33 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 								pen_type_create(PEN_TCG, subject_type),
 								pen_type_create(PEN_TCG,
 												tnccs->get_auth_type(tnccs)));
+					list->insert_last(list, tnc_id);
+				}
+			}
+
+			peer_ip = tnccs->get_peer_ip(tnccs);
+			if (peer_ip)
+			{
+				switch (peer_ip->get_family(peer_ip))
+				{
+					case AF_INET:
+						id_type = TNC_ID_IPV4_ADDR;
+						break;
+					case AF_INET6:
+						id_type = TNC_ID_IPV6_ADDR;
+						break;
+					default:
+						id_type = TNC_ID_UNKNOWN;
+				}
+
+				if (id_type != TNC_ID_UNKNOWN &&
+					asprintf(&id_str, "%H", peer_ip) >= 0)
+				{
+					id_value = chunk_from_str(id_str);
+					tnc_id = tncif_identity_create(
+								pen_type_create(PEN_TCG, id_type), id_value,
+								pen_type_create(PEN_TCG, TNC_SUBJECT_MACHINE),
+								pen_type_create(PEN_TCG, TNC_AUTH_UNKNOWN));
 					list->insert_last(list, tnc_id);
 				}
 			}
