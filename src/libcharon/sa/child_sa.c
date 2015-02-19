@@ -799,12 +799,15 @@ METHOD(child_sa_t, add_policies, status_t,
 		array_insert(this->my_ts, ARRAY_TAIL, my_ts->clone(my_ts));
 	}
 	enumerator->destroy(enumerator);
+	array_sort(this->my_ts, (void*)traffic_selector_cmp, NULL);
+
 	enumerator = other_ts_list->create_enumerator(other_ts_list);
 	while (enumerator->enumerate(enumerator, &other_ts))
 	{
 		array_insert(this->other_ts, ARRAY_TAIL, other_ts->clone(other_ts));
 	}
 	enumerator->destroy(enumerator);
+	array_sort(this->other_ts, (void*)traffic_selector_cmp, NULL);
 
 	if (this->config->install_policy(this->config))
 	{
