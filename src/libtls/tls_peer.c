@@ -312,7 +312,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 static public_key_t *find_public_key(private_tls_peer_t *this)
 {
 	public_key_t *public = NULL, *current;
-	certificate_t *cert;
+	certificate_t *cert, *found;
 	enumerator_t *enumerator;
 	auth_cfg_t *auth;
 
@@ -323,9 +323,13 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
 						KEY_ANY, cert->get_subject(cert), this->server_auth);
 		while (enumerator->enumerate(enumerator, &current, &auth))
 		{
-			public = current->get_ref(current);
-			this->server_auth->merge(this->server_auth, auth, FALSE);
-			break;
+			found = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+			if (found && cert->equals(cert, found))
+			{
+				public = current->get_ref(current);
+				this->server_auth->merge(this->server_auth, auth, FALSE);
+				break;
+			}
 		}
 		enumerator->destroy(enumerator);
 	}
