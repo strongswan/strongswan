@@ -1728,20 +1728,45 @@ METHOD(ike_sa_manager_t, create_id_enumerator, enumerator_t*,
 }
 
 /**
- * Move all CHILD_SAs from old to new
+ * Move all CHILD_SAs and virtual IPs from old to new
  */
-static void adopt_children(ike_sa_t *old, ike_sa_t *new)
+static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
+	host_t *vip;
+	int chcount = 0, vipcount = 0;
+
 
 	enumerator = old->create_child_sa_enumerator(old);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
 		old->remove_child_sa(old, enumerator);
 		new->add_child_sa(new, child_sa);
+		chcount++;
 	}
 	enumerator->destroy(enumerator);
+
+	enumerator = old->create_virtual_ip_enumerator(old, FALSE);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		new->add_virtual_ip(new, FALSE, vip);
+		vipcount++;
+	}
+	enumerator->destroy(enumerator);
+	/* this does not release the addresses, which is good, but it does trigger
+	 * an assign_vips(FALSE) event... */
+	old->clear_virtual_ips(old, FALSE);
+	/* ...trigger the analogous event on the new SA */
+	charon->bus->set_sa(charon->bus, new);
+	charon->bus->assign_vips(charon->bus, new, TRUE);
+	charon->bus->set_sa(charon->bus, old);
+
+	if (chcount || vipcount)
+	{
+		DBG1(DBG_IKE, "detected reauth of existing IKE_SA, adopting %d "
+			 "children and %d virtual IPs", chcount, vipcount);
+	}
 }
 
 /**
@@ -1761,7 +1786,7 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 		{
 			/* IKEv1 implicitly takes over children, IKEv2 recreates them
 			 * explicitly. */
-			adopt_children(duplicate, new);
+			adopt_children_and_vips(duplicate, new);
 		}
 		/* For IKEv1 we have to delay the delete for the old IKE_SA. Some
 		 * peers need to complete the new SA first, otherwise the quick modes
