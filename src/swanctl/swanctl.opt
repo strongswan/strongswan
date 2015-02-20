@@ -622,9 +622,10 @@ connections.<conn>.children.<child>.reqid = 0
 connections.<conn>.children.<child>.mark_in = 0/0x00000000
 	Netfilter mark and mask for input traffic.
 
-	Netfilter mark and mask for input traffic. On Linux Netfilter may apply
-	marks to each packet coming from a tunnel having that option set. The
-	mark may then be used by Netfilter to match rules.
+	Netfilter mark and mask for input traffic. On Linux Netfilter may require
+	marks on each packet to match an SA having that option set. This allows
+	Netfilter rules to select specific tunnels for incoming traffic. The
+	special value _%unique_ sets a unique mark on each CHILD_SA instance.
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
@@ -634,7 +635,8 @@ connections.<conn>.children.<child>.mark_out = 0/0x00000000
 
 	Netfilter mark and mask for output traffic. On Linux Netfilter may require
 	marks on each packet to match a policy having that option set. This allows
-	Netfilter rules to select specific tunnels for outgoing traffic.
+	Netfilter rules to select specific tunnels for outgoing traffic. The
+	special value _%unique_ sets a unique mark on each CHILD_SA instance.
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.

@@ -932,6 +932,7 @@ METHOD(ike_sa_t, update_hosts, void,
 		/* update our address in any case */
 		if (force && !me->equals(me, this->my_host))
 		{
+			charon->bus->ike_update(charon->bus, &this->public, TRUE, me);
 			set_my_host(this, me->clone(me));
 			update = TRUE;
 		}
@@ -945,6 +946,7 @@ METHOD(ike_sa_t, update_hosts, void,
 				(!has_condition(this, COND_NAT_HERE) ||
 				 !has_condition(this, COND_ORIGINAL_INITIATOR)))
 			{
+				charon->bus->ike_update(charon->bus, &this->public, FALSE, other);
 				set_other_host(this, other->clone(other));
 				update = TRUE;
 			}

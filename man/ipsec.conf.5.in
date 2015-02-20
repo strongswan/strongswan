@@ -987,7 +987,9 @@ sets an XFRM mark in the inbound and outbound
 IPsec SAs and policies. If the mask is missing then a default
 mask of
 .B 0xffffffff
-is assumed.
+is assumed. The special value
+.B %unique
+assigns a unique value to each newly created IPsec SA.
 .TP
 .BR mark_in " = <value>[/<mask>]"
 sets an XFRM mark in the inbound IPsec SA and
