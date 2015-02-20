@@ -216,6 +216,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_FORECAST
+  SUBDIRS += plugins/forecast
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/forecast/libstrongswan-forecast.la
+endif
+endif
+
 if USE_FARP
   SUBDIRS += plugins/farp
 if MONOLITHIC

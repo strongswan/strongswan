@@ -71,6 +71,7 @@ CONFIG_OPTS = \
 	--enable-dhcp \
 	--enable-farp \
 	--enable-connmark \
+	--enable-forecast \
 	--enable-addrblock \
 	--enable-ctr \
 	--enable-ccm \
