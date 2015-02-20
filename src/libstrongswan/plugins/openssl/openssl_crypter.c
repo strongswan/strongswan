@@ -135,7 +135,7 @@ METHOD(crypter_t, get_block_size, size_t,
 METHOD(crypter_t, get_iv_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->cipher->block_size;
+	return this->cipher->iv_len;
 }
 
 METHOD(crypter_t, get_key_size, size_t,
