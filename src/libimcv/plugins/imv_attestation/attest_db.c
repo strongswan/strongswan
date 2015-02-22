@@ -849,29 +849,31 @@ METHOD(attest_db_t, list_devices, void,
 {
 	enumerator_t *e, *e_ar;
 	chunk_t ar_id_value = chunk_empty;
-	char *product, *device;
+	char *product, *device, *description;
 	time_t timestamp;
-	int id, last_id = 0, ar_id = 0, last_ar_id = 0, device_count = 0;
+	int id, last_id = 0, ar_id = 0, last_ar_id = 0, device_count = 0, trusted;
 	int session_id, rec;
 	u_int32_t ar_id_type;
 	u_int tstamp;
 
 	e = this->db->query(this->db,
-			"SELECT d.id, d.value, s.id, s.time, s.identity, s.rec, p.name "
+			"SELECT d.id, d.value, d.trusted, d.description, "
+			"s.id, s.time, s.identity, s.rec, p.name "
 			"FROM devices AS d "
 			"JOIN sessions AS s ON d.id = s.device "
 			"JOIN products AS p ON p.id = s.product "
-			"ORDER BY d.value, s.time DESC", DB_INT, DB_TEXT, DB_INT, DB_UINT,
-			 DB_INT, DB_INT, DB_TEXT);
+			"ORDER BY d.value, s.time DESC", DB_INT, DB_TEXT, DB_INT, DB_TEXT,
+			 DB_INT, DB_UINT, DB_INT, DB_INT, DB_TEXT);
 
 	if (e)
 	{
-		while (e->enumerate(e, &id, &device, &session_id, &tstamp, &ar_id, &rec,
-							   &product))
+		while (e->enumerate(e, &id, &device, &trusted, &description,
+							   &session_id, &tstamp, &ar_id, &rec, &product))
 		{
 			if (id != last_id)
 			{
-				printf("%4d: %s - %s\n", id, device, product);
+				printf("%4d: %s %s - %s - %s\n", id, trusted ? "+" : "-",
+												 device, product, description);
 				device_count++;
 				last_id = id;
 			}
