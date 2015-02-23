@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -246,5 +247,13 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
  * @return				signature_scheme, SIGN_UNKNOWN if OID is unsupported
  */
 signature_scheme_t signature_scheme_from_oid(int oid);
+
+/**
+ * Determine the type of key associated with a given signature scheme.
+ *
+ * @param scheme		signature scheme
+ * @return				key type (could be KEY_ANY)
+ */
+key_type_t key_type_from_signature_scheme(signature_scheme_t scheme);
 
 #endif /** PUBLIC_KEY_H_ @}*/

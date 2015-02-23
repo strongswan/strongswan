@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -147,3 +148,36 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 	}
 }
 
+/*
+ * Defined in header.
+ */
+key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
+{
+	switch (scheme)
+	{
+		case SIGN_UNKNOWN:
+			break;
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+		case SIGN_RSA_EMSA_PKCS1_MD5:
+		case SIGN_RSA_EMSA_PKCS1_SHA1:
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+		case SIGN_RSA_EMSA_PKCS1_SHA256:
+		case SIGN_RSA_EMSA_PKCS1_SHA384:
+		case SIGN_RSA_EMSA_PKCS1_SHA512:
+			return KEY_RSA;
+		case SIGN_ECDSA_WITH_SHA1_DER:
+		case SIGN_ECDSA_WITH_SHA256_DER:
+		case SIGN_ECDSA_WITH_SHA384_DER:
+		case SIGN_ECDSA_WITH_SHA512_DER:
+		case SIGN_ECDSA_WITH_NULL:
+		case SIGN_ECDSA_256:
+		case SIGN_ECDSA_384:
+		case SIGN_ECDSA_521:
+			return KEY_ECDSA;
+		case SIGN_BLISS_WITH_SHA256:
+		case SIGN_BLISS_WITH_SHA384:
+		case SIGN_BLISS_WITH_SHA512:
+			return KEY_BLISS;
+	}
+	return KEY_ANY;
+}
