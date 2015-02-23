@@ -244,9 +244,17 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
  * Conversion of ASN.1 signature or hash OID to signature scheme.
  *
  * @param oid			ASN.1 OID
- * @return				signature_scheme, SIGN_UNKNOWN if OID is unsupported
+ * @return				signature scheme, SIGN_UNKNOWN if OID is unsupported
  */
 signature_scheme_t signature_scheme_from_oid(int oid);
+
+/**
+ * Conversion of signature scheme to ASN.1 signature OID.
+ *
+ * @param scheme		signature scheme
+ * @return				ASN.1 OID, OID_UNKNOWN if not supported
+ */
+int signature_scheme_to_oid(signature_scheme_t scheme);
 
 /**
  * Determine the type of key associated with a given signature scheme.

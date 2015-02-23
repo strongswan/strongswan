@@ -143,9 +143,52 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_BLISS_WITH_SHA256;
 		case OID_BLISS_WITH_SHA384:
 			return SIGN_BLISS_WITH_SHA384;
-		default:
-			return SIGN_UNKNOWN;
 	}
+	return SIGN_UNKNOWN;
+}
+
+/*
+ * Defined in header.
+ */
+int signature_scheme_to_oid(signature_scheme_t scheme)
+{
+	switch (scheme)
+	{
+		case SIGN_UNKNOWN:
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+		case SIGN_ECDSA_WITH_NULL:
+		case SIGN_ECDSA_256:
+		case SIGN_ECDSA_384:
+		case SIGN_ECDSA_521:
+			break;
+		case SIGN_RSA_EMSA_PKCS1_MD5:
+			return OID_MD5_WITH_RSA;
+		case SIGN_RSA_EMSA_PKCS1_SHA1:
+			return OID_SHA1_WITH_RSA;
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return OID_SHA224_WITH_RSA;
+		case SIGN_RSA_EMSA_PKCS1_SHA256:
+			return OID_SHA256_WITH_RSA;
+		case SIGN_RSA_EMSA_PKCS1_SHA384:
+			return OID_SHA384_WITH_RSA;
+		case SIGN_RSA_EMSA_PKCS1_SHA512:
+			return OID_SHA512_WITH_RSA;
+		case SIGN_ECDSA_WITH_SHA1_DER:
+			return OID_ECDSA_WITH_SHA1;
+		case SIGN_ECDSA_WITH_SHA256_DER:
+			return OID_ECDSA_WITH_SHA256;
+		case SIGN_ECDSA_WITH_SHA384_DER:
+			return OID_ECDSA_WITH_SHA384;
+		case SIGN_ECDSA_WITH_SHA512_DER:
+			return OID_ECDSA_WITH_SHA512;
+		case SIGN_BLISS_WITH_SHA256:
+			return OID_BLISS_WITH_SHA256;
+		case SIGN_BLISS_WITH_SHA384:
+			return OID_BLISS_WITH_SHA384;
+		case SIGN_BLISS_WITH_SHA512:
+			return OID_BLISS_WITH_SHA512;
+	}
+	return OID_UNKNOWN;
 }
 
 /*
