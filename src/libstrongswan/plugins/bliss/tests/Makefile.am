@@ -5,7 +5,10 @@ check_PROGRAMS = $(TESTS)
 bliss_tests_SOURCES = \
 	suites/test_bliss_fft.c \
 	suites/test_bliss_bitpacker.c \
+	suites/test_bliss_huffman.c \
+	suites/test_bliss_keys.c \
 	suites/test_bliss_sampler.c \
+	suites/test_bliss_signature.c \
 	suites/test_bliss_sign.c \
 	bliss_tests.h bliss_tests.c
 
