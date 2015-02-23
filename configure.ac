@@ -1078,6 +1078,12 @@ if test x$xauth_pam = xtrue; then
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
 
+if test x$connmark = xtrue -o x$forecast = xtrue; then
+	PKG_CHECK_MODULES(libiptc, [libiptc])
+	AC_SUBST(libiptc_CFLAGS)
+	AC_SUBST(libiptc_LIBS)
+fi
+
 if test x$capabilities = xnative; then
 	AC_MSG_NOTICE([Usage of the native Linux capabilities interface is deprecated, use libcap instead])
 	# Linux requires the following for capset(), Android does not have it,
