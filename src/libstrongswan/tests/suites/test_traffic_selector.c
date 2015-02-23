@@ -18,25 +18,29 @@
 #include <selectors/traffic_selector.h>
 
 
-static void verify(const char *str, traffic_selector_t *ts)
+static void verify(const char *str, const char *alt, traffic_selector_t *ts)
 {
 	char buf[512];
 
 	ck_assert(ts != NULL);
 	snprintf(buf, sizeof(buf), "%R", ts);
 	ts->destroy(ts);
-	ck_assert_str_eq(buf, str);
+	if (!streq(buf, str) && !streq(buf, alt))
+	{
+		fail("%s != %s or %s", buf, str, alt);
+	}
 }
 
 START_TEST(test_create_from_string)
 {
-	verify("10.1.0.0/16[tcp/http]",
+	verify("10.1.0.0/16[tcp/http]", "10.1.0.0/16[6/80]",
 		traffic_selector_create_from_string(IPPROTO_TCP, TS_IPV4_ADDR_RANGE,
 							"10.1.0.0", 80, "10.1.255.255", 80));
 	verify("10.1.0.1..10.1.0.99[udp/1234-1235]",
+		   "10.1.0.1..10.1.0.99[17/1234-1235]",
 		traffic_selector_create_from_string(IPPROTO_UDP, TS_IPV4_ADDR_RANGE,
 							"10.1.0.1", 1234, "10.1.0.99", 1235));
-	verify("fec1::/64",
+	verify("fec1::/64", NULL,
 		traffic_selector_create_from_string(0, TS_IPV6_ADDR_RANGE,
 							"fec1::", 0, "fec1::ffff:ffff:ffff:ffff", 65535));
 }
@@ -44,9 +48,9 @@ END_TEST
 
 START_TEST(test_create_from_cidr)
 {
-	verify("10.1.0.0/16",
+	verify("10.1.0.0/16", NULL,
 		traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535));
-	verify("10.1.0.1/32[udp/1234-1235]",
+	verify("10.1.0.1/32[udp/1234-1235]", "10.1.0.1/32[17/1234-1235]",
 		traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP,
 										  1234, 1235));
 }
@@ -54,7 +58,7 @@ END_TEST
 
 START_TEST(test_create_from_bytes)
 {
-	verify("10.1.0.0/16",
+	verify("10.1.0.0/16", NULL,
 		traffic_selector_create_from_bytes(0, TS_IPV4_ADDR_RANGE,
 			chunk_from_chars(0x0a,0x01,0x00,0x00), 0,
 			chunk_from_chars(0x0a,0x01,0xff,0xff), 65535));
@@ -63,7 +67,7 @@ END_TEST
 
 START_TEST(test_create_from_subnet)
 {
-	verify("10.1.0.0/16",
+	verify("10.1.0.0/16", NULL,
 		traffic_selector_create_from_subnet(
 					host_create_from_string("10.1.0.0", 0), 16, 0, 0, 65535));
 }
@@ -76,7 +80,7 @@ START_TEST(test_subset)
 
 	a = traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535);
 	b = traffic_selector_create_from_cidr("10.1.5.0/24", 0, 0, 65535);
-	verify("10.1.5.0/24", a->get_subset(a, b));
+	verify("10.1.5.0/24", NULL, a->get_subset(a, b));
 	a->destroy(a);
 	b->destroy(b);
 }
@@ -88,7 +92,8 @@ START_TEST(test_subset_port)
 
 	a = traffic_selector_create_from_cidr("10.0.0.0/8", IPPROTO_TCP, 55, 60);
 	b = traffic_selector_create_from_cidr("10.2.7.16/30", 0, 0, 65535);
-	verify("10.2.7.16/30[tcp/55-60]", a->get_subset(a, b));
+	verify("10.2.7.16/30[tcp/55-60]", "10.2.7.16/30[6/55-60]",
+		a->get_subset(a, b));
 	a->destroy(a);
 	b->destroy(b);
 }
@@ -100,7 +105,7 @@ START_TEST(test_subset_equal)
 
 	a = traffic_selector_create_from_cidr("10.1.0.0/16", IPPROTO_TCP, 80, 80);
 	b = traffic_selector_create_from_cidr("10.1.0.0/16", IPPROTO_TCP, 80, 80);
-	verify("10.1.0.0/16[tcp/http]", a->get_subset(a, b));
+	verify("10.1.0.0/16[tcp/http]", "10.1.0.0/16[6/80]", a->get_subset(a, b));
 	a->destroy(a);
 	b->destroy(b);
 }
