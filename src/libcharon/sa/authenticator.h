@@ -85,6 +85,11 @@ enum auth_method_t {
 	AUTH_NULL = 13,
 
 	/**
+	 * Digital Signature as specified in RFC 7427
+	 */
+	AUTH_DS = 14,
+
+	/**
 	 * BLISS Authentication Method
 	 */
 	AUTH_BLISS = 220,

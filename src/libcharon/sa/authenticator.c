@@ -31,13 +31,14 @@ ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
 	"DSS signature");
-ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_NULL, AUTH_DSS,
+ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_DS, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
 	"ECDSA-521 signature",
 	"secure password method",
-	"NULL authentication");
-ENUM_NEXT(auth_method_names, AUTH_BLISS, AUTH_BLISS, AUTH_NULL,
+	"NULL authentication",
+	"digital signature");
+ENUM_NEXT(auth_method_names, AUTH_BLISS, AUTH_BLISS, AUTH_DS,
 	"BLISS signature");
 ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_BLISS,
 	"XAuthInitPSK",
