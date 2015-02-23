@@ -639,7 +639,7 @@ METHOD(forecast_listener_t, set_broadcast, void,
 	{
 		struct sockaddr_in *in;
 
-		in = bcast->get_sockaddr(bcast);
+		in = (struct sockaddr_in*)bcast->get_sockaddr(bcast);
 		this->broadcast = in->sin_addr.s_addr;
 	}
 }
