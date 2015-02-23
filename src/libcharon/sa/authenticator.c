@@ -103,6 +103,7 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_ECDSA_256:
 		case AUTH_ECDSA_384:
 		case AUTH_ECDSA_521:
+		case AUTH_DS:
 		case AUTH_BLISS:
 			return (authenticator_t*)pubkey_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
