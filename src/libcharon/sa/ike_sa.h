@@ -131,6 +131,11 @@ enum ike_extension_t {
 	 * peer supports proprietary IKEv1 or standardized IKEv2 fragmentation
 	 */
 	EXT_IKE_FRAGMENTATION = (1<<11),
+
+	/**
+	 * Signature Authentication, RFC 7427
+	 */
+	EXT_SIGNATURE_AUTH = (1<<12),
 };
 
 /**

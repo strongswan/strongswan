@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -20,6 +20,8 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
@@ -103,6 +105,64 @@ struct private_ike_init_t {
 };
 
 /**
+ * Notify the peer about the hash algorithms we support, as per RFC 7427
+ */
+static void send_supported_hash_algorithms(message_t *message)
+{
+	enumerator_t *enumerator;
+	bio_writer_t *writer;
+	hash_algorithm_t hash;
+	char *plugin_name;
+
+	/* TODO-SIG: As initiator we could send only the algorithms we expect based
+	 * on e.g. rightauth config */
+	writer = bio_writer_create(0);
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+	{
+		if (hasher_algorithm_for_ikev2(hash))
+		{
+			writer->write_uint16(writer, hash);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (writer->get_buf(writer).len)
+	{
+		message->add_notify(message, FALSE, SIGNATURE_HASH_ALGORITHMS,
+							writer->get_buf(writer));
+	}
+	writer->destroy(writer);
+}
+
+/**
+ * Store algorithms supported by other peer
+ */
+static void handle_supported_hash_algorithms(private_ike_init_t *this,
+											 notify_payload_t *notify)
+{
+	bio_reader_t *reader;
+	u_int16_t algo;
+	bool added = FALSE;
+
+	reader = bio_reader_create(notify->get_notification_data(notify));
+	while (reader->remaining(reader) >= 2 && reader->read_uint16(reader, &algo))
+	{
+		if (hasher_algorithm_for_ikev2(algo))
+		{
+			this->keymat->add_hash_algorithm(this->keymat, algo);
+			added = TRUE;
+		}
+	}
+	reader->destroy(reader);
+
+	if (added)
+	{
+		this->ike_sa->enable_extension(this->ike_sa, EXT_SIGNATURE_AUTH);
+	}
+}
+
+/**
  * build the payloads for the message
  */
 static void build_payloads(private_ike_init_t *this, message_t *message)
@@ -174,6 +234,16 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 								chunk_empty);
 		}
 	}
+	/* submit supported hash algorithms for signature authentication */
+	if (!this->old_sa)
+	{
+		if (this->initiator ||
+			this->ike_sa->supports_extension(this->ike_sa,
+											 EXT_SIGNATURE_AUTH))
+		{
+			send_supported_hash_algorithms(message);
+		}
+	}
 }
 
 /**
@@ -228,11 +298,20 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				notify_payload_t *notify = (notify_payload_t*)payload;
 
-				if (notify->get_notify_type(notify) == FRAGMENTATION_SUPPORTED)
+				switch (notify->get_notify_type(notify))
 				{
-					this->ike_sa->enable_extension(this->ike_sa,
-												   EXT_IKE_FRAGMENTATION);
+					case FRAGMENTATION_SUPPORTED:
+						this->ike_sa->enable_extension(this->ike_sa,
+													   EXT_IKE_FRAGMENTATION);
+						break;
+					case SIGNATURE_HASH_ALGORITHMS:
+						handle_supported_hash_algorithms(this, notify);
+						break;
+					default:
+						/* other notifies are handled elsewhere */
+						break;
 				}
+
 			}
 			default:
 				break;
