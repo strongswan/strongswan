@@ -151,6 +151,8 @@ enum notify_type_t {
 	SENDER_REQUEST_ID = 16429,
 	/* IKEv2 fragmentation supported, RFC 7383 */
 	FRAGMENTATION_SUPPORTED = 16430,
+	/* Signature Hash Algorithms, RFC 7427 */
+	SIGNATURE_HASH_ALGORITHMS = 16431,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
