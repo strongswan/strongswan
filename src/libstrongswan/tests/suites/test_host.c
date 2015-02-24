@@ -237,6 +237,42 @@ START_TEST(test_create_from_string_and_family_other)
 END_TEST
 
 /*******************************************************************************
+ * host_create_from_dns
+ */
+
+static void test_create_from_dns(int family, chunk_t addr)
+{
+	host_t *host;
+
+	host = host_create_from_dns("localhost", family, 500);
+	ck_assert(host);
+	if (family != AF_UNSPEC)
+	{
+		verify_address(host, addr, family, 500);
+	}
+	host->destroy(host);
+}
+
+START_TEST(test_create_from_dns_any)
+{
+	test_create_from_dns(AF_UNSPEC, chunk_empty);
+}
+END_TEST
+
+START_TEST(test_create_from_dns_v4)
+{
+	test_create_from_dns(AF_INET, chunk_from_chars(127,0,0,1));
+}
+END_TEST
+
+START_TEST(test_create_from_dns_v6)
+{
+	test_create_from_dns(AF_INET6,
+						 chunk_from_chars(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1));
+}
+END_TEST
+
+/*******************************************************************************
  * host_create_from_sockaddr
  */
 
@@ -692,6 +728,12 @@ Suite *host_suite_create()
 	tcase_add_test(tc, test_create_from_string_and_family_v4);
 	tcase_add_test(tc, test_create_from_string_and_family_v6);
 	tcase_add_test(tc, test_create_from_string_and_family_other);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("host_create_from_dns");
+	tcase_add_test(tc, test_create_from_dns_any);
+	tcase_add_test(tc, test_create_from_dns_v4);
+	tcase_add_test(tc, test_create_from_dns_v6);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("host_create_from_sockaddr");
