@@ -169,17 +169,19 @@ static void *resolve_hosts(private_host_resolver_t *this)
 	while (TRUE)
 	{
 		this->mutex->lock(this->mutex);
-		thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
 		while (this->queue->remove_first(this->queue,
 										(void**)&query) != SUCCESS)
 		{
-			old = thread_cancelability(TRUE);
-			timed_out = this->new_query->timed_wait(this->new_query,
-									this->mutex, NEW_QUERY_WAIT_TIMEOUT * 1000);
-			thread_cancelability(old);
 			if (this->disabled)
 			{
-				thread_cleanup_pop(TRUE);
+				this->mutex->unlock(this->mutex);
+				return NULL;
+			}
+			timed_out = this->new_query->timed_wait(this->new_query,
+									this->mutex, NEW_QUERY_WAIT_TIMEOUT * 1000);
+			if (this->disabled)
+			{
+				this->mutex->unlock(this->mutex);
 				return NULL;
 			}
 			else if (timed_out && (this->threads > this->min_threads))
@@ -188,13 +190,13 @@ static void *resolve_hosts(private_host_resolver_t *this)
 
 				this->threads--;
 				this->pool->remove(this->pool, thread, NULL);
-				thread_cleanup_pop(TRUE);
+				this->mutex->unlock(this->mutex);
 				thread->detach(thread);
 				return NULL;
 			}
 		}
 		this->busy_threads++;
-		thread_cleanup_pop(TRUE);
+		this->mutex->unlock(this->mutex);
 
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = query->family;
