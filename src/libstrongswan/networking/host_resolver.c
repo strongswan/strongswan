@@ -163,6 +163,9 @@ static void *resolve_hosts(private_host_resolver_t *this)
 	int error;
 	bool old, timed_out;
 
+	/* default resolver threads to non-cancellable */
+	thread_cancelability(FALSE);
+
 	while (TRUE)
 	{
 		this->mutex->lock(this->mutex);
