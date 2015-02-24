@@ -43,6 +43,10 @@ all)
 		# libunwind causes threads to be cleaned up after LD is disabled
 		CONFIG="$CONFIG --disable-unwind-backtraces"
 	fi
+	if test "$MONOLITHIC" = "yes"; then
+		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
+		CONFIG="$CONFIG --disable-forecast --disable-connmark"
+	fi
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
