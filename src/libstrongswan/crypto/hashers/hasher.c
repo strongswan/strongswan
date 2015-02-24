@@ -364,3 +364,39 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 	}
 }
 
+/*
+ * Defined in header.
+ */
+hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
+{
+	switch (scheme)
+	{
+		case SIGN_UNKNOWN:
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+		case SIGN_ECDSA_WITH_NULL:
+			break;
+		case SIGN_RSA_EMSA_PKCS1_MD5:
+			return HASH_MD5;
+		case SIGN_RSA_EMSA_PKCS1_SHA1:
+		case SIGN_ECDSA_WITH_SHA1_DER:
+			return HASH_SHA1;
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return HASH_SHA224;
+		case SIGN_RSA_EMSA_PKCS1_SHA256:
+		case SIGN_ECDSA_WITH_SHA256_DER:
+		case SIGN_ECDSA_256:
+		case SIGN_BLISS_WITH_SHA256:
+			return HASH_SHA256;
+		case SIGN_RSA_EMSA_PKCS1_SHA384:
+		case SIGN_ECDSA_WITH_SHA384_DER:
+		case SIGN_ECDSA_384:
+		case SIGN_BLISS_WITH_SHA384:
+			return HASH_SHA384;
+		case SIGN_RSA_EMSA_PKCS1_SHA512:
+		case SIGN_ECDSA_WITH_SHA512_DER:
+		case SIGN_ECDSA_521:
+		case SIGN_BLISS_WITH_SHA512:
+			return HASH_SHA512;
+	}
+	return HASH_UNKNOWN;
+}
