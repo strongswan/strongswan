@@ -19,6 +19,12 @@
   Windows 7 IKEv2 clients, which announces its services over the tunnel if the
   negotiated IPsec policy allows it.
 
+- The cga plugin provides a backend to create and verify IPv6 Cryptographically
+  Generated Address parameters, as defined in RFC 3972. The pki tool has been
+  extended by a --cga command to generate such parameters and to print them.
+  CGA parameters can be negotiated over IKEv2, and the new narrowid plugin can
+  narrow traffic selectors according the authenticated (CGA) IKE identities.
+
 
 strongswan-5.2.2
 ----------------
