@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,6 +18,7 @@
 
 #include <daemon.h>
 #include <crypto/prf_plus.h>
+#include <collections/array.h>
 
 typedef struct private_keymat_v2_t private_keymat_v2_t;
 
@@ -69,6 +71,12 @@ struct private_keymat_v2_t {
 	 * Key to verify incoming authentication data (SKp)
 	 */
 	chunk_t skp_verify;
+
+	/**
+	 * List of hash algorithms supported by peer for signature
+	 * authentication (hash_algorithm_t)
+	 */
+	array_t *hash_algorithms;
 };
 
 METHOD(keymat_t, get_version, ike_version_t,
@@ -676,6 +684,47 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	return TRUE;
 }
 
+/**
+ * Sort hash algorithms
+ */
+static int hash_sort(const void *a, const void *b, void *user)
+{
+	const hash_algorithm_t *ha = a, *hb = b;
+	return *ha - *hb;
+}
+
+/**
+ * Find a hash algorithm
+ */
+static int hash_find(const void *a, const void *b)
+{
+	return hash_sort(a, b, NULL);
+}
+
+METHOD(keymat_v2_t, hash_algorithm_supported, bool,
+	private_keymat_v2_t *this, hash_algorithm_t hash)
+{
+	if (!this->hash_algorithms)
+	{
+		return FALSE;
+	}
+	return array_bsearch(this->hash_algorithms, &hash, hash_find, NULL) != -1;
+}
+
+METHOD(keymat_v2_t, add_hash_algorithm, void,
+	private_keymat_v2_t *this, hash_algorithm_t hash)
+{
+	if (!this->hash_algorithms)
+	{
+		this->hash_algorithms = array_create(sizeof(hash_algorithm_t), 0);
+	}
+	if (!hash_algorithm_supported(this, hash))
+	{
+		array_insert(this->hash_algorithms, ARRAY_TAIL, &hash);
+		array_sort(this->hash_algorithms, hash_sort, NULL);
+	}
+}
+
 METHOD(keymat_t, destroy, void,
 	private_keymat_v2_t *this)
 {
@@ -685,6 +734,7 @@ METHOD(keymat_t, destroy, void,
 	chunk_clear(&this->skd);
 	chunk_clear(&this->skp_verify);
 	chunk_clear(&this->skp_build);
+	array_destroy(this->hash_algorithms);
 	free(this);
 }
 
@@ -709,6 +759,9 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 			.get_skd = _get_skd,
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
+			.add_hash_algorithm = _add_hash_algorithm,
+			.hash_algorithm_supported = _hash_algorithm_supported,
+
 		},
 		.initiator = initiator,
 		.prf_alg = PRF_UNDEFINED,
