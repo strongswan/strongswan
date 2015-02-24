@@ -90,11 +90,6 @@ enum auth_method_t {
 	AUTH_DS = 14,
 
 	/**
-	 * BLISS Authentication Method
-	 */
-	AUTH_BLISS = 220,
-
-	/**
 	 * IKEv1 initiator XAUTH with PSK, outside of IANA range
 	 */
 	AUTH_XAUTH_INIT_PSK = 256,

@@ -226,11 +226,6 @@ METHOD(authenticator_t, build, status_t,
 						return status;
 				}
 				break;
-			case KEY_BLISS:
-				/* we currently use SHA512 only */
-				scheme = SIGN_BLISS_WITH_SHA512;
-				auth_method = AUTH_BLISS;
-				break;
 			default:
 				DBG1(DBG_IKE, "private key of type %N not supported",
 					 key_type_names, private->get_type(private));
@@ -298,10 +293,6 @@ METHOD(authenticator_t, process, status_t,
 			break;
 		case AUTH_ECDSA_521:
 			scheme = SIGN_ECDSA_521;
-			break;
-		case AUTH_BLISS:
-			key_type = KEY_BLISS;
-			scheme = SIGN_BLISS_WITH_SHA512;
 			break;
 		case AUTH_DS:
 			if (parse_signature_auth_data(&auth_data, &key_type, &scheme))
