@@ -380,7 +380,15 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 			return NULL;
 		}
 	}
-	handle = dlopen(file, RTLD_LAZY);
+	handle = dlopen(file, RTLD_LAZY
+#ifdef RTLD_NODELETE
+	/* if supported, do not unload library when unloading a plugin. It really
+	 * doesn't matter in productive systems, but causes many (dependency)
+	 * library reloads during unit tests. Some libraries can't handle that,
+	 * GnuTLS leaks file descriptors in its library load/unload functions. */
+					| RTLD_NODELETE
+#endif
+					);
 	if (handle == NULL)
 	{
 		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
