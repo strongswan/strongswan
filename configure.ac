@@ -69,6 +69,7 @@ ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
+ARG_WITH_SET([pythoneggdir],         ["main site-packages directory"], [path to install python eggs to to])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -289,6 +290,7 @@ ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning i
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([ruby-gems],      [enable installation of provided ruby gems.])
+ARG_ENABL_SET([python-eggs],    [enable installation of provided python eggs.])
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -1185,6 +1187,18 @@ if test x$ruby_gems = xtrue; then
 	AC_SUBST(RUBYGEMDIR, "$rubygemdir")
 fi
 
+if test x$python_eggs = xtrue; then
+	AC_PATH_PROG([EASY_INSTALL], [easy_install], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+	if test x$EASY_INSTALL = x; then
+		AC_MSG_ERROR(Python easy_install not found)
+	fi
+	if test "x$pythoneggdir" = "xmain site-packages directory"; then
+		AC_SUBST(PYTHONEGGINSTALLDIR, "")
+	else
+		AC_SUBST(PYTHONEGGINSTALLDIR, "--install-dir $pythoneggdir")
+	fi
+fi
+
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
@@ -1549,6 +1563,7 @@ AM_CONDITIONAL(USE_SVC, test x$svc = xtrue)
 AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
 AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
 AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
+AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
 
 # ========================
 #  set global definitions
