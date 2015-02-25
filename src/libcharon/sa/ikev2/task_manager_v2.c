@@ -1304,17 +1304,16 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (mid == this->responding.mid)
 		{
-			/* reject initial messages once established */
-			if (msg->get_exchange_type(msg) == IKE_SA_INIT ||
-				msg->get_exchange_type(msg) == IKE_AUTH)
+			/* reject initial messages if not received in specific states */
+			if ((msg->get_exchange_type(msg) == IKE_SA_INIT &&
+				 this->ike_sa->get_state(this->ike_sa) != IKE_CREATED) ||
+				(msg->get_exchange_type(msg) == IKE_AUTH &&
+				 this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING))
 			{
-				if (this->ike_sa->get_state(this->ike_sa) != IKE_CREATED &&
-					this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
-				{
-					DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
-						 exchange_type_names, msg->get_exchange_type(msg));
-					return FAILED;
-				}
+				DBG1(DBG_IKE, "ignoring %N in IKE_SA state %N",
+					 exchange_type_names, msg->get_exchange_type(msg),
+					 ike_sa_state_names, this->ike_sa->get_state(this->ike_sa));
+				return FAILED;
 			}
 			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 			{	/* with MOBIKE, we do no implicit updates */
