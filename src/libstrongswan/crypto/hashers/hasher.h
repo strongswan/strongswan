@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -32,19 +32,19 @@ typedef struct hasher_t hasher_t;
 #include <credentials/keys/public_key.h>
 
 /**
- * Algorithms to use for hashing.
+ * Hash algorithms as defined for IKEv2 by RFC 7427
  */
 enum hash_algorithm_t {
-	/** not specified hash function */
-	HASH_UNKNOWN 		= 0,
-	HASH_MD2 			= 1,
-	HASH_MD4			= 2,
-	HASH_MD5 			= 3,
-	HASH_SHA1 			= 4,
-	HASH_SHA224			= 5,
-	HASH_SHA256 		= 6,
-	HASH_SHA384 		= 7,
-	HASH_SHA512 		= 8
+	HASH_SHA1 			= 1,
+	HASH_SHA256			= 2,
+	HASH_SHA384			= 3,
+	HASH_SHA512			= 4,
+	/* use private use range for algorithms not defined/permitted by RFC 7427 */
+	HASH_UNKNOWN 		= 1024,
+	HASH_MD2 			= 1025,
+	HASH_MD4			= 1026,
+	HASH_MD5 			= 1027,
+	HASH_SHA224			= 1028,
 };
 
 #define HASH_SIZE_MD2		16
