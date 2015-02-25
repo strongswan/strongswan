@@ -74,3 +74,7 @@ SUBDIRS =
 if USE_RUBY_GEMS
 SUBDIRS += ruby
 endif
+
+if USE_PYTHON_EGGS
+SUBDIRS += python
+endif
