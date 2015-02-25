@@ -102,6 +102,11 @@ struct private_ike_init_t {
 	 * retries done so far after failure (cookie or bad dh group)
 	 */
 	u_int retry;
+
+	/**
+	 * Whether to use Signature Authentication as per RFC 7427
+	 */
+	bool signature_authentication;
 };
 
 /**
@@ -235,7 +240,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	/* submit supported hash algorithms for signature authentication */
-	if (!this->old_sa)
+	if (!this->old_sa && this->signature_authentication)
 	{
 		if (this->initiator ||
 			this->ike_sa->supports_extension(this->ike_sa,
@@ -305,7 +310,10 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 													   EXT_IKE_FRAGMENTATION);
 						break;
 					case SIGNATURE_HASH_ALGORITHMS:
-						handle_supported_hash_algorithms(this, notify);
+						if (this->signature_authentication)
+						{
+							handle_supported_hash_algorithms(this, notify);
+						}
 						break;
 					default:
 						/* other notifies are handled elsewhere */
@@ -716,6 +724,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.dh_group = MODP_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.old_sa = old_sa,
+		.signature_authentication = lib->settings->get_bool(lib->settings,
+								"%s.signature_authentication", TRUE, lib->ns),
 	);
 
 	if (initiator)

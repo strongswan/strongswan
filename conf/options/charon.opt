@@ -287,6 +287,9 @@ charon.send_delay_type = 0
 charon.send_vendor_id = no
 	Send strongSwan vendor ID payload
 
+charon.signature_authentication = yes
+	Whether to enable Signature Authentication as per RFC 7427.
+
 charon.start-scripts {}
 	Section containing a list of scripts (name = path) that are executed when
 	the daemon is started.
