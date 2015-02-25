@@ -251,6 +251,28 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 /*
  * Described in header.
  */
+bool hasher_algorithm_for_ikev2(hash_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case HASH_SHA1:
+		case HASH_SHA256:
+		case HASH_SHA384:
+		case HASH_SHA512:
+			return TRUE;
+		case HASH_UNKNOWN:
+		case HASH_MD2:
+		case HASH_MD4:
+		case HASH_MD5:
+		case HASH_SHA224:
+			break;
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header.
+ */
 int hasher_algorithm_to_oid(hash_algorithm_t alg)
 {
 	int oid;

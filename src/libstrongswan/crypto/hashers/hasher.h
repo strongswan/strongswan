@@ -163,6 +163,14 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 													size_t length);
 
 /**
+ * Check if the given algorithm may be used for IKEv2 signature authentication.
+ *
+ * @param alg			hash algorithm
+ * @return				TRUE if algorithm may be used, FALSE otherwise
+ */
+bool hasher_algorithm_for_ikev2(hash_algorithm_t alg);
+
+/**
  * Conversion of hash algorithm into ASN.1 OID.
  *
  * @param alg			hash algorithm
