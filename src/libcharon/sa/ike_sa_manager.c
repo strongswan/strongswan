@@ -1184,7 +1184,8 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	DBG2(DBG_MGR, "checkout IKE_SA by message");
 
-	if (id->get_responder_spi(id) == 0)
+	if (id->get_responder_spi(id) == 0 &&
+		message->get_message_id(message) == 0)
 	{
 		if (message->get_major_version(message) == IKEV2_MAJOR_VERSION)
 		{
