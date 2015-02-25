@@ -321,6 +321,7 @@ METHOD(authenticator_t, process, status_t,
 						   id, auth_method_names, auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
+			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, (uintptr_t)scheme);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			break;
 		}
