@@ -337,8 +337,11 @@ static int sign_crl()
 	}
 	if (private->get_type(private) == KEY_BLISS)
 	{
-		/* currently only SHA-512 is supported */
-		digest = HASH_SHA512;
+		/* the default hash function is SHA512. SHA1 is not supported */
+		if (digest == HASH_SHA1)
+		{
+			digest = HASH_SHA512;
+		}
 	}
 
 	if (basecrl)

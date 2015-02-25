@@ -326,6 +326,10 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 		case KEY_BLISS:
 			switch (alg)
 			{
+				case HASH_SHA256:
+					return OID_BLISS_WITH_SHA256;
+				case HASH_SHA384:
+					return OID_BLISS_WITH_SHA384;
 				case HASH_SHA512:
 					return OID_BLISS_WITH_SHA512;
 				default:

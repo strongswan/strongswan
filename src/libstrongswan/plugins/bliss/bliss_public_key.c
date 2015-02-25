@@ -59,8 +59,8 @@ METHOD(public_key_t, get_type, key_type_t,
 /**
  * Verify a BLISS signature based on a SHA-512 hash
  */
-static bool verify_bliss_with_sha512(private_bliss_public_key_t *this,
-									 chunk_t data, chunk_t signature)
+static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
+						 chunk_t data, chunk_t signature)
 {
 	int i, n;
 	int32_t *z1, *u;
@@ -68,21 +68,31 @@ static bool verify_bliss_with_sha512(private_bliss_public_key_t *this,
 	uint16_t q, q2, p, *c_indices, *indices;
 	uint32_t *az;
 	uint8_t data_hash_buf[HASH_SIZE_SHA512];
-	chunk_t data_hash = { data_hash_buf, sizeof(data_hash_buf) };
+	chunk_t data_hash;
 	hasher_t *hasher;
 	bliss_fft_t *fft;
 	bliss_signature_t *sig;
 	bool success = FALSE;
 
 	/* Create data hash */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	hasher = lib->crypto->create_hasher(lib->crypto, alg);
 	if (!hasher )
 	{
 		return FALSE;
 	}
+	data_hash = chunk_create(data_hash_buf, hasher->get_hash_size(hasher));
+
 	if (!hasher->get_hash(hasher, data, data_hash_buf))
 	{
 		hasher->destroy(hasher);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+
+	/* Create SHA512 hasher for c_indices oracle */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher)
+	{
 		return FALSE;
 	}
 
@@ -190,8 +200,12 @@ METHOD(public_key_t, verify, bool,
 {
 	switch (scheme)
 	{
+		case SIGN_BLISS_WITH_SHA256:
+			return verify_bliss(this, HASH_SHA256, data, signature);
+		case SIGN_BLISS_WITH_SHA384:
+			return verify_bliss(this, HASH_SHA384, data, signature);
 		case SIGN_BLISS_WITH_SHA512:
-			return verify_bliss_with_sha512(this, data, signature);
+			return verify_bliss(this, HASH_SHA512, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported by BLISS",
 				 signature_scheme_names, scheme);

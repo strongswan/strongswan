@@ -23,6 +23,7 @@ static u_int key_strength[] = { 128, 160, 192 };
 
 START_TEST(test_bliss_sign_all)
 {
+	signature_scheme_t signature_scheme;
 	private_key_t *privkey, *privkey1;
 	public_key_t *pubkey, *pubkey1;
 	chunk_t msg, signature, privkey_blob, pubkey_blob, pubkey_fp, privkey_fp;
@@ -31,6 +32,18 @@ START_TEST(test_bliss_sign_all)
 	for (k = 0; k < 4; k++)
 	{
 		int verify_count = 1000;
+
+		switch (k)
+		{
+			case 1:
+				signature_scheme = SIGN_BLISS_WITH_SHA256;
+				break;
+			case 2:
+				signature_scheme = SIGN_BLISS_WITH_SHA384;
+				break;
+			default:
+				signature_scheme = SIGN_BLISS_WITH_SHA512;
+		}
 
 		/* enforce BLISS-B key for k = 2, 3 */
 		lib->settings->set_bool(lib->settings,
@@ -105,9 +118,9 @@ START_TEST(test_bliss_sign_all)
 		/* generate and verify 1000 BLISS signatures */
 		while (verify_count--)
 		{
-			ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA512, msg,
+			ck_assert(privkey->sign(privkey, signature_scheme, msg,
 									&signature));
-			ck_assert(pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA512, msg,
+			ck_assert(pubkey->verify(pubkey, signature_scheme, msg,
 									 signature));
 			free(signature.ptr);
 		}

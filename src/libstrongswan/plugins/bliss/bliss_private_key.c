@@ -158,18 +158,20 @@ static void greedy_sc(int8_t *s1, int8_t *s2, int n, uint16_t *c_indices,
 }
 
 /**
- * Compute a BLISS signature based on a SHA-512 hash
+ * Compute a BLISS signature
  */
-static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
-								   chunk_t data, chunk_t *signature)
+static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
+					   chunk_t data, chunk_t *signature)
 {
-	rng_t *rng;
-	hash_algorithm_t alg;
-	hasher_t *hasher;
 	bliss_fft_t *fft;
 	bliss_signature_t *sig;
 	bliss_sampler_t *sampler = NULL;
-	uint8_t seed_buf[32], data_hash_buf[HASH_SIZE_SHA512];
+	rng_t *rng;
+	hasher_t *hasher;
+	hash_algorithm_t mgf1_alg;
+	size_t mgf1_seed_len;
+	uint8_t mgf1_seed_buf[HASH_SIZE_SHA512], data_hash_buf[HASH_SIZE_SHA512];
+	chunk_t mgf1_seed, data_hash;
 	uint16_t q, q2, p, p2, *c_indices, tests = 0;
 	uint32_t *ay;
 	int32_t *y1, *y2, *z1, *z2, *u, *s1c, *s2c;
@@ -177,39 +179,46 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	int32_t scalar, norm, ui;
 	int16_t *ud, *uz2d, *z2d, value;
 	int i, n;
-	size_t seed_len;
 	double mean1 = 0, mean2 = 0, sigma1 = 0, sigma2 = 0;
-	chunk_t seed;
-	chunk_t data_hash = { data_hash_buf, sizeof(data_hash_buf) };
 	bool accepted, positive, success = FALSE, use_bliss_b;
 
 	/* Initialize signature */
 	*signature = chunk_empty;
 
 	/* Create data hash */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	hasher = lib->crypto->create_hasher(lib->crypto, alg);
 	if (!hasher)
 	{
 		return FALSE;
 	}
+	data_hash = chunk_create(data_hash_buf, hasher->get_hash_size(hasher));
+
 	if (!hasher->get_hash(hasher, data, data_hash_buf))
 	{
 		hasher->destroy(hasher);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+
+	/* Create SHA512 hasher for c_indices oracle */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher)
+	{
 		return FALSE;
 	}
 
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		alg = HASH_SHA256;
-		seed_len = HASH_SIZE_SHA256;
+		mgf1_alg = HASH_SHA256;
+		mgf1_seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		alg = HASH_SHA1;
-		seed_len = HASH_SIZE_SHA1;
+		mgf1_alg = HASH_SHA1;
+		mgf1_seed_len = HASH_SIZE_SHA1;
 	}
-	seed = chunk_create(seed_buf, seed_len);
+	mgf1_seed = chunk_create(mgf1_seed_buf, mgf1_seed_len);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
@@ -260,13 +269,13 @@ static bool sign_bliss_with_sha512(private_bliss_private_key_t *this,
 	{
 		tests++;
 
-		if (!rng->get_bytes(rng, seed_len, seed_buf))
+		if (!rng->get_bytes(rng, mgf1_seed_len, mgf1_seed_buf))
 		{
 			goto end;
 		}
 		DESTROY_IF(sampler);
 
-		sampler = bliss_sampler_create(alg, seed, this->set);
+		sampler = bliss_sampler_create(mgf1_alg, mgf1_seed, this->set);
 		if (!sampler)
 		{
 			goto end;
@@ -507,8 +516,12 @@ METHOD(private_key_t, sign, bool,
 {
 	switch (scheme)
 	{
+		case SIGN_BLISS_WITH_SHA256:
+			return sign_bliss(this, HASH_SHA256, data, signature);
+		case SIGN_BLISS_WITH_SHA384:
+			return sign_bliss(this, HASH_SHA384, data, signature);
 		case SIGN_BLISS_WITH_SHA512:
-			return sign_bliss_with_sha512(this, data, signature);
+			return sign_bliss(this, HASH_SHA512, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported with BLISS",
 				 signature_scheme_names, scheme);

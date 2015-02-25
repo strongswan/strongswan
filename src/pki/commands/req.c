@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2009 Andreas Steffen
+ * Copyright (C) 2009-2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -104,8 +105,11 @@ static int req()
 
 	if (type == KEY_BLISS)
 	{
-		/* currently only SHA-512 is supported */
-		digest = HASH_SHA512;
+		/* the default hash function is SHA512. SHA1 is not supported */
+		if (digest == HASH_SHA1)
+		{
+			digest = HASH_SHA512;
+		}
 	}
 	if (!dn)
 	{

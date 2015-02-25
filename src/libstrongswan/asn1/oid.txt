@@ -224,6 +224,8 @@
                     0x08     "BLISS-B_IV"				OID_BLISS_B_IV
                   0x03       "blissSigType"
                     0x01     "BLISS-with-SHA512"		OID_BLISS_WITH_SHA512
+                    0x02     "BLISS-with-SHA384"		OID_BLISS_WITH_SHA384
+                    0x03     "BLISS-with-SHA256"		OID_BLISS_WITH_SHA256
           0x89               ""
             0x31             ""
               0x01           ""

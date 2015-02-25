@@ -19,6 +19,10 @@
   Windows 7 IKEv2 clients, which announces its services over the tunnel if the
   negotiated IPsec policy allows it.
 
+- Upgrade of the BLISS post-quantum signature algorithm to the improved BLISS-B
+  variant. Can be used in conjunction with the SHA256, SHA384 and SHA512 hash
+  algorithms with SHA512 being the default.
+
 
 strongswan-5.2.2
 ----------------

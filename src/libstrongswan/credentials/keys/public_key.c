@@ -43,6 +43,8 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA512,
 	"ECDSA-256",
 	"ECDSA-384",
 	"ECDSA-521",
+	"BLISS_WITH_SHA256",
+	"BLISS_WITH_SHA384",
 	"BLISS_WITH_SHA512",
 );
 
@@ -136,6 +138,10 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 		case OID_BLISS_PUBLICKEY:
 		case OID_BLISS_WITH_SHA512:
 			return SIGN_BLISS_WITH_SHA512;
+		case OID_BLISS_WITH_SHA256:
+			return SIGN_BLISS_WITH_SHA256;
+		case OID_BLISS_WITH_SHA384:
+			return SIGN_BLISS_WITH_SHA384;
 		default:
 			return SIGN_UNKNOWN;
 	}

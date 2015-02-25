@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -365,8 +366,11 @@ static int issue()
 
 	if (private->get_type(private) == KEY_BLISS)
 	{
-		/* currently only SHA-512 is supported */
-		digest = HASH_SHA512;
+		/* the default hash function is SHA512. SHA1 is not supported */
+		if (digest == HASH_SHA1)
+		{
+			digest = HASH_SHA512;
+		}
 	}
 	if (hex)
 	{
