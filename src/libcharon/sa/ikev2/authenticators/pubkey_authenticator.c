@@ -249,8 +249,9 @@ METHOD(authenticator_t, build, status_t,
 		}
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 auth_method_names, auth_method,
-		 (status == SUCCESS)? "successful":"failed");
+		 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
+		 auth_method == AUTH_DS ? scheme : auth_method,
+		 status == SUCCESS ? "successful" : "failed");
 	chunk_free(&octets);
 	private->destroy(private);
 
@@ -317,8 +318,9 @@ METHOD(authenticator_t, process, status_t,
 	{
 		if (public->verify(public, scheme, octets, auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
-						   id, auth_method_names, auth_method);
+			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
+				 auth_method == AUTH_DS ? scheme : auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, (uintptr_t)scheme);
