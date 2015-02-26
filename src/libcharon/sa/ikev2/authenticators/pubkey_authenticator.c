@@ -153,6 +153,13 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 			}
 		}
 		enumerator->destroy(enumerator);
+
+		/* default to the scheme we'd use with classic authentication */
+		if (selected == SIGN_UNKNOWN && key_type == KEY_RSA &&
+			keymat->hash_algorithm_supported(keymat, HASH_SHA1))
+		{
+			selected = SIGN_RSA_EMSA_PKCS1_SHA1;
+		}
 	}
 	return selected;
 }
