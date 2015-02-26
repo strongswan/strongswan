@@ -1,7 +1,7 @@
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 carol::cat /var/log/daemon.log::EAP method EAP_MD5 succeeded, no MSK established::YES
-dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 dave:: cat /var/log/daemon.log::requesting EAP_TLS authentication, sending EAP_NAK::YES
 dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 dave:: cat /var/log/daemon.log::EAP method EAP_TLS succeeded, MSK established::YES

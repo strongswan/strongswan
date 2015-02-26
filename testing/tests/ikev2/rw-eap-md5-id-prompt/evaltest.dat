@@ -1,6 +1,6 @@
 carol::cat /var/log/daemon.log::configured EAP-Identity carol::YES
 carol::cat /var/log/daemon.log::added EAP secret for carol moon.strongswan.org::YES
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 moon:: cat /var/log/daemon.log::authentication of 'PH_IP_CAROL' with EAP successful::YES
 moon:: cat /var/log/daemon.log::received EAP identity.*carol::YES

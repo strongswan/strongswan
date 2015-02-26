@@ -1,4 +1,4 @@
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 carol::cat /var/log/daemon.log::server requested EAP_SIM authentication::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 moon:: cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES

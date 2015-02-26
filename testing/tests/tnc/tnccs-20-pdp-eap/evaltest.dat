@@ -1,10 +1,10 @@
-dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 dave:: cat /var/log/daemon.log::PDP server.*aaa.strongswan.org.*is listening on port 271::YES
 dave:: cat /var/log/daemon.log::collected ... SWID tags::YES
 dave:: cat /var/log/daemon.log::PB-TNC access recommendation is .*Quarantined::YES
 dave:: cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
 dave:: cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 carol::cat /var/log/daemon.log::PDP server.*aaa.strongswan.org.*is listening on port 271::YES
 carol::cat /var/log/daemon.log::collected ... SWID tag IDs::YES
 carol::cat /var/log/daemon.log::collected 1 SWID tag::YES

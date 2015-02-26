@@ -1,8 +1,8 @@
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
 carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
 carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/16::YES
-dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
+dave:: cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA.* successful::YES
 dave:: cat /var/log/daemon.log::TNCCS-Recommendation.*none::YES
 dave:: cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
 dave:: cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.0/16::NO
