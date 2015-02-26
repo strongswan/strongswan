@@ -112,14 +112,11 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 									auth_cfg_t *auth, private_key_t *private)
 {
 	enumerator_t *enumerator;
-	signature_scheme_t scheme = SIGN_UNKNOWN;
-	hash_algorithm_t hash;
-	char *plugin_name;
+	signature_scheme_t selected = SIGN_UNKNOWN, scheme;
 	uintptr_t config;
 	auth_rule_t rule;
 	key_type_t key_type;
 	bool have_config = FALSE;
-	int oid;
 
 	key_type = private->get_type(private);
 	enumerator = auth->create_enumerator(auth);
@@ -134,32 +131,30 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 			keymat->hash_algorithm_supported(keymat,
 										hasher_from_signature_scheme(config)))
 		{
-			scheme = config;
+			selected = config;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (scheme == SIGN_UNKNOWN && !have_config)
+	if (selected == SIGN_UNKNOWN && !have_config)
 	{
-		/* if no specific configuration, find a scheme supported by us, the
-		 * other peer and the key */
-		enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-		while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+		/* if no specific configuration, find a scheme appropriate for the key
+		 * and supported by the other peer */
+		enumerator = signature_schemes_for_key(key_type,
+											   private->get_keysize(private));
+		while (enumerator->enumerate(enumerator, &scheme))
 		{
-			if (keymat->hash_algorithm_supported(keymat, hash))
+			if (keymat->hash_algorithm_supported(keymat,
+										hasher_from_signature_scheme(scheme)))
 			{
-				oid = hasher_signature_algorithm_to_oid(hash, key_type);
-				if (oid != OID_UNKNOWN)
-				{
-					scheme = signature_scheme_from_oid(oid);
-					break;
-				}
+				selected = scheme;
+				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
-	return scheme;
+	return selected;
 }
 
 METHOD(authenticator_t, build, status_t,
