@@ -34,14 +34,12 @@ all)
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
 			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
-			--disable-systemd --disable-soup
+			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	if test "$LEAK_DETECTIVE" = "yes"; then
 		# libgcrypt can't be deinitialized
 		CONFIG="$CONFIG --disable-gcrypt"
-		# libunwind causes threads to be cleaned up after LD is disabled
-		CONFIG="$CONFIG --disable-unwind-backtraces"
 	fi
 	if test "$MONOLITHIC" = "yes"; then
 		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
