@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +18,7 @@
 #include <library.h>
 #include <utils/utils.h>
 #include <ipsec/ipsec_types.h>
+#include <credentials/keys/public_key.h>
 
 #include <time.h>
 
@@ -695,6 +696,44 @@ START_TEST(test_mark_from_string)
 }
 END_TEST
 
+/*******************************************************************************
+ * signature_schemes_for_key
+ */
+
+static struct {
+	key_type_t type;
+	int size;
+	signature_scheme_t expected[4];
+} scheme_data[] = {
+	{KEY_RSA,   1024, { SIGN_RSA_EMSA_PKCS1_SHA256, SIGN_RSA_EMSA_PKCS1_SHA384, SIGN_RSA_EMSA_PKCS1_SHA512, SIGN_UNKNOWN }},
+	{KEY_RSA,   2048, { SIGN_RSA_EMSA_PKCS1_SHA256, SIGN_RSA_EMSA_PKCS1_SHA384, SIGN_RSA_EMSA_PKCS1_SHA512, SIGN_UNKNOWN }},
+	{KEY_RSA,   4096, { SIGN_RSA_EMSA_PKCS1_SHA384, SIGN_RSA_EMSA_PKCS1_SHA512, SIGN_UNKNOWN }},
+	{KEY_RSA,   8192, { SIGN_RSA_EMSA_PKCS1_SHA512, SIGN_UNKNOWN }},
+	{KEY_ECDSA,  256, { SIGN_ECDSA_WITH_SHA256_DER, SIGN_ECDSA_WITH_SHA384_DER, SIGN_ECDSA_WITH_SHA512_DER, SIGN_UNKNOWN }},
+	{KEY_ECDSA,  384, { SIGN_ECDSA_WITH_SHA384_DER, SIGN_ECDSA_WITH_SHA512_DER, SIGN_UNKNOWN }},
+	{KEY_ECDSA,  512, { SIGN_ECDSA_WITH_SHA512_DER, SIGN_UNKNOWN }},
+	{KEY_BLISS,  128, { SIGN_BLISS_WITH_SHA256, SIGN_BLISS_WITH_SHA384, SIGN_BLISS_WITH_SHA512, SIGN_UNKNOWN }},
+	{KEY_BLISS,  192, { SIGN_BLISS_WITH_SHA384, SIGN_BLISS_WITH_SHA512, SIGN_UNKNOWN }},
+	{KEY_BLISS,  256, { SIGN_BLISS_WITH_SHA512, SIGN_UNKNOWN }},
+};
+
+START_TEST(test_signature_schemes_for_key)
+{
+	enumerator_t  *enumerator;
+	signature_scheme_t scheme;
+	int i;
+
+	enumerator = signature_schemes_for_key(scheme_data[_i].type, scheme_data[_i].size);
+	for (i = 0; scheme_data[_i].expected[i] != SIGN_UNKNOWN; i++)
+	{
+		ck_assert(enumerator->enumerate(enumerator, &scheme));
+		ck_assert_int_eq(scheme_data[_i].expected[i], scheme);
+	}
+	ck_assert(!enumerator->enumerate(enumerator, &scheme));
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
 Suite *utils_suite_create()
 {
 	Suite *s;
@@ -775,6 +814,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("mark_from_string");
 	tcase_add_loop_test(tc, test_mark_from_string, 0, countof(mark_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("signature_schemes_for_key");
+	tcase_add_loop_test(tc, test_signature_schemes_for_key, 0, countof(scheme_data));
 	suite_add_tcase(s, tc);
 
 	return s;

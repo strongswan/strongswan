@@ -191,6 +191,73 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 	return OID_UNKNOWN;
 }
 
+/**
+ * Map for signature schemes to the key type and maximum key size allowed.
+ * We only cover schemes with hash algorithms supported by IKEv2 signature
+ * authentication.
+ */
+static struct {
+	signature_scheme_t scheme;
+	key_type_t type;
+	int max_keysize;
+} scheme_map[] = {
+	{ SIGN_RSA_EMSA_PKCS1_SHA256, KEY_RSA,   3072 },
+	{ SIGN_RSA_EMSA_PKCS1_SHA384, KEY_RSA,   7680 },
+	{ SIGN_RSA_EMSA_PKCS1_SHA512, KEY_RSA,   0 },
+	{ SIGN_ECDSA_WITH_SHA256_DER, KEY_ECDSA, 256 },
+	{ SIGN_ECDSA_WITH_SHA384_DER, KEY_ECDSA, 384 },
+	{ SIGN_ECDSA_WITH_SHA512_DER, KEY_ECDSA, 0 },
+	{ SIGN_BLISS_WITH_SHA256,     KEY_BLISS, 128 },
+	{ SIGN_BLISS_WITH_SHA384,     KEY_BLISS, 192 },
+	{ SIGN_BLISS_WITH_SHA512,     KEY_BLISS, 0 },
+};
+
+/**
+ * Private data for signature scheme enumerator
+ */
+typedef struct  {
+	enumerator_t public;
+	int index;
+	key_type_t type;
+	int size;
+} private_enumerator_t;
+
+METHOD(enumerator_t, signature_schemes_enumerate, bool,
+	private_enumerator_t *this, signature_scheme_t *scheme)
+{
+	while (++this->index < countof(scheme_map))
+	{
+		if (this->type == scheme_map[this->index].type &&
+		   (this->size <= scheme_map[this->index].max_keysize ||
+			!scheme_map[this->index].max_keysize))
+		{
+			*scheme = scheme_map[this->index].scheme;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Defined in header.
+ */
+enumerator_t *signature_schemes_for_key(key_type_t type, int size)
+{
+	private_enumerator_t *this;
+
+	INIT(this,
+		.public = {
+			.enumerate = (void*)_signature_schemes_enumerate,
+			.destroy = (void*)free,
+		},
+		.index = -1,
+		.type = type,
+		.size = size,
+	);
+
+	return &this->public;
+}
+
 /*
  * Defined in header.
  */
