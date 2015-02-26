@@ -1,3 +1,6 @@
+strongswan-5.3.0
+----------------
+
 - Added support for IKEv2 make-before-break reauthentication. By using a global
   CHILD_SA reqid allocation mechanism, charon supports overlapping CHILD_SAs.
   This allows the use of make-before-break instead of the previously supported
