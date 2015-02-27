@@ -103,7 +103,7 @@ CALLBACK(conn_sn, int,
 	{
 		return vici_parse_cb(res, children_sn, NULL, NULL, NULL);
 	}
-	if (streq(name, "local") || streq(name, "remote"))
+	if (strpfx(name, "local") || strpfx(name, "remote"))
 	{
 		hashtable_t *auth;
 
@@ -112,7 +112,8 @@ CALLBACK(conn_sn, int,
 		if (ret == 0)
 		{
 			printf("  %s %s authentication:\n",
-				name, auth->get(auth, "class") ?: "unspecified");
+				strpfx(name, "local") ? "local" : "remote",
+				auth->get(auth, "class") ?: "unspecified");
 			if (auth->get(auth, "id"))
 			{
 				printf("    id: %s\n", auth->get(auth, "id"));
