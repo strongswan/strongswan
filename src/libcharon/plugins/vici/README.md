@@ -821,9 +821,9 @@ during encoding.
 
 ## Connecting to the daemon ##
 
-To create a connection to the daemon, a socket must be passed to the
-_Connection_ constructor. There is no default, but on Unix systems usually
-a Unix socket over _/var/run/charon.vici_ is used:
+To create a connection to the daemon, a socket can be passed to the
+_Connection_ constructor. If none is passed, a default Unix socket at
+_/var/run/charon.vici_ is used:
 
 	require "vici"
 	require "socket"
