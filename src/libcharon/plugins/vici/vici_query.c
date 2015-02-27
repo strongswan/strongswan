@@ -508,11 +508,14 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 		certificate_t *cert;
 		char *str;
 	} v;
+	char buf[32];
+	int i = 0;
 
 	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
 	while (enumerator->enumerate(enumerator, &auth))
 	{
-		b->begin_section(b, local ? "local" : "remote");
+		snprintf(buf, sizeof(buf), "%s-%d", local ? "local" : "remote", ++i);
+		b->begin_section(b, buf);
 
 		rules = auth->create_enumerator(auth);
 		while (rules->enumerate(rules, &rule, &v))
