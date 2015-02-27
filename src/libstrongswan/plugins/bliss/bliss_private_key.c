@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -251,6 +251,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	/* Use of the enhanced BLISS-B signature algorithm? */
 	switch (this->set->id)
 	{
+		default:
 		case BLISS_I:
 		case BLISS_II:
 		case BLISS_III:
@@ -1165,7 +1166,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 	bliss_bitpacker_t *packer;
 	asn1_parser_t *parser;
 	size_t s_bits = 0;
-	int8_t s, s_min, s_max;
+	int8_t s, s_min = 0, s_max = 0;
 	uint32_t s_sign = 0x02, s_mask = 0xfffffffc, value;
 	bool success = FALSE;
 	int objectID, oid, i;
