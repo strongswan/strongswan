@@ -855,3 +855,68 @@ _list-conns_ command and implicitly the _list-conn_ event:
 
 For more details about the ruby gem refer to the comments in the gem source
 code or the generated documentation.
+
+# vici Python egg #
+
+The _vici Python egg_ is a pure Python implementation of the VICI protocol to
+implement client applications. It is provided in the _python_ subdirectory, and
+gets built and installed if strongSwan has been _./configure_'d with
+_--enable-vici_ and _--enable-python-eggs_.
+
+The _vici_ module provides a _Session()_ constructor for a high level interface,
+the underlying classes are usually not required to build Python applications
+using VICI. The _Session_ class provides methods for the supported VICI
+commands.
+
+To represent the VICI message data tree, the library converts the binary
+encoding to Python data types. The _Session_ class takes and returns Python
+objects for the exchanged message data:
+ * Sections get encoded as OrderedDict, containing other sections, or
+ * Key/Values, where the values are strings as dictionary values
+ * Lists get encoded as Python Lists with string values
+Values that do not conform to Python dict or list get converted to strings using
+str().
+
+## Connecting to the daemon ##
+
+To create a connection to the daemon, a socket can be passed to the _Session_
+constructor. If none is passed, a default Unix socket at _/var/run/charon.vici_
+is used:
+
+	import vici
+	import socket
+
+	s = socket.socket(socket.AF_UNIX)
+	s.connect("/var/run/charon.vici")
+	v = vici.Session(s)
+
+## A simple client request ##
+
+An example to print the daemon version information is as simple as:
+
+	ver = v.version()
+
+	print "{daemon} {version} ({sysname}, {release}, {machine})".format(**ver)
+
+## A request with response iteration ##
+
+The _Session_ class returns an iterable list for streamed events. Currently a
+list is returned with all streamed event messages, but a future release might
+provide more scalable object streaming. The following example lists all loaded
+connections using the _list-conns_ command and implicitly the _list-conn_ event:
+
+	for conn in v.list_conns():
+		for key in conn:
+			print key
+
+## Sorting in dictionaries ##
+
+In VICI, in some message trees the order of objects in dictionary matters. In
+contrast to ruby Hashes, Python dictionaries do not preserve order of added
+objects. It is therefore recommended to use OrderedDicts instead of the default
+dictionaries. Objects returned by the library use OrderedDicts.
+
+## API documentation ##
+
+For more details about the Python egg refer to the comments in the Python source
+code.
