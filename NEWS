@@ -9,6 +9,19 @@ strongswan-5.3.0
   as any previous strongSwan release) it must be explicitly enabled using
   the charon.make_before_break strongswan.conf option.
 
+- Support for "Signature Authentication in IKEv2" (RFC 7427) has been added.
+  This allows the use of stronger hash algorithms for public key authentication.
+  By default, signature schemes are chosen based on the strength of the
+  signature key, but specific hash algorithms may be configured in leftauth.
+
+- Key types and hash algorithms specified in rightauth are now also checked
+  against IKEv2 signature schemes.  If such constraints are used for certificate
+  chain validation in existing configurations, in particular with peers that
+  don't support RFC 7427, it may be necessary to disable this feature with the
+  charon.signature_authentication_constraints setting, because the signature
+  scheme used in classic IKEv2 public key authentication may not be strong
+  enough.
+
 - The new connmark plugin allows a host to bind conntrack flows to a specific
   CHILD_SA by applying and restoring the SA mark to conntrack entries. This
   allows a peer to handle multiple transport mode connections coming over the
