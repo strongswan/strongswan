@@ -64,10 +64,11 @@ START_TEST(test_imcv_seg_env)
 	libimcv_init(FALSE);
 	max_seg_size  = seg_env_tests[_i].max_seg_size;
 	last_seg_size = seg_env_tests[_i].last_seg_size;
+
 	base_attr = ita_attr_command_create(command);
 	base_attr->build(base_attr);
-
 	seg_env = seg_env_create(id, base_attr, max_seg_size);
+
 	if (seg_env_tests[_i].next_segs == 0)
 	{
 		ck_assert(seg_env == NULL);
@@ -156,7 +157,6 @@ START_TEST(test_imcv_seg_env)
 		seg_env1->destroy(seg_env1);
 		base_attr1->destroy(base_attr1);
 	}
-	base_attr->destroy(base_attr);
 	libimcv_deinit();
 }
 END_TEST

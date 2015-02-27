@@ -98,7 +98,7 @@ struct seg_env_t {
  * Create a PA-TNC attribute segment envelope object
  *
  * @param base_attr_id		Base Attribute ID
- * @param base_attr			Base Attribute to be segmented
+ * @param base_attr			Base Attribute to be segmented, owned by seg_env_t
  * @param max_seg_size		Maximum segment size
  */
 seg_env_t* seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
