@@ -290,6 +290,14 @@ charon.send_vendor_id = no
 charon.signature_authentication = yes
 	Whether to enable Signature Authentication as per RFC 7427.
 
+charon.signature_authentication_constraints = yes
+	Whether to enable constraints against IKEv2 signature schemes.
+
+	If enabled, signature schemes configured in _rightauth_, in addition to
+	getting used as constraints against signature schemes employed in the
+	certificate chain, are also used as constraints against the signature scheme
+	used by peers during IKEv2.
+
 charon.start-scripts {}
 	Section containing a list of scripts (name = path) that are executed when
 	the daemon is started.
