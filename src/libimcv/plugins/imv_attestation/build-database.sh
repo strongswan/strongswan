@@ -2,7 +2,7 @@
 
 p="Ubuntu 14.04 x86_64"
 a="x86_64-linux-gnu"
-k="3.13.0-37-generic"
+k="3.13.0-46-generic"
 
 for hash in sha1 sha256
 do
