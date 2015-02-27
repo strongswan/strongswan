@@ -390,7 +390,10 @@ module Vici
   # during encoding.
   class Connection
 
-    def initialize(socket)
+    def initialize(socket = nil)
+      if socket == nil
+        socket = UNIXSocket.new("/var/run/charon.vici")
+      end
       @transp = Transport.new(socket)
     end
 
