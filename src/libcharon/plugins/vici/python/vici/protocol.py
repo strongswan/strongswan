@@ -3,6 +3,7 @@ import socket
 import struct
 
 from collections import namedtuple
+from collections import OrderedDict
 
 from .exception import DeserializationException
 
@@ -150,13 +151,13 @@ class Message(object):
                     "Expected end of list at {pos}".format(pos=stream.tell())
                 )
 
-        section = {}
+        section = OrderedDict()
         section_stack = []
         while stream.has_more():
             element_type, = struct.unpack("!B", stream.read(1))
             if element_type == cls.SECTION_START:
                 section_name = decode_named_type(stream)
-                new_section = {}
+                new_section = OrderedDict()
                 section[section_name] = new_section
                 section_stack.append(section)
                 section = new_section
