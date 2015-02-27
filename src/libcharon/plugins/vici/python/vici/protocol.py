@@ -11,10 +11,8 @@ class Transport(object):
     HEADER_LENGTH = 4
     MAX_SEGMENT = 512 * 1024
 
-    def __init__(self, address="/var/run/charon.vici"):
-        self.address = address
-        self.socket = socket.socket(socket.AF_UNIX)
-        self.socket.connect(address)
+    def __init__(self, sock):
+        self.socket = sock
 
     def send(self, packet):
         self.socket.sendall(struct.pack("!I", len(packet)) + packet)

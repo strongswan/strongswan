@@ -1,4 +1,5 @@
 import collections
+import socket
 
 from .exception import SessionException
 from .protocol import Transport, Packet, Message
@@ -11,8 +12,11 @@ CommandResult = collections.namedtuple(
 
 
 class Session(object):
-    def __init__(self, address="/var/run/charon.vici"):
-        self.handler = SessionHandler(Transport(address))
+    def __init__(self, sock=None):
+        if sock is None:
+            sock = socket.socket(socket.AF_UNIX)
+            sock.connect("/var/run/charon.vici")
+        self.handler = SessionHandler(Transport(sock))
 
     def version(self):
         """Retrieve daemon and system specific version information.
