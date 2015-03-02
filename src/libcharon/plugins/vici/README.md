@@ -900,10 +900,10 @@ An example to print the daemon version information is as simple as:
 
 ## A request with response iteration ##
 
-The _Session_ class returns an iterable list for streamed events. Currently a
-list is returned with all streamed event messages, but a future release might
-provide more scalable object streaming. The following example lists all loaded
-connections using the _list-conns_ command and implicitly the _list-conn_ event:
+The _Session_ class returns an iterable Python generator for streamed events to
+continuously stream objects to the caller. The following example lists all
+loaded connections using the _list-conns_ command and implicitly the _list-conn_
+event:
 
 	for conn in v.list_conns():
 		for key in conn:
