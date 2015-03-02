@@ -245,12 +245,18 @@ static void test_create_from_dns(int family, chunk_t addr)
 	host_t *host;
 
 	host = host_create_from_dns("localhost", family, 500);
-	ck_assert(host);
-	if (family != AF_UNSPEC)
+	if (family != AF_INET6)
 	{
-		verify_address(host, addr, family, 500);
+		ck_assert(host != NULL);
 	}
-	host->destroy(host);
+	if (host)
+	{
+		if (family != AF_UNSPEC)
+		{
+			verify_address(host, addr, family, 500);
+		}
+		host->destroy(host);
+	}
 }
 
 START_TEST(test_create_from_dns_any)
