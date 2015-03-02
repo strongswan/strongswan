@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -102,6 +102,8 @@ enum auth_rule_t {
 	AUTH_RULE_RSA_STRENGTH,
 	/** required ECDSA public key strength, u_int in bits */
 	AUTH_RULE_ECDSA_STRENGTH,
+	/** required BLISS public key strength, u_int in bits */
+	AUTH_RULE_BLISS_STRENGTH,
 	/** required signature scheme, signature_scheme_t */
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
