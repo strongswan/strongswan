@@ -5,3 +5,6 @@ class DeserializationException(Exception):
 
 class SessionException(Exception):
     """Session request exception."""
+
+class CommandException(Exception):
+    """Command result exception."""

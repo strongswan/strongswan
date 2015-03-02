@@ -1,14 +1,8 @@
 import collections
 import socket
 
-from .exception import SessionException
+from .exception import SessionException, CommandException
 from .protocol import Transport, Packet, Message
-
-
-CommandResult = collections.namedtuple(
-    "CommandResult",
-    ["success", "errmsg", "log"]
-)
 
 
 class Session(object):
@@ -36,53 +30,44 @@ class Session(object):
 
     def reload_settings(self):
         """Reload strongswan.conf settings and any plugins supporting reload.
-
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("reload-settings"))
+        self.handler.request("reload-settings")
 
     def initiate(self, sa):
         """Initiate an SA.
 
         :param sa: the SA to initiate
         :type sa: dict
-        :return: logs emitted by command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
+        :return: logs emitted by command
+        :rtype: list
         """
-        response = self.handler.streamed_request("initiate", "control-log", sa)
-        return self._result(*response)
+        return self.handler.streamed_request("initiate", "control-log", sa)
 
     def terminate(self, sa):
         """Terminate an SA.
 
         :param sa: the SA to terminate
         :type sa: dict
-        :return: logs emitted by command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
+        :return: logs emitted by command
+        :rtype: list
         """
-        response = self.handler.streamed_request("terminate", "control-log", sa)
-        return self._result(*response)
+        return self.handler.streamed_request("terminate", "control-log", sa)
 
     def install(self, policy):
         """Install a trap, drop or bypass policy defined by a CHILD_SA config.
 
         :param policy: policy to install
         :type policy: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("install", policy))
+        self.handler.request("install", policy)
 
     def uninstall(self, policy):
         """Uninstall a trap, drop or bypass policy defined by a CHILD_SA config.
 
         :param policy: policy to uninstall
         :type policy: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("uninstall", policy))
+        self.handler.request("uninstall", policy)
 
     def list_sas(self, filters=None):
         """Retrieve active IKE_SAs and associated CHILD_SAs.
@@ -92,9 +77,7 @@ class Session(object):
         :return: list of active IKE_SAs and associated CHILD_SAs
         :rtype: list
         """
-        _, sa_list = self.handler.streamed_request("list-sas",
-                                                   "list-sa", filters)
-        return sa_list
+        return self.handler.streamed_request("list-sas", "list-sa", filters)
 
     def list_policies(self, filters=None):
         """Retrieve installed trap, drop and bypass policies.
@@ -104,9 +87,8 @@ class Session(object):
         :return: list of installed trap, drop and bypass policies
         :rtype: list
         """
-        _, policy_list = self.handler.streamed_request("list-policies",
-                                                       "list-policy", filters)
-        return policy_list
+        return self.handler.streamed_request("list-policies", "list-policy",
+                                             filters)
 
     def list_conns(self, filters=None):
         """Retrieve loaded connections.
@@ -116,9 +98,8 @@ class Session(object):
         :return: list of connections
         :rtype: list
         """
-        _, connection_list = self.handler.streamed_request("list-conns",
-                                                           "list-conn", filters)
-        return connection_list
+        return self.handler.streamed_request("list-conns", "list-conn",
+                                             filters)
 
     def get_conns(self):
         """Retrieve connection names loaded exclusively over vici.
@@ -136,58 +117,46 @@ class Session(object):
         :return: list of installed trap, drop and bypass policies
         :rtype: list
         """
-        _, cert_list = self.handler.streamed_request("list-certs",
-                                                     "list-cert", filters)
-        return cert_list
+        return self.handler.streamed_request("list-certs", "list-cert", filters)
 
     def load_conn(self, connection):
         """Load a connection definition into the daemon.
 
         :param connection: connection definition
         :type connection: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("load-conn", connection))
+        self.handler.request("load-conn", connection)
 
     def unload_conn(self, name):
         """Unload a connection definition.
 
         :param name: connection definition name
         :type name: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("unload-conn", name))
+        self.handler.request("unload-conn", name)
 
     def load_cert(self, certificate):
         """Load a certificate into the daemon.
 
         :param certificate: PEM or DER encoded certificate
         :type certificate: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("load-cert", certificate))
+        self.handler.request("load-cert", certificate)
 
     def load_key(self, private_key):
         """Load a private key into the daemon.
 
         :param private_key: PEM or DER encoded key
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("load-key", private_key))
+        self.handler.request("load-key", private_key)
 
     def load_shared(self, secret):
         """Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
         :param secret: shared IKE PSK, EAP or XAuth secret
         :type secret: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("load-shared", secret))
+        self.handler.request("load-shared", secret)
 
     def clear_creds(self):
         """Clear credentials loaded over vici.
@@ -195,11 +164,8 @@ class Session(object):
         Clear all loaded certificate, private key and shared key credentials.
         This affects only credentials loaded over vici, but additionally
         flushes the credential cache.
-
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("clear-creds"))
+        self.handler.request("clear-creds")
 
     def load_pool(self, pool):
         """Load a virtual IP pool.
@@ -209,10 +175,8 @@ class Session(object):
 
         :param pool: virtual IP and configuration attribute pool
         :type pool: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("load-pool", pool))
+        return self.handler.request("load-pool", pool)
 
     def unload_pool(self, pool_name):
         """Unload a virtual IP pool.
@@ -222,10 +186,8 @@ class Session(object):
 
         :param pool_name: pool by name
         :type pool_name: dict
-        :return: result of command, with `errmsg` given on failure
-        :rtype: :py:class:`vici.session.CommandResult`
         """
-        return self._result(self.handler.request("unload-pool", pool_name))
+        self.handler.request("unload-pool", pool_name)
 
     def get_pools(self):
         """Retrieve loaded pools.
@@ -234,21 +196,6 @@ class Session(object):
         :rtype: dict
         """
         return self.handler.request("get-pools")
-
-    def _result(self, command_response, log=None):
-        """Create a CommandResult for a request response.
-
-        :param command_response: command request response
-        :type command_response: dict
-        :param log: list of log messages (optional)
-        :type log: list
-        :return: a CommandResult containing any given log messages
-        :rtype: :py:class:`vici.session.CommandResult`
-        """
-        if command_response["success"] == "yes":
-            return CommandResult(True, None, log)
-        else:
-            return CommandResult(False, command_response["errmsg"], log)
 
 
 class SessionHandler(object):
@@ -270,7 +217,7 @@ class SessionHandler(object):
         return self._read()
 
     def request(self, command, message=None):
-        """Send command request with an optional message.
+        """Send request with an optional message.
 
         :param command: command to send
         :type command: str
@@ -293,7 +240,16 @@ class SessionHandler(object):
                 )
             )
 
-        return Message.deserialize(response.payload)
+        command_response = Message.deserialize(response.payload)
+        if "success" in command_response:
+            if command_response["success"] != "yes":
+                raise CommandException(
+                    "Command failed: {errmsg}".format(
+                        errmsg=command_response["errmsg"]
+                    )
+                )
+
+        return command_response
 
     def streamed_request(self, command, event_stream_type, message=None):
         """Send command request and collect and return all emitted events.
@@ -334,7 +290,7 @@ class SessionHandler(object):
             response = self._read()
 
         if response.response_type == Packet.CMD_RESPONSE:
-            response_message = Message.deserialize(response.payload)
+            Message.deserialize(response.payload)
         else:
             raise SessionException(
                 "Unexpected response type {type}, "
@@ -356,7 +312,8 @@ class SessionHandler(object):
                 )
             )
 
-        return (response_message, result)
+        return result
+
 
     def _read(self):
         """Get next packet from transport.
