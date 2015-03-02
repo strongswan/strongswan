@@ -219,6 +219,7 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
 	if (max_seg_size <  PA_TNC_ATTR_HEADER_SIZE ||
 		max_seg_size >= PA_TNC_ATTR_HEADER_SIZE + value.len)
 	{
+		base_attr->destroy(base_attr);
 		return NULL;
 	}
 
