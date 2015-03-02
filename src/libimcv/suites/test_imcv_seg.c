@@ -226,7 +226,6 @@ START_TEST(test_imcv_seg_env_special)
 	/* cleanup */
 	attr->destroy(attr);
 	seg_env->destroy(seg_env);
-	base_attr->destroy(base_attr);
 }
 END_TEST
 
@@ -306,7 +305,8 @@ START_TEST(test_imcv_seg_contract)
 									 TRUE, issuer_id, FALSE);
 	contract_r = seg_contract_create(msg_type, max_attr_size, max_seg_size,
 									 FALSE, issuer_id, TRUE);
-	attr = contract_r->first_segment(contract_r, base_attr_r);
+	attr = contract_r->first_segment(contract_r,
+									 base_attr_r->get_ref(base_attr_r));
 
 	if (seg_env_tests[_i].next_segs == 0)
 	{
@@ -422,8 +422,8 @@ START_TEST(test_imcv_seg_contract_special)
 	ck_assert(!oversize);
 
 	/* get first segment of each base attribute */
-	attr1_f = contract_r->first_segment(contract_r, base_attr1_r);
-	attr2_f = contract_r->first_segment(contract_r, base_attr2_r);
+	attr1_f = contract_r->first_segment(contract_r, base_attr1_r->get_ref(base_attr1_r));
+	attr2_f = contract_r->first_segment(contract_r, base_attr2_r->get_ref(base_attr2_r));
 	ck_assert(attr1_f);
 	ck_assert(attr2_f);
 	seg_env_attr1 = (tcg_seg_attr_seg_env_t*)attr1_f;
