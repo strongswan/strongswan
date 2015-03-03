@@ -24,6 +24,7 @@
 #include <bio/bio_writer.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
+#include <crypto/hashers/hash_algorithm_set.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -110,34 +111,73 @@ struct private_ike_init_t {
 };
 
 /**
- * Notify the peer about the hash algorithms we support, as per RFC 7427
+ * Notify the peer about the hash algorithms we support or expect,
+ * as per RFC 7427
  */
-static void send_supported_hash_algorithms(message_t *message)
+static void send_supported_hash_algorithms(private_ike_init_t *this,
+										   message_t *message)
 {
-	enumerator_t *enumerator;
+	hash_algorithm_set_t *algos;
+	enumerator_t *enumerator, *rounds;
 	bio_writer_t *writer;
 	hash_algorithm_t hash;
+	peer_cfg_t *peer;
+	auth_cfg_t *auth;
+	auth_rule_t rule;
+	uintptr_t config;
 	char *plugin_name;
 
-	/* TODO-SIG: As initiator we could send only the algorithms we expect based
-	 * on e.g. rightauth config */
-	writer = bio_writer_create(0);
-	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+	algos = hash_algorithm_set_create();
+	peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer)
 	{
-		if (hasher_algorithm_for_ikev2(hash))
+		rounds = peer->create_auth_cfg_enumerator(peer, FALSE);
+		while (rounds->enumerate(rounds, &auth))
+		{
+			enumerator = auth->create_enumerator(auth);
+			while (enumerator->enumerate(enumerator, &rule, &config))
+			{
+				if (rule == AUTH_RULE_SIGNATURE_SCHEME)
+				{
+					hash = hasher_from_signature_scheme(config);
+					if (hasher_algorithm_for_ikev2(hash))
+					{
+						algos->add(algos, hash);
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		rounds->destroy(rounds);
+	}
+
+	if (!algos->count(algos))
+	{
+		enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+		{
+			if (hasher_algorithm_for_ikev2(hash))
+			{
+				algos->add(algos, hash);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (algos->count(algos))
+	{
+		writer = bio_writer_create(0);
+		enumerator = algos->create_enumerator(algos);
+		while (enumerator->enumerate(enumerator, &hash))
 		{
 			writer->write_uint16(writer, hash);
 		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (writer->get_buf(writer).len)
-	{
+		enumerator->destroy(enumerator);
 		message->add_notify(message, FALSE, SIGNATURE_HASH_ALGORITHMS,
 							writer->get_buf(writer));
+		writer->destroy(writer);
 	}
-	writer->destroy(writer);
+	algos->destroy(algos);
 }
 
 /**
@@ -246,7 +286,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 			this->ike_sa->supports_extension(this->ike_sa,
 											 EXT_SIGNATURE_AUTH))
 		{
-			send_supported_hash_algorithms(message);
+			send_supported_hash_algorithms(this, message);
 		}
 	}
 }
