@@ -159,11 +159,26 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 		}
 		enumerator->destroy(enumerator);
 
-		/* default to the scheme we'd use with classic authentication */
-		if (selected == SIGN_UNKNOWN && key_type == KEY_RSA &&
-			keymat->hash_algorithm_supported(keymat, HASH_SHA1))
+		/* for RSA we tried at least SHA-512, also try other schemes down to
+		 * what we'd use with classic authentication */
+		if (selected == SIGN_UNKNOWN && key_type == KEY_RSA)
 		{
-			selected = SIGN_RSA_EMSA_PKCS1_SHA1;
+			signature_scheme_t schemes[] = {
+				SIGN_RSA_EMSA_PKCS1_SHA384,
+				SIGN_RSA_EMSA_PKCS1_SHA256,
+				SIGN_RSA_EMSA_PKCS1_SHA1,
+			};
+			int i;
+
+			for (i = 0; i < countof(schemes); i++)
+			{
+				if (keymat->hash_algorithm_supported(keymat,
+									hasher_from_signature_scheme(schemes[i])))
+				{
+					selected = scheme;
+					break;
+				}
+			}
 		}
 	}
 	return selected;
