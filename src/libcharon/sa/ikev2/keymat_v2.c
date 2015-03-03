@@ -18,7 +18,7 @@
 
 #include <daemon.h>
 #include <crypto/prf_plus.h>
-#include <collections/array.h>
+#include <crypto/hashers/hash_algorithm_set.h>
 
 typedef struct private_keymat_v2_t private_keymat_v2_t;
 
@@ -73,10 +73,9 @@ struct private_keymat_v2_t {
 	chunk_t skp_verify;
 
 	/**
-	 * List of hash algorithms supported by peer for signature
-	 * authentication (hash_algorithm_t)
+	 * Set of hash algorithms supported by peer for signature authentication
 	 */
-	array_t *hash_algorithms;
+	hash_algorithm_set_t *hash_algorithms;
 };
 
 METHOD(keymat_t, get_version, ike_version_t,
@@ -684,23 +683,6 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	return TRUE;
 }
 
-/**
- * Sort hash algorithms
- */
-static int hash_sort(const void *a, const void *b, void *user)
-{
-	const hash_algorithm_t *ha = a, *hb = b;
-	return *ha - *hb;
-}
-
-/**
- * Find a hash algorithm
- */
-static int hash_find(const void *a, const void *b)
-{
-	return hash_sort(a, b, NULL);
-}
-
 METHOD(keymat_v2_t, hash_algorithm_supported, bool,
 	private_keymat_v2_t *this, hash_algorithm_t hash)
 {
@@ -708,7 +690,7 @@ METHOD(keymat_v2_t, hash_algorithm_supported, bool,
 	{
 		return FALSE;
 	}
-	return array_bsearch(this->hash_algorithms, &hash, hash_find, NULL) != -1;
+	return this->hash_algorithms->contains(this->hash_algorithms, hash);
 }
 
 METHOD(keymat_v2_t, add_hash_algorithm, void,
@@ -716,13 +698,9 @@ METHOD(keymat_v2_t, add_hash_algorithm, void,
 {
 	if (!this->hash_algorithms)
 	{
-		this->hash_algorithms = array_create(sizeof(hash_algorithm_t), 0);
+		this->hash_algorithms = hash_algorithm_set_create();
 	}
-	if (!hash_algorithm_supported(this, hash))
-	{
-		array_insert(this->hash_algorithms, ARRAY_TAIL, &hash);
-		array_sort(this->hash_algorithms, hash_sort, NULL);
-	}
+	this->hash_algorithms->add(this->hash_algorithms, hash);
 }
 
 METHOD(keymat_t, destroy, void,
@@ -734,7 +712,7 @@ METHOD(keymat_t, destroy, void,
 	chunk_clear(&this->skd);
 	chunk_clear(&this->skp_verify);
 	chunk_clear(&this->skp_build);
-	array_destroy(this->hash_algorithms);
+	DESTROY_IF(this->hash_algorithms);
 	free(this);
 }
 
