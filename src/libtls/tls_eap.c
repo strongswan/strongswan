@@ -426,6 +426,12 @@ METHOD(tls_eap_t, set_identifier, void,
 	this->identifier = identifier;
 }
 
+METHOD(tls_eap_t, get_auth, auth_cfg_t*,
+	private_tls_eap_t *this)
+{
+	return this->tls->get_auth(this->tls);
+}
+
 METHOD(tls_eap_t, destroy, void,
 	private_tls_eap_t *this)
 {
@@ -453,6 +459,7 @@ tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
 			.get_msk = _get_msk,
 			.get_identifier = _get_identifier,
 			.set_identifier = _set_identifier,
+			.get_auth = _get_auth,
 			.destroy = _destroy,
 		},
 		.type = type,

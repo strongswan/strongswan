@@ -22,6 +22,11 @@ strongswan-5.3.0
   Windows 7 IKEv2 clients, which announces its services over the tunnel if the
   negotiated IPsec policy allows it.
 
+- EAP server methods now can fulfill public key constraints, such as rightcert
+  or rightca. Additionally, public key and signature constraints can be
+  specified for EAP methods in the rightauth keyword. Currently the EAP-TLS and
+  EAP-TTLS methods provide verification details to constraints checking.
+
 - Upgrade of the BLISS post-quantum signature algorithm to the improved BLISS-B
   variant. Can be used in conjunction with the SHA256, SHA384 and SHA512 hash
   algorithms with SHA512 being the default.

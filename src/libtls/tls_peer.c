@@ -324,6 +324,7 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
 		while (enumerator->enumerate(enumerator, &current, &auth))
 		{
 			public = current->get_ref(current);
+			this->server_auth->merge(this->server_auth, auth, FALSE);
 			break;
 		}
 		enumerator->destroy(enumerator);
@@ -1153,6 +1154,12 @@ METHOD(tls_handshake_t, get_server_id, identification_t*,
 	return this->server;
 }
 
+METHOD(tls_handshake_t, get_auth, auth_cfg_t*,
+	private_tls_peer_t *this)
+{
+	return this->server_auth;
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_peer_t *this)
 {
@@ -1186,6 +1193,7 @@ tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto, tls_alert_t *alert
 				.finished = _finished,
 				.get_peer_id = _get_peer_id,
 				.get_server_id = _get_server_id,
+				.get_auth = _get_auth,
 				.destroy = _destroy,
 			},
 		},

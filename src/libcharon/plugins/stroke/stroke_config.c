@@ -620,9 +620,16 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	else if (strpfx(auth, "eap"))
 	{
 		eap_vendor_type_t *type;
+		char *pos;
 
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
-
+		/* check for public key constraints for EAP-TLS etc. */
+		pos = strchr(auth, ':');
+		if (pos)
+		{
+			*pos = 0;
+			parse_pubkey_constraints(pos + 1, cfg);
+		}
 		type = eap_vendor_type_from_string(auth);
 		if (type)
 		{
