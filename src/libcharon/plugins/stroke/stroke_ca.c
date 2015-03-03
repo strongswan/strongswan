@@ -120,6 +120,84 @@ static void ca_section_destroy(ca_section_t *this)
 }
 
 /**
+ * Data for the certificate enumerator
+ */
+typedef struct {
+	private_stroke_ca_t *this;
+	certificate_type_t cert;
+	key_type_t key;
+	identification_t *id;
+} cert_data_t;
+
+/**
+ * destroy cert_data
+ */
+static void cert_data_destroy(cert_data_t *data)
+{
+	data->this->lock->unlock(data->this->lock);
+	free(data);
+}
+
+/**
+ * filter function for certs enumerator
+ */
+static bool certs_filter(cert_data_t *data, ca_section_t **in,
+						 certificate_t **out)
+{
+	public_key_t *public;
+	certificate_t *cert = (*in)->cert;
+
+	if (data->cert == CERT_ANY || data->cert == cert->get_type(cert))
+	{
+		public = cert->get_public_key(cert);
+		if (public)
+		{
+			if (data->key == KEY_ANY || data->key == public->get_type(public))
+			{
+				if (data->id && public->has_fingerprint(public,
+											data->id->get_encoding(data->id)))
+				{
+					public->destroy(public);
+					*out = cert;
+					return TRUE;
+				}
+			}
+			public->destroy(public);
+		}
+		else if (data->key != KEY_ANY)
+		{
+			return FALSE;
+		}
+		if (data->id == NULL || cert->has_subject(cert, data->id))
+		{
+			*out = cert;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_stroke_ca_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
+{
+	enumerator_t *enumerator;
+	cert_data_t *data;
+
+	INIT(data,
+		.this = this,
+		.cert = cert,
+		.key = key,
+		.id = id,
+	);
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->sections->create_enumerator(this->sections);
+	return enumerator_create_filter(enumerator, (void*)certs_filter, data,
+									(void*)cert_data_destroy);
+}
+
+/**
  * data to pass to create_inner_cdp
  */
 typedef struct {
@@ -438,7 +516,7 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 		.public = {
 			.set = {
 				.create_private_enumerator = (void*)return_null,
-				.create_cert_enumerator = (void*)return_null,
+				.create_cert_enumerator = _create_cert_enumerator,
 				.create_shared_enumerator = (void*)return_null,
 				.create_cdp_enumerator = _create_cdp_enumerator,
 				.cache_cert = (void*)nop,
@@ -456,4 +534,3 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 
 	return &this->public;
 }
-

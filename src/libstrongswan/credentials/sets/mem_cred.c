@@ -192,6 +192,24 @@ METHOD(mem_cred_t, add_cert_ref, certificate_t*,
 	return add_cert_internal(this, trusted, cert);
 }
 
+METHOD(mem_cred_t, get_cert_ref, certificate_t*,
+	private_mem_cred_t *this, certificate_t *cert)
+{
+	certificate_t *cached;
+
+	this->lock->write_lock(this->lock);
+	if (this->untrusted->find_first(this->untrusted,
+									(linked_list_match_t)certificate_equals,
+									(void**)&cached, cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+		cert = cached->get_ref(cached);
+	}
+	this->lock->unlock(this->lock);
+
+	return cert;
+}
+
 METHOD(mem_cred_t, add_crl, bool,
 	private_mem_cred_t *this, crl_t *crl)
 {
@@ -736,6 +754,7 @@ mem_cred_t *mem_cred_create()
 			},
 			.add_cert = _add_cert,
 			.add_cert_ref = _add_cert_ref,
+			.get_cert_ref = _get_cert_ref,
 			.add_crl = _add_crl,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
