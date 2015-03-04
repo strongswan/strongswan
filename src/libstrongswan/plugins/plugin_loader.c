@@ -1291,9 +1291,9 @@ METHOD(plugin_loader_t, status, void,
 
 		if (this->stats.failed)
 		{
-			dbg(DBG_LIB, level, "unable to load %d plugin feature%s (%d due to "
-				"unmet dependencies)", this->stats.failed,
-				this->stats.failed == 1 ? "" : "s", this->stats.depends);
+			DBG2(DBG_LIB, "unable to load %d plugin feature%s (%d due to unmet "
+				 "dependencies)", this->stats.failed,
+				 this->stats.failed == 1 ? "" : "s", this->stats.depends);
 		}
 	}
 }
