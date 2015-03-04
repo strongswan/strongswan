@@ -1755,7 +1755,8 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 	if (host->equals(host, duplicate->get_other_host(duplicate)))
 	{
 		/* looks like a reauthentication attempt */
-		if (!new->has_condition(new, COND_INIT_CONTACT_SEEN))
+		if (!new->has_condition(new, COND_INIT_CONTACT_SEEN) &&
+			new->get_version(new) == IKEV1)
 		{
 			/* IKEv1 implicitly takes over children, IKEv2 recreates them
 			 * explicitly. */
