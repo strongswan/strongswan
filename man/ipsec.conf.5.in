@@ -584,6 +584,7 @@ for pre-shared key authentication,
 to (require the) use of the Extensible Authentication Protocol in IKEv2, and
 .B xauth
 for IKEv1 eXtended Authentication.
+
 To require a trustchain public key strength for the remote side, specify the
 key type followed by the minimum strength in bits (for example
 .BR ecdsa-384
@@ -596,6 +597,20 @@ or a key strength definition (for example
 .BR pubkey-sha1-sha256
 or
 .BR rsa-2048-ecdsa-256-sha256-sha384-sha512 ).
+Unless disabled in
+.BR strongswan.conf (5)
+such key types and hash algorithms are also applied as constraints against IKEv2
+signature authentication schemes used by the remote side.
+
+If both peers support RFC 7427 ("Signature Authentication in IKEv2") specific
+hash algorithms to be used during IKEv2 authentication may be configured.
+The syntax is the same as above. For example, with
+.B pubkey-sha384-sha256
+a public key signature scheme with either SHA-384 or SHA-256 would get used for
+authentication, in that order and depending on the hash algorithms supported by
+the peer.  If no specific hash algorithms are configured, the default is to
+prefer an algorithm that matches or exceeds the strength of the signature key.
+
 For
 .BR eap ,
 an optional EAP method can be appended. Currently defined methods are

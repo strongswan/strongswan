@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -20,6 +20,8 @@
 #include <daemon.h>
 #include <encoding/payloads/auth_payload.h>
 #include <sa/ikev2/keymat_v2.h>
+#include <asn1/asn1.h>
+#include <asn1/oid.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -52,7 +54,135 @@ struct private_pubkey_authenticator_t {
 	 * Reserved bytes of ID payload
 	 */
 	char reserved[3];
+
+	/**
+	 * Whether to store signature schemes on remote auth configs.
+	 */
+	bool store_signature_scheme;
 };
+
+/**
+ * Parse authentication data used for Signature Authentication as per RFC 7427
+ */
+static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
+									  signature_scheme_t *scheme)
+{
+	u_int8_t len;
+	int oid;
+
+	if (!auth_data->len)
+	{
+		return FALSE;
+	}
+	len = auth_data->ptr[0];
+	*auth_data = chunk_skip(*auth_data, 1);
+	/* we currently don't support schemes that require parameters */
+	oid = asn1_parse_algorithmIdentifier(*auth_data, 1, NULL);
+	*scheme = signature_scheme_from_oid(oid);
+	if (*scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
+	*key_type = key_type_from_signature_scheme(*scheme);
+	*auth_data = chunk_skip(*auth_data, len);
+	return TRUE;
+}
+
+/**
+ * Build authentication data used for Signature Authentication as per RFC 7427
+ */
+static bool build_signature_auth_data(chunk_t *auth_data,
+									  signature_scheme_t scheme)
+{
+	chunk_t data;
+	u_int8_t len;
+	int oid;
+
+	oid = signature_scheme_to_oid(scheme);
+	if (oid == OID_UNKNOWN)
+	{
+		return FALSE;
+	}
+	data = asn1_algorithmIdentifier(oid);
+	len = data.len;
+	*auth_data = chunk_cat("cmm", chunk_from_thing(len), data, *auth_data);
+	return TRUE;
+}
+
+/**
+ * Select a signature scheme based on our configuration, the other peer's
+ * capabilities and the private key
+ */
+static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
+									auth_cfg_t *auth, private_key_t *private)
+{
+	enumerator_t *enumerator;
+	signature_scheme_t selected = SIGN_UNKNOWN, scheme;
+	uintptr_t config;
+	auth_rule_t rule;
+	key_type_t key_type;
+	bool have_config = FALSE;
+
+	key_type = private->get_type(private);
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &rule, &config))
+	{
+		if (rule != AUTH_RULE_SIGNATURE_SCHEME)
+		{
+			continue;
+		}
+		have_config = TRUE;
+		if (key_type == key_type_from_signature_scheme(config) &&
+			keymat->hash_algorithm_supported(keymat,
+										hasher_from_signature_scheme(config)))
+		{
+			selected = config;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (selected == SIGN_UNKNOWN && !have_config)
+	{
+		/* if no specific configuration, find a scheme appropriate for the key
+		 * and supported by the other peer */
+		enumerator = signature_schemes_for_key(key_type,
+											   private->get_keysize(private));
+		while (enumerator->enumerate(enumerator, &scheme))
+		{
+			if (keymat->hash_algorithm_supported(keymat,
+										hasher_from_signature_scheme(scheme)))
+			{
+				selected = scheme;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* for RSA we tried at least SHA-512, also try other schemes down to
+		 * what we'd use with classic authentication */
+		if (selected == SIGN_UNKNOWN && key_type == KEY_RSA)
+		{
+			signature_scheme_t schemes[] = {
+				SIGN_RSA_EMSA_PKCS1_SHA384,
+				SIGN_RSA_EMSA_PKCS1_SHA256,
+				SIGN_RSA_EMSA_PKCS1_SHA1,
+			};
+			int i;
+
+			for (i = 0; i < countof(schemes); i++)
+			{
+				if (keymat->hash_algorithm_supported(keymat,
+									hasher_from_signature_scheme(schemes[i])))
+				{
+					selected = scheme;
+					break;
+				}
+			}
+		}
+	}
+	return selected;
+}
 
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
@@ -64,7 +194,7 @@ METHOD(authenticator_t, build, status_t,
 	auth_cfg_t *auth;
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
-	signature_scheme_t scheme;
+	signature_scheme_t scheme = SIGN_UNKNOWN;
 	keymat_v2_t *keymat;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
@@ -75,62 +205,75 @@ METHOD(authenticator_t, build, status_t,
 		DBG1(DBG_IKE, "no private key found for '%Y'", id);
 		return NOT_FOUND;
 	}
-
-	switch (private->get_type(private))
-	{
-		case KEY_RSA:
-			/* we currently use always SHA1 for signatures,
-			 * TODO: support other hashes depending on configuration/auth */
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			auth_method = AUTH_RSA;
-			break;
-		case KEY_ECDSA:
-			/* we try to deduct the signature scheme from the keysize */
-			switch (private->get_keysize(private))
-			{
-				case 256:
-					scheme = SIGN_ECDSA_256;
-					auth_method = AUTH_ECDSA_256;
-					break;
-				case 384:
-					scheme = SIGN_ECDSA_384;
-					auth_method = AUTH_ECDSA_384;
-					break;
-				case 521:
-					scheme = SIGN_ECDSA_521;
-					auth_method = AUTH_ECDSA_521;
-					break;
-				default:
-					DBG1(DBG_IKE, "%d bit ECDSA private key size not supported",
-							private->get_keysize(private));
-					return status;
-			}
-			break;
-		case KEY_BLISS:
-			/* we currently use SHA512 only */
-			scheme = SIGN_BLISS_WITH_SHA512;
-			auth_method = AUTH_BLISS;
-			break;
-		default:
-			DBG1(DBG_IKE, "private key of type %N not supported",
-					key_type_names, private->get_type(private));
-			return status;
-	}
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_SIGNATURE_AUTH))
+	{
+		scheme = select_signature_scheme(keymat, auth, private);
+		auth_method = AUTH_DS;
+		if (scheme == SIGN_UNKNOWN)
+		{
+			DBG1(DBG_IKE, "no common hash algorithm found to create signature "
+				 "with %N key", key_type_names, private->get_type(private));
+			return status;
+		}
+	}
+	else
+	{
+		switch (private->get_type(private))
+		{
+			case KEY_RSA:
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+				auth_method = AUTH_RSA;
+				break;
+			case KEY_ECDSA:
+				/* deduct the signature scheme from the keysize */
+				switch (private->get_keysize(private))
+				{
+					case 256:
+						scheme = SIGN_ECDSA_256;
+						auth_method = AUTH_ECDSA_256;
+						break;
+					case 384:
+						scheme = SIGN_ECDSA_384;
+						auth_method = AUTH_ECDSA_384;
+						break;
+					case 521:
+						scheme = SIGN_ECDSA_521;
+						auth_method = AUTH_ECDSA_521;
+						break;
+					default:
+						DBG1(DBG_IKE, "%d bit ECDSA private key size not "
+							 "supported", private->get_keysize(private));
+						return status;
+				}
+				break;
+			default:
+				DBG1(DBG_IKE, "private key of type %N not supported",
+					 key_type_names, private->get_type(private));
+				return status;
+		}
+	}
+
 	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
 								this->nonce, id, this->reserved, &octets) &&
 		private->sign(private, scheme, octets, &auth_data))
 	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, auth_method);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-		status = SUCCESS;
+		if (auth_method != AUTH_DS ||
+			build_signature_auth_data(&auth_data, scheme))
+		{
+			auth_payload = auth_payload_create();
+			auth_payload->set_auth_method(auth_payload, auth_method);
+			auth_payload->set_data(auth_payload, auth_data);
+			chunk_free(&auth_data);
+			message->add_payload(message, (payload_t*)auth_payload);
+			status = SUCCESS;
+		}
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 auth_method_names, auth_method,
-		 (status == SUCCESS)? "successful":"failed");
+		 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
+		 auth_method == AUTH_DS ? scheme : auth_method,
+		 status == SUCCESS ? "successful" : "failed");
 	chunk_free(&octets);
 	private->destroy(private);
 
@@ -158,11 +301,10 @@ METHOD(authenticator_t, process, status_t,
 		return FAILED;
 	}
 	auth_method = auth_payload->get_auth_method(auth_payload);
+	auth_data = auth_payload->get_data(auth_payload);
 	switch (auth_method)
 	{
 		case AUTH_RSA:
-			/* We currently accept SHA1 signatures only
-			 * TODO: allow other hash algorithms and note it in "auth" */
 			key_type = KEY_RSA;
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
@@ -175,14 +317,15 @@ METHOD(authenticator_t, process, status_t,
 		case AUTH_ECDSA_521:
 			scheme = SIGN_ECDSA_521;
 			break;
-		case AUTH_BLISS:
-			key_type = KEY_BLISS;
-			scheme = SIGN_BLISS_WITH_SHA512;
-			break;
+		case AUTH_DS:
+			if (parse_signature_auth_data(&auth_data, &key_type, &scheme))
+			{
+				break;
+			}
+			/* fall-through */
 		default:
 			return INVALID_ARG;
 	}
-	auth_data = auth_payload->get_data(auth_payload);
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (!keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
@@ -197,11 +340,16 @@ METHOD(authenticator_t, process, status_t,
 	{
 		if (public->verify(public, scheme, octets, auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
-						   id, auth_method_names, auth_method);
+			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
+				 auth_method == AUTH_DS ? scheme : auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			if (this->store_signature_scheme)
+			{
+				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, (uintptr_t)scheme);
+			}
 			break;
 		}
 		else
@@ -274,6 +422,8 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 		.ike_sa = ike_sa,
 		.ike_sa_init = received_init,
 		.nonce = sent_nonce,
+		.store_signature_scheme = lib->settings->get_bool(lib->settings,
+					"%s.signature_authentication_constraints", TRUE, lib->ns),
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 

@@ -698,6 +698,9 @@ static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
 			case KEY_ECDSA:
 				auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
 				break;
+			case KEY_BLISS:
+				auth->add(auth, AUTH_RULE_BLISS_STRENGTH, strength);
+				break;
 			default:
 				break;
 		}

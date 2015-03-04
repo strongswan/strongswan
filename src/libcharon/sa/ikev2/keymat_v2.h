@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -124,6 +124,22 @@ struct keymat_v2_t {
 	bool (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 						chunk_t nonce, chunk_t secret,
 						identification_t *id, char reserved[3], chunk_t *sig);
+
+	/**
+	 * Add a hash algorithm supported by the peer for signature authentication.
+	 *
+	 * @param hash			hash algorithm
+	 */
+	void (*add_hash_algorithm)(keymat_v2_t *this, hash_algorithm_t hash);
+
+	/**
+	 * Check if a given hash algorithm is supported by the peer for signature
+	 * authentication.
+	 *
+	 * @param hash			hash algorithm
+	 * @return				TRUE if supported, FALSE otherwise
+	 */
+	bool (*hash_algorithm_supported)(keymat_v2_t *this, hash_algorithm_t hash);
 };
 
 /**

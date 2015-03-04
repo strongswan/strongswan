@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -243,8 +244,35 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
  * Conversion of ASN.1 signature or hash OID to signature scheme.
  *
  * @param oid			ASN.1 OID
- * @return				signature_scheme, SIGN_UNKNOWN if OID is unsupported
+ * @return				signature scheme, SIGN_UNKNOWN if OID is unsupported
  */
 signature_scheme_t signature_scheme_from_oid(int oid);
+
+/**
+ * Conversion of signature scheme to ASN.1 signature OID.
+ *
+ * @param scheme		signature scheme
+ * @return				ASN.1 OID, OID_UNKNOWN if not supported
+ */
+int signature_scheme_to_oid(signature_scheme_t scheme);
+
+/**
+ * Enumerate signature schemes that are appropriate for a key of the given type
+ * and size|strength.
+ *
+ * @param type			type of the key
+ * @param size			size or strength of the key
+ * @return				enumerator over signature_scheme_t (increasing strength)
+ */
+enumerator_t *signature_schemes_for_key(key_type_t type, int size);
+
+/**
+ * Determine the type of key associated with a given signature scheme.
+ *
+ * @param scheme		signature scheme
+ * @return				key type (could be KEY_ANY)
+ */
+key_type_t key_type_from_signature_scheme(signature_scheme_t scheme);
+
 
 #endif /** PUBLIC_KEY_H_ @}*/

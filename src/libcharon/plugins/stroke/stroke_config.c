@@ -301,7 +301,8 @@ static void build_crl_policy(auth_cfg_t *cfg, bool local, int policy)
 static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 {
 	enumerator_t *enumerator;
-	bool rsa = FALSE, ecdsa = FALSE, rsa_len = FALSE, ecdsa_len = FALSE;
+	bool rsa = FALSE, ecdsa = FALSE, bliss = FALSE,
+		 rsa_len = FALSE, ecdsa_len = FALSE, bliss_strength = FALSE;
 	int strength;
 	char *token;
 
@@ -328,6 +329,9 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
 			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
 			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
+			{ "sha256",		SIGN_BLISS_WITH_SHA256,			KEY_BLISS,	},
+			{ "sha384",		SIGN_BLISS_WITH_SHA384,			KEY_BLISS,	},
+			{ "sha512",		SIGN_BLISS_WITH_SHA512,			KEY_BLISS,	},
 		};
 
 		if (rsa_len || ecdsa_len)
@@ -343,8 +347,12 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 				{
 					cfg->add(cfg, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
 				}
+				else if (bliss_strength)
+				{
+					cfg->add(cfg, AUTH_RULE_BLISS_STRENGTH, (uintptr_t)strength);
+				}
 			}
-			rsa_len = ecdsa_len = FALSE;
+			rsa_len = ecdsa_len = bliss_strength = FALSE;
 			if (strength)
 			{
 				continue;
@@ -358,6 +366,11 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 		if (streq(token, "ecdsa"))
 		{
 			ecdsa = ecdsa_len = TRUE;
+			continue;
+		}
+		if (streq(token, "bliss"))
+		{
+			bliss = bliss_strength = TRUE;
 			continue;
 		}
 		if (streq(token, "pubkey"))
@@ -376,7 +389,8 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 				 */
 				if ((rsa && schemes[i].key == KEY_RSA) ||
 					(ecdsa && schemes[i].key == KEY_ECDSA) ||
-					(!rsa && !ecdsa))
+					(bliss && schemes[i].key == KEY_BLISS) ||
+					(!rsa && !ecdsa && !bliss))
 				{
 					cfg->add(cfg, AUTH_RULE_SIGNATURE_SCHEME,
 							 (uintptr_t)schemes[i].scheme);
@@ -590,7 +604,8 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	/* authentication metod (class, actually) */
 	if (strpfx(auth, "pubkey") ||
 		strpfx(auth, "rsa") ||
-		strpfx(auth, "ecdsa"))
+		strpfx(auth, "ecdsa") ||
+		strpfx(auth, "bliss"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);

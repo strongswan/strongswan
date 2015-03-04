@@ -31,15 +31,14 @@ ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
 	"DSS signature");
-ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_NULL, AUTH_DSS,
+ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_DS, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
 	"ECDSA-521 signature",
 	"secure password method",
-	"NULL authentication");
-ENUM_NEXT(auth_method_names, AUTH_BLISS, AUTH_BLISS, AUTH_NULL,
-	"BLISS signature");
-ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_BLISS,
+	"NULL authentication",
+	"digital signature");
+ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_DS,
 	"XAuthInitPSK",
 	"XAuthRespPSK",
 	"XAuthInitRSA",
@@ -102,7 +101,7 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_ECDSA_256:
 		case AUTH_ECDSA_384:
 		case AUTH_ECDSA_521:
-		case AUTH_BLISS:
+		case AUTH_DS:
 			return (authenticator_t*)pubkey_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
 		case AUTH_PSK:

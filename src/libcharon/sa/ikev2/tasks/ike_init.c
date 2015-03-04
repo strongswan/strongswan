@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -20,8 +20,11 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
+#include <crypto/hashers/hash_algorithm_set.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -100,7 +103,109 @@ struct private_ike_init_t {
 	 * retries done so far after failure (cookie or bad dh group)
 	 */
 	u_int retry;
+
+	/**
+	 * Whether to use Signature Authentication as per RFC 7427
+	 */
+	bool signature_authentication;
 };
+
+/**
+ * Notify the peer about the hash algorithms we support or expect,
+ * as per RFC 7427
+ */
+static void send_supported_hash_algorithms(private_ike_init_t *this,
+										   message_t *message)
+{
+	hash_algorithm_set_t *algos;
+	enumerator_t *enumerator, *rounds;
+	bio_writer_t *writer;
+	hash_algorithm_t hash;
+	peer_cfg_t *peer;
+	auth_cfg_t *auth;
+	auth_rule_t rule;
+	uintptr_t config;
+	char *plugin_name;
+
+	algos = hash_algorithm_set_create();
+	peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer)
+	{
+		rounds = peer->create_auth_cfg_enumerator(peer, FALSE);
+		while (rounds->enumerate(rounds, &auth))
+		{
+			enumerator = auth->create_enumerator(auth);
+			while (enumerator->enumerate(enumerator, &rule, &config))
+			{
+				if (rule == AUTH_RULE_SIGNATURE_SCHEME)
+				{
+					hash = hasher_from_signature_scheme(config);
+					if (hasher_algorithm_for_ikev2(hash))
+					{
+						algos->add(algos, hash);
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		rounds->destroy(rounds);
+	}
+
+	if (!algos->count(algos))
+	{
+		enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+		{
+			if (hasher_algorithm_for_ikev2(hash))
+			{
+				algos->add(algos, hash);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (algos->count(algos))
+	{
+		writer = bio_writer_create(0);
+		enumerator = algos->create_enumerator(algos);
+		while (enumerator->enumerate(enumerator, &hash))
+		{
+			writer->write_uint16(writer, hash);
+		}
+		enumerator->destroy(enumerator);
+		message->add_notify(message, FALSE, SIGNATURE_HASH_ALGORITHMS,
+							writer->get_buf(writer));
+		writer->destroy(writer);
+	}
+	algos->destroy(algos);
+}
+
+/**
+ * Store algorithms supported by other peer
+ */
+static void handle_supported_hash_algorithms(private_ike_init_t *this,
+											 notify_payload_t *notify)
+{
+	bio_reader_t *reader;
+	u_int16_t algo;
+	bool added = FALSE;
+
+	reader = bio_reader_create(notify->get_notification_data(notify));
+	while (reader->remaining(reader) >= 2 && reader->read_uint16(reader, &algo))
+	{
+		if (hasher_algorithm_for_ikev2(algo))
+		{
+			this->keymat->add_hash_algorithm(this->keymat, algo);
+			added = TRUE;
+		}
+	}
+	reader->destroy(reader);
+
+	if (added)
+	{
+		this->ike_sa->enable_extension(this->ike_sa, EXT_SIGNATURE_AUTH);
+	}
+}
 
 /**
  * build the payloads for the message
@@ -174,6 +279,16 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 								chunk_empty);
 		}
 	}
+	/* submit supported hash algorithms for signature authentication */
+	if (!this->old_sa && this->signature_authentication)
+	{
+		if (this->initiator ||
+			this->ike_sa->supports_extension(this->ike_sa,
+											 EXT_SIGNATURE_AUTH))
+		{
+			send_supported_hash_algorithms(this, message);
+		}
+	}
 }
 
 /**
@@ -228,11 +343,23 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				notify_payload_t *notify = (notify_payload_t*)payload;
 
-				if (notify->get_notify_type(notify) == FRAGMENTATION_SUPPORTED)
+				switch (notify->get_notify_type(notify))
 				{
-					this->ike_sa->enable_extension(this->ike_sa,
-												   EXT_IKE_FRAGMENTATION);
+					case FRAGMENTATION_SUPPORTED:
+						this->ike_sa->enable_extension(this->ike_sa,
+													   EXT_IKE_FRAGMENTATION);
+						break;
+					case SIGNATURE_HASH_ALGORITHMS:
+						if (this->signature_authentication)
+						{
+							handle_supported_hash_algorithms(this, notify);
+						}
+						break;
+					default:
+						/* other notifies are handled elsewhere */
+						break;
 				}
+
 			}
 			default:
 				break;
@@ -637,6 +764,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.dh_group = MODP_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.old_sa = old_sa,
+		.signature_authentication = lib->settings->get_bool(lib->settings,
+								"%s.signature_authentication", TRUE, lib->ns),
 	);
 
 	if (initiator)

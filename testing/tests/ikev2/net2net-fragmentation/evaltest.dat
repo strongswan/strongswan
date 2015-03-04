@@ -1,7 +1,7 @@
 moon::cat /var/log/daemon.log::IKE_SA_INIT request 0.*FRAG_SUP::YES
 sun::cat /var/log/daemon.log::IKE_SA_INIT response 0.*FRAG_SUP::YES
-moon::cat /var/log/daemon.log::splitting IKE message with length of 1804 bytes into 2 fragments::YES
-sun::cat /var/log/daemon.log::splitting IKE message with length of 1596 bytes into 2 fragments::YES
+moon::cat /var/log/daemon.log::splitting IKE message with length of .*bytes into 2 fragments::YES
+sun::cat /var/log/daemon.log::splitting IKE message with length of .*bytes into 2 fragments::YES
 moon::cat /var/log/daemon.log::received fragment #1 of 2, waiting for complete IKE message::YES
 moon::cat /var/log/daemon.log::received fragment #2 of 2, reassembling fragmented IKE message::YES
 sun::cat /var/log/daemon.log::received fragment #1 of 2, waiting for complete IKE message::YES

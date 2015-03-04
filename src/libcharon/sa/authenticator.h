@@ -85,9 +85,9 @@ enum auth_method_t {
 	AUTH_NULL = 13,
 
 	/**
-	 * BLISS Authentication Method
+	 * Digital Signature as specified in RFC 7427
 	 */
-	AUTH_BLISS = 220,
+	AUTH_DS = 14,
 
 	/**
 	 * IKEv1 initiator XAUTH with PSK, outside of IANA range

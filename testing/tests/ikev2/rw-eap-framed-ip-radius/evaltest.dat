@@ -1,4 +1,4 @@
-carol::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA signature successful::YES
+carol::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA.* successful::YES
 moon ::cat /var/log/daemon.log::received EAP identity .*carol::YES
 carol::cat /var/log/daemon.log::server requested EAP_MD5 authentication::YES
 carol::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with EAP successful::YES
@@ -8,7 +8,7 @@ carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*PH_IP_CAROL.*moon.strongswa
 moon ::ipsec status 2> /dev/null::rw-eap[{]1}.*INSTALLED, TUNNEL::YES
 carol::ipsec status 2> /dev/null::home.*INSTALLED, TUNNEL::YES
 carol::cat /var/log/daemon.log::installing new virtual IP 10.3.0.1::YES
-dave ::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA signature successful::YES
+dave ::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA.* successful::YES
 moon ::cat /var/log/daemon.log::received EAP identity .*dave::YES
 dave ::cat /var/log/daemon.log::server requested EAP_MD5 authentication::YES
 dave ::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with EAP successful::YES
