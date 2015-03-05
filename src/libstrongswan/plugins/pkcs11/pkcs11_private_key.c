@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -23,6 +23,7 @@
 #include "pkcs11_public_key.h"
 
 #include <utils/debug.h>
+#include <asn1/asn1.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 
@@ -288,7 +289,23 @@ METHOD(private_key_t, sign, bool,
 		free(buf);
 		return FALSE;
 	}
-	*signature = chunk_create(buf, len);
+	switch (scheme)
+	{
+		case SIGN_ECDSA_WITH_SHA1_DER:
+		case SIGN_ECDSA_WITH_SHA256_DER:
+		case SIGN_ECDSA_WITH_SHA384_DER:
+		case SIGN_ECDSA_WITH_SHA512_DER:
+			/* return an ASN.1 encoded sequence of integers r and s */
+			len /= 2;
+			*signature = asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_integer("c", chunk_create(buf, len)),
+								asn1_integer("c", chunk_create(buf+len, len)));
+			free(buf);
+			break;
+		default:
+			*signature = chunk_create(buf, len);
+			break;
+	}
 	return TRUE;
 }
 
