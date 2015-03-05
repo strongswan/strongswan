@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2015 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -113,6 +113,11 @@ struct scheduler_t {
 	 * @return				number of scheduled jobs
 	 */
 	u_int (*get_job_load) (scheduler_t *this);
+
+	/**
+	 * Remove all scheduled jobs.
+	 */
+	void (*flush)(scheduler_t *this);
 
 	/**
 	 * Destroys a scheduler object.
