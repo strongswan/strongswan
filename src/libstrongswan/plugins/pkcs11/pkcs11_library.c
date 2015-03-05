@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -21,6 +21,7 @@
 #include <dlfcn.h>
 
 #include <library.h>
+#include <asn1/asn1.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
 #include <collections/linked_list.h>
@@ -641,10 +642,37 @@ static void free_attrs(object_enumerator_t *this)
 }
 
 /**
+ * CKA_EC_POINT is encodeed as ASN.1 octet string, we can't handle that and
+ * some tokens actually return them even unwrapped.
+ *
+ * Because ASN1_OCTET_STRING is 0x04 and uncompressed EC_POINTs also begin with
+ * 0x04 (compressed ones with 0x02 or 0x03) there will be an attempt to parse
+ * unwrapped uncompressed EC_POINTs.  This will fail in most cases as the length
+ * will not be correct, however, there is a small chance that the key's first
+ * byte denotes the correct length.  Checking the first byte of the key should
+ * further reduce the risk of false positives, though.
+ *
+ * The original memory is freed if the value is unwrapped.
+ */
+static void unwrap_ec_point(chunk_t *data)
+{
+	chunk_t wrapped, unwrapped;
+
+	wrapped = unwrapped = *data;
+	if (asn1_unwrap(&unwrapped, &unwrapped) == ASN1_OCTET_STRING &&
+		unwrapped.len && unwrapped.ptr[0] >= 0x02 && unwrapped.ptr[0] <= 0x04)
+	{
+		*data = chunk_clone(unwrapped);
+		free(wrapped.ptr);
+	}
+}
+
+/**
  * Get attributes for a given object during enumeration
  */
 static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 {
+	chunk_t data;
 	CK_RV rv;
 	int i;
 
@@ -676,6 +704,16 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 		free_attrs(this);
 		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
 		return FALSE;
+	}
+	for (i = 0; i < this->count; i++)
+	{
+		if (this->attr[i].type == CKA_EC_POINT)
+		{
+			data = chunk_create(this->attr[i].pValue, this->attr[i].ulValueLen);
+			unwrap_ec_point(&data);
+			this->attr[i].pValue = data.ptr;
+			this->attr[i].ulValueLen = data.len;
+		}
 	}
 	return TRUE;
 }
@@ -886,6 +924,10 @@ METHOD(pkcs11_library_t, get_ck_attribute, bool,
 			 ck_rv_names, rv);
 		chunk_free(data);
 		return FALSE;
+	}
+	if (attr.type == CKA_EC_POINT)
+	{
+		unwrap_ec_point(data);
 	}
 	return TRUE;
 }
