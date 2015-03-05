@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -135,6 +135,7 @@ static const asn1Object_t pkinfoObjects[] = {
 /**
  * Extract the DER encoded Parameters and ECPoint from the given DER encoded
  * subjectPublicKeyInfo.
+ * Memory for ecpoint is allocated.
  */
 static bool parse_ecdsa_public_key(chunk_t blob, chunk_t *ecparams,
 								   chunk_t *ecpoint, size_t *keylen)
@@ -173,7 +174,9 @@ static bool parse_ecdsa_public_key(chunk_t blob, chunk_t *ecparams,
 				{	/* skip initial bit string octet defining 0 unused bits */
 					object = chunk_skip(object, 1);
 				}
-				*ecpoint = object;
+				/* the correct way to encode an EC_POINT in PKCS#11 is as
+				 * ASN.1 octet string */
+				*ecpoint = asn1_wrap(ASN1_OCTET_STRING, "c", object);
 				break;
 			}
 		}
@@ -776,11 +779,11 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 		if (parse_ecdsa_public_key(blob, &ecparams, &ecpoint, &keylen))
 		{
 			this = find_ecdsa_key(ecparams, ecpoint, keylen);
-			if (this)
+			if (!this)
 			{
-				return &this->public;
+				this = create_ecdsa_key(ecparams, ecpoint, keylen);
 			}
-			this = create_ecdsa_key(ecparams, ecpoint, keylen);
+			chunk_free(&ecpoint);
 			if (this)
 			{
 				return &this->public;
