@@ -474,8 +474,9 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
-	/* make sure the cache is clear before unloading plugins */
+	/* make sure the cache and scheduler are clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
+	lib->scheduler->flush(lib->scheduler);
 	lib->plugins->unload(lib->plugins);
 	DESTROY_IF(this->public.attributes);
 	DESTROY_IF(this->kernel_handler);
