@@ -208,7 +208,8 @@ METHOD(public_key_t, verify, bool,
 	CK_SESSION_HANDLE session;
 	CK_RV rv;
 	hash_algorithm_t hash_alg;
-	chunk_t hash = chunk_empty;
+	chunk_t hash = chunk_empty, parse, r, s;
+	size_t len;
 
 	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k,
 												&hash_alg);
@@ -218,9 +219,37 @@ METHOD(public_key_t, verify, bool,
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
-	if (sig.len && sig.ptr[0] == 0)
-	{	/* trim leading zero byte in sig */
-		sig = chunk_skip(sig, 1);
+	switch (scheme)
+	{
+		case SIGN_ECDSA_WITH_SHA1_DER:
+		case SIGN_ECDSA_WITH_SHA256_DER:
+		case SIGN_ECDSA_WITH_SHA384_DER:
+		case SIGN_ECDSA_WITH_SHA512_DER:
+			/* PKCS#11 expects the ECDSA signatures as simple concatenation of
+			 * r and s, so unwrap the ASN.1 encoded sequence */
+			parse = sig;
+			if (asn1_unwrap(&parse, &parse) != ASN1_SEQUENCE ||
+				asn1_unwrap(&parse, &r) != ASN1_INTEGER ||
+				asn1_unwrap(&parse, &s) != ASN1_INTEGER)
+			{
+				return FALSE;
+			}
+			r = chunk_skip_zero(r);
+			s = chunk_skip_zero(s);
+			len = (get_keysize(this) + 7) / 8;
+			if (r.len > len || s.len > len)
+			{
+				return FALSE;
+			}
+			/* concatenate r and s (forced to the defined length) */
+			sig = chunk_alloca(2*len);
+			memset(sig.ptr, 0, sig.len);
+			memcpy(sig.ptr + (len - r.len), r.ptr, r.len);
+			memcpy(sig.ptr + len + (len - s.len), s.ptr, s.len);
+			break;
+		default:
+			sig = chunk_skip_zero(sig);
+			break;
 	}
 	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,
 									 &session);
