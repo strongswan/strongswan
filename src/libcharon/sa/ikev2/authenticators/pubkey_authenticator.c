@@ -22,6 +22,7 @@
 #include <sa/ikev2/keymat_v2.h>
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
+#include <collections/array.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -110,19 +111,21 @@ static bool build_signature_auth_data(chunk_t *auth_data,
 }
 
 /**
- * Select a signature scheme based on our configuration, the other peer's
- * capabilities and the private key
+ * Selects possible signature schemes based on our configuration, the other
+ * peer's capabilities and the private key
  */
-static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
+static array_t *select_signature_schemes(keymat_v2_t *keymat,
 									auth_cfg_t *auth, private_key_t *private)
 {
 	enumerator_t *enumerator;
-	signature_scheme_t selected = SIGN_UNKNOWN, scheme;
+	signature_scheme_t scheme;
 	uintptr_t config;
 	auth_rule_t rule;
 	key_type_t key_type;
 	bool have_config = FALSE;
+	array_t *selected;
 
+	selected = array_create(sizeof(signature_scheme_t), 0);
 	key_type = private->get_type(private);
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &rule, &config))
@@ -136,15 +139,15 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 			keymat->hash_algorithm_supported(keymat,
 										hasher_from_signature_scheme(config)))
 		{
-			selected = config;
-			break;
+			scheme = config;
+			array_insert(selected, ARRAY_TAIL, &scheme);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (selected == SIGN_UNKNOWN && !have_config)
+	if (!have_config)
 	{
-		/* if no specific configuration, find a scheme appropriate for the key
+		/* if no specific configuration, find schemes appropriate for the key
 		 * and supported by the other peer */
 		enumerator = signature_schemes_for_key(key_type,
 											   private->get_keysize(private));
@@ -153,30 +156,40 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 			if (keymat->hash_algorithm_supported(keymat,
 										hasher_from_signature_scheme(scheme)))
 			{
-				selected = scheme;
-				break;
+				array_insert(selected, ARRAY_TAIL, &scheme);
 			}
 		}
 		enumerator->destroy(enumerator);
 
 		/* for RSA we tried at least SHA-512, also try other schemes down to
 		 * what we'd use with classic authentication */
-		if (selected == SIGN_UNKNOWN && key_type == KEY_RSA)
+		if (key_type == KEY_RSA)
 		{
 			signature_scheme_t schemes[] = {
 				SIGN_RSA_EMSA_PKCS1_SHA384,
 				SIGN_RSA_EMSA_PKCS1_SHA256,
 				SIGN_RSA_EMSA_PKCS1_SHA1,
-			};
-			int i;
+			}, contained;
+			bool found;
+			int i, j;
 
 			for (i = 0; i < countof(schemes); i++)
 			{
-				if (keymat->hash_algorithm_supported(keymat,
-									hasher_from_signature_scheme(schemes[i])))
+				scheme = schemes[i];
+				found = FALSE;
+				for (j = 0; j < array_count(selected); j++)
 				{
-					selected = scheme;
-					break;
+					array_get(selected, j, &contained);
+					if (scheme == contained)
+					{
+						found = TRUE;
+						break;
+					}
+				}
+				if (!found && keymat->hash_algorithm_supported(keymat,
+										hasher_from_signature_scheme(scheme)))
+				{
+					array_insert(selected, ARRAY_TAIL, &scheme);
 				}
 			}
 		}
@@ -187,6 +200,7 @@ static signature_scheme_t select_signature_scheme(keymat_v2_t *keymat,
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
 {
+	enumerator_t *enumerator;
 	chunk_t octets = chunk_empty, auth_data;
 	status_t status = FAILED;
 	private_key_t *private;
@@ -194,8 +208,9 @@ METHOD(authenticator_t, build, status_t,
 	auth_cfg_t *auth;
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
-	signature_scheme_t scheme = SIGN_UNKNOWN;
+	signature_scheme_t scheme = SIGN_UNKNOWN, *schemep;
 	keymat_v2_t *keymat;
+	array_t *schemes;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
@@ -209,14 +224,38 @@ METHOD(authenticator_t, build, status_t,
 
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_SIGNATURE_AUTH))
 	{
-		scheme = select_signature_scheme(keymat, auth, private);
-		auth_method = AUTH_DS;
-		if (scheme == SIGN_UNKNOWN)
+		schemes = select_signature_schemes(keymat, auth, private);
+		if (!array_count(schemes))
 		{
 			DBG1(DBG_IKE, "no common hash algorithm found to create signature "
 				 "with %N key", key_type_names, private->get_type(private));
+			array_destroy(schemes);
 			return status;
 		}
+		auth_method = AUTH_DS;
+		if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+									this->nonce, id, this->reserved, &octets))
+		{
+			enumerator = array_create_enumerator(schemes);
+			while (enumerator->enumerate(enumerator, &schemep))
+			{
+				scheme = *schemep;
+				if (private->sign(private, scheme, octets, &auth_data) &&
+					build_signature_auth_data(&auth_data, scheme))
+				{
+					status = SUCCESS;
+					break;
+				}
+				else
+				{
+					DBG2(DBG_IKE, "unable to create %N signature for %N key",
+						 signature_scheme_names, scheme, key_type_names,
+						 private->get_type(private));
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		array_destroy(schemes);
 	}
 	else
 	{
@@ -253,22 +292,20 @@ METHOD(authenticator_t, build, status_t,
 					 key_type_names, private->get_type(private));
 				return status;
 		}
-	}
-
-	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-								this->nonce, id, this->reserved, &octets) &&
-		private->sign(private, scheme, octets, &auth_data))
-	{
-		if (auth_method != AUTH_DS ||
-			build_signature_auth_data(&auth_data, scheme))
+		if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+									this->nonce, id, this->reserved, &octets) &&
+			private->sign(private, scheme, octets, &auth_data))
 		{
-			auth_payload = auth_payload_create();
-			auth_payload->set_auth_method(auth_payload, auth_method);
-			auth_payload->set_data(auth_payload, auth_data);
-			chunk_free(&auth_data);
-			message->add_payload(message, (payload_t*)auth_payload);
 			status = SUCCESS;
 		}
+	}
+	if (status == SUCCESS)
+	{
+		auth_payload = auth_payload_create();
+		auth_payload->set_auth_method(auth_payload, auth_method);
+		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
+		message->add_payload(message, (payload_t*)auth_payload);
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
 		 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
