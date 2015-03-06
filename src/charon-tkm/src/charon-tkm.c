@@ -276,6 +276,10 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	/* the authorize hook currently does not support RFC 7427 signature auth */
+	lib->settings->set_bool(lib->settings, "%s.signature_authentication", FALSE,
+							dmn_name);
+
 	/* make sure we log to the DAEMON facility by default */
 	lib->settings->set_int(lib->settings, "%s.syslog.daemon.default",
 			lib->settings->get_int(lib->settings, "%s.syslog.daemon.default", 1,
