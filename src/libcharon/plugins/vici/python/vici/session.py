@@ -295,7 +295,7 @@ class SessionHandler(object):
                 break
 
         if response.response_type == Packet.CMD_RESPONSE:
-            Message.deserialize(response.payload)
+            command_response = Message.deserialize(response.payload)
         else:
             raise SessionException(
                 "Unexpected response type {type}, "
@@ -316,3 +316,12 @@ class SessionHandler(object):
                     confirm=Packet.EVENT_CONFIRM,
                 )
             )
+
+        # evaluate command result, if any
+        if "success" in command_response:
+            if command_response["success"] != "yes":
+                raise CommandException(
+                    "Command failed: {errmsg}".format(
+                        errmsg=command_response["errmsg"]
+                    )
+                )
