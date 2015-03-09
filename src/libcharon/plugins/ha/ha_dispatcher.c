@@ -792,7 +792,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	if (initiator)
 	{
 		if (child_sa->install(child_sa, encr_r, integ_r, inbound_spi,
-							  inbound_cpi, initiator, FALSE, TRUE,
+							  inbound_cpi, initiator, TRUE, TRUE,
 							  local_ts, remote_ts) != SUCCESS ||
 			child_sa->install(child_sa, encr_i, integ_i, outbound_spi,
 							  outbound_cpi, initiator, FALSE, TRUE,
@@ -804,7 +804,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	else
 	{
 		if (child_sa->install(child_sa, encr_i, integ_i, inbound_spi,
-							  inbound_cpi, initiator, FALSE, TRUE,
+							  inbound_cpi, initiator, TRUE, TRUE,
 							  local_ts, remote_ts) != SUCCESS ||
 			child_sa->install(child_sa, encr_r, integ_r, outbound_spi,
 							  outbound_cpi, initiator, FALSE, TRUE,
