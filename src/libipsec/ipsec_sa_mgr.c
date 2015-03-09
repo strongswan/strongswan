@@ -439,7 +439,8 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	u_int8_t protocol, u_int32_t reqid,	mark_t mark, u_int32_t tfc,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound)
+	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
+	bool update)
 {
 	ipsec_sa_entry_t *entry;
 	ipsec_sa_t *sa_new;
@@ -462,7 +463,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 
 	this->mutex->lock(this->mutex);
 
-	if (inbound)
+	if (update)
 	{	/* remove any pre-allocated SPIs */
 		u_int32_t *spi_alloc;
 

@@ -73,6 +73,7 @@ struct ipsec_sa_mgr_t {
 	 * @param encap			enable UDP encapsulation (must be TRUE)
 	 * @param esn			Extended Sequence Numbers (currently not supported)
 	 * @param inbound		TRUE if this is an inbound SA, FALSE otherwise
+	 * @param update		TRUE if an SPI has already been allocated for SA
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa)(ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
@@ -81,7 +82,7 @@ struct ipsec_sa_mgr_t {
 					   u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg,
 					   chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
 					   u_int16_t cpi, bool initiator, bool encap, bool esn,
-					   bool inbound);
+					   bool inbound, bool update);
 
 	/**
 	 * Update the hosts on an installed SA.
