@@ -86,7 +86,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound,
+	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t* src_ts, linked_list_t* dst_ts)
 {
 	esa_info_t esa;

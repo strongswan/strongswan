@@ -1197,7 +1197,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound,
+	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t* src_ts, linked_list_t* dst_ts)
 {
 	netlink_buf_t request;
@@ -1217,7 +1217,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
 			   tfc, &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED,
 			   chunk_empty, mode, ipcomp, 0, 0, initiator, FALSE, FALSE,
-			   inbound, src_ts, dst_ts);
+			   inbound, update, src_ts, dst_ts);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
@@ -1230,7 +1230,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = inbound ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	hdr->nlmsg_type = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 
 	sa = NLMSG_DATA(hdr);

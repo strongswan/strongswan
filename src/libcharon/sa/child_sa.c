@@ -750,7 +750,7 @@ METHOD(child_sa_t, install, status_t,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->config->get_replay_window(this->config),
-				initiator, this->encap, esn, update, src_ts, dst_ts);
+				initiator, this->encap, esn, inbound, update, src_ts, dst_ts);
 
 	free(lifetime);
 
