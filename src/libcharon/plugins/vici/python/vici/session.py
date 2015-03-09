@@ -281,10 +281,16 @@ class SessionHandler(object):
         # issue command, and read any event messages
         packet = Packet.request(command, message)
         self.transport.send(packet)
+        exited = False
         while True:
             response = Packet.parse(self.transport.receive())
             if response.response_type == Packet.EVENT:
-                yield Message.deserialize(response.payload)
+                if not exited:
+                    try:
+                        yield Message.deserialize(response.payload)
+                    except GeneratorExit:
+                        exited = True
+                        pass
             else:
                 break
 

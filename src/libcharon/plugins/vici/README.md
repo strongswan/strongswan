@@ -909,6 +909,11 @@ event:
 		for key in conn:
 			print key
 
+Please note that if the returned generator is not iterated completely, it must
+be closed using _close()_. This is implicitly done when breaking from a loop,
+but an explicit call may be required when directly iterating the generator with
+_next()_.
+
 ## Sorting in dictionaries ##
 
 In VICI, in some message trees the order of objects in dictionary matters. In
