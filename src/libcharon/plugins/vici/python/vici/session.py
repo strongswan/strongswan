@@ -241,7 +241,7 @@ class SessionHandler(object):
 
         command_response = Message.deserialize(response.payload)
         if "success" in command_response:
-            if command_response["success"] != "yes":
+            if command_response["success"] != b"yes":
                 raise CommandException(
                     "Command failed: {errmsg}".format(
                         errmsg=command_response["errmsg"]
@@ -319,7 +319,7 @@ class SessionHandler(object):
 
         # evaluate command result, if any
         if "success" in command_response:
-            if command_response["success"] != "yes":
+            if command_response["success"] != b"yes":
                 raise CommandException(
                     "Command failed: {errmsg}".format(
                         errmsg=command_response["errmsg"]

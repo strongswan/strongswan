@@ -3,6 +3,7 @@ EXTRA_DIST = LICENSE MANIFEST.in \
 	vici/test/__init__.py \
 	vici/test/test_protocol.py \
 	vici/__init__.py \
+	vici/compat.py \
 	vici/exception.py \
 	vici/protocol.py \
 	vici/session.py
