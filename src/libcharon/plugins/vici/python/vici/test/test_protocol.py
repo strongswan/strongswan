@@ -1,7 +1,53 @@
 import pytest
 
-from ..protocol import Message, FiniteStream
+from ..protocol import Packet, Message, FiniteStream
 from ..exception import DeserializationException
+
+
+class TestPacket(object):
+    # test data definitions for outgoing packet types
+    cmd_request = b"\x00\x0c" b"command_type"
+    cmd_request_msg = b"\x00\x07" b"command" b"payload"
+    event_register = b"\x03\x0a" b"event_type"
+    event_unregister = b"\x04\x0a" b"event_type"
+
+    # test data definitions for incoming packet types
+    cmd_response = b"\x01" b"reply"
+    cmd_unknown = b"\x02"
+    event_confirm = b"\x05"
+    event_unknown = b"\x06"
+    event = b"\x07\x03" b"log" b"message"
+
+    def test_request(self):
+        assert Packet.request("command_type") == self.cmd_request
+        assert Packet.request("command", b"payload") == self.cmd_request_msg
+
+    def test_register_event(self):
+        assert Packet.register_event("event_type") == self.event_register
+
+    def test_unregister_event(self):
+        assert Packet.unregister_event("event_type") == self.event_unregister
+
+    def test_parse(self):
+        parsed_cmd_response = Packet.parse(self.cmd_response)
+        assert parsed_cmd_response.response_type == Packet.CMD_RESPONSE
+        assert parsed_cmd_response.payload.getvalue() == self.cmd_response
+
+        parsed_cmd_unknown = Packet.parse(self.cmd_unknown)
+        assert parsed_cmd_unknown.response_type == Packet.CMD_UNKNOWN
+        assert parsed_cmd_unknown.payload.getvalue() == self.cmd_unknown
+
+        parsed_event_confirm = Packet.parse(self.event_confirm)
+        assert parsed_event_confirm.response_type == Packet.EVENT_CONFIRM
+        assert parsed_event_confirm.payload.getvalue() == self.event_confirm
+
+        parsed_event_unknown = Packet.parse(self.event_unknown)
+        assert parsed_event_unknown.response_type == Packet.EVENT_UNKNOWN
+        assert parsed_event_unknown.payload.getvalue() == self.event_unknown
+
+        parsed_event = Packet.parse(self.event)
+        assert parsed_event.response_type == Packet.EVENT
+        assert parsed_event.payload.getvalue() == self.event
 
 
 class TestMessage(object):
