@@ -245,7 +245,7 @@ class Session(object):
         :return: a CommandResult containing any given log messages
         :rtype: :py:class:`vici.session.CommandResult`
         """
-        if command_response["success"] == "yes":
+        if command_response["success"] == b"yes":
             return CommandResult(True, None, log)
         else:
             return CommandResult(False, command_response["errmsg"], log)

@@ -5,6 +5,7 @@ import struct
 from collections import namedtuple
 from collections import OrderedDict
 
+from .compat import iteritems
 from .exception import DeserializationException
 
 
@@ -51,6 +52,7 @@ class Packet(object):
 
     @classmethod
     def _named_request(cls, request_type, request, message=None):
+        request = request.encode()
         payload = struct.pack("!BB", request_type, len(request)) + request
         if message is not None:
             return payload + message
@@ -93,22 +95,23 @@ class Message(object):
     @classmethod
     def serialize(cls, message):
         def encode_named_type(marker, name):
-            name = str(name)
+            name = name.encode()
             return struct.pack("!BB", marker, len(name)) + name
 
         def encode_blob(value):
-            value = str(value)
+            if not isinstance(value, bytes):
+                value = str(value).encode()
             return struct.pack("!H", len(value)) + value
 
         def serialize_list(lst):
-            segment = str()
+            segment = bytes()
             for item in lst:
                 segment += struct.pack("!B", cls.LIST_ITEM) + encode_blob(item)
             return segment
 
         def serialize_dict(d):
-            segment = str()
-            for key, value in d.iteritems():
+            segment = bytes()
+            for key, value in iteritems(d):
                 if isinstance(value, dict):
                     segment += (
                         encode_named_type(cls.SECTION_START, key)
@@ -134,7 +137,7 @@ class Message(object):
     def deserialize(cls, stream):
         def decode_named_type(stream):
             length, = struct.unpack("!B", stream.read(1))
-            return stream.read(length)
+            return stream.read(length).decode()
 
         def decode_blob(stream):
             length, = struct.unpack("!H", stream.read(2))
