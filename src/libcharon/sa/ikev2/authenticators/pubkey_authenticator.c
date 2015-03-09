@@ -197,108 +197,153 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 	return selected;
 }
 
+/**
+ * Create a signature using RFC 7427 signature authentication
+ */
+static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
+							auth_cfg_t *auth, private_key_t *private,
+							identification_t *id, chunk_t *auth_data)
+{
+	enumerator_t *enumerator;
+	keymat_v2_t *keymat;
+	signature_scheme_t scheme = SIGN_UNKNOWN, *schemep;
+	array_t *schemes;
+	chunk_t octets = chunk_empty;
+	status_t status = FAILED;
+
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	schemes = select_signature_schemes(keymat, auth, private);
+	if (!array_count(schemes))
+	{
+		DBG1(DBG_IKE, "no common hash algorithm found to create signature "
+			 "with %N key", key_type_names, private->get_type(private));
+		array_destroy(schemes);
+		return FAILED;
+	}
+
+	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+								this->nonce, id, this->reserved, &octets))
+	{
+		enumerator = array_create_enumerator(schemes);
+		while (enumerator->enumerate(enumerator, &schemep))
+		{
+			scheme = *schemep;
+			if (private->sign(private, scheme, octets, auth_data) &&
+				build_signature_auth_data(auth_data, scheme))
+			{
+				status = SUCCESS;
+				break;
+			}
+			else
+			{
+				DBG2(DBG_IKE, "unable to create %N signature for %N key",
+					 signature_scheme_names, scheme, key_type_names,
+					 private->get_type(private));
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
+		 signature_scheme_names, scheme,
+		 status == SUCCESS ? "successful" : "failed");
+	array_destroy(schemes);
+	chunk_free(&octets);
+	return status;
+}
+
+/**
+ * Create a classic IKEv2 signature
+ */
+static status_t sign_classic(private_pubkey_authenticator_t *this,
+							 auth_cfg_t *auth, private_key_t *private,
+							 identification_t *id, auth_method_t *auth_method,
+							 chunk_t *auth_data)
+{
+	signature_scheme_t scheme;
+	keymat_v2_t *keymat;
+	chunk_t octets = chunk_empty;
+	status_t status = FAILED;
+
+	switch (private->get_type(private))
+	{
+		case KEY_RSA:
+			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			*auth_method = AUTH_RSA;
+			break;
+		case KEY_ECDSA:
+			/* deduct the signature scheme from the keysize */
+			switch (private->get_keysize(private))
+			{
+				case 256:
+					scheme = SIGN_ECDSA_256;
+					*auth_method = AUTH_ECDSA_256;
+					break;
+				case 384:
+					scheme = SIGN_ECDSA_384;
+					*auth_method = AUTH_ECDSA_384;
+					break;
+				case 521:
+					scheme = SIGN_ECDSA_521;
+					*auth_method = AUTH_ECDSA_521;
+					break;
+				default:
+					DBG1(DBG_IKE, "%d bit ECDSA private key size not supported",
+						 private->get_keysize(private));
+					return FAILED;
+			}
+			break;
+		default:
+			DBG1(DBG_IKE, "private key of type %N not supported",
+				 key_type_names, private->get_type(private));
+			return FAILED;
+	}
+
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+								this->nonce, id, this->reserved, &octets) &&
+		private->sign(private, scheme, octets, auth_data))
+	{
+		status = SUCCESS;
+	}
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
+		 auth_method_names, *auth_method,
+		 status == SUCCESS ? "successful" : "failed");
+	chunk_free(&octets);
+	return status;
+}
+
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	chunk_t octets = chunk_empty, auth_data;
-	status_t status = FAILED;
 	private_key_t *private;
 	identification_t *id;
 	auth_cfg_t *auth;
+	chunk_t auth_data;
+	status_t status;
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
-	signature_scheme_t scheme = SIGN_UNKNOWN, *schemep;
-	keymat_v2_t *keymat;
-	array_t *schemes;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
-	if (private == NULL)
+	if (!private)
 	{
 		DBG1(DBG_IKE, "no private key found for '%Y'", id);
 		return NOT_FOUND;
 	}
-	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_SIGNATURE_AUTH))
 	{
-		schemes = select_signature_schemes(keymat, auth, private);
-		if (!array_count(schemes))
-		{
-			DBG1(DBG_IKE, "no common hash algorithm found to create signature "
-				 "with %N key", key_type_names, private->get_type(private));
-			array_destroy(schemes);
-			return status;
-		}
 		auth_method = AUTH_DS;
-		if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-									this->nonce, id, this->reserved, &octets))
-		{
-			enumerator = array_create_enumerator(schemes);
-			while (enumerator->enumerate(enumerator, &schemep))
-			{
-				scheme = *schemep;
-				if (private->sign(private, scheme, octets, &auth_data) &&
-					build_signature_auth_data(&auth_data, scheme))
-				{
-					status = SUCCESS;
-					break;
-				}
-				else
-				{
-					DBG2(DBG_IKE, "unable to create %N signature for %N key",
-						 signature_scheme_names, scheme, key_type_names,
-						 private->get_type(private));
-				}
-			}
-			enumerator->destroy(enumerator);
-		}
-		array_destroy(schemes);
+		status = sign_signature_auth(this, auth, private, id, &auth_data);
 	}
 	else
 	{
-		switch (private->get_type(private))
-		{
-			case KEY_RSA:
-				scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-				auth_method = AUTH_RSA;
-				break;
-			case KEY_ECDSA:
-				/* deduct the signature scheme from the keysize */
-				switch (private->get_keysize(private))
-				{
-					case 256:
-						scheme = SIGN_ECDSA_256;
-						auth_method = AUTH_ECDSA_256;
-						break;
-					case 384:
-						scheme = SIGN_ECDSA_384;
-						auth_method = AUTH_ECDSA_384;
-						break;
-					case 521:
-						scheme = SIGN_ECDSA_521;
-						auth_method = AUTH_ECDSA_521;
-						break;
-					default:
-						DBG1(DBG_IKE, "%d bit ECDSA private key size not "
-							 "supported", private->get_keysize(private));
-						return status;
-				}
-				break;
-			default:
-				DBG1(DBG_IKE, "private key of type %N not supported",
-					 key_type_names, private->get_type(private));
-				return status;
-		}
-		if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-									this->nonce, id, this->reserved, &octets) &&
-			private->sign(private, scheme, octets, &auth_data))
-		{
-			status = SUCCESS;
-		}
+		status = sign_classic(this, auth, private, id, &auth_method,
+							  &auth_data);
 	}
+	private->destroy(private);
+
 	if (status == SUCCESS)
 	{
 		auth_payload = auth_payload_create();
@@ -307,13 +352,6 @@ METHOD(authenticator_t, build, status_t,
 		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 	}
-	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
-		 auth_method == AUTH_DS ? scheme : auth_method,
-		 status == SUCCESS ? "successful" : "failed");
-	chunk_free(&octets);
-	private->destroy(private);
-
 	return status;
 }
 
