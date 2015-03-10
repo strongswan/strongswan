@@ -4,5 +4,5 @@ to the virtual gateway <b>mars</b> implemented by the two real gateways
 based on <b>ClusterIP</b>. Depending on the hash of the IP addresses of the peers
 and the SPIs, the inbound and outbound CHILD_SAs are either assigned to
 segment 1 managed by <b>alice</b> or segment 2 handled by <b>moon</b>.
-The IKEv2 protocol is managed by <b>moon</b> exclusively with passive
-IKE_SAs installed on the backup gateway <b>alice</b>.
+The IKEv2 protocol is managed by <b>alice</b> exclusively with passive
+IKE_SAs installed on the backup gateway <b>moon</b>.
