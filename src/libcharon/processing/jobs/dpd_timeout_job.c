@@ -63,6 +63,12 @@ METHOD(job_t, execute, job_requeue_t,
 											  this->ike_sa_id);
 	if (ike_sa)
 	{
+		if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			return JOB_REQUEUE_NONE;
+		}
+
 		use_time = ike_sa->get_statistic(ike_sa, STAT_INBOUND);
 
 		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
