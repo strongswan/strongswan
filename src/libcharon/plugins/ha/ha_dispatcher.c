@@ -373,6 +373,9 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				else
 				{
 					DBG1(DBG_IKE, "HA is missing nodes peer configuration");
+					charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+					ike_sa = NULL;
 				}
 				break;
 			case HA_EXTENSIONS:
