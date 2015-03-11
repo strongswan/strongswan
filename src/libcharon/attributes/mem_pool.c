@@ -110,6 +110,17 @@ static entry_t* entry_create(identification_t *id)
 }
 
 /**
+ * Destroy an entry
+ */
+static void entry_destroy(entry_t *this)
+{
+	this->id->destroy(this->id);
+	array_destroy(this->online);
+	array_destroy(this->offline);
+	free(this);
+}
+
+/**
  * hashtable hash function for identities
  */
 static u_int id_hash(identification_t *id)
@@ -356,8 +367,16 @@ static int get_reassigned(private_mem_pool_t *this, identification_t *id,
 		if (array_remove(entry->offline, ARRAY_HEAD, &current))
 		{
 			lease.offset = current;
-			DBG1(DBG_CFG, "reassigning existing offline lease by '%Y'"
-				 " to '%Y'", entry->id, id);
+			DBG1(DBG_CFG, "reassigning existing offline lease by '%Y' "
+				 "to '%Y'", entry->id, id);
+		}
+		if (!array_count(entry->online) && !array_count(entry->offline))
+		{
+			this->leases->remove_at(this->leases, enumerator);
+			entry_destroy(entry);
+		}
+		if (lease.offset)
+		{
 			break;
 		}
 	}
@@ -570,10 +589,7 @@ METHOD(mem_pool_t, destroy, void,
 	enumerator = this->leases->create_enumerator(this->leases);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		entry->id->destroy(entry->id);
-		array_destroy(entry->online);
-		array_destroy(entry->offline);
-		free(entry);
+		entry_destroy(entry);
 	}
 	enumerator->destroy(enumerator);
 
