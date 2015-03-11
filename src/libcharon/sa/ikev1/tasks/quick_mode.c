@@ -401,6 +401,8 @@ static bool install(private_quick_mode_t *this)
 	if (old)
 	{
 		charon->bus->child_rekey(charon->bus, old, this->child_sa);
+		/* rekeyed CHILD_SAs stay installed until they expire */
+		old->set_state(old, CHILD_INSTALLED);
 	}
 	else
 	{
