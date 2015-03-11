@@ -775,6 +775,15 @@ secrets.pkcs8<suffix>.file =
 secrets.pkcs8<suffix>.secret
 	Value of decryption passphrase for PKCS#8 key.
 
+secrets.pkcs12<suffix> { # }
+	PKCS#12 decryption passphrase for a container in the _pkcs12_ folder.
+
+secrets.pkcs12<suffix>.file =
+	File name in the _pkcs12_ folder for which this passphrase should be used.
+
+secrets.pkcs12<suffix>.secret
+	Value of decryption passphrase for PKCS#12 container.
+
 pools { # }
 	Section defining named pools.
 
