@@ -180,13 +180,22 @@ static bool load_key_anytype(vici_conn_t *conn, command_format_options_t format,
 }
 
 /**
+ * Data passed to password callback
+ */
+typedef struct {
+	char prompt[128];
+	mem_cred_t *cache;
+} cb_data_t;
+
+/**
  * Callback function to prompt for private key passwords
  */
 CALLBACK(password_cb, shared_key_t*,
-	char *prompt, shared_key_type_t type,
+	cb_data_t *data, shared_key_type_t type,
 	identification_t *me, identification_t *other,
 	id_match_t *match_me, id_match_t *match_other)
 {
+	shared_key_t *shared;
 	char *pwd = NULL;
 
 	if (type != SHARED_PRIVATE_KEY_PASS)
@@ -194,7 +203,7 @@ CALLBACK(password_cb, shared_key_t*,
 		return NULL;
 	}
 #ifdef HAVE_GETPASS
-	pwd = getpass(prompt);
+	pwd = getpass(data->prompt);
 #endif
 	if (!pwd || strlen(pwd) == 0)
 	{
@@ -208,7 +217,10 @@ CALLBACK(password_cb, shared_key_t*,
 	{
 		*match_other = ID_MATCH_PERFECT;
 	}
-	return shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	/* cache secret if it is required more than once (PKCS#12) */
+	data->cache->add_shared(data->cache, shared, NULL);
+	return shared->get_ref(shared);
 }
 
 /**
@@ -250,21 +262,26 @@ static void* decrypt(char *name, char *type, chunk_t encoding)
 	int subtype;
 	void *cred;
 	callback_cred_t *cb;
-	char buf[128];
+	cb_data_t data;
 
 	if (!determine_credtype(type, &credtype, &subtype))
 	{
 		return NULL;
 	}
 
-	snprintf(buf, sizeof(buf), "Password for %s file '%s': ", type, name);
+	snprintf(data.prompt, sizeof(data.prompt), "Password for %s file '%s': ",
+			 type, name);
 
-	cb = callback_cred_create_shared(password_cb, buf);
+	data.cache = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &data.cache->set);
+	cb = callback_cred_create_shared(password_cb, &data);
 	lib->credmgr->add_set(lib->credmgr, &cb->set);
 
 	cred = lib->creds->create(lib->creds, credtype, subtype,
 							  BUILD_BLOB_PEM, encoding, BUILD_END);
 
+	lib->credmgr->remove_set(lib->credmgr, &data.cache->set);
+	data.cache->destroy(data.cache);
 	lib->credmgr->remove_set(lib->credmgr, &cb->set);
 	cb->destroy(cb);
 
