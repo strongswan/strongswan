@@ -1198,6 +1198,7 @@ if test x$python_eggs = xtrue; then
 	else
 		AC_SUBST(PYTHONEGGINSTALLDIR, "--install-dir $pythoneggdir")
 	fi
+	AC_PATH_PROG([PY_TEST], [py.test], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 fi
 
 # ===============================================
@@ -1567,6 +1568,7 @@ AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
 AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
 AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
 AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
+AM_CONDITIONAL(USE_PY_TEST, test "x$PY_TEST" != x)
 
 # ========================
 #  set global definitions
