@@ -22,6 +22,7 @@
 #include <sa/ikev2/tasks/ike_delete.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/initiate_tasks_job.h>
 
 
 typedef struct private_ike_rekey_t private_ike_rekey_t;
@@ -68,12 +69,33 @@ struct private_ike_rekey_t {
 };
 
 /**
+ * Check if an IKE_SA has any queued tasks, return initiation job
+ */
+static job_t* check_queued_tasks(ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+	job_t *job = NULL;
+
+	enumerator = ike_sa->create_task_enumerator(ike_sa, TASK_QUEUE_QUEUED);
+	if (enumerator->enumerate(enumerator, &task))
+	{
+		job = (job_t*)initiate_tasks_job_create(ike_sa->get_id(ike_sa));
+	}
+	enumerator->destroy(enumerator);
+
+	return job;
+}
+
+/**
  * Establish the new replacement IKE_SA
  */
 static void establish_new(private_ike_rekey_t *this)
 {
 	if (this->new_sa)
 	{
+		job_t *job;
+
 		this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
 		DBG0(DBG_IKE, "IKE_SA %s[%d] rekeyed between %H[%Y]...%H[%Y]",
 			 this->new_sa->get_name(this->new_sa),
@@ -85,7 +107,14 @@ static void establish_new(private_ike_rekey_t *this)
 
 		this->new_sa->inherit_post(this->new_sa, this->ike_sa);
 		charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
+		job = check_queued_tasks(this->new_sa);
+		/* don't queue job before checkin(), as the IKE_SA is not yet
+		 * registered at the manager */
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
+		if (job)
+		{
+			lib->processor->queue_job(lib->processor, job);
+		}
 		this->new_sa = NULL;
 		/* set threads active IKE_SA after checkin */
 		charon->bus->set_sa(charon->bus, this->ike_sa);

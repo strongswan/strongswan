@@ -66,6 +66,7 @@ processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
+processing/jobs/initiate_tasks_job.c processing/jobs/initiate_tasks_job.h \
 sa/eap/eap_method.c sa/eap/eap_method.h sa/eap/eap_inner_method.h \
 sa/eap/eap_manager.c sa/eap/eap_manager.h \
 sa/xauth/xauth_method.c sa/xauth/xauth_method.h \
