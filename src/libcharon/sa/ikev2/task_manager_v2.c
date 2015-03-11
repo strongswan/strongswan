@@ -1573,7 +1573,6 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		new->queue_task(new, (task_t*)ike_reauth_complete_create(new,
 										this->ike_sa->get_id(this->ike_sa)));
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
-		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
 	else
 	{
