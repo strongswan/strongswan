@@ -117,6 +117,17 @@ charon.i_dont_care_about_security_and_use_aggressive_mode_psk = no
 charon.ignore_routing_tables
 	A space-separated list of routing tables to be excluded from route lookups.
 
+charon.ignore_acquire_ts = no
+	Whether to ignore the traffic selectors from the kernel's acquire events for
+	IKEv2 connections (they are not used for IKEv1).
+
+	If this is disabled the traffic selectors from the kernel's acquire events,
+	which are derived from the triggering packet, are prepended to the traffic
+	selectors from the configuration for IKEv2 connection. By enabling this,
+	such specific traffic selectors will be ignored and only the ones in the
+	config will	be sent. This always happens for IKEv1 connections as the
+	protocol only supports one set of traffic selectors per CHILD_SA.
+
 charon.ikesa_limit = 0
 	Maximum number of IKE_SAs that can be established at the same time before
 	new connection attempts are blocked.

@@ -65,6 +65,11 @@ struct private_trap_manager_t {
 	 * listener to track acquiring IKE_SAs
 	 */
 	trap_listener_t listener;
+
+	/**
+	 * Whether to ignore traffic selectors from acquires
+	 */
+	bool ignore_acquire_ts;
 };
 
 /**
@@ -353,7 +358,7 @@ METHOD(trap_manager_t, acquire, void,
 		{
 			ike_sa->set_peer_cfg(ike_sa, peer);
 		}
-		if (ike_sa->get_version(ike_sa) == IKEV1)
+		if (this->ignore_acquire_ts || ike_sa->get_version(ike_sa) == IKEV1)
 		{	/* in IKEv1, don't prepend the acquiring packet TS, as we only
 			 * have a single TS that we can establish in a Quick Mode. */
 			src = dst = NULL;
@@ -484,6 +489,8 @@ trap_manager_t *trap_manager_create(void)
 		},
 		.traps = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.ignore_acquire_ts = lib->settings->get_bool(lib->settings,
+										"%s.ignore_acquire_ts", FALSE, lib->ns),
 	);
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
 
