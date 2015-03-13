@@ -99,7 +99,7 @@ typedef struct {
 	/** IKE_SA identifier this entry is stored under */
 	ike_sa_id_t *id;
 	/** RADIUS accounting session ID */
-	char sid[16];
+	char sid[24];
 	/** number of sent/received octets/packets */
 	struct {
 		u_int64_t sent;
