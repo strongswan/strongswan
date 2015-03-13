@@ -977,10 +977,10 @@ CALLBACK(stats, vici_message_t*,
 		struct mallinfo mi = mallinfo();
 
 		b->begin_section(b, "mallinfo");
-		b->add_kv(b, "sbrk", "%d", mi.arena);
-		b->add_kv(b, "mmap", "%d", mi.hblkhd);
-		b->add_kv(b, "used", "%d", mi.uordblks);
-		b->add_kv(b, "free", "%d", mi.fordblks);
+		b->add_kv(b, "sbrk", "%u", mi.arena);
+		b->add_kv(b, "mmap", "%u", mi.hblkhd);
+		b->add_kv(b, "used", "%u", mi.uordblks);
+		b->add_kv(b, "free", "%u", mi.fordblks);
 		b->end_section(b);
 	}
 #endif /* HAVE_MALLINFO */
