@@ -497,7 +497,7 @@ METHOD(stroke_list_t, status, void,
 		{
 			struct mallinfo mi = mallinfo();
 
-			fprintf(out, "  malloc: sbrk %d, mmap %d, used %d, free %d\n",
+			fprintf(out, "  malloc: sbrk %u, mmap %u, used %u, free %u\n",
 				    mi.arena, mi.hblkhd, mi.uordblks, mi.fordblks);
 		}
 #endif /* HAVE_MALLINFO */
