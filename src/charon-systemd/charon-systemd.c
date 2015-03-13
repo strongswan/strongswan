@@ -40,6 +40,17 @@
 #include <threading/rwlock.h>
 
 /**
+ * Default user and group
+ */
+#ifndef IPSEC_USER
+#define IPSEC_USER NULL
+#endif
+
+#ifndef IPSEC_GROUP
+#define IPSEC_GROUP NULL
+#endif
+
+/**
  * hook in library for debugging messages
  */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
@@ -268,18 +279,20 @@ static int run()
  */
 static bool lookup_uid_gid()
 {
-#ifdef IPSEC_USER
-	if (!lib->caps->resolve_uid(lib->caps, IPSEC_USER))
+	char *name
+
+	name = lib->settings->get_str(lib->settings, "%s.user", IPSEC_USER,
+								  lib->ns);
+	if (name && !lib->caps->resolve_uid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif /* IPSEC_USER */
-#ifdef IPSEC_GROUP
-	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP))
+	name = lib->settings->get_str(lib->settings, "%s.group", IPSEC_GROUP,
+								  lib->ns);
+	if (name && !lib->caps->resolve_gid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif /* IPSEC_GROUP */
 	return TRUE;
 }
 
