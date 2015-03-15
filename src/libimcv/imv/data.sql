@@ -812,6 +812,12 @@ INSERT INTO groups (			/* 15 */
   'Debian armv7l', 2
 );
 
+INSERT INTO groups (            /* 16 */
+  name
+) VALUES (
+  'TPM TBOOT'
+);
+
 /* Default Product Groups */
 
 INSERT INTO groups_product_defaults (
@@ -1326,6 +1332,12 @@ INSERT INTO policies (          /* 21 */
   16, 'TPM BIOS/IMA Measurements', 'BI', 2, 2
 );
 
+INSERT INTO policies (          /* 22 */
+  type, name, argument, rec_fail, rec_noresult
+) VALUES (
+  16, 'TPM TBOOT Measurements', 'T', 2, 2
+);
+
 /* Enforcements */
 
 INSERT INTO enforcements (		/*  1 */
@@ -1428,6 +1440,12 @@ INSERT INTO enforcements (      /* 17 */
   policy, group_id, max_age
 ) VALUES (
   21, 13, 60
+);
+
+INSERT INTO enforcements (      /* 18 */
+  policy, group_id, max_age
+) VALUES (
+  22, 16, 60
 );
 
 /* swid_entities */
