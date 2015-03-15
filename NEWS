@@ -44,6 +44,10 @@ strongswan-5.3.0
   variant. Can be used in conjunction with the SHA256, SHA384 and SHA512 hash
   algorithms with SHA512 being the default.
 
+- The IF-IMV 1.4 interface now makes the IP address of the TNC access requestor
+  as seen by the TNC server available to all IMVs. This information can be
+  forwarded to policy enforcement points (e.g. firewalls or routers).
+
 
 strongswan-5.2.2
 ----------------
