@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -59,11 +59,6 @@ struct pts_ita_comp_tboot_t {
 	 * Primary key for Component Functional Name database entry
 	 */
 	int cid;
-
-	/**
-	 * Primary key for AIK database entry
-	 */
-	int kid;
 
 	/**
 	 * Component is registering measurements
@@ -243,7 +238,7 @@ METHOD(pts_component_t, verify, status_t,
 	else
 	{
 		status = this->pts_db->check_comp_measurement(this->pts_db,
-								measurement, this->cid, this->kid,
+								measurement, this->cid, this->aik_id,
 								++this->seq_no, extended_pcr, algo);
 		if (status != SUCCESS)
 		{
