@@ -60,7 +60,7 @@ static void destroy_cdp(x509_cdp_t *this)
 static int issue()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
-	hash_algorithm_t digest = HASH_SHA1;
+	hash_algorithm_t digest = HASH_SHA256;
 	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -364,14 +364,6 @@ static int issue()
 	}
 	public->destroy(public);
 
-	if (private->get_type(private) == KEY_BLISS)
-	{
-		/* the default hash function is SHA512. SHA1 is not supported */
-		if (digest == HASH_SHA1)
-		{
-			digest = HASH_SHA512;
-		}
-	}
 	if (hex)
 	{
 		serial = chunk_from_hex(chunk_create(hex, strlen(hex)), NULL);
@@ -599,7 +591,7 @@ static void __attribute__ ((constructor))reg()
 			{"crl",				'u', 1, "CRL distribution point URI to include"},
 			{"crlissuer",		'I', 1, "CRL Issuer for CRL at distribution point"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
+			{"digest",			'g', 1, "digest for signature creation, default: sha256"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

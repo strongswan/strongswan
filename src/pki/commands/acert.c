@@ -32,7 +32,7 @@
 static int acert()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
-	hash_algorithm_t digest = HASH_SHA1;
+	hash_algorithm_t digest = HASH_SHA256;
 	certificate_t *ac = NULL, *cert = NULL, *issuer =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -167,14 +167,6 @@ static int acert()
 		error = "issuer private key does not match issuer certificate";
 		goto end;
 	}
-	if (private->get_type(private) == KEY_BLISS)
-	{
-		/* the default hash function is SHA512. SHA1 is not supported */
-		if (digest == HASH_SHA1)
-		{
-			digest = HASH_SHA512;
-		}
-	}
 
 	if (hex)
 	{
@@ -295,7 +287,7 @@ static void __attribute__ ((constructor))reg()
 			{"not-before",		'F', 1, "date/time the validity of the AC starts"},
 			{"not-after",		'T', 1, "date/time the validity of the AC ends"},
 			{"dateform",		'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
-			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
+			{"digest",			'g', 1, "digest for signature creation, default: sha256"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

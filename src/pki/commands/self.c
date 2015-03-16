@@ -50,7 +50,7 @@ static int self()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
-	hash_algorithm_t digest = HASH_SHA1;
+	hash_algorithm_t digest = HASH_SHA256;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -263,14 +263,6 @@ static int self()
 		break;
 	}
 
-	if (type == KEY_BLISS)
-	{
-		/* the default hash function is SHA512. SHA1 is not supported */
-		if (digest == HASH_SHA1)
-		{
-			digest = HASH_SHA512;
-		}
-	}
 	if (!dn)
 	{
 		error = "--dn is required";
@@ -455,7 +447,7 @@ static void __attribute__ ((constructor))reg()
 			{"policy-any",		'A', 1, "inhibitAnyPolicy constraint"},
 			{"flag",			'e', 1, "include extendedKeyUsage flag"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
+			{"digest",			'g', 1, "digest for signature creation, default: sha256"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

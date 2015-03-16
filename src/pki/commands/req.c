@@ -31,7 +31,7 @@ static int req()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
-	hash_algorithm_t digest = HASH_SHA1;
+	hash_algorithm_t digest = HASH_SHA256;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	char *file = NULL, *dn = NULL, *error = NULL;
@@ -103,14 +103,6 @@ static int req()
 		break;
 	}
 
-	if (type == KEY_BLISS)
-	{
-		/* the default hash function is SHA512. SHA1 is not supported */
-		if (digest == HASH_SHA1)
-		{
-			digest = HASH_SHA512;
-		}
-	}
 	if (!dn)
 	{
 		error = "--dn is required";
@@ -208,7 +200,7 @@ static void __attribute__ ((constructor))reg()
 			{"dn",		'd', 1, "subject distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in cert request"},
 			{"password",'p', 1, "challengePassword to include in cert request"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"digest",	'g', 1, "digest for signature creation, default: sha256"},
 			{"outform",	'f', 1, "encoding of generated request, default: der"},
 		}
 	});
