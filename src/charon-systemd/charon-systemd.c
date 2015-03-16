@@ -279,7 +279,7 @@ static int run()
  */
 static bool lookup_uid_gid()
 {
-	char *name
+	char *name;
 
 	name = lib->settings->get_str(lib->settings, "%s.user", IPSEC_USER,
 								  lib->ns);
