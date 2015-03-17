@@ -1114,22 +1114,6 @@ METHOD(child_sa_t, destroy, void,
 
 	set_state(this, CHILD_DESTROYING);
 
-	/* delete SAs in the kernel, if they are set up */
-	if (this->my_spi)
-	{
-		hydra->kernel_interface->del_sa(hydra->kernel_interface,
-					this->other_addr, this->my_addr, this->my_spi,
-					proto_ike2ip(this->protocol), this->my_cpi,
-					this->mark_in);
-	}
-	if (this->other_spi)
-	{
-		hydra->kernel_interface->del_sa(hydra->kernel_interface,
-					this->my_addr, this->other_addr, this->other_spi,
-					proto_ike2ip(this->protocol), this->other_cpi,
-					this->mark_out);
-	}
-
 	if (this->config->install_policy(this->config))
 	{
 		/* delete all policies in the kernel */
@@ -1144,6 +1128,22 @@ METHOD(child_sa_t, destroy, void,
 			}
 		}
 		enumerator->destroy(enumerator);
+	}
+
+	/* delete SAs in the kernel, if they are set up */
+	if (this->my_spi)
+	{
+		hydra->kernel_interface->del_sa(hydra->kernel_interface,
+					this->other_addr, this->my_addr, this->my_spi,
+					proto_ike2ip(this->protocol), this->my_cpi,
+					this->mark_in);
+	}
+	if (this->other_spi)
+	{
+		hydra->kernel_interface->del_sa(hydra->kernel_interface,
+					this->my_addr, this->other_addr, this->other_spi,
+					proto_ike2ip(this->protocol), this->other_cpi,
+					this->mark_out);
 	}
 
 	if (this->reqid_allocated)
