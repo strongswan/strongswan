@@ -117,7 +117,7 @@ static int sign_crl()
 	certificate_t *ca = NULL, *crl = NULL;
 	crl_t *lastcrl = NULL;
 	x509_t *x509;
-	hash_algorithm_t digest = HASH_SHA256;
+	hash_algorithm_t digest = HASH_UNKNOWN;
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
 	char *basecrl = NULL;
 	char serial[512], *keyid = NULL;
@@ -330,6 +330,10 @@ static int sign_crl()
 		error = "loading CA private key failed";
 		goto error;
 	}
+	if (digest == HASH_UNKNOWN)
+	{
+		digest = get_default_digest(private);
+	}
 	if (!private->belongs_to(private, public))
 	{
 		error = "CA private key does not match CA certificate";
@@ -465,7 +469,7 @@ static void __attribute__ ((constructor))reg()
 			{"serial",		's', 1, "hex encoded certificate serial number to revoke"},
 			{"reason",		'r', 1, "reason for certificate revocation"},
 			{"date",		'd', 1, "revocation date as unix timestamp, default: now"},
-			{"digest",		'g', 1, "digest for signature creation, default: sha256"},
+			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
 			{"outform",		'f', 1, "encoding of generated crl, default: der"},
 		}
 	});

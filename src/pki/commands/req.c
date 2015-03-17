@@ -31,7 +31,7 @@ static int req()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
-	hash_algorithm_t digest = HASH_SHA256;
+	hash_algorithm_t digest = HASH_UNKNOWN;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	char *file = NULL, *dn = NULL, *error = NULL;
@@ -139,6 +139,10 @@ static int req()
 		error = "parsing private key failed";
 		goto end;
 	}
+	if (digest == HASH_UNKNOWN)
+	{
+		digest = get_default_digest(private);
+	}
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
 							  BUILD_SIGNING_KEY, private,
 							  BUILD_SUBJECT, id,
@@ -200,7 +204,7 @@ static void __attribute__ ((constructor))reg()
 			{"dn",		'd', 1, "subject distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in cert request"},
 			{"password",'p', 1, "challengePassword to include in cert request"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha256"},
+			{"digest",	'g', 1, "digest for signature creation, default: key-specific"},
 			{"outform",	'f', 1, "encoding of generated request, default: der"},
 		}
 	});

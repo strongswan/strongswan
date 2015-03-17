@@ -237,6 +237,27 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc)
 #endif
 }
 
+/*
+ * Described in header
+ */
+hash_algorithm_t get_default_digest(private_key_t *private)
+{
+	enumerator_t *enumerator;
+	signature_scheme_t scheme;
+	hash_algorithm_t alg = HASH_UNKNOWN;
+
+	enumerator = signature_schemes_for_key(private->get_type(private),
+										   private->get_keysize(private));
+	if (enumerator->enumerate(enumerator, &scheme))
+	{
+		alg = hasher_from_signature_scheme(scheme);
+	}
+	enumerator->destroy(enumerator);
+
+	/* default to SHA-256 */
+	return alg == HASH_UNKNOWN ? HASH_SHA256 : alg;
+}
+
 /**
  * Callback credential set pki uses
  */

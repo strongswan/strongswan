@@ -55,4 +55,12 @@ bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
  */
 void set_file_mode(FILE *stream, cred_encoding_type_t enc);
 
+/**
+ * Select default digest for signatures with the given key
+ *
+ * @param private	private key
+ * @return			hash algorithm
+ */
+hash_algorithm_t get_default_digest(private_key_t *private);
+
 #endif /** PKI_H_ @}*/

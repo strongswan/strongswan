@@ -50,7 +50,7 @@ static int self()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
-	hash_algorithm_t digest = HASH_SHA256;
+	hash_algorithm_t digest = HASH_UNKNOWN;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -314,6 +314,10 @@ static int self()
 		error = "loading private key failed";
 		goto end;
 	}
+	if (digest == HASH_UNKNOWN)
+	{
+		digest = get_default_digest(private);
+	}
 	public = private->get_public_key(private);
 	if (!public)
 	{
@@ -447,7 +451,7 @@ static void __attribute__ ((constructor))reg()
 			{"policy-any",		'A', 1, "inhibitAnyPolicy constraint"},
 			{"flag",			'e', 1, "include extendedKeyUsage flag"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",			'g', 1, "digest for signature creation, default: sha256"},
+			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

@@ -60,7 +60,7 @@ static void destroy_cdp(x509_cdp_t *this)
 static int issue()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
-	hash_algorithm_t digest = HASH_SHA256;
+	hash_algorithm_t digest = HASH_UNKNOWN;
 	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -357,6 +357,10 @@ static int issue()
 		error = "loading CA private key failed";
 		goto end;
 	}
+	if (digest == HASH_UNKNOWN)
+	{
+		digest = get_default_digest(private);
+	}
 	if (!private->belongs_to(private, public))
 	{
 		error = "CA private key does not match CA certificate";
@@ -591,7 +595,7 @@ static void __attribute__ ((constructor))reg()
 			{"crl",				'u', 1, "CRL distribution point URI to include"},
 			{"crlissuer",		'I', 1, "CRL Issuer for CRL at distribution point"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",			'g', 1, "digest for signature creation, default: sha256"},
+			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
