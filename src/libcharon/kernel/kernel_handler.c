@@ -99,8 +99,9 @@ METHOD(kernel_listener_t, mapping, bool,
 {
 	protocol_id_t proto = proto_ip2ike(protocol);
 
-	DBG1(DBG_KNL, "NAT mappings of CHILD_SA %N/0x%08x/%H changed, "
-		 "queuing update job", protocol_id_names, proto, ntohl(spi), dst);
+	DBG1(DBG_KNL, "NAT mappings of CHILD_SA %N/0x%08x/%H changed to %#H, "
+		 "queuing update job", protocol_id_names, proto, ntohl(spi), dst,
+		 remote);
 
 	lib->processor->queue_job(lib->processor,
 						(job_t*)update_sa_job_create(proto, spi, dst, remote));
