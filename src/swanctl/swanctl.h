@@ -66,4 +66,9 @@
  */
 #define SWANCTL_PKCS8DIR SWANCTLDIR "/pkcs8"
 
+/**
+ * Directory for PKCS#12 containers
+ */
+#define SWANCTL_PKCS12DIR SWANCTLDIR "/pkcs12"
+
 #endif /** SWANCTL_H_ @}*/

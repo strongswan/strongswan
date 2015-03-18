@@ -25,6 +25,7 @@
 
 #include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
+#include <credentials/containers/pkcs12.h>
 
 /**
  * Load a single certificate over vici
@@ -60,7 +61,7 @@ static bool load_cert(vici_conn_t *conn, command_format_options_t format,
 	}
 	else
 	{
-		printf("loaded %s certificate '%s'\n", type, dir);
+		printf("loaded %s certificate from '%s'\n", type, dir);
 	}
 	vici_free_res(res);
 	return ret;
@@ -113,7 +114,14 @@ static bool load_key(vici_conn_t *conn, command_format_options_t format,
 
 	req = vici_begin("load-key");
 
-	vici_add_key_valuef(req, "type", "%s", type);
+	if (streq(type, "pkcs8"))
+	{	/* as used by vici */
+		vici_add_key_valuef(req, "type", "any");
+	}
+	else
+	{
+		vici_add_key_valuef(req, "type", "%s", type);
+	}
 	vici_add_key_value(req, "data", data.ptr, data.len);
 
 	res = vici_submit(req, conn);
@@ -135,20 +143,59 @@ static bool load_key(vici_conn_t *conn, command_format_options_t format,
 	}
 	else
 	{
-		printf("loaded %s key '%s'\n", type, dir);
+		printf("loaded %s key from '%s'\n", type, dir);
 	}
 	vici_free_res(res);
 	return ret;
 }
 
 /**
+ * Load a private key of any type to vici
+ */
+static bool load_key_anytype(vici_conn_t *conn, command_format_options_t format,
+							 char *path, private_key_t *private)
+{
+	bool loaded = FALSE;
+	chunk_t encoding;
+
+	if (!private->get_encoding(private, PRIVKEY_ASN1_DER, &encoding))
+	{
+		fprintf(stderr, "encoding private key from '%s' failed\n", path);
+		return FALSE;
+	}
+	switch (private->get_type(private))
+	{
+		case KEY_RSA:
+			loaded = load_key(conn, format, path, "rsa", encoding);
+			break;
+		case KEY_ECDSA:
+			loaded = load_key(conn, format, path, "ecdsa", encoding);
+			break;
+		default:
+			fprintf(stderr, "unsupported key type in '%s'\n", path);
+			break;
+	}
+	chunk_clear(&encoding);
+	return loaded;
+}
+
+/**
+ * Data passed to password callback
+ */
+typedef struct {
+	char prompt[128];
+	mem_cred_t *cache;
+} cb_data_t;
+
+/**
  * Callback function to prompt for private key passwords
  */
 CALLBACK(password_cb, shared_key_t*,
-	char *prompt, shared_key_type_t type,
+	cb_data_t *data, shared_key_type_t type,
 	identification_t *me, identification_t *other,
 	id_match_t *match_me, id_match_t *match_other)
 {
+	shared_key_t *shared;
 	char *pwd = NULL;
 
 	if (type != SHARED_PRIVATE_KEY_PASS)
@@ -156,7 +203,7 @@ CALLBACK(password_cb, shared_key_t*,
 		return NULL;
 	}
 #ifdef HAVE_GETPASS
-	pwd = getpass(prompt);
+	pwd = getpass(data->prompt);
 #endif
 	if (!pwd || strlen(pwd) == 0)
 	{
@@ -170,65 +217,94 @@ CALLBACK(password_cb, shared_key_t*,
 	{
 		*match_other = ID_MATCH_PERFECT;
 	}
-	return shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	/* cache secret if it is required more than once (PKCS#12) */
+	data->cache->add_shared(data->cache, shared, NULL);
+	return shared->get_ref(shared);
 }
 
 /**
- * Try to parse a potentially encrypted private key using password prompt
+ * Determine credential type and subtype from a type string
  */
-static private_key_t* decrypt_key(char *name, char *type, chunk_t encoding)
+static bool determine_credtype(char *type, credential_type_t *credtype,
+							   int *subtype)
 {
-	key_type_t kt = KEY_ANY;
-	private_key_t *private;
+	struct {
+		char *type;
+		credential_type_t credtype;
+		int subtype;
+	} map[] = {
+		{ "pkcs8",			CRED_PRIVATE_KEY,		KEY_ANY,			},
+		{ "rsa",			CRED_PRIVATE_KEY,		KEY_RSA,			},
+		{ "ecdsa",			CRED_PRIVATE_KEY,		KEY_ECDSA,			},
+		{ "pkcs12",			CRED_CONTAINER,			CONTAINER_PKCS12,	},
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (streq(map[i].type, type))
+		{
+			*credtype = map[i].credtype;
+			*subtype = map[i].subtype;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Try to parse a potentially encrypted credential using password prompt
+ */
+static void* decrypt(char *name, char *type, chunk_t encoding)
+{
+	credential_type_t credtype;
+	int subtype;
+	void *cred;
 	callback_cred_t *cb;
-	char buf[128];
+	cb_data_t data;
 
-	if (streq(type, "rsa"))
+	if (!determine_credtype(type, &credtype, &subtype))
 	{
-		kt = KEY_RSA;
-	}
-	else if (streq(type, "ecdsa"))
-	{
-		kt = KEY_ECDSA;
+		return NULL;
 	}
 
-	snprintf(buf, sizeof(buf), "Password for '%s': ", name);
+	snprintf(data.prompt, sizeof(data.prompt), "Password for %s file '%s': ",
+			 type, name);
 
-	cb = callback_cred_create_shared(password_cb, buf);
+	data.cache = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &data.cache->set);
+	cb = callback_cred_create_shared(password_cb, &data);
 	lib->credmgr->add_set(lib->credmgr, &cb->set);
 
-	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, kt,
-								 BUILD_BLOB_PEM, encoding, BUILD_END);
+	cred = lib->creds->create(lib->creds, credtype, subtype,
+							  BUILD_BLOB_PEM, encoding, BUILD_END);
 
+	lib->credmgr->remove_set(lib->credmgr, &data.cache->set);
+	data.cache->destroy(data.cache);
 	lib->credmgr->remove_set(lib->credmgr, &cb->set);
 	cb->destroy(cb);
 
-	return private;
+	return cred;
 }
 
 /**
- * Try to parse a potentially encrypted private key using configured secret
+ * Try to parse a potentially encrypted credential using configured secret
  */
-static private_key_t* decrypt_key_with_config(settings_t *cfg, char *name,
-											  char *type, chunk_t encoding)
-{	key_type_t kt = KEY_ANY;
+static void* decrypt_with_config(settings_t *cfg, char *name, char *type,
+								 chunk_t encoding)
+{
+	credential_type_t credtype;
+	int subtype;
 	enumerator_t *enumerator, *secrets;
 	char *section, *key, *value, *file, buf[128];
 	shared_key_t *shared;
-	private_key_t *private = NULL;
+	void *cred = NULL;
 	mem_cred_t *mem = NULL;
 
-	if (streq(type, "rsa"))
+	if (!determine_credtype(type, &credtype, &subtype))
 	{
-		kt = KEY_RSA;
-	}
-	else if (streq(type, "ecdsa"))
-	{
-		kt = KEY_ECDSA;
-	}
-	else
-	{
-		type = "pkcs8";
+		return NULL;
 	}
 
 	/* load all secrets for this key type */
@@ -265,12 +341,12 @@ static private_key_t* decrypt_key_with_config(settings_t *cfg, char *name,
 	{
 		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 
-		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, kt,
-									 BUILD_BLOB_PEM, encoding, BUILD_END);
+		cred = lib->creds->create(lib->creds, credtype, subtype,
+								  BUILD_BLOB_PEM, encoding, BUILD_END);
 
 		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
 
-		if (!private)
+		if (!cred)
 		{
 			fprintf(stderr, "configured decryption secret for '%s' invalid\n",
 					name);
@@ -279,7 +355,7 @@ static private_key_t* decrypt_key_with_config(settings_t *cfg, char *name,
 		mem->destroy(mem);
 	}
 
-	return private;
+	return cred;
 }
 
 /**
@@ -292,30 +368,15 @@ static bool load_encrypted_key(vici_conn_t *conn,
 {
 	private_key_t *private;
 	bool loaded = FALSE;
-	chunk_t encoding;
 
-	private = decrypt_key_with_config(cfg, rel, type, data);
+	private = decrypt_with_config(cfg, rel, type, data);
 	if (!private && !noprompt)
 	{
-		private = decrypt_key(rel, type, data);
+		private = decrypt(rel, type, data);
 	}
 	if (private)
 	{
-		if (private->get_encoding(private, PRIVKEY_ASN1_DER, &encoding))
-		{
-			switch (private->get_type(private))
-			{
-				case KEY_RSA:
-					loaded = load_key(conn, format, path, "rsa", encoding);
-					break;
-				case KEY_ECDSA:
-					loaded = load_key(conn, format, path, "ecdsa", encoding);
-					break;
-				default:
-					break;
-			}
-			chunk_clear(&encoding);
-		}
+		loaded = load_key_anytype(conn, format, path, private);
 		private->destroy(private);
 	}
 	return loaded;
@@ -361,6 +422,114 @@ static void load_keys(vici_conn_t *conn, command_format_options_t format,
 }
 
 /**
+ * Load credentials from a PKCS#12 container over vici
+ */
+static bool load_pkcs12(vici_conn_t *conn, command_format_options_t format,
+						char *path, pkcs12_t *p12)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	private_key_t *private;
+	chunk_t encoding;
+	bool loaded = TRUE;
+
+	enumerator = p12->create_cert_enumerator(p12);
+	while (loaded && enumerator->enumerate(enumerator, &cert))
+	{
+		loaded = FALSE;
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		{
+			loaded = load_cert(conn, format, path, "x509", encoding);
+			if (loaded)
+			{
+				fprintf(stderr, "  %Y\n", cert->get_subject(cert));
+			}
+			free(encoding.ptr);
+		}
+		else
+		{
+			fprintf(stderr, "encoding certificate from '%s' failed\n", path);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = p12->create_key_enumerator(p12);
+	while (loaded && enumerator->enumerate(enumerator, &private))
+	{
+		loaded = load_key_anytype(conn, format, path, private);
+	}
+	enumerator->destroy(enumerator);
+
+	return loaded;
+}
+
+/**
+ * Try to decrypt and load credentials from a container
+ */
+static bool load_encrypted_container(vici_conn_t *conn,
+					command_format_options_t format, settings_t *cfg, char *rel,
+					char *path, char *type, bool noprompt, chunk_t data)
+{
+	container_t *container;
+	bool loaded = FALSE;
+
+	container = decrypt_with_config(cfg, rel, type, data);
+	if (!container && !noprompt)
+	{
+		container = decrypt(rel, type, data);
+	}
+	if (container)
+	{
+		switch (container->get_type(container))
+		{
+			case CONTAINER_PKCS12:
+				loaded = load_pkcs12(conn, format, path, (pkcs12_t*)container);
+				break;
+			default:
+				break;
+		}
+		container->destroy(container);
+	}
+	return loaded;
+}
+
+/**
+ * Load credential containers from a directory
+ */
+static void load_containers(vici_conn_t *conn, command_format_options_t format,
+						bool noprompt, settings_t *cfg, char *type, char *dir)
+{
+	enumerator_t *enumerator;
+	struct stat st;
+	chunk_t *map;
+	char *path, *rel;
+
+	enumerator = enumerator_create_directory(dir);
+	if (enumerator)
+	{
+		while (enumerator->enumerate(enumerator, &rel, &path, &st))
+		{
+			if (S_ISREG(st.st_mode))
+			{
+				map = chunk_map(path, FALSE);
+				if (map)
+				{
+					load_encrypted_container(conn, format, cfg, rel, path,
+											 type, noprompt, *map);
+					chunk_unmap(map);
+				}
+				else
+				{
+					fprintf(stderr, "mapping '%s' failed: %s, skipped\n",
+							path, strerror(errno));
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
+/**
  * Load a single secret over VICI
  */
 static bool load_secret(vici_conn_t *conn, settings_t *cfg,
@@ -380,6 +549,7 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 		"rsa",
 		"ecdsa",
 		"pkcs8",
+		"pkcs12",
 	};
 
 	for (i = 0; i < countof(types); i++)
@@ -510,7 +680,9 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 
 	load_keys(conn, format, noprompt, cfg, "rsa", SWANCTL_RSADIR);
 	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
-	load_keys(conn, format, noprompt, cfg, "any", SWANCTL_PKCS8DIR);
+	load_keys(conn, format, noprompt, cfg, "pkcs8", SWANCTL_PKCS8DIR);
+
+	load_containers(conn, format, noprompt, cfg, "pkcs12", SWANCTL_PKCS12DIR);
 
 	enumerator = cfg->create_section_enumerator(cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
