@@ -2260,6 +2260,12 @@ METHOD(ike_sa_t, inherit_post, void,
 		array_insert_create(&this->other_vips, ARRAY_TAIL, vip);
 	}
 
+	/* MOBIKE additional addresses */
+	while (array_remove(other->peer_addresses, ARRAY_HEAD, &vip))
+	{
+		array_insert_create(&this->peer_addresses, ARRAY_TAIL, vip);
+	}
+
 	/* authentication information */
 	enumerator = array_create_enumerator(other->my_auths);
 	while (enumerator->enumerate(enumerator, &cfg))
