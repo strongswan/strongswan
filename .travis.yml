@@ -8,6 +8,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq bison flex gperf gettext
   - ./scripts/test.sh deps
+  - ./scripts/test.sh pydeps
 
 script:
   - ./autogen.sh

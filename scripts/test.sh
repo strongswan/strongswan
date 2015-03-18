@@ -52,7 +52,8 @@ all)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
-		  binutils-dev libunwind7-dev libjson0-dev iptables-dev"
+		  binutils-dev libunwind7-dev libjson0-dev iptables-dev python-pip"
+	PYDEPS="pytest"
 	;;
 win*)
 	CONFIG="--disable-defaults --enable-svc --enable-ikev2
@@ -92,6 +93,11 @@ esac
 
 if test "$1" = "deps"; then
 	sudo apt-get install -qq $DEPS
+	exit $?
+fi
+
+if test "$1" = "pydeps"; then
+	test -z "$PYDEPS" || sudo pip -q install $PYDEPS
 	exit $?
 fi
 
