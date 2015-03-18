@@ -1,0 +1,34 @@
+from setuptools import setup
+
+
+long_description = (
+    "The strongSwan VICI protocol allows external application to monitor, "
+    "configure and control the IKE daemon charon. This python package provides "
+    "a native client side implementation of the VICI protocol, well suited to "
+    "script automated tasks in a reliable way."
+)
+
+setup(
+    name="vici",
+    version="@EGG_VERSION@",
+    description="Native python interface for strongSwan VICI",
+    author="Bjorn Schuberg",
+    url="https://wiki.strongswan.org/projects/strongswan/wiki/Vici",
+    license="MIT",
+    packages=["vici"],
+    long_description=long_description,
+    include_package_data=True,
+    classifiers=(
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Topic :: Security",
+        "Topic :: Software Development :: Libraries",
+    )
+)

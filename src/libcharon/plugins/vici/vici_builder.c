@@ -84,6 +84,8 @@ METHOD(vici_builder_t, add, void,
 
 	if (value.len > 0xffff)
 	{
+		DBG1(DBG_ENC, "vici value exceeds size limit (%zu > %u)",
+			 value.len, 0xffff);
 		this->error++;
 		return;
 	}
@@ -125,22 +127,56 @@ METHOD(vici_builder_t, add, void,
 	}
 }
 
-METHOD(vici_builder_t, vadd_kv, void,
-	private_vici_builder_t *this, char *key, char *fmt, va_list args)
+/**
+ * Add a list item or a key/value, if key given
+ */
+static void vadd_kv_or_li(private_vici_builder_t *this, char *key,
+						  char *fmt, va_list args)
 {
-	char buf[2048];
+	u_char buf[512];
+	chunk_t value;
 	ssize_t len;
+	va_list copy;
 
-	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	if (len < 0 || len >= sizeof(buf))
+	va_copy(copy, args);
+	len = vsnprintf(buf, sizeof(buf), fmt, copy);
+	va_end(copy);
+	if (len >= sizeof(buf))
 	{
-		DBG1(DBG_ENC, "vici builder format buffer exceeds limit");
+		value = chunk_alloc(len + 1);
+		len = vsnprintf(value.ptr, value.len, fmt, args);
+	}
+	else
+	{
+		value = chunk_create(buf, len);
+	}
+
+	if (len < 0)
+	{
+		DBG1(DBG_ENC, "vici builder format print failed");
 		this->error++;
 	}
 	else
 	{
-		add(this, VICI_KEY_VALUE, key, chunk_create(buf, len));
+		if (key)
+		{
+			add(this, VICI_KEY_VALUE, key, value);
+		}
+		else
+		{
+			add(this, VICI_LIST_ITEM, value);
+		}
 	}
+	if (value.ptr != buf)
+	{
+		free(value.ptr);
+	}
+}
+
+METHOD(vici_builder_t, vadd_kv, void,
+	private_vici_builder_t *this, char *key, char *fmt, va_list args)
+{
+	vadd_kv_or_li(this, key, fmt, args);
 }
 
 METHOD(vici_builder_t, add_kv, void,
@@ -153,23 +189,10 @@ METHOD(vici_builder_t, add_kv, void,
 	va_end(args);
 }
 
-
 METHOD(vici_builder_t, vadd_li, void,
 	private_vici_builder_t *this, char *fmt, va_list args)
 {
-	char buf[2048];
-	ssize_t len;
-
-	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	if (len < 0 || len >= sizeof(buf))
-	{
-		DBG1(DBG_ENC, "vici builder format buffer exceeds limit");
-		this->error++;
-	}
-	else
-	{
-		add(this, VICI_LIST_ITEM, chunk_create(buf, len));
-	}
+	vadd_kv_or_li(this, NULL, fmt, args);
 }
 
 METHOD(vici_builder_t, add_li, void,

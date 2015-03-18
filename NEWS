@@ -35,6 +35,10 @@ strongswan-5.3.0
   Windows 7 IKEv2 clients, which announces its services over the tunnel if the
   negotiated IPsec policy allows it.
 
+- For the vici plugin a Python Egg has been added to allow Python applications
+  to control or monitor the IKE daemon using the VICI interface, similar to the
+  existing ruby gem. The Python library has been contributed by Björn Schuberg.
+
 - EAP server methods now can fulfill public key constraints, such as rightcert
   or rightca. Additionally, public key and signature constraints can be
   specified for EAP methods in the rightauth keyword. Currently the EAP-TLS and
