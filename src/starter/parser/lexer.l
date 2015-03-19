@@ -152,9 +152,8 @@ static void include_files(parser_helper_t *ctx);
 	\\t     yyextra->string_add(yyextra, "\t");
 	\\b     yyextra->string_add(yyextra, "\b");
 	\\f     yyextra->string_add(yyextra, "\f");
-	\\(.|\n)			{
-		yyextra->string_add(yyextra, yytext+1);
-	}
+	\\\r?\n /* merge lines that end with EOL characters */
+	\\.     yyextra->string_add(yyextra, yytext+1);
 	[^\\\n"]+			{
 		yyextra->string_add(yyextra, yytext);
 	}
