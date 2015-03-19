@@ -401,6 +401,17 @@ static inline void *memset_noop(void *s, int c, size_t n)
         typedef uint64_t        u_int64_t;
 #endif
 
+#ifdef HAVE_INT128
+/**
+ * 128 bit wide signed integer, if supported
+ */
+typedef __int128 int128_t;
+/**
+ * 128 bit wide unsigned integer, if supported
+ */
+typedef unsigned __int128 u_int128_t;
+#endif
+
 typedef enum status_t status_t;
 
 /**
