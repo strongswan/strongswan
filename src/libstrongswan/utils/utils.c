@@ -61,44 +61,9 @@ ENUM(status_names, SUCCESS, NEED_MORE,
 /**
  * Described in header.
  */
-void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
+void memxor_noinline(u_int8_t dst[], u_int8_t src[], size_t n)
 {
-	int m, i;
-
-	/* byte wise XOR until dst aligned */
-	for (i = 0; (uintptr_t)&dst[i] % sizeof(long) && i < n; i++)
-	{
-		dst[i] ^= src[i];
-	}
-	/* try to use words if src shares an aligment with dst */
-	switch (((uintptr_t)&src[i] % sizeof(long)))
-	{
-		case 0:
-			for (m = n - sizeof(long); i <= m; i += sizeof(long))
-			{
-				*(long*)&dst[i] ^= *(long*)&src[i];
-			}
-			break;
-		case sizeof(int):
-			for (m = n - sizeof(int); i <= m; i += sizeof(int))
-			{
-				*(int*)&dst[i] ^= *(int*)&src[i];
-			}
-			break;
-		case sizeof(short):
-			for (m = n - sizeof(short); i <= m; i += sizeof(short))
-			{
-				*(short*)&dst[i] ^= *(short*)&src[i];
-			}
-			break;
-		default:
-			break;
-	}
-	/* byte wise XOR of the rest */
-	for (; i < n; i++)
-	{
-		dst[i] ^= src[i];
-	}
+	memxor_inline(dst, src, n);
 }
 
 /**

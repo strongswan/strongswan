@@ -551,10 +551,68 @@ typedef struct timespec timespec_t;
  */
 typedef struct sockaddr sockaddr_t;
 
+ /**
+  * Same as memcpy, but XORs src into dst instead of copy, non-inlining.
+  */
+void memxor_noinline(u_int8_t dst[], u_int8_t src[], size_t n);
+
 /**
- * Same as memcpy, but XORs src into dst instead of copy
+ * Same as memcpy, but XORs src into dst instead of copy, inlining.
  */
-void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
+static inline void memxor_inline(u_int8_t dst[], u_int8_t src[], size_t n)
+{
+	int m, i;
+
+	/* byte wise XOR until dst aligned */
+	for (i = 0; (uintptr_t)&dst[i] % sizeof(long) && i < n; i++)
+	{
+		dst[i] ^= src[i];
+	}
+	/* try to use words if src shares an aligment with dst */
+	switch (((uintptr_t)&src[i] % sizeof(long)))
+	{
+		case 0:
+			for (m = n - sizeof(long); i <= m; i += sizeof(long))
+			{
+				*(long*)&dst[i] ^= *(long*)&src[i];
+			}
+			break;
+		case sizeof(int):
+			for (m = n - sizeof(int); i <= m; i += sizeof(int))
+			{
+				*(int*)&dst[i] ^= *(int*)&src[i];
+			}
+			break;
+		case sizeof(short):
+			for (m = n - sizeof(short); i <= m; i += sizeof(short))
+			{
+				*(short*)&dst[i] ^= *(short*)&src[i];
+			}
+			break;
+		default:
+			break;
+	}
+	/* byte wise XOR of the rest */
+	for (; i < n; i++)
+	{
+		dst[i] ^= src[i];
+	}
+}
+
+/**
+ * Same as memcpy, but XORs src into dst instead of copy, auto-inlining.
+ */
+static inline void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
+{
+	if (__builtin_constant_p(n))
+	{
+		memxor_inline(dest, src, n);
+	}
+	else
+	{
+		memxor_noinline(dest, src, n);
+	}
+}
 
 /**
  * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.
