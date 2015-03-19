@@ -23,8 +23,7 @@ as are empty lines which are not within a section.
 A line which contains
 .B include
 and a file name, separated by white space,
-is replaced by the contents of that file,
-preceded and followed by empty lines.
+is replaced by the contents of that file.
 If the file name is not a full pathname,
 it is considered to be relative to the directory containing the
 including file.
@@ -61,12 +60,9 @@ indicates what type of section follows, and
 .I name
 is an arbitrary name which distinguishes the section from others
 of the same type.
-Names must start with a letter and may contain only
-letters, digits, periods, underscores, and hyphens.
 All subsequent non-empty lines
-which begin with white space are part of the section;
-comments within a section must begin with white space too.
-There may be only one section of a given type with a given name.
+which begin with white space are part of the section.
+Sections of the same type that share the same name are merged.
 .PP
 Lines within the section are generally of the form
 .PP
@@ -75,24 +71,30 @@ Lines within the section are generally of the form
 (note the mandatory preceding white space).
 There can be white space on either side of the
 .BR = .
-Parameter names follow the same syntax as section names,
-and are specific to a section type.
-Unless otherwise explicitly specified,
-no parameter name may appear more than once in a section.
+Parameter names are specific to a section type.
 .PP
 An empty
 .I value
 stands for the system default value (if any) of the parameter,
-i.e. it is roughly equivalent to omitting the parameter line entirely.
+i.e. it is roughly equivalent to omitting the parameter line entirely. This may
+be useful to clear a setting inherited from a
+.B %default
+section or via
+.B also
+parameter (see below).
 A
 .I value
-may contain white space only if the entire
+may contain single spaces (additional white space is reduced to one space).
+To preserve white space as written enclose the entire
 .I value
-is enclosed in double quotes (\fB"\fR);
-a
-.I value
-cannot itself contain a double quote,
-nor may it be continued across more than one line.
+in double quotes (\fB"\fR); in such values double quotes themselves may be
+escaped by prefixing them with
+.B \\\\
+characters. A double-quoted string may span multiple lines by ending them with
+.B \\\\
+characters (following lines don't have to begin with white space, as that will
+be preserved). Additionally, the following control characters may be encoded in
+double-quoted strings: \\n, \\r, \\t, \\b, \\f.
 .PP
 Numeric values are specified to be either an ``integer''
 (a sequence of digits) or a ``decimal number''
@@ -102,38 +104,24 @@ There is currently one parameter which is available in any type of
 section:
 .TP
 .B also
-the value is a section name;
-the parameters of that section are appended to this section,
-as if they had been written as part of it.
-The specified section must exist, must follow the current one,
-and must have the same section type.
-(Nesting is permitted,
-and there may be more than one
+the value is a section name; the parameters of that section are inherited by
+the current section. Parameters in the current section always override inherited
+parameters, even if an
 .B also
-in a single section,
-although it is forbidden to append the same section more than once.)
+follows after them.
+The specified section must exist and must have the same section type; it doesn't
+if it is defined before or after the current section.
+Nesting is permitted, and there may be more than one
+.B also
+in a single section (parameters from referenced sections are inherited and
+overridden in the order of these
+.B also
+parameters).
 .PP
 A section with name
 .B %default
-specifies defaults for sections of the same type.
-For each parameter in it,
-any section of that type which does not have a parameter of the same name
-gets a copy of the one from the
-.B %default
-section.
-There may be multiple
-.B %default
-sections of a given type,
-but only one default may be supplied for any specific parameter name,
-and all
-.B %default
-sections of a given type must precede all non-\c
-.B %default
-sections of that type.
-.B %default
-sections may not contain the
-.B also
-parameter.
+specifies defaults for sections of the same type. All parameters in it, are
+inherited by all other sections of that type.
 .PP
 Currently there are three types of sections:
 a
