@@ -34,7 +34,7 @@ Doxyfile :	Doxyfile.in
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
 		-e "s:\@PACKAGE_NAME\@:$(PACKAGE_NAME):" \
-		-e "s:\@SRC_DIR\@:$(srcdir):" \
+		-e "s:\@SRC_DIR\@:$(srcdir):g" \
 		$(srcdir)/$@.in > $@
 
 apidoc :	Doxyfile
