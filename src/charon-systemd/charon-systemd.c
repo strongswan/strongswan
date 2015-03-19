@@ -378,7 +378,8 @@ int main(int argc, char *argv[])
 	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
 							countof(features), TRUE, journal_reload, &journal);
 
-	if (!charon->initialize(charon, PLUGINS))
+	if (!charon->initialize(charon,
+			lib->settings->get_str(lib->settings, "%s.load", PLUGINS, lib->ns)))
 	{
 		sd_notifyf(0, "STATUS=charon initialization failed");
 		return SS_RC_INITIALIZATION_FAILED;
