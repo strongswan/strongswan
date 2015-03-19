@@ -564,14 +564,22 @@ static inline void memxor_inline(u_int8_t dst[], u_int8_t src[], size_t n)
 	int m, i;
 
 	/* byte wise XOR until dst aligned */
-	for (i = 0; (uintptr_t)&dst[i] % sizeof(long) && i < n; i++)
+	for (i = 0; (uintptr_t)&dst[i] % sizeof(MAX_INT_TYPE) && i < n; i++)
 	{
 		dst[i] ^= src[i];
 	}
 	/* try to use words if src shares an aligment with dst */
-	switch (((uintptr_t)&src[i] % sizeof(long)))
+	switch (((uintptr_t)&src[i] % sizeof(MAX_INT_TYPE)))
 	{
+#ifdef HAVE_INT128
 		case 0:
+			for (m = n - sizeof(int128_t); i <= m; i += sizeof(int128_t))
+			{
+				*(int128_t*)&dst[i] ^= *(int128_t*)&src[i];
+			}
+			break;
+#endif
+		case sizeof(MAX_INT_TYPE) - sizeof(long):
 			for (m = n - sizeof(long); i <= m; i += sizeof(long))
 			{
 				*(long*)&dst[i] ^= *(long*)&src[i];
