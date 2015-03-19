@@ -14,6 +14,6 @@ endif
 
 libstrongswan_attr_sql_la_SOURCES = \
 	attr_sql_plugin.h attr_sql_plugin.c \
-	sql_attribute.h sql_attribute.c
+	attr_sql_provider.h attr_sql_provider.c
 
 libstrongswan_attr_sql_la_LDFLAGS = -module -avoid-version

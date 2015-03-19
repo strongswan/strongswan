@@ -19,7 +19,7 @@
 #include <plugins/plugin_feature.h>
 
 #include "attr_sql_plugin.h"
-#include "sql_attribute.h"
+#include "attr_sql_provider.h"
 
 typedef struct private_attr_sql_plugin_t private_attr_sql_plugin_t;
 
@@ -41,7 +41,7 @@ struct private_attr_sql_plugin_t {
 	/**
 	 * configuration attributes
 	 */
-	sql_attribute_t *attribute;
+	attr_sql_provider_t *attribute;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -74,7 +74,7 @@ static bool open_database(private_attr_sql_plugin_t *this,
 			DBG1(DBG_CFG, "attr-sql plugin failed to connect to database");
 			return FALSE;
 		}
-		this->attribute = sql_attribute_create(this->db);
+		this->attribute = attr_sql_provider_create(this->db);
 		charon->attributes->add_provider(charon->attributes,
 										 &this->attribute->provider);
 	}

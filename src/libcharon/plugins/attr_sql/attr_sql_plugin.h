@@ -17,7 +17,7 @@
  * @defgroup attr_sql attr_sql
  * @ingroup cplugins
  *
- * @defgroup sql_plugin sql_plugin
+ * @defgroup attr_sql_plugin attr_sql_plugin
  * @{ @ingroup attr_sql
  */
 

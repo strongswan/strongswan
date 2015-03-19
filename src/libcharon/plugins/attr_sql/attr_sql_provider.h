@@ -14,22 +14,22 @@
  */
 
 /**
- * @defgroup sql_attribute sql_attribute
+ * @defgroup attr_sql_provider attr_sql_provider
  * @{ @ingroup attr_sql
  */
 
-#ifndef SQL_ATTRIBUTE_H_
-#define SQL_ATTRIBUTE_H_
+#ifndef ATTR_SQL_PROVIDER_H_
+#define ATTR_SQL_PROVIDER_H_
 
 #include <attributes/attribute_provider.h>
 #include <database/database.h>
 
-typedef struct sql_attribute_t sql_attribute_t;
+typedef struct attr_sql_provider_t attr_sql_provider_t;
 
 /**
  * SQL database based IKEv2 cfg attribute provider.
  */
-struct sql_attribute_t {
+struct attr_sql_provider_t {
 
 	/**
 	 * Implements attribute provider interface
@@ -37,14 +37,14 @@ struct sql_attribute_t {
 	attribute_provider_t provider;
 
 	/**
-	 * Destroy a sql_attribute instance.
+	 * Destroy a attr_sql_provider instance.
 	 */
-	void (*destroy)(sql_attribute_t *this);
+	void (*destroy)(attr_sql_provider_t *this);
 };
 
 /**
- * Create a sql_attribute instance.
+ * Create a attr_sql_provider instance.
  */
-sql_attribute_t *sql_attribute_create(database_t *db);
+attr_sql_provider_t *attr_sql_provider_create(database_t *db);
 
-#endif /** SQL_ATTRIBUTE_H_ @}*/
+#endif /** ATTR_SQL_PROVIDER_H_ @}*/

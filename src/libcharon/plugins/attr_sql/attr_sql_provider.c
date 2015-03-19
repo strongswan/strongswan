@@ -18,19 +18,19 @@
 #include <utils/debug.h>
 #include <library.h>
 
-#include "sql_attribute.h"
+#include "attr_sql_provider.h"
 
-typedef struct private_sql_attribute_t private_sql_attribute_t;
+typedef struct private_attr_sql_provider_t private_attr_sql_provider_t;
 
 /**
- * private data of sql_attribute
+ * private data of attr_sql_provider
  */
-struct private_sql_attribute_t {
+struct private_attr_sql_provider_t {
 
 	/**
 	 * public functions
 	 */
-	sql_attribute_t public;
+	attr_sql_provider_t public;
 
 	/**
 	 * database connection
@@ -46,7 +46,7 @@ struct private_sql_attribute_t {
 /**
  * lookup/insert an identity
  */
-static u_int get_identity(private_sql_attribute_t *this, ike_sa_t *ike_sa)
+static u_int get_identity(private_attr_sql_provider_t *this, ike_sa_t *ike_sa)
 {
 	identification_t *id;
 	enumerator_t *e;
@@ -82,7 +82,7 @@ static u_int get_identity(private_sql_attribute_t *this, ike_sa_t *ike_sa)
 /**
  * Lookup an attribute pool by name
  */
-static u_int get_attr_pool(private_sql_attribute_t *this, char *name)
+static u_int get_attr_pool(private_attr_sql_provider_t *this, char *name)
 {
 	enumerator_t *e;
 	u_int row = 0;
@@ -102,7 +102,7 @@ static u_int get_attr_pool(private_sql_attribute_t *this, char *name)
 /**
  * Lookup pool by name and address family
  */
-static u_int get_pool(private_sql_attribute_t *this, char *name, int family,
+static u_int get_pool(private_attr_sql_provider_t *this, char *name, int family,
 					  u_int *timeout)
 {
 	enumerator_t *e;
@@ -128,7 +128,7 @@ static u_int get_pool(private_sql_attribute_t *this, char *name, int family,
 /**
  * Look up an existing lease
  */
-static host_t* check_lease(private_sql_attribute_t *this, char *name,
+static host_t* check_lease(private_attr_sql_provider_t *this, char *name,
 						   u_int pool, u_int identity)
 {
 	while (TRUE)
@@ -174,7 +174,7 @@ static host_t* check_lease(private_sql_attribute_t *this, char *name,
  * address as a candidate, but double check later on if it is still available
  * during the update operation. This allows us to work without locking.
  */
-static host_t* get_lease(private_sql_attribute_t *this, char *name,
+static host_t* get_lease(private_attr_sql_provider_t *this, char *name,
 						 u_int pool, u_int timeout, u_int identity)
 {
 	while (TRUE)
@@ -246,7 +246,7 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_sql_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
+	private_attr_sql_provider_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	host_t *requested)
 {
 	enumerator_t *enumerator;
@@ -298,7 +298,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	private_sql_attribute_t *this, linked_list_t *pools, host_t *address,
+	private_attr_sql_provider_t *this, linked_list_t *pools, host_t *address,
 	ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
@@ -341,7 +341,7 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_sql_attribute_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
+	private_attr_sql_provider_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
 	enumerator_t *attr_enumerator = NULL;
@@ -435,8 +435,8 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	return (attr_enumerator ? attr_enumerator : enumerator_create_empty());
 }
 
-METHOD(sql_attribute_t, destroy, void,
-	private_sql_attribute_t *this)
+METHOD(attr_sql_provider_t, destroy, void,
+	private_attr_sql_provider_t *this)
 {
 	free(this);
 }
@@ -444,9 +444,9 @@ METHOD(sql_attribute_t, destroy, void,
 /*
  * see header file
  */
-sql_attribute_t *sql_attribute_create(database_t *db)
+attr_sql_provider_t *attr_sql_provider_create(database_t *db)
 {
-	private_sql_attribute_t *this;
+	private_attr_sql_provider_t *this;
 	time_t now = time(NULL);
 
 	INIT(this,
