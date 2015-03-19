@@ -697,6 +697,17 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([no])]
 )
 
+AC_MSG_CHECKING([for __int128])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/types.h>]],
+		[[__int128 x = 0;
+		  return x;]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_INT128], [], [have __int128 type support])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_MSG_CHECKING([for GCC __sync operations])
 AC_RUN_IFELSE([AC_LANG_SOURCE(
 	[[
