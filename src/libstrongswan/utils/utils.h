@@ -410,6 +410,12 @@ typedef __int128 int128_t;
  * 128 bit wide unsigned integer, if supported
  */
 typedef unsigned __int128 u_int128_t;
+
+# define MAX_INT_TYPE int128_t
+# define MAX_UINT_TYPE u_int128_t
+#else
+# define MAX_INT_TYPE int64_t
+# define MAX_UINT_TYPE u_int64_t
 #endif
 
 typedef enum status_t status_t;
