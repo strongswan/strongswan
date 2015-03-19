@@ -572,29 +572,29 @@ static inline void memxor_inline(u_int8_t dst[], u_int8_t src[], size_t n)
 	switch (((uintptr_t)&src[i] % sizeof(MAX_INT_TYPE)))
 	{
 #ifdef HAVE_INT128
-		case 0:
+		case sizeof(int128_t) % sizeof(MAX_INT_TYPE):
 			for (m = n - sizeof(int128_t); i <= m; i += sizeof(int128_t))
 			{
 				*(int128_t*)&dst[i] ^= *(int128_t*)&src[i];
 			}
 			break;
 #endif
-		case sizeof(MAX_INT_TYPE) - sizeof(long):
-			for (m = n - sizeof(long); i <= m; i += sizeof(long))
+		case sizeof(int64_t) % sizeof(MAX_INT_TYPE):
+			for (m = n - sizeof(int64_t); i <= m; i += sizeof(int64_t))
 			{
-				*(long*)&dst[i] ^= *(long*)&src[i];
+				*(int64_t*)&dst[i] ^= *(int64_t*)&src[i];
 			}
 			break;
-		case sizeof(int):
-			for (m = n - sizeof(int); i <= m; i += sizeof(int))
+		case sizeof(int32_t) % sizeof(MAX_INT_TYPE):
+			for (m = n - sizeof(int32_t); i <= m; i += sizeof(int32_t))
 			{
-				*(int*)&dst[i] ^= *(int*)&src[i];
+				*(int32_t*)&dst[i] ^= *(int32_t*)&src[i];
 			}
 			break;
-		case sizeof(short):
-			for (m = n - sizeof(short); i <= m; i += sizeof(short))
+		case sizeof(int16_t) % sizeof(MAX_INT_TYPE):
+			for (m = n - sizeof(int16_t); i <= m; i += sizeof(int16_t))
 			{
-				*(short*)&dst[i] ^= *(short*)&src[i];
+				*(int16_t*)&dst[i] ^= *(int16_t*)&src[i];
 			}
 			break;
 		default:
