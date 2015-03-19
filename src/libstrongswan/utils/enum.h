@@ -176,7 +176,7 @@ bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val);
  * @param len	buffer size
  * @return		buf, NULL if buffer too small
  */
-char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t buflen);
+char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len);
 
 /**
  * printf hook function for enum_names_t.
