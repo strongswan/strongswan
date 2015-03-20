@@ -146,6 +146,12 @@ METHOD(payload_t, verify, status_t,
 	diffie_hellman_group_t g = this->dh_group_number;
 	bool valid = TRUE;
 
+	if (this->type == PLV1_KEY_EXCHANGE)
+	{
+		/* IKEv1 does not transmit the group */
+		return SUCCESS;
+	}
+
 	switch (g)
 	{
 		case MODP_NONE:
