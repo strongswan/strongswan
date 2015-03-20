@@ -18,6 +18,8 @@ endif
 
 libstrongswan_tnccs_20_la_SOURCES = \
 	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c \
+	tnccs_20_handler.h \
+	tnccs_20_server.h tnccs_20_server.c tnccs_20_client.h tnccs_20_client.c \
 	batch/pb_tnc_batch.h batch/pb_tnc_batch.c \
 	messages/pb_tnc_msg.h messages/pb_tnc_msg.c \
 	messages/ietf/pb_experimental_msg.h messages/ietf/pb_experimental_msg.c \

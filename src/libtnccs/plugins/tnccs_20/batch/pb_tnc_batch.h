@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -84,10 +84,21 @@ struct pb_tnc_batch_t {
 	void (*build)(pb_tnc_batch_t *this);
 
 	/**
+	 * Process the PB-TNC Batch header
+	 *
+	 * @param directionality	TRUE if no mutual TNC measurements
+	 * @param is_server			TRUE if called by TNC server
+	 * @param from_server		TRUE if sent by TNC server
+	 * @return					return processing status
+	 */
+	status_t (*process_header)(pb_tnc_batch_t *this, bool directionality,
+							   bool is_server, bool *from_server);
+
+	/**
 	 * Process the PB-TNC Batch
 	 *
-	 * @param				PB-TNC state machine
-	 * @return				return processing status
+	 * @param state_machine		PB-TNC state machine
+	 * @return					return processing status
 	 */
 	status_t (*process)(pb_tnc_batch_t *this,
 						pb_tnc_state_machine_t *state_machine);
@@ -95,14 +106,14 @@ struct pb_tnc_batch_t {
 	/**
 	 * Enumerates over all PB-TNC Messages
 	 *
-	 * @return				return message enumerator
+	 * @return					return message enumerator
 	 */
 	enumerator_t* (*create_msg_enumerator)(pb_tnc_batch_t *this);
 
 	/**
 	 * Enumerates over all parsing errors
 	 *
-	 * @return				return error enumerator
+	 * @return					return error enumerator
 	 */
 	enumerator_t* (*create_error_enumerator)(pb_tnc_batch_t *this);
 
@@ -115,9 +126,9 @@ struct pb_tnc_batch_t {
 /**
  * Create an empty PB-TNC Batch of a given type
  *
- * @param is_server			TRUE if server, FALSE if client
- * @param type				PB-TNC batch type
- * @param max_batch_len		maximum size the PB-TNC batch
+ * @param is_server				TRUE if server, FALSE if client
+ * @param type					PB-TNC batch type
+ * @param max_batch_len			maximum size the PB-TNC batch
  */
 pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type,
 									size_t max_batch_len);
@@ -125,9 +136,8 @@ pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type,
 /**
  * Create an unprocessed PB-TNC Batch from data
  *
- * @param is_server			TRUE if server, FALSE if client
  * @param  data				encoded PB-TNC batch
  */
-pb_tnc_batch_t* pb_tnc_batch_create_from_data(bool is_server, chunk_t data);
+pb_tnc_batch_t* pb_tnc_batch_create_from_data(chunk_t data);
 
 #endif /** PB_TNC_BATCH_H_ @}*/
