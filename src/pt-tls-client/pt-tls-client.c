@@ -270,6 +270,7 @@ int main(int argc, char *argv[])
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
+			{"mutual",		no_argument,			NULL,		'm' },
 			{"quiet",		no_argument,			NULL,		'q' },
 			{"debug",		required_argument,		NULL,		'd' },
 			{"optionsfrom",	required_argument,		NULL,		'+' },
@@ -310,6 +311,10 @@ int main(int argc, char *argv[])
 				continue;
 			case 'p':			/* --port <port> */
 				port = atoi(optarg);
+				continue;
+			case 'm':			/* --mutual */
+				lib->settings->set_bool(lib->settings,
+								"%s.plugins.tnccs-20.mutual", TRUE, lib->ns);
 				continue;
 			case 'q':       	/* --quiet */
 				log_to_stderr = FALSE;

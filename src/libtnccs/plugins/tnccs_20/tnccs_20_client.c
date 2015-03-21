@@ -22,6 +22,7 @@
 #include "messages/ietf/pb_remediation_parameters_msg.h"
 #include "messages/ietf/pb_reason_string_msg.h"
 #include "messages/ietf/pb_language_preference_msg.h"
+#include "messages/ita/pb_mutual_capability_msg.h"
 #include "messages/tcg/pb_pdp_referral_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
@@ -104,10 +105,15 @@ struct private_tnccs_20_client_t {
 	 */
 	u_int16_t pdp_port;
 
+	/**
+	 * Mutual PB-TNC protocol enabled
+	 */
+	bool mutual;
+
 };
 
 /**
- * The following function is shared with the tnccs_20_server class
+ * The following two functions are shared with the tnccs_20_server class
  */
 void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg, bool *fatal_error)
 {
@@ -157,6 +163,22 @@ void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg, bool *fatal_error)
 	{
 		DBG1(DBG_TNC, "received %s PB-TNC error (%u) with Vendor ID 0x%06x",
 					  fatal ? "fatal" : "non-fatal", error_code, vendor_id);
+	}
+}
+
+void tnccs_20_handle_ita_mutual_capability_msg(pb_tnc_msg_t *msg, bool *mutual)
+{
+	pb_mutual_capability_msg_t *mutual_msg;
+	uint32_t protocols;
+
+	mutual_msg = (pb_mutual_capability_msg_t*)msg;
+	protocols = mutual_msg->get_protocols(mutual_msg);
+
+	if (protocols & PB_MUTUAL_HALF_DUPLEX)
+	{
+		*mutual = TRUE;
+		DBG1(DBG_TNC, "activating mutual PB-TNC %N protocol",
+			 pb_tnc_mutual_protocol_type_names, PB_MUTUAL_HALF_DUPLEX);
 	}
 }
 
@@ -365,6 +387,23 @@ static void handle_tcg_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *ms
 }
 
 /**
+ * Handle a single PB-TNC ITA standard message according to its type
+ */
+static void handle_ita_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *msg)
+{
+	pen_type_t msg_type = msg->get_type(msg);
+
+	switch (msg_type.type)
+	{
+		case PB_ITA_MSG_MUTUAL_CAPABILITY:
+			tnccs_20_handle_ita_mutual_capability_msg(msg, &this->mutual);
+			break;
+		default:
+			break;
+	}
+}
+
+/**
  * Handle a single PB-TNC message according to its type
  */
 static void handle_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *msg)
@@ -378,6 +417,9 @@ static void handle_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *msg)
 			break;
 		case PEN_TCG:
 			handle_tcg_message(this, msg);
+			break;
+		case PEN_ITA:
+			handle_ita_message(this, msg);
 			break;
 		default:
 			break;
@@ -602,6 +644,21 @@ METHOD(tnccs_20_handler_t, begin_handshake, void,
 	tnc->imcs->notify_connection_change(tnc->imcs, this->connection_id,
 										TNC_CONNECTION_STATE_HANDSHAKE);
 
+	/* Announce PB-TNC Mutual Capability if activated */
+	if (lib->settings->get_bool(lib->settings,
+				"%s.plugins.tnccs-20.mutual", FALSE, lib->ns))
+	{
+		pb_tnc_mutual_protocol_type_t protocols;
+
+		protocols = PB_MUTUAL_HALF_DUPLEX;
+		DBG2(DBG_TNC, "proposing PB-TNC mutual %N protocol",
+			 pb_tnc_mutual_protocol_type_names, PB_MUTUAL_HALF_DUPLEX);
+		msg = pb_mutual_capability_msg_create(protocols);
+		this->mutex->lock(this->mutex);
+		this->messages->insert_last(this->messages, msg);
+		this->mutex->unlock(this->mutex);
+	}
+
 	/* Create PB-TNC Language Preference message */
 	pref_lang = tnc->imcs->get_preferred_language(tnc->imcs);
 	msg = pb_language_preference_msg_create(chunk_create(pref_lang,
@@ -619,6 +676,12 @@ METHOD(tnccs_20_handler_t, get_send_flag, bool,
 	private_tnccs_20_client_t *this)
 {
 	return this->send_msg;
+}
+
+METHOD(tnccs_20_handler_t, get_mutual, bool,
+	private_tnccs_20_client_t *this)
+{
+	return this->mutual;
 }
 
 METHOD(tnccs_20_handler_t, add_msg, void,
@@ -697,6 +760,7 @@ tnccs_20_handler_t* tnccs_20_client_create(tnccs_t *tnccs,
 				.build = _build,
 				.begin_handshake = _begin_handshake,
 				.get_send_flag = _get_send_flag,
+				.get_mutual = _get_mutual,
 				.add_msg = _add_msg,
 				.handle_errors = _handle_errors,
 				.destroy = _destroy,

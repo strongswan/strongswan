@@ -22,6 +22,7 @@
 #include "messages/ietf/pb_remediation_parameters_msg.h"
 #include "messages/ietf/pb_reason_string_msg.h"
 #include "messages/ietf/pb_language_preference_msg.h"
+#include "messages/ita/pb_mutual_capability_msg.h"
 #include "messages/tcg/pb_pdp_referral_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
@@ -105,19 +106,19 @@ struct private_tnccs_20_server_t {
 	bool eap_transport;
 
 	/**
-	 * PDP server FQDN
+	 * Mutual PB-TNC protocol enabled
 	 */
-	chunk_t pdp_server;
-
-	/**
-	 * PDP server port
-	 */
-	u_int16_t pdp_port;
+	bool mutual;
 
 };
 
-
-extern void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg, bool *fatal_error);
+/**
+ * The following two functions are shared with the tnccs_20_server class
+ */
+extern void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg,
+										   bool *fatal_error);
+extern void tnccs_20_handle_ita_mutual_capability_msg(pb_tnc_msg_t *msg,
+										   bool *mutual);
 
 /**
  * If the batch type changes then delete all accumulated PB-TNC messages
@@ -214,6 +215,35 @@ static void handle_ietf_message(private_tnccs_20_server_t *this, pb_tnc_msg_t *m
 }
 
 /**
+ * Handle a single PB-TNC ITA standard message according to its type
+ */
+static void handle_ita_message(private_tnccs_20_server_t *this, pb_tnc_msg_t *msg)
+{
+	pen_type_t msg_type = msg->get_type(msg);
+
+	switch (msg_type.type)
+	{
+		case PB_ITA_MSG_MUTUAL_CAPABILITY:
+			tnccs_20_handle_ita_mutual_capability_msg(msg, &this->mutual);
+
+			/* Respond with PB-TNC Mutual Capability message if activated */
+			if (this->mutual && lib->settings->get_bool(lib->settings,
+								"%s.plugins.tnccs-20.mutual", FALSE, lib->ns))
+			{
+				pb_tnc_mutual_protocol_type_t protocols = PB_MUTUAL_HALF_DUPLEX;
+
+				msg = pb_mutual_capability_msg_create(protocols);
+				this->mutex->lock(this->mutex);
+				this->messages->insert_last(this->messages, msg);
+				this->mutex->unlock(this->mutex);
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+/**
  * Handle a single PB-TNC message according to its type
  */
 static void handle_message(private_tnccs_20_server_t *this, pb_tnc_msg_t *msg)
@@ -224,6 +254,9 @@ static void handle_message(private_tnccs_20_server_t *this, pb_tnc_msg_t *msg)
 	{
 		case PEN_IETF:
 			handle_ietf_message(this, msg);
+			break;
+		case PEN_ITA:
+			handle_ita_message(this, msg);
 			break;
 		default:
 			break;
@@ -259,9 +292,7 @@ METHOD(tnccs_20_handler_t, process, status_t,
 
 	DBG1(DBG_TNC, "processing PB-TNC %N batch for Connection ID %d",
 		 pb_tnc_batch_type_names, batch_type, this->connection_id);
-
 	status = batch->process(batch, this->state_machine);
-	DBG2(DBG_TNC, "status after batch process: %N", status_names, status);
 
 	if (status != FAILED)
 	{
@@ -535,6 +566,12 @@ METHOD(tnccs_20_handler_t, get_send_flag, bool,
 	return this->send_msg;
 }
 
+METHOD(tnccs_20_handler_t, get_mutual, bool,
+	private_tnccs_20_server_t *this)
+{
+	return this->mutual;
+}
+
 METHOD(tnccs_20_handler_t, add_msg, void,
 	private_tnccs_20_server_t *this, pb_tnc_msg_t *msg)
 {
@@ -610,6 +647,7 @@ tnccs_20_handler_t* tnccs_20_server_create(tnccs_t *tnccs,
 				.build = _build,
 				.begin_handshake = _begin_handshake,
 				.get_send_flag = _get_send_flag,
+				.get_mutual = _get_mutual,
 				.add_msg = _add_msg,
 				.handle_errors = _handle_errors,
 				.destroy = _destroy,

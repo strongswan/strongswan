@@ -65,6 +65,13 @@ struct tnccs_20_handler_t {
 	bool (*get_send_flag)(tnccs_20_handler_t *this);
 
 	/**
+	 * Indicates if the PB-TNC mutual protocol has been enabled
+	 *
+	 * @return				TRUE if enabled
+	 */
+	bool (*get_mutual)(tnccs_20_handler_t *this);
+
+	/**
 	 * Add a PB-PA message to the handler's message queue
 	 *
 	 * @param msg			PB-PA message to be added

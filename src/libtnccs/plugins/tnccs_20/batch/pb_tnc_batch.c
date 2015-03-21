@@ -166,6 +166,9 @@ METHOD(pb_tnc_batch_t, add_msg, bool,
 		case PEN_TCG:
 			msg_type_names = pb_tnc_tcg_msg_type_names;
 			break;
+		case PEN_ITA:
+			msg_type_names = pb_tnc_ita_msg_type_names;
+			break;
 	}
 	DBG2(DBG_TNC, "adding %N/%N message", pen_names, msg_type.vendor_id,
 										  msg_type_names, msg_type.type);
@@ -210,6 +213,9 @@ METHOD(pb_tnc_batch_t, build, void,
 				break;
 			case PEN_TCG:
 				msg_infos = pb_tnc_tcg_msg_infos;
+				break;
+			case PEN_ITA:
+				msg_infos = pb_tnc_ita_msg_infos;
 				break;
 		}
 		if (msg_infos[msg_type.type].has_noskip_flag)
@@ -383,6 +389,11 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	{
 		msg_type_names = pb_tnc_tcg_msg_type_names;
 		msg_infos = pb_tnc_tcg_msg_infos;
+	}
+	else if (vendor_id == PEN_ITA && msg_type <= PB_ITA_MSG_ROOF)
+	{
+		msg_type_names = pb_tnc_ita_msg_type_names;
+		msg_infos = pb_tnc_ita_msg_infos;
 	}
 	else
 	{

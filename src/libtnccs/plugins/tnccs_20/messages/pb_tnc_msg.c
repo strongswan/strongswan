@@ -22,6 +22,7 @@
 #include "ietf/pb_access_recommendation_msg.h"
 #include "ietf/pb_remediation_parameters_msg.h"
 #include "ietf/pb_reason_string_msg.h"
+#include "ita/pb_mutual_capability_msg.h"
 #include "tcg/pb_pdp_referral_msg.h"
 
 #include <library.h>
@@ -37,8 +38,14 @@ ENUM(pb_tnc_msg_type_names, PB_MSG_EXPERIMENTAL, PB_MSG_REASON_STRING,
 	"PB-Reason-String"
 );
 
-ENUM(pb_tnc_tcg_msg_type_names, PB_TCG_MSG_PDP_REFERRAL, PB_TCG_MSG_PDP_REFERRAL,
+ENUM(pb_tnc_tcg_msg_type_names, PB_TCG_MSG_PDP_REFERRAL,
+								PB_TCG_MSG_PDP_REFERRAL,
 	"PB-PDP-Referral"
+);
+
+ENUM(pb_tnc_ita_msg_type_names, PB_ITA_MSG_MUTUAL_CAPABILITY,
+								PB_ITA_MSG_MUTUAL_CAPABILITY,
+	"PB-Mutual-Capability"
 );
 
 pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
@@ -55,6 +62,11 @@ pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
 pb_tnc_msg_info_t pb_tnc_tcg_msg_infos[] = {
 	{ 0 }, /* dummy entry because pb_tnc_tcg_msg_type_t starts with 1 */
 	{ 20, FALSE, FALSE,  FALSE },
+};
+
+pb_tnc_msg_info_t pb_tnc_ita_msg_infos[] = {
+	{ 0 }, /* dummy entry because pb_tnc_ita_msg_type_t starts with 1 */
+	{ 16, FALSE, FALSE,  FALSE },
 };
 
 /**
@@ -89,6 +101,13 @@ pb_tnc_msg_t* pb_tnc_msg_create_from_data(pen_type_t msg_type, chunk_t value)
 		if (msg_type.type == PB_TCG_MSG_PDP_REFERRAL)
 		{
 			return pb_pdp_referral_msg_create_from_data(value);
+		}
+	}
+	else if (msg_type.vendor_id == PEN_ITA)
+	{
+		if (msg_type.type == PB_ITA_MSG_MUTUAL_CAPABILITY)
+		{
+			return pb_mutual_capability_msg_create_from_data(value);
 		}
 	}
 	return NULL;

@@ -30,6 +30,7 @@ libstrongswan_tnccs_20_la_SOURCES = \
 	messages/ietf/pb_language_preference_msg.h messages/ietf/pb_language_preference_msg.c \
 	messages/ietf/pb_reason_string_msg.h messages/ietf/pb_reason_string_msg.c \
 	messages/ietf/pb_remediation_parameters_msg.h messages/ietf/pb_remediation_parameters_msg.c \
+	messages/ita/pb_mutual_capability_msg.h messages/ita/pb_mutual_capability_msg.c \
 	messages/tcg/pb_pdp_referral_msg.h messages/tcg/pb_pdp_referral_msg.c \
 	state_machine/pb_tnc_state_machine.h state_machine/pb_tnc_state_machine.c
 
