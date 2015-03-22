@@ -54,8 +54,10 @@ struct tnccs_20_handler_t {
 
 	/**
 	 * Put the IMCs or IMVs into the handshake state
+	 *
+	 * @param mutual		TRUE if PB-TNC mutual mode is already established
 	 */
-	void (*begin_handshake)(tnccs_20_handler_t *this);
+	void (*begin_handshake)(tnccs_20_handler_t *this, bool mutual);
 
 	/**
 	 * Indicates if IMCs or IMVs are allowed to send PA-TNC messages
@@ -70,6 +72,13 @@ struct tnccs_20_handler_t {
 	 * @return				TRUE if enabled
 	 */
 	bool (*get_mutual)(tnccs_20_handler_t *this);
+
+	/**
+	 * Get state of the PB-TNC protocol
+	 *
+	 * @return				PB-TNC state
+	 */
+	pb_tnc_state_t (*get_state)(tnccs_20_handler_t *this);
 
 	/**
 	 * Add a PB-PA message to the handler's message queue

@@ -52,6 +52,10 @@ strongswan-5.3.0
   as seen by the TNC server available to all IMVs. This information can be
   forwarded to policy enforcement points (e.g. firewalls or routers).
 
+- The new mutual tnccs-20 plugin parameter activates mutual TNC measurements
+  in PB-TNC half-duplex mode between two endpoints over either a PT-EAP or
+  PT-TLS transport medium.
+
 
 strongswan-5.2.2
 ----------------

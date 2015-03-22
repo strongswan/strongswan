@@ -80,7 +80,7 @@ struct private_tnccs_20_t {
 	u_int32_t auth_type;
 
 	/**
-	 * Mutual TNC measurements
+	 * Mutual PB-TNC protocol enabled
 	 */
 	bool mutual;
 
@@ -171,12 +171,12 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
-	chunk_t data;
 	pb_tnc_batch_t *batch;
-	bool from_server, mutual;
+	bool from_server;
 	status_t status;
+	chunk_t data;
 
-	/* On arrival of first PB-TNC batch create TNC server */
+	/* On arrival of first batch from TNC client create TNC server */
 	if (this->is_server && !this->tnc_server)
 	{
 		this->tnc_server = tnccs_20_server_create(&this->public, _send_msg,
@@ -187,25 +187,40 @@ METHOD(tls_t, process, status_t,
 			return FAILED;
 		}
 		this->tnccs_handler = this->tnc_server;
-		this->tnccs_handler->begin_handshake(this->tnccs_handler);
+		this->tnccs_handler->begin_handshake(this->tnccs_handler, FALSE);
 	}
 
 	data = chunk_create(buf, buflen);
 	DBG1(DBG_TNC, "received TNCCS batch (%u bytes)", data.len);
 	DBG3(DBG_TNC, "%B", &data);
 
-	/* Has a mutual connection been established? */
-	mutual = this->tnc_client && this->tnc_server;
-
 	/* Parse the header of the received PB-TNC batch */
 	batch = pb_tnc_batch_create_from_data(data);
-	status = batch->process_header(batch, !mutual, this->is_server,
+	status = batch->process_header(batch, !this->mutual, this->is_server,
 								   &from_server);
-	this->to_server = mutual ? from_server : !this->is_server;
 
-	/* Set active TNCCS handler */
-	this->tnccs_handler = this->to_server ? this->tnc_client : this->tnc_server;	
-	DBG2(DBG_TNC, "TNC %s is handling the connection",
+	this->to_server = this->mutual ? from_server : !this->is_server;
+
+	/* In the mutual case, first batch from TNC server requires a TNC client */
+	if (this->to_server && !this->tnc_client)
+	{
+		this->tnc_client = tnccs_20_client_create(&this->public, _send_msg,
+									this->max_batch_len, this->max_msg_len);
+		if (!this->tnc_client)
+		{
+			batch->destroy(batch);
+			return FAILED;
+		}
+		this->tnccs_handler = this->tnc_client;
+		this->tnccs_handler->begin_handshake(this->tnccs_handler, this->mutual);
+	}
+	else
+	{
+		/* Set active TNCCS handler for processing */
+		this->tnccs_handler = this->to_server ? this->tnc_client :
+												this->tnc_server;
+	}
+	DBG2(DBG_TNC, "TNC %s is handling inbound connection",
 				   this->to_server ? "client" : "server");
 
 	if (status == SUCCESS)
@@ -219,6 +234,40 @@ METHOD(tls_t, process, status_t,
 	}
 	batch->destroy(batch);
 
+	/* Has a mutual connection been established? */
+	this->mutual = this->is_server ?
+				   this->tnc_server->get_mutual(this->tnc_server) :
+				   this->tnc_client->get_mutual(this->tnc_client);
+
+	if (this->mutual && !this->is_server)
+	{
+		pb_tnc_state_t client_state, server_state;
+
+		client_state = !this->tnc_client ? PB_STATE_INIT :
+						this->tnc_client->get_state(this->tnc_client);
+		server_state = !this->tnc_server ? PB_STATE_INIT :
+						this->tnc_server->get_state(this->tnc_server);
+
+		/* In half-duplex mutual mode toggle the direction on the client side */
+		if ((!this->to_server && client_state != PB_STATE_DECIDED) ||
+			( this->to_server && server_state != PB_STATE_END))
+		{
+			this->to_server = !this->to_server;
+		}
+		else if (client_state == PB_STATE_DECIDED &&
+				 server_state == PB_STATE_END)
+		{
+			/* Cause the final CLOSE batch to be sent to the TNC server */
+			this->to_server = TRUE;
+		}
+
+		/* Suppress a successful CLOSE batch coming from the TNC server */
+		if (status == SUCCESS)
+		{
+			status = NEED_MORE;
+		}
+	}
+
 	return status;
 }
 
@@ -229,10 +278,15 @@ METHOD(tls_t, build, status_t,
 
 	if (this->to_server)
 	{
+		DBG2(DBG_TNC, "TNC client is handling outbound connection");
+
 		/* Before sending the first PB-TNC batch create TNC client */
-		if (!this->tnc_client)
+		if (this->tnc_client)
 		{
-			DBG2(DBG_TNC, "TNC client is handling the connection");
+			this->tnccs_handler = this->tnc_client;
+		}
+		else
+		{
 			this->tnc_client = tnccs_20_client_create(&this->public, _send_msg,
 													  this->max_batch_len,
 													  this->max_msg_len);
@@ -241,15 +295,21 @@ METHOD(tls_t, build, status_t,
 				status = FAILED;
 			}
 			this->tnccs_handler = this->tnc_client;
-			this->tnccs_handler->begin_handshake(this->tnccs_handler);		
+			this->tnccs_handler->begin_handshake(this->tnccs_handler,
+												 this->mutual);		
 		}
 	}
 	else
 	{
+		DBG2(DBG_TNC, "TNC server is handling outbound connection");
+
 		/* Before sending the first PB-TNC batch create TNC server */
-		if (!this->tnc_server)
+		if (this->tnc_server)
 		{
-			DBG2(DBG_TNC, "TNC server is handling the connection");
+			this->tnccs_handler = this->tnc_server;
+		}
+		else
+		{
 			this->tnc_server = tnccs_20_server_create(&this->public, _send_msg,
 										this->max_batch_len, this->max_msg_len,
 										this->eap_transport);
@@ -258,7 +318,8 @@ METHOD(tls_t, build, status_t,
 				status = FAILED;
 			}
 			this->tnccs_handler = this->tnc_server;
-			this->tnccs_handler->begin_handshake(this->tnccs_handler);		
+			this->tnccs_handler->begin_handshake(this->tnccs_handler,
+												 this->mutual);		
 		}
 	}
 	status = this->tnccs_handler->build(this->tnccs_handler, buf, buflen, msglen);

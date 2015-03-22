@@ -44,6 +44,7 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_CALLBACK(tnc_manager_register, tnc_imc_manager_create),
 			PLUGIN_PROVIDE(CUSTOM, "imc-manager"),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
+				PLUGIN_SDEPEND(CUSTOM, "imv-manager"),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_TRUSTED_PUBKEY),
 	};

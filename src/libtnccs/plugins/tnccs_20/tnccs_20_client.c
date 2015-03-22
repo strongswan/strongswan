@@ -110,6 +110,11 @@ struct private_tnccs_20_client_t {
 	 */
 	bool mutual;
 
+	/**
+	 * Mutual Capability message sent
+	 */
+	bool sent_mutual_capability;
+
 };
 
 /**
@@ -166,20 +171,29 @@ void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg, bool *fatal_error)
 	}
 }
 
-void tnccs_20_handle_ita_mutual_capability_msg(pb_tnc_msg_t *msg, bool *mutual)
+bool tnccs_20_handle_ita_mutual_capability_msg(pb_tnc_msg_t *msg)
 {
 	pb_mutual_capability_msg_t *mutual_msg;
 	uint32_t protocols;
+
+	if (!lib->settings->get_bool(lib->settings,
+				"%s.plugins.tnccs-20.mutual", FALSE, lib->ns))
+	{
+		/* PB-TNC mutual capability disabled, ignore message */
+		return FALSE;
+	}
 
 	mutual_msg = (pb_mutual_capability_msg_t*)msg;
 	protocols = mutual_msg->get_protocols(mutual_msg);
 
 	if (protocols & PB_MUTUAL_HALF_DUPLEX)
 	{
-		*mutual = TRUE;
 		DBG1(DBG_TNC, "activating mutual PB-TNC %N protocol",
 			 pb_tnc_mutual_protocol_type_names, PB_MUTUAL_HALF_DUPLEX);
+		return TRUE;
 	}
+
+	return FALSE;
 }
 
 /**
@@ -396,7 +410,7 @@ static void handle_ita_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *ms
 	switch (msg_type.type)
 	{
 		case PB_ITA_MSG_MUTUAL_CAPABILITY:
-			tnccs_20_handle_ita_mutual_capability_msg(msg, &this->mutual);
+			this->mutual = tnccs_20_handle_ita_mutual_capability_msg(msg);
 			break;
 		default:
 			break;
@@ -636,7 +650,7 @@ METHOD(tnccs_20_handler_t, build, status_t,
 }
 
 METHOD(tnccs_20_handler_t, begin_handshake, void,
-	private_tnccs_20_client_t *this)
+	private_tnccs_20_client_t *this, bool mutual)
 {
 	pb_tnc_msg_t *msg;
 	char *pref_lang;
@@ -645,7 +659,9 @@ METHOD(tnccs_20_handler_t, begin_handshake, void,
 										TNC_CONNECTION_STATE_HANDSHAKE);
 
 	/* Announce PB-TNC Mutual Capability if activated */
-	if (lib->settings->get_bool(lib->settings,
+	this->sent_mutual_capability = mutual;
+
+	if (!mutual && lib->settings->get_bool(lib->settings,
 				"%s.plugins.tnccs-20.mutual", FALSE, lib->ns))
 	{
 		pb_tnc_mutual_protocol_type_t protocols;
@@ -657,6 +673,7 @@ METHOD(tnccs_20_handler_t, begin_handshake, void,
 		this->mutex->lock(this->mutex);
 		this->messages->insert_last(this->messages, msg);
 		this->mutex->unlock(this->mutex);
+		this->sent_mutual_capability = TRUE;
 	}
 
 	/* Create PB-TNC Language Preference message */
@@ -682,6 +699,12 @@ METHOD(tnccs_20_handler_t, get_mutual, bool,
 	private_tnccs_20_client_t *this)
 {
 	return this->mutual;
+}
+
+METHOD(tnccs_20_handler_t, get_state, pb_tnc_state_t,
+	private_tnccs_20_client_t *this)
+{
+	return this->state_machine->get_state(this->state_machine);
 }
 
 METHOD(tnccs_20_handler_t, add_msg, void,
@@ -761,6 +784,7 @@ tnccs_20_handler_t* tnccs_20_client_create(tnccs_t *tnccs,
 				.begin_handshake = _begin_handshake,
 				.get_send_flag = _get_send_flag,
 				.get_mutual = _get_mutual,
+				.get_state = _get_state,
 				.add_msg = _add_msg,
 				.handle_errors = _handle_errors,
 				.destroy = _destroy,
