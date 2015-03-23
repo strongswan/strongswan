@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
@@ -281,6 +282,19 @@ METHOD(delete_payload_t, set_ike_spi, void,
 	this->payload_length = get_header_length(this) + this->spi_size;
 }
 
+METHOD(delete_payload_t, get_ike_spi, bool,
+	private_delete_payload_t *this, u_int64_t *spi_i, u_int64_t *spi_r)
+{
+	if (this->protocol_id != PROTO_IKE ||
+		this->spis.len < 2 * sizeof(u_int64_t))
+	{
+		return FALSE;
+	}
+	memcpy(spi_i, this->spis.ptr, sizeof(u_int64_t));
+	memcpy(spi_r, this->spis.ptr + sizeof(u_int64_t), sizeof(u_int64_t));
+	return TRUE;
+}
+
 /**
  * SPI enumerator implementation
  */
@@ -352,6 +366,7 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 			.get_protocol_id = _get_protocol_id,
 			.add_spi = _add_spi,
 			.set_ike_spi = _set_ike_spi,
+			.get_ike_spi = _get_ike_spi,
 			.create_spi_enumerator = _create_spi_enumerator,
 			.destroy = _destroy,
 		},
