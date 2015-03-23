@@ -716,7 +716,7 @@ static status_t select_and_install(private_child_create_t *this,
 /**
  * build the payloads for the message
  */
-static void build_payloads(private_child_create_t *this, message_t *message)
+static bool build_payloads(private_child_create_t *this, message_t *message)
 {
 	sa_payload_t *sa_payload;
 	nonce_payload_t *nonce_payload;
@@ -748,6 +748,11 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	{
 		ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 														   this->dh);
+		if (!ke_payload)
+		{
+			DBG1(DBG_IKE, "creating KE payload failed");
+			return FALSE;
+		}
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
 
@@ -776,6 +781,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 		message->add_notify(message, FALSE, ESP_TFC_PADDING_NOT_SUPPORTED,
 							chunk_empty);
 	}
+	return TRUE;
 }
 
 /**
@@ -1035,7 +1041,10 @@ METHOD(task_t, build_i, status_t,
 							NARROW_INITIATOR_PRE_AUTH, this->tsi, this->tsr);
 	}
 
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		return FAILED;
+	}
 
 	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
@@ -1288,7 +1297,12 @@ METHOD(task_t, build_r, status_t,
 			return SUCCESS;
 	}
 
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		handle_child_sa_failure(this, message);
+		return SUCCESS;
+	}
 
 	if (!this->rekey)
 	{	/* invoke the child_up() hook if we are not rekeying */

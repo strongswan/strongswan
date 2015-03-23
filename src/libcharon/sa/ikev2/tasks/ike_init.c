@@ -210,7 +210,7 @@ static void handle_supported_hash_algorithms(private_ike_init_t *this,
 /**
  * build the payloads for the message
  */
-static void build_payloads(private_ike_init_t *this, message_t *message)
+static bool build_payloads(private_ike_init_t *this, message_t *message)
 {
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
@@ -254,7 +254,13 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 
 	nonce_payload = nonce_payload_create(PLV2_NONCE);
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
-	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
+													   this->dh);
+	if (!ke_payload)
+	{
+		DBG1(DBG_IKE, "creating KE payload failed");
+		return FALSE;
+	}
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
@@ -289,6 +295,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 			send_supported_hash_algorithms(this, message);
 		}
 	}
+	return TRUE;
 }
 
 /**
@@ -438,7 +445,10 @@ METHOD(task_t, build_i, status_t,
 		message->add_notify(message, FALSE, COOKIE, this->cookie);
 	}
 
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		return FAILED;
+	}
 
 #ifdef ME
 	{
@@ -572,7 +582,10 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		return FAILED;
+	}
 	return SUCCESS;
 }
 

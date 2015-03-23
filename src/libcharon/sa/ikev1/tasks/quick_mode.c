@@ -465,12 +465,19 @@ static bool get_nonce(private_quick_mode_t *this, chunk_t *nonce,
 /**
  * Add KE payload to message
  */
-static void add_ke(private_quick_mode_t *this, message_t *message)
+static bool add_ke(private_quick_mode_t *this, message_t *message)
 {
 	ke_payload_t *ke_payload;
 
-	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE,
+													   this->dh);
+	if (!ke_payload)
+	{
+		DBG1(DBG_IKE, "creating KE payload failed");
+		return FALSE;
+	}
 	message->add_payload(message, &ke_payload->payload_interface);
+	return TRUE;
 }
 
 /**
@@ -880,7 +887,10 @@ METHOD(task_t, build_i, status_t,
 			}
 			if (group != MODP_NONE)
 			{
-				add_ke(this, message);
+				if (!add_ke(this, message))
+				{
+					return FAILED;
+				}
 			}
 			if (!this->tsi)
 			{
@@ -1218,7 +1228,10 @@ METHOD(task_t, build_r, status_t,
 			}
 			if (this->dh)
 			{
-				add_ke(this, message);
+				if (!add_ke(this, message))
+				{
+					return FAILED;
+				}
 			}
 
 			add_ts(this, message);
