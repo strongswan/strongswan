@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -74,6 +77,42 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, process_r, status_t,
 	private_isakmp_delete_t *this, message_t *message)
 {
+	enumerator_t *payloads;
+	payload_t *payload;
+	delete_payload_t *delete_payload;
+	ike_sa_id_t *id;
+	u_int64_t spi_i, spi_r;
+	bool found = FALSE;
+
+	/* some peers send DELETE payloads for other IKE_SAs, e.g. those for expired
+	 * ones after a rekeyeing, make sure the SPIs match */
+	id = this->ike_sa->get_id(this->ike_sa);
+	payloads = message->create_payload_enumerator(message);
+	while (payloads->enumerate(payloads, &payload))
+	{
+		if (payload->get_type(payload) == PLV1_DELETE)
+		{
+			delete_payload = (delete_payload_t*)payload;
+			if (!delete_payload->get_ike_spi(delete_payload, &spi_i, &spi_r))
+			{
+				continue;
+			}
+			if (id->get_initiator_spi(id) == spi_i &&
+				id->get_responder_spi(id) == spi_r)
+			{
+				found = TRUE;
+				break;
+			}
+		}
+	}
+	payloads->destroy(payloads);
+
+	if (!found)
+	{
+		DBG1(DBG_IKE, "received DELETE for different IKE_SA, ignored");
+		return SUCCESS;
+	}
+
 	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa));
