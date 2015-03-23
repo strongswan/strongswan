@@ -908,7 +908,7 @@ START_SETUP(setup_string_config)
 		"special = \"all { special } characters # can be used.\"\n"
 		"unterminated = \"is fine\n"
 		"but = produces a warning\n"
-		"newlines = \"can either be encoded\\nor\\\n"
+		"newlines = \"can either be encoded\\nor \\\n"
 		"escaped\"\n"
 		"quotes = \"\\\"and\\\" slashes \\\\ can \\\\ be\" # escaped too\n"
 		"multiple = \"strings\" are \"combined\"\n"
@@ -922,7 +922,7 @@ START_TEST(test_strings)
 	verify_string("all { special } characters # can be used.", "special");
 	verify_string("is fine", "unterminated");
 	verify_string("produces a warning", "but");
-	verify_string("can either be encoded\nor\nescaped", "newlines");
+	verify_string("can either be encoded\nor escaped", "newlines");
 	verify_string("\"and\" slashes \\ can \\ be", "quotes");
 	verify_string("strings are combined", "multiple");
 }
