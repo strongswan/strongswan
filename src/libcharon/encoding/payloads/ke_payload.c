@@ -320,9 +320,15 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 ke_payload_t *ke_payload_create_from_diffie_hellman(payload_type_t type,
 													diffie_hellman_t *dh)
 {
-	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create(type);
+	private_ke_payload_t *this;
+	chunk_t value;
 
-	dh->get_my_public_value(dh, &this->key_exchange_data);
+	if (!dh->get_my_public_value(dh, &value))
+	{
+		return NULL;
+	}
+	this = (private_ke_payload_t*)ke_payload_create(type);
+	this->key_exchange_data = value;
 	this->dh_group_number = dh->get_dh_group(dh);
 	this->payload_length += this->key_exchange_data.len;
 

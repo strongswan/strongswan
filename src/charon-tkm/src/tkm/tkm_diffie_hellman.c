@@ -55,10 +55,11 @@ struct private_tkm_diffie_hellman_t {
 
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t *value)
 {
 	sequence_to_chunk(this->pubvalue.data, this->pubvalue.size, value);
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

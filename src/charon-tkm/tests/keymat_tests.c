@@ -53,7 +53,7 @@ START_TEST(test_derive_ike_keys)
 
 	/* Use the same pubvalue for both sides */
 	chunk_t pubvalue;
-	dh->dh.get_my_public_value(&dh->dh, &pubvalue);
+	ck_assert(dh->dh.get_my_public_value(&dh->dh, &pubvalue));
 	dh->dh.set_other_public_value(&dh->dh, pubvalue);
 
 	fail_unless(keymat->keymat_v2.derive_ike_keys(&keymat->keymat_v2, proposal,

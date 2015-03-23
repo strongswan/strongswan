@@ -235,10 +235,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	this->computed = TRUE;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
 	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

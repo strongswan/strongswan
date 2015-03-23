@@ -148,10 +148,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	derive_secret(this, value);
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_pkcs11_dh_t *this, chunk_t *value)
 {
 	*value = chunk_clone(this->pub_key);
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

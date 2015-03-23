@@ -584,6 +584,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (!build_payloads(this, message))
 	{
+		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
 	return SUCCESS;

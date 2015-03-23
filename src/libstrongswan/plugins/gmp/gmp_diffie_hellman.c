@@ -144,7 +144,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	mpz_clear(p_min_1);
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_gmp_diffie_hellman_t *this,chunk_t *value)
 {
 	value->len = this->p_len;
@@ -153,6 +153,7 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	{
 		value->len = 0;
 	}
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

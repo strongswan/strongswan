@@ -990,7 +990,11 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 	}
 	chunk_clear(&premaster);
 
-	this->dh->get_my_public_value(this->dh, &pub);
+	if (!this->dh->get_my_public_value(this->dh, &pub))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	if (this->dh->get_dh_group(this->dh) == MODP_CUSTOM)
 	{
 		writer->write_data16(writer, pub);

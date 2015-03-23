@@ -915,7 +915,11 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->get_my_public_value(this->dh, &chunk);
+	if (!this->dh->get_my_public_value(this->dh, &chunk))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	if (params)
 	{
 		writer->write_data16(writer, chunk);

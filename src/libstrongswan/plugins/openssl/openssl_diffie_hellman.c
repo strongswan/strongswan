@@ -61,13 +61,14 @@ struct private_openssl_diffie_hellman_t {
 	bool computed;
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *value)
 {
 	*value = chunk_alloc(DH_size(this->dh));
 	memset(value->ptr, 0, value->len);
 	BN_bn2bin(this->dh->pub_key,
 			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

@@ -132,10 +132,11 @@ static chunk_t export_mpi(gcry_mpi_t value, size_t len)
 	return chunk;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_gcrypt_dh_t *this, chunk_t *value)
 {
 	*value = export_mpi(this->ya, this->p_len);
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

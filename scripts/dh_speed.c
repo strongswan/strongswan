@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <assert.h>
 #include <library.h>
 #include <utils/debug.h>
 #include <crypto/diffie_hellman.h>
@@ -88,12 +89,12 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 
 	for (round = 0; round < rounds; round++)
 	{
-		l[round]->get_my_public_value(l[round], &chunk);
+		assert(l[round]->get_my_public_value(l[round], &chunk));
 		r->set_other_public_value(r, chunk);
 		chunk_free(&chunk);
 	}
 
-	r->get_my_public_value(r, &chunk);
+	assert(r->get_my_public_value(r, &chunk));
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{

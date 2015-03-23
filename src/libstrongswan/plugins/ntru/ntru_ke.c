@@ -109,7 +109,7 @@ struct private_ntru_ke_t {
     ntru_drbg_t *drbg;
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_ntru_ke_t *this, chunk_t *value)
 {
 	*value = chunk_empty;
@@ -130,13 +130,14 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 			if (!this->privkey)
 			{
 				DBG1(DBG_LIB, "NTRU keypair generation failed");
-				return;
+				return FALSE;
 			}
 			this->pubkey = this->privkey->get_public_key(this->privkey);
 		}
 		*value = chunk_clone(this->pubkey->get_encoding(this->pubkey));
 		DBG3(DBG_LIB, "NTRU public key: %B", value);
 	}
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

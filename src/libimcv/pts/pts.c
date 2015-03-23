@@ -227,7 +227,10 @@ METHOD(pts_t, create_dh_nonce, bool,
 METHOD(pts_t, get_my_public_value, bool,
 	private_pts_t *this, chunk_t *value, chunk_t *nonce)
 {
-	this->dh->get_my_public_value(this->dh, value);
+	if (!this->dh->get_my_public_value(this->dh, value))
+	{
+		return FALSE;
+	}
 	*nonce = this->is_imc ? this->responder_nonce : this->initiator_nonce;
 	return TRUE;
 }

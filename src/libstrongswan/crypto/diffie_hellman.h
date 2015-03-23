@@ -109,8 +109,10 @@ struct diffie_hellman_t {
 	 * Space for returned chunk is allocated and must be freed by the caller.
 	 *
 	 * @param value		public value of caller is stored at this location
+	 * @return			TRUE if public value retrieved
 	 */
-	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *value);
+	bool (*get_my_public_value) (diffie_hellman_t *this, chunk_t *value)
+		__attribute__((warn_unused_result));
 
 	/**
 	 * Get the DH group used.

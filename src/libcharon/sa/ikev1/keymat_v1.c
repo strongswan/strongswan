@@ -560,7 +560,10 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	dh->get_my_public_value(dh, &dh_me);
+	if (!dh->get_my_public_value(dh, &dh_me))
+	{
+		return FALSE;
+	}
 	g_xi = this->initiator ? dh_me : dh_other;
 	g_xr = this->initiator ? dh_other : dh_me;
 
