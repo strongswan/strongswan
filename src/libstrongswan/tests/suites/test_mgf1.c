@@ -239,20 +239,30 @@ START_TEST(mgf1_test_bitspender)
 END_TEST
 
 
-Suite *mgf1_suite_create()
+Suite *mgf1_suite_create(char *name, int n)
 {
 	Suite *s;
 	TCase *tc;
 
-	s = suite_create("mgf1");
+	s = suite_create(name);
 
 	tc = tcase_create("mgf1");
-	tcase_add_loop_test(tc, mgf1_test_mgf1, 0, countof(mgf1_tests));
+	tcase_add_loop_test(tc, mgf1_test_mgf1, n, n + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("bitspender");
-	tcase_add_loop_test(tc, mgf1_test_bitspender, 0, countof(mgf1_tests));
+	tcase_add_loop_test(tc, mgf1_test_bitspender, n, n + 1);
 	suite_add_tcase(s, tc);
 
 	return s;
+}
+
+Suite *mgf1_sha1_suite_create()
+{
+	return mgf1_suite_create("mgf1-sha1", 0);
+}
+
+Suite *mgf1_sha256_suite_create()
+{
+	return mgf1_suite_create("mgf1-sha256", 1);
 }
