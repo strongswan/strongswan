@@ -73,7 +73,7 @@ struct private_gcrypt_dh_t {
 	size_t p_len;
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_gcrypt_dh_t *this, chunk_t value)
 {
 	gcry_mpi_t p_min_1;
@@ -88,7 +88,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi yb failed: %s", gpg_strerror(err));
-		return;
+		return FALSE;
 	}
 
 	p_min_1 = gcry_mpi_new(this->p_len * 8);
@@ -112,6 +112,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			 " y < 2 || y > p - 1 ");
 	}
 	gcry_mpi_release(p_min_1);
+	return this->zz != NULL;
 }
 
 /**

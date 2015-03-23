@@ -85,7 +85,7 @@ struct private_gmp_diffie_hellman_t {
 	bool computed;
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_gmp_diffie_hellman_t *this, chunk_t value)
 {
 	mpz_t p_min_1;
@@ -142,6 +142,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			 " y < 2 || y > p - 1 ");
 	}
 	mpz_clear(p_min_1);
+	return this->computed;
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,

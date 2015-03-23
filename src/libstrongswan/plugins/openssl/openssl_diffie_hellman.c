@@ -87,7 +87,7 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 }
 
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
 	int len;
@@ -100,10 +100,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "DH shared secret computation failed");
-		return;
+		return FALSE;
 	}
 	this->shared_secret.len = len;
 	this->computed = TRUE;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

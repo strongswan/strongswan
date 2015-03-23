@@ -745,7 +745,11 @@ METHOD(phase1_t, get_nonce_ke, bool,
 		return FALSE;
 	}
 	this->dh_value = chunk_clone(ke_payload->get_key_exchange_data(ke_payload));
-	this->dh->set_other_public_value(this->dh, this->dh_value);
+	if (!this->dh->set_other_public_value(this->dh, this->dh_value))
+	{
+		DBG1(DBG_IKE, "unable to apply received KE value");
+		return FALSE;
+	}
 
 	nonce_payload = (nonce_payload_t*)message->get_payload(message, PLV1_NONCE);
 	if (!nonce_payload)

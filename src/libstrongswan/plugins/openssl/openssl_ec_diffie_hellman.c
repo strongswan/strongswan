@@ -216,23 +216,24 @@ error:
 	return ret;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
 	if (!chunk2ecp(this->ec_group, value, this->pub_key))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		return;
+		return FALSE;
 	}
 
 	chunk_clear(&this->shared_secret);
 
 	if (!compute_shared_key(this, &this->shared_secret)) {
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
-		return;
+		return FALSE;
 	}
 
 	this->computed = TRUE;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,

@@ -90,7 +90,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	for (round = 0; round < rounds; round++)
 	{
 		assert(l[round]->get_my_public_value(l[round], &chunk));
-		r->set_other_public_value(r, chunk);
+		assert(r->set_other_public_value(r, chunk));
 		chunk_free(&chunk);
 	}
 
@@ -98,7 +98,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{
-		l[round]->set_other_public_value(l[round], chunk);
+		assert(l[round]->set_other_public_value(l[round], chunk));
 	}
 	printf(" | S = B^a/s: %8.1f\n", rounds / end_timing(&timing));
 	chunk_free(&chunk);
@@ -144,4 +144,3 @@ int main(int argc, char *argv[])
 	}
 	return 0;
 }
-

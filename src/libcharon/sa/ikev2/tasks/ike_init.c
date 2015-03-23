@@ -70,6 +70,11 @@ struct private_ike_init_t {
 	diffie_hellman_t *dh;
 
 	/**
+	 * Applying DH public value failed?
+	 */
+	bool dh_failed;
+
+	/**
 	 * Keymat derivation (from IKE_SA)
 	 */
 	keymat_v2_t *keymat;
@@ -384,7 +389,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 		}
 		if (this->dh)
 		{
-			this->dh->set_other_public_value(this->dh,
+			this->dh_failed = !this->dh->set_other_public_value(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
 		}
 	}
@@ -576,6 +581,13 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 
+	if (this->dh_failed)
+	{
+		DBG1(DBG_IKE, "applying DH public value failed");
+		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		return FAILED;
+	}
+
 	if (!derive_keys(this, this->other_nonce, this->my_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -701,6 +713,12 @@ METHOD(task_t, process_i, status_t,
 		return FAILED;
 	}
 
+	if (this->dh_failed)
+	{
+		DBG1(DBG_IKE, "applying DH public value failed");
+		return FAILED;
+	}
+
 	if (!derive_keys(this, this->my_nonce, this->other_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -724,6 +742,7 @@ METHOD(task_t, migrate, void,
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
+	this->dh_failed = FALSE;
 	if (this->dh && this->dh->get_dh_group(this->dh) != this->dh_group)
 	{	/* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
 		this->dh->destroy(this->dh);

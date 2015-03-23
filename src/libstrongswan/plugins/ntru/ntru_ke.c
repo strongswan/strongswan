@@ -106,7 +106,7 @@ struct private_ntru_ke_t {
 	/**
 	 * Deterministic Random Bit Generator
 	 */
-    ntru_drbg_t *drbg;
+	ntru_drbg_t *drbg;
 };
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,
@@ -153,8 +153,7 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 	return TRUE;
 }
 
-
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_ntru_ke_t *this, chunk_t value)
 {
 	if (this->privkey)
@@ -163,15 +162,15 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		if (value.len == 0)
 		{
 			DBG1(DBG_LIB, "empty NTRU ciphertext");
-			return;
+			return FALSE;
 		}
 		DBG3(DBG_LIB, "NTRU ciphertext: %B", &value);
 
 		/* decrypt the shared secret */
- 		if (!this->privkey->decrypt(this->privkey, value, &this->shared_secret))
+		if (!this->privkey->decrypt(this->privkey, value, &this->shared_secret))
 		{
 			DBG1(DBG_LIB, "NTRU decryption of shared secret failed");
-			return;
+			return FALSE;
 		}
 		this->computed = TRUE;
 	}
@@ -186,13 +185,13 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		pubkey = ntru_public_key_create_from_data(this->drbg, value);
 		if (!pubkey)
 		{
-			return;
+			return FALSE;
 		}
 		if (pubkey->get_id(pubkey) != this->param_set->id)
 		{
 			DBG1(DBG_LIB, "received NTRU public key with wrong OUI");
 			pubkey->destroy(pubkey);
-			return;
+			return FALSE;
 		}
 		this->pubkey = pubkey;
 
@@ -205,7 +204,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		{
 			DBG1(DBG_LIB, "generation of shared secret failed");
 			chunk_free(&this->shared_secret);
-			return;
+			return FALSE;
 		}
 		this->computed = TRUE;
 
@@ -213,10 +212,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		if (!pubkey->encrypt(pubkey, this->shared_secret, &this->ciphertext))
 		{
 			DBG1(DBG_LIB, "NTRU encryption of shared secret failed");
-			return;
+			return FALSE;
 		}
 		DBG3(DBG_LIB, "NTRU ciphertext: %B", &this->ciphertext);
 	}
+	return this->computed;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
@@ -302,10 +302,10 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 
 	drbg = ntru_drbg_create(strength, chunk_from_str("IKE NTRU-KE"), entropy);
 	if (!drbg)
- 	{
+	{
 		DBG1(DBG_LIB, "could not instantiate DRBG at %u bit security", strength);
 		entropy->destroy(entropy);
-        return NULL;
+		return NULL;
 	}
 
 	INIT(this,
@@ -327,4 +327,3 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 
 	return &this->public;
 }
-

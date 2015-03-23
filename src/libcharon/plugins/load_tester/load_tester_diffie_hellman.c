@@ -22,9 +22,10 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	load_tester_diffie_hellman_t *this, chunk_t value)
 {
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,

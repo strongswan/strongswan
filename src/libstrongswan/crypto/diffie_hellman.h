@@ -100,8 +100,10 @@ struct diffie_hellman_t {
 	 * Chunk gets cloned and can be destroyed afterwards.
 	 *
 	 * @param value		public value of partner
+	 * @return			TRUE if other public value verified and set
 	 */
-	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
+	bool (*set_other_public_value)(diffie_hellman_t *this, chunk_t value)
+		__attribute__((warn_unused_result));
 
 	/**
 	 * Gets the own public value to transmit.

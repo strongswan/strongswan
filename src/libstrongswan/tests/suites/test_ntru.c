@@ -1083,14 +1083,14 @@ START_TEST(test_ntru_ke)
 	r_ntru = lib->crypto->create_dh(lib->crypto, params[k].group);
 	ck_assert(r_ntru != NULL);
 
-	r_ntru->set_other_public_value(r_ntru, pub_key);
+	ck_assert(r_ntru->set_other_public_value(r_ntru, pub_key));
 	ck_assert(r_ntru->get_my_public_value(r_ntru, &cipher_text));
 	ck_assert(cipher_text.len > 0);
 
 	ck_assert(r_ntru->get_shared_secret(r_ntru, &r_shared_secret));
 	ck_assert(r_shared_secret.len > 0);
 
-	i_ntru->set_other_public_value(i_ntru, cipher_text);
+	ck_assert(i_ntru->set_other_public_value(i_ntru, cipher_text));
 	ck_assert(i_ntru->get_shared_secret(i_ntru, &i_shared_secret));
 	ck_assert(chunk_equals(i_shared_secret, r_shared_secret));
 
@@ -1136,7 +1136,7 @@ START_TEST(test_ntru_pubkey_oid)
 	chunk_t cipher_text;
 
 	r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
-	r_ntru->set_other_public_value(r_ntru, oid_tests[_i]);
+	ck_assert(!r_ntru->set_other_public_value(r_ntru, oid_tests[_i]));
 	ck_assert(r_ntru->get_my_public_value(r_ntru, &cipher_text));
 	ck_assert(cipher_text.len == 0);
 	r_ntru->destroy(r_ntru);
@@ -1158,7 +1158,7 @@ START_TEST(test_ntru_wrong_set)
 						  "libstrongswan.plugins.ntru.parameter_set",
 						  "optimum");
 	r_ntru = lib->crypto->create_dh(lib->crypto, NTRU_112_BIT);
-	r_ntru->set_other_public_value(r_ntru, pub_key);
+	ck_assert(!r_ntru->set_other_public_value(r_ntru, pub_key));
 	ck_assert(r_ntru->get_my_public_value(r_ntru, &cipher_text));
 	ck_assert(cipher_text.len == 0);
 
@@ -1191,7 +1191,7 @@ START_TEST(test_ntru_ciphertext)
 	{
 		i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
 		ck_assert(i_ntru->get_my_public_value(i_ntru, &pub_key));
-		i_ntru->set_other_public_value(i_ntru, test[i]);
+		ck_assert(!i_ntru->set_other_public_value(i_ntru, test[i]));
 		ck_assert(!i_ntru->get_shared_secret(i_ntru, &shared_secret));
 		ck_assert(shared_secret.len == 0);
 
@@ -1212,9 +1212,9 @@ START_TEST(test_ntru_wrong_ciphertext)
 
 	ck_assert(i_ntru->get_my_public_value(i_ntru, &pub_key_i));
 	ck_assert(m_ntru->get_my_public_value(m_ntru, &pub_key_m));
-	r_ntru->set_other_public_value(r_ntru, pub_key_m);
+	ck_assert(r_ntru->set_other_public_value(r_ntru, pub_key_m));
 	ck_assert(r_ntru->get_my_public_value(r_ntru, &cipher_text));
-	i_ntru->set_other_public_value(i_ntru, cipher_text);
+	ck_assert(!i_ntru->set_other_public_value(i_ntru, cipher_text));
 	ck_assert(!i_ntru->get_shared_secret(i_ntru, &shared_secret));
 	ck_assert(shared_secret.len == 0);
 
