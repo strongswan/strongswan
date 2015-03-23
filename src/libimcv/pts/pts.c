@@ -264,7 +264,7 @@ METHOD(pts_t, calculate_secret, bool,
 	DBG3(DBG_PTS, "responder nonce: %B", &this->responder_nonce);
 
 	/* Calculate the DH secret */
-	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
+	if (!this->dh->get_shared_secret(this->dh, &shared_secret))
 	{
 		DBG1(DBG_PTS, "shared DH secret computation failed");
 		return FALSE;

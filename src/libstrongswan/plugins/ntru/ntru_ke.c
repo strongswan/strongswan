@@ -139,17 +139,17 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	}
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_ntru_ke_t *this, chunk_t *secret)
 {
 	if (!this->computed || !this->shared_secret.len)
 	{
 		*secret = chunk_empty;
-		return FAILED;
+		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
 
-	return SUCCESS;
+	return TRUE;
 }
 
 

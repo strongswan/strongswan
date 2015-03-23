@@ -1061,7 +1061,6 @@ START_TEST(test_ntru_ke)
 	diffie_hellman_t *i_ntru, *r_ntru;
 	char buf[10];
 	int k, n, len;
-	status_t status;
 
 	k = (_i) / countof(parameter_sets);
 	n = (_i) % countof(parameter_sets);
@@ -1088,13 +1087,11 @@ START_TEST(test_ntru_ke)
 	r_ntru->get_my_public_value(r_ntru, &cipher_text);
 	ck_assert(cipher_text.len > 0);
 
-	status = r_ntru->get_shared_secret(r_ntru, &r_shared_secret);
-	ck_assert(status == SUCCESS);
+	ck_assert(r_ntru->get_shared_secret(r_ntru, &r_shared_secret));
 	ck_assert(r_shared_secret.len > 0);
 
 	i_ntru->set_other_public_value(i_ntru, cipher_text);
-	status = i_ntru->get_shared_secret(i_ntru, &i_shared_secret);
-	ck_assert(status == SUCCESS);
+	ck_assert(i_ntru->get_shared_secret(i_ntru, &i_shared_secret));
 	ck_assert(chunk_equals(i_shared_secret, r_shared_secret));
 
 	chunk_clear(&i_shared_secret);
@@ -1195,7 +1192,7 @@ START_TEST(test_ntru_ciphertext)
 		i_ntru = lib->crypto->create_dh(lib->crypto, NTRU_128_BIT);
 		i_ntru->get_my_public_value(i_ntru, &pub_key);
 		i_ntru->set_other_public_value(i_ntru, test[i]);
-		ck_assert(i_ntru->get_shared_secret(i_ntru, &shared_secret) != SUCCESS);
+		ck_assert(!i_ntru->get_shared_secret(i_ntru, &shared_secret));
 		ck_assert(shared_secret.len == 0);
 
 		chunk_free(&pub_key);
@@ -1218,7 +1215,7 @@ START_TEST(test_ntru_wrong_ciphertext)
 	r_ntru->set_other_public_value(r_ntru, pub_key_m);
 	r_ntru->get_my_public_value(r_ntru, &cipher_text);
 	i_ntru->set_other_public_value(i_ntru, cipher_text);
-	ck_assert(i_ntru->get_shared_secret(i_ntru, &shared_secret) != SUCCESS);
+	ck_assert(!i_ntru->get_shared_secret(i_ntru, &shared_secret));
 	ck_assert(shared_secret.len == 0);
 
 	chunk_free(&pub_key_i);

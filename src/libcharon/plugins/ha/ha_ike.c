@@ -84,7 +84,7 @@ METHOD(listener_t, ike_keys, bool,
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
-	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+	if (!dh->get_shared_secret(dh, &secret))
 	{
 		return TRUE;
 	}

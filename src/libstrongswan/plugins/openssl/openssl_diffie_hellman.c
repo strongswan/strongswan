@@ -70,19 +70,19 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	/* shared secret should requires a len according the DH group */
 	*secret = chunk_alloc(DH_size(this->dh));
 	memset(secret->ptr, 0, secret->len);
 	memcpy(secret->ptr + secret->len - this->shared_secret.len,
 		   this->shared_secret.ptr, this->shared_secret.len);
-	return SUCCESS;
+	return TRUE;
 }
 
 

@@ -300,7 +300,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	spi_i = chunk_alloca(sizeof(u_int64_t));
 	spi_r = chunk_alloca(sizeof(u_int64_t));
 
-	if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+	if (!dh->get_shared_secret(dh, &secret))
 	{
 		return FALSE;
 	}
@@ -554,7 +554,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 	if (dh)
 	{
-		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		if (!dh->get_shared_secret(dh, &secret))
 		{
 			return FALSE;
 		}

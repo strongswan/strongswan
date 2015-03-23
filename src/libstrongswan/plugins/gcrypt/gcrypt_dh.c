@@ -138,15 +138,15 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	*value = export_mpi(this->ya, this->p_len);
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_gcrypt_dh_t *this, chunk_t *secret)
 {
 	if (!this->zz)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	*secret = export_mpi(this->zz, this->p_len);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

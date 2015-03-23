@@ -89,9 +89,10 @@ struct diffie_hellman_t {
 	 * Space for returned secret is allocated and must be freed by the caller.
 	 *
 	 * @param secret	shared secret will be written into this chunk
-	 * @return			SUCCESS, FAILED if not both DH values are set
+	 * @return			TRUE if shared secret computed successfully
 	 */
-	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
+	bool (*get_shared_secret)(diffie_hellman_t *this, chunk_t *secret)
+		__attribute__((warn_unused_result));
 
 	/**
 	 * Sets the public value of partner.

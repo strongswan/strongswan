@@ -155,20 +155,20 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	}
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_gmp_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	secret->len = this->p_len;
 	secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
 	if (secret->ptr == NULL)
 	{
-		return FAILED;
+		return FALSE;
 	}
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

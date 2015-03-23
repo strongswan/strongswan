@@ -973,7 +973,7 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 {
 	chunk_t premaster, pub;
 
-	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
+	if (!this->dh->get_shared_secret(this->dh, &premaster))
 	{
 		DBG1(DBG_TLS, "calculating premaster from DH failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);

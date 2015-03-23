@@ -61,11 +61,11 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	sequence_to_chunk(this->pubvalue.data, this->pubvalue.size, value);
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t *secret)
 {
 	*secret = chunk_empty;
-	return SUCCESS;
+	return TRUE;
 }
 
 

@@ -425,7 +425,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	if (dh->get_shared_secret(dh, &g_xy) != SUCCESS)
+	if (!dh->get_shared_secret(dh, &g_xy))
 	{
 		return FALSE;
 	}
@@ -661,7 +661,7 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 	protocol = proposal->get_protocol(proposal);
 	if (dh)
 	{
-		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		if (!dh->get_shared_secret(dh, &secret))
 		{
 			return FALSE;
 		}

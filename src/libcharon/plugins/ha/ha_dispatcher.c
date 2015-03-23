@@ -81,11 +81,11 @@ struct ha_diffie_hellman_t {
 	chunk_t pub;
 };
 
-METHOD(diffie_hellman_t, dh_get_shared_secret, status_t,
+METHOD(diffie_hellman_t, dh_get_shared_secret, bool,
 	ha_diffie_hellman_t *this, chunk_t *secret)
 {
 	*secret = chunk_clone(this->secret);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, dh_get_my_public_value, void,

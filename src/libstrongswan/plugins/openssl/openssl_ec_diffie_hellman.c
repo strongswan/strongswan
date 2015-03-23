@@ -241,15 +241,15 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

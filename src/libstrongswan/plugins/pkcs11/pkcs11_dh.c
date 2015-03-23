@@ -154,15 +154,15 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	*value = chunk_clone(this->pub_key);
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_pkcs11_dh_t *this, chunk_t *secret)
 {
 	if (!this->secret.ptr)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	*secret = chunk_clone(this->secret);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
