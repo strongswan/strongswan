@@ -134,11 +134,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			}
 
 			responder_value = attr_cast->get_responder_value(attr_cast);
-			pts->set_peer_public_value(pts, responder_value,
-											responder_nonce);
 
 			/* Calculate secret assessment value */
-			if (!pts->calculate_secret(pts))
+			if (!pts->set_peer_public_value(pts, responder_value,
+											responder_nonce) ||
+				!pts->calculate_secret(pts))
 			{
 				return FALSE;
 			}

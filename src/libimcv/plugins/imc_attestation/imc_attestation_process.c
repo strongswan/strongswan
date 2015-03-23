@@ -178,8 +178,10 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 				return FALSE;
 			}
 
-			pts->set_peer_public_value(pts, initiator_value, initiator_nonce);
-			if (!pts->calculate_secret(pts))
+
+			if (!pts->set_peer_public_value(pts, initiator_value,
+											initiator_nonce) ||
+				!pts->calculate_secret(pts))
 			{
 				return FALSE;
 			}

@@ -232,7 +232,7 @@ METHOD(pts_t, get_my_public_value, bool,
 	return TRUE;
 }
 
-METHOD(pts_t, set_peer_public_value, void,
+METHOD(pts_t, set_peer_public_value, bool,
 	private_pts_t *this, chunk_t value, chunk_t nonce)
 {
 	this->dh->set_other_public_value(this->dh, value);
@@ -246,6 +246,7 @@ METHOD(pts_t, set_peer_public_value, void,
 	{
 		this->responder_nonce = nonce;
 	}
+	return TRUE;
 }
 
 METHOD(pts_t, calculate_secret, bool,
