@@ -224,11 +224,12 @@ METHOD(pts_t, create_dh_nonce, bool,
 	return TRUE;
 }
 
-METHOD(pts_t, get_my_public_value, void,
+METHOD(pts_t, get_my_public_value, bool,
 	private_pts_t *this, chunk_t *value, chunk_t *nonce)
 {
 	this->dh->get_my_public_value(this->dh, value);
 	*nonce = this->is_imc ? this->responder_nonce : this->initiator_nonce;
+	return TRUE;
 }
 
 METHOD(pts_t, set_peer_public_value, void,
