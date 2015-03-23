@@ -55,30 +55,29 @@ struct private_tkm_diffie_hellman_t {
 
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t *value)
 {
 	sequence_to_chunk(this->pubvalue.data, this->pubvalue.size, value);
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t *secret)
 {
 	*secret = chunk_empty;
-	return SUCCESS;
+	return TRUE;
 }
 
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t value)
 {
-	// TODO: unvoid this function
-
 	dh_pubvalue_type othervalue;
 	othervalue.size = value.len;
 	memcpy(&othervalue.data, value.ptr, value.len);
 
-	ike_dh_generate_key(this->context_id, othervalue);
+	return ike_dh_generate_key(this->context_id, othervalue) == TKM_OK;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

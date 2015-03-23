@@ -105,6 +105,11 @@ struct private_child_create_t {
 	diffie_hellman_t *dh;
 
 	/**
+	 * Applying DH public value failed?
+	 */
+	bool dh_failed;
+
+	/**
 	 * group used for DH exchange
 	 */
 	diffie_hellman_group_t dh_group;
@@ -716,7 +721,7 @@ static status_t select_and_install(private_child_create_t *this,
 /**
  * build the payloads for the message
  */
-static void build_payloads(private_child_create_t *this, message_t *message)
+static bool build_payloads(private_child_create_t *this, message_t *message)
 {
 	sa_payload_t *sa_payload;
 	nonce_payload_t *nonce_payload;
@@ -748,6 +753,11 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	{
 		ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 														   this->dh);
+		if (!ke_payload)
+		{
+			DBG1(DBG_IKE, "creating KE payload failed");
+			return FALSE;
+		}
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
 
@@ -776,6 +786,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 		message->add_notify(message, FALSE, ESP_TFC_PADDING_NOT_SUPPORTED,
 							chunk_empty);
 	}
+	return TRUE;
 }
 
 /**
@@ -887,7 +898,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				}
 				if (this->dh)
 				{
-					this->dh->set_other_public_value(this->dh,
+					this->dh_failed = !this->dh->set_other_public_value(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
@@ -1035,7 +1046,10 @@ METHOD(task_t, build_i, status_t,
 							NARROW_INITIATOR_PRE_AUTH, this->tsi, this->tsr);
 	}
 
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		return FAILED;
+	}
 
 	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
@@ -1176,8 +1190,15 @@ METHOD(task_t, build_r, status_t,
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
 		case CREATE_CHILD_SA:
-			if (generate_nonce(this) != SUCCESS)
+			if (generate_nonce(this) != SUCCESS )
 			{
+				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
+									chunk_empty);
+				return SUCCESS;
+			}
+			if (this->dh_failed)
+			{
+				DBG1(DBG_IKE, "applying DH public value failed");
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
 									chunk_empty);
 				return SUCCESS;
@@ -1288,7 +1309,12 @@ METHOD(task_t, build_r, status_t,
 			return SUCCESS;
 	}
 
-	build_payloads(this, message);
+	if (!build_payloads(this, message))
+	{
+		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		handle_child_sa_failure(this, message);
+		return SUCCESS;
+	}
 
 	if (!this->rekey)
 	{	/* invoke the child_up() hook if we are not rekeying */
@@ -1466,6 +1492,13 @@ METHOD(task_t, process_i, status_t,
 		return delete_failed_sa(this);
 	}
 
+	if (this->dh_failed)
+	{
+		DBG1(DBG_IKE, "applying DH public value failed");
+		handle_child_sa_failure(this, message);
+		return delete_failed_sa(this);
+	}
+
 	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
 	{
 		if (!this->rekey)
@@ -1543,6 +1576,7 @@ METHOD(task_t, migrate, void,
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
+	this->dh_failed = FALSE;
 	if (this->proposals)
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));

@@ -85,10 +85,15 @@ struct private_gmp_diffie_hellman_t {
 	bool computed;
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_gmp_diffie_hellman_t *this, chunk_t value)
 {
 	mpz_t p_min_1;
+
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
 
 	mpz_init(p_min_1);
 	mpz_sub_ui(p_min_1, this->p, 1);
@@ -142,9 +147,10 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			 " y < 2 || y > p - 1 ");
 	}
 	mpz_clear(p_min_1);
+	return this->computed;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_gmp_diffie_hellman_t *this,chunk_t *value)
 {
 	value->len = this->p_len;
@@ -153,22 +159,23 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 	{
 		value->len = 0;
 	}
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_gmp_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	secret->len = this->p_len;
 	secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
 	if (secret->ptr == NULL)
 	{
-		return FAILED;
+		return FALSE;
 	}
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

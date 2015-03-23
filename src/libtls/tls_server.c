@@ -494,8 +494,13 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		}
 		pub = chunk_skip(pub, 1);
 	}
-	this->dh->set_other_public_value(this->dh, pub);
-	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
+	if (!this->dh->set_other_public_value(this->dh, pub))
+	{
+		DBG1(DBG_TLS, "applying DH public value failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	if (!this->dh->get_shared_secret(this->dh, &premaster))
 	{
 		DBG1(DBG_TLS, "calculating premaster from DH failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -915,7 +920,11 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->get_my_public_value(this->dh, &chunk);
+	if (!this->dh->get_my_public_value(this->dh, &chunk))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	if (params)
 	{
 		writer->write_data16(writer, chunk);

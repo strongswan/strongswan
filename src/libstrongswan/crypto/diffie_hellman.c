@@ -501,3 +501,75 @@ bool diffie_hellman_group_is_ec(diffie_hellman_group_t group)
 			return FALSE;
 	}
 }
+
+/**
+ * See header.
+ */
+bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
+{
+	diffie_hellman_params_t *params;
+	bool valid = FALSE;
+
+	switch (group)
+	{
+		case MODP_768_BIT:
+		case MODP_1024_BIT:
+		case MODP_1536_BIT:
+		case MODP_2048_BIT:
+		case MODP_3072_BIT:
+		case MODP_4096_BIT:
+		case MODP_6144_BIT:
+		case MODP_8192_BIT:
+		case MODP_1024_160:
+		case MODP_2048_224:
+		case MODP_2048_256:
+			params = diffie_hellman_get_params(group);
+			if (params)
+			{
+				valid = value.len == params->prime.len;
+			}
+			break;
+		case ECP_192_BIT:
+			valid = value.len == 48;
+			break;
+		case ECP_224_BIT:
+		case ECP_224_BP:
+			valid = value.len == 56;
+			break;
+		case ECP_256_BIT:
+		case ECP_256_BP:
+			valid = value.len == 64;
+			break;
+		case ECP_384_BIT:
+		case ECP_384_BP:
+			valid = value.len == 96;
+			break;
+		case ECP_512_BP:
+			valid = value.len == 128;
+			break;
+		case ECP_521_BIT:
+			valid = value.len == 132;
+			break;
+		case NTRU_112_BIT:
+		case NTRU_128_BIT:
+		case NTRU_192_BIT:
+		case NTRU_256_BIT:
+			/* verification currently not supported, do in plugin */
+			valid = FALSE;
+			break;
+		case MODP_NULL:
+		case MODP_CUSTOM:
+			valid = TRUE;
+			break;
+		case MODP_NONE:
+			/* fail */
+			break;
+		/* compile-warn unhandled groups, fail verification */
+	}
+	if (!valid)
+	{
+		DBG1(DBG_ENC, "invalid DH public value size (%zu bytes) for %N",
+			 value.len, diffie_hellman_group_names, group);
+	}
+	return valid;
+}

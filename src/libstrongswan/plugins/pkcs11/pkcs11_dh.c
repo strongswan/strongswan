@@ -81,7 +81,7 @@ struct private_pkcs11_dh_t {
  *
  * If this succeeds the shared secret is stored in this->secret.
  */
-static void derive_secret(private_pkcs11_dh_t *this, chunk_t other)
+static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 {
 	CK_OBJECT_CLASS klass = CKO_SECRET_KEY;
 	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
@@ -102,19 +102,25 @@ static void derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_DeriveKey() error: %N", ck_rv_names, rv);
-		return;
+		return FALSE;
 	}
 	if (!this->lib->get_ck_attribute(this->lib, this->session, secret,
 									 CKA_VALUE, &this->secret))
 	{
 		chunk_free(&this->secret);
-		return;
+		return FALSE;
 	}
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_pkcs11_dh_t *this, chunk_t value)
 {
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	switch (this->group)
 	{
 		case ECP_192_BIT:
@@ -137,7 +143,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 			if (!lib->settings->get_bool(lib->settings,
 									"%s.ecp_x_coordinate_only", TRUE, lib->ns))
 			{	/* we only get the x coordinate back */
-				return;
+				return FALSE;
 			}
 			value = chunk_from_thing(params);
 			break;
@@ -145,24 +151,25 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		default:
 			break;
 	}
-	derive_secret(this, value);
+	return derive_secret(this, value);
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_pkcs11_dh_t *this, chunk_t *value)
 {
 	*value = chunk_clone(this->pub_key);
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_pkcs11_dh_t *this, chunk_t *secret)
 {
 	if (!this->secret.ptr)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	*secret = chunk_clone(this->secret);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
@@ -443,4 +450,3 @@ pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group,
 	}
 	return NULL;
 }
-

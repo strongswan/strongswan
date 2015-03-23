@@ -384,7 +384,12 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->set_other_public_value(this->dh, pub);
+	if (!this->dh->set_other_public_value(this->dh, pub))
+	{
+		DBG1(DBG_TLS, "applying DH public value failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
@@ -494,7 +499,12 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1));
+	if (!this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1)))
+	{
+		DBG1(DBG_TLS, "applying DH public value failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
@@ -973,7 +983,7 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 {
 	chunk_t premaster, pub;
 
-	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
+	if (!this->dh->get_shared_secret(this->dh, &premaster))
 	{
 		DBG1(DBG_TLS, "calculating premaster from DH failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -990,7 +1000,11 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 	}
 	chunk_clear(&premaster);
 
-	this->dh->get_my_public_value(this->dh, &pub);
+	if (!this->dh->get_my_public_value(this->dh, &pub))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	if (this->dh->get_dh_group(this->dh) == MODP_CUSTOM)
 	{
 		writer->write_data16(writer, pub);

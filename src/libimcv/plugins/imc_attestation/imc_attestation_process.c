@@ -137,7 +137,11 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			{
 				return FALSE;
 			}
-			pts->get_my_public_value(pts, &responder_value, &responder_nonce);
+			if (!pts->get_my_public_value(pts, &responder_value,
+										  &responder_nonce))
+			{
+				return FALSE;
+			}
 
 			/* Send DH Nonce Parameters Response attribute */
 			attr = tcg_pts_attr_dh_nonce_params_resp_create(selected_dh_group,
@@ -174,8 +178,10 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 				return FALSE;
 			}
 
-			pts->set_peer_public_value(pts, initiator_value, initiator_nonce);
-			if (!pts->calculate_secret(pts))
+
+			if (!pts->set_peer_public_value(pts, initiator_value,
+											initiator_nonce) ||
+				!pts->calculate_secret(pts))
 			{
 				return FALSE;
 			}

@@ -224,17 +224,24 @@ METHOD(pts_t, create_dh_nonce, bool,
 	return TRUE;
 }
 
-METHOD(pts_t, get_my_public_value, void,
+METHOD(pts_t, get_my_public_value, bool,
 	private_pts_t *this, chunk_t *value, chunk_t *nonce)
 {
-	this->dh->get_my_public_value(this->dh, value);
+	if (!this->dh->get_my_public_value(this->dh, value))
+	{
+		return FALSE;
+	}
 	*nonce = this->is_imc ? this->responder_nonce : this->initiator_nonce;
+	return TRUE;
 }
 
-METHOD(pts_t, set_peer_public_value, void,
+METHOD(pts_t, set_peer_public_value, bool,
 	private_pts_t *this, chunk_t value, chunk_t nonce)
 {
-	this->dh->set_other_public_value(this->dh, value);
+	if (!this->dh->set_other_public_value(this->dh, value))
+	{
+		return FALSE;
+	}
 
 	nonce = chunk_clone(nonce);
 	if (this->is_imc)
@@ -245,6 +252,7 @@ METHOD(pts_t, set_peer_public_value, void,
 	{
 		this->responder_nonce = nonce;
 	}
+	return TRUE;
 }
 
 METHOD(pts_t, calculate_secret, bool,
@@ -264,7 +272,7 @@ METHOD(pts_t, calculate_secret, bool,
 	DBG3(DBG_PTS, "responder nonce: %B", &this->responder_nonce);
 
 	/* Calculate the DH secret */
-	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
+	if (!this->dh->get_shared_secret(this->dh, &shared_secret))
 	{
 		DBG1(DBG_PTS, "shared DH secret computation failed");
 		return FALSE;

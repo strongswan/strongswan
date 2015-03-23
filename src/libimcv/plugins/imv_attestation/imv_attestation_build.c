@@ -69,7 +69,11 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 
 			/* Send DH nonce finish attribute */
 			selected_algorithm = pts->get_meas_algorithm(pts);
-			pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
+			if (!pts->get_my_public_value(pts, &initiator_value,
+										  &initiator_nonce))
+			{
+				return FALSE;
+			}
 			attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
 											initiator_value, initiator_nonce);
 			attr->set_noskip_flag(attr, TRUE);

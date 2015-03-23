@@ -15,31 +15,36 @@
 
 #include "load_tester_diffie_hellman.h"
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_my_public_value.
- */
-static void get_my_public_value(load_tester_diffie_hellman_t *this,
-								chunk_t *value)
+METHOD(diffie_hellman_t, get_my_public_value, bool,
+	load_tester_diffie_hellman_t *this, chunk_t *value)
 {
 	*value = chunk_empty;
+	return TRUE;
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_shared_secret.
- */
-static status_t get_shared_secret(load_tester_diffie_hellman_t *this,
-								  chunk_t *secret)
+METHOD(diffie_hellman_t, set_other_public_value, bool,
+	load_tester_diffie_hellman_t *this, chunk_t value)
+{
+	return TRUE;
+}
+
+METHOD(diffie_hellman_t, get_shared_secret, bool,
+	load_tester_diffie_hellman_t *this, chunk_t *secret)
 {
 	*secret = chunk_empty;
-	return SUCCESS;
+	return TRUE;
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(load_tester_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+	load_tester_diffie_hellman_t *this)
 {
 	return MODP_NULL;
+}
+
+METHOD(diffie_hellman_t, destroy, void,
+	load_tester_diffie_hellman_t *this)
+{
+	free(this);
 }
 
 /**
@@ -55,13 +60,15 @@ load_tester_diffie_hellman_t *load_tester_diffie_hellman_create(
 		return NULL;
 	}
 
-	this = malloc_thing(load_tester_diffie_hellman_t);
-
-	this->dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *))get_shared_secret;
-	this->dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t ))nop;
-	this->dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *))get_my_public_value;
-	this->dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *))get_dh_group;
-	this->dh.destroy = (void (*)(diffie_hellman_t *))free;
+	INIT(this,
+		.dh = {
+			.get_shared_secret = _get_shared_secret,
+			.set_other_public_value = _set_other_public_value,
+			.get_my_public_value = _get_my_public_value,
+			.get_dh_group = _get_dh_group,
+			.destroy = _destroy,
+		}
+	);
 
 	return this;
 }

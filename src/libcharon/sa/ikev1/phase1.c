@@ -694,7 +694,13 @@ METHOD(phase1_t, add_nonce_ke, bool,
 	nonce_gen_t *nonceg;
 	chunk_t nonce;
 
-	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE, this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE,
+													   this->dh);
+	if (!ke_payload)
+	{
+		DBG1(DBG_IKE, "creating KE payload failed");
+		return FALSE;
+	}
 	message->add_payload(message, &ke_payload->payload_interface);
 
 	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
@@ -739,7 +745,11 @@ METHOD(phase1_t, get_nonce_ke, bool,
 		return FALSE;
 	}
 	this->dh_value = chunk_clone(ke_payload->get_key_exchange_data(ke_payload));
-	this->dh->set_other_public_value(this->dh, this->dh_value);
+	if (!this->dh->set_other_public_value(this->dh, this->dh_value))
+	{
+		DBG1(DBG_IKE, "unable to apply received KE value");
+		return FALSE;
+	}
 
 	nonce_payload = (nonce_payload_t*)message->get_payload(message, PLV1_NONCE);
 	if (!nonce_payload)

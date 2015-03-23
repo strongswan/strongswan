@@ -142,79 +142,6 @@ static encoding_rule_t encodings_v1[] = {
 METHOD(payload_t, verify, status_t,
 	private_ke_payload_t *this)
 {
-	diffie_hellman_params_t *params;
-	diffie_hellman_group_t g = this->dh_group_number;
-	bool valid = TRUE;
-
-	if (this->type == PLV1_KEY_EXCHANGE)
-	{
-		/* IKEv1 does not transmit the group */
-		return SUCCESS;
-	}
-
-	switch (g)
-	{
-		case MODP_NONE:
-			valid = FALSE;
-			break;
-		case MODP_768_BIT:
-		case MODP_1024_BIT:
-		case MODP_1536_BIT:
-		case MODP_2048_BIT:
-		case MODP_3072_BIT:
-		case MODP_4096_BIT:
-		case MODP_6144_BIT:
-		case MODP_8192_BIT:
-		case MODP_1024_160:
-		case MODP_2048_224:
-		case MODP_2048_256:
-			params = diffie_hellman_get_params(g);
-			if (params)
-			{
-				valid = this->key_exchange_data.len == params->prime.len;
-			}
-			break;
-		case ECP_192_BIT:
-			valid = this->key_exchange_data.len == 48;
-			break;
-		case ECP_224_BIT:
-		case ECP_224_BP:
-			valid = this->key_exchange_data.len == 56;
-			break;
-		case ECP_256_BIT:
-		case ECP_256_BP:
-			valid = this->key_exchange_data.len == 64;
-			break;
-		case ECP_384_BIT:
-		case ECP_384_BP:
-			valid = this->key_exchange_data.len == 96;
-			break;
-		case ECP_512_BP:
-			valid = this->key_exchange_data.len == 128;
-			break;
-		case ECP_521_BIT:
-			valid = this->key_exchange_data.len == 132;
-			break;
-		case NTRU_112_BIT:
-		case NTRU_128_BIT:
-		case NTRU_192_BIT:
-		case NTRU_256_BIT:
-			/* NTRU public key size depends on the parameter set, but is
-			 * at least 512 bytes */
-			valid = this->key_exchange_data.len > 512;
-			break;
-		case MODP_NULL:
-		case MODP_CUSTOM:
-			break;
-		/* compile-warn unhandled groups, but accept them so we can negotiate
-		 * a different group that we support. */
-	}
-	if (!valid)
-	{
-		DBG1(DBG_ENC, "invalid KE data size (%zu bytes) for %N",
-			 this->key_exchange_data.len, diffie_hellman_group_names, g);
-		return FAILED;
-	}
 	return SUCCESS;
 }
 
@@ -320,9 +247,15 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 ke_payload_t *ke_payload_create_from_diffie_hellman(payload_type_t type,
 													diffie_hellman_t *dh)
 {
-	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create(type);
+	private_ke_payload_t *this;
+	chunk_t value;
 
-	dh->get_my_public_value(dh, &this->key_exchange_data);
+	if (!dh->get_my_public_value(dh, &value))
+	{
+		return NULL;
+	}
+	this = (private_ke_payload_t*)ke_payload_create(type);
+	this->key_exchange_data = value;
 	this->dh_group_number = dh->get_dh_group(dh);
 	this->payload_length += this->key_exchange_data.len;
 

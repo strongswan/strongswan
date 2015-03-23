@@ -61,35 +61,41 @@ struct private_openssl_diffie_hellman_t {
 	bool computed;
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *value)
 {
 	*value = chunk_alloc(DH_size(this->dh));
 	memset(value->ptr, 0, value->len);
 	BN_bn2bin(this->dh->pub_key,
 			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	/* shared secret should requires a len according the DH group */
 	*secret = chunk_alloc(DH_size(this->dh));
 	memset(secret->ptr, 0, secret->len);
 	memcpy(secret->ptr + secret->len - this->shared_secret.len,
 		   this->shared_secret.ptr, this->shared_secret.len);
-	return SUCCESS;
+	return TRUE;
 }
 
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
 	int len;
+
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
 
 	BN_bin2bn(value.ptr, value.len, this->pub_key);
 	chunk_clear(&this->shared_secret);
@@ -99,10 +105,11 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "DH shared secret computation failed");
-		return;
+		return FALSE;
 	}
 	this->shared_secret.len = len;
 	this->computed = TRUE;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,

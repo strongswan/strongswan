@@ -143,16 +143,18 @@ struct pts_t {
 	 *
 	 * @param value				My public DH value
 	 * @param nonce				My DH nonce
+	 * @return					TRUE if public value retrieved successfully
 	 */
-	void (*get_my_public_value)(pts_t *this, chunk_t *value, chunk_t *nonce);
+	bool (*get_my_public_value)(pts_t *this, chunk_t *value, chunk_t *nonce);
 
 	/**
 	 * Set peer Diffie.Hellman public value
 	 *
 	 * @param value				Peer public DH value
 	 * @param nonce				Peer DH nonce
+	 * @return					TRUE if public value set successfully
 	 */
-	void (*set_peer_public_value) (pts_t *this, chunk_t value, chunk_t nonce);
+	bool (*set_peer_public_value) (pts_t *this, chunk_t value, chunk_t nonce);
 
 	/**
 	 * Calculates assessment secret to be used for TPM Quote as ExternalData

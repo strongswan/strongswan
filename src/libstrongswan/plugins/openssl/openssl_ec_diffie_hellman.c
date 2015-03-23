@@ -216,40 +216,47 @@ error:
 	return ret;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
+METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	if (!chunk2ecp(this->ec_group, value, this->pub_key))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		return;
+		return FALSE;
 	}
 
 	chunk_clear(&this->shared_secret);
 
 	if (!compute_shared_key(this, &this->shared_secret)) {
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
-		return;
+		return FALSE;
 	}
 
 	this->computed = TRUE;
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, void,
+METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
 	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
+	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, status_t,
+METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
-		return FAILED;
+		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
-	return SUCCESS;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
