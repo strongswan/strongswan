@@ -122,7 +122,7 @@ CALLBACK(child_sas, int,
 		}
 		if (child->get(child, "esn"))
 		{
-			printf("/%s", child->get(child, "esn"));
+			printf("/ESN");
 		}
 		printf("\n");
 
