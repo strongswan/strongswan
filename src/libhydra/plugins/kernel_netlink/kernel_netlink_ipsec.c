@@ -1550,7 +1550,8 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 							 host_t *dst, mark_t mark,
 							 struct xfrm_replay_state_esn **replay_esn,
 							 u_int32_t *replay_esn_len,
-							 struct xfrm_replay_state **replay)
+							 struct xfrm_replay_state **replay,
+							 struct xfrm_lifetime_cur **lifetime)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1618,20 +1619,27 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 		rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
 		while (RTA_OK(rta, rtasize))
 		{
+			if (rta->rta_type == XFRMA_LTIME_VAL &&
+				RTA_PAYLOAD(rta) == sizeof(**lifetime))
+			{
+				free(*lifetime);
+				*lifetime = malloc(RTA_PAYLOAD(rta));
+				memcpy(*lifetime, RTA_DATA(rta), RTA_PAYLOAD(rta));
+			}
 			if (rta->rta_type == XFRMA_REPLAY_VAL &&
 				RTA_PAYLOAD(rta) == sizeof(**replay))
 			{
+				free(*replay);
 				*replay = malloc(RTA_PAYLOAD(rta));
 				memcpy(*replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
-				break;
 			}
 			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
 				RTA_PAYLOAD(rta) >= sizeof(**replay_esn))
 			{
+				free(*replay_esn);
 				*replay_esn = malloc(RTA_PAYLOAD(rta));
 				*replay_esn_len = RTA_PAYLOAD(rta);
 				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
-				break;
 			}
 			rta = RTA_NEXT(rta, rtasize);
 		}
@@ -1813,6 +1821,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_encap_tmpl* tmpl = NULL;
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
+	struct xfrm_lifetime_cur *lifetime = NULL;
 	u_int32_t replay_esn_len;
 	status_t status = FAILED;
 
@@ -1878,7 +1887,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		goto failed;
 	}
 
-	get_replay_state(this, spi, protocol, dst, mark, &replay_esn, &replay_esn_len, &replay);
+	get_replay_state(this, spi, protocol, dst, mark, &replay_esn,
+					 &replay_esn_len, &replay, &lifetime);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
@@ -1967,8 +1977,25 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	}
 	else
 	{
-		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry "
-					  "with SPI %.8x", ntohl(spi));
+		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry with "
+			 "SPI %.8x", ntohl(spi));
+	}
+	if (lifetime)
+	{
+		struct xfrm_lifetime_cur *state;
+
+		state = netlink_reserve(hdr, sizeof(request), XFRMA_LTIME_VAL,
+								sizeof(*state));
+		if (!state)
+		{
+			goto failed;
+		}
+		memcpy(state, lifetime, sizeof(*state));
+	}
+	else
+	{
+		DBG1(DBG_KNL, "unable to copy usage stats from old SAD entry with "
+			 "SPI %.8x", ntohl(spi));
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -1981,6 +2008,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 failed:
 	free(replay);
 	free(replay_esn);
+	free(lifetime);
 	memwipe(out, len);
 	memwipe(&request, sizeof(request));
 	free(out);
