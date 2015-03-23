@@ -116,6 +116,11 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_pkcs11_dh_t *this, chunk_t value)
 {
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	switch (this->group)
 	{
 		case ECP_192_BIT:

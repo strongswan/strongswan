@@ -175,8 +175,17 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
  * Check if a given DH group is an ECDH group
  *
  * @param group			group to check
- * @return				TUE if group is an ECP group
+ * @return				TRUE if group is an ECP group
  */
 bool diffie_hellman_group_is_ec(diffie_hellman_group_t group);
+
+/**
+ * Check if a diffie hellman public value is valid for given group.
+ *
+ * @param group			group the value is used in
+ * @param value			public DH value to check
+ * @return				TRUE if value looks valid for group
+ */
+bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value);
 
 #endif /** DIFFIE_HELLMAN_H_ @}*/

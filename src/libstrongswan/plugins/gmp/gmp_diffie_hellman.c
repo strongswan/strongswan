@@ -90,6 +90,11 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 {
 	mpz_t p_min_1;
 
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	mpz_init(p_min_1);
 	mpz_sub_ui(p_min_1, this->p, 1);
 

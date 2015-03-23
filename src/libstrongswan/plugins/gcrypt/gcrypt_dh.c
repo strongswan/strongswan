@@ -79,6 +79,11 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	gcry_mpi_t p_min_1;
 	gcry_error_t err;
 
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	if (this->yb)
 	{
 		gcry_mpi_release(this->yb);

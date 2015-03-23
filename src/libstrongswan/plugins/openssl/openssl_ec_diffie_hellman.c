@@ -219,6 +219,11 @@ error:
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	if (!chunk2ecp(this->ec_group, value, this->pub_key))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");

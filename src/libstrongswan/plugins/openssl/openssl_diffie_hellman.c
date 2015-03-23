@@ -92,6 +92,11 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 {
 	int len;
 
+	if (!diffie_hellman_verify_value(this->group, value))
+	{
+		return FALSE;
+	}
+
 	BN_bin2bn(value.ptr, value.len, this->pub_key);
 	chunk_clear(&this->shared_secret);
 	this->shared_secret.ptr = malloc(DH_size(this->dh));
