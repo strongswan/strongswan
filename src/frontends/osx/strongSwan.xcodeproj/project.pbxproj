@@ -27,7 +27,7 @@
 		5BD1CCC41726DB0100587077 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5BD1CCC31726DB0100587077 /* AppDelegate.m */; };
 		5BD1CCC71726DB0200587077 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5BD1CCC51726DB0200587077 /* MainMenu.xib */; };
 		5BD1CCD71726DB4000587077 /* charon-xpc.c in Sources */ = {isa = PBXBuildFile; fileRef = 5BD1CCD61726DB4000587077 /* charon-xpc.c */; };
-		5BD1CCDF1726DC0A00587077 /* org.strongswan.charon-xpc in Copy Files */ = {isa = PBXBuildFile; fileRef = 5BD1CCD11726DB4000587077 /* org.strongswan.charon-xpc */; };
+		5BD1CCDF1726DC0A00587077 /* org.strongswan.charon-xpc in Copy Files */ = {isa = PBXBuildFile; fileRef = 5BD1CCD11726DB4000587077 /* org.strongswan.charon-xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		5BD1CCEB1727CCA400587077 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 5BD1CCEA1727CCA400587077 /* README.md */; };
 		5BD1CCED1727D7AF00587077 /* ServiceManagement.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCEC1727D7AF00587077 /* ServiceManagement.framework */; };
 		5BD1CCF31727DE3E00587077 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BD1CCF21727DE3E00587077 /* Security.framework */; };
@@ -255,7 +255,7 @@
 		5BD1CCA31726DB0100587077 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0620;
 				ORGANIZATIONNAME = "revosec AG";
 			};
 			buildConfigurationList = 5BD1CCA61726DB0100587077 /* Build configuration list for PBXProject "strongSwan" */;
