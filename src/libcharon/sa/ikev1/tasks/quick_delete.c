@@ -105,7 +105,7 @@ static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
 		this->spi = spi = child_sa->get_spi(child_sa, TRUE);
 	}
 
-	rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYING;
+	rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYED;
 	child_sa->set_state(child_sa, CHILD_DELETING);
 
 	my_ts = linked_list_create_from_enumerator(

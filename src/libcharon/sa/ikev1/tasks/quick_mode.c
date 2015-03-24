@@ -402,7 +402,7 @@ static bool install(private_quick_mode_t *this)
 	{
 		charon->bus->child_rekey(charon->bus, old, this->child_sa);
 		/* rekeyed CHILD_SAs stay installed until they expire */
-		old->set_state(old, CHILD_INSTALLED);
+		old->set_state(old, CHILD_REKEYED);
 	}
 	else
 	{
@@ -988,6 +988,7 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 			{
 				case CHILD_INSTALLED:
 				case CHILD_REKEYING:
+				case CHILD_REKEYED:
 					policies = child_sa->create_policy_enumerator(child_sa);
 					if (policies->enumerate(policies, &local, &remote) &&
 						local->equals(local, this->tsr) &&

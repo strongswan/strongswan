@@ -68,6 +68,11 @@ enum child_sa_state_t {
 	CHILD_REKEYING,
 
 	/**
+	 * CHILD_SA that was rekeyed, but stays installed
+	 */
+	CHILD_REKEYED,
+
+	/**
 	 * CHILD_SA negotiation failed, but gets retried
 	 */
 	CHILD_RETRYING,

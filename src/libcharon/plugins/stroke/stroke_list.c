@@ -323,7 +323,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 
 		}
 	}
-	else if (child_sa->get_state(child_sa) == CHILD_REKEYING)
+	else if (child_sa->get_state(child_sa) == CHILD_REKEYING ||
+			 child_sa->get_state(child_sa) == CHILD_REKEYED)
 	{
 		rekey = child_sa->get_lifetime(child_sa, TRUE);
 		fprintf(out, ", expires in %V", &now, &rekey);
