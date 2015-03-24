@@ -187,6 +187,8 @@ int main(int argc, char *argv[])
 	lib->settings->set_default_str(lib->settings, "charon-xpc.port_nat_t", "0");
 	lib->settings->set_default_str(lib->settings,
 								"charon-xpc.close_ike_on_child_failure", "yes");
+	lib->settings->set_default_str(lib->settings,
+								"charon-xpc.plugins.osx-attr.append", "no");
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
 				"nonce pkcs1 openssl keychain ctr ccm gcm kernel-libipsec "
