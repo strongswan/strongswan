@@ -493,7 +493,7 @@ static bool get_ke(private_quick_mode_t *this, message_t *message)
 		DBG1(DBG_IKE, "KE payload missing");
 		return FALSE;
 	}
-	if (this->dh->set_other_public_value(this->dh,
+	if (!this->dh->set_other_public_value(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload)))
 	{
 		DBG1(DBG_IKE, "unable to apply received KE value");
