@@ -76,7 +76,7 @@ typedef struct {
 	u_int32_t spi;
 	/** use UDP encapsulation */
 	bool encap;
-	/** wheter we should allow reencapsulation of IPsec received forecasts */
+	/** whether we should allow reencapsulation of IPsec received forecasts */
 	bool reinject;
 	/** broadcast address used for that entry */
 	u_int32_t broadcast;

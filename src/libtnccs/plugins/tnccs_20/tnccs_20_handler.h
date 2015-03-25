@@ -90,7 +90,7 @@ struct tnccs_20_handler_t {
 	/**
 	 * Handle errors that occurred during PB-TNC batch header processing
 	 *
-	 * @param batch			batch where a fatal error occured
+	 * @param batch			batch where a fatal error occurred
 	 */
 	void (*handle_errors)(tnccs_20_handler_t *this, pb_tnc_batch_t *batch);
 

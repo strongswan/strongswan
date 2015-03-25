@@ -1293,7 +1293,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		 * reqid cache would find the same reqid for our selectors, this does
 		 * not work in a special case: If an SA is triggered by a trap policy,
 		 * but the negotiated SA gets narrowed, we still must reuse the same
-		 * reqid to succesfully "trigger" the SA on the kernel level. Rekeying
+		 * reqid to successfully "trigger" the SA on the kernel level. Rekeying
 		 * such an SA requires an explicit reqid, as the cache currently knows
 		 * the original selectors only for that reqid. */
 		if (rekey)
