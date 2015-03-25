@@ -144,6 +144,7 @@ ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
 ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
+ARG_ENABL_SET([aesni],          [enable Intel AES-NI crypto plugin.])
 ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
 ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
@@ -1243,6 +1244,7 @@ ADD_PLUGIN([test-vectors],         [s charon scepclient pki])
 ADD_PLUGIN([unbound],              [s charon scripts])
 ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm cmd])
 ADD_PLUGIN([pkcs11],               [s charon pki nm cmd])
+ADD_PLUGIN([aesni],                [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([aes],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon scepclient pki scripts nm cmd])
@@ -1406,6 +1408,7 @@ AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
 AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RDRAND, test x$rdrand = xtrue)
+AM_CONDITIONAL(USE_AESNI, test x$aesni = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
@@ -1649,6 +1652,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/rdrand/Makefile
+	src/libstrongswan/plugins/aesni/Makefile
 	src/libstrongswan/plugins/random/Makefile
 	src/libstrongswan/plugins/nonce/Makefile
 	src/libstrongswan/plugins/hmac/Makefile
