@@ -97,17 +97,60 @@ typedef enum {
 } radius_acct_terminate_cause_t;
 
 /**
- * Usage stats for a cached SAs
+ * Usage stats for bytes and packets
+ */
+typedef struct {
+	struct {
+		u_int64_t sent;
+		u_int64_t received;
+	} bytes, packets;
+} usage_t;
+
+/**
+ * Add usage stats (modifies a)
+ */
+static inline void add_usage(usage_t *a, usage_t b)
+{
+	a->bytes.sent += b.bytes.sent;
+	a->bytes.received += b.bytes.received;
+	a->packets.sent += b.packets.sent;
+	a->packets.received += b.packets.received;
+}
+
+/**
+ * Subtract usage stats (modifies a)
+ */
+static inline void sub_usage(usage_t *a, usage_t b)
+{
+	a->bytes.sent -= b.bytes.sent;
+	a->bytes.received -= b.bytes.received;
+	a->packets.sent -= b.packets.sent;
+	a->packets.received -= b.packets.received;
+}
+
+/**
+ * Usage stats for a cached/migrated SAs
  */
 typedef struct {
 	/** unique CHILD_SA identifier */
 	u_int32_t id;
 	/** usage stats for this SA */
-	struct {
-		u_int64_t sent;
-		u_int64_t received;
-	} bytes, packets;
+	usage_t usage;
 } sa_entry_t;
+
+/**
+ * Clone an sa_entry_t
+ */
+static sa_entry_t *clone_sa(sa_entry_t *sa)
+{
+	sa_entry_t *this;
+
+	INIT(this,
+		.id = sa->id,
+		.usage = sa->usage,
+	);
+	return this;
+}
 
 /**
  * Hashtable entry with usage stats
@@ -118,12 +161,11 @@ typedef struct {
 	/** RADIUS accounting session ID */
 	char sid[24];
 	/** number of sent/received octets/packets for expired SAs */
-	struct {
-		u_int64_t sent;
-		u_int64_t received;
-	} bytes, packets;
+	usage_t usage;
 	/** list of cached SAs, sa_entry_t (sorted by their unique ID) */
 	array_t *cached;
+	/** list of migrated SAs, sa_entry_t (sorted by their unique ID) */
+	array_t *migrated;
 	/** session creation time */
 	time_t created;
 	/** terminate cause */
@@ -143,6 +185,7 @@ typedef struct {
 static void destroy_entry(entry_t *this)
 {
 	array_destroy_function(this->cached, (void*)free, NULL);
+	array_destroy_function(this->migrated, (void*)free, NULL);
 	this->id->destroy(this->id);
 	free(this);
 }
@@ -192,37 +235,86 @@ static int sa_find(const void *a, const void *b)
 }
 
 /**
+ * Update or create usage counters of a cached SA
+ */
+static void update_sa(entry_t *entry, u_int32_t id, usage_t usage)
+{
+	sa_entry_t *sa, lookup;
+
+	lookup.id = id;
+	if (array_bsearch(entry->cached, &lookup, sa_find, &sa) == -1)
+	{
+		INIT(sa,
+			.id = id,
+		);
+		array_insert_create(&entry->cached, ARRAY_TAIL, sa);
+		array_sort(entry->cached, sa_sort, NULL);
+	}
+	sa->usage = usage;
+}
+
+/**
  * Update usage counter when a CHILD_SA rekeys/goes down
  */
 static void update_usage(private_eap_radius_accounting_t *this,
 						 ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
-	u_int64_t bytes_in, bytes_out, packets_in, packets_out;
+	usage_t usage;
 	entry_t *entry;
-	sa_entry_t *sa, lookup;
 
-	child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out, &packets_out);
-	child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in, &packets_in);
+	child_sa->get_usestats(child_sa, TRUE, NULL, &usage.bytes.received,
+						   &usage.packets.received);
+	child_sa->get_usestats(child_sa, FALSE, NULL, &usage.bytes.sent,
+						   &usage.packets.sent);
 
 	this->mutex->lock(this->mutex);
 	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
 	if (entry)
 	{
-		lookup.id = child_sa->get_unique_id(child_sa);
-		if (array_bsearch(entry->cached, &lookup, sa_find, &sa) == -1)
-		{
-			INIT(sa,
-				.id = lookup.id,
-			);
-			array_insert_create(&entry->cached, ARRAY_TAIL, sa);
-			array_sort(entry->cached, sa_sort, NULL);
-		}
-		sa->bytes.sent = bytes_out;
-		sa->bytes.received = bytes_in;
-		sa->packets.sent = packets_out;
-		sa->packets.received = packets_in;
+		update_sa(entry, child_sa->get_unique_id(child_sa), usage);
 	}
 	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Collect usage stats for all CHILD_SAs of the given IKE_SA, optionally returns
+ * the total number of bytes and packets
+ */
+static array_t *collect_stats(ike_sa_t *ike_sa, usage_t *total)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	array_t *stats;
+	sa_entry_t *sa;
+	usage_t usage;
+
+	if (total)
+	{
+		*total = (usage_t){};
+	}
+
+	stats = array_create(0, 0);
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		INIT(sa,
+			.id = child_sa->get_unique_id(child_sa),
+		);
+		array_insert(stats, ARRAY_TAIL, sa);
+		array_sort(stats, sa_sort, NULL);
+
+		child_sa->get_usestats(child_sa, TRUE, NULL, &usage.bytes.received,
+							   &usage.packets.received);
+		child_sa->get_usestats(child_sa, FALSE, NULL, &usage.bytes.sent,
+							   &usage.packets.sent);
+		sa->usage = usage;
+		if (total)
+		{
+			add_usage(total, usage);
+		}
+	}
+	enumerator->destroy(enumerator);
+	return stats;
 }
 
 /**
@@ -255,11 +347,20 @@ static void cleanup_sas(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
 		{
 			/* SA is gone, add its latest stats to the total for this IKE_SA
 			 * and remove the cache entry */
-			entry->bytes.sent += sa->bytes.sent;
-			entry->bytes.received += sa->bytes.received;
-			entry->packets.sent += sa->packets.sent;
-			entry->packets.received += sa->packets.received;
+			add_usage(&entry->usage, sa->usage);
 			array_remove_at(entry->cached, enumerator);
+			free(sa);
+		}
+	}
+	enumerator->destroy(enumerator);
+	enumerator = array_create_enumerator(entry->migrated);
+	while (enumerator->enumerate(enumerator, &sa))
+	{
+		if (array_bsearch(sas, sa, sa_find, &found) == -1)
+		{
+			/* SA is gone, subtract stats from the total for this IKE_SA */
+			sub_usage(&entry->usage, sa->usage);
+			array_remove_at(entry->migrated, enumerator);
 			free(sa);
 		}
 	}
@@ -362,17 +463,15 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
  * Get an existing or create a new entry from the locked session table
  */
 static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
-									ike_sa_t *ike_sa)
+									ike_sa_id_t *id, u_int32_t unique)
 {
-	ike_sa_id_t *id;
 	entry_t *entry;
 	time_t now;
 
-	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
+	entry = this->sessions->get(this->sessions, id);
 	if (!entry)
 	{
 		now = time_monotonic(NULL);
-		id = ike_sa->get_id(ike_sa);
 
 		INIT(entry,
 			.id = id->clone(id),
@@ -383,8 +482,7 @@ static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
 			/* default terminate cause, if none other catched */
 			.cause = ACCT_CAUSE_USER_REQUEST,
 		);
-		snprintf(entry->sid, sizeof(entry->sid), "%u-%u",
-				 this->prefix, ike_sa->get_unique_id(ike_sa));
+		snprintf(entry->sid, sizeof(entry->sid), "%u-%u", this->prefix, unique);
 		this->sessions->put(this->sessions, entry->id, entry);
 	}
 	return entry;
@@ -419,11 +517,9 @@ void destroy_interim_data(interim_data_t *this)
 static job_requeue_t send_interim(interim_data_t *data)
 {
 	private_eap_radius_accounting_t *this = data->this;
-	u_int64_t bytes_in = 0, bytes_out = 0, packets_in = 0, packets_out = 0;
-	u_int64_t bytes, packets;
+	usage_t usage;
 	radius_message_t *message = NULL;
 	enumerator_t *enumerator;
-	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
 	u_int32_t value;
@@ -435,28 +531,7 @@ static job_requeue_t send_interim(interim_data_t *data)
 	{
 		return JOB_REQUEUE_NONE;
 	}
-	stats = array_create(0, 0);
-	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
-	while (enumerator->enumerate(enumerator, &child_sa))
-	{
-		INIT(sa,
-			.id = child_sa->get_unique_id(child_sa),
-		);
-		array_insert(stats, ARRAY_TAIL, sa);
-		array_sort(stats, sa_sort, NULL);
-
-		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes, &packets);
-		sa->bytes.sent = bytes;
-		sa->packets.sent = packets;
-		bytes_out += bytes;
-		packets_out += packets;
-		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes, &packets);
-		sa->bytes.received = bytes;
-		sa->packets.received = packets;
-		bytes_in += bytes;
-		packets_in += packets;
-	}
-	enumerator->destroy(enumerator);
+	stats = collect_stats(ike_sa, &usage);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 
 	/* avoid any races by returning IKE_SA before acquiring lock */
@@ -474,27 +549,38 @@ static job_requeue_t send_interim(interim_data_t *data)
 			{
 				/* SA is still around, update stats (e.g. for IKEv1 where
 				 * SA might get used even after rekeying) */
-				sa->bytes = found->bytes;
-				sa->packets = found->packets;
+				sa->usage = found->usage;
 			}
 			else
 			{
-				/* SA is gone, add its latest stats to the total for this IKE_SA
+				/* SA is gone, add its last stats to the total for this IKE_SA
 				 * and remove the cache entry */
-				entry->bytes.sent += sa->bytes.sent;
-				entry->bytes.received += sa->bytes.received;
-				entry->packets.sent += sa->packets.sent;
-				entry->packets.received += sa->packets.received;
+				add_usage(&entry->usage, sa->usage);
 				array_remove_at(entry->cached, enumerator);
 				free(sa);
 			}
 		}
 		enumerator->destroy(enumerator);
 
-		bytes_in += entry->bytes.received;
-		bytes_out += entry->bytes.sent;
-		packets_in += entry->packets.received;
-		packets_out += entry->packets.sent;
+		enumerator = array_create_enumerator(entry->migrated);
+		while (enumerator->enumerate(enumerator, &sa))
+		{
+			if (array_bsearch(stats, sa, sa_find, &found) != -1)
+			{
+				/* SA is still around, but we have to compensate */
+				sub_usage(&usage, sa->usage);
+			}
+			else
+			{
+				/* SA is gone, subtract stats from the total for this IKE_SA */
+				sub_usage(&entry->usage, sa->usage);
+				array_remove_at(entry->migrated, enumerator);
+				free(sa);
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		add_usage(&usage, entry->usage);
 
 		message = radius_message_create(RMC_ACCOUNTING_REQUEST);
 		value = htonl(ACCT_STATUS_INTERIM_UPDATE);
@@ -503,26 +589,26 @@ static job_requeue_t send_interim(interim_data_t *data)
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		add_ike_sa_parameters(this, message, ike_sa);
 
-		value = htonl(bytes_out);
+		value = htonl(usage.bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(bytes_out >> 32);
+		value = htonl(usage.bytes.sent >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_OUTPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
-		value = htonl(packets_out);
+		value = htonl(usage.packets.sent);
 		message->add(message, RAT_ACCT_OUTPUT_PACKETS, chunk_from_thing(value));
 
-		value = htonl(bytes_in);
+		value = htonl(usage.bytes.received);
 		message->add(message, RAT_ACCT_INPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(bytes_in >> 32);
+		value = htonl(usage.bytes.received >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_INPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
-		value = htonl(packets_in);
+		value = htonl(usage.packets.received);
 		message->add(message, RAT_ACCT_INPUT_PACKETS, chunk_from_thing(value));
 
 		value = htonl(entry->interim.last - entry->created);
@@ -606,7 +692,8 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 
 	this->mutex->lock(this->mutex);
 
-	entry = get_or_create_entry(this, ike_sa);
+	entry = get_or_create_entry(this, ike_sa->get_id(ike_sa),
+								ike_sa->get_unique_id(ike_sa));
 	entry->start_sent = TRUE;
 
 	message = radius_message_create(RMC_ACCOUNTING_REQUEST);
@@ -660,10 +747,14 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		enumerator = array_create_enumerator(entry->cached);
 		while (enumerator->enumerate(enumerator, &sa))
 		{
-			entry->bytes.sent += sa->bytes.sent;
-			entry->bytes.received += sa->bytes.received;
-			entry->packets.sent += sa->packets.sent;
-			entry->packets.received += sa->packets.received;
+			add_usage(&entry->usage, sa->usage);
+		}
+		enumerator->destroy(enumerator);
+
+		enumerator = array_create_enumerator(entry->migrated);
+		while (enumerator->enumerate(enumerator, &sa))
+		{
+			sub_usage(&entry->usage, sa->usage);
 		}
 		enumerator->destroy(enumerator);
 
@@ -674,26 +765,26 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		add_ike_sa_parameters(this, message, ike_sa);
 
-		value = htonl(entry->bytes.sent);
+		value = htonl(entry->usage.bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(entry->bytes.sent >> 32);
+		value = htonl(entry->usage.bytes.sent >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_OUTPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
-		value = htonl(entry->packets.sent);
+		value = htonl(entry->usage.packets.sent);
 		message->add(message, RAT_ACCT_OUTPUT_PACKETS, chunk_from_thing(value));
 
-		value = htonl(entry->bytes.received);
+		value = htonl(entry->usage.bytes.received);
 		message->add(message, RAT_ACCT_INPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(entry->bytes.received >> 32);
+		value = htonl(entry->usage.bytes.received >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_INPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
-		value = htonl(entry->packets.received);
+		value = htonl(entry->usage.packets.received);
 		message->add(message, RAT_ACCT_INPUT_PACKETS, chunk_from_thing(value));
 
 		value = htonl(time_monotonic(NULL) - entry->created);
@@ -829,6 +920,54 @@ METHOD(listener_t, child_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, children_migrate, bool,
+	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa, ike_sa_id_t *new,
+	u_int32_t unique)
+{
+	enumerator_t *enumerator;
+	sa_entry_t *sa, *sa_new, *cached;
+	entry_t *entry_old, *entry_new;
+	array_t *stats;
+
+	if (!new)
+	{
+		return TRUE;
+	}
+	stats = collect_stats(ike_sa, NULL);
+	this->mutex->lock(this->mutex);
+	entry_old = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
+	if (entry_old)
+	{
+		entry_new = get_or_create_entry(this, new, unique);
+		enumerator = array_create_enumerator(stats);
+		while (enumerator->enumerate(enumerator, &sa))
+		{
+			/* if the SA was already rekeyed/cached we cache it too on the new
+			 * SA to track it properly until it's finally gone */
+			if (array_bsearch(entry_old->cached, sa, sa_find, &cached) != -1)
+			{
+				sa_new = clone_sa(sa);
+				array_insert_create(&entry_new->cached, ARRAY_TAIL, sa_new);
+				array_sort(entry_new->cached, sa_sort, NULL);
+			}
+			/* if the SA was used, we store it to compensate on the new SA */
+			if (sa->usage.bytes.sent || sa->usage.bytes.received ||
+				sa->usage.packets.sent || sa->usage.packets.received)
+			{
+				sa_new = clone_sa(sa);
+				array_insert_create(&entry_new->migrated, ARRAY_TAIL, sa_new);
+				array_sort(entry_new->migrated, sa_sort, NULL);
+				/* store/update latest stats on old SA to report in Stop */
+				update_sa(entry_old, sa->id, sa->usage);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	this->mutex->unlock(this->mutex);
+	array_destroy_function(stats, (void*)free, NULL);
+	return TRUE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
 	child_sa_t *child_sa, bool up)
@@ -866,6 +1005,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 				.message = _message_hook,
 				.child_updown = _child_updown,
 				.child_rekey = _child_rekey,
+				.children_migrate = _children_migrate,
 			},
 			.destroy = _destroy,
 		},
@@ -908,7 +1048,8 @@ void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, u_int32_t interval)
 
 		DBG1(DBG_CFG, "scheduling RADIUS Interim-Updates every %us", interval);
 		singleton->mutex->lock(singleton->mutex);
-		entry = get_or_create_entry(singleton, ike_sa);
+		entry = get_or_create_entry(singleton, ike_sa->get_id(ike_sa),
+									ike_sa->get_unique_id(ike_sa));
 		entry->interim.interval = interval;
 		singleton->mutex->unlock(singleton->mutex);
 	}
