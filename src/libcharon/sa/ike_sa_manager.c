@@ -1737,7 +1737,8 @@ static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 	host_t *vip;
 	int chcount = 0, vipcount = 0;
 
-
+	charon->bus->children_migrate(charon->bus, new->get_id(new),
+								  new->get_unique_id(new));
 	enumerator = old->create_child_sa_enumerator(old);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
@@ -1760,6 +1761,7 @@ static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 	/* ...trigger the analogous event on the new SA */
 	charon->bus->set_sa(charon->bus, new);
 	charon->bus->assign_vips(charon->bus, new, TRUE);
+	charon->bus->children_migrate(charon->bus, NULL, 0);
 	charon->bus->set_sa(charon->bus, old);
 
 	if (chcount || vipcount)

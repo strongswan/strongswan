@@ -1475,6 +1475,8 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	}
 	enumerator->destroy(enumerator);
 
+	charon->bus->children_migrate(charon->bus, new->get_id(new),
+								  new->get_unique_id(new));
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
@@ -1482,6 +1484,9 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 		new->add_child_sa(new, child_sa);
 	}
 	enumerator->destroy(enumerator);
+	charon->bus->set_sa(charon->bus, new);
+	charon->bus->children_migrate(charon->bus, NULL, 0);
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 
 	if (!new->get_child_count(new))
 	{	/* check if a Quick Mode task is queued (UNITY_LOAD_BALANCE case) */
