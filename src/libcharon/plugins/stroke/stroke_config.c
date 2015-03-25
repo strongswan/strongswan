@@ -334,7 +334,7 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 			{ "sha512",		SIGN_BLISS_WITH_SHA512,			KEY_BLISS,	},
 		};
 
-		if (rsa_len || ecdsa_len)
+		if (rsa_len || ecdsa_len || bliss_strength)
 		{	/* expecting a key strength token */
 			strength = atoi(token);
 			if (strength)
