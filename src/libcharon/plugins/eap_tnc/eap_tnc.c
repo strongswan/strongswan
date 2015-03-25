@@ -311,6 +311,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	{
 		DBG1(DBG_TNC, "%N constructor did not find IKE_SA",
 					   eap_type_names, type);
+		free(this);
 		return NULL;
 	}
 	if (is_server)
