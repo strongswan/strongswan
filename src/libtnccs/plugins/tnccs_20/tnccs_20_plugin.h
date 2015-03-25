@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnccs_20 tnccs_20
- * @ingroup cplugins
+ * @ingroup tplugins
  *
  * @defgroup tnccs_20_plugin tnccs_20_plugin
  * @{ @ingroup tnccs_20

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnc_imv tnc_imv
- * @ingroup cplugins
+ * @ingroup tplugins
  *
  * @defgroup tnc_imv_plugin tnc_imv_plugin
  * @{ @ingroup tnc_imv

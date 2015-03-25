@@ -15,7 +15,7 @@
 
 /**
  * @defgroup imc imc
- * @ingroup tnc
+ * @ingroup libtnccs
  *
  * @defgroup imct imc
  * @{ @ingroup imc

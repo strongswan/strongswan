@@ -14,9 +14,12 @@
  */
 
 /**
- * @defgroup tnc tnc
+ * @defgroup libtnccs libtnccs
  *
- * @addtogroup tnc
+ * @defgroup tplugins plugins
+ * @ingroup libtnccs
+ *
+ * @addtogroup libtnccs
  * @{
  */
 

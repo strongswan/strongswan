@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnccs tnccs
- * @ingroup tnc
+ * @ingroup libtnccs
  *
  * @defgroup tnccst tnccs
  * @{ @ingroup tnccs
