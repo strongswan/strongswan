@@ -226,6 +226,48 @@ static void update_usage(private_eap_radius_accounting_t *this,
 }
 
 /**
+ * Cleanup cached SAs
+ */
+static void cleanup_sas(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
+						entry_t *entry)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	sa_entry_t *sa, *found;
+	array_t *sas;
+
+	sas = array_create(0, 0);
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		INIT(sa,
+			.id = child_sa->get_unique_id(child_sa),
+		);
+		array_insert(sas, ARRAY_TAIL, sa);
+		array_sort(sas, sa_sort, NULL);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = array_create_enumerator(entry->cached);
+	while (enumerator->enumerate(enumerator, &sa))
+	{
+		if (array_bsearch(sas, sa, sa_find, &found) == -1)
+		{
+			/* SA is gone, add its latest stats to the total for this IKE_SA
+			 * and remove the cache entry */
+			entry->bytes.sent += sa->bytes.sent;
+			entry->bytes.received += sa->bytes.received;
+			entry->packets.sent += sa->packets.sent;
+			entry->packets.received += sa->packets.received;
+			array_remove_at(entry->cached, enumerator);
+			free(sa);
+		}
+	}
+	enumerator->destroy(enumerator);
+	array_destroy_function(sas, (void*)free, NULL);
+}
+
+/**
  * Send a RADIUS message, wait for response
  */
 static bool send_message(private_eap_radius_accounting_t *this,
@@ -757,6 +799,8 @@ METHOD(listener_t, ike_rekey, bool,
 		/* fire new interim update job, old gets invalid */
 		schedule_interim(this, entry);
 
+		cleanup_sas(this, new, entry);
+
 		entry = this->sessions->put(this->sessions, entry->id, entry);
 		if (entry)
 		{
@@ -772,7 +816,16 @@ METHOD(listener_t, child_rekey, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
 	child_sa_t *old, child_sa_t *new)
 {
+	entry_t *entry;
+
 	update_usage(this, ike_sa, old);
+	this->mutex->lock(this->mutex);
+	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
+	if (entry)
+	{
+		cleanup_sas(this, ike_sa, entry);
+	}
+	this->mutex->unlock(this->mutex);
 	return TRUE;
 }
 
