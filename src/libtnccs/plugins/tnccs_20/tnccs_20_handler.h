@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnccs_20_handler_h tnccs_20_handler
- * @{ @ingroup tnccs_20_handler
+ * @{ @ingroup tnccs_20
  */
 
 #ifndef TNCCS_20_HANDLER_H_

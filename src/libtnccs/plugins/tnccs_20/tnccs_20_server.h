@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnccs_20_server_h tnccs_20_server
- * @{ @ingroup tnccs_20_server
+ * @{ @ingroup tnccs_20
  */
 
 #ifndef TNCCS_20_SERVER_H_
@@ -44,7 +44,7 @@ struct tnccs_20_server_t {
 	 *
 	 * @param rec			TNC Action Recommendation
 	 * @param eval			TNC Evaluation Result
-	 * @return				TRUE if Action Recommendation is 
+	 * @return				TRUE if Action Recommendation is
 	 */
 	bool (*have_recommendation)(tnccs_20_server_t *this,
 								TNC_IMV_Action_Recommendation *rec,
@@ -61,7 +61,7 @@ struct tnccs_20_server_t {
  * @param max_msg_len		Maximum PA-TNC message size
  * @param eap_transport		TRUE if IF-T for EAP methods
  */
-tnccs_20_handler_t* tnccs_20_server_create(tnccs_t *tnccs, 
+tnccs_20_handler_t* tnccs_20_server_create(tnccs_t *tnccs,
 										   tnccs_send_message_t send_msg,
 										   size_t max_batch_len,
 										   size_t max_msg_len,

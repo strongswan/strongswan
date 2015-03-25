@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnccs_20_client_h tnccs_20_client
- * @{ @ingroup tnccs_20_client
+ * @{ @ingroup tnccs_20
  */
 
 #ifndef TNCCS_20_CLIENT_H_
