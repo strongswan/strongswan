@@ -274,8 +274,6 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	status_t status;
-
 	if (this->to_server)
 	{
 		DBG2(DBG_TNC, "TNC client is handling outbound connection");
@@ -292,11 +290,11 @@ METHOD(tls_t, build, status_t,
 													  this->max_msg_len);
 			if (!this->tnc_client)
 			{
-				status = FAILED;
+				return FAILED;
 			}
 			this->tnccs_handler = this->tnc_client;
 			this->tnccs_handler->begin_handshake(this->tnccs_handler,
-												 this->mutual);		
+												 this->mutual);
 		}
 	}
 	else
@@ -315,16 +313,14 @@ METHOD(tls_t, build, status_t,
 										this->eap_transport);
 			if (!this->tnc_server)
 			{
-				status = FAILED;
+				return FAILED;
 			}
 			this->tnccs_handler = this->tnc_server;
 			this->tnccs_handler->begin_handshake(this->tnccs_handler,
-												 this->mutual);		
+												 this->mutual);
 		}
 	}
-	status = this->tnccs_handler->build(this->tnccs_handler, buf, buflen, msglen);
-	
-	return status;
+	return this->tnccs_handler->build(this->tnccs_handler, buf, buflen, msglen);
 }
 
 METHOD(tls_t, is_server, bool,
