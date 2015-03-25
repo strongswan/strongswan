@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -186,6 +186,21 @@ struct listener_t {
 	 */
 	bool (*child_rekey)(listener_t *this, ike_sa_t *ike_sa,
 						child_sa_t *old, child_sa_t *new);
+
+	/**
+	 * Hook called when CHILD_SAs get migrated from one IKE_SA to another during
+	 * IKEv1 reauthentication.
+	 *
+	 * This is called twice, once for the old IKE_SA before the CHILD_SAs are
+	 * removed, and once for the new IKE_SA just after they got added.
+	 *
+	 * @param ike_sa	new or old IKE_SA
+	 * @param new		ID of new SA when called for the old, NULL otherwise
+	 * @param unique	unique ID of new SA when called for the old, 0 otherwise
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*children_migrate)(listener_t *this, ike_sa_t *ike_sa,
+							 ike_sa_id_t *new, u_int32_t unique);
 
 	/**
 	 * Hook called to invoke additional authorization rules.
