@@ -14,6 +14,7 @@
  */
 
 #include "aesni_plugin.h"
+#include "aesni_cbc.h"
 
 #include <stdio.h>
 
@@ -45,6 +46,10 @@ METHOD(plugin_t, get_features, int,
 	private_aesni_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CRYPTER, aesni_cbc_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
 	};
 
 	*features = f;
