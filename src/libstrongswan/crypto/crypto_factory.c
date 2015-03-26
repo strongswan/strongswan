@@ -439,14 +439,14 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 }
 
 METHOD(crypto_factory_t, add_crypter, bool,
-	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	private_crypto_factory_t *this, encryption_algorithm_t algo, size_t key_size,
 	const char *plugin_name, crypter_constructor_t create)
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
-		this->tester->test_crypter(this->tester, algo, 0, create,
-								   this->bench ? &speed : NULL,	plugin_name))
+		this->tester->test_crypter(this->tester, algo, key_size, create,
+								   this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->crypters, algo, plugin_name, speed, create);
 		return TRUE;
@@ -476,13 +476,13 @@ METHOD(crypto_factory_t, remove_crypter, void,
 }
 
 METHOD(crypto_factory_t, add_aead, bool,
-	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	private_crypto_factory_t *this, encryption_algorithm_t algo, size_t key_size,
 	const char *plugin_name, aead_constructor_t create)
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
-		this->tester->test_aead(this->tester, algo, 0, 0, create,
+		this->tester->test_aead(this->tester, algo, key_size, 0, create,
 								this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->aeads, algo, plugin_name, speed, create);

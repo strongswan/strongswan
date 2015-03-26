@@ -437,10 +437,12 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 	{
 		case FEATURE_CRYPTER:
 			lib->crypto->add_crypter(lib->crypto, feature->arg.crypter.alg,
+								feature->arg.crypter.key_size,
 								name, reg->arg.reg.f);
 			break;
 		case FEATURE_AEAD:
 			lib->crypto->add_aead(lib->crypto, feature->arg.aead.alg,
+								feature->arg.aead.key_size,
 								name, reg->arg.reg.f);
 			break;
 		case FEATURE_SIGNER:
