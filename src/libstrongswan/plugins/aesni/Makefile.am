@@ -3,6 +3,7 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = \
 	-maes \
+	-mssse3 \
 	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
@@ -14,6 +15,7 @@ endif
 libstrongswan_aesni_la_SOURCES = \
 	aesni_key.h aesni_key.c \
 	aesni_cbc.h aesni_cbc.c \
+	aesni_ctr.h aesni_ctr.c \
 	aesni_plugin.h aesni_plugin.c
 
 libstrongswan_aesni_la_LDFLAGS = -module -avoid-version
