@@ -55,6 +55,45 @@ static void reverse_key(aesni_key_t *this)
 	memwipe(t, sizeof(t));
 }
 
+/**
+ * Assist in creating a 128-bit round key
+ */
+static __m128i assist128(__m128i a, __m128i b)
+{
+	__m128i c;
+
+	b = _mm_shuffle_epi32(b ,0xff);
+	c = _mm_slli_si128(a, 0x04);
+	a = _mm_xor_si128(a, c);
+	c = _mm_slli_si128(c, 0x04);
+	a = _mm_xor_si128(a, c);
+	c = _mm_slli_si128(c, 0x04);
+	a = _mm_xor_si128(a, c);
+	a = _mm_xor_si128(a, b);
+
+	return a;
+}
+
+/**
+ * Expand a 128-bit key to encryption round keys
+ */
+static void expand128(__m128i *key, __m128i *schedule)
+{
+	__m128i t;
+
+	schedule[0] = t = _mm_loadu_si128(key);
+	schedule[1] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x01));
+	schedule[2] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x02));
+	schedule[3] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x04));
+	schedule[4] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x08));
+	schedule[5] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x10));
+	schedule[6] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x20));
+	schedule[7] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x40));
+	schedule[8] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x80));
+	schedule[9] = t = assist128(t, _mm_aeskeygenassist_si128(t, 0x1b));
+	schedule[10]    = assist128(t, _mm_aeskeygenassist_si128(t, 0x36));
+}
+
 METHOD(aesni_key_t, destroy, void,
 	private_aesni_key_t *this)
 {
@@ -72,6 +111,9 @@ aesni_key_t *aesni_key_create(bool encrypt, chunk_t key)
 
 	switch (key.len)
 	{
+		case 16:
+			rounds = AES128_ROUNDS;
+			break;
 		default:
 			return NULL;
 	}
@@ -85,6 +127,9 @@ aesni_key_t *aesni_key_create(bool encrypt, chunk_t key)
 
 	switch (key.len)
 	{
+		case 16:
+			expand128((__m128i*)key.ptr, this->public.schedule);
+			break;
 		default:
 			break;
 	}
