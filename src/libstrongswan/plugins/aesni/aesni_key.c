@@ -20,6 +20,7 @@
  */
 #define AES128_ROUNDS 10
 #define AES192_ROUNDS 12
+#define AES256_ROUNDS 14
 
 typedef struct private_aesni_key_t private_aesni_key_t;
 
@@ -169,6 +170,76 @@ static void expand192(__m128i *key, __m128i *schedule)
 	schedule[12] = t1;
 }
 
+/**
+ * Assist in creating a 256-bit round key
+ */
+static __m128i assist256_1(__m128i a, __m128i b)
+{
+	__m128i x, y;
+
+	b = _mm_shuffle_epi32(b, 0xff);
+	y = _mm_slli_si128(a, 0x04);
+	x = _mm_xor_si128(a, y);
+	y = _mm_slli_si128(y, 0x04);
+	x = _mm_xor_si128 (x, y);
+	y = _mm_slli_si128(y, 0x04);
+	x = _mm_xor_si128(x, y);
+	x = _mm_xor_si128(x, b);
+
+	return x;
+}
+
+/**
+ * Assist in creating a 256-bit round key
+ */
+static __m128i assist256_2(__m128i a, __m128i b)
+{
+	__m128i x, y, z;
+
+	y = _mm_aeskeygenassist_si128(a, 0x00);
+	z = _mm_shuffle_epi32(y, 0xaa);
+	y = _mm_slli_si128(b, 0x04);
+	x = _mm_xor_si128(b, y);
+	y = _mm_slli_si128(y, 0x04);
+	x = _mm_xor_si128(x, y);
+	y = _mm_slli_si128(y, 0x04);
+	x = _mm_xor_si128(x, y);
+	x = _mm_xor_si128(x, z);
+
+	return x;
+}
+
+/**
+ * Expand a 256-bit encryption key to round keys
+ */
+static void expand256(__m128i *key, __m128i *schedule)
+{
+	__m128i t1, t2;
+
+	schedule[0] = t1 = _mm_loadu_si128(key);
+	schedule[1] = t2 = _mm_loadu_si128(key + 1);
+
+	schedule[2] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x01));
+	schedule[3] = t2 = assist256_2(t1, t2);
+
+	schedule[4] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x02));
+	schedule[5] = t2 = assist256_2(t1, t2);
+
+	schedule[6] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x04));
+	schedule[7] = t2 = assist256_2(t1, t2);
+
+	schedule[8] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x08));
+	schedule[9] = t2 = assist256_2(t1, t2);
+
+	schedule[10] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x10));
+	schedule[11] = t2 = assist256_2(t1, t2);
+
+	schedule[12] = t1 = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x20));
+	schedule[13] = t2 = assist256_2(t1, t2);
+
+	schedule[14] = assist256_1(t1, _mm_aeskeygenassist_si128(t2, 0x40));
+}
+
 METHOD(aesni_key_t, destroy, void,
 	private_aesni_key_t *this)
 {
@@ -192,6 +263,9 @@ aesni_key_t *aesni_key_create(bool encrypt, chunk_t key)
 		case 24:
 			rounds = AES192_ROUNDS;
 			break;
+		case 32:
+			rounds = AES256_ROUNDS;
+			break;
 		default:
 			return NULL;
 	}
@@ -210,6 +284,9 @@ aesni_key_t *aesni_key_create(bool encrypt, chunk_t key)
 			break;
 		case 24:
 			expand192((__m128i*)key.ptr, this->public.schedule);
+			break;
+		case 32:
+			expand256((__m128i*)key.ptr, this->public.schedule);
 			break;
 		default:
 			break;
