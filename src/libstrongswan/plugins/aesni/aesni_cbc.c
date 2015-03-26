@@ -60,13 +60,26 @@ struct private_aesni_cbc_t {
 };
 
 /**
- * Generic CBC encryption
+ * AES-128 CBC encryption
  */
-static void encrypt_cbc(aesni_key_t *key, u_int blocks, u_char *in,
-						u_char *iv, u_char *out)
+static void encrypt_cbc128(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
 {
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
 	__m128i t, fb, *bi, *bo;
-	int i, round;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
 
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
@@ -76,24 +89,44 @@ static void encrypt_cbc(aesni_key_t *key, u_int blocks, u_char *in,
 	{
 		t = _mm_loadu_si128(bi + i);
 		fb = _mm_xor_si128(t, fb);
-		fb = _mm_xor_si128(fb, key->schedule[0]);
-		for (round = 1; round < key->rounds; round++)
-		{
-			fb = _mm_aesenc_si128(fb, key->schedule[round]);
-		}
-		fb = _mm_aesenclast_si128(fb, key->schedule[key->rounds]);
+		fb = _mm_xor_si128(fb, k0);
+
+		fb = _mm_aesenc_si128(fb, k1);
+		fb = _mm_aesenc_si128(fb, k2);
+		fb = _mm_aesenc_si128(fb, k3);
+		fb = _mm_aesenc_si128(fb, k4);
+		fb = _mm_aesenc_si128(fb, k5);
+		fb = _mm_aesenc_si128(fb, k6);
+		fb = _mm_aesenc_si128(fb, k7);
+		fb = _mm_aesenc_si128(fb, k8);
+		fb = _mm_aesenc_si128(fb, k9);
+
+		fb = _mm_aesenclast_si128(fb, k10);
 		_mm_storeu_si128(bo + i, fb);
 	}
 }
 
 /**
- * Generic CBC decryption
+ * AES-128 CBC decryption
  */
-static void decrypt_cbc(aesni_key_t *key, u_int blocks, u_char *in,
-						u_char *iv, u_char *out)
+static void decrypt_cbc128(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
 {
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
 	__m128i t, fb, last, *bi, *bo;
-	int i, round;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
 
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
@@ -102,12 +135,233 @@ static void decrypt_cbc(aesni_key_t *key, u_int blocks, u_char *in,
 	for (i = 0; i < blocks; i++)
 	{
 		last = _mm_loadu_si128(bi + i);
-		t = _mm_xor_si128(last, key->schedule[0]);
-		for (round = 1; round  < key->rounds; round++)
-		{
-			t = _mm_aesdec_si128(t, key->schedule[round]);
-		}
-		t = _mm_aesdeclast_si128(t, key->schedule[key->rounds]);
+		t = _mm_xor_si128(last, k0);
+
+		t = _mm_aesdec_si128(t, k1);
+		t = _mm_aesdec_si128(t, k2);
+		t = _mm_aesdec_si128(t, k3);
+		t = _mm_aesdec_si128(t, k4);
+		t = _mm_aesdec_si128(t, k5);
+		t = _mm_aesdec_si128(t, k6);
+		t = _mm_aesdec_si128(t, k7);
+		t = _mm_aesdec_si128(t, k8);
+		t = _mm_aesdec_si128(t, k9);
+
+		t = _mm_aesdeclast_si128(t, k10);
+		t = _mm_xor_si128(t, fb);
+		_mm_storeu_si128(bo + i, t);
+		fb = last;
+	}
+}
+
+/**
+ * AES-192 CBC encryption
+ */
+static void encrypt_cbc192(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
+	__m128i t, fb, *bi, *bo;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
+	k11 = key->schedule[11];
+	k12 = key->schedule[12];
+
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	fb = _mm_loadu_si128((__m128i*)iv);
+	for (i = 0; i < blocks; i++)
+	{
+		t = _mm_loadu_si128(bi + i);
+		fb = _mm_xor_si128(t, fb);
+		fb = _mm_xor_si128(fb, k0);
+
+		fb = _mm_aesenc_si128(fb, k1);
+		fb = _mm_aesenc_si128(fb, k2);
+		fb = _mm_aesenc_si128(fb, k3);
+		fb = _mm_aesenc_si128(fb, k4);
+		fb = _mm_aesenc_si128(fb, k5);
+		fb = _mm_aesenc_si128(fb, k6);
+		fb = _mm_aesenc_si128(fb, k7);
+		fb = _mm_aesenc_si128(fb, k8);
+		fb = _mm_aesenc_si128(fb, k9);
+		fb = _mm_aesenc_si128(fb, k10);
+		fb = _mm_aesenc_si128(fb, k11);
+
+		fb = _mm_aesenclast_si128(fb, k12);
+		_mm_storeu_si128(bo + i, fb);
+	}
+}
+
+/**
+ * AES-192 CBC decryption
+ */
+static void decrypt_cbc192(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
+	__m128i t, fb, last, *bi, *bo;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
+	k11 = key->schedule[11];
+	k12 = key->schedule[12];
+
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	fb = _mm_loadu_si128((__m128i*)iv);
+	for (i = 0; i < blocks; i++)
+	{
+		last = _mm_loadu_si128(bi + i);
+		t = _mm_xor_si128(last, k0);
+
+		t = _mm_aesdec_si128(t, k1);
+		t = _mm_aesdec_si128(t, k2);
+		t = _mm_aesdec_si128(t, k3);
+		t = _mm_aesdec_si128(t, k4);
+		t = _mm_aesdec_si128(t, k5);
+		t = _mm_aesdec_si128(t, k6);
+		t = _mm_aesdec_si128(t, k7);
+		t = _mm_aesdec_si128(t, k8);
+		t = _mm_aesdec_si128(t, k9);
+		t = _mm_aesdec_si128(t, k10);
+		t = _mm_aesdec_si128(t, k11);
+
+		t = _mm_aesdeclast_si128(t, k12);
+		t = _mm_xor_si128(t, fb);
+		_mm_storeu_si128(bo + i, t);
+		fb = last;
+	}
+}
+
+/**
+ * AES-256 CBC encryption
+ */
+static void encrypt_cbc256(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
+	__m128i t, fb, *bi, *bo;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
+	k11 = key->schedule[11];
+	k12 = key->schedule[12];
+	k13 = key->schedule[13];
+	k14 = key->schedule[14];
+
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	fb = _mm_loadu_si128((__m128i*)iv);
+	for (i = 0; i < blocks; i++)
+	{
+		t = _mm_loadu_si128(bi + i);
+		fb = _mm_xor_si128(t, fb);
+		fb = _mm_xor_si128(fb, k0);
+
+		fb = _mm_aesenc_si128(fb, k1);
+		fb = _mm_aesenc_si128(fb, k2);
+		fb = _mm_aesenc_si128(fb, k3);
+		fb = _mm_aesenc_si128(fb, k4);
+		fb = _mm_aesenc_si128(fb, k5);
+		fb = _mm_aesenc_si128(fb, k6);
+		fb = _mm_aesenc_si128(fb, k7);
+		fb = _mm_aesenc_si128(fb, k8);
+		fb = _mm_aesenc_si128(fb, k9);
+		fb = _mm_aesenc_si128(fb, k10);
+		fb = _mm_aesenc_si128(fb, k11);
+		fb = _mm_aesenc_si128(fb, k12);
+		fb = _mm_aesenc_si128(fb, k13);
+
+		fb = _mm_aesenclast_si128(fb, k14);
+		_mm_storeu_si128(bo + i, fb);
+	}
+}
+
+/**
+ * AES-256 CBC decryption
+ */
+static void decrypt_cbc256(aesni_key_t *key, u_int blocks, u_char *in,
+						   u_char *iv, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
+	__m128i t, fb, last, *bi, *bo;
+	int i;
+
+	k0 = key->schedule[0];
+	k1 = key->schedule[1];
+	k2 = key->schedule[2];
+	k3 = key->schedule[3];
+	k4 = key->schedule[4];
+	k5 = key->schedule[5];
+	k6 = key->schedule[6];
+	k7 = key->schedule[7];
+	k8 = key->schedule[8];
+	k9 = key->schedule[9];
+	k10 = key->schedule[10];
+	k11 = key->schedule[11];
+	k12 = key->schedule[12];
+	k13 = key->schedule[13];
+	k14 = key->schedule[14];
+
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	fb = _mm_loadu_si128((__m128i*)iv);
+	for (i = 0; i < blocks; i++)
+	{
+		last = _mm_loadu_si128(bi + i);
+		t = _mm_xor_si128(last, k0);
+
+		t = _mm_aesdec_si128(t, k1);
+		t = _mm_aesdec_si128(t, k2);
+		t = _mm_aesdec_si128(t, k3);
+		t = _mm_aesdec_si128(t, k4);
+		t = _mm_aesdec_si128(t, k5);
+		t = _mm_aesdec_si128(t, k6);
+		t = _mm_aesdec_si128(t, k7);
+		t = _mm_aesdec_si128(t, k8);
+		t = _mm_aesdec_si128(t, k9);
+		t = _mm_aesdec_si128(t, k10);
+		t = _mm_aesdec_si128(t, k11);
+		t = _mm_aesdec_si128(t, k12);
+		t = _mm_aesdec_si128(t, k13);
+
+		t = _mm_aesdeclast_si128(t, k14);
 		t = _mm_xor_si128(t, fb);
 		_mm_storeu_si128(bo + i, t);
 		fb = last;
@@ -231,9 +485,23 @@ aesni_cbc_t *aesni_cbc_create(encryption_algorithm_t algo, size_t key_size)
 			},
 		},
 		.key_size = key_size,
-		.encrypt = encrypt_cbc,
-		.decrypt = decrypt_cbc,
 	);
+
+	switch (key_size)
+	{
+		case 16:
+			this->encrypt = encrypt_cbc128;
+			this->decrypt = decrypt_cbc128;
+			break;
+		case 24:
+			this->encrypt = encrypt_cbc192;
+			this->decrypt = decrypt_cbc192;
+			break;
+		case 32:
+			this->encrypt = encrypt_cbc256;
+			this->decrypt = decrypt_cbc256;
+			break;
+	}
 
 	return &this->public;
 }
