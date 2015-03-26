@@ -61,38 +61,69 @@ struct private_aesni_ctr_t {
 };
 
 /**
- * Generic CTR encryption
+ * Do big-endian increment on x
  */
-static void encrypt_ctr(private_aesni_ctr_t *this,
-						size_t len, u_char *in, u_char *out)
+static inline __m128i increment_be(__m128i x)
 {
-	__m128i state, t, d, b, swap, one, *bi, *bo;
-	u_int i, round, blocks, rem;
+	__m128i swap;
 
-	one = _mm_set_epi32(0, 0, 0, 1);
 	swap = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+	x = _mm_shuffle_epi8(x, swap);
+	x = _mm_add_epi64(x, _mm_set_epi32(0, 0, 0, 1));
+	x = _mm_shuffle_epi8(x, swap);
+
+	return x;
+}
+
+/**
+ * AES-128 CTR encryption
+ */
+static void encrypt_ctr128(private_aesni_ctr_t *this,
+						   size_t len, u_char *in, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
+	__m128i state, t, d, b, *bi, *bo;
+	u_int i, blocks, rem;
+
 	state = _mm_load_si128((__m128i*)&this->state);
 	blocks = len / AES_BLOCK_SIZE;
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
-		t = _mm_xor_si128(state, this->key->schedule[0]);
-		for (round = 1; round < this->key->rounds; round++)
-		{
-			t = _mm_aesenc_si128(t, this->key->schedule[round]);
-		}
-		t = _mm_aesenclast_si128(t, this->key->schedule[this->key->rounds]);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+
+		t = _mm_aesenclast_si128(t, k10);
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
-		/* big endian increment */
-		t = _mm_shuffle_epi8(state, swap);
-		t = _mm_add_epi64(t, one);
-		state = _mm_shuffle_epi8(t, swap);
+		state = increment_be(state);
 	}
 
 	if (rem)
@@ -101,12 +132,189 @@ static void encrypt_ctr(private_aesni_ctr_t *this,
 		memcpy(&b, bi + blocks, rem);
 
 		d = _mm_loadu_si128(&b);
-		t = _mm_xor_si128(state, this->key->schedule[0]);
-		for (round = 1; round < this->key->rounds; round++)
-		{
-			t = _mm_aesenc_si128(t, this->key->schedule[round]);
-		}
-		t = _mm_aesenclast_si128(t, this->key->schedule[this->key->rounds]);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+
+		t = _mm_aesenclast_si128(t, k10);
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(&b, t);
+
+		memcpy(bo + blocks, &b, rem);
+	}
+}
+
+/**
+ * AES-192 CTR encryption
+ */
+static void encrypt_ctr192(private_aesni_ctr_t *this,
+						   size_t len, u_char *in, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
+	__m128i state, t, d, b, *bi, *bo;
+	u_int i, blocks, rem;
+
+	state = _mm_load_si128((__m128i*)&this->state);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+
+		t = _mm_aesenclast_si128(t, k12);
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		state = increment_be(state);
+	}
+
+	if (rem)
+	{
+		memset(&b, 0, sizeof(b));
+		memcpy(&b, bi + blocks, rem);
+
+		d = _mm_loadu_si128(&b);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+
+		t = _mm_aesenclast_si128(t, k12);
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(&b, t);
+
+		memcpy(bo + blocks, &b, rem);
+	}
+}
+
+/**
+ * AES-256 CTR encryption
+ */
+static void encrypt_ctr256(private_aesni_ctr_t *this,
+						   size_t len, u_char *in, u_char *out)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
+	__m128i state, t, d, b, *bi, *bo;
+	u_int i, blocks, rem;
+
+	state = _mm_load_si128((__m128i*)&this->state);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+	k13 = this->key->schedule[13];
+	k14 = this->key->schedule[14];
+
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenc_si128(t, k12);
+		t = _mm_aesenc_si128(t, k13);
+
+		t = _mm_aesenclast_si128(t, k14);
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		state = increment_be(state);
+	}
+
+	if (rem)
+	{
+		memset(&b, 0, sizeof(b));
+		memcpy(&b, bi + blocks, rem);
+
+		d = _mm_loadu_si128(&b);
+		t = _mm_xor_si128(state, k0);
+
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenc_si128(t, k12);
+		t = _mm_aesenc_si128(t, k13);
+
+		t = _mm_aesenclast_si128(t, k14);
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(&b, t);
 
@@ -216,8 +424,20 @@ aesni_ctr_t *aesni_ctr_create(encryption_algorithm_t algo, size_t key_size)
 			},
 		},
 		.key_size = key_size,
-		.crypt = encrypt_ctr,
 	);
+
+	switch (key_size)
+	{
+		case 16:
+			this->crypt = encrypt_ctr128;
+			break;
+		case 24:
+			this->crypt = encrypt_ctr192;
+			break;
+		case 32:
+			this->crypt = encrypt_ctr256;
+			break;
+	}
 
 	return &this->public;
 }
