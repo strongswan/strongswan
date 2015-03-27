@@ -18,3 +18,21 @@ libimcv.plugins.imc-attestation.use_quote2 = yes
 
 libimcv.plugins.imc-attestation.pcr_info = no
 	Whether to send pcr_before and pcr_after info.
+
+libimcv.plugins.imc-attestation.pcr17_before =
+        PCR17 value before measurement.
+
+libimcv.plugins.imc-attestation.pcr17_meas =
+        Dummy measurement value extended into PCR17 if the TBOOT log is not available.
+
+libimcv.plugins.imc-attestation.pcr17_after =
+        PCR17 value after measurement.
+
+libimcv.plugins.imc-attestation.pcr18_before =
+        PCR18 value before measurement.
+
+libimcv.plugins.imc-attestation.pcr18_meas =
+       Dummy measurement value extended into PCR17 if the TBOOT log is not available. 
+
+libimcv.plugins.imc-attestation.pcr18_after =
+        PCR18 value after measurement.
