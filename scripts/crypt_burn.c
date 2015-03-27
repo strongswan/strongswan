@@ -124,6 +124,56 @@ static bool burn_aead(const proposal_token_t *token, u_int limit, u_int len)
 	return ok;
 }
 
+static int burn_signer(const proposal_token_t *token, u_int limit, u_int len)
+{
+	chunk_t  key, data, sig;
+	signer_t *signer;
+	int i = 0;
+	bool ok;
+
+	signer = lib->crypto->create_signer(lib->crypto, token->algorithm);
+	if (!signer)
+	{
+		fprintf(stderr, "%N not supported\n",
+				integrity_algorithm_names, token->algorithm);
+		return FALSE;
+	}
+
+	data = chunk_alloc(len);
+	memset(data.ptr, 0xDD, data.len);
+	key = chunk_alloc(signer->get_key_size(signer));
+	memset(key.ptr, 0xAA, key.len);
+	sig = chunk_alloc(signer->get_block_size(signer));
+
+	ok = signer->set_key(signer, key);
+	while (ok)
+	{
+		if (!signer->get_signature(signer, data, sig.ptr))
+		{
+			fprintf(stderr, "creating signature failed!\n");
+			ok = FALSE;
+			break;
+		}
+		if (!signer->verify_signature(signer, data, sig))
+		{
+			fprintf(stderr, "verifying signature failed!\n");
+			ok = FALSE;
+			break;
+		}
+		if (limit && ++i == limit)
+		{
+			break;
+		}
+	}
+	signer->destroy(signer);
+
+	free(data.ptr);
+	free(key.ptr);
+	free(sig.ptr);
+
+	return ok;
+}
+
 int main(int argc, char *argv[])
 {
 	const proposal_token_t *token;
@@ -169,6 +219,9 @@ int main(int argc, char *argv[])
 			{
 				ok = burn_crypter(token, limit, len);
 			}
+			break;
+		case INTEGRITY_ALGORITHM:
+			ok = burn_signer(token, limit, len);
 			break;
 		default:
 			fprintf(stderr, "'%s' is not a crypter/aead algorithm!\n", argv[1]);
