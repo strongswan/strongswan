@@ -580,13 +580,22 @@ METHOD(crypto_tester_t, test_signer, bool,
 			break;
 		}
 
+		data = chunk_create(vector->data, vector->len);
 		key = chunk_create(vector->key, signer->get_key_size(signer));
 		if (!signer->set_key(signer, key))
 		{
 			goto failure;
 		}
+		/* do partial append mode and check if key gets set correctly */
+		if (!signer->get_signature(signer, data, NULL))
+		{
+			goto failure;
+		}
+		if (!signer->set_key(signer, key))
+		{
+			goto failure;
+		}
 		/* allocated signature */
-		data = chunk_create(vector->data, vector->len);
 		if (!signer->allocate_signature(signer, data, &mac))
 		{
 			goto failure;
@@ -905,13 +914,22 @@ METHOD(crypto_tester_t, test_prf, bool,
 			break;
 		}
 
+		seed = chunk_create(vector->seed, vector->len);
 		key = chunk_create(vector->key, vector->key_size);
 		if (!prf->set_key(prf, key))
 		{
 			goto failure;
 		}
+		/* do partial append mode and check if key gets set correctly */
+		if (!prf->get_bytes(prf, seed, NULL))
+		{
+			goto failure;
+		}
+		if (!prf->set_key(prf, key))
+		{
+			goto failure;
+		}
 		/* allocated bytes */
-		seed = chunk_create(vector->seed, vector->len);
 		if (!prf->allocate_bytes(prf, seed, &out))
 		{
 			goto failure;
