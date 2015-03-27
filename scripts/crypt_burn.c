@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <library.h>
 
-static int burn_crypter(const proposal_token_t *token, u_int limit)
+static int burn_crypter(const proposal_token_t *token, u_int limit, u_int len)
 {
 	chunk_t iv, key, data;
 	crypter_t *crypter;
@@ -34,7 +34,7 @@ static int burn_crypter(const proposal_token_t *token, u_int limit)
 
 	iv = chunk_alloc(crypter->get_iv_size(crypter));
 	memset(iv.ptr, 0xFF, iv.len);
-	data = chunk_alloc(round_up(1024, crypter->get_block_size(crypter)));
+	data = chunk_alloc(round_up(len, crypter->get_block_size(crypter)));
 	memset(data.ptr, 0xDD, data.len);
 	key = chunk_alloc(crypter->get_key_size(crypter));
 	memset(key.ptr, 0xAA, key.len);
@@ -68,7 +68,7 @@ static int burn_crypter(const proposal_token_t *token, u_int limit)
 	return ok;
 }
 
-static bool burn_aead(const proposal_token_t *token, u_int limit)
+static bool burn_aead(const proposal_token_t *token, u_int limit, u_int len)
 {
 	chunk_t iv, key, data, dataicv, assoc;
 	aead_t *aead;
@@ -86,7 +86,7 @@ static bool burn_aead(const proposal_token_t *token, u_int limit)
 
 	iv = chunk_alloc(aead->get_iv_size(aead));
 	memset(iv.ptr, 0xFF, iv.len);
-	dataicv = chunk_alloc(round_up(1024, aead->get_block_size(aead)) +
+	dataicv = chunk_alloc(round_up(len, aead->get_block_size(aead)) +
 						  aead->get_icv_size(aead));
 	data = chunk_create(dataicv.ptr, dataicv.len - aead->get_icv_size(aead));
 	memset(data.ptr, 0xDD, data.len);
@@ -127,7 +127,7 @@ static bool burn_aead(const proposal_token_t *token, u_int limit)
 int main(int argc, char *argv[])
 {
 	const proposal_token_t *token;
-	int limit = 0;
+	u_int limit = 0, len = 1024;
 	bool ok;
 
 	library_init(NULL, "crypt_burn");
@@ -138,12 +138,17 @@ int main(int argc, char *argv[])
 
 	if (argc < 2)
 	{
-		fprintf(stderr, "usage: %s <algorithm>!\n", argv[0]);
+		fprintf(stderr, "usage: %s <algorithm> [buflen=%u] [rounds=%u]\n",
+				argv[0], len, limit);
 		return 1;
 	}
 	if (argc > 2)
 	{
-		limit = atoi(argv[2]);
+		len = atoi(argv[2]);
+	}
+	if (argc > 3)
+	{
+		limit = atoi(argv[3]);
 	}
 
 	token = lib->proposal->get_token(lib->proposal, argv[1]);
@@ -158,11 +163,11 @@ int main(int argc, char *argv[])
 		case ENCRYPTION_ALGORITHM:
 			if (encryption_algorithm_is_aead(token->algorithm))
 			{
-				ok = burn_aead(token, limit);
+				ok = burn_aead(token, limit, len);
 			}
 			else
 			{
-				ok = burn_crypter(token, limit);
+				ok = burn_crypter(token, limit, len);
 			}
 			break;
 		default:
