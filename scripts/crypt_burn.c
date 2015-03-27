@@ -25,12 +25,11 @@ int main(int argc, char *argv[])
 	size_t bs;
 	int i = 0, limit = 0;
 
-
 	library_init(NULL, "crypt_burn");
-	lib->plugins->load(lib->plugins, PLUGINS);
+	lib->plugins->load(lib->plugins, getenv("PLUGINS") ?: PLUGINS);
 	atexit(library_deinit);
 
-	printf("loaded: %s\n", PLUGINS);
+	fprintf(stderr, "loaded: %s\n", lib->plugins->loaded_plugins(lib->plugins));
 
 	memset(buffer, 0x12, sizeof(buffer));
 	memset(assoc, 0x34, sizeof(assoc));
