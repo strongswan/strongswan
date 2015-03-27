@@ -18,6 +18,7 @@
 #include "aesni_ctr.h"
 #include "aesni_ccm.h"
 #include "aesni_xcbc.h"
+#include "aesni_cmac.h"
 
 #include <stdio.h>
 
@@ -71,6 +72,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRF, PRF_AES128_XCBC),
 		PLUGIN_REGISTER(SIGNER, aesni_xcbc_signer_create),
 			PLUGIN_PROVIDE(SIGNER, AUTH_AES_XCBC_96),
+		PLUGIN_REGISTER(PRF, aesni_cmac_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_AES128_CMAC),
+		PLUGIN_REGISTER(SIGNER, aesni_cmac_signer_create),
+			PLUGIN_PROVIDE(SIGNER, AUTH_AES_CMAC_96),
 	};
 
 	*features = f;
