@@ -1,0 +1,3 @@
+The hosts <b>moon</b> and <b>sun</b> do mutual TNC measurements over IKEv2-EAP
+using the PA-TNC, PB-TNC and PT-EAP protocols. The authentication is based on
+X.509 certificates.

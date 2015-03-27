@@ -1,0 +1,8 @@
+--connect sun.strongswan.org
+--client moon.strongswan.org
+--key /etc/ipsec.d/private/moonKey.pem
+--cert /etc/ipsec.d/certs/moonCert.pem
+--cert /etc/ipsec.d/cacerts/strongswanCert.pem
+--mutual
+--quiet
+--debug 2
