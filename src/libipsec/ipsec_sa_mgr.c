@@ -482,7 +482,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 
 	entry = create_entry(sa_new);
 	schedule_expiration(this, entry);
-	this->sas->insert_last(this->sas, entry);
+	this->sas->insert_first(this->sas, entry);
 
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;
