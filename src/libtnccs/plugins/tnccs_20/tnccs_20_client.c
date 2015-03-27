@@ -456,9 +456,7 @@ static void build_retry_batch(private_tnccs_20_client_t *this)
 METHOD(tnccs_20_handler_t, process, status_t,
 	private_tnccs_20_client_t *this, pb_tnc_batch_t *batch)
 {
-	pb_tnc_msg_t *msg;
 	pb_tnc_batch_type_t batch_type;
-	enumerator_t *enumerator;
 	status_t status;
 
 	batch_type = batch->get_type(batch);
@@ -507,20 +505,9 @@ METHOD(tnccs_20_handler_t, process, status_t,
 	{
 		case FAILED:
 			this->fatal_error = TRUE;
-			this->mutex->lock(this->mutex);
-			change_batch_type(this, PB_BATCH_CLOSE);
-			this->mutex->unlock(this->mutex);
 			status = VERIFY_ERROR;
-			/* fall through to add error messages to outbound batch */
+			break;
 		case VERIFY_ERROR:
-			enumerator = batch->create_error_enumerator(batch);
-			while (enumerator->enumerate(enumerator, &msg))
-			{
-				this->mutex->lock(this->mutex);
-				this->messages->insert_last(this->messages, msg->get_ref(msg));
-				this->mutex->unlock(this->mutex);
-			}
-			enumerator->destroy(enumerator);
 			break;
 		case SUCCESS:
 		default:
@@ -728,10 +715,18 @@ METHOD(tnccs_20_handler_t, add_msg, void,
 }
 
 METHOD(tnccs_20_handler_t, handle_errors, void,
-	private_tnccs_20_client_t *this, pb_tnc_batch_t *batch)
+	private_tnccs_20_client_t *this, pb_tnc_batch_t *batch,
+	bool fatal_header_error)
 {
 	pb_tnc_msg_t *msg;
 	enumerator_t *enumerator;
+
+	if (fatal_header_error || this->fatal_error)
+	{
+		this->mutex->lock(this->mutex);
+		change_batch_type(this, PB_BATCH_CLOSE);
+		this->mutex->unlock(this->mutex);
+	}
 
 	enumerator = batch->create_error_enumerator(batch);
 	while (enumerator->enumerate(enumerator, &msg))

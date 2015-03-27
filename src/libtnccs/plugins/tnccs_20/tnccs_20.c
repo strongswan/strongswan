@@ -172,7 +172,7 @@ METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
 	pb_tnc_batch_t *batch;
-	bool from_server;
+	bool from_server, fatal_header_error = FALSE;
 	status_t status;
 	chunk_t data;
 
@@ -198,7 +198,11 @@ METHOD(tls_t, process, status_t,
 	batch = pb_tnc_batch_create_from_data(data);
 	status = batch->process_header(batch, !this->mutual, this->is_server,
 								   &from_server);
-
+	if (status == FAILED)
+	{
+		fatal_header_error = TRUE;
+		status = VERIFY_ERROR;
+	}
 	this->to_server = this->mutual ? from_server : !this->is_server;
 
 	/* In the mutual case, first batch from TNC server requires a TNC client */
@@ -229,7 +233,8 @@ METHOD(tls_t, process, status_t,
 	}
 	if (status == VERIFY_ERROR)
 	{
-		this->tnccs_handler->handle_errors(this->tnccs_handler, batch);
+		this->tnccs_handler->handle_errors(this->tnccs_handler, batch,
+										   fatal_header_error);
 		status = NEED_MORE;
 	}
 	batch->destroy(batch);
