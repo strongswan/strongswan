@@ -18,7 +18,7 @@
 
 static int burn_crypter(const proposal_token_t *token, u_int limit)
 {
-	chunk_t iv,  data;
+	chunk_t iv, key, data;
 	crypter_t *crypter;
 	int i = 0;
 	bool ok;
@@ -36,8 +36,10 @@ static int burn_crypter(const proposal_token_t *token, u_int limit)
 	memset(iv.ptr, 0xFF, iv.len);
 	data = chunk_alloc(round_up(1024, crypter->get_block_size(crypter)));
 	memset(data.ptr, 0xDD, data.len);
+	key = chunk_alloc(crypter->get_key_size(crypter));
+	memset(key.ptr, 0xAA, key.len);
 
-	ok = TRUE;
+	ok = crypter->set_key(crypter, key);
 	while (ok)
 	{
 		if (!crypter->encrypt(crypter, data, iv, NULL))
@@ -61,13 +63,14 @@ static int burn_crypter(const proposal_token_t *token, u_int limit)
 
 	free(iv.ptr);
 	free(data.ptr);
+	free(key.ptr);
 
 	return ok;
 }
 
 static bool burn_aead(const proposal_token_t *token, u_int limit)
 {
-	chunk_t iv, data, dataicv, assoc;
+	chunk_t iv, key, data, dataicv, assoc;
 	aead_t *aead;
 	int i = 0;
 	bool ok;
@@ -89,8 +92,10 @@ static bool burn_aead(const proposal_token_t *token, u_int limit)
 	memset(data.ptr, 0xDD, data.len);
 	assoc = chunk_alloc(13);
 	memset(assoc.ptr, 0xCC, assoc.len);
+	key = chunk_alloc(aead->get_key_size(aead));
+	memset(key.ptr, 0xAA, key.len);
 
-	ok = TRUE;
+	ok = aead->set_key(aead, key);
 	while (ok)
 	{
 		if (!aead->encrypt(aead, data, assoc, iv, NULL))
@@ -114,6 +119,7 @@ static bool burn_aead(const proposal_token_t *token, u_int limit)
 
 	free(iv.ptr);
 	free(data.ptr);
+	free(key.ptr);
 
 	return ok;
 }
