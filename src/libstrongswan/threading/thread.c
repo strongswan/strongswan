@@ -16,7 +16,6 @@
 #define _GNU_SOURCE
 #include <pthread.h>
 #include <signal.h>
-#include <semaphore.h>
 
 #ifdef HAVE_GETTID
 #include <sys/types.h>
@@ -77,11 +76,6 @@ struct private_thread_t {
 	 * Mutex to make modifying thread properties safe.
 	 */
 	mutex_t *mutex;
-
-	/**
-	 * Semaphore used to sync the creation/start of the thread.
-	 */
-	sem_t created;
 
 	/**
 	 * TRUE if this thread has been detached or joined, i.e. can be cleaned
@@ -160,7 +154,6 @@ static void thread_destroy(private_thread_t *this)
 	this->cleanup_handlers->destroy(this->cleanup_handlers);
 	this->mutex->unlock(this->mutex);
 	this->mutex->destroy(this->mutex);
-	sem_destroy(&this->created);
 	free(this);
 }
 
@@ -263,7 +256,6 @@ static private_thread_t *thread_create_internal()
 		.cleanup_handlers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
-	sem_init(&this->created, FALSE, 0);
 
 	return this;
 }
@@ -292,7 +284,6 @@ static void *thread_main(private_thread_t *this)
 {
 	void *res;
 
-	sem_wait(&this->created);
 	current_thread->set(current_thread, this);
 	pthread_cleanup_push((thread_cleanup_t)thread_cleanup, this);
 
@@ -324,6 +315,10 @@ thread_t *thread_create(thread_main_t main, void *arg)
 
 	this->main = main;
 	this->arg = arg;
+	id_mutex->lock(id_mutex);
+	this->id = next_id++;
+	id_mutex->unlock(id_mutex);
+
 	if (pthread_create(&this->thread_id, NULL, (void*)thread_main, this) != 0)
 	{
 		DBG1(DBG_LIB, "failed to create thread!");
@@ -331,10 +326,6 @@ thread_t *thread_create(thread_main_t main, void *arg)
 		thread_destroy(this);
 		return NULL;
 	}
-	id_mutex->lock(id_mutex);
-	this->id = next_id++;
-	id_mutex->unlock(id_mutex);
-	sem_post(&this->created);
 
 	return &this->public;
 }
