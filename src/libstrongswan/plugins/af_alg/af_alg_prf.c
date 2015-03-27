@@ -139,6 +139,7 @@ METHOD(prf_t, set_key, bool,
 {
 	char buf[this->block_size];
 
+	this->ops->reset(this->ops);
 	if (this->xcbc)
 	{
 		/* The kernel currently does not support variable length XCBC keys,
