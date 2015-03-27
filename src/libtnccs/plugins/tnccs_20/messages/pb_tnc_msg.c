@@ -43,8 +43,9 @@ ENUM(pb_tnc_tcg_msg_type_names, PB_TCG_MSG_PDP_REFERRAL,
 	"PB-PDP-Referral"
 );
 
-ENUM(pb_tnc_ita_msg_type_names, PB_ITA_MSG_MUTUAL_CAPABILITY,
+ENUM(pb_tnc_ita_msg_type_names, PB_ITA_MSG_NOSKIP_TEST,
 								PB_ITA_MSG_MUTUAL_CAPABILITY,
+	"PB-Noskip-Test",
 	"PB-Mutual-Capability"
 );
 
@@ -65,7 +66,7 @@ pb_tnc_msg_info_t pb_tnc_tcg_msg_infos[] = {
 };
 
 pb_tnc_msg_info_t pb_tnc_ita_msg_infos[] = {
-	{ 0 }, /* dummy entry because pb_tnc_ita_msg_type_t starts with 1 */
+	{ 12, TRUE,  FALSE,  TRUE  },
 	{ 16, FALSE, FALSE,  FALSE },
 };
 

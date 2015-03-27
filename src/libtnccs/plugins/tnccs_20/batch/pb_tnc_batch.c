@@ -179,6 +179,7 @@ METHOD(pb_tnc_batch_t, add_msg, bool,
 METHOD(pb_tnc_batch_t, build, void,
 	private_pb_tnc_batch_t *this)
 {
+	u_int8_t version;
 	u_int32_t msg_len;
 	chunk_t msg_value;
 	enumerator_t *enumerator;
@@ -187,9 +188,14 @@ METHOD(pb_tnc_batch_t, build, void,
 	pb_tnc_msg_info_t *msg_infos;
 	bio_writer_t *writer;
 
+	/* Set wrong PB-TNC version for testing purposes to force a PB-TNC error */
+	version = lib->settings->get_int(lib->settings,
+						"%s.plugins.tnccs-20.tests.pb_tnc_version",
+						 PB_TNC_VERSION, lib->ns);
+
 	/* build PB-TNC batch header */
 	writer = bio_writer_create(this->batch_len);
-	writer->write_uint8 (writer, PB_TNC_VERSION);
+	writer->write_uint8 (writer, version);
 	writer->write_uint8 (writer, this->is_server ?
 								 PB_TNC_BATCH_FLAG_D : PB_TNC_BATCH_FLAG_NONE);
 	writer->write_uint16(writer, this->type);
@@ -310,7 +316,7 @@ METHOD(pb_tnc_batch_t, process_header, status_t,
 
 fatal:
 	this->errors->insert_last(this->errors, msg);
-	return VERIFY_ERROR;
+	return FAILED;
 }
 
 static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
@@ -385,12 +391,14 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		msg_type_names = pb_tnc_msg_type_names;
 		msg_infos = pb_tnc_msg_infos;
 	}
-	else if (vendor_id == PEN_TCG && msg_type <= PB_TCG_MSG_ROOF)
+	else if (vendor_id == PEN_TCG && msg_type <= PB_TCG_MSG_ROOF &&
+									 msg_type >  PB_TCG_MSG_RESERVED)
 	{
 		msg_type_names = pb_tnc_tcg_msg_type_names;
 		msg_infos = pb_tnc_tcg_msg_infos;
 	}
-	else if (vendor_id == PEN_ITA && msg_type <= PB_ITA_MSG_ROOF)
+	else if (vendor_id == PEN_ITA && msg_type <= PB_ITA_MSG_ROOF &&
+									 msg_type >  PB_ITA_MSG_NOSKIP_TEST)
 	{
 		msg_type_names = pb_tnc_ita_msg_type_names;
 		msg_infos = pb_tnc_ita_msg_infos;
@@ -408,7 +416,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 		if (noskip_flag)
 		{
-			DBG1(DBG_TNC, "reject PB-TNC message 0x%06x/0x%08x)",
+			DBG1(DBG_TNC, "reject PB-TNC message (0x%06x/0x%08x)",
 						   vendor_id, msg_type);
 			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
 							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
@@ -416,7 +424,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		}
 		else
 		{
-			DBG1(DBG_TNC, "ignore PB-TNC message 0x%06x/0x%08x)",
+			DBG1(DBG_TNC, "ignore PB-TNC message (0x%06x/0x%08x)",
 						   vendor_id, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;

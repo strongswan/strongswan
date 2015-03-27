@@ -54,6 +54,7 @@ extern enum_name_t *pb_tnc_msg_type_names;
  * PB-TNC Message Type defined in the TCG namespace
  */
 enum pb_tnc_tcg_msg_type_t {
+	PB_TCG_MSG_RESERVED =				0,
 	PB_TCG_MSG_PDP_REFERRAL =			1,
 	PB_TCG_MSG_ROOF =					1
 };
@@ -67,6 +68,7 @@ extern enum_name_t *pb_tnc_tcg_msg_type_names;
  * PB-TNC Message Type defined in the ITA namespace
  */
 enum pb_tnc_ita_msg_type_t {
+	PB_ITA_MSG_NOSKIP_TEST =			0,
 	PB_ITA_MSG_MUTUAL_CAPABILITY =		1,
 	PB_ITA_MSG_ROOF =					1
 };

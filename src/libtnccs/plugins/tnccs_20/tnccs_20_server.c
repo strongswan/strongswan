@@ -23,6 +23,7 @@
 #include "messages/ietf/pb_reason_string_msg.h"
 #include "messages/ietf/pb_language_preference_msg.h"
 #include "messages/ita/pb_mutual_capability_msg.h"
+#include "messages/ita/pb_noskip_test_msg.h"
 #include "messages/tcg/pb_pdp_referral_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
@@ -543,6 +544,16 @@ METHOD(tnccs_20_handler_t, begin_handshake, void,
 	{
 		msg = pb_pdp_referral_msg_create_from_fqdn(
 						pdp_server->get_encoding(pdp_server), *pdp_port);
+		this->mutex->lock(this->mutex);
+		this->messages->insert_last(this->messages, msg);
+		this->mutex->unlock(this->mutex);
+	}
+
+	/* Send a PB-Noskip-Test message for testing purposes */
+	if (lib->settings->get_bool(lib->settings,
+				"%s.plugins.tnccs-20.tests.pb_tnc_noskip", FALSE, lib->ns))
+	{
+		msg = pb_noskip_test_msg_create();
 		this->mutex->lock(this->mutex);
 		this->messages->insert_last(this->messages, msg);
 		this->mutex->unlock(this->mutex);
