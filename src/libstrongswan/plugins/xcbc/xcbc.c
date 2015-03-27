@@ -219,6 +219,10 @@ METHOD(mac_t, set_key, bool,
 {
 	chunk_t iv, k1, lengthened;
 
+	memset(this->e, 0, this->b);
+	this->remaining_bytes = 0;
+	this->zero = TRUE;
+
 	/* we support variable keys from RFC4434 */
 	if (key.len == this->b)
 	{
