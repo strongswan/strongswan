@@ -17,6 +17,7 @@
 #include "aesni_cbc.h"
 #include "aesni_ctr.h"
 #include "aesni_ccm.h"
+#include "aesni_xcbc.h"
 
 #include <stdio.h>
 
@@ -66,6 +67,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  32),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 32),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 32),
+		PLUGIN_REGISTER(PRF, aesni_xcbc_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_AES128_XCBC),
+		PLUGIN_REGISTER(SIGNER, aesni_xcbc_signer_create),
+			PLUGIN_PROVIDE(SIGNER, AUTH_AES_XCBC_96),
 	};
 
 	*features = f;

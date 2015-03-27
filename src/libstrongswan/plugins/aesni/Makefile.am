@@ -17,6 +17,7 @@ libstrongswan_aesni_la_SOURCES = \
 	aesni_cbc.h aesni_cbc.c \
 	aesni_ctr.h aesni_ctr.c \
 	aesni_ccm.h aesni_ccm.c \
+	aesni_xcbc.h aesni_xcbc.c \
 	aesni_plugin.h aesni_plugin.c
 
 libstrongswan_aesni_la_LDFLAGS = -module -avoid-version
