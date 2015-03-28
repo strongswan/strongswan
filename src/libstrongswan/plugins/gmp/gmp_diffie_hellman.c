@@ -252,7 +252,7 @@ static gmp_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 		*random.ptr &= 0x7F;
 	}
 	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
-	chunk_free(&random);
+	chunk_clear(&random);
 	DBG2(DBG_LIB, "size of DH secret exponent: %u bits",
 		 mpz_sizeinbase(this->xa, 2));
 
