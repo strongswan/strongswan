@@ -920,14 +920,17 @@ METHOD(crypto_tester_t, test_prf, bool,
 		{
 			goto failure;
 		}
-		/* do partial append mode and check if key gets set correctly */
-		if (!prf->get_bytes(prf, seed, NULL))
+		if (alg != PRF_FIPS_SHA1_160)
 		{
-			goto failure;
-		}
-		if (!prf->set_key(prf, key))
-		{
-			goto failure;
+			/* do partial append mode and check if key gets set correctly */
+			if (!prf->get_bytes(prf, seed, NULL))
+			{
+				goto failure;
+			}
+			if (!prf->set_key(prf, key))
+			{
+				goto failure;
+			}
 		}
 		/* allocated bytes */
 		if (!prf->allocate_bytes(prf, seed, &out))
@@ -960,7 +963,7 @@ METHOD(crypto_tester_t, test_prf, bool,
 			goto failure;
 		}
 		/* bytes to existing buffer, using append mode */
-		if (seed.len > 2)
+		if (alg != PRF_FIPS_SHA1_160 && seed.len > 2)
 		{
 			memset(out.ptr, 0, out.len);
 			if (vector->stateful)
