@@ -116,6 +116,12 @@ METHOD(prf_t, get_bytes, bool,
 	u_int8_t *xkey = this->key;
 	u_int8_t one[this->b];
 
+	if (!w)
+	{
+		/* append mode is not supported */
+		return FALSE;
+	}
+
 	memset(one, 0, this->b);
 	one[this->b - 1] = 0x01;
 
@@ -250,4 +256,3 @@ fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 
 	return &this->public;
 }
-
