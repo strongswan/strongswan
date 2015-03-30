@@ -17,6 +17,7 @@
 #include "aesni_cbc.h"
 #include "aesni_ctr.h"
 #include "aesni_ccm.h"
+#include "aesni_gcm.h"
 #include "aesni_xcbc.h"
 #include "aesni_cmac.h"
 
@@ -68,6 +69,16 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  32),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 32),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 32),
+		PLUGIN_REGISTER(AEAD, aesni_gcm_create),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
 		PLUGIN_REGISTER(PRF, aesni_xcbc_prf_create),
 			PLUGIN_PROVIDE(PRF, PRF_AES128_XCBC),
 		PLUGIN_REGISTER(SIGNER, aesni_xcbc_signer_create),
@@ -79,7 +90,7 @@ METHOD(plugin_t, get_features, int,
 	};
 
 	*features = f;
-	if (cpu_feature_available(CPU_FEATURE_AESNI))
+	if (cpu_feature_available(CPU_FEATURE_AESNI | CPU_FEATURE_PCLMULQDQ))
 	{
 		return countof(f);
 	}
