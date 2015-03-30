@@ -69,15 +69,26 @@ struct private_mac_t {
 	 * Current HMAC context
 	 */
 	HMAC_CTX hmac;
+
+	/**
+	 * Key set on HMAC_CTX?
+	 */
+	bool key_set;
 };
 
 METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
-	return HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
+	if (HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL))
+	{
+		this->key_set = TRUE;
+		return TRUE;
+	}
+	return FALSE;
 #else /* OPENSSL_VERSION_NUMBER < 1.0 */
 	HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
+	this->key_set = TRUE;
 	return TRUE;
 #endif
 }
@@ -85,6 +96,10 @@ METHOD(mac_t, set_key, bool,
 METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
+	if (!this->key_set)
+	{
+		return FALSE;
+	}
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Update(&this->hmac, data.ptr, data.len))
 	{
@@ -153,11 +168,6 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 	}
 
 	HMAC_CTX_init(&this->hmac);
-	if (!set_key(this, chunk_empty))
-	{
-		destroy(this);
-		return NULL;
-	}
 
 	return &this->public;
 }
