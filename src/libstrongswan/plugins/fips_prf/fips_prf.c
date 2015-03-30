@@ -15,8 +15,6 @@
 
 #include "fips_prf.h"
 
-#include <arpa/inet.h>
-
 #include <utils/debug.h>
 
 typedef struct private_fips_prf_t private_fips_prf_t;
