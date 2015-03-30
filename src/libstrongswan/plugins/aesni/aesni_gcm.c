@@ -297,14 +297,15 @@ static __m128i decrypt_gcm_rem(private_aesni_gcm_t *this, u_int rem,
 }
 
 /**
- * Generic GCM encryption/ICV generation
+ * AES-128 GCM encryption/ICV generation
  */
-static void encrypt_gcm(private_aesni_gcm_t *this,
-						size_t len, u_char *in, u_char *out, u_char *iv,
-						size_t alen, u_char *assoc, u_char *icv)
+static void encrypt_gcm128(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
 {
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
 	__m128i d, t, y, j, cb, *bi, *bo;
-	u_int round, blocks, rem, i;
+	u_int blocks, rem, i;
 
 	j = create_j(this, iv);
 	y = icv_header(this, assoc, alen);
@@ -313,16 +314,35 @@ static void encrypt_gcm(private_aesni_gcm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+
 	cb = increment_be(j);
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
-		t = _mm_xor_si128(cb, this->key->schedule[0]);
-		for (round = 1; round < this->key->rounds; round++)
-		{
-			t = _mm_aesenc_si128(t, this->key->schedule[round]);
-		}
-		t = _mm_aesenclast_si128(t, this->key->schedule[this->key->rounds]);
+
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenclast_si128(t, k10);
+
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
@@ -340,14 +360,15 @@ static void encrypt_gcm(private_aesni_gcm_t *this,
 }
 
 /**
- * Generic GCM decryption/ICV generation
+ * AES-128 GCM decryption/ICV generation
  */
-static void decrypt_gcm(private_aesni_gcm_t *this,
-						size_t len, u_char *in, u_char *out, u_char *iv,
-						size_t alen, u_char *assoc, u_char *icv)
+static void decrypt_gcm128(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
 {
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
 	__m128i d, t, y, j, cb, *bi, *bo;
-	u_int round, blocks, rem, i;
+	u_int blocks, rem, i;
 
 	j = create_j(this, iv);
 	y = icv_header(this, assoc, alen);
@@ -356,6 +377,18 @@ static void decrypt_gcm(private_aesni_gcm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+
 	cb = increment_be(j);
 	for (i = 0; i < blocks; i++)
 	{
@@ -363,12 +396,294 @@ static void decrypt_gcm(private_aesni_gcm_t *this,
 
 		y = ghash(this->h, y, d);
 
-		t = _mm_xor_si128(cb, this->key->schedule[0]);
-		for (round = 1; round < this->key->rounds; round++)
-		{
-			t = _mm_aesenc_si128(t, this->key->schedule[round]);
-		}
-		t = _mm_aesenclast_si128(t, this->key->schedule[this->key->rounds]);
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenclast_si128(t, k10);
+
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		cb = increment_be(cb);
+	}
+
+	if (rem)
+	{
+		y = decrypt_gcm_rem(this, rem, bi + blocks, bo + blocks, cb, y);
+	}
+	y = icv_tailer(this, y, alen, len);
+	icv_crypt(this, y, j, icv);
+}
+
+/**
+ * AES-192 GCM encryption/ICV generation
+ */
+static void encrypt_gcm192(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
+	__m128i d, t, y, j, cb, *bi, *bo;
+	u_int blocks, rem, i;
+
+	j = create_j(this, iv);
+	y = icv_header(this, assoc, alen);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+
+	cb = increment_be(j);
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenclast_si128(t, k12);
+
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		y = ghash(this->h, y, t);
+
+		cb = increment_be(cb);
+	}
+
+	if (rem)
+	{
+		y = encrypt_gcm_rem(this, rem, bi + blocks, bo + blocks, cb, y);
+	}
+	y = icv_tailer(this, y, alen, len);
+	icv_crypt(this, y, j, icv);
+}
+
+/**
+ * AES-192 GCM decryption/ICV generation
+ */
+static void decrypt_gcm192(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
+	__m128i d, t, y, j, cb, *bi, *bo;
+	u_int blocks, rem, i;
+
+	j = create_j(this, iv);
+	y = icv_header(this, assoc, alen);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+
+	cb = increment_be(j);
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+
+		y = ghash(this->h, y, d);
+
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenclast_si128(t, k12);
+
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		cb = increment_be(cb);
+	}
+
+	if (rem)
+	{
+		y = decrypt_gcm_rem(this, rem, bi + blocks, bo + blocks, cb, y);
+	}
+	y = icv_tailer(this, y, alen, len);
+	icv_crypt(this, y, j, icv);
+}
+
+/**
+ * AES-256 GCM encryption/ICV generation
+ */
+static void encrypt_gcm256(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
+	__m128i d, t, y, j, cb, *bi, *bo;
+	u_int blocks, rem, i;
+
+	j = create_j(this, iv);
+	y = icv_header(this, assoc, alen);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+	k13 = this->key->schedule[13];
+	k14 = this->key->schedule[14];
+
+	cb = increment_be(j);
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenc_si128(t, k12);
+		t = _mm_aesenc_si128(t, k13);
+		t = _mm_aesenclast_si128(t, k14);
+
+		t = _mm_xor_si128(t, d);
+		_mm_storeu_si128(bo + i, t);
+
+		y = ghash(this->h, y, t);
+
+		cb = increment_be(cb);
+	}
+
+	if (rem)
+	{
+		y = encrypt_gcm_rem(this, rem, bi + blocks, bo + blocks, cb, y);
+	}
+	y = icv_tailer(this, y, alen, len);
+	icv_crypt(this, y, j, icv);
+}
+
+/**
+ * AES-256 GCM decryption/ICV generation
+ */
+static void decrypt_gcm256(private_aesni_gcm_t *this,
+						   size_t len, u_char *in, u_char *out, u_char *iv,
+						   size_t alen, u_char *assoc, u_char *icv)
+{
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
+	__m128i d, t, y, j, cb, *bi, *bo;
+	u_int blocks, rem, i;
+
+	j = create_j(this, iv);
+	y = icv_header(this, assoc, alen);
+	blocks = len / AES_BLOCK_SIZE;
+	rem = len % AES_BLOCK_SIZE;
+	bi = (__m128i*)in;
+	bo = (__m128i*)out;
+
+	k0 = this->key->schedule[0];
+	k1 = this->key->schedule[1];
+	k2 = this->key->schedule[2];
+	k3 = this->key->schedule[3];
+	k4 = this->key->schedule[4];
+	k5 = this->key->schedule[5];
+	k6 = this->key->schedule[6];
+	k7 = this->key->schedule[7];
+	k8 = this->key->schedule[8];
+	k9 = this->key->schedule[9];
+	k10 = this->key->schedule[10];
+	k11 = this->key->schedule[11];
+	k12 = this->key->schedule[12];
+	k13 = this->key->schedule[13];
+	k14 = this->key->schedule[14];
+
+	cb = increment_be(j);
+	for (i = 0; i < blocks; i++)
+	{
+		d = _mm_loadu_si128(bi + i);
+
+		y = ghash(this->h, y, d);
+
+		t = _mm_xor_si128(cb, k0);
+		t = _mm_aesenc_si128(t, k1);
+		t = _mm_aesenc_si128(t, k2);
+		t = _mm_aesenc_si128(t, k3);
+		t = _mm_aesenc_si128(t, k4);
+		t = _mm_aesenc_si128(t, k5);
+		t = _mm_aesenc_si128(t, k6);
+		t = _mm_aesenc_si128(t, k7);
+		t = _mm_aesenc_si128(t, k8);
+		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, k10);
+		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenc_si128(t, k12);
+		t = _mm_aesenc_si128(t, k13);
+		t = _mm_aesenclast_si128(t, k14);
+
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
@@ -555,9 +870,23 @@ aesni_gcm_t *aesni_gcm_create(encryption_algorithm_t algo,
 		.key_size = key_size,
 		.iv_gen = iv_gen_seq_create(),
 		.icv_size = icv_size,
-		.encrypt = encrypt_gcm,
-		.decrypt = decrypt_gcm,
 	);
+
+	switch (key_size)
+	{
+		case 16:
+			this->encrypt = encrypt_gcm128;
+			this->decrypt = decrypt_gcm128;
+			break;
+		case 24:
+			this->encrypt = encrypt_gcm192;
+			this->decrypt = decrypt_gcm192;
+			break;
+		case 32:
+			this->encrypt = encrypt_gcm256;
+			this->decrypt = decrypt_gcm256;
+			break;
+	}
 
 	return &this->public;
 }
