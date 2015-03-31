@@ -86,6 +86,21 @@ struct private_aesni_gcm_t {
 	 * GHASH subkey H, big-endian
 	 */
 	__m128i h;
+
+	/**
+	 * GHASH key H^2, big-endian
+	 */
+	__m128i hh;
+
+	/**
+	 * GHASH key H^3, big-endian
+	 */
+	__m128i hhh;
+
+	/**
+	 * GHASH key H^4, big-endian
+	 */
+	__m128i hhhh;
 };
 
 /**
@@ -100,7 +115,7 @@ static inline __m128i swap128(__m128i x)
 /**
  * Multiply two blocks in GF128
  */
-static inline __m128i mult_block(__m128i h, __m128i y)
+static __m128i mult_block(__m128i h, __m128i y)
 {
 	__m128i t1, t2, t3, t4, t5, t6;
 
@@ -149,6 +164,96 @@ static inline __m128i mult_block(__m128i h, __m128i y)
 	t4 = _mm_xor_si128(t4, t5);
 
 	return swap128(t4);
+}
+
+/**
+ * Multiply four consecutive blocks by their respective GHASH key, XOR
+ */
+static inline __m128i mult4xor(__m128i h1, __m128i h2, __m128i h3, __m128i h4,
+							   __m128i d1, __m128i d2, __m128i d3, __m128i d4)
+{
+	__m128i t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
+
+	d1 = swap128(d1);
+	d2 = swap128(d2);
+	d3 = swap128(d3);
+	d4 = swap128(d4);
+
+	t0 = _mm_clmulepi64_si128(h1, d1, 0x00);
+	t1 = _mm_clmulepi64_si128(h2, d2, 0x00);
+	t2 = _mm_clmulepi64_si128(h3, d3, 0x00);
+	t3 = _mm_clmulepi64_si128(h4, d4, 0x00);
+	t8 = _mm_xor_si128(t0, t1);
+	t8 = _mm_xor_si128(t8, t2);
+	t8 = _mm_xor_si128(t8, t3);
+
+	t4 = _mm_clmulepi64_si128(h1, d1, 0x11);
+	t5 = _mm_clmulepi64_si128(h2, d2, 0x11);
+	t6 = _mm_clmulepi64_si128(h3, d3, 0x11);
+	t7 = _mm_clmulepi64_si128(h4, d4, 0x11);
+	t9 = _mm_xor_si128(t4, t5);
+	t9 = _mm_xor_si128(t9, t6);
+	t9 = _mm_xor_si128(t9, t7);
+
+	t0 = _mm_shuffle_epi32(h1, 78);
+	t4 = _mm_shuffle_epi32(d1, 78);
+	t0 = _mm_xor_si128(t0, h1);
+	t4 = _mm_xor_si128(t4, d1);
+	t1 = _mm_shuffle_epi32(h2, 78);
+	t5 = _mm_shuffle_epi32(d2, 78);
+	t1 = _mm_xor_si128(t1, h2);
+	t5 = _mm_xor_si128(t5, d2);
+	t2 = _mm_shuffle_epi32(h3, 78);
+	t6 = _mm_shuffle_epi32(d3, 78);
+	t2 = _mm_xor_si128(t2, h3);
+	t6 = _mm_xor_si128(t6, d3);
+	t3 = _mm_shuffle_epi32(h4, 78);
+	t7 = _mm_shuffle_epi32(d4, 78);
+	t3 = _mm_xor_si128(t3, h4);
+	t7 = _mm_xor_si128(t7, d4);
+
+	t0 = _mm_clmulepi64_si128(t0, t4, 0x00);
+	t1 = _mm_clmulepi64_si128(t1, t5, 0x00);
+	t2 = _mm_clmulepi64_si128(t2, t6, 0x00);
+	t3 = _mm_clmulepi64_si128(t3, t7, 0x00);
+	t0 = _mm_xor_si128(t0, t8);
+	t0 = _mm_xor_si128(t0, t9);
+	t0 = _mm_xor_si128(t1, t0);
+	t0 = _mm_xor_si128(t2, t0);
+
+	t0 = _mm_xor_si128(t3, t0);
+	t4 = _mm_slli_si128(t0, 8);
+	t0 = _mm_srli_si128(t0, 8);
+	t3 = _mm_xor_si128(t4, t8);
+	t6 = _mm_xor_si128(t0, t9);
+	t7 = _mm_srli_epi32(t3, 31);
+	t8 = _mm_srli_epi32(t6, 31);
+	t3 = _mm_slli_epi32(t3, 1);
+	t6 = _mm_slli_epi32(t6, 1);
+	t9 = _mm_srli_si128(t7, 12);
+	t8 = _mm_slli_si128(t8, 4);
+	t7 = _mm_slli_si128(t7, 4);
+	t3 = _mm_or_si128(t3, t7);
+	t6 = _mm_or_si128(t6, t8);
+	t6 = _mm_or_si128(t6, t9);
+	t7 = _mm_slli_epi32(t3, 31);
+	t8 = _mm_slli_epi32(t3, 30);
+	t9 = _mm_slli_epi32(t3, 25);
+	t7 = _mm_xor_si128(t7, t8);
+	t7 = _mm_xor_si128(t7, t9);
+	t8 = _mm_srli_si128(t7, 4);
+	t7 = _mm_slli_si128(t7, 12);
+	t3 = _mm_xor_si128(t3, t7);
+	t2 = _mm_srli_epi32(t3, 1);
+	t4 = _mm_srli_epi32(t3, 2);
+	t5 = _mm_srli_epi32(t3, 7);
+	t2 = _mm_xor_si128(t2, t4);
+	t2 = _mm_xor_si128(t2, t5);
+	t2 = _mm_xor_si128(t2, t8);
+	t3 = _mm_xor_si128(t3, t2);
+	t6 = _mm_xor_si128(t6, t3);
+
+	return swap128(t6);
 }
 
 /**
@@ -309,7 +414,7 @@ static void encrypt_gcm128(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -321,6 +426,11 @@ static void encrypt_gcm128(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -396,15 +506,14 @@ static void encrypt_gcm128(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
+		y = _mm_xor_si128(y, t1);
+		y = mult4xor(h1, h2, h3, h4, y, t2, t3, t4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
 		_mm_storeu_si128(bo + i + 3, t4);
-
-		y = ghash(this->h, y, t1);
-		y = ghash(this->h, y, t2);
-		y = ghash(this->h, y, t3);
-		y = ghash(this->h, y, t4);
 	}
 
 	for (i = pblocks; i < blocks; i++)
@@ -426,7 +535,7 @@ static void encrypt_gcm128(private_aesni_gcm_t *this,
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(bo + i, t1);
 
-		y = ghash(this->h, y, t1);
+		y = ghash(h4, y, t1);
 
 		cb = increment_be(cb);
 	}
@@ -447,7 +556,7 @@ static void decrypt_gcm128(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -459,6 +568,11 @@ static void decrypt_gcm128(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -479,10 +593,8 @@ static void decrypt_gcm128(private_aesni_gcm_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		y = ghash(this->h, y, d1);
-		y = ghash(this->h, y, d2);
-		y = ghash(this->h, y, d3);
-		y = ghash(this->h, y, d4);
+		y = _mm_xor_si128(y, d1);
+		y = mult4xor(h1, h2, h3, h4, y, d2, d3, d4);
 
 		t1 = _mm_xor_si128(cb, k0);
 		cb = increment_be(cb);
@@ -539,6 +651,7 @@ static void decrypt_gcm128(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
@@ -549,7 +662,7 @@ static void decrypt_gcm128(private_aesni_gcm_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		y = ghash(this->h, y, d1);
+		y = ghash(h4, y, d1);
 
 		t1 = _mm_xor_si128(cb, k0);
 		t1 = _mm_aesenc_si128(t1, k1);
@@ -585,7 +698,7 @@ static void encrypt_gcm192(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -597,6 +710,11 @@ static void encrypt_gcm192(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -682,15 +800,14 @@ static void encrypt_gcm192(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
+		y = _mm_xor_si128(y, t1);
+		y = mult4xor(h1, h2, h3, h4, y, t2, t3, t4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
 		_mm_storeu_si128(bo + i + 3, t4);
-
-		y = ghash(this->h, y, t1);
-		y = ghash(this->h, y, t2);
-		y = ghash(this->h, y, t3);
-		y = ghash(this->h, y, t4);
 	}
 
 	for (i = pblocks; i < blocks; i++)
@@ -714,7 +831,7 @@ static void encrypt_gcm192(private_aesni_gcm_t *this,
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(bo + i, t1);
 
-		y = ghash(this->h, y, t1);
+		y = ghash(h4, y, t1);
 
 		cb = increment_be(cb);
 	}
@@ -735,7 +852,7 @@ static void decrypt_gcm192(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -747,6 +864,11 @@ static void decrypt_gcm192(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -769,10 +891,8 @@ static void decrypt_gcm192(private_aesni_gcm_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		y = ghash(this->h, y, d1);
-		y = ghash(this->h, y, d2);
-		y = ghash(this->h, y, d3);
-		y = ghash(this->h, y, d4);
+		y = _mm_xor_si128(y, d1);
+		y = mult4xor(h1, h2, h3, h4, y, d2, d3, d4);
 
 		t1 = _mm_xor_si128(cb, k0);
 		cb = increment_be(cb);
@@ -837,6 +957,7 @@ static void decrypt_gcm192(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
@@ -847,7 +968,7 @@ static void decrypt_gcm192(private_aesni_gcm_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		y = ghash(this->h, y, d1);
+		y = ghash(h4, y, d1);
 
 		t1 = _mm_xor_si128(cb, k0);
 		t1 = _mm_aesenc_si128(t1, k1);
@@ -885,7 +1006,7 @@ static void encrypt_gcm256(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -897,6 +1018,11 @@ static void encrypt_gcm256(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -992,15 +1118,14 @@ static void encrypt_gcm256(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
+		y = _mm_xor_si128(y, t1);
+		y = mult4xor(h1, h2, h3, h4, y, t2, t3, t4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
 		_mm_storeu_si128(bo + i + 3, t4);
-
-		y = ghash(this->h, y, t1);
-		y = ghash(this->h, y, t2);
-		y = ghash(this->h, y, t3);
-		y = ghash(this->h, y, t4);
 	}
 
 	for (i = pblocks; i < blocks; i++)
@@ -1047,7 +1172,7 @@ static void decrypt_gcm256(private_aesni_gcm_t *this,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
-	__m128i d1, d2, d3, d4, t1, t2, t3, t4;
+	__m128i d1, d2, d3, d4, t1, t2, t3, t4, h1, h2, h3, h4;
 	__m128i y, j, cb, *bi, *bo;
 	u_int blocks, pblocks, rem, i;
 
@@ -1059,6 +1184,11 @@ static void decrypt_gcm256(private_aesni_gcm_t *this,
 	rem = len % AES_BLOCK_SIZE;
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	k0 = this->key->schedule[0];
 	k1 = this->key->schedule[1];
@@ -1083,10 +1213,8 @@ static void decrypt_gcm256(private_aesni_gcm_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		y = ghash(this->h, y, d1);
-		y = ghash(this->h, y, d2);
-		y = ghash(this->h, y, d3);
-		y = ghash(this->h, y, d4);
+		y = _mm_xor_si128(y, d1);
+		y = mult4xor(h1, h2, h3, h4, y, d2, d3, d4);
 
 		t1 = _mm_xor_si128(cb, k0);
 		cb = increment_be(cb);
@@ -1159,6 +1287,7 @@ static void decrypt_gcm256(private_aesni_gcm_t *this,
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
 		t4 = _mm_xor_si128(t4, d4);
+
 		_mm_storeu_si128(bo + i + 0, t1);
 		_mm_storeu_si128(bo + i + 1, t2);
 		_mm_storeu_si128(bo + i + 2, t3);
@@ -1169,7 +1298,7 @@ static void decrypt_gcm256(private_aesni_gcm_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		y = ghash(this->h, y, d1);
+		y = ghash(h4, y, d1);
 
 		t1 = _mm_xor_si128(cb, k0);
 		t1 = _mm_aesenc_si128(t1, k1);
@@ -1298,7 +1427,15 @@ METHOD(aead_t, set_key, bool,
 	}
 	h = _mm_aesenclast_si128(h, this->key->schedule[this->key->rounds]);
 
-	this->h = swap128(h);
+	this->h = h;
+	h = swap128(h);
+	this->hh = mult_block(h, this->h);
+	this->hhh = mult_block(h, this->hh);
+	this->hhhh = mult_block(h, this->hhh);
+	this->h = swap128(this->h);
+	this->hh = swap128(this->hh);
+	this->hhh = swap128(this->hhh);
+	this->hhhh = swap128(this->hhhh);
 
 	return TRUE;
 }
@@ -1308,6 +1445,9 @@ METHOD(aead_t, destroy, void,
 {
 	DESTROY_IF(this->key);
 	memwipe(&this->h, sizeof(this->h));
+	memwipe(&this->hh, sizeof(this->hh));
+	memwipe(&this->hhh, sizeof(this->hhh));
+	memwipe(&this->hhhh, sizeof(this->hhhh));
 	this->iv_gen->destroy(this->iv_gen);
 	free(this);
 }
