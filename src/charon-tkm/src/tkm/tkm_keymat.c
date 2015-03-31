@@ -102,6 +102,7 @@ static void aead_create_from_keys(aead_t **in, aead_t **out,
 	*in = *out = NULL;
 	signer_t *signer_i, *signer_r;
 	crypter_t *crypter_i, *crypter_r;
+	iv_gen_t *ivg_i, *ivg_r;
 
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
 	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
@@ -145,15 +146,21 @@ static void aead_create_from_keys(aead_t **in, aead_t **out,
 		return;
 	}
 
+	ivg_i = iv_gen_create_for_alg(enc_alg);
+	ivg_r = iv_gen_create_for_alg(enc_alg);
+	if (!ivg_i || !ivg_r)
+	{
+		return;
+	}
 	if (initiator)
 	{
-		*in = aead_create(crypter_r, signer_r);
-		*out = aead_create(crypter_i, signer_i);
+		*in = aead_create(crypter_r, signer_r, ivg_r);
+		*out = aead_create(crypter_i, signer_i, ivg_i);
 	}
 	else
 	{
-		*in = aead_create(crypter_i, signer_i);
-		*out = aead_create(crypter_r, signer_r);
+		*in = aead_create(crypter_i, signer_i, ivg_i);
+		*out = aead_create(crypter_r, signer_r, ivg_r);
 	}
 }
 

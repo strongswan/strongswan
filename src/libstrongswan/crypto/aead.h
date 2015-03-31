@@ -135,8 +135,9 @@ struct aead_t {
  *
  * @param crypter		encryption transform for this aead
  * @param signer		integrity transform for this aead
+ * @param iv_gen		suitable IV generator for encryption algorithm
  * @return				aead transform
  */
-aead_t *aead_create(crypter_t *crypter, signer_t *signer);
+aead_t *aead_create(crypter_t *crypter, signer_t *signer, iv_gen_t *iv_gen);
 
 #endif /** AEAD_H_ @}*/

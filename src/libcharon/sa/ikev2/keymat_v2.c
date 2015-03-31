@@ -193,6 +193,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 {
 	crypter_t *crypter_i = NULL, *crypter_r = NULL;
 	signer_t *signer_i, *signer_r;
+	iv_gen_t *ivg_i, *ivg_r;
 	size_t key_size;
 	chunk_t key = chunk_empty;
 
@@ -264,15 +265,21 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 		goto failure;
 	}
 
+	ivg_i = iv_gen_create_for_alg(enc_alg);
+	ivg_r = iv_gen_create_for_alg(enc_alg);
+	if (!ivg_i || !ivg_r)
+	{
+		goto failure;
+	}
 	if (this->initiator)
 	{
-		this->aead_in = aead_create(crypter_r, signer_r);
-		this->aead_out = aead_create(crypter_i, signer_i);
+		this->aead_in = aead_create(crypter_r, signer_r, ivg_r);
+		this->aead_out = aead_create(crypter_i, signer_i, ivg_i);
 	}
 	else
 	{
-		this->aead_in = aead_create(crypter_i, signer_i);
-		this->aead_out = aead_create(crypter_r, signer_r);
+		this->aead_in = aead_create(crypter_i, signer_i, ivg_i);
+		this->aead_out = aead_create(crypter_r, signer_r, ivg_r);
 	}
 	signer_i = signer_r = NULL;
 	crypter_i = crypter_r = NULL;

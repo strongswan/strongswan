@@ -244,6 +244,7 @@ static bool create_traditional(private_esp_context_t *this, int enc_alg,
 {
 	crypter_t *crypter = NULL;
 	signer_t *signer = NULL;
+	iv_gen_t *ivg;
 
 	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_key.len);
 	if (!crypter)
@@ -272,7 +273,13 @@ static bool create_traditional(private_esp_context_t *this, int enc_alg,
 			 "failed");
 		goto failed;
 	}
-	this->aead = aead_create(crypter, signer);
+	ivg = iv_gen_create_for_alg(enc_alg);
+	if (!ivg)
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: creating iv gen failed");
+		goto failed;
+	}
+	this->aead = aead_create(crypter, signer, ivg);
 	return TRUE;
 
 failed:
