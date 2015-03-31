@@ -244,7 +244,7 @@ METHOD(aesni_key_t, destroy, void,
 	private_aesni_key_t *this)
 {
 	memwipe(this, sizeof(*this) + (this->public.rounds + 1) * AES_BLOCK_SIZE);
-	free(this);
+	free_align(this);
 }
 
 /**
@@ -270,7 +270,7 @@ aesni_key_t *aesni_key_create(bool encrypt, chunk_t key)
 			return NULL;
 	}
 
-	INIT_EXTRA(this, (rounds + 1) * AES_BLOCK_SIZE,
+	INIT_EXTRA_ALIGN(this, (rounds + 1) * AES_BLOCK_SIZE, sizeof(__m128i),
 		.public = {
 			.destroy = _destroy,
 			.rounds = rounds,

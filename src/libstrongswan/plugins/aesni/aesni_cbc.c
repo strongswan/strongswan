@@ -693,7 +693,7 @@ METHOD(crypter_t, destroy, void,
 {
 	DESTROY_IF(this->ekey);
 	DESTROY_IF(this->dkey);
-	free(this);
+	free_align(this);
 }
 
 /**
@@ -720,7 +720,7 @@ aesni_cbc_t *aesni_cbc_create(encryption_algorithm_t algo, size_t key_size)
 			return NULL;
 	}
 
-	INIT(this,
+	INIT_ALIGN(this, sizeof(__m128i),
 		.public = {
 			.crypter = {
 				.encrypt = _encrypt,

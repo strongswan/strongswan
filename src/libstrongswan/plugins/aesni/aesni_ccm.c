@@ -902,7 +902,7 @@ METHOD(aead_t, destroy, void,
 {
 	DESTROY_IF(this->key);
 	this->iv_gen->destroy(this->iv_gen);
-	free(this);
+	free_align(this);
 }
 
 /**
@@ -949,7 +949,7 @@ aesni_ccm_t *aesni_ccm_create(encryption_algorithm_t algo,
 			return NULL;
 	}
 
-	INIT(this,
+	INIT_ALIGN(this, sizeof(__m128i),
 		.public = {
 			.aead = {
 				.encrypt = _encrypt,

@@ -309,7 +309,7 @@ METHOD(mac_t, destroy, void,
 	DESTROY_IF(this->k1);
 	memwipe(&this->k2, sizeof(this->k2));
 	memwipe(&this->k3, sizeof(this->k3));
-	free(this);
+	free_align(this);
 }
 
 /*
@@ -319,7 +319,7 @@ mac_t *aesni_xcbc_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_aesni_mac_t *this;
 
-	INIT(this,
+	INIT_ALIGN(this, sizeof(__m128i),
 		.public = {
 			.get_mac = _get_mac,
 			.get_mac_size = _get_mac_size,

@@ -1465,7 +1465,7 @@ METHOD(aead_t, destroy, void,
 	memwipe(&this->hhh, sizeof(this->hhh));
 	memwipe(&this->hhhh, sizeof(this->hhhh));
 	this->iv_gen->destroy(this->iv_gen);
-	free(this);
+	free_align(this);
 }
 
 /**
@@ -1512,7 +1512,7 @@ aesni_gcm_t *aesni_gcm_create(encryption_algorithm_t algo,
 			return NULL;
 	}
 
-	INIT(this,
+	INIT_ALIGN(this, sizeof(__m128i),
 		.public = {
 			.aead = {
 				.encrypt = _encrypt,
