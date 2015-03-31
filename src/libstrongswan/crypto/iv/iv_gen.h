@@ -58,4 +58,12 @@ struct iv_gen_t {
 	void (*destroy)(iv_gen_t *this);
 };
 
+/**
+ * Select an IV generator for a given encryption algorithm.
+ *
+ * @param alg			encryption algorithm
+ * @return				IV generator
+ */
+iv_gen_t* iv_gen_create_for_alg(encryption_algorithm_t alg);
+
 #endif /** IV_GEN_H_ @}*/
