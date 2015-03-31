@@ -567,6 +567,24 @@ typedef struct timespec timespec_t;
 typedef struct sockaddr sockaddr_t;
 
 /**
+ * malloc(), but returns aligned memory.
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param size			size of allocated data
+ * @param align			alignment, up to 255 bytes, usually a power of 2
+ * @return				allocated hunk, aligned to align bytes
+ */
+void* malloc_align(size_t size, u_int8_t align);
+
+/**
+ * Free a hunk allocated by malloc_align().
+ *
+ * @param ptr			hunk to free
+ */
+void free_align(void *ptr);
+
+/**
  * Same as memcpy, but XORs src into dst instead of copy
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
