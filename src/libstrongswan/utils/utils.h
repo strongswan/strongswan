@@ -274,6 +274,19 @@ static inline void *memset_noop(void *s, int c, size_t n)
 						   *(this) = (typeof(*(this))){ __VA_ARGS__ }; }
 
 /**
+ * Aligning version of INIT().
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param this		object to allocate/initialize
+ * @param align		alignment for allocation, in bytes
+ * @param ...		initializer
+ */
+#define INIT_ALIGN(this, align, ...) { \
+						(this) = malloc_align(sizeof(*(this)), align); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; }
+
+/**
  * Object allocation/initialization macro, with extra allocated bytes at tail.
  *
  * The extra space gets zero-initialized.
@@ -285,6 +298,22 @@ static inline void *memset_noop(void *s, int c, size_t n)
 #define INIT_EXTRA(this, extra, ...) { \
 						typeof(extra) _extra = (extra); \
 						(this) = malloc(sizeof(*(this)) + _extra); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; \
+						memset((this) + 1, 0, _extra); }
+
+/**
+ * Aligning version of INIT_EXTRA().
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param this		object to allocate/initialize
+ * @param extra		number of bytes to allocate at end of this
+ * @param align		alignment for allocation, in bytes
+ * @param ...		initializer
+ */
+#define INIT_EXTRA_ALIGN(this, extra, align, ...) { \
+						typeof(extra) _extra = (extra); \
+						(this) = malloc_align(sizeof(*(this)) + _extra, align); \
 						*(this) = (typeof(*(this))){ __VA_ARGS__ }; \
 						memset((this) + 1, 0, _extra); }
 
