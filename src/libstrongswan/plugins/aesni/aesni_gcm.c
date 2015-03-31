@@ -269,14 +269,30 @@ static __m128i ghash(__m128i h, __m128i y, __m128i x)
  */
 static __m128i icv_header(private_aesni_gcm_t *this, void *assoc, size_t alen)
 {
-	u_int blocks, rem, i;
+	u_int blocks, pblocks, rem, i;
+	__m128i h1, h2, h3, h4, d1, d2, d3, d4;
 	__m128i y, last, *ab;
+
+	h1 = this->hhhh;
+	h2 = this->hhh;
+	h3 = this->hh;
+	h4 = this->h;
 
 	y = _mm_setzero_si128();
 	ab = assoc;
 	blocks = alen / AES_BLOCK_SIZE;
+	pblocks = blocks - (blocks % GCM_CRYPT_PARALLELISM);
 	rem = alen % AES_BLOCK_SIZE;
-	for (i = 0; i < blocks; i++)
+	for (i = 0; i < pblocks; i += GCM_CRYPT_PARALLELISM)
+	{
+		d1 = _mm_loadu_si128(ab + i + 0);
+		d2 = _mm_loadu_si128(ab + i + 1);
+		d3 = _mm_loadu_si128(ab + i + 2);
+		d4 = _mm_loadu_si128(ab + i + 3);
+		y = _mm_xor_si128(y, d1);
+		y = mult4xor(h1, h2, h3, h4, y, d2, d3, d4);
+	}
+	for (i = pblocks; i < blocks; i++)
 	{
 		y = ghash(this->h, y, _mm_loadu_si128(ab + i));
 	}
