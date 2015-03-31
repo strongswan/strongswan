@@ -17,7 +17,7 @@ clean-local:
 
 if RUBY_GEMS_INSTALL
 install-data-local: vici-$(PACKAGE_VERSION).gem
-	$(GEM) install --install-dir $(DESTDIR)$(RUBYGEMDIR) \
+	$(GEM) install --no-user-install --install-dir $(DESTDIR)$(RUBYGEMDIR) \
 		vici-$(PACKAGE_VERSION).gem
 
 uninstall-local:
