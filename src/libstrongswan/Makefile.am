@@ -540,6 +540,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CHAPOLY
+  SUBDIRS += plugins/chapoly
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/chapoly/libstrongswan-chapoly.la
+endif
+endif
+
 if USE_CTR
   SUBDIRS += plugins/ctr
 if MONOLITHIC
