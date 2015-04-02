@@ -34,7 +34,7 @@ pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
 selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
-settings/settings_parser.y settings/settings_lexer.l \
+settings/settings_parser.y settings/settings_lexer.l utils/cpu_feature.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c
@@ -103,7 +103,7 @@ threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
-utils/leak_detective.h utils/printf_hook/printf_hook.h \
+utils/cpu_feature.h utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
 utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
 utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h
