@@ -118,6 +118,8 @@ typedef struct {
 	array_t *queue;
 	/** do we have job processing input queue? */
 	bool has_processor;
+	/** is this client disconnecting */
+	bool disconnecting;
 	/** client connection identifier */
 	u_int id;
 	/** any users reading over this connection? */
@@ -186,6 +188,10 @@ static entry_t* find_entry(private_vici_socket_t *this, stream_t *stream,
 				{
 					continue;
 				}
+			}
+			if (entry->disconnecting)
+			{
+				continue;
 			}
 			candidate = TRUE;
 
@@ -304,7 +310,7 @@ static void disconnect(private_vici_socket_t *this, u_int id)
  * Write queued output data
  */
 static bool do_write(private_vici_socket_t *this, entry_t *entry,
-					 stream_t *stream)
+					 stream_t *stream, char *errmsg, size_t errlen)
 {
 	msg_buf_t *out;
 	ssize_t len;
@@ -326,7 +332,8 @@ static bool do_write(private_vici_socket_t *this, entry_t *entry,
 				{
 					return TRUE;
 				}
-				DBG1(DBG_CFG, "vici header write error: %s", strerror(errno));
+				snprintf(errmsg, errlen, "vici header write error: %s",
+						 strerror(errno));
 				return FALSE;
 			}
 			out->hdrlen += len;
@@ -339,7 +346,7 @@ static bool do_write(private_vici_socket_t *this, entry_t *entry,
 								out->buf.len - out->done, FALSE);
 			if (len == 0)
 			{
-				DBG1(DBG_CFG, "premature vici disconnect");
+				snprintf(errmsg, errlen, "premature vici disconnect");
 				return FALSE;
 			}
 			if (len < 0)
@@ -348,7 +355,7 @@ static bool do_write(private_vici_socket_t *this, entry_t *entry,
 				{
 					return TRUE;
 				}
-				DBG1(DBG_CFG, "vici write error: %s", strerror(errno));
+				snprintf(errmsg, errlen, "vici write error: %s", strerror(errno));
 				return FALSE;
 			}
 			out->done += len;
@@ -369,13 +376,14 @@ static bool do_write(private_vici_socket_t *this, entry_t *entry,
 CALLBACK(on_write, bool,
 	private_vici_socket_t *this, stream_t *stream)
 {
+	char errmsg[256] = "";
 	entry_t *entry;
 	bool ret = FALSE;
 
 	entry = find_entry(this, stream, 0, FALSE, TRUE);
 	if (entry)
 	{
-		ret = do_write(this, entry, stream);
+		ret = do_write(this, entry, stream, errmsg, sizeof(errmsg));
 		if (ret)
 		{
 			/* unregister if we have no more messages to send */
@@ -383,9 +391,15 @@ CALLBACK(on_write, bool,
 		}
 		else
 		{
+			entry->disconnecting = TRUE;
 			disconnect(entry->this, entry->id);
 		}
 		put_entry(this, entry, FALSE, TRUE);
+
+		if (!ret && errmsg[0])
+		{
+			DBG1(DBG_CFG, errmsg);
+		}
 	}
 
 	return ret;
@@ -395,7 +409,7 @@ CALLBACK(on_write, bool,
  * Read in available header with data, non-blocking cumulating to buffer
  */
 static bool do_read(private_vici_socket_t *this, entry_t *entry,
-					stream_t *stream)
+					stream_t *stream, char *errmsg, size_t errlen)
 {
 	u_int32_t msglen;
 	ssize_t len;
@@ -415,7 +429,8 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 			{
 				return TRUE;
 			}
-			DBG1(DBG_CFG, "vici header read error: %s", strerror(errno));
+			snprintf(errmsg, errlen, "vici header read error: %s",
+					 strerror(errno));
 			return FALSE;
 		}
 		entry->in.hdrlen += len;
@@ -424,8 +439,8 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 			msglen = untoh32(entry->in.hdr);
 			if (msglen > VICI_MESSAGE_SIZE_MAX)
 			{
-				DBG1(DBG_CFG, "vici message length %u exceeds %u bytes limit, "
-					 "ignored", msglen, VICI_MESSAGE_SIZE_MAX);
+				snprintf(errmsg, errlen, "vici message length %u exceeds %u "
+						 "bytes limit, ignored", msglen, VICI_MESSAGE_SIZE_MAX);
 				return FALSE;
 			}
 			/* header complete, continue with data */
@@ -440,7 +455,7 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 						   entry->in.buf.len - entry->in.done, FALSE);
 		if (len == 0)
 		{
-			DBG1(DBG_CFG, "premature vici disconnect");
+			snprintf(errmsg, errlen, "premature vici disconnect");
 			return FALSE;
 		}
 		if (len < 0)
@@ -449,7 +464,7 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 			{
 				return TRUE;
 			}
-			DBG1(DBG_CFG, "vici read error: %s", strerror(errno));
+			snprintf(errmsg, errlen, "vici read error: %s", strerror(errno));
 			return FALSE;
 		}
 		entry->in.done += len;
@@ -502,6 +517,7 @@ CALLBACK(process_queue, job_requeue_t,
 CALLBACK(on_read, bool,
 	private_vici_socket_t *this, stream_t *stream)
 {
+	char errmsg[256] = "";
 	entry_selector_t *sel;
 	entry_t *entry;
 	bool ret = FALSE;
@@ -509,9 +525,10 @@ CALLBACK(on_read, bool,
 	entry = find_entry(this, stream, 0, TRUE, FALSE);
 	if (entry)
 	{
-		ret = do_read(this, entry, stream);
+		ret = do_read(this, entry, stream, errmsg, sizeof(errmsg));
 		if (!ret)
 		{
+			entry->disconnecting = TRUE;
 			disconnect(this, entry->id);
 		}
 		else if (entry->in.hdrlen == sizeof(entry->in.hdr) &&
@@ -534,6 +551,11 @@ CALLBACK(on_read, bool,
 			}
 		}
 		put_entry(this, entry, TRUE, FALSE);
+
+		if (!ret && errmsg[0])
+		{
+			DBG1(DBG_CFG, errmsg);
+		}
 	}
 
 	return ret;
