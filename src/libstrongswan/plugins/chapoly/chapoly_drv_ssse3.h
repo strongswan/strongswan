@@ -13,31 +13,19 @@
  * for more details.
  */
 
-#include "chapoly_drv.h"
-#include "chapoly_drv_portable.h"
-#include "chapoly_drv_ssse3.h"
+/**
+ * @defgroup chapoly_drv_ssse3 chapoly_drv_ssse3
+ * @{ @ingroup chapoly
+ */
 
-typedef chapoly_drv_t*(*chapoly_drv_create)();
+#include "chapoly_drv.h"
+
+#ifndef CHAPOLY_DRV_SSSE3_H_
+#define CHAPOLY_DRV_SSSE3_H_
 
 /**
- * See header.
+ * Create a chapoly_drv_ssse3 instance.
  */
-chapoly_drv_t *chapoly_drv_probe()
-{
-	chapoly_drv_create drivers[] = {
-		chapoly_drv_ssse3_create,
-		chapoly_drv_portable_create,
-	};
-	chapoly_drv_t *driver;
-	int i;
+chapoly_drv_t *chapoly_drv_ssse3_create();
 
-	for (i = 0; i < countof(drivers); i++)
-	{
-		driver = drivers[i]();
-		if (driver)
-		{
-			return driver;
-		}
-	}
-	return NULL;
-}
+#endif /** CHAPOLY_DRV_SSSE3_H_ @}*/
