@@ -839,6 +839,22 @@ AC_COMPILE_IFELSE(
 	]
 )
 
+AC_MSG_CHECKING([x86/x64 target])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[], [[
+		 #if !defined(__i386__) && !defined(__x86_64__)
+		 # error not on x86/x64
+		 #endif
+		]])],
+	[
+		x86x64=true
+		AC_MSG_RESULT([yes])
+	],
+	[AC_MSG_RESULT([no])]
+)
+AM_CONDITIONAL(USE_X86X64, [test "x$x86x64" = xtrue])
+
 if test x$printf_hooks = xvstr; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
