@@ -30,6 +30,18 @@ typedef enum {
 	CPUID1_ECX_AESNI =				(1 << 25),
 	CPUID1_ECX_AVX =				(1 << 28),
 	CPUID1_ECX_RDRAND =				(1 << 30),
+
+	/* For CentaurHauls cpuid(0xC0000001) */
+	CPUIDC1_EDX_RNG_AVAILABLE =		(1 <<  2),
+	CPUIDC1_EDX_RNG_ENABLED =		(1 <<  3),
+	CPUIDC1_EDX_ACE_AVAILABLE =		(1 <<  6),
+	CPUIDC1_EDX_ACE_ENABLED =		(1 <<  7),
+	CPUIDC1_EDX_ACE2_AVAILABLE =	(1 <<  8),
+	CPUIDC1_EDX_ACE2_ENABLED =		(1 <<  9),
+	CPUIDC1_EDX_PHE_AVAILABLE =		(1 << 10),
+	CPUIDC1_EDX_PHE_ENABLED =		(1 << 11),
+	CPUIDC1_EDX_PMM_AVAILABLE =		(1 << 12),
+	CPUIDC1_EDX_PMM_ENABLED =		(1 << 13),
 } cpuid_flag_t;
 
 /**
@@ -62,6 +74,30 @@ static inline cpu_feature_t f2f(u_int reg, cpuid_flag_t flag, cpu_feature_t f)
 }
 
 /**
+ * Get features for a Via "CentaurHauls" CPU
+ */
+static cpu_feature_t get_via_features()
+{
+	cpu_feature_t f = 0;
+	u_int a, b, c, d;
+
+	cpuid(0xc0000001, &a, &b, &c, &d);
+
+	f |= f2f(d, CPUIDC1_EDX_RNG_AVAILABLE, CPU_FEATURE_PADLOCK_RNG_AVAILABLE);
+	f |= f2f(d, CPUIDC1_EDX_RNG_ENABLED, CPU_FEATURE_PADLOCK_RNG_ENABLED);
+	f |= f2f(d, CPUIDC1_EDX_ACE_AVAILABLE, CPU_FEATURE_PADLOCK_ACE_AVAILABLE);
+	f |= f2f(d, CPUIDC1_EDX_ACE_ENABLED, CPU_FEATURE_PADLOCK_ACE_ENABLED);
+	f |= f2f(d, CPUIDC1_EDX_ACE2_AVAILABLE, CPU_FEATURE_PADLOCK_ACE2_AVAILABLE);
+	f |= f2f(d, CPUIDC1_EDX_ACE2_ENABLED, CPU_FEATURE_PADLOCK_ACE2_ENABLED);
+	f |= f2f(d, CPUIDC1_EDX_PHE_AVAILABLE, CPU_FEATURE_PADLOCK_PHE_AVAILABLE);
+	f |= f2f(d, CPUIDC1_EDX_PHE_ENABLED, CPU_FEATURE_PADLOCK_PHE_ENABLED);
+	f |= f2f(d, CPUIDC1_EDX_PMM_AVAILABLE, CPU_FEATURE_PADLOCK_PMM_AVAILABLE);
+	f |= f2f(d, CPUIDC1_EDX_PMM_ENABLED, CPU_FEATURE_PADLOCK_PMM_ENABLED);
+
+	return f;
+}
+
+/**
  * See header.
  */
 cpu_feature_t cpu_feature_get_all()
@@ -89,6 +125,15 @@ cpu_feature_t cpu_feature_get_all()
 	f |= f2f(c, CPUID1_ECX_AVX, CPU_FEATURE_AVX);
 	f |= f2f(c, CPUID1_ECX_RDRAND, CPU_FEATURE_RDRAND);
 
+	if (streq(vendor, "CentaurHauls"))
+	{
+		cpuid(0xc0000000, &a, &b, &c, &d);
+		/* check Centaur Extended Feature Flags */
+		if (a >= 0xc0000001)
+		{
+			f |= get_via_features();
+		}
+	}
 	return f;
 }
 
