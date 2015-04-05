@@ -112,6 +112,7 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
 			/* RFC 4106 */
+		case ENCR_CHACHA20_POLY1305:
 			salt_size = 4;
 			break;
 		case ENCR_AES_CCM_ICV8:
