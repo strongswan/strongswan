@@ -66,7 +66,7 @@ static double end_timing(struct timespec *start)
 static void run_test(diffie_hellman_group_t group, int rounds)
 {
 	diffie_hellman_t *l[rounds], *r;
-	chunk_t chunk, chunks[rounds];
+	chunk_t chunk, chunks[rounds], lsecrets[rounds], rsecrets[rounds];
 	struct timespec timing;
 	int round;
 
@@ -78,8 +78,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 		return;
 	}
 
-	printf("%N:\t",
-			diffie_hellman_group_names, group);
+	printf("%N:\t", diffie_hellman_group_names, group);
 
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
@@ -92,6 +91,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	for (round = 0; round < rounds; round++)
 	{
 		assert(r->set_other_public_value(r, chunks[round]));
+		assert(r->get_shared_secret(r, &rsecrets[round]));
 		chunk_free(&chunks[round]);
 	}
 
@@ -100,12 +100,16 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	for (round = 0; round < rounds; round++)
 	{
 		assert(l[round]->set_other_public_value(l[round], chunk));
+		assert(l[round]->get_shared_secret(l[round], &lsecrets[round]));
 	}
 	printf(" | S = B^a/s: %8.1f\n", rounds / end_timing(&timing));
 	chunk_free(&chunk);
 
 	for (round = 0; round < rounds; round++)
 	{
+		assert(chunk_equals(rsecrets[round], lsecrets[round]));
+		free(lsecrets[round].ptr);
+		free(rsecrets[round].ptr);
 		l[round]->destroy(l[round]);
 	}
 	r->destroy(r);
