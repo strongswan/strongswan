@@ -215,6 +215,7 @@ static bool create_aead(private_esp_context_t *this, int alg,
 		case ENCR_AES_GCM_ICV8:
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_CHACHA20_POLY1305:
 			/* the key includes a 4 byte salt */
 			this->aead = lib->crypto->create_aead(lib->crypto, alg,
 												  key.len - 4, 4);
