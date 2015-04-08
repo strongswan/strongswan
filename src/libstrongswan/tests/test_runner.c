@@ -50,6 +50,7 @@ static void destroy_case(test_case_t *tcase)
 {
 	array_destroy(tcase->functions);
 	array_destroy(tcase->fixtures);
+	free(tcase);
 }
 
 /**
