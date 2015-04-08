@@ -913,6 +913,10 @@ static const asn1Object_t timeObjects[] = {
 	{ 0, "end opt",			ASN1_EOC,				ASN1_END			}, /* 3 */
 	{ 0, "exit",			ASN1_EOC,				ASN1_EXIT			}
 };
+#ifdef TIME_UTC
+/* used by C11 timespec_get(), <time.h> */
+# undef TIME_UTC
+#endif
 #define TIME_UTC			0
 #define TIME_GENERALIZED	2
 
