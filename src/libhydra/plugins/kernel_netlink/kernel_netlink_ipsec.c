@@ -1822,7 +1822,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
-	u_int32_t replay_esn_len;
+	u_int32_t replay_esn_len = 0;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
