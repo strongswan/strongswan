@@ -132,7 +132,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
-	if (!tkm->sad->insert(tkm->sad, reqid, esa_id, local, peer, spi_rem,
+	if (!tkm->sad->insert(tkm->sad, esa_id, reqid, local, peer, spi_rem,
 						  protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
