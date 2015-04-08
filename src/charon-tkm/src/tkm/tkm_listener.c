@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <stdarg.h>
+
 #include <daemon.h>
 #include <encoding/payloads/auth_payload.h>
 #include <utils/chunk.h>
@@ -209,6 +211,13 @@ METHOD(listener_t, alert, bool,
 	{
 		tkm_keymat_t *keymat;
 		isa_id_type isa_id;
+		int is_first;
+
+		is_first = va_arg(args, int);
+		if (!is_first)
+		{
+			return TRUE;
+		}
 
 		keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
 		isa_id = keymat->get_isa_id(keymat);
