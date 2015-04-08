@@ -127,6 +127,26 @@ static bool sad_entry_match_dst(sad_entry_t * const entry,
 }
 
 /**
+ * Find a list entry with given esa id.
+ */
+static bool sad_entry_match_esa_id(sad_entry_t * const entry,
+								   const esa_id_type * const esa_id)
+{
+	return entry->esa_id == *esa_id;
+}
+
+/**
+ * Find a list entry with given reqid and different esa id.
+ */
+static bool sad_entry_match_other_esa(sad_entry_t * const entry,
+									  const esa_id_type * const esa_id,
+									  const u_int32_t * const reqid)
+{
+	return entry->reqid  == *reqid &&
+		   entry->esa_id != *esa_id;
+}
+
+/**
  * Compare two SAD entries for equality.
  */
 static bool sad_entry_equal(sad_entry_t * const left, sad_entry_t * const right)
@@ -204,6 +224,42 @@ METHOD(tkm_kernel_sad_t, get_esa_id, esa_id_type,
 	{
 		DBG3(DBG_KNL, "no SAD entry found for src %H, dst %H, spi %x, proto %u",
 			 src, dst, ntohl(spi), proto);
+	}
+	this->mutex->unlock(this->mutex);
+	return id;
+}
+
+METHOD(tkm_kernel_sad_t, get_other_esa_id, esa_id_type,
+	private_tkm_kernel_sad_t * const this, const esa_id_type esa_id)
+{
+	esa_id_type id = 0;
+	sad_entry_t *entry = NULL;
+	u_int32_t reqid;
+	status_t res;
+
+	this->mutex->lock(this->mutex);
+	res = this->data->find_first(this->data,
+								 (linked_list_match_t)sad_entry_match_esa_id,
+								 (void**)&entry, &esa_id);
+	if (res == SUCCESS && entry)
+	{
+		reqid = entry->reqid;
+	}
+	else
+	{
+		DBG3(DBG_KNL, "no SAD entry found for ESA id %llu", esa_id);
+		this->mutex->unlock(this->mutex);
+		return id;
+	}
+
+	res = this->data->find_first(this->data,
+								 (linked_list_match_t)sad_entry_match_other_esa,
+								 (void**)&entry, &esa_id, &reqid);
+	if (res == SUCCESS && entry)
+	{
+		id = entry->esa_id;
+		DBG3(DBG_KNL, "returning ESA id %llu of other SAD entry with reqid %u",
+			 id, reqid);
 	}
 	this->mutex->unlock(this->mutex);
 	return id;
@@ -289,6 +345,7 @@ tkm_kernel_sad_t *tkm_kernel_sad_create()
 		.public = {
 			.insert = _insert,
 			.get_esa_id = _get_esa_id,
+			.get_other_esa_id = _get_other_esa_id,
 			.get_dst_host = _get_dst_host,
 			.remove = __remove,
 			.destroy = _destroy,
