@@ -1092,7 +1092,10 @@ METHOD(task_t, process_r, status_t,
 static void handle_child_sa_failure(private_child_create_t *this,
 									message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
+	bool is_first;
+
+	is_first = message->get_exchange_type(message) == IKE_AUTH;
+	if (is_first &&
 		lib->settings->get_bool(lib->settings,
 								"%s.close_ike_on_child_failure", FALSE, lib->ns))
 	{
@@ -1106,7 +1109,8 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	else
 	{
 		DBG1(DBG_IKE, "failed to establish CHILD_SA, keeping IKE_SA");
-		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE);
+		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE,
+						   is_first);
 	}
 }
 
