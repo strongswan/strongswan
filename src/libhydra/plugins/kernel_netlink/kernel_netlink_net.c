@@ -1551,6 +1551,26 @@ static void rt_entry_destroy(rt_entry_t *this)
 }
 
 /**
+ * Check if the route received with RTM_NEWROUTE is usable based on its type.
+ */
+static bool route_usable(struct nlmsghdr *hdr)
+{
+	struct rtmsg *msg;
+
+	msg = NLMSG_DATA(hdr);
+	switch (msg->rtm_type)
+	{
+		case RTN_BLACKHOLE:
+		case RTN_UNREACHABLE:
+		case RTN_PROHIBIT:
+		case RTN_THROW:
+			return FALSE;
+		default:
+			return TRUE;
+	}
+}
+
+/**
  * Parse route received with RTM_NEWROUTE. The given rt_entry_t object will be
  * reused if not NULL.
  *
@@ -1700,6 +1720,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				rt_entry_t *other;
 				uintptr_t table;
 
+				if (!route_usable(current))
+				{
+					continue;
+				}
 				route = parse_route(current, route);
 
 				table = (uintptr_t)route->table;
