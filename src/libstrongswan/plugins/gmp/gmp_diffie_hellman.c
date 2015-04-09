@@ -162,6 +162,15 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	return TRUE;
 }
 
+METHOD(diffie_hellman_t, set_private_value, bool,
+	private_gmp_diffie_hellman_t *this, chunk_t value)
+{
+	mpz_import(this->xa, value.len, 1, 1, 1, 0, value.ptr);
+	mpz_powm(this->ya, this->g, this->xa, this->p);
+	this->computed = FALSE;
+	return TRUE;
+}
+
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_gmp_diffie_hellman_t *this, chunk_t *secret)
 {
@@ -212,6 +221,7 @@ static gmp_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
+				.set_private_value = _set_private_value,
 				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},
