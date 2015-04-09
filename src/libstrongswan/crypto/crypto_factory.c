@@ -377,6 +377,12 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	{
 		if (entry->algo == group)
 		{
+			if (this->test_on_create && group != MODP_CUSTOM &&
+				!this->tester->test_dh(this->tester, group,
+								entry->create_dh, NULL, default_plugin_name))
+			{
+				continue;
+			}
 			diffie_hellman = entry->create_dh(group, g, p);
 			if (diffie_hellman)
 			{
@@ -692,8 +698,17 @@ METHOD(crypto_factory_t, add_dh, bool,
 	private_crypto_factory_t *this, diffie_hellman_group_t group,
 	const char *plugin_name, dh_constructor_t create)
 {
-	add_entry(this, this->dhs, group, plugin_name, 0, create);
-	return TRUE;
+	u_int speed = 0;
+
+	if (!this->test_on_add ||
+		this->tester->test_dh(this->tester, group, create,
+							  this->bench ? &speed : NULL, plugin_name))
+	{
+		add_entry(this, this->dhs, group, plugin_name, 0, create);
+		return TRUE;
+	}
+	this->test_failures++;
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, remove_dh, void,
@@ -892,6 +907,8 @@ METHOD(crypto_factory_t, add_test_vector, void,
 			return this->tester->add_prf_vector(this->tester, vector);
 		case RANDOM_NUMBER_GENERATOR:
 			return this->tester->add_rng_vector(this->tester, vector);
+		case DIFFIE_HELLMAN_GROUP:
+			return this->tester->add_dh_vector(this->tester, vector);
 		default:
 			DBG1(DBG_LIB, "%N test vectors not supported, ignored",
 				 transform_type_names, type);
@@ -1016,6 +1033,7 @@ static u_int verify_registered_algorithms(crypto_factory_t *factory)
 	TEST_ALGORITHMS(hasher);
 	TEST_ALGORITHMS(prf);
 	TEST_ALGORITHMS(rng);
+	TEST_ALGORITHMS(dh);
 	this->lock->unlock(this->lock);
 	return failures;
 }
