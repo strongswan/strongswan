@@ -37,6 +37,11 @@ typedef struct ha_cache_t ha_cache_t;
 struct ha_cache_t {
 
 	/**
+	 * Implements listener interface to catch reload events
+	 */
+	listener_t listener;
+
+	/**
 	 * Cache an IKE specific message.
 	 *
 	 * @param ike_sa		associated IKE_SA

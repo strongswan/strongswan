@@ -107,6 +107,7 @@ static bool plugin_cb(private_ha_plugin_t *this,
 		charon->bus->add_listener(charon->bus, &this->segments->listener);
 		charon->bus->add_listener(charon->bus, &this->ike->listener);
 		charon->bus->add_listener(charon->bus, &this->child->listener);
+		charon->bus->add_listener(charon->bus, &this->cache->listener);
 		charon->attributes->add_provider(charon->attributes,
 										 &this->attr->provider);
 	}
@@ -117,6 +118,7 @@ static bool plugin_cb(private_ha_plugin_t *this,
 		charon->bus->remove_listener(charon->bus, &this->segments->listener);
 		charon->bus->remove_listener(charon->bus, &this->ike->listener);
 		charon->bus->remove_listener(charon->bus, &this->child->listener);
+		charon->bus->remove_listener(charon->bus, &this->cache->listener);
 	}
 	return TRUE;
 }

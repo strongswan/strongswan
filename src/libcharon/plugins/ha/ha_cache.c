@@ -56,6 +56,11 @@ struct private_ha_cache_t {
 	 * Mutex to lock cache
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Sync configuration on config reload
+	 */
+	bool sync;
 };
 
 /**
@@ -353,6 +358,23 @@ static job_requeue_t request_resync(private_ha_cache_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+METHOD(listener_t, alert_hook, bool,
+	private_ha_cache_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
+{
+	if (alert == ALERT_CONF_RELOAD_FINISHED)
+	{
+		if (this->sync)
+		{
+			lib->processor->queue_job(lib->processor, (job_t*)
+				callback_job_create_with_prio((callback_job_cb_t)request_resync,
+										this, NULL, NULL, JOB_PRIO_CRITICAL));
+		}
+		/* Request sync only after the first configuration load */
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(ha_cache_t, destroy, void,
 	private_ha_cache_t *this)
 {
@@ -371,6 +393,9 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 
 	INIT(this,
 		.public = {
+			.listener = {
+				.alert = _alert_hook,
+			},
 			.cache = _cache,
 			.delete = _delete_,
 			.resync = _resync,
@@ -381,14 +406,8 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 		.socket = socket,
 		.cache = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 8),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.sync = sync,
 	);
 
-	if (sync)
-	{
-		/* request a resync as soon as we are up */
-		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-			callback_job_create_with_prio((callback_job_cb_t)request_resync,
-									this, NULL, NULL, JOB_PRIO_CRITICAL), 1);
-	}
 	return &this->public;
 }
