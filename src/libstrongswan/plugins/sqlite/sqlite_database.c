@@ -69,6 +69,18 @@ typedef struct {
 } transaction_t;
 
 /**
+ * Check if the SQLite library is thread safe
+ */
+static bool is_threadsave()
+{
+#if SQLITE_VERSION_NUMBER >= 3005000
+	return sqlite3_threadsafe() > 0;
+#endif
+	/* sqlite connections prior to 3.5 may be used by a single thread only */
+	return FALSE;
+}
+
+/**
  * Create and run a sqlite stmt using a sql string and args
  */
 static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
@@ -168,9 +180,10 @@ typedef struct {
 static void sqlite_enumerator_destroy(sqlite_enumerator_t *this)
 {
 	sqlite3_finalize(this->stmt);
-#if SQLITE_VERSION_NUMBER < 3005000
-	this->database->mutex->unlock(this->database->mutex);
-#endif
+	if (!is_threadsave())
+	{
+		this->database->mutex->unlock(this->database->mutex);
+	}
 	free(this->columns);
 	free(this);
 }
@@ -248,10 +261,10 @@ METHOD(database_t, query, enumerator_t*,
 	sqlite_enumerator_t *enumerator = NULL;
 	int i;
 
-#if SQLITE_VERSION_NUMBER < 3005000
-	/* sqlite connections prior to 3.5 may be used by a single thread only, */
-	this->mutex->lock(this->mutex);
-#endif
+	if (!is_threadsave())
+	{
+		this->mutex->lock(this->mutex);
+	}
 
 	va_start(args, sql);
 	stmt = run(this, sql, &args);
