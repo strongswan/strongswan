@@ -152,6 +152,10 @@ enum alert_t {
 	ALERT_CERT_EXCEEDED_PATH_LEN,
 	/** Certificate rejected; other policy violation, certificate_t */
 	ALERT_CERT_POLICY_VIOLATION,
+	/** Configuration reload started, no argument */
+	ALERT_CONF_RELOAD_STARTED,
+	/** Configuration reload finished, no argument */
+	ALERT_CONF_RELOAD_FINISHED,
 };
 
 /**
