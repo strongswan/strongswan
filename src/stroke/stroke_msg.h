@@ -230,6 +230,10 @@ struct stroke_msg_t {
 		STR_USER_CREDS,
 		/* print/reset counters */
 		STR_COUNTERS,
+		/* notify a config reload start */
+		STR_CONF_RELOAD_START,
+		/* notify a config reload end */
+		STR_CONF_RELOAD_END,
 		/* more to come */
 	} type;
 

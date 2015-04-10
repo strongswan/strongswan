@@ -730,6 +730,14 @@ static bool on_accept(private_stroke_socket_t *this, stream_t *stream)
 		case STR_COUNTERS:
 			stroke_counters(this, msg, out);
 			break;
+		case STR_CONF_RELOAD_START:
+			DBG1(DBG_CFG, "received stroke conf reload start");
+			charon->bus->alert(charon->bus, ALERT_CONF_RELOAD_STARTED);
+			break;
+		case STR_CONF_RELOAD_END:
+			DBG1(DBG_CFG, "received stroke conf reload end");
+			charon->bus->alert(charon->bus, ALERT_CONF_RELOAD_FINISHED);
+			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
 			break;
