@@ -110,6 +110,23 @@ struct listener_t {
 					   chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
+	 * Hook called if an IKE_SA gets routed.
+	 *
+	 * @param child_cfg	IKE_SA Config Template to be routed
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+
+	bool (*child_route)(listener_t *this, child_sa_t *child_sa, peer_cfg_t *peer);
+
+	/**
+	 * Hook called if an IKE_SA gets routed.
+	 *
+	 * @param child_cfg	IKE_SA Config Template to be unrouted
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+
+	bool (*child_unroute)(listener_t *this, child_sa_t *child_sa);
+	/**
 	 * Hook called if an IKE_SA gets up or down.
 	 *
 	 * @param ike_sa	IKE_SA coming up/going down

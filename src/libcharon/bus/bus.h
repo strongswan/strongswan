@@ -366,6 +366,21 @@ struct bus_t {
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
+	 * CHILD_SA route hook.
+	 *
+	 * @param child_sa	Child SA to be routed
+	 * @param peer_cfg	Peer Config to be routed
+	 */
+	void (*child_route)(bus_t *this, child_sa_t *child_sa, peer_cfg_t *peer);
+
+	/**
+	 * CHILD_SA unroute hook.
+	 *
+	 * @param child_sa	Child SA to be routed
+	 */
+	void (*child_unroute)(bus_t *this, child_sa_t *child_sa);
+
+	/**
 	 * IKE_SA up/down hook.
 	 *
 	 * @param ike_sa	IKE_SA coming up/going down

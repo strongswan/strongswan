@@ -215,6 +215,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 		this->lock->write_lock(this->lock);
 		entry->child_sa = child_sa;
 		this->lock->unlock(this->lock);
+		charon->bus->child_route(charon->bus, child_sa, peer);
 	}
 	if (found)
 	{
@@ -237,6 +238,7 @@ METHOD(trap_manager_t, uninstall, bool,
 			entry->child_sa->get_reqid(entry->child_sa) == reqid)
 		{
 			this->traps->remove_at(this->traps, enumerator);
+			charon->bus->child_unroute(charon->bus, entry->child_sa);
 			found = entry;
 			break;
 		}
