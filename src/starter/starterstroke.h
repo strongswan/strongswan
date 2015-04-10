@@ -18,6 +18,8 @@
 
 #include "confread.h"
 
+int starter_stroke_config_reload_start();
+int starter_stroke_config_reload_end();
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn);
 int starter_stroke_del_conn(starter_conn_t *conn);
 int starter_stroke_route_conn(starter_conn_t *conn);

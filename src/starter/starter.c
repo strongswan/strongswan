@@ -705,6 +705,11 @@ int main (int argc, char **argv)
 			exit(LSB_RC_SUCCESS);
 		}
 
+		if (starter_charon_pid())
+		{
+			starter_stroke_config_reload_start();
+		}
+
 		/*
 		 * Delete all connections. Will be added below
 		 */
@@ -848,6 +853,7 @@ int main (int argc, char **argv)
 			}
 			_action_ &= ~FLAG_ACTION_START_CHARON;
 
+			starter_stroke_config_reload_start();
 			for (ca = cfg->ca_first; ca; ca = ca->next)
 			{
 				if (ca->state == STATE_ADDED)
@@ -913,6 +919,7 @@ int main (int argc, char **argv)
 					}
 				}
 			}
+			starter_stroke_config_reload_end();
 		}
 
 		/*

@@ -109,6 +109,24 @@ static char* connection_name(starter_conn_t *conn)
 	return conn->name;
 }
 
+int starter_stroke_config_reload_start()
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_CONF_RELOAD_START;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	return send_stroke_msg(&msg);
+}
+
+int starter_stroke_config_reload_end()
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_CONF_RELOAD_END;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	return send_stroke_msg(&msg);
+}
+
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {
 	msg_end->auth = push_string(msg, conn_end->auth);
