@@ -61,6 +61,32 @@ START_TEST(test_chunk_equals)
 END_TEST
 
 /*******************************************************************************
+ * equals_const
+ */
+
+START_TEST(test_chunk_equals_const)
+{
+	chunk_t chunk = chunk_from_str("chunk");
+	chunk_t chunk_a, chunk_b;
+
+	chunk_a = chunk_empty;
+	chunk_b = chunk_empty;
+	ck_assert(!chunk_equals_const(chunk_a, chunk_b));
+
+	chunk_a = chunk;
+	ck_assert(!chunk_equals_const(chunk_a, chunk_b));
+	chunk_b = chunk;
+	ck_assert(chunk_equals_const(chunk_a, chunk_b));
+
+	chunk_b = chunk_from_str("asdf");
+	ck_assert(!chunk_equals_const(chunk_a, chunk_b));
+
+	chunk_b = chunk_from_str("chunk");
+	ck_assert(chunk_equals_const(chunk_a, chunk_b));
+}
+END_TEST
+
+/*******************************************************************************
  * chunk_compare test
  */
 
@@ -1013,6 +1039,7 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("equals");
 	tcase_add_test(tc, test_chunk_equals);
+	tcase_add_test(tc, test_chunk_equals_const);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("chunk_compare");

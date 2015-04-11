@@ -235,6 +235,48 @@ static bool attack_memeq(char *name, u_int iterations, u_int distance)
 	return FALSE;
 }
 
+CALLBACK(attack_chunk1, bool,
+	u_char *subj, u_char *data, size_t len)
+{
+	return chunk_equals(chunk_create(subj, len), chunk_create(data, len));
+}
+
+CALLBACK(attack_chunk2, bool,
+	u_char *subj, u_char *data, size_t len)
+{
+	return chunk_equals_const(chunk_create(subj, len), chunk_create(data, len));
+}
+
+static bool attack_chunk(char *name, u_int iterations, u_int distance)
+{
+	struct {
+		char *name;
+		attackfn_t fn;
+	} attacks[] = {
+		{ "chunk1", attack_chunk1 },
+		{ "chunk2", attack_chunk2 },
+	};
+	u_char exp[16];
+	int i;
+
+	srandom(time(NULL));
+	for (i = 0; i < sizeof(exp); i++)
+	{
+		exp[i] = random();
+	}
+	fprintf(stderr, "attacking %b\n", exp, sizeof(exp));
+
+	for (i = 0; i < countof(attacks); i++)
+	{
+		if (streq(name, attacks[i].name))
+		{
+			return timeattack(attacks[i].fn, exp, sizeof(exp),
+							  iterations, distance);
+		}
+	}
+	return FALSE;
+}
+
 CALLBACK(attack_aead, bool,
 	aead_t *aead, u_char *data, size_t len)
 {
@@ -357,7 +399,7 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 	{
 		fprintf(stderr, "usage: %s <attack> <iterations> <distance>\n", argv[0]);
-		fprintf(stderr, "  <attack>: memeq[1-5] / aead / signer\n");
+		fprintf(stderr, "  <attack>: memeq[1-5] / chunk[1-2] / aead / signer\n");
 		fprintf(stderr, "  <iterations>: number of invocations * 1000\n");
 		fprintf(stderr, "  <distance>: time difference in ns for a hit\n");
 		fprintf(stderr, "  example: %s memeq1 100 500\n", argv[0]);
@@ -367,6 +409,10 @@ int main(int argc, char *argv[])
 	if (strpfx(argv[1], "memeq"))
 	{
 		return !attack_memeq(argv[1], atoi(argv[2]), atoi(argv[3]));
+	}
+	if (strpfx(argv[1], "chunk"))
+	{
+		return !attack_chunk(argv[1], atoi(argv[2]), atoi(argv[3]));
 	}
 	return !attack_transform(argv[1], atoi(argv[2]), atoi(argv[3]));
 }

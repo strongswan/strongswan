@@ -310,6 +310,19 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
 }
 
 /**
+ * Compare two chunks for equality, constant time for cryptographic purposes.
+ *
+ * Note that this function is constant time only for chunks with the same
+ * length, i.e. it does not protect against guessing the length of one of the
+ * chunks.
+ */
+static inline bool chunk_equals_const(chunk_t a, chunk_t b)
+{
+	return a.ptr != NULL  && b.ptr != NULL &&
+			a.len == b.len && memeq_const(a.ptr, b.ptr, a.len);
+}
+
+/**
  * Compare two chunks (given as pointers) for equality (useful as callback),
  * NULL chunks are never equal.
  */
