@@ -86,7 +86,7 @@ METHOD(sasl_mechanism_t, process_server, status_t,
 		DBG1(DBG_CFG, "no shared secret found for '%Y'", this->client);
 		return FAILED;
 	}
-	if (!chunk_equals(shared->get_key(shared), password))
+	if (!chunk_equals_const(shared->get_key(shared), password))
 	{
 		DBG1(DBG_CFG, "shared secret for '%Y' does not match", this->client);
 		shared->destroy(shared);

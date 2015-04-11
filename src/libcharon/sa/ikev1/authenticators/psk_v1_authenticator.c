@@ -124,7 +124,7 @@ METHOD(authenticator_t, process, status_t,
 		return FAILED;
 	}
 	free(dh.ptr);
-	if (chunk_equals(hash, hash_payload->get_hash(hash_payload)))
+	if (chunk_equals_const(hash, hash_payload->get_hash(hash_payload)))
 	{
 		free(hash.ptr);
 		if (!this->hybrid)

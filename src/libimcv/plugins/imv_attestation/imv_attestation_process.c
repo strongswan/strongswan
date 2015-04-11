@@ -181,7 +181,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			DBG1(DBG_IMV, "verifying AIK with keyid %#B", &keyid);
 			keyid_hex = chunk_to_hex(keyid, NULL, FALSE);
 			if (session->get_device_id(session, &device_id) &&
-				chunk_equals(keyid_hex, device_id))
+				chunk_equals_const(keyid_hex, device_id))
 			{
 				trusted = session->get_device_trust(session);
 			}
@@ -290,7 +290,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 
 						/* check hashes from database against measurements */
 						e = pts_db->create_file_hash_enumerator(pts_db,
-											pts->get_platform_id(pts), 
+											pts->get_platform_id(pts),
 											algo, is_dir, arg_int);
 						if (!e)
 						{
@@ -446,7 +446,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 					return FALSE;
 				}
 
-				if (!chunk_equals(pcr_comp, pcr_composite))
+				if (!chunk_equals_const(pcr_comp, pcr_composite))
 				{
 					DBG1(DBG_IMV, "received PCR Composite does not match "
 								  "constructed one");
@@ -564,4 +564,3 @@ quote_error:
 	}
 	return TRUE;
 }
-

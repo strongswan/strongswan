@@ -180,7 +180,7 @@ METHOD(xauth_method_t, process_server, status_t,
 										SHARED_EAP, this->server, this->peer);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
-		if (chunk_equals(shared->get_key(shared), pass))
+		if (chunk_equals_const(shared->get_key(shared), pass))
 		{
 			status = SUCCESS;
 			break;

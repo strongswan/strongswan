@@ -812,7 +812,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 		goto error;
 	}
 
-	if (!chunk_equals(this->auth_response, auth_string))
+	if (!chunk_equals_const(this->auth_response, auth_string))
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed");
 		goto error;

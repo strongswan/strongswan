@@ -133,7 +133,7 @@ METHOD(pts_file_meas_t, check, bool,
 		{
 			while (e->enumerate(e, &hash))
 			{
-				if (chunk_equals(entry->measurement, hash))
+				if (chunk_equals_const(entry->measurement, hash))
 				{
 					status = SUCCESS;
 					break;
@@ -223,7 +223,7 @@ METHOD(pts_file_meas_t, verify, bool,
 				}
 			}
 
-			/* no PTS measurement returned for this filename */ 
+			/* no PTS measurement returned for this filename */
 			if (!found)
 			{
 				success = FALSE;
@@ -234,7 +234,7 @@ METHOD(pts_file_meas_t, verify, bool,
 
 		if (found && !match)
 		{
-			if (chunk_equals(measurement, entry->measurement))
+			if (chunk_equals_const(measurement, entry->measurement))
 			{
 				match = TRUE;
 				DBG2(DBG_PTS, "  %#B for '%s' is ok",
@@ -252,7 +252,7 @@ METHOD(pts_file_meas_t, verify, bool,
 			 &entry->measurement, entry->filename);
 			enumerator->destroy(enumerator);
 	}
-	
+
 	return success;
 }
 

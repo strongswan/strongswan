@@ -249,7 +249,7 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
+		if (!chunk_equals_const(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
 			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value",
 						   extended_pcr);
@@ -354,4 +354,3 @@ pts_component_t *pts_ita_comp_tboot_create(u_int32_t depth,
 
 	return &this->public;
 }
-

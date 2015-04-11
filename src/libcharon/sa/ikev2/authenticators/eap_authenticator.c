@@ -464,7 +464,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 		return FALSE;
 	}
 	recv_auth_data = auth_payload->get_data(auth_payload);
-	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
+	if (!auth_data.len || !chunk_equals_const(auth_data, recv_auth_data))
 	{
 		DBG1(DBG_IKE, "verification of AUTH payload with%s EAP MSK failed",
 			 this->msk.ptr ? "" : "out");

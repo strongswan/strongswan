@@ -123,7 +123,7 @@ METHOD(authenticator_t, process, status_t,
 		{
 			continue;
 		}
-		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
+		if (auth_data.len && chunk_equals_const(auth_data, recv_auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 				 other_id, auth_method_names, AUTH_PSK);

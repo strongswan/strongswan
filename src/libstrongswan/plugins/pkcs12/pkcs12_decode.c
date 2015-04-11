@@ -356,7 +356,7 @@ static bool verify_mac(hash_algorithm_t hash, chunk_t salt,
 		{
 			break;
 		}
-		if (chunk_equals(mac, calculated))
+		if (chunk_equals_const(mac, calculated))
 		{
 			success = TRUE;
 			break;
