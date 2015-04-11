@@ -185,6 +185,11 @@ static inline bool memeq(const void *x, const void *y, size_t len)
 }
 
 /**
+ * Same as memeq(), but with a constant runtime, safe for cryptographic use.
+ */
+bool memeq_const(const void *x, const void *y, size_t len);
+
+/**
  * Calling memcpy() with NULL pointers, even with n == 0, results in undefined
  * behavior according to the C standard.  This version is guaranteed to not
  * access the pointers if n is 0.

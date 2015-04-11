@@ -112,6 +112,25 @@ void memwipe_noinline(void *ptr, size_t n)
 /**
  * Described in header.
  */
+bool memeq_const(const void *x, const void *y, size_t len)
+{
+	const u_char *a, *b;
+	u_int bad = 0;
+	size_t i;
+
+	a = (const u_char*)x;
+	b = (const u_char*)y;
+
+	for (i = 0; i < len; i++)
+	{
+		bad |= a[i] != b[i];
+	}
+	return !bad;
+}
+
+/**
+ * Described in header.
+ */
 void *memstr(const void *haystack, const char *needle, size_t n)
 {
 	const u_char *pos = haystack;

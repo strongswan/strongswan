@@ -196,6 +196,12 @@ CALLBACK(attack_memeq4, bool,
 	return !m;
 }
 
+CALLBACK(attack_memeq5, bool,
+	u_char *subj, u_char *data, size_t len)
+{
+	return memeq_const(subj, data, len);
+}
+
 static bool attack_memeq(char *name, u_int iterations, u_int distance)
 {
 	struct {
@@ -206,6 +212,7 @@ static bool attack_memeq(char *name, u_int iterations, u_int distance)
 		{ "memeq2", attack_memeq2 },
 		{ "memeq3", attack_memeq3 },
 		{ "memeq4", attack_memeq4 },
+		{ "memeq5", attack_memeq5 },
 	};
 	u_char exp[16];
 	int i;
@@ -350,7 +357,7 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 	{
 		fprintf(stderr, "usage: %s <attack> <iterations> <distance>\n", argv[0]);
-		fprintf(stderr, "  <attack>: memeq[1-4] / aead / signer\n");
+		fprintf(stderr, "  <attack>: memeq[1-5] / aead / signer\n");
 		fprintf(stderr, "  <iterations>: number of invocations * 1000\n");
 		fprintf(stderr, "  <distance>: time difference in ns for a hit\n");
 		fprintf(stderr, "  example: %s memeq1 100 500\n", argv[0]);
