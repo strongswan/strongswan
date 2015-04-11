@@ -187,7 +187,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 				 " %u bytes", em.len, data.len);
 			goto end;
 		}
-		success = memeq(em.ptr, data.ptr, data.len);
+		success = memeq_const(em.ptr, data.ptr, data.len);
 	}
 	else
 	{   /* IKEv2 and X.509 certificate signatures */
@@ -258,7 +258,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 						goto end_parser;
 					}
 					hasher->destroy(hasher);
-					success = memeq(object.ptr, hash.ptr, hash.len);
+					success = memeq_const(object.ptr, hash.ptr, hash.len);
 					free(hash.ptr);
 					break;
 				}
@@ -500,4 +500,3 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_load(key_type_t type, va_list args)
 
 	return &this->public;
 }
-

@@ -193,7 +193,7 @@ METHOD(eap_method_t, process_server, status_t,
 	}
 	response = chunk_create(data.ptr + 6, data.ptr[5]);
 	if (response.len < expected.len ||
-		!memeq(response.ptr, expected.ptr, expected.len))
+		!memeq_const(response.ptr, expected.ptr, expected.len))
 	{
 		chunk_free(&expected);
 		DBG1(DBG_IKE, "EAP-MD5 verification failed");
@@ -299,4 +299,3 @@ eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer)
 
 	return &this->public;
 }
-

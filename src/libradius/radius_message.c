@@ -536,7 +536,7 @@ METHOD(radius_message_t, verify, bool,
 		/* verify Response-Authenticator */
 		if (!hasher->get_hash(hasher, msg, NULL) ||
 			!hasher->get_hash(hasher, secret, buf) ||
-			!memeq(buf, res_auth, HASH_SIZE_MD5))
+			!memeq_const(buf, res_auth, HASH_SIZE_MD5))
 		{
 			DBG1(DBG_CFG, "RADIUS Response-Authenticator verification failed");
 			return FALSE;

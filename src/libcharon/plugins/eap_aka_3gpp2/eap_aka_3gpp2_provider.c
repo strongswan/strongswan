@@ -158,7 +158,7 @@ METHOD(simaka_provider_t, resync, bool,
 	{
 		return FALSE;
 	}
-	if (!memeq(macs, xmacs, AKA_MAC_LEN))
+	if (!memeq_const(macs, xmacs, AKA_MAC_LEN))
 	{
 		DBG1(DBG_IKE, "received MACS does not match XMACS");
 		DBG3(DBG_IKE, "MACS %b XMACS %b",
@@ -205,4 +205,3 @@ eap_aka_3gpp2_provider_t *eap_aka_3gpp2_provider_create(
 
 	return &this->public;
 }
-
