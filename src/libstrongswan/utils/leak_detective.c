@@ -552,6 +552,7 @@ char *whitelist[] = {
 	/* ClearSilver */
 	"nerr_init",
 	/* libgcrypt */
+	"gcrypt_plugin_create",
 	"gcry_control",
 	"gcry_check_version",
 	"gcry_randomize",
