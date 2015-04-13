@@ -41,6 +41,7 @@ Suite *vectors_suite_create()
 
 	tc = tcase_create("failures");
 	tcase_add_test(tc, test_vectors);
+	tcase_set_timeout(tc, 8);
 	suite_add_tcase(s, tc);
 
 	return s;
