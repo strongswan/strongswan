@@ -921,6 +921,119 @@ METHOD(crypto_factory_t, get_test_vector_failures, u_int,
 	return this->test_failures;
 }
 
+/**
+ * Private enumerator for create_verify_enumerator()
+ */
+typedef struct {
+	enumerator_t public;
+	enumerator_t *inner;
+	transform_type_t type;
+	crypto_tester_t *tester;
+	rwlock_t *lock;
+} verify_enumerator_t;
+
+METHOD(enumerator_t, verify_enumerate, bool,
+	verify_enumerator_t *this, u_int *alg, const char **plugin, bool *valid)
+{
+	entry_t *entry;
+
+	if (!this->inner->enumerate(this->inner, &entry))
+	{
+		return FALSE;
+	}
+	switch (this->type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			*valid = this->tester->test_crypter(this->tester, entry->algo, 0,
+							entry->create_crypter, NULL, entry->plugin_name);
+			break;
+		case AEAD_ALGORITHM:
+			*valid = this->tester->test_aead(this->tester, entry->algo, 0, 0,
+							entry->create_aead, NULL, entry->plugin_name);
+			break;
+		case INTEGRITY_ALGORITHM:
+			*valid = this->tester->test_signer(this->tester, entry->algo,
+							entry->create_signer, NULL, entry->plugin_name);
+			break;
+		case HASH_ALGORITHM:
+			*valid = this->tester->test_hasher(this->tester, entry->algo,
+							entry->create_hasher, NULL, entry->plugin_name);
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			*valid = this->tester->test_prf(this->tester, entry->algo,
+							entry->create_prf, NULL, entry->plugin_name);
+			break;
+		case RANDOM_NUMBER_GENERATOR:
+			*valid = this->tester->test_rng(this->tester, entry->algo,
+							entry->create_rng, NULL, entry->plugin_name);
+			break;
+		case DIFFIE_HELLMAN_GROUP:
+			*valid = this->tester->test_dh(this->tester, entry->algo,
+							entry->create_dh, NULL, entry->plugin_name);
+			break;
+		default:
+			return FALSE;
+	}
+	*plugin = entry->plugin_name;
+	*alg = entry->algo;
+	return TRUE;
+}
+
+METHOD(enumerator_t, verify_destroy, void,
+	verify_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	this->lock->unlock(this->lock);
+	free(this);
+}
+
+METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
+	private_crypto_factory_t *this, transform_type_t type)
+{
+	verify_enumerator_t *enumerator;
+	enumerator_t *inner;
+
+	this->lock->read_lock(this->lock);
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			inner = this->crypters->create_enumerator(this->crypters);
+			break;
+		case AEAD_ALGORITHM:
+			inner = this->aeads->create_enumerator(this->aeads);
+			break;
+		case INTEGRITY_ALGORITHM:
+			inner = this->signers->create_enumerator(this->signers);
+			break;
+		case HASH_ALGORITHM:
+			inner = this->hashers->create_enumerator(this->hashers);
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			inner = this->prfs->create_enumerator(this->prfs);
+			break;
+		case RANDOM_NUMBER_GENERATOR:
+			inner = this->rngs->create_enumerator(this->rngs);
+			break;
+		case DIFFIE_HELLMAN_GROUP:
+			inner = this->dhs->create_enumerator(this->dhs);
+			break;
+		default:
+			this->lock->unlock(this->lock);
+			return enumerator_create_empty();
+	}
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_verify_enumerate,
+			.destroy = _verify_destroy,
+		},
+		.inner = inner,
+		.type = type,
+		.tester = this->tester,
+		.lock = this->lock,
+	);
+	return &enumerator->public;
+}
+
 METHOD(crypto_factory_t, destroy, void,
 	private_crypto_factory_t *this)
 {
@@ -980,6 +1093,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_nonce_gen_enumerator = _create_nonce_gen_enumerator,
 			.add_test_vector = _add_test_vector,
 			.get_test_vector_failures = _get_test_vector_failures,
+			.create_verify_enumerator = _create_verify_enumerator,
 			.destroy = _destroy,
 		},
 		.crypters = linked_list_create(),

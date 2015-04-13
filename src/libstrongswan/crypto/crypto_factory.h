@@ -382,6 +382,19 @@ struct crypto_factory_t {
 	u_int (*get_test_vector_failures)(crypto_factory_t *this);
 
 	/**
+	 * Create an enumerator verifying transforms using known test vectors.
+	 *
+	 * The resulting enumerator enumerates over an u_int with the type
+	 * specific transform identifier, the plugin name providing the transform,
+	 * and a boolean value indicating success/failure for the given transform.
+	 *
+	 * @param type			transform type to test
+	 * @return				enumerator over (u_int, char*, bool)
+	 */
+	enumerator_t* (*create_verify_enumerator)(crypto_factory_t *this,
+											  transform_type_t type);
+
+	/**
 	 * Destroy a crypto_factory instance.
 	 */
 	void (*destroy)(crypto_factory_t *this);
