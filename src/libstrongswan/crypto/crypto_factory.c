@@ -915,12 +915,6 @@ METHOD(crypto_factory_t, add_test_vector, void,
 	}
 }
 
-METHOD(crypto_factory_t, get_test_vector_failures, u_int,
-	private_crypto_factory_t *this)
-{
-	return this->test_failures;
-}
-
 /**
  * Private enumerator for create_verify_enumerator()
  */
@@ -1092,7 +1086,6 @@ crypto_factory_t *crypto_factory_create()
 			.create_rng_enumerator = _create_rng_enumerator,
 			.create_nonce_gen_enumerator = _create_nonce_gen_enumerator,
 			.add_test_vector = _add_test_vector,
-			.get_test_vector_failures = _get_test_vector_failures,
 			.create_verify_enumerator = _create_verify_enumerator,
 			.destroy = _destroy,
 		},
@@ -1116,40 +1109,3 @@ crypto_factory_t *crypto_factory_create()
 
 	return &this->public;
 }
-
-/**
- * Manually verify all registered algorithms against test vectors
- */
-static u_int verify_registered_algorithms(crypto_factory_t *factory)
-{
-	private_crypto_factory_t *this = (private_crypto_factory_t*)factory;
-	enumerator_t *enumerator;
-	entry_t *entry;
-	u_int failures = 0;
-
-#define TEST_ALGORITHMS(test, ...) do { \
-	enumerator = this->test##s->create_enumerator(this->test##s); \
-	while (enumerator->enumerate(enumerator, &entry)) \
-	{ \
-		if (!this->tester->test_##test(this->tester, entry->algo, ##__VA_ARGS__, \
-							entry->create_##test, NULL, entry->plugin_name)) \
-		{ \
-			failures++; \
-		} \
-	} \
-	enumerator->destroy(enumerator); \
-} while (0)
-
-	this->lock->read_lock(this->lock);
-	TEST_ALGORITHMS(crypter, 0);
-	TEST_ALGORITHMS(aead, 0, 0);
-	TEST_ALGORITHMS(signer);
-	TEST_ALGORITHMS(hasher);
-	TEST_ALGORITHMS(prf);
-	TEST_ALGORITHMS(rng);
-	TEST_ALGORITHMS(dh);
-	this->lock->unlock(this->lock);
-	return failures;
-}
-
-EXPORT_FUNCTION_FOR_TESTS(crypto, verify_registered_algorithms);

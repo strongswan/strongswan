@@ -372,16 +372,6 @@ struct crypto_factory_t {
 							void *vector);
 
 	/**
-	 * Get the number of test vector failures encountered during add.
-	 *
-	 * This counter gets incremented only if transforms get tested during
-	 * registration.
-	 *
-	 * @return				number of failed test vectors
-	 */
-	u_int (*get_test_vector_failures)(crypto_factory_t *this);
-
-	/**
 	 * Create an enumerator verifying transforms using known test vectors.
 	 *
 	 * The resulting enumerator enumerates over an u_int with the type
