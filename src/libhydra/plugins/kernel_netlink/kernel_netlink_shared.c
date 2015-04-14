@@ -83,6 +83,11 @@ struct private_netlink_socket_t {
 	u_int retries;
 
 	/**
+	 * Buffer size for received Netlink messages
+	 */
+	u_int buflen;
+
+	/**
 	 * Use parallel netlink queries
 	 */
 	bool parallel;
@@ -161,7 +166,7 @@ static bool write_msg(private_netlink_socket_t *this, struct nlmsghdr *msg)
  * Read a single Netlink message from socket, return 0 on error, -1 on timeout
  */
 static ssize_t read_msg(private_netlink_socket_t *this,
-						char buf[4096], size_t buflen, bool block)
+						char *buf, size_t buflen, bool block)
 {
 	ssize_t len;
 
@@ -236,20 +241,17 @@ static bool queue(private_netlink_socket_t *this, struct nlmsghdr *buf)
 static bool read_and_queue(private_netlink_socket_t *this, bool block)
 {
 	struct nlmsghdr *hdr;
-	union {
-		struct nlmsghdr hdr;
-		char bytes[4096];
-	} buf;
+	char buf[this->buflen];
 	ssize_t len;
 
-	len = read_msg(this, buf.bytes, sizeof(buf.bytes), block);
+	len = read_msg(this, buf, sizeof(buf), block);
 	if (len == -1)
 	{
 		return TRUE;
 	}
 	if (len)
 	{
-		hdr = &buf.hdr;
+		hdr = (struct nlmsghdr*)buf;
 		while (NLMSG_OK(hdr, len))
 		{
 			if (!queue(this, hdr))
@@ -568,6 +570,8 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.entries = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.protocol = protocol,
 		.names = names,
+		.buflen = lib->settings->get_int(lib->settings,
+							"%s.plugins.kernel-netlink.buflen", 4096, lib->ns),
 		.timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,

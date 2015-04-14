@@ -1,3 +1,6 @@
+charon.plugins.kernel-netlink.buflen = 4096
+	Buffer size for received Netlink messages.
+
 charon.plugins.kernel-netlink.fwmark =
 	Firewall mark to set on the routing rule that directs traffic to our routing
 	table.
