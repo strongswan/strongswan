@@ -124,6 +124,16 @@ void thread_cleanup_push(thread_cleanup_t cleanup, void *arg);
 void thread_cleanup_pop(bool execute);
 
 /**
+ * Pop and execute all cleanup handlers in reverse order of registration.
+ *
+ * This function is for very special purposes only, where the caller exactly
+ * knows which cleanup handlers have been pushed. For regular use, a caller
+ * should thread_cleanup_pop() exactly the number of handlers it pushed
+ * using thread_cleanup_push().
+ */
+void thread_cleanup_popall();
+
+/**
  * Enable or disable the cancelability of the current thread. The current
  * value is returned.
  *

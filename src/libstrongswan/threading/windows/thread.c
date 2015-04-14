@@ -562,6 +562,26 @@ void thread_cleanup_pop(bool execute)
 /**
  * Described in header.
  */
+void thread_cleanup_popall()
+{
+	private_thread_t *this;
+	cleanup_t cleanup = {};
+	bool old;
+
+	this = get_current_thread();
+	while (array_count(this->cleanup))
+	{
+		old = set_leak_detective(FALSE);
+		array_remove(this->cleanup, -1, &cleanup);
+		set_leak_detective(old);
+
+		cleanup.cb(cleanup.arg);
+	}
+}
+
+/**
+ * Described in header.
+ */
 bool thread_cancelability(bool enable)
 {
 	private_thread_t *this;

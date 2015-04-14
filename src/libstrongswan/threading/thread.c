@@ -402,6 +402,23 @@ void thread_cleanup_pop(bool execute)
 /**
  * Described in header.
  */
+void thread_cleanup_popall()
+{
+	private_thread_t *this = (private_thread_t*)thread_current();
+	cleanup_handler_t *handler;
+
+	while (this->cleanup_handlers->get_count(this->cleanup_handlers))
+	{
+		this->cleanup_handlers->remove_last(this->cleanup_handlers,
+											(void**)&handler);
+		handler->cleanup(handler->arg);
+		free(handler);
+	}
+}
+
+/**
+ * Described in header.
+ */
 bool thread_cancelability(bool enable)
 {
 #ifdef HAVE_PTHREAD_CANCEL

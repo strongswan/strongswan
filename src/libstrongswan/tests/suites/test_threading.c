@@ -1517,6 +1517,36 @@ START_TEST(test_cleanup_pop)
 }
 END_TEST
 
+static void *cleanup_popall_run(void *data)
+{
+	thread_cleanup_push(cleanup3, data);
+	thread_cleanup_push(cleanup2, data);
+	thread_cleanup_push(cleanup1, data);
+
+	thread_cleanup_popall();
+	return NULL;
+}
+
+START_TEST(test_cleanup_popall)
+{
+	thread_t *threads[THREADS];
+	uintptr_t values[THREADS];
+	int i;
+
+	for (i = 0; i < THREADS; i++)
+	{
+		values[i] = 1;
+		threads[i] = thread_create(cleanup_popall_run, &values[i]);
+	}
+	for (i = 0; i < THREADS; i++)
+	{
+		threads[i]->join(threads[i]);
+		ck_assert_int_eq(values[i], 4);
+	}
+}
+END_TEST
+
+
 static thread_value_t *tls[10];
 
 static void *tls_run(void *data)
@@ -1697,6 +1727,7 @@ Suite *threading_suite_create()
 	tcase_add_test(tc, test_cleanup_exit);
 	tcase_add_test(tc, test_cleanup_cancel);
 	tcase_add_test(tc, test_cleanup_pop);
+	tcase_add_test(tc, test_cleanup_popall);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread local storage");
