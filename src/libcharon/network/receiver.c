@@ -247,7 +247,7 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	{
 		return FALSE;
 	}
-	if (chunk_equals(reference, cookie))
+	if (chunk_equals_const(reference, cookie))
 	{
 		chunk_free(&reference);
 		return TRUE;

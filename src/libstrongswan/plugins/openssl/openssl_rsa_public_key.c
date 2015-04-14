@@ -74,7 +74,7 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 								 RSA_PKCS1_PADDING);
 		if (len != -1)
 		{
-			valid = chunk_equals(data, chunk_create(buf, len));
+			valid = chunk_equals_const(data, chunk_create(buf, len));
 		}
 		free(buf);
 	}

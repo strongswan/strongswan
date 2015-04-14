@@ -307,6 +307,48 @@ START_TEST(test_memxor_aligned)
 END_TEST
 
 /*******************************************************************************
+ * memeq/const
+ */
+
+static struct {
+	char *a;
+	char *b;
+	size_t n;
+	bool res;
+} memeq_data[] = {
+	{NULL, NULL, 0, TRUE},
+	{"a", "b", 0, TRUE},
+	{"", "", 1, TRUE},
+	{"abcdefgh", "abcdefgh", 8, TRUE},
+	{"a", "b", 1, FALSE},
+	{"A", "a", 1, FALSE},
+	{"\0a", "\0b", 2, FALSE},
+	{"abc", "abd", 3, FALSE},
+	{"abc", "dbd", 3, FALSE},
+	{"abcdefgh", "abcdffgh", 8, FALSE},
+	{"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+	 "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz", 52, TRUE},
+	{"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+	 "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyy", 52, FALSE},
+	{"bbcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+	 "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz", 52, FALSE},
+};
+
+START_TEST(test_memeq)
+{
+	ck_assert(memeq(memeq_data[_i].a, memeq_data[_i].b,
+					memeq_data[_i].n) == memeq_data[_i].res);
+}
+END_TEST
+
+START_TEST(test_memeq_const)
+{
+	ck_assert(memeq_const(memeq_data[_i].a, memeq_data[_i].b,
+						  memeq_data[_i].n) == memeq_data[_i].res);
+}
+END_TEST
+
+/*******************************************************************************
  * memstr
  */
 
@@ -777,6 +819,11 @@ Suite *utils_suite_create()
 	tc = tcase_create("memxor");
 	tcase_add_test(tc, test_memxor);
 	tcase_add_test(tc, test_memxor_aligned);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("memeq");
+	tcase_add_loop_test(tc, test_memeq, 0, countof(memeq_data));
+	tcase_add_loop_test(tc, test_memeq_const, 0, countof(memeq_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("memstr");

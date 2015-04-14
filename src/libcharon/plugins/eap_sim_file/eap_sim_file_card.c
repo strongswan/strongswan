@@ -52,7 +52,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 			 c_rand, SIM_RAND_LEN, c_sres, SIM_SRES_LEN, c_kc, SIM_KC_LEN);
 		if (id->matches(id, cand))
 		{
-			if (memeq(c_rand, rand, SIM_RAND_LEN))
+			if (memeq_const(c_rand, rand, SIM_RAND_LEN))
 			{
 				DBG2(DBG_CFG, "  => triplet matches");
 				memcpy(sres, c_sres, SIM_SRES_LEN);
@@ -105,4 +105,3 @@ eap_sim_file_card_t *eap_sim_file_card_create(eap_sim_file_triplets_t *triplets)
 
 	return &this->public;
 }
-

@@ -307,7 +307,7 @@ static bool check_boot_aggregate(pts_pcr_t *pcrs, chunk_t measurement,
 	}
 	if (pcr_ok)
 	{
-		success = chunk_equals(boot_aggregate, measurement);
+		success = chunk_equals_const(boot_aggregate, measurement);
 		DBG1(DBG_PTS, "boot aggregate value is %scorrect",
 					   success ? "":"in");
 		return success;
@@ -693,7 +693,7 @@ METHOD(pts_component_t, verify, status_t,
 							status = FAILED;
 							break;
 						}
-						if (chunk_equals(measurement, hash))
+						if (chunk_equals_const(measurement, hash))
 						{
 							status = SUCCESS;
 							break;
@@ -748,7 +748,7 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		if (!chunk_equals(pcr_before, pcrs->get(pcrs, pcr)))
+		if (!chunk_equals_const(pcr_before, pcrs->get(pcrs, pcr)))
 		{
 			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value",
 						   pcr);
@@ -876,7 +876,7 @@ METHOD(pts_component_t, destroy, void,
 		DESTROY_IF(this->bios_list);
 		DESTROY_IF(this->ima_list);
 		this->name->destroy(this->name);
-		
+
 		free(this);
 	}
 }
@@ -911,4 +911,3 @@ pts_component_t *pts_ita_comp_ima_create(uint32_t depth,
 
 	return &this->public;
 }
-

@@ -537,7 +537,7 @@ METHOD(task_t, process_i, status_t,
 			cookie2 = this->cookie2;
 			this->cookie2 = chunk_empty;
 			process_payloads(this, message);
-			if (!chunk_equals(cookie2, this->cookie2))
+			if (!chunk_equals_const(cookie2, this->cookie2))
 			{
 				chunk_free(&cookie2);
 				DBG1(DBG_IKE, "COOKIE2 mismatch, closing IKE_SA");

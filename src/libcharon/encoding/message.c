@@ -2625,7 +2625,7 @@ METHOD(message_t, parse_body, status_t,
 			other_hash = hash_payload->get_hash(hash_payload);
 			DBG3(DBG_ENC, "HASH received %B\nHASH expected %B",
 				 &other_hash, &hash);
-			if (!chunk_equals(hash, other_hash))
+			if (!chunk_equals_const(hash, other_hash))
 			{
 				DBG1(DBG_ENC, "received HASH payload does not match");
 				chunk_free(&hash);

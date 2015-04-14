@@ -5,7 +5,7 @@ AM_CPPFLAGS = \
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \
-	dnssec malloc_speed aes-test settings-test
+	dnssec malloc_speed aes-test settings-test timeattack
 
 if USE_TLS
   noinst_PROGRAMS += tls_test
@@ -28,6 +28,7 @@ hash_burn_SOURCES = hash_burn.c
 malloc_speed_SOURCES = malloc_speed.c
 fetch_SOURCES = fetch.c
 dnssec_SOURCES = dnssec.c
+timeattack_SOURCES = timeattack.c
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 keyid2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
@@ -41,6 +42,7 @@ fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dnssec_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 aes_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 settings_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+timeattack_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 key2keyid.o :	$(top_builddir)/config.status
 

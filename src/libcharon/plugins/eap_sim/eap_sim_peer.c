@@ -310,7 +310,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	/* excepting two or three RAND, each 16 bytes. We require two valid
 	 * and different RANDs */
 	if ((rands.len != 2 * SIM_RAND_LEN && rands.len != 3 * SIM_RAND_LEN) ||
-		memeq(rands.ptr, rands.ptr + SIM_RAND_LEN, SIM_RAND_LEN))
+		memeq_const(rands.ptr, rands.ptr + SIM_RAND_LEN, SIM_RAND_LEN))
 	{
 		DBG1(DBG_IKE, "no valid AT_RAND received");
 		if (!create_client_error(this, SIM_INSUFFICIENT_CHALLENGES, out))
@@ -734,4 +734,3 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 
 	return &this->public;
 }
-

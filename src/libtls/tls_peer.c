@@ -641,7 +641,7 @@ static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (!chunk_equals(received, chunk_from_thing(buf)))
+	if (!chunk_equals_const(received, chunk_from_thing(buf)))
 	{
 		DBG1(DBG_TLS, "received server finished invalid");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);

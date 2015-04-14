@@ -138,7 +138,7 @@ METHOD(signer_t, verify_signature, bool,
 	{
 		return FALSE;
 	}
-	return memeq(signature.ptr, sig, signature.len);
+	return memeq_const(signature.ptr, sig, signature.len);
 }
 
 METHOD(signer_t, get_key_size, size_t,

@@ -187,7 +187,7 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 	}
 	if (e->enumerate(e, &hash_id, &hash_value))
 	{
-		if (!chunk_equals(measurement, hash_value))
+		if (!chunk_equals_const(measurement, hash_value))
 		{
 			/* update hash measurement value */
 			if (this->db->execute(this->db, &hash_id,
@@ -289,7 +289,7 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 
 	while (e->enumerate(e, &hash))
 	{
-		if (chunk_equals(hash, measurement))
+		if (chunk_equals_const(hash, measurement))
 		{
 			status = SUCCESS;
 			break;

@@ -262,7 +262,7 @@ static status_t process_reauthentication(private_eap_sim_server_t *this,
 		this->crypto->clear_keys(this->crypto);
 		return initiate(this, out);
 	}
-	if (!chunk_equals(counter, this->counter))
+	if (!chunk_equals_const(counter, this->counter))
 	{
 		DBG1(DBG_IKE, "received counter does not match");
 		return FAILED;
@@ -644,4 +644,3 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 
 	return &this->public;
 }
-

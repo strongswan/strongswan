@@ -812,7 +812,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 		goto error;
 	}
 
-	if (!chunk_equals(this->auth_response, auth_string))
+	if (!chunk_equals_const(this->auth_response, auth_string))
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed");
 		goto error;
@@ -1087,8 +1087,8 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	userid->destroy(userid);
 	chunk_clear(&nt_hash);
 
-	if (memeq(res->response.nt_response, this->nt_response.ptr,
-			  this->nt_response.len))
+	if (memeq_const(res->response.nt_response, this->nt_response.ptr,
+					this->nt_response.len))
 	{
 		chunk_t hex;
 		char msg[AUTH_RESPONSE_LEN + sizeof(SUCCESS_MESSAGE)];
@@ -1267,4 +1267,3 @@ eap_mschapv2_t *eap_mschapv2_create_peer(identification_t *server, identificatio
 
 	return &this->public;
 }
-
