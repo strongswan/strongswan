@@ -185,6 +185,7 @@ static bool run_test(test_function_t *tfun, int i)
 		tfun->cb(i);
 		return TRUE;
 	}
+	thread_cleanup_popall();
 	return FALSE;
 }
 
@@ -219,6 +220,7 @@ static bool call_fixture(test_case_t *tcase, bool up)
 		}
 		else
 		{
+			thread_cleanup_popall();
 			failure = TRUE;
 			break;
 		}
@@ -336,6 +338,7 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 		}
 		else
 		{
+			thread_cleanup_popall();
 			library_deinit();
 			return FALSE;
 		}
