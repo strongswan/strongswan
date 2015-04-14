@@ -159,17 +159,18 @@ static void build_ctr(private_aesni_ccm_t *this, u_int32_t i, u_char *iv,
 static __m128i icv_header(private_aesni_ccm_t *this, size_t len, u_char *iv,
 						  u_int16_t alen, u_char *assoc)
 {
-	__m128i b, t, c;
+	__m128i *ks, b, t, c;
 	u_int i, round, blocks, rem;
 
+	ks = this->key->schedule;
 	build_b0(this, len, alen, iv, &b);
 	c = _mm_loadu_si128(&b);
-	c = _mm_xor_si128(c, this->key->schedule[0]);
+	c = _mm_xor_si128(c, ks[0]);
 	for (round = 1; round < this->key->rounds; round++)
 	{
-		c = _mm_aesenc_si128(c, this->key->schedule[round]);
+		c = _mm_aesenc_si128(c, ks[round]);
 	}
-	c = _mm_aesenclast_si128(c, this->key->schedule[this->key->rounds]);
+	c = _mm_aesenclast_si128(c, ks[this->key->rounds]);
 
 	if (alen)
 	{
@@ -200,12 +201,12 @@ static __m128i icv_header(private_aesni_ccm_t *this, size_t len, u_char *iv,
 				t = _mm_loadu_si128(((__m128i*)(assoc - sizeof(alen))) + i);
 			}
 			c = _mm_xor_si128(t, c);
-			c = _mm_xor_si128(c, this->key->schedule[0]);
+			c = _mm_xor_si128(c, ks[0]);
 			for (round = 1; round < this->key->rounds; round++)
 			{
-				c = _mm_aesenc_si128(c, this->key->schedule[round]);
+				c = _mm_aesenc_si128(c, ks[round]);
 			}
-			c = _mm_aesenclast_si128(c, this->key->schedule[this->key->rounds]);
+			c = _mm_aesenclast_si128(c, ks[this->key->rounds]);
 		}
 	}
 	return c;
@@ -217,18 +218,19 @@ static __m128i icv_header(private_aesni_ccm_t *this, size_t len, u_char *iv,
 static void crypt_icv(private_aesni_ccm_t *this, u_char *iv,
 					  __m128i c, u_char *icv)
 {
-	__m128i b, t;
+	__m128i *ks, b, t;
 	u_int round;
 
+	ks = this->key->schedule;
 	build_ctr(this, 0, iv, &b);
 
 	t = _mm_loadu_si128(&b);
-	t = _mm_xor_si128(t, this->key->schedule[0]);
+	t = _mm_xor_si128(t, ks[0]);
 	for (round = 1; round < this->key->rounds; round++)
 	{
-		t = _mm_aesenc_si128(t, this->key->schedule[round]);
+		t = _mm_aesenc_si128(t, ks[round]);
 	}
-	t = _mm_aesenclast_si128(t, this->key->schedule[this->key->rounds]);
+	t = _mm_aesenclast_si128(t, ks[this->key->rounds]);
 
 	t = _mm_xor_si128(t, c);
 
@@ -258,23 +260,24 @@ static inline __m128i increment_be(__m128i x)
 static __m128i encrypt_ccm_rem(aesni_key_t *key, u_int rem, __m128i state,
 							   void *in, void *out, __m128i c)
 {
-	__m128i t, b, d;
+	__m128i *ks, t, b, d;
 	u_int round;
 
+	ks = key->schedule;
 	memset(&b, 0, sizeof(b));
 	memcpy(&b, in, rem);
 	d = _mm_loadu_si128(&b);
 
 	c = _mm_xor_si128(d, c);
-	c = _mm_xor_si128(c, key->schedule[0]);
-	t = _mm_xor_si128(state, key->schedule[0]);
+	c = _mm_xor_si128(c, ks[0]);
+	t = _mm_xor_si128(state, ks[0]);
 	for (round = 1; round < key->rounds; round++)
 	{
-		c = _mm_aesenc_si128(c, key->schedule[round]);
-		t = _mm_aesenc_si128(t, key->schedule[round]);
+		c = _mm_aesenc_si128(c, ks[round]);
+		t = _mm_aesenc_si128(t, ks[round]);
 	}
-	c = _mm_aesenclast_si128(c, key->schedule[key->rounds]);
-	t = _mm_aesenclast_si128(t, key->schedule[key->rounds]);
+	c = _mm_aesenclast_si128(c, ks[key->rounds]);
+	t = _mm_aesenclast_si128(t, ks[key->rounds]);
 
 	t = _mm_xor_si128(t, d);
 	_mm_storeu_si128(&b, t);
@@ -290,31 +293,32 @@ static __m128i encrypt_ccm_rem(aesni_key_t *key, u_int rem, __m128i state,
 static __m128i decrypt_ccm_rem(aesni_key_t *key, u_int rem, __m128i state,
 							   void *in, void *out, __m128i c)
 {
-	__m128i t, b, d;
+	__m128i *ks, t, b, d;
 	u_int round;
 
+	ks = key->schedule;
 	memset(&b, 0, sizeof(b));
 	memcpy(&b, in, rem);
 	d = _mm_loadu_si128(&b);
 
-	t = _mm_xor_si128(state, key->schedule[0]);
+	t = _mm_xor_si128(state, ks[0]);
 	for (round = 1; round < key->rounds; round++)
 	{
-		t = _mm_aesenc_si128(t, key->schedule[round]);
+		t = _mm_aesenc_si128(t, ks[round]);
 	}
-	t = _mm_aesenclast_si128(t, key->schedule[key->rounds]);
+	t = _mm_aesenclast_si128(t, ks[key->rounds]);
 	t = _mm_xor_si128(t, d);
 	_mm_storeu_si128(&b, t);
 
 	memset((u_char*)&b + rem, 0, sizeof(b) - rem);
 	t = _mm_loadu_si128(&b);
 	c = _mm_xor_si128(t, c);
-	c = _mm_xor_si128(c, key->schedule[0]);
+	c = _mm_xor_si128(c, ks[0]);
 	for (round = 1; round < key->rounds; round++)
 	{
-		c = _mm_aesenc_si128(c, key->schedule[round]);
+		c = _mm_aesenc_si128(c, ks[round]);
 	}
-	c = _mm_aesenclast_si128(c, key->schedule[key->rounds]);
+	c = _mm_aesenclast_si128(c, ks[key->rounds]);
 
 	memcpy(out, &b, rem);
 
@@ -328,8 +332,7 @@ static void encrypt_ccm128(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -340,47 +343,37 @@ static void encrypt_ccm128(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
 		c = _mm_xor_si128(d, c);
-		c = _mm_xor_si128(c, k0);
-		t = _mm_xor_si128(state, k0);
+		c = _mm_xor_si128(c, ks[0]);
+		t = _mm_xor_si128(state, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		t = _mm_aesenc_si128(t, k1);
-		c = _mm_aesenc_si128(c, k2);
-		t = _mm_aesenc_si128(t, k2);
-		c = _mm_aesenc_si128(c, k3);
-		t = _mm_aesenc_si128(t, k3);
-		c = _mm_aesenc_si128(c, k4);
-		t = _mm_aesenc_si128(t, k4);
-		c = _mm_aesenc_si128(c, k5);
-		t = _mm_aesenc_si128(t, k5);
-		c = _mm_aesenc_si128(c, k6);
-		t = _mm_aesenc_si128(t, k6);
-		c = _mm_aesenc_si128(c, k7);
-		t = _mm_aesenc_si128(t, k7);
-		c = _mm_aesenc_si128(c, k8);
-		t = _mm_aesenc_si128(t, k8);
-		c = _mm_aesenc_si128(c, k9);
-		t = _mm_aesenc_si128(t, k9);
+		c = _mm_aesenc_si128(c, ks[1]);
+		t = _mm_aesenc_si128(t, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
+		t = _mm_aesenc_si128(t, ks[9]);
 
-		c = _mm_aesenclast_si128(c, k10);
-		t = _mm_aesenclast_si128(t, k10);
+		c = _mm_aesenclast_si128(c, ks[10]);
+		t = _mm_aesenclast_si128(t, ks[10]);
 
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
@@ -402,8 +395,7 @@ static void decrypt_ccm128(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -414,52 +406,42 @@ static void decrypt_ccm128(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
-		t = _mm_xor_si128(state, k0);
+		t = _mm_xor_si128(state, ks[0]);
 
-		t = _mm_aesenc_si128(t, k1);
-		t = _mm_aesenc_si128(t, k2);
-		t = _mm_aesenc_si128(t, k3);
-		t = _mm_aesenc_si128(t, k4);
-		t = _mm_aesenc_si128(t, k5);
-		t = _mm_aesenc_si128(t, k6);
-		t = _mm_aesenc_si128(t, k7);
-		t = _mm_aesenc_si128(t, k8);
-		t = _mm_aesenc_si128(t, k9);
+		t = _mm_aesenc_si128(t, ks[1]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		t = _mm_aesenc_si128(t, ks[9]);
 
-		t = _mm_aesenclast_si128(t, k10);
+		t = _mm_aesenclast_si128(t, ks[10]);
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
 		c = _mm_xor_si128(t, c);
-		c = _mm_xor_si128(c, k0);
+		c = _mm_xor_si128(c, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		c = _mm_aesenc_si128(c, k2);
-		c = _mm_aesenc_si128(c, k3);
-		c = _mm_aesenc_si128(c, k4);
-		c = _mm_aesenc_si128(c, k5);
-		c = _mm_aesenc_si128(c, k6);
-		c = _mm_aesenc_si128(c, k7);
-		c = _mm_aesenc_si128(c, k8);
-		c = _mm_aesenc_si128(c, k9);
+		c = _mm_aesenc_si128(c, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
 
-		c = _mm_aesenclast_si128(c, k10);
+		c = _mm_aesenclast_si128(c, ks[10]);
 
 		state = increment_be(state);
 	}
@@ -478,8 +460,7 @@ static void encrypt_ccm192(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -490,53 +471,41 @@ static void encrypt_ccm192(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
 		c = _mm_xor_si128(d, c);
-		c = _mm_xor_si128(c, k0);
-		t = _mm_xor_si128(state, k0);
+		c = _mm_xor_si128(c, ks[0]);
+		t = _mm_xor_si128(state, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		t = _mm_aesenc_si128(t, k1);
-		c = _mm_aesenc_si128(c, k2);
-		t = _mm_aesenc_si128(t, k2);
-		c = _mm_aesenc_si128(c, k3);
-		t = _mm_aesenc_si128(t, k3);
-		c = _mm_aesenc_si128(c, k4);
-		t = _mm_aesenc_si128(t, k4);
-		c = _mm_aesenc_si128(c, k5);
-		t = _mm_aesenc_si128(t, k5);
-		c = _mm_aesenc_si128(c, k6);
-		t = _mm_aesenc_si128(t, k6);
-		c = _mm_aesenc_si128(c, k7);
-		t = _mm_aesenc_si128(t, k7);
-		c = _mm_aesenc_si128(c, k8);
-		t = _mm_aesenc_si128(t, k8);
-		c = _mm_aesenc_si128(c, k9);
-		t = _mm_aesenc_si128(t, k9);
-		c = _mm_aesenc_si128(c, k10);
-		t = _mm_aesenc_si128(t, k10);
-		c = _mm_aesenc_si128(c, k11);
-		t = _mm_aesenc_si128(t, k11);
+		c = _mm_aesenc_si128(c, ks[1]);
+		t = _mm_aesenc_si128(t, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
+		t = _mm_aesenc_si128(t, ks[9]);
+		c = _mm_aesenc_si128(c, ks[10]);
+		t = _mm_aesenc_si128(t, ks[10]);
+		c = _mm_aesenc_si128(c, ks[11]);
+		t = _mm_aesenc_si128(t, ks[11]);
 
-		c = _mm_aesenclast_si128(c, k12);
-		t = _mm_aesenclast_si128(t, k12);
+		c = _mm_aesenclast_si128(c, ks[12]);
+		t = _mm_aesenclast_si128(t, ks[12]);
 
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
@@ -558,8 +527,7 @@ static void decrypt_ccm192(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -570,58 +538,46 @@ static void decrypt_ccm192(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
-		t = _mm_xor_si128(state, k0);
+		t = _mm_xor_si128(state, ks[0]);
 
-		t = _mm_aesenc_si128(t, k1);
-		t = _mm_aesenc_si128(t, k2);
-		t = _mm_aesenc_si128(t, k3);
-		t = _mm_aesenc_si128(t, k4);
-		t = _mm_aesenc_si128(t, k5);
-		t = _mm_aesenc_si128(t, k6);
-		t = _mm_aesenc_si128(t, k7);
-		t = _mm_aesenc_si128(t, k8);
-		t = _mm_aesenc_si128(t, k9);
-		t = _mm_aesenc_si128(t, k10);
-		t = _mm_aesenc_si128(t, k11);
+		t = _mm_aesenc_si128(t, ks[1]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		t = _mm_aesenc_si128(t, ks[9]);
+		t = _mm_aesenc_si128(t, ks[10]);
+		t = _mm_aesenc_si128(t, ks[11]);
 
-		t = _mm_aesenclast_si128(t, k12);
+		t = _mm_aesenclast_si128(t, ks[12]);
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
 		c = _mm_xor_si128(t, c);
-		c = _mm_xor_si128(c, k0);
+		c = _mm_xor_si128(c, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		c = _mm_aesenc_si128(c, k2);
-		c = _mm_aesenc_si128(c, k3);
-		c = _mm_aesenc_si128(c, k4);
-		c = _mm_aesenc_si128(c, k5);
-		c = _mm_aesenc_si128(c, k6);
-		c = _mm_aesenc_si128(c, k7);
-		c = _mm_aesenc_si128(c, k8);
-		c = _mm_aesenc_si128(c, k9);
-		c = _mm_aesenc_si128(c, k10);
-		c = _mm_aesenc_si128(c, k11);
+		c = _mm_aesenc_si128(c, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
+		c = _mm_aesenc_si128(c, ks[10]);
+		c = _mm_aesenc_si128(c, ks[11]);
 
-		c = _mm_aesenclast_si128(c, k12);
+		c = _mm_aesenclast_si128(c, ks[12]);
 
 		state = increment_be(state);
 	}
@@ -640,8 +596,7 @@ static void encrypt_ccm256(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -652,59 +607,45 @@ static void encrypt_ccm256(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
-	k13 = this->key->schedule[13];
-	k14 = this->key->schedule[14];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
 		c = _mm_xor_si128(d, c);
-		c = _mm_xor_si128(c, k0);
-		t = _mm_xor_si128(state, k0);
+		c = _mm_xor_si128(c, ks[0]);
+		t = _mm_xor_si128(state, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		t = _mm_aesenc_si128(t, k1);
-		c = _mm_aesenc_si128(c, k2);
-		t = _mm_aesenc_si128(t, k2);
-		c = _mm_aesenc_si128(c, k3);
-		t = _mm_aesenc_si128(t, k3);
-		c = _mm_aesenc_si128(c, k4);
-		t = _mm_aesenc_si128(t, k4);
-		c = _mm_aesenc_si128(c, k5);
-		t = _mm_aesenc_si128(t, k5);
-		c = _mm_aesenc_si128(c, k6);
-		t = _mm_aesenc_si128(t, k6);
-		c = _mm_aesenc_si128(c, k7);
-		t = _mm_aesenc_si128(t, k7);
-		c = _mm_aesenc_si128(c, k8);
-		t = _mm_aesenc_si128(t, k8);
-		c = _mm_aesenc_si128(c, k9);
-		t = _mm_aesenc_si128(t, k9);
-		c = _mm_aesenc_si128(c, k10);
-		t = _mm_aesenc_si128(t, k10);
-		c = _mm_aesenc_si128(c, k11);
-		t = _mm_aesenc_si128(t, k11);
-		c = _mm_aesenc_si128(c, k12);
-		t = _mm_aesenc_si128(t, k12);
-		c = _mm_aesenc_si128(c, k13);
-		t = _mm_aesenc_si128(t, k13);
+		c = _mm_aesenc_si128(c, ks[1]);
+		t = _mm_aesenc_si128(t, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
+		t = _mm_aesenc_si128(t, ks[9]);
+		c = _mm_aesenc_si128(c, ks[10]);
+		t = _mm_aesenc_si128(t, ks[10]);
+		c = _mm_aesenc_si128(c, ks[11]);
+		t = _mm_aesenc_si128(t, ks[11]);
+		c = _mm_aesenc_si128(c, ks[12]);
+		t = _mm_aesenc_si128(t, ks[12]);
+		c = _mm_aesenc_si128(c, ks[13]);
+		t = _mm_aesenc_si128(t, ks[13]);
 
-		c = _mm_aesenclast_si128(c, k14);
-		t = _mm_aesenclast_si128(t, k14);
+		c = _mm_aesenclast_si128(c, ks[14]);
+		t = _mm_aesenclast_si128(t, ks[14]);
 
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
@@ -726,8 +667,7 @@ static void decrypt_ccm256(private_aesni_ccm_t *this,
 						   size_t len, u_char *in, u_char *out, u_char *iv,
 						   size_t alen, u_char *assoc, u_char *icv)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
-	__m128i d, t, c, b, state, *bi, *bo;
+	__m128i *ks, d, t, c, b, state, *bi, *bo;
 	u_int blocks, rem, i;
 
 	c = icv_header(this, len, iv, alen, assoc);
@@ -738,64 +678,50 @@ static void decrypt_ccm256(private_aesni_ccm_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
-	k13 = this->key->schedule[13];
-	k14 = this->key->schedule[14];
+	ks = this->key->schedule;
 
 	for (i = 0; i < blocks; i++)
 	{
 		d = _mm_loadu_si128(bi + i);
 
-		t = _mm_xor_si128(state, k0);
+		t = _mm_xor_si128(state, ks[0]);
 
-		t = _mm_aesenc_si128(t, k1);
-		t = _mm_aesenc_si128(t, k2);
-		t = _mm_aesenc_si128(t, k3);
-		t = _mm_aesenc_si128(t, k4);
-		t = _mm_aesenc_si128(t, k5);
-		t = _mm_aesenc_si128(t, k6);
-		t = _mm_aesenc_si128(t, k7);
-		t = _mm_aesenc_si128(t, k8);
-		t = _mm_aesenc_si128(t, k9);
-		t = _mm_aesenc_si128(t, k10);
-		t = _mm_aesenc_si128(t, k11);
-		t = _mm_aesenc_si128(t, k12);
-		t = _mm_aesenc_si128(t, k13);
+		t = _mm_aesenc_si128(t, ks[1]);
+		t = _mm_aesenc_si128(t, ks[2]);
+		t = _mm_aesenc_si128(t, ks[3]);
+		t = _mm_aesenc_si128(t, ks[4]);
+		t = _mm_aesenc_si128(t, ks[5]);
+		t = _mm_aesenc_si128(t, ks[6]);
+		t = _mm_aesenc_si128(t, ks[7]);
+		t = _mm_aesenc_si128(t, ks[8]);
+		t = _mm_aesenc_si128(t, ks[9]);
+		t = _mm_aesenc_si128(t, ks[10]);
+		t = _mm_aesenc_si128(t, ks[11]);
+		t = _mm_aesenc_si128(t, ks[12]);
+		t = _mm_aesenc_si128(t, ks[13]);
 
-		t = _mm_aesenclast_si128(t, k14);
+		t = _mm_aesenclast_si128(t, ks[14]);
 		t = _mm_xor_si128(t, d);
 		_mm_storeu_si128(bo + i, t);
 
 		c = _mm_xor_si128(t, c);
-		c = _mm_xor_si128(c, k0);
+		c = _mm_xor_si128(c, ks[0]);
 
-		c = _mm_aesenc_si128(c, k1);
-		c = _mm_aesenc_si128(c, k2);
-		c = _mm_aesenc_si128(c, k3);
-		c = _mm_aesenc_si128(c, k4);
-		c = _mm_aesenc_si128(c, k5);
-		c = _mm_aesenc_si128(c, k6);
-		c = _mm_aesenc_si128(c, k7);
-		c = _mm_aesenc_si128(c, k8);
-		c = _mm_aesenc_si128(c, k9);
-		c = _mm_aesenc_si128(c, k10);
-		c = _mm_aesenc_si128(c, k11);
-		c = _mm_aesenc_si128(c, k12);
-		c = _mm_aesenc_si128(c, k13);
+		c = _mm_aesenc_si128(c, ks[1]);
+		c = _mm_aesenc_si128(c, ks[2]);
+		c = _mm_aesenc_si128(c, ks[3]);
+		c = _mm_aesenc_si128(c, ks[4]);
+		c = _mm_aesenc_si128(c, ks[5]);
+		c = _mm_aesenc_si128(c, ks[6]);
+		c = _mm_aesenc_si128(c, ks[7]);
+		c = _mm_aesenc_si128(c, ks[8]);
+		c = _mm_aesenc_si128(c, ks[9]);
+		c = _mm_aesenc_si128(c, ks[10]);
+		c = _mm_aesenc_si128(c, ks[11]);
+		c = _mm_aesenc_si128(c, ks[12]);
+		c = _mm_aesenc_si128(c, ks[13]);
 
-		c = _mm_aesenclast_si128(c, k14);
+		c = _mm_aesenclast_si128(c, ks[14]);
 
 		state = increment_be(state);
 	}

@@ -87,10 +87,9 @@ static inline __m128i increment_be(__m128i x)
 static void encrypt_ctr128(private_aesni_ctr_t *this,
 						   size_t len, u_char *in, u_char *out)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
 	__m128i t1, t2, t3, t4;
 	__m128i d1, d2, d3, d4;
-	__m128i state, b, *bi, *bo;
+	__m128i *ks, state, b, *bi, *bo;
 	u_int i, blocks, pblocks, rem;
 
 	state = _mm_load_si128((__m128i*)&this->state);
@@ -100,17 +99,7 @@ static void encrypt_ctr128(private_aesni_ctr_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
+	ks = this->key->schedule;
 
 	for (i = 0; i < pblocks; i += CTR_CRYPT_PARALLELISM)
 	{
@@ -119,56 +108,56 @@ static void encrypt_ctr128(private_aesni_ctr_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t2 = _mm_xor_si128(state, k0);
+		t2 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t3 = _mm_xor_si128(state, k0);
+		t3 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t4 = _mm_xor_si128(state, k0);
+		t4 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t2 = _mm_aesenc_si128(t2, k1);
-		t3 = _mm_aesenc_si128(t3, k1);
-		t4 = _mm_aesenc_si128(t4, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t2 = _mm_aesenc_si128(t2, k2);
-		t3 = _mm_aesenc_si128(t3, k2);
-		t4 = _mm_aesenc_si128(t4, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t2 = _mm_aesenc_si128(t2, k3);
-		t3 = _mm_aesenc_si128(t3, k3);
-		t4 = _mm_aesenc_si128(t4, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t2 = _mm_aesenc_si128(t2, k4);
-		t3 = _mm_aesenc_si128(t3, k4);
-		t4 = _mm_aesenc_si128(t4, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t2 = _mm_aesenc_si128(t2, k5);
-		t3 = _mm_aesenc_si128(t3, k5);
-		t4 = _mm_aesenc_si128(t4, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t2 = _mm_aesenc_si128(t2, k6);
-		t3 = _mm_aesenc_si128(t3, k6);
-		t4 = _mm_aesenc_si128(t4, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t2 = _mm_aesenc_si128(t2, k7);
-		t3 = _mm_aesenc_si128(t3, k7);
-		t4 = _mm_aesenc_si128(t4, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t2 = _mm_aesenc_si128(t2, k8);
-		t3 = _mm_aesenc_si128(t3, k8);
-		t4 = _mm_aesenc_si128(t4, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t2 = _mm_aesenc_si128(t2, k9);
-		t3 = _mm_aesenc_si128(t3, k9);
-		t4 = _mm_aesenc_si128(t4, k9);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t2 = _mm_aesenc_si128(t2, ks[1]);
+		t3 = _mm_aesenc_si128(t3, ks[1]);
+		t4 = _mm_aesenc_si128(t4, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t2 = _mm_aesenc_si128(t2, ks[2]);
+		t3 = _mm_aesenc_si128(t3, ks[2]);
+		t4 = _mm_aesenc_si128(t4, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t2 = _mm_aesenc_si128(t2, ks[3]);
+		t3 = _mm_aesenc_si128(t3, ks[3]);
+		t4 = _mm_aesenc_si128(t4, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t2 = _mm_aesenc_si128(t2, ks[4]);
+		t3 = _mm_aesenc_si128(t3, ks[4]);
+		t4 = _mm_aesenc_si128(t4, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t2 = _mm_aesenc_si128(t2, ks[5]);
+		t3 = _mm_aesenc_si128(t3, ks[5]);
+		t4 = _mm_aesenc_si128(t4, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t2 = _mm_aesenc_si128(t2, ks[6]);
+		t3 = _mm_aesenc_si128(t3, ks[6]);
+		t4 = _mm_aesenc_si128(t4, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t2 = _mm_aesenc_si128(t2, ks[7]);
+		t3 = _mm_aesenc_si128(t3, ks[7]);
+		t4 = _mm_aesenc_si128(t4, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t2 = _mm_aesenc_si128(t2, ks[8]);
+		t3 = _mm_aesenc_si128(t3, ks[8]);
+		t4 = _mm_aesenc_si128(t4, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t2 = _mm_aesenc_si128(t2, ks[9]);
+		t3 = _mm_aesenc_si128(t3, ks[9]);
+		t4 = _mm_aesenc_si128(t4, ks[9]);
 
-		t1 = _mm_aesenclast_si128(t1, k10);
-		t2 = _mm_aesenclast_si128(t2, k10);
-		t3 = _mm_aesenclast_si128(t3, k10);
-		t4 = _mm_aesenclast_si128(t4, k10);
+		t1 = _mm_aesenclast_si128(t1, ks[10]);
+		t2 = _mm_aesenclast_si128(t2, ks[10]);
+		t3 = _mm_aesenclast_si128(t3, ks[10]);
+		t4 = _mm_aesenclast_si128(t4, ks[10]);
 		t1 = _mm_xor_si128(t1, d1);
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
@@ -183,20 +172,20 @@ static void encrypt_ctr128(private_aesni_ctr_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
 
-		t1 = _mm_aesenclast_si128(t1, k10);
+		t1 = _mm_aesenclast_si128(t1, ks[10]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(bo + i, t1);
 	}
@@ -207,19 +196,19 @@ static void encrypt_ctr128(private_aesni_ctr_t *this,
 		memcpy(&b, bi + blocks, rem);
 
 		d1 = _mm_loadu_si128(&b);
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
 
-		t1 = _mm_aesenclast_si128(t1, k10);
+		t1 = _mm_aesenclast_si128(t1, ks[10]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(&b, t1);
 
@@ -233,10 +222,9 @@ static void encrypt_ctr128(private_aesni_ctr_t *this,
 static void encrypt_ctr192(private_aesni_ctr_t *this,
 						   size_t len, u_char *in, u_char *out)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12;
 	__m128i t1, t2, t3, t4;
 	__m128i d1, d2, d3, d4;
-	__m128i state, b, *bi, *bo;
+	__m128i *ks, state, b, *bi, *bo;
 	u_int i, blocks, pblocks, rem;
 
 	state = _mm_load_si128((__m128i*)&this->state);
@@ -246,19 +234,7 @@ static void encrypt_ctr192(private_aesni_ctr_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
+	ks = this->key->schedule;
 
 	for (i = 0; i < pblocks; i += CTR_CRYPT_PARALLELISM)
 	{
@@ -267,64 +243,64 @@ static void encrypt_ctr192(private_aesni_ctr_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t2 = _mm_xor_si128(state, k0);
+		t2 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t3 = _mm_xor_si128(state, k0);
+		t3 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t4 = _mm_xor_si128(state, k0);
+		t4 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t2 = _mm_aesenc_si128(t2, k1);
-		t3 = _mm_aesenc_si128(t3, k1);
-		t4 = _mm_aesenc_si128(t4, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t2 = _mm_aesenc_si128(t2, k2);
-		t3 = _mm_aesenc_si128(t3, k2);
-		t4 = _mm_aesenc_si128(t4, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t2 = _mm_aesenc_si128(t2, k3);
-		t3 = _mm_aesenc_si128(t3, k3);
-		t4 = _mm_aesenc_si128(t4, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t2 = _mm_aesenc_si128(t2, k4);
-		t3 = _mm_aesenc_si128(t3, k4);
-		t4 = _mm_aesenc_si128(t4, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t2 = _mm_aesenc_si128(t2, k5);
-		t3 = _mm_aesenc_si128(t3, k5);
-		t4 = _mm_aesenc_si128(t4, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t2 = _mm_aesenc_si128(t2, k6);
-		t3 = _mm_aesenc_si128(t3, k6);
-		t4 = _mm_aesenc_si128(t4, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t2 = _mm_aesenc_si128(t2, k7);
-		t3 = _mm_aesenc_si128(t3, k7);
-		t4 = _mm_aesenc_si128(t4, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t2 = _mm_aesenc_si128(t2, k8);
-		t3 = _mm_aesenc_si128(t3, k8);
-		t4 = _mm_aesenc_si128(t4, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t2 = _mm_aesenc_si128(t2, k9);
-		t3 = _mm_aesenc_si128(t3, k9);
-		t4 = _mm_aesenc_si128(t4, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t2 = _mm_aesenc_si128(t2, k10);
-		t3 = _mm_aesenc_si128(t3, k10);
-		t4 = _mm_aesenc_si128(t4, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
-		t2 = _mm_aesenc_si128(t2, k11);
-		t3 = _mm_aesenc_si128(t3, k11);
-		t4 = _mm_aesenc_si128(t4, k11);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t2 = _mm_aesenc_si128(t2, ks[1]);
+		t3 = _mm_aesenc_si128(t3, ks[1]);
+		t4 = _mm_aesenc_si128(t4, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t2 = _mm_aesenc_si128(t2, ks[2]);
+		t3 = _mm_aesenc_si128(t3, ks[2]);
+		t4 = _mm_aesenc_si128(t4, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t2 = _mm_aesenc_si128(t2, ks[3]);
+		t3 = _mm_aesenc_si128(t3, ks[3]);
+		t4 = _mm_aesenc_si128(t4, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t2 = _mm_aesenc_si128(t2, ks[4]);
+		t3 = _mm_aesenc_si128(t3, ks[4]);
+		t4 = _mm_aesenc_si128(t4, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t2 = _mm_aesenc_si128(t2, ks[5]);
+		t3 = _mm_aesenc_si128(t3, ks[5]);
+		t4 = _mm_aesenc_si128(t4, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t2 = _mm_aesenc_si128(t2, ks[6]);
+		t3 = _mm_aesenc_si128(t3, ks[6]);
+		t4 = _mm_aesenc_si128(t4, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t2 = _mm_aesenc_si128(t2, ks[7]);
+		t3 = _mm_aesenc_si128(t3, ks[7]);
+		t4 = _mm_aesenc_si128(t4, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t2 = _mm_aesenc_si128(t2, ks[8]);
+		t3 = _mm_aesenc_si128(t3, ks[8]);
+		t4 = _mm_aesenc_si128(t4, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t2 = _mm_aesenc_si128(t2, ks[9]);
+		t3 = _mm_aesenc_si128(t3, ks[9]);
+		t4 = _mm_aesenc_si128(t4, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t2 = _mm_aesenc_si128(t2, ks[10]);
+		t3 = _mm_aesenc_si128(t3, ks[10]);
+		t4 = _mm_aesenc_si128(t4, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
+		t2 = _mm_aesenc_si128(t2, ks[11]);
+		t3 = _mm_aesenc_si128(t3, ks[11]);
+		t4 = _mm_aesenc_si128(t4, ks[11]);
 
-		t1 = _mm_aesenclast_si128(t1, k12);
-		t2 = _mm_aesenclast_si128(t2, k12);
-		t3 = _mm_aesenclast_si128(t3, k12);
-		t4 = _mm_aesenclast_si128(t4, k12);
+		t1 = _mm_aesenclast_si128(t1, ks[12]);
+		t2 = _mm_aesenclast_si128(t2, ks[12]);
+		t3 = _mm_aesenclast_si128(t3, ks[12]);
+		t4 = _mm_aesenclast_si128(t4, ks[12]);
 		t1 = _mm_xor_si128(t1, d1);
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
@@ -339,22 +315,22 @@ static void encrypt_ctr192(private_aesni_ctr_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
 
-		t1 = _mm_aesenclast_si128(t1, k12);
+		t1 = _mm_aesenclast_si128(t1, ks[12]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(bo + i, t1);
 	}
@@ -365,21 +341,21 @@ static void encrypt_ctr192(private_aesni_ctr_t *this,
 		memcpy(&b, bi + blocks, rem);
 
 		d1 = _mm_loadu_si128(&b);
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
 
-		t1 = _mm_aesenclast_si128(t1, k12);
+		t1 = _mm_aesenclast_si128(t1, ks[12]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(&b, t1);
 
@@ -393,10 +369,9 @@ static void encrypt_ctr192(private_aesni_ctr_t *this,
 static void encrypt_ctr256(private_aesni_ctr_t *this,
 						   size_t len, u_char *in, u_char *out)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14;
 	__m128i t1, t2, t3, t4;
 	__m128i d1, d2, d3, d4;
-	__m128i state, b, *bi, *bo;
+	__m128i *ks, state, b, *bi, *bo;
 	u_int i, blocks, pblocks, rem;
 
 	state = _mm_load_si128((__m128i*)&this->state);
@@ -406,21 +381,7 @@ static void encrypt_ctr256(private_aesni_ctr_t *this,
 	bi = (__m128i*)in;
 	bo = (__m128i*)out;
 
-	k0 = this->key->schedule[0];
-	k1 = this->key->schedule[1];
-	k2 = this->key->schedule[2];
-	k3 = this->key->schedule[3];
-	k4 = this->key->schedule[4];
-	k5 = this->key->schedule[5];
-	k6 = this->key->schedule[6];
-	k7 = this->key->schedule[7];
-	k8 = this->key->schedule[8];
-	k9 = this->key->schedule[9];
-	k10 = this->key->schedule[10];
-	k11 = this->key->schedule[11];
-	k12 = this->key->schedule[12];
-	k13 = this->key->schedule[13];
-	k14 = this->key->schedule[14];
+	ks = this->key->schedule;
 
 	for (i = 0; i < pblocks; i += CTR_CRYPT_PARALLELISM)
 	{
@@ -429,72 +390,72 @@ static void encrypt_ctr256(private_aesni_ctr_t *this,
 		d3 = _mm_loadu_si128(bi + i + 2);
 		d4 = _mm_loadu_si128(bi + i + 3);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t2 = _mm_xor_si128(state, k0);
+		t2 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t3 = _mm_xor_si128(state, k0);
+		t3 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
-		t4 = _mm_xor_si128(state, k0);
+		t4 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t2 = _mm_aesenc_si128(t2, k1);
-		t3 = _mm_aesenc_si128(t3, k1);
-		t4 = _mm_aesenc_si128(t4, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t2 = _mm_aesenc_si128(t2, k2);
-		t3 = _mm_aesenc_si128(t3, k2);
-		t4 = _mm_aesenc_si128(t4, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t2 = _mm_aesenc_si128(t2, k3);
-		t3 = _mm_aesenc_si128(t3, k3);
-		t4 = _mm_aesenc_si128(t4, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t2 = _mm_aesenc_si128(t2, k4);
-		t3 = _mm_aesenc_si128(t3, k4);
-		t4 = _mm_aesenc_si128(t4, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t2 = _mm_aesenc_si128(t2, k5);
-		t3 = _mm_aesenc_si128(t3, k5);
-		t4 = _mm_aesenc_si128(t4, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t2 = _mm_aesenc_si128(t2, k6);
-		t3 = _mm_aesenc_si128(t3, k6);
-		t4 = _mm_aesenc_si128(t4, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t2 = _mm_aesenc_si128(t2, k7);
-		t3 = _mm_aesenc_si128(t3, k7);
-		t4 = _mm_aesenc_si128(t4, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t2 = _mm_aesenc_si128(t2, k8);
-		t3 = _mm_aesenc_si128(t3, k8);
-		t4 = _mm_aesenc_si128(t4, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t2 = _mm_aesenc_si128(t2, k9);
-		t3 = _mm_aesenc_si128(t3, k9);
-		t4 = _mm_aesenc_si128(t4, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t2 = _mm_aesenc_si128(t2, k10);
-		t3 = _mm_aesenc_si128(t3, k10);
-		t4 = _mm_aesenc_si128(t4, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
-		t2 = _mm_aesenc_si128(t2, k11);
-		t3 = _mm_aesenc_si128(t3, k11);
-		t4 = _mm_aesenc_si128(t4, k11);
-		t1 = _mm_aesenc_si128(t1, k12);
-		t2 = _mm_aesenc_si128(t2, k12);
-		t3 = _mm_aesenc_si128(t3, k12);
-		t4 = _mm_aesenc_si128(t4, k12);
-		t1 = _mm_aesenc_si128(t1, k13);
-		t2 = _mm_aesenc_si128(t2, k13);
-		t3 = _mm_aesenc_si128(t3, k13);
-		t4 = _mm_aesenc_si128(t4, k13);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t2 = _mm_aesenc_si128(t2, ks[1]);
+		t3 = _mm_aesenc_si128(t3, ks[1]);
+		t4 = _mm_aesenc_si128(t4, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t2 = _mm_aesenc_si128(t2, ks[2]);
+		t3 = _mm_aesenc_si128(t3, ks[2]);
+		t4 = _mm_aesenc_si128(t4, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t2 = _mm_aesenc_si128(t2, ks[3]);
+		t3 = _mm_aesenc_si128(t3, ks[3]);
+		t4 = _mm_aesenc_si128(t4, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t2 = _mm_aesenc_si128(t2, ks[4]);
+		t3 = _mm_aesenc_si128(t3, ks[4]);
+		t4 = _mm_aesenc_si128(t4, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t2 = _mm_aesenc_si128(t2, ks[5]);
+		t3 = _mm_aesenc_si128(t3, ks[5]);
+		t4 = _mm_aesenc_si128(t4, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t2 = _mm_aesenc_si128(t2, ks[6]);
+		t3 = _mm_aesenc_si128(t3, ks[6]);
+		t4 = _mm_aesenc_si128(t4, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t2 = _mm_aesenc_si128(t2, ks[7]);
+		t3 = _mm_aesenc_si128(t3, ks[7]);
+		t4 = _mm_aesenc_si128(t4, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t2 = _mm_aesenc_si128(t2, ks[8]);
+		t3 = _mm_aesenc_si128(t3, ks[8]);
+		t4 = _mm_aesenc_si128(t4, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t2 = _mm_aesenc_si128(t2, ks[9]);
+		t3 = _mm_aesenc_si128(t3, ks[9]);
+		t4 = _mm_aesenc_si128(t4, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t2 = _mm_aesenc_si128(t2, ks[10]);
+		t3 = _mm_aesenc_si128(t3, ks[10]);
+		t4 = _mm_aesenc_si128(t4, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
+		t2 = _mm_aesenc_si128(t2, ks[11]);
+		t3 = _mm_aesenc_si128(t3, ks[11]);
+		t4 = _mm_aesenc_si128(t4, ks[11]);
+		t1 = _mm_aesenc_si128(t1, ks[12]);
+		t2 = _mm_aesenc_si128(t2, ks[12]);
+		t3 = _mm_aesenc_si128(t3, ks[12]);
+		t4 = _mm_aesenc_si128(t4, ks[12]);
+		t1 = _mm_aesenc_si128(t1, ks[13]);
+		t2 = _mm_aesenc_si128(t2, ks[13]);
+		t3 = _mm_aesenc_si128(t3, ks[13]);
+		t4 = _mm_aesenc_si128(t4, ks[13]);
 
-		t1 = _mm_aesenclast_si128(t1, k14);
-		t2 = _mm_aesenclast_si128(t2, k14);
-		t3 = _mm_aesenclast_si128(t3, k14);
-		t4 = _mm_aesenclast_si128(t4, k14);
+		t1 = _mm_aesenclast_si128(t1, ks[14]);
+		t2 = _mm_aesenclast_si128(t2, ks[14]);
+		t3 = _mm_aesenclast_si128(t3, ks[14]);
+		t4 = _mm_aesenclast_si128(t4, ks[14]);
 		t1 = _mm_xor_si128(t1, d1);
 		t2 = _mm_xor_si128(t2, d2);
 		t3 = _mm_xor_si128(t3, d3);
@@ -509,24 +470,24 @@ static void encrypt_ctr256(private_aesni_ctr_t *this,
 	{
 		d1 = _mm_loadu_si128(bi + i);
 
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 		state = increment_be(state);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
-		t1 = _mm_aesenc_si128(t1, k12);
-		t1 = _mm_aesenc_si128(t1, k13);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
+		t1 = _mm_aesenc_si128(t1, ks[12]);
+		t1 = _mm_aesenc_si128(t1, ks[13]);
 
-		t1 = _mm_aesenclast_si128(t1, k14);
+		t1 = _mm_aesenclast_si128(t1, ks[14]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(bo + i, t1);
 	}
@@ -537,23 +498,23 @@ static void encrypt_ctr256(private_aesni_ctr_t *this,
 		memcpy(&b, bi + blocks, rem);
 
 		d1 = _mm_loadu_si128(&b);
-		t1 = _mm_xor_si128(state, k0);
+		t1 = _mm_xor_si128(state, ks[0]);
 
-		t1 = _mm_aesenc_si128(t1, k1);
-		t1 = _mm_aesenc_si128(t1, k2);
-		t1 = _mm_aesenc_si128(t1, k3);
-		t1 = _mm_aesenc_si128(t1, k4);
-		t1 = _mm_aesenc_si128(t1, k5);
-		t1 = _mm_aesenc_si128(t1, k6);
-		t1 = _mm_aesenc_si128(t1, k7);
-		t1 = _mm_aesenc_si128(t1, k8);
-		t1 = _mm_aesenc_si128(t1, k9);
-		t1 = _mm_aesenc_si128(t1, k10);
-		t1 = _mm_aesenc_si128(t1, k11);
-		t1 = _mm_aesenc_si128(t1, k12);
-		t1 = _mm_aesenc_si128(t1, k13);
+		t1 = _mm_aesenc_si128(t1, ks[1]);
+		t1 = _mm_aesenc_si128(t1, ks[2]);
+		t1 = _mm_aesenc_si128(t1, ks[3]);
+		t1 = _mm_aesenc_si128(t1, ks[4]);
+		t1 = _mm_aesenc_si128(t1, ks[5]);
+		t1 = _mm_aesenc_si128(t1, ks[6]);
+		t1 = _mm_aesenc_si128(t1, ks[7]);
+		t1 = _mm_aesenc_si128(t1, ks[8]);
+		t1 = _mm_aesenc_si128(t1, ks[9]);
+		t1 = _mm_aesenc_si128(t1, ks[10]);
+		t1 = _mm_aesenc_si128(t1, ks[11]);
+		t1 = _mm_aesenc_si128(t1, ks[12]);
+		t1 = _mm_aesenc_si128(t1, ks[13]);
 
-		t1 = _mm_aesenclast_si128(t1, k14);
+		t1 = _mm_aesenclast_si128(t1, ks[14]);
 		t1 = _mm_xor_si128(t1, d1);
 		_mm_storeu_si128(&b, t1);
 

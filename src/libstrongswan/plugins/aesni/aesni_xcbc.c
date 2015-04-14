@@ -72,8 +72,7 @@ struct private_aesni_mac_t {
 METHOD(mac_t, get_mac, bool,
 	private_aesni_mac_t *this, chunk_t data, u_int8_t *out)
 {
-	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10;
-	__m128i e, *bi;
+	__m128i *ks, e, *bi;
 	u_int blocks, rem, i;
 
 	if (!this->k1)
@@ -81,17 +80,7 @@ METHOD(mac_t, get_mac, bool,
 		return FALSE;
 	}
 
-	k0 = this->k1->schedule[0];
-	k1 = this->k1->schedule[1];
-	k2 = this->k1->schedule[2];
-	k3 = this->k1->schedule[3];
-	k4 = this->k1->schedule[4];
-	k5 = this->k1->schedule[5];
-	k6 = this->k1->schedule[6];
-	k7 = this->k1->schedule[7];
-	k8 = this->k1->schedule[8];
-	k9 = this->k1->schedule[9];
-	k10 = this->k1->schedule[10];
+	ks = this->k1->schedule;
 
 	e = this->e;
 
@@ -114,17 +103,17 @@ METHOD(mac_t, get_mac, bool,
 
 		e = _mm_xor_si128(e, _mm_loadu_si128((__m128i*)this->rem));
 
-		e = _mm_xor_si128(e, k0);
-		e = _mm_aesenc_si128(e, k1);
-		e = _mm_aesenc_si128(e, k2);
-		e = _mm_aesenc_si128(e, k3);
-		e = _mm_aesenc_si128(e, k4);
-		e = _mm_aesenc_si128(e, k5);
-		e = _mm_aesenc_si128(e, k6);
-		e = _mm_aesenc_si128(e, k7);
-		e = _mm_aesenc_si128(e, k8);
-		e = _mm_aesenc_si128(e, k9);
-		e = _mm_aesenclast_si128(e, k10);
+		e = _mm_xor_si128(e, ks[0]);
+		e = _mm_aesenc_si128(e, ks[1]);
+		e = _mm_aesenc_si128(e, ks[2]);
+		e = _mm_aesenc_si128(e, ks[3]);
+		e = _mm_aesenc_si128(e, ks[4]);
+		e = _mm_aesenc_si128(e, ks[5]);
+		e = _mm_aesenc_si128(e, ks[6]);
+		e = _mm_aesenc_si128(e, ks[7]);
+		e = _mm_aesenc_si128(e, ks[8]);
+		e = _mm_aesenc_si128(e, ks[9]);
+		e = _mm_aesenclast_si128(e, ks[10]);
 
 		bi = (__m128i*)data.ptr;
 		rem = data.len % AES_BLOCK_SIZE;
@@ -140,17 +129,17 @@ METHOD(mac_t, get_mac, bool,
 		{
 			e = _mm_xor_si128(e, _mm_loadu_si128(bi + i));
 
-			e = _mm_xor_si128(e, k0);
-			e = _mm_aesenc_si128(e, k1);
-			e = _mm_aesenc_si128(e, k2);
-			e = _mm_aesenc_si128(e, k3);
-			e = _mm_aesenc_si128(e, k4);
-			e = _mm_aesenc_si128(e, k5);
-			e = _mm_aesenc_si128(e, k6);
-			e = _mm_aesenc_si128(e, k7);
-			e = _mm_aesenc_si128(e, k8);
-			e = _mm_aesenc_si128(e, k9);
-			e = _mm_aesenclast_si128(e, k10);
+			e = _mm_xor_si128(e, ks[0]);
+			e = _mm_aesenc_si128(e, ks[1]);
+			e = _mm_aesenc_si128(e, ks[2]);
+			e = _mm_aesenc_si128(e, ks[3]);
+			e = _mm_aesenc_si128(e, ks[4]);
+			e = _mm_aesenc_si128(e, ks[5]);
+			e = _mm_aesenc_si128(e, ks[6]);
+			e = _mm_aesenc_si128(e, ks[7]);
+			e = _mm_aesenc_si128(e, ks[8]);
+			e = _mm_aesenc_si128(e, ks[9]);
+			e = _mm_aesenclast_si128(e, ks[10]);
 		}
 
 		/* store remaining bytes of block M[n] */
@@ -196,17 +185,17 @@ METHOD(mac_t, get_mac, bool,
 		}
 		e = _mm_xor_si128(e, _mm_loadu_si128((__m128i*)this->rem));
 
-		e = _mm_xor_si128(e, k0);
-		e = _mm_aesenc_si128(e, k1);
-		e = _mm_aesenc_si128(e, k2);
-		e = _mm_aesenc_si128(e, k3);
-		e = _mm_aesenc_si128(e, k4);
-		e = _mm_aesenc_si128(e, k5);
-		e = _mm_aesenc_si128(e, k6);
-		e = _mm_aesenc_si128(e, k7);
-		e = _mm_aesenc_si128(e, k8);
-		e = _mm_aesenc_si128(e, k9);
-		e = _mm_aesenclast_si128(e, k10);
+		e = _mm_xor_si128(e, ks[0]);
+		e = _mm_aesenc_si128(e, ks[1]);
+		e = _mm_aesenc_si128(e, ks[2]);
+		e = _mm_aesenc_si128(e, ks[3]);
+		e = _mm_aesenc_si128(e, ks[4]);
+		e = _mm_aesenc_si128(e, ks[5]);
+		e = _mm_aesenc_si128(e, ks[6]);
+		e = _mm_aesenc_si128(e, ks[7]);
+		e = _mm_aesenc_si128(e, ks[8]);
+		e = _mm_aesenc_si128(e, ks[9]);
+		e = _mm_aesenclast_si128(e, ks[10]);
 		_mm_storeu_si128((__m128i*)out, e);
 
 		/* (2) Define E[0] = 0x00000000000000000000000000000000 */
