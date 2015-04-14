@@ -306,6 +306,70 @@ START_TEST(test_memxor_aligned)
 }
 END_TEST
 
+/**
+ * Check if memory is all filled with c
+ */
+static bool check_memrange(u_char *p, size_t len, u_char c)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		if (p[i] != c)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+START_TEST(test_memxor_unaligned)
+{
+	u_char src[256], dst[256];
+	u_int salign, dalign, len;
+
+	for (len = 0; len < 200; len++)
+	{
+		for (salign = 8; salign <= 40; salign++)
+		{
+			for (dalign = 8; dalign <= 40; dalign++)
+			{
+				memset(src, 0x51, sizeof(src));
+				memset(src + salign, 0x24, len);
+				memset(dst, 0xDE, sizeof(dst));
+
+				switch (_i)
+				{
+					case 0:
+						memxor(dst + dalign, src + salign, len);
+						break;
+					case 1:
+						memxor_inline(dst + dalign, src + salign, len);
+						break;
+					case 2:
+						memxor_noinline(dst + dalign, src + salign, len);
+						break;
+				}
+
+				ck_assert_msg(
+					check_memrange(dst, dalign, 0xDE),
+					"pre for %u/%u/%u: %b", len, salign, dalign,
+					dst, (int)sizeof(dst));
+				ck_assert_msg(
+					check_memrange(dst + dalign, len, 0x24 ^ 0xDE),
+					"val for %u/%u/%u: %b", len, salign, dalign,
+					dst, (int)sizeof(dst));
+				ck_assert_msg(
+					check_memrange(dst + dalign + len,
+								   sizeof(dst) - dalign - len, 0xDE),
+					"pst for %u/%u/%u: %b", len, salign, dalign,
+					dst, (int)sizeof(dst));
+			}
+		}
+	}
+}
+END_TEST
+
 /*******************************************************************************
  * memeq/const
  */
@@ -819,6 +883,7 @@ Suite *utils_suite_create()
 	tc = tcase_create("memxor");
 	tcase_add_test(tc, test_memxor);
 	tcase_add_test(tc, test_memxor_aligned);
+	tcase_add_loop_test(tc, test_memxor_unaligned, 0, 3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("memeq");
