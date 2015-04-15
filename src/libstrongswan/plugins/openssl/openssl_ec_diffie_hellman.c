@@ -248,6 +248,49 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	return TRUE;
 }
 
+METHOD(diffie_hellman_t, set_private_value, bool,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+{
+	EC_POINT *pub = NULL;
+	BIGNUM *priv = NULL;
+	bool ret = FALSE;
+
+	priv = BN_bin2bn(value.ptr, value.len, NULL);
+	if (!priv)
+	{
+		goto error;
+	}
+	pub = EC_POINT_new(EC_KEY_get0_group(this->key));
+	if (!pub)
+	{
+		goto error;
+	}
+	if (EC_POINT_mul(this->ec_group, pub, priv, NULL, NULL, NULL) != 1)
+	{
+		goto error;
+	}
+	if (EC_KEY_set_private_key(this->key, priv) != 1)
+	{
+		goto error;
+	}
+	if (EC_KEY_set_public_key(this->key, pub) != 1)
+	{
+		goto error;
+	}
+	ret = TRUE;
+
+error:
+	if (pub)
+	{
+		EC_POINT_free(pub);
+	}
+	if (priv)
+	{
+		BN_free(priv);
+	}
+	return ret;
+}
+
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
@@ -558,6 +601,7 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
+				.set_private_value = _set_private_value,
 				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},

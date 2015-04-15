@@ -40,6 +40,10 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/sha2.c \
 	test_vectors/sha2_hmac.c \
 	test_vectors/fips_prf.c \
+	test_vectors/modp.c \
+	test_vectors/modpsub.c \
+	test_vectors/ecp.c \
+	test_vectors/ecpbp.c \
 	test_vectors/rng.c
 
 libstrongswan_test_vectors_la_LDFLAGS = -module -avoid-version

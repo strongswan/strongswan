@@ -291,6 +291,15 @@ START_TEST(test_enum_printf_hook_split)
 }
 END_TEST
 
+START_TEST(test_enum_printf_hook_null)
+{
+	char buf[16];
+
+	snprintf(buf, sizeof(buf), "%N", NULL, 7);
+	ck_assert_str_eq("(7)", buf);
+}
+END_TEST
+
 START_TEST(test_enum_printf_hook_flags)
 {
 	char buf[1024];
@@ -406,6 +415,7 @@ Suite *enum_suite_create()
 	tc = tcase_create("enum_printf_hook");
 	tcase_add_loop_test(tc, test_enum_printf_hook_cont, 0, countof(printf_tests_cont));
 	tcase_add_loop_test(tc, test_enum_printf_hook_split, 0, countof(printf_tests_split));
+	tcase_add_test(tc, test_enum_printf_hook_null);
 	tcase_add_loop_test(tc, test_enum_printf_hook_flags, 0, countof(printf_tests_flags));
 	tcase_add_loop_test(tc, test_enum_printf_hook_flags_incomplete, 0, countof(printf_tests_flags_incomplete));
 	tcase_add_loop_test(tc, test_enum_printf_hook_flags_null, 0, countof(printf_tests_flags_null));

@@ -145,6 +145,24 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	return TRUE;
 }
 
+METHOD(diffie_hellman_t, set_private_value, bool,
+	private_gcrypt_dh_t *this, chunk_t value)
+{
+	gcry_error_t err;
+	gcry_mpi_t xa;
+
+	err = gcry_mpi_scan(&xa, GCRYMPI_FMT_USG, value.ptr, value.len, NULL);
+	if (!err)
+	{
+		gcry_mpi_release(this->xa);
+		this->xa = xa;
+		gcry_mpi_powm(this->ya, this->g, this->xa, this->p);
+		gcry_mpi_release(this->zz);
+		this->zz = NULL;
+	}
+	return !err;
+}
+
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_gcrypt_dh_t *this, chunk_t *secret)
 {
@@ -191,6 +209,7 @@ gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
+				.set_private_value = _set_private_value,
 				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},

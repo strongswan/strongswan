@@ -372,14 +372,17 @@ struct crypto_factory_t {
 							void *vector);
 
 	/**
-	 * Get the number of test vector failures encountered during add.
+	 * Create an enumerator verifying transforms using known test vectors.
 	 *
-	 * This counter gets incremented only if transforms get tested during
-	 * registration.
+	 * The resulting enumerator enumerates over an u_int with the type
+	 * specific transform identifier, the plugin name providing the transform,
+	 * and a boolean value indicating success/failure for the given transform.
 	 *
-	 * @return				number of failed test vectors
+	 * @param type			transform type to test
+	 * @return				enumerator over (u_int, char*, bool)
 	 */
-	u_int (*get_test_vector_failures)(crypto_factory_t *this);
+	enumerator_t* (*create_verify_enumerator)(crypto_factory_t *this,
+											  transform_type_t type);
 
 	/**
 	 * Destroy a crypto_factory instance.

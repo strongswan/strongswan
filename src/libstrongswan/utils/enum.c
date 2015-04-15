@@ -26,6 +26,10 @@
  */
 char *enum_to_name(enum_name_t *e, int val)
 {
+	if (!e)
+	{
+		return NULL;
+	}
 	do
 	{
 		if (val >= e->first && val <= e->last)
@@ -140,7 +144,7 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	int val = *((int*)(args[1]));
 	char *name, buf[512];
 
-	if (ed->next == ENUM_FLAG_MAGIC)
+	if (ed && ed->next == ENUM_FLAG_MAGIC)
 	{
 		name = enum_flags_to_string(ed, val, buf, sizeof(buf));
 		if (name == NULL)

@@ -37,10 +37,6 @@ all)
 			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	if test "$LEAK_DETECTIVE" = "yes"; then
-		# libgcrypt can't be deinitialized
-		CONFIG="$CONFIG --disable-gcrypt"
-	fi
 	if test "$MONOLITHIC" = "yes"; then
 		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
 		CONFIG="$CONFIG --disable-forecast --disable-connmark"

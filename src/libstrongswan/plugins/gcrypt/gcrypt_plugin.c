@@ -158,6 +158,9 @@ plugin_t *gcrypt_plugin_create()
 	}
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
+	/* initialize static allocations we want to exclude from leak-detective */
+	gcry_create_nonce(NULL, 0);
+
 	INIT(this,
 		.public = {
 			.plugin = {

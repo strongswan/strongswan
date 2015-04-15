@@ -19,15 +19,34 @@
 #include "test_suite.h"
 
 #include <utils/test.h>
+#include <threading/thread.h>
+#include <crypto/transform.h>
 
-IMPORT_FUNCTION_FOR_TESTS(crypto, verify_registered_algorithms, u_int,
-						  crypto_factory_t *factory);
+static transform_type_t tfs[] = {
+	ENCRYPTION_ALGORITHM,
+	AEAD_ALGORITHM,
+	INTEGRITY_ALGORITHM,
+	HASH_ALGORITHM,
+	PSEUDO_RANDOM_FUNCTION,
+	RANDOM_NUMBER_GENERATOR,
+	DIFFIE_HELLMAN_GROUP,
+};
 
 START_TEST(test_vectors)
 {
-	u_int failed = TEST_FUNCTION(crypto, verify_registered_algorithms,
-								 lib->crypto);
-	fail_if(failed > 0, "%u test vectors failed", failed);
+	enumerator_t *enumerator;
+	char *plugin;
+	bool success;
+	u_int alg;
+
+	enumerator = lib->crypto->create_verify_enumerator(lib->crypto, tfs[_i]);
+	thread_cleanup_push((void*)enumerator->destroy, enumerator);
+	while (enumerator->enumerate(enumerator, &alg, &plugin, &success))
+	{
+		ck_assert_msg(success, "test vector for %N from '%s' plugin failed",
+					  transform_get_enum_names(tfs[_i]), alg, plugin);
+	}
+	thread_cleanup_pop(TRUE);
 }
 END_TEST
 
@@ -39,8 +58,9 @@ Suite *vectors_suite_create()
 
 	s = suite_create("vectors");
 
-	tc = tcase_create("failures");
-	tcase_add_test(tc, test_vectors);
+	tc = tcase_create("transforms");
+	tcase_add_loop_test(tc, test_vectors, 0, countof(tfs));
+	tcase_set_timeout(tc, 8);
 	suite_add_tcase(s, tc);
 
 	return s;

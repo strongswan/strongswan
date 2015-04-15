@@ -185,6 +185,7 @@ static bool run_test(test_function_t *tfun, int i)
 		tfun->cb(i);
 		return TRUE;
 	}
+	thread_cleanup_popall();
 	return FALSE;
 }
 
@@ -219,6 +220,7 @@ static bool call_fixture(test_case_t *tcase, bool up)
 		}
 		else
 		{
+			thread_cleanup_popall();
 			failure = TRUE;
 			break;
 		}
@@ -233,9 +235,6 @@ static bool call_fixture(test_case_t *tcase, bool up)
  */
 static bool pre_test(test_runner_init_t init, char *cfg)
 {
-	level_t level = LEVEL_SILENT;
-	char *verbosity;
-
 	library_init(cfg, "test-runner");
 
 	/* use non-blocking RNG to generate keys fast */
@@ -258,12 +257,6 @@ static bool pre_test(test_runner_init_t init, char *cfg)
 		library_deinit();
 		return FALSE;
 	}
-	verbosity = getenv("TESTS_VERBOSITY");
-	if (verbosity)
-	{
-		level = atoi(verbosity);
-	}
-	dbg_default_set_level(level);
 	return TRUE;
 }
 
@@ -336,6 +329,7 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 		}
 		else
 		{
+			thread_cleanup_popall();
 			library_deinit();
 			return FALSE;
 		}
@@ -529,7 +523,8 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	test_suite_t *suite;
 	enumerator_t *enumerator;
 	int passed = 0, result;
-	char *cfg;
+	level_t level = LEVEL_SILENT;
+	char *cfg, *verbosity;
 
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
@@ -541,6 +536,13 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	{
 		return EXIT_FAILURE;
 	}
+
+	verbosity = getenv("TESTS_VERBOSITY");
+	if (verbosity)
+	{
+		level = atoi(verbosity);
+	}
+	dbg_default_set_level(level);
 
 	fprintf(stderr, "Running %u '%s' test suites:\n", array_count(suites), name);
 

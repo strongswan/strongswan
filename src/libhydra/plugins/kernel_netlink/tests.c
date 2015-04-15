@@ -33,9 +33,7 @@ static bool test_runner_init(bool init)
 {
 	if (init)
 	{
-		dbg_default_set_level(0);
 		lib->processor->set_threads(lib->processor, 8);
-		dbg_default_set_level(1);
 	}
 	else
 	{

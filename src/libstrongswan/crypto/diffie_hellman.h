@@ -117,6 +117,18 @@ struct diffie_hellman_t {
 		__attribute__((warn_unused_result));
 
 	/**
+	 * Set an explicit own private value to use.
+	 *
+	 * Calling this method is usually not required, as the DH backend generates
+	 * an appropriate private value itself. It is optional to implement, and
+	 * used mostly for testing purposes.
+	 *
+	 * @param value		private value to set
+	 */
+	bool (*set_private_value)(diffie_hellman_t *this, chunk_t value)
+		__attribute__((warn_unused_result));
+
+	/**
 	 * Get the DH group used.
 	 *
 	 * @return			DH group set in construction
