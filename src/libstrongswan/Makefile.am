@@ -37,7 +37,8 @@ selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
 settings/settings_parser.y settings/settings_lexer.l utils/cpu_feature.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c
+utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c \
+utils/utils/atomics.c
 
 if !USE_WINDOWS
   libstrongswan_la_SOURCES += \
@@ -106,7 +107,8 @@ utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/cpu_feature.h utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
 utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
-utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h
+utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h \
+utils/utils/atomics.h
 endif
 
 library.lo :	$(top_builddir)/config.status

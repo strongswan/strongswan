@@ -39,7 +39,8 @@ selectors/traffic_selector.c settings/settings.c settings/settings_types.c \
 settings/settings_parser.c settings/settings_lexer.c utils/cpu_feature.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c
+utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c \
+utils/utils/atomics.c
 
 libstrongswan_la_SOURCES += \
     threading/thread.c \
