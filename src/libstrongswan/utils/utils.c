@@ -16,24 +16,19 @@
 
 #include "utils.h"
 
-#include <string.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <inttypes.h>
-#include <stdint.h>
-#include <dirent.h>
-#include <time.h>
+#include <limits.h>
 #ifndef WIN32
 # include <signal.h>
 #endif
 
 #include <library.h>
-#include <utils/chunk.h>
 #include <collections/enumerator.h>
-#include <threading/mutex.h>
-#include <threading/condvar.h>
 
 #ifdef WIN32
+
+#include <threading/mutex.h>
+#include <threading/condvar.h>
 
 /**
  * Flag to indicate signaled wait_sigint()

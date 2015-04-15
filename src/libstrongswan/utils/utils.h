@@ -40,6 +40,33 @@
 # include <poll.h>
 #endif
 
+#include "utils/types.h"
+#include "enum.h"
+#include "utils/atomics.h"
+#include "utils/align.h"
+#include "utils/byteorder.h"
+#include "utils/string.h"
+#include "utils/memory.h"
+#include "utils/strerror.h"
+#include "utils/status.h"
+#include "utils/object.h"
+#include "utils/path.h"
+#include "utils/time.h"
+#include "utils/tty.h"
+#ifdef __APPLE__
+# include "compat/apple.h"
+#endif
+
+/**
+ * Initialize utility functions
+ */
+void utils_init();
+
+/**
+ * Deinitialize utility functions
+ */
+void utils_deinit();
+
 /**
  * strongSwan program return codes
  */
@@ -73,33 +100,6 @@
  */
 #define BUILD_ASSERT_ARRAY(a) \
 		BUILD_ASSERT(!__builtin_types_compatible_p(typeof(a), typeof(&(a)[0])))
-
-#include "utils/types.h"
-#include "enum.h"
-#include "utils/atomics.h"
-#include "utils/align.h"
-#include "utils/byteorder.h"
-#include "utils/string.h"
-#include "utils/memory.h"
-#include "utils/strerror.h"
-#include "utils/status.h"
-#include "utils/object.h"
-#include "utils/path.h"
-#include "utils/time.h"
-#include "utils/tty.h"
-#ifdef __APPLE__
-# include "compat/apple.h"
-#endif
-
-/**
- * Initialize utility functions
- */
-void utils_init();
-
-/**
- * Deinitialize utility functions
- */
-void utils_deinit();
 
 /**
  * Debug macro to follow control flow
