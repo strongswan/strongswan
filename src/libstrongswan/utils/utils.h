@@ -84,6 +84,7 @@
 #include "utils/status.h"
 #include "utils/object.h"
 #include "utils/path.h"
+#include "utils/time.h"
 #include "utils/tty.h"
 #ifdef __APPLE__
 # include "compat/apple.h"
@@ -163,26 +164,6 @@ void utils_deinit();
 #define ignore_result(call) { if(call){}; }
 
 /**
- * time_t not defined
- */
-#define UNDEFINED_TIME 0
-
-/**
- * Maximum time since epoch causing wrap-around on Jan 19 03:14:07 UTC 2038
- */
-#define TIME_32_BIT_SIGNED_MAX	0x7fffffff
-
-/**
- * Handle struct timeval like an own type.
- */
-typedef struct timeval timeval_t;
-
-/**
- * Handle struct timespec like an own type.
- */
-typedef struct timespec timespec_t;
-
-/**
  * malloc(), but returns aligned memory.
  *
  * The returned pointer must be freed using free_align(), not free().
@@ -213,34 +194,6 @@ void wait_sigint();
  */
 void closefrom(int lowfd);
 #endif
-
-/**
- * Get a timestamp from a monotonic time source.
- *
- * While the time()/gettimeofday() functions are affected by leap seconds
- * and system time changes, this function returns ever increasing monotonic
- * time stamps.
- *
- * @param tv		timeval struct receiving monotonic timestamps, or NULL
- * @return			monotonic timestamp in seconds
- */
-time_t time_monotonic(timeval_t *tv);
-
-/**
- * Add the given number of milliseconds to the given timeval struct
- *
- * @param tv		timeval struct to modify
- * @param ms		number of milliseconds
- */
-static inline void timeval_add_ms(timeval_t *tv, u_int ms)
-{
-	tv->tv_usec += ms * 1000;
-	while (tv->tv_usec >= 1000000 /* 1s */)
-	{
-		tv->tv_usec -= 1000000;
-		tv->tv_sec++;
-	}
-}
 
 /**
  * returns null
@@ -288,23 +241,5 @@ static inline size_t round_down(size_t size, size_t alignment)
 {
 	return size - (size % alignment);
 }
-
-/**
- * printf hook for time_t.
- *
- * Arguments are:
- *	time_t* time, bool utc
- */
-int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
-					 const void *const *args);
-
-/**
- * printf hook for time_t deltas.
- *
- * Arguments are:
- *	time_t* begin, time_t* end
- */
-int time_delta_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
-						   const void *const *args);
 
 #endif /** UTILS_H_ @}*/
