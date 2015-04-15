@@ -111,7 +111,7 @@ utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
 utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h \
 utils/utils/atomics.h utils/utils/types.h utils/utils/byteorder.h \
 utils/utils/string.h utils/utils/memory.h utils/utils/tty.h utils/utils/path.h \
-utils/utils/status.h
+utils/utils/status.h utils/utils/object.h
 endif
 
 library.lo :	$(top_builddir)/config.status
