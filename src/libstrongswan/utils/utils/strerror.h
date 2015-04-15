@@ -14,7 +14,8 @@
  */
 
 /**
- * @{ @ingroup utils
+ * @defgroup strerror_i strerror
+ * @{ @ingroup utils_i
  */
 
 #ifndef STRERROR_H_
