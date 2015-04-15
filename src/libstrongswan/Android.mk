@@ -41,7 +41,7 @@ utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/parser_helper.c utils/test.c utils/process.c utils/utils/strerror.c \
 utils/utils/atomics.c utils/utils/string.c utils/utils/memory.c \
-utils/utils/tty.c
+utils/utils/tty.c utils/utils/path.c
 
 libstrongswan_la_SOURCES += \
     threading/thread.c \

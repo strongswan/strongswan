@@ -81,18 +81,10 @@
 #include "utils/string.h"
 #include "utils/memory.h"
 #include "utils/strerror.h"
+#include "utils/path.h"
 #include "utils/tty.h"
 #ifdef __APPLE__
 # include "compat/apple.h"
-#endif
-
-/**
- * Directory separator character in paths on this platform
- */
-#ifdef WIN32
-# define DIRECTORY_SEPARATOR "\\"
-#else
-# define DIRECTORY_SEPARATOR "/"
 #endif
 
 /**
@@ -388,49 +380,6 @@ void free_align(void *ptr);
  * Portable function to wait for SIGINT/SIGTERM (or equivalent).
  */
 void wait_sigint();
-
-/**
- * Like dirname(3) returns the directory part of the given null-terminated
- * pathname, up to but not including the final '/' (or '.' if no '/' is found).
- * Trailing '/' are not counted as part of the pathname.
- *
- * The difference is that it does this in a thread-safe manner (i.e. it does not
- * use static buffers) and does not modify the original path.
- *
- * @param path		original pathname
- * @return			allocated directory component
- */
-char *path_dirname(const char *path);
-
-/**
- * Like basename(3) returns the filename part of the given null-terminated path,
- * i.e. the part following the final '/' (or '.' if path is empty or NULL).
- * Trailing '/' are not counted as part of the pathname.
- *
- * The difference is that it does this in a thread-safe manner (i.e. it does not
- * use static buffers) and does not modify the original path.
- *
- * @param path		original pathname
- * @return			allocated filename component
- */
-char *path_basename(const char *path);
-
-/**
- * Check if a given path is absolute.
- *
- * @param path		path to check
- * @return			TRUE if absolute, FALSE if relative
- */
-bool path_absolute(const char *path);
-
-/**
- * Creates a directory and all required parent directories.
- *
- * @param path		path to the new directory
- * @param mode		permissions of the new directory/directories
- * @return			TRUE on success
- */
-bool mkdir_p(const char *path, mode_t mode);
 
 #ifndef HAVE_CLOSEFROM
 /**
