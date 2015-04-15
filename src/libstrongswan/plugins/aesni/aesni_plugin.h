@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup aesni_p aesni
+ * @defgroup aesni aesni
  * @ingroup plugins
  *
  * @defgroup aesni_plugin aesni_plugin
- * @{ @ingroup aesni_p
+ * @{ @ingroup aesni
  */
 
 #ifndef AESNI_PLUGIN_H_
