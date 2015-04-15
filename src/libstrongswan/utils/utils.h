@@ -120,6 +120,16 @@ void utils_deinit();
 #endif
 
 /**
+ * Address santizer support
+ */
+#if __has_feature(address_sanitizer) || \
+	(defined(__GNUC__) && defined(__SANITIZE_ADDRESS__))
+# define ADDRESS_SANITIZER_EXCLUDE __attribute__((no_sanitize_address))
+#else
+# define ADDRESS_SANITIZER_EXCLUDE
+#endif
+
+/**
  * Debug macro to follow control flow
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
