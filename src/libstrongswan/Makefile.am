@@ -108,7 +108,7 @@ utils/cpu_feature.h utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
 utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
 utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h \
-utils/utils/atomics.h utils/utils/types.h
+utils/utils/atomics.h utils/utils/types.h utils/utils/byteorder.h
 endif
 
 library.lo :	$(top_builddir)/config.status
