@@ -78,6 +78,7 @@
 #include "enum.h"
 #include "utils/atomics.h"
 #include "utils/byteorder.h"
+#include "utils/string.h"
 #include "utils/strerror.h"
 #ifdef __APPLE__
 # include "compat/apple.h"
@@ -101,62 +102,6 @@ void utils_init();
  * Deinitialize utility functions
  */
 void utils_deinit();
-
-/**
- * Helper function that compares two strings for equality
- */
-static inline bool streq(const char *x, const char *y)
-{
-	return strcmp(x, y) == 0;
-}
-
-/**
- * Helper function that compares two strings for equality, length limited
- */
-static inline bool strneq(const char *x, const char *y, size_t len)
-{
-	return strncmp(x, y, len) == 0;
-}
-
-/**
- * Helper function that checks if a string starts with a given prefix
- */
-static inline bool strpfx(const char *x, const char *prefix)
-{
-	return strneq(x, prefix, strlen(prefix));
-}
-
-/**
- * Helper function that compares two strings for equality ignoring case
- */
-static inline bool strcaseeq(const char *x, const char *y)
-{
-	return strcasecmp(x, y) == 0;
-}
-
-/**
- * Helper function that compares two strings for equality ignoring case, length limited
- */
-static inline bool strncaseeq(const char *x, const char *y, size_t len)
-{
-	return strncasecmp(x, y, len) == 0;
-}
-
-/**
- * Helper function that checks if a string starts with a given prefix
- */
-static inline bool strcasepfx(const char *x, const char *prefix)
-{
-	return strncaseeq(x, prefix, strlen(prefix));
-}
-
-/**
- * NULL-safe strdup variant
- */
-static inline char *strdupnull(const char *s)
-{
-	return s ? strdup(s) : NULL;
-}
 
 /**
  * Helper function that compares two binary blobs for equality
@@ -608,28 +553,6 @@ void *utils_memrchr(const void *s, int c, size_t n);
 #ifndef HAVE_MEMRCHR
 #define memrchr(s,c,n) utils_memrchr(s,c,n)
 #endif
-
-/**
- * Translates the characters in the given string, searching for characters
- * in 'from' and mapping them to characters in 'to'.
- * The two characters sets 'from' and 'to' must contain the same number of
- * characters.
- */
-char *translate(char *str, const char *from, const char *to);
-
-/**
- * Replaces all occurrences of search in the given string with replace.
- *
- * Allocates memory only if anything is replaced in the string.  The original
- * string is also returned if any of the arguments are invalid (e.g. if search
- * is empty or any of them are NULL).
- *
- * @param str		original string
- * @param search	string to search for and replace
- * @param replace	string to replace found occurrences with
- * @return			allocated string, if anything got replaced, str otherwise
- */
-char *strreplace(const char *str, const char *search, const char *replace);
 
 /**
  * Portable function to wait for SIGINT/SIGTERM (or equivalent).
