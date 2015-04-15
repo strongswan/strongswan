@@ -113,6 +113,13 @@ void utils_deinit();
 		BUILD_ASSERT(!__builtin_types_compatible_p(typeof(a), typeof(&(a)[0])))
 
 /**
+ * LLVM/Clang __has_feature support
+ */
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+
+/**
  * Debug macro to follow control flow
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
