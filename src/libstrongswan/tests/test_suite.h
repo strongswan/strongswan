@@ -313,7 +313,7 @@ void test_fail_if_worker_failed();
 	test_fail_if_worker_failed(); \
 	if (!(x)) \
 	{ \
-		test_fail_msg(__FILE__, __LINE__, #x); \
+		test_fail_msg(__FILE__, __LINE__, "%s", #x); \
 	} \
 })
 
@@ -329,7 +329,7 @@ void test_fail_if_worker_failed();
 	test_fail_if_worker_failed(); \
 	if (!(x)) \
 	{ \
-		test_fail_msg(__FILE__, __LINE__, #x ": " fmt, ##__VA_ARGS__); \
+		test_fail_msg(__FILE__, __LINE__, "%s: " fmt, #x, ##__VA_ARGS__); \
 	} \
 })
 
@@ -349,7 +349,7 @@ void test_fail_if_worker_failed();
 	test_fail_if_worker_failed(); \
 	if (x) \
 	{ \
-		test_fail_msg(__FILE__, __LINE__, #x ": " fmt, ##__VA_ARGS__); \
+		test_fail_msg(__FILE__, __LINE__, "%s : " fmt, #x, ##__VA_ARGS__); \
 	} \
 })
 #define fail_unless test_assert_msg

@@ -274,6 +274,50 @@ static inline void *memset_noop(void *s, int c, size_t n)
 						   *(this) = (typeof(*(this))){ __VA_ARGS__ }; }
 
 /**
+ * Aligning version of INIT().
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param this		object to allocate/initialize
+ * @param align		alignment for allocation, in bytes
+ * @param ...		initializer
+ */
+#define INIT_ALIGN(this, align, ...) { \
+						(this) = malloc_align(sizeof(*(this)), align); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; }
+
+/**
+ * Object allocation/initialization macro, with extra allocated bytes at tail.
+ *
+ * The extra space gets zero-initialized.
+ *
+ * @param this		pointer to object to allocate memory for
+ * @param extra		number of bytes to allocate at end of this
+ * @param ...		initializer
+ */
+#define INIT_EXTRA(this, extra, ...) { \
+						typeof(extra) _extra = (extra); \
+						(this) = malloc(sizeof(*(this)) + _extra); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; \
+						memset((this) + 1, 0, _extra); }
+
+/**
+ * Aligning version of INIT_EXTRA().
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param this		object to allocate/initialize
+ * @param extra		number of bytes to allocate at end of this
+ * @param align		alignment for allocation, in bytes
+ * @param ...		initializer
+ */
+#define INIT_EXTRA_ALIGN(this, extra, align, ...) { \
+						typeof(extra) _extra = (extra); \
+						(this) = malloc_align(sizeof(*(this)) + _extra, align); \
+						*(this) = (typeof(*(this))){ __VA_ARGS__ }; \
+						memset((this) + 1, 0, _extra); }
+
+/**
  * Method declaration/definition macro, providing private and public interface.
  *
  * Defines a method name with this as first parameter and a return value ret,
@@ -550,6 +594,24 @@ typedef struct timespec timespec_t;
  * Handle struct chunk_t like an own type.
  */
 typedef struct sockaddr sockaddr_t;
+
+/**
+ * malloc(), but returns aligned memory.
+ *
+ * The returned pointer must be freed using free_align(), not free().
+ *
+ * @param size			size of allocated data
+ * @param align			alignment, up to 255 bytes, usually a power of 2
+ * @return				allocated hunk, aligned to align bytes
+ */
+void* malloc_align(size_t size, u_int8_t align);
+
+/**
+ * Free a hunk allocated by malloc_align().
+ *
+ * @param ptr			hunk to free
+ */
+void free_align(void *ptr);
 
 /**
  * Same as memcpy, but XORs src into dst instead of copy

@@ -1,3 +1,9 @@
+- The new aesni plugin provides CBC, CTR, XCBC, CMAC, CCM and GCM crypto
+  primitives for AES-128/192/256. The plugin requires AES-NI and PCLMULQDQ
+  instructions and works on both x86 and x64 architectures. It provides
+  superior crypto performance in userland without any external libraries.
+
+
 strongswan-5.3.0
 ----------------
 

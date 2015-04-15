@@ -296,6 +296,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_AESNI
+  SUBDIRS += plugins/aesni
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/aesni/libstrongswan-aesni.la
+endif
+endif
+
 if USE_RANDOM
   SUBDIRS += plugins/random
 if MONOLITHIC

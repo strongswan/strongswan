@@ -138,11 +138,11 @@ static u_int end_timing(struct timespec *start)
  * Benchmark a crypter
  */
 static u_int bench_crypter(private_crypto_tester_t *this,
-	encryption_algorithm_t alg, crypter_constructor_t create)
+	encryption_algorithm_t alg, crypter_constructor_t create, size_t key_size)
 {
 	crypter_t *crypter;
 
-	crypter = create(alg, 0);
+	crypter = create(alg, key_size);
 	if (crypter)
 	{
 		char iv[crypter->get_iv_size(crypter)];
@@ -280,8 +280,8 @@ failure:
 	{
 		if (failed)
 		{
-			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
-				 encryption_algorithm_names, alg, plugin_name);
+			DBG1(DBG_LIB,"disable %N[%s]: %zd byte key size not supported",
+				 encryption_algorithm_names, alg, plugin_name, key_size);
 			return FALSE;
 		}
 		else
@@ -296,9 +296,10 @@ failure:
 	{
 		if (speed)
 		{
-			*speed = bench_crypter(this, alg, create);
-			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
+			*speed = bench_crypter(this, alg, create, key_size);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points "
+				 "(%zd bit key)", encryption_algorithm_names, alg,
+				 plugin_name, tested, *speed, key_size * 8);
 		}
 		else
 		{
@@ -313,11 +314,11 @@ failure:
  * Benchmark an aead transform
  */
 static u_int bench_aead(private_crypto_tester_t *this,
-	encryption_algorithm_t alg, aead_constructor_t create)
+	encryption_algorithm_t alg, aead_constructor_t create, size_t key_size)
 {
 	aead_t *aead;
 
-	aead = create(alg, 0, 0);
+	aead = create(alg, key_size, 0);
 	if (aead)
 	{
 		char iv[aead->get_iv_size(aead)];
@@ -474,8 +475,8 @@ failure:
 	{
 		if (failed)
 		{
-			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
-				 encryption_algorithm_names, alg, plugin_name);
+			DBG1(DBG_LIB,"disable %N[%s]: %zd byte key size not supported",
+				 encryption_algorithm_names, alg, plugin_name, key_size);
 			return FALSE;
 		}
 		else
@@ -490,9 +491,10 @@ failure:
 	{
 		if (speed)
 		{
-			*speed = bench_aead(this, alg, create);
-			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
+			*speed = bench_aead(this, alg, create, key_size);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points "
+				 "(%zd bit key)", encryption_algorithm_names, alg,
+				 plugin_name, tested, *speed, key_size * 8);
 		}
 		else
 		{

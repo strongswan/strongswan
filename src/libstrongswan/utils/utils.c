@@ -61,6 +61,50 @@ ENUM(status_names, SUCCESS, NEED_MORE,
 /**
  * Described in header.
  */
+void* malloc_align(size_t size, u_int8_t align)
+{
+	u_int8_t pad;
+	void *ptr;
+
+	if (align == 0)
+	{
+		align = 1;
+	}
+	ptr = malloc(align + sizeof(pad) + size);
+	if (!ptr)
+	{
+		return NULL;
+	}
+	/* store padding length just before data, down to the allocation boundary
+	 * to do some verification during free_align() */
+	pad = align - ((uintptr_t)ptr % align);
+	memset(ptr, pad, pad);
+	return ptr + pad;
+}
+
+/**
+ * Described in header.
+ */
+void free_align(void *ptr)
+{
+	u_int8_t pad, *pos;
+
+	pos = ptr - 1;
+	/* verify padding to check any corruption */
+	for (pad = *pos; (void*)pos >= ptr - pad; pos--)
+	{
+		if (*pos != pad)
+		{
+			DBG1(DBG_LIB, "!!!! invalid free_align() !!!!");
+			return;
+		}
+	}
+	free(ptr - pad);
+}
+
+/**
+ * Described in header.
+ */
 void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 {
 	int m, i;

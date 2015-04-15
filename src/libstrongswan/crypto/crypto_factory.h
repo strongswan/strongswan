@@ -162,12 +162,14 @@ struct crypto_factory_t {
 	 * Register a crypter constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param key size		key size to peform benchmarking for
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
 	bool (*add_crypter)(crypto_factory_t *this, encryption_algorithm_t algo,
-						const char *plugin_name, crypter_constructor_t create);
+						size_t key_size, const char *plugin_name,
+						crypter_constructor_t create);
 
 	/**
 	 * Unregister a crypter constructor.
@@ -187,12 +189,14 @@ struct crypto_factory_t {
 	 * Register a aead constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param key size		key size to peform benchmarking for
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
 	bool (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
-					 const char *plugin_name, aead_constructor_t create);
+					 size_t key_size, const char *plugin_name,
+					 aead_constructor_t create);
 
 	/**
 	 * Register a signer constructor.
