@@ -374,9 +374,7 @@ void thread_cleanup_push(thread_cleanup_t cleanup, void *arg)
 		.arg = arg,
 	);
 
-	this->mutex->lock(this->mutex);
 	this->cleanup_handlers->insert_last(this->cleanup_handlers, handler);
-	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -387,15 +385,12 @@ void thread_cleanup_pop(bool execute)
 	private_thread_t *this = (private_thread_t*)thread_current();
 	cleanup_handler_t *handler;
 
-	this->mutex->lock(this->mutex);
 	if (this->cleanup_handlers->remove_last(this->cleanup_handlers,
 											(void**)&handler) != SUCCESS)
 	{
-		this->mutex->unlock(this->mutex);
 		DBG1(DBG_LIB, "!!! THREAD CLEANUP ERROR !!!");
 		return;
 	}
-	this->mutex->unlock(this->mutex);
 
 	if (execute)
 	{
