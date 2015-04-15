@@ -81,6 +81,7 @@
 #include "utils/string.h"
 #include "utils/memory.h"
 #include "utils/strerror.h"
+#include "utils/tty.h"
 #ifdef __APPLE__
 # include "compat/apple.h"
 #endif
@@ -354,46 +355,6 @@ enum status_t {
  * enum_names for type status_t.
  */
 extern enum_name_t *status_names;
-
-typedef enum tty_escape_t tty_escape_t;
-
-/**
- * Excape codes for tty colors
- */
-enum tty_escape_t {
-	/** text properties */
-	TTY_RESET,
-	TTY_BOLD,
-	TTY_UNDERLINE,
-	TTY_BLINKING,
-
-	/** foreground colors */
-	TTY_FG_BLACK,
-	TTY_FG_RED,
-	TTY_FG_GREEN,
-	TTY_FG_YELLOW,
-	TTY_FG_BLUE,
-	TTY_FG_MAGENTA,
-	TTY_FG_CYAN,
-	TTY_FG_WHITE,
-	TTY_FG_DEF,
-
-	/** background colors */
-	TTY_BG_BLACK,
-	TTY_BG_RED,
-	TTY_BG_GREEN,
-	TTY_BG_YELLOW,
-	TTY_BG_BLUE,
-	TTY_BG_MAGENTA,
-	TTY_BG_CYAN,
-	TTY_BG_WHITE,
-	TTY_BG_DEF,
-};
-
-/**
- * Get the escape string for a given TTY color, empty string on non-tty fd
- */
-char* tty_escape_get(int fd, tty_escape_t escape);
 
 /**
  * Handle struct timeval like an own type.
