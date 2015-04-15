@@ -77,6 +77,7 @@
 #include "utils/types.h"
 #include "enum.h"
 #include "utils/atomics.h"
+#include "utils/align.h"
 #include "utils/byteorder.h"
 #include "utils/string.h"
 #include "utils/memory.h"
@@ -99,22 +100,6 @@ void utils_init();
  * Deinitialize utility functions
  */
 void utils_deinit();
-
-/**
- * Macro gives back larger of two values.
- */
-#define max(x,y) ({ \
-	typeof(x) _x = (x); \
-	typeof(y) _y = (y); \
-	_x > _y ? _x : _y; })
-
-/**
- * Macro gives back smaller of two values.
- */
-#define min(x,y) ({ \
-	typeof(x) _x = (x); \
-	typeof(y) _y = (y); \
-	_x < _y ? _x : _y; })
 
 /**
  * Debug macro to follow control flow
@@ -164,24 +149,6 @@ void utils_deinit();
 #define ignore_result(call) { if(call){}; }
 
 /**
- * malloc(), but returns aligned memory.
- *
- * The returned pointer must be freed using free_align(), not free().
- *
- * @param size			size of allocated data
- * @param align			alignment, up to 255 bytes, usually a power of 2
- * @return				allocated hunk, aligned to align bytes
- */
-void* malloc_align(size_t size, u_int8_t align);
-
-/**
- * Free a hunk allocated by malloc_align().
- *
- * @param ptr			hunk to free
- */
-void free_align(void *ptr);
-
-/**
  * Portable function to wait for SIGINT/SIGTERM (or equivalent).
  */
 void wait_sigint();
@@ -214,32 +181,5 @@ bool return_true();
  * returns FALSE
  */
 bool return_false();
-
-/**
- * Get the padding required to make size a multiple of alignment
- */
-static inline size_t pad_len(size_t size, size_t alignment)
-{
-	size_t remainder;
-
-	remainder = size % alignment;
-	return remainder ? alignment - remainder : 0;
-}
-
-/**
- * Round up size to be multiple of alignment
- */
-static inline size_t round_up(size_t size, size_t alignment)
-{
-	return size + pad_len(size, alignment);
-}
-
-/**
- * Round down size to be a multiple of alignment
- */
-static inline size_t round_down(size_t size, size_t alignment)
-{
-	return size - (size % alignment);
-}
 
 #endif /** UTILS_H_ @}*/
