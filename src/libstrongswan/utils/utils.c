@@ -39,21 +39,6 @@
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 
-ENUM(status_names, SUCCESS, NEED_MORE,
-	"SUCCESS",
-	"FAILED",
-	"OUT_OF_RES",
-	"ALREADY_DONE",
-	"NOT_SUPPORTED",
-	"INVALID_ARG",
-	"NOT_FOUND",
-	"PARSE_ERROR",
-	"VERIFY_ERROR",
-	"INVALID_STATE",
-	"DESTROY_ME",
-	"NEED_MORE",
-);
-
 /**
  * Described in header.
  */
@@ -297,22 +282,6 @@ bool return_true()
 bool return_false()
 {
 	return FALSE;
-}
-
-/**
- * returns FAILED
- */
-status_t return_failed()
-{
-	return FAILED;
-}
-
-/**
- * returns SUCCESS
- */
-status_t return_success()
-{
-	return SUCCESS;
 }
 
 /**
