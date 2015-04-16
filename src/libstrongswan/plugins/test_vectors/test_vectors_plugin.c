@@ -19,13 +19,13 @@
 #include <crypto/crypto_tester.h>
 
 /* define symbols of all test vectors */
-#define TEST_VECTOR_CRYPTER(x) crypter_test_vector_t x;
-#define TEST_VECTOR_AEAD(x) aead_test_vector_t x;
-#define TEST_VECTOR_SIGNER(x) signer_test_vector_t x;
-#define TEST_VECTOR_HASHER(x) hasher_test_vector_t x;
-#define TEST_VECTOR_PRF(x) prf_test_vector_t x;
-#define TEST_VECTOR_RNG(x) rng_test_vector_t x;
-#define TEST_VECTOR_DH(x) dh_test_vector_t x;
+#define TEST_VECTOR_CRYPTER(x) extern crypter_test_vector_t x;
+#define TEST_VECTOR_AEAD(x) extern aead_test_vector_t x;
+#define TEST_VECTOR_SIGNER(x) extern signer_test_vector_t x;
+#define TEST_VECTOR_HASHER(x) extern hasher_test_vector_t x;
+#define TEST_VECTOR_PRF(x) extern prf_test_vector_t x;
+#define TEST_VECTOR_RNG(x) extern rng_test_vector_t x;
+#define TEST_VECTOR_DH(x) extern dh_test_vector_t x;
 
 #include "test_vectors.h"
 
