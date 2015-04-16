@@ -38,7 +38,9 @@ Doxyfile :	Doxyfile.in
 		$(srcdir)/$@.in > $@
 
 apidoc :	Doxyfile
-		doxygen
+		@test -d apidoc || doxygen
+		@! find Doxyfile src/ -name '*.h' -o -name '*.md' , -newer apidoc | \
+			grep -q '' || doxygen && touch apidoc
 
 cov-reset-common:
 		@rm -rf $(top_builddir)/coverage
@@ -75,4 +77,4 @@ clean-local: cov-reset-common
 		@find $(top_builddir)/src $(top_builddir)/scripts -name "*.gcno" -delete
 		@rm -rf apidoc
 
-.PHONY: cov-reset-common cov-reset cov-report coverage
+.PHONY: cov-reset-common cov-reset cov-report coverage apidoc
