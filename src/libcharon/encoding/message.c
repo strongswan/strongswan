@@ -1411,6 +1411,42 @@ static char* get_string(private_message_t *this, char *buf, int len)
 				len -= written;
 			}
 		}
+		if (payload->get_type(payload) == PLV1_FRAGMENT)
+		{
+			fragment_payload_t *frag;
+
+			frag = (fragment_payload_t*)payload;
+			if (frag->is_last(frag))
+			{
+				written = snprintf(pos, len, "(%u/%u)",
+							frag->get_number(frag), frag->get_number(frag));
+			}
+			else
+			{
+				written = snprintf(pos, len, "(%u)", frag->get_number(frag));
+			}
+			if (written >= len || written < 0)
+			{
+				return buf;
+			}
+			pos += written;
+			len -= written;
+		}
+		if (payload->get_type(payload) == PLV2_FRAGMENT)
+		{
+			encrypted_fragment_payload_t *frag;
+
+			frag = (encrypted_fragment_payload_t*)payload;
+			written = snprintf(pos, len, "(%u/%u)",
+							   frag->get_fragment_number(frag),
+							   frag->get_total_fragments(frag));
+			if (written >= len || written < 0)
+			{
+				return buf;
+			}
+			pos += written;
+			len -= written;
+		}
 	}
 	enumerator->destroy(enumerator);
 
