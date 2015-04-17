@@ -15,6 +15,11 @@
 
 #include "iv_gen_seq.h"
 
+/**
+ * Magic value for the initial IV state
+ */
+#define SEQ_IV_INIT_STATE (~(u_int64_t)0)
+
 typedef struct private_iv_gen_t private_iv_gen_t;
 
 /**
@@ -26,6 +31,11 @@ struct private_iv_gen_t {
 	 * Public iv_gen_t interface.
 	 */
 	iv_gen_t public;
+
+	/**
+	 * Previously passed sequence number to enforce uniqueness
+	 */
+	u_int64_t prev;
 
 	/**
 	 * Salt to mask counter
@@ -43,6 +53,15 @@ METHOD(iv_gen_t, get_iv, bool,
 	{
 		return FALSE;
 	}
+	if (this->prev != SEQ_IV_INIT_STATE && seq <= this->prev)
+	{
+		return FALSE;
+	}
+	if (seq == SEQ_IV_INIT_STATE)
+	{
+		return FALSE;
+	}
+	this->prev = seq;
 	if (len > sizeof(u_int64_t))
 	{
 		len = sizeof(u_int64_t);
@@ -84,6 +103,7 @@ iv_gen_t *iv_gen_seq_create()
 			.allocate_iv = _allocate_iv,
 			.destroy = _destroy,
 		},
+		.prev = SEQ_IV_INIT_STATE,
 	);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);

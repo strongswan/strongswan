@@ -25,6 +25,9 @@
 /**
  * Create an IV generator that generates sequential IVs (counter).
  *
+ * The passed external IV must be larger than the one passed to any previous
+ * call.
+ *
  * @return		IV generator
  */
 iv_gen_t *iv_gen_seq_create();
