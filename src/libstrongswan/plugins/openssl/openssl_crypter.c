@@ -226,10 +226,12 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					return NULL;
 			}
 			break;
+#ifndef OPENSSL_NO_DES
 		case ENCR_DES_ECB:
 			key_size = 8;
 			this->cipher = EVP_des_ecb();
 			break;
+#endif
 		default:
 		{
 			char* name;
