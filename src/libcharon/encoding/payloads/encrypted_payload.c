@@ -502,6 +502,8 @@ METHOD(encrypted_payload_t, encrypt, status_t,
 	generator = generator_create();
 	plain = generate(this, generator);
 	assoc = append_header(this, assoc);
+	/* lower 32-bits are for fragment number, if used */
+	mid <<= 32;
 	status = encrypt_content("encrypted payload", this->aead, mid, plain, assoc,
 							 &this->encrypted);
 	generator->destroy(generator);
@@ -932,6 +934,9 @@ METHOD(encrypted_payload_t, frag_encrypt, status_t,
 	}
 	free(this->encrypted.ptr);
 	assoc = append_header_frag(this, assoc);
+	/* IKEv2 message IDs are not unique if fragmentation is used, hence include
+	 * the fragment number to make it unique */
+	mid = mid << 32 | this->fragment_number;
 	status = encrypt_content("encrypted fragment payload", this->aead, mid,
 							 this->plain, assoc, &this->encrypted);
 	free(assoc.ptr);
