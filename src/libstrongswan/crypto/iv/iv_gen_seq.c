@@ -53,6 +53,10 @@ METHOD(iv_gen_t, get_iv, bool,
 	{
 		return FALSE;
 	}
+	if (size < sizeof(u_int64_t))
+	{
+		return FALSE;
+	}
 	if (this->prev != SEQ_IV_INIT_STATE && seq <= this->prev)
 	{
 		return FALSE;
