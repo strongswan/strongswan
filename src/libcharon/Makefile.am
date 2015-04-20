@@ -83,7 +83,7 @@ sa/child_sa_manager.c sa/child_sa_manager.h \
 sa/task_manager.h sa/task_manager.c \
 sa/shunt_manager.c sa/shunt_manager.h \
 sa/trap_manager.c sa/trap_manager.h \
-sa/redirect_provider.h \
+sa/redirect_provider.h sa/redirect_manager.c sa/redirect_manager.h \
 sa/task.c sa/task.h
 
 if USE_IKEV2
