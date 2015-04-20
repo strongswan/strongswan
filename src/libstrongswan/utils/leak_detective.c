@@ -691,8 +691,8 @@ static int print_traces(private_leak_detective_t *this,
 			{
 				if (!thresh_count || entry->count >= thresh_count)
 				{
-					this->report_cb(this->report_data, entry->count,
-									entry->bytes, entry->backtrace, detailed);
+					cb(user, entry->count, entry->bytes, entry->backtrace,
+					   detailed);
 				}
 			}
 		}
