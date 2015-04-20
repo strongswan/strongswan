@@ -391,6 +391,10 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 							handle_supported_hash_algorithms(this, notify);
 						}
 						break;
+					case REDIRECT_SUPPORTED:
+						this->ike_sa->enable_extension(this->ike_sa,
+													   EXT_IKE_REDIRECTION);
+						break;
 					default:
 						/* other notifies are handled elsewhere */
 						break;
