@@ -39,7 +39,7 @@ Doxyfile :	Doxyfile.in
 
 apidoc :	Doxyfile
 		@test -d apidoc || doxygen
-		@! find Doxyfile src/ \( -name '*.h' -o -name '*.md' \) -newer apidoc | \
+		@! find Doxyfile $(top_srcdir)/src/ \( -name '*.h' -o -name '*.md' \) -newer apidoc | \
 			grep -q '' || doxygen && touch apidoc
 
 cov-reset-common:
