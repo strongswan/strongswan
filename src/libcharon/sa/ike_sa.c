@@ -282,6 +282,11 @@ struct private_ike_sa_t {
 	 * Maximum length of a single fragment, 0 for address-specific defaults
 	 */
 	size_t fragment_size;
+
+	/**
+	 * Whether to follow IKEv2 redirects
+	 */
+	bool follow_redirects;
 };
 
 /**
@@ -1958,6 +1963,11 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	host_t *other;
 
 	DBG1(DBG_IKE, "redirected to %Y", gateway);
+	if (!this->follow_redirects)
+	{
+		DBG1(DBG_IKE, "server sent REDIRECT even though we disabled it");
+		return FALSE;
+	}
 
 	snprintf(gw, sizeof(gw), "%Y", gateway);
 	gw[sizeof(gw)-1] = '\0';
@@ -2640,6 +2650,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 								"%s.flush_auth_cfg", FALSE, lib->ns),
 		.fragment_size = lib->settings->get_int(lib->settings,
 								"%s.fragment_size", 0, lib->ns),
+		.follow_redirects = lib->settings->get_bool(lib->settings,
+								"%s.follow_redirects", TRUE, lib->ns),
 	);
 
 	if (version == IKEV2)

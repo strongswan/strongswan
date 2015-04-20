@@ -118,6 +118,11 @@ struct private_ike_init_t {
 	 * Whether to use Signature Authentication as per RFC 7427
 	 */
 	bool signature_authentication;
+
+	/**
+	 * Whether to follow IKEv2 redirects as per RFC 5685
+	 */
+	bool follow_redirects;
 };
 
 /**
@@ -325,7 +330,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	/* notify other peer if we support redirection */
-	if (!this->old_sa && this->initiator)
+	if (!this->old_sa && this->initiator && this->follow_redirects)
 	{
 		message->add_notify(message, FALSE, REDIRECT_SUPPORTED, chunk_empty);
 	}
@@ -850,6 +855,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
+		.follow_redirects = lib->settings->get_bool(lib->settings,
+								"%s.follow_redirects", TRUE, lib->ns),
 	);
 	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
 
