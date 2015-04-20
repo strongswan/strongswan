@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Tobias Brunner
+ * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -136,6 +136,11 @@ enum ike_extension_t {
 	 * Signature Authentication, RFC 7427
 	 */
 	EXT_SIGNATURE_AUTH = (1<<12),
+
+	/**
+	 * IKEv2 Redirect Mechanism, RFC 5685
+	 */
+	EXT_IKE_REDIRECTION = (1<<13),
 };
 
 /**
