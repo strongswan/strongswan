@@ -72,9 +72,14 @@ struct sad_entry_t {
 	host_t *dst;
 
 	/**
-	 * SPI of CHILD SA.
+	 * Local SPI of CHILD SA.
 	 */
-	u_int32_t spi;
+	u_int32_t spi_loc;
+
+	/**
+	 * Remote SPI of CHILD SA.
+	 */
+	u_int32_t spi_rem;
 
 	/**
 	 * Protocol of CHILD SA (ESP/AH).
@@ -97,7 +102,7 @@ static void sad_entry_destroy(sad_entry_t *entry)
 }
 
 /**
- * Find a list entry with given src, dst, spi and proto values.
+ * Find a list entry with given src, dst, (remote) spi and proto values.
  */
 static bool sad_entry_match(sad_entry_t * const entry, const host_t * const src,
 							const host_t * const dst, const u_int32_t * const spi,
@@ -110,7 +115,7 @@ static bool sad_entry_match(sad_entry_t * const entry, const host_t * const src,
 
 	return src->ip_equals(entry->src, (host_t *)src) &&
 		   dst->ip_equals(entry->dst, (host_t *)dst) &&
-		   entry->spi == *spi && entry->proto == *proto;
+		   entry->spi_rem == *spi && entry->proto == *proto;
 }
 
 /**
@@ -121,9 +126,9 @@ static bool sad_entry_match_dst(sad_entry_t * const entry,
 								const u_int32_t * const spi,
 								const u_int8_t * const proto)
 {
-	return entry->reqid == *reqid &&
-		   entry->spi   == *spi &&
-		   entry->proto == *proto;
+	return entry->reqid   == *reqid &&
+		   entry->spi_rem == *spi   &&
+		   entry->proto   == *proto;
 }
 
 /**
@@ -160,13 +165,15 @@ static bool sad_entry_equal(sad_entry_t * const left, sad_entry_t * const right)
 		   left->reqid == right->reqid &&
 		   left->src->ip_equals(left->src, right->src) &&
 		   left->dst->ip_equals(left->dst, right->dst) &&
-		   left->spi == right->spi && left->proto == right->proto;
+		   left->spi_loc == right->spi_loc &&
+		   left->spi_rem == right->spi_rem &&
+		   left->proto == right->proto;
 }
 
 METHOD(tkm_kernel_sad_t, insert, bool,
 	private_tkm_kernel_sad_t * const this, const esa_id_type esa_id,
 	const u_int32_t reqid, const host_t * const src, const host_t * const dst,
-	const u_int32_t spi, const u_int8_t proto)
+	const u_int32_t spi_loc, const u_int32_t spi_rem, const u_int8_t proto)
 {
 	status_t result;
 	sad_entry_t *new_entry;
@@ -176,7 +183,8 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 		 .reqid = reqid,
 		 .src = (host_t *)src,
 		 .dst = (host_t *)dst,
-		 .spi = spi,
+		 .spi_loc = spi_loc,
+		 .spi_rem = spi_rem,
 		 .proto = proto,
 	);
 
@@ -187,8 +195,8 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 	if (result == NOT_FOUND)
 	{
 		DBG3(DBG_KNL, "inserting SAD entry (esa: %llu, reqid: %u, src: %H, "
-			 "dst: %H, spi: %x, proto: %u)", esa_id, reqid, src, dst,
-			 ntohl(spi), proto);
+			 "dst: %H, spi_loc: %x, spi_rem: %x,proto: %u)", esa_id, reqid, src,
+			 dst, ntohl(spi_loc), ntohl(spi_rem), proto);
 		new_entry->src = src->clone((host_t *)src);
 		new_entry->dst = dst->clone((host_t *)dst);
 		this->data->insert_last(this->data, new_entry);
