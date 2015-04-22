@@ -559,6 +559,8 @@ static bool derive_keys(private_ike_init_t *this,
 METHOD(task_t, build_r, status_t,
 	private_ike_init_t *this, message_t *message)
 {
+	identification_t *gateway;
+
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
@@ -568,6 +570,21 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
+
+	/* check if we'd have to redirect the client */
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
+		charon->redirect->redirect_on_init(charon->redirect, this->ike_sa,
+										   &gateway))
+	{
+		chunk_t data;
+
+		DBG1(DBG_IKE, "redirecting peer to %Y", gateway);
+		data = redirect_data_create(gateway, this->other_nonce);
+		message->add_notify(message, TRUE, REDIRECT, data);
+		gateway->destroy(gateway);
+		chunk_free(&data);
+		return FAILED;
+	}
 
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
