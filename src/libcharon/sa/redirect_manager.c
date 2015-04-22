@@ -17,6 +17,8 @@
 
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
+#include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 
 typedef struct private_redirect_manager_t private_redirect_manager_t;
 
@@ -40,6 +42,57 @@ struct private_redirect_manager_t {
 	 */
 	rwlock_t *lock;
 };
+
+
+/**
+ * Gateway identify types
+ *
+ * The encoding is the same as that for corresponding ID payloads.
+ */
+typedef enum {
+	/** IPv4 address of the VPN gateway */
+	GATEWAY_ID_TYPE_IPV4 = 1,
+	/** IPv6 address of the VPN gateway */
+	GATEWAY_ID_TYPE_IPV6 = 2,
+	/** FQDN of the VPN gateway */
+	GATEWAY_ID_TYPE_FQDN = 3,
+} gateway_id_type_t;
+
+/**
+ * Mapping of gateway identity types to identity types
+ */
+static id_type_t gateway_to_id_type(gateway_id_type_t type)
+{
+	switch (type)
+	{
+		case GATEWAY_ID_TYPE_IPV4:
+			return ID_IPV4_ADDR;
+		case GATEWAY_ID_TYPE_IPV6:
+			return ID_IPV6_ADDR;
+		case GATEWAY_ID_TYPE_FQDN:
+			return ID_FQDN;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Mapping of identity types to gateway identity types
+ */
+static gateway_id_type_t id_type_to_gateway(id_type_t type)
+{
+	switch (type)
+	{
+		case ID_IPV4_ADDR:
+			return GATEWAY_ID_TYPE_IPV4;
+		case ID_IPV6_ADDR:
+			return GATEWAY_ID_TYPE_IPV6;
+		case ID_FQDN:
+			return GATEWAY_ID_TYPE_FQDN;
+		default:
+			return 0;
+	}
+}
 
 METHOD(redirect_manager_t, add_provider, void,
 	private_redirect_manager_t *this, redirect_provider_t *provider)
@@ -75,19 +128,16 @@ static bool should_redirect(private_redirect_manager_t *this, ike_sa_t *ike_sa,
 		bool (**method)(void*,ike_sa_t*,identification_t**) = provider + offset;
 		if (*method && (*method)(provider, ike_sa, gateway))
 		{
-			switch (*gateway ? (*gateway)->get_type(*gateway) : 0)
+			if (*gateway && id_type_to_gateway((*gateway)->get_type(*gateway)))
 			{
-				case ID_IPV4_ADDR:
-				case ID_IPV6_ADDR:
-				case ID_FQDN:
-					redirect = TRUE;
-					break;
-				default:
-					DBG1(DBG_CFG, "redirect provider returned invalid gateway");
-					DESTROY_IF(*gateway);
-					continue;
+				redirect = TRUE;
+				break;
 			}
-			break;
+			else
+			{
+				DBG1(DBG_CFG, "redirect provider returned invalid gateway ID");
+				DESTROY_IF(*gateway);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -139,4 +189,86 @@ redirect_manager_t *redirect_manager_create()
 	);
 
 	return &this->public;
+}
+
+/*
+ * Encoding of a REDIRECT or REDIRECTED_FROM notify
+ *
+                         1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Next Payload  |C|  RESERVED   |         Payload Length        |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |Protocol ID(=0)| SPI Size (=0) |      Notify Message Type      |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | GW Ident Type |  GW Ident Len |                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               ~
+    ~                   New Responder GW Identity                   ~
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                                                               |
+    ~                        Nonce Data                             ~
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/*
+ * Described in header
+ */
+chunk_t redirect_data_create(identification_t *gw, chunk_t nonce)
+{
+	gateway_id_type_t type;
+	bio_writer_t *writer;
+	chunk_t data;
+
+	type = id_type_to_gateway(gw->get_type(gw));
+	if (!type)
+	{
+		return chunk_empty;
+	}
+
+	writer = bio_writer_create(0);
+	writer->write_uint8(writer, type);
+	writer->write_data8(writer, gw->get_encoding(gw));
+	if (nonce.ptr)
+	{
+		writer->write_data(writer, nonce);
+	}
+
+	data = writer->extract_buf(writer);
+	writer->destroy(writer);
+	return data;
+}
+
+/*
+ * Described in header
+ */
+identification_t *redirect_data_parse(chunk_t data, chunk_t *nonce)
+{
+	bio_reader_t *reader;
+	id_type_t id_type;
+	chunk_t gateway;
+	u_int8_t type;
+
+	reader = bio_reader_create(data);
+	if (!reader->read_uint8(reader, &type) ||
+		!reader->read_data8(reader, &gateway))
+	{
+		DBG1(DBG_ENC, "invalid REDIRECT notify data");
+		reader->destroy(reader);
+		return NULL;
+	}
+	id_type = gateway_to_id_type(type);
+	if (!id_type)
+	{
+		DBG1(DBG_ENC, "invalid gateway ID type (%d) in REDIRECT notify", type);
+		reader->destroy(reader);
+		return NULL;
+	}
+	if (nonce)
+	{
+		*nonce = chunk_clone(reader->peek(reader));
+	}
+	reader->destroy(reader);
+	return identification_create_from_encoding(id_type, gateway);
 }

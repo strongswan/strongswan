@@ -87,4 +87,23 @@ struct redirect_manager_t {
  */
 redirect_manager_t *redirect_manager_create();
 
+/**
+ * Create notification data of a REDIRECT or REDIRECT_FROM payload using the
+ * given gateway identity and optional nonce (only used during IKE_SA_INIT).
+ *
+ * @param gw				gateway identity (IP or FQDN), gets cloned
+ * @param nonce				nonce value, or chunk_empty, gets cloned
+ * @return					notify data, chunk_empty if ID type is not supported
+ */
+chunk_t redirect_data_create(identification_t *gw, chunk_t nonce);
+
+/**
+ * Parse notification data of a REDIRECT or REDIRECTED_FROM notify payload.
+ *
+ * @param data				notification data to parse
+ * @param nonce[out]		nonce data (allocated), if any was provided
+ * @return					gateway identity, NULL if data is invalid
+ */
+identification_t *redirect_data_parse(chunk_t data, chunk_t *nonce);
+
 #endif /** REDIRECT_MANAGER_H_ @}*/
