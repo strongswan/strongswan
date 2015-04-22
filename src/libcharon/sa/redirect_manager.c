@@ -75,7 +75,18 @@ static bool should_redirect(private_redirect_manager_t *this, ike_sa_t *ike_sa,
 		bool (**method)(void*,ike_sa_t*,identification_t**) = provider + offset;
 		if (*method && (*method)(provider, ike_sa, gateway))
 		{
-			redirect = TRUE;
+			switch (*gateway ? (*gateway)->get_type(*gateway) : 0)
+			{
+				case ID_IPV4_ADDR:
+				case ID_IPV6_ADDR:
+				case ID_FQDN:
+					redirect = TRUE;
+					break;
+				default:
+					DBG1(DBG_CFG, "redirect provider returned invalid gateway");
+					DESTROY_IF(*gateway);
+					continue;
+			}
 			break;
 		}
 	}
