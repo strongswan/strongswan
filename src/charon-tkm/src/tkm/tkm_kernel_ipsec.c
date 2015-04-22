@@ -164,6 +164,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG1(DBG_KNL, "child SA (%llu, no PFS) creation failed", esa_id);
 			goto failure;
 		}
+		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
 	/* creation of subsequent child SA with PFS: nonce and dh context are set */
@@ -176,6 +177,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
 			goto failure;
 		}
+		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
 	if (ike_esa_select(esa_id) != TKM_OK)
