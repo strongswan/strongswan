@@ -419,6 +419,23 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 							handle_supported_hash_algorithms(this, notify);
 						}
 						break;
+					case REDIRECTED_FROM:
+					{
+						identification_t *gateway;
+						chunk_t data;
+
+						data = notify->get_notification_data(notify);
+						gateway = redirect_data_parse(data, NULL);
+						if (!gateway)
+						{
+							DBG1(DBG_IKE, "received invalid REDIRECTED_FROM "
+								 "notify, ignored");
+							break;
+						}
+						DBG1(DBG_IKE, "client got redirected from %Y", gateway);
+						gateway->destroy(gateway);
+						/* fall-through */
+					}
 					case REDIRECT_SUPPORTED:
 						this->ike_sa->enable_extension(this->ike_sa,
 													   EXT_IKE_REDIRECTION);
