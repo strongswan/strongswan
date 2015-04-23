@@ -1951,6 +1951,37 @@ METHOD(ike_sa_t, reestablish, status_t,
 	return status;
 }
 
+METHOD(ike_sa_t, handle_redirect, bool,
+	private_ike_sa_t *this, identification_t *gateway)
+{
+	char gw[BUF_LEN];
+	host_t *other;
+
+	DBG1(DBG_IKE, "redirected to %Y", gateway);
+
+	snprintf(gw, sizeof(gw), "%Y", gateway);
+	gw[sizeof(gw)-1] = '\0';
+	other = host_create_from_dns(gw, AF_UNSPEC, IKEV2_UDP_PORT);
+	if (!other)
+	{
+		DBG1(DBG_IKE, "unable to resolve gateway ID '%Y', redirect failed",
+			 gateway);
+		return FALSE;
+	}
+	switch (this->state)
+	{
+		case IKE_CONNECTING:
+			reset(this);
+			set_other_host(this, other);
+			return TRUE;
+		default:
+			DBG1(DBG_IKE, "unable to handle redirect for IKE_SA in state %N",
+				 ike_sa_state_names, this->state);
+			other->destroy(other);
+			return FALSE;
+	}
+}
+
 METHOD(ike_sa_t, retransmit, status_t,
 	private_ike_sa_t *this, u_int32_t message_id)
 {
@@ -2543,6 +2574,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.destroy = _destroy,
 			.send_dpd = _send_dpd,
 			.send_keepalive = _send_keepalive,
+			.handle_redirect = _handle_redirect,
 			.get_keymat = _get_keymat,
 			.add_child_sa = _add_child_sa,
 			.get_child_sa = _get_child_sa,

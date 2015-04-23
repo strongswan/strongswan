@@ -704,6 +704,28 @@ METHOD(task_t, process_i, status_t,
 					this->retry++;
 					return NEED_MORE;
 				}
+				case REDIRECT:
+				{
+					identification_t *gateway;
+					chunk_t data, nonce = chunk_empty;
+					status_t status = FAILED;
+
+					data = notify->get_notification_data(notify);
+					gateway = redirect_data_parse(data, &nonce);
+					enumerator->destroy(enumerator);
+					if (!gateway || !chunk_equals(nonce, this->my_nonce))
+					{
+						DBG1(DBG_IKE, "received invalid REDIRECT notify");
+					}
+					else if (this->ike_sa->handle_redirect(this->ike_sa,
+															gateway))
+					{
+						status = NEED_MORE;
+					}
+					DESTROY_IF(gateway);
+					chunk_free(&nonce);
+					return status;
+				}
 				default:
 				{
 					if (type <= 16383)
