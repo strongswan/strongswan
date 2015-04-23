@@ -858,6 +858,13 @@ struct ike_sa_t {
 	bool (*handle_redirect)(ike_sa_t *this, identification_t *gateway);
 
 	/**
+	 * Get the address of the gateway that redirected us.
+	 *
+	 * @return				original gateway address
+	 */
+	host_t *(*get_redirected_from)(ike_sa_t *this);
+
+	/**
 	 * Get the keying material of this IKE_SA.
 	 *
 	 * @return				per IKE_SA keymat instance

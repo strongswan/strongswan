@@ -287,6 +287,11 @@ struct private_ike_sa_t {
 	 * Whether to follow IKEv2 redirects
 	 */
 	bool follow_redirects;
+
+	/**
+	 * Original gateway address from which we got redirected
+	 */
+	host_t *redirected_from;
 };
 
 /**
@@ -389,6 +394,12 @@ METHOD(ike_sa_t, set_other_host, void,
 {
 	DESTROY_IF(this->other_host);
 	this->other_host = other;
+}
+
+METHOD(ike_sa_t, get_redirected_from, host_t*,
+	private_ike_sa_t *this)
+{
+	return this->redirected_from;
 }
 
 METHOD(ike_sa_t, get_peer_cfg, peer_cfg_t*,
@@ -748,6 +759,8 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					keepalives = TRUE;
 				}
+				DESTROY_IF(this->redirected_from);
+				this->redirected_from = NULL;
 			}
 			break;
 		}
@@ -1960,7 +1973,7 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	private_ike_sa_t *this, identification_t *gateway)
 {
 	char gw[BUF_LEN];
-	host_t *other;
+	host_t *other, *from;
 
 	DBG1(DBG_IKE, "redirected to %Y", gateway);
 	if (!this->follow_redirects)
@@ -1978,16 +1991,20 @@ METHOD(ike_sa_t, handle_redirect, bool,
 			 gateway);
 		return FALSE;
 	}
+	from = this->other_host->clone(this->other_host);
 	switch (this->state)
 	{
 		case IKE_CONNECTING:
 			reset(this);
 			set_other_host(this, other);
+			DESTROY_IF(this->redirected_from);
+			this->redirected_from = from;
 			return TRUE;
 		default:
 			DBG1(DBG_IKE, "unable to handle redirect for IKE_SA in state %N",
 				 ike_sa_state_names, this->state);
 			other->destroy(other);
+			from->destroy(from);
 			return FALSE;
 	}
 }
@@ -2505,6 +2522,7 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->other_id);
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
+	DESTROY_IF(this->redirected_from);
 
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
@@ -2585,6 +2603,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.send_dpd = _send_dpd,
 			.send_keepalive = _send_keepalive,
 			.handle_redirect = _handle_redirect,
+			.get_redirected_from = _get_redirected_from,
 			.get_keymat = _get_keymat,
 			.add_child_sa = _add_child_sa,
 			.get_child_sa = _get_child_sa,
