@@ -332,7 +332,25 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	/* notify other peer if we support redirection */
 	if (!this->old_sa && this->initiator && this->follow_redirects)
 	{
-		message->add_notify(message, FALSE, REDIRECT_SUPPORTED, chunk_empty);
+		identification_t *gateway;
+		host_t *from;
+		chunk_t data;
+
+		from = this->ike_sa->get_redirected_from(this->ike_sa);
+		if (from)
+		{
+			gateway = identification_create_from_sockaddr(
+													from->get_sockaddr(from));
+			data = redirect_data_create(gateway, chunk_empty);
+			message->add_notify(message, FALSE, REDIRECTED_FROM, data);
+			chunk_free(&data);
+			gateway->destroy(gateway);
+		}
+		else
+		{
+			message->add_notify(message, FALSE, REDIRECT_SUPPORTED,
+								chunk_empty);
+		}
 	}
 	return TRUE;
 }
