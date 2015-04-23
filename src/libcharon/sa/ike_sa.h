@@ -202,6 +202,11 @@ enum ike_condition_t {
 	 * This IKE_SA is currently being reauthenticated
 	 */
 	COND_REAUTHENTICATING = (1<<10),
+
+	/**
+	 * This IKE_SA has been redirected
+	 */
+	COND_REDIRECTED = (1<<11),
 };
 
 /**
