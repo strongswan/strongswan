@@ -118,6 +118,11 @@ struct private_ike_auth_t {
 	 * Is EAP acceptable, did we strictly authenticate peer?
 	 */
 	bool eap_acceptable;
+
+	/**
+	 * Gateway ID if redirected
+	 */
+	identification_t *redirect_to;
 };
 
 /**
@@ -988,6 +993,15 @@ METHOD(task_t, process_i, status_t,
 				case ME_ENDPOINT:
 					/* handled in ike_me task */
 					break;
+				case REDIRECT:
+					DESTROY_IF(this->redirect_to);
+					this->redirect_to = redirect_data_parse(
+								notify->get_notification_data(notify), NULL);
+					if (!this->redirect_to)
+					{
+						DBG1(DBG_IKE, "received invalid REDIRECT notify");
+					}
+					break;
 				default:
 				{
 					if (type <= 16383)
@@ -1118,30 +1132,35 @@ METHOD(task_t, process_i, status_t,
 	{
 		this->expect_another_auth = FALSE;
 	}
-	if (!this->expect_another_auth && !this->do_another_auth && !this->my_auth)
+	if (this->expect_another_auth || this->do_another_auth || this->my_auth)
 	{
-		if (!update_cfg_candidates(this, TRUE))
-		{
-			goto peer_auth_failed;
-		}
-		if (!charon->bus->authorize(charon->bus, TRUE))
-		{
-			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
-					      "cancelling");
-			goto peer_auth_failed;
-		}
-		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-			 this->ike_sa->get_name(this->ike_sa),
-			 this->ike_sa->get_unique_id(this->ike_sa),
-			 this->ike_sa->get_my_host(this->ike_sa),
-			 this->ike_sa->get_my_id(this->ike_sa),
-			 this->ike_sa->get_other_host(this->ike_sa),
-			 this->ike_sa->get_other_id(this->ike_sa));
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-		return SUCCESS;
+		return NEED_MORE;
 	}
-	return NEED_MORE;
+	if (!update_cfg_candidates(this, TRUE))
+	{
+		goto peer_auth_failed;
+	}
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
+				      "cancelling");
+		goto peer_auth_failed;
+	}
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	if (this->redirect_to)
+	{
+		this->ike_sa->handle_redirect(this->ike_sa, this->redirect_to);
+	}
+	return SUCCESS;
 
 peer_auth_failed:
 	charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
@@ -1165,6 +1184,7 @@ METHOD(task_t, migrate, void,
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
+	DESTROY_IF(this->redirect_to);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 
 	this->my_packet = NULL;
@@ -1173,6 +1193,7 @@ METHOD(task_t, migrate, void,
 	this->peer_cfg = NULL;
 	this->my_auth = NULL;
 	this->other_auth = NULL;
+	this->redirect_to = NULL;
 	this->do_another_auth = TRUE;
 	this->expect_another_auth = TRUE;
 	this->authentication_failed = FALSE;
@@ -1189,6 +1210,7 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->peer_cfg);
+	DESTROY_IF(this->redirect_to);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 	free(this);
 }
