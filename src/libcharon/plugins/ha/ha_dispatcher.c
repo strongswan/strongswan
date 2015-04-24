@@ -135,6 +135,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
 	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
+	host_t *other = NULL;
 	bool ok = FALSE;
 
 	enumerator = message->create_attribute_enumerator(message);
@@ -149,6 +150,9 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			case HA_IKE_REKEY_ID:
 				old_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
+				break;
+			case HA_REMOTE_ADDR:
+				other = value.host->clone(value.host);
 				break;
 			case HA_IKE_VERSION:
 				version = value.u8;
@@ -252,6 +256,11 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 												charon->ike_sa_manager, old_sa);
 				old_sa = NULL;
 			}
+			if (other)
+			{
+				ike_sa->set_other_host(ike_sa, other);
+				other = NULL;
+			}
 			ike_sa->set_state(ike_sa, IKE_CONNECTING);
 			ike_sa->set_proposal(ike_sa, proposal);
 			this->cache->cache(this->cache, ike_sa, message);
@@ -270,6 +279,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, old_sa);
 	}
+	DESTROY_IF(other);
 	DESTROY_IF(message);
 }
 

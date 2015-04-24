@@ -138,6 +138,7 @@ METHOD(listener_t, ike_keys, bool,
 			m->add_attribute(m, HA_PSK, shared->get_key(shared));
 		}
 	}
+	m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
 
 	this->socket->push(this->socket, m);
 	this->cache->cache(this->cache, ike_sa, m);
