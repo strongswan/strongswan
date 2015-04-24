@@ -283,7 +283,7 @@ METHOD(pb_tnc_batch_t, process_header, status_t,
 
 	if (directionality & (*from_server == is_server))
 	{
-		DBG1(DBG_TNC, "wrong Directionality: batch is from a PB %s",
+		DBG1(DBG_TNC, "wrong Directionality: batch is from a PB-TNC %s",
 					   is_server ? "server" : "client");
 		msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
 					   PB_ERROR_INVALID_PARAMETER, 1);
