@@ -14,6 +14,7 @@ options = \
 	options/charon-logging.opt \
 	options/charon-systemd.opt \
 	options/imcv.opt \
+	options/imv_policy_manager.opt \
 	options/manager.opt \
 	options/medsrv.opt \
 	options/pacman.opt \

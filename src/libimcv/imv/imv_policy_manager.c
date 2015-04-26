@@ -255,7 +255,8 @@ static bool policy_stop(database_t *db, int session_id)
 	enumerator_t *e;
 	int rec, policy, final_rec, id_type;
 	chunk_t id_value;
-	char *result, *ip_address = NULL;
+	char *result, *format, *ip_address = NULL;
+	char command[512];
 	bool success = TRUE;
 
 	/* store all workitem results for this session in the results table */
@@ -334,6 +335,25 @@ static bool policy_stop(database_t *db, int session_id)
 	fprintf(stderr, "recommendation for access requestor %s is %N\n",
 			ip_address ? ip_address : "0.0.0.0",
 			TNC_IMV_Action_Recommendation_names, final_rec);
+
+	if (final_rec == TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
+	{
+		format = lib->settings->get_str(lib->settings,
+						"imv_policy_manager.command_allow", NULL);
+	}
+	else
+	{
+		format = lib->settings->get_str(lib->settings,
+						"imv_policy_manager.command_block", NULL);
+	}
+	if (format && ip_address)
+	{
+		/* the IP address can occur at most twice in the command string */
+		snprintf(command, sizeof(command), format, ip_address, ip_address);
+		success = system(command) == 0;
+		fprintf(stderr, "%s system command: %s\n",
+			    success ? "successful" : "failed", command);
+	}
 	free(ip_address);
 
 	return success;
