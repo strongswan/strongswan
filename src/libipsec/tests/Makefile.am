@@ -3,6 +3,7 @@ TESTS = ipsec_tests
 check_PROGRAMS = $(TESTS)
 
 ipsec_tests_SOURCES = \
+	suites/test_chapoly.c \
 	ipsec_tests.h ipsec_tests.c
 
 ipsec_tests_CFLAGS = \

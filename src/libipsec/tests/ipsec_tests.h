@@ -12,3 +12,5 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+TEST_SUITE_DEPEND(chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
