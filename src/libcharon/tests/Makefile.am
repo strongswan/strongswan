@@ -11,6 +11,8 @@ libcharon_tests_CFLAGS = \
   -I$(top_srcdir)/src/libhydra \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \
+  -DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
+  -DPLUGINS=\""${s_plugins}\"" \
   @COVERAGE_CFLAGS@
 
 libcharon_tests_LDFLAGS = @COVERAGE_LDFLAGS@
