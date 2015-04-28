@@ -40,9 +40,9 @@ struct private_aead_t {
 	aead_t public;
 
 	/**
-	 * The encryption key
+	 * The key size
 	 */
-	chunk_t	key;
+	size_t key_size;
 
 	/**
 	 * Salt value
@@ -60,9 +60,9 @@ struct private_aead_t {
 	iv_gen_t *iv_gen;
 
 	/**
-	 * The cipher to use
+	 * Context with key schedule
 	 */
-	const EVP_CIPHER *cipher;
+	EVP_CIPHER_CTX ctx;
 };
 
 /**
@@ -71,7 +71,6 @@ struct private_aead_t {
 static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 				  u_char *out, int enc)
 {
-	EVP_CIPHER_CTX ctx;
 	u_char nonce[NONCE_LEN];
 	bool success = FALSE;
 	int len;
@@ -79,37 +78,33 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	memcpy(nonce, this->salt, SALT_LEN);
 	memcpy(nonce + SALT_LEN, iv.ptr, IV_LEN);
 
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_CIPHER_CTX_set_padding(&ctx, 0);
-	if (!EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc) ||
-		!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, NONCE_LEN, NULL) ||
-		!EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, nonce, enc))
+	if (!EVP_CipherInit_ex(&this->ctx, NULL, NULL, NULL, nonce, enc))
 	{
 		goto done;
 	}
-	if (!enc && !EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_TAG, this->icv_size,
-									 data.ptr + data.len))
+	if (!enc && !EVP_CIPHER_CTX_ctrl(&this->ctx, EVP_CTRL_GCM_SET_TAG,
+									 this->icv_size, data.ptr + data.len))
 	{	/* set ICV for verification on decryption */
 		goto done;
 	}
-	if (assoc.len && !EVP_CipherUpdate(&ctx, NULL, &len, assoc.ptr, assoc.len))
+	if (assoc.len && !EVP_CipherUpdate(&this->ctx, NULL, &len,
+									   assoc.ptr, assoc.len))
 	{	/* set AAD if specified */
 		goto done;
 	}
-	if (!EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len) ||
-		!EVP_CipherFinal_ex(&ctx, out + len, &len))
+	if (!EVP_CipherUpdate(&this->ctx, out, &len, data.ptr, data.len) ||
+		!EVP_CipherFinal_ex(&this->ctx, out + len, &len))
 	{	/* EVP_CipherFinal_ex fails if ICV is incorrect on decryption */
 		goto done;
 	}
-	if (enc && !EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_GET_TAG, this->icv_size,
-									out + data.len))
+	if (enc && !EVP_CIPHER_CTX_ctrl(&this->ctx, EVP_CTRL_GCM_GET_TAG,
+									this->icv_size, out + data.len))
 	{	/* copy back the ICV when encrypting */
 		goto done;
 	}
 	success = TRUE;
 
 done:
-	EVP_CIPHER_CTX_cleanup(&ctx);
 	return success;
 }
 
@@ -152,7 +147,7 @@ METHOD(aead_t, decrypt, bool,
 METHOD(aead_t, get_block_size, size_t,
 	private_aead_t *this)
 {
-	return this->cipher->block_size;
+	return 1;
 }
 
 METHOD(aead_t, get_icv_size, size_t,
@@ -176,7 +171,7 @@ METHOD(aead_t, get_iv_gen, iv_gen_t*,
 METHOD(aead_t, get_key_size, size_t,
 	private_aead_t *this)
 {
-	return this->key.len + SALT_LEN;
+	return this->key_size + SALT_LEN;
 }
 
 METHOD(aead_t, set_key, bool,
@@ -187,14 +182,18 @@ METHOD(aead_t, set_key, bool,
 		return FALSE;
 	}
 	memcpy(this->salt, key.ptr + key.len - SALT_LEN, SALT_LEN);
-	memcpy(this->key.ptr, key.ptr, this->key.len);
+
+	if (!EVP_CipherInit_ex(&this->ctx, NULL, NULL, key.ptr, NULL, 0))
+	{
+		return FALSE;
+	}
 	return TRUE;
 }
 
 METHOD(aead_t, destroy, void,
 	private_aead_t *this)
 {
-	chunk_clear(&this->key);
+	EVP_CIPHER_CTX_cleanup(&this->ctx);
 	this->iv_gen->destroy(this->iv_gen);
 	free(this);
 }
@@ -205,6 +204,7 @@ METHOD(aead_t, destroy, void,
 aead_t *openssl_gcm_create(encryption_algorithm_t algo,
 						   size_t key_size, size_t salt_size)
 {
+	const EVP_CIPHER *cipher = NULL;
 	private_aead_t *this;
 
 	INIT(this,
@@ -255,13 +255,13 @@ aead_t *openssl_gcm_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:
-					this->cipher = EVP_get_cipherbyname("aes-128-gcm");
+					cipher = EVP_get_cipherbyname("aes-128-gcm");
 					break;
 				case 24:
-					this->cipher = EVP_get_cipherbyname("aes-192-gcm");
+					cipher = EVP_get_cipherbyname("aes-192-gcm");
 					break;
 				case 32:
-					this->cipher = EVP_get_cipherbyname("aes-256-gcm");
+					cipher = EVP_get_cipherbyname("aes-256-gcm");
 					break;
 				default:
 					free(this);
@@ -273,14 +273,29 @@ aead_t *openssl_gcm_create(encryption_algorithm_t algo,
 			return NULL;
 	}
 
-	if (!this->cipher)
+	if (!cipher)
 	{
 		free(this);
 		return NULL;
 	}
 
-	this->key = chunk_alloc(key_size);
+	this->key_size = key_size;
 	this->iv_gen = iv_gen_seq_create();
+
+	EVP_CIPHER_CTX_init(&this->ctx);
+	EVP_CIPHER_CTX_set_padding(&this->ctx, 0);
+
+	if (!EVP_CipherInit_ex(&this->ctx, cipher, NULL, NULL, NULL, 0))
+	{
+		destroy(this);
+		return NULL;
+	}
+	if (!EVP_CIPHER_CTX_ctrl(&this->ctx, EVP_CTRL_GCM_SET_IVLEN,
+							 NONCE_LEN, NULL))
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }
