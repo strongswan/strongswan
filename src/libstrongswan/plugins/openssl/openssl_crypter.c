@@ -29,15 +29,25 @@ struct private_openssl_crypter_t {
 	 */
 	openssl_crypter_t public;
 
-	/*
-	 * the key
+	/**
+	 * Key size, in bytes
 	 */
-	chunk_t	key;
+	size_t key_size;
 
 	/*
 	 * the cipher to use
 	 */
 	const EVP_CIPHER *cipher;
+
+	/**
+	 * Encryption context
+	 */
+	EVP_CIPHER_CTX enc;
+
+	/**
+	 * Decryption context
+	 */
+	EVP_CIPHER_CTX dec;
 };
 
 /**
@@ -91,7 +101,7 @@ static char* lookup_algorithm(u_int16_t ikev2_algo, size_t *key_size)
  * Do the actual en/decryption in an EVP context
  */
 static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
-				  chunk_t *dst, int enc)
+				  chunk_t *dst, EVP_CIPHER_CTX *ctx, int enc)
 {
 	int len;
 	u_char *out;
@@ -102,28 +112,22 @@ static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 		*dst = chunk_alloc(data.len);
 		out = dst->ptr;
 	}
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
-	return EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc) &&
-		   EVP_CIPHER_CTX_set_padding(&ctx, 0) /* disable padding */ &&
-		   EVP_CIPHER_CTX_set_key_length(&ctx, this->key.len) &&
-		   EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, iv.ptr, enc) &&
-		   EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len) &&
+	return EVP_CipherInit_ex(ctx, NULL, NULL, NULL, iv.ptr, enc) &&
+		   EVP_CipherUpdate(ctx, out, &len, data.ptr, data.len) &&
 		   /* since padding is disabled this does nothing */
-		   EVP_CipherFinal_ex(&ctx, out + len, &len) &&
-		   EVP_CIPHER_CTX_cleanup(&ctx);
+		   EVP_CipherFinal_ex(ctx, out + len, &len);
 }
 
 METHOD(crypter_t, decrypt, bool,
 	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
-	return crypt(this, data, iv, dst, 0);
+	return crypt(this, data, iv, dst, &this->dec, 0);
 }
 
 METHOD(crypter_t, encrypt, bool,
 	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
-	return crypt(this, data, iv, dst, 1);
+	return crypt(this, data, iv, dst, &this->enc, 1);
 }
 
 METHOD(crypter_t, get_block_size, size_t,
@@ -141,20 +145,29 @@ METHOD(crypter_t, get_iv_size, size_t,
 METHOD(crypter_t, get_key_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->key.len;
+	return this->key_size;
 }
 
 METHOD(crypter_t, set_key, bool,
 	private_openssl_crypter_t *this, chunk_t key)
 {
-	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
+	if (key.len != this->key_size)
+	{
+		return FALSE;
+	}
+	if (!EVP_CipherInit_ex(&this->enc, NULL, NULL, key.ptr, NULL, 1) ||
+		!EVP_CipherInit_ex(&this->dec, NULL, NULL, key.ptr, NULL, 0))
+	{
+		return FALSE;
+	}
 	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,
 	private_openssl_crypter_t *this)
 {
-	chunk_clear(&this->key);
+	EVP_CIPHER_CTX_cleanup(&this->enc);
+	EVP_CIPHER_CTX_cleanup(&this->dec);
 	free(this);
 }
 
@@ -162,7 +175,7 @@ METHOD(crypter_t, destroy, void,
  * Described in header
  */
 openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
-												  size_t key_size)
+										  size_t key_size)
 {
 	private_openssl_crypter_t *this;
 
@@ -255,7 +268,19 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 		return NULL;
 	}
 
-	this->key = chunk_alloc(key_size);
+	this->key_size = key_size;
 
+	EVP_CIPHER_CTX_init(&this->enc);
+	EVP_CIPHER_CTX_init(&this->dec);
+	if (!EVP_CipherInit_ex(&this->enc, this->cipher, NULL, NULL, NULL, 1) ||
+		!EVP_CipherInit_ex(&this->dec, this->cipher, NULL, NULL, NULL, 0) ||
+		!EVP_CIPHER_CTX_set_padding(&this->enc, 0) ||
+		!EVP_CIPHER_CTX_set_padding(&this->dec, 0) ||
+		!EVP_CIPHER_CTX_set_key_length(&this->enc, key_size) ||
+		!EVP_CIPHER_CTX_set_key_length(&this->dec, key_size))
+	{
+		destroy(this);
+		return NULL;
+	}
 	return &this->public;
 }
