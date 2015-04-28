@@ -53,6 +53,14 @@ class Session(object):
         """
         return self.handler.streamed_request("terminate", "control-log", sa)
 
+    def redirect(self, sa):
+        """Redirect an IKE_SA.
+
+        :param sa: the SA to redirect
+        :type sa: dict
+        """
+        self.handler.request("redirect", sa)
+
     def install(self, policy):
         """Install a trap, drop or bypass policy defined by a CHILD_SA config.
 

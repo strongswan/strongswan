@@ -289,6 +289,21 @@ Terminates an SA while streaming _control-log_ events.
 The default timeout of 0 waits indefinitely for a result, and a timeout value
 of -1 returns a result immediately.
 
+### redirect() ###
+
+Redirect a client-initiated IKE_SA to another gateway.  Only for IKEv2 and if
+supported by the peer.
+
+	{
+		ike = <redirect an IKE_SA by configuration name>
+		ike-id = <redirect an IKE_SA by its unique id>
+		peer-ip = <redirect an IKE_SA with matching peer IP>
+		peer-id = <redirect an IKE_SA with matching peer identity>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
 ### install() ###
 
 Install a trap, drop or bypass policy defined by a CHILD_SA config.
