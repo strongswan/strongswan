@@ -30,6 +30,7 @@
 #include <sa/ikev2/tasks/ike_rekey.h>
 #include <sa/ikev2/tasks/ike_reauth.h>
 #include <sa/ikev2/tasks/ike_reauth_complete.h>
+#include <sa/ikev2/tasks/ike_redirect.h>
 #include <sa/ikev2/tasks/ike_delete.h>
 #include <sa/ikev2/tasks/ike_config.h>
 #include <sa/ikev2/tasks/ike_dpd.h>
@@ -470,6 +471,11 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 				if (activate_task(this, TASK_IKE_DELETE))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
+				if (activate_task(this, TASK_IKE_REDIRECT))
 				{
 					exchange = INFORMATIONAL;
 					break;
@@ -992,6 +998,11 @@ static status_t process_request(private_task_manager_t *this,
 									 * invokes all the required hooks. */
 									task = (task_t*)ike_delete_create(
 														this->ike_sa, FALSE);
+									break;
+								case REDIRECT:
+									task = (task_t*)ike_redirect_create(
+															this->ike_sa, NULL);
+									break;
 								default:
 									break;
 							}

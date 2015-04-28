@@ -57,6 +57,8 @@ enum task_type_t {
 	TASK_IKE_REAUTH,
 	/** completion task for make-before-break IKE_SA re-authentication */
 	TASK_IKE_REAUTH_COMPLETE,
+	/** redirect an active IKE_SA */
+	TASK_IKE_REDIRECT,
 	/** delete an IKE_SA */
 	TASK_IKE_DELETE,
 	/** liveness check */
