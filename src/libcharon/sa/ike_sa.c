@@ -57,6 +57,7 @@
 #include <processing/jobs/retry_initiate_job.h>
 #include <sa/ikev2/tasks/ike_auth_lifetime.h>
 #include <sa/ikev2/tasks/ike_reauth_complete.h>
+#include <sa/ikev2/tasks/ike_redirect.h>
 
 #ifdef ME
 #include <sa/ikev2/tasks/ike_me.h>
@@ -2101,6 +2102,45 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	}
 }
 
+METHOD(ike_sa_t, redirect, status_t,
+	private_ike_sa_t *this, identification_t *gateway)
+{
+	switch (this->state)
+	{
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+		case IKE_REKEYING:
+			if (has_condition(this, COND_REDIRECTED))
+			{	/* IKE_SA already got redirected */
+				return SUCCESS;
+			}
+			if (has_condition(this, COND_ORIGINAL_INITIATOR))
+			{
+				DBG1(DBG_IKE, "unable to redirect IKE_SA as initiator");
+				return FAILED;
+			}
+			if (this->version == IKEV1)
+			{
+				DBG1(DBG_IKE, "unable to redirect IKEv1 SA");
+				return FAILED;
+			}
+			if (!supports_extension(this, EXT_IKE_REDIRECTION))
+			{
+				DBG1(DBG_IKE, "client does not support IKE redirection");
+				return FAILED;
+			}
+#ifdef USE_IKEV2
+			this->task_manager->queue_task(this->task_manager,
+						(task_t*)ike_redirect_create(&this->public, gateway));
+#endif
+			return this->task_manager->initiate(this->task_manager);
+		default:
+			DBG1(DBG_IKE, "unable to redirect IKE_SA in state %N",
+				 ike_sa_state_names, this->state);
+			return INVALID_STATE;
+	}
+}
+
 METHOD(ike_sa_t, retransmit, status_t,
 	private_ike_sa_t *this, u_int32_t message_id)
 {
@@ -2694,6 +2734,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.destroy = _destroy,
 			.send_dpd = _send_dpd,
 			.send_keepalive = _send_keepalive,
+			.redirect = _redirect,
 			.handle_redirect = _handle_redirect,
 			.get_redirected_from = _get_redirected_from,
 			.get_keymat = _get_keymat,

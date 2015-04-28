@@ -853,6 +853,15 @@ struct ike_sa_t {
 	void (*send_keepalive) (ike_sa_t *this, bool scheduled);
 
 	/**
+	 * Redirect an active IKE_SA.
+	 *
+	 * @param gateway		gateway ID (IP or FQDN) of the target
+	 * @return				state, including DESTROY_ME, if this IKE_SA MUST be
+	 * 						destroyed
+	 */
+	status_t (*redirect)(ike_sa_t *this, identification_t *gateway);
+
+	/**
 	 * Handle a redirect request.
 	 *
 	 * The behavior is different depending on the state of the IKE_SA.
