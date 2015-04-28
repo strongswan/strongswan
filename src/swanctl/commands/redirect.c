@@ -117,7 +117,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		redirect, 'd', "redirect", "redirect an IKE_SA",
 		{"--ike <name> | --ike-id <id> | --peer-ip <ip>",
-		 "--peer-id <id> | --gateway <ip|fqdn> [--raw|--pretty]"},
+		 "--peer-id <id|wildcards> | --gateway <ip|fqdn> [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"ike",			'i', 1, "redirect by IKE_SA name"},

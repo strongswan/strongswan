@@ -366,7 +366,7 @@ CALLBACK(redirect, vici_message_t*,
 	enumerator_t *sas;
 	char *ike, *peer_ip, *peer_id, *gw, *errmsg = NULL;
 	u_int ike_id, current, found = 0;
-	identification_t *gateway, *identity = NULL;
+	identification_t *gateway, *identity = NULL, *other_id;
 	host_t *address = NULL;
 	ike_sa_t *ike_sa;
 	vici_builder_t *builder;
@@ -445,10 +445,13 @@ CALLBACK(redirect, vici_message_t*,
 		{
 			continue;
 		}
-		if (identity &&
-			!identity->equals(identity, ike_sa->get_other_eap_id(ike_sa)))
+		if (identity)
 		{
-			continue;
+			other_id = ike_sa->get_other_eap_id(ike_sa);
+			if (!other_id->matches(other_id, identity))
+			{
+				continue;
+			}
 		}
 		lib->processor->queue_job(lib->processor,
 				(job_t*)redirect_job_create(ike_sa->get_id(ike_sa), gateway));
