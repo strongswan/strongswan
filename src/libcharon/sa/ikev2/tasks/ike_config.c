@@ -333,6 +333,11 @@ METHOD(task_t, build_r, status_t,
 		linked_list_t *vips, *pools;
 		host_t *requested;
 
+		if (this->ike_sa->has_condition(this->ike_sa, COND_REDIRECTED))
+		{	/* don't assign attributes for redirected SAs */
+			return SUCCESS;
+		}
+
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		vips = linked_list_create();
