@@ -13,6 +13,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2014 Timo Teräs <timo.teras@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
@@ -262,9 +284,12 @@ CALLBACK(ike_sas, int,
 CALLBACK(list_cb, void,
 	command_format_options_t *format, char *name, vici_res_t *res)
 {
+	char buf[256];
+
 	if (*format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "list-sa event", *format & COMMAND_FORMAT_PRETTY,
+		snprintf(buf, sizeof(buf), "%s event", name);
+		vici_dump(res, buf, *format & COMMAND_FORMAT_PRETTY,
 				  stdout);
 	}
 	else
@@ -348,6 +373,50 @@ static int list_sas(vici_conn_t *conn)
 	return 0;
 }
 
+static int monitor_sas(vici_conn_t *conn)
+{
+	command_format_options_t format = COMMAND_FORMAT_NONE;
+	char *arg;
+
+	while (TRUE)
+	{
+		switch (command_getopt(&arg))
+		{
+			case 'h':
+				return command_usage(NULL);
+			case 'P':
+				format |= COMMAND_FORMAT_PRETTY;
+				/* fall through to raw */
+			case 'r':
+				format |= COMMAND_FORMAT_RAW;
+				continue;
+			case EOF:
+				break;
+			default:
+				return command_usage("invalid --monitor-sa option");
+		}
+		break;
+	}
+	if (vici_register(conn, "ike-updown", list_cb, &format) != 0)
+	{
+		fprintf(stderr, "registering for IKE_SAs failed: %s\n",
+				strerror(errno));
+		return errno;
+	}
+	if (vici_register(conn, "child-updown", list_cb, &format) != 0)
+	{
+		fprintf(stderr, "registering for CHILD_SAs failed: %s\n",
+				strerror(errno));
+		return errno;
+	}
+
+	wait_sigint();
+
+	fprintf(stderr, "disconnecting...\n");
+
+	return 0;
+}
+
 /**
  * Register the command.
  */
@@ -361,6 +430,19 @@ static void __attribute__ ((constructor))reg()
 			{"ike",			'i', 1, "filter IKE_SAs by name"},
 			{"ike-id",		'I', 1, "filter IKE_SAs by unique identifier"},
 			{"noblock",		'n', 0, "don't wait for IKE_SAs in use"},
+			{"raw",			'r', 0, "dump raw response message"},
+			{"pretty",		'P', 0, "dump raw response message in pretty print"},
+		}
+	});
+}
+
+static void __attribute__ ((constructor))reg_monitor_sa()
+{
+	command_register((command_t) {
+		monitor_sas, 'm', "monitor-sa", "monitor for IKE_SA and CHILD_SA changes",
+		{"[--raw|--pretty]"},
+		{
+			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
