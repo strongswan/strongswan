@@ -13,6 +13,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2014 Timo Teräs <timo.teras@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "vici_query.h"
 #include "vici_builder.h"
 
@@ -1008,12 +1030,71 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "list-policy", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-conn", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-cert", reg);
+	this->dispatcher->manage_event(this->dispatcher, "ike-updown", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-updown", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
 	manage_command(this, "list-certs", list_certs, reg);
 	manage_command(this, "version", version, reg);
 	manage_command(this, "stats", stats, reg);
+}
+
+METHOD(listener_t, ike_updown, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, bool up)
+{
+	vici_builder_t *b;
+	time_t now;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "ike-updown"))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+
+	b = vici_builder_create();
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now);
+	b->begin_section(b, "child-sas");
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  "ike-updown", 0, b->finalize(b));
+
+	return TRUE;
+}
+
+METHOD(listener_t, child_updown, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa, bool up)
+{
+	vici_builder_t *b;
+	time_t now;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "child-updown"))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+	b = vici_builder_create();
+
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now);
+	b->begin_section(b, "child-sas");
+
+	b->begin_section(b, child_sa->get_name(child_sa));
+	list_child(this, b, child_sa, now);
+	b->end_section(b);
+
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  "child-updown", 0, b->finalize(b));
+
+	return TRUE;
 }
 
 METHOD(vici_query_t, destroy, void,
@@ -1032,6 +1113,10 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 
 	INIT(this,
 		.public = {
+			.listener = {
+				.ike_updown = _ike_updown,
+				.child_updown = _child_updown,
+			},
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
