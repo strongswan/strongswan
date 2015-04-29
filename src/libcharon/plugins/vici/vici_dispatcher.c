@@ -13,6 +13,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2014 Timo Teräs <timo.teras@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "vici_dispatcher.h"
 #include "vici_socket.h"
 
@@ -446,6 +468,24 @@ METHOD(vici_dispatcher_t, manage_event, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(vici_dispatcher_t, has_event_listeners, bool,
+	private_vici_dispatcher_t *this, char *name)
+{
+	bool retval = FALSE;
+
+	this->mutex->lock(this->mutex);
+	if (this->events->get(this->events, name))
+	{
+		/* the entry might be getting destroyed, but returning
+		 * false positive is not a problem as a later raise_event
+		 * will check things again. */
+		retval = TRUE;
+	}
+	this->mutex->unlock(this->mutex);
+
+	return retval;
+}
+
 METHOD(vici_dispatcher_t, raise_event, void,
 	private_vici_dispatcher_t *this, char *name, u_int id,
 	vici_message_t *message)
@@ -504,6 +544,7 @@ vici_dispatcher_t *vici_dispatcher_create(char *uri)
 		.public = {
 			.manage_command = _manage_command,
 			.manage_event = _manage_event,
+			.has_event_listeners = _has_event_listeners,
 			.raise_event = _raise_event,
 			.destroy = _destroy,
 		},
