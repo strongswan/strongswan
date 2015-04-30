@@ -437,8 +437,11 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						/* fall-through */
 					}
 					case REDIRECT_SUPPORTED:
-						this->ike_sa->enable_extension(this->ike_sa,
-													   EXT_IKE_REDIRECTION);
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_IKE_REDIRECTION);
+						}
 						break;
 					default:
 						/* other notifies are handled elsewhere */
@@ -612,7 +615,8 @@ METHOD(task_t, build_r, status_t,
 	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 	/* check if we'd have to redirect the client */
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
+	if (!this->old_sa &&
+		this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
 		charon->redirect->redirect_on_init(charon->redirect, this->ike_sa,
 										   &gateway))
 	{
@@ -750,6 +754,12 @@ METHOD(task_t, process_i, status_t,
 					chunk_t data, nonce = chunk_empty;
 					status_t status = FAILED;
 
+					if (this->old_sa)
+					{
+						DBG1(DBG_IKE, "received REDIRECT notify during rekeying"
+						     ", ignored");
+						break;
+					}
 					data = notify->get_notification_data(notify);
 					gateway = redirect_data_parse(data, &nonce);
 					enumerator->destroy(enumerator);
