@@ -1950,8 +1950,11 @@ METHOD(ike_sa_t, reestablish, status_t,
 	host = this->my_host;
 	new->set_my_host(new, host->clone(host));
 	charon->bus->ike_reestablish_pre(charon->bus, &this->public, new);
-	/* resolve hosts but use the old addresses above as fallback */
-	resolve_hosts((private_ike_sa_t*)new);
+	if (!has_condition(this, COND_REAUTHENTICATING))
+	{	/* reauthenticate to the same addresses, but resolve hosts if
+		 * reestablishing (old addresses serve as fallback) */
+		resolve_hosts((private_ike_sa_t*)new);
+	}
 	/* if we already have a virtual IP, we reuse it */
 	enumerator = array_create_enumerator(this->my_vips);
 	while (enumerator->enumerate(enumerator, &host))
