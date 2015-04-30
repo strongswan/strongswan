@@ -360,6 +360,36 @@ CALLBACK(terminate, vici_message_t*,
 	return builder->finalize(builder);
 }
 
+/**
+ * Parse a peer-ip specified, which can be a subnet in CIDR notation, a range
+ * or a single IP address.
+ */
+static traffic_selector_t *parse_peer_ip(char *ip)
+{
+	traffic_selector_t *ts;
+	host_t *from, *to;
+	ts_type_t type;
+
+	if (host_create_from_range(ip, &from, &to))
+	{
+		if (to->get_family(to) == AF_INET)
+		{
+			type = TS_IPV4_ADDR_RANGE;
+		}
+		else
+		{
+			type = TS_IPV6_ADDR_RANGE;
+		}
+		ts = traffic_selector_create_from_bytes(0, type,
+												from->get_address(from), 0,
+												to->get_address(to), 0xFFFF);
+		from->destroy(from);
+		to->destroy(to);
+		return ts;
+	}
+	return traffic_selector_create_from_cidr(ip, 0, 0, 0xFFFF);
+}
+
 CALLBACK(redirect, vici_message_t*,
 	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -367,7 +397,7 @@ CALLBACK(redirect, vici_message_t*,
 	char *ike, *peer_ip, *peer_id, *gw, *errmsg = NULL;
 	u_int ike_id, current, found = 0;
 	identification_t *gateway, *identity = NULL, *other_id;
-	host_t *address = NULL;
+	traffic_selector_t *ts = NULL;
 	ike_sa_t *ike_sa;
 	vici_builder_t *builder;
 
@@ -392,12 +422,12 @@ CALLBACK(redirect, vici_message_t*,
 	}
 	if (peer_ip)
 	{
-		address = host_create_from_string(peer_ip, 0);
-		if (!address)
+		ts = parse_peer_ip(peer_ip);
+		if (!ts)
 		{
 			return send_reply(this, "invalid peer IP selector");
 		}
-		DBG1(DBG_CFG, "vici redirect IKE_SAs with src %H to %Y", address,
+		DBG1(DBG_CFG, "vici redirect IKE_SAs with src %R to %Y", ts,
 			 gateway);
 	}
 	if (peer_id)
@@ -405,7 +435,7 @@ CALLBACK(redirect, vici_message_t*,
 		identity = identification_create_from_string(peer_id);
 		if (!identity)
 		{
-			DESTROY_IF(address);
+			DESTROY_IF(ts);
 			return send_reply(this, "invalid peer identity selector");
 		}
 		DBG1(DBG_CFG, "vici redirect IKE_SAs with ID '%Y' to %Y", identity,
@@ -413,15 +443,15 @@ CALLBACK(redirect, vici_message_t*,
 	}
 	if (ike_id)
 	{
-		DBG1(DBG_CFG, "vici redirect IKE_SA #%d to %Y", ike_id, gateway);
+		DBG1(DBG_CFG, "vici redirect IKE_SA #%d to '%Y'", ike_id, gateway);
 	}
 	if (ike)
 	{
-		DBG1(DBG_CFG, "vici redirect IKE_SA '%s' to %Y", ike, gateway);
+		DBG1(DBG_CFG, "vici redirect IKE_SA '%s' to '%Y'", ike, gateway);
 	}
 	if (!peer_ip && !peer_id && !ike && !ike_id)
 	{
-		DBG1(DBG_CFG, "vici redirect all IKE_SAs to %Y", gateway);
+		DBG1(DBG_CFG, "vici redirect all IKE_SAs to '%Y'", gateway);
 	}
 
 	sas = charon->controller->create_ike_sa_enumerator(charon->controller, TRUE);
@@ -440,8 +470,7 @@ CALLBACK(redirect, vici_message_t*,
 		{
 			continue;
 		}
-		if (address &&
-			!address->ip_equals(address, ike_sa->get_other_host(ike_sa)))
+		if (ts && !ts->includes(ts, ike_sa->get_other_host(ike_sa)))
 		{
 			continue;
 		}
@@ -471,7 +500,7 @@ CALLBACK(redirect, vici_message_t*,
 	}
 	gateway->destroy(gateway);
 	DESTROY_IF(identity);
-	DESTROY_IF(address);
+	DESTROY_IF(ts);
 	return builder->finalize(builder);
 }
 

@@ -297,7 +297,8 @@ supported by the peer.
 	{
 		ike = <redirect an IKE_SA by configuration name>
 		ike-id = <redirect an IKE_SA by its unique id>
-		peer-ip = <redirect an IKE_SA with matching peer IP>
+		peer-ip = <redirect an IKE_SA with matching peer IP, may also be a
+				   subnet in CIDR notation or an IP range>
 		peer-id = <redirect an IKE_SA with matching peer identity, may contain
 				   wildcards>
 	} => {
