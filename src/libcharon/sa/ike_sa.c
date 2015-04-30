@@ -294,6 +294,11 @@ struct private_ike_sa_t {
 	 * Original gateway address from which we got redirected
 	 */
 	host_t *redirected_from;
+
+	/**
+	 * Timestamps of redirect attempts to handle loops
+	 */
+	array_t *redirected_at;
 };
 
 /**
@@ -2020,6 +2025,7 @@ static bool redirect_established(private_ike_sa_t *this, identification_t *to)
 	private_ike_sa_t *new_priv;
 	ike_sa_t *new;
 	host_t *other;
+	time_t redirect;
 
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 											   this->version, TRUE);
@@ -2039,6 +2045,11 @@ static bool redirect_established(private_ike_sa_t *this, identification_t *to)
 		 * resolve the local address */
 		new_priv->remote_host = other;
 		resolve_hosts(new_priv);
+		new_priv->redirected_at = array_create(sizeof(time_t), MAX_REDIRECTS);
+		while (array_remove(this->redirected_at, ARRAY_HEAD, &redirect))
+		{
+			array_insert(new_priv->redirected_at, ARRAY_TAIL, &redirect);
+		}
 		if (reestablish_children(this, new, TRUE) != DESTROY_ME)
 		{
 #ifdef USE_IKEV2
@@ -2082,6 +2093,32 @@ static bool redirect_connecting(private_ike_sa_t *this, identification_t *to)
 	return TRUE;
 }
 
+/**
+ * Check if the current redirect exceeds the limits for redirects
+ */
+static bool redirect_count_exceeded(private_ike_sa_t *this)
+{
+	time_t now, redirect;
+
+	now = time_monotonic(NULL);
+	/* remove entries outside the defined period */
+	while (array_get(this->redirected_at, ARRAY_HEAD, &redirect) &&
+		   now - redirect >= REDIRECT_LOOP_DETECT_PERIOD)
+	{
+		array_remove(this->redirected_at, ARRAY_HEAD, NULL);
+	}
+	if (array_count(this->redirected_at) < MAX_REDIRECTS)
+	{
+		if (!this->redirected_at)
+		{
+			this->redirected_at = array_create(sizeof(time_t), MAX_REDIRECTS);
+		}
+		array_insert(this->redirected_at, ARRAY_TAIL, &now);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(ike_sa_t, handle_redirect, bool,
 	private_ike_sa_t *this, identification_t *gateway)
 {
@@ -2089,6 +2126,12 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	if (!this->follow_redirects)
 	{
 		DBG1(DBG_IKE, "server sent REDIRECT even though we disabled it");
+		return FALSE;
+	}
+	if (redirect_count_exceeded(this))
+	{
+		DBG1(DBG_IKE, "only %d redirects are allowed within %d seconds",
+			 MAX_REDIRECTS, REDIRECT_LOOP_DETECT_PERIOD);
 		return FALSE;
 	}
 
@@ -2658,6 +2701,7 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
 	DESTROY_IF(this->redirected_from);
+	array_destroy(this->redirected_at);
 
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);

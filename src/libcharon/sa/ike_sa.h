@@ -66,6 +66,16 @@ typedef struct ike_sa_t ike_sa_t;
 #define RETRY_JITTER 20
 
 /**
+ * Number of redirects allowed within REDIRECT_LOOP_DETECT_PERIOD.
+ */
+#define MAX_REDIRECTS 5
+
+/**
+ * Time period in seconds in which at most MAX_REDIRECTS are allowed.
+ */
+#define REDIRECT_LOOP_DETECT_PERIOD 300
+
+/**
  * Extensions (or optional features) the peer supports
  */
 enum ike_extension_t {
