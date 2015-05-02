@@ -126,7 +126,7 @@ CALLBACK(child_sas, int,
 		}
 		printf("\n");
 
-		printf("    installed %s ago", child->get(child, "install-time"));
+		printf("    installed %ss ago", child->get(child, "install-time"));
 		if (child->get(child, "rekey-time"))
 		{
 			printf(", rekeying in %ss", child->get(child, "rekey-time"));
