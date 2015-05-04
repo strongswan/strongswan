@@ -130,7 +130,8 @@ enum alert_t {
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no argument */
 	ALERT_UNIQUE_KEEP,
-	/** IKE_SA kept on failed child SA establishment, no argument */
+	/** IKE_SA kept on failed child SA establishment, argument is an int (!=0 if
+	 * first child SA) */
 	ALERT_KEEP_ON_CHILD_SA_FAILURE,
 	/** allocating virtual IP failed, linked_list_t of host_t requested */
 	ALERT_VIP_FAILURE,

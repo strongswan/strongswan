@@ -27,7 +27,6 @@ START_TEST(test_nonceg_creation)
 
 	ng = tkm_nonceg_create();
 	fail_if(ng == NULL, "Error creating tkm nonce generator");
-	fail_if(ng->get_id(ng) == 0, "Invalid context id (0)");
 
 	ng->nonce_gen.destroy(&ng->nonce_gen);
 }

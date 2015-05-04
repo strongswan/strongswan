@@ -90,6 +90,11 @@ struct private_ike_init_t {
 	chunk_t other_nonce;
 
 	/**
+	 * nonce generator
+	 */
+	nonce_gen_t *nonceg;
+
+	/**
 	 * Negotiated proposal used for IKE_SA
 	 */
 	proposal_t *proposal;
@@ -428,21 +433,12 @@ METHOD(task_t, build_i, status_t,
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
-		nonce_gen_t *nonceg;
-
-		nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
-		if (!nonceg)
-		{
-			DBG1(DBG_IKE, "no nonce generator found to create nonce");
-			return FAILED;
-		}
-		if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+		if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE,
+										  &this->my_nonce))
 		{
 			DBG1(DBG_IKE, "nonce allocation failed");
-			nonceg->destroy(nonceg);
 			return FAILED;
 		}
-		nonceg->destroy(nonceg);
 	}
 
 	if (this->cookie.ptr)
@@ -477,19 +473,11 @@ METHOD(task_t, process_r,  status_t,
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
-	if (!nonceg)
-	{
-		DBG1(DBG_IKE, "no nonce generator found to create nonce");
-		return FAILED;
-	}
-	if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+	if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE, &this->my_nonce))
 	{
 		DBG1(DBG_IKE, "nonce allocation failed");
-		nonceg->destroy(nonceg);
 		return FAILED;
 	}
-	nonceg->destroy(nonceg);
 
 #ifdef ME
 	{
@@ -756,6 +744,7 @@ METHOD(task_t, destroy, void,
 {
 	DESTROY_IF(this->dh);
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->nonceg);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->cookie);
@@ -800,6 +789,14 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
 	);
+
+	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!this->nonceg)
+	{
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
+		free(this);
+		return FAILED;
+	}
 
 	if (initiator)
 	{

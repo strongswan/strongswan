@@ -65,6 +65,11 @@ struct private_child_create_t {
 	chunk_t other_nonce;
 
 	/**
+	 * nonce generator
+	 */
+	nonce_gen_t *nonceg;
+
+	/**
 	 * config to create the CHILD_SA from
 	 */
 	child_cfg_t *config;
@@ -216,22 +221,12 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
  */
 static status_t generate_nonce(private_child_create_t *this)
 {
-	nonce_gen_t *nonceg;
-
-	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
-	if (!nonceg)
-	{
-		DBG1(DBG_IKE, "no nonce generator found to create nonce");
-		return FAILED;
-	}
-	if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+	if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE,
+									  &this->my_nonce))
 	{
 		DBG1(DBG_IKE, "nonce allocation failed");
-		nonceg->destroy(nonceg);
 		return FAILED;
 	}
-	nonceg->destroy(nonceg);
-
 	return SUCCESS;
 }
 
@@ -1092,7 +1087,10 @@ METHOD(task_t, process_r, status_t,
 static void handle_child_sa_failure(private_child_create_t *this,
 									message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
+	bool is_first;
+
+	is_first = message->get_exchange_type(message) == IKE_AUTH;
+	if (is_first &&
 		lib->settings->get_bool(lib->settings,
 								"%s.close_ike_on_child_failure", FALSE, lib->ns))
 	{
@@ -1106,7 +1104,8 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	else
 	{
 		DBG1(DBG_IKE, "failed to establish CHILD_SA, keeping IKE_SA");
-		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE);
+		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE,
+						   is_first);
 	}
 }
 
@@ -1627,6 +1626,7 @@ METHOD(task_t, destroy, void,
 	}
 
 	DESTROY_IF(this->config);
+	DESTROY_IF(this->nonceg);
 	free(this);
 }
 
@@ -1665,6 +1665,14 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.rekey = rekey,
 		.retry = FALSE,
 	);
+
+	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!this->nonceg)
+	{
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
+		free(this);
+		return NULL;
+	}
 
 	if (config)
 	{

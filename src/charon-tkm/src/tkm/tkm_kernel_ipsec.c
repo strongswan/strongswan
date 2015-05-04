@@ -132,7 +132,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
-	if (!tkm->sad->insert(tkm->sad, reqid, esa_id, local, peer, spi_rem,
+	if (!tkm->sad->insert(tkm->sad, esa_id, reqid, local, peer, spi_loc, spi_rem,
 						  protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
@@ -164,6 +164,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG1(DBG_KNL, "child SA (%llu, no PFS) creation failed", esa_id);
 			goto failure;
 		}
+		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
 	/* creation of subsequent child SA with PFS: nonce and dh context are set */
@@ -176,6 +177,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
 			goto failure;
 		}
+		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
 	if (ike_esa_select(esa_id) != TKM_OK)
@@ -217,11 +219,22 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
-	esa_id_type esa_id;
+	esa_id_type esa_id, other_esa_id;
 
 	esa_id = tkm->sad->get_esa_id(tkm->sad, src, dst, spi, protocol);
 	if (esa_id)
 	{
+		other_esa_id = tkm->sad->get_other_esa_id(tkm->sad, esa_id);
+		if (other_esa_id)
+		{
+			DBG1(DBG_KNL, "selecting child SA (esa: %llu)", other_esa_id);
+			if (ike_esa_select(other_esa_id) != TKM_OK)
+			{
+				DBG1(DBG_KNL, "error selecting other child SA (esa: %llu)",
+						other_esa_id);
+			}
+		}
+
 		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
 			 ntohl(spi));
 		if (ike_esa_reset(esa_id) != TKM_OK)

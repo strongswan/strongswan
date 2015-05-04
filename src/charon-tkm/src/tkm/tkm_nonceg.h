@@ -36,14 +36,6 @@ struct tkm_nonceg_t {
 	 * Implements nonce_gen_t.
 	 */
 	nonce_gen_t nonce_gen;
-
-	/**
-	 * Get nonce context id.
-	 *
-	 * @return	context id of this nonce generator.
-	 */
-	nc_id_type (*get_id)(tkm_nonceg_t * const this);
-
 };
 
 /**

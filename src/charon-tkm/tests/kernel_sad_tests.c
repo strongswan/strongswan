@@ -34,7 +34,7 @@ START_TEST(test_insert)
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
 
-	fail_unless(sad->insert(sad, 1, 2, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 1, 2, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
 
 	sad->destroy(sad);
@@ -47,9 +47,9 @@ START_TEST(test_insert_duplicate)
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
 
-	fail_unless(sad->insert(sad, 1, 2, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 1, 2, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
-	fail_if(sad->insert(sad, 1, 2, addr, addr, 42, 50),
+	fail_if(sad->insert(sad, 1, 2, addr, addr, 27, 42, 50),
 			"Expected error inserting duplicate entry");
 
 	sad->destroy(sad);
@@ -61,7 +61,7 @@ START_TEST(test_get_esa_id)
 {
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
-	fail_unless(sad->insert(sad, 23, 54, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
 	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 23,
 				"Error getting esa id");
@@ -81,11 +81,42 @@ START_TEST(test_get_esa_id_nonexistent)
 }
 END_TEST
 
+START_TEST(test_get_other_esa_id)
+{
+	host_t *addr = host_create_from_string("127.0.0.1", 1024);
+	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
+				"Error inserting SAD entry");
+	fail_unless(sad->insert(sad, 24, 54, addr, addr, 27, 42, 50),
+				"Error inserting SAD entry");
+	fail_unless(sad->get_other_esa_id(sad, 23) == 24,
+				"Error getting other esa id");
+	sad->destroy(sad);
+	addr->destroy(addr);
+}
+END_TEST
+
+START_TEST(test_get_other_esa_id_nonexistent)
+{
+	host_t *addr = host_create_from_string("127.0.0.1", 1024);
+	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
+	fail_unless(sad->get_other_esa_id(sad, 1) == 0,
+				"Got other esa id for nonexistent SAD entry");
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
+				"Error inserting SAD entry");
+	fail_unless(sad->get_other_esa_id(sad, 23) == 0,
+				"Got own esa id");
+
+	sad->destroy(sad);
+	addr->destroy(addr);
+}
+END_TEST
+
 START_TEST(test_get_dst_host)
 {
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
-	fail_unless(sad->insert(sad, 23, 54, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
 
 	host_t *dst = sad->get_dst_host(sad, 54, 42, 50);
@@ -108,7 +139,7 @@ START_TEST(test_remove)
 {
 	host_t *addr = host_create_from_string("127.0.0.1", 1024);
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
-	fail_unless(sad->insert(sad, 23, 54, addr, addr, 42, 50),
+	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
 	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 23,
 				"Error getting esa id");
@@ -149,6 +180,11 @@ Suite *make_kernel_sad_tests()
 	tc = tcase_create("get_esa_id");
 	tcase_add_test(tc, test_get_esa_id);
 	tcase_add_test(tc, test_get_esa_id_nonexistent);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("get_other_esa_id");
+	tcase_add_test(tc, test_get_other_esa_id);
+	tcase_add_test(tc, test_get_other_esa_id_nonexistent);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get_dst_host");

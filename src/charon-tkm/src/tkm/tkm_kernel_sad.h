@@ -40,21 +40,22 @@ struct tkm_kernel_sad_t {
 	 * @param reqid			reqid of the SA
 	 * @param src			source address of CHILD SA
 	 * @param dst			destination address of CHILD SA
-	 * @param spi			SPI of CHILD SA
+	 * @param spi_loc		Local SPI of CHILD SA
+	 * @param spi_rem		Remote SPI of CHILD SA
 	 * @param proto			protocol of CHILD SA (ESP/AH)
 	 * @return				TRUE if entry was inserted, FALSE otherwise
 	 */
 	bool (*insert)(tkm_kernel_sad_t * const this, const esa_id_type esa_id,
 				   const u_int32_t reqid, const host_t * const src,
-				   const host_t * const dst, const u_int32_t spi,
-				   const u_int8_t proto);
+				   const host_t * const dst, const u_int32_t spi_loc,
+				   const u_int32_t spi_rem, const u_int8_t proto);
 
 	/**
 	 * Get ESA id for entry with given parameters.
 	 *
 	 * @param src			source address of CHILD SA
 	 * @param dst			destination address of CHILD SA
-	 * @param spi			SPI of CHILD SA
+	 * @param spi			Remote SPI of CHILD SA
 	 * @param proto			protocol of CHILD SA (ESP/AH)
 	 * @return				ESA id of entry if found, 0 otherwise
 	 */
@@ -63,10 +64,20 @@ struct tkm_kernel_sad_t {
 				 const u_int32_t spi, const u_int8_t proto);
 
 	/**
+	 * Get ESA id for entry associated with same security policy as the
+	 * specified ESA.
+	 *
+	 * @param esa_id		id of ESA identifying the security policy
+	 * @return				ESA id of entry if found, 0 otherwise
+	 */
+	esa_id_type (*get_other_esa_id)(tkm_kernel_sad_t * const this,
+									const esa_id_type esa_id);
+
+	/**
 	 * Get destination host for entry with given parameters.
 	 *
 	 * @param reqid			reqid of CHILD SA
-	 * @param spi			SPI of CHILD SA
+	 * @param spi			Remote SPI of CHILD SA
 	 * @param proto			protocol of CHILD SA (ESP/AH)
 	 * @return				destination host of entry if found, NULL otherwise
 	 */

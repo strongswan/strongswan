@@ -33,23 +33,32 @@ struct private_tkm_nonceg_t {
 	tkm_nonceg_t public;
 
 	/**
-	 * Context id.
+	 * Nonce chunk.
 	 */
-	nc_id_type context_id;
-
+	chunk_t nonce;
 };
 
 METHOD(nonce_gen_t, get_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, u_int8_t *buffer)
 {
 	nonce_type nonce;
+	uint64_t nc_id;
 
-	if (ike_nc_create(this->context_id, size, &nonce) != TKM_OK)
+	nc_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_NONCE);
+	if (!nc_id)
 	{
 		return FALSE;
 	}
 
+	if (ike_nc_create(nc_id, size, &nonce) != TKM_OK)
+	{
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nc_id);
+		return FALSE;
+	}
+
 	memcpy(buffer, &nonce.data, size);
+	this->nonce = chunk_clone(chunk_create(buffer, size));
+	tkm->chunk_map->insert(tkm->chunk_map, &this->nonce, nc_id);
 	return TRUE;
 }
 
@@ -57,24 +66,28 @@ METHOD(nonce_gen_t, allocate_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(size);
-	if (get_nonce(this, chunk->len, chunk->ptr))
-	{
-		tkm->chunk_map->insert(tkm->chunk_map, chunk, this->context_id);
-		return TRUE;
-	}
-	return FALSE;
+	return get_nonce(this, chunk->len, chunk->ptr);
 }
 
 METHOD(nonce_gen_t, destroy, void,
 	private_tkm_nonceg_t *this)
 {
-	free(this);
-}
+	uint64_t nc_id;
 
-METHOD(tkm_nonceg_t, get_id, nc_id_type,
-	private_tkm_nonceg_t *this)
-{
-	return this->context_id;
+	nc_id = tkm->chunk_map->get_id(tkm->chunk_map, &this->nonce);
+	if (nc_id)
+	{
+		DBG1(DBG_IKE, "resetting stale nonce context %llu", nc_id);
+
+		if (ike_nc_reset(nc_id) != TKM_OK)
+		{
+			DBG1(DBG_IKE, "failed to reset nonce context %llu", nc_id);
+		}
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nc_id);
+		tkm->chunk_map->remove(tkm->chunk_map, &this->nonce);
+	}
+	chunk_free(&this->nonce);
+	free(this);
 }
 
 /*
@@ -91,16 +104,8 @@ tkm_nonceg_t *tkm_nonceg_create()
 				.allocate_nonce = _allocate_nonce,
 				.destroy = _destroy,
 			},
-			.get_id = _get_id,
 		},
-		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_NONCE),
 	);
-
-	if (!this->context_id)
-	{
-		free(this);
-		return NULL;
-	}
 
 	return &this->public;
 }

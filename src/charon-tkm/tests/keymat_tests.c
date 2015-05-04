@@ -46,7 +46,6 @@ START_TEST(test_derive_ike_keys)
 	fail_if(!ng, "Unable to create nonce generator");
 	fail_unless(ng->nonce_gen.allocate_nonce(&ng->nonce_gen, 32, &nonce),
 			"Unable to allocate nonce");
-	ng->nonce_gen.destroy(&ng->nonce_gen);
 
 	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
 	fail_if(!dh, "Unable to create DH");
@@ -69,6 +68,7 @@ START_TEST(test_derive_ike_keys)
 	fail_if(aead->get_block_size(aead) != 16, "Block size mismatch %d",
 			aead->get_block_size(aead));
 
+	ng->nonce_gen.destroy(&ng->nonce_gen);
 	proposal->destroy(proposal);
 	dh->dh.destroy(&dh->dh);
 	ike_sa_id->destroy(ike_sa_id);
