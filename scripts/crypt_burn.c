@@ -120,6 +120,7 @@ static bool burn_aead(const proposal_token_t *token, u_int limit, u_int len)
 	free(iv.ptr);
 	free(data.ptr);
 	free(key.ptr);
+	free(assoc.ptr);
 
 	return ok;
 }
