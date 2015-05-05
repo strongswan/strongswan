@@ -221,6 +221,7 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
  */
 static bool generate_nonce(private_child_create_t *this)
 {
+	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
 	if (!this->nonceg)
 	{
 		DBG1(DBG_IKE, "no nonce generator found to create nonce");
@@ -1580,6 +1581,7 @@ METHOD(task_t, migrate, void,
 	}
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->nonceg);
 	DESTROY_IF(this->dh);
 	this->dh_failed = FALSE;
 	if (this->proposals)
@@ -1671,7 +1673,6 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.rekey = rekey,
 		.retry = FALSE,
 	);
-	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
 
 	if (config)
 	{
