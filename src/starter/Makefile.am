@@ -40,10 +40,6 @@ EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = keywords.c parser/parser.h
 
-if USE_CHARON
-  AM_CPPFLAGS += -DSTART_CHARON
-endif
-
 if USE_LOAD_WARNING
   AM_CPPFLAGS += -DLOAD_WARNING
 endif

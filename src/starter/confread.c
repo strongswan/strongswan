@@ -149,12 +149,8 @@ static void load_setup(starter_config_t *cfg, conf_parser_t *parser)
 	dict->destroy(dict);
 
 	/* verify the executables are actually available */
-#ifdef START_CHARON
 	cfg->setup.charonstart = cfg->setup.charonstart &&
 							 daemon_exists(daemon_name, cmd);
-#else
-	cfg->setup.charonstart = FALSE;
-#endif
 }
 
 /*
@@ -722,12 +718,9 @@ starter_config_t* confread_load(const char *file)
 	INIT(cfg,
 		.setup = {
 			.uniqueids = TRUE,
-
+			.charonstart = TRUE,
 		}
 	);
-#ifdef START_CHARON
-	cfg->setup.charonstart = TRUE;
-#endif
 
 	/* load config setup section */
 	load_setup(cfg, parser);
