@@ -467,8 +467,6 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r,  status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	nonce_gen_t *nonceg;
-
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
