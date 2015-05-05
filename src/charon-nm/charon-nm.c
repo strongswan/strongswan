@@ -160,6 +160,9 @@ int main(int argc, char *argv[])
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_syslog;
 
+	/* LD causes a crash probably due to Glib */
+	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
+
 	/* initialize library */
 	if (!library_init(NULL, "charon-nm"))
 	{
