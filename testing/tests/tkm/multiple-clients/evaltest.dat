@@ -18,5 +18,5 @@ sun::cat /tmp/tkm.log::Adding policy \[ 2, 192.168.0.2 <-> 192.168.0.200 \]::YES
 sun::cat /tmp/tkm.log | grep "Checked CA certificate of CC context 1" | wc -l::2::YES
 sun::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 sun::cat /tmp/tkm.log::Authentication of ISA context 2 successful::YES
-sun::cat /tmp/tkm.log::Adding SA \[ 1, 192.168.0.2 <-> 192.168.0.100, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
-sun::cat /tmp/tkm.log::Adding SA \[ 2, 192.168.0.2 <-> 192.168.0.200, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
+sun::cat /tmp/tkm.log::Adding ESA \[ 1, 192.168.0.2 <-> 192.168.0.100, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
+sun::cat /tmp/tkm.log::Adding ESA \[ 2, 192.168.0.2 <-> 192.168.0.200, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES

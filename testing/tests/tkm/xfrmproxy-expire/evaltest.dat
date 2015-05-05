@@ -15,8 +15,8 @@ moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
 moon::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 moon::cat /tmp/tkm.log::Creating first new ESA context with ID 1 (Isa 1, Sp 1, Ea 1, Initiator TRUE, spi_loc.*, spi_rem.*)::YES
 moon::cat /tmp/tkm.log::Creating ESA context with ID 2 (Isa 1, Sp 1, Ea 1, Dh_Id 1, Nc_Loc_Id 1, Initiator TRUE, spi_loc.*, spi_rem.*)::YES
-moon::cat /tmp/tkm.log | grep 'Adding SA \[ 1, 192.168.0.1 <-> 192.168.0.2, SPI_in.*, SPI_out.*, soft 2, hard 60 \]' | wc -l::2::YES
+moon::cat /tmp/tkm.log | grep 'Adding ESA \[ 1, 192.168.0.1 <-> 192.168.0.2, SPI_in.*, SPI_out.*, soft 2, hard 60 \]' | wc -l::2::YES
 moon::cat /tmp/tkm.log::Resetting ESA context 1::YES
-moon::cat /tmp/tkm.log::Deleting SA \[ 1, 192.168.0.1 <=> 192.168.0.2, SPI_in.*, SPI_out.* \]::YES
+moon::cat /tmp/tkm.log::Deleting ESA \[ 1, 192.168.0.1 <=> 192.168.0.2, SPI_in.*, SPI_out.* \]::YES
 moon::cat /tmp/xfrm_proxy.log::Initiating ESA acquire for reqid 1::YES
 moon::cat /tmp/xfrm_proxy.log::Initiating ESA expire (reqid 1, proto 50, SPI.*, hard FALSE)::YES

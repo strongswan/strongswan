@@ -9,4 +9,4 @@ moon::cat /tmp/tkm.log::RSA private key '/etc/tkm/moonKey.der' loaded::YES
 moon::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.1 <-> 192.168.0.2 \]::YES
 moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
 moon::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
-moon::cat /tmp/tkm.log::Adding SA \[ 1, 192.168.0.1 <-> 192.168.0.2, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
+moon::cat /tmp/tkm.log::Adding ESA \[ 1, 192.168.0.1 <-> 192.168.0.2, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES
