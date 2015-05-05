@@ -121,6 +121,25 @@ struct private_ike_init_t {
 };
 
 /**
+ * Allocate our own nonce value
+ */
+static bool generate_nonce(private_ike_init_t *this)
+{
+	if (!this->nonceg)
+	{
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
+		return FALSE;
+	}
+	if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE,
+									  &this->my_nonce))
+	{
+		DBG1(DBG_IKE, "nonce allocation failed");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Notify the peer about the hash algorithms we support or expect,
  * as per RFC 7427
  */
@@ -433,10 +452,8 @@ METHOD(task_t, build_i, status_t,
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
-		if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE,
-										  &this->my_nonce))
+		if (!generate_nonce(this))
 		{
-			DBG1(DBG_IKE, "nonce allocation failed");
 			return FAILED;
 		}
 	}
@@ -471,9 +488,8 @@ METHOD(task_t, process_r,  status_t,
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE, &this->my_nonce))
+	if (!generate_nonce(this))
 	{
-		DBG1(DBG_IKE, "nonce allocation failed");
 		return FAILED;
 	}
 
@@ -787,14 +803,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
 	);
-
 	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
-	if (!this->nonceg)
-	{
-		DBG1(DBG_IKE, "no nonce generator found to create nonce");
-		free(this);
-		return FAILED;
-	}
 
 	if (initiator)
 	{
@@ -806,6 +815,5 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
 	}
-
 	return &this->public;
 }
