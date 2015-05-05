@@ -219,15 +219,20 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
 /**
  * generate a new nonce to include in a CREATE_CHILD_SA message
  */
-static status_t generate_nonce(private_child_create_t *this)
+static bool generate_nonce(private_child_create_t *this)
 {
+	if (!this->nonceg)
+	{
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
+		return FALSE;
+	}
 	if (!this->nonceg->allocate_nonce(this->nonceg, NONCE_SIZE,
 									  &this->my_nonce))
 	{
 		DBG1(DBG_IKE, "nonce allocation failed");
-		return FAILED;
+		return FALSE;
 	}
-	return SUCCESS;
+	return TRUE;
 }
 
 /**
@@ -928,9 +933,10 @@ METHOD(task_t, build_i, status_t,
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
 		case CREATE_CHILD_SA:
-			if (generate_nonce(this) != SUCCESS)
+			if (!generate_nonce(this))
 			{
-				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
+									chunk_empty);
 				return SUCCESS;
 			}
 			if (!this->retry)
@@ -1189,7 +1195,7 @@ METHOD(task_t, build_r, status_t,
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
 		case CREATE_CHILD_SA:
-			if (generate_nonce(this) != SUCCESS )
+			if (!generate_nonce(this))
 			{
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
 									chunk_empty);
@@ -1665,14 +1671,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.rekey = rekey,
 		.retry = FALSE,
 	);
-
 	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
-	if (!this->nonceg)
-	{
-		DBG1(DBG_IKE, "no nonce generator found to create nonce");
-		free(this);
-		return NULL;
-	}
 
 	if (config)
 	{
@@ -1686,6 +1685,5 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		this->public.task.process = _process_r;
 		this->initiator = FALSE;
 	}
-
 	return &this->public;
 }
