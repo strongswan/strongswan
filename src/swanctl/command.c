@@ -124,17 +124,8 @@ int command_getopt(char **arg)
 		switch (op)
 		{
 			case '+':
-				if (!options->from(options, optarg, &argc, &argv, optind))
-				{
-					/* a error value */
-					return 255;
-				}
-				continue;
 			case 'v':
-				dbg_default_set_level(atoi(optarg));
-				continue;
 			case 'u':
-				uri = optarg;
 				continue;
 			default:
 				*arg = optarg;
@@ -257,6 +248,37 @@ static void cleanup()
 }
 
 /**
+ * Process options common for all commands
+ */
+static bool process_common_opts()
+{
+	while (TRUE)
+	{
+		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		{
+			case '+':
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					return FALSE;
+				}
+				continue;
+			case 'v':
+				dbg_default_set_level(atoi(optarg));
+				continue;
+			case 'u':
+				uri = optarg;
+				continue;
+			default:
+				continue;
+			case '?':
+				return FALSE;
+			case EOF:
+				return TRUE;
+		}
+	}
+}
+
+/**
  * Open vici connection, call a command
  */
 static int call_command(command_t *cmd)
@@ -303,6 +325,11 @@ int command_dispatch(int c, char *v[])
 			{
 				return command_usage(NULL);
 			}
+			if (!process_common_opts())
+			{
+				return command_usage("invalid options");
+			}
+			optind = 2;
 			return call_command(&cmds[i]);
 		}
 	}
