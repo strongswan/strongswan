@@ -517,6 +517,13 @@ int main (int argc, char **argv)
 		exit(status);
 	}
 
+	if (stat(cmd, &stb) != 0)
+	{
+		DBG1(DBG_APP, "IKE daemon '%s' not found", cmd);
+		cleanup();
+		exit(LSB_RC_FAILURE);
+	}
+
 	DBG1(DBG_APP, "Starting %sSwan "VERSION" IPsec [starter]...",
 		lib->settings->get_bool(lib->settings,
 			"charon.i_dont_care_about_security_and_use_aggressive_mode_psk",
@@ -836,7 +843,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_START_CHARON)
 		{
-			if (cfg->setup.charonstart && !starter_charon_pid())
+			if (!starter_charon_pid())
 			{
 				DBG2(DBG_APP, "Attempting to start %s...", daemon_name);
 				if (starter_start_charon(cfg, no_fork, attach_gdb))

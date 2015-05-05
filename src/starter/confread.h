@@ -193,7 +193,6 @@ typedef struct starter_config starter_config_t;
 
 struct starter_config {
 		struct {
-				bool     charonstart;
 				char     *charondebug;
 				bool     uniqueids;
 				bool     cachecrls;

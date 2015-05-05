@@ -50,17 +50,6 @@ static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
  */
 extern kw_entry_t *in_word_set (char *str, unsigned int len);
 
-static bool daemon_exists(char *daemon, char *path)
-{
-	struct stat st;
-	if (stat(path, &st) != 0)
-	{
-		DBG1(DBG_APP, "Disabling %sstart option, '%s' not found", daemon, path);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 /**
  * Process deprecated keywords
  */
@@ -147,10 +136,6 @@ static void load_setup(starter_config_t *cfg, conf_parser_t *parser)
 	}
 	enumerator->destroy(enumerator);
 	dict->destroy(dict);
-
-	/* verify the executables are actually available */
-	cfg->setup.charonstart = cfg->setup.charonstart &&
-							 daemon_exists(daemon_name, cmd);
 }
 
 /*
@@ -718,7 +703,6 @@ starter_config_t* confread_load(const char *file)
 	INIT(cfg,
 		.setup = {
 			.uniqueids = TRUE,
-			.charonstart = TRUE,
 		}
 	);
 
