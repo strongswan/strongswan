@@ -39,6 +39,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -46,6 +47,8 @@ import android.os.ParcelFileDescriptor;
 import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.util.Log;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CharonVpnService extends VpnService implements Runnable
 {
@@ -535,6 +538,12 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			mName = name;
 			mBuilder = createBuilder(name);
+                    try {
+                        mBuilder.addAllowedApplication("com.android.chrome");
+                    } catch (PackageManager.NameNotFoundException ex) {
+//                        Logger.getLogger(CharonVpnService.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.e("strongSwan", "dupa",ex);
+                    }
 			mCache = new BuilderCache();
 		}
 

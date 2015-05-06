@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.strongswan.android.apiclient"
+    android:versionCode="26"
+    android:versionName="1.4.5" >
+
+    <uses-sdk
+        android:minSdkVersion="14"
+        android:targetSdkVersion="19" />
+
+    <permission android:name="org.strongswan.android.permission.VPN_PROFILE_CRUD" android:protectionLevel="normal"/>
+
+    <uses-permission android:name="org.strongswan.android.permission.VPN_PROFILE_CRUD"/>
+
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name">
+        <activity android:name=".ApiClientActivity" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

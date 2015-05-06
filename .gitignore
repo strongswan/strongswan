@@ -45,3 +45,5 @@ coverage/
 .metadata/
 .settings/
 test-driver
+/src/frontends/android/apiclient/target/
+/src/frontends/android/api/target/

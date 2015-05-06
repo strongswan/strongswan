@@ -17,13 +17,24 @@
 
 package org.strongswan.android.data;
 
+import android.content.res.Resources;
+import android.os.Bundle;
+import org.strongswan.android.R;
+
 public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private VpnType mVpnType;
 	private long mId = -1;
 
-	public long getId()
+    public VpnProfile() {
+    }
+
+    public VpnProfile(Bundle bundle, Resources resources) {
+        fromBundle(bundle, resources);
+    }
+
+    public long getId()
 	{
 		return mId;
 	}
@@ -131,4 +142,28 @@ public class VpnProfile implements Cloneable
 			throw new AssertionError();
 		}
 	}
+
+    public Bundle toBundle(Resources resources) {
+        Bundle bundle = new Bundle();
+        bundle.putLong(resources.getString(R.string.vpn_profile_bundle_id_key), getId());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_certificate_alias_key), getCertificateAlias());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_gateway_key), getGateway());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_name_key), getName());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_password_key), getPassword());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_type_key), getVpnType().name());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key), getUserCertificateAlias());
+        bundle.putString(resources.getString(R.string.vpn_profile_bundle_username_key), getUsername());
+        return bundle;
+    }
+
+    private void fromBundle(Bundle bundle, Resources resources) {
+        mId = bundle.getLong(resources.getString(R.string.vpn_profile_bundle_id_key));
+        mCertificate = bundle.getString(resources.getString(R.string.vpn_profile_bundle_certificate_alias_key));
+        mGateway = bundle.getString(resources.getString(R.string.vpn_profile_bundle_gateway_key));
+        mName = bundle.getString(resources.getString(R.string.vpn_profile_bundle_name_key));
+        mPassword = bundle.getString(resources.getString(R.string.vpn_profile_bundle_password_key));
+        mVpnType = VpnType.valueOf(bundle.getString(resources.getString(R.string.vpn_profile_bundle_type_key)));
+        mUserCertificate = bundle.getString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key));
+        mUsername = bundle.getString(resources.getString(R.string.vpn_profile_bundle_username_key));
+    }
 }

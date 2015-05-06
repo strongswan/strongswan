@@ -1,0 +1,58 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent">
+
+    <RadioGroup
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+        <RadioButton
+                android:id="@+id/service_radio_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Service"
+                android:checked="true"
+                android:onClick="clickService"/>
+
+        <RadioButton
+                android:id="@+id/messenger_radio_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Messenger"
+                android:onClick="clickMessenger"/>
+
+
+    </RadioGroup>
+
+    <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Connect to strongSwan"
+            android:onClick="clickConnectToStrongSwan"/>
+
+    <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Disconnect from strongSwan"
+            android:onClick="clickDisconnectFromStrongSwan"/>
+
+    <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Create Vpn Profile"
+            android:onClick="clickCreateVpnProfile"/>
+
+    <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Read VPN Profiles"
+            android:onClick="clickReadVpnProfiles"/>
+
+    <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Delete VPN Profiles"
+            android:onClick="clickDeleteVpnProfiles"/>
+</LinearLayout>

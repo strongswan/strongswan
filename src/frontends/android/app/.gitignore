@@ -1,0 +1,8 @@
+bin/
+gen/
+libs/
+obj/
+target/
+.idea/
+*.iml
+/gen-external-apklibs
