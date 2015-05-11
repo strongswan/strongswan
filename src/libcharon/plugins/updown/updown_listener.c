@@ -382,6 +382,302 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	free_env(envp);
 }
 
+/**
+* Invoke the route script once for given traffic selectors
+*/
+static void invoke_once_route(private_updown_listener_t *this,
+	child_sa_t *child_sa, child_cfg_t *config, peer_cfg_t *peer,
+	traffic_selector_t *my_ts, traffic_selector_t *other_ts)
+{
+	host_t *me, *other, *host;
+	char *iface;
+	u_int8_t mask;
+	mark_t mark;
+	bool is_host, is_ipv6;
+	int out;
+	FILE *shell;
+	process_t *process;
+	char *envp[128] = {};
+	ike_cfg_t *ike_cfg;
+
+	/* try to resolve addresses */
+	ike_cfg = peer->get_ike_cfg(peer);
+	other = ike_cfg->resolve_other(ike_cfg, AF_UNSPEC);
+	if (!other || other->is_anyaddr(other))
+	{
+		DESTROY_IF(other);
+		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
+		return;
+	}
+	me = ike_cfg->resolve_me(ike_cfg, other->get_family(other));
+	if (!me || me->is_anyaddr(me))
+	{
+		DESTROY_IF(me);
+		me = hydra->kernel_interface->get_source_addr(
+									hydra->kernel_interface, other, NULL);
+		if (!me)
+		{
+			DBG1(DBG_CFG, "installing trap failed, local address unknown");
+			other->destroy(other);
+			return;
+		}
+		me->set_port(me, ike_cfg->get_my_port(ike_cfg));
+	}
+
+	push_env(envp, countof(envp), "PATH=%s", getenv("PATH"));
+	push_env(envp, countof(envp), "PLUTO_VERSION=1.1");
+	is_host = my_ts->is_host(my_ts, me);
+	if (is_host)
+	{
+		is_ipv6 = me->get_family(me) == AF_INET6;
+	}
+	else
+	{
+		is_ipv6 = my_ts->get_type(my_ts) == TS_IPV6_ADDR_RANGE;
+	}
+	push_env(envp, countof(envp), "PLUTO_VERB=route%s%s",
+			 is_host ? "-host" : "-client",
+			 is_ipv6 ? "-v6" : "");
+	push_env(envp, countof(envp), "PLUTO_CONNECTION=%s",
+			 config->get_name(config));
+	iface = uncache_iface(this, child_sa->get_reqid(child_sa));
+	push_env(envp, countof(envp), "PLUTO_INTERFACE=%s",
+			 iface ? iface : "unknown");
+	push_env(envp, countof(envp), "PLUTO_REQID=%u",
+			 child_sa->get_reqid(child_sa));
+	push_env(envp, countof(envp), "PLUTO_PROTO=%s",
+			 child_sa->get_protocol(child_sa) == PROTO_ESP ? "esp" : "ah");
+	push_env(envp, countof(envp), "PLUTO_ME=%H", me);
+	if (my_ts->to_subnet(my_ts, &host, &mask))
+	{
+		push_env(envp, countof(envp), "PLUTO_MY_CLIENT=%+H/%u", host, mask);
+		host->destroy(host);
+	}
+	push_env(envp, countof(envp), "PLUTO_MY_PORT=%u",
+			 get_port(my_ts, other_ts, TRUE));
+	push_env(envp, countof(envp), "PLUTO_MY_PROTOCOL=%u",
+			 my_ts->get_protocol(my_ts));
+	push_env(envp, countof(envp), "PLUTO_PEER=%H", other);
+	if (other_ts->to_subnet(other_ts, &host, &mask))
+	{
+		push_env(envp, countof(envp), "PLUTO_PEER_CLIENT=%+H/%u", host, mask);
+		host->destroy(host);
+	}
+	push_env(envp, countof(envp), "PLUTO_PEER_PORT=%u",
+			 get_port(my_ts, other_ts, FALSE));
+	push_env(envp, countof(envp), "PLUTO_PEER_PROTOCOL=%u",
+			 other_ts->get_protocol(other_ts));
+	mark = config->get_mark(config, TRUE);
+	if (mark.value)
+	{
+		push_env(envp, countof(envp), "PLUTO_MARK_IN=%u/0x%08x",
+				 mark.value, mark.mask);
+	}
+	mark = config->get_mark(config, FALSE);
+	if (mark.value)
+	{
+		push_env(envp, countof(envp), "PLUTO_MARK_OUT=%u/0x%08x",
+				 mark.value, mark.mask);
+	}
+	if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
+	{
+		push_env(envp, countof(envp), "PLUTO_IPCOMP=1");
+	}
+	if (config->get_hostaccess(config))
+	{
+		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");
+	}
+
+	process = process_start_shell(envp, NULL, &out, NULL, "2>&1 %s",
+								  config->get_updown(config));
+	if (process)
+	{
+		shell = fdopen(out, "r");
+		if (shell)
+		{
+			while (TRUE)
+			{
+				char resp[128];
+
+				if (fgets(resp, sizeof(resp), shell) == NULL)
+				{
+					if (ferror(shell))
+					{
+						DBG1(DBG_CHD, "error reading from updown script");
+					}
+					break;
+				}
+				else
+				{
+					char *e = resp + strlen(resp);
+					if (e > resp && e[-1] == '\n')
+					{
+						e[-1] = '\0';
+					}
+					DBG1(DBG_CHD, "updown: %s", resp);
+				}
+			}
+			fclose(shell);
+		}
+		else
+		{
+			close(out);
+		}
+		process->wait(process, NULL);
+	}
+	free(iface);
+	free_env(envp);
+}
+
+/**
+* Invoke the unroute script once for given traffic selectors
+*/
+static void invoke_once_unroute(private_updown_listener_t *this,
+	child_sa_t *child_sa, child_cfg_t *config, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts)
+{
+	host_t *host;
+	char *iface;
+	u_int8_t mask;
+	mark_t mark;
+	int out;
+	FILE *shell;
+	process_t *process;
+	char *envp[128] = {};
+
+	push_env(envp, countof(envp), "PATH=%s", getenv("PATH"));
+	push_env(envp, countof(envp), "PLUTO_VERSION=1.1");
+	push_env(envp, countof(envp), "PLUTO_VERB=unroute");
+	push_env(envp, countof(envp), "PLUTO_CONNECTION=%s",
+			 config->get_name(config));
+	iface = uncache_iface(this, child_sa->get_reqid(child_sa));
+	push_env(envp, countof(envp), "PLUTO_INTERFACE=%s",
+			 iface ? iface : "unknown");
+	push_env(envp, countof(envp), "PLUTO_REQID=%u",
+			 child_sa->get_reqid(child_sa));
+	push_env(envp, countof(envp), "PLUTO_PROTO=%s",
+			 child_sa->get_protocol(child_sa) == PROTO_ESP ? "esp" : "ah");
+	if (my_ts->to_subnet(my_ts, &host, &mask))
+	{
+		push_env(envp, countof(envp), "PLUTO_MY_CLIENT=%+H/%u", host, mask);
+		host->destroy(host);
+	}
+	push_env(envp, countof(envp), "PLUTO_MY_PORT=%u",
+			 get_port(my_ts, other_ts, TRUE));
+	push_env(envp, countof(envp), "PLUTO_MY_PROTOCOL=%u",
+			 my_ts->get_protocol(my_ts));
+	if (other_ts->to_subnet(other_ts, &host, &mask))
+	{
+		push_env(envp, countof(envp), "PLUTO_PEER_CLIENT=%+H/%u", host, mask);
+		host->destroy(host);
+	}
+	push_env(envp, countof(envp), "PLUTO_PEER_PORT=%u",
+			 get_port(my_ts, other_ts, FALSE));
+	push_env(envp, countof(envp), "PLUTO_PEER_PROTOCOL=%u",
+			 other_ts->get_protocol(other_ts));
+	mark = config->get_mark(config, TRUE);
+	if (mark.value)
+	{
+		push_env(envp, countof(envp), "PLUTO_MARK_IN=%u/0x%08x",
+				 mark.value, mark.mask);
+	}
+	mark = config->get_mark(config, FALSE);
+	if (mark.value)
+	{
+		push_env(envp, countof(envp), "PLUTO_MARK_OUT=%u/0x%08x",
+				 mark.value, mark.mask);
+	}
+	if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
+	{
+		push_env(envp, countof(envp), "PLUTO_IPCOMP=1");
+	}
+	if (config->get_hostaccess(config))
+	{
+		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");
+	}
+
+	process = process_start_shell(envp, NULL, &out, NULL, "2>&1 %s",
+								  config->get_updown(config));
+	if (process)
+	{
+		shell = fdopen(out, "r");
+		if (shell)
+		{
+			while (TRUE)
+			{
+				char resp[128];
+
+				if (fgets(resp, sizeof(resp), shell) == NULL)
+				{
+					if (ferror(shell))
+					{
+						DBG1(DBG_CHD, "error reading from updown script");
+					}
+					break;
+				}
+				else
+				{
+					char *e = resp + strlen(resp);
+					if (e > resp && e[-1] == '\n')
+					{
+						e[-1] = '\0';
+					}
+					DBG1(DBG_CHD, "updown: %s", resp);
+				}
+			}
+			fclose(shell);
+		}
+		else
+		{
+			close(out);
+		}
+		process->wait(process, NULL);
+	}
+	free(iface);
+	free_env(envp);
+}
+
+METHOD(listener_t, child_route, bool,
+	private_updown_listener_t *this, child_sa_t *child_sa, peer_cfg_t *peer)
+{
+	traffic_selector_t *my_ts, *other_ts;
+	enumerator_t *enumerator;
+	child_cfg_t *config;
+
+	config = child_sa->get_config(child_sa);
+	if (config->get_updown(config))
+	{
+		enumerator = child_sa->create_policy_enumerator(child_sa);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			invoke_once_route(this, child_sa, config, peer, my_ts,
+				other_ts);
+		}
+		enumerator->destroy(enumerator);
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, child_unroute, bool,
+	private_updown_listener_t *this, child_sa_t *child_sa)
+{
+	traffic_selector_t *my_ts, *other_ts;
+	enumerator_t *enumerator;
+	child_cfg_t *config;
+
+	config = child_sa->get_config(child_sa);
+	if (config->get_updown(config))
+	{
+		enumerator = child_sa->create_policy_enumerator(child_sa);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			invoke_once_unroute(this, child_sa, config, my_ts, other_ts);
+		}
+		enumerator->destroy(enumerator);
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_updown_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -420,6 +716,8 @@ updown_listener_t *updown_listener_create(updown_handler_t *handler)
 	INIT(this,
 		.public = {
 			.listener = {
+				.child_route = _child_route,
+				.child_unroute = _child_unroute,
 				.child_updown = _child_updown,
 			},
 			.destroy = _destroy,
