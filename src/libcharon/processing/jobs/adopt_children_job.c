@@ -21,6 +21,7 @@
 #include <daemon.h>
 #include <hydra.h>
 #include <collections/array.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 typedef struct private_adopt_children_job_t private_adopt_children_job_t;
 
@@ -133,10 +134,19 @@ METHOD(job_t, execute, job_requeue_t,
 							 "adopting %d children and %d virtual IPs",
 							 children->get_count(children), vips->get_count(vips));
 					}
-					ike_sa->set_state(ike_sa, IKE_DELETING);
-					charon->bus->ike_updown(charon->bus, ike_sa, FALSE);
-					charon->ike_sa_manager->checkin_and_destroy(
+					if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+					{
+						charon->ike_sa_manager->checkin_and_destroy(
 											charon->ike_sa_manager, ike_sa);
+					}
+					else
+					{
+						lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+								delete_ike_sa_job_create(ike_sa->get_id(ike_sa),
+														 TRUE), 10);
+						charon->ike_sa_manager->checkin(
+											charon->ike_sa_manager, ike_sa);
+					}
 				}
 				else
 				{
