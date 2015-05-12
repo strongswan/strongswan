@@ -451,7 +451,7 @@ CALLBACK(redirect, vici_message_t*,
 	}
 	if (!peer_ip && !peer_id && !ike && !ike_id)
 	{
-		DBG1(DBG_CFG, "vici redirect all IKE_SAs to '%Y'", gateway);
+		return send_reply(this, "missing redirect selector");
 	}
 
 	sas = charon->controller->create_ike_sa_enumerator(charon->controller, TRUE);
