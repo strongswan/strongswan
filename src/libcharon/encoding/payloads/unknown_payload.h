@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -40,6 +41,13 @@ struct unknown_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
+
+	/**
+	 * Get the original payload type as sent by the peer.
+	 *
+	 * @return				type of the original payload
+	 */
+	payload_type_t (*get_type) (unknown_payload_t *this);
 
 	/**
 	 * Get the raw data of this payload, without

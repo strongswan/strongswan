@@ -2513,7 +2513,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			was_encrypted = "encrypted fragment payload";
 		}
 
-		if (payload_is_known(type, this->major_version) && !was_encrypted &&
+		if (type != PL_UNKNOWN && !was_encrypted &&
 			!is_connectivity_check(this, payload) &&
 			this->exchange_type != AGGRESSIVE)
 		{

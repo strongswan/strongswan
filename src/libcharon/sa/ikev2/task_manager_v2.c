@@ -1184,15 +1184,17 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		enumerator = msg->create_payload_enumerator(msg);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
-			unknown = (unknown_payload_t*)payload;
-			type = payload->get_type(payload);
-			if (!payload_is_known(type, msg->get_major_version(msg)) &&
-				unknown->is_critical(unknown))
+			if (payload->get_type(payload) == PL_UNKNOWN)
 			{
-				DBG1(DBG_ENC, "payload type %N is not supported, "
-					 "but its critical!", payload_type_names, type);
-				status = NOT_SUPPORTED;
-				break;
+				unknown = (unknown_payload_t*)payload;
+				if (unknown->is_critical(unknown))
+				{
+					type = unknown->get_type(unknown);
+					DBG1(DBG_ENC, "payload type %N is not supported, "
+						 "but its critical!", payload_type_names, type);
+					status = NOT_SUPPORTED;
+					break;
+				}
 			}
 		}
 		enumerator->destroy(enumerator);

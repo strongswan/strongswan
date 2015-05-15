@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -121,6 +122,12 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_payload_type, payload_type_t,
 	private_unknown_payload_t *this)
 {
+	return PL_UNKNOWN;
+}
+
+METHOD(unknown_payload_t, get_type, payload_type_t,
+	private_unknown_payload_t *this)
+{
 	return this->type;
 }
 
@@ -181,6 +188,7 @@ unknown_payload_t *unknown_payload_create(payload_type_t type)
 				.destroy = _destroy,
 			},
 			.is_critical = _is_critical,
+			.get_type = _get_type,
 			.get_data = _get_data,
 			.destroy = _destroy,
 		},

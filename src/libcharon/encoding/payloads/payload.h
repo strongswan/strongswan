@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -262,6 +262,11 @@ enum payload_type_t {
 	 * used internally only.
 	 */
 	PL_HEADER = 256,
+
+	/**
+	 * Used to handle unknown or invalid payload types.
+	 */
+	PL_UNKNOWN,
 
 	/**
 	 * PLV2_PROPOSAL_SUBSTRUCTURE, IKEv2 proposals in a SA payload.
