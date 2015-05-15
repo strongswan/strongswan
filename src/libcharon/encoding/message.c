@@ -2286,9 +2286,16 @@ static status_t parse_payloads(private_message_t *this)
 			payload->destroy(payload);
 			return VERIFY_ERROR;
 		}
-
-		DBG2(DBG_ENC, "%N payload verified, adding to payload list",
-			 payload_type_names, type);
+		if (payload->get_type(payload) == PL_UNKNOWN)
+		{
+			DBG2(DBG_ENC, "%N payload unknown or not allowed",
+				 payload_type_names, type);
+		}
+		else
+		{
+			DBG2(DBG_ENC, "%N payload verified, adding to payload list",
+				 payload_type_names, type);
+		}
 		this->payloads->insert_last(this->payloads, payload);
 
 		/* an encrypted (fragment) payload MUST be the last one, so STOP here.
