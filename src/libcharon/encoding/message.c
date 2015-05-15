@@ -1447,6 +1447,19 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			pos += written;
 			len -= written;
 		}
+		if (payload->get_type(payload) == PL_UNKNOWN)
+		{
+			unknown_payload_t *unknown;
+
+			unknown = (unknown_payload_t*)payload;
+			written = snprintf(pos, len, "(%d)", unknown->get_type(unknown));
+			if (written >= len || written < 0)
+			{
+				return buf;
+			}
+			pos += written;
+			len -= written;
+		}
 	}
 	enumerator->destroy(enumerator);
 
