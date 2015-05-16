@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,9 @@ ENUM_NEXT(pen_names, PEN_MICROSOFT, PEN_MICROSOFT, PEN_IBM,
 	"Microsoft");
 ENUM_NEXT(pen_names, PEN_REDHAT, PEN_REDHAT, PEN_MICROSOFT,
 	"Redhat");
-ENUM_NEXT(pen_names, PEN_ALTIGA, PEN_ALTIGA, PEN_REDHAT,
+ENUM_NEXT(pen_names, PEN_PWG, PEN_PWG, PEN_REDHAT,
+	"PWG");
+ENUM_NEXT(pen_names, PEN_ALTIGA, PEN_ALTIGA, PEN_PWG,
 	"Altiga");
 ENUM_NEXT(pen_names, PEN_OSC, PEN_OSC, PEN_ALTIGA,
 	"OSC");

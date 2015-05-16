@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ enum pen_t {
 	PEN_IBM =			0x000002,	/*        2 */
 	PEN_MICROSOFT =		0x000137,	/*      311 */
 	PEN_REDHAT =		0x000908,	/*     2312 */
+	PEN_PWG =			0x000A8B,	/*     2699 */
 	PEN_ALTIGA =		0x000c04,	/*     3076 */
 	PEN_OSC =			0x002358,	/*     9048 */
 	PEN_DEBIAN =		0x002572,	/*     9586 */

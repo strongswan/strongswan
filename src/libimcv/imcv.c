@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,6 +16,7 @@
 #include "imcv.h"
 #include "ietf/ietf_attr.h"
 #include "ita/ita_attr.h"
+#include "pwg/pwg_attr.h"
 #include "tcg/tcg_attr.h"
 #include "pts/components/pts_component.h"
 #include "pts/components/pts_component_manager.h"
@@ -179,6 +181,8 @@ bool libimcv_init(bool is_imv)
 							ietf_attr_create_from_data, ietf_attr_names);
 		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_ITA,
 							ita_attr_create_from_data, ita_attr_names);
+		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_PWG,
+							pwg_attr_create_from_data, pwg_attr_names);
 		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_TCG,
 							tcg_attr_create_from_data, tcg_attr_names);
 
@@ -235,6 +239,7 @@ void libimcv_deinit(void)
 
 		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_IETF);
 		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_ITA);
+		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_PWG);
 		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_TCG);
 		DESTROY_IF(imcv_pa_tnc_attributes);
 		imcv_pa_tnc_attributes = NULL;

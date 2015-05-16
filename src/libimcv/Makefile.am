@@ -84,6 +84,7 @@ libimcv_la_SOURCES = \
 	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \
 	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
+	pwg/pwg_attr.h pwg/pwg_attr.c \
 	seg/seg_contract.h seg/seg_contract.c \
 	seg/seg_contract_manager.h seg/seg_contract_manager.c \
 	seg/seg_env.h seg/seg_env.c \
