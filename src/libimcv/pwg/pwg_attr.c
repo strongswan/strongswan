@@ -83,28 +83,30 @@ pa_tnc_attr_t* pwg_attr_create_from_data(u_int32_t type, size_t length, chunk_t 
 		case PWG_HCD_PSTN_FAX_ENABLED:
 			return generic_attr_bool_create_from_data(length, value,
 									pen_type_create(PEN_PWG, type));
-		case PWG_HCD_FIREWALL_SETTING:
-			return ietf_attr_port_filter_create_from_data(length, value,
-									pen_type_create(PEN_PWG, type));
 		case PWG_HCD_ATTRS_NATURAL_LANG:
 		case PWG_HCD_MACHINE_TYPE_MODEL:
 		case PWG_HCD_VENDOR_NAME:
-		case PWG_HCD_VENDOR_SMI_CODE:
-		case PWG_HCD_TIME_SOURCE:
 		case PWG_HCD_FIRMWARE_NAME:
 		case PWG_HCD_FIRMWARE_PATCHES:
 		case PWG_HCD_FIRMWARE_STRING_VERSION:
-		case PWG_HCD_FIRMWARE_VERSION:
-		case PWG_HCD_RESIDENT_APP_NAME:
-		case PWG_HCD_RESIDENT_APP_PATCHES:
-		case PWG_HCD_RESIDENT_APP_STRING_VERSION:
-		case PWG_HCD_RESIDENT_APP_VERSION:
+		case PWG_HCD_TIME_SOURCE:
 		case PWG_HCD_USER_APP_NAME:
 		case PWG_HCD_USER_APP_PATCHES:
 		case PWG_HCD_USER_APP_STRING_VERSION:
-		case PWG_HCD_USER_APP_VERSION:
+		case PWG_HCD_RESIDENT_APP_NAME:
+		case PWG_HCD_RESIDENT_APP_PATCHES:
+		case PWG_HCD_RESIDENT_APP_STRING_VERSION:
 		case PWG_HCD_CERTIFICATION_STATE:
 		case PWG_HCD_CONFIGURATION_STATE:
+			return generic_attr_string_create_from_data(length, value,
+									pen_type_create(PEN_PWG, type));
+		case PWG_HCD_FIREWALL_SETTING:
+			return ietf_attr_port_filter_create_from_data(length, value,
+									pen_type_create(PEN_PWG, type));
+		case PWG_HCD_VENDOR_SMI_CODE:
+		case PWG_HCD_FIRMWARE_VERSION:
+		case PWG_HCD_RESIDENT_APP_VERSION:
+		case PWG_HCD_USER_APP_VERSION:
 		default:
 			return NULL;
 	}

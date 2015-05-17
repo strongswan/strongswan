@@ -37,6 +37,7 @@ libimcv_la_SOURCES = \
 	imv/imv_session_manager.h imv/imv_session_manager.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
 	generic/generic_attr_bool.h generic/generic_attr_bool.c \
+	generic/generic_attr_string.h generic/generic_attr_string.c \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
 	ietf/ietf_attr_attr_request.h ietf/ietf_attr_attr_request.c \
@@ -54,7 +55,6 @@ libimcv_la_SOURCES = \
 	ita/ita_attr_get_settings.h ita/ita_attr_get_settings.c \
 	ita/ita_attr_settings.h ita/ita_attr_settings.c \
 	ita/ita_attr_angel.h ita/ita_attr_angel.c \
-	ita/ita_attr_device_id.h ita/ita_attr_device_id.c \
 	os_info/os_info.h os_info/os_info.c \
 	pa_tnc/pa_tnc_attr.h \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \

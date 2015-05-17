@@ -124,14 +124,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	u_int32_t status;
   
-    pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
-													  this->type.vendor_id);
 	*offset = 0;
 
 	if (this->value.len < this->length)
 	{
 		return NEED_MORE;
 	}
+    pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  this->type.vendor_id);
+
 	if (this->value.len != ATTR_BOOL_SIZE)
 	{
 		DBG1(DBG_TNC, "incorrect attribute size for %N/%N",

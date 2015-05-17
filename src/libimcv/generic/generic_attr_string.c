@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,24 +13,23 @@
  * for more details.
  */
 
-#include "ita_attr.h"
-#include "ita_attr_device_id.h"
+#include "generic_attr_string.h"
 
+#include <imcv.h>
 #include <pen/pen.h>
-
 #include <utils/debug.h>
 
-typedef struct private_ita_attr_device_id_t private_ita_attr_device_id_t;
+typedef struct private_generic_attr_string_t private_generic_attr_string_t;
 
 /**
- * Private data of an ita_attr_device_id_t object.
+ * Private data of an generic_attr_string_t object.
  */
-struct private_ita_attr_device_id_t {
+struct private_generic_attr_string_t {
 
 	/**
-	 * Public members of ita_attr_device_id_t
+	 * Public members of generic_attr_string_t
 	 */
-	ita_attr_device_id_t public;
+	generic_attr_string_t public;
 
 	/**
 	 * Vendor-specific attribute type
@@ -59,62 +58,76 @@ struct private_ita_attr_device_id_t {
 };
 
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_ita_attr_device_id_t *this, bool noskip)
+	private_generic_attr_string_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	return;
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ita_attr_device_id_t *this, u_int32_t *offset)
+	private_generic_attr_string_t *this, u_int32_t *offset)
 {
+	enum_name_t *pa_attr_names;
+	u_char *pos;
 	*offset = 0;
 
 	if (this->value.len < this->length)
 	{
 		return NEED_MORE;
 	}
+    pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  this->type.vendor_id);
+
+	pos = memchr(this->value.ptr, '\0', this->value.len);
+	if (pos)
+	{
+		DBG1(DBG_TNC, "nul termination in %N/%N string attribute",
+			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type);
+		*offset = pos - this->value.ptr;
+		return FAILED;
+	}
+
 	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
-	private_ita_attr_device_id_t *this, chunk_t segment)
+	private_generic_attr_string_t *this, chunk_t segment)
 {
 	this->value = chunk_cat("mc", this->value, segment);
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_ita_attr_device_id_t *this)
+	private_generic_attr_string_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -126,9 +139,10 @@ METHOD(pa_tnc_attr_t, destroy, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_device_id_create_from_data(size_t length, chunk_t value)
+pa_tnc_attr_t *generic_attr_string_create_from_data(size_t length,
+					 				chunk_t value, pen_type_t type)
 {
-	private_ita_attr_device_id_t *this;
+	private_generic_attr_string_t *this;
 
 	INIT(this,
 		.public = {
@@ -144,7 +158,7 @@ pa_tnc_attr_t *ita_attr_device_id_create_from_data(size_t length, chunk_t value)
 				.destroy = _destroy,
 			},
 		},
-		.type = { PEN_ITA, ITA_ATTR_DEVICE_ID },
+		.type = type,
 		.length = length,
 		.value = chunk_clone(value),
 		.ref = 1,
@@ -156,8 +170,8 @@ pa_tnc_attr_t *ita_attr_device_id_create_from_data(size_t length, chunk_t value)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ita_attr_device_id_create(chunk_t value)
+pa_tnc_attr_t *generic_attr_string_create(chunk_t value, pen_type_t type)
 {
-	return ita_attr_device_id_create_from_data(value.len, value);
+	return generic_attr_string_create_from_data(value.len, value, type);
 }
 

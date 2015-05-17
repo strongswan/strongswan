@@ -27,13 +27,13 @@
 #include <imv/imv_msg.h>
 #include <imv/imv_session.h>
 #include <imv/imv_os_info.h>
+#include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <ita/ita_attr.h>
-#include <ita/ita_attr_device_id.h>
 #include <tcg/tcg_attr.h>
 #include <tcg/pts/tcg_pts_attr_meas_algo.h>
 #include <tcg/pts/tcg_pts_attr_proto_caps.h>

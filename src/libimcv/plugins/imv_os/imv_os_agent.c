@@ -24,6 +24,7 @@
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <generic/generic_attr_bool.h>
+#include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_installed_packages.h>
@@ -36,7 +37,6 @@
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
-#include <ita/ita_attr_device_id.h>
 #include "tcg/seg/tcg_seg_attr_max_size.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 

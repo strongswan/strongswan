@@ -19,7 +19,7 @@
 #include "ita/ita_attr_get_settings.h"
 #include "ita/ita_attr_settings.h"
 #include "ita/ita_attr_angel.h"
-#include "ita/ita_attr_device_id.h"
+#include "generic/generic_attr_string.h"
 
 ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_DEVICE_ID,
 	"Command",
@@ -53,7 +53,8 @@ pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, size_t length,
 		case ITA_ATTR_STOP_ANGEL:
 			return ita_attr_angel_create_from_data(FALSE);
 		case ITA_ATTR_DEVICE_ID:
-			return ita_attr_device_id_create_from_data(length, value);
+			return generic_attr_string_create_from_data(length, value,
+									pen_type_create(PEN_ITA, type));
 		default:
 			return NULL;
 	}

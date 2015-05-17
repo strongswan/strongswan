@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,43 +14,46 @@
  */
 
 /**
- * @defgroup ita_attr_device_id ita_attr_device_id
- * @{ @ingroup ita_attr
+ * @defgroup generic_attr_string generic_attr_string
+ * @{ @ingroup generic_attr
  */
 
-#ifndef ITA_ATTR_DEVICE_ID_H_
-#define ITA_ATTR_DEVICE_ID_H_
+#ifndef GENERIC_ATTR_STRING_H_
+#define GENERIC_ATTR_STRING_H_
 
-typedef struct ita_attr_device_id_t ita_attr_device_id_t;
+typedef struct generic_attr_string_t generic_attr_string_t;
 
+#include <pen/pen.h>
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**
- * Class implementing the ITA Device ID PA-TNC attribute.
- *
+ * Class implementing a generic PA-TNC attribute containing a non-nul
+ * terminated string 
  */
-struct ita_attr_device_id_t {
+struct generic_attr_string_t {
 
 	/**
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-
 };
 
 /**
- * Creates an ita_attr_device_id_t object
+ * Creates a generic_attr_string_t object
  *
- * @param value				ITA Device ID attribute value
+ * @param string			Non-nul terminated string
+ * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* ita_attr_device_id_create(chunk_t value);
+pa_tnc_attr_t* generic_attr_string_create(chunk_t string, pen_type_t type);
 
 /**
- * Creates an ita_attr_device_id_t object from received data
+ * Creates an generic_attr_string_t object from received data
  *
  * @param length			Total length of attribute value
  * @param value				Unparsed attribute value (might be a segment)
+ * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* ita_attr_device_id_create_from_data(size_t length, chunk_t value);
+pa_tnc_attr_t* generic_attr_string_create_from_data(size_t length,
+									chunk_t value, pen_type_t type);
 
-#endif /** ITA_ATTR_DEVICE_ID_H_ @}*/
+#endif /** GENERIC_ATTR_STRING_H_ @}*/

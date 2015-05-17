@@ -19,6 +19,7 @@
 #include <imc/imc_msg.h>
 #include <imc/imc_os_info.h>
 #include <generic/generic_attr_bool.h>
+#include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_installed_packages.h>
@@ -29,7 +30,6 @@
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
-#include <ita/ita_attr_device_id.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -331,7 +331,8 @@ static void add_device_id(imc_msg_t *msg)
 	}
 
 	DBG1(DBG_IMC, "device ID is %.*s", value.len, value.ptr);
-	attr = ita_attr_device_id_create(value);
+	attr = generic_attr_string_create(value, pen_type_create(PEN_ITA,
+									  ITA_ATTR_DEVICE_ID));
 	msg->add_attribute(msg, attr);
 	free(value.ptr);
 }
