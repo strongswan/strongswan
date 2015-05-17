@@ -62,7 +62,8 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, size_t length,
 		case IETF_ATTR_OPERATIONAL_STATUS:
 			return ietf_attr_op_status_create_from_data(length, value);
 		case IETF_ATTR_PORT_FILTER:
-			return ietf_attr_port_filter_create_from_data(length, value);
+			return ietf_attr_port_filter_create_from_data(length, value,
+									pen_type_create(PEN_IETF, type));
 		case IETF_ATTR_INSTALLED_PACKAGES:
 			return ietf_attr_installed_packages_create_from_data(length, value);
 		case IETF_ATTR_PA_TNC_ERROR:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -61,16 +61,18 @@ struct ietf_attr_port_filter_t {
 /**
  * Creates an ietf_attr_port_filter_t object
  *
+ * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* ietf_attr_port_filter_create(void);
+pa_tnc_attr_t* ietf_attr_port_filter_create(pen_type_t type);
 
 /**
  * Creates an ietf_attr_port_filter_t object from received data
  *
  * @param length			Total length of attribute value
  * @param value				Unparsed attribute value (might be a segment)
+ * @param type				Vendor ID / Attribute Type
  */
 pa_tnc_attr_t* ietf_attr_port_filter_create_from_data(size_t length,
-													  chunk_t value);
+										chunk_t value, pen_type_t type);
 
 #endif /** IETF_ATTR_PORT_FILTER_H_ @}*/

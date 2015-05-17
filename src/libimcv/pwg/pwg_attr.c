@@ -15,7 +15,9 @@
 
 #include "pwg_attr.h"
 
-#include <generic/generic_attr_bool.h>
+#include "generic/generic_attr_bool.h"
+#include "ietf/ietf_attr_port_filter.h"
+
 
 ENUM_BEGIN(pwg_attr_names,	PWG_HCD_ATTRS_NATURAL_LANG,
 							PWG_HCD_VENDOR_SMI_CODE,
@@ -81,11 +83,13 @@ pa_tnc_attr_t* pwg_attr_create_from_data(u_int32_t type, size_t length, chunk_t 
 		case PWG_HCD_PSTN_FAX_ENABLED:
 			return generic_attr_bool_create_from_data(length, value,
 									pen_type_create(PEN_PWG, type));
+		case PWG_HCD_FIREWALL_SETTING:
+			return ietf_attr_port_filter_create_from_data(length, value,
+									pen_type_create(PEN_PWG, type));
 		case PWG_HCD_ATTRS_NATURAL_LANG:
 		case PWG_HCD_MACHINE_TYPE_MODEL:
 		case PWG_HCD_VENDOR_NAME:
 		case PWG_HCD_VENDOR_SMI_CODE:
-		case PWG_HCD_FIREWALL_SETTING:
 		case PWG_HCD_TIME_SOURCE:
 		case PWG_HCD_FIRMWARE_NAME:
 		case PWG_HCD_FIRMWARE_PATCHES:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -236,7 +236,7 @@ METHOD(ietf_attr_port_filter_t, create_port_enumerator, enumerator_t*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_port_filter_create(void)
+pa_tnc_attr_t *ietf_attr_port_filter_create(pen_type_t type)
 {
 	private_ietf_attr_port_filter_t *this;
 
@@ -256,7 +256,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create(void)
 			.add_port = _add_port,
 			.create_port_enumerator = _create_port_enumerator,
 		},
-		.type = { PEN_IETF, IETF_ATTR_PORT_FILTER },
+		.type = type,
 		.ports = linked_list_create(),
 		.ref = 1,
 	);
@@ -268,7 +268,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create(void)
  * Described in header.
  */
 pa_tnc_attr_t *ietf_attr_port_filter_create_from_data(size_t length,
-													  chunk_t data)
+										chunk_t data, pen_type_t type)
 {
 	private_ietf_attr_port_filter_t *this;
 
@@ -288,7 +288,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create_from_data(size_t length,
 			.add_port = _add_port,
 			.create_port_enumerator = _create_port_enumerator,
 		},
-		.type = {PEN_IETF, IETF_ATTR_PORT_FILTER },
+		.type = type,
 		.length = length,
 		.value = chunk_clone(data),
 		.ports = linked_list_create(),

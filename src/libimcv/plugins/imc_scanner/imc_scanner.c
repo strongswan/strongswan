@@ -241,7 +241,8 @@ static TNC_Result add_port_filter(imc_msg_t *msg)
 	pa_tnc_attr_t *attr;
 	ietf_attr_port_filter_t *attr_port_filter;
 
-	attr = ietf_attr_port_filter_create();
+	attr = ietf_attr_port_filter_create(pen_type_create(PEN_IETF,
+										IETF_ATTR_PORT_FILTER));
 	attr->set_noskip_flag(attr, TRUE);
 	attr_port_filter = (ietf_attr_port_filter_t*)attr;
 	if (!do_netstat(attr_port_filter))
