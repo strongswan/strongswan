@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,36 +13,37 @@
  * for more details.
  */
 
-#include "ietf_attr_fwd_enabled.h"
+#include "generic_attr_bool.h"
 
+#include <imcv.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
-typedef struct private_ietf_attr_fwd_enabled_t private_ietf_attr_fwd_enabled_t;
+typedef struct private_generic_attr_bool_t private_generic_attr_bool_t;
 
 /**
- * PA-TNC Forwarding Enabled type  (see section 4.2.11 of RFC 5792)
+ * Generic PA-TNC attribute containing boolean status value in 32 bit encoding 
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                        Forwarding Enabled                     |
+ *  |                        Boolean Value                          |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define FORWARDING_ENABLED_SIZE		4
+#define ATTR_BOOL_SIZE	4
 
 /**
- * Private data of an ietf_attr_fwd_enabled_t object.
+ * Private data of an generic_attr_bool_t object.
  */
-struct private_ietf_attr_fwd_enabled_t {
+struct private_generic_attr_bool_t {
 
 	/**
-	 * Public members of ietf_attr_fwd_enabled_t
+	 * Public members of generic_attr_bool_t
 	 */
-	ietf_attr_fwd_enabled_t public;
+	generic_attr_bool_t public;
 
 	/**
 	 * Vendor-specific attribute type
@@ -65,9 +66,9 @@ struct private_ietf_attr_fwd_enabled_t {
 	bool noskip_flag;
 
 	/**
-	 * Forwarding Enabled status
+	 * Boolean status value
 	 */
-	os_fwd_status_t fwd_status;
+	bool status;
 
 	/**
 	 * Reference count
@@ -76,31 +77,31 @@ struct private_ietf_attr_fwd_enabled_t {
 };
 
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_ietf_attr_fwd_enabled_t *this, bool noskip)
+	private_generic_attr_bool_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	bio_writer_t *writer;
 
@@ -108,8 +109,8 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(FORWARDING_ENABLED_SIZE);
-	writer->write_uint32(writer, this->fwd_status);
+	writer = bio_writer_create(ATTR_BOOL_SIZE);
+	writer->write_uint32(writer, this->status);
 
 	this->value = writer->extract_buf(writer);
 	this->length = this->value.len;
@@ -117,52 +118,57 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_fwd_enabled_t *this, u_int32_t *offset)
+	private_generic_attr_bool_t *this, u_int32_t *offset)
 {
+	enum_name_t *pa_attr_names;
 	bio_reader_t *reader;
-	u_int32_t fwd_status;
-
+	u_int32_t status;
+  
+    pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  this->type.vendor_id);
 	*offset = 0;
 
 	if (this->value.len < this->length)
 	{
 		return NEED_MORE;
 	}
-	if (this->value.len != FORWARDING_ENABLED_SIZE)
+	if (this->value.len != ATTR_BOOL_SIZE)
 	{
-		DBG1(DBG_TNC, "incorrect size for IETF forwarding enabled attribute");
+		DBG1(DBG_TNC, "incorrect attribute size for %N/%N",
+			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type);
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint32(reader, &fwd_status);
+	reader->read_uint32(reader, &status);
 	reader->destroy(reader);
 
-	if (fwd_status > OS_FWD_UNKNOWN)
+	if (status > 1)
 	{
-		DBG1(DBG_TNC, "IETF forwarding enabled field has unknown value %u",
-					   fwd_status);
+		DBG1(DBG_TNC, "%N/%N attribute contains invalid non-boolean value %u",
+			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type,
+			 status);
 		return FAILED;
 	}
-	this->fwd_status = fwd_status;
+	this->status = status;
 
 	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
-	private_ietf_attr_fwd_enabled_t *this, chunk_t segment)
+	private_generic_attr_bool_t *this, chunk_t segment)
 {
 	this->value = chunk_cat("mc", this->value, segment);
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_ietf_attr_fwd_enabled_t *this)
+	private_generic_attr_bool_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -171,18 +177,18 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(ietf_attr_fwd_enabled_t, get_status, os_fwd_status_t,
-	private_ietf_attr_fwd_enabled_t *this)
+METHOD(generic_attr_bool_t, get_status, bool,
+	private_generic_attr_bool_t *this)
 {
-	return this->fwd_status;
+	return this->status;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_fwd_enabled_create(os_fwd_status_t fwd_status)
+pa_tnc_attr_t *generic_attr_bool_create(bool status, pen_type_t type)
 {
-	private_ietf_attr_fwd_enabled_t *this;
+	private_generic_attr_bool_t *this;
 
 	INIT(this,
 		.public = {
@@ -199,8 +205,8 @@ pa_tnc_attr_t *ietf_attr_fwd_enabled_create(os_fwd_status_t fwd_status)
 			},
 			.get_status = _get_status,
 		},
-		.type = { PEN_IETF, IETF_ATTR_FORWARDING_ENABLED },
-		.fwd_status = fwd_status,
+		.type = type,
+		.status = status,
 		.ref = 1,
 	);
 
@@ -210,10 +216,10 @@ pa_tnc_attr_t *ietf_attr_fwd_enabled_create(os_fwd_status_t fwd_status)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_fwd_enabled_create_from_data(size_t length,
-													  chunk_t data)
+pa_tnc_attr_t *generic_attr_bool_create_from_data(size_t length, chunk_t data,
+												  pen_type_t type)
 {
-	private_ietf_attr_fwd_enabled_t *this;
+	private_generic_attr_bool_t *this;
 
 	INIT(this,
 		.public = {
@@ -230,7 +236,7 @@ pa_tnc_attr_t *ietf_attr_fwd_enabled_create_from_data(size_t length,
 			},
 			.get_status = _get_status,
 		},
-		.type = { PEN_IETF, IETF_ATTR_FORWARDING_ENABLED },
+		.type = type,
 		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,

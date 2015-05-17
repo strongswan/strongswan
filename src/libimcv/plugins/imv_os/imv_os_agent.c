@@ -23,10 +23,9 @@
 #include <imcv.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
+#include <generic/generic_attr_bool.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
-#include <ietf/ietf_attr_default_pwd_enabled.h>
-#include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_numeric_version.h>
 #include <ietf/ietf_attr_op_status.h>
@@ -270,12 +269,12 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 				}
 				case IETF_ATTR_FORWARDING_ENABLED:
 				{
-					ietf_attr_fwd_enabled_t *attr_cast;
+					generic_attr_bool_t *attr_cast;
 					os_fwd_status_t fwd_status;
 
 					state->set_action_flags(state,
 											IMV_OS_ATTR_FORWARDING_ENABLED);
-					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
+					attr_cast = (generic_attr_bool_t*)attr;
 					fwd_status = attr_cast->get_status(attr_cast);
 					DBG1(DBG_IMV, "IPv4 forwarding is %N",
 								   os_fwd_status_names, fwd_status);
@@ -288,12 +287,12 @@ static TNC_Result receive_msg(private_imv_os_agent_t *this, imv_state_t *state,
 				}
 				case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 				{
-					ietf_attr_default_pwd_enabled_t *attr_cast;
+					generic_attr_bool_t *attr_cast;
 					bool default_pwd_status;
 
 					state->set_action_flags(state,
 									IMV_OS_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
-					attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
+					attr_cast = (generic_attr_bool_t*)attr;
 					default_pwd_status = attr_cast->get_status(attr_cast);
 					DBG1(DBG_IMV, "factory default password is %sabled",
 								   default_pwd_status ? "en":"dis");

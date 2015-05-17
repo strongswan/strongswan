@@ -36,11 +36,10 @@ libimcv_la_SOURCES = \
 	imv/imv_session.h imv/imv_session.c \
 	imv/imv_session_manager.h imv/imv_session_manager.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
+	generic/generic_attr_bool.h generic/generic_attr_bool.c \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
 	ietf/ietf_attr_attr_request.h ietf/ietf_attr_attr_request.c \
-	ietf/ietf_attr_fwd_enabled.h ietf/ietf_attr_fwd_enabled.c \
-	ietf/ietf_attr_default_pwd_enabled.h ietf/ietf_attr_default_pwd_enabled.c \
 	ietf/ietf_attr_installed_packages.h ietf/ietf_attr_installed_packages.c \
 	ietf/ietf_attr_numeric_version.h ietf/ietf_attr_numeric_version.c \
 	ietf/ietf_attr_op_status.h ietf/ietf_attr_op_status.c \
