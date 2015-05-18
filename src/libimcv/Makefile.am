@@ -37,6 +37,7 @@ libimcv_la_SOURCES = \
 	imv/imv_session_manager.h imv/imv_session_manager.c \
 	imv/imv_workitem.h imv/imv_workitem.c \
 	generic/generic_attr_bool.h generic/generic_attr_bool.c \
+	generic/generic_attr_chunk.h generic/generic_attr_chunk.c \
 	generic/generic_attr_string.h generic/generic_attr_string.c \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
@@ -84,6 +85,7 @@ libimcv_la_SOURCES = \
 	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
 	pwg/pwg_attr.h pwg/pwg_attr.c \
+	pwg/pwg_attr_vendor_smi_code.h pwg/pwg_attr_vendor_smi_code.c \
 	seg/seg_contract.h seg/seg_contract.c \
 	seg/seg_contract_manager.h seg/seg_contract_manager.c \
 	seg/seg_env.h seg/seg_env.c \

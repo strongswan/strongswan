@@ -13,37 +13,36 @@
  * for more details.
  */
 
-#include "generic_attr_bool.h"
+#include "pwg_attr_vendor_smi_code.h"
 
-#include <imcv.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
-typedef struct private_generic_attr_bool_t private_generic_attr_bool_t;
+typedef struct private_pwg_attr_vendor_smi_code_t private_pwg_attr_vendor_smi_code_t;
 
 /**
- * Generic PA-TNC attribute containing boolean status value in 32 bit encoding 
+ * PWG HCD PA-TNC Vendor SMI Code
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                        Boolean Value                          |
+ *  |    Reserved   |                 Vendor SMI Code               |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define ATTR_BOOL_SIZE	4
+#define VENDOR_SMI_CODE_SIZE	4
 
 /**
- * Private data of an generic_attr_bool_t object.
+ * Private data of an pwg_attr_vendor_smi_code_t object.
  */
-struct private_generic_attr_bool_t {
+struct private_pwg_attr_vendor_smi_code_t {
 
 	/**
-	 * Public members of generic_attr_bool_t
+	 * Public members of pwg_attr_vendor_smi_code_t
 	 */
-	generic_attr_bool_t public;
+	pwg_attr_vendor_smi_code_t public;
 
 	/**
 	 * Vendor-specific attribute type
@@ -66,9 +65,9 @@ struct private_generic_attr_bool_t {
 	bool noskip_flag;
 
 	/**
-	 * Boolean status value
+	 * Vendor SMI code
 	 */
-	bool status;
+	pen_t vendor_smi_code;
 
 	/**
 	 * Reference count
@@ -77,31 +76,31 @@ struct private_generic_attr_bool_t {
 };
 
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_generic_attr_bool_t *this, bool noskip)
+	private_pwg_attr_vendor_smi_code_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	bio_writer_t *writer;
 
@@ -109,8 +108,8 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(ATTR_BOOL_SIZE);
-	writer->write_uint32(writer, this->status);
+	writer = bio_writer_create(VENDOR_SMI_CODE_SIZE);
+	writer->write_uint32(writer, this->vendor_smi_code);
 
 	this->value = writer->extract_buf(writer);
 	this->length = this->value.len;
@@ -118,58 +117,47 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_generic_attr_bool_t *this, u_int32_t *offset)
+	private_pwg_attr_vendor_smi_code_t *this, u_int32_t *offset)
 {
-	enum_name_t *pa_attr_names;
 	bio_reader_t *reader;
-	u_int32_t status;
-  
+	uint32_t vendor_smi_code;
+	uint8_t reserved;
+
 	*offset = 0;
 
 	if (this->value.len < this->length)
 	{
 		return NEED_MORE;
 	}
-	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
-													  this->type.vendor_id);
-
-	if (this->value.len != ATTR_BOOL_SIZE)
+	if (this->value.len != VENDOR_SMI_CODE_SIZE)
 	{
-		DBG1(DBG_TNC, "incorrect attribute size for %N/%N",
-			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type);
+		DBG1(DBG_TNC, "incorrect attribute length for PWG HCD Vendor SMI Code");
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint32(reader, &status);
+	reader->read_uint8 (reader, &reserved);
+	reader->read_uint24(reader, &vendor_smi_code);
 	reader->destroy(reader);
-
-	if (status > 1)
-	{
-		DBG1(DBG_TNC, "%N/%N attribute contains invalid non-boolean value %u",
-			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type,
-			 status);
-		return FAILED;
-	}
-	this->status = status;
+	this->vendor_smi_code = vendor_smi_code;
 
 	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
-	private_generic_attr_bool_t *this, chunk_t segment)
+	private_pwg_attr_vendor_smi_code_t *this, chunk_t segment)
 {
 	this->value = chunk_cat("mc", this->value, segment);
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_generic_attr_bool_t *this)
+	private_pwg_attr_vendor_smi_code_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -178,18 +166,18 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(generic_attr_bool_t, get_status, bool,
-	private_generic_attr_bool_t *this)
+METHOD(pwg_attr_vendor_smi_code_t, get_vendor_smi_code, pen_t,
+	private_pwg_attr_vendor_smi_code_t *this)
 {
-	return this->status;
+	return this->vendor_smi_code;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *generic_attr_bool_create(bool status, pen_type_t type)
+pa_tnc_attr_t *pwg_attr_vendor_smi_code_create(pen_t vendor_smi_code)
 {
-	private_generic_attr_bool_t *this;
+	private_pwg_attr_vendor_smi_code_t *this;
 
 	INIT(this,
 		.public = {
@@ -204,10 +192,10 @@ pa_tnc_attr_t *generic_attr_bool_create(bool status, pen_type_t type)
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_status = _get_status,
+			.get_vendor_smi_code = _get_vendor_smi_code,
 		},
-		.type = type,
-		.status = status,
+		.type = { PEN_PWG, PWG_HCD_VENDOR_SMI_CODE },
+		.vendor_smi_code = vendor_smi_code,
 		.ref = 1,
 	);
 
@@ -217,10 +205,10 @@ pa_tnc_attr_t *generic_attr_bool_create(bool status, pen_type_t type)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *generic_attr_bool_create_from_data(size_t length, chunk_t data,
-												  pen_type_t type)
+pa_tnc_attr_t *pwg_attr_vendor_smi_code_create_from_data(size_t length,
+														 chunk_t data)
 {
-	private_generic_attr_bool_t *this;
+	private_pwg_attr_vendor_smi_code_t *this;
 
 	INIT(this,
 		.public = {
@@ -235,9 +223,9 @@ pa_tnc_attr_t *generic_attr_bool_create_from_data(size_t length, chunk_t data,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_status = _get_status,
+			.get_vendor_smi_code = _get_vendor_smi_code,
 		},
-		.type = type,
+		.type = { PEN_PWG, PWG_HCD_VENDOR_SMI_CODE },
 		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,

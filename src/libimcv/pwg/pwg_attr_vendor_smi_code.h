@@ -14,46 +14,52 @@
  */
 
 /**
- * @defgroup generic_attr_string generic_attr_string
- * @{ @ingroup generic_attr
+ * @defgroup pwg_attr_vendor_smi_codet pwg_attr_vendor_smi_code
+ * @{ @ingroup ietf_attr
  */
 
-#ifndef GENERIC_ATTR_STRING_H_
-#define GENERIC_ATTR_STRING_H_
+#ifndef PWG_ATTR_VENDOR_SMI_CODE_H_
+#define PWG_ATTR_VENDOR_SMI_CODE_H_
 
-typedef struct generic_attr_string_t generic_attr_string_t;
+typedef struct pwg_attr_vendor_smi_code_t pwg_attr_vendor_smi_code_t;
 
-#include <pen/pen.h>
+#include "pwg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
+
 /**
- * Class implementing a generic PA-TNC attribute containing a non-nul
- * terminated printable string
+ * Class implementing the PWG HCD PA-TNC Vendor SMI Code attribute.
+ *
  */
-struct generic_attr_string_t {
+struct pwg_attr_vendor_smi_code_t {
 
 	/**
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
+
+	/**
+	 * Gets the Vendor SMI Code
+	 *
+	 * @return				Vendor SMI Code
+	 */
+	pen_t (*get_vendor_smi_code)(pwg_attr_vendor_smi_code_t *this);
+
 };
 
 /**
- * Creates a generic_attr_string_t object
+ * Creates an pwg_attr_vendor_smi_code_t object
  *
- * @param string			Non-nul terminated string
- * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* generic_attr_string_create(chunk_t string, pen_type_t type);
+pa_tnc_attr_t* pwg_attr_vendor_smi_code_create(pen_t vendor_smi_code);
 
 /**
- * Creates an generic_attr_string_t object from received data
+ * Creates an pwg_attr_vendor_smi_code_t object from received data
  *
  * @param length			Total length of attribute value
  * @param value				Unparsed attribute value (might be a segment)
- * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* generic_attr_string_create_from_data(size_t length,
-									chunk_t value, pen_type_t type);
+pa_tnc_attr_t* pwg_attr_vendor_smi_code_create_from_data(size_t length,
+														 chunk_t value);
 
-#endif /** GENERIC_ATTR_STRING_H_ @}*/
+#endif /** PWG_ATTR_VENDOR_SMI_CODE_H_ @}*/

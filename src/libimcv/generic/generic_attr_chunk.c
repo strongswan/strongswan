@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Andreas Steffen
+ * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,23 +13,23 @@
  * for more details.
  */
 
-#include "generic_attr_string.h"
+#include "generic_attr_chunk.h"
 
 #include <imcv.h>
 #include <pen/pen.h>
 #include <utils/debug.h>
 
-typedef struct private_generic_attr_string_t private_generic_attr_string_t;
+typedef struct private_generic_attr_chunk_t private_generic_attr_chunk_t;
 
 /**
- * Private data of an generic_attr_string_t object.
+ * Private data of an generic_attr_chunk_t object.
  */
-struct private_generic_attr_string_t {
+struct private_generic_attr_chunk_t {
 
 	/**
-	 * Public members of generic_attr_string_t
+	 * Public members of generic_attr_chunk_t
 	 */
-	generic_attr_string_t public;
+	generic_attr_chunk_t public;
 
 	/**
 	 * Vendor-specific attribute type
@@ -40,6 +40,11 @@ struct private_generic_attr_string_t {
 	 * Length of attribute value
 	 */
 	size_t length;
+
+	/**
+	 * Fixed size of attribute value, set to 0 if dynamic
+	 */
+	size_t size;
 
 	/**
 	 * Attribute value or segment
@@ -58,40 +63,39 @@ struct private_generic_attr_string_t {
 };
 
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_generic_attr_string_t *this, bool noskip)
+	private_generic_attr_chunk_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	return;
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_generic_attr_string_t *this, u_int32_t *offset)
+	private_generic_attr_chunk_t *this, u_int32_t *offset)
 {
 	enum_name_t *pa_attr_names;
-	u_char *pos;
 	*offset = 0;
 
 	if (this->value.len < this->length)
@@ -100,19 +104,12 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
 													  this->type.vendor_id);
-	if (this->value.len > this->length)
+
+	if ((this->size == 0 && this->value.len > this->length) ||
+		(this->size != 0 && this->value.len != this->size))
 	{
 		DBG1(DBG_TNC, "inconsistent length of %N/%N string attribute",
 			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type);
-		return FAILED;
-	}
-
-	pos = memchr(this->value.ptr, '\0', this->value.len);
-	if (pos)
-	{
-		DBG1(DBG_TNC, "nul termination in %N/%N string attribute",
-			 pen_names, this->type.vendor_id, pa_attr_names, this->type.type);
-		*offset = pos - this->value.ptr;
 		return FAILED;
 	}
 
@@ -120,20 +117,20 @@ METHOD(pa_tnc_attr_t, process, status_t,
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
-	private_generic_attr_string_t *this, chunk_t segment)
+	private_generic_attr_chunk_t *this, chunk_t segment)
 {
 	this->value = chunk_cat("mc", this->value, segment);
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_generic_attr_string_t *this)
+	private_generic_attr_chunk_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -145,10 +142,10 @@ METHOD(pa_tnc_attr_t, destroy, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *generic_attr_string_create_from_data(size_t length,
-					 				chunk_t value, pen_type_t type)
+pa_tnc_attr_t *generic_attr_chunk_create_from_data(size_t length, chunk_t value,
+												   size_t size, pen_type_t type)
 {
-	private_generic_attr_string_t *this;
+	private_generic_attr_chunk_t *this;
 
 	INIT(this,
 		.public = {
@@ -166,6 +163,7 @@ pa_tnc_attr_t *generic_attr_string_create_from_data(size_t length,
 		},
 		.type = type,
 		.length = length,
+		.size = size,
 		.value = chunk_clone(value),
 		.ref = 1,
 	);
@@ -176,8 +174,9 @@ pa_tnc_attr_t *generic_attr_string_create_from_data(size_t length,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *generic_attr_string_create(chunk_t value, pen_type_t type)
+pa_tnc_attr_t *generic_attr_chunk_create(chunk_t value, pen_type_t type)
 {
-	return generic_attr_string_create_from_data(value.len, value, type);
+	return generic_attr_chunk_create_from_data(value.len, value,
+											   value.len, type);
 }
 

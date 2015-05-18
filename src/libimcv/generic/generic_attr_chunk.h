@@ -14,23 +14,23 @@
  */
 
 /**
- * @defgroup generic_attr_string generic_attr_string
+ * @defgroup generic_attr_chunk generic_attr_chunk
  * @{ @ingroup generic_attr
  */
 
-#ifndef GENERIC_ATTR_STRING_H_
-#define GENERIC_ATTR_STRING_H_
+#ifndef GENERIC_ATTR_CHUNK_H_
+#define GENERIC_ATTR_CHUNK_H_
 
-typedef struct generic_attr_string_t generic_attr_string_t;
+typedef struct generic_attr_chunk_t generic_attr_chunk_t;
 
 #include <pen/pen.h>
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**
- * Class implementing a generic PA-TNC attribute containing a non-nul
- * terminated printable string
+ * Class implementing a generic PA-TNC attribute containing a possibly
+ * binary string with either a fixed or variable size
  */
-struct generic_attr_string_t {
+struct generic_attr_chunk_t {
 
 	/**
 	 * Public PA-TNC attribute interface
@@ -39,21 +39,22 @@ struct generic_attr_string_t {
 };
 
 /**
- * Creates a generic_attr_string_t object
+ * Creates a generic_attr_chunk_t object
  *
  * @param string			Non-nul terminated string
  * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* generic_attr_string_create(chunk_t string, pen_type_t type);
+pa_tnc_attr_t* generic_attr_chunk_create(chunk_t string, pen_type_t type);
 
 /**
- * Creates an generic_attr_string_t object from received data
+ * Creates an generic_attr_chunk_t object from received data
  *
  * @param length			Total length of attribute value
  * @param value				Unparsed attribute value (might be a segment)
+ * @param size				size in bytes if fixed array or 0 if dynamic size
  * @param type				Vendor ID / Attribute Type
  */
-pa_tnc_attr_t* generic_attr_string_create_from_data(size_t length,
-									chunk_t value, pen_type_t type);
+pa_tnc_attr_t* generic_attr_chunk_create_from_data(size_t length, chunk_t value,
+												   size_t size, pen_type_t type);
 
-#endif /** GENERIC_ATTR_STRING_H_ @}*/
+#endif /** GENERIC_ATTR_CHUNK_H_ @}*/
