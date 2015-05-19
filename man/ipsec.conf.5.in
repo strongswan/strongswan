@@ -237,7 +237,7 @@ or
 .B esp
 keyword may be used, AH+ESP bundles are not supported.
 
-There is no default, by default ESP is used.
+There is no default AH cipher suite since by default ESP is used.
 The daemon adds its extensive default proposal to the configured value. To
 restrict it to the configured proposal an
 exclamation mark
