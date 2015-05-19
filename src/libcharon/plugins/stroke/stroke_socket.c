@@ -16,6 +16,8 @@
 
 #include "stroke_socket.h"
 
+#define _GNU_SOURCE /* for asprintf() */
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -769,7 +771,7 @@ stroke_socket_t *stroke_socket_create()
 {
 	private_stroke_socket_t *this;
 	int max_concurrent;
-	char *uri;
+	char *uri, *uri_default, *piddir;
 
 	INIT(this,
 		.public = {
@@ -800,9 +802,17 @@ stroke_socket_t *stroke_socket_create()
 	max_concurrent = lib->settings->get_int(lib->settings,
 				"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,
 				lib->ns);
-	uri = lib->settings->get_str(lib->settings,
-				"%s.plugins.stroke.socket", "unix://" STROKE_SOCKET, lib->ns);
+
+	piddir = lib->settings->get_str(lib->settings, "%s.piddir", IPSEC_PIDDIR,
+									lib->ns);
+	if (asprintf(&uri_default, "unix://%s/" STROKE_SOCKET_NAME, piddir) < 0)
+	{
+		uri_default = strdup("unix://" STROKE_SOCKET);
+	}
+	uri = lib->settings->get_str(lib->settings, "%s.plugins.stroke.socket",
+								 uri_default, lib->ns);
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
+	free(uri_default);
 	if (!this->service)
 	{
 		DBG1(DBG_CFG, "creating stroke socket failed");

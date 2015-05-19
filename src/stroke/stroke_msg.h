@@ -22,9 +22,10 @@
 #include <library.h>
 
 /**
- * Socket which is used to communicate between charon and stroke
+ * Socket file which is used to communicate between charon and stroke
  */
-#define STROKE_SOCKET IPSEC_PIDDIR "/charon.ctl"
+#define STROKE_SOCKET_NAME "charon.ctl"
+#define STROKE_SOCKET IPSEC_PIDDIR "/" STROKE_SOCKET_NAME
 
 /**
  * Number of bytes by which the buffer is increased as needed

@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for asprintf() */
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -75,7 +76,7 @@ static void push_string_impl(stroke_msg_t **msg, size_t offset, char *string)
 static int send_stroke_msg(stroke_msg_t *msg)
 {
 	stream_t *stream;
-	char *uri, buffer[512], *pass;
+	char *uri, *uri_default, *piddir, buffer[512], *pass;
 	int count;
 
 	if (msg->length == UINT16_MAX)
@@ -87,15 +88,23 @@ static int send_stroke_msg(stroke_msg_t *msg)
 
 	msg->output_verbosity = output_verbosity;
 
+	piddir = lib->settings->get_str(lib->settings, "%s.piddir", IPSEC_PIDDIR,
+									daemon_name);
+	if (asprintf(&uri_default, "unix://%s/" STROKE_SOCKET_NAME, piddir) < 0)
+	{
+		uri_default = strdup("unix://" STROKE_SOCKET);
+	}
 	uri = lib->settings->get_str(lib->settings, "%s.plugins.stroke.socket",
-								 "unix://" STROKE_SOCKET, daemon_name);
+								 uri_default, daemon_name);
 	stream = lib->streams->connect(lib->streams, uri);
 	if (!stream)
 	{
 		fprintf(stderr, "failed to connect to stroke socket '%s'\n", uri);
+		free(uri_default);
 		free(msg);
 		return -1;
 	}
+	free(uri_default);
 
 	if (!stream->write_all(stream, msg, msg->length))
 	{

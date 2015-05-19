@@ -91,9 +91,9 @@ static int send_stroke_msg(stroke_msg_t *msg)
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
 
-	if (asprintf(&uri_default, "unix://%s/charon.ctl", piddir) < 0)
+	if (asprintf(&uri_default, "unix://%s/" STROKE_SOCKET_NAME, piddir) < 0)
 	{
-		uri_default = strdup("unix://" IPSEC_PIDDIR "/charon.ctl");
+		uri_default = strdup("unix://" STROKE_SOCKET);
 	}
 	uri = lib->settings->get_str(lib->settings, "%s.plugins.stroke.socket",
 								 uri_default, daemon_name);
