@@ -226,6 +226,9 @@ charon.nbns1
 charon.nbns2
 	WINS servers assigned to peer via configuration payload (CP).
 
+charon.piddir = ${piddir}
+	Directory for PID and UNIX socket files.
+
 charon.port = 500
 	UDP port used locally. If set to 0 a random port will be allocated.
 

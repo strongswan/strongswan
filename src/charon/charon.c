@@ -16,6 +16,7 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for asprintf() */
 #include <stdio.h>
 #define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
@@ -41,11 +42,6 @@
 #endif
 
 /**
- * PID file, in which charon stores its process id
- */
-#define PID_FILE IPSEC_PIDDIR "/charon.pid"
-
-/**
  * Default user and group
  */
 #ifndef IPSEC_USER
@@ -55,6 +51,11 @@
 #ifndef IPSEC_GROUP
 #define IPSEC_GROUP NULL
 #endif
+
+/**
+ * Path to the PID file
+ */
+static char *pidfile_name = NULL;
 
 /**
  * Global reference to PID file (required to truncate, if undeletable)
@@ -203,9 +204,9 @@ static bool check_pidfile()
 {
 	struct stat stb;
 
-	if (stat(PID_FILE, &stb) == 0)
+	if (stat(pidfile_name, &stb) == 0)
 	{
-		pidfile = fopen(PID_FILE, "r");
+		pidfile = fopen(pidfile_name, "r");
 		if (pidfile)
 		{
 			char buf[64];
@@ -223,12 +224,13 @@ static bool check_pidfile()
 				return TRUE;
 			}
 		}
-		DBG1(DBG_DMN, "removing pidfile '"PID_FILE"', process not running");
-		unlink(PID_FILE);
+		DBG1(DBG_DMN, "removing pidfile '%s', process not running",
+			 pidfile_name);
+		unlink(pidfile_name);
 	}
 
 	/* create new pidfile */
-	pidfile = fopen(PID_FILE, "w");
+	pidfile = fopen(pidfile_name, "w");
 	if (pidfile)
 	{
 		int fd;
@@ -236,8 +238,8 @@ static bool check_pidfile()
 		fd = fileno(pidfile);
 		if (fd == -1 || fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
 		{
-			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
-				 strerror(errno));
+			DBG1(DBG_LIB, "setting FD_CLOEXEC for '%s' failed: %s",
+				 pidfile_name, strerror(errno));
 		}
 		ignore_result(fchown(fileno(pidfile),
 							 lib->caps->get_uid(lib->caps),
@@ -262,7 +264,7 @@ static void unlink_pidfile()
 		ignore_result(ftruncate(fileno(pidfile), 0));
 		fclose(pidfile);
 	}
-	unlink(PID_FILE);
+	unlink(pidfile_name);
 }
 
 /**
@@ -294,6 +296,7 @@ int main(int argc, char *argv[])
 	struct sigaction action;
 	int group, status = SS_RC_INITIALIZATION_FAILED;
 	struct utsname utsname;
+	char *piddir;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -421,9 +424,17 @@ int main(int argc, char *argv[])
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
+	piddir = lib->settings->get_str(lib->settings, "%s.piddir", IPSEC_PIDDIR,
+									lib->ns);
+	if (asprintf(&pidfile_name, "%s/charon.pid", piddir) < 0)
+	{
+		DBG1(DBG_DMN, "unable to set pidfile name - aborting charon");
+		goto deinit;
+	}
+
 	if (check_pidfile())
 	{
-		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
+		DBG1(DBG_DMN, "charon already running (\"%s\" exists)", pidfile_name);
 		goto deinit;
 	}
 
@@ -460,6 +471,7 @@ int main(int argc, char *argv[])
 	status = 0;
 
 deinit:
+	free(pidfile_name);
 	libcharon_deinit();
 	libhydra_deinit();
 	library_deinit();
