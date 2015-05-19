@@ -230,7 +230,8 @@ static void unlink_pidfile()
  */
 int main(int argc, char *argv[])
 {
-	char *dmn_name;
+	char *dmn_name, *piddir;
+
 	if (argc > 0 && strlen(argv[0]) > 0)
 	{
 		dmn_name = basename(argv[0]);
@@ -320,11 +321,13 @@ int main(int argc, char *argv[])
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	/* set global pidfile name depending on daemon name */
-	if (asprintf(&pidfile_name, IPSEC_PIDDIR"/%s.pid", dmn_name) < 0)
+	piddir = lib->settings->get_str(lib->settings, "%s.piddir", IPSEC_PIDDIR,
+									dmn_name);
+	if (asprintf(&pidfile_name, "%s/%s.pid", piddir, dmn_name) < 0)
 	{
 		DBG1(DBG_DMN, "unable to set pidfile name - aborting %s", dmn_name);
 		goto deinit;
-	};
+	}
 
 	if (check_pidfile())
 	{
@@ -386,6 +389,7 @@ int main(int argc, char *argv[])
 	lib->encoding->remove_encoder(lib->encoding, tkm_encoder_encode);
 
 deinit:
+	free(pidfile_name);
 	destroy_dh_mapping();
 	libcharon_deinit();
 	libhydra_deinit();
