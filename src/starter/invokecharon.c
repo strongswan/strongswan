@@ -179,7 +179,6 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 	}
 	else
 	{
-		unlink(CHARON_CTL_FILE);
 		_stop_requested = 0;
 
 		pid = fork();

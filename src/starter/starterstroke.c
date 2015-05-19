@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for asprintf() */
+#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +78,7 @@ static void push_string_impl(stroke_msg_t **msg, size_t offset, char *string)
 static int send_stroke_msg(stroke_msg_t *msg)
 {
 	stream_t *stream;
-	char *uri, buffer[64];
+	char *uri, *uri_default, buffer[64];
 	int count;
 
 	if (msg->length == UINT16_MAX)
@@ -89,15 +91,21 @@ static int send_stroke_msg(stroke_msg_t *msg)
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
 
+	if (asprintf(&uri_default, "unix://%s/charon.ctl", piddir) < 0)
+	{
+		uri_default = strdup("unix://" IPSEC_PIDDIR "/charon.ctl");
+	}
 	uri = lib->settings->get_str(lib->settings, "%s.plugins.stroke.socket",
-								 "unix://" CHARON_CTL_FILE, daemon_name);
+								 uri_default, daemon_name);
 	stream = lib->streams->connect(lib->streams, uri);
 	if (!stream)
 	{
 		DBG1(DBG_APP, "failed to connect to stroke socket '%s'", uri);
+		free(uri_default);
 		free(msg);
 		return -1;
 	}
+	free(uri_default);
 
 	if (!stream->write_all(stream, msg, msg->length))
 	{

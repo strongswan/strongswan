@@ -22,13 +22,10 @@
 #define CONFIG_FILE     IPSEC_CONFDIR "/ipsec.conf"
 #define SECRETS_FILE    IPSEC_CONFDIR "/ipsec.secrets"
 
-#define CHARON_CTL_FILE IPSEC_PIDDIR "/charon.ctl"
-
 extern char *daemon_name;
 extern char *cmd;
+extern char *piddir;
 extern char *pid_file;
-
-#define DYNIP_DIR       IPSEC_PIDDIR "/dynip"
 
 #endif /* _STARTER_FILES_H_ */
 

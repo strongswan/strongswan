@@ -6,3 +6,6 @@ starter.load =
 
 starter.load_warning = yes
 	Disable charon plugin load option warning.
+
+starter.piddir = ${piddir}
+	Directory for PID and UNIX socket files.
