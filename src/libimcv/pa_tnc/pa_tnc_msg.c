@@ -226,7 +226,14 @@ METHOD(pa_tnc_msg_t, process, status_t,
 							reader, FALSE, &offset, this->encoding, &error);
 		if (!attr)
 		{
-			goto err;
+			if (error)
+			{
+				goto err;
+			}
+			else
+			{
+				continue;
+			}
 		}
 		attr_value = attr->get_value(attr);
 		attr_type  = attr->get_type(attr);
