@@ -31,7 +31,7 @@ IPSEC_DIR="@IPSEC_DIR@"
 IPSEC_BINDIR="@IPSEC_BINDIR@"
 IPSEC_SBINDIR="@IPSEC_SBINDIR@"
 IPSEC_CONFDIR="@IPSEC_CONFDIR@"
-IPSEC_PIDDIR="@IPSEC_PIDDIR@"
+IPSEC_PIDDIR=${IPSEC_PIDDIR:-"@IPSEC_PIDDIR@"}
 IPSEC_SCRIPT="@IPSEC_SCRIPT@"
 
 IPSEC_STARTER_PID="${IPSEC_PIDDIR}/starter.${DAEMON_NAME}.pid"
@@ -216,7 +216,7 @@ start)
 	if [ -d /var/lock/subsys ]; then
 		touch /var/lock/subsys/ipsec
 	fi
-	exec $IPSEC_STARTER --daemon $DAEMON_NAME "$@"
+	exec $IPSEC_STARTER --daemon $DAEMON_NAME --piddir $IPSEC_PIDDIR "$@"
 	;;
 status|statusall)
 	op="$1"
