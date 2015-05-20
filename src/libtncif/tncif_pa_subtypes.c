@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Andreas Steffen
+ * Copyright (C) 2010-2015 Andreas Steffen
  *
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -16,6 +16,7 @@
 
 #include "tncif_pa_subtypes.h"
 
+/* IETF PA Subtype names */
 ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
 	"Testing",
 	"Operating System",
@@ -33,6 +34,7 @@ ENUM_NEXT(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY, PA_SUBTYPE_IETF_ANY,
 );
 ENUM_END(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY);
 
+/* TCG PA Subtype names */
 ENUM_BEGIN(pa_subtype_tcg_names, PA_SUBTYPE_TCG_PTS, PA_SUBTYPE_TCG_SWID,
 	"PTS",
 	"SCAP",
@@ -44,6 +46,17 @@ ENUM_NEXT(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY, PA_SUBTYPE_TCG_ANY,
 );
 ENUM_END(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY);
 
+/* PWG PA Subtype names */
+ENUM_BEGIN(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD, PA_SUBTYPE_PWG_HCD,
+	"HCD"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_ANY, PA_SUBTYPE_PWG_ANY,
+								PA_SUBTYPE_PWG_HCD,
+	"ANY"
+);
+ENUM_END(pa_subtype_pwg_names, PA_SUBTYPE_PWG_ANY);
+
+/* FHH PA Subtype names */
 ENUM_BEGIN(pa_subtype_fhh_names, PA_SUBTYPE_FHH_HOSTSCANNER, PA_SUBTYPE_FHH_DUMMY,
 	"HostScanner",
 	"Dummy"
@@ -63,6 +76,7 @@ ENUM_NEXT(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY, PA_SUBTYPE_FHH_ANY,
 );
 ENUM_END(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY);
 
+/* ITA-HSR PA Subtype names */
 ENUM_BEGIN(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_ECHO,
 	"Test",
 	"Echo"
@@ -84,6 +98,8 @@ enum_name_t* get_pa_subtype_names(pen_t pen)
 			return pa_subtype_ietf_names;
 		case PEN_TCG:
 			return pa_subtype_tcg_names;
+		case PEN_PWG:
+			return pa_subtype_pwg_names;
 		case PEN_FHH:
 			return pa_subtype_fhh_names;
 		case PEN_ITA:

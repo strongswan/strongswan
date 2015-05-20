@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -63,6 +64,19 @@ extern enum_name_t *pa_subtype_ietf_names;
  * enum name for pa_subtype_tcg_t.
  */
 extern enum_name_t *pa_subtype_tcg_names;
+
+/**
+ * PA-TNC PWG Subtypes
+ */
+ enum pa_subtype_pwg_t {
+	PA_SUBTYPE_PWG_HCD =				0x01,
+	PA_SUBTYPE_PWG_ANY =				0xff
+};
+
+/**
+ * enum name for pa_subtype_pwg_t.
+ */
+extern enum_name_t *pa_subtype_pwg_names;
 
 /**
  * PA-TNC FHH Subtypes
