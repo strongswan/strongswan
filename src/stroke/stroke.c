@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2014 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,27 +33,57 @@ struct stroke_token {
 static char *daemon_name = "charon";
 static int output_verbosity = 1; /* CONTROL */
 
-static char* push_string(stroke_msg_t *msg, char *string)
+static stroke_msg_t *create_stroke_msg(int type)
 {
-	unsigned long string_start = msg->length;
+	stroke_msg_t *msg;
 
-	if (string == NULL ||  msg->length + strlen(string) >= sizeof(stroke_msg_t))
-	{
-		return NULL;
-	}
-	else
-	{
-		msg->length += strlen(string) + 1;
-		strcpy((char*)msg + string_start, string);
-		return (char*)string_start;
-	}
+	INIT(msg,
+		.type = type,
+		.length = offsetof(stroke_msg_t, buffer),
+	);
+	return msg;
 }
 
-static int send_stroke_msg (stroke_msg_t *msg)
+#define push_string(msg, field, str) \
+	push_string_impl(msg, offsetof(stroke_msg_t, field), str)
+
+static void push_string_impl(stroke_msg_t **msg, size_t offset, char *string)
+{
+	size_t cur_len = (*msg)->length, str_len;
+
+	if (!string)
+	{
+		return;
+	}
+	str_len = strlen(string) + 1;
+	if (cur_len + str_len >= UINT16_MAX)
+	{
+		(*msg)->length = UINT16_MAX;
+		return;
+	}
+	while (cur_len + str_len > sizeof(stroke_msg_t) + (*msg)->buflen)
+	{
+		*msg = realloc(*msg, sizeof(stroke_msg_t) + (*msg)->buflen +
+					   STROKE_BUF_LEN_INC);
+		(*msg)->buflen += STROKE_BUF_LEN_INC;
+	}
+	(*msg)->length += str_len;
+	strcpy((char*)*msg + cur_len, string);
+	*(char**)((char*)*msg + offset) = (char*)cur_len;
+}
+
+static int send_stroke_msg(stroke_msg_t *msg)
 {
 	stream_t *stream;
 	char *uri, buffer[512], *pass;
 	int count;
+
+	if (msg->length == UINT16_MAX)
+	{
+		fprintf(stderr, "stroke message exceeds maximum buffer size");
+		free(msg);
+		return -1;
+	}
 
 	msg->output_verbosity = output_verbosity;
 
@@ -63,6 +93,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	if (!stream)
 	{
 		fprintf(stderr, "failed to connect to stroke socket '%s'\n", uri);
+		free(msg);
 		return -1;
 	}
 
@@ -70,6 +101,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	{
 		fprintf(stderr, "sending stroke message failed\n");
 		stream->destroy(stream);
+		free(msg);
 		return -1;
 	}
 
@@ -109,6 +141,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 		fprintf(stderr, "reading stroke response failed\n");
 	}
 	stream->destroy(stream);
+	free(msg);
 	return 0;
 }
 
@@ -117,126 +150,116 @@ static int add_connection(char *name,
 						  char *my_addr, char *other_addr,
 						  char *my_nets, char *other_nets)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	memset(&msg, 0, sizeof(msg));
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.type = STR_ADD_CONN;
+	msg = create_stroke_msg(STR_ADD_CONN);
 
-	msg.add_conn.name = push_string(&msg, name);
-	msg.add_conn.version = 2;
-	msg.add_conn.mode = 1;
-	msg.add_conn.mobike = 1;
-	msg.add_conn.dpd.action = 1;
-	msg.add_conn.install_policy = 1;
+	push_string(&msg, add_conn.name, name);
+	msg->add_conn.version = 2;
+	msg->add_conn.mode = 1;
+	msg->add_conn.mobike = 1;
+	msg->add_conn.dpd.action = 1;
+	msg->add_conn.install_policy = 1;
 
-	msg.add_conn.me.id = push_string(&msg, my_id);
-	msg.add_conn.me.address = push_string(&msg, my_addr);
-	msg.add_conn.me.ikeport = 500;
-	msg.add_conn.me.subnets = push_string(&msg, my_nets);
-	msg.add_conn.me.sendcert = 1;
-	msg.add_conn.me.to_port = 65535;
+	push_string(&msg, add_conn.me.id, my_id);
+	push_string(&msg, add_conn.me.address, my_addr);
+	msg->add_conn.me.ikeport = 500;
+	push_string(&msg, add_conn.me.subnets, my_nets);
+	msg->add_conn.me.sendcert = 1;
+	msg->add_conn.me.to_port = 65535;
 
-	msg.add_conn.other.id = push_string(&msg, other_id);
-	msg.add_conn.other.address = push_string(&msg, other_addr);
-	msg.add_conn.other.ikeport = 500;
-	msg.add_conn.other.subnets = push_string(&msg, other_nets);
-	msg.add_conn.other.sendcert = 1;
-	msg.add_conn.other.to_port = 65535;
+	push_string(&msg, add_conn.other.id, other_id);
+	push_string(&msg, add_conn.other.address, other_addr);
+	msg->add_conn.other.ikeport = 500;
+	push_string(&msg, add_conn.other.subnets, other_nets);
+	msg->add_conn.other.sendcert = 1;
+	msg->add_conn.other.to_port = 65535;
 
-	return send_stroke_msg(&msg);
+	return send_stroke_msg(msg);
 }
 
 static int del_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.type = STR_DEL_CONN;
-	msg.initiate.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_DEL_CONN);
+	push_string(&msg, initiate.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int initiate_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.type = STR_INITIATE;
-	msg.initiate.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_INITIATE);
+	push_string(&msg, initiate.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int terminate_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_TERMINATE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.initiate.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_TERMINATE);
+	push_string(&msg, initiate.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int terminate_connection_srcip(char *start, char *end)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_TERMINATE_SRCIP;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.terminate_srcip.start = push_string(&msg, start);
-	msg.terminate_srcip.end = push_string(&msg, end);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_TERMINATE_SRCIP);
+	push_string(&msg, terminate_srcip.start, start);
+	push_string(&msg, terminate_srcip.end, end);
+	return send_stroke_msg(msg);
 }
 
 static int rekey_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_REKEY;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.rekey.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_REKEY);
+	push_string(&msg, rekey.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int route_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_ROUTE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.route.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_ROUTE);
+	push_string(&msg, route.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int unroute_connection(char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_UNROUTE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.unroute.name = push_string(&msg, name);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_UNROUTE);
+	push_string(&msg, unroute.name, name);
+	return send_stroke_msg(msg);
 }
 
 static int show_status(stroke_keyword_t kw, char *connection)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
 	switch (kw)
 	{
 		case STROKE_STATUSALL:
-			msg.type = STR_STATUS_ALL;
+			msg = create_stroke_msg(STR_STATUS_ALL);
 			break;
 		case STROKE_STATUSALL_NOBLK:
-			msg.type = STR_STATUS_ALL_NOBLK;
+			msg = create_stroke_msg(STR_STATUS_ALL_NOBLK);
 			break;
 		default:
-			msg.type = STR_STATUS;
+			msg = create_stroke_msg(STR_STATUS);
 			break;
 	}
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.status.name = push_string(&msg, connection);
-	return send_stroke_msg(&msg);
+	push_string(&msg, status.name, connection);
+	return send_stroke_msg(msg);
 }
 
 static int list_flags[] = {
@@ -257,13 +280,12 @@ static int list_flags[] = {
 
 static int list(stroke_keyword_t kw, int utc)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_LIST;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.list.utc = utc;
-	msg.list.flags = list_flags[kw - STROKE_LIST_FIRST];
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_LIST);
+	msg->list.utc = utc;
+	msg->list.flags = list_flags[kw - STROKE_LIST_FIRST];
+	return send_stroke_msg(msg);
 }
 
 static int reread_flags[] = {
@@ -278,12 +300,11 @@ static int reread_flags[] = {
 
 static int reread(stroke_keyword_t kw)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_REREAD;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.reread.flags = reread_flags[kw - STROKE_REREAD_FIRST];
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_REREAD);
+	msg->reread.flags = reread_flags[kw - STROKE_REREAD_FIRST];
+	return send_stroke_msg(msg);
 }
 
 static int purge_flags[] = {
@@ -295,12 +316,11 @@ static int purge_flags[] = {
 
 static int purge(stroke_keyword_t kw)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_PURGE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.purge.flags = purge_flags[kw - STROKE_PURGE_FIRST];
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_PURGE);
+	msg->purge.flags = purge_flags[kw - STROKE_PURGE_FIRST];
+	return send_stroke_msg(msg);
 }
 
 static int export_flags[] = {
@@ -311,68 +331,61 @@ static int export_flags[] = {
 
 static int export(stroke_keyword_t kw, char *selector)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_EXPORT;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.export.selector = push_string(&msg, selector);
-	msg.export.flags = export_flags[kw - STROKE_EXPORT_FIRST];
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_EXPORT);
+	push_string(&msg, export.selector, selector);
+	msg->export.flags = export_flags[kw - STROKE_EXPORT_FIRST];
+	return send_stroke_msg(msg);
 }
 
 static int leases(stroke_keyword_t kw, char *pool, char *address)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_LEASES;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.leases.pool = push_string(&msg, pool);
-	msg.leases.address = push_string(&msg, address);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_LEASES);
+	push_string(&msg, leases.pool, pool);
+	push_string(&msg, leases.address, address);
+	return send_stroke_msg(msg);
 }
 
 static int memusage()
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_MEMUSAGE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_MEMUSAGE);
+	return send_stroke_msg(msg);
 }
 
 static int user_credentials(char *name, char *user, char *pass)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_USER_CREDS;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.user_creds.name = push_string(&msg, name);
-	msg.user_creds.username = push_string(&msg, user);
-	msg.user_creds.password = push_string(&msg, pass);
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_USER_CREDS);
+	push_string(&msg, user_creds.name, name);
+	push_string(&msg, user_creds.username, user);
+	push_string(&msg, user_creds.password, pass);
+	return send_stroke_msg(msg);
 }
 
 static int counters(int reset, char *name)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_COUNTERS;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.counters.name = push_string(&msg, name);
-	msg.counters.reset = reset;
-
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_COUNTERS);
+	push_string(&msg, counters.name, name);
+	msg->counters.reset = reset;
+	return send_stroke_msg(msg);
 }
 
 static int set_loglevel(char *type, u_int level)
 {
-	stroke_msg_t msg;
+	stroke_msg_t *msg;
 
-	msg.type = STR_LOGLEVEL;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.loglevel.type = push_string(&msg, type);
-	msg.loglevel.level = level;
-	return send_stroke_msg(&msg);
+	msg = create_stroke_msg(STR_LOGLEVEL);
+	push_string(&msg, loglevel.type, type);
+	msg->loglevel.level = level;
+	return send_stroke_msg(msg);
 }
 
 static int usage(char *error)
