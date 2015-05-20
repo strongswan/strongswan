@@ -354,6 +354,13 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
+	/* reject (export) DH groups using primes smaller than 1024 bit */
+	if (prime.len < 1024 / 8)
+	{
+		DBG1(DBG_TLS, "short DH prime received (%zu bytes)", prime.len);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	public = find_public_key(this);
 	if (!public)
 	{
