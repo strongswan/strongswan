@@ -1,6 +1,13 @@
 strongswan-5.3.1
 ----------------
 
+- Fixed a denial-of-service and potential remote code execution vulnerability
+  triggered by IKEv1/IKEv2 messages that contain payloads for the respective
+  other IKE version. Such payload are treated specially since 5.2.2 but because
+  they were still identified by their original payload type they were used as
+  such in some places causing invalid function pointer dereferences.
+  The vulnerability has been registered as CVE-2015-3991.
+
 - The new aesni plugin provides CBC, CTR, XCBC, CMAC, CCM and GCM crypto
   primitives for AES-128/192/256. The plugin requires AES-NI and PCLMULQDQ
   instructions and works on both x86 and x64 architectures. It provides
