@@ -291,8 +291,10 @@ ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and p
 ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
-ARG_ENABL_SET([ruby-gems],      [enable installation of provided ruby gems.])
-ARG_ENABL_SET([python-eggs],    [enable installation of provided python eggs.])
+ARG_ENABL_SET([ruby-gems],      [enable build of provided ruby gems.])
+ARG_ENABL_SET([ruby-gems-install],[enable installation of provided ruby gems.])
+ARG_ENABL_SET([python-eggs],    [enable build of provided python eggs.])
+ARG_ENABL_SET([python-eggs-install],[enable installation of provided python eggs.])
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -431,6 +433,14 @@ fi
 
 if test x$medcli = xtrue; then
 	mediation=true
+fi
+
+if test x$ruby_gems_install = xtrue; then
+	ruby_gems=true
+fi
+
+if test x$python_eggs_install = xtrue; then
+	python_eggs=true
 fi
 
 # ===========================================
@@ -1199,11 +1209,14 @@ if test x$ruby_gems = xtrue; then
 	fi
 	AC_SUBST(RUBYGEMDIR, "$rubygemdir")
 fi
+AM_CONDITIONAL(RUBY_GEMS_INSTALL, [test "x$ruby_gems_install" = xtrue])
 
 if test x$python_eggs = xtrue; then
-	AC_PATH_PROG([EASY_INSTALL], [easy_install], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
-	if test x$EASY_INSTALL = x; then
-		AC_MSG_ERROR(Python easy_install not found)
+	if test x$python_eggs_install = xtrue; then
+		AC_PATH_PROG([EASY_INSTALL], [easy_install], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+		if test x$EASY_INSTALL = x; then
+			AC_MSG_ERROR(Python easy_install not found)
+		fi
 	fi
 	if test "x$pythoneggdir" = "xmain site-packages directory"; then
 		AC_SUBST(PYTHONEGGINSTALLDIR, "")
@@ -1212,6 +1225,7 @@ if test x$python_eggs = xtrue; then
 	fi
 	AC_PATH_PROG([PY_TEST], [py.test], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 fi
+AM_CONDITIONAL(PYTHON_EGGS_INSTALL, [test "x$python_eggs_install" = xtrue])
 
 # ===============================================
 #  collect plugin list for strongSwan components

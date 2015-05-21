@@ -15,6 +15,7 @@ all-local: vici-$(PACKAGE_VERSION).gem
 clean-local:
 	rm -f vici.gemspec vici-$(PACKAGE_VERSION).gem
 
+if RUBY_GEMS_INSTALL
 install-data-local: vici-$(PACKAGE_VERSION).gem
 	$(GEM) install --install-dir $(DESTDIR)$(RUBYGEMDIR) \
 		vici-$(PACKAGE_VERSION).gem
@@ -22,3 +23,4 @@ install-data-local: vici-$(PACKAGE_VERSION).gem
 uninstall-local:
 	$(GEM) uninstall --install-dir $(DESTDIR)$(RUBYGEMDIR) \
 		--version $(PACKAGE_VERSION) vici
+endif
