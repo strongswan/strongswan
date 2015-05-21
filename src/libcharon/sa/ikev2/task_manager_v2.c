@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2014 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -661,6 +661,32 @@ static status_t process_response(private_task_manager_t *this,
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
+
+	enumerator = array_create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!task->pre_process)
+		{
+			continue;
+		}
+		switch (task->pre_process(task, message))
+		{
+			case SUCCESS:
+				break;
+			case FAILED:
+			default:
+				/* just ignore the message */
+				DBG1(DBG_IKE, "ignore invalid %N response",
+					 exchange_type_names, message->get_exchange_type(message));
+				enumerator->destroy(enumerator);
+				return SUCCESS;
+			case DESTROY_ME:
+				/* critical failure, destroy IKE_SA */
+				enumerator->destroy(enumerator);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
