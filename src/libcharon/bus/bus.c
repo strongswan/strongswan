@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -687,6 +687,37 @@ METHOD(bus_t, child_rekey, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, children_migrate, void,
+	private_bus_t *this, ike_sa_id_t *new, u_int32_t unique)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+
+	ike_sa = this->thread_sa->get(this->thread_sa);
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->children_migrate)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->children_migrate(entry->listener, ike_sa, new,
+												 unique);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, ike_updown, void,
 	private_bus_t *this, ike_sa_t *ike_sa, bool up)
 {
@@ -1038,6 +1069,7 @@ bus_t *bus_create()
 			.ike_reestablish_post = _ike_reestablish_post,
 			.child_updown = _child_updown,
 			.child_rekey = _child_rekey,
+			.children_migrate = _children_migrate,
 			.authorize = _authorize,
 			.narrow = _narrow,
 			.assign_vips = _assign_vips,
