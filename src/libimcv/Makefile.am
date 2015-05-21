@@ -175,6 +175,14 @@ if USE_IMV_SWID
   SUBDIRS += plugins/imv_swid
 endif
 
+if USE_IMC_HCD
+  SUBDIRS += plugins/imc_hcd
+endif
+
+if USE_IMV_HCD
+  SUBDIRS += plugins/imv_hcd
+endif
+
 TESTS = imcv_tests
 
 check_PROGRAMS = $(TESTS)
