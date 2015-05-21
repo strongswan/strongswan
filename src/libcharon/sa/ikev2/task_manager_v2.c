@@ -1078,6 +1078,44 @@ static status_t process_request(private_task_manager_t *this,
 		}
 	}
 
+	enumerator = array_create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!task->pre_process)
+		{
+			continue;
+		}
+		switch (task->pre_process(task, message))
+		{
+			case SUCCESS:
+				break;
+			case FAILED:
+			default:
+				/* just ignore the message */
+				DBG1(DBG_IKE, "ignore invalid %N request",
+					 exchange_type_names, message->get_exchange_type(message));
+				enumerator->destroy(enumerator);
+				switch (message->get_exchange_type(message))
+				{
+					case IKE_SA_INIT:
+						/* no point in keeping the SA when it was created with
+						 * an invalid IKE_SA_INIT message */
+						return DESTROY_ME;
+					default:
+						/* remove tasks we queued for this request */
+						flush_queue(this, TASK_QUEUE_PASSIVE);
+						/* fall-through */
+					case IKE_AUTH:
+						return NEED_MORE;
+				}
+			case DESTROY_ME:
+				/* critical failure, destroy IKE_SA */
+				enumerator->destroy(enumerator);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	/* let the tasks process the message */
 	enumerator = array_create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, (void*)&task))
@@ -1368,12 +1406,17 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
 				return SUCCESS;
 			}
-			if (process_request(this, msg) != SUCCESS)
+			switch (process_request(this, msg))
 			{
-				flush(this);
-				return DESTROY_ME;
+				case SUCCESS:
+					this->responding.mid++;
+					break;
+				case NEED_MORE:
+					break;
+				default:
+					flush(this);
+					return DESTROY_ME;
 			}
-			this->responding.mid++;
 		}
 		else if ((mid == this->responding.mid - 1) &&
 				 array_count(this->responding.packets))
