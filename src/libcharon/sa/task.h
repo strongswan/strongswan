@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -154,6 +154,18 @@ struct task_t {
 	 *						- SUCCESS if task completed
 	 */
 	status_t (*process) (task_t *this, message_t *message);
+
+	/**
+	 * Verify a message before processing it (optional to implement by tasks).
+	 *
+	 * @param message		message to verify
+	 * @return
+	 *						- FAILED if verification is not successful, the
+	 *						  message will be silently discarded
+	 *						- DESTROY_ME if IKE_SA has to be destroyed
+	 *						- SUCCESS if verification is successful
+	 */
+	status_t (*pre_process) (task_t *this, message_t *message);
 
 	/**
 	 * Get the type of the task implementation.
