@@ -693,6 +693,54 @@ static void raise_alerts(private_ike_init_t *this, notify_type_t type)
 	}
 }
 
+METHOD(task_t, pre_process_i, status_t,
+	private_ike_init_t *this, message_t *message)
+{
+	enumerator_t *enumerator;
+	payload_t *payload;
+
+	/* check for erroneous notifies */
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == PLV2_NOTIFY)
+		{
+			notify_payload_t *notify = (notify_payload_t*)payload;
+			notify_type_t type = notify->get_notify_type(notify);
+
+			switch (type)
+			{
+				case REDIRECT:
+				{
+					identification_t *gateway;
+					chunk_t data, nonce = chunk_empty;
+					status_t status = SUCCESS;
+
+					if (this->old_sa)
+					{
+						break;
+					}
+					data = notify->get_notification_data(notify);
+					gateway = redirect_data_parse(data, &nonce);
+					if (!gateway || !chunk_equals(nonce, this->my_nonce))
+					{
+						DBG1(DBG_IKE, "received invalid REDIRECT notify");
+						status = FAILED;
+					}
+					DESTROY_IF(gateway);
+					chunk_free(&nonce);
+					enumerator->destroy(enumerator);
+					return status;
+				}
+				default:
+					break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return SUCCESS;
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {
@@ -762,18 +810,13 @@ METHOD(task_t, process_i, status_t,
 					}
 					data = notify->get_notification_data(notify);
 					gateway = redirect_data_parse(data, &nonce);
-					enumerator->destroy(enumerator);
-					if (!gateway || !chunk_equals(nonce, this->my_nonce))
-					{
-						DBG1(DBG_IKE, "received invalid REDIRECT notify");
-					}
-					else if (this->ike_sa->handle_redirect(this->ike_sa,
-															gateway))
+					if (this->ike_sa->handle_redirect(this->ike_sa, gateway))
 					{
 						status = NEED_MORE;
 					}
 					DESTROY_IF(gateway);
 					chunk_free(&nonce);
+					enumerator->destroy(enumerator);
 					return status;
 				}
 				default:
@@ -909,6 +952,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	{
 		this->public.task.build = _build_i;
 		this->public.task.process = _process_i;
+		this->public.task.pre_process = _pre_process_i;
 	}
 	else
 	{
