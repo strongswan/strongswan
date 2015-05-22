@@ -3,6 +3,10 @@ charon.plugins.ha.autobalance = 0
 	Set to 0 to disable.
 
 charon.plugins.ha.fifo_interface = yes
+	Enable HA FIFO interface to change segment responsibility.
+
+charon.plugins.ha.fifo
+	Path of the HA FIFO (named pipe).
 
 charon.plugins.ha.heartbeat_delay = 1000
 

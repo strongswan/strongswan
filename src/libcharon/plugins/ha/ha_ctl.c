@@ -13,8 +13,8 @@
  * for more details.
  */
 
-#include "ha_ctl.h"
-
+#define _GNU_SOURCE /* for asprintf() */
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/select.h>
@@ -22,10 +22,13 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "ha_ctl.h"
+
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
-#define HA_FIFO IPSEC_PIDDIR "/charon.ha"
+#define HA_FIFO_NAME "charon.ha"
+#define HA_FIFO IPSEC_PIDDIR "/" HA_FIFO_NAME
 
 typedef struct private_ha_ctl_t private_ha_ctl_t;
 
@@ -48,6 +51,11 @@ struct private_ha_ctl_t {
 	 * Resynchronization message cache
 	 */
 	ha_cache_t *cache;
+
+	/**
+	 * Path to FIFO file
+	 */
+	char* fifo;
 };
 
 /**
@@ -61,7 +69,7 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 	u_int segment;
 
 	oldstate = thread_cancelability(TRUE);
-	fifo = open(HA_FIFO, O_RDONLY);
+	fifo = open(this->fifo, O_RDONLY);
 	thread_cancelability(oldstate);
 	if (fifo == -1)
 	{
@@ -100,6 +108,7 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 METHOD(ha_ctl_t, destroy, void,
 	private_ha_ctl_t *this)
 {
+	free(this->fifo);
 	free(this);
 }
 
@@ -119,17 +128,33 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 		.cache = cache,
 	);
 
-	if (access(HA_FIFO, R_OK|W_OK) != 0)
+	this->fifo = lib->settings->get_str(lib->settings, "%s.plugins.ha.fifo",
+										NULL, lib->ns);
+	if (this->fifo)
+	{
+		this->fifo = strdup(this->fifo);
+	}
+	else
+	{
+		if (asprintf(&this->fifo, "%s/" HA_FIFO_NAME,
+					 lib->settings->get_str(lib->settings, "%s.piddir",
+											IPSEC_PIDDIR, lib->ns)) < 0)
+		{
+			this->fifo = strdup(HA_FIFO);
+		}
+	}
+
+	if (access(this->fifo, R_OK|W_OK) != 0)
 	{
 		old = umask(S_IRWXO);
-		if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
+		if (mkfifo(this->fifo, S_IRUSR | S_IWUSR) != 0)
 		{
 			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
-				 HA_FIFO, strerror(errno));
+				 this->fifo, strerror(errno));
 		}
 		umask(old);
 	}
-	if (chown(HA_FIFO, lib->caps->get_uid(lib->caps),
+	if (chown(this->fifo, lib->caps->get_uid(lib->caps),
 			  lib->caps->get_gid(lib->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
