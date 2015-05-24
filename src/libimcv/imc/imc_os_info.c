@@ -586,9 +586,9 @@ imc_os_info_t *imc_os_info_create(void)
 
 	/* As an option OS name and OS version can be configured manually */
 	name.ptr = lib->settings->get_str(lib->settings,
-									  "%s.imcv.imc_os_info.name", NULL, lib->ns);
+									  "%s.imcv.os_info.name", NULL, lib->ns);
 	version.ptr = lib->settings->get_str(lib->settings,
-									  "%s.imcv.imc_os_info.version", NULL, lib->ns);
+									  "%s.imcv.os_info.version", NULL, lib->ns);
 	if (name.ptr && version.ptr)
 	{
 		name.len = strlen(name.ptr);
