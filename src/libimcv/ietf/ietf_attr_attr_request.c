@@ -138,8 +138,21 @@ METHOD(pa_tnc_attr_t, build, void,
 METHOD(ietf_attr_attr_request_t, add, void,
 	private_ietf_attr_attr_request_t *this, pen_t vendor_id, u_int32_t type)
 {
+	enum_name_t *pa_attr_names;
 	pen_type_t *entry;
 
+	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+														  vendor_id);
+	if (pa_attr_names)
+	{
+		DBG2(DBG_TNC, "  0x%06x/0x%08x '%N/%N'", vendor_id, type,
+						 pen_names, vendor_id, pa_attr_names, type);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "  0x%06x/0x%08x '%N'", vendor_id, type,
+						 pen_names, vendor_id);
+	}
 	entry = malloc_thing(pen_type_t);
 	entry->vendor_id = vendor_id;
 	entry->type = type;
@@ -150,7 +163,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_ietf_attr_attr_request_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	enum_name_t *pa_attr_names;
 	pen_t vendor_id;
 	u_int32_t type;
 	u_int8_t reserved;
@@ -176,19 +188,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_uint8 (reader, &reserved);
 		reader->read_uint24(reader, &vendor_id);
 		reader->read_uint32(reader, &type);
-
-		pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
-														  vendor_id);
-		if (pa_attr_names)
-		{
-			DBG2(DBG_TNC, "  0x%06x/0x%08x '%N/%N'", vendor_id, type,
-							 pen_names, vendor_id, pa_attr_names, type);
-		}
-		else
-		{
-			DBG2(DBG_TNC, "  0x%06x/0x%08x '%N'", vendor_id, type,
-							 pen_names, vendor_id);
-		}
 		add(this, vendor_id, type);
 	}
 	reader->destroy(reader);
