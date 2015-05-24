@@ -345,9 +345,13 @@ static void add_installed_packages(imc_state_t *state, imc_msg_t *msg)
 	enumerator_t *enumerator;
 	chunk_t name, version;
 
+	enumerator = os->create_package_enumerator(os);
+	if (!enumerator)
+	{
+		return;
+	}
 	attr = ietf_attr_installed_packages_create();
 
-	enumerator = os->create_package_enumerator(os);
 	while (enumerator->enumerate(enumerator, &name, &version))
 	{
 		DBG2(DBG_IMC, "package '%.*s' (%.*s)",
