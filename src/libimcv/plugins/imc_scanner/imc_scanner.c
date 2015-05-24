@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@
 static const char imc_name[] = "Scanner";
 
 static pen_type_t msg_types[] = {
-	{ PEN_IETF, PA_SUBTYPE_IETF_VPN }
+	{ PEN_IETF, PA_SUBTYPE_IETF_FIREWALL }
 };
 
 static imc_agent_t *imc_scanner;

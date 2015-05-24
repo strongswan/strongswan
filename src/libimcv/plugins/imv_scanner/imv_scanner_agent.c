@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ typedef struct private_imv_scanner_agent_t private_imv_scanner_agent_t;
 
 /* Subscribed PA-TNC message subtypes */
 static pen_type_t msg_types[] = {
-	{ PEN_IETF, PA_SUBTYPE_IETF_VPN }
+	{ PEN_IETF, PA_SUBTYPE_IETF_FIREWALL }
 };
 
 /**
