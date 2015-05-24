@@ -54,6 +54,8 @@ CONFIG_OPTS = \
 	--enable-imv-attestation \
 	--enable-imc-swid \
 	--enable-imv-swid \
+	--enable-imc-hcd \
+	--enable-imv-hcd \
 	--enable-sql \
 	--enable-sqlite \
 	--enable-attr-sql \
