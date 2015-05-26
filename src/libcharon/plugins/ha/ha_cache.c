@@ -43,6 +43,11 @@ struct private_ha_cache_t {
 	ha_socket_t *socket;
 
 	/**
+	 * Tunnel securing sync messages
+	 */
+	ha_tunnel_t *tunnel;
+
+	/**
 	 * Total number of segments
 	 */
 	u_int count;
@@ -259,6 +264,10 @@ static void rekey_segment(private_ha_cache_t *this, u_int segment)
 												charon->ike_sa_manager, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
+		if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
+		{
+			continue;
+		}
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 			this->kernel->get_segment(this->kernel,
 						ike_sa->get_other_host(ike_sa)) == segment)
@@ -365,7 +374,7 @@ METHOD(ha_cache_t, destroy, void,
  * See header
  */
 ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
-							bool sync, u_int count)
+							ha_tunnel_t *tunnel, bool sync, u_int count)
 {
 	private_ha_cache_t *this;
 
@@ -379,6 +388,7 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 		.count = count,
 		.kernel = kernel,
 		.socket = socket,
+		.tunnel = tunnel,
 		.cache = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 8),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);

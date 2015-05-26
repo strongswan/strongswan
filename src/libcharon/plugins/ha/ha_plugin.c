@@ -137,7 +137,8 @@ static bool initialize_plugin(private_ha_plugin_t *this)
 	this->kernel = ha_kernel_create(count);
 	this->segments = ha_segments_create(this->socket, this->kernel, this->tunnel,
 							count, strcmp(local, remote) > 0, monitor);
-	this->cache = ha_cache_create(this->kernel, this->socket, resync, count);
+	this->cache = ha_cache_create(this->kernel, this->socket, this->tunnel,
+								  resync, count);
 	if (fifo)
 	{
 		this->ctl = ha_ctl_create(this->segments, this->cache);

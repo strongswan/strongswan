@@ -73,6 +73,6 @@ struct ha_cache_t {
  * @param count			total number of segments
  */
 ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
-							bool resync, u_int count);
+							ha_tunnel_t *tunnel, bool resync, u_int count);
 
 #endif /** HA_CACHE_H_ @}*/
