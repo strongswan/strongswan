@@ -97,13 +97,72 @@ METHOD(plugin_t, get_name, char*,
 }
 
 /**
- * Register listener
+ * Initialize plugin
+ */
+static bool initialize_plugin(private_ha_plugin_t *this)
+{
+	char *local, *remote, *secret;
+	u_int count;
+	bool fifo, monitor, resync;
+
+	local = lib->settings->get_str(lib->settings,
+								"%s.plugins.ha.local", NULL, lib->ns);
+	remote = lib->settings->get_str(lib->settings,
+								"%s.plugins.ha.remote", NULL, lib->ns);
+	secret = lib->settings->get_str(lib->settings,
+								"%s.plugins.ha.secret", NULL, lib->ns);
+	fifo = lib->settings->get_bool(lib->settings,
+								"%s.plugins.ha.fifo_interface", TRUE, lib->ns);
+	monitor = lib->settings->get_bool(lib->settings,
+								"%s.plugins.ha.monitor", TRUE, lib->ns);
+	resync = lib->settings->get_bool(lib->settings,
+								"%s.plugins.ha.resync", TRUE, lib->ns);
+	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
+								"%s.plugins.ha.segment_count", 1, lib->ns));
+	if (!local || !remote)
+	{
+		DBG1(DBG_CFG, "HA config misses local/remote address");
+		return FALSE;
+	}
+
+	if (secret)
+	{
+		this->tunnel = ha_tunnel_create(local, remote, secret);
+	}
+	this->socket = ha_socket_create(local, remote);
+	if (!this->socket)
+	{
+		return FALSE;
+	}
+	this->kernel = ha_kernel_create(count);
+	this->segments = ha_segments_create(this->socket, this->kernel, this->tunnel,
+							count, strcmp(local, remote) > 0, monitor);
+	this->cache = ha_cache_create(this->kernel, this->socket, resync, count);
+	if (fifo)
+	{
+		this->ctl = ha_ctl_create(this->segments, this->cache);
+	}
+	this->attr = ha_attribute_create(this->kernel, this->segments);
+	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
+										this->cache, this->kernel, this->attr);
+	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
+	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
+								  this->kernel);
+	return TRUE;
+}
+
+/**
+ * Initialize plugin and register listener
  */
 static bool plugin_cb(private_ha_plugin_t *this,
 					  plugin_feature_t *feature, bool reg, void *cb_data)
 {
 	if (reg)
 	{
+		if (!initialize_plugin(this))
+		{
+			return FALSE;
+		}
 		charon->bus->add_listener(charon->bus, &this->segments->listener);
 		charon->bus->add_listener(charon->bus, &this->ike->listener);
 		charon->bus->add_listener(charon->bus, &this->child->listener);
@@ -127,6 +186,7 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "ha"),
+				PLUGIN_SDEPEND(CUSTOM, "kernel-ipsec"),
 	};
 	*features = f;
 	return countof(f);
@@ -136,14 +196,14 @@ METHOD(plugin_t, destroy, void,
 	private_ha_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
-	this->ike->destroy(this->ike);
-	this->child->destroy(this->child);
-	this->dispatcher->destroy(this->dispatcher);
-	this->attr->destroy(this->attr);
-	this->cache->destroy(this->cache);
-	this->segments->destroy(this->segments);
-	this->kernel->destroy(this->kernel);
-	this->socket->destroy(this->socket);
+	DESTROY_IF(this->ike);
+	DESTROY_IF(this->child);
+	DESTROY_IF(this->dispatcher);
+	DESTROY_IF(this->attr);
+	DESTROY_IF(this->cache);
+	DESTROY_IF(this->segments);
+	DESTROY_IF(this->kernel);
+	DESTROY_IF(this->socket);
 	DESTROY_IF(this->tunnel);
 	free(this);
 }
@@ -154,29 +214,6 @@ METHOD(plugin_t, destroy, void,
 plugin_t *ha_plugin_create()
 {
 	private_ha_plugin_t *this;
-	char *local, *remote, *secret;
-	u_int count;
-	bool fifo, monitor, resync;
-
-	local = lib->settings->get_str(lib->settings,
-								"%s.plugins.ha.local", NULL, lib->ns);
-	remote = lib->settings->get_str(lib->settings,
-								"%s.plugins.ha.remote", NULL, lib->ns);
-	secret = lib->settings->get_str(lib->settings,
-								"%s.plugins.ha.secret", NULL, lib->ns);
-	fifo = lib->settings->get_bool(lib->settings,
-								"%s.plugins.ha.fifo_interface", TRUE, lib->ns);
-	monitor = lib->settings->get_bool(lib->settings,
-								"%s.plugins.ha.monitor", TRUE, lib->ns);
-	resync = lib->settings->get_bool(lib->settings,
-								"%s.plugins.ha.resync", TRUE, lib->ns);
-	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
-								"%s.plugins.ha.segment_count", 1, lib->ns));
-	if (!local || !remote)
-	{
-		DBG1(DBG_CFG, "HA config misses local/remote address");
-		return NULL;
-	}
 
 	if (!lib->caps->keep(lib->caps, CAP_CHOWN))
 	{	/* required to chown(2) control socket, ha_kernel also needs it at
@@ -194,32 +231,6 @@ plugin_t *ha_plugin_create()
 			},
 		},
 	);
-
-	if (secret)
-	{
-		this->tunnel = ha_tunnel_create(local, remote, secret);
-	}
-	this->socket = ha_socket_create(local, remote);
-	if (!this->socket)
-	{
-		DESTROY_IF(this->tunnel);
-		free(this);
-		return NULL;
-	}
-	this->kernel = ha_kernel_create(count);
-	this->segments = ha_segments_create(this->socket, this->kernel, this->tunnel,
-							count, strcmp(local, remote) > 0, monitor);
-	this->cache = ha_cache_create(this->kernel, this->socket, resync, count);
-	if (fifo)
-	{
-		this->ctl = ha_ctl_create(this->segments, this->cache);
-	}
-	this->attr = ha_attribute_create(this->kernel, this->segments);
-	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
-										this->cache, this->kernel, this->attr);
-	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
-	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
-								  this->kernel);
 
 	return &this->public.plugin;
 }
