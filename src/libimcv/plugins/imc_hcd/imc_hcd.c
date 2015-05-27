@@ -17,6 +17,7 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
+#include <imc/imc_os_info.h>
 #include <generic/generic_attr_bool.h>
 #include <generic/generic_attr_chunk.h>
 #include <generic/generic_attr_string.h>
@@ -39,6 +40,7 @@ static pen_type_t msg_types[] = {
 };
 
 static imc_agent_t *imc_hcd;
+static imc_os_info_t *os;
 
 typedef struct quadruple_t quadruple_t;
 
@@ -79,6 +81,15 @@ TNC_Result TNC_IMC_API TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  imc_id, actual_version);
 	if (!imc_hcd)
 	{
+		return TNC_RESULT_FATAL;
+	}
+
+	os = imc_os_info_create();
+	if (!os)
+	{
+		imc_hcd->destroy(imc_hcd);
+		imc_hcd = NULL;
+
 		return TNC_RESULT_FATAL;
 	}
 
@@ -695,6 +706,9 @@ TNC_Result TNC_IMC_API TNC_IMC_Terminate(TNC_IMCID imc_id)
 	}
 	imc_hcd->destroy(imc_hcd);
 	imc_hcd = NULL;
+
+	os->destroy(os);
+	os = NULL;
 
 	return TNC_RESULT_SUCCESS;
 }
