@@ -69,6 +69,7 @@ struct ha_cache_t {
  *
  * @param kernel		kernel helper
  * @param socket		socket to send resync messages
+ * @param tunnel		HA tunnel
  * @param resync 		request a resync during startup?
  * @param count			total number of segments
  */
