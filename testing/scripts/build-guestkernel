@@ -43,7 +43,10 @@ then
 	fi
 fi
 
-execute "cp $KERNELCONFIG .config" 0
+if [ ! -f .config ]
+then
+	execute "cp $KERNELCONFIG .config" 0
+fi
 
 echo "Creating kernel configuration, you might get prompted for new parameters"
 make oldconfig 2>&1 | tee -a $LOGFILE
