@@ -199,6 +199,7 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
 	{ENCR_SERPENT_CBC,			"serpent"			},
 	{ENCR_TWOFISH_CBC,			"twofish"			},
+	{ENCR_CHACHA20_POLY1305,	"rfc7539esp(chacha20,poly1305)"},
 };
 
 /**
@@ -1291,6 +1292,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		case ENCR_AES_GCM_ICV16:
 		case ENCR_NULL_AUTH_AES_GMAC:
 		case ENCR_CAMELLIA_CCM_ICV16:
+		case ENCR_CHACHA20_POLY1305:
 			icv_size += 32;
 			/* FALL */
 		case ENCR_AES_CCM_ICV12:
