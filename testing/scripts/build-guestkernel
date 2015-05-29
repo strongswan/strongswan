@@ -26,18 +26,21 @@ then
 	execute "wget -q $url"
 fi
 
-log_action "Unpacking kernel"
-execute "tar xJf $KERNELTARBALL"
-
 KERNELDIR=$BUILDDIR/$KERNEL
 cd $KERNELDIR
 
-if [ $KERNELPATCH ]
+if [ ! -d "$KERNELDIR" ]
 then
-	log_action "Applying kernel patch"
-	bzcat ../$KERNELPATCH | patch -p1 >>$LOGFILE 2>&1
-	log_status $?
-	[ $? -eq 0 ] || exit 1
+	log_action "Unpacking kernel"
+	execute "tar xJf $KERNELTARBALL"
+
+	if [ $KERNELPATCH ]
+	then
+		log_action "Applying kernel patch"
+		bzcat ../$KERNELPATCH | patch -p1 >>$LOGFILE 2>&1
+		log_status $?
+		[ $? -eq 0 ] || exit 1
+	fi
 fi
 
 execute "cp $KERNELCONFIG .config" 0
