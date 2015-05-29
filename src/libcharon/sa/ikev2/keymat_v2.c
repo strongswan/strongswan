@@ -528,6 +528,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 			case ENCR_AES_GCM_ICV16:
 			case ENCR_AES_CTR:
 			case ENCR_NULL_AUTH_AES_GMAC:
+			case ENCR_CHACHA20_POLY1305:
 				enc_size += 4;
 				break;
 			default:
