@@ -1054,6 +1054,12 @@ METHOD(listener_t, ike_updown, bool,
 	now = time_monotonic(NULL);
 
 	b = vici_builder_create();
+
+	if (up)
+	{
+		b->add_kv(b, "up", "yes");
+	}
+
 	b->begin_section(b, ike_sa->get_name(ike_sa));
 	list_ike(this, b, ike_sa, now);
 	b->begin_section(b, "child-sas");
@@ -1079,6 +1085,11 @@ METHOD(listener_t, child_updown, bool,
 
 	now = time_monotonic(NULL);
 	b = vici_builder_create();
+
+	if (up)
+	{
+		b->add_kv(b, "up", "yes");
+	}
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
 	list_ike(this, b, ike_sa, now);
