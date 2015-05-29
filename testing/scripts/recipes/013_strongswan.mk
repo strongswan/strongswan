@@ -77,6 +77,7 @@ CONFIG_OPTS = \
 	--enable-ccm \
 	--enable-gcm \
 	--enable-cmac \
+	--enable-chapoly \
 	--enable-ha \
 	--enable-af-alg \
 	--enable-whitelist \
