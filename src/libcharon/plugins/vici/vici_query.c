@@ -1062,8 +1062,6 @@ METHOD(listener_t, ike_updown, bool,
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
 	list_ike(this, b, ike_sa, now);
-	b->begin_section(b, "child-sas");
-	b->end_section(b);
 	b->end_section(b);
 
 	this->dispatcher->raise_event(this->dispatcher,
