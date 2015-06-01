@@ -1031,7 +1031,9 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "list-conn", reg);
 	this->dispatcher->manage_event(this->dispatcher, "list-cert", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-updown", reg);
+	this->dispatcher->manage_event(this->dispatcher, "ike-rekey", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-updown", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-rekey", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
@@ -1066,6 +1068,35 @@ METHOD(listener_t, ike_updown, bool,
 
 	this->dispatcher->raise_event(this->dispatcher,
 								  "ike-updown", 0, b->finalize(b));
+
+	return TRUE;
+}
+
+METHOD(listener_t, ike_rekey, bool,
+	private_vici_query_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	vici_builder_t *b;
+	time_t now;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "ike-rekey"))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+
+	b = vici_builder_create();
+	b->begin_section(b, old->get_name(old));
+	b->begin_section(b, "old");
+	list_ike(this, b, old, now);
+	b->end_section(b);
+	b->begin_section(b, "new");
+	list_ike(this, b, new, now);
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  "ike-rekey", 0, b->finalize(b));
 
 	return TRUE;
 }
@@ -1106,6 +1137,45 @@ METHOD(listener_t, child_updown, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, child_rekey, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, child_sa_t *old,
+	child_sa_t *new)
+{
+	vici_builder_t *b;
+	time_t now;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "child-rekey"))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+	b = vici_builder_create();
+
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now);
+	b->begin_section(b, "child-sas");
+
+	b->begin_section(b, old->get_name(old));
+
+	b->begin_section(b, "old");
+	list_child(this, b, old, now);
+	b->end_section(b);
+	b->begin_section(b, "new");
+	list_child(this, b, new, now);
+	b->end_section(b);
+
+	b->end_section(b);
+
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  "child-rekey", 0, b->finalize(b));
+
+	return TRUE;
+}
+
 METHOD(vici_query_t, destroy, void,
 	private_vici_query_t *this)
 {
@@ -1124,7 +1194,9 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
+				.ike_rekey = _ike_rekey,
 				.child_updown = _child_updown,
+				.child_rekey = _child_rekey,
 			},
 			.destroy = _destroy,
 		},
