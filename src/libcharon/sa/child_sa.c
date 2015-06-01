@@ -698,7 +698,7 @@ METHOD(child_sa_t, install, status_t,
 	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
 								  &esn, NULL);
 
-	if (!this->reqid_allocated)
+	if (!this->reqid_allocated && !this->reqid)
 	{
 		status = hydra->kernel_interface->alloc_reqid(hydra->kernel_interface,
 							my_ts, other_ts, this->mark_in, this->mark_out,
@@ -826,7 +826,7 @@ METHOD(child_sa_t, add_policies, status_t,
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
 
-	if (!this->reqid_allocated)
+	if (!this->reqid_allocated && !this->reqid)
 	{
 		/* trap policy, get or confirm reqid */
 		status = hydra->kernel_interface->alloc_reqid(
