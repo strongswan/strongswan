@@ -18,6 +18,7 @@
 #include <daemon.h>
 #include <sa/ikev1/tasks/isakmp_delete.h>
 #include <sa/ikev1/tasks/quick_delete.h>
+#include <sa/ikev1/tasks/quick_mode.h>
 
 #include <encoding/payloads/delete_payload.h>
 
@@ -68,6 +69,54 @@ static void cancel_quick_mode(private_informational_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
+}
+
+static void raise_proposal_mismatch(private_informational_t *this)
+{
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+	{
+		/* Main/Aggressive Mode */
+		linked_list_t *list;
+		ike_cfg_t *config;
+
+		config = this->ike_sa->get_ike_cfg(this->ike_sa);
+		if (config)
+		{
+			list = config->get_proposals(config);
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
+							   list, FALSE);
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
+		}
+	}
+	else
+	{
+		/* Quick Mode */
+		enumerator_t *enumerator;
+		linked_list_t *list;
+		child_cfg_t *config;
+		quick_mode_t *quick;
+		task_t *task;
+
+		enumerator = this->ike_sa->create_task_enumerator(this->ike_sa,
+														  TASK_QUEUE_ACTIVE);
+		while (enumerator->enumerate(enumerator, &task))
+		{
+			if (task->get_type(task) == TASK_QUICK_MODE)
+			{
+				quick = (quick_mode_t*)task;
+				config = quick->get_config(quick);
+				if (config)
+				{
+					list = config->get_proposals(config, FALSE);
+					charon->bus->alert(charon->bus,
+								ALERT_PROPOSAL_MISMATCH_CHILD, list, FALSE);
+					list->destroy_offset(list, offsetof(proposal_t, destroy));
+				}
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 }
 
 METHOD(task_t, build_i, status_t,
@@ -138,8 +187,10 @@ METHOD(task_t, process_r, status_t,
 					}
 					switch (type)
 					{
-						case INVALID_ID_INFORMATION:
 						case NO_PROPOSAL_CHOSEN:
+							raise_proposal_mismatch(this);
+							/* FALL */
+						case INVALID_ID_INFORMATION:
 							cancel_quick_mode(this);
 							break;
 						default:
