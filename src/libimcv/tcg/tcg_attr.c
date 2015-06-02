@@ -47,16 +47,18 @@ ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
 	"SCAP Results",
 	"SCAP Summary Results");
 ENUM_NEXT(tcg_attr_names,	TCG_SWID_REQUEST,
-							TCG_SWID_TAG_EVENTS,
+							TCG_SWID_SUBSCRIPTION_STATUS_RESP,
 							TCG_SCAP_SUMMARY_RESULTS,
 	"SWID Request",
 	"SWID Tag Identifier Inventory",
 	"SWID Tag Identifier Events",
 	"SWID Tag Inventory",
-	"SWID Tag Events");
+	"SWID Tag Events",
+	"SWID Subscription Status Request",
+	"SWID Subscription Status Response");
 ENUM_NEXT(tcg_attr_names,	TCG_SEG_MAX_ATTR_SIZE_REQ,
 							TCG_SEG_CANCEL_SEG_EXCH,
-							TCG_SWID_TAG_EVENTS,
+							TCG_SWID_SUBSCRIPTION_STATUS_RESP,
 	"Max Attribute Size Request",
 	"Max Attribute Size Response",
 	"Attribute Segment Envelope",
@@ -253,6 +255,8 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, size_t length, chunk_t 
 		/* unsupported TCG/SWID attributes */
 		case TCG_SWID_TAG_ID_EVENTS:
 		case TCG_SWID_TAG_EVENTS:
+		case TCG_SWID_SUBSCRIPTION_STATUS_REQ:
+		case TCG_SWID_SUBSCRIPTION_STATUS_RESP:
 		/* unsupported TCG/PTS attributes */
 		case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_TEMPL_REF_MANI_SET_META:
