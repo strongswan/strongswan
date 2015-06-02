@@ -860,16 +860,22 @@ METHOD(listener_t, message_hook, bool,
 	if (plain && ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		!incoming && !message->get_request(message))
 	{
-		if (ike_sa->get_version(ike_sa) == IKEV1 &&
-			message->get_exchange_type(message) == TRANSACTION)
-		{
-			send_start(this, ike_sa);
-		}
 		if (ike_sa->get_version(ike_sa) == IKEV2 &&
 			message->get_exchange_type(message) == IKE_AUTH)
 		{
 			send_start(this, ike_sa);
 		}
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, assign_vips, bool,
+	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa, bool assign)
+{
+	/* start accounting as soon as the virtual IP is set */
+	if (assign && ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		send_start(this, ike_sa);
 	}
 	return TRUE;
 }
@@ -1003,6 +1009,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.message = _message_hook,
+				.assign_vips = _assign_vips,
 				.child_updown = _child_updown,
 				.child_rekey = _child_rekey,
 				.children_migrate = _children_migrate,
