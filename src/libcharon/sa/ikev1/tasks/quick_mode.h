@@ -58,6 +58,13 @@ struct quick_mode_t {
 	 * @param spi			spi of SA to rekey
 	 */
 	void (*rekey)(quick_mode_t *this, u_int32_t spi);
+
+	/**
+	 * Get the used CHILD_SA configuration.
+	 *
+	 * @return				config
+	 */
+	child_cfg_t* (*get_config)(quick_mode_t *this);
 };
 
 /**

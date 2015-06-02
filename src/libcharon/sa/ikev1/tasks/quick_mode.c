@@ -1357,6 +1357,12 @@ METHOD(quick_mode_t, rekey, void,
 	this->rekey = spi;
 }
 
+METHOD(quick_mode_t, get_config, child_cfg_t*,
+	private_quick_mode_t *this)
+{
+	return this->config;
+}
+
 METHOD(task_t, migrate, void,
 	private_quick_mode_t *this, ike_sa_t *ike_sa)
 {
@@ -1420,6 +1426,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
 			.rekey = _rekey,
+			.get_config = _get_config,
 		},
 		.ike_sa = ike_sa,
 		.initiator = config != NULL,
