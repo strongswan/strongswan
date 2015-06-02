@@ -1087,7 +1087,6 @@ METHOD(task_t, process_r, status_t,
 													   EXT_STRONGSWAN);
 			this->proposal = this->config->select_proposal(this->config,
 														   list, FALSE, private);
-			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			get_lifetimes(this);
 			apply_lifetimes(this, sa_payload);
@@ -1096,8 +1095,12 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "no matching proposal found, sending %N",
 					 notify_type_names, NO_PROPOSAL_CHOSEN);
+				charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
+								   list, TRUE);
+				list->destroy_offset(list, offsetof(proposal_t, destroy));
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			this->spi_i = this->proposal->get_spi(this->proposal);
 
 			if (!get_nonce(this, &this->nonce_i, message))
