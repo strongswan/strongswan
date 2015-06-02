@@ -395,12 +395,15 @@ METHOD(task_t, process_r, status_t,
 														   EXT_STRONGSWAN);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
 															list, private);
-			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
+				charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
+								   list, TRUE);
+				list->destroy_offset(list, offsetof(proposal_t, destroy));
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 			this->method = sa_payload->get_auth_method(sa_payload);
