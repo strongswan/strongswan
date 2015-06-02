@@ -111,9 +111,11 @@ enum alert_t {
 	ALERT_RETRANSMIT_RECEIVE,
 	/** received half-open timeout before IKE_SA established, no argument */
 	ALERT_HALF_OPEN_TIMEOUT,
-	/** IKE proposals do not match, argument is linked_list_t of proposal_t */
+	/** IKE proposals do not match, arguments are linked_list_t of proposal_t,
+	 *  followed by a bool set to TRUE if mismatch is local. */
 	ALERT_PROPOSAL_MISMATCH_IKE,
-	/** CHILD proposals do not match, argument is linked_list_t of proposal_t */
+	/** CHILD proposals do not match, argument is linked_list_t of proposal_t,
+	 *  followed by a bool set to TRUE if mismatch is local. */
 	ALERT_PROPOSAL_MISMATCH_CHILD,
 	/** traffic selectors do not match, arguments are two linked_list_t
 	 *  containing traffic_selector_t for initiator and for responder */

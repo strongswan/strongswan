@@ -483,7 +483,7 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
 		charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
-						   this->proposals);
+						   this->proposals, TRUE);
 		return FAILED;
 	}
 	this->other_spi = this->proposal->get_spi(this->proposal);
@@ -1340,7 +1340,8 @@ static void raise_alerts(private_child_create_t *this, notify_type_t type)
 	{
 		case NO_PROPOSAL_CHOSEN:
 			list = this->config->get_proposals(this->config, FALSE);
-			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD, list);
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
+							   list, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			break;
 		default:
