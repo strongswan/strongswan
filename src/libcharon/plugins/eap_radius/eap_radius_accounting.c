@@ -694,6 +694,11 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 
 	entry = get_or_create_entry(this, ike_sa->get_id(ike_sa),
 								ike_sa->get_unique_id(ike_sa));
+	if (entry->start_sent)
+	{
+		this->mutex->unlock(this->mutex);
+		return;
+	}
 	entry->start_sent = TRUE;
 
 	message = radius_message_create(RMC_ACCOUNTING_REQUEST);
