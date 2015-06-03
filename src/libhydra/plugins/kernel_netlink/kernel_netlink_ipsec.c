@@ -2059,6 +2059,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	ipsec_sa_t *ipsec = mapping->sa;
 	struct xfrm_userpolicy_info *policy_info;
 	struct nlmsghdr *hdr;
+	status_t status;
 	int i;
 
 	/* clone the policy so we are able to check it out again later */
@@ -2153,7 +2154,14 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	}
 	this->mutex->unlock(this->mutex);
 
-	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+	if (status == ALREADY_DONE && !update)
+	{
+		DBG1(DBG_KNL, "policy already exists, try to update it");
+		hdr->nlmsg_type = XFRM_MSG_UPDPOLICY;
+		status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+	}
+	if (status != SUCCESS)
 	{
 		return FAILED;
 	}
