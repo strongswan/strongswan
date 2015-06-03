@@ -112,6 +112,11 @@ struct private_ike_auth_t {
 	 * received an INITIAL_CONTACT?
 	 */
 	bool initial_contact;
+
+	/**
+	 * Is EAP acceptable, did we strictly authenticate peer?
+	 */
+	bool eap_acceptable;
 };
 
 /**
@@ -879,6 +884,37 @@ static void send_auth_failed_informational(private_ike_auth_t *this,
 	message->destroy(message);
 }
 
+/**
+ * Check if strict constraint fullfillment required to continue current auth
+ */
+static bool require_strict(private_ike_auth_t *this, bool mutual_eap)
+{
+	auth_cfg_t *cfg;
+
+	if (this->eap_acceptable)
+	{
+		return FALSE;
+	}
+
+	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	switch ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS))
+	{
+		case AUTH_CLASS_EAP:
+			if (mutual_eap && this->my_auth)
+			{
+				this->eap_acceptable = TRUE;
+				return !this->my_auth->is_mutual(this->my_auth);
+			}
+			return TRUE;
+		case AUTH_CLASS_PSK:
+			return TRUE;
+		case AUTH_CLASS_PUBKEY:
+		case AUTH_CLASS_ANY:
+		default:
+			return FALSE;
+	}
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_auth_t *this, message_t *message)
 {
@@ -1011,6 +1047,14 @@ METHOD(task_t, process_i, status_t,
 		if (!mutual_eap)
 		{
 			apply_auth_cfg(this, FALSE);
+		}
+	}
+
+	if (require_strict(this, mutual_eap))
+	{
+		if (!update_cfg_candidates(this, TRUE))
+		{
+			goto peer_auth_failed;
 		}
 	}
 
