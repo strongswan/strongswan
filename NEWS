@@ -1,3 +1,13 @@
+strongswan-5.3.2
+----------------
+
+- Fixed a vulnerability that allowed rogue servers with a valid certificate
+  accepted by the client to trick it into disclosing its username and even
+  password (if the client accepts EAP-GTC).  This was caused because constraints
+  against the responder's authentication were enforced too late.
+  This vulnerability has been registered as CVE-2015-4171.
+
+
 strongswan-5.3.1
 ----------------
 
