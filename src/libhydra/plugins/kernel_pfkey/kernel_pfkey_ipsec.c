@@ -2357,6 +2357,7 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	pfkey_msg_t response;
 	size_t len;
 	ipsec_mode_t proto_mode;
+	status_t status;
 
 	memset(&request, 0, sizeof(request));
 
@@ -2444,7 +2445,15 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 
 	this->mutex->unlock(this->mutex);
 
-	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	status = pfkey_send(this, msg, &out, &len);
+	if (status == SUCCESS && !update && out->sadb_msg_errno == EEXIST)
+	{
+		DBG1(DBG_KNL, "policy already exists, try to update it");
+		free(out);
+		msg->sadb_msg_type = SADB_X_SPDUPDATE;
+		status = pfkey_send(this, msg, &out, &len);
+	}
+	if (status != SUCCESS)
 	{
 		return FAILED;
 	}
