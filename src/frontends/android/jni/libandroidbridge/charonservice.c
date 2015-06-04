@@ -469,6 +469,8 @@ static void set_options(char *logfile)
 	lib->settings->set_int(lib->settings,
 					"charon.fragment_size", ANDROID_FRAGMENT_SIZE);
 	lib->settings->set_bool(lib->settings,
+					"charon.initiator_only", TRUE);
+	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
 	/* setting the source address breaks the VpnService.protect() function which
 	 * uses SO_BINDTODEVICE internally.  the addresses provided to the kernel as
