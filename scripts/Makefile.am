@@ -42,7 +42,7 @@ fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dnssec_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 aes_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 settings_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-timeattack_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+timeattack_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
 
 key2keyid.o :	$(top_builddir)/config.status
 
