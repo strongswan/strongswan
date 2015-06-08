@@ -58,6 +58,10 @@ START_SETUP(setup_base_config)
 		"	}\n"
 		"	key2 = with space\n"
 		"	key3 = \"string with\\nnewline\"\n"
+		"	key4 = \"multi line\n"
+		"string\"\n"
+		"	key5 = \"escaped \\\n"
+		"newline\"\n"
 		"}\n"
 		"out = side\n"
 		"other {\n"
@@ -88,6 +92,8 @@ START_TEST(test_get_str)
 	verify_string("", "main.empty");
 	verify_string("with space", "main.key2");
 	verify_string("string with\nnewline", "main.key3");
+	verify_string("multi line\nstring", "main.key4");
+	verify_string("escaped newline", "main.key5");
 	verify_string("value", "main.sub1.key");
 	verify_string("value2", "main.sub1.key2");
 	verify_string("bar", "main.sub1.subsub.foo");
@@ -97,7 +103,7 @@ START_TEST(test_get_str)
 	verify_string("other val", "other.key1");
 
 	verify_null("main.none");
-	verify_null("main.key4");
+	verify_null("main.key6");
 	verify_null("other.sub");
 }
 END_TEST
@@ -131,7 +137,7 @@ START_TEST(test_get_str_printf)
 	 * probably document it at least */
 	verify_null("main.%s%u.key%d", "sub", 1, 2);
 
-	verify_null("%s.%s%d", "main", "key", 4);
+	verify_null("%s.%s%d", "main", "key", 6);
 }
 END_TEST
 
@@ -906,9 +912,8 @@ START_SETUP(setup_string_config)
 	create_settings(chunk_from_str(
 		"string = \"  with    accurate\twhitespace\"\n"
 		"special = \"all { special } characters # can be used.\"\n"
-		"unterminated = \"is fine\n"
-		"but = produces a warning\n"
-		"newlines = \"can either be encoded\\nor \\\n"
+		"newlines = \"can be encoded explicitly\\nor implicitly\n"
+		"or \\\n"
 		"escaped\"\n"
 		"quotes = \"\\\"and\\\" slashes \\\\ can \\\\ be\" # escaped too\n"
 		"multiple = \"strings\" are \"combined\"\n"
@@ -920,9 +925,7 @@ START_TEST(test_strings)
 {
 	verify_string("  with    accurate\twhitespace", "string");
 	verify_string("all { special } characters # can be used.", "special");
-	verify_string("is fine", "unterminated");
-	verify_string("produces a warning", "but");
-	verify_string("can either be encoded\nor escaped", "newlines");
+	verify_string("can be encoded explicitly\nor implicitly\nor escaped", "newlines");
 	verify_string("\"and\" slashes \\ can \\ be", "quotes");
 	verify_string("strings are combined", "multiple");
 }
@@ -986,6 +989,12 @@ START_TEST(test_invalid)
 	contents = chunk_from_str(
 		"unterminated {\n"
 		"	not = valid\n");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"unterminated {\n"
+		"	strings = \"are invalid\n");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
 
