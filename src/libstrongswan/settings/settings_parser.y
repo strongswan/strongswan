@@ -79,7 +79,7 @@ static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
 	struct kv_t *kv;
 }
 %token <s> NAME STRING
-%token NEWLINE
+%token NEWLINE STRING_ERROR
 
 /* ...and other symbols */
 %type <s> value valuepart
