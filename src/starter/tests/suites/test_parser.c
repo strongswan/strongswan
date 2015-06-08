@@ -328,6 +328,9 @@ static struct {
 	{ TRUE, "conn foo\n\tkey=val     ue", "foo", "val ue" },
 	{ TRUE, "conn foo\n\tkey=\"val   ue\"", "foo", "val   ue" },
 	{ TRUE, "conn foo\n\tkey=\"val\\nue\"", "foo", "val\nue" },
+	{ TRUE, "conn foo\n\tkey=\"val\nue\"", "foo", "val\nue" },
+	{ TRUE, "conn foo\n\tkey=\"val\\\nue\"", "foo", "value" },
+	{ FALSE, "conn foo\n\tkey=\"unterminated", "foo", NULL },
 };
 
 START_TEST(test_strings)
