@@ -448,6 +448,8 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	identification_t *other_id;
 	auth_cfg_t *auth;
 	keymat_v2_t *keymat;
+	eap_type_t type;
+	u_int32_t vendor;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
 														 PLV2_AUTH);
@@ -478,6 +480,13 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	this->auth_complete = TRUE;
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+
+	type = this->method->get_type(this->method, &vendor);
+	auth->add(auth, AUTH_RULE_EAP_TYPE, type);
+	if (vendor)
+	{
+		auth->add(auth, AUTH_RULE_EAP_VENDOR, vendor);
+	}
 	return TRUE;
 }
 
