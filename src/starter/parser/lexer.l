@@ -123,16 +123,11 @@ static void include_files(parser_helper_t *ctx);
 <str>{
 	"\""				|
 	<<EOF>>				|
-	\n					|
 	\\					{
 		if (!streq(yytext, "\""))
 		{
-			if (streq(yytext, "\n"))
-			{	/* put the newline back to fix the line numbers */
-				unput('\n');
-				yy_set_bol(0);
-			}
 			PARSER_DBG1(yyextra, "unterminated string detected");
+			return STRING_ERROR;
 		}
 		if (yy_top_state(yyscanner) == inc)
 		{	/* string include */
@@ -152,7 +147,7 @@ static void include_files(parser_helper_t *ctx);
 	\\t     yyextra->string_add(yyextra, "\t");
 	\\\r?\n /* merge lines that end with EOL characters */
 	\\.     yyextra->string_add(yyextra, yytext+1);
-	[^\\\n"]+			{
+	[^\\"]+			{
 		yyextra->string_add(yyextra, yytext);
 	}
 }

@@ -73,7 +73,7 @@ static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
 	conf_parser_section_t t;
 }
 %token <s> STRING
-%token EQ SPACES NEWLINE CONFIG_SETUP CONN CA
+%token EQ SPACES NEWLINE CONFIG_SETUP CONN CA STRING_ERROR
 
 /* ...and other symbols */
 %type <t> section_type
