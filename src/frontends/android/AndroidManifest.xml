@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2014 Tobias Brunner
+    Copyright (C) 2012-2015 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     Hochschule fuer Technik Rapperswil
@@ -20,7 +20,7 @@
     android:versionCode="26"
     android:versionName="1.4.5" >
 
-    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="19" />
+    <uses-sdk android:minSdkVersion="15" android:targetSdkVersion="22" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
