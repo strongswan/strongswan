@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -400,18 +400,15 @@ METHOD(charonservice_t, get_network_manager, network_manager_t*,
 /**
  * Initiate a new connection
  *
- * @param gateway			gateway address (gets owned)
- * @param username			username (gets owned)
- * @param password			password (gets owned)
+ * @param settings			configuration settings (gets owned)
  */
-static void initiate(char *type, char *gateway, char *username, char *password)
+static void initiate(settings_t *settings)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
-	this->service = android_service_create(this->creds, type, gateway,
-										   username, password);
+	this->service = android_service_create(this->creds, settings);
 }
 
 /**
@@ -707,14 +704,12 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
  * Initiate SA
  */
 JNI_METHOD(CharonVpnService, initiate, void,
-	jstring jtype, jstring jgateway, jstring jusername, jstring jpassword)
+	jstring jconfig)
 {
-	char *type, *gateway, *username, *password;
+	settings_t *settings;
+	char *config;
 
-	type = androidjni_convert_jstring(env, jtype);
-	gateway = androidjni_convert_jstring(env, jgateway);
-	username = androidjni_convert_jstring(env, jusername);
-	password = androidjni_convert_jstring(env, jpassword);
-
-	initiate(type, gateway, username, password);
+	config = androidjni_convert_jstring(env, jconfig);
+	settings = settings_create_string(config);
+	initiate(settings);
 }

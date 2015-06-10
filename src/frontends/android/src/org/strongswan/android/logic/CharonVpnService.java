@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -32,6 +32,7 @@ import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.utils.SettingsWriter;
 
 import android.app.PendingIntent;
 import android.app.Service;
@@ -215,9 +216,12 @@ public class CharonVpnService extends VpnService implements Runnable
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
-							initiate(mCurrentProfile.getVpnType().getIdentifier(),
-									 mCurrentProfile.getGateway(), mCurrentProfile.getUsername(),
-									 mCurrentProfile.getPassword());
+							SettingsWriter writer = new SettingsWriter();
+							writer.setValue("connection.type", mCurrentProfile.getVpnType().getIdentifier());
+							writer.setValue("connection.server", mCurrentProfile.getGateway());
+							writer.setValue("connection.username", mCurrentProfile.getUsername());
+							writer.setValue("connection.password", mCurrentProfile.getPassword());
+							initiate(writer.serialize());
 						}
 						else
 						{
@@ -497,7 +501,6 @@ public class CharonVpnService extends VpnService implements Runnable
 	private PrivateKey getUserKey() throws KeyChainException, InterruptedException
 	{
 		return KeyChain.getPrivateKey(getApplicationContext(), mCurrentUserCertificateAlias);
-
 	}
 
 	/**
@@ -518,7 +521,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	/**
 	 * Initiate VPN, provided by libandroidbridge.so
 	 */
-	public native void initiate(String type, String gateway, String username, String password);
+	public native void initiate(String config);
 
 	/**
 	 * Adapter for VpnService.Builder which is used to access it safely via JNI.
