@@ -542,7 +542,9 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		if (this->initiator_only || drop_ike_sa_init(this, message))
+		id = message->get_ike_sa_id(message);
+		if (this->initiator_only || !id->is_initiator(id) ||
+			drop_ike_sa_init(this, message))
 		{
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
