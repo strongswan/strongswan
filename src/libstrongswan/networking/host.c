@@ -354,6 +354,10 @@ host_t *host_create_from_string_and_family(char *string, int family,
 		struct sockaddr_in6 v6;
 	} addr;
 
+	if (!string)
+	{
+		return NULL;
+	}
 	if (streq(string, "%any"))
 	{
 		return host_create_any_port(family ? family : AF_INET, port);
