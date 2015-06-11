@@ -25,7 +25,22 @@
 #endif
 
 #ifndef HAVE_CLOSEFROM
+#if defined(__linux__) && defined(HAVE_SYS_SYSCALL_H)
+# include <sys/stat.h>
+# include <fcntl.h>
+# include <sys/syscall.h>
+/* This is from the kernel sources.  We limit the length of directory names to
+ * 256 as we only use it to enumerate FDs. */
+struct linux_dirent64 {
+	u_int64_t d_ino;
+	int64_t d_off;
+	unsigned short	d_reclen;
+	unsigned char d_type;
+	char d_name[256];
+};
+#else /* !defined(__linux__) || !defined(HAVE_SYS_SYSCALL_H) */
 # include <dirent.h>
+#endif /* defined(__linux__) && defined(HAVE_SYS_SYSCALL_H) */
 #endif
 
 #include <library.h>
@@ -120,14 +135,46 @@ void wait_sigint()
  */
 void closefrom(int low_fd)
 {
-	DIR *dir;
-	struct dirent *entry;
 	int max_fd, dir_fd, fd;
 
-	/* try to close only open file descriptors on Linux... This is potentially
-	 * unsafe when called after fork() in multi-threaded applications.  In
-	 * particular opendir() will require an allocation.  So it depends on how
-	 * the malloc() implementation handles such situations */
+	/* try to close only open file descriptors on Linux... */
+#if defined(__linux__) && defined(HAVE_SYS_SYSCALL_H)
+	/* By directly using a syscall we avoid any calls that might be unsafe after
+	 * fork() (e.g. malloc()). */
+	char buffer[sizeof(struct linux_dirent64)];
+	struct linux_dirent64 *entry;
+	int offset, len;
+
+	dir_fd = open("/proc/self/fd", O_RDONLY);
+	if (dir_fd != -1)
+	{
+		while ((len = syscall(SYS_getdents64, dir_fd, buffer,
+							  sizeof(buffer))) > 0)
+		{
+			for (offset = 0; offset < len; offset += entry->d_reclen)
+			{
+				entry = (struct linux_dirent64*)(buffer + offset);
+				if (!isdigit(entry->d_name[0]))
+				{
+					continue;
+				}
+				fd = atoi(entry->d_name);
+				if (fd != dir_fd && fd >= low_fd)
+				{
+					close(fd);
+				}
+			}
+		}
+		close(dir_fd);
+		return;
+	}
+#else /* !defined(__linux__) || !defined(HAVE_SYS_SYSCALL_H) */
+	/* This is potentially unsafe when called after fork() in multi-threaded
+	 * applications.  In particular opendir() will require an allocation.
+	 * Depends on how the malloc() implementation handles such situations. */
+	DIR *dir;
+	struct dirent *entry;
+
 	dir = opendir(FD_DIR);
 	if (dir)
 	{
@@ -147,6 +194,7 @@ void closefrom(int low_fd)
 		closedir(dir);
 		return;
 	}
+#endif /* defined(__linux__) && defined(HAVE_SYS_SYSCALL_H) */
 
 	/* ...fall back to closing all fds otherwise */
 #ifdef WIN32

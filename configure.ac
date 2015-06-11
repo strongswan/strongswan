@@ -591,7 +591,7 @@ AC_CHECK_FUNC([syslog], [
 ])
 AM_CONDITIONAL(USE_SYSLOG, [test "x$syslog" = xtrue])
 
-AC_CHECK_HEADERS(sys/sockio.h glob.h net/if_tun.h)
+AC_CHECK_HEADERS(sys/sockio.h sys/syscall.h glob.h net/if_tun.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 AC_CHECK_HEADERS([netinet/ip6.h linux/fib_rules.h], [], [],
 [
