@@ -52,7 +52,7 @@ struct private_whitelist_listener_t {
  */
 static u_int hash(identification_t *key)
 {
-	return chunk_hash(key->get_encoding(key));
+	return key->hash(key, 0);
 }
 
 /**
