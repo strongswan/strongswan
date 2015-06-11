@@ -478,7 +478,7 @@ static status_t atodn(char *src, chunk_t *dn)
 					name.len -= whitespace;
 					rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
 								&& !asn1_is_printablestring(name))
-								? ASN1_T61STRING : x501rdns[i].type;
+								? ASN1_UTF8STRING : x501rdns[i].type;
 
 					if (rdn_count < RDN_MAX)
 					{
