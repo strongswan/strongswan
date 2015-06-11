@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2015 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -727,6 +727,88 @@ START_TEST(test_matches_empty_reverse)
 END_TEST
 
 /*******************************************************************************
+ * identification hashing
+ */
+
+static bool id_hash_equals(char *str, char *b_str)
+{
+	identification_t *a, *b;
+	bool success = FALSE;
+
+	a = identification_create_from_string(str);
+	b = identification_create_from_string(b_str ?: str);
+	success = a->hash(a, 0) == b->hash(b, 0);
+	a->destroy(a);
+	b->destroy(b);
+	return success;
+}
+
+START_TEST(test_hash)
+{
+	ck_assert(id_hash_equals("moon@strongswan.org", NULL));
+	ck_assert(id_hash_equals("vpn.strongswan.org", NULL));
+	ck_assert(id_hash_equals("192.168.1.1", NULL));
+	ck_assert(id_hash_equals("C=CH", NULL));
+
+	ck_assert(!id_hash_equals("moon@strongswan.org", "sun@strongswan.org"));
+	ck_assert(!id_hash_equals("vpn.strongswan.org", "*.strongswan.org"));
+	ck_assert(!id_hash_equals("192.168.1.1", "192.168.1.2"));
+	ck_assert(!id_hash_equals("C=CH", "C=DE"));
+	ck_assert(!id_hash_equals("fqdn:strongswan.org", "keyid:strongswan.org"));
+}
+END_TEST
+
+START_TEST(test_hash_any)
+{
+	ck_assert(id_hash_equals("%any", NULL));
+	ck_assert(id_hash_equals("%any", "0.0.0.0"));
+	ck_assert(id_hash_equals("%any", "*"));
+	ck_assert(id_hash_equals("%any", ""));
+
+	ck_assert(!id_hash_equals("%any", "any"));
+}
+END_TEST
+
+START_TEST(test_hash_dn)
+{
+	identification_t *a, *b;
+
+	/* same DN (C=CH, O=strongSwan), different RDN type (PRINTABLESTRING vs.
+	 * UTF8STRING) */
+	a = identification_create_from_data(chunk_from_chars(
+			0x30, 0x22, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03,
+			0x55, 0x04, 0x06, 0x13, 0x02, 0x43, 0x48, 0x31,
+			0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x0a,
+			0x13, 0x0a, 0x73, 0x74, 0x72, 0x6f, 0x6e, 0x67,
+			0x53, 0x77, 0x61, 0x6e));
+	b = identification_create_from_data(chunk_from_chars(
+			0x30, 0x22, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03,
+			0x55, 0x04, 0x06, 0x0c, 0x02, 0x43, 0x48, 0x31,
+			0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x0a,
+			0x0c, 0x0a, 0x73, 0x74, 0x72, 0x6f, 0x6e, 0x67,
+			0x53, 0x77, 0x61, 0x6e));
+	ck_assert_int_eq(a->hash(a, 0), b->hash(b, 0));
+	ck_assert(a->equals(a, b));
+	a->destroy(a);
+	b->destroy(b);
+}
+END_TEST
+
+START_TEST(test_hash_inc)
+{
+	identification_t *a;
+
+	a = identification_create_from_string("vpn.strongswan.org");
+	ck_assert(a->hash(a, 0) != a->hash(a, 1));
+	a->destroy(a);
+
+	a = identification_create_from_string("C=CH, O=strongSwan");
+	ck_assert(a->hash(a, 0) != a->hash(a, 1));
+	a->destroy(a);
+}
+END_TEST
+
+/*******************************************************************************
  * identification part enumeration
  */
 
@@ -849,6 +931,13 @@ Suite *identification_suite_create()
 	tcase_add_test(tc, test_matches_string);
 	tcase_add_loop_test(tc, test_matches_empty, ID_ANY, ID_KEY_ID + 1);
 	tcase_add_loop_test(tc, test_matches_empty_reverse, ID_ANY, ID_KEY_ID + 1);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("hash");
+	tcase_add_test(tc, test_hash);
+	tcase_add_test(tc, test_hash_any);
+	tcase_add_test(tc, test_hash_dn);
+	tcase_add_test(tc, test_hash_inc);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("part enumeration");
