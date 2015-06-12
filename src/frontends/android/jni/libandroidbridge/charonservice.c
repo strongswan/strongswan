@@ -406,6 +406,10 @@ static void initiate(settings_t *settings)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	lib->settings->set_str(lib->settings,
+						"charon.plugins.tnc-imc.preferred_language",
+						settings->get_str(settings, "global.language", "en"));
+
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
 	this->service = android_service_create(this->creds, settings);
