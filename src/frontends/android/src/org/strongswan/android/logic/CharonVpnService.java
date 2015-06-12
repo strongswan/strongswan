@@ -23,6 +23,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -217,6 +218,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						{
 							Log.i(TAG, "charon started");
 							SettingsWriter writer = new SettingsWriter();
+							writer.setValue("global.language", Locale.getDefault().getLanguage());
 							writer.setValue("connection.type", mCurrentProfile.getVpnType().getIdentifier());
 							writer.setValue("connection.server", mCurrentProfile.getGateway());
 							writer.setValue("connection.username", mCurrentProfile.getUsername());
