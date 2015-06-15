@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -20,6 +20,7 @@ package org.strongswan.android.data;
 public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+	private Integer mMTU;
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -101,6 +102,16 @@ public class VpnProfile implements Cloneable
 	public void setUserCertificateAlias(String alias)
 	{
 		this.mUserCertificate = alias;
+	}
+
+	public Integer getMTU()
+	{
+		return mMTU;
+	}
+
+	public void setMTU(Integer mtu)
+	{
+		this.mMTU = mtu;
 	}
 
 	@Override
