@@ -228,9 +228,10 @@ METHOD(task_t, build_r, status_t,
 
 	if (this->ike_init->task.build(&this->ike_init->task, message) == FAILED)
 	{
+		charon->bus->set_sa(charon->bus, this->ike_sa);
 		return SUCCESS;
 	}
-
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 
 	/* rekeying successful, delete the IKE_SA using a subtask */
