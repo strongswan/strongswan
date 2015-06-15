@@ -116,7 +116,6 @@ static void establish_new(private_ike_rekey_t *this)
 			lib->processor->queue_job(lib->processor, job);
 		}
 		this->new_sa = NULL;
-		/* set threads active IKE_SA after checkin */
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 }
@@ -335,15 +334,13 @@ METHOD(task_t, process_i, status_t,
 				{
 					charon->ike_sa_manager->checkin(
 								charon->ike_sa_manager, this->new_sa);
-					/* set threads active IKE_SA after checkin */
-					charon->bus->set_sa(charon->bus, this->ike_sa);
 				}
+				charon->bus->set_sa(charon->bus, this->ike_sa);
 				this->new_sa = NULL;
 				establish_new(other);
 				return SUCCESS;
 			}
 		}
-		/* set threads active IKE_SA after checkin */
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 
@@ -372,9 +369,13 @@ METHOD(ike_rekey_t, collide, void,
 	this->collision = other;
 }
 
-METHOD(task_t, migrate, void,
-	private_ike_rekey_t *this, ike_sa_t *ike_sa)
+/**
+ * Cleanup the task
+ */
+static void cleanup(private_ike_rekey_t *this)
 {
+	ike_sa_t *cur_sa;
+
 	if (this->ike_init)
 	{
 		this->ike_init->task.destroy(&this->ike_init->task);
@@ -383,9 +384,16 @@ METHOD(task_t, migrate, void,
 	{
 		this->ike_delete->task.destroy(&this->ike_delete->task);
 	}
+	cur_sa = charon->bus->get_sa(charon->bus);
 	DESTROY_IF(this->new_sa);
+	charon->bus->set_sa(charon->bus, cur_sa);
 	DESTROY_IF(this->collision);
+}
 
+METHOD(task_t, migrate, void,
+	private_ike_rekey_t *this, ike_sa_t *ike_sa)
+{
+	cleanup();
 	this->collision = NULL;
 	this->ike_sa = ike_sa;
 	this->new_sa = NULL;
@@ -396,16 +404,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	private_ike_rekey_t *this)
 {
-	if (this->ike_init)
-	{
-		this->ike_init->task.destroy(&this->ike_init->task);
-	}
-	if (this->ike_delete)
-	{
-		this->ike_delete->task.destroy(&this->ike_delete->task);
-	}
-	DESTROY_IF(this->new_sa);
-	DESTROY_IF(this->collision);
+	cleanup();
 	free(this);
 }
 
