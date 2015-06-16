@@ -681,11 +681,14 @@ static job_requeue_t initiate(private_android_service_t *this)
 		}
 	};
 	char *type, *server;
+	int port;
 
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
+	port = this->settings->get_int(this->settings, "connection.port",
+								   IKEV2_UDP_PORT);
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, TRUE, "0.0.0.0",
 							 charon->socket->get_port(charon->socket, FALSE),
-							 server, IKEV2_UDP_PORT, FRAGMENTATION_YES, 0);
+							 server, port, FRAGMENTATION_YES, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
