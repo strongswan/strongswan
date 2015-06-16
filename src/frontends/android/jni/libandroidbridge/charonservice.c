@@ -44,7 +44,6 @@
 #define ANDROID_RETRASNMIT_TRIES 3
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
-#define ANDROID_FRAGMENT_SIZE 1400
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -409,6 +408,14 @@ static void initiate(settings_t *settings)
 	lib->settings->set_str(lib->settings,
 						"charon.plugins.tnc-imc.preferred_language",
 						settings->get_str(settings, "global.language", "en"));
+	/* this is actually the size of the complete IKE/IP packet, so if the MTU
+	 * for the TUN devices has to be reduced to pass traffic the IKE packets
+	 * will be a bit smaller than necessary as there is no IPsec overhead like
+	 * for the tunneled traffic (but compensating that seems like overkill) */
+	lib->settings->set_int(lib->settings,
+						"charon.fragment_size",
+						settings->get_int(settings, "global.mtu",
+										  ANDROID_DEFAULT_MTU));
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
@@ -467,8 +474,6 @@ static void set_options(char *logfile)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
-	lib->settings->set_int(lib->settings,
-					"charon.fragment_size", ANDROID_FRAGMENT_SIZE);
 	lib->settings->set_bool(lib->settings,
 					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,

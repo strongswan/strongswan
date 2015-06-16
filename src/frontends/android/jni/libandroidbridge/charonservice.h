@@ -45,6 +45,11 @@ typedef enum android_imc_state_t android_imc_state_t;
 typedef struct charonservice_t charonservice_t;
 
 /**
+ * Default value for the MTU of TUN device and the size of IKE fragments
+ */
+#define ANDROID_DEFAULT_MTU 1400
+
+/**
  * VPN status codes. As defined in CharonVpnService.java
  */
 enum android_vpn_state_t {
