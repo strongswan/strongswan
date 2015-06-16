@@ -65,6 +65,7 @@
     <string name="profile_ca_select_certificate">Wählen Sie ein bestimmtes CA-Zertifikat</string>
     <string name="profile_show_advanced_label">Erweiterte Einstellungen anzeigen</string>
     <string name="profile_mtu_label">MTU:</string>
+    <string name="profile_port_label">Server Port:</string>
     <string name="profile_use_default_hint">(Standardwert verwenden)</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Bitte geben Sie hier die Gateway-Adresse ein</string>
