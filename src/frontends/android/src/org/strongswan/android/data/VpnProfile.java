@@ -20,7 +20,7 @@ package org.strongswan.android.data;
 public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private Integer mMTU;
+	private Integer mMTU, mPort;
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -112,6 +112,16 @@ public class VpnProfile implements Cloneable
 	public void setMTU(Integer mtu)
 	{
 		this.mMTU = mtu;
+	}
+
+	public Integer getPort()
+	{
+		return mPort;
+	}
+
+	public void setPort(Integer port)
+	{
+		this.mPort = port;
 	}
 
 	@Override
