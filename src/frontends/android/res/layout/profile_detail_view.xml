@@ -165,6 +165,20 @@
                 android:inputType="number|textNoSuggestions"
                 android:hint="@string/profile_use_default_hint" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_port_label" />
+
+            <EditText
+                android:id="@+id/port"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:inputType="number|textNoSuggestions"
+                android:hint="@string/profile_use_default_hint" />
+
         </LinearLayout>
     </LinearLayout>
 

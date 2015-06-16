@@ -84,6 +84,7 @@ public class VpnProfileDetailActivity extends Activity
 	private CheckBox mShowAdvanced;
 	private ViewGroup mAdvancedSettings;
 	private EditText mMTU;
+	private EditText mPort;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -117,6 +118,7 @@ public class VpnProfileDetailActivity extends Activity
 		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
 
 		mMTU = (EditText)findViewById(R.id.mtu);
+		mPort = (EditText)findViewById(R.id.port);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -342,7 +344,7 @@ public class VpnProfileDetailActivity extends Activity
 		boolean show = mShowAdvanced.isChecked();
 		if (!show && mProfile != null)
 		{
-			show = mProfile.getMTU() != null;
+			show = mProfile.getMTU() != null || mProfile.getPort() != null;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -408,6 +410,12 @@ public class VpnProfileDetailActivity extends Activity
 			mMTU.setError(String.format(getString(R.string.alert_text_out_of_range), MTU_MIN, MTU_MAX));
 			valid = false;
 		}
+		Integer port = getInteger(mPort);
+		if (port != null && (port < 1 || port > 65535))
+		{
+			mPort.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
+			valid = false;
+		}
 		return valid;
 	}
 
@@ -436,6 +444,7 @@ public class VpnProfileDetailActivity extends Activity
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
 		mProfile.setMTU(getInteger(mMTU));
+		mProfile.setPort(getInteger(mPort));
 	}
 
 	/**
@@ -459,6 +468,7 @@ public class VpnProfileDetailActivity extends Activity
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
+				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
 				useralias = mProfile.getUserCertificateAlias();
 				alias = mProfile.getCertificateAlias();
 				getActionBar().setTitle(mProfile.getName());
