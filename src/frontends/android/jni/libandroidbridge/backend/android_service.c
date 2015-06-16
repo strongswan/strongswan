@@ -32,8 +32,6 @@
 
 typedef struct private_android_service_t private_android_service_t;
 
-#define TUN_DEFAULT_MTU 1400
-
 /**
  * private data of Android service
  */
@@ -68,6 +66,11 @@ struct private_android_service_t {
 	 * TUN device file descriptor
 	 */
 	int tunfd;
+
+	/**
+	 * MTU of TUN device
+	 */
+	int mtu;
 
 	/**
 	 * DNS proxy
@@ -176,7 +179,7 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 		return JOB_REQUEUE_DIRECT;
 	}
 
-	raw = chunk_alloc(TUN_DEFAULT_MTU);
+	raw = chunk_alloc(this->mtu);
 	len = read(tunfd, raw.ptr, raw.len);
 	if (len < 0)
 	{
@@ -294,7 +297,7 @@ static bool setup_tun_device(private_android_service_t *this,
 		return FALSE;
 	}
 	if (!add_routes(builder, child_sa) ||
-		!builder->set_mtu(builder, TUN_DEFAULT_MTU))
+		!builder->set_mtu(builder, this->mtu))
 	{
 		return FALSE;
 	}
@@ -827,6 +830,7 @@ android_service_t *android_service_create(android_creds_t *creds,
 		.settings = settings,
 		.creds = creds,
 		.tunfd = -1,
+		.mtu = settings->get_int(settings, "global.mtu", ANDROID_DEFAULT_MTU),
 	);
 	/* only allow queries for the VPN gateway */
 	this->dns_proxy->add_hostname(this->dns_proxy,

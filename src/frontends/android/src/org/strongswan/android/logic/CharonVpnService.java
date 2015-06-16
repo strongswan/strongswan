@@ -219,6 +219,7 @@ public class CharonVpnService extends VpnService implements Runnable
 							Log.i(TAG, "charon started");
 							SettingsWriter writer = new SettingsWriter();
 							writer.setValue("global.language", Locale.getDefault().getLanguage());
+							writer.setValue("global.mtu", mCurrentProfile.getMTU());
 							writer.setValue("connection.type", mCurrentProfile.getVpnType().getIdentifier());
 							writer.setValue("connection.server", mCurrentProfile.getGateway());
 							writer.setValue("connection.username", mCurrentProfile.getUsername());
