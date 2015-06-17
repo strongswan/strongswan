@@ -83,11 +83,6 @@ struct private_charonservice_t {
 	network_manager_t *network_manager;
 
 	/**
-	 * Handle network events
-	 */
-	android_net_t *net_handler;
-
-	/**
 	 * CharonVpnService reference
 	 */
 	jobject vpn_service;
@@ -431,14 +426,12 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 	if (reg)
 	{
-		this->net_handler = android_net_create();
 		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 		charon->attributes->add_handler(charon->attributes,
 										&this->attr->handler);
 	}
 	else
 	{
-		this->net_handler->destroy(this->net_handler);
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 		charon->attributes->remove_handler(charon->attributes,
 										   &this->attr->handler);
@@ -491,19 +484,6 @@ static void set_options(char *logfile)
 	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.use_ipv6", FALSE);
-	/* don't install virtual IPs via kernel-netlink */
-	lib->settings->set_bool(lib->settings,
-					"charon.install_virtual_ip", FALSE);
-	/* kernel-netlink should not trigger roam events, we use Android's
-	 * ConnectivityManager for that, much less noise */
-	lib->settings->set_bool(lib->settings,
-					"charon.plugins.kernel-netlink.roam_events", FALSE);
-	/* ignore tun devices (it's mostly tun0 but it may already be taken, ignore
-	 * some others too), also ignore lo as a default route points to it when
-	 * no connectivity is available */
-	lib->settings->set_str(lib->settings,
-					"charon.interfaces_ignore", "lo, tun0, tun1, tun2, tun3, "
-					"tun4");
 
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
@@ -527,6 +507,8 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 		PLUGIN_CALLBACK(charonservice_register, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
