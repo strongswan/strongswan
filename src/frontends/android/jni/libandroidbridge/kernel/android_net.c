@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -11,6 +11,10 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "android_net.h"
 
@@ -29,7 +33,7 @@ struct private_android_net_t {
 	/**
 	 * Public kernel interface
 	 */
-	android_net_t public;
+	kernel_net_t public;
 
 	/**
 	 * Reference to NetworkManager object
@@ -37,14 +41,24 @@ struct private_android_net_t {
 	network_manager_t *network_manager;
 
 	/**
-	 * earliest time of the next roam event
+	 * Earliest time of the next roam event
 	 */
 	timeval_t next_roam;
 
 	/**
-	 * mutex to check and update roam event time
+	 * Mutex to check and update roam event time, and other private members
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * List of virtual IPs
+	 */
+	linked_list_t *vips;
+
+	/**
+	 * Socket used to determine source address
+	 */
+	int socket_v4;
 };
 
 /**
@@ -83,32 +97,151 @@ static void connectivity_cb(private_android_net_t *this,
 	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 }
 
-METHOD(android_net_t, destroy, void,
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_android_net_t *this, host_t *dest, host_t *src)
+{
+	union {
+		struct sockaddr sockaddr;
+		struct sockaddr_in sin;
+		struct sockaddr_in6 sin6;
+	} addr;
+	socklen_t addrlen;
+
+	addrlen = *dest->get_sockaddr_len(dest);
+	addr.sockaddr.sa_family = AF_UNSPEC;
+	if (connect(this->socket_v4, &addr.sockaddr, addrlen) < 0)
+	{
+		DBG1(DBG_KNL, "failed to disconnect socket: %s", strerror(errno));
+		return NULL;
+	}
+	if (connect(this->socket_v4, dest->get_sockaddr(dest), addrlen) < 0)
+	{
+		/* don't report an error if we are not connected (ENETUNREACH) */
+		if (errno != ENETUNREACH)
+		{
+			DBG1(DBG_KNL, "failed to connect socket: %s", strerror(errno));
+		}
+		return NULL;
+	}
+	if (getsockname(this->socket_v4, &addr.sockaddr, &addrlen) < 0)
+	{
+		DBG1(DBG_KNL, "failed to determine src address: %s", strerror(errno));
+		return NULL;
+	}
+	return host_create_from_sockaddr((sockaddr_t*)&addr);
+}
+
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_android_net_t *this, host_t *dest, int prefix, host_t *src)
+{
+	return NULL;
+}
+
+METHOD(kernel_net_t, get_interface, bool,
+	private_android_net_t *this, host_t *host, char **name)
+{
+	if (name)
+	{	/* the actual name does not matter in our case */
+		*name = strdup("strongswan");
+	}
+	return TRUE;
+}
+
+METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
+	private_android_net_t *this, kernel_address_type_t which)
+{
+	/* return virtual IPs if requested, nothing otherwise */
+	if (which & ADDR_TYPE_VIRTUAL)
+	{
+		this->mutex->lock(this->mutex);
+		return enumerator_create_cleaner(
+					this->vips->create_enumerator(this->vips),
+					(void*)this->mutex->unlock, this->mutex);
+	}
+	return enumerator_create_empty();
+}
+
+METHOD(kernel_net_t, add_ip, status_t,
+	private_android_net_t *this, host_t *virtual_ip, int prefix, char *iface)
+{
+	this->mutex->lock(this->mutex);
+	this->vips->insert_last(this->vips, virtual_ip->clone(virtual_ip));
+	this->mutex->unlock(this->mutex);
+	return SUCCESS;
+}
+
+METHOD(kernel_net_t, del_ip, status_t,
+	private_android_net_t *this, host_t *virtual_ip, int prefix, bool wait)
+{
+	host_t *vip;
+
+	this->mutex->lock(this->mutex);
+	if (this->vips->find_first(this->vips, (void*)virtual_ip->ip_equals,
+							   (void**)&vip, virtual_ip) == SUCCESS)
+	{
+		this->vips->remove(this->vips, vip, NULL);
+		vip->destroy(vip);
+	}
+	this->mutex->unlock(this->mutex);
+	return SUCCESS;
+}
+
+METHOD(kernel_net_t, add_route, status_t,
+	private_android_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	host_t *gateway, host_t *src_ip, char *if_name)
+{
+	return NOT_SUPPORTED;
+}
+
+METHOD(kernel_net_t, del_route, status_t,
+	private_android_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	host_t *gateway, host_t *src_ip, char *if_name)
+{
+	return NOT_SUPPORTED;
+}
+
+METHOD(kernel_net_t, destroy, void,
 	private_android_net_t *this)
 {
 	this->network_manager->remove_connectivity_cb(this->network_manager,
 												 (void*)connectivity_cb);
 	this->mutex->destroy(this->mutex);
+	this->vips->destroy(this->vips);
+	close(this->socket_v4);
 	free(this);
 }
 
-/*
- * Described in header.
- */
-android_net_t *android_net_create()
+kernel_net_t *kernel_android_net_create()
 {
 	private_android_net_t *this;
 
 	INIT(this,
 		.public = {
+			.get_source_addr = _get_source_addr,
+			.get_nexthop = _get_nexthop,
+			.get_interface = _get_interface,
+			.create_address_enumerator = _create_address_enumerator,
+			.add_ip = _add_ip,
+			.del_ip = _del_ip,
+			.add_route = _add_route,
+			.del_route = _del_route,
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.vips = linked_list_create(),
 		.network_manager = charonservice->get_network_manager(charonservice),
 	);
 	timerclear(&this->next_roam);
 
+	this->socket_v4 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (this->socket_v4 < 0)
+	{
+		DBG1(DBG_KNL, "failed to create socket to lookup src addresses: %s",
+			 strerror(errno));
+	}
+	charonservice->bypass_socket(charonservice, this->socket_v4, AF_INET);
+
 	this->network_manager->add_connectivity_cb(this->network_manager,
 											  (void*)connectivity_cb, this);
 	return &this->public;
-};
+}
