@@ -57,12 +57,15 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set, int32_t *x, int16_t *xd)
 bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
 							int n, uint16_t kappa, uint16_t *c_indices)
 {
-	int i, j;
+	int i, j, j_max;
 	uint64_t extra_bits;
 	uint16_t index, rounds = 0;
 	uint8_t hash[HASH_SIZE_SHA512], un16_buf[2];
 	chunk_t un16 = { un16_buf, 2 };
 	bool index_taken[n];
+
+	/* number of indices that can be derived in a single random oracle round */
+	j_max = sizeof(hash) - sizeof(extra_bits);
 
 	while (TRUE)
 	{
@@ -87,11 +90,11 @@ bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
 			return FALSE;
 		}
 
-		extra_bits = untoh64(hash + sizeof(hash) - sizeof(uint64_t));
+		extra_bits = untoh64(hash + j_max);
 
-		for (i = 0, j = 0; j < sizeof(hash); j++)
+		for (i = 0, j = 0; j < j_max; j++)
 		{
-			index = 2 * (uint16_t)hash[i] + (extra_bits & 1);
+			index = 2 * (uint16_t)hash[j] + (extra_bits & 1);
 			if (!index_taken[index])
 			{
 				c_indices[i++] = index;
@@ -101,6 +104,7 @@ bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
 			{
 				return TRUE;
 			}
+			extra_bits >>= 1;
 		}
 	}
 }
