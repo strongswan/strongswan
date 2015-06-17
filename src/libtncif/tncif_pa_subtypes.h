@@ -23,6 +23,7 @@
 
 typedef enum pa_subtype_ietf_t pa_subtype_ietf_t;
 typedef enum pa_subtype_tcg_t pa_subtype_tcg_t;
+typedef enum pa_subtype_pwg_t pa_subtype_pwg_t;
 typedef enum pa_subtype_fhh_t pa_subtype_fhh_t;
 typedef enum pa_subtype_ita_t pa_subtype_ita_t;
 
@@ -69,7 +70,21 @@ extern enum_name_t *pa_subtype_tcg_names;
  * PA-TNC PWG Subtypes
  */
  enum pa_subtype_pwg_t {
-	PA_SUBTYPE_PWG_HCD =				0x01,
+	PA_SUBTYPE_PWG_HCD_TESTING =		0x00,
+	PA_SUBTYPE_PWG_HCD_OTHER =			0x01,
+	PA_SUBTYPE_PWG_HCD_UNKNOWN =		0x02,
+	PA_SUBTYPE_PWG_HCD_CONSOLE =		0x04,
+	PA_SUBTYPE_PWG_HCD_SYSTEM =			0x05,
+	PA_SUBTYPE_PWG_HCD_COVER =			0x06,
+	PA_SUBTYPE_PWG_HCD_INPUT_TRAY =		0x08,
+	PA_SUBTYPE_PWG_HCD_OUTPUT_TRAY =	0x09,
+	PA_SUBTYPE_PWG_HCD_MARKER =			0x0a,
+	PA_SUBTYPE_PWG_HCD_MEDIA_PATH =		0x0d,
+	PA_SUBTYPE_PWG_HCD_CHANNEL =		0x0e,
+	PA_SUBTYPE_PWG_HCD_INTERPRETER =	0x0f,
+	PA_SUBTYPE_PWG_HCD_FINISHER =		0x1e,
+	PA_SUBTYPE_PWG_HCD_INTERFACE =		0x28,
+	PA_SUBTYPE_PWG_HCD_SCANNER =		0x32,
 	PA_SUBTYPE_PWG_ANY =				0xff
 };
 

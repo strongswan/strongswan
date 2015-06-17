@@ -36,7 +36,12 @@
 static const char imc_name[] = "HCD";
 
 static pen_type_t msg_types[] = {
-	{ PEN_PWG, PA_SUBTYPE_PWG_HCD }
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_SYSTEM },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_CONSOLE },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_MARKER },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_FINISHER },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_INTERFACE },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_SCANNER }
 };
 
 static imc_agent_t *imc_hcd;
@@ -139,18 +144,18 @@ TNC_Result TNC_IMC_API TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 /**
  * Add AttributesNaturalLanguage attribute to send queue
  */
-static void add_attrs_natural_lang(imc_msg_t *msg)
+static void add_attrs_natural_lang(imc_msg_t *msg, char *section)
 {
 	pa_tnc_attr_t *attr;
 	char *string;
 
 	string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.attributes_natural_language", "en",
-					lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_ATTRS_NATURAL_LANG,
-					string);
+				"%s.plugins.imc-hcd.subtypes.%s.attributes_natural_language",
+				"en", lib->ns, section);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_ATTRS_NATURAL_LANG,
+				string);
 	attr = generic_attr_string_create(chunk_from_str(string),
-					pen_type_create(PEN_PWG, PWG_HCD_ATTRS_NATURAL_LANG));
+				pen_type_create(PEN_PWG, PWG_HCD_ATTRS_NATURAL_LANG));
 	msg->add_attribute(msg, attr);
 }
 
@@ -163,12 +168,12 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 	bool status;
 
 	status = lib->settings->get_bool(lib->settings,
-					"%s.plugins.imc-hcd.default_password_enabled", FALSE,
-					lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_DEFAULT_PWD_ENABLED,
-					status ? "yes" : "no");
+				"%s.plugins.imc-hcd.subtypes.system.default_password_enabled",
+				FALSE, lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_DEFAULT_PWD_ENABLED,
+				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
-					pen_type_create(PEN_PWG, PWG_HCD_DEFAULT_PWD_ENABLED));
+				pen_type_create(PEN_PWG, PWG_HCD_DEFAULT_PWD_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -181,11 +186,12 @@ static void add_forwarding_enabled(imc_msg_t *msg)
 	bool status;
 
 	status = lib->settings->get_bool(lib->settings,
-					"%s.plugins.imc-hcd.forwarding_enabled", FALSE, lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_FORWARDING_ENABLED,
-					status ? "yes" : "no");
+				"%s.plugins.imc-hcd.subtypes.system.forwarding_enabled",
+				FALSE, lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_FORWARDING_ENABLED,
+				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
-					pen_type_create(PEN_PWG, PWG_HCD_FORWARDING_ENABLED));
+				pen_type_create(PEN_PWG, PWG_HCD_FORWARDING_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -198,11 +204,12 @@ static void add_machine_type_model(imc_msg_t *msg)
 	char *string;
 
 	string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.machine_type_model", "", lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_MACHINE_TYPE_MODEL,
-					string);
+				"%s.plugins.imc-hcd.subtypes.system.machine_type_model",
+				"", lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_MACHINE_TYPE_MODEL,
+				string);
 	attr = generic_attr_string_create(chunk_from_str(string),
-					pen_type_create(PEN_PWG, PWG_HCD_MACHINE_TYPE_MODEL));
+				pen_type_create(PEN_PWG, PWG_HCD_MACHINE_TYPE_MODEL));
 	msg->add_attribute(msg, attr);
 }
 
@@ -215,11 +222,12 @@ static void add_pstn_fax_enabled(imc_msg_t *msg)
 	bool status;
 
 	status = lib->settings->get_bool(lib->settings,
-					"%s.plugins.imc-hcd.pstn_fax_enabled", FALSE, lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_PSTN_FAX_ENABLED,
-					status ? "yes" : "no");
+				"%s.plugins.imc-hcd.subtypes.system.pstn_fax_enabled",
+				FALSE, lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_PSTN_FAX_ENABLED,
+				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
-					pen_type_create(PEN_PWG, PWG_HCD_PSTN_FAX_ENABLED));
+				pen_type_create(PEN_PWG, PWG_HCD_PSTN_FAX_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -232,11 +240,12 @@ static void add_time_source(imc_msg_t *msg)
 	char *string;
 
 	string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.time_source", "", lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_TIME_SOURCE,
-					string);
+				"%s.plugins.imc-hcd.subtypes.system.time_source",
+				"", lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_TIME_SOURCE,
+				string);
 	attr = generic_attr_string_create(chunk_from_str(string),
-					pen_type_create(PEN_PWG, PWG_HCD_TIME_SOURCE));
+				pen_type_create(PEN_PWG, PWG_HCD_TIME_SOURCE));
 	msg->add_attribute(msg, attr);
 }
 
@@ -249,12 +258,12 @@ static void add_user_app_enabled(imc_msg_t *msg)
 	bool status;
 
 	status = lib->settings->get_bool(lib->settings,
-					"%s.plugins.imc-hcd.user_application_enabled", FALSE,
-					lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_USER_APP_ENABLED,
-					status ? "yes" : "no");
+				"%s.plugins.imc-hcd.subtypes.system.user_application_enabled",
+				FALSE, lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_USER_APP_ENABLED,
+				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
-					pen_type_create(PEN_PWG, PWG_HCD_USER_APP_ENABLED));
+				pen_type_create(PEN_PWG, PWG_HCD_USER_APP_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -267,12 +276,12 @@ static void add_user_app_persist_enabled(imc_msg_t *msg)
 	bool status;
 
 	status = lib->settings->get_bool(lib->settings,
-					"%s.plugins.imc-hcd.user_application_persistenc.enabled",
-					FALSE, lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_USER_APP_PERSIST_ENABLED,
-					status ? "yes" : "no");
+				"%s.plugins.imc-hcd.subtypes.system.user_application_persistence.enabled",
+				FALSE, lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_USER_APP_PERSIST_ENABLED,
+				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
-					pen_type_create(PEN_PWG, PWG_HCD_USER_APP_PERSIST_ENABLED));
+				pen_type_create(PEN_PWG, PWG_HCD_USER_APP_PERSIST_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -285,11 +294,12 @@ static void add_vendor_name(imc_msg_t *msg)
 	char *string;
 
 	string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.vendor_name", "", lib->ns);
-	DBG2(DBG_IMC, "%N: %s", pwg_attr_names, PWG_HCD_VENDOR_NAME,
-					string);
+				"%s.plugins.imc-hcd.subtypes.system.vendor_name",
+				"", lib->ns);
+	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_VENDOR_NAME,
+				string);
 	attr = generic_attr_string_create(chunk_from_str(string),
-					pen_type_create(PEN_PWG, PWG_HCD_VENDOR_NAME));
+				pen_type_create(PEN_PWG, PWG_HCD_VENDOR_NAME));
 	msg->add_attribute(msg, attr);
 }
 
@@ -302,9 +312,10 @@ static void add_vendor_smi_code(imc_msg_t *msg)
 	int smi_code;
 
 	smi_code = lib->settings->get_int(lib->settings,
-					"%s.plugins.imc-hcd.vendor_smi_code", 0, lib->ns);
-	DBG2(DBG_IMC, "%N: 0x%06x (%d)", pwg_attr_names, PWG_HCD_VENDOR_SMI_CODE,
-					smi_code, smi_code);
+				"%s.plugins.imc-hcd.subtypes.system.vendor_smi_code",
+				0, lib->ns);
+	DBG2(DBG_IMC, "  %N: 0x%06x (%d)", pwg_attr_names, PWG_HCD_VENDOR_SMI_CODE,
+				smi_code, smi_code);
 	attr = pwg_attr_vendor_smi_code_create(smi_code);
 	msg->add_attribute(msg, attr);
 }
@@ -319,12 +330,13 @@ static void add_certification_state(imc_msg_t *msg)
 	chunk_t blob;
 
 	hex_string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.certification_state", NULL, lib->ns);
+					"%s.plugins.imc-hcd.subtypes.system.certification_state",
+					NULL, lib->ns);
 	if (hex_string)
 	{
 		blob = chunk_from_hex(chunk_from_str(hex_string), NULL);
 	
-		DBG2(DBG_IMC, "%N: %B", pwg_attr_names, PWG_HCD_CERTIFICATION_STATE,
+		DBG2(DBG_IMC, "  %N: %B", pwg_attr_names, PWG_HCD_CERTIFICATION_STATE,
 					&blob);
 		attr = generic_attr_chunk_create(blob,
 					pen_type_create(PEN_PWG, PWG_HCD_CERTIFICATION_STATE));
@@ -343,12 +355,13 @@ static void add_configuration_state(imc_msg_t *msg)
 	chunk_t blob;
 
 	hex_string = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.configuration_state", NULL, lib->ns);
+					"%s.plugins.imc-hcd.subtypes.system.configuration_state",
+					NULL, lib->ns);
 	if (hex_string)
 	{
 		blob = chunk_from_hex(chunk_from_str(hex_string), NULL);
 	
-		DBG2(DBG_IMC, "%N: %B", pwg_attr_names, PWG_HCD_CONFIGURATION_STATE,
+		DBG2(DBG_IMC, "  %N: %B", pwg_attr_names, PWG_HCD_CONFIGURATION_STATE,
 					&blob);
 		attr = generic_attr_chunk_create(blob,
 					pen_type_create(PEN_PWG, PWG_HCD_CONFIGURATION_STATE));
@@ -360,7 +373,7 @@ static void add_configuration_state(imc_msg_t *msg)
 /**
  * Add Correlated Attributes to send queue
  */
-static void add_quadruple(imc_msg_t *msg, quadruple_t *quad)
+static void add_quadruple(imc_msg_t *msg, char *section, quadruple_t *quad)
 {
 	pa_tnc_attr_t *attr;
 	const size_t version_len = 16;
@@ -371,21 +384,22 @@ static void add_quadruple(imc_msg_t *msg, quadruple_t *quad)
 	enumerator_t *enumerator;
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
-						"%s.plugins.imc-hcd.%s", lib->ns, quad->section);
+					"%s.plugins.imc-hcd.subtypes.%s.%s",
+					lib->ns, section, quad->section);
 	while (enumerator->enumerate(enumerator, &app))
 	{
 		name = lib->settings->get_str(lib->settings,
-						"%s.plugins.imc-hcd.%s.%s.name", "",
-						lib->ns, quad->section, app);
+					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.name",
+					"",	lib->ns, section, quad->section, app);
 		patches = lib->settings->get_str(lib->settings,
-						"%s.plugins.imc-hcd.%s.%s.patches", "",
-						lib->ns, quad->section, app);
+					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.patches",
+					"", lib->ns, section, quad->section, app);
 		string_version = lib->settings->get_str(lib->settings,
-						"%s.plugins.imc-hcd.%s.%s.string_version", "",
-						lib->ns, quad->section, app);
+					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.string_version",
+					"",	lib->ns, section, quad->section, app);
 		hex_version = lib->settings->get_str(lib->settings,
-						"%s.plugins.imc-hcd.%s.%s.version", hex_version_default,
-						lib->ns, quad->section, app);
+					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.version", 
+					hex_version_default, lib->ns, section, quad->section, app);
 
 		/* replace \n escape character by CRLF */
 		pos = patches;
@@ -414,23 +428,23 @@ static void add_quadruple(imc_msg_t *msg, quadruple_t *quad)
 
 		DBG2(DBG_IMC, "--- %s ---", app);
 
-		DBG2(DBG_IMC, "%N: %s", pwg_attr_names, quad->name_attr, name);
+		DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, quad->name_attr, name);
 		attr = generic_attr_string_create(chunk_from_str(name),
 						pen_type_create(PEN_PWG, quad->name_attr));
 		msg->add_attribute(msg, attr);
 
-		DBG2(DBG_IMC, "%N: %s", pwg_attr_names, quad->patches_attr, patches);
+		DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, quad->patches_attr, patches);
 		attr = generic_attr_string_create(chunk_from_str(patches),
 						pen_type_create(PEN_PWG, quad->patches_attr));
 		msg->add_attribute(msg, attr);
 
-		DBG2(DBG_IMC, "%N: %s", pwg_attr_names, quad->string_version_attr,
+		DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, quad->string_version_attr,
 						string_version);
 		attr = generic_attr_string_create(chunk_from_str(string_version),
 						pen_type_create(PEN_PWG, quad->string_version_attr));
 		msg->add_attribute(msg, attr);
 
-		DBG2(DBG_IMC, "%N: %#B", pwg_attr_names, quad->version_attr, &num_version);
+		DBG2(DBG_IMC, "  %N: %#B", pwg_attr_names, quad->version_attr, &num_version);
 		attr = generic_attr_chunk_create(num_version,
 						pen_type_create(PEN_PWG, quad->version_attr));
 		msg->add_attribute(msg, attr);
@@ -447,6 +461,10 @@ TNC_Result TNC_IMC_API TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	imc_state_t *state;
 	imc_msg_t *out_msg;
 	TNC_Result result = TNC_RESULT_SUCCESS;
+	pa_subtype_pwg_t subtype;
+	pen_type_t msg_type;
+	enumerator_t *enumerator;
+	char *section;
 	int i;
 
 	if (!imc_hcd)
@@ -458,34 +476,77 @@ TNC_Result TNC_IMC_API TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	out_msg = imc_msg_create(imc_hcd, state, connection_id, imc_id,
-							 TNC_IMVID_ANY, msg_types[0]);
 
-	/* mandatory attributes that are always sent without request */
-	add_attrs_natural_lang(out_msg);
-	add_default_pwd_enabled(out_msg);
-	add_forwarding_enabled(out_msg);
-	add_machine_type_model(out_msg);
-	add_pstn_fax_enabled(out_msg);
-	add_time_source(out_msg);
-	add_vendor_name(out_msg);
-	add_vendor_smi_code(out_msg);
-	add_user_app_enabled(out_msg);
-	add_user_app_persist_enabled(out_msg);
-
-	if (lib->settings->get_bool(lib->settings,
-								"%s.plugins.imc-hcd.push_info", FALSE, lib->ns))
+	/* Enumerate over all HCD subtype sections */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+						"%s.plugins.imc-hcd.subtypes", lib->ns);
+	while (enumerator->enumerate(enumerator, &section) &&
+		   result == TNC_RESULT_SUCCESS)
 	{
-		/* correlated attributes */
-		for (i = 0; i < countof(quadruples); i++)
+		if (streq(section, "system"))
 		{
-			add_quadruple(out_msg, &quadruples[i]);
+			subtype = PA_SUBTYPE_PWG_HCD_SYSTEM;
 		}
-	}
+		else if (streq(section, "console"))
+		{
+			subtype = PA_SUBTYPE_PWG_HCD_CONSOLE;
+		}
+		else if (streq(section, "marker"))
+		{
+			subtype = PA_SUBTYPE_PWG_HCD_MARKER;
+		}
+		else if (streq(section, "finisher"))
+		{
+			subtype = PA_SUBTYPE_PWG_HCD_FINISHER;
+		}
+		else if (streq(section, "interface"))
+		{
+			subtype = PA_SUBTYPE_PWG_HCD_INTERFACE;
+		}
+		else if (streq(section, "scanner"))
+		{
+			subtype = PA_SUBTYPE_PWG_HCD_SCANNER;
+		}
+		else
+		{
+			DBG1(DBG_IMC, "HCD subtype '%s' not supported", section);
+			continue;
+		}
+		DBG2(DBG_IMC, "retrieving attributes for PA subtype %N/%N",
+			 pen_names, PEN_PWG, pa_subtype_pwg_names, subtype);
+		msg_type = pen_type_create(PEN_PWG, subtype);
+		out_msg = imc_msg_create(imc_hcd, state, connection_id, imc_id,
+								 TNC_IMVID_ANY, msg_type);
 
-	/* send PA-TNC message with the excl flag not set */
-	result = out_msg->send(out_msg, FALSE);
-	out_msg->destroy(out_msg);
+		/* mandatory attributes that are always sent without request */
+		add_attrs_natural_lang(out_msg, section);
+		if (subtype == PA_SUBTYPE_PWG_HCD_SYSTEM)
+		{
+			add_default_pwd_enabled(out_msg);
+			add_forwarding_enabled(out_msg);
+			add_machine_type_model(out_msg);
+			add_pstn_fax_enabled(out_msg);
+			add_time_source(out_msg);
+			add_vendor_name(out_msg);
+			add_vendor_smi_code(out_msg);
+			add_user_app_enabled(out_msg);
+			add_user_app_persist_enabled(out_msg);
+		}
+		if (lib->settings->get_bool(lib->settings,
+								"%s.plugins.imc-hcd.push_info", FALSE, lib->ns))
+		{
+			/* correlated attributes */
+			for (i = 0; i < countof(quadruples); i++)
+			{
+				add_quadruple(out_msg, section, &quadruples[i]);
+			}
+		}
+
+		/* send PA-TNC message with the excl flag not set */
+		result = out_msg->send(out_msg, FALSE);
+		out_msg->destroy(out_msg);
+	}
+	enumerator->destroy(enumerator);
 
 	return result;
 }
@@ -536,7 +597,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 						switch (entry->type)
 						{
 							case PWG_HCD_ATTRS_NATURAL_LANG:
-								add_attrs_natural_lang(out_msg);
+								add_attrs_natural_lang(out_msg, "system");
 								break;
 							case PWG_HCD_DEFAULT_PWD_ENABLED:
 								add_default_pwd_enabled(out_msg);
@@ -582,13 +643,13 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 						switch (entry->type)
 						{
 							case PWG_HCD_FIRMWARE_NAME:
-								add_quadruple(out_msg, &quadruples[0]);
+								add_quadruple(out_msg, "system", &quadruples[0]);
 								break;
 							case PWG_HCD_RESIDENT_APP_NAME:
-								add_quadruple(out_msg, &quadruples[1]);
+								add_quadruple(out_msg, "system", &quadruples[1]);
 								break;
 							case PWG_HCD_USER_APP_NAME:
-								add_quadruple(out_msg, &quadruples[2]);
+								add_quadruple(out_msg, "system", &quadruples[2]);
 								break;
 							default:
 								break;

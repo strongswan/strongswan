@@ -45,7 +45,13 @@ typedef enum imv_hcd_attr_t imv_hcd_attr_t;
 
 /* Subscribed PA-TNC message subtypes */
 static pen_type_t msg_types[] = {
-	{ PEN_PWG, PA_SUBTYPE_PWG_HCD }
+	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_SYSTEM },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_CONSOLE },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_MARKER },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_FINISHER },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_INTERFACE },
+	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_SCANNER }
 };
 
 /**

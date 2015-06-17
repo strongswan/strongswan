@@ -47,11 +47,50 @@ ENUM_NEXT(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY, PA_SUBTYPE_TCG_ANY,
 ENUM_END(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY);
 
 /* PWG PA Subtype names */
-ENUM_BEGIN(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD, PA_SUBTYPE_PWG_HCD,
-	"HCD"
+ENUM_BEGIN(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_TESTING,
+								 PA_SUBTYPE_PWG_HCD_UNKNOWN,
+	"HCD Testing",
+	"HCD Other",
+	"HCD Unknown"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_CONSOLE,
+								PA_SUBTYPE_PWG_HCD_COVER,
+								PA_SUBTYPE_PWG_HCD_UNKNOWN,
+	"HCD Console",
+	"HCD System",
+	"HCD Cover"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_INPUT_TRAY,
+								PA_SUBTYPE_PWG_HCD_MARKER,
+								PA_SUBTYPE_PWG_HCD_COVER,
+	"HCD Input Tray",
+	"HCD Output Tray",
+	"HCD Marker"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_MEDIA_PATH,
+								PA_SUBTYPE_PWG_HCD_INTERPRETER,
+								PA_SUBTYPE_PWG_HCD_MARKER,
+	"HCD Media Path",
+	"HCD Channel",
+	"HCD Interpreter"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_FINISHER,
+								PA_SUBTYPE_PWG_HCD_FINISHER,
+								PA_SUBTYPE_PWG_HCD_INTERPRETER,
+	"HCD Finisher"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_INTERFACE,
+								PA_SUBTYPE_PWG_HCD_INTERFACE,
+								PA_SUBTYPE_PWG_HCD_FINISHER,
+	"HCD Interface"
+);
+ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_HCD_SCANNER,
+								PA_SUBTYPE_PWG_HCD_SCANNER,
+								PA_SUBTYPE_PWG_HCD_INTERFACE,
+	"HCD Scanner"
 );
 ENUM_NEXT(pa_subtype_pwg_names, PA_SUBTYPE_PWG_ANY, PA_SUBTYPE_PWG_ANY,
-								PA_SUBTYPE_PWG_HCD,
+								PA_SUBTYPE_PWG_HCD_SCANNER,
 	"ANY"
 );
 ENUM_END(pa_subtype_pwg_names, PA_SUBTYPE_PWG_ANY);
