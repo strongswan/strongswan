@@ -42,6 +42,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
@@ -732,22 +733,25 @@ public class CharonVpnService extends VpnService implements Runnable
 
 	/*
 	 * The libraries are extracted to /data/data/org.strongswan.android/...
-	 * during installation.
+	 * during installation.  On newer releases most are loaded in JNI_OnLoad.
 	 */
 	static
 	{
-		System.loadLibrary("strongswan");
-
-		if (MainActivity.USE_BYOD)
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2)
 		{
-			System.loadLibrary("tncif");
-			System.loadLibrary("tnccs");
-			System.loadLibrary("imcv");
-		}
+			System.loadLibrary("strongswan");
 
-		System.loadLibrary("hydra");
-		System.loadLibrary("charon");
-		System.loadLibrary("ipsec");
+			if (MainActivity.USE_BYOD)
+			{
+				System.loadLibrary("tncif");
+				System.loadLibrary("tnccs");
+				System.loadLibrary("imcv");
+			}
+
+			System.loadLibrary("hydra");
+			System.loadLibrary("charon");
+			System.loadLibrary("ipsec");
+		}
 		System.loadLibrary("androidbridge");
 	}
 }
