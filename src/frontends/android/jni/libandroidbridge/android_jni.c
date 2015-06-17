@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -15,6 +15,8 @@
  * for more details.
  */
 
+#include <dlfcn.h>
+
 #include "android_jni.h"
 
 #include <library.h>
@@ -24,6 +26,21 @@
  * JVM
  */
 static JavaVM *android_jvm;
+
+static struct {
+	char name[32];
+	void *handle;
+} libs[] = {
+	{ "libstrongswan.so", NULL },
+#ifdef USE_BYOD
+	{ "libtncif.so", NULL },
+	{ "libtnccs.so", NULL },
+	{ "libimcv.so", NULL },
+#endif
+	{ "libhydra.so", NULL },
+	{ "libcharon.so", NULL },
+	{ "libipsec.so", NULL },
+};
 
 jclass *android_charonvpnservice_class;
 jclass *android_charonvpnservice_builder_class;
@@ -79,12 +96,22 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	JNIEnv *env;
 	jclass jversion;
 	jfieldID jsdk_int;
+	int i;
 
 	android_jvm = vm;
 
 	if ((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) != JNI_OK)
 	{
 		return -1;
+	}
+
+	for (i = 0; i < countof(libs); i++)
+	{
+		libs[i].handle = dlopen(libs[i].name, RTLD_GLOBAL);
+		if (!libs[i].handle)
+		{
+			return -1;
+		}
 	}
 
 	androidjni_threadlocal = thread_value_create(attached_thread_cleanup);
@@ -109,6 +136,16 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
  */
 void JNI_OnUnload(JavaVM *vm, void *reserved)
 {
+	int i;
+
 	androidjni_threadlocal->destroy(androidjni_threadlocal);
+
+	for (i = countof(libs) - 1; i >= 0; i--)
+	{
+		if (libs[i].handle)
+		{
+			dlclose(libs[i].handle);
+		}
+	}
 }
 
