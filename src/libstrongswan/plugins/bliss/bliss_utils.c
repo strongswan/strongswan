@@ -57,23 +57,27 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set, int32_t *x, int16_t *xd)
 bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
 							int n, uint16_t kappa, uint16_t *c_indices)
 {
-	int i, j, j_max;
-	uint64_t extra_bits;
-	uint16_t index, rounds = 0;
+	int i, index_found, rounds;
+	uint16_t index;
 	uint8_t hash[HASH_SIZE_SHA512], un16_buf[2];
 	chunk_t un16 = { un16_buf, 2 };
 	bool index_taken[n];
 
-	/* number of indices that can be derived in a single random oracle round */
-	j_max = sizeof(hash) - sizeof(extra_bits);
-
-	while (TRUE)
+	for (i = 0; i < n; i++)
 	{
+		index_taken[i] = FALSE;
+	}
+	index_found = 0;
+
+	for (rounds = 0; rounds < 0x10000; rounds++)
+	{
+		/* hash data */
 		if (!hasher->get_hash(hasher, data_hash, NULL))
 		{
 			return FALSE;
 		}
 
+		/* followed by the ud vector */
 		for (i = 0; i < n; i++)
 		{
 			htoun16(un16_buf, ud[i]);
@@ -81,32 +85,34 @@ bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
 			{
 				return FALSE;
 			}
-			index_taken[i] = FALSE;
 		}
 
-		htoun16(un16_buf, rounds++);
+		/* hash the round iteration */
+		htoun16(un16_buf, rounds);
 		if (!hasher->get_hash(hasher, un16, hash))
 		{
 			return FALSE;
 		}
 
-		extra_bits = untoh64(hash + j_max);
-
-		for (i = 0, j = 0; j < j_max; j++)
+		for (i = 0; i < HASH_SIZE_SHA512; i += 2)
 		{
-			index = 2 * (uint16_t)hash[j] + (extra_bits & 1);
+			index = untoh16(&hash[i]) % n;
+
 			if (!index_taken[index])
 			{
-				c_indices[i++] = index;
+				c_indices[index_found++] = index;
 				index_taken[index] = TRUE;
+
+				if (index_found == kappa)
+				{
+					return TRUE;
+				}
 			}
-			if (i == kappa)
-			{
-				return TRUE;
-			}
-			extra_bits >>= 1;
 		}
 	}
+	DBG1(DBG_LIB, "aborted c_indices generation after 2^16 rounds");
+
+	return FALSE;
 }
 
 /**
