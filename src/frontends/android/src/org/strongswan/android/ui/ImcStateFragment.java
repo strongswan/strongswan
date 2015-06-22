@@ -83,7 +83,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 							 Bundle savedInstanceState)
 	{
-		View view = inflater.inflate(R.layout.imc_state_fragment, null);
+		View view = inflater.inflate(R.layout.imc_state_fragment, container, false);
 
 		mButton = (LinearLayout)view.findViewById(R.id.imc_state_button);
 		mButton.setOnClickListener(new OnClickListener() {
