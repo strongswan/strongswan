@@ -288,13 +288,29 @@ METHOD(capabilities_t, resolve_uid, bool,
 
 #ifdef HAVE_GETPWNAM_R
 	struct passwd passwd;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	err = getpwnam_r(username, &passwd, buf, sizeof(buf), &pwp);
-	if (pwp)
+	while (1)
 	{
-		this->uid = pwp->pw_uid;
+		buf = realloc(buf, buflen);
+
+		err = getpwnam_r(username, &passwd, buf, buflen, &pwp);
+		if (err == 0)
+		{
+			this->uid = pwp->pw_uid;
+			break;
+		}
+		else if (err == ERANGE)
+		{
+			buflen *= 2;
+		}
+		else /* any other error */
+		{
+			break;
+		}
 	}
+	free(buf);
 #else /* HAVE GETPWNAM_R */
 	this->mutex->lock(this->mutex);
 	pwp = getpwnam(username);
@@ -324,13 +340,29 @@ METHOD(capabilities_t, resolve_gid, bool,
 
 #ifdef HAVE_GETGRNAM_R
 	struct group group;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	err = getgrnam_r(groupname, &group, buf, sizeof(buf), &grp);
-	if (grp)
+	while (1)
 	{
-		this->gid = grp->gr_gid;
+		buf = realloc(buf, buflen);
+
+		err = getgrnam_r(groupname, &group, buf, buflen, &grp);
+		if (err == 0)
+		{
+			this->gid = grp->gr_gid;
+			break;
+		}
+		else if (err == ERANGE)
+		{
+			buflen *= 2;
+		}
+		else /* any other error */
+		{
+			break;
+		}
 	}
+	free(buf);
 #else /* HAVE_GETGRNAM_R */
 	this->mutex->lock(this->mutex);
 	grp = getgrnam(groupname);
@@ -358,16 +390,34 @@ METHOD(capabilities_t, resolve_gid, bool,
 static bool init_supplementary_groups(private_capabilities_t *this)
 {
 	struct passwd *pwp;
+	int err;
 	int res = -1;
 
 #ifdef HAVE_GETPWUID_R
 	struct passwd pwd;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	if (getpwuid_r(this->uid, &pwd, buf, sizeof(buf), &pwp) == 0 && pwp)
+	while (1)
 	{
-		res = initgroups(pwp->pw_name, this->gid);
+		buf = realloc(buf, buflen);
+
+		err = getpwuid_r(this->uid, &pwd, buf, buflen, &pwp);
+		if (err == 0)
+		{
+			res = initgroups(pwp->pw_name, this->gid);
+			break;
+		}
+		else if (err == ERANGE)
+		{
+			buflen *= 2;
+		}
+		else
+		{
+			break;
+		}
 	}
+	free(buf);
 #else /* HAVE_GETPWUID_R */
 	this->mutex->lock(this->mutex);
 	pwp = getpwuid(this->uid);
