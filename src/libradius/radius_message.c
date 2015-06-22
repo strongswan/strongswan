@@ -97,7 +97,7 @@ ENUM_NEXT(radius_message_code_names, RMC_DISCONNECT_REQUEST, RMC_COA_NAK, RMC_AC
 	"CoA-NAK");
 ENUM_END(radius_message_code_names, RMC_COA_NAK);
 
-ENUM(radius_attribute_type_names, RAT_USER_NAME, RAT_MIP6_HOME_LINK_PREFIX,
+ENUM_BEGIN(radius_attribute_type_names, RAT_USER_NAME, RAT_MIP6_HOME_LINK_PREFIX,
 	"User-Name",
 	"User-Password",
 	"CHAP-Password",
@@ -223,6 +223,13 @@ ENUM(radius_attribute_type_names, RAT_USER_NAME, RAT_MIP6_HOME_LINK_PREFIX,
 	"Delegated-IPv6-Prefix",
 	"MIP6-Feature-Vector",
 	"MIP6-Home-Link-Prefix");
+ENUM_NEXT(radius_attribute_type_names, RAT_FRAMED_IPV6_ADDRESS, RAT_STATEFUL_IPV6_ADDRESS_POOL, RAT_MIP6_HOME_LINK_PREFIX,
+	"Framed-IPv6-Address",
+	"DNS-Server-IPv6-Address",
+	"Route-IPv6-Information",
+	"Delegated-IPv6-Prefix-Pool",
+	"Stateful-IPv6-Address-Pool");
+ENUM_END(radius_attribute_type_names, RAT_STATEFUL_IPV6_ADDRESS_POOL);
 
 /**
  * Attribute enumerator implementation

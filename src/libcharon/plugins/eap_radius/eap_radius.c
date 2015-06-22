@@ -434,6 +434,9 @@ static void add_nameserver_attribute(eap_radius_provider_t *provider,
 		case 31: /* MS-Secondary-NBNS-Server */
 			provider->add_attribute(provider, id, INTERNAL_IP4_NBNS, data);
 			break;
+		case RAT_FRAMED_IPV6_DNS_SERVER:
+			provider->add_attribute(provider, id, INTERNAL_IP6_DNS, data);
+			break;
 	}
 }
 
@@ -515,7 +518,8 @@ static void process_cfg_attributes(radius_message_t *msg)
 		enumerator = msg->create_enumerator(msg);
 		while (enumerator->enumerate(enumerator, &type, &data))
 		{
-			if (type == RAT_FRAMED_IP_ADDRESS && data.len == 4)
+			if ((type == RAT_FRAMED_IP_ADDRESS && data.len == 4) ||
+				(type == RAT_FRAMED_IPV6_ADDRESS && data.len == 16))
 			{
 				host = host_create_from_chunk(AF_INET, data, 0);
 				if (host)
@@ -528,6 +532,11 @@ static void process_cfg_attributes(radius_message_t *msg)
 			{
 				provider->add_attribute(provider, ike_sa->get_unique_id(ike_sa),
 										INTERNAL_IP4_NETMASK, data);
+			}
+			else if (type == RAT_FRAMED_IPV6_DNS_SERVER && data.len == 16)
+			{
+				add_nameserver_attribute(provider,
+									ike_sa->get_unique_id(ike_sa), type, data);
 			}
 		}
 		enumerator->destroy(enumerator);
