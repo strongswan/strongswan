@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -288,13 +288,25 @@ METHOD(capabilities_t, resolve_uid, bool,
 
 #ifdef HAVE_GETPWNAM_R
 	struct passwd passwd;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	err = getpwnam_r(username, &passwd, buf, sizeof(buf), &pwp);
-	if (pwp)
+	while (TRUE)
 	{
-		this->uid = pwp->pw_uid;
+		buf = realloc(buf, buflen);
+		err = getpwnam_r(username, &passwd, buf, buflen, &pwp);
+		if (err == ERANGE)
+		{
+			buflen *= 2;
+			continue;
+		}
+		if (pwp)
+		{
+			this->uid = pwp->pw_uid;
+		}
+		break;
 	}
+	free(buf);
 #else /* HAVE GETPWNAM_R */
 	this->mutex->lock(this->mutex);
 	pwp = getpwnam(username);
@@ -324,13 +336,25 @@ METHOD(capabilities_t, resolve_gid, bool,
 
 #ifdef HAVE_GETGRNAM_R
 	struct group group;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	err = getgrnam_r(groupname, &group, buf, sizeof(buf), &grp);
-	if (grp)
+	while (TRUE)
 	{
-		this->gid = grp->gr_gid;
+		buf = realloc(buf, buflen);
+		err = getgrnam_r(groupname, &group, buf, buflen, &grp);
+		if (err == ERANGE)
+		{
+			buflen *= 2;
+			continue;
+		}
+		if (grp)
+		{
+			this->gid = grp->gr_gid;
+		}
+		break;
 	}
+	free(buf);
 #else /* HAVE_GETGRNAM_R */
 	this->mutex->lock(this->mutex);
 	grp = getgrnam(groupname);
@@ -362,12 +386,24 @@ static bool init_supplementary_groups(private_capabilities_t *this)
 
 #ifdef HAVE_GETPWUID_R
 	struct passwd pwd;
-	char buf[1024];
+	size_t buflen = 1024;
+	char *buf = NULL;
 
-	if (getpwuid_r(this->uid, &pwd, buf, sizeof(buf), &pwp) == 0 && pwp)
+	while (TRUE)
 	{
-		res = initgroups(pwp->pw_name, this->gid);
+		buf = realloc(buf, buflen);
+		if (getpwuid_r(this->uid, &pwd, buf, buflen, &pwp) == ERANGE)
+		{
+			buflen *= 2;
+			continue;
+		}
+		if (pwp)
+		{
+			res = initgroups(pwp->pw_name, this->gid);
+		}
+		break;
 	}
+	free(buf);
 #else /* HAVE_GETPWUID_R */
 	this->mutex->lock(this->mutex);
 	pwp = getpwuid(this->uid);
