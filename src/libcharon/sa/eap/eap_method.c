@@ -30,7 +30,8 @@ bool eap_method_register(plugin_t *plugin, plugin_feature_t *feature,
 {
 	if (reg)
 	{
-		charon->eap->add_method(charon->eap, feature->arg.eap, 0,
+		charon->eap->add_method(charon->eap, feature->arg.eap.type,
+					feature->arg.eap.vendor,
 					feature->type == FEATURE_EAP_SERVER ? EAP_SERVER : EAP_PEER,
 					(eap_constructor_t)data);
 	}

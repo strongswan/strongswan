@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -185,7 +185,8 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->arg.container == b->arg.container;
 			case FEATURE_EAP_SERVER:
 			case FEATURE_EAP_PEER:
-				return a->arg.eap == b->arg.eap;
+				return a->arg.eap.vendor == b->arg.eap.vendor &&
+					   a->arg.eap.type == b->arg.eap.type;
 			case FEATURE_DATABASE:
 				return a->arg.database == DB_ANY ||
 					   a->arg.database == b->arg.database;
@@ -368,8 +369,15 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 			break;
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
-			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					eap_type_short_names, feature->arg.eap) > 0)
+			if (feature->arg.eap.vendor &&
+				asprintf(&str, "%N:%d-%d", plugin_feature_names, feature->type,
+					feature->arg.eap.type, feature->arg.eap.vendor) > 0)
+			{
+				return str;
+			}
+			else if (!feature->arg.eap.vendor &&
+				asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
+					eap_type_short_names, feature->arg.eap.type) > 0)
 			{
 				return str;
 			}

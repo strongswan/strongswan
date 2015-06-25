@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -196,7 +196,7 @@ struct plugin_feature_t {
 		/** FEATURE_CONTAINER_DECODE/ENCODE */
 		container_type_t container;
 		/** FEATURE_EAP_SERVER/CLIENT */
-		eap_type_t eap;
+		eap_vendor_type_t eap;
 		/** FEATURE_DATABASE */
 		db_driver_t database;
 		/** FEATURE_FETCHER */
@@ -292,8 +292,10 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_CERT_ENCODE(kind, type)				__PLUGIN_FEATURE(kind, CERT_ENCODE, .cert = type)
 #define _PLUGIN_FEATURE_CONTAINER_DECODE(kind, type)		__PLUGIN_FEATURE(kind, CONTAINER_DECODE, .container = type)
 #define _PLUGIN_FEATURE_CONTAINER_ENCODE(kind, type)		__PLUGIN_FEATURE(kind, CONTAINER_ENCODE, .container = type)
-#define _PLUGIN_FEATURE_EAP_SERVER(kind, type)				__PLUGIN_FEATURE(kind, EAP_SERVER, .eap = type)
-#define _PLUGIN_FEATURE_EAP_PEER(kind, type)				__PLUGIN_FEATURE(kind, EAP_PEER, .eap = type)
+#define _PLUGIN_FEATURE_EAP_SERVER(kind, type)				_PLUGIN_FEATURE_EAP_SERVER_VENDOR(kind, type, 0)
+#define _PLUGIN_FEATURE_EAP_PEER(kind, type)				_PLUGIN_FEATURE_EAP_PEER_VENDOR(kind, type, 0)
+#define _PLUGIN_FEATURE_EAP_SERVER_VENDOR(kind, type, vendor)__PLUGIN_FEATURE(kind, EAP_SERVER, .eap = { type, vendor })
+#define _PLUGIN_FEATURE_EAP_PEER_VENDOR(kind, type, vendor)	__PLUGIN_FEATURE(kind, EAP_PEER, .eap = { type, vendor })
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
 #define _PLUGIN_FEATURE_RESOLVER(kind, ...)					__PLUGIN_FEATURE(kind, RESOLVER, .custom = NULL)
