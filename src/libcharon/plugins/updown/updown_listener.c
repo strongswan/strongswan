@@ -169,31 +169,34 @@ static void push_dns_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * Push variables for local virtual IPs
+ * Push variables for local/remote virtual IPs
  */
 static void push_vip_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
-						 char *envp[], u_int count)
+						 char *envp[], u_int count, bool local)
 {
 	enumerator_t *enumerator;
 	host_t *host;
 	int v4 = 0, v6 = 0;
 	bool first = TRUE;
 
-	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
 	while (enumerator->enumerate(enumerator, &host))
 	{
 		if (first)
 		{	/* legacy variable for first VIP */
 			first = FALSE;
-			push_env(envp, count, "PLUTO_MY_SOURCEIP=%H", host);
+			push_env(envp, count, "PLUTO_%s_SOURCEIP=%H",
+					 local ? "MY" : "PEER", host);
 		}
 		switch (host->get_family(host))
 		{
 			case AF_INET:
-				push_env(envp, count, "PLUTO_MY_SOURCEIP4_%d=%H", ++v4, host);
+				push_env(envp, count, "PLUTO_%s_SOURCEIP4_%d=%H",
+						 local ? "MY" : "PEER", ++v4, host);
 				break;
 			case AF_INET6:
-				push_env(envp, count, "PLUTO_MY_SOURCEIP6_%d=%H", ++v6, host);
+				push_env(envp, count, "PLUTO_%s_SOURCEIP6_%d=%H",
+						 local ? "MY" : "PEER", ++v6, host);
 				break;
 			default:
 				continue;
@@ -313,7 +316,8 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		push_env(envp, countof(envp), "PLUTO_XAUTH_ID=%Y",
 				 ike_sa->get_other_eap_id(ike_sa));
 	}
-	push_vip_env(this, ike_sa, envp, countof(envp));
+	push_vip_env(this, ike_sa, envp, countof(envp), TRUE);
+	push_vip_env(this, ike_sa, envp, countof(envp), FALSE);
 	mark = config->get_mark(config, TRUE);
 	if (mark.value)
 	{
