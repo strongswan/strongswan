@@ -1,7 +1,7 @@
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
-Both <b>carol</b> and <b>dave</b> request a <b>virtual IP</b> via the IKEv2 configuration payload
-by using the <b>leftsourceip=%config</b> parameter. The gateway <b>moon</b> assigns virtual IP
-addresses from a pool named <b>bigpool</b> that was created in an SQL database by the command
+Both <b>carol</b> and <b>dave</b> request a <b>virtual IP</b> via the IKEv2 configuration payload.
+The gateway <b>moon</b> assigns virtual IP addresses from a pool named <b>bigpool</b> that was
+created in an SQL database by the command
 <b>ipsec pool --name bigpool --start 10.3.0.1 --end 10.3.3.232 --timeout 0</b>.
 <p>
 The updown script automatically inserts iptables-based firewall rules that let pass the
