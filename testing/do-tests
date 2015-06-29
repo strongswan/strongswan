@@ -468,7 +468,7 @@ do
     <img src="../../images/$DIAGRAM" alt="$VIRTHOSTS">
 @EOF
 
-	if [ -n "$IPV6" -o $SUBDIR = "ipv6" ]
+	if [ -n "$IPV6" ]
 	then
 	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
