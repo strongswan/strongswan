@@ -254,27 +254,6 @@ do
 	    continue
 	fi
 
-	if [ $SUBDIR = "ipv6" -o $name = "rw-psk-ipv6" ]
-	then
-	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
-	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="ip6tables -v -n -L"
-	    IPTABLES_DSP="ip6tables -L"
-	else
-	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
-	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="iptables -v -n -L"
-	    IPTABLES_DSP="iptables -L"
-	fi
-
-	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
-	then
-	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE; echo; ip -6 route list table $SOURCEIP_ROUTING_TABLE"
-	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
-	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
-	    IPTABLES_DSP="iptables -L ; ip6tables -L"
-	fi
-
 	[ -f $DEFAULTTESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
 	[ -f $DEFAULTTESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
 	[ -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
@@ -351,6 +330,8 @@ do
 
 	$DIR/scripts/load-testconfig $testname
 	unset RADIUSHOSTS
+	unset IPV6
+	unset SWANCTL
 	source $TESTDIR/test.conf
 
 
@@ -487,6 +468,27 @@ do
     <img src="../../images/$DIAGRAM" alt="$VIRTHOSTS">
 @EOF
 
+	if [ -n "$IPV6" -o $SUBDIR = "ipv6" ]
+	then
+	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP=$IPROUTE_CMD
+	    IPTABLES_CMD="ip6tables -v -n -L"
+	    IPTABLES_DSP="ip6tables -L"
+	else
+	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP=$IPROUTE_CMD
+	    IPTABLES_CMD="iptables -v -n -L"
+	    IPTABLES_DSP="iptables -L"
+	fi
+
+	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
+	then
+	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE; echo; ip -6 route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
+	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
+	    IPTABLES_DSP="iptables -L ; ip6tables -L"
+	fi
+
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
@@ -494,7 +496,7 @@ do
 		scp $SSHCONF $HOSTLOGIN:/etc/strongswan.conf \
 		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
 
-		if [ $SUBDIR = "swanctl" ]
+		if [  -n "$SWANCTL" ]
 		then
 			scp $SSHCONF $HOSTLOGIN:/etc/swanctl/swanctl.conf \
 			$TESTRESULTDIR/${host}.swanctl.conf  > /dev/null 2>&1
@@ -543,7 +545,7 @@ do
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
 
-		if [ $SUBDIR = "swanctl" ]
+		if [ -n "$SWANCTL" ]
 		then
 		    cat >> $TESTRESULTDIR/index.html <<@EOF
     <h3>$host</h3>
