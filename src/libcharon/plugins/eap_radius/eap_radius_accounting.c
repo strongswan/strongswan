@@ -447,10 +447,8 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 							 vip->get_address(vip));
 				break;
 			case AF_INET6:
-				/* we currently assign /128 prefixes, only (reserved, length) */
-				data = chunk_from_chars(0, 128);
-				data = chunk_cata("cc", data, vip->get_address(vip));
-				message->add(message, RAT_FRAMED_IPV6_PREFIX, data);
+				message->add(message, RAT_FRAMED_IPV6_ADDRESS,
+							 vip->get_address(vip));
 				break;
 			default:
 				break;
