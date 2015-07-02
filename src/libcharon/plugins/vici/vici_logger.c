@@ -18,6 +18,7 @@
 
 #include <daemon.h>
 #include <threading/mutex.h>
+#include <processing/jobs/callback_job.h>
 
 typedef struct private_vici_logger_t private_vici_logger_t;
 
@@ -42,10 +43,53 @@ struct private_vici_logger_t {
 	int recursive;
 
 	/**
+	 * List of messages to raise async events
+	 */
+	linked_list_t *queue;
+
+	/**
 	 * Mutex to synchronize logging
 	 */
 	mutex_t *mutex;
 };
+
+/**
+ * Async callback to raise events for queued messages
+ */
+static job_requeue_t raise_events(private_vici_logger_t *this)
+{
+	vici_message_t *message;
+	u_int count;
+
+	this->mutex->lock(this->mutex);
+	count = this->queue->get_count(this->queue);
+	this->queue->remove_first(this->queue, (void**)&message);
+	this->mutex->unlock(this->mutex);
+
+	if (count > 0)
+	{
+		this->dispatcher->raise_event(this->dispatcher, "log", 0, message);
+	}
+	if (count > 1)
+	{
+		return JOB_REQUEUE_DIRECT;
+	}
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Queue a message for async processing
+ */
+static void queue_messsage(private_vici_logger_t *this, vici_message_t *message)
+{
+	this->queue->insert_last(this->queue, message);
+	if (this->queue->get_count(this->queue) == 1)
+	{
+		lib->processor->queue_job(lib->processor, (job_t*)
+					callback_job_create((callback_job_cb_t)raise_events,
+										this, NULL, NULL));
+	}
+}
 
 METHOD(logger_t, log_, void,
 	private_vici_logger_t *this, debug_t group, level_t level, int thread,
@@ -75,7 +119,7 @@ METHOD(logger_t, log_, void,
 		message = builder->finalize(builder);
 		if (message)
 		{
-			this->dispatcher->raise_event(this->dispatcher, "log", 0, message);
+			queue_messsage(this, message);
 		}
 	}
 	this->recursive--;
@@ -101,6 +145,7 @@ METHOD(vici_logger_t, destroy, void,
 	private_vici_logger_t *this)
 {
 	manage_commands(this, FALSE);
+	this->queue->destroy_offset(this->queue, offsetof(vici_message_t, destroy));
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -121,6 +166,7 @@ vici_logger_t *vici_logger_create(vici_dispatcher_t *dispatcher)
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
+		.queue = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 	);
 
