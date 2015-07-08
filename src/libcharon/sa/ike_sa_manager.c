@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -382,6 +382,11 @@ struct private_ike_sa_manager_t {
 	 * RNG to get random SPIs for our side
 	 */
 	rng_t *rng;
+
+	/**
+	 * Lock to access the RNG instance
+	 */
+	rwlock_t *rng_lock;
 
 	/**
 	 * reuse existing IKE_SAs in checkout_by_config
@@ -943,12 +948,14 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
 {
 	u_int64_t spi;
 
-	if (this->rng &&
-		this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
+	this->rng_lock->read_lock(this->rng_lock);
+	if (!this->rng ||
+		!this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
 	{
-		return spi;
+		spi = 0;
 	}
-	return 0;
+	this->rng_lock->unlock(this->rng_lock);
+	return spi;
 }
 
 /**
@@ -2055,8 +2062,10 @@ METHOD(ike_sa_manager_t, flush, void,
 	charon->bus->set_sa(charon->bus, NULL);
 	unlock_all_segments(this);
 
+	this->rng_lock->write_lock(this->rng_lock);
 	this->rng->destroy(this->rng);
 	this->rng = NULL;
+	this->rng_lock->unlock(this->rng_lock);
 }
 
 METHOD(ike_sa_manager_t, destroy, void,
@@ -2081,6 +2090,7 @@ METHOD(ike_sa_manager_t, destroy, void,
 	free(this->connected_peers_segments);
 	free(this->init_hashes_segments);
 
+	this->rng_lock->destroy(this->rng_lock);
 	free(this);
 }
 
@@ -2138,6 +2148,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		free(this);
 		return NULL;
 	}
+	this->rng_lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	this->ikesa_limit = lib->settings->get_int(lib->settings,
 											   "%s.ikesa_limit", 0, lib->ns);
