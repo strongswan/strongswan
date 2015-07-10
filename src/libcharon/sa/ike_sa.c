@@ -1224,7 +1224,12 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	if (host)
 	{
-		set_other_host(this, host);
+		if (!host->is_anyaddr(host) ||
+			this->other_host->is_anyaddr(this->other_host))
+		{	/* don't set to %any if we currently have an address, but the
+			 * address family might have changed */
+			set_other_host(this, host);
+		}
 	}
 
 	if (this->local_host)
