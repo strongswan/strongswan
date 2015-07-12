@@ -25,8 +25,8 @@
 static test_configuration_t tests[] = {
 #define TEST_SUITE(x) \
 	{ .suite = x, },
-#define TEST_SUITE_DEPEND(x, type, args) \
-	{ .suite = x, .feature = PLUGIN_DEPENDS(type, args) },
+#define TEST_SUITE_DEPEND(x, type, ...) \
+	{ .suite = x, .feature = PLUGIN_DEPENDS(type, __VA_ARGS__) },
 #include "tls_tests.h"
 	{ .suite = NULL, }
 };

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
+ * Copyright (C) 2015 Martin Willi
+ * Copyright (C) 2015 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,5 +13,31 @@
  * for more details.
  */
 
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+#include "chapoly_drv.h"
+#include "chapoly_drv_portable.h"
+#include "chapoly_drv_ssse3.h"
+
+typedef chapoly_drv_t*(*chapoly_drv_create)();
+
+/**
+ * See header.
+ */
+chapoly_drv_t *chapoly_drv_probe()
+{
+	chapoly_drv_create drivers[] = {
+		chapoly_drv_ssse3_create,
+		chapoly_drv_portable_create,
+	};
+	chapoly_drv_t *driver;
+	int i;
+
+	for (i = 0; i < countof(drivers); i++)
+	{
+		driver = drivers[i]();
+		if (driver)
+		{
+			return driver;
+		}
+	}
+	return NULL;
+}

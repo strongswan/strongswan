@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
+ * Copyright (C) 2015 Martin Willi
+ * Copyright (C) 2015 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,5 +13,30 @@
  * for more details.
  */
 
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+/**
+ * @defgroup chapoly chapoly
+ * @ingroup plugins
+ *
+ * @defgroup chapoly_plugin chapoly_plugin
+ * @{ @ingroup chapoly
+ */
+
+#ifndef CHAPOLY_PLUGIN_H_
+#define CHAPOLY_PLUGIN_H_
+
+#include <plugins/plugin.h>
+
+typedef struct chapoly_plugin_t chapoly_plugin_t;
+
+/**
+ * Plugin providing a ChaCha20/Poly1305 AEAD.
+ */
+struct chapoly_plugin_t {
+
+	/**
+	 * Implements plugin interface.
+	 */
+	plugin_t plugin;
+};
+
+#endif /** CHAPOLY_PLUGIN_H_ @}*/

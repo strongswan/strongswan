@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
+ * Copyright (C) 2015 Martin Willi
+ * Copyright (C) 2015 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,5 +13,4 @@
  * for more details.
  */
 
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+TEST_SUITE_DEPEND(chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)

@@ -265,7 +265,7 @@ static bool pre_test(test_runner_init_t init, char *cfg)
  */
 typedef struct {
 	char *name;
-	char msg[512 - sizeof(char*) - 2 * sizeof(int)];
+	char msg[4096 - sizeof(char*) - 2 * sizeof(int)];
 	const char *file;
 	int line;
 	int i;

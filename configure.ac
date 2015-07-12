@@ -127,6 +127,7 @@ ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto 
 ARG_ENABL_SET([bliss],          [enable BLISS software implementation plugin.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
 ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
 ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
 ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
@@ -838,6 +839,22 @@ AC_COMPILE_IFELSE(
 	]
 )
 
+AC_MSG_CHECKING([x86/x64 target])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[], [[
+		 #if !defined(__i386__) && !defined(__x86_64__)
+		 # error not on x86/x64
+		 #endif
+		]])],
+	[
+		x86x64=true
+		AC_MSG_RESULT([yes])
+	],
+	[AC_MSG_RESULT([no])]
+)
+AM_CONDITIONAL(USE_X86X64, [test "x$x86x64" = xtrue])
+
 if test x$printf_hooks = xvstr; then
 	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
@@ -1293,6 +1310,7 @@ ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
+ADD_PLUGIN([chapoly],              [s charon scripts nm cmd])
 ADD_PLUGIN([xcbc],                 [s charon nm cmd])
 ADD_PLUGIN([cmac],                 [s charon nm cmd])
 ADD_PLUGIN([hmac],                 [s charon pki scripts nm cmd])
@@ -1449,6 +1467,7 @@ AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_KEYCHAIN, test x$keychain = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
+AM_CONDITIONAL(USE_CHAPOLY, test x$chapoly = xtrue)
 AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
@@ -1698,6 +1717,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/keychain/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile
+	src/libstrongswan/plugins/chapoly/Makefile
 	src/libstrongswan/plugins/ctr/Makefile
 	src/libstrongswan/plugins/ccm/Makefile
 	src/libstrongswan/plugins/gcm/Makefile
@@ -1713,6 +1733,7 @@ AC_CONFIG_FILES([
 	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/tests/Makefile
 	src/libipsec/Makefile
+	src/libipsec/tests/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libtls/tests/Makefile

@@ -10,6 +10,11 @@
     <cmdline>root=/dev/vda1 loglevel=1 console=hvc0</cmdline>
     <boot dev='hd'/>
   </os>
+  <cpu>
+    <model fallback='allow'>core2duo</model>
+    <feature policy='optional' name='aes'/>
+    <feature policy='optional' name='pclmuldq'/>
+  </cpu>
   <features>
     <acpi/>
     <apic/>

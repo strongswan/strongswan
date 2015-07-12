@@ -27,7 +27,7 @@
 /**
  * Failure message buf
  */
-static char failure_buf[512];
+static char failure_buf[4096];
 
 /**
  * Source file failure occurred
