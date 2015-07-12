@@ -1,3 +1,11 @@
+- Added support for the ChaCha20/Poly1305 AEAD cipher specified in RFC7539 and
+  draft-ietf-ipsecme-chacha20-poly1305 using the chacha20poly1305 ike/esp
+  proposal keyword. The new chapoly plugin implements the cipher, optionally
+  SSE-accelerated on x86/x64 architectures. It is usable both in IKEv2 and the
+  strongSwan libipsec ESP backend. On Linux 4.2 or newer the kernel-netlink
+  plugin can configure the cipher for ESP SAs.
+
+
 strongswan-5.3.2
 ----------------
 
