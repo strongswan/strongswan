@@ -56,8 +56,8 @@ static void include_files(parser_helper_t *ctx);
 
 %%
 
-[\t ]*#[^\n]*			/* eat comments */
-[\t ]+					/* eat whitespace */
+[\t ]*#[^\r\n]*			/* eat comments */
+[\t\r ]+				/* eat whitespace */
 \n|#.*\n				return NEWLINE; /* also eats comments at the end of a line */
 
 "{"						|
@@ -74,12 +74,13 @@ static void include_files(parser_helper_t *ctx);
 	yy_push_state(str, yyscanner);
 }
 
-[^#{}="\n\t ]+			{
+[^#{}="\r\n\t ]+			{
 	yylval->s = strdup(yytext);
 	return NAME;
 }
 
 <inc>{
+	\r					/* just ignore these */
 	/* we allow all characters except #, } and spaces, they can be escaped */
 	<<EOF>>				|
 	[#}\n\t ]			{
@@ -111,12 +112,13 @@ static void include_files(parser_helper_t *ctx);
 	\\["#} ]			{
 		yyextra->string_add(yyextra, yytext+1);
 	}
-	[^"\\#}\n\t ]+ {
+	[^"\\#}\r\n\t ]+ {
 		yyextra->string_add(yyextra, yytext);
 	}
 }
 
 <str>{
+	\r					/* just ignore these */
 	"\""				|
 	<<EOF>>				|
 	\\					{
@@ -138,12 +140,13 @@ static void include_files(parser_helper_t *ctx);
 			return STRING;
 		}
 	}
+
 	\\n     yyextra->string_add(yyextra, "\n");
 	\\r     yyextra->string_add(yyextra, "\r");
 	\\t     yyextra->string_add(yyextra, "\t");
-	\\\r?\n /* merge lines that end with EOL characters */
+	\\\r?\n /* merge lines that end with escaped EOL characters */
 	\\.     yyextra->string_add(yyextra, yytext+1);
-	[^\\"]+			{
+	[^\\\r"]+			{
 		yyextra->string_add(yyextra, yytext);
 	}
 }
