@@ -20,7 +20,10 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+#include <threading/rwlock_condvar.h>
 #include <collections/linked_list.h>
+
+#define INSTALL_DISABLED ((u_int)~0)
 
 typedef struct private_trap_manager_t private_trap_manager_t;
 typedef struct trap_listener_t trap_listener_t;
@@ -75,6 +78,16 @@ struct private_trap_manager_t {
 	 * mutex for list of acquires
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * number of threads currently installing trap policies, or INSTALL_DISABLED
+	 */
+	u_int installing;
+
+	/**
+	 * condvar to signal trap policy installation
+	 */
+	rwlock_condvar_t *condvar;
 
 	/**
 	 * Whether to ignore traffic selectors from acquires
@@ -171,6 +184,11 @@ METHOD(trap_manager_t, install, u_int32_t,
 	}
 
 	this->lock->write_lock(this->lock);
+	if (this->installing == INSTALL_DISABLED)
+	{	/* flush() has been called */
+		this->lock->unlock(this->lock);
+		return 0;
+	}
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -204,6 +222,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 		.peer_cfg = peer->get_ref(peer),
 	);
 	this->traps->insert_first(this->traps, entry);
+	this->installing++;
 	/* don't hold lock while creating CHILD_SA and installing policies */
 	this->lock->unlock(this->lock);
 
@@ -252,6 +271,11 @@ METHOD(trap_manager_t, install, u_int32_t,
 	{
 		destroy_entry(found);
 	}
+	this->lock->write_lock(this->lock);
+	/* do this at the end, so entries created temporarily are also destroyed */
+	this->installing--;
+	this->condvar->signal(this->condvar);
+	this->lock->unlock(this->lock);
 	return reqid;
 }
 
@@ -495,8 +519,13 @@ METHOD(trap_manager_t, flush, void,
 	private_trap_manager_t *this)
 {
 	this->lock->write_lock(this->lock);
+	while (this->installing)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 	this->traps->destroy_function(this->traps, (void*)destroy_entry);
 	this->traps = linked_list_create();
+	this->installing = INSTALL_DISABLED;
 	this->lock->unlock(this->lock);
 }
 
@@ -506,6 +535,7 @@ METHOD(trap_manager_t, destroy, void,
 	charon->bus->remove_listener(charon->bus, &this->listener.listener);
 	this->traps->destroy_function(this->traps, (void*)destroy_entry);
 	this->acquires->destroy_function(this->acquires, (void*)destroy_acquire);
+	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -539,6 +569,7 @@ trap_manager_t *trap_manager_create(void)
 		.acquires = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.condvar = rwlock_condvar_create(),
 		.ignore_acquire_ts = lib->settings->get_bool(lib->settings,
 										"%s.ignore_acquire_ts", FALSE, lib->ns),
 	);
