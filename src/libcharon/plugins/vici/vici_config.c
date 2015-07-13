@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -1352,10 +1355,12 @@ CALLBACK(children_sn, bool,
 				.jitter = LFT_UNDEFINED,
 			},
 			.bytes = {
+				.rekey = LFT_UNDEFINED,
 				.life = LFT_UNDEFINED,
 				.jitter = LFT_UNDEFINED,
 			},
 			.packets = {
+				.rekey = LFT_UNDEFINED,
 				.life = LFT_UNDEFINED,
 				.jitter = LFT_UNDEFINED,
 			},
@@ -1407,6 +1412,15 @@ CALLBACK(children_sn, bool,
 	if (child.lft.packets.life == LFT_UNDEFINED)
 	{
 		child.lft.packets.life = child.lft.packets.rekey * 110 / 100;
+	}
+	/* if no soft lifetime specified, add one at hard lifetime - 10% */
+	if (child.lft.bytes.rekey == LFT_UNDEFINED)
+	{
+		child.lft.bytes.rekey = child.lft.bytes.life * 90 / 100;
+	}
+	if (child.lft.packets.rekey == LFT_UNDEFINED)
+	{
+		child.lft.packets.rekey = child.lft.packets.life * 90 / 100;
 	}
 	/* if no rand time defined, use difference of hard and soft */
 	if (child.lft.time.jitter == LFT_UNDEFINED)
@@ -1958,20 +1972,20 @@ CALLBACK(unload_conn, vici_message_t*,
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *cfg;
+	char *conn_name;
 	bool found = FALSE;
-	char *conn;
 
-	conn = message->get_str(message, NULL, "name");
-	if (!conn)
+	conn_name = message->get_str(message, NULL, "name");
+	if (!conn_name)
 	{
-		return create_reply("missing connection name to unload");
+		return create_reply("unload: missing connection name");
 	}
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->conns->create_enumerator(this->conns);
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
-		if (streq(cfg->get_name(cfg), conn))
+		if (streq(cfg->get_name(cfg), conn_name))
 		{
 			this->conns->remove_at(this->conns, enumerator);
 			cfg->destroy(cfg);
@@ -1984,7 +1998,7 @@ CALLBACK(unload_conn, vici_message_t*,
 
 	if (!found)
 	{
-		return create_reply("connection '%s' not found for unloading", conn);
+		return create_reply("unload: connection '%s' not found", conn_name);
 	}
 	return create_reply(NULL);
 }
