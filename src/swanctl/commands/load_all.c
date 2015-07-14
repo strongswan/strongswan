@@ -22,6 +22,7 @@
 #include "command.h"
 #include "swanctl.h"
 #include "load_creds.h"
+#include "load_authorities.h"
 #include "load_pools.h"
 #include "load_conns.h"
 
@@ -72,6 +73,10 @@ static int load_all(vici_conn_t *conn)
 	}
 	if (ret == 0)
 	{
+		ret = load_authorities_cfg(conn, format, cfg);
+	}
+	if (ret == 0)
+	{
 		ret = load_pools_cfg(conn, format, cfg);
 	}
 	if (ret == 0)
@@ -90,7 +95,8 @@ static int load_all(vici_conn_t *conn)
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		load_all, 'q', "load-all", "load credentials, pools and connections",
+		load_all, 'q', "load-all",
+		"load credentials, authorities, pools and connections",
 		{"[--raw|--pretty] [--clear] [--noprompt]"},
 		{
 			{"help",		'h', 0, "show usage information"},

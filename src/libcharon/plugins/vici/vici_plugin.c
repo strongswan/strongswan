@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -42,6 +45,7 @@
 #include "vici_cred.h"
 #include "vici_config.h"
 #include "vici_attribute.h"
+#include "vici_authority.h"
 #include "vici_logger.h"
 
 #include <library.h>
@@ -78,6 +82,11 @@ struct private_vici_plugin_t {
 	 * Credential backend
 	 */
 	vici_cred_t *cred;
+
+	/**
+	 * Certification Authority backend
+	 */
+	vici_authority_t *authority;
 
 	/**
 	 * Configuration backend
@@ -119,7 +128,10 @@ static bool register_vici(private_vici_plugin_t *this,
 			this->query = vici_query_create(this->dispatcher);
 			this->control = vici_control_create(this->dispatcher);
 			this->cred = vici_cred_create(this->dispatcher);
-			this->config = vici_config_create(this->dispatcher);
+			this->authority = vici_authority_create(this->dispatcher,
+													this->cred);
+			lib->credmgr->add_set(lib->credmgr, &this->authority->set);
+			this->config = vici_config_create(this->dispatcher, this->authority);
 			this->attrs = vici_attribute_create(this->dispatcher);
 			this->logger = vici_logger_create(this->dispatcher);
 
@@ -145,6 +157,8 @@ static bool register_vici(private_vici_plugin_t *this,
 		this->logger->destroy(this->logger);
 		this->attrs->destroy(this->attrs);
 		this->config->destroy(this->config);
+		lib->credmgr->remove_set(lib->credmgr, &this->authority->set);
+		this->authority->destroy(this->authority);
 		this->cred->destroy(this->cred);
 		this->control->destroy(this->control);
 		this->query->destroy(this->query);

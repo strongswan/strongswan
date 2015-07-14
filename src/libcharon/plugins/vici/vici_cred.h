@@ -31,6 +31,14 @@ typedef struct vici_cred_t vici_cred_t;
 struct vici_cred_t {
 
 	/**
+	 * Add a certificate to the certificate store
+	 *
+	 * @param cert	certificate to be added to store
+	 * @return		reference to certificate or cached copy
+	 */
+	certificate_t* (*add_cert)(vici_cred_t *this, certificate_t *cert);
+
+	/**
 	 * Destroy a vici_cred_t.
 	 */
 	void (*destroy)(vici_cred_t *this);

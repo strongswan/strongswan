@@ -23,6 +23,7 @@ libstrongswan_vici_la_SOURCES = \
 	vici_config.h vici_config.c \
 	vici_cred.h vici_cred.c \
 	vici_attribute.h vici_attribute.c \
+	vici_authority.h vici_authority.c \
 	vici_logger.h vici_logger.c \
 	vici_plugin.h vici_plugin.c
 

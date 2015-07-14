@@ -294,6 +294,12 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 	manage_command(this, "load-shared", load_shared, reg);
 }
 
+METHOD(vici_cred_t, add_cert, certificate_t*,
+	private_vici_cred_t *this, certificate_t *cert)
+{
+	return this->creds->get_cert_ref(this->creds, cert);
+}
+
 METHOD(vici_cred_t, destroy, void,
 	private_vici_cred_t *this)
 {
@@ -313,6 +319,7 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 
 	INIT(this,
 		.public = {
+			.add_cert = _add_cert,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,

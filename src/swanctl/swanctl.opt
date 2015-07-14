@@ -810,3 +810,35 @@ pools.<name>.<attr> =
 	subnets for the corresponding attribute types. Alternatively, **<attr>** can
 	be a numerical identifier, for which string attribute values are accepted
 	as well.
+
+authorities { # }
+	Section defining attributes of certification authorities.
+
+authorities.<name> { # }
+	Section defining a certification authority with a unique name.
+
+authorities.<name>.cacert =
+	CA certificate belonging to the certification authority.
+
+	The certificates may use a relative path from the **swanctl** _x509ca_
+	directory, or an absolute path.
+
+authorities.<name>.crl_uris =
+	Comma-separated list of CRL distribution points
+
+	Comma-separated list of CRL distribution points (ldap, http, or file URI)
+
+authorities.<name>.ocsp_uris =
+	Comma-separated list of OCSP URIs
+
+	Comma-separated list of OCSP URIs
+
+authorities.<name>.cert_uri_base =
+	Defines the base URI for the Hash and URL feature supported by IKEv2.
+
+	Defines the base URI for the Hash and URL feature supported by IKEv2.
+	Instead of exchanging complete certificates, IKEv2 allows one to send an
+	URI that resolves to the DER encoded certificate. The certificate URIs are
+	built by appending the SHA1 hash of the DER encoded certificates to this
+	base URI.
+

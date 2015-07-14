@@ -7,10 +7,12 @@ swanctl_SOURCES = \
 	commands/install.c \
 	commands/list_sas.c \
 	commands/list_pols.c \
+	commands/list_authorities.c \
 	commands/list_conns.c \
 	commands/list_certs.c \
 	commands/list_pools.c \
 	commands/load_all.c \
+	commands/load_authorities.h  commands/load_authorities.c \
 	commands/load_conns.c commands/load_conns.h \
 	commands/load_creds.c commands/load_creds.h \
 	commands/load_pools.c commands/load_pools.h \

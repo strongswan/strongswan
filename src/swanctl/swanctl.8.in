@@ -53,8 +53,14 @@ list currently active IKE_SAs
 .B "\-P, \-\-list\-pols"
 list currently installed policies
 .TP
+.B "\-b, \-\-load\-authorities"
+(re\-)load certification authorities information
+.TP
 .B "\-L, \-\-list\-conns"
 list loaded configurations
+.TP
+.B "\-B, \-\-list\-authorities"
+list loaded certification authorities information
 .TP
 .B "\-x, \-\-list\-certs"
 list stored certificates
@@ -63,7 +69,7 @@ list stored certificates
 list loaded pool configurations
 .TP
 .B "\-q, \-\-load\-all"
-(re\-)load credentials, pools and connections
+(re\-)load credentials, pools, authorities and connections
 .TP
 .B "\-c, \-\-load\-conns"
 (re\-)load connection configuration

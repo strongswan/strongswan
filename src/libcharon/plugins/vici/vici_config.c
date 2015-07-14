@@ -96,6 +96,12 @@ struct private_vici_config_t {
 	 * Lock for conns list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Auxiliary certification authority information
+	 */
+	vici_authority_t *authority;
+
 };
 
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
@@ -1043,15 +1049,21 @@ CALLBACK(parse_group, bool,
 /**
  * Parse a certificate; add as auth rule to config
  */
-static bool parse_cert(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
+static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 {
+	vici_authority_t *authority;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB_PEM, v, BUILD_END);
 	if (cert)
 	{
-		cfg->add(cfg, rule, cert);
+		if (rule == AUTH_RULE_SUBJECT_CERT)
+		{
+			authority = auth->request->this->authority;
+			authority->check_for_hash_and_url(authority, cert);
+		}
+		auth->cfg->add(auth->cfg, rule, cert);
 		return TRUE;
 	}
 	return FALSE;
@@ -1061,18 +1073,18 @@ static bool parse_cert(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
  * Parse subject certificates
  */
 CALLBACK(parse_certs, bool,
-	auth_cfg_t *cfg, chunk_t v)
+	auth_data_t *auth, chunk_t v)
 {
-	return parse_cert(cfg, AUTH_RULE_SUBJECT_CERT, v);
+	return parse_cert(auth, AUTH_RULE_SUBJECT_CERT, v);
 }
 
 /**
  * Parse CA certificates
  */
 CALLBACK(parse_cacerts, bool,
-	auth_cfg_t *cfg, chunk_t v)
+	auth_data_t *auth, chunk_t v)
 {
-	return parse_cert(cfg, AUTH_RULE_CA_CERT, v);
+	return parse_cert(auth, AUTH_RULE_CA_CERT, v);
 }
 
 /**
@@ -1267,8 +1279,8 @@ CALLBACK(auth_li, bool,
 {
 	parse_rule_t rules[] = {
 		{ "groups",			parse_group,		auth->cfg					},
-		{ "certs",			parse_certs,		auth->cfg					},
-		{ "cacerts",		parse_cacerts,		auth->cfg					},
+		{ "certs",			parse_certs,		auth						},
+		{ "cacerts",		parse_cacerts,		auth						},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -2056,7 +2068,8 @@ METHOD(vici_config_t, destroy, void,
 /**
  * See header
  */
-vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher)
+vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
+								  vici_authority_t *authority)
 {
 	private_vici_config_t *this;
 
@@ -2072,6 +2085,7 @@ vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher)
 		.dispatcher = dispatcher,
 		.conns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.authority = authority,
 	);
 
 	manage_commands(this, TRUE);

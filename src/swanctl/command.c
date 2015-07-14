@@ -211,7 +211,7 @@ int command_usage(char *error, ...)
 	{
 		for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 		{
-			fprintf(out, "  swanctl --%-15s (-%c)  %s\n",
+			fprintf(out, "  swanctl --%-16s (-%c)  %s\n",
 					cmds[i].cmd, cmds[i].op, cmds[i].description);
 		}
 	}
