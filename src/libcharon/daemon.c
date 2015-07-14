@@ -462,6 +462,10 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.traps->flush(this->public.traps);
 	}
+	if (this->public.shunts)
+	{
+		this->public.shunts->flush(this->public.shunts);
+	}
 	if (this->public.sender)
 	{
 		this->public.sender->flush(this->public.sender);
