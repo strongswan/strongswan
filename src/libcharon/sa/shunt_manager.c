@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -20,7 +21,6 @@
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 
-
 typedef struct private_shunt_manager_t private_shunt_manager_t;
 
 /**
@@ -37,6 +37,11 @@ struct private_shunt_manager_t {
 	 * Installed shunts, as child_cfg_t
 	 */
 	linked_list_t *shunts;
+
+	/**
+	 * Lock to safely access the list of shunts
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -120,6 +125,7 @@ METHOD(shunt_manager_t, install, bool,
 	bool found = FALSE;
 
 	/* check if not already installed */
+	this->lock->write_lock(this->lock);
 	enumerator = this->shunts->create_enumerator(this->shunts);
 	while (enumerator->enumerate(enumerator, &child_cfg))
 	{
@@ -130,14 +136,15 @@ METHOD(shunt_manager_t, install, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
-
 	if (found)
 	{
 		DBG1(DBG_CFG, "shunt %N policy '%s' already installed",
 			 ipsec_mode_names, child->get_mode(child), child->get_name(child));
+		this->lock->unlock(this->lock);
 		return TRUE;
 	}
 	this->shunts->insert_last(this->shunts, child->get_ref(child));
+	this->lock->unlock(this->lock);
 
 	return install_shunt_policy(child);
 }
@@ -215,6 +222,7 @@ METHOD(shunt_manager_t, uninstall, bool,
 	enumerator_t *enumerator;
 	child_cfg_t *child, *found = NULL;
 
+	this->lock->write_lock(this->lock);
 	enumerator = this->shunts->create_enumerator(this->shunts);
 	while (enumerator->enumerate(enumerator, &child))
 	{
@@ -226,6 +234,7 @@ METHOD(shunt_manager_t, uninstall, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	if (!found)
 	{
@@ -239,7 +248,10 @@ METHOD(shunt_manager_t, uninstall, bool,
 METHOD(shunt_manager_t, create_enumerator, enumerator_t*,
 	private_shunt_manager_t *this)
 {
-	return this->shunts->create_enumerator(this->shunts);
+	this->lock->read_lock(this->lock);
+	return enumerator_create_cleaner(
+							this->shunts->create_enumerator(this->shunts),
+							(void*)this->lock->unlock, this->lock);
 }
 
 METHOD(shunt_manager_t, destroy, void,
@@ -253,6 +265,7 @@ METHOD(shunt_manager_t, destroy, void,
 		child->destroy(child);
 	}
 	this->shunts->destroy(this->shunts);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -271,6 +284,7 @@ shunt_manager_t *shunt_manager_create()
 			.destroy = _destroy,
 		},
 		.shunts = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;
