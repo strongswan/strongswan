@@ -19,7 +19,10 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <threading/rwlock.h>
+#include <threading/rwlock_condvar.h>
 #include <collections/linked_list.h>
+
+#define INSTALL_DISABLED ((u_int)~0)
 
 typedef struct private_shunt_manager_t private_shunt_manager_t;
 
@@ -42,6 +45,16 @@ struct private_shunt_manager_t {
 	 * Lock to safely access the list of shunts
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Number of threads currently installing shunts, or INSTALL_DISABLED
+	 */
+	u_int installing;
+
+	/**
+	 * Condvar to signal shunt installation
+	 */
+	rwlock_condvar_t *condvar;
 };
 
 /**
@@ -126,6 +139,11 @@ METHOD(shunt_manager_t, install, bool,
 
 	/* check if not already installed */
 	this->lock->write_lock(this->lock);
+	if (this->installing == INSTALL_DISABLED)
+	{	/* flush() has been called */
+		this->lock->unlock(this->lock);
+		return FALSE;
+	}
 	enumerator = this->shunts->create_enumerator(this->shunts);
 	while (enumerator->enumerate(enumerator, &child_cfg))
 	{
@@ -144,17 +162,20 @@ METHOD(shunt_manager_t, install, bool,
 		return TRUE;
 	}
 	this->shunts->insert_last(this->shunts, child->get_ref(child));
+	this->installing++;
 	this->lock->unlock(this->lock);
 
 	success = install_shunt_policy(child);
 
+	this->lock->write_lock(this->lock);
 	if (!success)
 	{
-		this->lock->write_lock(this->lock);
 		this->shunts->remove(this->shunts, child, NULL);
-		this->lock->unlock(this->lock);
 		child->destroy(child);
 	}
+	this->installing--;
+	this->condvar->signal(this->condvar);
+	this->lock->unlock(this->lock);
 	return success;
 }
 
@@ -263,18 +284,31 @@ METHOD(shunt_manager_t, create_enumerator, enumerator_t*,
 							(void*)this->lock->unlock, this->lock);
 }
 
-METHOD(shunt_manager_t, destroy, void,
+METHOD(shunt_manager_t, flush, void,
 	private_shunt_manager_t *this)
 {
 	child_cfg_t *child;
 
+	this->lock->write_lock(this->lock);
+	while (this->installing)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 	while (this->shunts->remove_last(this->shunts, (void**)&child) == SUCCESS)
 	{
 		uninstall_shunt_policy(child);
 		child->destroy(child);
 	}
-	this->shunts->destroy(this->shunts);
+	this->installing = INSTALL_DISABLED;
+	this->lock->unlock(this->lock);
+}
+
+METHOD(shunt_manager_t, destroy, void,
+	private_shunt_manager_t *this)
+{
+	this->shunts->destroy_offset(this->shunts, offsetof(child_cfg_t, destroy));
 	this->lock->destroy(this->lock);
+	this->condvar->destroy(this->condvar);
 	free(this);
 }
 
@@ -290,10 +324,12 @@ shunt_manager_t *shunt_manager_create()
 			.install = _install,
 			.uninstall = _uninstall,
 			.create_enumerator = _create_enumerator,
+			.flush = _flush,
 			.destroy = _destroy,
 		},
 		.shunts = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.condvar = rwlock_condvar_create(),
 	);
 
 	return &this->public;
