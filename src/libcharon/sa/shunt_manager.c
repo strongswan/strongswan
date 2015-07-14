@@ -122,7 +122,7 @@ METHOD(shunt_manager_t, install, bool,
 {
 	enumerator_t *enumerator;
 	child_cfg_t *child_cfg;
-	bool found = FALSE;
+	bool found = FALSE, success;
 
 	/* check if not already installed */
 	this->lock->write_lock(this->lock);
@@ -146,7 +146,16 @@ METHOD(shunt_manager_t, install, bool,
 	this->shunts->insert_last(this->shunts, child->get_ref(child));
 	this->lock->unlock(this->lock);
 
-	return install_shunt_policy(child);
+	success = install_shunt_policy(child);
+
+	if (!success)
+	{
+		this->lock->write_lock(this->lock);
+		this->shunts->remove(this->shunts, child, NULL);
+		this->lock->unlock(this->lock);
+		child->destroy(child);
+	}
+	return success;
 }
 
 /**
