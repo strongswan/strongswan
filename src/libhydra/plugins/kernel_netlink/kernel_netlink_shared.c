@@ -185,8 +185,8 @@ static ssize_t read_msg(private_netlink_socket_t *this,
 			return -1;
 		}
 	}
-	len = recv(this->socket, buf, buflen, block ? 0 : MSG_DONTWAIT);
-	if (len == buflen)
+	len = recv(this->socket, buf, buflen, MSG_TRUNC|(block ? 0 : MSG_DONTWAIT));
+	if (len > buflen)
 	{
 		DBG1(DBG_KNL, "netlink response exceeds buffer size");
 		return 0;
