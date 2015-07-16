@@ -163,6 +163,7 @@ CALLBACK(initiate, vici_message_t*,
 	peer_cfg_t *peer_cfg;
 	char *child;
 	u_int timeout;
+	bool limits;
 	log_info_t log = {
 		.dispatcher = this->dispatcher,
 		.id = id,
@@ -170,6 +171,7 @@ CALLBACK(initiate, vici_message_t*,
 
 	child = request->get_str(request, NULL, "child");
 	timeout = request->get_int(request, 0, "timeout");
+	limits = request->get_bool(request, FALSE, "init-limits");
 	log.level = request->get_int(request, 1, "loglevel");
 
 	if (!child)
@@ -185,13 +187,16 @@ CALLBACK(initiate, vici_message_t*,
 		return send_reply(this, "CHILD_SA config '%s' not found", child);
 	}
 	switch (charon->controller->initiate(charon->controller, peer_cfg,
-					child_cfg, (controller_cb_t)log_vici, &log, timeout, FALSE))
+				child_cfg, (controller_cb_t)log_vici, &log, timeout, limits))
 	{
 		case SUCCESS:
 			return send_reply(this, NULL);
 		case OUT_OF_RES:
 			return send_reply(this, "CHILD_SA '%s' not established after %dms",
 							  child, timeout);
+		case INVALID_STATE:
+			return send_reply(this, "establishing CHILD_SA '%s' not possible "
+							  "at the moment due to limits", child);
 		case FAILED:
 		default:
 			return send_reply(this, "establishing CHILD_SA '%s' failed", child);

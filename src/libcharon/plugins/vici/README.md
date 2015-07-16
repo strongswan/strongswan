@@ -259,6 +259,7 @@ Initiates an SA while streaming _control-log_ events.
 	{
 		child = <CHILD_SA configuration name to initiate>
 		timeout = <timeout in seconds before returning>
+		init-limits = <whether limits may prevent initiating the CHILD_SA>
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>
