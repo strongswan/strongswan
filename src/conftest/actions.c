@@ -65,7 +65,7 @@ static job_requeue_t initiate(char *config)
 	{
 		DBG1(DBG_CFG, "initiating IKE_SA for CHILD_SA config '%s'", config);
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 NULL, NULL, 0);
+									 NULL, NULL, 0, FALSE);
 	}
 	else
 	{

@@ -239,7 +239,7 @@ static bool on_accept(private_load_tester_control_t *this, stream_t *io)
 
 		switch (charon->controller->initiate(charon->controller,
 										peer_cfg, child_cfg->get_ref(child_cfg),
-										(void*)initiate_cb, listener, 0))
+										(void*)initiate_cb, listener, 0, FALSE))
 		{
 			case NEED_MORE:
 				/* Callback returns FALSE once it got track of this IKE_SA.

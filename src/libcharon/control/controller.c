@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Tobias Brunner
+ * Copyright (C) 2011-2015 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
@@ -116,6 +116,11 @@ struct interface_listener_t {
 	 * spinlock to update the IKE_SA handle properly
 	 */
 	spinlock_t *lock;
+
+	/**
+	 * whether to check limits
+	 */
+	bool limits;
 };
 
 
@@ -358,7 +363,6 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		listener->child_cfg->destroy(listener->child_cfg);
 		peer_cfg->destroy(peer_cfg);
 		listener->status = FAILED;
-		/* release listener */
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
@@ -371,6 +375,49 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 	}
 	peer_cfg->destroy(peer_cfg);
+
+	if (listener->limits && ike_sa->get_state(ike_sa) == IKE_CREATED)
+	{	/* only check if we are not reusing an IKE_SA */
+		u_int half_open, limit_half_open, limit_job_load;
+
+		half_open = charon->ike_sa_manager->get_half_open_count(
+										charon->ike_sa_manager, NULL);
+		limit_half_open = lib->settings->get_int(lib->settings,
+										"%s.init_limit_half_open", 0, lib->ns);
+		limit_job_load = lib->settings->get_int(lib->settings,
+										"%s.init_limit_job_load", 0, lib->ns);
+		if (limit_half_open && half_open >= limit_half_open)
+		{
+			DBG1(DBG_IKE, "abort IKE_SA initiation, half open IKE_SA count of "
+				 "%d exceeds limit of %d", half_open, limit_half_open);
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
+			listener->child_cfg->destroy(listener->child_cfg);
+			listener->status = INVALID_STATE;
+			listener_done(listener);
+			return JOB_REQUEUE_NONE;
+		}
+		if (limit_job_load)
+		{
+			u_int jobs = 0, i;
+
+			for (i = 0; i < JOB_PRIO_MAX; i++)
+			{
+				jobs += lib->processor->get_job_load(lib->processor, i);
+			}
+			if (jobs > limit_job_load)
+			{
+				DBG1(DBG_IKE, "abort IKE_SA initiation, job load of %d exceeds "
+					 "limit of %d", jobs, limit_job_load);
+				charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+				listener->child_cfg->destroy(listener->child_cfg);
+				listener->status = INVALID_STATE;
+				listener_done(listener);
+				return JOB_REQUEUE_NONE;
+			}
+		}
+	}
 
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, 0, NULL, NULL) == SUCCESS)
 	{
@@ -391,7 +438,7 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 METHOD(controller_t, initiate, status_t,
 	private_controller_t *this, peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-	controller_cb_t callback, void *param, u_int timeout)
+	controller_cb_t callback, void *param, u_int timeout, bool limits)
 {
 	interface_job_t *job;
 	status_t status;
@@ -414,6 +461,7 @@ METHOD(controller_t, initiate, status_t,
 			.child_cfg = child_cfg,
 			.peer_cfg = peer_cfg,
 			.lock = spinlock_create(),
+			.limits = limits,
 		},
 		.public = {
 			.execute = _initiate_execute,

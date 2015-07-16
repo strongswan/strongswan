@@ -184,8 +184,8 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "CHILD_SA config '%s' not found", child);
 	}
-	switch (charon->controller->initiate(charon->controller,
-				peer_cfg, child_cfg, (controller_cb_t)log_vici, &log, timeout))
+	switch (charon->controller->initiate(charon->controller, peer_cfg,
+					child_cfg, (controller_cb_t)log_vici, &log, timeout, FALSE))
 	{
 		case SUCCESS:
 			return send_reply(this, NULL);

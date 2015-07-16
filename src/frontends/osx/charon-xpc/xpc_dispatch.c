@@ -196,7 +196,7 @@ void start_connection(private_xpc_dispatch_t *this,
 		peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 
 		if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-					(controller_cb_t)initiate_cb, &ike_sa, 0) == NEED_MORE)
+				(controller_cb_t)initiate_cb, &ike_sa, 0, FALSE) == NEED_MORE)
 		{
 			this->channels->add(this->channels, channel, ike_sa);
 			success = TRUE;

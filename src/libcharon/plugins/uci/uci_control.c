@@ -147,7 +147,7 @@ static void initiate(private_uci_control_t *this, char *name)
 		if (enumerator->enumerate(enumerator, &child_cfg) &&
 			charon->controller->initiate(charon->controller, peer_cfg,
 								child_cfg->get_ref(child_cfg),
-								controller_cb_empty, NULL, 0) == SUCCESS)
+								controller_cb_empty, NULL, 0, FALSE) == SUCCESS)
 		{
 			write_fifo(this, "connection '%s' established\n", name);
 		}
