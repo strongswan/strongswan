@@ -1,4 +1,4 @@
-charon.plugins.kernel-netlink.buflen = 4096
+charon.plugins.kernel-netlink.buflen = <min(PAGE_SIZE, 8192)>
 	Buffer size for received Netlink messages.
 
 charon.plugins.kernel-netlink.fwmark =

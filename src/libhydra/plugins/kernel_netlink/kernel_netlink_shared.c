@@ -571,7 +571,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.protocol = protocol,
 		.names = names,
 		.buflen = lib->settings->get_int(lib->settings,
-							"%s.plugins.kernel-netlink.buflen", 4096, lib->ns),
+							"%s.plugins.kernel-netlink.buflen", 0, lib->ns),
 		.timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,
@@ -582,6 +582,16 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.parallel = parallel,
 	);
 
+	if (!this->buflen)
+	{
+		long pagesize = sysconf(_SC_PAGESIZE);
+		if (pagesize == -1)
+		{
+			pagesize = 4096;
+		}
+		/* base this on NLMSG_GOODSIZE */
+		this->buflen = min(pagesize, 8192);
+	}
 	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create netlink socket");
