@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -136,6 +139,26 @@ struct vici_message_t {
 	 * @return		value
 	 */
 	int (*vget_int)(vici_message_t *this, int def, char *fmt, va_list args);
+
+	/**
+	 * Get the value of a key/value pair as boolean.
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param ...	arguments to fmt string
+	 * @return		value
+	 */
+	bool (*get_bool)(vici_message_t *this, bool def, char *fmt, ...);
+
+	/**
+	 * Get the value of a key/value pair as boolean, va_list variant
+	 *
+	 * @param def	default value if not found
+	 * @param fmt	printf style format string for key, with sections
+	 * @param args	arguments to fmt string
+	 * @return		value
+	 */
+	bool (*vget_bool)(vici_message_t *this, bool def, char *fmt, va_list args);
 
 	/**
 	 * Get the raw value of a key/value pair.
