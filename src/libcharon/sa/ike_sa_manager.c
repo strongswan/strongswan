@@ -1572,7 +1572,6 @@ METHOD(ike_sa_manager_t, checkin, void,
 			put_half_open(this, entry);
 		}
 		else if (!entry->half_open &&
-				 !entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
 				 ike_sa->get_state(ike_sa) == IKE_CONNECTING)
 		{
 			/* this is a new half-open SA */
