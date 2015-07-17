@@ -1348,44 +1348,47 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	DBG2(DBG_MGR, "checkout IKE_SA by config");
 
-	if (!this->reuse_ikesa)
-	{	/* IKE_SA reuse disable by config */
-		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
-		charon->bus->set_sa(charon->bus, ike_sa);
-		return ike_sa;
-	}
-
-	enumerator = create_table_enumerator(this);
-	while (enumerator->enumerate(enumerator, &entry, &segment))
+	if (this->reuse_ikesa)
 	{
-		if (!wait_for_entry(this, entry, segment))
+		enumerator = create_table_enumerator(this);
+		while (enumerator->enumerate(enumerator, &entry, &segment))
 		{
-			continue;
-		}
-		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
-		{	/* skip IKE_SAs which are not usable */
-			continue;
-		}
-
-		current_peer = entry->ike_sa->get_peer_cfg(entry->ike_sa);
-		if (current_peer && current_peer->equals(current_peer, peer_cfg))
-		{
-			current_ike = current_peer->get_ike_cfg(current_peer);
-			if (current_ike->equals(current_ike, peer_cfg->get_ike_cfg(peer_cfg)))
+			if (!wait_for_entry(this, entry, segment))
 			{
-				entry->checked_out = TRUE;
-				ike_sa = entry->ike_sa;
-				DBG2(DBG_MGR, "found existing IKE_SA %u with a '%s' config",
-						ike_sa->get_unique_id(ike_sa),
-						current_peer->get_name(current_peer));
-				break;
+				continue;
+			}
+			if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+			{	/* skip IKE_SAs which are not usable */
+				continue;
+			}
+			current_peer = entry->ike_sa->get_peer_cfg(entry->ike_sa);
+			if (current_peer && current_peer->equals(current_peer, peer_cfg))
+			{
+				current_ike = current_peer->get_ike_cfg(current_peer);
+				if (current_ike->equals(current_ike,
+										peer_cfg->get_ike_cfg(peer_cfg)))
+				{
+					entry->checked_out = TRUE;
+					ike_sa = entry->ike_sa;
+					DBG2(DBG_MGR, "found existing IKE_SA %u with a '%s' config",
+							ike_sa->get_unique_id(ike_sa),
+							current_peer->get_name(current_peer));
+					break;
+				}
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 
 	if (!ike_sa)
-	{	/* no IKE_SA using such a config, hand out a new */
+	{	/* no IKE_SA using such a config, or reuse disabled, hand out a new */
+		if (this->ikesa_limit &&
+			this->public.get_count(&this->public) >= this->ikesa_limit)
+		{
+			DBG1(DBG_MGR, "IKE_SA creation failed, hitting IKE_SA limit (%u)",
+				 this->ikesa_limit);
+			return NULL;
+		}
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
