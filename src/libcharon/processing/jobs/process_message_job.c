@@ -91,16 +91,26 @@ METHOD(job_t, get_priority, job_priority_t,
 	{
 		case IKE_AUTH:
 			/* IKE auth is rather expensive and often blocking, low priority */
+		case AGGRESSIVE:
+		case ID_PROT:
+			/* AM is basically IKE_SA_INIT/IKE_AUTH combined (without EAP/XAuth)
+			 * MM is similar, but stretched out more */
 			return JOB_PRIO_LOW;
 		case INFORMATIONAL:
+		case INFORMATIONAL_V1:
 			/* INFORMATIONALs are inexpensive, for DPD we should have low
 			 * reaction times */
 			return JOB_PRIO_HIGH;
 		case IKE_SA_INIT:
-		case CREATE_CHILD_SA:
-		default:
 			/* IKE_SA_INIT is expensive, but we will drop them in the receiver
 			 * if we are overloaded */
+		case CREATE_CHILD_SA:
+		case QUICK_MODE:
+			/* these may require DH, but if not they are relatively cheap */
+		case TRANSACTION:
+			/* these are mostly cheap, however, if XAuth via RADIUS is used
+			 * they may block */
+		default:
 			return JOB_PRIO_MEDIUM;
 	}
 }
