@@ -762,15 +762,24 @@ is configured the identity has to be confirmed by the certificate.
 
 Can be an IP address, a fully-qualified domain name, an email address or a
 Distinguished Name for which the ID type is determined automatically and the
-string is converted to the appropriate encoding. To enforce a specific identity
-type, a prefix may be used, followed by a colon (:). If the number sign (#)
-follows the colon, the remaining data is interpreted as hex encoding, otherwise
-the string is used as-is as the identification data. Note that this implies
-that no conversion is performed for non-string identities. For example,
+string is converted to the appropriate encoding. The rules for this conversion
+are described in IDENTITY PARSING below.
+
+In certain special situations the identity parsing above might be inadequate
+or produce the wrong result. Examples are the need to encode a FQDN as KEY_ID or
+the string parser being unable to produce the correct binary ASN.1 encoding of
+a certificate's DN.  For these situations it is possible to enforce a specific
+identity type and to provide the binary encoding of the identity. To do this a
+prefix may be used, followed by a colon (:). If the number sign (#) follows the
+colon, the remaining data is interpreted as hex encoding, otherwise the string
+is used as is as the identification data.
+.BR Note :
+The latter implies that no conversion is performed for non-string identities.
+For example,
 \fIipv4:10.0.0.1\fP does not create a valid ID_IPV4_ADDR IKE identity, as it
 does not get converted to binary 0x0a000001. Instead, one could use
 \fIipv4:#0a000001\fP to get a valid identity, but just using the implicit type
-with automatic conversion is usually simpler. The same applies to the ASN1
+with automatic conversion is usually simpler. The same applies to the ASN.1
 encoded types. The following prefixes are known:
 .BR ipv4 ,
 .BR ipv6 ,
@@ -1289,6 +1298,48 @@ and the value
 .B keep
 to reject new IKE_SA setups and keep the duplicate established earlier.
 
+.SH IDENTITY PARSING
+The type and binary encoding of identity strings specified in \fIleftid\fR
+are detected as follows:
+.IP \[bu]
+If the string value contains an equal sign (=) it is assumed to be a
+Distinguished Name, with RDNs separated by commas (,) \fIor\fR slashes (/ - the string
+must start with a slash to use this syntax). An attempt is made to create a
+binary ASN.1 encoding from this string. If that fails the type is set to KEY_ID
+with the literal string value adopted as encoding.
+.IP \[bu]
+If the string value contains an @ the type depends on the position of that
+character:
+.RS
+.IP \[bu]
+If the string begins with @# the type is set to KEY_ID and the string following
+that prefix is assumed to be the hex-encoded binary value of the identity.
+.IP \[bu]
+If the string begins with @@ the type is set to USER_FQDN and the encoding is
+the literal string after that prefix.
+.IP \[bu]
+If the string begins with @ the type is set to FQDN and the encoding is the
+literal string after that prefix.
+.IP \[bu]
+All remaining strings containing an @ are assumed to be of type USER_FQDN/RFC822
+with the literal string value as encoding.
+.RE
+.IP \[bu]
+If the value does not contain any @ or = characters it is parsed as follows:
+.RS
+.IP \[bu]
+If the value is an empty string, or equals %any[6], 0.0.0.0, ::, or * the
+type is set to ID_ANY, which matches any other identity.
+.IP \[bu]
+If the value contains a colon (:) it is assumed to be an IPv6 address. But if
+parsing the address and converting it to its binary encoding fails the type is
+set to KEY_ID and the encoding is the literal value.
+.IP \[bu]
+For all other strings an attempt at parsing them as IPv4 addresses is made. If
+that fails the type is set to FQDN and the literal value is adopted as
+encoding (this is where domain names and simple names end up).
+.RE
+
 .SH SA EXPIRY/REKEY
 The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
 after a specific amount of time. For IPsec SAs this can also happen after a
@@ -1365,6 +1416,7 @@ must not exceed the original limit. For example, specifying
 .B margintime = 30m
 in the default configuration is a bad idea as there is a chance that the rekey
 time equals zero and, thus, rekeying gets disabled.
+
 .SH FILES
 .nf
 /etc/ipsec.conf
