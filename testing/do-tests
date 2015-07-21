@@ -510,6 +510,9 @@ do
 		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pools \
 			    > $TESTRESULTDIR/${host}.swanctl.pools 2>/dev/null
 
+		    ssh $SSHCONF $HOSTLOGIN swanctl --list-authorities \
+			    > $TESTRESULTDIR/${host}.swanctl.authorities 2>/dev/null
+
 		    ssh $SSHCONF $HOSTLOGIN swanctl --list-sas \
 			    > $TESTRESULTDIR/${host}.swanctl.sas 2>/dev/null
 
@@ -564,8 +567,8 @@ do
 	  <ul>
 	    <li><a href="$host.swanctl.sas">swanctl --list-sas</a></li>
 	    <li><a href="$host.swanctl.pols">swanctl --list-pols</a></li>
+	    <li><a href="$host.swanctl.authorities">swanctl --list-authorities</a></li>
 	    <li><a href="$host.swanctl.stats">swanctl --stats</a></li>
-	    <li><a href="$host.auth.log">auth.log</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
@@ -575,6 +578,7 @@ do
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
+	    <li><a href="$host.auth.log">auth.log</a></li>
 	  </ul>
 	  &nbsp;
       </td>
