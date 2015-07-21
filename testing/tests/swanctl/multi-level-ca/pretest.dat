@@ -1,0 +1,8 @@
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+dave::service charon start 2> /dev/null
+moon::sleep 1
+carol::swanctl --initiate --child alice 2> /dev/null
+carol::swanctl --initiate --child venus 2> /dev/null
+dave::swanctl --initiate --child alice 2> /dev/null
+dave::swanctl --initiate --child venus 2> /dev/null

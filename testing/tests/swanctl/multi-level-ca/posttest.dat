@@ -1,0 +1,8 @@
+carol::swanctl --terminate --ike home 2> /dev/null
+dave::swanctl --terminate --ike home 2> /dev/null
+carol::service charon stop 2> /dev/null
+dave::service charon stop 2> /dev/null
+moon::service charon stop 2> /dev/null
+carol::rm -r /etc/swanctl
+dave::rm -r /etc/swanctl
+moon::rm -r /etc/swanctl
