@@ -26,6 +26,7 @@
 
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
+#define ROAM_DELAY_RECHECK 1000
 
 typedef struct private_android_net_t private_android_net_t;
 
@@ -60,6 +61,11 @@ struct private_android_net_t {
 	 * Socket used to determine source address
 	 */
 	int socket_v4;
+
+	/**
+	 * Whether the device is currently connected
+	 */
+	bool connected;
 };
 
 /**
@@ -84,6 +90,7 @@ static void connectivity_cb(private_android_net_t *this,
 
 	time_monotonic(&now);
 	this->mutex->lock(this->mutex);
+	this->connected = !disconnected;
 	if (!timercmp(&now, &this->next_roam, >))
 	{
 		this->mutex->unlock(this->mutex);
@@ -107,6 +114,8 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		struct sockaddr_in6 sin6;
 	} addr;
 	socklen_t addrlen;
+	timeval_t now;
+	job_t *job;
 
 	addrlen = *dest->get_sockaddr_len(dest);
 	addr.sockaddr.sa_family = AF_UNSPEC;
@@ -126,6 +135,27 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		if (errno != ENETUNREACH)
 		{
 			DBG1(DBG_KNL, "failed to connect socket: %s", strerror(errno));
+		}
+		else
+		{
+			time_monotonic(&now);
+			this->mutex->lock(this->mutex);
+			if (this->connected && timercmp(&now, &this->next_roam, >))
+			{	/* we were not able to find a source address but reportedly are
+				 * connected, trigger a recheck in case an IP address appears
+				 * delayed but the callback is not triggered again */
+				timeval_add_ms(&now, ROAM_DELAY_RECHECK);
+				this->next_roam = now;
+				this->mutex->unlock(this->mutex);
+				job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
+												  NULL, NULL, NULL);
+				lib->scheduler->schedule_job_ms(lib->scheduler, job,
+												ROAM_DELAY_RECHECK);
+			}
+			else
+			{
+				this->mutex->unlock(this->mutex);
+			}
 		}
 		return NULL;
 	}
@@ -275,7 +305,10 @@ kernel_net_t *kernel_android_net_create()
 	}
 	charonservice->bypass_socket(charonservice, this->socket_v4, AF_INET);
 
-	this->network_manager->add_connectivity_cb(this->network_manager,
-											  (void*)connectivity_cb, this);
+	this->mutex->lock(this->mutex);
+	this->network_manager->add_connectivity_cb(
+						this->network_manager, (void*)connectivity_cb, this);
+	this->connected = this->network_manager->is_connected(this->network_manager);
+	this->mutex->unlock(this->mutex);
 	return &this->public;
 }
