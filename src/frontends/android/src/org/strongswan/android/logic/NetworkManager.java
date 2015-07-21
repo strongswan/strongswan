@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -42,12 +42,21 @@ public class NetworkManager extends BroadcastReceiver
 		mContext.unregisterReceiver(this);
 	}
 
+	public boolean isConnected()
+	{
+		ConnectivityManager cm = (ConnectivityManager)mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo info = null;
+		if (cm != null)
+		{
+			info = cm.getActiveNetworkInfo();
+		}
+		return info != null && info.isConnected();
+	}
+
 	@Override
 	public void onReceive(Context context, Intent intent)
 	{
-		ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo info = cm.getActiveNetworkInfo();
-		networkChanged(info == null || !info.isConnected());
+		networkChanged(!isConnected());
 	}
 
 	/**
