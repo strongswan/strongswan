@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -388,7 +391,7 @@ static void print_crl(crl_t *crl)
 		chunk = chunk_skip_zero(chunk);
 		localtime_r(&ts, &tm);
 		strftime(buf, sizeof(buf), "%F %T", &tm);
-		printf("    %#B %N %s\n", &chunk, crl_reason_names, reason, buf);
+		printf("    %#B: %s, %N\n", &chunk, buf, crl_reason_names, reason);
 		count++;
 	}
 	enumerator->destroy(enumerator);
