@@ -42,6 +42,7 @@ public class VpnProfileDataSource
 	public static final String KEY_USER_CERTIFICATE = "user_certificate";
 	public static final String KEY_MTU = "mtu";
 	public static final String KEY_PORT = "port";
+	public static final String KEY_SPLIT_TUNNELING = "split_tunneling";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -50,7 +51,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 6;
+	private static final int DATABASE_VERSION = 7;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -63,7 +64,8 @@ public class VpnProfileDataSource
 								KEY_CERTIFICATE + " TEXT," +
 								KEY_USER_CERTIFICATE + " TEXT," +
 								KEY_MTU + " INTEGER," +
-								KEY_PORT + " INTEGER" +
+								KEY_PORT + " INTEGER," +
+								KEY_SPLIT_TUNNELING + " INTEGER" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -76,6 +78,7 @@ public class VpnProfileDataSource
 								KEY_USER_CERTIFICATE,
 								KEY_MTU,
 								KEY_PORT,
+								KEY_SPLIT_TUNNELING,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -118,6 +121,11 @@ public class VpnProfileDataSource
 			if (oldVersion < 6)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_PORT +
+						   " INTEGER;");
+			}
+			if (oldVersion < 7)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SPLIT_TUNNELING +
 						   " INTEGER;");
 			}
 		}
@@ -273,6 +281,7 @@ public class VpnProfileDataSource
 		profile.setUserCertificateAlias(cursor.getString(cursor.getColumnIndex(KEY_USER_CERTIFICATE)));
 		profile.setMTU(getInt(cursor, cursor.getColumnIndex(KEY_MTU)));
 		profile.setPort(getInt(cursor, cursor.getColumnIndex(KEY_PORT)));
+		profile.setSplitTunneling(getInt(cursor, cursor.getColumnIndex(KEY_SPLIT_TUNNELING)));
 		return profile;
 	}
 
@@ -288,6 +297,7 @@ public class VpnProfileDataSource
 		values.put(KEY_USER_CERTIFICATE, profile.getUserCertificateAlias());
 		values.put(KEY_MTU, profile.getMTU());
 		values.put(KEY_PORT, profile.getPort());
+		values.put(KEY_SPLIT_TUNNELING, profile.getSplitTunneling());
 		return values;
 	}
 

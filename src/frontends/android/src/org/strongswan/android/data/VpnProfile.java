@@ -17,10 +17,15 @@
 
 package org.strongswan.android.data;
 
+
 public class VpnProfile implements Cloneable
 {
+	/* While storing this as EnumSet would be nicer this simplifies storing it in a database */
+	public static final int SPLIT_TUNNELING_BLOCK_IPV4 = 1;
+	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
+
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private Integer mMTU, mPort;
+	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -122,6 +127,16 @@ public class VpnProfile implements Cloneable
 	public void setPort(Integer port)
 	{
 		this.mPort = port;
+	}
+
+	public Integer getSplitTunneling()
+	{
+		return mSplitTunneling;
+	}
+
+	public void setSplitTunneling(Integer splitTunneling)
+	{
+		this.mSplitTunneling = splitTunneling;
 	}
 
 	@Override
