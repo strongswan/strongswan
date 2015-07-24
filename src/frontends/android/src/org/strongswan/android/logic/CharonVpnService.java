@@ -18,6 +18,10 @@
 package org.strongswan.android.logic;
 
 import java.io.File;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -35,6 +39,7 @@ import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
 import org.strongswan.android.utils.SettingsWriter;
 
+import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
@@ -48,6 +53,7 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.security.KeyChain;
 import android.security.KeyChainException;
+import android.system.OsConstants;
 import android.util.Log;
 
 public class CharonVpnService extends VpnService implements Runnable
@@ -214,7 +220,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						startConnection(mCurrentProfile);
 						mIsDisconnecting = false;
 
-						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
+						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName(), mCurrentProfile.getSplitTunneling());
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
@@ -535,15 +541,17 @@ public class CharonVpnService extends VpnService implements Runnable
 	public class BuilderAdapter
 	{
 		private final String mName;
+		private final Integer mSplitTunneling;
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
 
-		public BuilderAdapter(String name)
+		public BuilderAdapter(String name, Integer splitTunneling)
 		{
 			mName = name;
+			mSplitTunneling = splitTunneling;
 			mBuilder = createBuilder(name);
-			mCache = new BuilderCache();
+			mCache = new BuilderCache(mSplitTunneling);
 		}
 
 		private VpnService.Builder createBuilder(String name)
@@ -565,7 +573,6 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				mBuilder.addAddress(address, prefixLength);
 				mCache.addAddress(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
@@ -580,6 +587,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			try
 			{
 				mBuilder.addDnsServer(address);
+				mCache.recordAddressFamily(address);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -592,7 +600,6 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				mBuilder.addRoute(address, prefixLength);
 				mCache.addRoute(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
@@ -619,7 +626,6 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				mBuilder.setMtu(mtu);
 				mCache.setMtu(mtu);
 			}
 			catch (IllegalArgumentException ex)
@@ -634,6 +640,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			ParcelFileDescriptor fd;
 			try
 			{
+				mCache.applyData(mBuilder);
 				fd = mBuilder.establish();
 			}
 			catch (Exception ex)
@@ -649,7 +656,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			 * builder anymore, but we might need another when reestablishing */
 			mBuilder = createBuilder(mName);
 			mEstablishedCache = mCache;
-			mCache = new BuilderCache();
+			mCache = new BuilderCache(mSplitTunneling);
 			return fd.detachFd();
 		}
 
@@ -687,17 +694,40 @@ public class CharonVpnService extends VpnService implements Runnable
 	public class BuilderCache
 	{
 		private final List<PrefixedAddress> mAddresses = new ArrayList<PrefixedAddress>();
-		private final List<PrefixedAddress> mRoutes = new ArrayList<PrefixedAddress>();
+		private final List<PrefixedAddress> mRoutesIPv4 = new ArrayList<PrefixedAddress>();
+		private final List<PrefixedAddress> mRoutesIPv6 = new ArrayList<PrefixedAddress>();
+		private final int mSplitTunneling;
 		private int mMtu;
+		private boolean mIPv4Seen, mIPv6Seen;
+
+		public BuilderCache(Integer splitTunneling)
+		{
+			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
+		}
 
 		public void addAddress(String address, int prefixLength)
 		{
 			mAddresses.add(new PrefixedAddress(address, prefixLength));
+			recordAddressFamily(address);
 		}
 
 		public void addRoute(String address, int prefixLength)
 		{
-			mRoutes.add(new PrefixedAddress(address, prefixLength));
+			try
+			{
+				if (isIPv6(address))
+				{
+					mRoutesIPv6.add(new PrefixedAddress(address, prefixLength));
+				}
+				else
+				{
+					mRoutesIPv4.add(new PrefixedAddress(address, prefixLength));
+				}
+			}
+			catch (UnknownHostException ex)
+			{
+				ex.printStackTrace();
+			}
 		}
 
 		public void setMtu(int mtu)
@@ -705,17 +735,87 @@ public class CharonVpnService extends VpnService implements Runnable
 			mMtu = mtu;
 		}
 
+		public void recordAddressFamily(String address)
+		{
+			try
+			{
+				if (isIPv6(address))
+				{
+					mIPv6Seen = true;
+				}
+				else
+				{
+					mIPv4Seen = true;
+				}
+			}
+			catch (UnknownHostException ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+
+		@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 		public void applyData(VpnService.Builder builder)
 		{
 			for (PrefixedAddress address : mAddresses)
 			{
 				builder.addAddress(address.mAddress, address.mPrefix);
 			}
-			for (PrefixedAddress route : mRoutes)
+			/* add routes depending on whether split tunneling is allowed or not,
+			 * that is, whether we have to handle and block non-VPN traffic */
+			if ((mSplitTunneling & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) == 0)
 			{
-				builder.addRoute(route.mAddress, route.mPrefix);
+				if (mIPv4Seen)
+				{	/* split tunneling is used depending on the routes */
+					for (PrefixedAddress route : mRoutesIPv4)
+					{
+						builder.addRoute(route.mAddress, route.mPrefix);
+					}
+				}
+				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+				{	/* allow traffic that would otherwise be blocked to bypass the VPN */
+					builder.allowFamily(OsConstants.AF_INET);
+				}
+			}
+			else if (mIPv4Seen)
+			{	/* only needed if we've seen any addresses.  otherwise, traffic
+				 * is blocked by default (we also install no routes in that case) */
+				builder.addRoute("0.0.0.0", 0);
+			}
+			/* same thing for IPv6 */
+			if ((mSplitTunneling & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) == 0)
+			{
+				if (mIPv6Seen)
+				{
+					for (PrefixedAddress route : mRoutesIPv6)
+					{
+						builder.addRoute(route.mAddress, route.mPrefix);
+					}
+				}
+				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+				{
+					builder.allowFamily(OsConstants.AF_INET6);
+				}
+			}
+			else if (mIPv6Seen)
+			{
+				builder.addRoute("::", 0);
 			}
 			builder.setMtu(mMtu);
+		}
+
+		private boolean isIPv6(String address) throws UnknownHostException
+		{
+			InetAddress addr = InetAddress.getByName(address);
+			if (addr instanceof Inet4Address)
+			{
+				return false;
+			}
+			else if (addr instanceof Inet6Address)
+			{
+				return true;
+			}
+			return false;
 		}
 
 		private class PrefixedAddress
