@@ -179,6 +179,24 @@
                 android:inputType="number|textNoSuggestions"
                 android:hint="@string/profile_use_default_hint" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_split_tunneling_label" />
+
+            <CheckBox
+                android:id="@+id/split_tunneling_v4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_split_tunnelingv4_title" />
+
+            <CheckBox
+                android:id="@+id/split_tunneling_v6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_split_tunnelingv6_title" />
+
         </LinearLayout>
     </LinearLayout>
 

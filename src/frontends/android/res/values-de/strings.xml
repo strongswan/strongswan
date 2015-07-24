@@ -67,6 +67,9 @@
     <string name="profile_mtu_label">MTU:</string>
     <string name="profile_port_label">Server Port:</string>
     <string name="profile_use_default_hint">(Standardwert verwenden)</string>
+    <string name="profile_split_tunneling_label">Split-Tunneling:</string>
+    <string name="profile_split_tunnelingv4_title">Blockiere IPv4 Verkehr der nicht für das VPN bestimmt ist</string>
+    <string name="profile_split_tunnelingv6_title">Blockiere IPv6 Verkehr der nicht für das VPN bestimmt ist</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Bitte geben Sie hier die Gateway-Adresse ein</string>
     <string name="alert_text_no_input_username">Bitte geben Sie hier Ihren Benutzernamen ein</string>

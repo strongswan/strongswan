@@ -85,6 +85,8 @@ public class VpnProfileDetailActivity extends Activity
 	private ViewGroup mAdvancedSettings;
 	private EditText mMTU;
 	private EditText mPort;
+	private CheckBox mBlockIPv4;
+	private CheckBox mBlockIPv6;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -119,6 +121,8 @@ public class VpnProfileDetailActivity extends Activity
 
 		mMTU = (EditText)findViewById(R.id.mtu);
 		mPort = (EditText)findViewById(R.id.port);
+		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
+		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -344,7 +348,8 @@ public class VpnProfileDetailActivity extends Activity
 		boolean show = mShowAdvanced.isChecked();
 		if (!show && mProfile != null)
 		{
-			show = mProfile.getMTU() != null || mProfile.getPort() != null;
+			Integer st = mProfile.getSplitTunneling();
+			show = mProfile.getMTU() != null || mProfile.getPort() != null || (st != null && st != 0);
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -445,6 +450,10 @@ public class VpnProfileDetailActivity extends Activity
 		mProfile.setCertificateAlias(certAlias);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
+		int st = 0;
+		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
+		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
+		mProfile.setSplitTunneling(st == 0 ? null : st);
 	}
 
 	/**
@@ -469,6 +478,8 @@ public class VpnProfileDetailActivity extends Activity
 				mPassword.setText(mProfile.getPassword());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);
+				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
 				useralias = mProfile.getUserCertificateAlias();
 				alias = mProfile.getCertificateAlias();
 				getActionBar().setTitle(mProfile.getName());

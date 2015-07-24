@@ -67,6 +67,9 @@
     <string name="profile_mtu_label">MTU:</string>
     <string name="profile_port_label">Server port:</string>
     <string name="profile_use_default_hint">(use default)</string>
+    <string name="profile_split_tunneling_label">Split tunneling:</string>
+    <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
+    <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Wprowadź adres bramki</string>
     <string name="alert_text_no_input_username">Wprowadź swoją nazwę użytkownika</string>
