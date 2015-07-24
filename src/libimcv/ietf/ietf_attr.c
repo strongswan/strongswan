@@ -16,6 +16,7 @@
 #include "ietf_attr.h"
 #include "ietf/ietf_attr_assess_result.h"
 #include "ietf/ietf_attr_attr_request.h"
+#include "ietf/ietf_attr_fwd_enabled.h"
 #include "ietf/ietf_attr_installed_packages.h"
 #include "ietf/ietf_attr_numeric_version.h"
 #include "ietf/ietf_attr_op_status.h"
@@ -73,6 +74,8 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, size_t length,
 		case IETF_ATTR_REMEDIATION_INSTRUCTIONS:
 			return ietf_attr_remediation_instr_create_from_data(length, value);
 		case IETF_ATTR_FORWARDING_ENABLED:
+			return ietf_attr_fwd_enabled_create_from_data(length, value,
+									pen_type_create(PEN_IETF, type));
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 			return generic_attr_bool_create_from_data(length, value,
 									pen_type_create(PEN_IETF, type));

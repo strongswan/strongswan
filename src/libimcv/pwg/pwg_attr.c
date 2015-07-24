@@ -18,6 +18,7 @@
 #include "generic/generic_attr_bool.h"
 #include "generic/generic_attr_chunk.h"
 #include "generic/generic_attr_string.h"
+#include "ietf/ietf_attr_fwd_enabled.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "pwg/pwg_attr_vendor_smi_code.h"
 
@@ -79,7 +80,6 @@ pa_tnc_attr_t* pwg_attr_create_from_data(u_int32_t type, size_t length, chunk_t 
 	switch (type)
 	{
 		case PWG_HCD_DEFAULT_PWD_ENABLED:
-		case PWG_HCD_FORWARDING_ENABLED:
 		case PWG_HCD_USER_APP_ENABLED:
 		case PWG_HCD_USER_APP_PERSIST_ENABLED:
 		case PWG_HCD_PSTN_FAX_ENABLED:
@@ -111,6 +111,9 @@ pa_tnc_attr_t* pwg_attr_create_from_data(u_int32_t type, size_t length, chunk_t 
 									pen_type_create(PEN_PWG, type));
 		case PWG_HCD_VENDOR_SMI_CODE:
 			return pwg_attr_vendor_smi_code_create_from_data(length, value);
+		case PWG_HCD_FORWARDING_ENABLED:
+			return ietf_attr_fwd_enabled_create_from_data(length, value,
+									pen_type_create(PEN_PWG, type));
 		case PWG_HCD_FIREWALL_SETTING:
 			return ietf_attr_port_filter_create_from_data(length, value,
 									pen_type_create(PEN_PWG, type));
