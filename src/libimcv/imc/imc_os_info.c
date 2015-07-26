@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -194,6 +194,14 @@ METHOD(imc_os_info_t, get_fwd_status, os_fwd_status_t,
 	}
 
 	return fwd_status;
+}
+
+METHOD(imc_os_info_t, get_default_pwd_status, bool,
+	private_imc_os_info_t *this)
+{
+	/* As an option the default password status can be configured manually */
+	return lib->settings->get_bool(lib->settings,
+					"%s.imcv.os_info.default_password_enabled", FALSE, lib->ns);
 }
 
 METHOD(imc_os_info_t, get_uptime, time_t,
@@ -618,6 +626,7 @@ imc_os_info_t *imc_os_info_create(void)
 			.get_numeric_version = _get_numeric_version,
 			.get_version = _get_version,
 			.get_fwd_status = _get_fwd_status,
+			.get_default_pwd_status = _get_default_pwd_status,
 			.get_uptime = _get_uptime,
 			.get_setting = _get_setting,
 			.create_package_enumerator = _create_package_enumerator,
