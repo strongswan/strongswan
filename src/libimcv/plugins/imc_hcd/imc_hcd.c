@@ -23,6 +23,7 @@
 #include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include "ietf/ietf_attr_fwd_enabled.h"
 #include <pwg/pwg_attr.h>
 #include <pwg/pwg_attr_vendor_smi_code.h>
 
@@ -46,6 +47,22 @@ static pen_type_t msg_types[] = {
 
 static imc_agent_t *imc_hcd;
 static imc_os_info_t *os;
+
+typedef struct section_subtype_t section_subtype_t;
+
+struct section_subtype_t {
+	char *section;
+	pa_subtype_pwg_t subtype;
+};
+
+static section_subtype_t section_subtypes[] = {
+	{ "system",    PA_SUBTYPE_PWG_HCD_SYSTEM    },
+	{ "console",   PA_SUBTYPE_PWG_HCD_CONSOLE   },
+	{ "marker",    PA_SUBTYPE_PWG_HCD_MARKER    },
+	{ "finisher",  PA_SUBTYPE_PWG_HCD_FINISHER  },
+	{ "interface", PA_SUBTYPE_PWG_HCD_INTERFACE },
+	{ "scanner"  , PA_SUBTYPE_PWG_HCD_SCANNER   }
+};
 
 typedef struct quadruple_t quadruple_t;
 
@@ -167,9 +184,7 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 	pa_tnc_attr_t *attr;
 	bool status;
 
-	status = lib->settings->get_bool(lib->settings,
-				"%s.plugins.imc-hcd.subtypes.system.default_password_enabled",
-				FALSE, lib->ns);
+	status = os->get_default_pwd_status(os);
 	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_DEFAULT_PWD_ENABLED,
 				status ? "yes" : "no");
 	attr = generic_attr_bool_create(status,
@@ -183,14 +198,12 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 static void add_forwarding_enabled(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
-	bool status;
+	os_fwd_status_t fwd_status;
 
-	status = lib->settings->get_bool(lib->settings,
-				"%s.plugins.imc-hcd.subtypes.system.forwarding_enabled",
-				FALSE, lib->ns);
-	DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, PWG_HCD_FORWARDING_ENABLED,
-				status ? "yes" : "no");
-	attr = generic_attr_bool_create(status,
+	fwd_status = os->get_fwd_status(os);
+	DBG2(DBG_IMC, "  %N: %N", pwg_attr_names, PWG_HCD_FORWARDING_ENABLED,
+				os_fwd_status_names, fwd_status);
+	attr = ietf_attr_fwd_enabled_create(fwd_status,
 				pen_type_create(PEN_PWG, PWG_HCD_FORWARDING_ENABLED));
 	msg->add_attribute(msg, attr);
 }
@@ -483,37 +496,24 @@ TNC_Result TNC_IMC_API TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	while (enumerator->enumerate(enumerator, &section) &&
 		   result == TNC_RESULT_SUCCESS)
 	{
-		if (streq(section, "system"))
+		subtype = PA_SUBTYPE_PWG_HCD_UNKNOWN;
+
+		for (i = 0; i < countof(section_subtypes); i++)
 		{
-			subtype = PA_SUBTYPE_PWG_HCD_SYSTEM;
+			if (streq(section, section_subtypes[i].section))
+			{
+				subtype = section_subtypes[i].subtype;
+				break;
+			}
 		}
-		else if (streq(section, "console"))
-		{
-			subtype = PA_SUBTYPE_PWG_HCD_CONSOLE;
-		}
-		else if (streq(section, "marker"))
-		{
-			subtype = PA_SUBTYPE_PWG_HCD_MARKER;
-		}
-		else if (streq(section, "finisher"))
-		{
-			subtype = PA_SUBTYPE_PWG_HCD_FINISHER;
-		}
-		else if (streq(section, "interface"))
-		{
-			subtype = PA_SUBTYPE_PWG_HCD_INTERFACE;
-		}
-		else if (streq(section, "scanner"))
-		{
-			subtype = PA_SUBTYPE_PWG_HCD_SCANNER;
-		}
-		else
+		if (subtype == PA_SUBTYPE_PWG_HCD_UNKNOWN)
 		{
 			DBG1(DBG_IMC, "HCD subtype '%s' not supported", section);
 			continue;
 		}
 		DBG2(DBG_IMC, "retrieving attributes for PA subtype %N/%N",
 			 pen_names, PEN_PWG, pa_subtype_pwg_names, subtype);
+
 		msg_type = pen_type_create(PEN_PWG, subtype);
 		out_msg = imc_msg_create(imc_hcd, state, connection_id, imc_id,
 								 TNC_IMVID_ANY, msg_type);
@@ -556,8 +556,10 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 	imc_msg_t *out_msg;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
-	pen_type_t type;
+	pen_type_t type, msg_type;
 	TNC_Result result;
+	char *section = NULL;
+	int i;
 	bool fatal_error = FALSE, pushed_info;
 
 	/* generate an outgoing PA-TNC message - we might need it */
@@ -569,6 +571,16 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 	{
 		out_msg->destroy(out_msg);
 		return result;
+	}
+	msg_type = in_msg->get_msg_type(in_msg);
+
+	for (i = 0; i < countof(section_subtypes); i++)
+	{
+		if (msg_type.type == section_subtypes[i].subtype)
+		{
+			section = section_subtypes[i].section;
+			break;
+		}
 	}
 	pushed_info = lib->settings->get_bool(lib->settings,
 						"%s.plugins.imc-hcd.push_info", FALSE, lib->ns);
@@ -597,7 +609,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 						switch (entry->type)
 						{
 							case PWG_HCD_ATTRS_NATURAL_LANG:
-								add_attrs_natural_lang(out_msg, "system");
+								add_attrs_natural_lang(out_msg, section);
 								break;
 							case PWG_HCD_DEFAULT_PWD_ENABLED:
 								add_default_pwd_enabled(out_msg);
@@ -643,13 +655,13 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 						switch (entry->type)
 						{
 							case PWG_HCD_FIRMWARE_NAME:
-								add_quadruple(out_msg, "system", &quadruples[0]);
+								add_quadruple(out_msg, section, &quadruples[0]);
 								break;
 							case PWG_HCD_RESIDENT_APP_NAME:
-								add_quadruple(out_msg, "system", &quadruples[1]);
+								add_quadruple(out_msg, section, &quadruples[1]);
 								break;
 							case PWG_HCD_USER_APP_NAME:
-								add_quadruple(out_msg, "system", &quadruples[2]);
+								add_quadruple(out_msg, section, &quadruples[2]);
 								break;
 							default:
 								break;

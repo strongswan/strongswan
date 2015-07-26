@@ -22,6 +22,7 @@
 #include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include "ietf/ietf_attr_fwd_enabled.h"
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_numeric_version.h>
 #include <ietf/ietf_attr_op_status.h>
@@ -211,10 +212,9 @@ static void add_fwd_enabled(imc_msg_t *msg)
 	os_fwd_status_t fwd_status;
 
 	fwd_status = os->get_fwd_status(os);
-	DBG1(DBG_IMC, "IPv4 forwarding is %N",
-				   os_fwd_status_names, fwd_status);
-	attr = generic_attr_bool_create(fwd_status, pen_type_create(PEN_IETF,
-									IETF_ATTR_FORWARDING_ENABLED));
+	DBG1(DBG_IMC, "IPv4 forwarding is %N", os_fwd_status_names, fwd_status);
+	attr = ietf_attr_fwd_enabled_create(fwd_status,
+				pen_type_create(PEN_IETF, IETF_ATTR_FORWARDING_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 
@@ -224,10 +224,12 @@ static void add_fwd_enabled(imc_msg_t *msg)
 static void add_default_pwd_enabled(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
+	bool status;
 
-	DBG1(DBG_IMC, "factory default password is disabled");
-	attr = generic_attr_bool_create(FALSE, pen_type_create(PEN_IETF,
-									IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED));
+	status = os->get_default_pwd_status(os);
+	DBG1(DBG_IMC, "factory default password is %sabled", status ? "en" : "dis");
+	attr = generic_attr_bool_create(status,
+			pen_type_create(PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED));
 	msg->add_attribute(msg, attr);
 }
 

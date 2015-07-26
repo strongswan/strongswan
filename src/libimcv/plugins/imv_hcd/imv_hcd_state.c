@@ -20,6 +20,12 @@
 #include <utils/debug.h>
 
 typedef struct private_imv_hcd_state_t private_imv_hcd_state_t;
+typedef struct subtype_action_flags_t subtype_action_flags_t;
+
+struct subtype_action_flags_t {
+	pa_subtype_pwg_t subtype;
+	uint32_t action_flags;
+};
 
 /**
  * Private data of an imv_hcd_state_t object.
@@ -57,9 +63,14 @@ struct private_imv_hcd_state_t {
 	uint32_t max_msg_len;
 
 	/**
-	 * Flags set for completed actions
+	 * Current flags set for completed actions
 	 */
-	uint32_t action_flags;
+	uint32_t *action_flags;
+
+	/**
+	 * Action flags for all PA subtypes
+	 */
+	subtype_action_flags_t subtype_action_flags[6];
 
 	/**
 	 * IMV database session associated with TNCCS connection
@@ -128,13 +139,13 @@ METHOD(imv_state_t, get_max_msg_len, uint32_t,
 METHOD(imv_state_t, set_action_flags, void,
 	private_imv_hcd_state_t *this, uint32_t flags)
 {
-	this->action_flags |= flags;
+	*this->action_flags |= flags;
 }
 
 METHOD(imv_state_t, get_action_flags, uint32_t,
 	private_imv_hcd_state_t *this)
 {
-	return this->action_flags;
+	return *this->action_flags;
 }
 
 METHOD(imv_state_t, set_session, void,
@@ -219,6 +230,32 @@ METHOD(imv_hcd_state_t, get_handshake_state, imv_hcd_handshake_state_t,
 	return this->handshake_state;
 }
 
+METHOD(imv_hcd_state_t, set_subtype, void,
+	private_imv_hcd_state_t *this, pa_subtype_pwg_t subtype)
+{
+	int i;
+
+	for (i = 0; i < countof(this->subtype_action_flags); i++)
+	{
+		if (subtype == this->subtype_action_flags[i].subtype)
+		{
+			this->action_flags = &this->subtype_action_flags[i].action_flags;
+			break;
+		}
+	}
+}
+
+METHOD(imv_hcd_state_t, set_user_app_disabled, void,
+	private_imv_hcd_state_t *this)
+{
+	int i;
+
+	for (i = 0; i < countof(this->subtype_action_flags); i++)
+	{
+		this->subtype_action_flags[i].action_flags |= IMV_HCD_ATTR_USER_APP_NAME;
+	}
+}
+
 /**
  * Described in header.
  */
@@ -250,13 +287,25 @@ imv_state_t *imv_hcd_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_handshake_state = _set_handshake_state,
 			.get_handshake_state = _get_handshake_state,
+			.set_subtype = _set_subtype,
+			.set_user_app_disabled = _set_user_app_disabled,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
 		.contracts = seg_contract_manager_create(),
+		.subtype_action_flags = {
+			{ PA_SUBTYPE_PWG_HCD_SYSTEM,    IMV_HCD_ATTR_NONE        },
+			{ PA_SUBTYPE_PWG_HCD_CONSOLE,   IMV_HCD_ATTR_SYSTEM_ONLY },
+			{ PA_SUBTYPE_PWG_HCD_MARKER,    IMV_HCD_ATTR_SYSTEM_ONLY },
+			{ PA_SUBTYPE_PWG_HCD_FINISHER,  IMV_HCD_ATTR_SYSTEM_ONLY },
+			{ PA_SUBTYPE_PWG_HCD_INTERFACE, IMV_HCD_ATTR_SYSTEM_ONLY },
+			{ PA_SUBTYPE_PWG_HCD_SCANNER,   IMV_HCD_ATTR_SYSTEM_ONLY },
+		}
 	);
+
+	this->action_flags = &this->subtype_action_flags[0].action_flags;
 
 	return &this->public.interface;
 }

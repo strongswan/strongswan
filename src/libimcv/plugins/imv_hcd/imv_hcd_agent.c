@@ -27,6 +27,7 @@
 #include <generic/generic_attr_string.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include <ietf/ietf_attr_fwd_enabled.h>
 #include <pwg/pwg_attr.h>
 #include <pwg/pwg_attr_vendor_smi_code.h>
 #include "tcg/seg/tcg_seg_attr_max_size.h"
@@ -41,7 +42,6 @@
 #define HCD_MAX_ATTR_SIZE	10000000
 
 typedef struct private_imv_hcd_agent_t private_imv_hcd_agent_t;
-typedef enum imv_hcd_attr_t imv_hcd_attr_t;
 
 /* Subscribed PA-TNC message subtypes */
 static pen_type_t msg_types[] = {
@@ -54,60 +54,42 @@ static pen_type_t msg_types[] = {
 	{ PEN_PWG, PA_SUBTYPE_PWG_HCD_SCANNER }
 };
 
-/**
- * Flag set when corresponding attribute has been received
- */
-enum imv_hcd_attr_t {
-	IMV_HCD_ATTR_NONE =                          0,
-	IMV_HCD_ATTR_NATURAL_LANG =              (1<<0),
-	IMV_HCD_ATTR_DEFAULT_PWD_ENABLED =       (1<<1),
-	IMV_HCD_ATTR_FIREWALL_SETTING =          (1<<2),
-	IMV_HCD_ATTR_FIRMWARE_NAME =             (1<<3),
-	IMV_HCD_ATTR_FORWARDING_ENABLED =        (1<<4),
-	IMV_HCD_ATTR_MACHINE_TYPE_MODEL =        (1<<5),
-	IMV_HCD_ATTR_PSTN_FAX_ENABLED =          (1<<6),
-	IMV_HCD_ATTR_RESIDENT_APP_NAME =         (1<<7),
-	IMV_HCD_ATTR_TIME_SOURCE =               (1<<8),
-	IMV_HCD_ATTR_USER_APP_ENABLED =          (1<<9),
-	IMV_HCD_ATTR_USER_APP_PERSIST_ENABLED =  (1<<10),
-	IMV_HCD_ATTR_USER_APP_NAME =             (1<<11),
-	IMV_HCD_ATTR_VENDOR_NAME =               (1<<12),
-	IMV_HCD_ATTR_VENDOR_SMI_CODE =           (1<<13),
-	IMV_HCD_ATTR_MUST =                      (1<<14)-1
-};
-
 static imv_hcd_attr_t attr_type_to_flag(pwg_attr_t attr_type)
 {
 	switch (attr_type)
 	{
-		case PWG_HCD_ATTRS_NATURAL_LANG:
-			return IMV_HCD_ATTR_NATURAL_LANG;
 		case PWG_HCD_DEFAULT_PWD_ENABLED:
 			return IMV_HCD_ATTR_DEFAULT_PWD_ENABLED;
 		case PWG_HCD_FIREWALL_SETTING:
 			return IMV_HCD_ATTR_FIREWALL_SETTING;
-		case PWG_HCD_FIRMWARE_NAME:
-			return IMV_HCD_ATTR_FIRMWARE_NAME;
 		case PWG_HCD_FORWARDING_ENABLED:
 			return IMV_HCD_ATTR_FORWARDING_ENABLED;
 		case PWG_HCD_MACHINE_TYPE_MODEL:
 			return IMV_HCD_ATTR_MACHINE_TYPE_MODEL;
 		case PWG_HCD_PSTN_FAX_ENABLED:
 			return IMV_HCD_ATTR_PSTN_FAX_ENABLED;
-		case PWG_HCD_RESIDENT_APP_NAME:
-			return IMV_HCD_ATTR_RESIDENT_APP_NAME;
 		case PWG_HCD_TIME_SOURCE:
 			return IMV_HCD_ATTR_TIME_SOURCE;
 		case PWG_HCD_USER_APP_ENABLED:
 			return IMV_HCD_ATTR_USER_APP_ENABLED;
 		case PWG_HCD_USER_APP_PERSIST_ENABLED:
 			return IMV_HCD_ATTR_USER_APP_PERSIST_ENABLED;
-		case PWG_HCD_USER_APP_NAME:
-			return IMV_HCD_ATTR_USER_APP_NAME;
 		case PWG_HCD_VENDOR_NAME:
 			return IMV_HCD_ATTR_VENDOR_NAME;
 		case PWG_HCD_VENDOR_SMI_CODE:
 			return IMV_HCD_ATTR_VENDOR_SMI_CODE;
+		case PWG_HCD_CERTIFICATION_STATE:
+			return IMV_HCD_ATTR_CERTIFICATION_STATE;
+		case PWG_HCD_CONFIGURATION_STATE:
+			return IMV_HCD_ATTR_CONFIGURATION_STATE;
+		case PWG_HCD_ATTRS_NATURAL_LANG:
+			return IMV_HCD_ATTR_NATURAL_LANG;
+		case PWG_HCD_FIRMWARE_NAME:
+			return IMV_HCD_ATTR_FIRMWARE_NAME;
+		case PWG_HCD_RESIDENT_APP_NAME:
+			return IMV_HCD_ATTR_RESIDENT_APP_NAME;
+		case PWG_HCD_USER_APP_NAME:
+			return IMV_HCD_ATTR_USER_APP_NAME;
 		default:
 			return IMV_HCD_ATTR_NONE;
 	}
@@ -194,7 +176,8 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 	imv_msg_t *out_msg;
 	imv_hcd_state_t *hcd_state;
 	pa_tnc_attr_t *attr;
-	pen_type_t type;
+	enum_name_t *pa_subtype_names; 
+	pen_type_t type, msg_type;
 	TNC_Result result;
 	bool fatal_error = FALSE, assessment = FALSE;
 	enumerator_t *enumerator;
@@ -211,6 +194,20 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 		out_msg->destroy(out_msg);
 		return result;
 	}
+	msg_type = in_msg->get_msg_type(in_msg);
+	pa_subtype_names = get_pa_subtype_names(msg_type.vendor_id);
+	DBG2(DBG_IMV, "received attributes for PA subtype %N/%N",
+		 pen_names, msg_type.vendor_id, pa_subtype_names, msg_type.type);
+
+	/* set current subtype */
+	if (msg_type.vendor_id == PEN_IETF)
+	{
+		hcd_state->set_subtype(hcd_state, PA_SUBTYPE_PWG_HCD_SYSTEM);
+	}
+	else
+	{
+		hcd_state->set_subtype(hcd_state, msg_type.type);
+	}
 
 	/* analyze PA-TNC attributes */
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
@@ -218,7 +215,41 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 	{
 		type = attr->get_type(attr);
 
-		if (type.vendor_id == PEN_PWG)
+		if (type.vendor_id == PEN_IETF)
+		{
+			switch (type.type)
+			{
+				case IETF_ATTR_FORWARDING_ENABLED:
+				{
+					ietf_attr_fwd_enabled_t *attr_cast;
+					os_fwd_status_t fwd_status;
+
+					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
+					fwd_status = attr_cast->get_status(attr_cast);
+					DBG2(DBG_IMV, "  %N: %N", ietf_attr_names, type.type,
+								   os_fwd_status_names, fwd_status);
+					state->set_action_flags(state,
+											IMV_HCD_ATTR_FORWARDING_ENABLED);
+					break;
+				}
+				case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
+				{
+					generic_attr_bool_t *attr_cast;
+					bool status;
+
+					attr_cast = (generic_attr_bool_t*)attr;
+					status = attr_cast->get_status(attr_cast);
+					DBG2(DBG_IMV, "  %N: %s", ietf_attr_names, type.type,
+								   status ? "yes" : "no");
+					state->set_action_flags(state,
+											IMV_HCD_ATTR_DEFAULT_PWD_ENABLED);
+					break;
+				}
+				default:
+					break;
+			}
+		}
+		else if (type.vendor_id == PEN_PWG)
 		{
 			state->set_action_flags(state, attr_type_to_flag(type.type));
 
@@ -241,7 +272,7 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 					chunk_t value;
 
 					value = attr->get_value(attr);
-					DBG2(DBG_IMV, "%N: %.*s", pwg_attr_names, type.type,
+					DBG2(DBG_IMV, "  %N: %.*s", pwg_attr_names, type.type,
 								   value.len, value.ptr);
 					break;
 				}
@@ -252,7 +283,7 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 					chunk_t value;
 
 					value = attr->get_value(attr);
-					DBG2(DBG_IMV, "%N: %#B", pwg_attr_names, type.type, &value);
+					DBG2(DBG_IMV, "  %N: %#B", pwg_attr_names, type.type, &value);
 					break;
 				}
 				case PWG_HCD_CERTIFICATION_STATE:
@@ -261,11 +292,10 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 					chunk_t value;
 
 					value = attr->get_value(attr);
-					DBG2(DBG_IMV, "%N: %B", pwg_attr_names, type.type, &value);
+					DBG2(DBG_IMV, "  %N: %B", pwg_attr_names, type.type, &value);
 					break;
 				}
 				case PWG_HCD_DEFAULT_PWD_ENABLED:
-				case PWG_HCD_FORWARDING_ENABLED:
 				case PWG_HCD_PSTN_FAX_ENABLED:
 				case PWG_HCD_USER_APP_ENABLED:
 				case PWG_HCD_USER_APP_PERSIST_ENABLED:
@@ -275,17 +305,28 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 
 					attr_cast = (generic_attr_bool_t*)attr;
 					status = attr_cast->get_status(attr_cast);
-					DBG2(DBG_IMV, "%N: %s", pwg_attr_names, type.type,
+					DBG2(DBG_IMV, "  %N: %s", pwg_attr_names, type.type,
 								   status ? "yes" : "no");
 
 					if (type.type == PWG_HCD_USER_APP_ENABLED && !status)
 					{
 						/* do not request user applications */
-						state->set_action_flags(state,
-												IMV_HCD_ATTR_USER_APP_NAME);
+						hcd_state->set_user_app_disabled(hcd_state);
 					}		
 					break;
 				}
+				case PWG_HCD_FORWARDING_ENABLED:
+				{
+					ietf_attr_fwd_enabled_t *attr_cast;
+					os_fwd_status_t fwd_status;
+
+					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
+					fwd_status = attr_cast->get_status(attr_cast);
+					DBG2(DBG_IMV, "  %N: %N", pwg_attr_names, type.type,
+								   os_fwd_status_names, fwd_status);
+					break;
+				}
+
 				case PWG_HCD_VENDOR_SMI_CODE:
 				{
 					pwg_attr_vendor_smi_code_t *attr_cast;
@@ -293,7 +334,7 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 
 					attr_cast = (pwg_attr_vendor_smi_code_t*)attr;
 					smi_code = attr_cast->get_vendor_smi_code(attr_cast);
-					DBG2(DBG_IMV, "%N: 0x%06x (%u)", pwg_attr_names, type.type,
+					DBG2(DBG_IMV, "  %N: 0x%06x (%u)", pwg_attr_names, type.type,
 								  smi_code, smi_code);
 					break;
 				}
@@ -439,9 +480,14 @@ static pa_tnc_attr_t* build_attr_request(uint32_t received)
 	{
 		attr_cast->add(attr_cast, PEN_PWG, PWG_HCD_VENDOR_SMI_CODE);
 	}
-	attr_cast->add(attr_cast, PEN_PWG, PWG_HCD_CERTIFICATION_STATE);
-	attr_cast->add(attr_cast, PEN_PWG, PWG_HCD_CONFIGURATION_STATE);
-
+	if (!(received & IMV_HCD_ATTR_CERTIFICATION_STATE))
+	{
+		attr_cast->add(attr_cast, PEN_PWG, PWG_HCD_CERTIFICATION_STATE);
+	}
+	if (!(received & IMV_HCD_ATTR_CONFIGURATION_STATE))
+	{
+		attr_cast->add(attr_cast, PEN_PWG, PWG_HCD_CONFIGURATION_STATE);
+	}
 	return attr;
 }
 
@@ -455,7 +501,6 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	pa_tnc_attr_t *attr;
 	TNC_IMVID imv_id;
 	TNC_Result result = TNC_RESULT_SUCCESS;
-	uint32_t received;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
@@ -463,17 +508,12 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 	hcd_state = (imv_hcd_state_t*)state;
 	handshake_state = hcd_state->get_handshake_state(hcd_state);
-	received = state->get_action_flags(state);
 	imv_id = this->agent->get_id(this->agent);
 
 	if (handshake_state == IMV_HCD_STATE_END)
 	{
 		return TNC_RESULT_SUCCESS;
 	}
-
-	/* create an empty out message - we might need it */
-	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
-							 msg_types[0]);
 
 	if (handshake_state == IMV_HCD_STATE_INIT)
 	{
@@ -482,6 +522,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		seg_contract_t *contract;
 		seg_contract_manager_t *contracts;
 		char buf[BUF_LEN];
+		uint32_t received;
+		int i;
 
 		/* Determine maximum PA-TNC attribute segment size */
 		max_seg_size = state->get_max_msg_len(state)
@@ -490,31 +532,41 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								- TCG_SEG_ATTR_SEG_ENV_HEADER
 								- PA_TNC_ATTR_HEADER_SIZE
 								- TCG_SEG_ATTR_MAX_SIZE_SIZE;
-
-		/* Announce support of PA-TNC segmentation to IMC */
-		contract = seg_contract_create(msg_types[0], max_attr_size,
-										max_seg_size, TRUE, imv_id, FALSE);
-		contract->get_info_string(contract, buf, BUF_LEN, TRUE);
-		DBG2(DBG_IMV, "%s", buf);
 		contracts = state->get_contracts(state);
-		contracts->add_contract(contracts, contract);
-		attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
-		out_msg->add_attribute(out_msg, attr);
 
-		if ((received & IMV_HCD_ATTR_MUST) != IMV_HCD_ATTR_MUST)
+		for (i = 1; i < countof(msg_types); i++)
 		{
-			/* create attribute request for missing mandatory attributes */
-			out_msg->add_attribute(out_msg, build_attr_request(received));
+			out_msg = imv_msg_create(this->agent, state, id, imv_id,
+									 TNC_IMCID_ANY, msg_types[i]);
+
+			/* Announce support of PA-TNC segmentation to IMC */
+			contract = seg_contract_create(msg_types[i], max_attr_size,
+										   max_seg_size, TRUE, imv_id, FALSE);
+			contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+			DBG2(DBG_IMV, "%s", buf);
+			contracts->add_contract(contracts, contract);
+			attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size,
+												TRUE);
+			out_msg->add_attribute(out_msg, attr);
+
+			hcd_state->set_subtype(hcd_state, msg_types[i].type);	
+			received = state->get_action_flags(state);
+
+			if ((received & IMV_HCD_ATTR_MUST) != IMV_HCD_ATTR_MUST)
+			{
+				/* create attribute request for missing mandatory attributes */
+				out_msg->add_attribute(out_msg, build_attr_request(received));
+			}
+			result = out_msg->send(out_msg, FALSE);
+			out_msg->destroy(out_msg);
+
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				break;
+			}
 		}
 		hcd_state->set_handshake_state(hcd_state, IMV_HCD_STATE_ATTR_REQ);
 	}
-
-	/* send non-empty PA-TNC message with excl flag not set */
-	if (out_msg->get_attribute_count(out_msg))
-	{
-		result = out_msg->send(out_msg, FALSE);
-	}
-	out_msg->destroy(out_msg);
 
 	return result;
 }
