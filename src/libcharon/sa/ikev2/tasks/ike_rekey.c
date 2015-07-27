@@ -394,7 +394,7 @@ static void cleanup(private_ike_rekey_t *this)
 METHOD(task_t, migrate, void,
 	private_ike_rekey_t *this, ike_sa_t *ike_sa)
 {
-	cleanup();
+	cleanup(this);
 	this->collision = NULL;
 	this->ike_sa = ike_sa;
 	this->new_sa = NULL;
@@ -405,7 +405,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	private_ike_rekey_t *this)
 {
-	cleanup();
+	cleanup(this);
 	free(this);
 }
 
