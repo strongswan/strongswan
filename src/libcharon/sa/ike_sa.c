@@ -1230,6 +1230,10 @@ static void resolve_hosts(private_ike_sa_t *this)
 			 * address family might have changed */
 			set_other_host(this, host);
 		}
+		else
+		{
+			host->destroy(host);
+		}
 	}
 
 	if (this->local_host)
