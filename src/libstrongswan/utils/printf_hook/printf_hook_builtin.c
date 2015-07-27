@@ -843,7 +843,8 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 								/* String */
 								sarg = va_arg(ap, const char *);
 								sarg = sarg ? sarg : "(null)";
-								slen = strlen(sarg);
+								slen = prec != -1 ? strnlen(sarg, prec)
+												  : strlen(sarg);
 								goto is_string;
 							}
 							case 'm':
