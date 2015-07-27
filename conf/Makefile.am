@@ -52,6 +52,7 @@ plugins = \
 	plugins/gcrypt.opt \
 	plugins/ha.opt \
 	plugins/imc-attestation.opt \
+	plugins/imc-hcd.opt \
 	plugins/imc-os.opt \
 	plugins/imc-scanner.opt \
 	plugins/imc-swid.opt \
