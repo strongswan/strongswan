@@ -324,6 +324,14 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 }
 
 /**
+ * Check if the two IDs match (the first one is optional)
+ */
+static inline bool id_matches(identification_t *id, identification_t *sql_id)
+{
+	return !id || id->matches(id, sql_id) || sql_id->matches(sql_id, id);
+}
+
+/**
  * Build a peer config from an SQL query
  */
 static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
@@ -352,8 +360,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 
 		local_id = identification_create_from_encoding(l_type, l_data);
 		remote_id = identification_create_from_encoding(r_type, r_data);
-		if ((me && !me->matches(me, local_id)) ||
-			(other && !other->matches(other, remote_id)))
+		if (!id_matches(me, local_id) || !id_matches(other, remote_id))
 		{
 			local_id->destroy(local_id);
 			remote_id->destroy(remote_id);
