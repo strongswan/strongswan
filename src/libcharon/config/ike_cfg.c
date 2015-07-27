@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -508,6 +509,52 @@ static void parse_addresses(char *str, linked_list_t *hosts,
 		hosts->insert_last(hosts, strdup(str));
 	}
 	enumerator->destroy(enumerator);
+}
+
+/**
+ * Described in header.
+ */
+int ike_cfg_get_family(ike_cfg_t *cfg, bool local)
+{
+	private_ike_cfg_t *this = (private_ike_cfg_t*)cfg;
+	enumerator_t *enumerator;
+	host_t *host;
+	char *str;
+	int family = AF_UNSPEC;
+
+	if (local)
+	{
+		enumerator = this->my_hosts->create_enumerator(this->my_hosts);
+	}
+	else
+	{
+		enumerator = this->other_hosts->create_enumerator(this->other_hosts);
+	}
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		if (streq(str, "%any"))
+		{	/* ignore %any as its family is undetermined */
+			continue;
+		}
+		host = host_create_from_string(str, 0);
+		if (host)
+		{
+			if (family == AF_UNSPEC)
+			{
+				family = host->get_family(host);
+			}
+			else if (family != host->get_family(host))
+			{
+				/* more than one address family defined */
+				family = AF_UNSPEC;
+				host->destroy(host);
+				break;
+			}
+		}
+		DESTROY_IF(host);
+	}
+	enumerator->destroy(enumerator);
+	return family;
 }
 
 /**

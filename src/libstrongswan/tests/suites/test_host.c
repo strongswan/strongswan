@@ -104,6 +104,9 @@ START_TEST(test_create_from_string_v4)
 {
 	host_t *host;
 
+	host = host_create_from_string(NULL, 500);
+	ck_assert(!host);
+
 	host = host_create_from_string("%any", 500);
 	verify_any(host, AF_INET, 500);
 	host->destroy(host);
@@ -196,6 +199,7 @@ static void test_create_from_string_and_family_addr(char *string, chunk_t addr,
 
 START_TEST(test_create_from_string_and_family_v4)
 {
+	test_create_from_string_and_family_any(NULL, AF_INET, AF_UNSPEC);
 	test_create_from_string_and_family_any("%any", AF_INET, AF_INET);
 	test_create_from_string_and_family_any("%any4", AF_INET, AF_INET);
 	test_create_from_string_and_family_any("0.0.0.0", AF_INET, AF_INET);
@@ -210,6 +214,7 @@ END_TEST
 
 START_TEST(test_create_from_string_and_family_v6)
 {
+	test_create_from_string_and_family_any(NULL, AF_INET6, AF_UNSPEC);
 	test_create_from_string_and_family_any("%any", AF_INET6, AF_INET6);
 	test_create_from_string_and_family_any("%any6", AF_INET6, AF_INET6);
 	test_create_from_string_and_family_any("::", AF_INET6, AF_INET6);
@@ -224,6 +229,7 @@ END_TEST
 
 START_TEST(test_create_from_string_and_family_other)
 {
+	test_create_from_string_and_family_any(NULL, AF_UNSPEC, AF_UNSPEC);
 	test_create_from_string_and_family_any("%any", AF_UNSPEC, AF_INET);
 	test_create_from_string_and_family_any("%any4", AF_UNSPEC, AF_INET);
 	test_create_from_string_and_family_any("0.0.0.0", AF_UNSPEC, AF_INET);

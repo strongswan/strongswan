@@ -13,5 +13,6 @@
  * for more details.
  */
 
+TEST_SUITE(ike_cfg_suite_create)
 TEST_SUITE(mem_pool_suite_create)
 TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)

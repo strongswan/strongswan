@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Tobias Brunner
+ * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1198,6 +1198,19 @@ static void resolve_hosts(private_ike_sa_t *this)
 		case SOCKET_FAMILY_BOTH:
 		case SOCKET_FAMILY_NONE:
 			break;
+	}
+
+	/* if an IP address is set locally, use the same family to resolve remote */
+	if (family == AF_UNSPEC && !this->remote_host)
+	{
+		if (this->local_host)
+		{
+			family = this->local_host->get_family(this->local_host);
+		}
+		else
+		{
+			family = ike_cfg_get_family(this->ike_cfg, TRUE);
+		}
 	}
 
 	if (this->remote_host)
