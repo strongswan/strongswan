@@ -17,6 +17,7 @@
 
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
+#include <crypto/mgf1/mgf1_bitspender.h>
 #include <utils/debug.h>
 
 /**
@@ -54,64 +55,62 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set, int32_t *x, int16_t *xd)
 /**
  * See header.
  */
-bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
-							int n, uint16_t kappa, uint16_t *c_indices)
+bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
+							uint16_t *ud, bliss_param_set_t *set,
+							uint16_t *c_indices)
 {
-	int i, index_found, rounds;
-	uint16_t index;
-	uint8_t hash[HASH_SIZE_SHA512], un16_buf[2];
-	chunk_t un16 = { un16_buf, 2 };
-	bool index_taken[n];
+	int i, index_trials = 0, index_found = 0;
+	bool index_taken[set->n];
+	uint32_t index;
+	uint8_t *seed_pos;
+	chunk_t seed;
+	mgf1_bitspender_t *bitspender;
 
-	for (i = 0; i < n; i++)
+	seed = chunk_alloca(data_hash.len + set->n * sizeof(uint16_t));
+
+	/* the data hash makes up the first part of the oracle seed */
+	memcpy(seed.ptr, data_hash.ptr, data_hash.len);
+	seed_pos = seed.ptr + data_hash.len;
+
+	/* followed by the n elements of the ud vector in network order */
+	for (i = 0; i < set->n; i++)
+	{
+		htoun16(seed_pos, ud[i]);
+		seed_pos += sizeof(uint16_t);
+	}
+
+	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	if (!bitspender)
+	{
+	    return NULL;
+	}
+
+	for (i = 0; i < set->n; i++)
 	{
 		index_taken[i] = FALSE;
 	}
-	index_found = 0;
 
-	for (rounds = 0; rounds < 0x10000; rounds++)
+	DBG3(DBG_LIB, " i  c_index[i]");
+	while (bitspender->get_bits(bitspender, set->n_bits, &index))
 	{
-		/* hash data */
-		if (!hasher->get_hash(hasher, data_hash, NULL))
-		{
-			return FALSE;
-		}
+		index_trials++;
 
-		/* followed by the ud vector */
-		for (i = 0; i < n; i++)
+		if (!index_taken[index])
 		{
-			htoun16(un16_buf, ud[i]);
-			if (!hasher->get_hash(hasher, un16, NULL))
+			DBG3(DBG_LIB, "%2u %8u", index_found, index);
+			c_indices[index_found++] = index;
+			index_taken[index] = TRUE;
+
+			if (index_found == set->kappa)
 			{
-				return FALSE;
-			}
-		}
-
-		/* hash the round iteration */
-		htoun16(un16_buf, rounds);
-		if (!hasher->get_hash(hasher, un16, hash))
-		{
-			return FALSE;
-		}
-
-		for (i = 0; i < HASH_SIZE_SHA512; i += 2)
-		{
-			index = untoh16(&hash[i]) % n;
-
-			if (!index_taken[index])
-			{
-				c_indices[index_found++] = index;
-				index_taken[index] = TRUE;
-
-				if (index_found == kappa)
-				{
-					return TRUE;
-				}
+				DBG3(DBG_LIB, "%2d  index trials", index_trials);
+				bitspender->destroy(bitspender);
+				return TRUE;
 			}
 		}
 	}
-	DBG1(DBG_LIB, "aborted c_indices generation after 2^16 rounds");
 
+	bitspender->destroy(bitspender);
 	return FALSE;
 }
 

@@ -168,7 +168,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	bliss_sampler_t *sampler = NULL;
 	rng_t *rng;
 	hasher_t *hasher;
-	hash_algorithm_t mgf1_alg;
+	hash_algorithm_t mgf1_alg, oracle_alg;
 	size_t mgf1_seed_len;
 	uint8_t mgf1_seed_buf[HASH_SIZE_SHA512], data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t mgf1_seed, data_hash;
@@ -185,7 +185,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	/* Initialize signature */
 	*signature = chunk_empty;
 
-	/* Create data hash */
+	/* Create data hash using configurable hash algorithm */
 	hasher = lib->crypto->create_hasher(lib->crypto, alg);
 	if (!hasher)
 	{
@@ -199,13 +199,6 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 		return FALSE;
 	}
 	hasher->destroy(hasher);
-
-	/* Create SHA512 hasher for c_indices oracle */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
-	if (!hasher)
-	{
-		return FALSE;
-	}
 
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
@@ -223,9 +216,11 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
 	{
-		hasher->destroy(hasher);
 		return FALSE;
 	}
+
+	/* MGF1 hash algorithm to be used for random oracle */
+	oracle_alg = HASH_SHA512;
 
 	/* Initialize a couple of needed variables */
 	n  = this->set->n;
@@ -360,7 +355,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 			DBG3(DBG_LIB, "%3d  %6d   %4d", i, u[i], ud[i]);
 		}
 
-		if (!bliss_utils_generate_c(hasher, data_hash, ud, n, this->set->kappa,
+		if (!bliss_utils_generate_c(oracle_alg, data_hash, ud, this->set,
 									c_indices))
 		{
 			goto end;
@@ -495,7 +490,6 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 end:
 	/* cleanup */
 	DESTROY_IF(sampler);
-	hasher->destroy(hasher);
 	sig->destroy(sig);
 	fft->destroy(fft);
 	rng->destroy(rng);

@@ -47,15 +47,15 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set,	int32_t *x, int16_t *xd)
 /**
  * Generate the binary challenge vector c as an array of kappa indices
  *
- * @param hasher	hasher used as an oracle
+ * @param alg		hash algorithm to be used for the internal oracle
  * @param data_hash	hash of the data to be signed
  * @param ud		input vector ud of size n
- * @param n			size of input vector ud
- * @param kappa		parameter kappa
+ * @param set		BLISS parameter set to be used (n, n_bits, kappa)
  * @param c_indices	indexes of non-zero challenge coefficients
  */
-bool bliss_utils_generate_c(hasher_t *hasher, chunk_t data_hash, uint16_t *ud,
-							int n, uint16_t kappa, uint16_t *c_indices);
+bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
+							uint16_t *ud, bliss_param_set_t *set,
+							uint16_t *c_indices);
 
 /**
  * Check the infinity and l2 norms of the vectors z1 and z2d << d

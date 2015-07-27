@@ -11,6 +11,11 @@ strongswan-5.3.3
 - The vici interface now supports the configuration of auxiliary certification
   authority information as CRL and OCSP URIs
  
+- In the bliss plugin the c_indices derivation using a SHA-512 based random oracle
+  has been fixed, generalized and standardized by employing the MGF1 mask generation
+  function with SHA-512. As a consequence BLISS signatures unsing the improved oracle
+  are not compatible with the earlier implementation.
+ 
 
 strongswan-5.3.2
 ----------------
