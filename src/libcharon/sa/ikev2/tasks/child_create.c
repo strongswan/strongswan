@@ -1596,6 +1596,7 @@ METHOD(task_t, migrate, void,
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->dh = NULL;
+	this->nonceg = NULL;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->ipcomp = IPCOMP_NONE;
