@@ -334,8 +334,7 @@ METHOD(task_t, process_i, status_t,
 	if (this->child_create->task.process(&this->child_create->task,
 										 message) == NEED_MORE)
 	{
-		/* bad DH group while rekeying, try again */
-		this->child_create->task.migrate(&this->child_create->task, this->ike_sa);
+		/* bad DH group while rekeying, retry, or failure requiring deletion */
 		return NEED_MORE;
 	}
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
