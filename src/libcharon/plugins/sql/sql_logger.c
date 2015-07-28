@@ -120,6 +120,7 @@ METHOD(logger_t, get_level, level_t,
 METHOD(sql_logger_t, destroy, void,
 	private_sql_logger_t *this)
 {
+	this->recursive->destroy(this->recursive);
 	free(this);
 }
 
