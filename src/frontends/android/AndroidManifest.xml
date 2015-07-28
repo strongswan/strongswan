@@ -17,8 +17,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.strongswan.android"
-    android:versionCode="26"
-    android:versionName="1.4.5" >
+    android:versionCode="28"
+    android:versionName="1.5.0" >
 
     <uses-sdk android:minSdkVersion="15" android:targetSdkVersion="22" />
 
