@@ -24,6 +24,7 @@ import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ComponentName;
@@ -82,7 +83,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 							 Bundle savedInstanceState)
 	{
-		View view = inflater.inflate(R.layout.imc_state_fragment, null);
+		View view = inflater.inflate(R.layout.imc_state_fragment, container, false);
 
 		mButton = (LinearLayout)view.findViewById(R.id.imc_state_button);
 		mButton.setOnClickListener(new OnClickListener() {
@@ -174,7 +175,12 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 
 	public void updateView()
 	{
-		FragmentTransaction ft = getFragmentManager().beginTransaction();
+		FragmentManager fm = getFragmentManager();
+		if (fm == null)
+		{
+			return;
+		}
+		FragmentTransaction ft = fm.beginTransaction();
 
 		switch (mService.getImcState())
 		{

@@ -60,6 +60,8 @@ import android.widget.TextView;
 public class VpnProfileDetailActivity extends Activity
 {
 	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
+	private static final int MTU_MIN = 1280;
+	private static final int MTU_MAX = 1500;
 
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
@@ -79,6 +81,12 @@ public class VpnProfileDetailActivity extends Activity
 	private CheckBox mCheckAuto;
 	private RelativeLayout mSelectCert;
 	private RelativeLayout mTncNotice;
+	private CheckBox mShowAdvanced;
+	private ViewGroup mAdvancedSettings;
+	private EditText mMTU;
+	private EditText mPort;
+	private CheckBox mBlockIPv4;
+	private CheckBox mBlockIPv6;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -107,6 +115,14 @@ public class VpnProfileDetailActivity extends Activity
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
 		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
+
+		mShowAdvanced = (CheckBox)findViewById(R.id.show_advanced);
+		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
+
+		mMTU = (EditText)findViewById(R.id.mtu);
+		mPort = (EditText)findViewById(R.id.port);
+		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
+		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -154,6 +170,14 @@ public class VpnProfileDetailActivity extends Activity
 			}
 		});
 
+		mShowAdvanced.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+			{
+				updateAdvancedSettings();
+			}
+		});
+
 		mId = savedInstanceState == null ? null : savedInstanceState.getLong(VpnProfileDataSource.KEY_ID);
 		if (mId == null)
 		{
@@ -165,6 +189,7 @@ public class VpnProfileDetailActivity extends Activity
 
 		updateCredentialView();
 		updateCertificateSelector();
+		updateAdvancedSettings();
 	}
 
 	@Override
@@ -315,6 +340,22 @@ public class VpnProfileDetailActivity extends Activity
 	}
 
 	/**
+	 * Update the advanced settings UI depending on whether any advanced
+	 * settings have already been made.
+	 */
+	private void updateAdvancedSettings()
+	{
+		boolean show = mShowAdvanced.isChecked();
+		if (!show && mProfile != null)
+		{
+			Integer st = mProfile.getSplitTunneling();
+			show = mProfile.getMTU() != null || mProfile.getPort() != null || (st != null && st != 0);
+		}
+		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
+		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
+	}
+
+	/**
 	 * Save or update the profile depending on whether we actually have a
 	 * profile object or not (this was created in updateProfileData)
 	 */
@@ -368,6 +409,18 @@ public class VpnProfileDetailActivity extends Activity
 			showCertificateAlert();
 			valid = false;
 		}
+		Integer mtu = getInteger(mMTU);
+		if (mtu != null && (mtu < MTU_MIN || mtu > MTU_MAX))
+		{
+			mMTU.setError(String.format(getString(R.string.alert_text_out_of_range), MTU_MIN, MTU_MAX));
+			valid = false;
+		}
+		Integer port = getInteger(mPort);
+		if (port != null && (port < 1 || port > 65535))
+		{
+			mPort.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
+			valid = false;
+		}
 		return valid;
 	}
 
@@ -395,6 +448,12 @@ public class VpnProfileDetailActivity extends Activity
 		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
+		mProfile.setMTU(getInteger(mMTU));
+		mProfile.setPort(getInteger(mPort));
+		int st = 0;
+		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
+		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
+		mProfile.setSplitTunneling(st == 0 ? null : st);
 	}
 
 	/**
@@ -417,6 +476,10 @@ public class VpnProfileDetailActivity extends Activity
 				mVpnType = mProfile.getVpnType();
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
+				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
+				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);
+				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
 				useralias = mProfile.getUserCertificateAlias();
 				alias = mProfile.getCertificateAlias();
 				getActionBar().setTitle(mProfile.getName());
@@ -456,6 +519,17 @@ public class VpnProfileDetailActivity extends Activity
 				mCertEntry = null;
 			}
 		}
+	}
+
+	/**
+	 * Get the integer value in the given text box or null if empty
+	 *
+	 * @param view text box (numeric entry assumed)
+	 */
+	private Integer getInteger(EditText view)
+	{
+		String value = view.getText().toString().trim();
+		return value.isEmpty() ? null : Integer.valueOf(value);
 	}
 
 	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback

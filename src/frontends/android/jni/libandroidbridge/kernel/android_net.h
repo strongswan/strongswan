@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,25 +22,14 @@
 #define ANDROID_NET_H_
 
 #include <library.h>
-
-typedef struct android_net_t android_net_t;
-
-/**
- * Handle connectivity events from NetworkManager
- */
-struct android_net_t {
-
-	/**
-	 * Destroy an android_net_t instance.
-	 */
-	void (*destroy)(android_net_t *this);
-};
+#include <kernel/kernel_net.h>
 
 /**
- * Create an android_net_t instance.
+ * Create an Android-specific kernel_net_t instance.
  *
- * @return			android_net_t instance
+ * @return			kernel_net_t instance
  */
-android_net_t *android_net_create();
+kernel_net_t *kernel_android_net_create();
+
 
 #endif /** ANDROID_NET_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -32,8 +32,6 @@
 
 typedef struct private_android_service_t private_android_service_t;
 
-#define TUN_DEFAULT_MTU 1400
-
 /**
  * private data of Android service
  */
@@ -55,24 +53,9 @@ struct private_android_service_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * the type of VPN
+	 * configuration setttings
 	 */
-	char *type;
-
-	/**
-	 * gateway
-	 */
-	char *gateway;
-
-	/**
-	 * username
-	 */
-	char *username;
-
-	/**
-	 * password
-	 */
-	char *password;
+	settings_t *settings;
 
 	/**
 	 * lock to safely access the TUN device fd
@@ -83,6 +66,11 @@ struct private_android_service_t {
 	 * TUN device file descriptor
 	 */
 	int tunfd;
+
+	/**
+	 * MTU of TUN device
+	 */
+	int mtu;
 
 	/**
 	 * DNS proxy
@@ -191,7 +179,7 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 		return JOB_REQUEUE_DIRECT;
 	}
 
-	raw = chunk_alloc(TUN_DEFAULT_MTU);
+	raw = chunk_alloc(this->mtu);
 	len = read(tunfd, raw.ptr, raw.len);
 	if (len < 0)
 	{
@@ -309,7 +297,7 @@ static bool setup_tun_device(private_android_service_t *this,
 		return FALSE;
 	}
 	if (!add_routes(builder, child_sa) ||
-		!builder->set_mtu(builder, TUN_DEFAULT_MTU))
+		!builder->set_mtu(builder, this->mtu))
 	{
 		return FALSE;
 	}
@@ -621,6 +609,7 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 {
 	identification_t *user;
 	auth_cfg_t *auth;
+	char *username, *password;
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
@@ -629,12 +618,14 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TTLS);
 	}
 
-	user = identification_create_from_string(this->username);
+	username = this->settings->get_str(this->settings, "connection.username",
+									   NULL);
+	password = this->settings->get_str(this->settings, "connection.password",
+									   NULL);
+	user = identification_create_from_string(username);
 	auth->add(auth, AUTH_RULE_IDENTITY, user);
 
-	this->creds->add_username_password(this->creds, this->username,
-									   this->password);
-	memwipe(this->password, strlen(this->password));
+	this->creds->add_username_password(this->creds, username, password);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 }
 
@@ -644,6 +635,7 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	certificate_t *cert;
 	identification_t *id;
 	auth_cfg_t *auth;
+	char *type;
 
 	cert = this->creds->load_user_certificate(this->creds);
 	if (!cert)
@@ -651,8 +643,9 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 		return FALSE;
 	}
 
+	type = this->settings->get_str(this->settings, "connection.type", NULL);
 	auth = auth_cfg_create();
-	if (strpfx("ikev2-eap-tls", this->type))
+	if (strpfx("ikev2-eap-tls", type))
 	{
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TLS);
@@ -687,11 +680,15 @@ static job_requeue_t initiate(private_android_service_t *this)
 			.jitter = 300 /* 5min */
 		}
 	};
+	char *type, *server;
+	int port;
 
+	server = this->settings->get_str(this->settings, "connection.server", NULL);
+	port = this->settings->get_int(this->settings, "connection.port",
+								   IKEV2_UDP_PORT);
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, TRUE, "0.0.0.0",
 							 charon->socket->get_port(charon->socket, FALSE),
-							 this->gateway, IKEV2_UDP_PORT,
-							 FRAGMENTATION_YES, 0);
+							 server, port, FRAGMENTATION_YES, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
@@ -705,10 +702,11 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
+	type = this->settings->get_str(this->settings, "connection.type", NULL);
 	/* local auth config */
-	if (streq("ikev2-cert", this->type) ||
-		streq("ikev2-cert-eap", this->type) ||
-		streq("ikev2-eap-tls", this->type))
+	if (streq("ikev2-cert", type) ||
+		streq("ikev2-cert-eap", type) ||
+		streq("ikev2-eap-tls", type))
 	{
 		if (!add_auth_cfg_cert(this, peer_cfg))
 		{
@@ -718,16 +716,16 @@ static job_requeue_t initiate(private_android_service_t *this)
 			return JOB_REQUEUE_NONE;
 		}
 	}
-	if (streq("ikev2-eap", this->type) ||
-		streq("ikev2-cert-eap", this->type) ||
-		streq("ikev2-byod-eap", this->type))
+	if (streq("ikev2-eap", type) ||
+		streq("ikev2-cert-eap", type) ||
+		streq("ikev2-byod-eap", type))
 	{
-		add_auth_cfg_pw(this, peer_cfg, strpfx(this->type, "ikev2-byod"));
+		add_auth_cfg_pw(this, peer_cfg, strpfx(type, "ikev2-byod"));
 	}
 
 	/* remote auth config */
 	auth = auth_cfg_create();
-	gateway = identification_create_from_string(this->gateway);
+	gateway = identification_create_from_string(server);
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -806,23 +804,15 @@ METHOD(android_service_t, destroy, void,
 	close_tun_device(this);
 	this->dns_proxy->destroy(this->dns_proxy);
 	this->lock->destroy(this->lock);
-	free(this->type);
-	free(this->gateway);
-	free(this->username);
-	if (this->password)
-	{
-		memwipe(this->password, strlen(this->password));
-		free(this->password);
-	}
+	this->settings->destroy(this->settings);
 	free(this);
 }
 
 /**
  * See header
  */
-android_service_t *android_service_create(android_creds_t *creds, char *type,
-										  char *gateway, char *username,
-										  char *password)
+android_service_t *android_service_create(android_creds_t *creds,
+										  settings_t *settings)
 {
 	private_android_service_t *this;
 
@@ -840,15 +830,14 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.dns_proxy = android_dns_proxy_create(),
-		.username = username,
-		.password = password,
-		.gateway = gateway,
+		.settings = settings,
 		.creds = creds,
-		.type = type,
 		.tunfd = -1,
+		.mtu = settings->get_int(settings, "global.mtu", ANDROID_DEFAULT_MTU),
 	);
 	/* only allow queries for the VPN gateway */
-	this->dns_proxy->add_hostname(this->dns_proxy, gateway);
+	this->dns_proxy->add_hostname(this->dns_proxy,
+			this->settings->get_str(this->settings, "connection.server", NULL));
 
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 

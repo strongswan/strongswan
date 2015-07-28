@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -44,7 +44,6 @@
 #define ANDROID_RETRASNMIT_TRIES 3
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
-#define ANDROID_FRAGMENT_SIZE 1400
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -82,11 +81,6 @@ struct private_charonservice_t {
 	 * NetworkManager instance (accessed via JNI)
 	 */
 	network_manager_t *network_manager;
-
-	/**
-	 * Handle network events
-	 */
-	android_net_t *net_handler;
 
 	/**
 	 * CharonVpnService reference
@@ -400,18 +394,27 @@ METHOD(charonservice_t, get_network_manager, network_manager_t*,
 /**
  * Initiate a new connection
  *
- * @param gateway			gateway address (gets owned)
- * @param username			username (gets owned)
- * @param password			password (gets owned)
+ * @param settings			configuration settings (gets owned)
  */
-static void initiate(char *type, char *gateway, char *username, char *password)
+static void initiate(settings_t *settings)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	lib->settings->set_str(lib->settings,
+						"charon.plugins.tnc-imc.preferred_language",
+						settings->get_str(settings, "global.language", "en"));
+	/* this is actually the size of the complete IKE/IP packet, so if the MTU
+	 * for the TUN devices has to be reduced to pass traffic the IKE packets
+	 * will be a bit smaller than necessary as there is no IPsec overhead like
+	 * for the tunneled traffic (but compensating that seems like overkill) */
+	lib->settings->set_int(lib->settings,
+						"charon.fragment_size",
+						settings->get_int(settings, "global.mtu",
+										  ANDROID_DEFAULT_MTU));
+
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
-	this->service = android_service_create(this->creds, type, gateway,
-										   username, password);
+	this->service = android_service_create(this->creds, settings);
 }
 
 /**
@@ -423,14 +426,12 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 	if (reg)
 	{
-		this->net_handler = android_net_create();
 		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 		charon->attributes->add_handler(charon->attributes,
 										&this->attr->handler);
 	}
 	else
 	{
-		this->net_handler->destroy(this->net_handler);
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 		charon->attributes->remove_handler(charon->attributes,
 										   &this->attr->handler);
@@ -466,8 +467,8 @@ static void set_options(char *logfile)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
-	lib->settings->set_int(lib->settings,
-					"charon.fragment_size", ANDROID_FRAGMENT_SIZE);
+	lib->settings->set_bool(lib->settings,
+					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
 	/* setting the source address breaks the VpnService.protect() function which
@@ -483,19 +484,6 @@ static void set_options(char *logfile)
 	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.use_ipv6", FALSE);
-	/* don't install virtual IPs via kernel-netlink */
-	lib->settings->set_bool(lib->settings,
-					"charon.install_virtual_ip", FALSE);
-	/* kernel-netlink should not trigger roam events, we use Android's
-	 * ConnectivityManager for that, much less noise */
-	lib->settings->set_bool(lib->settings,
-					"charon.plugins.kernel-netlink.roam_events", FALSE);
-	/* ignore tun devices (it's mostly tun0 but it may already be taken, ignore
-	 * some others too), also ignore lo as a default route points to it when
-	 * no connectivity is available */
-	lib->settings->set_str(lib->settings,
-					"charon.interfaces_ignore", "lo, tun0, tun1, tun2, tun3, "
-					"tun4");
 
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
@@ -519,6 +507,8 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 		PLUGIN_CALLBACK(charonservice_register, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
@@ -705,14 +695,12 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
  * Initiate SA
  */
 JNI_METHOD(CharonVpnService, initiate, void,
-	jstring jtype, jstring jgateway, jstring jusername, jstring jpassword)
+	jstring jconfig)
 {
-	char *type, *gateway, *username, *password;
+	settings_t *settings;
+	char *config;
 
-	type = androidjni_convert_jstring(env, jtype);
-	gateway = androidjni_convert_jstring(env, jgateway);
-	username = androidjni_convert_jstring(env, jusername);
-	password = androidjni_convert_jstring(env, jpassword);
-
-	initiate(type, gateway, username, password);
+	config = androidjni_convert_jstring(env, jconfig);
+	settings = settings_create_string(config);
+	initiate(settings);
 }

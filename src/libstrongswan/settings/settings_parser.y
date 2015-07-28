@@ -39,6 +39,7 @@ int settings_parser_get_leng(void *scanner);
 int settings_parser_get_lineno(void *scanner);
 /* Custom functions in lexer */
 bool settings_parser_open_next_file(parser_helper_t *ctx);
+bool settings_parser_load_string(parser_helper_t *ctx, const char *content);
 
 /**
  * Forward declarations
@@ -79,7 +80,7 @@ static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
 	struct kv_t *kv;
 }
 %token <s> NAME STRING
-%token NEWLINE
+%token NEWLINE STRING_ERROR
 
 /* ...and other symbols */
 %type <s> value valuepart
@@ -280,6 +281,42 @@ bool settings_parser_parse_file(section_t *root, char *name)
 		{
 			DBG1(DBG_CFG, "invalid config file '%s'", name);
 		}
+	}
+	array_destroy(sections);
+	settings_parser_lex_destroy(helper->scanner);
+	helper->destroy(helper);
+	return success;
+}
+
+/**
+ * Parse the given string and add all sections and key/value pairs to the
+ * given section.
+ */
+bool settings_parser_parse_string(section_t *root, char *settings)
+{
+	parser_helper_t *helper;
+	array_t *sections = NULL;
+	bool success = FALSE;
+
+	array_insert_create(&sections, ARRAY_TAIL, root);
+	helper = parser_helper_create(sections);
+	helper->get_lineno = settings_parser_get_lineno;
+	if (settings_parser_lex_init_extra(helper, &helper->scanner) != 0)
+	{
+		helper->destroy(helper);
+		array_destroy(sections);
+		return FALSE;
+	}
+	settings_parser_load_string(helper, settings);
+	if (getenv("DEBUG_SETTINGS_PARSER"))
+	{
+		yydebug = 1;
+		settings_parser_set_debug(1, helper->scanner);
+	}
+	success = yyparse(helper) == 0;
+	if (!success)
+	{
+		DBG1(DBG_CFG, "failed to parse settings '%s'", settings);
 	}
 	array_destroy(sections);
 	settings_parser_lex_destroy(helper->scanner);

@@ -63,11 +63,19 @@
     <string name="profile_ca_auto_label">Wybierz automatycznie</string>
     <string name="profile_ca_select_certificate_label">Wybierz certyfikat CA</string>
     <string name="profile_ca_select_certificate">Wybierz określony certyfikat CA</string>
+    <string name="profile_show_advanced_label">Show advanced settings</string>
+    <string name="profile_mtu_label">MTU:</string>
+    <string name="profile_port_label">Server port:</string>
+    <string name="profile_use_default_hint">(use default)</string>
+    <string name="profile_split_tunneling_label">Split tunneling:</string>
+    <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
+    <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Wprowadź adres bramki</string>
     <string name="alert_text_no_input_username">Wprowadź swoją nazwę użytkownika</string>
     <string name="alert_text_nocertfound_title">Nie wybrano żadnego certyfikatu CA</string>
     <string name="alert_text_nocertfound">Wybierz lub uaktywnij jeden <i>Wybierz automatycznie</i></string>
+    <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
     <string name="tnc_notice_subtitle">Device data is sent to the gateway operator</string>
     <string name="tnc_notice_details">&lt;p>Trusted Network Connect (TNC) allows gateway operators to assess the health of a client device.&lt;/p>&lt;p>For that purpose the gateway operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.&lt;/p>&lt;b>Any data will be sent only after verifying the gateway\'s identity.&lt;/b></string>

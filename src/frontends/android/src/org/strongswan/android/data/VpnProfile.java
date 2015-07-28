@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -17,9 +17,15 @@
 
 package org.strongswan.android.data;
 
+
 public class VpnProfile implements Cloneable
 {
+	/* While storing this as EnumSet would be nicer this simplifies storing it in a database */
+	public static final int SPLIT_TUNNELING_BLOCK_IPV4 = 1;
+	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
+
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -101,6 +107,36 @@ public class VpnProfile implements Cloneable
 	public void setUserCertificateAlias(String alias)
 	{
 		this.mUserCertificate = alias;
+	}
+
+	public Integer getMTU()
+	{
+		return mMTU;
+	}
+
+	public void setMTU(Integer mtu)
+	{
+		this.mMTU = mtu;
+	}
+
+	public Integer getPort()
+	{
+		return mPort;
+	}
+
+	public void setPort(Integer port)
+	{
+		this.mPort = port;
+	}
+
+	public Integer getSplitTunneling()
+	{
+		return mSplitTunneling;
+	}
+
+	public void setSplitTunneling(Integer splitTunneling)
+	{
+		this.mSplitTunneling = splitTunneling;
 	}
 
 	@Override
