@@ -36,6 +36,8 @@ typedef enum {
 	JHASH_LOOKUP2,
 	/* new variant, http://burtleburtle.net/bob/c/lookup3.c, since 2.6.37 */
 	JHASH_LOOKUP3,
+	/* variant with different init values, since 4.1 */
+	JHASH_LOOKUP3_1,
 } jhash_version_t;
 
 typedef struct private_ha_kernel_t private_ha_kernel_t;
@@ -88,8 +90,15 @@ static jhash_version_t get_jhash_version()
 				}
 				/* FALL */
 			case 2:
-				DBG1(DBG_CFG, "detected Linux %d.%d, using new jhash", a, b);
-				return JHASH_LOOKUP3;
+				if (a < 4 || (a == 4 && b == 0))
+				{
+					DBG1(DBG_CFG, "detected Linux %d.%d, using new jhash",
+						 a, b);
+					return JHASH_LOOKUP3;
+				}
+				DBG1(DBG_CFG, "detected Linux %d.%d, using new jhash with "
+					 "updated init values", a, b);
+				return JHASH_LOOKUP3_1;
 			default:
 				break;
 		}
@@ -126,6 +135,14 @@ static u_int32_t jhash(jhash_version_t version, u_int32_t a, u_int32_t b)
 			b -= c; b -= a; b ^= (a << 10);
 			c -= a; c -= b; c ^= (b >> 15);
 			break;
+		case JHASH_LOOKUP3_1:
+			/* changed with 4.1: # of 32-bit words shifted by 2 and c is
+			 * initialized. we only use the two word variant with SPIs, so it's
+			 * unlikely that b is 0 in that case */
+			c += ((b ? 2 : 1) << 2) + 0xdeadbeef;
+			a += ((b ? 2 : 1) << 2);
+			b += ((b ? 2 : 1) << 2);
+			/* FALL */
 		case JHASH_LOOKUP3:
 			a += 0xdeadbeef;
 			b += 0xdeadbeef;
