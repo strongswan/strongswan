@@ -2562,6 +2562,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	if (!add_mark(hdr, sizeof(request), mark))
 	{
+		this->mutex->unlock(this->mutex);
 		return FAILED;
 	}
 
