@@ -1,6 +1,6 @@
-alice::ipsec status 2> /dev/null::rw\[1].*ESTABLISHED.*mars.strongswan.org.*carol@strongswan.org::YES
+alice::ipsec status 2> /dev/null::rw\[1].*PASSIVE.*mars.strongswan.org.*carol@strongswan.org::YES
 alice::ipsec status 2> /dev/null::rw\[2].*ESTABLISHED.*mars.strongswan.org.*dave@strongswan.org::YES
-moon:: ipsec status 2> /dev/null::rw\[1].*PASSIVE.*mars.strongswan.org.*carol@strongswan.org::YES
+moon:: ipsec status 2> /dev/null::rw\[1].*ESTABLISHED.*mars.strongswan.org.*carol@strongswan.org::YES
 moon:: ipsec status 2> /dev/null::rw\[2].*PASSIVE.*mars.strongswan.org.*dave@strongswan.org::YES
 carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*carol@strongswan.org.*mars.strongswan.org::YES
 dave:: ipsec status 2> /dev/null::home.*ESTABLISHED.*dave@strongswan.org.*mars.strongswan.org::YES

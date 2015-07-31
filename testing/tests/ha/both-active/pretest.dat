@@ -11,6 +11,7 @@ carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
 moon::ipsec start
 alice::ipsec start
+alice::sleep 1
 carol::ipsec start
 dave::ipsec start
 carol::sleep 1

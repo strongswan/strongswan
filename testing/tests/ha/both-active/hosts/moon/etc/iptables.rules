@@ -11,8 +11,8 @@
 -A FORWARD -m policy -o eth0 --dir out --pol ipsec --proto esp -j ACCEPT
 
 # clusterip rules
--A INPUT -i eth0 -d 192.168.0.5 -j CLUSTERIP --new --hashmode sourceip --clustermac 01:00:c0:a8:00:05 --total-nodes 2 --local-node 1
--A INPUT -i eth1 -d 10.1.0.5    -j CLUSTERIP --new --hashmode sourceip --clustermac 01:00:0a:01:00:05 --total-nodes 2 --local-node 1
+-A INPUT -i eth0 -d 192.168.0.5 -j CLUSTERIP --new --hashmode sourceip --clustermac 01:00:c0:a8:00:05 --total-nodes 2 --local-node 0 
+-A INPUT -i eth1 -d 10.1.0.5    -j CLUSTERIP --new --hashmode sourceip --clustermac 01:00:0a:01:00:05 --total-nodes 2 --local-node 0 
 
 # allow esp
 -A INPUT  -p 50 -j ACCEPT
