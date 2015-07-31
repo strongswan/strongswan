@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -105,6 +105,11 @@ struct private_child_sa_t {
 	 * Did we allocate/confirm and must release the reqid?
 	 */
 	bool reqid_allocated;
+
+	/**
+	 * Is the reqid statically configured
+	 */
+	bool static_reqid;
 
 	/*
 	 * Unique CHILD_SA identifier
@@ -698,7 +703,7 @@ METHOD(child_sa_t, install, status_t,
 	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
 								  &esn, NULL);
 
-	if (!this->reqid_allocated && !this->reqid)
+	if (!this->reqid_allocated && !this->static_reqid)
 	{
 		status = hydra->kernel_interface->alloc_reqid(hydra->kernel_interface,
 							my_ts, other_ts, this->mark_in, this->mark_out,
@@ -826,7 +831,7 @@ METHOD(child_sa_t, add_policies, status_t,
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
 
-	if (!this->reqid_allocated && !this->reqid)
+	if (!this->reqid_allocated && !this->static_reqid)
 	{
 		/* trap policy, get or confirm reqid */
 		status = hydra->kernel_interface->alloc_reqid(
@@ -1304,6 +1309,10 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		{
 			this->reqid = charon->traps->find_reqid(charon->traps, config);
 		}
+	}
+	else
+	{
+		this->static_reqid = TRUE;
 	}
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
