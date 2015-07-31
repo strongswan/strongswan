@@ -27,7 +27,6 @@ then
 fi
 
 KERNELDIR=$BUILDDIR/$KERNEL
-cd $KERNELDIR
 
 if [ ! -d "$KERNELDIR" ]
 then
@@ -37,11 +36,12 @@ then
 	if [ $KERNELPATCH ]
 	then
 		log_action "Applying kernel patch"
-		bzcat ../$KERNELPATCH | patch -p1 >>$LOGFILE 2>&1
+		bzcat $KERNELPATCH | patch -d $KERNELDIR -p1 >>$LOGFILE 2>&1
 		log_status $?
 		[ $? -eq 0 ] || exit 1
 	fi
 fi
+cd $KERNELDIR
 
 if [ ! -f .config ]
 then
