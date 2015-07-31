@@ -129,11 +129,6 @@ enum id_type_t {
 	 * Private ID type which represents a GeneralName of type URI
 	 */
 	ID_DER_ASN1_GN_URI = 201,
-
-	/**
-	 * Private ID type which represents a user ID
-	 */
-	ID_USER_ID = 202
 };
 
 /**

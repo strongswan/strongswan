@@ -47,10 +47,9 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_USER_ID, ID_KEY_ID,
-	"ID_DER_ASN1_GN_URI",
-	"ID_USER_ID");
-ENUM_END(id_type_names, ID_USER_ID);
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_DER_ASN1_GN_URI, ID_KEY_ID,
+	"ID_DER_ASN1_GN_URI");
+ENUM_END(id_type_names, ID_DER_ASN1_GN_URI);
 
 /**
  * coding of X.501 distinguished name
@@ -859,7 +858,6 @@ int identification_printf_hook(printf_hook_data_t *data,
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
-		case ID_USER_ID:
 			chunk_printable(this->encoded, &proper, '?');
 			snprintf(buf, sizeof(buf), "%.*s", (int)proper.len, proper.ptr);
 			chunk_free(&proper);
@@ -941,7 +939,6 @@ static private_identification_t *identification_create(id_type_t type)
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
-		case ID_USER_ID:
 			this->public.hash = _hash_binary;
 			this->public.matches = _matches_string;
 			this->public.equals = _equals_strcasecmp;
