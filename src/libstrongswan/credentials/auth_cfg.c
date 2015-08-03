@@ -514,9 +514,10 @@ METHOD(auth_cfg_t, complies, bool,
 	private_auth_cfg_t *this, auth_cfg_t *constraints, bool log_error)
 {
 	enumerator_t *e1, *e2;
-	bool success = TRUE, group_match = FALSE, cert_match = FALSE;
+	bool success = TRUE, group_match = FALSE;
+	bool ca_match = FALSE, cert_match = FALSE;
 	identification_t *require_group = NULL;
-	certificate_t *require_cert = NULL;
+	certificate_t *require_ca = NULL, *require_cert = NULL;
 	signature_scheme_t scheme = SIGN_UNKNOWN;
 	u_int strength = 0;
 	auth_rule_t t1, t2;
@@ -531,26 +532,21 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			{
-				certificate_t *c1, *c2;
+				certificate_t *cert;
 
-				c1 = (certificate_t*)value;
+				/* for CA certs, a match of a single cert is sufficient */
+				require_ca = (certificate_t*)value;
 
-				success = FALSE;
 				e2 = create_enumerator(this);
-				while (e2->enumerate(e2, &t2, &c2))
+				while (e2->enumerate(e2, &t2, &cert))
 				{
 					if ((t2 == AUTH_RULE_CA_CERT || t2 == AUTH_RULE_IM_CERT) &&
-						c1->equals(c1, c2))
+						cert->equals(cert, require_ca))
 					{
-						success = TRUE;
+						ca_match = TRUE;
 					}
 				}
 				e2->destroy(e2);
-				if (!success && log_error)
-				{
-					DBG1(DBG_CFG, "constraint check failed: peer not "
-						 "authenticated by CA '%Y'.", c1->get_subject(c1));
-				}
 				break;
 			}
 			case AUTH_RULE_SUBJECT_CERT:
@@ -853,13 +849,22 @@ METHOD(auth_cfg_t, complies, bool,
 		}
 		return FALSE;
 	}
-
+	if (require_ca && !ca_match)
+	{
+		if (log_error)
+		{
+			DBG1(DBG_CFG, "constraint check failed: peer not "
+				 "authenticated by CA '%Y'",
+				 require_ca->get_subject(require_ca));
+		}
+		return FALSE;
+	}
 	if (require_cert && !cert_match)
 	{
 		if (log_error)
 		{
 			DBG1(DBG_CFG, "constraint check failed: peer not "
-				 "authenticated with peer cert '%Y'.",
+				 "authenticated with peer cert '%Y'",
 				 require_cert->get_subject(require_cert));
 		}
 		return FALSE;
