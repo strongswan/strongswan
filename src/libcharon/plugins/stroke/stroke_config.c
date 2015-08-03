@@ -184,19 +184,16 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 }
 
 /**
- * Build an IKE config from a stroke message
+ * Check if any addresses in the given string are local
  */
-static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
+static bool is_local(char *address)
 {
 	enumerator_t *enumerator;
-	stroke_end_t tmp_end;
-	ike_cfg_t *ike_cfg;
 	host_t *host;
-	u_int16_t ikeport;
-	char me[256], other[256], *token;
-	bool swapped = FALSE;;
+	char *token;
+	bool found = FALSE;
 
-	enumerator = enumerator_create_token(msg->add_conn.other.address, ",", " ");
+	enumerator = enumerator_create_token(address, ",", " ");
 	while (enumerator->enumerate(enumerator, &token))
 	{
 		if (!strchr(token, '/'))
@@ -207,40 +204,56 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 				if (hydra->kernel_interface->get_interface(
 										hydra->kernel_interface, host, NULL))
 				{
-					DBG2(DBG_CFG, "left is other host, swapping ends");
-					tmp_end = msg->add_conn.me;
-					msg->add_conn.me = msg->add_conn.other;
-					msg->add_conn.other = tmp_end;
-					swapped = TRUE;
+					found = TRUE;
 				}
 				host->destroy(host);
+				if (found)
+				{
+					break;
+				}
 			}
 		}
 	}
 	enumerator->destroy(enumerator);
+	return found;
+}
 
-	if (!swapped)
+/**
+ * Swap ends if indicated by left|right
+ */
+static void swap_ends(stroke_msg_t *msg)
+{
+	if (!lib->settings->get_bool(lib->settings, "%s.plugins.stroke.allow_swap",
+								 TRUE, lib->ns))
 	{
-		enumerator = enumerator_create_token(msg->add_conn.me.address, ",", " ");
-		while (enumerator->enumerate(enumerator, &token))
-		{
-			if (!strchr(token, '/'))
-			{
-				host = host_create_from_dns(token, 0, 0);
-				if (host)
-				{
-					if (!hydra->kernel_interface->get_interface(
-										hydra->kernel_interface, host, NULL))
-					{
-						DBG1(DBG_CFG, "left nor right host is our side, "
-							 "assuming left=local");
-					}
-					host->destroy(host);
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
+		return;
 	}
+
+	if (is_local(msg->add_conn.other.address))
+	{
+		stroke_end_t tmp_end;
+
+		DBG2(DBG_CFG, "left is other host, swapping ends");
+		tmp_end = msg->add_conn.me;
+		msg->add_conn.me = msg->add_conn.other;
+		msg->add_conn.other = tmp_end;
+	}
+	else if (!is_local(msg->add_conn.me.address))
+	{
+		DBG1(DBG_CFG, "left nor right host is our side, assuming left=local");
+	}
+}
+
+/**
+ * Build an IKE config from a stroke message
+ */
+static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
+{
+	ike_cfg_t *ike_cfg;
+	u_int16_t ikeport;
+	char me[256], other[256];
+
+	swap_ends(msg);
 
 	if (msg->add_conn.me.allow_any)
 	{
