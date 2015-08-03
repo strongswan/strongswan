@@ -163,7 +163,7 @@ running_any()
 	command -v virsh >/dev/null || return 1
 	for host in $*
 	do
-		virsh list --name | grep "^$host$" >/dev/null && return 0
+		virsh list --name 2>/dev/null | grep "^$host$" >/dev/null && return 0
 	done
 	return 1
 }
