@@ -23,6 +23,7 @@ SSHCONF="-F $DIR/ssh_config"
 [ -d $DIR/tests ] || die "Directory 'tests' not found"
 [ -d $BUILDDIR ] ||
 	die "Directory '$BUILDDIR' does not exist, please run make-testing first"
+running_any $STRONGSWANHOSTS || die "Please start test environment before running $0"
 
 ln -sfT $DIR $TESTDIR/testing
 
