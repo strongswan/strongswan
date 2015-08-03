@@ -186,7 +186,7 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 /**
  * Check if any addresses in the given string are local
  */
-static bool is_local(char *address)
+static bool is_local(char *address, bool any_allowed)
 {
 	enumerator_t *enumerator;
 	host_t *host;
@@ -203,6 +203,10 @@ static bool is_local(char *address)
 			{
 				if (hydra->kernel_interface->get_interface(
 										hydra->kernel_interface, host, NULL))
+				{
+					found = TRUE;
+				}
+				else if (any_allowed && host->is_anyaddr(host))
 				{
 					found = TRUE;
 				}
@@ -229,7 +233,7 @@ static void swap_ends(stroke_msg_t *msg)
 		return;
 	}
 
-	if (is_local(msg->add_conn.other.address))
+	if (is_local(msg->add_conn.other.address, FALSE))
 	{
 		stroke_end_t tmp_end;
 
@@ -238,7 +242,7 @@ static void swap_ends(stroke_msg_t *msg)
 		msg->add_conn.me = msg->add_conn.other;
 		msg->add_conn.other = tmp_end;
 	}
-	else if (!is_local(msg->add_conn.me.address))
+	else if (!is_local(msg->add_conn.me.address, TRUE))
 	{
 		DBG1(DBG_CFG, "left nor right host is our side, assuming left=local");
 	}
