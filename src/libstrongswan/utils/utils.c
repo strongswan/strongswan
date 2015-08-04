@@ -175,10 +175,19 @@ void closefrom(int low_fd)
 	DIR *dir;
 	struct dirent *entry;
 
+#ifndef HAVE_DIRFD
+	/* if we don't have dirfd() lets close the lowest FD and hope it gets reused
+	 * by opendir() */
+	close(low_fd);
+	dir_fd = low_fd++;
+#endif
+
 	dir = opendir(FD_DIR);
 	if (dir)
 	{
+#ifdef HAVE_DIRFD
 		dir_fd = dirfd(dir);
+#endif
 		while ((entry = readdir(dir)))
 		{
 			if (!isdigit(entry->d_name[0]))
