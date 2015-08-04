@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -16,14 +16,22 @@
 
 #include "utils.h"
 
+#include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
+#include <ctype.h>
 #ifndef WIN32
 # include <signal.h>
 #endif
 
+#ifndef HAVE_CLOSEFROM
+# include <dirent.h>
+#endif
+
 #include <library.h>
 #include <collections/enumerator.h>
+
+#define FD_DIR "/proc/self/fd"
 
 #ifdef WIN32
 
@@ -110,43 +118,47 @@ void wait_sigint()
 /**
  * Described in header.
  */
-void closefrom(int lowfd)
+void closefrom(int low_fd)
 {
-	char fd_dir[PATH_MAX];
-	int maxfd, fd, len;
+	DIR *dir;
+	struct dirent *entry;
+	int max_fd, dir_fd, fd;
 
-	/* try to close only open file descriptors on Linux... */
-	len = snprintf(fd_dir, sizeof(fd_dir), "/proc/%u/fd", getpid());
-	if (len > 0 && len < sizeof(fd_dir) && access(fd_dir, F_OK) == 0)
+	/* try to close only open file descriptors on Linux... This is potentially
+	 * unsafe when called after fork() in multi-threaded applications.  In
+	 * particular opendir() will require an allocation.  So it depends on how
+	 * the malloc() implementation handles such situations */
+	dir = opendir(FD_DIR);
+	if (dir)
 	{
-		enumerator_t *enumerator = enumerator_create_directory(fd_dir);
-		if (enumerator)
+		dir_fd = dirfd(dir);
+		while ((entry = readdir(dir)))
 		{
-			char *rel;
-			while (enumerator->enumerate(enumerator, &rel, NULL, NULL))
+			if (!isdigit(entry->d_name[0]))
 			{
-				fd = atoi(rel);
-				if (fd >= lowfd)
-				{
-					close(fd);
-				}
+				continue;
 			}
-			enumerator->destroy(enumerator);
-			return;
+			fd = atoi(entry->d_name);
+			if (fd != dir_fd && fd >= low_fd)
+			{
+				close(fd);
+			}
 		}
+		closedir(dir);
+		return;
 	}
 
 	/* ...fall back to closing all fds otherwise */
 #ifdef WIN32
-	maxfd = _getmaxstdio();
+	max_fd = _getmaxstdio();
 #else
-	maxfd = (int)sysconf(_SC_OPEN_MAX);
+	max_fd = (int)sysconf(_SC_OPEN_MAX);
 #endif
-	if (maxfd < 0)
+	if (max_fd < 0)
 	{
-		maxfd = 256;
+		max_fd = 256;
 	}
-	for (fd = lowfd; fd < maxfd; fd++)
+	for (fd = low_fd; fd < max_fd; fd++)
 	{
 		close(fd);
 	}
