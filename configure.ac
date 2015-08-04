@@ -553,7 +553,7 @@ AC_CHECK_FUNC(
 		# set -Werror so that we get an error for "argument ... has
 		# incompatible pointer type" warnings
 		save_CFLAGS="$CFLAGS"
-		CFLAGS="$CFLAGS -Werror"
+		CFLAGS="$CFLAGS -Werror -Wno-unused-parameter"
 		AC_MSG_CHECKING([for GNU-style qsort_r])
 		AC_COMPILE_IFELSE(
 			[AC_LANG_PROGRAM(
