@@ -392,7 +392,8 @@ static void add_quadruple(imc_msg_t *msg, char *section, quadruple_t *quad)
 	const size_t version_len = 16;
 	char version[version_len];
 	char hex_version_default[] = "00000000000000000000000000000000";
-	char *app, *name, *patches, *pos, *string_version, *hex_version;
+	char *app, *name, *patches, *string_version, *hex_version;
+	size_t len;
 	chunk_t num_version;
 	enumerator_t *enumerator;
 
@@ -414,24 +415,6 @@ static void add_quadruple(imc_msg_t *msg, char *section, quadruple_t *quad)
 					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.version", 
 					hex_version_default, lib->ns, section, quad->section, app);
 
-		/* replace \n escape character by CRLF */
-		pos = patches;
-		while (TRUE)
-		{
-			pos = strchr(pos, '\\');
-			if (pos == NULL)
-			{
-				break;
-			}
-			if (pos[1] == 'n')
-			{
-				pos[0] = '\r';
-				pos[1] = '\n';
-				pos++;
-			}
-			pos++;
-		}
-
 		/* convert hex string into binary chunk */
 		if (strlen(hex_version) > 2 * version_len)
 		{
@@ -446,7 +429,14 @@ static void add_quadruple(imc_msg_t *msg, char *section, quadruple_t *quad)
 						pen_type_create(PEN_PWG, quad->name_attr));
 		msg->add_attribute(msg, attr);
 
-		DBG2(DBG_IMC, "  %N: %s", pwg_attr_names, quad->patches_attr, patches);
+		/* remove any trailing LF from patches string for logging */
+		len = strlen(patches);
+		if (len && (patches[len - 1] == '\n'))
+		{
+			len--;
+		}
+		DBG2(DBG_IMC, "  %N:%s%.*s", pwg_attr_names, quad->patches_attr,
+						len ? "\n" : " ", len, patches);
 		attr = generic_attr_string_create(chunk_from_str(patches),
 						pen_type_create(PEN_PWG, quad->patches_attr));
 		msg->add_attribute(msg, attr);

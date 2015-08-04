@@ -260,20 +260,36 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 				case PWG_HCD_VENDOR_NAME:
 				case PWG_HCD_TIME_SOURCE:
 				case PWG_HCD_FIRMWARE_NAME:
-				case PWG_HCD_FIRMWARE_PATCHES:
 				case PWG_HCD_FIRMWARE_STRING_VERSION:
 				case PWG_HCD_RESIDENT_APP_NAME:
-				case PWG_HCD_RESIDENT_APP_PATCHES:
 				case PWG_HCD_RESIDENT_APP_STRING_VERSION:
 				case PWG_HCD_USER_APP_NAME:
-				case PWG_HCD_USER_APP_PATCHES:
 				case PWG_HCD_USER_APP_STRING_VERSION:
 				{
 					chunk_t value;
 
 					value = attr->get_value(attr);
 					DBG2(DBG_IMV, "  %N: %.*s", pwg_attr_names, type.type,
-								   value.len, value.ptr);
+								  value.len, value.ptr);
+					break;
+				}
+				case PWG_HCD_FIRMWARE_PATCHES:
+				case PWG_HCD_RESIDENT_APP_PATCHES:
+				case PWG_HCD_USER_APP_PATCHES:
+				{
+					chunk_t value;
+					size_t len;
+
+					value = attr->get_value(attr);
+					len = value.len;
+
+					/* remove any trailing LF from patches string */
+					if (len && (value.ptr[len - 1] == '\n'))
+					{
+						len--;
+					}
+					DBG2(DBG_IMV, "  %N:%s%.*s", pwg_attr_names, type.type,
+								  len ? "\n" : " ", len, value.ptr);
 					break;
 				}
 				case PWG_HCD_FIRMWARE_VERSION:
@@ -306,7 +322,7 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 					attr_cast = (generic_attr_bool_t*)attr;
 					status = attr_cast->get_status(attr_cast);
 					DBG2(DBG_IMV, "  %N: %s", pwg_attr_names, type.type,
-								   status ? "yes" : "no");
+								  status ? "yes" : "no");
 
 					if (type.type == PWG_HCD_USER_APP_ENABLED && !status)
 					{
@@ -323,7 +339,7 @@ static TNC_Result receive_msg(private_imv_hcd_agent_t *this, imv_state_t *state,
 					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
 					fwd_status = attr_cast->get_status(attr_cast);
 					DBG2(DBG_IMV, "  %N: %N", pwg_attr_names, type.type,
-								   os_fwd_status_names, fwd_status);
+								  os_fwd_status_names, fwd_status);
 					break;
 				}
 
