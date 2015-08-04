@@ -31,7 +31,7 @@ R	141123125153Z	141128194312Z,superseded	1E	unknown	/C=CH/O=Linux strongSwan/OU=
 V	150226210530Z		1F	unknown	/C=CH/O=Linux strongSwan/OU=Authorization Authority/CN=aa@strongswan.org
 V	190404095350Z		20	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
 V	190404095433Z		21	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
-V	150803083841Z		22	unknown	/C=CH/O=Linux strongSwan/CN=aaa.strongswan.org
+R	150803083841Z	150804144912Z,superseded	22	unknown	/C=CH/O=Linux strongSwan/CN=aaa.strongswan.org
 V	151119165922Z		23	unknown	/C=CH/O=Linux strongSwan/OU=Virtual VPN Gateway/CN=mars.strongswan.org
 V	161015124507Z		24	unknown	/C=CH/O=Linux strongSwan/OU=SHA-224/CN=moon.strongswan.org
 V	161015124759Z		25	unknown	/C=CH/O=Linux strongSwan/OU=SHA-384/CN=carol@strongswan.org
@@ -47,3 +47,4 @@ V	190826145626Z		2E	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=bob@strongsw
 R	190826150222Z	140827150343Z,keyCompromise	2F	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
 V	190826150536Z		30	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
 V	190826151202Z		31	unknown	/C=CH/O=Linux strongSwan/OU=Accounting/CN=dave@strongswan.org
+V	191127201436Z		32	unknown	/C=CH/O=Linux strongSwan/OU=OCSP Signing Authority/CN=ocsp.strongswan.org
