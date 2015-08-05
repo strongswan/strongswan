@@ -589,6 +589,12 @@ connections.<conn>.children.<child>.mode = tunnel
 	_pass_ and _drop_ are used to install shunt policies, which explicitly
 	bypass the defined traffic from IPsec processing, or drop it, respectively.
 
+connections.<conn>.children.<child>.policies = yes
+	Whether to install IPsec policies or not.
+
+	Whether to install IPsec policies or not. Disabling this can be useful in
+	some scenarios e.g. MIPv6, where policies are not managed by the IKE daemon.
+
 connections.<conn>.children.<child>.dpd_action = clear
 	Action to perform on DPD timeout (_clear_, _trap_ or _restart_).
 

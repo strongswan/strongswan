@@ -391,7 +391,7 @@ typedef struct {
 	char* updown;
 	bool hostaccess;
 	bool ipcomp;
-	bool route;
+	bool policies;
 	ipsec_mode_t mode;
 	u_int32_t replay_window;
 	action_t dpd_action;
@@ -426,6 +426,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   hostaccess = %u", data->hostaccess);
 	DBG2(DBG_CFG, "   ipcomp = %u", data->ipcomp);
 	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, data->mode);
+	DBG2(DBG_CFG, "   policies = %u", data->policies);
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
@@ -1249,6 +1250,7 @@ CALLBACK(child_kv, bool,
 		{ "updown",			parse_string,		&child->updown				},
 		{ "hostaccess",		parse_bool,			&child->hostaccess			},
 		{ "mode",			parse_mode,			&child->mode				},
+		{ "policies",		parse_bool,			&child->policies			},
 		{ "replay_window",	parse_uint32,		&child->replay_window		},
 		{ "rekey_time",		parse_time,			&child->lft.time.rekey		},
 		{ "life_time",		parse_time,			&child->lft.time.life		},
@@ -1356,6 +1358,7 @@ CALLBACK(children_sn, bool,
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
 		.mode = MODE_TUNNEL,
+		.policies = TRUE,
 		.replay_window = REPLAY_UNDEFINED,
 		.dpd_action = ACTION_NONE,
 		.start_action = ACTION_NONE,
@@ -1458,6 +1461,8 @@ CALLBACK(children_sn, bool,
 						child.dpd_action, child.close_action, child.ipcomp,
 						child.inactivity, child.reqid, &child.mark_in,
 						&child.mark_out, child.tfc);
+
+	cfg->set_mipv6_options(cfg, FALSE, child.policies);
 
 	if (child.replay_window != REPLAY_UNDEFINED)
 	{
