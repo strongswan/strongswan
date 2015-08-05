@@ -491,6 +491,16 @@ struct private_kernel_netlink_net_t {
 	bool rta_prefsrc_for_ipv6;
 
 	/**
+	 * whether marks can be used in route lookups
+	 */
+	bool rta_mark;
+
+	/**
+	 * the mark excluded from the routing rule used for virtual IPs
+	 */
+	mark_t routing_mark;
+
+	/**
 	 * whether to prefer temporary IPv6 addresses over public ones
 	 */
 	bool prefer_temporary_addrs;
@@ -1676,18 +1686,25 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	family = dest->get_family(dest);
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
-	if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
-		this->routing_table || match_net)
-	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
-		 * as we want to ignore routes with virtual IPs we cannot use DUMP
-		 * if these routes are not installed in a separate table */
-		hdr->nlmsg_flags |= NLM_F_DUMP;
-	}
 	hdr->nlmsg_type = RTM_GETROUTE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
 	msg = NLMSG_DATA(hdr);
 	msg->rtm_family = family;
+	if (!match_net && this->rta_mark && this->routing_mark.value)
+	{
+		/* if our routing rule excludes packets with a certain mark we can
+		 * get the preferred route without having to dump all routes */
+		chunk = chunk_from_thing(this->routing_mark.value);
+		netlink_add_attribute(hdr, RTA_MARK, chunk, sizeof(request));
+	}
+	else if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
+			 this->routing_table || match_net)
+	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
+		 * as we want to ignore routes with virtual IPs we cannot use DUMP
+		 * if these routes are not installed in a separate table */
+		hdr->nlmsg_flags |= NLM_F_DUMP;
+	}
 	if (candidate)
 	{
 		chunk = candidate->get_address(candidate);
@@ -2412,6 +2429,10 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 			netlink_add_attribute(hdr, FRA_FWMARK, chunk, sizeof(request));
 			chunk = chunk_from_thing(mark.mask);
 			netlink_add_attribute(hdr, FRA_FWMASK, chunk, sizeof(request));
+			if (msg->rtm_flags & FIB_RULE_INVERT)
+			{
+				this->routing_mark = mark;
+			}
 		}
 #else
 		DBG1(DBG_KNL, "setting firewall mark on routing rule is not supported");
@@ -2435,6 +2456,10 @@ static void check_kernel_features(private_kernel_netlink_net_t *this)
 			case 3:
 				if (a == 2)
 				{
+					if (b == 6 && c >= 36)
+					{
+						this->rta_mark = TRUE;
+					}
 					DBG2(DBG_KNL, "detected Linux %d.%d.%d, no support for "
 						 "RTA_PREFSRC for IPv6 routes", a, b, c);
 					break;
@@ -2443,6 +2468,7 @@ static void check_kernel_features(private_kernel_netlink_net_t *this)
 			case 2:
 				/* only 3.x+ uses two part version numbers */
 				this->rta_prefsrc_for_ipv6 = TRUE;
+				this->rta_mark = TRUE;
 				break;
 			default:
 				break;
