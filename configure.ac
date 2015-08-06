@@ -1868,17 +1868,18 @@ AC_CONFIG_FILES([
 	man/ipsec.secrets.5
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/pki.1
+	src/pki/man/pki---acert.1
+	src/pki/man/pki---dn.1
 	src/pki/man/pki---gen.1
 	src/pki/man/pki---issue.1
 	src/pki/man/pki---keyid.1
-	src/pki/man/pki---pkcs7.1
 	src/pki/man/pki---pkcs12.1
+	src/pki/man/pki---pkcs7.1
 	src/pki/man/pki---print.1
 	src/pki/man/pki---pub.1
 	src/pki/man/pki---req.1
 	src/pki/man/pki---self.1
 	src/pki/man/pki---signcrl.1
-	src/pki/man/pki---acert.1
 	src/pki/man/pki---verify.1
 	src/swanctl/swanctl.8
 	src/swanctl/swanctl.conf.5.head

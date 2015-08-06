@@ -1,4 +1,4 @@
-.TH PKI 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH PKI 1 "2015-08-06" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -63,6 +63,9 @@ Calculate key identifiers of a key or certificate.
 .TP
 .B "\-a, \-\-print"
 Print a credential (key, certificate etc.) in human readable form.
+.TP
+.B "\-d, \-\-dn"
+Extract the subject DN of an X.509 certificate.
 .TP
 .B "\-p, \-\-pub"
 Extract a public key from a private key or certificate.
@@ -156,5 +159,6 @@ certificates with the \-\-crl option.
 .BR pki\ \-\-pkcs7 (1),
 .BR pki\ \-\-keyid (1),
 .BR pki\ \-\-print (1),
+.BR pki\ \-\-dn (1),
 .BR pki\ \-\-pub (1),
 .BR pki\ \-\-verify (1)
