@@ -197,6 +197,16 @@ class Session(object):
         """
         return self.handler.request("get-pools")
 
+    def listen(self, event_types):
+        """Register and listen for the given events.
+
+        :param event_types: event types to register
+        :type event_types: list
+        :return: generator for streamed event responses as (event_type, dict)
+        :rtype: generator
+        """
+        return self.handler.listen(event_types)
+
 
 class SessionHandler(object):
     """Handles client command execution requests over vici."""
@@ -331,3 +341,27 @@ class SessionHandler(object):
                         errmsg=command_response["errmsg"]
                     )
                 )
+
+    def listen(self, event_types):
+        """Register and listen for the given events.
+
+        :param event_types: event types to register
+        :type event_types: list
+        :return: generator for streamed event responses as (event_type, dict)
+        :rtype: generator
+        """
+        for event_type in event_types:
+            self._register_unregister(event_type, True)
+
+        try:
+            while True:
+                response = Packet.parse(self.transport.receive())
+                if response.response_type == Packet.EVENT:
+                    try:
+                        yield response.event_type, Message.deserialize(response.payload)
+                    except GeneratorExit:
+                        break
+
+        finally:
+            for event_type in event_types:
+                self._register_unregister(event_type, False)
