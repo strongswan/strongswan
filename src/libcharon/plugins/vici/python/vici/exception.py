@@ -8,3 +8,6 @@ class SessionException(Exception):
 
 class CommandException(Exception):
     """Command result exception."""
+
+class EventUnknownException(Exception):
+    """Event unknown exception."""
