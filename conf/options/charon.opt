@@ -271,8 +271,8 @@ charon.retransmit_tries = 5
 	Number of times to retransmit a packet before giving up.
 
 charon.retry_initiate_interval = 0
-	Interval to use when retrying to initiate an IKE_SA (e.g. if DNS resolution
-	failed), 0 to disable retries.
+	Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if DNS
+	resolution failed), 0 to disable retries.
 
 charon.reuse_ikesa = yes
 	Initiate CHILD_SA within existing IKE_SAs.

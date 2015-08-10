@@ -6,8 +6,8 @@ charon.plugins.eap-radius.accounting_close_on_timeout = yes
 	updates.
 
 charon.plugins.eap-radius.accounting_interval = 0
-	Interval for interim RADIUS accounting updates, if not specified by the
-	RADIUS server in the Access-Accept message.
+	Interval in seconds for interim RADIUS accounting updates, if not specified
+	by the RADIUS server in the Access-Accept message.
 
 charon.plugins.eap-radius.accounting_requires_vip = no
 	If enabled, accounting is disabled unless an IKE_SA has at least one
