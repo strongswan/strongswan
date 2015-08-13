@@ -31,7 +31,7 @@ typedef struct ocsp_request_t ocsp_request_t;
 struct ocsp_request_t {
 
 	/**
-	 * Implements certificiate_t interface
+	 * Implements certificate_t interface
 	 */
 	certificate_t interface;
 };

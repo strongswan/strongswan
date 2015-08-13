@@ -50,7 +50,7 @@ extern enum_name_t *ocsp_status_names;
 struct ocsp_response_t {
 
 	/**
-	 * Implements certificiate_t interface
+	 * Implements certificate_t interface
 	 */
 	certificate_t certificate;
 

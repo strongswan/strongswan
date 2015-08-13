@@ -96,13 +96,13 @@ METHOD(listener_t, alert, bool,
 		case ALERT_PROPOSAL_MISMATCH_IKE:
 			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_IKE);
 			list = va_arg(args, linked_list_t*);
-			snprintf(msg.str, sizeof(msg.str), "the received IKE_SA poposals "
+			snprintf(msg.str, sizeof(msg.str), "the received IKE_SA proposals "
 					 "did not match: %#P", list);
 			break;
 		case ALERT_PROPOSAL_MISMATCH_CHILD:
 			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_CHILD);
 			list = va_arg(args, linked_list_t*);
-			snprintf(msg.str, sizeof(msg.str), "the received CHILD_SA poposals "
+			snprintf(msg.str, sizeof(msg.str), "the received CHILD_SA proposals "
 					 "did not match: %#P", list);
 			break;
 		case ALERT_TS_MISMATCH:
@@ -153,14 +153,14 @@ METHOD(listener_t, alert, bool,
 			msg.type = htonl(ERROR_NOTIFY_CERT_EXPIRED);
 			cert = va_arg(args, certificate_t*);
 			cert->get_validity(cert, NULL, &not_before, &not_after);
-			snprintf(msg.str, sizeof(msg.str), "certificiate expired: '%Y' "
+			snprintf(msg.str, sizeof(msg.str), "certificate expired: '%Y' "
 					 "(valid from %T to %T)", cert->get_subject(cert),
 					 &not_before, TRUE, &not_after, TRUE);
 			break;
 		case ALERT_CERT_REVOKED:
 			msg.type = htonl(ERROR_NOTIFY_CERT_REVOKED);
 			cert = va_arg(args, certificate_t*);
-			snprintf(msg.str, sizeof(msg.str), "certificiate revoked: '%Y'",
+			snprintf(msg.str, sizeof(msg.str), "certificate revoked: '%Y'",
 					 cert->get_subject(cert));
 			break;
 		case ALERT_CERT_NO_ISSUER:
