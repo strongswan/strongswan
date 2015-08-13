@@ -914,6 +914,11 @@ static void add_to_proposal_v1_ike(proposal_t *proposal,
 
 	if (encr != ENCR_UNDEFINED)
 	{
+		if (encr == ENCR_AES_CBC && !key_length)
+		{	/* some implementations don't send a Key Length attribute for
+			 * AES-128, early drafts of RFC 3602 allowed that */
+			key_length = 128;
+		}
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, key_length);
 	}
 }
@@ -962,6 +967,12 @@ static void add_to_proposal_v1(proposal_t *proposal,
 									transform->get_transform_id(transform));
 		if (encr)
 		{
+			if (encr == ENCR_AES_CBC && !key_length)
+			{	/* some implementations don't send a Key Length attribute for
+				 * AES-128, early drafts of RFC 3602 allowed that for IKE, some
+				 * also seem to do it for ESP */
+				key_length = 128;
+			}
 			proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr,
 									key_length);
 		}
