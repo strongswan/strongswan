@@ -65,6 +65,5 @@ void starter_netkey_cleanup(void)
 		return;
 	}
 	hydra->kernel_interface->flush_sas(hydra->kernel_interface);
-	hydra->kernel_interface->flush_policies(hydra->kernel_interface);
 	lib->plugins->unload(lib->plugins);
 }
