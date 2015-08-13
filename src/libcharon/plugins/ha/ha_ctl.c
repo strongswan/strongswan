@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -51,6 +52,41 @@ struct private_ha_ctl_t {
 };
 
 /**
+ * Change the permissions of the control FIFO, returns TRUE on success
+ */
+static bool change_fifo_permissions()
+{
+	if (chown(HA_FIFO, lib->caps->get_uid(lib->caps),
+			  lib->caps->get_gid(lib->caps)) != 0)
+	{
+		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Deletes and creates the control FIFO, returns TRUE on success
+ */
+static bool recreate_fifo()
+{
+	mode_t old;
+	bool success = TRUE;
+
+	unlink(HA_FIFO);
+	old = umask(S_IRWXO);
+	if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
+	{
+		DBG1(DBG_CFG, "creating HA FIFO %s failed: %s", HA_FIFO,
+			 strerror(errno));
+		success = FALSE;
+	}
+	umask(old);
+	return success && change_fifo_permissions();
+}
+
+/**
  * FIFO dispatching function
  */
 static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
@@ -59,13 +95,22 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 	bool oldstate;
 	char buf[8];
 	u_int segment;
+	struct stat sb;
 
 	oldstate = thread_cancelability(TRUE);
 	fifo = open(HA_FIFO, O_RDONLY);
 	thread_cancelability(oldstate);
-	if (fifo == -1)
+	if (fifo == -1 || fstat(fifo, &sb) != 0 || !S_ISFIFO(sb.st_mode))
 	{
-		DBG1(DBG_CFG, "opening HA fifo failed: %s", strerror(errno));
+		if (fifo == -1 && errno != ENOENT)
+		{
+			DBG1(DBG_CFG, "opening HA FIFO failed: %s", strerror(errno));
+		}
+		else
+		{
+			DBG1(DBG_CFG, "%s is not a FIFO, recreate it", HA_FIFO);
+			recreate_fifo();
+		}
 		sleep(1);
 		return JOB_REQUEUE_FAIR;
 	}
@@ -100,6 +145,7 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 METHOD(ha_ctl_t, destroy, void,
 	private_ha_ctl_t *this)
 {
+	unlink(HA_FIFO);
 	free(this);
 }
 
@@ -109,7 +155,7 @@ METHOD(ha_ctl_t, destroy, void,
 ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 {
 	private_ha_ctl_t *this;
-	mode_t old;
+	struct stat sb;
 
 	INIT(this,
 		.public = {
@@ -119,20 +165,30 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 		.cache = cache,
 	);
 
-	if (access(HA_FIFO, R_OK|W_OK) != 0)
+	if (stat(HA_FIFO, &sb) == 0)
 	{
-		old = umask(S_IRWXO);
-		if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
+		if (!S_ISFIFO(sb.st_mode))
 		{
-			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
-				 HA_FIFO, strerror(errno));
+			DBG1(DBG_CFG, "%s is not a FIFO, recreate it", HA_FIFO);
+			recreate_fifo();
 		}
-		umask(old);
+		else if (access(HA_FIFO, R_OK|W_OK) != 0)
+		{
+			DBG1(DBG_CFG, "accessing HA FIFO %s denied, recreate it", HA_FIFO);
+			recreate_fifo();
+		}
+		else
+		{
+			change_fifo_permissions();
+		}
 	}
-	if (chown(HA_FIFO, lib->caps->get_uid(lib->caps),
-			  lib->caps->get_gid(lib->caps)) != 0)
+	else if (errno == ENOENT)
 	{
-		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
+		recreate_fifo();
+	}
+	else
+	{
+		DBG1(DBG_CFG, "accessing HA FIFO %s failed: %s", HA_FIFO,
 			 strerror(errno));
 	}
 
@@ -141,4 +197,3 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	return &this->public;
 }
-
