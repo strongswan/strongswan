@@ -408,6 +408,11 @@ struct private_kernel_pfroute_net_t
 	 * Time in ms to wait for IP addresses to appear/disappear
 	 */
 	int vip_wait;
+
+	/**
+	 * whether to actually install virtual IPs
+	 */
+	bool install_virtual_ip;
 };
 
 
@@ -1197,6 +1202,11 @@ METHOD(kernel_net_t, add_ip, status_t,
 	tun_device_t *tun;
 	bool timeout = FALSE;
 
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+
 	tun = tun_device_create(NULL);
 	if (!tun)
 	{
@@ -1270,6 +1280,11 @@ METHOD(kernel_net_t, del_ip, status_t,
 	tun_device_t *tun;
 	host_t *addr;
 	bool timeout = FALSE, found = FALSE;
+
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->tuns->create_enumerator(this->tuns);
@@ -1848,6 +1863,8 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.roam_lock = spinlock_create(),
 		.vip_wait = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-pfroute.vip_wait", 1000, lib->ns),
+		.install_virtual_ip = lib->settings->get_bool(lib->settings,
+						"%s.install_virtual_ip", TRUE, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
