@@ -138,7 +138,7 @@ static child_cfg_t* find_child_cfg(char *name, peer_cfg_t **out)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
+	child_cfg_t *child_cfg = NULL;
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(
 							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);

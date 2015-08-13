@@ -44,7 +44,7 @@ char* translate(char *str, const char *from, const char *to)
 char* strreplace(const char *str, const char *search, const char *replace)
 {
 	size_t len, slen, rlen, count = 0;
-	char *res, *pos, *found, *dst;
+	char *res, *pos, *found = NULL, *dst;
 
 	if (!str || !*str || !search || !*search || !replace)
 	{

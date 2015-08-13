@@ -321,7 +321,7 @@ METHOD(authenticator_t, build, status_t,
 	chunk_t auth_data;
 	status_t status;
 	auth_payload_t *auth_payload;
-	auth_method_t auth_method;
+	auth_method_t auth_method = AUTH_NONE;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);

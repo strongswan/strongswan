@@ -59,7 +59,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
  */
 u_int32_t plugin_feature_hash(plugin_feature_t *feature)
 {
-	chunk_t data;
+	chunk_t data = chunk_empty;
 
 	switch (feature->type)
 	{
