@@ -729,7 +729,9 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			list = linked_list_create();
 			tnccs = entry->tnccs;
 
-			peer_id = tnccs->tls.get_peer_id(&tnccs->tls);
+			peer_id = tnccs->tls.is_server(&tnccs->tls) ?
+					tnccs->tls.get_peer_id(&tnccs->tls) :
+					tnccs->tls.get_server_id(&tnccs->tls);
 			if (peer_id)
 			{
 				switch (peer_id->get_type(peer_id))
@@ -771,7 +773,9 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 				}
 			}
 
-			peer_ip = tnccs->get_peer_ip(tnccs);
+			peer_ip = tnccs->tls.is_server(&tnccs->tls) ?
+					tnccs->get_peer_ip(tnccs) :
+					tnccs->get_server_ip(tnccs);
 			if (peer_ip)
 			{
 				switch (peer_ip->get_family(peer_ip))

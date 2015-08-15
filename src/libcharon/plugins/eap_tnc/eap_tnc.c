@@ -335,6 +335,10 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
+	if (!is_server)
+	{
+		tnccs->set_auth_type(tnccs, TNC_AUTH_X509_CERT);
+	}
 	this->tnccs = tnccs->get_ref(tnccs);
 	this->tls_eap = tls_eap_create(type, &tnccs->tls,
 								   EAP_TNC_MAX_MESSAGE_LEN,

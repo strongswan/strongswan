@@ -450,6 +450,7 @@ METHOD(pt_tls_client_t, run_assessment, status_t,
 	{
 		return FAILED;
 	}
+	tnccs->set_auth_type(tnccs, TNC_AUTH_X509_CERT);
 
 	DBG1(DBG_TNC, "entering PT-TLS data transport phase");
 	if (!assess(this, (tls_t*)tnccs))
