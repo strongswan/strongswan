@@ -738,6 +738,65 @@ information during an active_list-authorities_ command.
 		}
 	}
 
+### ike-updown ###
+
+The _ike-updown_ event is issued when an IKE_SA is established or terminated.
+
+	{
+		up = <yes or no>
+		<IKE_SA config name> = {
+			<same data as in the list-sas event, but without child-sas section>
+		}
+	}
+
+### ike-rekey ###
+
+The _ike-rekey_ event is issued when an IKE_SA is rekeyed.
+
+	{
+		<IKE_SA config name> = {
+			old = {
+				<same data as in the list-sas event, but without child-sas section>
+			}
+			new = {
+				<same data as in the list-sas event, but without child-sas section>
+			}
+		}
+	}
+
+### child-updown ###
+
+The _child-updown_ event is issued when a CHILD_SA is established or terminated.
+
+	{
+		up = <yes or no>
+		<IKE_SA config name> = {
+			<same data as in the list-sas event, but with only the affected
+			 CHILD_SA in the child-sas section>
+		}
+	}
+
+### child-rekey ###
+
+The _child-rekey_ event is issued when a CHILD_SA is rekeyed.
+
+	{
+		<IKE_SA config name> = {
+			<same data as in the list-sas event, but with the child-sas section
+			 as follows>
+			child-sas = {
+				<child-sa-name> = {
+					old = {
+						<same data as in the list-sas event>
+					}
+					new = {
+						<same data as in the list-sas event>
+					}
+				}
+			}
+		}
+	}
+
 # libvici C client library #
 
 libvici is the reference implementation of a C client library implementing

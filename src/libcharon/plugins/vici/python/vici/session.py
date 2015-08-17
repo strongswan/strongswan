@@ -1,7 +1,7 @@
 import collections
 import socket
 
-from .exception import SessionException, CommandException
+from .exception import SessionException, CommandException, EventUnknownException
 from .protocol import Transport, Packet, Message
 
 
@@ -197,6 +197,16 @@ class Session(object):
         """
         return self.handler.request("get-pools")
 
+    def listen(self, event_types):
+        """Register and listen for the given events.
+
+        :param event_types: event types to register
+        :type event_types: list
+        :return: generator for streamed event responses as (event_type, dict)
+        :rtype: generator
+        """
+        return self.handler.listen(event_types)
+
 
 class SessionHandler(object):
     """Handles client command execution requests over vici."""
@@ -214,6 +224,32 @@ class SessionHandler(object):
         """
         self.transport.send(packet)
         return Packet.parse(self.transport.receive())
+
+    def _register_unregister(self, event_type, register):
+        """Register or unregister for the given event.
+
+        :param event_type: event to register
+        :type event_type: str
+        :param register: whether to register or unregister
+        :type register: bool
+        """
+        if register:
+            packet = Packet.register_event(event_type)
+        else:
+            packet = Packet.unregister_event(event_type)
+        response = self._communicate(packet)
+        if response.response_type == Packet.EVENT_UNKNOWN:
+            raise EventUnknownException(
+                "Unknown event type '{event}'".format(event=event_type)
+            )
+        elif response.response_type != Packet.EVENT_CONFIRM:
+            raise SessionException(
+                "Unexpected response type {type}, "
+                "expected '{confirm}' (EVENT_CONFIRM)".format(
+                    type=response.response_type,
+                    confirm=Packet.EVENT_CONFIRM,
+                )
+            )
 
     def request(self, command, message=None):
         """Send request with an optional message.
@@ -265,57 +301,37 @@ class SessionHandler(object):
         if message is not None:
             message = Message.serialize(message)
 
-        # subscribe to event stream
-        packet = Packet.register_event(event_stream_type)
-        response = self._communicate(packet)
+        self._register_unregister(event_stream_type, True);
 
-        if response.response_type != Packet.EVENT_CONFIRM:
-            raise SessionException(
-                "Unexpected response type {type}, "
-                "expected '{confirm}' (EVENT_CONFIRM)".format(
-                    type=response.response_type,
-                    confirm=Packet.EVENT_CONFIRM,
-                )
-            )
+        try:
+            packet = Packet.request(command, message)
+            self.transport.send(packet)
+            exited = False
+            while True:
+                response = Packet.parse(self.transport.receive())
+                if response.response_type == Packet.EVENT:
+                    if not exited:
+                        try:
+                            yield Message.deserialize(response.payload)
+                        except GeneratorExit:
+                            exited = True
+                            pass
+                else:
+                    break
 
-        # issue command, and read any event messages
-        packet = Packet.request(command, message)
-        self.transport.send(packet)
-        exited = False
-        while True:
-            response = Packet.parse(self.transport.receive())
-            if response.response_type == Packet.EVENT:
-                if not exited:
-                    try:
-                        yield Message.deserialize(response.payload)
-                    except GeneratorExit:
-                        exited = True
-                        pass
+            if response.response_type == Packet.CMD_RESPONSE:
+                command_response = Message.deserialize(response.payload)
             else:
-                break
-
-        if response.response_type == Packet.CMD_RESPONSE:
-            command_response = Message.deserialize(response.payload)
-        else:
-            raise SessionException(
-                "Unexpected response type {type}, "
-                "expected '{response}' (CMD_RESPONSE)".format(
-                    type=response.response_type,
-                    response=Packet.CMD_RESPONSE
+                raise SessionException(
+                    "Unexpected response type {type}, "
+                    "expected '{response}' (CMD_RESPONSE)".format(
+                        type=response.response_type,
+                        response=Packet.CMD_RESPONSE
+                    )
                 )
-            )
 
-        # unsubscribe from event stream
-        packet = Packet.unregister_event(event_stream_type)
-        response = self._communicate(packet)
-        if response.response_type != Packet.EVENT_CONFIRM:
-            raise SessionException(
-                "Unexpected response type {type}, "
-                "expected '{confirm}' (EVENT_CONFIRM)".format(
-                    type=response.response_type,
-                    confirm=Packet.EVENT_CONFIRM,
-                )
-            )
+        finally:
+            self._register_unregister(event_stream_type, False);
 
         # evaluate command result, if any
         if "success" in command_response:
@@ -325,3 +341,27 @@ class SessionHandler(object):
                         errmsg=command_response["errmsg"]
                     )
                 )
+
+    def listen(self, event_types):
+        """Register and listen for the given events.
+
+        :param event_types: event types to register
+        :type event_types: list
+        :return: generator for streamed event responses as (event_type, dict)
+        :rtype: generator
+        """
+        for event_type in event_types:
+            self._register_unregister(event_type, True)
+
+        try:
+            while True:
+                response = Packet.parse(self.transport.receive())
+                if response.response_type == Packet.EVENT:
+                    try:
+                        yield response.event_type, Message.deserialize(response.payload)
+                    except GeneratorExit:
+                        break
+
+        finally:
+            for event_type in event_types:
+                self._register_unregister(event_type, False)
