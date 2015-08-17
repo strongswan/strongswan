@@ -591,11 +591,51 @@ METHOD(imv_agent_if_t, solicit_recommendation, TNC_Result,
 	private_imv_hcd_agent_t *this, TNC_ConnectionID id)
 {
 	imv_state_t *state;
+	imv_hcd_state_t* hcd_state;
+	imv_hcd_handshake_state_t handshake_state;
+	enum_name_t *pa_subtype_names;
+	bool missing = FALSE;
+	uint32_t received;
+	int i;
 
 	if (!this->agent->get_state(this->agent, id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
+	hcd_state = (imv_hcd_state_t*)state;
+	handshake_state = hcd_state->get_handshake_state(hcd_state);
+
+	if (handshake_state == IMV_HCD_STATE_ATTR_REQ)
+	{
+		pa_subtype_names = get_pa_subtype_names(PEN_PWG);
+
+		for (i = 1; i < countof(msg_types); i++)
+		{
+			hcd_state->set_subtype(hcd_state, msg_types[i].type);
+			received = state->get_action_flags(state);
+			if ((received & IMV_HCD_ATTR_MUST) != IMV_HCD_ATTR_MUST)
+			{
+				DBG1(DBG_IMV, "missing attributes for PA subtype %N/%N",
+					 pen_names, PEN_PWG, pa_subtype_names, msg_types[i].type);
+				missing = TRUE;
+			}
+		}
+
+		if (missing)
+		{
+			state->set_recommendation(state,
+							TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS ,
+							TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
+		}
+		else
+		{
+			state->set_recommendation(state,
+							TNC_IMV_ACTION_RECOMMENDATION_ALLOW ,
+							TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+		}
+	}
+	hcd_state->set_handshake_state(hcd_state, IMV_HCD_STATE_END);
+
 	return this->agent->provide_recommendation(this->agent, state);
 }
 

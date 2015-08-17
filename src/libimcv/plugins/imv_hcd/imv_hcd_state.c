@@ -14,6 +14,8 @@
  */
 
 #include "imv_hcd_state.h"
+#include "imv/imv_lang_string.h"
+#include "imv/imv_reason_string.h"
 
 #include <tncif_policy.h>
 
@@ -97,6 +99,27 @@ struct private_imv_hcd_state_t {
 	 */
 	imv_hcd_handshake_state_t handshake_state;
 
+	/**
+	 * TNC Reason String
+	 */
+	imv_reason_string_t *reason_string;
+
+};
+
+/**
+ * Supported languages
+ */
+static char* languages[] = { "en", "de", "fr", "pl" };
+
+/**
+ * Reason strings for "Port Filter"
+ */
+static imv_lang_string_t reasons[] = {
+	{ "en", "Mandatory HCD attributes are missing" },
+	{ "de", "Obligatorische HCD Attribute fehlen" },
+	{ "fr", "Il manque des attributes HCD obligatoires" },
+	{ "pl", "Brakuje atrybutów obowiązkowych" },
+	{ NULL, NULL }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -200,7 +223,20 @@ METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_hcd_state_t *this, enumerator_t *language_enumerator,
 	chunk_t *reason_string, char **reason_language)
 {
-	return FALSE;
+	if (this->rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
+	{
+		return FALSE;
+	}
+	*reason_language = imv_lang_string_select_lang(language_enumerator,
+											  languages, countof(languages));
+
+	/* Instantiate a TNC Reason String object */
+	DESTROY_IF(this->reason_string);
+	this->reason_string = imv_reason_string_create(*reason_language, "\n");
+	this->reason_string->add_reason(this->reason_string, reasons);
+	*reason_string = this->reason_string->get_encoding(this->reason_string);
+
+	return TRUE;
 }
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
@@ -214,6 +250,7 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_hcd_state_t *this)
 {
 	DESTROY_IF(this->session);
+	DESTROY_IF(this->reason_string);
 	this->contracts->destroy(this->contracts);
 	free(this);
 }
