@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -90,6 +90,12 @@ METHOD(pa_tnc_msg_t, get_encoding, chunk_t,
 	private_pa_tnc_msg_t *this)
 {
 	return this->encoding;
+}
+
+METHOD(pa_tnc_msg_t, get_space, size_t,
+	private_pa_tnc_msg_t *this)
+{
+	return this->max_msg_len ? this->max_msg_len - this->msg_len : 0;
 }
 
 METHOD(pa_tnc_msg_t, add_attribute, bool,
@@ -389,6 +395,7 @@ pa_tnc_msg_t *pa_tnc_msg_create(size_t max_msg_len)
 	INIT(this,
 		.public = {
 			.get_encoding = _get_encoding,
+			.get_space = _get_space,
 			.add_attribute = _add_attribute,
 			.build = _build,
 			.process = _process,
@@ -416,6 +423,7 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 	INIT(this,
 		.public = {
 			.get_encoding = _get_encoding,
+			.get_space = _get_space,
 			.add_attribute = _add_attribute,
 			.build = _build,
 			.process = _process,

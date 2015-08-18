@@ -42,7 +42,7 @@ static struct {
 	{ 24, 1, 24 },
 	{ 25, 1, 23 },
 	{ 47, 1,  1 },
-	{ 48, 0,  0 },	
+	{ 48, 0,  0 },
 };
 
 static char command[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -87,7 +87,7 @@ START_TEST(test_imcv_seg_env)
 			if (n == 0)
 			{
 				/* create first segment */
-				attr = seg_env->first_segment(seg_env);
+				attr = seg_env->first_segment(seg_env, 0);
 			
 				seg_env_attr = (tcg_seg_attr_seg_env_t*)attr;
 				segment = seg_env_attr->get_segment(seg_env_attr, &flags);
@@ -168,8 +168,9 @@ START_TEST(test_imcv_seg_env_special)
 	pen_type_t type;
 	seg_env_t *seg_env;
 	chunk_t segment, value;
+	uint32_t max_attr_len = 60;
 	uint32_t max_seg_size = 47;
-	uint32_t last_seg_size = 1;
+	uint32_t last_seg_size = 4;
 	uint32_t offset = 12;
 
 	base_attr = ita_attr_command_create(command);
@@ -179,7 +180,7 @@ START_TEST(test_imcv_seg_env_special)
 	base_attr->set_noskip_flag(base_attr, TRUE);
 
 	seg_env = seg_env_create(id, base_attr, max_seg_size);
-	attr = seg_env->first_segment(seg_env);
+	attr = seg_env->first_segment(seg_env, max_attr_len);
 	attr->destroy(attr);
 
 	/* don't return last segment indicator */
@@ -306,7 +307,7 @@ START_TEST(test_imcv_seg_contract)
 	contract_r = seg_contract_create(msg_type, max_attr_size, max_seg_size,
 									 FALSE, issuer_id, TRUE);
 	attr = contract_r->first_segment(contract_r,
-									 base_attr_r->get_ref(base_attr_r));
+									 base_attr_r->get_ref(base_attr_r), 0);
 
 	if (seg_env_tests[_i].next_segs == 0)
 	{
@@ -422,8 +423,8 @@ START_TEST(test_imcv_seg_contract_special)
 	ck_assert(!oversize);
 
 	/* get first segment of each base attribute */
-	attr1_f = contract_r->first_segment(contract_r, base_attr1_r->get_ref(base_attr1_r));
-	attr2_f = contract_r->first_segment(contract_r, base_attr2_r->get_ref(base_attr2_r));
+	attr1_f = contract_r->first_segment(contract_r, base_attr1_r->get_ref(base_attr1_r), 0);
+	attr2_f = contract_r->first_segment(contract_r, base_attr2_r->get_ref(base_attr2_r), 0);
 	ck_assert(attr1_f);
 	ck_assert(attr2_f);
 	seg_env_attr1 = (tcg_seg_attr_seg_env_t*)attr1_f;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -446,9 +446,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				max_seg_size = state->get_max_msg_len(state)
 								- PA_TNC_HEADER_SIZE 
 								- PA_TNC_ATTR_HEADER_SIZE
-								- TCG_SEG_ATTR_SEG_ENV_HEADER
-								- PA_TNC_ATTR_HEADER_SIZE
-								- TCG_SEG_ATTR_MAX_SIZE_SIZE;
+								- TCG_SEG_ATTR_SEG_ENV_HEADER;
 
 				/* Announce support of PA-TNC segmentation to IMC */
 				contract = seg_contract_create(msg_types[0], max_attr_size,

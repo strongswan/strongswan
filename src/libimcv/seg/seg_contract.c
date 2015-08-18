@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -148,7 +148,7 @@ METHOD(seg_contract_t, check_size, bool,
 }
 
 METHOD(seg_contract_t, first_segment, pa_tnc_attr_t*,
-	private_seg_contract_t *this, pa_tnc_attr_t *attr)
+	private_seg_contract_t *this, pa_tnc_attr_t *attr, size_t max_attr_len)
 {
 	seg_env_t *seg_env;
 
@@ -160,7 +160,7 @@ METHOD(seg_contract_t, first_segment, pa_tnc_attr_t*,
 	}
 	this->seg_envs->insert_last(this->seg_envs, seg_env);
 
-	return seg_env->first_segment(seg_env);
+	return seg_env->first_segment(seg_env, max_attr_len);
 }
 
 METHOD(seg_contract_t, next_segment, pa_tnc_attr_t*,

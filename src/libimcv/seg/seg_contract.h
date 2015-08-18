@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -78,9 +78,11 @@ struct seg_contract_t {
 	 * Generate first segment of a PA-TNC attribute according to the contract
 	 *
 	 * @param attr			PA-TNC attribute to be segmented
+	 * @param max_attr_len	Maximum size of first segment envelope attribute
 	 * @return				First segment envelope attribute
 	 */
-	pa_tnc_attr_t* (*first_segment)(seg_contract_t *this, pa_tnc_attr_t *attr);
+	pa_tnc_attr_t* (*first_segment)(seg_contract_t *this, pa_tnc_attr_t *attr,
+									size_t max_attr_len);
 
 	/**
 	 * Generate next segment of a PA-TNC attribute according to the contract

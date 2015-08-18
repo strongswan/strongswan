@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -89,13 +89,20 @@ METHOD(seg_env_t, get_base_attr_info, chunk_t,
 }
 
 METHOD(seg_env_t, first_segment, pa_tnc_attr_t*,
-	private_seg_env_t *this)
+	private_seg_env_t *this, size_t max_attr_len)
 {
 	pa_tnc_attr_t *seg_env_attr;
 	bio_writer_t *writer;
 	pen_type_t type;
 	chunk_t segment_data, value;
+	size_t seg_size;
 	uint8_t flags, seg_env_flags;
+
+	/* compute size of first segment */
+	seg_size = max_attr_len ? min(this->max_seg_size,
+								  max_attr_len - PA_TNC_ATTR_HEADER_SIZE
+											   - TCG_SEG_ATTR_SEG_ENV_HEADER)
+							: this->max_seg_size;
 
 	/* get components of base attribute header and data */
 	flags = this->base_attr->get_noskip_flag(this->base_attr) ?
@@ -104,7 +111,7 @@ METHOD(seg_env_t, first_segment, pa_tnc_attr_t*,
 
 	/* attribute data going into the first segment */
 	segment_data = this->data;
-	segment_data.len = this->max_seg_size - PA_TNC_ATTR_HEADER_SIZE;
+	segment_data.len = seg_size - PA_TNC_ATTR_HEADER_SIZE;
 
 	/* build encoding of the base attribute header and first segment data */
 	writer = bio_writer_create(this->max_seg_size);
@@ -118,7 +125,7 @@ METHOD(seg_env_t, first_segment, pa_tnc_attr_t*,
 	this->data = chunk_skip(this->data, segment_data.len);
 
 	DBG2(DBG_TNC, "creating first segment for base attribute ID %d (%d bytes)",
-		 this->base_attr_id, this->max_seg_size);
+		 this->base_attr_id, seg_size);
 
 	seg_env_flags = SEG_ENV_FLAG_START | SEG_ENV_FLAG_MORE;
 	seg_env_attr = tcg_seg_attr_seg_env_create(value, seg_env_flags,

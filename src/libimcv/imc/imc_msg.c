@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -108,6 +108,7 @@ METHOD(imc_msg_t, send_, TNC_Result,
 	pa_tnc_attr_t *attr;
 	TNC_UInt32 msg_flags;
 	TNC_MessageType msg_type;
+	size_t max_msg_len, min_seg_attr_len, space_left;
 	bool attr_added, oversize;
 	chunk_t msg;
 	seg_contract_t *contract;
@@ -120,23 +121,37 @@ METHOD(imc_msg_t, send_, TNC_Result,
 	contract = contracts->get_contract(contracts, this->msg_type,
 									   FALSE, this->dst_id);
 
+	/* Retrieve maximum allowed PA-TNC message size if set */
+	max_msg_len = this->state->get_max_msg_len(this->state);
+
+	/* Minimum size needed for Segmentation Envelope Attribute */
+	min_seg_attr_len = PA_TNC_ATTR_HEADER_SIZE + TCG_SEG_ATTR_SEG_ENV_HEADER +
+					   PA_TNC_ATTR_HEADER_SIZE;
+
 	while (this->attr_list->get_count(this->attr_list))
 	{
-		pa_tnc_msg = pa_tnc_msg_create(this->state->get_max_msg_len(this->state));
+		pa_tnc_msg = pa_tnc_msg_create(max_msg_len);
 		attr_added = FALSE;
 
 		enumerator = this->attr_list->create_enumerator(this->attr_list);
 		while (enumerator->enumerate(enumerator, &attr))
 		{
+			space_left = pa_tnc_msg->get_space(pa_tnc_msg);
+
 			if (contract && contract->check_size(contract, attr, &oversize))
 			{
 				if (oversize)
 				{
-					/* TODO generate SWID error msg */
+					/* TODO handle oversized attributes */
+				}
+				else if (max_msg_len == 0 || space_left >= min_seg_attr_len)
+				{
+					attr = contract->first_segment(contract, attr, space_left);
 				}
 				else
 				{
-					attr = contract->first_segment(contract, attr);
+					/* segment attribute in next iteration */
+					break;
 				}
 			}
 			if (pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
@@ -147,11 +162,12 @@ METHOD(imc_msg_t, send_, TNC_Result,
 			{
 				if (attr_added)
 				{
+					/* there might be space for attribute in next iteration */
 					break;
 				}
 				else
 				{
-					DBG1(DBG_IMC, "PA-TNC attribute too large to send, deleted");
+					DBG1(DBG_IMV, "PA-TNC attribute too large to send, deleted");
 					attr->destroy(attr);
 				}
 			}
@@ -341,9 +357,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				my_max_seg_size = this->state->get_max_msg_len(this->state)
 									- PA_TNC_HEADER_SIZE
 									- PA_TNC_ATTR_HEADER_SIZE
-									- TCG_SEG_ATTR_SEG_ENV_HEADER
-									- PA_TNC_ATTR_HEADER_SIZE
-									- TCG_SEG_ATTR_MAX_SIZE_SIZE;
+									- TCG_SEG_ATTR_SEG_ENV_HEADER;
 
 				/* If segmentation is possible select lower segment size */
 				if (max_seg_size != SEG_CONTRACT_NO_FRAGMENTATION &&

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -66,9 +66,10 @@ struct seg_env_t {
 	/**
 	 * Generate the first segment envelope of the base attribute
 	 *
+	 * @param max_attr_len	Maximum size of first attribute segment envelope
 	 * @return				First attribute segment envelope
 	 */
-	pa_tnc_attr_t* (*first_segment)(seg_env_t *this);
+	pa_tnc_attr_t* (*first_segment)(seg_env_t *this, size_t max_attr_len);
 
 	/**
 	 * Generate the next segment envelope of the base attribute

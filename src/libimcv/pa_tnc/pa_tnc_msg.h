@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -42,6 +42,13 @@ struct pa_tnc_msg_t {
 	 * @return					encoded PA-TNC message
 	 */
 	chunk_t (*get_encoding)(pa_tnc_msg_t *this);
+
+	/**
+	 * Get the remaining space in octets left in the PA-TNC message
+	 *
+	 * @return					remaining space or 0 if max_msg_len is not set
+	 */
+	size_t (*get_space)(pa_tnc_msg_t *this);
 
 	/**
 	 * Add a PA-TNC attribute
