@@ -1240,7 +1240,9 @@ static void resolve_hosts(private_ike_sa_t *this)
 			set_other_host(this, host);
 		}
 		else
-		{
+		{	/* reuse the original port as some implementations might not like
+			 * initial IKE messages on other ports */
+			this->other_host->set_port(this->other_host, host->get_port(host));
 			host->destroy(host);
 		}
 	}
