@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -36,6 +39,14 @@ struct quick_mode_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+
+	/**
+	 * Get the message ID of the quick mode exchange handled by this task as
+	 * responder.
+	 *
+	 * @return				message ID, or 0 (not defined yet or as initiator)
+	 */
+	u_int32_t (*get_mid)(quick_mode_t *this);
 
 	/**
 	 * Use a specific reqid to install this CHILD_SA.

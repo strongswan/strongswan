@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2014 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -901,6 +901,34 @@ static bool process_dpd(private_task_manager_t *this, message_t *message)
 }
 
 /**
+ * Check if we already have a quick mode task queued for the exchange with the
+ * given message ID
+ */
+static bool have_quick_mode_task(private_task_manager_t *this, u_int32_t mid)
+{
+	enumerator_t *enumerator;
+	quick_mode_t *qm;
+	task_t *task;
+	bool found = FALSE;
+
+	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_QUICK_MODE)
+		{
+			qm = (quick_mode_t*)task;
+			if (qm->get_mid(qm) == mid)
+			{
+				found = TRUE;
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * handle an incoming request message
  */
 static status_t process_request(private_task_manager_t *this,
@@ -911,6 +939,7 @@ static status_t process_request(private_task_manager_t *this,
 	bool send_response = FALSE, dpd = FALSE;
 
 	if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
+		message->get_exchange_type(message) == QUICK_MODE ||
 		this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
 		switch (message->get_exchange_type(message))
@@ -945,6 +974,10 @@ static status_t process_request(private_task_manager_t *this,
 					DBG1(DBG_IKE, "received quick mode request for "
 						 "unestablished IKE_SA, ignored");
 					return FAILED;
+				}
+				if (have_quick_mode_task(this, message->get_message_id(message)))
+				{
+					break;
 				}
 				task = (task_t *)quick_mode_create(this->ike_sa, NULL,
 												   NULL, NULL);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -184,6 +184,11 @@ struct private_quick_mode_t {
 	 * Use UDP encapsulation
 	 */
 	bool udp;
+
+	/**
+	 * Message ID of handled quick mode exchange
+	 */
+	u_int32_t mid;
 
 	/** states of quick mode */
 	enum {
@@ -1019,6 +1024,11 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 METHOD(task_t, process_r, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
+	if (this->mid && this->mid != message->get_message_id(message))
+	{	/* not responsible for this quick mode exchange */
+		return NEED_MORE;
+	}
+
 	switch (this->state)
 	{
 		case QM_INIT:
@@ -1188,6 +1198,11 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
+	if (this->mid && this->mid != message->get_message_id(message))
+	{	/* not responsible for this quick mode exchange */
+		return NEED_MORE;
+	}
+
 	switch (this->state)
 	{
 		case QM_INIT:
@@ -1242,6 +1257,7 @@ METHOD(task_t, build_r, status_t,
 			add_ts(this, message);
 
 			this->state = QM_NEGOTIATED;
+			this->mid = message->get_message_id(message);
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
@@ -1335,6 +1351,12 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_QUICK_MODE;
 }
 
+METHOD(quick_mode_t, get_mid, u_int32_t,
+	private_quick_mode_t *this)
+{
+	return this->mid;
+}
+
 METHOD(quick_mode_t, use_reqid, void,
 	private_quick_mode_t *this, u_int32_t reqid)
 {
@@ -1368,6 +1390,7 @@ METHOD(task_t, migrate, void,
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
 	this->state = QM_INIT;
+	this->mid = 0;
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->proposal = NULL;
@@ -1414,6 +1437,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.get_mid = _get_mid,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
 			.rekey = _rekey,
