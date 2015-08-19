@@ -145,6 +145,11 @@ struct private_child_create_t {
 	ipcomp_transform_t ipcomp_received;
 
 	/**
+	 * IPsec protocol
+	 */
+	protocol_id_t proto;
+
+	/**
 	 * Own allocated SPI
 	 */
 	u_int32_t my_spi;
@@ -260,23 +265,23 @@ static bool allocate_spi(private_child_create_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	protocol_id_t proto = PROTO_ESP;
 
 	if (this->initiator)
 	{
+		this->proto = PROTO_ESP;
 		/* we just get a SPI for the first protocol. TODO: If we ever support
 		 * proposal lists with mixed protocols, we'd need multiple SPIs */
 		if (this->proposals->get_first(this->proposals,
 									   (void**)&proposal) == SUCCESS)
 		{
-			proto = proposal->get_protocol(proposal);
+			this->proto = proposal->get_protocol(proposal);
 		}
 	}
 	else
 	{
-		proto = this->proposal->get_protocol(this->proposal);
+		this->proto = this->proposal->get_protocol(this->proposal);
 	}
-	this->my_spi = this->child_sa->alloc_spi(this->child_sa, proto);
+	this->my_spi = this->child_sa->alloc_spi(this->child_sa, this->proto);
 	if (this->my_spi)
 	{
 		if (this->initiator)
@@ -1352,18 +1357,16 @@ METHOD(task_t, build_i_delete, status_t,
 	private_child_create_t *this, message_t *message)
 {
 	message->set_exchange_type(message, INFORMATIONAL);
-	if (this->proposal)
+	if (this->my_spi && this->proto)
 	{
-		protocol_id_t proto;
 		delete_payload_t *del;
 
-		proto = this->proposal->get_protocol(this->proposal);
-		del = delete_payload_create(PLV2_DELETE, proto);
+		del = delete_payload_create(PLV2_DELETE, this->proto);
 		del->add_spi(del, this->my_spi);
 		message->add_payload(message, (payload_t*)del);
 
 		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
-			 protocol_id_names, proto, ntohl(this->my_spi));
+			 protocol_id_names, this->proto, ntohl(this->my_spi));
 	}
 	return NEED_MORE;
 }
@@ -1373,7 +1376,7 @@ METHOD(task_t, build_i_delete, status_t,
  */
 static status_t delete_failed_sa(private_child_create_t *this)
 {
-	if (this->proposal)
+	if (this->my_spi && this->proto)
 	{
 		this->public.task.build = _build_i_delete;
 		this->public.task.process = (void*)return_success;
