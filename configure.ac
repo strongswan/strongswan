@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.3.3dr5])
+AC_INIT([strongSwan],[5.3.3dr6])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
