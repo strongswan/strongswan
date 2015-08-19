@@ -404,7 +404,7 @@ static auth_method_t get_pubkey_method(private_phase1_t *this, auth_cfg_t *auth)
 		id = (identification_t*)auth->get(auth, AUTH_RULE_IDENTITY);
 		if (id)
 		{
-			private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, NULL);
+			private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
 			if (private)
 			{
 				switch (private->get_type(private))
