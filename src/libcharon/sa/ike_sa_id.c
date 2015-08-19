@@ -18,7 +18,7 @@
 #include "ike_sa_id.h"
 
 #include <stdio.h>
-
+#include <encoding/payloads/ike_header.h>
 
 typedef struct private_ike_sa_id_t private_ike_sa_id_t;
 
@@ -90,6 +90,8 @@ METHOD(ike_sa_id_t, equals, bool,
 		return FALSE;
 	}
 	return this->ike_version == other->ike_version &&
+		   (this->ike_version == IKEV1_MAJOR_VERSION ||
+			this->is_initiator_flag == other->is_initiator_flag) &&
 		   this->initiator_spi == other->initiator_spi &&
 		   this->responder_spi == other->responder_spi;
 }
