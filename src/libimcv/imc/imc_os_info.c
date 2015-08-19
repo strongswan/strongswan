@@ -90,6 +90,14 @@ METHOD(imc_os_info_t, get_version, chunk_t,
 	return this->version;
 }
 
+METHOD(imc_os_info_t, get_default_pwd_status, bool,
+	private_imc_os_info_t *this)
+{
+	/* As an option the default password status can be configured manually */
+	return lib->settings->get_bool(lib->settings,
+					"%s.imcv.os_info.default_password_enabled", FALSE, lib->ns);
+}
+
 #ifdef WIN32
 
 METHOD(imc_os_info_t, get_fwd_status, os_fwd_status_t,
@@ -194,14 +202,6 @@ METHOD(imc_os_info_t, get_fwd_status, os_fwd_status_t,
 	}
 
 	return fwd_status;
-}
-
-METHOD(imc_os_info_t, get_default_pwd_status, bool,
-	private_imc_os_info_t *this)
-{
-	/* As an option the default password status can be configured manually */
-	return lib->settings->get_bool(lib->settings,
-					"%s.imcv.os_info.default_password_enabled", FALSE, lib->ns);
 }
 
 METHOD(imc_os_info_t, get_uptime, time_t,
