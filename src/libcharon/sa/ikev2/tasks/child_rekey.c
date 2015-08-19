@@ -170,13 +170,8 @@ METHOD(task_t, build_i, status_t,
 	}
 	config = this->child_sa->get_config(this->child_sa);
 
-	/* we just need the rekey notify ... */
-	notify = notify_payload_create_from_protocol_and_type(PLV2_NOTIFY,
-													this->protocol, REKEY_SA);
-	notify->set_spi(notify, this->spi);
-	message->add_payload(message, (payload_t*)notify);
 
-	/* ... our CHILD_CREATE task does the hard work for us. */
+	/* our CHILD_CREATE task does the hard work for us */
 	if (!this->child_create)
 	{
 		this->child_create = child_create_create(this->ike_sa,
@@ -193,6 +188,14 @@ METHOD(task_t, build_i, status_t,
 	{
 		schedule_delayed_rekey(this);
 		return FAILED;
+	}
+	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
+	{
+		/* don't add the notify if the CHILD_CREATE task changed the exchange */
+		notify = notify_payload_create_from_protocol_and_type(PLV2_NOTIFY,
+													this->protocol, REKEY_SA);
+		notify->set_spi(notify, this->spi);
+		message->add_payload(message, (payload_t*)notify);
 	}
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 
