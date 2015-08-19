@@ -1352,20 +1352,18 @@ METHOD(task_t, build_i_delete, status_t,
 	private_child_create_t *this, message_t *message)
 {
 	message->set_exchange_type(message, INFORMATIONAL);
-	if (this->child_sa && this->proposal)
+	if (this->proposal)
 	{
 		protocol_id_t proto;
 		delete_payload_t *del;
-		u_int32_t spi;
 
 		proto = this->proposal->get_protocol(this->proposal);
-		spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		del = delete_payload_create(PLV2_DELETE, proto);
-		del->add_spi(del, spi);
+		del->add_spi(del, this->my_spi);
 		message->add_payload(message, (payload_t*)del);
 
 		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
-			 protocol_id_names, proto, ntohl(spi));
+			 protocol_id_names, proto, ntohl(this->my_spi));
 	}
 	return NEED_MORE;
 }
@@ -1375,9 +1373,13 @@ METHOD(task_t, build_i_delete, status_t,
  */
 static status_t delete_failed_sa(private_child_create_t *this)
 {
-	this->public.task.build = _build_i_delete;
-	this->public.task.process = (void*)return_success;
-	return NEED_MORE;
+	if (this->proposal)
+	{
+		this->public.task.build = _build_i_delete;
+		this->public.task.process = (void*)return_success;
+		return NEED_MORE;
+	}
+	return SUCCESS;
 }
 
 METHOD(task_t, process_i, status_t,
