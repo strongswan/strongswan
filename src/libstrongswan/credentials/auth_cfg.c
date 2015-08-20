@@ -661,7 +661,8 @@ METHOD(auth_cfg_t, complies, bool,
 			}
 			case AUTH_RULE_EAP_TYPE:
 			{
-				if ((uintptr_t)value != (uintptr_t)get(this, t1))
+				if ((uintptr_t)value != (uintptr_t)get(this, t1) &&
+					(uintptr_t)value != EAP_DYNAMIC)
 				{
 					success = FALSE;
 					if (log_error)
