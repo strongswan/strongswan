@@ -197,7 +197,7 @@ METHOD(mem_cred_t, get_cert_ref, certificate_t*,
 {
 	certificate_t *cached;
 
-	this->lock->write_lock(this->lock);
+	this->lock->read_lock(this->lock);
 	if (this->untrusted->find_first(this->untrusted,
 									(linked_list_match_t)certificate_equals,
 									(void**)&cached, cert) == SUCCESS)
