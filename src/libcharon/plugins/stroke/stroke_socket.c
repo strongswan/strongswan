@@ -779,10 +779,10 @@ stroke_socket_t *stroke_socket_create()
 				"%s.plugins.stroke.prevent_loglevel_changes", FALSE, lib->ns),
 	);
 
-	this->cred = stroke_cred_create();
+	this->ca = stroke_ca_create();
+	this->cred = stroke_cred_create(this->ca);
 	this->attribute = stroke_attribute_create();
 	this->handler = stroke_handler_create();
-	this->ca = stroke_ca_create(this->cred);
 	this->config = stroke_config_create(this->ca, this->cred, this->attribute);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);

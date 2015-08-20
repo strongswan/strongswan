@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,8 +23,7 @@
 #define STROKE_CA_H_
 
 #include <stroke_msg.h>
-
-#include "stroke_cred.h"
+#include <credentials/sets/mem_cred.h>
 
 typedef struct stroke_ca_t stroke_ca_t;
 
@@ -67,6 +66,29 @@ struct stroke_ca_t {
 	void (*check_for_hash_and_url)(stroke_ca_t *this, certificate_t* cert);
 
 	/**
+	 * Get a reference to a CA certificate if it is already stored,
+	 * otherwise returns the same certificate.
+	 *
+	 * @param cert		certificate to check
+	 * @return			reference to stored CA certifiate, or original
+	 */
+	certificate_t *(*get_cert_ref)(stroke_ca_t *this, certificate_t *cert);
+
+	/**
+	 * Reload CA certificates referenced in CA sections. Flushes the certificate
+	 * cache.
+	 */
+	void (*reload_certs)(stroke_ca_t *this);
+
+	/**
+	 * Replace automatically loaded CA certificates.  Flushes the certificate
+	 * cache.
+	 *
+	 * @param certs		credential set to take certificates from (not modified)
+	 */
+	void (*replace_certs)(stroke_ca_t *this, mem_cred_t *certs);
+
+	/**
 	 * Destroy a stroke_ca instance.
 	 */
 	void (*destroy)(stroke_ca_t *this);
@@ -75,6 +97,6 @@ struct stroke_ca_t {
 /**
  * Create a stroke_ca instance.
  */
-stroke_ca_t *stroke_ca_create(stroke_cred_t *cred);
+stroke_ca_t *stroke_ca_create();
 
 #endif /** STROKE_CA_H_ @}*/
