@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -182,70 +182,6 @@ static certificate_t *load_from_smartcard(smartcard_format_t format,
 	return cred;
 }
 
-METHOD(stroke_cred_t, load_ca, certificate_t*,
-	private_stroke_cred_t *this, char *filename)
-{
-	certificate_t *cert = NULL;
-	char path[PATH_MAX];
-
-	if (strpfx(filename, "%smartcard"))
-	{
-		smartcard_format_t format;
-		char module[SC_PART_LEN], keyid[SC_PART_LEN];
-		u_int slot;
-
-		format = parse_smartcard(filename, &slot, module, keyid);
-		if (format != SC_FORMAT_INVALID)
-		{
-			cert = (certificate_t*)load_from_smartcard(format,
-							slot, module, keyid, CRED_CERTIFICATE, CERT_X509);
-		}
-	}
-	else
-	{
-		if (*filename == '/')
-		{
-			snprintf(path, sizeof(path), "%s", filename);
-		}
-		else
-		{
-			snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
-		}
-
-		if (this->force_ca_cert)
-		{	/* we treat this certificate as a CA certificate even if it has no
-			 * CA basic constraint */
-			cert = lib->creds->create(lib->creds,
-								  CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, path, BUILD_X509_FLAG, X509_CA,
-								  BUILD_END);
-		}
-		else
-		{
-			cert = lib->creds->create(lib->creds,
-								  CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, path,
-								  BUILD_END);
-		}
-	}
-	if (cert)
-	{
-		x509_t *x509 = (x509_t*)cert;
-
-		if (!(x509->get_flags(x509) & X509_CA))
-		{
-			DBG1(DBG_CFG, "  ca certificate \"%Y\" misses ca basic constraint, "
-				 "discarded", cert->get_subject(cert));
-			cert->destroy(cert);
-			return NULL;
-		}
-		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
-			 cert->get_subject(cert), filename);
-		return this->creds->get_cert_ref(this->creds, cert);
-	}
-	return NULL;
-}
-
 METHOD(stroke_cred_t, load_peer, certificate_t*,
 	private_stroke_cred_t *this, char *filename)
 {
@@ -384,23 +320,52 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 }
 
 /**
- * Load a CA certificate  from disk
+ * Load a CA certificate, optionally force it to be one
  */
-static void load_x509_ca(private_stroke_cred_t *this, char *file,
-						 mem_cred_t *creds)
+static certificate_t *load_ca_cert(char *filename, bool force_ca_cert)
 {
-	certificate_t *cert;
+	certificate_t *cert = NULL;
+	char path[PATH_MAX];
 
-	if (this->force_ca_cert)
-	{	/* treat certificate as CA cert even it has no CA basic constraint */
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, file,
-								  BUILD_X509_FLAG, X509_CA, BUILD_END);
+	if (strpfx(filename, "%smartcard"))
+	{
+		smartcard_format_t format;
+		char module[SC_PART_LEN], keyid[SC_PART_LEN];
+		u_int slot;
+
+		format = parse_smartcard(filename, &slot, module, keyid);
+		if (format != SC_FORMAT_INVALID)
+		{
+			cert = (certificate_t*)load_from_smartcard(format,
+							slot, module, keyid, CRED_CERTIFICATE, CERT_X509);
+		}
 	}
 	else
 	{
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, file, BUILD_END);
+		if (*filename == '/')
+		{
+			snprintf(path, sizeof(path), "%s", filename);
+		}
+		else
+		{
+			snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
+		}
+
+		if (force_ca_cert)
+		{	/* we treat this certificate as a CA certificate even if it has no
+			 * CA basic constraint */
+			cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, path, BUILD_X509_FLAG, X509_CA,
+								  BUILD_END);
+		}
+		else
+		{
+			cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, path,
+								  BUILD_END);
+		}
 	}
 	if (cert)
 	{
@@ -411,13 +376,40 @@ static void load_x509_ca(private_stroke_cred_t *this, char *file,
 			DBG1(DBG_CFG, "  ca certificate \"%Y\" lacks ca basic constraint, "
 				 "discarded", cert->get_subject(cert));
 			cert->destroy(cert);
+			return NULL;
 		}
-		else
-		{
-			DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
-				 cert->get_subject(cert), file);
-			creds->add_cert(creds, TRUE, cert);
-		}
+		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
+			 cert->get_subject(cert), filename);
+		return cert;
+	}
+	return NULL;
+}
+
+METHOD(stroke_cred_t, load_ca, certificate_t*,
+   private_stroke_cred_t *this, char *filename)
+{
+	certificate_t *cert;
+
+	cert = load_ca_cert(filename, this->force_ca_cert);
+	if (cert)
+	{
+		return this->cacerts->get_cert_ref(this->cacerts, cert);
+	}
+	return NULL;
+}
+
+/**
+ * Load a CA certificate from disk
+ */
+static void load_x509_ca(private_stroke_cred_t *this, char *file,
+						 mem_cred_t *creds)
+{
+	certificate_t *cert;
+
+	cert = load_ca_cert(file, this->force_ca_cert);
+	if (cert)
+	{
+		creds->add_cert(creds, TRUE, cert);
 	}
 	else
 	{
