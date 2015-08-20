@@ -29,6 +29,8 @@
 #include <credentials/certificates/certificate.h>
 #include <collections/linked_list.h>
 
+#include "stroke_ca.h"
+
 typedef struct stroke_cred_t stroke_cred_t;
 
 /**
@@ -48,17 +50,6 @@ struct stroke_cred_t {
 	 * @param prompt	I/O channel to prompt for private key passhprase
 	 */
 	void (*reread)(stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt);
-
-	/**
-	 * Load a CA certificate.
-	 *
-	 * This method does not add the loaded CA certificate to the internal
-	 * credentail set, but returns it only.
-	 *
-	 * @param filename		file to load CA cert from
-	 * @return				loaded certificate, or NULL
-	 */
-	certificate_t* (*load_ca)(stroke_cred_t *this, char *filename);
 
 	/**
 	 * Load a peer certificate and serve it through the credential_set.
@@ -103,6 +94,6 @@ struct stroke_cred_t {
 /**
  * Create a stroke_cred instance.
  */
-stroke_cred_t *stroke_cred_create();
+stroke_cred_t *stroke_cred_create(stroke_ca_t *ca);
 
 #endif /** STROKE_CRED_H_ @}*/

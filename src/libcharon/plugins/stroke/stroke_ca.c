@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,6 +24,13 @@
 #include <daemon.h>
 
 typedef struct private_stroke_ca_t private_stroke_ca_t;
+typedef struct ca_section_t ca_section_t;
+typedef struct ca_cert_t ca_cert_t;
+
+/**
+ * Provided by stroke_cred.c
+ */
+certificate_t *stroke_load_ca_cert(char *filename);
 
 /**
  * private data of stroke_ca
@@ -41,17 +48,16 @@ struct private_stroke_ca_t {
 	rwlock_t *lock;
 
 	/**
-	 * list of starters CA sections and its certificates (ca_section_t)
+	 * list of CA sections and their certificates (ca_section_t)
 	 */
 	linked_list_t *sections;
 
 	/**
-	 * stroke credentials, stores our CA certificates
+	 * list of all loaded CA certificates (ca_cert_t)
 	 */
-	stroke_cred_t *cred;
+	linked_list_t *certs;
 };
 
-typedef struct ca_section_t ca_section_t;
 
 /**
  * loaded ipsec.conf CA sections
@@ -64,7 +70,12 @@ struct ca_section_t {
 	char *name;
 
 	/**
-	 * reference to cert in trusted_credential_t
+	 * path/name of the certificate
+	 */
+	char *path;
+
+	/**
+	 * reference to cert
 	 */
 	certificate_t *cert;
 
@@ -90,16 +101,37 @@ struct ca_section_t {
 };
 
 /**
+ * loaded CA certificate
+ */
+struct ca_cert_t {
+
+	/**
+	 * reference to cert
+	 */
+	certificate_t *cert;
+
+	/**
+	 * The number of CA sections referring to this certificate
+	 */
+	u_int count;
+
+	/**
+	 * TRUE if this certificate was automatically loaded
+	 */
+	bool automatic;
+};
+
+/**
  * create a new CA section
  */
-static ca_section_t *ca_section_create(char *name, certificate_t *cert)
+static ca_section_t *ca_section_create(char *name, char *path)
 {
 	ca_section_t *ca = malloc_thing(ca_section_t);
 
 	ca->name = strdup(name);
+	ca->path = strdup(path);
 	ca->crl = linked_list_create();
 	ca->ocsp = linked_list_create();
-	ca->cert = cert;
 	ca->hashes = linked_list_create();
 	ca->certuribase = NULL;
 	return ca;
@@ -115,7 +147,17 @@ static void ca_section_destroy(ca_section_t *this)
 	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
 	this->cert->destroy(this->cert);
 	free(this->certuribase);
+	free(this->path);
 	free(this->name);
+	free(this);
+}
+
+/**
+ * Destroy a ca cert entry
+ */
+static void ca_cert_destroy(ca_cert_t *this)
+{
+	this->cert->destroy(this->cert);
 	free(this);
 }
 
@@ -141,7 +183,7 @@ static void cert_data_destroy(cert_data_t *data)
 /**
  * filter function for certs enumerator
  */
-static bool certs_filter(cert_data_t *data, ca_section_t **in,
+static bool certs_filter(cert_data_t *data, ca_cert_t **in,
 						 certificate_t **out)
 {
 	public_key_t *public;
@@ -192,7 +234,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	);
 
 	this->lock->read_lock(this->lock);
-	enumerator = this->sections->create_enumerator(this->sections);
+	enumerator = this->certs->create_enumerator(this->certs);
 	return enumerator_create_filter(enumerator, (void*)certs_filter, data,
 									(void*)cert_data_destroy);
 }
@@ -312,6 +354,81 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			data, (void*)cdp_data_destroy);
 }
 
+/**
+ * Compare the given certificate to the ca_cert_t items in the list
+ */
+static bool match_cert(ca_cert_t *item, certificate_t *cert)
+{
+	return cert->equals(cert, item->cert);
+}
+
+/**
+ * Match automatically added certificates and remove/destroy them if they are
+ * not referenced by CA sections.
+ */
+static bool remove_auto_certs(ca_cert_t *item, void *not_used)
+{
+	if (item->automatic)
+	{
+		item->automatic = FALSE;
+		if (!item->count)
+		{
+			ca_cert_destroy(item);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Find the given certificate that was referenced by a section and remove it
+ * unless it was also loaded automatically or is used by other CA sections.
+ */
+static bool remove_cert(ca_cert_t *item, certificate_t *cert)
+{
+	if (item->count && cert->equals(cert, item->cert))
+	{
+		if (--item->count == 0 && !item->automatic)
+		{
+			ca_cert_destroy(item);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Adds a certificate to the certificate store
+ */
+static certificate_t *add_cert_internal(private_stroke_ca_t *this,
+										certificate_t *cert, bool automatic)
+{
+	ca_cert_t *found;
+
+	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
+								(void**)&found, cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+		cert = found->cert->get_ref(found->cert);
+	}
+	else
+	{
+		INIT(found,
+			.cert = cert->get_ref(cert)
+		);
+		this->certs->insert_first(this->certs, found);
+	}
+	if (automatic)
+	{
+		found->automatic = TRUE;
+	}
+	else
+	{
+		found->count++;
+	}
+	return cert;
+}
+
 METHOD(stroke_ca_t, add, void,
 	private_stroke_ca_t *this, stroke_msg_t *msg)
 {
@@ -323,10 +440,10 @@ METHOD(stroke_ca_t, add, void,
 		DBG1(DBG_CFG, "missing cacert parameter");
 		return;
 	}
-	cert = this->cred->load_ca(this->cred, msg->add_ca.cacert);
+	cert = stroke_load_ca_cert(msg->add_ca.cacert);
 	if (cert)
 	{
-		ca = ca_section_create(msg->add_ca.name, cert);
+		ca = ca_section_create(msg->add_ca.name, msg->add_ca.cacert);
 		if (msg->add_ca.crluri)
 		{
 			ca->crl->insert_last(ca->crl, strdup(msg->add_ca.crluri));
@@ -348,6 +465,7 @@ METHOD(stroke_ca_t, add, void,
 			ca->certuribase = strdup(msg->add_ca.certuribase);
 		}
 		this->lock->write_lock(this->lock);
+		ca->cert = add_cert_internal(this, cert, FALSE);
 		this->sections->insert_last(this->sections, ca);
 		this->lock->unlock(this->lock);
 		DBG1(DBG_CFG, "added ca '%s'", msg->add_ca.name);
@@ -372,8 +490,12 @@ METHOD(stroke_ca_t, del, void,
 		ca = NULL;
 	}
 	enumerator->destroy(enumerator);
+	if (ca)
+	{
+		this->certs->remove(this->certs, ca->cert, (void*)remove_cert);
+	}
 	this->lock->unlock(this->lock);
-	if (ca == NULL)
+	if (!ca)
 	{
 		DBG1(DBG_CFG, "no ca named '%s' found\n", msg->del_ca.name);
 		return;
@@ -383,6 +505,88 @@ METHOD(stroke_ca_t, del, void,
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 }
 
+METHOD(stroke_ca_t, get_cert_ref, certificate_t*,
+	private_stroke_ca_t *this, certificate_t *cert)
+{
+	ca_cert_t *found;
+
+	this->lock->read_lock(this->lock);
+	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
+								(void**)&found, cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+		cert = found->cert->get_ref(found->cert);
+	}
+	this->lock->unlock(this->lock);
+	return cert;
+}
+
+METHOD(stroke_ca_t, reload_certs, void,
+	private_stroke_ca_t *this)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	ca_section_t *ca;
+	certificate_type_t type = CERT_X509;
+
+	/* holding the write lock while loading/parsing certificates is not optimal,
+	 * however, there usually are not that many ca sections configured */
+	this->lock->write_lock(this->lock);
+	if (this->sections->get_count(this->sections))
+	{
+		DBG1(DBG_CFG, "rereading ca certificates in ca sections");
+	}
+	enumerator = this->sections->create_enumerator(this->sections);
+	while (enumerator->enumerate(enumerator, &ca))
+	{
+		cert = stroke_load_ca_cert(ca->path);
+		if (cert)
+		{
+			if (cert->equals(cert, ca->cert))
+			{
+				cert->destroy(cert);
+			}
+			else
+			{
+				this->certs->remove(this->certs, ca->cert, (void*)remove_cert);
+				ca->cert->destroy(ca->cert);
+				ca->cert = add_cert_internal(this, cert, FALSE);
+			}
+		}
+		else
+		{
+			DBG1(DBG_CFG, "failed to reload certificate '%s', removing ca '%s'",
+				 ca->path, ca->name);
+			this->sections->remove_at(this->sections, enumerator);
+			this->certs->remove(this->certs, ca->cert, (void*)remove_cert);
+			ca_section_destroy(ca);
+			type = CERT_ANY;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	lib->credmgr->flush_cache(lib->credmgr, type);
+}
+
+METHOD(stroke_ca_t, replace_certs, void,
+	private_stroke_ca_t *this, mem_cred_t *certs)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+
+	enumerator = certs->set.create_cert_enumerator(&certs->set, CERT_X509,
+												   KEY_ANY, NULL, TRUE);
+	this->lock->write_lock(this->lock);
+	this->certs->remove(this->certs, NULL, (void*)remove_auto_certs);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		cert = add_cert_internal(this, cert->get_ref(cert), TRUE);
+		cert->destroy(cert);
+	}
+	this->lock->unlock(this->lock);
+	enumerator->destroy(enumerator);
+	lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
+}
 /**
  * list crl or ocsp URIs
  */
@@ -501,6 +705,7 @@ METHOD(stroke_ca_t, destroy, void,
 	private_stroke_ca_t *this)
 {
 	this->sections->destroy_function(this->sections, (void*)ca_section_destroy);
+	this->certs->destroy_function(this->certs, (void*)ca_cert_destroy);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -508,7 +713,7 @@ METHOD(stroke_ca_t, destroy, void,
 /*
  * see header file
  */
-stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
+stroke_ca_t *stroke_ca_create()
 {
 	private_stroke_ca_t *this;
 
@@ -524,12 +729,15 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 			.add = _add,
 			.del = _del,
 			.list = _list,
+			.get_cert_ref = _get_cert_ref,
+			.reload_certs = _reload_certs,
+			.replace_certs = _replace_certs,
 			.check_for_hash_and_url = _check_for_hash_and_url,
 			.destroy = _destroy,
 		},
 		.sections = linked_list_create(),
+		.certs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.cred = cred,
 	);
 
 	return &this->public;

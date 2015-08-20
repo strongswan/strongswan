@@ -75,11 +75,6 @@ struct private_stroke_cred_t {
 	mem_cred_t *creds;
 
 	/**
-	 * CA certificates
-	 */
-	mem_cred_t *cacerts;
-
-	/**
 	 * Attribute Authority certificates
 	 */
 	mem_cred_t *aacerts;
@@ -94,6 +89,11 @@ struct private_stroke_cred_t {
 	 * cache CRLs to disk?
 	 */
 	bool cachecrl;
+
+	/**
+	 * CA certificate store
+	 */
+	stroke_ca_t *ca;
 };
 
 /** Length of smartcard specifier parts (module, keyid) */
@@ -385,17 +385,17 @@ static certificate_t *load_ca_cert(char *filename, bool force_ca_cert)
 	return NULL;
 }
 
-METHOD(stroke_cred_t, load_ca, certificate_t*,
-   private_stroke_cred_t *this, char *filename)
+/**
+ * Used by stroke_ca.c
+ */
+certificate_t *stroke_load_ca_cert(char *filename)
 {
-	certificate_t *cert;
+	bool force_ca_cert;
 
-	cert = load_ca_cert(filename, this->force_ca_cert);
-	if (cert)
-	{
-		return this->cacerts->get_cert_ref(this->cacerts, cert);
-	}
-	return NULL;
+	force_ca_cert = lib->settings->get_bool(lib->settings,
+						"%s.plugins.stroke.ignore_missing_ca_basic_constraint",
+						FALSE, lib->ns);
+	return load_ca_cert(filename, force_ca_cert);
 }
 
 /**
@@ -409,6 +409,7 @@ static void load_x509_ca(private_stroke_cred_t *this, char *file,
 	cert = load_ca_cert(file, this->force_ca_cert);
 	if (cert)
 	{
+		cert = this->ca->get_cert_ref(this->ca, cert);
 		creds->add_cert(creds, TRUE, cert);
 	}
 	else
@@ -1346,9 +1347,14 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
  */
 static void load_certs(private_stroke_cred_t *this)
 {
+	mem_cred_t *creds;
+
 	DBG1(DBG_CFG, "loading ca certificates from '%s'",
 		 CA_CERTIFICATE_DIR);
-	load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA, this->cacerts);
+	creds = mem_cred_create();
+	load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA, creds);
+	this->ca->replace_certs(this->ca, creds);
+	creds->destroy(creds);
 
 	DBG1(DBG_CFG, "loading aa certificates from '%s'",
 		 AA_CERTIFICATE_DIR);
@@ -1378,24 +1384,28 @@ METHOD(stroke_cred_t, reread, void,
 		DBG1(DBG_CFG, "rereading secrets");
 		load_secrets(this, NULL, this->secrets_file, 0, prompt);
 	}
-	creds = mem_cred_create();
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
+		/* first reload certificates in ca sections, so we can refer to them */
+		this->ca->reload_certs(this->ca);
+
 		DBG1(DBG_CFG, "rereading ca certificates from '%s'",
 			 CA_CERTIFICATE_DIR);
+		creds = mem_cred_create();
 		load_certdir(this, CA_CERTIFICATE_DIR, CERT_X509, X509_CA, creds);
-		this->cacerts->replace_certs(this->cacerts, creds, FALSE);
-		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
+		this->ca->replace_certs(this->ca, creds);
+		creds->destroy(creds);
 	}
 	if (msg->reread.flags & REREAD_AACERTS)
 	{
 		DBG1(DBG_CFG, "rereading aa certificates from '%s'",
 			 AA_CERTIFICATE_DIR);
+		creds = mem_cred_create();
 		load_certdir(this, AA_CERTIFICATE_DIR, CERT_X509, X509_AA, creds);
 		this->aacerts->replace_certs(this->aacerts, creds, FALSE);
+		creds->destroy(creds);
 		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
 	}
-	creds->destroy(creds);
 	if (msg->reread.flags & REREAD_OCSPCERTS)
 	{
 		DBG1(DBG_CFG, "rereading ocsp signer certificates from '%s'",
@@ -1427,10 +1437,8 @@ METHOD(stroke_cred_t, destroy, void,
 	private_stroke_cred_t *this)
 {
 	lib->credmgr->remove_set(lib->credmgr, &this->aacerts->set);
-	lib->credmgr->remove_set(lib->credmgr, &this->cacerts->set);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->aacerts->destroy(this->aacerts);
-	this->cacerts->destroy(this->cacerts);
 	this->creds->destroy(this->creds);
 	free(this);
 }
@@ -1438,7 +1446,7 @@ METHOD(stroke_cred_t, destroy, void,
 /*
  * see header file
  */
-stroke_cred_t *stroke_cred_create()
+stroke_cred_t *stroke_cred_create(stroke_ca_t *ca)
 {
 	private_stroke_cred_t *this;
 
@@ -1452,7 +1460,6 @@ stroke_cred_t *stroke_cred_create()
 				.cache_cert = (void*)_cache_cert,
 			},
 			.reread = _reread,
-			.load_ca = _load_ca,
 			.load_peer = _load_peer,
 			.load_pubkey = _load_pubkey,
 			.add_shared = _add_shared,
@@ -1463,12 +1470,11 @@ stroke_cred_t *stroke_cred_create()
 								"%s.plugins.stroke.secrets_file", SECRETS_FILE,
 								lib->ns),
 		.creds = mem_cred_create(),
-		.cacerts = mem_cred_create(),
 		.aacerts = mem_cred_create(),
+		.ca = ca,
 	);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
-	lib->credmgr->add_set(lib->credmgr, &this->cacerts->set);
 	lib->credmgr->add_set(lib->credmgr, &this->aacerts->set);
 
 	this->force_ca_cert = lib->settings->get_bool(lib->settings,
