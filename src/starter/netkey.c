@@ -55,16 +55,3 @@ bool starter_netkey_init(void)
 	DBG2(DBG_APP, "found netkey IPsec stack");
 	return TRUE;
 }
-
-void starter_netkey_cleanup(void)
-{
-	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "starter.load", PLUGINS)))
-	{
-		DBG1(DBG_APP, "unable to load kernel plugins");
-		return;
-	}
-	hydra->kernel_interface->flush_sas(hydra->kernel_interface);
-	hydra->kernel_interface->flush_policies(hydra->kernel_interface);
-	lib->plugins->unload(lib->plugins);
-}

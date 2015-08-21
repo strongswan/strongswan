@@ -2024,10 +2024,17 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_flush *flush;
+	struct {
+		u_int8_t proto;
+		char *name;
+	} protos[] = {
+		{ IPPROTO_AH, "AH" },
+		{ IPPROTO_ESP, "ESP" },
+		{ IPPROTO_COMP, "IPComp" },
+	};
+	int i;
 
 	memset(&request, 0, sizeof(request));
-
-	DBG2(DBG_KNL, "flushing all SAD entries");
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -2035,12 +2042,18 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_flush));
 
 	flush = NLMSG_DATA(hdr);
-	flush->proto = IPSEC_PROTO_ANY;
 
-	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	for (i = 0; i < countof(protos); i++)
 	{
-		DBG1(DBG_KNL, "unable to flush SAD entries");
-		return FAILED;
+		DBG2(DBG_KNL, "flushing all %s SAD entries", protos[i].name);
+
+		flush->proto = protos[i].proto;
+
+		if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to flush %s SAD entries", protos[i].name);
+			return FAILED;
+		}
 	}
 	return SUCCESS;
 }

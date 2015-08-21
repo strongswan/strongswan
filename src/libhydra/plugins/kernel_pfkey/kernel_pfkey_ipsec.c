@@ -2086,31 +2086,44 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
+	struct {
+		u_int8_t proto;
+		char *name;
+	} protos[] = {
+		{ SADB_SATYPE_AH, "AH" },
+		{ SADB_SATYPE_ESP, "ESP" },
+		{ SADB_X_SATYPE_IPCOMP, "IPComp" },
+	};
 	size_t len;
+	int i;
 
 	memset(&request, 0, sizeof(request));
-
-	DBG2(DBG_KNL, "flushing all SAD entries");
 
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_FLUSH;
-	msg->sadb_msg_satype = SADB_SATYPE_UNSPEC;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
-	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	for (i = 0; i < countof(protos); i++)
 	{
-		DBG1(DBG_KNL, "unable to flush SAD entries");
-		return FAILED;
-	}
-	else if (out->sadb_msg_errno)
-	{
-		DBG1(DBG_KNL, "unable to flush SAD entries: %s (%d)",
-					   strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		DBG2(DBG_KNL, "flushing all %s SAD entries", protos[i].name);
+
+		msg->sadb_msg_satype = protos[i].proto;
+		if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to flush %s SAD entries", protos[i].name);
+			return FAILED;
+		}
+		else if (out->sadb_msg_errno)
+		{
+			DBG1(DBG_KNL, "unable to flush %s SAD entries: %s (%d)",
+				 protos[i].name, strerror(out->sadb_msg_errno),
+				 out->sadb_msg_errno);
+			free(out);
+			return FAILED;
+		}
 		free(out);
-		return FAILED;
 	}
-	free(out);
 	return SUCCESS;
 }
 

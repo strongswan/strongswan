@@ -364,6 +364,14 @@ do
 		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'conntrack -F' >/dev/null 2>&1
 	done
 
+	##########################################################################
+	# flush IPsec state on all hosts
+	#
+
+	for host in $STRONGSWANHOSTS
+	do
+		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'ip xfrm state flush; ip xfrm policy flush' >/dev/null 2>&1
+	done
 
 	##########################################################################
 	# execute pre-test commands
@@ -718,6 +726,24 @@ do
 	    }
 	}' $TESTDIR/posttest.dat` >> $CONSOLE_LOG 2>&1
 
+	##########################################################################
+	# check that IPsec state was cleaned up properly
+	#
+
+	for host in $IPSECHOSTS
+	do
+		eval HOSTLOGIN=root@\$ipv4_${host}
+		IPSECSTATE=`ssh $SSHCONF $HOSTLOGIN 'ip xfrm state'`
+		IPSECPOLICY=`ssh $SSHCONF $HOSTLOGIN 'ip xfrm policy'`
+		if [ -n "$IPSECSTATE" -o -n "$IPSECPOLICY" ]
+		then
+			echo -e "\n$host# ip xfrm state [NO]" >> $CONSOLE_LOG
+			echo "$IPSECSTATE" >> $CONSOLE_LOG
+			echo -e "\n$host# ip xfrm policy [NO]" >> $CONSOLE_LOG
+			echo "$IPSECPOLICY" >> $CONSOLE_LOG
+			STATUS="failed"
+		fi
+	done
 
 	##########################################################################
 	# get a copy of /var/log/auth.log

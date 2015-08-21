@@ -703,7 +703,6 @@ int main (int argc, char **argv)
 			{
 				starter_stop_charon();
 			}
-			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(starter_pid_file);
 			cleanup();
