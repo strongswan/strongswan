@@ -152,6 +152,11 @@ struct private_child_sa_t {
 	bool trap;
 
 	/**
+	 * TRUE to only install outbound trap policies
+	 */
+	bool trap_outbound_only;
+
+	/**
 	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
 	bool encap;
@@ -783,21 +788,25 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
 	status_t status = SUCCESS;
+
 	status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							my_addr, other_addr, my_ts, other_ts,
 							POLICY_OUT, type, other_sa,
 							this->mark_out, priority);
 
-	status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
-							other_addr, my_addr, other_ts, my_ts,
-							POLICY_IN, type, my_sa,
-							this->mark_in, priority);
-	if (this->mode != MODE_TRANSPORT)
+	if (!this->trap || !this->trap_outbound_only)
 	{
 		status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							other_addr, my_addr, other_ts, my_ts,
+							POLICY_IN, type, my_sa,
+							this->mark_in, priority);
+		if (this->mode != MODE_TRANSPORT)
+		{
+			status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+							other_addr, my_addr, other_ts, my_ts,
 							POLICY_FWD, type, my_sa,
 							this->mark_in, priority);
+		}
 	}
 	return status;
 }
@@ -812,14 +821,18 @@ static void del_policies_internal(private_child_sa_t *this,
 	hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						my_ts, other_ts, POLICY_OUT, this->reqid,
 						this->mark_out, priority);
-	hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts,  POLICY_IN, this->reqid,
-						this->mark_in, priority);
-	if (this->mode != MODE_TRANSPORT)
+
+	if (!this->trap || !this->trap_outbound_only)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
+						other_ts, my_ts,  POLICY_IN, this->reqid,
+						this->mark_in, priority);
+		if (this->mode != MODE_TRANSPORT)
+		{
+			hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_FWD, this->reqid,
 						this->mark_in, priority);
+		}
 	}
 }
 
@@ -1265,6 +1278,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
+		.trap_outbound_only = lib->settings->get_bool(lib->settings,
+						"%s.install_trap_outbound_only", FALSE, lib->ns),
 	);
 
 	this->config = config;

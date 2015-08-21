@@ -157,6 +157,13 @@ charon.initiator_only = no
 charon.install_routes = yes
 	Install routes into a separate routing table for established IPsec tunnels.
 
+charon.install_trap_outbound_only = no
+	Only install trap policies that match outbound traffic.
+
+	If this is enabled the daemon will only install trap policies that match
+	outbound traffic.  That is, no inbound/forward policies are installed to
+	block unencrypted/unauthenticated incoming traffic.
+
 charon.install_virtual_ip = yes
 	Install virtual IP addresses.
 
