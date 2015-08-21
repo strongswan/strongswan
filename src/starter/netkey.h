@@ -16,7 +16,6 @@
 #define _STARTER_NETKEY_H_
 
 extern bool starter_netkey_init (void);
-extern void starter_netkey_cleanup (void);
 
 #endif /* _STARTER_NETKEY_H_ */
 
