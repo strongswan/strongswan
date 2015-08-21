@@ -434,7 +434,7 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 	child_cfg = create_child_cfg(this, peer_cfg);
 
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 controller_cb_empty, NULL, 0) != SUCCESS)
+								controller_cb_empty, NULL, 0, FALSE) != SUCCESS)
 	{
 		terminate(pid);
 	}

@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -355,6 +358,33 @@ START_TEST(test_get_int)
 }
 END_TEST
 
+START_TEST(test_get_bool)
+{
+	vici_message_t *m;
+
+	m = build_getter_msg();
+
+	ck_assert(m->get_bool(m, TRUE, "key1"));
+	ck_assert(m->get_bool(m, FALSE, "key1"));
+
+	ck_assert(m->get_bool(m, TRUE, "section1.key2"));
+	ck_assert(m->get_bool(m, TRUE, "section1.section2.key3"));
+	ck_assert(m->get_bool(m, TRUE, "section1.key4"));
+	ck_assert(m->get_bool(m, TRUE, "key5"));
+	ck_assert(m->get_bool(m, TRUE, "nonexistent"));
+	ck_assert(m->get_bool(m, TRUE, "n.o.n.e.x.i.s.t.e.n.t"));
+
+	ck_assert(!m->get_bool(m, FALSE, "section1.key2"));
+	ck_assert(!m->get_bool(m, FALSE, "section1.section2.key3"));
+	ck_assert(!m->get_bool(m, FALSE, "section1.key4"));
+	ck_assert(!m->get_bool(m, FALSE, "key5"));
+	ck_assert(!m->get_bool(m, FALSE, "nonexistent"));
+	ck_assert(!m->get_bool(m, FALSE, "n.o.n.e.x.i.s.t.e.n.t"));
+
+	m->destroy(m);
+}
+END_TEST
+
 START_TEST(test_get_value)
 {
 	vici_message_t *m;
@@ -400,6 +430,7 @@ Suite *message_suite_create()
 	tc = tcase_create("convenience getters");
 	tcase_add_test(tc, test_get_str);
 	tcase_add_test(tc, test_get_int);
+	tcase_add_test(tc, test_get_bool);
 	tcase_add_test(tc, test_get_value);
 	suite_add_tcase(s, tc);
 

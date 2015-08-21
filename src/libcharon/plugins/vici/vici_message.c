@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -385,6 +388,41 @@ METHOD(vici_message_t, get_int, int,
 	return val;
 }
 
+METHOD(vici_message_t, vget_bool, bool,
+	private_vici_message_t *this, bool def, char *fmt, va_list args)
+{
+	chunk_t value;
+	bool found;
+	char buf[16];
+
+	found = find_value(this, &value, fmt, args);
+	if (found)
+	{
+		if (value.len == 0)
+		{
+			return def;
+		}
+		if (chunk_printable(value, NULL, 0))
+		{
+			snprintf(buf, sizeof(buf), "%.*s", (int)value.len, value.ptr);
+			return settings_value_as_bool(buf, def);
+		}
+	}
+	return def;
+}
+
+METHOD(vici_message_t, get_bool, bool,
+	private_vici_message_t *this, bool def, char *fmt, ...)
+{
+	va_list args;
+	bool val;
+
+	va_start(args, fmt);
+	val = vget_bool(this, def, fmt, args);
+	va_end(args);
+	return val;
+}
+
 METHOD(vici_message_t, vget_value, chunk_t,
 	private_vici_message_t *this, chunk_t def, char *fmt, va_list args)
 {
@@ -633,6 +671,8 @@ vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 			.vget_str = _vget_str,
 			.get_int = _get_int,
 			.vget_int = _vget_int,
+			.get_bool = _get_bool,
+			.vget_bool = _vget_bool,
 			.get_value = _get_value,
 			.vget_value = _vget_value,
 			.get_encoding = _get_encoding,
