@@ -247,7 +247,11 @@ module Vici
     def recv_all(len)
       encoding = ""
       while encoding.length < len do
-        encoding << @socket.recv(len - encoding.length)
+        data = @socket.recv(len - encoding.length)
+        if data.empty?
+          raise TransportError, "connection closed"
+        end
+        encoding << data
       end
       encoding
     end
