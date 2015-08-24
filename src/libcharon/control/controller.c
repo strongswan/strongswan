@@ -381,7 +381,7 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		u_int half_open, limit_half_open, limit_job_load;
 
 		half_open = charon->ike_sa_manager->get_half_open_count(
-										charon->ike_sa_manager, NULL);
+										charon->ike_sa_manager, NULL, FALSE);
 		limit_half_open = lib->settings->get_int(lib->settings,
 										"%s.init_limit_half_open", 0, lib->ns);
 		limit_job_load = lib->settings->get_int(lib->settings,

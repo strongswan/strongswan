@@ -929,7 +929,7 @@ CALLBACK(stats, vici_message_t*,
 		charon->ike_sa_manager->get_count(charon->ike_sa_manager));
 	b->add_kv(b, "half-open", "%u",
 		charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
-													NULL));
+													NULL, FALSE));
 	b->end_section(b);
 
 	b->begin_list(b, "plugins");

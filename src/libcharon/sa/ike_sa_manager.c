@@ -206,6 +206,9 @@ struct half_open_t {
 
 	/** the number of half-open IKE_SAs with that host */
 	u_int count;
+
+	/** the number of half-open IKE_SAs we responded to with that host */
+	u_int count_responder;
 };
 
 /**
@@ -359,6 +362,11 @@ struct private_ike_sa_manager_t {
 	 * Total number of half-open IKE_SAs.
 	 */
 	refcount_t half_open_count;
+
+	/**
+	 * Total number of half-open IKE_SAs as responder.
+	 */
+	refcount_t half_open_count_responder;
 
 	/**
 	 * Hash table with connected_peers_t objects.
@@ -737,9 +745,11 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	table_item_t *item;
 	u_int row, segment;
 	rwlock_t *lock;
+	ike_sa_id_t *ike_id;
 	half_open_t *half_open;
 	chunk_t addr;
 
+	ike_id = entry->ike_sa_id;
 	addr = entry->other->get_address(entry->other);
 	row = chunk_hash(addr) & this->table_mask;
 	segment = row & this->segment_mask;
@@ -752,7 +762,6 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 
 		if (chunk_equals(addr, half_open->other))
 		{
-			half_open->count++;
 			break;
 		}
 		item = item->next;
@@ -762,7 +771,6 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	{
 		INIT(half_open,
 			.other = chunk_clone(addr),
-			.count = 1,
 		);
 		INIT(item,
 			.value = half_open,
@@ -770,8 +778,14 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 		);
 		this->half_open_table[row] = item;
 	}
-	this->half_open_segments[segment].count++;
+	half_open->count++;
 	ref_get(&this->half_open_count);
+	if (!ike_id->is_initiator(ike_id))
+	{
+		half_open->count_responder++;
+		ref_get(&this->half_open_count_responder);
+	}
+	this->half_open_segments[segment].count++;
 	lock->unlock(lock);
 }
 
@@ -783,8 +797,10 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	table_item_t *item, *prev = NULL;
 	u_int row, segment;
 	rwlock_t *lock;
+	ike_sa_id_t *ike_id;
 	chunk_t addr;
 
+	ike_id = entry->ike_sa_id;
 	addr = entry->other->get_address(entry->other);
 	row = chunk_hash(addr) & this->table_mask;
 	segment = row & this->segment_mask;
@@ -797,6 +813,12 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 
 		if (chunk_equals(addr, half_open->other))
 		{
+			if (!ike_id->is_initiator(ike_id))
+			{
+				half_open->count_responder--;
+				ignore_result(ref_put(&this->half_open_count_responder));
+			}
+			ignore_result(ref_put(&this->half_open_count));
 			if (--half_open->count == 0)
 			{
 				if (prev)
@@ -811,7 +833,6 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 				free(item);
 			}
 			this->half_open_segments[segment].count--;
-			ignore_result(ref_put(&this->half_open_count));
 			break;
 		}
 		prev = item;
@@ -1945,7 +1966,7 @@ METHOD(ike_sa_manager_t, get_count, u_int,
 }
 
 METHOD(ike_sa_manager_t, get_half_open_count, u_int,
-	private_ike_sa_manager_t *this, host_t *ip)
+	private_ike_sa_manager_t *this, host_t *ip, bool responder_only)
 {
 	table_item_t *item;
 	u_int row, segment;
@@ -1967,7 +1988,8 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 
 			if (chunk_equals(addr, half_open->other))
 			{
-				count = half_open->count;
+				count = responder_only ? half_open->count_responder
+									   : half_open->count;
 				break;
 			}
 			item = item->next;
@@ -1976,7 +1998,8 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 	}
 	else
 	{
-		count = (u_int)ref_cur(&this->half_open_count);
+		count = responder_only ? (u_int)ref_cur(&this->half_open_count_responder)
+							   : (u_int)ref_cur(&this->half_open_count);
 	}
 	return count;
 }

@@ -216,14 +216,15 @@ struct ike_sa_manager_t {
 	 * To prevent the server from resource exhaustion, cookies and other
 	 * mechanisms are used. The number of half open IKE_SAs is a good
 	 * indicator to see if a peer is flooding the server.
-	 * If a host is supplied, only the number of half open IKE_SAs initiated
-	 * from this IP are counted.
-	 * Only SAs for which we are the responder are counted.
+	 * If a host is supplied, only the number of half open IKE_SAs with this IP
+	 * are counted.
 	 *
 	 * @param ip				NULL for all, IP for half open IKE_SAs with IP
+	 * @param responder_only	TRUE to return only the number of responding SAs
 	 * @return					number of half open IKE_SAs
 	 */
-	u_int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
+	u_int (*get_half_open_count)(ike_sa_manager_t *this, host_t *ip,
+								 bool responder_only);
 
 	/**
 	 * Delete all existing IKE_SAs and destroy them immediately.

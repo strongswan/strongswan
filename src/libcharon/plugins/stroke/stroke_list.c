@@ -647,7 +647,7 @@ METHOD(stroke_list_t, status, void,
 	enumerator->destroy(enumerator);
 
 	half_open = charon->ike_sa_manager->get_half_open_count(
-												charon->ike_sa_manager, NULL);
+										charon->ike_sa_manager, NULL, FALSE);
 	fprintf(out, "Security Associations (%u up, %u connecting):\n",
 		charon->ike_sa_manager->get_count(charon->ike_sa_manager) - half_open,
 		half_open);
