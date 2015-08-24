@@ -1608,6 +1608,12 @@ METHOD(ike_sa_manager_t, checkin, void,
 		entry = entry_create();
 		entry->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 		entry->ike_sa = ike_sa;
+		if (ike_sa->get_state(ike_sa) == IKE_CONNECTING)
+		{
+			entry->half_open = TRUE;
+			entry->other = other->clone(other);
+			put_half_open(this, entry);
+		}
 		segment = put_entry(this, entry);
 	}
 
