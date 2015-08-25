@@ -849,8 +849,7 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
 		memcpy(this->to, to.ptr+1, to.len-1);
 		this->to[to.len-2] |= mask;
 	}
-	this->netbits = chunk_equals(from, to) ? (from.len-1)*8 - from.ptr[0]
-										   : NON_SUBNET_ADDRESS_RANGE;
+	calc_netbits(this);
 	return (&this->public);
 }
 
