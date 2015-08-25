@@ -7,6 +7,7 @@ import android.content.res.Resources;
 import android.os.*;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.Toast;
 import com.google.inject.Inject;
@@ -32,6 +33,8 @@ public class ApiClientActivity extends RoboActivity {
     RadioButton messengerRadioButton;
     @InjectView(R.id.service_radio_button)
     RadioButton serviceRadioButton;
+    @InjectView(R.id.package_name_edit_text)
+    EditText packageNameEditText;
     private VpnProfileCrudService service;
     private Messenger messenger;
     private int ipcType;
@@ -260,6 +263,7 @@ public class ApiClientActivity extends RoboActivity {
         vpnProfile.putString(resources.getString(R.string.vpn_profile_bundle_username_key), "john");
         vpnProfile.putString(resources.getString(R.string.vpn_profile_bundle_password_key), "haslo123");
         vpnProfile.putString(resources.getString(R.string.vpn_profile_bundle_type_key), resources.getString(R.string.vpn_profile_bundle_type_ikev2_eap_value));
+        vpnProfile.getString(resources.getString(R.string.vpn_profile_bundle_allowed_applications), packageNameEditText.getText().toString());
         return vpnProfile;
     }
 
@@ -270,6 +274,7 @@ public class ApiClientActivity extends RoboActivity {
         vpnProfile.putString(resources.getString(R.string.vpn_profile_bundle_type_key), resources.getString(R.string.vpn_profile_bundle_type_ikev2_cert_value));
         vpnProfile.getString(resources.getString(R.string.vpn_profile_bundle_certificate_alias_key), "john");
         vpnProfile.getString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key), "john");
+        vpnProfile.getString(resources.getString(R.string.vpn_profile_bundle_allowed_applications), packageNameEditText.getText().toString());
         return vpnProfile;
     }
 

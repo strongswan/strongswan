@@ -24,6 +24,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.os.Build;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
@@ -214,7 +215,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						startConnection(mCurrentProfile);
 						mIsDisconnecting = false;
 
-						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
+						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile);
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
@@ -533,25 +534,31 @@ public class CharonVpnService extends VpnService implements Runnable
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
+		private final VpnProfile profile;
 
-		public BuilderAdapter(String name)
+		public BuilderAdapter(VpnProfile profile)
 		{
-			mName = name;
-			mBuilder = createBuilder(name);
-                    try {
-                        mBuilder.addAllowedApplication("com.android.chrome");
-                    } catch (PackageManager.NameNotFoundException ex) {
-//                        Logger.getLogger(CharonVpnService.class.getName()).log(Level.SEVERE, null, ex);
-                        Log.e("strongSwan", "dupa",ex);
-                    }
+			this.profile = profile;
+			mName = profile.getName();
+			mBuilder = createBuilder();
 			mCache = new BuilderCache();
 		}
 
-		private VpnService.Builder createBuilder(String name)
+		private VpnService.Builder createBuilder()
 		{
 			VpnService.Builder builder = new CharonVpnService.Builder();
 			builder.setSession(mName);
 
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				ArrayList<String> allowedApplications = profile.getAllowedApplications();
+				for (String s : allowedApplications) {
+					try {
+						mBuilder.addAllowedApplication(s);
+					} catch (PackageManager.NameNotFoundException ex) {
+						Log.w(TAG, "Failed to add packageName: " + s + " to allowed applications list for vpn profile: " + mName, ex);
+					}
+				}
+			}
 			/* even though the option displayed in the system dialog says "Configure"
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
@@ -648,7 +655,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			}
 			/* now that the TUN device is created we don't need the current
 			 * builder anymore, but we might need another when reestablishing */
-			mBuilder = createBuilder(mName);
+			mBuilder = createBuilder();
 			mEstablishedCache = mCache;
 			mCache = new BuilderCache();
 			return fd.detachFd();
@@ -664,7 +671,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			}
 			try
 			{
-				Builder builder = createBuilder(mName);
+				Builder builder = createBuilder();
 				mEstablishedCache.applyData(builder);
 				fd = builder.establish();
 			}

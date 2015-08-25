@@ -21,9 +21,13 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import org.strongswan.android.R;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+	private ArrayList<String> allowedApplications = new ArrayList<String>();
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -114,6 +118,14 @@ public class VpnProfile implements Cloneable
 		this.mUserCertificate = alias;
 	}
 
+	public ArrayList<String> getAllowedApplications() {
+		return allowedApplications;
+	}
+
+	public void setAllowedApplications(ArrayList<String> allowedApplications) {
+		this.allowedApplications = allowedApplications;
+	}
+
 	@Override
 	public String toString()
 	{
@@ -153,6 +165,7 @@ public class VpnProfile implements Cloneable
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_type_key), getVpnType().name());
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key), getUserCertificateAlias());
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_username_key), getUsername());
+		bundle.putStringArrayList(resources.getString(R.string.vpn_profile_bundle_allowed_applications), getAllowedApplications());
         return bundle;
     }
 
@@ -165,5 +178,6 @@ public class VpnProfile implements Cloneable
         mVpnType = VpnType.valueOf(bundle.getString(resources.getString(R.string.vpn_profile_bundle_type_key)));
         mUserCertificate = bundle.getString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key));
         mUsername = bundle.getString(resources.getString(R.string.vpn_profile_bundle_username_key));
+		allowedApplications = bundle.getStringArrayList(resources.getString(R.string.vpn_profile_bundle_allowed_applications));
     }
 }

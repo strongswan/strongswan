@@ -23,7 +23,6 @@
                 android:text="Messenger"
                 android:onClick="clickMessenger"/>
 
-
     </RadioGroup>
 
     <Button
@@ -55,4 +54,10 @@
             android:layout_height="wrap_content"
             android:text="Delete VPN Profiles"
             android:onClick="clickDeleteVpnProfiles"/>
+
+    <EditText
+            android:id="@+id/package_name_edit_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="com.android.chrome"/>
 </LinearLayout>
