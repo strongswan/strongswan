@@ -607,6 +607,27 @@ START_TEST(test_include)
 }
 END_TEST
 
+START_TEST(test_include_string)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include this/does/not/exist.conf\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"		include \"" include2 "\"\n"
+		"	}\n"
+		"}\n"
+		"include \"" include1 "\"");
+
+	create_settings(contents);
+	verify_include();
+}
+END_TEST
+
 START_TEST(test_load_files)
 {
 	chunk_t contents = chunk_from_str(
@@ -1009,7 +1030,7 @@ END_TEST
 START_SETUP(setup_string_config)
 {
 	create_settings(chunk_from_str(
-		"string = \"  with    accurate\twhitespace\"\n"
+		"string = \"  with    accurate\twhite\\tspace\"\n"
 		"special = \"all { special } characters # can be used.\"\n"
 		"newlines = \"can be encoded explicitly\\nor implicitly\n"
 		"or \\\n"
@@ -1022,7 +1043,7 @@ END_SETUP
 
 START_TEST(test_strings)
 {
-	verify_string("  with    accurate\twhitespace", "string");
+	verify_string("  with    accurate\twhite\tspace", "string");
 	verify_string("all { special } characters # can be used.", "special");
 	verify_string("can be encoded explicitly\nor implicitly\nor escaped", "newlines");
 	verify_string("\"and\" slashes \\ can \\ be", "quotes");
@@ -1162,6 +1183,7 @@ Suite *settings_suite_create()
 	tc = tcase_create("include/load_files[_section]");
 	tcase_add_checked_fixture(tc, setup_include_config, teardown_include_config);
 	tcase_add_test(tc, test_include);
+	tcase_add_test(tc, test_include_string);
 	tcase_add_test(tc, test_load_files);
 	tcase_add_test(tc, test_load_files_section);
 	tcase_add_test(tc, test_order_kv);
