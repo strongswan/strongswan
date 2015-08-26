@@ -63,9 +63,9 @@ struct private_shunt_manager_t {
 static bool install_shunt_policy(child_cfg_t *child)
 {
 	enumerator_t *e_my_ts, *e_other_ts;
-	linked_list_t *my_ts_list, *other_ts_list;
+	linked_list_t *my_ts_list, *other_ts_list, *hosts;
 	traffic_selector_t *my_ts, *other_ts;
-	host_t *host_any;
+	host_t *host_any, *host_any6;
 	policy_type_t policy_type;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
@@ -85,9 +85,13 @@ static bool install_shunt_policy(child_cfg_t *child)
 			return FALSE;
 	}
 
-	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
-	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
 	host_any = host_create_any(AF_INET);
+	host_any6 = host_create_any(AF_INET6);
+
+	hosts = linked_list_create_with_items(host_any, host_any6, NULL);
+	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, hosts);
+	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
+	hosts->destroy(hosts);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -135,6 +139,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 							   offsetof(traffic_selector_t, destroy));
 	other_ts_list->destroy_offset(other_ts_list,
 							   offsetof(traffic_selector_t, destroy));
+	host_any6->destroy(host_any6);
 	host_any->destroy(host_any);
 
 	return status == SUCCESS;
@@ -195,8 +200,9 @@ METHOD(shunt_manager_t, install, bool,
 static void uninstall_shunt_policy(child_cfg_t *child)
 {
 	enumerator_t *e_my_ts, *e_other_ts;
-	linked_list_t *my_ts_list, *other_ts_list;
+	linked_list_t *my_ts_list, *other_ts_list, *hosts;
 	traffic_selector_t *my_ts, *other_ts;
+	host_t *host_any, *host_any6;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
 
@@ -212,8 +218,17 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 			return;
 	}
 
-	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
-	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
+	host_any = host_create_any(AF_INET);
+	host_any6 = host_create_any(AF_INET6);
+	hosts = linked_list_create_with_items(host_any, host_any6, NULL);
+
+	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, hosts);
+	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
+
+	hosts->destroy(hosts);
+	host_any6->destroy(host_any6);
+	host_any->destroy(host_any);
+
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
