@@ -514,15 +514,30 @@ static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 	INIT(policy,
 		.direction = dir,
 	);
+	u_int16_t port;
+	u_int8_t proto;
 
 	src_ts->to_subnet(src_ts, &policy->src.net, &policy->src.mask);
 	dst_ts->to_subnet(dst_ts, &policy->dst.net, &policy->dst.mask);
 
 	/* src or dest proto may be "any" (0), use more restrictive one */
-	policy->src.proto = max(src_ts->get_protocol(src_ts),
-							dst_ts->get_protocol(dst_ts));
-	policy->src.proto = policy->src.proto ? policy->src.proto : IPSEC_PROTO_ANY;
-	policy->dst.proto = policy->src.proto;
+	proto = max(src_ts->get_protocol(src_ts), dst_ts->get_protocol(dst_ts));
+	/* map the ports to ICMP type/code how the Linux kernel expects them, that
+	 * is, type in src, code in dst */
+	if (proto == IPPROTO_ICMP || proto == IPPROTO_ICMPV6)
+	{
+		port = max(policy->src.net->get_port(policy->src.net),
+				   policy->dst.net->get_port(policy->dst.net));
+		policy->src.net->set_port(policy->src.net,
+								  traffic_selector_icmp_type(port));
+		policy->dst.net->set_port(policy->dst.net,
+								  traffic_selector_icmp_code(port));
+	}
+	else if (!proto)
+	{
+		proto = IPSEC_PROTO_ANY;
+	}
+	policy->src.proto = policy->dst.proto = proto;
 
 	return policy;
 }
@@ -950,28 +965,6 @@ static size_t hostcpy(void *dest, host_t *host, bool include_port)
 }
 
 /**
- * Copy a host_t as sockaddr_t to the given memory location and map the port to
- * ICMP/ICMPv6 message type/code as the Linux kernel expects it, that is, the
- * type in the source and the code in the destination address.
- * @return		the number of bytes copied
- */
-static size_t hostcpy_icmp(void *dest, host_t *host, u_int16_t type)
-{
-	size_t len;
-
-	len = hostcpy(dest, host, TRUE);
-	if (type == SADB_EXT_ADDRESS_SRC)
-	{
-		set_port(dest, traffic_selector_icmp_type(host->get_port(host)));
-	}
-	else
-	{
-		set_port(dest, traffic_selector_icmp_code(host->get_port(host)));
-	}
-	return len;
-}
-
-/**
  * add a host to the given sadb_msg
  */
 static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
@@ -983,14 +976,7 @@ static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
 	addr->sadb_address_exttype = type;
 	addr->sadb_address_proto = proto;
 	addr->sadb_address_prefixlen = prefixlen;
-	if (proto == IPPROTO_ICMP || proto == IPPROTO_ICMPV6)
-	{
-		len = hostcpy_icmp(addr + 1, host, type);
-	}
-	else
-	{
-		len = hostcpy(addr + 1, host, include_port);
-	}
+	len = hostcpy(addr + 1, host, include_port);
 	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
 	PFKEY_EXT_ADD(msg, addr);
 }
