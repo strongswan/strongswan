@@ -96,6 +96,16 @@ static bool install_shunt_policy(child_cfg_t *child)
 		e_other_ts = other_ts_list->create_enumerator(other_ts_list);
 		while (e_other_ts->enumerate(e_other_ts, &other_ts))
 		{
+			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
+			{
+				continue;
+			}
+			if (my_ts->get_protocol(my_ts) &&
+				other_ts->get_protocol(other_ts) &&
+				my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
+			{
+				continue;
+			}
 			/* install out policy */
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
@@ -212,6 +222,16 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 		e_other_ts = other_ts_list->create_enumerator(other_ts_list);
 		while (e_other_ts->enumerate(e_other_ts, &other_ts))
 		{
+			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
+			{
+				continue;
+			}
+			if (my_ts->get_protocol(my_ts) &&
+				other_ts->get_protocol(other_ts) &&
+				my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
+			{
+				continue;
+			}
 			/* uninstall out policy */
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, my_ts, other_ts,
