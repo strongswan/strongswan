@@ -735,6 +735,7 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 										traffic_selector_t *dst)
 {
 	struct xfrm_selector sel;
+	u_int16_t port;
 
 	memset(&sel, 0, sizeof(sel));
 	sel.family = (src->get_type(src) == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
@@ -747,13 +748,13 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 	if ((sel.proto == IPPROTO_ICMP || sel.proto == IPPROTO_ICMPV6) &&
 		(sel.dport || sel.sport))
 	{
-		/* the ICMP type is encoded in the most significant 8 bits and the ICMP
-		 * code in the least significant 8 bits of the port.  via XFRM we have
-		 * to pass the ICMP type and code in the source and destination port
-		 * fields, respectively.  the port is in network byte order. */
-		u_int16_t port = max(sel.dport, sel.sport);
-		sel.sport = htons(port & 0xff);
-		sel.dport = htons(port >> 8);
+		/* the kernel expects the ICMP type and code in the source and
+		 * destination port fields, respectively. */
+		port = ntohs(max(sel.dport, sel.sport));
+		sel.sport = htons(traffic_selector_icmp_type(port));
+		sel.sport_mask = sel.sport ? ~0 : 0;
+		sel.dport = htons(traffic_selector_icmp_code(port));
+		sel.dport_mask = sel.dport ? ~0 : 0;
 	}
 	sel.ifindex = 0;
 	sel.user = 0;
