@@ -211,6 +211,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 	if (this->installing == INSTALL_DISABLED)
 	{	/* flush() has been called */
 		this->lock->unlock(this->lock);
+		me->destroy(me);
 		return 0;
 	}
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -234,6 +235,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 		{
 			DBG1(DBG_CFG, "CHILD_SA '%s' is already being routed", found->name);
 			this->lock->unlock(this->lock);
+			me->destroy(me);
 			return 0;
 		}
 		/* config might have changed so update everything */
