@@ -396,6 +396,17 @@ static void process_packages(char *filename, char *product, bool security)
 				pacman_state = PACMAN_STATE_BEGIN_PACKAGE;
 		}
 	}
+	switch (pacman_state)
+	{
+		case PACMAN_STATE_END_PACKAGE:
+			free(version);
+			/* fall-through */
+		case PACMAN_STATE_VERSION:
+			free(package);
+			break;
+		default:
+			break;
+	}
 	fclose(file);
 	db->destroy(db);
 
