@@ -580,7 +580,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
-		{"[--in file] [--type pub|pkcs10] --cakey file|--cakeyid hex",
+		{"[--in file] [--type pub|pkcs10|rsa|ecdsa|bliss] --cakey file|--cakeyid hex",
 		 " --cacert file [--dn subject-dn] [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--pathlen len]",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
@@ -591,7 +591,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
-			{"in",				'i', 1, "public key/request file to issue, default: stdin"},
+			{"in",				'i', 1, "key/request file to issue, default: stdin"},
 			{"type",			't', 1, "type of input, default: pub"},
 			{"cacert",			'c', 1, "CA certificate file"},
 			{"cakey",			'k', 1, "CA private key file"},
