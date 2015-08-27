@@ -111,6 +111,10 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 			DBG1(DBG_CFG, "%s is not a FIFO, recreate it", HA_FIFO);
 			recreate_fifo();
 		}
+		if (fifo != -1)
+		{
+			close(fifo);
+		}
 		sleep(1);
 		return JOB_REQUEUE_FAIR;
 	}
