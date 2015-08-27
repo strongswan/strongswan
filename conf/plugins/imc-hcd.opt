@@ -8,7 +8,7 @@ libimcv.plugins.imc-hcd.subtypes.<section>
 	Defines a PWG HCD PA subtype section. Recognized subtype section names are
     _system_, _control_, _marker_, _finisher_, _interface_ and _scanner_.
 
-libimcv.plugins.imc-hcd.subtypes.<section>.attributes_natural_language [en]
+libimcv.plugins.imc-hcd.subtypes.<section>.attributes_natural_language = en
 	Variable length natural language tag conforming to RFC 5646 specifies
 	the language to be used in the health assessment message of a given subtype.
 
@@ -45,7 +45,7 @@ libimcv.plugins.imc-hcd.subtypes.system.configuration_state
 libimcv.plugins.imc-hcd.subtypes.system.machine_type_model
 	String specifying the machine type and model of the hardcopy device.
 
-libimcv.plugins.imc-hcd.subtypes.system.pstn_fax_enabled [no]
+libimcv.plugins.imc-hcd.subtypes.system.pstn_fax_enabled = no
 	Specifies if a PSTN facsimile interface is installed and enabled on the
 	hardcopy device.
 
@@ -53,17 +53,17 @@ libimcv.plugins.imc-hcd.subtypes.system.time_source
 	String specifying the hostname of the network time server used by the
 	hardcopy device.
 
-libimcv.plugins.imc-hcd.subtypes.system.user_application_enabled [no]
+libimcv.plugins.imc-hcd.subtypes.system.user_application_enabled = no
 	Specifies if users can dynamically download and execute applications on
 	the hardcopy device.
 
-libimcv.plugins.imc-hcd.subtypes.system.user_application_persistence_enabled [no]
+libimcv.plugins.imc-hcd.subtypes.system.user_application_persistence_enabled = no
 	Specifies if user dynamically downloaded applications can persist outside
 	the boundaries of a single job on the hardcopy device.
 
 libimcv.plugins.imc-hcd.subtypes.system.vendor_name
 	String specifying the manufacturer of the hardcopy device.
- 
+
 libimcv.plugins.imc-hcd.subtypes.system.vendor_smi_code
 	Integer specifying the globally unique 24-bit SMI code assigned to the
 	manufacturer of the hardcopy device.
