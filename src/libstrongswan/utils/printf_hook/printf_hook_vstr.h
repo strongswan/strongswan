@@ -16,7 +16,7 @@
 
 /**
  * @defgroup printf_hook_vstr printf_hook_vstr
- * @{ @ingroup utils
+ * @{ @ingroup printf_hook
  */
 
 #ifndef PRINTF_HOOK_VSTR_H_

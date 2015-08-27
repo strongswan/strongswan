@@ -15,7 +15,7 @@
  */
 
 /**
- * @defgroup sha1_hasher sha1_hasher
+ * @defgroup padlock_sha1_hasher padlock_sha1_hasher
  * @{ @ingroup padlock_p
  */
 

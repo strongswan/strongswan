@@ -18,7 +18,7 @@
 
 /**
  * @defgroup vici_message vici_message
- * @{ @ingroup vici_dispatcher
+ * @{ @ingroup vici
  */
 
 #ifndef VICI_MESSAGE_H_

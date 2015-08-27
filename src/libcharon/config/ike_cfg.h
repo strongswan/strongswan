@@ -160,7 +160,7 @@ struct ike_cfg_t {
 	 *
 	 * Returned list and its proposals must be destroyed after use.
 	 *
-	 * @return 				list containing all the proposals
+	 * @return				list containing all the proposals
 	 */
 	linked_list_t* (*get_proposals) (ike_cfg_t *this);
 
@@ -247,7 +247,7 @@ struct ike_cfg_t {
  * @param other_port		IKE port to use as dest, 500 uses IKEv2 port floating
  * @param fragmentation		use IKEv1 fragmentation
  * @param dscp				DSCP value to send IKE packets with
- * @return 					ike_cfg_t object.
+ * @return					ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, u_int16_t my_port,
@@ -259,10 +259,10 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
  * families are configured AF_UNSPEC is returned.  %any is ignored (%any4|6 are
  * not though).
  *
+ * @param this				ike config to check
  * @param local				TRUE to check local addresses, FALSE for remote
  * @return					address family of address(es) if distinct
  */
 int ike_cfg_get_family(ike_cfg_t *this, bool local);
-
 
 #endif /** IKE_CFG_H_ @}*/

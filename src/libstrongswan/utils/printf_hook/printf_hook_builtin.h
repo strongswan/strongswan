@@ -15,7 +15,7 @@
 
 /**
  * @defgroup printf_hook_builtin printf_hook_builtin
- * @{ @ingroup utils
+ * @{ @ingroup printf_hook
  */
 
 #ifndef PRINTF_HOOK_BUILTIN_H_

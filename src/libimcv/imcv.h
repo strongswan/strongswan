@@ -15,6 +15,9 @@
 /**
  * @defgroup libimcv libimcv
  *
+ * @defgroup generic_attr generic_attr
+ * @ingroup libimcv
+ *
  * @defgroup libimcv_imc imc
  * @ingroup libimcv
  *

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tnc_ifmap_renew_session_job tnc_ifmap_renew_session_job
- * @{ @ingroup cjobs
+ * @{ @ingroup tnc_ifmap
  */
 
 #ifndef TNC_IFMAP_RENEW_SESSION_JOB_H_
