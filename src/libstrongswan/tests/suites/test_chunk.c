@@ -1020,7 +1020,7 @@ START_TEST(test_printf_hook)
 	int len;
 
 	/* %B should be the same as %b, which is what we check, comparing the
-	 * acutal result could be tricky as %b prints the chunk's memory address */
+	 * actual result could be tricky as %b prints the chunk's memory address */
 	len = snprintf(buf, sizeof(buf), "%B", &printf_hook_data[_i].in);
 	ck_assert(len >= 0 && len < sizeof(buf));
 	len = snprintf(mem, sizeof(mem), "%b", printf_hook_data[_i].in.ptr,

@@ -340,7 +340,7 @@ static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 33
 static const int tm_leap_1970 = 477;
 
 /**
- * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
+ * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calendar time
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {

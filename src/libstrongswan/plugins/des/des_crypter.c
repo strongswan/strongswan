@@ -112,7 +112,7 @@ struct private_des_crypter_t {
 #endif
 
 /* This helps C compiler generate the correct code for multiple functional
- * units.  It reduces register dependancies at the expense of 2 more
+ * units.  It reduces register dependencies at the expense of 2 more
  * registers */
 #ifndef DES_RISC1
 #define DES_RISC1
