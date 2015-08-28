@@ -72,6 +72,7 @@ plugins = \
 	plugins/lookip.opt \
 	plugins/ntru.opt \
 	plugins/openssl.opt \
+	plugins/osx-attr.opt \
 	plugins/pkcs11.opt \
 	plugins/radattr.opt \
 	plugins/random.opt \
