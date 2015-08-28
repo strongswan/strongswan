@@ -521,7 +521,7 @@ static void process_cfg_attributes(radius_message_t *msg)
 			if ((type == RAT_FRAMED_IP_ADDRESS && data.len == 4) ||
 				(type == RAT_FRAMED_IPV6_ADDRESS && data.len == 16))
 			{
-				host = host_create_from_chunk(AF_INET, data, 0);
+				host = host_create_from_chunk(AF_UNSPEC, data, 0);
 				if (host)
 				{
 					provider->add_framed_ip(provider,
