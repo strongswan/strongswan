@@ -1,21 +1,41 @@
 strongswan-5.3.3
 ----------------
 
-- Added support for the ChaCha20/Poly1305 AEAD cipher specified in RFC7539 and
-  draft-ietf-ipsecme-chacha20-poly1305 using the chacha20poly1305 ike/esp
-  proposal keyword. The new chapoly plugin implements the cipher, optionally
-  SSE-accelerated on x86/x64 architectures. It is usable both in IKEv2 and the
-  strongSwan libipsec ESP backend. On Linux 4.2 or newer the kernel-netlink
-  plugin can configure the cipher for ESP SAs.
+- Added support for the ChaCha20/Poly1305 AEAD cipher specified in RFC 7539 and
+  RFC 7634 using the chacha20poly1305 ike/esp proposal keyword. The new chapoly
+  plugin implements the cipher, if possible SSE-accelerated on x86/x64
+  architectures. It is usable both in IKEv2 and the strongSwan libipsec ESP
+  backend. On Linux 4.2 or newer the kernel-netlink plugin can configure the
+  cipher for ESP SAs.
 
 - The vici interface now supports the configuration of auxiliary certification
-  authority information as CRL and OCSP URIs
- 
-- In the bliss plugin the c_indices derivation using a SHA-512 based random oracle
-  has been fixed, generalized and standardized by employing the MGF1 mask generation
-  function with SHA-512. As a consequence BLISS signatures unsing the improved oracle
-  are not compatible with the earlier implementation.
- 
+  authority information as CRL and OCSP URIs.
+
+- In the bliss plugin the c_indices derivation using a SHA-512 based random
+  oracle has been fixed, generalized and standardized by employing the MGF1 mask
+  generation function with SHA-512. As a consequence BLISS signatures unsing the
+  improved oracle are not compatible with the earlier implementation.
+
+- Support for auto=route with right=%any for transport mode connections has
+  been added (the ikev2/trap-any scenario provides examples).
+
+- The starter daemon does not flush IPsec policies and SAs anymore when it is
+  stopped.  Already existing duplicate policies are now overwritten by the IKE
+  daemon when it installs its policies.
+
+- Init limits (like charon.init_limit_half_open) can now optionally be enforced
+  when initiating SAs via VICI. For this, IKE_SAs initiated by the daemon are
+  now also counted as half-open SAs, which, as a side-effect, fixes the status
+  output while connecting (e.g. in ipsec status).
+
+- Symmetric configuration of EAP methods in left|rightauth is now possible when
+  mutual EAP-only authentication is used (previously, the client had to
+  configure rightauth=eap or rightauth=any, which prevented it from using this
+  same config as responder).
+
+- The initiator flag in the IKEv2 header is compared again (wasn't the case
+  since 5.0.0) and packets that have the flag set incorrectly are again ignored.
+
 
 strongswan-5.3.2
 ----------------
