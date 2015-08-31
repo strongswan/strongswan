@@ -104,8 +104,14 @@ static void cleanup(void)
 
 static void usage(void)
 {
- 	printf("Usage:\n"
-		   "ipsec pacman --product <name> --file <filename> [--update]\n");
+	printf("Parses package information files from Debian/Ubuntu repositories and\n");
+	printf("stores the extracted information in the database used by the OS IMV.\n\n");
+	printf("ipsec pacman --product <name> --file <filename> [--security]\n\n");
+	printf("  --help               print usage information\n");
+	printf("  --product <name>     name of the Debian/Ubuntu release, as stored in the DB\n");
+	printf("  --file <filename>    package information file to parse\n");
+	printf("  --security           set this when parsing a file with security updates\n");
+	printf("\n");
 }
 
 /**
