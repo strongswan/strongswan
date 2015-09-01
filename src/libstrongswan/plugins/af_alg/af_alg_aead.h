@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,41 +14,42 @@
  */
 
 /**
- * @defgroup af_alg_crypter af_alg_crypter
+ * @defgroup af_alg_aead af_alg_aead
  * @{ @ingroup af_alg
  */
 
-#ifndef AF_ALG_CRYPTER_H_
-#define AF_ALG_CRYPTER_H_
+#ifndef AF_ALG_AEAD_H_
+#define AF_ALG_AEAD_H_
 
-typedef struct af_alg_crypter_t af_alg_crypter_t;
+typedef struct af_alg_aead_t af_alg_aead_t;
 
 #include <plugins/plugin.h>
-#include <crypto/crypters/crypter.h>
+#include <crypto/aead.h>
 
-/** Number of crypters */
-#define AF_ALG_CRYPTER 25
+/** Number of aead algorithms */
+#define AF_ALG_AEAD 19
 
 /**
- * Implementation of crypters using AF_ALG.
+ * Implementation of AEAD algorithms using AF_ALG.
  */
-struct af_alg_crypter_t {
+struct af_alg_aead_t {
 
 	/**
-	 * The crypter_t interface.
+	 * The aead_t interface.
 	 */
-	crypter_t crypter;
+	aead_t aead;
 };
 
 /**
- * Constructor to create af_alg_crypter_t.
+ * Constructor to create af_alg_aead_t.
  *
  * @param algo			algorithm to implement
  * @param key_size		key size in bytes
- * @return				af_alg_crypter_t, NULL if not supported
+ * @param salt_size		size of implicit salt length
+ * @return				af_alg_aead_t, NULL if not supported
  */
-af_alg_crypter_t *af_alg_crypter_create(encryption_algorithm_t algo,
-										size_t key_size);
+af_alg_aead_t *af_alg_aead_create(encryption_algorithm_t algo, size_t key_size,
+								  size_t salt_size);
 
 /**
  * Probe algorithms and return plugin features.
@@ -56,6 +57,6 @@ af_alg_crypter_t *af_alg_crypter_create(encryption_algorithm_t algo,
  * @param features		plugin features to create
  * @param pos			current position in features
  */
-void af_alg_crypter_probe(plugin_feature_t *features, int *pos);
+void af_alg_aead_probe(plugin_feature_t *features, int *pos);
 
-#endif /** AF_ALG_CRYPTER_H_ @}*/
+#endif /** AF_ALG_AEAD_H_ @}*/

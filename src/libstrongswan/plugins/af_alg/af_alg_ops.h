@@ -68,12 +68,34 @@ struct af_alg_ops_t {
 				  char *out);
 
 	/**
+	 * En-/Decrypt a chunk of data with an AEAD algorithm.
+	 *
+	 * @param type		crypto operation (ALG_OP_DECRYPT/ALG_OP_ENCRYPT)
+	 * @param iv		iv to use
+	 * @param data		data to encrypt/decrypt
+	 * @param assoc		associated data to authenticate
+	 * @param icv		length of the ICV
+	 * @param out		buffer to write processed data to
+	 * @return			TRUE if successful
+	 */
+	bool (*crypt_aead)(af_alg_ops_t *this, u_int32_t type, chunk_t iv,
+					   chunk_t data, chunk_t assoc, size_t icv, chunk_t out);
+
+	/**
 	 * Set the key for en-/decryption or HMAC/XCBC operations.
 	 *
 	 * @param key		key to set for transform
 	 * @return			TRUE if successful
 	 */
 	bool (*set_key)(af_alg_ops_t *this, chunk_t key);
+
+	/**
+	 * Set the ICV length for AEAD operations.
+	 *
+	 * @param len		ICV length
+	 * @return			TRUE if successful
+	 */
+	bool (*set_icv_length)(af_alg_ops_t *this, size_t len);
 
 	/**
 	 * Destroy a af_alg_ops_t.

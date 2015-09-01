@@ -21,6 +21,7 @@
 #include "af_alg_signer.h"
 #include "af_alg_prf.h"
 #include "af_alg_crypter.h"
+#include "af_alg_aead.h"
 
 typedef struct private_af_alg_plugin_t private_af_alg_plugin_t;
 
@@ -44,8 +45,8 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, get_features, int,
 	private_af_alg_plugin_t *this, plugin_feature_t *features[])
 {
-	static plugin_feature_t f[AF_ALG_HASHER + AF_ALG_SIGNER +
-							  AF_ALG_PRF + AF_ALG_CRYPTER + 4] = {};
+	static plugin_feature_t f[AF_ALG_HASHER + AF_ALG_SIGNER + AF_ALG_PRF +
+							  AF_ALG_CRYPTER + AF_ALG_AEAD + 5] = {};
 	static int count = 0;
 
 	if (!count)
@@ -58,6 +59,8 @@ METHOD(plugin_t, get_features, int,
 		af_alg_prf_probe(f, &count);
 		f[count++] = PLUGIN_REGISTER(CRYPTER, af_alg_crypter_create);
 		af_alg_crypter_probe(f, &count);
+		f[count++] = PLUGIN_REGISTER(AEAD, af_alg_aead_create);
+		af_alg_aead_probe(f, &count);
 	}
 	*features = f;
 	return count;
