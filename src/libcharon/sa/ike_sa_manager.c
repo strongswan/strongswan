@@ -1628,8 +1628,24 @@ METHOD(ike_sa_manager_t, checkin, void,
 			 * delete any existing IKE_SAs with that peer. */
 			if (ike_sa->has_condition(ike_sa, COND_INIT_CONTACT_SEEN))
 			{
+				/* We can't hold the segment locked while checking the
+				 * uniqueness as this could lead to deadlocks.  We mark the
+				 * entry as checked out while we release the lock so no other
+				 * thread can acquire it.  Since it is not yet in the list of
+				 * connected peers that will not cause a deadlock as no other
+				 * caller of check_unqiueness() will try to check out this SA */
+				entry->checked_out = TRUE;
+				unlock_single_segment(this, segment);
+
 				this->public.check_uniqueness(&this->public, ike_sa, TRUE);
 				ike_sa->set_condition(ike_sa, COND_INIT_CONTACT_SEEN, FALSE);
+
+				/* The entry could have been modified in the mean time, e.g.
+				 * because another SA was added/removed next to it or another
+				 * thread is waiting, but it should still exist, so there is no
+				 * need for a lookup via get_entry_by... */
+				lock_single_segment(this, segment);
+				entry->checked_out = FALSE;
 			}
 		}
 
