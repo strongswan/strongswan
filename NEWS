@@ -36,6 +36,13 @@ strongswan-5.3.3
 - The initiator flag in the IKEv2 header is compared again (wasn't the case
   since 5.0.0) and packets that have the flag set incorrectly are again ignored.
 
+- Implemented a demo Hardcopy Device IMC/IMV pair based on the "Hardcopy
+  Device Health Assessment Trusted Network Connect Binding" (HCD-TNC) 
+  document drafted by the IEEE Printer Working Group (PWG).
+
+- Fixed IF-M segmentation which failed in the presence of multiple small
+  attributes in front of a huge attribute to be segmented.
+
 
 strongswan-5.3.2
 ----------------
