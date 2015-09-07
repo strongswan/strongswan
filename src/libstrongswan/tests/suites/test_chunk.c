@@ -1030,6 +1030,23 @@ START_TEST(test_printf_hook)
 }
 END_TEST
 
+START_TEST(test_printf_hook_null)
+{
+	char buf[16];
+	int len;
+
+	len = snprintf(buf, sizeof(buf), "%#B", NULL);
+	ck_assert(len >= 0 && len < sizeof(buf));
+	ck_assert_str_eq(buf, "(null)");
+	len = snprintf(buf, sizeof(buf), "%+B", NULL);
+	ck_assert(len >= 0 && len < sizeof(buf));
+	ck_assert_str_eq(buf, "(null)");
+	len = snprintf(buf, sizeof(buf), "%B", NULL);
+	ck_assert(len >= 0 && len < sizeof(buf));
+	ck_assert_str_eq(buf, "(null)");
+}
+END_TEST
+
 Suite *chunk_suite_create()
 {
 	Suite *s;
@@ -1113,6 +1130,7 @@ Suite *chunk_suite_create()
 	tcase_add_loop_test(tc, test_printf_hook_hash, 0, countof(printf_hook_data));
 	tcase_add_loop_test(tc, test_printf_hook_plus, 0, countof(printf_hook_data));
 	tcase_add_loop_test(tc, test_printf_hook, 0, countof(printf_hook_data));
+	tcase_add_test(tc, test_printf_hook_null);
 	suite_add_tcase(s, tc);
 
 	return s;

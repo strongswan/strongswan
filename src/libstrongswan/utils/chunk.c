@@ -1026,8 +1026,13 @@ int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 {
 	chunk_t *chunk = *((chunk_t**)(args[0]));
 	bool first = TRUE;
-	chunk_t copy = *chunk;
+	chunk_t copy;
 	int written = 0;
+
+	if (!chunk)
+	{
+		return print_in_hook(data, "(null)");
+	}
 
 	if (!spec->hash && !spec->plus)
 	{
@@ -1036,6 +1041,7 @@ int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 		return mem_printf_hook(data, spec, new_args);
 	}
 
+	copy = *chunk;
 	while (copy.len > 0)
 	{
 		if (first)
