@@ -550,6 +550,7 @@ START_TEST(test_matches)
 	a = identification_create_from_string("C=CH, E=moon@strongswan.org, CN=moon");
 
 	ck_assert(id_matches(a, "C=CH, E=moon@strongswan.org, CN=moon", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "C=CH, E=*@strongswan.org, CN=moon", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "C=CH, E=*, CN=moon", ID_MATCH_ONE_WILDCARD));
 	ck_assert(id_matches(a, "C=CH, E=*, CN=*", ID_MATCH_ONE_WILDCARD - 1));
 	ck_assert(id_matches(a, "C=*, E=*, CN=*", ID_MATCH_ONE_WILDCARD - 2));
