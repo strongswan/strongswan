@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 Tobias Brunner
+ * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -2483,6 +2483,12 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
 	u_int32_t priority;
+	ipsec_sa_t assigned_sa = {
+		.src = src,
+		.dst = dst,
+		.mark = mark,
+		.cfg = *sa,
+	};
 
 	DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%08x)",
 				   src_ts, dst_ts, policy_dir_names, direction,
@@ -2519,7 +2525,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (priority == mapping->priority)
+		if (priority == mapping->priority && type == mapping->type &&
+			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
 			policy_sa_destroy(mapping, &direction, this);
