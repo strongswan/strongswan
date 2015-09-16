@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -2705,6 +2705,11 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	bool first = TRUE, is_installed = TRUE;
 	u_int32_t priority;
 	size_t len;
+	ipsec_sa_t assigned_sa = {
+		.src = src,
+		.dst = dst,
+		.cfg = *sa,
+	};
 
 	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
 	{	/* FWD policies are not supported on all platforms */
@@ -2738,8 +2743,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (sa->reqid == mapping->sa->cfg.reqid &&
-			priority == mapping->priority)
+		if (priority == mapping->priority &&
+			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			to_remove = mapping;
 			is_installed = first;
