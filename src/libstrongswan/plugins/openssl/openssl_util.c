@@ -18,6 +18,7 @@
 
 #include <utils/debug.h>
 
+#include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 

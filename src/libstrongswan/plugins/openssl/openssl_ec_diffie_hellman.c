@@ -17,6 +17,7 @@
 
 #ifndef OPENSSL_NO_EC
 
+#include <openssl/bn.h>
 #include <openssl/ec.h>
 #include <openssl/objects.h>
 #include <openssl/bn.h>

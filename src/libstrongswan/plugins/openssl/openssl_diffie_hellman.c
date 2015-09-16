@@ -18,6 +18,7 @@
 
 #ifndef OPENSSL_NO_DH
 
+#include <openssl/bn.h>
 #include <openssl/dh.h>
 
 #include "openssl_diffie_hellman.h"

@@ -23,6 +23,7 @@
 
 #include <utils/debug.h>
 
+#include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #ifndef OPENSSL_NO_ENGINE
