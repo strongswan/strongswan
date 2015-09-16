@@ -563,15 +563,16 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_kernel_libipsec_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
+	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t priority)
 {
 	policy_entry_t *policy, *found = NULL;
 	status_t status;
 
 	status = ipsec->policies->del_policy(ipsec->policies, src_ts, dst_ts,
-										 direction, reqid, mark, priority);
+										 direction, sa->reqid, mark, priority);
 
 	policy = create_policy_entry(src_ts, dst_ts, direction);
 

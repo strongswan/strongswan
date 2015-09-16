@@ -413,8 +413,14 @@ METHOD(enumerator_t, policy_enumerate, bool,
 		{	/* protocol mismatch */
 			continue;
 		}
-		*my_out = this->ts;
-		*other_out = other_ts;
+		if (my_out)
+		{
+			*my_out = this->ts;
+		}
+		if (other_out)
+		{
+			*other_out = other_ts;
+		}
 		return TRUE;
 	}
 	return FALSE;
@@ -775,6 +781,50 @@ static bool require_policy_update()
 }
 
 /**
+ * Prepare SA config to install/delete policies
+ */
+static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
+						   ipsec_sa_cfg_t *other_sa)
+{
+	enumerator_t *enumerator;
+
+	*my_sa = (ipsec_sa_cfg_t){
+		.mode = this->mode,
+		.reqid = this->reqid,
+		.ipcomp = {
+			.transform = this->ipcomp,
+		},
+	};
+	*other_sa = *my_sa;
+
+	my_sa->ipcomp.cpi = this->my_cpi;
+	other_sa->ipcomp.cpi = this->other_cpi;
+
+	if (this->protocol == PROTO_ESP)
+	{
+		my_sa->esp.use = TRUE;
+		my_sa->esp.spi = this->my_spi;
+		other_sa->esp.use = TRUE;
+		other_sa->esp.spi = this->other_spi;
+	}
+	else
+	{
+		my_sa->ah.use = TRUE;
+		my_sa->ah.spi = this->my_spi;
+		other_sa->ah.use = TRUE;
+		other_sa->ah.spi = this->other_spi;
+	}
+
+	enumerator = create_policy_enumerator(this);
+	while (enumerator->enumerate(enumerator, NULL, NULL))
+	{
+		my_sa->policy_count++;
+		other_sa->policy_count++;
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Install 3 policies: out, in and forward
  */
 static status_t install_policies_internal(private_child_sa_t *this,
@@ -806,20 +856,22 @@ static status_t install_policies_internal(private_child_sa_t *this,
  * Delete 3 policies: out, in and forward
  */
 static void del_policies_internal(private_child_sa_t *this,
-		traffic_selector_t *my_ts, traffic_selector_t *other_ts,
-		policy_priority_t priority)
+	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
+	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
+
 	hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						my_ts, other_ts, POLICY_OUT, this->reqid,
-						this->mark_out, priority);
+						my_addr, other_addr, my_ts, other_ts, POLICY_OUT, type,
+						other_sa, this->mark_out, priority);
 	hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts,  POLICY_IN, this->reqid,
-						this->mark_in, priority);
+						other_addr, my_addr, other_ts, my_ts, POLICY_IN,
+						type, my_sa, this->mark_in, priority);
 	if (this->mode != MODE_TRANSPORT)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_FWD, this->reqid,
-						this->mark_in, priority);
+						other_addr, my_addr, other_ts, my_ts, POLICY_FWD,
+						type, my_sa, this->mark_in, priority);
 	}
 }
 
@@ -864,45 +916,15 @@ METHOD(child_sa_t, add_policies, status_t,
 	if (this->config->install_policy(this->config))
 	{
 		policy_priority_t priority;
-		ipsec_sa_cfg_t my_sa = {
-			.mode = this->mode,
-			.reqid = this->reqid,
-			.ipcomp = {
-				.transform = this->ipcomp,
-			},
-		}, other_sa = my_sa;
+		ipsec_sa_cfg_t my_sa, other_sa;
 
-		my_sa.ipcomp.cpi = this->my_cpi;
-		other_sa.ipcomp.cpi = this->other_cpi;
-
-		if (this->protocol == PROTO_ESP)
-		{
-			my_sa.esp.use = TRUE;
-			my_sa.esp.spi = this->my_spi;
-			other_sa.esp.use = TRUE;
-			other_sa.esp.spi = this->other_spi;
-		}
-		else
-		{
-			my_sa.ah.use = TRUE;
-			my_sa.ah.spi = this->my_spi;
-			other_sa.ah.use = TRUE;
-			other_sa.ah.spi = this->other_spi;
-		}
+		prepare_sa_cfg(this, &my_sa, &other_sa);
 
 		/* if we're not in state CHILD_INSTALLING (i.e. if there is no SAD
 		 * entry) we install a trap policy */
 		this->trap = this->state == CHILD_CREATED;
 		priority = this->trap ? POLICY_PRIORITY_ROUTED
 							  : POLICY_PRIORITY_DEFAULT;
-
-		enumerator = create_policy_enumerator(this);
-		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
-		{
-			my_sa.policy_count++;
-			other_sa.policy_count++;
-		}
-		enumerator->destroy(enumerator);
 
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
@@ -1006,38 +1028,14 @@ METHOD(child_sa_t, update, status_t,
 
 	if (this->config->install_policy(this->config) && require_policy_update())
 	{
-		ipsec_sa_cfg_t my_sa = {
-			.mode = this->mode,
-			.reqid = this->reqid,
-			.ipcomp = {
-				.transform = this->ipcomp,
-			},
-		}, other_sa = my_sa;
-
-		my_sa.ipcomp.cpi = this->my_cpi;
-		other_sa.ipcomp.cpi = this->other_cpi;
-
-		if (this->protocol == PROTO_ESP)
-		{
-			my_sa.esp.use = TRUE;
-			my_sa.esp.spi = this->my_spi;
-			other_sa.esp.use = TRUE;
-			other_sa.esp.spi = this->other_spi;
-		}
-		else
-		{
-			my_sa.ah.use = TRUE;
-			my_sa.ah.spi = this->my_spi;
-			other_sa.ah.use = TRUE;
-			other_sa.ah.spi = this->other_spi;
-		}
-
-		/* update policies */
 		if (!me->ip_equals(me, this->my_addr) ||
 			!other->ip_equals(other, this->other_addr))
 		{
+			ipsec_sa_cfg_t my_sa, other_sa;
 			enumerator_t *enumerator;
 			traffic_selector_t *my_ts, *other_ts;
+
+			prepare_sa_cfg(this, &my_sa, &other_sa);
 
 			/* always use high priorities, as hosts getting updated are INSTALLED */
 			enumerator = create_policy_enumerator(this);
@@ -1045,8 +1043,9 @@ METHOD(child_sa_t, update, status_t,
 			{
 				traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
 				/* remove old policies first */
-				del_policies_internal(this, my_ts, other_ts,
-									  POLICY_PRIORITY_DEFAULT);
+				del_policies_internal(this, this->my_addr, this->other_addr,
+									  my_ts, other_ts, &my_sa, &other_sa,
+									  POLICY_IPSEC, POLICY_PRIORITY_DEFAULT);
 
 				/* check if we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
@@ -1068,21 +1067,20 @@ METHOD(child_sa_t, update, status_t,
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
-								&my_sa, &other_sa, POLICY_IPSEC,
-								POLICY_PRIORITY_DEFAULT);
+										  &my_sa, &other_sa, POLICY_IPSEC,
+										  POLICY_PRIORITY_DEFAULT);
 
 				/* update fallback policies after the new policy is in place */
-				if (old_my_ts || old_other_ts)
-				{
-					del_policies_internal(this, old_my_ts ?: my_ts,
-										  old_other_ts ?: other_ts,
+				del_policies_internal(this, this->my_addr, this->other_addr,
+									  old_my_ts ?: my_ts,
+									  old_other_ts ?: other_ts,
+									  &my_sa, &other_sa, POLICY_DROP,
+									  POLICY_PRIORITY_FALLBACK);
+				install_policies_internal(this, me, other, my_ts, other_ts,
+										  &my_sa, &other_sa, POLICY_DROP,
 										  POLICY_PRIORITY_FALLBACK);
-					install_policies_internal(this, me, other, my_ts, other_ts,
-								&my_sa, &other_sa, POLICY_DROP,
-								POLICY_PRIORITY_FALLBACK);
-					DESTROY_IF(old_my_ts);
-					DESTROY_IF(old_other_ts);
-				}
+				DESTROY_IF(old_my_ts);
+				DESTROY_IF(old_other_ts);
 			}
 			enumerator->destroy(enumerator);
 		}
@@ -1122,15 +1120,21 @@ METHOD(child_sa_t, destroy, void,
 
 	if (this->config->install_policy(this->config))
 	{
+		ipsec_sa_cfg_t my_sa, other_sa;
+
+		prepare_sa_cfg(this, &my_sa, &other_sa);
+
 		/* delete all policies in the kernel */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			del_policies_internal(this, my_ts, other_ts, priority);
+			del_policies_internal(this, this->my_addr, this->other_addr,
+					my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC, priority);
 			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
 			{
-				del_policies_internal(this, my_ts, other_ts,
-									  POLICY_PRIORITY_FALLBACK);
+				del_policies_internal(this, this->my_addr, this->other_addr,
+								my_ts, other_ts, &my_sa, &other_sa, POLICY_DROP,
+								POLICY_PRIORITY_FALLBACK);
 			}
 		}
 		enumerator->destroy(enumerator);

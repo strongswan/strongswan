@@ -2470,8 +2470,9 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t prio)
 {
 	policy_entry_t *current, policy;
@@ -2496,7 +2497,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	/* find the policy */
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, &policy);
-	if (!current || current->reqid != reqid)
+	if (!current || current->reqid != sa->reqid)
 	{
 		if (mark.value)
 		{
