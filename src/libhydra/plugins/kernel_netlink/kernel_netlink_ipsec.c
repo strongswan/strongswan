@@ -318,11 +318,6 @@ struct private_kernel_netlink_ipsec_t {
 	bool proto_port_transport;
 
 	/**
-	 * Whether to track the history of a policy
-	 */
-	bool policy_history;
-
-	/**
 	 * Whether to always use UPDATE to install policies
 	 */
 	bool policy_update;
@@ -2352,26 +2347,19 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 								   dst_ts, mark, sa);
 	assigned_sa->priority = get_priority(policy, priority);
 
-	if (this->policy_history)
-	{	/* insert the SA according to its priority */
-		enumerator = policy->used_by->create_enumerator(policy->used_by);
-		while (enumerator->enumerate(enumerator, (void**)&current_sa))
+	/* insert the SA according to its priority */
+	enumerator = policy->used_by->create_enumerator(policy->used_by);
+	while (enumerator->enumerate(enumerator, (void**)&current_sa))
+	{
+		if (current_sa->priority >= assigned_sa->priority)
 		{
-			if (current_sa->priority >= assigned_sa->priority)
-			{
-				break;
-			}
-			update = FALSE;
+			break;
 		}
-		policy->used_by->insert_before(policy->used_by, enumerator,
-									   assigned_sa);
-		enumerator->destroy(enumerator);
+		update = FALSE;
 	}
-	else
-	{	/* simply insert it last and only update if it is not installed yet */
-		policy->used_by->insert_last(policy->used_by, assigned_sa);
-		update = !found;
-	}
+	policy->used_by->insert_before(policy->used_by, enumerator,
+								   assigned_sa);
+	enumerator->destroy(enumerator);
 
 	if (!update)
 	{	/* we don't update the policy if the priority is lower than that of
@@ -2525,28 +2513,20 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return NOT_FOUND;
 	}
 
-	if (this->policy_history)
-	{	/* remove mapping to SA by reqid and priority */
-		priority = get_priority(current, prio);
-		enumerator = current->used_by->create_enumerator(current->used_by);
-		while (enumerator->enumerate(enumerator, (void**)&mapping))
+	/* remove mapping to SA by reqid and priority */
+	priority = get_priority(current, prio);
+	enumerator = current->used_by->create_enumerator(current->used_by);
+	while (enumerator->enumerate(enumerator, (void**)&mapping))
+	{
+		if (priority == mapping->priority)
 		{
-			if (priority == mapping->priority)
-			{
-				current->used_by->remove_at(current->used_by, enumerator);
-				policy_sa_destroy(mapping, &direction, this);
-				break;
-			}
-			is_installed = FALSE;
+			current->used_by->remove_at(current->used_by, enumerator);
+			policy_sa_destroy(mapping, &direction, this);
+			break;
 		}
-		enumerator->destroy(enumerator);
-	}
-	else
-	{	/* remove one of the SAs but don't update the policy */
-		current->used_by->remove_last(current->used_by, (void**)&mapping);
-		policy_sa_destroy(mapping, &direction, this);
 		is_installed = FALSE;
 	}
+	enumerator->destroy(enumerator);
 
 	if (current->used_by->get_count(current->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
@@ -2915,7 +2895,6 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.bypass = array_create(sizeof(bypass_t), 0),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.policy_history = TRUE,
 		.policy_update = lib->settings->get_bool(lib->settings,
 					"%s.plugins.kernel-netlink.policy_update", FALSE, lib->ns),
 		.install_routes = lib->settings->get_bool(lib->settings,
