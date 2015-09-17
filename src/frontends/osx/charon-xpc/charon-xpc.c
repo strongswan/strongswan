@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include <library.h>
 #include <hydra.h>
@@ -84,9 +85,10 @@ static int run()
 	{
 		int sig;
 
-		if (sigwait(&set, &sig))
+		sig = sigwaitinfo(&set, NULL);
+		if (sig == -1)
 		{
-			DBG1(DBG_DMN, "error while waiting for a signal");
+			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return 1;
 		}
 		switch (sig)
@@ -206,7 +208,7 @@ int main(int argc, char *argv[])
 		 VERSION, utsname.sysname, utsname.release, utsname.machine);
 
 	/* add handler for SEGV and ILL,
-	 * INT, TERM and HUP are handled by sigwait() in run() */
+	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */
 	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);

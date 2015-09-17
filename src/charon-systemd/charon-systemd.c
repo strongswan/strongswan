@@ -249,10 +249,10 @@ static int run()
 
 	while (TRUE)
 	{
-		int sig, error;
+		int sig;
 
-		error = sigwait(&set, &sig);
-		if (error)
+		sig = sigwaitinfo(&set, NULL);
+		if (sig == -1)
 		{
 			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(error));
 			return SS_RC_INITIALIZATION_FAILED;
@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* add handler for SEGV and ILL,
-	 * INT, TERM and HUP are handled by sigwait() in run() */
+	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */
 	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);

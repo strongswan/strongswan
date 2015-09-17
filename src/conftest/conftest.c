@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
 	sigaddset(&set, SIGTERM);
 	sigprocmask(SIG_BLOCK, &set, NULL);
 
-	while (sigwait(&set, &sig) == 0)
+	while ((sig = sigwaitinfo(&set, NULL)) != -1)
 	{
 		switch (sig)
 		{

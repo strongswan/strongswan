@@ -17,14 +17,13 @@
  */
 
 #include <stdio.h>
-#define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
-#undef _POSIX_PTHREAD_SEMANTICS
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <errno.h>
 
 #include <library.h>
 #include <hydra.h>
@@ -112,12 +111,11 @@ static int run()
 	while (TRUE)
 	{
 		int sig;
-		int error;
 
-		error = sigwait(&set, &sig);
-		if (error)
+		sig = sigwaitinfo(&set, NULL);
+		if (sig == -1)
 		{
-			DBG1(DBG_DMN, "error %d while waiting for a signal", error);
+			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return 1;
 		}
 		switch (sig)
@@ -382,7 +380,7 @@ int main(int argc, char *argv[])
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	/* add handler for SEGV and ILL,
-	 * INT, TERM and HUP are handled by sigwait() in run() */
+	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */
 	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);

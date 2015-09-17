@@ -117,14 +117,13 @@ void wait_sigint()
 void wait_sigint()
 {
 	sigset_t set;
-	int sig;
 
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGTERM);
 
 	sigprocmask(SIG_BLOCK, &set, NULL);
-	sigwait(&set, &sig);
+	sigwaitinfo(&set, NULL);
 }
 
 #endif

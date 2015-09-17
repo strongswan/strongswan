@@ -383,14 +383,13 @@ METHOD(fast_dispatcher_t, waitsignal, void,
 	private_fast_dispatcher_t *this)
 {
 	sigset_t set;
-	int sig;
 
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGTERM);
 	sigaddset(&set, SIGHUP);
 	sigprocmask(SIG_BLOCK, &set, NULL);
-	sigwait(&set, &sig);
+	sigwaitinfo(&set, NULL);
 }
 
 METHOD(fast_dispatcher_t, destroy, void,

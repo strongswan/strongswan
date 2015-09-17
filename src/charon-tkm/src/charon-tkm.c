@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <errno.h>
 
 #include <hydra.h>
 #include <daemon.h>
@@ -98,12 +99,11 @@ static void run()
 	while (TRUE)
 	{
 		int sig;
-		int error;
 
-		error = sigwait(&set, &sig);
-		if (error)
+		sig = sigwaitinfo(&set, NULL);
+		if (sig == -1)
 		{
-			DBG1(DBG_DMN, "error %d while waiting for a signal", error);
+			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(error));
 			return;
 		}
 		switch (sig)
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 	lib->encoding->add_encoder(lib->encoding, tkm_encoder_encode);
 
 	/* add handler for SEGV and ILL,
-	 * INT and TERM are handled by sigwait() in run() */
+	 * INT and TERM are handled by sigwaitinfo() in run() */
 	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);
