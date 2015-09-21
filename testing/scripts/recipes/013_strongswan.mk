@@ -18,6 +18,7 @@ NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
 CONFIG_OPTS = \
 	--sysconfdir=/etc \
+	--with-strongswan-conf=/etc/strongswan.conf.testing \
 	--with-random-device=/dev/urandom \
 	--disable-load-warning \
 	--enable-curl \
