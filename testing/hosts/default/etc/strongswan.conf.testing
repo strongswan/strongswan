@@ -1,1 +1,7 @@
+charon {
+  retransmit_tries = 2
+  retransmit_timeout = 1.0
+  retransmit_base = 1
+}
+
 include strongswan.conf
