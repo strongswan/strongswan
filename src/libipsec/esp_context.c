@@ -250,6 +250,7 @@ static bool create_traditional(private_esp_context_t *this, int enc_alg,
 	switch (enc_alg)
 	{
 		case ENCR_AES_CTR:
+		case ENCR_CAMELLIA_CTR:
 			/* the key includes a 4 byte salt */
 			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg,
 												  enc_key.len - 4);
