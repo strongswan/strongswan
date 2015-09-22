@@ -23,14 +23,9 @@
 typedef struct private_keymat_v1_t private_keymat_v1_t;
 
 /**
- * Max. number of IVs to track.
+ * Max. number of IVs/QMs to track.
  */
-#define MAX_IV 3
-
-/**
- * Max. number of Quick Modes to track.
- */
-#define MAX_QM 2
+#define MAX_EXCHANGES_DEFAULT 3
 
 /**
  * Data stored for IVs
@@ -110,6 +105,11 @@ struct private_keymat_v1_t {
 	 * of QMs are tracked at the same time. Stores qm_data_t objects.
 	 */
 	linked_list_t *qms;
+
+	/**
+	 * Max. number of IVs/Quick Modes to track.
+	 */
+	int max_exchanges;
 };
 
 
@@ -874,7 +874,7 @@ static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, u_int32_t mid)
 	}
 	this->qms->insert_first(this->qms, found);
 	/* remove least recently used state if maximum reached */
-	if (this->qms->get_count(this->qms) > MAX_QM &&
+	if (this->qms->get_count(this->qms) > this->max_exchanges &&
 		this->qms->remove_last(this->qms, (void**)&qm) == SUCCESS)
 	{
 		qm_data_destroy(qm);
@@ -1048,7 +1048,7 @@ static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
 	}
 	this->ivs->insert_first(this->ivs, found);
 	/* remove least recently used IV if maximum reached */
-	if (this->ivs->get_count(this->ivs) > MAX_IV &&
+	if (this->ivs->get_count(this->ivs) > this->max_exchanges &&
 		this->ivs->remove_last(this->ivs, (void**)&iv) == SUCCESS)
 	{
 		iv_data_destroy(iv);
@@ -1163,6 +1163,8 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 		.ivs = linked_list_create(),
 		.qms = linked_list_create(),
 		.initiator = initiator,
+		.max_exchanges = lib->settings->get_int(lib->settings,
+					"%s.max_ikev1_exchanges", MAX_EXCHANGES_DEFAULT, lib->ns),
 	);
 
 	return &this->public;

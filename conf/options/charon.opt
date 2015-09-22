@@ -204,6 +204,10 @@ charon.load_modular = no
 	plugin list is preserved. Enabled plugins not found in that list are ordered
 	alphabetically before other plugins with the same priority.
 
+charon.max_ikev1_exchanges = 3
+	Maximum number of IKEv1 phase 2 exchanges per IKE_SA to keep state about and
+	track concurrently.
+
 charon.max_packet = 10000
 	Maximum packet size accepted by charon.
 
