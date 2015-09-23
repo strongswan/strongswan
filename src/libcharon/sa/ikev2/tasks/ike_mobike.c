@@ -339,7 +339,11 @@ METHOD(ike_mobike_t, transmit, bool,
 		{
 			if (me->ip_equals(me, me_old))
 			{
-				charon->sender->send(charon->sender, packet->clone(packet));
+				copy = packet->clone(packet);
+				/* hosts might have been updated by a peer's MOBIKE exchange */
+				copy->set_source(copy, me_old->clone(me_old));
+				copy->set_destination(copy, other_old->clone(other_old));
+				charon->sender->send(charon->sender, copy);
 				me->destroy(me);
 				return TRUE;
 			}
