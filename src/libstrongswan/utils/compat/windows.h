@@ -221,6 +221,11 @@ static inline int setenv(const char *name, const char *value, int overwrite)
 #define RTLD_LAZY 1
 
 /**
+ * Immediate binding, ignored on Windows
+ */
+#define RTLD_NOW 2
+
+/**
  * Default handle targeting .exe
  */
 #define RTLD_DEFAULT (NULL)
