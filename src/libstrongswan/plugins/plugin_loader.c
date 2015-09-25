@@ -356,6 +356,7 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 {
 	plugin_entry_t *entry;
 	void *handle;
+	int flag = RTLD_LAZY;
 
 	switch (create_plugin(this, RTLD_DEFAULT, name, FALSE, critical, &entry))
 	{
@@ -380,15 +381,19 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 			return NULL;
 		}
 	}
-	handle = dlopen(file, RTLD_LAZY
+	if (lib->settings->get_bool(lib->settings, "%s.dlopen_use_rtld_now",
+								lib->ns, FALSE))
+	{
+		flag = RTLD_NOW;
+	}
 #ifdef RTLD_NODELETE
-	/* if supported, do not unload library when unloading a plugin. It really
-	 * doesn't matter in productive systems, but causes many (dependency)
-	 * library reloads during unit tests. Some libraries can't handle that,
+	/* If supported, do not unload the library when unloading a plugin. It
+	 * really doesn't matter in productive systems, but causes many (dependency)
+	 * library reloads during unit tests. Some libraries can't handle that, e.g.
 	 * GnuTLS leaks file descriptors in its library load/unload functions. */
-					| RTLD_NODELETE
+	flag |= RTLD_NODELETE;
 #endif
-					);
+	handle = dlopen(file, flag);
 	if (handle == NULL)
 	{
 		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
