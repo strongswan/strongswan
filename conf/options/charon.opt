@@ -66,8 +66,8 @@ charon.dh_exponent_ansi_x9_42 = yes
 	strength.
 
 charon.dlopen_use_rtld_now = no
-	Use RTLD_NOW with dlopen when loading plugins to reveal missing symbols
-	immediately.
+	Use RTLD_NOW with dlopen when loading plugins and IMV/IMCs to reveal missing
+	symbols immediately.
 
 charon.dns1
 	DNS server assigned to peer via configuration payload (CP).

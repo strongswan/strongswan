@@ -349,10 +349,16 @@ static private_tnc_imc_t* tnc_imc_create_empty(char *name)
 imc_t* tnc_imc_create(char *name, char *path)
 {
 	private_tnc_imc_t *this;
+	int flag = RTLD_LAZY;
 
 	this = tnc_imc_create_empty(name);
 
-	this->handle = dlopen(path, RTLD_LAZY);
+	if (lib->settings->get_bool(lib->settings, "%s.dlopen_use_rtld_now",
+								lib->ns, FALSE))
+	{
+		flag = RTLD_NOW;
+	}
+	this->handle = dlopen(path, flag);
 	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to load: %s", name, dlerror());
