@@ -1095,6 +1095,22 @@ static status_t process_request(private_task_manager_t *this,
 		 * the same message again. */
 		clear_packets(this->responding.packets);
 	}
+	if (this->queued &&
+		this->queued->get_exchange_type(this->queued) == INFORMATIONAL_V1)
+	{
+		message_t *queued;
+		status_t status;
+
+		queued = this->queued;
+		this->queued = NULL;
+		status = this->public.task_manager.process_message(
+											&this->public.task_manager, queued);
+		queued->destroy(queued);
+		if (status == DESTROY_ME)
+		{
+			return status;
+		}
+	}
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0 &&
 		this->queued_tasks->get_count(this->queued_tasks) > 0)
 	{
