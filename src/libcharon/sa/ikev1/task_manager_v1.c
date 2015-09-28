@@ -935,6 +935,28 @@ static bool have_quick_mode_task(private_task_manager_t *this, u_int32_t mid)
 }
 
 /**
+ * Check if we still have an aggressive mode task queued
+ */
+static bool have_aggressive_mode_task(private_task_manager_t *this)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+	bool found = FALSE;
+
+	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_AGGRESSIVE_MODE)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * handle an incoming request message
  */
 static status_t process_request(private_task_manager_t *this,
@@ -1338,6 +1360,16 @@ METHOD(task_manager_t, process_message, status_t,
 					 exchange_type_names, msg->get_exchange_type(msg));
 				return FAILED;
 			}
+		}
+
+		/* drop XAuth/Mode Config/Quick Mode messages until we received the last
+		 * Aggressive Mode message */
+		if (have_aggressive_mode_task(this) &&
+			msg->get_exchange_type(msg) != AGGRESSIVE)
+		{
+			DBG1(DBG_IKE, "ignoring %N request while phase 1 is incomplete",
+				 exchange_type_names, msg->get_exchange_type(msg));
+			return FAILED;
 		}
 
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
