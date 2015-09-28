@@ -1167,7 +1167,8 @@ static status_t process_response(private_task_manager_t *this,
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	clear_packets(this->initiating.packets);
 
-	if (this->queued && this->active_tasks->get_count(this->active_tasks) == 0)
+	if (this->queued && !this->active_tasks->get_count(this->active_tasks) &&
+		this->queued->get_exchange_type(this->queued) == TRANSACTION)
 	{
 		queued = this->queued;
 		this->queued = NULL;
