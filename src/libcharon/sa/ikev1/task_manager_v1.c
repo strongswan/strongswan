@@ -1387,13 +1387,20 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 
 		/* drop XAuth/Mode Config/Quick Mode messages until we received the last
-		 * Aggressive Mode message */
-		if (have_aggressive_mode_task(this) &&
-			msg->get_exchange_type(msg) != AGGRESSIVE)
+		 * Aggressive Mode message.  since Informational messages are not
+		 * retransmitted we queue them. */
+		if (have_aggressive_mode_task(this))
 		{
-			DBG1(DBG_IKE, "ignoring %N request while phase 1 is incomplete",
-				 exchange_type_names, msg->get_exchange_type(msg));
-			return FAILED;
+			if (msg->get_exchange_type(msg) == INFORMATIONAL_V1)
+			{
+				return queue_message(this, msg);
+			}
+			else if (msg->get_exchange_type(msg) != AGGRESSIVE)
+			{
+				DBG1(DBG_IKE, "ignoring %N request while phase 1 is incomplete",
+					 exchange_type_names, msg->get_exchange_type(msg));
+				return FAILED;
+			}
 		}
 
 		/* queue XAuth/Mode Config messages unless the Main Mode exchange we
