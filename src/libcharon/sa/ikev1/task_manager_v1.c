@@ -1262,6 +1262,29 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	return status;
 }
 
+/**
+ * Queue the given message if possible
+ */
+static status_t queue_message(private_task_manager_t *this, message_t *msg)
+{
+	if (this->queued)
+	{
+		DBG1(DBG_IKE, "ignoring %N request, queue full",
+			 exchange_type_names, msg->get_exchange_type(msg));
+		return FAILED;
+	}
+	this->queued = message_create_from_packet(msg->get_packet(msg));
+	if (this->queued->parse_header(this->queued) != SUCCESS)
+	{
+		this->queued->destroy(this->queued);
+		this->queued = NULL;
+		return FAILED;
+	}
+	DBG1(DBG_IKE, "queueing %N request as tasks still active",
+		 exchange_type_names, msg->get_exchange_type(msg));
+	return SUCCESS;
+}
+
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
@@ -1372,25 +1395,12 @@ METHOD(task_manager_t, process_message, status_t,
 			return FAILED;
 		}
 
+		/* queue XAuth/Mode Config messages unless the Main Mode exchange we
+		 * initiated is complete */
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
 			this->active_tasks->get_count(this->active_tasks))
-		{	/* main mode not yet complete, queue XAuth/Mode config tasks */
-			if (this->queued)
-			{
-				DBG1(DBG_IKE, "ignoring additional %N request, queue full",
-					 exchange_type_names, TRANSACTION);
-				return SUCCESS;
-			}
-			this->queued = message_create_from_packet(msg->get_packet(msg));
-			if (this->queued->parse_header(this->queued) != SUCCESS)
-			{
-				this->queued->destroy(this->queued);
-				this->queued = NULL;
-				return FAILED;
-			}
-			DBG1(DBG_IKE, "queueing %N request as tasks still active",
-				 exchange_type_names, TRANSACTION);
-			return SUCCESS;
+		{
+			return queue_message(this, msg);
 		}
 
 		msg->set_request(msg, TRUE);
