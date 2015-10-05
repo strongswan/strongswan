@@ -2135,7 +2135,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			{
 				continue;
 			}
-			tmpl->reqid = policy->reqid;
+			tmpl->reqid = ipsec->cfg.reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
@@ -2317,7 +2317,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	current = this->policies->get(this->policies, policy);
 	if (current)
 	{
-		if (current->reqid != sa->reqid)
+		if (current->reqid && sa->reqid && current->reqid != sa->reqid)
 		{
 			DBG1(DBG_CFG, "unable to install policy %R === %R %N (mark "
 				 "%u/0x%08x) for reqid %u, the same policy for reqid %u exists",
@@ -2503,7 +2503,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	/* find the policy */
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, &policy);
-	if (!current || current->reqid != sa->reqid)
+	if (!current)
 	{
 		if (mark.value)
 		{
