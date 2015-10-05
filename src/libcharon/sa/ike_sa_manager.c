@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "ike_sa_manager.h"
 
@@ -1143,7 +1144,10 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 	entry_t *entry;
 	u_int segment;
 
-	DBG2(DBG_MGR, "checkout IKE_SA");
+	DBG2(DBG_MGR, "checkout %N SA with SPIs %.16"PRIx64"_i %.16"PRIx64"_r",
+		 ike_version_names, ike_sa_id->get_ike_version(ike_sa_id),
+		 be64toh(ike_sa_id->get_initiator_spi(ike_sa_id)),
+		 be64toh(ike_sa_id->get_responder_spi(ike_sa_id)));
 
 	if (get_entry_by_id(this, ike_sa_id, &entry, &segment) == SUCCESS)
 	{
@@ -1229,7 +1233,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	id = id->clone(id);
 	id->switch_initiator(id);
 
-	DBG2(DBG_MGR, "checkout IKE_SA by message");
+	DBG2(DBG_MGR, "checkout %N SA by message with SPIs %.16"PRIx64"_i "
+		 "%.16"PRIx64"_r", ike_version_names, id->get_ike_version(id),
+		 be64toh(id->get_initiator_spi(id)),
+		 be64toh(id->get_responder_spi(id)));
 
 	if (id->get_responder_spi(id) == 0 &&
 		message->get_message_id(message) == 0)
@@ -1440,7 +1447,7 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 	ike_sa_t *ike_sa = NULL;
 	u_int segment;
 
-	DBG2(DBG_MGR, "checkout IKE_SA by ID %u", id);
+	DBG2(DBG_MGR, "checkout IKE_SA by unique ID %u", id);
 
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
@@ -1476,6 +1483,8 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	u_int segment;
+
+	DBG2(DBG_MGR, "checkout IKE_SA by%s name '%s'", child ? " child" : "", name);
 
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
@@ -1623,7 +1632,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 			entry->other = other->clone(other);
 			put_half_open(this, entry);
 		}
-		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
+		DBG2(DBG_MGR, "checkin of IKE_SA successful");
 		entry->condvar->signal(entry->condvar);
 	}
 	else
@@ -1711,7 +1720,7 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 		if (entry->driveout_waiting_threads && entry->driveout_new_threads)
 		{	/* it looks like flush() has been called and the SA is being deleted
 			 * anyway, just check it in */
-			DBG2(DBG_MGR, "ignored check-in and destroy of IKE_SA during shutdown");
+			DBG2(DBG_MGR, "ignored checkin and destroy of IKE_SA during shutdown");
 			entry->checked_out = NULL;
 			entry->condvar->broadcast(entry->condvar);
 			unlock_single_segment(this, segment);
@@ -1748,11 +1757,11 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 
 		entry_destroy(entry);
 
-		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
+		DBG2(DBG_MGR, "checkin and destroy of IKE_SA successful");
 	}
 	else
 	{
-		DBG1(DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
+		DBG1(DBG_MGR, "tried to checkin and delete nonexisting IKE_SA");
 		ike_sa->destroy(ike_sa);
 	}
 	charon->bus->set_sa(charon->bus, NULL);
