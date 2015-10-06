@@ -256,10 +256,10 @@ stop)
 		if [ -n "$spid" ]
 		then
 			kill $spid 2>/dev/null
-			loop=11
+			loop=110
 			while [ $loop -gt 0 ] ; do
 				kill -0 $spid 2>/dev/null || break
-				sleep 1
+				sleep 0.1
 				loop=$(($loop - 1))
 			done
 			if [ $loop -eq 0 ]
