@@ -738,44 +738,52 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 }
 
 
-METHOD(kernel_interface_t, add_ipsec_interface, void,
+METHOD(kernel_interface_t, add_ipsec_interface, bool,
 	private_kernel_interface_t *this, kernel_ipsec_constructor_t constructor)
 {
 	if (!this->ipsec)
 	{
 		this->ipsec_constructor = constructor;
 		this->ipsec = constructor();
+		return this->ipsec != NULL;
 	}
+	return FALSE;
 }
 
-METHOD(kernel_interface_t, remove_ipsec_interface, void,
+METHOD(kernel_interface_t, remove_ipsec_interface, bool,
 	private_kernel_interface_t *this, kernel_ipsec_constructor_t constructor)
 {
 	if (constructor == this->ipsec_constructor && this->ipsec)
 	{
 		this->ipsec->destroy(this->ipsec);
 		this->ipsec = NULL;
+		return TRUE;
 	}
+	return FALSE;
 }
 
-METHOD(kernel_interface_t, add_net_interface, void,
+METHOD(kernel_interface_t, add_net_interface, bool,
 	private_kernel_interface_t *this, kernel_net_constructor_t constructor)
 {
 	if (!this->net)
 	{
 		this->net_constructor = constructor;
 		this->net = constructor();
+		return this->net != NULL;
 	}
+	return FALSE;
 }
 
-METHOD(kernel_interface_t, remove_net_interface, void,
+METHOD(kernel_interface_t, remove_net_interface, bool,
 	private_kernel_interface_t *this, kernel_net_constructor_t constructor)
 {
 	if (constructor == this->net_constructor && this->net)
 	{
 		this->net->destroy(this->net);
 		this->net = NULL;
+		return TRUE;
 	}
+	return FALSE;
 }
 
 METHOD(kernel_interface_t, add_listener, void,

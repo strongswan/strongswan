@@ -25,13 +25,14 @@ bool kernel_ipsec_register(plugin_t *plugin, plugin_feature_t *feature,
 {
 	if (reg)
 	{
-		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
+		return hydra->kernel_interface->add_ipsec_interface(
+											hydra->kernel_interface,
 											(kernel_ipsec_constructor_t)data);
 	}
 	else
 	{
-		hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
+		return hydra->kernel_interface->remove_ipsec_interface(
+											hydra->kernel_interface,
 											(kernel_ipsec_constructor_t)data);
 	}
-	return TRUE;
 }

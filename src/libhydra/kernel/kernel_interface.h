@@ -502,39 +502,49 @@ struct kernel_interface_t {
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.
 	 *
-	 * @param create			constructor to register
+	 * @param create		constructor to register
+	 * @return				TRUE if the ipsec kernel interface was registered
+	 *						successfully, FALSE if an interface was already
+	 *						registered or the registration failed
 	 */
-	void (*add_ipsec_interface)(kernel_interface_t *this,
+	bool (*add_ipsec_interface)(kernel_interface_t *this,
 								kernel_ipsec_constructor_t create);
 
 	/**
 	 * Unregister an ipsec kernel interface constructor.
 	 *
-	 * @param create			constructor to unregister
+	 * @param create		constructor to unregister
+	 * @return				TRUE if the ipsec kernel interface was unregistered
+	 *						successfully, FALSE otherwise
 	 */
-	void (*remove_ipsec_interface)(kernel_interface_t *this,
+	bool (*remove_ipsec_interface)(kernel_interface_t *this,
 								   kernel_ipsec_constructor_t create);
 
 	/**
 	 * Register a network kernel interface constructor on the manager.
 	 *
-	 * @param create			constructor to register
+	 * @param create		constructor to register
+	 * @return				TRUE if the kernel net interface was registered
+	 *						successfully, FALSE if an interface was already
+	 *						registered or the registration failed
 	 */
-	void (*add_net_interface)(kernel_interface_t *this,
+	bool (*add_net_interface)(kernel_interface_t *this,
 							  kernel_net_constructor_t create);
 
 	/**
 	 * Unregister a network kernel interface constructor.
 	 *
-	 * @param create			constructor to unregister
+	 * @param create		constructor to unregister
+	 * @return				TRUE if the kernel net interface was unregistered
+	 *						successfully, FALSE otherwise
 	 */
-	void (*remove_net_interface)(kernel_interface_t *this,
+	bool (*remove_net_interface)(kernel_interface_t *this,
 								 kernel_net_constructor_t create);
 
 	/**
 	 * Add a listener to the kernel interface.
 	 *
-	 * @param listener			listener to add
+	 * @param listener		listener to add
 	 */
 	void (*add_listener)(kernel_interface_t *this,
 						 kernel_listener_t *listener);
@@ -542,7 +552,7 @@ struct kernel_interface_t {
 	/**
 	 * Remove a listener from the kernel interface.
 	 *
-	 * @param listener			listener to remove
+	 * @param listener		listener to remove
 	 */
 	void (*remove_listener)(kernel_interface_t *this,
 							kernel_listener_t *listener);
