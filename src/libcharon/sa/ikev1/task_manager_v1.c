@@ -752,6 +752,12 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 			case ALREADY_DONE:
 				cancelled = TRUE;
 				break;
+			case INVALID_ARG:
+				if (task->get_type(task) == TASK_QUICK_MODE)
+				{	/* not responsible for this exchange */
+					continue;
+				}
+				/* FALL */
 			case FAILED:
 			default:
 				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
@@ -1034,6 +1040,12 @@ static status_t process_request(private_task_manager_t *this,
 			case ALREADY_DONE:
 				send_response = FALSE;
 				break;
+			case INVALID_ARG:
+				if (task->get_type(task) == TASK_QUICK_MODE)
+				{	/* not responsible for this exchange */
+					continue;
+				}
+				/* FALL */
 			case FAILED:
 			default:
 				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);

@@ -1026,7 +1026,7 @@ METHOD(task_t, process_r, status_t,
 {
 	if (this->mid && this->mid != message->get_message_id(message))
 	{	/* not responsible for this quick mode exchange */
-		return NEED_MORE;
+		return INVALID_ARG;
 	}
 
 	switch (this->state)
@@ -1200,7 +1200,7 @@ METHOD(task_t, build_r, status_t,
 {
 	if (this->mid && this->mid != message->get_message_id(message))
 	{	/* not responsible for this quick mode exchange */
-		return NEED_MORE;
+		return INVALID_ARG;
 	}
 
 	switch (this->state)
