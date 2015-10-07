@@ -388,7 +388,7 @@ static bool install(private_quick_mode_t *this)
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
 
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
-		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),

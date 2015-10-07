@@ -302,7 +302,7 @@ METHOD(peer_cfg_t, select_child_cfg, child_cfg_t*,
 	enumerator_t *enumerator;
 	int best = 0;
 
-	DBG2(DBG_CFG, "looking for a child config for %#R=== %#R", my_ts, other_ts);
+	DBG2(DBG_CFG, "looking for a child config for %#R === %#R", my_ts, other_ts);
 	enumerator = create_child_cfg_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{

@@ -110,7 +110,7 @@ METHOD(listener_t, alert, bool,
 			list = va_arg(args, linked_list_t*);
 			list2 = va_arg(args, linked_list_t*);
 			snprintf(msg.str, sizeof(msg.str), "the received traffic selectors "
-					 "did not match: %#R=== %#R", list, list2);
+					 "did not match: %#R === %#R", list, list2);
 			break;
 		case ALERT_INSTALL_CHILD_SA_FAILED:
 			msg.type = htonl(ERROR_NOTIFY_INSTALL_CHILD_SA_FAILED);

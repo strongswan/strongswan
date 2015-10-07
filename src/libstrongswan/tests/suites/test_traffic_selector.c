@@ -770,17 +770,17 @@ START_TEST(test_printf_hook_hash)
 	list = linked_list_create_with_items(
 				traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535),
 				NULL);
-	verify_list("10.1.0.0/16 ", NULL, list);
+	verify_list("10.1.0.0/16", NULL, list);
 	list = linked_list_create_with_items(
 				traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535),
 				traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP, 1234, 1235),
 				NULL);
-	verify_list("10.1.0.0/16 10.1.0.1/32[udp/1234-1235] ", "10.1.0.0/16 10.1.0.1/32[17/1234-1235] ", list);
+	verify_list("10.1.0.0/16 10.1.0.1/32[udp/1234-1235]", "10.1.0.0/16 10.1.0.1/32[17/1234-1235]", list);
 	list = linked_list_create_with_items(
 				traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535),
 				traffic_selector_create_from_string(IPPROTO_UDP, TS_IPV4_ADDR_RANGE, "10.1.0.1", 1234, "10.1.0.99", 1235),
 				NULL);
-	verify_list("10.1.0.0/16 10.1.0.1..10.1.0.99[udp/1234-1235] ", "10.1.0.0/16 10.1.0.1..10.1.0.99[17/1234-1235] ", list);
+	verify_list("10.1.0.0/16 10.1.0.1..10.1.0.99[udp/1234-1235]", "10.1.0.0/16 10.1.0.1..10.1.0.99[17/1234-1235]", list);
 }
 END_TEST
 

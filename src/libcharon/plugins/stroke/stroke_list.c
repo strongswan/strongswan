@@ -334,7 +334,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 							child_sa->create_ts_enumerator(child_sa, TRUE));
 	other_ts = linked_list_create_from_enumerator(
 							child_sa->create_ts_enumerator(child_sa, FALSE));
-	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
+	fprintf(out, "\n%12s{%d}:   %#R === %#R\n",
 			child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 			my_ts, other_ts);
 	my_ts->destroy(my_ts);
@@ -586,7 +586,7 @@ METHOD(stroke_list_t, status, void,
 			{
 				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-				fprintf(out, "%12s:   child:  %#R=== %#R%N",
+				fprintf(out, "%12s:   child:  %#R === %#R %N",
 						child_cfg->get_name(child_cfg),	my_ts, other_ts,
 						ipsec_mode_names, child_cfg->get_mode(child_cfg));
 				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
@@ -620,7 +620,7 @@ METHOD(stroke_list_t, status, void,
 		}
 		my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 		other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-		fprintf(out, "%12s:  %#R=== %#R%N\n",
+		fprintf(out, "%12s:  %#R === %#R %N\n",
 				child_cfg->get_name(child_cfg),	my_ts, other_ts,
 				ipsec_mode_names, child_cfg->get_mode(child_cfg));
 		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));

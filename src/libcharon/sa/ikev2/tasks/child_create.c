@@ -712,7 +712,7 @@ static status_t select_and_install(private_child_create_t *this,
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
 
 	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
-		 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
@@ -1245,7 +1245,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (this->config == NULL)
 	{
-		DBG1(DBG_IKE, "traffic selectors %#R=== %#R inacceptable",
+		DBG1(DBG_IKE, "traffic selectors %#R === %#R inacceptable",
 			 this->tsr, this->tsi);
 		charon->bus->alert(charon->bus, ALERT_TS_MISMATCH, this->tsi, this->tsr);
 		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);

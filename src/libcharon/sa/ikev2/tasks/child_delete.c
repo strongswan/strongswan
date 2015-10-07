@@ -266,7 +266,7 @@ static void log_children(private_child_delete_t *this)
 		if (this->expired)
 		{
 			DBG0(DBG_IKE, "closing expired CHILD_SA %s{%d} "
-				 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+				 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 				 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 				 ntohl(child_sa->get_spi(child_sa, TRUE)),
 				 ntohl(child_sa->get_spi(child_sa, FALSE)), my_ts, other_ts);
@@ -277,7 +277,7 @@ static void log_children(private_child_delete_t *this)
 			child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out, NULL);
 
 			DBG0(DBG_IKE, "closing CHILD_SA %s{%d} with SPIs %.8x_i "
-				 "(%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
+				 "(%llu bytes) %.8x_o (%llu bytes) and TS %#R === %#R",
 				 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 				 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
 				 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,

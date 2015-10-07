@@ -848,7 +848,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	seg_o = this->kernel->get_segment_spi(this->kernel,
 								ike_sa->get_other_host(ike_sa), outbound_spi);
 
-	DBG1(DBG_CFG, "installed HA CHILD_SA %s{%d} %#R=== %#R "
+	DBG1(DBG_CFG, "installed HA CHILD_SA %s{%d} %#R === %#R "
 		"(segment in: %d%s, out: %d%s)", child_sa->get_name(child_sa),
 		child_sa->get_unique_id(child_sa), local_ts, remote_ts,
 		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
