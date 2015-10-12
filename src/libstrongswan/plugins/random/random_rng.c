@@ -56,6 +56,7 @@ METHOD(rng_t, get_bytes, bool,
 			DBG1(DBG_LIB, "reading from random FD %d failed: %s, retrying...",
 				 this->fd, strerror(errno));
 			sleep(1);
+			continue;
 		}
 		done += got;
 	}
