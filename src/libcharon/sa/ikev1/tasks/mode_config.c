@@ -482,7 +482,9 @@ static host_t *assign_migrated_vip(linked_list_t *migrated, host_t *requested)
 	enumerator = migrated->create_enumerator(migrated);
 	while (enumerator->enumerate(enumerator, &vip))
 	{
-		if (vip->ip_equals(vip, requested))
+		if (vip->ip_equals(vip, requested) ||
+		   (requested->is_anyaddr(requested) &&
+			requested->get_family(requested) == vip->get_family(vip)))
 		{
 			migrated->remove_at(migrated, enumerator);
 			found = vip;
