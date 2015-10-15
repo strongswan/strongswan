@@ -226,6 +226,9 @@
                     0x01     "BLISS-with-SHA512"		OID_BLISS_WITH_SHA512
                     0x02     "BLISS-with-SHA384"		OID_BLISS_WITH_SHA384
                     0x03     "BLISS-with-SHA256"		OID_BLISS_WITH_SHA256
+                    0x04     "BLISS-with-SHA3-512"		OID_BLISS_WITH_SHA3_512
+                    0x05     "BLISS-with-SHA3-384"		OID_BLISS_WITH_SHA3_384
+                    0x06     "BLISS-with-SHA3-256"		OID_BLISS_WITH_SHA3_256
           0x89               ""
             0x31             ""
               0x01           ""
@@ -435,10 +438,10 @@
                 0x04         "id-sha224"				OID_SHA224
                 0x05         "id-sha512-224"
                 0x06         "id-sha512-256"
-                0x07         "id-sha3-224"
-                0x08         "id-sha3-256"
-                0x09         "id-sha3-384"
-                0x0A         "id-sha3-512"
+                0x07         "id-sha3-224"				OID_SHA3_224
+                0x08         "id-sha3-256"				OID_SHA3_256
+                0x09         "id-sha3-384"				OID_SHA3_384
+                0x0A         "id-sha3-512"				OID_SHA3_512
                 0x0B         "id-shake128"
                 0x0C         "id-shake256"
         0x86                 ""
