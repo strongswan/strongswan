@@ -697,7 +697,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */
 							   TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   0, 0, /* DPD delay, timeout */
+							   600, 0, /* DPD delay, timeout */
 							   FALSE, NULL, NULL); /* mediation */
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
