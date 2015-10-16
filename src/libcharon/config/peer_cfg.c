@@ -538,10 +538,6 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 METHOD(peer_cfg_t, equals, bool,
 	private_peer_cfg_t *this, private_peer_cfg_t *other)
 {
-	enumerator_t *e1, *e2;
-	host_t *vip1, *vip2;
-	char *pool1, *pool2;
-
 	if (this == other)
 	{
 		return TRUE;
@@ -550,44 +546,15 @@ METHOD(peer_cfg_t, equals, bool,
 	{
 		return FALSE;
 	}
-
-	if (this->vips->get_count(this->vips) != other->vips->get_count(other->vips))
+	if (!this->vips->equals_offset(this->vips, other->vips,
+								   offsetof(host_t, ip_equals)))
 	{
 		return FALSE;
 	}
-	e1 = create_virtual_ip_enumerator(this);
-	e2 = create_virtual_ip_enumerator(other);
-	if (e1->enumerate(e1, &vip1) && e2->enumerate(e2, &vip2))
-	{
-		if (!vip1->ip_equals(vip1, vip2))
-		{
-			e1->destroy(e1);
-			e2->destroy(e2);
-			return FALSE;
-		}
-	}
-	e1->destroy(e1);
-	e2->destroy(e2);
-
-	if (this->pools->get_count(this->pools) !=
-		other->pools->get_count(other->pools))
+	if (!this->pools->equals_function(this->pools, other->pools, (void*)streq))
 	{
 		return FALSE;
 	}
-	e1 = create_pool_enumerator(this);
-	e2 = create_pool_enumerator(other);
-	if (e1->enumerate(e1, &pool1) && e2->enumerate(e2, &pool2))
-	{
-		if (!streq(pool1, pool2))
-		{
-			e1->destroy(e1);
-			e2->destroy(e2);
-			return FALSE;
-		}
-	}
-	e1->destroy(e1);
-	e2->destroy(e2);
-
 	return (
 		get_ike_version(this) == get_ike_version(other) &&
 		this->cert_policy == other->cert_policy &&
