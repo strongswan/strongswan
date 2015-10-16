@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -433,6 +433,56 @@ METHOD(linked_list_t, clone_offset, linked_list_t*,
 	return clone;
 }
 
+METHOD(linked_list_t, equals_offset, bool,
+	private_linked_list_t *this, linked_list_t *other_pub, size_t offset)
+{
+	private_linked_list_t *other = (private_linked_list_t*)other_pub;
+	element_t *cur_t, *cur_o;
+
+	if (this->count != other->count)
+	{
+		return FALSE;
+	}
+	cur_t = this->first;
+	cur_o = other->first;
+	while (cur_t && cur_o)
+	{
+		bool (**method)(void*,void*) = cur_t->value + offset;
+		if (!(*method)(cur_t->value, cur_o->value))
+		{
+			return FALSE;
+		}
+		cur_t = cur_t->next;
+		cur_o = cur_o->next;
+	}
+	return TRUE;
+}
+
+METHOD(linked_list_t, equals_function, bool,
+	private_linked_list_t *this, linked_list_t *other_pub,
+	bool (*fn)(void*,void*))
+{
+	private_linked_list_t *other = (private_linked_list_t*)other_pub;
+	element_t *cur_t, *cur_o;
+
+	if (this->count != other->count)
+	{
+		return FALSE;
+	}
+	cur_t = this->first;
+	cur_o = other->first;
+	while (cur_t && cur_o)
+	{
+		if (!fn(cur_t->value, cur_o->value))
+		{
+			return FALSE;
+		}
+		cur_t = cur_t->next;
+		cur_o = cur_o->next;
+	}
+	return TRUE;
+}
+
 METHOD(linked_list_t, destroy, void,
 	private_linked_list_t *this)
 {
@@ -503,6 +553,8 @@ linked_list_t *linked_list_create()
 			.invoke_offset = (void*)_invoke_offset,
 			.invoke_function = (void*)_invoke_function,
 			.clone_offset = _clone_offset,
+			.equals_offset = _equals_offset,
+			.equals_function = _equals_function,
 			.destroy = _destroy,
 			.destroy_offset = _destroy_offset,
 			.destroy_function = _destroy_function,

@@ -348,6 +348,91 @@ START_TEST(test_clone_offset)
 }
 END_TEST
 
+
+/*******************************************************************************
+ * equals
+ */
+
+typedef struct equals_t equals_t;
+
+struct equals_t {
+	int val;
+	bool (*equals)(equals_t *a, equals_t *b);
+};
+
+static bool equalsfn(equals_t *a, equals_t *b)
+{
+	return a->val == b->val;
+}
+
+START_TEST(test_equals_offset)
+{
+	linked_list_t *other;
+	equals_t *x, items[] = {
+		{ .val = 1, .equals = equalsfn, },
+		{ .val = 2, .equals = equalsfn, },
+		{ .val = 3, .equals = equalsfn, },
+		{ .val = 4, .equals = equalsfn, },
+		{ .val = 5, .equals = equalsfn, },
+	};
+	int i;
+
+	for (i = 0; i < countof(items); i++)
+	{
+		list->insert_last(list, &items[i]);
+	}
+	ck_assert(list->equals_offset(list, list, offsetof(equals_t, equals)));
+	other = linked_list_create_from_enumerator(list->create_enumerator(list));
+	ck_assert(list->equals_offset(list, other, offsetof(equals_t, equals)));
+	other->remove_last(other, (void**)&x);
+	ck_assert(!list->equals_offset(list, other, offsetof(equals_t, equals)));
+	list->remove_last(list, (void**)&x);
+	ck_assert(list->equals_offset(list, other, offsetof(equals_t, equals)));
+	other->remove_first(other, (void**)&x);
+	ck_assert(!list->equals_offset(list, other, offsetof(equals_t, equals)));
+	list->remove_first(list, (void**)&x);
+	ck_assert(list->equals_offset(list, other, offsetof(equals_t, equals)));
+	while (list->remove_first(list, (void**)&x) == SUCCESS);
+	while (other->remove_first(other, (void**)&x) == SUCCESS);
+	ck_assert(list->equals_offset(list, other, offsetof(equals_t, equals)));
+	other->destroy(other);
+}
+END_TEST
+
+START_TEST(test_equals_function)
+{
+	linked_list_t *other;
+	equals_t *x, items[] = {
+		{ .val = 1, },
+		{ .val = 2, },
+		{ .val = 3, },
+		{ .val = 4, },
+		{ .val = 5, },
+	};
+	int i;
+
+	for (i = 0; i < countof(items); i++)
+	{
+		list->insert_last(list, &items[i]);
+	}
+	ck_assert(list->equals_function(list, list, (void*)equalsfn));
+	other = linked_list_create_from_enumerator(list->create_enumerator(list));
+	ck_assert(list->equals_function(list, other, (void*)equalsfn));
+	other->remove_last(other, (void**)&x);
+	ck_assert(!list->equals_function(list, other, (void*)equalsfn));
+	list->remove_last(list, (void**)&x);
+	ck_assert(list->equals_function(list, other, (void*)equalsfn));
+	other->remove_first(other, (void**)&x);
+	ck_assert(!list->equals_function(list, other, (void*)equalsfn));
+	list->remove_first(list, (void**)&x);
+	ck_assert(list->equals_function(list, other, (void*)equalsfn));
+	while (list->remove_first(list, (void**)&x) == SUCCESS);
+	while (other->remove_first(other, (void**)&x) == SUCCESS);
+	ck_assert(list->equals_function(list, other, (void*)equalsfn));
+	other->destroy(other);
+}
+END_TEST
+
 Suite *linked_list_suite_create()
 {
 	Suite *s;
@@ -384,6 +469,12 @@ Suite *linked_list_suite_create()
 	tc = tcase_create("clone");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_clone_offset);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("equals");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_equals_offset);
+	tcase_add_test(tc, test_equals_function);
 	suite_add_tcase(s, tc);
 
 	return s;

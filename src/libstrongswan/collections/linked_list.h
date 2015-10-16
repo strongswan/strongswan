@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -216,6 +216,27 @@ struct linked_list_t {
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
+
+	/**
+	 * Compare two lists and their objects for equality using the given equals
+	 * method.
+	 *
+	 * @param other		list to compare
+	 * @param offset	offset of the objects equals method
+	 * @return			TRUE if lists and objects are equal, FALSE otherwise
+	 */
+	bool (*equals_offset) (linked_list_t *this, linked_list_t *other,
+						   size_t offset);
+
+	/**
+	 * Compare two lists and their objects for equality using the given function.
+	 *
+	 * @param other		list to compare
+	 * @param function	function to compare the objects
+	 * @return			TRUE if lists and objects are equal, FALSE otherwise
+	 */
+	bool (*equals_function) (linked_list_t *this, linked_list_t *other,
+							 bool (*)(void*,void*));
 
 	/**
 	 * Destroys a linked_list object.
