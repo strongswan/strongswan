@@ -57,6 +57,8 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.google.common.collect.EnumHashBiMap;
+
 public class VpnProfileDetailActivity extends Activity
 {
 	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
@@ -87,6 +89,7 @@ public class VpnProfileDetailActivity extends Activity
 	private EditText mPort;
 	private CheckBox mBlockIPv4;
 	private CheckBox mBlockIPv6;
+	private Spinner mSelectDpd;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -123,6 +126,8 @@ public class VpnProfileDetailActivity extends Activity
 		mPort = (EditText)findViewById(R.id.port);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
+
+		mSelectDpd = (Spinner)findViewById(R.id.dpd);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -454,6 +459,7 @@ public class VpnProfileDetailActivity extends Activity
 		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
 		mProfile.setSplitTunneling(st == 0 ? null : st);
+		mProfile.setDpd(dpdMap.inverse().get(mSelectDpd.getSelectedItemPosition()));
 	}
 
 	/**
@@ -493,6 +499,7 @@ public class VpnProfileDetailActivity extends Activity
 		}
 
 		mSelectVpnType.setSelection(mVpnType.ordinal());
+		mSelectDpd.setSelection(dpdMap.get(mProfile != null ? mProfile.getDpd() : VpnProfile.DEFAULT_DPD_LEVEL));
 
 		/* check if the user selected a user certificate previously */
 		useralias = savedInstanceState == null ? useralias: savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
@@ -649,5 +656,14 @@ public class VpnProfileDetailActivity extends Activity
 					}
 				}).create();
 		}
+	}
+
+	private static final EnumHashBiMap<VpnProfile.DpdLevel, Integer> dpdMap;
+	static {
+		dpdMap = EnumHashBiMap.create(VpnProfile.DpdLevel.class);
+		dpdMap.put(VpnProfile.DpdLevel.OFF, 0);
+		dpdMap.put(VpnProfile.DpdLevel.LOW, 1);
+		dpdMap.put(VpnProfile.DpdLevel.MEDIUM, 2);
+		dpdMap.put(VpnProfile.DpdLevel.HIGH, 3);
 	}
 }

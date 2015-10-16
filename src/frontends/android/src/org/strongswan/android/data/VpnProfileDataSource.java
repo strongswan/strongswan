@@ -27,7 +27,10 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
+import android.support.annotation.NonNull;
 import android.util.Log;
+
+import com.google.common.collect.EnumHashBiMap;
 
 public class VpnProfileDataSource
 {
@@ -43,6 +46,7 @@ public class VpnProfileDataSource
 	public static final String KEY_MTU = "mtu";
 	public static final String KEY_PORT = "port";
 	public static final String KEY_SPLIT_TUNNELING = "split_tunneling";
+	public static final String KEY_DPD = "dpd";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -51,7 +55,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 7;
+	private static final int DATABASE_VERSION = 8;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -65,7 +69,8 @@ public class VpnProfileDataSource
 								KEY_USER_CERTIFICATE + " TEXT," +
 								KEY_MTU + " INTEGER," +
 								KEY_PORT + " INTEGER," +
-								KEY_SPLIT_TUNNELING + " INTEGER" +
+								KEY_SPLIT_TUNNELING + " INTEGER," +
+								KEY_DPD + " INTEGER" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -79,6 +84,7 @@ public class VpnProfileDataSource
 								KEY_MTU,
 								KEY_PORT,
 								KEY_SPLIT_TUNNELING,
+								KEY_DPD,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -126,6 +132,11 @@ public class VpnProfileDataSource
 			if (oldVersion < 7)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SPLIT_TUNNELING +
+						   " INTEGER;");
+			}
+			if (oldVersion < 8)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_DPD +
 						   " INTEGER;");
 			}
 		}
@@ -282,6 +293,7 @@ public class VpnProfileDataSource
 		profile.setMTU(getInt(cursor, cursor.getColumnIndex(KEY_MTU)));
 		profile.setPort(getInt(cursor, cursor.getColumnIndex(KEY_PORT)));
 		profile.setSplitTunneling(getInt(cursor, cursor.getColumnIndex(KEY_SPLIT_TUNNELING)));
+		profile.setDpd(getDpd(cursor, cursor.getColumnIndex(KEY_DPD)));
 		return profile;
 	}
 
@@ -298,11 +310,31 @@ public class VpnProfileDataSource
 		values.put(KEY_MTU, profile.getMTU());
 		values.put(KEY_PORT, profile.getPort());
 		values.put(KEY_SPLIT_TUNNELING, profile.getSplitTunneling());
+		values.put(KEY_DPD, dpdMap.get(profile.getDpd()));
 		return values;
 	}
 
 	private Integer getInt(Cursor cursor, int columnIndex)
 	{
 		return cursor.isNull(columnIndex) ? null : cursor.getInt(columnIndex);
+	}
+
+	@NonNull
+	private VpnProfile.DpdLevel getDpd(Cursor cursor, int columnIndex) {
+		final Integer dpdInt = getInt(cursor, columnIndex);
+		if (dpdInt == null || !dpdMap.containsValue(dpdInt)) {
+			return VpnProfile.DEFAULT_DPD_LEVEL;
+		} else {
+			return dpdMap.inverse().get(dpdInt);
+		}
+	}
+
+	private static final EnumHashBiMap<VpnProfile.DpdLevel, Integer> dpdMap;
+	static {
+		dpdMap = EnumHashBiMap.create(VpnProfile.DpdLevel.class);
+		dpdMap.put(VpnProfile.DpdLevel.OFF, 0);
+		dpdMap.put(VpnProfile.DpdLevel.LOW, 1);
+		dpdMap.put(VpnProfile.DpdLevel.MEDIUM, 2);
+		dpdMap.put(VpnProfile.DpdLevel.HIGH, 3);
 	}
 }

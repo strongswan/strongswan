@@ -24,3 +24,11 @@ android {
         jniLibs.srcDirs = ['libs']
     }
 }
+
+repositories {
+    jcenter()
+}
+dependencies {
+    compile 'com.android.support:support-annotations:23.0.+'
+    compile 'com.google.guava:guava:19.0-rc2'
+}
