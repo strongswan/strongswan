@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008 Tobias Brunner
+ * Copyright (C) 2007-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -152,6 +152,20 @@ struct peer_cfg_t {
 	 * @param enumerator	enumerator indicating element position
 	 */
 	void (*remove_child_cfg)(peer_cfg_t *this, enumerator_t *enumerator);
+
+	/**
+	 * Replace the CHILD configs with those in the given PEER config.
+	 *
+	 * Configs that are equal are not replaced.
+	 *
+	 * The enumerator enumerates the removed and added CHILD configs
+	 * (child_cfg_t*, bool), where the flag is FALSE for removed configs and
+	 * TRUE for added configs.
+	 *
+	 * @param other			other config to get CHILD configs from
+	 * @return				an enumerator over removed/added CHILD configs
+	 */
+	enumerator_t* (*replace_child_cfgs)(peer_cfg_t *this, peer_cfg_t *other);
 
 	/**
 	 * Create an enumerator for all attached CHILD configs.
