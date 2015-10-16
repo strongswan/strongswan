@@ -371,9 +371,6 @@ METHOD(ike_cfg_t, equals, bool,
 	private_ike_cfg_t *this, ike_cfg_t *other_public)
 {
 	private_ike_cfg_t *other = (private_ike_cfg_t*)other_public;
-	enumerator_t *e1, *e2;
-	proposal_t *p1, *p2;
-	bool eq = TRUE;
 
 	if (this == other)
 	{
@@ -383,25 +380,12 @@ METHOD(ike_cfg_t, equals, bool,
 	{
 		return FALSE;
 	}
-	if (this->proposals->get_count(this->proposals) !=
-		other->proposals->get_count(other->proposals))
+	if (!this->proposals->equals_offset(this->proposals, other->proposals,
+										offsetof(proposal_t, equals)))
 	{
 		return FALSE;
 	}
-	e1 = this->proposals->create_enumerator(this->proposals);
-	e2 = other->proposals->create_enumerator(other->proposals);
-	while (e1->enumerate(e1, &p1) && e2->enumerate(e2, &p2))
-	{
-		if (!p1->equals(p1, p2))
-		{
-			eq = FALSE;
-			break;
-		}
-	}
-	e1->destroy(e1);
-	e2->destroy(e2);
-
-	return (eq &&
+	return
 		this->version == other->version &&
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
@@ -409,7 +393,7 @@ METHOD(ike_cfg_t, equals, bool,
 		streq(this->me, other->me) &&
 		streq(this->other, other->other) &&
 		this->my_port == other->my_port &&
-		this->other_port == other->other_port);
+		this->other_port == other->other_port;
 }
 
 METHOD(ike_cfg_t, get_ref, ike_cfg_t*,
