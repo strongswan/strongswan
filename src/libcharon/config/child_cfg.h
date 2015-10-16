@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -272,6 +272,14 @@ struct child_cfg_t {
 	 *						FALSE, otherwise
 	 */
 	bool (*install_policy)(child_cfg_t *this);
+
+	/**
+	 * Check if two child_cfg objects are equal.
+	 *
+	 * @param other			candidate to check for equality against this
+	 * @return				TRUE if equal
+	 */
+	bool (*equals)(child_cfg_t *this, child_cfg_t *other);
 
 	/**
 	 * Increase the reference count.

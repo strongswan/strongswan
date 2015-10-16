@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -531,6 +531,57 @@ METHOD(child_cfg_t, install_policy, bool,
 	return this->install_policy;
 }
 
+#define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
+#define LIFETIME_EQUALS(a, b) ({  LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
+
+METHOD(child_cfg_t, equals, bool,
+	private_child_cfg_t *this, child_cfg_t *other_pub)
+{
+	private_child_cfg_t *other = (private_child_cfg_t*)other_pub;
+
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	if (!this->proposals->equals_offset(this->proposals, other->proposals,
+										offsetof(proposal_t, equals)))
+	{
+		return FALSE;
+	}
+	if (!this->my_ts->equals_offset(this->my_ts, other->my_ts,
+									offsetof(traffic_selector_t, equals)))
+	{
+		return FALSE;
+	}
+	if (!this->other_ts->equals_offset(this->other_ts, other->other_ts,
+									   offsetof(traffic_selector_t, equals)))
+	{
+		return FALSE;
+	}
+	return this->hostaccess == other->hostaccess &&
+		this->mode == other->mode &&
+		this->start_action == other->start_action &&
+		this->dpd_action == other->dpd_action &&
+		this->close_action == other->close_action &&
+		LIFETIME_EQUALS(this->lifetime, other->lifetime) &&
+		this->use_ipcomp == other->use_ipcomp &&
+		this->inactivity == other->inactivity &&
+		this->reqid == other->reqid &&
+		this->mark_in.value == other->mark_in.value &&
+		this->mark_in.mask == other->mark_in.mask &&
+		this->mark_out.value == other->mark_out.value &&
+		this->mark_out.mask == other->mark_out.mask &&
+		this->tfc == other->tfc &&
+		this->replay_window == other->replay_window &&
+		this->proxy_mode == other->proxy_mode &&
+		this->install_policy == other->install_policy &&
+		streq(this->updown, other->updown);
+}
+
 METHOD(child_cfg_t, get_ref, child_cfg_t*,
 	private_child_cfg_t *this)
 {
@@ -593,6 +644,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.set_replay_window = _set_replay_window,
 			.use_proxy_mode = _use_proxy_mode,
 			.install_policy = _install_policy,
+			.equals = _equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
