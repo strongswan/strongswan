@@ -1847,22 +1847,19 @@ static void replace_children(private_vici_config_t *this,
 {
 	enumerator_t *enumerator;
 	child_cfg_t *child;
+	bool added;
 
-	enumerator = to->create_child_cfg_enumerator(to);
-	while (enumerator->enumerate(enumerator, &child))
+	enumerator = to->replace_child_cfgs(to, from);
+	while (enumerator->enumerate(enumerator, &child, &added))
 	{
-		to->remove_child_cfg(to, enumerator);
-		clear_start_action(this, to->get_name(to), child);
-		child->destroy(child);
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = from->create_child_cfg_enumerator(from);
-	while (enumerator->enumerate(enumerator, &child))
-	{
-		from->remove_child_cfg(from, enumerator);
-		to->add_child_cfg(to, child);
-		run_start_action(this, to, child);
+		if (added)
+		{
+			run_start_action(this, to, child);
+		}
+		else
+		{
+			clear_start_action(this, to->get_name(to), child);
+		}
 	}
 	enumerator->destroy(enumerator);
 }
