@@ -234,6 +234,33 @@ static void add_condition(vici_builder_t *b, ike_sa_t *ike_sa,
 }
 
 /**
+ * List virtual IPs
+ */
+static void list_vips(private_vici_query_t *this, vici_builder_t *b,
+					  ike_sa_t *ike_sa, bool local, char *name)
+{
+	enumerator_t *enumerator;
+	bool has = FALSE;
+	host_t *vip;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		if (!has)
+		{
+			b->begin_list(b, name);
+			has = TRUE;
+		}
+		b->add_li(b, "%H", vip);
+	}
+	enumerator->destroy(enumerator);
+	if (has)
+	{
+		b->end_list(b);
+	}
+}
+
+/**
  * List details of an IKE_SA
  */
 static void list_ike(private_vici_query_t *this, vici_builder_t *b,
@@ -326,6 +353,9 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 			b->add_kv(b, "reauth-time", "%"PRId64, (int64_t)(t - now));
 		}
 	}
+
+	list_vips(this, b, ike_sa, TRUE, "local-vips");
+	list_vips(this, b, ike_sa, FALSE, "remote-vips");
 
 	list_task_queue(this, b, ike_sa, TASK_QUEUE_QUEUED, "tasks-queued");
 	list_task_queue(this, b, ike_sa, TASK_QUEUE_ACTIVE, "tasks-active");

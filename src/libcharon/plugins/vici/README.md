@@ -600,6 +600,12 @@ command.
 			established = <seconds the IKE_SA has been established>
 			rekey-time = <seconds before IKE_SA gets rekeyed>
 			reauth-time = <seconds before IKE_SA gets re-authenticated>
+			local-vips = [
+				<list of virtual IPs assigned by the remote peer, installed locally>
+			]
+			remote-vips = [
+				<list of virtual IPs assigned to the remote peer>
+			]
 			tasks-queued = [
 				<list of currently queued tasks for execution>
 			]
