@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -19,8 +22,22 @@
 
 #include "command.h"
 
+CALLBACK(list_leases, int,
+	char *pool, vici_res_t *res, char *name)
+{
+	if (streq(name, "leases"))
+	{
+		return vici_parse_cb(res, list_leases, NULL, NULL, pool);
+	}
+	printf("  %-30s %-8s '%s'\n",
+		   vici_find_str(res, "", "%s.leases.%s.address", pool, name),
+		   vici_find_str(res, "", "%s.leases.%s.status", pool, name),
+		   vici_find_str(res, "", "%s.leases.%s.identity", pool, name));
+	return 0;
+}
+
 CALLBACK(list_pool, int,
-	linked_list_t *list, vici_res_t *res, char *name)
+	void *not_used, vici_res_t *res, char *name)
 {
 	char pool[64], leases[32];
 
@@ -33,7 +50,7 @@ CALLBACK(list_pool, int,
 	printf("%-20s %-30s %16s\n",
 		name, vici_find_str(res, "", "%s.base", name), leases);
 
-	return 0;
+	return vici_parse_cb(res, list_leases, NULL, NULL, name);
 }
 
 static int list_pools(vici_conn_t *conn)
@@ -43,6 +60,7 @@ static int list_pools(vici_conn_t *conn)
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg;
 	int ret = 0;
+	bool leases = FALSE;
 
 	while (TRUE)
 	{
@@ -56,6 +74,9 @@ static int list_pools(vici_conn_t *conn)
 			case 'r':
 				format |= COMMAND_FORMAT_RAW;
 				continue;
+			case 'l':
+				leases = TRUE;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -65,6 +86,10 @@ static int list_pools(vici_conn_t *conn)
 	}
 
 	req = vici_begin("get-pools");
+	if (leases)
+	{
+		vici_add_key_valuef(req, "leases", "yes");
+	}
 	res = vici_submit(req, conn);
 	if (!res)
 	{
@@ -92,11 +117,12 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_pools, 'A', "list-pools", "list loaded pool configurations",
-		{"[--raw|--pretty]"},
+		{"[--leases] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
+			{"leases",		'l', 0, "list leases of each pool"},
 		}
 	});
 }
