@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
+ * Copyright (C) 2014-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -662,9 +662,16 @@ CALLBACK(get_pools, vici_message_t*,
 	vici_message_t *message)
 {
 	vici_builder_t *builder;
-	enumerator_t *enumerator;
+	enumerator_t *enumerator, *leases;
 	mem_pool_t *vips;
 	pool_t *pool;
+	identification_t *uid;
+	host_t *lease;
+	bool list_leases, on;
+	char buf[32];
+	int i;
+
+	list_leases = message->get_bool(message, FALSE, "leases");
 
 	builder = vici_builder_create();
 
@@ -681,6 +688,23 @@ CALLBACK(get_pools, vici_message_t*,
 		builder->add_kv(builder, "online", "%u", vips->get_online(vips));
 		builder->add_kv(builder, "offline", "%u", vips->get_offline(vips));
 
+		if (list_leases)
+		{
+			i = 0;
+			builder->begin_section(builder, "leases");
+			leases = vips->create_lease_enumerator(vips);
+			while (leases && leases->enumerate(leases, &uid, &lease, &on))
+			{
+				snprintf(buf, sizeof(buf), "%d", i++);
+				builder->begin_section(builder, buf);
+				builder->add_kv(builder, "address", "%H", lease);
+				builder->add_kv(builder, "identity", "%Y", uid);
+				builder->add_kv(builder, "status", on ? "online" : "offline");
+				builder->end_section(builder);
+			}
+			leases->destroy(leases);
+			builder->end_section(builder);
+		}
 		builder->end_section(builder);
 	}
 	enumerator->destroy(enumerator);

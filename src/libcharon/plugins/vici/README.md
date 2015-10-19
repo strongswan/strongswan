@@ -526,12 +526,21 @@ Unloading fails for pools with leases currently online.
 
 List the currently loaded pools.
 
-	{} => {
+	{
+		leases = <set to yes to include leases>
+	} => {
 		<pool name>* = {
 			base = <virtual IP pool base address>
 			size = <total number of addresses in the pool>
 			online = <number of leases online>
 			offline = <number of leases offline>
+			leases = {
+				<zero-based index>* = {
+					address = <IP address>
+					identity = <assigned identity>
+					status = <online|offline>
+				}
+			}
 		}
 	}
 
