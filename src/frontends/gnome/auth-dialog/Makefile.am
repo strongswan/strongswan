@@ -1,7 +1,6 @@
 libexec_PROGRAMS = nm-strongswan-auth-dialog
 
 nm_strongswan_auth_dialog_CPPFLAGS = \
-	$(GTHREAD_CFLAGS) \
 	$(GTK_CFLAGS) \
 	$(LIBGNOMEUI_CFLAGS) \
 	$(GNOMEKEYRING_CFLAGS) \
