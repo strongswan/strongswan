@@ -1,6 +1,9 @@
 /*
+ * Copyright (C) 2015 Lubomir Rintel
+ *
  * Copyright (C) 2008-2011 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2004 Dan Williams
  * Red Hat, Inc.
  *
@@ -19,14 +22,16 @@
 #include <config.h>
 #endif
 
+#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
 #include <libsecret/secret.h>
-#include <libgnomeui/libgnomeui.h>
 
 #include <NetworkManager.h>
 #include <nm-vpn-service-plugin.h>
+#include <nma-vpn-password-dialog.h>
 
 #define NM_DBUS_SERVICE_STRONGSWAN	"org.freedesktop.NetworkManager.strongswan"
 
@@ -85,7 +90,7 @@ static char* get_connection_type(char *uuid)
 int main (int argc, char *argv[])
 {
 	gboolean retry = FALSE, allow_interaction = FALSE;
-	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
+	gchar *name = NULL, *uuid = NULL, *service = NULL, *pass;
 	GOptionContext *context;
 	char *agent, *type;
 	guint32 minlen = 0;
@@ -142,68 +147,46 @@ int main (int argc, char *argv[])
 		{
 			if (!strcmp(type, "eap"))
 			{
-				dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("EAP password required to establish VPN connection:"),
-							NULL, NULL, TRUE);
-				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+				dialog = nma_vpn_password_dialog_new(_("VPN password required"),
+								     _("EAP password required to establish VPN connection:"),
+								     NULL);
 			}
 			else if (!strcmp(type, "key"))
 			{
-				dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("Private key decryption password required to establish VPN connection:"),
-							NULL, NULL, TRUE);
-				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+				dialog = nma_vpn_password_dialog_new(_("VPN password required"),
+								     _("Private key decryption password required to establish VPN connection:"),
+								     NULL);
 			}
 			else if (!strcmp(type, "psk"))
 			{
-				dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("Pre-shared key required to establish VPN connection (min. 20 characters):"),
-							NULL, NULL, TRUE);
-				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+				dialog = nma_vpn_password_dialog_new(_("VPN password required"),
+								     _("Pre-shared key required to establish VPN connection (min. 20 characters):"),
+								     NULL);
 				minlen = 20;
 			}
 			else /* smartcard */
 			{
-				dialog = gnome_password_dialog_new(_("VPN password required"),
-							_("Smartcard PIN required to establish VPN connection:"),
-							NULL, NULL, TRUE);
-				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), FALSE);
+				dialog = nma_vpn_password_dialog_new(_("VPN password required"),
+								     _("Smartcard PIN required to establish VPN connection:"),
+								     NULL);
 			}
-			gnome_password_dialog_set_show_username(GNOME_PASSWORD_DIALOG(dialog), FALSE);
 			if (pass)
 			{
-				gnome_password_dialog_set_password(GNOME_PASSWORD_DIALOG(dialog), pass);
+				nma_vpn_password_dialog_set_password(NMA_VPN_PASSWORD_DIALOG(dialog), pass);
 			}
 
+			nma_vpn_password_dialog_set_show_password_secondary(NMA_VPN_PASSWORD_DIALOG(dialog), FALSE);
+			gtk_widget_show(dialog);
 too_short_retry:
-			if (!gnome_password_dialog_run_and_block(GNOME_PASSWORD_DIALOG(dialog)))
+			if (!nma_vpn_password_dialog_run_and_block(NMA_VPN_PASSWORD_DIALOG(dialog)))
 			{
 				return 1;
 			}
 
-			pass = gnome_password_dialog_get_password(GNOME_PASSWORD_DIALOG(dialog));
+			pass = g_strdup(nma_vpn_password_dialog_get_password(NMA_VPN_PASSWORD_DIALOG(dialog)));
 			if (minlen && strlen(pass) < minlen)
 			{
 				goto too_short_retry;
-			}
-			switch (gnome_password_dialog_get_remember(GNOME_PASSWORD_DIALOG(dialog)))
-			{
-				case GNOME_PASSWORD_DIALOG_REMEMBER_NOTHING:
-					break;
-				case GNOME_PASSWORD_DIALOG_REMEMBER_SESSION:
-					keyring = SECRET_COLLECTION_SESSION;
-					/* FALL */
-				case GNOME_PASSWORD_DIALOG_REMEMBER_FOREVER:
-					if (!secret_password_store_sync(SECRET_SCHEMA_COMPAT_NETWORK,
-								keyring, "", pass, NULL, NULL,
-								"user", g_get_user_name(),
-								"server", name,
-								"protocol", service,
-								NULL))
-					{
-						g_warning ("storing password in keyring failed");
-					}
-					break;
 			}
 		}
 		if (pass)

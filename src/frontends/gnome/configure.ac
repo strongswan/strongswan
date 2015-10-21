@@ -43,7 +43,6 @@ IT_PROG_INTLTOOL([0.35])
 AM_GLIB_GNU_GETTEXT
 
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
-PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
 PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
 
 PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
