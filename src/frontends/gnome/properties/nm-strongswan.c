@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Lubomir Rintel
  * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -26,11 +27,14 @@
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
 
-#define NM_VPN_API_SUBJECT_TO_CHANGE
-
+#ifdef NM_STRONGSWAN_OLD
+#define NM_VPN_LIBNM_COMPAT
 #include <nm-vpn-plugin-ui-interface.h>
 #include <nm-setting-vpn.h>
 #include <nm-setting-connection.h>
+#else
+#include <NetworkManager.h>
+#endif
 
 #include "nm-strongswan.h"
 
@@ -41,18 +45,25 @@
 
 /************** plugin class **************/
 
-static void strongswan_plugin_ui_interface_init (NMVpnPluginUiInterface *iface_class);
+enum {
+	PROP_0,
+	PROP_NAME,
+	PROP_DESC,
+	PROP_SERVICE
+};
+
+static void strongswan_plugin_ui_interface_init (NMVpnEditorPluginInterface *iface_class);
 
 G_DEFINE_TYPE_EXTENDED (StrongswanPluginUi, strongswan_plugin_ui, G_TYPE_OBJECT, 0,
-						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_PLUGIN_UI_INTERFACE,
+						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_EDITOR_PLUGIN,
 											   strongswan_plugin_ui_interface_init))
 
 /************** UI widget class **************/
 
-static void strongswan_plugin_ui_widget_interface_init (NMVpnPluginUiWidgetInterface *iface_class);
+static void strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class);
 
 G_DEFINE_TYPE_EXTENDED (StrongswanPluginUiWidget, strongswan_plugin_ui_widget, G_TYPE_OBJECT, 0,
-						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_PLUGIN_UI_WIDGET_INTERFACE,
+						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_EDITOR,
 											   strongswan_plugin_ui_widget_interface_init))
 
 #define STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, StrongswanPluginUiWidgetPrivate))
@@ -178,7 +189,7 @@ static gboolean
 init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError **error)
 {
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVPN *settings;
+	NMSettingVpn *settings;
 	GtkWidget *widget;
 	const char *value;
 
@@ -281,7 +292,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 }
 
 static GObject *
-get_widget (NMVpnPluginUiWidgetInterface *iface)
+get_widget (NMVpnEditor *iface)
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
@@ -290,13 +301,13 @@ get_widget (NMVpnPluginUiWidgetInterface *iface)
 }
 
 static gboolean
-update_connection (NMVpnPluginUiWidgetInterface *iface,
+update_connection (NMVpnEditor *iface,
 				   NMConnection *connection,
 				   GError **error)
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVPN *settings;
+	NMSettingVpn *settings;
 	GtkWidget *widget;
 	gboolean active;
 	char *str;
@@ -386,17 +397,17 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	return TRUE;
 }
 
-static NMVpnPluginUiWidgetInterface *
+static NMVpnEditor *
 nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 {
-	NMVpnPluginUiWidgetInterface *object;
+	NMVpnEditor *object;
 	StrongswanPluginUiWidgetPrivate *priv;
 	char *ui_file;
 
 	if (error)
 		g_return_val_if_fail (*error == NULL, NULL);
 
-	object = NM_VPN_PLUGIN_UI_WIDGET_INTERFACE (g_object_new (STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, NULL));
+	object = g_object_new (STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, NULL);
 	if (!object) {
 		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not create strongswan object");
 		return NULL;
@@ -467,7 +478,7 @@ strongswan_plugin_ui_widget_init (StrongswanPluginUiWidget *plugin)
 }
 
 static void
-strongswan_plugin_ui_widget_interface_init (NMVpnPluginUiWidgetInterface *iface_class)
+strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class)
 {
 	/* interface implementation */
 	iface_class->get_widget = get_widget;
@@ -475,13 +486,13 @@ strongswan_plugin_ui_widget_interface_init (NMVpnPluginUiWidgetInterface *iface_
 }
 
 static guint32
-get_capabilities (NMVpnPluginUiInterface *iface)
+get_capabilities (NMVpnEditorPlugin *iface)
 {
 	return 0;
 }
 
-static NMVpnPluginUiWidgetInterface *
-ui_factory (NMVpnPluginUiInterface *iface, NMConnection *connection, GError **error)
+static NMVpnEditor *
+get_editor (NMVpnEditorPlugin *iface, NMConnection *connection, GError **error)
 {
 	return nm_vpn_plugin_ui_widget_interface_new (connection, error);
 }
@@ -491,13 +502,13 @@ get_property (GObject *object, guint prop_id,
 			  GValue *value, GParamSpec *pspec)
 {
 	switch (prop_id) {
-	case NM_VPN_PLUGIN_UI_INTERFACE_PROP_NAME:
+	case PROP_NAME:
 		g_value_set_string (value, STRONGSWAN_PLUGIN_NAME);
 		break;
-	case NM_VPN_PLUGIN_UI_INTERFACE_PROP_DESC:
+	case PROP_DESC:
 		g_value_set_string (value, STRONGSWAN_PLUGIN_DESC);
 		break;
-	case NM_VPN_PLUGIN_UI_INTERFACE_PROP_SERVICE:
+	case PROP_SERVICE:
 		g_value_set_string (value, STRONGSWAN_PLUGIN_SERVICE);
 		break;
 	default:
@@ -514,16 +525,16 @@ strongswan_plugin_ui_class_init (StrongswanPluginUiClass *req_class)
 	object_class->get_property = get_property;
 
 	g_object_class_override_property (object_class,
-									  NM_VPN_PLUGIN_UI_INTERFACE_PROP_NAME,
-									  NM_VPN_PLUGIN_UI_INTERFACE_NAME);
+									  PROP_NAME,
+									  NM_VPN_EDITOR_PLUGIN_NAME);
 
 	g_object_class_override_property (object_class,
-									  NM_VPN_PLUGIN_UI_INTERFACE_PROP_DESC,
-									  NM_VPN_PLUGIN_UI_INTERFACE_DESC);
+									  PROP_DESC,
+									  NM_VPN_EDITOR_PLUGIN_DESCRIPTION);
 
 	g_object_class_override_property (object_class,
-									  NM_VPN_PLUGIN_UI_INTERFACE_PROP_SERVICE,
-									  NM_VPN_PLUGIN_UI_INTERFACE_SERVICE);
+									  PROP_SERVICE,
+									  NM_VPN_EDITOR_PLUGIN_SERVICE);
 }
 
 static void
@@ -532,20 +543,20 @@ strongswan_plugin_ui_init (StrongswanPluginUi *plugin)
 }
 
 static void
-strongswan_plugin_ui_interface_init (NMVpnPluginUiInterface *iface_class)
+strongswan_plugin_ui_interface_init (NMVpnEditorPluginInterface *iface_class)
 {
 	/* interface implementation */
-	iface_class->ui_factory = ui_factory;
+	iface_class->get_editor = get_editor;
 	iface_class->get_capabilities = get_capabilities;
 	/* TODO: implement delete_connection to purge associated secrets */
 }
 
 
-G_MODULE_EXPORT NMVpnPluginUiInterface *
-nm_vpn_plugin_ui_factory (GError **error)
+G_MODULE_EXPORT NMVpnEditorPlugin *
+nm_vpn_editor_plugin_factory (GError **error)
 {
 	if (error)
 		g_return_val_if_fail (*error == NULL, NULL);
 
-	return NM_VPN_PLUGIN_UI_INTERFACE (g_object_new (STRONGSWAN_TYPE_PLUGIN_UI, NULL));
+	return g_object_new (STRONGSWAN_TYPE_PLUGIN_UI, NULL);
 }

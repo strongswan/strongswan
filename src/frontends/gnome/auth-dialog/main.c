@@ -24,10 +24,9 @@
 #include <gtk/gtk.h>
 #include <libsecret/secret.h>
 #include <libgnomeui/libgnomeui.h>
-#include <nm-vpn-plugin.h>
-#include <nm-setting-vpn.h>
-#include <nm-setting-connection.h>
-#include <nm-vpn-plugin-utils.h>
+
+#include <NetworkManager.h>
+#include <nm-vpn-service-plugin.h>
 
 #define NM_DBUS_SERVICE_STRONGSWAN	"org.freedesktop.NetworkManager.strongswan"
 
@@ -66,7 +65,7 @@ static char* get_connection_type(char *uuid)
 	GHashTable *data = NULL, *secrets = NULL;
 	char *method;
 
-	if (!nm_vpn_plugin_utils_read_vpn_details (0, &data, &secrets)) {
+	if (!nm_vpn_service_plugin_read_vpn_details (0, &data, &secrets)) {
 		fprintf (stderr, "Failed to read data and secrets from stdin.\n");
 		return NULL;
 	}
