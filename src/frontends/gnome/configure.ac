@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.3.2, martin@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.4.0, martin@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
