@@ -3,6 +3,9 @@ name=strongswan
 service=org.freedesktop.NetworkManager.strongswan
 program=@IPSECDIR@/charon-nm
 
+[libnm]
+plugin=@PLUGINDIR@/libnm-vpn-plugin-strongswan.so
+
 [GNOME]
 auth-dialog=@NM_LIBEXECDIR@/nm-strongswan-auth-dialog
 properties=@NM_PLUGINDIR@/libnm-strongswan-properties

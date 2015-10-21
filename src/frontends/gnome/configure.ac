@@ -46,7 +46,7 @@ PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
 PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
 PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
 
-PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 0.9.0 libnm-util libnm-glib libnm-glib-vpn)
+PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
 
 PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
