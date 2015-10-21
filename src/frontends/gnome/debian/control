@@ -4,6 +4,7 @@ Priority: extra
 Maintainer: Martin Willi <martin@strongswan.org>
 Build-Depends: cdbs,
 	debhelper (>= 7),
+	libnm (>= 1.1.0),
 	network-manager-dev (>= 0.9),
 	libnm-util-dev (>= 0.9),
 	libnm-glib-dev (>= 0.9),

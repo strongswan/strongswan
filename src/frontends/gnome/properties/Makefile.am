@@ -19,21 +19,21 @@ common_CFLAGS = \
 	-DGDK_DISABLE_DEPRECATED
 
 libnm_vpn_plugin_strongswan_la_CFLAGS = \
-	$(NM_UTILS_CFLAGS) \
+	$(LIBNM_GLIB_CFLAGS) \
 	$(common_CFLAGS)
 
 libnm_strongswan_properties_la_CFLAGS = \
 	-DNM_STRONGSWAN_OLD \
-	$(NM_UTILS_CFLAGS) \
+	$(LIBNM_GLIB_CFLAGS) \
 	$(common_CFLAGS)
 
 libnm_vpn_plugin_strongswan_la_LIBADD = \
 	$(GTK_LIBS) \
-	$(NM_UTILS_LIBS)
+	$(LIBNM_GLIB_LIBS)
 
 libnm_strongswan_properties_la_LIBADD = \
 	$(GTK_LIBS) \
-	$(NM_UTILS_LIBS)
+	$(LIBNM_GLIB_LIBS)
 
 libnm_vpn_plugin_strongswan_la_LDFLAGS = \
 	-avoid-version
