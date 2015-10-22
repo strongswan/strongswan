@@ -1,4 +1,7 @@
-bin/
-gen/
-libs/
-obj/
+.gradle/
+.idea/
+app/build/
+app/src/main/libs
+app/src/main/obj
+*.iml
+local.properties

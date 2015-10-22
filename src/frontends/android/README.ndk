@@ -1,5 +1,5 @@
-To build this within the NDK several things have to be added in the jni
-folder:
+To build this within the NDK several things have to be added in the
+app/src/main/jni/ folder:
 
  - strongswan: The strongSwan sources.  This can either be an extracted tarball,
    or a symlink to the Git repository.  To build from the repository the sources

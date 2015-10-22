@@ -16,11 +16,7 @@
     for more details.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.strongswan.android"
-    android:versionCode="28"
-    android:versionName="1.5.0" >
-
-    <uses-sdk android:minSdkVersion="15" android:targetSdkVersion="22" />
+    package="org.strongswan.android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
