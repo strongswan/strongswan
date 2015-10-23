@@ -280,6 +280,7 @@ ARG_ENABL_SET([manager],        [enable web management console (proof of concept
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
+ARG_ENABL_SET([nm-absolute-paths], [Use absolute paths to in .name files. Useful for development.])
 ARG_DISBL_SET([pki],            [disable pki certificate utility.])
 ARG_DISBL_SET([scepclient],     [disable SCEP client tool.])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
@@ -1127,6 +1128,8 @@ if test x$nm = xtrue; then
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm_util libnm_glib libnm_glib_vpn])]
 	)
 	nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
+	test x"$nm_absolute_paths" = x"yes" && nm_plugindir='$(libdir)/NetworkManager/'
+	AC_SUBST(nm_plugindir)
 	AC_SUBST(nm_libexecdir)
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
