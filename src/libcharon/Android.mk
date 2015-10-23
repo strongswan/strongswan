@@ -228,7 +228,6 @@ endif
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(strongswan_PATH)/src/include \
 	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libstrongswan
 
