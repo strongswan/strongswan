@@ -76,10 +76,17 @@ AC_ARG_WITH(
 	[AC_SUBST(charon, "$withval")],
 	[AC_SUBST(charon, "${libexecdir}/ipsec/charon-nm")]
 )
+AC_ARG_ENABLE(
+	[nm-absolute-paths],
+	AS_HELP_STRING([--enable-nm-absolute-paths],[use absolute paths for NM plugins in the .name file])
+)
+
 nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
 AC_SUBST(nm_libexecdir)
 nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
 AC_SUBST(nm_plugindir)
+test x"$enable_nm_absolute_paths" = x"yes" && nm_plugindir_abs="$(nm_plugindir)/"
+AC_SUBST(nm_plugindir_abs)
 
 NM_COMPILER_WARNINGS
 
