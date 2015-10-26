@@ -409,7 +409,7 @@ METHOD(authenticator_t, process, status_t,
 	}
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-														key_type, id, auth);
+													key_type, id, auth, TRUE);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, octets, auth_data))

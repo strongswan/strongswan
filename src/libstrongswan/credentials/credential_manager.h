@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -202,14 +203,18 @@ struct credential_manager_t {
 	 * where the auth config helper contains rules for constraint checks.
 	 * This function is very similar to create_trusted_enumerator(), but
 	 * gets public keys directly.
+	 * If online is set, revocations are checked online for the whole
+	 * trustchain.
 	 *
 	 * @param type		type of the key to get
 	 * @param id		owner of the key, signer of the signature
 	 * @param auth		authentication infos
+	 * @param online	whether revocations should be checked online
 	 * @return			enumerator
 	 */
 	enumerator_t* (*create_public_enumerator)(credential_manager_t *this,
-					key_type_t type, identification_t *id, auth_cfg_t *auth);
+					key_type_t type, identification_t *id, auth_cfg_t *auth,
+					bool online);
 
 	/**
 	 * Cache a certificate by invoking cache_cert() on all registered sets.

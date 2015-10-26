@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -993,7 +994,7 @@ METHOD(enumerator_t, public_destroy, void,
 
 METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
 	private_credential_manager_t *this, key_type_t type, identification_t *id,
-	auth_cfg_t *auth)
+	auth_cfg_t *auth, bool online)
 {
 	public_enumerator_t *enumerator;
 
@@ -1002,7 +1003,7 @@ METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
 			.enumerate = (void*)_public_enumerate,
 			.destroy = _public_destroy,
 		},
-		.inner = create_trusted_enumerator(this, type, id, TRUE),
+		.inner = create_trusted_enumerator(this, type, id, online),
 		.this = this,
 	);
 	if (auth)

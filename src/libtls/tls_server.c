@@ -548,7 +548,7 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	bio_reader_t *sig;
 
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-										KEY_ANY, this->peer, this->peer_auth);
+									KEY_ANY, this->peer, this->peer_auth, TRUE);
 	while (enumerator->enumerate(enumerator, &public, &auth))
 	{
 		sig = bio_reader_create(reader->peek(reader));
