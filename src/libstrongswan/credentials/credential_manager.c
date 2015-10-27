@@ -918,6 +918,8 @@ METHOD(enumerator_t, trusted_destroy, void,
 	DESTROY_IF(this->auth);
 	DESTROY_IF(this->candidates);
 	this->failed->destroy_offset(this->failed, offsetof(certificate_t, destroy));
+	/* check for delayed certificate cache queue */
+	cache_queue(this->this);
 	free(this);
 }
 
@@ -986,7 +988,6 @@ METHOD(enumerator_t, public_destroy, void,
 		this->wrapper->destroy(this->wrapper);
 	}
 	this->this->lock->unlock(this->this->lock);
-
 	/* check for delayed certificate cache queue */
 	cache_queue(this->this);
 	free(this);
