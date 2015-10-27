@@ -217,6 +217,11 @@ enum ike_condition_t {
 	 * This IKE_SA has been redirected
 	 */
 	COND_REDIRECTED = (1<<11),
+
+	/**
+	 * Online certificate revocation checking is suspended for this IKE_SA
+	 */
+	COND_ONLINE_VALIDATION_SUSPENDED = (1<<12),
 };
 
 /**
