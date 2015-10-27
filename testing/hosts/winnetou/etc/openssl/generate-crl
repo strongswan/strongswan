@@ -24,6 +24,9 @@ openssl crl -in crl.pem -outform der -out strongswan.crl
 cp strongswan.crl     ${ROOT}
 cp strongswanCert.pem ${ROOT}
 cp index.html         ${ROOT}
+# revoke moon's current CERT
+pki --signcrl --cacert strongswanCert.pem --cakey strongswanKey.pem --lifetime 30 --reason key-compromise --cert newcerts/2B.pem --lastcrl strongswan.crl > strongswan_moon_revoked.crl
+cp strongswan_moon_revoked.crl ${ROOT}
 cd /etc/openssl/research
 openssl ca -gencrl -crldays 15 -config /etc/openssl/research/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out research.crl
