@@ -522,6 +522,14 @@ struct ike_sa_t {
 	enumerator_t* (*create_auth_cfg_enumerator)(ike_sa_t *this, bool local);
 
 	/**
+	 * Verify the trustchains (validity, revocation) in completed public key
+	 * auth rounds.
+	 *
+	 * @return				TRUE if certificates were valid, FALSE otherwise
+	 */
+	bool (*verify_peer_certificate)(ike_sa_t *this);
+
+	/**
 	 * Get the selected proposal of this IKE_SA.
 	 *
 	 * @return				selected proposal
