@@ -59,6 +59,8 @@ enum task_type_t {
 	TASK_IKE_REAUTH_COMPLETE,
 	/** redirect an active IKE_SA */
 	TASK_IKE_REDIRECT,
+	/** verify a peer's certificate */
+	TASK_IKE_VERIFY_PEER_CERT,
 	/** delete an IKE_SA */
 	TASK_IKE_DELETE,
 	/** liveness check */

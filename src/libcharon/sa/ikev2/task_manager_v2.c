@@ -527,6 +527,11 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = INFORMATIONAL;
 					break;
 				}
+				if (activate_task(this, TASK_IKE_VERIFY_PEER_CERT))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
 			case IKE_REKEYING:
 				if (activate_task(this, TASK_IKE_DELETE))
 				{
