@@ -35,6 +35,7 @@
 #include <sa/ikev2/tasks/ike_config.h>
 #include <sa/ikev2/tasks/ike_dpd.h>
 #include <sa/ikev2/tasks/ike_vendor.h>
+#include <sa/ikev2/tasks/ike_verify_peer_cert.h>
 #include <sa/ikev2/tasks/child_create.h>
 #include <sa/ikev2/tasks/child_rekey.h>
 #include <sa/ikev2/tasks/child_delete.h>
@@ -1655,8 +1656,12 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	}
 	enumerator->destroy(enumerator);
 
+	/* suspend online revocation checking until the SA is established */
+	new->set_condition(new, COND_ONLINE_VALIDATION_SUSPENDED, TRUE);
+
 	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
 	{
+		new->queue_task(new, (task_t*)ike_verify_peer_cert_create(new));
 		new->queue_task(new, (task_t*)ike_reauth_complete_create(new,
 										this->ike_sa->get_id(this->ike_sa)));
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
