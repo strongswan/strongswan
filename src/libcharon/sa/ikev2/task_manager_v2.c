@@ -624,7 +624,7 @@ METHOD(task_manager_t, initiate, status_t,
 	if (this->initiating.type == EXCHANGE_TYPE_UNDEFINED)
 	{
 		message->destroy(message);
-		return SUCCESS;
+		return initiate(this);
 	}
 
 	if (!generate_message(this, message, &this->initiating.packets))
