@@ -463,6 +463,26 @@ METHOD(ike_sa_t, create_auth_cfg_enumerator, enumerator_t*,
 	return array_create_enumerator(this->other_auths);
 }
 
+/**
+ * Flush the stored authentication round information
+ */
+static void flush_auth_cfgs(private_ike_sa_t *this)
+{
+	auth_cfg_t *cfg;
+
+	this->my_auth->purge(this->my_auth, FALSE);
+	this->other_auth->purge(this->other_auth, FALSE);
+
+	while (array_remove(this->my_auths, ARRAY_TAIL, &cfg))
+	{
+		cfg->destroy(cfg);
+	}
+	while (array_remove(this->other_auths, ARRAY_TAIL, &cfg))
+	{
+		cfg->destroy(cfg);
+	}
+}
+
 METHOD(ike_sa_t, verify_peer_certificate, bool,
 	private_ike_sa_t *this)
 {
@@ -482,13 +502,16 @@ METHOD(ike_sa_t, verify_peer_certificate, bool,
 		return FALSE;
 	}
 
-	if (lib->settings->get_bool(lib->settings,
+	if (!this->flush_auth_cfg &&
+		lib->settings->get_bool(lib->settings,
 								"%s.flush_auth_cfg", FALSE, lib->ns))
-	{
+	{	/* we can do this check only once if auth configs are flushed */
 		DBG1(DBG_IKE, "unable to verify peer certificate as authentication "
 			 "information has been flushed");
 		return FALSE;
 	}
+	this->public.set_condition(&this->public, COND_ONLINE_VALIDATION_SUSPENDED,
+							   FALSE);
 
 	e1 = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg, FALSE);
 	e2 = array_create_enumerator(this->other_auths);
@@ -514,9 +537,6 @@ METHOD(ike_sa_t, verify_peer_certificate, bool,
 		}
 		if (!peer->get_validity(peer, NULL, &not_before, &not_after))
 		{
-			/* FIXME: theoretically we could find a newer cert with the same
-			 * identity and public key below...but it's not the cert used by
-			 * the peer during the original authentication so... */
 			DBG1(DBG_IKE, "peer certificate invalid (valid from %T to %T)",
 				 &not_before, FALSE, &not_after, FALSE);
 			valid = FALSE;
@@ -561,27 +581,13 @@ METHOD(ike_sa_t, verify_peer_certificate, bool,
 	}
 	e1->destroy(e1);
 	e2->destroy(e2);
+
+	if (this->flush_auth_cfg)
+	{
+		this->flush_auth_cfg = FALSE;
+		flush_auth_cfgs(this);
+	}
 	return valid;
-}
-
-/**
- * Flush the stored authentication round information
- */
-static void flush_auth_cfgs(private_ike_sa_t *this)
-{
-	auth_cfg_t *cfg;
-
-	this->my_auth->purge(this->my_auth, FALSE);
-	this->other_auth->purge(this->other_auth, FALSE);
-
-	while (array_remove(this->my_auths, ARRAY_TAIL, &cfg))
-	{
-		cfg->destroy(cfg);
-	}
-	while (array_remove(this->other_auths, ARRAY_TAIL, &cfg))
-	{
-		cfg->destroy(cfg);
-	}
 }
 
 METHOD(ike_sa_t, get_proposal, proposal_t*,
@@ -1543,9 +1549,14 @@ METHOD(ike_sa_t, process_message, status_t,
 	status = this->task_manager->process_message(this->task_manager, message);
 	if (this->flush_auth_cfg && this->state == IKE_ESTABLISHED)
 	{
-		/* authentication completed */
-		this->flush_auth_cfg = FALSE;
-		flush_auth_cfgs(this);
+		/* authentication completed but if the online validation is suspended we
+		 * need the auth cfgs until we did the delayed verification, we flush
+		 * them afterwards */
+		if (!has_condition(this, COND_ONLINE_VALIDATION_SUSPENDED))
+		{
+			this->flush_auth_cfg = FALSE;
+			flush_auth_cfgs(this);
+		}
 	}
 	return status;
 }
