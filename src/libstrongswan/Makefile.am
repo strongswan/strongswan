@@ -288,6 +288,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SHA3
+  SUBDIRS += plugins/sha3
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sha3/libstrongswan-sha3.la
+endif
+endif
+
 if USE_GMP
   SUBDIRS += plugins/gmp
 if MONOLITHIC

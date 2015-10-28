@@ -40,6 +40,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/sha1_hmac.c \
 	test_vectors/sha2.c \
 	test_vectors/sha2_hmac.c \
+	test_vectors/sha3.c \
 	test_vectors/fips_prf.c \
 	test_vectors/modp.c \
 	test_vectors/modpsub.c \
