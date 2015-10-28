@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -100,6 +100,12 @@ enum signature_scheme_t {
 	SIGN_BLISS_WITH_SHA384,
 	/** BLISS with SHA-512                                             */
 	SIGN_BLISS_WITH_SHA512,
+	/** BLISS with SHA-3_256                                           */
+	SIGN_BLISS_WITH_SHA3_256,
+	/** BLISS with SHA-3_384                                           */
+	SIGN_BLISS_WITH_SHA3_384,
+	/** BLISS with SHA-3_512                                           */
+	SIGN_BLISS_WITH_SHA3_512,
 };
 
 /**

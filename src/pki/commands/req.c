@@ -196,7 +196,8 @@ static void __attribute__ ((constructor))reg()
 		"create a PKCS#10 certificate request",
 		{"  [--in file] [--type rsa|ecdsa|bliss] --dn distinguished-name",
 		 "[--san subjectAltName]+ [--password challengePassword]",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},

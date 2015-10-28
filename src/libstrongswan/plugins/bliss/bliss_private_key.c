@@ -517,6 +517,12 @@ METHOD(private_key_t, sign, bool,
 			return sign_bliss(this, HASH_SHA384, data, signature);
 		case SIGN_BLISS_WITH_SHA512:
 			return sign_bliss(this, HASH_SHA512, data, signature);
+		case SIGN_BLISS_WITH_SHA3_256:
+			return sign_bliss(this, HASH_SHA3_256, data, signature);
+		case SIGN_BLISS_WITH_SHA3_384:
+			return sign_bliss(this, HASH_SHA3_384, data, signature);
+		case SIGN_BLISS_WITH_SHA3_512:
+			return sign_bliss(this, HASH_SHA3_512, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported with BLISS",
 				 signature_scheme_names, scheme);

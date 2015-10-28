@@ -428,16 +428,19 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_ECDSA_WITH_SHA256_DER:
 		case SIGN_ECDSA_256:
 		case SIGN_BLISS_WITH_SHA256:
+		case SIGN_BLISS_WITH_SHA3_256:
 			return HASH_SHA256;
 		case SIGN_RSA_EMSA_PKCS1_SHA384:
 		case SIGN_ECDSA_WITH_SHA384_DER:
 		case SIGN_ECDSA_384:
 		case SIGN_BLISS_WITH_SHA384:
+		case SIGN_BLISS_WITH_SHA3_384:
 			return HASH_SHA384;
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
 		case SIGN_ECDSA_WITH_SHA512_DER:
 		case SIGN_ECDSA_521:
 		case SIGN_BLISS_WITH_SHA512:
+		case SIGN_BLISS_WITH_SHA3_512:
 			return HASH_SHA512;
 	}
 	return HASH_UNKNOWN;

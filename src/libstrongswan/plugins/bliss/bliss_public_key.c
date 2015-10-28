@@ -199,6 +199,12 @@ METHOD(public_key_t, verify, bool,
 			return verify_bliss(this, HASH_SHA384, data, signature);
 		case SIGN_BLISS_WITH_SHA512:
 			return verify_bliss(this, HASH_SHA512, data, signature);
+		case SIGN_BLISS_WITH_SHA3_256:
+			return verify_bliss(this, HASH_SHA3_256, data, signature);
+		case SIGN_BLISS_WITH_SHA3_384:
+			return verify_bliss(this, HASH_SHA3_384, data, signature);
+		case SIGN_BLISS_WITH_SHA3_512:
+			return verify_bliss(this, HASH_SHA3_512, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported by BLISS",
 				 signature_scheme_names, scheme);

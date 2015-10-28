@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -47,6 +47,9 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA512,
 	"BLISS_WITH_SHA256",
 	"BLISS_WITH_SHA384",
 	"BLISS_WITH_SHA512",
+	"BLISS_WITH_SHA3_256",
+	"BLISS_WITH_SHA3_384",
+	"BLISS_WITH_SHA3_512",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,
@@ -139,10 +142,16 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 		case OID_BLISS_PUBLICKEY:
 		case OID_BLISS_WITH_SHA512:
 			return SIGN_BLISS_WITH_SHA512;
-		case OID_BLISS_WITH_SHA256:
-			return SIGN_BLISS_WITH_SHA256;
 		case OID_BLISS_WITH_SHA384:
 			return SIGN_BLISS_WITH_SHA384;
+		case OID_BLISS_WITH_SHA256:
+			return SIGN_BLISS_WITH_SHA256;
+		case OID_BLISS_WITH_SHA3_512:
+			return SIGN_BLISS_WITH_SHA3_512;
+		case OID_BLISS_WITH_SHA3_384:
+			return SIGN_BLISS_WITH_SHA3_384;
+		case OID_BLISS_WITH_SHA3_256:
+			return SIGN_BLISS_WITH_SHA3_256;
 	}
 	return SIGN_UNKNOWN;
 }
@@ -187,6 +196,12 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_BLISS_WITH_SHA384;
 		case SIGN_BLISS_WITH_SHA512:
 			return OID_BLISS_WITH_SHA512;
+		case SIGN_BLISS_WITH_SHA3_256:
+			return OID_BLISS_WITH_SHA3_256;
+		case SIGN_BLISS_WITH_SHA3_384:
+			return OID_BLISS_WITH_SHA3_384;
+		case SIGN_BLISS_WITH_SHA3_512:
+			return OID_BLISS_WITH_SHA3_512;
 	}
 	return OID_UNKNOWN;
 }
@@ -287,6 +302,9 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_BLISS_WITH_SHA256:
 		case SIGN_BLISS_WITH_SHA384:
 		case SIGN_BLISS_WITH_SHA512:
+		case SIGN_BLISS_WITH_SHA3_256:
+		case SIGN_BLISS_WITH_SHA3_384:
+		case SIGN_BLISS_WITH_SHA3_512:
 			return KEY_BLISS;
 	}
 	return KEY_ANY;
