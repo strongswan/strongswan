@@ -254,7 +254,7 @@ static int run()
 		sig = sigwaitinfo(&set, NULL);
 		if (sig == -1)
 		{
-			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(error));
+			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return SS_RC_INITIALIZATION_FAILED;
 		}
 		switch (sig)

@@ -103,7 +103,7 @@ static void run()
 		sig = sigwaitinfo(&set, NULL);
 		if (sig == -1)
 		{
-			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(error));
+			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return;
 		}
 		switch (sig)
