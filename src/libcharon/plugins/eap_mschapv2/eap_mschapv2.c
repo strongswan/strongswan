@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2015 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -86,6 +86,16 @@ struct private_eap_mschapv2_t
 	 * Provide EAP-Identity
 	 */
 	auth_cfg_t *auth;
+
+	/**
+	 * Current state
+	 */
+	enum {
+		S_EXPECT_CHALLENGE,
+		S_EXPECT_RESPONSE,
+		S_EXPECT_SUCCESS,
+		S_DONE,
+	} state;
 };
 
 /**
@@ -633,6 +643,7 @@ METHOD(eap_method_t, initiate_server, status_t,
 	memcpy(cha->name, name, sizeof(MSCHAPV2_HOST_NAME) - 1);
 
 	*out = eap_payload_create_data(chunk_create((void*) eap, len));
+	this->state = S_EXPECT_RESPONSE;
 	return NEED_MORE;
 }
 
@@ -752,6 +763,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	memcpy(res->name, userid.ptr, userid.len);
 
 	*out = eap_payload_create_data(chunk_create((void*) eap, len));
+	this->state = S_EXPECT_SUCCESS;
 	return NEED_MORE;
 }
 
@@ -834,6 +846,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 
 	*out = eap_payload_create_data(chunk_create((void*) eap, len));
 	status = NEED_MORE;
+	this->state = S_DONE;
 
 error:
 	chunk_free(&auth_string);
@@ -927,6 +940,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	 */
 
 	status = FAILED;
+	this->state = S_DONE;
 
 error:
 	chunk_free(&challenge);
@@ -951,26 +965,38 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	eap = (eap_mschapv2_header_t*)data.ptr;
 
+	switch (this->state)
+	{
+		case S_EXPECT_CHALLENGE:
+			if (eap->opcode == MSCHAPV2_CHALLENGE)
+			{
+				return process_peer_challenge(this, in, out);
+			}
+			break;
+		case S_EXPECT_SUCCESS:
+			switch (eap->opcode)
+			{
+				case MSCHAPV2_SUCCESS:
+					return process_peer_success(this, in, out);
+				case MSCHAPV2_FAILURE:
+					return process_peer_failure(this, in, out);
+			}
+			break;
+		default:
+			break;
+	}
 	switch (eap->opcode)
 	{
 		case MSCHAPV2_CHALLENGE:
-		{
-			return process_peer_challenge(this, in, out);
-		}
 		case MSCHAPV2_SUCCESS:
-		{
-			return process_peer_success(this, in, out);
-		}
 		case MSCHAPV2_FAILURE:
-		{
-			return process_peer_failure(this, in, out);
-		}
+			DBG1(DBG_IKE, "received unexpected EAP-MS-CHAPv2 message with "
+				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
+			break;
 		default:
-		{
 			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported "
 				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
 			break;
-		}
 	}
 	return FAILED;
 }
@@ -1032,6 +1058,8 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	/* delay the response for some time to make brute-force attacks harder */
 	sleep(RETRY_DELAY);
 
+	/* since the error is retryable the state does not change, we still
+	 * expect an MSCHAPV2_RESPONSE from the peer */
 	return NEED_MORE;
 }
 
@@ -1118,6 +1146,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		*out = eap_payload_create_data(chunk_create((void*) eap, len));
 
 		this->auth->add(this->auth, AUTH_RULE_EAP_IDENTITY, userid);
+		this->state = S_EXPECT_SUCCESS;
 		return NEED_MORE;
 	}
 	userid->destroy(userid);
@@ -1146,26 +1175,39 @@ METHOD(eap_method_t, process_server, status_t,
 
 	eap = (eap_mschapv2_header_t*)data.ptr;
 
+	switch (this->state)
+	{
+		case S_EXPECT_RESPONSE:
+			if (eap->opcode == MSCHAPV2_RESPONSE)
+			{
+				return process_server_response(this, in, out);
+			}
+			break;
+		case S_EXPECT_SUCCESS:
+			if (eap->opcode == MSCHAPV2_SUCCESS &&
+				this->msk.ptr)
+			{
+				return SUCCESS;
+			}
+			break;
+		default:
+			break;
+	}
 	switch (eap->opcode)
 	{
-		case MSCHAPV2_RESPONSE:
-		{
-			return process_server_response(this, in, out);
-		}
-		case MSCHAPV2_SUCCESS:
-		{
-			return SUCCESS;
-		}
 		case MSCHAPV2_FAILURE:
-		{
+			/* the client may abort the authentication by sending us a failure
+			 * in any state */
 			return FAILED;
-		}
+		case MSCHAPV2_RESPONSE:
+		case MSCHAPV2_SUCCESS:
+			DBG1(DBG_IKE, "received unexpected EAP-MS-CHAPv2 message with "
+				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
+			break;
 		default:
-		{
 			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported "
 				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
 			break;
-		}
 	}
 	return FAILED;
 }
@@ -1247,6 +1289,7 @@ static private_eap_mschapv2_t *eap_mschapv2_create_generic(identification_t *ser
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
 		.auth = auth_cfg_create(),
+		.state = S_EXPECT_CHALLENGE,
 	);
 
 	return this;
