@@ -98,7 +98,8 @@ CONFIG_OPTS = \
 	--enable-ntru \
 	--enable-lookip \
 	--enable-swanctl \
-	--enable-bliss
+	--enable-bliss \
+	--enable-sha3
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

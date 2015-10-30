@@ -45,5 +45,5 @@ openssl ca -gencrl -crldays 15 -config /etc/openssl/rfc3779/openssl.cnf -out crl
 openssl crl -in crl.pem -outform der -out strongswan_rfc3779.crl
 cp strongswan_rfc3779.crl ${ROOT}
 cd /etc/openssl/bliss
-pki --signcrl --cacert strongswan_blissCert.der --cakey strongswan_blissKey.der --lifetime 30 --digest sha512 > strongswan_bliss.crl
+pki --signcrl --cacert strongswan_blissCert.der --cakey strongswan_blissKey.der --lifetime 30 --digest sha3_512 > strongswan_bliss.crl
 cp strongswan_bliss.crl ${ROOT}
