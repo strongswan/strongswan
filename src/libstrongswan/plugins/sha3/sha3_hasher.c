@@ -18,6 +18,7 @@
 typedef struct private_sha3_hasher_t private_sha3_hasher_t;
 
 #define KECCAK_STATE_SIZE	 200	/* bytes */
+#define KECCAK_MAX_RATE		 144	/* bytes */
 #define DELIMITED_SUFFIX	0x06
 
 static const uint64_t round_constants[] = {
@@ -71,6 +72,11 @@ struct private_sha3_hasher_t {
 	 * Rate in bytes
 	 */
 	u_int rate;
+
+	/**
+	 * Rate input buffer
+	 */
+	uint8_t rate_buffer[KECCAK_MAX_RATE];
 
 	/**
 	 * Index pointing to the current position in the rate buffer
@@ -384,22 +390,59 @@ METHOD(hasher_t, get_hash_size, size_t,
 
 static void sha3_absorb(private_sha3_hasher_t *this, chunk_t data)
 {
-	while (data.len--)
+	uint64_t *buffer_lanes, *state_lanes;
+	size_t len, rate_lanes;
+	int i;
+
+	buffer_lanes = (uint64_t*)this->rate_buffer;
+	state_lanes  = (uint64_t*)this->state;
+	rate_lanes = this->rate / sizeof(uint64_t);
+
+	while (data.len)
 	{
-		this->state[this->rate_index++] ^= *data.ptr++;
+		len = min(data.len, this->rate - this->rate_index);
+		memcpy(this->rate_buffer + this->rate_index, data.ptr, len);
+		this->rate_index += len;
+		data.ptr += len;
+		data.len -= len;
 
 		if (this->rate_index == this->rate)
 		{
-			keccak_f1600_state_permute(this->state);
+			for (i = 0; i < rate_lanes; i++)
+			{
+				state_lanes[i] ^= buffer_lanes[i];
+			}
 			this->rate_index = 0;
+
+			keccak_f1600_state_permute(this->state);
 		}
 	}
 }
 
 static void sha3_final(private_sha3_hasher_t *this)
 {
+	uint64_t *buffer_lanes, *state_lanes;
+	size_t rate_lanes, remainder;
+	int i;
+
 	/* Add the delimitedSuffix as the first bit of padding */
-	this->state[this->rate_index] ^= DELIMITED_SUFFIX;
+	this->rate_buffer[this->rate_index++] = DELIMITED_SUFFIX;
+
+	buffer_lanes = (uint64_t*)this->rate_buffer;
+	state_lanes  = (uint64_t*)this->state;
+	rate_lanes = this->rate_index / sizeof(uint64_t);
+
+	remainder = this->rate_index - rate_lanes * sizeof(uint64_t);
+	if (remainder)
+	{
+		memset(this->rate_buffer + this->rate_index, 0x00,
+			   sizeof(uint64_t) - remainder);
+		rate_lanes++;
+	}
+	for (i = 0; i < rate_lanes; i++)
+	{
+		state_lanes[i] ^= buffer_lanes[i];
+	}
 
 	/* Add the second bit of padding */
 	this->state[this->rate - 1] ^= 0x80;
