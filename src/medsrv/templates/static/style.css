@@ -104,23 +104,6 @@ a img {
 	color: #dd0000;
 }
 
-.even {
-	cursor : pointer;
-}
-
-.even a, .odd a {
-	text-decoration: none;
-}
-
-.odd {
-	background-color: #f2cd6f;
-	cursor : pointer;
-}
-
-.head {
-	background-color: #ffec9e;
-}
-
 table.list * {
 	padding: 0px 1em 0px 0.2em;
 }
@@ -130,3 +113,16 @@ table.list tr td, table.list tr th {
 	border-color: black;
 }
 
+table.list tr th {
+	background-color: #ffec9e;
+}
+
+table.list tr:nth-child(odd) td {
+	background-color: #f2cd6f;
+}
+
+table.list tr td a {
+	text-decoration: none;
+	display: inline-block;
+	width: 100%;
+}
