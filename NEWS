@@ -1,3 +1,12 @@
+strongswan-5.3.4
+----------------
+
+- The sha3 plugin implements the SHA3 Keccak-F1600 hash algorithm family.
+  Within the strongSwan framework SHA3 is currently used for BLISS signatures
+  only because the OIDs for other signature algorithms haven't been defined
+  yet. Also the use of SHA3 for IKEv2 has not been standardized yet.
+
+
 strongswan-5.3.3
 ----------------
 
