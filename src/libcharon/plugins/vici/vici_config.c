@@ -1619,8 +1619,8 @@ static void clear_start_action(private_vici_config_t *this,
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t id = 0;
-	array_t *ids = NULL;
+	u_int32_t id = 0, others;
+	array_t *ids = NULL, *ikeids = NULL;
 	char *name;
 
 	name = child_cfg->get_name(child_cfg);
@@ -1631,17 +1631,45 @@ static void clear_start_action(private_vici_config_t *this,
 													charon->controller, TRUE);
 			while (enumerator->enumerate(enumerator, &ike_sa))
 			{
+				others = id = 0;
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
-					if (streq(name, child_sa->get_name(child_sa)))
+					if (child_sa->get_state(child_sa) != CHILD_DELETING)
 					{
-						id = child_sa->get_unique_id(child_sa);
-						array_insert_create_value(&ids, sizeof(id),
-												  ARRAY_TAIL, &id);
+						if (streq(name, child_sa->get_name(child_sa)))
+						{
+							id = child_sa->get_unique_id(child_sa);
+						}
+						else
+						{
+							others++;
+						}
 					}
 				}
 				children->destroy(children);
+
+				if (id && !others)
+				{
+					/* found matching children only, delete full IKE_SA */
+					id = ike_sa->get_unique_id(ike_sa);
+					array_insert_create_value(&ikeids, sizeof(id),
+											  ARRAY_TAIL, &id);
+				}
+				else
+				{
+					children = ike_sa->create_child_sa_enumerator(ike_sa);
+					while (children->enumerate(children, &child_sa))
+					{
+						if (streq(name, child_sa->get_name(child_sa)))
+						{
+							id = child_sa->get_unique_id(child_sa);
+							array_insert_create_value(&ids, sizeof(id),
+													  ARRAY_TAIL, &id);
+						}
+					}
+					children->destroy(children);
+				}
 			}
 			enumerator->destroy(enumerator);
 
@@ -1654,6 +1682,16 @@ static void clear_start_action(private_vici_config_t *this,
 														id, NULL, NULL, 0);
 				}
 				array_destroy(ids);
+			}
+			if (array_count(ikeids))
+			{
+				while (array_remove(ikeids, ARRAY_HEAD, &id))
+				{
+					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
+					charon->controller->terminate_ike(charon->controller,
+													  id, NULL, NULL, 0);
+				}
+				array_destroy(ikeids);
 			}
 			break;
 		case ACTION_ROUTE:
