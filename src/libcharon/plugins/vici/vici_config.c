@@ -1613,7 +1613,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 /**
  * Undo start actions associated to a child config
  */
-static void clear_start_action(private_vici_config_t *this,
+static void clear_start_action(private_vici_config_t *this, char *peer_name,
 							   child_cfg_t *child_cfg)
 {
 	enumerator_t *enumerator, *children;
@@ -1631,6 +1631,10 @@ static void clear_start_action(private_vici_config_t *this,
 													charon->controller, TRUE);
 			while (enumerator->enumerate(enumerator, &ike_sa))
 			{
+				if (!streq(ike_sa->get_name(ike_sa), peer_name))
+				{
+					continue;
+				}
 				others = id = 0;
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
@@ -1753,7 +1757,7 @@ static void clear_start_actions(private_vici_config_t *this,
 	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 	while (enumerator->enumerate(enumerator, &child_cfg))
 	{
-		clear_start_action(this, child_cfg);
+		clear_start_action(this, peer_cfg->get_name(peer_cfg), child_cfg);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1771,7 +1775,7 @@ static void replace_children(private_vici_config_t *this,
 	while (enumerator->enumerate(enumerator, &child))
 	{
 		to->remove_child_cfg(to, enumerator);
-		clear_start_action(this, child);
+		clear_start_action(this, to->get_name(to), child);
 		child->destroy(child);
 	}
 	enumerator->destroy(enumerator);
