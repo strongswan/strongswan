@@ -1886,9 +1886,8 @@ CALLBACK(config_sn, bool,
 
 	if (peer.local->get_count(peer.local) == 0)
 	{
-		free_peer_data(&peer);
-		peer.request->reply = create_reply("missing local auth config");
-		return FALSE;
+		auth_cfg = auth_cfg_create();
+		peer.local->insert_last(peer.local, auth_cfg);
 	}
 	if (peer.remote->get_count(peer.remote) == 0)
 	{
