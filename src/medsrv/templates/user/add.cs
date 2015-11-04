@@ -6,7 +6,7 @@
   <table class="user">
     <tr>
       <td><label for="new_login">Username</label></td>
-      <td><input type="text" id="new_login" name="new_login" class="focus" maxlength="30" value="<?cs var:new_login ?>"/></td>
+      <td><input type="text" id="new_login" name="new_login" autofocus maxlength="30" value="<?cs var:new_login ?>"/></td>
     </tr>
     <tr>
       <td><label for="new_password">Password</label></td>

@@ -6,7 +6,7 @@
   <table class="peer">
     <tr>
       <td><label for="alias">Alias</label></td>
-      <td><input type="text" id="alias" name="alias" maxlength="30" class="focus" value="<?cs var:alias ?>"/></td>
+      <td><input type="text" id="alias" name="alias" maxlength="30" autofocus value="<?cs var:alias ?>"/></td>
     </tr>
     <tr>
       <td valign="top"><label for="public_key">Public Key</label></td>
