@@ -2005,6 +2005,7 @@ CALLBACK(unload_conn, vici_message_t*,
 		if (streq(cfg->get_name(cfg), conn_name))
 		{
 			this->conns->remove_at(this->conns, enumerator);
+			clear_start_actions(this, cfg);
 			cfg->destroy(cfg);
 			found = TRUE;
 			break;
