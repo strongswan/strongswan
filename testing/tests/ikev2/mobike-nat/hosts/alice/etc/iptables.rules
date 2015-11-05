@@ -5,11 +5,15 @@
 -P OUTPUT DROP
 -P FORWARD DROP
 
+# allow traffic on lo as ifup/ifdown call bind's rndc which accesses TCP 953
+-A OUTPUT -o lo -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+
 # allow IPsec tunnel traffic
 -A INPUT  -m policy --dir in  --pol ipsec --proto esp -j ACCEPT
 -A OUTPUT -m policy --dir out --pol ipsec --proto esp -j ACCEPT
 
-# allow ESP 
+# allow ESP
 -A INPUT  -i eth0 -p 50 -j ACCEPT
 -A INPUT  -i eth1 -p 50 -j ACCEPT
 -A OUTPUT -o eth0 -p 50 -j ACCEPT
