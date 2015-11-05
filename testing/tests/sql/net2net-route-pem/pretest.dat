@@ -9,5 +9,5 @@ sun::iptables-restore < /etc/iptables.rules
 sun::ipsec start
 moon::ipsec start
 moon::expect-connection net-net
-alice::ping -c 1 PH_IP_BOB
-bob::ping -c 1 PH_IP_VENUS
+alice::ping -c 1 -W 1 PH_IP_BOB
+bob::ping -c 1 -W 1 PH_IP_VENUS
