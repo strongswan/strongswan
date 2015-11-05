@@ -1063,7 +1063,10 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	name_len = min(data.len - RESPONSE_PAYLOAD_LEN, 255);
 	snprintf(buf, sizeof(buf), "%.*s", name_len, res->name);
 	userid = identification_create_from_string(buf);
-	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
+	if (!userid->equals(userid, this->peer))
+	{
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
+	}
 	/* userid can only be destroyed after the last use of username */
 	username = extract_username(userid->get_encoding(userid));
 
