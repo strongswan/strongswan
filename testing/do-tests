@@ -131,7 +131,7 @@ ENVIRONMENT_HEADER=$(cat <<@EOF
     <tr>
       <td width="100">&nbsp;</td>
       <td width="300">&nbsp;</td>
-      <td width=" 50">&nbsp;</td>
+      <td width=" 80">&nbsp;</td>
       <td >&nbsp;</td>
     </tr>
 @EOF
@@ -159,7 +159,8 @@ cat > $TESTRESULTSHTML <<@EOF
     <tr align="left">
       <th>Number</th>
       <th>Test</th>
-      <th colspan="2">Result</th>
+      <th align="right">Time [s]</th>
+      <th>Result</th>
     </tr>
 @EOF
 
@@ -248,6 +249,8 @@ do
 	let "testnumber += 1"
 	testname=$SUBDIR/$name
 	log_action " $testnumber $testname:"
+
+	teststart=$(date +%s)
 
 	if [ ! -d $DEFAULTTESTSDIR/${testname} ]
 	then
@@ -782,6 +785,9 @@ do
 	##########################################################################
 	# write test status to html file
 	#
+	testend=$(date +%s)
+	let "testend -= teststart"
+	let "timetotal += testend"
 
 	if [ $STATUS = "passed" ]
 	then
@@ -796,8 +802,8 @@ do
   <tr>
     <td>$testnumber</td>
     <td><a href="$testname/index.html">$testname</a></td>
+    <td align="right">$testend</td>
     <td><a href="$testname/console.log"><font color="$COLOR">$STATUS</font></a></td>
-    <td>&nbsp;</td>
   </tr>
 @EOF
 	cat >> $SUBTESTSINDEX << @EOF
@@ -838,6 +844,9 @@ cat >> $TESTRESULTSHTML << @EOF
     </tr>
     <tr>
       <td><b>Failed</b></td><td><b><font color="red">$failed_cnt</font></b></td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><b>Time [s]</b></td><td><b><font color="blue">$timetotal</font></b></td><td>&nbsp;</td><td>&nbsp;</td>
     </tr>
   </table>
 </body>
@@ -883,6 +892,6 @@ echo
 echo "The results are available in $TODAYDIR"
 echo "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
 
-ENDDATE=`date +%Y%m%d-%H%M`
+ENDDATE=`date +%Y%m%d-%H%M-%S`
 echo
 echo "Finished : $ENDDATE"
