@@ -1802,6 +1802,8 @@ METHOD(task_manager_t, queue_dpd, void,
 							pow(this->retransmit_base, retransmit));
 		}
 	}
+	/* compensate for the already elapsed dpd delay */
+	t -= 1000 * peer_cfg->get_dpd(peer_cfg);
 
 	/* schedule DPD timeout job */
 	lib->scheduler->schedule_job_ms(lib->scheduler,
