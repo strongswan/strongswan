@@ -49,6 +49,9 @@ log_action "Mounting $SWANDIR as /root/strongswan"
 execute "bindfs -u $SRCUID -g $SRCGID $SWANDIR $LOOPDIR/root/strongswan"
 do_on_exit umount $LOOPDIR/root/strongswan
 
+log_action "Remove SWID tags of previous versions"
+execute_chroot 'find /usr/local/share/regid.2004-03.org.strongswan -name *.swidtag -delete'
+
 echo "Building and installing strongSwan"
 log_action "Preparing source tree"
 execute_chroot 'autoreconf -i /root/strongswan'
