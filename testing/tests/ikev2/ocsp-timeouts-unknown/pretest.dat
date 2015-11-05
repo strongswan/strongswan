@@ -1,5 +1,5 @@
-moon::iptables -I OUTPUT -d PH_IP_WINNETOU -p tcp --dport 80 -j DROP
-carol::iptables -I OUTPUT -d PH_IP_WINNETOU -p tcp --dport 80 -j DROP
+moon::iptables -I OUTPUT -d PH_IP_WINNETOU -p tcp --dport 80 -j REJECT --reject-with tcp-reset
+carol::iptables -I OUTPUT -d PH_IP_WINNETOU -p tcp --dport 80 -j REJECT --reject-with tcp-reset
 moon::ipsec start
 carol::ipsec start
 carol::expect-connection home
