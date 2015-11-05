@@ -6,7 +6,7 @@ echo "Content-type: application/ocsp-response"
 echo ""
 
 # simulate a delayed response
-sleep 5
+sleep 2
 
 cat | /usr/bin/openssl ocsp -index index.txt -CA strongswanCert.pem \
 	-rkey ocspKey.pem -rsigner ocspCert.pem \

@@ -6,5 +6,5 @@ OCSP server is listening. Thanks to timeouts the connection can nevertheless
 be established successfully by contacting a valid OCSP URI contained in
 <b>carol</b>'s certificate.
 <p>
-As an additional test the OCSP response is delayed by 5 seconds in order to check
+As an additional test the OCSP response is delayed by a few seconds in order to check
 the correct handling of retransmitted IKE_AUTH messages.
