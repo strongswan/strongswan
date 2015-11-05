@@ -504,32 +504,20 @@ do
 
 		scp $SSHCONF $HOSTLOGIN:/etc/strongswan.conf \
 		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
-
 		if [  -n "$SWANCTL" ]
 		then
 			scp $SSHCONF $HOSTLOGIN:/etc/swanctl/swanctl.conf \
 			$TESTRESULTDIR/${host}.swanctl.conf  > /dev/null 2>&1
 
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-conns \
-			    > $TESTRESULTDIR/${host}.swanctl.conns 2>/dev/null
+			for subsys in conns certs pools authorities sas pols
+			do
+				ssh $SSHCONF $HOSTLOGIN swanctl --list-$subsys \
+					> $TESTRESULTDIR/${host}.swanctl.$subsys 2>/dev/null
+			done
 
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-certs \
-			    > $TESTRESULTDIR/${host}.swanctl.certs 2>/dev/null
-
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pools \
-			    > $TESTRESULTDIR/${host}.swanctl.pools 2>/dev/null
-
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-authorities \
-			    > $TESTRESULTDIR/${host}.swanctl.authorities 2>/dev/null
-
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-sas \
-			    > $TESTRESULTDIR/${host}.swanctl.sas 2>/dev/null
-
-		    ssh $SSHCONF $HOSTLOGIN swanctl --list-pols \
-			    > $TESTRESULTDIR/${host}.swanctl.pols 2>/dev/null
-
-		    ssh $SSHCONF $HOSTLOGIN swanctl --stats \
-			    > $TESTRESULTDIR/${host}.swanctl.stats 2>/dev/null
+			# this is quite slow due to allocation stats via leak-detective
+			ssh $SSHCONF $HOSTLOGIN swanctl --stats \
+				> $TESTRESULTDIR/${host}.swanctl.stats 2>/dev/null
 		else
 		    for file in ipsec.conf ipsec.secrets
 		    do
