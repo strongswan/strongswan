@@ -266,6 +266,9 @@ Initiates an SA while streaming _control-log_ events.
 		errmsg = <error string on failure or timeout>
 	}
 
+The default timeout of 0 waits indefinitely for a result, and a timeout value
+of -1 returns a result immediately.
+
 ### terminate() ###
 
 Terminates an SA while streaming _control-log_ events.
@@ -281,6 +284,9 @@ Terminates an SA while streaming _control-log_ events.
 		success = <yes or no>
 		errmsg = <error string on failure or timeout>
 	}
+
+The default timeout of 0 waits indefinitely for a result, and a timeout value
+of -1 returns a result immediately.
 
 ### install() ###
 

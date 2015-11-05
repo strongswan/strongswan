@@ -162,8 +162,9 @@ CALLBACK(initiate, vici_message_t*,
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
 	char *child;
-	u_int timeout;
+	int timeout;
 	bool limits;
+	controller_cb_t log_cb = NULL;
 	log_info_t log = {
 		.dispatcher = this->dispatcher,
 		.id = id,
@@ -178,6 +179,10 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "missing configuration name");
 	}
+	if (timeout >= 0)
+	{
+		log_cb = (controller_cb_t)log_vici;
+	}
 
 	DBG1(DBG_CFG, "vici initiate '%s'", child);
 
@@ -187,7 +192,7 @@ CALLBACK(initiate, vici_message_t*,
 		return send_reply(this, "CHILD_SA config '%s' not found", child);
 	}
 	switch (charon->controller->initiate(charon->controller, peer_cfg,
-				child_cfg, (controller_cb_t)log_vici, &log, timeout, limits))
+									child_cfg, log_cb, &log, timeout, limits))
 	{
 		case SUCCESS:
 			return send_reply(this, NULL);
@@ -208,11 +213,13 @@ CALLBACK(terminate, vici_message_t*,
 {
 	enumerator_t *enumerator, *isas, *csas;
 	char *child, *ike, *errmsg = NULL;
-	u_int timeout, child_id, ike_id, current, *del, done = 0;
+	u_int child_id, ike_id, current, *del, done = 0;
+	int timeout;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	array_t *ids;
 	vici_builder_t *builder;
+	controller_cb_t log_cb = NULL;
 	log_info_t log = {
 		.dispatcher = this->dispatcher,
 		.id = id,
@@ -245,6 +252,11 @@ CALLBACK(terminate, vici_message_t*,
 	if (child)
 	{
 		DBG1(DBG_CFG, "vici terminate CHILD_SA '%s'", child);
+	}
+
+	if (timeout >= 0)
+	{
+		log_cb = (controller_cb_t)log_vici;
 	}
 
 	ids = array_create(sizeof(u_int), 0);
@@ -296,7 +308,7 @@ CALLBACK(terminate, vici_message_t*,
 		if (child || child_id)
 		{
 			if (charon->controller->terminate_child(charon->controller, *del,
-						(controller_cb_t)log_vici, &log, timeout) == SUCCESS)
+											log_cb, &log, timeout) == SUCCESS)
 			{
 				done++;
 			}
@@ -304,7 +316,7 @@ CALLBACK(terminate, vici_message_t*,
 		else
 		{
 			if (charon->controller->terminate_ike(charon->controller, *del,
-						(controller_cb_t)log_vici, &log, timeout) == SUCCESS)
+											log_cb, &log, timeout) == SUCCESS)
 			{
 				done++;
 			}
