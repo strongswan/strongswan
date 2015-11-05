@@ -4,9 +4,10 @@ dave::iptables-restore < /etc/iptables.rules
 moon::rm /etc/ipsec.d/cacerts/*
 carol::rm /etc/ipsec.d/cacerts/*
 dave::rm /etc/ipsec.d/cacerts/*
+moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-moon::ipsec start
-carol::sleep 2
+carol::expect-connection home
 carol::ipsec up home
+dave::expect-connection home
 dave::ipsec up home

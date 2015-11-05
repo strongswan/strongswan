@@ -7,8 +7,8 @@ moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to-
 moon::iptables -A FORWARD -i eth1 -o eth0 -s 10.1.0.0/16  -j ACCEPT
 moon::iptables -A FORWARD -i eth0 -o eth1 -d 10.1.0.0/16  -j ACCEPT
 carol::ipsec start
-carol::sleep 1
+carol::expect-connection medsrv
 alice::ipsec start
 alice::sleep 1
 venus::ipsec start
-venus::sleep 4
+venus::sleep 2

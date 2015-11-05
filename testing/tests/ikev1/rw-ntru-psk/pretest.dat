@@ -7,7 +7,7 @@ dave::rm /etc/ipsec.d/cacerts/*
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start
-carol::sleep 2 
+carol::expect-connection home
 carol::ipsec up home
+dave::expect-connection home
 dave::ipsec up home
-carol::sleep 1

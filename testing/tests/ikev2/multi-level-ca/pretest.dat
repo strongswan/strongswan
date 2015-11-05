@@ -1,8 +1,11 @@
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start
-carol::sleep 2
+carol::expect-connection alice
+carol::expect-connection venus
 carol::ipsec up alice
 carol::ipsec up venus
+dave::expect-connection alice
+dave::expect-connection venus
 dave::ipsec up venus
 dave::ipsec up alice

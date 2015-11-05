@@ -3,6 +3,5 @@ carol::iptables-restore < /etc/iptables.rules
 alice::radiusd
 moon::ipsec start
 carol::ipsec start
-carol::sleep 1
+carol::expect-connection home
 carol::ipsec up home
-carol::sleep 1

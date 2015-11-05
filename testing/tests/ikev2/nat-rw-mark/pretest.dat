@@ -13,8 +13,7 @@ sun::iptables -t mangle -A PREROUTING -d PH_IP_DAVE10 -j MARK --set-mark 20
 sun::ipsec start
 alice::ipsec start
 venus::ipsec start
-alice::sleep 2
+alice::expect-connection nat-t
 alice::ipsec up nat-t
-venus::sleep 2
+venus::expect-connection nat-t
 venus::ipsec up nat-t
-venus::sleep 2

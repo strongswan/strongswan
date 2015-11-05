@@ -1,4 +1,4 @@
 carol::ipsec start
 moon::ipsec start
-carol::sleep 2 
+carol::expect-connection home
 carol::ipsec up home

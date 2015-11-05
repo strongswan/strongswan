@@ -12,10 +12,11 @@ dave::iptables-restore < /etc/iptables.rules
 moon::ipsec start
 alice::ipsec start
 moon::ipsec start
-moon::sleep 2 
+moon::sleep 2
 alice::echo "+1" > /var/run/charon.ha
 carol::ipsec start
 dave::ipsec start
-carol::sleep 1
+carol::expect-connection home
+dave::expect-connection home
 carol::ipsec up home
 dave::ipsec up home

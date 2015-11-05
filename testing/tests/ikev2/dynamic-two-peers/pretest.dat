@@ -6,7 +6,7 @@ dave::iptables-restore < /etc/iptables.rules
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start
-carol::sleep 2
+carol::expect-connection moon
 carol::ipsec up moon
+dave::expect-connection moon
 dave::ipsec up moon
-carol::sleep 1

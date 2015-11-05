@@ -11,7 +11,7 @@ alice::ipsec start
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-dave::sleep 1
+carol::expect-connection home
 carol::ipsec up home
+dave::expect-connection home
 dave::ipsec up home
-dave::sleep 1

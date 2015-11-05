@@ -6,8 +6,7 @@ moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to-
 alice::ipsec start
 venus::ipsec start
 sun::ipsec start
-alice::sleep 2 
+alice::expect-connection nat-t
 alice::ipsec up nat-t
-venus::sleep 2 
+venus::expect-connection nat-t
 venus::ipsec up nat-t
-venus::sleep 2

@@ -4,6 +4,7 @@ dave::iptables-restore < /etc/iptables.rules
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-carol::sleep 3
+carol::expect-connection home
+dave::expect-connection home
 carol::ipsec up home
 dave::ipsec up home

@@ -7,6 +7,5 @@ sun::iptables -t nat -A PREROUTING -i eth0 -s PH_IP_MOON -p udp -j DNAT --to-des
 sun::ip route add 10.1.0.0/16 via PH_IP_BOB
 alice::ipsec start
 bob::ipsec start
-alice::sleep 2
+alice::expect-connection nat-t
 alice::ipsec up nat-t
-alice::sleep 1

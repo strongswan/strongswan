@@ -4,5 +4,5 @@ moon::rm /etc/ipsec.d/cacerts/*
 sun::rm /etc/ipsec.d/cacerts/*
 moon::ipsec start
 sun::ipsec start
-moon::sleep 2
+moon::expect-connection net-net
 moon::ipsec up net-net

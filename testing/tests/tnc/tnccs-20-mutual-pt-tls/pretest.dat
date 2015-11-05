@@ -1,4 +1,4 @@
 sun::ipsec start
 moon::cat /etc/pts/options
-moon::sleep 1
-moon::ipsec pt-tls-client --optionsfrom /etc/pts/options 
+sun::expect-connection pdp
+moon::ipsec pt-tls-client --optionsfrom /etc/pts/options

@@ -4,7 +4,7 @@ alice::iptables-restore < /etc/iptables.rules
 carol::ipsec start
 moon::ipsec start
 alice::ipsec start
-carol::sleep 2 
+carol::expect-connection home
 carol::ipsec up home
+alice::expect-connection home
 alice::ipsec up home
-alice::sleep 1

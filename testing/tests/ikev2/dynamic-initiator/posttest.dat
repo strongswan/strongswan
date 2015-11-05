@@ -1,6 +1,5 @@
 dave::ipsec stop
 carol::ipsec stop
-dave::sleep 1
 moon::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush

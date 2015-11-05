@@ -14,9 +14,9 @@ dave::cat /etc/tnc_config
 moon::ipsec start
 dave::ipsec start
 carol::ipsec start
-dave::sleep 1
+dave::expect-connection home
 dave::ipsec up home
+carol::expect-connection home
 carol::ipsec up home
-carol::sleep 1
 alice::ipsec attest --sessions
 alice::ipsec attest --devices

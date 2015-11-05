@@ -8,6 +8,6 @@ moon::iptables-restore < /etc/iptables.rules
 sun::iptables-restore < /etc/iptables.rules
 sun::ipsec start
 moon::ipsec start
-moon::sleep 1
+moon::expect-connection net-net
 alice::ping -c 1 PH_IP_BOB
 bob::ping -c 1 PH_IP_VENUS

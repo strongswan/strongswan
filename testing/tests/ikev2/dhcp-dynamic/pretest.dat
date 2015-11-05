@@ -6,7 +6,7 @@ venus::/etc/init.d/isc-dhcp-server start 2> /dev/null
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start
-carol::sleep 2
+carol::expect-connection home
 carol::ipsec up home
+dave::expect-connection home
 dave::ipsec up home
-carol::sleep 1
