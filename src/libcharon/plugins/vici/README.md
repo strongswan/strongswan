@@ -258,6 +258,7 @@ Initiates an SA while streaming _control-log_ events.
 
 	{
 		child = <CHILD_SA configuration name to initiate>
+		ike = <optional IKE_SA configuraiton name to find child under>
 		timeout = <timeout in seconds before returning>
 		init-limits = <whether limits may prevent initiating the CHILD_SA>
 		loglevel = <loglevel to issue "control-log" events for>
@@ -294,6 +295,7 @@ Install a trap, drop or bypass policy defined by a CHILD_SA config.
 
 	{
 		child = <CHILD_SA configuration name to install>
+		ike = <optional IKE_SA configuraiton name to find child under>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>

@@ -134,7 +134,7 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 /**
  * Find a peer/child config from a child config name
  */
-static child_cfg_t* find_child_cfg(char *name, peer_cfg_t **out)
+static child_cfg_t* find_child_cfg(char *name, char *pname, peer_cfg_t **out)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
@@ -144,6 +144,10 @@ static child_cfg_t* find_child_cfg(char *name, peer_cfg_t **out)
 							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
+		if (pname && !streq(pname, peer_cfg->get_name(peer_cfg)))
+		{
+			continue;
+		}
 		child_cfg = get_child_from_peer(peer_cfg, name);
 		if (child_cfg)
 		{
@@ -161,7 +165,7 @@ CALLBACK(initiate, vici_message_t*,
 {
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
-	char *child;
+	char *child, *ike;
 	int timeout;
 	bool limits;
 	controller_cb_t log_cb = NULL;
@@ -171,6 +175,7 @@ CALLBACK(initiate, vici_message_t*,
 	};
 
 	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
 	timeout = request->get_int(request, 0, "timeout");
 	limits = request->get_bool(request, FALSE, "init-limits");
 	log.level = request->get_int(request, 1, "loglevel");
@@ -186,7 +191,7 @@ CALLBACK(initiate, vici_message_t*,
 
 	DBG1(DBG_CFG, "vici initiate '%s'", child);
 
-	child_cfg = find_child_cfg(child, &peer_cfg);
+	child_cfg = find_child_cfg(child, ike, &peer_cfg);
 	if (!child_cfg)
 	{
 		return send_reply(this, "CHILD_SA config '%s' not found", child);
@@ -391,10 +396,11 @@ CALLBACK(install, vici_message_t*,
 {
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
-	char *child;
+	char *child, *ike;
 	bool ok;
 
 	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
 	if (!child)
 	{
 		return send_reply(this, "missing configuration name");
@@ -402,7 +408,7 @@ CALLBACK(install, vici_message_t*,
 
 	DBG1(DBG_CFG, "vici install '%s'", child);
 
-	child_cfg = find_child_cfg(child, &peer_cfg);
+	child_cfg = find_child_cfg(child, ike, &peer_cfg);
 	if (!child_cfg)
 	{
 		return send_reply(this, "configuration name not found");
