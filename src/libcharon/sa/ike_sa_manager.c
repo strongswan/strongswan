@@ -1384,7 +1384,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 			continue;
 		}
 		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
-		{	/* skip IKE_SAs which are not usable */
+		{	/* skip IKE_SAs which are not usable, wake other waiting threads */
+			entry->condvar->signal(entry->condvar);
 			continue;
 		}
 
@@ -1402,6 +1403,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 				break;
 			}
 		}
+		/* other threads might be waiting for this entry */
+		entry->condvar->signal(entry->condvar);
 	}
 	enumerator->destroy(enumerator);
 
@@ -1434,6 +1437,8 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 				entry->checked_out = TRUE;
 				break;
 			}
+			/* other threads might be waiting for this entry */
+			entry->condvar->signal(entry->condvar);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1490,6 +1495,8 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 				break;
 			}
+			/* other threads might be waiting for this entry */
+			entry->condvar->signal(entry->condvar);
 		}
 	}
 	enumerator->destroy(enumerator);
