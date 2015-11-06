@@ -1646,6 +1646,9 @@ METHOD(ike_sa_manager_t, checkin, void,
 				 * need for a lookup via get_entry_by... */
 				lock_single_segment(this, segment);
 				entry->checked_out = FALSE;
+				/* We already signaled waiting threads above, we have to do that
+				 * again after checking the SA out and back in again. */
+				entry->condvar->signal(entry->condvar);
 			}
 		}
 
