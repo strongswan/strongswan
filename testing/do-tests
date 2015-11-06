@@ -47,7 +47,6 @@ testnumber="0"
 failed_cnt="0"
 passed_cnt="0"
 
-
 ##############################################################################
 # copy default tests to $BUILDDIR
 #
@@ -338,8 +337,11 @@ do
 	# copy test specific configurations to uml hosts and clear auth.log files
 	#
 
+	DBDIR=/etc/db.d
+
 	$DIR/scripts/load-testconfig $testname
 	unset RADIUSHOSTS
+	unset DBHOSTS
 	unset IPV6
 	unset SWANCTL
 	source $TESTDIR/test.conf
@@ -363,6 +365,17 @@ do
 		eval TDUP_${host}="true"
 	    done
 	fi
+
+	##########################################################################
+	# create database directory in RAM
+	#
+
+	for host in $DBHOSTS
+	do
+		eval HOSTLOGIN=root@\$ipv4_${host}
+	    ssh $SSHCONF $HOSTLOGIN "mkdir -p $DBDIR; mount -t ramfs -o size=5m ramfs $DBDIR" >/dev/null 2>&1
+	    ssh $SSHCONF $HOSTLOGIN "chgrp www-data $DBDIR; chmod g+w $DBDIR" >/dev/null 2>&1
+	done
 
 	##########################################################################
 	# flush conntrack table on all hosts
@@ -780,6 +793,15 @@ do
 	    fi
 	done
 
+	##########################################################################
+	# remove database directory if needed
+	#
+
+	for host in $DBHOSTS
+	do
+		eval HOSTLOGIN=root@\$ipv4_${host}
+	    ssh $SSHCONF $HOSTLOGIN "umount $DBDIR; rm -r $DBDIR" > /dev/null 2>&1
+	done
 
 	##########################################################################
 	# copy default host config back if necessary
