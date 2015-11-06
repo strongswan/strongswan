@@ -82,6 +82,44 @@ START_TEST(test_hasher_sig_to_oid)
 END_TEST
 
 typedef struct {
+	signature_scheme_t scheme;
+	hash_algorithm_t alg;
+}hasher_sig_scheme_t;
+
+static hasher_sig_scheme_t sig_schemes[] = {
+	{ SIGN_UNKNOWN,               HASH_UNKNOWN  },
+	{ SIGN_RSA_EMSA_PKCS1_NULL,   HASH_UNKNOWN  },
+	{ SIGN_RSA_EMSA_PKCS1_MD5,    HASH_MD5      },
+	{ SIGN_RSA_EMSA_PKCS1_SHA1,   HASH_SHA1     },
+	{ SIGN_RSA_EMSA_PKCS1_SHA224, HASH_SHA224   },
+	{ SIGN_RSA_EMSA_PKCS1_SHA256, HASH_SHA256   },
+	{ SIGN_RSA_EMSA_PKCS1_SHA384, HASH_SHA384   },
+	{ SIGN_RSA_EMSA_PKCS1_SHA512, HASH_SHA512   },
+	{ SIGN_ECDSA_WITH_SHA1_DER,   HASH_SHA1     },
+	{ SIGN_ECDSA_WITH_SHA256_DER, HASH_SHA256   },
+	{ SIGN_ECDSA_WITH_SHA384_DER, HASH_SHA384   },
+	{ SIGN_ECDSA_WITH_SHA512_DER, HASH_SHA512   },
+	{ SIGN_ECDSA_WITH_NULL,       HASH_UNKNOWN  },
+	{ SIGN_ECDSA_256,             HASH_SHA256   },
+	{ SIGN_ECDSA_384,             HASH_SHA384   },
+	{ SIGN_ECDSA_521,             HASH_SHA512   },
+	{ SIGN_BLISS_WITH_SHA2_256,   HASH_SHA256   },
+	{ SIGN_BLISS_WITH_SHA2_384,   HASH_SHA384   },
+	{ SIGN_BLISS_WITH_SHA2_512,   HASH_SHA512   },
+	{ SIGN_BLISS_WITH_SHA3_256,   HASH_SHA3_256 },
+	{ SIGN_BLISS_WITH_SHA3_384,   HASH_SHA3_384 },
+	{ SIGN_BLISS_WITH_SHA3_512,   HASH_SHA3_512 },
+	{ 30,						  HASH_UNKNOWN  }
+};
+
+START_TEST(test_hasher_from_sig_scheme)
+{
+	ck_assert(hasher_from_signature_scheme(sig_schemes[_i].scheme) ==
+										   sig_schemes[_i].alg);
+}
+END_TEST
+
+typedef struct {
 	pseudo_random_function_t prf;
 	hash_algorithm_t alg;
 }hasher_prf_t;
@@ -165,6 +203,35 @@ START_TEST(test_hasher_to_integrity)
 }
 END_TEST
 
+
+typedef struct {
+	hash_algorithm_t alg;
+	bool ikev2;
+}hasher_ikev2_t;
+
+static hasher_ikev2_t ikev2[] = {
+	{ HASH_SHA1,     TRUE  },
+	{ HASH_SHA256,   TRUE  },
+	{ HASH_SHA384,   TRUE  },
+	{ HASH_SHA512,   TRUE  },
+	{ HASH_UNKNOWN,  FALSE },
+	{ HASH_MD2,      FALSE },
+	{ HASH_MD4,      FALSE },
+	{ HASH_MD5,      FALSE },
+	{ HASH_SHA224,   FALSE },
+	{ HASH_SHA3_224, FALSE },
+	{ HASH_SHA3_256, FALSE },
+	{ HASH_SHA3_384, FALSE },
+	{ HASH_SHA3_512, FALSE },
+	{ 30,            FALSE }
+};
+
+START_TEST(test_hasher_for_ikev2)
+{
+	ck_assert(hasher_algorithm_for_ikev2(ikev2[_i].alg) == ikev2[_i].ikev2);
+}
+END_TEST
+
 Suite *hasher_suite_create()
 {
 	Suite *s;
@@ -184,6 +251,10 @@ Suite *hasher_suite_create()
 	tcase_add_loop_test(tc, test_hasher_sig_to_oid, 11, countof(oids));
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("from_sig_scheme");
+	tcase_add_loop_test(tc, test_hasher_from_sig_scheme, 0, countof(sig_schemes));
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("from_prf");
 	tcase_add_loop_test(tc, test_hasher_from_prf, 0, countof(prfs));
 	suite_add_tcase(s, tc);
@@ -194,6 +265,10 @@ Suite *hasher_suite_create()
 
 	tc = tcase_create("to_integrity");
 	tcase_add_loop_test(tc, test_hasher_to_integrity, 0, 17);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("for_ikev2");
+	tcase_add_loop_test(tc, test_hasher_for_ikev2, 0, countof(ikev2));
 	suite_add_tcase(s, tc);
 
 	return s;
