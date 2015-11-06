@@ -105,6 +105,12 @@ do
     do_on_exit kill `eval echo \\\$ssh_pid_$host`
 done
 
+##############################################################################
+# determine actual software versions
+#
+
+[ -f $SHAREDDIR/.strongswan-version ] && SWANVERSION=`cat $SHAREDDIR/.strongswan-version`
+KERNELVERSION=`ssh $SSHCONF root@\$ipv4_winnetou uname -r 2>/dev/null`
 
 ##############################################################################
 # create header for the results html file
