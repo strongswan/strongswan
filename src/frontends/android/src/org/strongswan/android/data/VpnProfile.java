@@ -17,6 +17,7 @@
 
 package org.strongswan.android.data;
 
+import java.util.EnumMap;
 
 public class VpnProfile implements Cloneable
 {
@@ -26,6 +27,8 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private Integer mMTU, mPort, mSplitTunneling;
+	private VpnProfile.DpdLevel mDpd;
+
 	private VpnType mVpnType;
 	private long mId = -1;
 
@@ -137,6 +140,35 @@ public class VpnProfile implements Cloneable
 	public void setSplitTunneling(Integer splitTunneling)
 	{
 		this.mSplitTunneling = splitTunneling;
+	}
+
+	public DpdLevel getDpd()
+	{
+		return mDpd;
+	}
+
+	public void setDpd(DpdLevel dpd)
+	{
+		this.mDpd = dpd;
+	}
+
+	public enum DpdLevel {
+		OFF, LOW, MEDIUM, HIGH
+	}
+
+	public static final DpdLevel DEFAULT_DPD_LEVEL = DpdLevel.MEDIUM;
+
+	private static final EnumMap<DpdLevel, Integer> dpdToSeconds;
+	static {
+		dpdToSeconds = new EnumMap<>(DpdLevel.class);
+		dpdToSeconds.put(DpdLevel.OFF, 0);
+		dpdToSeconds.put(DpdLevel.LOW, 1800);
+		dpdToSeconds.put(DpdLevel.MEDIUM, 600);
+		dpdToSeconds.put(DpdLevel.HIGH, 60);
+	}
+
+	public int getDpdSeconds() {
+		return dpdToSeconds.get(mDpd);
 	}
 
 	@Override

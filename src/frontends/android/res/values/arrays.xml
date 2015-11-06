@@ -22,4 +22,11 @@
         <item>IKEv2 EAP-TLS (Certificate)</item>
         <item>IKEv2 EAP-TNC (Username/Password)</item>
     </string-array>
+
+    <string-array name="dpd_options">
+        <item>Off</item>
+        <item>Low</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
 </resources>

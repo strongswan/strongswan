@@ -197,6 +197,19 @@
                 android:layout_height="wrap_content"
                 android:text="@string/profile_split_tunnelingv6_title" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_dpd_label" />
+
+            <Spinner
+                android:id="@+id/dpd"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"
+                android:entries="@array/dpd_options"/>
+
         </LinearLayout>
     </LinearLayout>
 

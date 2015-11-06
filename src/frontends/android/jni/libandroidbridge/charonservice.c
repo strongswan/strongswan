@@ -484,6 +484,8 @@ static void set_options(char *logfile)
 	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.use_ipv6", FALSE);
+	lib->settings->set_time(lib->settings,
+					"charon.keep_alive", 0);
 
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
