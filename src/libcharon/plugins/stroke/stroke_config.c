@@ -346,9 +346,9 @@ static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
 			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
 			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
 			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
-			{ "sha256",		SIGN_BLISS_WITH_SHA256,			KEY_BLISS,	},
-			{ "sha384",		SIGN_BLISS_WITH_SHA384,			KEY_BLISS,	},
-			{ "sha512",		SIGN_BLISS_WITH_SHA512,			KEY_BLISS,	},
+			{ "sha256",		SIGN_BLISS_WITH_SHA2_256,		KEY_BLISS,	},
+			{ "sha384",		SIGN_BLISS_WITH_SHA2_384,		KEY_BLISS,	},
+			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	},
 		};
 
 		if (rsa_len || ecdsa_len || bliss_strength)

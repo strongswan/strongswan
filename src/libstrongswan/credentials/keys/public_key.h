@@ -94,12 +94,12 @@ enum signature_scheme_t {
 	SIGN_ECDSA_384,
 	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
 	SIGN_ECDSA_521,
-	/** BLISS with SHA-256                                             */
-	SIGN_BLISS_WITH_SHA256,
-	/** BLISS with SHA-384                                             */
-	SIGN_BLISS_WITH_SHA384,
-	/** BLISS with SHA-512                                             */
-	SIGN_BLISS_WITH_SHA512,
+	/** BLISS with SHA-2_256                                           */
+	SIGN_BLISS_WITH_SHA2_256,
+	/** BLISS with SHA-2_384                                           */
+	SIGN_BLISS_WITH_SHA2_384,
+	/** BLISS with SHA-2_512                                           */
+	SIGN_BLISS_WITH_SHA2_512,
 	/** BLISS with SHA-3_256                                           */
 	SIGN_BLISS_WITH_SHA3_256,
 	/** BLISS with SHA-3_384                                           */

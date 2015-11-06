@@ -387,11 +387,11 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 			switch (alg)
 			{
 				case HASH_SHA256:
-					return OID_BLISS_WITH_SHA256;
+					return OID_BLISS_WITH_SHA2_256;
 				case HASH_SHA384:
-					return OID_BLISS_WITH_SHA384;
+					return OID_BLISS_WITH_SHA2_384;
 				case HASH_SHA512:
-					return OID_BLISS_WITH_SHA512;
+					return OID_BLISS_WITH_SHA2_512;
 				case HASH_SHA3_256:
 					return OID_BLISS_WITH_SHA3_256;
 				case HASH_SHA3_384:
@@ -427,19 +427,19 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
 		case SIGN_ECDSA_WITH_SHA256_DER:
 		case SIGN_ECDSA_256:
-		case SIGN_BLISS_WITH_SHA256:
+		case SIGN_BLISS_WITH_SHA2_256:
 		case SIGN_BLISS_WITH_SHA3_256:
 			return HASH_SHA256;
 		case SIGN_RSA_EMSA_PKCS1_SHA384:
 		case SIGN_ECDSA_WITH_SHA384_DER:
 		case SIGN_ECDSA_384:
-		case SIGN_BLISS_WITH_SHA384:
+		case SIGN_BLISS_WITH_SHA2_384:
 		case SIGN_BLISS_WITH_SHA3_384:
 			return HASH_SHA384;
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
 		case SIGN_ECDSA_WITH_SHA512_DER:
 		case SIGN_ECDSA_521:
-		case SIGN_BLISS_WITH_SHA512:
+		case SIGN_BLISS_WITH_SHA2_512:
 		case SIGN_BLISS_WITH_SHA3_512:
 			return HASH_SHA512;
 	}

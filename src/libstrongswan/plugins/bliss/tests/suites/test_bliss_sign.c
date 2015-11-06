@@ -36,13 +36,13 @@ START_TEST(test_bliss_sign_all)
 		switch (k)
 		{
 			case 1:
-				signature_scheme = SIGN_BLISS_WITH_SHA256;
+				signature_scheme = SIGN_BLISS_WITH_SHA2_256;
 				break;
 			case 2:
-				signature_scheme = SIGN_BLISS_WITH_SHA384;
+				signature_scheme = SIGN_BLISS_WITH_SHA2_384;
 				break;
 			default:
-				signature_scheme = SIGN_BLISS_WITH_SHA512;
+				signature_scheme = SIGN_BLISS_WITH_SHA2_512;
 		}
 
 		/* enforce BLISS-B key for k = 2, 3 */
@@ -176,14 +176,14 @@ START_TEST(test_bliss_sign_fail)
 
 	/* generate valid signature */
 	msg = chunk_from_str("Hello Dolly!");
-	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA512, msg, &signature));
+	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, msg, &signature));
 
 	/* verify with invalid signature scheme */
 	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, msg, signature));
 
 	/* corrupt signature */
 	signature.ptr[signature.len - 1] ^= 0x80;
-	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA512, msg, signature));
+	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA2_512, msg, signature));
 
 	free(signature.ptr);
 	privkey->destroy(privkey);

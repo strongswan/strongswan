@@ -223,9 +223,9 @@
                     0x07     "BLISS-B-III"				OID_BLISS_B_III
                     0x08     "BLISS-B-IV"				OID_BLISS_B_IV
                   0x03       "blissSigType"
-                    0x01     "BLISS-with-SHA512"		OID_BLISS_WITH_SHA512
-                    0x02     "BLISS-with-SHA384"		OID_BLISS_WITH_SHA384
-                    0x03     "BLISS-with-SHA256"		OID_BLISS_WITH_SHA256
+                    0x01     "BLISS-with-SHA2-512"		OID_BLISS_WITH_SHA2_512
+                    0x02     "BLISS-with-SHA2-384"		OID_BLISS_WITH_SHA2_384
+                    0x03     "BLISS-with-SHA2-256"		OID_BLISS_WITH_SHA2_256
                     0x04     "BLISS-with-SHA3-512"		OID_BLISS_WITH_SHA3_512
                     0x05     "BLISS-with-SHA3-384"		OID_BLISS_WITH_SHA3_384
                     0x06     "BLISS-with-SHA3-256"		OID_BLISS_WITH_SHA3_256

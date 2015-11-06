@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,30 +28,38 @@ typedef struct {
 }hasher_oid_t;
 
 static hasher_oid_t oids[] = {
-	{ OID_MD2, HASH_MD2, KEY_ANY },
-	{ OID_MD5, HASH_MD5, KEY_ANY },
-	{ OID_SHA1, HASH_SHA1, KEY_ANY },
-	{ OID_SHA224, HASH_SHA224, KEY_ANY },
-	{ OID_SHA256, HASH_SHA256, KEY_ANY },
-	{ OID_SHA384, HASH_SHA384, KEY_ANY },
-	{ OID_SHA512, HASH_SHA512, KEY_ANY },
-	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ANY },
-	{ OID_MD2_WITH_RSA, HASH_MD2, KEY_RSA },
-	{ OID_MD5_WITH_RSA, HASH_MD5, KEY_RSA },
-	{ OID_SHA1_WITH_RSA, HASH_SHA1, KEY_RSA },
-	{ OID_SHA224_WITH_RSA, HASH_SHA224, KEY_RSA },
-	{ OID_SHA256_WITH_RSA, HASH_SHA256, KEY_RSA },
-	{ OID_SHA384_WITH_RSA, HASH_SHA384, KEY_RSA },
-	{ OID_SHA512_WITH_RSA, HASH_SHA512, KEY_RSA },
-	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_RSA },
-	{ OID_ECDSA_WITH_SHA1, HASH_SHA1, KEY_ECDSA },
-	{ OID_ECDSA_WITH_SHA256, HASH_SHA256, KEY_ECDSA },
-	{ OID_ECDSA_WITH_SHA384, HASH_SHA384, KEY_ECDSA },
-	{ OID_ECDSA_WITH_SHA512, HASH_SHA512, KEY_ECDSA },
-	{ OID_BLISS_WITH_SHA256, HASH_SHA256, KEY_BLISS },
-	{ OID_BLISS_WITH_SHA384, HASH_SHA384, KEY_BLISS },
-	{ OID_BLISS_WITH_SHA512, HASH_SHA512, KEY_BLISS },
-	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ECDSA }
+	{ OID_MD2, HASH_MD2, KEY_ANY },                         /*  0 */
+	{ OID_MD5, HASH_MD5, KEY_ANY },                         /*  1 */
+	{ OID_SHA1, HASH_SHA1, KEY_ANY },                       /*  2 */
+	{ OID_SHA224, HASH_SHA224, KEY_ANY },                   /*  3 */
+	{ OID_SHA256, HASH_SHA256, KEY_ANY },                   /*  4 */
+	{ OID_SHA384, HASH_SHA384, KEY_ANY },                   /*  5 */
+	{ OID_SHA512, HASH_SHA512, KEY_ANY },                   /*  6 */
+	{ OID_SHA3_224, HASH_SHA3_224, KEY_ANY },               /*  7 */
+	{ OID_SHA3_256, HASH_SHA3_256, KEY_ANY },               /*  8 */
+	{ OID_SHA3_384, HASH_SHA3_384, KEY_ANY },               /*  9 */
+	{ OID_SHA3_512, HASH_SHA3_512, KEY_ANY },               /* 10 */
+	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ANY },                 /* 11 */
+	{ OID_MD2_WITH_RSA, HASH_MD2, KEY_RSA },                /* 12 */
+	{ OID_MD5_WITH_RSA, HASH_MD5, KEY_RSA },                /* 13 */
+	{ OID_SHA1_WITH_RSA, HASH_SHA1, KEY_RSA },              /* 14 */
+	{ OID_SHA224_WITH_RSA, HASH_SHA224, KEY_RSA },          /* 15 */
+	{ OID_SHA256_WITH_RSA, HASH_SHA256, KEY_RSA },          /* 16 */
+	{ OID_SHA384_WITH_RSA, HASH_SHA384, KEY_RSA },          /* 17 */
+	{ OID_SHA512_WITH_RSA, HASH_SHA512, KEY_RSA },          /* 18 */
+	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_RSA },                 /* 19 */
+	{ OID_ECDSA_WITH_SHA1, HASH_SHA1, KEY_ECDSA },          /* 20 */
+	{ OID_ECDSA_WITH_SHA256, HASH_SHA256, KEY_ECDSA },      /* 21 */
+	{ OID_ECDSA_WITH_SHA384, HASH_SHA384, KEY_ECDSA },      /* 22 */
+	{ OID_ECDSA_WITH_SHA512, HASH_SHA512, KEY_ECDSA },      /* 23 */
+	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ECDSA },               /* 24 */
+	{ OID_BLISS_WITH_SHA2_256, HASH_SHA256, KEY_BLISS },    /* 25 */
+	{ OID_BLISS_WITH_SHA2_384, HASH_SHA384, KEY_BLISS },    /* 26 */
+	{ OID_BLISS_WITH_SHA2_512, HASH_SHA512, KEY_BLISS },    /* 27 */
+	{ OID_BLISS_WITH_SHA3_256, HASH_SHA3_256, KEY_BLISS },  /* 28 */
+	{ OID_BLISS_WITH_SHA3_384, HASH_SHA3_384, KEY_BLISS },  /* 29 */
+	{ OID_BLISS_WITH_SHA3_512, HASH_SHA3_512, KEY_BLISS },  /* 30 */
+	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_BLISS }                /* 31 */
 };
 
 START_TEST(test_hasher_from_oid)
@@ -169,11 +177,11 @@ Suite *hasher_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("to_oid");
-	tcase_add_loop_test(tc, test_hasher_to_oid, 0, 8);
+	tcase_add_loop_test(tc, test_hasher_to_oid, 0, 12);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("sig_to_oid");
-	tcase_add_loop_test(tc, test_hasher_sig_to_oid, 7, countof(oids));
+	tcase_add_loop_test(tc, test_hasher_sig_to_oid, 11, countof(oids));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("from_prf");
