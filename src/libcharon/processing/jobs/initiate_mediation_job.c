@@ -161,6 +161,10 @@ METHOD(job_t, initiate, job_requeue_t,
 		}
 		mediated_cfg->destroy(mediated_cfg);
 	}
+	else
+	{	/* newly created IKE_SA is not checked in yet, try again */
+		return JOB_RESCHEDULE_MS(100);
+	}
 	return JOB_REQUEUE_NONE;
 }
 
