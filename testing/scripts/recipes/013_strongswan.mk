@@ -111,6 +111,7 @@ $(TAR):
 
 $(PKG): $(TAR)
 	tar xfj $(TAR)
+	echo "$(SWANVERSION)" > /root/shared/.strongswan-version
 
 configure: $(BUILDDIR)
 	cd $(BUILDDIR) && $(DIR)/configure $(CONFIG_OPTS)
