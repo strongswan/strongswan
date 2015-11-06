@@ -10,6 +10,3 @@ dave::ip6tables-restore < /etc/ip6tables.flush
 alice::"ip route del fec0:\:/16 via fec1:\:1"
 carol::"ip route del fec1:\:/16 via fec0:\:1"
 dave::"ip route del fec1:\:/16 via fec0:\:1"
-moon::rm /etc/ipsec.d/ipsec.*
-carol::rm /etc/ipsec.d/ipsec.*
-dave::rm /etc/ipsec.d/ipsec.*

@@ -15,4 +15,3 @@ moon::ipsec pool --del intpool 2> /dev/null
 moon::ipsec pool --delattr dns --server PH_IP_VENUS --pool intpool --identity venus.strongswan.org 2> /dev/null
 moon::ipsec pool --delattr dns --server PH_IP_ALICE --pool intpool --identity alice@strongswan.org 2> /dev/null
 moon::ipsec pool --delattr dns --server PH_IP_WINNETOU --pool extpool 2> /dev/null
-moon::rm /etc/ipsec.d/ipsec.*

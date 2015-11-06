@@ -4,7 +4,3 @@ dave::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
-moon::rm /etc/ipsec.d/ipsec.db
-carol::rm /etc/ipsec.d/ipsec.db
-dave::rm /etc/ipsec.d/ipsec.db
-~

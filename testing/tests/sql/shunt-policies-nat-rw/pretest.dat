@@ -1,12 +1,12 @@
 alice::rm /etc/ipsec.d/cacerts/*
 venus::rm /etc/ipsec.d/cacerts/*
 sun::rm /etc/ipsec.d/cacerts/*
-alice::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
-venus::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
-sun::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
-alice::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
-venus::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
-sun::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
+alice::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
+venus::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
+sun::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
+alice::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
+venus::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
+sun::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 sun::iptables-restore < /etc/iptables.rules
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p udp -j SNAT --to-source PH_IP_MOON:1024-1100
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to-source PH_IP_MOON:2000-2100

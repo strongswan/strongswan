@@ -3,7 +3,6 @@ carol::ipsec stop
 dave::ipsec stop
 alice::ipsec stop
 alice::service apache2 stop
-alice::umount /etc/pts
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
