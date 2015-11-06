@@ -6,10 +6,13 @@ carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 carol::echo 0 > /proc/sys/net/ipv4/ip_forward
 dave::echo aabbccddeeff11223344556677889900 > /var/lib/dbus/machine-id
+alice::mv /etc/pts/data1.sql /tmp/
+alice::mount -t ramfs -o size=5m ramfs /etc/pts
+alice::mv /tmp/data1.sql /etc/pts/
 alice::sed -i "s/NOW/`date +%s`/g" /etc/pts/data1.sql
 alice::sed -i "s:DEBIAN_VERSION:\`cat /etc/debian_version\`:" /etc/pts/data1.sql
 alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql data.sql /etc/pts/data1.sql | sqlite3 /etc/pts/config.db
-alice::chgrp www-data /etc/pts/config.db; chmod g+w /etc/pts/config.db
+alice::chgrp -R www-data /etc/pts; chmod -R g+w /etc/pts
 alice::/var/www/tnc/manage.py setpassword strongSwan strongSwan
 alice::service apache2 start
 alice::ipsec start
