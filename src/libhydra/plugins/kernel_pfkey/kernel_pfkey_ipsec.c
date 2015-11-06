@@ -843,7 +843,9 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV32,				0							}, */
 	{ENCR_NULL,					SADB_EALG_NULL				},
 	{ENCR_AES_CBC,				SADB_X_EALG_AESCBC			},
-/*	{ENCR_AES_CTR,				SADB_X_EALG_AESCTR			}, */
+#ifdef SADB_X_EALG_AESCTR
+	{ENCR_AES_CTR,				SADB_X_EALG_AESCTR			},
+#endif
 /*  {ENCR_AES_CCM_ICV8,			SADB_X_EALG_AES_CCM_ICV8	}, */
 /*	{ENCR_AES_CCM_ICV12,		SADB_X_EALG_AES_CCM_ICV12	}, */
 /*	{ENCR_AES_CCM_ICV16,		SADB_X_EALG_AES_CCM_ICV16	}, */
