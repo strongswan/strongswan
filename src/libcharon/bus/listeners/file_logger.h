@@ -47,10 +47,13 @@ struct file_logger_t {
 	/**
 	 * Set options used by this logger
 	 *
-	 * @param time_format	format of timestamp prefix, as in strftime(), cloned
-	 * @param ike_name		TRUE to prefix the name of the IKE_SA
+	 * @param time_format		format of timestamp prefix, as in strftime(), cloned
+	 * @param ike_name			TRUE to prefix the name of the IKE_SA
+	 * @param use_millisecond	TRUE to prefix a millisecond time to the end of 
+	 *                        	the time_format. time_format should end with %H:%M:%S for 
+	 *                        	this to make sence
 	 */
-	void (*set_options) (file_logger_t *this, char *time_format, bool ike_name);
+	void (*set_options) (file_logger_t *this, char *time_format, bool ike_name, bool use_millisecond);
 
 	/**
 	 * Open (or reopen) the log file according to the given parameters

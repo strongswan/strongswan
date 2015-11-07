@@ -324,11 +324,13 @@ static void load_file_logger(private_daemon_t *this, char *filename,
 	file_logger_t *file_logger;
 	debug_t group;
 	level_t def;
-	bool ike_name, flush_line, append;
+	bool ike_name, flush_line, append, use_millisecond;
 	char *time_format;
 
 	time_format = lib->settings->get_str(lib->settings,
 						"%s.filelog.%s.time_format", NULL, lib->ns, filename);
+	use_millisecond = lib->settings->get_bool(lib->settings,
+						"%s.filelog.%s.use_millisecond", FALSE, lib->ns, filename);
 	ike_name = lib->settings->get_bool(lib->settings,
 						"%s.filelog.%s.ike_name", FALSE, lib->ns, filename);
 	flush_line = lib->settings->get_bool(lib->settings,
@@ -337,7 +339,7 @@ static void load_file_logger(private_daemon_t *this, char *filename,
 						"%s.filelog.%s.append", TRUE, lib->ns, filename);
 
 	file_logger = add_file_logger(this, filename, current_loggers);
-	file_logger->set_options(file_logger, time_format, ike_name);
+	file_logger->set_options(file_logger, time_format, ike_name, use_millisecond);
 	file_logger->open(file_logger, flush_line, append);
 
 	def = lib->settings->get_int(lib->settings, "%s.filelog.%s.default", 1,
