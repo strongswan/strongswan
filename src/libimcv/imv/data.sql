@@ -388,6 +388,30 @@ INSERT INTO products (			/* 65 */
  'Debian 7.8 armv7l'
 );
 
+INSERT INTO products (			/* 66 */
+  name
+) VALUES (
+ 'Debian 7.9 i686'
+);
+
+INSERT INTO products (			/* 67 */
+  name
+) VALUES (
+ 'Debian 7.9 x86_64'
+);
+
+INSERT INTO products (			/* 68 */
+  name
+) VALUES (
+ 'Debian 7.9 armv6l'
+);
+
+INSERT INTO products (			/* 69 */
+  name
+) VALUES (
+ 'Debian 7.9 armv7l'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -889,6 +913,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 66
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -950,6 +980,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 59
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 67
 );
 
 INSERT INTO groups_product_defaults (
@@ -1201,7 +1237,19 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  14, 68
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   15, 65
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  15, 69
 );
 
 /* Policies */
