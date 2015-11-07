@@ -7,7 +7,7 @@ AM_LDFLAGS = \
 ipseclib_LTLIBRARIES = libradius.la
 
 libradius_la_LIBADD = \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la
+	$(top_builddir)/src/libstrongswan/libstrongswan.la -lm
 
 libradius_la_SOURCES = \
 	radius_message.h radius_message.c \

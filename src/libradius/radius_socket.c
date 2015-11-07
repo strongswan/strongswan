@@ -13,11 +13,34 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2015 Thom Troy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "radius_socket.h"
 #include "radius_mppe.h"
 
 #include <errno.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <pen/pen.h>
 #include <utils/debug.h>
@@ -83,6 +106,21 @@ struct private_radius_socket_t {
 	 * RADIUS secret
 	 */
 	chunk_t secret;
+
+	/**
+	 * Number of times we retransmit messages before giving up
+	 */
+	u_int retransmit_tries;
+
+	/**
+	 * Retransmission timeout
+	 */
+	double retransmit_timeout;
+
+	/**
+	 * Base to calculate retransmission timeout
+	 */
+	double retransmit_base;
 };
 
 /**
@@ -185,7 +223,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 {
 	radius_message_t *response;
 	chunk_t data;
-	int i, *fd, retransmit = 0;
+	int *fd, retransmit = 0, timeout;
 	u_int16_t port;
 	rng_t *rng = NULL;
 
@@ -218,21 +256,22 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	data = request->get_encoding(request);
 	DBG3(DBG_CFG, "%B", &data);
 
-	/* timeout after 2, 3, 4, 5 seconds */
-	for (i = 2; i <= 5; i++)
+	while (retransmit < this->retransmit_tries)
 	{
+		timeout = (int)(this->retransmit_timeout * 1000.0 *
+						pow(this->retransmit_base, retransmit));
 		if (retransmit)
 		{
-			DBG1(DBG_CFG, "retransmitting RADIUS %N (attempt %d)",
-				 radius_message_code_names, request->get_code(request),
-				 retransmit);
+			DBG1(DBG_CFG, "retransmit %d of RADIUS %N (timeout: %.1fs)",
+				 retransmit, radius_message_code_names,
+				 request->get_code(request), timeout/1000.0);
 		}
 		if (send(*fd, data.ptr, data.len, 0) != data.len)
 		{
 			DBG1(DBG_CFG, "sending RADIUS message failed: %s", strerror(errno));
 			return NULL;
 		}
-		switch (receive_response(*fd, i*1000, request->get_identifier(request),
+		switch (receive_response(*fd, timeout, request->get_identifier(request),
 								 &response))
 		{
 			case SUCCESS:
@@ -251,8 +290,9 @@ METHOD(radius_socket_t, request, radius_message_t*,
 		response->destroy(response);
 		return NULL;
 	}
-	DBG1(DBG_CFG, "RADIUS %N timed out after %d retransmits",
-		 radius_message_code_names, request->get_code(request), retransmit - 1);
+
+	DBG1(DBG_CFG, "RADIUS %N timed out after %d attempts",
+		 radius_message_code_names, request->get_code(request), retransmit);
 	return NULL;
 }
 
@@ -336,7 +376,8 @@ METHOD(radius_socket_t, destroy, void,
  * See header
  */
 radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
-									  u_int16_t acct_port, chunk_t secret)
+									  u_int16_t acct_port, chunk_t secret,
+									  u_int tries, double timeout, double base)
 {
 	private_radius_socket_t *this;
 
@@ -354,6 +395,9 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
+		.retransmit_tries = tries,
+		.retransmit_timeout = timeout,
+		.retransmit_base = base,
 	);
 
 	if (!this->hasher || !this->signer || !this->rng ||
