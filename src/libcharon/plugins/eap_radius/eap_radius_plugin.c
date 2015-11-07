@@ -97,7 +97,7 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	enumerator_t *enumerator;
 	radius_config_t *config;
 	char *nas_identifier, *secret, *address, *section;
-	int auth_port, acct_port, sockets, preference;
+	int auth_port, acct_port, sockets, preference, num_request_attempts, first_request_timeout, request_backoff_timeout;
 
 	address = lib->settings->get_str(lib->settings,
 								"%s.plugins.eap-radius.server", NULL, lib->ns);
@@ -117,8 +117,18 @@ static void load_configs(private_eap_radius_plugin_t *this)
 						"%s.plugins.eap-radius.port", AUTH_PORT, lib->ns);
 		sockets = lib->settings->get_int(lib->settings,
 						"%s.plugins.eap-radius.sockets", 1, lib->ns);
+
+		num_request_attempts = lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.num_request_attempts", 5, lib->ns);
+		first_request_timeout = lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.first_request_timeout", 2000, lib->ns);
+		request_backoff_timeout = lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.request_backoff_timeout", 1000, lib->ns);
+
 		config = radius_config_create(address, address, auth_port, ACCT_PORT,
-									  nas_identifier, secret, sockets, 0);
+									  nas_identifier, secret, sockets, 0,
+									  num_request_attempts, first_request_timeout,
+									  request_backoff_timeout);
 		if (!config)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
@@ -170,11 +180,32 @@ static void load_configs(private_eap_radius_plugin_t *this)
 					lib->settings->get_int(lib->settings,
 						"%s.plugins.eap-radius.sockets", 1, lib->ns),
 				lib->ns, section);
+
+		num_request_attempts = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.num_request_attempts",
+					lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.num_request_attempts", 5, lib->ns),
+				lib->ns, section);
+
+		first_request_timeout = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.first_request_timeout",
+					lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.first_request_timeout", 2000, lib->ns),
+				lib->ns, section);
+
+		request_backoff_timeout = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.request_backoff_timeout",
+					lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.request_backoff_timeout", 1000, lib->ns),
+				lib->ns, section);
+
 		preference = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.preference", 0,
 				lib->ns, section);
 		config = radius_config_create(section, address, auth_port, acct_port,
-								nas_identifier, secret, sockets, preference);
+								nas_identifier, secret, sockets, preference,
+								num_request_attempts, first_request_timeout, 
+								request_backoff_timeout);
 		if (!config)
 		{
 			DBG1(DBG_CFG, "loading RADIUS server '%s' failed, skipped", section);

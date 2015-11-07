@@ -83,18 +83,23 @@ struct radius_config_t {
 /**
  * Create a radius_config_t instance.
  *
- * @param name				server name
- * @param address			server address
- * @param auth_port			server port for authentication
- * @param acct_port			server port for accounting
- * @param nas_identifier	NAS-Identifier to use with this server
- * @param secret			secret to use with this server
- * @param sockets			number of sockets to create in pool
- * @param preference		preference boost for this server
+ * @param name						server name
+ * @param address					server address
+ * @param auth_port					server port for authentication
+ * @param acct_port					server port for accounting
+ * @param nas_identifier			NAS-Identifier to use with this server
+ * @param secret					secret to use with this server
+ * @param sockets					number of sockets to create in pool
+ * @param preference				preference boost for this server
+ * @param num_request_attempts		number of attempts to try send a request
+ * @param first_request_timeout		time to wait for response first time
+ * @param request_backoff_timeout	backoff timeout for sending attempts
  */
 radius_config_t *radius_config_create(char *name, char *address,
 									  u_int16_t auth_port, u_int16_t acct_port,
 									  char *nas_identifier, char *secret,
-									  int sockets, int preference);
+									  int sockets, int preference,
+									  int num_request_attempts, int first_request_timeout,
+									  int request_backoff_timeout);
 
 #endif /** RADIUS_CONFIG_H_ @}*/

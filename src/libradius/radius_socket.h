@@ -72,6 +72,8 @@ struct radius_socket_t {
  * @param secret	RADIUS secret
  */
 radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
-									  u_int16_t acct_port, chunk_t secret);
+									  u_int16_t acct_port, chunk_t secret,
+									  int num_request_attempts, int first_request_timeout,
+									  int request_backoff_timeout);
 
 #endif /** RADIUS_SOCKET_H_ @}*/

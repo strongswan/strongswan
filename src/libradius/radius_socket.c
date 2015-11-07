@@ -83,6 +83,23 @@ struct private_radius_socket_t {
 	 * RADIUS secret
 	 */
 	chunk_t secret;
+
+	/**
+	 * Number fo times to retry a request
+	 */
+	int num_request_attempts;
+
+	/**
+	 * Time to wait for first response in milliseconds
+	 */
+	int first_request_timeout;
+
+	/**
+	 * Backoff time for subsquent request attempts in milliseconds
+	 * Will result in maximum attempt timeout of
+	 * first_request_timeout + (num_request_attempts * request_backoff_timeout)
+	 */
+	int request_backoff_timeout;
 };
 
 /**
@@ -185,7 +202,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 {
 	radius_message_t *response;
 	chunk_t data;
-	int i, *fd, retransmit = 0;
+	int *fd, retransmit = 0, timeout;
 	u_int16_t port;
 	rng_t *rng = NULL;
 
@@ -218,11 +235,14 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	data = request->get_encoding(request);
 	DBG3(DBG_CFG, "%B", &data);
 
-	/* timeout after 2, 3, 4, 5 seconds */
-	for (i = 2; i <= 5; i++)
+	/* exonential backoff timer, 1*request_retry_time, 2*request_retry_time ..... */
+	timeout = this->first_request_timeout;
+	do
 	{
 		if (retransmit)
 		{
+			timeout = timeout + this->request_backoff_timeout;
+
 			DBG1(DBG_CFG, "retransmitting RADIUS %N (attempt %d)",
 				 radius_message_code_names, request->get_code(request),
 				 retransmit);
@@ -232,7 +252,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 			DBG1(DBG_CFG, "sending RADIUS message failed: %s", strerror(errno));
 			return NULL;
 		}
-		switch (receive_response(*fd, i*1000, request->get_identifier(request),
+		switch (receive_response(*fd, timeout, request->get_identifier(request),
 								 &response))
 		{
 			case SUCCESS:
@@ -250,9 +270,10 @@ METHOD(radius_socket_t, request, radius_message_t*,
 		}
 		response->destroy(response);
 		return NULL;
-	}
-	DBG1(DBG_CFG, "RADIUS %N timed out after %d retransmits",
-		 radius_message_code_names, request->get_code(request), retransmit - 1);
+	} while(retransmit < this->num_request_attempts);
+
+	DBG1(DBG_CFG, "RADIUS %N timed out after %d attempts",
+		 radius_message_code_names, request->get_code(request), retransmit);
 	return NULL;
 }
 
@@ -336,7 +357,9 @@ METHOD(radius_socket_t, destroy, void,
  * See header
  */
 radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
-									  u_int16_t acct_port, chunk_t secret)
+									  u_int16_t acct_port, chunk_t secret,
+									  int num_request_attempts, int first_request_timeout,
+									  int request_backoff_timeout)
 {
 	private_radius_socket_t *this;
 
@@ -354,6 +377,9 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
+		.num_request_attempts = num_request_attempts,
+		.first_request_timeout = first_request_timeout,
+		.request_backoff_timeout = request_backoff_timeout,
 	);
 
 	if (!this->hasher || !this->signer || !this->rng ||

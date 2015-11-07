@@ -180,7 +180,9 @@ METHOD(radius_config_t, destroy, void,
 radius_config_t *radius_config_create(char *name, char *address,
 									  u_int16_t auth_port, u_int16_t acct_port,
 									  char *nas_identifier, char *secret,
-									  int sockets, int preference)
+									  int sockets, int preference,
+									  int num_request_attempts, int first_request_timeout,
+									  int request_backoff_timeout)
 {
 	private_radius_config_t *this;
 	radius_socket_t *socket;
@@ -209,7 +211,9 @@ radius_config_t *radius_config_create(char *name, char *address,
 	while (sockets--)
 	{
 		socket = radius_socket_create(address, auth_port, acct_port,
-									  chunk_create(secret, strlen(secret)));
+									  chunk_create(secret, strlen(secret)),
+									  num_request_attempts, first_request_timeout,
+									  request_backoff_timeout);
 		if (!socket)
 		{
 			destroy(this);
