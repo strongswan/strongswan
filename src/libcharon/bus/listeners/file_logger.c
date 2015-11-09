@@ -65,6 +65,14 @@ struct private_file_logger_t {
 	char *time_format;
 
 	/**
+	 * Print the millisecond after time_format. 
+	 * Uses the prefix .XXX and only makes sense if 
+	 * time_format ends with %S e.g. %H:%M:%S or %T 
+	 * would result in 12:52:25.123
+	 */
+	bool use_millisecond;
+
+	/**
 	 * Print the name/# of the IKE_SA?
 	 */
 	bool ike_name;
@@ -87,7 +95,9 @@ METHOD(logger_t, log_, void,
 	char timestr[128], namestr[128] = "";
 	const char *current = message, *next;
 	struct tm tm;
+	struct timeval tv;
 	time_t t;
+	int millisecond=0;
 
 	this->lock->read_lock(this->lock);
 	if (!this->out)
@@ -97,8 +107,11 @@ METHOD(logger_t, log_, void,
 	}
 	if (this->time_format)
 	{
-		t = time(NULL);
+		gettimeofday(&tv, NULL); 
+		t = tv.tv_sec;
 		localtime_r(&t, &tm);
+		millisecond = tv.tv_usec/1000;
+
 		strftime(timestr, sizeof(timestr), this->time_format, &tm);
 	}
 	if (this->ike_name && ike_sa)
@@ -126,8 +139,16 @@ METHOD(logger_t, log_, void,
 		next = strchr(current, '\n');
 		if (this->time_format)
 		{
-			fprintf(this->out, "%s %.2d[%N]%s ",
+			if(this->use_millisecond)
+			{
+				fprintf(this->out, "%s.%03d %.2d[%N]%s ",
+					timestr, millisecond, thread, debug_names, group, namestr);
+			}
+			else
+			{
+				fprintf(this->out, "%s %.2d[%N]%s ",
 					timestr, thread, debug_names, group, namestr);
+			}
 		}
 		else
 		{
@@ -182,10 +203,11 @@ METHOD(file_logger_t, set_level, void,
 }
 
 METHOD(file_logger_t, set_options, void,
-	private_file_logger_t *this, char *time_format, bool ike_name)
+	private_file_logger_t *this, char *time_format, bool ike_name, bool use_millisecond)
 {
 	this->lock->write_lock(this->lock);
 	free(this->time_format);
+	this->use_millisecond = use_millisecond;
 	this->time_format = strdupnull(time_format);
 	this->ike_name = ike_name;
 	this->lock->unlock(this->lock);
