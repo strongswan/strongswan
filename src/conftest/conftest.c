@@ -382,15 +382,17 @@ static void load_log_levels(file_logger_t *logger, char *section)
  */
 static void load_logger_options(file_logger_t *logger, char *section)
 {
-	bool ike_name;
 	char *time_format;
+	bool add_ms, ike_name;
 
 	time_format = conftest->test->get_str(conftest->test,
 					"log.%s.time_format", NULL, section);
+	add_ms = conftest->test->get_bool(conftest->test,
+					"log.%s.time_add_ms", FALSE, section);
 	ike_name = conftest->test->get_bool(conftest->test,
 					"log.%s.ike_name", FALSE, section);
 
-	logger->set_options(logger, time_format, FALSE, ike_name);
+	logger->set_options(logger, time_format, add_ms, ike_name);
 }
 
 /**
