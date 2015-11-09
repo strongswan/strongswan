@@ -1188,11 +1188,15 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
  */
 static u_int32_t get_message_id_or_hash(message_t *message)
 {
-	/* Use the message ID, or the message hash in IKEv1 Main/Aggressive mode */
-	if (message->get_major_version(message) == IKEV1_MAJOR_VERSION &&
-		message->get_message_id(message) == 0)
+	if (message->get_major_version(message) == IKEV1_MAJOR_VERSION)
 	{
-		return chunk_hash(message->get_packet_data(message));
+		/* Use a hash for IKEv1 Phase 1, where we don't have a MID, and Quick
+		 * Mode, where all three messages use the same message ID */
+		if (message->get_message_id(message) == 0 ||
+			message->get_exchange_type(message) == QUICK_MODE)
+		{
+			return chunk_hash(message->get_packet_data(message));
+		}
 	}
 	return message->get_message_id(message);
 }
