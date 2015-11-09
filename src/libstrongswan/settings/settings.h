@@ -51,6 +51,15 @@ bool settings_value_as_bool(char *value, bool def);
 int settings_value_as_int(char *value, int def);
 
 /**
+ * Convert a string value returned by a key/value enumerator to an u_int64_t.
+ *
+ * @see settings_t.create_key_value_enumerator()
+ * @param value			the string value
+ * @param def			the default value, if value is NULL or invalid
+ */
+u_int64_t settings_value_as_uint64(char *value, u_int64_t def);
+
+/**
  * Convert a string value returned by a key/value enumerator to a double.
  *
  * @see settings_t.create_key_value_enumerator()

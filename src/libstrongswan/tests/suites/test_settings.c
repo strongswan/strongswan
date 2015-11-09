@@ -317,6 +317,26 @@ START_TEST(test_set_int)
 }
 END_TEST
 
+START_TEST(test_value_as_unit64)
+{
+	test_int_eq(1, settings_value_as_uint64(NULL, 1));
+	test_int_eq(1, settings_value_as_uint64("", 1));
+	test_int_eq(1, settings_value_as_uint64("2a", 1));
+	test_int_eq(1, settings_value_as_uint64("a2", 1));
+	test_int_eq(1, settings_value_as_uint64("2.0", 1));
+
+	test_int_eq(10, settings_value_as_uint64("10", 0));
+	test_int_eq(10, settings_value_as_uint64("010", 0));
+	test_int_eq(16, settings_value_as_uint64("0x010", 0));
+	test_int_eq(0x2a, settings_value_as_uint64("0x2a", 0));
+
+	test_int_eq(0xffffffffffffffffLL, settings_value_as_uint64("0xffffffffffffffff", 0));
+	test_int_eq(0xffffffff00000000LL, settings_value_as_uint64("0xffffffff00000000", 0));
+	test_int_eq(0xffffffff00000000LL, settings_value_as_uint64("18446744069414584320", 0));
+	test_int_eq(0xffffffff00000001LL, settings_value_as_uint64("18446744069414584321", 0));
+}
+END_TEST
+
 START_SETUP(setup_double_config)
 {
 	create_settings(chunk_from_str(
@@ -1156,6 +1176,10 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_int_config, teardown_config);
 	tcase_add_test(tc, test_get_int);
 	tcase_add_test(tc, test_set_int);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("settings_value_as_uint64");
+	tcase_add_test(tc, test_value_as_unit64);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get/set_double");
