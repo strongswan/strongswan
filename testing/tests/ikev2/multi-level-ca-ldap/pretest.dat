@@ -1,8 +1,8 @@
 winnetou::/etc/init.d/slapd start
 moon::iptables-restore < /etc/iptables.rules
+moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-moon::ipsec start
 carol::expect-connection alice
 carol::expect-connection venus
 carol::ipsec up alice

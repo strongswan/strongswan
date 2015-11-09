@@ -9,6 +9,7 @@ dave::cat /etc/tnc/dummyimc.file
 moon::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
 carol::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
 dave::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
+moon::expect-connection rw-allow
 carol::expect-connection home
 carol::ipsec up home
 dave::expect-connection home
