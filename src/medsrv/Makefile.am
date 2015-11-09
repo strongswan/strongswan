@@ -35,11 +35,11 @@ templates/peer/list.cs
 medsrv_templates_staticdir = ${medsrv_templatesdir}/static
 medsrv_templates_static_DATA = templates/header.cs templates/footer.cs \
 templates/static/style.css templates/static/strongswan.png \
-templates/static/favicon.ico templates/static/mootools.js templates/static/script.js
+templates/static/favicon.ico
 
 EXTRA_DIST = templates/header.cs templates/footer.cs \
 templates/static/style.css templates/static/strongswan.png \
-templates/static/favicon.ico templates/static/mootools.js templates/static/script.js \
+templates/static/favicon.ico \
 templates/peer/add.cs templates/peer/edit.cs templates/peer/list.cs \
 templates/user/login.cs templates/user/add.cs templates/user/edit.cs \
 templates/user/help.cs
