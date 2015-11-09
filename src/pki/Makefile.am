@@ -17,7 +17,10 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/signcrl.c \
 	commands/verify.c
 
-pki_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+pki_LDADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(PTHREADLIB) $(DLLIB)
+
 pki.o :	$(top_builddir)/config.status
 
 AM_CPPFLAGS = \
