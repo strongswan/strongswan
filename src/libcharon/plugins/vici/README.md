@@ -587,6 +587,10 @@ command.
 			initiator = <yes, if initiator of IKE_SA>
 			initiator-spi = <hex encoded initiator SPI / cookie>
 			responder-spi = <hex encoded responder SPI / cookie>
+			nat-local = <yes, if local endpoint is behind a NAT>
+			nat-remote = <yes, if remote endpoint is behind a NAT>
+			nat-fake = <yes, if NAT situation has been faked as responder>
+			nat-any = <yes, if any endpoint is behind a NAT (also if faked)>
 			encr-alg = <IKE encryption algorithm string>
 			encr-keysize = <key size for encr-alg, if applicable>
 			integ-alg = <IKE integrity algorithm string>
