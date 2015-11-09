@@ -252,8 +252,20 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	b->add_kv(b, "local-host", "%H", ike_sa->get_my_host(ike_sa));
 	b->add_kv(b, "local-id", "%Y", ike_sa->get_my_id(ike_sa));
 
+	if (ike_sa->supports_extension(ike_sa, EXT_NATT) &&
+	    ike_sa->has_condition(ike_sa, COND_NAT_HERE))
+	{
+		b->add_kv(b, "local-nat-t", "yes");
+	}
+
 	b->add_kv(b, "remote-host", "%H", ike_sa->get_other_host(ike_sa));
 	b->add_kv(b, "remote-id", "%Y", ike_sa->get_other_id(ike_sa));
+
+	if (ike_sa->supports_extension(ike_sa, EXT_NATT) &&
+	    ike_sa->has_condition(ike_sa, COND_NAT_THERE))
+	{
+		b->add_kv(b, "remote-nat-t", "yes");
+	}
 
 	eap = ike_sa->get_other_eap_id(ike_sa);
 
