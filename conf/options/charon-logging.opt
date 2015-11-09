@@ -28,6 +28,10 @@ charon.filelog.<filename>.time_format
 	Prefix each log entry with a timestamp. The option accepts a format string
 	as passed to **strftime**(3).
 
+charon.filelog.<filename>.time_add_ms = no
+	Adds the milliseconds within the current second after the timestamp
+	(separated by a dot, so _time_format_ should end with %S or %T).
+
 charon.syslog {}
 	Section to define syslog loggers, see LOGGER CONFIGURATION in
 	**strongswan.conf**(5).

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -65,6 +65,11 @@ struct private_file_logger_t {
 	char *time_format;
 
 	/**
+	 * Add milliseconds after the time string
+	 */
+	bool add_ms;
+
+	/**
 	 * Print the name/# of the IKE_SA?
 	 */
 	bool ike_name;
@@ -87,7 +92,9 @@ METHOD(logger_t, log_, void,
 	char timestr[128], namestr[128] = "";
 	const char *current = message, *next;
 	struct tm tm;
-	time_t t;
+	timeval_t tv;
+	time_t s;
+	u_int ms = 0;
 
 	this->lock->read_lock(this->lock);
 	if (!this->out)
@@ -97,8 +104,10 @@ METHOD(logger_t, log_, void,
 	}
 	if (this->time_format)
 	{
-		t = time(NULL);
-		localtime_r(&t, &tm);
+		gettimeofday(&tv, NULL);
+		s = tv.tv_sec;
+		ms = tv.tv_usec / 1000;
+		localtime_r(&s, &tm);
 		strftime(timestr, sizeof(timestr), this->time_format, &tm);
 	}
 	if (this->ike_name && ike_sa)
@@ -126,8 +135,16 @@ METHOD(logger_t, log_, void,
 		next = strchr(current, '\n');
 		if (this->time_format)
 		{
-			fprintf(this->out, "%s %.2d[%N]%s ",
-					timestr, thread, debug_names, group, namestr);
+			if (this->add_ms)
+			{
+				fprintf(this->out, "%s.%03u %.2d[%N]%s ",
+						timestr, ms, thread, debug_names, group, namestr);
+			}
+			else
+			{
+				fprintf(this->out, "%s %.2d[%N]%s ",
+						timestr, thread, debug_names, group, namestr);
+			}
 		}
 		else
 		{
@@ -182,11 +199,12 @@ METHOD(file_logger_t, set_level, void,
 }
 
 METHOD(file_logger_t, set_options, void,
-	private_file_logger_t *this, char *time_format, bool ike_name)
+	private_file_logger_t *this, char *time_format, bool add_ms, bool ike_name)
 {
 	this->lock->write_lock(this->lock);
 	free(this->time_format);
 	this->time_format = strdupnull(time_format);
+	this->add_ms = add_ms;
 	this->ike_name = ike_name;
 	this->lock->unlock(this->lock);
 }

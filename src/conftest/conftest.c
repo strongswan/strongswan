@@ -390,7 +390,7 @@ static void load_logger_options(file_logger_t *logger, char *section)
 	ike_name = conftest->test->get_bool(conftest->test,
 					"log.%s.ike_name", FALSE, section);
 
-	logger->set_options(logger, time_format, ike_name);
+	logger->set_options(logger, time_format, FALSE, ike_name);
 }
 
 /**
@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
 	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
 
 	logger = file_logger_create("stdout");
-	logger->set_options(logger, NULL, FALSE);
+	logger->set_options(logger, NULL, FALSE, FALSE);
 	logger->open(logger, FALSE, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
 	charon->bus->add_logger(charon->bus, &logger->logger);
