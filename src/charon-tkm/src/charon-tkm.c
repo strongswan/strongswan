@@ -43,6 +43,7 @@
 #include "tkm_public_key.h"
 #include "tkm_cred.h"
 #include "tkm_encoder.h"
+#include "tkm_spi_generator.h"
 
 /**
  * TKM bus listener for IKE authorize events.
@@ -298,6 +299,9 @@ int main(int argc, char *argv[])
 			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA256),
 		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(tkm_spi_generator_register, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "tkm-spi-generator"),
+				PLUGIN_DEPENDS(CUSTOM, "libcharon-sa-managers"),
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE, NULL, NULL);
