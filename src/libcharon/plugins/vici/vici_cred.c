@@ -71,6 +71,7 @@ CALLBACK(load_cert, vici_message_t*,
 	certificate_t *cert;
 	x509_t *x509;
 	chunk_t data;
+	bool trusted = TRUE;
 	char *str;
 
 	str = message->get_str(message, NULL, "type");
@@ -99,6 +100,7 @@ CALLBACK(load_cert, vici_message_t*,
 	else if (strcaseeq(str, "x509ac"))
 	{
 		type = CERT_X509_AC;
+		trusted = FALSE;
 	}
 	else
 	{
@@ -137,7 +139,7 @@ CALLBACK(load_cert, vici_message_t*,
 	}
 	else
 	{
-		this->creds->add_cert(this->creds, TRUE, cert);
+		this->creds->add_cert(this->creds, trusted, cert);
 	}
 	return create_reply(NULL);
 }
