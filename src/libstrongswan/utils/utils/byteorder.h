@@ -158,6 +158,26 @@ static inline u_int64_t untoh64(void *network)
 #endif
 }
 
+#ifndef le32toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define le32toh(x) __builtin_bswap32(x)
+#  define htole32(x) __builtin_bswap32(x)
+# else
+#  define le32toh(x) (x)
+#  define htole32(x) (x)
+# endif
+#endif
+
+#ifndef le64toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define le64toh(x) __builtin_bswap64(x)
+#  define htole64(x) __builtin_bswap64(x)
+# else
+#  define le64toh(x) (x)
+#  define htole64(x) (x)
+# endif
+#endif
+
 /**
  * Read a 32-bit value in little-endian order from unaligned address.
  *
