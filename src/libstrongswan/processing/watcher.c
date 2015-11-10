@@ -345,6 +345,13 @@ static job_requeue_t watch(private_watcher_t *this)
 		old = thread_cancelability(TRUE);
 
 		res = poll(pfd, count, -1);
+		if (res == -1 && errno == EINTR)
+		{
+			/* LinuxThreads interrupts poll(), but does not make it a
+			 * cancellation point. Manually test if we got cancelled. */
+			thread_cancellation_point();
+		}
+
 		thread_cancelability(old);
 		thread_cleanup_pop(FALSE);
 
