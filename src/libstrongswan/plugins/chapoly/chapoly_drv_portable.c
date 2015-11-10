@@ -58,27 +58,6 @@ struct private_chapoly_drv_portable_t {
 };
 
 /**
- * Convert unaligned little endian to host byte order
- */
-static inline u_int32_t uletoh32(void *p)
-{
-	u_int32_t ret;
-
-	memcpy(&ret, p, sizeof(ret));
-	ret = le32toh(ret);
-	return ret;
-}
-
-/**
- * Convert host byte order to unaligned little endian
- */
-static inline void htoule32(void *p, u_int32_t v)
-{
-	v = htole32(v);
-	memcpy(p, &v, sizeof(v));
-}
-
-/**
  * XOR a 32-bit integer into an unaligned destination
  */
 static inline void xor32u(void *p, u_int32_t x)

@@ -158,4 +158,31 @@ static inline u_int64_t untoh64(void *network)
 #endif
 }
 
+/**
+ * Read a 32-bit value in little-endian order from unaligned address.
+ *
+ * @param network	unaligned address to read little endian value from
+ * @return			host order value
+ */
+static inline u_int32_t uletoh32(void *p)
+{
+	u_int32_t ret;
+
+	memcpy(&ret, p, sizeof(ret));
+	ret = le32toh(ret);
+	return ret;
+}
+
+/**
+ * Write a 32-bit value in little-endian to an unaligned address.
+ *
+ * @param host		host order 32-bit value
+ * @param network	unaligned address to write little endian value to
+ */
+static inline void htoule32(void *p, u_int32_t v)
+{
+	v = htole32(v);
+	memcpy(p, &v, sizeof(v));
+}
+
 #endif /** BYTEORDER_H_ @} */
