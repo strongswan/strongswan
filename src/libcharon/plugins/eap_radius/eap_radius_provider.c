@@ -178,18 +178,38 @@ static void add_addr(private_eap_radius_provider_t *this,
  * Remove the next address from the locked hashtable stored for given id
  */
 static host_t* remove_addr(private_eap_radius_provider_t *this,
-						   hashtable_t *hashtable, uintptr_t id)
+						   hashtable_t *hashtable, uintptr_t id, host_t *addr)
 {
+	enumerator_t *enumerator;
 	entry_t *entry;
-	host_t *addr = NULL;
+	host_t *found = NULL, *current;
 
 	entry = hashtable->remove(hashtable, (void*)id);
 	if (entry)
 	{
-		entry->addrs->remove_first(entry->addrs, (void**)&addr);
+		enumerator = entry->addrs->create_enumerator(entry->addrs);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (addr->ip_equals(addr, current))
+			{	/* prefer an exact match */
+				entry->addrs->remove_at(entry->addrs, enumerator);
+				enumerator->destroy(enumerator);
+				put_or_destroy_entry(hashtable, entry);
+				return current;
+			}
+			if (!found && addr->get_family(addr) == current->get_family(current))
+			{	/* fallback to the first IP with a matching address family */
+				found = current;
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (found)
+		{
+			entry->addrs->remove(entry->addrs, found, NULL);
+		}
 		put_or_destroy_entry(hashtable, entry);
 	}
-	return addr;
+	return found;
 }
 
 /**
@@ -326,7 +346,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 		if (streq(name, "radius"))
 		{
 			this->listener.mutex->lock(this->listener.mutex);
-			addr = remove_addr(this, this->listener.unclaimed, sa);
+			addr = remove_addr(this, this->listener.unclaimed, sa, requested);
 			if (addr)
 			{
 				add_addr(this, this->listener.claimed, sa, addr->clone(addr));
@@ -357,7 +377,7 @@ METHOD(attribute_provider_t, release_address, bool,
 		if (streq(name, "radius"))
 		{
 			this->listener.mutex->lock(this->listener.mutex);
-			found = remove_addr(this, this->listener.claimed, sa);
+			found = remove_addr(this, this->listener.claimed, sa, address);
 			this->listener.mutex->unlock(this->listener.mutex);
 			break;
 		}
