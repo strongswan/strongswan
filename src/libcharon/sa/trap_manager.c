@@ -211,6 +211,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 	if (this->installing == INSTALL_DISABLED)
 	{	/* flush() has been called */
 		this->lock->unlock(this->lock);
+		other->destroy(other);
 		me->destroy(me);
 		return 0;
 	}
@@ -235,6 +236,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 		{
 			DBG1(DBG_CFG, "CHILD_SA '%s' is already being routed", found->name);
 			this->lock->unlock(this->lock);
+			other->destroy(other);
 			me->destroy(me);
 			return 0;
 		}
