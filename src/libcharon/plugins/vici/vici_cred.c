@@ -131,8 +131,14 @@ CALLBACK(load_cert, vici_message_t*,
 
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
 
-	this->creds->add_cert(this->creds, TRUE, cert);
-
+	if (type == CERT_X509_CRL)
+	{
+		this->creds->add_crl(this->creds, (crl_t*)cert);
+	}
+	else
+	{
+		this->creds->add_cert(this->creds, TRUE, cert);
+	}
 	return create_reply(NULL);
 }
 
