@@ -119,7 +119,7 @@ static void load_configs(private_eap_radius_plugin_t *this)
 						"%s.plugins.eap-radius.sockets", 1, lib->ns);
 
 		num_request_attempts = lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.num_request_attempts", 5, lib->ns);
+						"%s.plugins.eap-radius.num_request_attempts", 4, lib->ns);
 		first_request_timeout = lib->settings->get_int(lib->settings,
 						"%s.plugins.eap-radius.first_request_timeout", 2000, lib->ns);
 		request_backoff_timeout = lib->settings->get_int(lib->settings,
@@ -184,7 +184,7 @@ static void load_configs(private_eap_radius_plugin_t *this)
 		num_request_attempts = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.num_request_attempts",
 					lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.num_request_attempts", 5, lib->ns),
+						"%s.plugins.eap-radius.num_request_attempts", 4, lib->ns),
 				lib->ns, section);
 
 		first_request_timeout = lib->settings->get_int(lib->settings,
