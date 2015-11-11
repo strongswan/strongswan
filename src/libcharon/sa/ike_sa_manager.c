@@ -394,9 +394,17 @@ struct private_ike_sa_manager_t {
 	rng_t *rng;
 
 	/**
-	 * Lock to access the RNG instance
+	 * Registered callback for IKE SPIs
 	 */
-	rwlock_t *rng_lock;
+	struct {
+		spi_cb_t cb;
+		void *data;
+	} spi_cb;
+
+	/**
+	 * Lock to access the RNG instance and the callback
+	 */
+	rwlock_t *spi_lock;
 
 	/**
 	 * reuse existing IKE_SAs in checkout_by_config
@@ -971,13 +979,17 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
 {
 	u_int64_t spi;
 
-	this->rng_lock->read_lock(this->rng_lock);
-	if (!this->rng ||
-		!this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
+	this->spi_lock->read_lock(this->spi_lock);
+	if (this->spi_cb.cb)
+	{
+		spi = this->spi_cb.cb(this->spi_cb.data);
+	}
+	else if (!this->rng ||
+			 !this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
 	{
 		spi = 0;
 	}
-	this->rng_lock->unlock(this->rng_lock);
+	this->spi_lock->unlock(this->spi_lock);
 	return spi;
 }
 
@@ -2040,6 +2052,15 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 	return count;
 }
 
+METHOD(ike_sa_manager_t, set_spi_cb, void,
+	private_ike_sa_manager_t *this, spi_cb_t callback, void *data)
+{
+	this->spi_lock->write_lock(this->spi_lock);
+	this->spi_cb.cb = callback;
+	this->spi_cb.data = data;
+	this->spi_lock->unlock(this->spi_lock);
+}
+
 METHOD(ike_sa_manager_t, flush, void,
 	private_ike_sa_manager_t *this)
 {
@@ -2122,10 +2143,12 @@ METHOD(ike_sa_manager_t, flush, void,
 	charon->bus->set_sa(charon->bus, NULL);
 	unlock_all_segments(this);
 
-	this->rng_lock->write_lock(this->rng_lock);
+	this->spi_lock->write_lock(this->spi_lock);
 	this->rng->destroy(this->rng);
 	this->rng = NULL;
-	this->rng_lock->unlock(this->rng_lock);
+	this->spi_cb.cb = NULL;
+	this->spi_cb.data = NULL;
+	this->spi_lock->unlock(this->spi_lock);
 }
 
 METHOD(ike_sa_manager_t, destroy, void,
@@ -2150,7 +2173,7 @@ METHOD(ike_sa_manager_t, destroy, void,
 	free(this->connected_peers_segments);
 	free(this->init_hashes_segments);
 
-	this->rng_lock->destroy(this->rng_lock);
+	this->spi_lock->destroy(this->spi_lock);
 	free(this);
 }
 
@@ -2197,6 +2220,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 			.get_count = _get_count,
 			.get_half_open_count = _get_half_open_count,
 			.flush = _flush,
+			.set_spi_cb = _set_spi_cb,
 			.destroy = _destroy,
 		},
 	);
@@ -2208,7 +2232,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		free(this);
 		return NULL;
 	}
-	this->rng_lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	this->spi_lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	this->ikesa_limit = lib->settings->get_int(lib->settings,
 											   "%s.ikesa_limit", 0, lib->ns);

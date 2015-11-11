@@ -540,6 +540,31 @@ METHOD(settings_t, get_int, int,
 /**
  * Described in header
  */
+inline u_int64_t settings_value_as_uint64(char *value, u_int64_t def)
+{
+	u_int64_t intval;
+	char *end;
+	int base = 10;
+
+	if (value)
+	{
+		errno = 0;
+		if (value[0] == '0' && value[1] == 'x')
+		{	/* manually detect 0x prefix as we want to avoid octal encoding */
+			base = 16;
+		}
+		intval = strtoull(value, &end, base);
+		if (errno == 0 && *end == 0 && end != value)
+		{
+			return intval;
+		}
+	}
+	return def;
+}
+
+/**
+ * Described in header
+ */
 inline double settings_value_as_double(char *value, double def)
 {
 	double dval;
