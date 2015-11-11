@@ -367,7 +367,7 @@ static certificate_t* fetch_crl(char *url)
 		return NULL;
 	}
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
-							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+							 BUILD_BLOB_PEM, chunk, BUILD_END);
 	chunk_free(&chunk);
 	if (!crl)
 	{
