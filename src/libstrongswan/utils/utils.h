@@ -56,6 +56,9 @@
 #ifdef __APPLE__
 # include "compat/apple.h"
 #endif
+#ifdef __ANDROID__
+# include "compat/android.h"
+#endif
 
 /**
  * Initialize utility functions

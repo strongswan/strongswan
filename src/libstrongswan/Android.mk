@@ -117,8 +117,7 @@ LOCAL_SRC_FILES += $(call add_plugin, xcbc)
 
 # build libstrongswan ----------------------------------------------------------
 
-LOCAL_CFLAGS := $(strongswan_CFLAGS) \
-	-include $(LOCAL_PATH)/AndroidConfigLocal.h
+LOCAL_CFLAGS := $(strongswan_CFLAGS)
 
 LOCAL_MODULE := libstrongswan
 

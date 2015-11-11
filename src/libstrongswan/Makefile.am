@@ -110,7 +110,7 @@ utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/cpu_feature.h utils/leak_detective.h utils/printf_hook/printf_hook.h \
 utils/printf_hook/printf_hook_vstr.h utils/printf_hook/printf_hook_builtin.h \
 utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
-utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h \
+utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h utils/compat/android.h \
 utils/utils/atomics.h utils/utils/types.h utils/utils/byteorder.h \
 utils/utils/string.h utils/utils/memory.h utils/utils/tty.h utils/utils/path.h \
 utils/utils/status.h utils/utils/object.h utils/utils/time.h utils/utils/align.h
@@ -191,7 +191,7 @@ endif
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords_static.txt \
-Android.mk AndroidConfigLocal.h
+Android.mk
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
