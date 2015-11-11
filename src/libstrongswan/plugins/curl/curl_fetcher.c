@@ -123,7 +123,7 @@ METHOD(fetcher_t, fetch, status_t,
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
 	}
 
-	DBG2(DBG_LIB, "  sending http request to '%s'...", uri);
+	DBG2(DBG_LIB, "  sending request to '%s'...", uri);
 	curl_status = curl_easy_perform(this->curl);
 	switch (curl_status)
 	{
@@ -137,10 +137,10 @@ METHOD(fetcher_t, fetch, status_t,
 			{
 				*this->result = result;
 			}
-			status = (result >= 200 && result < 300) ? SUCCESS : FAILED;
+			status = (result < 400) ? SUCCESS : FAILED;
 			break;
 		default:
-			DBG1(DBG_LIB, "libcurl http request failed [%d]: %s", curl_status,
+			DBG1(DBG_LIB, "libcurl request failed [%d]: %s", curl_status,
 				 error);
 			status = FAILED;
 			break;
