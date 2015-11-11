@@ -127,9 +127,45 @@ public class BufferedByteWriter
 	 * @param value
 	 * @return the writer
 	 */
+	public BufferedByteWriter put16(byte value)
+	{
+		return this.put16((short)(value & 0xFF));
+	}
+
+	/**
+	 * Write the given short value (16-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
 	public BufferedByteWriter put16(short value)
 	{
 		ensureCapacity(2);
+		mWriter.putShort(value);
+		return this;
+	}
+
+	/**
+	 * Write 24-bit of the given value in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put24(byte value)
+	{
+		ensureCapacity(3);
+		mWriter.putShort((short)0);
+		mWriter.put(value);
+		return this;
+	}
+
+	/**
+	 * Write 24-bit of the given value in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put24(short value)
+	{
+		ensureCapacity(3);
+		mWriter.put((byte)0);
 		mWriter.putShort(value);
 		return this;
 	}
@@ -152,11 +188,61 @@ public class BufferedByteWriter
 	 * @param value
 	 * @return the writer
 	 */
+	public BufferedByteWriter put32(byte value)
+	{
+		return put32(value & 0xFF);
+	}
+
+	/**
+	 * Write the given int value (32-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put32(short value)
+	{
+		return put32(value & 0xFFFF);
+	}
+
+	/**
+	 * Write the given int value (32-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
 	public BufferedByteWriter put32(int value)
 	{
 		ensureCapacity(4);
 		mWriter.putInt(value);
 		return this;
+	}
+
+	/**
+	 * Write the given long value (64-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put64(byte value)
+	{
+		return put64(value & 0xFFL);
+	}
+
+	/**
+	 * Write the given long value (64-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put64(short value)
+	{
+		return put64(value & 0xFFFFL);
+	}
+
+	/**
+	 * Write the given long value (64-bit) in big-endian order to the buffer
+	 * @param value
+	 * @return the writer
+	 */
+	public BufferedByteWriter put64(int value)
+	{
+		return put64(value & 0xFFFFFFFFL);
 	}
 
 	/**
