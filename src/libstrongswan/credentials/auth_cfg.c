@@ -951,9 +951,9 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 	{
 		entry_t entry;
 
-		while (array_remove(other->entries, ARRAY_HEAD, &entry))
-		{
-			array_insert(this->entries, ARRAY_TAIL, &entry);
+		while (array_remove(other->entries, ARRAY_TAIL, &entry))
+		{	/* keep order but prefer new values (esp. for single valued ones) */
+			array_insert(this->entries, ARRAY_HEAD, &entry);
 		}
 		array_compress(other->entries);
 	}

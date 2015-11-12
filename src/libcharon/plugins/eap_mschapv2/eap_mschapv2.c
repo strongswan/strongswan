@@ -81,6 +81,11 @@ struct private_eap_mschapv2_t
 	 * Number of retries
 	 */
 	int retries;
+
+	/**
+	 * Provide EAP-Identity
+	 */
+	auth_cfg_t *auth;
 };
 
 /**
@@ -1058,7 +1063,10 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	name_len = min(data.len - RESPONSE_PAYLOAD_LEN, 255);
 	snprintf(buf, sizeof(buf), "%.*s", name_len, res->name);
 	userid = identification_create_from_string(buf);
-	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
+	if (!userid->equals(userid, this->peer))
+	{
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
+	}
 	/* userid can only be destroyed after the last use of username */
 	username = extract_username(userid->get_encoding(userid));
 
@@ -1084,7 +1092,6 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		chunk_clear(&nt_hash);
 		return FAILED;
 	}
-	userid->destroy(userid);
 	chunk_clear(&nt_hash);
 
 	if (memeq_const(res->response.nt_response, this->nt_response.ptr,
@@ -1109,9 +1116,11 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		chunk_free(&hex);
 		memcpy(eap->data, msg, AUTH_RESPONSE_LEN + sizeof(SUCCESS_MESSAGE));
 		*out = eap_payload_create_data(chunk_create((void*) eap, len));
+
+		this->auth->add(this->auth, AUTH_RULE_EAP_IDENTITY, userid);
 		return NEED_MORE;
 	}
-
+	userid->destroy(userid);
 	return process_server_retry(this, out);
 }
 
@@ -1197,11 +1206,18 @@ METHOD(eap_method_t, is_mutual, bool,
 	return FALSE;
 }
 
+METHOD(eap_method_t, get_auth, auth_cfg_t*,
+	private_eap_mschapv2_t *this)
+{
+	return this->auth;
+}
+
 METHOD(eap_method_t, destroy, void,
 	 private_eap_mschapv2_t *this)
 {
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
+	this->auth->destroy(this->auth);
 	chunk_free(&this->challenge);
 	chunk_free(&this->nt_response);
 	chunk_free(&this->auth_response);
@@ -1224,11 +1240,13 @@ static private_eap_mschapv2_t *eap_mschapv2_create_generic(identification_t *ser
 				.get_msk = _get_msk,
 				.get_identifier = _get_identifier,
 				.set_identifier = _set_identifier,
+				.get_auth = _get_auth,
 				.destroy = _destroy,
 			},
 		},
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
+		.auth = auth_cfg_create(),
 	);
 
 	return this;
