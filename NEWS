@@ -1,6 +1,11 @@
 strongswan-5.3.4
 ----------------
 
+- Fixed an authentication bypass vulnerability in the eap-mschapv2 plugin that
+  was caused by insufficient verification of the internal state when handling
+  MSCHAPv2 Success messages received by the client.
+  This vulnerability has been registered as CVE-2015-8023.
+
 - The sha3 plugin implements the SHA3 Keccak-F1600 hash algorithm family.
   Within the strongSwan framework SHA3 is currently used for BLISS signatures
   only because the OIDs for other signature algorithms haven't been defined
@@ -46,7 +51,7 @@ strongswan-5.3.3
   since 5.0.0) and packets that have the flag set incorrectly are again ignored.
 
 - Implemented a demo Hardcopy Device IMC/IMV pair based on the "Hardcopy
-  Device Health Assessment Trusted Network Connect Binding" (HCD-TNC) 
+  Device Health Assessment Trusted Network Connect Binding" (HCD-TNC)
   document drafted by the IEEE Printer Working Group (PWG).
 
 - Fixed IF-M segmentation which failed in the presence of multiple small
