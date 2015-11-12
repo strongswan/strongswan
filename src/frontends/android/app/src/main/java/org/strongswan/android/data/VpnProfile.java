@@ -180,6 +180,7 @@ public class VpnProfile implements Cloneable
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_type_key), getVpnType().name());
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key), getUserCertificateAlias());
         bundle.putString(resources.getString(R.string.vpn_profile_bundle_username_key), getUsername());
+		bundle.putString(resources.getString(R.string.vpn_profile_bundle_certificate_id_key), getCertificateId());
 		bundle.putStringArrayList(resources.getString(R.string.vpn_profile_bundle_allowed_applications), getAllowedApplications());
         return bundle;
     }
@@ -193,6 +194,7 @@ public class VpnProfile implements Cloneable
         mVpnType = VpnType.valueOf(bundle.getString(resources.getString(R.string.vpn_profile_bundle_type_key)));
         mUserCertificate = bundle.getString(resources.getString(R.string.vpn_profile_bundle_user_certificate_alias_key));
         mUsername = bundle.getString(resources.getString(R.string.vpn_profile_bundle_username_key));
+		mCertificateId = bundle.getString(resources.getString(R.string.vpn_profile_bundle_certificate_id_key));
  		allowedApplications = bundle.getStringArrayList(resources.getString(R.string.vpn_profile_bundle_allowed_applications));
     }
 }

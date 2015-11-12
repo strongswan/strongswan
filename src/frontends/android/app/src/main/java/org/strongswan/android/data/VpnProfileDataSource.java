@@ -285,7 +285,7 @@ public class VpnProfileDataSource
 		values.put(KEY_PASSWORD, profile.getPassword());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
 		values.put(KEY_USER_CERTIFICATE, profile.getUserCertificateAlias());
-        values.put(KEY_CERTIFICATE_ID,profile.getCertificateId());
+        values.put(KEY_CERTIFICATE_ID, profile.getCertificateId());
         values.put(KEY_ALLOWED_APPLICATIONS, convertToString(profile.getAllowedApplications()));
 		return values;
 	}

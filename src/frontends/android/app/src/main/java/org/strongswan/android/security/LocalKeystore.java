@@ -17,6 +17,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
+import java.util.Enumeration;
 
 /**
  * @author Marcin Waligórski <marcin.waligorski@fancyfon.com>
@@ -30,8 +31,9 @@ public class LocalKeystore {
     private static final String CA_KEYSTORE_TYPE = "BKS";
 
     // TODO: Change this string to enum
-    public static final String CA_TYPE = "CA_";
-    public static final String USER_TYPE = "USER_";
+    private static final String CA_TYPE = "CA_";
+    private static final String USER_TYPE = "USER_";
+    private static final int NOT_A_SUBJECT_OF_CA_CERTIFICATE = -1;
     private KeyStore userCertKeystore;
     private KeyStore caCertKeystore;
 
@@ -40,12 +42,12 @@ public class LocalKeystore {
         caCertKeystore = KeyStore.getInstance(CA_KEYSTORE_TYPE);
     }
 
-    public boolean addPkcs12(byte[] pkcs12, String password, String certificateId) {
+    public String addPkcs12(byte[] pkcs12, String password, String certificateId) {
         try {
             userCertKeystore.load(new ByteArrayInputStream(pkcs12), password.toCharArray());
             userCertKeystore.store(StrongSwanApplication.getContext().openFileOutput(USER_TYPE + certificateId, Context
                     .MODE_PRIVATE), PASSWORD.toCharArray());
-            return true;
+            return getUserCertificateAlias();
         } catch (IOException e) {
             Log.e(TAG, "Error adding certificate to keystore: " + e);
         } catch (NoSuchAlgorithmException e) {
@@ -55,10 +57,28 @@ public class LocalKeystore {
         } catch (KeyStoreException e) {
             Log.e(TAG, "Error adding certificate to keystore: " + e);
         }
-        return false;
+        return null;
     }
 
-    public boolean addCaCertificate(byte[] caCertificate, String certificateId) {
+    private String getUserCertificateAlias() throws KeyStoreException {
+        String userCertAlias = "";
+        Enumeration<String> aliases = userCertKeystore.aliases();
+        while(aliases.hasMoreElements()) {
+            String alias = aliases.nextElement();
+            X509Certificate cert = (X509Certificate) userCertKeystore.getCertificate(alias);
+            if(isNotACaCertificate(cert)) {
+                userCertAlias = alias;
+                break;
+            }
+        }
+        return userCertAlias;
+    }
+
+    private boolean isNotACaCertificate(X509Certificate cert) {
+        return cert != null && cert.getBasicConstraints() == NOT_A_SUBJECT_OF_CA_CERTIFICATE;
+    }
+
+    public String addCaCertificate(byte[] caCertificate, String certificateId) {
         try {
             caCertKeystore.load(null, null);
             Certificate ca = getCaCertificateFromBytes(caCertificate);
@@ -66,7 +86,7 @@ public class LocalKeystore {
                 caCertKeystore.setCertificateEntry(certificateId, ca);
                 caCertKeystore.store(StrongSwanApplication.getContext().openFileOutput(CA_TYPE + certificateId, Context
                         .MODE_PRIVATE), PASSWORD.toCharArray());
-                return true;
+                return caCertKeystore.aliases().nextElement();
             }
         } catch (IOException e) {
             Log.e(TAG, "Error adding certificate to keystore: " + e);
@@ -77,13 +97,13 @@ public class LocalKeystore {
         } catch (KeyStoreException e) {
             Log.e(TAG, "Error adding certificate to keystore: " + e);
         }
-        return false;
+        return null;
     }
 
     private Certificate getCaCertificateFromBytes(byte[] caCertificate) throws CertificateException, IOException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         InputStream caInput = new BufferedInputStream(new ByteArrayInputStream(caCertificate));
-        Certificate ca;
+        Certificate ca = null;
         try {
             ca = cf.generateCertificate(caInput);
         } finally {
@@ -119,20 +139,16 @@ public class LocalKeystore {
     }
 
     private Certificate[] getCertificates(String certificateId, String alias) throws IOException, NoSuchAlgorithmException, CertificateException, KeyStoreException {
-        Certificate[] certs = null;
         userCertKeystore.load(StrongSwanApplication.getContext().openFileInput(USER_TYPE + certificateId), PASSWORD
                 .toCharArray());
-        certs = userCertKeystore.getCertificateChain(alias);
-        return certs;
+        return userCertKeystore.getCertificateChain(alias);
     }
 
     public X509Certificate getCertificate(String certificateId, String alias) {
         try {
-            Certificate cert = null;
             caCertKeystore.load(StrongSwanApplication.getContext().openFileInput(CA_TYPE + certificateId), PASSWORD
                     .toCharArray());
-            cert = caCertKeystore.getCertificate(alias);
-            return (X509Certificate) cert;
+            return (X509Certificate) caCertKeystore.getCertificate(alias);
         } catch (KeyStoreException e) {
             Log.e(TAG, "Error reading certificate from keystore: " + e);
         } catch (CertificateException e) {
@@ -172,15 +188,12 @@ public class LocalKeystore {
      * Calculates the SHA-1 hash of the current timestamp.
      * @return hex encoded SHA-1 hash of the current timestamp or null if failed
      */
-    public String generateId()
-    {
+    public String generateId() {
         MessageDigest md;
-        try
-        {
+        try {
             md = java.security.MessageDigest.getInstance("SHA1");
-            md.update(Calendar.getInstance().getTime().toString()
+            byte[] hash = md.digest(Calendar.getInstance().getTime().toString()
                     .getBytes());
-            byte[] hash = md.digest();
             return Utils.bytesToHex(hash);
         }
         catch (NoSuchAlgorithmException e)

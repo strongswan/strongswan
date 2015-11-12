@@ -23,6 +23,7 @@ All rights reserved.
     <string name="vpn_profile_bundle_gateway_key">gateway</string>
     <string name="vpn_profile_bundle_username_key">username</string>
     <string name="vpn_profile_bundle_password_key">password</string>
+    <string name="vpn_profile_bundle_certificate_id_key">certificate_id</string>
     <string name="vpn_profile_bundle_certificate_alias_key">certificate_alias</string>
     <string name="vpn_profile_bundle_user_certificate_alias_key">user_certificate_alias</string>
     <string name="vpn_profile_bundle_allowed_applications">allowed_applications</string>
