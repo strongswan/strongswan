@@ -14,6 +14,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2015 Thom Troy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "eap_radius_plugin.h"
 
 #include "eap_radius.h"
@@ -97,7 +119,9 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	enumerator_t *enumerator;
 	radius_config_t *config;
 	char *nas_identifier, *secret, *address, *section;
-	int auth_port, acct_port, sockets, preference, num_request_attempts, first_request_timeout, request_backoff_timeout;
+	int auth_port, acct_port, sockets, preference;
+	u_int retransmit_tries;
+	double retransmit_timeout, retransmit_base;
 
 	address = lib->settings->get_str(lib->settings,
 								"%s.plugins.eap-radius.server", NULL, lib->ns);
@@ -118,17 +142,17 @@ static void load_configs(private_eap_radius_plugin_t *this)
 		sockets = lib->settings->get_int(lib->settings,
 						"%s.plugins.eap-radius.sockets", 1, lib->ns);
 
-		num_request_attempts = lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.num_request_attempts", 4, lib->ns);
-		first_request_timeout = lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.first_request_timeout", 2000, lib->ns);
-		request_backoff_timeout = lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.request_backoff_timeout", 1000, lib->ns);
+		retransmit_tries = lib->settings->get_int(lib->settings,
+						"%s.plugins.eap-radius.retransmit_tries", 4, lib->ns);
+		retransmit_timeout = lib->settings->get_double(lib->settings,
+						"%s.plugins.eap-radius.retransmit_timeout", 2.0, lib->ns);
+		retransmit_base = lib->settings->get_double(lib->settings,
+						"%s.plugins.eap-radius.retransmit_base", 1.4, lib->ns);
 
 		config = radius_config_create(address, address, auth_port, ACCT_PORT,
 									  nas_identifier, secret, sockets, 0,
-									  num_request_attempts, first_request_timeout,
-									  request_backoff_timeout);
+									  retransmit_tries, retransmit_timeout,
+									  retransmit_base);
 		if (!config)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
@@ -181,31 +205,32 @@ static void load_configs(private_eap_radius_plugin_t *this)
 						"%s.plugins.eap-radius.sockets", 1, lib->ns),
 				lib->ns, section);
 
-		num_request_attempts = lib->settings->get_int(lib->settings,
-				"%s.plugins.eap-radius.servers.%s.num_request_attempts",
+		retransmit_tries = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.retransmit_tries",
 					lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.num_request_attempts", 4, lib->ns),
+						"%s.plugins.eap-radius.retransmit_tries", 4, lib->ns),
 				lib->ns, section);
 
-		first_request_timeout = lib->settings->get_int(lib->settings,
-				"%s.plugins.eap-radius.servers.%s.first_request_timeout",
-					lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.first_request_timeout", 2000, lib->ns),
+		retransmit_timeout = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.retransmit_timeout",
+					lib->settings->get_double(lib->settings,
+						"%s.plugins.eap-radius.retransmit_timeout", 2.0, lib->ns),
 				lib->ns, section);
 
-		request_backoff_timeout = lib->settings->get_int(lib->settings,
-				"%s.plugins.eap-radius.servers.%s.request_backoff_timeout",
-					lib->settings->get_int(lib->settings,
-						"%s.plugins.eap-radius.request_backoff_timeout", 1000, lib->ns),
+		retransmit_base = lib->settings->get_int(lib->settings,
+				"%s.plugins.eap-radius.servers.%s.retransmit_base",
+					lib->settings->get_double(lib->settings,
+						"%s.plugins.eap-radius.retransmit_base", 1.4, lib->ns),
 				lib->ns, section);
 
 		preference = lib->settings->get_int(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.preference", 0,
 				lib->ns, section);
+
 		config = radius_config_create(section, address, auth_port, acct_port,
 								nas_identifier, secret, sockets, preference,
-								num_request_attempts, first_request_timeout, 
-								request_backoff_timeout);
+								retransmit_tries, retransmit_timeout, 
+								retransmit_base);
 		if (!config)
 		{
 			DBG1(DBG_CFG, "loading RADIUS server '%s' failed, skipped", section);

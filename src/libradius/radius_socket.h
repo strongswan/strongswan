@@ -13,6 +13,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2015 Thom Troy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @defgroup radius_socket radius_socket
  * @{ @ingroup libradius
@@ -66,14 +88,17 @@ struct radius_socket_t {
 /**
  * Create a radius_socket instance.
  *
- * @param address	server name
- * @param auth_port	server port for authentication
- * @param acct_port	server port for accounting
- * @param secret	RADIUS secret
+ * @param address					server name
+ * @param auth_port					server port for authentication
+ * @param acct_port					server port for accounting
+ * @param secret					RADIUS secret
+ * @param retransmit_tries			number of times we retransmit messages
+ * @param retransmit_timeout		retransmission timeout
+ * @param retransmit_base			base to calculate retransmission timeout
  */
 radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 									  u_int16_t acct_port, chunk_t secret,
-									  int num_request_attempts, int first_request_timeout,
-									  int request_backoff_timeout);
+									  u_int retransmit_tries, double retransmit_timeout,
+									  double retransmit_base);
 
 #endif /** RADIUS_SOCKET_H_ @}*/

@@ -13,6 +13,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2015 Thom Troy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @defgroup radius_config radius_config
  * @{ @ingroup libradius
@@ -91,15 +113,15 @@ struct radius_config_t {
  * @param secret					secret to use with this server
  * @param sockets					number of sockets to create in pool
  * @param preference				preference boost for this server
- * @param num_request_attempts		number of attempts to try send a request
- * @param first_request_timeout		time to wait for response first time
- * @param request_backoff_timeout	backoff timeout for sending attempts
+ * @param retransmit_tries			number of times we retransmit messages
+ * @param retransmit_timeout		retransmission timeout
+ * @param retransmit_base			base to calculate retransmission timeout
  */
 radius_config_t *radius_config_create(char *name, char *address,
 									  u_int16_t auth_port, u_int16_t acct_port,
 									  char *nas_identifier, char *secret,
 									  int sockets, int preference,
-									  int num_request_attempts, int first_request_timeout,
-									  int request_backoff_timeout);
+									  u_int retransmit_tries, double retransmit_timeout,
+									  double retransmit_base);
 
 #endif /** RADIUS_CONFIG_H_ @}*/

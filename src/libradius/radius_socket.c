@@ -13,11 +13,34 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2015 Thom Troy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "radius_socket.h"
 #include "radius_mppe.h"
 
 #include <errno.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <pen/pen.h>
 #include <utils/debug.h>
@@ -85,21 +108,19 @@ struct private_radius_socket_t {
 	chunk_t secret;
 
 	/**
-	 * Number fo times to retry a request
+	 * Number of times we retransmit messages before giving up
 	 */
-	int num_request_attempts;
+	u_int retransmit_tries;
 
 	/**
-	 * Time to wait for first response in milliseconds
+	 * Retransmission timeout
 	 */
-	int first_request_timeout;
+	double retransmit_timeout;
 
 	/**
-	 * Backoff time for subsquent request attempts in milliseconds
-	 * Will result in maximum attempt timeout of
-	 * first_request_timeout + (num_request_attempts * request_backoff_timeout)
+	 * Base to calculate retransmission timeout
 	 */
-	int request_backoff_timeout;
+	double retransmit_base;
 };
 
 /**
@@ -235,17 +256,17 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	data = request->get_encoding(request);
 	DBG3(DBG_CFG, "%B", &data);
 
-	/* exonential backoff timer, 1*request_retry_time, 2*request_retry_time ..... */
-	timeout = this->first_request_timeout;
+	timeout = this->retransmit_timeout * 1000.0;
 	do
 	{
-		if (retransmit)
+		if (retransmit > 0)
 		{
-			timeout = timeout + this->request_backoff_timeout;
+			timeout = (int)(this->retransmit_timeout * 1000.0 *
+					pow(this->retransmit_base, retransmit));
 
-			DBG1(DBG_CFG, "retransmitting RADIUS %N (attempt %d)",
+			DBG1(DBG_CFG, "retransmitting RADIUS %N (attempt: %d, timeout: %d) ",
 				 radius_message_code_names, request->get_code(request),
-				 retransmit);
+				 retransmit, timeout);
 		}
 		if (send(*fd, data.ptr, data.len, 0) != data.len)
 		{
@@ -270,7 +291,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 		}
 		response->destroy(response);
 		return NULL;
-	} while(retransmit < this->num_request_attempts);
+	} while(retransmit < this->retransmit_tries);
 
 	DBG1(DBG_CFG, "RADIUS %N timed out after %d attempts",
 		 radius_message_code_names, request->get_code(request), retransmit);
@@ -358,8 +379,8 @@ METHOD(radius_socket_t, destroy, void,
  */
 radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 									  u_int16_t acct_port, chunk_t secret,
-									  int num_request_attempts, int first_request_timeout,
-									  int request_backoff_timeout)
+									  u_int retransmit_tries, double retransmit_timeout,
+									  double retransmit_base)
 {
 	private_radius_socket_t *this;
 
@@ -377,9 +398,9 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
-		.num_request_attempts = num_request_attempts,
-		.first_request_timeout = first_request_timeout,
-		.request_backoff_timeout = request_backoff_timeout,
+		.retransmit_tries = retransmit_tries,
+		.retransmit_timeout = retransmit_timeout,
+		.retransmit_base = retransmit_base,
 	);
 
 	if (!this->hasher || !this->signer || !this->rng ||
