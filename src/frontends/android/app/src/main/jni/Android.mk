@@ -32,6 +32,7 @@ strongswan_CFLAGS := \
 	-Wno-sign-compare \
 	-Wno-strict-aliasing \
 	-Wno-unused-parameter \
+	-Wno-missing-field-initializers \
 	-DHAVE___BOOL \
 	-DHAVE_STDBOOL_H \
 	-DHAVE_ALLOCA_H \
