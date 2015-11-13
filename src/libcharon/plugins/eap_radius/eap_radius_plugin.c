@@ -211,13 +211,13 @@ static void load_configs(private_eap_radius_plugin_t *this)
 						"%s.plugins.eap-radius.retransmit_tries", 4, lib->ns),
 				lib->ns, section);
 
-		retransmit_timeout = lib->settings->get_int(lib->settings,
+		retransmit_timeout = lib->settings->get_double(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.retransmit_timeout",
 					lib->settings->get_double(lib->settings,
 						"%s.plugins.eap-radius.retransmit_timeout", 2.0, lib->ns),
 				lib->ns, section);
 
-		retransmit_base = lib->settings->get_int(lib->settings,
+		retransmit_base = lib->settings->get_double(lib->settings,
 				"%s.plugins.eap-radius.servers.%s.retransmit_base",
 					lib->settings->get_double(lib->settings,
 						"%s.plugins.eap-radius.retransmit_base", 1.4, lib->ns),
