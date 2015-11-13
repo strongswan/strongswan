@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -38,6 +38,7 @@
 # include <netinet/in.h>
 # include <sched.h>
 # include <poll.h>
+# include <signal.h>
 #endif
 
 #include "utils/types.h"
@@ -150,6 +151,19 @@ void utils_deinit();
  * Ignore result of functions tagged with warn_unused_result attributes
  */
 #define ignore_result(call) { if(call){}; }
+
+#if !defined(HAVE_SIGWAITINFO) && !defined(WIN32)
+/**
+ * Block and wait for a set of signals
+ *
+ * We don't replicate the functionality of siginfo_t.  If info is not NULL
+ * -1 is returend and errno is set to EINVAL.
+ *
+ * @param set		set of signals to wait for
+ * @param info		must be NULL
+ */
+int sigwaitinfo(const sigset_t *set, void *info);
+#endif
 
 /**
  * Portable function to wait for SIGINT/SIGTERM (or equivalent).

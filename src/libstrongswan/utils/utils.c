@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <ctype.h>
+#include <errno.h>
 #ifndef WIN32
 # include <signal.h>
 #endif
@@ -126,7 +127,26 @@ void wait_sigint()
 	sigwaitinfo(&set, NULL);
 }
 
-#endif
+#ifndef HAVE_SIGWAITINFO
+int sigwaitinfo(const sigset_t *set, void *info)
+{
+	int sig, err;
+
+	if (info)
+	{	/* we don't replicate siginfo_t, fail if anybody tries to use it */
+		errno = EINVAL;
+		return -1;
+	}
+	err = sigwait(set, &sig);
+	if (err != 0)
+	{
+		errno = err;
+		sig = -1;
+	}
+	return sig;
+}
+#endif /* HAVE_SIGWAITINFO */
+#endif /* WIN32 */
 
 #ifndef HAVE_CLOSEFROM
 /**
