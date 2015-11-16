@@ -79,3 +79,7 @@ endif
 if USE_PYTHON_EGGS
 SUBDIRS += python
 endif
+
+if USE_PERL_CPAN
+SUBDIRS += perl
+endif
