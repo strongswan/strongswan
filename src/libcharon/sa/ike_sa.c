@@ -487,9 +487,12 @@ METHOD(ike_sa_t, send_keepalive, void,
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
 
-	if (!(this->conditions & COND_NAT_HERE) || this->keepalive_interval == 0 ||
-		this->state == IKE_PASSIVE)
-	{	/* disable keep alives if we are not NATed anymore, or we are passive */
+	if (!this->keepalive_interval || this->state == IKE_PASSIVE)
+	{	/* keepalives disabled either by configuration or for passive IKE_SAs */
+		return;
+	}
+	if (!(this->conditions & COND_NAT_HERE) || (this->conditions & COND_STALE))
+	{	/* disable keepalives if we are not NATed anymore, or the SA is stale */
 		return;
 	}
 
@@ -589,6 +592,9 @@ METHOD(ike_sa_t, set_condition, void,
 								  has_condition(this, COND_NAT_HERE) ||
 								  has_condition(this, COND_NAT_THERE) ||
 								  has_condition(this, COND_NAT_FAKE));
+					break;
+				case COND_STALE:
+					send_keepalive(this);
 					break;
 				default:
 					break;
