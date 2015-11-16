@@ -78,6 +78,32 @@ win*)
 		;;
 	esac
 	;;
+osx)
+	# use the same options as in the Homebrew Formula
+	CONFIG="--disable-defaults --enable-charon --enable-cmd --enable-constraints
+			--enable-curl --enable-eap-gtc --enable-eap-identity
+			--enable-eap-md5 --enable-eap-mschapv2 --enable-ikev1 --enable-ikev2
+			--enable-kernel-libipsec --enable-kernel-pfkey
+			--enable-kernel-pfroute --enable-nonce --enable-openssl
+			--enable-osx-attr --enable-pem --enable-pgp --enable-pkcs1
+			--enable-pkcs8 --enable-pki --enable-pubkey --enable-revocation
+			--enable-scepclient --enable-socket-default --enable-sshkey
+			--enable-stroke --enable-swanctl --enable-unity --enable-updown
+			--enable-x509 --enable-xauth-generic"
+	DEPS="bison gettext openssl curl"
+	BREW_PREFIX=$(brew --prefix)
+	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
+	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
+	for pkg in openssl curl
+	do
+		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$PKG/lib/pkgconfig:$PKG_CONFIG_PATH
+		CPPFLAGS="-I$BREW_PREFIX/opt/$pkg/include $CPPFLAGS"
+		LDFLAGS="-L$BREW_PREFIX/opt/$pkg/lib $LDFLAGS"
+	done
+	export PKG_CONFIG_PATH
+	export CPPFLAGS
+	export LDFLAGS
+	;;
 dist)
 	TARGET=distcheck
 	;;
@@ -88,7 +114,16 @@ dist)
 esac
 
 if test "$1" = "deps"; then
-	sudo apt-get install -qq $DEPS
+	case "$TRAVIS_OS_NAME" in
+	linux)
+		sudo apt-get update -qq && \
+		sudo apt-get install -qq bison flex gperf gettext $DEPS
+		;;
+	osx)
+		brew update && \
+		brew install $DEPS
+		;;
+	esac
 	exit $?
 fi
 
@@ -98,10 +133,13 @@ if test "$1" = "pydeps"; then
 fi
 
 CONFIG="$CONFIG
+	--disable-dependency-tracking
 	--enable-silent-rules
 	--enable-test-vectors
 	--enable-monolithic=${MONOLITHIC-no}
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
-echo "$ CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make $TARGET"
+echo "$ ./autogen.sh"
+./autogen.sh || exit $?
+echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG && make $TARGET"
 CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make -j4 $TARGET

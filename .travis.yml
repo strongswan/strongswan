@@ -5,13 +5,10 @@ compiler:
   - clang
 
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq bison flex gperf gettext
   - ./scripts/test.sh deps
   - ./scripts/test.sh pydeps
 
 script:
-  - ./autogen.sh
   - ./scripts/test.sh
 
 env:
@@ -42,3 +39,6 @@ matrix:
       env: TEST=win64 MONOLITHIC=yes
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
+    - compiler: clang
+      os: osx
+      env: TEST=osx
