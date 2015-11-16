@@ -54,7 +54,7 @@ METHOD(job_t, execute, job_requeue_t,
 											  this->ike_sa_id);
 	if (ike_sa)
 	{
-		ike_sa->send_keepalive(ike_sa);
+		ike_sa->send_keepalive(ike_sa, TRUE);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	return JOB_REQUEUE_NONE;

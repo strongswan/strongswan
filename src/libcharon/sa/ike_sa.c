@@ -239,6 +239,11 @@ struct private_ike_sa_t {
 	u_int32_t keepalive_interval;
 
 	/**
+	 * The schedueld keep alive job, if any
+	 */
+	send_keepalive_job_t *keepalive_job;
+
+	/**
 	 * interval for retries during initiation (e.g. if DNS resolution failed),
 	 * 0 to disable (default)
 	 */
@@ -482,11 +487,14 @@ METHOD(ike_sa_t, set_message_id, void,
 }
 
 METHOD(ike_sa_t, send_keepalive, void,
-	private_ike_sa_t *this)
+	private_ike_sa_t *this, bool scheduled)
 {
-	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
 
+	if (scheduled)
+	{
+		this->keepalive_job = NULL;
+	}
 	if (!this->keepalive_interval || this->state == IKE_PASSIVE)
 	{	/* keepalives disabled either by configuration or for passive IKE_SAs */
 		return;
@@ -517,9 +525,12 @@ METHOD(ike_sa_t, send_keepalive, void,
 		charon->sender->send_no_marker(charon->sender, packet);
 		diff = 0;
 	}
-	job = send_keepalive_job_create(this->ike_sa_id);
-	lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
-								 this->keepalive_interval - diff);
+	if (!this->keepalive_job)
+	{
+		this->keepalive_job = send_keepalive_job_create(this->ike_sa_id);
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)this->keepalive_job,
+									 this->keepalive_interval - diff);
+	}
 }
 
 METHOD(ike_sa_t, get_ike_cfg, ike_cfg_t*,
@@ -566,7 +577,7 @@ METHOD(ike_sa_t, set_condition, void,
 				case COND_NAT_HERE:
 					DBG1(DBG_IKE, "local host is behind NAT, sending keep alives");
 					this->conditions |= COND_NAT_ANY;
-					send_keepalive(this);
+					send_keepalive(this, FALSE);
 					break;
 				case COND_NAT_THERE:
 					DBG1(DBG_IKE, "remote host is behind NAT");
@@ -594,7 +605,7 @@ METHOD(ike_sa_t, set_condition, void,
 								  has_condition(this, COND_NAT_FAKE));
 					break;
 				case COND_STALE:
-					send_keepalive(this);
+					send_keepalive(this, FALSE);
 					break;
 				default:
 					break;
@@ -755,7 +766,7 @@ METHOD(ike_sa_t, set_state, void,
 	}
 	if (keepalives)
 	{
-		send_keepalive(this);
+		send_keepalive(this, FALSE);
 	}
 }
 
@@ -2329,7 +2340,7 @@ METHOD(ike_sa_t, inherit_post, void,
 	this->conditions = other->conditions;
 	if (this->conditions & COND_NAT_HERE)
 	{
-		send_keepalive(this);
+		send_keepalive(this, FALSE);
 	}
 
 #ifdef ME

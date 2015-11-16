@@ -837,8 +837,10 @@ struct ike_sa_t {
 	 *
 	 * To refresh NAT tables in a NAT router between the peers, periodic empty
 	 * UDP packets are sent if no other traffic was sent.
+	 *
+	 * @param scheduled		if this is a scheduled keepalive
 	 */
-	void (*send_keepalive) (ike_sa_t *this);
+	void (*send_keepalive) (ike_sa_t *this, bool scheduled);
 
 	/**
 	 * Get the keying material of this IKE_SA.
