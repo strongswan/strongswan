@@ -5,7 +5,7 @@ use AutoLoader qw(AUTOLOAD);
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    new, from_data, hash, encode, raw
+    new, from_data, hash, encode, raw, result
 );
 our $VERSION = '0.9';
 
@@ -60,6 +60,12 @@ sub encode {
 sub raw {
     my $self = shift;
     return '{' . raw_hash($self->{'Hash'}) . '}';
+}
+
+sub result {
+    my $self = shift;
+    my $result = $self->{'Hash'};
+    return ($result->{'success'} eq 'yes', $result->{'errmsg'});
 }
 
 # private functions
