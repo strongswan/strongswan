@@ -449,6 +449,10 @@ if test x$python_eggs_install = xtrue; then
 	python_eggs=true
 fi
 
+if test x$perl_cpan_install = xtrue; then
+	python_cpan=true
+fi
+
 # ===========================================
 #  check required libraries and header files
 # ===========================================
@@ -1248,6 +1252,8 @@ if test x$python_eggs = xtrue; then
 	AC_PATH_PROG([PY_TEST], [py.test], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 fi
 AM_CONDITIONAL(PYTHON_EGGS_INSTALL, [test "x$python_eggs_install" = xtrue])
+
+AM_CONDITIONAL(PERL_CPAN_INSTALL, [test "x$perl_cpan_install" = xtrue])
 
 # ===============================================
 #  collect plugin list for strongSwan components
