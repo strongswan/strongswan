@@ -1078,3 +1078,43 @@ dictionaries. Objects returned by the library use OrderedDicts.
 
 For more details about the Python egg refer to the comments in the Python source
 code.
+
+# Vici::Session Perl CPAN module #
+
+The _Vici::Session Perl CPAN module_ is a pure Perl implementation of the VICI
+protocol to implement client applications. It is provided in the _perl_
+subdirectory, and gets built and installed if strongSwan has been
+ _./configure_'d with_--enable-vici_ and _--enable-perl-cpan_.
+
+The _Vici::Session_ module provides a _new()_ constructor for a high level
+interface, the underlying _Vici::Packet_ and _Vici::Transport_ classes are 
+usually not required to build Perl applications using VICI. The _Vici::Session_ 
+class provides methods for the supported VICI commands. The auxiliare
+ _Vici::Message_ class is used to encode configuration parameters sent to
+the daemon and decode data returned by the daemon.
+
+## Connecting to the daemon ##
+
+	use IO::Socket::UNIX;
+	use Vici::Session;
+	use Vici::Message;
+
+	my $socket = IO::Socket::UNIX->new(
+			Type => SOCK_STREAM,
+			Peer => '/var/run/charon.vici',
+	) or die "Vici socket: $!";
+
+	my $session = Vici::Session->new($socket);
+
+## A simple client request ##
+
+An example to print the daemon version information is as simple as:
+
+	my $version = $session->version()->hash();
+
+	foreach my $key ('daemon', 'version', 'sysname', 'release', 'machine' ) {
+		print $version->{$key}, " ";
+	}
+
+The _Vici::Session_ methods are explained in the perl/Vici-Session/README.pod
+document.
