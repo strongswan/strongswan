@@ -12,6 +12,7 @@ our $VERSION = '0.9';
 use strict;
 use warnings;
 use Switch;
+use Vici::Message;
 use Vici::Transport;
 
 use constant {
@@ -36,18 +37,19 @@ sub new {
 }
 
 sub request {
-    my ($self, $command, $data) = @_;
-    my $request = pack('CC/a*a*', CMD_REQUEST, $command, $data);
+    my ($self, $command, $vars) = @_;
+    my $out = defined $vars ? $vars->encode() : '';
+    my $request = pack('CC/a*a*', CMD_REQUEST, $command, $out);
     $self->{'Transport'}->send($request);
 
     my $response = $self->{'Transport'}->receive();
-    my ($type, $msg) = unpack('Ca*', $response);
+    my ($type, $data) = unpack('Ca*', $response);
 
 	switch ($type)
     {
         case CMD_RESPONSE
         {
-            return $msg
+            return Vici::Message->from_data($data);
         }
         case CMD_UNKNOWN
         {
@@ -111,13 +113,15 @@ sub unregister {
 }
 
 sub streamed_request {
-    my ($self, $command, $event, $data) = @_;
-    $self->register($event);
+    my ($self, $command, $event, $vars) = @_;
+    my $out = defined $vars ? $vars->encode() : '';
 
-    my $request = pack('CC/a*a*', CMD_REQUEST, $command, $data);
+   $self->register($event);
+
+    my $request = pack('CC/a*a*', CMD_REQUEST, $command, $out);
     $self->{'Transport'}->send($request);
     my $more = 1;
-    my $msg = "";
+    my @list = ();
 
 	while ($more)
 	{
@@ -129,9 +133,11 @@ sub streamed_request {
             case EVENT
             {
                (my $event_name, $data) = unpack('C/a*a*', $data);
-               if ($event_name == $event)
+
+               if ($event_name eq $event)
                {
-                   $msg .= $data;
+                   my $msg = Vici::Message->from_data($data);
+                   push(@list, $msg);
                }
             }
             case CMD_RESPONSE
@@ -146,7 +152,7 @@ sub streamed_request {
             }
         }
     }
-    return $msg;
+    return \@list;
 }
 
 1;

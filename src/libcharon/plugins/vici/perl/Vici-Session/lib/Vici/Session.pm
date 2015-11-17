@@ -5,9 +5,11 @@ use AutoLoader qw(AUTOLOAD);
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    new, version, stats, reload_settings, initiate, list_sas, list_policies,
-    list_conns, get_conns, list_certs, list_authorities, get_authorities,
-    get_pools
+    new, version, stats, reload_settings, initiate, terminate, install,
+    uninstall, list_sas, list_policies, list_conns, get_conns, list_certs,
+    list_authorities, get_authorities, load_conn, unload_conn, load_cert,
+    load_key, load_shared, clear_creds, load_authority, unload_authority,
+    load_pool, unload_pool, get_pools, get_algorithms
 );
 our $VERSION = '0.9';
 
@@ -27,104 +29,131 @@ sub new {
 }
 
 sub version {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('version');
-    return Vici::Message->from_data($data);
+    return request('version', @_);
 }
 
 sub stats {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('stats');
-    return Vici::Message->from_data($data);
+    return request('stats', @_);
 }
 
 sub reload_settings {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('reload-settings');
-    my $msg = Vici::Message->from_data($data);
-    my $res = $msg->hash();
-    return $res->{'success'} == 'yes';
+   return request_res('reload-settings', @_);
 }
 
 sub initiate {
-    my ($self, $msg) = @_;
-    my $vars = '';
-    if (defined $msg)
-    {
-        $vars = $msg->encode();
-    }
-    my $data = $self->{'Packet'}->request('initiate', $vars);
-    my $msg = Vici::Message->from_data($data);
-    my $res = $msg->hash();
-    return $res->{'success'} == 'yes';
+    return request_vars_res('initiate', @_);
+}
+
+sub terminate {
+    return request_vars_res('terminate', @_);
+}
+
+sub install {
+    return request_vars_res('install', @_);
+}
+
+sub uninstall {
+    return request_vars_res('uninstall', @_);
 }
 
 sub list_sas {
-    my ($self, $msg) = @_;
-    my $vars = '';
-    if (defined $msg)
-    {
-        $vars = $msg->encode();
-    }
-    my $data = $self->{'Packet'}->streamed_request('list-sas',
-                                                   'list-sa', $vars);
-    return Vici::Message->from_data($data);
+    return request_list('list-sas', 'list-sa', @_);
 }
 
 sub list_policies {
-    my $self = shift;
-    my $data = $self->{'Packet'}->streamed_request('list-policies',
-                                                   'list-policy');
-    return Vici::Message->from_data($data);
+    return request_list('list-policies', 'list-policy', @_);
 }
 
 sub list_conns {
-    my ($self, $msg) = @_;
-    my $vars = '';
-    if (defined $msg)
-    {
-        $vars = $msg->encode();
-    }
-    my $data = $self->{'Packet'}->streamed_request('list-conns',
-                                                   'list-conn', $vars);
-    return Vici::Message->from_data($data);
+    return request_list('list-conns', 'list-conn', @_);
 }
 
 sub get_conns {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('get-conns');
-    return Vici::Message->from_data($data);
+    return request('get-conns', @_);
 }
 
 sub list_certs {
-    my ($self, $msg) = @_;
-    my $vars = '';
-    if (defined $msg)
-    {
-        $vars = $msg->encode();
-    }
-    my $data = $self->{'Packet'}->streamed_request('list-authorities',
-                                                   'list-authority', $vars);
-    return Vici::Message->from_data($data);
+    return request_list('list-certs', 'list-cert', @_);
 }
 
 sub list_authorities {
-    my $self = shift;
-    my $data = $self->{'Packet'}->streamed_request('list-authorities',
-                                                   'list-authority');
-    return Vici::Message->from_data($data);
+    return request_list('list-authorities', 'list-authority', @_);
 }
 
 sub get_authorities {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('get-authorities');
-    return Vici::Message->from_data($data);
+    return request('get-authorities', @_);
+}
+
+sub load_conn {
+    return request_vars_res('load-conn', @_);
+}
+
+sub unload_conn {
+    return request_vars_res('unload-conn', @_);
+}
+
+sub load_cert {
+    return request_vars_res('load-cert', @_);
+}
+
+sub load_key {
+    return request_vars_res('load-key', @_);
+}
+
+sub load_shared {
+    return request_vars_res('load-shared', @_);
+}
+
+sub clear_creds {
+   return request_res('clear-creds', @_);
+}
+
+sub load_authority {
+    return request_vars_res('load-authority', @_);
+}
+
+sub unload_authority {
+    return request_vars_res('unload-authority', @_);
+}
+
+sub load_pool {
+    return request_vars_res('load-pool', @_);
+}
+
+sub unload_pool {
+    return request_vars_res('unload-pool', @_);
 }
 
 sub get_pools {
-    my $self = shift;
-    my $data = $self->{'Packet'}->request('get-pools');
-    return Vici::Message->from_data($data);
+    return request('get-pools', @_);
+}
+
+sub get_algorithms {
+    return request('get-algorithms', @_);
+}
+
+# Private functions
+
+sub request {
+    my ($command, $self) = @_;
+    return $self->{'Packet'}->request($command);
+}
+
+sub request_res {
+    my ($command, $self) = @_;
+    my $msg = $self->{'Packet'}->request($command);
+    return $msg->result();
+}
+
+sub request_vars_res {
+    my ($command, $self, $vars) = @_;
+    my $msg = $self->{'Packet'}->request($command, $vars);
+    return $msg->result();
+}
+
+sub request_list {
+    my ($command, $event, $self, $vars) = @_;
+    return $self->{'Packet'}->streamed_request($command, $event, $vars);
 }
 
 1;
