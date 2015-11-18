@@ -64,6 +64,8 @@ LOCAL_SRC_FILES := $(libstrongswan_la_SOURCES)
 
 LOCAL_SRC_FILES += $(call add_plugin, aes)
 
+LOCAL_SRC_FILES += $(call add_plugin, chapoly)
+
 LOCAL_SRC_FILES += $(call add_plugin, curl)
 ifneq ($(call plugin_enabled, curl),)
 LOCAL_C_INCLUDES += $(libcurl_PATH)
