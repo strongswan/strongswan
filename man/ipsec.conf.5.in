@@ -349,13 +349,14 @@ liveliness of the IPsec peer. The values
 .BR hold ,
 and
 .B restart
-all activate DPD. If no activity is detected, all connections with a dead peer
-are stopped and unrouted
-.RB ( clear ),
-put in the hold state
-.RB ( hold )
-or restarted
-.RB ( restart ).
+all activate DPD and determine the action to perform on a timeout. With
+.B clear
+the connection is closed with no further actions taken.
+.B hold
+installs a trap policy, which will catch matching traffic and tries to
+re-negotiate the connection on demand.
+.B restart
+will immediately trigger an attempt to re-negotiation the connection.
 The default is
 .B none
 which disables the active sending of DPD messages.
