@@ -789,7 +789,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16-ecp256"));
+							"aes128gcm16-aes256gcm16-chacha20poly1305-"
+							"ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-sha256-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
@@ -799,7 +800,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 							"ecp256-ecp384-ecp521-"
 							"modp2048-modp3072-modp4096-modp1024"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16"));
+							"aes128gcm16-aes256gcm16-chacha20poly1305"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-sha256"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
