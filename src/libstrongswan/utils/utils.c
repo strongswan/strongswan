@@ -124,7 +124,10 @@ void wait_sigint()
 	sigaddset(&set, SIGTERM);
 
 	sigprocmask(SIG_BLOCK, &set, NULL);
-	sigwaitinfo(&set, NULL);
+	while (sigwaitinfo(&set, NULL) == -1 && errno == EINTR)
+	{
+		/* wait for signal */
+	}
 }
 
 #ifndef HAVE_SIGWAITINFO

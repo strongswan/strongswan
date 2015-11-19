@@ -115,6 +115,10 @@ static int run()
 		sig = sigwaitinfo(&set, NULL);
 		if (sig == -1)
 		{
+			if (errno == EINTR)
+			{	/* ignore signals we didn't wait for */
+				continue;
+			}
 			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return 1;
 		}
@@ -151,11 +155,6 @@ static int run()
 			{	/* an error occurred */
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return 1;
-			}
-			default:
-			{
-				DBG1(DBG_DMN, "unknown signal %d received. Ignored", sig);
-				break;
 			}
 		}
 	}

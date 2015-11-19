@@ -85,6 +85,10 @@ static void run()
 		sig = sigwaitinfo(&set, NULL);
 		if (sig == -1)
 		{
+			if (errno == EINTR)
+			{	/* ignore signals we didn't wait for */
+				continue;
+			}
 			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return;
 		}
@@ -101,11 +105,6 @@ static void run()
 				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return;
-			}
-			default:
-			{
-				DBG1(DBG_DMN, "unknown signal %d received. Ignored", sig);
-				break;
 			}
 		}
 	}

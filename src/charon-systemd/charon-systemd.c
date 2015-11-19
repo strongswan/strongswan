@@ -254,6 +254,10 @@ static int run()
 		sig = sigwaitinfo(&set, NULL);
 		if (sig == -1)
 		{
+			if (errno == EINTR)
+			{	/* ignore signals we didn't wait for */
+				continue;
+			}
 			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return SS_RC_INITIALIZATION_FAILED;
 		}
@@ -264,11 +268,6 @@ static int run()
 				DBG1(DBG_DMN, "SIGTERM received, shutting down");
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return 0;
-			}
-			default:
-			{
-				DBG1(DBG_DMN, "unknown signal %d received. Ignored", sig);
-				break;
 			}
 		}
 	}
