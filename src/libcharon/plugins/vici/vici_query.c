@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2015 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -868,6 +871,108 @@ CALLBACK(list_certs, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Add a key/value pair of ALG => plugin
+ */
+static void add_algorithm(vici_builder_t *b, enum_name_t *alg_names,
+						  int alg_type, const char *plugin_name)
+{
+	char alg_name[BUF_LEN];
+
+	sprintf(alg_name, "%N", alg_names, alg_type);
+	b->add_kv(b, alg_name, (char*)plugin_name);
+}
+
+CALLBACK(get_algorithms, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	vici_builder_t *b;
+	enumerator_t *enumerator;
+	encryption_algorithm_t encryption;
+	integrity_algorithm_t integrity;
+	hash_algorithm_t hash;
+	pseudo_random_function_t prf;
+	diffie_hellman_group_t group;
+	rng_quality_t quality;
+	const char *plugin_name;
+
+	b = vici_builder_create();
+
+	b->begin_section(b, "encryption");
+	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+	{
+		add_algorithm(b, encryption_algorithm_names, encryption, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "integrity");
+	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
+	{
+		add_algorithm(b, integrity_algorithm_names, integrity, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "aead");
+	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+	{
+		add_algorithm(b, encryption_algorithm_names, encryption, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "hasher");
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+	{
+		add_algorithm(b, hash_algorithm_names, hash, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "prf");
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
+	{
+		add_algorithm(b, pseudo_random_function_names, prf, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "dh");
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		add_algorithm(b, diffie_hellman_group_names, group, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "rng");
+	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
+	{
+		add_algorithm(b, rng_quality_names, quality, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "nonce-gen");
+	enumerator = lib->crypto->create_nonce_gen_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &plugin_name))
+	{
+		b->add_kv(b, "NONCE_GEN", (char*)plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	return b->finalize(b);
+}
+
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -1085,6 +1190,7 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
 	manage_command(this, "list-certs", list_certs, reg);
+	manage_command(this, "get-algorithms", get_algorithms, reg);
 	manage_command(this, "version", version, reg);
 	manage_command(this, "stats", stats, reg);
 }

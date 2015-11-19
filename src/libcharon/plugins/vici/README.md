@@ -544,6 +544,16 @@ List the currently loaded pools.
 		}
 	}
 
+### get-algorithms() ###
+
+List currently loaded algorithms and their implementation.
+
+	{} => {
+		<algorithm type> = {
+			<algorithm> = <plugin providing the implementation>
+		}
+	}
+
 ## Server-issued events ##
 
 Based on the packet layer, the vici plugin raises event messages using named
