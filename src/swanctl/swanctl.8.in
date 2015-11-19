@@ -1,4 +1,4 @@
-.TH SWANCTL 8 "2014-04-28" "@PACKAGE_VERSION@" "strongSwan"
+.TH SWANCTL 8 "2015-11-20" "@PACKAGE_VERSION@" "strongSwan"
 .SH NAME
 swanctl \- strongSwan configuration, control and monitoring command line interface.
 .SH SYNOPSIS
@@ -67,6 +67,9 @@ list stored certificates
 .TP
 .B "\-A, \-\-list\-pools"
 list loaded pool configurations
+.TP
+.B "\-g, \-\-list\-algs"
+list loaded algorithms and their implementation
 .TP
 .B "\-q, \-\-load\-all"
 (re\-)load credentials, pools, authorities and connections
