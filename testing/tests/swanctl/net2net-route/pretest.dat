@@ -2,5 +2,6 @@ sun::iptables-restore < /etc/iptables.rules
 moon::iptables-restore < /etc/iptables.rules
 sun::service charon start 2> /dev/null
 moon::service charon start 2> /dev/null
-moon::sleep 1
-alice::ping -c 3 10.2.0.10
+sun::expect-connection gw-gw
+moon::expect-connection gw-gw
+alice::ping -c 3 -W 1 -i 0.2 PH_IP_BOB

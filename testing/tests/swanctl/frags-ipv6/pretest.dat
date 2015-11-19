@@ -10,6 +10,8 @@ dave::"ip route add fec1:\:/16 via fec0:\:1"
 moon::service charon start 2> /dev/null
 carol::service charon start 2> /dev/null
 dave::service charon start 2> /dev/null
-moon::sleep 1
+moon::expect-connection rw
+carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null
+dave::expect-connection home
 dave::swanctl --initiate --child home 2> /dev/null
