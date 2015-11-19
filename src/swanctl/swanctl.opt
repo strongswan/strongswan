@@ -268,6 +268,11 @@ connections.<conn>.local<suffix> {}
 	unique suffix. To define a single authentication round, the suffix may be
 	omitted.
 
+connections.<conn>.local<suffix>.round = 0
+	Optional numeric identifier by which authentication rounds are sorted.  If
+	not specified rounds are ordered by their position in the config file/VICI
+	message.
+
 connections.<conn>.local<suffix>.certs =
 	Comma separated list of certificate candidates to use for authentication.
 
@@ -373,6 +378,11 @@ connections.<conn>.remote<suffix> {}
 	Each round is defined in a section having _remote_ as prefix, and an
 	optional unique suffix. To define a single authentication round, the suffix
 	may be omitted.
+
+connections.<conn>.remote<suffix>.round = 0
+	Optional numeric identifier by which authentication rounds are sorted.  If
+	not specified rounds are ordered by their position in the config file/VICI
+	message.
 
 connections.<conn>.remote<suffix>.id = %any
 	IKE identity to expect for authentication round.
