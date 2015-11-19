@@ -15,10 +15,16 @@ fi
 secs=$2
 [ ! $secs ] && secs=5
 
+cmd="swanctl --list-conns"
+grep 'load.*stroke' /etc/strongswan.conf >/dev/null
+if [ $? -eq 0 ]; then
+	cmd="ipsec statusall"
+fi
+
 let steps=$secs*10
 for i in `seq 1 $steps`
 do
-	ipsec statusall 2>&1 | grep ^[[:space:]]*$1: >/dev/null
+	$cmd 2>&1 | grep ^[[:space:]]*$1: >/dev/null
 	[ $? -eq 0 ] && exit 0
 	sleep 0.1
 done
