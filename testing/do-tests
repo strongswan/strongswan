@@ -537,7 +537,6 @@ do
 					> $TESTRESULTDIR/${host}.swanctl.$subsys 2>/dev/null
 			done
 
-			# this is quite slow due to allocation stats via leak-detective
 			ssh $SSHCONF $HOSTLOGIN swanctl --stats \
 				> $TESTRESULTDIR/${host}.swanctl.stats 2>/dev/null
 		else

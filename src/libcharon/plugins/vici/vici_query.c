@@ -1020,18 +1020,6 @@ CALLBACK(version, vici_message_t*,
 	return b->finalize(b);
 }
 
-/**
- * Callback function for memusage summary
- */
-CALLBACK(sum_usage, void,
-	vici_builder_t *b, int count, size_t bytes, int whitelisted)
-{
-	b->begin_section(b, "mem");
-	b->add_kv(b, "total", "%zu", bytes);
-	b->add_kv(b, "allocs", "%d", count);
-	b->end_section(b);
-}
-
 CALLBACK(stats, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -1093,12 +1081,7 @@ CALLBACK(stats, vici_message_t*,
 	enumerator->destroy(enumerator);
 	b->end_list(b);
 
-	if (lib->leak_detective)
-	{
-		lib->leak_detective->usage(lib->leak_detective, NULL, sum_usage, b);
-	}
 #ifdef WIN32
-	else
 	{
 		DWORD lasterr = ERROR_INVALID_HANDLE;
 		HANDLE heaps[32];
