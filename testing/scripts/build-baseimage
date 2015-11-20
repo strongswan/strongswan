@@ -77,8 +77,6 @@ do_on_exit graceful_umount $LOOPDIR/proc
 
 for service in $SERVICES
 do
-	log_action "Stopping service $service"
-	execute_chroot "/etc/init.d/$service stop"
 	log_action "Disabling service $service"
 	execute_chroot "update-rc.d -f $service remove"
 done
