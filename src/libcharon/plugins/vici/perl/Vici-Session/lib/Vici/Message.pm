@@ -78,10 +78,10 @@ sub parse {
     {
         (my $type, $data) = unpack('Ca*', $data);
 
-		if ($type == SECTION_END)
-		{
-			return $data;
-		}
+        if ($type == SECTION_END)
+        {
+            return $data;
+        }
 
         (my $key, $data) = unpack('C/a*a*', $data);
 

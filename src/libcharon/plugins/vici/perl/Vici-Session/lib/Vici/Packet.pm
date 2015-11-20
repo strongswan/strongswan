@@ -5,7 +5,7 @@ use AutoLoader qw(AUTOLOAD);
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    new, request, register, unregister, streamed_request
+    new, request, register, unregister, event, streamed_request
 );
 our $VERSION = '0.9';
 
@@ -42,24 +42,27 @@ sub request {
     my $request = pack('CC/a*a*', CMD_REQUEST, $command, $out);
     $self->{'Transport'}->send($request);
 
-    my $response = $self->{'Transport'}->receive();
-    my ($type, $data) = unpack('Ca*', $response);
-
-	switch ($type)
+    while (1)
     {
-        case CMD_RESPONSE
+        my $response = $self->{'Transport'}->receive();
+        my ($type, $data) = unpack('Ca*', $response);
+
+        switch ($type)
         {
-            return Vici::Message->from_data($data);
+            case CMD_RESPONSE
+            {
+                return Vici::Message->from_data($data);
+            }
+            case CMD_UNKNOWN
+            {
+                die "unknown command '", $command, "'\n"
+            }
+            else
+            {
+                #ignore, message might be for another thread
+            }
         }
-        case CMD_UNKNOWN
-        {
-            die "unknown command '", $command, "'\n"
-        }
-        else
-        {
-            die "invalid response type\n"
-        }
-    }; 
+    } 
 }
 
 sub register {
@@ -110,6 +113,22 @@ sub unregister {
             die "invalid response type\n"
         }
     }; 
+}
+
+sub event {
+    my $self = shift;
+
+    while (1)
+    {
+        my $response = $self->{'Transport'}->receive();
+        my ($type, $data) = unpack('Ca*', $response);
+        if ($type == EVENT)
+        {
+            (my $event_name, $data) = unpack('C/a*a*', $data);
+             my $msg = Vici::Message->from_data($data);
+            return ($event_name, $msg);
+        }
+    }
 }
 
 sub streamed_request {

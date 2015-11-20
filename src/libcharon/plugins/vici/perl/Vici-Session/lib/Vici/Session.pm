@@ -9,7 +9,8 @@ our @EXPORT = qw(
     uninstall, list_sas, list_policies, list_conns, get_conns, list_certs,
     list_authorities, get_authorities, load_conn, unload_conn, load_cert,
     load_key, load_shared, clear_creds, load_authority, unload_authority,
-    load_pool, unload_pool, get_pools
+    load_pool, unload_pool, get_pools, register_events, unregister_events,
+    listen_events
 );
 our $VERSION = '0.9';
 
@@ -126,6 +127,41 @@ sub unload_pool {
 
 sub get_pools {
     return request('get-pools', @_);
+}
+
+sub register_events {
+    my ($self, $events) = @_;
+    if (ref($events) eq 'ARRAY')
+    {
+        foreach my $event (@$events)
+        {
+            $self->{'Packet'}->register($event);
+        }
+    }
+    else
+    {
+        $self->{'Packet'}->register($events);
+    }
+}
+
+sub unregister_events {
+    my ($self, $events) = @_;
+    if (ref($events) eq 'ARRAY')
+    {
+        foreach my $event (@$events)
+        {
+            $self->{'Packet'}->register($event);
+        }
+    }
+    else
+    {
+        $self->{'Packet'}->register($events);
+    }
+}
+
+sub listen_events {
+    my ($self, $events) = @_;
+	return $self->{'Packet'}->event();
 }
 
 # Private functions
