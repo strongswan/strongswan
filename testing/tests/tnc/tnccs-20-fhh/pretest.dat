@@ -6,12 +6,15 @@ carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 carol::cat /etc/tnc/dummyimc.file
 dave::cat /etc/tnc/dummyimc.file
-moon::cat /etc/tnc/dummyimv.policy
-moon::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
-carol::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
-dave::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
+carol::rm /etc/swanctl/rsa/*
+dave::rm /etc/swanctl/rsa/*
+carol::rm /etc/swanctl/x509/*
+dave::rm /etc/swanctl/x509/*
+moon::service charon start
+carol::service charon start
+dave::service charon start
 moon::expect-connection rw-allow
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home 2> /dev/null
 dave::expect-connection home
-dave::ipsec up home
+dave::swanctl --initiate --child home 2> /dev/null

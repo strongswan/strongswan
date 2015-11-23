@@ -7,10 +7,14 @@ alice::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.propertie
 alice::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
-moon::ipsec start
-carol::ipsec start
-dave::ipsec start
+carol::rm /etc/swanctl/rsa/*
+dave::rm /etc/swanctl/rsa/*
+carol::rm /etc/swanctl/x509/*
+dave::rm /etc/swanctl/x509/*
+moon::service charon start
+carol::service charon start
+dave::service charon start
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home
 dave::expect-connection home
-dave::ipsec up home
+dave::swanctl --initiate --child home

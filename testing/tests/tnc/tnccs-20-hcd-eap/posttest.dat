@@ -1,7 +1,9 @@
-moon::ipsec stop
-carol::ipsec stop
-dave::ipsec stop
-alice::ipsec stop
+carol::service charon stop
+dave::service charon stop
+moon::service charon stop
+alice::service charon stop
+alice::rm /etc/swanctl/rsa/aaaKey.pem
+alice::rm /etc/swanctl/x509/aaaCert.pem
 winnetou::ip route del 10.1.0.0/16 via 192.168.0.1
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush

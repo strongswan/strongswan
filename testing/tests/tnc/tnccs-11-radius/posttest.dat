@@ -1,6 +1,6 @@
-moon::ipsec stop
-carol::ipsec stop
-dave::ipsec stop
+carol::service charon stop
+dave::service charon stop
+moon::service charon stop
 alice::killall radiusd
 alice::rm /etc/freeradius/sites-enabled/inner-tunnel-second
 moon::iptables-restore < /etc/iptables.flush

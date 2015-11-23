@@ -1,14 +1,20 @@
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
-dave::/etc/init.d/apache2 start 2> /dev/null
 alice::ln -s /etc/freeradius/sites-available/inner-tunnel-second /etc/freeradius/sites-enabled/inner-tunnel-second
 alice::cat /etc/freeradius/sites-enabled/inner-tunnel-second
 alice::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties radiusd
-moon::ipsec start
-carol::ipsec start
-dave::ipsec start
+alice::cat /etc/tnc_config
+carol::cat /etc/tnc_config
+dave::cat /etc/tnc_config
+carol::rm /etc/swanctl/rsa/*
+dave::rm /etc/swanctl/rsa/*
+carol::rm /etc/swanctl/x509/*
+dave::rm /etc/swanctl/x509/*
+moon::service charon start
+carol::service charon start
+dave::service charon start
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home
 dave::expect-connection home
-dave::ipsec up home
+dave::swanctl --initiate --child home

@@ -1,6 +1,6 @@
-moon::ipsec stop
-carol::ipsec stop
-dave::ipsec stop
+carol::service charon stop
+dave::service charon stop
+moon::service charon stop
 alice::killall radiusd
 alice::rm /etc/freeradius/sites-enabled/inner-tunnel-second
 carol::echo 1 > /proc/sys/net/ipv4/ip_forward

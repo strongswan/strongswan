@@ -1,6 +1,12 @@
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
+alice::rm /etc/swanctl/x509/aliceCert.pem
+alice::rm /etc/swanctl/rsa/aliceKey.pem
+carol::rm /etc/swanctl/x509/carolCert.pem
+carol::rm /etc/swanctl/rsa/carolKey.pem
+dave::rm /etc/swanctl/x509/daveCert.pem
+dave::rm /etc/swanctl/rsa/daveKey.pem
 alice::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
@@ -12,12 +18,12 @@ alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql dat
 alice::chgrp -R www-data /etc/db.d/config.db; chmod -R g+w /etc/db.d/config.db
 alice::/var/www/tnc/manage.py setpassword strongSwan strongSwan
 alice::service apache2 start
-alice::ipsec start
-moon::ipsec start
-dave::ipsec start
-carol::ipsec start
+alice::service charon start
+moon::service charon start
+dave::service charon start
+carol::service charon start
 dave::expect-connection home
-dave::ipsec up home
+dave::swanctl --initiate --child home 2> /dev/null
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home 2> /dev/null
 carol::sleep 1

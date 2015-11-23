@@ -16,4 +16,3 @@ alice::cat /var/log/daemon.log::policy enforced on peer.*carol@strongswan.org.*i
 alice::cat /var/log/daemon.log::policy enforced on peer.*dave@strongswan.org.*is.*no access::YES
 moon:: cat /var/log/daemon.log::RADIUS authentication of.*dave@strongswan.org.*failed::YES
 moon:: cat /var/log/daemon.log::RADIUS authentication of.*dave@strongswan.org.*failed::YES
-
