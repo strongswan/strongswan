@@ -14,6 +14,10 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+# libgnutls, if pulled in by libcurl, does not properly cleanup all memory,
+# which causes invalid frees during shutdown when leak detective is used
+export LEAK_DETECTIVE_DISABLE=1
+
 export COMMON_NAME=strongSwan
 
 ROOT=/var/www
