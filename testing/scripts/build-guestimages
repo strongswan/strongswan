@@ -60,6 +60,7 @@ do
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
 		execute "cp -rf $DIR/../images $LOOPDIR/var/www/" 0
+		execute_chroot "a2enmod -q cgid" 0
 		execute_chroot "ln -s /etc/openssl/certs /var/www/certs" 0
 		execute_chroot "/etc/openssl/generate-crl" 0
 		execute_chroot "update-rc.d apache2 defaults" 0
