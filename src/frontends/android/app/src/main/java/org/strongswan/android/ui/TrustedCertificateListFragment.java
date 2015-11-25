@@ -15,26 +15,13 @@
 
 package org.strongswan.android.ui;
 
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map.Entry;
-
-import org.strongswan.android.R;
-import org.strongswan.android.logic.TrustedCertificateManager;
-import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
-import org.strongswan.android.security.TrustedCertificateEntry;
-import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
-
 import android.app.Activity;
-import android.app.ListFragment;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.content.Loader;
 import android.os.Bundle;
+import android.support.v4.app.ListFragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -44,7 +31,20 @@ import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.SearchView.OnQueryTextListener;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
+import org.strongswan.android.R;
+import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
+import org.strongswan.android.security.TrustedCertificateEntry;
+import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
+
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map.Entry;
+
+public class TrustedCertificateListFragment extends ListFragment implements LoaderManager.LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
 	public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
 	private OnTrustedCertificateSelectedListener mListener;
@@ -54,7 +54,8 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	/**
 	 * The activity containing this fragment should implement this interface
 	 */
-	public interface OnTrustedCertificateSelectedListener {
+	public interface OnTrustedCertificateSelectedListener
+	{
 		public void onTrustedCertificateSelected(TrustedCertificateEntry selected);
 	}
 
@@ -186,7 +187,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		public List<TrustedCertificateEntry> loadInBackground()
 		{
 			TrustedCertificateManager certman = TrustedCertificateManager.getInstance().load();
-			Hashtable<String,X509Certificate> certificates = certman.getCACertificates(mSource);
+			Hashtable<String, X509Certificate> certificates = certman.getCACertificates(mSource);
 			List<TrustedCertificateEntry> selected;
 
 			selected = new ArrayList<TrustedCertificateEntry>();

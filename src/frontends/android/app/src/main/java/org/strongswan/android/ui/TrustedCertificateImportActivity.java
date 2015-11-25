@@ -15,17 +15,6 @@
 
 package org.strongswan.android.ui;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-
-import org.strongswan.android.R;
-import org.strongswan.android.data.VpnProfileDataSource;
-import org.strongswan.android.logic.TrustedCertificateManager;
-
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -37,19 +26,31 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
-public class TrustedCertificateImportActivity extends Activity
+import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.TrustedCertificateManager;
+
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+
+public class TrustedCertificateImportActivity extends AppCompatActivity
 {
 	private static final int OPEN_DOCUMENT = 0;
 	private static final String DIALOG_TAG = "Dialog";
 
 	/* same as those listed in the manifest */
 	private static final String[] ACCEPTED_MIME_TYPES = {
-														 "application/x-x509-ca-cert",
-														 "application/x-x509-server-cert",
-														 "application/x-pem-file",
-														 "application/pkix-cert"
+		"application/x-x509-ca-cert",
+		"application/x-x509-server-cert",
+		"application/x-pem-file",
+		"application/pkix-cert"
 	};
 
 	@TargetApi(Build.VERSION_CODES.KITKAT)
@@ -97,6 +98,7 @@ public class TrustedCertificateImportActivity extends Activity
 
 	/**
 	 * Import the file pointed to by the given URI as a certificate.
+	 *
 	 * @param uri
 	 */
 	private void importCertificate(Uri uri)
@@ -124,6 +126,7 @@ public class TrustedCertificateImportActivity extends Activity
 
 	/**
 	 * Load the file from the given URI and try to parse it as X.509 certificate.
+	 *
 	 * @param uri
 	 * @return certificate or null
 	 */
@@ -151,6 +154,7 @@ public class TrustedCertificateImportActivity extends Activity
 
 	/**
 	 * Try to store the given certificate in the KeyStore.
+	 *
 	 * @param certificate
 	 * @return whether it was successfully stored
 	 */
@@ -188,7 +192,8 @@ public class TrustedCertificateImportActivity extends Activity
 				.setIcon(R.drawable.ic_launcher)
 				.setTitle(R.string.import_certificate)
 				.setMessage(certificate.getSubjectDN().toString())
-				.setPositiveButton(R.string.import_certificate, new DialogInterface.OnClickListener() {
+				.setPositiveButton(R.string.import_certificate, new DialogInterface.OnClickListener()
+				{
 					@Override
 					public void onClick(DialogInterface dialog, int whichButton)
 					{
@@ -205,7 +210,8 @@ public class TrustedCertificateImportActivity extends Activity
 						getActivity().finish();
 					}
 				})
-				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+				{
 					@Override
 					public void onClick(DialogInterface dialog, int which)
 					{

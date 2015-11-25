@@ -15,7 +15,7 @@
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="ApplicationTheme" parent="@android:style/Theme.Holo">
+    <style name="ApplicationTheme" parent="Theme.AppCompat">
     </style>
 
 </resources>

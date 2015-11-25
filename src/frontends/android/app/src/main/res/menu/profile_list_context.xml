@@ -16,9 +16,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <item android:id="@+id/edit_profile"
-        android:title="@string/edit_profile" ></item>
+        android:title="@string/edit_profile" />
 
     <item android:id="@+id/delete_profile"
-        android:title="@string/delete_profile" ></item>
+        android:title="@string/delete_profile" />
 
 </menu>

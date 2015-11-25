@@ -15,7 +15,16 @@
 
 package org.strongswan.android.ui;
 
-import java.security.KeyStore;
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -24,18 +33,9 @@ import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificate
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.CertificateDeleteConfirmationDialog.OnCertificateDeleteListener;
 
-import android.app.ActionBar;
-import android.app.ActionBar.Tab;
-import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentTransaction;
-import android.content.Intent;
-import android.os.Build;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import java.security.KeyStore;
 
-public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener, OnCertificateDeleteListener
+public class TrustedCertificatesActivity extends AppCompatActivity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener, OnCertificateDeleteListener
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
 	private static final String DIALOG_TAG = "Dialog";
@@ -48,29 +48,29 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.trusted_certificates_activity);
 
-		ActionBar actionBar = getActionBar();
+		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
 		TrustedCertificatesTabListener listener;
 		listener = new TrustedCertificatesTabListener(this, "system", TrustedCertificateSource.SYSTEM);
 		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.system_tab)
-			.setTag(listener)
-			.setTabListener(listener));
+							 .newTab()
+							 .setText(R.string.system_tab)
+							 .setTag(listener)
+							 .setTabListener(listener));
 		listener = new TrustedCertificatesTabListener(this, "user", TrustedCertificateSource.USER);
 		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.user_tab)
-			.setTag(listener)
-			.setTabListener(listener));
+							 .newTab()
+							 .setText(R.string.user_tab)
+							 .setTag(listener)
+							 .setTabListener(listener));
 		listener = new TrustedCertificatesTabListener(this, "local", TrustedCertificateSource.LOCAL);
 		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.local_tab)
-			.setTag(listener)
-			.setTabListener(listener));
+							 .newTab()
+							 .setText(R.string.local_tab)
+							 .setTag(listener)
+							 .setTabListener(listener));
 
 		if (savedInstanceState != null)
 		{
@@ -83,7 +83,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	protected void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		outState.putInt("tab", getActionBar().getSelectedNavigationIndex());
+		outState.putInt("tab", getSupportActionBar().getSelectedNavigationIndex());
 	}
 
 	@Override
@@ -151,7 +151,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		else
 		{
 			TrustedCertificatesTabListener listener;
-			listener = (TrustedCertificatesTabListener)getActionBar().getSelectedTab().getTag();
+			listener = (TrustedCertificatesTabListener)getSupportActionBar().getSelectedTab().getTag();
 			if (listener.mTag == "local")
 			{
 				Bundle args = new Bundle();
@@ -182,9 +182,9 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	private void reloadCertificates()
 	{
 		TrustedCertificateManager.getInstance().reset();
-		for (int i = 0; i < getActionBar().getTabCount(); i++)
+		for (int i = 0; i < getSupportActionBar().getTabCount(); i++)
 		{
-			Tab tab = getActionBar().getTabAt(i);
+			ActionBar.Tab tab = getSupportActionBar().getTabAt(i);
 			TrustedCertificatesTabListener listener = (TrustedCertificatesTabListener)tab.getTag();
 			listener.reset();
 		}
@@ -196,24 +196,24 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		private final TrustedCertificateSource mSource;
 		private Fragment mFragment;
 
-		public TrustedCertificatesTabListener(Activity activity, String tag, TrustedCertificateSource source)
+		public TrustedCertificatesTabListener(AppCompatActivity activity, String tag, TrustedCertificateSource source)
 		{
 			mTag = tag;
 			mSource = source;
 			/* check to see if we already have a fragment for this tab, probably
 			 * from a previously saved state. if so, deactivate it, because the
 			 * initial state is that no tab is shown */
-			mFragment = activity.getFragmentManager().findFragmentByTag(mTag);
+			mFragment = activity.getSupportFragmentManager().findFragmentByTag(mTag);
 			if (mFragment != null && !mFragment.isDetached())
 			{
-				FragmentTransaction ft = activity.getFragmentManager().beginTransaction();
+				FragmentTransaction ft = activity.getSupportFragmentManager().beginTransaction();
 				ft.detach(mFragment);
 				ft.commit();
 			}
 		}
 
 		@Override
-		public void onTabSelected(Tab tab, FragmentTransaction ft)
+		public void onTabSelected(ActionBar.Tab tab, FragmentTransaction ft)
 		{
 			if (mFragment == null)
 			{
@@ -230,7 +230,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		}
 
 		@Override
-		public void onTabUnselected(Tab tab, FragmentTransaction ft)
+		public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction ft)
 		{
 			if (mFragment != null)
 			{
@@ -239,7 +239,7 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		}
 
 		@Override
-		public void onTabReselected(Tab tab, FragmentTransaction ft)
+		public void onTabReselected(ActionBar.Tab tab, FragmentTransaction ft)
 		{
 			/* nothing to be done */
 		}

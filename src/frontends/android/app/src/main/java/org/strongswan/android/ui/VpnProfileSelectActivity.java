@@ -15,15 +15,15 @@
 
 package org.strongswan.android.ui;
 
+import android.content.Intent;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
-
-public class VpnProfileSelectActivity extends Activity implements OnVpnProfileSelectedListener
+public class VpnProfileSelectActivity extends AppCompatActivity implements OnVpnProfileSelectedListener
 {
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
