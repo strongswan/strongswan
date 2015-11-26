@@ -182,12 +182,6 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 	private void reloadCertificates()
 	{
 		TrustedCertificateManager.getInstance().reset();
-		for (int i = 0; i < getSupportActionBar().getTabCount(); i++)
-		{
-			ActionBar.Tab tab = getSupportActionBar().getTabAt(i);
-			TrustedCertificatesTabListener listener = (TrustedCertificatesTabListener)tab.getTag();
-			listener.reset();
-		}
 	}
 
 	public static class TrustedCertificatesTabListener implements ActionBar.TabListener
@@ -242,14 +236,6 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 		public void onTabReselected(ActionBar.Tab tab, FragmentTransaction ft)
 		{
 			/* nothing to be done */
-		}
-
-		public void reset()
-		{
-			if (mFragment != null)
-			{
-				((TrustedCertificateListFragment)mFragment).reset();
-			}
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,11 +15,10 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.ListFragment;
-import android.support.v4.app.LoaderManager;
+import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.text.TextUtils;
@@ -43,8 +42,10 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Observable;
+import java.util.Observer;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderManager.LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
+public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
 	public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
 	private OnTrustedCertificateSelectedListener mListener;
@@ -88,13 +89,13 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onAttach(Activity activity)
+	public void onAttach(Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		if (activity instanceof OnTrustedCertificateSelectedListener)
+		if (context instanceof OnTrustedCertificateSelectedListener)
 		{
-			mListener = (OnTrustedCertificateSelectedListener)activity;
+			mListener = (OnTrustedCertificateSelectedListener)context;
 		}
 	}
 
@@ -122,18 +123,6 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		String search = TextUtils.isEmpty(newText) ? null : newText;
 		mAdapter.getFilter().filter(search);
 		return true;
-	}
-
-	/**
-	 * Reset the loader of this list fragment
-	 */
-	public void reset()
-	{
-		if (isResumed())
-		{
-			setListShown(false);
-		}
-		getLoaderManager().restartLoader(0, null, this);
 	}
 
 	@Override
@@ -176,6 +165,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	{
 		private List<TrustedCertificateEntry> mData;
 		private final TrustedCertificateSource mSource;
+		private TrustedCertificateManagerObserver mObserver;
 
 		public CertificateListLoader(Context context, TrustedCertificateSource source)
 		{
@@ -205,9 +195,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			if (mData != null)
 			{	/* if we have data ready, deliver it directly */
 				deliverResult(mData);
-				return;
 			}
-			forceLoad();
+			if (takeContentChanged() || mData == null)
+			{
+				forceLoad();
+			}
 		}
 
 		@Override
@@ -221,6 +213,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			if (isStarted())
 			{	/* if it is started we deliver the data directly,
 				 * otherwise this is handled in onStartLoading */
+				if (mObserver == null)
+				{
+					mObserver = new TrustedCertificateManagerObserver();
+					TrustedCertificateManager.getInstance().addObserver(mObserver);
+				}
 				super.deliverResult(data);
 			}
 		}
@@ -228,7 +225,34 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		@Override
 		protected void onReset()
 		{
+			if (mObserver != null)
+			{
+				TrustedCertificateManager.getInstance().deleteObserver(mObserver);
+				mObserver = null;
+			}
 			mData = null;
+			super.onReset();
+		}
+
+		@Override
+		protected void onAbandon()
+		{
+			if (mObserver != null)
+			{
+				TrustedCertificateManager.getInstance().deleteObserver(mObserver);
+				mObserver = null;
+			}
+		}
+
+		private class TrustedCertificateManagerObserver implements Observer
+		{
+			private ForceLoadContentObserver mContentObserver = new ForceLoadContentObserver();
+
+			@Override
+			public void update(Observable observable, Object data)
+			{
+				mContentObserver.onChange(false);
+			}
 		}
 	}
 }
