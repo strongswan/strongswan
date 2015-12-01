@@ -1,3 +1,11 @@
+strongswan-5.4.0
+----------------
+
+- For the vici plugin a Vici:Session Perl CPAN module has been added to allow
+  Perl applications to control and/or monitor the IKE daemon using the VICI
+  interface, similar to the existing Python egg or Ruby gem.
+
+
 strongswan-5.3.5
 ----------------
 
