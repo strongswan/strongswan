@@ -531,7 +531,7 @@ do
 			scp $SSHCONF $HOSTLOGIN:/etc/swanctl/swanctl.conf \
 			$TESTRESULTDIR/${host}.swanctl.conf  > /dev/null 2>&1
 
-			for subsys in conns certs pools authorities sas pols
+			for subsys in conns algs certs pools authorities sas pols
 			do
 				ssh $SSHCONF $HOSTLOGIN swanctl --list-$subsys \
 					> $TESTRESULTDIR/${host}.swanctl.$subsys 2>/dev/null
@@ -539,6 +539,9 @@ do
 
 			ssh $SSHCONF $HOSTLOGIN swanctl --stats \
 				> $TESTRESULTDIR/${host}.swanctl.stats 2>/dev/null
+
+			cat $TESTRESULTDIR/${host}.swanctl.algs >> \
+				$TESTRESULTDIR/${host}.swanctl.stats
 		else
 		    for file in ipsec.conf ipsec.secrets
 		    do
@@ -586,7 +589,7 @@ do
 	    <li><a href="$host.swanctl.sas">swanctl --list-sas</a></li>
 	    <li><a href="$host.swanctl.pols">swanctl --list-pols</a></li>
 	    <li><a href="$host.swanctl.authorities">swanctl --list-authorities</a></li>
-	    <li><a href="$host.swanctl.stats">swanctl --stats</a></li>
+	    <li><a href="$host.swanctl.stats">swanctl --stats|--list-algs</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
