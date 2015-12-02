@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2014 Tobias Brunner
+# Copyright (C) 2014-2015 Tobias Brunner
 # Hochschule fuer Technik Rapperswil
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -48,6 +48,14 @@ full.section.name {[#]}
 
 If a # is added between the curly braces the section header will be commented
 out in the configuration file snippet, which is useful for example sections.
+
+Dots in section/option names may be escaped with a backslash.  For instance,
+with the following section description
+
+charon.filelog./var/log/daemon\.log {}
+	Section to define logging into /var/log/daemon.log
+
+/var/log/daemon.log will be the name of the last section.
 """
 
 import sys
@@ -58,9 +66,10 @@ from operator import attrgetter
 
 class ConfigOption:
 	"""Representing a configuration option or described section in strongswan.conf"""
-	def __init__(self, name, default = None, section = False, commented = False):
-		self.name = name.split('.')[-1]
-		self.fullname = name
+	def __init__(self, path, default = None, section = False, commented = False):
+		self.path = path
+		self.name = path[-1]
+		self.fullname = '.'.join(path)
 		self.default = default
 		self.section = section
 		self.commented = commented
@@ -68,7 +77,7 @@ class ConfigOption:
 		self.options = []
 
 	def __lt__(self, other):
-		return  self.name < other.name
+		return self.name < other.name
 
 	def add_paragraph(self):
 		"""Adds a new paragraph to the description"""
@@ -113,7 +122,8 @@ class Parser:
 		if m:
 			if self.__current:
 				self.__add_option(self.__current)
-			self.__current = ConfigOption(m.group('name'), m.group('default'),
+			path = self.__split_name(m.group('name'))
+			self.__current = ConfigOption(path, m.group('default'),
 										  commented = not m.group('assign'))
 			return
 		# section definition
@@ -121,7 +131,8 @@ class Parser:
 		if m:
 			if self.__current:
 				self.__add_option(self.__current)
-			self.__current = ConfigOption(m.group('name'), section = True,
+			path = self.__split_name(m.group('name'))
+			self.__current = ConfigOption(path, section = True,
 										  commented = m.group('comment'))
 			return
 		# paragraph separator
@@ -133,11 +144,14 @@ class Parser:
 		if m and self.__current:
 			self.__current.add(m.group('text'))
 
+	def __split_name(self, name):
+		"""Split the given full name in a list of section/option names"""
+		return [x.replace('\.', '.') for x in re.split(r'(?<!\\)\.', name)]
+
 	def __add_option(self, option):
 		"""Adds the given option to the abstract storage"""
 		option.desc = [desc for desc in option.desc if len(desc)]
-		parts = option.fullname.split('.')
-		parent = self.__get_option(parts[:-1], True)
+		parent = self.__get_option(option.path[:-1], True)
 		if not parent:
 			parent = self
 		found = next((x for x in parent.options if x.name == option.name
@@ -149,18 +163,16 @@ class Parser:
 			if self.sort:
 				parent.options.sort()
 
-	def __get_option(self, parts, create = False):
+	def __get_option(self, path, create = False):
 		"""Searches/Creates the option (section) based on a list of section names"""
 		option = None
 		options = self.options
-		fullname = ""
-		for name in parts:
-			fullname += '.' + name if len(fullname) else name
+		for i, name in enumerate(path, 1):
 			option = next((x for x in options if x.name == name and x.section), None)
 			if not option:
 				if not create:
 					break
-				option = ConfigOption(fullname, section = True)
+				option = ConfigOption(path[:i], section = True)
 				options.append(option)
 				if self.sort:
 					options.sort()
@@ -169,7 +181,7 @@ class Parser:
 
 	def get_option(self, name):
 		"""Retrieves the option with the given name"""
-		return self.__get_option(name.split('.'))
+		return self.__get_option(self.__split_name(name))
 
 class TagReplacer:
 	"""Replaces formatting tags in text"""
