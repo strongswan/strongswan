@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015 Tobias Brunner, Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
@@ -40,6 +40,9 @@
 
 #include "vici_query.h"
 #include "vici_builder.h"
+#include "vici_version.h"
+
+#include <credentials/certificates/x509.h>
 
 #include <inttypes.h>
 #include <time.h>
@@ -775,7 +778,7 @@ CALLBACK(list_conns, vici_message_t*,
 /**
  * Do we have a private key for given certificate
  */
-static bool has_privkey(private_vici_query_t *this, certificate_t *cert)
+static bool has_privkey(certificate_t *cert)
 {
 	private_key_t *private;
 	public_key_t *public;
@@ -803,54 +806,52 @@ static bool has_privkey(private_vici_query_t *this, certificate_t *cert)
 	return found;
 }
 
-CALLBACK(list_certs, vici_message_t*,
-	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+/**
+ * Store cert filter data
+ */
+typedef struct {
+	vici_version_t version;
+	certificate_type_t type;
+	x509_flag_t flag;
+	identification_t *subject;
+} cert_filter_t;
+
+/**
+ * Enumerate all X.509 certificates with a given flag
+ */
+static void enum_x509(private_vici_query_t *this, u_int id,
+					  linked_list_t *certs, cert_filter_t *filter,
+					  x509_flag_t flag)
 {
-	enumerator_t *enumerator, *added;
-	linked_list_t *list;
-	certificate_t *cert, *current;
-	chunk_t encoding;
-	identification_t *subject = NULL;
-	int type;
+	enumerator_t *enumerator;
+	certificate_t *cert;
 	vici_builder_t *b;
-	bool found;
-	char *str;
+	chunk_t encoding;
+	x509_flag_t mask;
+	x509_t *x509;
 
-	str = request->get_str(request, "ANY", "type");
-	if (!enum_from_name(certificate_type_names, str, &type))
+	if (filter->type != CERT_ANY && filter->version == VICI_2_0 &&
+		filter->flag != flag)
 	{
-		b = vici_builder_create();
-		return b->finalize(b);
+		return;
 	}
-	str = request->get_str(request, NULL, "subject");
-	if (str)
-	{
-		subject = identification_create_from_string(str);
-	}
+	mask = X509_CA | X509_AA | X509_OCSP_SIGNER;
 
-	list = linked_list_create();
-	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
-												type, KEY_ANY, subject, FALSE);
+	enumerator = certs->create_enumerator(certs);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		found = FALSE;
-		added = list->create_enumerator(list);
-		while (added->enumerate(added, &current))
+		x509 = (x509_t*)cert;
+		if ((x509->get_flags(x509) & mask) != flag)
 		{
-			if (current->equals(current, cert))
-			{
-				found = TRUE;
-				break;
-			}
+			continue;
 		}
-		added->destroy(added);
 
-		if (!found && cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 		{
 			b = vici_builder_create();
 			b->add_kv(b, "type", "%N",
 					  certificate_type_names, cert->get_type(cert));
-			if (has_privkey(this, cert))
+			if (has_privkey(cert))
 			{
 				b->add_kv(b, "has_privkey", "yes");
 			}
@@ -859,14 +860,179 @@ CALLBACK(list_certs, vici_message_t*,
 
 			this->dispatcher->raise_event(this->dispatcher, "list-cert", id,
 										  b->finalize(b));
-			list->insert_last(list, cert->get_ref(cert));
 		}
 	}
 	enumerator->destroy(enumerator);
+}
 
-	list->destroy_offset(list, offsetof(certificate_t, destroy));
-	DESTROY_IF(subject);
+/**
+ * Enumerate all non-X.509 certificate types
+ */
+static void enum_others(private_vici_query_t *this, u_int id,
+						linked_list_t *certs, cert_filter_t *filter)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	vici_builder_t *b;
+	chunk_t encoding;
 
+	enumerator = certs->create_enumerator(certs);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		{
+			b = vici_builder_create();
+			b->add_kv(b, "type", "%N",
+					  certificate_type_names, cert->get_type(cert));
+			b->add(b, VICI_KEY_VALUE, "data", encoding);
+			free(encoding.ptr);
+
+			this->dispatcher->raise_event(this->dispatcher, "list-cert", id,
+										  b->finalize(b));
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Enumerate all certificates of a given type
+ */
+static void enum_certs(private_vici_query_t *this,	u_int id,
+					   cert_filter_t *filter, certificate_type_t type)
+{
+	enumerator_t *e1, *e2;
+	certificate_t *cert, *current;
+	linked_list_t *certs;
+	bool found;
+
+	if (filter->type != CERT_ANY && filter->type != type)
+	{
+		return;
+	}
+	certs = linked_list_create();
+
+	e1 = lib->credmgr->create_cert_enumerator(lib->credmgr, type, KEY_ANY,
+											  filter->subject, FALSE);
+	while (e1->enumerate(e1, &cert))
+	{
+		found = FALSE;
+
+		e2 = certs->create_enumerator(certs);
+		while (e2->enumerate(e2, &current))
+		{
+			if (current->equals(current, cert))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		e2->destroy(e2);
+
+		if (!found)
+		{
+			certs->insert_last(certs, cert->get_ref(cert));
+		}
+	}
+	e1->destroy(e1);
+
+	if (type == CERT_X509)
+	{
+		enum_x509(this, id, certs, filter, X509_NONE);
+		enum_x509(this, id, certs, filter, X509_CA);
+		enum_x509(this, id, certs, filter, X509_AA);
+		enum_x509(this, id, certs, filter, X509_OCSP_SIGNER);
+	}
+	else
+	{
+		enum_others(this, id, certs, filter);
+	}
+	certs->destroy_offset(certs, offsetof(certificate_t, destroy));
+}
+
+CALLBACK(list_certs, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	cert_filter_t filter = {
+		.version = VICI_1_0,
+		.type = CERT_ANY,
+		.flag = X509_NONE,
+		.subject = NULL
+	};
+	vici_builder_t *b;
+	char *str;
+
+	str = request->get_str(request, "1.0", "vici");
+	if (!enum_from_name(vici_version_names, str, &filter.version))
+	{
+		DBG1(DBG_CFG, "unsupported vici version '%s'", str);
+		goto finalize;
+	}
+	str = request->get_str(request, "ANY", "type");
+
+	if (filter.version == VICI_1_0)
+	{
+		if (!enum_from_name(certificate_type_names, str, &filter.type))
+		{
+			DBG1(DBG_CFG, "invalid certificate type '%s'", str);
+			goto finalize;
+		}
+	}
+	else	/* VICI 2.0 */
+	{
+		if (strcaseeq(str, "any"))
+		{
+			filter.type = CERT_ANY;
+		}
+		else if (strcaseeq(str, "x509"))
+		{
+			filter.type = CERT_X509;
+		}
+		else if (strcaseeq(str, "x509ca"))
+		{
+			filter.type = CERT_X509;
+			filter.flag = X509_CA;
+		}
+		else if (strcaseeq(str, "x509aa"))
+		{
+			filter.type = CERT_X509;
+			filter.flag = X509_AA;
+		}
+		else if (strcaseeq(str, "x509ocsp"))
+		{
+			filter.type = CERT_X509;
+			filter.flag = X509_OCSP_SIGNER;
+		}
+		else if (strcaseeq(str, "x509crl"))
+		{
+			filter.type = CERT_X509_CRL;
+		}
+		else if (strcaseeq(str, "x509ac"))
+		{
+			filter.type = CERT_X509_AC;
+		}
+		else if (strcaseeq(str, "ocsp"))
+		{
+			filter.type = CERT_X509_OCSP_RESPONSE;
+		}
+		else
+		{
+			DBG1(DBG_CFG, "invalid certificate type '%s'", str);
+			goto finalize;
+		}
+	}
+
+	str = request->get_str(request, NULL, "subject");
+	if (str)
+	{
+		filter.subject = identification_create_from_string(str);
+	}
+	enum_certs(this, id, &filter, CERT_X509);
+	enum_certs(this, id, &filter, CERT_X509_AC);
+	enum_certs(this, id, &filter, CERT_X509_CRL);
+	enum_certs(this, id, &filter, CERT_X509_OCSP_RESPONSE);
+	DESTROY_IF(filter.subject);
+
+finalize:
 	b = vici_builder_create();
 	return b->finalize(b);
 }
