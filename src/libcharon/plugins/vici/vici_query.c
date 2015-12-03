@@ -41,8 +41,7 @@
 #include "vici_query.h"
 #include "vici_builder.h"
 #include "vici_version.h"
-
-#include <credentials/certificates/x509.h>
+#include "vici_cert_info.h"
 
 #include <inttypes.h>
 #include <time.h>
@@ -821,7 +820,7 @@ typedef struct {
  */
 static void enum_x509(private_vici_query_t *this, u_int id,
 					  linked_list_t *certs, cert_filter_t *filter,
-					  x509_flag_t flag)
+					  x509_flag_t flag, char *cert_type)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -830,7 +829,7 @@ static void enum_x509(private_vici_query_t *this, u_int id,
 	x509_flag_t mask;
 	x509_t *x509;
 
-	if (filter->type != CERT_ANY && filter->version == VICI_2_0 &&
+	if (filter->type != CERT_ANY && filter->version != VICI_1_0 &&
 		filter->flag != flag)
 	{
 		return;
@@ -849,8 +848,16 @@ static void enum_x509(private_vici_query_t *this, u_int id,
 		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 		{
 			b = vici_builder_create();
-			b->add_kv(b, "type", "%N",
-					  certificate_type_names, cert->get_type(cert));
+			if (filter->version == VICI_1_0)
+			{
+				b->add_kv(b, "type", "%N", certificate_type_names,
+										   cert->get_type(cert));
+			}
+			else
+			{
+				b->add_kv(b, "vici", "%N", vici_version_names, VICI_VERSION);
+				b->add_kv(b, "type", "%s", cert_type);
+			}
 			if (has_privkey(cert))
 			{
 				b->add_kv(b, "has_privkey", "yes");
@@ -869,7 +876,8 @@ static void enum_x509(private_vici_query_t *this, u_int id,
  * Enumerate all non-X.509 certificate types
  */
 static void enum_others(private_vici_query_t *this, u_int id,
-						linked_list_t *certs, cert_filter_t *filter)
+						linked_list_t *certs, cert_filter_t *filter,
+						char *cert_type)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -882,8 +890,16 @@ static void enum_others(private_vici_query_t *this, u_int id,
 		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 		{
 			b = vici_builder_create();
-			b->add_kv(b, "type", "%N",
-					  certificate_type_names, cert->get_type(cert));
+			if (filter->version == VICI_1_0)
+			{
+				b->add_kv(b, "type", "%N", certificate_type_names,
+										   cert->get_type(cert));
+			}
+			else
+			{
+				b->add_kv(b, "vici", "%N", vici_version_names, VICI_VERSION);
+				b->add_kv(b, "type", "%s", cert_type);
+			}
 			b->add(b, VICI_KEY_VALUE, "data", encoding);
 			free(encoding.ptr);
 
@@ -898,7 +914,8 @@ static void enum_others(private_vici_query_t *this, u_int id,
  * Enumerate all certificates of a given type
  */
 static void enum_certs(private_vici_query_t *this,	u_int id,
-					   cert_filter_t *filter, certificate_type_t type)
+					   cert_filter_t *filter, certificate_type_t type,
+					   char *cert_type)
 {
 	enumerator_t *e1, *e2;
 	certificate_t *cert, *current;
@@ -937,14 +954,14 @@ static void enum_certs(private_vici_query_t *this,	u_int id,
 
 	if (type == CERT_X509)
 	{
-		enum_x509(this, id, certs, filter, X509_NONE);
-		enum_x509(this, id, certs, filter, X509_CA);
-		enum_x509(this, id, certs, filter, X509_AA);
-		enum_x509(this, id, certs, filter, X509_OCSP_SIGNER);
+		enum_x509(this, id, certs, filter, X509_NONE, "x509");
+		enum_x509(this, id, certs, filter, X509_CA, "x509ca");
+		enum_x509(this, id, certs, filter, X509_AA, "x509ac");
+		enum_x509(this, id, certs, filter, X509_OCSP_SIGNER, "x509ocsp");
 	}
 	else
 	{
-		enum_others(this, id, certs, filter);
+		enum_others(this, id, certs, filter, cert_type);
 	}
 	certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 }
@@ -979,40 +996,13 @@ CALLBACK(list_certs, vici_message_t*,
 	}
 	else	/* VICI 2.0 */
 	{
-		if (strcaseeq(str, "any"))
+		vici_cert_info_t *cert_info;
+
+		cert_info = vici_cert_info_retrieve(str);
+		if (cert_info)
 		{
-			filter.type = CERT_ANY;
-		}
-		else if (strcaseeq(str, "x509"))
-		{
-			filter.type = CERT_X509;
-		}
-		else if (strcaseeq(str, "x509ca"))
-		{
-			filter.type = CERT_X509;
-			filter.flag = X509_CA;
-		}
-		else if (strcaseeq(str, "x509aa"))
-		{
-			filter.type = CERT_X509;
-			filter.flag = X509_AA;
-		}
-		else if (strcaseeq(str, "x509ocsp"))
-		{
-			filter.type = CERT_X509;
-			filter.flag = X509_OCSP_SIGNER;
-		}
-		else if (strcaseeq(str, "x509crl"))
-		{
-			filter.type = CERT_X509_CRL;
-		}
-		else if (strcaseeq(str, "x509ac"))
-		{
-			filter.type = CERT_X509_AC;
-		}
-		else if (strcaseeq(str, "ocsp"))
-		{
-			filter.type = CERT_X509_OCSP_RESPONSE;
+			filter.type = cert_info->type;
+			filter.flag = cert_info->flag;
 		}
 		else
 		{
@@ -1026,10 +1016,10 @@ CALLBACK(list_certs, vici_message_t*,
 	{
 		filter.subject = identification_create_from_string(str);
 	}
-	enum_certs(this, id, &filter, CERT_X509);
-	enum_certs(this, id, &filter, CERT_X509_AC);
-	enum_certs(this, id, &filter, CERT_X509_CRL);
-	enum_certs(this, id, &filter, CERT_X509_OCSP_RESPONSE);
+	enum_certs(this, id, &filter, CERT_X509, "x509");
+	enum_certs(this, id, &filter, CERT_X509_AC, "x509ac");
+	enum_certs(this, id, &filter, CERT_X509_CRL, "x509crl");
+	enum_certs(this, id, &filter, CERT_X509_OCSP_RESPONSE, "ocsp");
 	DESTROY_IF(filter.subject);
 
 finalize:
@@ -1146,6 +1136,7 @@ CALLBACK(version, vici_message_t*,
 
 	b = vici_builder_create();
 
+	b->add_kv(b, "vici", "%N", vici_version_names, VICI_VERSION);
 	b->add_kv(b, "daemon", "%s", lib->ns);
 	b->add_kv(b, "version", "%s", VERSION);
 

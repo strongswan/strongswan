@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -14,6 +17,8 @@
  */
 
 #include "command.h"
+
+#include <vici_version.h>
 
 #include <errno.h>
 
@@ -51,7 +56,8 @@ static int version(vici_conn_t *conn)
 
 	if (!daemon)
 	{
-		printf("strongSwan swanctl %s\n", VERSION);
+		printf("strongSwan swanctl %s vici %N\n", VERSION,
+				vici_version_names, VICI_VERSION);
 		return 0;
 	}
 
@@ -69,12 +75,13 @@ static int version(vici_conn_t *conn)
 	}
 	else
 	{
-		printf("strongSwan %s %s (%s, %s, %s)\n",
-			vici_find_str(res, "", "version"),
-			vici_find_str(res, "", "daemon"),
-			vici_find_str(res, "", "sysname"),
-			vici_find_str(res, "", "release"),
-			vici_find_str(res, "", "machine"));
+		printf("strongSwan %s vici %s %s (%s, %s, %s)\n",
+			vici_find_str(res, ""   , "version"),
+			vici_find_str(res, "1.0", "vici"),
+			vici_find_str(res, ""   , "daemon"),
+			vici_find_str(res, ""   , "sysname"),
+			vici_find_str(res, ""   , "release"),
+			vici_find_str(res, ""   , "machine"));
 	}
 	vici_free_res(res);
 	return 0;

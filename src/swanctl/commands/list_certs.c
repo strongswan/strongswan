@@ -29,7 +29,15 @@
 #include <credentials/certificates/ac.h>
 #include <selectors/traffic_selector.h>
 
+#include <vici_version.h>
+#include <vici_cert_info.h>
+
 #include "command.h"
+
+/**
+ * Current certificate type info
+ */
+static vici_cert_info_t *current_cert_info = NULL;
 
 /**
  * Print PEM encoding of a certificate
@@ -115,44 +123,43 @@ static void print_x509(x509_t *x509)
 	enumerator->destroy(enumerator);
 
 	flags = x509->get_flags(x509);
-	printf("flags:     ");
-	if (flags & X509_CA)
+	if (flags != X509_NONE)
 	{
-		printf("CA ");
+		printf("flags:     ");
+		if (flags & X509_CA)
+		{
+			printf("CA ");
+		}
+		if (flags & X509_CRL_SIGN)
+		{
+			printf("CRLSign ");
+		}
+		if (flags & X509_OCSP_SIGNER)
+		{
+			printf("ocspSigning ");
+		}
+		if (flags & X509_SERVER_AUTH)
+		{
+			printf("serverAuth ");
+		}
+		if (flags & X509_CLIENT_AUTH)
+		{
+			printf("clientAuth ");
+		}
+		if (flags & X509_IKE_INTERMEDIATE)
+		{
+			printf("ikeIntermediate ");
+		}
+		if (flags & X509_MS_SMARTCARD_LOGON)
+		{
+			printf("msSmartcardLogon");
+		}
+		if (flags & X509_SELF_SIGNED)
+		{
+			printf("self-signed ");
+		}
+		printf("\n");
 	}
-	if (flags & X509_CRL_SIGN)
-	{
-		printf("CRLSign ");
-	}
-	if (flags & X509_AA)
-	{
-		printf("AA ");
-	}
-	if (flags & X509_OCSP_SIGNER)
-	{
-		printf("OCSP ");
-	}
-	if (flags & X509_AA)
-	{
-		printf("AA ");
-	}
-	if (flags & X509_SERVER_AUTH)
-	{
-		printf("serverAuth ");
-	}
-	if (flags & X509_CLIENT_AUTH)
-	{
-		printf("clientAuth ");
-	}
-	if (flags & X509_IKE_INTERMEDIATE)
-	{
-		printf("iKEIntermediate ");
-	}
-	if (flags & X509_SELF_SIGNED)
-	{
-		printf("self-signed ");
-	}
-	printf("\n");
 
 	first = TRUE;
 	enumerator = x509->create_crl_uri_enumerator(x509);
@@ -486,8 +493,8 @@ static void print_cert(certificate_t *cert, bool has_privkey)
 
 	now = time(NULL);
 
-	printf("cert:      %N\n", certificate_type_names, cert->get_type(cert));
-	if (cert->get_type(cert) != CERT_X509_CRL)
+	if (cert->get_type(cert) != CERT_X509_CRL &&
+		cert->get_type(cert) != CERT_X509_OCSP_RESPONSE)
 	{
 		printf("subject:  \"%Y\"\n", cert->get_subject(cert));
 	}
@@ -541,49 +548,75 @@ static void print_cert(certificate_t *cert, bool has_privkey)
 CALLBACK(list_cb, void,
 	command_format_options_t *format, char *name, vici_res_t *res)
 {
+	certificate_t *cert;
+	vici_version_t version;
+	vici_cert_info_t *cert_info;
+	bool has_privkey, first = FALSE;
+	char *version_str, *type_str;
+	void *buf;
+	int len;
+
 	if (*format & COMMAND_FORMAT_RAW)
 	{
 		vici_dump(res, "list-cert event", *format & COMMAND_FORMAT_PRETTY,
 				  stdout);
+		return;
 	}
-	else
-	{
-		certificate_type_t type;
-		certificate_t *cert;
-		void *buf;
-		int len;
-		bool has_privkey;
 
-		buf = vici_find(res, &len, "data");
-		has_privkey = streq(vici_find_str(res, "no", "has_privkey"), "yes");
-		if (enum_from_name(certificate_type_names,
-						   vici_find_str(res, "ANY", "type"), &type) &&
-			type != CERT_ANY && buf)
+	version_str = vici_find_str(res, "1.0", "vici");
+	if (!enum_from_name(vici_version_names, version_str, &version) ||
+		version == VICI_1_0)
+	{
+		fprintf(stderr, "unsupported vici version '%s'\n", version_str);
+		return;
+	}
+
+	buf = vici_find(res, &len, "data");
+	if (!buf)
+	{
+		fprintf(stderr, "received incomplete certificate data\n");
+		return;
+	}
+	has_privkey = streq(vici_find_str(res, "no", "has_privkey"), "yes");
+
+	type_str = vici_find_str(res, "any", "type");
+	cert_info = vici_cert_info_retrieve(type_str);
+	if (!cert_info || cert_info->type == CERT_ANY)
+	{
+		fprintf(stderr, "unsupported certificate type '%s'\n", type_str);
+		return;
+	}
+
+	/* Detect change of certificate type */
+	if (cert_info != current_cert_info)
+	{
+		first = TRUE;
+		current_cert_info = cert_info;
+	}
+
+	/* Parse certificate data blob */
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, cert_info->type,
+							  BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
+							  BUILD_END);
+	if (cert)
+	{
+		if (*format & COMMAND_FORMAT_PEM)
 		{
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-									BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
-									BUILD_END);
-			if (cert)
-			{
-				if (*format & COMMAND_FORMAT_PEM)
-				{
-					print_pem(cert);
-				}
-				else
-				{
-					print_cert(cert, has_privkey);
-				}
-				cert->destroy(cert);
-			}
-			else
-			{
-				fprintf(stderr, "parsing certificate failed\n");
-			}
+			print_pem(cert);
 		}
 		else
 		{
-			fprintf(stderr, "received incomplete certificate data\n");
+			if (first)
+			{
+				printf("List of %ss:\n\n", cert_info->caption);
+			}
+			print_cert(cert, has_privkey);
 		}
+		cert->destroy(cert);
+	}
+	else
+	{
+		fprintf(stderr, "parsing certificate failed\n");
 	}
 }
 
@@ -631,6 +664,8 @@ static int list_certs(vici_conn_t *conn)
 		return ret;
 	}
 	req = vici_begin("list-certs");
+	vici_add_version(req, VICI_VERSION);
+
 	if (type)
 	{
 		vici_add_key_valuef(req, "type", "%s", type);
@@ -639,6 +674,7 @@ static int list_certs(vici_conn_t *conn)
 	{
 		vici_add_key_valuef(req, "subject", "%s", subject);
 	}
+
 	res = vici_submit(req, conn);
 	if (!res)
 	{
@@ -662,8 +698,9 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_certs, 'x', "list-certs", "list stored certificates",
-		{"[--subject <dn/san>] [--type X509|X509_AC|X509_CRL] [--pem] "
-		 "[--raw|--pretty]"},
+		{"[--subject <dn/san>] "
+		 "[--type x509|x509ca|x509aa|x509ac|x509crl|x509ocsp|ocsp] "
+		 "[--pem] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"subject",		's', 1, "filter by certificate subject"},

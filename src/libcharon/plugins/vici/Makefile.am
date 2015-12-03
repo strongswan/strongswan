@@ -19,6 +19,7 @@ libstrongswan_vici_la_SOURCES = \
 	vici_message.h vici_message.c \
 	vici_builder.h vici_builder.c \
 	vici_dispatcher.h vici_dispatcher.c \
+	vici_cert_info.c vici_cert_info.h \
 	vici_query.h vici_query.c \
 	vici_control.h vici_control.c \
 	vici_config.h vici_config.c \
@@ -40,6 +41,7 @@ libvici_la_SOURCES = \
 	vici_message.c vici_message.h \
 	vici_builder.c vici_builder.h \
 	vici_version.c vici_version.h \
+	vici_cert_info.c vici_cert_info.h \
 	libvici.c libvici.h
 
 libvici_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la

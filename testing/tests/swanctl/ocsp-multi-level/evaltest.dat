@@ -1,8 +1,8 @@
-moon:: swanctl --list-certs --type X509_OCSP_RESPONSE 2> /dev/null::subject.*ocsp.research.strongswan.org::YES
-moon:: swanctl --list-certs --type X509_OCSP_RESPONSE 2> /dev/null::subject.*ocsp.sales.strongswan.org::YES
-moon:: swanctl --list-certs --type X509_OCSP_RESPONSE 2> /dev/null::subject.*ocsp.strongswan.org::YES
-carol::swanctl --list-certs --type X509_OCSP_RESPONSE 2> /dev/null::subject.*ocsp.strongswan.org::YES
-dave:: swanctl --list-certs --type X509_OCSP_RESPONSE 2> /dev/null::subject.*ocsp.strongswan.org::YES
+moon:: swanctl --list-certs --type ocsp 2> /dev/null::issuer.*ocsp.research.strongswan.org::YES
+moon:: swanctl --list-certs --type ocsp 2> /dev/null::issuer.*ocsp.sales.strongswan.org::YES
+moon:: swanctl --list-certs --type ocsp 2> /dev/null::issuer.*ocsp.strongswan.org::YES
+carol::swanctl --list-certs --type ocsp 2> /dev/null::issuer.*ocsp.strongswan.org::YES
+dave:: swanctl --list-certs --type ocsp 2> /dev/null::issuer.*ocsp.strongswan.org::YES
 moon:: cat /var/log/daemon.log::ocsp response correctly signed by.*ocsp.research.strongswan.org::YES
 moon:: cat /var/log/daemon.log::ocsp response correctly signed by.*ocsp.sales.strongswan.org::YES
 moon:: cat /var/log/daemon.log::ocsp response correctly signed by.*ocsp.strongswan.org::YES
