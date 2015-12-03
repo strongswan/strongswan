@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+
  * libvici.h is MIT-licensed to simplify reuse, but please note that libvici.c
  * is not, as it depends on the GPLv2 licensed libstrongswan.
  *
@@ -85,6 +88,21 @@
 #define LIBVICI_H_
 
 #include <stdio.h>
+
+/**
+ * Vici versions
+ */
+typedef enum {
+	/** default version if vici key/value pair is missing in message */
+	VICI_1_0,
+	/** current version, vici key/value pair is explicitly sent in message */
+	VICI_2_0,
+} vici_version_t;
+
+/**
+ * Current vici version
+ */
+#define VICI_VERSION	VICI_2_0
 
 /**
  * Opaque vici connection contex.
@@ -218,6 +236,14 @@ void vici_add_key_value(vici_req_t *req, char *key, void *buf, int len);
  * @param ...		arguments to format string
  */
 void vici_add_key_valuef(vici_req_t *req, char *key, char *fmt, ...);
+
+/**
+ * Add a vici version key/value pair  (not not needed for VICI 1.0)
+ *
+ * @param req		request message to add vici version key/value pair to
+ * @param version	vici version
+ */
+void vici_add_version(vici_req_t *req, vici_version_t version);
 
 /**
  * Begin a list in a request message.

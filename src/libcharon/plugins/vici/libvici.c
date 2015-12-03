@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -17,6 +20,7 @@
 #include "vici_builder.h"
 #include "vici_dispatcher.h"
 #include "vici_socket.h"
+#include "vici_version.h"
 
 #include <library.h>
 #include <threading/mutex.h>
@@ -327,6 +331,11 @@ void vici_add_key_valuef(vici_req_t *req, char *key, char *fmt, ...)
 	va_start(args, fmt);
 	req->b->vadd_kv(req->b, key, fmt, args);
 	va_end(args);
+}
+
+void vici_add_version(vici_req_t *req, vici_version_t version)
+{
+	vici_add_key_valuef(req, "vici", "%N", vici_version_names, version);
 }
 
 void vici_begin_list(vici_req_t *req, char *name)

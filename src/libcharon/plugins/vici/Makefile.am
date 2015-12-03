@@ -14,6 +14,7 @@ plugin_LTLIBRARIES = libstrongswan-vici.la
 endif
 
 libstrongswan_vici_la_SOURCES = \
+	vici_version.c vici_version.h \
 	vici_socket.h vici_socket.c \
 	vici_message.h vici_message.c \
 	vici_builder.h vici_builder.c \
@@ -38,6 +39,7 @@ ipseclib_LTLIBRARIES = libvici.la
 libvici_la_SOURCES = \
 	vici_message.c vici_message.h \
 	vici_builder.c vici_builder.h \
+	vici_version.c vici_version.h \
 	libvici.c libvici.h
 
 libvici_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
