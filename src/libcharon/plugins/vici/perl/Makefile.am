@@ -18,7 +18,7 @@ Vici-Session/pm_to_blib: $(EXTRA_DIST) $(srcdir)/Vici-Session/Makefile
 	(cd $(srcdir)/Vici-Session; make)
 
 clean-local:
-	(cd $(srcdir)/Vici-Session; make clean)
+	(cd $(srcdir)/Vici-Session; [ ! -f Makefile ] || make clean)
 
 if PERL_CPAN_INSTALL
 install-exec-local: Vici-Session/pm_to_blib
