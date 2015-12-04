@@ -1619,7 +1619,7 @@ static void clear_start_action(private_vici_config_t *this,
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t id = 0, *del;
+	u_int32_t id = 0;
 	array_t *ids = NULL;
 	char *name;
 
@@ -1637,7 +1637,8 @@ static void clear_start_action(private_vici_config_t *this,
 					if (streq(name, child_sa->get_name(child_sa)))
 					{
 						id = child_sa->get_unique_id(child_sa);
-						array_insert_create(&ids, ARRAY_TAIL, &id);
+						array_insert_create_value(&ids, sizeof(id),
+												  ARRAY_TAIL, &id);
 					}
 				}
 				children->destroy(children);
@@ -1646,11 +1647,11 @@ static void clear_start_action(private_vici_config_t *this,
 
 			if (array_count(ids))
 			{
-				while (array_remove(ids, ARRAY_HEAD, &del))
+				while (array_remove(ids, ARRAY_HEAD, &id))
 				{
-					DBG1(DBG_CFG, "closing '%s' #%u", name, *del);
+					DBG1(DBG_CFG, "closing '%s' #%u", name, id);
 					charon->controller->terminate_child(charon->controller,
-														*del, NULL, NULL, 0);
+														id, NULL, NULL, 0);
 				}
 				array_destroy(ids);
 			}
