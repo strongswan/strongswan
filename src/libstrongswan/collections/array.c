@@ -277,6 +277,16 @@ void array_insert_create(array_t **array, int idx, void *ptr)
 	array_insert(*array, idx, ptr);
 }
 
+void array_insert_create_value(array_t **array, u_int esize,
+							   int idx, void *val)
+{
+	if (*array == NULL)
+	{
+		*array = array_create(esize, 0);
+	}
+	array_insert(*array, idx, val);
+}
+
 void array_insert_enumerator(array_t *array, int idx, enumerator_t *enumerator)
 {
 	void *ptr;

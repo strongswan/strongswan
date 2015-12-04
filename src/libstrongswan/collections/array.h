@@ -139,6 +139,21 @@ void array_insert(array_t *array, int idx, void *data);
 void array_insert_create(array_t **array, int idx, void *ptr);
 
 /**
+ * Create a value based array if it does not exist, insert value.
+ *
+ * This is a convenience function to insert a value and implicitly
+ * create a value based array if array is NULL. Array is set the the newly
+ * created array, if any.
+ *
+ * @param array			pointer to array reference, potentially NULL
+ * @param esize			element size of this array
+ * @param idx			index to insert item at
+ * @param val			pointer to value to insert
+ */
+void array_insert_create_value(array_t **array, u_int esize,
+							   int idx, void *val);
+
+/**
  * Insert all items from an enumerator to an array.
  *
  * @param array			array to add items to
