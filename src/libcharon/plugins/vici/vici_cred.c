@@ -15,6 +15,7 @@
 
 #include "vici_cred.h"
 #include "vici_builder.h"
+#include "vici_cert_info.h"
 
 #include <credentials/sets/mem_cred.h>
 #include <credentials/certificates/ac.h>
@@ -66,9 +67,9 @@ static vici_message_t* create_reply(char *fmt, ...)
 CALLBACK(load_cert, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
-	certificate_type_t type;
-	x509_flag_t required_flags = 0, additional_flags = 0;
+	vici_cert_info_t *cert_info;
 	certificate_t *cert;
+	x509_flag_t flag;
 	x509_t *x509;
 	chunk_t data;
 	bool trusted = TRUE;
@@ -79,61 +80,47 @@ CALLBACK(load_cert, vici_message_t*,
 	{
 		return create_reply("certificate type missing");
 	}
-	if (strcaseeq(str, "x509"))
+
+	cert_info = vici_cert_info_retrieve(str);
+	if (!cert_info)
 	{
-		type = CERT_X509;
+		return create_reply("invalid certificate type '%s'", str);
 	}
-	else if (strcaseeq(str, "x509ca"))
-	{
-		type = CERT_X509;
-		required_flags = X509_CA;
-	}
-	else if (strcaseeq(str, "x509aa"))
-	{
-		type = CERT_X509;
-		additional_flags = X509_AA;
-	}
-	else if (strcaseeq(str, "x509crl"))
-	{
-		type = CERT_X509_CRL;
-	}
-	else if (strcaseeq(str, "x509ac"))
-	{
-		type = CERT_X509_AC;
-		trusted = FALSE;
-	}
-	else
-	{
-		return create_reply("invalid certificate type: %s", str);
-	}
+
 	data = message->get_value(message, chunk_empty, "data");
 	if (!data.len)
 	{
 		return create_reply("certificate data missing");
 	}
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+
+	/* do not set CA flag externally */
+	flag = (cert_info->flag & X509_CA) ? X509_NONE : cert_info->flag;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, cert_info->type,
 							  BUILD_BLOB_PEM, data,
-							  BUILD_X509_FLAG, additional_flags,
+							  BUILD_X509_FLAG, flag,
 							  BUILD_END);
 	if (!cert)
 	{
 		return create_reply("parsing %N certificate failed",
-							certificate_type_names, type);
+							certificate_type_names, cert_info->type);
 	}
-	if (cert->get_type(cert) == CERT_X509)
-	{
-		x509 = (x509_t*)cert;
-
-		if ((required_flags & x509->get_flags(x509)) != required_flags)
-		{
-			cert->destroy(cert);
-			return create_reply("certificate misses required flag, rejected");
-		}
-	}
-
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
 
-	if (type == CERT_X509_CRL)
+	/* check if CA certificate has CA basic constraint set */
+	if (cert_info->flag & X509_CA)
+	{
+		char err_msg[] = "ca certificate lacks CA basic constraint, rejected";
+		x509 = (x509_t*)cert;
+
+		if (!(x509->get_flags(x509) & X509_CA))
+		{
+			cert->destroy(cert);
+			DBG1(DBG_CFG, "  %s", err_msg);
+			return create_reply(err_msg);
+		}
+	}
+	if (cert_info->type == CERT_X509_CRL)
 	{
 		this->creds->add_crl(this->creds, (crl_t*)cert);
 	}
@@ -168,6 +155,10 @@ CALLBACK(load_key, vici_message_t*,
 	else if (strcaseeq(str, "ecdsa"))
 	{
 		type = KEY_ECDSA;
+	}
+	else if (strcaseeq(str, "bliss"))
+	{
+		type = KEY_BLISS;
 	}
 	else
 	{

@@ -900,6 +900,10 @@ static void enum_others(private_vici_query_t *this, u_int id,
 				b->add_kv(b, "vici", "%N", vici_version_names, VICI_VERSION);
 				b->add_kv(b, "type", "%s", cert_type);
 			}
+			if (has_privkey(cert))
+			{
+				b->add_kv(b, "has_privkey", "yes");
+			}
 			b->add(b, VICI_KEY_VALUE, "data", encoding);
 			free(encoding.ptr);
 
@@ -1016,6 +1020,7 @@ CALLBACK(list_certs, vici_message_t*,
 	{
 		filter.subject = identification_create_from_string(str);
 	}
+	enum_certs(this, id, &filter, CERT_TRUSTED_PUBKEY, "pubkey");
 	enum_certs(this, id, &filter, CERT_X509, "x509");
 	enum_certs(this, id, &filter, CERT_X509_AC, "x509ac");
 	enum_certs(this, id, &filter, CERT_X509_CRL, "x509crl");

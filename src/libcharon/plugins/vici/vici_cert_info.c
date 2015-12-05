@@ -31,6 +31,8 @@ static vici_cert_info_t vici_cert_infos[] = {
 	{ "x509crl", "X.509 CRL",                      CERT_X509_CRL,
 											 	   X509_NONE                },
 	{ "ocsp", "OCSP Response",                     CERT_X509_OCSP_RESPONSE,
+												   X509_NONE                },
+	{ "pubkey", "Raw Public Key",                  CERT_TRUSTED_PUBKEY,
 												   X509_NONE                }
 };
 

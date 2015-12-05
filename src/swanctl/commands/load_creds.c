@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -171,6 +174,9 @@ static bool load_key_anytype(vici_conn_t *conn, command_format_options_t format,
 		case KEY_ECDSA:
 			loaded = load_key(conn, format, path, "ecdsa", encoding);
 			break;
+		case KEY_BLISS:
+			loaded = load_key(conn, format, path, "bliss", encoding);
+			break;
 		default:
 			fprintf(stderr, "unsupported key type in '%s'\n", path);
 			break;
@@ -237,6 +243,7 @@ static bool determine_credtype(char *type, credential_type_t *credtype,
 		{ "pkcs8",			CRED_PRIVATE_KEY,		KEY_ANY,			},
 		{ "rsa",			CRED_PRIVATE_KEY,		KEY_RSA,			},
 		{ "ecdsa",			CRED_PRIVATE_KEY,		KEY_ECDSA,			},
+		{ "bliss",			CRED_PRIVATE_KEY,		KEY_BLISS,			},
 		{ "pkcs12",			CRED_CONTAINER,			CONTAINER_PKCS12,	},
 	};
 	int i;
@@ -548,6 +555,7 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 		"ike",
 		"rsa",
 		"ecdsa",
+		"bliss",
 		"pkcs8",
 		"pkcs12",
 	};
@@ -672,14 +680,17 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 		}
 	}
 
-	load_certs(conn, format, "x509", SWANCTL_X509DIR);
-	load_certs(conn, format, "x509ca", SWANCTL_X509CADIR);
-	load_certs(conn, format, "x509aa", SWANCTL_X509AADIR);
-	load_certs(conn, format, "x509crl", SWANCTL_X509CRLDIR);
-	load_certs(conn, format, "x509ac", SWANCTL_X509ACDIR);
+	load_certs(conn, format, "x509",     SWANCTL_X509DIR);
+	load_certs(conn, format, "x509ca",   SWANCTL_X509CADIR);
+	load_certs(conn, format, "x509aa",   SWANCTL_X509AADIR);
+	load_certs(conn, format, "x509crl",  SWANCTL_X509CRLDIR);
+	load_certs(conn, format, "x509ac",   SWANCTL_X509ACDIR);
+	load_certs(conn, format, "x509ocsp", SWANCTL_X509OCSPDIR);
+	load_certs(conn, format, "pubkey",   SWANCTL_PUBKEYDIR);
 
-	load_keys(conn, format, noprompt, cfg, "rsa", SWANCTL_RSADIR);
+	load_keys(conn, format, noprompt, cfg, "rsa",   SWANCTL_RSADIR);
 	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
+	load_keys(conn, format, noprompt, cfg, "bliss", SWANCTL_BLISSDIR);
 	load_keys(conn, format, noprompt, cfg, "pkcs8", SWANCTL_PKCS8DIR);
 
 	load_containers(conn, format, noprompt, cfg, "pkcs12", SWANCTL_PKCS12DIR);
