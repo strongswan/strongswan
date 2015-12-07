@@ -1613,14 +1613,14 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 /**
  * Undo start actions associated to a child config
  */
-static void clear_start_action(private_vici_config_t *this,
+static void clear_start_action(private_vici_config_t *this, char *peer_name,
 							   child_cfg_t *child_cfg)
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t id = 0, *del;
-	array_t *ids = NULL;
+	u_int32_t id = 0, others;
+	array_t *ids = NULL, *ikeids = NULL;
 	char *name;
 
 	name = child_cfg->get_name(child_cfg);
@@ -1631,28 +1631,71 @@ static void clear_start_action(private_vici_config_t *this,
 													charon->controller, TRUE);
 			while (enumerator->enumerate(enumerator, &ike_sa))
 			{
+				if (!streq(ike_sa->get_name(ike_sa), peer_name))
+				{
+					continue;
+				}
+				others = id = 0;
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
-					if (streq(name, child_sa->get_name(child_sa)))
+					if (child_sa->get_state(child_sa) != CHILD_DELETING)
 					{
-						id = child_sa->get_unique_id(child_sa);
-						array_insert_create(&ids, ARRAY_TAIL, &id);
+						if (streq(name, child_sa->get_name(child_sa)))
+						{
+							id = child_sa->get_unique_id(child_sa);
+						}
+						else
+						{
+							others++;
+						}
 					}
 				}
 				children->destroy(children);
+
+				if (id && !others)
+				{
+					/* found matching children only, delete full IKE_SA */
+					id = ike_sa->get_unique_id(ike_sa);
+					array_insert_create_value(&ikeids, sizeof(id),
+											  ARRAY_TAIL, &id);
+				}
+				else
+				{
+					children = ike_sa->create_child_sa_enumerator(ike_sa);
+					while (children->enumerate(children, &child_sa))
+					{
+						if (streq(name, child_sa->get_name(child_sa)))
+						{
+							id = child_sa->get_unique_id(child_sa);
+							array_insert_create_value(&ids, sizeof(id),
+													  ARRAY_TAIL, &id);
+						}
+					}
+					children->destroy(children);
+				}
 			}
 			enumerator->destroy(enumerator);
 
 			if (array_count(ids))
 			{
-				while (array_remove(ids, ARRAY_HEAD, &del))
+				while (array_remove(ids, ARRAY_HEAD, &id))
 				{
-					DBG1(DBG_CFG, "closing '%s' #%u", name, *del);
+					DBG1(DBG_CFG, "closing '%s' #%u", name, id);
 					charon->controller->terminate_child(charon->controller,
-														*del, NULL, NULL, 0);
+														id, NULL, NULL, 0);
 				}
 				array_destroy(ids);
+			}
+			if (array_count(ikeids))
+			{
+				while (array_remove(ikeids, ARRAY_HEAD, &id))
+				{
+					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
+					charon->controller->terminate_ike(charon->controller,
+													  id, NULL, NULL, 0);
+				}
+				array_destroy(ikeids);
 			}
 			break;
 		case ACTION_ROUTE:
@@ -1714,7 +1757,7 @@ static void clear_start_actions(private_vici_config_t *this,
 	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 	while (enumerator->enumerate(enumerator, &child_cfg))
 	{
-		clear_start_action(this, child_cfg);
+		clear_start_action(this, peer_cfg->get_name(peer_cfg), child_cfg);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1732,7 +1775,7 @@ static void replace_children(private_vici_config_t *this,
 	while (enumerator->enumerate(enumerator, &child))
 	{
 		to->remove_child_cfg(to, enumerator);
-		clear_start_action(this, child);
+		clear_start_action(this, to->get_name(to), child);
 		child->destroy(child);
 	}
 	enumerator->destroy(enumerator);
@@ -1843,9 +1886,8 @@ CALLBACK(config_sn, bool,
 
 	if (peer.local->get_count(peer.local) == 0)
 	{
-		free_peer_data(&peer);
-		peer.request->reply = create_reply("missing local auth config");
-		return FALSE;
+		auth_cfg = auth_cfg_create();
+		peer.local->insert_last(peer.local, auth_cfg);
 	}
 	if (peer.remote->get_count(peer.remote) == 0)
 	{
@@ -2005,6 +2047,7 @@ CALLBACK(unload_conn, vici_message_t*,
 		if (streq(cfg->get_name(cfg), conn_name))
 		{
 			this->conns->remove_at(this->conns, enumerator);
+			clear_start_actions(this, cfg);
 			cfg->destroy(cfg);
 			found = TRUE;
 			break;

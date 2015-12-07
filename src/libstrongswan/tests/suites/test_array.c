@@ -491,6 +491,44 @@ START_TEST(test_invoke_offset)
 }
 END_TEST
 
+START_TEST(test_insert_create)
+{
+	array_t *array = NULL;
+	uintptr_t x;
+
+	array_insert_create(&array, ARRAY_TAIL, (void*)(uintptr_t)1);
+	array_insert_create(&array, ARRAY_TAIL, (void*)(uintptr_t)2);
+	ck_assert(array != NULL);
+
+	ck_assert(array_get(array, ARRAY_HEAD, &x));
+	ck_assert_int_eq(x, 1);
+	ck_assert(array_get(array, ARRAY_TAIL, &x));
+	ck_assert_int_eq(x, 2);
+
+	array_destroy(array);
+}
+END_TEST
+
+START_TEST(test_insert_create_value)
+{
+	array_t *array = NULL;
+	u_int16_t v;
+
+	v = 1;
+	array_insert_create_value(&array, sizeof(v), ARRAY_TAIL, &v);
+	v = 2;
+	array_insert_create_value(&array, sizeof(v), ARRAY_TAIL, &v);
+	ck_assert(array != NULL);
+
+	ck_assert(array_get(array, ARRAY_HEAD, &v));
+	ck_assert_int_eq(v, 1);
+	ck_assert(array_get(array, ARRAY_TAIL, &v));
+	ck_assert_int_eq(v, 2);
+
+	array_destroy(array);
+}
+END_TEST
+
 Suite *array_suite_create()
 {
 	Suite *s;
@@ -526,6 +564,11 @@ Suite *array_suite_create()
 
 	tc = tcase_create("invoke offset");
 	tcase_add_test(tc, test_invoke_offset);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("insert create");
+	tcase_add_test(tc, test_insert_create);
+	tcase_add_test(tc, test_insert_create_value);
 	suite_add_tcase(s, tc);
 
 	return s;

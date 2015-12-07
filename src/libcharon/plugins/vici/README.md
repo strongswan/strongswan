@@ -258,13 +258,17 @@ Initiates an SA while streaming _control-log_ events.
 
 	{
 		child = <CHILD_SA configuration name to initiate>
-		timeout = <timeout in seconds before returning>
+		ike = <optional IKE_SA configuraiton name to find child under>
+		timeout = <timeout in ms before returning>
 		init-limits = <whether limits may prevent initiating the CHILD_SA>
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure or timeout>
 	}
+
+The default timeout of 0 waits indefinitely for a result, and a timeout value
+of -1 returns a result immediately.
 
 ### terminate() ###
 
@@ -275,12 +279,15 @@ Terminates an SA while streaming _control-log_ events.
 		ike = <terminate an IKE_SA by configuration name>
 		child_id = <terminate a CHILD_SA by its reqid>
 		ike_id = <terminate an IKE_SA by its unique id>
-		timeout = <timeout in seconds before returning>
+		timeout = <timeout in ms before returning>
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure or timeout>
 	}
+
+The default timeout of 0 waits indefinitely for a result, and a timeout value
+of -1 returns a result immediately.
 
 ### install() ###
 
@@ -288,6 +295,7 @@ Install a trap, drop or bypass policy defined by a CHILD_SA config.
 
 	{
 		child = <CHILD_SA configuration name to install>
+		ike = <optional IKE_SA configuraiton name to find child under>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>
