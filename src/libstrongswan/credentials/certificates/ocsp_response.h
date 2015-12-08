@@ -77,6 +77,13 @@ struct ocsp_response_t {
 	 * @return					enumerator over certificate_t*
 	 */
 	enumerator_t* (*create_cert_enumerator)(ocsp_response_t *this);
+
+	/**
+	 * Create an enumerator over the contained responses.
+	 *
+	 * @return					enumerator over major response fields
+	 */
+	enumerator_t* (*create_response_enumerator)(ocsp_response_t *this);
 };
 
 #endif /** OCSP_RESPONSE_H_ @}*/

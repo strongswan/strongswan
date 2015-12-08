@@ -1,7 +1,8 @@
 /**
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007-2014 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2007-2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -225,6 +226,42 @@ METHOD(ocsp_response_t, create_cert_enumerator, enumerator_t*,
 	private_x509_ocsp_response_t *this)
 {
 	return this->certs->create_enumerator(this->certs);
+}
+
+/**
+ * enumerator filter callback for create_response_enumerator
+ */
+static bool filter(void *data, single_response_t **response,
+				   chunk_t *serialNumber,
+				   void *p2, cert_validation_t *status,
+				   void *p3, time_t *revocationTime,
+				   void *p4, crl_reason_t *revocationReason)
+{
+	if (serialNumber)
+	{
+		*serialNumber = (*response)->serialNumber;
+	}
+	if (status)
+	{
+		*status = (*response)->status;
+	}
+	if (revocationTime)
+	{
+		*revocationTime = (*response)->revocationTime;
+	}
+	if (revocationReason)
+	{
+		*revocationReason = (*response)->revocationReason;
+	}
+	return TRUE;
+}
+
+METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
+	private_x509_ocsp_response_t *this)
+{
+	return enumerator_create_filter(
+				this->responses->create_enumerator(this->responses),
+				(void*)filter, NULL, NULL);
 }
 
 /**
@@ -828,6 +865,7 @@ static x509_ocsp_response_t *load(chunk_t blob)
 				},
 				.get_status = _get_status,
 				.create_cert_enumerator = _create_cert_enumerator,
+				.create_response_enumerator = _create_response_enumerator,
 			},
 		},
 		.ref = 1,

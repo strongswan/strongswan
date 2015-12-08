@@ -20,6 +20,7 @@
 #include "x509.h"
 #include "crl.h"
 #include "ac.h"
+#include "ocsp_response.h"
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
@@ -326,7 +327,6 @@ static void print_crl(private_certificate_printer_t *this, crl_t *crl)
 	chunk_t chunk;
 	int count = 0;
 	bool first;
-	char buf[64];
 	x509_cdp_t *cdp;
 	FILE *f = this->f;
 
@@ -466,6 +466,63 @@ static void print_ac(private_certificate_printer_t *this, ac_t *ac)
 }
 
 /**
+ * Print OCSP response specific information
+ */
+static void print_ocsp_response(private_certificate_printer_t *this,
+								ocsp_response_t *ocsp_response)
+{
+	enumerator_t *enumerator;
+	chunk_t serialNumber;
+	cert_validation_t status;
+	char *status_text;
+	time_t revocationTime;
+	crl_reason_t *revocationReason;
+	bool first = TRUE;
+	FILE *f = this->f;
+
+	if (this->detailed)
+	{
+		fprintf(f, "  responses: ");
+
+		enumerator = ocsp_response->create_response_enumerator(ocsp_response);
+		while (enumerator->enumerate(enumerator, &serialNumber, &status,
+									 &revocationTime, &revocationReason))
+		{
+			if (first)
+			{
+				first = FALSE;
+			}
+			else
+			{
+				fprintf(f, "             ");
+			}
+			serialNumber = chunk_skip_zero(serialNumber);
+
+			switch (status)
+			{
+				case VALIDATION_GOOD:
+					status_text = "good";
+					break;
+				case VALIDATION_REVOKED:
+					status_text = "revoked";
+					break;
+				default:
+					status_text = "unknown";
+			}
+			fprintf(f, "%#B: %s", &serialNumber, status_text);
+
+			if (status == VALIDATION_REVOKED)
+			{
+				fprintf(f, " on %T, %N", &revocationTime, this->utc,
+							 crl_reason_names, revocationReason);
+			}
+			fprintf(f, "\n");
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
+/**
  * Print public key information
  */
 static void print_pubkey(private_certificate_printer_t *this, public_key_t *key,
@@ -497,6 +554,7 @@ METHOD(certificate_printer_t, print, void,
 	time_t now, notAfter, notBefore;
 	certificate_type_t type;
 	identification_t *subject;
+	char *t0, *t1, *t2;
 	public_key_t *key;
 	FILE *f = this->f;
 
@@ -519,7 +577,19 @@ METHOD(certificate_printer_t, print, void,
 	cert->get_validity(cert, &now, &notBefore, &notAfter);
 	if (notBefore != UNDEFINED_TIME && notAfter != UNDEFINED_TIME)
 	{
-		fprintf(f, "  validity:  not before %T, ", &notBefore, this->utc);
+		if (type == CERT_X509_CRL || type == CERT_X509_OCSP_RESPONSE)
+		{
+			t0 = "update:  ";
+			t1 = "this on";
+			t2 = "next on";
+		}
+		else
+		{
+			t0 = "validity:";
+			t1 = "not before";
+			t2 = "not after ";
+		}
+		fprintf(f, "  %s  %s %T, ", t0, t1, &notBefore, this->utc);
 		if (now < notBefore)
 		{
 			fprintf(f, "not valid yet (valid in %V)\n", &now, &notBefore);
@@ -528,7 +598,7 @@ METHOD(certificate_printer_t, print, void,
 		{
 			fprintf(f, "ok\n");
 		}
-		fprintf(f, "             not after  %T, ", &notAfter, this->utc);
+		fprintf(f, "             %s %T, ", t2, &notAfter, this->utc);
 		if (now > notAfter)
 		{
 			fprintf(f, "expired (%V ago)\n", &now, &notAfter);
@@ -551,6 +621,8 @@ METHOD(certificate_printer_t, print, void,
 			print_ac(this, (ac_t*)cert);
 			break;
 		case CERT_X509_OCSP_RESPONSE:
+			print_ocsp_response(this, (ocsp_response_t*)cert);
+			break;
 		case CERT_TRUSTED_PUBKEY:
 		default:
 			break;
