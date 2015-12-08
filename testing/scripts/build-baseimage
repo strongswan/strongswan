@@ -19,7 +19,7 @@ INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,liblog4cxx10-dev
 INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop,screen
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
 INC=$INC,dnsutils,hostapd,libsoup2.4-dev,ca-certificates,unzip
-INC=$INC,python,python-setuptools,python-dev,python-pip
+INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
 INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
 case "$BASEIMGSUITE" in
 wheezy)
@@ -85,6 +85,30 @@ execute "debootstrap --arch=$BASEIMGARCH --include=$INC $BASEIMGSUITE $LOOPDIR $
 
 execute "mount -t proc none $LOOPDIR/proc" 0
 do_on_exit graceful_umount $LOOPDIR/proc
+
+log_action "Downloading signing key for custom apt repo"
+execute_chroot "wget -q $BASEIMGEXTKEY -O /tmp/key"
+log_action "Installing signing key for custom apt repo"
+execute_chroot "apt-key add /tmp/key"
+
+log_action "Enabling custom apt repo"
+cat > $LOOPDIR/etc/apt/sources.list.d/strongswan.list << EOF
+deb $BASEIMGEXTREPO $BASEIMGSUITE main
+EOF
+log_status $?
+
+log_action "Prioritize custom apt repo"
+cat > $LOOPDIR/etc/apt/preferences.d/strongswan.pref << EOF
+Package: *
+Pin: origin "$BASEIMGEXTREPOHOST"
+Pin-Priority: 1001
+EOF
+log_status $?
+
+log_action "Update package sources"
+execute_chroot "apt-get update"
+log_action "Install packages from custom repo"
+execute_chroot "apt-get -y upgrade"
 
 for service in $SERVICES
 do
