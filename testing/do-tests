@@ -418,9 +418,9 @@ do
 
 	function stop_tcpdump {
 	    echo "${1}# killall tcpdump" >> $CONSOLE_LOG
-	    eval ssh $SSHCONF root@\$ipv4_${1} killall tcpdump
+	    eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
 	    eval TDUP_${1}="false"
-	    echo ""
+	    echo "" >> $CONSOLE_LOG
 	}
 
 
@@ -712,15 +712,9 @@ do
 
 	for host in $TCPDUMPHOSTS
 	do
-	    eval HOSTLOGIN=root@\$ipv4_${host}
-
-		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
-			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
-
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
 	    <li><a href="$host.tcpdump.log">$host tcpdump.log</a></li>
 @EOF
-
 	done
 
 	cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -802,10 +796,11 @@ do
 	do
 	    if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
 	    then
-		echo "${host}# killall tcpdump" >> $CONSOLE_LOG
-		eval ssh $SSHCONF root@\$ipv4_$host killall tcpdump
-		eval TDUP_${host}="false"
+			stop_tcpdump $host
 	    fi
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
+			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
 	done
 
 	##########################################################################
