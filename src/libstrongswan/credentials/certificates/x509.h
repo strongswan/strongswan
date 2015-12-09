@@ -46,6 +46,8 @@ enum x509_flag_t {
 	X509_AA =                 (1<<1),
 	/** cert has OCSP signer constraint */
 	X509_OCSP_SIGNER =        (1<<2),
+    /** cert has either CA, AA or OCSP constraint */
+	X509_ANY = X509_CA | X509_AA | X509_OCSP_SIGNER,
 	/** cert has serverAuth key usage */
 	X509_SERVER_AUTH =        (1<<3),
 	/** cert has clientAuth key usage */
@@ -61,6 +63,8 @@ enum x509_flag_t {
 	/** cert has Microsoft Smartcard Logon usage */
 	X509_MS_SMARTCARD_LOGON = (1<<9),
 };
+
+extern enum_name_t *x509_flag_names;
 
 /**
  * Different numerical X.509 constraints.

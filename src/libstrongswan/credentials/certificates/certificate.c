@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,10 +23,10 @@ ENUM(certificate_type_names, CERT_ANY, CERT_GPG,
 	"ANY",
 	"X509",
 	"X509_CRL",
-	"X509_OCSP_REQUEST",
-	"X509_OCSP_RESPONSE",
+	"OCSP_REQUEST",
+	"OCSP_RESPONSE",
 	"X509_AC",
-	"TRUSTED_PUBKEY",
+	"PUBKEY",
 	"PKCS10_REQUEST",
 	"PGP",
 );
