@@ -369,7 +369,9 @@ call includes all certificates known by the daemon, not only those loaded
 over vici.
 
 	{
-		type = <certificate type to filter for, or ANY>
+		type = <certificate type to filter for, X509|X509_AC|X509_CRL|
+												OCSP_RESPONSE|PUBKEY  or ANY>
+		flag = <X.509 certificate flag to filter for, NONE|CA|AA|OCSP or ANY>
 		subject = <set to list only certificates having subject>
 	} => {
 		# completes after streaming list-cert events
@@ -427,7 +429,8 @@ Unload a previously loaded connection definition by name.
 Load a certificate into the daemon.
 
 	{
-		type = <certificate type, X509|X509CA|X509AA|X509CRL|X509AC>
+		type = <certificate type, X509|X509_AC|X509_CRL>
+		flag = <X.509 certificate flag, NONE|CA|AA|OCSP>
 		data = <PEM or DER encoded certificate data>
 	} => {
 		success = <yes or no>
@@ -753,7 +756,8 @@ The _list-cert_ event is issued to stream loaded certificates during an active
 _list-certs_ command.
 
 	{
-		type = <certificate type>
+		type = <certificate type, X509|X509_AC|X509_CRL|OCSP_RESPONSE|PUBKEY>
+		flag = <X.509 certificate flag, NONE|CA|AA|OCSP>
 		has_privkey = <set if a private key for the certificate is available>
 		data = <ASN1 encoded certificate data>
 	}

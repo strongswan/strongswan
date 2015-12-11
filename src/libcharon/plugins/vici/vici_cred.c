@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2015 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -67,9 +70,9 @@ static vici_message_t* create_reply(char *fmt, ...)
 CALLBACK(load_cert, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
-	vici_cert_info_t *cert_info;
 	certificate_t *cert;
-	x509_flag_t flag;
+	certificate_type_t type;
+	x509_flag_t ext_flag, flag = X509_NONE;
 	x509_t *x509;
 	chunk_t data;
 	bool trusted = TRUE;
@@ -80,9 +83,18 @@ CALLBACK(load_cert, vici_message_t*,
 	{
 		return create_reply("certificate type missing");
 	}
-
-	cert_info = vici_cert_info_retrieve(str);
-	if (!cert_info)
+	if (enum_from_name(certificate_type_names, str, &type))
+	{
+		if (type == CERT_X509)
+		{
+			str = message->get_str(message, "NONE", "flag");
+			if (!enum_from_name(x509_flag_names, str, &flag))
+			{
+				return create_reply("invalid certificate flag '%s'", str);
+			}
+		}
+	}
+	else if	(!vici_cert_info_from_str(str, &type, &flag))
 	{
 		return create_reply("invalid certificate type '%s'", str);
 	}
@@ -94,21 +106,21 @@ CALLBACK(load_cert, vici_message_t*,
 	}
 
 	/* do not set CA flag externally */
-	flag = (cert_info->flag & X509_CA) ? X509_NONE : cert_info->flag;
+	ext_flag = (flag & X509_CA) ? X509_NONE : flag;
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, cert_info->type,
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 							  BUILD_BLOB_PEM, data,
-							  BUILD_X509_FLAG, flag,
+							  BUILD_X509_FLAG, ext_flag,
 							  BUILD_END);
 	if (!cert)
 	{
 		return create_reply("parsing %N certificate failed",
-							certificate_type_names, cert_info->type);
+							certificate_type_names, type);
 	}
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
 
 	/* check if CA certificate has CA basic constraint set */
-	if (cert_info->flag & X509_CA)
+	if (flag & X509_CA)
 	{
 		char err_msg[] = "ca certificate lacks CA basic constraint, rejected";
 		x509 = (x509_t*)cert;
@@ -120,7 +132,7 @@ CALLBACK(load_cert, vici_message_t*,
 			return create_reply(err_msg);
 		}
 	}
-	if (cert_info->type == CERT_X509_CRL)
+	if (type == CERT_X509_CRL)
 	{
 		this->creds->add_crl(this->creds, (crl_t*)cert);
 	}

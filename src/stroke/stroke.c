@@ -433,9 +433,9 @@ static int usage(char *error)
 	fprintf(out, "  Show extended status information without blocking:\n");
 	fprintf(out, "    stroke statusall-nb\n");
 	fprintf(out, "  Show list of authority and attribute certificates:\n");
-	fprintf(out, "    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
+	fprintf(out, "    stroke listcacerts|listocspcerts|listaacerts|listacerts [--utc]\n");
 	fprintf(out, "  Show list of end entity certificates, ca info records  and crls:\n");
-	fprintf(out, "    stroke listcerts|listcainfos|listcrls|listall\n");
+	fprintf(out, "    stroke listcerts|listcainfos|listcrls|listall [--utc]\n");
 	fprintf(out, "  Show list of supported algorithms:\n");
 	fprintf(out, "    stroke listalgs\n");
 	fprintf(out, "  Reload authority and attribute certificates:\n");

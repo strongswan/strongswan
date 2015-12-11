@@ -2,9 +2,6 @@
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
- * Copyright (C) 2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
- *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -35,7 +32,7 @@
 /**
  * Maximum number of options in a command (+3)
  */
-#define MAX_OPTIONS 32
+#define MAX_OPTIONS 34
 
 /**
  * Maximum number of usage summary lines (+1)
@@ -82,12 +79,10 @@ struct command_t {
  * Command format options
 */
 enum command_format_options_t {
-	COMMAND_FORMAT_NONE   =  0,
+	COMMAND_FORMAT_NONE   = 0,
 	COMMAND_FORMAT_RAW    = (1<<0),
 	COMMAND_FORMAT_PRETTY = (1<<1),
 	COMMAND_FORMAT_PEM    = (1<<2),
-	COMMAND_FORMAT_SHORT  = (1<<3),
-	COMMAND_FORMAT_UTC    = (1<<4),
 };
 
 /**

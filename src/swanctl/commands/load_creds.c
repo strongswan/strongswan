@@ -30,11 +30,14 @@
 #include <credentials/sets/callback_cred.h>
 #include <credentials/containers/pkcs12.h>
 
+#include <vici_cert_info.h>
+
 /**
  * Load a single certificate over vici
  */
 static bool load_cert(vici_conn_t *conn, command_format_options_t format,
-					  char *dir, char *type, chunk_t data)
+					  char *dir, certificate_type_t type, x509_flag_t flag,
+					  chunk_t data)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -42,7 +45,11 @@ static bool load_cert(vici_conn_t *conn, command_format_options_t format,
 
 	req = vici_begin("load-cert");
 
-	vici_add_key_valuef(req, "type", "%s", type);
+	vici_add_key_valuef(req, "type", "%N", certificate_type_names, type);
+	if (type == CERT_X509)
+	{
+		vici_add_key_valuef(req, "flag", "%N", x509_flag_names, flag);
+	}
 	vici_add_key_value(req, "data", data.ptr, data.len);
 
 	res = vici_submit(req, conn);
@@ -64,7 +71,7 @@ static bool load_cert(vici_conn_t *conn, command_format_options_t format,
 	}
 	else
 	{
-		printf("loaded %s certificate from '%s'\n", type, dir);
+		printf("loaded certificate from '%s'\n", dir);
 	}
 	vici_free_res(res);
 	return ret;
@@ -74,12 +81,16 @@ static bool load_cert(vici_conn_t *conn, command_format_options_t format,
  * Load certficiates from a directory
  */
 static void load_certs(vici_conn_t *conn, command_format_options_t format,
-					   char *type, char *dir)
+					   char *type_str, char *dir)
 {
 	enumerator_t *enumerator;
+	certificate_type_t type;
+	x509_flag_t flag;
 	struct stat st;
 	chunk_t *map;
 	char *path;
+
+	vici_cert_info_from_str(type_str, &type, &flag);
 
 	enumerator = enumerator_create_directory(dir);
 	if (enumerator)
@@ -91,7 +102,7 @@ static void load_certs(vici_conn_t *conn, command_format_options_t format,
 				map = chunk_map(path, FALSE);
 				if (map)
 				{
-					load_cert(conn, format, path, type, *map);
+					load_cert(conn, format, path, type, flag, *map);
 					chunk_unmap(map);
 				}
 				else
@@ -446,7 +457,8 @@ static bool load_pkcs12(vici_conn_t *conn, command_format_options_t format,
 		loaded = FALSE;
 		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 		{
-			loaded = load_cert(conn, format, path, "x509", encoding);
+			loaded = load_cert(conn, format, path, CERT_X509, X509_NONE,
+							   encoding);
 			if (loaded)
 			{
 				fprintf(stderr, "  %Y\n", cert->get_subject(cert));
@@ -682,11 +694,10 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 
 	load_certs(conn, format, "x509",     SWANCTL_X509DIR);
 	load_certs(conn, format, "x509ca",   SWANCTL_X509CADIR);
-	load_certs(conn, format, "x509aa",   SWANCTL_X509AADIR);
-	load_certs(conn, format, "x509crl",  SWANCTL_X509CRLDIR);
-	load_certs(conn, format, "x509ac",   SWANCTL_X509ACDIR);
 	load_certs(conn, format, "x509ocsp", SWANCTL_X509OCSPDIR);
-	load_certs(conn, format, "pubkey",   SWANCTL_PUBKEYDIR);
+	load_certs(conn, format, "x509aa",   SWANCTL_X509AADIR);
+	load_certs(conn, format, "x509ac",   SWANCTL_X509ACDIR);
+	load_certs(conn, format, "x509crl",  SWANCTL_X509CRLDIR);
 
 	load_keys(conn, format, noprompt, cfg, "rsa",   SWANCTL_RSADIR);
 	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);

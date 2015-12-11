@@ -17,10 +17,11 @@
  */
 
 #include "certificate_printer.h"
-#include "x509.h"
-#include "crl.h"
-#include "ac.h"
-#include "ocsp_response.h"
+#include "credentials/certificates/x509.h"
+#include "credentials/certificates/crl.h"
+#include "credentials/certificates/ac.h"
+#include "credentials/certificates/ocsp_response.h"
+#include "credentials/certificates/pgp_certificate.h"
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
@@ -54,6 +55,17 @@ struct private_certificate_printer_t {
 	 * Print time information in UTC
 	 */
 	bool utc;
+
+	/**
+	 * Previous certificate type
+	 */
+	certificate_type_t type;
+
+	/**
+	 * Previous X.509 certificate flag
+	 */
+	x509_flag_t flag;
+
 };
 
 /**
@@ -568,7 +580,7 @@ METHOD(certificate_printer_t, print, void,
 	{
 		fprintf(f, "  subject:  \"%Y\"\n", subject);
 	}
-	if (cert->get_type(cert) != CERT_TRUSTED_PUBKEY)
+	if (type != CERT_TRUSTED_PUBKEY && type != CERT_GPG)
 	{
 		fprintf(f, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 	}
@@ -577,35 +589,44 @@ METHOD(certificate_printer_t, print, void,
 	cert->get_validity(cert, &now, &notBefore, &notAfter);
 	if (notBefore != UNDEFINED_TIME && notAfter != UNDEFINED_TIME)
 	{
-		if (type == CERT_X509_CRL || type == CERT_X509_OCSP_RESPONSE)
+		if (type == CERT_GPG)
 		{
-			t0 = "update:  ";
-			t1 = "this on";
-			t2 = "next on";
+			fprintf(f, "  created:   %T\n", &notBefore, this->utc);
+			fprintf(f, "  until:     %T%s\n", &notAfter, this->utc,
+				(notAfter == TIME_32_BIT_SIGNED_MAX) ?" expires never" : "");
 		}
 		else
 		{
-			t0 = "validity:";
-			t1 = "not before";
-			t2 = "not after ";
-		}
-		fprintf(f, "  %s  %s %T, ", t0, t1, &notBefore, this->utc);
-		if (now < notBefore)
-		{
-			fprintf(f, "not valid yet (valid in %V)\n", &now, &notBefore);
-		}
-		else
-		{
-			fprintf(f, "ok\n");
-		}
-		fprintf(f, "             %s %T, ", t2, &notAfter, this->utc);
-		if (now > notAfter)
-		{
-			fprintf(f, "expired (%V ago)\n", &now, &notAfter);
-		}
-		else
-		{
-			fprintf(f, "ok (expires in %V)\n", &now, &notAfter);
+			 if (type == CERT_X509_CRL || type == CERT_X509_OCSP_RESPONSE)
+			{
+				t0 = "update:  ";
+				t1 = "this on";
+				t2 = "next on";
+			}
+			else
+			{
+				t0 = "validity:";
+				t1 = "not before";
+				t2 = "not after ";
+			}
+			fprintf(f, "  %s  %s %T, ", t0, t1, &notBefore, this->utc);
+			if (now < notBefore)
+			{
+				fprintf(f, "not valid yet (valid in %V)\n", &now, &notBefore);
+			}
+			else
+			{
+				fprintf(f, "ok\n");
+			}
+			fprintf(f, "             %s %T, ", t2, &notAfter, this->utc);
+			if (now > notAfter)
+			{
+				fprintf(f, "expired (%V ago)\n", &now, &notAfter);
+			}
+			else
+			{
+				fprintf(f, "ok (expires in %V)\n", &now, &notAfter);
+			}
 		}
 	}
 
@@ -627,12 +648,78 @@ METHOD(certificate_printer_t, print, void,
 		default:
 			break;
 	}
+	if (type == CERT_GPG)
+	{
+		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)cert;
+		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
+
+		fprintf(f, "  pgpDigest: %#B\n", &fingerprint);
+	}
 	key = cert->get_public_key(cert);
 	if (key)
 	{
 		print_pubkey(this, key, has_privkey);
 		key->destroy(key);
 	}
+}
+
+METHOD(certificate_printer_t, print_caption, void,
+	private_certificate_printer_t *this, certificate_type_t type,
+	x509_flag_t flag)
+{
+	char *caption;
+
+	if (type != this->type || (type == CERT_X509 && flag != this->flag))
+	{
+		switch (type)
+		{
+			case CERT_X509:
+				switch (flag)
+				{
+					case X509_NONE:
+						caption = "X.509 End Entity Certificate";
+						break;
+					case X509_CA:
+						caption = "X.509 CA Certificate";
+						break;
+					case X509_AA:
+						caption = "X.509 AA Certificate";
+						break;
+					case X509_OCSP_SIGNER:
+						caption = "X.509 OCSP Signer Certificate";
+						break;
+					default:
+						return;
+				}
+				break;
+			case CERT_X509_AC:
+				caption = "X.509 Attribute Certificate";
+				break;
+			case CERT_X509_CRL:
+				caption = "X.509 CRL";
+				break;
+			case CERT_X509_OCSP_RESPONSE:
+				caption = "OCSP Response";
+				break;
+			case CERT_TRUSTED_PUBKEY:
+				caption = "Raw Public Key";
+				break;
+			case CERT_GPG:
+				caption = "PGP End Entity Certificate";
+				break;
+			default:
+				return;
+		}
+		fprintf(this->f, "\nList of %ss\n", caption);
+
+		/* Update to current type and flag value */
+		this->type = type;
+		if (type == CERT_X509)
+		{
+			this->flag = flag;
+		}
+	}
+	fprintf(this->f, "\n");
 }
 
 METHOD(certificate_printer_t, destroy, void,
@@ -652,11 +739,14 @@ certificate_printer_t *certificate_printer_create(FILE *f, bool detailed,
 	INIT(this,
 		.public = {
 			.print = _print,
+			.print_caption = _print_caption,
 			.destroy = _destroy,
 		},
 		.f = f,
 		.detailed = detailed,
 		.utc = utc,
+		.type = CERT_ANY,
+		.flag = X509_ANY,
 	);
 
 	return &this->public;

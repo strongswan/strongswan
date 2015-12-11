@@ -27,15 +27,12 @@
 #include <credentials/certificates/certificate_printer.h>
 #include <selectors/traffic_selector.h>
 
-#include <vici_version.h>
-#include <vici_cert_info.h>
-
 #include "command.h"
 
 /**
- * Current certificate type info
+ * Static certificate printer object
  */
-static vici_cert_info_t *current_cert_info = NULL;
+static certificate_printer_t *cert_printer = NULL;
 
 /**
  * Print PEM encoding of a certificate
@@ -59,11 +56,10 @@ CALLBACK(list_cb, void,
 	command_format_options_t *format, char *name, vici_res_t *res)
 {
 	certificate_t *cert;
-	certificate_printer_t *printer;
-	vici_version_t version;
-	vici_cert_info_t *cert_info;
-	bool detailed, utc, has_privkey, first = FALSE;
-	char *version_str, *type_str;
+	certificate_type_t type;
+	x509_flag_t flag = X509_NONE;
+	bool has_privkey;
+	char *str;
 	void *buf;
 	int len;
 
@@ -71,14 +67,6 @@ CALLBACK(list_cb, void,
 	{
 		vici_dump(res, "list-cert event", *format & COMMAND_FORMAT_PRETTY,
 				  stdout);
-		return;
-	}
-
-	version_str = vici_find_str(res, "1.0", "vici");
-	if (!enum_from_name(vici_version_names, version_str, &version) ||
-		version == VICI_1_0)
-	{
-		fprintf(stderr, "unsupported vici version '%s'\n", version_str);
 		return;
 	}
 
@@ -90,23 +78,24 @@ CALLBACK(list_cb, void,
 	}
 	has_privkey = streq(vici_find_str(res, "no", "has_privkey"), "yes");
 
-	type_str = vici_find_str(res, "any", "type");
-	cert_info = vici_cert_info_retrieve(type_str);
-	if (!cert_info || cert_info->type == CERT_ANY)
+	str = vici_find_str(res, "ANY", "type");
+	if (!enum_from_name(certificate_type_names, str, &type) || type == CERT_ANY)
 	{
-		fprintf(stderr, "unsupported certificate type '%s'\n", type_str);
+		fprintf(stderr, "unsupported certificate type '%s'\n", str);
 		return;
 	}
-
-	/* Detect change of certificate type */
-	if (cert_info != current_cert_info)
+	if (type == CERT_X509)
 	{
-		first = TRUE;
-		current_cert_info = cert_info;
+		str = vici_find_str(res, "ANY", "flag");
+		if (!enum_from_name(x509_flag_names, str, &flag) || flag == X509_ANY)
+		{
+			fprintf(stderr, "unsupported certificate flag '%s'\n", str);
+			return;
+		}
 	}
 
 	/* Parse certificate data blob */
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, cert_info->type,
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
 							  BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
 							  BUILD_END);
 	if (cert)
@@ -117,16 +106,8 @@ CALLBACK(list_cb, void,
 		}
 		else
 		{
-			if (first)
-			{
-				printf("\nList of %ss:\n", cert_info->caption);
-			}
-			printf("\n");
-			detailed = !(*format & COMMAND_FORMAT_SHORT);
-			utc = *format & COMMAND_FORMAT_UTC;
-			printer = certificate_printer_create(stdout, detailed, utc);
-			printer->print(printer, cert, has_privkey);
-			printer->destroy(printer);
+			cert_printer->print_caption(cert_printer, type, flag);
+			cert_printer->print(cert_printer, cert, has_privkey);
 		}
 		cert->destroy(cert);
 	}
@@ -141,7 +122,8 @@ static int list_certs(vici_conn_t *conn)
 	vici_req_t *req;
 	vici_res_t *res;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
-	char *arg, *subject = NULL, *type = NULL;
+	char *arg, *subject = NULL, *type = NULL, *flag = NULL;
+	bool detailed = TRUE, utc = FALSE;
 	int ret;
 
 	while (TRUE)
@@ -156,6 +138,9 @@ static int list_certs(vici_conn_t *conn)
 			case 't':
 				type = arg;
 				continue;
+			case 'f':
+				flag = arg;
+				continue;
 			case 'p':
 				format |= COMMAND_FORMAT_PEM;
 				continue;
@@ -166,10 +151,10 @@ static int list_certs(vici_conn_t *conn)
 				format |= COMMAND_FORMAT_RAW;
 				continue;
 			case 'S':
-				format |= COMMAND_FORMAT_SHORT;
+				detailed = FALSE;
 				continue;
 			case 'U':
-				format |= COMMAND_FORMAT_UTC;
+				utc = TRUE;
 				continue;
 			case EOF:
 				break;
@@ -186,22 +171,28 @@ static int list_certs(vici_conn_t *conn)
 		return ret;
 	}
 	req = vici_begin("list-certs");
-	vici_add_version(req, VICI_VERSION);
 
 	if (type)
 	{
 		vici_add_key_valuef(req, "type", "%s", type);
 	}
+	if (flag)
+	{
+		vici_add_key_valuef(req, "flag", "%s", flag);
+	}
 	if (subject)
 	{
 		vici_add_key_valuef(req, "subject", "%s", subject);
 	}
+	cert_printer = certificate_printer_create(stdout, detailed, utc);
 
 	res = vici_submit(req, conn);
 	if (!res)
 	{
 		ret = errno;
 		fprintf(stderr, "list-certs request failed: %s\n", strerror(errno));
+		cert_printer->destroy(cert_printer);
+		cert_printer = NULL;
 		return ret;
 	}
 	if (format & COMMAND_FORMAT_RAW)
@@ -210,6 +201,9 @@ static int list_certs(vici_conn_t *conn)
 				  stdout);
 	}
 	vici_free_res(res);
+
+	cert_printer->destroy(cert_printer);
+	cert_printer = NULL;
 	return 0;
 }
 
@@ -221,12 +215,14 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		list_certs, 'x', "list-certs", "list stored certificates",
 		{"[--subject <dn/san>] "
-		 "[--type x509|x509ca|x509aa|x509ac|x509crl|x509ocsp|ocsp] "
+		 "[--type x509|x509_ac|x509_crl|ocsp_response|pubkey]\n         "
+		 "[--flag none|ca|aa|ocsp|any] "
 		 "[--pem] [--raw|--pretty|--short|--utc]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"subject",		's', 1, "filter by certificate subject"},
 			{"type",		't', 1, "filter by certificate type"},
+			{"flag",		'f', 1, "filter by X.509 certificate flag"},
 			{"pem",			'p', 0, "print PEM encoding of certificate"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},

@@ -31,7 +31,6 @@
 #include <collections/linked_list.h>
 #include <plugins/plugin.h>
 #include <credentials/certificates/x509.h>
-#include <credentials/certificates/pgp_certificate.h>
 #include <credentials/certificates/certificate_printer.h>
 #include <config/peer_cfg.h>
 
@@ -62,6 +61,11 @@ struct private_stroke_list_t {
 	 */
 	stroke_attribute_t *attribute;
 };
+
+/**
+ * Static certificate printer object
+ */
+static certificate_printer_t *cert_printer = NULL;
 
 /**
  * Log tasks of a specific queue to out
@@ -761,132 +765,49 @@ static bool has_privkey(certificate_t *cert)
 }
 
 /**
- * list OpenPGP certificates
- */
-static void stroke_list_pgp_certs(linked_list_t *list, char *label,
-								  bool utc, FILE *out)
-{
-	bool first = TRUE;
-	time_t now = time(NULL);
-	enumerator_t *enumerator = list->create_enumerator(list);
-	certificate_t *cert;
-	chunk_t keyid;
-
-	while (enumerator->enumerate(enumerator, (void**)&cert))
-	{
-		time_t created, until;
-		public_key_t *public;
-		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)cert;
-		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
-
-		if (first)
-		{
-			fprintf(out, "\n");
-			fprintf(out, "List of %ss:\n", label);
-			first = FALSE;
-		}
-		fprintf(out, "\n");
-		fprintf(out, "  userid:   '%Y'\n", cert->get_subject(cert));
-		fprintf(out, "  digest:    %#B\n", &fingerprint);
-
-		/* list validity */
-		cert->get_validity(cert, &now, &created, &until);
-		fprintf(out, "  created:   %T\n", &created, utc);
-		fprintf(out, "  until:     %T%s\n", &until, utc,
-			(until == TIME_32_BIT_SIGNED_MAX) ? " (expires never)":"");
-
-		public = cert->get_public_key(cert);
-		if (public)
-		{
-			fprintf(out, "  pubkey:    %N %d bits%s\n",
-					key_type_names, public->get_type(public),
-					public->get_keysize(public),
-					has_privkey(cert) ? ", has private key" : "");
-
-			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
-			{
-				fprintf(out, "  keyid:     %#B\n", &keyid);
-			}
-			if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
-			{
-				fprintf(out, "  subjkey:   %#B\n", &keyid);
-			}
-			public->destroy(public);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
  * list all X.509 certificates matching the flags
  */
-static void stroke_list_x509_certs(linked_list_t *list, char *label,
-								   x509_flag_t flags, bool utc, FILE *out)
+static void stroke_list_x509_certs(linked_list_t *list, x509_flag_t flag)
 {
-	bool first = TRUE;
 	enumerator_t *enumerator;
 	certificate_t *cert;
-	certificate_printer_t *printer;
-	x509_flag_t flag_mask;
-
-	printer = certificate_printer_create(out, TRUE, utc),
-
-	/* mask all auxiliary flags */
-	flag_mask = ~(X509_SERVER_AUTH | X509_CLIENT_AUTH | X509_IKE_INTERMEDIATE |
-				  X509_SELF_SIGNED | X509_IP_ADDR_BLOCKS);
 
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		x509_t *x509 = (x509_t*)cert;
-		x509_flag_t x509_flags = x509->get_flags(x509) & flag_mask;
+		x509_flag_t flags = x509->get_flags(x509) & X509_ANY;
 
 		/* list only if flag is set or flag == 0 */
-		if ((x509_flags & flags) || (x509_flags == flags))
+		if ((flags & flag) || flags == flag)
 		{
-			if (first)
-			{
-				fprintf(out, "\n");
-				fprintf(out, "List of %ss:\n", label);
-				first = FALSE;
-			}
-			fprintf(out, "\n");
-			printer->print(printer, cert, has_privkey(cert));
+			cert_printer->print_caption(cert_printer, CERT_X509, flag);
+			cert_printer->print(cert_printer, cert, has_privkey(cert));
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	printer->destroy(printer);
 }
 
 /**
  * list all other certificates types
  */
-static void stroke_list_other_certs(linked_list_t *list, char *label,
-									bool utc, FILE *out)
+static void stroke_list_other_certs(certificate_type_t type)
 {
-	bool first = TRUE;
 	enumerator_t *enumerator;
 	certificate_t *cert;
-	certificate_printer_t *printer;
+	linked_list_t *list;
 
-	printer = certificate_printer_create(out, TRUE, utc),
+	list = create_unique_cert_list(type);
 
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		if (first)
-		{
-			fprintf(out, "\n");
-			fprintf(out, "List of %ss:\n", label);
-			first = FALSE;
-		}
-		fprintf(out, "\n");
-		printer->print(printer, cert, has_privkey(cert));
+		cert_printer->print_caption(cert_printer, cert->get_type(cert), X509_NONE);
+		cert_printer->print(cert_printer, cert, has_privkey(cert));
 	}
 	enumerator->destroy(enumerator);
 
-	printer->destroy(printer);
+	list->destroy_offset(list, offsetof(certificate_t, destroy));
 }
 
 /**
@@ -1058,21 +979,15 @@ METHOD(stroke_list_t, list, void,
 {
 	linked_list_t *cert_list = NULL;
 
+	cert_printer = certificate_printer_create(out, TRUE, msg->list.utc);
+
 	if (msg->list.flags & LIST_PUBKEYS)
 	{
-		linked_list_t *pubkey_list = create_unique_cert_list(CERT_TRUSTED_PUBKEY);
-
-		stroke_list_other_certs(pubkey_list, "Raw Public Key",
-								msg->list.utc, out);
-		pubkey_list->destroy_offset(pubkey_list, offsetof(certificate_t, destroy));
+		stroke_list_other_certs(CERT_TRUSTED_PUBKEY);
 	}
 	if (msg->list.flags & LIST_CERTS)
 	{
-		linked_list_t *pgp_list = create_unique_cert_list(CERT_GPG);
-
-		stroke_list_pgp_certs(pgp_list, "PGP End Entity Certificate",
-							  msg->list.utc, out);
-		pgp_list->destroy_offset(pgp_list, offsetof(certificate_t, destroy));
+		stroke_list_other_certs(CERT_GPG);
 	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
@@ -1080,49 +995,33 @@ METHOD(stroke_list_t, list, void,
 	}
 	if (msg->list.flags & LIST_CERTS)
 	{
-		stroke_list_x509_certs(cert_list, "X.509 End Entity Certificate",
-							   X509_NONE, msg->list.utc, out);
+		stroke_list_x509_certs(cert_list, X509_NONE);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
-		stroke_list_x509_certs(cert_list, "X.509 CA Certificate",
-							   X509_CA, msg->list.utc, out);
+		stroke_list_x509_certs(cert_list, X509_CA);
 	}
 	if (msg->list.flags & LIST_OCSPCERTS)
 	{
-		stroke_list_x509_certs(cert_list, "X.509 OCSP Signer Certificate",
-							   X509_OCSP_SIGNER, msg->list.utc, out);
+		stroke_list_x509_certs(cert_list, X509_OCSP_SIGNER);
 	}
 	if (msg->list.flags & LIST_AACERTS)
 	{
-		stroke_list_x509_certs(cert_list, "X.509 AA Certificate",
-							   X509_AA, msg->list.utc, out);
+		stroke_list_x509_certs(cert_list, X509_AA);
 	}
 	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 
 	if (msg->list.flags & LIST_ACERTS)
 	{
-		linked_list_t *ac_list = create_unique_cert_list(CERT_X509_AC);
-
-		stroke_list_other_certs(ac_list, "X.509 Attribute Certificate",
-								msg->list.utc, out);
-		ac_list->destroy_offset(ac_list, offsetof(certificate_t, destroy));
+		stroke_list_other_certs(CERT_X509_AC);
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		linked_list_t *crl_list = create_unique_cert_list(CERT_X509_CRL);
-
-		stroke_list_other_certs(crl_list, "X.509 CRL",
-								msg->list.utc, out);
-		crl_list->destroy_offset(crl_list, offsetof(certificate_t, destroy));
+		stroke_list_other_certs(CERT_X509_CRL);
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
-		linked_list_t *ocsp_list = create_unique_cert_list(CERT_X509_OCSP_RESPONSE);
-
-		stroke_list_other_certs(ocsp_list, "OCSP Response",
-								msg->list.utc, out);
-		ocsp_list->destroy_offset(ocsp_list, offsetof(certificate_t, destroy));
+		stroke_list_other_certs(CERT_X509_OCSP_RESPONSE);
 	}
 	if (msg->list.flags & LIST_ALGS)
 	{
@@ -1132,6 +1031,8 @@ METHOD(stroke_list_t, list, void,
 	{
 		list_plugins(out);
 	}
+	cert_printer->destroy(cert_printer);
+	cert_printer = NULL;
 }
 
 /**

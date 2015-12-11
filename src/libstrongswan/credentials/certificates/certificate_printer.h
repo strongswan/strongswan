@@ -24,6 +24,7 @@
 typedef struct certificate_printer_t certificate_printer_t;
 
 #include "credentials/certificates/certificate.h"
+#include "credentials/certificates/x509.h"
 
 #include <stdio.h>
 
@@ -40,6 +41,15 @@ struct certificate_printer_t {
 	 */
 	void (*print)(certificate_printer_t *this, certificate_t *cert,
 				  bool has_privkey);
+
+	/**
+	 * Print a caption if the certificate type changed.
+	 *
+	 * @type			certificate type
+	 * @flag			X.509 certificate flag
+	 */
+	void (*print_caption)(certificate_printer_t *this, certificate_type_t type,
+						  x509_flag_t flag);
 
 	/**
 	 * Destroy the certificate_printer object.

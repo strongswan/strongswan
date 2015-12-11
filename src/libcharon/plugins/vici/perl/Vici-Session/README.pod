@@ -164,13 +164,13 @@ print $version->raw(), "\n";
 
 loads a certificate into the daemon.
 
-  my %vars = ( type => 'X509CA', data => $ca_cert );
+  my %vars = ( type => 'X509', flag => 'CA', data => $ca_cert );
   my ($res, $errmsg) = $session->load_cert(Vici::Message->new(\%vars));
 
 =cut
 
 print "----- load-cert -----\n";
-my %vars = ( type => 'X509CA', data => $ca_cert ); 
+my %vars = ( type => 'X509', flag => 'CA', data => $ca_cert );
 my ($res, $errmsg) = $session->load_cert(Vici::Message->new(\%vars));
 print $res ? "ok\n" : "failed: $errmsg\n";
 
