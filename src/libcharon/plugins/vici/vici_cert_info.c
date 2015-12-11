@@ -15,38 +15,42 @@
 
 #include "vici_cert_info.h"
 
-static vici_cert_info_t vici_cert_infos[] = {
-	{ "any", "",                                   CERT_ANY,
-												   X509_NONE                },
-	{ "x509", "X.509 End Entity Certificate",      CERT_X509,
-												   X509_NONE                },
-	{ "x509ca", "X.509 CA Certificate",            CERT_X509,
-												   X509_CA                  },
-	{ "x509aa", "X.509 AA Certificate",            CERT_X509,
-												   X509_AA                  },
-	{ "x509ocsp", "X.509 OCSP Signer Certificate", CERT_X509,
-												   X509_OCSP_SIGNER         },
-	{ "x509ac", "X.509 Attribute Certificate",     CERT_X509_AC,
-												   X509_NONE                },
-	{ "x509crl", "X.509 CRL",                      CERT_X509_CRL,
-											 	   X509_NONE                },
-	{ "ocsp", "OCSP Response",                     CERT_X509_OCSP_RESPONSE,
-												   X509_NONE                },
-	{ "pubkey", "Raw Public Key",                  CERT_TRUSTED_PUBKEY,
-												   X509_NONE                }
+/**
+ * Legacy vici certificate types and directories created by swanctl
+ */
+typedef struct {
+
+	/** Certificate type string used in legacy vici messages */
+	char *type_str;
+	/** Base certificate type */
+	certificate_type_t type;
+	/** X.509 flag */
+	x509_flag_t flag;
+} cert_type_t;
+
+static cert_type_t cert_types[] = {
+	{ "x509",     CERT_X509,     X509_NONE        },
+	{ "x509ca",   CERT_X509,     X509_CA          },
+	{ "x509ocsp", CERT_X509,     X509_OCSP_SIGNER },
+	{ "x509aa",   CERT_X509,     X509_AA          },
+	{ "x509ac",   CERT_X509_AC,  X509_NONE        },
+	{ "x509crl",  CERT_X509_CRL, X509_NONE        },
 };
 
-/* See header. */
-vici_cert_info_t* vici_cert_info_retrieve(char *type_str)
+bool vici_cert_info_from_str(char *type_str, certificate_type_t *type,
+							 x509_flag_t *flag)
 {
 	int i;
 
-	for (i = 0; i < countof(vici_cert_infos); i++)
+	for (i = 0; i < countof(cert_types); i++)
 	{
-		if (strcaseeq(type_str, vici_cert_infos[i].type_str))
+		if (strcaseeq(type_str, cert_types[i].type_str))
 		{
-			return &vici_cert_infos[i];
+			*type = cert_types[i].type;
+			*flag = cert_types[i].flag;
+			return TRUE;
 		}
 	}
-	return NULL;
+	return FALSE;
 }
+
