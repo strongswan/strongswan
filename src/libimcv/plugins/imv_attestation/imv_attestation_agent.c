@@ -603,8 +603,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 							if (!comp)
 							{
 								comp_name->log(comp_name, "unregistered ");
-								comp_name->destroy(comp_name);
 							}
+							comp_name->destroy(comp_name);
 						}
 
 						/* do TPM IMA measurements */
@@ -620,8 +620,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 							if (!comp)
 							{
 								comp_name->log(comp_name, "unregistered ");
-								comp_name->destroy(comp_name);
 							}
+							comp_name->destroy(comp_name);
 						}
 
 						/* do TPM TRUSTED BOOT measurements */
@@ -637,8 +637,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 							if (!comp)
 							{
 								comp_name->log(comp_name, "unregistered ");
-								comp_name->destroy(comp_name);
 							}
+							comp_name->destroy(comp_name);
 						}
 						attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_NONCE_REQ);

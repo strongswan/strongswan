@@ -115,7 +115,7 @@ struct imv_attestation_state_t {
 	/**
 	 * Create and add an entry to the list of Functional Components
 	 *
-	 * @param name				Component Functional Name
+	 * @param name				Component Functional Name (cloned)
 	 * @param depth				Sub-component Depth
 	 * @param pts_db			PTS measurement database
 	 * @return					created functional component instance or NULL

@@ -45,7 +45,7 @@ struct pts_component_manager_t {
 	 * @param comp_func_names		Vendor-specific Component Functional names
 	 * @param qualifier_type_size	Vendor-specific Qualifier Type size
 	 * @param qualifier_flag_names	Vendor-specific Qualifier Flag names
-	 * @param qualifier_type_names	Vendor-specific Qualifier Type names 
+	 * @param qualifier_type_names	Vendor-specific Qualifier Type names
 	 */
 	void (*add_vendor)(pts_component_manager_t *this, pen_t vendor_id,
 					   enum_name_t *comp_func_names,
@@ -106,7 +106,7 @@ struct pts_component_manager_t {
 	 * @param pts_db				PTS measurement database
 	 * @return						Component object if supported, NULL else
 	 */
-	pts_component_t* (*create)(pts_component_manager_t *this, 
+	pts_component_t* (*create)(pts_component_manager_t *this,
 							   pts_comp_func_name_t *name, u_int32_t depth,
 							   pts_database_t *pts_db);
 
