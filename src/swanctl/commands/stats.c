@@ -15,7 +15,16 @@
 
 #include "command.h"
 
+#include <collections/hashtable.h>
+
 #include <errno.h>
+
+CALLBACK(list, int,
+	hashtable_t *sa, vici_res_t *res, char *name, void *value, int len)
+{
+	printf(" %.*s", len, value);
+	return 0;
+}
 
 static int stats(vici_conn_t *conn)
 {
@@ -98,6 +107,9 @@ static int stats(vici_conn_t *conn)
 				vici_find_str(res, "", "mallinfo.used"),
 				vici_find_str(res, "", "mallinfo.free"));
 		}
+		printf("loaded plugins:");
+		vici_parse_cb(res, NULL, NULL, list, NULL);
+		printf("\n");
 	}
 	vici_free_res(res);
 	return 0;
