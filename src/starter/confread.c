@@ -40,8 +40,8 @@
 #define SA_REPLACEMENT_RETRIES_DEFAULT   3
 #define SA_REPLAY_WINDOW_DEFAULT        -1 /* use charon.replay_window */
 
-static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
-static const char esp_defaults[] = "aes128-sha1,3des-sha1";
+static const char ike_defaults[] = "aes128-sha256-modp3072";
+static const char esp_defaults[] = "aes128-sha256";
 
 static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
 
