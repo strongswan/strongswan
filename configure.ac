@@ -450,7 +450,7 @@ if test x$python_eggs_install = xtrue; then
 fi
 
 if test x$perl_cpan_install = xtrue; then
-	python_cpan=true
+	perl_cpan=true
 fi
 
 # ===========================================
