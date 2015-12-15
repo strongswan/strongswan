@@ -279,11 +279,15 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 			/* don't touch child other created, it has already been deleted */
 			if (!this->other_child_destroyed)
 			{
-				/* disable close action for the redundand child */
+				/* disable close action and updown event for redundant child */
 				child_sa = other->child_create->get_child(other->child_create);
 				if (child_sa)
 				{
 					child_sa->set_close_action(child_sa, ACTION_NONE);
+					if (child_sa->get_state(child_sa) != CHILD_REKEYING)
+					{
+						child_sa->set_state(child_sa, CHILD_REKEYING);
+					}
 				}
 			}
 		}
@@ -371,6 +375,11 @@ METHOD(task_t, process_i, status_t,
 	if (to_delete == NULL)
 	{
 		return SUCCESS;
+	}
+	/* disable updown event for redundant CHILD_SA */
+	if (to_delete->get_state(to_delete) != CHILD_REKEYING)
+	{
+		to_delete->set_state(to_delete, CHILD_REKEYING);
 	}
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
