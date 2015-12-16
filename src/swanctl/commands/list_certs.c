@@ -214,10 +214,9 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_certs, 'x', "list-certs", "list stored certificates",
-		{"[--subject <dn/san>] "
-		 "[--type x509|x509_ac|x509_crl|ocsp_response|pubkey]\n         "
-		 "[--flag none|ca|aa|ocsp|any] "
-		 "[--pem] [--raw|--pretty|--short|--utc]"},
+		{"[--subject <dn/san>] [--pem]",
+		 "[--type x509|x509_ac|x509_crl|ocsp_response|pubkey]",
+		 "[--flag none|ca|aa|ocsp|any] [--raw|--pretty|--short|--utc]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"subject",		's', 1, "filter by certificate subject"},
