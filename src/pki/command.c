@@ -208,7 +208,7 @@ int command_usage(char *error)
 	}
 	else
 	{
-		for (i = 0; cmds[active].line[i]; i++)
+		for (i = 0; i < sizeof(cmds[active].line) / sizeof(cmds[active].line[0]); i++)
 		{
 			if (i == 0)
 			{
