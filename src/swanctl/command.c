@@ -176,6 +176,15 @@ void command_register(command_t command)
 				"uri",		'u', 1, "service URI to connect to"
 			};
 		}
+		for (i = 0; cmds[registered].line[i]; i++)
+		{
+			if (i == MAX_LINES - 1)
+			{
+				fprintf(stderr, "command '%s' specifies too many usage summary "
+						"lines, please increase MAX_LINES\n", command.cmd);
+				break;
+			}
+		}
 	}
 	registered++;
 }
@@ -217,7 +226,7 @@ int command_usage(char *error, ...)
 	}
 	else
 	{
-		for (i = 0; cmds[active].line[i]; i++)
+		for (i = 0; i < MAX_LINES && cmds[active].line[i]; i++)
 		{
 			if (i == 0)
 			{
