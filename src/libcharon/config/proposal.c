@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2014 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
+ * Copyright (C) 2013-2015 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -640,20 +641,41 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 
 	if (aead)
 	{
+		/* Round 1 adds algorithms with at least 128 bit security strength */
 		enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
 		while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 		{
 			switch (encryption)
 			{
-				case ENCR_AES_CCM_ICV8:
-				case ENCR_AES_CCM_ICV12:
-				case ENCR_AES_CCM_ICV16:
-				case ENCR_AES_GCM_ICV8:
-				case ENCR_AES_GCM_ICV12:
 				case ENCR_AES_GCM_ICV16:
-				case ENCR_CAMELLIA_CCM_ICV8:
-				case ENCR_CAMELLIA_CCM_ICV12:
+				case ENCR_AES_CCM_ICV16:
 				case ENCR_CAMELLIA_CCM_ICV16:
+					/* we assume that we support all AES/Camellia sizes */
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+					break;
+				case ENCR_CHACHA20_POLY1305:
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* Round 2 adds algorithms with less than 128 bit security strength */
+		enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+		{
+			switch (encryption)
+			{
+				case ENCR_AES_GCM_ICV12:
+				case ENCR_AES_GCM_ICV8:
+				case ENCR_AES_CCM_ICV12:
+				case ENCR_AES_CCM_ICV8:
+				case ENCR_CAMELLIA_CCM_ICV12:
+				case ENCR_CAMELLIA_CCM_ICV8:
 					/* we assume that we support all AES/Camellia sizes */
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
@@ -672,6 +694,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	}
 	else
 	{
+		/* Round 1 adds algorithms with at least 128 bit security strength */
 		enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 		while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 		{
@@ -686,6 +709,18 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
 					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* Round 2 adds algorithms with less than 128 bit security strength */
+		enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+		{
+			switch (encryption)
+			{
 				case ENCR_3DES:
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
 					break;
@@ -703,18 +738,33 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			return FALSE;
 		}
 
+		/* Round 1 adds algorithms with at least 128 bit security strength */
 		enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
 		while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
 		{
 			switch (integrity)
 			{
-				case AUTH_HMAC_SHA1_96:
 				case AUTH_HMAC_SHA2_256_128:
 				case AUTH_HMAC_SHA2_384_192:
 				case AUTH_HMAC_SHA2_512_256:
-				case AUTH_HMAC_MD5_96:
+					add_algorithm(this, INTEGRITY_ALGORITHM, integrity, 0);
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		/* Round 2 adds algorithms with less than 128 bit security strength */
+		enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
+		{
+			switch (integrity)
+			{
 				case AUTH_AES_XCBC_96:
 				case AUTH_AES_CMAC_96:
+				case AUTH_HMAC_SHA1_96:
+				case AUTH_HMAC_MD5_96:
 					add_algorithm(this, INTEGRITY_ALGORITHM, integrity, 0);
 					break;
 				default:
@@ -724,16 +774,15 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		enumerator->destroy(enumerator);
 	}
 
+	/* Round 1 adds algorithms with at least 128 bit security strength */
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
 		switch (prf)
 		{
-			case PRF_HMAC_SHA1:
 			case PRF_HMAC_SHA2_256:
 			case PRF_HMAC_SHA2_384:
 			case PRF_HMAC_SHA2_512:
-			case PRF_HMAC_MD5:
 			case PRF_AES128_XCBC:
 			case PRF_AES128_CMAC:
 				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
@@ -744,6 +793,63 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	}
 	enumerator->destroy(enumerator);
 
+	/* Round 2 adds algorithms with less than 128 bit security strength */
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
+	{
+		switch (prf)
+		{
+			case PRF_HMAC_SHA1:
+			case PRF_HMAC_MD5:
+				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 1 adds ECC and NTRU algorithms with at least 128 bit security strength */
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		switch (group)
+		{
+			case ECP_256_BIT:
+			case ECP_384_BIT:
+			case ECP_521_BIT:
+			case ECP_256_BP:
+			case ECP_384_BP:
+			case ECP_512_BP:
+			case NTRU_128_BIT:
+			case NTRU_192_BIT:
+			case NTRU_256_BIT:
+				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 2 adds other algorithms with at least 128 bit security strength */
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		switch (group)
+		{
+			case MODP_3072_BIT:
+			case MODP_4096_BIT:
+			case MODP_8192_BIT:
+				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 3 adds algorithms with less than 128 bit security strength */
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
@@ -755,28 +861,16 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case MODP_768_BIT:
 				/* weak */
 				break;
-			case MODP_1024_BIT:
-			case MODP_1536_BIT:
 			case MODP_2048_BIT:
-			case MODP_3072_BIT:
-			case MODP_4096_BIT:
-			case MODP_8192_BIT:
-			case ECP_256_BIT:
-			case ECP_384_BIT:
-			case ECP_521_BIT:
-			case MODP_1024_160:
-			case MODP_2048_224:
 			case MODP_2048_256:
-			case ECP_192_BIT:
+			case MODP_2048_224:
+			case MODP_1536_BIT:
+			case MODP_1024_BIT:
+			case MODP_1024_160:
 			case ECP_224_BIT:
 			case ECP_224_BP:
-			case ECP_256_BP:
-			case ECP_384_BP:
-			case ECP_512_BP:
+			case ECP_192_BIT:
 			case NTRU_112_BIT:
-			case NTRU_128_BIT:
-			case NTRU_192_BIT:
-			case NTRU_256_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
@@ -805,21 +899,27 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			}
 			break;
 		case PROTO_ESP:
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         128);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
-			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,        256);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
-			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC,          128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC,          192);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC,          256);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_3DES,               0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,         256);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,        0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_MD5_96,        0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 			break;
 		case PROTO_AH:
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
-			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,  0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,        0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_MD5_96,        0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 			break;
 		default:
 			break;
