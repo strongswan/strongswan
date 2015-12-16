@@ -243,7 +243,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			proposal = child_sa->get_proposal(child_sa);
 			if (proposal)
 			{
-				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
+				u_int16_t encr_alg = ENCR_UNDEFINED, dh_alg = MODP_NONE, int_alg = AUTH_UNDEFINED;
 				u_int16_t encr_size = 0, int_size = 0;
 				u_int16_t esn = NO_EXT_SEQ_NUMBERS;
 				bool first = TRUE;
@@ -252,6 +252,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 										&encr_alg, &encr_size);
 				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
 										&int_alg, &int_size);
+				proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+										&dh_alg, NULL);
 				proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
 										&esn, NULL);
 
@@ -275,6 +277,10 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					{
 						fprintf(out, "_%u", int_size);
 					}
+				}
+				if (dh_alg != MODP_NONE)
+				{
+					fprintf(out, "/%N", diffie_hellman_group_names, dh_alg);
 				}
 				if (esn == EXT_SEQ_NUMBERS)
 				{
