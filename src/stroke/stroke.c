@@ -279,7 +279,7 @@ static int list_flags[] = {
 	LIST_ALL
 };
 
-static int list(stroke_keyword_t kw, int utc)
+static int list(stroke_keyword_t kw, bool utc)
 {
 	stroke_msg_t *msg;
 
@@ -478,6 +478,7 @@ int main(int argc, char *argv[])
 {
 	const stroke_token_t *token;
 	char *cmd;
+	bool utc = FALSE;
 	int res = 0;
 
 	library_init(NULL, "stroke");
@@ -487,6 +488,7 @@ int main(int argc, char *argv[])
 	{
 		struct option long_opts[] = {
 			{"help",		no_argument,		NULL,	'h' },
+			{"utc",			no_argument,		NULL,	'u' },
 			{"daemon",		required_argument,	NULL,	'd' },
 			{0,0,0,0},
 		};
@@ -498,6 +500,9 @@ int main(int argc, char *argv[])
 				return usage(NULL);
 			case 'd':
 				daemon_name = optarg;
+				continue;
+			case 'u':
+				utc = TRUE;
 				continue;
 			default:
 				return usage("invalid option");
@@ -611,7 +616,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_ALGS:
 		case STROKE_LIST_PLUGINS:
 		case STROKE_LIST_ALL:
-			res = list(token->kw, argc && streq(argv[0], "--utc"));
+			res = list(token->kw, utc);
 			break;
 		case STROKE_REREAD_SECRETS:
 		case STROKE_REREAD_CACERTS:
