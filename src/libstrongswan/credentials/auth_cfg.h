@@ -182,6 +182,13 @@ struct auth_cfg_t {
 	void (*add)(auth_cfg_t *this, auth_rule_t rule, ...);
 
 	/**
+	 * Add public key and signature scheme constraints to the set.
+	 *
+	 * @param constraints	constraints string (e.g. "rsa-sha384")
+	 */
+	void (*add_pubkey_constraints)(auth_cfg_t *this, char *constraints);
+
+	/**
 	 * Get a rule value.
 	 *
 	 * For rules we expect only once the latest value is returned.

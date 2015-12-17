@@ -313,117 +313,6 @@ static void build_crl_policy(auth_cfg_t *cfg, bool local, int policy)
 }
 
 /**
- * Parse public key / signature strength constraints
- */
-static void parse_pubkey_constraints(char *auth, auth_cfg_t *cfg)
-{
-	enumerator_t *enumerator;
-	bool rsa = FALSE, ecdsa = FALSE, bliss = FALSE,
-		 rsa_len = FALSE, ecdsa_len = FALSE, bliss_strength = FALSE;
-	int strength;
-	char *token;
-
-	enumerator = enumerator_create_token(auth, "-", "");
-	while (enumerator->enumerate(enumerator, &token))
-	{
-		bool found = FALSE;
-		int i;
-		struct {
-			char *name;
-			signature_scheme_t scheme;
-			key_type_t key;
-		} schemes[] = {
-			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	},
-			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	},
-			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA224,		KEY_RSA,	},
-			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA256,		KEY_RSA,	},
-			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA384,		KEY_RSA,	},
-			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA512,		KEY_RSA,	},
-			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	},
-			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	},
-			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	},
-			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	},
-			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
-			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
-			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
-			{ "sha256",		SIGN_BLISS_WITH_SHA2_256,		KEY_BLISS,	},
-			{ "sha384",		SIGN_BLISS_WITH_SHA2_384,		KEY_BLISS,	},
-			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	},
-		};
-
-		if (rsa_len || ecdsa_len || bliss_strength)
-		{	/* expecting a key strength token */
-			strength = atoi(token);
-			if (strength)
-			{
-				if (rsa_len)
-				{
-					cfg->add(cfg, AUTH_RULE_RSA_STRENGTH, (uintptr_t)strength);
-				}
-				else if (ecdsa_len)
-				{
-					cfg->add(cfg, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
-				}
-				else if (bliss_strength)
-				{
-					cfg->add(cfg, AUTH_RULE_BLISS_STRENGTH, (uintptr_t)strength);
-				}
-			}
-			rsa_len = ecdsa_len = bliss_strength = FALSE;
-			if (strength)
-			{
-				continue;
-			}
-		}
-		if (streq(token, "rsa"))
-		{
-			rsa = rsa_len = TRUE;
-			continue;
-		}
-		if (streq(token, "ecdsa"))
-		{
-			ecdsa = ecdsa_len = TRUE;
-			continue;
-		}
-		if (streq(token, "bliss"))
-		{
-			bliss = bliss_strength = TRUE;
-			continue;
-		}
-		if (streq(token, "pubkey"))
-		{
-			continue;
-		}
-
-		for (i = 0; i < countof(schemes); i++)
-		{
-			if (streq(schemes[i].name, token))
-			{
-				/* for each matching string, allow the scheme, if:
-				 * - it is an RSA scheme, and we enforced RSA
-				 * - it is an ECDSA scheme, and we enforced ECDSA
-				 * - it is not a key type specific scheme
-				 */
-				if ((rsa && schemes[i].key == KEY_RSA) ||
-					(ecdsa && schemes[i].key == KEY_ECDSA) ||
-					(bliss && schemes[i].key == KEY_BLISS) ||
-					(!rsa && !ecdsa && !bliss))
-				{
-					cfg->add(cfg, AUTH_RULE_SIGNATURE_SCHEME,
-							 (uintptr_t)schemes[i].scheme);
-				}
-				found = TRUE;
-			}
-		}
-		if (!found)
-		{
-			DBG1(DBG_CFG, "ignoring invalid auth token: '%s'", token);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
  * build authentication config
  */
 static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
@@ -626,8 +515,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
-
-		parse_pubkey_constraints(auth, cfg);
+		cfg->add_pubkey_constraints(cfg, auth);
 	}
 	else if (streq(auth, "psk") || streq(auth, "secret"))
 	{
@@ -660,7 +548,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		if (pos)
 		{
 			*pos = 0;
-			parse_pubkey_constraints(pos + 1, cfg);
+			cfg->add_pubkey_constraints(cfg, pos + 1);
 		}
 		type = eap_vendor_type_from_string(auth);
 		if (type)

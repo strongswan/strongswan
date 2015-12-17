@@ -510,6 +510,115 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 	}
 }
 
+METHOD(auth_cfg_t, add_pubkey_constraints, void,
+	private_auth_cfg_t *this, char* constraints)
+{
+	enumerator_t *enumerator;
+	bool rsa = FALSE, ecdsa = FALSE, bliss = FALSE,
+		 rsa_len = FALSE, ecdsa_len = FALSE, bliss_strength = FALSE;
+	int strength;
+	char *token;
+
+	enumerator = enumerator_create_token(constraints, "-", "");
+	while (enumerator->enumerate(enumerator, &token))
+	{
+		bool found = FALSE;
+		int i;
+		struct {
+			char *name;
+			signature_scheme_t scheme;
+			key_type_t key;
+		} schemes[] = {
+			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	},
+			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	},
+			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA224,		KEY_RSA,	},
+			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA256,		KEY_RSA,	},
+			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA384,		KEY_RSA,	},
+			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA512,		KEY_RSA,	},
+			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	},
+			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	},
+			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	},
+			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	},
+			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
+			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
+			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
+			{ "sha256",		SIGN_BLISS_WITH_SHA2_256,		KEY_BLISS,	},
+			{ "sha384",		SIGN_BLISS_WITH_SHA2_384,		KEY_BLISS,	},
+			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	},
+		};
+
+		if (rsa_len || ecdsa_len || bliss_strength)
+		{	/* expecting a key strength token */
+			strength = atoi(token);
+			if (strength)
+			{
+				if (rsa_len)
+				{
+					add(this, AUTH_RULE_RSA_STRENGTH, (uintptr_t)strength);
+				}
+				else if (ecdsa_len)
+				{
+					add(this, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
+				}
+				else if (bliss_strength)
+				{
+					add(this, AUTH_RULE_BLISS_STRENGTH, (uintptr_t)strength);
+				}
+			}
+			rsa_len = ecdsa_len = bliss_strength = FALSE;
+			if (strength)
+			{
+				continue;
+			}
+		}
+		if (streq(token, "rsa"))
+		{
+			rsa = rsa_len = TRUE;
+			continue;
+		}
+		if (streq(token, "ecdsa"))
+		{
+			ecdsa = ecdsa_len = TRUE;
+			continue;
+		}
+		if (streq(token, "bliss"))
+		{
+			bliss = bliss_strength = TRUE;
+			continue;
+		}
+		if (streq(token, "pubkey"))
+		{
+			continue;
+		}
+
+		for (i = 0; i < countof(schemes); i++)
+		{
+			if (streq(schemes[i].name, token))
+			{
+				/* for each matching string, allow the scheme, if:
+				 * - it is an RSA scheme, and we enforced RSA
+				 * - it is an ECDSA scheme, and we enforced ECDSA
+				 * - it is not a key type specific scheme
+				 */
+				if ((rsa && schemes[i].key == KEY_RSA) ||
+					(ecdsa && schemes[i].key == KEY_ECDSA) ||
+					(bliss && schemes[i].key == KEY_BLISS) ||
+					(!rsa && !ecdsa && !bliss))
+				{
+					add(this, AUTH_RULE_SIGNATURE_SCHEME,
+					   (uintptr_t)schemes[i].scheme);
+				}
+				found = TRUE;
+			}
+		}
+		if (!found)
+		{
+			DBG1(DBG_CFG, "ignoring invalid auth token: '%s'", token);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(auth_cfg_t, complies, bool,
 	private_auth_cfg_t *this, auth_cfg_t *constraints, bool log_error)
 {
@@ -1116,6 +1225,7 @@ auth_cfg_t *auth_cfg_create()
 	INIT(this,
 		.public = {
 			.add = (void(*)(auth_cfg_t*, auth_rule_t type, ...))add,
+			.add_pubkey_constraints = _add_pubkey_constraints,
 			.get = _get,
 			.create_enumerator = _create_enumerator,
 			.replace = (void(*)(auth_cfg_t*,enumerator_t*,auth_rule_t,...))replace,
