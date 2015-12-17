@@ -1,0 +1,9 @@
+carol::service charon stop 2> /dev/null
+dave::service charon stop 2> /dev/null
+moon::service charon stop 2> /dev/null
+moon::iptables-restore < /etc/iptables.flush
+carol::iptables-restore < /etc/iptables.flush
+dave::iptables-restore < /etc/iptables.flush
+moon::cd /etc/swanctl;  rm bliss/* x509/moonCert.der  x509ca/strongswan_blissCert.der
+carol::cd /etc/swanctl; rm bliss/* x509/carolCert.der x509ca/strongswan_blissCert.der
+dave::cd /etc/swanctl;  rm bliss/* x509/daveCert.der  x509ca/strongswan_blissCert.der
