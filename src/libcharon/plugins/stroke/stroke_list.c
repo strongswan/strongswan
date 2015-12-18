@@ -243,40 +243,36 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			proposal = child_sa->get_proposal(child_sa);
 			if (proposal)
 			{
-				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
-				u_int16_t encr_size = 0, int_size = 0;
-				u_int16_t esn = NO_EXT_SEQ_NUMBERS;
+				u_int16_t alg, ks;
 				bool first = TRUE;
 
-				proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
-										&encr_alg, &encr_size);
-				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
-										&int_alg, &int_size);
-				proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
-										&esn, NULL);
-
-				if (encr_alg != ENCR_UNDEFINED)
+				if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+											&alg, &ks) && alg != ENCR_UNDEFINED)
 				{
-					fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+					fprintf(out, "%N", encryption_algorithm_names, alg);
 					first = FALSE;
-					if (encr_size)
+					if (ks)
 					{
-						fprintf(out, "_%u", encr_size);
+						fprintf(out, "_%u", ks);
 					}
 				}
-				if (int_alg != AUTH_UNDEFINED)
+				if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+											&alg, &ks) && alg != AUTH_UNDEFINED)
 				{
-					if (!first)
+					fprintf(out, "%s%N", first ? "" : "/",
+							integrity_algorithm_names, alg);
+					if (ks)
 					{
-						fprintf(out, "/");
-					}
-					fprintf(out, "%N", integrity_algorithm_names, int_alg);
-					if (int_size)
-					{
-						fprintf(out, "_%u", int_size);
+						fprintf(out, "_%u", ks);
 					}
 				}
-				if (esn == EXT_SEQ_NUMBERS)
+				if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+											&alg, NULL))
+				{
+					fprintf(out, "/%N", diffie_hellman_group_names, alg);
+				}
+				if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
+											&alg, NULL) && alg == EXT_SEQ_NUMBERS)
 				{
 					fprintf(out, "/ESN");
 				}
