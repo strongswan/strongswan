@@ -283,7 +283,7 @@ charon.retry_initiate_interval = 0
 	resolution failed), 0 to disable retries.
 
 charon.reuse_ikesa = yes
-	Initiate CHILD_SA within existing IKE_SAs.
+	Initiate CHILD_SA within existing IKE_SAs (always enabled for IKEv1).
 
 charon.routing_table
 	Numerical routing table to install routes to.

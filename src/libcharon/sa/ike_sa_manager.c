@@ -1384,8 +1384,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	DBG2(DBG_MGR, "checkout IKE_SA by config");
 
-	if (!this->reuse_ikesa)
-	{	/* IKE_SA reuse disable by config */
+	if (!this->reuse_ikesa && peer_cfg->get_ike_version(peer_cfg) != IKEV1)
+	{	/* IKE_SA reuse disabled by config (not possible for IKEv1) */
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		charon->bus->set_sa(charon->bus, ike_sa);
 		return ike_sa;
