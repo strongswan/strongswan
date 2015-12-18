@@ -98,7 +98,6 @@ CONFIG_OPTS = \
 	--enable-tkm \
 	--enable-ntru \
 	--enable-lookip \
-	--enable-swanctl \
 	--enable-bliss \
 	--enable-sha3
 
