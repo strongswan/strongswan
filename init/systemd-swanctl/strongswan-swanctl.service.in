@@ -7,3 +7,6 @@ Type=notify
 ExecStart=@SBINDIR@/charon-systemd
 ExecStartPost=@SBINDIR@/swanctl --load-all --noprompt
 ExecReload=@SBINDIR@/swanctl --reload
+
+[Install]
+WantedBy=multi-user.target
