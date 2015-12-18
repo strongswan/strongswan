@@ -1,20 +1,8 @@
 package Vici::Session;
 
-require Exporter;
-use AutoLoader qw(AUTOLOAD);
-
-our @ISA = qw(Exporter);
-our @EXPORT = qw(
-    new, version, stats, reload_settings, initiate, terminate, install,
-    uninstall, list_sas, list_policies, list_conns, get_conns, list_certs,
-    list_authorities, get_authorities, load_conn, unload_conn, load_cert,
-    load_key, load_shared, clear_creds, load_authority, unload_authority,
-    load_pool, unload_pool, get_pools, get_algorithms
-);
 our $VERSION = '0.9';
 
 use strict;
-use warnings;
 use Vici::Packet;
 use Vici::Message;
 

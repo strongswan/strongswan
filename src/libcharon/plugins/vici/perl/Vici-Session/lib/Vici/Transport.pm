@@ -1,16 +1,8 @@
 package Vici::Transport;
 
-require Exporter;
-use AutoLoader qw(AUTOLOAD);
-
-our @ISA = qw(Exporter);
-our @EXPORT = qw(
-    new, send, receive
-);
 our $VERSION = '0.9';
 
 use strict;
-use warnings;
 
 sub new {
     my $class = shift;

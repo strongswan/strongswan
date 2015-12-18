@@ -1,17 +1,8 @@
 package Vici::Message;
 
-require Exporter;
-use AutoLoader qw(AUTOLOAD);
-
-our @ISA = qw(Exporter);
-our @EXPORT = qw(
-    new, from_data, hash, encode, raw, result
-);
 our $VERSION = '0.9';
 
 use strict;
-use warnings;
-use Switch;
 use Vici::Transport;
 
 use constant {
@@ -85,52 +76,46 @@ sub parse {
 
         (my $key, $data) = unpack('C/a*a*', $data);
 
-        switch ($type)
-        {       
-            case KEY_VALUE
-            {
-                (my $value, $data) = unpack('n/a*a*', $data);
-                $hash->{$key} = $value;
-            }
-            case SECTION_START
-            {
-                my %section = ();
-                $data = parse($data, \%section);
-                $hash->{$key} = \%section;
-            }
-            case LIST_START
-            {
-                my @list = ();
-                my $more = 1;
+        if ( $type == KEY_VALUE )
+        {
+            (my $value, $data) = unpack('n/a*a*', $data);
+            $hash->{$key} = $value;
+        }
+        elsif ( $type == SECTION_START )
+        {
+            my %section = ();
+            $data = parse($data, \%section);
+            $hash->{$key} = \%section;
+        }
+        elsif ( $type == LIST_START )
+        {
+            my @list = ();
+            my $more = 1;
 
-                while (length($data) > 0 and $more)
+            while (length($data) > 0 and $more)
+            {
+                (my $type, $data) = unpack('Ca*', $data);
+                if ( $type == LIST_ITEM )
                 {
-                    (my $type, $data) = unpack('Ca*', $data);
-                    switch ($type)
-                    {
-                        case LIST_ITEM
-                        {
-                            (my $value, $data) = unpack('n/a*a*', $data);
-                            push(@list, $value);
-                        }
-                        case LIST_END
-                        {
-                            $more = 0;
-                            $hash->{$key} = \@list;
-                         }
-                        else
-                        {
-                            die "message parsing error: ", $type, "\n"
-                        }
-                    }
+                    (my $value, $data) = unpack('n/a*a*', $data);
+                    push(@list, $value);
+                }
+                elsif ( $type == LIST_END )
+                {
+                    $more = 0;
+                    $hash->{$key} = \@list;
+                 }
+                else
+                {
+                    die "message parsing error: ", $type, "\n"
                 }
             }
-            else
-            {
-                die "message parsing error: ", $type, "\n"
-            }
-        } 
-	}
+        }
+        else
+        {
+            die "message parsing error: ", $type, "\n"
+        }
+    }
     return $data;
 }
 
@@ -141,31 +126,28 @@ sub encode_hash {
 
     while ( (my $key, my $value) = each %$hash )
     {
-        switch (ref($value))
+        if ( ref($value) eq 'HASH' )
         {
-            case 'HASH'
-            {
-                $enc .= pack('CC/a*', SECTION_START, $key);
-                $enc .= encode_hash($value);
-                $enc .= pack('C', SECTION_END);
-            }
-            case 'ARRAY'
-            {
-                $enc .= pack('CC/a*', LIST_START, $key);
+            $enc .= pack('CC/a*', SECTION_START, $key);
+            $enc .= encode_hash($value);
+            $enc .= pack('C', SECTION_END);
+        }
+        elsif ( ref($value) eq 'ARRAY' )
+        {
+            $enc .= pack('CC/a*', LIST_START, $key);
 
-                foreach my $item (@$value)
-                {
-                    $enc .= pack('Cn/a*', LIST_ITEM, $item);
-                }
-                $enc .= pack('C', LIST_END);
-            }
-            else
+            foreach my $item (@$value)
             {
-                $enc .= pack('CC/a*n/a*', KEY_VALUE, $key, $value);
+                $enc .= pack('Cn/a*', LIST_ITEM, $item);
             }
+            $enc .= pack('C', LIST_END);
+        }
+        else
+        {
+            $enc .= pack('CC/a*n/a*', KEY_VALUE, $key, $value);
         }
     }
-    return $enc;        
+    return $enc;
 }
 
 sub raw_hash {
@@ -185,38 +167,35 @@ sub raw_hash {
         }
         $raw .= $key;
 
-        switch (ref($value))
+        if ( ref($value) eq 'HASH' )
         {
-            case 'HASH'
-            {
-                $raw .= '{' . raw_hash($value) . '}';
-            }
-            case 'ARRAY'
-            {
-                my $first_item = 1;
-                $raw .= '[';
+            $raw .= '{' . raw_hash($value) . '}';
+        }
+        elsif ( ref($value) eq 'ARRAY' )
+        {
+            my $first_item = 1;
+            $raw .= '[';
 
-                foreach my $item (@$value)
-                {
-                    if ($first_item)
-                    {
-                        $first_item = 0;
-                    }
-                    else
-                    {
-                        $raw .= ' ';
-                    }
-                    $raw .= $item;
-                }
-                $raw .= ']';
-            }
-            else
+            foreach my $item (@$value)
             {
-                $raw .= '=' . $value;
+                if ($first_item)
+                {
+                    $first_item = 0;
+                }
+                else
+                {
+                    $raw .= ' ';
+                }
+                $raw .= $item;
             }
+            $raw .= ']';
+        }
+        else
+        {
+            $raw .= '=' . $value;
         }
     }
-    return $raw;        
+    return $raw;
 }
 
 1;

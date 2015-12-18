@@ -1,17 +1,8 @@
 package Vici::Packet;
 
-require Exporter;
-use AutoLoader qw(AUTOLOAD);
-
-our @ISA = qw(Exporter);
-our @EXPORT = qw(
-    new, request, register, unregister, streamed_request
-);
 our $VERSION = '0.9';
 
 use strict;
-use warnings;
-use Switch;
 use Vici::Message;
 use Vici::Transport;
 
@@ -45,21 +36,18 @@ sub request {
     my $response = $self->{'Transport'}->receive();
     my ($type, $data) = unpack('Ca*', $response);
 
-	switch ($type)
+    if ( $type == CMD_RESPONSE )
     {
-        case CMD_RESPONSE
-        {
-            return Vici::Message->from_data($data);
-        }
-        case CMD_UNKNOWN
-        {
-            die "unknown command '", $command, "'\n"
-        }
-        else
-        {
-            die "invalid response type\n"
-        }
-    }; 
+        return Vici::Message->from_data($data);
+    }
+    elsif ( $type == CMD_UNKNOWN )
+    {
+        die "unknown command '", $command, "'\n"
+    }
+    else
+    {
+        die "invalid response type\n"
+    }
 }
 
 sub register {
@@ -70,21 +58,18 @@ sub register {
     my $response = $self->{'Transport'}->receive();
     my ($type, $data) = unpack('Ca*', $response);
 
-	switch ($type)
+    if ( $type == EVENT_CONFIRM )
     {
-        case EVENT_CONFIRM
-        {
-            return
-        }
-        case EVENT_UNKNOWN
-        {
-            die "unknown event '", $event, "'\n"
-        }
-        else
-        {
-            die "invalid response type\n"
-        }
-    }; 
+        return
+    }
+    elsif ( $type == EVENT_UNKNOWN )
+    {
+        die "unknown event '", $event, "'\n"
+    }
+    else
+    {
+        die "invalid response type\n"
+    }
 }
 
 sub unregister {
@@ -95,21 +80,18 @@ sub unregister {
     my $response = $self->{'Transport'}->receive();
     my ($type, $data) = unpack('Ca*', $response);
 
-	switch ($type)
+    if ( $type == EVENT_CONFIRM )
     {
-        case EVENT_CONFIRM
-        {
-            return
-        }
-        case EVENT_UNKNOWN
-        {
-            die "unknown event '", $event, "'\n"
-        }
-        else
-        {
-            die "invalid response type\n"
-        }
-    }; 
+        return
+    }
+    elsif ( $type == EVENT_UNKNOWN )
+    {
+        die "unknown event '", $event, "'\n"
+    }
+    else
+    {
+        die "invalid response type\n"
+    }
 }
 
 sub streamed_request {
@@ -123,33 +105,30 @@ sub streamed_request {
     my $more = 1;
     my @list = ();
 
-	while ($more)
-	{
+    while ($more)
+    {
         my $response = $self->{'Transport'}->receive();
         my ($type, $data) = unpack('Ca*', $response);
 
-        switch ($type)
+        if ( $type == EVENT )
         {
-            case EVENT
-            {
-               (my $event_name, $data) = unpack('C/a*a*', $data);
+           (my $event_name, $data) = unpack('C/a*a*', $data);
 
-               if ($event_name eq $event)
-               {
-                   my $msg = Vici::Message->from_data($data);
-                   push(@list, $msg);
-               }
-            }
-            case CMD_RESPONSE
-            {
-                $self->unregister($event);
-                $more = 0;
-            }
-            else
-            {
-                $self->unregister($event);
-                die "invalid response type\n";
-            }
+           if ($event_name eq $event)
+           {
+               my $msg = Vici::Message->from_data($data);
+               push(@list, $msg);
+           }
+        }
+        elsif ( $type == CMD_RESPONSE )
+        {
+            $self->unregister($event);
+            $more = 0;
+        }
+        else
+        {
+            $self->unregister($event);
+            die "invalid response type\n";
         }
     }
     return \@list;
