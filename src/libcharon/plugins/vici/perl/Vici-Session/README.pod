@@ -242,7 +242,7 @@ with the same name gets updated or replaced.
 
   my @l_ts = ( '10.1.0.0/16' );
   my @r_ts = ( '10.2.0.0/16' );
-  my @esp  = ( 'aes128gcm128-modp2048' );
+  my @esp  = ( 'aes128gcm128-modp3072' );
 
   my %child = (
       local_ts  => \@l_ts,
@@ -257,7 +257,7 @@ with the same name gets updated or replaced.
   my %l = ( auth => 'pubkey', id => 'moon.strongswan.org',
             certs => \@l_certs );
   my %r = ( auth => 'pubkey', id => 'sun.strongswan.org');
-  my @ike = ( 'aes128-sha256-modp2048' );
+  my @ike = ( 'aes128-sha256-modp3072' );
 
   my %gw = (
       version => 2,
@@ -278,7 +278,7 @@ with the same name gets updated or replaced.
 print "----- load-conn -----\n";
 my @l_ts = ( '10.1.0.0/16' );
 my @r_ts = ( '10.2.0.0/16' );
-my @esp  = ( 'aes128gcm128-modp2048' );
+my @esp  = ( 'aes128gcm128-modp3072' );
 my %child = (
     local_ts  => \@l_ts,
     remote_ts => \@r_ts,
@@ -290,7 +290,7 @@ my @r_addrs = ( '192.168.0.2' );
 my @l_certs = ( $moon_cert );
 my %l = ( auth => 'pubkey', id => 'moon.strongswan.org', certs => \@l_certs );
 my %r = ( auth => 'pubkey', id => 'sun.strongswan.org');
-my @ike = ( 'aes128-sha256-modp2048' );
+my @ike = ( 'aes128-sha256-modp3072' );
 my %gw = (
     version => 2,
     mobike => 'no',
