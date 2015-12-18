@@ -134,11 +134,6 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 					b->add_kv(b, "integ-keysize", "%u", ks);
 				}
 			}
-			if (proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION,
-										&alg, NULL))
-			{
-				b->add_kv(b, "prf-alg", "%N", pseudo_random_function_names, alg);
-			}
 			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
 										&alg, NULL))
 			{
