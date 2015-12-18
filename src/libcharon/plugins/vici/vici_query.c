@@ -126,7 +126,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 				}
 			}
 			if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
-										&alg, &ks) && alg != ENCR_UNDEFINED)
+										&alg, &ks) && alg != AUTH_UNDEFINED)
 			{
 				b->add_kv(b, "integ-alg", "%N", integrity_algorithm_names, alg);
 				if (ks)
