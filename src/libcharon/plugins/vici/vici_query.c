@@ -40,6 +40,7 @@
 
 #include "vici_query.h"
 #include "vici_builder.h"
+#include "vici_cert_info.h"
 
 #include <inttypes.h>
 #include <time.h>
@@ -961,19 +962,22 @@ CALLBACK(list_certs, vici_message_t*,
 	char *str;
 
 	str = request->get_str(request, "ANY", "type");
-	if (!enum_from_name(certificate_type_names, str, &filter.type))
+	if (enum_from_name(certificate_type_names, str, &filter.type))
+	{
+		if (filter.type == CERT_X509)
+		{
+			str = request->get_str(request, "ANY", "flag");
+			if (!enum_from_name(x509_flag_names, str, &filter.flag))
+			{
+				DBG1(DBG_CFG, "invalid certificate flag '%s'", str);
+				goto finalize;
+			}
+		}
+	}
+	else if	(!vici_cert_info_from_str(str, &filter.type, &filter.flag))
 	{
 		DBG1(DBG_CFG, "invalid certificate type '%s'", str);
 		goto finalize;
-	}
-	if (filter.type == CERT_X509)
-	{
-		str = request->get_str(request, "ANY", "flag");
-		if (!enum_from_name(x509_flag_names, str, &filter.flag))
-		{
-			DBG1(DBG_CFG, "invalid certificate flag '%s'", str);
-			goto finalize;
-		}
 	}
 
 	str = request->get_str(request, NULL, "subject");
