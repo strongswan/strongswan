@@ -941,13 +941,17 @@ if test x$systemd = xtrue; then
 		AC_MSG_ERROR([not found (try --with-systemdsystemunitdir)])
 	fi
 
-	PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
-	AC_SUBST(systemd_daemon_CFLAGS)
-	AC_SUBST(systemd_daemon_LIBS)
+	PKG_CHECK_MODULES(systemd, [libsystemd >= 209],
+		[AC_SUBST(systemd_CFLAGS)
+		AC_SUBST(systemd_LIBS)],
+		[PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
+		AC_SUBST(systemd_daemon_CFLAGS)
+		AC_SUBST(systemd_daemon_LIBS)
 
-	PKG_CHECK_MODULES(systemd_journal, [libsystemd-journal])
-	AC_SUBST(systemd_journal_CFLAGS)
-	AC_SUBST(systemd_journal_LIBS)
+		PKG_CHECK_MODULES(systemd_journal, [libsystemd-journal])
+		AC_SUBST(systemd_journal_CFLAGS)
+		AC_SUBST(systemd_journal_LIBS)
+		])
 fi
 
 if test x$tss = xtrousers; then
