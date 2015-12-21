@@ -733,6 +733,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_DEMO
+  SUBDIRS += plugins/demo
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/demo/libstrongswan-demo.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif
