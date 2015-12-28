@@ -1,5 +1,5 @@
-sun::ipsec stop
-alice::ipsec stop
-venus::ipsec stop
+alice::service charon stop 2> /dev/null
+venus::service charon stop 2> /dev/null
+sun::service charon stop 2> /dev/null
 sun::iptables-restore < /etc/iptables.flush
 moon::iptables -t nat -F

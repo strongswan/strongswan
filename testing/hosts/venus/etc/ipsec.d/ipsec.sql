@@ -1,4 +1,4 @@
 /* strongSwan SQLite database */
 
-/* configuration is read from ipsec.conf   */
-/* credentials are read from ipsec.secrets */
+/* configuration is read from swanctl.conf or ipsec.conf */
+/* credentials  are read from swanctl.conf or ipsec.secrets */

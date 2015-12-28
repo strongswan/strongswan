@@ -1,11 +1,11 @@
-moon::rm /etc/ipsec.d/cacerts/*
-sun::rm /etc/ipsec.d/cacerts/*
 moon::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 sun::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 moon::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 sun::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 moon::iptables-restore < /etc/iptables.rules
 sun::iptables-restore < /etc/iptables.rules
-sun::ipsec start
-moon::ipsec start
-moon::sleep 1
+sun::service charon start 2> /dev/null
+sun::expect-connection net-net
+moon::service charon start 2> /dev/null
+moon::sleep 4 
+

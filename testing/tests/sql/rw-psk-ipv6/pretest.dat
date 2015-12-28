@@ -1,6 +1,3 @@
-moon::rm /etc/ipsec.d/cacerts/*
-carol::rm /etc/ipsec.d/cacerts/*
-dave::rm /etc/ipsec.d/cacerts/*
 moon::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 carol::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 dave::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
@@ -16,10 +13,11 @@ dave::ip6tables-restore < /etc/ip6tables.rules
 alice::"ip route add fec0:\:/16 via fec1:\:1"
 carol::"ip route add fec1:\:/16 via fec0:\:1"
 dave::"ip route add fec1:\:/16 via fec0:\:1"
-moon::ipsec start
-carol::ipsec start
-dave::ipsec start
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+dave::service charon start 2> /dev/null
+moon::expect-connection rw
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home 2> /dev/null
 dave::expect-connection home
-dave::ipsec up home
+dave::swanctl --initiate --child home 2> /dev/null

@@ -1,12 +1,11 @@
-moon::rm /etc/ipsec.d/cacerts/*
-carol::rm /etc/ipsec.d/cacerts/*
 moon::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 carol::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ipsec.d/data.sql > /etc/db.d/ipsec.sql
 moon::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 carol::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
-moon::ipsec start
-carol::ipsec start
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+moon::expect-connection rw-eap-aka
 carol::expect-connection home
-carol::ipsec up home
+carol::swanctl --initiate --child home 2> /dev/null
