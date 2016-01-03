@@ -861,21 +861,24 @@ static void enum_x509(private_vici_query_t *this, u_int id,
  * Enumerate all non-X.509 certificate types
  */
 static void enum_others(private_vici_query_t *this, u_int id,
-						linked_list_t *certs, cert_filter_t *filter)
+						linked_list_t *certs, certificate_type_t type)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	vici_builder_t *b;
 	chunk_t encoding;
+	cred_encoding_type_t encoding_type;
+
+	encoding_type = (type == CERT_TRUSTED_PUBKEY) ? PUBKEY_SPKI_ASN1_DER :
+													CERT_ASN1_DER;
 
 	enumerator = certs->create_enumerator(certs);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		if (cert->get_encoding(cert, encoding_type, &encoding))
 		{
 			b = vici_builder_create();
-			b->add_kv(b, "type", "%N", certificate_type_names,
-									   cert->get_type(cert));
+			b->add_kv(b, "type", "%N", certificate_type_names, type);
 			if (has_privkey(cert))
 			{
 				b->add_kv(b, "has_privkey", "yes");
@@ -940,7 +943,7 @@ static void enum_certs(private_vici_query_t *this,	u_int id,
 	}
 	else
 	{
-		enum_others(this, id, certs, filter);
+		enum_others(this, id, certs, type);
 	}
 	certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 }
