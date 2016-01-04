@@ -59,6 +59,7 @@ static bool is_file_list_key(char *key)
 	char *keys[] = {
 		"certs",
 		"cacerts",
+		"pubkeys"
 	};
 	int i;
 
@@ -112,10 +113,16 @@ static bool add_file_list_key(vici_req_t *req, char *key, char *value)
 						 SWANCTL_X509DIR, DIRECTORY_SEPARATOR, token);
 				token = buf;
 			}
-			if (streq(key, "cacerts"))
+			else if (streq(key, "cacerts"))
 			{
 				snprintf(buf, sizeof(buf), "%s%s%s",
 						 SWANCTL_X509CADIR, DIRECTORY_SEPARATOR, token);
+				token = buf;
+			}
+			else if (streq(key, "pubkeys"))
+			{
+				snprintf(buf, sizeof(buf), "%s%s%s",
+						 SWANCTL_PUBKEYDIR, DIRECTORY_SEPARATOR, token);
 				token = buf;
 			}
 		}

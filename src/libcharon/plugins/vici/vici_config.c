@@ -48,6 +48,8 @@
 #include <collections/array.h>
 #include <collections/linked_list.h>
 
+#include <pubkey_cert.h>
+
 #include <stdio.h>
 
 /**
@@ -96,6 +98,11 @@ struct private_vici_config_t {
 	 * Lock for conns list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Credential backend managed by VICI used for our certificates
+	 */
+	vici_cred_t *cred;
 
 	/**
 	 * Auxiliary certification authority information
@@ -1057,6 +1064,7 @@ CALLBACK(parse_group, bool,
 static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 {
 	vici_authority_t *authority;
+	vici_cred_t *cred;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -1068,6 +1076,8 @@ static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 			authority = auth->request->this->authority;
 			authority->check_for_hash_and_url(authority, cert);
 		}
+		cred = auth->request->this->cred;
+		cert = cred->add_cert(cred, cert);
 		auth->cfg->add(auth->cfg, rule, cert);
 		return TRUE;
 	}
@@ -1090,6 +1100,27 @@ CALLBACK(parse_cacerts, bool,
 	auth_data_t *auth, chunk_t v)
 {
 	return parse_cert(auth, AUTH_RULE_CA_CERT, v);
+}
+
+/**
+ * Parse raw public keys
+ */
+CALLBACK(parse_pubkeys, bool,
+	auth_data_t *auth, chunk_t v)
+{
+	vici_cred_t *cred;
+	certificate_t *cert;
+
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
+							  BUILD_BLOB_PEM, v, BUILD_END);
+	if (cert)
+	{
+		cred = auth->request->this->cred;
+		cert = cred->add_cert(cred, cert);
+		auth->cfg->add(auth->cfg, AUTH_RULE_SUBJECT_CERT, cert);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -1287,6 +1318,7 @@ CALLBACK(auth_li, bool,
 		{ "groups",			parse_group,		auth->cfg					},
 		{ "certs",			parse_certs,		auth						},
 		{ "cacerts",		parse_cacerts,		auth						},
+		{ "pubkeys",		parse_pubkeys,		auth						},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1510,20 +1542,32 @@ CALLBACK(peer_sn, bool,
 			.request = peer->request,
 			.cfg = auth_cfg_create(),
 		};
+		certificate_t *cert;
+		identification_t *id;
 
 		if (!message->parse(message, ctx, NULL, auth_kv, auth_li, &auth))
 		{
 			auth.cfg->destroy(auth.cfg);
 			return FALSE;
 		}
+		cert = auth.cfg->get(auth.cfg, AUTH_RULE_SUBJECT_CERT);
+		id   = auth.cfg->get(auth.cfg, AUTH_RULE_IDENTITY);
 
-		if (!auth.cfg->get(auth.cfg, AUTH_RULE_IDENTITY))
+		if (cert)
 		{
-			identification_t *id;
-			certificate_t *cert;
+			if (id)
+			{
+				if (cert->get_type(cert) == CERT_TRUSTED_PUBKEY &&
+					id->get_type != ID_ANY)
+				{
+					pubkey_cert_t *pubkey_cert;
 
-			cert = auth.cfg->get(auth.cfg, AUTH_RULE_SUBJECT_CERT);
-			if (cert)
+					/* the id is set for informational purposes, only */
+					pubkey_cert = (pubkey_cert_t*)cert;
+					pubkey_cert->set_subject(pubkey_cert, id);
+				}
+			}
+			else
 			{
 				id = cert->get_subject(cert);
 				DBG1(DBG_CFG, "  id not specified, defaulting to cert id '%Y'",
@@ -2121,7 +2165,8 @@ METHOD(vici_config_t, destroy, void,
  * See header
  */
 vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
-								  vici_authority_t *authority)
+								  vici_authority_t *authority,
+								  vici_cred_t *cred)
 {
 	private_vici_config_t *this;
 
@@ -2138,6 +2183,7 @@ vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
 		.conns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.authority = authority,
+		.cred = cred,
 	);
 
 	manage_commands(this, TRUE);

@@ -131,7 +131,8 @@ static bool register_vici(private_vici_plugin_t *this,
 			this->authority = vici_authority_create(this->dispatcher,
 													this->cred);
 			lib->credmgr->add_set(lib->credmgr, &this->authority->set);
-			this->config = vici_config_create(this->dispatcher, this->authority);
+			this->config = vici_config_create(this->dispatcher, this->authority,
+											  this->cred);
 			this->attrs = vici_attribute_create(this->dispatcher);
 			this->logger = vici_logger_create(this->dispatcher);
 

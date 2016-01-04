@@ -26,6 +26,7 @@
 
 #include "vici_dispatcher.h"
 #include "vici_authority.h"
+#include "vici_cred.h"
 
 #include <config/backend.h>
 
@@ -51,9 +52,11 @@ struct vici_config_t {
  *
  * @param dispatcher		dispatcher to receive requests from
  * @param authority			Auxiliary certification authority information
+ * @param cred				in-memory credential backend managed by VICI
  * @return					config backend
  */
 vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
-								  vici_authority_t *authority);
+								  vici_authority_t *authority,
+								  vici_cred_t *cred);
 
 #endif /** VICI_CONFIG_H_ @}*/

@@ -273,11 +273,21 @@ connections.<conn>.local<suffix>.certs =
 
 	Comma separated list of certificate candidates to use for authentication.
 	The certificates may use a relative path from the **swanctl** _x509_
-	directory, or an absolute path.
+	directory or an absolute path.
 
 	The certificate used for authentication is selected based on the received
 	certificate request payloads. If no appropriate CA can be located, the
 	first certificate is used.
+
+connections.<conn>.local<suffix>.pubkeys =
+	Comma separated list of raw public key candidates to use for authentication.
+
+	Comma separated list of raw public key candidates to use for authentication.
+	The public keys may use a relative path from the **swanctl** _pubkey_
+	directory or an absolute path.
+
+	Even though multiple local public keys could be defined in principle, only
+	the	first public key in the list is used for authentication.
 
 connections.<conn>.local<suffix>.auth = pubkey
 	Authentication to perform locally (_pubkey_, _psk_, _xauth[-backend]_ or
@@ -370,14 +380,21 @@ connections.<conn>.remote<suffix>.certs =
 
 	Comma separated list of certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509_
-	directory, or an absolute path.
+	directory or an absolute path.
 
 connections.<conn>.remote<suffix>.cacerts =
 	Comma separated list of CA certificates to accept for authentication.
 
 	Comma separated list of CA certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509ca_
-	directory, or an absolute path.
+	directory or an absolute path.
+
+connections.<conn>.remote<suffix>.pubkeys =
+	Comma separated list of raw public keys to accept for authentication.
+
+	Comma separated list of raw public keys to accept for authentication.
+	The public keys may use a relative path from the **swanctl** _x509_
+	directory or an absolute path.
 
 connections.<conn>.remote<suffix>.revocation = relaxed
 	Certificate revocation policy, (_strict_, _ifuri_ or _relaxed_).
@@ -587,8 +604,8 @@ connections.<conn>.children.<child>.mode = tunnel
 	Both _transport_ and _beet_ modes are subject to mode negotiation; _tunnel_
 	mode is negotiated if the preferred mode is not available.
 
-	_pass_ and _drop_ are used to install shunt policies, which explicitly
-	bypass the defined traffic from IPsec processing, or drop it, respectively.
+	_pass_ and _drop_ are used to install shunt policies which explicitly
+	bypass the defined traffic from IPsec processing or drop it, respectively.
 
 connections.<conn>.children.<child>.policies = yes
 	Whether to install IPsec policies or not.
@@ -704,7 +721,7 @@ secrets { # }
 
 	It is not recommended to define any private key decryption passphrases,
 	as then there is no real security benefit in having encrypted keys. Either
-	store the key unencrypted, or enter the keys manually when loading
+	store the key unencrypted or enter the keys manually when loading
 	credentials.
 
 secrets.eap<suffix> { # }
@@ -725,7 +742,7 @@ secrets.eap<suffix>.secret =
 	Value of the EAP/XAuth secret.
 
 	Value of the EAP/XAuth secret. It may either be an ASCII string, a hex
-	encoded string if it has a _0x_ prefix, or a Base64 encoded string if it
+	encoded string if it has a _0x_ prefix or a Base64 encoded string if it
 	has a _0s_ prefix in its value.
 
 secrets.eap<suffix>.id<suffix> =
@@ -745,7 +762,7 @@ secrets.ike<suffix>.secret =
 	Value of the IKE preshared secret.
 
 	Value of the IKE preshared secret. It may either be an ASCII string,
-	a hex encoded string if it has a _0x_ prefix, or a Base64 encoded string if
+	a hex encoded string if it has a _0x_ prefix or a Base64 encoded string if
 	it has a _0s_ prefix in its value.
 
 secrets.ike<suffix>.id<suffix> =
@@ -805,7 +822,7 @@ pools.<name>.addrs =
 	Addresses allocated in pool.
 
 	Subnet or range defining addresses allocated in pool. Accepts a single CIDR
-	subnet defining the pool to allocate addresses from, or an address range
+	subnet defining the pool to allocate addresses from or an address range
 	(<from>-<to>).  Pools must be unique and non-overlapping.
 
 pools.<name>.<attr> =
@@ -828,7 +845,7 @@ authorities.<name>.cacert =
 	CA certificate belonging to the certification authority.
 
 	The certificates may use a relative path from the **swanctl** _x509ca_
-	directory, or an absolute path.
+	directory or an absolute path.
 
 authorities.<name>.crl_uris =
 	Comma-separated list of CRL distribution points

@@ -308,7 +308,7 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 METHOD(vici_cred_t, add_cert, certificate_t*,
 	private_vici_cred_t *this, certificate_t *cert)
 {
-	return this->creds->get_cert_ref(this->creds, cert);
+	return this->creds->add_cert_ref(this->creds, TRUE, cert);
 }
 
 METHOD(vici_cred_t, destroy, void,
