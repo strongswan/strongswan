@@ -52,6 +52,7 @@
 #endif
 
 #include <daemon.h>
+#include <asn1/asn1.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 
@@ -866,8 +867,10 @@ static void enum_others(private_vici_query_t *this, u_int id,
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	vici_builder_t *b;
-	chunk_t encoding;
+	chunk_t encoding, t_ch;
 	cred_encoding_type_t encoding_type;
+	identification_t *subject;
+	time_t not_before, not_after;
 
 	encoding_type = (type == CERT_TRUSTED_PUBKEY) ? PUBKEY_SPKI_ASN1_DER :
 													CERT_ASN1_DER;
@@ -886,6 +889,27 @@ static void enum_others(private_vici_query_t *this, u_int id,
 			b->add(b, VICI_KEY_VALUE, "data", encoding);
 			free(encoding.ptr);
 
+			if (type == CERT_TRUSTED_PUBKEY)
+			{
+				subject = cert->get_subject(cert);
+				if (subject->get_type(subject) != ID_KEY_ID)
+				{
+					b->add_kv(b, "subject", "%Y", cert->get_subject(cert));
+				}
+				cert->get_validity(cert, NULL, &not_before, &not_after);
+				if (not_before != UNDEFINED_TIME)
+				{
+					t_ch = asn1_from_time(&not_before, ASN1_GENERALIZEDTIME);
+					b->add(b, VICI_KEY_VALUE, "not-before", chunk_skip(t_ch, 2));
+					chunk_free(&t_ch);
+				}
+				if (not_after != UNDEFINED_TIME)
+				{
+					t_ch = asn1_from_time(&not_after, ASN1_GENERALIZEDTIME);
+					b->add(b, VICI_KEY_VALUE, "not-after", chunk_skip(t_ch, 2));
+					chunk_free(&t_ch);
+				}
+			}
 			this->dispatcher->raise_event(this->dispatcher, "list-cert", id,
 										  b->finalize(b));
 		}

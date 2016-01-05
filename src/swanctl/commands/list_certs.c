@@ -58,6 +58,10 @@ CALLBACK(list_cb, void,
 	certificate_t *cert;
 	certificate_type_t type;
 	x509_flag_t flag = X509_NONE;
+	identification_t *subject = NULL;
+	time_t not_before = UNDEFINED_TIME;
+	time_t not_after  = UNDEFINED_TIME;
+	chunk_t t_ch;
 	bool has_privkey;
 	char *str;
 	void *buf;
@@ -93,11 +97,38 @@ CALLBACK(list_cb, void,
 			return;
 		}
 	}
-
-	/* Parse certificate data blob */
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-							  BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
-							  BUILD_END);
+	if (type == CERT_TRUSTED_PUBKEY)
+	{
+		str = vici_find_str(res, NULL, "subject");
+		if (str)
+		{
+			subject = identification_create_from_string(str);
+		}
+		str = vici_find_str(res, NULL, "not-before");
+		if (str)
+		{
+			t_ch = chunk_from_str(str);
+			not_before = asn1_to_time(&t_ch, ASN1_GENERALIZEDTIME);
+		}
+		str = vici_find_str(res, NULL, "not-after");
+		if (str)
+		{
+			t_ch = chunk_from_str(str);
+			not_after = asn1_to_time(&t_ch, ASN1_GENERALIZEDTIME);
+		}
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+								  BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
+								  BUILD_NOT_BEFORE_TIME, not_before,
+								  BUILD_NOT_AFTER_TIME, not_after,
+								  BUILD_SUBJECT, subject, BUILD_END);
+		DESTROY_IF(subject);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+								  BUILD_BLOB_ASN1_DER, chunk_create(buf, len),
+								  BUILD_END);
+	}
 	if (cert)
 	{
 		if (*format & COMMAND_FORMAT_PEM)

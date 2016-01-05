@@ -760,6 +760,9 @@ _list-certs_ command.
 		flag = <X.509 certificate flag, NONE|CA|AA|OCSP>
 		has_privkey = <set if a private key for the certificate is available>
 		data = <ASN1 encoded certificate data>
+		subject = <subject string if defined and certificate type is PUBKEY>
+		not-before = <time string if defined and certificate type is PUBKEY>
+		not-after  = <time string if defined and certificate type is PUBKEY>
 	}
 
 ### list-authority ###
