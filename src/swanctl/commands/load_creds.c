@@ -698,6 +698,7 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 	load_certs(conn, format, "x509aa",   SWANCTL_X509AADIR);
 	load_certs(conn, format, "x509ac",   SWANCTL_X509ACDIR);
 	load_certs(conn, format, "x509crl",  SWANCTL_X509CRLDIR);
+	load_certs(conn, format, "pubkey",   SWANCTL_PUBKEYDIR);
 
 	load_keys(conn, format, noprompt, cfg, "rsa",   SWANCTL_RSADIR);
 	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);

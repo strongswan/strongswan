@@ -29,12 +29,13 @@ typedef struct {
 } cert_type_t;
 
 static cert_type_t cert_types[] = {
-	{ "x509",     CERT_X509,     X509_NONE        },
-	{ "x509ca",   CERT_X509,     X509_CA          },
-	{ "x509ocsp", CERT_X509,     X509_OCSP_SIGNER },
-	{ "x509aa",   CERT_X509,     X509_AA          },
-	{ "x509ac",   CERT_X509_AC,  X509_NONE        },
-	{ "x509crl",  CERT_X509_CRL, X509_NONE        },
+	{ "x509",     CERT_X509,           X509_NONE        },
+	{ "x509ca",   CERT_X509,           X509_CA          },
+	{ "x509ocsp", CERT_X509,           X509_OCSP_SIGNER },
+	{ "x509aa",   CERT_X509,           X509_AA          },
+	{ "x509ac",   CERT_X509_AC,        X509_NONE        },
+	{ "x509crl",  CERT_X509_CRL,       X509_NONE        },
+	{ "pubkey",   CERT_TRUSTED_PUBKEY, X509_NONE        },
 };
 
 bool vici_cert_info_from_str(char *type_str, certificate_type_t *type,
