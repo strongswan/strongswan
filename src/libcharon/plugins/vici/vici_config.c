@@ -1542,39 +1542,43 @@ CALLBACK(peer_sn, bool,
 			.request = peer->request,
 			.cfg = auth_cfg_create(),
 		};
+		auth_rule_t rule;
 		certificate_t *cert;
+		pubkey_cert_t *pubkey_cert;
 		identification_t *id;
+		enumerator_t *enumerator;
+		bool default_id = FALSE;
 
 		if (!message->parse(message, ctx, NULL, auth_kv, auth_li, &auth))
 		{
 			auth.cfg->destroy(auth.cfg);
 			return FALSE;
 		}
-		cert = auth.cfg->get(auth.cfg, AUTH_RULE_SUBJECT_CERT);
 		id   = auth.cfg->get(auth.cfg, AUTH_RULE_IDENTITY);
 
-		if (cert)
+		enumerator = auth.cfg->create_enumerator(auth.cfg);
+		while (enumerator->enumerate(enumerator, &rule, &cert))
 		{
-			if (id)
+			if (rule == AUTH_RULE_SUBJECT_CERT && !default_id)
 			{
-				if (cert->get_type(cert) == CERT_TRUSTED_PUBKEY &&
-					id->get_type != ID_ANY)
+				if (id == NULL)
 				{
-					pubkey_cert_t *pubkey_cert;
-
-					/* the id is set for informational purposes, only */
+					id = cert->get_subject(cert);
+					DBG1(DBG_CFG, "  id not specified, defaulting to"
+								  " cert subject '%Y'", id);
+					auth.cfg->add(auth.cfg, AUTH_RULE_IDENTITY, id->clone(id));
+					default_id = TRUE;
+				}
+				else if (cert->get_type(cert) == CERT_TRUSTED_PUBKEY &&
+						 id->get_type != ID_ANY)
+				{
+					/* set the subject of all raw public keys to the id */
 					pubkey_cert = (pubkey_cert_t*)cert;
 					pubkey_cert->set_subject(pubkey_cert, id);
 				}
 			}
-			else
-			{
-				id = cert->get_subject(cert);
-				DBG1(DBG_CFG, "  id not specified, defaulting to cert id '%Y'",
-					 id);
-				auth.cfg->add(auth.cfg, AUTH_RULE_IDENTITY, id->clone(id));
-			}
 		}
+		enumerator->destroy(enumerator);
 
 		if (strcasepfx(name, "local"))
 		{
