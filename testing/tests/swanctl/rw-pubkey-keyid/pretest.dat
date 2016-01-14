@@ -4,6 +4,7 @@ dave::iptables-restore < /etc/iptables.rules
 moon::cd /etc/swanctl; rm x509/* x509ca/*
 carol::cd /etc/swanctl; rm x509/* x509ca/*
 dave::cd /etc/swanctl; rm x509/* x509ca/*
+moon::cat /etc/swanctl/swanctl_base.conf
 moon::service charon start 2> /dev/null
 carol::service charon start 2> /dev/null
 dave::service charon start 2> /dev/null
