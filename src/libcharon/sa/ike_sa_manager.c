@@ -1288,13 +1288,12 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 						entry = entry_create();
 						entry->ike_sa = ike_sa;
 						entry->ike_sa_id = id;
+						entry->processing = get_message_id_or_hash(message);
+						entry->init_hash = hash;
 
 						segment = put_entry(this, entry);
 						entry->checked_out = TRUE;
 						unlock_single_segment(this, segment);
-
-						entry->processing = get_message_id_or_hash(message);
-						entry->init_hash = hash;
 
 						DBG2(DBG_MGR, "created IKE_SA %s[%u]",
 							 ike_sa->get_name(ike_sa),
