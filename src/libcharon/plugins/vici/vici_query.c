@@ -273,15 +273,20 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	identification_t *eap;
 	proposal_t *proposal;
 	u_int16_t alg, ks;
+	host_t *host;
 
 	b->add_kv(b, "uniqueid", "%u", ike_sa->get_unique_id(ike_sa));
 	b->add_kv(b, "version", "%u", ike_sa->get_version(ike_sa));
 	b->add_kv(b, "state", "%N", ike_sa_state_names, ike_sa->get_state(ike_sa));
 
-	b->add_kv(b, "local-host", "%H", ike_sa->get_my_host(ike_sa));
+	host = ike_sa->get_my_host(ike_sa);
+	b->add_kv(b, "local-host", "%H", host);
+	b->add_kv(b, "local-port", "%d", host->get_port(host));
 	b->add_kv(b, "local-id", "%Y", ike_sa->get_my_id(ike_sa));
 
-	b->add_kv(b, "remote-host", "%H", ike_sa->get_other_host(ike_sa));
+	host = ike_sa->get_other_host(ike_sa);
+	b->add_kv(b, "remote-host", "%H", host);
+	b->add_kv(b, "remote-port", "%d", host->get_port(host));
 	b->add_kv(b, "remote-id", "%Y", ike_sa->get_other_id(ike_sa));
 
 	eap = ike_sa->get_other_eap_id(ike_sa);

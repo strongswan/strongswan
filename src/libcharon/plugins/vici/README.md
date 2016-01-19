@@ -609,8 +609,10 @@ command.
 			version = <IKE version, 1 or 2>
 			state = <IKE_SA state name>
 			local-host = <local IKE endpoint address>
+			local-port = <local IKE endpoint port>
 			local-id = <local IKE identity>
 			remote-host = <remote IKE endpoint address>
+			remote-port = <remote IKE endpoint port>
 			remote-id = <remote IKE identity>
 			remote-xauth-id = <remote XAuth identity, if XAuth-authenticated>
 			remote-eap-id = <remote EAP identity, if EAP-authenticated>
