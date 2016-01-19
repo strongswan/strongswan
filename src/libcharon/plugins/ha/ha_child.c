@@ -91,6 +91,10 @@ METHOD(listener_t, child_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_INTEG, alg);
 	}
+	if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &alg, NULL))
+	{
+		m->add_attribute(m, HA_ALG_DH, alg);
+	}
 	if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, &alg, NULL))
 	{
 		m->add_attribute(m, HA_ESN, alg);
