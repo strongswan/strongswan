@@ -230,6 +230,7 @@ METHOD(ha_message_t, add_attribute, void,
 			break;
 		}
 		/* u_int16_t */
+		case HA_ALG_DH:
 		case HA_ALG_PRF:
 		case HA_ALG_OLD_PRF:
 		case HA_ALG_ENCR:
@@ -450,6 +451,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			return TRUE;
 		}
 		/** u_int16_t */
+		case HA_ALG_DH:
 		case HA_ALG_PRF:
 		case HA_ALG_OLD_PRF:
 		case HA_ALG_ENCR:

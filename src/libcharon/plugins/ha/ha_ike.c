@@ -121,6 +121,10 @@ METHOD(listener_t, ike_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_PRF, alg);
 	}
+	if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &alg, NULL))
+	{
+		m->add_attribute(m, HA_ALG_DH, alg);
+	}
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	m->add_attribute(m, HA_SECRET, secret);

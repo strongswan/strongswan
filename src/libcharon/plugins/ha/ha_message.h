@@ -122,6 +122,8 @@ enum ha_message_attribute_t {
 	HA_ALG_ENCR_LEN,
 	/** u_int16_t, integrity protection algorithm */
 	HA_ALG_INTEG,
+	/** u_int16_t, DH group */
+	HA_ALG_DH,
 	/** u_int8_t, IPsec mode, TUNNEL|TRANSPORT|... */
 	HA_IPSEC_MODE,
 	/** u_int8_t, IPComp protocol */

@@ -132,6 +132,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	ike_sa_t *ike_sa = NULL, *old_sa = NULL;
 	ike_version_t version = IKEV2;
 	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
+	u_int16_t dh_grp = 0;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
 	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
@@ -193,6 +194,9 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			case HA_ALG_OLD_PRF:
 				old_prf = value.u16;
 				break;
+			case HA_ALG_DH:
+				dh_grp = value.u16;
+				break;
 			default:
 				break;
 		}
@@ -216,6 +220,10 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		if (prf)
 		{
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
+		}
+		if (dh_grp)
+		{
+			proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, dh_grp, 0);
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
 		dh = ha_diffie_hellman_create(secret, dh_local);
