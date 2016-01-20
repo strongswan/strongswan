@@ -681,8 +681,10 @@ static job_requeue_t initiate(private_android_service_t *this)
 		}
 	};
 	char *type, *server;
-	int port;
+	int port, loose_identity;
 
+	loose_identity = this->settings->get_int(this->settings, 
+								   "connection.loose_identity", TRUE);
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
 	port = this->settings->get_int(this->settings, "connection.port",
 								   IKEV2_UDP_PORT);
@@ -727,7 +729,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth = auth_cfg_create();
 	gateway = identification_create_from_string(server);
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
-	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
+	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, loose_identity);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
