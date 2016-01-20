@@ -39,7 +39,6 @@ strongswan_CFLAGS := \
 	-DHAVE_ALLOCA \
 	-DHAVE_CLOCK_GETTIME \
 	-DHAVE_DLADDR \
-	-DHAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC \
 	-DHAVE_PRCTL \
 	-DHAVE_LINUX_UDP_H \
 	-DHAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY \
@@ -65,6 +64,11 @@ strongswan_CFLAGS := \
 ifneq ($(strongswan_USE_BYOD),)
 strongswan_CFLAGS += -DUSE_BYOD
 endif
+
+ifneq ($(TARGET_ARCH_ABI), arm64-v8a)
+strongswan_CFLAGS += -DHAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC
+endif
+
 
 strongswan_BUILD := \
 	openssl \
