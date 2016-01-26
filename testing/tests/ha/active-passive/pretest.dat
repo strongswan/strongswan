@@ -11,7 +11,6 @@ carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
 moon::ipsec start
 alice::ipsec start
-moon::ipsec start
 moon::sleep 2
 alice::echo "+1" > /var/run/charon.ha
 carol::ipsec start
