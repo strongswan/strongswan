@@ -314,27 +314,31 @@ METHOD(listener_t, message_hook, bool,
 			sync_vips(this, ike_sa);
 		}
 	}
-	if (!plain && ike_sa->get_version(ike_sa) == IKEV1)
+	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
 		ha_message_t *m;
 		keymat_v1_t *keymat;
-		u_int32_t mid;
 		chunk_t iv;
 
-		mid = message->get_message_id(message);
-		if (mid == 0)
+		/* we need the last block (or expected next IV) of Phase 1, which gets
+		 * upated after successful en-/decryption depending on direction */
+		if (incoming == plain)
 		{
-			keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
-			if (keymat->get_iv(keymat, mid, &iv))
+			if (message->get_message_id(message) == 0)
 			{
-				m = ha_message_create(HA_IKE_IV);
-				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-				m->add_attribute(m, HA_IV, iv);
-				this->socket->push(this->socket, m);
-				this->cache->cache(this->cache, ike_sa, m);
+				keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+				if (keymat->get_iv(keymat, 0, &iv))
+				{
+					m = ha_message_create(HA_IKE_IV);
+					m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+					m->add_attribute(m, HA_IV, iv);
+					this->socket->push(this->socket, m);
+					this->cache->cache(this->cache, ike_sa, m);
+				}
 			}
 		}
-		if (!incoming && message->get_exchange_type(message) == TRANSACTION)
+		if (!plain && !incoming &&
+			message->get_exchange_type(message) == TRANSACTION)
 		{
 			sync_vips(this, ike_sa);
 		}
