@@ -168,6 +168,8 @@ enum id_part_t {
 	ID_PART_RDN_I,
 	/** DN Qualifier RDN of a DN */
 	ID_PART_RDN_DNQ,
+	/** Pseudonym RDN of a DN */
+	ID_PART_RDN_PN,
 	/** UniqueIdentifier RDN of a DN */
 	ID_PART_RDN_ID,
 	/** Locality RDN of a DN */
