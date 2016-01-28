@@ -324,11 +324,11 @@ START_TEST(test_printf_hook)
 	string_equals("C=CH, E=moon@strongswan.org, CN=moon",
 				  "C=CH, emailAddress=moon@strongswan.org, CN=moon");
 
-	/* C=CH, pseudonym=ANO (pseudonym is currently not recognized) */
-	string_equals_id("C=CH, 55:04:41=ANO", identification_create_from_encoding(ID_DER_ASN1_DN,
+	/* C=CH, telexNumber=123 (telexNumber is currently not recognized) */
+	string_equals_id("C=CH, 55:04:15=123", identification_create_from_encoding(ID_DER_ASN1_DN,
 		chunk_from_chars(0x30, 0x19, 0x31, 0x17, 0x30, 0x09, 0x06, 0x03, 0x55,
 						 0x04, 0x06, 0x13, 0x02, 0x43, 0x48, 0x30, 0x0a, 0x06,
-						 0x03, 0x55, 0x04, 0x41, 0x13, 0x03, 0x41, 0x4e, 0x4f)));
+						 0x03, 0x55, 0x04, 0x15, 0x13, 0x03, 0x31, 0x32, 0x33)));
 	/* C=CH, O=strongSwan (but instead of a 2nd OID -0x06- we got NULL -0x05) */
 	string_equals_id("C=CH, (invalid ID_DER_ASN1_DN)", identification_create_from_encoding(ID_DER_ASN1_DN,
 		chunk_from_chars(0x30, 0x20, 0x31, 0x1e, 0x30, 0x09, 0x06, 0x03, 0x55,
