@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -518,13 +518,16 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 }
 
 METHOD(auth_cfg_t, add_pubkey_constraints, void,
-	private_auth_cfg_t *this, char* constraints)
+	private_auth_cfg_t *this, char* constraints, bool ike)
 {
 	enumerator_t *enumerator;
-	bool rsa = FALSE, ecdsa = FALSE, bliss = FALSE,
-		 rsa_len = FALSE, ecdsa_len = FALSE, bliss_strength = FALSE;
+	bool is_ike = FALSE, ike_added = FALSE;
+	key_type_t expected_type = -1;
+	auth_rule_t expected_strength = AUTH_RULE_MAX;
 	int strength;
 	char *token;
+	auth_rule_t type;
+	void *value;
 
 	enumerator = enumerator_create_token(constraints, "-", "");
 	while (enumerator->enumerate(enumerator, &token))
@@ -554,46 +557,47 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	},
 		};
 
-		if (rsa_len || ecdsa_len || bliss_strength)
+		if (expected_strength != AUTH_RULE_MAX)
 		{	/* expecting a key strength token */
 			strength = atoi(token);
 			if (strength)
 			{
-				if (rsa_len)
-				{
-					add(this, AUTH_RULE_RSA_STRENGTH, (uintptr_t)strength);
-				}
-				else if (ecdsa_len)
-				{
-					add(this, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
-				}
-				else if (bliss_strength)
-				{
-					add(this, AUTH_RULE_BLISS_STRENGTH, (uintptr_t)strength);
-				}
+				add(this, expected_strength, (uintptr_t)strength);
 			}
-			rsa_len = ecdsa_len = bliss_strength = FALSE;
+			expected_strength = AUTH_RULE_MAX;
 			if (strength)
 			{
 				continue;
 			}
 		}
-		if (streq(token, "rsa"))
+		if (streq(token, "rsa") || streq(token, "ike:rsa"))
 		{
-			rsa = rsa_len = TRUE;
+			expected_type = KEY_RSA;
+			expected_strength = AUTH_RULE_RSA_STRENGTH;
+			is_ike = strpfx(token, "ike:");
 			continue;
 		}
-		if (streq(token, "ecdsa"))
+		if (streq(token, "ecdsa") || streq(token, "ike:ecdsa"))
 		{
-			ecdsa = ecdsa_len = TRUE;
+			expected_type = KEY_ECDSA;
+			expected_strength = AUTH_RULE_ECDSA_STRENGTH;
+			is_ike = strpfx(token, "ike:");
 			continue;
 		}
-		if (streq(token, "bliss"))
+		if (streq(token, "bliss") || streq(token, "ike:bliss"))
 		{
-			bliss = bliss_strength = TRUE;
+			expected_type = KEY_BLISS;
+			expected_strength = AUTH_RULE_BLISS_STRENGTH;
+			is_ike = strpfx(token, "ike:");
 			continue;
 		}
-		if (streq(token, "pubkey"))
+		if (streq(token, "pubkey") || streq(token, "ike:pubkey"))
+		{
+			expected_type = KEY_ANY;
+			is_ike = strpfx(token, "ike:");
+			continue;
+		}
+		if (is_ike && !ike)
 		{
 			continue;
 		}
@@ -602,18 +606,19 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		{
 			if (streq(schemes[i].name, token))
 			{
-				/* for each matching string, allow the scheme, if:
-				 * - it is an RSA scheme, and we enforced RSA
-				 * - it is an ECDSA scheme, and we enforced ECDSA
-				 * - it is not a key type specific scheme
-				 */
-				if ((rsa && schemes[i].key == KEY_RSA) ||
-					(ecdsa && schemes[i].key == KEY_ECDSA) ||
-					(bliss && schemes[i].key == KEY_BLISS) ||
-					(!rsa && !ecdsa && !bliss))
+				if (expected_type == KEY_ANY || expected_type == schemes[i].key)
 				{
-					add(this, AUTH_RULE_SIGNATURE_SCHEME,
-					   (uintptr_t)schemes[i].scheme);
+					if (is_ike)
+					{
+						add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+							(uintptr_t)schemes[i].scheme);
+						ike_added = TRUE;
+					}
+					else
+					{
+						add(this, AUTH_RULE_SIGNATURE_SCHEME,
+						   (uintptr_t)schemes[i].scheme);
+					}
 				}
 				found = TRUE;
 			}
@@ -624,6 +629,25 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	/* if no explicit IKE signature contraints were added we add them for all
+	 * configured signature contraints */
+	if (ike && !ike_added &&
+		lib->settings->get_bool(lib->settings,
+							"%s.signature_authentication_constraints", TRUE,
+							lib->ns))
+	{
+		enumerator = create_enumerator(this);
+		while (enumerator->enumerate(enumerator, &type, &value))
+		{
+			if (type == AUTH_RULE_SIGNATURE_SCHEME)
+			{
+				add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+					(uintptr_t)value);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 }
 
 /**

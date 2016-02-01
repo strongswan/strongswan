@@ -187,8 +187,10 @@ struct auth_cfg_t {
 	 * Add public key and signature scheme constraints to the set.
 	 *
 	 * @param constraints	constraints string (e.g. "rsa-sha384")
+	 * @param ike			whether to add/parse constraints for IKE signatures
 	 */
-	void (*add_pubkey_constraints)(auth_cfg_t *this, char *constraints);
+	void (*add_pubkey_constraints)(auth_cfg_t *this, char *constraints,
+								   bool ike);
 
 	/**
 	 * Get a rule value.

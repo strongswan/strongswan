@@ -955,13 +955,14 @@ CALLBACK(parse_auth, bool,
 	{
 		return FALSE;
 	}
-	if (strpfx(buf, "pubkey") ||
+	if (strpfx(buf, "ike:") ||
+		strpfx(buf, "pubkey") ||
 		strpfx(buf, "rsa") ||
 		strpfx(buf, "ecdsa") ||
 		strpfx(buf, "bliss"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-		cfg->add_pubkey_constraints(cfg, buf);
+		cfg->add_pubkey_constraints(cfg, buf, TRUE);
 		return TRUE;
 	}
 	if (strcaseeq(buf, "psk"))
