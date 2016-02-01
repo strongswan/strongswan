@@ -179,7 +179,7 @@ METHOD(authenticator_t, process, status_t,
 		if (public->verify(public, scheme, hash, sig))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
-				 id, key_type_names, this->type);
+				 id, signature_scheme_names, scheme);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);

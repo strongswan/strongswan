@@ -1,4 +1,4 @@
-carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA successful::YES
+carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA_EMSA_PKCS1_NULL successful::YES
 moon:: cat /var/log/daemon.log::XAuth authentication of 'carol@strongswan.org' successful::YES
 moon:: ipsec status 2> /dev/null::rw.*ESTABLISHED.*moon.strongswan.org.*carol@strongswan.org::YES
 carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*carol@strongswan.org.*moon.strongswan.org::YES
