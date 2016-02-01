@@ -130,7 +130,7 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &rule, &config))
 	{
-		if (rule != AUTH_RULE_SIGNATURE_SCHEME)
+		if (rule != AUTH_RULE_IKE_SIGNATURE_SCHEME)
 		{
 			continue;
 		}
@@ -427,7 +427,8 @@ METHOD(authenticator_t, process, status_t,
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			if (this->store_signature_scheme)
 			{
-				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, (uintptr_t)scheme);
+				auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+						 (uintptr_t)scheme);
 			}
 			break;
 		}

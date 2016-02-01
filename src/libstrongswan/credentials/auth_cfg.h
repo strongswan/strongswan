@@ -106,6 +106,8 @@ enum auth_rule_t {
 	AUTH_RULE_BLISS_STRENGTH,
 	/** required signature scheme, signature_scheme_t */
 	AUTH_RULE_SIGNATURE_SCHEME,
+	/** required signature scheme for IKE authentication, signature_scheme_t */
+	AUTH_RULE_IKE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,
 
