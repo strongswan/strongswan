@@ -16,6 +16,29 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2016 secunet Security Networks AG
+ * Copyright (C) 2016 Thomas Egerer
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @defgroup libcharon libcharon
  *
@@ -161,6 +184,7 @@ typedef struct daemon_t daemon_t;
 #include <network/socket_manager.h>
 #include <control/controller.h>
 #include <bus/bus.h>
+#include <bus/listeners/custom_logger.h>
 #include <sa/ike_sa_manager.h>
 #include <sa/child_sa_manager.h>
 #include <sa/trap_manager.h>
@@ -311,8 +335,8 @@ struct daemon_t {
 						 bool to_stderr);
 
 	/**
-	 * Set the log level for the given log group for all configured file- and
-	 * syslog-loggers.
+	 * Set the log level for the given log group for all configured file-,
+	 * syslog and custom-loggers.
 	 *
 	 * @param group		log group
 	 * @param level		log level
@@ -344,5 +368,16 @@ bool libcharon_init();
  * Deinitialize libcharon and destroy the "charon" instance of daemon_t.
  */
 void libcharon_deinit();
+
+/**
+ * Register a custom logger constructor.
+ *
+ * To be called from __attribute__((constructor)) functions.
+ *
+ * @param name				name of the logger (also used for loglevel config)
+ * @param constructor		constructor to create custom logger
+ */
+void register_custom_logger(char *name,
+							custom_logger_constructor_t constructor);
 
 #endif /** DAEMON_H_ @}*/

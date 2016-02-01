@@ -16,6 +16,29 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2016 secunet Security Networks AG
+ * Copyright (C) 2016 Thomas Egerer
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -111,6 +134,70 @@ static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 }
 
 /**
+ * Data for registered custom loggers
+ */
+typedef struct {
+	/**
+	 * Name of the custom logger (also used for loglevel configuration)
+	 */
+	char *name;
+
+	/**
+	 * Constructor to be called for custom logger creation
+	 */
+	custom_logger_constructor_t constructor;
+
+} custom_logger_entry_t;
+
+#define MAX_CUSTOM_LOGGERS 10
+
+/**
+ * Static array for logger registration using __attribute__((constructor))
+ */
+static custom_logger_entry_t custom_loggers[MAX_CUSTOM_LOGGERS];
+static int custom_logger_count;
+
+/**
+ * Described in header
+ */
+void register_custom_logger(char *name,
+							custom_logger_constructor_t constructor)
+{
+	if (custom_logger_count < MAX_CUSTOM_LOGGERS - 1)
+	{
+		custom_loggers[custom_logger_count].name = name;
+		custom_loggers[custom_logger_count].constructor = constructor;
+		custom_logger_count++;
+	}
+	else
+	{
+		fprintf(stderr, "failed to register custom logger, please increase "
+				"MAX_CUSTOM_LOGGERS");
+	}
+}
+
+/**
+ * Types of supported loggers
+ */
+typedef enum {
+	/**
+	 * Syslog logger instance
+	 */
+	SYS_LOGGER,
+
+	/**
+	 * File logger instance
+	 */
+	FILE_LOGGER,
+
+	/**
+	 * Custom logger instance
+	 */
+	CUSTOM_LOGGER,
+
+} logger_type_t;
+
+/**
  * Some metadata about configured loggers
  */
 typedef struct {
@@ -120,9 +207,9 @@ typedef struct {
 	char *target;
 
 	/**
-	 * TRUE if this is a file logger
+	 * Type of logger
 	 */
-	bool file;
+	logger_type_t type;
 
 	/**
 	 * The actual logger
@@ -130,6 +217,7 @@ typedef struct {
 	union {
 		sys_logger_t *sys;
 		file_logger_t *file;
+		custom_logger_t *custom;
 	} logger;
 
 } logger_entry_t;
@@ -139,13 +227,17 @@ typedef struct {
  */
 static void logger_entry_destroy(logger_entry_t *this)
 {
-	if (this->file)
+	switch (this->type)
 	{
-		DESTROY_IF(this->logger.file);
-	}
-	else
-	{
-		DESTROY_IF(this->logger.sys);
+		case FILE_LOGGER:
+			DESTROY_IF(this->logger.file);
+			break;
+		case SYS_LOGGER:
+			DESTROY_IF(this->logger.sys);
+			break;
+		case CUSTOM_LOGGER:
+			DESTROY_IF(this->logger.custom);
+			break;
 	}
 	free(this->target);
 	free(this);
@@ -156,13 +248,18 @@ static void logger_entry_destroy(logger_entry_t *this)
  */
 static void logger_entry_unregister_destroy(logger_entry_t *this)
 {
-	if (this->file)
+	switch (this->type)
 	{
-		charon->bus->remove_logger(charon->bus, &this->logger.file->logger);
-	}
-	else
-	{
-		charon->bus->remove_logger(charon->bus, &this->logger.sys->logger);
+		case FILE_LOGGER:
+			charon->bus->remove_logger(charon->bus, &this->logger.file->logger);
+			break;
+		case SYS_LOGGER:
+			charon->bus->remove_logger(charon->bus, &this->logger.sys->logger);
+			break;
+		case CUSTOM_LOGGER:
+			charon->bus->remove_logger(charon->bus,
+									   &this->logger.custom->logger);
+			break;
 	}
 	logger_entry_destroy(this);
 }
@@ -170,9 +267,10 @@ static void logger_entry_unregister_destroy(logger_entry_t *this)
 /**
  * Match a logger entry by target and whether it is a file or syslog logger
  */
-static bool logger_entry_match(logger_entry_t *this, char *target, bool *file)
+static bool logger_entry_match(logger_entry_t *this, char *target,
+							   logger_type_t *type)
 {
-	return this->file == *file && streq(this->target, target);
+	return this->type == *type && streq(this->target, target);
 }
 
 /**
@@ -228,28 +326,45 @@ static int get_syslog_facility(char *facility)
  * Returns an existing or newly created logger entry (if found, it is removed
  * from the given linked list of existing loggers)
  */
-static logger_entry_t *get_logger_entry(char *target, bool is_file_logger,
-										linked_list_t *existing)
+static logger_entry_t *get_logger_entry(char *target, logger_type_t type,
+										linked_list_t *existing,
+										custom_logger_constructor_t constructor)
 {
 	logger_entry_t *entry;
 
 	if (existing->find_first(existing, (void*)logger_entry_match,
-							(void**)&entry, target, &is_file_logger) != SUCCESS)
+							(void**)&entry, target, &type) != SUCCESS)
 	{
 		INIT(entry,
 			.target = strdup(target),
-			.file = is_file_logger,
+			.type = type,
 		);
-		if (is_file_logger)
+		switch (type)
 		{
-			entry->logger.file = file_logger_create(target);
-		}
+			case FILE_LOGGER:
+				entry->logger.file = file_logger_create(target);
+				break;
+			case SYS_LOGGER:
 #ifdef HAVE_SYSLOG
-		else
-		{
-			entry->logger.sys = sys_logger_create(get_syslog_facility(target));
-		}
+				entry->logger.sys = sys_logger_create(
+												get_syslog_facility(target));
+				break;
+#else
+				free(entry);
+				return NULL;
 #endif /* HAVE_SYSLOG */
+			case CUSTOM_LOGGER:
+				if (constructor)
+				{
+					entry->logger.custom = constructor(target);
+				}
+				if (!entry->logger.custom)
+				{
+					free(entry);
+					return NULL;
+				}
+				break;
+		}
 	}
 	else
 	{
@@ -266,9 +381,12 @@ static sys_logger_t *add_sys_logger(private_daemon_t *this, char *facility,
 {
 	logger_entry_t *entry;
 
-	entry = get_logger_entry(facility, FALSE, current_loggers);
-	this->loggers->insert_last(this->loggers, entry);
-	return entry->logger.sys;
+	entry = get_logger_entry(facility, SYS_LOGGER, current_loggers, NULL);
+	if (entry)
+	{
+		this->loggers->insert_last(this->loggers, entry);
+	}
+	return entry ? entry->logger.sys : NULL;
 }
 
 /**
@@ -279,9 +397,30 @@ static file_logger_t *add_file_logger(private_daemon_t *this, char *filename,
 {
 	logger_entry_t *entry;
 
-	entry = get_logger_entry(filename, TRUE, current_loggers);
-	this->loggers->insert_last(this->loggers, entry);
-	return entry->logger.file;
+	entry = get_logger_entry(filename, FILE_LOGGER, current_loggers, NULL);
+	if (entry)
+	{
+		this->loggers->insert_last(this->loggers, entry);
+	}
+	return entry ? entry->logger.file : NULL;
+}
+
+ /**
+ * Create or reuse a custom logger
+ */
+static custom_logger_t *add_custom_logger(private_daemon_t *this,
+										  custom_logger_entry_t *custom,
+										  linked_list_t *current_loggers)
+{
+	logger_entry_t *entry;
+
+	entry = get_logger_entry(custom->name, CUSTOM_LOGGER, current_loggers,
+							 custom->constructor);
+	if (entry)
+	{
+		this->loggers->insert_last(this->loggers, entry);
+	}
+	return entry ? entry->logger.custom : NULL;
 }
 
 /**
@@ -300,6 +439,11 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 	}
 
 	sys_logger = add_sys_logger(this, facility, current_loggers);
+	if (!sys_logger)
+	{
+		return;
+	}
+
 	sys_logger->set_options(sys_logger,
 				lib->settings->get_bool(lib->settings, "%s.syslog.%s.ike_name",
 										FALSE, lib->ns, facility));
@@ -339,6 +483,11 @@ static void load_file_logger(private_daemon_t *this, char *filename,
 						"%s.filelog.%s.append", TRUE, lib->ns, filename);
 
 	file_logger = add_file_logger(this, filename, current_loggers);
+	if (!file_logger)
+	{
+		return;
+	}
+
 	file_logger->set_options(file_logger, time_format, add_ms, ike_name);
 	file_logger->open(file_logger, flush_line, append);
 
@@ -353,12 +502,41 @@ static void load_file_logger(private_daemon_t *this, char *filename,
 	charon->bus->add_logger(charon->bus, &file_logger->logger);
 }
 
+/**
+ * Load the given custom logger configured in strongswan.conf
+ */
+static void load_custom_logger(private_daemon_t *this,
+							   custom_logger_entry_t *entry,
+							   linked_list_t *current_loggers)
+{
+	custom_logger_t *custom_logger;
+	debug_t group;
+	level_t def;
+
+	custom_logger = add_custom_logger(this, entry, current_loggers);
+	if (!custom_logger)
+	{
+		return;
+	}
+
+	def = lib->settings->get_int(lib->settings, "%s.customlog.%s.default", 1,
+								 lib->ns, entry->name);
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		custom_logger->set_level(custom_logger, group,
+				lib->settings->get_int(lib->settings, "%s.customlog.%s.%N", def,
+							lib->ns, entry->name, debug_lower_names, group));
+	}
+	charon->bus->add_logger(charon->bus, &custom_logger->logger);
+}
+
 METHOD(daemon_t, load_loggers, void,
 	private_daemon_t *this, level_t levels[DBG_MAX], bool to_stderr)
 {
 	enumerator_t *enumerator;
 	linked_list_t *current_loggers;
 	char *target;
+	int i;
 
 	this->mutex->lock(this->mutex);
 	handle_syslog_identifier(this);
@@ -379,6 +557,11 @@ METHOD(daemon_t, load_loggers, void,
 		load_file_logger(this, target, current_loggers);
 	}
 	enumerator->destroy(enumerator);
+
+	for (i = 0; i < custom_logger_count; ++i)
+	{
+		load_custom_logger(this, &custom_loggers[i], current_loggers);
+	}
 
 	if (!this->loggers->get_count(this->loggers) && levels)
 	{	/* setup legacy style default loggers configured via command-line */
@@ -431,15 +614,24 @@ METHOD(daemon_t, set_level, void,
 	enumerator = this->loggers->create_enumerator(this->loggers);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->file)
+		switch (entry->type)
 		{
-			entry->logger.file->set_level(entry->logger.file, group, level);
-			charon->bus->add_logger(charon->bus, &entry->logger.file->logger);
-		}
-		else
-		{
-			entry->logger.sys->set_level(entry->logger.sys, group, level);
-			charon->bus->add_logger(charon->bus, &entry->logger.sys->logger);
+			case FILE_LOGGER:
+				entry->logger.file->set_level(entry->logger.file, group, level);
+				charon->bus->add_logger(charon->bus,
+										&entry->logger.file->logger);
+				break;
+			case SYS_LOGGER:
+				entry->logger.sys->set_level(entry->logger.sys, group, level);
+				charon->bus->add_logger(charon->bus,
+										&entry->logger.sys->logger);
+				break;
+			case CUSTOM_LOGGER:
+				entry->logger.custom->set_level(entry->logger.custom, group,
+												level);
+				charon->bus->add_logger(charon->bus,
+										&entry->logger.sys->logger);
+				break;
 		}
 	}
 	enumerator->destroy(enumerator);
