@@ -666,6 +666,10 @@ peer_cfg_t *peer_cfg_create(char *name,
 	{
 		jitter_time = reauth_time;
 	}
+	if (dpd && dpd_timeout && dpd > dpd_timeout)
+	{
+		dpd_timeout = dpd;
+	}
 
 	INIT(this,
 		.public = {
