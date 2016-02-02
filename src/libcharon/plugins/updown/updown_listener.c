@@ -278,6 +278,16 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	else
 	{
 		iface = uncache_iface(this, child_sa->get_reqid(child_sa));
+
+		// mod by MSC mschmoock@cocus.com: usage details
+		uint64_t bytes_in, bytes_out;
+		uint64_t packets_in, packets_out;
+		child_sa->get_usestats(child_sa, true, 0, &bytes_in, &packets_in);
+		child_sa->get_usestats(child_sa, false, 0, &bytes_out, &packets_out);
+		push_env(envp, countof(envp), "PLUTO_BYTES_IN=%u", bytes_in);
+		push_env(envp, countof(envp), "PLUTO_PACKETS_IN=%u", packets_in);
+		push_env(envp, countof(envp), "PLUTO_BYTES_OUT=%u", bytes_out);
+		push_env(envp, countof(envp), "PLUTO_PACKETS_OUT=%u", packets_out);
 	}
 	push_env(envp, countof(envp), "PLUTO_INTERFACE=%s",
 			 iface ? iface : "unknown");
