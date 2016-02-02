@@ -369,6 +369,7 @@ METHOD(authenticator_t, process, status_t,
 	signature_scheme_t scheme;
 	status_t status = NOT_FOUND;
 	keymat_v2_t *keymat;
+	const char *reason = "unsupported";
 
 	auth_payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
 	if (!auth_payload)
@@ -397,8 +398,11 @@ METHOD(authenticator_t, process, status_t,
 			{
 				break;
 			}
+			reason = "payload invalid";
 			/* fall-through */
 		default:
+			DBG1(DBG_IKE, "%N authentication %s", auth_method_names,
+				 auth_method, reason);
 			return INVALID_ARG;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
