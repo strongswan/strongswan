@@ -17,7 +17,7 @@
 
 #include "attributes.h"
 
-ENUM_BEGIN(configuration_attribute_type_names, INTERNAL_IP4_ADDRESS, HOME_AGENT_ADDRESS,
+ENUM_BEGIN(configuration_attribute_type_names, INTERNAL_IP4_ADDRESS, P_CSCF_IP6_ADDRESS,
 	"INTERNAL_IP4_ADDRESS",
 	"INTERNAL_IP4_NETMASK",
 	"INTERNAL_IP4_DNS",
@@ -36,8 +36,10 @@ ENUM_BEGIN(configuration_attribute_type_names, INTERNAL_IP4_ADDRESS, HOME_AGENT_
 	"MIP6_HOME_PREFIX",
 	"INTERNAL_IP6_LINK",
 	"INTERNAL_IP6_PREFIX",
-	"HOME_AGENT_ADDRESS");
-ENUM_NEXT(configuration_attribute_type_names, XAUTH_TYPE, XAUTH_ANSWER, HOME_AGENT_ADDRESS,
+	"HOME_AGENT_ADDRESS",
+	"P_CSCF_IP4_ADDRESS",
+	"P_CSCF_IP6_ADDRESS");
+ENUM_NEXT(configuration_attribute_type_names, XAUTH_TYPE, XAUTH_ANSWER, P_CSCF_IP6_ADDRESS,
 	"XAUTH_TYPE",
 	"XAUTH_USER_NAME",
 	"XAUTH_USER_PASSWORD",
@@ -65,7 +67,7 @@ ENUM_NEXT(configuration_attribute_type_names, UNITY_BANNER, UNITY_DDNS_HOSTNAME,
 	"UNITY_DDNS_HOSTNAME");
 ENUM_END(configuration_attribute_type_names, UNITY_DDNS_HOSTNAME);
 
-ENUM_BEGIN(configuration_attribute_type_short_names, INTERNAL_IP4_ADDRESS, HOME_AGENT_ADDRESS,
+ENUM_BEGIN(configuration_attribute_type_short_names, INTERNAL_IP4_ADDRESS, P_CSCF_IP6_ADDRESS,
 	"ADDR",
 	"MASK",
 	"DNS",
@@ -84,8 +86,10 @@ ENUM_BEGIN(configuration_attribute_type_short_names, INTERNAL_IP4_ADDRESS, HOME_
 	"MIP6HPFX",
 	"LINK6",
 	"PFX6",
-	"HOA");
-ENUM_NEXT(configuration_attribute_type_short_names, XAUTH_TYPE, XAUTH_ANSWER, HOME_AGENT_ADDRESS,
+	"HOA",
+	"PCSCF4",
+	"PCSCF6");
+ENUM_NEXT(configuration_attribute_type_short_names, XAUTH_TYPE, XAUTH_ANSWER, P_CSCF_IP6_ADDRESS,
 	"X_TYPE",
 	"X_USER",
 	"X_PWD",
