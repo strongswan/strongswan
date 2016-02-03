@@ -788,7 +788,7 @@ information during an active_list-authorities_ command.
 The _ike-updown_ event is issued when an IKE_SA is established or terminated.
 
 	{
-		up = <yes or no>
+		up = <set if up event>
 		<IKE_SA config name> = {
 			<same data as in the list-sas event, but without child-sas section>
 		}
@@ -814,7 +814,7 @@ The _ike-rekey_ event is issued when an IKE_SA is rekeyed.
 The _child-updown_ event is issued when a CHILD_SA is established or terminated.
 
 	{
-		up = <yes or no>
+		up = <set if up event>
 		<IKE_SA config name> = {
 			<same data as in the list-sas event, but with only the affected
 			 CHILD_SA in the child-sas section>
@@ -1102,8 +1102,8 @@ subdirectory, and gets built and installed if strongSwan has been
  _./configure_'d with_--enable-vici_ and _--enable-perl-cpan_.
 
 The _Vici::Session_ module provides a _new()_ constructor for a high level
-interface, the underlying _Vici::Packet_ and _Vici::Transport_ classes are 
-usually not required to build Perl applications using VICI. The _Vici::Session_ 
+interface, the underlying _Vici::Packet_ and _Vici::Transport_ classes are
+usually not required to build Perl applications using VICI. The _Vici::Session_
 class provides methods for the supported VICI commands. The auxiliare
  _Vici::Message_ class is used to encode configuration parameters sent to
 the daemon and decode data returned by the daemon.
