@@ -156,6 +156,8 @@ endif
 
 LOCAL_SRC_FILES += $(call add_plugin, attr)
 
+LOCAL_SRC_FILES += $(call add_plugin, p-cscf)
+
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2)

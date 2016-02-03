@@ -489,6 +489,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_P_CSCF
+  SUBDIRS += plugins/p_cscf
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/p_cscf/libstrongswan-p-cscf.la
+endif
+endif
+
 if USE_ANDROID_DNS
   SUBDIRS += plugins/android_dns
 if MONOLITHIC

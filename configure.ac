@@ -228,6 +228,7 @@ ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration att
 ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
 ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
 ARG_ENABL_SET([osx-attr],       [enable OS X SystemConfiguration attribute handler.])
+ARG_ENABL_SET([p-cscf],         [enable plugin to request P-CSCF server addresses from an ePDG.])
 ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
 ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
 # TNC modules/plugins
@@ -1396,6 +1397,7 @@ ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([osx-attr],             [c charon cmd])
+ADD_PLUGIN([p-cscf],               [c charon cmd])
 ADD_PLUGIN([android-dns],          [c charon])
 ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
@@ -1500,6 +1502,7 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_OSX_ATTR, test x$osx_attr = xtrue)
+AM_CONDITIONAL(USE_P_CSCF, test x$p_cscf = xtrue)
 AM_CONDITIONAL(USE_ANDROID_DNS, test x$android_dns = xtrue)
 AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
@@ -1839,6 +1842,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/osx_attr/Makefile
+	src/libcharon/plugins/p_cscf/Makefile
 	src/libcharon/plugins/android_dns/Makefile
 	src/libcharon/plugins/android_log/Makefile
 	src/libcharon/plugins/maemo/Makefile
