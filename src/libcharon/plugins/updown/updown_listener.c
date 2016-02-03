@@ -17,6 +17,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "updown_listener.h"
 
@@ -279,15 +280,20 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	{
 		iface = uncache_iface(this, child_sa->get_reqid(child_sa));
 
-		// mod by MSC mschmoock@cocus.com: usage details
-		uint64_t bytes_in, bytes_out;
-		uint64_t packets_in, packets_out;
-		child_sa->get_usestats(child_sa, true, 0, &bytes_in, &packets_in);
+		uint64_t bytes_in, bytes_out = 0;
+		uint64_t packets_in, packets_out = 0;
+		time_t install_time, lastuse_time = 0;
+		child_sa->get_usestats(child_sa, true, &lastuse_time, &bytes_in, &packets_in);
 		child_sa->get_usestats(child_sa, false, 0, &bytes_out, &packets_out);
+		install_time = child_sa->get_installtime(child_sa);
 		push_env(envp, countof(envp), "PLUTO_BYTES_IN=%u", bytes_in);
 		push_env(envp, countof(envp), "PLUTO_PACKETS_IN=%u", packets_in);
 		push_env(envp, countof(envp), "PLUTO_BYTES_OUT=%u", bytes_out);
 		push_env(envp, countof(envp), "PLUTO_PACKETS_OUT=%u", packets_out);
+		if (lastuse_time > 0) 
+		{
+			push_env(envp, countof(envp), "PLUTO_DURATION=%u", lastuse_time - install_time);
+		}
 	}
 	push_env(envp, countof(envp), "PLUTO_INTERFACE=%s",
 			 iface ? iface : "unknown");
