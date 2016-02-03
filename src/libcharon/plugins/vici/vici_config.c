@@ -982,8 +982,16 @@ CALLBACK(parse_auth, bool,
 	}
 	if (strcasepfx(buf, "eap"))
 	{
+		char *pos;
+
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 
+		pos = strchr(buf, ':');
+		if (pos)
+		{
+			*pos = 0;
+			cfg->add_pubkey_constraints(cfg, pos + 1, FALSE);
+		}
 		type = eap_vendor_type_from_string(buf);
 		if (type)
 		{
