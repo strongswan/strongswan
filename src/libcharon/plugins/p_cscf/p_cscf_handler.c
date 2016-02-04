@@ -135,9 +135,13 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 			.enumerate = (void*)_enumerate_attrs,
 			.destroy = (void*)free,
 		},
-		.request_ipv4 = has_host_family(vips, AF_INET),
-		.request_ipv6 = has_host_family(vips, AF_INET6),
 	);
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.p-cscf.enable.%s",
+								FALSE, lib->ns, ike_sa->get_name(ike_sa)))
+	{
+		enumerator->request_ipv4 = has_host_family(vips, AF_INET);
+		enumerator->request_ipv6 = has_host_family(vips, AF_INET6);
+	}
 	return &enumerator->public;
 }
 
