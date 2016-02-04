@@ -71,18 +71,21 @@ struct ipsec_policy_mgr_t {
 	/**
 	 * Remove a policy
 	 *
+	 * @param src			source address of SA
+	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
-	 * @param reqid			unique ID of the associated SA
+	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
+	 * @param sa			details about the SA(s) tied to this policy
 	 * @param mark			optional mark
 	 * @param priority		priority of the policy
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy)(ipsec_policy_mgr_t *this,
-						   traffic_selector_t *src_ts,
-						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, u_int32_t reqid, mark_t mark,
+						   host_t *src, host_t *dst, traffic_selector_t *src_ts,
+						   traffic_selector_t *dst_ts, policy_dir_t direction,
+						   policy_type_t type, ipsec_sa_cfg_t *sa, mark_t mark,
 						   policy_priority_t priority);
 
 	/**

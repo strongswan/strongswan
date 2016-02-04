@@ -175,9 +175,10 @@ METHOD(ipsec_policy_mgr_t, add_policy, status_t,
 }
 
 METHOD(ipsec_policy_mgr_t, del_policy, status_t,
-	private_ipsec_policy_mgr_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
-	mark_t mark, policy_priority_t policy_priority)
+	private_ipsec_policy_mgr_t *this, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa, mark_t mark,
+	policy_priority_t policy_priority)
 {
 	enumerator_t *enumerator;
 	ipsec_policy_entry_t *current, *found = NULL;
@@ -198,7 +199,7 @@ METHOD(ipsec_policy_mgr_t, del_policy, status_t,
 	{
 		if (current->priority == priority &&
 			current->policy->match(current->policy, src_ts, dst_ts, direction,
-								   reqid, mark, policy_priority))
+								   sa->reqid, mark, policy_priority))
 		{
 			this->policies->remove_at(this->policies, enumerator);
 			found = current;

@@ -571,8 +571,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_entry_t *policy, *found = NULL;
 	status_t status;
 
-	status = ipsec->policies->del_policy(ipsec->policies, src_ts, dst_ts,
-										 direction, sa->reqid, mark, priority);
+	status = ipsec->policies->del_policy(ipsec->policies, src, dst, src_ts,
+								dst_ts, direction, type, sa, mark, priority);
 
 	policy = create_policy_entry(src_ts, dst_ts, direction);
 

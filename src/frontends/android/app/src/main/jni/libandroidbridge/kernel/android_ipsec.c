@@ -131,8 +131,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t priority)
 {
-	return ipsec->policies->del_policy(ipsec->policies, src_ts, dst_ts,
-									   direction, sa->reqid, mark, priority);
+	return ipsec->policies->del_policy(ipsec->policies, src, dst, src_ts,
+									   dst_ts,  direction, type, sa, mark,
+									   priority);
 }
 
 METHOD(kernel_ipsec_t, flush_policies, status_t,
