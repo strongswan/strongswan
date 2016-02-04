@@ -183,7 +183,7 @@ METHOD(ipsec_policy_mgr_t, del_policy, status_t,
 	ipsec_policy_entry_t *current, *found = NULL;
 	u_int32_t priority;
 
-	if (direction == POLICY_FWD)
+	if (type != POLICY_IPSEC || direction == POLICY_FWD)
 	{	/* we ignore these policies as we currently have no use for them */
 		return SUCCESS;
 	}
