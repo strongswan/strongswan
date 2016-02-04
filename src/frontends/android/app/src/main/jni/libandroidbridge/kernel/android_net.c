@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -58,9 +58,14 @@ struct private_android_net_t {
 	linked_list_t *vips;
 
 	/**
-	 * Socket used to determine source address
+	 * Socket used to determine source address (IPv4)
 	 */
 	int socket_v4;
+
+	/**
+	 * Socket used to determine source address (IPv6)
+	 */
+	int socket_v6;
 
 	/**
 	 * Whether the device is currently connected
@@ -116,10 +121,24 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 	socklen_t addrlen;
 	timeval_t now;
 	job_t *job;
+	int socket;
 
+	if (dest->get_family(dest) == AF_INET)
+	{
+		socket = this->socket_v4;
+	}
+	else
+	{
+		socket = this->socket_v6;
+	}
+	if (socket < 0)
+	{
+		DBG1(DBG_KNL, "unable to determine src address for address family");
+		return NULL;
+	}
 	addrlen = *dest->get_sockaddr_len(dest);
 	addr.sockaddr.sa_family = AF_UNSPEC;
-	if (connect(this->socket_v4, &addr.sockaddr, addrlen) < 0)
+	if (connect(socket, &addr.sockaddr, addrlen) < 0)
 	{
 		DBG1(DBG_KNL, "failed to disconnect socket: %s", strerror(errno));
 		return NULL;
@@ -129,7 +148,7 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		 * at all */
 		charonservice->bypass_socket(charonservice, -1, 0);
 	}
-	if (connect(this->socket_v4, dest->get_sockaddr(dest), addrlen) < 0)
+	if (connect(socket, dest->get_sockaddr(dest), addrlen) < 0)
 	{
 		/* don't report an error if we are not connected (ENETUNREACH) */
 		if (errno != ENETUNREACH)
@@ -159,7 +178,7 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		}
 		return NULL;
 	}
-	if (getsockname(this->socket_v4, &addr.sockaddr, &addrlen) < 0)
+	if (getsockname(socket, &addr.sockaddr, &addrlen) < 0)
 	{
 		DBG1(DBG_KNL, "failed to determine src address: %s", strerror(errno));
 		return NULL;
@@ -276,6 +295,7 @@ METHOD(kernel_net_t, destroy, void,
 	this->mutex->destroy(this->mutex);
 	this->vips->destroy(this->vips);
 	close(this->socket_v4);
+	close(this->socket_v6);
 	free(this);
 }
 
@@ -313,6 +333,24 @@ kernel_net_t *kernel_android_net_create()
 			 strerror(errno));
 	}
 	charonservice->bypass_socket(charonservice, this->socket_v4, AF_INET);
+
+	switch (charon->socket->supported_families(charon->socket))
+	{
+		case SOCKET_FAMILY_IPV6:
+		case SOCKET_FAMILY_BOTH:
+			this->socket_v6 = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+			if (this->socket_v6 < 0)
+			{
+				DBG1(DBG_KNL, "failed to create socket to lookup IPv6 src "
+					 "addresses: %s", strerror(errno));
+			}
+			charonservice->bypass_socket(charonservice, this->socket_v6,
+										 AF_INET6);
+			break;
+		default:
+			this->socket_v6 = -1;
+			break;
+	}
 
 	this->mutex->lock(this->mutex);
 	this->network_manager->add_connectivity_cb(
