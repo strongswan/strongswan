@@ -103,6 +103,22 @@ METHOD(enumerator_t, enumerate_attrs, bool,
 	return FALSE;
 }
 
+/**
+ * Check if the given host has a matching address family
+ */
+static bool is_family(host_t *host, int *family)
+{
+	return host->get_family(host) == *family;
+}
+
+/**
+ * Check if a list has a host of a given family
+ */
+static bool has_host_family(linked_list_t *list, int family)
+{
+	return list->find_first(list, (void*)is_family, NULL, &family) == SUCCESS;
+}
+
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 	private_p_cscf_handler_t *this, ike_sa_t *ike_sa,
 	linked_list_t *vips)
@@ -119,8 +135,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 			.enumerate = (void*)_enumerate_attrs,
 			.destroy = (void*)free,
 		},
-		.request_ipv4 = TRUE,
-		.request_ipv6 = TRUE,
+		.request_ipv4 = has_host_family(vips, AF_INET),
+		.request_ipv6 = has_host_family(vips, AF_INET6),
 	);
 	return &enumerator->public;
 }
