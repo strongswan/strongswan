@@ -14,6 +14,7 @@
  */
 
 #include "p_cscf_plugin.h"
+#include "p_cscf_handler.h"
 
 #include <daemon.h>
 
@@ -28,6 +29,11 @@ struct private_p_cscf_plugin_t {
 	 * Public interface
 	 */
 	p_cscf_plugin_t public;
+
+	/**
+	 * P-CSCF server address attribute handler
+	 */
+	p_cscf_handler_t *handler;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -36,9 +42,40 @@ METHOD(plugin_t, get_name, char*,
 	return "p-cscf";
 }
 
+/**
+ * Register handler
+ */
+static bool plugin_cb(private_p_cscf_plugin_t *this,
+					  plugin_feature_t *feature, bool reg, void *cb_data)
+{
+	if (reg)
+	{
+		charon->attributes->add_handler(charon->attributes,
+										&this->handler->handler);
+	}
+	else
+	{
+		charon->attributes->remove_handler(charon->attributes,
+										   &this->handler->handler);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_p_cscf_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)plugin_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "p-cscf"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_p_cscf_plugin_t *this)
 {
+	this->handler->destroy(this->handler);
 	free(this);
 }
 
@@ -53,9 +90,11 @@ plugin_t *p_cscf_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
+		.handler = p_cscf_handler_create(),
 	);
 
 	return &this->public.plugin;
