@@ -17,7 +17,7 @@
 
 #include "debug.h"
 
-ENUM(debug_names, DBG_DMN, DBG_LIB,
+ENUM(debug_names, DBG_DMN, DBG_ANY,
 	"DMN",
 	"MGR",
 	"IKE",
@@ -36,9 +36,10 @@ ENUM(debug_names, DBG_DMN, DBG_LIB,
 	"APP",
 	"ESP",
 	"LIB",
+	"ANY",
 );
 
-ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
+ENUM(debug_lower_names, DBG_DMN, DBG_ANY,
 	"dmn",
 	"mgr",
 	"ike",
@@ -57,6 +58,7 @@ ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
 	"app",
 	"esp",
 	"lib",
+	"any",
 );
 
 /**

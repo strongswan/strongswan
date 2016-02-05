@@ -590,17 +590,10 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 		fprintf(out, "command not allowed!\n");
 		return;
 	}
-	if (strcaseeq(msg->loglevel.type, "any"))
+	if (!enum_from_name(debug_names, msg->loglevel.type, &group))
 	{
-		group = DBG_ANY;
-	}
-	else
-	{
-		if (!enum_from_name(debug_names, msg->loglevel.type, &group))
-		{
-			fprintf(out, "unknown type '%s'!\n", msg->loglevel.type);
-			return;
-		}
+		fprintf(out, "unknown type '%s'!\n", msg->loglevel.type);
+		return;
 	}
 	charon->set_level(charon, group, msg->loglevel.level);
 }
