@@ -159,6 +159,7 @@ static attribute_type_key_t keys[] = {
 	{"netmask",			INTERNAL_IP4_NETMASK,	INTERNAL_IP6_NETMASK},
 	{"server",			INTERNAL_IP4_SERVER,	INTERNAL_IP6_SERVER},
 	{"subnet",			INTERNAL_IP4_SUBNET,	INTERNAL_IP6_SUBNET},
+	{"p-cscf",			P_CSCF_IP4_ADDRESS,		P_CSCF_IP6_ADDRESS},
 	{"split-include",	UNITY_SPLIT_INCLUDE,	UNITY_SPLIT_INCLUDE},
 	{"split-exclude",	UNITY_LOCAL_LAN,		UNITY_LOCAL_LAN},
 };
