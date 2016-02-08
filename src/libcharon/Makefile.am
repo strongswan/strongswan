@@ -280,6 +280,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_QUOTA
+  SUBDIRS += plugins/quota
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/quota/libstrongswan-quota.la
+endif
+endif
+
 if USE_EXT_AUTH
   SUBDIRS += plugins/ext_auth
 if MONOLITHIC

@@ -74,6 +74,7 @@ plugins = \
 	plugins/openssl.opt \
 	plugins/osx-attr.opt \
 	plugins/pkcs11.opt \
+	plugins/quota.opt \
 	plugins/radattr.opt \
 	plugins/random.opt \
 	plugins/resolve.opt \
