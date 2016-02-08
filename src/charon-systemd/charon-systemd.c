@@ -325,6 +325,15 @@ static plugin_feature_t features[] = {
 };
 
 /**
+ * Add namespace alias
+ */
+static void __attribute__ ((constructor))register_namespace()
+{
+	/* inherit settings from charon */
+	library_add_namespace("charon");
+}
+
+/**
  * Main function, starts the daemon.
  */
 int main(int argc, char *argv[])
