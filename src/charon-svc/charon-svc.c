@@ -189,6 +189,15 @@ static int service_wait()
 }
 
 /**
+ * Add namespace alias
+ */
+static void __attribute__ ((constructor))register_namespace()
+{
+	/* inherit settings from charon */
+	library_add_namespace("charon");
+}
+
+/**
  * Initialize and run charon using a wait function
  */
 static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv, int (*wait)())
