@@ -46,6 +46,7 @@
 
 #include <daemon.h>
 #include <threading/rwlock.h>
+#include <threading/rwlock_condvar.h>
 #include <collections/array.h>
 #include <collections/linked_list.h>
 
@@ -99,6 +100,16 @@ struct private_vici_config_t {
 	 * Lock for conns list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Condvar used to snyc running actions
+	 */
+	rwlock_condvar_t *condvar;
+
+	/**
+	 * True while we run or undo a start action
+	 */
+	bool handling_actions;
 
 	/**
 	 * Credential backend managed by VICI used for our certificates
@@ -1671,7 +1682,7 @@ static u_int32_t find_reqid(child_cfg_t *cfg)
 }
 
 /**
- * Perform start actions associated to a child config
+ * Perform start actions associated with a child config
  */
 static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 							 child_cfg_t *child_cfg)
@@ -1704,7 +1715,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 }
 
 /**
- * Undo start actions associated to a child config
+ * Undo start actions associated with a child config
  */
 static void clear_start_action(private_vici_config_t *this, char *peer_name,
 							   child_cfg_t *child_cfg)
@@ -1717,6 +1728,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 	char *name;
 
 	name = child_cfg->get_name(child_cfg);
+
 	switch (child_cfg->get_start_action(child_cfg))
 	{
 		case ACTION_RESTART:
@@ -1823,36 +1835,56 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 }
 
 /**
- * Run start actions associated to all child configs of a peer config
+ * Run or undo a start actions associated with a child config
  */
-static void run_start_actions(private_vici_config_t *this, peer_cfg_t *peer_cfg)
+static void handle_start_action(private_vici_config_t *this,
+								peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+								bool undo)
 {
-	enumerator_t *enumerator;
-	child_cfg_t *child_cfg;
+	this->handling_actions = TRUE;
+	this->lock->unlock(this->lock);
 
-	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-	while (enumerator->enumerate(enumerator, &child_cfg))
-	{
-		run_start_action(this, peer_cfg, child_cfg);
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
- * Undo start actions associated to all child configs of a peer config
- */
-static void clear_start_actions(private_vici_config_t *this,
-								peer_cfg_t *peer_cfg)
-{
-	enumerator_t *enumerator;
-	child_cfg_t *child_cfg;
-
-	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-	while (enumerator->enumerate(enumerator, &child_cfg))
+	if (undo)
 	{
 		clear_start_action(this, peer_cfg->get_name(peer_cfg), child_cfg);
 	}
+	else
+	{
+		run_start_action(this, peer_cfg, child_cfg);
+	}
+
+	this->lock->write_lock(this->lock);
+	this->handling_actions = FALSE;
+}
+
+/**
+ * Run or undo start actions associated with all child configs of a peer config
+ */
+static void handle_start_actions(private_vici_config_t *this,
+								 peer_cfg_t *peer_cfg, bool undo)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *child_cfg;
+
+	this->handling_actions = TRUE;
+	this->lock->unlock(this->lock);
+
+	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+	while (enumerator->enumerate(enumerator, &child_cfg))
+	{
+		if (undo)
+		{
+			clear_start_action(this, peer_cfg->get_name(peer_cfg), child_cfg);
+		}
+		else
+		{
+			run_start_action(this, peer_cfg, child_cfg);
+		}
+	}
 	enumerator->destroy(enumerator);
+
+	this->lock->write_lock(this->lock);
+	this->handling_actions = FALSE;
 }
 
 /**
@@ -1868,14 +1900,7 @@ static void replace_children(private_vici_config_t *this,
 	enumerator = to->replace_child_cfgs(to, from);
 	while (enumerator->enumerate(enumerator, &child, &added))
 	{
-		if (added)
-		{
-			run_start_action(this, to, child);
-		}
-		else
-		{
-			clear_start_action(this, to->get_name(to), child);
-		}
+		handle_start_action(this, to, child, !added);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1891,6 +1916,10 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 	bool merged = FALSE;
 
 	this->lock->write_lock(this->lock);
+	while (this->handling_actions)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 
 	enumerator = this->conns->create_enumerator(this->conns);
 	while (enumerator->enumerate(enumerator, &current))
@@ -1911,10 +1940,10 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 				DBG1(DBG_CFG, "replaced vici connection: %s",
 					 peer_cfg->get_name(peer_cfg));
 				this->conns->remove_at(this->conns, enumerator);
-				clear_start_actions(this, current);
-				current->destroy(current);
 				this->conns->insert_last(this->conns, peer_cfg);
-				run_start_actions(this, peer_cfg);
+				handle_start_actions(this, current, TRUE);
+				handle_start_actions(this, peer_cfg, FALSE);
+				current->destroy(current);
 			}
 			merged = TRUE;
 			break;
@@ -1926,9 +1955,9 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 	{
 		DBG1(DBG_CFG, "added vici connection: %s", peer_cfg->get_name(peer_cfg));
 		this->conns->insert_last(this->conns, peer_cfg);
-		run_start_actions(this, peer_cfg);
+		handle_start_actions(this, peer_cfg, FALSE);
 	}
-
+	this->condvar->signal(this->condvar);
 	this->lock->unlock(this->lock);
 }
 
@@ -2139,19 +2168,24 @@ CALLBACK(unload_conn, vici_message_t*,
 	}
 
 	this->lock->write_lock(this->lock);
+	while (this->handling_actions)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 	enumerator = this->conns->create_enumerator(this->conns);
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
 		if (streq(cfg->get_name(cfg), conn_name))
 		{
 			this->conns->remove_at(this->conns, enumerator);
-			clear_start_actions(this, cfg);
+			handle_start_actions(this, cfg, TRUE);
 			cfg->destroy(cfg);
 			found = TRUE;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->condvar->signal(this->condvar);
 	this->lock->unlock(this->lock);
 
 	if (!found)
@@ -2207,6 +2241,7 @@ METHOD(vici_config_t, destroy, void,
 {
 	manage_commands(this, FALSE);
 	this->conns->destroy_offset(this->conns, offsetof(peer_cfg_t, destroy));
+	this->condvar->destroy(this->condvar);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -2232,6 +2267,7 @@ vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
 		.dispatcher = dispatcher,
 		.conns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.condvar = rwlock_condvar_create(),
 		.authority = authority,
 		.cred = cred,
 	);
