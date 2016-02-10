@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,6 +23,7 @@
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
+#include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
@@ -57,9 +58,9 @@ struct entry_t {
 	condvar_t *condvar;
 
 	/**
-	 * Is this ike_sa currently checked out?
+	 * Thread by which this IKE_SA is currently checked out, if any
 	 */
-	bool checked_out;
+	thread_t *checked_out;
 
 	/**
 	 * Does this SA drives out new threads?
@@ -1148,7 +1149,7 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 	{
 		if (wait_for_entry(this, entry, segment))
 		{
-			entry->checked_out = TRUE;
+			entry->checked_out = thread_current();
 			ike_sa = entry->ike_sa;
 			DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
@@ -1292,7 +1293,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 						entry->init_hash = hash;
 
 						segment = put_entry(this, entry);
-						entry->checked_out = TRUE;
+						entry->checked_out = thread_current();
 						unlock_single_segment(this, segment);
 
 						DBG2(DBG_MGR, "created IKE_SA %s[%u]",
@@ -1347,7 +1348,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			ike_sa_id_t *ike_id;
 
 			ike_id = entry->ike_sa->get_id(entry->ike_sa);
-			entry->checked_out = TRUE;
+			entry->checked_out = thread_current();
 			if (message->get_first_payload_type(message) != PLV1_FRAGMENT &&
 				message->get_first_payload_type(message) != PLV2_FRAGMENT)
 			{	/* TODO-FRAG: this fails if there are unencrypted payloads */
@@ -1410,7 +1411,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 			current_ike = current_peer->get_ike_cfg(current_peer);
 			if (current_ike->equals(current_ike, peer_cfg->get_ike_cfg(peer_cfg)))
 			{
-				entry->checked_out = TRUE;
+				entry->checked_out = thread_current();
 				ike_sa = entry->ike_sa;
 				DBG2(DBG_MGR, "found existing IKE_SA %u with a '%s' config",
 						ike_sa->get_unique_id(ike_sa),
@@ -1449,7 +1450,7 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 			if (entry->ike_sa->get_unique_id(entry->ike_sa) == id)
 			{
 				ike_sa = entry->ike_sa;
-				entry->checked_out = TRUE;
+				entry->checked_out = thread_current();
 				break;
 			}
 			/* other threads might be waiting for this entry */
@@ -1505,7 +1506,7 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 			/* got one, return */
 			if (ike_sa)
 			{
-				entry->checked_out = TRUE;
+				entry->checked_out = thread_current();
 				DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
 						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 				break;
@@ -1597,7 +1598,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 		/* ike_sa_id must be updated */
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
-		entry->checked_out = FALSE;
+		entry->checked_out = NULL;
 		entry->processing = -1;
 		/* check if this SA is half-open */
 		if (entry->half_open && ike_sa->get_state(ike_sa) != IKE_CONNECTING)
@@ -1656,7 +1657,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 				 * thread can acquire it.  Since it is not yet in the list of
 				 * connected peers that will not cause a deadlock as no other
 				 * caller of check_unqiueness() will try to check out this SA */
-				entry->checked_out = TRUE;
+				entry->checked_out = thread_current();
 				unlock_single_segment(this, segment);
 
 				this->public.check_uniqueness(&this->public, ike_sa, TRUE);
@@ -1667,7 +1668,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 				 * thread is waiting, but it should still exist, so there is no
 				 * need for a lookup via get_entry_by... */
 				lock_single_segment(this, segment);
-				entry->checked_out = FALSE;
+				entry->checked_out = NULL;
 				/* We already signaled waiting threads above, we have to do that
 				 * again after checking the SA out and back in again. */
 				entry->condvar->signal(entry->condvar);
@@ -1711,7 +1712,7 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 		{	/* it looks like flush() has been called and the SA is being deleted
 			 * anyway, just check it in */
 			DBG2(DBG_MGR, "ignored check-in and destroy of IKE_SA during shutdown");
-			entry->checked_out = FALSE;
+			entry->checked_out = NULL;
 			entry->condvar->broadcast(entry->condvar);
 			unlock_single_segment(this, segment);
 			return;
