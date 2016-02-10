@@ -144,6 +144,13 @@ METHOD(payload_t, verify, status_t,
 			}
 			break;
 		case INTERNAL_IP6_ADDRESS:
+			if (this->type == PLV1_CONFIGURATION_ATTRIBUTE &&
+				this->length_or_value == 16)
+			{	/* 16 bytes are correct for IKEv1, but older releases sent a
+				 * prefix byte so we still accept 0 or 17 as in IKEv2 */
+				break;
+			}
+			/* fall-through */
 		case INTERNAL_IP6_SUBNET:
 			if (this->length_or_value != 0 && this->length_or_value != 17)
 			{
