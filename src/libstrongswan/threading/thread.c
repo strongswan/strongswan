@@ -48,7 +48,7 @@ struct private_thread_t {
 	thread_t public;
 
 	/**
-	 * Human-readable ID of this thread.
+	 * Identificator of this thread (human-readable/thread ID).
 	 */
 	u_int id;
 
@@ -155,6 +155,23 @@ static void thread_destroy(private_thread_t *this)
 	this->mutex->unlock(this->mutex);
 	this->mutex->destroy(this->mutex);
 	free(this);
+}
+
+/**
+ * Determine the ID of the current thread
+ */
+static u_int get_thread_id()
+{
+	u_int id;
+
+#if defined(USE_THREAD_IDS) && defined(HAVE_GETTID)
+	id = gettid();
+#else
+	id_mutex->lock(id_mutex);
+	id = next_id++;
+	id_mutex->unlock(id_mutex);
+#endif
+	return id;
 }
 
 METHOD(thread_t, cancel, void,
@@ -284,6 +301,8 @@ static void *thread_main(private_thread_t *this)
 {
 	void *res;
 
+	this->id = get_thread_id();
+
 	current_thread->set(current_thread, this);
 	pthread_cleanup_push((thread_cleanup_t)thread_cleanup, this);
 
@@ -315,9 +334,6 @@ thread_t *thread_create(thread_main_t main, void *arg)
 
 	this->main = main;
 	this->arg = arg;
-	id_mutex->lock(id_mutex);
-	this->id = next_id++;
-	id_mutex->unlock(id_mutex);
 
 	if (pthread_create(&this->thread_id, NULL, (void*)thread_main, this) != 0)
 	{
@@ -341,11 +357,7 @@ thread_t *thread_current()
 	if (!this)
 	{
 		this = thread_create_internal();
-
-		id_mutex->lock(id_mutex);
-		this->id = next_id++;
-		id_mutex->unlock(id_mutex);
-
+		this->id = get_thread_id();
 		current_thread->set(current_thread, (void*)this);
 	}
 	return &this->public;
@@ -475,12 +487,12 @@ void threads_init()
 
 	dummy1 = thread_value_create(NULL);
 
-	next_id = 1;
-	main_thread->id = 0;
+	next_id = 0;
 	main_thread->thread_id = pthread_self();
 	current_thread = thread_value_create(NULL);
 	current_thread->set(current_thread, (void*)main_thread);
 	id_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	main_thread->id = get_thread_id();
 
 #ifndef HAVE_PTHREAD_CANCEL
 	{	/* install a signal handler for our custom SIG_CANCEL */

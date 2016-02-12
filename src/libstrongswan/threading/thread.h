@@ -97,11 +97,13 @@ thread_t *thread_create(thread_main_t main, void *arg);
 thread_t *thread_current();
 
 /**
- * Get the human-readable ID of the current thread.
+ * Get the ID of the current thread.
  *
- * The IDs are assigned incrementally starting from 1.
+ * Depending on the build configuration thread IDs are either assigned
+ * incrementally starting from 1, or equal the value returned by an appropriate
+ * syscall (like gettid() or GetCurrentThreadId()), if available.
  *
- * @return				human-readable ID
+ * @return				ID of the current thread
  */
 u_int thread_current_id();
 

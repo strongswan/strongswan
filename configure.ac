@@ -305,6 +305,7 @@ ARG_ENABL_SET([perl-cpan-install],[enable installation of provided CPAN module.]
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
+ARG_ENABL_SET([log-thread-ids], [use thread ID, if available, instead of an incremented value starting from 1, to identify threads.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
 # ===================================
@@ -1641,6 +1642,9 @@ if test x$mediation = xtrue; then
 fi
 if test x$capabilities = xlibcap -o x$capabilities = xnative; then
 	AC_DEFINE([CAPABILITIES], [], [capability dropping support])
+fi
+if test x$log_thread_ids = xtrue; then
+	AC_DEFINE([USE_THREAD_IDS], [], [use thread ID for thread identification, if available])
 fi
 if test x$monolithic = xtrue; then
 	AC_DEFINE([MONOLITHIC], [], [monolithic build embedding plugins])

@@ -516,7 +516,11 @@ thread_t *thread_current()
  */
 u_int thread_current_id()
 {
+#ifdef USE_THREAD_IDS
+	return get_current_thread()->id;
+#else
 	return get_current_thread()->tid;
+#endif
 }
 
 /**
