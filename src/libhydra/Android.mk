@@ -13,10 +13,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(libhydra_la_SOURCES))
 
 # adding the plugin source files
 
-LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
-
-LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
-
 # build libhydra ---------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \

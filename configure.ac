@@ -1280,9 +1280,8 @@ cmd_plugins=
 aikgen_plugins=
 
 # location specific lists for checksumming,
-# for src/libcharon, src/libhydra, src/libstrongswan and src/libtnccs
+# for src/libcharon, src/libstrongswan and src/libtnccs
 c_plugins=
-h_plugins=
 s_plugins=
 t_plugins=
 
@@ -1347,9 +1346,9 @@ ADD_PLUGIN([load-tester],          [c charon])
 ADD_PLUGIN([kernel-libipsec],      [c charon cmd])
 ADD_PLUGIN([kernel-wfp],           [c charon])
 ADD_PLUGIN([kernel-iph],           [c charon])
-ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
-ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
-ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
+ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
+ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
+ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
@@ -1511,6 +1510,9 @@ AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
+AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
 AM_CONDITIONAL(USE_KERNEL_WFP, test x$kernel_wfp = xtrue)
 AM_CONDITIONAL(USE_KERNEL_IPH, test x$kernel_iph = xtrue)
@@ -1577,12 +1579,6 @@ AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
-
-#  hydra plugins
-# ---------------
-AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
-AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
-AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 
 #  other options
 # ---------------
@@ -1749,9 +1745,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libhydra/Makefile
-	src/libhydra/plugins/kernel_netlink/Makefile
-	src/libhydra/plugins/kernel_pfkey/Makefile
-	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/tests/Makefile
 	src/libipsec/Makefile
 	src/libipsec/tests/Makefile
@@ -1828,6 +1821,9 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/unity/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
+	src/libcharon/plugins/kernel_netlink/Makefile
+	src/libcharon/plugins/kernel_pfkey/Makefile
+	src/libcharon/plugins/kernel_pfroute/Makefile
 	src/libcharon/plugins/kernel_libipsec/Makefile
 	src/libcharon/plugins/kernel_wfp/Makefile
 	src/libcharon/plugins/kernel_iph/Makefile
@@ -1922,6 +1918,5 @@ AC_MSG_RESULT([-----------------------------------------------------])
 
 AC_MSG_RESULT([libstrongswan:$s_plugins])
 AC_MSG_RESULT([libcharon:    $c_plugins])
-AC_MSG_RESULT([libhydra:     $h_plugins])
 AC_MSG_RESULT([libtnccs:     $t_plugins])
 AC_MSG_RESULT([])

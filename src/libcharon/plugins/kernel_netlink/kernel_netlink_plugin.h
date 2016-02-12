@@ -15,7 +15,7 @@
 
 /**
  * @defgroup kernel_netlink kernel_netlink
- * @ingroup hplugins
+ * @ingroup cplugins
  *
  * @defgroup kernel_netlink_plugin kernel_netlink_plugin
  * @{ @ingroup kernel_netlink

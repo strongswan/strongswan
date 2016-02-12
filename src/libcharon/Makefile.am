@@ -512,6 +512,27 @@ if MONOLITHIC
 endif
 endif
 
+if USE_KERNEL_PFKEY
+  SUBDIRS += plugins/kernel_pfkey
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
+endif
+endif
+
+if USE_KERNEL_PFROUTE
+  SUBDIRS += plugins/kernel_pfroute
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
+endif
+endif
+
+if USE_KERNEL_NETLINK
+  SUBDIRS += plugins/kernel_netlink
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_netlink/libstrongswan-kernel-netlink.la
+endif
+endif
+
 if USE_KERNEL_LIBIPSEC
   SUBDIRS += plugins/kernel_libipsec
 if MONOLITHIC
