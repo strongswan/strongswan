@@ -15,7 +15,6 @@ parser/parser.y parser/lexer.l parser/conf_parser.c parser/conf_parser.h
 AM_CPPFLAGS = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/starter \
 	-I$(top_srcdir)/src/stroke \
@@ -33,7 +32,6 @@ AM_YFLAGS = -v -d
 
 starter_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	libstarter.la \
 	$(SOCKLIB) $(PTHREADLIB)

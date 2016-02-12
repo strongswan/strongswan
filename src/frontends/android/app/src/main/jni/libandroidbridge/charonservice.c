@@ -35,7 +35,6 @@
 #endif
 
 #include <daemon.h>
-#include <hydra.h>
 #include <ipsec.h>
 #include <library.h>
 #include <threading/thread.h>
@@ -606,17 +605,9 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	set_options(logfile);
 	free(logfile);
 
-	if (!libhydra_init())
-	{
-		libhydra_deinit();
-		library_deinit();
-		return FALSE;
-	}
-
 	if (!libipsec_init())
 	{
 		libipsec_deinit();
-		libhydra_deinit();
 		library_deinit();
 		return FALSE;
 	}
@@ -625,7 +616,6 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		libcharon_deinit();
 		libipsec_deinit();
-		libhydra_deinit();
 		library_deinit();
 		return FALSE;
 	}
@@ -657,7 +647,6 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 		libcharon_deinit();
 		charonservice_deinit(env);
 		libipsec_deinit();
-		libhydra_deinit();
 		library_deinit();
 		return FALSE;
 	}
@@ -687,7 +676,6 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 	libcharon_deinit();
 	charonservice_deinit(env);
 	libipsec_deinit();
-	libhydra_deinit();
 	library_deinit();
 }
 

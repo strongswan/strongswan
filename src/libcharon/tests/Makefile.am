@@ -10,7 +10,6 @@ libcharon_tests_SOURCES = \
 
 libcharon_tests_CFLAGS = \
   -I$(top_srcdir)/src/libcharon \
-  -I$(top_srcdir)/src/libhydra \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \
   -DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
@@ -20,6 +19,5 @@ libcharon_tests_CFLAGS = \
 libcharon_tests_LDFLAGS = @COVERAGE_LDFLAGS@
 libcharon_tests_LDADD = \
   $(top_builddir)/src/libcharon/libcharon.la \
-  $(top_builddir)/src/libhydra/libhydra.la \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
   $(top_builddir)/src/libstrongswan/tests/libtest.la

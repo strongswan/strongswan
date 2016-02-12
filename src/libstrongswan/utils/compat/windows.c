@@ -82,7 +82,6 @@ static void* dlsym_default(const char *name)
 {
 	const char *dlls[] = {
 		"libstrongswan-0.dll",
-		"libhydra-0.dll",
 		"libcharon-0.dll",
 		"libtnccs-0.dll",
 		NULL /* .exe */

@@ -2,7 +2,6 @@ etc/strongswan.conf												etc/
 usr/lib/strongswan/libstrongswan.so*							usr/lib/strongswan/
 usr/lib/strongswan/libcharon.so*								usr/lib/strongswan/
 usr/lib/strongswan/libtls.so*									usr/lib/strongswan/
-usr/lib/strongswan/libhydra.so*									usr/lib/strongswan/
 usr/lib/strongswan/plugins/libstrongswan-x509.so*				usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-pubkey.so*				usr/lib/strongswan/plugins/
 usr/lib/strongswan/plugins/libstrongswan-xcbc.so*				usr/lib/strongswan/plugins/

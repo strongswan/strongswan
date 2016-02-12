@@ -26,7 +26,6 @@
 #include <errno.h>
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
@@ -329,11 +328,6 @@ int main(int argc, char *argv[])
 		{
 			exit(SS_RC_DAEMON_INTEGRITY);
 		}
-	}
-	atexit(libhydra_deinit);
-	if (!libhydra_init())
-	{
-		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(libcharon_deinit);
 	if (!libcharon_init())

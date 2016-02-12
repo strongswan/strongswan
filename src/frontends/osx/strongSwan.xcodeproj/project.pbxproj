@@ -478,7 +478,6 @@
 					/usr/include,
 					../../libstrongswan,
 					../../libcharon,
-					../../libhydra,
 				);
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
@@ -486,7 +485,6 @@
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
-					../../libhydra/.libs,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
@@ -499,8 +497,6 @@
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
 					../../libipsec/.libs/libipsec.a,
-					"-force_load",
-					../../libhydra/.libs/libhydra.a,
 					"-force_load",
 					../../libcharon/.libs/libcharon.a,
 					"-sectcreate",
@@ -531,7 +527,6 @@
 					/usr/include,
 					../../libstrongswan,
 					../../libcharon,
-					../../libhydra,
 				);
 				INFOPLIST_FILE = "charon-xpc/charon-xpc-Info.plist";
 				INSTALL_PATH = /;
@@ -539,7 +534,6 @@
 					/usr/lib,
 					../../libstrongswan/.libs,
 					../../libcharon/.libs,
-					../../libhydra/.libs,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = (
@@ -552,8 +546,6 @@
 					../../libstrongswan/.libs/libstrongswan.a,
 					"-force_load",
 					../../libipsec/.libs/libipsec.a,
-					"-force_load",
-					../../libhydra/.libs/libhydra.a,
 					"-force_load",
 					../../libcharon/.libs/libcharon.a,
 					"-sectcreate",

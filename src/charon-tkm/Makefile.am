@@ -4,15 +4,13 @@ OBJ = $(abs_top_builddir)/src
 AM_CPPFLAGS = \
 	-include $(abs_top_builddir)/config.h \
 	-I$(SRC)/libstrongswan \
-	-I$(SRC)/libhydra \
 	-I$(SRC)/libcharon
 
 LIBLD = \
 	-L$(OBJ)/libstrongswan/.libs \
-	-L$(OBJ)/libhydra/.libs \
 	-L$(OBJ)/libcharon/.libs
-LIBPT = $(OBJ)/libstrongswan/.libs:$(OBJ)/libhydra/.libs:$(OBJ)/libcharon/.libs
-LIBFL = -lstrongswan -lhydra -lcharon
+LIBPT = $(OBJ)/libstrongswan/.libs:$(OBJ)/libcharon/.libs
+LIBFL = -lstrongswan -lcharon
 
 DEFS += -DPLUGINS=\""$(PLUGINS)\"" -DIPSEC_PIDDIR=\"${piddir}\"
 

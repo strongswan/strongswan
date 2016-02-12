@@ -26,7 +26,6 @@
 #include <libgen.h>
 #include <errno.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <library.h>
 #include <utils/backtrace.h>
@@ -256,14 +255,6 @@ int main(int argc, char *argv[])
 		exit(status);
 	}
 
-	if (!libhydra_init())
-	{
-		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting %s", dmn_name);
-		libhydra_deinit();
-		library_deinit();
-		exit(status);
-	}
-
 	if (!libcharon_init())
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting %s", dmn_name);
@@ -391,7 +382,6 @@ int main(int argc, char *argv[])
 deinit:
 	destroy_dh_mapping();
 	libcharon_deinit();
-	libhydra_deinit();
 	library_deinit();
 	tkm_deinit();
 	return status;

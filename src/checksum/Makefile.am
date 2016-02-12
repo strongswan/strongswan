@@ -8,7 +8,6 @@ EXTRA_PROGRAMS = checksum_builder
 checksum_builder_SOURCES = checksum_builder.c
 checksum_builder_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libhydra/libhydra.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	$(DLLIB)
 checksum_builder_LDFLAGS = -rpath '$(DESTDIR)$(ipseclibdir)'
@@ -17,7 +16,6 @@ CLEANFILES = checksum.c $(EXTRA_PROGRAMS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-DPLUGINDIR=\"${DESTDIR}${plugindir}\"
 
@@ -33,14 +31,6 @@ exes =
 
 if !MONOLITHIC
   AM_CPPFLAGS += -DS_PLUGINS=\""${s_plugins}\""
-endif
-
-if USE_LIBHYDRA
-  deps += $(top_builddir)/src/libhydra/libhydra.la
-  libs += $(DESTDIR)$(ipseclibdir)/libhydra.so
-if !MONOLITHIC
-  AM_CPPFLAGS += -DH_PLUGINS=\""${h_plugins}\""
-endif
 endif
 
 if USE_LIBIPSEC

@@ -14,7 +14,6 @@
  */
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 
 #include <utils/backtrace.h>
@@ -210,28 +209,22 @@ static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv, int (*wait)())
 		if (library_init(NULL, SERVICE_NAME))
 		{
 			update_status(SERVICE_START_PENDING);
-			if (libhydra_init())
+			if (libcharon_init())
 			{
+				charon->load_loggers(charon, levels, TRUE);
+				print_version();
 				update_status(SERVICE_START_PENDING);
-				if (libcharon_init())
+				if (charon->initialize(charon, PLUGINS))
 				{
-					charon->load_loggers(charon, levels, TRUE);
-					print_version();
 					update_status(SERVICE_START_PENDING);
-					if (charon->initialize(charon, PLUGINS))
-					{
-						update_status(SERVICE_START_PENDING);
-						lib->plugins->status(lib->plugins, LEVEL_CTRL);
+					lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
-						charon->start(charon);
+					charon->start(charon);
 
-						status.dwWin32ExitCode = wait();
-					}
-					update_status(SERVICE_STOP_PENDING);
-					libcharon_deinit();
+					status.dwWin32ExitCode = wait();
 				}
 				update_status(SERVICE_STOP_PENDING);
-				libhydra_deinit();
+				libcharon_deinit();
 			}
 			update_status(SERVICE_STOP_PENDING);
 			library_deinit();

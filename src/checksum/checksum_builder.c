@@ -19,7 +19,6 @@
 #include <dlfcn.h>
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 #include <collections/enumerator.h>
 
@@ -128,9 +127,8 @@ int main(int argc, char* argv[])
 {
 	int i;
 
-	/* forces link against libhydra/libcharon, imports symbols needed to
+	/* forces link against libcharon, imports symbols needed to
 	 * dlopen plugins */
-	hydra = NULL;
 	charon = NULL;
 
 	/* avoid confusing leak reports in build process */
@@ -158,9 +156,6 @@ int main(int argc, char* argv[])
 	}
 #ifdef S_PLUGINS
 	build_plugin_checksums(S_PLUGINS);
-#endif
-#ifdef H_PLUGINS
-	build_plugin_checksums(H_PLUGINS);
 #endif
 #ifdef T_PLUGINS
 	build_plugin_checksums(T_PLUGINS);

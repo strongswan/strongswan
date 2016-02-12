@@ -97,7 +97,6 @@ strongswan_CFLAGS += \
 strongswan_BUILD := \
 	charon \
 	libcharon \
-	libhydra \
 	libstrongswan \
 	libtncif \
 	libtnccs \

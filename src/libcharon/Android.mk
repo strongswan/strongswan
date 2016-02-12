@@ -235,7 +235,6 @@ endif
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
@@ -248,6 +247,6 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libhydra
+LOCAL_SHARED_LIBRARIES += libstrongswan
 
 include $(BUILD_SHARED_LIBRARY)
