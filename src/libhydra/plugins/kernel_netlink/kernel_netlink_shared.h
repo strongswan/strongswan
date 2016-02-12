@@ -21,14 +21,22 @@
 #include <linux/rtnetlink.h>
 
 /**
+ * Default buffer size.
+ *
+ * 1024 byte is currently sufficient for all operations.
+ */
+#ifndef KERNEL_NETLINK_BUFSIZE
+#define KERNEL_NETLINK_BUFSIZE 1024
+#endif
+
+/**
  * General purpose netlink buffer.
  *
- * 1024 byte is currently sufficient for all operations. Some platform
- * require an enforced aligment to four bytes (e.g. ARM).
+ * Some platforms require an enforced aligment to four bytes (e.g. ARM).
  */
 typedef union {
 	struct nlmsghdr hdr;
-	u_char bytes[1024];
+	u_char bytes[KERNEL_NETLINK_BUFSIZE];
 } netlink_buf_t __attribute__((aligned(RTA_ALIGNTO)));
 
 typedef struct netlink_socket_t netlink_socket_t;
