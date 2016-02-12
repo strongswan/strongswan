@@ -41,7 +41,6 @@
 
 #include <string.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <sa/ikev1/keymat_v1.h>
 #include <config/peer_cfg.h>
@@ -104,7 +103,7 @@ static bool force_encap(ike_cfg_t *ike_cfg)
 {
 	if (!ike_cfg->force_encap(ike_cfg))
 	{
-		return hydra->kernel_interface->get_features(hydra->kernel_interface) &
+		return charon->kernel->get_features(charon->kernel) &
 					KERNEL_REQUIRE_UDP_ENCAPSULATION;
 	}
 	return TRUE;

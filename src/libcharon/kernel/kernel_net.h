@@ -16,7 +16,7 @@
 
 /**
  * @defgroup kernel_net kernel_net
- * @{ @ingroup hkernel
+ * @{ @ingroup kernel
  */
 
 #ifndef KERNEL_NET_H_

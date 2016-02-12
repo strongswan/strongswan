@@ -15,7 +15,6 @@
 
 #include "kernel_handler.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
@@ -135,8 +134,7 @@ METHOD(kernel_listener_t, roam, bool,
 METHOD(kernel_handler_t, destroy, void,
 	private_kernel_handler_t *this)
 {
-	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
-											 &this->public.listener);
+	charon->kernel->remove_listener(charon->kernel, &this->public.listener);
 	free(this);
 }
 
@@ -157,8 +155,7 @@ kernel_handler_t *kernel_handler_create()
 		},
 	);
 
-	hydra->kernel_interface->add_listener(hydra->kernel_interface,
-										  &this->public.listener);
+	charon->kernel->add_listener(charon->kernel, &this->public.listener);
 
 	return &this->public;
 }

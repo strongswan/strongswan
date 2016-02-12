@@ -3,11 +3,7 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 libhydra_la_SOURCES := \
-hydra.c hydra.h \
-kernel/kernel_interface.c kernel/kernel_interface.h \
-kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
-kernel/kernel_net.c kernel/kernel_net.h \
-kernel/kernel_listener.h
+hydra.c hydra.h
 
 LOCAL_SRC_FILES := $(filter %.c,$(libhydra_la_SOURCES))
 

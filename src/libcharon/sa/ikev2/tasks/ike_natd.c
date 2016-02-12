@@ -18,7 +18,6 @@
 
 #include <string.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <config/peer_cfg.h>
 #include <crypto/hashers/hasher.h>
@@ -86,7 +85,7 @@ static bool force_encap(ike_cfg_t *ike_cfg)
 {
 	if (!ike_cfg->force_encap(ike_cfg))
 	{
-		return hydra->kernel_interface->get_features(hydra->kernel_interface) &
+		return charon->kernel->get_features(charon->kernel) &
 					KERNEL_REQUIRE_UDP_ENCAPSULATION;
 	}
 	return TRUE;
@@ -327,7 +326,7 @@ METHOD(task_t, build_i, status_t,
 	}
 	else
 	{
-		host = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+		host = charon->kernel->get_source_addr(charon->kernel,
 							this->ike_sa->get_other_host(this->ike_sa), NULL);
 		if (host)
 		{	/* 2. */
@@ -341,8 +340,8 @@ METHOD(task_t, build_i, status_t,
 		}
 		else
 		{	/* 3. */
-			enumerator = hydra->kernel_interface->create_address_enumerator(
-									hydra->kernel_interface, ADDR_TYPE_REGULAR);
+			enumerator = charon->kernel->create_address_enumerator(
+											charon->kernel, ADDR_TYPE_REGULAR);
 			while (enumerator->enumerate(enumerator, (void**)&host))
 			{
 				/* apply port 500 to host, but work on a copy */

@@ -19,7 +19,6 @@
 #include "kernel_libipsec_router.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <ipsec.h>
 #include <collections/hashtable.h>
 #include <networking/tun_device.h>
@@ -298,8 +297,7 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 										 (ipsec_outbound_cb_t)send_esp);
 	ipsec->processor->unregister_inbound(ipsec->processor,
 										 (ipsec_inbound_cb_t)deliver_plain);
-	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
-											 &this->public.listener);
+	charon->kernel->remove_listener(charon->kernel, &this->public.listener);
 	this->lock->destroy(this->lock);
 	this->tuns->destroy(this->tuns);
 	close(this->notify[0]);
@@ -351,8 +349,7 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 								  (hashtable_equals_t)tun_entry_equals, 4);
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
-	hydra->kernel_interface->add_listener(hydra->kernel_interface,
-										  &this->public.listener);
+	charon->kernel->add_listener(charon->kernel, &this->public.listener);
 	ipsec->processor->register_outbound(ipsec->processor, send_esp, NULL);
 	ipsec->processor->register_inbound(ipsec->processor,
 									(ipsec_inbound_cb_t)deliver_plain, this);

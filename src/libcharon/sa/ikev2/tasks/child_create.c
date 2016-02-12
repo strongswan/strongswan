@@ -18,7 +18,6 @@
 #include "child_create.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
 #include <credentials/certificates/x509.h>
@@ -786,7 +785,7 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 			break;
 	}
 
-	features = hydra->kernel_interface->get_features(hydra->kernel_interface);
+	features = charon->kernel->get_features(charon->kernel);
 	if (!(features & KERNEL_ESP_V3_TFC))
 	{
 		message->add_notify(message, FALSE, ESP_TFC_PADDING_NOT_SUPPORTED,

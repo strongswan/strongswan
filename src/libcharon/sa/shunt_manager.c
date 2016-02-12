@@ -16,7 +16,6 @@
 
 #include "shunt_manager.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
@@ -111,22 +110,22 @@ static bool install_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* install out policy */
-			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->add_policy(charon->kernel,
+								host_any, host_any,
 								my_ts, other_ts, POLICY_OUT, policy_type,
 								&sa, child->get_mark(child, FALSE),
 								policy_prio);
 
 			/* install in policy */
-			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->add_policy(charon->kernel,
+								host_any, host_any,
 								other_ts, my_ts, POLICY_IN, policy_type,
 								&sa, child->get_mark(child, TRUE),
 								policy_prio);
 
 			/* install forward policy */
-			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->add_policy(charon->kernel,
+								host_any, host_any,
 								other_ts, my_ts, POLICY_FWD, policy_type,
 								&sa, child->get_mark(child, TRUE),
 								policy_prio);
@@ -248,22 +247,22 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* uninstall out policy */
-			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->del_policy(charon->kernel,
+							host_any, host_any,
 							my_ts, other_ts, POLICY_OUT, policy_type,
 							&sa, child->get_mark(child, FALSE),
 							policy_prio);
 
 			/* uninstall in policy */
-			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->del_policy(charon->kernel,
+							host_any, host_any,
 							other_ts, my_ts, POLICY_IN, policy_type,
 							&sa, child->get_mark(child, TRUE),
 							policy_prio);
 
 			/* uninstall forward policy */
-			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, host_any, host_any,
+			status |= charon->kernel->del_policy(charon->kernel,
+							host_any, host_any,
 							other_ts, my_ts, POLICY_FWD, policy_type,
 							&sa, child->get_mark(child, TRUE),
 							policy_prio);

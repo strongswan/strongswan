@@ -24,7 +24,7 @@
 
 #include "kernel_iph_net.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <threading/mutex.h>
 #include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -130,7 +130,7 @@ static job_requeue_t roam_event(private_kernel_iph_net_t *this)
 	this->roam_address = FALSE;
 	this->mutex->unlock(this->mutex);
 
-	hydra->kernel_interface->roam(hydra->kernel_interface, address);
+	charon->kernel->roam(charon->kernel, address);
 	return JOB_REQUEUE_NONE;
 }
 

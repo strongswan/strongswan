@@ -35,7 +35,7 @@
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_shared.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
 #include <collections/array.h>
@@ -262,8 +262,8 @@ static char* lookup_algorithm(transform_type_t type, int ikev2)
 			return list[i].name;
 		}
 	}
-	if (hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface,
-												  ikev2, type, NULL, &name))
+	if (charon->kernel->lookup_algorithm(charon->kernel, ikev2, type, NULL,
+										 &name))
 	{
 		return name;
 	}
@@ -856,8 +856,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	src_ts = selector2ts(&acquire->sel, TRUE);
 	dst_ts = selector2ts(&acquire->sel, FALSE);
 
-	hydra->kernel_interface->acquire(hydra->kernel_interface, reqid, src_ts,
-									 dst_ts);
+	charon->kernel->acquire(charon->kernel, reqid, src_ts, dst_ts);
 }
 
 /**
@@ -882,8 +881,8 @@ static void process_expire(private_kernel_netlink_ipsec_t *this,
 		dst = xfrm2host(expire->state.family, &expire->state.id.daddr, 0);
 		if (dst)
 		{
-			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
-											spi, dst, expire->hard != 0);
+			charon->kernel->expire(charon->kernel, protocol, spi, dst,
+								   expire->hard != 0);
 			dst->destroy(dst);
 		}
 	}
@@ -951,8 +950,8 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this,
 
 	if (src_ts && dst_ts && local && remote)
 	{
-		hydra->kernel_interface->migrate(hydra->kernel_interface, reqid,
-										 src_ts, dst_ts, dir, local, remote);
+		charon->kernel->migrate(charon->kernel, reqid, src_ts, dst_ts, dir,
+								local, remote);
 	}
 	else
 	{
@@ -988,8 +987,8 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 							mapping->new_sport);
 			if (new)
 			{
-				hydra->kernel_interface->mapping(hydra->kernel_interface,
-												 IPPROTO_ESP, spi, dst, new);
+				charon->kernel->mapping(charon->kernel, IPPROTO_ESP, spi, dst,
+										new);
 				new->destroy(new);
 			}
 			dst->destroy(dst);
@@ -2202,22 +2201,21 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			.prefixlen = policy->sel.prefixlen_s,
 		);
 
-		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				fwd->dst_ts, &route->src_ip, NULL) == SUCCESS)
+		if (charon->kernel->get_address_by_ts(charon->kernel, fwd->dst_ts,
+											  &route->src_ip, NULL) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD) */
 			if (!ipsec->src->is_anyaddr(ipsec->src))
 			{
-				route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, ipsec->src,
-											-1, ipsec->dst);
+				route->gateway = charon->kernel->get_nexthop(charon->kernel,
+													ipsec->src, -1, ipsec->dst);
 			}
 			else
 			{	/* for shunt policies */
 				iface = xfrm2host(policy->sel.family, &policy->sel.saddr, 0);
-				route->gateway = hydra->kernel_interface->get_nexthop(
-										hydra->kernel_interface, iface,
-										policy->sel.prefixlen_s, route->src_ip);
+				route->gateway = charon->kernel->get_nexthop(charon->kernel,
+												iface, policy->sel.prefixlen_s,
+												route->src_ip);
 				iface->destroy(iface);
 			}
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
@@ -2232,8 +2230,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 				iface = route->src_ip;
 			}
 			/* install route via outgoing interface */
-			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-														iface, &route->if_name))
+			if (!charon->kernel->get_interface(charon->kernel, iface,
+											   &route->if_name))
 			{
 				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);
@@ -2250,9 +2248,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 					return SUCCESS;
 				}
 				/* uninstall previously installed route */
-				if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-						old->dst_net, old->prefixlen, old->gateway,
-						old->src_ip, old->if_name) != SUCCESS)
+				if (charon->kernel->del_route(charon->kernel, old->dst_net,
+										old->prefixlen, old->gateway,
+										old->src_ip, old->if_name) != SUCCESS)
 				{
 					DBG1(DBG_KNL, "error uninstalling route installed with "
 								  "policy %R === %R %N", fwd->src_ts,
@@ -2265,10 +2263,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 
 			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
 				 fwd->src_ts, route->gateway, route->src_ip, route->if_name);
-			switch (hydra->kernel_interface->add_route(
-								hydra->kernel_interface, route->dst_net,
-								route->prefixlen, route->gateway,
-								route->src_ip, route->if_name))
+			switch (charon->kernel->add_route(charon->kernel, route->dst_net,
+											  route->prefixlen, route->gateway,
+											  route->src_ip, route->if_name))
 			{
 				default:
 					DBG1(DBG_KNL, "unable to install source route for %H",
@@ -2579,9 +2576,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	if (current->route)
 	{
 		route_entry_t *route = current->route;
-		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-				route->dst_net, route->prefixlen, route->gateway,
-				route->src_ip, route->if_name) != SUCCESS)
+		if (charon->kernel->del_route(charon->kernel, route->dst_net,
+									  route->prefixlen, route->gateway,
+									  route->src_ip, route->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
 						  "policy %R === %R %N", src_ts, dst_ts,

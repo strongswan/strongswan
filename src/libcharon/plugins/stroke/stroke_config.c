@@ -16,7 +16,6 @@
 
 #include "stroke_config.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/lexparser.h>
@@ -201,8 +200,7 @@ static bool is_local(char *address, bool any_allowed)
 			host = host_create_from_dns(token, 0, 0);
 			if (host)
 			{
-				if (hydra->kernel_interface->get_interface(
-										hydra->kernel_interface, host, NULL))
+				if (charon->kernel->get_interface(charon->kernel, host, NULL))
 				{
 					found = TRUE;
 				}

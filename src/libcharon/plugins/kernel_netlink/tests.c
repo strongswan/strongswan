@@ -15,8 +15,6 @@
 
 #include <test_runner.h>
 
-#include <hydra.h>
-
 /* declare test suite constructors */
 #define TEST_SUITE(x) test_suite_t* x();
 #include "tests.h"

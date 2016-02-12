@@ -63,7 +63,7 @@
  * @defgroup payloads payloads
  * @ingroup encoding
  *
- * @defgroup ckernel kernel
+ * @defgroup kernel kernel
  * @ingroup libcharon
  *
  * @defgroup network network
@@ -179,6 +179,7 @@
 typedef struct daemon_t daemon_t;
 
 #include <attributes/attribute_manager.h>
+#include <kernel/kernel_interface.h>
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
@@ -237,6 +238,11 @@ struct daemon_t {
 	 * Socket manager instance
 	 */
 	socket_manager_t *socket;
+
+	/**
+	 * Kernel interface to communicate with kernel
+	 */
+	kernel_interface_t *kernel;
 
 	/**
 	 * A ike_sa_manager_t instance.

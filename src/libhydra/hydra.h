@@ -31,8 +31,6 @@
 
 typedef struct hydra_t hydra_t;
 
-#include <kernel/kernel_interface.h>
-
 #include <library.h>
 
 /**
@@ -40,10 +38,6 @@ typedef struct hydra_t hydra_t;
  */
 struct hydra_t {
 
-	/**
-	 * kernel interface to communicate with kernel
-	 */
-	kernel_interface_t *kernel_interface;
 };
 
 /**

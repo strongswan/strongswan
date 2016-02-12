@@ -18,8 +18,6 @@
 
 #include "kernel_pfroute_net.h"
 
-#include <hydra.h>
-
 typedef struct private_kernel_pfroute_plugin_t private_kernel_pfroute_plugin_t;
 
 /**

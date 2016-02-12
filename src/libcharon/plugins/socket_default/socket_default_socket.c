@@ -41,7 +41,6 @@
 #include <netinet/udp.h>
 #include <net/if.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
@@ -720,16 +719,15 @@ static int open_socket(private_socket_default_socket_t *this,
 	}
 #endif
 
-	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
-												skt, family))
+	if (!charon->kernel->bypass_socket(charon->kernel, skt, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
 
 	/* enable UDP decapsulation for NAT-T sockets */
 	if (port == &this->natt &&
-		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
-												   skt, family, this->natt))
+		!charon->kernel->enable_udp_decap(charon->kernel, skt, family,
+										  this->natt))
 	{
 		DBG1(DBG_NET, "enabling UDP decapsulation for %s on port %d failed",
 			 family == AF_INET ? "IPv4" : "IPv6", this->natt);

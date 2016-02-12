@@ -20,7 +20,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <hydra.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
 

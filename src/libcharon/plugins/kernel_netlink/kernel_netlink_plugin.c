@@ -19,8 +19,6 @@
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_net.h"
 
-#include <hydra.h>
-
 typedef struct private_kernel_netlink_plugin_t private_kernel_netlink_plugin_t;
 
 /**

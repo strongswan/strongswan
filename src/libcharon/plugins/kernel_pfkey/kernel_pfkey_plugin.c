@@ -18,8 +18,6 @@
 
 #include "kernel_pfkey_ipsec.h"
 
-#include <hydra.h>
-
 typedef struct private_kernel_pfkey_plugin_t private_kernel_pfkey_plugin_t;
 
 /**

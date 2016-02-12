@@ -51,7 +51,7 @@
 #include "kernel_netlink_net.h"
 #include "kernel_netlink_shared.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
@@ -893,7 +893,7 @@ static job_requeue_t roam_event(private_kernel_netlink_net_t *this)
 	address = this->roam_address;
 	this->roam_address = FALSE;
 	this->roam_lock->unlock(this->roam_lock);
-	hydra->kernel_interface->roam(hydra->kernel_interface, address);
+	charon->kernel->roam(charon->kernel, address);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -1004,8 +1004,8 @@ static void process_link(private_kernel_netlink_net_t *this,
 				INIT(entry,
 					.ifindex = msg->ifi_index,
 					.addrs = linked_list_create(),
-					.usable = hydra->kernel_interface->is_interface_usable(
-												hydra->kernel_interface, name),
+					.usable = charon->kernel->is_interface_usable(
+														charon->kernel, name),
 				);
 				this->ifaces->insert_last(this->ifaces, entry);
 			}

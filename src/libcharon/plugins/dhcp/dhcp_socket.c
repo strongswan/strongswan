@@ -31,7 +31,6 @@
 #include <threading/condvar.h>
 #include <threading/thread.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -209,8 +208,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	else
 	{
 		/* act as relay agent */
-		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
-													   this->dst, NULL);
+		src = charon->kernel->get_source_addr(charon->kernel, this->dst, NULL);
 		if (src)
 		{
 			memcpy(&dhcp->gateway_address, src->get_address(src).ptr,

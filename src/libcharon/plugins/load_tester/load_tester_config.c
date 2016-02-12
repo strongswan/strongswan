@@ -18,7 +18,6 @@
 #include <netdb.h>
 
 #include <daemon.h>
-#include <hydra.h>
 #include <attributes/mem_pool.h>
 #include <collections/hashtable.h>
 #include <threading/mutex.h>
@@ -656,8 +655,8 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 		id->destroy(id);
 		return NULL;
 	}
-	if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
-										found, this->prefix, iface) != SUCCESS)
+	if (charon->kernel->add_ip(charon->kernel, found, this->prefix,
+							   iface) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "installing load-tester IP %H on %s failed", found, iface);
 		found->destroy(found);
@@ -852,8 +851,8 @@ METHOD(load_tester_config_t, delete_ip, void,
 		{
 			if (pool->release_address(pool, entry->host, entry->id))
 			{
-				hydra->kernel_interface->del_ip(hydra->kernel_interface,
-											entry->host, this->prefix, FALSE);
+				charon->kernel->del_ip(charon->kernel, entry->host,
+									   this->prefix, FALSE);
 				break;
 			}
 		}
@@ -882,8 +881,8 @@ static void cleanup_leases(private_load_tester_config_t *this)
 		{
 			if (online)
 			{
-				hydra->kernel_interface->del_ip(hydra->kernel_interface,
-												addr, this->prefix, FALSE);
+				charon->kernel->del_ip(charon->kernel, addr, this->prefix,
+									   FALSE);
 				entry = this->leases->remove(this->leases, addr);
 				if (entry)
 				{

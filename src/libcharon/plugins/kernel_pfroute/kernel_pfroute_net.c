@@ -24,7 +24,7 @@
 
 #include "kernel_pfroute_net.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <networking/host.h>
 #include <networking/tun_device.h>
@@ -555,7 +555,7 @@ static job_requeue_t roam_event(private_kernel_pfroute_net_t *this)
 	address = this->roam_address;
 	this->roam_address = FALSE;
 	this->roam_lock->unlock(this->roam_lock);
-	hydra->kernel_interface->roam(hydra->kernel_interface, address);
+	charon->kernel->roam(charon->kernel, address);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -862,8 +862,8 @@ static void process_link(private_kernel_pfroute_net_t *this,
 		if (if_indextoname(iface->ifindex, iface->ifname))
 		{
 			DBG1(DBG_KNL, "interface %s appeared", iface->ifname);
-			iface->usable = hydra->kernel_interface->is_interface_usable(
-										hydra->kernel_interface, iface->ifname);
+			iface->usable = charon->kernel->is_interface_usable(charon->kernel,
+																iface->ifname);
 			repopulate_iface(this, iface);
 			this->ifaces->insert_last(this->ifaces, iface);
 			if (iface->usable)
@@ -1266,7 +1266,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	/* lets do this while holding the lock, thus preventing another thread
 	 * from deleting the TUN device concurrently, hopefully listeners are quick
 	 * and cause no deadlocks */
-	hydra->kernel_interface->tun(hydra->kernel_interface, tun, TRUE);
+	charon->kernel->tun(charon->kernel, tun, TRUE);
 	this->lock->unlock(this->lock);
 
 	return SUCCESS;
@@ -1294,8 +1294,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 		if (addr && addr->ip_equals(addr, vip))
 		{
 			this->tuns->remove_at(this->tuns, enumerator);
-			hydra->kernel_interface->tun(hydra->kernel_interface, tun,
-										 FALSE);
+			charon->kernel->tun(charon->kernel, tun, FALSE);
 			tun->destroy(tun);
 			found = TRUE;
 			break;
@@ -1738,8 +1737,8 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 						.ifindex = if_nametoindex(ifa->ifa_name),
 						.flags = ifa->ifa_flags,
 						.addrs = linked_list_create(),
-						.usable = hydra->kernel_interface->is_interface_usable(
-										hydra->kernel_interface, ifa->ifa_name),
+						.usable = charon->kernel->is_interface_usable(
+												charon->kernel, ifa->ifa_name),
 					);
 					memcpy(iface->ifname, ifa->ifa_name, IFNAMSIZ);
 					this->ifaces->insert_last(this->ifaces, iface);

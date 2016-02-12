@@ -18,7 +18,6 @@
 #include "tnc_ifmap_renew_session_job.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <utils/debug.h>
 
 #define IFMAP_RENEW_SESSION_INTERVAL	150
@@ -51,8 +50,8 @@ static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
 	host_t *host;
 	bool success = TRUE;
 
-	enumerator = hydra->kernel_interface->create_address_enumerator(
-									hydra->kernel_interface, ADDR_TYPE_REGULAR);
+	enumerator = charon->kernel->create_address_enumerator(charon->kernel,
+														   ADDR_TYPE_REGULAR);
 	while (enumerator->enumerate(enumerator, &host))
 	{
 		if (!this->ifmap->publish_device_ip(this->ifmap, host))

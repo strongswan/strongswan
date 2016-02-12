@@ -685,6 +685,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.xauth);
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
+	DESTROY_IF(this->public.kernel);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -862,6 +863,7 @@ private_daemon_t *daemon_create()
 		.ref = 1,
 	);
 	charon = &this->public;
+	this->public.kernel = kernel_interface_create();
 	this->public.attributes = attribute_manager_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
