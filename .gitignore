@@ -45,3 +45,6 @@ coverage/
 .metadata/
 .settings/
 test-driver
+strongswan.config
+strongswan.files
+strongswan.includes
