@@ -83,6 +83,11 @@ METHOD(listener_t, alert, bool,
 			snprintf(msg.str, sizeof(msg.str), "parsing IKE message from "
 					 "%#H failed", message->get_source(message));
 			break;
+		case ALERT_RETRANSMIT_SEND:
+			msg.type = htonl(ERROR_NOTIFY_RETRANSMIT_SEND);
+			snprintf(msg.str, sizeof(msg.str), "IKE message retransmission "
+					 "number %u", va_arg(args, u_int));
+			break;
 		case ALERT_RETRANSMIT_SEND_TIMEOUT:
 			msg.type = htonl(ERROR_NOTIFY_RETRANSMIT_SEND_TIMEOUT);
 			snprintf(msg.str, sizeof(msg.str),
