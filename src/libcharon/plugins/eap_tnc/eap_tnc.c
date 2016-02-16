@@ -328,7 +328,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, tnccs_type,
 						is_server, server, peer, server_ip, peer_ip,
 						(type == EAP_TNC) ? TNC_IFT_EAP_1_1 : TNC_IFT_EAP_2_0,
-						is_server ? enforce_recommendation : NULL);
+						enforce_recommendation);
 	if (!tnccs)
 	{
 		DBG1(DBG_TNC, "TNCCS protocol '%s' not enabled", protocol);

@@ -1,0 +1,4 @@
+moon::service charon stop
+sun::service charon stop
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush

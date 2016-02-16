@@ -126,6 +126,24 @@ struct private_tnccs_20_t {
 
 };
 
+METHOD(tls_t, is_complete, bool,
+	private_tnccs_20_t *this)
+{
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	tnccs_20_server_t *tnc_server;
+
+	if (this->tnc_server)
+	{
+		tnc_server = (tnccs_20_server_t*)this->tnc_server;
+		if (tnc_server->have_recommendation(tnc_server, &rec, &eval))
+		{
+			return this->callback ? this->callback(rec, eval) : TRUE;
+		}
+	}
+	return FALSE;
+}
+
 METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_UInt32 msg_flags,
@@ -269,6 +287,7 @@ METHOD(tls_t, process, status_t,
 		/* Suppress a successful CLOSE batch coming from the TNC server */
 		if (status == SUCCESS)
 		{
+			is_complete(this);
 			status = NEED_MORE;
 		}
 	}
@@ -357,25 +376,6 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 	private_tnccs_20_t *this)
 {
 	return TLS_PURPOSE_EAP_TNC;
-}
-
-METHOD(tls_t, is_complete, bool,
-	private_tnccs_20_t *this)
-{
-	TNC_IMV_Action_Recommendation rec;
-	TNC_IMV_Evaluation_Result eval;
-
-	if (this->tnc_server)
-	{
-		tnccs_20_server_t *tnc_server;
-
-		tnc_server = (tnccs_20_server_t*)this->tnc_server;
-		if (tnc_server->have_recommendation(tnc_server, &rec, &eval))
-		{
-			return this->callback ? this->callback(rec, eval) : TRUE;
-		}
-	}
-	return FALSE;
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
