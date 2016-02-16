@@ -352,7 +352,8 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
 					 this->initiating.retransmitted, message_id);
-				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
+				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet,
+								   this->initiating.retransmitted);
 			}
 			if (!mobike)
 			{

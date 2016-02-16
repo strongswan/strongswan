@@ -361,7 +361,8 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 		DBG1(DBG_IKE, "sending retransmit %u of %s message ID %u, seq %u",
 			 retransmitted, seqnr < RESPONDING_SEQ ? "request" : "response",
 			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
-		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet,
+						   retransmitted);
 	}
 	send_packets(this, packets);
 	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
