@@ -143,7 +143,7 @@ INSERT INTO peer_configs (
 INSERT INTO child_configs (
   name, updown
 ) VALUES (
-  'rw-eap-aka', 'ipsec _updown iptables'
+  'rw-eap-aka', '/usr/local/libexec/ipsec/_updown iptables'
 );
 
 INSERT INTO peer_config_child_config (

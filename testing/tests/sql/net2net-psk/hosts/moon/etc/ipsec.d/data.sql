@@ -55,7 +55,7 @@ INSERT INTO peer_configs (
 INSERT INTO child_configs (
   name, updown
 ) VALUES (
-  'net-net', 'ipsec _updown iptables'
+  'net-net', '/usr/local/libexec/ipsec/_updown iptables'
 );
 
 INSERT INTO peer_config_child_config (

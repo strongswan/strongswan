@@ -155,19 +155,19 @@ INSERT INTO peer_configs (
 INSERT INTO child_configs (
   name, updown, start_action, dpd_action
 ) VALUES (
-  'net-1', 'ipsec _updown iptables', 2, 2
+  'net-1', '/usr/local/libexec/ipsec/_updown iptables', 2, 2
 );
 
 INSERT INTO child_configs (
   name, updown, start_action, dpd_action
 ) VALUES (
-  'net-2', 'ipsec _updown iptables', 2, 2
+  'net-2', '/usr/local/libexec/ipsec/_updown iptables', 2, 2
 );
 
 INSERT INTO child_configs (
   name, updown, start_action, dpd_action
 ) VALUES (
-  'net-3', 'ipsec _updown iptables', 2, 2
+  'net-3', '/usr/local/libexec/ipsec/_updown iptables', 2, 2
 );
 
 INSERT INTO peer_config_child_config (

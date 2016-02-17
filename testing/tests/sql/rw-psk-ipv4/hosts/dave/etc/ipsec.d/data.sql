@@ -49,7 +49,7 @@ INSERT INTO peer_configs (
 INSERT INTO child_configs (
   name, updown
 ) VALUES (
-  'home', 'ipsec _updown iptables'
+  'home', '/usr/local/libexec/ipsec/_updown iptables'
 );
 
 INSERT INTO peer_config_child_config (
