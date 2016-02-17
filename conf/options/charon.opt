@@ -61,6 +61,14 @@ charon.crypto_test.required = no
 charon.crypto_test.rng_true = no
 	Whether to test RNG with TRUE quality; requires a lot of entropy.
 
+charon.delete_rekeyed = no
+	Delete CHILD_SAs right after they got successfully rekeyed (IKEv1 only).
+
+	Delete CHILD_SAs right after they got successfully rekeyed (IKEv1 only).
+	Reduces the number of stale CHILD_SAs in scenarios with a lot of rekeyings.
+	However, this might cause problems with implementations that continue to
+	use rekeyed SAs until they expire.
+
 charon.dh_exponent_ansi_x9_42 = yes
 	Use ANSI X9.42 DH exponent size or optimum size matched to cryptographic
 	strength.

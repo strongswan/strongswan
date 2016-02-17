@@ -171,6 +171,11 @@ struct private_quick_mode_t {
 	u_int32_t rekey;
 
 	/**
+	 * Delete old child after successful rekey
+	 */
+	bool delete;
+
+	/**
 	 * Negotiated mode, tunnel or transport
 	 */
 	ipsec_mode_t mode;
@@ -406,8 +411,17 @@ static bool install(private_quick_mode_t *this)
 	if (old)
 	{
 		charon->bus->child_rekey(charon->bus, old, this->child_sa);
-		/* rekeyed CHILD_SAs stay installed until they expire */
+		/* rekeyed CHILD_SAs stay installed until they expire or are deleted
+		 * by the other peer */
 		old->set_state(old, CHILD_REKEYED);
+		/* as initiator we delete the CHILD_SA if configured to do so */
+		if (this->initiator && this->delete)
+		{
+			this->ike_sa->queue_task(this->ike_sa,
+				(task_t*)quick_delete_create(this->ike_sa,
+								this->proposal->get_protocol(this->proposal),
+								this->rekey, TRUE, FALSE));
+		}
 	}
 	else
 	{
@@ -1450,6 +1464,8 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 		.tsi = tsi ? tsi->clone(tsi) : NULL,
 		.tsr = tsr ? tsr->clone(tsr) : NULL,
 		.proto = PROTO_ESP,
+		.delete = lib->settings->get_bool(lib->settings,
+										  "%s.delete_rekeyed", FALSE, lib->ns),
 	);
 
 	if (config)
