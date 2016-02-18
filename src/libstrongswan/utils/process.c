@@ -158,6 +158,7 @@ process_t* process_start(char *const argv[], char *const envp[],
 		return NULL;
 	}
 
+	char* ipsec_confdir = getenv("IPSEC_CONFDIR");
 	this->pid = fork();
 	switch (this->pid)
 	{
@@ -194,6 +195,10 @@ process_t* process_start(char *const argv[], char *const envp[],
 			if (close_all)
 			{
 				closefrom(3);
+			}
+			if (ipsec_confdir)
+			{
+				chdir(ipsec_confdir);
 			}
 			if (execve(argv[0], argv, envp ?: empty) == -1)
 			{
