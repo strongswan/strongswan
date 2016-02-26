@@ -1,11 +1,11 @@
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
-moon::ipsec start
-carol::ipsec start
-dave::ipsec start
-moon::expect-connection rw
-carol::expect-connection home
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+dave::service charon start 2> /dev/null
+moon::expect-connection net 
+carol::expect-connection home 
+carol::swanctl --initiate --child home 2> /dev/null
 dave::expect-connection home
-carol::ipsec up home
-dave::ipsec up home
+dave::swanctl --initiate --child home 2> /dev/null
