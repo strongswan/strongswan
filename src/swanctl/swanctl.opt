@@ -42,9 +42,9 @@ connections.<conn>.remote_addrs = %any
 	be specified.
 
 connections.<conn>.local_port = 500
-	Local UPD port for IKE communication.
+	Local UDP port for IKE communication.
 
-	Local UPD port for IKE communication. By default the port of the socket
+	Local UDP port for IKE communication. By default the port of the socket
 	backend is used, which is usually _500_. If port _500_ is used, automatic
 	IKE port floating to port 4500 is used to work around NAT issues.
 
@@ -54,7 +54,7 @@ connections.<conn>.local_port = 500
 connections.<conn>.remote_port = 500
 	Remote UDP port for IKE communication.
 
-	Remote UPD port for IKE communication. If the default of port _500_ is used,
+	Remote UDP port for IKE communication. If the default of port _500_ is used,
 	automatic IKE port floating to port 4500 is used to work around NAT issues.
 
 connections.<conn>.proposals = default
