@@ -1,0 +1,8 @@
+moon::iptables-restore < /etc/iptables.rules
+carol::iptables-restore < /etc/iptables.rules
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+carol::expect-connection icmp
+carol::expect-connection ssh
+carol::swanctl --initiate --child icmp 2> /dev/null
+carol::swanctl --initiate --child ssh 2> /dev/null
