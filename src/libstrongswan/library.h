@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2016 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -275,5 +275,15 @@ void library_deinit();
  * Library instance, set after library_init() and before library_deinit() calls.
  */
 extern library_t *lib;
+
+/**
+ * Add additional names used as alias for the namespace registered with
+ * library_init().
+ *
+ * To be called from __attribute__((constructor)) functions.
+ *
+ * @param ns			additional namespace
+ */
+void library_add_namespace(char *ns);
 
 #endif /** LIBRARY_H_ @}*/
