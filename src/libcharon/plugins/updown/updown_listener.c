@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -204,25 +205,47 @@ static void push_vip_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	enumerator->destroy(enumerator);
 }
 
+#define	PORT_BUF_LEN	12
+
 /**
  * Determine proper values for port env variable
  */
-static u_int16_t get_port(traffic_selector_t *me,
-						  traffic_selector_t *other, bool local)
+static char* get_port(traffic_selector_t *me, traffic_selector_t *other,
+					  char *port_buf, bool local)
 {
+	uint16_t port, to, from;
+
 	switch (max(me->get_protocol(me), other->get_protocol(other)))
 	{
 		case IPPROTO_ICMP:
 		case IPPROTO_ICMPV6:
 		{
-			u_int16_t port = me->get_from_port(me);
-
-			port = max(port, other->get_from_port(other));
-			return local ? traffic_selector_icmp_type(port)
-						 : traffic_selector_icmp_code(port);
+			port = max(me->get_from_port(me), other->get_from_port(other));
+			snprintf(port_buf, PORT_BUF_LEN, "%u",
+					 local ? traffic_selector_icmp_type(port)
+						   : traffic_selector_icmp_code(port));
+			return port_buf;
 		}
 	}
-	return local ? me->get_from_port(me) : other->get_from_port(other);
+	if (local)
+	{
+		from = me->get_from_port(me);
+		to   = me->get_to_port(me);
+	}
+	else
+	{
+		from = other->get_from_port(other);
+		to   = other->get_to_port(other);
+	}
+	if (from == to)
+	{
+		snprintf(port_buf, PORT_BUF_LEN, "%u", from);
+	}
+	else
+	{
+		snprintf(port_buf, PORT_BUF_LEN, "%u:%u", from, to);
+	}
+	return port_buf;
 }
 
 /**
@@ -240,6 +263,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	int out;
 	FILE *shell;
 	process_t *process;
+	char port_buf[PORT_BUF_LEN];
 	char *envp[128] = {};
 
 	me = ike_sa->get_my_host(ike_sa);
@@ -292,8 +316,8 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		push_env(envp, countof(envp), "PLUTO_MY_CLIENT=%+H/%u", host, mask);
 		host->destroy(host);
 	}
-	push_env(envp, countof(envp), "PLUTO_MY_PORT=%u",
-			 get_port(my_ts, other_ts, TRUE));
+	push_env(envp, countof(envp), "PLUTO_MY_PORT=%s",
+			 get_port(my_ts, other_ts, port_buf, TRUE));
 	push_env(envp, countof(envp), "PLUTO_MY_PROTOCOL=%u",
 			 my_ts->get_protocol(my_ts));
 	push_env(envp, countof(envp), "PLUTO_PEER=%H", other);
@@ -304,8 +328,8 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		push_env(envp, countof(envp), "PLUTO_PEER_CLIENT=%+H/%u", host, mask);
 		host->destroy(host);
 	}
-	push_env(envp, countof(envp), "PLUTO_PEER_PORT=%u",
-			 get_port(my_ts, other_ts, FALSE));
+	push_env(envp, countof(envp), "PLUTO_PEER_PORT=%s",
+			 get_port(my_ts, other_ts, port_buf, FALSE));
 	push_env(envp, countof(envp), "PLUTO_PEER_PROTOCOL=%u",
 			 other_ts->get_protocol(other_ts));
 	if (ike_sa->has_condition(ike_sa, COND_EAP_AUTHENTICATED) ||
