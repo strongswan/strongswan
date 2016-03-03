@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
- * Copyright (C) 2008 Andreas Steffen
+ * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -702,15 +702,13 @@ static void ts2subnet(traffic_selector_t* ts,
 static void ts2ports(traffic_selector_t* ts,
 					 u_int16_t *port, u_int16_t *mask)
 {
-	/* Linux does not seem to accept complex portmasks. Only
-	 * any or a specific port is allowed. We set to any, if we have
-	 * a port range, or to a specific, if we have one port only.
-	 */
-	u_int16_t from, to;
+	uint16_t from, to, bitmask;
+	int bit;
 
 	from = ts->get_from_port(ts);
 	to = ts->get_to_port(ts);
 
+	/* Quick check for a single port */
 	if (from == to)
 	{
 		*port = htons(from);
@@ -718,9 +716,23 @@ static void ts2ports(traffic_selector_t* ts,
 	}
 	else
 	{
-		*port = 0;
+		/* Compute the port mask for port ranges */
 		*mask = 0;
+
+		for (bit = 15; bit >= 0; bit--)
+		{
+			bitmask = 1 << bit;
+
+			if ((bitmask & from) != (bitmask & to))
+			{
+				*port = htons(from & *mask);
+				*mask = htons(*mask);
+				return;
+			}
+			*mask |= bitmask;
+		}
 	}
+	return;
 }
 
 /**
