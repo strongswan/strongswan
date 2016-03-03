@@ -20,7 +20,7 @@
 
 #include "../android_jni.h"
 #include "../charonservice.h"
-#include <hydra.h>
+#include <daemon.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/mutex.h>
 
@@ -75,7 +75,7 @@ static job_requeue_t roam_event()
 {
 	/* this will fail if no connection is up */
 	charonservice->bypass_socket(charonservice, -1, 0);
-	hydra->kernel_interface->roam(hydra->kernel_interface, TRUE);
+	charon->kernel->roam(charon->kernel, TRUE);
 	return JOB_REQUEUE_NONE;
 }
 

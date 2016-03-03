@@ -19,7 +19,6 @@
 #include "socket_win_socket.h"
 
 #include <library.h>
-#include <hydra.h>
 #include <threading/thread.h>
 #include <daemon.h>
 
@@ -397,13 +396,11 @@ static SOCKET open_socket(private_socket_win_socket_t *this, int i)
 		closesocket(s);
 		return INVALID_SOCKET;
 	}
-	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
-												s, AF_INET))
+	if (!charon->kernel->bypass_socket(charon->kernel, s, AF_INET))
 	{
 		DBG1(DBG_NET, "installing IPv4 IKE bypass policy failed");
 	}
-	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
-												s, AF_INET6))
+	if (!charon->kernel->bypass_socket(charon->kernel, s, AF_INET6))
 	{
 		DBG1(DBG_NET, "installing IPv6 IKE bypass policy failed");
 	}

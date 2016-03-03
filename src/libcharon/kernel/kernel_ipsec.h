@@ -18,7 +18,7 @@
 
 /**
  * @defgroup kernel_ipsec kernel_ipsec
- * @{ @ingroup hkernel
+ * @{ @ingroup kernel
  */
 
 #ifndef KERNEL_IPSEC_H_

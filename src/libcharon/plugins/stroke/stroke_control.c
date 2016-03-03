@@ -16,7 +16,6 @@
 
 #include "stroke_control.h"
 
-#include <hydra.h>
 #include <daemon.h>
 
 #include <processing/jobs/delete_ike_sa_job.h>

@@ -37,7 +37,6 @@ static struct {
 	{ "libtnccs.so", NULL },
 	{ "libimcv.so", NULL },
 #endif
-	{ "libhydra.so", NULL },
 	{ "libcharon.so", NULL },
 	{ "libipsec.so", NULL },
 };

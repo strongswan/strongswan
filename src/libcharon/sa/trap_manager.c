@@ -16,7 +16,6 @@
 
 #include "trap_manager.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
@@ -195,8 +194,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 		if (!me || me->is_anyaddr(me))
 		{
 			DESTROY_IF(me);
-			me = hydra->kernel_interface->get_source_addr(
-										hydra->kernel_interface, other, NULL);
+			me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
 			if (!me)
 			{
 				DBG1(DBG_CFG, "installing trap failed, local address unknown");

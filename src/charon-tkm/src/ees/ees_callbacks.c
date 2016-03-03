@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <tkm/constants.h>
 #include <tkm/types.h>
@@ -25,8 +25,7 @@
 void charon_esa_acquire(result_type *res, const sp_id_type sp_id)
 {
 	DBG1(DBG_KNL, "ees: acquire received for reqid %u", sp_id);
-	hydra->kernel_interface->acquire(hydra->kernel_interface, sp_id, NULL,
-									 NULL);
+	charon->kernel->acquire(charon->kernel, sp_id, NULL, NULL);
 	*res = TKM_OK;
 }
 
@@ -47,6 +46,5 @@ void charon_esa_expire(result_type *res, const sp_id_type sp_id,
 
 	DBG1(DBG_KNL, "ees: expire received for reqid %u, spi %x, dst %H", sp_id,
 		 ntohl(spi_rem), dst);
-	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
-									spi_rem, dst, hard != 0);
+	charon->kernel->expire(charon->kernel, protocol, spi_rem, dst, hard != 0);
 }

@@ -21,7 +21,6 @@
 #include "updown_listener.h"
 
 #include <utils/process.h>
-#include <hydra.h>
 #include <daemon.h>
 #include <config/child_cfg.h>
 
@@ -265,8 +264,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 			 config->get_name(config));
 	if (up)
 	{
-		if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												   me, &iface))
+		if (charon->kernel->get_interface(charon->kernel, me, &iface))
 		{
 			cache_iface(this, child_sa->get_reqid(child_sa), iface);
 		}

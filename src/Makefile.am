@@ -4,10 +4,6 @@ if USE_LIBSTRONGSWAN
   SUBDIRS += libstrongswan
 endif
 
-if USE_LIBHYDRA
-  SUBDIRS += libhydra
-endif
-
 if USE_LIBIPSEC
   SUBDIRS += libipsec
 endif

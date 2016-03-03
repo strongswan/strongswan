@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,35 +14,36 @@
  */
 
 
-#include "kernel_pfroute_plugin.h"
+#include "kernel_netlink_plugin.h"
 
-#include "kernel_pfroute_net.h"
+#include "kernel_netlink_ipsec.h"
+#include "kernel_netlink_net.h"
 
-#include <hydra.h>
-
-typedef struct private_kernel_pfroute_plugin_t private_kernel_pfroute_plugin_t;
+typedef struct private_kernel_netlink_plugin_t private_kernel_netlink_plugin_t;
 
 /**
- * private data of kernel PF_ROUTE plugin
+ * private data of kernel netlink plugin
  */
-struct private_kernel_pfroute_plugin_t {
+struct private_kernel_netlink_plugin_t {
 	/**
 	 * implements plugin interface
 	 */
-	kernel_pfroute_plugin_t public;
+	kernel_netlink_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_kernel_pfroute_plugin_t *this)
+	private_kernel_netlink_plugin_t *this)
 {
-	return "kernel-pfroute";
+	return "kernel-netlink";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_kernel_pfroute_plugin_t *this, plugin_feature_t *features[])
+	private_kernel_netlink_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK(kernel_net_register, kernel_pfroute_net_create),
+		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_netlink_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 	};
 	*features = f;
@@ -50,7 +51,7 @@ METHOD(plugin_t, get_features, int,
 }
 
 METHOD(plugin_t, destroy, void,
-	private_kernel_pfroute_plugin_t *this)
+	private_kernel_netlink_plugin_t *this)
 {
 	free(this);
 }
@@ -58,9 +59,17 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *kernel_pfroute_plugin_create()
+plugin_t *kernel_netlink_plugin_create()
 {
-	private_kernel_pfroute_plugin_t *this;
+	private_kernel_netlink_plugin_t *this;
+
+	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
+	{	/* required to bind/use XFRM sockets / create/modify routing tables, but
+		 * not if only the read-only parts of kernel-netlink-net are used, so
+		 * we don't fail here */
+		DBG1(DBG_KNL, "kernel-netlink plugin might require CAP_NET_ADMIN "
+			 "capability");
+	}
 
 	INIT(this,
 		.public = {

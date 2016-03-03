@@ -47,7 +47,10 @@ encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 encoding/payloads/hash_payload.c encoding/payloads/hash_payload.h \
 encoding/payloads/fragment_payload.c encoding/payloads/fragment_payload.h \
-kernel/kernel_handler.c kernel/kernel_handler.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.c kernel/kernel_net.h \
+kernel/kernel_listener.h kernel/kernel_handler.c kernel/kernel_handler.h \
 network/receiver.c network/receiver.h network/sender.c network/sender.h \
 network/socket.c network/socket.h \
 network/socket_manager.c network/socket_manager.h \
@@ -216,6 +219,10 @@ endif
 
 LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 
+LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
+
+LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
+
 LOCAL_SRC_FILES += $(call add_plugin, socket-default)
 
 LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic)
@@ -228,7 +235,6 @@ endif
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
-	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
@@ -241,6 +247,6 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libhydra
+LOCAL_SHARED_LIBRARIES += libstrongswan
 
 include $(BUILD_SHARED_LIBRARY)

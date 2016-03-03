@@ -19,7 +19,6 @@
 #include "adopt_children_job.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <collections/array.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 

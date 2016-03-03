@@ -40,7 +40,7 @@
 
 /**
  * @defgroup kernel_interface kernel_interface
- * @{ @ingroup hkernel
+ * @{ @ingroup kernel
  */
 
 #ifndef KERNEL_INTERFACE_H_

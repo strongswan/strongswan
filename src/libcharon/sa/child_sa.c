@@ -23,7 +23,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <collections/array.h>
 
@@ -469,10 +468,10 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->my_spi)
 		{
-			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
-							this->other_addr, this->my_addr, this->my_spi,
-							proto_ike2ip(this->protocol), this->mark_in,
-							&bytes, &packets, &time);
+			status = charon->kernel->query_sa(charon->kernel, this->other_addr,
+									this->my_addr, this->my_spi,
+									proto_ike2ip(this->protocol), this->mark_in,
+									&bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
@@ -493,10 +492,10 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->other_spi)
 		{
-			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
-							this->my_addr, this->other_addr, this->other_spi,
-							proto_ike2ip(this->protocol), this->mark_out,
-							&bytes, &packets, &time);
+			status = charon->kernel->query_sa(charon->kernel, this->my_addr,
+								this->other_addr, this->other_spi,
+								proto_ike2ip(this->protocol), this->mark_out,
+								&bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
@@ -532,15 +531,15 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 
 		if (inbound)
 		{
-			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_IN, this->mark_in, &in) == SUCCESS)
+			if (charon->kernel->query_policy(charon->kernel, other_ts,
+							my_ts, POLICY_IN, this->mark_in, &in) == SUCCESS)
 			{
 				last_use = max(last_use, in);
 			}
 			if (this->mode != MODE_TRANSPORT)
 			{
-				if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_FWD, this->mark_in, &fwd) == SUCCESS)
+				if (charon->kernel->query_policy(charon->kernel, other_ts,
+							my_ts, POLICY_FWD, this->mark_in, &fwd) == SUCCESS)
 				{
 					last_use = max(last_use, fwd);
 				}
@@ -548,8 +547,8 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 		}
 		else
 		{
-			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
-						my_ts, other_ts, POLICY_OUT, this->mark_out, &out) == SUCCESS)
+			if (charon->kernel->query_policy(charon->kernel, my_ts,
+							other_ts, POLICY_OUT, this->mark_out, &out) == SUCCESS)
 			{
 				last_use = max(last_use, out);
 			}
@@ -629,10 +628,8 @@ METHOD(child_sa_t, get_installtime, time_t,
 METHOD(child_sa_t, alloc_spi, u_int32_t,
 	   private_child_sa_t *this, protocol_id_t protocol)
 {
-	if (hydra->kernel_interface->get_spi(hydra->kernel_interface,
-										 this->other_addr, this->my_addr,
-										 proto_ike2ip(protocol),
-										 &this->my_spi) == SUCCESS)
+	if (charon->kernel->get_spi(charon->kernel, this->other_addr, this->my_addr,
+							proto_ike2ip(protocol), &this->my_spi) == SUCCESS)
 	{
 		/* if we allocate a SPI, but then are unable to establish the SA, we
 		 * need to know the protocol family to delete the partial SA */
@@ -645,9 +642,8 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 METHOD(child_sa_t, alloc_cpi, u_int16_t,
 	   private_child_sa_t *this)
 {
-	if (hydra->kernel_interface->get_cpi(hydra->kernel_interface,
-										 this->other_addr, this->my_addr,
-										 &this->my_cpi) == SUCCESS)
+	if (charon->kernel->get_cpi(charon->kernel, this->other_addr, this->my_addr,
+								&this->my_cpi) == SUCCESS)
 	{
 		return this->my_cpi;
 	}
@@ -711,9 +707,8 @@ METHOD(child_sa_t, install, status_t,
 
 	if (!this->reqid_allocated && !this->static_reqid)
 	{
-		status = hydra->kernel_interface->alloc_reqid(hydra->kernel_interface,
-							my_ts, other_ts, this->mark_in, this->mark_out,
-							&this->reqid);
+		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
+								this->mark_in, this->mark_out, &this->reqid);
 		if (status != SUCCESS)
 		{
 			return status;
@@ -757,7 +752,7 @@ METHOD(child_sa_t, install, status_t,
 		dst_ts = other_ts;
 	}
 
-	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
+	status = charon->kernel->add_sa(charon->kernel,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
@@ -776,7 +771,7 @@ static bool require_policy_update()
 {
 	kernel_feature_t f;
 
-	f = hydra->kernel_interface->get_features(hydra->kernel_interface);
+	f = charon->kernel->get_features(charon->kernel);
 	return !(f & KERNEL_NO_POLICY_UPDATES);
 }
 
@@ -833,18 +828,18 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
 	status_t status = SUCCESS;
-	status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+	status |= charon->kernel->add_policy(charon->kernel,
 							my_addr, other_addr, my_ts, other_ts,
 							POLICY_OUT, type, other_sa,
 							this->mark_out, priority);
 
-	status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+	status |= charon->kernel->add_policy(charon->kernel,
 							other_addr, my_addr, other_ts, my_ts,
 							POLICY_IN, type, my_sa,
 							this->mark_in, priority);
 	if (this->mode != MODE_TRANSPORT)
 	{
-		status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+		status |= charon->kernel->add_policy(charon->kernel,
 							other_addr, my_addr, other_ts, my_ts,
 							POLICY_FWD, type, my_sa,
 							this->mark_in, priority);
@@ -861,15 +856,15 @@ static void del_policies_internal(private_child_sa_t *this,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
 
-	hydra->kernel_interface->del_policy(hydra->kernel_interface,
+	charon->kernel->del_policy(charon->kernel,
 						my_addr, other_addr, my_ts, other_ts, POLICY_OUT, type,
 						other_sa, this->mark_out, priority);
-	hydra->kernel_interface->del_policy(hydra->kernel_interface,
+	charon->kernel->del_policy(charon->kernel,
 						other_addr, my_addr, other_ts, my_ts, POLICY_IN,
 						type, my_sa, this->mark_in, priority);
 	if (this->mode != MODE_TRANSPORT)
 	{
-		hydra->kernel_interface->del_policy(hydra->kernel_interface,
+		charon->kernel->del_policy(charon->kernel,
 						other_addr, my_addr, other_ts, my_ts, POLICY_FWD,
 						type, my_sa, this->mark_in, priority);
 	}
@@ -886,8 +881,8 @@ METHOD(child_sa_t, add_policies, status_t,
 	if (!this->reqid_allocated && !this->static_reqid)
 	{
 		/* trap policy, get or confirm reqid */
-		status = hydra->kernel_interface->alloc_reqid(
-							hydra->kernel_interface, my_ts_list, other_ts_list,
+		status = charon->kernel->alloc_reqid(
+							charon->kernel, my_ts_list, other_ts_list,
 							this->mark_in, this->mark_out, &this->reqid);
 		if (status != SUCCESS)
 		{
@@ -967,11 +962,10 @@ static void reinstall_vip(host_t *vip, host_t *me)
 {
 	char *iface;
 
-	if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
-											   me, &iface))
+	if (charon->kernel->get_interface(charon->kernel, me, &iface))
 	{
-		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1, TRUE);
-		hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, -1, iface);
+		charon->kernel->del_ip(charon->kernel, vip, -1, TRUE);
+		charon->kernel->add_ip(charon->kernel, vip, -1, iface);
 		free(iface);
 	}
 }
@@ -1000,7 +994,7 @@ METHOD(child_sa_t, update, status_t,
 		/* update our (initiator) SA */
 		if (this->my_spi)
 		{
-			if (hydra->kernel_interface->update_sa(hydra->kernel_interface,
+			if (charon->kernel->update_sa(charon->kernel,
 							this->my_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 							this->other_addr, this->my_addr, other, me,
@@ -1014,7 +1008,7 @@ METHOD(child_sa_t, update, status_t,
 		/* update his (responder) SA */
 		if (this->other_spi)
 		{
-			if (hydra->kernel_interface->update_sa(hydra->kernel_interface,
+			if (charon->kernel->update_sa(charon->kernel,
 							this->other_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 							this->my_addr, this->other_addr, me, other,
@@ -1143,14 +1137,14 @@ METHOD(child_sa_t, destroy, void,
 	/* delete SAs in the kernel, if they are set up */
 	if (this->my_spi)
 	{
-		hydra->kernel_interface->del_sa(hydra->kernel_interface,
+		charon->kernel->del_sa(charon->kernel,
 					this->other_addr, this->my_addr, this->my_spi,
 					proto_ike2ip(this->protocol), this->my_cpi,
 					this->mark_in);
 	}
 	if (this->other_spi)
 	{
-		hydra->kernel_interface->del_sa(hydra->kernel_interface,
+		charon->kernel->del_sa(charon->kernel,
 					this->my_addr, this->other_addr, this->other_spi,
 					proto_ike2ip(this->protocol), this->other_cpi,
 					this->mark_out);
@@ -1158,7 +1152,7 @@ METHOD(child_sa_t, destroy, void,
 
 	if (this->reqid_allocated)
 	{
-		if (hydra->kernel_interface->release_reqid(hydra->kernel_interface,
+		if (charon->kernel->release_reqid(charon->kernel,
 						this->reqid, this->mark_in, this->mark_out) != SUCCESS)
 		{
 			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);

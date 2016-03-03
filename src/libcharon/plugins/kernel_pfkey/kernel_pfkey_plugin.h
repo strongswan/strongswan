@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
+ * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,3 +12,31 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+/**
+ * @defgroup kernel_pfkey kernel_pfkey
+ * @ingroup cplugins
+ *
+ * @defgroup kernel_pfkey_plugin kernel_pfkey_plugin
+ * @{ @ingroup kernel_pfkey
+ */
+
+#ifndef KERNEL_PFKEY_PLUGIN_H_
+#define KERNEL_PFKEY_PLUGIN_H_
+
+#include <plugins/plugin.h>
+
+typedef struct kernel_pfkey_plugin_t kernel_pfkey_plugin_t;
+
+/**
+ * PF_KEY kernel interface plugin
+ */
+struct kernel_pfkey_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** KERNEL_PFKEY_PLUGIN_H_ @}*/

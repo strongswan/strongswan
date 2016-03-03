@@ -36,7 +36,6 @@
 #include <netinet/udp.h>
 #include <net/if.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
@@ -438,15 +437,13 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 		return 0;
 	}
 
-	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
-												fd, family))
+	if (!charon->kernel->bypass_socket(charon->kernel, fd, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
 
 	/* enable UDP decapsulation on each socket */
-	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
-												   fd, family, *port))
+	if (!charon->kernel->enable_udp_decap(charon->kernel, fd, family, *port))
 	{
 		DBG1(DBG_NET, "enabling UDP decapsulation for %s on port %d failed",
 			 family == AF_INET ? "IPv4" : "IPv6", *port);

@@ -17,7 +17,6 @@
 
 #include <string.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <config/peer_cfg.h>
 #include <encoding/payloads/id_payload.h>
@@ -135,8 +134,8 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 
-	enumerator = hydra->kernel_interface->create_address_enumerator(
-									hydra->kernel_interface, ADDR_TYPE_REGULAR);
+	enumerator = charon->kernel->create_address_enumerator(charon->kernel,
+														   ADDR_TYPE_REGULAR);
 	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);

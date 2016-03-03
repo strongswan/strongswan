@@ -18,7 +18,6 @@
 #include "android_attr.h"
 #include "../charonservice.h"
 
-#include <hydra.h>
 #include <utils/debug.h>
 #include <library.h>
 

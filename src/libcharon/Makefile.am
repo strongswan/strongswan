@@ -46,7 +46,10 @@ encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 encoding/payloads/hash_payload.c encoding/payloads/hash_payload.h \
 encoding/payloads/fragment_payload.c encoding/payloads/fragment_payload.h \
-kernel/kernel_handler.c kernel/kernel_handler.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.c kernel/kernel_net.h \
+kernel/kernel_listener.h kernel/kernel_handler.c kernel/kernel_handler.h \
 network/receiver.c network/receiver.h network/sender.c network/sender.h \
 network/socket.c network/socket.h \
 network/socket_manager.c network/socket_manager.h \
@@ -143,7 +146,6 @@ daemon.lo :		$(top_builddir)/config.status
 AM_CPPFLAGS = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\"
@@ -153,7 +155,6 @@ AM_LDFLAGS = \
 
 libcharon_la_LIBADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
-  $(top_builddir)/src/libhydra/libhydra.la \
   -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 if USE_WINDOWS
@@ -509,6 +510,27 @@ if USE_HA
   SUBDIRS += plugins/ha
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/ha/libstrongswan-ha.la
+endif
+endif
+
+if USE_KERNEL_PFKEY
+  SUBDIRS += plugins/kernel_pfkey
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
+endif
+endif
+
+if USE_KERNEL_PFROUTE
+  SUBDIRS += plugins/kernel_pfroute
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
+endif
+endif
+
+if USE_KERNEL_NETLINK
+  SUBDIRS += plugins/kernel_netlink
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_netlink/libstrongswan-kernel-netlink.la
 endif
 endif
 

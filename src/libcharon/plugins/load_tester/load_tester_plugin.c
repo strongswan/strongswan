@@ -23,7 +23,6 @@
 
 #include <unistd.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>

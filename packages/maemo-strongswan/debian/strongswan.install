@@ -2,7 +2,6 @@
 etc
 # libraries
 usr/lib/ipsec/libstrongswan.so*
-usr/lib/ipsec/libhydra.so*
 usr/lib/ipsec/libcharon.so*
 # starter etc.
 usr/sbin/ipsec

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Martin Willi
- * Copyright (C) 2011 revosec AG
+ * Copyright (C) 2008 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,26 +13,24 @@
  * for more details.
  */
 
-#include "kernel_net.h"
+#include "kernel_ipsec.h"
 
-#include <hydra.h>
+#include <daemon.h>
 
 /**
  * See header
  */
-bool kernel_net_register(plugin_t *plugin, plugin_feature_t *feature,
-						 bool reg, void *data)
+bool kernel_ipsec_register(plugin_t *plugin, plugin_feature_t *feature,
+						   bool reg, void *data)
 {
 	if (reg)
 	{
-		return hydra->kernel_interface->add_net_interface(
-											hydra->kernel_interface,
-											(kernel_net_constructor_t)data);
+		return charon->kernel->add_ipsec_interface(charon->kernel,
+											(kernel_ipsec_constructor_t)data);
 	}
 	else
 	{
-		return hydra->kernel_interface->remove_net_interface(
-											hydra->kernel_interface,
-											(kernel_net_constructor_t)data);
+		return charon->kernel->remove_ipsec_interface(charon->kernel,
+											(kernel_ipsec_constructor_t)data);
 	}
 }

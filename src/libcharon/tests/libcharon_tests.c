@@ -14,7 +14,6 @@
  */
 
 #include <test_runner.h>
-#include <hydra.h>
 #include <daemon.h>
 
 /* declare test suite constructors */
@@ -39,7 +38,6 @@ static bool test_runner_init(bool init)
 	{
 		char *plugins, *plugindir;
 
-		libhydra_init();
 		libcharon_init();
 
 		plugins = getenv("TESTS_PLUGINS") ?:
@@ -59,7 +57,6 @@ static bool test_runner_init(bool init)
 		lib->processor->cancel(lib->processor);
 		lib->plugins->unload(lib->plugins);
 		libcharon_deinit();
-		libhydra_deinit();
 	}
 	return TRUE;
 }

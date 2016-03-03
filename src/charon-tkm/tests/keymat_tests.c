@@ -17,7 +17,6 @@
 #include <tests/test_suite.h>
 
 #include <daemon.h>
-#include <hydra.h>
 #include <config/proposal.h>
 #include <encoding/payloads/ike_header.h>
 #include <tkm/client.h>

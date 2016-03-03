@@ -18,7 +18,6 @@
 #include <tests/test_runner.h>
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 
 #include "tkm.h"
@@ -50,7 +49,6 @@ static bool test_runner_init(bool init)
 
 	if (init)
 	{
-		libhydra_init();
 		libcharon_init();
 		lib->settings->set_int(lib->settings,
 							   "test-runner.filelog.stdout.default", 0);
@@ -74,8 +72,6 @@ static bool test_runner_init(bool init)
 
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libstrongswan/plugins",
 									 PLUGINS);
-		plugin_loader_add_plugindirs(BUILDDIR "/src/libhydra/plugins",
-									 PLUGINS);
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libcharon/plugins",
 									 PLUGINS);
 		if (charon->initialize(charon, PLUGINS))
@@ -95,7 +91,6 @@ static bool test_runner_init(bool init)
 
 	destroy_dh_mapping();
 	libcharon_deinit();
-	libhydra_deinit();
 	return result;
 }
 

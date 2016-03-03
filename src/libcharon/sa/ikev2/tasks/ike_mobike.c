@@ -18,7 +18,6 @@
 
 #include <string.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <sa/ikev2/tasks/ike_natd.h>
 #include <encoding/payloads/notify_payload.h>
@@ -196,8 +195,8 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	int added = 0;
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
-	enumerator = hydra->kernel_interface->create_address_enumerator(
-									hydra->kernel_interface, ADDR_TYPE_REGULAR);
+	enumerator = charon->kernel->create_address_enumerator(charon->kernel,
+														   ADDR_TYPE_REGULAR);
 	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
 		if (me->ip_equals(me, host))
@@ -333,8 +332,7 @@ METHOD(ike_mobike_t, transmit, bool,
 
 	if (!this->check)
 	{
-		me = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
-													  other_old, me_old);
+		me = charon->kernel->get_source_addr(charon->kernel, other_old, me_old);
 		if (me)
 		{
 			if (me->ip_equals(me, me_old))
@@ -372,8 +370,7 @@ METHOD(ike_mobike_t, transmit, bool,
 		{
 			continue;
 		}
-		me = hydra->kernel_interface->get_source_addr(
-										hydra->kernel_interface, other, NULL);
+		me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
 		if (me)
 		{
 			/* reuse port for an active address, 4500 otherwise */
@@ -407,7 +404,7 @@ METHOD(task_t, build_i, status_t,
 
 		/* we check if the existing address is still valid */
 		old = message->get_source(message);
-		new = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+		new = charon->kernel->get_source_addr(charon->kernel,
 										message->get_destination(message), old);
 		if (new)
 		{

@@ -13,26 +13,30 @@
  * for more details.
  */
 
-#include "kernel_ipsec.h"
+/**
+ * @defgroup kernel_netlink kernel_netlink
+ * @ingroup cplugins
+ *
+ * @defgroup kernel_netlink_plugin kernel_netlink_plugin
+ * @{ @ingroup kernel_netlink
+ */
 
-#include <hydra.h>
+#ifndef KERNEL_NETLINK_PLUGIN_H_
+#define KERNEL_NETLINK_PLUGIN_H_
+
+#include <plugins/plugin.h>
+
+typedef struct kernel_netlink_plugin_t kernel_netlink_plugin_t;
 
 /**
- * See header
+ * netlink kernel interface plugin
  */
-bool kernel_ipsec_register(plugin_t *plugin, plugin_feature_t *feature,
-						   bool reg, void *data)
-{
-	if (reg)
-	{
-		return hydra->kernel_interface->add_ipsec_interface(
-											hydra->kernel_interface,
-											(kernel_ipsec_constructor_t)data);
-	}
-	else
-	{
-		return hydra->kernel_interface->remove_ipsec_interface(
-											hydra->kernel_interface,
-											(kernel_ipsec_constructor_t)data);
-	}
-}
+struct kernel_netlink_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** KERNEL_NETLINK_PLUGIN_H_ @}*/

@@ -356,7 +356,6 @@ static void cleanup()
 	free(conftest->suite_dir);
 	free(conftest);
 	libcharon_deinit();
-	libhydra_deinit();
 	library_deinit();
 }
 
@@ -442,16 +441,9 @@ int main(int argc, char *argv[])
 		library_deinit();
 		return SS_RC_LIBSTRONGSWAN_INTEGRITY;
 	}
-	if (!libhydra_init())
-	{
-		libhydra_deinit();
-		library_deinit();
-		return SS_RC_INITIALIZATION_FAILED;
-	}
 	if (!libcharon_init())
 	{
 		libcharon_deinit();
-		libhydra_deinit();
 		library_deinit();
 		return SS_RC_INITIALIZATION_FAILED;
 	}

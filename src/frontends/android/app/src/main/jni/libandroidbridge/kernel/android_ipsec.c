@@ -19,7 +19,7 @@
 
 #include <utils/debug.h>
 #include <library.h>
-#include <hydra.h>
+#include <daemon.h>
 #include <ipsec.h>
 
 typedef struct private_kernel_android_ipsec_t private_kernel_android_ipsec_t;
@@ -42,8 +42,7 @@ struct private_kernel_android_ipsec_t {
  */
 static void expire(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard)
 {
-	hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
-									spi, dst, hard);
+	charon->kernel->expire(charon->kernel, protocol, spi, dst, hard);
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,

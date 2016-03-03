@@ -17,8 +17,6 @@
 #include "kernel_iph_plugin.h"
 #include "kernel_iph_net.h"
 
-#include <hydra.h>
-
 typedef struct private_kernel_iph_plugin_t private_kernel_iph_plugin_t;
 
 /**

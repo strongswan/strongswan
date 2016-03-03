@@ -78,7 +78,7 @@
 
 #include "kernel_pfkey_ipsec.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <utils/debug.h>
 #include <networking/host.h>
 #include <collections/linked_list.h>
@@ -922,8 +922,7 @@ static int lookup_algorithm(transform_type_t type, int ikev2)
 		}
 		list++;
 	}
-	hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface, ikev2,
-											  type, &alg, NULL);
+	charon->kernel->lookup_algorithm(charon->kernel, ikev2, type, &alg, NULL);
 	return alg;
 }
 
@@ -1283,8 +1282,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
 
-	hydra->kernel_interface->acquire(hydra->kernel_interface, reqid, src_ts,
-									 dst_ts);
+	charon->kernel->acquire(charon->kernel, reqid, src_ts, dst_ts);
 }
 
 /**
@@ -1316,8 +1314,7 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 		dst = host_create_from_sockaddr((sockaddr_t*)(response.dst + 1));
 		if (dst)
 		{
-			hydra->kernel_interface->expire(hydra->kernel_interface, protocol,
-											spi, dst, hard);
+			charon->kernel->expire(charon->kernel, protocol, spi, dst, hard);
 			dst->destroy(dst);
 		}
 	}
@@ -1366,8 +1363,8 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this,
 
 	if (src_ts && dst_ts && local && remote)
 	{
-		hydra->kernel_interface->migrate(hydra->kernel_interface, reqid,
-										 src_ts, dst_ts, dir, local, remote);
+		charon->kernel->migrate(charon->kernel, reqid, src_ts, dst_ts, dir,
+								local, remote);
 	}
 	else
 	{
@@ -1437,8 +1434,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 		new = host_create_from_sockaddr(sa);
 		if (new)
 		{
-			hydra->kernel_interface->mapping(hydra->kernel_interface,
-											 IPPROTO_ESP, spi, dst, new);
+			charon->kernel->mapping(charon->kernel, IPPROTO_ESP, spi, dst, new);
 			new->destroy(new);
 		}
 		dst->destroy(dst);
@@ -2142,15 +2138,13 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 	if (!route->exclude)
 	{
 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
-		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
-												   dst, -1, NULL);
+		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL);
 		if (gtw)
 		{
 			char *if_name = NULL;
 
-			if (hydra->kernel_interface->get_interface(
-									hydra->kernel_interface, src, &if_name) &&
-				hydra->kernel_interface->add_route(hydra->kernel_interface,
+			if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
+				charon->kernel->add_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									gtw, src, if_name) == SUCCESS)
@@ -2213,10 +2207,10 @@ static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
 			dst = route->exclude->dst;
 			DBG2(DBG_KNL, "uninstalling exclude route for %H src %H",
 				 dst, route->exclude->src);
-			if (hydra->kernel_interface->get_interface(
-									hydra->kernel_interface,
+			if (charon->kernel->get_interface(
+									charon->kernel,
 									route->exclude->src, &if_name) &&
-				hydra->kernel_interface->del_route(hydra->kernel_interface,
+				charon->kernel->del_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									route->exclude->gtw, route->exclude->src,
@@ -2241,8 +2235,8 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	host_t *host, *src, *dst;
 	bool is_virtual;
 
-	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-									in->dst_ts, &host, &is_virtual) != SUCCESS)
+	if (charon->kernel->get_address_by_ts(charon->kernel, in->dst_ts, &host,
+										  &is_virtual) != SUCCESS)
 	{
 		return FALSE;
 	}
@@ -2259,8 +2253,8 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 
 	if (!dst->is_anyaddr(dst))
 	{
-		route->gateway = hydra->kernel_interface->get_nexthop(
-									hydra->kernel_interface, dst, -1, src);
+		route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1,
+													 src);
 
 		/* if the IP is virtual, we install the route over the interface it has
 		 * been installed on. Otherwise we use the interface we use for IKE, as
@@ -2272,17 +2266,16 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	}
 	else
 	{	/* for shunt policies */
-		route->gateway = hydra->kernel_interface->get_nexthop(
-									hydra->kernel_interface, policy->src.net,
-									policy->src.mask, route->src_ip);
+		route->gateway = charon->kernel->get_nexthop(charon->kernel,
+											policy->src.net, policy->src.mask,
+											route->src_ip);
 
 		/* we don't have a source address, use the address we found */
 		src = route->src_ip;
 	}
 
 	/* get interface for route, using source address */
-	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												src, &route->if_name))
+	if (!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
 	{
 		route_entry_destroy(route);
 		return FALSE;
@@ -2298,9 +2291,9 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 			return TRUE;
 		}
 		/* uninstall previously installed route */
-		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-									old->dst_net, old->prefixlen, old->gateway,
-									old->src_ip, old->if_name) != SUCCESS)
+		if (charon->kernel->del_route(charon->kernel, old->dst_net,
+									  old->prefixlen, old->gateway,
+									  old->src_ip, old->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
 				 "%R === %R %N", in->src_ts, in->dst_ts,
@@ -2311,8 +2304,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
-	if (hydra->kernel_interface->get_features(
-					hydra->kernel_interface) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
+	if (charon->kernel->get_features(charon->kernel) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
 	{
 		if (in->src_ts->is_host(in->src_ts, dst))
 		{
@@ -2331,9 +2323,9 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
 		 in->src_ts, route->gateway, route->src_ip, route->if_name);
 
-	switch (hydra->kernel_interface->add_route(hydra->kernel_interface,
-							route->dst_net, route->prefixlen, route->gateway,
-							route->src_ip, route->if_name))
+	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
+									  route->prefixlen, route->gateway,
+									  route->src_ip, route->if_name))
 	{
 		case ALREADY_DONE:
 			/* route exists, do not uninstall */
@@ -2813,9 +2805,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	if (policy->route)
 	{
 		route_entry_t *route = policy->route;
-		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-				route->dst_net, route->prefixlen, route->gateway,
-				route->src_ip, route->if_name) != SUCCESS)
+		if (charon->kernel->del_route(charon->kernel, route->dst_net,
+									  route->prefixlen, route->gateway,
+									  route->src_ip, route->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
 						  "policy %R === %R %N", src_ts, dst_ts,

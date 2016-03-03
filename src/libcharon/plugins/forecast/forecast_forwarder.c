@@ -27,7 +27,6 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -428,8 +427,7 @@ METHOD(forecast_forwarder_t, destroy, void,
 		lib->watcher->remove(lib->watcher, this->kernel.pkt);
 		close(this->kernel.pkt);
 	}
-	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
-											 &this->kernel.listener);
+	charon->kernel->remove_listener(charon->kernel, &this->kernel.listener);
 	free(this);
 }
 
@@ -486,8 +484,8 @@ forecast_forwarder_t *forecast_forwarder_create(forecast_listener_t *listener)
 
 	setup_interface(&this->kernel);
 
-	hydra->kernel_interface->add_listener(hydra->kernel_interface,
-										  &this->kernel.listener);
+	charon->kernel->add_listener(charon->kernel,
+										   &this->kernel.listener);
 
 	lib->watcher->add(lib->watcher, this->kernel.pkt, WATCHER_READ,
 					  (watcher_cb_t)receive_casts, this);

@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <hydra.h>
 #include <daemon.h>
 
 #include <library.h>
@@ -177,14 +176,6 @@ int main(int argc, char *argv[])
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
-	if (!libhydra_init())
-	{
-		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting charon-nm");
-		libhydra_deinit();
-		library_deinit();
-		exit(SS_RC_INITIALIZATION_FAILED);
-	}
-
 	if (!libcharon_init())
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting charon-nm");
@@ -212,7 +203,6 @@ int main(int argc, char *argv[])
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
 		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
-		DBG1(DBG_DMN, "lib    'libhydra': passed file and segment integrity tests");
 		DBG1(DBG_DMN, "lib    'libcharon': passed file and segment integrity tests");
 		DBG1(DBG_DMN, "daemon 'charon-nm': passed file integrity test");
 	}
@@ -260,7 +250,6 @@ int main(int argc, char *argv[])
 
 deinit:
 	libcharon_deinit();
-	libhydra_deinit();
 	library_deinit();
 	return status;
 }

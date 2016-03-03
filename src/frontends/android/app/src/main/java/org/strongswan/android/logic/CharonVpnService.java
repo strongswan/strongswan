@@ -848,7 +848,6 @@ public class CharonVpnService extends VpnService implements Runnable
 				System.loadLibrary("imcv");
 			}
 
-			System.loadLibrary("hydra");
 			System.loadLibrary("charon");
 			System.loadLibrary("ipsec");
 		}

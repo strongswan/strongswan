@@ -6,7 +6,6 @@ scepclient.o :	$(top_builddir)/config.status
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra \
 	-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 	-DPLUGINS=\""${scepclient_plugins}\""
 

@@ -16,7 +16,6 @@
 #include "xauth.h"
 
 #include <daemon.h>
-#include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
 #include <processing/jobs/adopt_children_job.h>
 #include <sa/ikev1/tasks/mode_config.h>

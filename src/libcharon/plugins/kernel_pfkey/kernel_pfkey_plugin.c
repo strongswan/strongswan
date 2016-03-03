@@ -14,46 +14,41 @@
  */
 
 
-#include "kernel_netlink_plugin.h"
+#include "kernel_pfkey_plugin.h"
 
-#include "kernel_netlink_ipsec.h"
-#include "kernel_netlink_net.h"
+#include "kernel_pfkey_ipsec.h"
 
-#include <hydra.h>
-
-typedef struct private_kernel_netlink_plugin_t private_kernel_netlink_plugin_t;
+typedef struct private_kernel_pfkey_plugin_t private_kernel_pfkey_plugin_t;
 
 /**
- * private data of kernel netlink plugin
+ * private data of kernel PF_KEY plugin
  */
-struct private_kernel_netlink_plugin_t {
+struct private_kernel_pfkey_plugin_t {
 	/**
 	 * implements plugin interface
 	 */
-	kernel_netlink_plugin_t public;
+	kernel_pfkey_plugin_t public;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_kernel_netlink_plugin_t *this)
+	private_kernel_pfkey_plugin_t *this)
 {
-	return "kernel-netlink";
+	return "kernel-pfkey";
 }
 
 METHOD(plugin_t, get_features, int,
-	private_kernel_netlink_plugin_t *this, plugin_feature_t *features[])
+	private_kernel_pfkey_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_netlink_ipsec_create),
+		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_pfkey_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 	};
 	*features = f;
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	private_kernel_netlink_plugin_t *this)
+	private_kernel_pfkey_plugin_t *this)
 {
 	free(this);
 }
@@ -61,16 +56,14 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *kernel_netlink_plugin_create()
+plugin_t *kernel_pfkey_plugin_create()
 {
-	private_kernel_netlink_plugin_t *this;
+	private_kernel_pfkey_plugin_t *this;
 
-	if (!lib->caps->keep(lib->caps, CAP_NET_ADMIN))
-	{	/* required to bind/use XFRM sockets / create/modify routing tables, but
-		 * not if only the read-only parts of kernel-netlink-net are used, so
-		 * we don't fail here */
-		DBG1(DBG_KNL, "kernel-netlink plugin might require CAP_NET_ADMIN "
-			 "capability");
+	if (!lib->caps->check(lib->caps, CAP_NET_ADMIN))
+	{	/* required to open PF_KEY sockets */
+		DBG1(DBG_KNL, "kernel-pfkey plugin requires CAP_NET_ADMIN capability");
+		return NULL;
 	}
 
 	INIT(this,

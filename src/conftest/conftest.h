@@ -21,7 +21,6 @@
 #define CONFTEST_H_
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 #include <credentials/sets/mem_cred.h>
 

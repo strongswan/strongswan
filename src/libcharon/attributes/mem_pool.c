@@ -17,7 +17,6 @@
 #include "mem_pool.h"
 
 #include <library.h>
-#include <hydra.h>
 #include <utils/debug.h>
 #include <collections/hashtable.h>
 #include <collections/array.h>

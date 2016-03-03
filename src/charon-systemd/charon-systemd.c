@@ -31,7 +31,6 @@
 #include <systemd/sd-daemon.h>
 #include <systemd/sd-journal.h>
 
-#include <hydra.h>
 #include <daemon.h>
 
 #include <library.h>
@@ -353,12 +352,6 @@ int main(int argc, char *argv[])
 		!lib->integrity->check_file(lib->integrity, "charon-systemd", argv[0]))
 	{
 		sd_notifyf(0, "STATUS=integrity check of charon-systemd failed");
-		return SS_RC_INITIALIZATION_FAILED;
-	}
-	atexit(libhydra_deinit);
-	if (!libhydra_init())
-	{
-		sd_notifyf(0, "STATUS=libhydra initialization failed");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
 	atexit(libcharon_deinit);

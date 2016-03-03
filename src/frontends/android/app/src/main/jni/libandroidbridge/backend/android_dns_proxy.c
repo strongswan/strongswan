@@ -22,7 +22,7 @@
 
 #include "android_dns_proxy.h"
 
-#include <hydra.h>
+#include <daemon.h>
 #include <threading/rwlock.h>
 #include <collections/hashtable.h>
 #include <processing/jobs/callback_job.h>
@@ -121,8 +121,7 @@ static int open_socket(int family)
 		DBG1(DBG_NET, "could not open proxy socket: %s", strerror(errno));
 		return -1;
 	}
-	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
-												skt, family))
+	if (!charon->kernel->bypass_socket(charon->kernel, skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy for proxy socket failed");
 		close(skt);

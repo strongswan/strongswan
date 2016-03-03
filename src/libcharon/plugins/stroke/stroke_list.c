@@ -26,7 +26,6 @@
 #include <malloc.h>
 #endif /* HAVE_MALLINFO */
 
-#include <hydra.h>
 #include <daemon.h>
 #include <collections/linked_list.h>
 #include <plugins/plugin.h>
@@ -533,8 +532,8 @@ METHOD(stroke_list_t, status, void,
 		}
 		enumerator->destroy(enumerator);
 
-		enumerator = hydra->kernel_interface->create_address_enumerator(
-								hydra->kernel_interface, ADDR_TYPE_REGULAR);
+		enumerator = charon->kernel->create_address_enumerator(charon->kernel,
+															ADDR_TYPE_REGULAR);
 		fprintf(out, "Listening IP addresses:\n");
 		while (enumerator->enumerate(enumerator, (void**)&host))
 		{
