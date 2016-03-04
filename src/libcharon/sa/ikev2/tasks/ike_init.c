@@ -118,6 +118,11 @@ struct private_ike_init_t {
 	 * Whether to use Signature Authentication as per RFC 7427
 	 */
 	bool signature_authentication;
+
+	/**
+	 * Whether to follow IKEv2 redirects as per RFC 5685
+	 */
+	bool follow_redirects;
 };
 
 /**
@@ -324,6 +329,29 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 			send_supported_hash_algorithms(this, message);
 		}
 	}
+	/* notify other peer if we support redirection */
+	if (!this->old_sa && this->initiator && this->follow_redirects)
+	{
+		identification_t *gateway;
+		host_t *from;
+		chunk_t data;
+
+		from = this->ike_sa->get_redirected_from(this->ike_sa);
+		if (from)
+		{
+			gateway = identification_create_from_sockaddr(
+													from->get_sockaddr(from));
+			data = redirect_data_create(gateway, chunk_empty);
+			message->add_notify(message, FALSE, REDIRECTED_FROM, data);
+			chunk_free(&data);
+			gateway->destroy(gateway);
+		}
+		else
+		{
+			message->add_notify(message, FALSE, REDIRECT_SUPPORTED,
+								chunk_empty);
+		}
+	}
 	return TRUE;
 }
 
@@ -389,6 +417,30 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						if (this->signature_authentication)
 						{
 							handle_supported_hash_algorithms(this, notify);
+						}
+						break;
+					case REDIRECTED_FROM:
+					{
+						identification_t *gateway;
+						chunk_t data;
+
+						data = notify->get_notification_data(notify);
+						gateway = redirect_data_parse(data, NULL);
+						if (!gateway)
+						{
+							DBG1(DBG_IKE, "received invalid REDIRECTED_FROM "
+								 "notify, ignored");
+							break;
+						}
+						DBG1(DBG_IKE, "client got redirected from %Y", gateway);
+						gateway->destroy(gateway);
+						/* fall-through */
+					}
+					case REDIRECT_SUPPORTED:
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_IKE_REDIRECTION);
 						}
 						break;
 					default:
@@ -550,6 +602,8 @@ static bool derive_keys(private_ike_init_t *this,
 METHOD(task_t, build_r, status_t,
 	private_ike_init_t *this, message_t *message)
 {
+	identification_t *gateway;
+
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
@@ -559,6 +613,22 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
+
+	/* check if we'd have to redirect the client */
+	if (!this->old_sa &&
+		this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
+		charon->redirect->redirect_on_init(charon->redirect, this->ike_sa,
+										   &gateway))
+	{
+		chunk_t data;
+
+		DBG1(DBG_IKE, "redirecting peer to %Y", gateway);
+		data = redirect_data_create(gateway, this->other_nonce);
+		message->add_notify(message, TRUE, REDIRECT, data);
+		gateway->destroy(gateway);
+		chunk_free(&data);
+		return FAILED;
+	}
 
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
@@ -623,6 +693,54 @@ static void raise_alerts(private_ike_init_t *this, notify_type_t type)
 	}
 }
 
+METHOD(task_t, pre_process_i, status_t,
+	private_ike_init_t *this, message_t *message)
+{
+	enumerator_t *enumerator;
+	payload_t *payload;
+
+	/* check for erroneous notifies */
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == PLV2_NOTIFY)
+		{
+			notify_payload_t *notify = (notify_payload_t*)payload;
+			notify_type_t type = notify->get_notify_type(notify);
+
+			switch (type)
+			{
+				case REDIRECT:
+				{
+					identification_t *gateway;
+					chunk_t data, nonce = chunk_empty;
+					status_t status = SUCCESS;
+
+					if (this->old_sa)
+					{
+						break;
+					}
+					data = notify->get_notification_data(notify);
+					gateway = redirect_data_parse(data, &nonce);
+					if (!gateway || !chunk_equals(nonce, this->my_nonce))
+					{
+						DBG1(DBG_IKE, "received invalid REDIRECT notify");
+						status = FAILED;
+					}
+					DESTROY_IF(gateway);
+					chunk_free(&nonce);
+					enumerator->destroy(enumerator);
+					return status;
+				}
+				default:
+					break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return SUCCESS;
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {
@@ -677,6 +795,29 @@ METHOD(task_t, process_i, status_t,
 					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
 					this->retry++;
 					return NEED_MORE;
+				}
+				case REDIRECT:
+				{
+					identification_t *gateway;
+					chunk_t data, nonce = chunk_empty;
+					status_t status = FAILED;
+
+					if (this->old_sa)
+					{
+						DBG1(DBG_IKE, "received REDIRECT notify during rekeying"
+						     ", ignored");
+						break;
+					}
+					data = notify->get_notification_data(notify);
+					gateway = redirect_data_parse(data, &nonce);
+					if (this->ike_sa->handle_redirect(this->ike_sa, gateway))
+					{
+						status = NEED_MORE;
+					}
+					DESTROY_IF(gateway);
+					chunk_free(&nonce);
+					enumerator->destroy(enumerator);
+					return status;
 				}
 				default:
 				{
@@ -802,6 +943,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
+		.follow_redirects = lib->settings->get_bool(lib->settings,
+								"%s.follow_redirects", TRUE, lib->ns),
 	);
 	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
 
@@ -809,6 +952,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	{
 		this->public.task.build = _build_i;
 		this->public.task.process = _process_i;
+		this->public.task.pre_process = _pre_process_i;
 	}
 	else
 	{

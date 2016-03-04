@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Tobias Brunner
+ * Copyright (C) 2006-2015 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -64,6 +64,16 @@ typedef struct ike_sa_t ike_sa_t;
  * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
  */
 #define RETRY_JITTER 20
+
+/**
+ * Number of redirects allowed within REDIRECT_LOOP_DETECT_PERIOD.
+ */
+#define MAX_REDIRECTS 5
+
+/**
+ * Time period in seconds in which at most MAX_REDIRECTS are allowed.
+ */
+#define REDIRECT_LOOP_DETECT_PERIOD 300
 
 /**
  * Extensions (or optional features) the peer supports
@@ -136,6 +146,11 @@ enum ike_extension_t {
 	 * Signature Authentication, RFC 7427
 	 */
 	EXT_SIGNATURE_AUTH = (1<<12),
+
+	/**
+	 * IKEv2 Redirect Mechanism, RFC 5685
+	 */
+	EXT_IKE_REDIRECTION = (1<<13),
 };
 
 /**
@@ -197,6 +212,11 @@ enum ike_condition_t {
 	 * This IKE_SA is currently being reauthenticated
 	 */
 	COND_REAUTHENTICATING = (1<<10),
+
+	/**
+	 * This IKE_SA has been redirected
+	 */
+	COND_REDIRECTED = (1<<11),
 };
 
 /**
@@ -841,6 +861,32 @@ struct ike_sa_t {
 	 * @param scheduled		if this is a scheduled keepalive
 	 */
 	void (*send_keepalive) (ike_sa_t *this, bool scheduled);
+
+	/**
+	 * Redirect an active IKE_SA.
+	 *
+	 * @param gateway		gateway ID (IP or FQDN) of the target
+	 * @return				state, including DESTROY_ME, if this IKE_SA MUST be
+	 * 						destroyed
+	 */
+	status_t (*redirect)(ike_sa_t *this, identification_t *gateway);
+
+	/**
+	 * Handle a redirect request.
+	 *
+	 * The behavior is different depending on the state of the IKE_SA.
+	 *
+	 * @param gateway		gateway ID (IP or FQDN) of the target
+	 * @return				FALSE if redirect not possible, TRUE otherwise
+	 */
+	bool (*handle_redirect)(ike_sa_t *this, identification_t *gateway);
+
+	/**
+	 * Get the address of the gateway that redirected us.
+	 *
+	 * @return				original gateway address
+	 */
+	host_t *(*get_redirected_from)(ike_sa_t *this);
 
 	/**
 	 * Get the keying material of this IKE_SA.

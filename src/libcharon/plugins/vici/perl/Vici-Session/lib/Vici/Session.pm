@@ -36,6 +36,10 @@ sub terminate {
     return request_vars_res('terminate', @_);
 }
 
+sub redirect {
+    return request_vars_res('redirect', @_);
+}
+
 sub install {
     return request_vars_res('install', @_);
 }

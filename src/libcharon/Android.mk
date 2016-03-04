@@ -59,6 +59,7 @@ processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
 processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
 processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
+processing/jobs/redirect_job.c processing/jobs/redirect_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \
 processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
@@ -84,6 +85,7 @@ sa/child_sa_manager.c sa/child_sa_manager.h \
 sa/task_manager.h sa/task_manager.c \
 sa/shunt_manager.c sa/shunt_manager.h \
 sa/trap_manager.c sa/trap_manager.h \
+sa/redirect_provider.h sa/redirect_manager.c sa/redirect_manager.h \
 sa/task.c sa/task.h
 
 libcharon_la_SOURCES += \
@@ -107,6 +109,7 @@ sa/ikev2/tasks/ike_mobike.c sa/ikev2/tasks/ike_mobike.h \
 sa/ikev2/tasks/ike_rekey.c sa/ikev2/tasks/ike_rekey.h \
 sa/ikev2/tasks/ike_reauth.c sa/ikev2/tasks/ike_reauth.h \
 sa/ikev2/tasks/ike_reauth_complete.c sa/ikev2/tasks/ike_reauth_complete.h \
+sa/ikev2/tasks/ike_redirect.c sa/ikev2/tasks/ike_redirect.h \
 sa/ikev2/tasks/ike_auth_lifetime.c sa/ikev2/tasks/ike_auth_lifetime.h \
 sa/ikev2/tasks/ike_vendor.c sa/ikev2/tasks/ike_vendor.h
 

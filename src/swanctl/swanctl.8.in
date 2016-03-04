@@ -41,6 +41,10 @@ initiate a connection
 \-\-terminate\fR
 terminate a connection
 .TP
+.B "\-d, \-\-redirect"
+\-\-redirect\fR
+redirect an IKE_SA
+.TP
 .B "\-p, \-\-install"
 install a trap or shunt policy
 .TP

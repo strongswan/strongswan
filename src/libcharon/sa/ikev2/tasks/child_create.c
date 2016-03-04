@@ -1220,6 +1220,10 @@ METHOD(task_t, build_r, status_t,
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
+			if (this->ike_sa->has_condition(this->ike_sa, COND_REDIRECTED))
+			{	/* no CHILD_SA is created for redirected SAs */
+				return SUCCESS;
+			}
 			ike_auth = TRUE;
 		default:
 			break;

@@ -505,6 +505,12 @@ module Vici
     end
 
     ##
+    # Redirect an IKE_SA.
+    def redirect(options)
+      check_success(@transp.request("redirect", Message.new(options)))
+    end
+
+    ##
     # Install a shunt/route policy.
     def install(policy)
       check_success(@transp.request("install", Message.new(policy)))

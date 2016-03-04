@@ -190,6 +190,7 @@ typedef struct daemon_t daemon_t;
 #include <sa/child_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <sa/shunt_manager.h>
+#include <sa/redirect_manager.h>
 #include <config/backend_manager.h>
 #include <sa/eap/eap_manager.h>
 #include <sa/xauth/xauth_manager.h>
@@ -263,6 +264,11 @@ struct daemon_t {
 	 * Manager for shunt PASS|DROP policies
 	 */
 	shunt_manager_t *shunts;
+
+	/**
+	 * Manager for IKE redirect providers
+	 */
+	redirect_manager_t *redirect;
 
 	/**
 	 * Manager for the different configuration backends.

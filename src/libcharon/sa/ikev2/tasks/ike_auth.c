@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -25,6 +25,7 @@
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <sa/ikev2/authenticators/eap_authenticator.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 typedef struct private_ike_auth_t private_ike_auth_t;
 
@@ -117,6 +118,11 @@ struct private_ike_auth_t {
 	 * Is EAP acceptable, did we strictly authenticate peer?
 	 */
 	bool eap_acceptable;
+
+	/**
+	 * Gateway ID if redirected
+	 */
+	identification_t *redirect_to;
 };
 
 /**
@@ -685,6 +691,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_ike_auth_t *this, message_t *message)
 {
+	identification_t *gateway;
 	auth_cfg_t *cfg;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
@@ -817,34 +824,56 @@ METHOD(task_t, build_r, status_t,
 	{
 		this->do_another_auth = FALSE;
 	}
-	if (!this->do_another_auth && !this->expect_another_auth)
+	if (this->do_another_auth || this->expect_another_auth)
 	{
-		if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-													 this->ike_sa, FALSE))
-		{
-			DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
-			charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
-			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
-								chunk_empty);
-			return FAILED;
-		}
-		if (!charon->bus->authorize(charon->bus, TRUE))
-		{
-			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
-			goto peer_auth_failed;
-		}
-		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-			 this->ike_sa->get_name(this->ike_sa),
-			 this->ike_sa->get_unique_id(this->ike_sa),
-			 this->ike_sa->get_my_host(this->ike_sa),
-			 this->ike_sa->get_my_id(this->ike_sa),
-			 this->ike_sa->get_other_host(this->ike_sa),
-			 this->ike_sa->get_other_id(this->ike_sa));
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-		return SUCCESS;
+		return NEED_MORE;
 	}
-	return NEED_MORE;
+
+	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+												 this->ike_sa, FALSE))
+	{
+		DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
+		charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
+							chunk_empty);
+		return FAILED;
+	}
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
+		goto peer_auth_failed;
+	}
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
+		charon->redirect->redirect_on_auth(charon->redirect, this->ike_sa,
+										   &gateway))
+	{
+		delete_ike_sa_job_t *job;
+		chunk_t data;
+
+		DBG1(DBG_IKE, "redirecting peer to %Y", gateway);
+		data = redirect_data_create(gateway, chunk_empty);
+		message->add_notify(message, FALSE, REDIRECT, data);
+		gateway->destroy(gateway);
+		chunk_free(&data);
+		/* we use this condition to prevent the CHILD_SA from getting created */
+		this->ike_sa->set_condition(this->ike_sa, COND_REDIRECTED, TRUE);
+		/* if the peer does not delete the SA we do so after a while */
+		job = delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE);
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
+						lib->settings->get_int(lib->settings,
+							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
+							lib->ns));
+	}
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+	return SUCCESS;
 
 peer_auth_failed:
 	message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
@@ -963,6 +992,15 @@ METHOD(task_t, process_i, status_t,
 					break;
 				case ME_ENDPOINT:
 					/* handled in ike_me task */
+					break;
+				case REDIRECT:
+					DESTROY_IF(this->redirect_to);
+					this->redirect_to = redirect_data_parse(
+								notify->get_notification_data(notify), NULL);
+					if (!this->redirect_to)
+					{
+						DBG1(DBG_IKE, "received invalid REDIRECT notify");
+					}
 					break;
 				default:
 				{
@@ -1094,30 +1132,35 @@ METHOD(task_t, process_i, status_t,
 	{
 		this->expect_another_auth = FALSE;
 	}
-	if (!this->expect_another_auth && !this->do_another_auth && !this->my_auth)
+	if (this->expect_another_auth || this->do_another_auth || this->my_auth)
 	{
-		if (!update_cfg_candidates(this, TRUE))
-		{
-			goto peer_auth_failed;
-		}
-		if (!charon->bus->authorize(charon->bus, TRUE))
-		{
-			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
-					      "cancelling");
-			goto peer_auth_failed;
-		}
-		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-			 this->ike_sa->get_name(this->ike_sa),
-			 this->ike_sa->get_unique_id(this->ike_sa),
-			 this->ike_sa->get_my_host(this->ike_sa),
-			 this->ike_sa->get_my_id(this->ike_sa),
-			 this->ike_sa->get_other_host(this->ike_sa),
-			 this->ike_sa->get_other_id(this->ike_sa));
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-		return SUCCESS;
+		return NEED_MORE;
 	}
-	return NEED_MORE;
+	if (!update_cfg_candidates(this, TRUE))
+	{
+		goto peer_auth_failed;
+	}
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
+				      "cancelling");
+		goto peer_auth_failed;
+	}
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	if (this->redirect_to)
+	{
+		this->ike_sa->handle_redirect(this->ike_sa, this->redirect_to);
+	}
+	return SUCCESS;
 
 peer_auth_failed:
 	charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
@@ -1141,6 +1184,7 @@ METHOD(task_t, migrate, void,
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
+	DESTROY_IF(this->redirect_to);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 
 	this->my_packet = NULL;
@@ -1149,6 +1193,7 @@ METHOD(task_t, migrate, void,
 	this->peer_cfg = NULL;
 	this->my_auth = NULL;
 	this->other_auth = NULL;
+	this->redirect_to = NULL;
 	this->do_another_auth = TRUE;
 	this->expect_another_auth = TRUE;
 	this->authentication_failed = FALSE;
@@ -1165,6 +1210,7 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->peer_cfg);
+	DESTROY_IF(this->redirect_to);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 	free(this);
 }

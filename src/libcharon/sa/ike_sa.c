@@ -56,6 +56,8 @@
 #include <processing/jobs/rekey_ike_sa_job.h>
 #include <processing/jobs/retry_initiate_job.h>
 #include <sa/ikev2/tasks/ike_auth_lifetime.h>
+#include <sa/ikev2/tasks/ike_reauth_complete.h>
+#include <sa/ikev2/tasks/ike_redirect.h>
 
 #ifdef ME
 #include <sa/ikev2/tasks/ike_me.h>
@@ -282,6 +284,21 @@ struct private_ike_sa_t {
 	 * Maximum length of a single fragment, 0 for address-specific defaults
 	 */
 	size_t fragment_size;
+
+	/**
+	 * Whether to follow IKEv2 redirects
+	 */
+	bool follow_redirects;
+
+	/**
+	 * Original gateway address from which we got redirected
+	 */
+	host_t *redirected_from;
+
+	/**
+	 * Timestamps of redirect attempts to handle loops
+	 */
+	array_t *redirected_at;
 };
 
 /**
@@ -384,6 +401,12 @@ METHOD(ike_sa_t, set_other_host, void,
 {
 	DESTROY_IF(this->other_host);
 	this->other_host = other;
+}
+
+METHOD(ike_sa_t, get_redirected_from, host_t*,
+	private_ike_sa_t *this)
+{
+	return this->redirected_from;
 }
 
 METHOD(ike_sa_t, get_peer_cfg, peer_cfg_t*,
@@ -743,6 +766,8 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					keepalives = TRUE;
 				}
+				DESTROY_IF(this->redirected_from);
+				this->redirected_from = NULL;
 			}
 			break;
 		}
@@ -1750,6 +1775,86 @@ static bool is_child_queued(private_ike_sa_t *this, task_queue_t queue)
 	return found;
 }
 
+/**
+ * Reestablish CHILD_SAs and migrate queued tasks.
+ *
+ * If force is true all SAs are restarted, otherwise their close/dpd_action
+ * is followed.
+ */
+static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
+									 bool force)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
+	action_t action;
+	status_t status = FAILED;
+
+	/* handle existing CHILD_SAs */
+	enumerator = create_child_sa_enumerator(this);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	{
+		if (force)
+		{
+			switch (child_sa->get_state(child_sa))
+			{
+				case CHILD_ROUTED:
+				{	/* move routed child directly */
+					remove_child_sa(this, enumerator);
+					new->add_child_sa(new, child_sa);
+					action = ACTION_NONE;
+					break;
+				}
+				default:
+				{	/* initiate/queue all other CHILD_SAs */
+					action = ACTION_RESTART;
+					break;
+				}
+			}
+		}
+		else
+		{	/* only restart CHILD_SAs that are configured accordingly */
+			if (this->state == IKE_DELETING)
+			{
+				action = child_sa->get_close_action(child_sa);
+			}
+			else
+			{
+				action = child_sa->get_dpd_action(child_sa);
+			}
+		}
+		switch (action)
+		{
+			case ACTION_RESTART:
+				child_cfg = child_sa->get_config(child_sa);
+				DBG1(DBG_IKE, "restarting CHILD_SA %s",
+					 child_cfg->get_name(child_cfg));
+				child_cfg->get_ref(child_cfg);
+				status = new->initiate(new, child_cfg,
+								child_sa->get_reqid(child_sa), NULL, NULL);
+				break;
+			default:
+				continue;
+		}
+		if (status == DESTROY_ME)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	/* adopt any active or queued CHILD-creating tasks */
+	if (status != DESTROY_ME)
+	{
+		task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
+		other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
+		if (new->get_state(new) == IKE_CREATED)
+		{
+			status = new->initiate(new, NULL, 0, NULL, NULL);
+		}
+	}
+	return status;
+}
+
 METHOD(ike_sa_t, reestablish, status_t,
 	private_ike_sa_t *this)
 {
@@ -1758,7 +1863,6 @@ METHOD(ike_sa_t, reestablish, status_t,
 	action_t action;
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-	child_cfg_t *child_cfg;
 	bool restart = FALSE;
 	status_t status = FAILED;
 
@@ -1851,8 +1955,11 @@ METHOD(ike_sa_t, reestablish, status_t,
 	host = this->my_host;
 	new->set_my_host(new, host->clone(host));
 	charon->bus->ike_reestablish_pre(charon->bus, &this->public, new);
-	/* resolve hosts but use the old addresses above as fallback */
-	resolve_hosts((private_ike_sa_t*)new);
+	if (!has_condition(this, COND_REAUTHENTICATING))
+	{	/* reauthenticate to the same addresses, but resolve hosts if
+		 * reestablishing (old addresses serve as fallback) */
+		resolve_hosts((private_ike_sa_t*)new);
+	}
 	/* if we already have a virtual IP, we reuse it */
 	enumerator = array_create_enumerator(this->my_vips);
 	while (enumerator->enumerate(enumerator, &host))
@@ -1869,68 +1976,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 	else
 #endif /* ME */
 	{
-		/* handle existing CHILD_SAs */
-		enumerator = create_child_sa_enumerator(this);
-		while (enumerator->enumerate(enumerator, (void**)&child_sa))
-		{
-			if (has_condition(this, COND_REAUTHENTICATING))
-			{
-				switch (child_sa->get_state(child_sa))
-				{
-					case CHILD_ROUTED:
-					{	/* move routed child directly */
-						remove_child_sa(this, enumerator);
-						new->add_child_sa(new, child_sa);
-						action = ACTION_NONE;
-						break;
-					}
-					default:
-					{	/* initiate/queue all other CHILD_SAs */
-						action = ACTION_RESTART;
-						break;
-					}
-				}
-			}
-			else
-			{	/* only restart CHILD_SAs that are configured accordingly */
-				if (this->state == IKE_DELETING)
-				{
-					action = child_sa->get_close_action(child_sa);
-				}
-				else
-				{
-					action = child_sa->get_dpd_action(child_sa);
-				}
-			}
-			switch (action)
-			{
-				case ACTION_RESTART:
-					child_cfg = child_sa->get_config(child_sa);
-					DBG1(DBG_IKE, "restarting CHILD_SA %s",
-						 child_cfg->get_name(child_cfg));
-					child_cfg->get_ref(child_cfg);
-					status = new->initiate(new, child_cfg,
-									child_sa->get_reqid(child_sa), NULL, NULL);
-					break;
-				default:
-					continue;
-			}
-			if (status == DESTROY_ME)
-			{
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-		/* adopt any active or queued CHILD-creating tasks */
-		if (status != DESTROY_ME)
-		{
-			task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
-			other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
-			if (new->get_state(new) == IKE_CREATED)
-			{
-				status = new->initiate(new, NULL, 0, NULL, NULL);
-			}
-		}
+		status = reestablish_children(this, new,
+									has_condition(this, COND_REAUTHENTICATING));
 	}
 
 	if (status == DESTROY_ME)
@@ -1949,6 +1996,195 @@ METHOD(ike_sa_t, reestablish, status_t,
 	}
 	charon->bus->set_sa(charon->bus, &this->public);
 	return status;
+}
+
+/**
+ * Resolve the given gateway ID
+ */
+static host_t *resolve_gateway_id(identification_t *gateway)
+{
+	char gw[BUF_LEN];
+	host_t *addr;
+
+	snprintf(gw, sizeof(gw), "%Y", gateway);
+	gw[sizeof(gw)-1] = '\0';
+	addr = host_create_from_dns(gw, AF_UNSPEC, IKEV2_UDP_PORT);
+	if (!addr)
+	{
+		DBG1(DBG_IKE, "unable to resolve gateway ID '%Y', redirect failed",
+			 gateway);
+	}
+	return addr;
+}
+
+/**
+ * Redirect the current SA to the given target host
+ */
+static bool redirect_established(private_ike_sa_t *this, identification_t *to)
+{
+	private_ike_sa_t *new_priv;
+	ike_sa_t *new;
+	host_t *other;
+	time_t redirect;
+
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+											   this->version, TRUE);
+	if (!new)
+	{
+		return FALSE;
+	}
+	new_priv = (private_ike_sa_t*)new;
+	new->set_peer_cfg(new, this->peer_cfg);
+	new_priv->redirected_from = this->other_host->clone(this->other_host);
+	charon->bus->ike_reestablish_pre(charon->bus, &this->public, new);
+	other = resolve_gateway_id(to);
+	if (other)
+	{
+		set_my_host(new_priv, this->my_host->clone(this->my_host));
+		/* this allows us to force the remote address while we still properly
+		 * resolve the local address */
+		new_priv->remote_host = other;
+		resolve_hosts(new_priv);
+		new_priv->redirected_at = array_create(sizeof(time_t), MAX_REDIRECTS);
+		while (array_remove(this->redirected_at, ARRAY_HEAD, &redirect))
+		{
+			array_insert(new_priv->redirected_at, ARRAY_TAIL, &redirect);
+		}
+		if (reestablish_children(this, new, TRUE) != DESTROY_ME)
+		{
+#ifdef USE_IKEV2
+			new->queue_task(new, (task_t*)ike_reauth_complete_create(new,
+															 this->ike_sa_id));
+#endif
+			charon->bus->ike_reestablish_post(charon->bus, &this->public, new,
+											  TRUE);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+			charon->bus->set_sa(charon->bus, &this->public);
+			return TRUE;
+		}
+	}
+	charon->bus->ike_reestablish_post(charon->bus, &this->public, new,
+									  FALSE);
+	charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+	charon->bus->set_sa(charon->bus, &this->public);
+	return FALSE;
+}
+
+/**
+ * Redirect the current connecting SA to the given target host
+ */
+static bool redirect_connecting(private_ike_sa_t *this, identification_t *to)
+{
+	host_t *other;
+
+	other = resolve_gateway_id(to);
+	if (!other)
+	{
+		return FALSE;
+	}
+	reset(this);
+	DESTROY_IF(this->redirected_from);
+	this->redirected_from = this->other_host->clone(this->other_host);
+	DESTROY_IF(this->remote_host);
+	/* this allows us to force the remote address while we still properly
+	 * resolve the local address */
+	this->remote_host = other;
+	resolve_hosts(this);
+	return TRUE;
+}
+
+/**
+ * Check if the current redirect exceeds the limits for redirects
+ */
+static bool redirect_count_exceeded(private_ike_sa_t *this)
+{
+	time_t now, redirect;
+
+	now = time_monotonic(NULL);
+	/* remove entries outside the defined period */
+	while (array_get(this->redirected_at, ARRAY_HEAD, &redirect) &&
+		   now - redirect >= REDIRECT_LOOP_DETECT_PERIOD)
+	{
+		array_remove(this->redirected_at, ARRAY_HEAD, NULL);
+	}
+	if (array_count(this->redirected_at) < MAX_REDIRECTS)
+	{
+		if (!this->redirected_at)
+		{
+			this->redirected_at = array_create(sizeof(time_t), MAX_REDIRECTS);
+		}
+		array_insert(this->redirected_at, ARRAY_TAIL, &now);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+METHOD(ike_sa_t, handle_redirect, bool,
+	private_ike_sa_t *this, identification_t *gateway)
+{
+	DBG1(DBG_IKE, "redirected to %Y", gateway);
+	if (!this->follow_redirects)
+	{
+		DBG1(DBG_IKE, "server sent REDIRECT even though we disabled it");
+		return FALSE;
+	}
+	if (redirect_count_exceeded(this))
+	{
+		DBG1(DBG_IKE, "only %d redirects are allowed within %d seconds",
+			 MAX_REDIRECTS, REDIRECT_LOOP_DETECT_PERIOD);
+		return FALSE;
+	}
+
+	switch (this->state)
+	{
+		case IKE_CONNECTING:
+			return redirect_connecting(this, gateway);
+		case IKE_ESTABLISHED:
+			return redirect_established(this, gateway);
+		default:
+			DBG1(DBG_IKE, "unable to handle redirect for IKE_SA in state %N",
+				 ike_sa_state_names, this->state);
+			return FALSE;
+	}
+}
+
+METHOD(ike_sa_t, redirect, status_t,
+	private_ike_sa_t *this, identification_t *gateway)
+{
+	switch (this->state)
+	{
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+		case IKE_REKEYING:
+			if (has_condition(this, COND_REDIRECTED))
+			{	/* IKE_SA already got redirected */
+				return SUCCESS;
+			}
+			if (has_condition(this, COND_ORIGINAL_INITIATOR))
+			{
+				DBG1(DBG_IKE, "unable to redirect IKE_SA as initiator");
+				return FAILED;
+			}
+			if (this->version == IKEV1)
+			{
+				DBG1(DBG_IKE, "unable to redirect IKEv1 SA");
+				return FAILED;
+			}
+			if (!supports_extension(this, EXT_IKE_REDIRECTION))
+			{
+				DBG1(DBG_IKE, "client does not support IKE redirection");
+				return FAILED;
+			}
+#ifdef USE_IKEV2
+			this->task_manager->queue_task(this->task_manager,
+						(task_t*)ike_redirect_create(&this->public, gateway));
+#endif
+			return this->task_manager->initiate(this->task_manager);
+		default:
+			DBG1(DBG_IKE, "unable to redirect IKE_SA in state %N",
+				 ike_sa_state_names, this->state);
+			return INVALID_STATE;
+	}
 }
 
 METHOD(ike_sa_t, retransmit, status_t,
@@ -2464,6 +2700,8 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->other_id);
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
+	DESTROY_IF(this->redirected_from);
+	array_destroy(this->redirected_at);
 
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
@@ -2543,6 +2781,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.destroy = _destroy,
 			.send_dpd = _send_dpd,
 			.send_keepalive = _send_keepalive,
+			.redirect = _redirect,
+			.handle_redirect = _handle_redirect,
+			.get_redirected_from = _get_redirected_from,
 			.get_keymat = _get_keymat,
 			.add_child_sa = _add_child_sa,
 			.get_child_sa = _get_child_sa,
@@ -2608,6 +2849,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 								"%s.flush_auth_cfg", FALSE, lib->ns),
 		.fragment_size = lib->settings->get_int(lib->settings,
 								"%s.fragment_size", 0, lib->ns),
+		.follow_redirects = lib->settings->get_bool(lib->settings,
+								"%s.follow_redirects", TRUE, lib->ns),
 	);
 
 	if (version == IKEV2)
