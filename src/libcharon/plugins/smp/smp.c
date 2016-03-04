@@ -229,8 +229,8 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 		local = ike_sa->get_my_host(ike_sa);
 		xmlTextWriterStartElement(writer, "local");
 		xmlTextWriterWriteFormatElement(writer, "spi", "%.16llx",
-							id->is_initiator(id) ? id->get_initiator_spi(id)
-												 : id->get_responder_spi(id));
+					be64toh(id->is_initiator(id) ? id->get_initiator_spi(id)
+												 : id->get_responder_spi(id)));
 		write_id(writer, "identification", ike_sa->get_my_id(ike_sa));
 		write_address(writer, "address", local);
 		xmlTextWriterWriteFormatElement(writer, "port", "%d",
@@ -246,8 +246,8 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 		remote = ike_sa->get_other_host(ike_sa);
 		xmlTextWriterStartElement(writer, "remote");
 		xmlTextWriterWriteFormatElement(writer, "spi", "%.16llx",
-							id->is_initiator(id) ? id->get_responder_spi(id)
-												 : id->get_initiator_spi(id));
+					be64toh(id->is_initiator(id) ? id->get_responder_spi(id)
+												 : id->get_initiator_spi(id)));
 		write_id(writer, "identification", ike_sa->get_other_id(ike_sa));
 		write_address(writer, "address", remote);
 		xmlTextWriterWriteFormatElement(writer, "port", "%d",
