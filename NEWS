@@ -7,6 +7,10 @@ strongswan-5.4.0
   on different selectors via VICI/swanctl.  Unless disabled in strongswan.conf
   the charon daemon will follow redirect requests received from servers.
 
+- The ike: prefix enables the explicit configuration of signature scheme
+  constraints against IKEv2 authentication in rightauth, which allows the use
+  of different signature schemes for trustchain verification and authentication.
+
 - For the vici plugin a Vici:Session Perl CPAN module has been added to allow
   Perl applications to control and/or monitor the IKE daemon using the VICI
   interface, similar to the existing Python egg or Ruby gem.

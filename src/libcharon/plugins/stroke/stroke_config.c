@@ -506,14 +506,15 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 
 	/* authentication metod (class, actually) */
-	if (strpfx(auth, "pubkey") ||
+	if (strpfx(auth, "ike:") ||
+		strpfx(auth, "pubkey") ||
 		strpfx(auth, "rsa") ||
 		strpfx(auth, "ecdsa") ||
 		strpfx(auth, "bliss"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
-		cfg->add_pubkey_constraints(cfg, auth);
+		cfg->add_pubkey_constraints(cfg, auth, TRUE);
 	}
 	else if (streq(auth, "psk") || streq(auth, "secret"))
 	{
@@ -546,7 +547,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		if (pos)
 		{
 			*pos = 0;
-			cfg->add_pubkey_constraints(cfg, pos + 1);
+			cfg->add_pubkey_constraints(cfg, pos + 1, FALSE);
 		}
 		type = eap_vendor_type_from_string(auth);
 		if (type)

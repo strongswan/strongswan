@@ -171,7 +171,7 @@ static void send_supported_hash_algorithms(private_ike_init_t *this,
 			enumerator = auth->create_enumerator(auth);
 			while (enumerator->enumerate(enumerator, &rule, &config))
 			{
-				if (rule == AUTH_RULE_SIGNATURE_SCHEME)
+				if (rule == AUTH_RULE_IKE_SIGNATURE_SCHEME)
 				{
 					hash = hasher_from_signature_scheme(config);
 					if (hasher_algorithm_for_ikev2(hash))

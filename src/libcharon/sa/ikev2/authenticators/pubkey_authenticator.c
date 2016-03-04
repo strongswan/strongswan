@@ -55,11 +55,6 @@ struct private_pubkey_authenticator_t {
 	 * Reserved bytes of ID payload
 	 */
 	char reserved[3];
-
-	/**
-	 * Whether to store signature schemes on remote auth configs.
-	 */
-	bool store_signature_scheme;
 };
 
 /**
@@ -130,7 +125,7 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &rule, &config))
 	{
-		if (rule != AUTH_RULE_SIGNATURE_SCHEME)
+		if (rule != AUTH_RULE_IKE_SIGNATURE_SCHEME)
 		{
 			continue;
 		}
@@ -425,10 +420,7 @@ METHOD(authenticator_t, process, status_t,
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-			if (this->store_signature_scheme)
-			{
-				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, (uintptr_t)scheme);
-			}
+			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME, (uintptr_t)scheme);
 			break;
 		}
 		else
@@ -501,8 +493,6 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 		.ike_sa = ike_sa,
 		.ike_sa_init = received_init,
 		.nonce = sent_nonce,
-		.store_signature_scheme = lib->settings->get_bool(lib->settings,
-					"%s.signature_authentication_constraints", TRUE, lib->ns),
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 

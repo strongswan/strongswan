@@ -106,6 +106,8 @@ enum auth_rule_t {
 	AUTH_RULE_BLISS_STRENGTH,
 	/** required signature scheme, signature_scheme_t */
 	AUTH_RULE_SIGNATURE_SCHEME,
+	/** required signature scheme for IKE authentication, signature_scheme_t */
+	AUTH_RULE_IKE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,
 
@@ -185,8 +187,10 @@ struct auth_cfg_t {
 	 * Add public key and signature scheme constraints to the set.
 	 *
 	 * @param constraints	constraints string (e.g. "rsa-sha384")
+	 * @param ike			whether to add/parse constraints for IKE signatures
 	 */
-	void (*add_pubkey_constraints)(auth_cfg_t *this, char *constraints);
+	void (*add_pubkey_constraints)(auth_cfg_t *this, char *constraints,
+								   bool ike);
 
 	/**
 	 * Get a rule value.
