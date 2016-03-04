@@ -137,8 +137,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		fprintf(out, "%12s[%d]: %N SPIs: %.16"PRIx64"_i%s %.16"PRIx64"_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				ike_version_names, ike_sa->get_version(ike_sa),
-				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
-				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
+				be64toh(id->get_initiator_spi(id)),
+				id->is_initiator(id) ? "*" : "",
+				be64toh(id->get_responder_spi(id)),
+				id->is_initiator(id) ? "" : "*");
 
 
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
