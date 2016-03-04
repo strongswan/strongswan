@@ -44,6 +44,36 @@
 #define BITFIELD5(t, a, b, c, d, e,...)	struct { t e; t d; t c; t b; t a; __VA_ARGS__}
 #endif
 
+#ifndef le32toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define le32toh(x) __builtin_bswap32(x)
+#  define htole32(x) __builtin_bswap32(x)
+# else
+#  define le32toh(x) (x)
+#  define htole32(x) (x)
+# endif
+#endif
+
+#ifndef le64toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define le64toh(x) __builtin_bswap64(x)
+#  define htole64(x) __builtin_bswap64(x)
+# else
+#  define le64toh(x) (x)
+#  define htole64(x) (x)
+# endif
+#endif
+
+#ifndef be64toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define be64toh(x) (x)
+#  define htobe64(x) (x)
+# else
+#  define be64toh(x) __builtin_bswap64(x)
+#  define htobe64(x) __builtin_bswap64(x)
+# endif
+#endif
+
 /**
  * Write a 16-bit host order value in network order to an unaligned address.
  *
@@ -157,26 +187,6 @@ static inline u_int64_t untoh64(void *network)
 	return (((u_int64_t)high_part) << 32) + low_part;
 #endif
 }
-
-#ifndef le32toh
-# if BYTE_ORDER == BIG_ENDIAN
-#  define le32toh(x) __builtin_bswap32(x)
-#  define htole32(x) __builtin_bswap32(x)
-# else
-#  define le32toh(x) (x)
-#  define htole32(x) (x)
-# endif
-#endif
-
-#ifndef le64toh
-# if BYTE_ORDER == BIG_ENDIAN
-#  define le64toh(x) __builtin_bswap64(x)
-#  define htole64(x) __builtin_bswap64(x)
-# else
-#  define le64toh(x) (x)
-#  define htole64(x) (x)
-# endif
-#endif
 
 /**
  * Read a 32-bit value in little-endian order from unaligned address.
