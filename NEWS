@@ -5,6 +5,11 @@ strongswan-5.4.0
   Perl applications to control and/or monitor the IKE daemon using the VICI
   interface, similar to the existing Python egg or Ruby gem.
 
+- Traffic selectors with port ranges can now be configured in the Linux kernel:
+  e.g. remote_ts = 10.1.0.0/16[tcp/20-23] local_ts = dynamic[tcp/32768-65535].
+  The port range must map to a port mask, though since the kernel does not
+  support arbitrary ranges.
+
 
 strongswan-5.3.5
 ----------------
