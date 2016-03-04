@@ -308,8 +308,10 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	{
 		b->add_kv(b, "initiator", "yes");
 	}
-	b->add_kv(b, "initiator-spi", "%.16"PRIx64, id->get_initiator_spi(id));
-	b->add_kv(b, "responder-spi", "%.16"PRIx64, id->get_responder_spi(id));
+	b->add_kv(b, "initiator-spi", "%.16"PRIx64,
+			  be64toh(id->get_initiator_spi(id)));
+	b->add_kv(b, "responder-spi", "%.16"PRIx64,
+			  be64toh(id->get_responder_spi(id)));
 
 	add_condition(b, ike_sa, "nat-local", COND_NAT_HERE);
 	add_condition(b, ike_sa, "nat-remote", COND_NAT_THERE);
