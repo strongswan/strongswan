@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Andreas Steffen
+ * Copyright (C) 2013-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -213,7 +213,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 				if (request_id == swid_state->get_request_id(swid_state))
 				{
 					swid_state->set_swid_inventory(swid_state, inventory);
-					swid_state->set_count(swid_state, tag_id_count, 0);
+					swid_state->set_count(swid_state, tag_id_count, 0,
+										  in_msg->get_src_id(in_msg));
 				}
 				else
 				{
@@ -251,7 +252,8 @@ static TNC_Result receive_msg(private_imv_swid_agent_t *this,
 
 				if (request_id == swid_state->get_request_id(swid_state))
 				{
-					swid_state->set_count(swid_state, 0, tag_count);
+					swid_state->set_count(swid_state, 0, tag_count,
+										  in_msg->get_src_id(in_msg));
 
 					if (this->rest_api)
 					{
@@ -387,7 +389,8 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	}
 
 	/* Create an empty out message - we might need it */
-	out_msg = imv_msg_create(this->agent, state, id, imv_id, TNC_IMCID_ANY,
+	out_msg = imv_msg_create(this->agent, state, id, imv_id,
+							 swid_state->get_imc_id(swid_state),
 							 msg_types[0]);
 
 	if (!imcv_db)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -121,6 +121,11 @@ struct private_imv_swid_state_t {
 	 * Number of missing SWID Tags or Tag IDs
 	 */
 	uint32_t missing;
+
+	/**
+	 * SWID IMC ID
+	 */
+	TNC_UInt32 imc_id;
 
 	/**
 	 * Top level JSON object
@@ -326,10 +331,12 @@ METHOD(imv_swid_state_t, get_missing, uint32_t,
 }
 
 METHOD(imv_swid_state_t, set_count, void,
-	private_imv_swid_state_t *this, int tag_id_count, int tag_count)
+	private_imv_swid_state_t *this, int tag_id_count, int tag_count,
+	TNC_UInt32 imc_id)
 {
 	this->tag_id_count += tag_id_count;
 	this->tag_count += tag_count;
+	this->imc_id = imc_id;
 }
 
 METHOD(imv_swid_state_t, get_count, void,
@@ -343,6 +350,12 @@ METHOD(imv_swid_state_t, get_count, void,
 	{
 		*tag_count = this->tag_count;
 	}
+}
+
+METHOD(imv_swid_state_t, get_imc_id, TNC_UInt32,
+	private_imv_swid_state_t *this)
+{
+	return this->imc_id;
 }
 
 /**
@@ -384,12 +397,14 @@ imv_state_t *imv_swid_state_create(TNC_ConnectionID connection_id)
 			.get_missing = _get_missing,
 			.set_count = _set_count,
 			.get_count = _get_count,
+			.get_imc_id = _get_imc_id,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
 		.contracts = seg_contract_manager_create(),
+		.imc_id = TNC_IMCID_ANY,
 		.jobj = json_object_new_object(),
 		.jarray = json_object_new_array(),
 	);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -81,19 +81,19 @@ struct imv_swid_state_t {
 	 */
 	uint32_t (*get_request_id)(imv_swid_state_t *this);
 
-    /**
-     * Set or extend the SWID Tag ID inventory in the state
-     *
-     * @param inventory			SWID Tags ID inventory to be added
-     */
-    void (*set_swid_inventory)(imv_swid_state_t *this, swid_inventory_t *inventory);
+	/**
+	 * Set or extend the SWID Tag ID inventory in the state
+	 *
+	 * @param inventory			SWID Tags ID inventory to be added
+	 */
+	void (*set_swid_inventory)(imv_swid_state_t *this, swid_inventory_t *inventory);
 
-   /**
-     * Get the encoding of the complete SWID Tag ID inventory
-     *
-     * @return			       SWID Tags ID inventory as a JSON array
-     */
-    json_object* (*get_swid_inventory)(imv_swid_state_t *this);
+	/**
+	 * Get the encoding of the complete SWID Tag ID inventory
+	 *
+	 * @return			       SWID Tags ID inventory as a JSON array
+	 */
+	json_object* (*get_swid_inventory)(imv_swid_state_t *this);
 
 	/**
 	 * Set the number of still missing SWID Tags or Tag IDs
@@ -114,8 +114,10 @@ struct imv_swid_state_t {
 	 *
 	 * @param tag_id_count		Number of received SWID Tag IDs
 	 * @param tag_count			Number of received SWID Tags
+	 * @param imc_id			SWID IMC ID
 	 */
-	void (*set_count)(imv_swid_state_t *this, int tag_id_count, int tag_count);
+	void (*set_count)(imv_swid_state_t *this, int tag_id_count, int tag_count,
+					  TNC_UInt32 imc_id);
 
 	/**
 	 * Set [or with multiple attributes increment] SWID Tag [ID] counters
@@ -124,6 +126,13 @@ struct imv_swid_state_t {
 	 * @param tag_count			Number of received SWID Tags
 	 */
 	void (*get_count)(imv_swid_state_t *this, int *tag_id_count, int *tag_count);
+
+	/**
+	 * Get SWID IMC ID
+	 *
+	 * @return					SWID IMC ID
+	 */
+	TNC_UInt32 (*get_imc_id)(imv_swid_state_t *this);
 };
 
 /**
