@@ -237,7 +237,7 @@ static char* get_port(traffic_selector_t *me, traffic_selector_t *other,
 		from = other->get_from_port(other);
 		to   = other->get_to_port(other);
 	}
-	if (from == to)
+	if (from == to || (from == 0 && to == 65535))
 	{
 		snprintf(port_buf, PORT_BUF_LEN, "%u", from);
 	}
