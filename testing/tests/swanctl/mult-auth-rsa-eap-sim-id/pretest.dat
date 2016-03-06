@@ -1,0 +1,15 @@
+alice::cat /etc/freeradius/clients.conf
+alice::cat /etc/freeradius/eap.conf
+alice::cat /etc/freeradius/proxy.conf
+alice::cat /etc/freeradius/triplets.dat
+carol::cat /etc/ipsec.d/triplets.dat
+dave::cat /etc/ipsec.d/triplets.dat
+alice::radiusd
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+dave::service charon start 2> /dev/null
+moon::expect-connection rw
+carol::expect-connection home
+carol::swanctl --initiate --child home 2> /dev/null
+dave::expect-connection home
+dave::swanctl --initiate --child home 2> /dev/null
