@@ -551,13 +551,13 @@ static payload_order_t aggressive_i_order[] = {
 	{PLV1_NONCE,					0},
 	{PLV1_ID,						0},
 	{PLV1_CERTIFICATE,				0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
 	{PLV1_NAT_D,					0},
 	{PLV1_NAT_D_DRAFT_00_03,		0},
 	{PLV1_SIGNATURE,				0},
 	{PLV1_HASH,						0},
-	{PLV1_CERTREQ,					0},
-	{PLV1_NOTIFY,					0},
-	{PLV1_VENDOR_ID,				0},
 	{PLV1_FRAGMENT,					0},
 };
 
@@ -591,13 +591,13 @@ static payload_order_t aggressive_r_order[] = {
 	{PLV1_NONCE,					0},
 	{PLV1_ID,						0},
 	{PLV1_CERTIFICATE,				0},
+	{PLV1_CERTREQ,					0},
+	{PLV1_NOTIFY,					0},
+	{PLV1_VENDOR_ID,				0},
 	{PLV1_NAT_D,					0},
 	{PLV1_NAT_D_DRAFT_00_03,		0},
 	{PLV1_SIGNATURE,				0},
 	{PLV1_HASH,						0},
-	{PLV1_CERTREQ,					0},
-	{PLV1_NOTIFY,					0},
-	{PLV1_VENDOR_ID,				0},
 	{PLV1_FRAGMENT,					0},
 };
 
