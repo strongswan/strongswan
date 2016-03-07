@@ -308,13 +308,16 @@ static bool manage_in(private_connmark_listener_t *this,
 }
 
 /**
- * Add outbund rule restoring CONNMARK on matching traffic
+ * Add outbund rule restoring CONNMARK on matching traffic unless the packet
+ * already has a mark set
  */
 static bool manage_out(private_connmark_listener_t *this,
 					   struct iptc_handle *ipth, bool add,
 					   traffic_selector_t *dst, traffic_selector_t *src)
 {
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry));
+	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+							  XT_ALIGN(sizeof(struct xt_mark_mtinfo1));
+	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
 	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_connmark_tginfo1));
 	u_int16_t entry_size	= target_offset + target_size;
@@ -331,6 +334,18 @@ static bool manage_out(private_connmark_listener_t *this,
 	{
 		return FALSE;
 	}
+	ADD_STRUCT(pos, struct ipt_entry_match,
+		.u = {
+			.user = {
+				.match_size = match_size,
+				.name = "mark",
+				.revision = 1,
+			},
+		},
+	);
+	ADD_STRUCT(pos, struct xt_mark_mtinfo1,
+		.mask = ~0,
+	);
 	ADD_STRUCT(pos, struct ipt_entry_target,
 		.u = {
 			.user = {
