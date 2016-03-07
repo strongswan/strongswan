@@ -1161,6 +1161,11 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 		unlock_single_segment(this, segment);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
+
+	if (!ike_sa)
+	{
+		DBG2(DBG_MGR, "IKE_SA checkout not successful");
+	}
 	return ike_sa;
 }
 
@@ -1277,7 +1282,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			DBG1(DBG_MGR, "ignoring message, failed to hash message");
 			DESTROY_IF(hasher);
 			id->destroy(id);
-			return NULL;
+			goto out;
 		}
 		hasher->destroy(hasher);
 
@@ -1306,9 +1311,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 						DBG2(DBG_MGR, "created IKE_SA %s[%u]",
 							 ike_sa->get_name(ike_sa),
 							 ike_sa->get_unique_id(ike_sa));
-
-						charon->bus->set_sa(charon->bus, ike_sa);
-						return ike_sa;
+						goto out;
 					}
 					else
 					{
@@ -1324,14 +1327,14 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 				remove_init_hash(this, hash);
 				chunk_free(&hash);
 				id->destroy(id);
-				return NULL;
+				goto out;
 			}
 			case FAILED:
 			{	/* we failed to allocate an SPI */
 				chunk_free(&hash);
 				id->destroy(id);
 				DBG1(DBG_MGR, "ignoring message, failed to allocate SPI");
-				return NULL;
+				goto out;
 			}
 			case ALREADY_DONE:
 			default:
@@ -1376,7 +1379,13 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		charon->bus->alert(charon->bus, ALERT_INVALID_IKE_SPI, message);
 	}
 	id->destroy(id);
+
+out:
 	charon->bus->set_sa(charon->bus, ike_sa);
+	if (!ike_sa)
+	{
+		DBG2(DBG_MGR, "IKE_SA checkout not successful");
+	}
 	return ike_sa;
 }
 
@@ -1396,7 +1405,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	{	/* IKE_SA reuse disabled by config (not possible for IKEv1) */
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		charon->bus->set_sa(charon->bus, ike_sa);
-		return ike_sa;
+		goto out;
 	}
 
 	enumerator = create_table_enumerator(this);
@@ -1436,6 +1445,12 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
+
+out:
+	if (!ike_sa)
+	{
+		DBG2(DBG_MGR, "IKE_SA checkout not successful");
+	}
 	return ike_sa;
 }
 
@@ -1470,6 +1485,10 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 	{
 		DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
 			 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+	}
+	else
+	{
+		DBG2(DBG_MGR, "IKE_SA checkout not successful");
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -1527,6 +1546,11 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 	enumerator->destroy(enumerator);
 
 	charon->bus->set_sa(charon->bus, ike_sa);
+
+	if (!ike_sa)
+	{
+		DBG2(DBG_MGR, "IKE_SA checkout not successful");
+	}
 	return ike_sa;
 }
 
@@ -1632,7 +1656,6 @@ METHOD(ike_sa_manager_t, checkin, void,
 			entry->other = other->clone(other);
 			put_half_open(this, entry);
 		}
-		DBG2(DBG_MGR, "checkin of IKE_SA successful");
 		entry->condvar->signal(entry->condvar);
 	}
 	else
@@ -1648,6 +1671,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 		}
 		segment = put_entry(this, entry);
 	}
+	DBG2(DBG_MGR, "checkin of IKE_SA successful");
 
 	/* apply identities for duplicate test */
 	if ((ike_sa->get_state(ike_sa) == IKE_ESTABLISHED ||
