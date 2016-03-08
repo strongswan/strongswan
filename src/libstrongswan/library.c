@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -60,6 +60,31 @@ struct private_library_t {
 	 */
 	refcount_t ref;
 };
+
+#define MAX_NAMESPACES 5
+
+/**
+ * Additional namespaces registered using __atrribute__((constructor))
+ */
+static char *namespaces[MAX_NAMESPACES];
+static int ns_count;
+
+/**
+ * Described in header
+ */
+void library_add_namespace(char *ns)
+{
+	if (ns_count < MAX_NAMESPACES - 1)
+	{
+		namespaces[ns_count] = ns;
+		ns_count++;
+	}
+	else
+	{
+		fprintf(stderr, "failed to register additional namespace alias, please "
+				"increase MAX_NAMESPACES");
+	}
+}
 
 /**
  * library instance
@@ -248,6 +273,7 @@ bool library_init(char *settings, const char *namespace)
 {
 	private_library_t *this;
 	printf_hook_t *pfh;
+	int i;
 
 	if (lib)
 	{	/* already initialized, increase refcount */
@@ -311,6 +337,11 @@ bool library_init(char *settings, const char *namespace)
 									 (hashtable_equals_t)equals, 4);
 
 	this->public.settings = settings_create(this->public.conf);
+	/* add registered aliases */
+	for (i = 0; i < ns_count; ++i)
+	{
+		lib->settings->add_fallback(lib->settings, lib->ns, namespaces[i]);
+	}
 	/* all namespace settings may fall back to libstrongswan */
 	lib->settings->add_fallback(lib->settings, lib->ns, "libstrongswan");
 
