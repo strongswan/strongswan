@@ -1,8 +1,9 @@
 /*
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2009-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -824,6 +825,154 @@ METHOD(identification_t, matches_dn, id_match_t,
 }
 
 /**
+ * Transform netmask to CIDR bits
+ */
+static int netmask_to_cidr(char *netmask, size_t address_size)
+{
+	uint8_t byte;
+	int i, netbits = 0;
+
+	for (i = 0; i < address_size; i++)
+	{
+		byte = netmask[i];
+
+		if (byte == 0x00)
+		{
+			break;
+		}
+		if (byte == 0xff)
+		{
+			netbits += 8;
+		}
+		else
+		{
+			while (byte & 0x80)
+			{
+				netbits++;
+				byte <<= 1;
+			}
+		}
+	}
+	return netbits;
+}
+
+METHOD(identification_t, matches_range, id_match_t,
+	private_identification_t *this, identification_t *other)
+{
+	chunk_t other_encoding;
+	uint8_t *address, *from, *to, *network, *netmask;
+	size_t address_size = 0;
+	int netbits, range_sign, i;
+
+	if (other->get_type(other) == ID_ANY)
+	{
+		return ID_MATCH_ANY;
+	}
+	if (this->type == other->get_type(other) &&
+		chunk_equals(this->encoded, other->get_encoding(other)))
+	{
+		return ID_MATCH_PERFECT;
+	}
+	if ((this->type == ID_IPV4_ADDR &&
+		 other->get_type(other) == ID_IPV4_ADDR_SUBNET))
+	{
+		address_size = sizeof(struct in_addr);
+	}
+	else if ((this->type == ID_IPV6_ADDR &&
+		 other->get_type(other) == ID_IPV6_ADDR_SUBNET))
+	{
+		address_size = sizeof(struct in6_addr);
+	}
+	if (address_size)
+	{
+		other_encoding = other->get_encoding(other);
+		if (this->encoded.len != address_size ||
+			other_encoding.len != 2 * address_size)
+		{
+			return ID_MATCH_NONE;
+		}
+		address = this->encoded.ptr;
+		network = other_encoding.ptr;
+		netmask = other_encoding.ptr + address_size;
+		netbits = netmask_to_cidr(netmask, address_size);
+
+		if (netbits == 0)
+		{
+			return ID_MATCH_MAX_WILDCARDS;
+		}
+		if (netbits == 8 * address_size)
+		{
+			return memeq(address, network, address_size) ?
+				   ID_MATCH_PERFECT : ID_MATCH_NONE;
+		}
+		for (i = 0; i < (netbits + 7)/8; i++)
+		{
+			if ((address[i] ^ network[i]) & netmask[i])
+			{
+				return ID_MATCH_NONE;
+			}
+		}
+		return ID_MATCH_ONE_WILDCARD;
+	}
+	if ((this->type == ID_IPV4_ADDR &&
+		 other->get_type(other) == ID_IPV4_ADDR_RANGE))
+	{
+		address_size = sizeof(struct in_addr);
+	}
+	else if ((this->type == ID_IPV6_ADDR &&
+		 other->get_type(other) == ID_IPV6_ADDR_RANGE))
+	{
+		address_size = sizeof(struct in6_addr);
+	}
+	if (address_size)
+	{
+		other_encoding = other->get_encoding(other);
+		if (this->encoded.len != address_size ||
+			other_encoding.len != 2 * address_size)
+		{
+			return ID_MATCH_NONE;
+		}
+		address = this->encoded.ptr;
+		from = other_encoding.ptr;
+		to = other_encoding.ptr + address_size;
+
+		range_sign = memcmp(to, from, address_size);
+		if (range_sign < 0)
+		{	/* to is smaller than from */
+			return ID_MATCH_NONE;
+		}
+
+		/* check lower bound */
+		for (i = 0; i < address_size; i++)
+		{
+			if (address[i] != from[i])
+			{
+				if (address[i] < from[i])
+				{
+					return ID_MATCH_NONE;
+				}
+				break;
+			}
+		}
+
+		/* check upper bound */
+		for (i = 0; i < address_size; i++)
+		{
+			if (address[i] != to[i])
+			{
+				if (address[i] > to[i])
+				{
+					return ID_MATCH_NONE;
+				}
+				break;
+			}
+		}
+		return range_sign ? ID_MATCH_ONE_WILDCARD : ID_MATCH_PERFECT;
+	}
+	return ID_MATCH_NONE;
+}
+
+/**
  * Described in header.
  */
 int identification_printf_hook(printf_hook_data_t *data,
@@ -831,7 +980,9 @@ int identification_printf_hook(printf_hook_data_t *data,
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	chunk_t proper;
-	char buf[512];
+	char buf[BUF_LEN];
+	char *pos;
+	size_t written, len, address_size;
 
 	if (this == NULL)
 	{
@@ -841,49 +992,115 @@ int identification_printf_hook(printf_hook_data_t *data,
 	switch (this->type)
 	{
 		case ID_ANY:
-			snprintf(buf, sizeof(buf), "%%any");
+			snprintf(buf, BUF_LEN, "%%any");
 			break;
 		case ID_IPV4_ADDR:
 			if (this->encoded.len < sizeof(struct in_addr) ||
-				inet_ntop(AF_INET, this->encoded.ptr, buf, sizeof(buf)) == NULL)
+				inet_ntop(AF_INET, this->encoded.ptr, buf, BUF_LEN) == NULL)
 			{
-				snprintf(buf, sizeof(buf), "(invalid ID_IPV4_ADDR)");
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV4_ADDR)");
+			}
+			break;
+		case ID_IPV4_ADDR_SUBNET:
+			address_size = sizeof(struct in_addr);
+			if (this->encoded.len < 2 * address_size ||
+				inet_ntop(AF_INET, this->encoded.ptr, buf, BUF_LEN) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV4_ADDR_SUBNET)");
+				break;
+			}
+			written = strlen(buf);
+			snprintf(buf + written, BUF_LEN - written, "/%d",
+					 netmask_to_cidr(this->encoded.ptr + address_size,
+														 address_size));
+			break;
+		case ID_IPV4_ADDR_RANGE:
+			address_size = sizeof(struct in_addr);
+			if (this->encoded.len < 2 * address_size ||
+				inet_ntop(AF_INET, this->encoded.ptr, buf, BUF_LEN) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV4_ADDR_RANGE)");
+				break;
+			}
+			written = strlen(buf);
+			pos = buf + written;
+			len = BUF_LEN - written;
+			written = snprintf(pos, len, "-");
+			if (written < 0 || written >= len ||
+			    inet_ntop(AF_INET, this->encoded.ptr + address_size,
+						  pos + written, len - written) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV4_ADDR_RANGE)");
 			}
 			break;
 		case ID_IPV6_ADDR:
 			if (this->encoded.len < sizeof(struct in6_addr) ||
-				inet_ntop(AF_INET6, this->encoded.ptr, buf, INET6_ADDRSTRLEN) == NULL)
+				inet_ntop(AF_INET6, this->encoded.ptr, buf, BUF_LEN) == NULL)
 			{
-				snprintf(buf, sizeof(buf), "(invalid ID_IPV6_ADDR)");
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV6_ADDR)");
+			}
+			break;
+		case ID_IPV6_ADDR_SUBNET:
+			address_size = sizeof(struct in6_addr);
+			if (this->encoded.len < 2 * address_size ||
+				inet_ntop(AF_INET6, this->encoded.ptr, buf, BUF_LEN) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV6_ADDR_SUBNET)");
+			}
+			else
+			{
+				written = strlen(buf);
+				snprintf(buf + written, BUF_LEN - written, "/%d",
+						 netmask_to_cidr(this->encoded.ptr + address_size,
+															 address_size));
+			}
+			break;
+		case ID_IPV6_ADDR_RANGE:
+			address_size = sizeof(struct in6_addr);
+			if (this->encoded.len < 2 * address_size ||
+				inet_ntop(AF_INET6, this->encoded.ptr, buf, BUF_LEN) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV6_ADDR_RANGE)");
+				break;
+			}
+			written = strlen(buf);
+			pos = buf + written;
+			len = BUF_LEN - written;
+			written = snprintf(pos, len, "-");
+			if (written < 0 || written >= len ||
+			    inet_ntop(AF_INET6, this->encoded.ptr + address_size,
+						  pos + written, len - written) == NULL)
+			{
+				snprintf(buf, BUF_LEN, "(invalid ID_IPV6_ADDR_RANGE)");
 			}
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
 			chunk_printable(this->encoded, &proper, '?');
-			snprintf(buf, sizeof(buf), "%.*s", (int)proper.len, proper.ptr);
+			snprintf(buf, BUF_LEN, "%.*s", (int)proper.len, proper.ptr);
 			chunk_free(&proper);
 			break;
 		case ID_DER_ASN1_DN:
-			dntoa(this->encoded, buf, sizeof(buf));
+			dntoa(this->encoded, buf, BUF_LEN);
 			break;
 		case ID_DER_ASN1_GN:
-			snprintf(buf, sizeof(buf), "(ASN.1 general name)");
+			snprintf(buf, BUF_LEN, "(ASN.1 general name)");
 			break;
 		case ID_KEY_ID:
 			if (chunk_printable(this->encoded, NULL, '?') &&
 				this->encoded.len != HASH_SIZE_SHA1)
 			{	/* fully printable, use ascii version */
-				snprintf(buf, sizeof(buf), "%.*s", (int)this->encoded.len,
+				snprintf(buf, BUF_LEN, "%.*s", (int)this->encoded.len,
 						 this->encoded.ptr);
 			}
 			else
 			{	/* not printable, hex dump */
-				snprintf(buf, sizeof(buf), "%#B", &this->encoded);
+				snprintf(buf, BUF_LEN, "%#B", &this->encoded);
 			}
 			break;
 		default:
-			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);
+			snprintf(buf, BUF_LEN, "(unknown ID type: %d)", this->type);
 			break;
 	}
 	if (spec->minus)
@@ -952,6 +1169,13 @@ static private_identification_t *identification_create(id_type_t type)
 			this->public.matches = _matches_dn;
 			this->public.contains_wildcards = _contains_wildcards_dn;
 			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
+			this->public.hash = _hash_binary;
+			this->public.equals = _equals_binary;
+			this->public.matches = _matches_range;
+			this->public.contains_wildcards = return_false;
+			break;
 		default:
 			this->public.hash = _hash_binary;
 			this->public.equals = _equals_binary;
@@ -973,6 +1197,10 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 	} prefixes[] = {
 		{ "ipv4:",			ID_IPV4_ADDR			},
 		{ "ipv6:",			ID_IPV6_ADDR			},
+		{ "ipv4net:",		ID_IPV4_ADDR_SUBNET		},
+		{ "ipv6net:",		ID_IPV6_ADDR_SUBNET		},
+		{ "ipv4range:",		ID_IPV4_ADDR_RANGE		},
+		{ "ipv6range:",		ID_IPV6_ADDR_RANGE		},
 		{ "rfc822:",		ID_RFC822_ADDR			},
 		{ "email:",			ID_RFC822_ADDR			},
 		{ "userfqdn:",		ID_USER_FQDN			},
@@ -1038,6 +1266,115 @@ static private_identification_t* create_from_string_with_num_type(char *str)
 	return this;
 }
 
+/**
+ * Convert to an IPv4/IPv6 host address, subnet or address range
+ */
+static private_identification_t* create_ip_address_from_string(char *string,
+															   bool is_ipv4)
+{
+	private_identification_t *this;
+	uint8_t encoding[32];
+	uint8_t *str, *pos, *address, *to_address, *netmask;
+	size_t address_size;
+	int bits, bytes, i;
+	bool has_subnet = FALSE, has_range = FALSE;
+
+	address = encoding;
+	address_size = is_ipv4 ? sizeof(struct in_addr) : sizeof(struct in6_addr);
+
+	str = strdup(string);
+	pos = strchr(str, '/');
+	if (pos)
+	{	/* separate IP address from optional netmask */
+
+		*pos = '\0';
+		has_subnet = TRUE;
+	}
+	else
+	{
+		pos = strchr(str, '-');
+		if (pos)
+		{	/* separate lower address from upper address of IP range */
+			*pos = '\0';
+			has_range = TRUE;
+		}
+	}
+
+	if (inet_pton(is_ipv4 ? AF_INET : AF_INET6, str, address) != 1)
+	{
+		free(str);
+		return NULL;
+	}
+
+	if (has_subnet)
+	{	/* is IP subnet */
+		bits = atoi(pos + 1);
+		if (bits > 8 * address_size)
+		{
+			free(str);
+			return NULL;
+		}
+		bytes = bits / 8;
+		bits -= 8 * bytes;
+		netmask = encoding + address_size;
+
+		for (i = 0; i < address_size; i++)
+		{
+			if (bytes)
+			{
+				*netmask = 0xff;
+				bytes--;
+			}
+			else if (bits)
+			{
+				*netmask = 0xff << (8 - bits);
+				bits = 0;
+			}
+			else
+			{
+				*netmask = 0x00;
+			}
+			*address++ &= *netmask++;
+		}
+		this = identification_create(is_ipv4 ? ID_IPV4_ADDR_SUBNET :
+											   ID_IPV6_ADDR_SUBNET);
+		this->encoded = chunk_clone(chunk_create(encoding, 2 * address_size));
+	}
+	else if (has_range)
+	{	/* is IP range */
+		to_address = encoding + address_size;
+
+		if (inet_pton(is_ipv4 ? AF_INET : AF_INET6, pos + 1, to_address) != 1)
+		{
+			free(str);
+			return NULL;
+		}
+		for (i = 0; i < address_size; i++)
+		{
+			if (address[i] != to_address[i])
+			{
+				if (address[i] > to_address[i])
+				{
+					free(str);
+					return NULL;
+				}
+				break;
+			}
+		}
+		this = identification_create(is_ipv4 ? ID_IPV4_ADDR_RANGE :
+											   ID_IPV6_ADDR_RANGE);
+		this->encoded = chunk_clone(chunk_create(encoding, 2 * address_size));
+	}
+	else
+	{	/* is IP host address */
+		this = identification_create(is_ipv4 ? ID_IPV4_ADDR : ID_IPV6_ADDR);
+		this->encoded = chunk_clone(chunk_create(encoding, address_size));
+	}
+	free(str);
+
+	return this;
+}
+
 /*
  * Described in header.
  */
@@ -1095,15 +1432,9 @@ identification_t *identification_create_from_string(char *string)
 		{
 			if (strchr(string, ':') == NULL)
 			{
-				struct in_addr address;
-				chunk_t chunk = {(void*)&address, sizeof(address)};
-
-				if (inet_pton(AF_INET, string, &address) > 0)
-				{	/* is IPv4 */
-					this = identification_create(ID_IPV4_ADDR);
-					this->encoded = chunk_clone(chunk);
-				}
-				else
+				/* IPv4 address or subnet */
+				this = create_ip_address_from_string(string, TRUE);
+				if (!this)
 				{	/* not IPv4, mostly FQDN */
 					this = identification_create(ID_FQDN);
 					this->encoded = chunk_from_str(strdup(string));
@@ -1112,15 +1443,9 @@ identification_t *identification_create_from_string(char *string)
 			}
 			else
 			{
-				struct in6_addr address;
-				chunk_t chunk = {(void*)&address, sizeof(address)};
-
-				if (inet_pton(AF_INET6, string, &address) > 0)
-				{	/* is IPv6 */
-					this = identification_create(ID_IPV6_ADDR);
-					this->encoded = chunk_clone(chunk);
-				}
-				else
+				/* IPv6 address or subnet */
+				this = create_ip_address_from_string(string, FALSE);
+				if (!this)
 				{	/* not IPv4/6 fallback to KEY_ID */
 					this = identification_create(ID_KEY_ID);
 					this->encoded = chunk_from_str(strdup(string));

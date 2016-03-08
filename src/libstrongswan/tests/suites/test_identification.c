@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2013-2015 Tobias Brunner
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -122,67 +123,122 @@ static struct {
 		} data;
 	} result;
 } string_data[] = {
-	{NULL,						ID_ANY,			{ .type = ENC_CHUNK }},
-	{"",						ID_ANY,			{ .type = ENC_CHUNK }},
-	{"%any",					ID_ANY,			{ .type = ENC_CHUNK }},
-	{"%any6",					ID_ANY,			{ .type = ENC_CHUNK }},
-	{"0.0.0.0",					ID_ANY,			{ .type = ENC_CHUNK }},
-	{"0::0",					ID_ANY,			{ .type = ENC_CHUNK }},
-	{"::",						ID_ANY,			{ .type = ENC_CHUNK }},
-	{"*",						ID_ANY,			{ .type = ENC_CHUNK }},
-	{"any",						ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"any6",					ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"0",						ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"**",						ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"192.168.1.1",				ID_IPV4_ADDR,	{ .type = ENC_CHUNK,
+	{NULL,						ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"",						ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"%any",					ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"%any6",					ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"0.0.0.0",					ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"0::0",					ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"::",						ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"*",						ID_ANY,					{ .type = ENC_CHUNK  }},
+	{"any",						ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"any6",					ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"0",						ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"**",						ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"192.168.1.1",				ID_IPV4_ADDR,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01) }},
-	{"192.168.",				ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{".",						ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"fec0::1",					ID_IPV6_ADDR,	{ .type = ENC_CHUNK,
+	{"192.168.",				ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{".",						ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"192.168.1.1/33",			ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"192.168.1.1/32",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01,0xff,0xff,0xff,0xff)  }},
+	{"192.168.1.1/31",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x00,0xff,0xff,0xff,0xfe)  }},
+	{"192.168.1.8/30",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x08,0xff,0xff,0xff,0xfc)  }},
+	{"192.168.1.128/25",		ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x80,0xff,0xff,0xff,0x80)  }},
+	{"192.168.1.0/24",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x00,0xff,0xff,0xff,0x00)  }},
+	{"192.168.1.0/23",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x00,0x00,0xff,0xff,0xfe,0x00)  }},
+	{"192.168.4.0/22",			ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x04,0x00,0xff,0xff,0xfc,0x00)  }},
+	{"0.0.0.0/0",				ID_IPV4_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00)  }},
+	{"192.168.1.0-192.168.1.40",ID_IPV4_ADDR_RANGE,		{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x00,0xc0,0xa8,0x01,0x28)  }},
+	{"0.0.0.0-255.255.255.255",	ID_IPV4_ADDR_RANGE,		{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0x00,0x00,0x00,0x00,0xff,0xff,0xff,0xff)  }},
+	{"192.168.1.40-192.168.1.0",ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"fec0::1",					ID_IPV6_ADDR,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
-								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01) }},
-	{"fec0::",					ID_IPV6_ADDR,	{ .type = ENC_CHUNK,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01)  }},
+	{"fec0::",					ID_IPV6_ADDR,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
-								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00) }},
-	{"fec0:",					ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{":",						ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{"alice@strongswan.org",	ID_RFC822_ADDR,	{ .type = ENC_SIMPLE }},
-	{"alice@strongswan",		ID_RFC822_ADDR,	{ .type = ENC_SIMPLE }},
-	{"alice@",					ID_RFC822_ADDR,	{ .type = ENC_SIMPLE }},
-	{"alice",					ID_FQDN,		{ .type = ENC_SIMPLE }},
-	{"@",						ID_FQDN,		{ .type = ENC_CHUNK }},
-	{" @",						ID_RFC822_ADDR,	{ .type = ENC_SIMPLE }},
-	{"@strongswan.org",			ID_FQDN,		{ .type = ENC_STRING,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00)  }},
+	{"fec0:",					ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{":",						ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"fec0::1/129",				ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"fec0::1/128",				ID_IPV6_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff ) }},
+	{"fec0::1/127",				ID_IPV6_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe ) }},
+	{"fec0::4/126",				ID_IPV6_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfc ) }},
+	{"fec0::100/120",			ID_IPV6_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+								   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00 ) }},
+	{"::/0",					ID_IPV6_ADDR_SUBNET,	{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ) }},
+	{"fec0::1-fec0::4fff",		ID_IPV6_ADDR_RANGE,		{ .type = ENC_CHUNK,
+		.data.c = chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,
+								   0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+								   0x00,0x00,0x00,0x00,0x00,0x00,0x4f,0xff ) }},
+	{"fec0::4fff-fec0::1",		ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"fec0::1-",				ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"alice@strongswan.org",	ID_RFC822_ADDR,			{ .type = ENC_SIMPLE }},
+	{"alice@strongswan",		ID_RFC822_ADDR,			{ .type = ENC_SIMPLE }},
+	{"alice@",					ID_RFC822_ADDR,			{ .type = ENC_SIMPLE }},
+	{"alice",					ID_FQDN,				{ .type = ENC_SIMPLE }},
+	{"@",						ID_FQDN,				{ .type = ENC_CHUNK }},
+	{" @",						ID_RFC822_ADDR,			{ .type = ENC_SIMPLE }},
+	{"@strongswan.org",			ID_FQDN,				{ .type = ENC_STRING,
 		.data.s = "strongswan.org" }},
-	{"@#deadbeef",				ID_KEY_ID,		{ .type = ENC_CHUNK,
+	{"@#deadbeef",				ID_KEY_ID,				{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xde,0xad,0xbe,0xef) }},
-	{"@#deadbee",				ID_KEY_ID,		{ .type = ENC_CHUNK,
+	{"@#deadbee",				ID_KEY_ID,				{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0x0d,0xea,0xdb,0xee) }},
-	{"foo=bar",					ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{"foo=",					ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{"=bar",					ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{"C=",						ID_DER_ASN1_DN,	{ .type = ENC_CHUNK,
+	{"foo=bar",					ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"foo=",					ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"=bar",					ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"C=",						ID_DER_ASN1_DN,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0x30,0x0b,0x31,0x09,0x30,0x07,0x06,
 								   0x03,0x55,0x04,0x06,0x13,0x00) }},
-	{"C=CH",					ID_DER_ASN1_DN,	{ .type = ENC_CHUNK,
+	{"C=CH",					ID_DER_ASN1_DN,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0x30,0x0d,0x31,0x0b,0x30,0x09,0x06,
 								   0x03,0x55,0x04,0x06,0x13,0x02,0x43,0x48) }},
-	{"C=CH,",					ID_DER_ASN1_DN,	{ .type = ENC_CHUNK,
+	{"C=CH,",					ID_DER_ASN1_DN,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0x30,0x0d,0x31,0x0b,0x30,0x09,0x06,
 								   0x03,0x55,0x04,0x06,0x13,0x02,0x43,0x48) }},
-	{"C=CH, ",					ID_DER_ASN1_DN,	{ .type = ENC_CHUNK,
+	{"C=CH, ",					ID_DER_ASN1_DN,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0x30,0x0d,0x31,0x0b,0x30,0x09,0x06,
 								   0x03,0x55,0x04,0x06,0x13,0x02,0x43,0x48) }},
-	{"C=CH, O",					ID_KEY_ID,		{ .type = ENC_SIMPLE }},
-	{"IPv4:#c0a80101",			ID_IPV4_ADDR,	{ .type = ENC_CHUNK,
+	{"C=CH, O",					ID_KEY_ID,				{ .type = ENC_SIMPLE }},
+	{"IPv4:#c0a80101",			ID_IPV4_ADDR,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01) }},
-	{ "email:tester",			ID_RFC822_ADDR,	{ .type = ENC_STRING,
+	{ "email:tester",			ID_RFC822_ADDR,			{ .type = ENC_STRING,
 		.data.s = "tester" }},
-	{ "{1}:#c0a80101",			ID_IPV4_ADDR,	{ .type = ENC_CHUNK,
+	{ "{1}:#c0a80101",			ID_IPV4_ADDR,			{ .type = ENC_CHUNK,
 		.data.c = chunk_from_chars(0xc0,0xa8,0x01,0x01) }},
-	{ "{0x02}:tester",			ID_FQDN,		{ .type = ENC_STRING,
+	{ "{0x02}:tester",			ID_FQDN,				{ .type = ENC_STRING,
 		.data.s = "tester" }},
-	{ "{99}:somedata",			99,				{ .type = ENC_STRING,
+	{ "{99}:somedata",			99,						{ .type = ENC_STRING,
 		.data.s = "somedata" }},
 };
 
@@ -264,14 +320,33 @@ START_TEST(test_printf_hook)
 
 	string_equals("192.168.1.1", "192.168.1.1");
 	string_equals_id("(invalid ID_IPV4_ADDR)",
-				identification_create_from_encoding(ID_IPV4_ADDR, chunk_empty));
+			identification_create_from_encoding(ID_IPV4_ADDR, chunk_empty));
+	string_equals("192.168.1.1/32", "192.168.1.1/32");
+	string_equals("192.168.1.2/31", "192.168.1.2/31");
+	string_equals("192.168.1.0/24", "192.168.1.0/24");
+	string_equals("192.168.2.0/23", "192.168.2.0/23");
+	string_equals("0.0.0.0/0", "0.0.0.0/0");
+	string_equals_id("(invalid ID_IPV4_ADDR_SUBNET)",
+			identification_create_from_encoding(ID_IPV4_ADDR_SUBNET, chunk_empty));
+	string_equals("192.168.1.1-192.168.1.254", "192.168.1.1-192.168.1.254");
+	string_equals("0.0.0.0-255.255.255.255", "0.0.0.0-255.255.255.255");
+	string_equals_id("(invalid ID_IPV4_ADDR_RANGE)",
+			identification_create_from_encoding(ID_IPV4_ADDR_RANGE, chunk_empty));
 	string_equals("fec0::1", "fec0::1");
 	string_equals("fec0::1", "fec0:0:0::1");
 	string_equals_id("(invalid ID_IPV6_ADDR)",
-				identification_create_from_encoding(ID_IPV6_ADDR, chunk_empty));
-
+			identification_create_from_encoding(ID_IPV6_ADDR, chunk_empty));
+	string_equals("fec0::1/128", "fec0::1/128");
+	string_equals("fec0::2/127", "fec0::2/127");
+	string_equals("fec0::100/120", "fec0::100/120");
+	string_equals("::/0", "::/0");
+	string_equals_id("(invalid ID_IPV6_ADDR_SUBNET)",
+			identification_create_from_encoding(ID_IPV6_ADDR_SUBNET, chunk_empty));
+	string_equals("fec0::1-fec0::4fff", "fec0::1-fec0::4fff");
+	string_equals_id("(invalid ID_IPV6_ADDR_RANGE)",
+			identification_create_from_encoding(ID_IPV6_ADDR_RANGE, chunk_empty));
 	string_equals_id("(unknown ID type: 255)",
-				identification_create_from_encoding(255, chunk_empty));
+			identification_create_from_encoding(255, chunk_empty));
 
 	string_equals("moon@strongswan.org", "moon@strongswan.org");
 	string_equals("MOON@STRONGSWAN.ORG", "MOON@STRONGSWAN.ORG");
@@ -591,6 +666,89 @@ START_TEST(test_matches_binary)
 	ck_assert(id_matches(a, "*=bar", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "foo=*", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+	a->destroy(a);
+}
+END_TEST
+
+START_TEST(test_matches_range)
+{
+	identification_t *a, *b;
+
+	/* IPv4 addresses */
+	a = identification_create_from_string("192.168.1.1");
+	ck_assert(a->get_type(a) == ID_IPV4_ADDR);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1/32", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0/32", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/24", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.0.0/24", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.64", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.2-192.168.1.64", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.0.240-192.168.1.0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv4 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV4_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE,
+			chunk_from_chars(0xc0,0xa8,0x01,0x28,0xc0,0xa8,0x01,0x00));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+
+	a->destroy(a);
+
+	/* IPv6 addresses */
+	a = identification_create_from_string("fec0::1");
+	ck_assert(a->get_type(a) == ID_IPV6_ADDR);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1/128", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/120", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::100/120", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1-fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::0-fec0::5", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::4001-fec0::4ffe", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "feb0::1-fec0::0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv6 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV6_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE,
+			chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x4f,0xff,
+							 0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01 ));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+
+	a->destroy(a);
+
+	/* Malformed IPv4 address encoding */
+	a = identification_create_from_encoding(ID_IPV4_ADDR, chunk_empty);
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "0.0.0.0-255.255.255.255", ID_MATCH_NONE));
+	a->destroy(a);
+
+	/* Malformed IPv6 address encoding */
+	a = identification_create_from_encoding(ID_IPV6_ADDR, chunk_empty);
+	ck_assert(id_matches(a, "::/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", ID_MATCH_NONE));
 	a->destroy(a);
 }
 END_TEST
@@ -929,6 +1087,7 @@ Suite *identification_suite_create()
 	tcase_add_test(tc, test_matches);
 	tcase_add_test(tc, test_matches_any);
 	tcase_add_test(tc, test_matches_binary);
+	tcase_add_test(tc, test_matches_range);
 	tcase_add_test(tc, test_matches_string);
 	tcase_add_loop_test(tc, test_matches_empty, ID_ANY, ID_KEY_ID + 1);
 	tcase_add_loop_test(tc, test_matches_empty_reverse, ID_ANY, ID_KEY_ID + 1);
