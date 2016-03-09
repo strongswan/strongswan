@@ -160,7 +160,10 @@ static bool manage_rule(struct iptc_handle *ipth, const char *chain,
 	}
 	else
 	{
-		if (!iptc_delete_entry(chain, e, "", ipth))
+		u_char matchmask[e->next_offset];
+
+		memset(matchmask, 255, sizeof(matchmask));
+		if (!iptc_delete_entry(chain, e, matchmask, ipth))
 		{
 			DBG1(DBG_CFG, "deleting %s rule failed: %s",
 				 chain, iptc_strerror(errno));
