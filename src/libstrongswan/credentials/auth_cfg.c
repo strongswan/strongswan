@@ -46,6 +46,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"RULE_SUBJECT_CERT",
 	"RULE_CRL_VALIDATION",
 	"RULE_OCSP_VALIDATION",
+	"RULE_CERT_VALIDATION_SUSPENDED",
 	"RULE_GROUP",
 	"RULE_RSA_STRENGTH",
 	"RULE_ECDSA_STRENGTH",
@@ -80,6 +81,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_XAUTH_IDENTITY:
 		case AUTH_RULE_XAUTH_BACKEND:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_RULE_MAX:
@@ -214,6 +216,7 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_RULE_BLISS_STRENGTH:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 			/* integer type */
 			this->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
@@ -264,6 +267,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_RULE_BLISS_STRENGTH:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 		{
 			return e1->value == e2->value;
 		}
@@ -356,6 +360,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_BLISS_STRENGTH:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 		case AUTH_RULE_MAX:
 			break;
 	}
@@ -389,6 +394,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_BLISS_STRENGTH:
 			case AUTH_RULE_SIGNATURE_SCHEME:
 			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				/* integer type */
 				entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
@@ -471,6 +477,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_OCSP_VALIDATION:
 			return (void*)VALIDATION_FAILED;
 		case AUTH_RULE_IDENTITY_LOOSE:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 			return (void*)FALSE;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
@@ -757,6 +764,11 @@ METHOD(auth_cfg_t, complies, bool,
 			{
 				uintptr_t validated;
 
+				if (get(this, AUTH_RULE_CERT_VALIDATION_SUSPENDED))
+				{	/* skip validation, may happen later */
+					break;
+				}
+
 				e2 = create_enumerator(this);
 				while (e2->enumerate(e2, &t2, &validated))
 				{
@@ -934,6 +946,8 @@ METHOD(auth_cfg_t, complies, bool,
 				/* just an indication when verifying AUTH_RULE_IDENTITY */
 			case AUTH_RULE_XAUTH_BACKEND:
 				/* not enforced, just a hint for local authentication */
+			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
+				/* not a constraint */
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -1086,6 +1100,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_BLISS_STRENGTH:
 				case AUTH_RULE_SIGNATURE_SCHEME:
 				case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+				case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				{
 					add(this, type, (uintptr_t)value);
 					break;
@@ -1257,6 +1272,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_BLISS_STRENGTH:
 			case AUTH_RULE_SIGNATURE_SCHEME:
 			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				clone->add(clone, type, (uintptr_t)value);
 				break;
 			case AUTH_RULE_MAX:

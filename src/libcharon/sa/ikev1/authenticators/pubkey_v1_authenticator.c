@@ -173,7 +173,7 @@ METHOD(authenticator_t, process, status_t,
 	sig = sig_payload->get_hash(sig_payload);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr, this->type,
-														id, auth);
+														id, auth, TRUE);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, hash, sig))

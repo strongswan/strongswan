@@ -320,7 +320,8 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
 	if (cert)
 	{
 		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-						KEY_ANY, cert->get_subject(cert), this->server_auth);
+											KEY_ANY, cert->get_subject(cert),
+											this->server_auth, TRUE);
 		while (enumerator->enumerate(enumerator, &current, &auth))
 		{
 			found = auth->get(auth, AUTH_RULE_SUBJECT_CERT);

@@ -365,6 +365,7 @@ METHOD(authenticator_t, process, status_t,
 	status_t status = NOT_FOUND;
 	keymat_v2_t *keymat;
 	const char *reason = "unsupported";
+	bool online;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
 	if (!auth_payload)
@@ -408,8 +409,10 @@ METHOD(authenticator_t, process, status_t,
 		return FAILED;
 	}
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	online = !this->ike_sa->has_condition(this->ike_sa,
+										  COND_ONLINE_VALIDATION_SUSPENDED);
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-														key_type, id, auth);
+													key_type, id, auth, online);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, octets, auth_data))
@@ -421,6 +424,10 @@ METHOD(authenticator_t, process, status_t,
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME, (uintptr_t)scheme);
+			if (!online)
+			{
+				auth->add(auth, AUTH_RULE_CERT_VALIDATION_SUSPENDED, TRUE);
+			}
 			break;
 		}
 		else

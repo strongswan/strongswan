@@ -58,6 +58,7 @@
 #include <sa/ikev2/tasks/ike_auth_lifetime.h>
 #include <sa/ikev2/tasks/ike_reauth_complete.h>
 #include <sa/ikev2/tasks/ike_redirect.h>
+#include <credentials/sets/auth_cfg_wrapper.h>
 
 #ifdef ME
 #include <sa/ikev2/tasks/ike_me.h>
@@ -480,6 +481,113 @@ static void flush_auth_cfgs(private_ike_sa_t *this)
 	{
 		cfg->destroy(cfg);
 	}
+}
+
+METHOD(ike_sa_t, verify_peer_certificate, bool,
+	private_ike_sa_t *this)
+{
+	enumerator_t *e1, *e2, *certs;
+	auth_cfg_t *cfg, *cfg_done;
+	certificate_t *peer, *cert;
+	public_key_t *key;
+	auth_cfg_t *auth;
+	auth_cfg_wrapper_t *wrapper;
+	time_t not_before, not_after;
+	bool valid = TRUE, found;
+
+	if (this->state != IKE_ESTABLISHED)
+	{
+		DBG1(DBG_IKE, "unable to verify peer certificate in state %N",
+			 ike_sa_state_names, this->state);
+		return FALSE;
+	}
+
+	if (!this->flush_auth_cfg &&
+		lib->settings->get_bool(lib->settings,
+								"%s.flush_auth_cfg", FALSE, lib->ns))
+	{	/* we can do this check only once if auth configs are flushed */
+		DBG1(DBG_IKE, "unable to verify peer certificate as authentication "
+			 "information has been flushed");
+		return FALSE;
+	}
+	this->public.set_condition(&this->public, COND_ONLINE_VALIDATION_SUSPENDED,
+							   FALSE);
+
+	e1 = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg, FALSE);
+	e2 = array_create_enumerator(this->other_auths);
+	while (e1->enumerate(e1, &cfg))
+	{
+		if (!e2->enumerate(e2, &cfg_done))
+		{	/* this should not happen as the authentication should never have
+			 * succeeded */
+			valid = FALSE;
+			break;
+		}
+		if ((uintptr_t)cfg_done->get(cfg_done,
+									 AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_PUBKEY)
+		{
+			continue;
+		}
+		peer = cfg_done->get(cfg_done, AUTH_RULE_SUBJECT_CERT);
+		if (!peer)
+		{
+			DBG1(DBG_IKE, "no subject certificate found, skipping certificate "
+				 "verification");
+			continue;
+		}
+		if (!peer->get_validity(peer, NULL, &not_before, &not_after))
+		{
+			DBG1(DBG_IKE, "peer certificate invalid (valid from %T to %T)",
+				 &not_before, FALSE, &not_after, FALSE);
+			valid = FALSE;
+			break;
+		}
+		key = peer->get_public_key(peer);
+		if (!key)
+		{
+			DBG1(DBG_IKE, "unable to retrieve public key, skipping certificate "
+				 "verification");
+			continue;
+		}
+		DBG1(DBG_IKE, "verifying peer certificate");
+		/* serve received certificates */
+		wrapper = auth_cfg_wrapper_create(cfg_done);
+		lib->credmgr->add_local_set(lib->credmgr, &wrapper->set, FALSE);
+		certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
+							key->get_type(key), peer->get_subject(peer), TRUE);
+		key->destroy(key);
+
+		found = FALSE;
+		while (certs->enumerate(certs, &cert, &auth))
+		{
+			if (peer->equals(peer, cert))
+			{
+				cfg_done->add(cfg_done, AUTH_RULE_CERT_VALIDATION_SUSPENDED,
+							  FALSE);
+				cfg_done->merge(cfg_done, auth, FALSE);
+				valid = cfg_done->complies(cfg_done, cfg, TRUE);
+				found = TRUE;
+				break;
+			}
+		}
+		certs->destroy(certs);
+		lib->credmgr->remove_local_set(lib->credmgr, &wrapper->set);
+		wrapper->destroy(wrapper);
+		if (!found || !valid)
+		{
+			valid = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	if (this->flush_auth_cfg)
+	{
+		this->flush_auth_cfg = FALSE;
+		flush_auth_cfgs(this);
+	}
+	return valid;
 }
 
 METHOD(ike_sa_t, get_proposal, proposal_t*,
@@ -1441,9 +1549,14 @@ METHOD(ike_sa_t, process_message, status_t,
 	status = this->task_manager->process_message(this->task_manager, message);
 	if (this->flush_auth_cfg && this->state == IKE_ESTABLISHED)
 	{
-		/* authentication completed */
-		this->flush_auth_cfg = FALSE;
-		flush_auth_cfgs(this);
+		/* authentication completed but if the online validation is suspended we
+		 * need the auth cfgs until we did the delayed verification, we flush
+		 * them afterwards */
+		if (!has_condition(this, COND_ONLINE_VALIDATION_SUSPENDED))
+		{
+			this->flush_auth_cfg = FALSE;
+			flush_auth_cfgs(this);
+		}
 	}
 	return status;
 }
@@ -2750,6 +2863,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.set_peer_cfg = _set_peer_cfg,
 			.get_auth_cfg = _get_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.verify_peer_certificate = _verify_peer_certificate,
 			.add_auth_cfg = _add_auth_cfg,
 			.get_proposal = _get_proposal,
 			.set_proposal = _set_proposal,

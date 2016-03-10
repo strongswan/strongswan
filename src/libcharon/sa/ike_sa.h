@@ -217,6 +217,11 @@ enum ike_condition_t {
 	 * This IKE_SA has been redirected
 	 */
 	COND_REDIRECTED = (1<<11),
+
+	/**
+	 * Online certificate revocation checking is suspended for this IKE_SA
+	 */
+	COND_ONLINE_VALIDATION_SUSPENDED = (1<<12),
 };
 
 /**
@@ -520,6 +525,14 @@ struct ike_sa_t {
 	 * @return				enumerator over auth_cfg_t
 	 */
 	enumerator_t* (*create_auth_cfg_enumerator)(ike_sa_t *this, bool local);
+
+	/**
+	 * Verify the trustchains (validity, revocation) in completed public key
+	 * auth rounds.
+	 *
+	 * @return				TRUE if certificates were valid, FALSE otherwise
+	 */
+	bool (*verify_peer_certificate)(ike_sa_t *this);
 
 	/**
 	 * Get the selected proposal of this IKE_SA.
