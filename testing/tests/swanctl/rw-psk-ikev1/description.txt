@@ -1,10 +1,15 @@
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
-to gateway <b>moon</b>. The authentication is based on two <b>pre-shared keys</b>
-bound to the two distinct gateway identities <b>moon1.strongswan.org</b> and
-<b>moon2.strongswan.org</b>. On the gateway these two identities are bound to
-two disjoint sets of client IP address ranges which allows IKEv1 Main Mode
-to select the correct connection definition and via the gateway identity the
-correct PSK.
+to gateway <b>moon</b>. The IKEv1 main mode authentication is based on
+<b>pre-shared keys</b> and <b>IPv4 address</b> identities.
+On the gateway two connections with differing parameters are defined:
+One for peers from the <b>192.168.0.96/28</b> subnet and one for peers from
+the range <b>192.168.0.150-192.168.0.200</b>.
+<p/>
+On the gateway for different shared keys are defined for the following
+hierarchcal peer address ranges: <b>0.0.0.0/0 0::0/0</b>,
+<b>192.168.0.96/28</b>, <b>192.168.0.150-192.168.0.200</b> and
+<b>192.168.0.200</b>. Client <b>carol</b> uses the first and client <b>dave</b>
+the fourth PSK.
 <p/>
 Upon the successful establishment of the IPsec tunnels, <b>carol</b> pings the
 client <b>alice</b> and <b>dave</b> the client <b>venus</b> lying in two different
