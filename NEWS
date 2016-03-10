@@ -11,6 +11,15 @@ strongswan-5.4.0
   constraints against IKEv2 authentication in rightauth, which allows the use
   of different signature schemes for trustchain verification and authentication.
 
+- The initiator of an IKEv2 make-before-break reauthentication now suspends
+  online certificate revocation checks (OCSP, CRLs) until the new IKE_SA and all
+  CHILD_SAs are established.  This is required if the checks are done over the
+  CHILD_SA established with the new IKE_SA.  This is not possible until the
+  initiator installs this SA and that only happens after the authentication is
+  completed successfully.  So we suspend the checks during the reauthentication
+  and do them afterwards, if they fail the IKE_SA is closed.  This change has no
+  effect on the behavior during the authentication of the initial IKE_SA.
+
 - For the vici plugin a Vici:Session Perl CPAN module has been added to allow
   Perl applications to control and/or monitor the IKE daemon using the VICI
   interface, similar to the existing Python egg or Ruby gem.
