@@ -311,11 +311,13 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 			 ike_sa->get_unique_id(ike_sa));
 	push_env(envp, countof(envp), "PLUTO_ME=%H", me);
 	push_env(envp, countof(envp), "PLUTO_MY_ID=%Y", ike_sa->get_my_id(ike_sa));
-	if (my_ts->to_subnet(my_ts, &host, &mask))
+	if (!my_ts->to_subnet(my_ts, &host, &mask))
 	{
-		push_env(envp, countof(envp), "PLUTO_MY_CLIENT=%+H/%u", host, mask);
-		host->destroy(host);
+		DBG1(DBG_CHD, "updown approximates local TS %R "
+					  "by next larger subnet", my_ts);
 	}
+	push_env(envp, countof(envp), "PLUTO_MY_CLIENT=%+H/%u", host, mask);
+	host->destroy(host);
 	push_env(envp, countof(envp), "PLUTO_MY_PORT=%s",
 			 get_port(my_ts, other_ts, port_buf, TRUE));
 	push_env(envp, countof(envp), "PLUTO_MY_PROTOCOL=%u",
@@ -323,11 +325,13 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	push_env(envp, countof(envp), "PLUTO_PEER=%H", other);
 	push_env(envp, countof(envp), "PLUTO_PEER_ID=%Y",
 			 ike_sa->get_other_id(ike_sa));
-	if (other_ts->to_subnet(other_ts, &host, &mask))
+	if (!other_ts->to_subnet(other_ts, &host, &mask))
 	{
-		push_env(envp, countof(envp), "PLUTO_PEER_CLIENT=%+H/%u", host, mask);
-		host->destroy(host);
+		DBG1(DBG_CHD, "updown approximates remote TS %R "
+					  "by next larger subnet", other_ts);
 	}
+	push_env(envp, countof(envp), "PLUTO_PEER_CLIENT=%+H/%u", host, mask);
+	host->destroy(host);
 	push_env(envp, countof(envp), "PLUTO_PEER_PORT=%s",
 			 get_port(my_ts, other_ts, port_buf, FALSE));
 	push_env(envp, countof(envp), "PLUTO_PEER_PROTOCOL=%u",

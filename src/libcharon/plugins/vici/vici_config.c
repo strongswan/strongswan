@@ -3,7 +3,7 @@
  * Copyright (C) 2014 revosec AG
  *
  * Copyright (C) 2015-2016 Tobias Brunner
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -645,6 +645,22 @@ CALLBACK(parse_ts, bool,
 	if (streq(buf, "dynamic"))
 	{
 		ts = traffic_selector_create_dynamic(proto, from, to);
+	}
+	else if (strchr(buf, '-'))
+	{
+		host_t *lower, *upper;
+		ts_type_t type;
+
+		if (host_create_from_range(buf, &lower, &upper))
+		{
+			type = (lower->get_family(lower) == AF_INET) ?
+						 		TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
+			ts = traffic_selector_create_from_bytes(proto, type,
+								lower->get_address(lower), from,
+								upper->get_address(upper), to);
+			lower->destroy(lower);
+			upper->destroy(upper);
+		}
 	}
 	else
 	{
