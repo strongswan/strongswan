@@ -73,6 +73,7 @@ plugins = \
 	plugins/ntru.opt \
 	plugins/openssl.opt \
 	plugins/osx-attr.opt \
+	plugins/p-cscf.opt \
 	plugins/pkcs11.opt \
 	plugins/radattr.opt \
 	plugins/random.opt \

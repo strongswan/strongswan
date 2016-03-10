@@ -49,6 +49,9 @@ enum configuration_attribute_type_t {
 	INTERNAL_IP6_LINK       = 17,
 	INTERNAL_IP6_PREFIX     = 18,
 	HOME_AGENT_ADDRESS		= 19,
+	/* RFC 7651 */
+	P_CSCF_IP4_ADDRESS		= 20,
+	P_CSCF_IP6_ADDRESS		= 21,
 	/* XAUTH attributes */
 	XAUTH_TYPE              = 16520,
 	XAUTH_USER_NAME         = 16521,

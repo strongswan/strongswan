@@ -132,6 +132,7 @@ METHOD(payload_t, verify, status_t,
 		case INTERNAL_IP4_NBNS:
 		case INTERNAL_ADDRESS_EXPIRY:
 		case INTERNAL_IP4_DHCP:
+		case P_CSCF_IP4_ADDRESS:
 			if (this->length_or_value != 0 && this->length_or_value != 4)
 			{
 				failed = TRUE;
@@ -160,6 +161,7 @@ METHOD(payload_t, verify, status_t,
 		case INTERNAL_IP6_DNS:
 		case INTERNAL_IP6_NBNS:
 		case INTERNAL_IP6_DHCP:
+		case P_CSCF_IP6_ADDRESS:
 			if (this->length_or_value != 0 && this->length_or_value != 16)
 			{
 				failed = TRUE;
