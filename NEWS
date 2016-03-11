@@ -29,6 +29,14 @@ strongswan-5.4.0
   The port range must map to a port mask, though since the kernel does not
   support arbitrary ranges.
 
+- The vici plugin allows the configuration of IPv4 and IPv6 address ranges
+  in local and remote traffic selectors. Since both the Linux kernel and
+  iptables cannot handle arbitrary ranges, address ranges are mapped to the next
+  larger CIDR subnet by the kernel-netlink and updown plugins, respectively.
+
+- Implemented IKEv1 IPv4/IPv6 address subnet and range identities that can be
+  used as owners of shared secrets.
+
 
 strongswan-5.3.5
 ----------------
