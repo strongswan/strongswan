@@ -402,7 +402,7 @@ or
 keyword may be used, AH+ESP bundles are not supported.
 
 Defaults to
-.BR aes128-sha1,3des-sha1 .
+.BR aes128-sha256 .
 The daemon adds its extensive default proposal to this default
 or the configured value.  To restrict it to the configured proposal an
 exclamation mark
@@ -453,7 +453,7 @@ if required.
 .BR ike " = <cipher suites>"
 comma-separated list of IKE/ISAKMP SA encryption/authentication algorithms
 to be used, e.g.
-.BR aes128-sha1-modp2048 .
+.BR aes128-sha256-modp3072 .
 The notation is
 .BR encryption-integrity[-prf]-dhgroup .
 If no PRF is given, the algorithms defined for integrity are used for the PRF.
@@ -466,10 +466,10 @@ or
 .BR prfaesxcbc ).
 .br
 In IKEv2, multiple algorithms and proposals may be included, such as
-.BR aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024 .
+.BR aes128-aes256-sha1-modp3072-modp2048,3des-sha1-md5-modp1024 .
 
 Defaults to
-.BR aes128-sha1-modp2048,3des-sha1-modp1536 .
+.BR aes128-sha256-modp3072 .
 The daemon adds its extensive default proposal to this
 default or the configured value.  To restrict it to the configured proposal an
 exclamation mark
