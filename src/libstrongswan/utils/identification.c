@@ -980,9 +980,9 @@ int identification_printf_hook(printf_hook_data_t *data,
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	chunk_t proper;
-	char buf[BUF_LEN];
-	char *pos;
-	size_t written, len, address_size;
+	char buf[BUF_LEN], *pos;
+	size_t len, address_size;
+	int written;
 
 	if (this == NULL)
 	{
