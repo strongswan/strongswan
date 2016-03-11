@@ -435,13 +435,13 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 		}
 		len = min(file_len, len);
 		rewind(file);
-		buf[len] = '\0';
 		if (fread(buf, 1, len, file) != len)
 		{
 			DBG1(DBG_IMC, "failed to read file \"%s\"", releases[i]);
 			fclose(file);
 			return FALSE;
 		}
+		buf[len] = '\0';
 		fclose(file);
 
 		DBG1(DBG_IMC, "processing \"%s\" file", releases[i]);
