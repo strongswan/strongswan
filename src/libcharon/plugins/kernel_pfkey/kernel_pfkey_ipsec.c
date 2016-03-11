@@ -2329,14 +2329,15 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	{	/* for shunt policies */
 		route->gateway = charon->kernel->get_nexthop(charon->kernel,
 											policy->src.net, policy->src.mask,
-											route->src_ip, NULL);
+											route->src_ip, &route->if_name);
 
 		/* we don't have a source address, use the address we found */
 		src = route->src_ip;
 	}
 
 	/* get interface for route, using source address */
-	if (!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
+	if (!route->if_name &&
+		!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
 	{
 		route_entry_destroy(route);
 		return FALSE;
