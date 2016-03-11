@@ -1710,9 +1710,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		chunk = candidate->get_address(candidate);
 		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
 	}
+	/* we use this below to match against the routes */
+	chunk = dest->get_address(dest);
 	if (!match_net)
 	{
-		chunk = dest->get_address(dest);
 		netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
 	}
 
