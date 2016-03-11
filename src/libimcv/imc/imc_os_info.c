@@ -383,6 +383,7 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 	FILE *file;
 	u_char buf[BUF_LEN], *pos = buf;
 	int len = BUF_LEN - 1;
+	long file_len;
 	os_type_t os_type = OS_TYPE_UNKNOWN;
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
@@ -425,7 +426,14 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 
 		/* read release file into buffer */
 		fseek(file, 0, SEEK_END);
-		len = min(ftell(file), len);
+		file_len = ftell(file);
+		if (file_len < 0)
+		{
+			DBG1(DBG_IMC, "failed to determine size of \"%s\"", releases[i]);
+			fclose(file);
+			return FALSE;
+		}
+		len = min(file_len, len);
 		rewind(file);
 		buf[len] = '\0';
 		if (fread(buf, 1, len, file) != len)
