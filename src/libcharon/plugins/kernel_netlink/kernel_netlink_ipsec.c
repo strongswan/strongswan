@@ -2335,19 +2335,22 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 
 			/* get the interface to install the route for. If we have a local
 			 * address, use it. Otherwise (for shunt policies) use the
-			 * routes source address. */
+			 * route's source address. */
 			iface = ipsec->dst;
 			if (iface->is_anyaddr(iface))
 			{
-				iface = route->src_ip;
-			}
-			/* install route via outgoing interface */
-			if (!charon->kernel->get_interface(charon->kernel, iface,
-											   &route->if_name))
-			{
-				policy_change_done(this, policy);
-				route_entry_destroy(route);
-				return SUCCESS;
+				iface = ipsec->dst;
+				if (iface->is_anyaddr(iface))
+				{
+					iface = route->src_ip;
+				}
+				if (!charon->kernel->get_interface(charon->kernel, iface,
+												   &route->if_name))
+				{
+					policy_change_done(this, policy);
+					route_entry_destroy(route);
+					return SUCCESS;
+				}
 			}
 
 			if (policy->route)
