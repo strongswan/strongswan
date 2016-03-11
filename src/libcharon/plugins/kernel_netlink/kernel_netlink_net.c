@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1502,6 +1502,32 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
+ * get the name of an interface by index (allocated)
+ */
+static char *get_interface_name_by_index(private_kernel_netlink_net_t *this,
+										 int index)
+{
+	iface_entry_t *iface;
+	char *name = NULL;
+
+	DBG2(DBG_KNL, "getting iface name for index %d", index);
+
+	this->lock->read_lock(this->lock);
+	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
+								(void**)&iface, &index) == SUCCESS)
+	{
+		name = strdup(iface->ifname);
+	}
+	this->lock->unlock(this->lock);
+
+	if (!name)
+	{
+		DBG1(DBG_KNL, "unable to get interface name for %d", index);
+	}
+	return name;
+}
+
+/**
  * check if an address or net (addr with prefix net bits) is in
  * subnet (net with net_len net bits)
  */
@@ -1879,7 +1905,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	enumerator->destroy(enumerator);
 
 	if (nexthop)
-	{	/* nexthop lookup, return gateway if any */
+	{	/* nexthop lookup, return gateway and oif if any */
 		if (iface)
 		{
 			*iface = NULL;
@@ -1887,6 +1913,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		if (best || routes->get_first(routes, (void**)&best) == SUCCESS)
 		{
 			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
+			if (iface && route->oif)
+			{
+				*iface = get_interface_name_by_index(this, route->oif);
+			}
 		}
 		if (!addr && !match_net)
 		{	/* fallback to destination address */
@@ -1906,8 +1936,16 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	if (addr)
 	{
-		DBG2(DBG_KNL, "using %H as %s to reach %H/%d", addr,
-			 nexthop ? "nexthop" : "address", dest, prefix);
+		if (nexthop && iface && *iface)
+		{
+			DBG2(DBG_KNL, "using %H as nexthop and %s as dev to reach %H/%d",
+				 addr, *iface, dest, prefix);
+		}
+		else
+		{
+			DBG2(DBG_KNL, "using %H as %s to reach %H/%d", addr,
+				 nexthop ? "nexthop" : "address", dest, prefix);
+		}
 	}
 	else if (!recursion)
 	{
