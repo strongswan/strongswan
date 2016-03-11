@@ -36,8 +36,8 @@ struct certificate_printer_t {
 	/**
 	 * Print a certificate.
 	 *
-	 * @cert			certificate to be printed
-	 * @has_privkey		indicates that certificate has a matching private key
+	 * @param cert			certificate to be printed
+	 * @param has_privkey	indicates that certificate has a matching private key
 	 */
 	void (*print)(certificate_printer_t *this, certificate_t *cert,
 				  bool has_privkey);
@@ -45,8 +45,8 @@ struct certificate_printer_t {
 	/**
 	 * Print a caption if the certificate type changed.
 	 *
-	 * @type			certificate type
-	 * @flag			X.509 certificate flag
+	 * @param type		certificate type
+	 * @param flag		X.509 certificate flag
 	 */
 	void (*print_caption)(certificate_printer_t *this, certificate_type_t type,
 						  x509_flag_t flag);
@@ -65,6 +65,6 @@ struct certificate_printer_t {
  * @param utc			print time inforamtion in UTC
  */
 certificate_printer_t* certificate_printer_create(FILE *f, bool detailed,
-														   bool utc);
+												  bool utc);
 
 #endif /** CERTIFICATE_PRINTER_H_ @}*/
