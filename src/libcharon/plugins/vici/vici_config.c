@@ -553,7 +553,7 @@ CALLBACK(parse_ts, bool,
 	linked_list_t *out, chunk_t v)
 {
 	char buf[128], *protoport, *sep, *port = "", *end;
-	traffic_selector_t *ts;
+	traffic_selector_t *ts = NULL;
 	struct protoent *protoent;
 	struct servent *svc;
 	long int p;
