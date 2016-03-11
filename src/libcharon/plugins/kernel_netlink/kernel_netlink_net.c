@@ -1659,7 +1659,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						 int prefix, bool nexthop, host_t *candidate,
-						 u_int recursion)
+						 char **iface, u_int recursion)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
@@ -1861,7 +1861,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			if (gtw && !gtw->ip_equals(gtw, dest))
 			{
 				route->src_host = get_route(this, gtw, -1, FALSE, candidate,
-											recursion + 1);
+											iface, recursion + 1);
 			}
 			DESTROY_IF(gtw);
 			if (route->src_host)
@@ -1880,6 +1880,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	if (nexthop)
 	{	/* nexthop lookup, return gateway if any */
+		if (iface)
+		{
+			*iface = NULL;
+		}
 		if (best || routes->get_first(routes, (void**)&best) == SUCCESS)
 		{
 			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
@@ -1916,13 +1920,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, dest, -1, FALSE, src, 0);
+	return get_route(this, dest, -1, FALSE, src, NULL, 0);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src)
+	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src,
+	char **iface)
 {
-	return get_route(this, dest, prefix, TRUE, src, 0);
+	return get_route(this, dest, prefix, TRUE, src, iface, 0);
 }
 
 /**

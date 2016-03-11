@@ -1684,8 +1684,13 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, int prefix, host_t *src)
+	private_kernel_pfroute_net_t *this, host_t *dest, int prefix, host_t *src,
+	char **iface)
 {
+	if (iface)
+	{
+		*iface = NULL;
+	}
 	return get_route(this, TRUE, dest, src);
 }
 

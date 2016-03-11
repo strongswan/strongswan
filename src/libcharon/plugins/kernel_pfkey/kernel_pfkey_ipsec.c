@@ -2199,7 +2199,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 	if (!route->exclude)
 	{
 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
-		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL);
+		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL, NULL);
 		if (gtw)
 		{
 			char *if_name = NULL;
@@ -2315,7 +2315,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	if (!dst->is_anyaddr(dst))
 	{
 		route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1,
-													 src);
+													 src, NULL);
 
 		/* if the IP is virtual, we install the route over the interface it has
 		 * been installed on. Otherwise we use the interface we use for IKE, as
@@ -2329,7 +2329,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	{	/* for shunt policies */
 		route->gateway = charon->kernel->get_nexthop(charon->kernel,
 											policy->src.net, policy->src.mask,
-											route->src_ip);
+											route->src_ip, NULL);
 
 		/* we don't have a source address, use the address we found */
 		src = route->src_ip;

@@ -2320,14 +2320,14 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			if (!ipsec->src->is_anyaddr(ipsec->src))
 			{
 				route->gateway = charon->kernel->get_nexthop(charon->kernel,
-													ipsec->src, -1, ipsec->dst);
+											ipsec->src, -1, ipsec->dst, NULL);
 			}
 			else
 			{	/* for shunt policies */
 				iface = xfrm2host(policy->sel.family, &policy->sel.saddr, 0);
 				route->gateway = charon->kernel->get_nexthop(charon->kernel,
 												iface, policy->sel.prefixlen_s,
-												route->src_ip);
+												route->src_ip, NULL);
 				iface->destroy(iface);
 			}
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
