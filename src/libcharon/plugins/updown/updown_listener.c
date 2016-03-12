@@ -344,13 +344,13 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	}
 	push_vip_env(this, ike_sa, envp, countof(envp), TRUE);
 	push_vip_env(this, ike_sa, envp, countof(envp), FALSE);
-	mark = config->get_mark(config, TRUE);
+	mark = child_sa->get_mark(child_sa, TRUE);
 	if (mark.value)
 	{
 		push_env(envp, countof(envp), "PLUTO_MARK_IN=%u/0x%08x",
 				 mark.value, mark.mask);
 	}
-	mark = config->get_mark(config, FALSE);
+	mark = child_sa->get_mark(child_sa, FALSE);
 	if (mark.value)
 	{
 		push_env(envp, countof(envp), "PLUTO_MARK_OUT=%u/0x%08x",
