@@ -186,11 +186,13 @@ METHOD(ha_cache_t, delete_, void,
 {
 	entry_t *entry;
 
+	this->mutex->lock(this->mutex);
 	entry = this->cache->remove(this->cache, ike_sa);
 	if (entry)
 	{
 		entry_destroy(entry);
 	}
+	this->mutex->unlock(this->mutex);
 }
 
 /**
