@@ -69,7 +69,7 @@ METHOD(imc_os_info_t, get_name, chunk_t,
 }
 
 METHOD(imc_os_info_t, get_numeric_version, void,
-	private_imc_os_info_t *this, u_int32_t *major, u_int32_t *minor)
+	private_imc_os_info_t *this, uint32_t *major, uint32_t *minor)
 {
 	u_char *pos;
 

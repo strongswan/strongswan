@@ -160,7 +160,7 @@ struct task_manager_t {
 	 * @param tsi			initiator traffic selector, if packet-triggered
 	 * @param tsr			responder traffic selector, if packet-triggered
 	 */
-	void (*queue_child)(task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
+	void (*queue_child)(task_manager_t *this, child_cfg_t *cfg, uint32_t reqid,
 						traffic_selector_t *tsi, traffic_selector_t *tsr);
 
 	/**
@@ -170,7 +170,7 @@ struct task_manager_t {
 	 * @param spi			CHILD_SA SPI to rekey
 	 */
 	void (*queue_child_rekey)(task_manager_t *this, protocol_id_t protocol,
-							  u_int32_t spi);
+							  uint32_t spi);
 
 	/**
 	 * Queue CHILD_SA delete tasks.
@@ -180,7 +180,7 @@ struct task_manager_t {
 	 * @param expired		TRUE if SA already expired
 	 */
 	void (*queue_child_delete)(task_manager_t *this, protocol_id_t protocol,
-							   u_int32_t spi, bool expired);
+							   uint32_t spi, bool expired);
 
 	/**
 	 * Queue liveness checking tasks.
@@ -199,7 +199,7 @@ struct task_manager_t {
 	 *						- INVALID_STATE if retransmission not required
 	 *						- SUCCESS if retransmission sent
 	 */
-	status_t (*retransmit) (task_manager_t *this, u_int32_t message_id);
+	status_t (*retransmit) (task_manager_t *this, uint32_t message_id);
 
 	/**
 	 * Migrate all queued tasks from other to this.
@@ -242,7 +242,7 @@ struct task_manager_t {
 	 * @param initiate		message ID / DPD seq to initiate exchanges (send)
 	 * @param respond		message ID / DPD seq to respond to exchanges (expect)
 	 */
-	void (*reset) (task_manager_t *this, u_int32_t initiate, u_int32_t respond);
+	void (*reset) (task_manager_t *this, uint32_t initiate, uint32_t respond);
 
 	/**
 	 * Check if we are currently waiting for a reply.

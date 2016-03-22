@@ -119,14 +119,14 @@ struct tnccs_t {
 	 *
 	 * @return				TNC Client authentication type
 	 */
-	u_int32_t (*get_auth_type)(tnccs_t *this);
+	uint32_t (*get_auth_type)(tnccs_t *this);
 
 	/**
 	 * Set type of TNC Client authentication
 	 *
 	 * @param auth_type		TNC Client authentication type
 	 */
-	void (*set_auth_type)(tnccs_t *this, u_int32_t auth_type);
+	void (*set_auth_type)(tnccs_t *this, uint32_t auth_type);
 
 	/**
 	 * Get PDP server name and port number
@@ -134,7 +134,7 @@ struct tnccs_t {
 	 * @param port		PDP port number
 	 * @return			PDP server name
 	 */
-	chunk_t (*get_pdp_server)(tnccs_t *this, u_int16_t *port);
+	chunk_t (*get_pdp_server)(tnccs_t *this, uint16_t *port);
 
 	/**
 	 * Get a new reference to the TNCCS object.

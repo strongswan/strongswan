@@ -540,9 +540,9 @@ METHOD(settings_t, get_int, int,
 /**
  * Described in header
  */
-inline u_int64_t settings_value_as_uint64(char *value, u_int64_t def)
+inline uint64_t settings_value_as_uint64(char *value, uint64_t def)
 {
-	u_int64_t intval;
+	uint64_t intval;
 	char *end;
 	int base = 10;
 
@@ -597,10 +597,10 @@ METHOD(settings_t, get_double, double,
 /**
  * Described in header
  */
-inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
+inline uint32_t settings_value_as_time(char *value, uint32_t def)
 {
 	char *endptr;
-	u_int32_t timeval;
+	uint32_t timeval;
 	if (value)
 	{
 		errno = 0;
@@ -638,8 +638,8 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 	return def;
 }
 
-METHOD(settings_t, get_time, u_int32_t,
-	private_settings_t *this, char *key, u_int32_t def, ...)
+METHOD(settings_t, get_time, uint32_t,
+	private_settings_t *this, char *key, uint32_t def, ...)
 {
 	char *value;
 	va_list args;
@@ -695,7 +695,7 @@ METHOD(settings_t, set_double, void,
 }
 
 METHOD(settings_t, set_time, void,
-	private_settings_t *this, char *key, u_int32_t value, ...)
+	private_settings_t *this, char *key, uint32_t value, ...)
 {
 	char val[16];
 	va_list args;

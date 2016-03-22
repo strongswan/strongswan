@@ -59,7 +59,7 @@ struct child_sa_manager_t {
 	 * @return				IKE_SA, NULL if not found
 	 */
 	ike_sa_t *(*checkout)(child_sa_manager_t *this,
-						  protocol_id_t protocol, u_int32_t spi, host_t *dst,
+						  protocol_id_t protocol, uint32_t spi, host_t *dst,
 						  child_sa_t **child_sa);
 
 	/**
@@ -72,7 +72,7 @@ struct child_sa_manager_t {
 	 * @param child_sa		returns CHILD_SA managed by IKE_SA
 	 * @return				IKE_SA, NULL if not found
 	 */
-	ike_sa_t *(*checkout_by_id)(child_sa_manager_t *this, u_int32_t unique_id,
+	ike_sa_t *(*checkout_by_id)(child_sa_manager_t *this, uint32_t unique_id,
 								child_sa_t **child_sa);
 
 	/**

@@ -83,7 +83,7 @@ struct private_aesni_ccm_t {
  * First block with control information
  */
 typedef struct __attribute__((packed)) {
-	BITFIELD4(u_int8_t,
+	BITFIELD4(uint8_t,
 		/* size of p length field q, as q-1 */
 		q_len: 3,
 		/* size of our ICV t, as (t-2)/2 */
@@ -105,7 +105,7 @@ typedef struct __attribute__((packed)) {
  * Counter block
  */
 typedef struct __attribute__((packed)) {
-	BITFIELD3(u_int8_t,
+	BITFIELD3(uint8_t,
 		/* size of p length field q, as q-1 */
 		q_len: 3,
 		zero: 3,
@@ -140,7 +140,7 @@ static void build_b0(private_aesni_ccm_t *this, size_t len, size_t alen,
 /**
  * Build a counter block for counter i
  */
-static void build_ctr(private_aesni_ccm_t *this, u_int32_t i, u_char *iv,
+static void build_ctr(private_aesni_ccm_t *this, uint32_t i, u_char *iv,
 					  void *out)
 {
 	ctr_t *ctr = out;
@@ -157,7 +157,7 @@ static void build_ctr(private_aesni_ccm_t *this, u_int32_t i, u_char *iv,
  * Calculate the ICV for the b0 and associated data
  */
 static __m128i icv_header(private_aesni_ccm_t *this, size_t len, u_char *iv,
-						  u_int16_t alen, u_char *assoc)
+						  uint16_t alen, u_char *assoc)
 {
 	__m128i *ks, b, t, c;
 	u_int i, round, blocks, rem;

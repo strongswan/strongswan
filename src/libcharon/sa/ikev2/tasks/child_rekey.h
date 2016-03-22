@@ -59,6 +59,6 @@ struct child_rekey_t {
  * @return				child_rekey task to handle by the task_manager
  */
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-								  u_int32_t spi);
+								  uint32_t spi);
 
 #endif /** CHILD_REKEY_H_ @}*/

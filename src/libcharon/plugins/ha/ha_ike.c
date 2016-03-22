@@ -78,7 +78,7 @@ METHOD(listener_t, ike_keys, bool,
 	ha_message_t *m;
 	chunk_t secret;
 	proposal_t *proposal;
-	u_int16_t alg, len;
+	uint16_t alg, len;
 
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -168,7 +168,7 @@ METHOD(listener_t, ike_updown, bool,
 	{
 		enumerator_t *enumerator;
 		peer_cfg_t *peer_cfg;
-		u_int32_t extension, condition;
+		uint32_t extension, condition;
 		host_t *addr;
 		ike_sa_id_t *id;
 		identification_t *eap_id;
@@ -349,7 +349,7 @@ METHOD(listener_t, message_hook, bool,
 		ha_message_t *m;
 		notify_payload_t *notify;
 		chunk_t data;
-		u_int32_t seq;
+		uint32_t seq;
 
 		notify = message->get_notify(message, DPD_R_U_THERE);
 		if (notify)

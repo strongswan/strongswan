@@ -112,7 +112,7 @@ struct simaka_provider_t {
 	 * @return			permanent identity, NULL if id not a reauth identity
 	 */
 	identification_t* (*is_reauth)(simaka_provider_t *this, identification_t *id,
-								   char mk[HASH_SIZE_SHA1], u_int16_t *counter);
+								   char mk[HASH_SIZE_SHA1], uint16_t *counter);
 
 	/**
 	 * Generate a fast reauthentication identity, associated to a master key.

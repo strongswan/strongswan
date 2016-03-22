@@ -41,11 +41,11 @@ struct private_signer_t {
 };
 
 METHOD(signer_t, get_signature, bool,
-	private_signer_t *this, chunk_t data, u_int8_t *buffer)
+	private_signer_t *this, chunk_t data, uint8_t *buffer)
 {
 	if (buffer)
 	{
-		u_int8_t mac[this->mac->get_mac_size(this->mac)];
+		uint8_t mac[this->mac->get_mac_size(this->mac)];
 
 		if (!this->mac->get_mac(this->mac, data, mac))
 		{
@@ -62,7 +62,7 @@ METHOD(signer_t, allocate_signature, bool,
 {
 	if (chunk)
 	{
-		u_int8_t mac[this->mac->get_mac_size(this->mac)];
+		uint8_t mac[this->mac->get_mac_size(this->mac)];
 
 		if (!this->mac->get_mac(this->mac, data, mac))
 		{
@@ -78,7 +78,7 @@ METHOD(signer_t, allocate_signature, bool,
 METHOD(signer_t, verify_signature, bool,
 	private_signer_t *this, chunk_t data, chunk_t signature)
 {
-	u_int8_t mac[this->mac->get_mac_size(this->mac)];
+	uint8_t mac[this->mac->get_mac_size(this->mac)];
 
 	if (signature.len != this->truncation)
 	{

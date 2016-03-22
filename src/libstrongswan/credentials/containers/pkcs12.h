@@ -73,6 +73,6 @@ struct pkcs12_t {
  * @return				TRUE on success
  */
 bool pkcs12_derive_key(hash_algorithm_t hash, chunk_t password, chunk_t salt,
-					u_int64_t iterations, pkcs12_key_type_t type, chunk_t key);
+					uint64_t iterations, pkcs12_key_type_t type, chunk_t key);
 
 #endif /** PKCS12_H_ @}*/

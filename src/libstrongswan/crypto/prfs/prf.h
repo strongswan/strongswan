@@ -80,7 +80,7 @@ struct prf_t {
 	 * @return			TRUE if bytes generated successfully
 	 */
 	bool (*get_bytes)(prf_t *this, chunk_t seed,
-					  u_int8_t *buffer) __attribute__((warn_unused_result));
+					  uint8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generates pseudo random bytes and allocate space for them.

@@ -134,7 +134,7 @@ METHOD(proposal_keywords_t, get_token, const proposal_token_t*,
 
 METHOD(proposal_keywords_t, register_token, void,
 	private_proposal_keywords_t *this, const char *name, transform_type_t type,
-	u_int16_t algorithm, u_int16_t keysize)
+	uint16_t algorithm, uint16_t keysize)
 {
 	proposal_token_t *token;
 

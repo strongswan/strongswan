@@ -413,7 +413,7 @@ payload_t *payload_create(payload_type_t type);
  * @param maj_ver	major IKE version (use 0 to skip version check)
  * @return			FALSE if payload type handled as unknown payload
  */
-bool payload_is_known(payload_type_t type, u_int8_t maj_ver);
+bool payload_is_known(payload_type_t type, uint8_t maj_ver);
 
 /**
  * Get the value field in a payload using encoding rules.

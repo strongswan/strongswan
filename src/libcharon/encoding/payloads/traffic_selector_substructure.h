@@ -62,7 +62,7 @@ struct traffic_selector_substructure_t {
 	 * @return			type of traffic selector
 	 *
 	 */
-	u_int8_t (*get_protocol_id) (traffic_selector_substructure_t *this);
+	uint8_t (*get_protocol_id) (traffic_selector_substructure_t *this);
 
 	/**
 	 * Set the IP protocol ID of Traffic selector
@@ -70,7 +70,7 @@ struct traffic_selector_substructure_t {
 	 * @param protocol_id	protocol ID of traffic selector
 	 */
 	void (*set_protocol_id) (traffic_selector_substructure_t *this,
-							  u_int8_t protocol_id);
+							  uint8_t protocol_id);
 
 	/**
 	 * Get the start port and address as host_t object.

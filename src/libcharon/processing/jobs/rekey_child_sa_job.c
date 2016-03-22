@@ -38,7 +38,7 @@ struct private_rekey_child_sa_job_t {
 	/**
 	 * inbound SPI of the CHILD_SA
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * SA destination address
@@ -86,7 +86,7 @@ METHOD(job_t, get_priority, job_priority_t,
  * Described in header
  */
 rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol,
-												u_int32_t spi, host_t *dst)
+												uint32_t spi, host_t *dst)
 {
 	private_rekey_child_sa_job_t *this;
 

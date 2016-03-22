@@ -115,7 +115,7 @@ bool pgp_read_mpi(chunk_t *blob, chunk_t *mpi);
  * @param scalar	resultin scalar
  * @return			TRUE if scalar parsed successfully
  */
-bool pgp_read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar);
+bool pgp_read_scalar(chunk_t *blob, size_t bytes, uint32_t *scalar);
 
 /**
  * Parse a PGP packet.

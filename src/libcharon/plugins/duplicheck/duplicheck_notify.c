@@ -75,7 +75,7 @@ METHOD(duplicheck_notify_t, send_, void,
 {
 	enumerator_t *enumerator;
 	stream_t *stream;
-	u_int16_t nlen;
+	uint16_t nlen;
 	char buf[512];
 	int len;
 

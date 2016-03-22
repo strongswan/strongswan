@@ -42,7 +42,7 @@ struct private_ts_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -62,12 +62,12 @@ struct private_ts_payload_t {
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Number of traffic selectors
 	 */
-	u_int8_t ts_num;
+	uint8_t ts_num;
 
 	/**
 	 * Contains the traffic selectors of type traffic_selector_substructure_t.

@@ -40,7 +40,7 @@ struct bio_reader_t {
 	 *
 	 * @return			number of remaining bytes in buffer
 	 */
-	u_int32_t (*remaining)(bio_reader_t *this);
+	uint32_t (*remaining)(bio_reader_t *this);
 
 	/**
 	 * Peek the remaining data, not consuming any bytes.
@@ -55,7 +55,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint8)(bio_reader_t *this, u_int8_t *res);
+	bool (*read_uint8)(bio_reader_t *this, uint8_t *res);
 
 	/**
 	 * Read a 16-bit integer from the buffer, advance.
@@ -63,7 +63,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint16)(bio_reader_t *this, u_int16_t *res);
+	bool (*read_uint16)(bio_reader_t *this, uint16_t *res);
 
 	/**
 	 * Read a 24-bit integer from the buffer, advance.
@@ -71,7 +71,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint24)(bio_reader_t *this, u_int32_t *res);
+	bool (*read_uint24)(bio_reader_t *this, uint32_t *res);
 
 	/**
 	 * Read a 32-bit integer from the buffer, advance.
@@ -79,7 +79,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint32)(bio_reader_t *this, u_int32_t *res);
+	bool (*read_uint32)(bio_reader_t *this, uint32_t *res);
 
 	/**
 	 * Read a 64-bit integer from the buffer, advance.
@@ -87,7 +87,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint64)(bio_reader_t *this, u_int64_t *res);
+	bool (*read_uint64)(bio_reader_t *this, uint64_t *res);
 
 	/**
 	 * Read a chunk of len bytes, advance.
@@ -96,7 +96,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data)(bio_reader_t *this, u_int32_t len, chunk_t *res);
+	bool (*read_data)(bio_reader_t *this, uint32_t len, chunk_t *res);
 
 	/**
 	 * Read a 8-bit integer from the end of the buffer, reduce remaining.
@@ -104,7 +104,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint8_end)(bio_reader_t *this, u_int8_t *res);
+	bool (*read_uint8_end)(bio_reader_t *this, uint8_t *res);
 
 	/**
 	 * Read a 16-bit integer from the end of the buffer, reduce remaining.
@@ -112,7 +112,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint16_end)(bio_reader_t *this, u_int16_t *res);
+	bool (*read_uint16_end)(bio_reader_t *this, uint16_t *res);
 
 	/**
 	 * Read a 24-bit integer from the end of the buffer, reduce remaining.
@@ -120,7 +120,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint24_end)(bio_reader_t *this, u_int32_t *res);
+	bool (*read_uint24_end)(bio_reader_t *this, uint32_t *res);
 
 	/**
 	 * Read a 32-bit integer from the end of the buffer, reduce remaining.
@@ -128,7 +128,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint32_end)(bio_reader_t *this, u_int32_t *res);
+	bool (*read_uint32_end)(bio_reader_t *this, uint32_t *res);
 
 	/**
 	 * Read a 64-bit integer from the end of the buffer, reduce remaining.
@@ -136,7 +136,7 @@ struct bio_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint64_end)(bio_reader_t *this, u_int64_t *res);
+	bool (*read_uint64_end)(bio_reader_t *this, uint64_t *res);
 
 	/**
 	 * Read a chunk of len bytes from the end of the buffer, reduce remaining.
@@ -145,7 +145,7 @@ struct bio_reader_t {
 	 * @param res		ponter to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data_end)(bio_reader_t *this, u_int32_t len, chunk_t *res);
+	bool (*read_data_end)(bio_reader_t *this, uint32_t len, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 8-bit length header, advance.

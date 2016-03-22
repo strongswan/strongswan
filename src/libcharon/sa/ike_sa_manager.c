@@ -113,7 +113,7 @@ struct entry_t {
 	/**
 	 * message ID or hash of currently processing message, -1 if none
 	 */
-	u_int32_t processing;
+	uint32_t processing;
 };
 
 /**
@@ -265,7 +265,7 @@ struct init_hash_t {
 	chunk_t hash;
 
 	/** our SPI allocated for the IKE_SA based on this message */
-	u_int64_t our_spi;
+	uint64_t our_spi;
 };
 
 typedef struct segment_t segment_t;
@@ -977,9 +977,9 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 /**
  * Get a random SPI for new IKE_SAs
  */
-static u_int64_t get_spi(private_ike_sa_manager_t *this)
+static uint64_t get_spi(private_ike_sa_manager_t *this)
 {
-	u_int64_t spi;
+	uint64_t spi;
 
 	this->spi_lock->read_lock(this->spi_lock);
 	if (this->spi_cb.cb)
@@ -987,7 +987,7 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
 		spi = this->spi_cb.cb(this->spi_cb.data);
 	}
 	else if (!this->rng ||
-			 !this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
+			 !this->rng->get_bytes(this->rng, sizeof(spi), (uint8_t*)&spi))
 	{
 		spi = 0;
 	}
@@ -1007,8 +1007,8 @@ static bool get_init_hash(hasher_t *hasher, message_t *message, chunk_t *hash)
 
 	if (message->get_first_payload_type(message) == PLV1_FRAGMENT)
 	{	/* only hash the source IP, port and SPI for fragmented init messages */
-		u_int16_t port;
-		u_int64_t spi;
+		uint16_t port;
+		uint64_t spi;
 
 		src = message->get_source(message);
 		if (!hasher->allocate_hash(hasher, src->get_address(src), NULL))
@@ -1050,13 +1050,13 @@ static bool get_init_hash(hasher_t *hasher, message_t *message, chunk_t *hash)
  *			FAILED if the SPI allocation failed
  */
 static status_t check_and_put_init_hash(private_ike_sa_manager_t *this,
-										chunk_t init_hash, u_int64_t *our_spi)
+										chunk_t init_hash, uint64_t *our_spi)
 {
 	table_item_t *item;
 	u_int row, segment;
 	mutex_t *mutex;
 	init_hash_t *init;
-	u_int64_t spi;
+	uint64_t spi;
 
 	row = chunk_hash(init_hash) & this->table_mask;
 	segment = row & this->segment_mask;
@@ -1174,8 +1174,8 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 {
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
-	u_int8_t ike_version;
-	u_int64_t spi;
+	uint8_t ike_version;
+	uint64_t spi;
 
 	ike_version = version == IKEV1 ? IKEV1_MAJOR_VERSION : IKEV2_MAJOR_VERSION;
 
@@ -1208,7 +1208,7 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 /**
  * Get the message ID or message hash to detect early retransmissions
  */
-static u_int32_t get_message_id_or_hash(message_t *message)
+static uint32_t get_message_id_or_hash(message_t *message)
 {
 	if (message->get_major_version(message) == IKEV1_MAJOR_VERSION)
 	{
@@ -1273,7 +1273,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	if (is_init)
 	{
 		hasher_t *hasher;
-		u_int64_t our_spi;
+		uint64_t our_spi;
 		chunk_t hash;
 
 		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -1455,7 +1455,7 @@ out:
 }
 
 METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
-	private_ike_sa_manager_t *this, u_int32_t id)
+	private_ike_sa_manager_t *this, uint32_t id)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;

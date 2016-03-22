@@ -55,7 +55,7 @@ struct private_kernel_listener_t {
 	/**
 	 * current broadcast address of internal network
 	 */
-	u_int32_t broadcast;
+	uint32_t broadcast;
 
 	/**
 	 * LAN interface index
@@ -105,7 +105,7 @@ static void send_net(private_forecast_forwarder_t *this,
 /**
  * Send a broadcast/multicast packet to a peer
  */
-static void send_peer(private_forecast_forwarder_t *this, u_int32_t dst,
+static void send_peer(private_forecast_forwarder_t *this, uint32_t dst,
 					  void *buf, size_t len, int mark)
 {
 	struct sockaddr_in addr = {
@@ -317,7 +317,7 @@ static void join_groups(private_kernel_listener_t *this, struct sockaddr *addr)
 /**
  * Attach the socket filter to the socket
  */
-static bool attach_filter(int fd, u_int32_t broadcast)
+static bool attach_filter(int fd, uint32_t broadcast)
 {
 	struct sock_filter filter_code[] = {
 		/* destination address: is ... */

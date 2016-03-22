@@ -78,13 +78,13 @@ struct proposal_t {
 	 * @param key_size		key size to use
 	 */
 	void (*add_algorithm) (proposal_t *this, transform_type_t type,
-						   u_int16_t alg, u_int16_t key_size);
+						   uint16_t alg, uint16_t key_size);
 
 	/**
 	 * Get an enumerator over algorithms for a specifc algo type.
 	 *
 	 * @param type			kind of algorithm
-	 * @return				enumerator over u_int16_t alg, u_int16_t key_size
+	 * @return				enumerator over uint16_t alg, uint16_t key_size
 	 */
 	enumerator_t *(*create_enumerator) (proposal_t *this, transform_type_t type);
 
@@ -99,7 +99,7 @@ struct proposal_t {
 	 * @return				TRUE if algorithm of this kind available
 	 */
 	bool (*get_algorithm) (proposal_t *this, transform_type_t type,
-						   u_int16_t *alg, u_int16_t *key_size);
+						   uint16_t *alg, uint16_t *key_size);
 
 	/**
 	 * Check if the proposal has a specific DH group.
@@ -141,14 +141,14 @@ struct proposal_t {
 	 *
 	 * @return				spi for proto
 	 */
-	u_int64_t (*get_spi) (proposal_t *this);
+	uint64_t (*get_spi) (proposal_t *this);
 
 	/**
 	 * Set the SPI of the proposal.
 	 *
 	 * @param spi			spi to set for proto
 	 */
-	void (*set_spi) (proposal_t *this, u_int64_t spi);
+	void (*set_spi) (proposal_t *this, uint64_t spi);
 
 	/**
 	 * Get the proposal number, as encoded in SA payload

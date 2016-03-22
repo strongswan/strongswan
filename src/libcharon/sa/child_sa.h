@@ -128,7 +128,7 @@ struct child_sa_t {
 	 *
 	 * @return 			reqid of the CHILD SA
 	 */
-	u_int32_t (*get_reqid)(child_sa_t *this);
+	uint32_t (*get_reqid)(child_sa_t *this);
 
 	/**
 	 * Get the unique numerical identifier for this CHILD_SA.
@@ -138,7 +138,7 @@ struct child_sa_t {
 	 *
 	 * @return			unique CHILD_SA identifier
 	 */
-	u_int32_t (*get_unique_id)(child_sa_t *this);
+	uint32_t (*get_unique_id)(child_sa_t *this);
 
 	/**
 	 * Get the config used to set up this child sa.
@@ -171,7 +171,7 @@ struct child_sa_t {
 	 * @param inbound	TRUE to get inbound SPI, FALSE for outbound.
 	 * @return 			SPI of the CHILD SA
 	 */
-	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
+	uint32_t (*get_spi) (child_sa_t *this, bool inbound);
 
 	/**
 	 * Get the CPI of this CHILD_SA.
@@ -183,7 +183,7 @@ struct child_sa_t {
 	 * @param inbound	TRUE to get inbound CPI, FALSE for outbound.
 	 * @return 			CPI of the CHILD SA
 	 */
-	u_int16_t (*get_cpi) (child_sa_t *this, bool inbound);
+	uint16_t (*get_cpi) (child_sa_t *this, bool inbound);
 
 	/**
 	 * Get the protocol which this CHILD_SA uses to protect traffic.
@@ -300,7 +300,7 @@ struct child_sa_t {
 	 * @param[out] packets	number of processed packets (NULL to ignore)
 	 */
 	void (*get_usestats)(child_sa_t *this, bool inbound, time_t *time,
-						 u_int64_t *bytes, u_int64_t *packets);
+						 uint64_t *bytes, uint64_t *packets);
 
 	/**
 	 * Get the mark used with this CHILD_SA.
@@ -335,14 +335,14 @@ struct child_sa_t {
 	 * @param spi		SPI output pointer
 	 * @return			SPI, 0 on failure
 	 */
-	u_int32_t (*alloc_spi)(child_sa_t *this, protocol_id_t protocol);
+	uint32_t (*alloc_spi)(child_sa_t *this, protocol_id_t protocol);
 
 	/**
 	 * Allocate a CPI to use for IPComp.
 	 *
 	 * @return			CPI, 0 on failure
 	 */
-	u_int16_t (*alloc_cpi)(child_sa_t *this);
+	uint16_t (*alloc_cpi)(child_sa_t *this);
 
 	/**
 	 * Install an IPsec SA for one direction.
@@ -359,7 +359,7 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*install)(child_sa_t *this, chunk_t encr, chunk_t integ,
-						u_int32_t spi, u_int16_t cpi,
+						uint32_t spi, uint16_t cpi,
 						bool initiator, bool inbound, bool tfcv3,
 						linked_list_t *my_ts, linked_list_t *other_ts);
 	/**
@@ -404,7 +404,7 @@ struct child_sa_t {
  * @return					child_sa_t object
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
-							 u_int32_t reqid, bool encap,
+							 uint32_t reqid, bool encap,
 							 u_int mark_in, u_int mark_out);
 
 #endif /** CHILD_SA_H_ @}*/

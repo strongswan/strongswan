@@ -243,7 +243,7 @@ struct pts_t {
 	 * @param pcr_value			Chunk to save pcr read output
 	 * @return					NULL in case of TSS error, PCR value otherwise
 	 */
-	bool (*read_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value);
+	bool (*read_pcr)(pts_t *this, uint32_t pcr_num, chunk_t *pcr_value);
 
 	/**
 	 * Extends given PCR with given value
@@ -254,7 +254,7 @@ struct pts_t {
 	 * @param output			Chunk to save PCR value after extension
 	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
-	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input,
+	bool (*extend_pcr)(pts_t *this, uint32_t pcr_num, chunk_t input,
 					   chunk_t *output);
 
 	/**

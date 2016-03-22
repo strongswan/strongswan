@@ -146,7 +146,7 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_pkcs11_hasher_t *this, chunk_t chunk, u_int8_t *hash)
+	private_pkcs11_hasher_t *this, chunk_t chunk, uint8_t *hash)
 {
 	CK_RV rv;
 	CK_ULONG len;

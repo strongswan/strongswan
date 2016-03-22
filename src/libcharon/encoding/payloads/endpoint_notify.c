@@ -33,7 +33,7 @@ struct private_endpoint_notify_t {
 	/**
 	 * Priority
 	 */
-	u_int32_t priority;
+	uint32_t priority;
 
 	/**
 	 * Family
@@ -83,36 +83,36 @@ static private_endpoint_notify_t *endpoint_notify_create();
 /**
  * Helper functions to parse integer values
  */
-static status_t parse_uint8(u_int8_t **cur, u_int8_t *top, u_int8_t *val)
+static status_t parse_uint8(uint8_t **cur, uint8_t *top, uint8_t *val)
 {
-	if (*cur + sizeof(u_int8_t) > top)
+	if (*cur + sizeof(uint8_t) > top)
 	{
 		return FAILED;
 	}
-	*val =  *(u_int8_t*)*cur;
-	*cur += sizeof(u_int8_t);
+	*val =  *(uint8_t*)*cur;
+	*cur += sizeof(uint8_t);
 	return SUCCESS;
 }
 
-static status_t parse_uint16(u_int8_t **cur, u_int8_t *top, u_int16_t *val)
+static status_t parse_uint16(uint8_t **cur, uint8_t *top, uint16_t *val)
 {
-	if (*cur + sizeof(u_int16_t) > top)
+	if (*cur + sizeof(uint16_t) > top)
 	{
 		return FAILED;
 	}
-	*val =  ntohs(*(u_int16_t*)*cur);
-	*cur += sizeof(u_int16_t);
+	*val =  ntohs(*(uint16_t*)*cur);
+	*cur += sizeof(uint16_t);
 	return SUCCESS;
 }
 
-static status_t parse_uint32(u_int8_t **cur, u_int8_t *top, u_int32_t *val)
+static status_t parse_uint32(uint8_t **cur, uint8_t *top, uint32_t *val)
 {
-	if (*cur + sizeof(u_int32_t) > top)
+	if (*cur + sizeof(uint32_t) > top)
 	{
 		return FAILED;
 	}
-	*val =  ntohl(*(u_int32_t*)*cur);
-	*cur += sizeof(u_int32_t);
+	*val =  ntohl(*(uint32_t*)*cur);
+	*cur += sizeof(uint32_t);
 	return SUCCESS;
 }
 
@@ -121,11 +121,11 @@ static status_t parse_uint32(u_int8_t **cur, u_int8_t *top, u_int32_t *val)
  */
 static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t data)
 {
-	u_int8_t family, type, addr_family;
-	u_int16_t port;
+	uint8_t family, type, addr_family;
+	uint16_t port;
 	chunk_t addr;
-	u_int8_t *cur = data.ptr;
-	u_int8_t *top = data.ptr + data.len;
+	uint8_t *cur = data.ptr;
+	uint8_t *top = data.ptr + data.len;
 
 	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
 
@@ -191,9 +191,9 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 {
 	chunk_t prio_chunk, family_chunk, type_chunk, port_chunk, addr_chunk;
 	chunk_t data;
-	u_int32_t prio;
-	u_int16_t port;
-	u_int8_t family, type;
+	uint32_t prio;
+	uint16_t port;
+	uint8_t family, type;
 
 	prio = htonl(this->priority);
 	prio_chunk = chunk_from_thing(prio);
@@ -237,14 +237,14 @@ METHOD(endpoint_notify_t, build_notify, notify_payload_t*,
 }
 
 
-METHOD(endpoint_notify_t, get_priority, u_int32_t,
+METHOD(endpoint_notify_t, get_priority, uint32_t,
 	private_endpoint_notify_t *this)
 {
 	return this->priority;
 }
 
 METHOD(endpoint_notify_t, set_priority, void,
-	private_endpoint_notify_t *this, u_int32_t priority)
+	private_endpoint_notify_t *this, uint32_t priority)
 {
 	this->priority = priority;
 }

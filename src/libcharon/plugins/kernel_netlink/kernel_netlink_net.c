@@ -278,7 +278,7 @@ struct route_entry_t {
 	chunk_t dst_net;
 
 	/** Destination net prefixlen */
-	u_int8_t prefixlen;
+	uint8_t prefixlen;
 };
 
 /**
@@ -513,12 +513,12 @@ struct private_kernel_netlink_net_t {
 	/**
 	 * MTU to set on installed routes
 	 */
-	u_int32_t mtu;
+	uint32_t mtu;
 
 	/**
 	 * MSS to set on installed routes
 	 */
-	u_int32_t mss;
+	uint32_t mss;
 };
 
 /**
@@ -526,7 +526,7 @@ struct private_kernel_netlink_net_t {
  */
 static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 								int nlmsg_type, int flags, chunk_t dst_net,
-								u_int8_t prefixlen, host_t *gateway,
+								uint8_t prefixlen, host_t *gateway,
 								host_t *src_ip, char *if_name);
 
 /**
@@ -1217,7 +1217,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	struct rtmsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = RTM_RTA(msg);
 	size_t rtasize = RTM_PAYLOAD(hdr);
-	u_int32_t rta_oif = 0;
+	uint32_t rta_oif = 0;
 	host_t *host = NULL;
 
 	/* ignore routes added by us or in the local routing table (local addrs) */
@@ -1243,7 +1243,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 			case RTA_OIF:
 				if (RTA_PAYLOAD(rta) == sizeof(rta_oif))
 				{
-					rta_oif = *(u_int32_t*)RTA_DATA(rta);
+					rta_oif = *(uint32_t*)RTA_DATA(rta);
 				}
 				break;
 		}
@@ -1545,10 +1545,10 @@ typedef struct {
 	chunk_t src;
 	chunk_t dst;
 	host_t *src_host;
-	u_int8_t dst_len;
-	u_int32_t table;
-	u_int32_t oif;
-	u_int32_t priority;
+	uint8_t dst_len;
+	uint32_t table;
+	uint32_t oif;
+	uint32_t priority;
 } rt_entry_t;
 
 /**
@@ -1630,20 +1630,20 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 			case RTA_OIF:
 				if (RTA_PAYLOAD(rta) == sizeof(route->oif))
 				{
-					route->oif = *(u_int32_t*)RTA_DATA(rta);
+					route->oif = *(uint32_t*)RTA_DATA(rta);
 				}
 				break;
 			case RTA_PRIORITY:
 				if (RTA_PAYLOAD(rta) == sizeof(route->priority))
 				{
-					route->priority = *(u_int32_t*)RTA_DATA(rta);
+					route->priority = *(uint32_t*)RTA_DATA(rta);
 				}
 				break;
 #ifdef HAVE_RTA_TABLE
 			case RTA_TABLE:
 				if (RTA_PAYLOAD(rta) == sizeof(route->table))
 				{
-					route->table = *(u_int32_t*)RTA_DATA(rta);
+					route->table = *(uint32_t*)RTA_DATA(rta);
 				}
 				break;
 #endif /* HAVE_RTA_TABLE*/
@@ -2144,7 +2144,7 @@ METHOD(kernel_net_t, del_ip, status_t,
  */
 static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 								int nlmsg_type, int flags, chunk_t dst_net,
-								u_int8_t prefixlen, host_t *gateway,
+								uint8_t prefixlen, host_t *gateway,
 								host_t *src_ip, char *if_name)
 {
 	netlink_buf_t request;
@@ -2160,7 +2160,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	if (this->routing_table == 0 && prefixlen == 0)
 	{
 		chunk_t half_net;
-		u_int8_t half_prefixlen;
+		uint8_t half_prefixlen;
 		status_t status;
 
 		half_net = chunk_alloca(dst_net.len);
@@ -2206,22 +2206,22 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	if (this->mtu || this->mss)
 	{
 		chunk = chunk_alloca(RTA_LENGTH((sizeof(struct rtattr) +
-										 sizeof(u_int32_t)) * 2));
+										 sizeof(uint32_t)) * 2));
 		chunk.len = 0;
 		rta = (struct rtattr*)chunk.ptr;
 		if (this->mtu)
 		{
 			rta->rta_type = RTAX_MTU;
-			rta->rta_len = RTA_LENGTH(sizeof(u_int32_t));
-			memcpy(RTA_DATA(rta), &this->mtu, sizeof(u_int32_t));
+			rta->rta_len = RTA_LENGTH(sizeof(uint32_t));
+			memcpy(RTA_DATA(rta), &this->mtu, sizeof(uint32_t));
 			chunk.len = rta->rta_len;
 		}
 		if (this->mss)
 		{
 			rta = (struct rtattr*)(chunk.ptr + RTA_ALIGN(chunk.len));
 			rta->rta_type = RTAX_ADVMSS;
-			rta->rta_len = RTA_LENGTH(sizeof(u_int32_t));
-			memcpy(RTA_DATA(rta), &this->mss, sizeof(u_int32_t));
+			rta->rta_len = RTA_LENGTH(sizeof(uint32_t));
+			memcpy(RTA_DATA(rta), &this->mss, sizeof(uint32_t));
 			chunk.len = RTA_ALIGN(chunk.len) + rta->rta_len;
 		}
 		netlink_add_attribute(hdr, RTA_METRICS, chunk, sizeof(request));
@@ -2231,7 +2231,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 }
 
 METHOD(kernel_net_t, add_route, status_t,
-	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	private_kernel_netlink_net_t *this, chunk_t dst_net, uint8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;
@@ -2262,7 +2262,7 @@ METHOD(kernel_net_t, add_route, status_t,
 }
 
 METHOD(kernel_net_t, del_route, status_t,
-	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	private_kernel_netlink_net_t *this, chunk_t dst_net, uint8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;
@@ -2384,7 +2384,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
  * create or delete a rule to use our routing table
  */
 static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
-							int family, u_int32_t table, u_int32_t prio)
+							int family, uint32_t table, uint32_t prio)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;

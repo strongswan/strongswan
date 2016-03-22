@@ -61,7 +61,7 @@ struct private_proposal_t {
 	/**
 	 * senders SPI
 	 */
-	u_int64_t spi;
+	uint64_t spi;
 
 	/**
 	 * Proposal number
@@ -76,14 +76,14 @@ typedef struct {
 	/** Type of the transform */
 	transform_type_t type;
 	/** algorithm identifier */
-	u_int16_t alg;
+	uint16_t alg;
 	/** key size in bits, or zero if not needed */
-	u_int16_t key_size;
+	uint16_t key_size;
 } entry_t;
 
 METHOD(proposal_t, add_algorithm, void,
 	private_proposal_t *this, transform_type_t type,
-	u_int16_t alg, u_int16_t key_size)
+	uint16_t alg, uint16_t key_size)
 {
 	entry_t entry = {
 		.type = type,
@@ -97,8 +97,8 @@ METHOD(proposal_t, add_algorithm, void,
 /**
  * filter function for peer configs
  */
-static bool alg_filter(uintptr_t type, entry_t **in, u_int16_t *alg,
-					   void **unused, u_int16_t *key_size)
+static bool alg_filter(uintptr_t type, entry_t **in, uint16_t *alg,
+					   void **unused, uint16_t *key_size)
 {
 	entry_t *entry = *in;
 
@@ -127,7 +127,7 @@ METHOD(proposal_t, create_enumerator, enumerator_t*,
 
 METHOD(proposal_t, get_algorithm, bool,
 	private_proposal_t *this, transform_type_t type,
-	u_int16_t *alg, u_int16_t *key_size)
+	uint16_t *alg, uint16_t *key_size)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
@@ -147,7 +147,7 @@ METHOD(proposal_t, has_dh_group, bool,
 {
 	bool found = FALSE, any = FALSE;
 	enumerator_t *enumerator;
-	u_int16_t current;
+	uint16_t current;
 
 	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
 	while (enumerator->enumerate(enumerator, &current, NULL))
@@ -193,7 +193,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 						proposal_t *selected, transform_type_t type, bool priv)
 {
 	enumerator_t *e1, *e2;
-	u_int16_t alg1, alg2, ks1, ks2;
+	uint16_t alg1, alg2, ks1, ks2;
 	bool found = FALSE, optional = FALSE;
 
 	if (type == INTEGRITY_ALGORITHM &&
@@ -301,12 +301,12 @@ METHOD(proposal_t, get_protocol, protocol_id_t,
 }
 
 METHOD(proposal_t, set_spi, void,
-	private_proposal_t *this, u_int64_t spi)
+	private_proposal_t *this, uint64_t spi)
 {
 	this->spi = spi;
 }
 
-METHOD(proposal_t, get_spi, u_int64_t,
+METHOD(proposal_t, get_spi, uint64_t,
 	private_proposal_t *this)
 {
 	return this->spi;
@@ -319,7 +319,7 @@ static bool algo_list_equals(private_proposal_t *this, proposal_t *other,
 							 transform_type_t type)
 {
 	enumerator_t *e1, *e2;
-	u_int16_t alg1, alg2, ks1, ks2;
+	uint16_t alg1, alg2, ks1, ks2;
 	bool equals = TRUE;
 
 	e1 = create_enumerator(this, type);
@@ -418,7 +418,7 @@ static void check_proposal(private_proposal_t *this)
 {
 	enumerator_t *e;
 	entry_t *entry;
-	u_int16_t alg, ks;
+	uint16_t alg, ks;
 	bool all_aead = TRUE;
 	int i;
 
@@ -516,7 +516,7 @@ static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
 {
 	enumerator_t *enumerator;
 	size_t written = 0;
-	u_int16_t alg, size;
+	uint16_t alg, size;
 
 	enumerator = create_enumerator(this, kind);
 	while (enumerator->enumerate(enumerator, &alg, &size))

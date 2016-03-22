@@ -39,7 +39,7 @@ struct private_tkm_nonceg_t {
 };
 
 METHOD(nonce_gen_t, get_nonce, bool,
-	private_tkm_nonceg_t *this, size_t size, u_int8_t *buffer)
+	private_tkm_nonceg_t *this, size_t size, uint8_t *buffer)
 {
 	nonce_type nonce;
 	uint64_t nc_id;

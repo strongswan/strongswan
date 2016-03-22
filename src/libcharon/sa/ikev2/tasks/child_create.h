@@ -49,7 +49,7 @@ struct child_create_t {
 	 *
 	 * @param reqid		reqid to use
 	 */
-	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
+	void (*use_reqid) (child_create_t *this, uint32_t reqid);
 
 	/**
 	 * Use specific mark values to override configuration.

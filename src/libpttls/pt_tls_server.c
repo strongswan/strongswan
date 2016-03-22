@@ -55,7 +55,7 @@ struct private_pt_tls_server_t {
 	/**
 	 * Message Identifier
 	 */
-	u_int32_t identifier;
+	uint32_t identifier;
 
 	/**
 	 * TNCCS protocol handler, implemented as tls_t
@@ -71,8 +71,8 @@ static bool negotiate_version(private_pt_tls_server_t *this)
 {
 	bio_reader_t *reader;
 	bio_writer_t *writer;
-	u_int32_t vendor, type, identifier;
-	u_int8_t reserved, vmin, vmax, vpref;
+	uint32_t vendor, type, identifier;
+	uint8_t reserved, vmin, vmax, vpref;
 	bool res;
 
 	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
@@ -161,7 +161,7 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 static status_t read_sasl(private_pt_tls_server_t *this,
 						  sasl_mechanism_t *sasl)
 {
-	u_int32_t vendor, type, identifier;
+	uint32_t vendor, type, identifier;
 	bio_reader_t *reader;
 	status_t status;
 	chunk_t data;
@@ -260,11 +260,11 @@ static bool send_sasl_mechs(private_pt_tls_server_t *this)
 static status_t read_sasl_mech_selection(private_pt_tls_server_t *this,
 										 sasl_mechanism_t **out)
 {
-	u_int32_t vendor, type, identifier;
+	uint32_t vendor, type, identifier;
 	sasl_mechanism_t *sasl;
 	bio_reader_t *reader;
 	chunk_t chunk;
-	u_int8_t len;
+	uint8_t len;
 	char buf[21];
 
 	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
@@ -406,7 +406,7 @@ static status_t assess(private_pt_tls_server_t *this, tls_t *tnccs)
 	size_t buflen = PT_TLS_MAX_MESSAGE_LEN;
 	char buf[buflen];
 	bio_reader_t *reader;
-	u_int32_t vendor, type, identifier;
+	uint32_t vendor, type, identifier;
 	chunk_t data;
 	status_t status;
 

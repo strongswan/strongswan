@@ -92,10 +92,10 @@ typedef struct endpoint_pair_t endpoint_pair_t;
  */
 struct endpoint_pair_t {
 	/** pair id */
-	u_int32_t id;
+	uint32_t id;
 
 	/** priority */
-	u_int64_t priority;
+	uint64_t priority;
 
 	/** local endpoint */
 	host_t *local;
@@ -107,7 +107,7 @@ struct endpoint_pair_t {
 	check_state_t state;
 
 	/** number of retransmissions */
-	u_int32_t retransmitted;
+	uint32_t retransmitted;
 
 	/** the generated packet */
 	packet_t *packet;
@@ -132,8 +132,8 @@ static endpoint_pair_t *endpoint_pair_create(endpoint_notify_t *initiator,
 {
 	endpoint_pair_t *this;
 
-	u_int32_t pi = initiator->get_priority(initiator);
-	u_int32_t pr = responder->get_priority(responder);
+	uint32_t pi = initiator->get_priority(initiator);
+	uint32_t pr = responder->get_priority(responder);
 
 	INIT(this,
 		.priority = pow(2, 32) * min(pi, pr) + 2 * max(pi, pr)
@@ -313,7 +313,7 @@ typedef struct check_t check_t;
  */
 struct check_t {
 	/** message id */
-	u_int32_t mid;
+	uint32_t mid;
 
 	/** source of the connectivity check */
 	host_t *src;
@@ -375,7 +375,7 @@ struct callback_data_t {
 	chunk_t connect_id;
 
 	/** message (pair) id */
-	u_int32_t mid;
+	uint32_t mid;
 };
 
 /**
@@ -406,7 +406,7 @@ static callback_data_t *callback_data_create(private_connect_manager_t *connect_
  * Creates a new retransmission data object
  */
 static callback_data_t *retransmit_data_create(private_connect_manager_t *connect_manager,
-											   chunk_t connect_id, u_int32_t mid)
+											   chunk_t connect_id, uint32_t mid)
 {
 	callback_data_t *this = callback_data_create(connect_manager, connect_id);
 	this->mid = mid;
@@ -576,7 +576,7 @@ static status_t get_pair_by_hosts(linked_list_t *pairs, host_t *local,
 							 (void**)pair, local, remote);
 }
 
-static bool match_pair_by_id(endpoint_pair_t *current, u_int32_t *id)
+static bool match_pair_by_id(endpoint_pair_t *current, uint32_t *id)
 {
 	return current->id == *id;
 }
@@ -584,7 +584,7 @@ static bool match_pair_by_id(endpoint_pair_t *current, u_int32_t *id)
 /**
  * Searches for a pair with a specific id
  */
-static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id,
+static status_t get_pair_by_id(check_list_t *checklist, uint32_t id,
 							   endpoint_pair_t **pair)
 {
 	return checklist->pairs->find_first(checklist->pairs,
@@ -669,7 +669,7 @@ static void prune_pairs(linked_list_t *pairs)
 {
 	enumerator_t *enumerator, *search;
 	endpoint_pair_t *current, *other;
-	u_int32_t id = 0;
+	uint32_t id = 0;
 
 	enumerator = pairs->create_enumerator(pairs);
 	search = pairs->create_enumerator(pairs);
@@ -826,7 +826,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 static chunk_t build_signature(private_connect_manager_t *this,
 		check_list_t *checklist, check_t *check, bool outbound)
 {
-	u_int32_t mid;
+	uint32_t mid;
 	chunk_t mid_chunk, key_chunk, sig_chunk;
 	chunk_t sig_hash;
 
@@ -851,7 +851,7 @@ static chunk_t build_signature(private_connect_manager_t *this,
 }
 
 static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair);
-static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time);
+static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, uint32_t time);
 static void finish_checks(private_connect_manager_t *this, check_list_t *checklist);
 
 /**
@@ -1019,11 +1019,11 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data,
 						(callback_job_cleanup_t)callback_data_destroy, NULL);
 
-	u_int32_t retransmission = pair->retransmitted + 1;
-	u_int32_t rto = ME_INTERVAL;
+	uint32_t retransmission = pair->retransmitted + 1;
+	uint32_t rto = ME_INTERVAL;
 	if (retransmission > ME_BOOST)
 	{
-		rto = (u_int32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, retransmission - ME_BOOST));
+		rto = (uint32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, retransmission - ME_BOOST));
 	}
 	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms",
 		 retransmission, pair->id, rto);
@@ -1165,7 +1165,7 @@ static job_requeue_t sender(callback_data_t *data)
  * Schedules checks for a checklist (time in ms)
  */
 static void schedule_checks(private_connect_manager_t *this,
-							check_list_t *checklist, u_int32_t time)
+							check_list_t *checklist, uint32_t time)
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
 	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender,

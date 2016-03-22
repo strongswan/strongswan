@@ -67,7 +67,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	char reserved[3];
 	generator_t *generator;
 	chunk_t data;
-	u_int32_t *lenpos;
+	uint32_t *lenpos;
 
 	payload = message->get_payload(message,
 					message->get_request(message) ? PLV2_ID_INITIATOR : PLV2_ID_RESPONDER);

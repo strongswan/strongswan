@@ -87,7 +87,7 @@ struct tnccs_manager_t {
 										  tnccs_type_t type, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message,
 										  bool *request_handshake_retry,
-										  u_int32_t max_msg_len,
+										  uint32_t max_msg_len,
 										  recommendations_t **recs);
 
 	/**

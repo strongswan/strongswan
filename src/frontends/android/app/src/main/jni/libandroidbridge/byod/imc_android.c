@@ -404,8 +404,8 @@ static void handle_tcg_attribute(imc_android_state_t *state,
 			tcg_pts_attr_req_file_meas_t *attr_cast;
 			pts_file_meas_t *measurements;
 			pts_error_code_t pts_error;
-			u_int32_t delim;
-			u_int16_t req_id;
+			uint32_t delim;
+			uint16_t req_id;
 			bool is_dir;
 			char *path;
 

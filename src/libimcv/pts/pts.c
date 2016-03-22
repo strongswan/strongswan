@@ -615,7 +615,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 #ifdef TSS_TROUSERS
 
 METHOD(pts_t, read_pcr, bool,
-	private_pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value)
+	private_pts_t *this, uint32_t pcr_num, chunk_t *pcr_value)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -663,12 +663,12 @@ err:
 }
 
 METHOD(pts_t, extend_pcr, bool,
-	private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
+	private_pts_t *this, uint32_t pcr_num, chunk_t input, chunk_t *output)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
-	u_int32_t pcr_length;
+	uint32_t pcr_length;
 	chunk_t pcr_value = chunk_empty;
 
 	result = Tspi_Context_Create(&hContext);
@@ -734,7 +734,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_RESULT result;
 	chunk_t quote_info;
 	BYTE* versionInfo;
-	u_int32_t versionInfoSize, pcr;
+	uint32_t versionInfoSize, pcr;
 	enumerator_t *enumerator;
 	bool success = FALSE;
 
@@ -876,13 +876,13 @@ err1:
 #else /* TSS_TROUSERS */
 
 METHOD(pts_t, read_pcr, bool,
-	private_pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value)
+	private_pts_t *this, uint32_t pcr_num, chunk_t *pcr_value)
 {
 	return FALSE;
 }
 
 METHOD(pts_t, extend_pcr, bool,
-	private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
+	private_pts_t *this, uint32_t pcr_num, chunk_t input, chunk_t *output)
 {
 	return FALSE;
 }
@@ -1086,7 +1086,7 @@ static bool has_tpm(private_pts_t *this)
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
-	u_int32_t version_info_len;
+	uint32_t version_info_len;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)

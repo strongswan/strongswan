@@ -87,7 +87,7 @@ struct tnccs_connection_entry_t {
 	/**
 	 * Maximum size of a PA-TNC message
 	 */
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	/**
 	 * collection of IMV recommendations
@@ -199,7 +199,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	private_tnc_tnccs_manager_t *this, tnccs_type_t type, tnccs_t *tnccs,
 	tnccs_send_message_t send_message, bool* request_handshake_retry,
-	u_int32_t max_msg_len, recommendations_t **recs)
+	uint32_t max_msg_len, recommendations_t **recs)
 {
 	tnccs_connection_entry_t *entry;
 
@@ -414,14 +414,14 @@ static TNC_Result bool_attribute(TNC_UInt32 buffer_len,
 }
 
 /**
- * Write the value of an u_int32_t attribute into the buffer
+ * Write the value of an uint32_t attribute into the buffer
  */
 static TNC_Result uint_attribute(TNC_UInt32 buffer_len,
 								 TNC_BufferReference buffer,
 								 TNC_UInt32 *value_len,
-								 u_int32_t value)
+								 uint32_t value)
 {
-	*value_len = sizeof(u_int32_t);
+	*value_len = sizeof(uint32_t);
 
 	if (buffer && buffer_len >= *value_len)
 	{
@@ -465,7 +465,7 @@ static TNC_Result identity_attribute(TNC_UInt32 buffer_len,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	u_int32_t count;
+	uint32_t count;
 	chunk_t value;
 	tncif_identity_t *tnc_id;
 	TNC_Result result = TNC_RESULT_INVALID_PARAMETER;
@@ -721,7 +721,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			host_t *peer_ip;
 			tnccs_t *tnccs;
 			tncif_identity_t *tnc_id;
-			u_int32_t id_type, subject_type;
+			uint32_t id_type, subject_type;
 			chunk_t id_value;
 			char *id_str;
 			TNC_Result result;

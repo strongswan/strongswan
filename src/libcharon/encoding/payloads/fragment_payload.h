@@ -42,14 +42,14 @@ struct fragment_payload_t {
 	 *
 	 * @return				fragment ID
 	 */
-	u_int16_t (*get_id)(fragment_payload_t *this);
+	uint16_t (*get_id)(fragment_payload_t *this);
 
 	/**
 	 * Get the fragment number. Defines the order of the fragments.
 	 *
 	 * @return				fragment number
 	 */
-	u_int8_t (*get_number)(fragment_payload_t *this);
+	uint8_t (*get_number)(fragment_payload_t *this);
 
 	/**
 	 * Check if this is the last fragment.
@@ -88,7 +88,7 @@ fragment_payload_t *fragment_payload_create();
  * @param data		fragment data (gets cloned)
  * @return			fragment_payload_t object
  */
-fragment_payload_t *fragment_payload_create_from_data(u_int8_t num, bool last,
+fragment_payload_t *fragment_payload_create_from_data(uint8_t num, bool last,
 													  chunk_t data);
 
 #endif /** FRAGMENT_PAYLOAD_H_ @}*/

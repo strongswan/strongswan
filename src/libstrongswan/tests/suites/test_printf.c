@@ -75,7 +75,7 @@ END_TEST
 
 START_TEST(test_printf_unsigned)
 {
-	verify("1 23 456", "%u %lu %llu", 1, (u_long)23, (u_int64_t)456);
+	verify("1 23 456", "%u %lu %llu", 1, (u_long)23, (uint64_t)456);
 	verify("65535 255", "%hu %hhu", 0x1ffff, 0x1ff);
 	verify("123456789", "%zu", (size_t)123456789);
 	verify("   12", "%5u", 12);
@@ -99,7 +99,7 @@ END_TEST
 
 START_TEST(test_printf_hex)
 {
-	verify("1 23 456", "%x %lx %llx", 1, (u_long)0x23, (u_int64_t)0x456);
+	verify("1 23 456", "%x %lx %llx", 1, (u_long)0x23, (uint64_t)0x456);
 	verify("12abcdef 12ABCDEF", "%x %X", 0x12ABCDEF, 0x12ABCDEF);
 	verify("ffff ff", "%hx %hhx", 0x1ffff, 0x1ff);
 	verify("23456789", "%zx", (size_t)0x23456789);
@@ -170,10 +170,10 @@ END_TEST
 
 START_TEST(test_printf_pri)
 {
-	verify("255", "%" PRIu8, (u_int8_t)0xFF);
-	verify("65535", "%" PRIu16, (u_int16_t)0xFFFF);
-	verify("4294967295", "%" PRIu32, (u_int32_t)0x1FFFFFFFFll);
-	verify("18446744073709551615", "%" PRIu64, (u_int64_t)0xFFFFFFFFFFFFFFFFll);
+	verify("255", "%" PRIu8, (uint8_t)0xFF);
+	verify("65535", "%" PRIu16, (uint16_t)0xFFFF);
+	verify("4294967295", "%" PRIu32, (uint32_t)0x1FFFFFFFFll);
+	verify("18446744073709551615", "%" PRIu64, (uint64_t)0xFFFFFFFFFFFFFFFFll);
 
 	verify("-1", "%" PRId8, (int8_t)-1);
 	verify("-1", "%" PRId16, (int16_t)-1);

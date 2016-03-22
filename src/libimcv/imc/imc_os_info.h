@@ -54,8 +54,8 @@ struct imc_os_info_t {
 	 * @param major				OS major version number
 	 * @param minor				OS minor version number
 	 */
-	void (*get_numeric_version)(imc_os_info_t *this, u_int32_t *major,
-												 u_int32_t *minor);
+	void (*get_numeric_version)(imc_os_info_t *this, uint32_t *major,
+												 uint32_t *minor);
 
 	/**
 	 * Get the OS version or release

@@ -53,7 +53,7 @@ static void append_ts(bio_writer_t *writer, traffic_selector_t *ts)
 {
 	host_t *net, *mask;
 	chunk_t padding;
-	u_int8_t bits;
+	uint8_t bits;
 
 	if (!ts->to_subnet(ts, &net, &bits))
 	{
@@ -115,7 +115,7 @@ METHOD(enumerator_t, attribute_destroy, void,
  */
 static bool use_ts(traffic_selector_t *ts)
 {
-	u_int8_t mask;
+	uint8_t mask;
 	host_t *net;
 
 	if (ts->get_type(ts) != TS_IPV4_ADDR_RANGE)

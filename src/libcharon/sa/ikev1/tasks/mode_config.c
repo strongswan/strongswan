@@ -58,7 +58,7 @@ struct private_mode_config_t {
 	/**
 	 * Identifier to include in response
 	 */
-	u_int16_t identifier;
+	uint16_t identifier;
 };
 
 /**

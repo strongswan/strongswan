@@ -50,6 +50,6 @@ struct quick_delete_t {
  * @return				quick_delete task to handle by the task_manager
  */
 quick_delete_t *quick_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi, bool force, bool expired);
+									uint32_t spi, bool force, bool expired);
 
 #endif /** QUICK_DELETE_H_ @}*/

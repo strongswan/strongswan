@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 {
 	char buf[128];
 	int fd, len;
-	u_int16_t msglen;
+	uint16_t msglen;
 
 	fd = make_connection();
 	if (fd < 0)

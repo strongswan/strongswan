@@ -47,6 +47,6 @@ struct isakmp_dpd_t {
  * @return				ISAKMP_DPD task to handle by the task_manager
  */
 isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_type_t type,
-								u_int32_t seqnr);
+								uint32_t seqnr);
 
 #endif /** ISAKMP_DPD_H_ @}*/

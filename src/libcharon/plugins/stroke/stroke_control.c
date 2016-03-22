@@ -198,7 +198,7 @@ METHOD(stroke_control_t, initiate, void,
 /**
  * Parse a terminate/rekey specifier
  */
-static bool parse_specifier(char *string, u_int32_t *id,
+static bool parse_specifier(char *string, uint32_t *id,
 							char **name, bool *child, bool *all)
 {
 	int len;
@@ -266,7 +266,7 @@ static bool parse_specifier(char *string, u_int32_t *id,
  * Report the result of a terminate() call to console
  */
 static void report_terminate_status(private_stroke_control_t *this,
-						status_t status, FILE *out, u_int32_t id, bool child)
+						status_t status, FILE *out, uint32_t id, bool child)
 {
 	char *prefix, *postfix;
 
@@ -300,7 +300,7 @@ static void report_terminate_status(private_stroke_control_t *this,
 /**
  * Call the charon controller to terminate a CHILD_SA
  */
-static void charon_terminate(private_stroke_control_t *this, u_int32_t id,
+static void charon_terminate(private_stroke_control_t *this, uint32_t id,
 							 stroke_msg_t *msg, FILE *out, bool child)
 {
 	if (msg->output_verbosity >= 0)
@@ -336,7 +336,7 @@ METHOD(stroke_control_t, terminate, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	char *name;
-	u_int32_t id;
+	uint32_t id;
 	bool child, all;
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
@@ -424,7 +424,7 @@ METHOD(stroke_control_t, rekey, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	char *name;
-	u_int32_t id;
+	uint32_t id;
 	bool child, all, finished = FALSE;
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
@@ -591,13 +591,13 @@ METHOD(stroke_control_t, purge_ike, void,
 /**
  * Find an existing CHILD_SA/reqid
  */
-static u_int32_t find_reqid(child_cfg_t *child_cfg)
+static uint32_t find_reqid(child_cfg_t *child_cfg)
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
 	char *name;
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	reqid = charon->traps->find_reqid(charon->traps, child_cfg);
 	if (reqid)
@@ -636,7 +636,7 @@ static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 						 char *name, FILE *out)
 {
 	ipsec_mode_t mode;
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	mode = child_cfg->get_mode(child_cfg);
 	if (mode == MODE_PASS || mode == MODE_DROP)
@@ -731,7 +731,7 @@ METHOD(stroke_control_t, unroute, void,
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
-	u_int32_t id = 0;
+	uint32_t id = 0;
 
 	if (charon->shunts->uninstall(charon->shunts, msg->unroute.name))
 	{

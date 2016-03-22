@@ -123,7 +123,7 @@ int register_dh_mapping()
 	int count, i;
 	char *iana_id_str, *tkm_id_str;
 	diffie_hellman_group_t *iana_id;
-	u_int64_t *tkm_id;
+	uint64_t *tkm_id;
 	hashtable_t *map;
 	enumerator_t *enumerator;
 
@@ -138,7 +138,7 @@ int register_dh_mapping()
 	{
 		iana_id = malloc_thing(diffie_hellman_group_t);
 		*iana_id = settings_value_as_int(iana_id_str, 0);
-		tkm_id = malloc_thing(u_int64_t);
+		tkm_id = malloc_thing(uint64_t);
 		*tkm_id = settings_value_as_int(tkm_id_str, 0);
 
 		map->put(map, iana_id, tkm_id);
@@ -227,7 +227,7 @@ tkm_diffie_hellman_t *tkm_diffie_hellman_create(diffie_hellman_group_t group)
 		return NULL;
 	}
 
-	u_int64_t *dha_id = group_map->get(group_map, &group);
+	uint64_t *dha_id = group_map->get(group_map, &group);
 	if (!dha_id)
 	{
 		free(this);

@@ -432,7 +432,7 @@ struct bus_t {
 	 * @param new		ID of new SA when called for the old, NULL otherwise
 	 * @param uniue		unique ID of new SA when called for the old, 0 otherwise
 	 */
-	void (*children_migrate)(bus_t *this, ike_sa_id_t *new, u_int32_t unique);
+	void (*children_migrate)(bus_t *this, ike_sa_id_t *new, uint32_t unique);
 
 	/**
 	 * Virtual IP assignment hook.

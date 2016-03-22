@@ -47,7 +47,7 @@ struct tcg_pts_attr_simple_evid_final_t {
 	 * @param tpm_quote sig		Optional TPM Quote Signature
 	 * @return					PTS_SIMPLE_EVID_FINAL flags
 	 */
-	u_int8_t (*get_quote_info)(tcg_pts_attr_simple_evid_final_t *this,
+	uint8_t (*get_quote_info)(tcg_pts_attr_simple_evid_final_t *this,
 							   pts_meas_algorithms_t *comp_hash_algo,
 							   chunk_t *pcr_comp, chunk_t *tpm_quote_sig);
 
@@ -79,7 +79,7 @@ struct tcg_pts_attr_simple_evid_final_t {
  * @param tpm_quote_sign		Optional TPM Quote Signature
  */
 pa_tnc_attr_t* tcg_pts_attr_simple_evid_final_create(
-							u_int8_t flags,
+							uint8_t flags,
 							pts_meas_algorithms_t comp_hash_algorithm,
 							chunk_t pcr_comp,
 							chunk_t tpm_quote_sign);

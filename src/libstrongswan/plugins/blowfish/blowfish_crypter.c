@@ -84,14 +84,14 @@ struct private_blowfish_crypter_t {
 	/**
 	* Key size of this Blowfish cipher object.
 	*/
-	u_int32_t key_size;
+	uint32_t key_size;
 };
 
 METHOD(crypter_t, decrypt, bool,
 	private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	chunk_t *decrypted)
 {
-	u_int8_t *in, *out;
+	uint8_t *in, *out;
 
 	if (decrypted)
 	{
@@ -116,7 +116,7 @@ METHOD(crypter_t, encrypt, bool,
 	private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	chunk_t *encrypted)
 {
-	u_int8_t *in, *out;
+	uint8_t *in, *out;
 
 	if (encrypted)
 	{

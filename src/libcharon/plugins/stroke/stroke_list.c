@@ -206,7 +206,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
 	time_t use_in, use_out, rekey, now;
-	u_int64_t bytes_in, bytes_out, packets_in, packets_out;
+	uint64_t bytes_in, bytes_out, packets_in, packets_out;
 	proposal_t *proposal;
 	linked_list_t *my_ts, *other_ts;
 	child_cfg_t *config;
@@ -244,7 +244,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			proposal = child_sa->get_proposal(child_sa);
 			if (proposal)
 			{
-				u_int16_t alg, ks;
+				uint16_t alg, ks;
 				bool first = TRUE;
 
 				if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -286,7 +286,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				fprintf(out, " (%" PRIu64 " pkt%s, %" PRIu64 "s ago)",
 						packets_in, (packets_in == 1) ? "": "s",
-						(u_int64_t)(now - use_in));
+						(uint64_t)(now - use_in));
 			}
 
 			child_sa->get_usestats(child_sa, FALSE,
@@ -296,7 +296,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				fprintf(out, " (%" PRIu64 " pkt%s, %" PRIu64 "s ago)",
 						packets_out, (packets_out == 1) ? "": "s",
-						(u_int64_t)(now - use_out));
+						(uint64_t)(now - use_out));
 			}
 			fprintf(out, ", rekeying ");
 
@@ -474,7 +474,7 @@ METHOD(stroke_list_t, status, void,
 		ike_version_t ike_version;
 		char *pool;
 		host_t *host;
-		u_int32_t dpd;
+		uint32_t dpd;
 		time_t since, now;
 		u_int size, online, offline, i;
 		struct utsname utsname;

@@ -10,7 +10,7 @@ static void start_timing(struct timespec *start)
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, start);
 }
 
-static u_int64_t end_timing(struct timespec *start)
+static uint64_t end_timing(struct timespec *start)
 {
 	struct timespec end;
 
@@ -21,12 +21,12 @@ static u_int64_t end_timing(struct timespec *start)
 
 static int intcmp(const void *a, const void *b)
 {
-	return *(u_int64_t*)a - *(u_int64_t*)b;
+	return *(uint64_t*)a - *(uint64_t*)b;
 }
 
-static u_int64_t median(u_int64_t *m, int count)
+static uint64_t median(uint64_t *m, int count)
 {
-	qsort(m, count, sizeof(u_int64_t), intcmp);
+	qsort(m, count, sizeof(uint64_t), intcmp);
 	return m[count / 2];
 }
 
@@ -35,7 +35,7 @@ static bool timeattack(attackfn_t attackfn, void *subj, size_t dlen,
 {
 	struct timespec start;
 	u_char test[dlen];
-	u_int64_t mini, maxi, t[256], m[256][10];
+	uint64_t mini, maxi, t[256], m[256][10];
 	float fastdist = 0, slowdist = 0;
 	int i, j, k, l, byte, limit, retry = 0;
 	int fastest = 0, slowest = 0;

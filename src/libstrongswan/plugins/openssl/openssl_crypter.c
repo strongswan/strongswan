@@ -43,7 +43,7 @@ struct private_openssl_crypter_t {
 /**
  * Look up an OpenSSL algorithm name and validate its key size
  */
-static char* lookup_algorithm(u_int16_t ikev2_algo, size_t *key_size)
+static char* lookup_algorithm(uint16_t ikev2_algo, size_t *key_size)
 {
 	struct {
 		/* identifier specified in IKEv2 */

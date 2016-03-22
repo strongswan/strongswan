@@ -149,9 +149,9 @@
 #define SADB_X_EXT_NATT 0x002
 	struct sadb_sa_2 {
 		struct sadb_sa	sa;
-		u_int16_t		sadb_sa_natt_port;
-		u_int16_t		sadb_reserved0;
-		u_int32_t		sadb_reserved1;
+		uint16_t		sadb_sa_natt_port;
+		uint16_t		sadb_reserved0;
+		uint32_t		sadb_reserved1;
 	};
 #endif
 
@@ -286,7 +286,7 @@ struct route_entry_t {
 	chunk_t dst_net;
 
 	/** destination net prefixlen */
-	u_int8_t prefixlen;
+	uint8_t prefixlen;
 
 	/** reference to exclude route, if any */
 	exclude_route_t *exclude;
@@ -407,7 +407,7 @@ typedef struct policy_sa_in_t policy_sa_in_t;
  */
 struct policy_sa_t {
 	/** Priority assigned to the policy when installed with this SA */
-	u_int32_t priority;
+	uint32_t priority;
 
 	/** Type of the policy */
 	policy_type_t type;
@@ -481,19 +481,19 @@ typedef struct policy_entry_t policy_entry_t;
  */
 struct policy_entry_t {
 	/** Index assigned by the kernel */
-	u_int32_t index;
+	uint32_t index;
 
 	/** Direction of this policy: in, out, forward */
-	u_int8_t direction;
+	uint8_t direction;
 
 	/** Parameters of installed policy */
 	struct {
 		/** Subnet and port */
 		host_t *net;
 		/** Subnet mask */
-		u_int8_t mask;
+		uint8_t mask;
 		/** Protocol */
-		u_int8_t proto;
+		uint8_t proto;
 	} src, dst;
 
 	/** Associated route installed for this policy */
@@ -514,8 +514,8 @@ static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 	INIT(policy,
 		.direction = dir,
 	);
-	u_int16_t port;
-	u_int8_t proto;
+	uint16_t port;
+	uint8_t proto;
 
 	src_ts->to_subnet(src_ts, &policy->src.net, &policy->src.mask);
 	dst_ts->to_subnet(dst_ts, &policy->dst.net, &policy->dst.mask);
@@ -583,7 +583,7 @@ static inline bool policy_entry_equals(policy_entry_t *current,
  * compare the given kernel index with that of a policy
  */
 static inline bool policy_entry_match_byindex(policy_entry_t *current,
-											  u_int32_t *index)
+											  uint32_t *index)
 {
 	return current->index == *index;
 }
@@ -591,10 +591,10 @@ static inline bool policy_entry_match_byindex(policy_entry_t *current,
 /**
  * Calculate the priority of a policy
  */
-static inline u_int32_t get_priority(policy_entry_t *policy,
+static inline uint32_t get_priority(policy_entry_t *policy,
 									 policy_priority_t prio)
 {
-	u_int32_t priority = PRIO_BASE;
+	uint32_t priority = PRIO_BASE;
 	switch (prio)
 	{
 		case POLICY_PRIORITY_FALLBACK:
@@ -697,7 +697,7 @@ ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_EXT_MAX,
 /**
  * convert a protocol identifier to the PF_KEY sa type
  */
-static u_int8_t proto2satype(u_int8_t proto)
+static uint8_t proto2satype(uint8_t proto)
 {
 	switch (proto)
 	{
@@ -715,7 +715,7 @@ static u_int8_t proto2satype(u_int8_t proto)
 /**
  * convert a PF_KEY sa type to a protocol identifier
  */
-static u_int8_t satype2proto(u_int8_t satype)
+static uint8_t satype2proto(uint8_t satype)
 {
 	switch (satype)
 	{
@@ -733,7 +733,7 @@ static u_int8_t satype2proto(u_int8_t satype)
 /**
  * convert the general ipsec mode to the one defined in ipsec.h
  */
-static u_int8_t mode2kernel(ipsec_mode_t mode)
+static uint8_t mode2kernel(ipsec_mode_t mode)
 {
 	switch (mode)
 	{
@@ -753,7 +753,7 @@ static u_int8_t mode2kernel(ipsec_mode_t mode)
 /**
  * convert the general policy direction to the one defined in ipsec.h
  */
-static u_int8_t dir2kernel(policy_dir_t dir)
+static uint8_t dir2kernel(policy_dir_t dir)
 {
 	switch (dir)
 	{
@@ -773,7 +773,7 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 /**
  * convert the policy type to the one defined in ipsec.h
  */
-static inline u_int16_t type2kernel(policy_type_t type)
+static inline uint16_t type2kernel(policy_type_t type)
 {
 	switch (type)
 	{
@@ -791,7 +791,7 @@ static inline u_int16_t type2kernel(policy_type_t type)
 /**
  * convert the policy direction in ipsec.h to the general one.
  */
-static policy_dir_t kernel2dir(u_int8_t  dir)
+static policy_dir_t kernel2dir(uint8_t  dir)
 {
 	switch (dir)
 	{
@@ -898,7 +898,7 @@ static kernel_algorithm_t compression_algs[] = {
 static int lookup_algorithm(transform_type_t type, int ikev2)
 {
 	kernel_algorithm_t *list;
-	u_int16_t alg = 0;
+	uint16_t alg = 0;
 
 	switch (type)
 	{
@@ -929,7 +929,7 @@ static int lookup_algorithm(transform_type_t type, int ikev2)
 /**
  * Helper to set a port in a sockaddr_t, the port has to be in host order
  */
-static void set_port(sockaddr_t *addr, u_int16_t port)
+static void set_port(sockaddr_t *addr, uint16_t port)
 {
 	switch (addr->sa_family)
 	{
@@ -971,8 +971,8 @@ static size_t hostcpy(void *dest, host_t *host, bool include_port)
 /**
  * add a host to the given sadb_msg
  */
-static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
-						 u_int8_t proto, u_int8_t prefixlen, bool include_port)
+static void add_addr_ext(struct sadb_msg *msg, host_t *host, uint16_t type,
+						 uint8_t proto, uint8_t prefixlen, bool include_port)
 {
 	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
 	size_t len;
@@ -988,7 +988,7 @@ static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
 /**
  * adds an empty address extension to the given sadb_msg
  */
-static void add_anyaddr_ext(struct sadb_msg *msg, int family, u_int8_t type)
+static void add_anyaddr_ext(struct sadb_msg *msg, int family, uint8_t type)
 {
 	socklen_t len = (family == AF_INET) ? sizeof(struct sockaddr_in) :
 										  sizeof(struct sockaddr_in6);
@@ -1039,7 +1039,7 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 {
 	traffic_selector_t *ts;
 	host_t *host;
-	u_int8_t proto;
+	uint8_t proto;
 
 	proto = address->sadb_address_proto;
 	proto = proto == IPSEC_PROTO_ANY ? 0 : proto;
@@ -1240,7 +1240,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int32_t index, reqid = 0;
+	uint32_t index, reqid = 0;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_entry_t *policy;
 	policy_sa_t *sa;
@@ -1292,8 +1292,8 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 						   struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int8_t protocol;
-	u_int32_t spi;
+	uint8_t protocol;
+	uint32_t spi;
 	host_t *dst;
 	bool hard;
 
@@ -1330,7 +1330,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this,
 	pfkey_msg_t response;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_dir_t dir;
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 	host_t *local = NULL, *remote = NULL;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
@@ -1350,13 +1350,13 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this,
 	if (response.x_kmaddress)
 	{
 		sockaddr_t *local_addr, *remote_addr;
-		u_int32_t local_len;
+		uint32_t local_len;
 
 		local_addr  = (sockaddr_t*)&response.x_kmaddress[1];
 		local = host_create_from_sockaddr(local_addr);
 		local_len = (local_addr->sa_family == AF_INET6)?
 					sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
-		remote_addr = (sockaddr_t*)((u_int8_t*)local_addr + local_len);
+		remote_addr = (sockaddr_t*)((uint8_t*)local_addr + local_len);
 		remote = host_create_from_sockaddr(remote_addr);
 		DBG2(DBG_KNL, "  kmaddress: %H...%H", local, remote);
 	}
@@ -1384,7 +1384,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	u_int32_t spi;
+	uint32_t spi;
 	sockaddr_t *sa;
 	host_t *dst, *new;
 
@@ -1517,14 +1517,14 @@ static bool receive_events(private_kernel_pfkey_ipsec_t *this, int fd,
  */
 
 static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
-	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t *spi)
+	host_t *src, host_t *dst, uint8_t proto, uint32_t min, uint32_t max,
+	uint32_t *spi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_spirange *range;
 	pfkey_msg_t response;
-	u_int32_t received_spi = 0;
+	uint32_t received_spi = 0;
 	size_t len;
 
 	memset(&request, 0, sizeof(request));
@@ -1570,7 +1570,7 @@ static status_t get_spi_internal(private_kernel_pfkey_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	if (get_spi_internal(this, src, dst, protocol,
 						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
@@ -1585,9 +1585,9 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
-	u_int32_t received_spi = 0;
+	uint32_t received_spi = 0;
 
 	DBG2(DBG_KNL, "getting CPI");
 
@@ -1598,18 +1598,18 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 		return FAILED;
 	}
 
-	*cpi = htons((u_int16_t)ntohl(received_spi));
+	*cpi = htons((uint16_t)ntohl(received_spi));
 
 	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
-	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	u_int8_t protocol, u_int32_t reqid, mark_t mark, u_int32_t tfc,
-	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst, uint32_t spi,
+	uint8_t protocol, uint32_t reqid, mark_t mark, uint32_t tfc,
+	lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
@@ -1793,8 +1793,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_pfkey_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_kernel_pfkey_ipsec_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
@@ -1936,8 +1936,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark,
+	uint64_t *bytes, uint64_t *packets, time_t *time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2014,7 +2014,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2074,7 +2074,7 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct {
-		u_int8_t proto;
+		uint8_t proto;
 		char *name;
 	} protos[] = {
 		{ SADB_SATYPE_AH, "AH" },
@@ -2698,7 +2698,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_sa_t *mapping, *to_remove = NULL;
 	enumerator_t *enumerator;
 	bool first = TRUE, is_installed = TRUE;
-	u_int32_t priority;
+	uint32_t priority;
 	size_t len;
 	ipsec_sa_t assigned_sa = {
 		.src = src,
@@ -2876,7 +2876,7 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
  * Register a socket for ACQUIRE/EXPIRE messages
  */
 static status_t register_pfkey_socket(private_kernel_pfkey_ipsec_t *this,
-									  u_int8_t satype)
+									  uint8_t satype)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2931,7 +2931,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	}
 
 	memset(&policy, 0, sizeof(policy));
-	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+	policy.sadb_x_policy_len = sizeof(policy) / sizeof(uint64_t);
 	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
 
@@ -2953,7 +2953,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
-	private_kernel_pfkey_ipsec_t *this, int fd, int family, u_int16_t port)
+	private_kernel_pfkey_ipsec_t *this, int fd, int family, uint16_t port)
 {
 #ifndef __APPLE__
 	int type = UDP_ENCAP_ESPINUDP;

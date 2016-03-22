@@ -81,7 +81,7 @@ METHOD(rng_t, allocate_bytes, bool,
 }
 
 METHOD(rng_t, get_bytes, bool,
-	private_padlock_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_padlock_rng_t *this, size_t bytes, uint8_t *buffer)
 {
 	chunk_t chunk;
 

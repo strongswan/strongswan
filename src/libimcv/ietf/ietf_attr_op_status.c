@@ -93,12 +93,12 @@ struct private_ietf_attr_op_status_t {
 	/**
 	 * Status
 	 */
-	u_int8_t status;
+	uint8_t status;
 
 	/**
 	 * Result
 	 */
-	u_int8_t result;
+	uint8_t result;
 
 	/**
 	 * Last Use
@@ -164,11 +164,11 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_op_status_t *this, u_int32_t *offset)
+	private_ietf_attr_op_status_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	chunk_t last_use;
-	u_int16_t reserved;
+	uint16_t reserved;
 	struct tm t;
 
 	*offset = 0;
@@ -245,13 +245,13 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(ietf_attr_op_status_t, get_status, u_int8_t,
+METHOD(ietf_attr_op_status_t, get_status, uint8_t,
 	private_ietf_attr_op_status_t *this)
 {
 	return this->status;
 }
 
-METHOD(ietf_attr_op_status_t, get_result, u_int8_t,
+METHOD(ietf_attr_op_status_t, get_result, uint8_t,
 	private_ietf_attr_op_status_t *this)
 {
 	return this->result;
@@ -266,7 +266,7 @@ METHOD(ietf_attr_op_status_t, get_last_use, time_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_op_status_create(u_int8_t status, u_int8_t result,
+pa_tnc_attr_t *ietf_attr_op_status_create(uint8_t status, uint8_t result,
 										  time_t last_use)
 {
 	private_ietf_attr_op_status_t *this;

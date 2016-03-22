@@ -99,18 +99,18 @@ struct eap_vendor_type_t {
 	/**
 	 * Vendor Id
 	 */
-	u_int32_t vendor;
+	uint32_t vendor;
 };
 
 /**
  * EAP packet format
  */
 typedef struct __attribute__((packed)) {
-	u_int8_t code;
-	u_int8_t identifier;
-	u_int16_t length;
-	u_int8_t type;
-	u_int8_t data;
+	uint8_t code;
+	uint8_t identifier;
+	uint16_t length;
+	uint8_t type;
+	uint8_t data;
 } eap_packet_t;
 
 /**

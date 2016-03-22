@@ -86,8 +86,8 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 					   child_sa_t *child, time_t now)
 {
 	time_t t;
-	u_int64_t bytes, packets;
-	u_int16_t alg, ks;
+	uint64_t bytes, packets;
+	uint16_t alg, ks;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
@@ -152,7 +152,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 		b->add_kv(b, "packets-in", "%" PRIu64, packets);
 		if (t)
 		{
-			b->add_kv(b, "use-in", "%"PRIu64, (u_int64_t)(now - t));
+			b->add_kv(b, "use-in", "%"PRIu64, (uint64_t)(now - t));
 		}
 
 		child->get_usestats(child, FALSE, &t, &bytes, &packets);
@@ -160,7 +160,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 		b->add_kv(b, "packets-out", "%"PRIu64, packets);
 		if (t)
 		{
-			b->add_kv(b, "use-out", "%"PRIu64, (u_int64_t)(now - t));
+			b->add_kv(b, "use-out", "%"PRIu64, (uint64_t)(now - t));
 		}
 
 		t = child->get_lifetime(child, FALSE);
@@ -272,7 +272,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	ike_sa_id_t *id;
 	identification_t *eap;
 	proposal_t *proposal;
-	u_int16_t alg, ks;
+	uint16_t alg, ks;
 	host_t *host;
 
 	b->add_kv(b, "uniqueid", "%u", ike_sa->get_unique_id(ike_sa));

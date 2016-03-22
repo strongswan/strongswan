@@ -93,7 +93,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	chunk_t hash;
 	chunk_t decrypted;
 	chunk_t key = {alloca(key_size), key_size};
-	u_int8_t padding, *last_padding_pos, *first_padding_pos;
+	uint8_t padding, *last_padding_pos, *first_padding_pos;
 
 	/* build key from passphrase and IV */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);

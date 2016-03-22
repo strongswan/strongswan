@@ -59,7 +59,7 @@ enum pen_t {
  */
 struct pen_type_t {
 	pen_t vendor_id;
-	u_int32_t type;
+	uint32_t type;
 };
 
 /**
@@ -69,7 +69,7 @@ struct pen_type_t {
  * @param type			type to create a pen_type_t
  * @return				created pen_type_t
  */
-static inline pen_type_t pen_type_create(pen_t vendor_id, u_int32_t type)
+static inline pen_type_t pen_type_create(pen_t vendor_id, uint32_t type)
 {
 	pen_type_t pen_type = { vendor_id, type };
 	return pen_type;
@@ -96,7 +96,7 @@ static inline bool pen_type_equals(pen_type_t a, pen_type_t b)
  * @return				TRUE if vendor_id and type matches pen_type
  */
 static inline bool pen_type_is(pen_type_t pen_type,
-							   pen_t vendor_id, u_int32_t type)
+							   pen_t vendor_id, uint32_t type)
 {
 	return pen_type.vendor_id == vendor_id && pen_type.type == type;
 }

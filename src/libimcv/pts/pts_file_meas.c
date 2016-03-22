@@ -39,7 +39,7 @@ struct private_pts_file_meas_t {
 	/**
 	 * ID of PTS File Measurement Request
 	 */
-	u_int16_t request_id;
+	uint16_t request_id;
 
 	/**
 	 * List of File Measurements
@@ -70,7 +70,7 @@ static void free_entry(entry_t *entry)
 	}
 }
 
-METHOD(pts_file_meas_t, get_request_id, u_int16_t,
+METHOD(pts_file_meas_t, get_request_id, uint16_t,
 	private_pts_file_meas_t *this)
 {
 	return this->request_id;
@@ -266,7 +266,7 @@ METHOD(pts_file_meas_t, destroy, void,
 /**
  * See header
  */
-pts_file_meas_t *pts_file_meas_create(u_int16_t request_id)
+pts_file_meas_t *pts_file_meas_create(uint16_t request_id)
 {
 	private_pts_file_meas_t *this;
 
@@ -334,7 +334,7 @@ static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
 /**
  * See header
  */
-pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
+pts_file_meas_t *pts_file_meas_create_from_path(uint16_t request_id,
 							char *pathname, bool is_dir, bool use_rel_name,
 							pts_meas_algorithms_t alg)
 {

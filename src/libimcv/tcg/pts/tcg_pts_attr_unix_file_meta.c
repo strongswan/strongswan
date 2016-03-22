@@ -144,7 +144,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
 	pts_file_metadata_t *entry;
-	u_int64_t number_of_files;
+	uint64_t number_of_files;
 
 	if (this->value.ptr)
 	{
@@ -179,14 +179,14 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_file_meta_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_file_meta_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	pts_file_metadata_t *entry;
-	u_int8_t type, reserved;
-	u_int16_t len;
-	u_int64_t number_of_files, filesize, created, modified, accessed;
-	u_int64_t owner, group;
+	uint8_t type, reserved;
+	uint16_t len;
+	uint64_t number_of_files, filesize, created, modified, accessed;
+	uint64_t owner, group;
 	chunk_t filename;
 	status_t status = FAILED;
 

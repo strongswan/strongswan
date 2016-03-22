@@ -151,27 +151,27 @@ struct private_child_create_t {
 	/**
 	 * Own allocated SPI
 	 */
-	u_int32_t my_spi;
+	uint32_t my_spi;
 
 	/**
 	 * SPI received in proposal
 	 */
-	u_int32_t other_spi;
+	uint32_t other_spi;
 
 	/**
 	 * Own allocated Compression Parameter Index (CPI)
 	 */
-	u_int16_t my_cpi;
+	uint16_t my_cpi;
 
 	/**
 	 * Other Compression Parameter Index (CPI), received via IPCOMP_SUPPORTED
 	 */
-	u_int16_t other_cpi;
+	uint16_t other_cpi;
 
 	/**
 	 * reqid to use if we are rekeying
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Explicit inbound mark value
@@ -306,7 +306,7 @@ static bool allocate_spi(private_child_create_t *this)
  */
 static void schedule_inactivity_timeout(private_child_create_t *this)
 {
-	u_int32_t timeout, id;
+	uint32_t timeout, id;
 	bool close_ike;
 
 	timeout = this->config->get_inactivity(this->config);
@@ -386,7 +386,7 @@ static linked_list_t* get_transport_nat_ts(private_child_create_t *this,
 	linked_list_t *out;
 	traffic_selector_t *ts;
 	host_t *ike, *first = NULL;
-	u_int8_t mask;
+	uint8_t mask;
 
 	if (local)
 	{
@@ -501,7 +501,7 @@ static status_t select_and_install(private_child_create_t *this,
 
 	if (!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
-		u_int16_t group;
+		uint16_t group;
 
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
@@ -798,7 +798,7 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
  * Adds an IPCOMP_SUPPORTED notify to the message, allocating a CPI
  */
 static void add_ipcomp_notify(private_child_create_t *this,
-								  message_t *message, u_int8_t ipcomp)
+								  message_t *message, uint8_t ipcomp)
 {
 	this->my_cpi = this->child_sa->alloc_cpi(this->child_sa);
 	if (this->my_cpi)
@@ -838,11 +838,11 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 		case IPCOMP_SUPPORTED:
 		{
 			ipcomp_transform_t ipcomp;
-			u_int16_t cpi;
+			uint16_t cpi;
 			chunk_t data;
 
 			data = notify->get_notification_data(notify);
-			cpi = *(u_int16_t*)data.ptr;
+			cpi = *(uint16_t*)data.ptr;
 			ipcomp = (ipcomp_transform_t)(*(data.ptr + 2));
 			switch (ipcomp)
 			{
@@ -1310,7 +1310,7 @@ METHOD(task_t, build_r, status_t,
 			return SUCCESS;
 		case INVALID_ARG:
 		{
-			u_int16_t group = htons(this->dh_group);
+			uint16_t group = htons(this->dh_group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
 								chunk_from_thing(group));
 			handle_child_sa_failure(this, message);
@@ -1444,7 +1444,7 @@ METHOD(task_t, process_i, status_t,
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					u_int16_t group = MODP_NONE;
+					uint16_t group = MODP_NONE;
 
 					data = notify->get_notification_data(notify);
 					if (data.len == sizeof(group))
@@ -1529,7 +1529,7 @@ METHOD(task_t, process_i, status_t,
 }
 
 METHOD(child_create_t, use_reqid, void,
-	private_child_create_t *this, u_int32_t reqid)
+	private_child_create_t *this, uint32_t reqid)
 {
 	this->reqid = reqid;
 }

@@ -128,7 +128,7 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	host_t *addr, *host;
-	u_int16_t port;
+	uint16_t port;
 
 	/* get the port that is used to communicate with the ms */
 	host = this->ike_sa->get_my_host(this->ike_sa);

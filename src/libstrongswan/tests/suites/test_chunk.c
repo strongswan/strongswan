@@ -736,7 +736,7 @@ START_TEST(test_chunk_mac)
 {
 	chunk_t in;
 	u_char key[16];
-	u_int64_t out;
+	uint64_t out;
 	int i, count;
 
 	count = countof(sip_vectors);
@@ -765,7 +765,7 @@ END_TEST
 START_TEST(test_chunk_hash)
 {
 	chunk_t chunk;
-	u_int32_t hash_a, hash_b, hash_c;
+	uint32_t hash_a, hash_b, hash_c;
 
 	chunk = chunk_from_str("asdf");
 
@@ -787,7 +787,7 @@ END_TEST
 START_TEST(test_chunk_hash_static)
 {
 	chunk_t in;
-	u_int32_t out, hash_a, hash_b, hash_inc = 0x7b891a95;
+	uint32_t out, hash_a, hash_b, hash_inc = 0x7b891a95;
 	int i, count;
 
 	count = countof(sip_vectors);
@@ -813,7 +813,7 @@ END_TEST
  * test for chunk_internet_checksum[_inc]()
  */
 
-static inline u_int16_t compensate_alignment(u_int16_t val)
+static inline uint16_t compensate_alignment(uint16_t val)
 {
 	return ((val & 0xff) << 8) | (val >> 8);
 }
@@ -821,7 +821,7 @@ static inline u_int16_t compensate_alignment(u_int16_t val)
 START_TEST(test_chunk_internet_checksum)
 {
 	chunk_t chunk;
-	u_int16_t sum;
+	uint16_t sum;
 
 	chunk = chunk_from_chars(0x45,0x00,0x00,0x30,0x44,0x22,0x40,0x00,0x80,0x06,
 							 0x00,0x00,0x8c,0x7c,0x19,0xac,0xae,0x24,0x1e,0x2b);

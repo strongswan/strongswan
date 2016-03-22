@@ -77,7 +77,7 @@ struct private_aggressive_mode_t {
 	/**
 	 * Negotiated SA lifetime
 	 */
-	u_int32_t lifetime;
+	uint32_t lifetime;
 
 	/**
 	 * Negotiated authentication method
@@ -164,7 +164,7 @@ static status_t send_notify(private_aggressive_mode_t *this, notify_type_t type)
 {
 	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
-	u_int64_t spi_i, spi_r;
+	uint64_t spi_i, spi_r;
 	chunk_t spi;
 
 	notify = notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
@@ -219,7 +219,7 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *proposals;
 			identification_t *id;
 			packet_t *packet;
-			u_int16_t group;
+			uint16_t group;
 
 			DBG0(DBG_IKE, "initiating Aggressive Mode IKE_SA %s[%d] to %H",
 				 this->ike_sa->get_name(this->ike_sa),
@@ -377,7 +377,7 @@ METHOD(task_t, process_r, status_t,
 			id_payload_t *id_payload;
 			identification_t *id;
 			linked_list_t *list;
-			u_int16_t group;
+			uint16_t group;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "%H is initiating a Aggressive Mode IKE_SA",
@@ -629,7 +629,7 @@ METHOD(task_t, process_i, status_t,
 		id_payload_t *id_payload;
 		identification_t *id, *cid;
 		linked_list_t *list;
-		u_int32_t lifetime;
+		uint32_t lifetime;
 
 		sa_payload = (sa_payload_t*)message->get_payload(message,
 												PLV1_SECURITY_ASSOCIATION);

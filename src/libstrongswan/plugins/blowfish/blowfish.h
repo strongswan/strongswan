@@ -98,7 +98,7 @@ extern "C" {
 #else
 #include <sys/types.h>
 #endif
-#define BF_LONG u_int32_t
+#define BF_LONG uint32_t
 #endif
 
 #define BF_ROUNDS	16

@@ -96,8 +96,8 @@ struct radius_socket_t {
  * @param timeout	retransmission timeout
  * @param base		base to calculate retransmission timeout
  */
-radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
-									  u_int16_t acct_port, chunk_t secret,
+radius_socket_t *radius_socket_create(char *address, uint16_t auth_port,
+									  uint16_t acct_port, chunk_t secret,
 									  u_int tries, double timeout, double base);
 
 #endif /** RADIUS_SOCKET_H_ @}*/

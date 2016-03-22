@@ -113,7 +113,7 @@ static bool verify_eap(private_xauth_eap_t *this, eap_method_t *backend)
 	eap_payload_t *request, *response;
 	eap_method_t *frontend;
 	eap_type_t type;
-	u_int32_t vendor;
+	uint32_t vendor;
 	status_t status;
 
 	if (backend->initiate(backend, &request) != NEED_MORE)

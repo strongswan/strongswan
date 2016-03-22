@@ -38,7 +38,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * @param data		data supplied during registration of the callback
  * @return			allocated SPI, 0 on failure
  */
-typedef u_int64_t (*spi_cb_t)(void *data);
+typedef uint64_t (*spi_cb_t)(void *data);
 
 /**
  * Manages and synchronizes access to all IKE_SAs.
@@ -147,7 +147,7 @@ struct ike_sa_manager_t {
 	 * 							- checked out IKE_SA, if found
 	 * 							- NULL, if not found
 	 */
-	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, u_int32_t id);
+	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, uint32_t id);
 
 	/**
 	 * Check out an IKE_SA by the policy/connection name.

@@ -36,7 +36,7 @@ struct private_iv_gen_t {
 };
 
 METHOD(iv_gen_t, get_iv, bool,
-	private_iv_gen_t *this, u_int64_t seq, size_t size, u_int8_t *buffer)
+	private_iv_gen_t *this, uint64_t seq, size_t size, uint8_t *buffer)
 {
 	if (!this->rng)
 	{
@@ -46,7 +46,7 @@ METHOD(iv_gen_t, get_iv, bool,
 }
 
 METHOD(iv_gen_t, allocate_iv, bool,
-	private_iv_gen_t *this, u_int64_t seq, size_t size, chunk_t *chunk)
+	private_iv_gen_t *this, uint64_t seq, size_t size, chunk_t *chunk)
 {
 	if (!this->rng)
 	{

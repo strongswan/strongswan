@@ -267,7 +267,7 @@ END_TEARDOWN
  */
 typedef struct {
 	tls_version_t version;
-	u_int16_t port;
+	uint16_t port;
 	char *addr;
 	chunk_t data;
 	int fd;
@@ -411,7 +411,7 @@ static void run_echo_client(echo_server_config_t *config)
 /**
  * Common test wrapper function for different test variants
  */
-static void test_tls(tls_version_t version, u_int16_t port, bool cauth, u_int i)
+static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 {
 	echo_server_config_t *config;
 	tls_cipher_suite_t *suites;

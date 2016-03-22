@@ -38,7 +38,7 @@ struct private_id_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Critical flag.
@@ -53,17 +53,17 @@ struct private_id_payload_t {
 	/**
 	 * Reserved bytes
 	 */
-	u_int8_t reserved_byte[3];
+	uint8_t reserved_byte[3];
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Type of the ID Data.
 	 */
-	u_int8_t id_type;
+	uint8_t id_type;
 
 	/**
 	 * The contained id data value.
@@ -73,12 +73,12 @@ struct private_id_payload_t {
 	/**
 	 * Tunneled protocol ID for IKEv1 quick modes.
 	 */
-	u_int8_t protocol_id;
+	uint8_t protocol_id;
 
 	/**
 	 * Tunneled port for IKEv1 quick modes.
 	 */
-	u_int16_t port;
+	uint16_t port;
 
 	/**
 	 * one of PLV2_ID_INITIATOR, PLV2_ID_RESPONDER, IDv1 and PLV1_NAT_OA
@@ -334,7 +334,7 @@ METHOD(id_payload_t, get_ts, traffic_selector_t*,
 METHOD(id_payload_t, get_encoded, chunk_t,
 	private_id_payload_t *this)
 {
-	u_int16_t port = htons(this->port);
+	uint16_t port = htons(this->port);
 	return chunk_cat("cccc", chunk_from_thing(this->id_type),
 					 chunk_from_thing(this->protocol_id),
 					 chunk_from_thing(port), this->id_data);
@@ -400,7 +400,7 @@ id_payload_t *id_payload_create_from_identification(payload_type_t type,
 id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 {
 	private_id_payload_t *this;
-	u_int8_t mask;
+	uint8_t mask;
 	host_t *net;
 
 	this = (private_id_payload_t*)id_payload_create(PLV1_ID);
@@ -419,7 +419,7 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 	}
 	else if (ts->to_subnet(ts, &net, &mask))
 	{
-		u_int8_t netmask[16], len, byte;
+		uint8_t netmask[16], len, byte;
 
 		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE)
 		{

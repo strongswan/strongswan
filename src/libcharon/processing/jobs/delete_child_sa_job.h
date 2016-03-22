@@ -51,6 +51,6 @@ struct delete_child_sa_job_t {
  * @return			delete_child_sa_job_t object
  */
 delete_child_sa_job_t *delete_child_sa_job_create(protocol_id_t protocol,
-									u_int32_t spi, host_t *dst, bool expired);
+									uint32_t spi, host_t *dst, bool expired);
 
 #endif /** DELETE_CHILD_SA_JOB_H_ @}*/

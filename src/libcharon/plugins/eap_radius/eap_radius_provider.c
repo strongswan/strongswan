@@ -469,7 +469,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 }
 
 METHOD(eap_radius_provider_t, add_framed_ip, void,
-	private_eap_radius_provider_t *this, u_int32_t id, host_t *ip)
+	private_eap_radius_provider_t *this, uint32_t id, host_t *ip)
 {
 	this->listener.mutex->lock(this->listener.mutex);
 	add_addr(this, this->listener.unclaimed, id, ip);
@@ -477,7 +477,7 @@ METHOD(eap_radius_provider_t, add_framed_ip, void,
 }
 
 METHOD(eap_radius_provider_t, add_attribute, void,
-	private_eap_radius_provider_t *this, u_int32_t id,
+	private_eap_radius_provider_t *this, uint32_t id,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	attr_t *attr;

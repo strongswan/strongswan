@@ -68,7 +68,7 @@ struct private_xauth_t {
 	/**
 	 * received identifier
 	 */
-	u_int16_t identifier;
+	uint16_t identifier;
 
 	/**
 	 * status of Xauth exchange

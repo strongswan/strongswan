@@ -19,11 +19,11 @@ typedef struct private_rc2_crypter_t private_rc2_crypter_t;
 
 #define RC2_BLOCK_SIZE 8
 
-#define ROL16(x, k)	({ u_int16_t _x = (x); (_x << (k)) | (_x >> (16 - (k))); })
-#define ROR16(x, k)	({ u_int16_t _x = (x); (_x >> (k)) | (_x << (16 - (k))); })
+#define ROL16(x, k)	({ uint16_t _x = (x); (_x << (k)) | (_x >> (16 - (k))); })
+#define ROR16(x, k)	({ uint16_t _x = (x); (_x >> (k)) | (_x << (16 - (k))); })
 
-#define GET16(x)	({ u_char *_x = (x); (u_int16_t)_x[0] | ((u_int16_t)_x[1] << 8); })
-#define PUT16(x, v)	({ u_char *_x = (x); u_int16_t _v = (v); _x[0] = _v, _x[1] = _v >> 8; })
+#define GET16(x)	({ u_char *_x = (x); (uint16_t)_x[0] | ((uint16_t)_x[1] << 8); })
+#define PUT16(x, v)	({ u_char *_x = (x); uint16_t _v = (v); _x[0] = _v, _x[1] = _v >> 8; })
 
 /**
  * Private data of rc2_crypter_t
@@ -38,7 +38,7 @@ struct private_rc2_crypter_t {
 	/**
 	* The expanded key in 16-bit words
 	*/
-	u_int16_t  K[64];
+	uint16_t  K[64];
 
 	/**
 	* Key size in bytes
@@ -95,7 +95,7 @@ static const u_char PITABLE[256] =
  */
 static void encrypt_block(private_rc2_crypter_t *this, u_char R[])
 {
-	register u_int16_t R0, R1, R2, R3, *Kj;
+	register uint16_t R0, R1, R2, R3, *Kj;
 	int rounds = 3, mix = 5;
 
 	R0 = GET16(R);
@@ -139,7 +139,7 @@ static void encrypt_block(private_rc2_crypter_t *this, u_char R[])
  */
 static void decrypt_block(private_rc2_crypter_t *this, u_char R[])
 {
-	register u_int16_t R0, R1, R2, R3, *Kj;
+	register uint16_t R0, R1, R2, R3, *Kj;
 	int rounds = 3, mix = 5;
 
 	R0 = GET16(R);
@@ -185,7 +185,7 @@ static void decrypt_block(private_rc2_crypter_t *this, u_char R[])
 METHOD(crypter_t, decrypt, bool,
 	private_rc2_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
-	u_int8_t *in, *out, *prev;
+	uint8_t *in, *out, *prev;
 
 	if (data.len % RC2_BLOCK_SIZE || iv.len != RC2_BLOCK_SIZE)
 	{
@@ -222,7 +222,7 @@ METHOD(crypter_t, decrypt, bool,
 METHOD(crypter_t, encrypt, bool,
 	private_rc2_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
-	u_int8_t *in, *out, *end, *prev;
+	uint8_t *in, *out, *end, *prev;
 
 	if (data.len % RC2_BLOCK_SIZE || iv.len != RC2_BLOCK_SIZE)
 	{
@@ -273,7 +273,7 @@ METHOD(crypter_t, get_key_size, size_t,
 METHOD(crypter_t, set_key, bool,
 	private_rc2_crypter_t *this, chunk_t key)
 {
-	u_int8_t L[128], T8, TM, idx;
+	uint8_t L[128], T8, TM, idx;
 	int i;
 
 	if (key.len != this->T)

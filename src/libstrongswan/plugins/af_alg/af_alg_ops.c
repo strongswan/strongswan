@@ -108,7 +108,7 @@ METHOD(af_alg_ops_t, hash, bool,
 }
 
 METHOD(af_alg_ops_t, crypt, bool,
-	private_af_alg_ops_t *this, u_int32_t type, chunk_t iv, chunk_t data,
+	private_af_alg_ops_t *this, uint32_t type, chunk_t iv, chunk_t data,
 	char *out)
 {
 	struct msghdr msg = {};

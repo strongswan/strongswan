@@ -47,7 +47,7 @@ struct mac_t {
 	 * @return			TRUE if mac generated successfully
 	 */
 	bool (*get_mac)(mac_t *this, chunk_t data,
-					u_int8_t *out) __attribute__((warn_unused_result));
+					uint8_t *out) __attribute__((warn_unused_result));
 
 	/**
 	 * Get the size of the resulting MAC.

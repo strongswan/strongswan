@@ -58,8 +58,8 @@ METHOD(eap_ttls_avp_t, build, void,
 {
 	char zero_padding[] = { 0x00, 0x00, 0x00 };
 	chunk_t   avp_padding;
-	u_int8_t  avp_flags;
-	u_int32_t avp_len;
+	uint8_t  avp_flags;
+	uint32_t avp_len;
 
 	avp_flags = 0x40;
 	avp_len = 8 + data.len;
@@ -81,9 +81,9 @@ METHOD(eap_ttls_avp_t, process, status_t,
 	if (this->process_header)
 	{
 		bio_reader_t *header;
-		u_int32_t avp_code;
-		u_int8_t  avp_flags;
-		u_int32_t avp_len;
+		uint32_t avp_code;
+		uint8_t  avp_flags;
+		uint32_t avp_len;
 		bool success;
 
 		len = min(reader->remaining(reader), AVP_HEADER_LEN - this->inpos);

@@ -353,7 +353,7 @@ struct ike_sa_t {
 	 *
 	 * @return				unique ID
 	 */
-	u_int32_t (*get_unique_id) (ike_sa_t *this);
+	uint32_t (*get_unique_id) (ike_sa_t *this);
 
 	/**
 	 * Get the state of the IKE_SA.
@@ -382,7 +382,7 @@ struct ike_sa_t {
 	 * @param kind			kind of requested value
 	 * @return				value as integer
 	 */
-	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
+	uint32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
 
 	/**
 	 * Set statistic value of the IKE_SA.
@@ -390,7 +390,7 @@ struct ike_sa_t {
 	 * @param kind			kind of value to update
 	 * @param value			value as integer
 	 */
-	void (*set_statistic)(ike_sa_t *this, statistic_t kind, u_int32_t value);
+	void (*set_statistic)(ike_sa_t *this, statistic_t kind, uint32_t value);
 
 	/**
 	 * Get the own host address.
@@ -557,7 +557,7 @@ struct ike_sa_t {
 	 * @param initiate		TRUE to set message ID for initiating
 	 * @param mid			message id to set
 	 */
-	void (*set_message_id)(ike_sa_t *this, bool initiate, u_int32_t mid);
+	void (*set_message_id)(ike_sa_t *this, bool initiate, uint32_t mid);
 
 	/**
 	 * Add an additional address for the peer.
@@ -630,14 +630,14 @@ struct ike_sa_t {
 	 *
 	 * @return				number of pending updates
 	 */
-	u_int32_t (*get_pending_updates)(ike_sa_t *this);
+	uint32_t (*get_pending_updates)(ike_sa_t *this);
 
 	/**
 	 * Set the number of queued MOBIKE address updates.
 	 *
 	 * @param updates		number of pending updates
 	 */
-	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
+	void (*set_pending_updates)(ike_sa_t *this, uint32_t updates);
 
 #ifdef ME
 	/**
@@ -752,7 +752,7 @@ struct ike_sa_t {
 	 *						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
-						  u_int32_t reqid, traffic_selector_t *tsi,
+						  uint32_t reqid, traffic_selector_t *tsi,
 						  traffic_selector_t *tsr);
 
 	/**
@@ -850,7 +850,7 @@ struct ike_sa_t {
 	 *						- SUCCESS
 	 *						- NOT_FOUND if request doesn't have to be retransmited
 	 */
-	status_t (*retransmit) (ike_sa_t *this, u_int32_t message_id);
+	status_t (*retransmit) (ike_sa_t *this, uint32_t message_id);
 
 	/**
 	 * Sends a DPD request to the peer.
@@ -924,7 +924,7 @@ struct ike_sa_t {
 	 * @return				child_sa, or NULL if none found
 	 */
 	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol,
-								 u_int32_t spi, bool inbound);
+								 uint32_t spi, bool inbound);
 
 	/**
 	 * Get the number of CHILD_SAs.
@@ -958,7 +958,7 @@ struct ike_sa_t {
 	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
 	 *						- SUCCESS, if rekeying initiated
 	 */
-	status_t (*rekey_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+	status_t (*rekey_child_sa) (ike_sa_t *this, protocol_id_t protocol, uint32_t spi);
 
 	/**
 	 * Close the CHILD SA with the specified protocol/SPI.
@@ -975,7 +975,7 @@ struct ike_sa_t {
 	 *						- SUCCESS, if delete message sent
 	 */
 	status_t (*delete_child_sa)(ike_sa_t *this, protocol_id_t protocol,
-								u_int32_t spi, bool expired);
+								uint32_t spi, bool expired);
 
 	/**
 	 * Destroy a CHILD SA with the specified protocol/SPI.
@@ -988,7 +988,7 @@ struct ike_sa_t {
 	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
 	 *						- SUCCESS
 	 */
-	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, uint32_t spi);
 
 	/**
 	 * Rekey the IKE_SA.
@@ -1028,7 +1028,7 @@ struct ike_sa_t {
 	 * @param lifetime		lifetime in seconds
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
-	status_t (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
+	status_t (*set_auth_lifetime)(ike_sa_t *this, uint32_t lifetime);
 
 	/**
 	 * Add a virtual IP to use for this IKE_SA and its children.

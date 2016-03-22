@@ -50,7 +50,7 @@ static void usage(FILE *out)
 /**
  * Client routine
  */
-static int client(char *address, u_int16_t port, char *identity)
+static int client(char *address, uint16_t port, char *identity)
 {
 	pt_tls_client_t *assessment;
 	tls_t *tnccs;

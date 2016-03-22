@@ -276,7 +276,7 @@ METHOD(scheduler_t, schedule_job_tv, void,
 }
 
 METHOD(scheduler_t, schedule_job, void,
-	private_scheduler_t *this, job_t *job, u_int32_t s)
+	private_scheduler_t *this, job_t *job, uint32_t s)
 {
 	timeval_t tv;
 
@@ -287,7 +287,7 @@ METHOD(scheduler_t, schedule_job, void,
 }
 
 METHOD(scheduler_t, schedule_job_ms, void,
-	private_scheduler_t *this, job_t *job, u_int32_t ms)
+	private_scheduler_t *this, job_t *job, uint32_t ms)
 {
 	timeval_t tv, add;
 

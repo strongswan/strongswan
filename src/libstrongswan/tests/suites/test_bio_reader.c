@@ -65,7 +65,7 @@
 START_TEST(test_read_uint8)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07);
-	u_int8_t val;
+	uint8_t val;
 
 	assert_integer_read(data, 8, val);
 	assert_basic_read(8, val);
@@ -76,7 +76,7 @@ END_TEST
 START_TEST(test_read_uint16)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03);
-	u_int16_t val;
+	uint16_t val;
 
 	assert_integer_read(data, 16, val);
 	assert_basic_read(16, val);
@@ -87,7 +87,7 @@ END_TEST
 START_TEST(test_read_uint24)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03);
-	u_int32_t val;
+	uint32_t val;
 
 	assert_integer_read(data, 24, val);
 	assert_basic_read(24, val);
@@ -99,7 +99,7 @@ START_TEST(test_read_uint32)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 									0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03);
-	u_int32_t val;
+	uint32_t val;
 
 	assert_integer_read(data, 32, val);
 	assert_basic_read(32, val);
@@ -113,7 +113,7 @@ START_TEST(test_read_uint64)
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03);
-	u_int64_t val;
+	uint64_t val;
 
 	assert_integer_read(data, 64, val);
 	assert_basic_read(64, val);
@@ -170,7 +170,7 @@ END_TEST
 START_TEST(test_read_uint8_end)
 {
 	chunk_t data = chunk_from_chars(0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00);
-	u_int8_t val;
+	uint8_t val;
 
 	assert_integer_read_end(data, 8, val);
 	assert_basic_read_end(8, val);
@@ -181,7 +181,7 @@ END_TEST
 START_TEST(test_read_uint16_end)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x03, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00);
-	u_int16_t val;
+	uint16_t val;
 
 	assert_integer_read_end(data, 16, val);
 	assert_basic_read_end(16, val);
@@ -192,7 +192,7 @@ END_TEST
 START_TEST(test_read_uint24_end)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x00, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00);
-	u_int32_t val;
+	uint32_t val;
 
 	assert_integer_read_end(data, 24, val);
 	assert_basic_read_end(24, val);
@@ -204,7 +204,7 @@ START_TEST(test_read_uint32_end)
 {
 	chunk_t data = chunk_from_chars(0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02,
 									0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00);
-	u_int32_t val;
+	uint32_t val;
 
 	assert_integer_read_end(data, 32, val);
 	assert_basic_read_end(32, val);
@@ -218,7 +218,7 @@ START_TEST(test_read_uint64_end)
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-	u_int64_t val;
+	uint64_t val;
 
 	assert_integer_read_end(data, 64, val);
 	assert_basic_read_end(64, val);

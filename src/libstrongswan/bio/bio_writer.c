@@ -65,7 +65,7 @@ static inline void increase(private_bio_writer_t *this, size_t required)
 }
 
 METHOD(bio_writer_t, write_uint8, void,
-	private_bio_writer_t *this, u_int8_t value)
+	private_bio_writer_t *this, uint8_t value)
 {
 	increase(this, 1);
 	this->buf.ptr[this->used] = value;
@@ -73,7 +73,7 @@ METHOD(bio_writer_t, write_uint8, void,
 }
 
 METHOD(bio_writer_t, write_uint16, void,
-	private_bio_writer_t *this, u_int16_t value)
+	private_bio_writer_t *this, uint16_t value)
 {
 	increase(this, 2);
 	htoun16(this->buf.ptr + this->used, value);
@@ -81,7 +81,7 @@ METHOD(bio_writer_t, write_uint16, void,
 }
 
 METHOD(bio_writer_t, write_uint24, void,
-	private_bio_writer_t *this, u_int32_t value)
+	private_bio_writer_t *this, uint32_t value)
 {
 	increase(this, 3);
 	value = htonl(value);
@@ -90,7 +90,7 @@ METHOD(bio_writer_t, write_uint24, void,
 }
 
 METHOD(bio_writer_t, write_uint32, void,
-	private_bio_writer_t *this, u_int32_t value)
+	private_bio_writer_t *this, uint32_t value)
 {
 	increase(this, 4);
 	htoun32(this->buf.ptr + this->used, value);
@@ -98,7 +98,7 @@ METHOD(bio_writer_t, write_uint32, void,
 }
 
 METHOD(bio_writer_t, write_uint64, void,
-	private_bio_writer_t *this, u_int64_t value)
+	private_bio_writer_t *this, uint64_t value)
 {
 	increase(this, 8);
 	htoun64(this->buf.ptr + this->used, value);
@@ -166,7 +166,7 @@ METHOD(bio_writer_t, wrap16, void,
 METHOD(bio_writer_t, wrap24, void,
 	private_bio_writer_t *this)
 {
-	u_int32_t len;
+	uint32_t len;
 
 	increase(this, 3);
 	memmove(this->buf.ptr + 3, this->buf.ptr, this->used);
@@ -221,7 +221,7 @@ METHOD(bio_writer_t, destroy, void,
 /**
  * See header
  */
-bio_writer_t *bio_writer_create(u_int32_t bufsize)
+bio_writer_t *bio_writer_create(uint32_t bufsize)
 {
 	private_bio_writer_t *this;
 

@@ -64,35 +64,35 @@ struct pb_error_msg_t {
 	 *
 	 * @return				PB Error Code Vendor ID
 	 */
-	u_int32_t (*get_vendor_id)(pb_error_msg_t *this);
+	uint32_t (*get_vendor_id)(pb_error_msg_t *this);
 
 	/**
 	 * Get PB Error Code
 	 *
 	 * @return				PB Error Code
 	 */
-	u_int16_t (*get_error_code)(pb_error_msg_t *this);
+	uint16_t (*get_error_code)(pb_error_msg_t *this);
 
 	/**
 	 * Get the PB Error Offset
 	 *
 	 * @return				PB Error Offset
 	 */
-	u_int32_t (*get_offset)(pb_error_msg_t *this);
+	uint32_t (*get_offset)(pb_error_msg_t *this);
 
 	/**
 	 * Get the PB Bad Version
 	 *
 	 * @return				PB Bad Version
 	 */
-	u_int8_t (*get_bad_version)(pb_error_msg_t *this);
+	uint8_t (*get_bad_version)(pb_error_msg_t *this);
 
 	/**
 	 * Set the PB Bad Version
 	 *
 	 * @param version		PB Bad Version
 	 */
-	void (*set_bad_version)(pb_error_msg_t *this, u_int8_t version);
+	void (*set_bad_version)(pb_error_msg_t *this, uint8_t version);
 };
 
 /**
@@ -102,7 +102,7 @@ struct pb_error_msg_t {
  * @param vendor_id			Error Code Vendor ID
  * @param error_code		Error Code
  */
-pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
+pb_tnc_msg_t* pb_error_msg_create(bool fatal, uint32_t vendor_id,
 								  pb_tnc_error_code_t error_code);
 	
 /**
@@ -113,9 +113,9 @@ pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
  * @param error_code		Error Code
  * @param error_offset		Error Offset
  */
-pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, u_int32_t vendor_id,
+pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, uint32_t vendor_id,
 											  pb_tnc_error_code_t error_code,
-											  u_int32_t error_offset);
+											  uint32_t error_offset);
 
 /**
  * Create an unprocessed PB-Error message from raw data

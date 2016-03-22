@@ -121,10 +121,10 @@ METHOD(pa_tnc_attr_t, add_segment, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_get_aik_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_get_aik_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t reserved;
+	uint32_t reserved;
 
 	*offset = 0;
 

@@ -43,17 +43,17 @@ struct private_encrypted_payload_t {
 	 * next_payload means here the first payload of the
 	 * contained, encrypted payload.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Flags, including reserved bits
 	 */
-	u_int8_t flags;
+	uint8_t flags;
 
 	/**
 	 * Length of this payload
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Chunk containing the IV, plain, padding and ICV.
@@ -88,17 +88,17 @@ struct private_encrypted_fragment_payload_t {
 	 * the original encrypted payload, for all other fragments it MUST be set
 	 * to zero.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Flags, including reserved bits
 	 */
-	u_int8_t flags;
+	uint8_t flags;
 
 	/**
 	 * Length of this payload
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Chunk containing the IV, plain, padding and ICV.
@@ -108,12 +108,12 @@ struct private_encrypted_fragment_payload_t {
 	/**
 	 * Fragment number
 	 */
-	u_int16_t fragment_number;
+	uint16_t fragment_number;
 
 	/**
 	 * Total fragments
 	 */
-	u_int16_t total_fragments;
+	uint16_t total_fragments;
 
 	/**
 	 * AEAD transform to use
@@ -366,7 +366,7 @@ static chunk_t generate(private_encrypted_payload_t *this,
 {
 	payload_t *current, *next;
 	enumerator_t *enumerator;
-	u_int32_t *lenpos;
+	uint32_t *lenpos;
 	chunk_t chunk = chunk_empty;
 
 	enumerator = this->payloads->create_enumerator(this->payloads);
@@ -402,9 +402,9 @@ METHOD(encrypted_payload_t, generate_payloads, void,
 static chunk_t append_header(private_encrypted_payload_t *this, chunk_t assoc)
 {
 	struct {
-		u_int8_t next_payload;
-		u_int8_t flags;
-		u_int16_t length;
+		uint8_t next_payload;
+		uint8_t flags;
+		uint16_t length;
 	} __attribute__((packed)) header = {
 		.next_payload = this->next_payload,
 		.flags = this->flags,
@@ -416,7 +416,7 @@ static chunk_t append_header(private_encrypted_payload_t *this, chunk_t assoc)
 /**
  * Encrypts the data in plain and returns it in an allocated chunk.
  */
-static status_t encrypt_content(char *label, aead_t *aead, u_int64_t mid,
+static status_t encrypt_content(char *label, aead_t *aead, uint64_t mid,
 							chunk_t plain, chunk_t assoc, chunk_t *encrypted)
 {
 	chunk_t iv, padding, icv, crypt;
@@ -486,7 +486,7 @@ static status_t encrypt_content(char *label, aead_t *aead, u_int64_t mid,
 }
 
 METHOD(encrypted_payload_t, encrypt, status_t,
-	private_encrypted_payload_t *this, u_int64_t mid, chunk_t assoc)
+	private_encrypted_payload_t *this, uint64_t mid, chunk_t assoc)
 {
 	generator_t *generator;
 	chunk_t plain;
@@ -512,7 +512,7 @@ METHOD(encrypted_payload_t, encrypt, status_t,
 }
 
 METHOD(encrypted_payload_t, encrypt_v1, status_t,
-	private_encrypted_payload_t *this, u_int64_t mid, chunk_t iv)
+	private_encrypted_payload_t *this, uint64_t mid, chunk_t iv)
 {
 	generator_t *generator;
 	chunk_t plain, padding;
@@ -869,13 +869,13 @@ METHOD2(payload_t, encrypted_payload_t, frag_get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(encrypted_fragment_payload_t, get_fragment_number, u_int16_t,
+METHOD(encrypted_fragment_payload_t, get_fragment_number, uint16_t,
 	private_encrypted_fragment_payload_t *this)
 {
 	return this->fragment_number;
 }
 
-METHOD(encrypted_fragment_payload_t, get_total_fragments, u_int16_t,
+METHOD(encrypted_fragment_payload_t, get_total_fragments, uint16_t,
 	private_encrypted_fragment_payload_t *this)
 {
 	return this->total_fragments;
@@ -906,11 +906,11 @@ static chunk_t append_header_frag(private_encrypted_fragment_payload_t *this,
 								  chunk_t assoc)
 {
 	struct {
-		u_int8_t next_payload;
-		u_int8_t flags;
-		u_int16_t length;
-		u_int16_t fragment_number;
-		u_int16_t total_fragments;
+		uint8_t next_payload;
+		uint8_t flags;
+		uint16_t length;
+		uint16_t fragment_number;
+		uint16_t total_fragments;
 	} __attribute__((packed)) header = {
 		.next_payload = this->next_payload,
 		.flags = this->flags,
@@ -922,7 +922,7 @@ static chunk_t append_header_frag(private_encrypted_fragment_payload_t *this,
 }
 
 METHOD(encrypted_payload_t, frag_encrypt, status_t,
-	private_encrypted_fragment_payload_t *this, u_int64_t mid, chunk_t assoc)
+	private_encrypted_fragment_payload_t *this, uint64_t mid, chunk_t assoc)
 {
 	status_t status;
 
@@ -1015,7 +1015,7 @@ encrypted_fragment_payload_t *encrypted_fragment_payload_create()
  * Described in header
  */
 encrypted_fragment_payload_t *encrypted_fragment_payload_create_from_data(
-								u_int16_t num, u_int16_t total, chunk_t plain)
+								uint16_t num, uint16_t total, chunk_t plain)
 {
 	private_encrypted_fragment_payload_t *this;
 

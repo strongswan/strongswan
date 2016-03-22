@@ -101,7 +101,7 @@ struct private_ike_sa_t {
 	/**
 	 * unique numerical ID for this IKE_SA.
 	 */
-	u_int32_t unique_id;
+	uint32_t unique_id;
 
 	/**
 	 * Current state of the IKE_SA
@@ -233,12 +233,12 @@ struct private_ike_sa_t {
 	/**
 	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
 	 */
-	u_int32_t pending_updates;
+	uint32_t pending_updates;
 
 	/**
 	 * NAT keep alive interval
 	 */
-	u_int32_t keepalive_interval;
+	uint32_t keepalive_interval;
 
 	/**
 	 * The schedueld keep alive job, if any
@@ -249,7 +249,7 @@ struct private_ike_sa_t {
 	 * interval for retries during initiation (e.g. if DNS resolution failed),
 	 * 0 to disable (default)
 	 */
-	u_int32_t retry_initiate_interval;
+	uint32_t retry_initiate_interval;
 
 	/**
 	 * TRUE if a retry_initiate_job has been queued
@@ -259,12 +259,12 @@ struct private_ike_sa_t {
 	/**
 	 * Timestamps for this IKE_SA
 	 */
-	u_int32_t stats[STAT_MAX];
+	uint32_t stats[STAT_MAX];
 
 	/**
 	 * how many times we have retried so far (keyingtries)
 	 */
-	u_int32_t keyingtry;
+	uint32_t keyingtry;
 
 	/**
 	 * local host address to be used for IKE, set via MIGRATE kernel message
@@ -343,7 +343,7 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	return use_time;
 }
 
-METHOD(ike_sa_t, get_unique_id, u_int32_t,
+METHOD(ike_sa_t, get_unique_id, uint32_t,
 	private_ike_sa_t *this)
 {
 	return this->unique_id;
@@ -359,7 +359,7 @@ METHOD(ike_sa_t, get_name, char*,
 	return "(unnamed)";
 }
 
-METHOD(ike_sa_t, get_statistic, u_int32_t,
+METHOD(ike_sa_t, get_statistic, uint32_t,
 	private_ike_sa_t *this, statistic_t kind)
 {
 	if (kind < STAT_MAX)
@@ -370,7 +370,7 @@ METHOD(ike_sa_t, get_statistic, u_int32_t,
 }
 
 METHOD(ike_sa_t, set_statistic, void,
-	private_ike_sa_t *this, statistic_t kind, u_int32_t value)
+	private_ike_sa_t *this, statistic_t kind, uint32_t value)
 {
 	if (kind < STAT_MAX)
 	{
@@ -604,7 +604,7 @@ METHOD(ike_sa_t, set_proposal, void,
 }
 
 METHOD(ike_sa_t, set_message_id, void,
-	private_ike_sa_t *this, bool initiate, u_int32_t mid)
+	private_ike_sa_t *this, bool initiate, uint32_t mid)
 {
 	if (initiate)
 	{
@@ -814,7 +814,7 @@ METHOD(ike_sa_t, set_state, void,
 				this->state == IKE_PASSIVE)
 			{
 				job_t *job;
-				u_int32_t t;
+				uint32_t t;
 
 				/* calculate rekey, reauth and lifetime */
 				this->stats[STAT_ESTABLISHED] = time_monotonic(NULL);
@@ -1035,12 +1035,12 @@ METHOD(ike_sa_t, has_mapping_changed, bool,
 }
 
 METHOD(ike_sa_t, set_pending_updates, void,
-	private_ike_sa_t *this, u_int32_t updates)
+	private_ike_sa_t *this, uint32_t updates)
 {
 	this->pending_updates = updates;
 }
 
-METHOD(ike_sa_t, get_pending_updates, u_int32_t,
+METHOD(ike_sa_t, get_pending_updates, uint32_t,
 	private_ike_sa_t *this)
 {
 	return this->pending_updates;
@@ -1432,7 +1432,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 }
 
 METHOD(ike_sa_t, initiate, status_t,
-	private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid,
+	private_ike_sa_t *this, child_cfg_t *child_cfg, uint32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	bool defer_initiate = FALSE;
@@ -1642,7 +1642,7 @@ METHOD(ike_sa_t, add_child_sa, void,
 }
 
 METHOD(ike_sa_t, get_child_sa, child_sa_t*,
-	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool inbound)
+	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi, bool inbound)
 {
 	enumerator_t *enumerator;
 	child_sa_t *current, *found = NULL;
@@ -1721,7 +1721,7 @@ METHOD(ike_sa_t, remove_child_sa, void,
 }
 
 METHOD(ike_sa_t, rekey_child_sa, status_t,
-	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi)
 {
 	if (this->state == IKE_PASSIVE)
 	{
@@ -1732,7 +1732,7 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 }
 
 METHOD(ike_sa_t, delete_child_sa, status_t,
-	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool expired)
+	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi, bool expired)
 {
 	if (this->state == IKE_PASSIVE)
 	{
@@ -1744,7 +1744,7 @@ METHOD(ike_sa_t, delete_child_sa, status_t,
 }
 
 METHOD(ike_sa_t, destroy_child_sa, status_t,
-	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
@@ -2301,7 +2301,7 @@ METHOD(ike_sa_t, redirect, status_t,
 }
 
 METHOD(ike_sa_t, retransmit, status_t,
-	private_ike_sa_t *this, u_int32_t message_id)
+	private_ike_sa_t *this, uint32_t message_id)
 {
 	if (this->state == IKE_PASSIVE)
 	{
@@ -2316,7 +2316,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 			case IKE_CONNECTING:
 			{
 				/* retry IKE_SA_INIT/Main Mode if we have multiple keyingtries */
-				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
+				uint32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
 				charon->bus->alert(charon->bus, ALERT_PEER_INIT_UNREACHABLE,
 								   this->keyingtry);
 				this->keyingtry++;
@@ -2358,9 +2358,9 @@ METHOD(ike_sa_t, retransmit, status_t,
 }
 
 METHOD(ike_sa_t, set_auth_lifetime, status_t,
-	private_ike_sa_t *this, u_int32_t lifetime)
+	private_ike_sa_t *this, uint32_t lifetime)
 {
-	u_int32_t diff, hard, soft, now;
+	uint32_t diff, hard, soft, now;
 	bool send_update;
 
 	diff = this->peer_cfg->get_over_time(this->peer_cfg);

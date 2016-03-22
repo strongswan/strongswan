@@ -185,7 +185,7 @@ ENUM_END(tcg_attr_names,	TCG_PTS_AIK);
 /**
  * See header
  */
-pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, size_t length, chunk_t value)
+pa_tnc_attr_t* tcg_attr_create_from_data(uint32_t type, size_t length, chunk_t value)
 {
 	switch (type)
 	{

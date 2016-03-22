@@ -117,12 +117,12 @@ struct private_pb_pdp_referral_msg_t {
 	/**
 	 * PT protocol the PDP is using
 	 */
-	u_int8_t protocol;
+	uint8_t protocol;
 
 	/**
 	 * PT port the PDP is using
 	 */
-	u_int16_t port;
+	uint16_t port;
 
 	/**
 	 * Encoded message
@@ -163,10 +163,10 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_pdp_referral_msg_t *this, u_int32_t *offset)
+	private_pb_pdp_referral_msg_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t reserved;
+	uint8_t reserved;
 
 	*offset = 0;
 
@@ -223,7 +223,7 @@ METHOD(pb_pdp_referral_msg_t, get_identifier, chunk_t,
 }
 
 METHOD(pb_pdp_referral_msg_t, get_fqdn, chunk_t,
-	private_pb_pdp_referral_msg_t *this, u_int8_t *protocol, u_int16_t *port)
+	private_pb_pdp_referral_msg_t *this, uint8_t *protocol, uint16_t *port)
 {
 	if (protocol)
 	{
@@ -267,7 +267,7 @@ pb_tnc_msg_t* pb_pdp_referral_msg_create(pen_type_t identifier_type,
 /**
  * See header
  */
-pb_tnc_msg_t* pb_pdp_referral_msg_create_from_fqdn(chunk_t fqdn, u_int16_t port)
+pb_tnc_msg_t* pb_pdp_referral_msg_create_from_fqdn(chunk_t fqdn, uint16_t port)
 {
 	pb_tnc_msg_t *msg;
 	bio_writer_t *writer;

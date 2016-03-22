@@ -44,7 +44,7 @@ struct ietf_attr_attr_request_t {
 	 * @param vendor_id		Attribute Vendor ID
 	 * @param type			Attribute Type
 	 */
-	void (*add)(ietf_attr_attr_request_t *this, pen_t vendor_id, u_int32_t type);
+	void (*add)(ietf_attr_attr_request_t *this, pen_t vendor_id, uint32_t type);
 
 	/**
 	 * Creates an enumerator over all attribute types contained
@@ -59,7 +59,7 @@ struct ietf_attr_attr_request_t {
  * Creates an ietf_attr_attr_request_t object
  *
  */
-pa_tnc_attr_t* ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type);
+pa_tnc_attr_t* ietf_attr_attr_request_create(pen_t vendor_id, uint32_t type);
 
 /**
  * @param length			Total length of attribute value

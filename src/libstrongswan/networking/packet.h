@@ -85,14 +85,14 @@ struct packet_t {
 	 *
 	 * @return			DSCP value
 	 */
-	u_int8_t (*get_dscp)(packet_t *this);
+	uint8_t (*get_dscp)(packet_t *this);
 
 	/**
 	 * Set the DiffServ Code Point to use on this packet.
 	 *
 	 * @param value		DSCP value
 	 */
-	void (*set_dscp)(packet_t *this, u_int8_t value);
+	void (*set_dscp)(packet_t *this, uint8_t value);
 
 	/**
 	 * Increase the offset where the actual packet data starts.

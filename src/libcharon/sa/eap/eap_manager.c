@@ -35,7 +35,7 @@ struct eap_entry_t {
 	/**
 	 * vendor ID, 0 for default EAP methods
 	 */
-	u_int32_t vendor;
+	uint32_t vendor;
 
 	/**
 	 * Role of the method returned by the constructor, EAP_SERVER or EAP_PEER
@@ -70,7 +70,7 @@ struct private_eap_manager_t {
 };
 
 METHOD(eap_manager_t, add_method, void,
-	private_eap_manager_t *this, eap_type_t type, u_int32_t vendor,
+	private_eap_manager_t *this, eap_type_t type, uint32_t vendor,
 	eap_role_t role, eap_constructor_t constructor)
 {
 	eap_entry_t *entry = malloc_thing(eap_entry_t);
@@ -109,7 +109,7 @@ METHOD(eap_manager_t, remove_method, void,
  * filter the registered methods
  */
 static bool filter_methods(uintptr_t role, eap_entry_t **entry,
-						   eap_type_t *type, void *in, u_int32_t *vendor)
+						   eap_type_t *type, void *in, uint32_t *vendor)
 {
 	if ((*entry)->role != (eap_role_t)role)
 	{
@@ -144,7 +144,7 @@ METHOD(eap_manager_t, create_enumerator, enumerator_t*,
 }
 
 METHOD(eap_manager_t, create_instance, eap_method_t*,
-	private_eap_manager_t *this, eap_type_t type, u_int32_t vendor,
+	private_eap_manager_t *this, eap_type_t type, uint32_t vendor,
 	eap_role_t role, identification_t *server, identification_t *peer)
 {
 	enumerator_t *enumerator;

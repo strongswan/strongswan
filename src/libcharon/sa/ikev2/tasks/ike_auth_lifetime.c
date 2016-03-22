@@ -45,14 +45,14 @@ struct private_ike_auth_lifetime_t {
 static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *message)
 {
 	chunk_t chunk;
-	u_int32_t lifetime;
+	uint32_t lifetime;
 
 	lifetime = this->ike_sa->get_statistic(this->ike_sa, STAT_REAUTH);
 	if (lifetime)
 	{
 		lifetime -= time_monotonic(NULL);
 		chunk = chunk_from_thing(lifetime);
-		*(u_int32_t*)chunk.ptr = htonl(lifetime);
+		*(uint32_t*)chunk.ptr = htonl(lifetime);
 		message->add_notify(message, FALSE, AUTH_LIFETIME, chunk);
 	}
 }
@@ -64,13 +64,13 @@ static void process_payloads(private_ike_auth_lifetime_t *this, message_t *messa
 {
 	notify_payload_t *notify;
 	chunk_t data;
-	u_int32_t lifetime;
+	uint32_t lifetime;
 
 	notify = message->get_notify(message, AUTH_LIFETIME);
 	if (notify)
 	{
 		data = notify->get_notification_data(notify);
-		lifetime = ntohl(*(u_int32_t*)data.ptr);
+		lifetime = ntohl(*(uint32_t*)data.ptr);
 		this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
 	}
 }

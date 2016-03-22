@@ -58,7 +58,7 @@ struct private_stroke_counter_t {
 	/**
 	 * Global counter values
 	 */
-	u_int64_t counter[COUNTER_MAX];
+	uint64_t counter[COUNTER_MAX];
 
 	/**
 	 * Counters for specific connection names, char* => entry_t
@@ -78,7 +78,7 @@ typedef struct {
 	/** connection name */
 	char *name;
 	/** counter values for connection */
-	u_int64_t counter[COUNTER_MAX];
+	uint64_t counter[COUNTER_MAX];
 } entry_t;
 
 /**
@@ -290,7 +290,7 @@ METHOD(listener_t, message_hook, bool,
  * Print a single counter value to out
  */
 static void print_counter(FILE *out, stroke_counter_type_t type,
-						  u_int64_t counter)
+						  uint64_t counter)
 {
 	fprintf(out, "%-18N %12llu\n", stroke_counter_type_names, type, counter);
 }
@@ -300,7 +300,7 @@ static void print_counter(FILE *out, stroke_counter_type_t type,
  */
 static void print_one(private_stroke_counter_t *this, FILE *out, char *name)
 {
-	u_int64_t counter[COUNTER_MAX];
+	uint64_t counter[COUNTER_MAX];
 	entry_t *entry;
 	int i;
 
@@ -365,7 +365,7 @@ static void print_all(private_stroke_counter_t *this, FILE *out)
  */
 static void print_global(private_stroke_counter_t *this, FILE *out)
 {
-	u_int64_t counter[COUNTER_MAX];
+	uint64_t counter[COUNTER_MAX];
 	int i;
 
 	this->lock->lock(this->lock);

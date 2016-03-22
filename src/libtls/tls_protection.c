@@ -47,12 +47,12 @@ struct private_tls_protection_t {
 	/**
 	 * Sequence number of incoming records
 	 */
-	u_int64_t seq_in;
+	uint64_t seq_in;
 
 	/**
 	 * Sequence number for outgoing records
 	 */
-	u_int64_t seq_out;
+	uint64_t seq_out;
 
 	/**
 	 * AEAD transform for inbound traffic

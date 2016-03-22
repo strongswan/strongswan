@@ -50,7 +50,7 @@ struct tcg_pts_attr_req_file_meta_t {
 	 *
 	 * @return				UTF-8 encoding of a Delimiter Character
 	 */
-	u_int8_t (*get_delimiter)(tcg_pts_attr_req_file_meta_t *this);
+	uint8_t (*get_delimiter)(tcg_pts_attr_req_file_meta_t *this);
 
 	/**
 	 * Get Fully Qualified File Pathname
@@ -69,7 +69,7 @@ struct tcg_pts_attr_req_file_meta_t {
  * @param pathname			File Pathname
  */
 pa_tnc_attr_t* tcg_pts_attr_req_file_meta_create(bool directory_flag,
-												 u_int8_t delimiter,
+												 uint8_t delimiter,
 												 char *pathname);
 
 /**

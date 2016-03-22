@@ -57,21 +57,21 @@ struct sa_payload_t {
 	 * @param cpi			the CPI of the first IPComp (sub)proposal
 	 * @return				a list containing proposal_ts
 	 */
-	linked_list_t *(*get_ipcomp_proposals) (sa_payload_t *this, u_int16_t *cpi);
+	linked_list_t *(*get_ipcomp_proposals) (sa_payload_t *this, uint16_t *cpi);
 
 	/**
 	 * Get the (shortest) lifetime of a proposal (IKEv1 only).
 	 *
 	 * @return					lifetime, in seconds
 	 */
-	u_int32_t (*get_lifetime)(sa_payload_t *this);
+	uint32_t (*get_lifetime)(sa_payload_t *this);
 
 	/**
 	 * Get the (shortest) life duration of a proposal (IKEv1 only).
 	 *
 	 * @return					life duration, in bytes
 	 */
-	u_int64_t (*get_lifebytes)(sa_payload_t *this);
+	uint64_t (*get_lifebytes)(sa_payload_t *this);
 
 	/**
 	 * Get the first authentication method from the proposal (IKEv1 only).
@@ -138,9 +138,9 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal);
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
-							u_int32_t lifetime, u_int64_t lifebytes,
+							uint32_t lifetime, uint64_t lifebytes,
 							auth_method_t auth, ipsec_mode_t mode, encap_t udp,
-							u_int16_t cpi);
+							uint16_t cpi);
 
 /**
  * Creates an IKEv1 sa_payload_t object from a single proposal.
@@ -155,8 +155,8 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
-							u_int32_t lifetime, u_int64_t lifebytes,
+							uint32_t lifetime, uint64_t lifebytes,
 							auth_method_t auth, ipsec_mode_t mode, encap_t udp,
-							u_int16_t cpi);
+							uint16_t cpi);
 
 #endif /** SA_PAYLOAD_H_ @}*/

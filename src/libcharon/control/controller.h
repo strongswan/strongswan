@@ -111,7 +111,7 @@ struct controller_t {
 	 *						- NEED_MORE, if callback returned FALSE
 	 *						- OUT_OF_RES if timed out
 	 */
-	status_t (*terminate_ike)(controller_t *this, u_int32_t unique_id,
+	status_t (*terminate_ike)(controller_t *this, uint32_t unique_id,
 							  controller_cb_t callback, void *param,
 							  u_int timeout);
 
@@ -131,7 +131,7 @@ struct controller_t {
 	 *						- NEED_MORE, if callback returned FALSE
 	 *						- OUT_OF_RES if timed out
 	 */
-	status_t (*terminate_child)(controller_t *this, u_int32_t unique_id,
+	status_t (*terminate_child)(controller_t *this, uint32_t unique_id,
 								controller_cb_t callback, void *param,
 								u_int timeout);
 

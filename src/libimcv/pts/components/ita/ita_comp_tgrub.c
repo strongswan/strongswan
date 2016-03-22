@@ -42,7 +42,7 @@ struct pts_ita_comp_tgrub_t {
 	/**
 	 * Sub-component depth
 	 */
-	u_int32_t depth;
+	uint32_t depth;
 
 	/**
 	 * PTS measurement database
@@ -62,27 +62,27 @@ METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
 	return this->name;
 }
 
-METHOD(pts_component_t, get_evidence_flags, u_int8_t,
+METHOD(pts_component_t, get_evidence_flags, uint8_t,
 	pts_ita_comp_tgrub_t *this)
 {
 	return PTS_REQ_FUNC_COMP_EVID_PCR;
 }
 
-METHOD(pts_component_t, get_depth, u_int32_t,
+METHOD(pts_component_t, get_depth, uint32_t,
 	pts_ita_comp_tgrub_t *this)
 {
 	return this->depth;
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_ita_comp_tgrub_t *this, uint8_t qualifier, pts_t *pts,
 	pts_comp_evidence_t **evidence)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evid;
-	u_int32_t extended_pcr;
+	uint32_t extended_pcr;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 
@@ -116,11 +116,11 @@ METHOD(pts_component_t, measure, status_t,
 }
 
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_ita_comp_tgrub_t *this, uint8_t qualifier, pts_t *pts,
 	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
-	u_int32_t extended_pcr;
+	uint32_t extended_pcr;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	pts_pcr_t *pcrs;
@@ -155,7 +155,7 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, bio_writer_t *result)
+	pts_ita_comp_tgrub_t *this, uint8_t qualifier, bio_writer_t *result)
 {
 	return FALSE;
 }
@@ -180,7 +180,7 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tgrub_create(u_int32_t depth,
+pts_component_t *pts_ita_comp_tgrub_create(uint32_t depth,
 										   pts_database_t *pts_db)
 {
 	pts_ita_comp_tgrub_t *this;

@@ -67,7 +67,7 @@ struct private_eap_sim_server_t {
 	/**
 	 * unique EAP identifier
 	 */
-	u_int8_t identifier;
+	uint8_t identifier;
 
 	/**
 	 * concatenated SRES values
@@ -163,7 +163,7 @@ METHOD(eap_method_t, initiate, status_t,
  * Initiate  EAP-SIM/Request/Re-authentication message
  */
 static status_t reauthenticate(private_eap_sim_server_t *this,
-							   char mk[HASH_SIZE_SHA1], u_int16_t counter,
+							   char mk[HASH_SIZE_SHA1], uint16_t counter,
 							   eap_payload_t **out)
 {
 	simaka_message_t *message;
@@ -328,7 +328,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 		if (this->use_reauth && !nonce.len)
 		{
 			char mk[HASH_SIZE_SHA1];
-			u_int16_t counter;
+			uint16_t counter;
 
 			permanent = this->mgr->provider_is_reauth(this->mgr, id,
 													  mk, &counter);
@@ -495,7 +495,7 @@ static status_t process_client_error(private_eap_sim_server_t *this,
 	{
 		if (type == AT_CLIENT_ERROR_CODE)
 		{
-			u_int16_t code;
+			uint16_t code;
 
 			memcpy(&code, data.ptr, sizeof(code));
 			DBG1(DBG_IKE, "received EAP-SIM client error '%N'",
@@ -551,7 +551,7 @@ METHOD(eap_method_t, process, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_sim_server_t *this, u_int32_t *vendor)
+	private_eap_sim_server_t *this, uint32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_SIM;
@@ -568,14 +568,14 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
-METHOD(eap_method_t, get_identifier, u_int8_t,
+METHOD(eap_method_t, get_identifier, uint8_t,
 	private_eap_sim_server_t *this)
 {
 	return this->identifier;
 }
 
 METHOD(eap_method_t, set_identifier, void,
-	private_eap_sim_server_t *this, u_int8_t identifier)
+	private_eap_sim_server_t *this, uint8_t identifier)
 {
 	this->identifier = identifier;
 }

@@ -67,7 +67,7 @@ struct private_forecast_listener_t {
 	/**
 	 * Broadcast address on LAN interface, network order
 	 */
-	u_int32_t broadcast;
+	uint32_t broadcast;
 };
 
 /**
@@ -85,13 +85,13 @@ typedef struct {
 	/** remote IKE_SA endpoint */
 	host_t *rhost;
 	/** inbound SPI */
-	u_int32_t spi;
+	uint32_t spi;
 	/** use UDP encapsulation */
 	bool encap;
 	/** whether we should allow reencapsulation of IPsec received forecasts */
 	bool reinject;
 	/** broadcast address used for that entry */
-	u_int32_t broadcast;
+	uint32_t broadcast;
 } entry_t;
 
 /**
@@ -115,7 +115,7 @@ static void entry_destroy(entry_t *entry)
 static bool ts2in(traffic_selector_t *ts,
 				  struct in_addr *addr, struct in_addr *mask)
 {
-	u_int8_t bits;
+	uint8_t bits;
 	host_t *net;
 
 	if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE &&
@@ -179,12 +179,12 @@ static bool manage_rule(struct iptc_handle *ipth, const char *chain,
 static bool manage_pre_esp_in_udp(struct iptc_handle *ipth,
 								  entry_t *entry, bool add)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_udp));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_mark_tginfo2));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -240,12 +240,12 @@ static bool manage_pre_esp_in_udp(struct iptc_handle *ipth,
  */
 static bool manage_pre_esp(struct iptc_handle *ipth, entry_t *entry, bool add)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_esp));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_mark_tginfo2));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -306,10 +306,10 @@ static bool manage_pre(struct iptc_handle *ipth, entry_t *entry, bool add)
  */
 static bool manage_out(struct iptc_handle *ipth, entry_t *entry, bool add)
 {
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry));
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry));
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_mark_tginfo2));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -617,7 +617,7 @@ METHOD(listener_t, ike_update, bool,
  * Filter to map entries to ts/mark
  */
 static bool ts_filter(entry_t *entry, traffic_selector_t **ts,
-					  traffic_selector_t **out, void *dummy, u_int32_t *mark,
+					  traffic_selector_t **out, void *dummy, uint32_t *mark,
 					  void *dummy2, bool *reinject)
 {
 	*out = *ts;

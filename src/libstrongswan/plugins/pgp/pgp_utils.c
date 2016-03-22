@@ -73,9 +73,9 @@ ENUM_END(pgp_packet_tag_names, PGP_PKT_MOD_DETECT_CODE);
 /**
  * Read a PGP scalar of bytes length, advance blob
  */
-bool pgp_read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
+bool pgp_read_scalar(chunk_t *blob, size_t bytes, uint32_t *scalar)
 {
-	u_int32_t res = 0;
+	uint32_t res = 0;
 
 	if (bytes > blob->len)
 	{
@@ -96,7 +96,7 @@ bool pgp_read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
  */
 bool pgp_read_mpi(chunk_t *blob, chunk_t *mpi)
 {
-	u_int32_t bits, bytes;
+	uint32_t bits, bytes;
 
 	if (!pgp_read_scalar(blob, 2, &bits))
 	{
@@ -117,7 +117,7 @@ bool pgp_read_mpi(chunk_t *blob, chunk_t *mpi)
 /**
  * Read length of an PGP old packet length encoding
  */
-static bool pgp_old_packet_length(chunk_t *blob, u_int32_t *length)
+static bool pgp_old_packet_length(chunk_t *blob, uint32_t *length)
 {
 	/* bits 0 and 1 define the packet length type */
 	u_char type;
@@ -141,7 +141,7 @@ static bool pgp_old_packet_length(chunk_t *blob, u_int32_t *length)
  */
 bool pgp_read_packet(chunk_t *blob, chunk_t *data, pgp_packet_tag_t *tag)
 {
-	u_int32_t len;
+	uint32_t len;
 	u_char t;
 
 	if (!blob->len)

@@ -54,7 +54,7 @@ struct private_rdrand_rng_t {
 /**
  * Get a two byte word using RDRAND
  */
-static bool rdrand16(u_int16_t *out)
+static bool rdrand16(uint16_t *out)
 {
 	u_char res;
 	int i;
@@ -76,7 +76,7 @@ static bool rdrand16(u_int16_t *out)
 /**
  * Get a four byte word using RDRAND
  */
-static bool rdrand32(u_int32_t *out)
+static bool rdrand32(uint32_t *out)
 {
 	u_char res;
 	int i;
@@ -99,7 +99,7 @@ static bool rdrand32(u_int32_t *out)
 /**
  * Get a eight byte word using RDRAND
  */
-static bool rdrand64(u_int64_t *out)
+static bool rdrand64(uint64_t *out)
 {
 	u_char res;
 	int i;
@@ -122,9 +122,9 @@ static bool rdrand64(u_int64_t *out)
 /**
  * Get a one byte word using RDRAND
  */
-static bool rdrand8(u_int8_t *out)
+static bool rdrand8(uint8_t *out)
 {
-	u_int16_t u16;
+	uint16_t u16;
 
 	if (!rdrand16(&u16))
 	{
@@ -141,15 +141,15 @@ static bool rdrand128(void *out)
 {
 #ifdef __x86_64__
 	if (!rdrand64(out) ||
-		!rdrand64(out + sizeof(u_int64_t)))
+		!rdrand64(out + sizeof(uint64_t)))
 	{
 		return FALSE;
 	}
 #else /* __i386__ */
 	if (!rdrand32(out) ||
-		!rdrand32(out + 1 * sizeof(u_int32_t)) ||
-		!rdrand32(out + 2 * sizeof(u_int32_t)) ||
-		!rdrand32(out + 3 * sizeof(u_int32_t)))
+		!rdrand32(out + 1 * sizeof(uint32_t)) ||
+		!rdrand32(out + 2 * sizeof(uint32_t)) ||
+		!rdrand32(out + 3 * sizeof(uint32_t)))
 	{
 		return FALSE;
 	}
@@ -165,9 +165,9 @@ static bool reseed()
 	int i;
 
 #ifdef __x86_64__
-	u_int64_t tmp;
+	uint64_t tmp;
 
-	for (i = 0; i < 511 * 16 / sizeof(u_int64_t); i++)
+	for (i = 0; i < 511 * 16 / sizeof(uint64_t); i++)
 	{
 		if (!rdrand64(&tmp))
 		{
@@ -175,9 +175,9 @@ static bool reseed()
 		}
 	}
 #else /* __i386__ */
-	u_int32_t tmp;
+	uint32_t tmp;
 
-	for (i = 0; i < 511 * 16 / sizeof(u_int32_t); i++)
+	for (i = 0; i < 511 * 16 / sizeof(uint32_t); i++)
 	{
 		if (!rdrand32(&tmp))
 		{
@@ -202,48 +202,48 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 	}
 
 	/* align to 2 byte */
-	if (chunk.len >= sizeof(u_int8_t))
+	if (chunk.len >= sizeof(uint8_t))
 	{
 		if ((uintptr_t)chunk.ptr % 2)
 		{
-			if (!rdrand8((u_int8_t*)chunk.ptr))
+			if (!rdrand8((uint8_t*)chunk.ptr))
 			{
 				return FALSE;
 			}
-			chunk = chunk_skip(chunk, sizeof(u_int8_t));
+			chunk = chunk_skip(chunk, sizeof(uint8_t));
 		}
 	}
 
 	/* align to 4 byte */
-	if (chunk.len >= sizeof(u_int16_t))
+	if (chunk.len >= sizeof(uint16_t))
 	{
 		if ((uintptr_t)chunk.ptr % 4)
 		{
-			if (!rdrand16((u_int16_t*)chunk.ptr))
+			if (!rdrand16((uint16_t*)chunk.ptr))
 			{
 				return FALSE;
 			}
-			chunk = chunk_skip(chunk, sizeof(u_int16_t));
+			chunk = chunk_skip(chunk, sizeof(uint16_t));
 		}
 	}
 
 #ifdef __x86_64__
 
 	/* align to 8 byte */
-	if (chunk.len >= sizeof(u_int32_t))
+	if (chunk.len >= sizeof(uint32_t))
 	{
 		if ((uintptr_t)chunk.ptr % 8)
 		{
-			if (!rdrand32((u_int32_t*)chunk.ptr))
+			if (!rdrand32((uint32_t*)chunk.ptr))
 			{
 				return FALSE;
 			}
-			chunk = chunk_skip(chunk, sizeof(u_int32_t));
+			chunk = chunk_skip(chunk, sizeof(uint32_t));
 		}
 	}
 
 	/* fill with 8 byte words */
-	while (chunk.len >= sizeof(u_int64_t))
+	while (chunk.len >= sizeof(uint64_t))
 	{
 		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED == 0)
 		{
@@ -252,27 +252,27 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 				return FALSE;
 			}
 		}
-		if (!rdrand64((u_int64_t*)chunk.ptr))
+		if (!rdrand64((uint64_t*)chunk.ptr))
 		{
 			return FALSE;
 		}
-		chunk = chunk_skip(chunk, sizeof(u_int64_t));
+		chunk = chunk_skip(chunk, sizeof(uint64_t));
 	}
 
 	/* append 4 byte word */
-	if (chunk.len >= sizeof(u_int32_t))
+	if (chunk.len >= sizeof(uint32_t))
 	{
-		if (!rdrand32((u_int32_t*)chunk.ptr))
+		if (!rdrand32((uint32_t*)chunk.ptr))
 		{
 			return FALSE;
 		}
-		chunk = chunk_skip(chunk, sizeof(u_int32_t));
+		chunk = chunk_skip(chunk, sizeof(uint32_t));
 	}
 
 #else /* __i386__ */
 
 	/* fill with 4 byte words */
-	while (chunk.len >= sizeof(u_int32_t))
+	while (chunk.len >= sizeof(uint32_t))
 	{
 		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED == 0)
 		{
@@ -281,11 +281,11 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 				return FALSE;
 			}
 		}
-		if (!rdrand32((u_int32_t*)chunk.ptr))
+		if (!rdrand32((uint32_t*)chunk.ptr))
 		{
 			return FALSE;
 		}
-		chunk = chunk_skip(chunk, sizeof(u_int32_t));
+		chunk = chunk_skip(chunk, sizeof(uint32_t));
 	}
 
 #endif /* __x86_64__ / __i386__ */
@@ -299,23 +299,23 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 	}
 
 	/* append 2 byte word */
-	if (chunk.len >= sizeof(u_int16_t))
+	if (chunk.len >= sizeof(uint16_t))
 	{
-		if (!rdrand16((u_int16_t*)chunk.ptr))
+		if (!rdrand16((uint16_t*)chunk.ptr))
 		{
 			return FALSE;
 		}
-		chunk = chunk_skip(chunk, sizeof(u_int16_t));
+		chunk = chunk_skip(chunk, sizeof(uint16_t));
 	}
 
 	/* append 1 byte word */
-	if (chunk.len >= sizeof(u_int8_t))
+	if (chunk.len >= sizeof(uint8_t))
 	{
-		if (!rdrand8((u_int8_t*)chunk.ptr))
+		if (!rdrand8((uint8_t*)chunk.ptr))
 		{
 			return FALSE;
 		}
-		chunk = chunk_skip(chunk, sizeof(u_int8_t));
+		chunk = chunk_skip(chunk, sizeof(uint8_t));
 	}
 
 	return TRUE;
@@ -378,7 +378,7 @@ static bool rdrand_mixed(private_rdrand_rng_t *this, chunk_t chunk)
 }
 
 METHOD(rng_t, get_bytes, bool,
-	private_rdrand_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_rdrand_rng_t *this, size_t bytes, uint8_t *buffer)
 {
 	switch (this->quality)
 	{

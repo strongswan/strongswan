@@ -60,7 +60,7 @@ struct private_radius_socket_t {
 	/**
 	 * Server port for authentication
 	 */
-	u_int16_t auth_port;
+	uint16_t auth_port;
 
 	/**
 	 * socket file descriptor for authentication
@@ -70,7 +70,7 @@ struct private_radius_socket_t {
 	/**
 	 * Server port for accounting
 	 */
-	u_int16_t acct_port;
+	uint16_t acct_port;
 
 	/**
 	 * socket file descriptor for accounting
@@ -85,7 +85,7 @@ struct private_radius_socket_t {
 	/**
 	 * current RADIUS identifier
 	 */
-	u_int8_t identifier;
+	uint8_t identifier;
 
 	/**
 	 * hasher to use for response verification
@@ -127,7 +127,7 @@ struct private_radius_socket_t {
  * Check or establish RADIUS connection
  */
 static bool check_connection(private_radius_socket_t *this,
-							 int *fd, u_int16_t port)
+							 int *fd, uint16_t port)
 {
 	if (*fd == -1)
 	{
@@ -166,7 +166,7 @@ static bool check_connection(private_radius_socket_t *this,
 /**
  * Receive the response to the message with the given ID
  */
-static status_t receive_response(int fd, int timeout, u_int8_t id,
+static status_t receive_response(int fd, int timeout, uint8_t id,
 								 radius_message_t **response)
 {
 	radius_message_t *msg;
@@ -224,7 +224,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	radius_message_t *response;
 	chunk_t data;
 	int *fd, retransmit = 0, timeout;
-	u_int16_t port;
+	uint16_t port;
 	rng_t *rng = NULL;
 
 	if (request->get_code(request) == RMC_ACCOUNTING_REQUEST)
@@ -299,7 +299,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 /**
  * Decrypt a MS-MPPE-Send/Recv-Key
  */
-static chunk_t decrypt_mppe_key(private_radius_socket_t *this, u_int16_t salt,
+static chunk_t decrypt_mppe_key(private_radius_socket_t *this, uint16_t salt,
 								chunk_t C, radius_message_t *request)
 {
 	chunk_t decrypted;
@@ -375,8 +375,8 @@ METHOD(radius_socket_t, destroy, void,
 /**
  * See header
  */
-radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
-									  u_int16_t acct_port, chunk_t secret,
+radius_socket_t *radius_socket_create(char *address, uint16_t auth_port,
+									  uint16_t acct_port, chunk_t secret,
 									  u_int tries, double timeout, double base)
 {
 	private_radius_socket_t *this;

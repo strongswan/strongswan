@@ -93,8 +93,8 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 	esp_packet_t *packet;
 	ip_packet_t *ip_packet;
 	ipsec_sa_t *sa;
-	u_int8_t next_header;
-	u_int32_t spi, reqid;
+	uint8_t next_header;
+	uint32_t spi, reqid;
 
 	packet = (esp_packet_t*)this->inbound_queue->dequeue(this->inbound_queue);
 

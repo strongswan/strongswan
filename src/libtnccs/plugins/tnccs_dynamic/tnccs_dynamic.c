@@ -64,7 +64,7 @@ struct private_tnccs_dynamic_t {
 	/**
 	 * Type of TNC client authentication
 	 */
-	u_int32_t auth_type;
+	uint32_t auth_type;
 
 	/**
 	 * Callback function to communicate recommendation (TNC Server only)
@@ -223,20 +223,20 @@ METHOD(tnccs_t, set_transport, void,
 	this->transport = transport;
 }
 
-METHOD(tnccs_t, get_auth_type, u_int32_t,
+METHOD(tnccs_t, get_auth_type, uint32_t,
 	private_tnccs_dynamic_t *this)
 {
 	return this->auth_type;
 }
 
 METHOD(tnccs_t, set_auth_type, void,
-	private_tnccs_dynamic_t *this, u_int32_t auth_type)
+	private_tnccs_dynamic_t *this, uint32_t auth_type)
 {
 	this->auth_type = auth_type;
 }
 
 METHOD(tnccs_t, get_pdp_server, chunk_t,
-	private_tnccs_dynamic_t *this, u_int16_t *port)
+	private_tnccs_dynamic_t *this, uint16_t *port)
 {
 	tnccs_t *tnccs = (tnccs_t*)this->tls;
 

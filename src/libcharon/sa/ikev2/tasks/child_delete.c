@@ -50,7 +50,7 @@ struct private_child_delete_t {
 	/**
 	 * Inbound SPI of CHILD_SA to delete
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * whether to enforce delete action policy
@@ -86,7 +86,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		protocol_id_t protocol = child_sa->get_protocol(child_sa);
-		u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
+		uint32_t spi = child_sa->get_spi(child_sa, TRUE);
 
 		switch (protocol)
 		{
@@ -126,7 +126,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	enumerator_t *payloads, *spis;
 	payload_t *payload;
 	delete_payload_t *delete_payload;
-	u_int32_t spi;
+	uint32_t spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
 
@@ -199,7 +199,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
-	u_int32_t spi, reqid;
+	uint32_t spi, reqid;
 	action_t action;
 	status_t status = SUCCESS;
 
@@ -254,7 +254,7 @@ static void log_children(private_child_delete_t *this)
 	linked_list_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-	u_int64_t bytes_in, bytes_out;
+	uint64_t bytes_in, bytes_out;
 
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
@@ -391,7 +391,7 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi, bool expired)
+									uint32_t spi, bool expired)
 {
 	private_child_delete_t *this;
 

@@ -49,7 +49,7 @@ struct private_eap_md5_t {
 	/**
 	 * EAP message identifier
 	 */
-	u_int8_t identifier;
+	uint8_t identifier;
 };
 
 typedef struct eap_md5_header_t eap_md5_header_t;
@@ -59,17 +59,17 @@ typedef struct eap_md5_header_t eap_md5_header_t;
  */
 struct eap_md5_header_t {
 	/** EAP code (REQUEST/RESPONSE) */
-	u_int8_t code;
+	uint8_t code;
 	/** unique message identifier */
-	u_int8_t identifier;
+	uint8_t identifier;
 	/** length of whole message */
-	u_int16_t length;
+	uint16_t length;
 	/** EAP type */
-	u_int8_t type;
+	uint8_t type;
 	/** length of value (challenge) */
-	u_int8_t value_size;
+	uint8_t value_size;
 	/** actual value */
-	u_int8_t value[];
+	uint8_t value[];
 } __attribute__((__packed__));
 
 #define CHALLENGE_LEN 16
@@ -204,7 +204,7 @@ METHOD(eap_method_t, process_server, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_md5_t *this, u_int32_t *vendor)
+	private_eap_md5_t *this, uint32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_MD5;
@@ -222,14 +222,14 @@ METHOD(eap_method_t, is_mutual, bool,
 	return FALSE;
 }
 
-METHOD(eap_method_t, get_identifier, u_int8_t,
+METHOD(eap_method_t, get_identifier, uint8_t,
 	private_eap_md5_t *this)
 {
 	return this->identifier;
 }
 
 METHOD(eap_method_t, set_identifier, void,
-	private_eap_md5_t *this, u_int8_t identifier)
+	private_eap_md5_t *this, uint8_t identifier)
 {
 	this->identifier = identifier;
 }

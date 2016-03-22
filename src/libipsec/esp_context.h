@@ -46,7 +46,7 @@ struct esp_context_t {
 	 *
 	 * @return			current sequence number, in host byte order
 	 */
-	u_int32_t (*get_seqno)(esp_context_t *this);
+	uint32_t (*get_seqno)(esp_context_t *this);
 
 	/**
 	 * Allocate the next outbound ESP sequence number.
@@ -54,7 +54,7 @@ struct esp_context_t {
 	 * @param seqno		the sequence number, in host byte order
 	 * @return			FALSE if the sequence number cycled or inbound context
 	 */
-	bool (*next_seqno)(esp_context_t *this, u_int32_t *seqno);
+	bool (*next_seqno)(esp_context_t *this, uint32_t *seqno);
 
 	/**
 	 * Verify an ESP sequence number.  Checks whether a packet with this
@@ -66,7 +66,7 @@ struct esp_context_t {
 	 * @param seqno		the sequence number to verify, in host byte order
 	 * @return			TRUE when sequence number is valid
 	 */
-	bool (*verify_seqno)(esp_context_t *this, u_int32_t seqno);
+	bool (*verify_seqno)(esp_context_t *this, uint32_t seqno);
 
 	/**
 	 * Adds a sequence number that was successfully verified and
@@ -76,7 +76,7 @@ struct esp_context_t {
 	 * @param seqno		verified and authenticated seq number in host byte order
 	 */
 	void (*set_authenticated_seqno)(esp_context_t *this,
-									u_int32_t seqno);
+									uint32_t seqno);
 
 	/**
 	 * Destroy an esp_context_t

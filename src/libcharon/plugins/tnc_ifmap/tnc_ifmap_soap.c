@@ -186,7 +186,7 @@ METHOD(tnc_ifmap_soap_t, purgePublisher, bool,
  * Create an access-request based on device_name and ike_sa_id
  */
 static xmlNodePtr create_access_request(private_tnc_ifmap_soap_t *this,
-										u_int32_t id)
+										uint32_t id)
 {
 	xmlNodePtr node;
 	char buf[BUF_LEN];
@@ -415,7 +415,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	identification_t *id, *eap_id, *group;
 	host_t *host;
 	auth_cfg_t *auth;
-	u_int32_t ike_sa_id;
+	uint32_t ike_sa_id;
 	bool is_user = FALSE, first = TRUE, success;
 
 	/* extract relevant data from IKE_SA*/
@@ -584,7 +584,7 @@ METHOD(tnc_ifmap_soap_t, publish_virtual_ips, bool,
 {
 	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, node;
-	u_int32_t ike_sa_id;
+	uint32_t ike_sa_id;
 	enumerator_t *enumerator;
 	host_t *vip;
 	bool success;

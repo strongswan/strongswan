@@ -45,30 +45,30 @@ struct private_chapoly_drv_ssse3_t {
 	/**
 	 * Poly1305 update key
 	 */
-	u_int32_t r[5];
+	uint32_t r[5];
 
 	/**
 	 * Poly1305 update key r^2
 	 */
-	u_int32_t u[5];
+	uint32_t u[5];
 
 	/**
 	 * Poly1305 state
 	 */
-	u_int32_t h[5];
+	uint32_t h[5];
 
 	/**
 	 * Poly1305 finalize key
 	 */
-	u_int32_t s[4];
+	uint32_t s[4];
 };
 
 /**
  * Read a 32-bit integer from an unaligned address
  */
-static inline u_int32_t ru32(void *p)
+static inline uint32_t ru32(void *p)
 {
-	u_int32_t ret;
+	uint32_t ret;
 
 	memcpy(&ret, p, sizeof(ret));
 	return ret;
@@ -77,7 +77,7 @@ static inline u_int32_t ru32(void *p)
 /**
  * Write a 32-bit word to an unaligned address
  */
-static inline void wu32(void *p, u_int32_t v)
+static inline void wu32(void *p, uint32_t v)
 {
 	memcpy(p, &v, sizeof(v));
 }
@@ -85,13 +85,13 @@ static inline void wu32(void *p, u_int32_t v)
 /**
  * Shift a 64-bit unsigned integer v right by n bits, clamp to 32 bit
 */
-static inline u_int32_t sr(u_int64_t v, u_char n)
+static inline uint32_t sr(uint64_t v, u_char n)
 {
 	return v >> n;
 }
 
 /**
- * AND two values, using a native integer size >= sizeof(u_int32_t)
+ * AND two values, using a native integer size >= sizeof(uint32_t)
  */
 static inline u_long and(u_long v, u_long mask)
 {
@@ -189,7 +189,7 @@ static void chacha_4block_xor(private_chapoly_drv_ssse3_t *this, void *data)
 {
 	__m128i x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, xa, xb, xc, xd, xe, xf;
 	__m128i r8, r16, ctrinc, t, *out = data;
-	u_int32_t *m = (u_int32_t*)this->m;
+	uint32_t *m = (uint32_t*)this->m;
 	u_int i;
 
 	r8  = _mm_set_epi8(14, 13, 12, 15, 10, 9, 8, 11, 6, 5, 4, 7, 2, 1, 0, 3);
@@ -364,7 +364,7 @@ METHOD(chapoly_drv_t, set_key, bool,
 /**
  * r[127:64] = h[95:64] * a, r[63:0] = h[31:0] * b
  */
-static inline __m128i mul2(__m128i h, u_int32_t a, u_int32_t b)
+static inline __m128i mul2(__m128i h, uint32_t a, uint32_t b)
 {
 	return _mm_mul_epu32(h, _mm_set_epi32(0, a, 0, b));
 }
@@ -374,7 +374,7 @@ static inline __m128i mul2(__m128i h, u_int32_t a, u_int32_t b)
  * z = x[127:64] + x[63:0] + y[127:64] + y[63:0]
  */
 static inline void sum2(__m128i a, __m128i b, __m128i x, __m128i y,
-						u_int64_t *c, u_int64_t *z)
+						uint64_t *c, uint64_t *z)
 {
 	__m128i r, s;
 
@@ -392,10 +392,10 @@ static inline void sum2(__m128i a, __m128i b, __m128i x, __m128i y,
  * r = a[127:64] + b[127:64] + c[127:64] + d[127:64] + e[127:64]
  *   + a[63:0]   + b[63:0]   + c[63:0]   + d[63:0]   + e[63:0]
  */
-static inline u_int64_t sum5(__m128i a, __m128i b, __m128i c,
+static inline uint64_t sum5(__m128i a, __m128i b, __m128i c,
 							 __m128i d, __m128i e)
 {
-	u_int64_t r;
+	uint64_t r;
 
 	a = _mm_add_epi64(a, b);
 	c = _mm_add_epi64(c, d);
@@ -414,10 +414,10 @@ static inline u_int64_t sum5(__m128i a, __m128i b, __m128i c,
 static void make_u(private_chapoly_drv_ssse3_t *this)
 {
 	__m128i r01, r23, r44, x0, x1, y0, y1, z0;
-	u_int32_t r0, r1, r2, r3, r4;
-	u_int32_t u0, u1, u2, u3, u4;
-	u_int32_t s1, s2, s3, s4;
-	u_int64_t d0, d1, d2, d3, d4;
+	uint32_t r0, r1, r2, r3, r4;
+	uint32_t u0, u1, u2, u3, u4;
+	uint32_t s1, s2, s3, s4;
+	uint64_t d0, d1, d2, d3, d4;
 
 	r0 = this->r[0];
 	r1 = this->r[1];
@@ -513,12 +513,12 @@ METHOD(chapoly_drv_t, init, bool,
  */
 static void poly2(private_chapoly_drv_ssse3_t *this, u_char *data, u_int dblks)
 {
-	u_int32_t r0, r1, r2, r3, r4, u0, u1, u2, u3, u4;
-	u_int32_t s1, s2, s3, s4, v1, v2, v3, v4;
+	uint32_t r0, r1, r2, r3, r4, u0, u1, u2, u3, u4;
+	uint32_t s1, s2, s3, s4, v1, v2, v3, v4;
 	__m128i hc0, hc1, hc2, hc3, hc4;
-	u_int32_t h0, h1, h2, h3, h4;
-	u_int32_t c0, c1, c2, c3, c4;
-	u_int64_t d0, d1, d2, d3, d4;
+	uint32_t h0, h1, h2, h3, h4;
+	uint32_t c0, c1, c2, c3, c4;
+	uint64_t d0, d1, d2, d3, d4;
 	u_int i;
 
 	r0 = this->r[0];
@@ -622,13 +622,13 @@ static void poly2(private_chapoly_drv_ssse3_t *this, u_char *data, u_int dblks)
  */
 static void poly1(private_chapoly_drv_ssse3_t *this, u_char *data)
 {
-	u_int32_t r0, r1, r2, r3, r4;
-	u_int32_t s1, s2, s3, s4;
-	u_int32_t h0, h1, h2, h3, h4;
-	u_int64_t d0, d1, d2, d3, d4;
+	uint32_t r0, r1, r2, r3, r4;
+	uint32_t s1, s2, s3, s4;
+	uint32_t h0, h1, h2, h3, h4;
+	uint64_t d0, d1, d2, d3, d4;
 	__m128i h01, h23, h44;
 	__m128i x0, x1, y0, y1, z0;
-	u_int32_t t0, t1;
+	uint32_t t0, t1;
 
 	r0 = this->r[0];
 	r1 = this->r[1];
@@ -764,10 +764,10 @@ METHOD(chapoly_drv_t, decrypt, bool,
 METHOD(chapoly_drv_t, finish, bool,
 	private_chapoly_drv_ssse3_t *this, u_char *mac)
 {
-	u_int32_t h0, h1, h2, h3, h4;
-	u_int32_t g0, g1, g2, g3, g4;
-	u_int32_t mask;
-	u_int64_t f = 0;
+	uint32_t h0, h1, h2, h3, h4;
+	uint32_t g0, g1, g2, g3, g4;
+	uint32_t mask;
+	uint64_t f = 0;
 
 	/* fully carry h */
 	h0 = this->h[0];
@@ -790,7 +790,7 @@ METHOD(chapoly_drv_t, finish, bool,
 	g4 = h4 + (g3 >> 26) - (1 << 26); g3 &= 0x3ffffff;
 
 	/* select h if h < p, or h + -p if h >= p */
-	mask = (g4 >> ((sizeof(u_int32_t) * 8) - 1)) - 1;
+	mask = (g4 >> ((sizeof(uint32_t) * 8) - 1)) - 1;
 	g0 &= mask;
 	g1 &= mask;
 	g2 &= mask;

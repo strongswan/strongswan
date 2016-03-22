@@ -38,8 +38,8 @@ struct iv_gen_t {
 	 * @param buffer	pointer where the generated IV will be written
 	 * @return			TRUE if IV allocation was successful, FALSE otherwise
 	 */
-	bool (*get_iv)(iv_gen_t *this, u_int64_t seq, size_t size,
-				   u_int8_t *buffer) __attribute__((warn_unused_result));
+	bool (*get_iv)(iv_gen_t *this, uint64_t seq, size_t size,
+				   uint8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generates an IV and allocates space for it.
@@ -49,7 +49,7 @@ struct iv_gen_t {
 	 * @param chunk		chunk which will hold the generated IV
 	 * @return			TRUE if IV allocation was successful, FALSE otherwise
 	 */
-	bool (*allocate_iv)(iv_gen_t *this, u_int64_t seq, size_t size,
+	bool (*allocate_iv)(iv_gen_t *this, uint64_t seq, size_t size,
 						chunk_t *chunk) __attribute__((warn_unused_result));
 
 	/**

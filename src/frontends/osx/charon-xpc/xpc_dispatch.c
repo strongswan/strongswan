@@ -77,7 +77,7 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
-	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
+	uint16_t local_port, remote_port = IKEV2_UDP_PORT;
 
 	local_port = charon->socket->get_port(charon->socket, FALSE);
 	if (local_port != IKEV2_UDP_PORT)
@@ -154,7 +154,7 @@ static child_cfg_t* create_child_cfg(char *name)
 /**
  * Controller initiate callback
  */
-static bool initiate_cb(u_int32_t *sa, debug_t group, level_t level,
+static bool initiate_cb(uint32_t *sa, debug_t group, level_t level,
 						ike_sa_t *ike_sa, const char *message)
 {
 	if (ike_sa)
@@ -177,7 +177,7 @@ void start_connection(private_xpc_dispatch_t *this,
 	bool success = FALSE;
 	xpc_endpoint_t endpoint;
 	xpc_connection_t channel;
-	u_int32_t ike_sa;
+	uint32_t ike_sa;
 
 	name = (char*)xpc_dictionary_get_string(request, "name");
 	host = (char*)xpc_dictionary_get_string(request, "host");

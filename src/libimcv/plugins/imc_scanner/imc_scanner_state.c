@@ -59,7 +59,7 @@ struct private_imc_scanner_state_t {
 	/**
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	/**
 	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
@@ -93,12 +93,12 @@ METHOD(imc_state_t, set_flags, void,
 }
 
 METHOD(imc_state_t, set_max_msg_len, void,
-	private_imc_scanner_state_t *this, u_int32_t max_msg_len)
+	private_imc_scanner_state_t *this, uint32_t max_msg_len)
 {
 	this->max_msg_len = max_msg_len;
 }
 
-METHOD(imc_state_t, get_max_msg_len, u_int32_t,
+METHOD(imc_state_t, get_max_msg_len, uint32_t,
 	private_imc_scanner_state_t *this)
 {
 	return this->max_msg_len;

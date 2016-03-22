@@ -44,7 +44,7 @@ struct private_pkcs11_rng_t {
 };
 
 METHOD(rng_t, get_bytes, bool,
-	private_pkcs11_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_pkcs11_rng_t *this, size_t bytes, uint8_t *buffer)
 {
 	CK_RV rv;
 	rv = this->lib->f->C_GenerateRandom(this->session, buffer, bytes);

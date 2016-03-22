@@ -64,7 +64,7 @@ METHOD(job_t, execute, job_requeue_t,
 	ike_sa_id_t *id;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
-	u_int32_t unique;
+	uint32_t unique;
 
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->id);
 	if (ike_sa)

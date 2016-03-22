@@ -124,7 +124,7 @@ struct private_load_tester_config_t {
 	/**
 	 * Current port for unique initiator ports
 	 */
-	u_int16_t unique_port;
+	uint16_t unique_port;
 
 	/**
 	 * IKE_SA rekeying delay
@@ -154,7 +154,7 @@ struct private_load_tester_config_t {
 	/**
 	 * Dynamic source port, if used
 	 */
-	u_int16_t port;
+	uint16_t port;
 
 	/**
 	 * IKE version to use for load testing
@@ -454,8 +454,8 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 /**
  * Parse a protoport specifier
  */
-static bool parse_protoport(char *token, u_int16_t *from_port,
-							u_int16_t *to_port, u_int8_t *protocol)
+static bool parse_protoport(char *token, uint16_t *from_port,
+							uint16_t *to_port, uint8_t *protocol)
 {
 	char *sep, *port = "", *endptr;
 	struct protoent *proto;
@@ -494,7 +494,7 @@ static bool parse_protoport(char *token, u_int16_t *from_port,
 			{
 				return FALSE;
 			}
-			*protocol = (u_int8_t)p;
+			*protocol = (uint8_t)p;
 		}
 	}
 	if (streq(port, "%any"))
@@ -557,8 +557,8 @@ static void add_ts(private_load_tester_config_t *this,
 	{
 		enumerator_t *enumerator;
 		char *subnet, *pos;
-		u_int16_t from_port, to_port;
-		u_int8_t proto;
+		uint16_t from_port, to_port;
+		uint8_t proto;
 
 		enumerator = enumerator_create_token(string, ",", " ");
 		while (enumerator->enumerate(enumerator, &subnet))

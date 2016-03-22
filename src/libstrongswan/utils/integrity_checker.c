@@ -56,10 +56,10 @@ struct private_integrity_checker_t {
 	int checksum_count;
 };
 
-METHOD(integrity_checker_t, build_file, u_int32_t,
+METHOD(integrity_checker_t, build_file, uint32_t,
 	private_integrity_checker_t *this, char *file, size_t *len)
 {
-	u_int32_t checksum;
+	uint32_t checksum;
 	chunk_t *contents;
 
 	contents = chunk_map(file, FALSE);
@@ -109,7 +109,7 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 	return 0;
 }
 
-METHOD(integrity_checker_t, build_segment, u_int32_t,
+METHOD(integrity_checker_t, build_segment, uint32_t,
 	private_integrity_checker_t *this, void *sym, size_t *len)
 {
 	chunk_t segment;
@@ -154,7 +154,7 @@ METHOD(integrity_checker_t, check_file, bool,
 	private_integrity_checker_t *this, char *name, char *file)
 {
 	integrity_checksum_t *cs;
-	u_int32_t sum;
+	uint32_t sum;
 	size_t len = 0;
 
 	cs = find_checksum(this, name);
@@ -188,7 +188,7 @@ METHOD(integrity_checker_t, check_segment, bool,
 	private_integrity_checker_t *this, char *name, void *sym)
 {
 	integrity_checksum_t *cs;
-	u_int32_t sum;
+	uint32_t sum;
 	size_t len = 0;
 
 	cs = find_checksum(this, name);

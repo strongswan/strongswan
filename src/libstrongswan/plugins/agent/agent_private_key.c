@@ -98,18 +98,18 @@ static u_char read_byte(chunk_t *blob)
 }
 
 /**
- * read a u_int32_t from a blob
+ * read a uint32_t from a blob
  */
-static u_int32_t read_uint32(chunk_t *blob)
+static uint32_t read_uint32(chunk_t *blob)
 {
-	u_int32_t val;
+	uint32_t val;
 
-	if (blob->len < sizeof(u_int32_t))
+	if (blob->len < sizeof(uint32_t))
 	{
 		return 0;
 	}
-	val = ntohl(*(u_int32_t*)blob->ptr);
-	*blob = chunk_skip(*blob, sizeof(u_int32_t));
+	val = ntohl(*(uint32_t*)blob->ptr);
+	*blob = chunk_skip(*blob, sizeof(uint32_t));
 	return val;
 }
 
@@ -182,7 +182,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	blob = chunk_create(buf, sizeof(buf));
 	blob.len = read(this->socket, blob.ptr, blob.len);
 
-	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
+	if (blob.len < sizeof(uint32_t) + sizeof(u_char) ||
 		read_uint32(&blob) != blob.len ||
 		read_byte(&blob) != SSH_AGENT_ID_RESPONSE)
 	{
@@ -236,7 +236,7 @@ METHOD(private_key_t, sign, bool,
 	private_agent_private_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t *signature)
 {
-	u_int32_t len, flags;
+	uint32_t len, flags;
 	char buf[2048];
 	chunk_t blob;
 
@@ -247,7 +247,7 @@ METHOD(private_key_t, sign, bool,
 		return FALSE;
 	}
 
-	len = htonl(1 + sizeof(u_int32_t) * 3 + this->key.len + data.len);
+	len = htonl(1 + sizeof(uint32_t) * 3 + this->key.len + data.len);
 	buf[0] = SSH_AGENT_SIGN_REQUEST;
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, &buf, 1) != 1)
@@ -281,7 +281,7 @@ METHOD(private_key_t, sign, bool,
 
 	blob = chunk_create(buf, sizeof(buf));
 	blob.len = read(this->socket, blob.ptr, blob.len);
-	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
+	if (blob.len < sizeof(uint32_t) + sizeof(u_char) ||
 		read_uint32(&blob) != blob.len ||
 		read_byte(&blob) != SSH_AGENT_SIGN_RESPONSE)
 	{

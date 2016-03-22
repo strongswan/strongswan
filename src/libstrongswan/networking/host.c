@@ -79,7 +79,7 @@ METHOD(host_t, get_sockaddr_len, socklen_t*,
 METHOD(host_t, is_anyaddr, bool,
 	private_host_t *this)
 {
-	static const u_int8_t zeroes[IPV6_LEN];
+	static const uint8_t zeroes[IPV6_LEN];
 
 	switch (this->address.sa_family)
 	{
@@ -119,7 +119,7 @@ int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	else
 	{
 		void *address;
-		u_int16_t port;
+		uint16_t port;
 		int len;
 
 		address = &this->address6.sin6_addr;
@@ -191,7 +191,7 @@ METHOD(host_t, get_family, int,
 	return this->address.sa_family;
 }
 
-METHOD(host_t, get_port, u_int16_t,
+METHOD(host_t, get_port, uint16_t,
 	private_host_t *this)
 {
 	switch (this->address.sa_family)
@@ -212,7 +212,7 @@ METHOD(host_t, get_port, u_int16_t,
 }
 
 METHOD(host_t, set_port, void,
-	private_host_t *this, u_int16_t port)
+	private_host_t *this, uint16_t port)
 {
 	switch (this->address.sa_family)
 	{
@@ -334,7 +334,7 @@ static private_host_t *host_create_empty(void)
 /*
  * Create a %any host with port
  */
-static host_t *host_create_any_port(int family, u_int16_t port)
+static host_t *host_create_any_port(int family, uint16_t port)
 {
 	host_t *this;
 
@@ -347,7 +347,7 @@ static host_t *host_create_any_port(int family, u_int16_t port)
  * Described in header.
  */
 host_t *host_create_from_string_and_family(char *string, int family,
-										   u_int16_t port)
+										   uint16_t port)
 {
 	union {
 		struct sockaddr_in v4;
@@ -415,7 +415,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
 /*
  * Described in header.
  */
-host_t *host_create_from_string(char *string, u_int16_t port)
+host_t *host_create_from_string(char *string, uint16_t port)
 {
 	return host_create_from_string_and_family(string, AF_UNSPEC, port);
 }
@@ -455,7 +455,7 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 /*
  * Described in header.
  */
-host_t *host_create_from_dns(char *string, int af, u_int16_t port)
+host_t *host_create_from_dns(char *string, int af, uint16_t port)
 {
 	host_t *this;
 
@@ -474,7 +474,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 /*
  * Described in header.
  */
-host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
+host_t *host_create_from_chunk(int family, chunk_t address, uint16_t port)
 {
 	private_host_t *this;
 
@@ -646,7 +646,7 @@ host_t *host_create_netmask(int family, int netbits)
 	if (bytes < len)
 	{
 		memset(target + bytes, 0x00, len - bytes);
-		target[bytes] = (u_int8_t)(0xff << bits);
+		target[bytes] = (uint8_t)(0xff << bits);
 	}
 	return &this->public;
 }

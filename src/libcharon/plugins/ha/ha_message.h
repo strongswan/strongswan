@@ -92,9 +92,9 @@ enum ha_message_attribute_t {
 	HA_REMOTE_ADDR,
 	/** char*, name of configuration */
 	HA_CONFIG_NAME,
-	/** u_int32_t, bitset of ike_condition_t */
+	/** uint32_t, bitset of ike_condition_t */
 	HA_CONDITIONS,
-	/** u_int32_t, bitset of ike_extension_t */
+	/** uint32_t, bitset of ike_extension_t */
 	HA_EXTENSIONS,
 	/** host_t*, local virtual IP */
 	HA_LOCAL_VIP,
@@ -102,7 +102,7 @@ enum ha_message_attribute_t {
 	HA_REMOTE_VIP,
 	/** host_t*, known peer addresses (used for MOBIKE) */
 	HA_PEER_ADDR,
-	/** u_int8_t, initiator of an exchange, TRUE for local */
+	/** uint8_t, initiator of an exchange, TRUE for local */
 	HA_INITIATOR,
 	/** chunk_t, initiators nonce */
 	HA_NONCE_I,
@@ -112,41 +112,41 @@ enum ha_message_attribute_t {
 	HA_SECRET,
 	/** chunk_t, SKd of old SA if rekeying */
 	HA_OLD_SKD,
-	/** u_int16_t, pseudo random function */
+	/** uint16_t, pseudo random function */
 	HA_ALG_PRF,
-	/** u_int16_t, old pseudo random function if rekeying */
+	/** uint16_t, old pseudo random function if rekeying */
 	HA_ALG_OLD_PRF,
-	/** u_int16_t, encryption algorithm */
+	/** uint16_t, encryption algorithm */
 	HA_ALG_ENCR,
-	/** u_int16_t, encryption key size in bytes */
+	/** uint16_t, encryption key size in bytes */
 	HA_ALG_ENCR_LEN,
-	/** u_int16_t, integrity protection algorithm */
+	/** uint16_t, integrity protection algorithm */
 	HA_ALG_INTEG,
-	/** u_int16_t, DH group */
+	/** uint16_t, DH group */
 	HA_ALG_DH,
-	/** u_int8_t, IPsec mode, TUNNEL|TRANSPORT|... */
+	/** uint8_t, IPsec mode, TUNNEL|TRANSPORT|... */
 	HA_IPSEC_MODE,
-	/** u_int8_t, IPComp protocol */
+	/** uint8_t, IPComp protocol */
 	HA_IPCOMP,
-	/** u_int32_t, inbound security parameter index */
+	/** uint32_t, inbound security parameter index */
 	HA_INBOUND_SPI,
-	/** u_int32_t, outbound security parameter index */
+	/** uint32_t, outbound security parameter index */
 	HA_OUTBOUND_SPI,
-	/** u_int16_t, inbound security parameter index */
+	/** uint16_t, inbound security parameter index */
 	HA_INBOUND_CPI,
-	/** u_int16_t, outbound security parameter index */
+	/** uint16_t, outbound security parameter index */
 	HA_OUTBOUND_CPI,
 	/** traffic_selector_t*, local traffic selector */
 	HA_LOCAL_TS,
 	/** traffic_selector_t*, remote traffic selector */
 	HA_REMOTE_TS,
-	/** u_int32_t, message ID */
+	/** uint32_t, message ID */
 	HA_MID,
-	/** u_int16_t, HA segment */
+	/** uint16_t, HA segment */
 	HA_SEGMENT,
-	/** u_int16_t, Extended Sequence numbers */
+	/** uint16_t, Extended Sequence numbers */
 	HA_ESN,
-	/** u_int8_t, IKE version */
+	/** uint8_t, IKE version */
 	HA_IKE_VERSION,
 	/** chunk_t, own DH public value */
 	HA_LOCAL_DH,
@@ -162,9 +162,9 @@ enum ha_message_attribute_t {
  * Union to enumerate typed attributes in a message
  */
 union ha_message_value_t {
-	u_int8_t u8;
-	u_int16_t u16;
-	u_int32_t u32;
+	uint8_t u8;
+	uint16_t u16;
+	uint32_t u32;
 	char *str;
 	chunk_t chunk;
 	ike_sa_id_t *ike_sa_id;

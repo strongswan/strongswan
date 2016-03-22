@@ -108,7 +108,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_aik_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = PTS_AIK_FLAGS_NONE;
+	uint8_t flags = PTS_AIK_FLAGS_NONE;
 	cred_encoding_type_t encoding_type = CERT_ASN1_DER;
 	chunk_t aik_blob;
 
@@ -136,10 +136,10 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_aik_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_aik_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
+	uint8_t flags;
 	certificate_type_t type;
 	chunk_t aik_blob;
 

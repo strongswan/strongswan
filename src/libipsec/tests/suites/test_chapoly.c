@@ -27,7 +27,7 @@ METHOD(aead_t, get_iv_gen, iv_gen_t*,
 }
 
 METHOD(iv_gen_t, get_iv, bool,
-	iv_gen_t *this, u_int64_t seq, size_t size, u_int8_t *buffer)
+	iv_gen_t *this, uint64_t seq, size_t size, uint8_t *buffer)
 {
 	if (size != 8)
 	{
@@ -38,7 +38,7 @@ METHOD(iv_gen_t, get_iv, bool,
 }
 
 METHOD(iv_gen_t, allocate_iv, bool,
-	iv_gen_t *this, u_int64_t seq, size_t size, chunk_t *chunk)
+	iv_gen_t *this, uint64_t seq, size_t size, chunk_t *chunk)
 {
 	if (size != 8)
 	{
@@ -58,7 +58,7 @@ START_TEST(test_chapoly)
 	esp_packet_t *esp;
 	esp_context_t *ctx;
 	chunk_t data, exp;
-	u_int32_t seq = 0;
+	uint32_t seq = 0;
 
 	icmp = ip_packet_create(chunk_clone(chunk_from_chars(
 								0x45,0x00,0x00,0x54,0xa6,0xf2,0x00,0x00,

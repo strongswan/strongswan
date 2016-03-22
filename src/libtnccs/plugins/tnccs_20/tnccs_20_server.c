@@ -166,7 +166,7 @@ static void handle_ietf_message(private_tnccs_20_server_t *this, pb_tnc_msg_t *m
 		{
 			pb_pa_msg_t *pa_msg;
 			pen_type_t msg_subtype;
-			u_int16_t imc_id, imv_id;
+			uint16_t imc_id, imv_id;
 			chunk_t msg_body;
 			bool excl;
 			enum_name_t *pa_subtype_names;
@@ -531,14 +531,14 @@ METHOD(tnccs_20_handler_t, begin_handshake, void,
 {
 	pb_tnc_msg_t *msg;
 	identification_t *pdp_server;
-	u_int16_t *pdp_port;
+	uint16_t *pdp_port;
 
 	tnc->imvs->notify_connection_change(tnc->imvs, this->connection_id,
 										TNC_CONNECTION_STATE_HANDSHAKE);
 
 	/* Send a PB-TNC TCG PDP Referral message if PDP is known */
 	pdp_server = (identification_t*)lib->get(lib, "pt-tls-server");
-	pdp_port = (u_int16_t*)lib->get(lib, "pt-tls-port");
+	pdp_port = (uint16_t*)lib->get(lib, "pt-tls-port");
 
 	if (this->eap_transport && pdp_server && pdp_port)
 	{

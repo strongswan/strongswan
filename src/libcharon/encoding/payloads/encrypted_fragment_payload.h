@@ -42,14 +42,14 @@ struct encrypted_fragment_payload_t {
 	 *
 	 * @return			fragment number
 	 */
-	u_int16_t (*get_fragment_number)(encrypted_fragment_payload_t *this);
+	uint16_t (*get_fragment_number)(encrypted_fragment_payload_t *this);
 
 	/**
 	 * Get the total number of fragments.
 	 *
 	 * @return			total number of fragments
 	 */
-	u_int16_t (*get_total_fragments)(encrypted_fragment_payload_t *this);
+	uint16_t (*get_total_fragments)(encrypted_fragment_payload_t *this);
 
 	/**
 	 * Get the (decrypted) content of this payload.
@@ -80,6 +80,6 @@ encrypted_fragment_payload_t *encrypted_fragment_payload_create();
  * @return			encrypted_fragment_payload_t object
  */
 encrypted_fragment_payload_t *encrypted_fragment_payload_create_from_data(
-								u_int16_t num, u_int16_t total, chunk_t data);
+								uint16_t num, uint16_t total, chunk_t data);
 
 #endif /** ENCRYPTED_FRAGMENT_PAYLOAD_H_ @}*/

@@ -46,11 +46,11 @@ struct ietf_attr_port_filter_t {
 	 * @param port			TCP/UDP port number
 	 */
 	void (*add_port)(ietf_attr_port_filter_t *this, bool blocked,
-					 u_int8_t protocol, u_int16_t port);
+					 uint8_t protocol, uint16_t port);
 
 	/**
 	 * Enumerates over all ports
-	 * Format:  bool *blocked, u_int8_t *protocol, u_int16_t *port
+	 * Format:  bool *blocked, uint8_t *protocol, uint16_t *port
 	 *
 	 * @return				enumerator
 	 */

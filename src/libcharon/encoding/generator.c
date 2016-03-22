@@ -68,22 +68,22 @@ struct private_generator_t {
 	/**
 	 * Buffer used to generate the data into.
 	 */
-	u_int8_t *buffer;
+	uint8_t *buffer;
 
 	/**
 	 * Current write position in buffer (one byte aligned).
 	 */
-	u_int8_t *out_position;
+	uint8_t *out_position;
 
 	/**
 	 * Position of last byte in buffer.
 	 */
-	u_int8_t *roof_position;
+	uint8_t *roof_position;
 
 	/**
 	 * Current bit writing to in current byte (between 0 and 7).
 	 */
-	u_int8_t current_bit;
+	uint8_t current_bit;
 
 	/**
 	 * Associated data struct to read informations from.
@@ -93,7 +93,7 @@ struct private_generator_t {
 	/**
 	 * Offset of the header length field in the buffer.
 	 */
-	u_int32_t header_length_offset;
+	uint32_t header_length_offset;
 
 	/**
 	 * Attribute format of the last generated transform attribute.
@@ -107,7 +107,7 @@ struct private_generator_t {
 	 * Depending on the value of attribute_format this field is used
 	 * to hold the length of the transform attribute in bytes.
 	 */
-	u_int16_t attribute_length;
+	uint16_t attribute_length;
 
 	/**
 	 * TRUE, if debug messages should be logged during generation.
@@ -142,7 +142,7 @@ static int get_length(private_generator_t *this)
 /**
  * Get current offset in buffer (in bytes).
  */
-static u_int32_t get_offset(private_generator_t *this)
+static uint32_t get_offset(private_generator_t *this)
 {
 	return this->out_position - this->buffer;
 }
@@ -179,7 +179,7 @@ static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
 								  int number_of_bytes)
 {
 	int i;
-	u_int8_t *read_position = (u_int8_t *)bytes;
+	uint8_t *read_position = (uint8_t *)bytes;
 
 	make_space_available(this, number_of_bytes * 8);
 
@@ -195,7 +195,7 @@ static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
  * Generates a U_INT-Field type and writes it to buffer.
  */
 static void generate_u_int_type(private_generator_t *this,
-								encoding_type_t int_type,u_int32_t offset)
+								encoding_type_t int_type,uint32_t offset)
 {
 	int number_of_bits = 0;
 
@@ -242,12 +242,12 @@ static void generate_u_int_type(private_generator_t *this,
 	{
 		case U_INT_4:
 		{
-			u_int8_t high, low;
+			uint8_t high, low;
 
 			if (this->current_bit == 0)
 			{
 				/* high of current byte in buffer has to be set to the new value*/
-				high = *((u_int8_t *)(this->data_struct + offset)) << 4;
+				high = *((uint8_t *)(this->data_struct + offset)) << 4;
 				/* low in buffer is not changed */
 				low = *(this->out_position) & 0x0F;
 				/* high is set, low_val is not changed */
@@ -264,7 +264,7 @@ static void generate_u_int_type(private_generator_t *this,
 				/* high in buffer is not changed */
 				high = *(this->out_position) & 0xF0;
 				/* low of current byte in buffer has to be set to the new value*/
-				low = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
+				low = *((uint8_t *)(this->data_struct + offset)) & 0x0F;
 				*(this->out_position) = high | low;
 				if (this->debug)
 				{
@@ -287,7 +287,7 @@ static void generate_u_int_type(private_generator_t *this,
 		case U_INT_8:
 		{
 			/* 8 bit values are written as they are */
-			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
+			*this->out_position = *((uint8_t *)(this->data_struct + offset));
 			if (this->debug)
 			{
 				DBG3(DBG_ENC, "   => %d", *(this->out_position));
@@ -297,8 +297,8 @@ static void generate_u_int_type(private_generator_t *this,
 		}
 		case ATTRIBUTE_TYPE:
 		{
-			u_int8_t attribute_format_flag;
-			u_int16_t val;
+			uint8_t attribute_format_flag;
+			uint16_t val;
 
 			/* attribute type must not change first bit of current byte */
 			if (this->current_bit != 1)
@@ -308,7 +308,7 @@ static void generate_u_int_type(private_generator_t *this,
 			}
 			attribute_format_flag = *(this->out_position) & 0x80;
 			/* get attribute type value as 16 bit integer*/
-			val = *((u_int16_t*)(this->data_struct + offset));
+			val = *((uint16_t*)(this->data_struct + offset));
 			/* unset most significant bit */
 			val &= 0x7FFF;
 			if (attribute_format_flag)
@@ -321,7 +321,7 @@ static void generate_u_int_type(private_generator_t *this,
 				DBG3(DBG_ENC, "   => %d", val);
 			}
 			/* write bytes to buffer (set bit is overwritten) */
-			write_bytes_to_buffer(this, &val, sizeof(u_int16_t));
+			write_bytes_to_buffer(this, &val, sizeof(uint16_t));
 			this->current_bit = 0;
 			break;
 
@@ -330,33 +330,33 @@ static void generate_u_int_type(private_generator_t *this,
 		case PAYLOAD_LENGTH:
 		case ATTRIBUTE_LENGTH:
 		{
-			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
+			uint16_t val = htons(*((uint16_t*)(this->data_struct + offset)));
 			if (this->debug)
 			{
-				DBG3(DBG_ENC, "   %b", &val, sizeof(u_int16_t));
+				DBG3(DBG_ENC, "   %b", &val, sizeof(uint16_t));
 			}
-			write_bytes_to_buffer(this, &val, sizeof(u_int16_t));
+			write_bytes_to_buffer(this, &val, sizeof(uint16_t));
 			break;
 		}
 		case U_INT_32:
 		{
-			u_int32_t val = htonl(*((u_int32_t*)(this->data_struct + offset)));
+			uint32_t val = htonl(*((uint32_t*)(this->data_struct + offset)));
 			if (this->debug)
 			{
-				DBG3(DBG_ENC, "   %b", &val, sizeof(u_int32_t));
+				DBG3(DBG_ENC, "   %b", &val, sizeof(uint32_t));
 			}
-			write_bytes_to_buffer(this, &val, sizeof(u_int32_t));
+			write_bytes_to_buffer(this, &val, sizeof(uint32_t));
 			break;
 		}
 		case IKE_SPI:
 		{
 			/* 64 bit are written as-is, no host order conversion */
 			write_bytes_to_buffer(this, this->data_struct + offset,
-								  sizeof(u_int64_t));
+								  sizeof(uint64_t));
 			if (this->debug)
 			{
 				DBG3(DBG_ENC, "   %b", this->data_struct + offset,
-					 sizeof(u_int64_t));
+					 sizeof(uint64_t));
 			}
 			break;
 		}
@@ -372,10 +372,10 @@ static void generate_u_int_type(private_generator_t *this,
 /**
  * Generate a FLAG filed
  */
-static void generate_flag(private_generator_t *this, u_int32_t offset)
+static void generate_flag(private_generator_t *this, uint32_t offset)
 {
-	u_int8_t flag_value;
-	u_int8_t flag;
+	uint8_t flag_value;
+	uint8_t flag;
 
 	flag_value = (*((bool *) (this->data_struct + offset))) ? 1 : 0;
 	/* get flag position */
@@ -406,7 +406,7 @@ static void generate_flag(private_generator_t *this, u_int32_t offset)
 /**
  * Generates a bytestream from a chunk_t.
  */
-static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
+static void generate_from_chunk(private_generator_t *this, uint32_t offset)
 {
 	chunk_t *value;
 
@@ -427,11 +427,11 @@ static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
 }
 
 METHOD(generator_t, get_chunk, chunk_t,
-	private_generator_t *this, u_int32_t **lenpos)
+	private_generator_t *this, uint32_t **lenpos)
 {
 	chunk_t data;
 
-	*lenpos = (u_int32_t*)(this->buffer + this->header_length_offset);
+	*lenpos = (uint32_t*)(this->buffer + this->header_length_offset);
 	data = chunk_create(this->buffer, get_length(this));
 	if (this->debug)
 	{
@@ -537,7 +537,7 @@ METHOD(generator_t, generate_payload, void,
 					generate_u_int_type(this, U_INT_16, rules[i].offset);
 					/* this field hold the length of the attribute */
 					this->attribute_length =
-						*((u_int16_t *)(this->data_struct + rules[i].offset));
+						*((uint16_t *)(this->data_struct + rules[i].offset));
 				}
 				break;
 			case ATTRIBUTE_VALUE:

@@ -70,7 +70,7 @@ struct private_aesni_mac_t {
 };
 
 METHOD(mac_t, get_mac, bool,
-	private_aesni_mac_t *this, chunk_t data, u_int8_t *out)
+	private_aesni_mac_t *this, chunk_t data, uint8_t *out)
 {
 	__m128i *ks, e, *bi;
 	u_int blocks, rem, i;

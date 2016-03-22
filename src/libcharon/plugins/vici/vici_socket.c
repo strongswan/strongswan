@@ -95,11 +95,11 @@ typedef struct {
 	/** bytes of length header sent/received */
 	u_char hdrlen;
 	/** bytes of length header */
-	char hdr[sizeof(u_int32_t)];
+	char hdr[sizeof(uint32_t)];
 	/** send/receive buffer on heap */
 	chunk_t buf;
 	/** bytes sent/received in buffer */
-	u_int32_t done;
+	uint32_t done;
 } msg_buf_t;
 
 /**
@@ -411,7 +411,7 @@ CALLBACK(on_write, bool,
 static bool do_read(private_vici_socket_t *this, entry_t *entry,
 					stream_t *stream, char *errmsg, size_t errlen)
 {
-	u_int32_t msglen;
+	uint32_t msglen;
 	ssize_t len;
 
 	/* assemble the length header first */

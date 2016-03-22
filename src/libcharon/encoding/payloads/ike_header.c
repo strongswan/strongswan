@@ -37,31 +37,31 @@ struct private_ike_header_t {
 	/**
 	 * SPI of the initiator.
 	 */
-	u_int64_t initiator_spi;
+	uint64_t initiator_spi;
 
 	/**
 	 * SPI of the responder.
 	 */
-	u_int64_t responder_spi;
+	uint64_t responder_spi;
 
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 	/**
 	 * IKE major version.
 	 */
-	u_int8_t  maj_version;
+	uint8_t  maj_version;
 
 	/**
 	 * IKE minor version.
 	 */
-	u_int8_t  min_version;
+	uint8_t  min_version;
 
 	/**
 	 * Exchange type .
 	 */
-	u_int8_t  exchange_type;
+	uint8_t  exchange_type;
 
 	/**
 	 * Flags of the Message.
@@ -106,12 +106,12 @@ struct private_ike_header_t {
 	/**
 	 * Associated Message-ID.
 	 */
-	u_int32_t message_id;
+	uint32_t message_id;
 
 	/**
 	 * Length of the whole IKEv2-Message (header and all payloads).
 	 */
-	u_int32_t length;
+	uint32_t length;
 };
 
 ENUM_BEGIN(exchange_type_names, ID_PROT, TRANSACTION,
@@ -290,50 +290,50 @@ METHOD(payload_t, get_length, size_t,
 	return this->length;
 }
 
-METHOD(ike_header_t, get_initiator_spi, u_int64_t,
+METHOD(ike_header_t, get_initiator_spi, uint64_t,
 	private_ike_header_t *this)
 {
 	return this->initiator_spi;
 }
 
 METHOD(ike_header_t, set_initiator_spi, void,
-	private_ike_header_t *this, u_int64_t initiator_spi)
+	private_ike_header_t *this, uint64_t initiator_spi)
 {
 	this->initiator_spi = initiator_spi;
 }
 
-METHOD(ike_header_t, get_responder_spi, u_int64_t,
+METHOD(ike_header_t, get_responder_spi, uint64_t,
 	private_ike_header_t *this)
 {
 	return this->responder_spi;
 }
 
 METHOD(ike_header_t, set_responder_spi, void,
-	private_ike_header_t *this, u_int64_t responder_spi)
+	private_ike_header_t *this, uint64_t responder_spi)
 {
 	this->responder_spi = responder_spi;
 }
 
-METHOD(ike_header_t, get_maj_version, u_int8_t,
+METHOD(ike_header_t, get_maj_version, uint8_t,
 	private_ike_header_t *this)
 {
 	return this->maj_version;
 }
 
 METHOD(ike_header_t, set_maj_version, void,
-	private_ike_header_t *this, u_int8_t major)
+	private_ike_header_t *this, uint8_t major)
 {
 	this->maj_version = major;
 }
 
-METHOD(ike_header_t, get_min_version, u_int8_t,
+METHOD(ike_header_t, get_min_version, uint8_t,
 	private_ike_header_t *this)
 {
 	return this->min_version;
 }
 
 METHOD(ike_header_t, set_min_version, void,
-	private_ike_header_t *this, u_int8_t minor)
+	private_ike_header_t *this, uint8_t minor)
 {
 	this->min_version = minor;
 }
@@ -411,26 +411,26 @@ METHOD(ike_header_t, set_authonly_flag, void,
 	this->flags.authonly = authonly;
 }
 
-METHOD(ike_header_t, get_exchange_type, u_int8_t,
+METHOD(ike_header_t, get_exchange_type, uint8_t,
 	private_ike_header_t *this)
 {
 	return this->exchange_type;
 }
 
 METHOD(ike_header_t, set_exchange_type, void,
-	private_ike_header_t *this, u_int8_t exchange_type)
+	private_ike_header_t *this, uint8_t exchange_type)
 {
 	this->exchange_type = exchange_type;
 }
 
-METHOD(ike_header_t, get_message_id, u_int32_t,
+METHOD(ike_header_t, get_message_id, uint32_t,
 	private_ike_header_t *this)
 {
 	return this->message_id;
 }
 
 METHOD(ike_header_t, set_message_id, void,
-	private_ike_header_t *this, u_int32_t message_id)
+	private_ike_header_t *this, uint32_t message_id)
 {
 	this->message_id = message_id;
 }

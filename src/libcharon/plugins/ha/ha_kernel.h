@@ -45,7 +45,7 @@ struct ha_kernel_t {
 	 * @param spi		SPI to include in hash
 	 * @return			segment number
 	 */
-	u_int (*get_segment_spi)(ha_kernel_t *this, host_t *host, u_int32_t spi);
+	u_int (*get_segment_spi)(ha_kernel_t *this, host_t *host, uint32_t spi);
 
 	/**
 	 * Get the segment an arbitrary integer is in.

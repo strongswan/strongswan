@@ -119,10 +119,10 @@ static void send_op(private_vici_dispatcher_t *this, u_int id,
 	bio_writer_t *writer;
 	u_int len;
 
-	len = sizeof(u_int8_t);
+	len = sizeof(uint8_t);
 	if (name)
 	{
-		len += sizeof(u_int8_t) + strlen(name);
+		len += sizeof(uint8_t) + strlen(name);
 	}
 	if (message)
 	{
@@ -308,7 +308,7 @@ CALLBACK(inbound, void,
 {
 	bio_reader_t *reader;
 	chunk_t chunk;
-	u_int8_t type;
+	uint8_t type;
 	char name[257];
 
 	reader = bio_reader_create(data);

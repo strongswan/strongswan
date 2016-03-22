@@ -43,7 +43,7 @@ struct imc_swid_state_t {
 	 *
 	 * @return			Event ID Epoch
 	 */
-	u_int32_t (*get_eid_epoch)(imc_swid_state_t *this);
+	uint32_t (*get_eid_epoch)(imc_swid_state_t *this);
 
 };
 

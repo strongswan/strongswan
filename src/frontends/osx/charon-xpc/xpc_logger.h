@@ -42,7 +42,7 @@ struct xpc_logger_t {
 	 *
 	 * @param ike_sa		IKE_SA unique identifier
 	 */
-	void (*set_ike_sa)(xpc_logger_t *this, u_int32_t ike_sa);
+	void (*set_ike_sa)(xpc_logger_t *this, uint32_t ike_sa);
 
 	/**
 	 * Destroy a xpc_logger_t.

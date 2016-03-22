@@ -59,7 +59,7 @@ struct sad_entry_t {
 	/**
 	 * Reqid.
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Source address of CHILD SA.
@@ -74,17 +74,17 @@ struct sad_entry_t {
 	/**
 	 * Local SPI of CHILD SA.
 	 */
-	u_int32_t spi_loc;
+	uint32_t spi_loc;
 
 	/**
 	 * Remote SPI of CHILD SA.
 	 */
-	u_int32_t spi_rem;
+	uint32_t spi_rem;
 
 	/**
 	 * Protocol of CHILD SA (ESP/AH).
 	 */
-	u_int8_t proto;
+	uint8_t proto;
 
 };
 
@@ -105,8 +105,8 @@ static void sad_entry_destroy(sad_entry_t *entry)
  * Find a list entry with given src, dst, (remote) spi and proto values.
  */
 static bool sad_entry_match(sad_entry_t * const entry, const host_t * const src,
-							const host_t * const dst, const u_int32_t * const spi,
-							const u_int8_t * const proto)
+							const host_t * const dst, const uint32_t * const spi,
+							const uint8_t * const proto)
 {
 	if (entry->src == NULL || entry->dst == NULL)
 	{
@@ -122,9 +122,9 @@ static bool sad_entry_match(sad_entry_t * const entry, const host_t * const src,
  * Find a list entry with given reqid, spi and proto values.
  */
 static bool sad_entry_match_dst(sad_entry_t * const entry,
-								const u_int32_t * const reqid,
-								const u_int32_t * const spi,
-								const u_int8_t * const proto)
+								const uint32_t * const reqid,
+								const uint32_t * const spi,
+								const uint8_t * const proto)
 {
 	return entry->reqid   == *reqid &&
 		   entry->spi_rem == *spi   &&
@@ -145,7 +145,7 @@ static bool sad_entry_match_esa_id(sad_entry_t * const entry,
  */
 static bool sad_entry_match_other_esa(sad_entry_t * const entry,
 									  const esa_id_type * const esa_id,
-									  const u_int32_t * const reqid)
+									  const uint32_t * const reqid)
 {
 	return entry->reqid  == *reqid &&
 		   entry->esa_id != *esa_id;
@@ -172,8 +172,8 @@ static bool sad_entry_equal(sad_entry_t * const left, sad_entry_t * const right)
 
 METHOD(tkm_kernel_sad_t, insert, bool,
 	private_tkm_kernel_sad_t * const this, const esa_id_type esa_id,
-	const u_int32_t reqid, const host_t * const src, const host_t * const dst,
-	const u_int32_t spi_loc, const u_int32_t spi_rem, const u_int8_t proto)
+	const uint32_t reqid, const host_t * const src, const host_t * const dst,
+	const uint32_t spi_loc, const uint32_t spi_rem, const uint8_t proto)
 {
 	status_t result;
 	sad_entry_t *new_entry;
@@ -212,7 +212,7 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 
 METHOD(tkm_kernel_sad_t, get_esa_id, esa_id_type,
 	private_tkm_kernel_sad_t * const this, const host_t * const src,
-	const host_t * const dst, const u_int32_t spi, const u_int8_t proto)
+	const host_t * const dst, const uint32_t spi, const uint8_t proto)
 {
 	esa_id_type id = 0;
 	sad_entry_t *entry = NULL;
@@ -242,7 +242,7 @@ METHOD(tkm_kernel_sad_t, get_other_esa_id, esa_id_type,
 {
 	esa_id_type id = 0;
 	sad_entry_t *entry = NULL;
-	u_int32_t reqid;
+	uint32_t reqid;
 	status_t res;
 
 	this->mutex->lock(this->mutex);
@@ -274,8 +274,8 @@ METHOD(tkm_kernel_sad_t, get_other_esa_id, esa_id_type,
 }
 
 METHOD(tkm_kernel_sad_t, get_dst_host, host_t *,
-	private_tkm_kernel_sad_t * const this, const u_int32_t reqid,
-	const u_int32_t spi, const u_int8_t proto)
+	private_tkm_kernel_sad_t * const this, const uint32_t reqid,
+	const uint32_t spi, const uint8_t proto)
 {
 	host_t *dst = NULL;
 	sad_entry_t *entry = NULL;

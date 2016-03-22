@@ -41,7 +41,7 @@ struct private_sa_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -56,7 +56,7 @@ struct private_sa_payload_t {
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Proposals in this payload are stored in a linked_list_t.
@@ -71,12 +71,12 @@ struct private_sa_payload_t {
 	/**
 	 * IKEv1 DOI
 	 */
-	u_int32_t doi;
+	uint32_t doi;
 
 	/**
 	 * IKEv1 situation
 	 */
-	u_int32_t situation;
+	uint32_t situation;
 };
 
 /**
@@ -342,7 +342,7 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 }
 
 METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
-	private_sa_payload_t *this, u_int16_t *cpi)
+	private_sa_payload_t *this, uint16_t *cpi)
 {
 	int current_proposal = -1, unsupported_proposal = -1;
 	enumerator_t *enumerator;
@@ -353,8 +353,8 @@ METHOD(sa_payload_t, get_ipcomp_proposals, linked_list_t*,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &substruct))
 	{
-		u_int8_t proposal_number = substruct->get_proposal_number(substruct);
-		u_int8_t protocol_id = substruct->get_protocol_id(substruct);
+		uint8_t proposal_number = substruct->get_proposal_number(substruct);
+		uint8_t protocol_id = substruct->get_protocol_id(substruct);
 
 		if (proposal_number == unsupported_proposal)
 		{
@@ -403,12 +403,12 @@ METHOD(sa_payload_t, create_substructure_enumerator, enumerator_t*,
 	return this->proposals->create_enumerator(this->proposals);
 }
 
-METHOD(sa_payload_t, get_lifetime, u_int32_t,
+METHOD(sa_payload_t, get_lifetime, uint32_t,
 	private_sa_payload_t *this)
 {
 	proposal_substructure_t *substruct;
 	enumerator_t *enumerator;
-	u_int32_t lifetime = 0;
+	uint32_t lifetime = 0;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	if (enumerator->enumerate(enumerator, &substruct))
@@ -420,12 +420,12 @@ METHOD(sa_payload_t, get_lifetime, u_int32_t,
 	return lifetime;
 }
 
-METHOD(sa_payload_t, get_lifebytes, u_int64_t,
+METHOD(sa_payload_t, get_lifebytes, uint64_t,
 	private_sa_payload_t *this)
 {
 	proposal_substructure_t *substruct;
 	enumerator_t *enumerator;
-	u_int64_t lifebytes = 0;
+	uint64_t lifebytes = 0;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	if (enumerator->enumerate(enumerator, &substruct))
@@ -558,9 +558,9 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal)
  * Described in header.
  */
 sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
-								u_int32_t lifetime, u_int64_t lifebytes,
+								uint32_t lifetime, uint64_t lifebytes,
 								auth_method_t auth, ipsec_mode_t mode,
-								encap_t udp, u_int16_t cpi)
+								encap_t udp, uint16_t cpi)
 {
 	proposal_substructure_t *substruct;
 	private_sa_payload_t *this;
@@ -580,7 +580,7 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 	substruct->set_is_last_proposal(substruct, FALSE);
 	if (cpi)
 	{
-		u_int8_t proposal_number = substruct->get_proposal_number(substruct);
+		uint8_t proposal_number = substruct->get_proposal_number(substruct);
 
 		substruct = proposal_substructure_create_for_ipcomp_v1(lifetime,
 					lifebytes, cpi, mode, udp, proposal_number);
@@ -602,9 +602,9 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
  * Described in header.
  */
 sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
-								u_int32_t lifetime, u_int64_t lifebytes,
+								uint32_t lifetime, uint64_t lifebytes,
 								auth_method_t auth, ipsec_mode_t mode,
-								encap_t udp, u_int16_t cpi)
+								encap_t udp, uint16_t cpi)
 {
 	private_sa_payload_t *this;
 	linked_list_t *proposals;

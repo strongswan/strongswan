@@ -28,15 +28,15 @@ typedef struct rattr_t rattr_t;
  */
 struct rmsg_t {
 	/** message code, radius_message_code_t */
-	u_int8_t code;
+	uint8_t code;
 	/** message identifier */
-	u_int8_t identifier;
+	uint8_t identifier;
 	/** length of Code, Identifier, Length, Authenticator and Attributes */
-	u_int16_t length;
+	uint16_t length;
 	/** message authenticator, MD5 hash */
-	u_int8_t authenticator[HASH_SIZE_MD5];
+	uint8_t authenticator[HASH_SIZE_MD5];
 	/** variable list of packed attributes */
-	u_int8_t attributes[];
+	uint8_t attributes[];
 } __attribute__((packed));
 
 /**
@@ -44,11 +44,11 @@ struct rmsg_t {
  */
 struct rattr_t {
 	/** attribute type, radius_attribute_type_t */
-	u_int8_t type;
+	uint8_t type;
 	/** length of the attriubte, including the Type, Length and Value fields */
-	u_int8_t length;
+	uint8_t length;
 	/** variable length attribute value */
-	u_int8_t value[];
+	uint8_t value[];
 } __attribute__((packed));
 
 /**
@@ -293,7 +293,7 @@ typedef struct {
 	/** inner attribute enumerator */
 	enumerator_t *inner;
 	/** current vendor ID */
-	u_int32_t vendor;
+	uint32_t vendor;
 	/** reader for current vendor ID */
 	bio_reader_t *reader;
 } vendor_enumerator_t;
@@ -303,7 +303,7 @@ METHOD(enumerator_t, vendor_enumerate, bool,
 {
 	chunk_t inner_data;
 	int inner_type;
-	u_int8_t type8, len;
+	uint8_t type8, len;
 
 	while (TRUE)
 	{
@@ -449,7 +449,7 @@ METHOD(radius_message_t, crypt, bool,
 }
 
 METHOD(radius_message_t, sign, bool,
-	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
+	private_radius_message_t *this, uint8_t *req_auth, chunk_t secret,
 	hasher_t *hasher, signer_t *signer, rng_t *rng, bool msg_auth)
 {
 	if (rng)
@@ -516,7 +516,7 @@ METHOD(radius_message_t, sign, bool,
 }
 
 METHOD(radius_message_t, verify, bool,
-	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
+	private_radius_message_t *this, uint8_t *req_auth, chunk_t secret,
 	hasher_t *hasher, signer_t *signer)
 {
 	char buf[HASH_SIZE_MD5], res_auth[HASH_SIZE_MD5];
@@ -606,19 +606,19 @@ METHOD(radius_message_t, get_code, radius_message_code_t,
 	return this->msg->code;
 }
 
-METHOD(radius_message_t, get_identifier, u_int8_t,
+METHOD(radius_message_t, get_identifier, uint8_t,
 	private_radius_message_t *this)
 {
 	return this->msg->identifier;
 }
 
 METHOD(radius_message_t, set_identifier, void,
-	private_radius_message_t *this, u_int8_t identifier)
+	private_radius_message_t *this, uint8_t identifier)
 {
 	this->msg->identifier = identifier;
 }
 
-METHOD(radius_message_t, get_authenticator, u_int8_t*,
+METHOD(radius_message_t, get_authenticator, uint8_t*,
 	private_radius_message_t *this)
 {
 	return this->msg->authenticator;

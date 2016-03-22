@@ -35,7 +35,7 @@ struct private_xpc_logger_t {
 	/**
 	 * IKE_SA we log for
 	 */
-	u_int32_t ike_sa;
+	uint32_t ike_sa;
 };
 
 METHOD(logger_t, log_, void,
@@ -62,7 +62,7 @@ METHOD(logger_t, get_level, level_t,
 }
 
 METHOD(xpc_logger_t, set_ike_sa, void,
-	private_xpc_logger_t *this, u_int32_t ike_sa)
+	private_xpc_logger_t *this, uint32_t ike_sa)
 {
 	this->ike_sa = ike_sa;
 }

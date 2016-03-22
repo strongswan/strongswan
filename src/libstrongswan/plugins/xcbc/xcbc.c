@@ -40,7 +40,7 @@ struct private_mac_t {
 	/**
 	 * Block size, in bytes
 	 */
-	u_int8_t b;
+	uint8_t b;
 
 	/**
 	 * crypter using k1
@@ -50,22 +50,22 @@ struct private_mac_t {
 	/**
 	 * k2
 	 */
-	u_int8_t *k2;
+	uint8_t *k2;
 
 	/**
 	 * k3
 	 */
-	u_int8_t *k3;
+	uint8_t *k3;
 
 	/**
 	 * E
 	 */
-	u_int8_t *e;
+	uint8_t *e;
 
 	/**
 	 * remaining, unprocessed bytes in append mode
 	 */
-	u_int8_t *remaining;
+	uint8_t *remaining;
 
 	/**
 	 * number of bytes in remaining
@@ -138,7 +138,7 @@ static bool update(private_mac_t *this, chunk_t data)
 /**
  * run last round, data is in this->e
  */
-static bool final(private_mac_t *this, u_int8_t *out)
+static bool final(private_mac_t *this, uint8_t *out)
 {
 	chunk_t iv;
 
@@ -193,7 +193,7 @@ static bool final(private_mac_t *this, u_int8_t *out)
 }
 
 METHOD(mac_t, get_mac, bool,
-	private_mac_t *this, chunk_t data, u_int8_t *out)
+	private_mac_t *this, chunk_t data, uint8_t *out)
 {
 	/* update E, do not process last block */
 	if (!update(this, data))
@@ -294,7 +294,7 @@ static mac_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_mac_t *this;
 	crypter_t *crypter;
-	u_int8_t b;
+	uint8_t b;
 
 	crypter = lib->crypto->create_crypter(lib->crypto, algo, key_size);
 	if (!crypter)

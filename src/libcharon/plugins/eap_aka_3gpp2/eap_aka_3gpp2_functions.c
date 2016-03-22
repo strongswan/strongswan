@@ -54,7 +54,7 @@ static chunk_t fmk = chunk_from_chars(0x41, 0x48, 0x41, 0x47);
 /**
  * Binary represnation of the polynom T^160 + T^5 + T^3 + T^2 + 1
  */
-static u_int8_t g[] = {
+static uint8_t g[] = {
 	0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x2d
@@ -63,7 +63,7 @@ static u_int8_t g[] = {
 /**
  * Predefined random bits from the RAND Corporation book
  */
-static u_int8_t a[] = {
+static uint8_t a[] = {
 	0x9d, 0xe9, 0xc9, 0xc8, 0xef, 0xd5, 0x78, 0x11,
 	0x48, 0x23, 0x14, 0x01, 0x90, 0x1f, 0x2d, 0x49,
 	0x3f, 0x4c, 0x63, 0x65
@@ -72,7 +72,7 @@ static u_int8_t a[] = {
 /**
  * Predefined random bits from the RAND Corporation book
  */
-static u_int8_t b[] = {
+static uint8_t b[] = {
 	0x75, 0xef, 0xd1, 0x5c, 0x4b, 0x8f, 0x8f, 0x51,
 	0x4e, 0xf3, 0xbc, 0xc3, 0x79, 0x4a, 0x76, 0x5e,
 	0x7e, 0xec, 0x45, 0xe0
@@ -171,7 +171,7 @@ static void mpz_mod_poly(mpz_t r, mpz_t a, mpz_t b)
  * XOR the key into the SHA1 IV
  */
 static bool step3(prf_t *prf, u_char k[AKA_K_LEN],
-				  u_char payload[AKA_PAYLOAD_LEN], u_int8_t h[HASH_SIZE_SHA1])
+				  u_char payload[AKA_PAYLOAD_LEN], uint8_t h[HASH_SIZE_SHA1])
 {
 	/* use the keyed hasher to build the hash */
 	return prf->set_key(prf, chunk_create(k, AKA_K_LEN)) &&
@@ -243,7 +243,7 @@ static bool fx(prf_t *prf, u_char f, u_char k[AKA_K_LEN],
 /**
  * Calculation function of f1() and f1star()
  */
-static bool f1x(prf_t *prf, u_int8_t f, u_char k[AKA_K_LEN],
+static bool f1x(prf_t *prf, uint8_t f, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
 				u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN])
 {

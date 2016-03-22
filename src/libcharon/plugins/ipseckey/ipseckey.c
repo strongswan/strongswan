@@ -34,17 +34,17 @@ struct private_ipseckey_t {
 	/**
 	 * Precedence
 	 */
-	u_int8_t precedence;
+	uint8_t precedence;
 
 	/**
 	 * Gateway type
 	 */
-	u_int8_t gateway_type;
+	uint8_t gateway_type;
 
 	/**
 	 * Algorithm
 	 */
-	u_int8_t algorithm;
+	uint8_t algorithm;
 
 	/**
 	 * Gateway
@@ -57,7 +57,7 @@ struct private_ipseckey_t {
 	chunk_t public_key;
 };
 
-METHOD(ipseckey_t, get_precedence, u_int8_t,
+METHOD(ipseckey_t, get_precedence, uint8_t,
 	private_ipseckey_t *this)
 {
 	return this->precedence;
@@ -102,7 +102,7 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 {
 	private_ipseckey_t *this;
 	bio_reader_t *reader = NULL;
-	u_int8_t label;
+	uint8_t label;
 	chunk_t tmp;
 
 	INIT(this,

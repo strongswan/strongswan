@@ -44,7 +44,7 @@ struct private_cp_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Critical flag.
@@ -59,17 +59,17 @@ struct private_cp_payload_t {
 	/**
 	 * Reserved bytes
 	 */
-	u_int8_t reserved_byte[3];
+	uint8_t reserved_byte[3];
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Identifier field, IKEv1 only
 	 */
-	u_int16_t identifier;
+	uint16_t identifier;
 
 	/**
 	 * List of attributes, as configuration_attribute_t
@@ -79,7 +79,7 @@ struct private_cp_payload_t {
 	/**
 	 * Config Type.
 	 */
-	u_int8_t cfg_type;
+	uint8_t cfg_type;
 
 	/**
 	 * PLV2_CONFIGURATION or PLV1_CONFIGURATION
@@ -269,13 +269,13 @@ METHOD(cp_payload_t, get_config_type, config_type_t,
 	return this->cfg_type;
 }
 
-METHOD(cp_payload_t, get_identifier, u_int16_t,
+METHOD(cp_payload_t, get_identifier, uint16_t,
 			 private_cp_payload_t *this)
 {
 	return this->identifier;
 }
 METHOD(cp_payload_t, set_identifier, void,
-			 private_cp_payload_t *this, u_int16_t identifier)
+			 private_cp_payload_t *this, uint16_t identifier)
 {
 	this->identifier = identifier;
 }

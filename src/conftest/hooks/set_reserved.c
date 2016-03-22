@@ -85,11 +85,11 @@ static void set_bit(private_set_reserved_t *this, message_t *message,
  * Set reserved byte of a payload
  */
 static void set_byte(private_set_reserved_t *this, message_t *message,
-					payload_type_t type, u_int nr, u_int8_t byteval)
+					payload_type_t type, u_int nr, uint8_t byteval)
 {
 	enumerator_t *payloads;
 	payload_t *payload;
-	u_int8_t *byte;
+	uint8_t *byte;
 
 	if (type == PLV2_TRANSFORM_SUBSTRUCTURE || type == PLV2_PROPOSAL_SUBSTRUCTURE)
 	{
@@ -172,7 +172,7 @@ METHOD(listener_t, message, bool,
 		enumerator_t *bits, *bytes, *types;
 		payload_type_t type;
 		char *nr, *name;
-		u_int8_t byteval;
+		uint8_t byteval;
 
 		types = conftest->test->create_section_enumerator(conftest->test,
 													"hooks.%s", this->name);

@@ -70,21 +70,21 @@ struct ipsec_sa_t {
 	 *
 	 * @return			SPI of this SA
 	 */
-	u_int32_t (*get_spi)(ipsec_sa_t *this);
+	uint32_t (*get_spi)(ipsec_sa_t *this);
 
 	/**
 	 * Get the reqid of this SA
 	 *
 	 * @return			reqid of this SA
 	 */
-	u_int32_t (*get_reqid)(ipsec_sa_t *this);
+	uint32_t (*get_reqid)(ipsec_sa_t *this);
 
 	/**
 	 * Get the protocol (e.g. IPPROTO_ESP) of this SA
 	 *
 	 * @return			protocol of this SA
 	 */
-	u_int8_t (*get_protocol)(ipsec_sa_t *this);
+	uint8_t (*get_protocol)(ipsec_sa_t *this);
 
 	/**
 	 * Returns whether this SA is inbound or outbound
@@ -116,7 +116,7 @@ struct ipsec_sa_t {
 	 * @param packets	receives number of processed packets, or NULL
 	 * @param time		receives last use time of this SA, or NULL
 	 */
-	void (*get_usestats)(ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+	void (*get_usestats)(ipsec_sa_t *this, uint64_t *bytes, uint64_t *packets,
 						 time_t *time);
 
 	/**
@@ -124,7 +124,7 @@ struct ipsec_sa_t {
 	 *
 	 * @param bytes		length of packet processed
 	 */
-	void (*update_usestats)(ipsec_sa_t *this, u_int32_t bytes);
+	void (*update_usestats)(ipsec_sa_t *this, uint32_t bytes);
 
 	/**
 	 * Expire this SA, soft or hard.
@@ -145,7 +145,7 @@ struct ipsec_sa_t {
 	 * @param dst		destination address
 	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
 	 */
-	bool (*match_by_spi_dst)(ipsec_sa_t *this, u_int32_t spi, host_t *dst);
+	bool (*match_by_spi_dst)(ipsec_sa_t *this, uint32_t spi, host_t *dst);
 
 	/**
 	 * Check if this SA matches all given parameters
@@ -155,7 +155,7 @@ struct ipsec_sa_t {
 	 * @param dst		destination address
 	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
 	 */
-	bool (*match_by_spi_src_dst)(ipsec_sa_t *this, u_int32_t spi, host_t *src,
+	bool (*match_by_spi_src_dst)(ipsec_sa_t *this, uint32_t spi, host_t *src,
 								 host_t *dst);
 
 	/**
@@ -167,7 +167,7 @@ struct ipsec_sa_t {
 	 * @param inbound	TRUE for inbound SA, FALSE for outbound
 	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
 	 */
-	bool (*match_by_reqid)(ipsec_sa_t *this, u_int32_t reqid, bool inbound);
+	bool (*match_by_reqid)(ipsec_sa_t *this, uint32_t reqid, bool inbound);
 
 	/**
 	 * Destroy an ipsec_sa_t
@@ -199,12 +199,12 @@ struct ipsec_sa_t {
  * @param inbound		TRUE if this is an inbound SA, FALSE otherwise
  * @return				the IPsec SA, or NULL if the creation failed
  */
-ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
-							u_int8_t protocol, u_int32_t reqid, mark_t mark,
-							u_int32_t tfc, lifetime_cfg_t *lifetime,
-							u_int16_t enc_alg, chunk_t enc_key,
-							u_int16_t int_alg, chunk_t int_key,
-							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+ipsec_sa_t *ipsec_sa_create(uint32_t spi, host_t *src, host_t *dst,
+							uint8_t protocol, uint32_t reqid, mark_t mark,
+							uint32_t tfc, lifetime_cfg_t *lifetime,
+							uint16_t enc_alg, chunk_t enc_key,
+							uint16_t int_alg, chunk_t int_key,
+							ipsec_mode_t mode, uint16_t ipcomp, uint16_t cpi,
 							bool encap, bool esn, bool inbound);
 
 #endif /** IPSEC_SA_H_ @}*/

@@ -293,7 +293,7 @@ static void process_disconnect(private_eap_radius_dae_t *this,
  * Apply a new lifetime to an IKE_SA
  */
 static void apply_lifetime(private_eap_radius_dae_t *this, ike_sa_id_t *id,
-						   u_int32_t lifetime)
+						   uint32_t lifetime)
 {
 	ike_sa_t *ike_sa;
 
@@ -323,7 +323,7 @@ static void process_coa(private_eap_radius_dae_t *this,
 	ike_sa_id_t *id;
 	chunk_t data;
 	int type;
-	u_int32_t lifetime = 0;
+	uint32_t lifetime = 0;
 	bool lifetime_seen = FALSE;
 
 	ids = get_matching_ike_sas(this, request, client);

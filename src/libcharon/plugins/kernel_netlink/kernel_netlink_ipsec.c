@@ -347,7 +347,7 @@ struct route_entry_t {
 	chunk_t dst_net;
 
 	/** Destination net prefixlen */
-	u_int8_t prefixlen;
+	uint8_t prefixlen;
 };
 
 /**
@@ -470,7 +470,7 @@ typedef struct policy_sa_fwd_t policy_sa_fwd_t;
  */
 struct policy_sa_t {
 	/** Priority assigned to the policy when installed with this SA */
-	u_int32_t priority;
+	uint32_t priority;
 
 	/** Type of the policy */
 	policy_type_t type;
@@ -546,13 +546,13 @@ typedef struct policy_entry_t policy_entry_t;
 struct policy_entry_t {
 
 	/** Direction of this policy: in, out, forward */
-	u_int8_t direction;
+	uint8_t direction;
 
 	/** Parameters of installed policy */
 	struct xfrm_selector sel;
 
 	/** Optional mark */
-	u_int32_t mark;
+	uint32_t mark;
 
 	/** Associated route installed for this policy */
 	route_entry_t *route;
@@ -561,7 +561,7 @@ struct policy_entry_t {
 	linked_list_t *used_by;
 
 	/** reqid for this policy */
-	u_int32_t reqid;
+	uint32_t reqid;
 };
 
 /**
@@ -606,10 +606,10 @@ static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 /**
  * Calculate the priority of a policy
  */
-static inline u_int32_t get_priority(policy_entry_t *policy,
+static inline uint32_t get_priority(policy_entry_t *policy,
 									 policy_priority_t prio)
 {
-	u_int32_t priority = PRIO_BASE;
+	uint32_t priority = PRIO_BASE;
 	switch (prio)
 	{
 		case POLICY_PRIORITY_FALLBACK:
@@ -636,7 +636,7 @@ static inline u_int32_t get_priority(policy_entry_t *policy,
 /**
  * Convert the general ipsec mode to the one defined in xfrm.h
  */
-static u_int8_t mode2kernel(ipsec_mode_t mode)
+static uint8_t mode2kernel(ipsec_mode_t mode)
 {
 	switch (mode)
 	{
@@ -663,7 +663,7 @@ static void host2xfrm(host_t *host, xfrm_address_t *xfrm)
 /**
  * Convert a struct xfrm_address to a host_t
  */
-static host_t* xfrm2host(int family, xfrm_address_t *xfrm, u_int16_t port)
+static host_t* xfrm2host(int family, xfrm_address_t *xfrm, uint16_t port)
 {
 	chunk_t chunk;
 
@@ -685,7 +685,7 @@ static host_t* xfrm2host(int family, xfrm_address_t *xfrm, u_int16_t port)
  * Convert a traffic selector address range to subnet and its mask.
  */
 static void ts2subnet(traffic_selector_t* ts,
-					  xfrm_address_t *net, u_int8_t *mask)
+					  xfrm_address_t *net, uint8_t *mask)
 {
 	host_t *net_host;
 	chunk_t net_chunk;
@@ -700,7 +700,7 @@ static void ts2subnet(traffic_selector_t* ts,
  * Convert a traffic selector port range to port/portmask
  */
 static void ts2ports(traffic_selector_t* ts,
-					 u_int16_t *port, u_int16_t *mask)
+					 uint16_t *port, uint16_t *mask)
 {
 	uint16_t from, to, bitmask;
 	int bit;
@@ -742,7 +742,7 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 										traffic_selector_t *dst)
 {
 	struct xfrm_selector sel;
-	u_int16_t port;
+	uint16_t port;
 
 	memset(&sel, 0, sizeof(sel));
 	sel.family = (src->get_type(src) == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
@@ -775,8 +775,8 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 {
 	u_char *addr;
-	u_int8_t prefixlen;
-	u_int16_t port = 0;
+	uint8_t prefixlen;
+	uint16_t port = 0;
 	host_t *host = NULL;
 
 	if (src)
@@ -833,7 +833,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	struct rtattr *rta;
 	size_t rtasize;
 	traffic_selector_t *src_ts, *dst_ts;
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 	int proto = 0;
 
 	acquire = NLMSG_DATA(hdr);
@@ -878,8 +878,8 @@ static void process_expire(private_kernel_netlink_ipsec_t *this,
 						   struct nlmsghdr *hdr)
 {
 	struct xfrm_user_expire *expire;
-	u_int32_t spi;
-	u_int8_t protocol;
+	uint32_t spi;
+	uint8_t protocol;
 	host_t *dst;
 
 	expire = NLMSG_DATA(hdr);
@@ -913,7 +913,7 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this,
 	host_t *local = NULL, *remote = NULL;
 	host_t *old_src = NULL, *old_dst = NULL;
 	host_t *new_src = NULL, *new_dst = NULL;
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 	policy_dir_t dir;
 
 	policy_id = NLMSG_DATA(hdr);
@@ -981,7 +981,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 							struct nlmsghdr *hdr)
 {
 	struct xfrm_user_mapping *mapping;
-	u_int32_t spi;
+	uint32_t spi;
 
 	mapping = NLMSG_DATA(hdr);
 	spi = mapping->id.spi;
@@ -1080,13 +1080,13 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
  * Get an SPI for a specific protocol from the kernel.
  */
 static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
-	host_t *src, host_t *dst, u_int8_t proto, u_int32_t min, u_int32_t max,
-	u_int32_t *spi)
+	host_t *src, host_t *dst, uint8_t proto, uint32_t min, uint32_t max,
+	uint32_t *spi)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out;
 	struct xfrm_userspi_info *userspi;
-	u_int32_t received_spi = 0;
+	uint32_t received_spi = 0;
 	size_t len;
 
 	memset(&request, 0, sizeof(request));
@@ -1147,7 +1147,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	if (get_spi_internal(this, src, dst, protocol,
 						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
@@ -1162,9 +1162,9 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
-	u_int32_t received_spi = 0;
+	uint32_t received_spi = 0;
 
 	if (get_spi_internal(this, src, dst, IPPROTO_COMP,
 						 0x100, 0xEFFF, &received_spi) != SUCCESS)
@@ -1173,7 +1173,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 		return FAILED;
 	}
 
-	*cpi = htons((u_int16_t)ntohl(received_spi));
+	*cpi = htons((uint16_t)ntohl(received_spi));
 
 	DBG2(DBG_KNL, "got CPI %.4x", ntohs(*cpi));
 	return SUCCESS;
@@ -1201,10 +1201,10 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
+	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t* src_ts, linked_list_t* dst_ts)
 {
@@ -1212,7 +1212,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	char *alg_name;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
-	u_int16_t icv_size = 64;
+	uint16_t icv_size = 64;
 	ipsec_mode_t original_mode = mode;
 	traffic_selector_t *first_src_ts, *first_dst_ts;
 	status_t status = FAILED;
@@ -1483,7 +1483,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	if (tfc && protocol == IPPROTO_ESP && mode == MODE_TUNNEL)
 	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
-		u_int32_t *tfcpad;
+		uint32_t *tfcpad;
 
 		tfcpad = netlink_reserve(hdr, sizeof(request), XFRMA_TFCPAD,
 								 sizeof(*tfcpad));
@@ -1501,9 +1501,9 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			/* for ESN or larger replay windows we need the new
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
 			struct xfrm_replay_state_esn *replay;
-			u_int32_t bmp_size;
+			uint32_t bmp_size;
 
-			bmp_size = round_up(replay_window, sizeof(u_int32_t) * 8) / 8;
+			bmp_size = round_up(replay_window, sizeof(uint32_t) * 8) / 8;
 			replay = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
 									 sizeof(*replay) + bmp_size);
 			if (!replay)
@@ -1511,7 +1511,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				goto failed;
 			}
 			/* bmp_len contains number uf __u32's */
-			replay->bmp_len = bmp_size / sizeof(u_int32_t);
+			replay->bmp_len = bmp_size / sizeof(uint32_t);
 			replay->replay_window = replay_window;
 			DBG2(DBG_KNL, "  using replay window of %u packets", replay_window);
 
@@ -1555,10 +1555,10 @@ failed:
  * Allocates into one the replay state structure we get from the kernel.
  */
 static void get_replay_state(private_kernel_netlink_ipsec_t *this,
-							 u_int32_t spi, u_int8_t protocol,
+							 uint32_t spi, uint8_t protocol,
 							 host_t *dst, mark_t mark,
 							 struct xfrm_replay_state_esn **replay_esn,
-							 u_int32_t *replay_esn_len,
+							 uint32_t *replay_esn_len,
 							 struct xfrm_replay_state **replay,
 							 struct xfrm_lifetime_cur **lifetime)
 {
@@ -1658,8 +1658,8 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark,
+	uint64_t *bytes, uint64_t *packets, time_t *time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1759,7 +1759,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1816,8 +1816,8 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_kernel_netlink_ipsec_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool old_encap, bool new_encap, mark_t mark)
 {
 	netlink_buf_t request;
@@ -1831,7 +1831,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
-	u_int32_t replay_esn_len = 0;
+	uint32_t replay_esn_len = 0;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
@@ -2032,7 +2032,7 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_flush *flush;
 	struct {
-		u_int8_t proto;
+		uint8_t proto;
 		char *name;
 	} protos[] = {
 		{ IPPROTO_AH, "AH" },
@@ -2115,7 +2115,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	{
 		struct xfrm_user_tmpl *tmpl;
 		struct {
-			u_int8_t proto;
+			uint8_t proto;
 			bool use;
 		} protos[] = {
 			{ IPPROTO_COMP, ipsec->cfg.ipcomp.transform != IPCOMP_NONE },
@@ -2491,7 +2491,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
-	u_int32_t priority;
+	uint32_t priority;
 	ipsec_sa_t assigned_sa = {
 		.src = src,
 		.dst = dst,
@@ -2699,7 +2699,7 @@ typedef struct {
 	/** layer 4 protocol */
 	int proto;
 	/** port number, network order */
-	u_int16_t port;
+	uint16_t port;
 } bypass_t;
 
 /**
@@ -2839,7 +2839,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
-	private_kernel_netlink_ipsec_t *this, int fd, int family, u_int16_t port)
+	private_kernel_netlink_ipsec_t *this, int fd, int family, uint16_t port)
 {
 	int type = UDP_ENCAP_ESPINUDP;
 

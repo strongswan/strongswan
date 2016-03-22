@@ -69,7 +69,7 @@ struct private_quick_delete_t {
 	/**
 	 * Inbound SPI of CHILD_SA to delete
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * Send delete even if SA does not exist
@@ -86,9 +86,9 @@ struct private_quick_delete_t {
  * Delete the specified CHILD_SA, if found
  */
 static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
-						 u_int32_t spi, bool remote_close)
+						 uint32_t spi, bool remote_close)
 {
-	u_int64_t bytes_in, bytes_out;
+	uint64_t bytes_in, bytes_out;
 	child_sa_t *child_sa;
 	linked_list_t *my_ts, *other_ts;
 	child_cfg_t *child_cfg;
@@ -200,7 +200,7 @@ METHOD(task_t, process_r, status_t,
 	payload_t *payload;
 	delete_payload_t *delete_payload;
 	protocol_id_t protocol;
-	u_int32_t spi;
+	uint32_t spi;
 
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
@@ -260,7 +260,7 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 quick_delete_t *quick_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi, bool force, bool expired)
+									uint32_t spi, bool force, bool expired)
 {
 	private_quick_delete_t *this;
 

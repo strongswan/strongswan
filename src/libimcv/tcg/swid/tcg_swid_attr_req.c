@@ -80,17 +80,17 @@ struct private_tcg_swid_attr_req_t {
 	/**
 	 * SWID request flags
 	 */
-	u_int8_t flags;
+	uint8_t flags;
 
 	/**
 	 * Request ID
 	 */
-	u_int32_t request_id;
+	uint32_t request_id;
 
 	/**
 	 * Earliest EID
 	 */
-	u_int32_t earliest_eid;
+	uint32_t earliest_eid;
 
 	/**
 	 * List of Target Tag Identifiers
@@ -162,10 +162,10 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_swid_attr_req_t *this, u_int32_t *offset)
+	private_tcg_swid_attr_req_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t tag_id_count;
+	uint32_t tag_id_count;
 	chunk_t tag_creator, unique_sw_id;
 	swid_tag_id_t *tag_id;
 
@@ -244,19 +244,19 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(tcg_swid_attr_req_t, get_flags, u_int8_t,
+METHOD(tcg_swid_attr_req_t, get_flags, uint8_t,
 	private_tcg_swid_attr_req_t *this)
 {
 	return this->flags;
 }
 
-METHOD(tcg_swid_attr_req_t, get_request_id, u_int32_t,
+METHOD(tcg_swid_attr_req_t, get_request_id, uint32_t,
 	private_tcg_swid_attr_req_t *this)
 {
 	return this->request_id;
 }
 
-METHOD(tcg_swid_attr_req_t, get_earliest_eid, u_int32_t,
+METHOD(tcg_swid_attr_req_t, get_earliest_eid, uint32_t,
 	private_tcg_swid_attr_req_t *this)
 {
 	return this->earliest_eid;
@@ -277,8 +277,8 @@ METHOD(tcg_swid_attr_req_t, get_targets, swid_inventory_t*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_swid_attr_req_create(u_int8_t flags, u_int32_t request_id,
-										u_int32_t eid)
+pa_tnc_attr_t *tcg_swid_attr_req_create(uint8_t flags, uint32_t request_id,
+										uint32_t eid)
 {
 	private_tcg_swid_attr_req_t *this;
 

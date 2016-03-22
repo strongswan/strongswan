@@ -41,7 +41,7 @@ struct private_update_sa_job_t {
 	/**
 	 * SPI of the CHILD_SA
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * Old SA destination address
@@ -92,7 +92,7 @@ METHOD(job_t, get_priority, job_priority_t,
  * Described in header
  */
 update_sa_job_t *update_sa_job_create(protocol_id_t protocol,
-									  u_int32_t spi, host_t *dst, host_t *new)
+									  uint32_t spi, host_t *dst, host_t *new)
 {
 	private_update_sa_job_t *this;
 

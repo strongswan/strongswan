@@ -123,22 +123,22 @@ struct ipsec_sa_cfg_t {
 	/** mode of SA (tunnel, transport) */
 	ipsec_mode_t mode;
 	/** unique ID */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** number of policies of the same kind (in/out/fwd) attached to SA */
-	u_int32_t policy_count;
+	uint32_t policy_count;
 	/** details about ESP/AH */
 	struct {
 		/** TRUE if this protocol is used */
 		bool use;
 		/** SPI for ESP/AH */
-		u_int32_t spi;
+		uint32_t spi;
 	} esp, ah;
 	/** details about IPComp */
 	struct {
 		/** the IPComp transform used */
-		u_int16_t transform;
+		uint16_t transform;
 		/** CPI for IPComp */
-		u_int16_t cpi;
+		uint16_t cpi;
 	} ipcomp;
 };
 
@@ -150,11 +150,11 @@ struct ipsec_sa_cfg_t {
 struct lifetime_cfg_t {
 	struct {
 		/** Limit before the SA gets invalid. */
-		u_int64_t	life;
+		uint64_t	life;
 		/** Limit before the SA gets rekeyed. */
-		u_int64_t	rekey;
+		uint64_t	rekey;
 		/** The range of a random value subtracted from rekey. */
-		u_int64_t	jitter;
+		uint64_t	jitter;
 	} time, bytes, packets;
 };
 
@@ -163,9 +163,9 @@ struct lifetime_cfg_t {
  */
 struct mark_t {
 	/** Mark value */
-	u_int32_t value;
+	uint32_t value;
 	/** Mark mask */
-	u_int32_t mask;
+	uint32_t mask;
 };
 
 /**

@@ -136,7 +136,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(ietf_attr_attr_request_t, add, void,
-	private_ietf_attr_attr_request_t *this, pen_t vendor_id, u_int32_t type)
+	private_ietf_attr_attr_request_t *this, pen_t vendor_id, uint32_t type)
 {
 	enum_name_t *pa_attr_names;
 	pen_type_t *entry;
@@ -160,12 +160,12 @@ METHOD(ietf_attr_attr_request_t, add, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_attr_request_t *this, u_int32_t *offset)
+	private_ietf_attr_attr_request_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	pen_t vendor_id;
-	u_int32_t type;
-	u_int8_t reserved;
+	uint32_t type;
+	uint8_t reserved;
 	int count;
 
 	*offset = 0;
@@ -228,7 +228,7 @@ METHOD(ietf_attr_attr_request_t, create_enumerator, enumerator_t*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type)
+pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, uint32_t type)
 {
 	private_ietf_attr_attr_request_t *this;
 

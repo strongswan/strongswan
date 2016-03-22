@@ -170,7 +170,7 @@ static struct {
  * for fragmentation of base ISAKMP messages (Cisco adds that and thus sends
  * 0xc0000000)
  */
-static const u_int32_t fragmentation_ike = 0x80000000;
+static const uint32_t fragmentation_ike = 0x80000000;
 
 static bool is_known_vid(chunk_t data, int i)
 {

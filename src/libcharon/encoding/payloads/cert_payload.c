@@ -55,7 +55,7 @@ struct private_cert_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -70,12 +70,12 @@ struct private_cert_payload_t {
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Encoding of the CERT Data.
 	 */
-	u_int8_t encoding;
+	uint8_t encoding;
 
 	/**
 	 * The contained cert data value.

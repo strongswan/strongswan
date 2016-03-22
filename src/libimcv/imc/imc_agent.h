@@ -198,7 +198,7 @@ struct imc_agent_t {
  *
  */
 imc_agent_t *imc_agent_create(const char *name,
-							  pen_type_t *supported_types, u_int32_t type_count,
+							  pen_type_t *supported_types, uint32_t type_count,
 							  TNC_IMCID id, TNC_Version *actual_version);
 
 #endif /** IMC_AGENT_H_ @}*/

@@ -169,10 +169,10 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ita_attr_settings_t *this, u_int32_t *offset)
+	private_ita_attr_settings_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t count;
+	uint32_t count;
 	chunk_t name, value;
 	entry_t *entry;
 	status_t status = FAILED;

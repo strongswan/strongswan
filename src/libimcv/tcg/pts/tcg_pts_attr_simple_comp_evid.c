@@ -181,9 +181,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	bool has_pcr_info;
 	char utc_time_buf[25], *policy_uri;
-	u_int8_t flags;
-	u_int16_t len;
-	u_int32_t depth, extended_pcr;
+	uint8_t flags;
+	uint16_t len;
+	uint32_t depth, extended_pcr;
 	pts_comp_func_name_t *name;
 	pts_meas_algorithms_t hash_algorithm;
 	pts_pcr_transform_t transform;
@@ -301,14 +301,14 @@ bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_simple_comp_evid_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	pts_comp_func_name_t *name;
-	u_int8_t flags, fam_and_qualifier, qualifier, reserved;
-	u_int8_t measurement_type, transform, validation;
-	u_int16_t hash_algorithm, len;
-	u_int32_t depth, vendor_id, comp_name, extended_pcr;
+	uint8_t flags, fam_and_qualifier, qualifier, reserved;
+	uint8_t measurement_type, transform, validation;
+	uint16_t hash_algorithm, len;
+	uint32_t depth, vendor_id, comp_name, extended_pcr;
 	chunk_t measurement, utc_time, policy_uri, pcr_before, pcr_after;
 	time_t measurement_time;
 	bool has_pcr_info = FALSE, has_validation = FALSE;

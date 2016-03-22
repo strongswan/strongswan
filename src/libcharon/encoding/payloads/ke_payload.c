@@ -36,7 +36,7 @@ struct private_ke_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -51,17 +51,17 @@ struct private_ke_payload_t {
 	/**
 	 * Reserved bytes
 	 */
-	u_int8_t reserved_byte[2];
+	uint8_t reserved_byte[2];
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * DH Group Number.
 	 */
-	u_int16_t dh_group_number;
+	uint16_t dh_group_number;
 
 	/**
 	 * Key Exchange Data of this KE payload.

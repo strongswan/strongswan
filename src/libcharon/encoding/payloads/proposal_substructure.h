@@ -59,13 +59,13 @@ struct proposal_substructure_t {
 	 * @param id			proposal number to set
 	 */
 	void (*set_proposal_number) (proposal_substructure_t *this,
-								 u_int8_t proposal_number);
+								 uint8_t proposal_number);
 	/**
 	 * get proposal number of current proposal.
 	 *
 	 * @return			proposal number of current proposal substructure.
 	 */
-	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
+	uint8_t (*get_proposal_number) (proposal_substructure_t *this);
 
 	/**
 	 * Sets the protocol id of current proposal.
@@ -73,14 +73,14 @@ struct proposal_substructure_t {
 	 * @param id		protocol id to set
 	 */
 	void (*set_protocol_id) (proposal_substructure_t *this,
-							 u_int8_t protocol_id);
+							 uint8_t protocol_id);
 
 	/**
 	 * get protocol id of current proposal.
 	 *
 	 * @return			protocol id of current proposal substructure.
 	 */
-	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
+	uint8_t (*get_protocol_id) (proposal_substructure_t *this);
 
 	/**
 	 * Sets the next_payload field of this substructure
@@ -114,7 +114,7 @@ struct proposal_substructure_t {
 	 * @param cpi		the CPI if a supported algorithm is proposed
 	 * @return			TRUE if a supported algorithm is proposed
 	 */
-	bool (*get_cpi) (proposal_substructure_t *this, u_int16_t *cpi);
+	bool (*get_cpi) (proposal_substructure_t *this, uint16_t *cpi);
 
 	/**
 	 * Get proposals contained in a propsal_substructure_t.
@@ -135,14 +135,14 @@ struct proposal_substructure_t {
 	 *
 	 * @return					lifetime, in seconds
 	 */
-	u_int32_t (*get_lifetime)(proposal_substructure_t *this);
+	uint32_t (*get_lifetime)(proposal_substructure_t *this);
 
 	/**
 	 * Get the (shortest) life duration of a proposal (IKEv1 only).
 	 *
 	 * @return					life duration, in bytes
 	 */
-	u_int64_t (*get_lifebytes)(proposal_substructure_t *this);
+	uint64_t (*get_lifebytes)(proposal_substructure_t *this);
 
 	/**
 	 * Get the first authentication method from the proposal (IKEv1 only).
@@ -193,7 +193,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * @return			proposal_substructure_t object PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
-			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
+			proposal_t *proposal,  uint32_t lifetime, uint64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, encap_t udp);
 
 /**
@@ -208,7 +208,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  * @return			IKEv1 proposal_substructure_t PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
-			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
+			linked_list_t *proposals, uint32_t lifetime, uint64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, encap_t udp);
 
 /**
@@ -224,7 +224,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  * @return					IKEv1 proposal_substructure_t PLV1_PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
-			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			ipsec_mode_t mode, encap_t udp, u_int8_t proposal_number);
+			uint32_t lifetime, uint64_t lifebytes, uint16_t cpi,
+			ipsec_mode_t mode, encap_t udp, uint8_t proposal_number);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

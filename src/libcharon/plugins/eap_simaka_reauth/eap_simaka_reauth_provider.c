@@ -53,7 +53,7 @@ typedef struct {
 	/** currently used reauthentication identity */
 	identification_t *id;
 	/** counter value */
-	u_int16_t counter;
+	uint16_t counter;
 	/** master key */
 	char mk[HASH_SIZE_SHA1];
 } reauth_data_t;
@@ -92,7 +92,7 @@ static identification_t *gen_identity(private_eap_simaka_reauth_provider_t *this
 
 METHOD(simaka_provider_t, is_reauth, identification_t*,
 	private_eap_simaka_reauth_provider_t *this, identification_t *id,
-	char mk[HASH_SIZE_SHA1], u_int16_t *counter)
+	char mk[HASH_SIZE_SHA1], uint16_t *counter)
 {
 	identification_t *permanent;
 	reauth_data_t *data;

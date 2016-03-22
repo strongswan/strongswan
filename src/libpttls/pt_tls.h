@@ -105,8 +105,8 @@ enum pt_tls_auth_t {
  * @param identifier	receives Message Identifer
  * @return				reader over message value, NULL on error
  */
-bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
-						  u_int32_t *type, u_int32_t *identifier);
+bio_reader_t* pt_tls_read(tls_socket_t *tls, uint32_t *vendor,
+						  uint32_t *type, uint32_t *identifier);
 
 /**
  * Prepend a PT-TLS header to a writer, send data, destroy writer.
@@ -118,7 +118,7 @@ bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
  * @return				TRUE if data written successfully
  */
 bool pt_tls_write(tls_socket_t *tls, pt_tls_message_type_t type,
-				  u_int32_t identifier, chunk_t data);
+				  uint32_t identifier, chunk_t data);
 
 /**
  * Dummy libpttls initialization function needed for integrity test

@@ -462,7 +462,7 @@ START_TEST(test_asn1_to_time)
 {
 	typedef struct {
 		time_t time;
-		u_int8_t type;
+		uint8_t type;
 		char *string;
 	} testdata_t;
 
@@ -525,7 +525,7 @@ START_TEST(test_asn1_from_time)
 {
 	typedef struct {
 		time_t time;
-		u_int8_t type;
+		uint8_t type;
 		chunk_t chunk;
 	} testdata_t;
 
@@ -759,7 +759,7 @@ END_TEST
 START_TEST(test_asn1_parse_integer_uint64)
 {
 	typedef struct {
-		u_int64_t n;
+		uint64_t n;
 		chunk_t chunk;
 	} testdata_t;
 

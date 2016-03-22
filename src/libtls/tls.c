@@ -83,9 +83,9 @@ ENUM_END(tls_extension_names, TLS_EXT_RENEGOTIATION_INFO);
  * TLS record
  */
 typedef struct __attribute__((packed)) {
-	u_int8_t type;
-	u_int16_t version;
-	u_int16_t length;
+	uint8_t type;
+	uint16_t version;
+	uint16_t length;
 	char data[];
 } tls_record_t;
 

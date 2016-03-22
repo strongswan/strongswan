@@ -30,17 +30,17 @@ typedef struct attr_t attr_t;
  */
 struct hdr_t {
 	/** EAP code (REQUEST/RESPONSE) */
-	u_int8_t code;
+	uint8_t code;
 	/** unique message identifier */
-	u_int8_t identifier;
+	uint8_t identifier;
 	/** length of whole message */
-	u_int16_t length;
+	uint16_t length;
 	/** EAP type => EAP_SIM/EAP_AKA */
-	u_int8_t type;
+	uint8_t type;
 	/** SIM subtype */
-	u_int8_t subtype;
+	uint8_t subtype;
 	/** reserved bytes */
-	u_int16_t reserved;
+	uint16_t reserved;
 } __attribute__((__packed__));
 
 /**
@@ -48,9 +48,9 @@ struct hdr_t {
  */
 struct attr_hdr_t {
 	/** attribute type */
-	u_int8_t type;
+	uint8_t type;
 	/** attibute length */
-	u_int8_t length;
+	uint8_t length;
 } __attribute__((__packed__));
 
 /**
@@ -204,7 +204,7 @@ METHOD(simaka_message_t, is_request, bool,
 	return this->hdr->code == EAP_REQUEST;
 }
 
-METHOD(simaka_message_t, get_identifier, u_int8_t,
+METHOD(simaka_message_t, get_identifier, uint8_t,
 	private_simaka_message_t *this)
 {
 	return this->hdr->identifier;
@@ -366,7 +366,7 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 			case AT_IDENTITY:
 			case AT_VERSION_LIST:
 			{
-				u_int16_t len;
+				uint16_t len;
 
 				if (hdr->length < 1 || in.len < 4)
 				{
@@ -610,7 +610,7 @@ METHOD(simaka_message_t, generate, bool,
 	chunk_t out, encr, data, *target, mac = chunk_empty;
 	simaka_attribute_t type;
 	attr_hdr_t *hdr;
-	u_int16_t len;
+	uint16_t len;
 	signer_t *signer;
 
 	call_hook(this, FALSE, TRUE);
@@ -684,7 +684,7 @@ METHOD(simaka_message_t, generate, bool,
 			case AT_VERSION_LIST:
 			case AT_RES:
 			{
-				u_int16_t len, padding;
+				uint16_t len, padding;
 
 				len = htons(data.len);
 				if (type == AT_RES)
@@ -912,7 +912,7 @@ simaka_message_t *simaka_message_create_from_payload(chunk_t data,
 /**
  * See header.
  */
-simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
+simaka_message_t *simaka_message_create(bool request, uint8_t identifier,
 									eap_type_t type, simaka_subtype_t subtype,
 									simaka_crypto_t *crypto)
 {

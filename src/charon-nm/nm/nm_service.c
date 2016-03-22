@@ -68,7 +68,7 @@ static GValue* handler_to_val(nm_handler_t *handler,
 	array = g_array_new (FALSE, TRUE, sizeof (guint32));
 	while (enumerator->enumerate(enumerator, &chunk))
 	{
-		g_array_append_val (array, *(u_int32_t*)chunk.ptr);
+		g_array_append_val (array, *(uint32_t*)chunk.ptr);
 	}
 	enumerator->destroy(enumerator);
 	val = g_slice_new0 (GValue);
@@ -113,7 +113,7 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	enumerator->destroy(enumerator);
 	val = g_slice_new0(GValue);
 	g_value_init(val, G_TYPE_UINT);
-	g_value_set_uint(val, *(u_int32_t*)me->get_address(me).ptr);
+	g_value_set_uint(val, *(uint32_t*)me->get_address(me).ptr);
 	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
 
 	val = g_slice_new0(GValue);

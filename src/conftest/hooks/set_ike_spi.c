@@ -42,12 +42,12 @@ struct private_set_ike_spi_t {
 	/**
 	 * Initiator SPI
 	 */
-	u_int64_t spii;
+	uint64_t spii;
 
 	/**
 	 * Responder SPI
 	 */
-	u_int64_t spir;
+	uint64_t spir;
 };
 
 METHOD(listener_t, message, bool,

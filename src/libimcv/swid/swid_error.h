@@ -52,7 +52,7 @@ extern enum_name_t *swid_error_code_names;
  * @param max_attr_size		Maximum IF-M attribute size (if applicable)
  * @param description		Optional description string or NULL
  */
-pa_tnc_attr_t* swid_error_create(swid_error_code_t code, u_int32_t request,
-								 u_int32_t max_attr_size, char *description);
+pa_tnc_attr_t* swid_error_create(swid_error_code_t code, uint32_t request,
+								 uint32_t max_attr_size, char *description);
 
 #endif /** SWID_ERROR_H_ @}*/

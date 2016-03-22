@@ -75,12 +75,12 @@ struct private_pb_pa_msg_t {
 	/**
 	 * Posture Validator Identifier
 	 */
-	u_int16_t collector_id;
+	uint16_t collector_id;
 
 	/**
 	 * Posture Validator Identifier
 	 */
-	u_int16_t validator_id;
+	uint16_t validator_id;
 
 	/**
 	 * PA Message Body
@@ -131,9 +131,9 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_pa_msg_t *this, u_int32_t *offset)
+	private_pb_pa_msg_t *this, uint32_t *offset)
 {
-	u_int8_t flags;
+	uint8_t flags;
 	size_t msg_body_len;
 	bio_reader_t *reader;
 
@@ -186,13 +186,13 @@ METHOD(pb_pa_msg_t, get_subtype, pen_type_t,
 	return this->subtype;
 }
 
-METHOD(pb_pa_msg_t, get_collector_id, u_int16_t,
+METHOD(pb_pa_msg_t, get_collector_id, uint16_t,
 	private_pb_pa_msg_t *this)
 {
 	return this->collector_id;
 }
 
-METHOD(pb_pa_msg_t, get_validator_id, u_int16_t,
+METHOD(pb_pa_msg_t, get_validator_id, uint16_t,
 	private_pb_pa_msg_t *this)
 {
 	return this->validator_id;
@@ -241,8 +241,8 @@ pb_tnc_msg_t *pb_pa_msg_create_from_data(chunk_t data)
 /**
  * See header
  */
-pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
-							   u_int16_t collector_id, u_int16_t validator_id,
+pb_tnc_msg_t *pb_pa_msg_create(uint32_t vendor_id, uint32_t subtype,
+							   uint16_t collector_id, uint16_t validator_id,
 							   bool excl, chunk_t msg_body)
 {
 	private_pb_pa_msg_t *this;

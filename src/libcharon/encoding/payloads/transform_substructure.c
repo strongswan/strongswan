@@ -40,32 +40,32 @@ struct private_transform_substructure_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Reserved byte
 	 */
-	u_int8_t reserved[3];
+	uint8_t reserved[3];
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t transform_length;
+	uint16_t transform_length;
 
 	/**
 	 * Type or number, Type of the transform in IKEv2, number in IKEv2.
 	 */
-	u_int8_t transform_ton;
+	uint8_t transform_ton;
 
 	/**
 	 * Transform ID, as encoded in IKEv1.
 	 */
-	u_int8_t transform_id_v1;
+	uint8_t transform_id_v1;
 
 	/**
 	 * Transform ID, as encoded in IKEv2.
 	 */
-	u_int16_t transform_id_v2;
+	uint16_t transform_id_v2;
 
 	/**
 	 * Transforms Attributes are stored in a linked_list_t.
@@ -235,13 +235,13 @@ METHOD(payload_t, set_next_type, void,
 {
 }
 
-METHOD(transform_substructure_t, get_transform_type_or_number, u_int8_t,
+METHOD(transform_substructure_t, get_transform_type_or_number, uint8_t,
 	private_transform_substructure_t *this)
 {
 	return this->transform_ton;
 }
 
-METHOD(transform_substructure_t, get_transform_id, u_int16_t,
+METHOD(transform_substructure_t, get_transform_id, uint16_t,
 	private_transform_substructure_t *this)
 {
 	if (this->type == PLV2_TRANSFORM_SUBSTRUCTURE)
@@ -303,7 +303,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
  * Described in header
  */
 transform_substructure_t *transform_substructure_create_type(payload_type_t type,
-				u_int8_t type_or_number, u_int16_t id)
+				uint8_t type_or_number, uint16_t id)
 {
 	private_transform_substructure_t *this;
 

@@ -41,17 +41,17 @@ struct private_dnscert_t {
 	/**
 	 * Certificate type
 	 */
-	u_int16_t cert_type;
+	uint16_t cert_type;
 
 	/**
 	 * Key tag
 	 */
-	u_int16_t key_tag;
+	uint16_t key_tag;
 
 	/**
 	 * Algorithm
 	 */
-	u_int8_t algorithm;
+	uint8_t algorithm;
 
 	/**
 	 * Certificate
@@ -65,7 +65,7 @@ METHOD(dnscert_t, get_cert_type, dnscert_type_t,
 	return this->cert_type;
 }
 
-METHOD(dnscert_t, get_key_tag, u_int16_t,
+METHOD(dnscert_t, get_key_tag, uint16_t,
 	private_dnscert_t *this)
 {
 	return this->key_tag;

@@ -36,7 +36,7 @@ struct private_nonce_nonceg_t {
 };
 
 METHOD(nonce_gen_t, get_nonce, bool,
-	private_nonce_nonceg_t *this, size_t size, u_int8_t *buffer)
+	private_nonce_nonceg_t *this, size_t size, uint8_t *buffer)
 {
 	return this->rng->get_bytes(this->rng, size, buffer);
 }

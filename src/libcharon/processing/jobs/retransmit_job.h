@@ -49,7 +49,7 @@ struct retransmit_job_t {
  * @param ike_sa_id			identification of the ike_sa as ike_sa_id_t
  * @return					retransmit_job_t object
  */
-retransmit_job_t *retransmit_job_create(u_int32_t message_id,
+retransmit_job_t *retransmit_job_create(uint32_t message_id,
 										ike_sa_id_t *ike_sa_id);
 
 #endif /** RETRANSMIT_JOB_H_ @}*/

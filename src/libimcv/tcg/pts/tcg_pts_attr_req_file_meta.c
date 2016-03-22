@@ -83,7 +83,7 @@ struct private_tcg_pts_attr_req_file_meta_t {
 	/**
 	 * UTF8 Encoding of Delimiter Character
 	 */
-	u_int8_t delimiter;
+	uint8_t delimiter;
 
 	/**
 	 * Fully Qualified File Pathname
@@ -123,7 +123,7 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_req_file_meta_t *this)
 {
-	u_int8_t flags = PTS_REQ_FILE_META_NO_FLAGS;
+	uint8_t flags = PTS_REQ_FILE_META_NO_FLAGS;
 	chunk_t pathname;
 	bio_writer_t *writer;
 
@@ -149,11 +149,11 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_req_file_meta_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_req_file_meta_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
-	u_int16_t reserved;
+	uint8_t flags;
+	uint16_t reserved;
 	chunk_t pathname;
 
 	*offset = 0;
@@ -212,7 +212,7 @@ METHOD(tcg_pts_attr_req_file_meta_t, get_directory_flag, bool,
 	return this->directory_flag;
 }
 
-METHOD(tcg_pts_attr_req_file_meta_t, get_delimiter, u_int8_t,
+METHOD(tcg_pts_attr_req_file_meta_t, get_delimiter, uint8_t,
 	private_tcg_pts_attr_req_file_meta_t *this)
 {
 	return this->delimiter;
@@ -228,7 +228,7 @@ METHOD(tcg_pts_attr_req_file_meta_t, get_pathname, char*,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_req_file_meta_create(bool directory_flag,
-												 u_int8_t delimiter,
+												 uint8_t delimiter,
 												 char *pathname)
 {
 	private_tcg_pts_attr_req_file_meta_t *this;

@@ -54,7 +54,7 @@ struct private_child_rekey_t {
 	/**
 	 * Inbound SPI of CHILD_SA to rekey
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * the CHILD_CREATE task which is reused to simplify rekeying
@@ -91,7 +91,7 @@ struct private_child_rekey_t {
  */
 static void schedule_delayed_rekey(private_child_rekey_t *this)
 {
-	u_int32_t retry;
+	uint32_t retry;
 	job_t *job;
 
 	retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
@@ -130,7 +130,7 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 {
 	notify_payload_t *notify;
 	protocol_id_t protocol;
-	u_int32_t spi;
+	uint32_t spi;
 
 	notify = message->get_notify(message, REKEY_SA);
 	if (notify)
@@ -150,7 +150,7 @@ METHOD(task_t, build_i, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-	u_int32_t reqid;
+	uint32_t reqid;
 	child_cfg_t *config;
 
 	this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
@@ -217,7 +217,7 @@ METHOD(task_t, build_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
 	child_cfg_t *config;
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	if (this->child_sa == NULL ||
 		this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
@@ -324,7 +324,7 @@ METHOD(task_t, process_i, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
 	protocol_id_t protocol;
-	u_int32_t spi;
+	uint32_t spi;
 	child_sa_t *to_delete;
 
 	if (message->get_notify(message, NO_ADDITIONAL_SAS))
@@ -485,7 +485,7 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-								  u_int32_t spi)
+								  uint32_t spi)
 {
 	private_child_rekey_t *this;
 

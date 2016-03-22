@@ -145,7 +145,7 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 {
 	private_tnc_ifmap_listener_t *this;
 	job_t *job;
-	u_int32_t reschedule;
+	uint32_t reschedule;
 
 	INIT(this,
 		.public = {

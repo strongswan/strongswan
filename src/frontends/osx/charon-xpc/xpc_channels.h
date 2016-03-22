@@ -45,7 +45,7 @@ struct xpc_channels_t {
 	 * @param conn			XPC connection to channel
 	 * @param ike_sa		IKE_SA unique identifier to associate to connection
 	 */
-	void (*add)(xpc_channels_t *this, xpc_connection_t conn, u_int32_t ike_sa);
+	void (*add)(xpc_channels_t *this, xpc_connection_t conn, uint32_t ike_sa);
 
 	/**
 	 * Destroy a xpc_channels_t.

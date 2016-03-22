@@ -40,7 +40,7 @@ struct private_tnc_ifmap_renew_session_job_t {
 	/**
 	 * Reschedule time interval in seconds
 	 */
-	u_int32_t reschedule;
+	uint32_t reschedule;
 };
 
 METHOD(job_t, destroy, void,
@@ -83,7 +83,7 @@ METHOD(job_t, get_priority, job_priority_t,
  * Described in header
  */
 tnc_ifmap_renew_session_job_t *tnc_ifmap_renew_session_job_create(
-								tnc_ifmap_soap_t *ifmap, u_int32_t reschedule)
+								tnc_ifmap_soap_t *ifmap, uint32_t reschedule)
 {
 	private_tnc_ifmap_renew_session_job_t *this;
 

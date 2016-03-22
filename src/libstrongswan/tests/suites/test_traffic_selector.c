@@ -198,7 +198,7 @@ struct {
 	char *from;
 	char *to;
 	char *net;
-	u_int8_t mask;
+	uint8_t mask;
 	bool exact;
 } to_subnet_tests[] = {
 	{ TS_IPV4_ADDR_RANGE,	"10.0.0.1",	"10.0.0.1",			"10.0.0.1",	32,	TRUE	},
@@ -218,7 +218,7 @@ START_TEST(test_to_subnet)
 {
 	traffic_selector_t *ts;
 	host_t *net, *exp_net;
-	u_int8_t mask;
+	uint8_t mask;
 
 	ts = traffic_selector_create_from_string(0, to_subnet_tests[_i].type,
 					to_subnet_tests[_i].from, 0, to_subnet_tests[_i].to, 0);
@@ -234,9 +234,9 @@ END_TEST
 
 struct {
 	char *cidr;
-	u_int16_t from_port;
-	u_int16_t to_port;
-	u_int16_t port;
+	uint16_t from_port;
+	uint16_t to_port;
+	uint16_t port;
 } to_subnet_port_tests[] = {
 	{ "10.0.0.0/8",		0,		0,		0	},
 	{ "10.0.0.1/32",	80,		80,		80	},
@@ -252,7 +252,7 @@ START_TEST(test_to_subnet_port)
 {
 	traffic_selector_t *ts;
 	host_t *net, *exp_net;
-	u_int8_t mask;
+	uint8_t mask;
 	int exp_mask;
 
 	ts = traffic_selector_create_from_cidr(to_subnet_port_tests[_i].cidr, 0,
@@ -431,9 +431,9 @@ struct {
 	bool contained;
 	struct {
 		char *net;
-		u_int8_t proto;
-		u_int16_t from_port;
-		u_int16_t to_port;
+		uint8_t proto;
+		uint16_t from_port;
+		uint16_t to_port;
 	} a, b;
 } is_contained_in_tests[] = {
 	{  TRUE,  { "10.0.0.0/16", 0, 0, 65535 },	{ "10.0.0.0/16", 0, 0, 65535 },	},
@@ -555,9 +555,9 @@ struct {
 	int res;
 	struct {
 		char *net;
-		u_int8_t proto;
-		u_int16_t from_port;
-		u_int16_t to_port;
+		uint8_t proto;
+		uint16_t from_port;
+		uint16_t to_port;
 	} a, b;
 } cmp_tests[] = {
 	{  0, { "10.0.0.0/8", 0, 0, 65535 },	{ "10.0.0.0/8", 0, 0, 65535 },	},
@@ -706,13 +706,13 @@ START_TEST(test_hash)
 END_TEST
 
 struct {
-	u_int8_t proto;
-	u_int16_t from_port;
-	u_int16_t to_port;
-	u_int8_t from_type;
-	u_int8_t from_code;
-	u_int8_t to_type;
-	u_int8_t to_code;
+	uint8_t proto;
+	uint16_t from_port;
+	uint16_t to_port;
+	uint8_t from_type;
+	uint8_t from_code;
+	uint8_t to_type;
+	uint8_t to_code;
 	char *str;
 	char *str_alt;
 } icmp_tests[] = {
@@ -731,7 +731,7 @@ struct {
 START_TEST(test_icmp)
 {
 	traffic_selector_t *ts;
-	u_int16_t from, to;
+	uint16_t from, to;
 
 	ts = traffic_selector_create_dynamic(icmp_tests[_i].proto,
 							icmp_tests[_i].from_port, icmp_tests[_i].to_port);

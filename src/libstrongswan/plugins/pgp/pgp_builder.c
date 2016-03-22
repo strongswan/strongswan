@@ -26,7 +26,7 @@
  */
 static public_key_t *parse_public_key(chunk_t blob)
 {
-	u_int32_t alg;
+	uint32_t alg;
 	public_key_t *key;
 
 	if (!pgp_read_scalar(&blob, 1, &alg))
@@ -74,7 +74,7 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 static private_key_t *parse_rsa_private_key(chunk_t blob)
 {
 	chunk_t mpi[6];
-	u_int32_t s2k;
+	uint32_t s2k;
 	int i;
 
 	for (i = 0; i < 2; i++)
@@ -143,7 +143,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 {
 	chunk_t packet;
 	pgp_packet_tag_t tag;
-	u_int32_t version, created, days, alg;
+	uint32_t version, created, days, alg;
 	private_key_t *key;
 
 	if (!pgp_read_packet(&blob, &packet, &tag))

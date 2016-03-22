@@ -75,22 +75,22 @@ struct private_pb_error_msg_t {
 	/**
 	 * PB Error Code Vendor ID
 	 */
-	u_int32_t vendor_id;
+	uint32_t vendor_id;
 
 	/**
 	 * PB Error Code
 	 */
-	u_int16_t error_code;
+	uint16_t error_code;
 
 	/**
 	 * PB Error Offset
 	 */
-	u_int32_t error_offset;
+	uint32_t error_offset;
 
 	/**
 	 * Bad PB-TNC version received
 	 */
-	u_int8_t bad_version;
+	uint8_t bad_version;
 
 	/**
 	 * Encoded message
@@ -153,10 +153,10 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_error_msg_t *this, u_int32_t *offset)
+	private_pb_error_msg_t *this, uint32_t *offset)
 {
-	u_int8_t flags, max_version, min_version;
-	u_int16_t reserved;
+	uint8_t flags, max_version, min_version;
+	uint16_t reserved;
 	bio_reader_t *reader;
 
 	if (this->encoding.len < ERROR_HEADER_SIZE)
@@ -216,32 +216,32 @@ METHOD(pb_error_msg_t, get_fatal_flag, bool,
 	return this->fatal;
 }
 
-METHOD(pb_error_msg_t, get_vendor_id, u_int32_t,
+METHOD(pb_error_msg_t, get_vendor_id, uint32_t,
 	private_pb_error_msg_t *this)
 {
 	return this->vendor_id;
 }
 
-METHOD(pb_error_msg_t, get_error_code, u_int16_t,
+METHOD(pb_error_msg_t, get_error_code, uint16_t,
 	private_pb_error_msg_t *this)
 {
 	return this->error_code;
 }
 
-METHOD(pb_error_msg_t, get_offset, u_int32_t,
+METHOD(pb_error_msg_t, get_offset, uint32_t,
 	private_pb_error_msg_t *this)
 {
 	return this->error_offset;
 }
 
-METHOD(pb_error_msg_t, get_bad_version, u_int8_t,
+METHOD(pb_error_msg_t, get_bad_version, uint8_t,
 	private_pb_error_msg_t *this)
 {
 	return this->bad_version;
 }
 
 METHOD(pb_error_msg_t, set_bad_version, void,
-	private_pb_error_msg_t *this, u_int8_t version)
+	private_pb_error_msg_t *this, uint8_t version)
 {
 	this->bad_version = version;
 }
@@ -249,7 +249,7 @@ METHOD(pb_error_msg_t, set_bad_version, void,
 /**
  * See header
  */
-pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
+pb_tnc_msg_t* pb_error_msg_create(bool fatal, uint32_t vendor_id,
 								  pb_tnc_error_code_t error_code)
 {
 	private_pb_error_msg_t *this;
@@ -284,9 +284,9 @@ pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
 /**
  * See header
  */
-pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, u_int32_t vendor_id,
+pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, uint32_t vendor_id,
 											  pb_tnc_error_code_t error_code,
-											  u_int32_t error_offset)
+											  uint32_t error_offset)
 {
 	private_pb_error_msg_t *this;
 

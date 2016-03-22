@@ -60,7 +60,7 @@ struct tun_device_t {
 	 * @param netmask		the netmask to use
 	 * @return				TRUE if operation successful
 	 */
-	bool (*set_address)(tun_device_t *this, host_t *addr, u_int8_t netmask);
+	bool (*set_address)(tun_device_t *this, host_t *addr, uint8_t netmask);
 
 	/**
 	 * Get the IP address previously assigned to using set_address().
@@ -68,7 +68,7 @@ struct tun_device_t {
 	 * @param netmask		pointer receiving the configured netmask, or NULL
 	 * @return				address previously set, NULL if none
 	 */
-	host_t* (*get_address)(tun_device_t *this, u_int8_t *netmask);
+	host_t* (*get_address)(tun_device_t *this, uint8_t *netmask);
 
 	/**
 	 * Bring the TUN device up

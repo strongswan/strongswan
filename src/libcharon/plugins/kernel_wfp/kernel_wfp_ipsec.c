@@ -45,7 +45,7 @@ struct private_kernel_wfp_ipsec_t {
 	/**
 	 * Mix value to distribute SPI allocation randomly
 	 */
-	u_int32_t mixspi;
+	uint32_t mixspi;
 
 	/**
 	 * IKE bypass filters, as UINT64 filter LUID
@@ -103,16 +103,16 @@ struct private_kernel_wfp_ipsec_t {
  */
 typedef struct {
 	/** SPI for this SA */
-	u_int32_t spi;
+	uint32_t spi;
 	/** protocol, IPPROTO_ESP/IPPROTO_AH */
-	u_int8_t protocol;
+	uint8_t protocol;
 	/** hard lifetime of SA */
-	u_int32_t lifetime;
+	uint32_t lifetime;
 	/** destination host address for this SPI */
 	host_t *dst;
 	struct {
 		/** algorithm */
-		u_int16_t alg;
+		uint16_t alg;
 		/** key */
 		chunk_t key;
 	} integ, encr;
@@ -144,13 +144,13 @@ typedef struct {
 	/** policy destinaiton addresses */
 	traffic_selector_t *dst;
 	/** WFP allocated LUID for inbound filter ID */
-	u_int64_t policy_in;
+	uint64_t policy_in;
 	/** WFP allocated LUID for outbound filter ID */
-	u_int64_t policy_out;
+	uint64_t policy_out;
 	/** WFP allocated LUID for forward inbound filter ID, tunnel mode only */
-	u_int64_t policy_fwd_in;
+	uint64_t policy_fwd_in;
 	/** WFP allocated LUID for forward outbound filter ID, tunnel mode only */
-	u_int64_t policy_fwd_out;
+	uint64_t policy_fwd_out;
 	/** have installed a route for it? */
 	bool route;
 } sp_entry_t;
@@ -170,7 +170,7 @@ static void sp_entry_destroy(sp_entry_t *sp)
  */
 typedef struct {
 	/** reqid of entry */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** outer address on local host */
 	host_t *local;
 	/** outer address on remote host */
@@ -186,17 +186,17 @@ typedef struct {
 	/** UDP encapsulation */
 	bool encap;
 	/** provider context, for tunnel mode only */
-	u_int64_t provider;
+	uint64_t provider;
 	/** WFP allocated LUID for SA context */
-	u_int64_t sa_id;
+	uint64_t sa_id;
 	/** WFP allocated LUID for tunnel mode IP-IPv4 inbound filter */
-	u_int64_t ip_ipv4_in;
+	uint64_t ip_ipv4_in;
 	/** WFP allocated LUID for tunnel mode IP-IPv4 outbound filter */
-	u_int64_t ip_ipv4_out;
+	uint64_t ip_ipv4_out;
 	/** WFP allocated LUID for tunnel mode IP-IPv6 inbound filter */
-	u_int64_t ip_ipv6_in;
+	uint64_t ip_ipv6_in;
 	/** WFP allocated LUID for tunnel mode IP-IPv6 outbound filter */
-	u_int64_t ip_ipv6_out;
+	uint64_t ip_ipv6_out;
 } entry_t;
 
 /**
@@ -206,7 +206,7 @@ typedef struct {
 	/** destination net of route */
 	host_t *dst;
 	/** prefix length of dst */
-	u_int8_t mask;
+	uint8_t mask;
 	/** source address for route */
 	host_t *src;
 	/** gateway of route, NULL if directly attached */
@@ -348,9 +348,9 @@ static FWPM_FILTER_CONDITION0 *append_condition(FWPM_FILTER_CONDITION0 *conds[],
 /**
  * Convert an IPv4 prefix to a host order subnet mask
  */
-static u_int32_t prefix2mask(u_int8_t prefix)
+static uint32_t prefix2mask(uint8_t prefix)
 {
-	u_int8_t netmask[4] = {};
+	uint8_t netmask[4] = {};
 	int i;
 
 	for (i = 0; i < sizeof(netmask); i++)
@@ -370,7 +370,7 @@ static u_int32_t prefix2mask(u_int8_t prefix)
  * Convert a 16-bit range to a WFP condition
  */
 static void range2cond(FWPM_FILTER_CONDITION0 *cond,
-					   u_int16_t from, u_int16_t to)
+					   uint16_t from, uint16_t to)
 {
 	if (from == to)
 	{
@@ -399,11 +399,11 @@ static bool ts2condition(traffic_selector_t *ts, const GUID *target,
 	FWPM_FILTER_CONDITION0 *cond;
 	FWP_BYTE_ARRAY16 *addr;
 	FWP_RANGE0 *range;
-	u_int16_t from_port, to_port;
+	uint16_t from_port, to_port;
 	void *from, *to;
-	u_int8_t proto;
+	uint8_t proto;
 	host_t *net;
-	u_int8_t prefix;
+	uint8_t prefix;
 
 	from = ts->get_from_address(ts).ptr;
 	to = ts->get_to_address(ts).ptr;
@@ -496,7 +496,7 @@ static bool ts2condition(traffic_selector_t *ts, const GUID *target,
 	{
 		if (target == &FWPM_CONDITION_IP_LOCAL_ADDRESS)
 		{
-			u_int8_t from_type, to_type, from_code, to_code;
+			uint8_t from_type, to_type, from_code, to_code;
 
 			from_type = traffic_selector_icmp_type(from_port);
 			to_type = traffic_selector_icmp_type(to_port);
@@ -736,7 +736,7 @@ static bool install_sp(private_kernel_wfp_ipsec_t *this, sp_entry_t *sp,
  */
 static bool install_ipip_ale(private_kernel_wfp_ipsec_t *this,
 							 host_t *local, host_t *remote, GUID *context,
-							 bool inbound, int proto, u_int64_t *filter_id)
+							 bool inbound, int proto, uint64_t *filter_id)
 {
 	traffic_selector_t *lts, *rts;
 	FWPM_FILTER_CONDITION0 *conds = NULL;
@@ -1013,7 +1013,7 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
 		.ipVersion = version,
 	};
 	struct {
-		u_int16_t alg;
+		uint16_t alg;
 		chunk_t key;
 	} integ = {}, encr = {};
 	DWORD res;
@@ -1099,9 +1099,9 @@ static bool install_sa(private_kernel_wfp_ipsec_t *this, entry_t *entry,
  */
 static void host2address6(host_t *host, void *out)
 {
-	u_int32_t *src, *dst = out;
+	uint32_t *src, *dst = out;
 
-	src = (u_int32_t*)host->get_address(host).ptr;
+	src = (uint32_t*)host->get_address(host).ptr;
 
 	dst[0] = untoh32(&src[3]);
 	dst[1] = untoh32(&src[2]);
@@ -1273,7 +1273,7 @@ static bool generate_guid(private_kernel_wfp_ipsec_t *this, GUID *guid)
 	{
 		return FALSE;
 	}
-	ok = rng->get_bytes(rng, sizeof(GUID), (u_int8_t*)guid);
+	ok = rng->get_bytes(rng, sizeof(GUID), (uint8_t*)guid);
 	rng->destroy(rng);
 	return ok;
 }
@@ -1379,7 +1379,7 @@ static bool install_tunnel_sps(private_kernel_wfp_ipsec_t *this, entry_t *entry)
  * Reduce refcount, or uninstall a route if all refs gone
  */
 static bool uninstall_route(private_kernel_wfp_ipsec_t *this,
-							host_t *dst, u_int8_t mask, host_t *src, host_t *gtw)
+							host_t *dst, uint8_t mask, host_t *src, host_t *gtw)
 {
 	route_t *route, key = {
 		.dst = dst,
@@ -1421,7 +1421,7 @@ static bool uninstall_route(private_kernel_wfp_ipsec_t *this,
  * Install a single route, or refcount if exists
  */
 static bool install_route(private_kernel_wfp_ipsec_t *this,
-						  host_t *dst, u_int8_t mask, host_t *src, host_t *gtw)
+						  host_t *dst, uint8_t mask, host_t *src, host_t *gtw)
 {
 	route_t *route, key = {
 		.dst = dst,
@@ -1476,7 +1476,7 @@ static bool manage_route(private_kernel_wfp_ipsec_t *this,
 						 bool add)
 {
 	host_t *src, *dst, *gtw;
-	u_int8_t mask;
+	uint8_t mask;
 	bool done;
 
 	if (!dst_ts->to_subnet(dst_ts, &dst, &mask))
@@ -1578,7 +1578,7 @@ static bool install(private_kernel_wfp_ipsec_t *this, entry_t *entry)
  */
 typedef struct {
 	/** reqid this trap is installed for */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** is this a forward policy trap for tunnel mode? */
 	bool fwd;
 	/** do we have installed a route for this trap policy? */
@@ -1629,7 +1629,7 @@ static u_int hash_trap(trap_t *trap)
 static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
 					traffic_selector_t *src, traffic_selector_t *dst)
 {
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 	trap_t *trap, key = {
 		.filter_id = filter_id,
 	};
@@ -1654,7 +1654,7 @@ static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
  * Create a single host traffic selector from an FWP address definition
  */
 static traffic_selector_t *addr2ts(FWP_IP_VERSION version, void *data,
-					u_int8_t protocol, u_int16_t from_port, u_int16_t to_port)
+					uint8_t protocol, uint16_t from_port, uint16_t to_port)
 {
 	ts_type_t type;
 	UINT32 ints[4];
@@ -1689,9 +1689,9 @@ static void WINAPI event_callback(void *user, const FWPM_NET_EVENT1 *event)
 {
 	private_kernel_wfp_ipsec_t *this = user;
 	traffic_selector_t *local = NULL, *remote = NULL;
-	u_int8_t protocol = 0;
-	u_int16_t from_local = 0, to_local = 65535;
-	u_int16_t from_remote = 0, to_remote = 65535;
+	uint8_t protocol = 0;
+	uint16_t from_local = 0, to_local = 65535;
+	uint16_t from_remote = 0, to_remote = 65535;
 
 	if ((event->header.flags & FWPM_NET_EVENT_FLAG_LOCAL_ADDR_SET) &&
 		(event->header.flags & FWPM_NET_EVENT_FLAG_REMOTE_ADDR_SET))
@@ -1861,7 +1861,7 @@ static bool uninstall_trap(private_kernel_wfp_ipsec_t *this, trap_t *trap)
  * Create and install a new trap entry
  */
 static bool add_trap(private_kernel_wfp_ipsec_t *this,
-					 u_int32_t reqid, bool fwd, host_t *local, host_t *remote,
+					 uint32_t reqid, bool fwd, host_t *local, host_t *remote,
 					 traffic_selector_t *src, traffic_selector_t *dst)
 {
 	trap_t *trap;
@@ -1893,7 +1893,7 @@ static bool add_trap(private_kernel_wfp_ipsec_t *this,
  * Uninstall and remove a new trap entry
  */
 static bool remove_trap(private_kernel_wfp_ipsec_t *this,
-						u_int32_t reqid, bool fwd,
+						uint32_t reqid, bool fwd,
 						traffic_selector_t *src, traffic_selector_t *dst)
 {
 	enumerator_t *enumerator;
@@ -1949,10 +1949,10 @@ static bool init_spi(private_kernel_wfp_ipsec_t *this)
 	{
 		return FALSE;
 	}
-	ok = rng->get_bytes(rng, sizeof(this->nextspi), (u_int8_t*)&this->nextspi);
+	ok = rng->get_bytes(rng, sizeof(this->nextspi), (uint8_t*)&this->nextspi);
 	if (ok)
 	{
-		ok = rng->get_bytes(rng, sizeof(this->mixspi), (u_int8_t*)&this->mixspi);
+		ok = rng->get_bytes(rng, sizeof(this->mixspi), (uint8_t*)&this->mixspi);
 	}
 	rng->destroy(rng);
 	return ok;
@@ -1966,7 +1966,7 @@ static u_int permute(u_int x, u_int p)
 	u_int qr;
 
 	x = x % p;
-	qr = ((u_int64_t)x * x) % p;
+	qr = ((uint64_t)x * x) % p;
 	if (x <= p / 2)
 	{
 		return qr;
@@ -1976,7 +1976,7 @@ static u_int permute(u_int x, u_int p)
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	/* To avoid sequencial SPIs, we use a one-to-one permuation function on
 	 * an incrementing counter, that is a full period PRNG for the range we
@@ -1993,7 +1993,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }
@@ -2005,7 +2005,7 @@ typedef struct {
 	/* backref to kernel backend */
 	private_kernel_wfp_ipsec_t *this;
 	/* SPI of expiring SA */
-	u_int32_t spi;
+	uint32_t spi;
 	/* destination address of expiring SA */
 	host_t *dst;
 	/* is this a hard expire, or a rekey request? */
@@ -2027,7 +2027,7 @@ static void expire_data_destroy(expire_data_t *data)
 static job_requeue_t expire_job(expire_data_t *data)
 {
 	private_kernel_wfp_ipsec_t *this = data->this;
-	u_int8_t protocol;
+	uint8_t protocol;
 	entry_t *entry = NULL;
 	sa_entry_t key = {
 		.spi = data->spi,
@@ -2074,8 +2074,8 @@ static job_requeue_t expire_job(expire_data_t *data)
 /**
  * Schedule an expire event for an SA
  */
-static void schedule_expire(private_kernel_wfp_ipsec_t *this, u_int32_t spi,
-							host_t *dst, u_int32_t lifetime, bool hard)
+static void schedule_expire(private_kernel_wfp_ipsec_t *this, uint32_t spi,
+							host_t *dst, uint32_t lifetime, bool hard)
 {
 	expire_data_t *data;
 
@@ -2094,10 +2094,10 @@ static void schedule_expire(private_kernel_wfp_ipsec_t *this, u_int32_t spi,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
+	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
@@ -2186,8 +2186,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_wfp_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_kernel_wfp_ipsec_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
 	entry_t *entry;
@@ -2291,8 +2291,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes,
-	u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark, uint64_t *bytes,
+	uint64_t *packets, time_t *time)
 {
 	/* It does not seem that WFP provides any means of getting per-SA traffic
 	 * statistics. IPsecGetStatistics0/1() provides global stats, and
@@ -2303,7 +2303,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	entry_t *entry;
 	sa_entry_t key = {
@@ -2479,7 +2479,7 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
  * Add a bypass policy for a specific UDP port
  */
 static bool add_bypass(private_kernel_wfp_ipsec_t *this,
-					   int family, u_int16_t port, bool inbound, UINT64 *luid)
+					   int family, uint16_t port, bool inbound, UINT64 *luid)
 {
 	FWPM_FILTER_CONDITION0 *cond, *conds = NULL;
 	int count = 0;
@@ -2547,7 +2547,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	} saddr;
 	int addrlen = sizeof(saddr);
 	UINT64 filter_out, filter_in = 0;
-	u_int16_t port;
+	uint16_t port;
 
 	if (getsockname(fd, &saddr.sa, &addrlen) == SOCKET_ERROR)
 	{
@@ -2584,7 +2584,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
-	private_kernel_wfp_ipsec_t *this, int fd, int family, u_int16_t port)
+	private_kernel_wfp_ipsec_t *this, int fd, int family, uint16_t port)
 {
 	return FALSE;
 }

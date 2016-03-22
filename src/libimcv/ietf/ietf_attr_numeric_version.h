@@ -45,7 +45,7 @@ struct ietf_attr_numeric_version_t {
 	 * @param minor			Minor Version Number
 	 */
 	void (*get_version)(ietf_attr_numeric_version_t *this,
-						u_int32_t *major, u_int32_t *minor);
+						uint32_t *major, uint32_t *minor);
 
 	/**
 	 * Gets the Build Number
@@ -53,7 +53,7 @@ struct ietf_attr_numeric_version_t {
 	 * @param major			Major Version Number
 	 * @param minor			Minor Version Number
 	 */
-	u_int32_t (*get_build)(ietf_attr_numeric_version_t *this);
+	uint32_t (*get_build)(ietf_attr_numeric_version_t *this);
 
 	/**
 	 * Gets the Major and Minor Numbers of the Service Pack
@@ -62,17 +62,17 @@ struct ietf_attr_numeric_version_t {
 	 * @param minor			Servcie Pack Minor Number
 	 */
 	void (*get_service_pack)(ietf_attr_numeric_version_t *this,
-							 u_int16_t *major, u_int16_t *minor);
+							 uint16_t *major, uint16_t *minor);
 };
 
 /**
  * Creates an ietf_attr_numeric_version_t object
  *
  */
-pa_tnc_attr_t* ietf_attr_numeric_version_create(u_int32_t major, u_int32_t minor,
-												u_int32_t build,
-												u_int16_t service_pack_major,
-												u_int16_t service_pack_minor);
+pa_tnc_attr_t* ietf_attr_numeric_version_create(uint32_t major, uint32_t minor,
+												uint32_t build,
+												uint16_t service_pack_major,
+												uint16_t service_pack_minor);
 
 /**
  * Creates an ietf_attr_numeric_version_t object from received data

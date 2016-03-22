@@ -60,7 +60,7 @@ struct private_ccm_aead_t {
  * First block with control information
  */
 typedef struct __attribute__((packed)) {
-	BITFIELD4(u_int8_t,
+	BITFIELD4(uint8_t,
 		/* size of p length field q, as q-1 */
 		q_len: 3,
 		/* size of our ICV t, as (t-2)/2 */
@@ -82,7 +82,7 @@ typedef struct __attribute__((packed)) {
  * Counter block
  */
 typedef struct __attribute__((packed)) {
-	BITFIELD3(u_int8_t,
+	BITFIELD3(uint8_t,
 		/* size of p length field q, as q-1 */
 		q_len: 3,
 		zero: 3,
@@ -117,7 +117,7 @@ static void build_b0(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
 /**
  * Build a counter block for counter i
  */
-static void build_ctr(private_ccm_aead_t *this, u_int32_t i, chunk_t iv,
+static void build_ctr(private_ccm_aead_t *this, uint32_t i, chunk_t iv,
 					  char *out)
 {
 	ctr_t *ctr = (ctr_t*)out;

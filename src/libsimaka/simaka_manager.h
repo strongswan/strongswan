@@ -131,7 +131,7 @@ struct simaka_manager_t {
 	 */
 	void (*card_set_reauth)(simaka_manager_t *this, identification_t *id,
 							identification_t *next, char mk[HASH_SIZE_SHA1],
-							u_int16_t counter);
+							uint16_t counter);
 
 	/**
 	 * Retrieve fast reauthentication parameters from one of the registered cards.
@@ -143,7 +143,7 @@ struct simaka_manager_t {
 	 */
 	identification_t* (*card_get_reauth)(simaka_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter);
+								uint16_t *counter);
 
 	/**
 	 * Register a triplet provider (server) at the manager.
@@ -228,7 +228,7 @@ struct simaka_manager_t {
 	 */
 	identification_t* (*provider_is_reauth)(simaka_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter);
+								uint16_t *counter);
 
 	/**
 	 * Generate a fast reauth id using one of the registered providers.

@@ -87,12 +87,12 @@ static bio_reader_t* read_tls(tls_socket_t *tls, size_t len)
 /**
  * Read a PT-TLS message, return header data
  */
-bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
-						  u_int32_t *type, u_int32_t *identifier)
+bio_reader_t* pt_tls_read(tls_socket_t *tls, uint32_t *vendor,
+						  uint32_t *type, uint32_t *identifier)
 {
 	bio_reader_t *reader;
-	u_int32_t len;
-	u_int8_t reserved;
+	uint32_t len;
+	uint8_t reserved;
 
 	reader = read_tls(tls, PT_TLS_HEADER_LEN);
 	if (!reader)
@@ -135,7 +135,7 @@ bio_reader_t* pt_tls_read(tls_socket_t *tls, u_int32_t *vendor,
  * Prepend a PT-TLS header to a writer, send data, destroy writer
  */
 bool pt_tls_write(tls_socket_t *tls, pt_tls_message_type_t type,
-				  u_int32_t identifier, chunk_t data)
+				  uint32_t identifier, chunk_t data)
 {
 	bio_writer_t *writer;
 	chunk_t out;

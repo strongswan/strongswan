@@ -289,10 +289,10 @@ enum encoding_type_t {
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
 	 *
-	 * When generating the value of the u_int64_t pointing to
+	 * When generating the value of the uint64_t pointing to
 	 * is written (host and networ order is not changed).
 	 *
-	 * When parsing 8 bytes are read and written into the u_int64_t pointing to.
+	 * When parsing 8 bytes are read and written into the uint64_t pointing to.
 	 */
 	IKE_SPI,
 
@@ -342,7 +342,7 @@ struct encoding_rule_t {
 	 * When generating, data are read from this offset in the
 	 * data struct.
 	 */
-	u_int32_t offset;
+	uint32_t offset;
 };
 
 #endif /** ENCODINGS_H_ @}*/

@@ -37,15 +37,15 @@ struct private_tls_aead_t {
  * Associated header data to create signature over
  */
 typedef struct __attribute__((__packed__)) {
-	u_int64_t seq;
-	u_int8_t type;
-	u_int16_t version;
-	u_int16_t length;
+	uint64_t seq;
+	uint8_t type;
+	uint16_t version;
+	uint16_t length;
 } sigheader_t;
 
 METHOD(tls_aead_t, encrypt, bool,
 	private_tls_aead_t *this, tls_version_t version,
-	tls_content_type_t type, u_int64_t seq, chunk_t *data)
+	tls_content_type_t type, uint64_t seq, chunk_t *data)
 {
 	chunk_t assoc, mac;
 	sigheader_t hdr;
@@ -67,7 +67,7 @@ METHOD(tls_aead_t, encrypt, bool,
 
 METHOD(tls_aead_t, decrypt, bool,
 	private_tls_aead_t *this, tls_version_t version,
-	tls_content_type_t type, u_int64_t seq, chunk_t *data)
+	tls_content_type_t type, uint64_t seq, chunk_t *data)
 {
 	chunk_t assoc, mac;
 	sigheader_t hdr;

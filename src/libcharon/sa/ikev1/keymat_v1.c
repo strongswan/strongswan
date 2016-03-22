@@ -32,7 +32,7 @@ typedef struct private_keymat_v1_t private_keymat_v1_t;
  */
 typedef struct {
 	/** message ID */
-	u_int32_t mid;
+	uint32_t mid;
 	/** current IV */
 	chunk_t iv;
 	/** last block of encrypted message */
@@ -128,7 +128,7 @@ static void iv_data_destroy(iv_data_t *this)
  */
 typedef struct {
 	/** message ID */
-	u_int32_t mid;
+	uint32_t mid;
 	/** Ni_b (Nonce from first message) */
 	chunk_t n_i;
 	/** Nr_b (Nonce from second message) */
@@ -272,7 +272,7 @@ static bool expand_skeyid_e(chunk_t skeyid_e, size_t key_size, prf_t *prf,
 static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 {
 	private_aead_t *this;
-	u_int16_t alg, key_size;
+	uint16_t alg, key_size;
 	crypter_t *crypter;
 	chunk_t ka;
 
@@ -324,7 +324,7 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 /**
  * Converts integrity algorithm to PRF algorithm
  */
-static u_int16_t auth_to_prf(u_int16_t alg)
+static uint16_t auth_to_prf(uint16_t alg)
 {
 	switch (alg)
 	{
@@ -348,7 +348,7 @@ static u_int16_t auth_to_prf(u_int16_t alg)
 /**
  * Converts integrity algorithm to hash algorithm
  */
-static u_int16_t auth_to_hash(u_int16_t alg)
+static uint16_t auth_to_hash(uint16_t alg)
 {
 	switch (alg)
 	{
@@ -370,7 +370,7 @@ static u_int16_t auth_to_hash(u_int16_t alg)
 /**
  * Adjust the key length for PRF algorithms that expect a fixed key length.
  */
-static void adjust_keylen(u_int16_t alg, chunk_t *key)
+static void adjust_keylen(uint16_t alg, chunk_t *key)
 {
 	switch (alg)
 	{
@@ -393,10 +393,10 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 {
 	chunk_t g_xy, g_xi, g_xr, dh_me, spi_i, spi_r, nonces, data, skeyid_e;
 	chunk_t skeyid;
-	u_int16_t alg;
+	uint16_t alg;
 
-	spi_i = chunk_alloca(sizeof(u_int64_t));
-	spi_r = chunk_alloca(sizeof(u_int64_t));
+	spi_i = chunk_alloca(sizeof(uint64_t));
+	spi_r = chunk_alloca(sizeof(uint64_t));
 
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
 	{	/* no PRF negotiated, use HMAC version of integrity algorithm instead */
@@ -431,8 +431,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	}
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &g_xy);
 
-	*((u_int64_t*)spi_i.ptr) = id->get_initiator_spi(id);
-	*((u_int64_t*)spi_r.ptr) = id->get_responder_spi(id);
+	*((uint64_t*)spi_i.ptr) = id->get_initiator_spi(id);
+	*((uint64_t*)spi_r.ptr) = id->get_responder_spi(id);
 	nonces = chunk_cata("cc", nonce_i, nonce_r);
 
 	switch (auth)
@@ -585,11 +585,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 METHOD(keymat_v1_t, derive_child_keys, bool,
 	private_keymat_v1_t *this, proposal_t *proposal, diffie_hellman_t *dh,
-	u_int32_t spi_i, u_int32_t spi_r, chunk_t nonce_i, chunk_t nonce_r,
+	uint32_t spi_i, uint32_t spi_r, chunk_t nonce_i, chunk_t nonce_r,
 	chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r)
 {
-	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
-	u_int8_t protocol;
+	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
+	uint8_t protocol;
 	prf_plus_t *prf_plus;
 	chunk_t seed, secret = chunk_empty;
 	bool success = FALSE;
@@ -725,7 +725,7 @@ failure:
 METHOD(keymat_v1_t, create_hasher, bool,
 	private_keymat_v1_t *this, proposal_t *proposal)
 {
-	u_int16_t alg;
+	uint16_t alg;
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL) ||
 		(alg = auth_to_hash(alg)) == HASH_UNKNOWN)
 	{
@@ -754,7 +754,7 @@ METHOD(keymat_v1_t, get_hash, bool,
 	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id, chunk_t *hash)
 {
 	chunk_t data;
-	u_int64_t spi, spi_other;
+	uint64_t spi, spi_other;
 
 	/* HASH_I = prf(SKEYID, g^xi | g^xr | CKY-I | CKY-R | SAi_b | IDii_b )
 	 * HASH_R = prf(SKEYID, g^xr | g^xi | CKY-R | CKY-I | SAi_b | IDir_b )
@@ -810,7 +810,7 @@ static chunk_t get_message_data(message_t *message, generator_t *generator)
 {
 	payload_t *payload, *next;
 	enumerator_t *enumerator;
-	u_int32_t *lenpos;
+	uint32_t *lenpos;
 
 	if (message->is_encoded(message))
 	{	/* inbound, although the message is generated, we cannot access the
@@ -850,7 +850,7 @@ static chunk_t get_message_data(message_t *message, generator_t *generator)
  * Try to find data about a Quick Mode with the given message ID,
  * if none is found, state is generated.
  */
-static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, u_int32_t mid)
+static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, uint32_t mid)
 {
 	enumerator_t *enumerator;
 	qm_data_t *qm, *found = NULL;
@@ -885,7 +885,7 @@ static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, u_int32_t mid)
 METHOD(keymat_v1_t, get_hash_phase2, bool,
 	private_keymat_v1_t *this, message_t *message, chunk_t *hash)
 {
-	u_int32_t mid, mid_n;
+	uint32_t mid, mid_n;
 	chunk_t data = chunk_empty;
 	bool add_message = TRUE;
 	char *name = "Hash";
@@ -993,7 +993,7 @@ static bool generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
 	else
 	{
 		/* initial phase 2 IV = hash(last_phase1_block | mid) */
-		u_int32_t net;;
+		uint32_t net;;
 		chunk_t data;
 
 		net = htonl(iv->mid);
@@ -1014,7 +1014,7 @@ static bool generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
 /**
  * Try to find an IV for the given message ID, if not found, generate it.
  */
-static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
+static iv_data_t *lookup_iv(private_keymat_v1_t *this, uint32_t mid)
 {
 	enumerator_t *enumerator;
 	iv_data_t *iv, *found = NULL;
@@ -1057,7 +1057,7 @@ static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
 }
 
 METHOD(keymat_v1_t, get_iv, bool,
-	private_keymat_v1_t *this, u_int32_t mid, chunk_t *out)
+	private_keymat_v1_t *this, uint32_t mid, chunk_t *out)
 {
 	iv_data_t *iv;
 
@@ -1071,7 +1071,7 @@ METHOD(keymat_v1_t, get_iv, bool,
 }
 
 METHOD(keymat_v1_t, update_iv, bool,
-	private_keymat_v1_t *this, u_int32_t mid, chunk_t last_block)
+	private_keymat_v1_t *this, uint32_t mid, chunk_t last_block)
 {
 	iv_data_t *iv = lookup_iv(this, mid);
 	if (iv)
@@ -1084,7 +1084,7 @@ METHOD(keymat_v1_t, update_iv, bool,
 }
 
 METHOD(keymat_v1_t, confirm_iv, bool,
-	private_keymat_v1_t *this, u_int32_t mid)
+	private_keymat_v1_t *this, uint32_t mid)
 {
 	iv_data_t *iv = lookup_iv(this, mid);
 	if (iv)

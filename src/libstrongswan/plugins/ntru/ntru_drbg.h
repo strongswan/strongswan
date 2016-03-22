@@ -36,7 +36,7 @@ struct ntru_drbg_t {
 	 *
 	 * @return			configured security strength in bits
 	 */
-	u_int32_t (*get_strength)(ntru_drbg_t *this);
+	uint32_t (*get_strength)(ntru_drbg_t *this);
 
 	/**
 	 * Reseed the instantiated DRBG
@@ -54,8 +54,8 @@ struct ntru_drbg_t {
 	 * @param out		address of output buffer
 	 * @return			TRUE if successful
 	 */
-	bool (*generate)(ntru_drbg_t *this, u_int32_t strength, u_int32_t len,
-										u_int8_t *out);
+	bool (*generate)(ntru_drbg_t *this, uint32_t strength, uint32_t len,
+										uint8_t *out);
 
 	/**
 	 * Get a reference on an ntru_drbg_t object increasing the count by one
@@ -77,7 +77,7 @@ struct ntru_drbg_t {
  * @param pers_str		personalization string
  * @param entropy		entropy source to use
  */
-ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
+ntru_drbg_t *ntru_drbg_create(uint32_t strength, chunk_t pers_str,
 							  rng_t *entropy);
 
 #endif /** NTRU_DRBG_H_ @}*/

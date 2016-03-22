@@ -106,7 +106,7 @@ static size_t lookup_alg(pseudo_random_function_t algo, char **name, bool *xcbc)
 }
 
 METHOD(prf_t, get_bytes, bool,
-	private_af_alg_prf_t *this, chunk_t seed, u_int8_t *buffer)
+	private_af_alg_prf_t *this, chunk_t seed, uint8_t *buffer)
 {
 	return this->ops->hash(this->ops, seed, buffer, this->block_size);
 }

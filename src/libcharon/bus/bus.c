@@ -688,7 +688,7 @@ METHOD(bus_t, child_rekey, void,
 }
 
 METHOD(bus_t, children_migrate, void,
-	private_bus_t *this, ike_sa_id_t *new, u_int32_t unique)
+	private_bus_t *this, ike_sa_id_t *new, uint32_t unique)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;

@@ -21,17 +21,17 @@
 START_TEST(test_iv_gen_seq)
 {
 	iv_gen_t *iv_gen;
-	u_int64_t iv0, iv1_1, iv1_2;
+	uint64_t iv0, iv1_1, iv1_2;
 
 	iv_gen = iv_gen_seq_create();
-	ck_assert(iv_gen->get_iv(iv_gen, 0, 8, (u_int8_t*)&iv0));
-	ck_assert(iv_gen->get_iv(iv_gen, 1, 8, (u_int8_t*)&iv1_1));
+	ck_assert(iv_gen->get_iv(iv_gen, 0, 8, (uint8_t*)&iv0));
+	ck_assert(iv_gen->get_iv(iv_gen, 1, 8, (uint8_t*)&iv1_1));
 	ck_assert(iv0 != iv1_1);
 	/* every sequence number may be used twice, but results in a different IV */
-	ck_assert(iv_gen->get_iv(iv_gen, 1, 8, (u_int8_t*)&iv1_2));
+	ck_assert(iv_gen->get_iv(iv_gen, 1, 8, (uint8_t*)&iv1_2));
 	ck_assert(iv0 != iv1_2);
 	ck_assert(iv1_1 != iv1_2);
-	ck_assert(!iv_gen->get_iv(iv_gen, 1, 8, (u_int8_t*)&iv1_2));
+	ck_assert(!iv_gen->get_iv(iv_gen, 1, 8, (uint8_t*)&iv1_2));
 	iv_gen->destroy(iv_gen);
 }
 END_TEST
@@ -39,19 +39,19 @@ END_TEST
 START_TEST(test_iv_gen_seq_len)
 {
 	iv_gen_t *iv_gen;
-	u_int64_t iv;
-	u_int8_t buf[9];
+	uint64_t iv;
+	uint8_t buf[9];
 
 	iv_gen = iv_gen_seq_create();
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 0, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 1, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 2, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 3, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 4, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 5, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 6, (u_int8_t*)&iv));
-	ck_assert(!iv_gen->get_iv(iv_gen, 0, 7, (u_int8_t*)&iv));
-	ck_assert(iv_gen->get_iv(iv_gen, 0, 8, (u_int8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 0, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 1, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 2, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 3, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 4, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 5, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 6, (uint8_t*)&iv));
+	ck_assert(!iv_gen->get_iv(iv_gen, 0, 7, (uint8_t*)&iv));
+	ck_assert(iv_gen->get_iv(iv_gen, 0, 8, (uint8_t*)&iv));
 	ck_assert(iv_gen->get_iv(iv_gen, 0, 9, buf));
 	iv_gen->destroy(iv_gen);
 }

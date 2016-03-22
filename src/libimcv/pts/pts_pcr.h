@@ -45,7 +45,7 @@ struct pts_pcr_t {
 	 *
 	 * @return				number of selected PCRs
 	 */
-	u_int32_t (*get_count)(pts_pcr_t *this);
+	uint32_t (*get_count)(pts_pcr_t *this);
 
 	/**
 	 * Mark a PCR as selected
@@ -53,7 +53,7 @@ struct pts_pcr_t {
 	 * @param pcr			index of PCR
 	 * @return				TRUE if PCR index exists
 	 */
-	bool (*select_pcr)(pts_pcr_t *this, u_int32_t pcr);
+	bool (*select_pcr)(pts_pcr_t *this, uint32_t pcr);
 
 	/**
 	 * Get the size of the selection field in bytes
@@ -75,7 +75,7 @@ struct pts_pcr_t {
 	 * @param pcr			index of PCR
 	 * @return				content of PCR
 	 */
-	chunk_t (*get)(pts_pcr_t *this, u_int32_t pcr);
+	chunk_t (*get)(pts_pcr_t *this, uint32_t pcr);
 
 	/**
 	 * Set the content of a PCR
@@ -84,7 +84,7 @@ struct pts_pcr_t {
 	 * @param value			new value of PCR
 	 * @return				TRUE if value could be set
 	 */
-	bool (*set)(pts_pcr_t *this, u_int32_t pcr, chunk_t value);
+	bool (*set)(pts_pcr_t *this, uint32_t pcr, chunk_t value);
 
 	/**
 	 * Extend the content of a PCR
@@ -93,7 +93,7 @@ struct pts_pcr_t {
 	 * @param measurement	measurment value to be extended into PCR
 	 * @return				new content of PCR
 	 */
-	chunk_t (*extend)(pts_pcr_t *this, u_int32_t pcr, chunk_t measurement);
+	chunk_t (*extend)(pts_pcr_t *this, uint32_t pcr, chunk_t measurement);
 
 	/**
 	 * Create a PCR Composite object over all selected PCRs

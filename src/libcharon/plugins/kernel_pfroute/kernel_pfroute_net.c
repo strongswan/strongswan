@@ -209,7 +209,7 @@ struct route_entry_t {
 	chunk_t dst_net;
 
 	/** Destination net prefixlen */
-	u_int8_t prefixlen;
+	uint8_t prefixlen;
 };
 
 /**
@@ -420,7 +420,7 @@ struct private_kernel_pfroute_net_t
  * Forward declaration
  */
 static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
-							 chunk_t dst_net, u_int8_t prefixlen,
+							 chunk_t dst_net, uint8_t prefixlen,
 							 host_t *gateway, char *if_name);
 
 /**
@@ -1381,7 +1381,7 @@ static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
  * Add or remove a route
  */
 static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
-							 chunk_t dst_net, u_int8_t prefixlen,
+							 chunk_t dst_net, uint8_t prefixlen,
 							 host_t *gateway, char *if_name)
 {
 	struct {
@@ -1473,7 +1473,7 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 }
 
 METHOD(kernel_net_t, add_route, status_t,
-	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	private_kernel_pfroute_net_t *this, chunk_t dst_net, uint8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;
@@ -1502,7 +1502,7 @@ METHOD(kernel_net_t, add_route, status_t,
 }
 
 METHOD(kernel_net_t, del_route, status_t,
-	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	private_kernel_pfroute_net_t *this, chunk_t dst_net, uint8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;

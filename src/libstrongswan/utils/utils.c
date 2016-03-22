@@ -33,7 +33,7 @@
 /* This is from the kernel sources.  We limit the length of directory names to
  * 256 as we only use it to enumerate FDs. */
 struct linux_dirent64 {
-	u_int64_t d_ino;
+	uint64_t d_ino;
 	int64_t d_off;
 	unsigned short	d_reclen;
 	unsigned char d_type;

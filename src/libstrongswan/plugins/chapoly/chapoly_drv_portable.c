@@ -39,30 +39,30 @@ struct private_chapoly_drv_portable_t {
 	/**
 	 * ChaCha20 state matrix
 	 */
-	u_int32_t m[16];
+	uint32_t m[16];
 
 	/**
 	 * Poly1305 update key
 	 */
-	u_int32_t r[5];
+	uint32_t r[5];
 
 	/**
 	 * Poly1305 state
 	 */
-	u_int32_t h[5];
+	uint32_t h[5];
 
 	/**
 	 * Poly1305 finalize key
 	 */
-	u_int32_t s[4];
+	uint32_t s[4];
 };
 
 /**
  * XOR a 32-bit integer into an unaligned destination
  */
-static inline void xor32u(void *p, u_int32_t x)
+static inline void xor32u(void *p, uint32_t x)
 {
-	u_int32_t y;
+	uint32_t y;
 
 	memcpy(&y, p, sizeof(y));
 	y ^= x;
@@ -72,7 +72,7 @@ static inline void xor32u(void *p, u_int32_t x)
 /**
  * Multiply two 64-bit words
  */
-static inline u_int64_t mlt(u_int64_t a, u_int64_t b)
+static inline uint64_t mlt(uint64_t a, uint64_t b)
 {
 	return a * b;
 }
@@ -80,7 +80,7 @@ static inline u_int64_t mlt(u_int64_t a, u_int64_t b)
 /**
  * Shift a 64-bit unsigned integer v right by n bits, clamp to 32 bit
 */
-static inline u_int32_t sr(u_int64_t v, u_char n)
+static inline uint32_t sr(uint64_t v, u_char n)
 {
 	return v >> n;
 }
@@ -88,13 +88,13 @@ static inline u_int32_t sr(u_int64_t v, u_char n)
 /**
  * Circular left shift by n bits
  */
-static inline u_int32_t rotl32(u_int32_t v, u_char n)
+static inline uint32_t rotl32(uint32_t v, u_char n)
 {
 	return (v << n) | (v >> (sizeof(v) * 8 - n));
 }
 
 /**
- * AND two values, using a native integer size >= sizeof(u_int32_t)
+ * AND two values, using a native integer size >= sizeof(uint32_t)
  */
 static inline u_long and(u_long v, u_long mask)
 {
@@ -106,8 +106,8 @@ static inline u_long and(u_long v, u_long mask)
  */
 static void chacha_block_xor(private_chapoly_drv_portable_t *this, void *data)
 {
-	u_int32_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, xa, xb, xc, xd, xe, xf;
-	u_int32_t *out = data;
+	uint32_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, xa, xb, xc, xd, xe, xf;
+	uint32_t *out = data;
 	u_int i;
 
 	x0 = this->m[ 0];
@@ -246,10 +246,10 @@ METHOD(chapoly_drv_t, init, bool,
 METHOD(chapoly_drv_t, poly, bool,
 	private_chapoly_drv_portable_t *this, u_char *data, u_int blocks)
 {
-	u_int32_t r0, r1, r2, r3, r4;
-	u_int32_t s1, s2, s3, s4;
-	u_int32_t h0, h1, h2, h3, h4;
-	u_int64_t d0, d1, d2, d3, d4;
+	uint32_t r0, r1, r2, r3, r4;
+	uint32_t s1, s2, s3, s4;
+	uint32_t h0, h1, h2, h3, h4;
+	uint64_t d0, d1, d2, d3, d4;
 	u_int i;
 
 	r0 = this->r[0];
@@ -345,10 +345,10 @@ METHOD(chapoly_drv_t, decrypt, bool,
 METHOD(chapoly_drv_t, finish, bool,
 	private_chapoly_drv_portable_t *this, u_char *mac)
 {
-	u_int32_t h0, h1, h2, h3, h4;
-	u_int32_t g0, g1, g2, g3, g4;
-	u_int32_t mask;
-	u_int64_t f = 0;
+	uint32_t h0, h1, h2, h3, h4;
+	uint32_t g0, g1, g2, g3, g4;
+	uint32_t mask;
+	uint64_t f = 0;
 
 	/* fully carry h */
 	h0 = this->h[0];
@@ -371,7 +371,7 @@ METHOD(chapoly_drv_t, finish, bool,
 	g4 = h4 + (g3 >> 26) - (1 << 26); g3 &= 0x3ffffff;
 
 	/* select h if h < p, or h + -p if h >= p */
-	mask = (g4 >> ((sizeof(u_int32_t) * 8) - 1)) - 1;
+	mask = (g4 >> ((sizeof(uint32_t) * 8) - 1)) - 1;
 	g0 &= mask;
 	g1 &= mask;
 	g2 &= mask;

@@ -53,21 +53,21 @@ struct tcg_swid_attr_req_t {
 	 *
 	 * @return				Flags
 	 */
-	u_int8_t (*get_flags)(tcg_swid_attr_req_t *this);
+	uint8_t (*get_flags)(tcg_swid_attr_req_t *this);
 
 	/**
 	 * Get Request ID
 	 *
 	 * @return				Request ID
 	 */
-	u_int32_t (*get_request_id)(tcg_swid_attr_req_t *this);
+	uint32_t (*get_request_id)(tcg_swid_attr_req_t *this);
 
 	/**
 	 * Get Earliest EID
 	 *
 	 * @return				Event ID
 	 */
-	u_int32_t (*get_earliest_eid)(tcg_swid_attr_req_t *this);
+	uint32_t (*get_earliest_eid)(tcg_swid_attr_req_t *this);
 
 	/**
 	 * Add Tag ID
@@ -92,8 +92,8 @@ struct tcg_swid_attr_req_t {
  * @param request_id		Request ID
  * @param eid				Earliest Event ID
  */
-pa_tnc_attr_t* tcg_swid_attr_req_create(u_int8_t flags, u_int32_t request_id,
-										u_int32_t eid);
+pa_tnc_attr_t* tcg_swid_attr_req_create(uint8_t flags, uint32_t request_id,
+										uint32_t eid);
 
 /**
  * Creates an tcg_swid_attr_req_t object from received data

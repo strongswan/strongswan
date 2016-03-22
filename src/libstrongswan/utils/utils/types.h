@@ -50,10 +50,10 @@
  */
 #if defined __sun || defined WIN32
 #include <stdint.h>
-typedef uint8_t  u_int8_t;
-typedef uint16_t u_int16_t;
-typedef uint32_t u_int32_t;
-typedef uint64_t u_int64_t;
+typedef uint8_t  uint8_t;
+typedef uint16_t uint16_t;
+typedef uint32_t uint32_t;
+typedef uint64_t uint64_t;
 #endif
 
 #ifdef HAVE_INT128
@@ -70,7 +70,7 @@ typedef unsigned __int128 u_int128_t;
 # define MAX_UINT_TYPE u_int128_t
 #else
 # define MAX_INT_TYPE int64_t
-# define MAX_UINT_TYPE u_int64_t
+# define MAX_UINT_TYPE uint64_t
 #endif
 
 /**

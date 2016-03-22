@@ -1340,7 +1340,7 @@ METHOD(tls_crypto_t, set_protection, void,
 METHOD(tls_crypto_t, append_handshake, void,
 	private_tls_crypto_t *this, tls_handshake_type_t type, chunk_t data)
 {
-	u_int32_t header;
+	uint32_t header;
 
 	/* reconstruct handshake header */
 	header = htonl(data.len | (type << 24));
@@ -1407,7 +1407,7 @@ METHOD(tls_crypto_t, sign, bool,
 	{
 		signature_scheme_t scheme;
 		bio_reader_t *reader;
-		u_int8_t hash, alg;
+		uint8_t hash, alg;
 		chunk_t sig;
 		bool done = FALSE;
 
@@ -1487,7 +1487,7 @@ METHOD(tls_crypto_t, verify, bool,
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
 		signature_scheme_t scheme = SIGN_UNKNOWN;
-		u_int8_t hash, alg;
+		uint8_t hash, alg;
 		chunk_t sig;
 
 		if (!reader->read_uint8(reader, &hash) ||

@@ -57,7 +57,7 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_experimental_msg_t *this, u_int32_t *offset)
+	private_pb_experimental_msg_t *this, uint32_t *offset)
 {
 	return SUCCESS;
 }

@@ -90,7 +90,7 @@ struct hasher_t {
 	 * @return			TRUE if hash created successfully
 	 */
 	bool (*get_hash)(hasher_t *this, chunk_t data,
-					 u_int8_t *hash) __attribute__((warn_unused_result));
+					 uint8_t *hash) __attribute__((warn_unused_result));
 
 	/**
 	 * Hash data and allocate space for the hash.

@@ -128,21 +128,21 @@ struct ike_cfg_t {
 	 *
 	 * @return				source address port, host order
 	 */
-	u_int16_t (*get_my_port)(ike_cfg_t *this);
+	uint16_t (*get_my_port)(ike_cfg_t *this);
 
 	/**
 	 * Get the port to use as destination port.
 	 *
 	 * @return				destination address, host order
 	 */
-	u_int16_t (*get_other_port)(ike_cfg_t *this);
+	uint16_t (*get_other_port)(ike_cfg_t *this);
 
 	/**
 	 * Get the DSCP value to use for IKE packets send from connections.
 	 *
 	 * @return				DSCP value
 	 */
-	u_int8_t (*get_dscp)(ike_cfg_t *this);
+	uint8_t (*get_dscp)(ike_cfg_t *this);
 
 	/**
 	 * Adds a proposal to the list.
@@ -250,9 +250,9 @@ struct ike_cfg_t {
  * @return					ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
-						  char *me, u_int16_t my_port,
-						  char *other, u_int16_t other_port,
-						  fragmentation_t fragmentation, u_int8_t dscp);
+						  char *me, uint16_t my_port,
+						  char *other, uint16_t other_port,
+						  fragmentation_t fragmentation, uint8_t dscp);
 
 /**
  * Determine the address family of the local or remtoe address(es).  If multiple

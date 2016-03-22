@@ -142,7 +142,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
-	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
+	uint16_t local_port, remote_port = IKEV2_UDP_PORT;
 	ike_version_t version = IKE_ANY;
 	bool aggressive = FALSE;
 	proposal_t *proposal;

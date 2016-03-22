@@ -128,8 +128,8 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 	while (fgets(buf, sizeof(buf), file))
 	{
 		u_char *pos;
-		u_int8_t new_protocol, protocol;
-		u_int16_t new_port, port;
+		uint8_t new_protocol, protocol;
+		uint16_t new_port, port;
 		int i;
 		enumerator_t *enumerator;
 		bool allowed, found = FALSE;

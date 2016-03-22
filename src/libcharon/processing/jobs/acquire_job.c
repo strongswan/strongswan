@@ -32,7 +32,7 @@ struct private_acquire_job_t {
 	/**
 	 * reqid of the child to rekey
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * acquired source traffic selector
@@ -70,7 +70,7 @@ METHOD(job_t, get_priority, job_priority_t,
 /*
  * Described in header
  */
-acquire_job_t *acquire_job_create(u_int32_t reqid,
+acquire_job_t *acquire_job_create(uint32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts)
 {

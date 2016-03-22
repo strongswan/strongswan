@@ -65,7 +65,7 @@ struct private_mac_t {
 };
 
 METHOD(mac_t, get_mac, bool,
-	private_mac_t *this, chunk_t data, u_int8_t *out)
+	private_mac_t *this, chunk_t data, uint8_t *out)
 {
 	__m128i *ks, t, l, *bi;
 	u_int blocks, rem, i;

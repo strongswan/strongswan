@@ -46,7 +46,7 @@ struct ietf_attr_product_info_t {
 	 * @return				Product Name
 	 */
 	chunk_t (*get_info)(ietf_attr_product_info_t *this,
-						pen_t *vendor_id, u_int16_t *id);
+						pen_t *vendor_id, uint16_t *id);
 
 };
 
@@ -54,7 +54,7 @@ struct ietf_attr_product_info_t {
  * Creates an ietf_attr_product_info_t object
  *
  */
-pa_tnc_attr_t* ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
+pa_tnc_attr_t* ietf_attr_product_info_create(pen_t vendor_id, uint16_t id,
 											 chunk_t name);
 
 /**

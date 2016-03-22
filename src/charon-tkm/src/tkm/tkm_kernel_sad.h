@@ -46,9 +46,9 @@ struct tkm_kernel_sad_t {
 	 * @return				TRUE if entry was inserted, FALSE otherwise
 	 */
 	bool (*insert)(tkm_kernel_sad_t * const this, const esa_id_type esa_id,
-				   const u_int32_t reqid, const host_t * const src,
-				   const host_t * const dst, const u_int32_t spi_loc,
-				   const u_int32_t spi_rem, const u_int8_t proto);
+				   const uint32_t reqid, const host_t * const src,
+				   const host_t * const dst, const uint32_t spi_loc,
+				   const uint32_t spi_rem, const uint8_t proto);
 
 	/**
 	 * Get ESA id for entry with given parameters.
@@ -61,7 +61,7 @@ struct tkm_kernel_sad_t {
 	 */
 	esa_id_type (*get_esa_id)(tkm_kernel_sad_t * const this,
 				 const host_t * const src, const host_t * const dst,
-				 const u_int32_t spi, const u_int8_t proto);
+				 const uint32_t spi, const uint8_t proto);
 
 	/**
 	 * Get ESA id for entry associated with same security policy as the
@@ -82,7 +82,7 @@ struct tkm_kernel_sad_t {
 	 * @return				destination host of entry if found, NULL otherwise
 	 */
 	host_t * (*get_dst_host)(tkm_kernel_sad_t * const this,
-			  const u_int32_t reqid, const u_int32_t spi, const u_int8_t proto);
+			  const uint32_t reqid, const uint32_t spi, const uint8_t proto);
 
 	/**
 	 * Remove entry with given ESA id from SAD.

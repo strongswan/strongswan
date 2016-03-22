@@ -54,9 +54,9 @@ struct private_mconsole_t {
 typedef struct mconsole_request mconsole_request;
 /** mconsole request message */
 struct mconsole_request {
-	u_int32_t magic;
-	u_int32_t version;
-	u_int32_t len;
+	uint32_t magic;
+	uint32_t version;
+	uint32_t len;
 	char data[MCONSOLE_MAX_DATA];
 };
 
@@ -64,24 +64,24 @@ struct mconsole_request {
 typedef struct mconsole_reply mconsole_reply;
 /** mconsole reply message */
 struct mconsole_reply {
-	u_int32_t err;
-	u_int32_t more;
-	u_int32_t len;
+	uint32_t err;
+	uint32_t more;
+	uint32_t len;
 	char data[MCONSOLE_MAX_DATA];
 };
 
 typedef struct mconsole_notify mconsole_notify;
 /** mconsole notify message */
 struct mconsole_notify {
-	u_int32_t magic;
-	u_int32_t version;
+	uint32_t magic;
+	uint32_t version;
 	enum {
 		MCONSOLE_SOCKET,
 		MCONSOLE_PANIC,
 		MCONSOLE_HANG,
 		MCONSOLE_USER_NOTIFY,
 	} type;
-	u_int32_t len;
+	uint32_t len;
 	char data[MCONSOLE_MAX_DATA];
 };
 

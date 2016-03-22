@@ -98,22 +98,22 @@ struct private_quick_mode_t {
 	/**
 	 * Initiators ESP SPI
 	 */
-	u_int32_t spi_i;
+	uint32_t spi_i;
 
 	/**
 	 * Responder ESP SPI
 	 */
-	u_int32_t spi_r;
+	uint32_t spi_r;
 
 	/**
 	 * Initiators IPComp CPI
 	 */
-	u_int16_t cpi_i;
+	uint16_t cpi_i;
 
 	/**
 	 * Responders IPComp CPI
 	 */
-	u_int16_t cpi_r;
+	uint16_t cpi_r;
 
 	/**
 	 * selected CHILD_SA proposal
@@ -143,17 +143,17 @@ struct private_quick_mode_t {
 	/**
 	 * Negotiated lifetime of new SA
 	 */
-	u_int32_t lifetime;
+	uint32_t lifetime;
 
 	/**
 	 * Negotaited lifebytes of new SA
 	 */
-	u_int64_t lifebytes;
+	uint64_t lifebytes;
 
 	/**
 	 * Reqid to use, 0 for auto-allocate
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Explicit inbound mark value to use, if any
@@ -168,7 +168,7 @@ struct private_quick_mode_t {
 	/**
 	 * SPI of SA we rekey
 	 */
-	u_int32_t rekey;
+	uint32_t rekey;
 
 	/**
 	 * Delete old child after successful rekey
@@ -193,7 +193,7 @@ struct private_quick_mode_t {
 	/**
 	 * Message ID of handled quick mode exchange
 	 */
-	u_int32_t mid;
+	uint32_t mid;
 
 	/** states of quick mode */
 	enum {
@@ -207,7 +207,7 @@ struct private_quick_mode_t {
  */
 static void schedule_inactivity_timeout(private_quick_mode_t *this)
 {
-	u_int32_t timeout;
+	uint32_t timeout;
 	bool close_ike;
 
 	timeout = this->config->get_inactivity(this->config);
@@ -739,8 +739,8 @@ static void get_lifetimes(private_quick_mode_t *this)
  */
 static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload)
 {
-	u_int32_t lifetime;
-	u_int64_t lifebytes;
+	uint32_t lifetime;
+	uint64_t lifebytes;
 
 	lifetime = sa_payload->get_lifetime(sa_payload);
 	lifebytes = sa_payload->get_lifebytes(sa_payload);
@@ -863,7 +863,7 @@ METHOD(task_t, build_i, status_t,
 			if (group != MODP_NONE)
 			{
 				proposal_t *proposal;
-				u_int16_t preferred_group;
+				uint16_t preferred_group;
 
 				proposal = this->ike_sa->get_proposal(this->ike_sa);
 				proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
@@ -1050,7 +1050,7 @@ METHOD(task_t, process_r, status_t,
 			sa_payload_t *sa_payload;
 			linked_list_t *tsi, *tsr, *hostsi, *hostsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
-			u_int16_t group;
+			uint16_t group;
 			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
@@ -1365,14 +1365,14 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_QUICK_MODE;
 }
 
-METHOD(quick_mode_t, get_mid, u_int32_t,
+METHOD(quick_mode_t, get_mid, uint32_t,
 	private_quick_mode_t *this)
 {
 	return this->mid;
 }
 
 METHOD(quick_mode_t, use_reqid, void,
-	private_quick_mode_t *this, u_int32_t reqid)
+	private_quick_mode_t *this, uint32_t reqid)
 {
 	this->reqid = reqid;
 }
@@ -1385,7 +1385,7 @@ METHOD(quick_mode_t, use_marks, void,
 }
 
 METHOD(quick_mode_t, rekey, void,
-	private_quick_mode_t *this, u_int32_t spi)
+	private_quick_mode_t *this, uint32_t spi)
 {
 	this->rekey = spi;
 }

@@ -54,7 +54,7 @@ struct private_ipsec_policy_t {
 	/**
 	 * If any of the two TS has a protocol selector we cache it here
 	 */
-	u_int8_t protocol;
+	uint8_t protocol;
 
 	/**
 	 * Traffic direction
@@ -90,7 +90,7 @@ struct private_ipsec_policy_t {
 
 METHOD(ipsec_policy_t, match, bool,
 	private_ipsec_policy_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
+	traffic_selector_t *dst_ts, policy_dir_t direction, uint32_t reqid,
 	mark_t mark, policy_priority_t priority)
 {
 	return (this->direction == direction &&
@@ -104,7 +104,7 @@ METHOD(ipsec_policy_t, match, bool,
 METHOD(ipsec_policy_t, match_packet, bool,
 	private_ipsec_policy_t *this, ip_packet_t *packet)
 {
-	u_int8_t proto = packet->get_next_header(packet);
+	uint8_t proto = packet->get_next_header(packet);
 	host_t *src = packet->get_source(packet),
 		   *dst = packet->get_destination(packet);
 
@@ -125,7 +125,7 @@ METHOD(ipsec_policy_t, get_destination_ts, traffic_selector_t*,
 	return this->dst_ts;
 }
 
-METHOD(ipsec_policy_t, get_reqid, u_int32_t,
+METHOD(ipsec_policy_t, get_reqid, uint32_t,
 	private_ipsec_policy_t *this)
 {
 	return this->sa.reqid;

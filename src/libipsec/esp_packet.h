@@ -64,7 +64,7 @@ struct esp_packet_t {
 	 * @return				TRUE when successful, FALSE otherwise (e.g. when the
 	 *						length of the packet is invalid)
 	 */
-	bool (*parse_header)(esp_packet_t *this, u_int32_t *spi);
+	bool (*parse_header)(esp_packet_t *this, uint32_t *spi);
 
 	/**
 	 * Authenticate and decrypt the packet. Also verifies the sequence number
@@ -94,7 +94,7 @@ struct esp_packet_t {
 	 *							- NOT_FOUND if no suitable IV generator provided
 	 */
 	status_t (*encrypt)(esp_packet_t *this, esp_context_t *esp_context,
-						u_int32_t spi);
+						uint32_t spi);
 
 	/**
 	 * Get the next header field of a packet.
@@ -103,7 +103,7 @@ struct esp_packet_t {
 	 *
 	 * @return					next header field
 	 */
-	u_int8_t (*get_next_header)(esp_packet_t *this);
+	uint8_t (*get_next_header)(esp_packet_t *this);
 
 	/**
 	 * Get the plaintext payload of this packet.

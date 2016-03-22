@@ -82,14 +82,14 @@ struct endpoint_notify_t {
 	 *
 	 * @return			priority
 	 */
-	u_int32_t (*get_priority) (endpoint_notify_t *this);
+	uint32_t (*get_priority) (endpoint_notify_t *this);
 
 	/**
 	 * Sets the priority of this endpoint.
 	 *
 	 * @param priority	priority
 	 */
-	void (*set_priority) (endpoint_notify_t *this, u_int32_t priority);
+	void (*set_priority) (endpoint_notify_t *this, uint32_t priority);
 
 	/**
 	 * Returns the endpoint type of this endpoint.

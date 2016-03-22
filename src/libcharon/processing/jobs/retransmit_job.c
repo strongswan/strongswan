@@ -32,7 +32,7 @@ struct private_retransmit_job_t {
 	/**
 	 * Message ID of the request to resend.
 	 */
-	u_int32_t message_id;
+	uint32_t message_id;
 
 	/**
 	 * ID of the IKE_SA which the message belongs to.
@@ -79,7 +79,7 @@ METHOD(job_t, get_priority, job_priority_t,
 /*
  * Described in header.
  */
-retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
+retransmit_job_t *retransmit_job_create(uint32_t message_id,ike_sa_id_t *ike_sa_id)
 {
 	private_retransmit_job_t *this;
 

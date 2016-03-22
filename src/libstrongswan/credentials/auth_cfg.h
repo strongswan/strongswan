@@ -78,7 +78,7 @@ enum auth_rule_t {
 	AUTH_RULE_EAP_IDENTITY,
 	/** EAP type to propose for peer authentication, eap_type_t */
 	AUTH_RULE_EAP_TYPE,
-	/** EAP vendor for vendor specific type, u_int32_t */
+	/** EAP vendor for vendor specific type, uint32_t */
 	AUTH_RULE_EAP_VENDOR,
 	/** XAUTH backend name to use, char* */
 	AUTH_RULE_XAUTH_BACKEND,

@@ -38,7 +38,7 @@ struct pts_file_meas_t {
 	 *
 	 * @return				ID of PTS File Measurement Request
 	 */
-	u_int16_t (*get_request_id)(pts_file_meas_t *this);
+	uint16_t (*get_request_id)(pts_file_meas_t *this);
 
 	/**
 	 * Get the number of measured files
@@ -94,7 +94,7 @@ struct pts_file_meas_t {
  *
  * @param request_id		ID of PTS File Measurement Request
  */
-pts_file_meas_t* pts_file_meas_create(u_int16_t request_id);
+pts_file_meas_t* pts_file_meas_create(uint16_t request_id);
 
 /**
  * Creates a pts_file_meas_t object measuring a file/directory
@@ -105,7 +105,7 @@ pts_file_meas_t* pts_file_meas_create(u_int16_t request_id);
  * @param use_rel_name		TRUE if relative filenames are to be used
  * @param alg				PTS hash measurement algorithm to be used
  */
-pts_file_meas_t* pts_file_meas_create_from_path(u_int16_t request_id,
+pts_file_meas_t* pts_file_meas_create_from_path(uint16_t request_id,
 							char* pathname, bool is_dir, bool use_rel_name,
 							pts_meas_algorithms_t alg);
 

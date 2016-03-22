@@ -108,7 +108,7 @@ struct route_entry_t {
 	/** Destination net */
 	chunk_t dst_net;
 	/** Destination net prefixlen */
-	u_int8_t prefixlen;
+	uint8_t prefixlen;
 	/** Reference to exclude route, if any */
 	exclude_route_t *exclude;
 };
@@ -151,15 +151,15 @@ typedef struct policy_entry_t policy_entry_t;
  */
 struct policy_entry_t {
 	/** Direction of this policy: in, out, forward */
-	u_int8_t direction;
+	uint8_t direction;
 	/** Parameters of installed policy */
 	struct {
 		/** Subnet and port */
 		host_t *net;
 		/** Subnet mask */
-		u_int8_t mask;
+		uint8_t mask;
 		/** Protocol */
-		u_int8_t proto;
+		uint8_t proto;
 	} src, dst;
 	/** Associated route installed for this policy */
 	route_entry_t *route;
@@ -222,7 +222,7 @@ static inline bool policy_entry_equals(policy_entry_t *a,
 /**
  * Expiration callback
  */
-static void expire(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard)
+static void expire(uint8_t protocol, uint32_t spi, host_t *dst, bool hard)
 {
 	charon->kernel->expire(charon->kernel, protocol, spi, dst, hard);
 }
@@ -235,24 +235,24 @@ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	return ipsec->sas->get_spi(ipsec->sas, src, dst, protocol, spi);
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
 	return NOT_SUPPORTED;
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
+	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
@@ -263,8 +263,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_libipsec_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_kernel_libipsec_ipsec_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
 	return NOT_SUPPORTED;
@@ -272,8 +272,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes,
-	u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark, uint64_t *bytes,
+	uint64_t *packets, time_t *time)
 {
 	return ipsec->sas->query_sa(ipsec->sas, src, dst, spi, protocol, mark,
 								bytes, packets, time);
@@ -281,7 +281,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	return ipsec->sas->del_sa(ipsec->sas, src, dst, spi, protocol, cpi, mark);
 }
@@ -641,7 +641,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
-	private_kernel_libipsec_ipsec_t *this, int fd, int family, u_int16_t port)
+	private_kernel_libipsec_ipsec_t *this, int fd, int family, uint16_t port)
 {
 	return NOT_SUPPORTED;
 }

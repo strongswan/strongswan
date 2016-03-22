@@ -46,7 +46,7 @@ static void verify_netmask(chunk_t addr, int mask)
  * host_create_any
  */
 
-static void verify_any(host_t *host, int family, u_int16_t port)
+static void verify_any(host_t *host, int family, uint16_t port)
 {
 	verify_netmask(host->get_address(host), 0);
 	ck_assert(host->is_anyaddr(host));
@@ -88,7 +88,7 @@ END_TEST
  * host_create_from_string
  */
 
-static void verify_address(host_t *host, chunk_t addr, int family, u_int16_t port)
+static void verify_address(host_t *host, chunk_t addr, int family, uint16_t port)
 {
 	ck_assert(chunk_equals(host->get_address(host), addr));
 	ck_assert(!host->is_anyaddr(host));
@@ -656,7 +656,7 @@ END_TEST
 
 static struct {
 	char *addr;
-	u_int16_t port;
+	uint16_t port;
 	/* results for %H, %+H, %#H (falls back to [0]) */
 	char *result[3];
 } printf_data[] = {

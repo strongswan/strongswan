@@ -248,7 +248,7 @@ identification_t *redirect_data_parse(chunk_t data, chunk_t *nonce)
 	bio_reader_t *reader;
 	id_type_t id_type;
 	chunk_t gateway;
-	u_int8_t type;
+	uint8_t type;
 
 	reader = bio_reader_create(data);
 	if (!reader->read_uint8(reader, &type) ||

@@ -67,7 +67,7 @@ struct private_ietf_attr_assess_result_t {
 	/**
 	 * Assessment Result
 	 */
-	u_int32_t result;
+	uint32_t result;
 
 	/**
 	 * Reference count
@@ -117,7 +117,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_assess_result_t *this, u_int32_t *offset)
+	private_ietf_attr_assess_result_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 
@@ -162,7 +162,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(ietf_attr_assess_result_t, get_result, u_int32_t,
+METHOD(ietf_attr_assess_result_t, get_result, uint32_t,
 	private_ietf_attr_assess_result_t *this)
 {
 	return this->result;
@@ -171,7 +171,7 @@ METHOD(ietf_attr_assess_result_t, get_result, u_int32_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_assess_result_create(u_int32_t result)
+pa_tnc_attr_t *ietf_attr_assess_result_create(uint32_t result)
 {
 	private_ietf_attr_assess_result_t *this;
 

@@ -47,7 +47,7 @@ struct acquire_job_t {
  * @param dst_ts	destination traffic selector
  * @return			acquire_job_t object
  */
-acquire_job_t *acquire_job_create(u_int32_t reqid,
+acquire_job_t *acquire_job_create(uint32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts);
 

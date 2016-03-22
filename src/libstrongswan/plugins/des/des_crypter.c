@@ -96,7 +96,7 @@ struct private_des_crypter_t {
 #define DES_ENCRYPT 1
 #define DES_DECRYPT 0
 
-#define DES_LONG u_int32_t
+#define DES_LONG uint32_t
 
 #if defined(WIN32) || defined(WIN16)
 #ifndef MSDOS
@@ -1420,7 +1420,7 @@ METHOD(crypter_t, decrypt, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	des_cblock ivb;
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (decrypted)
@@ -1439,7 +1439,7 @@ METHOD(crypter_t, encrypt, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (encrypted)
@@ -1456,7 +1456,7 @@ METHOD(crypter_t, encrypt, bool,
 METHOD(crypter_t, decrypt_ecb, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (decrypted)
@@ -1472,7 +1472,7 @@ METHOD(crypter_t, decrypt_ecb, bool,
 METHOD(crypter_t, encrypt_ecb, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (encrypted)
@@ -1489,7 +1489,7 @@ METHOD(crypter_t, decrypt3, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	des_cblock ivb;
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (decrypted)
@@ -1508,7 +1508,7 @@ METHOD(crypter_t, encrypt3, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
-	u_int8_t *out;
+	uint8_t *out;
 
 	out = data.ptr;
 	if (encrypted)

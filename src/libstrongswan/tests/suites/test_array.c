@@ -512,7 +512,7 @@ END_TEST
 START_TEST(test_insert_create_value)
 {
 	array_t *array = NULL;
-	u_int16_t v;
+	uint16_t v;
 
 	v = 1;
 	array_insert_create_value(&array, sizeof(v), ARRAY_TAIL, &v);

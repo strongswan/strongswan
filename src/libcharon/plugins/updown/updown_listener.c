@@ -55,7 +55,7 @@ typedef struct cache_entry_t cache_entry_t;
  */
 struct cache_entry_t {
 	/** requid of the CHILD_SA */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** cached interface name */
 	char *iface;
 };
@@ -63,7 +63,7 @@ struct cache_entry_t {
 /**
  * Insert an interface name to the cache
  */
-static void cache_iface(private_updown_listener_t *this, u_int32_t reqid,
+static void cache_iface(private_updown_listener_t *this, uint32_t reqid,
 						char *iface)
 {
 	cache_entry_t *entry = malloc_thing(cache_entry_t);
@@ -77,7 +77,7 @@ static void cache_iface(private_updown_listener_t *this, u_int32_t reqid,
 /**
  * Remove a cached interface name and return it.
  */
-static char* uncache_iface(private_updown_listener_t *this, u_int32_t reqid)
+static char* uncache_iface(private_updown_listener_t *this, uint32_t reqid)
 {
 	enumerator_t *enumerator;
 	cache_entry_t *entry;
@@ -257,7 +257,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 {
 	host_t *me, *other, *host;
 	char *iface;
-	u_int8_t mask;
+	uint8_t mask;
 	mark_t mark;
 	bool is_host, is_ipv6;
 	int out;

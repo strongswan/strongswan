@@ -49,56 +49,56 @@ struct message_t {
 	 *
 	 * @param major_version	major version to set
 	 */
-	void (*set_major_version) (message_t *this, u_int8_t major_version);
+	void (*set_major_version) (message_t *this, uint8_t major_version);
 
 	/**
 	 * Gets the IKE major version of the message.
 	 *
 	 * @return				major version of the message
 	 */
-	u_int8_t (*get_major_version) (message_t *this);
+	uint8_t (*get_major_version) (message_t *this);
 
 	/**
 	 * Sets the IKE minor version of the message.
 	 *
 	 * @param minor_version	minor version to set
 	 */
-	void (*set_minor_version) (message_t *this, u_int8_t minor_version);
+	void (*set_minor_version) (message_t *this, uint8_t minor_version);
 
 	/**
 	 * Gets the IKE minor version of the message.
 	 *
 	 * @return				minor version of the message
 	 */
-	u_int8_t (*get_minor_version) (message_t *this);
+	uint8_t (*get_minor_version) (message_t *this);
 
 	/**
 	 * Sets the Message ID of the message.
 	 *
 	 * @param message_id	message_id to set
 	 */
-	void (*set_message_id) (message_t *this, u_int32_t message_id);
+	void (*set_message_id) (message_t *this, uint32_t message_id);
 
 	/**
 	 * Gets the Message ID of the message.
 	 *
 	 * @return				message_id type of the message
 	 */
-	u_int32_t (*get_message_id) (message_t *this);
+	uint32_t (*get_message_id) (message_t *this);
 
 	/**
 	 * Gets the initiator SPI of the message.
 	 *
 	 * @return				initiator spi of the message
 	 */
-	u_int64_t (*get_initiator_spi) (message_t *this);
+	uint64_t (*get_initiator_spi) (message_t *this);
 
 	/**
 	 * Gets the responder SPI of the message.
 	 *
 	 * @return				responder spi of the message
 	 */
-	u_int64_t (*get_responder_spi) (message_t *this);
+	uint64_t (*get_responder_spi) (message_t *this);
 
 	/**
 	 * Sets the IKE_SA ID of the message.

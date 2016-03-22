@@ -112,7 +112,7 @@ struct simaka_card_t {
 	 */
 	void (*set_reauth)(simaka_card_t *this, identification_t *id,
 					   identification_t *next, char mk[HASH_SIZE_SHA1],
-					   u_int16_t counter);
+					   uint16_t counter);
 
 	/**
 	 * Retrieve parameters for fast reauthentication stored via set_reauth().
@@ -123,7 +123,7 @@ struct simaka_card_t {
 	 * @return			fast reauthentication identity, NULL if not found
 	 */
 	identification_t* (*get_reauth)(simaka_card_t *this, identification_t *id,
-									char mk[HASH_SIZE_SHA1], u_int16_t *counter);
+									char mk[HASH_SIZE_SHA1], uint16_t *counter);
 };
 
 #endif /** SIMAKA_CARD_H_ @}*/

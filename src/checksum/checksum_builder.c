@@ -33,7 +33,7 @@ integrity_checker_t *integrity;
 static void build_checksum(char *path, char *name, char *sname)
 {
 	void *handle, *symbol;
-	u_int32_t fsum, ssum;
+	uint32_t fsum, ssum;
 	size_t fsize = 0;
 	size_t ssize = 0;
 

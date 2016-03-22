@@ -73,7 +73,7 @@ static bool entry_matches(eap_vendor_type_t *item, eap_vendor_type_t *other)
  * Load the given EAP method
  */
 static eap_method_t *load_method(private_eap_dynamic_t *this,
-								 eap_type_t type, u_int32_t vendor)
+								 eap_type_t type, uint32_t vendor)
 {
 	eap_method_t *method;
 
@@ -171,7 +171,7 @@ METHOD(eap_method_t, process, status_t,
 	private_eap_dynamic_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	eap_type_t received_type, type;
-	u_int32_t received_vendor, vendor;
+	uint32_t received_vendor, vendor;
 
 	received_type = in->get_type(in, &received_vendor);
 	if (received_vendor == 0 && received_type == EAP_NAK)
@@ -225,7 +225,7 @@ METHOD(eap_method_t, process, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_dynamic_t *this, u_int32_t *vendor)
+	private_eap_dynamic_t *this, uint32_t *vendor)
 {
 	if (this->method)
 	{
@@ -245,7 +245,7 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
-METHOD(eap_method_t, get_identifier, u_int8_t,
+METHOD(eap_method_t, get_identifier, uint8_t,
 	private_eap_dynamic_t *this)
 {
 	if (this->method)
@@ -256,7 +256,7 @@ METHOD(eap_method_t, get_identifier, u_int8_t,
 }
 
 METHOD(eap_method_t, set_identifier, void,
-	private_eap_dynamic_t *this, u_int8_t identifier)
+	private_eap_dynamic_t *this, uint8_t identifier)
 {
 	if (this->method)
 	{
@@ -335,7 +335,7 @@ static void get_supported_eap_types(private_eap_dynamic_t *this)
 {
 	enumerator_t *enumerator;
 	eap_type_t type;
-	u_int32_t vendor;
+	uint32_t vendor;
 
 	enumerator = charon->eap->create_enumerator(charon->eap, EAP_SERVER);
 	while (enumerator->enumerate(enumerator, &type, &vendor))

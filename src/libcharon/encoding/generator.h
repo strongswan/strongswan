@@ -57,7 +57,7 @@ struct generator_t {
 	 * @param lenpos		receives a pointer to fill in length value
 	 * @param return		chunk to internal buffer.
 	 */
-	chunk_t (*get_chunk) (generator_t *this, u_int32_t **lenpos);
+	chunk_t (*get_chunk) (generator_t *this, uint32_t **lenpos);
 
 	/**
 	 * Destroys a generator_t object.

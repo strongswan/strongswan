@@ -53,7 +53,7 @@ struct private_pb_assessment_result_msg_t {
 	/**
 	 * Assessment result code
 	 */
-	u_int32_t assessment_result;
+	uint32_t assessment_result;
 
 	/**
 	 * Encoded message
@@ -90,7 +90,7 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_assessment_result_msg_t *this, u_int32_t *offset)
+	private_pb_assessment_result_msg_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 
@@ -117,7 +117,7 @@ METHOD(pb_tnc_msg_t, destroy, void,
 	free(this);
 }
 
-METHOD(pb_assessment_result_msg_t, get_assessment_result, u_int32_t,
+METHOD(pb_assessment_result_msg_t, get_assessment_result, uint32_t,
 	private_pb_assessment_result_msg_t *this)
 {
 	return this->assessment_result;
@@ -151,7 +151,7 @@ pb_tnc_msg_t *pb_assessment_result_msg_create_from_data(chunk_t data)
 /**
  * See header
  */
-pb_tnc_msg_t *pb_assessment_result_msg_create(u_int32_t assessment_result)
+pb_tnc_msg_t *pb_assessment_result_msg_create(uint32_t assessment_result)
 {
 	private_pb_assessment_result_msg_t *this;
 

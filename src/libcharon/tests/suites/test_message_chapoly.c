@@ -40,7 +40,7 @@ METHOD(aead_t, get_iv_gen, iv_gen_t*,
 }
 
 METHOD(iv_gen_t, get_iv, bool,
-	iv_gen_t *this, u_int64_t seq, size_t size, u_int8_t *buffer)
+	iv_gen_t *this, uint64_t seq, size_t size, uint8_t *buffer)
 {
 	if (size != 8)
 	{
@@ -51,7 +51,7 @@ METHOD(iv_gen_t, get_iv, bool,
 }
 
 METHOD(iv_gen_t, allocate_iv, bool,
-	iv_gen_t *this, u_int64_t seq, size_t size, chunk_t *chunk)
+	iv_gen_t *this, uint64_t seq, size_t size, chunk_t *chunk)
 {
 	if (size != 8)
 	{
@@ -66,10 +66,10 @@ METHOD(iv_gen_t, allocate_iv, bool,
  */
 START_TEST(test_chacha20poly1305)
 {
-	u_int64_t spii, spir;
+	uint64_t spii, spir;
 	ike_sa_id_t *id;
 	message_t *m;
-	u_int32_t window = htonl(10);
+	uint32_t window = htonl(10);
 	chunk_t chunk, exp;
 	keymat_t keymat = {
 		.get_version = _get_version,

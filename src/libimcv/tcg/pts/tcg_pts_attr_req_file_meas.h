@@ -50,14 +50,14 @@ struct tcg_pts_attr_req_file_meas_t {
 	 *
 	 * @return				Request ID
 	 */
-	u_int16_t (*get_request_id)(tcg_pts_attr_req_file_meas_t *this);
+	uint16_t (*get_request_id)(tcg_pts_attr_req_file_meas_t *this);
 
 	/**
 	 * Get Delimiter
 	 *
 	 * @return				UTF-8 encoding of a Delimiter Character
 	 */
-	u_int32_t (*get_delimiter)(tcg_pts_attr_req_file_meas_t *this);
+	uint32_t (*get_delimiter)(tcg_pts_attr_req_file_meas_t *this);
 
 	/**
 	 * Get Fully Qualified File Pathname
@@ -77,8 +77,8 @@ struct tcg_pts_attr_req_file_meas_t {
  * @param pathname			File Pathname
  */
 pa_tnc_attr_t* tcg_pts_attr_req_file_meas_create(bool directory_flag,
-												 u_int16_t request_id,
-												 u_int32_t delimiter,
+												 uint16_t request_id,
+												 uint32_t delimiter,
 												 char *pathname);
 
 /**

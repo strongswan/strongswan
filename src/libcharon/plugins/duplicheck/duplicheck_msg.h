@@ -35,7 +35,7 @@ typedef struct duplicheck_msg_t duplicheck_msg_t;
  */
 struct duplicheck_msg_t {
 	/** length of the identity following, in network order (excluding len). */
-	u_int16_t len;
+	uint16_t len;
 	/** identity string, not null terminated */
 	char identity[];
 } __attribute__((__packed__));

@@ -162,7 +162,7 @@ static void add_product_info(imc_msg_t *msg)
 static void add_numeric_version(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
-	u_int32_t major, minor;
+	uint32_t major, minor;
 
 	os->get_numeric_version(os, &major, &minor);
 	DBG1(DBG_IMC, "operating system numeric version is %d.%d",

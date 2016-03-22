@@ -42,7 +42,7 @@ struct private_packet_t {
 	/**
 	 * DSCP value on packet
 	 */
-	u_int8_t dscp;
+	uint8_t dscp;
 
 	 /**
 	  * message data
@@ -94,13 +94,13 @@ METHOD(packet_t, set_data, void,
 	this->adjusted_data = this->data = data;
 }
 
-METHOD(packet_t, get_dscp, u_int8_t,
+METHOD(packet_t, get_dscp, uint8_t,
 	private_packet_t *this)
 {
 	return this->dscp;
 }
 METHOD(packet_t, set_dscp, void,
-	private_packet_t *this, u_int8_t value)
+	private_packet_t *this, uint8_t value)
 {
 	this->dscp = value;
 }

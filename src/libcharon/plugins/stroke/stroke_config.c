@@ -252,7 +252,7 @@ static void swap_ends(stroke_msg_t *msg)
 static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
 {
 	ike_cfg_t *ike_cfg;
-	u_int16_t ikeport;
+	uint16_t ikeport;
 	char me[256], other[256];
 
 	swap_ends(msg);
@@ -619,7 +619,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	identification_t *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
 	unique_policy_t unique;
-	u_int32_t rekey = 0, reauth = 0, over, jitter;
+	uint32_t rekey = 0, reauth = 0, over, jitter;
 	peer_cfg_t *peer_cfg;
 	auth_cfg_t *auth_cfg;
 
@@ -883,8 +883,8 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 /**
  * Parse a protoport specifier
  */
-static bool parse_protoport(char *token, u_int16_t *from_port,
-							u_int16_t *to_port, u_int8_t *protocol)
+static bool parse_protoport(char *token, uint16_t *from_port,
+							uint16_t *to_port, uint8_t *protocol)
 {
 	char *sep, *port = "", *endptr;
 	struct protoent *proto;
@@ -923,7 +923,7 @@ static bool parse_protoport(char *token, u_int16_t *from_port,
 			{
 				return FALSE;
 			}
-			*protocol = (u_int8_t)p;
+			*protocol = (uint8_t)p;
 		}
 	}
 	if (streq(port, "%any"))
@@ -1002,8 +1002,8 @@ static void add_ts(private_stroke_config_t *this,
 		{
 			enumerator_t *enumerator;
 			char *subnet, *pos;
-			u_int16_t from_port, to_port;
-			u_int8_t proto;
+			uint16_t from_port, to_port;
+			uint8_t proto;
 
 			enumerator = enumerator_create_token(end->subnets, ",", " ");
 			while (enumerator->enumerate(enumerator, &subnet))

@@ -121,8 +121,8 @@ METHOD(tncif_identity_t, build, void,
 METHOD(tncif_identity_t, process, bool,
 	private_tncif_identity_t *this, bio_reader_t *reader)
 {
-	u_int8_t reserved;
-	u_int32_t vendor_id, type;
+	uint8_t reserved;
+	uint32_t vendor_id, type;
 	chunk_t identity_value;
 
 	if (reader->remaining(reader) < TNCIF_IDENTITY_MIN_SIZE)

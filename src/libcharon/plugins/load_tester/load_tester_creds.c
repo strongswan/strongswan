@@ -57,7 +57,7 @@ struct private_load_tester_creds_t {
 	/**
 	 * serial number to issue certificates
 	 */
-	u_int32_t serial;
+	uint32_t serial;
 
 	/**
 	 * Preshared key for IKE
@@ -307,7 +307,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	identification_t *dn = NULL;
 	linked_list_t *sans;
 	char buf[128];
-	u_int32_t serial;
+	uint32_t serial;
 	time_t now;
 
 	if (this->ca == NULL)

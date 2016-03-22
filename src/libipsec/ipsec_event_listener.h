@@ -40,7 +40,7 @@ struct ipsec_event_listener_t {
 	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE if this is a hard expire, FALSE otherwise
 	 */
-	void (*expire)(u_int8_t protocol, u_int32_t spi, host_t *dst, bool hard);
+	void (*expire)(uint8_t protocol, uint32_t spi, host_t *dst, bool hard);
 };
 
 #endif /** IPSEC_EVENT_LISTENER_H_ @}*/

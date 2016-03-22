@@ -53,7 +53,7 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_openssl_hasher_t *this, chunk_t chunk, u_int8_t *hash)
+	private_openssl_hasher_t *this, chunk_t chunk, uint8_t *hash)
 {
 	if (EVP_DigestUpdate(this->ctx, chunk.ptr, chunk.len) != 1)
 	{

@@ -57,7 +57,7 @@ struct configuration_attribute_t {
 	 *
 	 * @return 		attribute value
 	 */
-	u_int16_t (*get_value) (configuration_attribute_t *this);
+	uint16_t (*get_value) (configuration_attribute_t *this);
 
 	/**
 	 * Destroys an configuration_attribute_t object.
@@ -92,6 +92,6 @@ configuration_attribute_t *configuration_attribute_create_chunk(
  * @return			created PLV1_CONFIGURATION_ATTRIBUTE configuration attribute
  */
 configuration_attribute_t *configuration_attribute_create_value(
-					configuration_attribute_type_t attr_type, u_int16_t value);
+					configuration_attribute_type_t attr_type, uint16_t value);
 
 #endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

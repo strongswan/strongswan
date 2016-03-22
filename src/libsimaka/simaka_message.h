@@ -176,7 +176,7 @@ struct simaka_message_t {
 	 *
 	 * @return			EAP message identifier
 	 */
-	u_int8_t (*get_identifier)(simaka_message_t *this);
+	uint8_t (*get_identifier)(simaka_message_t *this);
 
 	/**
 	 * Get the EAP type of the message.
@@ -257,7 +257,7 @@ struct simaka_message_t {
  * @param crypto		EAP-SIM/AKA crypto helper
  * @return				empty message of requested kind, NULL on error
  */
-simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
+simaka_message_t *simaka_message_create(bool request, uint8_t identifier,
 									eap_type_t type, simaka_subtype_t subtype,
 									simaka_crypto_t *crypto);
 

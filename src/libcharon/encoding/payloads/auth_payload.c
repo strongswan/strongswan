@@ -35,7 +35,7 @@ struct private_auth_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -50,17 +50,17 @@ struct private_auth_payload_t {
 	/**
 	 * Reserved bytes
 	 */
-	u_int8_t reserved_byte[3];
+	uint8_t reserved_byte[3];
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Method of the AUTH Data.
 	 */
-	u_int8_t auth_method;
+	uint8_t auth_method;
 
 	/**
 	 * The contained auth data value.

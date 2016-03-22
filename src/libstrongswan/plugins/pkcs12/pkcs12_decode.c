@@ -324,7 +324,7 @@ end:
  * Verify the given MAC with available passwords.
  */
 static bool verify_mac(hash_algorithm_t hash, chunk_t salt,
-					   u_int64_t iterations, chunk_t data, chunk_t mac)
+					   uint64_t iterations, chunk_t data, chunk_t mac)
 {
 	integrity_algorithm_t integ;
 	enumerator_t *enumerator;
@@ -450,7 +450,7 @@ static bool parse_PFX(private_pkcs12_t *this, chunk_t blob)
 			data = chunk_empty;
 	hash_algorithm_t hash = HASH_UNKNOWN;
 	container_t *container = NULL;
-	u_int64_t iterations = 0;
+	uint64_t iterations = 0;
 	bool success = FALSE;
 
 	parser = asn1_parser_create(PFXObjects, blob);

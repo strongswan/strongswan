@@ -72,7 +72,7 @@ struct eap_payload_t {
 	 *
 	 * @return			unique identifier
 	 */
-	u_int8_t (*get_identifier) (eap_payload_t *this);
+	uint8_t (*get_identifier) (eap_payload_t *this);
 
 	/**
 	 * Get the EAP method type.
@@ -80,13 +80,13 @@ struct eap_payload_t {
 	 * @param vendor	pointer receiving vendor identifier
 	 * @return			EAP method type, vendor specific if vendor != 0
 	 */
-	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
+	eap_type_t (*get_type) (eap_payload_t *this, uint32_t *vendor);
 
 	/**
 	 * Enumerate the EAP method types contained in an EAP-Nak (i.e. get_type()
 	 * returns EAP_NAK).
 	 *
-	 * @return			enumerator over (eap_type_t type, u_int32_t vendor)
+	 * @return			enumerator over (eap_type_t type, uint32_t vendor)
 	 */
 	enumerator_t* (*get_types) (eap_payload_t *this);
 
@@ -136,7 +136,7 @@ eap_payload_t *eap_payload_create_data_own(chunk_t data);
  * @param identifier	EAP identifier to use in payload
  * @return 				eap_payload_t object
  */
-eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
+eap_payload_t *eap_payload_create_code(eap_code_t code, uint8_t identifier);
 
 /**
  * Creates an eap_payload_t EAP_RESPONSE containing an EAP_NAK.
@@ -147,7 +147,7 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  * @param expanded		TRUE to send an expanded Nak
  * @return 				eap_payload_t object
  */
-eap_payload_t *eap_payload_create_nak(u_int8_t identifier, eap_type_t type,
-									  u_int32_t vendor, bool expanded);
+eap_payload_t *eap_payload_create_nak(uint8_t identifier, eap_type_t type,
+									  uint32_t vendor, bool expanded);
 
 #endif /** EAP_PAYLOAD_H_ @}*/

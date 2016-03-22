@@ -34,17 +34,17 @@ struct private_hash_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Reserved byte
 	 */
-	u_int8_t reserved;
+	uint8_t reserved;
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * The contained hash value.

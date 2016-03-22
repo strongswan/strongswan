@@ -115,7 +115,7 @@ typedef struct {
 	/** pending IKE_SA connecting upon acquire */
 	ike_sa_t *ike_sa;
 	/** reqid of pending trap policy */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** destination address (wildcard case) */
 	host_t *dst;
 } acquire_t;
@@ -143,7 +143,7 @@ static void destroy_acquire(acquire_t *this)
 /**
  * match an acquire entry by reqid
  */
-static bool acquire_by_reqid(acquire_t *this, u_int32_t *reqid)
+static bool acquire_by_reqid(acquire_t *this, uint32_t *reqid)
 {
 	return this->reqid == *reqid;
 }
@@ -156,9 +156,9 @@ static bool acquire_by_dst(acquire_t *this, host_t *dst)
 	return this->dst && this->dst->ip_equals(this->dst, dst);
 }
 
-METHOD(trap_manager_t, install, u_int32_t,
+METHOD(trap_manager_t, install, uint32_t,
 	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child,
-	u_int32_t reqid)
+	uint32_t reqid)
 {
 	entry_t *entry, *found = NULL;
 	ike_cfg_t *ike_cfg;
@@ -307,7 +307,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 }
 
 METHOD(trap_manager_t, uninstall, bool,
-	private_trap_manager_t *this, u_int32_t reqid)
+	private_trap_manager_t *this, uint32_t reqid)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -366,12 +366,12 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 									(void*)this->lock->unlock);
 }
 
-METHOD(trap_manager_t, find_reqid, u_int32_t,
+METHOD(trap_manager_t, find_reqid, uint32_t,
 	private_trap_manager_t *this, child_cfg_t *child)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -392,7 +392,7 @@ METHOD(trap_manager_t, find_reqid, u_int32_t,
 }
 
 METHOD(trap_manager_t, acquire, void,
-	private_trap_manager_t *this, u_int32_t reqid,
+	private_trap_manager_t *this, uint32_t reqid,
 	traffic_selector_t *src, traffic_selector_t *dst)
 {
 	enumerator_t *enumerator;
@@ -430,7 +430,7 @@ METHOD(trap_manager_t, acquire, void,
 	if (wildcard)
 	{	/* for wildcard acquires we check that we don't have a pending acquire
 		 * with the same peer */
-		u_int8_t mask;
+		uint8_t mask;
 
 		dst->to_subnet(dst, &host, &mask);
 		if (this->acquires->find_first(this->acquires, (void*)acquire_by_dst,
@@ -483,8 +483,8 @@ METHOD(trap_manager_t, acquire, void,
 		if (ike_sa)
 		{
 			ike_cfg_t *ike_cfg;
-			u_int16_t port;
-			u_int8_t mask;
+			uint16_t port;
+			uint8_t mask;
 
 			ike_sa->set_peer_cfg(ike_sa, peer);
 			ike_cfg = ike_sa->get_ike_cfg(ike_sa);

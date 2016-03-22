@@ -49,14 +49,14 @@ struct pts_component_t {
 	 *
 	 * @return				PTS Component Functional Name
 	 */
-	u_int8_t (*get_evidence_flags)(pts_component_t *this);
+	uint8_t (*get_evidence_flags)(pts_component_t *this);
 
 	/**
 	 * Get the PTS Sub-component Depth
 	 *
 	 * @return				PTS Sub-component Depth
 	 */
-	u_int32_t (*get_depth)(pts_component_t *this);
+	uint32_t (*get_depth)(pts_component_t *this);
 
 	/**
 	 * Do evidence measurements on the PTS Functional Component
@@ -67,7 +67,7 @@ struct pts_component_t {
 	 * @param measurements	additional file measurements (NULL if not present)
 	 * @return				status return code
 	 */
-	status_t (*measure)(pts_component_t *this, u_int8_t qualifier, pts_t *pts,
+	status_t (*measure)(pts_component_t *this, uint8_t qualifier, pts_t *pts,
 						pts_comp_evidence_t** evidence);
 
 	/**
@@ -78,7 +78,7 @@ struct pts_component_t {
 	 * @param evidence		component evidence measurement to be verified
 	 * @return				status return code
 	 */
-	status_t (*verify)(pts_component_t *this, u_int8_t qualifier, pts_t *pts,
+	status_t (*verify)(pts_component_t *this, uint8_t qualifier, pts_t *pts,
 					   pts_comp_evidence_t *evidence);
 
 	/**
@@ -89,7 +89,7 @@ struct pts_component_t {
 	 * @param result		writer appending concise measurement result
 	 * @return				TRUE if finalization successful
 	 */
-	bool (*finalize)(pts_component_t *this, u_int8_t qualifier,
+	bool (*finalize)(pts_component_t *this, uint8_t qualifier,
 					 bio_writer_t *result);
 
 	/**

@@ -200,14 +200,14 @@ struct notify_payload_t {
 	 *
 	 * @return			protocol id of this payload
 	 */
-	u_int8_t (*get_protocol_id) (notify_payload_t *this);
+	uint8_t (*get_protocol_id) (notify_payload_t *this);
 
 	/**
 	 * Sets the protocol id of this payload.
 	 *
 	 * @param protocol_id	protocol id to set
 	 */
-	void (*set_protocol_id) (notify_payload_t *this, u_int8_t protocol_id);
+	void (*set_protocol_id) (notify_payload_t *this, uint8_t protocol_id);
 
 	/**
 	 * Gets the notify message type of this payload.
@@ -230,7 +230,7 @@ struct notify_payload_t {
 	 *
 	 * @return		SPI value
 	 */
-	u_int32_t (*get_spi) (notify_payload_t *this);
+	uint32_t (*get_spi) (notify_payload_t *this);
 
 	/**
 	 * Sets the spi of this payload.
@@ -239,7 +239,7 @@ struct notify_payload_t {
 	 *
 	 * @param spi	SPI value
 	 */
-	void (*set_spi) (notify_payload_t *this, u_int32_t spi);
+	void (*set_spi) (notify_payload_t *this, uint32_t spi);
 
 	/**
 	 * Returns the currently set spi of this payload.

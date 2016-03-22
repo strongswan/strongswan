@@ -74,7 +74,7 @@ static inline size_t round_down(size_t size, size_t alignment)
  * @param align			alignment, up to 255 bytes, usually a power of 2
  * @return				allocated hunk, aligned to align bytes
  */
-void* malloc_align(size_t size, u_int8_t align);
+void* malloc_align(size_t size, uint8_t align);
 
 /**
  * Free a hunk allocated by malloc_align().

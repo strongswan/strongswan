@@ -33,9 +33,9 @@ struct private_sha512_hasher_t {
 	sha2_hasher_t public;
 
 	unsigned char   sha_out[128];   /* results are here, bytes 0..47/0..63 */
-	u_int64_t       sha_H[8];
-	u_int64_t       sha_blocks;
-	u_int64_t       sha_blocksMSB;
+	uint64_t       sha_H[8];
+	uint64_t       sha_blocks;
+	uint64_t       sha_blocksMSB;
 	int             sha_bufCnt;
 };
 
@@ -52,23 +52,23 @@ struct private_sha256_hasher_t {
 	sha2_hasher_t public;
 
 	unsigned char   sha_out[64];    /* results are here, bytes 0...31 */
-	u_int32_t       sha_H[8];
-	u_int64_t       sha_blocks;
+	uint32_t       sha_H[8];
+	uint64_t       sha_blocks;
 	int             sha_bufCnt;
 };
 
 
-static const u_int32_t sha224_hashInit[8] = {
+static const uint32_t sha224_hashInit[8] = {
 	0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511,
 	0x64f98fa7, 0xbefa4fa4
 };
 
-static const u_int32_t sha256_hashInit[8] = {
+static const uint32_t sha256_hashInit[8] = {
 	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
 	0x1f83d9ab, 0x5be0cd19
 };
 
-static const u_int32_t sha256_K[64] = {
+static const uint32_t sha256_K[64] = {
 	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
 	0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
 	0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
@@ -82,19 +82,19 @@ static const u_int32_t sha256_K[64] = {
 	0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-static const u_int64_t sha512_hashInit[8] = {
+static const uint64_t sha512_hashInit[8] = {
 	0x6a09e667f3bcc908ULL, 0xbb67ae8584caa73bULL, 0x3c6ef372fe94f82bULL,
 	0xa54ff53a5f1d36f1ULL, 0x510e527fade682d1ULL, 0x9b05688c2b3e6c1fULL,
 	0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL
 };
 
-static const u_int64_t sha384_hashInit[8] = {
+static const uint64_t sha384_hashInit[8] = {
 	0xcbbb9d5dc1059ed8ULL, 0x629a292a367cd507ULL, 0x9159015a3070dd17ULL,
 	0x152fecd8f70e5939ULL, 0x67332667ffc00b31ULL, 0x8eb44a8768581511ULL,
 	0xdb0c2e0d64f98fa7ULL, 0x47b5481dbefa4fa4ULL
 };
 
-static const u_int64_t sha512_K[80] = {
+static const uint64_t sha512_K[80] = {
 	0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL,
 	0xe9b5dba58189dbbcULL, 0x3956c25bf348b538ULL, 0x59f111f1b605d019ULL,
 	0x923f82a4af194f9bULL, 0xab1c5ed5da6d8118ULL, 0xd807aa98a3030242ULL,
@@ -143,14 +143,14 @@ static void sha256_transform(private_sha256_hasher_t *ctx,
 							 const unsigned char *datap)
 {
 	register int    j;
-	u_int32_t       a, b, c, d, e, f, g, h;
-	u_int32_t       T1, T2, W[64], Wm2, Wm15;
+	uint32_t       a, b, c, d, e, f, g, h;
+	uint32_t       T1, T2, W[64], Wm2, Wm15;
 
 	/* read the data, big endian byte order */
 	j = 0;
 	do {
-		W[j] = (((u_int32_t)(datap[0]))<<24) | (((u_int32_t)(datap[1]))<<16) |
-				(((u_int32_t)(datap[2]))<<8 ) | ((u_int32_t)(datap[3]));
+		W[j] = (((uint32_t)(datap[0]))<<24) | (((uint32_t)(datap[1]))<<16) |
+				(((uint32_t)(datap[2]))<<8 ) | ((uint32_t)(datap[3]));
 		datap += 4;
 	} while(++j < 16);
 
@@ -229,8 +229,8 @@ static void sha256_write(private_sha256_hasher_t *ctx,
 static void sha256_final(private_sha256_hasher_t *ctx)
 {
 	register int    j;
-	u_int64_t       bitLength;
-	u_int32_t       i;
+	uint64_t       bitLength;
+	uint32_t       i;
 	unsigned char   padByte, *datap;
 
 	bitLength = (ctx->sha_blocks << 9) | (ctx->sha_bufCnt << 3);
@@ -287,16 +287,16 @@ static void sha512_transform(private_sha512_hasher_t *ctx,
 							 const unsigned char *datap)
 {
 	register int    j;
-	u_int64_t       a, b, c, d, e, f, g, h;
-	u_int64_t       T1, T2, W[80], Wm2, Wm15;
+	uint64_t       a, b, c, d, e, f, g, h;
+	uint64_t       T1, T2, W[80], Wm2, Wm15;
 
 	/* read the data, big endian byte order */
 	j = 0;
 	do {
-		W[j] = (((u_int64_t)(datap[0]))<<56) | (((u_int64_t)(datap[1]))<<48) |
-				(((u_int64_t)(datap[2]))<<40) | (((u_int64_t)(datap[3]))<<32) |
-				(((u_int64_t)(datap[4]))<<24) | (((u_int64_t)(datap[5]))<<16) |
-				(((u_int64_t)(datap[6]))<<8 ) | ((u_int64_t)(datap[7]));
+		W[j] = (((uint64_t)(datap[0]))<<56) | (((uint64_t)(datap[1]))<<48) |
+				(((uint64_t)(datap[2]))<<40) | (((uint64_t)(datap[3]))<<32) |
+				(((uint64_t)(datap[4]))<<24) | (((uint64_t)(datap[5]))<<16) |
+				(((uint64_t)(datap[6]))<<8 ) | ((uint64_t)(datap[7]));
 		datap += 8;
 	} while(++j < 16);
 
@@ -374,8 +374,8 @@ static void sha512_write(private_sha512_hasher_t *ctx,
 static void sha512_final(private_sha512_hasher_t *ctx)
 {
 	register int    j;
-	u_int64_t       bitLength, bitLengthMSB;
-	u_int64_t       i;
+	uint64_t       bitLength, bitLengthMSB;
+	uint64_t       i;
 	unsigned char   padByte, *datap;
 
 	bitLength = (ctx->sha_blocks << 10) | (ctx->sha_bufCnt << 3);
@@ -469,7 +469,7 @@ METHOD(hasher_t, reset512, bool,
 }
 
 METHOD(hasher_t, get_hash224, bool,
-	private_sha256_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_sha256_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	sha256_write(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -482,7 +482,7 @@ METHOD(hasher_t, get_hash224, bool,
 }
 
 METHOD(hasher_t, get_hash256, bool,
-	private_sha256_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_sha256_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	sha256_write(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -495,7 +495,7 @@ METHOD(hasher_t, get_hash256, bool,
 }
 
 METHOD(hasher_t, get_hash384, bool,
-	private_sha512_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_sha512_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	sha512_write(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -508,7 +508,7 @@ METHOD(hasher_t, get_hash384, bool,
 }
 
 METHOD(hasher_t, get_hash512, bool,
-	private_sha512_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_sha512_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	sha512_write(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)

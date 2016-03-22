@@ -122,7 +122,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			port
 	 */
-	u_int16_t (*get_from_port) (traffic_selector_t *this);
+	uint16_t (*get_from_port) (traffic_selector_t *this);
 
 	/**
 	 * Get ending port of this ts.
@@ -136,7 +136,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			port
 	 */
-	u_int16_t (*get_to_port) (traffic_selector_t *this);
+	uint16_t (*get_to_port) (traffic_selector_t *this);
 
 	/**
 	 * Get the type of the traffic selector.
@@ -150,7 +150,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			protocol id
 	 */
-	u_int8_t (*get_protocol) (traffic_selector_t *this);
+	uint8_t (*get_protocol) (traffic_selector_t *this);
 
 	/**
 	 * Check if the traffic selector is for a single host.
@@ -218,7 +218,7 @@ struct traffic_selector_t {
 	 * @param mask		converted net mask
 	 * @return			TRUE if traffic selector matches exactly to the subnet
 	 */
-	bool (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
+	bool (*to_subnet) (traffic_selector_t *this, host_t **net, uint8_t *mask);
 
 	/**
 	 * Create a hash value for the traffic selector.
@@ -240,7 +240,7 @@ struct traffic_selector_t {
  * @param port			port number in host order
  * @return				ICMP/ICMPv6 message type
  */
-static inline u_int8_t traffic_selector_icmp_type(u_int16_t port)
+static inline uint8_t traffic_selector_icmp_type(uint16_t port)
 {
 	return port >> 8;
 }
@@ -251,7 +251,7 @@ static inline u_int8_t traffic_selector_icmp_type(u_int16_t port)
  * @param port			port number in host order
  * @return				ICMP/ICMPv6 message code
  */
-static inline u_int8_t traffic_selector_icmp_code(u_int16_t port)
+static inline uint8_t traffic_selector_icmp_code(uint16_t port)
 {
 	return port & 0xff;
 }
@@ -286,9 +286,9 @@ int traffic_selector_cmp(traffic_selector_t *a, traffic_selector_t *b,
  *						- NULL if invalid address strings/protocol
  */
 traffic_selector_t *traffic_selector_create_from_string(
-									u_int8_t protocol, ts_type_t type,
-									char *from_addr, u_int16_t from_port,
-									char *to_addr, u_int16_t to_port);
+									uint8_t protocol, ts_type_t type,
+									char *from_addr, uint16_t from_port,
+									char *to_addr, uint16_t to_port);
 
 
 
@@ -307,8 +307,8 @@ traffic_selector_t *traffic_selector_create_from_string(
  * @return				traffic selector, NULL if string invalid
  */
 traffic_selector_t *traffic_selector_create_from_cidr(
-										char *string, u_int8_t protocol,
-										u_int16_t from_port, u_int16_t to_port);
+										char *string, uint8_t protocol,
+										uint16_t from_port, uint16_t to_port);
 
 /**
  * Create a new traffic selector using data read from the net.
@@ -331,9 +331,9 @@ traffic_selector_t *traffic_selector_create_from_cidr(
  * @return				traffic_selector_t object
  */
 traffic_selector_t *traffic_selector_create_from_bytes(
-								u_int8_t protocol, ts_type_t type,
-								chunk_t from_address, u_int16_t from_port,
-								chunk_t to_address, u_int16_t to_port);
+								uint8_t protocol, ts_type_t type,
+								chunk_t from_address, uint16_t from_port,
+								chunk_t to_address, uint16_t to_port);
 
 /**
  * Create a new traffic selector using the RFC 3779 ASN.1 min/max address format
@@ -370,8 +370,8 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  *						- NULL if address family of net not supported
  */
 traffic_selector_t *traffic_selector_create_from_subnet(
-							host_t *net, u_int8_t netbits, u_int8_t protocol,
-							u_int16_t from_port, u_int16_t to_port);
+							host_t *net, uint8_t netbits, uint8_t protocol,
+							uint16_t from_port, uint16_t to_port);
 
 /**
  * Create a traffic selector for host-to-host cases.
@@ -392,8 +392,8 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  *						- traffic_selector_t object
  *						- NULL if type not supported
  */
-traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
-									u_int16_t from_port, u_int16_t to_port);
+traffic_selector_t *traffic_selector_create_dynamic(uint8_t protocol,
+									uint16_t from_port, uint16_t to_port);
 
 /**
  * printf hook function for traffic_selector_t.

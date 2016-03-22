@@ -77,7 +77,7 @@ struct component_entry_t {
 	/**
 	 * Vendor-Specific Component Functional Name
 	 */
-	u_int32_t name;
+	uint32_t name;
 
 	/**
 	 * Functional Component creation method
@@ -165,7 +165,7 @@ METHOD(pts_component_manager_t, get_qualifier_type_names, enum_name_t*,
 }
 
 METHOD(pts_component_manager_t, add_component, void,
-	private_pts_component_manager_t *this, pen_t vendor_id, u_int32_t name,
+	private_pts_component_manager_t *this, pen_t vendor_id, uint32_t name,
 	pts_component_create_t create)
 {
 	enumerator_t *enumerator;
@@ -210,13 +210,13 @@ METHOD(pts_component_manager_t, remove_vendor, void,
 	enumerator->destroy(enumerator);
 }
 
-METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
+METHOD(pts_component_manager_t, get_qualifier, uint8_t,
 	private_pts_component_manager_t *this, pts_comp_func_name_t *name,
 	char *flags)
 {
 	enumerator_t *enumerator;
 	vendor_entry_t *entry;
-	u_int8_t qualifier, size, flag, type = 0;
+	uint8_t qualifier, size, flag, type = 0;
 	int i;
 
 	enumerator = this->list->create_enumerator(this->list);
@@ -252,7 +252,7 @@ METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
 
 METHOD(pts_component_manager_t, create, pts_component_t*,
 	private_pts_component_manager_t *this,
-	pts_comp_func_name_t *name, u_int32_t depth, pts_database_t *pts_db)
+	pts_comp_func_name_t *name, uint32_t depth, pts_database_t *pts_db)
 {
 	enumerator_t *enumerator, *e2;
 	vendor_entry_t *entry;

@@ -154,7 +154,7 @@ static job_requeue_t reset_cb(struct reset_cb_data_t *data)
  * Schedule sequence number reset job
  */
 static void schedule_reset_job(private_reset_seq_t *this, host_t *dst,
-							   u_int32_t spi)
+							   uint32_t spi)
 {
 	struct reset_cb_data_t *data;
 	chunk_t chunk;

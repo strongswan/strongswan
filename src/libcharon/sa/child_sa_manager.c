@@ -59,11 +59,11 @@ typedef struct {
 	/** the associated IKE_SA */
 	ike_sa_id_t *ike_id;
 	/** unique CHILD_SA identifier */
-	u_int32_t unique_id;
+	uint32_t unique_id;
 	/** inbound SPI */
-	u_int32_t spi_in;
+	uint32_t spi_in;
 	/** outbound SPI */
-	u_int32_t spi_out;
+	uint32_t spi_out;
 	/** inbound host address */
 	host_t *host_in;
 	/** outbound host address and port */
@@ -202,7 +202,7 @@ METHOD(child_sa_manager_t, remove_, void,
  * Check out an IKE_SA for a given CHILD_SA
  */
 static ike_sa_t *checkout_ikesa(private_child_sa_manager_t *this,
-					ike_sa_id_t *id, u_int32_t unique_id, child_sa_t **child_sa)
+					ike_sa_id_t *id, uint32_t unique_id, child_sa_t **child_sa)
 {
 	enumerator_t *enumerator;
 	child_sa_t *current;
@@ -238,7 +238,7 @@ static ike_sa_t *checkout_ikesa(private_child_sa_manager_t *this,
 }
 
 METHOD(child_sa_manager_t, checkout_by_id, ike_sa_t*,
-	private_child_sa_manager_t *this, u_int32_t unique_id,
+	private_child_sa_manager_t *this, uint32_t unique_id,
 	child_sa_t **child_sa)
 {
 	ike_sa_id_t *id;
@@ -262,11 +262,11 @@ METHOD(child_sa_manager_t, checkout_by_id, ike_sa_t*,
 }
 
 METHOD(child_sa_manager_t, checkout, ike_sa_t*,
-	private_child_sa_manager_t *this, protocol_id_t protocol, u_int32_t spi,
+	private_child_sa_manager_t *this, protocol_id_t protocol, uint32_t spi,
 	host_t *dst, child_sa_t **child_sa)
 {
 	ike_sa_id_t *id;
-	u_int32_t unique_id;
+	uint32_t unique_id;
 	child_entry_t *entry, key = {
 		.spi_in = spi,
 		.spi_out = spi,

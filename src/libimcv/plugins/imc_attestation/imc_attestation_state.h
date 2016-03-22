@@ -57,7 +57,7 @@ struct imc_attestation_state_t {
 	 * @return					created functional component instance or NULL
 	 */
 	pts_component_t* (*create_component)(imc_attestation_state_t *this,
-							 pts_comp_func_name_t *name, u_int32_t depth);
+							 pts_comp_func_name_t *name, uint32_t depth);
 
 	/**
 	 * Add an entry to the Component Evidence cache list

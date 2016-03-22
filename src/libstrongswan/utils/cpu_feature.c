@@ -102,7 +102,7 @@ static cpu_feature_t get_via_features()
  */
 cpu_feature_t cpu_feature_get_all()
 {
-	char vendor[3 * sizeof(u_int32_t) + 1];
+	char vendor[3 * sizeof(uint32_t) + 1];
 	cpu_feature_t f = 0;
 	u_int a, b, c, d;
 

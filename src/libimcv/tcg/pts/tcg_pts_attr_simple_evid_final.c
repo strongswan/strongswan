@@ -81,7 +81,7 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	/**
 	 * Set of flags for Simple Evidence Final
 	 */
-	u_int8_t flags;
+	uint8_t flags;
 
 	/**
 	 * Optional Composite Hash Algorithm
@@ -168,7 +168,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags;
+	uint8_t flags;
 
 	if (this->value.ptr)
 	{
@@ -212,12 +212,12 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_simple_evid_final_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_simple_evid_final_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags, reserved;
-	u_int16_t algorithm;
-	u_int32_t pcr_comp_len, tpm_quote_sig_len, evid_sig_len;
+	uint8_t flags, reserved;
+	uint16_t algorithm;
+	uint32_t pcr_comp_len, tpm_quote_sig_len, evid_sig_len;
 	status_t status = FAILED;
 
 	*offset = 0;
@@ -296,7 +296,7 @@ end:
 	return status;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, get_quote_info, u_int8_t,
+METHOD(tcg_pts_attr_simple_evid_final_t, get_quote_info, uint8_t,
 	private_tcg_pts_attr_simple_evid_final_t *this,
 	pts_meas_algorithms_t *comp_hash_algo, chunk_t *pcr_comp, chunk_t *tpm_quote_sig)
 {
@@ -335,7 +335,7 @@ METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sig, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(u_int8_t flags,
+pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(uint8_t flags,
 							pts_meas_algorithms_t comp_hash_algorithm,
 							chunk_t pcr_comp, chunk_t tpm_quote_sig)
 {

@@ -85,12 +85,12 @@ struct private_transform_attribute_t {
 	/**
 	 * Type of the attribute.
 	 */
-	u_int16_t attribute_type;
+	uint16_t attribute_type;
 
 	/**
 	 * Attribute Length if attribute_format is 0, attribute Value otherwise.
 	 */
-	u_int16_t attribute_length_or_value;
+	uint16_t attribute_length_or_value;
 
 	/**
 	 * Attribute value as chunk if attribute_format is 0 (FALSE).
@@ -185,10 +185,10 @@ METHOD(transform_attribute_t, get_value_chunk, chunk_t,
 	return this->attribute_value;
 }
 
-METHOD(transform_attribute_t, get_value, u_int64_t,
+METHOD(transform_attribute_t, get_value, uint64_t,
 	private_transform_attribute_t *this)
 {
-	u_int64_t value = 0;
+	uint64_t value = 0;
 
 	if (this->attribute_format)
 	{
@@ -203,7 +203,7 @@ METHOD(transform_attribute_t, get_value, u_int64_t,
 	return untoh64((char*)&value);
 }
 
-METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
+METHOD(transform_attribute_t, get_attribute_type, uint16_t,
 	private_transform_attribute_t *this)
 {
 	return this->attribute_type;
@@ -250,7 +250,7 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
  * Described in header.
  */
 transform_attribute_t *transform_attribute_create_value(payload_type_t type,
-							transform_attribute_type_t kind, u_int64_t value)
+							transform_attribute_type_t kind, uint64_t value)
 {
 	private_transform_attribute_t *this;
 
@@ -265,7 +265,7 @@ transform_attribute_t *transform_attribute_create_value(payload_type_t type,
 	}
 	else if (value <= UINT32_MAX)
 	{
-		u_int32_t val32;
+		uint32_t val32;
 
 		val32 = htonl(value);
 		this->attribute_value = chunk_clone(chunk_from_thing(val32));

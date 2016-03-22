@@ -57,7 +57,7 @@ struct private_pb_access_recommendation_msg_t {
 	/**
 	 * Access recommendation code
 	 */
-	u_int16_t recommendation;
+	uint16_t recommendation;
 
 	/**
 	 * Encoded message
@@ -95,10 +95,10 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_access_recommendation_msg_t *this, u_int32_t *offset)
+	private_pb_access_recommendation_msg_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int16_t reserved;
+	uint16_t reserved;
 
 	reader = bio_reader_create(this->encoding);
 	reader->read_uint16(reader, &reserved);
@@ -124,7 +124,7 @@ METHOD(pb_tnc_msg_t, destroy, void,
 	free(this);
 }
 
-METHOD(pb_access_recommendation_msg_t, get_access_recommendation, u_int16_t,
+METHOD(pb_access_recommendation_msg_t, get_access_recommendation, uint16_t,
 	private_pb_access_recommendation_msg_t *this)
 {
 	return this->recommendation;
@@ -158,7 +158,7 @@ pb_tnc_msg_t *pb_access_recommendation_msg_create_from_data(chunk_t data)
 /**
  * See header
  */
-pb_tnc_msg_t *pb_access_recommendation_msg_create(u_int16_t recommendation)
+pb_tnc_msg_t *pb_access_recommendation_msg_create(uint16_t recommendation)
 {
 	private_pb_access_recommendation_msg_t *this;
 

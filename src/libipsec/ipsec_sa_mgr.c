@@ -109,19 +109,19 @@ typedef struct {
 	/**
 	 * 0 if this is a hard expire, otherwise the offset in s (soft->hard)
 	 */
-	u_int32_t hard_offset;
+	uint32_t hard_offset;
 
 } ipsec_sa_expired_t;
 
 /*
  * Used for the hash table of allocated SPIs
  */
-static bool spi_equals(u_int32_t *spi, u_int32_t *other_spi)
+static bool spi_equals(uint32_t *spi, uint32_t *other_spi)
 {
 	return *spi == *other_spi;
 }
 
-static u_int spi_hash(u_int32_t *spi)
+static u_int spi_hash(uint32_t *spi)
 {
 	return chunk_hash(chunk_from_thing(*spi));
 }
@@ -237,26 +237,26 @@ static bool match_entry_by_sa_ptr(ipsec_sa_entry_t *item, ipsec_sa_t *sa)
 	return item->sa == sa;
 }
 
-static bool match_entry_by_spi_inbound(ipsec_sa_entry_t *item, u_int32_t *spi,
+static bool match_entry_by_spi_inbound(ipsec_sa_entry_t *item, uint32_t *spi,
 									   bool *inbound)
 {
 	return item->sa->get_spi(item->sa) == *spi &&
 		   item->sa->is_inbound(item->sa) == *inbound;
 }
 
-static bool match_entry_by_spi_src_dst(ipsec_sa_entry_t *item, u_int32_t *spi,
+static bool match_entry_by_spi_src_dst(ipsec_sa_entry_t *item, uint32_t *spi,
 									   host_t *src, host_t *dst)
 {
 	return item->sa->match_by_spi_src_dst(item->sa, *spi, src, dst);
 }
 
 static bool match_entry_by_reqid_inbound(ipsec_sa_entry_t *item,
-										 u_int32_t *reqid, bool *inbound)
+										 uint32_t *reqid, bool *inbound)
 {
 	return item->sa->match_by_reqid(item->sa, *reqid, *inbound);
 }
 
-static bool match_entry_by_spi_dst(ipsec_sa_entry_t *item, u_int32_t *spi,
+static bool match_entry_by_spi_dst(ipsec_sa_entry_t *item, uint32_t *spi,
 								   host_t *dst)
 {
 	return item->sa->match_by_spi_dst(item->sa, *spi, dst);
@@ -299,7 +299,7 @@ static job_requeue_t sa_expired(ipsec_sa_expired_t *expired)
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_ptr,
 							  NULL, expired->entry) == SUCCESS)
 	{
-		u_int32_t hard_offset;
+		uint32_t hard_offset;
 
 		hard_offset = expired->hard_offset;
 		expired->entry->sa->expire(expired->entry->sa, hard_offset == 0);
@@ -328,7 +328,7 @@ static void schedule_expiration(private_ipsec_sa_mgr_t *this,
 	lifetime_cfg_t *lifetime = entry->sa->get_lifetime(entry->sa);
 	ipsec_sa_expired_t *expired;
 	callback_job_t *job;
-	u_int32_t timeout;
+	uint32_t timeout;
 
 	if (!lifetime->time.life)
 	{	/* no expiration at all */
@@ -362,7 +362,7 @@ static void schedule_expiration(private_ipsec_sa_mgr_t *this,
 static void flush_allocated_spis(private_ipsec_sa_mgr_t *this)
 {
 	enumerator_t *enumerator;
-	u_int32_t *current;
+	uint32_t *current;
 
 	DBG2(DBG_ESP, "flushing allocated SPIs");
 	enumerator = this->allocated_spis->create_enumerator(this->allocated_spis);
@@ -378,9 +378,9 @@ static void flush_allocated_spis(private_ipsec_sa_mgr_t *this)
 /**
  * Pre-allocate an SPI for an inbound SA
  */
-static bool allocate_spi(private_ipsec_sa_mgr_t *this, u_int32_t spi)
+static bool allocate_spi(private_ipsec_sa_mgr_t *this, uint32_t spi)
 {
-	u_int32_t *spi_alloc;
+	uint32_t *spi_alloc;
 
 	if (this->allocated_spis->get(this->allocated_spis, &spi) ||
 		this->sas->find_first(this->sas, (void*)match_entry_by_spi_inbound,
@@ -388,17 +388,17 @@ static bool allocate_spi(private_ipsec_sa_mgr_t *this, u_int32_t spi)
 	{
 		return FALSE;
 	}
-	spi_alloc = malloc_thing(u_int32_t);
+	spi_alloc = malloc_thing(uint32_t);
 	*spi_alloc = spi;
 	this->allocated_spis->put(this->allocated_spis, spi_alloc, spi_alloc);
 	return TRUE;
 }
 
 METHOD(ipsec_sa_mgr_t, get_spi, status_t,
-	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int8_t protocol,
-	u_int32_t *spi)
+	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint8_t protocol,
+	uint32_t *spi)
 {
-	u_int32_t spi_new;
+	uint32_t spi_new;
 
 	this->mutex->lock(this->mutex);
 	if (!this->rng)
@@ -415,7 +415,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 	do
 	{
 		if (!this->rng->get_bytes(this->rng, sizeof(spi_new),
-								 (u_int8_t*)&spi_new))
+								 (uint8_t*)&spi_new))
 		{
 			this->mutex->unlock(this->mutex);
 			DBG1(DBG_ESP, "failed to allocate SPI");
@@ -435,11 +435,11 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 }
 
 METHOD(ipsec_sa_mgr_t, add_sa, status_t,
-	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	u_int8_t protocol, u_int32_t reqid,	mark_t mark, u_int32_t tfc,
-	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
+	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint32_t spi,
+	uint8_t protocol, uint32_t reqid,	mark_t mark, uint32_t tfc,
+	lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode, uint16_t ipcomp,
+	uint16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
 	bool update)
 {
 	ipsec_sa_entry_t *entry;
@@ -465,7 +465,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 
 	if (update)
 	{	/* remove any pre-allocated SPIs */
-		u_int32_t *spi_alloc;
+		uint32_t *spi_alloc;
 
 		spi_alloc = this->allocated_spis->remove(this->allocated_spis, &spi);
 		free(spi_alloc);
@@ -489,8 +489,8 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 }
 
 METHOD(ipsec_sa_mgr_t, update_sa, status_t,
-	private_ipsec_sa_mgr_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_ipsec_sa_mgr_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
 	ipsec_sa_entry_t *entry = NULL;
@@ -528,8 +528,8 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 
 METHOD(ipsec_sa_mgr_t, query_sa, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark,
+	uint64_t *bytes, uint64_t *packets, time_t *time)
 {
 	ipsec_sa_entry_t *entry = NULL;
 
@@ -549,8 +549,8 @@ METHOD(ipsec_sa_mgr_t, query_sa, status_t,
 }
 
 METHOD(ipsec_sa_mgr_t, del_sa, status_t,
-	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint32_t spi,
+	uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	ipsec_sa_entry_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -583,7 +583,7 @@ METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 }
 
 METHOD(ipsec_sa_mgr_t, checkout_by_reqid, ipsec_sa_t*,
-	private_ipsec_sa_mgr_t *this, u_int32_t reqid, bool inbound)
+	private_ipsec_sa_mgr_t *this, uint32_t reqid, bool inbound)
 {
 	ipsec_sa_entry_t *entry;
 	ipsec_sa_t *sa = NULL;
@@ -600,7 +600,7 @@ METHOD(ipsec_sa_mgr_t, checkout_by_reqid, ipsec_sa_t*,
 }
 
 METHOD(ipsec_sa_mgr_t, checkout_by_spi, ipsec_sa_t*,
-	private_ipsec_sa_mgr_t *this, u_int32_t spi, host_t *dst)
+	private_ipsec_sa_mgr_t *this, uint32_t spi, host_t *dst)
 {
 	ipsec_sa_entry_t *entry;
 	ipsec_sa_t *sa = NULL;

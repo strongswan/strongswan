@@ -121,7 +121,7 @@ int time_delta_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	char* unit = "second";
 	time_t *arg1 = *((time_t**)(args[0]));
 	time_t *arg2 = *((time_t**)(args[1]));
-	u_int64_t delta = llabs(*arg1 - *arg2);
+	uint64_t delta = llabs(*arg1 - *arg2);
 
 	if (delta > 2 * 60 * 60 * 24)
 	{

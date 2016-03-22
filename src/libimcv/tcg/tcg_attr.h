@@ -101,7 +101,7 @@ extern enum_name_t *tcg_attr_names;
  * @param length			attribute length
  * @param value				attribute value or segment
  */
-pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, size_t length,
+pa_tnc_attr_t* tcg_attr_create_from_data(uint32_t type, size_t length,
 										 chunk_t value);
 
 #endif /** TCG_ATTR_H_ @}*/

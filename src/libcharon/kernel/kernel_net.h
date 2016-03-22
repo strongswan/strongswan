@@ -156,7 +156,7 @@ struct kernel_net_t {
 	 *						ALREADY_DONE if the route already exists
 	 */
 	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net,
-						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
 						   char *if_name);
 
 	/**
@@ -170,7 +170,7 @@ struct kernel_net_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_route) (kernel_net_t *this, chunk_t dst_net,
-						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
 						   char *if_name);
 
 	/**

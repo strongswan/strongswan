@@ -31,7 +31,7 @@ struct private_fips_prf_t {
 	/**
 	 * key of prf function, "b" long
 	 */
-	u_int8_t *key;
+	uint8_t *key;
 
 	/**
 	 * size of "b" in bytes
@@ -46,19 +46,19 @@ struct private_fips_prf_t {
 	/**
 	 * G function, either SHA1 or DES
 	 */
-	bool (*g)(private_fips_prf_t *this, chunk_t c, u_int8_t res[]);
+	bool (*g)(private_fips_prf_t *this, chunk_t c, uint8_t res[]);
 };
 
 /**
  * sum = (a + b) mod 2 ^ (length * 8)
  */
-static void add_mod(size_t length, u_int8_t a[], u_int8_t b[], u_int8_t sum[])
+static void add_mod(size_t length, uint8_t a[], uint8_t b[], uint8_t sum[])
 {
 	int i, c = 0;
 
 	for(i = length - 1; i >= 0; i--)
 	{
-		u_int32_t tmp;
+		uint32_t tmp;
 
 		tmp = a[i] + b[i] + c;
 		sum[i] = 0xff & tmp;
@@ -69,7 +69,7 @@ static void add_mod(size_t length, u_int8_t a[], u_int8_t b[], u_int8_t sum[])
 /**
  * calculate "chunk mod 2^(length*8)" and save it into buffer
  */
-static void chunk_mod(size_t length, chunk_t chunk, u_int8_t buffer[])
+static void chunk_mod(size_t length, chunk_t chunk, uint8_t buffer[])
 {
 	if (chunk.len < length)
 	{
@@ -105,14 +105,14 @@ static void chunk_mod(size_t length, chunk_t chunk, u_int8_t buffer[])
  * 0x8e, 0x20, 0xd7, 0x37, 0xa3, 0x27, 0x51, 0x16
  */
 METHOD(prf_t, get_bytes, bool,
-	private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
+	private_fips_prf_t *this, chunk_t seed, uint8_t w[])
 {
 	int i;
-	u_int8_t xval[this->b];
-	u_int8_t xseed[this->b];
-	u_int8_t sum[this->b];
-	u_int8_t *xkey = this->key;
-	u_int8_t one[this->b];
+	uint8_t xval[this->b];
+	uint8_t xseed[this->b];
+	uint8_t sum[this->b];
+	uint8_t *xkey = this->key;
+	uint8_t one[this->b];
 
 	if (!w)
 	{
@@ -175,9 +175,9 @@ METHOD(prf_t, set_key, bool,
 /**
  * Implementation of the G() function based on SHA1
  */
-static bool g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
+static bool g_sha1(private_fips_prf_t *this, chunk_t c, uint8_t res[])
 {
-	u_int8_t buf[64];
+	uint8_t buf[64];
 
 	if (c.len < sizeof(buf))
 	{

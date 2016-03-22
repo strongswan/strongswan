@@ -52,7 +52,7 @@ struct private_gcrypt_crypter_t {
 	struct {
 		char nonce[4];
 		char iv[8];
-		u_int32_t counter;
+		uint32_t counter;
 	} __attribute__((packed)) ctr;
 };
 

@@ -68,7 +68,7 @@ typedef void (*array_callback_t)(void *data, int idx, void *user);
  * @param reserve		number of items to allocate space for
  * @return				array instance
  */
-array_t *array_create(u_int esize, u_int8_t reserve);
+array_t *array_create(u_int esize, uint8_t reserve);
 
 /**
  * Get the number of elements currently in the array.

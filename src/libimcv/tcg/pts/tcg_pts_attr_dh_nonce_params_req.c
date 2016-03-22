@@ -72,7 +72,7 @@ struct private_tcg_pts_attr_dh_nonce_params_req_t {
 	/**
 	 * Minimum acceptable length of nonce
 	 */
-	u_int8_t min_nonce_len;
+	uint8_t min_nonce_len;
 
 	/**
 	 * Diffie Hellman group set
@@ -129,11 +129,11 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_dh_nonce_params_req_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_dh_nonce_params_req_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t reserved;
-	u_int16_t dh_groups;
+	uint8_t reserved;
+	uint16_t dh_groups;
 
 	*offset = 0;
 
@@ -179,7 +179,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(tcg_pts_attr_dh_nonce_params_req_t, get_min_nonce_len, u_int8_t,
+METHOD(tcg_pts_attr_dh_nonce_params_req_t, get_min_nonce_len, uint8_t,
 	private_tcg_pts_attr_dh_nonce_params_req_t *this)
 {
 	return this->min_nonce_len;
@@ -194,7 +194,7 @@ METHOD(tcg_pts_attr_dh_nonce_params_req_t, get_dh_groups, pts_dh_group_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create(u_int8_t min_nonce_len,
+pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create(uint8_t min_nonce_len,
 												pts_dh_group_t dh_groups)
 {
 	private_tcg_pts_attr_dh_nonce_params_req_t *this;

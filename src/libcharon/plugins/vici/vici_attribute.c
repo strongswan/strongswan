@@ -233,7 +233,7 @@ static bool have_vips_from_pool(mem_pool_t *pool, linked_list_t *vips)
 	enumerator_t *enumerator;
 	host_t *host;
 	chunk_t start, end, current;
-	u_int32_t size;
+	uint32_t size;
 	bool found = FALSE;
 
 	host = pool->get_base(pool);
@@ -477,10 +477,10 @@ CALLBACK(pool_li, bool,
 		{
 			if (host->get_family(host) == AF_INET)
 			{	/* IPv4 attributes contain a subnet mask */
-				u_int32_t netmask = 0;
+				uint32_t netmask = 0;
 
 				if (mask)
-				{	/* shifting u_int32_t by 32 or more is undefined */
+				{	/* shifting uint32_t by 32 or more is undefined */
 					mask = 32 - mask;
 					netmask = htonl((0xFFFFFFFF >> mask) << mask);
 				}

@@ -31,14 +31,14 @@
  * and unfortunately Android does not define a variant with BSD names.
  */
 struct tcphdr {
-	u_int16_t source;
-	u_int16_t dest;
-	u_int32_t seq;
-	u_int32_t ack_seq;
-	u_int16_t flags;
-	u_int16_t window;
-	u_int16_t check;
-	u_int16_t urg_ptr;
+	uint16_t source;
+	uint16_t dest;
+	uint32_t seq;
+	uint32_t ack_seq;
+	uint16_t flags;
+	uint16_t window;
+	uint16_t check;
+	uint16_t urg_ptr;
 } __attribute__((packed));
 
 /**
@@ -47,10 +47,10 @@ struct tcphdr {
  * the BSD member names, but this is simpler and more consistent with the above.
  */
 struct udphdr {
-	u_int16_t source;
-	u_int16_t dest;
-	u_int16_t len;
-	u_int16_t check;
+	uint16_t source;
+	uint16_t dest;
+	uint16_t len;
+	uint16_t check;
 } __attribute__((packed));
 
 typedef struct private_ip_packet_t private_ip_packet_t;
@@ -88,16 +88,16 @@ struct private_ip_packet_t {
 	/**
 	 * IP version
 	 */
-	u_int8_t version;
+	uint8_t version;
 
 	/**
 	 * Protocol|Next Header field
 	 */
-	u_int8_t next_header;
+	uint8_t next_header;
 
 };
 
-METHOD(ip_packet_t, get_version, u_int8_t,
+METHOD(ip_packet_t, get_version, uint8_t,
 	private_ip_packet_t *this)
 {
 	return this->version;
@@ -127,7 +127,7 @@ METHOD(ip_packet_t, get_payload, chunk_t,
 	return this->payload;
 }
 
-METHOD(ip_packet_t, get_next_header, u_int8_t,
+METHOD(ip_packet_t, get_next_header, uint8_t,
 	private_ip_packet_t *this)
 {
 	return this->next_header;
@@ -151,8 +151,8 @@ METHOD(ip_packet_t, destroy, void,
 /**
  * Parse transport protocol header
  */
-static bool parse_transport_header(chunk_t packet, u_int8_t proto,
-								   u_int16_t *sport, u_int16_t *dport)
+static bool parse_transport_header(chunk_t packet, uint8_t proto,
+								   uint16_t *sport, uint16_t *dport)
 {
 	switch (proto)
 	{
@@ -196,8 +196,8 @@ static bool parse_transport_header(chunk_t packet, u_int8_t proto,
 ip_packet_t *ip_packet_create(chunk_t packet)
 {
 	private_ip_packet_t *this;
-	u_int8_t version, next_header;
-	u_int16_t sport = 0, dport = 0;
+	uint8_t version, next_header;
+	uint16_t sport = 0, dport = 0;
 	host_t *src, *dst;
 	chunk_t payload;
 
@@ -296,19 +296,19 @@ failed:
 /**
  * Calculate the checksum for the pseudo IP header
  */
-static u_int16_t pseudo_header_checksum(host_t *src, host_t *dst,
-										u_int8_t proto, chunk_t payload)
+static uint16_t pseudo_header_checksum(host_t *src, host_t *dst,
+										uint8_t proto, chunk_t payload)
 {
 	switch (src->get_family(src))
 	{
 		case AF_INET:
 		{
 			struct __attribute__((packed)) {
-				u_int32_t src;
-				u_int32_t dst;
+				uint32_t src;
+				uint32_t dst;
 				u_char zero;
 				u_char proto;
-				u_int16_t len;
+				uint16_t len;
 			} pseudo = {
 				.proto = proto,
 				.len = htons(payload.len),
@@ -324,7 +324,7 @@ static u_int16_t pseudo_header_checksum(host_t *src, host_t *dst,
 			struct __attribute__((packed)) {
 				u_char src[16];
 				u_char dst[16];
-				u_int32_t len;
+				uint32_t len;
 				u_char zero[3];
 				u_char next_header;
 			} pseudo = {
@@ -344,10 +344,10 @@ static u_int16_t pseudo_header_checksum(host_t *src, host_t *dst,
 /**
  * Apply transport ports and calculate header checksums
  */
-static void fix_transport_header(host_t *src, host_t *dst, u_int8_t proto,
+static void fix_transport_header(host_t *src, host_t *dst, uint8_t proto,
 								 chunk_t payload)
 {
-	u_int16_t sum = 0, sport, dport;
+	uint16_t sum = 0, sport, dport;
 
 	sport = src->get_port(src);
 	dport = dst->get_port(dst);
@@ -407,7 +407,7 @@ static void fix_transport_header(host_t *src, host_t *dst, u_int8_t proto,
  * Described in header.
  */
 ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
-										u_int8_t next_header, chunk_t data)
+										uint8_t next_header, chunk_t data)
 {
 	chunk_t packet;
 	int family;

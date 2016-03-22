@@ -613,7 +613,7 @@ static void stroke_config(private_stroke_socket_t *this,
 static bool on_accept(private_stroke_socket_t *this, stream_t *stream)
 {
 	stroke_msg_t *msg;
-	u_int16_t len;
+	uint16_t len;
 	FILE *out;
 
 	/* read length */

@@ -99,7 +99,7 @@ struct socket_t {
 	 * @param nat_t			TRUE to get the port used to float in case of NAT-T
 	 * @return				the port
 	 */
-	u_int16_t (*get_port)(socket_t *this, bool nat_t);
+	uint16_t (*get_port)(socket_t *this, bool nat_t);
 
 	/**
 	 * Get the address families this socket is listening on.

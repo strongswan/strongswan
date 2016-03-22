@@ -25,9 +25,9 @@ ENUM(rng_quality_names, RNG_WEAK, RNG_TRUE,
 /*
  * Described in header.
  */
-bool rng_get_bytes_not_zero(rng_t *rng, size_t len, u_int8_t *buffer, bool all)
+bool rng_get_bytes_not_zero(rng_t *rng, size_t len, uint8_t *buffer, bool all)
 {
-	u_int8_t *pos = buffer, *check = buffer + (all ? len : min(1, len));
+	uint8_t *pos = buffer, *check = buffer + (all ? len : min(1, len));
 
 	if (!rng->get_bytes(rng, len, pos))
 	{

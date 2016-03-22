@@ -39,7 +39,7 @@ struct private_mgf1_t {
 	/**
 	 * Counter
 	 */
-	u_int32_t counter;
+	uint32_t counter;
 
 	/**
 	 * Set if counter has reached 2^32

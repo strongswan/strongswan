@@ -136,7 +136,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	rr_set_t *rrset;
 	rr_t *rrsig;
 	bio_reader_t *reader;
-	u_int32_t nBefore, nAfter;
+	uint32_t nBefore, nAfter;
 	chunk_t ignore;
 	char *fqdn;
 

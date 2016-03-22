@@ -35,27 +35,27 @@ struct private_traffic_selector_substructure_t {
 	/**
 	 * Type of traffic selector.
 	 */
-	u_int8_t ts_type;
+	uint8_t ts_type;
 
 	/**
 	 * IP Protocol ID.
 	 */
-	u_int8_t ip_protocol_id;
+	uint8_t ip_protocol_id;
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Start port number.
 	 */
-	u_int16_t start_port;
+	uint16_t start_port;
 
 	/**
 	 * End port number.
 	 */
-	u_int16_t end_port;
+	uint16_t end_port;
 
 	/**
 	 * Starting address.

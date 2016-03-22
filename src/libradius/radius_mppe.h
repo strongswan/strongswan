@@ -30,11 +30,11 @@
 typedef struct mppe_key_t mppe_key_t;
 
 struct mppe_key_t {
-	u_int32_t id;
-	u_int8_t type;
-	u_int8_t length;
-	u_int16_t salt;
-	u_int8_t key[];
+	uint32_t id;
+	uint8_t type;
+	uint8_t length;
+	uint16_t salt;
+	uint8_t key[];
 } __attribute__((packed));
 
 #endif /** RADIUS_MPPE_H_ @}*/

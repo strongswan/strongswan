@@ -44,7 +44,7 @@ struct private_prf_plus_t {
 	/**
 	 * Octet which will be appended to the seed, 0 if not used
 	 */
-	u_int8_t counter;
+	uint8_t counter;
 
 	/**
 	 * Already given out bytes in current buffer.
@@ -58,7 +58,7 @@ struct private_prf_plus_t {
 };
 
 METHOD(prf_plus_t, get_bytes, bool,
-	private_prf_plus_t *this, size_t length, u_int8_t *buffer)
+	private_prf_plus_t *this, size_t length, uint8_t *buffer)
 {
 	size_t round, written = 0;
 

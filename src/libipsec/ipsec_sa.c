@@ -36,7 +36,7 @@ struct private_ipsec_sa_t {
 	/**
 	 * SPI of this SA
 	 */
-	u_int32_t spi;
+	uint32_t spi;
 
 	/**
 	 * Source address
@@ -51,12 +51,12 @@ struct private_ipsec_sa_t {
 	/**
 	 * Protocol
 	 */
-	u_int8_t protocol;
+	uint8_t protocol;
 
 	/**
 	 * Reqid of this SA
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Lifetime configuration
@@ -90,9 +90,9 @@ struct private_ipsec_sa_t {
 		/** last time of use */
 		time_t time;
 		/** number of packets processed */
-		u_int64_t packets;
+		uint64_t packets;
 		/** number of bytes processed */
-		u_int64_t bytes;
+		uint64_t bytes;
 	} use;
 
 	/**
@@ -132,19 +132,19 @@ METHOD(ipsec_sa_t, set_destination, void,
 	this->dst = addr->clone(addr);
 }
 
-METHOD(ipsec_sa_t, get_spi, u_int32_t,
+METHOD(ipsec_sa_t, get_spi, uint32_t,
 	private_ipsec_sa_t *this)
 {
 	return this->spi;
 }
 
-METHOD(ipsec_sa_t, get_reqid, u_int32_t,
+METHOD(ipsec_sa_t, get_reqid, uint32_t,
 	private_ipsec_sa_t *this)
 {
 	return this->reqid;
 }
 
-METHOD(ipsec_sa_t, get_protocol, u_int8_t,
+METHOD(ipsec_sa_t, get_protocol, uint8_t,
 	private_ipsec_sa_t *this)
 {
 	return this->protocol;
@@ -169,7 +169,7 @@ METHOD(ipsec_sa_t, get_esp_context, esp_context_t*,
 }
 
 METHOD(ipsec_sa_t, get_usestats, void,
-	private_ipsec_sa_t *this, u_int64_t *bytes, u_int64_t *packets,
+	private_ipsec_sa_t *this, uint64_t *bytes, uint64_t *packets,
 	time_t *time)
 {
 	if (bytes)
@@ -210,7 +210,7 @@ METHOD(ipsec_sa_t, expire, void,
 }
 
 METHOD(ipsec_sa_t, update_usestats, void,
-	private_ipsec_sa_t *this, u_int32_t bytes)
+	private_ipsec_sa_t *this, uint32_t bytes)
 {
 	this->use.time = time_monotonic(NULL);
 	this->use.packets++;
@@ -239,21 +239,21 @@ METHOD(ipsec_sa_t, update_usestats, void,
 }
 
 METHOD(ipsec_sa_t, match_by_spi_dst, bool,
-	private_ipsec_sa_t *this, u_int32_t spi, host_t *dst)
+	private_ipsec_sa_t *this, uint32_t spi, host_t *dst)
 {
 	return this->spi == spi && this->dst->ip_equals(this->dst, dst) &&
 		   !this->hard_expired;
 }
 
 METHOD(ipsec_sa_t, match_by_spi_src_dst, bool,
-	private_ipsec_sa_t *this, u_int32_t spi, host_t *src, host_t *dst)
+	private_ipsec_sa_t *this, uint32_t spi, host_t *src, host_t *dst)
 {
 	return this->spi == spi && this->src->ip_equals(this->src, src) &&
 		   this->dst->ip_equals(this->dst, dst);
 }
 
 METHOD(ipsec_sa_t, match_by_reqid, bool,
-	private_ipsec_sa_t *this, u_int32_t reqid, bool inbound)
+	private_ipsec_sa_t *this, uint32_t reqid, bool inbound)
 {
 	return this->reqid == reqid && this->inbound == inbound &&
 		   !this->hard_expired;
@@ -271,11 +271,11 @@ METHOD(ipsec_sa_t, destroy, void,
 /**
  * Described in header.
  */
-ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
-		u_int8_t protocol, u_int32_t reqid, mark_t mark, u_int32_t tfc,
-		lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-		u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-		u_int16_t ipcomp, u_int16_t cpi, bool encap, bool esn, bool inbound)
+ipsec_sa_t *ipsec_sa_create(uint32_t spi, host_t *src, host_t *dst,
+		uint8_t protocol, uint32_t reqid, mark_t mark, uint32_t tfc,
+		lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+		uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+		uint16_t ipcomp, uint16_t cpi, bool encap, bool esn, bool inbound)
 {
 	private_ipsec_sa_t *this;
 

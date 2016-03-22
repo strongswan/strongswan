@@ -148,12 +148,12 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_dh_nonce_params_resp_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_dh_nonce_params_resp_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t reserved;
-	u_int8_t nonce_len;
-	u_int16_t dh_group, hash_algo_set;
+	uint32_t reserved;
+	uint8_t nonce_len;
+	uint16_t dh_group, hash_algo_set;
 
 	*offset = 0;
 

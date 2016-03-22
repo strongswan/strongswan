@@ -61,27 +61,27 @@ struct private_parser_t {
 	/**
 	 * major IKE version
 	 */
-	u_int8_t major_version;
+	uint8_t major_version;
 
 	/**
 	 * Current bit for reading in input data.
 	 */
-	u_int8_t bit_pos;
+	uint8_t bit_pos;
 
 	/**
 	 * Current byte for reading in input data.
 	 */
-	u_int8_t *byte_pos;
+	uint8_t *byte_pos;
 
 	/**
 	 * Input data to parse.
 	 */
-	u_int8_t *input;
+	uint8_t *input;
 
 	/**
 	 * Roof of input, used for length-checking.
 	 */
-	u_int8_t *input_roof;
+	uint8_t *input_roof;
 
 	/**
 	 * Set of encoding rules for this parsing session.
@@ -113,9 +113,9 @@ static bool bad_bitpos(private_parser_t *this, int number)
  * Parse a 4-Bit unsigned integer from the current parsing position.
  */
 static bool parse_uint4(private_parser_t *this, int rule_number,
-						u_int8_t *output_pos)
+						uint8_t *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint8_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
@@ -150,9 +150,9 @@ static bool parse_uint4(private_parser_t *this, int rule_number,
  * Parse a 8-Bit unsigned integer from the current parsing position.
  */
 static bool parse_uint8(private_parser_t *this, int rule_number,
-						u_int8_t *output_pos)
+						uint8_t *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint8_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
@@ -173,9 +173,9 @@ static bool parse_uint8(private_parser_t *this, int rule_number,
  * Parse a 15-Bit unsigned integer from the current parsing position.
  */
 static bool parse_uint15(private_parser_t *this, int rule_number,
-						 u_int16_t *output_pos)
+						 uint16_t *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint16_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
@@ -185,11 +185,11 @@ static bool parse_uint15(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
+		memcpy(output_pos, this->byte_pos, sizeof(uint16_t));
 		*output_pos = ntohs(*output_pos) & ~0x8000;
 		DBG3(DBG_ENC, "   => %hu", *output_pos);
 	}
-	this->byte_pos += sizeof(u_int16_t);
+	this->byte_pos += sizeof(uint16_t);
 	this->bit_pos = 0;
 	return TRUE;
 }
@@ -198,9 +198,9 @@ static bool parse_uint15(private_parser_t *this, int rule_number,
  * Parse a 16-Bit unsigned integer from the current parsing position.
  */
 static bool parse_uint16(private_parser_t *this, int rule_number,
-						 u_int16_t *output_pos)
+						 uint16_t *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint16_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
@@ -210,20 +210,20 @@ static bool parse_uint16(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
+		memcpy(output_pos, this->byte_pos, sizeof(uint16_t));
 		*output_pos = ntohs(*output_pos);
 		DBG3(DBG_ENC, "   => %hu", *output_pos);
 	}
-	this->byte_pos += sizeof(u_int16_t);
+	this->byte_pos += sizeof(uint16_t);
 	return TRUE;
 }
 /**
  * Parse a 32-Bit unsigned integer from the current parsing position.
  */
 static bool parse_uint32(private_parser_t *this, int rule_number,
-						 u_int32_t *output_pos)
+						 uint32_t *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint32_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
@@ -233,11 +233,11 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		memcpy(output_pos, this->byte_pos, sizeof(u_int32_t));
+		memcpy(output_pos, this->byte_pos, sizeof(uint32_t));
 		*output_pos = ntohl(*output_pos);
 		DBG3(DBG_ENC, "   => %u", *output_pos);
 	}
-	this->byte_pos += sizeof(u_int32_t);
+	this->byte_pos += sizeof(uint32_t);
 	return TRUE;
 }
 
@@ -245,7 +245,7 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
  * Parse a given amount of bytes and writes them to a specific location
  */
 static bool parse_bytes(private_parser_t *this, int rule_number,
-						u_int8_t *output_pos, int bytes)
+						uint8_t *output_pos, int bytes)
 {
 	if (this->byte_pos + bytes > this->input_roof)
 	{
@@ -270,13 +270,13 @@ static bool parse_bytes(private_parser_t *this, int rule_number,
 static bool parse_bit(private_parser_t *this, int rule_number,
 					  bool *output_pos)
 {
-	if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
+	if (this->byte_pos + sizeof(uint8_t) > this->input_roof)
 	{
 		return short_input(this, rule_number);
 	}
 	if (output_pos)
 	{
-		u_int8_t mask;
+		uint8_t mask;
 		mask = 0x01 << (7 - this->bit_pos);
 		*output_pos = *this->byte_pos & mask;
 
@@ -312,7 +312,7 @@ static bool parse_list(private_parser_t *this, int rule_number,
 	}
 	while (length > 0)
 	{
-		u_int8_t *pos_before = this->byte_pos;
+		uint8_t *pos_before = this->byte_pos;
 		payload_t *payload;
 
 		DBG2(DBG_ENC, "  %d bytes left, parsing recursively %N",
@@ -368,7 +368,7 @@ METHOD(parser_t, parse_payload, status_t,
 	payload_t *pld;
 	void *output;
 	int payload_length = 0, spi_size = 0, attribute_length = 0, header_length;
-	u_int16_t ts_type = 0;
+	uint16_t ts_type = 0;
 	bool attribute_format = FALSE;
 	int rule_number, rule_count;
 	encoding_rule_t *rule;
@@ -468,7 +468,7 @@ METHOD(parser_t, parse_payload, status_t,
 					return PARSE_ERROR;
 				}
 				/* parsed u_int16 should be aligned */
-				payload_length = *(u_int16_t*)(output + rule->offset);
+				payload_length = *(uint16_t*)(output + rule->offset);
 				/* all payloads must have at least 4 bytes header */
 				if (payload_length < 4)
 				{
@@ -484,7 +484,7 @@ METHOD(parser_t, parse_payload, status_t,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				spi_size = *(u_int8_t*)(output + rule->offset);
+				spi_size = *(uint8_t*)(output + rule->offset);
 				break;
 			}
 			case SPI:
@@ -564,7 +564,7 @@ METHOD(parser_t, parse_payload, status_t,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				attribute_length = *(u_int16_t*)(output + rule->offset);
+				attribute_length = *(uint16_t*)(output + rule->offset);
 				break;
 			}
 			case ATTRIBUTE_LENGTH_OR_VALUE:
@@ -574,7 +574,7 @@ METHOD(parser_t, parse_payload, status_t,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				attribute_length = *(u_int16_t*)(output + rule->offset);
+				attribute_length = *(uint16_t*)(output + rule->offset);
 				break;
 			}
 			case ATTRIBUTE_VALUE:
@@ -595,7 +595,7 @@ METHOD(parser_t, parse_payload, status_t,
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				ts_type = *(u_int8_t*)(output + rule->offset);
+				ts_type = *(uint8_t*)(output + rule->offset);
 				break;
 			}
 			case ADDRESS:
@@ -642,7 +642,7 @@ METHOD(parser_t, reset_context, void,
 }
 
 METHOD(parser_t, set_major_version, void,
-	private_parser_t *this, u_int8_t major_version)
+	private_parser_t *this, uint8_t major_version)
 {
 	this->major_version = major_version;
 }

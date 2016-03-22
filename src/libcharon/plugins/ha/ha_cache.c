@@ -206,7 +206,7 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 	linked_list_t *children;
 	struct {
 		protocol_id_t protocol;
-		u_int32_t spi;
+		uint32_t spi;
 	} *info;
 
 	children = linked_list_create();

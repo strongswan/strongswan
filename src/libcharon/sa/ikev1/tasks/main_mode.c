@@ -77,7 +77,7 @@ struct private_main_mode_t {
 	/**
 	 * Negotiated SA lifetime
 	 */
-	u_int32_t lifetime;
+	uint32_t lifetime;
 
 	/**
 	 * Negotiated authentication method
@@ -173,7 +173,7 @@ static status_t send_notify(private_main_mode_t *this, notify_type_t type)
 {
 	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
-	u_int64_t spi_i, spi_r;
+	uint64_t spi_i, spi_r;
 	chunk_t spi;
 
 	notify = notify_payload_create_from_protocol_and_type(PLV1_NOTIFY,
@@ -215,7 +215,7 @@ static void add_initial_contact(private_main_mode_t *this, message_t *message,
 	host_t *host;
 	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
-	u_int64_t spi_i, spi_r;
+	uint64_t spi_i, spi_r;
 	chunk_t spi;
 
 	idr = this->ph1->get_id(this->ph1, this->peer_cfg, FALSE);
@@ -303,7 +303,7 @@ METHOD(task_t, build_i, status_t,
 		}
 		case MM_SA:
 		{
-			u_int16_t group;
+			uint16_t group;
 
 			if (!this->ph1->create_hasher(this->ph1))
 			{
@@ -411,7 +411,7 @@ METHOD(task_t, process_r, status_t,
 		}
 		case MM_SA:
 		{
-			u_int16_t group;
+			uint16_t group;
 
 			if (!this->ph1->create_hasher(this->ph1))
 			{
@@ -627,7 +627,7 @@ METHOD(task_t, process_i, status_t,
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
 			auth_method_t method;
-			u_int32_t lifetime;
+			uint32_t lifetime;
 			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,

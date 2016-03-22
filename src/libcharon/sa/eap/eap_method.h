@@ -96,7 +96,7 @@ struct eap_method_t {
 	 * @param vendor	pointer receiving vendor identifier for type, 0 for none
 	 * @return			type of the EAP method
 	 */
-	eap_type_t (*get_type) (eap_method_t *this, u_int32_t *vendor);
+	eap_type_t (*get_type) (eap_method_t *this, uint32_t *vendor);
 
 	/**
 	 * Check if this EAP method authenticates the server.
@@ -126,7 +126,7 @@ struct eap_method_t {
 	 *
 	 * @return				current EAP identifier
 	 */
-	u_int8_t (*get_identifier) (eap_method_t *this);
+	uint8_t (*get_identifier) (eap_method_t *this);
 
 	/**
 	 * Set the EAP identifier to a deterministic value, overwriting
@@ -134,7 +134,7 @@ struct eap_method_t {
 	 *
 	 * @param identifier	current EAP identifier
 	 */
-	void (*set_identifier) (eap_method_t *this, u_int8_t identifier);
+	void (*set_identifier) (eap_method_t *this, uint8_t identifier);
 
 	/**
 	 * Get authentication details performed by this EAP method.

@@ -225,9 +225,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 		{
 			tcg_pts_attr_req_file_meas_t *attr_cast;
 			char *pathname;
-			u_int16_t request_id;
+			uint16_t request_id;
 			bool is_directory;
-			u_int32_t delimiter;
+			uint32_t delimiter;
 			pts_file_meas_t *measurements;
 			pen_type_t error_code;
 
@@ -282,7 +282,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			tcg_pts_attr_req_file_meta_t *attr_cast;
 			char *pathname;
 			bool is_directory;
-			u_int8_t delimiter;
+			uint8_t delimiter;
 			pts_file_meta_t *metadata;
 			pen_type_t error_code;
 
@@ -336,8 +336,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			pts_comp_evidence_t *evid;
 			pts_component_t *comp;
 			pen_type_t error_code;
-			u_int32_t depth;
-			u_int8_t flags;
+			uint32_t depth;
+			uint8_t flags;
 			status_t status;
 			enumerator_t *e;
 

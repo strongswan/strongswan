@@ -151,8 +151,8 @@ typedef enum {
  * DHCP option encoding, a TLV
  */
 typedef struct __attribute__((packed)) {
-	u_int8_t type;
-	u_int8_t len;
+	uint8_t type;
+	uint8_t len;
 	char data[];
 } dhcp_option_t;
 
@@ -160,22 +160,22 @@ typedef struct __attribute__((packed)) {
  * DHCP message format, with a maximum size options buffer
  */
 typedef struct __attribute__((packed)) {
-	u_int8_t opcode;
-	u_int8_t hw_type;
-	u_int8_t hw_addr_len;
-	u_int8_t hop_count;
-	u_int32_t transaction_id;
-	u_int16_t number_of_seconds;
-	u_int16_t flags;
-	u_int32_t client_address;
-	u_int32_t your_address;
-	u_int32_t server_address;
-	u_int32_t gateway_address;
+	uint8_t opcode;
+	uint8_t hw_type;
+	uint8_t hw_addr_len;
+	uint8_t hop_count;
+	uint32_t transaction_id;
+	uint16_t number_of_seconds;
+	uint16_t flags;
+	uint32_t client_address;
+	uint32_t your_address;
+	uint32_t server_address;
+	uint32_t gateway_address;
 	char client_hw_addr[6];
 	char client_hw_padding[10];
 	char server_hostname[64];
 	char boot_filename[128];
-	u_int32_t magic_cookie;
+	uint32_t magic_cookie;
 	char options[252];
 } dhcp_t;
 
@@ -191,7 +191,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp_option_t *option;
 	int optlen = 0;
 	host_t *src;
-	u_int32_t id;
+	uint32_t id;
 
 	memset(dhcp, 0, sizeof(*dhcp));
 	dhcp->opcode = BOOTREQUEST;
@@ -366,10 +366,10 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	private_dhcp_socket_t *this, identification_t *identity)
 {
 	dhcp_transaction_t *transaction;
-	u_int32_t id;
+	uint32_t id;
 	int try;
 
-	if (!this->rng->get_bytes(this->rng, sizeof(id), (u_int8_t*)&id))
+	if (!this->rng->get_bytes(this->rng, sizeof(id), (uint8_t*)&id))
 	{
 		DBG1(DBG_CFG, "DHCP DISCOVER failed, no transaction ID");
 		return NULL;

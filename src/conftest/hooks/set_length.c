@@ -75,7 +75,7 @@ METHOD(listener_t, message, bool,
 			if (type == payload->get_type(payload))
 			{
 				encoding_rule_t *rules;
-				u_int16_t *len;
+				uint16_t *len;
 				int i, count;
 
 				count = payload->get_encoding_rules(payload, &rules);
@@ -83,7 +83,7 @@ METHOD(listener_t, message, bool,
 				{
 					if (rules[i].type == PAYLOAD_LENGTH)
 					{
-						len = (u_int16_t*)(((void*)payload) + rules[i].offset);
+						len = (uint16_t*)(((void*)payload) + rules[i].offset);
 						DBG1(DBG_CFG, "adjusting length of %N payload "
 							 "from %d to %d", payload_type_short_names, type,
 							 *len, *len + this->diff);

@@ -72,7 +72,7 @@ struct keymat_v1_t {
 	 * @param integ_r		allocated responders integrity key
 	 */
 	bool (*derive_child_keys)(keymat_v1_t *this, proposal_t *proposal,
-						diffie_hellman_t *dh, u_int32_t spi_i, u_int32_t spi_r,
+						diffie_hellman_t *dh, uint32_t spi_i, uint32_t spi_r,
 						chunk_t nonce_i, chunk_t nonce_r,
 						chunk_t *encr_i, chunk_t *integ_i,
 						chunk_t *encr_r, chunk_t *integ_r);
@@ -127,7 +127,7 @@ struct keymat_v1_t {
 	 * @param iv			chunk receiving IV, internal data
 	 * @return				TRUE if IV allocated successfully
 	 */
-	bool (*get_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t *iv);
+	bool (*get_iv)(keymat_v1_t *this, uint32_t mid, chunk_t *iv);
 
 	/**
 	 * Updates the IV for the next message with the given message ID.
@@ -141,7 +141,7 @@ struct keymat_v1_t {
 	 * @param last_block	last block of encrypted message (gets cloned)
 	 * @return				TRUE if IV updated successfully
 	 */
-	bool (*update_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t last_block);
+	bool (*update_iv)(keymat_v1_t *this, uint32_t mid, chunk_t last_block);
 
 	/**
 	 * Confirms the updated IV for the given message ID.
@@ -152,7 +152,7 @@ struct keymat_v1_t {
 	 * @param mid			message ID
 	 * @return				TRUE if IV confirmed successfully
 	 */
-	bool (*confirm_iv)(keymat_v1_t *this, u_int32_t mid);
+	bool (*confirm_iv)(keymat_v1_t *this, uint32_t mid);
 };
 
 /**

@@ -142,7 +142,7 @@ chunk_t gmp_mpz_to_chunk(const mpz_t value)
 static void mpz_clear_sensitive(mpz_t z)
 {
 	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
-	u_int8_t *zeros = alloca(len);
+	uint8_t *zeros = alloca(len);
 
 	memset(zeros, 0, len);
 	/* overwrite mpz_t with zero bytes before clearing it */

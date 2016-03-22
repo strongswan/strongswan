@@ -47,7 +47,7 @@ struct tcg_pts_attr_req_func_comp_evid_t {
 	 * @param name				Functional Component Name
 	 */
 	void (*add_component)(tcg_pts_attr_req_func_comp_evid_t *this,
-						  u_int8_t flags, u_int32_t depth,
+						  uint8_t flags, uint32_t depth,
 						  pts_comp_func_name_t *name);
 
 	/**

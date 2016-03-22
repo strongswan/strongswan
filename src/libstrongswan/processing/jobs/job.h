@@ -96,7 +96,7 @@ struct job_requeue_t {
 	} schedule;
 	/** Time to reschedule the job */
 	union {
-		u_int32_t rel;
+		uint32_t rel;
 		timeval_t abs;
 	} time;
 };

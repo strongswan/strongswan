@@ -109,7 +109,7 @@ static void initiate(private_control_controller_t *this, fast_request_t *r,
  * terminate an IKE or CHILD SA
  */
 static void terminate(private_control_controller_t *this, fast_request_t *r,
-					  bool ike, u_int32_t id)
+					  bool ike, uint32_t id)
 {
 	gateway_t *gateway;
 	enumerator_t *e;
@@ -140,7 +140,7 @@ METHOD(fast_controller_t, handle, void,
 	}
 	if (action)
 	{
-		u_int32_t id;
+		uint32_t id;
 
 		if (streq(action, "terminateike"))
 		{

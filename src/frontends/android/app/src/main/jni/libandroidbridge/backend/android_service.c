@@ -208,7 +208,7 @@ static job_requeue_t handle_plain(private_android_service_t *this)
  * Add a route to the TUN device builder
  */
 static bool add_route(vpnservice_builder_t *builder, host_t *net,
-					  u_int8_t prefix)
+					  uint8_t prefix)
 {
 	/* if route is 0.0.0.0/0, split it into two routes 0.0.0.0/1 and
 	 * 128.0.0.0/1 because otherwise it would conflict with the current default
@@ -246,7 +246,7 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
 	while (success && enumerator->enumerate(enumerator, &src_ts, &dst_ts))
 	{
 		host_t *net;
-		u_int8_t prefix;
+		uint8_t prefix;
 
 		dst_ts->to_subnet(dst_ts, &net, &prefix);
 		success = add_route(builder, net, prefix);
@@ -399,7 +399,7 @@ static void close_tun_device(private_android_service_t *this)
  * Terminate the IKE_SA with the given unique ID
  */
 CALLBACK(terminate, job_requeue_t,
-	u_int32_t *id)
+	uint32_t *id)
 {
 	charon->controller->terminate_ike(charon->controller, *id,
 									  controller_cb_empty, NULL, 0);
@@ -410,7 +410,7 @@ CALLBACK(terminate, job_requeue_t,
  * Reestablish the IKE_SA with the given unique ID
  */
 CALLBACK(reestablish, job_requeue_t,
-	u_int32_t *id)
+	uint32_t *id)
 {
 	ike_sa_t *ike_sa;
 
@@ -498,7 +498,7 @@ METHOD(listener_t, alert, bool,
 				break;
 			case ALERT_KEEP_ON_CHILD_SA_FAILURE:
 			{
-				u_int32_t *id = malloc_thing(u_int32_t);
+				uint32_t *id = malloc_thing(uint32_t);
 
 				/* because close_ike_on_child_failure is set this is only
 				 * triggered when CHILD_SA rekeying failed. reestablish it in
@@ -514,7 +514,7 @@ METHOD(listener_t, alert, bool,
 				this->lock->read_lock(this->lock);
 				if (this->tunfd < 0)
 				{
-					u_int32_t *id = malloc_thing(u_int32_t);
+					uint32_t *id = malloc_thing(uint32_t);
 
 					/* always fail if we are not able to initiate the IKE_SA
 					 * initially */
@@ -531,14 +531,14 @@ METHOD(listener_t, alert, bool,
 				else
 				{
 					peer_cfg_t *peer_cfg;
-					u_int32_t tries, try;
+					uint32_t tries, try;
 
 					/* when reestablishing and if keyingtries is not %forever
 					 * the IKE_SA is destroyed after the set number of tries,
 					 * so notify the GUI */
 					peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 					tries = peer_cfg->get_keyingtries(peer_cfg);
-					try = va_arg(args, u_int32_t);
+					try = va_arg(args, uint32_t);
 					if (tries != 0 && try == tries-1)
 					{
 						charonservice->update_status(charonservice,

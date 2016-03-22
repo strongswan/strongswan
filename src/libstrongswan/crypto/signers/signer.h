@@ -96,7 +96,7 @@ struct signer_t {
 	 * @return			TRUE if signature created successfully
 	 */
 	bool (*get_signature)(signer_t *this, chunk_t data,
-						  u_int8_t *buffer) __attribute__((warn_unused_result));
+						  uint8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generate a signature and allocate space for it.

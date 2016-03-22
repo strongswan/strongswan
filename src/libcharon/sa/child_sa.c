@@ -63,22 +63,22 @@ struct private_child_sa_t {
 	/**
 	 * our actually used SPI, 0 if unused
 	 */
-	u_int32_t my_spi;
+	uint32_t my_spi;
 
 	/**
 	 * others used SPI, 0 if unused
 	 */
-	u_int32_t other_spi;
+	uint32_t other_spi;
 
 	/**
 	 * our Compression Parameter Index (CPI) used, 0 if unused
 	 */
-	u_int16_t my_cpi;
+	uint16_t my_cpi;
 
 	/**
 	 * others Compression Parameter Index (CPI) used, 0 if unused
 	 */
-	u_int16_t other_cpi;
+	uint16_t other_cpi;
 
 	/**
 	 * Array for local traffic selectors
@@ -98,7 +98,7 @@ struct private_child_sa_t {
 	/**
 	 * reqid used for this child_sa
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Did we allocate/confirm and must release the reqid?
@@ -113,7 +113,7 @@ struct private_child_sa_t {
 	/*
 	 * Unique CHILD_SA identifier
 	 */
-	u_int32_t unique_id;
+	uint32_t unique_id;
 
 	/**
 	 * inbound mark used for this child_sa
@@ -198,28 +198,28 @@ struct private_child_sa_t {
 	/**
 	 * last number of inbound bytes
 	 */
-	u_int64_t my_usebytes;
+	uint64_t my_usebytes;
 
 	/**
 	 * last number of outbound bytes
 	 */
-	u_int64_t other_usebytes;
+	uint64_t other_usebytes;
 
 	/**
 	 * last number of inbound packets
 	 */
-	u_int64_t my_usepackets;
+	uint64_t my_usepackets;
 
 	/**
 	 * last number of outbound bytes
 	 */
-	u_int64_t other_usepackets;
+	uint64_t other_usepackets;
 };
 
 /**
  * convert an IKEv2 specific protocol identifier to the IP protocol identifier.
  */
-static inline u_int8_t proto_ike2ip(protocol_id_t protocol)
+static inline uint8_t proto_ike2ip(protocol_id_t protocol)
 {
 	switch (protocol)
 	{
@@ -238,13 +238,13 @@ METHOD(child_sa_t, get_name, char*,
 	return this->config->get_name(this->config);
 }
 
-METHOD(child_sa_t, get_reqid, u_int32_t,
+METHOD(child_sa_t, get_reqid, uint32_t,
 	   private_child_sa_t *this)
 {
 	return this->reqid;
 }
 
-METHOD(child_sa_t, get_unique_id, u_int32_t,
+METHOD(child_sa_t, get_unique_id, uint32_t,
 	private_child_sa_t *this)
 {
 	return this->unique_id;
@@ -269,13 +269,13 @@ METHOD(child_sa_t, get_state, child_sa_state_t,
 	return this->state;
 }
 
-METHOD(child_sa_t, get_spi, u_int32_t,
+METHOD(child_sa_t, get_spi, uint32_t,
 	   private_child_sa_t *this, bool inbound)
 {
 	return inbound ? this->my_spi : this->other_spi;
 }
 
-METHOD(child_sa_t, get_cpi, u_int16_t,
+METHOD(child_sa_t, get_cpi, uint16_t,
 	   private_child_sa_t *this, bool inbound)
 {
 	return inbound ? this->my_cpi : this->other_cpi;
@@ -461,7 +461,7 @@ METHOD(child_sa_t, create_policy_enumerator, enumerator_t*,
 static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
-	u_int64_t bytes, packets;
+	uint64_t bytes, packets;
 	time_t time;
 
 	if (inbound)
@@ -573,7 +573,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 
 METHOD(child_sa_t, get_usestats, void,
 	private_child_sa_t *this, bool inbound,
-	time_t *time, u_int64_t *bytes, u_int64_t *packets)
+	time_t *time, uint64_t *bytes, uint64_t *packets)
 {
 	if ((!bytes && !packets) || update_usebytes(this, inbound) != FAILED)
 	{
@@ -625,7 +625,7 @@ METHOD(child_sa_t, get_installtime, time_t,
 	return this->install_time;
 }
 
-METHOD(child_sa_t, alloc_spi, u_int32_t,
+METHOD(child_sa_t, alloc_spi, uint32_t,
 	   private_child_sa_t *this, protocol_id_t protocol)
 {
 	if (charon->kernel->get_spi(charon->kernel, this->other_addr, this->my_addr,
@@ -639,7 +639,7 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 	return 0;
 }
 
-METHOD(child_sa_t, alloc_cpi, u_int16_t,
+METHOD(child_sa_t, alloc_cpi, uint16_t,
 	   private_child_sa_t *this)
 {
 	if (charon->kernel->get_cpi(charon->kernel, this->other_addr, this->my_addr,
@@ -651,16 +651,16 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 }
 
 METHOD(child_sa_t, install, status_t,
-	private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
-	u_int16_t cpi, bool initiator, bool inbound, bool tfcv3,
+	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
+	uint16_t cpi, bool initiator, bool inbound, bool tfcv3,
 	linked_list_t *my_ts, linked_list_t *other_ts)
 {
-	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
-	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
+	uint16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
+	uint16_t esn = NO_EXT_SEQ_NUMBERS;
 	linked_list_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
-	u_int32_t tfc = 0;
+	uint32_t tfc = 0;
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
@@ -1174,7 +1174,7 @@ METHOD(child_sa_t, destroy, void,
 static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 {
 	host_t *host = NULL;
-	u_int8_t mask;
+	uint8_t mask;
 	enumerator_t *enumerator;
 	linked_list_t *ts_list, *list;
 	traffic_selector_t *ts;
@@ -1207,7 +1207,7 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
  * Described in header.
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
-							 child_cfg_t *config, u_int32_t rekey, bool encap,
+							 child_cfg_t *config, uint32_t rekey, bool encap,
 							 u_int mark_in, u_int mark_out)
 {
 	private_child_sa_t *this;

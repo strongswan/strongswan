@@ -120,7 +120,7 @@ static bool read_result(private_winhttp_fetcher_t *this, HINTERNET request,
 {
 	DWORD received;
 	char buf[1024];
-	u_int32_t code;
+	uint32_t code;
 	DWORD codelen = sizeof(code);
 
 	if (!WinHttpReceiveResponse(request, NULL))

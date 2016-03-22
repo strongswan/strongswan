@@ -89,10 +89,10 @@ METHOD(socket_manager_t, sender, status_t,
 	return status;
 }
 
-METHOD(socket_manager_t, get_port, u_int16_t,
+METHOD(socket_manager_t, get_port, uint16_t,
 	private_socket_manager_t *this, bool nat_t)
 {
-	u_int16_t port = 0;
+	uint16_t port = 0;
 	this->lock->read_lock(this->lock);
 	if (this->socket)
 	{

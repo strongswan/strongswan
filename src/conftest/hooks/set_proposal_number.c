@@ -57,7 +57,7 @@ static void copy_proposal_algs(proposal_t *from, proposal_t *to,
 							   transform_type_t type)
 {
 	enumerator_t *enumerator;
-	u_int16_t alg, key_size;
+	uint16_t alg, key_size;
 
 	enumerator = from->create_enumerator(from, type);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))

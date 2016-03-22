@@ -375,7 +375,7 @@ void chunk_hash_seed();
  * @param chunk			data to hash
  * @return				hash value
  */
-u_int32_t chunk_hash(chunk_t chunk);
+uint32_t chunk_hash(chunk_t chunk);
 
 /**
  * Incremental version of chunk_hash. Use this to hash two or more chunks.
@@ -384,7 +384,7 @@ u_int32_t chunk_hash(chunk_t chunk);
  * @param hash			previous hash value
  * @return				hash value
  */
-u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
+uint32_t chunk_hash_inc(chunk_t chunk, uint32_t hash);
 
 /**
  * Computes a 32 bit hash of the given chunk.
@@ -398,7 +398,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
  * @param chunk			data to hash
  * @return				hash value
  */
-u_int32_t chunk_hash_static(chunk_t chunk);
+uint32_t chunk_hash_static(chunk_t chunk);
 
 /**
  * Incremental version of chunk_hash_static(). Use this to hash two or more
@@ -408,7 +408,7 @@ u_int32_t chunk_hash_static(chunk_t chunk);
  * @param hash			previous hash value
  * @return				hash value
  */
-u_int32_t chunk_hash_static_inc(chunk_t chunk, u_int32_t hash);
+uint32_t chunk_hash_static_inc(chunk_t chunk, uint32_t hash);
 
 /**
  * Computes a quick MAC from the given chunk and key using SipHash.
@@ -422,7 +422,7 @@ u_int32_t chunk_hash_static_inc(chunk_t chunk, u_int32_t hash);
  * @param key			key to use
  * @return				MAC for given input and key
  */
-u_int64_t chunk_mac(chunk_t chunk, u_char *key);
+uint64_t chunk_mac(chunk_t chunk, u_char *key);
 
 /**
  * Calculate the Internet Checksum according to RFC 1071 for the given chunk.
@@ -434,7 +434,7 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key);
  * @param data			data to process
  * @return				checksum (one's complement, network order)
  */
-u_int16_t chunk_internet_checksum(chunk_t data);
+uint16_t chunk_internet_checksum(chunk_t data);
 
 /**
  * Extend the given Internet Checksum (one's complement, in network byte order)
@@ -447,7 +447,7 @@ u_int16_t chunk_internet_checksum(chunk_t data);
  * @param checksum		previous checksum (one's complement, network order)
  * @return				checksum (one's complement, network order)
  */
-u_int16_t chunk_internet_checksum_inc(chunk_t data, u_int16_t checksum);
+uint16_t chunk_internet_checksum_inc(chunk_t data, uint16_t checksum);
 
 /**
  * printf hook function for chunk_t.

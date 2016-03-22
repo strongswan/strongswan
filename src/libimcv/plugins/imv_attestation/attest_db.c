@@ -853,7 +853,7 @@ METHOD(attest_db_t, list_devices, void,
 	time_t timestamp;
 	int id, last_id = 0, ar_id = 0, last_ar_id = 0, device_count = 0, trusted;
 	int session_id, rec;
-	u_int32_t ar_id_type;
+	uint32_t ar_id_type;
 	u_int tstamp;
 
 	e = this->db->query(this->db,

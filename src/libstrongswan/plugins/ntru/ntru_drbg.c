@@ -35,17 +35,17 @@ struct private_ntru_drbg_t {
 	/**
 	 * Security strength in bits of the DRBG
 	 */
-	u_int32_t strength;
+	uint32_t strength;
 
 	/**
 	 * Number of requests for pseudorandom bits
 	 */
-	u_int32_t reseed_counter;
+	uint32_t reseed_counter;
 
 	/**
 	 * Maximum number of requests for pseudorandom bits
 	 */
-	u_int32_t max_requests;
+	uint32_t max_requests;
 
 	/**
 	 * True entropy source
@@ -111,7 +111,7 @@ static bool update(private_ntru_drbg_t *this, chunk_t data)
 	return TRUE;
 }
 
-METHOD(ntru_drbg_t, get_strength, u_int32_t,
+METHOD(ntru_drbg_t, get_strength, uint32_t,
 	private_ntru_drbg_t *this)
 {
 	return this->strength;
@@ -142,7 +142,7 @@ METHOD(ntru_drbg_t, reseed, bool,
 }
 
 METHOD(ntru_drbg_t, generate, bool,
-	private_ntru_drbg_t *this, u_int32_t strength, u_int32_t len, u_int8_t *out)
+	private_ntru_drbg_t *this, uint32_t strength, uint32_t len, uint8_t *out)
 {
 	size_t delta;
 	chunk_t output;
@@ -206,14 +206,14 @@ METHOD(ntru_drbg_t, destroy, void,
 /*
  * Described in header.
  */
-ntru_drbg_t *ntru_drbg_create(u_int32_t strength, chunk_t pers_str,
+ntru_drbg_t *ntru_drbg_create(uint32_t strength, chunk_t pers_str,
 							  rng_t *entropy)
 {
 	private_ntru_drbg_t *this;
 	chunk_t seed;
 	signer_t *hmac;
 	size_t entropy_len;
-	u_int32_t max_requests;
+	uint32_t max_requests;
 
 	if (strength > MAX_STRENGTH_BITS)
 	{

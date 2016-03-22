@@ -62,12 +62,12 @@ struct kernel_algorithm_t {
 	/**
 	 * Identifier specified in IKE
 	 */
-	u_int16_t ike;
+	uint16_t ike;
 
 	/**
 	 * Identifier as defined in pfkeyv2.h
 	 */
-	u_int16_t kernel;
+	uint16_t kernel;
 
 	/**
 	 * Name of the algorithm in linux crypto API
@@ -166,7 +166,7 @@ METHOD(kernel_interface_t, get_features, kernel_feature_t,
 
 METHOD(kernel_interface_t, get_spi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	if (!this->ipsec)
 	{
@@ -177,7 +177,7 @@ METHOD(kernel_interface_t, get_spi, status_t,
 
 METHOD(kernel_interface_t, get_cpi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
 	if (!this->ipsec)
 	{
@@ -191,7 +191,7 @@ METHOD(kernel_interface_t, get_cpi, status_t,
  */
 typedef struct {
 	/** allocated reqid */
-	u_int32_t reqid;
+	uint32_t reqid;
 	/** references to this entry */
 	u_int refs;
 	/** inbound mark used for SA */
@@ -327,9 +327,9 @@ static array_t *array_from_ts_list(linked_list_t *list)
 METHOD(kernel_interface_t, alloc_reqid, status_t,
 	private_kernel_interface_t *this,
 	linked_list_t *local_ts, linked_list_t *remote_ts,
-	mark_t mark_in, mark_t mark_out, u_int32_t *reqid)
+	mark_t mark_in, mark_t mark_out, uint32_t *reqid)
 {
-	static u_int32_t counter = 0;
+	static uint32_t counter = 0;
 	reqid_entry_t *entry = NULL, *tmpl;
 	status_t status = SUCCESS;
 
@@ -379,7 +379,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 }
 
 METHOD(kernel_interface_t, release_reqid, status_t,
-	private_kernel_interface_t *this, u_int32_t reqid,
+	private_kernel_interface_t *this, uint32_t reqid,
 	mark_t mark_in, mark_t mark_out)
 {
 	reqid_entry_t *entry, tmpl = {
@@ -416,10 +416,10 @@ METHOD(kernel_interface_t, release_reqid, status_t,
 
 METHOD(kernel_interface_t, add_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
+	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
@@ -434,8 +434,8 @@ METHOD(kernel_interface_t, add_sa, status_t,
 }
 
 METHOD(kernel_interface_t, update_sa, status_t,
-	private_kernel_interface_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	private_kernel_interface_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
 	if (!this->ipsec)
@@ -448,8 +448,8 @@ METHOD(kernel_interface_t, update_sa, status_t,
 
 METHOD(kernel_interface_t, query_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark,
+	uint64_t *bytes, uint64_t *packets, time_t *time)
 {
 	if (!this->ipsec)
 	{
@@ -460,8 +460,8 @@ METHOD(kernel_interface_t, query_sa, status_t,
 }
 
 METHOD(kernel_interface_t, del_sa, status_t,
-	private_kernel_interface_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	private_kernel_interface_t *this, host_t *src, host_t *dst, uint32_t spi,
+	uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	if (!this->ipsec)
 	{
@@ -594,7 +594,7 @@ METHOD(kernel_interface_t, del_ip, status_t,
 
 METHOD(kernel_interface_t, add_route, status_t,
 	private_kernel_interface_t *this, chunk_t dst_net,
-	u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
+	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	if (!this->net)
 	{
@@ -606,7 +606,7 @@ METHOD(kernel_interface_t, add_route, status_t,
 
 METHOD(kernel_interface_t, del_route, status_t,
 	private_kernel_interface_t *this, chunk_t dst_net,
-	u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
+	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	if (!this->net)
 	{
@@ -627,7 +627,7 @@ METHOD(kernel_interface_t, bypass_socket, bool,
 }
 
 METHOD(kernel_interface_t, enable_udp_decap, bool,
-	private_kernel_interface_t *this, int fd, int family, u_int16_t port)
+	private_kernel_interface_t *this, int fd, int family, uint16_t port)
 {
 	if (!this->ipsec)
 	{
@@ -803,7 +803,7 @@ METHOD(kernel_interface_t, remove_listener, void,
 }
 
 METHOD(kernel_interface_t, acquire, void,
-	private_kernel_interface_t *this, u_int32_t reqid,
+	private_kernel_interface_t *this, uint32_t reqid,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	kernel_listener_t *listener;
@@ -823,7 +823,7 @@ METHOD(kernel_interface_t, acquire, void,
 }
 
 METHOD(kernel_interface_t, expire, void,
-	private_kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+	private_kernel_interface_t *this, uint8_t protocol, uint32_t spi,
 	host_t *dst, bool hard)
 {
 	kernel_listener_t *listener;
@@ -844,7 +844,7 @@ METHOD(kernel_interface_t, expire, void,
 }
 
 METHOD(kernel_interface_t, mapping, void,
-	private_kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+	private_kernel_interface_t *this, uint8_t protocol, uint32_t spi,
 	host_t *dst, host_t *remote)
 {
 	kernel_listener_t *listener;
@@ -865,7 +865,7 @@ METHOD(kernel_interface_t, mapping, void,
 }
 
 METHOD(kernel_interface_t, migrate, void,
-	private_kernel_interface_t *this, u_int32_t reqid,
+	private_kernel_interface_t *this, uint32_t reqid,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, host_t *local, host_t *remote)
 {
@@ -919,8 +919,8 @@ METHOD(kernel_interface_t, tun, void,
 }
 
 METHOD(kernel_interface_t, register_algorithm, void,
-	private_kernel_interface_t *this, u_int16_t alg_id, transform_type_t type,
-	u_int16_t kernel_id, char *kernel_name)
+	private_kernel_interface_t *this, uint16_t alg_id, transform_type_t type,
+	uint16_t kernel_id, char *kernel_name)
 {
 	kernel_algorithm_t *algorithm;
 
@@ -937,8 +937,8 @@ METHOD(kernel_interface_t, register_algorithm, void,
 }
 
 METHOD(kernel_interface_t, lookup_algorithm, bool,
-	private_kernel_interface_t *this, u_int16_t alg_id, transform_type_t type,
-	u_int16_t *kernel_id, char **kernel_name)
+	private_kernel_interface_t *this, uint16_t alg_id, transform_type_t type,
+	uint16_t *kernel_id, char **kernel_name)
 {
 	kernel_algorithm_t *algorithm;
 	enumerator_t *enumerator;

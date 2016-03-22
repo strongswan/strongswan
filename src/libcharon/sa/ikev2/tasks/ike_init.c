@@ -221,7 +221,7 @@ static void handle_supported_hash_algorithms(private_ike_init_t *this,
 											 notify_payload_t *notify)
 {
 	bio_reader_t *reader;
-	u_int16_t algo;
+	uint16_t algo;
 	bool added = FALSE;
 
 	reader = bio_reader_create(notify->get_notification_data(notify));
@@ -633,7 +633,7 @@ METHOD(task_t, build_r, status_t,
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
-		u_int16_t group;
+		uint16_t group;
 
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
@@ -765,7 +765,7 @@ METHOD(task_t, process_i, status_t,
 
 					bad_group = this->dh_group;
 					data = notify->get_notification_data(notify);
-					this->dh_group = ntohs(*((u_int16_t*)data.ptr));
+					this->dh_group = ntohs(*((uint16_t*)data.ptr));
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
 						 bad_group, diffie_hellman_group_names, this->dh_group);

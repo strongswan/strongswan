@@ -141,8 +141,8 @@ struct private_tls_peer_t {
 static status_t process_server_hello(private_tls_peer_t *this,
 									 bio_reader_t *reader)
 {
-	u_int8_t compression;
-	u_int16_t version, cipher;
+	uint8_t compression;
+	uint16_t version, cipher;
 	chunk_t random, session, ext = chunk_empty;
 	tls_cipher_suite_t suite = 0;
 
@@ -434,8 +434,8 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 {
 	diffie_hellman_group_t group;
 	public_key_t *public;
-	u_int8_t type;
-	u_int16_t curve;
+	uint8_t type;
+	uint16_t curve;
 	chunk_t pub, chunk;
 
 	chunk = reader->peek(reader);
@@ -833,7 +833,7 @@ static private_key_t *find_private_key(private_tls_peer_t *this)
 	private_key_t *key = NULL;
 	bio_reader_t *reader;
 	key_type_t type;
-	u_int8_t cert;
+	uint8_t cert;
 
 	if (!this->peer)
 	{

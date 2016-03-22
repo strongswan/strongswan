@@ -84,8 +84,8 @@ static bool poly_head(private_chapoly_aead_t *this, u_char *assoc, size_t len)
 static bool poly_tail(private_chapoly_aead_t *this, size_t alen, size_t clen)
 {
 	struct {
-		u_int64_t alen;
-		u_int64_t clen;
+		uint64_t alen;
+		uint64_t clen;
 	} b;
 
 	b.alen = htole64(alen);
@@ -190,7 +190,7 @@ METHOD(aead_t, encrypt, bool,
 {
 	u_char *out;
 
-	if (sizeof(plain.len) > sizeof(u_int32_t) && plain.len > P_MAX)
+	if (sizeof(plain.len) > sizeof(uint32_t) && plain.len > P_MAX)
 	{
 		return FALSE;
 	}
@@ -220,7 +220,7 @@ METHOD(aead_t, decrypt, bool,
 		return FALSE;
 	}
 	encr.len -= POLY_ICV_SIZE;
-	if (sizeof(encr.len) > sizeof(u_int32_t) && encr.len > P_MAX)
+	if (sizeof(encr.len) > sizeof(uint32_t) && encr.len > P_MAX)
 	{
 		return FALSE;
 	}

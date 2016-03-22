@@ -34,17 +34,17 @@ struct private_ike_sa_id_t {
 	/**
 	 * Major IKE version of IKE_SA.
 	 */
-	u_int8_t ike_version;
+	uint8_t ike_version;
 
 	 /**
 	  * SPI of initiator.
 	  */
-	u_int64_t initiator_spi;
+	uint64_t initiator_spi;
 
 	 /**
 	  * SPI of responder.
 	  */
-	u_int64_t responder_spi;
+	uint64_t responder_spi;
 
 	/**
 	 * Role for specific IKE_SA.
@@ -52,31 +52,31 @@ struct private_ike_sa_id_t {
 	bool is_initiator_flag;
 };
 
-METHOD(ike_sa_id_t, get_ike_version, u_int8_t,
+METHOD(ike_sa_id_t, get_ike_version, uint8_t,
 	private_ike_sa_id_t *this)
 {
 	return this->ike_version;
 }
 
 METHOD(ike_sa_id_t, set_responder_spi, void,
-	private_ike_sa_id_t *this, u_int64_t responder_spi)
+	private_ike_sa_id_t *this, uint64_t responder_spi)
 {
 	this->responder_spi = responder_spi;
 }
 
 METHOD(ike_sa_id_t, set_initiator_spi, void,
-	private_ike_sa_id_t *this, u_int64_t initiator_spi)
+	private_ike_sa_id_t *this, uint64_t initiator_spi)
 {
 	this->initiator_spi = initiator_spi;
 }
 
-METHOD(ike_sa_id_t, get_initiator_spi, u_int64_t,
+METHOD(ike_sa_id_t, get_initiator_spi, uint64_t,
 	private_ike_sa_id_t *this)
 {
 	return this->initiator_spi;
 }
 
-METHOD(ike_sa_id_t, get_responder_spi, u_int64_t,
+METHOD(ike_sa_id_t, get_responder_spi, uint64_t,
 	private_ike_sa_id_t *this)
 {
 	return this->responder_spi;
@@ -134,8 +134,8 @@ METHOD(ike_sa_id_t, destroy, void,
 /*
  * Described in header.
  */
-ike_sa_id_t * ike_sa_id_create(u_int8_t ike_version, u_int64_t initiator_spi,
-							   u_int64_t responder_spi, bool is_initiator_flag)
+ike_sa_id_t * ike_sa_id_create(uint8_t ike_version, uint64_t initiator_spi,
+							   uint64_t responder_spi, bool is_initiator_flag)
 {
 	private_ike_sa_id_t *this;
 

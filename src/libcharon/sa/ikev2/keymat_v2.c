@@ -99,8 +99,8 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 /**
  * Derive IKE keys for a combined AEAD algorithm
  */
-static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
-							u_int16_t key_size, prf_plus_t *prf_plus)
+static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
+							uint16_t key_size, prf_plus_t *prf_plus)
 {
 	aead_t *aead_i, *aead_r;
 	chunk_t key = chunk_empty;
@@ -189,8 +189,8 @@ failure:
 /**
  * Derive IKE keys for traditional encryption and MAC algorithms
  */
-static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
-					u_int16_t enc_size, u_int16_t int_alg, prf_plus_t *prf_plus)
+static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
+					uint16_t enc_size, uint16_t int_alg, prf_plus_t *prf_plus)
 {
 	crypter_t *crypter_i = NULL, *crypter_r = NULL;
 	signer_t *signer_i, *signer_r;
@@ -302,11 +302,11 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
 	prf_plus_t *prf_plus = NULL;
-	u_int16_t alg, key_size, int_alg;
+	uint16_t alg, key_size, int_alg;
 	prf_t *rekey_prf = NULL;
 
-	spi_i = chunk_alloca(sizeof(u_int64_t));
-	spi_r = chunk_alloca(sizeof(u_int64_t));
+	spi_i = chunk_alloca(sizeof(uint64_t));
+	spi_r = chunk_alloca(sizeof(uint64_t));
 
 	if (!dh->get_shared_secret(dh, &secret))
 	{
@@ -354,8 +354,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			break;
 	}
 	fixed_nonce = chunk_cat("cc", nonce_i, nonce_r);
-	*((u_int64_t*)spi_i.ptr) = id->get_initiator_spi(id);
-	*((u_int64_t*)spi_r.ptr) = id->get_responder_spi(id);
+	*((uint64_t*)spi_i.ptr) = id->get_initiator_spi(id);
+	*((uint64_t*)spi_r.ptr) = id->get_responder_spi(id);
 	prf_plus_seed = chunk_cat("ccc", full_nonce, spi_i, spi_r);
 
 	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr)
@@ -489,7 +489,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
-	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
+	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
 	prf_plus_t *prf_plus;
 

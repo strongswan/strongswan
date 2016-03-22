@@ -42,13 +42,13 @@
  */
 struct array_t {
 	/** number of elements currently in array (not counting head/tail) */
-	u_int32_t count;
+	uint32_t count;
 	/** size of each element, 0 for a pointer based array */
-	u_int16_t esize;
+	uint16_t esize;
 	/** allocated but unused elements at array front */
-	u_int8_t head;
+	uint8_t head;
 	/** allocated but unused elements at array end */
-	u_int8_t tail;
+	uint8_t tail;
 	/** array elements */
 	void *data;
 };
@@ -64,7 +64,7 @@ struct array_t {
 /**
  * Get the actual size of a number of elements
  */
-static size_t get_size(array_t *array, u_int32_t num)
+static size_t get_size(array_t *array, uint32_t num)
 {
 	if (array->esize)
 	{
@@ -76,7 +76,7 @@ static size_t get_size(array_t *array, u_int32_t num)
 /**
  * Increase allocated but unused tail room to at least "room"
  */
-static void make_tail_room(array_t *array, u_int8_t room)
+static void make_tail_room(array_t *array, uint8_t room)
 {
 	if (array->tail < room)
 	{
@@ -89,11 +89,11 @@ static void make_tail_room(array_t *array, u_int8_t room)
 /**
  * Increase allocated but unused head room to at least "room"
  */
-static void make_head_room(array_t *array, u_int8_t room)
+static void make_head_room(array_t *array, uint8_t room)
 {
 	if (array->head < room)
 	{
-		u_int8_t increase = room - array->head;
+		uint8_t increase = room - array->head;
 
 		array->data = realloc(array->data,
 						get_size(array, array->count + array->tail + room));
@@ -158,7 +158,7 @@ static void remove_head(array_t *array, int idx)
 	array->head++;
 }
 
-array_t *array_create(u_int esize, u_int8_t reserve)
+array_t *array_create(u_int esize, uint8_t reserve)
 {
 	array_t *array;
 
@@ -186,7 +186,7 @@ void array_compress(array_t *array)
 {
 	if (array)
 	{
-		u_int32_t tail;
+		uint32_t tail;
 
 		tail = array->tail;
 		if (array->head)

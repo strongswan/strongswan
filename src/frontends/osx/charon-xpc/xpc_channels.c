@@ -78,12 +78,12 @@ static void destroy_entry(entry_t *entry)
 /**
  * Find an IKE_SA unique identifier by a given XPC channel
  */
-static u_int32_t find_ike_sa_by_conn(private_xpc_channels_t *this,
+static uint32_t find_ike_sa_by_conn(private_xpc_channels_t *this,
 									 xpc_connection_t conn)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	u_int32_t ike_sa = 0;
+	uint32_t ike_sa = 0;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->channels->create_enumerator(this->channels);
@@ -126,7 +126,7 @@ static void remove_conn(private_xpc_channels_t *this, xpc_connection_t conn)
 /**
  * Trigger termination of a connection
  */
-static void stop_connection(private_xpc_channels_t *this, u_int32_t ike_sa,
+static void stop_connection(private_xpc_channels_t *this, uint32_t ike_sa,
 							xpc_object_t request, xpc_object_t reply)
 {
 	status_t status;
@@ -141,7 +141,7 @@ static void stop_connection(private_xpc_channels_t *this, u_int32_t ike_sa,
  */
 static struct {
 	char *name;
-	void (*handler)(private_xpc_channels_t *this, u_int32_t ike_sa,
+	void (*handler)(private_xpc_channels_t *this, uint32_t ike_sa,
 					xpc_object_t request, xpc_object_t reply);
 } commands[] = {
 	{ "stop_connection", stop_connection },
@@ -156,7 +156,7 @@ static void handle(private_xpc_channels_t *this, xpc_connection_t conn,
 	xpc_object_t reply;
 	const char *type, *rpc;
 	bool found = FALSE;
-	u_int32_t ike_sa;
+	uint32_t ike_sa;
 	int i;
 
 	type = xpc_dictionary_get_string(request, "type");
@@ -201,7 +201,7 @@ static void handle(private_xpc_channels_t *this, xpc_connection_t conn,
 }
 
 METHOD(xpc_channels_t, add, void,
-	private_xpc_channels_t *this, xpc_connection_t conn, u_int32_t ike_sa)
+	private_xpc_channels_t *this, xpc_connection_t conn, uint32_t ike_sa)
 {
 	entry_t *entry;
 
@@ -466,7 +466,7 @@ static shared_key_t* password_cb(private_xpc_channels_t *this,
 	shared_key_t *shared = NULL;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
-	u_int32_t sa;
+	uint32_t sa;
 
 	switch (type)
 	{

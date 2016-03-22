@@ -75,7 +75,7 @@ ENUM_END(pwg_attr_names,	PWG_HCD_CONFIGURATION_STATE);
 /**
  * See header
  */
-pa_tnc_attr_t* pwg_attr_create_from_data(u_int32_t type, size_t length, chunk_t value)
+pa_tnc_attr_t* pwg_attr_create_from_data(uint32_t type, size_t length, chunk_t value)
 {
 	switch (type)
 	{

@@ -271,7 +271,7 @@ METHOD(task_t, process_i, status_t,
 				this->collision->get_type(this->collision) == TASK_IKE_REAUTH)))
 			{
 				job_t *job;
-				u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+				uint32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
 				job = (job_t*)rekey_ike_sa_job_create(
 										this->ike_sa->get_id(this->ike_sa), FALSE);
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "

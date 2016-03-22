@@ -110,12 +110,12 @@ struct private_child_cfg_t {
 	/**
 	 * Inactivity timeout
 	 */
-	u_int32_t inactivity;
+	uint32_t inactivity;
 
 	/**
 	 * Reqid to install CHILD_SA with
 	 */
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	/**
 	 * Optional mark to install inbound CHILD_SA with
@@ -130,7 +130,7 @@ struct private_child_cfg_t {
 	/**
 	 * Traffic Flow Confidentiality padding, if enabled
 	 */
-	u_int32_t tfc;
+	uint32_t tfc;
 
 	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
@@ -145,7 +145,7 @@ struct private_child_cfg_t {
 	/**
 	 * anti-replay window size
 	 */
-	u_int32_t replay_window;
+	uint32_t replay_window;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -405,7 +405,7 @@ METHOD(child_cfg_t, get_hostaccess, bool,
  * Note: The distribution of random values is not perfect, but it
  * should get the job done.
  */
-static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
+static uint64_t apply_jitter(uint64_t rekey, uint64_t jitter)
 {
 	if (jitter == 0)
 	{
@@ -456,7 +456,7 @@ METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	u_int16_t dh_group = MODP_NONE;
+	uint16_t dh_group = MODP_NONE;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
@@ -476,13 +476,13 @@ METHOD(child_cfg_t, use_ipcomp, bool,
 	return this->use_ipcomp;
 }
 
-METHOD(child_cfg_t, get_inactivity, u_int32_t,
+METHOD(child_cfg_t, get_inactivity, uint32_t,
 	private_child_cfg_t *this)
 {
 	return this->inactivity;
 }
 
-METHOD(child_cfg_t, get_reqid, u_int32_t,
+METHOD(child_cfg_t, get_reqid, uint32_t,
 	private_child_cfg_t *this)
 {
 	return this->reqid;
@@ -494,20 +494,20 @@ METHOD(child_cfg_t, get_mark, mark_t,
 	return inbound ? this->mark_in : this->mark_out;
 }
 
-METHOD(child_cfg_t, get_tfc, u_int32_t,
+METHOD(child_cfg_t, get_tfc, uint32_t,
 	private_child_cfg_t *this)
 {
 	return this->tfc;
 }
 
-METHOD(child_cfg_t, get_replay_window, u_int32_t,
+METHOD(child_cfg_t, get_replay_window, uint32_t,
 	private_child_cfg_t *this)
 {
 	return this->replay_window;
 }
 
 METHOD(child_cfg_t, set_replay_window, void,
-	private_child_cfg_t *this, u_int32_t replay_window)
+	private_child_cfg_t *this, uint32_t replay_window)
 {
 	this->replay_window = replay_window;
 }
@@ -613,8 +613,8 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t start_action,
 							  action_t dpd_action, action_t close_action,
-							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc)
+							  bool ipcomp, uint32_t inactivity, uint32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out, uint32_t tfc)
 {
 	private_child_cfg_t *this;
 

@@ -41,7 +41,7 @@ struct private_random_rng_t {
 };
 
 METHOD(rng_t, get_bytes, bool,
-	private_random_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_random_rng_t *this, size_t bytes, uint8_t *buffer)
 {
 	size_t done;
 	ssize_t got;

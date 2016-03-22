@@ -82,7 +82,7 @@ extern enum_name_t *pb_tnc_ita_msg_type_names;
  * Information entry describing a PB-TNC Message Type
  */
 struct pb_tnc_msg_info_t {
-	u_int32_t min_size;
+	uint32_t min_size;
 	bool exact_size;
 	bool in_result_batch;
 	signed char has_noskip_flag;
@@ -138,7 +138,7 @@ struct pb_tnc_msg_t {
 	 * @param					relative offset where an error occurred
 	 * @return					return processing status
 	 */
-	status_t (*process)(pb_tnc_msg_t *this, u_int32_t *offset);
+	status_t (*process)(pb_tnc_msg_t *this, uint32_t *offset);
 
 	/**
 	 * Get a new reference to the message.

@@ -149,8 +149,8 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	u_int64_t count;
-	u_int16_t request_id;
+	uint64_t count;
+	uint16_t request_id;
 	char *filename;
 	chunk_t measurement;
 	bool first = TRUE;
@@ -192,7 +192,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_file_meas_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_file_meas_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	chunk_t measurement, filename;

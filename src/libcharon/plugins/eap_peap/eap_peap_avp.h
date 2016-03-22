@@ -45,7 +45,7 @@ struct eap_peap_avp_t {
 	 *					- NEED_MORE if another invocation of process/build needed
 	 */
 	status_t (*process)(eap_peap_avp_t *this, bio_reader_t *reader,
-						chunk_t *data, u_int8_t identifier);
+						chunk_t *data, uint8_t identifier);
 
 	/**
 	 * Build EAP-PEAP Message AVP to send out.

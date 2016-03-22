@@ -317,7 +317,7 @@ METHOD(gateway_t, initiate, enumerator_t*,
 }
 
 METHOD(gateway_t, terminate, enumerator_t*,
-	private_gateway_t *this, bool ike, u_int32_t id)
+	private_gateway_t *this, bool ike, uint32_t id)
 {
 	char *str, *kind;
 

@@ -75,8 +75,8 @@ METHOD(tls_application_t, process, status_t,
 	eap_packet_t *pkt;
 	eap_code_t code;
 	eap_type_t type, received_type;
-	u_int32_t vendor, received_vendor;
-	u_int16_t eap_len;
+	uint32_t vendor, received_vendor;
+	uint16_t eap_len;
 	size_t eap_pos = 0;
 	bool concatenated = FALSE;
 
@@ -240,7 +240,7 @@ METHOD(tls_application_t, build, status_t,
 	chunk_t data;
 	eap_code_t code;
 	eap_type_t type;
-	u_int32_t vendor;
+	uint32_t vendor;
 
 	if (this->method == NULL && this->start_phase2)
 	{

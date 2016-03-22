@@ -99,8 +99,8 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 {
 	chunk_t natd_chunk, spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk;
 	chunk_t natd_hash;
-	u_int64_t spi_i, spi_r;
-	u_int16_t port;
+	uint64_t spi_i, spi_r;
+	uint16_t port;
 
 	/* prepare all required chunks */
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
@@ -142,7 +142,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 	config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (force_encap(config) && type == NAT_DETECTION_SOURCE_IP)
 	{
-		u_int32_t addr;
+		uint32_t addr;
 
 		/* chunk_hash() is randomly keyed so this produces a random IPv4 address
 		 * that changes with every restart but otherwise stays the same */

@@ -25,7 +25,7 @@
 #include <plugins/ntru/ntru_private_key.h>
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
-						  u_int32_t strength, chunk_t pers_str, rng_t *entropy)
+						  uint32_t strength, chunk_t pers_str, rng_t *entropy)
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
 						  size_t len, hash_algorithm_t alg, chunk_t seed)
@@ -36,7 +36,7 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_seed, ntru_poly_t*,
 						  uint32_t indices_len_m, bool is_product_form)
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_data, ntru_poly_t*,
-						  u_int16_t *data, uint16_t N, uint16_t q,
+						  uint16_t *data, uint16_t N, uint16_t q,
 						  uint32_t indices_len_p, uint32_t indices_len_m,
 						  bool is_product_form)
 
@@ -73,8 +73,8 @@ char *parameter_sets[] = {
 };
 
 typedef struct {
-	u_int32_t requested;
-	u_int32_t standard;
+	uint32_t requested;
+	uint32_t standard;
 }strength_t;
 
 strength_t strengths[] = {

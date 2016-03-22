@@ -48,12 +48,12 @@ struct private_configuration_attribute_t {
 	/**
 	 * Type of the attribute.
 	 */
-	u_int16_t attr_type;
+	uint16_t attr_type;
 
 	/**
 	 * Length of the attribute, value if af_flag set.
 	 */
-	u_int16_t length_or_value;
+	uint16_t length_or_value;
 
 	/**
 	 * Attribute value as chunk.
@@ -272,7 +272,7 @@ METHOD(configuration_attribute_t, get_chunk, chunk_t,
 	return this->value;
 }
 
-METHOD(configuration_attribute_t, get_value, u_int16_t,
+METHOD(configuration_attribute_t, get_value, uint16_t,
 	private_configuration_attribute_t *this)
 {
 	if (this->af_flag)
@@ -328,7 +328,7 @@ configuration_attribute_t *configuration_attribute_create_chunk(
 
 	this = (private_configuration_attribute_t*)
 							configuration_attribute_create(type);
-	this->attr_type = ((u_int16_t)attr_type) & 0x7FFF;
+	this->attr_type = ((uint16_t)attr_type) & 0x7FFF;
 	this->value = chunk_clone(chunk);
 	this->length_or_value = chunk.len;
 
@@ -339,13 +339,13 @@ configuration_attribute_t *configuration_attribute_create_chunk(
  * Described in header.
  */
 configuration_attribute_t *configuration_attribute_create_value(
-					configuration_attribute_type_t attr_type, u_int16_t value)
+					configuration_attribute_type_t attr_type, uint16_t value)
 {
 	private_configuration_attribute_t *this;
 
 	this = (private_configuration_attribute_t*)
 					configuration_attribute_create(PLV1_CONFIGURATION_ATTRIBUTE);
-	this->attr_type = ((u_int16_t)attr_type) & 0x7FFF;
+	this->attr_type = ((uint16_t)attr_type) & 0x7FFF;
 	this->length_or_value = value;
 	this->af_flag = TRUE;
 

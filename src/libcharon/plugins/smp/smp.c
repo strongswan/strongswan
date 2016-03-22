@@ -374,7 +374,7 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 		xmlTextReaderNodeType(reader) == XML_READER_TYPE_TEXT)
 	{
 		const char *str;
-		u_int32_t id;
+		uint32_t id;
 		status_t status;
 
 		str = xmlTextReaderConstValue(reader);

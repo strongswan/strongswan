@@ -35,32 +35,32 @@ struct private_fragment_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t next_payload;
+	uint8_t next_payload;
 
 	/**
 	 * Reserved byte
 	 */
-	u_int8_t reserved;
+	uint8_t reserved;
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Fragment ID.
 	 */
-	u_int16_t fragment_id;
+	uint16_t fragment_id;
 
 	/**
 	 * Fragment number.
 	 */
-	u_int8_t fragment_number;
+	uint8_t fragment_number;
 
 	/**
 	 * Flags
 	 */
-	u_int8_t flags;
+	uint8_t flags;
 
 	/**
 	 * The contained fragment data.
@@ -145,13 +145,13 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(fragment_payload_t, get_id, u_int16_t,
+METHOD(fragment_payload_t, get_id, uint16_t,
 	private_fragment_payload_t *this)
 {
 	return this->fragment_id;
 }
 
-METHOD(fragment_payload_t, get_number, u_int8_t,
+METHOD(fragment_payload_t, get_number, uint8_t,
 	private_fragment_payload_t *this)
 {
 	return this->fragment_number;
@@ -210,7 +210,7 @@ fragment_payload_t *fragment_payload_create()
 /*
  * Described in header
  */
-fragment_payload_t *fragment_payload_create_from_data(u_int8_t num, bool last,
+fragment_payload_t *fragment_payload_create_from_data(uint8_t num, bool last,
 													  chunk_t data)
 {
 	private_fragment_payload_t *this;

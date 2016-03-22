@@ -37,7 +37,7 @@ struct ip_packet_t {
 	 *
 	 * @return				ip version
 	 */
-	u_int8_t (*get_version)(ip_packet_t *this);
+	uint8_t (*get_version)(ip_packet_t *this);
 
 	/**
 	 * Get the source address of this packet
@@ -58,7 +58,7 @@ struct ip_packet_t {
 	 *
 	 * @return				protocol|next header field
 	 */
-	u_int8_t (*get_next_header)(ip_packet_t *this);
+	uint8_t (*get_next_header)(ip_packet_t *this);
 
 	/**
 	 * Get the complete IP packet (including the header)
@@ -113,7 +113,7 @@ ip_packet_t *ip_packet_create(chunk_t packet);
  * @return				ip_packet_t instance, or NULL if invalid
  */
 ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
-										u_int8_t next_header, chunk_t data);
+										uint8_t next_header, chunk_t data);
 
 /**
  * Encode a UDP packet from the given data.

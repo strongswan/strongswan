@@ -84,12 +84,12 @@ struct private_socket_default_socket_t {
 	/**
 	 * Configured port (or random, if initially 0)
 	 */
-	u_int16_t port;
+	uint16_t port;
 
 	/**
 	 * Configured port for NAT-T (or random, if initially 0)
 	 */
-	u_int16_t natt;
+	uint16_t natt;
 
 	/**
 	 * IPv4 socket (500 or port)
@@ -114,22 +114,22 @@ struct private_socket_default_socket_t {
 	/**
 	 * DSCP value set on IPv4 socket
 	 */
-	u_int8_t dscp4;
+	uint8_t dscp4;
 
 	/**
 	 * DSCP value set on IPv4 socket for NAT-T (4500 or natt)
 	 */
-	u_int8_t dscp4_natt;
+	uint8_t dscp4_natt;
 
 	/**
 	 * DSCP value set on IPv6 socket (500 or port)
 	 */
-	u_int8_t dscp6;
+	uint8_t dscp6;
 
 	/**
 	 * DSCP value set on IPv6 socket for NAT-T (4500 or natt)
 	 */
-	u_int8_t dscp6_natt;
+	uint8_t dscp6_natt;
 
 	/**
 	 * Maximum packet size to receive
@@ -153,7 +153,7 @@ struct private_socket_default_socket_t {
  */
 #ifdef IP_PKTINFO
 
-static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
+static host_t *get_dst_v4(struct cmsghdr *cmsgptr, uint16_t port)
 {
 	struct sockaddr_in dst = {
 		.sin_family = AF_INET,
@@ -174,7 +174,7 @@ static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
 
 #elif defined(IP_RECVDSTADDR)
 
-static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
+static host_t *get_dst_v4(struct cmsghdr *cmsgptr, uint16_t port)
 {
 	struct sockaddr_in dst = {
 		.sin_family = AF_INET,
@@ -193,7 +193,7 @@ static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
 
 #else /* IP_PKTINFO || IP_RECVDSTADDR */
 
-static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
+static host_t *get_dst_v4(struct cmsghdr *cmsgptr, uint16_t port)
 {
 	return NULL;
 }
@@ -206,7 +206,7 @@ static host_t *get_dst_v4(struct cmsghdr *cmsgptr, u_int16_t port)
  */
 #ifdef HAVE_IN6_PKTINFO
 
-static host_t *get_dst_v6(struct cmsghdr *cmsgptr, u_int16_t port)
+static host_t *get_dst_v6(struct cmsghdr *cmsgptr, uint16_t port)
 {
 	struct in6_pktinfo *pktinfo;
 	struct sockaddr_in6 dst = {
@@ -225,7 +225,7 @@ static host_t *get_dst_v6(struct cmsghdr *cmsgptr, u_int16_t port)
 
 #else /* HAVE_IN6_PKTINFO */
 
-static host_t *get_dst_v6(struct cmsghdr *cmsgptr, u_int16_t port)
+static host_t *get_dst_v6(struct cmsghdr *cmsgptr, uint16_t port)
 {
 	return NULL;
 }
@@ -241,7 +241,7 @@ METHOD(socket_t, receiver, status_t,
 	host_t *source = NULL, *dest = NULL;
 	int i, rr, index, bytes_read = 0, selected = -1;
 	bool oldstate;
-	u_int16_t port = 0;
+	uint16_t port = 0;
 	struct pollfd pfd[] = {
 		{ .fd = this->ipv4,			.events = POLLIN },
 		{ .fd = this->ipv4_natt,	.events = POLLIN },
@@ -464,7 +464,7 @@ METHOD(socket_t, sender, status_t,
 	host_t *src, *dst;
 	struct msghdr msg;
 	struct iovec iov;
-	u_int8_t *dscp;
+	uint8_t *dscp;
 
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
@@ -521,7 +521,7 @@ METHOD(socket_t, sender, status_t,
 	{
 		if (family == AF_INET)
 		{
-			u_int8_t ds4;
+			uint8_t ds4;
 
 			ds4 = packet->get_dscp(packet) << 2;
 			if (setsockopt(skt, SOL_IP, IP_TOS, &ds4, sizeof(ds4)) == 0)
@@ -584,7 +584,7 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
-METHOD(socket_t, get_port, u_int16_t,
+METHOD(socket_t, get_port, uint16_t,
 	private_socket_default_socket_t *this, bool nat_t)
 {
 	return nat_t ? this->natt : this->port;
@@ -610,7 +610,7 @@ METHOD(socket_t, supported_families, socket_family_t,
  * open a socket to send and receive packets
  */
 static int open_socket(private_socket_default_socket_t *this,
-					   int family, u_int16_t *port)
+					   int family, uint16_t *port)
 {
 	int on = TRUE;
 	union {

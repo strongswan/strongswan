@@ -56,7 +56,7 @@ struct pb_access_recommendation_msg_t {
 	 *
 	 * @return			PB Access Recommendation
 	 */
-	u_int16_t (*get_access_recommendation)(pb_access_recommendation_msg_t *this);
+	uint16_t (*get_access_recommendation)(pb_access_recommendation_msg_t *this);
 };
 
 /**
@@ -64,7 +64,7 @@ struct pb_access_recommendation_msg_t {
  *
  * @param recommendation	Access Recommendation code
  */
-pb_tnc_msg_t* pb_access_recommendation_msg_create(u_int16_t recommendation);
+pb_tnc_msg_t* pb_access_recommendation_msg_create(uint16_t recommendation);
 
 /**
  * Create an unprocessed PB-Access-Recommendation message from raw data

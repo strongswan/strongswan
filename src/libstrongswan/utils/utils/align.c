@@ -20,9 +20,9 @@
 /**
  * Described in header.
  */
-void* malloc_align(size_t size, u_int8_t align)
+void* malloc_align(size_t size, uint8_t align)
 {
-	u_int8_t pad;
+	uint8_t pad;
 	void *ptr;
 
 	if (align == 0)
@@ -46,7 +46,7 @@ void* malloc_align(size_t size, u_int8_t align)
  */
 void free_align(void *ptr)
 {
-	u_int8_t pad, *pos;
+	uint8_t pad, *pos;
 
 	pos = ptr - 1;
 	/* verify padding to check any corruption */

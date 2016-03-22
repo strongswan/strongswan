@@ -29,7 +29,7 @@
  * @param depth			Sub-component depth
  * @param pts_db		PTS measurement database
  */
-pts_component_t* pts_ita_comp_ima_create(u_int32_t depth,
+pts_component_t* pts_ita_comp_ima_create(uint32_t depth,
 										 pts_database_t *pts_db);
 
 #endif /** PTS_ITA_COMP_IMA_H_ @}*/

@@ -42,8 +42,8 @@ static inline void copy_chunk(chunk_t dst, chunk_t src)
  */
 static void add_chunks(chunk_t a, chunk_t b)
 {
-	u_int16_t sum;
-	u_int8_t rem = 0;
+	uint16_t sum;
+	uint8_t rem = 0;
 	ssize_t i, j;
 
 	for (i = a.len - 1, j = b.len -1; i >= 0 && j >= 0; i--, j--)
@@ -64,12 +64,12 @@ static void add_chunks(chunk_t a, chunk_t b)
  * Do the actual key derivation with the given hasher, password and id.
  */
 static bool derive_key(hash_algorithm_t hash, chunk_t unicode, chunk_t salt,
-					   u_int64_t iterations, char id, chunk_t result)
+					   uint64_t iterations, char id, chunk_t result)
 {
 	chunk_t out = result, D, S, P = chunk_empty, I, Ai, B, Ij;
 	hasher_t *hasher;
 	size_t Slen, v, u;
-	u_int64_t i;
+	uint64_t i;
 	bool success = FALSE;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, hash);
@@ -149,7 +149,7 @@ end:
  * Described in header
  */
 bool pkcs12_derive_key(hash_algorithm_t hash, chunk_t password, chunk_t salt,
-					   u_int64_t iterations, pkcs12_key_type_t type, chunk_t key)
+					   uint64_t iterations, pkcs12_key_type_t type, chunk_t key)
 {
 	chunk_t unicode = chunk_empty;
 	bool success;

@@ -58,7 +58,7 @@ struct exchange_t {
 	/**
 	 * Message ID used for this transaction
 	 */
-	u_int32_t mid;
+	uint32_t mid;
 
 	/**
 	 * generated packet for retransmission
@@ -90,7 +90,7 @@ struct private_task_manager_t {
 		/**
 		 * Message ID of the exchange
 		 */
-		u_int32_t mid;
+		uint32_t mid;
 
 		/**
 		 * packet(s) for retransmission
@@ -111,7 +111,7 @@ struct private_task_manager_t {
 		/**
 		 * Message ID of the exchange
 		 */
-		u_int32_t mid;
+		uint32_t mid;
 
 		/**
 		 * how many times we have retransmitted so far
@@ -303,12 +303,12 @@ static bool generate_message(private_task_manager_t *this, message_t *message,
 }
 
 METHOD(task_manager_t, retransmit, status_t,
-	private_task_manager_t *this, u_int32_t message_id)
+	private_task_manager_t *this, uint32_t message_id)
 {
 	if (message_id == this->initiating.mid &&
 		array_count(this->initiating.packets))
 	{
-		u_int32_t timeout;
+		uint32_t timeout;
 		job_t *job;
 		enumerator_t *enumerator;
 		packet_t *packet;
@@ -336,7 +336,7 @@ METHOD(task_manager_t, retransmit, status_t,
 		{
 			if (this->initiating.retransmitted <= this->retransmit_tries)
 			{
-				timeout = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+				timeout = (uint32_t)(this->retransmit_timeout * 1000.0 *
 					pow(this->retransmit_base, this->initiating.retransmitted));
 			}
 			else
@@ -799,7 +799,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	host_t *me, *other;
 	bool delete = FALSE, hook = FALSE;
 	ike_sa_id_t *id = NULL;
-	u_int64_t responder_spi = 0;
+	uint64_t responder_spi = 0;
 	bool result;
 
 	me = request->get_destination(request);
@@ -1252,7 +1252,7 @@ static void send_notify_response(private_task_manager_t *this,
 static status_t parse_message(private_task_manager_t *this, message_t *msg)
 {
 	status_t status;
-	u_int8_t type = 0;
+	uint8_t type = 0;
 
 	status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
 
@@ -1345,7 +1345,7 @@ METHOD(task_manager_t, process_message, status_t,
 {
 	host_t *me, *other;
 	status_t status;
-	u_int32_t mid;
+	uint32_t mid;
 	bool schedule_delete_job = FALSE;
 
 	charon->bus->message(charon->bus, msg, TRUE, FALSE);
@@ -1726,7 +1726,7 @@ METHOD(task_manager_t, queue_mobike, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
+	private_task_manager_t *this, child_cfg_t *cfg, uint32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	child_create_t *task;
@@ -1740,13 +1740,13 @@ METHOD(task_manager_t, queue_child, void,
 }
 
 METHOD(task_manager_t, queue_child_rekey, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_task_manager_t *this, protocol_id_t protocol, uint32_t spi)
 {
 	queue_task(this, (task_t*)child_rekey_create(this->ike_sa, protocol, spi));
 }
 
 METHOD(task_manager_t, queue_child_delete, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi,
+	private_task_manager_t *this, protocol_id_t protocol, uint32_t spi,
 	bool expired)
 {
 	queue_task(this, (task_t*)child_delete_create(this->ike_sa,
@@ -1827,7 +1827,7 @@ METHOD(task_manager_t, busy, bool,
 }
 
 METHOD(task_manager_t, reset, void,
-	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
+	private_task_manager_t *this, uint32_t initiate, uint32_t respond)
 {
 	enumerator_t *enumerator;
 	task_t *task;

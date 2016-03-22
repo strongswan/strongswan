@@ -128,7 +128,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_seg_attr_next_seg_t *this, u_int32_t *offset)
+	private_tcg_seg_attr_next_seg_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	uint8_t flags;

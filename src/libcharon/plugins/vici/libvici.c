@@ -123,7 +123,7 @@ static bool read_error(vici_conn_t *conn, int err)
 /**
  * Handle a command response message
  */
-static bool handle_response(vici_conn_t *conn, u_int32_t len)
+static bool handle_response(vici_conn_t *conn, uint32_t len)
 {
 	chunk_t buf;
 
@@ -140,11 +140,11 @@ static bool handle_response(vici_conn_t *conn, u_int32_t len)
 /**
  * Dispatch received event message
  */
-static bool handle_event(vici_conn_t *conn, u_int32_t len)
+static bool handle_event(vici_conn_t *conn, uint32_t len)
 {
 	vici_message_t *message;
 	event_t *event;
-	u_int8_t namelen;
+	uint8_t namelen;
 	char name[257], *buf;
 
 	if (len < sizeof(namelen))
@@ -198,8 +198,8 @@ static bool handle_event(vici_conn_t *conn, u_int32_t len)
 CALLBACK(on_read, bool,
 	vici_conn_t *conn, stream_t *stream)
 {
-	u_int32_t len;
-	u_int8_t op;
+	uint32_t len;
+	uint8_t op;
 	ssize_t hlen;
 
 	hlen = stream->read(stream, &len, sizeof(len), FALSE);
@@ -358,8 +358,8 @@ vici_res_t* vici_submit(vici_req_t *req, vici_conn_t *conn)
 	vici_message_t *message;
 	vici_res_t *res;
 	chunk_t data;
-	u_int32_t len;
-	u_int8_t namelen, op;
+	uint32_t len;
+	uint8_t namelen, op;
 
 	message = req->b->finalize(req->b);
 	if (!message)
@@ -678,8 +678,8 @@ void vici_free_res(vici_res_t *res)
 int vici_register(vici_conn_t *conn, char *name, vici_event_cb_t cb, void *user)
 {
 	event_t *event;
-	u_int32_t len;
-	u_int8_t namelen, op;
+	uint32_t len;
+	uint8_t namelen, op;
 	int ret = 1;
 
 	op = cb ? VICI_EVENT_REGISTER : VICI_EVENT_UNREGISTER;

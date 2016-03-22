@@ -37,7 +37,7 @@ struct dhcp_transaction_t {
 	 *
 	 * @return			DHCP transaction identifier
 	 */
-	u_int32_t (*get_id)(dhcp_transaction_t *this);
+	uint32_t (*get_id)(dhcp_transaction_t *this);
 
 	/**
 	 * Get the peer identity this transaction is used for.
@@ -103,7 +103,7 @@ struct dhcp_transaction_t {
  * @param identity	peer identity this transaction is used for
  * @return			transaction instance
  */
-dhcp_transaction_t *dhcp_transaction_create(u_int32_t id,
+dhcp_transaction_t *dhcp_transaction_create(uint32_t id,
 											identification_t *identity);
 
 #endif /** DHCP_TRANSACTION_H_ @}*/

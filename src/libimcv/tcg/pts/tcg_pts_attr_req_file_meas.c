@@ -85,12 +85,12 @@ struct private_tcg_pts_attr_req_file_meas_t {
 	/**
 	 * Request ID
 	 */
-	u_int16_t request_id;
+	uint16_t request_id;
 
 	/**
 	 * UTF8 Encoding of Delimiter Character
 	 */
-	u_int32_t delimiter;
+	uint32_t delimiter;
 
 	/**
 	 * Fully Qualified File Pathname
@@ -130,7 +130,7 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_req_file_meas_t *this)
 {
-	u_int8_t flags = PTS_REQ_FILE_MEAS_NO_FLAGS;
+	uint8_t flags = PTS_REQ_FILE_MEAS_NO_FLAGS;
 	chunk_t pathname;
 	bio_writer_t *writer;
 
@@ -156,11 +156,11 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_req_file_meas_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_req_file_meas_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
-	u_int8_t reserved;
+	uint8_t flags;
+	uint8_t reserved;
 	chunk_t pathname;
 
 	*offset = 0;
@@ -220,13 +220,13 @@ METHOD(tcg_pts_attr_req_file_meas_t, get_directory_flag, bool,
 	return this->directory_flag;
 }
 
-METHOD(tcg_pts_attr_req_file_meas_t, get_request_id, u_int16_t,
+METHOD(tcg_pts_attr_req_file_meas_t, get_request_id, uint16_t,
 	private_tcg_pts_attr_req_file_meas_t *this)
 {
 	return this->request_id;
 }
 
-METHOD(tcg_pts_attr_req_file_meas_t, get_delimiter, u_int32_t,
+METHOD(tcg_pts_attr_req_file_meas_t, get_delimiter, uint32_t,
 	private_tcg_pts_attr_req_file_meas_t *this)
 {
 	return this->delimiter;
@@ -242,8 +242,8 @@ METHOD(tcg_pts_attr_req_file_meas_t, get_pathname, char*,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create(bool directory_flag,
-												 u_int16_t request_id,
-												 u_int32_t delimiter,
+												 uint16_t request_id,
+												 uint32_t delimiter,
 												 char *pathname)
 {
 	private_tcg_pts_attr_req_file_meas_t *this;

@@ -37,7 +37,7 @@ struct private_pts_comp_evidence_t {
 	/**
 	 * Sub-Component Depth
 	 */
-	u_int32_t depth;
+	uint32_t depth;
 
 	/**
 	 * Measurement Time
@@ -62,7 +62,7 @@ struct private_pts_comp_evidence_t {
 	/**
 	 * PCR the measurement was extended into
 	 */
-	u_int32_t extended_pcr;
+	uint32_t extended_pcr;
 
 	/**
 	 * PCR value before extension
@@ -92,7 +92,7 @@ struct private_pts_comp_evidence_t {
 };
 
 METHOD(pts_comp_evidence_t, get_comp_func_name, pts_comp_func_name_t*,
-	private_pts_comp_evidence_t *this, u_int32_t *depth)
+	private_pts_comp_evidence_t *this, uint32_t *depth)
 {
 	if (depth)
 	{
@@ -101,14 +101,14 @@ METHOD(pts_comp_evidence_t, get_comp_func_name, pts_comp_func_name_t*,
 	return this->name;
 }
 
-METHOD(pts_comp_evidence_t, get_extended_pcr, u_int32_t,
+METHOD(pts_comp_evidence_t, get_extended_pcr, uint32_t,
 	private_pts_comp_evidence_t *this)
 {
 	return this->extended_pcr;
 }
 
 METHOD(pts_comp_evidence_t, get_measurement, chunk_t,
-	private_pts_comp_evidence_t *this, u_int32_t *extended_pcr,
+	private_pts_comp_evidence_t *this, uint32_t *extended_pcr,
 	pts_meas_algorithms_t *algo, pts_pcr_transform_t *transform,
 	time_t *measurement_time)
 {
@@ -193,8 +193,8 @@ METHOD(pts_comp_evidence_t, destroy, void,
  * See header
  */
 pts_comp_evidence_t *pts_comp_evidence_create(pts_comp_func_name_t *name,
-											  u_int32_t depth,
-											  u_int32_t extended_pcr,
+											  uint32_t depth,
+											  uint32_t extended_pcr,
 											  pts_meas_algorithms_t algo,
 											  pts_pcr_transform_t transform,
 											  time_t measurement_time,

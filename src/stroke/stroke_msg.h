@@ -157,7 +157,7 @@ struct stroke_end_t {
 	char *cert_policy;
 	char *updown;
 	char *address;
-	u_int16_t ikeport;
+	uint16_t ikeport;
 	char *sourceip;
 	char *dns;
 	char *subnets;
@@ -165,9 +165,9 @@ struct stroke_end_t {
 	int hostaccess;
 	int tohost;
 	int allow_any;
-	u_int8_t protocol;
-	u_int16_t from_port;
-	u_int16_t to_port;
+	uint8_t protocol;
+	uint16_t from_port;
+	uint16_t to_port;
 };
 
 typedef struct stroke_msg_t stroke_msg_t;
@@ -177,7 +177,7 @@ typedef struct stroke_msg_t stroke_msg_t;
  */
 struct stroke_msg_t {
 	/* length of this message with all strings */
-	u_int16_t length;
+	uint16_t length;
 
 	/* type of the message */
 	enum {
@@ -263,9 +263,9 @@ struct stroke_msg_t {
 			int proxy_mode;
 			int install_policy;
 			int close_action;
-			u_int32_t reqid;
-			u_int32_t tfc;
-			u_int8_t ikedscp;
+			uint32_t reqid;
+			uint32_t tfc;
+			uint8_t ikedscp;
 
 			crl_policy_t crl_policy;
 			int unique;
@@ -279,10 +279,10 @@ struct stroke_msg_t {
 				time_t ipsec_lifetime;
 				time_t ike_lifetime;
 				time_t margin;
-				u_int64_t life_bytes;
-				u_int64_t margin_bytes;
-				u_int64_t life_packets;
-				u_int64_t margin_packets;
+				uint64_t life_bytes;
+				uint64_t margin_bytes;
+				uint64_t life_packets;
+				uint64_t margin_packets;
 				unsigned long tries;
 				unsigned long fuzz;
 			} rekey;
@@ -297,11 +297,11 @@ struct stroke_msg_t {
 				char *peerid;
 			} ikeme;
 			struct {
-				u_int32_t value;
-				u_int32_t mask;
+				uint32_t value;
+				uint32_t mask;
 			} mark_in, mark_out;
 			stroke_end_t me, other;
-			u_int32_t replay_window;
+			uint32_t replay_window;
 		} add_conn;
 
 		/* data for STR_ADD_CA */
@@ -369,7 +369,7 @@ struct stroke_msg_t {
 		} counters;
 	};
 	/* length of the string buffer */
-	u_int16_t buflen;
+	uint16_t buflen;
 	/* string buffer */
 	char buffer[];
 };

@@ -40,35 +40,35 @@ struct bio_writer_t {
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint8)(bio_writer_t *this, u_int8_t value);
+	void (*write_uint8)(bio_writer_t *this, uint8_t value);
 
 	/**
 	 * Append a 16-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint16)(bio_writer_t *this, u_int16_t value);
+	void (*write_uint16)(bio_writer_t *this, uint16_t value);
 
 	/**
 	 * Append a 24-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint24)(bio_writer_t *this, u_int32_t value);
+	void (*write_uint24)(bio_writer_t *this, uint32_t value);
 
 	/**
 	 * Append a 32-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint32)(bio_writer_t *this, u_int32_t value);
+	void (*write_uint32)(bio_writer_t *this, uint32_t value);
 
 	/**
 	 * Append a 64-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint64)(bio_writer_t *this, u_int64_t value);
+	void (*write_uint64)(bio_writer_t *this, uint64_t value);
 
 	/**
 	 * Append a chunk of data without a length header.
@@ -166,6 +166,6 @@ struct bio_writer_t {
  *
  * @param bufsize		initially allocated buffer size
  */
-bio_writer_t *bio_writer_create(u_int32_t bufsize);
+bio_writer_t *bio_writer_create(uint32_t bufsize);
 
 #endif /** BIO_WRITER_H_ @}*/

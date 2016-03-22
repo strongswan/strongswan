@@ -122,7 +122,7 @@ struct private_pb_tnc_batch_t {
 	/**
 	 * Offset into encoding (used for error reporting)
 	 */
-	u_int32_t offset;
+	uint32_t offset;
 };
 
 METHOD(pb_tnc_batch_t, get_type, pb_tnc_batch_type_t,
@@ -179,8 +179,8 @@ METHOD(pb_tnc_batch_t, add_msg, bool,
 METHOD(pb_tnc_batch_t, build, void,
 	private_pb_tnc_batch_t *this)
 {
-	u_int8_t version;
-	u_int32_t msg_len;
+	uint8_t version;
+	uint32_t msg_len;
 	chunk_t msg_value;
 	enumerator_t *enumerator;
 	pen_type_t msg_type;
@@ -205,7 +205,7 @@ METHOD(pb_tnc_batch_t, build, void,
 	enumerator = this->messages->create_enumerator(this->messages);
 	while (enumerator->enumerate(enumerator, &msg))
 	{
-		u_int8_t flags = PB_TNC_FLAG_NONE;
+		uint8_t flags = PB_TNC_FLAG_NONE;
 
 		/* build PB-TNC message */
 		msg_value = msg->get_encoding(msg);
@@ -247,8 +247,8 @@ METHOD(pb_tnc_batch_t, process_header, status_t,
 	bio_reader_t *reader;
 	pb_tnc_msg_t *msg;
 	pb_error_msg_t *err_msg;
-	u_int8_t version, flags, reserved, type;
-	u_int32_t batch_len;
+	uint8_t version, flags, reserved, type;
+	uint32_t batch_len;
 
 	if (this->encoding.len < PB_TNC_BATCH_HEADER_SIZE)
 	{
@@ -324,8 +324,8 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	bio_reader_t *reader;
 	pb_tnc_msg_t *pb_tnc_msg, *msg;
 	pb_tnc_msg_info_t *msg_infos;
-	u_int8_t flags;
-	u_int32_t vendor_id, msg_type, msg_len, offset;
+	uint8_t flags;
+	uint32_t vendor_id, msg_type, msg_len, offset;
 	chunk_t data, msg_value;
 	bool noskip_flag;
 	enum_name_t *msg_type_names;

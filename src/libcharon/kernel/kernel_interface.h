@@ -108,7 +108,7 @@ struct kernel_interface_t {
 	 * @return			SUCCESS if operation completed
 	 */
 	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst,
-						u_int8_t protocol, u_int32_t *spi);
+						uint8_t protocol, uint32_t *spi);
 
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
@@ -119,7 +119,7 @@ struct kernel_interface_t {
 	 * @return			SUCCESS if operation completed
 	 */
 	status_t (*get_cpi)(kernel_interface_t *this, host_t *src, host_t *dst,
-						u_int16_t *cpi);
+						uint16_t *cpi);
 
 	/**
 	 * Allocate or confirm a reqid to use for a given SA pair.
@@ -141,7 +141,7 @@ struct kernel_interface_t {
 	status_t (*alloc_reqid)(kernel_interface_t *this,
 							linked_list_t *local_ts, linked_list_t *remote_ts,
 							mark_t mark_in, mark_t mark_out,
-							u_int32_t *reqid);
+							uint32_t *reqid);
 
 	/**
 	 * Release a previously allocated reqid.
@@ -151,7 +151,7 @@ struct kernel_interface_t {
 	 * @param mark_out	outbound mark on SA
 	 * @return			SUCCESS if reqid released
 	 */
-	status_t (*release_reqid)(kernel_interface_t *this, u_int32_t reqid,
+	status_t (*release_reqid)(kernel_interface_t *this, uint32_t reqid,
 							  mark_t mark_in, mark_t mark_out);
 
 	/**
@@ -186,13 +186,13 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa) (kernel_interface_t *this,
-						host_t *src, host_t *dst, u_int32_t spi,
-						u_int8_t protocol, u_int32_t reqid, mark_t mark,
-						u_int32_t tfc, lifetime_cfg_t *lifetime,
-						u_int16_t enc_alg, chunk_t enc_key,
-						u_int16_t int_alg, chunk_t int_key,
-						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-						u_int32_t replay_window, bool initiator, bool encap,
+						host_t *src, host_t *dst, uint32_t spi,
+						uint8_t protocol, uint32_t reqid, mark_t mark,
+						uint32_t tfc, lifetime_cfg_t *lifetime,
+						uint16_t enc_alg, chunk_t enc_key,
+						uint16_t int_alg, chunk_t int_key,
+						ipsec_mode_t mode, uint16_t ipcomp, uint16_t cpi,
+						uint32_t replay_window, bool initiator, bool encap,
 						bool esn, bool inbound, bool update,
 						linked_list_t *src_ts, linked_list_t *dst_ts);
 
@@ -218,7 +218,7 @@ struct kernel_interface_t {
 	 *					  the kernel interface can't update the SA
 	 */
 	status_t (*update_sa)(kernel_interface_t *this,
-						  u_int32_t spi, u_int8_t protocol, u_int16_t cpi,
+						  uint32_t spi, uint8_t protocol, uint16_t cpi,
 						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
 						  bool encap, bool new_encap, mark_t mark);
@@ -237,8 +237,8 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
-						  u_int32_t spi, u_int8_t protocol, mark_t mark,
-						  u_int64_t *bytes, u_int64_t *packets, time_t *time);
+						  uint32_t spi, uint8_t protocol, mark_t mark,
+						  uint64_t *bytes, uint64_t *packets, time_t *time);
 
 	/**
 	 * Delete a previously installed SA from the SAD.
@@ -252,7 +252,7 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
-						u_int32_t spi, u_int8_t protocol, u_int16_t cpi,
+						uint32_t spi, uint8_t protocol, uint16_t cpi,
 						mark_t mark);
 
 	/**
@@ -426,7 +426,7 @@ struct kernel_interface_t {
 	 *						ALREADY_DONE if the route already exists
 	 */
 	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net,
-						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
 						   char *if_name);
 
 	/**
@@ -440,7 +440,7 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net,
-						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
 						   char *if_name);
 
 	/**
@@ -461,7 +461,7 @@ struct kernel_interface_t {
 	 * @return				TRUE if UDP decapsulation was enabled successfully
 	 */
 	bool (*enable_udp_decap)(kernel_interface_t *this, int fd, int family,
-							 u_int16_t port);
+							 uint16_t port);
 
 
 	/**
@@ -561,7 +561,7 @@ struct kernel_interface_t {
 	 * @param src_ts		source traffic selector
 	 * @param dst_ts		destination traffic selector
 	 */
-	void (*acquire)(kernel_interface_t *this, u_int32_t reqid,
+	void (*acquire)(kernel_interface_t *this, uint32_t reqid,
 					traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
 
 	/**
@@ -572,7 +572,7 @@ struct kernel_interface_t {
 	 * @param dst			destination address of expired SA
 	 * @param hard			TRUE if it is a hard expire, FALSE otherwise
 	 */
-	void (*expire)(kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+	void (*expire)(kernel_interface_t *this, uint8_t protocol, uint32_t spi,
 				   host_t *dst, bool hard);
 
 	/**
@@ -583,7 +583,7 @@ struct kernel_interface_t {
 	 * @param dst			original destination address of SA
 	 * @param remote		new remote host
 	 */
-	void (*mapping)(kernel_interface_t *this, u_int8_t protocol, u_int32_t spi,
+	void (*mapping)(kernel_interface_t *this, uint8_t protocol, uint32_t spi,
 					host_t *dst, host_t *remote);
 
 	/**
@@ -596,7 +596,7 @@ struct kernel_interface_t {
 	 * @param local			local host address to be used in the IKE_SA
 	 * @param remote		remote host address to be used in the IKE_SA
 	 */
-	void (*migrate)(kernel_interface_t *this, u_int32_t reqid,
+	void (*migrate)(kernel_interface_t *this, uint32_t reqid,
 					traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 					policy_dir_t direction, host_t *local, host_t *remote);
 
@@ -623,8 +623,8 @@ struct kernel_interface_t {
 	 * @param kernel_id			the kernel id of the algorithm
 	 * @param kernel_name		the kernel name of the algorithm
 	 */
-	void (*register_algorithm)(kernel_interface_t *this, u_int16_t alg_id,
-							   transform_type_t type, u_int16_t kernel_id,
+	void (*register_algorithm)(kernel_interface_t *this, uint16_t alg_id,
+							   transform_type_t type, uint16_t kernel_id,
 							   char *kernel_name);
 
 	/**
@@ -637,8 +637,8 @@ struct kernel_interface_t {
 	 * @param kernel_name		the kernel name of the algorithm (optional)
 	 * @return					TRUE if algorithm was found
 	 */
-	bool (*lookup_algorithm)(kernel_interface_t *this, u_int16_t alg_id,
-							 transform_type_t type, u_int16_t *kernel_id,
+	bool (*lookup_algorithm)(kernel_interface_t *this, uint16_t alg_id,
+							 transform_type_t type, uint16_t *kernel_id,
 							 char **kernel_name);
 
 	/**

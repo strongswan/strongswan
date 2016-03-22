@@ -61,7 +61,7 @@ struct gateway_t {
 	 * @param id		ID of the SA to terminate
 	 * @return			enumerator over control response XML children
 	 */
-	enumerator_t* (*terminate)(gateway_t *this, bool ike, u_int32_t id);
+	enumerator_t* (*terminate)(gateway_t *this, bool ike, uint32_t id);
 
 	/**
 	 * Initiate an IKE or a CHILD SA.

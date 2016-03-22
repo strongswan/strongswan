@@ -59,20 +59,20 @@ struct private_sha1_hasher_t {
 	/*
 	 * State of the hasher. Shared with sha1_prf.c, do not change it!!!
 	 */
-	u_int32_t state[5];
-	u_int32_t count[2];
-	u_int8_t buffer[64];
+	uint32_t state[5];
+	uint32_t count[2];
+	uint8_t buffer[64];
 };
 
 /*
  * Hash a single 512-bit block. This is the core of the algorithm. *
  */
-static void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
+static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64])
 {
-	u_int32_t a, b, c, d, e;
+	uint32_t a, b, c, d, e;
 	typedef union {
-		u_int8_t c[64];
-		u_int32_t l[16];
+		uint8_t c[64];
+		uint32_t l[16];
 	} CHAR64LONG16;
 	CHAR64LONG16 block[1];  /* use array to appear as a pointer */
 	memcpy(block, buffer, 64);
@@ -118,10 +118,10 @@ static void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 /**
  * Run your data through this. Also used in sha1_prf.
  */
-void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
+void SHA1Update(private_sha1_hasher_t* this, uint8_t *data, uint32_t len)
 {
-	u_int32_t i;
-	u_int32_t j;
+	uint32_t i;
+	uint32_t j;
 
 	j = this->count[0];
 	if ((this->count[0] += len << 3) < j)
@@ -151,15 +151,15 @@ void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
 /*
  * Add padding and return the message digest.
  */
-static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
+static void SHA1Final(private_sha1_hasher_t *this, uint8_t *digest)
 {
-	u_int32_t i;
-	u_int8_t finalcount[8];
-	u_int8_t c;
+	uint32_t i;
+	uint8_t finalcount[8];
+	uint8_t c;
 
 	for (i = 0; i < 8; i++)
 	{
-		finalcount[i] = (u_int8_t)((this->count[(i >= 4 ? 0 : 1)]
+		finalcount[i] = (uint8_t)((this->count[(i >= 4 ? 0 : 1)]
 		 >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
 	}
 	c = 0200;
@@ -172,7 +172,7 @@ static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 	SHA1Update(this, finalcount, 8);  /* Should cause a SHA1Transform() */
 	for (i = 0; i < 20; i++)
 	{
-		digest[i] = (u_int8_t)((this->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
+		digest[i] = (uint8_t)((this->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
 	}
 }
 
@@ -191,7 +191,7 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_sha1_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)

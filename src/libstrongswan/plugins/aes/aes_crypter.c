@@ -49,27 +49,27 @@ struct private_aes_crypter_t {
 	/**
 	 * Number of words in the key input block.
 	 */
-	u_int32_t aes_Nkey;
+	uint32_t aes_Nkey;
 
 	/**
 	 * The number of cipher rounds.
 	 */
-	u_int32_t aes_Nrnd;
+	uint32_t aes_Nrnd;
 
 	/**
 	* The encryption key schedule.
 	*/
-	u_int32_t aes_e_key[AES_KS_LENGTH];
+	uint32_t aes_e_key[AES_KS_LENGTH];
 
 	/**
 	* The decryption key schedule.
 	*/
-	u_int32_t aes_d_key[AES_KS_LENGTH];
+	uint32_t aes_d_key[AES_KS_LENGTH];
 
 	/**
 	* Key size of this AES cypher object.
 	*/
-	u_int32_t key_size;
+	uint32_t key_size;
 };
 
 /**
@@ -88,7 +88,7 @@ struct private_aes_crypter_t {
  */
 #define bval(x,n)       ((unsigned char)((x) >> 8 * (n)))
 #define bytes2word(b0, b1, b2, b3)  \
-        ((u_int32_t)(b3) << 24 | (u_int32_t)(b2) << 16 | (u_int32_t)(b1) << 8 | (b0))
+        ((uint32_t)(b3) << 24 | (uint32_t)(b2) << 16 | (uint32_t)(b1) << 8 | (b0))
 
 
 /* little endian processor without data alignment restrictions: AES_LE_OK */
@@ -105,15 +105,15 @@ struct private_aes_crypter_t {
 
 #ifdef AES_LE_OK
 /* little endian processor without data alignment restrictions */
-#define word_in(x)      *(u_int32_t*)(x)
-#define const_word_in(x)      *(const u_int32_t*)(x)
-#define word_out(x,v)   *(u_int32_t*)(x) = (v)
-#define const_word_out(x,v)   *(const u_int32_t*)(x) = (v)
+#define word_in(x)      *(uint32_t*)(x)
+#define const_word_in(x)      *(const uint32_t*)(x)
+#define word_out(x,v)   *(uint32_t*)(x) = (v)
+#define const_word_out(x,v)   *(const uint32_t*)(x) = (v)
 #else
 /* slower but generic big endian or with data alignment restrictions */
 /* some additional "const" touches to stop "gcc -Wcast-qual" complains --jjo */
-#define word_in(x)      ((u_int32_t)(((unsigned char *)(x))[0])|((u_int32_t)(((unsigned char *)(x))[1])<<8)|((u_int32_t)(((unsigned char *)(x))[2])<<16)|((u_int32_t)(((unsigned char *)(x))[3])<<24))
-#define const_word_in(x)      ((const u_int32_t)(((const unsigned char *)(x))[0])|((const u_int32_t)(((const unsigned char *)(x))[1])<<8)|((const u_int32_t)(((const unsigned char *)(x))[2])<<16)|((const u_int32_t)(((const unsigned char *)(x))[3])<<24))
+#define word_in(x)      ((uint32_t)(((unsigned char *)(x))[0])|((uint32_t)(((unsigned char *)(x))[1])<<8)|((uint32_t)(((unsigned char *)(x))[2])<<16)|((uint32_t)(((unsigned char *)(x))[3])<<24))
+#define const_word_in(x)      ((const uint32_t)(((const unsigned char *)(x))[0])|((const uint32_t)(((const unsigned char *)(x))[1])<<8)|((const uint32_t)(((const unsigned char *)(x))[2])<<16)|((const uint32_t)(((const unsigned char *)(x))[3])<<24))
 #define word_out(x,v)   ((unsigned char *)(x))[0]=(v),((unsigned char *)(x))[1]=((v)>>8),((unsigned char *)(x))[2]=((v)>>16),((unsigned char *)(x))[3]=((v)>>24)
 #define const_word_out(x,v)   ((const unsigned char *)(x))[0]=(v),((const unsigned char *)(x))[1]=((v)>>8),((const unsigned char *)(x))[2]=((v)>>16),((const unsigned char *)(x))[3]=((v)>>24)
 #endif
@@ -156,7 +156,7 @@ struct private_aes_crypter_t {
 // this table can be a table of bytes if the key schedule
 // code is adjusted accordingly
 
-static const u_int32_t rcon_tab[29] =
+static const uint32_t rcon_tab[29] =
 {
     w0(01), w0(02), w0(04), w0(08),
     w0(10), w0(20), w0(40), w0(80),
@@ -320,7 +320,7 @@ static const u_int32_t rcon_tab[29] =
 #undef  r
 #define r   r0
 
-static const u_int32_t ft_tab[4][256] =
+static const uint32_t ft_tab[4][256] =
 {   {   f_table },
 #undef  r
 #define r   r1
@@ -335,7 +335,7 @@ static const u_int32_t ft_tab[4][256] =
 
 #undef  r
 #define r   r0
-static const u_int32_t it_tab[4][256] =
+static const uint32_t it_tab[4][256] =
 {   {   i_table },
 #undef  r
 #define r   r1
@@ -386,7 +386,7 @@ static const u_int32_t it_tab[4][256] =
 
 #undef  r
 #define r(p,q,r,s)  w0(q)
-static const u_int32_t fl_tab[4][256] =
+static const uint32_t fl_tab[4][256] =
 {   {   f_table    },
 #undef  r
 #define r(p,q,r,s)   w1(q)
@@ -401,7 +401,7 @@ static const u_int32_t fl_tab[4][256] =
 
 #undef  w
 #define w   w0
-static const u_int32_t il_tab[4][256] =
+static const uint32_t il_tab[4][256] =
 {   {   li_table    },
 #undef  w
 #define w   w1
@@ -483,7 +483,7 @@ static const u_int32_t il_tab[4][256] =
 #undef r
 #define r   r0
 
-static const u_int32_t im_tab[4][256] =
+static const uint32_t im_tab[4][256] =
 {   {   m_table },
 #undef  r
 #define r   r1
@@ -717,8 +717,8 @@ static const u_int32_t im_tab[4][256] =
 static void encrypt_block(const private_aes_crypter_t *this,
 						  const unsigned char in_blk[], unsigned char out_blk[])
 {
-	u_int32_t locals(b0, b1);
-	const u_int32_t *kp = this->aes_e_key;
+	uint32_t locals(b0, b1);
+	const uint32_t *kp = this->aes_e_key;
 
 	state_in(b0, in_blk, kp); kp += nc;
 
@@ -754,8 +754,8 @@ static void encrypt_block(const private_aes_crypter_t *this,
 static void decrypt_block(const private_aes_crypter_t *this,
 						  const unsigned char in_blk[], unsigned char out_blk[])
 {
-	u_int32_t locals(b0, b1);
-	const u_int32_t *kp = this->aes_d_key;
+	uint32_t locals(b0, b1);
+	const uint32_t *kp = this->aes_d_key;
 
 	state_in(b0, in_blk, kp); kp += nc;
 
@@ -789,8 +789,8 @@ METHOD(crypter_t, decrypt, bool,
 	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	int pos;
-	const u_int32_t *iv_i;
-	u_int8_t *in, *out;
+	const uint32_t *iv_i;
+	uint8_t *in, *out;
 
 	if (decrypted)
 	{
@@ -811,16 +811,16 @@ METHOD(crypter_t, decrypt, bool,
 		decrypt_block(this, in, out);
 		if (pos==0)
 		{
-			iv_i=(const u_int32_t*) (iv.ptr);
+			iv_i=(const uint32_t*) (iv.ptr);
 		}
 		else
 		{
-			iv_i=(const u_int32_t*) (in-16);
+			iv_i=(const uint32_t*) (in-16);
 		}
-		*((u_int32_t *)(&out[ 0])) ^= iv_i[0];
-		*((u_int32_t *)(&out[ 4])) ^= iv_i[1];
-		*((u_int32_t *)(&out[ 8])) ^= iv_i[2];
-		*((u_int32_t *)(&out[12])) ^= iv_i[3];
+		*((uint32_t *)(&out[ 0])) ^= iv_i[0];
+		*((uint32_t *)(&out[ 4])) ^= iv_i[1];
+		*((uint32_t *)(&out[ 8])) ^= iv_i[2];
+		*((uint32_t *)(&out[12])) ^= iv_i[3];
 		in-=16;
 		out-=16;
 		pos-=16;
@@ -832,8 +832,8 @@ METHOD(crypter_t, encrypt, bool,
 	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	int pos;
-	const u_int32_t *iv_i;
-	u_int8_t *in, *out;
+	const uint32_t *iv_i;
+	uint8_t *in, *out;
 
 	in = data.ptr;
 	out = data.ptr;
@@ -848,16 +848,16 @@ METHOD(crypter_t, encrypt, bool,
 	{
 		if (pos==0)
 		{
-			iv_i=(const u_int32_t*) iv.ptr;
+			iv_i=(const uint32_t*) iv.ptr;
 		}
 		else
 		{
-			iv_i=(const u_int32_t*) (out-16);
+			iv_i=(const uint32_t*) (out-16);
 		}
-		*((u_int32_t *)(&out[ 0])) = iv_i[0]^*((const u_int32_t *)(&in[ 0]));
-		*((u_int32_t *)(&out[ 4])) = iv_i[1]^*((const u_int32_t *)(&in[ 4]));
-		*((u_int32_t *)(&out[ 8])) = iv_i[2]^*((const u_int32_t *)(&in[ 8]));
-		*((u_int32_t *)(&out[12])) = iv_i[3]^*((const u_int32_t *)(&in[12]));
+		*((uint32_t *)(&out[ 0])) = iv_i[0]^*((const uint32_t *)(&in[ 0]));
+		*((uint32_t *)(&out[ 4])) = iv_i[1]^*((const uint32_t *)(&in[ 4]));
+		*((uint32_t *)(&out[ 8])) = iv_i[2]^*((const uint32_t *)(&in[ 8]));
+		*((uint32_t *)(&out[12])) = iv_i[3]^*((const uint32_t *)(&in[12]));
 		encrypt_block(this, out, out);
 		in+=16;
 		out+=16;
@@ -887,8 +887,8 @@ METHOD(crypter_t, get_key_size, size_t,
 METHOD(crypter_t, set_key, bool,
 	private_aes_crypter_t *this, chunk_t key)
 {
-	u_int32_t    *kf, *kt, rci, f = 0;
-	u_int8_t *in_key = key.ptr;
+	uint32_t    *kf, *kt, rci, f = 0;
+	uint8_t *in_key = key.ptr;
 
 	this->aes_Nrnd = (this->aes_Nkey > (nc) ? this->aes_Nkey : (nc)) + 6;
 
@@ -948,7 +948,7 @@ METHOD(crypter_t, set_key, bool,
 
 	if(!f)
 	{
-		u_int32_t i;
+		uint32_t i;
 
 		kt = this->aes_d_key + nc * this->aes_Nrnd;
 		kf = this->aes_e_key;

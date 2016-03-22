@@ -316,7 +316,7 @@ static __m128i icv_tailer(private_aesni_gcm_t *this, __m128i y,
 	__m128i b;
 
 	htoun64(&b, alen * 8);
-	htoun64((u_char*)&b + sizeof(u_int64_t), dlen * 8);
+	htoun64((u_char*)&b + sizeof(uint64_t), dlen * 8);
 
 	return ghash(this->h, y, b);
 }

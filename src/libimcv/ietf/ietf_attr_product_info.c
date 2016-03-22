@@ -74,7 +74,7 @@ struct private_ietf_attr_product_info_t {
 	/**
 	 * Product ID
 	 */
-	u_int16_t product_id;
+	uint16_t product_id;
 
 	/**
 	 * Product Name
@@ -131,7 +131,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_product_info_t *this, u_int32_t *offset)
+	private_ietf_attr_product_info_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 	chunk_t product_name;
@@ -190,7 +190,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 }
 
 METHOD(ietf_attr_product_info_t, get_info, chunk_t,
-	private_ietf_attr_product_info_t *this, pen_t *vendor_id, u_int16_t *id)
+	private_ietf_attr_product_info_t *this, pen_t *vendor_id, uint16_t *id)
 {
 	if (vendor_id)
 	{
@@ -206,7 +206,7 @@ METHOD(ietf_attr_product_info_t, get_info, chunk_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
+pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, uint16_t id,
 											 chunk_t name)
 {
 	private_ietf_attr_product_info_t *this;

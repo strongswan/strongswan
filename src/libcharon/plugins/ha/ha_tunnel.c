@@ -79,7 +79,7 @@ struct private_ha_tunnel_t {
 	/**
 	 * Reqid of installed trap
 	 */
-	u_int32_t trap;
+	uint32_t trap;
 
 	/**
 	 * backend for HA SA

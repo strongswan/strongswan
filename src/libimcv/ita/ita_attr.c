@@ -35,7 +35,7 @@ ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_DEVICE_ID,
 /**
  * See header
  */
-pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, size_t length,
+pa_tnc_attr_t* ita_attr_create_from_data(uint32_t type, size_t length,
 										 chunk_t value)
 {
 	switch (type)

@@ -110,16 +110,16 @@ typedef struct entry_t entry_t;
  * Functional component entry
  */
 struct entry_t {
-	u_int8_t flags;
-	u_int32_t depth;
+	uint8_t flags;
+	uint32_t depth;
 	pts_comp_func_name_t *name;
 };
 
 /**
  * Enumerate functional component entries
  */
-static bool entry_filter(void *null, entry_t **entry, u_int8_t *flags,
-						 void *i2, u_int32_t *depth, void *i3,
+static bool entry_filter(void *null, entry_t **entry, uint8_t *flags,
+						 void *i2, uint32_t *depth, void *i3,
 						 pts_comp_func_name_t **name)
 {
 	*flags = (*entry)->flags;
@@ -195,11 +195,11 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_req_func_comp_evid_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_req_func_comp_evid_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t depth, vendor_id, name;
-	u_int8_t flags, fam_and_qualifier, qualifier;
+	uint32_t depth, vendor_id, name;
+	uint8_t flags, fam_and_qualifier, qualifier;
 	status_t status = FAILED;
 	entry_t *entry = NULL;
 
@@ -296,8 +296,8 @@ METHOD(pa_tnc_attr_t, destroy, void,
 }
 
 METHOD(tcg_pts_attr_req_func_comp_evid_t, add_component, void,
-	private_tcg_pts_attr_req_func_comp_evid_t *this, u_int8_t flags,
-	u_int32_t depth, pts_comp_func_name_t *name)
+	private_tcg_pts_attr_req_func_comp_evid_t *this, uint8_t flags,
+	uint32_t depth, pts_comp_func_name_t *name)
 {
 	entry_t *entry;
 

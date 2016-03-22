@@ -57,7 +57,7 @@
 /**
  * Magic value for an undefined lifetime
  */
-#define LFT_UNDEFINED (~(u_int64_t)0)
+#define LFT_UNDEFINED (~(uint64_t)0)
 
 /**
  * Default IKE rekey time
@@ -72,7 +72,7 @@
 /**
  * Undefined replay window
  */
-#define REPLAY_UNDEFINED (~(u_int32_t)0)
+#define REPLAY_UNDEFINED (~(uint32_t)0)
 
 typedef struct private_vici_config_t private_vici_config_t;
 
@@ -242,7 +242,7 @@ typedef struct {
 typedef struct {
 	request_data_t *request;
 	auth_cfg_t *cfg;
-	u_int32_t round;
+	uint32_t round;
 } auth_data_t;
 
 /**
@@ -259,20 +259,20 @@ static void free_auth_data(auth_data_t *data)
  */
 typedef struct {
 	request_data_t *request;
-	u_int32_t version;
+	uint32_t version;
 	bool aggressive;
 	bool encap;
 	bool mobike;
 	bool send_certreq;
 	bool pull;
 	cert_policy_t send_cert;
-	u_int64_t dpd_delay;
-	u_int64_t dpd_timeout;
+	uint64_t dpd_delay;
+	uint64_t dpd_timeout;
 	fragmentation_t fragmentation;
 	unique_policy_t unique;
-	u_int32_t keyingtries;
-	u_int32_t local_port;
-	u_int32_t remote_port;
+	uint32_t keyingtries;
+	uint32_t local_port;
+	uint32_t remote_port;
 	char *local_addrs;
 	char *remote_addrs;
 	linked_list_t *local;
@@ -281,10 +281,10 @@ typedef struct {
 	linked_list_t *children;
 	linked_list_t *vips;
 	char *pools;
-	u_int64_t reauth_time;
-	u_int64_t rekey_time;
-	u_int64_t over_time;
-	u_int64_t rand_time;
+	uint64_t reauth_time;
+	uint64_t rekey_time;
+	uint64_t over_time;
+	uint64_t rand_time;
 } peer_data_t;
 
 /**
@@ -428,15 +428,15 @@ typedef struct {
 	bool ipcomp;
 	bool policies;
 	ipsec_mode_t mode;
-	u_int32_t replay_window;
+	uint32_t replay_window;
 	action_t dpd_action;
 	action_t start_action;
 	action_t close_action;
-	u_int32_t reqid;
-	u_int32_t tfc;
+	uint32_t reqid;
+	uint32_t tfc;
 	mark_t mark_in;
 	mark_t mark_out;
-	u_int64_t inactivity;
+	uint64_t inactivity;
 	linked_list_t *proposals;
 	linked_list_t *local_ts;
 	linked_list_t *remote_ts;
@@ -568,8 +568,8 @@ CALLBACK(parse_ts, bool,
 	struct protoent *protoent;
 	struct servent *svc;
 	long int p;
-	u_int16_t from = 0, to = 0xffff;
-	u_int8_t proto = 0;
+	uint16_t from = 0, to = 0xffff;
+	uint8_t proto = 0;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
@@ -613,7 +613,7 @@ CALLBACK(parse_ts, bool,
 				{
 					return FALSE;
 				}
-				proto = (u_int8_t)p;
+				proto = (uint8_t)p;
 			}
 		}
 		if (streq(port, "opaque"))
@@ -809,10 +809,10 @@ CALLBACK(parse_action, bool,
 }
 
 /**
- * Parse a u_int32_t
+ * Parse a uint32_t
  */
 CALLBACK(parse_uint32, bool,
-	u_int32_t *out, chunk_t v)
+	uint32_t *out, chunk_t v)
 {
 	char buf[16], *end;
 	u_long l;
@@ -831,10 +831,10 @@ CALLBACK(parse_uint32, bool,
 }
 
 /**
- * Parse a u_int64_t
+ * Parse a uint64_t
  */
 CALLBACK(parse_uint64, bool,
-	u_int64_t *out, chunk_t v)
+	uint64_t *out, chunk_t v)
 {
 	char buf[16], *end;
 	unsigned long long l;
@@ -856,7 +856,7 @@ CALLBACK(parse_uint64, bool,
  * Parse a relative time
  */
 CALLBACK(parse_time, bool,
-	u_int64_t *out, chunk_t v)
+	uint64_t *out, chunk_t v)
 {
 	char buf[16], *end;
 	u_long l;
@@ -906,7 +906,7 @@ CALLBACK(parse_time, bool,
  * Parse byte volume
  */
 CALLBACK(parse_bytes, bool,
-	u_int64_t *out, chunk_t v)
+	uint64_t *out, chunk_t v)
 {
 	char buf[16], *end;
 	unsigned long long l;
@@ -968,7 +968,7 @@ CALLBACK(parse_mark, bool,
  * Parse TFC padding option
  */
 CALLBACK(parse_tfc, bool,
-	u_int32_t *out, chunk_t v)
+	uint32_t *out, chunk_t v)
 {
 	if (chunk_equals(v, chunk_from_str("mtu")))
 	{
@@ -1649,12 +1649,12 @@ CALLBACK(peer_sn, bool,
 /**
  * Find reqid of an existing CHILD_SA
  */
-static u_int32_t find_reqid(child_cfg_t *cfg)
+static uint32_t find_reqid(child_cfg_t *cfg)
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	reqid = charon->traps->find_reqid(charon->traps, cfg);
 	if (reqid)
@@ -1723,7 +1723,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t id = 0, others;
+	uint32_t id = 0, others;
 	array_t *ids = NULL, *ikeids = NULL;
 	char *name;
 

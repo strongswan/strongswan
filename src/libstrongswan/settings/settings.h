@@ -51,13 +51,13 @@ bool settings_value_as_bool(char *value, bool def);
 int settings_value_as_int(char *value, int def);
 
 /**
- * Convert a string value returned by a key/value enumerator to an u_int64_t.
+ * Convert a string value returned by a key/value enumerator to an uint64_t.
  *
  * @see settings_t.create_key_value_enumerator()
  * @param value			the string value
  * @param def			the default value, if value is NULL or invalid
  */
-u_int64_t settings_value_as_uint64(char *value, u_int64_t def);
+uint64_t settings_value_as_uint64(char *value, uint64_t def);
 
 /**
  * Convert a string value returned by a key/value enumerator to a double.
@@ -77,7 +77,7 @@ double settings_value_as_double(char *value, double def);
  * @param value			the string value
  * @param def			the default value, if value is NULL or invalid
  */
-u_int32_t settings_value_as_time(char *value, u_int32_t def);
+uint32_t settings_value_as_time(char *value, uint32_t def);
 
 /**
  * Generic configuration options read from a config file.
@@ -203,7 +203,7 @@ struct settings_t {
 	 * @param ...		argument list for key
 	 * @return			value of the key (in seconds)
 	 */
-	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
+	uint32_t (*get_time)(settings_t *this, char *key, uint32_t def, ...);
 
 	/**
 	 * Set a string value.
@@ -248,7 +248,7 @@ struct settings_t {
 	 * @param def		value to set
 	 * @param ...		argument list for key
 	 */
-	void (*set_time)(settings_t *this, char *key, u_int32_t value, ...);
+	void (*set_time)(settings_t *this, char *key, uint32_t value, ...);
 
 	/**
 	 * Set a default for string value.

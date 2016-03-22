@@ -79,7 +79,7 @@ struct private_tnccs_11_t {
 	/**
 	 * Type of TNC client authentication
 	 */
-	u_int32_t auth_type;
+	uint32_t auth_type;
 
 	/**
 	 * Connection ID assigned to this TNCCS connection
@@ -205,7 +205,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			imc_imv_msg_t *imc_imv_msg;
 			TNC_MessageType msg_type;
 			chunk_t msg_body;
-			u_int32_t msg_vid, msg_subtype;
+			uint32_t msg_vid, msg_subtype;
 			enum_name_t *pa_subtype_names;
 
 			imc_imv_msg = (imc_imv_msg_t*)msg;
@@ -622,20 +622,20 @@ METHOD(tnccs_t, set_transport, void,
 	this->transport = transport;
 }
 
-METHOD(tnccs_t, get_auth_type, u_int32_t,
+METHOD(tnccs_t, get_auth_type, uint32_t,
 	private_tnccs_11_t *this)
 {
 	return this->auth_type;
 }
 
 METHOD(tnccs_t, set_auth_type, void,
-	private_tnccs_11_t *this, u_int32_t auth_type)
+	private_tnccs_11_t *this, uint32_t auth_type)
 {
 	this->auth_type = auth_type;
 }
 
 METHOD(tnccs_t, get_pdp_server, chunk_t,
-	private_tnccs_11_t *this, u_int16_t *port)
+	private_tnccs_11_t *this, uint16_t *port)
 {
 	*port = 0;
 

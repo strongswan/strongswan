@@ -52,7 +52,7 @@ struct private_esp_packet_t {
 	/**
 	 * Next Header info (e.g. IPPROTO_IPIP)
 	 */
-	u_int8_t next_header;
+	uint8_t next_header;
 
 };
 
@@ -97,14 +97,14 @@ METHOD(packet_t, set_data, void,
 	return this->packet->set_data(this->packet, data);
 }
 
-METHOD(packet_t, get_dscp, u_int8_t,
+METHOD(packet_t, get_dscp, uint8_t,
 	private_esp_packet_t *this)
 {
 	return this->packet->get_dscp(this->packet);
 }
 
 METHOD(packet_t, set_dscp, void,
-	private_esp_packet_t *this, u_int8_t value)
+	private_esp_packet_t *this, uint8_t value)
 {
 	this->packet->set_dscp(this->packet, value);
 }
@@ -127,10 +127,10 @@ METHOD(packet_t, clone_, packet_t*,
 }
 
 METHOD(esp_packet_t, parse_header, bool,
-	private_esp_packet_t *this, u_int32_t *spi)
+	private_esp_packet_t *this, uint32_t *spi)
 {
 	bio_reader_t *reader;
-	u_int32_t seq;
+	uint32_t seq;
 
 	reader = bio_reader_create(this->packet->get_data(this->packet));
 	if (!reader->read_uint32(reader, spi) ||
@@ -156,7 +156,7 @@ static bool check_padding(chunk_t padding)
 
 	for (i = 0; i < padding.len; ++i)
 	{
-		if (padding.ptr[i] != (u_int8_t)(i + 1))
+		if (padding.ptr[i] != (uint8_t)(i + 1))
 		{
 			return FALSE;
 		}
@@ -169,7 +169,7 @@ static bool check_padding(chunk_t padding)
  */
 static bool remove_padding(private_esp_packet_t *this, chunk_t plaintext)
 {
-	u_int8_t next_header, pad_length;
+	uint8_t next_header, pad_length;
 	chunk_t padding, payload;
 	bio_reader_t *reader;
 
@@ -211,7 +211,7 @@ METHOD(esp_packet_t, decrypt, status_t,
 	private_esp_packet_t *this, esp_context_t *esp_context)
 {
 	bio_reader_t *reader;
-	u_int32_t spi, seq;
+	uint32_t spi, seq;
 	chunk_t data, iv, icv, aad, ciphertext, plaintext;
 	aead_t *aead;
 
@@ -272,16 +272,16 @@ static void generate_padding(chunk_t padding)
 
 	for (i = 0; i < padding.len; ++i)
 	{
-		padding.ptr[i] = (u_int8_t)(i + 1);
+		padding.ptr[i] = (uint8_t)(i + 1);
 	}
 }
 
 METHOD(esp_packet_t, encrypt, status_t,
-	private_esp_packet_t *this, esp_context_t *esp_context, u_int32_t spi)
+	private_esp_packet_t *this, esp_context_t *esp_context, uint32_t spi)
 {
 	chunk_t iv, icv, aad, padding, payload, ciphertext;
 	bio_writer_t *writer;
-	u_int32_t next_seqno;
+	uint32_t next_seqno;
 	size_t blocksize, plainlen;
 	aead_t *aead;
 	iv_gen_t *iv_gen;
@@ -316,7 +316,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	plainlen += padding.len;
 
 	/* len = spi, seq, IV, plaintext, ICV */
-	writer = bio_writer_create(2 * sizeof(u_int32_t) + iv.len + plainlen +
+	writer = bio_writer_create(2 * sizeof(uint32_t) + iv.len + plainlen +
 							   icv.len);
 	writer->write_uint32(writer, ntohl(spi));
 	writer->write_uint32(writer, next_seqno);
@@ -349,7 +349,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 
 	DBG3(DBG_ESP, "ESP before encryption:\n  payload = %B\n  padding = %B\n  "
 		 "padding length = %hhu, next header = %hhu", &payload, &padding,
-		 (u_int8_t)padding.len, this->next_header);
+		 (uint8_t)padding.len, this->next_header);
 
 	/* encrypt/authenticate the content inline */
 	if (!aead->encrypt(aead, ciphertext, aad, iv, NULL))
@@ -368,7 +368,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	return SUCCESS;
 }
 
-METHOD(esp_packet_t, get_next_header, u_int8_t,
+METHOD(esp_packet_t, get_next_header, uint8_t,
 	private_esp_packet_t *this)
 {
 	return this->next_header;

@@ -15,8 +15,8 @@
 
 #include "ha_kernel.h"
 
-typedef u_int32_t u32;
-typedef u_int8_t u8;
+typedef uint32_t u32;
+typedef uint8_t u8;
 
 #include <sys/utsname.h>
 #include <string.h>
@@ -115,9 +115,9 @@ static jhash_version_t get_jhash_version()
 /**
  * jhash algorithm of two words, as used in kernel (using 0 as initval)
  */
-static u_int32_t jhash(jhash_version_t version, u_int32_t a, u_int32_t b)
+static uint32_t jhash(jhash_version_t version, uint32_t a, uint32_t b)
 {
-	u_int32_t c = 0;
+	uint32_t c = 0;
 
 	switch (version)
 	{
@@ -162,7 +162,7 @@ static u_int32_t jhash(jhash_version_t version, u_int32_t a, u_int32_t b)
 /**
  * Segmentate a calculated hash
  */
-static u_int hash2segment(private_ha_kernel_t *this, u_int64_t hash)
+static u_int hash2segment(private_ha_kernel_t *this, uint64_t hash)
 {
 	return ((hash * this->count) >> 32) + 1;
 }
@@ -170,11 +170,11 @@ static u_int hash2segment(private_ha_kernel_t *this, u_int64_t hash)
 /**
  * Get a host as an integer for hashing
  */
-static u_int32_t host2int(host_t *host)
+static uint32_t host2int(host_t *host)
 {
 	if (host->get_family(host) == AF_INET)
 	{
-		return *(u_int32_t*)host->get_address(host).ptr;
+		return *(uint32_t*)host->get_address(host).ptr;
 	}
 	return 0;
 }
@@ -183,7 +183,7 @@ METHOD(ha_kernel_t, get_segment, u_int,
 	private_ha_kernel_t *this, host_t *host)
 {
 	unsigned long hash;
-	u_int32_t addr;
+	uint32_t addr;
 
 	addr = host2int(host);
 	hash = jhash(this->version, ntohl(addr), 0);
@@ -192,10 +192,10 @@ METHOD(ha_kernel_t, get_segment, u_int,
 }
 
 METHOD(ha_kernel_t, get_segment_spi, u_int,
-	private_ha_kernel_t *this, host_t *host, u_int32_t spi)
+	private_ha_kernel_t *this, host_t *host, uint32_t spi)
 {
 	unsigned long hash;
-	u_int32_t addr;
+	uint32_t addr;
 
 	addr = host2int(host);
 	hash = jhash(this->version, ntohl(addr), ntohl(spi));

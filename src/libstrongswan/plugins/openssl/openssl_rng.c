@@ -47,7 +47,7 @@ struct private_openssl_rng_t {
 };
 
 METHOD(rng_t, get_bytes, bool,
-	private_openssl_rng_t *this, size_t bytes, u_int8_t *buffer)
+	private_openssl_rng_t *this, size_t bytes, uint8_t *buffer)
 {
 	if (this->quality == RNG_WEAK)
 	{

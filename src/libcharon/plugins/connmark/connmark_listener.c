@@ -57,7 +57,7 @@ struct private_connmark_listener_t {
 static bool ts2in(traffic_selector_t *ts,
 				  struct in_addr *addr, struct in_addr *mask)
 {
-	u_int8_t bits;
+	uint8_t bits;
 	host_t *net;
 
 	if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE &&
@@ -120,15 +120,15 @@ static bool manage_rule(struct iptc_handle *ipth, const char *chain,
  */
 static bool manage_pre_esp_in_udp(private_connmark_listener_t *this,
 								  struct iptc_handle *ipth, bool add,
-								  u_int mark, u_int32_t spi,
+								  u_int mark, uint32_t spi,
 								  host_t *dst, host_t *src)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_udp));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_mark_tginfo2));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -178,15 +178,15 @@ static bool manage_pre_esp_in_udp(private_connmark_listener_t *this,
  */
 static bool manage_pre_esp(private_connmark_listener_t *this,
 						   struct iptc_handle *ipth, bool add,
-						   u_int mark, u_int32_t spi,
+						   u_int mark, uint32_t spi,
 						   host_t *dst, host_t *src)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_esp));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_mark_tginfo2));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -235,7 +235,7 @@ static bool manage_pre_esp(private_connmark_listener_t *this,
  */
 static bool manage_pre(private_connmark_listener_t *this,
 					   struct iptc_handle *ipth, bool add,
-					   u_int mark, u_int32_t spi, bool encap,
+					   u_int mark, uint32_t spi, bool encap,
 					   host_t *dst, host_t *src)
 {
 	if (encap)
@@ -250,15 +250,15 @@ static bool manage_pre(private_connmark_listener_t *this,
  */
 static bool manage_in(private_connmark_listener_t *this,
 					  struct iptc_handle *ipth, bool add,
-					  u_int mark, u_int32_t spi,
+					  u_int mark, uint32_t spi,
 					  traffic_selector_t *dst, traffic_selector_t *src)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_policy_info));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_connmark_tginfo1));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -316,12 +316,12 @@ static bool manage_out(private_connmark_listener_t *this,
 					   struct iptc_handle *ipth, bool add,
 					   traffic_selector_t *dst, traffic_selector_t *src)
 {
-	u_int16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
+	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
 							  XT_ALIGN(sizeof(struct xt_mark_mtinfo1));
-	u_int16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
-	u_int16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
+	uint16_t target_offset = XT_ALIGN(sizeof(struct ipt_entry)) + match_size;
+	uint16_t target_size	= XT_ALIGN(sizeof(struct ipt_entry_target)) +
 							  XT_ALIGN(sizeof(struct xt_connmark_tginfo1));
-	u_int16_t entry_size	= target_offset + target_size;
+	uint16_t entry_size	= target_offset + target_size;
 	u_char ipt[entry_size], *pos = ipt;
 	struct ipt_entry *e;
 
@@ -402,7 +402,7 @@ static bool manage_policies(private_connmark_listener_t *this,
 {
 	traffic_selector_t *local, *remote;
 	enumerator_t *enumerator;
-	u_int32_t spi;
+	uint32_t spi;
 	u_int mark;
 	bool done = TRUE;
 

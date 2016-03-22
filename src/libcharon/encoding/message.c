@@ -829,7 +829,7 @@ typedef struct {
 	 * fragments we expect.
 	 * For IKEv2 we store the total number of fragment we received last.
 	 */
-	u_int16_t last;
+	uint16_t last;
 
 	/**
 	 * Length of all currently received fragments.
@@ -858,12 +858,12 @@ struct private_message_t {
 	/**
 	 * Minor version of message.
 	 */
-	u_int8_t major_version;
+	uint8_t major_version;
 
 	/**
 	 * Major version of message.
 	 */
-	u_int8_t minor_version;
+	uint8_t minor_version;
 
 	/**
 	 * First Payload in message.
@@ -903,7 +903,7 @@ struct private_message_t {
 	/**
 	 * Message ID of this message.
 	 */
-	u_int32_t message_id;
+	uint32_t message_id;
 
 	/**
 	 * ID of assigned IKE_SA.
@@ -953,7 +953,7 @@ struct private_message_t {
 typedef struct {
 
 	/** fragment number */
-	u_int8_t num;
+	uint8_t num;
 
 	/** fragment data */
 	chunk_t data;
@@ -1024,48 +1024,48 @@ METHOD(message_t, get_ike_sa_id, ike_sa_id_t*,
 }
 
 METHOD(message_t, set_message_id, void,
-	private_message_t *this,u_int32_t message_id)
+	private_message_t *this,uint32_t message_id)
 {
 	this->message_id = message_id;
 }
 
-METHOD(message_t, get_message_id, u_int32_t,
+METHOD(message_t, get_message_id, uint32_t,
 	private_message_t *this)
 {
 	return this->message_id;
 }
 
-METHOD(message_t, get_initiator_spi, u_int64_t,
+METHOD(message_t, get_initiator_spi, uint64_t,
 	private_message_t *this)
 {
 	return (this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 }
 
-METHOD(message_t, get_responder_spi, u_int64_t,
+METHOD(message_t, get_responder_spi, uint64_t,
 	private_message_t *this)
 {
 	return (this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 }
 
 METHOD(message_t, set_major_version, void,
-	private_message_t *this, u_int8_t major_version)
+	private_message_t *this, uint8_t major_version)
 {
 	this->major_version = major_version;
 }
 
-METHOD(message_t, get_major_version, u_int8_t,
+METHOD(message_t, get_major_version, uint8_t,
 	private_message_t *this)
 {
 	return this->major_version;
 }
 
 METHOD(message_t, set_minor_version, void,
-	private_message_t *this,u_int8_t minor_version)
+	private_message_t *this,uint8_t minor_version)
 {
 	this->minor_version = minor_version;
 }
 
-METHOD(message_t, get_minor_version, u_int8_t,
+METHOD(message_t, get_minor_version, uint8_t,
 	private_message_t *this)
 {
 	return this->minor_version;
@@ -1331,7 +1331,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		if (payload->get_type(payload) == PLV2_EAP)
 		{
 			eap_payload_t *eap = (eap_payload_t*)payload;
-			u_int32_t vendor;
+			uint32_t vendor;
 			eap_type_t type;
 			char method[64] = "";
 
@@ -1790,7 +1790,7 @@ static status_t finalize_message(private_message_t *this, keymat_t *keymat,
 {
 	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
 	chunk_t chunk;
-	u_int32_t *lenpos;
+	uint32_t *lenpos;
 
 	if (encrypted)
 	{
@@ -1893,7 +1893,7 @@ static message_t *clone_message(private_message_t *this)
  * Create a single fragment with the given data
  */
 static message_t *create_fragment(private_message_t *this, payload_type_t next,
-								  u_int16_t num, u_int16_t count, chunk_t data)
+								  uint16_t num, uint16_t count, chunk_t data)
 {
 	enumerator_t *enumerator;
 	payload_t *fragment, *payload;
@@ -1972,11 +1972,11 @@ METHOD(message_t, fragment, status_t,
 	message_t *fragment;
 	packet_t *packet;
 	payload_type_t next = PL_NONE;
-	u_int16_t num, count;
+	uint16_t num, count;
 	host_t *src, *dst;
 	chunk_t data;
 	status_t status;
-	u_int32_t *lenpos;
+	uint32_t *lenpos;
 	size_t len;
 
 	src = this->packet->get_source(this->packet);
@@ -2703,7 +2703,7 @@ METHOD(message_t, parse_body, status_t,
 /**
  * Store the fragment data for the fragment with the given fragment number.
  */
-static status_t add_fragment(private_message_t *this, u_int16_t num,
+static status_t add_fragment(private_message_t *this, uint16_t num,
 							 chunk_t data)
 {
 	fragment_t *fragment;
@@ -2777,7 +2777,7 @@ METHOD(message_t, add_fragment_v1, status_t,
 {
 	fragment_payload_t *payload;
 	chunk_t data;
-	u_int8_t num;
+	uint8_t num;
 	status_t status;
 
 	if (!this->frag)
@@ -2840,7 +2840,7 @@ METHOD(message_t, add_fragment_v2, status_t,
 	payload_t *payload;
 	enumerator_t *enumerator;
 	chunk_t data;
-	u_int16_t total, num;
+	uint16_t total, num;
 	status_t status;
 
 	if (!this->frag)

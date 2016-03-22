@@ -109,14 +109,14 @@ struct transform_attribute_t {
 	 *
 	 * @return 		value
 	 */
-	u_int64_t (*get_value) (transform_attribute_t *this);
+	uint64_t (*get_value) (transform_attribute_t *this);
 
 	/**
 	 * get the type of the attribute.
 	 *
 	 * @return 		type of the value
 	 */
-	u_int16_t (*get_attribute_type) (transform_attribute_t *this);
+	uint16_t (*get_attribute_type) (transform_attribute_t *this);
 
 	/**
 	 * Destroys an transform_attribute_t object.
@@ -141,6 +141,6 @@ transform_attribute_t *transform_attribute_create(payload_type_t type);
  * @return				transform_attribute_t object
  */
 transform_attribute_t *transform_attribute_create_value(payload_type_t type,
-							transform_attribute_type_t kind, u_int64_t value);
+							transform_attribute_type_t kind, uint64_t value);
 
 #endif /** TRANSFORM_ATTRIBUTE_H_ @}*/

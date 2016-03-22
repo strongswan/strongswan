@@ -120,17 +120,17 @@ struct memory_header_t {
 	/**
 	 * Padding to make sizeof(memory_header_t) == 32
 	 */
-	u_int32_t padding[sizeof(void*) == sizeof(u_int32_t) ? 3 : 0];
+	uint32_t padding[sizeof(void*) == sizeof(uint32_t) ? 3 : 0];
 
 	/**
 	 * Number of bytes following after the header
 	 */
-	u_int32_t bytes;
+	uint32_t bytes;
 
 	/**
 	 * magic bytes to detect bad free or heap underflow, MEMORY_HEADER_MAGIC
 	 */
-	u_int32_t magic;
+	uint32_t magic;
 
 }__attribute__((__packed__));
 
@@ -142,7 +142,7 @@ struct memory_tail_t {
 	/**
 	 * Magic bytes to detect heap overflow, MEMORY_TAIL_MAGIC
 	 */
-	u_int32_t magic;
+	uint32_t magic;
 
 }__attribute__((__packed__));
 

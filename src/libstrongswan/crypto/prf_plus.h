@@ -39,7 +39,7 @@ struct prf_plus_t {
 	 * @return			TRUE if bytes generated successfully
 	 */
 	bool (*get_bytes)(prf_plus_t *this, size_t length,
-					  u_int8_t *buffer) __attribute__((warn_unused_result));
+					  uint8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Allocate pseudo random bytes.

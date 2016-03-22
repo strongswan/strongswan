@@ -299,7 +299,7 @@ static void update_children(private_ike_mobike_t *this)
 /**
  * Apply the port of the old host, if its ip equals the new, use port otherwise.
  */
-static void apply_port(host_t *host, host_t *old, u_int16_t port, bool local)
+static void apply_port(host_t *host, host_t *old, uint16_t port, bool local)
 {
 	if (host->ip_equals(host, old))
 	{

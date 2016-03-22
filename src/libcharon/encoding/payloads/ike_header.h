@@ -153,56 +153,56 @@ struct ike_header_t {
 	 *
 	 * @return				initiator_spi
 	 */
-	u_int64_t (*get_initiator_spi) (ike_header_t *this);
+	uint64_t (*get_initiator_spi) (ike_header_t *this);
 
 	/**
 	 * Set the initiator spi.
 	 *
 	 * @param initiator_spi	initiator_spi
 	 */
-	void (*set_initiator_spi) (ike_header_t *this, u_int64_t initiator_spi);
+	void (*set_initiator_spi) (ike_header_t *this, uint64_t initiator_spi);
 
 	/**
 	 * Get the responder spi.
 	 *
 	 * @return				responder_spi
 	 */
-	u_int64_t (*get_responder_spi) (ike_header_t *this);
+	uint64_t (*get_responder_spi) (ike_header_t *this);
 
 	/**
 	 * Set the responder spi.
 	 *
 	 * @param responder_spi	responder_spi
 	 */
-	void (*set_responder_spi) (ike_header_t *this, u_int64_t responder_spi);
+	void (*set_responder_spi) (ike_header_t *this, uint64_t responder_spi);
 
 	/**
 	 * Get the major version.
 	 *
 	 * @return				major version
 	 */
-	u_int8_t (*get_maj_version) (ike_header_t *this);
+	uint8_t (*get_maj_version) (ike_header_t *this);
 
 	/**
 	 * Set the major version.
 	 *
 	 * @param major			major version
 	 */
-	void (*set_maj_version) (ike_header_t *this, u_int8_t major);
+	void (*set_maj_version) (ike_header_t *this, uint8_t major);
 
 	/**
 	 * Get the minor version.
 	 *
 	 * @return				minor version
 	 */
-	u_int8_t (*get_min_version) (ike_header_t *this);
+	uint8_t (*get_min_version) (ike_header_t *this);
 
 	/**
 	 * Set the minor version.
 	 *
 	 * @param minor			minor version
 	 */
-	void (*set_min_version) (ike_header_t *this, u_int8_t minor);
+	void (*set_min_version) (ike_header_t *this, uint8_t minor);
 
 	/**
 	 * Get the response flag.
@@ -293,28 +293,28 @@ struct ike_header_t {
 	 *
 	 * @return				exchange type
 	 */
-	u_int8_t (*get_exchange_type) (ike_header_t *this);
+	uint8_t (*get_exchange_type) (ike_header_t *this);
 
 	/**
 	 * Set the  exchange type.
 	 *
 	 * @param exchange_type	exchange type
 	 */
-	void (*set_exchange_type) (ike_header_t *this, u_int8_t exchange_type);
+	void (*set_exchange_type) (ike_header_t *this, uint8_t exchange_type);
 
 	/**
 	 * Get the message id.
 	 *
 	 * @return				message id
 	 */
-	u_int32_t (*get_message_id) (ike_header_t *this);
+	uint32_t (*get_message_id) (ike_header_t *this);
 
 	/**
 	 * Set the message id.
 	 *
 	 * @param initiator_spi	message id
 	 */
-	void (*set_message_id) (ike_header_t *this, u_int32_t message_id);
+	void (*set_message_id) (ike_header_t *this, uint32_t message_id);
 
 	/**
 	 * Destroys a ike_header_t object.

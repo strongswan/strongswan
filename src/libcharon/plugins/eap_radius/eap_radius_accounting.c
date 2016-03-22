@@ -54,7 +54,7 @@ struct private_eap_radius_accounting_t {
 	/**
 	 * Session ID prefix
 	 */
-	u_int32_t prefix;
+	uint32_t prefix;
 
 	/**
 	 * Format string we use for Called/Calling-Station-Id for a host
@@ -101,8 +101,8 @@ typedef enum {
  */
 typedef struct {
 	struct {
-		u_int64_t sent;
-		u_int64_t received;
+		uint64_t sent;
+		uint64_t received;
 	} bytes, packets;
 } usage_t;
 
@@ -133,7 +133,7 @@ static inline void sub_usage(usage_t *a, usage_t b)
  */
 typedef struct {
 	/** unique CHILD_SA identifier */
-	u_int32_t id;
+	uint32_t id;
 	/** usage stats for this SA */
 	usage_t usage;
 } sa_entry_t;
@@ -172,7 +172,7 @@ typedef struct {
 	radius_acct_terminate_cause_t cause;
 	/* interim interval and timestamp of last update */
 	struct {
-		u_int32_t interval;
+		uint32_t interval;
 		time_t last;
 	} interim;
 	/** did we send Accounting-Start */
@@ -237,7 +237,7 @@ static int sa_find(const void *a, const void *b)
 /**
  * Update or create usage counters of a cached SA
  */
-static void update_sa(entry_t *entry, u_int32_t id, usage_t usage)
+static void update_sa(entry_t *entry, uint32_t id, usage_t usage)
 {
 	sa_entry_t *sa, lookup;
 
@@ -402,7 +402,7 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 	host_t *vip, *host;
 	char buf[MAX_RADIUS_ATTRIBUTE_SIZE + 1];
 	chunk_t data;
-	u_int32_t value;
+	uint32_t value;
 
 	/* virtual NAS-Port-Type */
 	value = htonl(5);
@@ -461,7 +461,7 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
  * Get an existing or create a new entry from the locked session table
  */
 static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
-									ike_sa_id_t *id, u_int32_t unique)
+									ike_sa_id_t *id, uint32_t unique)
 {
 	entry_t *entry;
 	time_t now;
@@ -520,7 +520,7 @@ static job_requeue_t send_interim(interim_data_t *data)
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	entry_t *entry;
-	u_int32_t value;
+	uint32_t value;
 	array_t *stats;
 	sa_entry_t *sa, *found;
 
@@ -681,7 +681,7 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 {
 	radius_message_t *message;
 	entry_t *entry;
-	u_int32_t value;
+	uint32_t value;
 
 	if (this->acct_req_vip && !has_vip(ike_sa))
 	{
@@ -735,7 +735,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	enumerator_t *enumerator;
 	entry_t *entry;
 	sa_entry_t *sa;
-	u_int32_t value;
+	uint32_t value;
 
 	this->mutex->lock(this->mutex);
 	entry = this->sessions->remove(this->sessions, ike_sa->get_id(ike_sa));
@@ -931,7 +931,7 @@ METHOD(listener_t, child_rekey, bool,
 
 METHOD(listener_t, children_migrate, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa, ike_sa_id_t *new,
-	u_int32_t unique)
+	uint32_t unique)
 {
 	enumerator_t *enumerator;
 	sa_entry_t *sa, *sa_new, *cached;
@@ -1020,7 +1020,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 			.destroy = _destroy,
 		},
 		/* use system time as Session ID prefix */
-		.prefix = (u_int32_t)time(NULL),
+		.prefix = (uint32_t)time(NULL),
 		.sessions = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -1050,7 +1050,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 /**
  * See header
  */
-void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, u_int32_t interval)
+void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, uint32_t interval)
 {
 	if (singleton)
 	{

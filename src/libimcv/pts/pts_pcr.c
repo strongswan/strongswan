@@ -40,17 +40,17 @@ struct private_pts_pcr_t {
 	/**
 	 * Number of extended PCR registers
 	 */
-	u_int32_t pcr_count;
+	uint32_t pcr_count;
 
 	/**
 	 * Highest extended PCR register
 	 */
-	u_int32_t pcr_max;
+	uint32_t pcr_max;
 
 	/**
 	 * Bitmap of extended PCR registers
 	 */
-	u_int8_t pcr_select[PTS_PCR_MAX_NUM / 8];
+	uint8_t pcr_select[PTS_PCR_MAX_NUM / 8];
 
 	/**
 	 * Hasher used to extend shadow PCRs
@@ -59,16 +59,16 @@ struct private_pts_pcr_t {
 
 };
 
-METHOD(pts_pcr_t, get_count, u_int32_t,
+METHOD(pts_pcr_t, get_count, uint32_t,
 	private_pts_pcr_t *this)
 {
 	return this->pcr_count;
 }
 
 METHOD(pts_pcr_t, select_pcr, bool,
-	private_pts_pcr_t *this, u_int32_t pcr)
+	private_pts_pcr_t *this, uint32_t pcr)
 {
-	u_int32_t i, f;
+	uint32_t i, f;
 
 	if (pcr >= PTS_PCR_MAX_NUM)
 	{
@@ -106,7 +106,7 @@ typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
 	/** current PCR */
-	u_int32_t pcr;
+	uint32_t pcr;
 	/** back reference to parent */
 	private_pts_pcr_t *pcrs;
 } pcr_enumerator_t;
@@ -116,11 +116,11 @@ typedef struct {
  */
 static bool pcr_enumerator_enumerate(pcr_enumerator_t *this, ...)
 {
-	u_int32_t *pcr, i, f;
+	uint32_t *pcr, i, f;
 	va_list args;
 
 	va_start(args, this);
-	pcr = va_arg(args, u_int32_t*);
+	pcr = va_arg(args, uint32_t*);
 	va_end(args);
 
 	while (this->pcr <= this->pcrs->pcr_max)
@@ -158,13 +158,13 @@ METHOD(pts_pcr_t, create_enumerator, enumerator_t*,
 }
 
 METHOD(pts_pcr_t, get, chunk_t,
-	private_pts_pcr_t *this, u_int32_t pcr)
+	private_pts_pcr_t *this, uint32_t pcr)
 {
 	return (pcr < PTS_PCR_MAX_NUM) ? this->pcrs[pcr] : chunk_empty;
 }
 
 METHOD(pts_pcr_t, set, bool,
-	private_pts_pcr_t *this, u_int32_t pcr, chunk_t value)
+	private_pts_pcr_t *this, uint32_t pcr, chunk_t value)
 {
 	if (value.len != PTS_PCR_LEN)
 	{
@@ -180,7 +180,7 @@ METHOD(pts_pcr_t, set, bool,
 }
 
 METHOD(pts_pcr_t, extend, chunk_t,
-	private_pts_pcr_t *this, u_int32_t pcr, chunk_t measurement)
+	private_pts_pcr_t *this, uint32_t pcr, chunk_t measurement)
 {
 	if (measurement.len != PTS_PCR_LEN)
 	{
@@ -205,8 +205,8 @@ METHOD(pts_pcr_t, get_composite, chunk_t,
 {
 	chunk_t composite;
 	enumerator_t *enumerator;
-	u_int16_t selection_size;
-	u_int32_t pcr_field_size, pcr;
+	uint16_t selection_size;
+	uint32_t pcr_field_size, pcr;
 	u_char *pos;
 
 	selection_size = get_selection_size(this);
@@ -236,7 +236,7 @@ METHOD(pts_pcr_t, get_composite, chunk_t,
 METHOD(pts_pcr_t, destroy, void,
 	private_pts_pcr_t *this)
 {
-	u_int32_t i;
+	uint32_t i;
 
 	for (i = 0; i < PTS_PCR_MAX_NUM; i++)
 	{
@@ -253,7 +253,7 @@ pts_pcr_t *pts_pcr_create(void)
 {
 	private_pts_pcr_t *this;
 	hasher_t *hasher;
-	u_int32_t i;
+	uint32_t i;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)

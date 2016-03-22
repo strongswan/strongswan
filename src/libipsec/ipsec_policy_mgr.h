@@ -105,7 +105,7 @@ struct ipsec_policy_mgr_t {
 	 */
 	ipsec_policy_t *(*find_by_packet)(ipsec_policy_mgr_t *this,
 									  ip_packet_t *packet, bool inbound,
-									  u_int32_t reqid);
+									  uint32_t reqid);
 
 	/**
 	 * Destroy an ipsec_policy_mgr_t

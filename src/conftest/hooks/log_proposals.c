@@ -54,7 +54,7 @@ METHOD(listener_t, message, bool,
 				proposals = list->create_enumerator(list);
 				while (proposals->enumerate(proposals, &proposal))
 				{
-					u_int64_t spi = proposal->get_spi(proposal);
+					uint64_t spi = proposal->get_spi(proposal);
 
 					if (proposal->get_protocol(proposal) != PROTO_IKE)
 					{

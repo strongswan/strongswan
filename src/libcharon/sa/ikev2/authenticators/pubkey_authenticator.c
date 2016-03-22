@@ -63,7 +63,7 @@ struct private_pubkey_authenticator_t {
 static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 									  signature_scheme_t *scheme)
 {
-	u_int8_t len;
+	uint8_t len;
 	int oid;
 
 	if (!auth_data->len)
@@ -91,7 +91,7 @@ static bool build_signature_auth_data(chunk_t *auth_data,
 									  signature_scheme_t scheme)
 {
 	chunk_t data;
-	u_int8_t len;
+	uint8_t len;
 	int oid;
 
 	oid = signature_scheme_to_oid(scheme);

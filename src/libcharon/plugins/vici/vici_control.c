@@ -507,12 +507,12 @@ CALLBACK(redirect, vici_message_t*,
 /**
  * Find reqid of an existing CHILD_SA
  */
-static u_int32_t find_reqid(child_cfg_t *cfg)
+static uint32_t find_reqid(child_cfg_t *cfg)
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	u_int32_t reqid;
+	uint32_t reqid;
 
 	reqid = charon->traps->find_reqid(charon->traps, cfg);
 	if (reqid)
@@ -583,7 +583,7 @@ CALLBACK(uninstall, vici_message_t*,
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
-	u_int32_t reqid = 0;
+	uint32_t reqid = 0;
 	char *child;
 
 	child = request->get_str(request, NULL, "child");

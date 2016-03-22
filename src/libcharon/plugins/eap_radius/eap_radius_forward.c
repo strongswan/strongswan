@@ -63,9 +63,9 @@ struct private_eap_radius_forward_t {
  */
 typedef struct {
 	/** vendor ID, 0 for standard attributes */
-	u_int32_t vendor;
+	uint32_t vendor;
 	/** attribute type */
-	u_int8_t type;
+	uint8_t type;
 } attr_t;
 
 /**
@@ -132,7 +132,7 @@ static bool is_attribute_selected(linked_list_t *selector,
 								  radius_attribute_type_t type, chunk_t data)
 {
 	enumerator_t *enumerator;
-	u_int32_t vendor = 0;
+	uint32_t vendor = 0;
 	attr_t *sel;
 	bool found = FALSE;
 

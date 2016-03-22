@@ -46,14 +46,14 @@ struct quick_mode_t {
 	 *
 	 * @return				message ID, or 0 (not defined yet or as initiator)
 	 */
-	u_int32_t (*get_mid)(quick_mode_t *this);
+	uint32_t (*get_mid)(quick_mode_t *this);
 
 	/**
 	 * Use a specific reqid to install this CHILD_SA.
 	 *
 	 * @param reqid			reqid to use
 	 */
-	void (*use_reqid)(quick_mode_t *this, u_int32_t reqid);
+	void (*use_reqid)(quick_mode_t *this, uint32_t reqid);
 
 	/**
 	 * Use specific mark values, overriding configuration.
@@ -68,7 +68,7 @@ struct quick_mode_t {
 	 *
 	 * @param spi			spi of SA to rekey
 	 */
-	void (*rekey)(quick_mode_t *this, u_int32_t spi);
+	void (*rekey)(quick_mode_t *this, uint32_t spi);
 };
 
 /**

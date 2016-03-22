@@ -32,7 +32,7 @@ static void echo_inbound(void *user, u_int id, chunk_t buf)
 
 	ck_assert_int_eq(data->id, id);
 	/* count number of bytes, including the header */
-	data->bytes += buf.len + sizeof(u_int32_t);
+	data->bytes += buf.len + sizeof(uint32_t);
 	/* echo back data chunk */
 	data->s->send(data->s, id, chunk_clone(buf));
 }
@@ -81,7 +81,7 @@ START_TEST(test_echo)
 		0x00,0x00,0x00,0x0A,	0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x02A,
 	);
 	char buf[m.len];
-	u_int32_t len;
+	uint32_t len;
 
 	lib->processor->set_threads(lib->processor, 4);
 

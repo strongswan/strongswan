@@ -36,7 +36,7 @@ struct private_load_tester_ipsec_t {
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int8_t protocol, u_int32_t *spi)
+	uint8_t protocol, uint32_t *spi)
 {
 	*spi = (uint32_t)ref_get(&this->spi);
 	return SUCCESS;
@@ -44,17 +44,17 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int16_t *cpi)
+	uint16_t *cpi)
 {
 	return FAILED;
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	u_int16_t ipcomp, u_int16_t cpi, u_int32_t replay_window,
+	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
+	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
+	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
 	bool initiator, bool encap, bool esn, bool inbound, bool update,
 	linked_list_t *src_ts, linked_list_t *dst_ts)
 {
@@ -62,8 +62,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_load_tester_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
-	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src,
+	private_load_tester_ipsec_t *this, uint32_t spi, uint8_t protocol,
+	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src,
 	host_t *new_dst, bool encap, bool new_encap, mark_t mark)
 {
 	return SUCCESS;
@@ -71,15 +71,15 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets, time_t *time)
+	uint32_t spi, uint8_t protocol, mark_t mark,
+	uint64_t *bytes, uint64_t *packets, time_t *time)
 {
 	return NOT_SUPPORTED;
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
+	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
 {
 	return SUCCESS;
 }

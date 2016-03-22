@@ -57,7 +57,7 @@ struct rng_t {
 	 * @return			TRUE if bytes successfully written
 	 */
 	bool (*get_bytes)(rng_t *this, size_t len,
-					  u_int8_t *buffer) __attribute__((warn_unused_result));
+					  uint8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generates random bytes and allocate space for them.
@@ -85,7 +85,7 @@ struct rng_t {
  * @param all			TRUE if all bytes have to be non-zero, FALSE for first
  * @return				TRUE if bytes successfully written
  */
-bool rng_get_bytes_not_zero(rng_t *rng, size_t len, u_int8_t *buffer,
+bool rng_get_bytes_not_zero(rng_t *rng, size_t len, uint8_t *buffer,
 							bool all) __attribute__((warn_unused_result));
 
 /**

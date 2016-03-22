@@ -40,17 +40,17 @@ struct private_pgp_cert_t {
 	/**
 	 * version of the public key
 	 */
-	u_int32_t version;
+	uint32_t version;
 
 	/**
 	 * creation time
 	 */
-	u_int32_t created;
+	uint32_t created;
 
 	/**
 	 * days the certificate is valid
 	 */
-	u_int32_t valid;
+	uint32_t valid;
 
 	/**
 	 * userid of the certificate
@@ -349,7 +349,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
  */
 static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 {
-	u_int32_t version, len, type, created;
+	uint32_t version, len, type, created;
 
 	if (!pgp_read_scalar(&packet, 1, &version))
 	{

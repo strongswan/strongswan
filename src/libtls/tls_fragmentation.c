@@ -127,7 +127,7 @@ static bool send_close_notify(private_tls_fragmentation_t *this)
 static status_t process_alert(private_tls_fragmentation_t *this,
 							  bio_reader_t *reader)
 {
-	u_int8_t level, description;
+	uint8_t level, description;
 
 	if (!reader->read_uint8(reader, &level) ||
 		!reader->read_uint8(reader, &description))
@@ -147,8 +147,8 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 	while (reader->remaining(reader))
 	{
 		bio_reader_t *msg;
-		u_int8_t type;
-		u_int32_t len;
+		uint8_t type;
+		uint32_t len;
 		status_t status;
 		chunk_t data;
 

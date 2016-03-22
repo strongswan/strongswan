@@ -67,7 +67,7 @@ struct exchange_t {
 	/**
 	 * Message ID used for this transaction
 	 */
-	u_int32_t mid;
+	uint32_t mid;
 
 	/**
 	 * generated packet for retransmission
@@ -104,12 +104,12 @@ struct private_task_manager_t {
 		/**
 		 * Message ID of the last response
 		 */
-		u_int32_t mid;
+		uint32_t mid;
 
 		/**
 		 * Hash of a previously received message
 		 */
-		u_int32_t hash;
+		uint32_t hash;
 
 		/**
 		 * packet(s) for retransmission
@@ -119,7 +119,7 @@ struct private_task_manager_t {
 		/**
 		 * Sequence number of the last sent message
 		 */
-		u_int32_t seqnr;
+		uint32_t seqnr;
 
 		/**
 		 * how many times we have retransmitted so far
@@ -135,12 +135,12 @@ struct private_task_manager_t {
 		/**
 		 * Message ID of the exchange
 		 */
-		u_int32_t mid;
+		uint32_t mid;
 
 		/**
 		 * Hashes of old responses we can ignore
 		 */
-		u_int32_t old_hashes[MAX_OLD_HASHES];
+		uint32_t old_hashes[MAX_OLD_HASHES];
 
 		/**
 		 * Position in old hash array
@@ -150,7 +150,7 @@ struct private_task_manager_t {
 		/**
 		 * Sequence number of the last sent message
 		 */
-		u_int32_t seqnr;
+		uint32_t seqnr;
 
 		/**
 		 * how many times we have retransmitted so far
@@ -212,12 +212,12 @@ struct private_task_manager_t {
 	/**
 	 * Sequence number for sending DPD requests
 	 */
-	u_int32_t dpd_send;
+	uint32_t dpd_send;
 
 	/**
 	 * Sequence number for received DPD requests
 	 */
-	u_int32_t dpd_recv;
+	uint32_t dpd_recv;
 };
 
 /**
@@ -341,11 +341,11 @@ static bool generate_message(private_task_manager_t *this, message_t *message,
 /**
  * Retransmit a packet (or its fragments)
  */
-static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
+static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 							u_int mid, u_int retransmitted, array_t *packets)
 {
 	packet_t *packet;
-	u_int32_t t;
+	uint32_t t;
 
 	array_get(packets, 0, &packet);
 	if (retransmitted > this->retransmit_tries)
@@ -354,7 +354,7 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT, packet);
 		return DESTROY_ME;
 	}
-	t = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+	t = (uint32_t)(this->retransmit_timeout * 1000.0 *
 					pow(this->retransmit_base, retransmitted));
 	if (retransmitted)
 	{
@@ -370,7 +370,7 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 }
 
 METHOD(task_manager_t, retransmit, status_t,
-	private_task_manager_t *this, u_int32_t seqnr)
+	private_task_manager_t *this, uint32_t seqnr)
 {
 	status_t status = SUCCESS;
 
@@ -807,7 +807,7 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 	message_t *response;
 	array_t *packets = NULL;
 	host_t *me, *other;
-	u_int32_t mid;
+	uint32_t mid;
 
 	if (request->get_exchange_type(request) == INFORMATIONAL_V1)
 	{	/* don't respond to INFORMATIONAL requests to avoid a notify war */
@@ -857,7 +857,7 @@ static bool process_dpd(private_task_manager_t *this, message_t *message)
 {
 	notify_payload_t *notify;
 	notify_type_t type;
-	u_int32_t seq;
+	uint32_t seq;
 	chunk_t data;
 
 	type = DPD_R_U_THERE;
@@ -910,7 +910,7 @@ static bool process_dpd(private_task_manager_t *this, message_t *message)
  * Check if we already have a quick mode task queued for the exchange with the
  * given message ID
  */
-static bool have_quick_mode_task(private_task_manager_t *this, u_int32_t mid)
+static bool have_quick_mode_task(private_task_manager_t *this, uint32_t mid)
 {
 	enumerator_t *enumerator;
 	quick_mode_t *qm;
@@ -1305,7 +1305,7 @@ static status_t queue_message(private_task_manager_t *this, message_t *msg)
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	u_int32_t hash, mid, i;
+	uint32_t hash, mid, i;
 	host_t *me, *other;
 	status_t status;
 
@@ -1660,7 +1660,7 @@ METHOD(task_manager_t, queue_mobike, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
+	private_task_manager_t *this, child_cfg_t *cfg, uint32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	quick_mode_t *task;
@@ -1739,7 +1739,7 @@ static traffic_selector_t* get_first_ts(child_sa_t *child_sa, bool local)
 }
 
 METHOD(task_manager_t, queue_child_rekey, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_task_manager_t *this, protocol_id_t protocol, uint32_t spi)
 {
 	child_sa_t *child_sa;
 	child_cfg_t *cfg;
@@ -1774,7 +1774,7 @@ METHOD(task_manager_t, queue_child_rekey, void,
 }
 
 METHOD(task_manager_t, queue_child_delete, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi,
+	private_task_manager_t *this, protocol_id_t protocol, uint32_t spi,
 	bool expired)
 {
 	queue_task(this, (task_t*)quick_delete_create(this->ike_sa, protocol,
@@ -1785,7 +1785,7 @@ METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
 	peer_cfg_t *peer_cfg;
-	u_int32_t t, retransmit;
+	uint32_t t, retransmit;
 
 	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, DPD_R_U_THERE,
 												this->dpd_send++));
@@ -1798,7 +1798,7 @@ METHOD(task_manager_t, queue_dpd, void,
 		/* use the same timeout as a retransmitting IKE message would have */
 		for (retransmit = 0; retransmit <= this->retransmit_tries; retransmit++)
 		{
-			t += (u_int32_t)(this->retransmit_timeout * 1000.0 *
+			t += (uint32_t)(this->retransmit_timeout * 1000.0 *
 							pow(this->retransmit_base, retransmit));
 		}
 	}
@@ -1871,7 +1871,7 @@ METHOD(task_manager_t, incr_mid, void,
 }
 
 METHOD(task_manager_t, reset, void,
-	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
+	private_task_manager_t *this, uint32_t initiate, uint32_t respond)
 {
 	enumerator_t *enumerator;
 	task_t *task;

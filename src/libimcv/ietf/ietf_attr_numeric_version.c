@@ -73,27 +73,27 @@ struct private_ietf_attr_numeric_version_t {
 	/**
 	 * Major Version Number
 	 */
-	u_int32_t major_version;
+	uint32_t major_version;
 
 	/**
 	 * Minor Version Number
 	 */
-	u_int32_t minor_version;
+	uint32_t minor_version;
 
 	/**
 	 * IBuild Number
 	 */
-	u_int32_t build;
+	uint32_t build;
 
 	/**
 	 * Service Pack Major Number
 	 */
-	u_int16_t service_pack_major;
+	uint16_t service_pack_major;
 
 	/**
 	 * Service Pack Minor Number
 	 */
-	u_int16_t service_pack_minor;
+	uint16_t service_pack_minor;
 
 	/**
 	 * Reference count
@@ -148,7 +148,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_numeric_version_t *this, u_int32_t *offset)
+	private_ietf_attr_numeric_version_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 
@@ -198,7 +198,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 }
 
 METHOD(ietf_attr_numeric_version_t, get_version, void,
-	private_ietf_attr_numeric_version_t *this, u_int32_t *major, u_int32_t *minor)
+	private_ietf_attr_numeric_version_t *this, uint32_t *major, uint32_t *minor)
 {
 	if (major)
 	{
@@ -210,14 +210,14 @@ METHOD(ietf_attr_numeric_version_t, get_version, void,
 	}
 }
 
-METHOD(ietf_attr_numeric_version_t, get_build, u_int32_t,
+METHOD(ietf_attr_numeric_version_t, get_build, uint32_t,
 	private_ietf_attr_numeric_version_t *this)
 {
 	return this->build;
 }
 
 METHOD(ietf_attr_numeric_version_t, get_service_pack, void,
-	private_ietf_attr_numeric_version_t *this, u_int16_t *major, u_int16_t *minor)
+	private_ietf_attr_numeric_version_t *this, uint16_t *major, uint16_t *minor)
 {
 	if (major)
 	{
@@ -232,10 +232,10 @@ METHOD(ietf_attr_numeric_version_t, get_service_pack, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_numeric_version_create(u_int32_t major, u_int32_t minor,
-												u_int32_t build,
-												u_int16_t service_pack_major,
-												u_int16_t service_pack_minor)
+pa_tnc_attr_t *ietf_attr_numeric_version_create(uint32_t major, uint32_t minor,
+												uint32_t build,
+												uint16_t service_pack_major,
+												uint16_t service_pack_minor)
 {
 	private_ietf_attr_numeric_version_t *this;
 

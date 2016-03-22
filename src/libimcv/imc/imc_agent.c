@@ -46,7 +46,7 @@ struct private_imc_agent_t {
 	/**
 	 * number of message types registered by IMC
 	 */
-	u_int32_t type_count;
+	uint32_t type_count;
 
 	/**
 	 * ID of IMC as assigned by TNCC
@@ -320,7 +320,7 @@ static char* get_str_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
 /**
  * Read an UInt32 attribute
  */
-static u_int32_t get_uint_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
+static uint32_t get_uint_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
 									TNC_AttributeID attribute_id)
 {
 	TNC_UInt32 len;
@@ -341,7 +341,7 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
 	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	conn_id = state->get_connection_id(state);
 	if (find_connection(this, conn_id))
@@ -550,7 +550,7 @@ METHOD(imc_agent_t, destroy, void,
  * Described in header.
  */
 imc_agent_t *imc_agent_create(const char *name,
-							  pen_type_t *supported_types, u_int32_t type_count,
+							  pen_type_t *supported_types, uint32_t type_count,
 							  TNC_IMCID id, TNC_Version *actual_version)
 {
 	private_imc_agent_t *this;

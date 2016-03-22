@@ -129,8 +129,8 @@ static chunk_t generate_natd_hash(private_isakmp_natd_t *this,
 {
 	hasher_t *hasher;
 	chunk_t natd_chunk, natd_hash;
-	u_int64_t spi_i, spi_r;
-	u_int16_t port;
+	uint64_t spi_i, spi_r;
+	uint16_t port;
 
 	hasher = this->keymat->get_hasher(this->keymat);
 	if (!hasher)

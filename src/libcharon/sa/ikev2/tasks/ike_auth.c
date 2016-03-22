@@ -186,7 +186,7 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
  */
 static void get_reserved_id_bytes(private_ike_auth_t *this, id_payload_t *id)
 {
-	u_int8_t *byte;
+	uint8_t *byte;
 	int i;
 
 	for (i = 0; i < countof(this->reserved); i++)

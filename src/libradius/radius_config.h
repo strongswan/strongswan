@@ -118,7 +118,7 @@ struct radius_config_t {
  * @param base				base to calculate retransmission timeout
  */
 radius_config_t *radius_config_create(char *name, char *address,
-									  u_int16_t auth_port, u_int16_t acct_port,
+									  uint16_t auth_port, uint16_t acct_port,
 									  char *nas_identifier, char *secret,
 									  int sockets, int preference,
 									  u_int tries, double timeout, double base);

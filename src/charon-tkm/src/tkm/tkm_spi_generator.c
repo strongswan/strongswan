@@ -25,8 +25,8 @@
  */
 typedef struct {
 	rng_t *rng;
-	u_int64_t spi_mask;
-	u_int64_t spi_label;
+	uint64_t spi_mask;
+	uint64_t spi_label;
 } get_spi_args_t;
 
 static get_spi_args_t *spi_args;
@@ -37,12 +37,12 @@ static get_spi_args_t *spi_args;
  * @param this			Callback args containing rng_t and spi mask & label
  * @return				labeled SPI
  */
-CALLBACK(tkm_get_spi, u_int64_t,
+CALLBACK(tkm_get_spi, uint64_t,
 	const get_spi_args_t const *this)
 {
-	u_int64_t spi;
+	uint64_t spi;
 
-	if (!this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
+	if (!this->rng->get_bytes(this->rng, sizeof(spi), (uint8_t*)&spi))
 	{
 		return 0;
 	}
@@ -54,7 +54,7 @@ bool tkm_spi_generator_register(plugin_t *plugin,
                                 plugin_feature_t *feature,
                                 bool reg, void *cb_data)
 {
-	u_int64_t spi_mask, spi_label;
+	uint64_t spi_mask, spi_label;
 	char *spi_val;
 	rng_t *rng;
 

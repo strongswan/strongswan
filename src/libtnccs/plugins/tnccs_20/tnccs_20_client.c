@@ -104,7 +104,7 @@ struct private_tnccs_20_client_t {
 	/**
 	 * PDP server port
 	 */
-	u_int16_t pdp_port;
+	uint16_t pdp_port;
 
 	/**
 	 * Mutual PB-TNC protocol enabled
@@ -124,8 +124,8 @@ struct private_tnccs_20_client_t {
 void tnccs_20_handle_ietf_error_msg(pb_tnc_msg_t *msg, bool *fatal_error)
 {
 	pb_error_msg_t *err_msg;
-	u_int32_t vendor_id;
-	u_int16_t error_code;
+	uint32_t vendor_id;
+	uint16_t error_code;
 	bool fatal;
 
 	err_msg = (pb_error_msg_t*)msg;
@@ -238,7 +238,7 @@ static void handle_ietf_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *m
 		{
 			pb_pa_msg_t *pa_msg;
 			pen_type_t msg_subtype;
-			u_int16_t imc_id, imv_id;
+			uint16_t imc_id, imv_id;
 			chunk_t msg_body;
 			bool excl;
 			enum_name_t *pa_subtype_names;
@@ -274,7 +274,7 @@ static void handle_ietf_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *m
 		case PB_MSG_ASSESSMENT_RESULT:
 		{
 			pb_assessment_result_msg_t *assess_msg;
-			u_int32_t result;
+			uint32_t result;
 
 			assess_msg = (pb_assessment_result_msg_t*)msg;
 			result = assess_msg->get_assessment_result(assess_msg);
@@ -375,7 +375,7 @@ static void handle_tcg_message(private_tnccs_20_client_t *this, pb_tnc_msg_t *ms
 		{
 			pb_pdp_referral_msg_t *pdp_msg;
 			pen_type_t pdp_id_type;
-			u_int8_t pdp_protocol;
+			uint8_t pdp_protocol;
 
 			pdp_msg = (pb_pdp_referral_msg_t*)msg;
 			pdp_id_type = pdp_msg->get_identifier_type(pdp_msg);
@@ -765,7 +765,7 @@ METHOD(tnccs_20_handler_t, destroy, void,
 }
 
 METHOD(tnccs_20_client_t, get_pdp_server, chunk_t,
-	private_tnccs_20_client_t *this, u_int16_t *port)
+	private_tnccs_20_client_t *this, uint16_t *port)
 {
 	*port = this->pdp_port;
 

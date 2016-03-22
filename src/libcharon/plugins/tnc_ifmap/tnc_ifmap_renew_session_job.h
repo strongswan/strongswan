@@ -46,6 +46,6 @@ struct tnc_ifmap_renew_session_job_t {
  * @param reschedule	reschedule time in seconds
  */
 tnc_ifmap_renew_session_job_t *tnc_ifmap_renew_session_job_create(
-								tnc_ifmap_soap_t *ifmap, u_int32_t reschedule);
+								tnc_ifmap_soap_t *ifmap, uint32_t reschedule);
 
 #endif /** TNC_IFMAP_RENEW_SESSION_JOB_H_ @}*/

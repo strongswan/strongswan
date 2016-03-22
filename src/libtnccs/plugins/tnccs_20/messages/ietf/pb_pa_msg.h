@@ -51,14 +51,14 @@ struct pb_pa_msg_t {
 	 *
 	 * @return				Posture Collector ID
 	 */
-	u_int16_t (*get_collector_id)(pb_pa_msg_t *this);
+	uint16_t (*get_collector_id)(pb_pa_msg_t *this);
 
 	/**
 	 * Get Posture Validator ID
 	 *
 	 * @return				Posture Validator ID
 	 */
-	u_int16_t (*get_validator_id)(pb_pa_msg_t *this);
+	uint16_t (*get_validator_id)(pb_pa_msg_t *this);
 
 	/**
 	 * Get the PA Message Body
@@ -86,8 +86,8 @@ struct pb_pa_msg_t {
  * @param excl				Exclusive Flag
  * @param msg_body		 	PA Message Body
  */
-pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
-							   u_int16_t collector_id, u_int16_t validator_id,
+pb_tnc_msg_t *pb_pa_msg_create(uint32_t vendor_id, uint32_t subtype,
+							   uint16_t collector_id, uint16_t validator_id,
 							   bool excl, chunk_t msg_body);
 
 /**

@@ -210,14 +210,14 @@ struct child_cfg_t {
 	 *
 	 * @return				inactivity timeout in s
 	 */
-	u_int32_t (*get_inactivity)(child_cfg_t *this);
+	uint32_t (*get_inactivity)(child_cfg_t *this);
 
 	/**
 	 * Specific reqid to use for CHILD_SA.
 	 *
 	 * @return				reqid
 	 */
-	u_int32_t (*get_reqid)(child_cfg_t *this);
+	uint32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
 	 * Optional mark for CHILD_SA.
@@ -232,21 +232,21 @@ struct child_cfg_t {
 	 *
 	 * @return				TFC padding, 0 to disable, -1 for MTU
 	 */
-	u_int32_t (*get_tfc)(child_cfg_t *this);
+	uint32_t (*get_tfc)(child_cfg_t *this);
 
 	/**
 	 * Get anti-replay window size
 	 *
 	 * @return				anti-replay window size
 	 */
-	u_int32_t (*get_replay_window)(child_cfg_t *this);
+	uint32_t (*get_replay_window)(child_cfg_t *this);
 
 	/**
 	 * Set anti-replay window size
 	 *
 	 * @param window		anti-replay window size
 	 */
-	void (*set_replay_window)(child_cfg_t *this, u_int32_t window);
+	void (*set_replay_window)(child_cfg_t *this, uint32_t window);
 
 	/**
 	 * Sets two options needed for Mobile IPv6 interoperability.
@@ -328,7 +328,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t start_action,
 							  action_t dpd_action, action_t close_action,
-							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc);
+							  bool ipcomp, uint32_t inactivity, uint32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out, uint32_t tfc);
 
 #endif /** CHILD_CFG_H_ @}*/

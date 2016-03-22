@@ -66,7 +66,7 @@ struct private_ntru_ke_t {
 	/**
 	 * Cryptographical strength in bits of the NTRU Parameter Set
 	 */
-	u_int32_t strength;
+	uint32_t strength;
 
 	/**
 	 * NTRU Public Key
@@ -247,7 +247,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	rng_t *entropy;
 	ntru_drbg_t *drbg;
 	char *parameter_set;
-	u_int32_t strength;
+	uint32_t strength;
 
 	parameter_set = lib->settings->get_str(lib->settings,
 						"%s.plugins.ntru.parameter_set", "optimum", lib->ns);

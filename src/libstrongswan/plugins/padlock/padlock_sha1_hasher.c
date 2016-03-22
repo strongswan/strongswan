@@ -54,9 +54,9 @@ static void padlock_sha1(int len, u_char *in, u_char *out)
 /**
  * sha1() a buffer of data into digest
  */
-static void sha1(chunk_t data, u_int32_t *digest)
+static void sha1(chunk_t data, uint32_t *digest)
 {
-	u_int32_t hash[128] PADLOCK_ALIGN;
+	uint32_t hash[128] PADLOCK_ALIGN;
 
 	hash[0] = 0x67452301;
 	hash[1] = 0xefcdab89;
@@ -91,18 +91,18 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_padlock_sha1_hasher_t *this, chunk_t chunk, u_int8_t *hash)
+	private_padlock_sha1_hasher_t *this, chunk_t chunk, uint8_t *hash)
 {
 	if (hash)
 	{
 		if (this->data.len)
 		{
 			append_data(this, chunk);
-			sha1(this->data, (u_int32_t*)hash);
+			sha1(this->data, (uint32_t*)hash);
 		}
 		else
 		{   /* hash directly if no previous data found */
-			sha1(chunk, (u_int32_t*)hash);
+			sha1(chunk, (uint32_t*)hash);
 		}
 		reset(this);
 	}

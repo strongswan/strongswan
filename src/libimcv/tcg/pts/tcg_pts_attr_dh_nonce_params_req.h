@@ -44,7 +44,7 @@ struct tcg_pts_attr_dh_nonce_params_req_t {
 	 *
 	 * @return				Minimum acceptable length of nonce
 	 */
-	u_int8_t (*get_min_nonce_len)(tcg_pts_attr_dh_nonce_params_req_t *this);
+	uint8_t (*get_min_nonce_len)(tcg_pts_attr_dh_nonce_params_req_t *this);
 
 	/**
 	 * Get supported Diffie Hellman Groups
@@ -60,7 +60,7 @@ struct tcg_pts_attr_dh_nonce_params_req_t {
  * @param min_nonce_len				Minimum acceptable length of nonce
  * @param dh_groups					Initiator's supported DH groups
  */
-pa_tnc_attr_t* tcg_pts_attr_dh_nonce_params_req_create(u_int8_t min_nonce_len,
+pa_tnc_attr_t* tcg_pts_attr_dh_nonce_params_req_create(uint8_t min_nonce_len,
 												pts_dh_group_t dh_groups);
 
 /**

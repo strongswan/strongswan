@@ -88,7 +88,7 @@ struct encrypted_payload_t {
 	 * 						- FAILED if encryption failed
 	 * 						- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*encrypt) (encrypted_payload_t *this, u_int64_t mid,
+	status_t (*encrypt) (encrypted_payload_t *this, uint64_t mid,
 						 chunk_t assoc);
 
 	/**

@@ -272,10 +272,10 @@ static void load_entries(private_attr_provider_t *this)
 				{
 					if (family == AF_INET)
 					{	/* IPv4 attributes contain a subnet mask */
-						u_int32_t netmask = 0;
+						uint32_t netmask = 0;
 
 						if (mask)
-						{	/* shifting u_int32_t by 32 or more is undefined */
+						{	/* shifting uint32_t by 32 or more is undefined */
 							mask = 32 - mask;
 							netmask = htonl((0xFFFFFFFF >> mask) << mask);
 						}

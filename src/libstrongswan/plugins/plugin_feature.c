@@ -57,7 +57,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 /**
  * See header.
  */
-u_int32_t plugin_feature_hash(plugin_feature_t *feature)
+uint32_t plugin_feature_hash(plugin_feature_t *feature)
 {
 	chunk_t data = chunk_empty;
 

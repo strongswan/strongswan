@@ -37,7 +37,7 @@ START_TEST(test_nonceg_allocate_nonce)
 	tkm_nonceg_t *ng = tkm_nonceg_create();
 
 	const size_t length = 256;
-	u_int8_t zero[length];
+	uint8_t zero[length];
 	memset(zero, 0, length);
 
 	chunk_t nonce;
@@ -61,10 +61,10 @@ START_TEST(test_nonceg_get_nonce)
 	tkm_nonceg_t *ng = tkm_nonceg_create();
 
 	const size_t length = 128;
-	u_int8_t zero[length];
+	uint8_t zero[length];
 	memset(zero, 0, length);
 
-	u_int8_t *buf = malloc(length + 1);
+	uint8_t *buf = malloc(length + 1);
 	memset(buf, 0, length);
 	/* set end marker */
 	buf[length] = 255;

@@ -50,7 +50,7 @@ typedef struct {
 	/** list of remote selectors */
 	linked_list_t *remote;
 	/** reqid of CHILD_SA */
-	u_int32_t reqid;
+	uint32_t reqid;
 } entry_t;
 
 METHOD(listener_t, child_updown, bool,

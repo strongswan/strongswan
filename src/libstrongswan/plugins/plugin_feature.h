@@ -362,7 +362,7 @@ static inline void plugin_features_add(plugin_feature_t *features,
  * @param feature	feature to hash
  * @return			hash value of the feature
  */
-u_int32_t plugin_feature_hash(plugin_feature_t *feature);
+uint32_t plugin_feature_hash(plugin_feature_t *feature);
 
 /**
  * Check if feature a matches to feature b.

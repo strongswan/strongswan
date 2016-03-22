@@ -64,7 +64,7 @@ struct af_alg_ops_t {
 	 * @param out		buffer write processed data to
 	 * @return			TRUE if successful
 	 */
-	bool (*crypt)(af_alg_ops_t *this, u_int32_t type, chunk_t iv, chunk_t data,
+	bool (*crypt)(af_alg_ops_t *this, uint32_t type, chunk_t iv, chunk_t data,
 				  char *out);
 
 	/**

@@ -32,7 +32,7 @@ struct private_dhcp_transaction_t {
 	/**
 	 * DHCP transaction ID
 	 */
-	u_int32_t id;
+	uint32_t id;
 
 	/**
 	 * Peer identity
@@ -63,7 +63,7 @@ typedef struct {
 	chunk_t data;
 } attribute_entry_t;
 
-METHOD(dhcp_transaction_t, get_id, u_int32_t,
+METHOD(dhcp_transaction_t, get_id, uint32_t,
 	private_dhcp_transaction_t *this)
 {
 	return this->id;
@@ -157,7 +157,7 @@ METHOD(dhcp_transaction_t, destroy, void,
 /**
  * See header
  */
-dhcp_transaction_t *dhcp_transaction_create(u_int32_t id,
+dhcp_transaction_t *dhcp_transaction_create(uint32_t id,
 											identification_t *identity)
 {
 	private_dhcp_transaction_t *this;

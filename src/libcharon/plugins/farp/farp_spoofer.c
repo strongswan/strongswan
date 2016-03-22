@@ -54,15 +54,15 @@ struct private_farp_spoofer_t {
  * IP over Ethernet ARP message
  */
 typedef struct __attribute__((packed)) {
-	u_int16_t hardware_type;
-	u_int16_t protocol_type;
-	u_int8_t hardware_size;
-	u_int8_t protocol_size;
-	u_int16_t opcode;
-	u_int8_t sender_mac[6];
-	u_int8_t sender_ip[4];
-	u_int8_t target_mac[6];
-	u_int8_t target_ip[4];
+	uint16_t hardware_type;
+	uint16_t protocol_type;
+	uint8_t hardware_size;
+	uint8_t protocol_size;
+	uint16_t opcode;
+	uint8_t sender_mac[6];
+	uint8_t sender_ip[4];
+	uint8_t target_mac[6];
+	uint8_t target_ip[4];
 } arp_t;
 
 /**

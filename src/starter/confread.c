@@ -331,7 +331,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 						DBG1(DBG_APP, "# bad protocol: %s=%s", key, value);
 						goto err;
 					}
-					end->protocol = (u_int8_t)p;
+					end->protocol = (uint8_t)p;
 				}
 			}
 			if (streq(port, "%any"))

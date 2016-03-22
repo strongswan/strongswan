@@ -27,8 +27,8 @@ ENUM(swid_error_code_names, TCG_SWID_ERROR, TCG_SWID_RESPONSE_TOO_LARGE,
 /**
  * Described in header.
  */
-pa_tnc_attr_t* swid_error_create(swid_error_code_t code, u_int32_t request_id,
-								 u_int32_t max_attr_size, char *description)
+pa_tnc_attr_t* swid_error_create(swid_error_code_t code, uint32_t request_id,
+								 uint32_t max_attr_size, char *description)
 {
 	bio_writer_t *writer;
 	chunk_t msg_info;

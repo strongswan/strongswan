@@ -25,7 +25,7 @@
 
 typedef struct ha_segments_t ha_segments_t;
 
-typedef u_int16_t segment_mask_t;
+typedef uint16_t segment_mask_t;
 
 /**
  * maximum number of segments

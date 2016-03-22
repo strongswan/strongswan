@@ -46,7 +46,7 @@ struct imv_database_t {
 	 */
 	 imv_session_t* (*add_session)(imv_database_t *this,
 								   TNC_ConnectionID conn_id,
-								   u_int32_t ar_id_type, chunk_t ar_id_value);
+								   uint32_t ar_id_type, chunk_t ar_id_value);
 
 	/**
 	 * Remove and delete a session

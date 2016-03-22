@@ -107,7 +107,7 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_af_alg_hasher_t *this, chunk_t chunk, u_int8_t *hash)
+	private_af_alg_hasher_t *this, chunk_t chunk, uint8_t *hash)
 {
 	return this->ops->hash(this->ops, chunk, hash, this->size);
 }

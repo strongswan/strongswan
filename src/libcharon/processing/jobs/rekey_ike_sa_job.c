@@ -49,11 +49,11 @@ METHOD(job_t, destroy, void,
 /**
  * Check if we should delay a reauth, and by how many seconds
  */
-static u_int32_t get_retry_delay(ike_sa_t *ike_sa)
+static uint32_t get_retry_delay(ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-	u_int32_t retry = 0;
+	uint32_t retry = 0;
 
 	/* avoid reauth collisions for certain IKE_SA/CHILD_SA states */
 	if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
@@ -87,7 +87,7 @@ METHOD(job_t, execute, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 	status_t status = SUCCESS;
-	u_int32_t retry = 0;
+	uint32_t retry = 0;
 
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);

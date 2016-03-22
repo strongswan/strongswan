@@ -200,7 +200,7 @@ struct listener_t {
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*children_migrate)(listener_t *this, ike_sa_t *ike_sa,
-							 ike_sa_id_t *new, u_int32_t unique);
+							 ike_sa_id_t *new, uint32_t unique);
 
 	/**
 	 * Hook called to invoke additional authorization rules.

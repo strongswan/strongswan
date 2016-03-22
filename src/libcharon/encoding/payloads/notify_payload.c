@@ -260,7 +260,7 @@ struct private_notify_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * Critical flag.
@@ -275,27 +275,27 @@ struct private_notify_payload_t {
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t payload_length;
+	uint16_t payload_length;
 
 	/**
 	 * Domain of interpretation, IKEv1 only.
 	 */
-	u_int32_t doi;
+	uint32_t doi;
 
 	/**
 	 * Protocol id.
 	 */
-	u_int8_t protocol_id;
+	uint8_t protocol_id;
 
 	/**
 	 * Spi size.
 	 */
-	u_int8_t spi_size;
+	uint8_t spi_size;
 
 	/**
 	 * Notify message type.
 	 */
-	u_int16_t notify_type;
+	uint16_t notify_type;
 
 	/**
 	 * Security parameter index (spi).
@@ -596,14 +596,14 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(notify_payload_t, get_protocol_id, u_int8_t,
+METHOD(notify_payload_t, get_protocol_id, uint8_t,
 	private_notify_payload_t *this)
 {
 	return this->protocol_id;
 }
 
 METHOD(notify_payload_t, set_protocol_id, void,
-	private_notify_payload_t *this, u_int8_t protocol_id)
+	private_notify_payload_t *this, uint8_t protocol_id)
 {
 	this->protocol_id = protocol_id;
 }
@@ -620,7 +620,7 @@ METHOD(notify_payload_t, set_notify_type, void,
 	this->notify_type = notify_type;
 }
 
-METHOD(notify_payload_t, get_spi, u_int32_t,
+METHOD(notify_payload_t, get_spi, uint32_t,
 	private_notify_payload_t *this)
 {
 	switch (this->protocol_id)
@@ -629,7 +629,7 @@ METHOD(notify_payload_t, get_spi, u_int32_t,
 		case PROTO_ESP:
 			if (this->spi.len == 4)
 			{
-				return *((u_int32_t*)this->spi.ptr);
+				return *((uint32_t*)this->spi.ptr);
 			}
 		default:
 			break;
@@ -638,7 +638,7 @@ METHOD(notify_payload_t, get_spi, u_int32_t,
 }
 
 METHOD(notify_payload_t, set_spi, void,
-	private_notify_payload_t *this, u_int32_t spi)
+	private_notify_payload_t *this, uint32_t spi)
 {
 	chunk_free(&this->spi);
 	switch (this->protocol_id)
@@ -646,7 +646,7 @@ METHOD(notify_payload_t, set_spi, void,
 		case PROTO_AH:
 		case PROTO_ESP:
 			this->spi = chunk_alloc(4);
-			*((u_int32_t*)this->spi.ptr) = spi;
+			*((uint32_t*)this->spi.ptr) = spi;
 			break;
 		default:
 			break;

@@ -36,7 +36,7 @@ struct private_prf_t {
 };
 
 METHOD(prf_t, get_bytes, bool,
-	private_prf_t *this, chunk_t seed, u_int8_t *buffer)
+	private_prf_t *this, chunk_t seed, uint8_t *buffer)
 {
 	return this->mac->get_mac(this->mac, seed, buffer);
 }

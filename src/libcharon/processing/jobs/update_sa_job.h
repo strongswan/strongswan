@@ -49,6 +49,6 @@ struct update_sa_job_t {
  * @return				update_sa_job_t object
  */
 update_sa_job_t *update_sa_job_create(protocol_id_t protocol,
-									  u_int32_t spi, host_t *dst, host_t *new);
+									  uint32_t spi, host_t *dst, host_t *new);
 
 #endif /** UPDATE_SA_JOB_H_ @}*/

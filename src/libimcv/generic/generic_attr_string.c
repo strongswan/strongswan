@@ -88,7 +88,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_generic_attr_string_t *this, u_int32_t *offset)
+	private_generic_attr_string_t *this, uint32_t *offset)
 {
 	enum_name_t *pa_attr_names;
 	u_char *pos;

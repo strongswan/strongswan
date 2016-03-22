@@ -222,7 +222,7 @@ struct peer_cfg_t {
 	 *
 	 * @return			max number retries
 	 */
-	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
+	uint32_t (*get_keyingtries) (peer_cfg_t *this);
 
 	/**
 	 * Get a time to start rekeying.
@@ -230,7 +230,7 @@ struct peer_cfg_t {
 	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
-	u_int32_t (*get_rekey_time)(peer_cfg_t *this, bool jitter);
+	uint32_t (*get_rekey_time)(peer_cfg_t *this, bool jitter);
 
 	/**
 	 * Get a time to start reauthentication.
@@ -238,14 +238,14 @@ struct peer_cfg_t {
 	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
-	u_int32_t (*get_reauth_time)(peer_cfg_t *this, bool jitter);
+	uint32_t (*get_reauth_time)(peer_cfg_t *this, bool jitter);
 
 	/**
 	 * Get the timeout of a rekeying/reauthenticating SA.
 	 *
 	 * @return			timeout in s
 	 */
-	u_int32_t (*get_over_time)(peer_cfg_t *this);
+	uint32_t (*get_over_time)(peer_cfg_t *this);
 
 	/**
 	 * Use MOBIKE (RFC4555) if peer supports it?
@@ -273,14 +273,14 @@ struct peer_cfg_t {
 	 *
 	 * @return			dpd_delay in seconds
 	 */
-	u_int32_t (*get_dpd) (peer_cfg_t *this);
+	uint32_t (*get_dpd) (peer_cfg_t *this);
 
 	/**
 	 * Get the DPD timeout interval (IKEv1 only)
 	 *
 	 * @return			dpd_timeout in seconds
 	 */
-	u_int32_t (*get_dpd_timeout) (peer_cfg_t *this);
+	uint32_t (*get_dpd_timeout) (peer_cfg_t *this);
 
 	/**
 	 * Add a virtual IP to request as initiator.
@@ -397,11 +397,11 @@ struct peer_cfg_t {
  */
 peer_cfg_t *peer_cfg_create(char *name,
 							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
-							unique_policy_t unique, u_int32_t keyingtries,
-							u_int32_t rekey_time, u_int32_t reauth_time,
-							u_int32_t jitter_time, u_int32_t over_time,
+							unique_policy_t unique, uint32_t keyingtries,
+							uint32_t rekey_time, uint32_t reauth_time,
+							uint32_t jitter_time, uint32_t over_time,
 							bool mobike, bool aggressive, bool pull_mode,
-							u_int32_t dpd, u_int32_t dpd_timeout,
+							uint32_t dpd, uint32_t dpd_timeout,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 

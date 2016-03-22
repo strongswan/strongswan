@@ -40,7 +40,7 @@ struct pb_assessment_result_msg_t {
 	 *
 	 * @return			PB Assessment result
 	 */
-	u_int32_t (*get_assessment_result)(pb_assessment_result_msg_t *this);
+	uint32_t (*get_assessment_result)(pb_assessment_result_msg_t *this);
 };
 
 /**
@@ -48,7 +48,7 @@ struct pb_assessment_result_msg_t {
  *
  * @param assessment_result		Assessment result code
  */
-pb_tnc_msg_t* pb_assessment_result_msg_create(u_int32_t assessment_result);
+pb_tnc_msg_t* pb_assessment_result_msg_create(uint32_t assessment_result);
 
 /**
  * Create an unprocessed PB-Assessment-Result message from raw data

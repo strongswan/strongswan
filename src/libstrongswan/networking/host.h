@@ -99,14 +99,14 @@ struct host_t {
 	 *
 	 * @return		port number
 	 */
-	u_int16_t (*get_port) (host_t *this);
+	uint16_t (*get_port) (host_t *this);
 
 	/**
 	 * Set the port of this host
 	 *
 	 * @param port	port number
 	 */
-	void (*set_port) (host_t *this, u_int16_t port);
+	void (*set_port) (host_t *this, uint16_t port);
 
 	/**
 	 * Compare the ips of two hosts hosts.
@@ -137,7 +137,7 @@ struct host_t {
  * @param port			port number
  * @return				host_t, NULL if string not an address.
  */
-host_t *host_create_from_string(char *string, u_int16_t port);
+host_t *host_create_from_string(char *string, uint16_t port);
 
 /**
  * Same as host_create_from_string(), but with the option to enforce a family.
@@ -148,7 +148,7 @@ host_t *host_create_from_string(char *string, u_int16_t port);
  * @return				host_t, NULL if string not an address.
  */
 host_t *host_create_from_string_and_family(char *string, int family,
-										   u_int16_t port);
+										   uint16_t port);
 
 /**
  * Constructor to create a host_t from a DNS name.
@@ -158,7 +158,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
  * @param port			port number
  * @return				host_t, NULL lookup failed
  */
-host_t *host_create_from_dns(char *string, int family, u_int16_t port);
+host_t *host_create_from_dns(char *string, int family, uint16_t port);
 
 /**
  * Constructor to create a host_t object from an address chunk.
@@ -170,7 +170,7 @@ host_t *host_create_from_dns(char *string, int family, u_int16_t port);
  * @param port			port number
  * @return				host_t, NULL if family not supported/chunk invalid
  */
-host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
+host_t *host_create_from_chunk(int family, chunk_t address, uint16_t port);
 
 /**
  * Constructor to create a host_t object from a sockaddr struct

@@ -43,7 +43,7 @@ struct tcg_pts_attr_dh_nonce_finish_t {
 	 *
 	 * @return				Length of nonce
 	 */
-	u_int8_t (*get_nonce_len)(tcg_pts_attr_dh_nonce_finish_t *this);
+	uint8_t (*get_nonce_len)(tcg_pts_attr_dh_nonce_finish_t *this);
 
 	/**
 	 * Get selected hash algorithm

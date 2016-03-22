@@ -131,8 +131,8 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL, *old_sa = NULL;
 	ike_version_t version = IKEV2;
-	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
-	u_int16_t dh_grp = 0;
+	uint16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
+	uint16_t dh_grp = 0;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
 	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
@@ -486,7 +486,7 @@ static void process_ike_mid(private_ha_dispatcher_t *this,
 	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
-	u_int32_t mid = 0;
+	uint32_t mid = 0;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -652,11 +652,11 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	child_sa_t *child_sa;
 	proposal_t *proposal;
 	bool initiator = FALSE, failed = FALSE, ok = FALSE;
-	u_int32_t inbound_spi = 0, outbound_spi = 0;
-	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
-	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
-	u_int16_t encr = 0, integ = 0, len = 0, dh_grp = 0;
-	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
+	uint32_t inbound_spi = 0, outbound_spi = 0;
+	uint16_t inbound_cpi = 0, outbound_cpi = 0;
+	uint8_t mode = MODE_TUNNEL, ipcomp = 0;
+	uint16_t encr = 0, integ = 0, len = 0, dh_grp = 0;
+	uint16_t esn = NO_EXT_SEQ_NUMBERS;
 	u_int seg_i, seg_o;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
@@ -777,7 +777,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
 		keymat_v1_t *keymat_v1 = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
-		u_int32_t spi_i, spi_r;
+		uint32_t spi_i, spi_r;
 
 		spi_i = initiator ? inbound_spi : outbound_spi;
 		spi_r = initiator ? outbound_spi : inbound_spi;
@@ -889,7 +889,7 @@ static void process_child_delete(private_ha_dispatcher_t *this,
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
-	u_int32_t spi = 0;
+	uint32_t spi = 0;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))

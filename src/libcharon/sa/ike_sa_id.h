@@ -41,7 +41,7 @@ struct ike_sa_id_t {
 	 *
 	 * @return					IKE version
 	 */
-	u_int8_t (*get_ike_version) (ike_sa_id_t *this);
+	uint8_t (*get_ike_version) (ike_sa_id_t *this);
 
 	/**
 	 * Set the SPI of the responder.
@@ -50,28 +50,28 @@ struct ike_sa_id_t {
 	 *
 	 * @param responder_spi		SPI of responder to set
 	 */
-	void (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
+	void (*set_responder_spi) (ike_sa_id_t *this, uint64_t responder_spi);
 
 	/**
 	 * Set the SPI of the initiator.
 	 *
 	 * @param initiator_spi		SPI to set
 	 */
-	void (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
+	void (*set_initiator_spi) (ike_sa_id_t *this, uint64_t initiator_spi);
 
 	/**
 	 * Get the initiator SPI.
 	 *
 	 * @return					SPI of the initiator
 	 */
-	u_int64_t (*get_initiator_spi) (ike_sa_id_t *this);
+	uint64_t (*get_initiator_spi) (ike_sa_id_t *this);
 
 	/**
 	 * Get the responder SPI.
 	 *
 	 * @return					SPI of the responder
 	 */
-	u_int64_t (*get_responder_spi) (ike_sa_id_t *this);
+	uint64_t (*get_responder_spi) (ike_sa_id_t *this);
 
 	/**
 	 * Check if two ike_sa_id_t objects are equal.
@@ -131,7 +131,7 @@ struct ike_sa_id_t {
  * @param is_initiaor			TRUE if we are the original initiator
  * @return						ike_sa_id_t object
  */
-ike_sa_id_t * ike_sa_id_create(u_int8_t ike_version, u_int64_t initiator_spi,
-							   u_int64_t responder_spi, bool is_initiaor);
+ike_sa_id_t * ike_sa_id_create(uint8_t ike_version, uint64_t initiator_spi,
+							   uint64_t responder_spi, bool is_initiaor);
 
 #endif /** IKE_SA_ID_H_ @}*/

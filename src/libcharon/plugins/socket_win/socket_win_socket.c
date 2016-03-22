@@ -51,7 +51,7 @@ struct private_socket_win_socket_t {
 	/**
 	 * Port for each socket
 	 */
-	u_int16_t ports[SOCKET_COUNT];
+	uint16_t ports[SOCKET_COUNT];
 
 	/**
 	 * IPv4/IPv6 dual-use sockets
@@ -205,7 +205,7 @@ METHOD(socket_t, receiver, status_t,
 METHOD(socket_t, sender, status_t,
 	private_socket_win_socket_t *this, packet_t *packet)
 {
-	u_int16_t port;
+	uint16_t port;
 	int i = -1, j;
 	host_t *src, *dst;
 	WSAMSG msg;
@@ -316,7 +316,7 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
-METHOD(socket_t, get_port, u_int16_t,
+METHOD(socket_t, get_port, uint16_t,
 	private_socket_win_socket_t *this, bool nat)
 {
 	return this->ports[nat != 0];

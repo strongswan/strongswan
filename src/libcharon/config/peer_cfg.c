@@ -88,7 +88,7 @@ struct private_peer_cfg_t {
 	/**
 	 * number of tries after giving up if peer does not respond
 	 */
-	u_int32_t keyingtries;
+	uint32_t keyingtries;
 
 	/**
 	 * enable support for MOBIKE
@@ -108,32 +108,32 @@ struct private_peer_cfg_t {
 	/**
 	 * Time before starting rekeying
 	 */
-	u_int32_t rekey_time;
+	uint32_t rekey_time;
 
 	/**
 	 * Time before starting reauthentication
 	 */
-	u_int32_t reauth_time;
+	uint32_t reauth_time;
 
 	/**
 	 * Time, which specifies the range of a random value subtracted from above.
 	 */
-	u_int32_t jitter_time;
+	uint32_t jitter_time;
 
 	/**
 	 * Delay before deleting a rekeying/reauthenticating SA
 	 */
-	u_int32_t over_time;
+	uint32_t over_time;
 
 	/**
 	 * DPD check intervall
 	 */
-	u_int32_t dpd;
+	uint32_t dpd;
 
 	/**
 	 * DPD timeout intervall (used for IKEv1 only)
 	 */
-	u_int32_t dpd_timeout;
+	uint32_t dpd_timeout;
 
 	/**
 	 * List of virtual IPs (host_t*) to request
@@ -455,13 +455,13 @@ METHOD(peer_cfg_t, get_unique_policy, unique_policy_t,
 	return this->unique;
 }
 
-METHOD(peer_cfg_t, get_keyingtries, u_int32_t,
+METHOD(peer_cfg_t, get_keyingtries, uint32_t,
 	private_peer_cfg_t *this)
 {
 	return this->keyingtries;
 }
 
-METHOD(peer_cfg_t, get_rekey_time, u_int32_t,
+METHOD(peer_cfg_t, get_rekey_time, uint32_t,
 	private_peer_cfg_t *this, bool jitter)
 {
 	if (this->rekey_time == 0)
@@ -475,7 +475,7 @@ METHOD(peer_cfg_t, get_rekey_time, u_int32_t,
 	return this->rekey_time - (random() % this->jitter_time);
 }
 
-METHOD(peer_cfg_t, get_reauth_time, u_int32_t,
+METHOD(peer_cfg_t, get_reauth_time, uint32_t,
 	private_peer_cfg_t *this, bool jitter)
 {
 	if (this->reauth_time == 0)
@@ -489,7 +489,7 @@ METHOD(peer_cfg_t, get_reauth_time, u_int32_t,
 	return this->reauth_time - (random() % this->jitter_time);
 }
 
-METHOD(peer_cfg_t, get_over_time, u_int32_t,
+METHOD(peer_cfg_t, get_over_time, uint32_t,
 	private_peer_cfg_t *this)
 {
 	return this->over_time;
@@ -513,13 +513,13 @@ METHOD(peer_cfg_t, use_pull_mode, bool,
 	return this->pull_mode;
 }
 
-METHOD(peer_cfg_t, get_dpd, u_int32_t,
+METHOD(peer_cfg_t, get_dpd, uint32_t,
 	private_peer_cfg_t *this)
 {
 	return this->dpd;
 }
 
-METHOD(peer_cfg_t, get_dpd_timeout, u_int32_t,
+METHOD(peer_cfg_t, get_dpd_timeout, uint32_t,
 	private_peer_cfg_t *this)
 {
 	return this->dpd_timeout;
@@ -726,11 +726,11 @@ METHOD(peer_cfg_t, destroy, void,
  */
 peer_cfg_t *peer_cfg_create(char *name,
 							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
-							unique_policy_t unique, u_int32_t keyingtries,
-							u_int32_t rekey_time, u_int32_t reauth_time,
-							u_int32_t jitter_time, u_int32_t over_time,
+							unique_policy_t unique, uint32_t keyingtries,
+							uint32_t rekey_time, uint32_t reauth_time,
+							uint32_t jitter_time, uint32_t over_time,
 							bool mobike, bool aggressive, bool pull_mode,
-							u_int32_t dpd, u_int32_t dpd_timeout,
+							uint32_t dpd, uint32_t dpd_timeout,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {

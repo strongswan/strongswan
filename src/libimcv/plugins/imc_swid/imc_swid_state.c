@@ -59,7 +59,7 @@ struct private_imc_swid_state_t {
 	/**
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
-	u_int32_t max_msg_len;
+	uint32_t max_msg_len;
 
 	/**
 	 * PA-TNC attribute segmentation contracts associated with TNCCS connection
@@ -69,7 +69,7 @@ struct private_imc_swid_state_t {
 	/**
 	 * Event ID Epoch
 	 */
-	u_int32_t eid_epoch;
+	uint32_t eid_epoch;
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -98,12 +98,12 @@ METHOD(imc_state_t, set_flags, void,
 }
 
 METHOD(imc_state_t, set_max_msg_len, void,
-	private_imc_swid_state_t *this, u_int32_t max_msg_len)
+	private_imc_swid_state_t *this, uint32_t max_msg_len)
 {
 	this->max_msg_len = max_msg_len;
 }
 
-METHOD(imc_state_t, get_max_msg_len, u_int32_t,
+METHOD(imc_state_t, get_max_msg_len, uint32_t,
 	private_imc_swid_state_t *this)
 {
 	return this->max_msg_len;
@@ -146,7 +146,7 @@ METHOD(imc_state_t, destroy, void,
 	free(this);
 }
 
-METHOD(imc_swid_state_t, get_eid_epoch, u_int32_t,
+METHOD(imc_swid_state_t, get_eid_epoch, uint32_t,
 	private_imc_swid_state_t *this)
 {
 	return this->eid_epoch;
@@ -158,11 +158,11 @@ METHOD(imc_swid_state_t, get_eid_epoch, u_int32_t,
 imc_state_t *imc_swid_state_create(TNC_ConnectionID connection_id)
 {
 	private_imc_swid_state_t *this;
-	u_int32_t eid_epoch;
+	uint32_t eid_epoch;
 	nonce_gen_t *ng;
 
 	ng = lib->crypto->create_nonce_gen(lib->crypto);
-	if (!ng || !ng->get_nonce(ng, 4, (u_int8_t*)&eid_epoch))
+	if (!ng || !ng->get_nonce(ng, 4, (uint8_t*)&eid_epoch))
 	{
 		DBG1(DBG_TNC, "failed to generate random EID epoch value");
 		DESTROY_IF(ng);

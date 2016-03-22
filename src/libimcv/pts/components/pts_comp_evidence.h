@@ -70,14 +70,14 @@ struct pts_comp_evidence_t {
 	 * @result					Component Functional Name
 	 */
 	pts_comp_func_name_t* (*get_comp_func_name)(pts_comp_evidence_t *this,
-							   					u_int32_t *depth);
+							   					uint32_t *depth);
 
 	/**
 	 * Gets the PCR the measurement was extended into
 	 *
 	 * @result					PCR the measurement was extended into
 	 */
-	u_int32_t (*get_extended_pcr)(pts_comp_evidence_t *this);
+	uint32_t (*get_extended_pcr)(pts_comp_evidence_t *this);
 
 	/**
 	 * Gets the measurement and the algorithms used
@@ -89,7 +89,7 @@ struct pts_comp_evidence_t {
 	 * @result					Measurement hash value
 	 */
 	chunk_t (*get_measurement)(pts_comp_evidence_t *this,
-							   u_int32_t *extended_pcr,
+							   uint32_t *extended_pcr,
 							   pts_meas_algorithms_t *algo,
 							   pts_pcr_transform_t *transform,
 							   time_t *measurement_time);
@@ -150,8 +150,8 @@ struct pts_comp_evidence_t {
  * @param measurement			Measurement hash value
  */
 pts_comp_evidence_t* pts_comp_evidence_create(pts_comp_func_name_t *name,
-											  u_int32_t depth,
-											  u_int32_t extended_pcr,
+											  uint32_t depth,
+											  uint32_t extended_pcr,
 											  pts_meas_algorithms_t algo,
 											  pts_pcr_transform_t transform,
 											  time_t measurement_time,

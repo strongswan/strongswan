@@ -96,8 +96,8 @@ struct private_tkm_keymat_t {
 static void aead_create_from_keys(aead_t **in, aead_t **out,
 	   const chunk_t * const sk_ai, const chunk_t * const sk_ar,
 	   const chunk_t * const sk_ei, const chunk_t * const sk_er,
-	   const u_int16_t enc_alg, const u_int16_t int_alg,
-	   const u_int16_t key_size, bool initiator)
+	   const uint16_t enc_alg, const uint16_t int_alg,
+	   const uint16_t key_size, bool initiator)
 {
 	*in = *out = NULL;
 	signer_t *signer_i, *signer_r;
@@ -187,8 +187,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	u_int16_t enc_alg, int_alg, key_size;
-	u_int64_t nc_id, spi_loc, spi_rem;
+	uint16_t enc_alg, int_alg, key_size;
+	uint64_t nc_id, spi_loc, spi_rem;
 	chunk_t *nonce, c_ai, c_ar, c_ei, c_er;
 	tkm_diffie_hellman_t *tkm_dh;
 	dh_id_type dh_id;

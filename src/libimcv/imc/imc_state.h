@@ -72,14 +72,14 @@ struct imc_state_t {
 	 *
 	 * @param max_msg_len	maximum size of a PA-TNC message
 	 */
-	void (*set_max_msg_len)(imc_state_t *this, u_int32_t max_msg_len);
+	void (*set_max_msg_len)(imc_state_t *this, uint32_t max_msg_len);
 
 	/**
 	 * Get the maximum size of a PA-TNC message for this TNCCS connection
 	 *
 	 * @return				maximum size of a PA-TNC message
 	 */
-	u_int32_t (*get_max_msg_len)(imc_state_t *this);
+	uint32_t (*get_max_msg_len)(imc_state_t *this);
 
 	/**
 	 * Get attribute segmentation contracts associated with TNCCS Connection

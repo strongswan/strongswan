@@ -137,7 +137,7 @@ typedef struct {
 METHOD(enumerator_t, parse_enumerate, bool,
 	parse_enumerator_t *this, vici_type_t *out, char **name, chunk_t *value)
 {
-	u_int8_t type;
+	uint8_t type;
 	chunk_t data;
 
 	if (!this->reader->remaining(this->reader) ||

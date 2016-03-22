@@ -43,7 +43,7 @@ struct private_bio_reader_t {
 	chunk_t cleanup;
 };
 
-METHOD(bio_reader_t, remaining, u_int32_t,
+METHOD(bio_reader_t, remaining, uint32_t,
 	private_bio_reader_t *this)
 {
 	return this->buf.len;
@@ -76,16 +76,16 @@ static inline chunk_t chunk_skip_end(chunk_t chunk, size_t bytes, bool from_end)
 /**
  * Returns a pointer to the data to read, optionally from the end
  */
-static inline u_char *get_ptr_end(private_bio_reader_t *this, u_int32_t len,
+static inline u_char *get_ptr_end(private_bio_reader_t *this, uint32_t len,
 								  bool from_end)
 {
 	return from_end ? this->buf.ptr + (this->buf.len - len) : this->buf.ptr;
 }
 
 /**
- * Read an u_int8_t from the buffer, optionally from the end of the buffer
+ * Read an uint8_t from the buffer, optionally from the end of the buffer
  */
-static bool read_uint8_internal(private_bio_reader_t *this, u_int8_t *res,
+static bool read_uint8_internal(private_bio_reader_t *this, uint8_t *res,
 								bool from_end)
 {
 	if (this->buf.len < 1)
@@ -100,9 +100,9 @@ static bool read_uint8_internal(private_bio_reader_t *this, u_int8_t *res,
 }
 
 /**
- * Read an u_int16_t from the buffer, optionally from the end
+ * Read an uint16_t from the buffer, optionally from the end
  */
-static bool read_uint16_internal(private_bio_reader_t *this, u_int16_t *res,
+static bool read_uint16_internal(private_bio_reader_t *this, uint16_t *res,
 								 bool from_end)
 {
 	if (this->buf.len < 2)
@@ -117,9 +117,9 @@ static bool read_uint16_internal(private_bio_reader_t *this, u_int16_t *res,
 }
 
 /**
- * Read an u_int32_t (only 24-bit) from the buffer, optionally from the end
+ * Read an uint32_t (only 24-bit) from the buffer, optionally from the end
  */
-static bool read_uint24_internal(private_bio_reader_t *this, u_int32_t *res,
+static bool read_uint24_internal(private_bio_reader_t *this, uint32_t *res,
 								 bool from_end)
 {
 	if (this->buf.len < 3)
@@ -134,9 +134,9 @@ static bool read_uint24_internal(private_bio_reader_t *this, u_int32_t *res,
 }
 
 /**
- * Read an u_int32_t from the buffer, optionally from the end
+ * Read an uint32_t from the buffer, optionally from the end
  */
-static bool read_uint32_internal(private_bio_reader_t *this, u_int32_t *res,
+static bool read_uint32_internal(private_bio_reader_t *this, uint32_t *res,
 								 bool from_end)
 {
 	if (this->buf.len < 4)
@@ -151,9 +151,9 @@ static bool read_uint32_internal(private_bio_reader_t *this, u_int32_t *res,
 }
 
 /**
- * Read an u_int64_t from the buffer, optionally from the end
+ * Read an uint64_t from the buffer, optionally from the end
  */
-static bool read_uint64_internal(private_bio_reader_t *this, u_int64_t *res,
+static bool read_uint64_internal(private_bio_reader_t *this, uint64_t *res,
 								 bool from_end)
 {
 	if (this->buf.len < 8)
@@ -170,7 +170,7 @@ static bool read_uint64_internal(private_bio_reader_t *this, u_int64_t *res,
 /**
  * Read a chunk of data from the buffer, optionally from the end
  */
-static bool read_data_internal(private_bio_reader_t *this, u_int32_t len,
+static bool read_data_internal(private_bio_reader_t *this, uint32_t len,
 							   chunk_t *res, bool from_end)
 {
 	if (this->buf.len < len)
@@ -185,73 +185,73 @@ static bool read_data_internal(private_bio_reader_t *this, u_int32_t len,
 }
 
 METHOD(bio_reader_t, read_uint8, bool,
-	private_bio_reader_t *this, u_int8_t *res)
+	private_bio_reader_t *this, uint8_t *res)
 {
 	return read_uint8_internal(this, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_uint16, bool,
-	private_bio_reader_t *this, u_int16_t *res)
+	private_bio_reader_t *this, uint16_t *res)
 {
 	return read_uint16_internal(this, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_uint24, bool,
-	private_bio_reader_t *this, u_int32_t *res)
+	private_bio_reader_t *this, uint32_t *res)
 {
 	return read_uint24_internal(this, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_uint32, bool,
-	private_bio_reader_t *this, u_int32_t *res)
+	private_bio_reader_t *this, uint32_t *res)
 {
 	return read_uint32_internal(this, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_uint64, bool,
-	private_bio_reader_t *this, u_int64_t *res)
+	private_bio_reader_t *this, uint64_t *res)
 {
 	return read_uint64_internal(this, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_data, bool,
-	private_bio_reader_t *this, u_int32_t len, chunk_t *res)
+	private_bio_reader_t *this, uint32_t len, chunk_t *res)
 {
 	return read_data_internal(this, len, res, FALSE);
 }
 
 METHOD(bio_reader_t, read_uint8_end, bool,
-	private_bio_reader_t *this, u_int8_t *res)
+	private_bio_reader_t *this, uint8_t *res)
 {
 	return read_uint8_internal(this, res, TRUE);
 }
 
 METHOD(bio_reader_t, read_uint16_end, bool,
-	private_bio_reader_t *this, u_int16_t *res)
+	private_bio_reader_t *this, uint16_t *res)
 {
 	return read_uint16_internal(this, res, TRUE);
 }
 
 METHOD(bio_reader_t, read_uint24_end, bool,
-	private_bio_reader_t *this, u_int32_t *res)
+	private_bio_reader_t *this, uint32_t *res)
 {
 	return read_uint24_internal(this, res, TRUE);
 }
 
 METHOD(bio_reader_t, read_uint32_end, bool,
-	private_bio_reader_t *this, u_int32_t *res)
+	private_bio_reader_t *this, uint32_t *res)
 {
 	return read_uint32_internal(this, res, TRUE);
 }
 
 METHOD(bio_reader_t, read_uint64_end, bool,
-	private_bio_reader_t *this, u_int64_t *res)
+	private_bio_reader_t *this, uint64_t *res)
 {
 	return read_uint64_internal(this, res, TRUE);
 }
 
 METHOD(bio_reader_t, read_data_end, bool,
-	private_bio_reader_t *this, u_int32_t len, chunk_t *res)
+	private_bio_reader_t *this, uint32_t len, chunk_t *res)
 {
 	return read_data_internal(this, len, res, TRUE);
 }
@@ -259,7 +259,7 @@ METHOD(bio_reader_t, read_data_end, bool,
 METHOD(bio_reader_t, read_data8, bool,
 	private_bio_reader_t *this, chunk_t *res)
 {
-	u_int8_t len;
+	uint8_t len;
 
 	if (!read_uint8(this, &len))
 	{
@@ -271,7 +271,7 @@ METHOD(bio_reader_t, read_data8, bool,
 METHOD(bio_reader_t, read_data16, bool,
 	private_bio_reader_t *this, chunk_t *res)
 {
-	u_int16_t len;
+	uint16_t len;
 
 	if (!read_uint16(this, &len))
 	{
@@ -283,7 +283,7 @@ METHOD(bio_reader_t, read_data16, bool,
 METHOD(bio_reader_t, read_data24, bool,
 	private_bio_reader_t *this, chunk_t *res)
 {
-	u_int32_t len;
+	uint32_t len;
 
 	if (!read_uint24(this, &len))
 	{
@@ -295,7 +295,7 @@ METHOD(bio_reader_t, read_data24, bool,
 METHOD(bio_reader_t, read_data32, bool,
 	private_bio_reader_t *this, chunk_t *res)
 {
-	u_int32_t len;
+	uint32_t len;
 
 	if (!read_uint32(this, &len))
 	{

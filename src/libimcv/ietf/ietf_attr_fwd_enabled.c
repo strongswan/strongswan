@@ -117,10 +117,10 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_fwd_enabled_t *this, u_int32_t *offset)
+	private_ietf_attr_fwd_enabled_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t fwd_status;
+	uint32_t fwd_status;
 
 	*offset = 0;
 

@@ -146,7 +146,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 	traffic_selector_t *ts;
 	ipsec_mode_t mode = MODE_TUNNEL;
 	char *token;
-	u_int32_t tfc;
+	uint32_t tfc;
 
 	if (settings->get_bool(settings, "configs.%s.%s.transport",
 						   FALSE, config, child))

@@ -107,7 +107,7 @@ struct dynsock_t {
 	/**
 	 * Bound source port
 	 */
-	u_int16_t port;
+	uint16_t port;
 };
 
 /**
@@ -324,7 +324,7 @@ METHOD(socket_t, receiver, status_t,
 /**
  * Get the port allocated dynamically using bind()
  */
-static bool get_dynamic_port(int fd, int family, u_int16_t *port)
+static bool get_dynamic_port(int fd, int family, uint16_t *port)
 {
 	union {
 		struct sockaddr_storage ss;
@@ -367,7 +367,7 @@ static bool get_dynamic_port(int fd, int family, u_int16_t *port)
  * open a socket to send and receive packets
  */
 static int open_socket(private_socket_dynamic_socket_t *this,
-					   int family, u_int16_t *port)
+					   int family, uint16_t *port)
 {
 	union {
 		struct sockaddr_storage ss;
@@ -481,7 +481,7 @@ static dynsock_t *get_any_socket(private_socket_dynamic_socket_t *this,
  * Find/Create a socket to send from host
  */
 static dynsock_t *find_socket(private_socket_dynamic_socket_t *this,
-							  int family, u_int16_t port)
+							  int family, uint16_t port)
 {
 	dynsock_t *skt, lookup = {
 		.family = family,
@@ -636,7 +636,7 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
-METHOD(socket_t, get_port, u_int16_t,
+METHOD(socket_t, get_port, uint16_t,
 	private_socket_dynamic_socket_t *this, bool nat_t)
 {
 	/* we return 0 here for users that have no explicit port configured, the

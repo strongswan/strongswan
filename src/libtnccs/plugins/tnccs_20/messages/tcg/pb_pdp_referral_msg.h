@@ -74,8 +74,8 @@ struct pb_pdp_referral_msg_t {
 	 * @param port			PT port the PDP is listening on
 	 * @return				Fully Qualified Domain Name of PDP
 	 */
-	chunk_t (*get_fqdn)(pb_pdp_referral_msg_t *this, u_int8_t *protocol,
-						u_int16_t *port);
+	chunk_t (*get_fqdn)(pb_pdp_referral_msg_t *this, uint8_t *protocol,
+						uint16_t *port);
 
 };
 
@@ -94,7 +94,7 @@ pb_tnc_msg_t* pb_pdp_referral_msg_create(pen_type_t identifier_type,
  * @param fqdn				Fully Qualified Domain Name of PDP
  * @param port				PT-TLS port the PDP is listening on 
  */
-pb_tnc_msg_t* pb_pdp_referral_msg_create_from_fqdn(chunk_t fqdn, u_int16_t port);
+pb_tnc_msg_t* pb_pdp_referral_msg_create_from_fqdn(chunk_t fqdn, uint16_t port);
 
 /**
  * Create an unprocessed PB-PDP-Referral message from raw data

@@ -77,7 +77,7 @@ struct ipsec_policy_t {
 	 *
 	 * @return			the reqid
 	 */
-	u_int32_t (*get_reqid)(ipsec_policy_t *this);
+	uint32_t (*get_reqid)(ipsec_policy_t *this);
 
 	/**
 	 * Get another reference to this policy
@@ -99,7 +99,7 @@ struct ipsec_policy_t {
 	 */
 	bool (*match)(ipsec_policy_t *this, traffic_selector_t *src_ts,
 				  traffic_selector_t *dst_ts, policy_dir_t direction,
-				  u_int32_t reqid, mark_t mark, policy_priority_t priority);
+				  uint32_t reqid, mark_t mark, policy_priority_t priority);
 
 	/**
 	 * Check if this policy matches the given IP packet

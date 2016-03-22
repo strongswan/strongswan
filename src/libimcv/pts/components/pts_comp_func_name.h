@@ -38,28 +38,28 @@ struct pts_comp_func_name_t {
 	 *
 	 * @return				PTS Component Functional Name Vendor ID
 	 */
-	u_int32_t (*get_vendor_id)(pts_comp_func_name_t *this);
+	uint32_t (*get_vendor_id)(pts_comp_func_name_t *this);
 
 	/**
 	 * Get the PTS Component Functional Name
 	 *
 	 * @return				PTS Component Functional Name
 	 */
-	u_int32_t (*get_name)(pts_comp_func_name_t *this);
+	uint32_t (*get_name)(pts_comp_func_name_t *this);
 
 	/**
 	 * Get the PTS Component Functional Name Qualifier
 	 *
 	 * @return				PTS Component Functional Name Qualifier
 	 */
-	u_int8_t (*get_qualifier)(pts_comp_func_name_t *this);
+	uint8_t (*get_qualifier)(pts_comp_func_name_t *this);
 
 	/**
 	 * Set the PTS Component Functional Name Qualifier
 	 *
 	 * @param qualifier		PTS Component Functional Name Qualifier to be set
 	 */
-	void (*set_qualifier)(pts_comp_func_name_t *this, u_int8_t qualifier);
+	void (*set_qualifier)(pts_comp_func_name_t *this, uint8_t qualifier);
 
 	/**
 	 * Check to PTS Component Functional Names for equality
@@ -97,7 +97,7 @@ struct pts_comp_func_name_t {
  * @param name				PTS Component Functional Name
  * @param qualifier			PTS Component Functional Name Qualifier
  */
-pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vid, u_int32_t name,
-												u_int8_t qualifier);
+pts_comp_func_name_t* pts_comp_func_name_create(uint32_t vid, uint32_t name,
+												uint8_t qualifier);
 
 #endif /** PTS_FUNC_COMP_NAME_H_ @}*/

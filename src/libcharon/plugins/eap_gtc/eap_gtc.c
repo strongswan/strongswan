@@ -46,7 +46,7 @@ struct private_eap_gtc_t {
 	/**
 	 * EAP message identififier
 	 */
-	u_int8_t identifier;
+	uint8_t identifier;
 };
 
 typedef struct eap_gtc_header_t eap_gtc_header_t;
@@ -56,15 +56,15 @@ typedef struct eap_gtc_header_t eap_gtc_header_t;
  */
 struct eap_gtc_header_t {
 	/** EAP code (REQUEST/RESPONSE) */
-	u_int8_t code;
+	uint8_t code;
 	/** unique message identifier */
-	u_int8_t identifier;
+	uint8_t identifier;
 	/** length of whole message */
-	u_int16_t length;
+	uint16_t length;
 	/** EAP type */
-	u_int8_t type;
+	uint8_t type;
 	/** type data */
-	u_int8_t data[];
+	uint8_t data[];
 } __attribute__((__packed__));
 
 METHOD(eap_method_t, initiate_peer, status_t,
@@ -186,7 +186,7 @@ METHOD(eap_method_t, process_server, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_gtc_t *this, u_int32_t *vendor)
+	private_eap_gtc_t *this, uint32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_GTC;
@@ -198,14 +198,14 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
-METHOD(eap_method_t, get_identifier, u_int8_t,
+METHOD(eap_method_t, get_identifier, uint8_t,
 	private_eap_gtc_t *this)
 {
 	return this->identifier;
 }
 
 METHOD(eap_method_t, set_identifier, void,
-	private_eap_gtc_t *this, u_int8_t identifier)
+	private_eap_gtc_t *this, uint8_t identifier)
 {
 	this->identifier = identifier;
 }

@@ -42,7 +42,7 @@
 #define S43 15
 #define S44 21
 
-static u_int8_t PADDING[64] = {
+static uint8_t PADDING[64] = {
   0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -66,22 +66,22 @@ static u_int8_t PADDING[64] = {
 Rotation is separate from addition to prevent recomputation.
  */
 #define FF(a, b, c, d, x, s, ac) { \
- (a) += F ((b), (c), (d)) + (x) + (u_int32_t)(ac); \
+ (a) += F ((b), (c), (d)) + (x) + (uint32_t)(ac); \
  (a) = ROTATE_LEFT ((a), (s)); \
  (a) += (b); \
   }
 #define GG(a, b, c, d, x, s, ac) { \
- (a) += G ((b), (c), (d)) + (x) + (u_int32_t)(ac); \
+ (a) += G ((b), (c), (d)) + (x) + (uint32_t)(ac); \
  (a) = ROTATE_LEFT ((a), (s)); \
  (a) += (b); \
   }
 #define HH(a, b, c, d, x, s, ac) { \
- (a) += H ((b), (c), (d)) + (x) + (u_int32_t)(ac); \
+ (a) += H ((b), (c), (d)) + (x) + (uint32_t)(ac); \
  (a) = ROTATE_LEFT ((a), (s)); \
  (a) += (b); \
   }
 #define II(a, b, c, d, x, s, ac) { \
- (a) += I ((b), (c), (d)) + (x) + (u_int32_t)(ac); \
+ (a) += I ((b), (c), (d)) + (x) + (uint32_t)(ac); \
  (a) = ROTATE_LEFT ((a), (s)); \
  (a) += (b); \
   }
@@ -102,41 +102,41 @@ struct private_md5_hasher_t {
 	/*
 	 * State of the hasher.
 	 */
-	u_int32_t state[5];
-	u_int32_t count[2];
-	u_int8_t buffer[64];
+	uint32_t state[5];
+	uint32_t count[2];
+	uint8_t buffer[64];
 };
 
 
 #if BYTE_ORDER != LITTLE_ENDIAN
 
-/* Encodes input (u_int32_t) into output (u_int8_t). Assumes len is
+/* Encodes input (uint32_t) into output (uint8_t). Assumes len is
  * a multiple of 4.
  */
-static void Encode (u_int8_t *output, u_int32_t *input, size_t len)
+static void Encode (uint8_t *output, uint32_t *input, size_t len)
 {
 	size_t i, j;
 
 	for (i = 0, j = 0; j < len; i++, j += 4)
 	{
-		output[j] = (u_int8_t)(input[i] & 0xff);
-		output[j+1] = (u_int8_t)((input[i] >> 8) & 0xff);
-		output[j+2] = (u_int8_t)((input[i] >> 16) & 0xff);
-		output[j+3] = (u_int8_t)((input[i] >> 24) & 0xff);
+		output[j] = (uint8_t)(input[i] & 0xff);
+		output[j+1] = (uint8_t)((input[i] >> 8) & 0xff);
+		output[j+2] = (uint8_t)((input[i] >> 16) & 0xff);
+		output[j+3] = (uint8_t)((input[i] >> 24) & 0xff);
 	}
 }
 
-/* Decodes input (u_int8_t) into output (u_int32_t). Assumes len is
+/* Decodes input (uint8_t) into output (uint32_t). Assumes len is
  * a multiple of 4.
  */
-static void Decode(u_int32_t *output, u_int8_t *input, size_t len)
+static void Decode(uint32_t *output, uint8_t *input, size_t len)
 {
 	size_t i, j;
 
 	for (i = 0, j = 0; j < len; i++, j += 4)
 	{
-		output[i] = ((u_int32_t)input[j]) | (((u_int32_t)input[j+1]) << 8) |
-		(((u_int32_t)input[j+2]) << 16) | (((u_int32_t)input[j+3]) << 24);
+		output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j+1]) << 8) |
+		(((uint32_t)input[j+2]) << 16) | (((uint32_t)input[j+3]) << 24);
 	}
 }
 
@@ -147,9 +147,9 @@ static void Decode(u_int32_t *output, u_int8_t *input, size_t len)
 
 /* MD5 basic transformation. Transforms state based on block.
  */
-static void MD5Transform(u_int32_t state[4], u_int8_t block[64])
+static void MD5Transform(uint32_t state[4], uint8_t block[64])
 {
-	u_int32_t a = state[0], b = state[1], c = state[2], d = state[3], x[16];
+	uint32_t a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
 	Decode(x, block, 64);
 
@@ -235,13 +235,13 @@ static void MD5Transform(u_int32_t state[4], u_int8_t block[64])
  * operation, processing another message block, and updating the
  * context.
  */
-static void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputLen)
+static void MD5Update(private_md5_hasher_t *this, uint8_t *input, size_t inputLen)
 {
-	u_int32_t i;
+	uint32_t i;
 	size_t index, partLen;
 
 	/* Compute number of bytes mod 64 */
-	index = (u_int8_t)((this->count[0] >> 3) & 0x3F);
+	index = (uint8_t)((this->count[0] >> 3) & 0x3F);
 
 	/* Update number of bits */
 	if ((this->count[0] += (inputLen << 3)) < (inputLen << 3))
@@ -276,9 +276,9 @@ static void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputL
 /* MD5 finalization. Ends an MD5 message-digest operation, writing the
  * the message digest and zeroizing the context.
  */
-static void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
+static void MD5Final (private_md5_hasher_t *this, uint8_t digest[16])
 {
-	u_int8_t bits[8];
+	uint8_t bits[8];
 	size_t index, padLen;
 
 	/* Save number of bits */
@@ -313,7 +313,7 @@ METHOD(hasher_t, reset, bool,
 }
 
 METHOD(hasher_t, get_hash, bool,
-	private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+	private_md5_hasher_t *this, chunk_t chunk, uint8_t *buffer)
 {
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)

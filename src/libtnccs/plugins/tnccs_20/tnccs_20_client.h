@@ -45,7 +45,7 @@ struct tnccs_20_client_t {
 	 * @param port			PT-TLS port of the PDP server
 	 * @return				FQDN of PDP server
 	 */
-	chunk_t (*get_pdp_server)(tnccs_20_client_t *this, u_int16_t *port);
+	chunk_t (*get_pdp_server)(tnccs_20_client_t *this, uint16_t *port);
 
 };
 

@@ -41,7 +41,7 @@ struct private_pkcs5_t {
 	/**
 	 * Iterations for key derivation
 	 */
-	u_int64_t iterations;
+	uint64_t iterations;
 
 	/**
 	 * Encryption algorithm
@@ -110,7 +110,7 @@ struct private_pkcs5_t {
  */
 static bool verify_padding(crypter_t *crypter, chunk_t *blob)
 {
-	u_int8_t padding, count;
+	uint8_t padding, count;
 
 	padding = count = blob->ptr[blob->len - 1];
 
@@ -181,10 +181,10 @@ static bool pkcs12_kdf(private_pkcs5_t *this, chunk_t password, chunk_t keymat)
  * Function F of PBKDF2
  */
 static bool pbkdf2_f(chunk_t block, prf_t *prf, chunk_t seed,
-					 u_int64_t iterations)
+					 uint64_t iterations)
 {
 	chunk_t u;
-	u_int64_t i;
+	uint64_t i;
 
 	u = chunk_alloca(prf->get_block_size(prf));
 	if (!prf->get_bytes(prf, seed, u.ptr))
@@ -212,7 +212,7 @@ static bool pbkdf2(private_pkcs5_t *this, chunk_t password, chunk_t key)
 	prf_t *prf;
 	chunk_t keymat, block, seed;
 	size_t blocks;
-	u_int32_t i = 0;
+	uint32_t i = 0;
 
 	prf = this->data.pbes2.prf;
 
@@ -247,7 +247,7 @@ static bool pbkdf1(private_pkcs5_t *this, chunk_t password, chunk_t key)
 {
 	hasher_t *hasher;
 	chunk_t hash;
-	u_int64_t i;
+	uint64_t i;
 
 	hasher = this->data.pbes1.hasher;
 

@@ -119,7 +119,7 @@ struct dnscert_t {
 	 *
 	 * @return			keytag
 	 */
-	u_int16_t (*get_key_tag)(dnscert_t *this);
+	uint16_t (*get_key_tag)(dnscert_t *this);
 
 	/**
 	 * Get the algorithm.

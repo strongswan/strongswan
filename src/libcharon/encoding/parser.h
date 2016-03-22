@@ -68,7 +68,7 @@ struct parser_t {
 	 *
 	 * @param major_version	the major IKE version
 	 */
-	void (*set_major_version) (parser_t *this, u_int8_t major_version);
+	void (*set_major_version) (parser_t *this, uint8_t major_version);
 
 	/**
 	 * Destroys a parser_t object.

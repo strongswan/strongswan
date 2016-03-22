@@ -47,7 +47,7 @@ ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
 /**
  * See header
  */
-pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, size_t length,
+pa_tnc_attr_t* ietf_attr_create_from_data(uint32_t type, size_t length,
 										  chunk_t value)
 {
 	switch (type)

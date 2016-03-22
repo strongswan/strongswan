@@ -50,7 +50,7 @@ struct tls_aead_t {
 	 * @return				TRUE if successfully encrypted
 	 */
 	bool (*encrypt)(tls_aead_t *this, tls_version_t version,
-					tls_content_type_t type, u_int64_t seq, chunk_t *data);
+					tls_content_type_t type, uint64_t seq, chunk_t *data);
 
 	/**
 	 * Decrypt and verify a TLS record.
@@ -65,7 +65,7 @@ struct tls_aead_t {
 	 * @return				TRUE if successfully decrypted
 	 */
 	bool (*decrypt)(tls_aead_t *this, tls_version_t version,
-					tls_content_type_t type, u_int64_t seq, chunk_t *data);
+					tls_content_type_t type, uint64_t seq, chunk_t *data);
 
 	/**
 	 * Get the authentication key size.

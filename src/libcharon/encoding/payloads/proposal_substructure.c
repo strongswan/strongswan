@@ -45,37 +45,37 @@ struct private_proposal_substructure_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	uint8_t  next_payload;
 
 	/**
 	 * reserved byte
 	 */
-	u_int8_t reserved;
+	uint8_t reserved;
 
 	/**
 	 * Length of this payload.
 	 */
-	u_int16_t proposal_length;
+	uint16_t proposal_length;
 
 	/**
 	 * Proposal number.
 	 */
-	u_int8_t proposal_number;
+	uint8_t proposal_number;
 
 	/**
 	 * Protocol ID.
 	 */
-	u_int8_t protocol_id;
+	uint8_t protocol_id;
 
 	/**
 	 * SPI size of the following SPI.
 	 */
-	u_int8_t  spi_size;
+	uint8_t  spi_size;
 
 	/**
 	 * Number of transforms.
 	 */
-	u_int8_t  transforms_count;
+	uint8_t  transforms_count;
 
 	/**
 	 * SPI is stored as chunk.
@@ -479,24 +479,24 @@ METHOD(proposal_substructure_t, set_is_last_proposal, void,
 }
 
 METHOD(proposal_substructure_t, set_proposal_number, void,
-	private_proposal_substructure_t *this,u_int8_t proposal_number)
+	private_proposal_substructure_t *this,uint8_t proposal_number)
 {
 	this->proposal_number = proposal_number;
 }
 
-METHOD(proposal_substructure_t, get_proposal_number, u_int8_t,
+METHOD(proposal_substructure_t, get_proposal_number, uint8_t,
 	private_proposal_substructure_t *this)
 {
 	return this->proposal_number;
 }
 
 METHOD(proposal_substructure_t, set_protocol_id, void,
-	private_proposal_substructure_t *this,u_int8_t protocol_id)
+	private_proposal_substructure_t *this,uint8_t protocol_id)
 {
 	this->protocol_id = protocol_id;
 }
 
-METHOD(proposal_substructure_t, get_protocol_id, u_int8_t,
+METHOD(proposal_substructure_t, get_protocol_id, uint8_t,
 	private_proposal_substructure_t *this)
 {
 	return this->protocol_id;
@@ -518,7 +518,7 @@ METHOD(proposal_substructure_t, get_spi, chunk_t,
 }
 
 METHOD(proposal_substructure_t, get_cpi, bool,
-	private_proposal_substructure_t *this, u_int16_t *cpi)
+	private_proposal_substructure_t *this, uint16_t *cpi)
 {
 
 	transform_substructure_t *transform;
@@ -554,7 +554,7 @@ static void add_to_proposal_v2(proposal_t *proposal,
 {
 	transform_attribute_t *tattr;
 	enumerator_t *enumerator;
-	u_int16_t key_length = 0;
+	uint16_t key_length = 0;
 
 	enumerator = transform->create_attribute_enumerator(transform);
 	while (enumerator->enumerate(enumerator, &tattr))
@@ -576,8 +576,8 @@ static void add_to_proposal_v2(proposal_t *proposal,
  * Map IKEv1 to IKEv2 algorithms
  */
 typedef struct {
-	u_int16_t ikev1;
-	u_int16_t ikev2;
+	uint16_t ikev1;
+	uint16_t ikev2;
 } algo_map_t;
 
 /**
@@ -681,8 +681,8 @@ static algo_map_t map_auth[] = {
 /**
  * Map an IKEv1 to an IKEv2 identifier
  */
-static u_int16_t ikev2_from_ikev1(algo_map_t *map, int count, u_int16_t def,
-								  u_int16_t value)
+static uint16_t ikev2_from_ikev1(algo_map_t *map, int count, uint16_t def,
+								  uint16_t value)
 {
 	int i;
 
@@ -699,7 +699,7 @@ static u_int16_t ikev2_from_ikev1(algo_map_t *map, int count, u_int16_t def,
 /**
  * Map an IKEv2 to an IKEv1 identifier
  */
-static u_int16_t ikev1_from_ikev2(algo_map_t *map, int count, u_int16_t value)
+static uint16_t ikev1_from_ikev2(algo_map_t *map, int count, uint16_t value)
 {
 	int i;
 
@@ -716,7 +716,7 @@ static u_int16_t ikev1_from_ikev2(algo_map_t *map, int count, u_int16_t value)
 /**
  * Get IKEv2 algorithm from IKEv1 identifier
  */
-static u_int16_t get_alg_from_ikev1(transform_type_t type, u_int16_t value)
+static uint16_t get_alg_from_ikev1(transform_type_t type, uint16_t value)
 {
 	switch (type)
 	{
@@ -737,7 +737,7 @@ static u_int16_t get_alg_from_ikev1(transform_type_t type, u_int16_t value)
 /**
  * Get IKEv1 algorithm from IKEv2 identifier
  */
-static u_int16_t get_ikev1_from_alg(transform_type_t type, u_int16_t value)
+static uint16_t get_ikev1_from_alg(transform_type_t type, uint16_t value)
 {
 	switch (type)
 	{
@@ -755,8 +755,8 @@ static u_int16_t get_ikev1_from_alg(transform_type_t type, u_int16_t value)
 /**
  * Get IKEv2 algorithm from IKEv1 ESP/AH transform ID
  */
-static u_int16_t get_alg_from_ikev1_transid(transform_type_t type,
-											u_int16_t value)
+static uint16_t get_alg_from_ikev1_transid(transform_type_t type,
+											uint16_t value)
 {
 	switch (type)
 	{
@@ -774,8 +774,8 @@ static u_int16_t get_alg_from_ikev1_transid(transform_type_t type,
 /**
  * Get IKEv1 ESP/AH transform ID from IKEv2 identifier
  */
-static u_int16_t get_ikev1_transid_from_alg(transform_type_t type,
-											u_int16_t value)
+static uint16_t get_ikev1_transid_from_alg(transform_type_t type,
+											uint16_t value)
 {
 	switch (type)
 	{
@@ -791,7 +791,7 @@ static u_int16_t get_ikev1_transid_from_alg(transform_type_t type,
 /**
  * Get IKEv1 authentication algorithm from IKEv2 identifier
  */
-static u_int16_t get_alg_from_ikev1_auth(u_int16_t value)
+static uint16_t get_alg_from_ikev1_auth(uint16_t value)
 {
 	return ikev2_from_ikev1(map_auth, countof(map_auth), AUTH_UNDEFINED, value);
 }
@@ -799,7 +799,7 @@ static u_int16_t get_alg_from_ikev1_auth(u_int16_t value)
 /**
  * Get IKEv1 authentication algorithm from IKEv2 identifier
  */
-static u_int16_t get_ikev1_auth_from_alg(u_int16_t value)
+static uint16_t get_ikev1_auth_from_alg(uint16_t value)
 {
 	return ikev1_from_ikev2(map_auth, countof(map_auth), value);
 }
@@ -807,7 +807,7 @@ static u_int16_t get_ikev1_auth_from_alg(u_int16_t value)
 /**
  * Get IKEv1 authentication attribute from auth_method_t
  */
-static u_int16_t get_ikev1_auth(auth_method_t method)
+static uint16_t get_ikev1_auth(auth_method_t method)
 {
 	switch (method)
 	{
@@ -842,7 +842,7 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 /**
  * Get IKEv1 encapsulation mode
  */
-static u_int16_t get_ikev1_mode(ipsec_mode_t mode, encap_t udp)
+static uint16_t get_ikev1_mode(ipsec_mode_t mode, encap_t udp)
 {
 	switch (mode)
 	{
@@ -880,8 +880,8 @@ static void add_to_proposal_v1_ike(proposal_t *proposal,
 	transform_attribute_type_t type;
 	transform_attribute_t *tattr;
 	enumerator_t *enumerator;
-	u_int16_t value, key_length = 0;
-	u_int16_t encr = ENCR_UNDEFINED;
+	uint16_t value, key_length = 0;
+	uint16_t encr = ENCR_UNDEFINED;
 
 	enumerator = transform->create_attribute_enumerator(transform);
 	while (enumerator->enumerate(enumerator, &tattr))
@@ -932,7 +932,7 @@ static void add_to_proposal_v1(proposal_t *proposal,
 	transform_attribute_type_t type;
 	transform_attribute_t *tattr;
 	enumerator_t *enumerator;
-	u_int16_t encr, value, key_length = 0;
+	uint16_t encr, value, key_length = 0;
 
 	enumerator = transform->create_attribute_enumerator(transform);
 	while (enumerator->enumerate(enumerator, &tattr))
@@ -985,15 +985,15 @@ METHOD(proposal_substructure_t, get_proposals, void,
 	transform_substructure_t *transform;
 	enumerator_t *enumerator;
 	proposal_t *proposal = NULL;
-	u_int64_t spi = 0;
+	uint64_t spi = 0;
 
 	switch (this->spi.len)
 	{
 		case 4:
-			spi =  *((u_int32_t*)this->spi.ptr);
+			spi =  *((uint32_t*)this->spi.ptr);
 			break;
 		case 8:
-			spi = *((u_int64_t*)this->spi.ptr);
+			spi = *((uint64_t*)this->spi.ptr);
 			break;
 		default:
 			break;
@@ -1042,7 +1042,7 @@ METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
 /**
  * Get an attribute from any transform, 0 if not found
  */
-static u_int64_t get_attr(private_proposal_substructure_t *this,
+static uint64_t get_attr(private_proposal_substructure_t *this,
 						  transform_attribute_type_t type)
 {
 	enumerator_t *transforms, *attributes;
@@ -1071,7 +1071,7 @@ static u_int64_t get_attr(private_proposal_substructure_t *this,
 /**
  * Look up a lifetime duration of a given kind in all transforms
  */
-static u_int64_t get_life_duration(private_proposal_substructure_t *this,
+static uint64_t get_life_duration(private_proposal_substructure_t *this,
 				transform_attribute_type_t type_attr, ikev1_life_type_t type,
 				transform_attribute_type_t dur_attr)
 {
@@ -1105,10 +1105,10 @@ static u_int64_t get_life_duration(private_proposal_substructure_t *this,
 	return 0;
 }
 
-METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
+METHOD(proposal_substructure_t, get_lifetime, uint32_t,
 	private_proposal_substructure_t *this)
 {
-	u_int32_t duration;
+	uint32_t duration;
 
 	switch (this->protocol_id)
 	{
@@ -1129,7 +1129,7 @@ METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
 	}
 }
 
-METHOD(proposal_substructure_t, get_lifebytes, u_int64_t,
+METHOD(proposal_substructure_t, get_lifebytes, uint64_t,
 	private_proposal_substructure_t *this)
 {
 	switch (this->protocol_id)
@@ -1259,11 +1259,11 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
  * Add an IKEv1 IKE proposal to the substructure
  */
 static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
-									 proposal_t *proposal, u_int32_t lifetime,
+									 proposal_t *proposal, uint32_t lifetime,
 									 auth_method_t method, int number)
 {
 	transform_substructure_t *transform;
-	u_int16_t alg, key_size;
+	uint16_t alg, key_size;
 	enumerator_t *enumerator;
 
 	transform = transform_substructure_create_type(PLV1_TRANSFORM_SUBSTRUCTURE,
@@ -1330,11 +1330,11 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
  * Add an IKEv1 ESP/AH proposal to the substructure
  */
 static void set_from_proposal_v1(private_proposal_substructure_t *this,
-				proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
+				proposal_t *proposal, uint32_t lifetime, uint64_t lifebytes,
 				ipsec_mode_t mode, encap_t udp, int number)
 {
 	transform_substructure_t *transform = NULL;
-	u_int16_t alg, transid, key_size;
+	uint16_t alg, transid, key_size;
 	enumerator_t *enumerator;
 
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
@@ -1420,7 +1420,7 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 								 proposal_t *proposal)
 {
 	transform_substructure_t *transform;
-	u_int16_t alg, key_size;
+	uint16_t alg, key_size;
 	enumerator_t *enumerator;
 
 	/* encryption algorithm is only available in ESP */
@@ -1485,8 +1485,8 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
  */
 static void set_data(private_proposal_substructure_t *this, proposal_t *proposal)
 {
-	u_int64_t spi64;
-	u_int32_t spi32;
+	uint64_t spi64;
+	uint32_t spi32;
 
 	/* add SPI, if necessary */
 	switch (proposal->get_protocol(proposal))
@@ -1533,7 +1533,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * See header.
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
-			proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
+			proposal_t *proposal, uint32_t lifetime, uint64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, encap_t udp)
 {
 	private_proposal_substructure_t *this;
@@ -1562,7 +1562,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  * See header.
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
-			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
+			linked_list_t *proposals, uint32_t lifetime, uint64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, encap_t udp)
 {
 	private_proposal_substructure_t *this = NULL;
@@ -1607,8 +1607,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  * See header.
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
-			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			ipsec_mode_t mode, encap_t udp, u_int8_t proposal_number)
+			uint32_t lifetime, uint64_t lifebytes, uint16_t cpi,
+			ipsec_mode_t mode, encap_t udp, uint8_t proposal_number)
 {
 	private_proposal_substructure_t *this;
 	transform_substructure_t *transform;
