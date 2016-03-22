@@ -2094,10 +2094,41 @@ METHOD(ike_sa_manager_t, set_spi_cb, void,
 	this->spi_lock->unlock(this->spi_lock);
 }
 
+/**
+ * Destroy all entries
+ */
+static void destroy_all_entries(private_ike_sa_manager_t *this)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	u_int segment;
+
+	enumerator = create_table_enumerator(this);
+	while (enumerator->enumerate(enumerator, &entry, &segment))
+	{
+		charon->bus->set_sa(charon->bus, entry->ike_sa);
+		if (entry->half_open)
+		{
+			remove_half_open(this, entry);
+		}
+		if (entry->my_id && entry->other_id)
+		{
+			remove_connected_peers(this, entry);
+		}
+		if (entry->init_hash.ptr)
+		{
+			remove_init_hash(this, entry->init_hash);
+		}
+		remove_entry_at((private_enumerator_t*)enumerator);
+		entry_destroy(entry);
+	}
+	enumerator->destroy(enumerator);
+	charon->bus->set_sa(charon->bus, NULL);
+}
+
 METHOD(ike_sa_manager_t, flush, void,
 	private_ike_sa_manager_t *this)
 {
-	/* destroy all list entries */
 	enumerator_t *enumerator;
 	entry_t *entry;
 	u_int segment;
@@ -2153,27 +2184,7 @@ METHOD(ike_sa_manager_t, flush, void,
 
 	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
-	enumerator = create_table_enumerator(this);
-	while (enumerator->enumerate(enumerator, &entry, &segment))
-	{
-		charon->bus->set_sa(charon->bus, entry->ike_sa);
-		if (entry->half_open)
-		{
-			remove_half_open(this, entry);
-		}
-		if (entry->my_id && entry->other_id)
-		{
-			remove_connected_peers(this, entry);
-		}
-		if (entry->init_hash.ptr)
-		{
-			remove_init_hash(this, entry->init_hash);
-		}
-		remove_entry_at((private_enumerator_t*)enumerator);
-		entry_destroy(entry);
-	}
-	enumerator->destroy(enumerator);
-	charon->bus->set_sa(charon->bus, NULL);
+	destroy_all_entries(this);
 	unlock_all_segments(this);
 
 	this->spi_lock->write_lock(this->spi_lock);
@@ -2189,7 +2200,11 @@ METHOD(ike_sa_manager_t, destroy, void,
 {
 	u_int i;
 
-	/* these are already cleared in flush() above */
+	/* in case new SAs were checked in after flush() was called */
+	lock_all_segments(this);
+	destroy_all_entries(this);
+	unlock_all_segments(this);
+
 	free(this->ike_sa_table);
 	free(this->half_open_table);
 	free(this->connected_peers_table);
