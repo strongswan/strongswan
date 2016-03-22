@@ -416,7 +416,7 @@ connections.<conn>.remote<suffix>.pubkeys =
 	Comma separated list of raw public keys to accept for authentication.
 
 	Comma separated list of raw public keys to accept for authentication.
-	The public keys may use a relative path from the **swanctl** _x509_
+	The public keys may use a relative path from the **swanctl** _pubkey_
 	directory or an absolute path.
 
 connections.<conn>.remote<suffix>.revocation = relaxed
