@@ -24,6 +24,7 @@
 #include <libiptc/libiptc.h>
 #include <linux/netfilter/xt_esp.h>
 #include <linux/netfilter/xt_tcpudp.h>
+#include <linux/netfilter/xt_mark.h>
 #include <linux/netfilter/xt_MARK.h>
 #include <linux/netfilter/xt_policy.h>
 #include <linux/netfilter/xt_CONNMARK.h>
