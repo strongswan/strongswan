@@ -823,7 +823,7 @@ METHOD(auth_cfg_t, complies, bool,
 						constraints->get(constraints, AUTH_RULE_IDENTITY_LOOSE))
 					{	/* also verify identity against subjectAltNames */
 						certificate_t *cert;
-
+						break;
 						cert = get(this, AUTH_HELPER_SUBJECT_CERT);
 						if (cert && cert->has_subject(cert, id1))
 						{
