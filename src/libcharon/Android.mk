@@ -10,6 +10,7 @@ attributes/mem_pool.c attributes/mem_pool.h \
 bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/logger.h \
+bus/listeners/custom_logger.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
