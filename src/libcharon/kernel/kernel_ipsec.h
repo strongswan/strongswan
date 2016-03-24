@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
@@ -151,6 +152,8 @@ struct kernel_ipsec_manage_policy_t {
 	policy_type_t type;
 	/** Priority class */
 	policy_priority_t prio;
+	/** Manually-set priority (automatic if set to 0) */
+	uint32_t manual_prio;
 	/** Source address of the SA(s) tied to this policy */
 	host_t *src;
 	/** Destination address of the SA(s) tied to this policy */

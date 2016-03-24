@@ -461,6 +461,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   close_action = %N", action_names, cfg->close_action);
 	DBG2(DBG_CFG, "   reqid = %u", cfg->reqid);
 	DBG2(DBG_CFG, "   tfc = %d", cfg->tfc);
+	DBG2(DBG_CFG, "   priority = %d", cfg->priority);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
@@ -1340,6 +1341,7 @@ CALLBACK(child_kv, bool,
 		{ "mark_in",		parse_mark,			&child->cfg.mark_in					},
 		{ "mark_out",		parse_mark,			&child->cfg.mark_out				},
 		{ "tfc_padding",	parse_tfc,			&child->cfg.tfc						},
+		{ "priority",		parse_uint32,		&child->cfg.priority				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,

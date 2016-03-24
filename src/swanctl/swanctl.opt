@@ -684,6 +684,13 @@ connections.<conn>.children.<child>.reqid = 0
 	not more than once. The default of _0_ uses dynamic reqids, allocated
 	incrementally.
 
+connections.<conn>.children.<child>.priority = 0
+	Optional fixed priority for IPsec policies.
+
+	Optional fixed priority for IPsec policies. This could be useful to install
+	high-priority drop policies.  The default of _0_ uses dynamically calculated
+	priorities based on the size of the traffic selectors.
+
 connections.<conn>.children.<child>.mark_in = 0/0x00000000
 	Netfilter mark and mask for input traffic.
 

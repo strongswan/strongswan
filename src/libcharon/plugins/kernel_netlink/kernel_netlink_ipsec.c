@@ -2397,7 +2397,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
-	assigned_sa->priority = get_priority(policy, data->prio);
+	assigned_sa->priority = data->manual_prio ? data->manual_prio :
+												get_priority(policy, data->prio);
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2576,7 +2577,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	}
 
 	/* remove mapping to SA by reqid and priority */
-	priority = get_priority(current, data->prio);
+	priority = data->manual_prio ? data->manual_prio :
+								   get_priority(current, data->prio);
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{

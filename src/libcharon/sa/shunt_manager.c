@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2016 Tobias Brunner
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -119,6 +119,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 			kernel_ipsec_manage_policy_t policy = {
 				.type = policy_type,
 				.prio = policy_prio,
+				.manual_prio = child->get_manual_prio(child),
 				.src = host_any,
 				.dst = host_any,
 				.sa = &sa,
@@ -265,6 +266,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 			kernel_ipsec_manage_policy_t policy = {
 				.type = policy_type,
 				.prio = policy_prio,
+				.manual_prio = child->get_manual_prio(child),
 				.src = host_any,
 				.dst = host_any,
 				.sa = &sa,

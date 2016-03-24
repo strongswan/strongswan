@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -236,6 +237,13 @@ struct child_cfg_t {
 	uint32_t (*get_tfc)(child_cfg_t *this);
 
 	/**
+	 * Get optional manually-set IPsec policy priority
+	 *
+	 * @return				manually-set IPsec policy priority (automatic if 0)
+	 */
+	uint32_t (*get_manual_prio)(child_cfg_t *this);
+
+	/**
 	 * Get anti-replay window size
 	 *
 	 * @return				anti-replay window size
@@ -308,6 +316,8 @@ struct child_cfg_create_t {
 	bool ipcomp;
 	/** TFC padding size, 0 to disable, -1 to pad to PMTU */
 	uint32_t tfc;
+	/** Optional manually-set IPsec policy priority */
+	uint32_t priority;
 	/** lifetime_cfg_t for this child_cfg */
 	lifetime_cfg_t lifetime;
 	/** Inactivity timeout in s before closing a CHILD_SA */

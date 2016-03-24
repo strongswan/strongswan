@@ -1,4 +1,5 @@
 /*
+ * Coypright (C) 2016 Andreas Steffen
  * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -881,7 +882,8 @@ static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
 static status_t install_policies_internal(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
-	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority,	uint32_t manual_prio)
 {
 	kernel_ipsec_policy_id_t out_id = {
 		.dir = POLICY_OUT,
@@ -897,12 +899,14 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
 		.prio = priority,
+		.manual_prio = manual_prio,
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
 	}, in_policy = {
 		.type = type,
 		.prio = priority,
+		.manual_prio = manual_prio,
 		.src = other_addr,
 		.dst = my_addr,
 		.sa = my_sa,
@@ -936,7 +940,8 @@ static status_t install_policies_internal(private_child_sa_t *this,
 static void del_policies_internal(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
-	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority, uint32_t manual_prio)
 {
 	kernel_ipsec_policy_id_t out_id = {
 		.dir = POLICY_OUT,
@@ -952,12 +957,14 @@ static void del_policies_internal(private_child_sa_t *this,
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
 		.prio = priority,
+		.manual_prio = manual_prio,
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
 	}, in_policy = {
 		.type = type,
 		.prio = priority,
+		.manual_prio = manual_prio,
 		.src = other_addr,
 		.dst = my_addr,
 		.sa = my_sa,
@@ -1019,8 +1026,10 @@ METHOD(child_sa_t, add_policies, status_t,
 	{
 		policy_priority_t priority;
 		ipsec_sa_cfg_t my_sa, other_sa;
+		uint32_t manual_prio;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
+		manual_prio = this->config->get_manual_prio(this->config);
 
 		/* if we're not in state CHILD_INSTALLING (i.e. if there is no SAD
 		 * entry) we install a trap policy */
@@ -1034,18 +1043,20 @@ METHOD(child_sa_t, add_policies, status_t,
 		{
 			/* install outbound drop policy to avoid packets leaving unencrypted
 			 * when updating policies */
-			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
+			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
+				require_policy_update())
 			{
 				status |= install_policies_internal(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_DROP,
-									POLICY_PRIORITY_FALLBACK);
+									POLICY_PRIORITY_FALLBACK, 0);
 			}
 
 			/* install policies */
 			status |= install_policies_internal(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
-									&my_sa, &other_sa, POLICY_IPSEC, priority);
+									&my_sa, &other_sa, POLICY_IPSEC,
+									priority, manual_prio);
 
 			if (status != SUCCESS)
 			{
@@ -1157,18 +1168,21 @@ METHOD(child_sa_t, update, status_t,
 			ipsec_sa_cfg_t my_sa, other_sa;
 			enumerator_t *enumerator;
 			traffic_selector_t *my_ts, *other_ts;
+			uint32_t manual_prio;
 
 			prepare_sa_cfg(this, &my_sa, &other_sa);
+			manual_prio = this->config->get_manual_prio(this->config);
 
 			/* always use high priorities, as hosts getting updated are INSTALLED */
 			enumerator = create_policy_enumerator(this);
 			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 			{
 				traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
+
 				/* remove old policies first */
 				del_policies_internal(this, this->my_addr, this->other_addr,
-									  my_ts, other_ts, &my_sa, &other_sa,
-									  POLICY_IPSEC, POLICY_PRIORITY_DEFAULT);
+							my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
+							POLICY_PRIORITY_DEFAULT, manual_prio);
 
 				/* check if we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
@@ -1191,17 +1205,20 @@ METHOD(child_sa_t, update, status_t,
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
 										  &my_sa, &other_sa, POLICY_IPSEC,
-										  POLICY_PRIORITY_DEFAULT);
+										  POLICY_PRIORITY_DEFAULT, manual_prio);
 
 				/* update fallback policies after the new policy is in place */
-				del_policies_internal(this, this->my_addr, this->other_addr,
-									  old_my_ts ?: my_ts,
-									  old_other_ts ?: other_ts,
-									  &my_sa, &other_sa, POLICY_DROP,
-									  POLICY_PRIORITY_FALLBACK);
-				install_policies_internal(this, me, other, my_ts, other_ts,
+				if (manual_prio == 0)
+				{
+					del_policies_internal(this, this->my_addr, this->other_addr,
+										  old_my_ts ?: my_ts,
+										  old_other_ts ?: other_ts,
 										  &my_sa, &other_sa, POLICY_DROP,
-										  POLICY_PRIORITY_FALLBACK);
+										  POLICY_PRIORITY_FALLBACK, 0);
+					install_policies_internal(this, me, other, my_ts, other_ts,
+										  &my_sa, &other_sa, POLICY_DROP,
+										  POLICY_PRIORITY_FALLBACK, 0);
+				}
 				DESTROY_IF(old_my_ts);
 				DESTROY_IF(old_other_ts);
 			}
@@ -1244,20 +1261,24 @@ METHOD(child_sa_t, destroy, void,
 	if (this->config->install_policy(this->config))
 	{
 		ipsec_sa_cfg_t my_sa, other_sa;
+		uint32_t manual_prio;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
+		manual_prio = this->config->get_manual_prio(this->config);
 
 		/* delete all policies in the kernel */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			del_policies_internal(this, this->my_addr, this->other_addr,
-					my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC, priority);
-			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
+								  my_ts, other_ts, &my_sa, &other_sa,
+								  POLICY_IPSEC, priority, manual_prio);
+			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
+				require_policy_update())
 			{
 				del_policies_internal(this, this->my_addr, this->other_addr,
-								my_ts, other_ts, &my_sa, &other_sa, POLICY_DROP,
-								POLICY_PRIORITY_FALLBACK);
+									  my_ts, other_ts, &my_sa, &other_sa,
+									  POLICY_DROP, POLICY_PRIORITY_FALLBACK, 0);
 			}
 		}
 		enumerator->destroy(enumerator);
