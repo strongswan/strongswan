@@ -576,6 +576,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.src_ts = my_ts,
 				.dst_ts = other_ts,
 				.mark = this->mark_out,
+				.interface = this->config->get_interface(this->config),
 			};
 			kernel_ipsec_query_policy_t query = {};
 
@@ -798,6 +799,7 @@ METHOD(child_sa_t, install, status_t,
 		.mode = this->mode,
 		.src_ts = src_ts,
 		.dst_ts = dst_ts,
+		.interface = inbound ? NULL : this->config->get_interface(this->config),
 		.lifetime = lifetime,
 		.enc_alg = enc_alg,
 		.enc_key = encr,
@@ -890,6 +892,7 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		.src_ts = my_ts,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
+		.interface = this->config->get_interface(this->config),
 	}, in_id = {
 		.dir = POLICY_IN,
 		.src_ts = other_ts,
@@ -948,6 +951,7 @@ static void del_policies_internal(private_child_sa_t *this,
 		.src_ts = my_ts,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
+		.interface = this->config->get_interface(this->config),
 	}, in_id = {
 		.dir = POLICY_IN,
 		.src_ts = other_ts,

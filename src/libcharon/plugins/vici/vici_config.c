@@ -462,6 +462,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   reqid = %u", cfg->reqid);
 	DBG2(DBG_CFG, "   tfc = %d", cfg->tfc);
 	DBG2(DBG_CFG, "   priority = %d", cfg->priority);
+	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
@@ -484,6 +485,7 @@ static void free_child_data(child_data_t *data)
 	data->remote_ts->destroy_offset(data->remote_ts,
 									offsetof(traffic_selector_t, destroy));
 	free(data->cfg.updown);
+	free(data->cfg.interface);
 }
 
 /**
@@ -1342,6 +1344,7 @@ CALLBACK(child_kv, bool,
 		{ "mark_out",		parse_mark,			&child->cfg.mark_out				},
 		{ "tfc_padding",	parse_tfc,			&child->cfg.tfc						},
 		{ "priority",		parse_uint32,		&child->cfg.priority				},
+		{ "interface",		parse_string,		&child->cfg.interface				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,

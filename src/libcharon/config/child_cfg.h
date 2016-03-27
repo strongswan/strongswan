@@ -244,6 +244,13 @@ struct child_cfg_t {
 	uint32_t (*get_manual_prio)(child_cfg_t *this);
 
 	/**
+	 * Get optional network interface restricting IPsec policy
+	 *
+	 * @return				network interface)
+	 */
+	char* (*get_interface)(child_cfg_t *this);
+
+	/**
 	 * Get anti-replay window size
 	 *
 	 * @return				anti-replay window size
@@ -318,6 +325,8 @@ struct child_cfg_create_t {
 	uint32_t tfc;
 	/** Optional manually-set IPsec policy priority */
 	uint32_t priority;
+	/** Optional network interface restricting IPsec policy (cloned) */
+	char *interface;
 	/** lifetime_cfg_t for this child_cfg */
 	lifetime_cfg_t lifetime;
 	/** Inactivity timeout in s before closing a CHILD_SA */

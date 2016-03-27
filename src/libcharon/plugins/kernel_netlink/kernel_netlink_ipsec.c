@@ -26,6 +26,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
+#include <net/if.h>
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
@@ -739,7 +740,8 @@ static void ts2ports(traffic_selector_t* ts,
  * Convert a pair of traffic_selectors to an xfrm_selector
  */
 static struct xfrm_selector ts2selector(traffic_selector_t *src,
-										traffic_selector_t *dst)
+										traffic_selector_t *dst,
+										char *interface)
 {
 	struct xfrm_selector sel;
 	uint16_t port;
@@ -763,7 +765,7 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
 		sel.dport = htons(traffic_selector_icmp_code(port));
 		sel.dport_mask = sel.dport ? ~0 : 0;
 	}
-	sel.ifindex = 0;
+	sel.ifindex = interface ? if_nametoindex(interface) : 0;
 	sel.user = 0;
 
 	return sel;
@@ -1279,7 +1281,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				data->dst_ts->get_first(data->dst_ts,
 										(void**)&first_dst_ts) == SUCCESS)
 			{
-				sa->sel = ts2selector(first_src_ts, first_dst_ts);
+				sa->sel = ts2selector(first_src_ts, first_dst_ts,
+									  data->interface);
 				if (!this->proto_port_transport)
 				{
 					/* don't install proto/port on SA. This would break
@@ -2358,7 +2361,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* create a policy */
 	INIT(policy,
-		.sel = ts2selector(id->src_ts, id->dst_ts),
+		.sel = ts2selector(id->src_ts, id->dst_ts, id->interface),
 		.mark = id->mark.value & id->mark.mask,
 		.direction = id->dir,
 		.reqid = data->sa->reqid,
@@ -2468,7 +2471,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
 	policy_id = NLMSG_DATA(hdr);
-	policy_id->sel = ts2selector(id->src_ts, id->dst_ts);
+	policy_id->sel = ts2selector(id->src_ts, id->dst_ts, id->interface);
 	policy_id->dir = id->dir;
 
 	if (!add_mark(hdr, sizeof(request), id->mark))
@@ -2552,7 +2555,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	/* create a policy */
 	memset(&policy, 0, sizeof(policy_entry_t));
-	policy.sel = ts2selector(id->src_ts, id->dst_ts);
+	policy.sel = ts2selector(id->src_ts, id->dst_ts, id->interface);
 	policy.mark = id->mark.value & id->mark.mask;
 	policy.direction = id->dir;
 

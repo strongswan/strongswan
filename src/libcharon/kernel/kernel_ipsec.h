@@ -69,6 +69,8 @@ struct kernel_ipsec_add_sa_t {
 	linked_list_t *src_ts;
 	/** List of destination traffic selectors */
 	linked_list_t *dst_ts;
+	/** Network interface restricting policy */
+	char *interface;
 	/** Lifetime configuration */
 	lifetime_cfg_t *lifetime;
 	/** Encryption algorithm */
@@ -142,6 +144,8 @@ struct kernel_ipsec_policy_id_t {
 	traffic_selector_t *dst_ts;
 	/** Optional mark */
 	mark_t mark;
+	/** Network interface restricting policy */
+	char *interface;
 };
 
 /**

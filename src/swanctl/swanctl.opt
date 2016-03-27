@@ -691,6 +691,9 @@ connections.<conn>.children.<child>.priority = 0
 	high-priority drop policies.  The default of _0_ uses dynamically calculated
 	priorities based on the size of the traffic selectors.
 
+connections.<conn>.children.<child>.interface =
+	Optional interface name to restrict IPsec policies.
+
 connections.<conn>.children.<child>.mark_in = 0/0x00000000
 	Netfilter mark and mask for input traffic.
 

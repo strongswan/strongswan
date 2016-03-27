@@ -139,6 +139,11 @@ struct private_child_cfg_t {
 	uint32_t manual_prio;
 
 	/**
+	 * Optional restriction of IPsec policy to a given network interface
+	 */
+	char *interface;
+
+	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
 	 */
 	bool proxy_mode;
@@ -512,6 +517,12 @@ METHOD(child_cfg_t, get_manual_prio, uint32_t,
 	return this->manual_prio;
 }
 
+METHOD(child_cfg_t, get_interface, char*,
+	private_child_cfg_t *this)
+{
+	return this->interface;
+}
+
 METHOD(child_cfg_t, get_replay_window, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -537,7 +548,7 @@ METHOD(child_cfg_t, install_policy, bool,
 }
 
 #define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
-#define LIFETIME_EQUALS(a, b) ({  LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
+#define LIFETIME_EQUALS(a, b) ({ LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
 
 METHOD(child_cfg_t, equals, bool,
 	private_child_cfg_t *this, child_cfg_t *other_pub)
@@ -585,7 +596,8 @@ METHOD(child_cfg_t, equals, bool,
 		this->replay_window == other->replay_window &&
 		this->proxy_mode == other->proxy_mode &&
 		this->install_policy == other->install_policy &&
-		streq(this->updown, other->updown);
+		streq(this->updown, other->updown) &&
+		streq(this->interface, other->interface);
 }
 
 METHOD(child_cfg_t, get_ref, child_cfg_t*,
@@ -603,10 +615,8 @@ METHOD(child_cfg_t, destroy, void,
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 		this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 		this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
-		if (this->updown)
-		{
-			free(this->updown);
-		}
+		free(this->updown);
+		free(this->interface);
 		free(this->name);
 		free(this);
 	}
@@ -641,6 +651,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_mark = _get_mark,
 			.get_tfc = _get_tfc,
 			.get_manual_prio = _get_manual_prio,
+			.get_interface = _get_interface,
 			.get_replay_window = _get_replay_window,
 			.set_replay_window = _set_replay_window,
 			.use_proxy_mode = _use_proxy_mode,
@@ -665,6 +676,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.use_ipcomp = data->ipcomp,
 		.tfc = data->tfc,
 		.manual_prio = data->priority,
+		.interface = strdupnull(data->interface),
 		.install_policy = !data->suppress_policies,
 		.refcount = 1,
 		.proposals = linked_list_create(),

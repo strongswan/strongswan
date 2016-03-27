@@ -68,6 +68,8 @@ static bool install_shunt_policy(child_cfg_t *child)
 	policy_type_t policy_type;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
+	uint32_t manual_prio;
+	char *interface;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -92,6 +94,9 @@ static bool install_shunt_policy(child_cfg_t *child)
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
 	hosts->destroy(hosts);
 
+	manual_prio = child->get_manual_prio(child);
+	interface = child->get_interface(child);
+
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
 	while (e_my_ts->enumerate(e_my_ts, &my_ts))
@@ -115,11 +120,12 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.src_ts = my_ts,
 				.dst_ts = other_ts,
 				.mark = child->get_mark(child, FALSE),
+				.interface = interface,
 			};
 			kernel_ipsec_manage_policy_t policy = {
 				.type = policy_type,
 				.prio = policy_prio,
-				.manual_prio = child->get_manual_prio(child),
+				.manual_prio = manual_prio,
 				.src = host_any,
 				.dst = host_any,
 				.sa = &sa,
@@ -134,6 +140,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.src_ts = other_ts,
 				.dst_ts = my_ts,
 				.mark = child->get_mark(child, TRUE),
+				.interface = interface,
 			};
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 			/* install "inbound" forward policy */
@@ -215,6 +222,8 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	policy_type_t policy_type;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
+	uint32_t manual_prio;
+	char *interface;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -239,6 +248,9 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
 	hosts->destroy(hosts);
 
+	manual_prio = child->get_manual_prio(child);
+	interface = child->get_interface(child);
+
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
 	while (e_my_ts->enumerate(e_my_ts, &my_ts))
@@ -262,11 +274,12 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.src_ts = my_ts,
 				.dst_ts = other_ts,
 				.mark = child->get_mark(child, FALSE),
+				.interface = interface,
 			};
 			kernel_ipsec_manage_policy_t policy = {
 				.type = policy_type,
 				.prio = policy_prio,
-				.manual_prio = child->get_manual_prio(child),
+				.manual_prio = manual_prio,
 				.src = host_any,
 				.dst = host_any,
 				.sa = &sa,
@@ -281,6 +294,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.src_ts = other_ts,
 				.dst_ts = my_ts,
 				.mark = child->get_mark(child, TRUE),
+				.interface = interface,
 			};
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 			/* uninstall "inbound" forward policy */
