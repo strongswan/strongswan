@@ -682,7 +682,8 @@ CALLBACK(list_conns, vici_message_t*,
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
-	char *ike, *str;
+	char *ike, *str, *interface;
+	uint32_t manual_prio;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	vici_builder_t *b;
@@ -760,6 +761,18 @@ CALLBACK(list_conns, vici_message_t*,
 			selectors->destroy(selectors);
 			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
 			b->end_list(b /* remote-ts */);
+
+			interface = child_cfg->get_interface(child_cfg);
+			if (interface)
+			{
+				b->add_kv(b, "interface", "%s", interface);
+			}
+
+			manual_prio = child_cfg->get_manual_prio(child_cfg);
+			if (manual_prio)
+			{
+				b->add_kv(b, "priority", "%u", manual_prio);
+			}
 
 			b->end_section(b);
 		}

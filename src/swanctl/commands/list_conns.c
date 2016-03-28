@@ -80,6 +80,7 @@ CALLBACK(children_sn, int,
 	hashtable_t *ike, vici_res_t *res, char *name)
 {
 	hashtable_t *child;
+	char *interface, *priority;
 	int ret;
 
 	child = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
@@ -89,6 +90,18 @@ CALLBACK(children_sn, int,
 		printf("  %s: %s\n", name, child->get(child, "mode"));
 		printf("    local:  %s\n", child->get(child, "local-ts"));
 		printf("    remote: %s\n", child->get(child, "remote-ts"));
+
+		interface = child->get(child, "interface");
+		if (interface)
+		{
+			printf("    interface: %s\n", interface);
+		}
+
+		priority = child->get(child, "priority");
+		if (priority)
+		{
+			printf("    priority: %s\n", priority);
+		}
 	}
 	free_hashtable(child);
 	return ret;
