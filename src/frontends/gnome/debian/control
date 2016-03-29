@@ -9,6 +9,7 @@ Build-Depends: cdbs,
 	libnm-glib-dev (>= 0.9),
 	libnm-glib-vpn-dev (>= 0.9),
 	libgnomeui-dev,
+	libsecret-1-dev,
 	automake,
 	gnome-common,
 Standards-Version: 3.8.3
