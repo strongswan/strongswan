@@ -130,7 +130,7 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	return TRUE;
 }
 
-static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *priv)
+static void update_sensitive (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *priv)
 {
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
@@ -138,49 +138,49 @@ static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *p
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 			/* FALL */
 		case 0:
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")));
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
 			break;
 		case 1:
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
 			break;
 		case 2:
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
 			break;
 		case 3:
 		case 4:
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")));
-			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
-			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), TRUE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
+			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
 			break;
 	}
 
@@ -194,7 +194,7 @@ settings_changed_cb (GtkWidget *widget, gpointer user_data)
 
 	if (widget == GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")))
 	{
-		update_layout(GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")), priv);
+		update_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")), priv);
 	}
 	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
 }
@@ -274,22 +274,15 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "user");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (show_toggled_cb), self);
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_secret (settings, "password");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
@@ -324,22 +317,16 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	{
 		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 	}
-	update_layout (widget, priv);
+	update_sensitive (widget, priv);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "usercert");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button"));
-	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "userkey");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
