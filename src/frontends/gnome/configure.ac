@@ -44,7 +44,7 @@ AM_GLIB_GNU_GETTEXT
 
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
 PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
-PKG_CHECK_MODULES(GNOMEKEYRING, gnome-keyring-1)
+PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
 PKG_CHECK_EXISTS([libnm-glib],
 	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm-glib libnm-glib-vpn)],
 	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm_glib libnm_glib_vpn)]
