@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 2.12 -->
+  <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkVBox" id="strongswan-vbox">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="valign">start</property>
     <property name="border_width">12</property>
     <property name="spacing">16</property>
     <child>
@@ -50,7 +50,7 @@
                   </object>
                   <packing>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -59,11 +59,15 @@
                     <property name="can_focus">True</property>
                     <property name="has_tooltip">True</property>
                     <property name="tooltip_text" translatable="yes">An IP address or hostname the Gateway can be contacted.</property>
+                    <property name="primary_icon_activatable">False</property>
+                    <property name="secondary_icon_activatable">False</property>
+                    <property name="primary_icon_sensitive">True</property>
+                    <property name="secondary_icon_sensitive">True</property>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -79,7 +83,7 @@
                     <property name="top_attach">1</property>
                     <property name="bottom_attach">2</property>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -139,7 +143,7 @@
               <object class="GtkTable" id="client-table">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="n_rows">4</property>
+                <property name="n_rows">6</property>
                 <property name="n_columns">2</property>
                 <property name="column_spacing">6</property>
                 <property name="row_spacing">6</property>
@@ -152,8 +156,8 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="top_attach">3</property>
-                    <property name="bottom_attach">4</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
                   </packing>
                 </child>
                 <child>
@@ -166,10 +170,10 @@
                     <property name="mnemonic_widget">userkey-button</property>
                   </object>
                   <packing>
-                    <property name="top_attach">3</property>
-                    <property name="bottom_attach">4</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -182,7 +186,7 @@
                   </object>
                   <packing>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -195,10 +199,10 @@
                     <property name="mnemonic_widget">user-entry</property>
                   </object>
                   <packing>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -207,13 +211,17 @@
                     <property name="can_focus">True</property>
                     <property name="has_tooltip">True</property>
                     <property name="tooltip_text" translatable="yes">The username (identity) to use for authentication against the gateway.</property>
+                    <property name="primary_icon_activatable">False</property>
+                    <property name="secondary_icon_activatable">False</property>
+                    <property name="primary_icon_sensitive">True</property>
+                    <property name="secondary_icon_sensitive">True</property>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
-                    <property name="y_options"></property>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -226,10 +234,10 @@
                     <property name="mnemonic_widget">usercert-button</property>
                   </object>
                   <packing>
-                    <property name="top_attach">2</property>
-                    <property name="bottom_attach">3</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
                     <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
+                    <property name="y_options"/>
                   </packing>
                 </child>
                 <child>
@@ -241,8 +249,8 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="top_attach">2</property>
-                    <property name="bottom_attach">3</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
                   </packing>
                 </child>
                 <child>
@@ -254,6 +262,58 @@
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
                   </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="passwd-label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">_Password:</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">user-entry</property>
+                  </object>
+                  <packing>
+                    <property name="top_attach">4</property>
+                    <property name="bottom_attach">5</property>
+                    <property name="x_options">GTK_FILL</property>
+                    <property name="y_options"/>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="passwd-entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="has_tooltip">True</property>
+                    <property name="tooltip_text" translatable="yes">The username (identity) to use for authentication against the gateway.</property>
+                    <property name="visibility">False</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">4</property>
+                    <property name="bottom_attach">5</property>
+                    <property name="y_options"/>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="passwd-show">
+                    <property name="label" translatable="yes">_Show password</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="draw_indicator">True</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">5</property>
+                    <property name="bottom_attach">6</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+
                 </child>
               </object>
             </child>
@@ -307,7 +367,6 @@
                     <property name="receives_default">False</property>
                     <property name="has_tooltip">True</property>
                     <property name="tooltip_text" translatable="yes">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
-                    <property name="use_action_appearance">False</property>
                     <property name="use_underline">True</property>
                     <property name="draw_indicator">True</property>
                   </object>
@@ -325,7 +384,6 @@
                     <property name="receives_default">False</property>
                     <property name="has_tooltip">True</property>
                     <property name="tooltip_text" translatable="yes">Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT situation is detected might help in such cases.</property>
-                    <property name="use_action_appearance">False</property>
                     <property name="use_underline">True</property>
                     <property name="draw_indicator">True</property>
                   </object>
@@ -343,7 +401,6 @@
                     <property name="receives_default">False</property>
                     <property name="has_tooltip">True</property>
                     <property name="tooltip_text" translatable="yes">IPComp compresses raw IP packets before they get encrypted. This saves some bandwidth, but uses more processing power.</property>
-                    <property name="use_action_appearance">False</property>
                     <property name="use_underline">True</property>
                     <property name="draw_indicator">True</property>
                   </object>
