@@ -277,8 +277,8 @@ Terminates an SA while streaming _control-log_ events.
 	{
 		child = <terminate a CHILD_SA by configuration name>
 		ike = <terminate an IKE_SA by configuration name>
-		child_id = <terminate a CHILD_SA by its reqid>
-		ike_id = <terminate an IKE_SA by its unique id>
+		child-id = <terminate a CHILD_SA by its reqid>
+		ike-id = <terminate an IKE_SA by its unique id>
 		timeout = <timeout in ms before returning>
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
@@ -337,7 +337,7 @@ events.
 	{
 		noblock = <use non-blocking mode if key is set>
 		ike = <filter listed IKE_SAs by its name>
-		ike_id = <filter listed IKE_SA by its unique id>
+		ike-id = <filter listed IKE_SA by its unique id>
 	} => {
 		# completes after streaming list-sa events
 	}
