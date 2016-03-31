@@ -706,6 +706,7 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyIdentifier))
 		{
 			this->authKeyIdentifier = chunk_clone(keyIdentifier);
+			keyIdentifier = asn1_simple_object(ASN1_CONTEXT_S_0, keyIdentifier);
 		}
 		public->destroy(public);
 	}
@@ -716,7 +717,7 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
 				asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
 				asn1_wrap(ASN1_OCTET_STRING, "m",
-					asn1_wrap(ASN1_SEQUENCE, "cmm",
+					asn1_wrap(ASN1_SEQUENCE, "mmm",
 						keyIdentifier,
 						authorityCertIssuer,
 						authorityCertSerialNumber
