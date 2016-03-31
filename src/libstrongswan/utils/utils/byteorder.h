@@ -47,9 +47,14 @@
 #ifndef le32toh
 # if BYTE_ORDER == BIG_ENDIAN
 #  define le32toh(x) __builtin_bswap32(x)
-#  define htole32(x) __builtin_bswap32(x)
 # else
 #  define le32toh(x) (x)
+# endif
+#endif
+#ifndef htole32
+# if BYTE_ORDER == BIG_ENDIAN
+#  define htole32(x) __builtin_bswap32(x)
+# else
 #  define htole32(x) (x)
 # endif
 #endif
@@ -57,9 +62,14 @@
 #ifndef le64toh
 # if BYTE_ORDER == BIG_ENDIAN
 #  define le64toh(x) __builtin_bswap64(x)
-#  define htole64(x) __builtin_bswap64(x)
 # else
 #  define le64toh(x) (x)
+# endif
+#endif
+#ifndef htole64
+# if BYTE_ORDER == BIG_ENDIAN
+#  define htole64(x) __builtin_bswap64(x)
+# else
 #  define htole64(x) (x)
 # endif
 #endif
@@ -67,9 +77,14 @@
 #ifndef be64toh
 # if BYTE_ORDER == BIG_ENDIAN
 #  define be64toh(x) (x)
-#  define htobe64(x) (x)
 # else
 #  define be64toh(x) __builtin_bswap64(x)
+# endif
+#endif
+#ifndef htobe64
+# if BYTE_ORDER == BIG_ENDIAN
+#  define htobe64(x) (x)
+# else
 #  define htobe64(x) __builtin_bswap64(x)
 # endif
 #endif
