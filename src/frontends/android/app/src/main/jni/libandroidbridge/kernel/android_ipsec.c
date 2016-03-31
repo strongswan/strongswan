@@ -60,43 +60,40 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
-	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
-	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
-	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound, bool update,
-	linked_list_t *src_ts, linked_list_t *dst_ts)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_add_sa_t *data)
 {
-	return ipsec->sas->add_sa(ipsec->sas, src, dst, spi, protocol, reqid, mark,
-							  tfc, lifetime, enc_alg, enc_key, int_alg, int_key,
-							  mode, ipcomp, cpi, initiator, encap, esn,
-							  inbound, update);
+	return ipsec->sas->add_sa(ipsec->sas, id->src, id->dst, id->spi, id->proto,
+					data->reqid, id->mark, data->tfc, data->lifetime,
+					data->enc_alg, data->enc_key, data->int_alg, data->int_key,
+					data->mode, data->ipcomp, data->cpi, data->initiator,
+					data->encap, data->esn, data->inbound, data->update);
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_android_ipsec_t *this, uint32_t spi, uint8_t protocol,
-	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool encap, bool new_encap, mark_t mark)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_update_sa_t *data)
 {
-	return ipsec->sas->update_sa(ipsec->sas, spi, protocol, cpi, src, dst,
-								 new_src, new_dst, encap, new_encap, mark);
+	return ipsec->sas->update_sa(ipsec->sas, id->spi, id->proto, data->cpi,
+					id->src, id->dst, data->new_src, data->new_dst, data->encap,
+					data->new_encap, id->mark);
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
-	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, mark_t mark,
-	uint64_t *bytes, uint64_t *packets, time_t *time)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
+	time_t *time)
 {
-	return ipsec->sas->query_sa(ipsec->sas, src, dst, spi, protocol, mark,
-								bytes, packets, time);
+	return ipsec->sas->query_sa(ipsec->sas, id->src, id->dst, id->spi,
+								id->proto, id->mark, bytes, packets, time);
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
-	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_del_sa_t *data)
 {
-	return ipsec->sas->del_sa(ipsec->sas, src, dst, spi, protocol, cpi, mark);
+	return ipsec->sas->del_sa(ipsec->sas, id->src, id->dst, id->spi, id->proto,
+							  data->cpi, id->mark);
 }
 
 METHOD(kernel_ipsec_t, flush_sas, status_t,
@@ -106,33 +103,30 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
-	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa, mark_t mark,
-	policy_priority_t priority)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
-	return ipsec->policies->add_policy(ipsec->policies, src, dst, src_ts,
-									   dst_ts, direction, type, sa, mark,
-									   priority);
+	return ipsec->policies->add_policy(ipsec->policies, data->src, data->dst,
+									   id->src_ts, id->dst_ts, id->dir,
+									   data->type, data->sa, id->mark,
+									   data->prio);
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
-	private_kernel_android_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	time_t *use_time)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_query_policy_t *data, time_t *use_time)
 {
 	return NOT_SUPPORTED;
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t priority)
+	private_kernel_android_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
-	return ipsec->policies->del_policy(ipsec->policies, src, dst, src_ts,
-									   dst_ts,  direction, type, sa, mark,
-									   priority);
+	return ipsec->policies->del_policy(ipsec->policies, data->src, data->dst,
+									   id->src_ts, id->dst_ts, id->dir,
+									   data->type, data->sa, id->mark,
+									   data->prio);
 }
 
 METHOD(kernel_ipsec_t, flush_policies, status_t,

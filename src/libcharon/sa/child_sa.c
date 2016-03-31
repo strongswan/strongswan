@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -468,10 +468,17 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->my_spi)
 		{
-			status = charon->kernel->query_sa(charon->kernel, this->other_addr,
-									this->my_addr, this->my_spi,
-									proto_ike2ip(this->protocol), this->mark_in,
-									&bytes, &packets, &time);
+			kernel_ipsec_sa_id_t id = {
+				.src = this->other_addr,
+				.dst = this->my_addr,
+				.spi = this->my_spi,
+				.proto = proto_ike2ip(this->protocol),
+				.mark = this->mark_in,
+			};
+			kernel_ipsec_query_sa_t query = {};
+
+			status = charon->kernel->query_sa(charon->kernel, &id, &query,
+											  &bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
@@ -492,10 +499,17 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->other_spi)
 		{
-			status = charon->kernel->query_sa(charon->kernel, this->my_addr,
-								this->other_addr, this->other_spi,
-								proto_ike2ip(this->protocol), this->mark_out,
-								&bytes, &packets, &time);
+			kernel_ipsec_sa_id_t id = {
+				.src = this->my_addr,
+				.dst = this->other_addr,
+				.spi = this->other_spi,
+				.proto = proto_ike2ip(this->protocol),
+				.mark = this->mark_out,
+			};
+			kernel_ipsec_query_sa_t query = {};
+
+			status = charon->kernel->query_sa(charon->kernel, &id, &query,
+											  &bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
@@ -531,15 +545,24 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 
 		if (inbound)
 		{
-			if (charon->kernel->query_policy(charon->kernel, other_ts,
-							my_ts, POLICY_IN, this->mark_in, &in) == SUCCESS)
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_IN,
+				.src_ts = other_ts,
+				.dst_ts = my_ts,
+				.mark = this->mark_in,
+			};
+			kernel_ipsec_query_policy_t query = {};
+
+			if (charon->kernel->query_policy(charon->kernel, &id, &query,
+											 &in) == SUCCESS)
 			{
 				last_use = max(last_use, in);
 			}
 			if (this->mode != MODE_TRANSPORT)
 			{
-				if (charon->kernel->query_policy(charon->kernel, other_ts,
-							my_ts, POLICY_FWD, this->mark_in, &fwd) == SUCCESS)
+				id.dir = POLICY_FWD;
+				if (charon->kernel->query_policy(charon->kernel, &id, &query,
+												 &fwd) == SUCCESS)
 				{
 					last_use = max(last_use, fwd);
 				}
@@ -547,8 +570,16 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 		}
 		else
 		{
-			if (charon->kernel->query_policy(charon->kernel, my_ts,
-							other_ts, POLICY_OUT, this->mark_out, &out) == SUCCESS)
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_OUT,
+				.src_ts = my_ts,
+				.dst_ts = other_ts,
+				.mark = this->mark_out,
+			};
+			kernel_ipsec_query_policy_t query = {};
+
+			if (charon->kernel->query_policy(charon->kernel, &id, &query,
+											 &out) == SUCCESS)
 			{
 				last_use = max(last_use, out);
 			}
@@ -659,6 +690,8 @@ METHOD(child_sa_t, install, status_t,
 	uint16_t esn = NO_EXT_SEQ_NUMBERS;
 	linked_list_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
+	kernel_ipsec_sa_id_t id;
+	kernel_ipsec_add_sa_t sa;
 	lifetime_cfg_t *lifetime;
 	uint32_t tfc = 0;
 	host_t *src, *dst;
@@ -752,12 +785,35 @@ METHOD(child_sa_t, install, status_t,
 		dst_ts = other_ts;
 	}
 
-	status = charon->kernel->add_sa(charon->kernel,
-				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
-				inbound ? this->mark_in : this->mark_out, tfc,
-				lifetime, enc_alg, encr, int_alg, integ, this->mode,
-				this->ipcomp, cpi, this->config->get_replay_window(this->config),
-				initiator, this->encap, esn, inbound, update, src_ts, dst_ts);
+	id = (kernel_ipsec_sa_id_t){
+		.src = src,
+		.dst = dst,
+		.spi = spi,
+		.proto = proto_ike2ip(this->protocol),
+		.mark = inbound ? this->mark_in : this->mark_out,
+	};
+	sa = (kernel_ipsec_add_sa_t){
+		.reqid = this->reqid,
+		.mode = this->mode,
+		.src_ts = src_ts,
+		.dst_ts = dst_ts,
+		.lifetime = lifetime,
+		.enc_alg = enc_alg,
+		.enc_key = encr,
+		.int_alg = int_alg,
+		.int_key = integ,
+		.replay_window = this->config->get_replay_window(this->config),
+		.tfc = tfc,
+		.ipcomp = this->ipcomp,
+		.cpi = cpi,
+		.encap = this->encap,
+		.esn = esn,
+		.initiator = initiator,
+		.inbound = inbound,
+		.update = update,
+	};
+
+	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
 	free(lifetime);
 
@@ -827,22 +883,38 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
+	kernel_ipsec_policy_id_t out_id = {
+		.dir = POLICY_OUT,
+		.src_ts = my_ts,
+		.dst_ts = other_ts,
+		.mark = this->mark_out,
+	}, in_id = {
+		.dir = POLICY_IN,
+		.src_ts = other_ts,
+		.dst_ts = my_ts,
+		.mark = this->mark_in,
+	};
+	kernel_ipsec_manage_policy_t out_policy = {
+		.type = type,
+		.prio = priority,
+		.src = my_addr,
+		.dst = other_addr,
+		.sa = other_sa,
+	}, in_policy = {
+		.type = type,
+		.prio = priority,
+		.src = other_addr,
+		.dst = my_addr,
+		.sa = my_sa,
+	};
 	status_t status = SUCCESS;
-	status |= charon->kernel->add_policy(charon->kernel,
-							my_addr, other_addr, my_ts, other_ts,
-							POLICY_OUT, type, other_sa,
-							this->mark_out, priority);
 
-	status |= charon->kernel->add_policy(charon->kernel,
-							other_addr, my_addr, other_ts, my_ts,
-							POLICY_IN, type, my_sa,
-							this->mark_in, priority);
+	status |= charon->kernel->add_policy(charon->kernel, &out_id, &out_policy);
+	status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
 	if (this->mode != MODE_TRANSPORT)
 	{
-		status |= charon->kernel->add_policy(charon->kernel,
-							other_addr, my_addr, other_ts, my_ts,
-							POLICY_FWD, type, my_sa,
-							this->mark_in, priority);
+		in_id.dir = POLICY_FWD;
+		status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
 	}
 	return status;
 }
@@ -855,18 +927,37 @@ static void del_policies_internal(private_child_sa_t *this,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type, policy_priority_t priority)
 {
+	kernel_ipsec_policy_id_t out_id = {
+		.dir = POLICY_OUT,
+		.src_ts = my_ts,
+		.dst_ts = other_ts,
+		.mark = this->mark_out,
+	}, in_id = {
+		.dir = POLICY_IN,
+		.src_ts = other_ts,
+		.dst_ts = my_ts,
+		.mark = this->mark_in,
+	};
+	kernel_ipsec_manage_policy_t out_policy = {
+		.type = type,
+		.prio = priority,
+		.src = my_addr,
+		.dst = other_addr,
+		.sa = other_sa,
+	}, in_policy = {
+		.type = type,
+		.prio = priority,
+		.src = other_addr,
+		.dst = my_addr,
+		.sa = my_sa,
+	};
 
-	charon->kernel->del_policy(charon->kernel,
-						my_addr, other_addr, my_ts, other_ts, POLICY_OUT, type,
-						other_sa, this->mark_out, priority);
-	charon->kernel->del_policy(charon->kernel,
-						other_addr, my_addr, other_ts, my_ts, POLICY_IN,
-						type, my_sa, this->mark_in, priority);
+	charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
+	charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
 	if (this->mode != MODE_TRANSPORT)
 	{
-		charon->kernel->del_policy(charon->kernel,
-						other_addr, my_addr, other_ts, my_ts, POLICY_FWD,
-						type, my_sa, this->mark_in, priority);
+		in_id.dir = POLICY_FWD;
+		charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
 	}
 }
 
@@ -994,11 +1085,22 @@ METHOD(child_sa_t, update, status_t,
 		/* update our (initiator) SA */
 		if (this->my_spi)
 		{
-			if (charon->kernel->update_sa(charon->kernel,
-							this->my_spi, proto_ike2ip(this->protocol),
-							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
-							this->other_addr, this->my_addr, other, me,
-							this->encap, encap, this->mark_in) == NOT_SUPPORTED)
+			kernel_ipsec_sa_id_t id = {
+				.src = this->other_addr,
+				.dst = this->my_addr,
+				.spi = this->my_spi,
+				.proto = proto_ike2ip(this->protocol),
+				.mark = this->mark_in,
+			};
+			kernel_ipsec_update_sa_t sa = {
+				.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+				.new_src = other,
+				.new_dst = me,
+				.encap = this->encap,
+				.new_encap = encap,
+			};
+			if (charon->kernel->update_sa(charon->kernel, &id,
+										  &sa) == NOT_SUPPORTED)
 			{
 				set_state(this, old);
 				return NOT_SUPPORTED;
@@ -1008,11 +1110,22 @@ METHOD(child_sa_t, update, status_t,
 		/* update his (responder) SA */
 		if (this->other_spi)
 		{
-			if (charon->kernel->update_sa(charon->kernel,
-							this->other_spi, proto_ike2ip(this->protocol),
-							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
-							this->my_addr, this->other_addr, me, other,
-							this->encap, encap, this->mark_out) == NOT_SUPPORTED)
+			kernel_ipsec_sa_id_t id = {
+				.src = this->my_addr,
+				.dst = this->other_addr,
+				.spi = this->other_spi,
+				.proto = proto_ike2ip(this->protocol),
+				.mark = this->mark_out,
+			};
+			kernel_ipsec_update_sa_t sa = {
+				.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+				.new_src = me,
+				.new_dst = other,
+				.encap = this->encap,
+				.new_encap = encap,
+			};
+			if (charon->kernel->update_sa(charon->kernel, &id,
+										  &sa) == NOT_SUPPORTED)
 			{
 				set_state(this, old);
 				return NOT_SUPPORTED;
@@ -1137,17 +1250,31 @@ METHOD(child_sa_t, destroy, void,
 	/* delete SAs in the kernel, if they are set up */
 	if (this->my_spi)
 	{
-		charon->kernel->del_sa(charon->kernel,
-					this->other_addr, this->my_addr, this->my_spi,
-					proto_ike2ip(this->protocol), this->my_cpi,
-					this->mark_in);
+		kernel_ipsec_sa_id_t id = {
+			.src = this->other_addr,
+			.dst = this->my_addr,
+			.spi = this->my_spi,
+			.proto = proto_ike2ip(this->protocol),
+			.mark = this->mark_in,
+		};
+		kernel_ipsec_del_sa_t sa = {
+			.cpi = this->my_cpi,
+		};
+		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
 	if (this->other_spi)
 	{
-		charon->kernel->del_sa(charon->kernel,
-					this->my_addr, this->other_addr, this->other_spi,
-					proto_ike2ip(this->protocol), this->other_cpi,
-					this->mark_out);
+		kernel_ipsec_sa_id_t id = {
+			.src = this->my_addr,
+			.dst = this->other_addr,
+			.spi = this->other_spi,
+			.proto = proto_ike2ip(this->protocol),
+			.mark = this->mark_out,
+		};
+		kernel_ipsec_del_sa_t sa = {
+			.cpi = this->other_cpi,
+		};
+		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
 
 	if (this->reqid_allocated)

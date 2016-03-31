@@ -50,63 +50,52 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
-	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
-	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
-	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound, bool update,
-	linked_list_t *src_ts, linked_list_t *dst_ts)
+	private_load_tester_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_add_sa_t *data)
 {
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_load_tester_ipsec_t *this, uint32_t spi, uint8_t protocol,
-	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src,
-	host_t *new_dst, bool encap, bool new_encap, mark_t mark)
+	private_load_tester_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_update_sa_t *data)
 {
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
-	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, mark_t mark,
-	uint64_t *bytes, uint64_t *packets, time_t *time)
+	private_load_tester_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
+	time_t *time)
 {
 	return NOT_SUPPORTED;
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
-	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
+	private_load_tester_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_del_sa_t *data)
 {
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
-	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t priority)
+	private_load_tester_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
-	private_load_tester_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	time_t *use_time)
+	private_load_tester_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_query_policy_t *data, time_t *use_time)
 {
 	*use_time = 1;
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_load_tester_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t priority)
+	private_load_tester_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
 	return SUCCESS;
 }

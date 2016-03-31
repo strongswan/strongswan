@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2016 Tobias Brunner
  * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -110,25 +110,31 @@ static bool install_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* install out policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								my_ts, other_ts, POLICY_OUT, policy_type,
-								&sa, child->get_mark(child, FALSE),
-								policy_prio);
-
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_OUT,
+				.src_ts = my_ts,
+				.dst_ts = other_ts,
+				.mark = child->get_mark(child, FALSE),
+			};
+			kernel_ipsec_manage_policy_t policy = {
+				.type = policy_type,
+				.prio = policy_prio,
+				.src = host_any,
+				.dst = host_any,
+				.sa = &sa,
+			};
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 			/* install in policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								other_ts, my_ts, POLICY_IN, policy_type,
-								&sa, child->get_mark(child, TRUE),
-								policy_prio);
-
+			id = (kernel_ipsec_policy_id_t){
+				.dir = POLICY_IN,
+				.src_ts = other_ts,
+				.dst_ts = my_ts,
+				.mark = child->get_mark(child, TRUE),
+			};
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 			/* install forward policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								other_ts, my_ts, POLICY_FWD, policy_type,
-								&sa, child->get_mark(child, TRUE),
-								policy_prio);
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
@@ -247,25 +253,31 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* uninstall out policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							my_ts, other_ts, POLICY_OUT, policy_type,
-							&sa, child->get_mark(child, FALSE),
-							policy_prio);
-
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_OUT,
+				.src_ts = my_ts,
+				.dst_ts = other_ts,
+				.mark = child->get_mark(child, FALSE),
+			};
+			kernel_ipsec_manage_policy_t policy = {
+				.type = policy_type,
+				.prio = policy_prio,
+				.src = host_any,
+				.dst = host_any,
+				.sa = &sa,
+			};
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 			/* uninstall in policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							other_ts, my_ts, POLICY_IN, policy_type,
-							&sa, child->get_mark(child, TRUE),
-							policy_prio);
-
+			id = (kernel_ipsec_policy_id_t){
+				.dir = POLICY_IN,
+				.src_ts = other_ts,
+				.dst_ts = my_ts,
+				.mark = child->get_mark(child, TRUE),
+			};
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 			/* uninstall forward policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							other_ts, my_ts, POLICY_FWD, policy_type,
-							&sa, child->get_mark(child, TRUE),
-							policy_prio);
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}

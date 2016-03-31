@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -160,41 +160,12 @@ struct kernel_interface_t {
 	 * This function does install a single SA for a single protocol in one
 	 * direction.
 	 *
-	 * @param src			source address for this SA
-	 * @param dst			destination address for this SA
-	 * @param spi			SPI allocated by us or remote peer
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param reqid			reqid for this SA
-	 * @param mark			optional mark for this SA
-	 * @param tfc			Traffic Flow Confidentiality padding for this SA
-	 * @param lifetime		lifetime_cfg_t for this SA
-	 * @param enc_alg		Algorithm to use for encryption (ESP only)
-	 * @param enc_key		key to use for encryption
-	 * @param int_alg		Algorithm to use for integrity protection
-	 * @param int_key		key to use for integrity protection
-	 * @param mode			mode of the SA (tunnel, transport)
-	 * @param ipcomp		IPComp transform to use
-	 * @param cpi			CPI for IPComp
-	 * @param replay_window	anti-replay window size
-	 * @param initiator		TRUE if initiator of the exchange creating this SA
-	 * @param encap			enable UDP encapsulation for NAT traversal
-	 * @param esn			TRUE to use Extended Sequence Numbers
-	 * @param inbound		TRUE if this is an inbound SA
-	 * @param update		TRUE if an SPI has already been allocated for SA
-	 * @param src_ts		list of source traffic selectors
-	 * @param dst_ts		list of destination traffic selectors
+	 * @param id			data identifying this SA
+	 * @param data			data for this SA
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_sa) (kernel_interface_t *this,
-						host_t *src, host_t *dst, uint32_t spi,
-						uint8_t protocol, uint32_t reqid, mark_t mark,
-						uint32_t tfc, lifetime_cfg_t *lifetime,
-						uint16_t enc_alg, chunk_t enc_key,
-						uint16_t int_alg, chunk_t int_key,
-						ipsec_mode_t mode, uint16_t ipcomp, uint16_t cpi,
-						uint32_t replay_window, bool initiator, bool encap,
-						bool esn, bool inbound, bool update,
-						linked_list_t *src_ts, linked_list_t *dst_ts);
+	status_t (*add_sa)(kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
+					   kernel_ipsec_add_sa_t *data);
 
 	/**
 	 * Update the hosts on an installed SA.
@@ -204,85 +175,55 @@ struct kernel_interface_t {
 	 * to identify SAs. Therefore if the destination address changed we
 	 * create a new SA and delete the old one.
 	 *
-	 * @param spi			SPI of the SA
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param cpi			CPI for IPComp, 0 if no IPComp is used
-	 * @param src			current source address
-	 * @param dst			current destination address
-	 * @param new_src		new source address
-	 * @param new_dst		new destination address
-	 * @param encap			current use of UDP encapsulation
-	 * @param new_encap		new use of UDP encapsulation
-	 * @param mark			optional mark for this SA
+	 * @param id			data identifying this SA
+	 * @param data			updated data for this SA
 	 * @return				SUCCESS if operation completed, NOT_SUPPORTED if
-	 *					  the kernel interface can't update the SA
+	 *						the kernel interface can't update the SA
 	 */
-	status_t (*update_sa)(kernel_interface_t *this,
-						  uint32_t spi, uint8_t protocol, uint16_t cpi,
-						  host_t *src, host_t *dst,
-						  host_t *new_src, host_t *new_dst,
-						  bool encap, bool new_encap, mark_t mark);
+	status_t (*update_sa)(kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
+						  kernel_ipsec_update_sa_t *data);
 
 	/**
 	 * Query the number of bytes processed by an SA from the SAD.
 	 *
-	 * @param src			source address for this SA
-	 * @param dst			destination address for this SA
-	 * @param spi			SPI allocated by us or remote peer
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param mark			optional mark for this SA
+	 * @param id			data identifying this SA
+	 * @param data			data to query the SA
 	 * @param[out] bytes	the number of bytes processed by SA
 	 * @param[out] packets	number of packets processed by SA
 	 * @param[out] time		last (monotonic) time of SA use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
-						  uint32_t spi, uint8_t protocol, mark_t mark,
-						  uint64_t *bytes, uint64_t *packets, time_t *time);
+	status_t (*query_sa)(kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
+						 kernel_ipsec_query_sa_t *data, uint64_t *bytes,
+						 uint64_t *packets, time_t *time);
 
 	/**
 	 * Delete a previously installed SA from the SAD.
 	 *
-	 * @param src			source address for this SA
-	 * @param dst			destination address for this SA
-	 * @param spi			SPI allocated by us or remote peer
-	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param cpi			CPI for IPComp or 0
-	 * @param mark			optional mark for this SA
+	 * @param id			data identifying this SA
+	 * @param data			data to delete the SA
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
-						uint32_t spi, uint8_t protocol, uint16_t cpi,
-						mark_t mark);
+	status_t (*del_sa)(kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
+					   kernel_ipsec_del_sa_t *data);
 
 	/**
 	 * Flush all SAs from the SAD.
 	 *
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*flush_sas) (kernel_interface_t *this);
+	status_t (*flush_sas)(kernel_interface_t *this);
 
 	/**
 	 * Add a policy to the SPD.
 	 *
-	 * @param src			source address of SA
-	 * @param dst			dest address of SA
-	 * @param src_ts		traffic selector to match traffic source
-	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
-	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
-	 * @param sa			details about the SA(s) tied to this policy
-	 * @param mark			mark for this policy
-	 * @param priority		priority of this policy
+	 * @param id			data identifying this policy
+	 * @param data			data for this policy
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_policy) (kernel_interface_t *this,
-							host_t *src, host_t *dst,
-							traffic_selector_t *src_ts,
-							traffic_selector_t *dst_ts,
-							policy_dir_t direction, policy_type_t type,
-							ipsec_sa_cfg_t *sa, mark_t mark,
-							policy_priority_t priority);
+	status_t (*add_policy)(kernel_interface_t *this,
+						   kernel_ipsec_policy_id_t *id,
+						   kernel_ipsec_manage_policy_t *data);
 
 	/**
 	 * Query the use time of a policy.
@@ -290,47 +231,33 @@ struct kernel_interface_t {
 	 * The use time of a policy is the time the policy was used
 	 * for the last time.
 	 *
-	 * @param src_ts		traffic selector to match traffic source
-	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
-	 * @param mark			optional mark
-	 * @param[out] use_time	the (monotonic) time of this SA's last use
+	 * @param id			data identifying this policy
+	 * @param data			data to query the policy
+	 * @param[out] use_time	the monotonic timestamp of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_policy) (kernel_interface_t *this,
-							  traffic_selector_t *src_ts,
-							  traffic_selector_t *dst_ts,
-							  policy_dir_t direction, mark_t mark,
-							  time_t *use_time);
+	status_t (*query_policy)(kernel_interface_t *this,
+							 kernel_ipsec_policy_id_t *id,
+							 kernel_ipsec_query_policy_t *data,
+							 time_t *use_time);
 
 	/**
 	 * Remove a policy from the SPD.
 	 *
-	 * @param src			source address of SA
-	 * @param dst			dest address of SA
-	 * @param src_ts		traffic selector to match traffic source
-	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
-	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
-	 * @param sa			details about the SA(s) tied to this policy
-	 * @param mark			mark for this policy
-	 * @param priority		priority of the policy
+	 * @param id			data identifying this policy
+	 * @param data			data for this policy
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_policy) (kernel_interface_t *this,
-							host_t *src, host_t *dst,
-							traffic_selector_t *src_ts,
-							traffic_selector_t *dst_ts,
-							policy_dir_t direction, policy_type_t type,
-							ipsec_sa_cfg_t *sa, mark_t mark,
-							policy_priority_t priority);
+	status_t (*del_policy)(kernel_interface_t *this,
+						   kernel_ipsec_policy_id_t *id,
+						   kernel_ipsec_manage_policy_t *data);
 
 	/**
 	 * Flush all policies from the SPD.
 	 *
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*flush_policies) (kernel_interface_t *this);
+	status_t (*flush_policies)(kernel_interface_t *this);
 
 	/**
 	 * Get our outgoing source address for a destination.

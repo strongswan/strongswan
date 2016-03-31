@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1200,32 +1200,45 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
-	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
-	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound, bool update,
-	linked_list_t* src_ts, linked_list_t* dst_ts)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_add_sa_t *data)
 {
 	netlink_buf_t request;
 	char *alg_name;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
-	uint16_t icv_size = 64;
-	ipsec_mode_t original_mode = mode;
+	uint16_t icv_size = 64, ipcomp = data->ipcomp;
+	ipsec_mode_t mode = data->mode, original_mode = data->mode;
 	traffic_selector_t *first_src_ts, *first_dst_ts;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
 	 * we are in the recursive call below */
-	if (ipcomp != IPCOMP_NONE && cpi != 0)
+	if (ipcomp != IPCOMP_NONE && data->cpi != 0)
 	{
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
-		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
-			   tfc, &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED,
-			   chunk_empty, mode, ipcomp, 0, 0, initiator, FALSE, FALSE,
-			   inbound, update, src_ts, dst_ts);
+		kernel_ipsec_sa_id_t ipcomp_id = {
+			.src = id->src,
+			.dst = id->dst,
+			.spi = htonl(ntohs(data->cpi)),
+			.proto = IPPROTO_COMP,
+			.mark = id->mark,
+		};
+		kernel_ipsec_add_sa_t ipcomp_sa = {
+			.reqid = data->reqid,
+			.mode = data->mode,
+			.src_ts = data->src_ts,
+			.dst_ts = data->dst_ts,
+			.lifetime = &lft,
+			.enc_alg = ENCR_UNDEFINED,
+			.int_alg = AUTH_UNDEFINED,
+			.tfc = data->tfc,
+			.ipcomp = data->ipcomp,
+			.initiator = data->initiator,
+			.inbound = data->inbound,
+			.update = data->update,
+		};
+		add_sa(this, &ipcomp_id, &ipcomp_sa);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
@@ -1234,19 +1247,20 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}  (mark "
-				  "%u/0x%08x)", ntohl(spi), reqid, mark.value, mark.mask);
+		 "%u/0x%08x)", ntohl(id->spi), data->reqid, id->mark.value,
+		 id->mark.mask);
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	hdr->nlmsg_type = data->update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 
 	sa = NLMSG_DATA(hdr);
-	host2xfrm(src, &sa->saddr);
-	host2xfrm(dst, &sa->id.daddr);
-	sa->id.spi = spi;
-	sa->id.proto = protocol;
-	sa->family = src->get_family(src);
+	host2xfrm(id->src, &sa->saddr);
+	host2xfrm(id->dst, &sa->id.daddr);
+	sa->id.spi = id->spi;
+	sa->id.proto = id->proto;
+	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
 	switch (mode)
 	{
@@ -1260,8 +1274,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 * selector can be installed other traffic would get dropped */
 				break;
 			}
-			if (src_ts->get_first(src_ts, (void**)&first_src_ts) == SUCCESS &&
-				dst_ts->get_first(dst_ts, (void**)&first_dst_ts) == SUCCESS)
+			if (data->src_ts->get_first(data->src_ts,
+										(void**)&first_src_ts) == SUCCESS &&
+				data->dst_ts->get_first(data->dst_ts,
+										(void**)&first_dst_ts) == SUCCESS)
 			{
 				sa->sel = ts2selector(first_src_ts, first_dst_ts);
 				if (!this->proto_port_transport)
@@ -1279,18 +1295,18 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			break;
 	}
 
-	sa->reqid = reqid;
-	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->bytes.rekey);
-	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->bytes.life);
-	sa->lft.soft_packet_limit = XFRM_LIMIT(lifetime->packets.rekey);
-	sa->lft.hard_packet_limit = XFRM_LIMIT(lifetime->packets.life);
+	sa->reqid = data->reqid;
+	sa->lft.soft_byte_limit = XFRM_LIMIT(data->lifetime->bytes.rekey);
+	sa->lft.hard_byte_limit = XFRM_LIMIT(data->lifetime->bytes.life);
+	sa->lft.soft_packet_limit = XFRM_LIMIT(data->lifetime->packets.rekey);
+	sa->lft.hard_packet_limit = XFRM_LIMIT(data->lifetime->packets.life);
 	/* we use lifetimes since added, not since used */
-	sa->lft.soft_add_expires_seconds = lifetime->time.rekey;
-	sa->lft.hard_add_expires_seconds = lifetime->time.life;
+	sa->lft.soft_add_expires_seconds = data->lifetime->time.rekey;
+	sa->lft.hard_add_expires_seconds = data->lifetime->time.life;
 	sa->lft.soft_use_expires_seconds = 0;
 	sa->lft.hard_use_expires_seconds = 0;
 
-	switch (enc_alg)
+	switch (data->enc_alg)
 	{
 		case ENCR_UNDEFINED:
 			/* no encryption */
@@ -1313,71 +1329,73 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			struct xfrm_algo_aead *algo;
 
-			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
+			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, data->enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-						 encryption_algorithm_names, enc_alg);
+						 encryption_algorithm_names, data->enc_alg);
 					goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
+				 encryption_algorithm_names, data->enc_alg,
+				 data->enc_key.len * 8);
 
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AEAD,
-								   sizeof(*algo) + enc_key.len);
+								   sizeof(*algo) + data->enc_key.len);
 			if (!algo)
 			{
 				goto failed;
 			}
-			algo->alg_key_len = enc_key.len * 8;
+			algo->alg_key_len = data->enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
-			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
+			memcpy(algo->alg_key, data->enc_key.ptr, data->enc_key.len);
 			break;
 		}
 		default:
 		{
 			struct xfrm_algo *algo;
 
-			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
+			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, data->enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-					 encryption_algorithm_names, enc_alg);
+					 encryption_algorithm_names, data->enc_alg);
 				goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
-				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
+				 encryption_algorithm_names, data->enc_alg,
+				 data->enc_key.len * 8);
 
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_CRYPT,
-								   sizeof(*algo) + enc_key.len);
+								   sizeof(*algo) + data->enc_key.len);
 			if (!algo)
 			{
 				goto failed;
 			}
-			algo->alg_key_len = enc_key.len * 8;
+			algo->alg_key_len = data->enc_key.len * 8;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
-			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
+			memcpy(algo->alg_key, data->enc_key.ptr, data->enc_key.len);
 		}
 	}
 
-	if (int_alg != AUTH_UNDEFINED)
+	if (data->int_alg != AUTH_UNDEFINED)
 	{
 		u_int trunc_len = 0;
 
-		alg_name = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
+		alg_name = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-				 integrity_algorithm_names, int_alg);
+				 integrity_algorithm_names, data->int_alg);
 			goto failed;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
-			 integrity_algorithm_names, int_alg, int_key.len * 8);
+			 integrity_algorithm_names, data->int_alg, data->int_key.len * 8);
 
-		switch (int_alg)
+		switch (data->int_alg)
 		{
 			case AUTH_HMAC_MD5_128:
 			case AUTH_HMAC_SHA2_256_128:
@@ -1398,31 +1416,31 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			 * use specified truncation size supported by newer kernels.
 			 * also use this for untruncated MD5 and SHA1. */
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH_TRUNC,
-								   sizeof(*algo) + int_key.len);
+								   sizeof(*algo) + data->int_key.len);
 			if (!algo)
 			{
 				goto failed;
 			}
-			algo->alg_key_len = int_key.len * 8;
+			algo->alg_key_len = data->int_key.len * 8;
 			algo->alg_trunc_len = trunc_len;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
-			memcpy(algo->alg_key, int_key.ptr, int_key.len);
+			memcpy(algo->alg_key, data->int_key.ptr, data->int_key.len);
 		}
 		else
 		{
 			struct xfrm_algo* algo;
 
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH,
-								   sizeof(*algo) + int_key.len);
+								   sizeof(*algo) + data->int_key.len);
 			if (!algo)
 			{
 				goto failed;
 			}
-			algo->alg_key_len = int_key.len * 8;
+			algo->alg_key_len = data->int_key.len * 8;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
-			memcpy(algo->alg_key, int_key.ptr, int_key.len);
+			memcpy(algo->alg_key, data->int_key.ptr, data->int_key.len);
 		}
 	}
 
@@ -1451,7 +1469,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 	}
 
-	if (encap)
+	if (data->encap)
 	{
 		struct xfrm_encap_tmpl *tmpl;
 
@@ -1461,8 +1479,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			goto failed;
 		}
 		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
-		tmpl->encap_sport = htons(src->get_port(src));
-		tmpl->encap_dport = htons(dst->get_port(dst));
+		tmpl->encap_sport = htons(id->src->get_port(id->src));
+		tmpl->encap_dport = htons(id->dst->get_port(id->dst));
 		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
 		/* encap_oa could probably be derived from the
 		 * traffic selectors [rfc4306, p39]. In the netlink kernel
@@ -1476,12 +1494,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		 * checks it marks them "checksum ok" so OA isn't needed. */
 	}
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		goto failed;
 	}
 
-	if (tfc && protocol == IPPROTO_ESP && mode == MODE_TUNNEL)
+	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
 	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
 		uint32_t *tfcpad;
 
@@ -1491,19 +1509,19 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			goto failed;
 		}
-		*tfcpad = tfc;
+		*tfcpad = data->tfc;
 	}
 
-	if (protocol != IPPROTO_COMP)
+	if (id->proto != IPPROTO_COMP)
 	{
-		if (replay_window != 0 && (esn || replay_window > 32))
+		if (data->replay_window != 0 && (data->esn || data->replay_window > 32))
 		{
 			/* for ESN or larger replay windows we need the new
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
 			struct xfrm_replay_state_esn *replay;
 			uint32_t bmp_size;
 
-			bmp_size = round_up(replay_window, sizeof(uint32_t) * 8) / 8;
+			bmp_size = round_up(data->replay_window, sizeof(uint32_t) * 8) / 8;
 			replay = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
 									 sizeof(*replay) + bmp_size);
 			if (!replay)
@@ -1512,10 +1530,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			}
 			/* bmp_len contains number uf __u32's */
 			replay->bmp_len = bmp_size / sizeof(uint32_t);
-			replay->replay_window = replay_window;
-			DBG2(DBG_KNL, "  using replay window of %u packets", replay_window);
+			replay->replay_window = data->replay_window;
+			DBG2(DBG_KNL, "  using replay window of %u packets",
+				 data->replay_window);
 
-			if (esn)
+			if (data->esn)
 			{
 				DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
 				sa->flags |= XFRM_STATE_ESN;
@@ -1523,21 +1542,24 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 		else
 		{
-			DBG2(DBG_KNL, "  using replay window of %u packets", replay_window);
-			sa->replay_window = replay_window;
+			DBG2(DBG_KNL, "  using replay window of %u packets",
+				 data->replay_window);
+			sa->replay_window = data->replay_window;
 		}
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		if (mark.value)
+		if (id->mark.value)
 		{
-			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x  "
-						  "(mark %u/0x%08x)", ntohl(spi), mark.value, mark.mask);
+			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x  (mark "
+				 "%u/0x%08x)", ntohl(id->spi), id->mark.value,
+				 id->mark.mask);
 		}
 		else
 		{
-			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
+			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x",
+				 ntohl(id->spi));
 		}
 		goto failed;
 	}
@@ -1555,8 +1577,7 @@ failed:
  * Allocates into one the replay state structure we get from the kernel.
  */
 static void get_replay_state(private_kernel_netlink_ipsec_t *this,
-							 uint32_t spi, uint8_t protocol,
-							 host_t *dst, mark_t mark,
+							 kernel_ipsec_sa_id_t *sa,
 							 struct xfrm_replay_state_esn **replay_esn,
 							 uint32_t *replay_esn_len,
 							 struct xfrm_replay_state **replay,
@@ -1572,7 +1593,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
-				   ntohl(spi));
+		 ntohl(sa->spi));
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1582,12 +1603,12 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	aevent_id = NLMSG_DATA(hdr);
 	aevent_id->flags = XFRM_AE_RVAL;
 
-	host2xfrm(dst, &aevent_id->sa_id.daddr);
-	aevent_id->sa_id.spi = spi;
-	aevent_id->sa_id.proto = protocol;
-	aevent_id->sa_id.family = dst->get_family(dst);
+	host2xfrm(sa->dst, &aevent_id->sa_id.daddr);
+	aevent_id->sa_id.spi = sa->spi;
+	aevent_id->sa_id.proto = sa->proto;
+	aevent_id->sa_id.family = sa->dst->get_family(sa->dst);
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), sa->mark))
 	{
 		return;
 	}
@@ -1657,9 +1678,9 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, mark_t mark,
-	uint64_t *bytes, uint64_t *packets, time_t *time)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
+	time_t *time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1671,7 +1692,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%08x)",
-				   ntohl(spi), mark.value, mark.mask);
+		 ntohl(id->spi), id->mark.value, id->mark.mask);
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1679,12 +1700,12 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
 	sa_id = NLMSG_DATA(hdr);
-	host2xfrm(dst, &sa_id->daddr);
-	sa_id->spi = spi;
-	sa_id->proto = protocol;
-	sa_id->family = dst->get_family(dst);
+	host2xfrm(id->dst, &sa_id->daddr);
+	sa_id->spi = id->spi;
+	sa_id->proto = id->proto;
+	sa_id->family = id->dst->get_family(id->dst);
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		return FAILED;
 	}
@@ -1705,18 +1726,18 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 				{
 					struct nlmsgerr *err = NLMSG_DATA(hdr);
 
-					if (mark.value)
+					if (id->mark.value)
 					{
-						DBG1(DBG_KNL, "querying SAD entry with SPI %.8x  "
-									  "(mark %u/0x%08x) failed: %s (%d)",
-									   ntohl(spi), mark.value, mark.mask,
-									   strerror(-err->error), -err->error);
+						DBG1(DBG_KNL, "querying SAD entry with SPI %.8x  (mark "
+							 "%u/0x%08x) failed: %s (%d)", ntohl(id->spi),
+							 id->mark.value, id->mark.mask,
+							 strerror(-err->error), -err->error);
 					}
 					else
 					{
 						DBG1(DBG_KNL, "querying SAD entry with SPI %.8x "
-									  "failed: %s (%d)", ntohl(spi),
-									   strerror(-err->error), -err->error);
+							 "failed: %s (%d)", ntohl(id->spi),
+							 strerror(-err->error), -err->error);
 					}
 					break;
 				}
@@ -1732,7 +1753,8 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 	if (sa == NULL)
 	{
-		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x",
+			 ntohl(id->spi));
 	}
 	else
 	{
@@ -1758,23 +1780,31 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_del_sa_t *data)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_id *sa_id;
 
 	/* if IPComp was used, we first delete the additional IPComp SA */
-	if (cpi)
+	if (data->cpi)
 	{
-		del_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, 0, mark);
+		kernel_ipsec_sa_id_t ipcomp_id = {
+			.src = id->src,
+			.dst = id->dst,
+			.spi = htonl(ntohs(data->cpi)),
+			.proto = IPPROTO_COMP,
+			.mark = id->mark,
+		};
+		kernel_ipsec_del_sa_t ipcomp = {};
+		del_sa(this, &ipcomp_id, &ipcomp);
 	}
 
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%08x)",
-				   ntohl(spi), mark.value, mark.mask);
+		 ntohl(id->spi), id->mark.value, id->mark.mask);
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1782,12 +1812,12 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
 	sa_id = NLMSG_DATA(hdr);
-	host2xfrm(dst, &sa_id->daddr);
-	sa_id->spi = spi;
-	sa_id->proto = protocol;
-	sa_id->family = dst->get_family(dst);
+	host2xfrm(id->dst, &sa_id->daddr);
+	sa_id->spi = id->spi;
+	sa_id->proto = id->proto;
+	sa_id->family = id->dst->get_family(id->dst);
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		return FAILED;
 	}
@@ -1795,30 +1825,30 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	switch (this->socket_xfrm->send_ack(this->socket_xfrm, hdr))
 	{
 		case SUCCESS:
-			DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x (mark %u/0x%08x)",
-				 ntohl(spi), mark.value, mark.mask);
+			DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x  (mark %u/0x%08x)",
+				 ntohl(id->spi), id->mark.value, id->mark.mask);
 			return SUCCESS;
 		case NOT_FOUND:
 			return NOT_FOUND;
 		default:
-			if (mark.value)
+			if (id->mark.value)
 			{
-				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x "
-					 "(mark %u/0x%08x)", ntohl(spi), mark.value, mark.mask);
+				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x  (mark "
+					 "%u/0x%08x)", ntohl(id->spi), id->mark.value,
+					 id->mark.mask);
 			}
 			else
 			{
 				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x",
-					 ntohl(spi));
+					 ntohl(id->spi));
 			}
 			return FAILED;
 	}
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, uint32_t spi, uint8_t protocol,
-	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool old_encap, bool new_encap, mark_t mark)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_update_sa_t *data)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1832,18 +1862,30 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
 	uint32_t replay_esn_len = 0;
+	kernel_ipsec_del_sa_t del = { 0 };
 	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
-	if (cpi)
+	if (data->cpi)
 	{
-		update_sa(this, htonl(ntohs(cpi)), IPPROTO_COMP, 0,
-				  src, dst, new_src, new_dst, FALSE, FALSE, mark);
+		kernel_ipsec_sa_id_t ipcomp_id = {
+			.src = id->src,
+			.dst = id->dst,
+			.spi = htonl(ntohs(data->cpi)),
+			.proto = IPPROTO_COMP,
+			.mark = id->mark,
+		};
+		kernel_ipsec_update_sa_t ipcomp = {
+			.new_src = data->new_src,
+			.new_dst = data->new_dst,
+		};
+		update_sa(this, &ipcomp_id, &ipcomp);
 	}
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update", ntohl(spi));
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update",
+		 ntohl(id->spi));
 
 	/* query the existing SA first */
 	hdr = &request.hdr;
@@ -1852,12 +1894,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
 	sa_id = NLMSG_DATA(hdr);
-	host2xfrm(dst, &sa_id->daddr);
-	sa_id->spi = spi;
-	sa_id->proto = protocol;
-	sa_id->family = dst->get_family(dst);
+	host2xfrm(id->dst, &sa_id->daddr);
+	sa_id->spi = id->spi;
+	sa_id->proto = id->proto;
+	sa_id->family = id->dst->get_family(id->dst);
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		return FAILED;
 	}
@@ -1892,23 +1934,25 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	}
 	if (out_sa == NULL)
 	{
-		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x",
+			 ntohl(id->spi));
 		goto failed;
 	}
 
-	get_replay_state(this, spi, protocol, dst, mark, &replay_esn,
-					 &replay_esn_len, &replay, &lifetime);
+	get_replay_state(this, id, &replay_esn, &replay_esn_len, &replay,
+					 &lifetime);
 
 	/* delete the old SA (without affecting the IPComp SA) */
-	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
+	if (del_sa(this, id, &del) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x",
-					   ntohl(spi));
+			 ntohl(id->spi));
 		goto failed;
 	}
 
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
-				   ntohl(spi), src, dst, new_src, new_dst);
+		 ntohl(id->spi), id->src, id->dst, data->new_src,
+		 data->new_dst);
 	/* copy over the SA from out to request */
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1916,15 +1960,15 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	sa = NLMSG_DATA(hdr);
 	memcpy(sa, NLMSG_DATA(out), sizeof(struct xfrm_usersa_info));
-	sa->family = new_dst->get_family(new_dst);
+	sa->family = data->new_dst->get_family(data->new_dst);
 
-	if (!src->ip_equals(src, new_src))
+	if (!id->src->ip_equals(id->src, data->new_src))
 	{
-		host2xfrm(new_src, &sa->saddr);
+		host2xfrm(data->new_src, &sa->saddr);
 	}
-	if (!dst->ip_equals(dst, new_dst))
+	if (!id->dst->ip_equals(id->dst, data->new_dst))
 	{
-		host2xfrm(new_dst, &sa->id.daddr);
+		host2xfrm(data->new_dst, &sa->id.daddr);
 	}
 
 	rta = XFRM_RTA(out, struct xfrm_usersa_info);
@@ -1932,13 +1976,13 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	while (RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
-		if (rta->rta_type != XFRMA_ENCAP || new_encap)
+		if (rta->rta_type != XFRMA_ENCAP || data->new_encap)
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
 				tmpl = RTA_DATA(rta);
-				tmpl->encap_sport = ntohs(new_src->get_port(new_src));
-				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+				tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+				tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
 			}
 			netlink_add_attribute(hdr, rta->rta_type,
 								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
@@ -1947,7 +1991,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta = RTA_NEXT(rta, rtasize);
 	}
 
-	if (tmpl == NULL && new_encap)
+	if (tmpl == NULL && data->new_encap)
 	{	/* add tmpl if we are enabling it */
 		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP, sizeof(*tmpl));
 		if (!tmpl)
@@ -1955,8 +1999,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			goto failed;
 		}
 		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
-		tmpl->encap_sport = ntohs(new_src->get_port(new_src));
-		tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+		tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+		tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
 		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
 	}
 
@@ -1987,7 +2031,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	else
 	{
 		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry with "
-			 "SPI %.8x", ntohl(spi));
+			 "SPI %.8x", ntohl(id->spi));
 	}
 	if (lifetime)
 	{
@@ -2004,12 +2048,13 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	else
 	{
 		DBG1(DBG_KNL, "unable to copy usage stats from old SAD entry with "
-			 "SPI %.8x", ntohl(spi));
+			 "SPI %.8x", ntohl(id->spi));
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x",
+			 ntohl(id->spi));
 		goto failed;
 	}
 
@@ -2303,10 +2348,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
-	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t priority)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
 	policy_entry_t *policy, *current;
 	policy_sa_t *assigned_sa, *current_sa;
@@ -2315,10 +2358,10 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* create a policy */
 	INIT(policy,
-		.sel = ts2selector(src_ts, dst_ts),
-		.mark = mark.value & mark.mask,
-		.direction = direction,
-		.reqid = sa->reqid,
+		.sel = ts2selector(id->src_ts, id->dst_ts),
+		.mark = id->mark.value & id->mark.mask,
+		.direction = id->dir,
+		.reqid = data->sa->reqid,
 	);
 
 	/* find the policy, which matches EXACTLY */
@@ -2326,21 +2369,21 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	current = this->policies->get(this->policies, policy);
 	if (current)
 	{
-		if (current->reqid && sa->reqid && current->reqid != sa->reqid)
+		if (current->reqid && data->sa->reqid &&
+			current->reqid != data->sa->reqid)
 		{
 			DBG1(DBG_CFG, "unable to install policy %R === %R %N (mark "
 				 "%u/0x%08x) for reqid %u, the same policy for reqid %u exists",
-				 src_ts, dst_ts, policy_dir_names, direction,
-				 mark.value, mark.mask, sa->reqid, current->reqid);
+				 id->src_ts, id->dst_ts, policy_dir_names, id->dir,
+				 id->mark.value, id->mark.mask, data->sa->reqid, current->reqid);
 			policy_entry_destroy(this, policy);
 			this->mutex->unlock(this->mutex);
 			return INVALID_STATE;
 		}
 		/* use existing policy */
-		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%08x) "
-					  "already exists, increasing refcount",
-					   src_ts, dst_ts, policy_dir_names, direction,
-					   mark.value, mark.mask);
+		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%08x) already exists, "
+			"increasing refcount", id->src_ts, id->dst_ts, policy_dir_names,
+			id->dir, id->mark.value, id->mark.mask);
 		policy_entry_destroy(this, policy);
 		policy = current;
 		found = TRUE;
@@ -2352,9 +2395,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	/* cache the assigned IPsec SA */
-	assigned_sa = policy_sa_create(this, direction, type, src, dst, src_ts,
-								   dst_ts, mark, sa);
-	assigned_sa->priority = get_priority(policy, priority);
+	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
+						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
+	assigned_sa->priority = get_priority(policy, data->prio);
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2383,23 +2426,22 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	DBG2(DBG_KNL, "%s policy %R === %R %N  (mark %u/0x%08x)",
-				   found ? "updating" : "adding", src_ts, dst_ts,
-				   policy_dir_names, direction, mark.value, mark.mask);
+		 found ? "updating" : "adding", id->src_ts, id->dst_ts,
+		 policy_dir_names, id->dir, id->mark.value, id->mark.mask);
 
 	if (add_policy_internal(this, policy, assigned_sa, found) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to %s policy %R === %R %N",
-					   found ? "update" : "add", src_ts, dst_ts,
-					   policy_dir_names, direction);
+			 found ? "update" : "add", id->src_ts, id->dst_ts,
+			 policy_dir_names, id->dir);
 		return FAILED;
 	}
 	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
-	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	time_t *use_time)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_query_policy_t *data, time_t *use_time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -2410,8 +2452,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "querying policy %R === %R %N  (mark %u/0x%08x)",
-				   src_ts, dst_ts, policy_dir_names, direction,
-				   mark.value, mark.mask);
+		 id->src_ts, id->dst_ts, policy_dir_names, id->dir, id->mark.value,
+		 id->mark.mask);
 
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -2419,10 +2461,10 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
 	policy_id = NLMSG_DATA(hdr);
-	policy_id->sel = ts2selector(src_ts, dst_ts);
-	policy_id->dir = direction;
+	policy_id->sel = ts2selector(id->src_ts, id->dst_ts);
+	policy_id->dir = id->dir;
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		return FAILED;
 	}
@@ -2443,7 +2485,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 				{
 					struct nlmsgerr *err = NLMSG_DATA(hdr);
 					DBG1(DBG_KNL, "querying policy failed: %s (%d)",
-								   strerror(-err->error), -err->error);
+						 strerror(-err->error), -err->error);
 					break;
 				}
 				default:
@@ -2458,8 +2500,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 	if (policy == NULL)
 	{
-		DBG2(DBG_KNL, "unable to query policy %R === %R %N", src_ts, dst_ts,
-					   policy_dir_names, direction);
+		DBG2(DBG_KNL, "unable to query policy %R === %R %N", id->src_ts,
+			 id->dst_ts, policy_dir_names, id->dir);
 		free(out);
 		return FAILED;
 	}
@@ -2479,10 +2521,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t prio)
+	private_kernel_netlink_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
 	policy_entry_t *current, policy;
 	enumerator_t *enumerator;
@@ -2493,52 +2533,52 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	bool is_installed = TRUE;
 	uint32_t priority;
 	ipsec_sa_t assigned_sa = {
-		.src = src,
-		.dst = dst,
-		.mark = mark,
-		.cfg = *sa,
+		.src = data->src,
+		.dst = data->dst,
+		.mark = id->mark,
+		.cfg = *data->sa,
 	};
 
 	DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%08x)",
-				   src_ts, dst_ts, policy_dir_names, direction,
-				   mark.value, mark.mask);
+		 id->src_ts, id->dst_ts, policy_dir_names, id->dir, id->mark.value,
+		 id->mark.mask);
 
 	/* create a policy */
 	memset(&policy, 0, sizeof(policy_entry_t));
-	policy.sel = ts2selector(src_ts, dst_ts);
-	policy.mark = mark.value & mark.mask;
-	policy.direction = direction;
+	policy.sel = ts2selector(id->src_ts, id->dst_ts);
+	policy.mark = id->mark.value & id->mark.mask;
+	policy.direction = id->dir;
 
 	/* find the policy */
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, &policy);
 	if (!current)
 	{
-		if (mark.value)
+		if (id->mark.value)
 		{
 			DBG1(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%08x) "
-						  "failed, not found", src_ts, dst_ts, policy_dir_names,
-						   direction, mark.value, mark.mask);
+				 "failed, not found", id->src_ts, id->dst_ts,
+				 policy_dir_names, id->dir, id->mark.value, id->mark.mask);
 		}
 		else
 		{
 			DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found",
-						   src_ts, dst_ts, policy_dir_names, direction);
+				 id->src_ts, id->dst_ts, policy_dir_names, id->dir);
 		}
 		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
 
 	/* remove mapping to SA by reqid and priority */
-	priority = get_priority(current, prio);
+	priority = get_priority(current, data->prio);
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (priority == mapping->priority && type == mapping->type &&
+		if (priority == mapping->priority && data->type == mapping->type &&
 			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
-			policy_sa_destroy(mapping, &direction, this);
+			policy_sa_destroy(mapping, &id->dir, this);
 			break;
 		}
 		is_installed = FALSE;
@@ -2555,14 +2595,14 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		}
 
 		DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%08x)",
-					   src_ts, dst_ts, policy_dir_names, direction,
-					   mark.value, mark.mask);
+			 id->src_ts, id->dst_ts, policy_dir_names, id->dir, id->mark.value,
+			 id->mark.mask);
 
 		current->used_by->get_first(current->used_by, (void**)&mapping);
 		if (add_policy_internal(this, current, mapping, TRUE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "unable to update policy %R === %R %N",
-						   src_ts, dst_ts, policy_dir_names, direction);
+				 id->src_ts, id->dst_ts, policy_dir_names, id->dir);
 			return FAILED;
 		}
 		return SUCCESS;
@@ -2577,9 +2617,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	policy_id = NLMSG_DATA(hdr);
 	policy_id->sel = current->sel;
-	policy_id->dir = direction;
+	policy_id->dir = id->dir;
 
-	if (!add_mark(hdr, sizeof(request), mark))
+	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		this->mutex->unlock(this->mutex);
 		return FAILED;
@@ -2592,9 +2632,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 									  route->prefixlen, route->gateway,
 									  route->src_ip, route->if_name) != SUCCESS)
 		{
-			DBG1(DBG_KNL, "error uninstalling route installed with "
-						  "policy %R === %R %N", src_ts, dst_ts,
-						   policy_dir_names, direction);
+			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+				 "%R === %R %N", id->src_ts, id->dst_ts, policy_dir_names,
+				 id->dir);
 		}
 	}
 
@@ -2604,16 +2644,16 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
-		if (mark.value)
+		if (id->mark.value)
 		{
-			DBG1(DBG_KNL, "unable to delete policy %R === %R %N  "
-						  "(mark %u/0x%08x)", src_ts, dst_ts, policy_dir_names,
-						   direction, mark.value, mark.mask);
+			DBG1(DBG_KNL, "unable to delete policy %R === %R %N  (mark "
+				 "%u/0x%08x)", id->src_ts, id->dst_ts, policy_dir_names,
+				 id->dir, id->mark.value, id->mark.mask);
 		}
 		else
 		{
 			DBG1(DBG_KNL, "unable to delete policy %R === %R %N",
-						   src_ts, dst_ts, policy_dir_names, direction);
+				 id->src_ts, id->dst_ts, policy_dir_names, id->dir);
 		}
 		return FAILED;
 	}
