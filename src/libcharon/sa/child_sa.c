@@ -915,6 +915,17 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	{
 		in_id.dir = POLICY_FWD;
 		status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
+
+		/* install an "outbound" FWD policy in case there is a drop policy
+		 * matching outbound forwarded traffic, to allow another tunnel to use
+		 * the reversed subnets and do the same we don't set a reqid (this also
+		 * allows the kernel backend to distinguish between the two types of
+		 * FWD policies) */
+		out_id.dir = POLICY_FWD;
+		other_sa->reqid = 0;
+		status |= charon->kernel->add_policy(charon->kernel, &out_id, &out_policy);
+		/* reset the reqid for any other further policies */
+		other_sa->reqid = this->reqid;
 	}
 	return status;
 }
@@ -958,6 +969,11 @@ static void del_policies_internal(private_child_sa_t *this,
 	{
 		in_id.dir = POLICY_FWD;
 		charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
+
+		out_id.dir = POLICY_FWD;
+		other_sa->reqid = 0;
+		charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
+		other_sa->reqid = this->reqid;
 	}
 }
 
