@@ -2403,7 +2403,13 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&current_sa))
 	{
-		if (current_sa->priority >= assigned_sa->priority)
+		if (current_sa->priority > assigned_sa->priority)
+		{
+			break;
+		}
+		/* prefer SAs with a reqid over those without */
+		if (current_sa->priority == assigned_sa->priority &&
+			(!current_sa->sa->cfg.reqid || assigned_sa->sa->cfg.reqid))
 		{
 			break;
 		}
