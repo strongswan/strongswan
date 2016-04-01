@@ -197,6 +197,82 @@ START_TEST(test_round)
 END_TEST
 
 /*******************************************************************************
+ * streq
+ */
+
+static struct {
+	char *a;
+	char *b;
+	bool eq;
+	bool case_eq;
+} streq_data[] = {
+	{NULL, NULL, TRUE, TRUE},
+	{NULL, "", FALSE, FALSE},
+	{"", NULL, FALSE, FALSE},
+	{"abc", "", FALSE, FALSE},
+	{"abc", "abc", TRUE, TRUE},
+	{"abc", "ABC", FALSE, TRUE},
+};
+
+START_TEST(test_streq)
+{
+	bool eq;
+
+	ck_assert(streq(streq_data[_i].a, streq_data[_i].a));
+	ck_assert(streq(streq_data[_i].b, streq_data[_i].b));
+	eq = streq(streq_data[_i].a, streq_data[_i].b);
+	ck_assert(eq == streq_data[_i].eq);
+
+	ck_assert(strcaseeq(streq_data[_i].a, streq_data[_i].a));
+	ck_assert(strcaseeq(streq_data[_i].b, streq_data[_i].b));
+	eq = strcaseeq(streq_data[_i].a, streq_data[_i].b);
+	ck_assert(eq == streq_data[_i].case_eq);
+}
+END_TEST
+
+/*******************************************************************************
+ * strneq
+ */
+
+static struct {
+	char *a;
+	char *b;
+	size_t n;
+	bool eq;
+	bool case_eq;
+} strneq_data[] = {
+	{NULL, NULL, 0, TRUE, TRUE},
+	{NULL, NULL, 10, TRUE, TRUE},
+	{NULL, "", 0, FALSE, FALSE},
+	{"", NULL, 0, FALSE, FALSE},
+	{"abc", "", 0, TRUE, TRUE},
+	{"abc", "", 1, FALSE, FALSE},
+	{"abc", "ab", 1, TRUE, TRUE},
+	{"abc", "ab", 2, TRUE, TRUE},
+	{"abc", "ab", 3, FALSE, FALSE},
+	{"abc", "abc", 3, TRUE, TRUE},
+	{"abc", "abc", 4, TRUE, TRUE},
+	{"abc", "abC", 2, TRUE, TRUE},
+	{"abc", "abC", 3, FALSE, TRUE},
+};
+
+START_TEST(test_strneq)
+{
+	bool eq;
+
+	ck_assert(strneq(strneq_data[_i].a, strneq_data[_i].a, strneq_data[_i].n));
+	ck_assert(strneq(strneq_data[_i].b, strneq_data[_i].b, strneq_data[_i].n));
+	eq = strneq(strneq_data[_i].a, strneq_data[_i].b, strneq_data[_i].n);
+	ck_assert(eq == strneq_data[_i].eq);
+
+	ck_assert(strncaseeq(strneq_data[_i].a, strneq_data[_i].a,  strneq_data[_i].n));
+	ck_assert(strncaseeq(strneq_data[_i].b, strneq_data[_i].b,  strneq_data[_i].n));
+	eq = strncaseeq(strneq_data[_i].a, strneq_data[_i].b,  strneq_data[_i].n);
+	ck_assert(eq == strneq_data[_i].case_eq);
+}
+END_TEST
+
+/*******************************************************************************
  * strpfx
  */
 
@@ -848,6 +924,8 @@ Suite *utils_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("string helper");
+	tcase_add_loop_test(tc, test_streq, 0, countof(streq_data));
+	tcase_add_loop_test(tc, test_strneq, 0, countof(strneq_data));
 	tcase_add_loop_test(tc, test_strpfx, 0, countof(strpfx_data));
 	suite_add_tcase(s, tc);
 
