@@ -2156,7 +2156,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_info->lft.soft_use_expires_seconds = 0;
 	policy_info->lft.hard_use_expires_seconds = 0;
 
-	if (mapping->type == POLICY_IPSEC)
+	if (mapping->type == POLICY_IPSEC && ipsec->cfg.reqid)
 	{
 		struct xfrm_user_tmpl *tmpl;
 		struct {
