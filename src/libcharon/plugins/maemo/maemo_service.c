@@ -236,6 +236,14 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	traffic_selector_t *ts;
 	auth_cfg_t *auth;
 	certificate_t *cert;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -332,14 +340,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create(this->current, ike_cfg,
-							   CERT_SEND_IF_ASKED,
-							   UNIQUE_REPLACE, 1, /* keyingtries */
-							   36000, 0, /* rekey 10h, reauth none */
-							   600, 600, /* jitter, over 10min */
-							   TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   0, 0, /* DPD delay, timeout */
-							   FALSE, NULL, NULL); /* mediation */
+	peer_cfg = peer_cfg_create(this->current, ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg,  host_create_from_string("0.0.0.0", 0));
 
 	auth = auth_cfg_create();

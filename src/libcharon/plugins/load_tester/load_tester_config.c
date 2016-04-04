@@ -688,6 +688,16 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	peer_cfg_t *peer_cfg;
 	char local[32], *remote;
 	host_t *addr;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_NO,
+		.keyingtries = 1,
+		.rekey_time = this->ike_rekey,
+		.over_time = this->ike_rekey,
+		.no_mobike = TRUE,
+		.dpd = this->dpd_delay,
+		.dpd_timeout = this->dpd_timeout,
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -739,14 +749,8 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 								 FRAGMENTATION_NO, 0);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
-	peer_cfg = peer_cfg_create("load-test", ike_cfg,
-							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
-							   this->ike_rekey, 0, /* rekey, reauth */
-							   0, this->ike_rekey, /* jitter, overtime */
-							   FALSE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   this->dpd_delay,   /* dpd_delay */
-							   this->dpd_timeout, /* dpd_timeout */
-							   FALSE, NULL, NULL);
+	peer_cfg = peer_cfg_create("load-test", ike_cfg, &peer);
+
 	if (this->vip)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, this->vip->clone(this->vip));

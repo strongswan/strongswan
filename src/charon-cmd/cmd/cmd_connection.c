@@ -144,8 +144,16 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	peer_cfg_t *peer_cfg;
 	uint16_t local_port, remote_port = IKEV2_UDP_PORT;
 	ike_version_t version = IKE_ANY;
-	bool aggressive = FALSE;
 	proposal_t *proposal;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+		.dpd = 30,
+	};
 
 	switch (this->profile)
 	{
@@ -159,7 +167,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V1_XAUTH_AM:
 		case PROF_V1_XAUTH_PSK_AM:
 		case PROF_V1_HYBRID_AM:
-			aggressive = TRUE;
+			peer.aggressive = TRUE;
 			/* FALL */
 		case PROF_V1_PUB:
 		case PROF_V1_XAUTH:
@@ -189,13 +197,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	}
-	peer_cfg = peer_cfg_create("cmd", ike_cfg,
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
-					36000, 0, /* rekey 10h, reauth none */
-					600, 600, /* jitter, over 10min */
-					TRUE, aggressive, TRUE, /* mobike, aggressive, pull */
-					30, 0, /* DPD delay, timeout */
-					FALSE, NULL, NULL); /* mediation */
+	peer_cfg = peer_cfg_create("cmd", ike_cfg, &peer);
 
 	return peer_cfg;
 }

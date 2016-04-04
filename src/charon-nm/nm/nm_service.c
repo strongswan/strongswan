@@ -300,6 +300,14 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	certificate_t *cert = NULL;
 	x509_t *x509;
 	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -533,13 +541,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 							 FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	peer_cfg = peer_cfg_create(priv->name, ike_cfg,
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
-					36000, 0, /* rekey 10h, reauth none */
-					600, 600, /* jitter, over 10min */
-					TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-					0, 0, /* DPD delay, timeout */
-					FALSE, NULL, NULL); /* mediation */
+
+	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));

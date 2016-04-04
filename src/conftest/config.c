@@ -247,11 +247,15 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	identification_t *lid, *rid;
 	char *child, *policy, *pool;
 	uintptr_t strength;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_ALWAYS_SEND,
+		.unique = UNIQUE_NO,
+		.keyingtries = 1,
+		.no_mobike = TRUE,
+	};
 
 	ike_cfg = load_ike_config(this, settings, config);
-	peer_cfg = peer_cfg_create(config, ike_cfg, CERT_ALWAYS_SEND,
-							   UNIQUE_NO, 1, 0, 0, 0, 0, FALSE, FALSE, TRUE,
-							   0, 0, FALSE, NULL, NULL);
+	peer_cfg = peer_cfg_create(config, ike_cfg, &peer);
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);

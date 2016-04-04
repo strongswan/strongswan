@@ -87,14 +87,18 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 
 		if (e->enumerate(e, &name))
 		{
-			peer_cfg = peer_cfg_create(
-				name, this->ike->get_ref(this->ike),
-				CERT_NEVER_SEND, UNIQUE_REPLACE,
-				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
-				this->rekey*5, this->rekey*3,	/* jitter, overtime */
-				TRUE, FALSE, TRUE,				/* mobike, aggressive, pull */
-				this->dpd, 0,					/* DPD delay, timeout */
-				TRUE, NULL, NULL);				/* mediation, med by, peer id */
+			peer_cfg_create_t peer = {
+				.cert_policy = CERT_NEVER_SEND,
+				.unique = UNIQUE_REPLACE,
+				.keyingtries = 1,
+				.rekey_time = this->rekey * 60,
+				.jitter_time = this->rekey * 5,
+				.over_time = this->rekey * 3,
+				.dpd = this->dpd,
+				.mediation = TRUE,
+			};
+			peer_cfg = peer_cfg_create(name, this->ike->get_ref(this->ike),
+									   &peer);
 			e->destroy(e);
 
 			auth = auth_cfg_create();

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,6 +26,7 @@
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
+typedef struct peer_cfg_create_t peer_cfg_create_t;
 
 #include <library.h>
 #include <utils/identification.h>
@@ -367,42 +368,52 @@ struct peer_cfg_t {
 };
 
 /**
+ * Data passed to the constructor of a peer_cfg_t object.
+ */
+struct peer_cfg_create_t {
+	/** Whether to send a certificate payload */
+	cert_policy_t cert_policy;
+	/** Uniqueness of an IKE_SA */
+	unique_policy_t unique;
+	/** How many keying tries should be done before giving up */
+	uint32_t keyingtries;
+	/** Timeout in seconds before starting rekeying */
+	uint32_t rekey_time;
+	/** Timeout in seconds before starting reauthentication */
+	uint32_t reauth_time;
+	/** Time range in seconds to randomly subtract from rekey/reauth time */
+	uint32_t jitter_time;
+	/** Maximum overtime in seconds before closing a rekeying/reauth SA */
+	uint32_t over_time;
+	/** Disable MOBIKE (RFC4555) */
+	bool no_mobike;
+	/** Use/accept aggressive mode with IKEv1 */
+	bool aggressive;
+	/** TRUE to use modeconfig push, FALSE for pull */
+	bool push_mode;
+	/** DPD check interval, 0 to disable */
+	uint32_t dpd;
+	/** DPD timeout interval (IKEv1 only), if 0 default applies */
+	uint32_t dpd_timeout;
+#ifdef ME
+	/** TRUE if this is a mediation connection */
+	bool mediation;
+	/** peer_cfg_t of the mediation connection to mediate through (adopted) */
+	peer_cfg_t *mediated_by;
+	/** ID that identifies our peer at the mediation server (adopted) */
+	identification_t *peer_id;
+#endif /* ME */
+};
+
+/**
  * Create a configuration object for IKE_AUTH and later.
  *
- * name-string gets cloned, ID's not.
- * Virtual IPs are used if they are != NULL. A %any host means the virtual
- * IP should be obtained from the other peer.
- * Lifetimes are in seconds. To prevent to peers to start rekeying at the
- * same time, a jitter may be specified. Rekeying of an SA starts at
- * (rekeylifetime - random(0, jitter)).
- *
- * @param name				name of the peer_cfg
- * @param ike_cfg			IKE config to use when acting as initiator
- * @param cert_policy		should we send a certificate payload?
- * @param unique			uniqueness of an IKE_SA
- * @param keyingtries		how many keying tries should be done before giving up
- * @param rekey_time		timeout before starting rekeying
- * @param reauth_time		timeout before starting reauthentication
- * @param jitter_time		timerange to randomly subtract from rekey/reauth time
- * @param over_time			maximum overtime before closing a rekeying/reauth SA
- * @param mobike			use MOBIKE (RFC4555) if peer supports it
- * @param aggressive		use/accept aggressive mode with IKEv1
- * @param pull_mode			TRUE to use modeconfig pull, FALSE for push
- * @param dpd				DPD check interval, 0 to disable
- * @param dpd_timeout		DPD timeout interval (IKEv1 only), if 0 default applies
- * @param mediation			TRUE if this is a mediation connection
- * @param mediated_by		peer_cfg_t of the mediation connection to mediate through
- * @param peer_id			ID that identifies our peer at the mediation server
+ * @param name				name of the peer_cfg (cloned)
+ * @param ike_cfg			IKE config to use when acting as initiator (adopted)
+ * @param data				data for this peer_cfg
  * @return					peer_cfg_t object
  */
-peer_cfg_t *peer_cfg_create(char *name,
-							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
-							unique_policy_t unique, uint32_t keyingtries,
-							uint32_t rekey_time, uint32_t reauth_time,
-							uint32_t jitter_time, uint32_t over_time,
-							bool mobike, bool aggressive, bool pull_mode,
-							uint32_t dpd, uint32_t dpd_timeout,
-							bool mediation, peer_cfg_t *mediated_by,
-							identification_t *peer_id);
+peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
+							peer_cfg_create_t *data);
 
 #endif /** PEER_CFG_H_ @}*/

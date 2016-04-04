@@ -82,6 +82,16 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	child_cfg_t *child_cfg;
 	chunk_t me, other;
 	char *address, *local_net, *remote_net;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_NEVER_SEND,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = this->rekey * 60,
+		.jitter_time = this->rekey * 5,
+		.over_time = this->rekey * 3,
+		.dpd = this->dpd,
+		.mediation = TRUE,
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -110,14 +120,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 							 address, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	med_cfg = peer_cfg_create(
-		"mediation", ike_cfg,
-		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3,	/* jitter, overtime */
-		TRUE, FALSE, TRUE,				/* mobike, aggressive, pull */
-		this->dpd, 0,					/* DPD delay, timeout */
-		TRUE, NULL, NULL);				/* mediation, med by, peer id */
+	med_cfg = peer_cfg_create("mediation", ike_cfg, &peer);
 	e->destroy(e);
 
 	auth = auth_cfg_create();
@@ -147,15 +150,10 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 		DESTROY_IF(e);
 		return NULL;
 	}
-	peer_cfg = peer_cfg_create(
-		name, this->ike->get_ref(this->ike),
-		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3,	/* jitter, overtime */
-		TRUE, FALSE, TRUE,				/* mobike, aggressive, pull */
-		this->dpd, 0,					/* DPD delay, timeout */
-		FALSE, med_cfg,					/* mediation, med by */
-		identification_create_from_encoding(ID_KEY_ID, other));
+	peer.mediation = FALSE;
+	peer.mediated_by = med_cfg;
+	peer.peer_id = identification_create_from_encoding(ID_KEY_ID, other);
+	peer_cfg = peer_cfg_create(name, this->ike->get_ref(this->ike), &peer);
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -206,6 +204,15 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 	chunk_t me, other;
 	child_cfg_t *child_cfg;
 	auth_cfg_t *auth;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_NEVER_SEND,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = this->rekey * 60,
+		.jitter_time = this->rekey * 5,
+		.over_time = this->rekey * 3,
+		.dpd = this->dpd,
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -224,14 +231,7 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 		this->current = NULL;
 		return FALSE;
 	}
-	this->current = peer_cfg_create(
-				name, this->ike->get_ref(this->ike),
-				CERT_NEVER_SEND, UNIQUE_REPLACE,
-				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
-				this->rekey*5, this->rekey*3,	/* jitter, overtime */
-				TRUE, FALSE, TRUE,				/* mobike, aggressive, pull */
-				this->dpd, 0,					/* DPD delay, timeout */
-				FALSE, NULL, NULL);				/* mediation, med by, peer id */
+	this->current = peer_cfg_create(name, this->ike->get_ref(this->ike), &peer);
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);

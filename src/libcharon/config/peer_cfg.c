@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -724,29 +724,22 @@ METHOD(peer_cfg_t, destroy, void,
 /*
  * Described in header-file
  */
-peer_cfg_t *peer_cfg_create(char *name,
-							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
-							unique_policy_t unique, uint32_t keyingtries,
-							uint32_t rekey_time, uint32_t reauth_time,
-							uint32_t jitter_time, uint32_t over_time,
-							bool mobike, bool aggressive, bool pull_mode,
-							uint32_t dpd, uint32_t dpd_timeout,
-							bool mediation, peer_cfg_t *mediated_by,
-							identification_t *peer_id)
+peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
+							peer_cfg_create_t *data)
 {
 	private_peer_cfg_t *this;
 
-	if (rekey_time && jitter_time > rekey_time)
+	if (data->rekey_time && data->jitter_time > data->rekey_time)
 	{
-		jitter_time = rekey_time;
+		data->jitter_time = data->rekey_time;
 	}
-	if (reauth_time && jitter_time > reauth_time)
+	if (data->reauth_time && data->jitter_time > data->reauth_time)
 	{
-		jitter_time = reauth_time;
+		data->jitter_time = data->reauth_time;
 	}
-	if (dpd && dpd_timeout && dpd > dpd_timeout)
+	if (data->dpd && data->dpd_timeout && data->dpd > data->dpd_timeout)
 	{
-		dpd_timeout = dpd;
+		data->dpd_timeout = data->dpd;
 	}
 
 	INIT(this,
@@ -789,33 +782,29 @@ peer_cfg_t *peer_cfg_create(char *name,
 		.ike_cfg = ike_cfg,
 		.child_cfgs = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.cert_policy = cert_policy,
-		.unique = unique,
-		.keyingtries = keyingtries,
-		.rekey_time = rekey_time,
-		.reauth_time = reauth_time,
-		.jitter_time = jitter_time,
-		.over_time = over_time,
-		.use_mobike = mobike,
-		.aggressive = aggressive,
-		.pull_mode = pull_mode,
-		.dpd = dpd,
-		.dpd_timeout = dpd_timeout,
+		.cert_policy = data->cert_policy,
+		.unique = data->unique,
+		.keyingtries = data->keyingtries,
+		.rekey_time = data->rekey_time,
+		.reauth_time = data->reauth_time,
+		.jitter_time = data->jitter_time,
+		.over_time = data->over_time,
+		.use_mobike = !data->no_mobike,
+		.aggressive = data->aggressive,
+		.pull_mode = !data->push_mode,
+		.dpd = data->dpd,
+		.dpd_timeout = data->dpd_timeout,
 		.vips = linked_list_create(),
 		.pools = linked_list_create(),
 		.local_auth = linked_list_create(),
 		.remote_auth = linked_list_create(),
 		.refcount = 1,
-	);
-
 #ifdef ME
-	this->mediation = mediation;
-	this->mediated_by = mediated_by;
-	this->peer_id = peer_id;
-#else /* ME */
-	DESTROY_IF(mediated_by);
-	DESTROY_IF(peer_id);
+		.mediation = data->mediation,
+		.mediated_by = data->mediated_by,
+		.peer_id = data->peer_id,
 #endif /* ME */
+	);
 
 	return &this->public;
 }

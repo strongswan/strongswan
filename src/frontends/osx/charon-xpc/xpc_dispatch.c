@@ -78,6 +78,15 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	uint16_t local_port, remote_port = IKEV2_UDP_PORT;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+		.dpd = 30,
+	};
 
 	local_port = charon->socket->get_port(charon->socket, FALSE);
 	if (local_port != IKEV2_UDP_PORT)
@@ -88,13 +97,7 @@ static peer_cfg_t* create_peer_cfg(char *name, char *host)
 							 host, remote_port, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	peer_cfg = peer_cfg_create(name, ike_cfg,
-							   CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
-							   36000, 0, /* rekey 10h, reauth none */
-							   600, 600, /* jitter, over 10min */
-							   TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   30, 0, /* DPD delay, timeout */
-							   FALSE, NULL, NULL); /* mediation */
+	peer_cfg = peer_cfg_create(name, ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
 	return peer_cfg;

@@ -1979,6 +1979,7 @@ CALLBACK(config_sn, bool,
 		.rand_time = LFT_UNDEFINED,
 	};
 	enumerator_t *enumerator;
+	peer_cfg_create_t cfg;
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
@@ -2075,12 +2076,22 @@ CALLBACK(config_sn, bool,
 						peer.local_addrs, peer.local_port,
 						peer.remote_addrs, peer.remote_port,
 						peer.fragmentation, 0);
-	peer_cfg = peer_cfg_create(name, ike_cfg, peer.send_cert, peer.unique,
-						peer.keyingtries, peer.rekey_time, peer.reauth_time,
-						peer.rand_time, peer.over_time, peer.mobike,
-						peer.aggressive, peer.pull,
-						peer.dpd_delay, peer.dpd_timeout,
-						FALSE, NULL, NULL);
+
+	cfg = (peer_cfg_create_t){
+		.cert_policy = peer.send_cert,
+		.unique = peer.unique,
+		.keyingtries = peer.keyingtries,
+		.rekey_time = peer.rekey_time,
+		.reauth_time = peer.reauth_time,
+		.jitter_time = peer.rand_time,
+		.over_time = peer.over_time,
+		.no_mobike = !peer.mobike,
+		.aggressive = peer.aggressive,
+		.push_mode = !peer.pull,
+		.dpd = peer.dpd_delay,
+		.dpd_timeout = peer.dpd_timeout,
+	};
+	peer_cfg = peer_cfg_create(name, ike_cfg, &cfg);
 
 	while (peer.local->remove_first(peer.local,
 									(void**)&auth) == SUCCESS)

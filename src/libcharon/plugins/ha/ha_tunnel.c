@@ -183,6 +183,15 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	auth_cfg_t *auth_cfg;
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_NEVER_SEND,
+		.unique = UNIQUE_KEEP,
+		.rekey_time = 86400, /* 24h */
+		.jitter_time = 7200, /* 2h */
+		.over_time = 3600, /* 1h */
+		.no_mobike = TRUE,
+		.dpd = 30,
+	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -211,9 +220,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							 remote, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	peer_cfg = peer_cfg_create("ha", ike_cfg, CERT_NEVER_SEND,
-						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, FALSE,
-						TRUE, 30, 0, FALSE, NULL, NULL);
+	peer_cfg = peer_cfg_create("ha", ike_cfg, &peer);
 
 	auth_cfg = auth_cfg_create();
 	auth_cfg->add(auth_cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
