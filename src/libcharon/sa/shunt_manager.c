@@ -124,6 +124,9 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			/* install "outbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 			/* install in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
@@ -132,7 +135,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.mark = child->get_mark(child, TRUE),
 			};
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
-			/* install forward policy */
+			/* install "inbound" forward policy */
 			id.dir = POLICY_FWD;
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 		}
@@ -267,6 +270,9 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			/* uninstall "outbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 			/* uninstall in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
@@ -275,7 +281,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.mark = child->get_mark(child, TRUE),
 			};
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
-			/* uninstall forward policy */
+			/* uninstall "inbound" forward policy */
 			id.dir = POLICY_FWD;
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 		}
