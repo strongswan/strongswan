@@ -139,25 +139,23 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 static child_cfg_t *load_child_config(private_config_t *this,
 							settings_t *settings, char *config, char *child)
 {
+	child_cfg_create_t data = {
+		.mode = MODE_TUNNEL,
+	};
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t lifetime = {};
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 	traffic_selector_t *ts;
-	ipsec_mode_t mode = MODE_TUNNEL;
 	char *token;
-	uint32_t tfc;
 
 	if (settings->get_bool(settings, "configs.%s.%s.transport",
 						   FALSE, config, child))
 	{
-		mode = MODE_TRANSPORT;
+		data.mode = MODE_TRANSPORT;
 	}
-	tfc = settings->get_int(settings, "configs.%s.%s.tfc_padding",
-							0, config, child);
-	child_cfg = child_cfg_create(child, &lifetime, NULL, FALSE, mode,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE,
-								 FALSE, 0, 0, NULL, NULL, tfc);
+	data.tfc = settings->get_int(settings, "configs.%s.%s.tfc_padding",
+								  0, config, child);
+	child_cfg = child_cfg_create(child, &data);
 
 	token = settings->get_str(settings, "configs.%s.%s.proposal",
 							  NULL, config, child);

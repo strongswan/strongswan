@@ -170,12 +170,22 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
 						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
 	{
-		lifetime_cfg_t lft = {
-			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
+		child_cfg_create_t child = {
+			.mode = mode,
+			.reqid = reqid,
+			.ipcomp = ipcomp,
+			.lifetime = {
+				.time = {
+					.life = lifetime, .rekey = rekeytime, .jitter = jitter
+				},
+			},
+			.start_action = start,
+			.dpd_action = dpd,
+			.close_action = close,
+			.updown = updown,
+			.hostaccess = hostaccess,
 		};
-		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
-									 start, dpd, close, ipcomp, 0, reqid,
-									 NULL, NULL, 0);
+		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;

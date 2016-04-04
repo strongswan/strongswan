@@ -1070,45 +1070,50 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 									stroke_msg_t *msg)
 {
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = msg->add_conn.rekey.ipsec_lifetime,
-			.rekey = msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
-			.jitter = msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = msg->add_conn.rekey.ipsec_lifetime,
+				.rekey = msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
+				.jitter = msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100
+			},
+			.bytes = {
+				.life = msg->add_conn.rekey.life_bytes,
+				.rekey = msg->add_conn.rekey.life_bytes - msg->add_conn.rekey.margin_bytes,
+				.jitter = msg->add_conn.rekey.margin_bytes * msg->add_conn.rekey.fuzz / 100
+			},
+			.packets = {
+				.life = msg->add_conn.rekey.life_packets,
+				.rekey = msg->add_conn.rekey.life_packets - msg->add_conn.rekey.margin_packets,
+				.jitter = msg->add_conn.rekey.margin_packets * msg->add_conn.rekey.fuzz / 100
+			},
 		},
-		.bytes = {
-			.life = msg->add_conn.rekey.life_bytes,
-			.rekey = msg->add_conn.rekey.life_bytes - msg->add_conn.rekey.margin_bytes,
-			.jitter = msg->add_conn.rekey.margin_bytes * msg->add_conn.rekey.fuzz / 100
+		.mark_in = {
+			.value = msg->add_conn.mark_in.value,
+			.mask = msg->add_conn.mark_in.mask
 		},
-		.packets = {
-			.life = msg->add_conn.rekey.life_packets,
-			.rekey = msg->add_conn.rekey.life_packets - msg->add_conn.rekey.margin_packets,
-			.jitter = msg->add_conn.rekey.margin_packets * msg->add_conn.rekey.fuzz / 100
-		}
-	};
-	mark_t mark_in = {
-		.value = msg->add_conn.mark_in.value,
-		.mask = msg->add_conn.mark_in.mask
-	};
-	mark_t mark_out = {
-		.value = msg->add_conn.mark_out.value,
-		.mask = msg->add_conn.mark_out.mask
+		.mark_out = {
+			.value = msg->add_conn.mark_out.value,
+			.mask = msg->add_conn.mark_out.mask
+		},
+		.reqid = msg->add_conn.reqid,
+		.mode = msg->add_conn.mode,
+		.proxy_mode = msg->add_conn.proxy_mode,
+		.ipcomp = msg->add_conn.ipcomp,
+		.tfc = msg->add_conn.tfc,
+		.inactivity = msg->add_conn.inactivity,
+		.dpd_action = map_action(msg->add_conn.dpd.action),
+		.close_action = map_action(msg->add_conn.close_action),
+		.updown = msg->add_conn.me.updown,
+		.hostaccess = msg->add_conn.me.hostaccess,
+		.suppress_policies = !msg->add_conn.install_policy,
 	};
 
-	child_cfg = child_cfg_create(
-				msg->add_conn.name, &lifetime, msg->add_conn.me.updown,
-				msg->add_conn.me.hostaccess, msg->add_conn.mode, ACTION_NONE,
-				map_action(msg->add_conn.dpd.action),
-				map_action(msg->add_conn.close_action), msg->add_conn.ipcomp,
-				msg->add_conn.inactivity, msg->add_conn.reqid,
-				&mark_in, &mark_out, msg->add_conn.tfc);
+	child_cfg = child_cfg_create(msg->add_conn.name, &child);
 	if (msg->add_conn.replay_window != -1)
 	{
 		child_cfg->set_replay_window(child_cfg, msg->add_conn.replay_window);
 	}
-	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,
-											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
 

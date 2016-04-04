@@ -82,12 +82,15 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	child_cfg_t *child_cfg;
 	chunk_t me, other;
 	char *address, *local_net, *remote_net;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = this->rekey * 60 + this->rekey,
-			.rekey = this->rekey,
-			.jitter = this->rekey
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = this->rekey * 60 + this->rekey,
+				.rekey = this->rekey,
+				.jitter = this->rekey
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	/* query mediation server config:
@@ -165,9 +168,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(name, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
@@ -205,12 +206,15 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 	chunk_t me, other;
 	child_cfg_t *child_cfg;
 	auth_cfg_t *auth;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = this->rekey * 60 + this->rekey,
-			.rekey = this->rekey,
-			.jitter = this->rekey
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = this->rekey * 60 + this->rekey,
+				.rekey = this->rekey,
+				.jitter = this->rekey
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	DESTROY_IF(this->current);
@@ -240,9 +244,7 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	this->current->add_auth_cfg(this->current, auth, FALSE);
 
-	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(name, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));

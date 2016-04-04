@@ -673,12 +673,17 @@ static job_requeue_t initiate(private_android_service_t *this)
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 3600, /* 1h */
-			.rekey = 3000, /* 50min */
-			.jitter = 300 /* 5min */
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 3600, /* 1h */
+				.rekey = 3000, /* 50min */
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
+		.dpd_action = ACTION_RESTART,
+		.close_action = ACTION_RESTART,
 	};
 	char *type, *server;
 	int port;
@@ -731,9 +736,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_RESTART, ACTION_RESTART,
-								 FALSE, 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("android", &child);
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,

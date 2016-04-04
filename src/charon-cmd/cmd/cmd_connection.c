@@ -335,18 +335,18 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this,
 	traffic_selector_t *ts;
 	proposal_t *proposal;
 	bool has_v4 = FALSE, has_v6 = FALSE;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 10800 /* 3h */,
-			.rekey = 10200 /* 2h50min */,
-			.jitter = 300 /* 5min */
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 10800 /* 3h */,
+				.rekey = 10200 /* 2h50min */,
+				.jitter = 300 /* 5min */
+			}
+		},
+		.mode = MODE_TUNNEL,
 	};
 
-	child_cfg = child_cfg_create("cmd", &lifetime,
-								 NULL, FALSE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("cmd", &child);
 	if (this->child_proposals->get_count(this->child_proposals))
 	{
 		while (this->child_proposals->remove_first(this->child_proposals,

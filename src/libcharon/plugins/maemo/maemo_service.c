@@ -236,12 +236,15 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	traffic_selector_t *ts;
 	auth_cfg_t *auth;
 	certificate_t *cert;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 10800, /* 3h */
-			.rekey = 10200, /* 2h50min */
-			.jitter = 300 /* 5min */
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 10800, /* 3h */
+				.rekey = 10200, /* 2h50min */
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	if (this->status == VPN_STATUS_CONNECTED ||
@@ -348,9 +351,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create(this->current, &lifetime, NULL /* updown */,
-								 TRUE, MODE_TUNNEL, ACTION_NONE, ACTION_NONE,
-								 ACTION_NONE, FALSE, 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(this->current, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);

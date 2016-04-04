@@ -688,13 +688,15 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	peer_cfg_t *peer_cfg;
 	char local[32], *remote;
 	host_t *addr;
-	ipsec_mode_t mode = MODE_TUNNEL;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = this->child_rekey * 2,
-			.rekey = this->child_rekey,
-			.jitter = 0
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = this->child_rekey * 2,
+				.rekey = this->child_rekey,
+				.jitter = 0
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	if (num)
@@ -768,17 +770,15 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	{
 		if (streq(this->mode, "transport"))
 		{
-			mode = MODE_TRANSPORT;
+			child.mode = MODE_TRANSPORT;
 		}
 		else if (streq(this->mode, "beet"))
 		{
-			mode = MODE_BEET;
+			child.mode = MODE_BEET;
 		}
 	}
 
-	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE, mode,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("load-test", &child);
 	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp));
 
 	if (num)

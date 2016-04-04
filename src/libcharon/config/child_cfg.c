@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -512,13 +512,6 @@ METHOD(child_cfg_t, set_replay_window, void,
 	this->replay_window = replay_window;
 }
 
-METHOD(child_cfg_t, set_mipv6_options, void,
-	private_child_cfg_t *this, bool proxy_mode, bool install_policy)
-{
-	this->proxy_mode = proxy_mode;
-	this->install_policy = install_policy;
-}
-
 METHOD(child_cfg_t, use_proxy_mode, bool,
 	private_child_cfg_t *this)
 {
@@ -609,12 +602,7 @@ METHOD(child_cfg_t, destroy, void,
 /*
  * Described in header-file
  */
-child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
-							  char *updown, bool hostaccess,
-							  ipsec_mode_t mode, action_t start_action,
-							  action_t dpd_action, action_t close_action,
-							  bool ipcomp, uint32_t inactivity, uint32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out, uint32_t tfc)
+child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 {
 	private_child_cfg_t *this;
 
@@ -634,7 +622,6 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
 			.get_dh_group = _get_dh_group,
-			.set_mipv6_options = _set_mipv6_options,
 			.use_ipcomp = _use_ipcomp,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
@@ -649,35 +636,28 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.destroy = _destroy,
 		},
 		.name = strdup(name),
-		.updown = strdupnull(updown),
-		.hostaccess = hostaccess,
-		.mode = mode,
-		.start_action = start_action,
-		.dpd_action = dpd_action,
-		.close_action = close_action,
-		.use_ipcomp = ipcomp,
-		.inactivity = inactivity,
-		.reqid = reqid,
-		.proxy_mode = FALSE,
-		.install_policy = TRUE,
+		.updown = strdupnull(data->updown),
+		.hostaccess = data->hostaccess,
+		.reqid = data->reqid,
+		.mode = data->mode,
+		.proxy_mode = data->proxy_mode,
+		.start_action = data->start_action,
+		.dpd_action = data->dpd_action,
+		.close_action = data->close_action,
+		.mark_in = data->mark_in,
+		.mark_out = data->mark_out,
+		.lifetime = data->lifetime,
+		.inactivity = data->inactivity,
+		.use_ipcomp = data->ipcomp,
+		.tfc = data->tfc,
+		.install_policy = !data->suppress_policies,
 		.refcount = 1,
 		.proposals = linked_list_create(),
 		.my_ts = linked_list_create(),
 		.other_ts = linked_list_create(),
-		.tfc = tfc,
 		.replay_window = lib->settings->get_int(lib->settings,
-				"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
+							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 	);
-
-	if (mark_in)
-	{
-		this->mark_in = *mark_in;
-	}
-	if (mark_out)
-	{
-		this->mark_out = *mark_out;
-	}
-	memcpy(&this->lifetime, lifetime, sizeof(lifetime_cfg_t));
 
 	return &this->public;
 }

@@ -125,18 +125,18 @@ static child_cfg_t* create_child_cfg(char *name)
 {
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 10800 /* 3h */,
-			.rekey = 10200 /* 2h50min */,
-			.jitter = 300 /* 5min */
-		}
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 10800 /* 3h */,
+				.rekey = 10200 /* 2h50min */,
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
-	child_cfg = child_cfg_create(name, &lifetime,
-								 NULL, FALSE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(name, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 										"aes128gcm8-aes128gcm12-aes128gcm16-"
 										"aes256gcm8-aes256gcm12-aes256gcm16"));

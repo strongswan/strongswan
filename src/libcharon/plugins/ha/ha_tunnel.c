@@ -183,10 +183,13 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	auth_cfg_t *auth_cfg;
 	child_cfg_t *child_cfg;
 	traffic_selector_t *ts;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 21600, .rekey = 20400, .jitter = 400,
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 21600, .rekey = 20400, .jitter = 400,
+			},
 		},
+		.mode = MODE_TRANSPORT,
 	};
 
 	/* setup credentials */
@@ -224,9 +227,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 				  identification_create_from_string(remote));
 	peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 
-	child_cfg = child_cfg_create("ha", &lifetime, NULL, TRUE, MODE_TRANSPORT,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("ha", &child);
 	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
