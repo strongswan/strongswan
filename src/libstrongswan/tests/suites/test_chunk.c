@@ -316,11 +316,11 @@ START_TEST(test_chunk_skip)
 	foobar = chunk_from_str("foobar");
 	a = foobar;
 	a = chunk_skip(a, 0);
-	ck_assert(chunk_equals(a, foobar));
+	ck_assert_chunk_eq(a, foobar);
 	a = chunk_skip(a, 1);
-	ck_assert(chunk_equals(a, chunk_from_str("oobar")));
+	ck_assert_chunk_eq(a, chunk_from_str("oobar"));
 	a = chunk_skip(a, 2);
-	ck_assert(chunk_equals(a, chunk_from_str("bar")));
+	ck_assert_chunk_eq(a, chunk_from_str("bar"));
 	a = chunk_skip(a, 3);
 	assert_chunk_empty(a);
 
@@ -338,20 +338,24 @@ START_TEST(test_chunk_skip_zero)
 {
 	chunk_t foobar, a;
 
-	a = chunk_empty;
-	a = chunk_skip_zero(a);
+	a = chunk_skip_zero(chunk_empty);
 	assert_chunk_empty(a);
 
 	foobar = chunk_from_str("foobar");
-	a = foobar;
-	a = chunk_skip_zero(a);
-	ck_assert(chunk_equals(a, foobar));
+	a = chunk_skip_zero(foobar);
+	ck_assert_chunk_eq(a, foobar);
 
-	a = chunk_from_chars(0x00, 0xaa, 0xbb, 0xcc);
+	foobar = chunk_from_chars(0x00);
+	a = chunk_skip_zero(foobar);
+	ck_assert_chunk_eq(a, foobar);
+
+	a = chunk_skip_zero(chunk_from_chars(0x00, 0xaa, 0xbb, 0xcc));
+	ck_assert_chunk_eq(a, chunk_from_chars(0xaa, 0xbb, 0xcc));
 	a = chunk_skip_zero(a);
-	ck_assert(chunk_equals(a, chunk_from_chars(0xaa, 0xbb, 0xcc)));
-	a = chunk_skip_zero(a);
-	ck_assert(chunk_equals(a, chunk_from_chars(0xaa, 0xbb, 0xcc)));
+	ck_assert_chunk_eq(a, chunk_from_chars(0xaa, 0xbb, 0xcc));
+
+	a = chunk_skip_zero(chunk_from_chars(0x00, 0x00, 0xaa, 0xbb, 0xcc));
+	ck_assert_chunk_eq(a, chunk_from_chars(0xaa, 0xbb, 0xcc));
 }
 END_TEST
 

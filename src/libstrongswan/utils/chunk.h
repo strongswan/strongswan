@@ -280,11 +280,11 @@ static inline chunk_t chunk_skip(chunk_t chunk, size_t bytes)
 }
 
 /**
- * Skip a leading zero-valued byte
+ * Skip any leading zero-valued bytes
  */
 static inline chunk_t chunk_skip_zero(chunk_t chunk)
 {
-	if (chunk.len > 1 && *chunk.ptr == 0x00)
+	while (chunk.len > 1 && *chunk.ptr == 0x00)
 	{
 		chunk.ptr++;
 		chunk.len--;
