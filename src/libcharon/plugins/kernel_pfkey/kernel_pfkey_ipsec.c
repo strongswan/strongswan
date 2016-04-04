@@ -2428,53 +2428,56 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	pol->sadb_x_policy_priority = mapping->priority;
 #endif
 
-	/* one or more sadb_x_ipsecrequest extensions are added to the
-	 * sadb_x_policy extension */
-	proto_mode = ipsec->cfg.mode;
-
-	req = (struct sadb_x_ipsecrequest*)(pol + 1);
-
-	if (ipsec->cfg.ipcomp.transform != IPCOMP_NONE)
+	if (mapping->type == POLICY_IPSEC && ipsec->cfg.reqid)
 	{
-		req->sadb_x_ipsecrequest_proto = IPPROTO_COMP;
+		/* one or more sadb_x_ipsecrequest extensions are added to the
+		 * sadb_x_policy extension */
+		proto_mode = ipsec->cfg.mode;
 
+		req = (struct sadb_x_ipsecrequest*)(pol + 1);
+
+		if (ipsec->cfg.ipcomp.transform != IPCOMP_NONE)
+		{
+			req->sadb_x_ipsecrequest_proto = IPPROTO_COMP;
+
+			/* !!! the length here MUST be in octets instead of 64 bit words */
+			req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
+			req->sadb_x_ipsecrequest_mode = mode2kernel(ipsec->cfg.mode);
+			req->sadb_x_ipsecrequest_reqid = ipsec->cfg.reqid;
+			req->sadb_x_ipsecrequest_level = (policy->direction == POLICY_OUT) ?
+											IPSEC_LEVEL_UNIQUE : IPSEC_LEVEL_USE;
+			if (ipsec->cfg.mode == MODE_TUNNEL)
+			{
+				len = hostcpy(req + 1, ipsec->src, FALSE);
+				req->sadb_x_ipsecrequest_len += len;
+				len = hostcpy((char*)(req + 1) + len, ipsec->dst, FALSE);
+				req->sadb_x_ipsecrequest_len += len;
+				/* use transport mode for other SAs */
+				proto_mode = MODE_TRANSPORT;
+			}
+
+			pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
+			req = (struct sadb_x_ipsecrequest*)((char*)(req) +
+												req->sadb_x_ipsecrequest_len);
+		}
+
+		req->sadb_x_ipsecrequest_proto = ipsec->cfg.esp.use ? IPPROTO_ESP
+															: IPPROTO_AH;
 		/* !!! the length here MUST be in octets instead of 64 bit words */
 		req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
-		req->sadb_x_ipsecrequest_mode = mode2kernel(ipsec->cfg.mode);
+		req->sadb_x_ipsecrequest_mode = mode2kernel(proto_mode);
 		req->sadb_x_ipsecrequest_reqid = ipsec->cfg.reqid;
-		req->sadb_x_ipsecrequest_level = (policy->direction == POLICY_OUT) ?
-										  IPSEC_LEVEL_UNIQUE : IPSEC_LEVEL_USE;
-		if (ipsec->cfg.mode == MODE_TUNNEL)
+		req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
+		if (proto_mode == MODE_TUNNEL)
 		{
 			len = hostcpy(req + 1, ipsec->src, FALSE);
 			req->sadb_x_ipsecrequest_len += len;
 			len = hostcpy((char*)(req + 1) + len, ipsec->dst, FALSE);
 			req->sadb_x_ipsecrequest_len += len;
-			/* use transport mode for other SAs */
-			proto_mode = MODE_TRANSPORT;
 		}
 
 		pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
-		req = (struct sadb_x_ipsecrequest*)((char*)(req) +
-											req->sadb_x_ipsecrequest_len);
 	}
-
-	req->sadb_x_ipsecrequest_proto = ipsec->cfg.esp.use ? IPPROTO_ESP
-														: IPPROTO_AH;
-	/* !!! the length here MUST be in octets instead of 64 bit words */
-	req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
-	req->sadb_x_ipsecrequest_mode = mode2kernel(proto_mode);
-	req->sadb_x_ipsecrequest_reqid = ipsec->cfg.reqid;
-	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
-	if (proto_mode == MODE_TUNNEL)
-	{
-		len = hostcpy(req + 1, ipsec->src, FALSE);
-		req->sadb_x_ipsecrequest_len += len;
-		len = hostcpy((char*)(req + 1) + len, ipsec->dst, FALSE);
-		req->sadb_x_ipsecrequest_len += len;
-	}
-
-	pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
