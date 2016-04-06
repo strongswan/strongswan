@@ -473,6 +473,9 @@ struct policy_sa_t {
 	/** Priority assigned to the policy when installed with this SA */
 	uint32_t priority;
 
+	/** Automatic priority assigned to the policy when installed with this SA */
+	uint32_t auto_priority;
+
 	/** Type of the policy */
 	policy_type_t type;
 
@@ -2434,8 +2437,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
+	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
 	assigned_sa->priority = data->manual_prio ? data->manual_prio :
-							get_priority(policy, data->prio, id->interface);
+												assigned_sa->auto_priority;
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2445,16 +2449,23 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		{
 			break;
 		}
-		/* prefer SAs with a reqid over those without */
-		if (current_sa->priority == assigned_sa->priority &&
-			(!current_sa->sa->cfg.reqid || assigned_sa->sa->cfg.reqid))
+		if (current_sa->priority == assigned_sa->priority)
 		{
-			break;
+			/* in case of equal manual prios order SAs by automatic priority */
+			if (current_sa->auto_priority > assigned_sa->auto_priority)
+			{
+				break;
+			}
+			/* prefer SAs with a reqid over those without */
+			if (current_sa->auto_priority == assigned_sa->auto_priority &&
+				(!current_sa->sa->cfg.reqid || assigned_sa->sa->cfg.reqid))
+			{
+				break;
+			}
 		}
 		update = FALSE;
 	}
-	policy->used_by->insert_before(policy->used_by, enumerator,
-								   assigned_sa);
+	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
 	enumerator->destroy(enumerator);
 
 	if (!update)
@@ -2575,7 +2586,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
-	uint32_t priority;
+	uint32_t priority, auto_priority;
 	ipsec_sa_t assigned_sa = {
 		.src = data->src,
 		.dst = data->dst,
@@ -2614,13 +2625,15 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	}
 
 	/* remove mapping to SA by reqid and priority */
-	priority = data->manual_prio ? data->manual_prio :
-			   get_priority(current, data->prio,id->interface);
+	auto_priority = get_priority(current, data->prio,id->interface);
+	priority = data->manual_prio ? data->manual_prio : auto_priority;
 
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (priority == mapping->priority && data->type == mapping->type &&
+		if (priority == mapping->priority &&
+			auto_priority == mapping->auto_priority &&
+			data->type == mapping->type &&
 			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
