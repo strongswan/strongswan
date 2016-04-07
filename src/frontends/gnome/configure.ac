@@ -50,13 +50,6 @@ PKG_CHECK_EXISTS([libnm-glib],
 	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm_glib libnm_glib_vpn)]
 )
 
-AC_ARG_WITH(
-	[charon],
-	AS_HELP_STRING([--with-charon=file],[path to the strongSwan charon NetworkManager backend"]),
-	[AC_SUBST(charon, "$withval")],
-	[AC_SUBST(charon, "${libexecdir}/ipsec/charon-nm")]
-)
-
 NM_COMPILER_WARNINGS
 
 AC_CONFIG_FILES([
