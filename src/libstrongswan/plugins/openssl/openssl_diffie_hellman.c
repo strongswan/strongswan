@@ -145,7 +145,11 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	this->dh->g = BN_bin2bn(params->generator.ptr, params->generator.len, NULL);
 	if (params->exp_len != params->prime.len)
 	{
+#ifdef OPENSSL_IS_BORINGSSL
+		this->dh->priv_length = params->exp_len * 8;
+#else
 		this->dh->length = params->exp_len * 8;
+#endif
 	}
 	return SUCCESS;
 }
