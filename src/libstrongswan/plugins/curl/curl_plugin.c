@@ -60,7 +60,7 @@ static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
 								 char *proto, plugin_feature_t f)
 {
 	/* http://curl.haxx.se/libcurl/c/libcurl-tutorial.html#Multi-threading */
-	if (strpfx(ssl, "OpenSSL"))
+	if (strpfx(ssl, "OpenSSL") || strpfx(ssl, "LibreSSL"))
 	{
 		add_feature(this, f);
 		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "openssl-threading"));
