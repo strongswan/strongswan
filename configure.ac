@@ -917,9 +917,9 @@ if test x$curl = xtrue; then
 fi
 
 if test x$unbound = xtrue; then
-	AC_HAVE_LIBRARY([ldns],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])])
+	AC_CHECK_LIB([ldns],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])],[])
 	AC_CHECK_HEADER([ldns/ldns.h],,[AC_MSG_ERROR([UNBOUND header ldns/ldns.h not found!])])
-	AC_HAVE_LIBRARY([unbound],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library libunbound not found])])
+	AC_CHECK_LIB([unbound],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library libunbound not found])],[])
 	AC_CHECK_HEADER([unbound.h],,[AC_MSG_ERROR([UNBOUND header unbound.h not found!])])
 fi
 
