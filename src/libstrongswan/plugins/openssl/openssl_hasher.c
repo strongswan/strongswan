@@ -43,7 +43,7 @@ struct private_openssl_hasher_t {
 METHOD(hasher_t, get_hash_size, size_t,
 	private_openssl_hasher_t *this)
 {
-	return this->hasher->md_size;
+	return EVP_MD_size(this->hasher);
 }
 
 METHOD(hasher_t, reset, bool,

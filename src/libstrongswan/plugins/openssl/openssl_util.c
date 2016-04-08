@@ -51,7 +51,7 @@ bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash)
 		goto error;
 	}
 
-	*hash = chunk_alloc(hasher->md_size);
+	*hash = chunk_alloc(EVP_MD_size(hasher));
 	if (!EVP_DigestFinal_ex(ctx, hash->ptr, NULL))
 	{
 		chunk_free(hash);
