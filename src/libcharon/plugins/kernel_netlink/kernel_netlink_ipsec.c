@@ -73,7 +73,7 @@
 #endif
 
 /** Base priority for installed policies */
-#define PRIO_BASE 384
+#define PRIO_BASE 100000
 
 /** Default lifetime of an acquire XFRM state (in seconds) */
 #define DEFAULT_ACQUIRE_LIFETIME 165
@@ -605,32 +605,66 @@ static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 }
 
 /**
- * Calculate the priority of a policy
+ * Determine number of set bits in 16 bit port mask
  */
-static inline uint32_t get_priority(policy_entry_t *policy,
-									 policy_priority_t prio)
+static inline uint32_t port_mask_bits(uint16_t port_mask)
 {
-	uint32_t priority = PRIO_BASE;
+	uint32_t bits;
+	uint16_t bit_mask = 0x8000;
+
+	port_mask = ntohs(port_mask);
+
+	for (bits = 0; bits < 16; bits++)
+	{
+		if (!(port_mask & bit_mask))
+		{
+			break;
+		}
+		bit_mask >>= 1;
+	}
+	return bits;
+}
+
+/**
+ * Calculate the priority of a policy
+ *
+ * bits 0-0:  restriction to network interface (0..1)   1 bit
+ * bits 1-6:  src + dst port mask bits (2 * 0..16)      6 bits
+ * bits 7-7:  restriction to protocol (0..1)            1 bit
+ * bits 8-16: src + dst network mask bits (2 * 0..128)  9 bits
+ *                                                     17 bits
+ *
+ * smallest value: 000000000 0 000000 0:      0, lowest priority = 100'000
+ * largest value : 100000000 1 100000 1: 65'729, highst priority =  34'271
+ */
+static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
+							 char *interface)
+{
+	uint32_t priority = PRIO_BASE, sport_mask_bits, dport_mask_bits;
+
 	switch (prio)
 	{
 		case POLICY_PRIORITY_FALLBACK:
-			priority <<= 1;
-			/* fall-through */
+			priority += PRIO_BASE;
+			/* fall-through to next case */
 		case POLICY_PRIORITY_ROUTED:
-			priority <<= 1;
-			/* fall-through */
+			priority += PRIO_BASE;
+			/* fall-through to next case */
 		case POLICY_PRIORITY_DEFAULT:
-			priority <<= 1;
-			/* fall-through */
+			priority += PRIO_BASE;
+			/* fall-through to next case */
 		case POLICY_PRIORITY_PASS:
 			break;
 	}
-	/* calculate priority based on selector size, small size = high prio */
-	priority -= policy->sel.prefixlen_s;
-	priority -= policy->sel.prefixlen_d;
-	priority <<= 2; /* make some room for the two flags */
-	priority += policy->sel.sport_mask || policy->sel.dport_mask ? 0 : 2;
-	priority += policy->sel.proto ? 0 : 1;
+	sport_mask_bits = port_mask_bits(policy->sel.sport_mask);
+	dport_mask_bits = port_mask_bits(policy->sel.dport_mask);
+
+	/* calculate priority */
+	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 256;
+	priority -=  policy->sel.proto ? 128 : 0;
+	priority -= (sport_mask_bits + dport_mask_bits) * 2;
+	priority -= (interface != NULL);
+
 	return priority;
 }
 
@@ -2401,7 +2435,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
 	assigned_sa->priority = data->manual_prio ? data->manual_prio :
-												get_priority(policy, data->prio);
+							get_priority(policy, data->prio, id->interface);
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2581,7 +2615,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	/* remove mapping to SA by reqid and priority */
 	priority = data->manual_prio ? data->manual_prio :
-								   get_priority(current, data->prio);
+			   get_priority(current, data->prio,id->interface);
+
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
