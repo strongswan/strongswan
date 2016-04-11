@@ -70,7 +70,8 @@ static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
 		add_feature(this, f);
 		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "gcrypt-threading"));
 	}
-	else if (strpfx(ssl, "NSS"))
+	else if (strpfx(ssl, "NSS") ||
+			 strpfx(ssl, "BoringSSL"))
 	{
 		add_feature(this, f);
 	}
