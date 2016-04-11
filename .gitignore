@@ -44,4 +44,9 @@ coverage/
 .project
 .metadata/
 .settings/
+/*.config
+/*.creator
+/*.creator.*
+/*.files
+/*.includes
 test-driver
