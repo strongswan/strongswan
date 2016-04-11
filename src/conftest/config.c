@@ -139,25 +139,23 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 static child_cfg_t *load_child_config(private_config_t *this,
 							settings_t *settings, char *config, char *child)
 {
+	child_cfg_create_t data = {
+		.mode = MODE_TUNNEL,
+	};
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t lifetime = {};
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 	traffic_selector_t *ts;
-	ipsec_mode_t mode = MODE_TUNNEL;
 	char *token;
-	uint32_t tfc;
 
 	if (settings->get_bool(settings, "configs.%s.%s.transport",
 						   FALSE, config, child))
 	{
-		mode = MODE_TRANSPORT;
+		data.mode = MODE_TRANSPORT;
 	}
-	tfc = settings->get_int(settings, "configs.%s.%s.tfc_padding",
-							0, config, child);
-	child_cfg = child_cfg_create(child, &lifetime, NULL, FALSE, mode,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE,
-								 FALSE, 0, 0, NULL, NULL, tfc);
+	data.tfc = settings->get_int(settings, "configs.%s.%s.tfc_padding",
+								  0, config, child);
+	child_cfg = child_cfg_create(child, &data);
 
 	token = settings->get_str(settings, "configs.%s.%s.proposal",
 							  NULL, config, child);
@@ -249,11 +247,15 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	identification_t *lid, *rid;
 	char *child, *policy, *pool;
 	uintptr_t strength;
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_ALWAYS_SEND,
+		.unique = UNIQUE_NO,
+		.keyingtries = 1,
+		.no_mobike = TRUE,
+	};
 
 	ike_cfg = load_ike_config(this, settings, config);
-	peer_cfg = peer_cfg_create(config, ike_cfg, CERT_ALWAYS_SEND,
-							   UNIQUE_NO, 1, 0, 0, 0, 0, FALSE, FALSE, TRUE,
-							   0, 0, FALSE, NULL, NULL);
+	peer_cfg = peer_cfg_create(config, ike_cfg, &peer);
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);

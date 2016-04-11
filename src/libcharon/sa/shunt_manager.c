@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2015-2016 Tobias Brunner
+ * Copyright (C) 2011-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,6 +68,8 @@ static bool install_shunt_policy(child_cfg_t *child)
 	policy_type_t policy_type;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
+	uint32_t manual_prio;
+	char *interface;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -92,6 +94,9 @@ static bool install_shunt_policy(child_cfg_t *child)
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
 	hosts->destroy(hosts);
 
+	manual_prio = child->get_manual_prio(child);
+	interface = child->get_interface(child);
+
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
 	while (e_my_ts->enumerate(e_my_ts, &my_ts))
@@ -110,25 +115,37 @@ static bool install_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* install out policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								my_ts, other_ts, POLICY_OUT, policy_type,
-								&sa, child->get_mark(child, FALSE),
-								policy_prio);
-
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_OUT,
+				.src_ts = my_ts,
+				.dst_ts = other_ts,
+				.mark = child->get_mark(child, FALSE),
+				.interface = interface,
+			};
+			kernel_ipsec_manage_policy_t policy = {
+				.type = policy_type,
+				.prio = policy_prio,
+				.manual_prio = manual_prio,
+				.src = host_any,
+				.dst = host_any,
+				.sa = &sa,
+			};
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			/* install "outbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 			/* install in policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								other_ts, my_ts, POLICY_IN, policy_type,
-								&sa, child->get_mark(child, TRUE),
-								policy_prio);
-
-			/* install forward policy */
-			status |= charon->kernel->add_policy(charon->kernel,
-								host_any, host_any,
-								other_ts, my_ts, POLICY_FWD, policy_type,
-								&sa, child->get_mark(child, TRUE),
-								policy_prio);
+			id = (kernel_ipsec_policy_id_t){
+				.dir = POLICY_IN,
+				.src_ts = other_ts,
+				.dst_ts = my_ts,
+				.mark = child->get_mark(child, TRUE),
+				.interface = interface,
+			};
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			/* install "inbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
@@ -205,6 +222,8 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	policy_type_t policy_type;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
+	uint32_t manual_prio;
+	char *interface;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -229,6 +248,9 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, hosts);
 	hosts->destroy(hosts);
 
+	manual_prio = child->get_manual_prio(child);
+	interface = child->get_interface(child);
+
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
 	while (e_my_ts->enumerate(e_my_ts, &my_ts))
@@ -247,25 +269,37 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				continue;
 			}
 			/* uninstall out policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							my_ts, other_ts, POLICY_OUT, policy_type,
-							&sa, child->get_mark(child, FALSE),
-							policy_prio);
-
+			kernel_ipsec_policy_id_t id = {
+				.dir = POLICY_OUT,
+				.src_ts = my_ts,
+				.dst_ts = other_ts,
+				.mark = child->get_mark(child, FALSE),
+				.interface = interface,
+			};
+			kernel_ipsec_manage_policy_t policy = {
+				.type = policy_type,
+				.prio = policy_prio,
+				.manual_prio = manual_prio,
+				.src = host_any,
+				.dst = host_any,
+				.sa = &sa,
+			};
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			/* uninstall "outbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 			/* uninstall in policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							other_ts, my_ts, POLICY_IN, policy_type,
-							&sa, child->get_mark(child, TRUE),
-							policy_prio);
-
-			/* uninstall forward policy */
-			status |= charon->kernel->del_policy(charon->kernel,
-							host_any, host_any,
-							other_ts, my_ts, POLICY_FWD, policy_type,
-							&sa, child->get_mark(child, TRUE),
-							policy_prio);
+			id = (kernel_ipsec_policy_id_t){
+				.dir = POLICY_IN,
+				.src_ts = other_ts,
+				.dst_ts = my_ts,
+				.mark = child->get_mark(child, TRUE),
+				.interface = interface,
+			};
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			/* uninstall "inbound" forward policy */
+			id.dir = POLICY_FWD;
+			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}

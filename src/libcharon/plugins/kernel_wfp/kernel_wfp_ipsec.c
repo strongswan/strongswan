@@ -2093,57 +2093,55 @@ static void schedule_expire(private_kernel_wfp_ipsec_t *this, uint32_t spi,
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
-	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint32_t reqid, mark_t mark,
-	uint32_t tfc, lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
-	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
-	uint16_t ipcomp, uint16_t cpi, uint32_t replay_window,
-	bool initiator, bool encap, bool esn, bool inbound, bool update,
-	linked_list_t *src_ts, linked_list_t *dst_ts)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_add_sa_t *data)
 {
 	host_t *local, *remote;
 	entry_t *entry;
 
-	if (inbound)
+	if (data->inbound)
 	{
 		/* comes first, create new entry */
-		local = dst->clone(dst);
-		remote = src->clone(src);
+		local = id->dst->clone(id->dst);
+		remote = id->src->clone(id->src);
 
 		INIT(entry,
-			.reqid = reqid,
+			.reqid = data->reqid,
 			.isa = {
-				.spi = spi,
+				.spi = id->spi,
 				.dst = local,
-				.protocol = protocol,
-				.lifetime = lifetime->time.life,
+				.protocol = id->proto,
+				.lifetime = data->lifetime->time.life,
 				.encr = {
-					.alg = enc_alg,
-					.key = chunk_clone(enc_key),
+					.alg = data->enc_alg,
+					.key = chunk_clone(data->enc_key),
 				},
 				.integ = {
-					.alg = int_alg,
-					.key = chunk_clone(int_key),
+					.alg = data->int_alg,
+					.key = chunk_clone(data->int_key),
 				},
 			},
 			.sps = array_create(0, 0),
 			.local = local,
 			.remote = remote,
-			.mode = mode,
-			.encap = encap,
+			.mode = data->mode,
+			.encap = data->encap,
 		);
 
-		if (lifetime->time.life)
+		if (data->lifetime->time.life)
 		{
-			schedule_expire(this, spi, local, lifetime->time.life, TRUE);
+			schedule_expire(this, id->spi, local,
+							data->lifetime->time.life, TRUE);
 		}
-		if (lifetime->time.rekey && lifetime->time.rekey != lifetime->time.life)
+		if (data->lifetime->time.rekey &&
+			data->lifetime->time.rekey != data->lifetime->time.life)
 		{
-			schedule_expire(this, spi, local, lifetime->time.rekey, FALSE);
+			schedule_expire(this, id->spi, local,
+							data->lifetime->time.rekey, FALSE);
 		}
 
 		this->mutex->lock(this->mutex);
-		this->tsas->put(this->tsas, (void*)(uintptr_t)reqid, entry);
+		this->tsas->put(this->tsas, (void*)(uintptr_t)data->reqid, entry);
 		this->isas->put(this->isas, &entry->isa, entry);
 		this->mutex->unlock(this->mutex);
 	}
@@ -2151,29 +2149,29 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		/* comes after inbound, update entry */
 		this->mutex->lock(this->mutex);
-		entry = this->tsas->remove(this->tsas, (void*)(uintptr_t)reqid);
+		entry = this->tsas->remove(this->tsas, (void*)(uintptr_t)data->reqid);
 		this->mutex->unlock(this->mutex);
 
 		if (!entry)
 		{
 			DBG1(DBG_KNL, "adding outbound SA failed, no inbound SA found "
-				 "for reqid %u ", reqid);
+				 "for reqid %u ", data->reqid);
 			return NOT_FOUND;
 		}
 		/* TODO: should we check for local/remote, mode etc.? */
 
 		entry->osa = (sa_entry_t){
-			.spi = spi,
+			.spi = id->spi,
 			.dst = entry->remote,
-			.protocol = protocol,
-			.lifetime = lifetime->time.life,
+			.protocol = id->proto,
+			.lifetime = data->lifetime->time.life,
 			.encr = {
-				.alg = enc_alg,
-				.key = chunk_clone(enc_key),
+				.alg = data->enc_alg,
+				.key = chunk_clone(data->enc_key),
 			},
 			.integ = {
-				.alg = int_alg,
-				.key = chunk_clone(int_key),
+				.alg = data->int_alg,
+				.key = chunk_clone(data->int_key),
 			},
 		};
 
@@ -2186,14 +2184,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_wfp_ipsec_t *this, uint32_t spi, uint8_t protocol,
-	uint16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool encap, bool new_encap, mark_t mark)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_update_sa_t *data)
 {
 	entry_t *entry;
 	sa_entry_t key = {
-		.dst = dst,
-		.spi = spi,
+		.dst = id->dst,
+		.spi = id->spi,
 	};
 	UINT64 sa_id = 0;
 	IPSEC_SA_CONTEXT1 *ctx;
@@ -2233,16 +2230,16 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		DBG1(DBG_KNL, "getting WFP SA context for updated failed: 0x%08x", res);
 		return FAILED;
 	}
-	if (!hosts2traffic(this, new_dst, new_src, &ctx->inboundSa->traffic) ||
-		!hosts2traffic(this, new_dst, new_src, &ctx->outboundSa->traffic))
+	if (!hosts2traffic(this, data->new_dst, data->new_src, &ctx->inboundSa->traffic) ||
+		!hosts2traffic(this, data->new_dst, data->new_src, &ctx->outboundSa->traffic))
 	{
 		FwpmFreeMemory0((void**)&ctx);
 		return FAILED;
 	}
 
-	if (new_encap != encap)
+	if (data->new_encap != data->encap)
 	{
-		if (new_encap)
+		if (data->new_encap)
 		{
 			ctx->inboundSa->udpEncapsulation = &ports;
 			ctx->outboundSa->udpEncapsulation = &ports;
@@ -2273,8 +2270,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 		entry->local->destroy(entry->local);
 		entry->remote->destroy(entry->remote);
-		entry->local = new_dst->clone(new_dst);
-		entry->remote = new_src->clone(new_src);
+		entry->local = data->new_dst->clone(data->new_dst);
+		entry->remote = data->new_src->clone(data->new_src);
 		entry->isa.dst = entry->local;
 		entry->osa.dst = entry->remote;
 
@@ -2290,9 +2287,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
-	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, mark_t mark, uint64_t *bytes,
-	uint64_t *packets, time_t *time)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
+	time_t *time)
 {
 	/* It does not seem that WFP provides any means of getting per-SA traffic
 	 * statistics. IPsecGetStatistics0/1() provides global stats, and
@@ -2302,13 +2299,13 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
-	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	uint32_t spi, uint8_t protocol, uint16_t cpi, mark_t mark)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_sa_id_t *id,
+	kernel_ipsec_del_sa_t *data)
 {
 	entry_t *entry;
 	sa_entry_t key = {
-		.dst = dst,
-		.spi = spi,
+		.dst = id->dst,
+		.spi = id->spi,
 	};
 
 	this->mutex->lock(this->mutex);
@@ -2341,25 +2338,23 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
-	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa, mark_t mark,
-	policy_priority_t priority)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
 	status_t status = SUCCESS;
 	entry_t *entry;
 	sp_entry_t *sp;
 	sa_entry_t key = {
-		.spi = sa->esp.use ? sa->esp.spi : sa->ah.spi,
-		.dst = dst,
+		.spi = data->sa->esp.use ? data->sa->esp.spi : data->sa->ah.spi,
+		.dst = data->dst,
 	};
 
-	if (sa->esp.use && sa->ah.use)
+	if (data->sa->esp.use && data->sa->ah.use)
 	{
 		return NOT_SUPPORTED;
 	}
 
-	switch (type)
+	switch (data->type)
 	{
 		case POLICY_IPSEC:
 			break;
@@ -2368,7 +2363,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			return NOT_SUPPORTED;
 	}
 
-	switch (direction)
+	switch (id->dir)
 	{
 		case POLICY_OUT:
 			break;
@@ -2380,18 +2375,20 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			return NOT_SUPPORTED;
 	}
 
-	switch (priority)
+	switch (data->prio)
 	{
 		case POLICY_PRIORITY_DEFAULT:
 			break;
 		case POLICY_PRIORITY_ROUTED:
-			if (!add_trap(this, sa->reqid, FALSE, src, dst, src_ts, dst_ts))
+			if (!add_trap(this, data->sa->reqid, FALSE, data->src, data->dst,
+						  id->src_ts, id->dst_ts))
 			{
 				return FAILED;
 			}
-			if (sa->mode == MODE_TUNNEL)
+			if (data->sa->mode == MODE_TUNNEL)
 			{
-				if (!add_trap(this, sa->reqid, TRUE, src, dst, src_ts, dst_ts))
+				if (!add_trap(this, data->sa->reqid, TRUE, data->src, data->dst,
+							  id->src_ts, id->dst_ts))
 				{
 					return FAILED;
 				}
@@ -2406,14 +2403,14 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	entry = this->osas->get(this->osas, &key);
 	if (entry)
 	{
-		if (sa->mode == MODE_TUNNEL || array_count(entry->sps) == 0)
+		if (data->sa->mode == MODE_TUNNEL || array_count(entry->sps) == 0)
 		{
 			INIT(sp,
-				.src = src_ts->clone(src_ts),
-				.dst = dst_ts->clone(dst_ts),
+				.src = id->src_ts->clone(id->src_ts),
+				.dst = id->dst_ts->clone(id->dst_ts),
 			);
 			array_insert(entry->sps, -1, sp);
-			if (array_count(entry->sps) == sa->policy_count)
+			if (array_count(entry->sps) == data->sa->policy_count)
 			{
 				if (!install(this, entry))
 				{
@@ -2442,25 +2439,24 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
-	private_kernel_wfp_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	time_t *use_time)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_query_policy_t *data, time_t *use_time)
 {
 	/* see query_sa() for some notes */
 	return NOT_SUPPORTED;
 }
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
-	private_kernel_wfp_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, policy_priority_t priority)
+	private_kernel_wfp_ipsec_t *this, kernel_ipsec_policy_id_t *id,
+	kernel_ipsec_manage_policy_t *data)
 {
-	if (direction == POLICY_OUT && priority == POLICY_PRIORITY_ROUTED)
+	if (id->dir == POLICY_OUT && data->prio == POLICY_PRIORITY_ROUTED)
 	{
-		if (remove_trap(this, sa->reqid, FALSE, src_ts, dst_ts))
+		if (remove_trap(this, data->sa->reqid, FALSE, id->src_ts,
+						id->dst_ts))
 		{
-			remove_trap(this, sa->reqid, TRUE, src_ts, dst_ts);
+			remove_trap(this, data->sa->reqid, TRUE, id->src_ts,
+						id->dst_ts);
 			return SUCCESS;
 		}
 		return NOT_FOUND;

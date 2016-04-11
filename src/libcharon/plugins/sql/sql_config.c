@@ -170,12 +170,22 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
 						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
 	{
-		lifetime_cfg_t lft = {
-			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
+		child_cfg_create_t child = {
+			.mode = mode,
+			.reqid = reqid,
+			.ipcomp = ipcomp,
+			.lifetime = {
+				.time = {
+					.life = lifetime, .rekey = rekeytime, .jitter = jitter
+				},
+			},
+			.start_action = start,
+			.dpd_action = dpd,
+			.close_action = close,
+			.updown = updown,
+			.hostaccess = hostaccess,
 		};
-		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
-									 start, dpd, close, ipcomp, 0, reqid,
-									 NULL, NULL, 0);
+		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;
@@ -290,6 +300,7 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 	return ike_cfg;
 }
 
+#ifdef ME
 /**
  * Query a peer config by its id
  */
@@ -322,6 +333,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 	}
 	return peer_cfg;
 }
+#endif /* ME */
 
 /**
  * Check if the two IDs match (the first one is optional)
@@ -353,7 +365,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			&mediation, &mediated_by, &p_type, &p_data))
 	{
 		identification_t *local_id, *remote_id, *peer_id = NULL;
-		peer_cfg_t *peer_cfg, *mediated_cfg;
+		peer_cfg_t *peer_cfg, *mediated_cfg = NULL;
 		ike_cfg_t *ike;
 		host_t *vip = NULL;
 		auth_cfg_t *auth;
@@ -367,22 +379,38 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			continue;
 		}
 		ike = get_ike_cfg_by_id(this, ike_cfg);
+
+#ifdef ME
 		mediated_cfg = mediated_by ? get_peer_cfg_by_id(this, mediated_by) : NULL;
 		if (p_type)
 		{
 			peer_id = identification_create_from_encoding(p_type, p_data);
 		}
+#endif
 		if (virtual)
 		{
 			vip = host_create_from_string(virtual, 0);
 		}
 		if (ike)
 		{
-			peer_cfg = peer_cfg_create(
-					name, ike, cert_policy, uniqueid,
-					keyingtries, rekeytime, reauthtime, jitter, overtime,
-					mobike, FALSE, TRUE, dpd_delay, 0,
-					mediation, mediated_cfg, peer_id);
+			peer_cfg_create_t peer = {
+				.cert_policy = cert_policy,
+				.unique = uniqueid,
+				.keyingtries = keyingtries,
+				.rekey_time = rekeytime,
+				.reauth_time = reauthtime,
+				.jitter_time = jitter,
+				.over_time = overtime,
+				.no_mobike = !mobike,
+				.dpd = dpd_delay,
+#ifdef ME
+				.mediation = mediation,
+				.mediated_by = mediated_cfg,
+				.peer_id = peer_id,
+#endif /* ME */
+			};
+
+			peer_cfg = peer_cfg_create(name, ike, &peer);
 			if (vip)
 			{
 				peer_cfg->add_virtual_ip(peer_cfg, vip);

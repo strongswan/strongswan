@@ -289,7 +289,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	NMSettingVPN *vpn;
 	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
-	bool virtual, encap, ipcomp;
+	bool virtual, encap;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -300,12 +300,23 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	certificate_t *cert = NULL;
 	x509_t *x509;
 	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 10800 /* 3h */,
-			.rekey = 10200 /* 2h50min */,
-			.jitter = 300 /* 5min */
-		}
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+	};
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 10800 /* 3h */,
+				.rekey = 10200 /* 2h50min */,
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	/**
@@ -339,32 +350,29 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		return FALSE;
 	}
 	str = nm_setting_vpn_get_data_item(vpn, "virtual");
-	virtual = str && streq(str, "yes");
+	virtual = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "encap");
-	encap = str && streq(str, "yes");
+	encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
-	ipcomp = str && streq(str, "yes");
+	child.ipcomp = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "method");
-	if (str)
+	if (streq(str, "psk"))
 	{
-		if (streq(str, "psk"))
-		{
-			auth_class = AUTH_CLASS_PSK;
-		}
-		else if (streq(str, "agent"))
-		{
-			auth_class = AUTH_CLASS_PUBKEY;
-			agent = TRUE;
-		}
-		else if (streq(str, "key"))
-		{
-			auth_class = AUTH_CLASS_PUBKEY;
-		}
-		else if (streq(str, "smartcard"))
-		{
-			auth_class = AUTH_CLASS_PUBKEY;
-			smartcard = TRUE;
-		}
+		auth_class = AUTH_CLASS_PSK;
+	}
+	else if (streq(str, "agent"))
+	{
+		auth_class = AUTH_CLASS_PUBKEY;
+		agent = TRUE;
+	}
+	else if (streq(str, "key"))
+	{
+		auth_class = AUTH_CLASS_PUBKEY;
+	}
+	else if (streq(str, "smartcard"))
+	{
+		auth_class = AUTH_CLASS_PUBKEY;
+		smartcard = TRUE;
 	}
 
 	/**
@@ -533,13 +541,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 							 FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	peer_cfg = peer_cfg_create(priv->name, ike_cfg,
-					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
-					36000, 0, /* rekey 10h, reauth none */
-					600, 600, /* jitter, over 10min */
-					TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-					0, 0, /* DPD delay, timeout */
-					FALSE, NULL, NULL); /* mediation */
+
+	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
@@ -561,10 +564,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, loose_gateway_id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create(priv->name, &lifetime,
-								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, ipcomp,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(priv->name, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);

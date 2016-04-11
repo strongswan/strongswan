@@ -1,8 +1,9 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -131,6 +132,16 @@ struct private_child_cfg_t {
 	 * Traffic Flow Confidentiality padding, if enabled
 	 */
 	uint32_t tfc;
+
+	/**
+	 * Optional manually-set IPsec policy priorities
+	 */
+	uint32_t manual_prio;
+
+	/**
+	 * Optional restriction of IPsec policy to a given network interface
+	 */
+	char *interface;
 
 	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
@@ -500,6 +511,18 @@ METHOD(child_cfg_t, get_tfc, uint32_t,
 	return this->tfc;
 }
 
+METHOD(child_cfg_t, get_manual_prio, uint32_t,
+	private_child_cfg_t *this)
+{
+	return this->manual_prio;
+}
+
+METHOD(child_cfg_t, get_interface, char*,
+	private_child_cfg_t *this)
+{
+	return this->interface;
+}
+
 METHOD(child_cfg_t, get_replay_window, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -510,13 +533,6 @@ METHOD(child_cfg_t, set_replay_window, void,
 	private_child_cfg_t *this, uint32_t replay_window)
 {
 	this->replay_window = replay_window;
-}
-
-METHOD(child_cfg_t, set_mipv6_options, void,
-	private_child_cfg_t *this, bool proxy_mode, bool install_policy)
-{
-	this->proxy_mode = proxy_mode;
-	this->install_policy = install_policy;
 }
 
 METHOD(child_cfg_t, use_proxy_mode, bool,
@@ -532,7 +548,7 @@ METHOD(child_cfg_t, install_policy, bool,
 }
 
 #define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
-#define LIFETIME_EQUALS(a, b) ({  LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
+#define LIFETIME_EQUALS(a, b) ({ LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
 
 METHOD(child_cfg_t, equals, bool,
 	private_child_cfg_t *this, child_cfg_t *other_pub)
@@ -576,10 +592,12 @@ METHOD(child_cfg_t, equals, bool,
 		this->mark_out.value == other->mark_out.value &&
 		this->mark_out.mask == other->mark_out.mask &&
 		this->tfc == other->tfc &&
+		this->manual_prio == other->manual_prio &&
 		this->replay_window == other->replay_window &&
 		this->proxy_mode == other->proxy_mode &&
 		this->install_policy == other->install_policy &&
-		streq(this->updown, other->updown);
+		streq(this->updown, other->updown) &&
+		streq(this->interface, other->interface);
 }
 
 METHOD(child_cfg_t, get_ref, child_cfg_t*,
@@ -597,10 +615,8 @@ METHOD(child_cfg_t, destroy, void,
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 		this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 		this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
-		if (this->updown)
-		{
-			free(this->updown);
-		}
+		free(this->updown);
+		free(this->interface);
 		free(this->name);
 		free(this);
 	}
@@ -609,12 +625,7 @@ METHOD(child_cfg_t, destroy, void,
 /*
  * Described in header-file
  */
-child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
-							  char *updown, bool hostaccess,
-							  ipsec_mode_t mode, action_t start_action,
-							  action_t dpd_action, action_t close_action,
-							  bool ipcomp, uint32_t inactivity, uint32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out, uint32_t tfc)
+child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 {
 	private_child_cfg_t *this;
 
@@ -634,12 +645,13 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
 			.get_dh_group = _get_dh_group,
-			.set_mipv6_options = _set_mipv6_options,
 			.use_ipcomp = _use_ipcomp,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_mark = _get_mark,
 			.get_tfc = _get_tfc,
+			.get_manual_prio = _get_manual_prio,
+			.get_interface = _get_interface,
 			.get_replay_window = _get_replay_window,
 			.set_replay_window = _set_replay_window,
 			.use_proxy_mode = _use_proxy_mode,
@@ -649,35 +661,30 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.destroy = _destroy,
 		},
 		.name = strdup(name),
-		.updown = strdupnull(updown),
-		.hostaccess = hostaccess,
-		.mode = mode,
-		.start_action = start_action,
-		.dpd_action = dpd_action,
-		.close_action = close_action,
-		.use_ipcomp = ipcomp,
-		.inactivity = inactivity,
-		.reqid = reqid,
-		.proxy_mode = FALSE,
-		.install_policy = TRUE,
+		.updown = strdupnull(data->updown),
+		.hostaccess = data->hostaccess,
+		.reqid = data->reqid,
+		.mode = data->mode,
+		.proxy_mode = data->proxy_mode,
+		.start_action = data->start_action,
+		.dpd_action = data->dpd_action,
+		.close_action = data->close_action,
+		.mark_in = data->mark_in,
+		.mark_out = data->mark_out,
+		.lifetime = data->lifetime,
+		.inactivity = data->inactivity,
+		.use_ipcomp = data->ipcomp,
+		.tfc = data->tfc,
+		.manual_prio = data->priority,
+		.interface = strdupnull(data->interface),
+		.install_policy = !data->suppress_policies,
 		.refcount = 1,
 		.proposals = linked_list_create(),
 		.my_ts = linked_list_create(),
 		.other_ts = linked_list_create(),
-		.tfc = tfc,
 		.replay_window = lib->settings->get_int(lib->settings,
-				"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
+							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 	);
-
-	if (mark_in)
-	{
-		this->mark_in = *mark_in;
-	}
-	if (mark_out)
-	{
-		this->mark_out = *mark_out;
-	}
-	memcpy(&this->lifetime, lifetime, sizeof(lifetime_cfg_t));
 
 	return &this->public;
 }

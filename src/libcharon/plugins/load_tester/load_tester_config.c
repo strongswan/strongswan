@@ -688,13 +688,25 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	peer_cfg_t *peer_cfg;
 	char local[32], *remote;
 	host_t *addr;
-	ipsec_mode_t mode = MODE_TUNNEL;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = this->child_rekey * 2,
-			.rekey = this->child_rekey,
-			.jitter = 0
-		}
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_NO,
+		.keyingtries = 1,
+		.rekey_time = this->ike_rekey,
+		.over_time = this->ike_rekey,
+		.no_mobike = TRUE,
+		.dpd = this->dpd_delay,
+		.dpd_timeout = this->dpd_timeout,
+	};
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = this->child_rekey * 2,
+				.rekey = this->child_rekey,
+				.jitter = 0
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	if (num)
@@ -737,14 +749,8 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 								 FRAGMENTATION_NO, 0);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
-	peer_cfg = peer_cfg_create("load-test", ike_cfg,
-							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
-							   this->ike_rekey, 0, /* rekey, reauth */
-							   0, this->ike_rekey, /* jitter, overtime */
-							   FALSE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   this->dpd_delay,   /* dpd_delay */
-							   this->dpd_timeout, /* dpd_timeout */
-							   FALSE, NULL, NULL);
+	peer_cfg = peer_cfg_create("load-test", ike_cfg, &peer);
+
 	if (this->vip)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, this->vip->clone(this->vip));
@@ -768,17 +774,15 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	{
 		if (streq(this->mode, "transport"))
 		{
-			mode = MODE_TRANSPORT;
+			child.mode = MODE_TRANSPORT;
 		}
 		else if (streq(this->mode, "beet"))
 		{
-			mode = MODE_BEET;
+			child.mode = MODE_BEET;
 		}
 	}
 
-	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE, mode,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("load-test", &child);
 	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp));
 
 	if (num)

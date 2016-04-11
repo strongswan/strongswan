@@ -126,12 +126,23 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 	child_cfg_t *child_cfg;
 	ike_cfg_t *ike_cfg;
 	auth_cfg_t *auth;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = create_rekey(esp_rekey) + 300,
-			.rekey = create_rekey(esp_rekey),
-			.jitter = 300
-		}
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_NO,
+		.keyingtries = 1,
+		.jitter_time = 1800,
+		.over_time = 900,
+		.dpd = 60,
+	};
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = create_rekey(esp_rekey) + 300,
+				.rekey = create_rekey(esp_rekey),
+				.jitter = 300
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	/* defaults */
@@ -157,13 +168,8 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 								 remote_addr, IKEV2_UDP_PORT,
 								 FRAGMENTATION_NO, 0);
 		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
-		this->peer_cfg = peer_cfg_create(
-					name, ike_cfg, CERT_SEND_IF_ASKED, UNIQUE_NO,
-					1, create_rekey(ike_rekey), 0,  /* keytries, rekey, reauth */
-					1800, 900,						/* jitter, overtime */
-					TRUE, FALSE, TRUE,			/* mobike, aggressive, pull */
-					60, 0,						/* DPD delay, timeout */
-					FALSE, NULL, NULL);			/* mediation, med by, peer id */
+		peer.rekey_time = create_rekey(ike_rekey);
+		this->peer_cfg = peer_cfg_create(name, ike_cfg, &peer);
 		auth = auth_cfg_create();
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
 		auth->add(auth, AUTH_RULE_IDENTITY,
@@ -179,9 +185,7 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 		}
 		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, FALSE);
 
-		child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-									 ACTION_NONE, ACTION_NONE, ACTION_NONE,
-									 FALSE, 0, 0, NULL, NULL, 0);
+		child_cfg = child_cfg_create(name, &child);
 		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_ESP));
 		child_cfg->add_traffic_selector(child_cfg, TRUE, create_ts(local_net));
 		child_cfg->add_traffic_selector(child_cfg, FALSE, create_ts(remote_net));

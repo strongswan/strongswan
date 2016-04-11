@@ -673,12 +673,24 @@ static job_requeue_t initiate(private_android_service_t *this)
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 3600, /* 1h */
-			.rekey = 3000, /* 50min */
-			.jitter = 300 /* 5min */
-		}
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+	};
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 3600, /* 1h */
+				.rekey = 3000, /* 50min */
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
+		.dpd_action = ACTION_RESTART,
+		.close_action = ACTION_RESTART,
 	};
 	char *type, *server;
 	int port;
@@ -692,13 +704,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create("android", ike_cfg, CERT_SEND_IF_ASKED,
-							   UNIQUE_REPLACE, 0, /* keyingtries */
-							   36000, 0, /* rekey 10h, reauth none */
-							   600, 600, /* jitter, over 10min */
-							   TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   0, 0, /* DPD delay, timeout */
-							   FALSE, NULL, NULL); /* mediation */
+	peer_cfg = peer_cfg_create("android", ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
@@ -731,9 +737,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_RESTART, ACTION_RESTART,
-								 FALSE, 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create("android", &child);
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,

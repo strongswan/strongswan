@@ -236,12 +236,23 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	traffic_selector_t *ts;
 	auth_cfg_t *auth;
 	certificate_t *cert;
-	lifetime_cfg_t lifetime = {
-		.time = {
-			.life = 10800, /* 3h */
-			.rekey = 10200, /* 2h50min */
-			.jitter = 300 /* 5min */
-		}
+	peer_cfg_create_t peer = {
+		.cert_policy = CERT_SEND_IF_ASKED,
+		.unique = UNIQUE_REPLACE,
+		.keyingtries = 1,
+		.rekey_time = 36000, /* 10h */
+		.jitter_time = 600, /* 10min */
+		.over_time = 600, /* 10min */
+	};
+	child_cfg_create_t child = {
+		.lifetime = {
+			.time = {
+				.life = 10800, /* 3h */
+				.rekey = 10200, /* 2h50min */
+				.jitter = 300 /* 5min */
+			},
+		},
+		.mode = MODE_TUNNEL,
 	};
 
 	if (this->status == VPN_STATUS_CONNECTED ||
@@ -329,14 +340,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create(this->current, ike_cfg,
-							   CERT_SEND_IF_ASKED,
-							   UNIQUE_REPLACE, 1, /* keyingtries */
-							   36000, 0, /* rekey 10h, reauth none */
-							   600, 600, /* jitter, over 10min */
-							   TRUE, FALSE, TRUE, /* mobike, aggressive, pull */
-							   0, 0, /* DPD delay, timeout */
-							   FALSE, NULL, NULL); /* mediation */
+	peer_cfg = peer_cfg_create(this->current, ike_cfg, &peer);
 	peer_cfg->add_virtual_ip(peer_cfg,  host_create_from_string("0.0.0.0", 0));
 
 	auth = auth_cfg_create();
@@ -348,9 +352,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
-	child_cfg = child_cfg_create(this->current, &lifetime, NULL /* updown */,
-								 TRUE, MODE_TUNNEL, ACTION_NONE, ACTION_NONE,
-								 ACTION_NONE, FALSE, 0, 0, NULL, NULL, 0);
+	child_cfg = child_cfg_create(this->current, &child);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
