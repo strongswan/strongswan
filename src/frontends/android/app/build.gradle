@@ -29,6 +29,7 @@ android {
 
     tasks.withType(JavaCompile) {
         compileTask -> compileTask.dependsOn buildNative
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
 
     clean.dependsOn 'cleanNative'
