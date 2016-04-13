@@ -278,18 +278,27 @@ static private_thread_t *thread_create_internal()
 }
 
 /**
- * Main cleanup function for threads.
+ * Remove and run all cleanup handlers in reverse order.
  */
-static void thread_cleanup(private_thread_t *this)
+static void thread_cleanup_popall_internal(private_thread_t *this)
 {
 	cleanup_handler_t *handler;
-	this->mutex->lock(this->mutex);
+
 	while (this->cleanup_handlers->remove_last(this->cleanup_handlers,
-											   (void**)&handler) == SUCCESS)
+											  (void**)&handler) == SUCCESS)
 	{
 		handler->cleanup(handler->arg);
 		free(handler);
 	}
+}
+
+/**
+ * Main cleanup function for threads.
+ */
+static void thread_cleanup(private_thread_t *this)
+{
+	thread_cleanup_popall_internal(this);
+	this->mutex->lock(this->mutex);
 	this->terminated = TRUE;
 	thread_destroy(this);
 }
@@ -417,15 +426,8 @@ void thread_cleanup_pop(bool execute)
 void thread_cleanup_popall()
 {
 	private_thread_t *this = (private_thread_t*)thread_current();
-	cleanup_handler_t *handler;
 
-	while (this->cleanup_handlers->get_count(this->cleanup_handlers))
-	{
-		this->cleanup_handlers->remove_last(this->cleanup_handlers,
-											(void**)&handler);
-		handler->cleanup(handler->arg);
-		free(handler);
-	}
+	thread_cleanup_popall_internal(this);
 }
 
 /**
