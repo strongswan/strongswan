@@ -502,8 +502,10 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+#ifndef OPENSSL_IS_BORINGSSL
 	CONF_modules_free();
 	OBJ_cleanup();
+#endif
 	EVP_cleanup();
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
@@ -555,7 +557,9 @@ plugin_t *openssl_plugin_create()
 
 	threading_init();
 
+#ifndef OPENSSL_IS_BORINGSSL
 	OPENSSL_config(NULL);
+#endif
 	OpenSSL_add_all_algorithms();
 
 #ifdef OPENSSL_FIPS
