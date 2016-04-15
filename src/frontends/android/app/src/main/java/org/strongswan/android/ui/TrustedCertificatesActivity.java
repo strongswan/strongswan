@@ -158,7 +158,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 				args.putString(CertificateDeleteConfirmationDialog.ALIAS, selected.getAlias());
 				CertificateDeleteConfirmationDialog dialog = new CertificateDeleteConfirmationDialog();
 				dialog.setArguments(args);
-				dialog.show(this.getFragmentManager(), DIALOG_TAG);
+				dialog.show(getSupportFragmentManager(), DIALOG_TAG);
 			}
 		}
 	}

@@ -17,10 +17,7 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog.Builder;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
@@ -35,7 +32,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDialogFragment;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -237,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 			ConfirmationDialog dialog = new ConfirmationDialog();
 			dialog.setArguments(profileInfo);
-			dialog.show(this.getFragmentManager(), DIALOG_TAG);
+			dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
 			return;
 		}
 		startVpnProfile(profileInfo);
@@ -255,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		{
 			LoginDialog login = new LoginDialog();
 			login.setArguments(profileInfo);
-			login.show(getFragmentManager(), DIALOG_TAG);
+			login.show(getSupportFragmentManager(), DIALOG_TAG);
 			return;
 		}
 		prepareVpnService(profileInfo);
@@ -332,7 +331,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 * Class that displays a confirmation dialog if a VPN profile is already connected
 	 * and then initiates the selected VPN profile if the user confirms the dialog.
 	 */
-	public static class ConfirmationDialog extends DialogFragment
+	public static class ConfirmationDialog extends AppCompatDialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)
@@ -351,7 +350,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 				button = R.string.reconnect;
 			}
 
-			return new Builder(getActivity())
+			return new AlertDialog.Builder(getActivity())
 				.setIcon(icon)
 				.setTitle(String.format(getString(title), profileInfo.getString(PROFILE_NAME)))
 				.setMessage(message)
@@ -379,7 +378,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 * Class that displays a login dialog and initiates the selected VPN
 	 * profile if the user confirms the dialog.
 	 */
-	public static class LoginDialog extends DialogFragment
+	public static class LoginDialog extends AppCompatDialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)
@@ -391,7 +390,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
 			final EditText password = (EditText)view.findViewById(R.id.password);
 
-			Builder adb = new Builder(getActivity());
+			AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
 			adb.setView(view);
 			adb.setTitle(getString(R.string.login_title));
 			adb.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener()
@@ -420,17 +419,17 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 * Class representing an error message which is displayed if VpnService is
 	 * not supported on the current device.
 	 */
-	public static class VpnNotSupportedError extends DialogFragment
+	public static class VpnNotSupportedError extends AppCompatDialogFragment
 	{
 		static final String ERROR_MESSAGE_ID = "org.strongswan.android.VpnNotSupportedError.MessageId";
 
-		public static void showWithMessage(Activity activity, int messageId)
+		public static void showWithMessage(AppCompatActivity activity, int messageId)
 		{
 			Bundle bundle = new Bundle();
 			bundle.putInt(ERROR_MESSAGE_ID, messageId);
 			VpnNotSupportedError dialog = new VpnNotSupportedError();
 			dialog.setArguments(bundle);
-			dialog.show(activity.getFragmentManager(), DIALOG_TAG);
+			dialog.show(activity.getSupportFragmentManager(), DIALOG_TAG);
 		}
 
 		@Override
@@ -438,7 +437,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		{
 			final Bundle arguments = getArguments();
 			final int messageId = arguments.getInt(ERROR_MESSAGE_ID);
-			return new Builder(getActivity())
+			return new AlertDialog.Builder(getActivity())
 				.setTitle(R.string.vpn_not_supported_title)
 				.setMessage(messageId)
 				.setCancelable(false)

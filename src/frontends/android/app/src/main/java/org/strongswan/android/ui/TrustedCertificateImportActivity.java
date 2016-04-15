@@ -17,16 +17,16 @@ package org.strongswan.android.ui;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDialogFragment;
 import android.widget.Toast;
 
 import org.strongswan.android.R;
@@ -119,7 +119,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		Bundle args = new Bundle();
 		args.putSerializable(VpnProfileDataSource.KEY_CERTIFICATE, certificate);
 		dialog.setArguments(args);
-		FragmentTransaction ft = getFragmentManager().beginTransaction();
+		FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
 		ft.add(dialog, DIALOG_TAG);
 		ft.commit();
 	}
@@ -179,7 +179,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 	 * Class that displays a confirmation dialog when a certificate should get
 	 * imported. If the user confirms the import we try to store it.
 	 */
-	public static class ConfirmImportDialog extends DialogFragment
+	public static class ConfirmImportDialog extends AppCompatDialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)

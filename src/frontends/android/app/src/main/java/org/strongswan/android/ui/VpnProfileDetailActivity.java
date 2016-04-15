@@ -17,9 +17,7 @@
 
 package org.strongswan.android.ui;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -28,7 +26,9 @@ import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDialogFragment;
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
@@ -146,7 +146,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			@Override
 			public void onClick(View v)
 			{
-				new TncNoticeDialog().show(VpnProfileDetailActivity.this.getFragmentManager(), "TncNotice");
+				new TncNoticeDialog().show(VpnProfileDetailActivity.this.getSupportFragmentManager(), "TncNotice");
 			}
 		});
 
@@ -633,7 +633,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	/**
 	 * Dialog with notification message if EAP-TNC is used.
 	 */
-	public static class TncNoticeDialog extends DialogFragment
+	public static class TncNoticeDialog extends AppCompatDialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)

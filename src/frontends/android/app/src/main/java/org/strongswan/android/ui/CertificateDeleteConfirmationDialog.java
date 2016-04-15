@@ -15,20 +15,20 @@
 
 package org.strongswan.android.ui;
 
-import org.strongswan.android.R;
-
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatDialogFragment;
+
+import org.strongswan.android.R;
 
 /**
  * Class that displays a confirmation dialog to delete a selected local
  * certificate.
  */
-public class CertificateDeleteConfirmationDialog extends DialogFragment
+public class CertificateDeleteConfirmationDialog extends AppCompatDialogFragment
 {
 	public static final String ALIAS = "alias";
 	OnCertificateDeleteListener mListener;
