@@ -109,15 +109,13 @@ public class VpnProfileListFragment extends Fragment
 			setHasOptionsMenu(true);
 		}
 
-		Context context = getActivity().getApplicationContext();
-
 		mDataSource = new VpnProfileDataSource(this.getActivity());
 		mDataSource.open();
 
 		/* cached list of profiles used as backend for the ListView */
 		mVpnProfiles = mDataSource.getAllVpnProfiles();
 
-		mListAdapter = new VpnProfileAdapter(context, R.layout.profile_list_item, mVpnProfiles);
+		mListAdapter = new VpnProfileAdapter(getActivity(), R.layout.profile_list_item, mVpnProfiles);
 	}
 
 	@Override
