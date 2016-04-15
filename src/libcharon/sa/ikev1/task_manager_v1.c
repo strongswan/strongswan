@@ -514,14 +514,7 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (!mode_config_expected(this) &&
-					activate_task(this, TASK_QUICK_MODE))
-				{
-					exchange = QUICK_MODE;
-					new_mid = TRUE;
-					break;
-				}
-				if (activate_task(this, TASK_INFORMATIONAL))
+				if (activate_task(this, TASK_ISAKMP_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -533,7 +526,14 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_DELETE))
+				if (!mode_config_expected(this) &&
+					activate_task(this, TASK_QUICK_MODE))
+				{
+					exchange = QUICK_MODE;
+					new_mid = TRUE;
+					break;
+				}
+				if (activate_task(this, TASK_INFORMATIONAL))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
