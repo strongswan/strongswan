@@ -1774,16 +1774,16 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					route->src_host = src;
 				}
-				/* insert route, sorted by priority and network prefix */
+				/* insert route, sorted by network prefix and priority */
 				enumerator = routes->create_enumerator(routes);
 				while (enumerator->enumerate(enumerator, &other))
 				{
-					if (route->priority < other->priority)
+					if (route->dst_len > other->dst_len)
 					{
 						break;
 					}
-					if (route->priority == other->priority &&
-						route->dst_len > other->dst_len)
+					if (route->dst_len == other->dst_len &&
+						route->priority < other->priority)
 					{
 						break;
 					}
