@@ -37,7 +37,7 @@ CREATE TABLE child_config_traffic_selector (
   traffic_selector INTEGER NOT NULL,
   kind INTEGER NOT NULL
 );
-DROP INDEX IF EXISTS child_config_traffic_selector;
+DROP INDEX IF EXISTS child_config_traffic_selector_all;
 CREATE INDEX child_config_traffic_selector_all ON child_config_traffic_selector (
   child_cfg, traffic_selector
 );
