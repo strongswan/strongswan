@@ -1007,7 +1007,6 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 			{
 				case CHILD_INSTALLED:
 				case CHILD_REKEYING:
-				case CHILD_REKEYED:
 					policies = child_sa->create_policy_enumerator(child_sa);
 					if (policies->enumerate(policies, &local, &remote) &&
 						local->equals(local, this->tsr) &&
@@ -1026,9 +1025,10 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 							 child_sa->get_unique_id(child_sa));
 					}
 					policies->destroy(policies);
-				break;
-			default:
-				break;
+					break;
+				case CHILD_REKEYED:
+				default:
+					break;
 			}
 		}
 	}
