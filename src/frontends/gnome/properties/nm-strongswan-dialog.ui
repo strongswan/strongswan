@@ -284,7 +284,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="has_tooltip">True</property>
-                    <property name="tooltip_text" translatable="yes">The username (identity) to use for authentication against the gateway.</property>
+                    <property name="tooltip_text" translatable="yes">The password to use for authentication against the gateway (min. 20 characters for PSKs).</property>
                     <property name="visibility">False</property>
                   </object>
                   <packing>
