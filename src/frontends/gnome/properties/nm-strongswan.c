@@ -127,6 +127,22 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 					 "address");
 		return FALSE;
 	}
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
+	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	{
+		case 4:
+		{
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
+			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+			if (str && strlen (str) < 20) {
+				g_set_error (error,
+							 STRONGSWAN_PLUGIN_UI_ERROR,
+							 STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
+							 "password is too short");
+				return FALSE;
+			}
+		}
+	}
 	return TRUE;
 }
 
