@@ -1126,6 +1126,8 @@ if test x$nm = xtrue; then
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-util libnm-glib libnm-glib-vpn])],
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm_util libnm_glib libnm_glib_vpn])]
 	)
+	nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
+	AC_SUBST(nm_libexecdir)
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
 fi

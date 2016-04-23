@@ -4,5 +4,5 @@ service=org.freedesktop.NetworkManager.strongswan
 program=@IPSECDIR@/charon-nm
 
 [GNOME]
-auth-dialog=@LIBEXECDIR@/nm-strongswan-auth-dialog
+auth-dialog=@NM_LIBEXECDIR@/nm-strongswan-auth-dialog
 properties=libnm-strongswan-properties

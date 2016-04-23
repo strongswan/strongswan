@@ -31,7 +31,7 @@ nmvpnservice_DATA = nm-strongswan-service.name
 
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 	$(AM_V_GEN) \
-	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' \
+	sed -e 's|[@]NM_LIBEXECDIR[@]|$(nm_libexecdir)|' \
 	    -e 's|[@]IPSECDIR[@]|${ipsecdir}|' $< >$@
 
 EXTRA_DIST = nm-strongswan-service.name.in
