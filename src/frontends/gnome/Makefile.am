@@ -14,7 +14,7 @@ appdata_in_files = NetworkManager-strongswan.appdata.xml.in
 
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 	$(AM_V_GEN) \
-	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' \
+	sed -e 's|[@]NM_LIBEXECDIR[@]|$(nm_libexecdir)|' \
 	    -e 's|[@]CHARON[@]|$(charon)|' $< >$@
 
 EXTRA_DIST = \

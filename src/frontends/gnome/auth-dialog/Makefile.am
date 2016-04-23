@@ -1,4 +1,4 @@
-libexec_PROGRAMS = nm-strongswan-auth-dialog
+nm_libexec_PROGRAMS = nm-strongswan-auth-dialog
 
 nm_strongswan_auth_dialog_CPPFLAGS = \
 	$(GTHREAD_CFLAGS) \

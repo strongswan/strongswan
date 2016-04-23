@@ -14,6 +14,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+PKG_PROG_PKG_CONFIG
 
 dnl
 dnl Required headers
@@ -75,6 +76,8 @@ AC_ARG_WITH(
 	[AC_SUBST(charon, "$withval")],
 	[AC_SUBST(charon, "${libexecdir}/ipsec/charon-nm")]
 )
+nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
+AC_SUBST(nm_libexecdir)
 
 NM_COMPILER_WARNINGS
 
