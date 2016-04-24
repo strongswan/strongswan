@@ -396,7 +396,7 @@ int load_conns_cfg(vici_conn_t *conn, command_format_options_t format,
 	}
 	if (found == 0)
 	{
-		printf("no connections found, %u unloaded\n", unloaded);
+		fprintf(stderr, "no connections found, %u unloaded\n", unloaded);
 		return 0;
 	}
 	if (loaded == found)
