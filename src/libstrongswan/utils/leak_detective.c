@@ -532,6 +532,7 @@ char *whitelist[] = {
 	"getpwuid_r",
 	"initgroups",
 	"tzset",
+	"_IO_file_doallocate",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
