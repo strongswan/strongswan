@@ -34,6 +34,7 @@
     0x2B                     "I"						OID_INITIALS
     0x2D                     "ID"						OID_UNIQUE_IDENTIFIER
     0x2E                     "dnQualifier"				OID_DN_QUALIFIER
+    0x36                     "dmdName"					OID_DMD_NAME
     0x41                     "pseudonym"				OID_PSEUDONYM
     0x48                     "role"						OID_ROLE
   0x1D                       "id-ce"
