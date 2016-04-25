@@ -188,6 +188,8 @@ enum id_part_t {
 	ID_PART_RDN_ST,
 	/** Title RDN of a DN */
 	ID_PART_RDN_T,
+	/** dmdName RDN of a DN */
+	ID_PART_RDN_DMDNAME,
 };
 
 /**

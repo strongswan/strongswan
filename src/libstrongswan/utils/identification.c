@@ -80,6 +80,7 @@ static const x501rdn_t x501rdns[] = {
 	{"G", 					OID_GIVEN_NAME,				ASN1_PRINTABLESTRING},
 	{"I", 					OID_INITIALS,				ASN1_PRINTABLESTRING},
 	{"dnQualifier", 		OID_DN_QUALIFIER,			ASN1_PRINTABLESTRING},
+	{"dmdName", 			OID_DMD_NAME,				ASN1_PRINTABLESTRING},
 	{"pseudonym", 			OID_PSEUDONYM,				ASN1_PRINTABLESTRING},
 	{"ID", 					OID_UNIQUE_IDENTIFIER,		ASN1_PRINTABLESTRING},
 	{"EN", 					OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
@@ -224,6 +225,7 @@ METHOD(enumerator_t, rdn_part_enumerate, bool,
 		{OID_UNIQUE_IDENTIFIER,	ID_PART_RDN_ID},
 		{OID_EMAIL_ADDRESS,		ID_PART_RDN_E},
 		{OID_EMPLOYEE_NUMBER,	ID_PART_RDN_EN},
+		{OID_DMD_NAME,			ID_PART_RDN_DMDNAME},
 	};
 
 	while (this->inner->enumerate(this->inner, &oid, &strtype, &inner_data))
