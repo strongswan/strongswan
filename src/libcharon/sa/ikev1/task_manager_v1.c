@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -935,9 +935,9 @@ static bool have_quick_mode_task(private_task_manager_t *this, uint32_t mid)
 }
 
 /**
- * Check if we still have an aggressive mode task queued
+ * Check if we still have a specific task queued
  */
-static bool have_aggressive_mode_task(private_task_manager_t *this)
+static bool have_task_queued(private_task_manager_t *this, task_type_t type)
 {
 	enumerator_t *enumerator;
 	task_t *task;
@@ -946,7 +946,7 @@ static bool have_aggressive_mode_task(private_task_manager_t *this)
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
-		if (task->get_type(task) == TASK_AGGRESSIVE_MODE)
+		if (task->get_type(task) == type)
 		{
 			found = TRUE;
 			break;
@@ -1405,7 +1405,7 @@ METHOD(task_manager_t, process_message, status_t,
 		/* drop XAuth/Mode Config/Quick Mode messages until we received the last
 		 * Aggressive Mode message.  since Informational messages are not
 		 * retransmitted we queue them. */
-		if (have_aggressive_mode_task(this))
+		if (have_task_queued(this, TASK_AGGRESSIVE_MODE))
 		{
 			if (msg->get_exchange_type(msg) == INFORMATIONAL_V1)
 			{
@@ -1423,6 +1423,13 @@ METHOD(task_manager_t, process_message, status_t,
 		 * initiated is complete */
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
 			this->active_tasks->get_count(this->active_tasks))
+		{
+			return queue_message(this, msg);
+		}
+
+		/* some peers send INITIAL_CONTACT notifies during XAuth, cache it */
+		if (have_task_queued(this, TASK_XAUTH) &&
+			msg->get_exchange_type(msg) == INFORMATIONAL_V1)
 		{
 			return queue_message(this, msg);
 		}
