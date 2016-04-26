@@ -13,15 +13,17 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<resources>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="ApplicationTheme" parent="ApplicationTheme.Base">
-        <item name="android:activatedBackgroundIndicator">@drawable/activated_background</item>
-        <item name="android:selectableItemBackground">@drawable/activated_background</item>
-    </style>
+    <item
+        android:state_pressed="true"
+        android:drawable="@color/pressed" />
 
-    <style name="AlertDialogTheme" parent="AlertDialogTheme.Base">
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
+    <item
+        android:state_activated="true"
+        android:drawable="@color/accent" />
 
-</resources>
+    <item
+        android:drawable="@android:color/transparent" />
+
+</selector>
