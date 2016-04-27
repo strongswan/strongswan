@@ -15,24 +15,24 @@
 
 package org.strongswan.android.ui;
 
-import java.util.ArrayList;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.view.MenuItem;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.RemediationInstructionsFragment.OnRemediationInstructionSelectedListener;
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.view.MenuItem;
+import java.util.ArrayList;
 
-public class RemediationInstructionsActivity extends Activity implements OnRemediationInstructionSelectedListener
+public class RemediationInstructionsActivity extends AppCompatActivity implements OnRemediationInstructionSelectedListener
 {
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.remediation_instructions);
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 		if (savedInstanceState != null)
 		{	/* only update if we're not restoring */
@@ -64,7 +64,7 @@ public class RemediationInstructionsActivity extends Activity implements OnRemed
 				{
 					finish();
 				}
-				getActionBar().setTitle(getTitle());
+				getSupportActionBar().setTitle(getTitle());
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
@@ -88,7 +88,7 @@ public class RemediationInstructionsActivity extends Activity implements OnRemed
 			frag.setArguments(args);
 
 			getFragmentManager().beginTransaction().replace(R.id.fragment_container, frag).addToBackStack(null).commit();
-			getActionBar().setTitle(instruction.getTitle());
+			getSupportActionBar().setTitle(instruction.getTitle());
 		}
 	}
 }

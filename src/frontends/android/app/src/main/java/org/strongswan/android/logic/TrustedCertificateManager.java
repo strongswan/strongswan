@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +17,8 @@
 
 package org.strongswan.android.logic;
 
+import android.util.Log;
+
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.cert.Certificate;
@@ -24,11 +26,10 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Observable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import android.util.Log;
-
-public class TrustedCertificateManager
+public class TrustedCertificateManager extends Observable
 {
 	private static final String TAG = TrustedCertificateManager.class.getSimpleName();
 	private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
@@ -61,13 +62,13 @@ public class TrustedCertificateManager
 	 */
 	private TrustedCertificateManager()
 	{
-		for (String name : new String[] { "LocalCertificateStore", "AndroidCAStore" })
+		for (String name : new String[]{"LocalCertificateStore", "AndroidCAStore"})
 		{
 			KeyStore store;
 			try
 			{
 				store = KeyStore.getInstance(name);
-				store.load(null,null);
+				store.load(null, null);
 				mKeyStores.add(store);
 			}
 			catch (Exception e)
@@ -81,12 +82,14 @@ public class TrustedCertificateManager
 	/**
 	 * This is not instantiated until the first call to getInstance()
 	 */
-	private static class Singleton {
+	private static class Singleton
+	{
 		public static final TrustedCertificateManager mInstance = new TrustedCertificateManager();
 	}
 
 	/**
 	 * Get the single instance of the CA certificate manager.
+	 *
 	 * @return CA certificate manager
 	 */
 	public static TrustedCertificateManager getInstance()
@@ -97,12 +100,17 @@ public class TrustedCertificateManager
 	/**
 	 * Invalidates the current load state so that the next call to load()
 	 * will force a reload of the cached CA certificates.
+	 *
+	 * Observers are notified when this method is called.
+	 *
 	 * @return reference to itself
 	 */
 	public TrustedCertificateManager reset()
 	{
 		Log.d(TAG, "Force reload of cached CA certificates on next load");
 		this.mReload = true;
+		this.setChanged();
+		this.notifyObservers();
 		return this;
 	}
 
@@ -110,6 +118,9 @@ public class TrustedCertificateManager
 	 * Ensures that the certificates are loaded but does not force a reload.
 	 * As this takes a while if the certificates are not loaded yet it should
 	 * be called asynchronously.
+	 *
+	 * Observers are only notified when the certificates are initially loaded, not when reloaded.
+	 *
 	 * @return reference to itself
 	 */
 	public TrustedCertificateManager load()
@@ -138,12 +149,18 @@ public class TrustedCertificateManager
 			fetchCertificates(certs, store);
 		}
 		this.mCACerts = certs;
-		this.mLoaded = true;
+		if (!this.mLoaded)
+		{
+			this.setChanged();
+			this.notifyObservers();
+			this.mLoaded = true;
+		}
 		Log.d(TAG, "Cached CA certificates loaded");
 	}
 
 	/**
 	 * Load all X.509 certificates from the given KeyStore.
+	 *
 	 * @param certs Hashtable to store certificates in
 	 * @param store KeyStore to load certificates from
 	 */
@@ -171,6 +188,7 @@ public class TrustedCertificateManager
 
 	/**
 	 * Retrieve the CA certificate with the given alias.
+	 *
 	 * @param alias alias of the certificate to get
 	 * @return the certificate, null if not found
 	 */
@@ -208,6 +226,7 @@ public class TrustedCertificateManager
 
 	/**
 	 * Get all CA certificates (from all keystores).
+	 *
 	 * @return Hashtable mapping aliases to certificates
 	 */
 	@SuppressWarnings("unchecked")
@@ -222,6 +241,7 @@ public class TrustedCertificateManager
 
 	/**
 	 * Get all certificates from the given source.
+	 *
 	 * @param source type to filter certificates
 	 * @return Hashtable mapping aliases to certificates
 	 */

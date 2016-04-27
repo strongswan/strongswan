@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,26 +15,12 @@
 
 package org.strongswan.android.ui;
 
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map.Entry;
-
-import org.strongswan.android.R;
-import org.strongswan.android.logic.TrustedCertificateManager;
-import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
-import org.strongswan.android.security.TrustedCertificateEntry;
-import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
-
-import android.app.Activity;
-import android.app.ListFragment;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.content.Loader;
 import android.os.Bundle;
+import android.support.v4.app.ListFragment;
+import android.support.v4.app.LoaderManager.LoaderCallbacks;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -43,6 +29,21 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.SearchView.OnQueryTextListener;
+
+import org.strongswan.android.R;
+import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
+import org.strongswan.android.security.TrustedCertificateEntry;
+import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
+
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Observable;
+import java.util.Observer;
 
 public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
@@ -54,7 +55,8 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	/**
 	 * The activity containing this fragment should implement this interface
 	 */
-	public interface OnTrustedCertificateSelectedListener {
+	public interface OnTrustedCertificateSelectedListener
+	{
 		public void onTrustedCertificateSelected(TrustedCertificateEntry selected);
 	}
 
@@ -87,13 +89,13 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onAttach(Activity activity)
+	public void onAttach(Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		if (activity instanceof OnTrustedCertificateSelectedListener)
+		if (context instanceof OnTrustedCertificateSelectedListener)
 		{
-			mListener = (OnTrustedCertificateSelectedListener)activity;
+			mListener = (OnTrustedCertificateSelectedListener)context;
 		}
 	}
 
@@ -121,18 +123,6 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		String search = TextUtils.isEmpty(newText) ? null : newText;
 		mAdapter.getFilter().filter(search);
 		return true;
-	}
-
-	/**
-	 * Reset the loader of this list fragment
-	 */
-	public void reset()
-	{
-		if (isResumed())
-		{
-			setListShown(false);
-		}
-		getLoaderManager().restartLoader(0, null, this);
 	}
 
 	@Override
@@ -175,6 +165,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	{
 		private List<TrustedCertificateEntry> mData;
 		private final TrustedCertificateSource mSource;
+		private TrustedCertificateManagerObserver mObserver;
 
 		public CertificateListLoader(Context context, TrustedCertificateSource source)
 		{
@@ -186,7 +177,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		public List<TrustedCertificateEntry> loadInBackground()
 		{
 			TrustedCertificateManager certman = TrustedCertificateManager.getInstance().load();
-			Hashtable<String,X509Certificate> certificates = certman.getCACertificates(mSource);
+			Hashtable<String, X509Certificate> certificates = certman.getCACertificates(mSource);
 			List<TrustedCertificateEntry> selected;
 
 			selected = new ArrayList<TrustedCertificateEntry>();
@@ -204,9 +195,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			if (mData != null)
 			{	/* if we have data ready, deliver it directly */
 				deliverResult(mData);
-				return;
 			}
-			forceLoad();
+			if (takeContentChanged() || mData == null)
+			{
+				forceLoad();
+			}
 		}
 
 		@Override
@@ -220,6 +213,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			if (isStarted())
 			{	/* if it is started we deliver the data directly,
 				 * otherwise this is handled in onStartLoading */
+				if (mObserver == null)
+				{
+					mObserver = new TrustedCertificateManagerObserver();
+					TrustedCertificateManager.getInstance().addObserver(mObserver);
+				}
 				super.deliverResult(data);
 			}
 		}
@@ -227,7 +225,34 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		@Override
 		protected void onReset()
 		{
+			if (mObserver != null)
+			{
+				TrustedCertificateManager.getInstance().deleteObserver(mObserver);
+				mObserver = null;
+			}
 			mData = null;
+			super.onReset();
+		}
+
+		@Override
+		protected void onAbandon()
+		{
+			if (mObserver != null)
+			{
+				TrustedCertificateManager.getInstance().deleteObserver(mObserver);
+				mObserver = null;
+			}
+		}
+
+		private class TrustedCertificateManagerObserver implements Observer
+		{
+			private ForceLoadContentObserver mContentObserver = new ForceLoadContentObserver();
+
+			@Override
+			public void update(Observable observable, Object data)
+			{
+				mContentObserver.onChange(false);
+			}
 		}
 	}
 }

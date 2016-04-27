@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
-    Hochschule fuer Technik Rapperswil
+    Copyright (C) 2012-2016 Tobias Brunner
+    HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -15,7 +15,15 @@
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="ApplicationTheme" parent="@android:style/Theme.Holo">
+    <style name="ApplicationTheme.Base" parent="Theme.AppCompat">
+        <item name="colorAccent">@color/accent</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="android:alertDialogTheme">@style/AlertDialogTheme</item>
+    </style>
+
+    <style name="AlertDialogTheme.Base" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="colorAccent">@color/accent</item>
     </style>
 
 </resources>

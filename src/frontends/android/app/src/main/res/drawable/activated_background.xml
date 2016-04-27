@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
-    Hochschule fuer Technik Rapperswil
+    Copyright (C) 2016 Tobias Brunner
+    HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -13,12 +13,17 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <item android:id="@+id/edit_profile"
-        android:title="@string/edit_profile" />
+    <item
+        android:state_pressed="true"
+        android:drawable="@color/pressed" />
 
-    <item android:id="@+id/delete_profile"
-        android:title="@string/delete_profile" />
+    <item
+        android:state_activated="true"
+        android:drawable="@color/accent" />
 
-</menu>
+    <item
+        android:drawable="@android:color/transparent" />
+
+</selector>

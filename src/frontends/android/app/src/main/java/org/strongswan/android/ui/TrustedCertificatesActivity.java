@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2015 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,20 @@
 
 package org.strongswan.android.ui;
 
-import java.security.KeyStore;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -24,22 +37,15 @@ import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificate
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.CertificateDeleteConfirmationDialog.OnCertificateDeleteListener;
 
-import android.app.ActionBar;
-import android.app.ActionBar.Tab;
-import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentTransaction;
-import android.content.Intent;
-import android.os.Build;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import java.security.KeyStore;
 
-public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener, OnCertificateDeleteListener
+public class TrustedCertificatesActivity extends AppCompatActivity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener, OnCertificateDeleteListener
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
 	private static final String DIALOG_TAG = "Dialog";
 	private static final int IMPORT_CERTIFICATE = 0;
+	private TrustedCertificatesPagerAdapter mAdapter;
+	private ViewPager mPager;
 	private boolean mSelect;
 
 	@Override
@@ -48,42 +54,18 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.trusted_certificates_activity);
 
-		ActionBar actionBar = getActionBar();
+		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
-		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
-		TrustedCertificatesTabListener listener;
-		listener = new TrustedCertificatesTabListener(this, "system", TrustedCertificateSource.SYSTEM);
-		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.system_tab)
-			.setTag(listener)
-			.setTabListener(listener));
-		listener = new TrustedCertificatesTabListener(this, "user", TrustedCertificateSource.USER);
-		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.user_tab)
-			.setTag(listener)
-			.setTabListener(listener));
-		listener = new TrustedCertificatesTabListener(this, "local", TrustedCertificateSource.LOCAL);
-		actionBar.addTab(actionBar
-			.newTab()
-			.setText(R.string.local_tab)
-			.setTag(listener)
-			.setTabListener(listener));
+		mAdapter = new TrustedCertificatesPagerAdapter(getSupportFragmentManager(), this);
 
-		if (savedInstanceState != null)
-		{
-			actionBar.setSelectedNavigationItem(savedInstanceState.getInt("tab", 0));
-		}
+		mPager = (ViewPager)findViewById(R.id.viewpager);
+		mPager.setAdapter(mAdapter);
+
+		TabLayout tabs = (TabLayout)findViewById(R.id.tabs);
+		tabs.setupWithViewPager(mPager);
+
 		mSelect = SELECT_CERTIFICATE.equals(getIntent().getAction());
-	}
-
-	@Override
-	protected void onSaveInstanceState(Bundle outState)
-	{
-		super.onSaveInstanceState(outState);
-		outState.putInt("tab", getActionBar().getSelectedNavigationIndex());
 	}
 
 	@Override
@@ -148,18 +130,13 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 			setResult(Activity.RESULT_OK, intent);
 			finish();
 		}
-		else
+		else if (mAdapter.getSource(mPager.getCurrentItem()) == TrustedCertificateSource.LOCAL)
 		{
-			TrustedCertificatesTabListener listener;
-			listener = (TrustedCertificatesTabListener)getActionBar().getSelectedTab().getTag();
-			if (listener.mTag == "local")
-			{
-				Bundle args = new Bundle();
-				args.putString(CertificateDeleteConfirmationDialog.ALIAS, selected.getAlias());
-				CertificateDeleteConfirmationDialog dialog = new CertificateDeleteConfirmationDialog();
-				dialog.setArguments(args);
-				dialog.show(this.getFragmentManager(), DIALOG_TAG);
-			}
+			Bundle args = new Bundle();
+			args.putString(CertificateDeleteConfirmationDialog.ALIAS, selected.getAlias());
+			CertificateDeleteConfirmationDialog dialog = new CertificateDeleteConfirmationDialog();
+			dialog.setArguments(args);
+			dialog.show(getSupportFragmentManager(), DIALOG_TAG);
 		}
 	}
 
@@ -182,74 +159,69 @@ public class TrustedCertificatesActivity extends Activity implements TrustedCert
 	private void reloadCertificates()
 	{
 		TrustedCertificateManager.getInstance().reset();
-		for (int i = 0; i < getActionBar().getTabCount(); i++)
+	}
+
+	public static class TrustedCertificatesPagerAdapter extends FragmentPagerAdapter
+	{
+		private TrustedCertificatesTab mTabs[];
+
+		public TrustedCertificatesPagerAdapter(FragmentManager fm, Context context)
 		{
-			Tab tab = getActionBar().getTabAt(i);
-			TrustedCertificatesTabListener listener = (TrustedCertificatesTabListener)tab.getTag();
-			listener.reset();
+			super(fm);
+			mTabs = new TrustedCertificatesTab[]{
+				new TrustedCertificatesTab(context.getString(R.string.system_tab), TrustedCertificateSource.SYSTEM),
+				new TrustedCertificatesTab(context.getString(R.string.user_tab), TrustedCertificateSource.USER),
+				new TrustedCertificatesTab(context.getString(R.string.local_tab), TrustedCertificateSource.LOCAL),
+			};
+		}
+
+		@Override
+		public int getCount()
+		{
+			return mTabs.length;
+		}
+
+		@Override
+		public CharSequence getPageTitle(int position)
+		{
+			return mTabs[position].getTitle();
+		}
+
+		public TrustedCertificateSource getSource(int position)
+		{
+			return mTabs[position].getSource();
+		}
+
+		@Override
+		public Fragment getItem(int position)
+		{
+			TrustedCertificateListFragment fragment = new TrustedCertificateListFragment();
+			Bundle args = new Bundle();
+			args.putSerializable(TrustedCertificateListFragment.EXTRA_CERTIFICATE_SOURCE, mTabs[position].getSource());
+			fragment.setArguments(args);
+			return fragment;
 		}
 	}
 
-	public static class TrustedCertificatesTabListener implements ActionBar.TabListener
+	public static class TrustedCertificatesTab
 	{
-		private final String mTag;
+		private final String mTitle;
 		private final TrustedCertificateSource mSource;
-		private Fragment mFragment;
 
-		public TrustedCertificatesTabListener(Activity activity, String tag, TrustedCertificateSource source)
+		public TrustedCertificatesTab(String title, TrustedCertificateSource source)
 		{
-			mTag = tag;
+			mTitle = title;
 			mSource = source;
-			/* check to see if we already have a fragment for this tab, probably
-			 * from a previously saved state. if so, deactivate it, because the
-			 * initial state is that no tab is shown */
-			mFragment = activity.getFragmentManager().findFragmentByTag(mTag);
-			if (mFragment != null && !mFragment.isDetached())
-			{
-				FragmentTransaction ft = activity.getFragmentManager().beginTransaction();
-				ft.detach(mFragment);
-				ft.commit();
-			}
 		}
 
-		@Override
-		public void onTabSelected(Tab tab, FragmentTransaction ft)
+		public String getTitle()
 		{
-			if (mFragment == null)
-			{
-				mFragment = new TrustedCertificateListFragment();
-				Bundle args = new Bundle();
-				args.putSerializable(TrustedCertificateListFragment.EXTRA_CERTIFICATE_SOURCE, mSource);
-				mFragment.setArguments(args);
-				ft.add(android.R.id.content, mFragment, mTag);
-			}
-			else
-			{
-				ft.attach(mFragment);
-			}
+			return mTitle;
 		}
 
-		@Override
-		public void onTabUnselected(Tab tab, FragmentTransaction ft)
+		public TrustedCertificateSource getSource()
 		{
-			if (mFragment != null)
-			{
-				ft.detach(mFragment);
-			}
-		}
-
-		@Override
-		public void onTabReselected(Tab tab, FragmentTransaction ft)
-		{
-			/* nothing to be done */
-		}
-
-		public void reset()
-		{
-			if (mFragment != null)
-			{
-				((TrustedCertificateListFragment)mFragment).reset();
-			}
+			return mSource;
 		}
 	}
 }

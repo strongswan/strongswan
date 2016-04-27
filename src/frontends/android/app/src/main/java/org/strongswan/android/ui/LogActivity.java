@@ -15,21 +15,21 @@
 
 package org.strongswan.android.ui;
 
-import java.io.File;
+import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.LogContentProvider;
 import org.strongswan.android.logic.CharonVpnService;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.Toast;
+import java.io.File;
 
-public class LogActivity extends Activity
+public class LogActivity extends AppCompatActivity
 {
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -37,7 +37,7 @@ public class LogActivity extends Activity
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.log_activity);
 
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 	}
 
 	@Override
@@ -74,7 +74,7 @@ public class LogActivity extends Activity
 				}
 
 				Intent intent = new Intent(Intent.ACTION_SEND);
-				intent.putExtra(Intent.EXTRA_EMAIL, new String[] { MainActivity.CONTACT_EMAIL });
+				intent.putExtra(Intent.EXTRA_EMAIL, new String[]{MainActivity.CONTACT_EMAIL});
 				intent.putExtra(Intent.EXTRA_SUBJECT, String.format(getString(R.string.log_mail_subject), version));
 				intent.setType("text/plain");
 				intent.putExtra(Intent.EXTRA_STREAM, LogContentProvider.createContentUri());

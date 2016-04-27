@@ -13,16 +13,17 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:id="@+id/menu_import_certificate"
         android:title="@string/import_certificate"
-        android:showAsAction="withText" />
+        app:showAsAction="withText" />
 
     <item
         android:id="@+id/menu_reload_certs"
         android:title="@string/reload_trusted_certs"
-        android:showAsAction="withText" />
+        app:showAsAction="withText" />
 
 </menu>

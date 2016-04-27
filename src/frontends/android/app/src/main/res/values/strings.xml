@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2015 Tobias Brunner
+    Copyright (C) 2012-2016 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
-    Hochschule fuer Technik Rapperswil
+    HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -50,8 +50,8 @@
     <string name="profile_edit_save">Save</string>
     <string name="profile_edit_cancel">Cancel</string>
     <string name="profile_name_label">Profile Name:</string>
-    <string name="profile_name_hint">(use gateway address)</string>
-    <string name="profile_gateway_label">Gateway:</string>
+    <string name="profile_name_hint">(use server address)</string>
+    <string name="profile_gateway_label">Server:</string>
     <string name="profile_vpn_type_label">Type:</string>
     <string name="profile_username_label">Username:</string>
     <string name="profile_password_label">Password:</string>
@@ -71,14 +71,14 @@
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
     <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
     <!-- Warnings/Notifications in the details view -->
-    <string name="alert_text_no_input_gateway">Please enter the gateway address here</string>
+    <string name="alert_text_no_input_gateway">Please enter the server address here</string>
     <string name="alert_text_no_input_username">Please enter your username here</string>
     <string name="alert_text_nocertfound_title">No CA certificate selected</string>
     <string name="alert_text_nocertfound">Please select one or activate <i>Select automatically</i></string>
     <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
-    <string name="tnc_notice_subtitle">Device data is sent to the gateway operator</string>
-    <string name="tnc_notice_details">&lt;p>Trusted Network Connect (TNC) allows gateway operators to assess the health of a client device.&lt;/p>&lt;p>For that purpose the gateway operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.&lt;/p>&lt;b>Any data will be sent only after verifying the gateway\'s identity.&lt;/b></string>
+    <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
+    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>
 
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">CA certificates</string>
@@ -116,9 +116,9 @@
     <string name="login_title">Enter password to connect</string>
     <string name="login_confirm">Connect</string>
     <string name="error_introduction">Failed to establish VPN:</string>
-    <string name="error_lookup_failed">Gateway address lookup failed.</string>
-    <string name="error_unreachable">Gateway is unreachable.</string>
-    <string name="error_peer_auth_failed">Verifying gateway authentication failed.</string>
+    <string name="error_lookup_failed">Server address lookup failed.</string>
+    <string name="error_unreachable">Server is unreachable.</string>
+    <string name="error_peer_auth_failed">Verifying server authentication failed.</string>
     <string name="error_auth_failed">User authentication failed.</string>
     <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Unspecified failure while connecting.</string>

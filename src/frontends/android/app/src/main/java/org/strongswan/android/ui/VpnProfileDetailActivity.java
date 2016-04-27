@@ -17,20 +17,7 @@
 
 package org.strongswan.android.ui;
 
-import java.security.cert.X509Certificate;
-
-import org.strongswan.android.R;
-import org.strongswan.android.data.VpnProfile;
-import org.strongswan.android.data.VpnProfileDataSource;
-import org.strongswan.android.data.VpnType;
-import org.strongswan.android.data.VpnType.VpnTypeFeature;
-import org.strongswan.android.logic.TrustedCertificateManager;
-import org.strongswan.android.security.TrustedCertificateEntry;
-
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -39,6 +26,9 @@ import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDialogFragment;
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
@@ -57,7 +47,17 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-public class VpnProfileDetailActivity extends Activity
+import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType;
+import org.strongswan.android.data.VpnType.VpnTypeFeature;
+import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.security.TrustedCertificateEntry;
+
+import java.security.cert.X509Certificate;
+
+public class VpnProfileDetailActivity extends AppCompatActivity
 {
 	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
 	private static final int MTU_MIN = 1280;
@@ -94,7 +94,7 @@ public class VpnProfileDetailActivity extends Activity
 		super.onCreate(savedInstanceState);
 
 		/* the title is set when we load the profile, if any */
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
@@ -146,7 +146,7 @@ public class VpnProfileDetailActivity extends Activity
 			@Override
 			public void onClick(View v)
 			{
-				new TncNoticeDialog().show(VpnProfileDetailActivity.this.getFragmentManager(), "TncNotice");
+				new TncNoticeDialog().show(VpnProfileDetailActivity.this.getSupportFragmentManager(), "TncNotice");
 			}
 		});
 
@@ -465,7 +465,7 @@ public class VpnProfileDetailActivity extends Activity
 	{
 		String useralias = null, alias = null;
 
-		getActionBar().setTitle(R.string.add_profile);
+		getSupportActionBar().setTitle(R.string.add_profile);
 		if (mId != null && mId != 0)
 		{
 			mProfile = mDataSource.getVpnProfile(mId);
@@ -482,7 +482,7 @@ public class VpnProfileDetailActivity extends Activity
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
 				useralias = mProfile.getUserCertificateAlias();
 				alias = mProfile.getCertificateAlias();
-				getActionBar().setTitle(mProfile.getName());
+				getSupportActionBar().setTitle(mProfile.getName());
 			}
 			else
 			{
@@ -633,7 +633,7 @@ public class VpnProfileDetailActivity extends Activity
 	/**
 	 * Dialog with notification message if EAP-TNC is used.
 	 */
-	public static class TncNoticeDialog extends DialogFragment
+	public static class TncNoticeDialog extends AppCompatDialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)
