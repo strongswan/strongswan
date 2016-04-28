@@ -20,6 +20,8 @@ libstrongswan_kernel_netlink_la_SOURCES = \
 	kernel_netlink_net.h kernel_netlink_net.c \
 	kernel_netlink_shared.h kernel_netlink_shared.c
 
+libstrongswan_kernel_netlink_la_LIBADD = $(DLLIB)
+
 libstrongswan_kernel_netlink_la_LDFLAGS = -module -avoid-version
 
 

@@ -18,6 +18,7 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdint.h>
@@ -32,6 +33,7 @@
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_shared.h"
@@ -327,6 +329,12 @@ struct private_kernel_netlink_ipsec_t {
 	 * Installed port based IKE bypass policies, as bypass_t
 	 */
 	array_t *bypass;
+
+	/**
+	 * Custom priority calculation function
+	 */
+	uint32_t (*get_priority)(kernel_ipsec_policy_id_t *id,
+							 kernel_ipsec_manage_policy_t *data);
 };
 
 typedef struct route_entry_t route_entry_t;
@@ -2439,8 +2447,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
 	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
-	assigned_sa->priority = data->manual_prio ? data->manual_prio :
-												assigned_sa->auto_priority;
+	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
+											   : data->manual_prio;
+	assigned_sa->priority = assigned_sa->priority ?: assigned_sa->auto_priority;
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2627,7 +2636,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	/* remove mapping to SA by reqid and priority */
 	auto_priority = get_priority(current, data->prio,id->interface);
-	priority = data->manual_prio ? data->manual_prio : auto_priority;
+	priority = this->get_priority ? this->get_priority(id, data)
+								  : data->manual_prio;
+	priority = priority ?: auto_priority;
 
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
@@ -3012,6 +3023,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.bypass = array_create(sizeof(bypass_t), 0),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.get_priority = dlsym(RTLD_DEFAULT,
+							  "kernel_netlink_get_priority_custom"),
 		.policy_update = lib->settings->get_bool(lib->settings,
 					"%s.plugins.kernel-netlink.policy_update", FALSE, lib->ns),
 		.install_routes = lib->settings->get_bool(lib->settings,
