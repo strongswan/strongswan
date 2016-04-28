@@ -66,7 +66,6 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
 			mService.registerListener(ImcStateFragment.this);
-			updateView();
 		}
 	};
 
@@ -147,9 +146,9 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	}
 
 	@Override
-	public void onStart()
+	public void onResume()
 	{
-		super.onStart();
+		super.onResume();
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -158,9 +157,9 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	}
 
 	@Override
-	public void onStop()
+	public void onPause()
 	{
-		super.onStop();
+		super.onPause();
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
