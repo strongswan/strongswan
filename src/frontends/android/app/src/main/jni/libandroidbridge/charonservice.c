@@ -43,6 +43,7 @@
 #define ANDROID_RETRASNMIT_TRIES 3
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
+#define ANDROID_KEEPALIVE_INTERVAL 45
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -466,6 +467,9 @@ static void set_options(char *logfile)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
+	/* increase NAT-T keepalive interval a bit to save battery power */
+	lib->settings->set_time(lib->settings,
+					"charon.keep_alive", ANDROID_KEEPALIVE_INTERVAL);
 	lib->settings->set_bool(lib->settings,
 					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,
