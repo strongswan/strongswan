@@ -17,7 +17,6 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.ComponentName;
@@ -27,6 +26,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;

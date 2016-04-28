@@ -15,9 +15,6 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -25,6 +22,9 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;

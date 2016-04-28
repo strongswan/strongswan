@@ -17,21 +17,12 @@
 
 package org.strongswan.android.ui;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
-import org.strongswan.android.R;
-import org.strongswan.android.data.VpnProfile;
-import org.strongswan.android.data.VpnProfileDataSource;
-import org.strongswan.android.ui.adapter.VpnProfileAdapter;
-
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.util.AttributeSet;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -45,6 +36,15 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.ui.adapter.VpnProfileAdapter;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 
 public class VpnProfileListFragment extends Fragment
 {
@@ -66,10 +66,10 @@ public class VpnProfileListFragment extends Fragment
 	}
 
 	@Override
-	public void onInflate(Activity activity, AttributeSet attrs, Bundle savedInstanceState)
+	public void onInflate(Context context, AttributeSet attrs, Bundle savedInstanceState)
 	{
-		super.onInflate(activity, attrs, savedInstanceState);
-		TypedArray a = activity.obtainStyledAttributes(attrs, R.styleable.Fragment);
+		super.onInflate(context, attrs, savedInstanceState);
+		TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.Fragment);
 		mReadOnly = a.getBoolean(R.styleable.Fragment_read_only, false);
 		a.recycle();
 	}
@@ -126,13 +126,13 @@ public class VpnProfileListFragment extends Fragment
 	}
 
 	@Override
-	public void onAttach(Activity activity)
+	public void onAttach(Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		if (activity instanceof OnVpnProfileSelectedListener)
+		if (context instanceof OnVpnProfileSelectedListener)
 		{
-			mListener = (OnVpnProfileSelectedListener)activity;
+			mListener = (OnVpnProfileSelectedListener)context;
 		}
 	}
 

@@ -38,7 +38,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 		{	/* only update if we're not restoring */
 			return;
 		}
-		RemediationInstructionsFragment frag = (RemediationInstructionsFragment)getFragmentManager().findFragmentById(R.id.remediation_instructions_fragment);
+		RemediationInstructionsFragment frag = (RemediationInstructionsFragment)getSupportFragmentManager().findFragmentById(R.id.remediation_instructions_fragment);
 		if (frag != null)
 		{	/* two-pane layout, update fragment */
 			Bundle extras = getIntent().getExtras();
@@ -49,7 +49,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 		{	/* one-pane layout, create fragment */
 			frag = new RemediationInstructionsFragment();
 			frag.setArguments(getIntent().getExtras());
-			getFragmentManager().beginTransaction().add(R.id.fragment_container, frag).commit();
+			getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, frag).commit();
 		}
 	}
 
@@ -60,7 +60,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 		{
 			case android.R.id.home:
 				/* one-pane layout, pop possible fragment from stack, finish otherwise */
-				if (!getFragmentManager().popBackStackImmediate())
+				if (!getSupportFragmentManager().popBackStackImmediate())
 				{
 					finish();
 				}
@@ -74,7 +74,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 	@Override
 	public void onRemediationInstructionSelected(RemediationInstruction instruction)
 	{
-		RemediationInstructionFragment frag = (RemediationInstructionFragment)getFragmentManager().findFragmentById(R.id.remediation_instruction_fragment);
+		RemediationInstructionFragment frag = (RemediationInstructionFragment)getSupportFragmentManager().findFragmentById(R.id.remediation_instruction_fragment);
 
 		if (frag != null)
 		{	/* two-pane layout, update directly */
@@ -87,7 +87,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 			args.putParcelable(RemediationInstructionFragment.ARG_REMEDIATION_INSTRUCTION, instruction);
 			frag.setArguments(args);
 
-			getFragmentManager().beginTransaction().replace(R.id.fragment_container, frag).addToBackStack(null).commit();
+			getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, frag).addToBackStack(null).commit();
 			getSupportActionBar().setTitle(instruction.getTitle());
 		}
 	}

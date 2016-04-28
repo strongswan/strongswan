@@ -15,17 +15,17 @@
 
 package org.strongswan.android.ui;
 
-import java.util.ArrayList;
+import android.content.Context;
+import android.os.Bundle;
+import android.support.v4.app.ListFragment;
+import android.view.View;
+import android.widget.ListView;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.adapter.RemediationInstructionAdapter;
 
-import android.app.Activity;
-import android.app.ListFragment;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.ListView;
+import java.util.ArrayList;
 
 public class RemediationInstructionsFragment extends ListFragment
 {
@@ -65,13 +65,13 @@ public class RemediationInstructionsFragment extends ListFragment
 	}
 
 	@Override
-	public void onAttach(Activity activity)
+	public void onAttach(Context context)
 	{
-		super.onAttach(activity);
+		super.onAttach(context);
 
-		if (activity instanceof OnRemediationInstructionSelectedListener)
+		if (context instanceof OnRemediationInstructionSelectedListener)
 		{
-			mListener = (OnRemediationInstructionSelectedListener)activity;
+			mListener = (OnRemediationInstructionSelectedListener)context;
 		}
 	}
 
