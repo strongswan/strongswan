@@ -120,8 +120,6 @@
     <string name="error_auth_failed">Помилка аутентифікації користувача.</string>
     <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Невідома помилка під час підключення.</string>
-    <string name="connecting_title">Підключення: %1$s</string>
-    <string name="connecting_message">Підключення VPN з \""%1$s\".</string>
     <string name="vpn_connected">VPN підключено</string>
     <string name="vpn_profile_connected">Цей VPN профіль зараз підключений!</string>
     <string name="reconnect">Перепідключитися</string>

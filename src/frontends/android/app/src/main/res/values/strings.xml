@@ -122,8 +122,6 @@
     <string name="error_auth_failed">User authentication failed.</string>
     <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Unspecified failure while connecting.</string>
-    <string name="connecting_title">Connecting: %1$s</string>
-    <string name="connecting_message">Establishing VPN with \""%1$s\".</string>
     <string name="vpn_connected">VPN connected</string>
     <string name="vpn_profile_connected">This VPN profile is currently connected!</string>
     <string name="reconnect">Reconnect</string>
