@@ -29,7 +29,10 @@ import android.security.KeyChainException;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDialogFragment;
+import android.text.Editable;
 import android.text.Html;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -123,6 +126,26 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mPort = (EditText)findViewById(R.id.port);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
+
+		mGateway.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				if (TextUtils.isEmpty(mGateway.getText()))
+				{
+					mName.setHint(R.string.profile_name_hint);
+				}
+				else
+				{
+					mName.setHint("(" + mGateway.getText() + ")");
+				}
+			}
+		});
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
