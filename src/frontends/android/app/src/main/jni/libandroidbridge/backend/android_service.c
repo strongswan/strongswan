@@ -682,7 +682,7 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 
 static job_requeue_t initiate(private_android_service_t *this)
 {
-	identification_t *gateway;
+	identification_t *gateway = NULL;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -708,7 +708,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.dpd_action = ACTION_RESTART,
 		.close_action = ACTION_RESTART,
 	};
-	char *type, *server;
+	char *type, *server, *remote_id;
 	int port;
 
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
@@ -747,9 +747,20 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	/* remote auth config */
 	auth = auth_cfg_create();
-	gateway = identification_create_from_string(server);
+	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
+										NULL);
+	if (remote_id)
+	{
+		gateway = identification_create_from_string(remote_id);
+	}
+	if (!gateway || gateway->get_type(gateway) == ID_ANY)
+	{
+		DESTROY_IF(gateway);
+		gateway = identification_create_from_string(server);
+		/* only use this if remote ID was not configured explicitly */
+		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
+	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
-	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
