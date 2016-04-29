@@ -135,8 +135,21 @@ CALLBACK(conn_sn, int,
 			}
 			printf("  %s %s authentication:\n",
 				strpfx(name, "local") ? "local" : "remote", class);
+			if (auth->get(auth, "id"))
 			{
 				printf("    id: %s\n", auth->get(auth, "id"));
+			}
+			if (auth->get(auth, "eap_id"))
+			{
+				printf("    eap_id: %s\n", auth->get(auth, "eap_id"));
+			}
+			if (auth->get(auth, "xauth_id"))
+			{
+				printf("    xauth_id: %s\n", auth->get(auth, "xauth_id"));
+			}
+			if (auth->get(auth, "aaa_id"))
+			{
+				printf("    aaa_id: %s\n", auth->get(auth, "aaa_id"));
 			}
 			if (auth->get(auth, "groups"))
 			{
