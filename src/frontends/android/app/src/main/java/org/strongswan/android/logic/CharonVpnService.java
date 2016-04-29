@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -232,6 +232,8 @@ public class CharonVpnService extends VpnService implements Runnable
 							writer.setValue("connection.port", mCurrentProfile.getPort());
 							writer.setValue("connection.username", mCurrentProfile.getUsername());
 							writer.setValue("connection.password", mCurrentProfile.getPassword());
+							writer.setValue("connection.local_id", mCurrentProfile.getLocalId());
+							writer.setValue("connection.remote_id", mCurrentProfile.getRemoteId());
 							initiate(writer.serialize());
 						}
 						else
