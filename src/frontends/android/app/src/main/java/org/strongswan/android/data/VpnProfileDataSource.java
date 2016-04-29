@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,6 +43,8 @@ public class VpnProfileDataSource
 	public static final String KEY_MTU = "mtu";
 	public static final String KEY_PORT = "port";
 	public static final String KEY_SPLIT_TUNNELING = "split_tunneling";
+	public static final String KEY_LOCAL_ID = "local_id";
+	public static final String KEY_REMOTE_ID = "remote_id";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -51,7 +53,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 7;
+	private static final int DATABASE_VERSION = 8;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -65,7 +67,9 @@ public class VpnProfileDataSource
 								KEY_USER_CERTIFICATE + " TEXT," +
 								KEY_MTU + " INTEGER," +
 								KEY_PORT + " INTEGER," +
-								KEY_SPLIT_TUNNELING + " INTEGER" +
+								KEY_SPLIT_TUNNELING + " INTEGER," +
+								KEY_LOCAL_ID + " TEXT," +
+								KEY_REMOTE_ID + " TEXT" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -79,6 +83,8 @@ public class VpnProfileDataSource
 								KEY_MTU,
 								KEY_PORT,
 								KEY_SPLIT_TUNNELING,
+								KEY_LOCAL_ID,
+								KEY_REMOTE_ID,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -127,6 +133,13 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SPLIT_TUNNELING +
 						   " INTEGER;");
+			}
+			if (oldVersion < 8)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_LOCAL_ID +
+						   " TEXT;");
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_REMOTE_ID +
+						   " TEXT;");
 			}
 		}
 
@@ -282,6 +295,8 @@ public class VpnProfileDataSource
 		profile.setMTU(getInt(cursor, cursor.getColumnIndex(KEY_MTU)));
 		profile.setPort(getInt(cursor, cursor.getColumnIndex(KEY_PORT)));
 		profile.setSplitTunneling(getInt(cursor, cursor.getColumnIndex(KEY_SPLIT_TUNNELING)));
+		profile.setLocalId(cursor.getString(cursor.getColumnIndex(KEY_LOCAL_ID)));
+		profile.setRemoteId(cursor.getString(cursor.getColumnIndex(KEY_REMOTE_ID)));
 		return profile;
 	}
 
@@ -298,6 +313,8 @@ public class VpnProfileDataSource
 		values.put(KEY_MTU, profile.getMTU());
 		values.put(KEY_PORT, profile.getPort());
 		values.put(KEY_SPLIT_TUNNELING, profile.getSplitTunneling());
+		values.put(KEY_LOCAL_ID, profile.getLocalId());
+		values.put(KEY_REMOTE_ID, profile.getRemoteId());
 		return values;
 	}
 

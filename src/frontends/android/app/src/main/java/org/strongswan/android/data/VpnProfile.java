@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,6 +25,7 @@ public class VpnProfile implements Cloneable
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+	private String mRemoteId, mLocalId;
 	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
 	private long mId = -1;
@@ -107,6 +108,26 @@ public class VpnProfile implements Cloneable
 	public void setUserCertificateAlias(String alias)
 	{
 		this.mUserCertificate = alias;
+	}
+
+	public String getLocalId()
+	{
+		return mLocalId;
+	}
+
+	public void setLocalId(String localId)
+	{
+		this.mLocalId = localId;
+	}
+
+	public String getRemoteId()
+	{
+		return mRemoteId;
+	}
+
+	public void setRemoteId(String remoteId)
+	{
+		this.mRemoteId = remoteId;
 	}
 
 	public Integer getMTU()
