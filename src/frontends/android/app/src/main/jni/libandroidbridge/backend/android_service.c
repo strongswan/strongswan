@@ -623,9 +623,9 @@ METHOD(listener_t, alert, bool,
 static void add_auth_cfg_pw(private_android_service_t *this,
 							peer_cfg_t *peer_cfg, bool byod)
 {
-	identification_t *user;
+	identification_t *user, *id = NULL;
 	auth_cfg_t *auth;
-	char *username, *password;
+	char *username, *password, *local_id;
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
@@ -638,8 +638,19 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 									   NULL);
 	password = this->settings->get_str(this->settings, "connection.password",
 									   NULL);
+	local_id = this->settings->get_str(this->settings, "connection.local_id",
+									   NULL);
 	user = identification_create_from_string(username);
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	auth->add(auth, AUTH_RULE_EAP_IDENTITY, user);
+	if (local_id)
+	{
+		id = identification_create_from_string(local_id);
+	}
+	if (!id)
+	{
+		id = user->clone(user);
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 
 	this->creds->add_username_password(this->creds, username, password);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
@@ -649,9 +660,9 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 							  peer_cfg_t *peer_cfg)
 {
 	certificate_t *cert;
-	identification_t *id;
+	identification_t *id = NULL;
 	auth_cfg_t *auth;
-	char *type;
+	char *type, *local_id;
 
 	cert = this->creds->load_user_certificate(this->creds);
 	if (!cert)
@@ -665,8 +676,8 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	{
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TLS);
-		id = identification_create_from_string("%any");
-		auth->add(auth, AUTH_RULE_AAA_IDENTITY, id);
+		auth->add(auth, AUTH_RULE_AAA_IDENTITY,
+				  identification_create_from_string("%any"));
 	}
 	else
 	{
@@ -674,8 +685,18 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	}
 	auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
 
-	id = cert->get_subject(cert);
-	auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+	local_id = this->settings->get_str(this->settings, "connection.local_id",
+									   NULL);
+	if (local_id)
+	{
+		id = identification_create_from_string(local_id);
+	}
+	if (!id)
+	{
+		id = cert->get_subject(cert);
+		id = id->clone(id);
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	return TRUE;
 }
