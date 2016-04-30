@@ -61,6 +61,9 @@
     <string name="profile_user_certificate_label">Benutzer-Zertifikat</string>
     <string name="profile_user_select_certificate_label">Benutzer-Zertifikat auswählen</string>
     <string name="profile_user_select_certificate">Wählen Sie ein bestimmtes Benutzer-Zertifikat</string>
+    <string name="profile_user_select_id_label">Benutzer-Identität</string>
+    <string name="profile_user_select_id_init">Wählen Sie zuerst ein Benutzer-Zertifikat</string>
+    <string name="profile_user_select_id_default">Standardwert (%1$s)</string>
     <string name="profile_ca_label">CA-Zertifikat</string>
     <string name="profile_ca_auto_label">Automatisch wählen</string>
     <string name="profile_ca_select_certificate_label">CA-Zertifikat auswählen</string>

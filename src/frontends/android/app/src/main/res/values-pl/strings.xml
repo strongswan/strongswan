@@ -61,6 +61,9 @@
     <string name="profile_user_certificate_label">Certyfikat użytkownika</string>
     <string name="profile_user_select_certificate_label">Wybierz certyfikat użytkownika</string>
     <string name="profile_user_select_certificate">>Wybierz określony certyfikat użytkownika</string>
+    <string name="profile_user_select_id_label">User identity</string>
+    <string name="profile_user_select_id_init">Select a certificate first</string>
+    <string name="profile_user_select_id_default">Default (%1$s)</string>
     <string name="profile_ca_label">Certyfikat CA</string>
     <string name="profile_ca_auto_label">Wybierz automatycznie</string>
     <string name="profile_ca_select_certificate_label">Wybierz certyfikat CA</string>

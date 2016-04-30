@@ -59,6 +59,9 @@
     <string name="profile_user_certificate_label">Сертифікат користувача</string>
     <string name="profile_user_select_certificate_label">Виберіть сертифікат користувача</string>
     <string name="profile_user_select_certificate">Вибрати спеціальний сертифікат користувача</string>
+    <string name="profile_user_select_id_label">User identity</string>
+    <string name="profile_user_select_id_init">Select a certificate first</string>
+    <string name="profile_user_select_id_default">Default (%1$s)</string>
     <string name="profile_ca_label">Сертифікат CA</string>
     <string name="profile_ca_auto_label">Вибрати автоматично</string>
     <string name="profile_ca_select_certificate_label">Вибрати сертифікат CA</string>
