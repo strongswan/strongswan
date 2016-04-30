@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,9 +15,14 @@
 
 package org.strongswan.android.security;
 
-import java.security.cert.X509Certificate;
-
 import android.net.http.SslCertificate;
+
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public class TrustedCertificateEntry implements Comparable<TrustedCertificateEntry>
 {
@@ -84,6 +89,40 @@ public class TrustedCertificateEntry implements Comparable<TrustedCertificateEnt
 	public String getSubjectSecondary()
 	{
 		return mSubjectSecondary;
+	}
+
+	/**
+	 * Get a sorted list of all rfc822Name, dnSName and iPAddress subjectAltNames
+	 *
+	 * @return sorted list of selected SANs
+	 */
+	public List<String> getSubjectAltNames()
+	{
+		List<String> list = new ArrayList<>();
+		try
+		{
+			Collection<List<?>> sans = mCert.getSubjectAlternativeNames();
+			if (sans != null)
+			{
+				for (List<?> san : sans)
+				{
+					switch ((Integer)san.get(0))
+					{
+						case 1: /* rfc822Name */
+						case 2: /* dnSName */
+						case 7: /* iPAddress */
+							list.add((String)san.get(1));
+							break;
+					}
+				}
+			}
+			Collections.sort(list);
+		}
+		catch(CertificateParsingException ex)
+		{
+			ex.printStackTrace();
+		}
+		return list;
 	}
 
 	/**
