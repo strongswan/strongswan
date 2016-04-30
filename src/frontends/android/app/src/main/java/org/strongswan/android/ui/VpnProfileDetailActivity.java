@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -57,6 +57,7 @@ import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
+import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 
 import java.security.cert.X509Certificate;
 
@@ -74,10 +75,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private VpnType mVpnType = VpnType.IKEV2_EAP;
 	private VpnProfile mProfile;
 	private EditText mName;
+	private TextInputLayoutHelper mNameWrap;
 	private EditText mGateway;
+	private TextInputLayoutHelper mGatewayWrap;
 	private Spinner mSelectVpnType;
 	private ViewGroup mUsernamePassword;
 	private EditText mUsername;
+	private TextInputLayoutHelper mUsernameWrap;
 	private EditText mPassword;
 	private ViewGroup mUserCertificate;
 	private RelativeLayout mSelectUserCert;
@@ -87,7 +91,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private CheckBox mShowAdvanced;
 	private ViewGroup mAdvancedSettings;
 	private EditText mMTU;
+	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
+	private TextInputLayoutHelper mPortWrap;
 	private CheckBox mBlockIPv4;
 	private CheckBox mBlockIPv6;
 
@@ -105,12 +111,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		setContentView(R.layout.profile_detail_view);
 
 		mName = (EditText)findViewById(R.id.name);
+		mNameWrap = (TextInputLayoutHelper)findViewById(R.id.name_wrap);
 		mGateway = (EditText)findViewById(R.id.gateway);
+		mGatewayWrap = (TextInputLayoutHelper) findViewById(R.id.gateway_wrap);
 		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
 		mTncNotice = (RelativeLayout)findViewById(R.id.tnc_notice);
 
 		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
 		mUsername = (EditText)findViewById(R.id.username);
+		mUsernameWrap = (TextInputLayoutHelper) findViewById(R.id.username_wrap);
 		mPassword = (EditText)findViewById(R.id.password);
 
 		mUserCertificate = (ViewGroup)findViewById(R.id.user_certificate_group);
@@ -123,7 +132,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
 
 		mMTU = (EditText)findViewById(R.id.mtu);
+		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
+		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
 
@@ -135,14 +146,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
 			@Override
-			public void afterTextChanged(Editable s) {
+			public void afterTextChanged(Editable s)
+			{
 				if (TextUtils.isEmpty(mGateway.getText()))
 				{
-					mName.setHint(R.string.profile_name_hint);
+					mNameWrap.setHelperText(getString(R.string.profile_name_hint));
 				}
 				else
 				{
-					mName.setHint("(" + mGateway.getText() + ")");
+					mNameWrap.setHelperText(String.format(getString(R.string.profile_name_hint_gateway), mGateway.getText()));
 				}
 			}
 		});
@@ -411,14 +423,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		boolean valid = true;
 		if (mGateway.getText().toString().trim().isEmpty())
 		{
-			mGateway.setError(getString(R.string.alert_text_no_input_gateway));
+			mGatewayWrap.setError(getString(R.string.alert_text_no_input_gateway));
 			valid = false;
 		}
 		if (mVpnType.has(VpnTypeFeature.USER_PASS))
 		{
 			if (mUsername.getText().toString().trim().isEmpty())
 			{
-				mUsername.setError(getString(R.string.alert_text_no_input_username));
+				mUsernameWrap.setError(getString(R.string.alert_text_no_input_username));
 				valid = false;
 			}
 		}
@@ -435,13 +447,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		Integer mtu = getInteger(mMTU);
 		if (mtu != null && (mtu < MTU_MIN || mtu > MTU_MAX))
 		{
-			mMTU.setError(String.format(getString(R.string.alert_text_out_of_range), MTU_MIN, MTU_MAX));
+			mMTUWrap.setError(String.format(getString(R.string.alert_text_out_of_range), MTU_MIN, MTU_MAX));
 			valid = false;
 		}
 		Integer port = getInteger(mPort);
 		if (port != null && (port < 1 || port > 65535))
 		{
-			mPort.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
+			mPortWrap.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
 			valid = false;
 		}
 		return valid;
