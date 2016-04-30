@@ -31,6 +31,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDialogFragment;
 import android.text.Editable;
 import android.text.Html;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -42,10 +44,12 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
+import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -74,7 +78,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TrustedCertificateEntry mUserCertEntry;
 	private VpnType mVpnType = VpnType.IKEV2_EAP;
 	private VpnProfile mProfile;
-	private EditText mName;
+	private MultiAutoCompleteTextView mName;
 	private TextInputLayoutHelper mNameWrap;
 	private EditText mGateway;
 	private TextInputLayoutHelper mGatewayWrap;
@@ -90,7 +94,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private RelativeLayout mTncNotice;
 	private CheckBox mShowAdvanced;
 	private ViewGroup mAdvancedSettings;
-	private EditText mRemoteId;
+	private MultiAutoCompleteTextView mRemoteId;
 	private TextInputLayoutHelper mRemoteIdWrap;
 	private EditText mMTU;
 	private TextInputLayoutHelper mMTUWrap;
@@ -112,7 +116,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		setContentView(R.layout.profile_detail_view);
 
-		mName = (EditText)findViewById(R.id.name);
+		mName = (MultiAutoCompleteTextView)findViewById(R.id.name);
 		mNameWrap = (TextInputLayoutHelper)findViewById(R.id.name_wrap);
 		mGateway = (EditText)findViewById(R.id.gateway);
 		mGatewayWrap = (TextInputLayoutHelper) findViewById(R.id.gateway_wrap);
@@ -133,7 +137,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mShowAdvanced = (CheckBox)findViewById(R.id.show_advanced);
 		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
 
-		mRemoteId = (EditText)findViewById(R.id.remote_id);
+		mRemoteId = (MultiAutoCompleteTextView)findViewById(R.id.remote_id);
 		mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
 		mMTU = (EditText)findViewById(R.id.mtu);
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
@@ -141,6 +145,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
+
+		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
+		mName.setTokenizer(spaceTokenizer);
+		mRemoteId.setTokenizer(spaceTokenizer);
+		final ArrayAdapter<String> completeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line);
+		mName.setAdapter(completeAdapter);
+		mRemoteId.setAdapter(completeAdapter);
 
 		mGateway.addTextChangedListener(new TextWatcher() {
 			@Override
@@ -152,6 +163,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			@Override
 			public void afterTextChanged(Editable s)
 			{
+				completeAdapter.clear();
+				completeAdapter.add(mGateway.getText().toString());
 				if (TextUtils.isEmpty(mGateway.getText()))
 				{
 					mNameWrap.setHelperText(getString(R.string.profile_name_hint));
@@ -693,6 +706,68 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 						dialog.dismiss();
 					}
 				}).create();
+		}
+	}
+
+	/**
+	 * Tokenizer implementation that separates by white-space
+	 */
+	public static class SpaceTokenizer implements MultiAutoCompleteTextView.Tokenizer
+	{
+		@Override
+		public int findTokenStart(CharSequence text, int cursor)
+		{
+			int i = cursor;
+
+			while (i > 0 && !Character.isWhitespace(text.charAt(i - 1)))
+			{
+				i--;
+			}
+			return i;
+		}
+
+		@Override
+		public int findTokenEnd(CharSequence text, int cursor)
+		{
+			int i = cursor;
+			int len = text.length();
+
+			while (i < len)
+			{
+				if (Character.isWhitespace(text.charAt(i)))
+				{
+					return i;
+				}
+				else
+				{
+					i++;
+				}
+			}
+			return len;
+		}
+
+		@Override
+		public CharSequence terminateToken(CharSequence text)
+		{
+			int i = text.length();
+
+			if (i > 0 && Character.isWhitespace(text.charAt(i - 1)))
+			{
+				return text;
+			}
+			else
+			{
+				if (text instanceof Spanned)
+				{
+					SpannableString sp = new SpannableString(text + " ");
+					TextUtils.copySpansFrom((Spanned) text, 0, text.length(), Object.class, sp, 0);
+					return sp;
+				}
+				else
+				{
+					return text + " ";
+				}
+			}
 		}
 	}
 }
