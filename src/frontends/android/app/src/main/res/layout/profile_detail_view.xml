@@ -122,6 +122,20 @@
                 android:id="@+id/select_user_certificate"
                 layout="@layout/two_line_button" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginLeft="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_user_select_id_label" />
+
+            <Spinner
+                android:id="@+id/select_user_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown" />
+
         </LinearLayout>
 
         <TextView

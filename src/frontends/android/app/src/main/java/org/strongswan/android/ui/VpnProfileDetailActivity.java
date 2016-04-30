@@ -61,6 +61,7 @@ import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
+import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 
 import java.security.cert.X509Certificate;
@@ -75,6 +76,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private Long mId;
 	private TrustedCertificateEntry mCertEntry;
 	private String mUserCertLoading;
+	private CertificateIdentitiesAdapter mSelectUserIdAdapter;
+	private String mSelectedUserId;
 	private TrustedCertificateEntry mUserCertEntry;
 	private VpnType mVpnType = VpnType.IKEV2_EAP;
 	private VpnProfile mProfile;
@@ -89,6 +92,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mPassword;
 	private ViewGroup mUserCertificate;
 	private RelativeLayout mSelectUserCert;
+	private Spinner mSelectUserId;
 	private CheckBox mCheckAuto;
 	private RelativeLayout mSelectCert;
 	private RelativeLayout mTncNotice;
@@ -130,6 +134,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mUserCertificate = (ViewGroup)findViewById(R.id.user_certificate_group);
 		mSelectUserCert = (RelativeLayout)findViewById(R.id.select_user_certificate);
+		mSelectUserId = (Spinner)findViewById(R.id.select_user_id);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
 		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
@@ -205,6 +210,24 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		});
 
 		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
+		mSelectUserIdAdapter = new CertificateIdentitiesAdapter(this);
+		mSelectUserId.setAdapter(mSelectUserIdAdapter);
+		mSelectUserId.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+			{
+				if (mUserCertEntry != null)
+				{	/* we don't store the subject DN as it is in the reverse order and the default anyway */
+					mSelectedUserId = position == 0 ? null : mSelectUserIdAdapter.getItem(position);
+				}
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> parent)
+			{
+				mSelectedUserId = null;
+			}
+		});
 
 		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
@@ -264,6 +287,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		if (mUserCertEntry != null)
 		{
 			outState.putString(VpnProfileDataSource.KEY_USER_CERTIFICATE, mUserCertEntry.getAlias());
+		}
+		if (mSelectedUserId != null)
+		{
+			outState.putString(VpnProfileDataSource.KEY_LOCAL_ID, mSelectedUserId);
 		}
 		if (mCertEntry != null)
 		{
@@ -326,6 +353,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
+			mSelectUserId.setEnabled(false);
 			if (mUserCertLoading != null)
 			{
 				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertLoading);
@@ -336,11 +364,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError(null);
 				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertEntry.getAlias());
 				((TextView)mSelectUserCert.findViewById(android.R.id.text2)).setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
+				mSelectUserIdAdapter.setCertificate(mUserCertEntry);
+				mSelectUserId.setSelection(mSelectUserIdAdapter.getPosition(mSelectedUserId));
+				mSelectUserId.setEnabled(true);
 			}
 			else
 			{
 				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setText(R.string.profile_user_select_certificate_label);
 				((TextView)mSelectUserCert.findViewById(android.R.id.text2)).setText(R.string.profile_user_select_certificate);
+				mSelectUserIdAdapter.setCertificate(null);
 			}
 		}
 	}
@@ -500,6 +532,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
 			mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
+			mProfile.setLocalId(mSelectedUserId);
 		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
@@ -520,7 +553,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	 */
 	private void loadProfileData(Bundle savedInstanceState)
 	{
-		String useralias = null, alias = null;
+		String useralias = null, local_id = null, alias = null;
 
 		getSupportActionBar().setTitle(R.string.add_profile);
 		if (mId != null && mId != 0)
@@ -539,6 +572,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
 				useralias = mProfile.getUserCertificateAlias();
+				local_id = mProfile.getLocalId();
 				alias = mProfile.getCertificateAlias();
 				getSupportActionBar().setTitle(mProfile.getName());
 			}
@@ -553,11 +587,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mSelectVpnType.setSelection(mVpnType.ordinal());
 
 		/* check if the user selected a user certificate previously */
-		useralias = savedInstanceState == null ? useralias: savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
+		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
+		local_id = savedInstanceState == null ? local_id : savedInstanceState.getString(VpnProfileDataSource.KEY_LOCAL_ID);
 		if (useralias != null)
 		{
 			UserCertificateLoader loader = new UserCertificateLoader(this, useralias);
 			mUserCertLoading = useralias;
+			mSelectedUserId = local_id;
 			loader.execute();
 		}
 
