@@ -90,6 +90,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private RelativeLayout mTncNotice;
 	private CheckBox mShowAdvanced;
 	private ViewGroup mAdvancedSettings;
+	private EditText mRemoteId;
+	private TextInputLayoutHelper mRemoteIdWrap;
 	private EditText mMTU;
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
@@ -131,6 +133,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mShowAdvanced = (CheckBox)findViewById(R.id.show_advanced);
 		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
 
+		mRemoteId = (EditText)findViewById(R.id.remote_id);
+		mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
 		mMTU = (EditText)findViewById(R.id.mtu);
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
@@ -151,10 +155,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				if (TextUtils.isEmpty(mGateway.getText()))
 				{
 					mNameWrap.setHelperText(getString(R.string.profile_name_hint));
+					mRemoteIdWrap.setHelperText(getString(R.string.profile_remote_id_hint));
 				}
 				else
 				{
 					mNameWrap.setHelperText(String.format(getString(R.string.profile_name_hint_gateway), mGateway.getText()));
+					mRemoteIdWrap.setHelperText(String.format(getString(R.string.profile_remote_id_hint_gateway), mGateway.getText()));
 				}
 			}
 		});
@@ -384,7 +390,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		if (!show && mProfile != null)
 		{
 			Integer st = mProfile.getSplitTunneling();
-			show = mProfile.getMTU() != null || mProfile.getPort() != null || (st != null && st != 0);
+			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
+				   mProfile.getPort() != null || (st != null && st != 0);
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -483,6 +490,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
+		String remote_id = mRemoteId.getText().toString().trim();
+		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
 		int st = 0;
@@ -511,6 +520,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mVpnType = mProfile.getVpnType();
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
+				mRemoteId.setText(mProfile.getRemoteId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);

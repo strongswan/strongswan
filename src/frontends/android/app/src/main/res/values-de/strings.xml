@@ -67,6 +67,9 @@
     <string name="profile_ca_select_certificate">Wählen Sie ein bestimmtes CA-Zertifikat</string>
     <string name="profile_advanced_label">Erweiterte Einstellungen</string>
     <string name="profile_show_advanced_label">Erweiterte Einstellungen anzeigen</string>
+    <string name="profile_remote_id_label">Server-Identität</string>
+    <string name="profile_remote_id_hint">Standardwert ist der konfigurierte Server. Eigene Werte werden explizit and den Server gesendet und während der Authentifizierung erzwungen</string>
+    <string name="profile_remote_id_hint_gateway">Standardwert ist \"%1$s\". Eigene Werte werden explizit and den Server gesendet und während der Authentifizierung erzwungen</string>
     <string name="profile_mtu_label">MTU des VPN Tunnel-Device</string>
     <string name="profile_mtu_hint">Falls der Standardwert in einem bestimmten Netzwerk nicht geeignet ist</string>
     <string name="profile_port_label">Server Port</string>
