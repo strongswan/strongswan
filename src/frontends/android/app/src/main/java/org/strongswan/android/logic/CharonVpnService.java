@@ -232,6 +232,7 @@ public class CharonVpnService extends VpnService implements Runnable
 							writer.setValue("connection.port", mCurrentProfile.getPort());
 							writer.setValue("connection.username", mCurrentProfile.getUsername());
 							writer.setValue("connection.password", mCurrentProfile.getPassword());
+							writer.setValue("connection.loose_identity", true);
 							initiate(writer.serialize());
 						}
 						else
