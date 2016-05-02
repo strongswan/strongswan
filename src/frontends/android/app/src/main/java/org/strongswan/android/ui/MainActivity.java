@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		if (mService != null && mService.getState() == State.CONNECTED)
+		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
 		{
 			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
 
