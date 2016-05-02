@@ -927,9 +927,16 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		 * matching outbound forwarded traffic, to allow another tunnel to use
 		 * the reversed subnets and do the same we don't set a reqid (this also
 		 * allows the kernel backend to distinguish between the two types of
-		 * FWD policies) */
+		 * FWD policies). To avoid problems with symmetrically overlapping
+		 * policies of two SAs we install them with reduced priority.  As they
+		 * basically act as bypass policies for drop policies we use a higher
+		 * priority than is used for them. */
 		out_id.dir = POLICY_FWD;
 		other_sa->reqid = 0;
+		if (priority == POLICY_PRIORITY_DEFAULT)
+		{
+			out_policy.prio = POLICY_PRIORITY_ROUTED;
+		}
 		status |= charon->kernel->add_policy(charon->kernel, &out_id, &out_policy);
 		/* reset the reqid for any other further policies */
 		other_sa->reqid = this->reqid;
@@ -983,6 +990,10 @@ static void del_policies_internal(private_child_sa_t *this,
 
 		out_id.dir = POLICY_FWD;
 		other_sa->reqid = 0;
+		if (priority == POLICY_PRIORITY_DEFAULT)
+		{
+			out_policy.prio = POLICY_PRIORITY_ROUTED;
+		}
 		charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
 		other_sa->reqid = this->reqid;
 	}
