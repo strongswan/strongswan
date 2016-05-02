@@ -7,9 +7,10 @@ sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 10 -j SNAT --to PH_IP
 sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 20 -j SNAT --to PH_IP_DAVE10
 sun::iptables -t mangle -A PREROUTING -d PH_IP_CAROL10 -j MARK --set-mark 11
 sun::iptables -t mangle -A PREROUTING -d PH_IP_DAVE10 -j MARK --set-mark 21
+sun::ipsec start
 alice::ipsec start
 venus::ipsec start
-sun::ipsec start
+sun::expect-connection alice
 alice::expect-connection home
 alice::ipsec up home
 venus::expect-connection home

@@ -4,9 +4,10 @@ dave::iptables-restore < /etc/iptables.rules
 moon::rm /etc/ipsec.d/cacerts/strongswanCert.pem
 carol::rm /etc/ipsec.d/cacerts/strongswanCert.pem
 dave::rm /etc/ipsec.d/cacerts/strongswanCert.pem
+moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-moon::ipsec start
+moon::expect-connection rw
 carol::expect-connection home
 carol::ipsec up home
 dave::expect-connection home

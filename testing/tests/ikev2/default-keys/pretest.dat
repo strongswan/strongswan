@@ -15,5 +15,6 @@ moon::scp /etc/ipsec.d/certs/selfCert.der carol:/etc/ipsec.d/certs/peerCert.der
 moon::scp carol:/etc/ipsec.d/certs/selfCert.der /etc/ipsec.d/certs/peerCert.der
 moon::ipsec reload
 carol::ipsec reload
+moon::expect-connection carol
 carol::expect-connection home
 carol::ipsec up home

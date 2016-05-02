@@ -10,9 +10,10 @@ bob::iptables -t mangle -A OUTPUT -d PH_IP_ALICE -p icmp -j DSCP --set-dscp-clas
 bob::iptables -t mangle -A OUTPUT -d PH_IP_VENUS -p icmp -j DSCP --set-dscp-class EF
 sun::iptables -t mangle -A PREROUTING -m dscp --dscp-class BE -j MARK --set-mark 10
 sun::iptables -t mangle -A PREROUTING -m dscp --dscp-class EF -j MARK --set-mark 20
-moon::ipsec start
 sun::ipsec start
+moon::ipsec start
+sun::expect-connection dscp-ef
 moon::expect-connection dscp-be
-moon::expect-connection dscp-ef
 moon::ipsec up dscp-be
+moon::expect-connection dscp-ef
 moon::ipsec up dscp-ef
