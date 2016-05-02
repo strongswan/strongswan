@@ -47,30 +47,40 @@
     <!-- VPN profile details -->
     <string name="profile_edit_save">Зберегти</string>
     <string name="profile_edit_cancel">Відміна</string>
-    <string name="profile_name_label">Назва профілю:</string>
-    <string name="profile_name_hint">(використовувати адресу cервер)</string>
-    <string name="profile_gateway_label">Сервер:</string>
-    <string name="profile_vpn_type_label">Тип:</string>
-    <string name="profile_username_label">Логін:</string>
-    <string name="profile_password_label">Пароль:</string>
-    <string name="profile_password_hint">(запитати якщо потрібно)</string>
-    <string name="profile_user_certificate_label">Сертифікат користувача:</string>
+    <string name="profile_name_label">Назва профілю (необов\'язковий)</string>
+    <string name="profile_name_hint">Defaults to the configured server</string>
+    <string name="profile_name_hint_gateway">Defaults to \"%1$s\"</string>
+    <string name="profile_gateway_label">Сервер</string>
+    <string name="profile_gateway_hint">IP address or hostname of the VPN server</string>
+    <string name="profile_vpn_type_label">VPN Тип</string>
+    <string name="profile_username_label">Логін</string>
+    <string name="profile_password_label">Пароль (необов\'язковий)</string>
+    <string name="profile_password_hint">Leave blank to get prompted on demand</string>
+    <string name="profile_user_certificate_label">Сертифікат користувача</string>
     <string name="profile_user_select_certificate_label">Виберіть сертифікат користувача</string>
     <string name="profile_user_select_certificate">Вибрати спеціальний сертифікат користувача</string>
-    <string name="profile_ca_label">Сертифікат CA:</string>
+    <string name="profile_user_select_id_label">User identity</string>
+    <string name="profile_user_select_id_init">Select a certificate first</string>
+    <string name="profile_user_select_id_default">Default (%1$s)</string>
+    <string name="profile_ca_label">Сертифікат CA</string>
     <string name="profile_ca_auto_label">Вибрати автоматично</string>
     <string name="profile_ca_select_certificate_label">Вибрати сертифікат CA</string>
     <string name="profile_ca_select_certificate">Вибрати спеціальний сертифікат CA</string>
+    <string name="profile_advanced_label">Advanced settings</string>
     <string name="profile_show_advanced_label">Show advanced settings</string>
-    <string name="profile_mtu_label">MTU:</string>
-    <string name="profile_port_label">Server port:</string>
-    <string name="profile_use_default_hint">(use default)</string>
-    <string name="profile_split_tunneling_label">Split tunneling:</string>
+    <string name="profile_remote_id_label">Server identity</string>
+    <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
+    <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
+    <string name="profile_port_label">Server port</string>
+    <string name="profile_port_hint">UDP port to connect to, if different from the default</string>
+    <string name="profile_split_tunneling_label">Split tunneling</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
     <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
     <!-- Warnings/Notifications in the details view -->
-    <string name="alert_text_no_input_gateway">Введіть адресу cервер тут</string>
-    <string name="alert_text_no_input_username">Введіть ім\'я користувача тут</string>
+    <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
+    <string name="alert_text_no_input_username">Введіть ім\'я користувача </string>
     <string name="alert_text_nocertfound_title">Не вибрано сертифікат CA</string>
     <string name="alert_text_nocertfound">Будь ласка виберіть один <i>Вибрати автоматично</i></string>
     <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
@@ -120,8 +130,6 @@
     <string name="error_auth_failed">Помилка аутентифікації користувача.</string>
     <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Невідома помилка під час підключення.</string>
-    <string name="connecting_title">Підключення: %1$s</string>
-    <string name="connecting_message">Підключення VPN з \""%1$s\".</string>
     <string name="vpn_connected">VPN підключено</string>
     <string name="vpn_profile_connected">Цей VPN профіль зараз підключений!</string>
     <string name="reconnect">Перепідключитися</string>
@@ -130,4 +138,3 @@
     <string name="connect">Підключити</string>
 
 </resources>
-

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2010-2015 Tobias Brunner
+ * Copyright (C) 2010-2016 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -430,6 +430,84 @@ CALLBACK(reestablish, job_requeue_t,
 	return JOB_REQUEUE_NONE;
 }
 
+METHOD(listener_t, ike_updown, bool,
+	private_android_service_t *this, ike_sa_t *ike_sa, bool up)
+{
+	/* this callback is only registered during initiation, so if the IKE_SA
+	 * goes down we assume some kind of authentication error, more specific
+	 * errors are catched in the alert() handler */
+	if (this->ike_sa == ike_sa && !up)
+	{
+		charonservice->update_status(charonservice,
+									 CHARONSERVICE_AUTH_ERROR);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_rekey, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		this->ike_sa = new;
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_reestablish_post_redirect, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
+	bool initiated)
+{
+	if (this->ike_sa == old && initiated)
+	{	/* if we get redirected during IKE_AUTH we just migrate to the new SA,
+		 * we don't have a TUN device yet, so reinstalling it without DNS would
+		 * fail (and using the DNS proxy is not required anyway) */
+		this->ike_sa = new;
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_reestablish_pre, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		/* enable DNS proxy so hosts are properly resolved while the TUN device
+		 * is still active */
+		this->lock->write_lock(this->lock);
+		this->use_dns_proxy = TRUE;
+		this->lock->unlock(this->lock);
+		/* if DNS servers are installed that are only reachable through the VPN
+		 * the DNS proxy doesn't help, so uninstall DNS servers */
+		if (!setup_tun_device_without_dns(this))
+		{
+			DBG1(DBG_DMN, "failed to setup TUN device without DNS");
+			charonservice->update_status(charonservice,
+										 CHARONSERVICE_GENERIC_ERROR);
+		}
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_reestablish_post, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
+	bool initiated)
+{
+	if (this->ike_sa == old && initiated)
+	{
+		this->ike_sa = new;
+		/* re-register hook to detect initiation failures */
+		this->public.listener.ike_updown = _ike_updown;
+		/* if the IKE_SA got deleted by the responder we get the child_down()
+		 * event on the old IKE_SA after this hook has been called, so they
+		 * get ignored and thus we trigger the event here */
+		charonservice->update_status(charonservice,
+									 CHARONSERVICE_CHILD_STATE_DOWN);
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -440,6 +518,9 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
+			/* enable hooks to handle reauthentications */
+			this->public.listener.ike_reestablish_pre = _ike_reestablish_pre;
+			this->public.listener.ike_reestablish_post = _ike_reestablish_post;
 			/* CHILD_SA is up so we can disable the DNS proxy we enabled to
 			 * reestablish the SA */
 			this->lock->write_lock(this->lock);
@@ -461,21 +542,6 @@ METHOD(listener_t, child_updown, bool,
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_DOWN);
 		}
-	}
-	return TRUE;
-}
-
-METHOD(listener_t, ike_updown, bool,
-	private_android_service_t *this, ike_sa_t *ike_sa, bool up)
-{
-	/* this callback is only registered during initiation, so if the IKE_SA
-	 * goes down we assume some kind of authentication error, more specific
-	 * errors are catched in the alert() handler */
-	if (this->ike_sa == ike_sa && !up)
-	{
-		charonservice->update_status(charonservice,
-									 CHARONSERVICE_AUTH_ERROR);
-		return FALSE;
 	}
 	return TRUE;
 }
@@ -554,62 +620,12 @@ METHOD(listener_t, alert, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, ike_rekey, bool,
-	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
-{
-	if (this->ike_sa == old)
-	{
-		this->ike_sa = new;
-	}
-	return TRUE;
-}
-
-METHOD(listener_t, ike_reestablish_pre, bool,
-	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
-{
-	if (this->ike_sa == old)
-	{
-		/* enable DNS proxy so hosts are properly resolved while the TUN device
-		 * is still active */
-		this->lock->write_lock(this->lock);
-		this->use_dns_proxy = TRUE;
-		this->lock->unlock(this->lock);
-		/* if DNS servers are installed that are only reachable through the VPN
-		 * the DNS proxy doesn't help, so uninstall DNS servers */
-		if (!setup_tun_device_without_dns(this))
-		{
-			DBG1(DBG_DMN, "failed to setup TUN device without DNS");
-			charonservice->update_status(charonservice,
-										 CHARONSERVICE_GENERIC_ERROR);
-		}
-	}
-	return TRUE;
-}
-
-METHOD(listener_t, ike_reestablish_post, bool,
-	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new,
-	bool initiated)
-{
-	if (this->ike_sa == old && initiated)
-	{
-		this->ike_sa = new;
-		/* re-register hook to detect initiation failures */
-		this->public.listener.ike_updown = _ike_updown;
-		/* if the IKE_SA got deleted by the responder we get the child_down()
-		 * event on the old IKE_SA after this hook has been called, so they
-		 * get ignored and thus we trigger the event here */
-		charonservice->update_status(charonservice,
-									 CHARONSERVICE_CHILD_STATE_DOWN);
-	}
-	return TRUE;
-}
-
 static void add_auth_cfg_pw(private_android_service_t *this,
 							peer_cfg_t *peer_cfg, bool byod)
 {
-	identification_t *user;
+	identification_t *user, *id = NULL;
 	auth_cfg_t *auth;
-	char *username, *password;
+	char *username, *password, *local_id;
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
@@ -622,8 +638,19 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 									   NULL);
 	password = this->settings->get_str(this->settings, "connection.password",
 									   NULL);
+	local_id = this->settings->get_str(this->settings, "connection.local_id",
+									   NULL);
 	user = identification_create_from_string(username);
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	auth->add(auth, AUTH_RULE_EAP_IDENTITY, user);
+	if (local_id)
+	{
+		id = identification_create_from_string(local_id);
+	}
+	if (!id)
+	{
+		id = user->clone(user);
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 
 	this->creds->add_username_password(this->creds, username, password);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
@@ -633,9 +660,9 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 							  peer_cfg_t *peer_cfg)
 {
 	certificate_t *cert;
-	identification_t *id;
+	identification_t *id = NULL;
 	auth_cfg_t *auth;
-	char *type;
+	char *type, *local_id;
 
 	cert = this->creds->load_user_certificate(this->creds);
 	if (!cert)
@@ -649,8 +676,8 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	{
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TLS);
-		id = identification_create_from_string("%any");
-		auth->add(auth, AUTH_RULE_AAA_IDENTITY, id);
+		auth->add(auth, AUTH_RULE_AAA_IDENTITY,
+				  identification_create_from_string("%any"));
 	}
 	else
 	{
@@ -658,15 +685,25 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	}
 	auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
 
-	id = cert->get_subject(cert);
-	auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+	local_id = this->settings->get_str(this->settings, "connection.local_id",
+									   NULL);
+	if (local_id)
+	{
+		id = identification_create_from_string(local_id);
+	}
+	if (!id)
+	{
+		id = cert->get_subject(cert);
+		id = id->clone(id);
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	return TRUE;
 }
 
 static job_requeue_t initiate(private_android_service_t *this)
 {
-	identification_t *gateway;
+	identification_t *gateway = NULL;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -692,7 +729,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.dpd_action = ACTION_RESTART,
 		.close_action = ACTION_RESTART,
 	};
-	char *type, *server;
+	char *type, *server, *remote_id;
 	int port;
 
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
@@ -731,9 +768,20 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	/* remote auth config */
 	auth = auth_cfg_create();
-	gateway = identification_create_from_string(server);
+	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
+										NULL);
+	if (remote_id)
+	{
+		gateway = identification_create_from_string(remote_id);
+	}
+	if (!gateway || gateway->get_type(gateway) == ID_ANY)
+	{
+		DESTROY_IF(gateway);
+		gateway = identification_create_from_string(server);
+		/* only use this if remote ID was not configured explicitly */
+		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
+	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
-	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
@@ -824,8 +872,7 @@ android_service_t *android_service_create(android_creds_t *creds,
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
-				.ike_reestablish_pre = _ike_reestablish_pre,
-				.ike_reestablish_post = _ike_reestablish_post,
+				.ike_reestablish_post = _ike_reestablish_post_redirect,
 				.ike_updown = _ike_updown,
 				.child_updown = _child_updown,
 				.alert = _alert,

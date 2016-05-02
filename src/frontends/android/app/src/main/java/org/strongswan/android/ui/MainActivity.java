@@ -18,9 +18,6 @@
 package org.strongswan.android.ui;
 
 import android.app.Dialog;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -31,6 +28,9 @@ import android.net.VpnService;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		if (mService != null && mService.getState() == State.CONNECTED)
+		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
 		{
 			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
 
@@ -317,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 */
 	public void removeFragmentByTag(String tag)
 	{
-		FragmentManager fm = getFragmentManager();
+		FragmentManager fm = getSupportFragmentManager();
 		Fragment login = fm.findFragmentByTag(tag);
 		if (login != null)
 		{

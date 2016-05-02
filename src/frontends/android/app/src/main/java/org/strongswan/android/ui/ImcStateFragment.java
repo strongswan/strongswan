@@ -15,9 +15,6 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -25,6 +22,9 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -66,7 +66,6 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
 			mService.registerListener(ImcStateFragment.this);
-			updateView();
 		}
 	};
 
@@ -147,9 +146,9 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	}
 
 	@Override
-	public void onStart()
+	public void onResume()
 	{
-		super.onStart();
+		super.onResume();
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -158,9 +157,9 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	}
 
 	@Override
-	public void onStop()
+	public void onPause()
 	{
-		super.onStop();
+		super.onPause();
 		if (mService != null)
 		{
 			mService.unregisterListener(this);

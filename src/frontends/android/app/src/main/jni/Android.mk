@@ -16,11 +16,13 @@ endif
 strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS) \
 	$(strongswan_BYOD_PLUGINS)
 
-include $(LOCAL_PATH)/strongswan/Android.common.mk
+strongswan_DIR := ../../../../../../../
 
 # includes
-strongswan_PATH := $(LOCAL_PATH)/strongswan
+strongswan_PATH := $(LOCAL_PATH)/$(strongswan_DIR)
 openssl_PATH := $(LOCAL_PATH)/openssl/include
+
+include $(strongswan_PATH)/Android.common.mk
 
 # CFLAGS (partially from a configure run using droid-gcc)
 strongswan_CFLAGS := \
@@ -67,15 +69,15 @@ endif
 strongswan_BUILD := \
 	openssl \
 	libandroidbridge \
-	strongswan/src/libipsec \
-	strongswan/src/libcharon \
-	strongswan/src/libstrongswan
+	$(strongswan_DIR)/src/libipsec \
+	$(strongswan_DIR)/src/libcharon \
+	$(strongswan_DIR)/src/libstrongswan
 
 ifneq ($(strongswan_USE_BYOD),)
 strongswan_BUILD += \
-	strongswan/src/libtnccs \
-	strongswan/src/libtncif \
-	strongswan/src/libimcv
+	$(strongswan_DIR)/src/libtnccs \
+	$(strongswan_DIR)/src/libtncif \
+	$(strongswan_DIR)/src/libimcv
 endif
 
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2016 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,16 +15,17 @@
 
 package org.strongswan.android.ui;
 
-import org.strongswan.android.R;
-import org.strongswan.android.logic.imc.RemediationInstruction;
-
-import android.app.ListFragment;
 import android.os.Bundle;
+import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import org.strongswan.android.R;
+import org.strongswan.android.logic.imc.RemediationInstruction;
 
 public class RemediationInstructionFragment extends ListFragment
 {
@@ -37,7 +38,13 @@ public class RemediationInstructionFragment extends ListFragment
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
 	{
-		return inflater.inflate(R.layout.remediation_instruction, container, false);
+		/* while the documentation recommends to include "@android:layout/list_content" to retain
+		 * the default functionality, this does not actually work with the ListFragment provided by
+		 * the support library as it builds the view manually and uses different IDs */
+		View layout = inflater.inflate(R.layout.remediation_instruction, container, false);
+		FrameLayout list = (FrameLayout)layout.findViewById(R.id.list_container);
+		list.addView(super.onCreateView(inflater, list, savedInstanceState));
+		return layout;
 	}
 
 	@Override
