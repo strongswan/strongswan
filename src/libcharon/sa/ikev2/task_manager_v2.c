@@ -695,6 +695,13 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (this->initiating.retransmitted)
+	{
+		packet_t *packet = NULL;
+		array_get(this->initiating.packets, 0, &packet);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED, packet);
+	}
+
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
 	enumerator = array_create_enumerator(this->active_tasks);

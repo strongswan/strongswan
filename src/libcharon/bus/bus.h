@@ -105,6 +105,9 @@ enum alert_t {
 	 * of the retransmit, if the message got fragmented only the first fragment
 	 * is passed */
 	ALERT_RETRANSMIT_SEND,
+	/** received response for retransmitted request, argument is packet_t, if
+	 * the message got fragmented only the first fragment is passed */
+	ALERT_RETRANSMIT_SEND_CLEARED,
 	/** sending retransmits timed out, argument is packet_t, if available and if
 	 *  the message got fragmented only the first fragment is passed */
 	ALERT_RETRANSMIT_SEND_TIMEOUT,
