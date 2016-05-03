@@ -84,13 +84,47 @@ CALLBACK(children_sn, int,
 {
 	hashtable_t *child;
 	char *interface, *priority;
+	char *rekey_time, *rekey_bytes, *rekey_packets;
+	bool no_time, no_bytes, no_packets, or = FALSE;
 	int ret;
 
 	child = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
 	ret = vici_parse_cb(res, NULL, values, list, child);
 	if (ret == 0)
 	{
-		printf("  %s: %s\n", name, child->get(child, "mode"));
+		printf("  %s: %s, ", name, child->get(child, "mode"));
+
+		rekey_time    = child->get(child, "rekey_time");
+		rekey_bytes   = child->get(child, "rekey_bytes");
+		rekey_packets = child->get(child, "rekey_packets");
+		no_time    = streq(rekey_time, "0");
+		no_bytes   = streq(rekey_bytes, "0");
+		no_packets = streq(rekey_packets, "0");
+
+		if (no_time && no_bytes && no_packets)
+		{
+			printf("no rekeying\n");
+		}
+		else
+		{
+			printf("rekeying every");
+			if (!no_time)
+			{
+				printf(" %ss", rekey_time);
+				or = TRUE;
+			}
+			if (!no_bytes)
+			{
+				printf("%s %s bytes", or ? " or" : "", rekey_bytes);
+				or = TRUE;
+			}
+			if (!no_packets)
+			{
+				printf("%s %s packets", or ? " or" : "", rekey_packets);
+			}
+			printf("\n");
+		}
+
 		printf("    local:  %s\n", child->get(child, "local-ts"));
 		printf("    remote: %s\n", child->get(child, "remote-ts"));
 
@@ -189,8 +223,43 @@ CALLBACK(conn_list, int,
 CALLBACK(conns, int,
 	void *null, vici_res_t *res, char *name)
 {
-	printf("%s: %s\n", name, vici_find_str(res, "", "%s.version", name));
+	char *version, *reauth_time, *rekey_time;
 
+	version     = vici_find_str(res, "", "%s.version", name);
+	reauth_time = vici_find_str(res, "", "%s.reauth_time", name);
+	rekey_time  = vici_find_str(res, "", "%s.rekey_time", name);
+
+	printf("%s: %s, ", name, version);
+	if (streq(version, "IKEv1"))
+	{
+		if (streq(reauth_time, "0"))
+		{
+			reauth_time = rekey_time;
+		}
+	}
+	if (streq(reauth_time, "0"))
+	{
+		printf("no reauthentication");
+	}
+	else
+	{
+		printf("reauthentication every %ss", reauth_time);
+	}
+	if (streq(version, "IKEv1"))
+	{
+		printf("\n");
+	}
+	else
+	{
+		if (streq(rekey_time, "0"))
+		{
+			printf(", no rekeying\n");
+		}
+		else
+		{
+			printf(", rekeying every %ss\n", rekey_time);
+		}
+	}
 	return vici_parse_cb(res, conn_sn, NULL, conn_list, NULL);
 }
 

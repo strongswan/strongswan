@@ -62,12 +62,22 @@
 /**
  * Default IKE rekey time
  */
-#define LFT_DEFAULT_IKE_REKEY (4 * 60 * 60)
+#define LFT_DEFAULT_IKE_REKEY_TIME		(4 * 60 * 60)
 
 /**
  * Default CHILD rekey time
  */
-#define LFT_DEFAULT_CHILD_REKEY (1 * 60 * 60)
+#define LFT_DEFAULT_CHILD_REKEY_TIME	(1 * 60 * 60)
+
+/**
+ * Default CHILD rekey bytes
+ */
+#define LFT_DEFAULT_CHILD_REKEY_BYTES		0
+
+/**
+ * Default CHILD rekey packets
+ */
+#define LFT_DEFAULT_CHILD_REKEY_PACKETS		0
 
 /**
  * Undefined replay window
@@ -1443,15 +1453,6 @@ static void check_lifetimes(lifetime_cfg_t *lft)
 	{
 		lft->packets.life = lft->packets.rekey * 110 / 100;
 	}
-	/* if no soft lifetime specified, add one at hard lifetime - 10% */
-	if (lft->bytes.rekey == LFT_UNDEFINED)
-	{
-		lft->bytes.rekey = lft->bytes.life * 90 / 100;
-	}
-	if (lft->packets.rekey == LFT_UNDEFINED)
-	{
-		lft->packets.rekey = lft->packets.life * 90 / 100;
-	}
 	/* if no rand time defined, use difference of hard and soft */
 	if (lft->time.jitter == LFT_UNDEFINED)
 	{
@@ -1485,17 +1486,17 @@ CALLBACK(children_sn, bool,
 			.mode = MODE_TUNNEL,
 			.lifetime = {
 				.time = {
-					.rekey = LFT_DEFAULT_CHILD_REKEY,
+					.rekey = LFT_DEFAULT_CHILD_REKEY_TIME,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
 				.bytes = {
-					.rekey = LFT_UNDEFINED,
+					.rekey = LFT_DEFAULT_CHILD_REKEY_BYTES,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
 				.packets = {
-					.rekey = LFT_UNDEFINED,
+					.rekey = LFT_DEFAULT_CHILD_REKEY_PACKETS,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
@@ -2044,7 +2045,7 @@ CALLBACK(config_sn, bool,
 	if (peer.rekey_time == LFT_UNDEFINED && peer.reauth_time == LFT_UNDEFINED)
 	{
 		/* apply a default rekey time if no rekey/reauth time set */
-		peer.rekey_time = LFT_DEFAULT_IKE_REKEY;
+		peer.rekey_time = LFT_DEFAULT_IKE_REKEY_TIME;
 		peer.reauth_time = 0;
 	}
 	if (peer.rekey_time == LFT_UNDEFINED)

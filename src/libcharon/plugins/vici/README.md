@@ -734,6 +734,8 @@ _list-conns_ command.
 				<list of valid remote IKE endpoint addresses>
 			]
 			version = <IKE version as string, IKEv1|IKEv2 or 0 for any>
+			reauth_time = <IKE_SA reauthentication interval in seconds>
+			rekey_time = <IKE_SA rekeying interval in seconds>
 
 			local*, remote* = { # multiple local and remote auth sections
 				class = <authentication type>
@@ -758,6 +760,9 @@ _list-conns_ command.
 			children = {
 				<CHILD_SA config name>* = {
 					mode = <IPsec mode>
+					rekey_time = <CHILD_SA rekeying interval in seconds>
+					rekey_bytes = <CHILD_SA rekeying interval in bytes>
+					rekey_packets = <CHILD_SA rekeying interval in packets>
 					local-ts = [
 						<list of local traffic selectors>
 					]

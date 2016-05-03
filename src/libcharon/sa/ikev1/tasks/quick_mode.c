@@ -722,7 +722,7 @@ static void get_lifetimes(private_quick_mode_t *this)
 {
 	lifetime_cfg_t *lft;
 
-	lft = this->config->get_lifetime(this->config);
+	lft = this->config->get_lifetime(this->config, TRUE);
 	if (lft->time.life)
 	{
 		this->lifetime = lft->time.life;

@@ -157,9 +157,10 @@ struct child_cfg_t {
 	 * The rekey limits automatically contain a jitter to avoid simultaneous
 	 * rekeying. These values will change with each call to this function.
 	 *
+	 * @param jitter		subtract jitter value to randomize lifetimes
 	 * @return				lifetime_cfg_t (has to be freed)
 	 */
-	lifetime_cfg_t* (*get_lifetime) (child_cfg_t *this);
+	lifetime_cfg_t* (*get_lifetime) (child_cfg_t *this, bool jitter);
 
 	/**
 	 * Get the mode to use for the CHILD_SA.
