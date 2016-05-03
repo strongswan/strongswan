@@ -121,6 +121,8 @@
 
     <!-- Dialogs -->
     <string name="login_title">Введите пароль для соединения</string>
+    <string name="login_username">Логин</string>
+    <string name="login_password">Пароль</string>
     <string name="login_confirm">Соединить</string>
     <string name="error_introduction">Ошибка подключения к VPN:</string>
     <string name="error_lookup_failed">Не найден адрес сервер.</string>

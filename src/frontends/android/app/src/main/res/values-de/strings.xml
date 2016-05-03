@@ -124,6 +124,8 @@
 
     <!-- Dialogs -->
     <string name="login_title">Passwort eingeben um zu verbinden</string>
+    <string name="login_username">Benutzername</string>
+    <string name="login_password">Passwort</string>
     <string name="login_confirm">Verbinden</string>
     <string name="error_introduction">Fehler beim Aufsetzen des VPN:</string>
     <string name="error_lookup_failed">Server-Adresse konnte nicht aufgelöst werden.</string>
