@@ -751,7 +751,7 @@ METHOD(child_sa_t, install, status_t,
 		this->reqid_allocated = TRUE;
 	}
 
-	lifetime = this->config->get_lifetime(this->config);
+	lifetime = this->config->get_lifetime(this->config, TRUE);
 
 	now = time_monotonic(NULL);
 	if (lifetime->time.rekey)

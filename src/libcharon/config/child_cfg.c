@@ -428,10 +428,14 @@ static uint64_t apply_jitter(uint64_t rekey, uint64_t jitter)
 #define APPLY_JITTER(l) l.rekey = apply_jitter(l.rekey, l.jitter)
 
 METHOD(child_cfg_t, get_lifetime, lifetime_cfg_t*,
-	private_child_cfg_t *this)
+	private_child_cfg_t *this, bool jitter)
 {
 	lifetime_cfg_t *lft = malloc_thing(lifetime_cfg_t);
 	memcpy(lft, &this->lifetime, sizeof(lifetime_cfg_t));
+	if (!jitter)
+	{
+		lft->time.jitter = lft->bytes.jitter = lft->packets.jitter = 0;
+	}
 	APPLY_JITTER(lft->time);
 	APPLY_JITTER(lft->bytes);
 	APPLY_JITTER(lft->packets);

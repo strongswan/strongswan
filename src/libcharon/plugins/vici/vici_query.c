@@ -686,6 +686,7 @@ CALLBACK(list_conns, vici_message_t*,
 	uint32_t manual_prio;
 	linked_list_t *list;
 	traffic_selector_t *ts;
+	lifetime_cfg_t *lft;
 	vici_builder_t *b;
 
 	ike = request->get_str(request, NULL, "ike");
@@ -726,6 +727,10 @@ CALLBACK(list_conns, vici_message_t*,
 
 		b->add_kv(b, "version", "%N", ike_version_names,
 			peer_cfg->get_ike_version(peer_cfg));
+		b->add_kv(b, "reauth_time", "%u",
+			peer_cfg->get_reauth_time(peer_cfg, FALSE));
+		b->add_kv(b, "rekey_time", "%u",
+			peer_cfg->get_rekey_time(peer_cfg, FALSE));
 
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
@@ -739,6 +744,12 @@ CALLBACK(list_conns, vici_message_t*,
 
 			b->add_kv(b, "mode", "%N", ipsec_mode_names,
 				child_cfg->get_mode(child_cfg));
+
+			lft = child_cfg->get_lifetime(child_cfg, FALSE);
+			b->add_kv(b, "rekey_time",    "%"PRIu64, lft->time.rekey);
+			b->add_kv(b, "rekey_bytes",   "%"PRIu64, lft->bytes.rekey);
+			b->add_kv(b, "rekey_packets", "%"PRIu64, lft->packets.rekey);
+			free(lft);
 
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
