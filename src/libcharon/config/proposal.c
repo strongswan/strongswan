@@ -861,16 +861,18 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case MODP_768_BIT:
 				/* weak */
 				break;
-			case MODP_2048_BIT:
-			case MODP_2048_256:
 			case MODP_2048_224:
 			case MODP_1536_BIT:
-			case MODP_1024_BIT:
 			case MODP_1024_160:
 			case ECP_224_BIT:
 			case ECP_224_BP:
 			case ECP_192_BIT:
 			case NTRU_112_BIT:
+				/* rarely used */
+				break;
+			case MODP_2048_BIT:
+			case MODP_2048_256:
+			case MODP_1024_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
