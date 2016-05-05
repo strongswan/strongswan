@@ -83,7 +83,7 @@ CALLBACK(children_sn, int,
 	hashtable_t *ike, vici_res_t *res, char *name)
 {
 	hashtable_t *child;
-	char *interface, *priority;
+	char *mode, *interface, *priority;
 	char *rekey_time, *rekey_bytes, *rekey_packets;
 	bool no_time, no_bytes, no_packets, or = FALSE;
 	int ret;
@@ -92,7 +92,8 @@ CALLBACK(children_sn, int,
 	ret = vici_parse_cb(res, NULL, values, list, child);
 	if (ret == 0)
 	{
-		printf("  %s: %s, ", name, child->get(child, "mode"));
+		mode = child->get(child, "mode");
+		printf("  %s: %s, ", name, mode);
 
 		rekey_time    = child->get(child, "rekey_time");
 		rekey_bytes   = child->get(child, "rekey_bytes");
@@ -101,7 +102,8 @@ CALLBACK(children_sn, int,
 		no_bytes   = streq(rekey_bytes, "0");
 		no_packets = streq(rekey_packets, "0");
 
-		if (no_time && no_bytes && no_packets)
+		if (strcaseeq(mode, "PASS") || strcaseeq(mode, "DROP") ||
+		   (no_time && no_bytes && no_packets))
 		{
 			printf("no rekeying\n");
 		}
