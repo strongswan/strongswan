@@ -196,10 +196,13 @@ CALLBACK(ike_sa, int,
 {
 	if (streq(name, "child-sas"))
 	{
-		printf("%s: #%s, %s, IKEv%s, %s:%s\n",
+		bool is_initiator = streq(ike->get(ike, "initiator"), "yes");
+
+		printf("%s: #%s, %s, IKEv%s, %s_i%s %s_r%s\n",
 			ike->get(ike, "name"), ike->get(ike, "uniqueid"),
 			ike->get(ike, "state"), ike->get(ike, "version"),
-			ike->get(ike, "initiator-spi"), ike->get(ike, "responder-spi"));
+			ike->get(ike, "initiator-spi"), is_initiator ? "*" : "",
+			ike->get(ike, "responder-spi"), is_initiator ? "" : "*");
 
 		printf("  local  '%s' @ %s[%s]",
 			ike->get(ike, "local-id"), ike->get(ike, "local-host"),
