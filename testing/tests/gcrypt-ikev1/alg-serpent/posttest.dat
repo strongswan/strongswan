@@ -1,2 +1,2 @@
-moon::ipsec stop
-carol::ipsec stop
+moon::service charon stop
+carol::service charon stop
