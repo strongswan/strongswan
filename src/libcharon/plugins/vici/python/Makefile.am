@@ -1,4 +1,4 @@
-EXTRA_DIST = LICENSE MANIFEST.in \
+EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	setup.py.in \
 	vici/test/__init__.py \
 	vici/test/test_protocol.py \

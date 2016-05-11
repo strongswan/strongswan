@@ -1,12 +1,7 @@
 from setuptools import setup
 
-
-long_description = (
-    "The strongSwan VICI protocol allows external application to monitor, "
-    "configure and control the IKE daemon charon. This python package provides "
-    "a native client side implementation of the VICI protocol, well suited to "
-    "script automated tasks in a reliable way."
-)
+with open('README.rst') as file:
+    long_description = file.read()
 
 setup(
     name="vici",
