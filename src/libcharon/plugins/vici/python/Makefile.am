@@ -20,6 +20,10 @@ dist/vici-$(PYTHON_PACKAGE_VERSION)-py$(PYTHON_VERSION).egg: $(EXTRA_DIST) $(src
 		-b $(shell readlink -f $(builddir))/build \
 		-d $(shell readlink -f $(builddir))/dist)
 
+package: $(EXTRA_DIST) $(srcdir)/setup.py
+	(cd $(srcdir); $(PYTHON) setup.py sdist bdist_wheel --universal \
+		-d $(shell readlink -f $(builddir))/dist)
+
 clean-local:
 	(cd $(srcdir); [ ! -f setup.py ] || $(PYTHON) setup.py clean -a)
 	rm -rf $(srcdir)/setup.py $(srcdir)/vici.egg-info $(builddir)/dist
@@ -33,3 +37,5 @@ endif
 if USE_PY_TEST
   TESTS = $(PY_TEST)
 endif
+
+.PHONY: package
