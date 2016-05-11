@@ -21,7 +21,9 @@ dist/vici-$(PYTHON_PACKAGE_VERSION)-py$(PYTHON_VERSION).egg: $(EXTRA_DIST) $(src
 		-d $(shell readlink -f $(builddir))/dist)
 
 package: $(EXTRA_DIST) $(srcdir)/setup.py
-	(cd $(srcdir); $(PYTHON) setup.py sdist bdist_wheel --universal \
+	(cd $(srcdir); $(PYTHON) setup.py sdist \
+		-d $(shell readlink -f $(builddir))/dist \
+		bdist_wheel --universal \
 		-d $(shell readlink -f $(builddir))/dist)
 
 clean-local:
