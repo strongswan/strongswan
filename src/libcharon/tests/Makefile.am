@@ -27,6 +27,7 @@ exchange_tests_SOURCES = \
   utils/exchange_test_helper.h utils/exchange_test_helper.c \
   utils/mock_ipsec.h utils/mock_ipsec.c \
   utils/mock_sender.h utils/mock_sender.c \
+  utils/sa_asserts.h \
   exchange_tests.h exchange_tests.c
 
 exchange_tests_CFLAGS = \
