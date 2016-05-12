@@ -6,6 +6,7 @@ libcharon_tests_SOURCES = \
   suites/test_ike_cfg.c \
   suites/test_mem_pool.c \
   suites/test_message_chapoly.c \
+  utils/mock_ipsec.h utils/mock_ipsec.c \
   utils/mock_sender.h utils/mock_sender.c \
   libcharon_tests.h libcharon_tests.c
 
