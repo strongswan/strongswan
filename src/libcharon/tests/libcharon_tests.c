@@ -53,9 +53,6 @@ static bool test_runner_init(bool init)
 	}
 	else
 	{
-		lib->processor->set_threads(lib->processor, 0);
-		lib->processor->cancel(lib->processor);
-		lib->plugins->unload(lib->plugins);
 		libcharon_deinit();
 	}
 	return TRUE;
