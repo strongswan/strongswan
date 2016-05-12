@@ -24,6 +24,7 @@ libcharon_tests_LDADD = \
 
 
 exchange_tests_SOURCES = \
+  suites/test_child_delete.c \
   utils/exchange_test_asserts.h utils/exchange_test_asserts.c \
   utils/exchange_test_helper.h utils/exchange_test_helper.c \
   utils/mock_ipsec.h utils/mock_ipsec.c \
