@@ -165,8 +165,6 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						/* we don't send back a delete if we initiated ourself */
 						if (!this->initiator)
 						{
-							this->ike_sa->destroy_child_sa(this->ike_sa,
-														   protocol, spi);
 							continue;
 						}
 						/* fall through */
