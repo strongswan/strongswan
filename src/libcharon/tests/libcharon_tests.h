@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2014-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -11,6 +14,14 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ */
+
+/**
+ * @defgroup libcharon-tests tests
+ * @ingroup libcharon
+ *
+ * @defgroup test_utils_c test_utils
+ * @ingroup libcharon-tests
  */
 
 TEST_SUITE(ike_cfg_suite_create)
