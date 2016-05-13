@@ -39,7 +39,18 @@ struct private_exchange_test_helper_t {
 	 * Credentials
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * IKE_SA SPI counter
+	 */
+	refcount_t ike_spi;
 };
+
+CALLBACK(get_ike_spi, uint64_t,
+	private_exchange_test_helper_t *this)
+{
+	return (uint64_t)ref_get(&this->ike_spi);
+}
 
 /*
  * Described in header
@@ -215,6 +226,9 @@ void exchange_test_helper_init(char *plugins)
 	/* and there is no kernel plugin loaded
 	 * TODO: we'd have more control if we'd implement kernel_interface_t */
 	charon->kernel->add_ipsec_interface(charon->kernel, mock_ipsec_create);
+	/* like SPIs for IPsec SAs, make IKE SPIs predictable */
+	charon->ike_sa_manager->set_spi_cb(charon->ike_sa_manager, get_ike_spi,
+									   this);
 
 	charon->backends->add_backend(charon->backends, &this->backend);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
