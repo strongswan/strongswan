@@ -27,6 +27,7 @@ exchange_tests_SOURCES = \
   suites/test_child_delete.c \
   utils/exchange_test_asserts.h utils/exchange_test_asserts.c \
   utils/exchange_test_helper.h utils/exchange_test_helper.c \
+  utils/mock_dh.h utils/mock_dh.c \
   utils/mock_ipsec.h utils/mock_ipsec.c \
   utils/mock_sender.h utils/mock_sender.c \
   utils/sa_asserts.h \
