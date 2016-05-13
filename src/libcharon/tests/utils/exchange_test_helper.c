@@ -15,6 +15,7 @@
 
 #include "exchange_test_helper.h"
 #include "mock_ipsec.h"
+#include "mock_dh.h"
 
 #include <credentials/sets/mem_cred.h>
 
@@ -201,6 +202,13 @@ static void initialize_logging()
 void exchange_test_helper_init(char *plugins)
 {
 	private_exchange_test_helper_t *this;
+	plugin_feature_t features[] = {
+		PLUGIN_REGISTER(DH, mock_dh_create),
+			/* we only need to support a limited number of DH groups */
+			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
+			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+	};
 
 	INIT(this,
 		.public = {
@@ -217,10 +225,13 @@ void exchange_test_helper_init(char *plugins)
 	);
 
 	initialize_logging();
+	lib->plugins->add_static_features(lib->plugins, "exchange-test-helper",
+								features, countof(features), TRUE, NULL, NULL);
 	/* the libcharon unit tests only load the libstrongswan plugins, unless
 	 * TESTS_PLUGINS is defined */
 	charon->initialize(charon, plugins);
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
+
 	/* the original sender is not initialized because there is no socket */
 	charon->sender = (sender_t*)this->public.sender;
 	/* and there is no kernel plugin loaded
