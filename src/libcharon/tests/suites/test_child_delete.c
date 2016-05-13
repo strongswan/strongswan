@@ -39,7 +39,7 @@ START_TEST(test_regular)
 										   &a, &b);
 	}
 	assert_hook_not_called(child_updown);
-	a->delete_child_sa(a, PROTO_ESP, _i+1, FALSE);
+	call_ikesa(a, delete_child_sa, PROTO_ESP, _i+1, FALSE);
 	assert_child_sa_state(a, _i+1, CHILD_DELETING);
 	assert_hook();
 
@@ -57,8 +57,8 @@ START_TEST(test_regular)
 	assert_child_sa_count(a, 0);
 	assert_hook();
 
-	a->destroy(a);
-	b->destroy(b);
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
 }
 END_TEST
 
@@ -74,9 +74,9 @@ START_TEST(test_collision)
 									   &a, &b);
 	/* both peers delete the CHILD_SA concurrently */
 	assert_hook_not_called(child_updown);
-	a->delete_child_sa(a, PROTO_ESP, 1, FALSE);
+	call_ikesa(a, delete_child_sa, PROTO_ESP, 1, FALSE);
 	assert_child_sa_state(a, 1, CHILD_DELETING);
-	b->delete_child_sa(b, PROTO_ESP, 2, FALSE);
+	call_ikesa(b, delete_child_sa, PROTO_ESP, 2, FALSE);
 	assert_child_sa_state(b, 2, CHILD_DELETING);
 	assert_hook();
 
@@ -122,8 +122,8 @@ START_TEST(test_collision)
 	assert_child_sa_count(b, 0);
 	assert_hook();
 
-	a->destroy(a);
-	b->destroy(b);
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
 }
 END_TEST
 

@@ -150,8 +150,7 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	peer_cfg = create_peer_cfg(TRUE);
 	sa_i->set_peer_cfg(sa_i, peer_cfg);
 	peer_cfg->destroy(peer_cfg);
-	charon->bus->set_sa(charon->bus, sa_i);
-	sa_i->initiate(sa_i, create_child_cfg(TRUE), 0, NULL, NULL);
+	call_ikesa(sa_i, initiate, create_child_cfg(TRUE), 0, NULL, NULL);
 	/* IKE_SA_INIT --> */
 	id_r->set_initiator_spi(id_r, id_i->get_initiator_spi(id_i));
 	process_message(this, sa_r, NULL);

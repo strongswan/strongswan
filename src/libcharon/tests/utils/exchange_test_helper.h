@@ -62,6 +62,16 @@ struct exchange_test_helper_t {
 };
 
 /**
+ * Since we don't use the IKE_SA manager to checkout SAs use this to call a
+ * method on the given IKE_SA in its context.
+ */
+#define call_ikesa(sa, method, ...) ({ \
+	charon->bus->set_sa(charon->bus, sa); \
+	sa->method(sa, ##__VA_ARGS__); \
+	charon->bus->set_sa(charon->bus, NULL); \
+})
+
+/**
  * The one and only instance of the helper object.
  *
  * Set between exchange_test_helper_setup() and exchange_test_helper_teardown()
