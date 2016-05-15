@@ -1,6 +1,7 @@
+moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-moon::ipsec start
+moon::expect-connection venus
 carol::expect-connection alice
 carol::ipsec up alice
 dave::expect-connection venus

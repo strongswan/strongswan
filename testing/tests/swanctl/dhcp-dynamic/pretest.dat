@@ -2,7 +2,7 @@ moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
 venus::cat /etc/dhcp/dhcpd.conf
-venus::/etc/init.d/isc-dhcp-server start 2> /dev/null
+venus::service isc-dhcp-server start 2> /dev/null
 moon::service charon start 2> /dev/null
 carol::service charon start 2> /dev/null
 dave::service charon start 2> /dev/null
