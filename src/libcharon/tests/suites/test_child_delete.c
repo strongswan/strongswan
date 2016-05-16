@@ -127,6 +127,60 @@ START_TEST(test_collision)
 }
 END_TEST
 
+/**
+ * This is like the collision above but one of the DELETEs is dropped or delayed
+ * so the other peer is not aware that there is a collision.
+ */
+START_TEST(test_collision_drop)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b);
+	/* both peers delete the CHILD_SA concurrently */
+	assert_hook_not_called(child_updown);
+	call_ikesa(a, delete_child_sa, PROTO_ESP, 1, FALSE);
+	assert_child_sa_state(a, 1, CHILD_DELETING);
+	call_ikesa(b, delete_child_sa, PROTO_ESP, 2, FALSE);
+	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_not_called(child_updown);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_hook();
+
+	/* drop/delay the responder's message */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- INFORMATIONAL { } */
+	assert_hook_updown(child_updown, FALSE);
+	assert_message_empty(IN);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_count(a, 0);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } (delayed/retransmitted) */
+	assert_hook_not_called(child_updown);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, msg);
+	assert_hook();
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_updown(child_updown, FALSE);
+	assert_message_empty(IN);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_count(b, 0);
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
 Suite *child_delete_suite_create()
 {
 	Suite *s;
@@ -138,8 +192,9 @@ Suite *child_delete_suite_create()
 	tcase_add_loop_test(tc, test_regular, 0, 2);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("collision");
+	tc = tcase_create("collisions");
 	tcase_add_test(tc, test_collision);
+	tcase_add_test(tc, test_collision_drop);
 	suite_add_tcase(s, tc);
 
 	return s;
