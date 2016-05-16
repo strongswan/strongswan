@@ -44,7 +44,7 @@
 /* default name of AIK private key blob */
 #define DEFAULT_FILENAME_AIKBLOB		AIK_DIR "aikBlob.bin"
 
-/* default name of AIK private key blob */
+/* default name of AIK public key */
 #define DEFAULT_FILENAME_AIKPUBKEY		AIK_DIR "aikPub.der"
 
 /* size in bytes of a TSS AIK public key blob */
