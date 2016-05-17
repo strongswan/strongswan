@@ -599,18 +599,37 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
+/* TODO: Implement */
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface_name)
 {
+        /*
+        * If we don't have a TUN device, we need to return NOT_SUPPORTED
+        */
 	return NOT_SUPPORTED;
+        /*
+        * Otherwise, we need to convert the interface name to an index and then add the IP to that adapter
+        * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365801(v=vs.85).aspx
+        * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365852(v=vs.85).aspx
+        * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365835(v=vs.85).aspx
+
+        */
+
 }
 
+/* TODO: Implement */
 METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
 	bool wait)
 {
+        /*
+        * If we don't have a TUN device, we need to return NOT_SUPPORTED
+        */
 	return NOT_SUPPORTED;
+        /*
+         * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365875(v=vs.85).aspx
+         */
 }
 
 /**
