@@ -14,8 +14,9 @@
  */
 
 #include "exchange_test_helper.h"
-#include "mock_ipsec.h"
 #include "mock_dh.h"
+#include "mock_ipsec.h"
+#include "mock_nonce_gen.h"
 
 #include <credentials/sets/mem_cred.h>
 
@@ -196,6 +197,14 @@ static void initialize_logging()
 	charon->load_loggers(charon, NULL, TRUE);
 }
 
+/**
+ * Create a nonce generator with the first byte
+ */
+static nonce_gen_t *create_nonce_gen()
+{
+	return mock_nonce_gen_create(exchange_test_helper->nonce_first_byte);
+}
+
 /*
  * Described in header
  */
@@ -208,6 +217,9 @@ void exchange_test_helper_init(char *plugins)
 			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
 			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+		PLUGIN_REGISTER(NONCE_GEN, create_nonce_gen),
+			PLUGIN_PROVIDE(NONCE_GEN),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
 	};
 
 	INIT(this,
