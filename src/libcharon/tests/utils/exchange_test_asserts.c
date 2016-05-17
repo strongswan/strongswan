@@ -56,6 +56,46 @@ bool exchange_test_asserts_child_updown(listener_t *listener, ike_sa_t *ike_sa,
 	return TRUE;
 }
 
+/**
+ * Assert a given message rule
+ */
+static void assert_message_rule(listener_message_assert_t *this, message_t *msg,
+								listener_message_rule_t *rule)
+{
+	if (rule->expected)
+	{
+		if (rule->payload)
+		{
+			assert_listener_msg(msg->get_payload(msg, rule->payload),
+								this, "expected payload (%N) not found",
+								payload_type_names, rule->payload);
+
+		}
+		if (rule->notify)
+		{
+			assert_listener_msg(msg->get_notify(msg, rule->notify),
+								this, "expected notify payload (%N) not found",
+								notify_type_names, rule->notify);
+		}
+	}
+	else
+	{
+		if (rule->payload)
+		{
+			assert_listener_msg(!msg->get_payload(msg, rule->payload),
+								this, "unexpected payload (%N) found",
+								payload_type_names, rule->payload);
+
+		}
+		if (rule->notify)
+		{
+			assert_listener_msg(!msg->get_notify(msg, rule->notify),
+								this, "unexpected notify payload (%N) found",
+								notify_type_names, rule->notify);
+		}
+	}
+}
+
 /*
  * Described in header
  */
@@ -80,17 +120,14 @@ bool exchange_test_asserts_message(listener_t *listener, ike_sa_t *ike_sa,
 								"count in message (%d != %d)", this->count,
 								count);
 		}
-		if (this->payload)
+		if (this->num_rules)
 		{
-			assert_listener_msg(message->get_payload(message, this->payload),
-								this, "expected payload (%N) not found",
-								payload_type_names, this->payload);
-		}
-		if (this->notify)
-		{
-			assert_listener_msg(message->get_notify(message, this->notify),
-								this, "expected notify payload (%N) not found",
-								notify_type_names, this->notify);
+			int i;
+
+			for (i = 0; i < this->num_rules; i++)
+			{
+				assert_message_rule(this, message, &this->rules[i]);
+			}
 		}
 		return FALSE;
 	}

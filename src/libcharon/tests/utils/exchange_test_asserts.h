@@ -27,6 +27,7 @@
 
 typedef struct listener_hook_assert_t listener_hook_assert_t;
 typedef struct listener_message_assert_t listener_message_assert_t;
+typedef struct listener_message_rule_t listener_message_rule_t;
 
 struct listener_hook_assert_t {
 
@@ -172,6 +173,29 @@ do { \
 } while(FALSE)
 
 /**
+ * Rules regarding payloads/notifies to expect/not expect in a message
+ */
+struct listener_message_rule_t {
+
+	/**
+	 * Whether the payload/notify is expected in the message, FALSE to fail if
+	 * it is found
+	 */
+	bool expected;
+
+	/**
+	 * Payload type to expect/not expect
+	 */
+	payload_type_t payload;
+
+	/**
+	 * Notify type to expect/not expect (paylod type does not have to be
+	 * specified)
+	 */
+	notify_type_t notify;
+};
+
+/**
  * Data used to check plaintext messages via listener_t
  */
 struct listener_message_assert_t {
@@ -197,19 +221,19 @@ struct listener_message_assert_t {
 	bool incoming;
 
 	/**
-	 * Payload count to expect
+	 * Payload count to expect (-1 to ignore the count)
 	 */
 	int count;
 
 	/**
-	 * Payload type to look for
+	 * Payloads to expect or not expect in a message
 	 */
-	payload_type_t payload;
+	listener_message_rule_t *rules;
 
 	/**
-	 * Notify type to look for
+	 * Number of rules
 	 */
-	notify_type_t notify;
+	int num_rules;
 };
 
 /**
@@ -224,9 +248,8 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  *
  * @param dir			IN or OUT to check the next in- or outbound message
  */
-#define assert_message_empty(dir) ({ \
-	_assert_payload(dir, 0, 0, 0); \
-})
+#define assert_message_empty(dir) \
+				_assert_payload(dir, 0)
 
 /**
  * Assert that the next in- or outbound plaintext message contains exactly
@@ -235,9 +258,8 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param dir			IN or OUT to check the next in- or outbound message
  * @param expected		expected payload type
  */
-#define assert_single_payload(dir, expected) ({ \
-	_assert_payload(dir, 1, expected, 0); \
-})
+#define assert_single_payload(dir, expected) \
+				_assert_payload(dir, 1, { TRUE, expected, 0 })
 
 /**
  * Assert that the next in- or outbound plaintext message contains exactly
@@ -246,18 +268,39 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param dir			IN or OUT to check the next in- or outbound message
  * @param expected		expected notify type
  */
-#define assert_single_notify(dir, expected) ({ \
-	_assert_payload(dir, 1, 0, expected); \
-})
+#define assert_single_notify(dir, expected) \
+				_assert_payload(dir, 1, { TRUE, 0, expected })
 
-#define _assert_payload(dir, c, p, n) ({ \
+/**
+ * Assert that the next in- or outbound plaintext message contains a notify
+ * of the given type.
+ *
+ * @param dir			IN or OUT to check the next in- or outbound message
+ * @param expected		expected notify type
+ */
+#define assert_notify(dir, expected) \
+				_assert_payload(dir, -1, { TRUE, 0, expected })
+
+/**
+ * Assert that the next in- or outbound plaintext message does not contain a
+ * notify of the given type.
+ *
+ * @param dir			IN or OUT to check the next in- or outbound message
+ * @param unexpected	not expected notify type
+ */
+#define assert_no_notify(dir, unexpected) \
+				_assert_payload(dir, -1, { FALSE, 0, unexpected })
+
+#define _assert_payload(dir, c, ...) ({ \
+	listener_message_rule_t _rules[] = { __VA_ARGS__ }; \
 	listener_message_assert_t _listener = { \
 		.listener = { .message = exchange_test_asserts_message, }, \
 		.file = __FILE__, \
 		.line = __LINE__, \
 		.incoming = streq(#dir, "IN") ? TRUE : FALSE, \
 		.count = c, \
-		.payload = p, \
+		.rules = _rules, \
+		.num_rules = countof(_rules), \
 	}; \
 	charon->bus->add_listener(charon->bus, &_listener.listener); \
 })
