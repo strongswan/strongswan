@@ -16,12 +16,34 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2016 Noel Kuntze
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "tun_device.h"
 
 #include <utils/debug.h>
 #include <threading/thread.h>
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H) && !defined(WIN32)
 
 tun_device_t *tun_device_create(const char *name_tmpl)
 {
@@ -53,6 +75,9 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <net/if_tun.h>
 #include <net/if_var.h>
 #include <netinet/in_var.h>
+#elif defined(WIN32)
+#include <tap-windows.h>
+#include <winioctl.h>
 #else
 #include <net/if_tun.h>
 #endif
@@ -67,12 +92,20 @@ struct private_tun_device_t {
 	 * Public interface
 	 */
 	tun_device_t public;
-
+#ifdef WIN32
+        /**
+         * The TUN device's file handle
+         */
+        HANDLE *tunhandle;
+        /**
+         *
+         */
+#else
 	/**
 	 * The TUN device's file descriptor
 	 */
 	int tunfd;
-
+#endif /* WIN32 */
 	/**
 	 * Name of the TUN device
 	 */
@@ -311,13 +344,19 @@ METHOD(tun_device_t, get_name, char*,
 {
 	return this->if_name;
 }
-
+#ifdef WIN32
+METHOD(tun_device_t, get_handle, HANDLE,
+        private_tun_device_t *this)
+{
+        return this->tunhandle;
+}
+#else
 METHOD(tun_device_t, get_fd, int,
 	private_tun_device_t *this)
 {
 	return this->tunfd;
 }
-
+#endif /* WIN32 */
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
@@ -328,7 +367,25 @@ METHOD(tun_device_t, write_packet, bool,
 	 * instead of parsing the packet again, we assume IPv4 for now */
 	uint32_t proto = htonl(AF_INET);
 	packet = chunk_cata("cc", chunk_from_thing(proto), packet);
-#endif
+#elif defined(WIN32)
+        bool status;
+        DWORD size;
+        status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
+            (DWORD) &packet.len, (LPDWORD) &size, NULL);
+        if (!status)
+        {
+		DBG1(DBG_LIB, "failed to write packet to TUN device %s: %u",
+			 this->if_name, (uint32_t) GetLastError());
+                /*
+                 * TODO: Translate integer to human readable string
+                 */
+		return FALSE;
+        }
+        if (size != packet.len)
+        {
+                return FALSE:
+        }
+#else
 	s = write(this->tunfd, packet.ptr, packet.len);
 	if (s < 0)
 	{
@@ -340,6 +397,7 @@ METHOD(tun_device_t, write_packet, bool,
 	{
 		return FALSE;
 	}
+#endif /* __APPLE__ or WIN32 */
 	return TRUE;
 }
 
@@ -353,6 +411,22 @@ METHOD(tun_device_t, read_packet, bool,
 	data = chunk_alloca(get_mtu(this));
 
 	old = thread_cancelability(TRUE);
+#ifdef WIN32
+        bool status;
+        DWORD size;
+        /* Read chunk from handle */
+        status = ReadFile(*(this->tunhandle), (LPVOID) &data.ptr,
+            (DWORD) data.len, &size, NULL);
+	thread_cancelability(old);
+        if (!status)
+        {
+                /* TODO: Convert DWORD (GetLastError()) to human readable error string */
+                DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
+                   (uint32_t) GetLastError());
+                return FALSE;
+
+        }
+#else
 	len = read(this->tunfd, data.ptr, data.len);
 	thread_cancelability(old);
 	if (len < 0)
@@ -362,6 +436,7 @@ METHOD(tun_device_t, read_packet, bool,
 		return FALSE;
 	}
 	data.len = len;
+#endif /* WIN32 */
 #ifdef __APPLE__
 	/* UTUN's prepend packets with a 32-bit protocol number */
 	data = chunk_skip(data, sizeof(uint32_t));
@@ -373,6 +448,10 @@ METHOD(tun_device_t, read_packet, bool,
 METHOD(tun_device_t, destroy, void,
 	private_tun_device_t *this)
 {
+#ifdef WIN32
+        /* close file handle, destroy interface */
+        CloseHandle(this->tunhandle);
+#else
 	if (this->tunfd > 0)
 	{
 		close(this->tunfd);
@@ -389,7 +468,7 @@ METHOD(tun_device_t, destroy, void,
 			DBG1(DBG_LIB, "failed to destroy %s: %s", this->if_name,
 				 strerror(errno));
 		}
-#endif /* __FreeBSD__ */
+#endif
 	}
 	if (this->sock > 0)
 	{
@@ -451,7 +530,72 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 		return FALSE;
 	}
 	return TRUE;
+#elif defined(WIN32)
+        /* WIN32 TAP driver stuff*/
+        /* Check if there is an unused tun device following the IPsec name scheme*/
 
+        /* Try to open that device */
+        /* If there is no device found to be used, create one yourself */
+        /* Set mode */
+        char device_path[256];
+        /* Translate dev name to guid */
+        /* TODO: Fix. device_guid should be */
+        snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, device_guid, TAP_WIN_SUFFIX);
+        this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
+            0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
+        if this->tunhandle == INVALID_HANDLE_VALUE)
+        {
+            DBG1(DBG_LIB, "could not create TUN device %s", device_path);
+        }
+        /* set correct mode */
+        /* TODO: integrate */
+	  in_addr_t ep[3];
+	  BOOL status;
+
+	  ep[0] = htonl (tt->local);
+	  ep[1] = htonl (tt->local & tt->remote_netmask);
+	  ep[2] = htonl (tt->remote_netmask);
+
+	  status = DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_TUN,
+				    ep, sizeof (ep),
+				    ep, sizeof (ep), &len, NULL);
+
+          msg (status ? M_INFO : M_FATAL, "Set TAP-Windows TUN subnet mode network/local/netmask = %s/%s/%s [%s]",
+	       print_in_addr_t (ep[1], IA_NET_ORDER, &gc),
+	       print_in_addr_t (ep[0], IA_NET_ORDER, &gc),
+	       print_in_addr_t (ep[2], IA_NET_ORDER, &gc),
+	       status ? "SUCCEEDED" : "FAILED");
+
+	/*
+
+	  in_addr_t ep[2];
+	  ep[0] = htonl (tt->local);
+	  ep[1] = htonl (tt->remote_netmask);
+
+	  if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
+				ep, sizeof (ep),
+				ep, sizeof (ep), &len, NULL))
+	    msg (M_FATAL, "ERROR: The TAP-Windows driver rejected a DeviceIoControl call to set Point-to-Point mode, which is required for --dev tun");
+	*/
+        /* Set device to up */
+        {
+            ULONG status = TRUE;
+            if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
+    			  &status, sizeof (status),
+			  &status, sizeof (status), &len, NULL))
+            msg (M_WARN, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
+        }
+
+  /* possible wait for adapter to come up */
+  {
+    int s = tt->options.tap_sleep;
+    if (s > 0)
+      {
+	msg (M_INFO, "Sleeping for %d seconds...", s);
+	openvpn_sleep (s);
+      }
+  }
+*/
 #elif defined(IFF_TUN)
 
 	struct ifreq ifr;
