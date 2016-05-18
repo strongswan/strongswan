@@ -486,7 +486,7 @@ AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
 AC_SUBST(SOCKLIB)
 
 # Android has pthread_* functions in bionic (libc), others need libpthread
-LIBS=""
+LIBS=$DLLIB
 AC_SEARCH_LIBS(pthread_create, pthread, [PTHREADLIB=$LIBS])
 AC_SUBST(PTHREADLIB)
 
