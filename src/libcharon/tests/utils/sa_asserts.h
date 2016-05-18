@@ -37,19 +37,32 @@
 })
 
 /**
- * Check if the CHILD_SA with the given inbound SPI is in the expected state.
+ * Check if the CHILD_SA with the given SPI is in the expected state.
  */
 #define assert_child_sa_state(ike_sa, spi, state) \
 ({ \
 	typeof(ike_sa) _sa = ike_sa; \
 	typeof(spi) _spi = spi; \
 	typeof(state) _state = state; \
-	child_sa_t *_child = _sa->get_child_sa(_sa, PROTO_ESP, _spi, TRUE); \
+	child_sa_t *_child = _sa->get_child_sa(_sa, PROTO_ESP, _spi, TRUE) ?: \
+						 _sa->get_child_sa(_sa, PROTO_ESP, _spi, FALSE); \
 	test_assert_msg(_child, "CHILD_SA with SPI %.8x does not exist", \
 					ntohl(_spi)); \
 	test_assert_msg(_state == _child->get_state(_child), "%N != %N", \
 					child_sa_state_names, _state, \
 					child_sa_state_names, _child->get_state(_child)); \
+})
+
+/**
+ * Assert that the CHILD_SA with the given inbound SPI does not exist.
+ */
+#define assert_child_sa_not_exists(ike_sa, spi) \
+({ \
+	typeof(ike_sa) _sa = ike_sa; \
+	typeof(spi) _spi = spi; \
+	child_sa_t *_child = _sa->get_child_sa(_sa, PROTO_ESP, _spi, TRUE) ?: \
+						 _sa->get_child_sa(_sa, PROTO_ESP, _spi, FALSE); \
+	test_assert_msg(!_child, "CHILD_SA with SPI %.8x exists", ntohl(_spi)); \
 })
 
 #endif /** SA_ASSERTS_H_ @}*/
