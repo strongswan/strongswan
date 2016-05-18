@@ -65,6 +65,11 @@ struct listener_hook_assert_t {
 	 * Expected updown result
 	 */
 	bool up;
+
+	/**
+	 * Initiator/Inbound SPIs to expect in rekey event
+	 */
+	uint64_t spi_old, spi_new;
 };
 
 /**
@@ -83,6 +88,18 @@ bool exchange_test_asserts_ike_updown(listener_t *this, ike_sa_t *ike_sa,
  */
 bool exchange_test_asserts_child_updown(listener_t *this, ike_sa_t *ike_sa,
 										child_sa_t *child_sa, bool up);
+
+/**
+ * Implementation of listener_t::ike_rekey.
+ */
+bool exchange_test_asserts_ike_rekey(listener_t *this, ike_sa_t *old,
+									 ike_sa_t *new);
+
+/**
+ * Implementation of listener_t::child_rekey.
+ */
+bool exchange_test_asserts_child_rekey(listener_t *this, ike_sa_t *ike_sa,
+									   child_sa_t *old, child_sa_t *new);
 
 /**
  * Check if a statement evaluates to TRUE, use original source file and line
@@ -133,6 +150,24 @@ bool exchange_test_asserts_child_updown(listener_t *this, ike_sa_t *ike_sa,
 								   : (void*)exchange_test_asserts_child_updown, \
 		.expected = 1, \
 		.up = e, \
+	)
+
+/**
+ * Initialize an assertion that enforces that the given rekey hook was called
+ * with the SAs with the matching initiator/inbound SPIs.
+ * Must be matched by a call to assert_hook().
+ *
+ * @param name		name of the hook
+ * @param old		SPI of the old SA
+ * @param new		SPI of the new SA
+ */
+#define assert_hook_rekey(name, old, new) \
+	_assert_hook_init(name, \
+		streq(#name, "ike_rekey") ? (void*)exchange_test_asserts_ike_rekey \
+								   : (void*)exchange_test_asserts_child_rekey, \
+		.expected = 1, \
+		.spi_old = old, \
+		.spi_new = new, \
 	)
 
 /**

@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <inttypes.h>
+
 #include <test_suite.h>
 
 #include "exchange_test_asserts.h"
@@ -53,6 +55,51 @@ bool exchange_test_asserts_child_updown(listener_t *listener, ike_sa_t *ike_sa,
 	this->count++;
 	assert_listener_msg(this->up == up, this, "CHILD_SA not '%s'",
 						this->up ? "up" : "down");
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool exchange_test_asserts_ike_rekey(listener_t *listener, ike_sa_t *old,
+									 ike_sa_t *new)
+{
+	listener_hook_assert_t *this = (listener_hook_assert_t*)listener;
+	ike_sa_id_t *id;
+	uint64_t spi;
+
+	this->count++;
+	id = old->get_id(old);
+	spi = id->get_initiator_spi(id);
+	assert_listener_msg(this->spi_old == spi, this, "unexpected old IKE_SA "
+						"%.16"PRIx64"_i instead of %.16"PRIx64"_i",
+						be64toh(spi), be64toh(this->spi_old));
+	id = new->get_id(new);
+	spi = id->get_initiator_spi(id);
+	assert_listener_msg(this->spi_new == spi, this, "unexpected new IKE_SA "
+						"%.16"PRIx64"_i instead of %.16"PRIx64"_i",
+						be64toh(spi), be64toh(this->spi_new));
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool exchange_test_asserts_child_rekey(listener_t *listener, ike_sa_t *ike_sa,
+									   child_sa_t *old, child_sa_t *new)
+{
+	listener_hook_assert_t *this = (listener_hook_assert_t*)listener;
+	uint32_t spi, expected;
+
+	this->count++;
+	spi = old->get_spi(old, TRUE);
+	expected = this->spi_old;
+	assert_listener_msg(expected == spi, this, "unexpected old CHILD_SA %.8x "
+						"instead of %.8x", spi, expected);
+	spi = new->get_spi(new, TRUE);
+	expected = this->spi_new;
+	assert_listener_msg(expected == spi, this, "unexpected new CHILD_SA %.8x "
+						"instead of %.8x", spi, expected);
 	return TRUE;
 }
 
