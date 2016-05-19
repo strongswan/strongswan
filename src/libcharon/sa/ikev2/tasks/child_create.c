@@ -1432,6 +1432,7 @@ METHOD(task_t, process_i, status_t,
 				case FAILED_CP_REQUIRED:
 				case TS_UNACCEPTABLE:
 				case INVALID_SELECTORS:
+				case TEMPORARY_FAILURE:
 				{
 					DBG1(DBG_IKE, "received %N notify, no CHILD_SA built",
 						 notify_type_names, type);

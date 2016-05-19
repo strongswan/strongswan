@@ -346,10 +346,10 @@ METHOD(task_t, process_i, status_t,
 	}
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
-		/* establishing new child failed, reuse old. but not when we
-		 * received a delete in the meantime */
-		if (!(this->collision &&
-			  this->collision->get_type(this->collision) == TASK_CHILD_DELETE))
+		/* establishing new child failed, reuse old and try again. but not when
+		 * we received a delete in the meantime */
+		if (!this->collision ||
+			 this->collision->get_type(this->collision) != TASK_CHILD_DELETE)
 		{
 			schedule_delayed_rekey(this);
 		}
