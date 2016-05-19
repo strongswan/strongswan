@@ -533,9 +533,12 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 #elif defined(WIN32)
         /* WIN32 TAP driver stuff*/
         /* Check if there is an unused tun device following the IPsec name scheme*/
-
+        enumerator_t *enumerator;
+        linked_list_t *possible_devices = get_tap_reg();
+        /* Iterate over list */
+        enumerator = enumerator->enumerate(possible_devices);
         /* Try to open that device */
-        /* If there is no device found to be used, create one yourself */
+
         /* Set mode */
         char device_path[256];
         /* Translate dev name to guid */
@@ -548,54 +551,40 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
             DBG1(DBG_LIB, "could not create TUN device %s", device_path);
         }
         /* set correct mode */
-        /* TODO: integrate */
-	  in_addr_t ep[3];
-	  BOOL status;
-
-	  ep[0] = htonl (tt->local);
-	  ep[1] = htonl (tt->local & tt->remote_netmask);
-	  ep[2] = htonl (tt->remote_netmask);
-
-	  status = DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_TUN,
-				    ep, sizeof (ep),
-				    ep, sizeof (ep), &len, NULL);
-
-          msg (status ? M_INFO : M_FATAL, "Set TAP-Windows TUN subnet mode network/local/netmask = %s/%s/%s [%s]",
-	       print_in_addr_t (ep[1], IA_NET_ORDER, &gc),
-	       print_in_addr_t (ep[0], IA_NET_ORDER, &gc),
-	       print_in_addr_t (ep[2], IA_NET_ORDER, &gc),
-	       status ? "SUCCEEDED" : "FAILED");
-
-	/*
-
-	  in_addr_t ep[2];
-	  ep[0] = htonl (tt->local);
-	  ep[1] = htonl (tt->remote_netmask);
-
-	  if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
-				ep, sizeof (ep),
-				ep, sizeof (ep), &len, NULL))
-	    msg (M_FATAL, "ERROR: The TAP-Windows driver rejected a DeviceIoControl call to set Point-to-Point mode, which is required for --dev tun");
-	*/
+        /* We set a fake gateway of 169.254.254.128 that we route packets over
+         The TAP driver strips the Ethernet header and trailer of the Ethernet frames
+         before sending them back to the application that listens on the handle */
+	in_addr_t ep[3];
+	BOOL status;
+        /* Local address (just fake one): 169.254.128.127 */
+	ep[0] = htonl (0xA9FE8079);
+        /*
+         * Remote network. THe tap driver validates it by masking it with the remote_netmask
+         * and then comparing hte result against the remote network (this value here).
+         * If it does not match, an error is logged and initialization fails.
+         * (local & remote_netmask ? local)
+         * The driver does proxy arp for this network and the local address.
+         */
+        /* Just fake a link local address for now (169.254.128.128) */
+	ep[1] = htonl (A9FE8080));
+        /* Remote netmask (255.255.0.0) */
+	ep[2] = htonl (FFFF0000);
+        
+        status = DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_TUN,
+		    ep, sizeof (ep),
+		    ep, sizeof (ep), &len, NULL);
         /* Set device to up */
+        ULONG status = TRUE;
+        if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
+  			  &status, sizeof (status),
+                            &status, sizeof (status), &len, NULL))
         {
-            ULONG status = TRUE;
-            if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
-    			  &status, sizeof (status),
-			  &status, sizeof (status), &len, NULL))
-            msg (M_WARN, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
+        DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
         }
 
-  /* possible wait for adapter to come up */
-  {
-    int s = tt->options.tap_sleep;
-    if (s > 0)
-      {
-	msg (M_INFO, "Sleeping for %d seconds...", s);
-	openvpn_sleep (s);
-      }
-  }
-*/
+            /* Give the adapter 2 seconds to come up */
+        DBG3 (DBG_LIB, "Sleeping for %d seconds...", 2);
+        sleep(2);
 #elif defined(IFF_TUN)
 
 	struct ifreq ifr;
