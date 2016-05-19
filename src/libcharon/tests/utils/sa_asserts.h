@@ -65,4 +65,36 @@
 	test_assert_msg(!_child, "CHILD_SA with SPI %.8x exists", ntohl(_spi)); \
 })
 
+/**
+ * Assert that there is a specific number of tasks in a given queue
+ *
+ * @param ike_sa		IKE_SA to check
+ * @param count			number of expected tasks
+ * @param queue			queue to check (task_queue_t)
+ */
+#define assert_num_tasks(ike_sa, count, queue) \
+({ \
+	typeof(ike_sa) _sa = ike_sa; \
+	typeof(count) _count = count; \
+	int _c = 0; task_t *_task; \
+	enumerator_t *_enumerator = _sa->create_task_enumerator(_sa, queue); \
+	while (_enumerator->enumerate(_enumerator, &_task)) { _c++; } \
+	_enumerator->destroy(_enumerator); \
+	test_assert_msg(_count == _c, "unexpected number of tasks in " #queue " " \
+					"of IKE_SA %s (%d != %d)", #ike_sa, _count, _c); \
+})
+
+/**
+ * Assert that all task queues of the given IKE_SA are empty
+ *
+ * @param ike_sa		IKE_SA to check
+ */
+#define assert_sa_idle(ike_sa) \
+({ \
+	typeof(ike_sa) _ike_sa = ike_sa; \
+	assert_num_tasks(_ike_sa, 0, TASK_QUEUE_QUEUED); \
+	assert_num_tasks(_ike_sa, 0, TASK_QUEUE_ACTIVE); \
+	assert_num_tasks(_ike_sa, 0, TASK_QUEUE_PASSIVE); \
+})
+
 #endif /** SA_ASSERTS_H_ @}*/
