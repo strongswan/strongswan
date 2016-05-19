@@ -337,6 +337,34 @@ METHOD(task_t, process_i, status_t,
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
 	}
+	if (message->get_notify(message, CHILD_SA_NOT_FOUND))
+	{
+		child_cfg_t *child_cfg;
+		uint32_t reqid;
+
+		if (this->collision &&
+			this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
+		{	/* ignore this error if we already deleted the CHILD_SA on the
+			 * peer's behalf (could happen if the other peer does not detect
+			 * the collision and did not respond with TEMPORARY_FAILURE) */
+			return SUCCESS;
+		}
+		DBG1(DBG_IKE, "peer didn't find the CHILD_SA we tried to rekey");
+		/* FIXME: according to RFC 7296 we should only create a new CHILD_SA if
+		 * it does not exist yet, we currently have no good way of checking for
+		 * that (we could go by name, but that might be tricky e.g. due to
+		 * narrowing) */
+		spi = this->child_sa->get_spi(this->child_sa, TRUE);
+		reqid = this->child_sa->get_reqid(this->child_sa);
+		protocol = this->child_sa->get_protocol(this->child_sa);
+		child_cfg = this->child_sa->get_config(this->child_sa);
+		child_cfg->get_ref(child_cfg);
+		charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
+		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+		return this->ike_sa->initiate(this->ike_sa,
+									  child_cfg->get_ref(child_cfg), reqid,
+									  NULL, NULL);
+	}
 
 	if (this->child_create->task.process(&this->child_create->task,
 										 message) == NEED_MORE)
