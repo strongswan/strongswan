@@ -1390,7 +1390,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 u_int mark_in, u_int mark_out)
 {
 	private_child_sa_t *this;
-	static refcount_t unique_id = 0, unique_mark = 0, mark;
+	static refcount_t unique_id = 0, unique_mark = 0;
+	refcount_t mark;
 
 	INIT(this,
 		.public = {
