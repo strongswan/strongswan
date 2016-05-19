@@ -219,11 +219,16 @@ METHOD(task_t, build_r, status_t,
 	child_cfg_t *config;
 	uint32_t reqid;
 
-	if (this->child_sa == NULL ||
-		this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
+	if (!this->child_sa)
 	{
 		DBG1(DBG_IKE, "unable to rekey, CHILD_SA not found");
-		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		message->add_notify(message, TRUE, CHILD_SA_NOT_FOUND, chunk_empty);
+		return SUCCESS;
+	}
+	if (this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
+	{
+		DBG1(DBG_IKE, "unable to rekey, we are deleting the CHILD_SA");
+		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
 
