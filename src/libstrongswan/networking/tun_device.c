@@ -569,7 +569,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 	ep[1] = htonl (A9FE8080));
         /* Remote netmask (255.255.0.0) */
 	ep[2] = htonl (FFFF0000);
-        
+
         status = DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_TUN,
 		    ep, sizeof (ep),
 		    ep, sizeof (ep), &len, NULL);
@@ -579,7 +579,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
   			  &status, sizeof (status),
                             &status, sizeof (status), &len, NULL))
         {
-        DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
+            DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
         }
 
             /* Give the adapter 2 seconds to come up */
