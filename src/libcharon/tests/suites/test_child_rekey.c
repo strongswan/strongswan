@@ -60,8 +60,7 @@ START_TEST(test_regular)
 	assert_hook_called(child_rekey);
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	/* FIXME: keeping this in CHILD_REKEYING is not ideal */
-	assert_child_sa_state(b, spi_b, CHILD_REKEYING);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED);
 	assert_hook();
 
@@ -145,14 +144,14 @@ START_TEST(test_collision)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 2, 5);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_state(b, 2, CHILD_REKEYED);
 	assert_child_sa_state(b, 5, CHILD_INSTALLED);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 6);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_state(a, 1, CHILD_REKEYED);
 	assert_child_sa_state(a, 6, CHILD_INSTALLED);
 	assert_hook();
 
@@ -169,7 +168,7 @@ START_TEST(test_collision)
 		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	}
 	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYING);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED);
 	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	if (data[_i].spi_del_b == 2)
@@ -183,7 +182,7 @@ START_TEST(test_collision)
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	}
 	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYING);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
 	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
 
 	/* we don't expect this hook to get called anymore */

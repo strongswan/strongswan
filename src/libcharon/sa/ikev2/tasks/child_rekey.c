@@ -241,6 +241,7 @@ METHOD(task_t, build_r, status_t,
 	config = this->child_sa->get_config(this->child_sa);
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
+	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
@@ -249,7 +250,7 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
-	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
+	this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
 
 	/* invoke rekey hook */
 	charon->bus->child_rekey(charon->bus, this->child_sa,
@@ -289,9 +290,9 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 				if (child_sa)
 				{
 					child_sa->set_close_action(child_sa, ACTION_NONE);
-					if (child_sa->get_state(child_sa) != CHILD_REKEYING)
+					if (child_sa->get_state(child_sa) != CHILD_REKEYED)
 					{
-						child_sa->set_state(child_sa, CHILD_REKEYING);
+						child_sa->set_state(child_sa, CHILD_REKEYED);
 					}
 				}
 			}
@@ -410,9 +411,9 @@ METHOD(task_t, process_i, status_t,
 		return SUCCESS;
 	}
 	/* disable updown event for redundant CHILD_SA */
-	if (to_delete->get_state(to_delete) != CHILD_REKEYING)
+	if (to_delete->get_state(to_delete) != CHILD_REKEYED)
 	{
-		to_delete->set_state(to_delete, CHILD_REKEYING);
+		to_delete->set_state(to_delete, CHILD_REKEYED);
 	}
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);

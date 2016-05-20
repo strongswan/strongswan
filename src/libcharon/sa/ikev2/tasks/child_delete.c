@@ -157,9 +157,8 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 
 				switch (child_sa->get_state(child_sa))
 				{
-					case CHILD_REKEYING:
+					case CHILD_REKEYED:
 						this->rekeyed = TRUE;
-						/* we reply as usual, rekeying will fail */
 						break;
 					case CHILD_DELETING:
 						/* we don't send back a delete if we initiated ourself */
@@ -168,11 +167,14 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 							continue;
 						}
 						/* fall through */
+					case CHILD_REKEYING:
+						/* we reply as usual, rekeying will fail */
 					case CHILD_INSTALLED:
 						if (!this->initiator)
 						{	/* reestablish installed children if required */
 							this->check_delete_action = TRUE;
 						}
+						break;
 					default:
 						break;
 				}
@@ -204,7 +206,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
-		/* signal child down event if we are not rekeying */
+		/* signal child down event if we weren't rekeying */
 		if (!this->rekeyed)
 		{
 			charon->bus->child_updown(charon->bus, child_sa, FALSE);
@@ -306,7 +308,7 @@ METHOD(task_t, build_i, status_t,
 		this->spi = child_sa->get_spi(child_sa, TRUE);
 	}
 	this->child_sas->insert_last(this->child_sas, child_sa);
-	if (child_sa->get_state(child_sa) == CHILD_REKEYING)
+	if (child_sa->get_state(child_sa) == CHILD_REKEYED)
 	{
 		this->rekeyed = TRUE;
 	}
