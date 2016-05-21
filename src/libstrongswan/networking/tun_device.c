@@ -63,6 +63,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <sys/stat.h>
 #include <unistd.h>
 #include <net/if.h>
+#endif
 
 #ifdef __APPLE__
 #include <net/if_utun.h>
