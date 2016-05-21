@@ -711,7 +711,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                      * Convert the IP to a string for later printing of it in
                      * the error message
                      */
-                    DWORD length = 17;
+                    DWORD length = 47;
                     char *readable_address = malloc(length);
                     memset(readable_address, 0, length);
                     InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
