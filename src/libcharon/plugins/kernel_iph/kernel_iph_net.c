@@ -655,33 +655,23 @@ METHOD(kernel_net_t, add_ip, status_t,
 
                     if (status != NO_ERROR)
                     {
-                        /*
-                         * Convert the IP to a string for later printing of it in
-                         * the error message
-                         */
-                        DWORD length = 17;
-                        char *readable_address = malloc(length);
-                        memset(readable_address, 0, length);
-                        InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
-
                         switch (status) {
                             case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_OBJECT_ALREADY_EXISTS:
-                                DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
+                                DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", virtual_ip);
                                 break;
                             default:
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
                         }
-                        free(readable_address);
                         return FAILURE;
                     }
                     else
@@ -711,29 +701,23 @@ METHOD(kernel_net_t, add_ip, status_t,
                          * Convert the IP to a string for later printing of it in
                          * the error message
                          */
-                        DWORD length = 47;
-                        char *readable_address = malloc(length);
-                        memset(readable_address, 0, length);
-                        InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
-
                         switch (status) {
                             case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_OBJECT_ALREADY_EXISTS:
-                                DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
+                                DBG1(DBG_KNL, "the kernel complained about the IP %H already existing on some interface", virtual_ip);
                                 break;
                             default:
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
                         }
-                        free(readable_address);
                         return FAILURE;
                     }
                     else
@@ -808,31 +792,20 @@ METHOD(kernel_net_t, del_ip, status_t,
 
                     if (status != NO_ERROR)
                     {
-                        /*
-                         * Convert the IP to a string for later printing of it in
-                         * the error message
-                         */
-                        DWORD length = 17;
-                        char *readable_address = malloc(length);
-                        memset(readable_address, 0, length);
-                        InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
-
                         switch (status) {
                             case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %H to interface %s", virtual_ip, iface_name);
                                 break;
                             default:
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
-                        }
-                        free(readable_address);
-                        return FAILURE;
+                        }                        return FAILURE;
                     }
                     else
                     {
@@ -857,30 +830,20 @@ METHOD(kernel_net_t, del_ip, status_t,
 
                     if (status != NO_ERROR)
                     {
-                        /*
-                         * Convert the IP to a string for later printing of it in
-                         * the error message
-                         */
-                        DWORD length = 47;
-                        char *readable_address = malloc(length);
-                        memset(readable_address, 0, length);
-                        InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
-
                         switch (status) {
                             case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
                                 break;
                             case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %s to interface %s", readable_address, iface_name);
+                                DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %H to interface %s", virtual_ip, iface_name);
                                 break;
                             default:
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
                         }
-                        free(readable_address);
                         return FAILURE;
                     }
                     else
