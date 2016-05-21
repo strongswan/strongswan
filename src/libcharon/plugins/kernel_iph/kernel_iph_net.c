@@ -604,152 +604,152 @@ METHOD(kernel_net_t, add_ip, status_t,
         private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
         char *iface_name)
 {
-    /*
-     * If we don't have a TUN device, we need to return NOT_SUPPORTED
-     * Check if the name starts with TAP
-     */
-    char *pos = strstr(iface_name, "TAP");
-    if (!pos)
-    {
-        return NOT_SUPPORTED;
-    }
-    else
-    {
         /*
-         * Convert the interface name to an index
+         * If we don't have a TUN device, we need to return NOT_SUPPORTED
+         * Check if the name starts with TAP
          */
-        NET_IFINDEX index = if_nametoindex(iface_name);
-        if (!index)
+        char *pos = strstr(iface_name, "TAP");
+        if (!pos)
         {
-            DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
-            return FALSE;
+            return NOT_SUPPORTED;
         }
         else
         {
             /*
-             * Transform IP address into in_addr structure
+             * Convert the interface name to an index
              */
-            chunk_t address = virtual_ip->get_address(this);
-
-            MIB_UNICASTIPADDRESS_ROW ip_row;
-            InitializeUnicastIpAddressEntry(&ip_row);
-
-            /*
-             * Check the length of the chunk.
-             */
-            if (address.len == 4)
+            NET_IFINDEX index = if_nametoindex(iface_name);
+            if (!index)
             {
-                /*
-                 * IPv4
-                 */
-                SOCKADDR_IN ipv4_address;
-
-                /* Horribly intricate struct */
-                ipv4_address.sin_family = AF_INET;
-                ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
-
-                ip_row.InterfaceIndex = index;
-                ip_row.Address.Ipv4 = ipv4_address;
-
-                BOOL status = CreateUnicastIpAddressEntry(&ip_row);
-
-                if (status != NO_ERROR)
-                {
-                    /*
-                     * Convert the IP to a string for later printing of it in
-                     * the error message
-                     */
-                    DWORD length = 17;
-                    char *readable_address = malloc(length);
-                    memset(readable_address, 0, length);
-                    InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
-
-                    switch (status) {
-                        case ERROR_INVALID_PARAMETER:
-                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_FOUND:
-                            DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_SUPPORTED:
-                            DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_OBJECT_ALREADY_EXISTS:
-                            DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
-                            break;
-                        default:
-                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                            break;
-                    }
-                    free(readable_address);
-                    return FAILURE;
-                }
-                else
-                {
-                    return SUCCESS;
-                }
-            }
-            else if (address.len == 16)
-            {
-                /*
-                 * IPv6
-                 */
-                SOCKADDR_IN6 ipv6_address;
-
-                /* Horribly intricate struct */
-                ipv6_address.sin_family = AF_INET6;
-                ipv6_address.sin6_addr = *address.ptr;
-
-                ip_row.InterfaceIndex = index;
-                ip_row.Address.Ipv6 = ipv6_address;
-
-                BOOL status = CreateUnicastIpAddressEntry(&ip_row);
-
-                if (status != NO_ERROR)
-                {
-                    /*
-                     * Convert the IP to a string for later printing of it in
-                     * the error message
-                     */
-                    DWORD length = 47;
-                    char *readable_address = malloc(length);
-                    memset(readable_address, 0, length);
-                    InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
-
-                    switch (status) {
-                        case ERROR_INVALID_PARAMETER:
-                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_FOUND:
-                            DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_SUPPORTED:
-                            DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_OBJECT_ALREADY_EXISTS:
-                            DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
-                            break;
-                        default:
-                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                            break;
-                    }
-                    free(readable_address);
-                    return FAILURE;
-                }
-                else
-                {
-                    return SUCCESS;
-                }
+                DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
+                return FALSE;
             }
             else
             {
-                /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
-                DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
-                return FALSE;
-            }
+                /*
+                 * Transform IP address into in_addr structure
+                 */
+                chunk_t address = virtual_ip->get_address(this);
 
+                MIB_UNICASTIPADDRESS_ROW ip_row;
+                InitializeUnicastIpAddressEntry(&ip_row);
+
+                /*
+                 * Check the length of the chunk.
+                 */
+                if (address.len == 4)
+                {
+                    /*
+                     * IPv4
+                     */
+                    SOCKADDR_IN ipv4_address;
+
+                    /* Horribly intricate struct */
+                    ipv4_address.sin_family = AF_INET;
+                    ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
+
+                    ip_row.InterfaceIndex = index;
+                    ip_row.Address.Ipv4 = ipv4_address;
+
+                    BOOL status = CreateUnicastIpAddressEntry(&ip_row);
+
+                    if (status != NO_ERROR)
+                    {
+                        /*
+                         * Convert the IP to a string for later printing of it in
+                         * the error message
+                         */
+                        DWORD length = 17;
+                        char *readable_address = malloc(length);
+                        memset(readable_address, 0, length);
+                        InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
+
+                        switch (status) {
+                            case ERROR_INVALID_PARAMETER:
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_FOUND:
+                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_SUPPORTED:
+                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_OBJECT_ALREADY_EXISTS:
+                                DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
+                                break;
+                            default:
+                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                                break;
+                        }
+                        free(readable_address);
+                        return FAILURE;
+                    }
+                    else
+                    {
+                        return SUCCESS;
+                    }
+                }
+                else if (address.len == 16)
+                {
+                    /*
+                     * IPv6
+                     */
+                    SOCKADDR_IN6 ipv6_address;
+
+                    /* Horribly intricate struct */
+                    ipv6_address.sin_family = AF_INET6;
+                    ipv6_address.sin6_addr = *address.ptr;
+
+                    ip_row.InterfaceIndex = index;
+                    ip_row.Address.Ipv6 = ipv6_address;
+
+                    BOOL status = CreateUnicastIpAddressEntry(&ip_row);
+
+                    if (status != NO_ERROR)
+                    {
+                        /*
+                         * Convert the IP to a string for later printing of it in
+                         * the error message
+                         */
+                        DWORD length = 47;
+                        char *readable_address = malloc(length);
+                        memset(readable_address, 0, length);
+                        InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
+
+                        switch (status) {
+                            case ERROR_INVALID_PARAMETER:
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_FOUND:
+                                DBG1(DBG_KNL, "the kernel complained about a missing parameter when trying to add the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_SUPPORTED:
+                                DBG1(DBG_KNL, "the kernel complained about missing support for adding the address %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_OBJECT_ALREADY_EXISTS:
+                                DBG1(DBG_KNL, "the kernel complained about the IP %s already existing on some interface", readable_address);
+                                break;
+                            default:
+                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                                break;
+                        }
+                        free(readable_address);
+                        return FAILURE;
+                    }
+                    else
+                    {
+                        return SUCCESS;
+                    }
+                }
+                else
+                {
+                    /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
+                    DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
+                    return FALSE;
+                }
+
+            }
         }
-    }
 }
 
 /* TODO: Implement */
@@ -757,146 +757,146 @@ METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
 	bool wait)
 {
-    /*
-     * If we don't have a TUN device, we need to return NOT_SUPPORTED
-     * Check if the name starts with TAP
-     */
-    char *pos = strstr(iface_name, "TAP");
-    if (!pos)
-    {
-        return NOT_SUPPORTED;
-    }
-    else
-    {
         /*
-         * Convert the interface name to an index
+         * If we don't have a TUN device, we need to return NOT_SUPPORTED
+         * Check if the name starts with TAP
          */
-        NET_IFINDEX index = if_nametoindex(iface_name);
-        if (!index)
+        char *pos = strstr(iface_name, "TAP");
+        if (!pos)
         {
-            DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
-            return FALSE;
+            return NOT_SUPPORTED;
         }
         else
         {
             /*
-             * Transform IP address into in_addr structure
+             * Convert the interface name to an index
              */
-            chunk_t address = virtual_ip->get_address(this);
-
-            MIB_UNICASTIPADDRESS_ROW ip_row;
-            InitializeUnicastIpAddressEntry(&ip_row);
-
-            /*
-             * Check the length of the chunk.
-             */
-            if (address.len == 4)
+            NET_IFINDEX index = if_nametoindex(iface_name);
+            if (!index)
             {
-                /*
-                 * IPv4
-                 */
-                SOCKADDR_IN ipv4_address;
-
-                /* Horribly intricate struct */
-                ipv4_address.sin_family = AF_INET;
-                ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
-
-                ip_row.InterfaceIndex = index;
-                ip_row.Address.Ipv4 = ipv4_address;
-
-                BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
-
-                if (status != NO_ERROR)
-                {
-                    /*
-                     * Convert the IP to a string for later printing of it in
-                     * the error message
-                     */
-                    DWORD length = 17;
-                    char *readable_address = malloc(length);
-                    memset(readable_address, 0, length);
-                    InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
-
-                    switch (status) {
-                        case ERROR_INVALID_PARAMETER:
-                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_FOUND:
-                            DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_SUPPORTED:
-                            DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %s to interface %s", readable_address, iface_name);
-                            break;
-                        default:
-                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                            break;
-                    }
-                    free(readable_address);
-                    return FAILURE;
-                }
-                else
-                {
-                    return SUCCESS;
-                }
-            }
-            else if (address.len == 16)
-            {
-                /*
-                 * IPv6
-                 */
-                SOCKADDR_IN6 ipv6_address;
-
-                /* Horribly intricate struct */
-                ipv6_address.sin_family = AF_INET6;
-                ipv6_address.sin6_addr = *address.ptr;
-
-                ip_row.InterfaceIndex = index;
-                ip_row.Address.Ipv6 = ipv6_address;
-
-                BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
-
-                if (status != NO_ERROR)
-                {
-                    /*
-                     * Convert the IP to a string for later printing of it in
-                     * the error message
-                     */
-                    DWORD length = 47;
-                    char *readable_address = malloc(length);
-                    memset(readable_address, 0, length);
-                    InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
-
-                    switch (status) {
-                        case ERROR_INVALID_PARAMETER:
-                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_FOUND:
-                            DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
-                            break;
-                        case ERROR_NOT_SUPPORTED:
-                            DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %s to interface %s", readable_address, iface_name);
-                            break;
-                        default:
-                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                            break;
-                    }
-                    free(readable_address);
-                    return FAILURE;
-                }
-                else
-                {
-                    return SUCCESS;
-                }
+                DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
+                return FALSE;
             }
             else
             {
-                /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
-                DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
-                return FALSE;
-            }
+                /*
+                 * Transform IP address into in_addr structure
+                 */
+                chunk_t address = virtual_ip->get_address(this);
 
+                MIB_UNICASTIPADDRESS_ROW ip_row;
+                InitializeUnicastIpAddressEntry(&ip_row);
+
+                /*
+                 * Check the length of the chunk.
+                 */
+                if (address.len == 4)
+                {
+                    /*
+                     * IPv4
+                     */
+                    SOCKADDR_IN ipv4_address;
+
+                    /* Horribly intricate struct */
+                    ipv4_address.sin_family = AF_INET;
+                    ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
+
+                    ip_row.InterfaceIndex = index;
+                    ip_row.Address.Ipv4 = ipv4_address;
+
+                    BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
+
+                    if (status != NO_ERROR)
+                    {
+                        /*
+                         * Convert the IP to a string for later printing of it in
+                         * the error message
+                         */
+                        DWORD length = 17;
+                        char *readable_address = malloc(length);
+                        memset(readable_address, 0, length);
+                        InetNtop(AF_INET, &ipv4_address.sin_addr, readable_address, length),
+
+                        switch (status) {
+                            case ERROR_INVALID_PARAMETER:
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_FOUND:
+                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_SUPPORTED:
+                                DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %s to interface %s", readable_address, iface_name);
+                                break;
+                            default:
+                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                                break;
+                        }
+                        free(readable_address);
+                        return FAILURE;
+                    }
+                    else
+                    {
+                        return SUCCESS;
+                    }
+                }
+                else if (address.len == 16)
+                {
+                    /*
+                     * IPv6
+                     */
+                    SOCKADDR_IN6 ipv6_address;
+
+                    /* Horribly intricate struct */
+                    ipv6_address.sin_family = AF_INET6;
+                    ipv6_address.sin6_addr = *address.ptr;
+
+                    ip_row.InterfaceIndex = index;
+                    ip_row.Address.Ipv6 = ipv6_address;
+
+                    BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
+
+                    if (status != NO_ERROR)
+                    {
+                        /*
+                         * Convert the IP to a string for later printing of it in
+                         * the error message
+                         */
+                        DWORD length = 47;
+                        char *readable_address = malloc(length);
+                        memset(readable_address, 0, length);
+                        InetNtop(AF_INET6, &ipv6_address.sin_addr, readable_address, length),
+
+                        switch (status) {
+                            case ERROR_INVALID_PARAMETER:
+                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_FOUND:
+                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %s to interface %s", readable_address, iface_name);
+                                break;
+                            case ERROR_NOT_SUPPORTED:
+                                DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %s to interface %s", readable_address, iface_name);
+                                break;
+                            default:
+                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                                break;
+                        }
+                        free(readable_address);
+                        return FAILURE;
+                    }
+                    else
+                    {
+                        return SUCCESS;
+                    }
+                }
+                else
+                {
+                    /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
+                    DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
+                    return FALSE;
+                }
+
+            }
         }
-    }
 
 }
 
