@@ -633,7 +633,9 @@ METHOD(kernel_net_t, add_ip, status_t,
 
                 MIB_UNICASTIPADDRESS_ROW ip_row;
                 InitializeUnicastIpAddressEntry(&ip_row);
-
+                ip_row.PrefixOrigin = IpPrefixOriginUnchanged;
+                ip_row.OnLinkPrefixLength = prefix;
+                
                 /*
                  * Check the length of the chunk.
                  */
@@ -770,6 +772,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 
                 MIB_UNICASTIPADDRESS_ROW ip_row;
                 InitializeUnicastIpAddressEntry(&ip_row);
+                ip_row.PrefixOrigin = IpPrefixOriginUnchanged;
+                ip_row.OnLinkPrefixLength = prefix;
 
                 /*
                  * Check the length of the chunk.
