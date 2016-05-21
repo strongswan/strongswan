@@ -599,7 +599,6 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
-/* TODO: Implement */
 METHOD(kernel_net_t, add_ip, status_t,
         private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
         char *iface_name)
@@ -635,7 +634,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                 InitializeUnicastIpAddressEntry(&ip_row);
                 ip_row.PrefixOrigin = IpPrefixOriginUnchanged;
                 ip_row.OnLinkPrefixLength = prefix;
-                
+
                 /*
                  * Check the length of the chunk.
                  */
@@ -738,7 +737,6 @@ METHOD(kernel_net_t, add_ip, status_t,
         }
 }
 
-/* TODO: Implement */
 METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
 	bool wait)
