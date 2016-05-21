@@ -744,7 +744,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                 else
                 {
                     /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
-                    DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
+                    DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %u", address.len);
                     return FALSE;
                 }
 
