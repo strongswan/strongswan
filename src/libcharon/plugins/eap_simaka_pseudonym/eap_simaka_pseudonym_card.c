@@ -69,8 +69,6 @@ METHOD(simaka_card_t, set_pseudonym, void,
 	private_eap_simaka_pseudonym_card_t *this, identification_t *id,
 	identification_t *pseudonym)
 {
-	identification_t *permanent;
-
 	/* create new entries */
 	id = id->clone(id);
 	pseudonym = pseudonym->clone(pseudonym);
