@@ -34,11 +34,6 @@ struct private_eap_simaka_pseudonym_card_t {
 	 * Permanent -> pseudonym mappings
 	 */
 	hashtable_t *pseudonym;
-
-	/**
-	 * Reverse pseudonym -> permanent mappings
-	 */
-	hashtable_t *permanent;
 };
 
 /**
@@ -79,11 +74,9 @@ METHOD(simaka_card_t, set_pseudonym, void,
 	/* create new entries */
 	id = id->clone(id);
 	pseudonym = pseudonym->clone(pseudonym);
-	permanent = this->permanent->put(this->permanent, pseudonym, id);
 	pseudonym = this->pseudonym->put(this->pseudonym, id, pseudonym);
 
 	/* delete old entries */
-	DESTROY_IF(permanent);
 	DESTROY_IF(pseudonym);
 }
 
@@ -109,15 +102,7 @@ METHOD(eap_simaka_pseudonym_card_t, destroy, void,
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = this->permanent->create_enumerator(this->permanent);
-	while (enumerator->enumerate(enumerator, &key, &id))
-	{
-		id->destroy(id);
-	}
-	enumerator->destroy(enumerator);
-
 	this->pseudonym->destroy(this->pseudonym);
-	this->permanent->destroy(this->permanent);
 	free(this);
 }
 
@@ -142,7 +127,6 @@ eap_simaka_pseudonym_card_t *eap_simaka_pseudonym_card_create()
 			.destroy = _destroy,
 		},
 		.pseudonym = hashtable_create((void*)hash, (void*)equals, 0),
-		.permanent = hashtable_create((void*)hash, (void*)equals, 0),
 	);
 
 	return &this->public;
