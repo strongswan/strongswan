@@ -587,6 +587,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_DEAD_PEER_NOTIFY
+  SUBDIRS += plugins/dead_peer_notify
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/dead_peer_notify/libstrongswan-dead-peer-notify.la
+endif
+endif
+
 if USE_CERTEXPIRE
   SUBDIRS += plugins/certexpire
 if MONOLITHIC

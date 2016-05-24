@@ -1,0 +1,40 @@
+charon.plugins.dead-peer-notify.send_email = no
+	Enable or disable sending notifications by email.
+
+	Enable or disable sending notifications by email.
+	After the last retransmit has been sent and the peer is considered dead,
+	plugin sends an email with notification, which contains a name and an ip address of the dead peer.
+
+charon.plugins.dead-peer-notify.mail_from =
+	Sender's email address.
+
+charon.plugins.dead-peer-notify.mail_to =
+	Recipient's email address.
+
+charon.plugins.dead-peer-notify.mail_username =
+	Sender's SMTP user name.
+
+charon.plugins.dead-peer-notify.mail_password =
+	Sender's SMTP password.
+
+charon.plugins.dead-peer-notify.smtp_url =
+	SMTP server url.
+
+	SMTP server url. Format: smtp://host:port.
+	Plugin supports only SSL/TLS connections.
+    (e.g. smtp://smtp.example.com:587)
+
+charon.plugins.dead-peer-notify.smtp_cacert =
+	Path to public certificate of the SMTP server.
+    (e.g. /etc/certs/mta_ca.pem)
+
+charon.plugins.dead-peer-notify.run_command = no
+	Enable or disable external command execution.
+
+	Enable or disable external command execution.
+	After the last retransmit has been sent and the peer is considered dead,
+	plugin executes external command with two arguments: dead peer name and ip address.
+
+charon.plugins.dead-peer-notify.command_path =
+	Path to external command.
+    (e.g. /usr/local/bin/user_script.sh)
