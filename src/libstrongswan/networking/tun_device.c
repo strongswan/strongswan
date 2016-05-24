@@ -43,7 +43,7 @@
 #include <utils/debug.h>
 #include <threading/thread.h>
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H) && !defined(WIN32)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H) && !defined(W32)
 
 tun_device_t *tun_device_create(const char *name_tmpl)
 {
@@ -55,7 +55,9 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 
 #include <errno.h>
 #include <fcntl.h>
+#if !defined(WIN32)
 #include <netinet/in.h>
+#endif
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -79,6 +81,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #elif defined(WIN32)
 #include <tap-windows.h>
 #include <winioctl.h>
+#include "win32.h"
 #else
 #include <net/if_tun.h>
 #endif
@@ -99,19 +102,19 @@ struct private_tun_device_t {
          */
         HANDLE *tunhandle;
         /**
-         *
+         * Name of the TUN device
          */
+        char if_name[256];
 #else
 	/**
 	 * The TUN device's file descriptor
 	 */
 	int tunfd;
-#endif /* WIN32 */
 	/**
 	 * Name of the TUN device
 	 */
 	char if_name[IFNAMSIZ];
-
+#endif /* WIN32 */
 	/**
 	 * Socket used for ioctl() to set interface addr, ...
 	 */
@@ -199,8 +202,18 @@ static bool set_address_impl(private_tun_device_t *this, host_t *addr,
 	return TRUE;
 }
 
-#else /* __FreeBSD__ */
+#elif defined(WIN32)
+        /* method definitions for Windows */
+/**
+ * Set the address using registry and fileIO shennanigans on Windows.
+ */
+static bool set_address_impl(private_tun_device_t *this, host_t *addr,
+							 uint8_t netmask)
+{
+    return TRUE;
+}
 
+#else /* __FreeBSD__ */
 /**
  * Set the address using the classic SIOCSIFADDR etc. commands on other systems.
  */
@@ -273,10 +286,21 @@ METHOD(tun_device_t, get_address, host_t*,
 	}
 	return this->address;
 }
-
+/* Fix for WIN32 */
 METHOD(tun_device_t, up, bool,
 	private_tun_device_t *this)
 {
+#ifdef WIN32
+        ULONG status = TRUE;
+        DWORD len;
+        if (!DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
+			  &status, sizeof (status),
+			  &status, sizeof (status), &len, NULL))
+        {
+            DBG1(DBG_LIB, "failed to set the interface %s to up", this->if_name);
+            return FALSE;
+        }
+#else
 	struct ifreq ifr;
 
 	memset(&ifr, 0, sizeof(ifr));
@@ -297,12 +321,17 @@ METHOD(tun_device_t, up, bool,
 			 strerror(errno));
 		return FALSE;
 	}
+#endif /* WIN32 */
 	return TRUE;
 }
 
+/* Fix for WIN32 */
 METHOD(tun_device_t, set_mtu, bool,
 	private_tun_device_t *this, int mtu)
 {
+#ifdef WIN32
+        return NOT_SUPPORTED;
+#else
 	struct ifreq ifr;
 
 	memset(&ifr, 0, sizeof(ifr));
@@ -315,6 +344,7 @@ METHOD(tun_device_t, set_mtu, bool,
 			 strerror(errno));
 		return FALSE;
 	}
+#endif
 	this->mtu = mtu;
 	return TRUE;
 }
@@ -322,6 +352,16 @@ METHOD(tun_device_t, set_mtu, bool,
 METHOD(tun_device_t, get_mtu, int,
 	private_tun_device_t *this)
 {
+#ifdef WIN32
+        ULONG mtu;
+        DWORD len;
+        if (DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_GET_MTU,
+			 &mtu, sizeof (mtu),
+			 &mtu, sizeof (mtu), &len, NULL))
+        {
+            this->mtu = (int) mtu;
+        }
+#else
 	struct ifreq ifr;
 
 	if (this->mtu > 0)
@@ -337,6 +377,7 @@ METHOD(tun_device_t, get_mtu, int,
 	{
 		this->mtu = ifr.ifr_mtu;
 	}
+#endif /* WIN32 */
 	return this->mtu;
 }
 
@@ -384,7 +425,7 @@ METHOD(tun_device_t, write_packet, bool,
         }
         if (size != packet.len)
         {
-                return FALSE:
+                return FALSE;
         }
 #else
 	s = write(this->tunfd, packet.ptr, packet.len);
@@ -471,6 +512,7 @@ METHOD(tun_device_t, destroy, void,
 		}
 #endif
 	}
+#endif
 	if (this->sock > 0)
 	{
 		close(this->sock);
@@ -535,11 +577,23 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* WIN32 TAP driver stuff*/
         /* Check if there is an unused tun device following the IPsec name scheme*/
         enumerator_t *enumerator;
+        char *name;
         linked_list_t *possible_devices = get_tap_reg();
         /* Iterate over list */
-        enumerator = enumerator->enumerate(possible_devices);
+        enumerator = possible_devices->create_enumerator(possible_devices);
         /* Try to open that device */
+        while(enumerator->enumerate(enumerator, &name))
+        {
 
+            /* device has been examined or used, free it */
+            free(name);
+        }
+
+        /* possible_devices has been freed while going over the enumerator.
+         * Therefore it is not necessary to free the elements in the list now.
+         */
+        enumerator->destroy(enumerator);
+        possible_devices->destroy(possible_devices);
         /* Set mode */
         char device_path[256];
         /* Translate dev name to guid */
@@ -547,7 +601,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, device_guid, TAP_WIN_SUFFIX);
         this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
             0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
-        if this->tunhandle == INVALID_HANDLE_VALUE)
+        if (this->tunhandle == INVALID_HANDLE_VALUE)
         {
             DBG1(DBG_LIB, "could not create TUN device %s", device_path);
         }
@@ -557,6 +611,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          before sending them back to the application that listens on the handle */
 	in_addr_t ep[3];
 	BOOL status;
+        DWORD len;
         /* Local address (just fake one): 169.254.128.127 */
 	ep[0] = htonl (0xA9FE8079);
         /*
@@ -567,16 +622,16 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          * The driver does proxy arp for this network and the local address.
          */
         /* Just fake a link local address for now (169.254.128.128) */
-	ep[1] = htonl (A9FE8080));
+	ep[1] = htonl (0xA9FE8080);
         /* Remote netmask (255.255.0.0) */
-	ep[2] = htonl (FFFF0000);
+	ep[2] = htonl (0xFFFF0000);
 
-        status = DeviceIoControl (tt->hand, TAP_WIN_IOCTL_CONFIG_TUN,
+        status = DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_CONFIG_TUN,
 		    ep, sizeof (ep),
 		    ep, sizeof (ep), &len, NULL);
         /* Set device to up */
         ULONG status = TRUE;
-        if (!DeviceIoControl (tt->hand, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
+        if (!DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
   			  &status, sizeof (status),
                             &status, sizeof (status), &len, NULL))
         {
@@ -661,13 +716,22 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.get_mtu = _get_mtu,
 			.set_mtu = _set_mtu,
 			.get_name = _get_name,
+                        /* For WIN32, that's a handle. */
+#ifdef WIN32
+                        .get_handle = _get_handle,
+#else
 			.get_fd = _get_fd,
+#endif
 			.set_address = _set_address,
 			.get_address = _get_address,
 			.up = _up,
 			.destroy = _destroy,
 		},
+#ifdef WIN32
+                .tunhandle = NULL,
+#else
 		.tunfd = -1,
+#endif
 		.sock = -1,
 	);
 
