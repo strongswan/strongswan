@@ -31,12 +31,12 @@ START_TEST(test_regular)
 	if (_i)
 	{	/* responder deletes the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &b, &a);
+										   &b, &a, NULL);
 	}
 	else
 	{	/* initiator deletes the CHILD_SA (SPI 1) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &a, &b);
+										   &a, &b, NULL);
 	}
 	assert_hook_not_called(child_updown);
 	call_ikesa(a, delete_child_sa, PROTO_ESP, _i+1, FALSE);
@@ -71,7 +71,7 @@ START_TEST(test_collision)
 	ike_sa_t *a, *b;
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
-									   &a, &b);
+									   &a, &b, NULL);
 	/* both peers delete the CHILD_SA concurrently */
 	assert_hook_not_called(child_updown);
 	call_ikesa(a, delete_child_sa, PROTO_ESP, 1, FALSE);
@@ -137,7 +137,7 @@ START_TEST(test_collision_drop)
 	message_t *msg;
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
-									   &a, &b);
+									   &a, &b, NULL);
 	/* both peers delete the CHILD_SA concurrently */
 	assert_hook_not_called(child_updown);
 	call_ikesa(a, delete_child_sa, PROTO_ESP, 1, FALSE);

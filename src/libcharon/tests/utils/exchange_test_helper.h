@@ -32,6 +32,7 @@
 #include "mock_sender.h"
 
 typedef struct exchange_test_helper_t exchange_test_helper_t;
+typedef struct exchange_test_sa_conf_t exchange_test_sa_conf_t;
 
 struct exchange_test_helper_t {
 
@@ -51,9 +52,10 @@ struct exchange_test_helper_t {
 	 *
 	 * @param[out] init		IKE_SA of the initiator
 	 * @param[out] resp		IKE_SA of the responder
+	 * @param conf			configuration for SAs
 	 */
 	void (*establish_sa)(exchange_test_helper_t *this, ike_sa_t **init,
-						 ike_sa_t **resp);
+						 ike_sa_t **resp, exchange_test_sa_conf_t *conf);
 
 	/**
 	 * Pass a message to the given IKE_SA for processing, setting the IKE_SA on
@@ -65,6 +67,19 @@ struct exchange_test_helper_t {
 	 */
 	void (*process_message)(exchange_test_helper_t *this, ike_sa_t *sa,
 							message_t *message);
+};
+
+struct exchange_test_sa_conf_t {
+
+	/**
+	 * Configuration for initiator and responder
+	 */
+	struct {
+		/** IKE proposal */
+		char *ike;
+		/** ESP proposal */
+		char *esp;
+	} initiator, responder;
 };
 
 /**

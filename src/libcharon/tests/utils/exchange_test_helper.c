@@ -21,6 +21,7 @@
 #include <credentials/sets/mem_cred.h>
 
 typedef struct private_exchange_test_helper_t private_exchange_test_helper_t;
+typedef struct private_backend_t private_backend_t;
 
 /**
  * Private data
@@ -33,11 +34,6 @@ struct private_exchange_test_helper_t {
 	exchange_test_helper_t public;
 
 	/**
-	 * Config backend
-	 */
-	backend_t backend;
-
-	/**
 	 * Credentials
 	 */
 	mem_cred_t *creds;
@@ -46,6 +42,27 @@ struct private_exchange_test_helper_t {
 	 * IKE_SA SPI counter
 	 */
 	refcount_t ike_spi;
+};
+
+/**
+ * Custom backend_t implementation
+ */
+struct private_backend_t {
+
+	/**
+	 * Public interface
+	 */
+	backend_t public;
+
+	/**
+	 * Responder ike_cfg
+	 */
+	ike_cfg_t *ike_cfg;
+
+	/**
+	 * Responder peer_cfg/child_cfg
+	 */
+	peer_cfg_t *peer_cfg;
 };
 
 CALLBACK(get_ike_spi, uint64_t,
@@ -59,26 +76,52 @@ CALLBACK(get_ike_spi, uint64_t,
  */
 exchange_test_helper_t *exchange_test_helper;
 
-static ike_cfg_t *create_ike_cfg()
+static ike_cfg_t *create_ike_cfg(bool initiator, exchange_test_sa_conf_t *conf)
 {
 	ike_cfg_t *ike_cfg;
+	char *proposal = NULL;
 
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, FALSE, "127.0.0.1", IKEV2_UDP_PORT,
 							 "127.0.0.1", IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	if (conf)
+	{
+		proposal = initiator ? conf->initiator.ike : conf->responder.ike;
+	}
+	if (proposal)
+	{
+		ike_cfg->add_proposal(ike_cfg,
+							proposal_create_from_string(PROTO_IKE, proposal));
+	}
+	else
+	{
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	}
 	return ike_cfg;
 }
 
-static child_cfg_t *create_child_cfg(bool initiator)
+static child_cfg_t *create_child_cfg(bool initiator,
+									 exchange_test_sa_conf_t *conf)
 {
 	child_cfg_t *child_cfg;
 	child_cfg_create_t child = {
 		.mode = MODE_TUNNEL,
 	};
+	char *proposal = NULL;
 
 	child_cfg = child_cfg_create(initiator ? "init" : "resp", &child);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	if (conf)
+	{
+		proposal = initiator ? conf->initiator.esp : conf->responder.esp;
+	}
+	if (proposal)
+	{
+		child_cfg->add_proposal(child_cfg,
+							proposal_create_from_string(PROTO_ESP, proposal));
+	}
+	else
+	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+	}
 	child_cfg->add_traffic_selector(child_cfg, TRUE,
 								traffic_selector_create_dynamic(0, 0, 65535));
 	child_cfg->add_traffic_selector(child_cfg, FALSE,
@@ -101,7 +144,8 @@ static void add_auth_cfg(peer_cfg_t *peer_cfg, bool initiator, bool local)
 	peer_cfg->add_auth_cfg(peer_cfg, auth, local);
 }
 
-static peer_cfg_t *create_peer_cfg(bool initiator)
+static peer_cfg_t *create_peer_cfg(bool initiator,
+								   exchange_test_sa_conf_t *conf)
 {
 	peer_cfg_t *peer_cfg;
 	peer_cfg_create_t peer = {
@@ -110,26 +154,23 @@ static peer_cfg_t *create_peer_cfg(bool initiator)
 		.keyingtries = 1,
 	};
 
-	peer_cfg = peer_cfg_create(initiator ? "init" : "resp", create_ike_cfg(),
-							   &peer);
+	peer_cfg = peer_cfg_create(initiator ? "init" : "resp",
+							   create_ike_cfg(initiator, conf), &peer);
 	add_auth_cfg(peer_cfg, initiator, TRUE);
 	add_auth_cfg(peer_cfg, initiator, FALSE);
-	peer_cfg->add_child_cfg(peer_cfg, create_child_cfg(initiator));
 	return peer_cfg;
 }
 
 METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
-	backend_t *this, host_t *me, host_t *other)
+	private_backend_t *this, host_t *me, host_t *other)
 {
-	ike_cfg_t *ike_cfg = create_ike_cfg();
-	return enumerator_create_single(ike_cfg, (void*)ike_cfg->destroy);
+	return enumerator_create_single(this->ike_cfg, NULL);
 }
 
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
-	backend_t *this, identification_t *me, identification_t *other)
+	private_backend_t *this, identification_t *me, identification_t *other)
 {
-	peer_cfg_t *peer_cfg = create_peer_cfg(FALSE);
-	return enumerator_create_single(peer_cfg, (void*)peer_cfg->destroy);
+	return enumerator_create_single(this->peer_cfg, NULL);
 }
 
 METHOD(exchange_test_helper_t, process_message, void,
@@ -146,11 +187,20 @@ METHOD(exchange_test_helper_t, process_message, void,
 }
 
 METHOD(exchange_test_helper_t, establish_sa, void,
-	private_exchange_test_helper_t *this, ike_sa_t **init, ike_sa_t **resp)
+	private_exchange_test_helper_t *this, ike_sa_t **init, ike_sa_t **resp,
+	exchange_test_sa_conf_t *conf)
 {
+	private_backend_t backend = {
+		.public = {
+			.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+			.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+			.get_peer_cfg_by_name = (void*)return_null,
+		},
+	};
 	ike_sa_id_t *id_i, *id_r;
 	ike_sa_t *sa_i, *sa_r;
 	peer_cfg_t *peer_cfg;
+	child_cfg_t *child_cfg;
 
 	sa_i = *init = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 														IKEV2, TRUE);
@@ -160,10 +210,20 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 														IKEV2, FALSE);
 	id_r = sa_r->get_id(sa_r);
 
-	peer_cfg = create_peer_cfg(TRUE);
+	peer_cfg = create_peer_cfg(TRUE, conf);
+	child_cfg = create_child_cfg(TRUE, conf);
+	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
 	sa_i->set_peer_cfg(sa_i, peer_cfg);
 	peer_cfg->destroy(peer_cfg);
-	call_ikesa(sa_i, initiate, create_child_cfg(TRUE), 0, NULL, NULL);
+	call_ikesa(sa_i, initiate, child_cfg, 0, NULL, NULL);
+
+	backend.ike_cfg = create_ike_cfg(FALSE, conf);
+	peer_cfg = backend.peer_cfg = create_peer_cfg(FALSE, conf);
+	child_cfg = create_child_cfg(FALSE, conf);
+	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
+	child_cfg->destroy(child_cfg);
+	charon->backends->add_backend(charon->backends, &backend.public);
+
 	/* IKE_SA_INIT --> */
 	id_r->set_initiator_spi(id_r, id_i->get_initiator_spi(id_i));
 	process_message(this, sa_r, NULL);
@@ -174,6 +234,10 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	process_message(this, sa_r, NULL);
 	/* <-- IKE_AUTH */
 	process_message(this, sa_i, NULL);
+
+	charon->backends->remove_backend(charon->backends, &backend.public);
+	DESTROY_IF(backend.peer_cfg);
+	DESTROY_IF(backend.ike_cfg);
 }
 
 /**
@@ -228,11 +292,6 @@ void exchange_test_helper_init(char *plugins)
 			.establish_sa = _establish_sa,
 			.process_message = _process_message,
 		},
-		.backend = {
-			.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
-			.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
-			.get_peer_cfg_by_name = (void*)return_null,
-		},
 		.creds = mem_cred_create(),
 	);
 
@@ -253,7 +312,6 @@ void exchange_test_helper_init(char *plugins)
 	charon->ike_sa_manager->set_spi_cb(charon->ike_sa_manager, get_ike_spi,
 									   this);
 
-	charon->backends->add_backend(charon->backends, &this->backend);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	this->creds->add_shared(this->creds,
@@ -272,7 +330,6 @@ void exchange_test_helper_deinit()
 
 	this = (private_exchange_test_helper_t*)exchange_test_helper;
 
-	charon->backends->remove_backend(charon->backends, &this->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
 	/* can't let charon do it as it happens too late */

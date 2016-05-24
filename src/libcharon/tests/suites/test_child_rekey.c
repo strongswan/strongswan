@@ -45,12 +45,12 @@ START_TEST(test_regular)
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &b, &a);
+										   &b, &a, NULL);
 	}
 	else
 	{	/* initiator rekeys the CHILD_SA (SPI 1) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &a, &b);
+										   &a, &b, NULL);
 	}
 	initiate_rekey(a, spi_a);
 
@@ -105,7 +105,7 @@ START_TEST(test_collision)
 	ike_sa_t *a, *b;
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
-									   &a, &b);
+									   &a, &b, NULL);
 
 	/* When rekeyings collide we get two CHILD_SAs with a total of four nonces.
 	 * The CHILD_SA with the lowest nonce SHOULD be deleted by the peer that
@@ -235,12 +235,12 @@ START_TEST(test_collision_delete)
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &b, &a);
+										   &b, &a, NULL);
 	}
 	else
 	{	/* initiator rekeys the CHILD_SA (SPI 1) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &a, &b);
+										   &a, &b, NULL);
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
@@ -322,12 +322,12 @@ START_TEST(test_collision_delete_drop_delete)
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &b, &a);
+										   &b, &a, NULL);
 	}
 	else
 	{	/* initiator rekeys the CHILD_SA (SPI 1) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &a, &b);
+										   &a, &b, NULL);
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
@@ -407,12 +407,12 @@ END_TEST
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &b, &a);
+										   &b, &a, NULL);
 	}
 	else
 	{	/* initiator rekeys the CHILD_SA (SPI 1) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
-										   &a, &b);
+										   &a, &b, NULL);
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
