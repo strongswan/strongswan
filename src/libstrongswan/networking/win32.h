@@ -22,5 +22,13 @@
 
 #ifdef WIN32
 
+#include <collections/linked_list.h>
+/*
+ * Searches through the registry for suitable TAP driver interfaces
+ * On Windows, the TAP interface metadata is stored and described in the registry.
+ * It returns a linked list that contains all found guids. The guids describe the interfaces.
+ */
+
+linked_list_t *get_tap_reg();
 
 #endif
