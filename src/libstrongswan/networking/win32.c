@@ -29,6 +29,7 @@
 
 #include <tap-windows.h>
 #include <winioctl.h>
+#include "win32.h"
 
 /* Find the guid of the given device in the registry */
 
@@ -73,6 +74,7 @@ get_unspecified_device_guid(const int device_number,
 /*
  * Lookup a --dev-node adapter name in the registry
  * returning the GUID and optional actual_name.
+ * TODO: Rewrite
  */
 static const char *
 get_device_guid(const char *name,
@@ -123,6 +125,7 @@ get_device_guid(const char *name,
 
 /*
  * Translates a GUID to a name
+ * TODO: Rewrite
  */
 static const char *
 guid_to_name(const char *guid, const struct panel_reg *panel_reg)
