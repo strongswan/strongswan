@@ -125,7 +125,14 @@ struct tun_device_t {
 	 * @return				interface name
 	 */
 	char *(*get_name)(tun_device_t *this);
-
+#ifdef WIN32
+        /*
+         * Get the underlying tun handle.
+         *
+         * @return                              file handle of this tun device
+         */
+        HANDLE (*get_handle)(tun_device_t *this);
+#else
 	/**
 	 * Get the underlying tun file descriptor.
 	 *
@@ -133,6 +140,7 @@ struct tun_device_t {
 	 */
 	int (*get_fd)(tun_device_t *this);
 
+#endif
 	/**
 	 * Destroy a tun_device_t
 	 */
