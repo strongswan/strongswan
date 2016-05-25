@@ -218,6 +218,7 @@ METHOD(task_t, build_r, status_t,
 {
 	child_cfg_t *config;
 	uint32_t reqid;
+	child_sa_state_t state;
 
 	if (!this->child_sa)
 	{
@@ -241,12 +242,13 @@ METHOD(task_t, build_r, status_t,
 	config = this->child_sa->get_config(this->child_sa);
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
+
+	state = this->child_sa->get_state(this->child_sa);
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
-	{
-		/* rekeying failed, reuse old child */
-		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	{	/* rekeying failed, reuse old child */
+		this->child_sa->set_state(this->child_sa, state);
 		return SUCCESS;
 	}
 
