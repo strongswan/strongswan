@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,7 +19,7 @@
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
 #include <sa/ikev2/tasks/child_create.h>
-
+#include <sa/ikev2/tasks/child_rekey.h>
 
 typedef struct private_child_delete_t private_child_delete_t;
 
@@ -119,6 +120,33 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 }
 
 /**
+ * Check if the given CHILD_SA is the redundant SA created in a rekey collision.
+ */
+static bool is_redundant(private_child_delete_t *this, child_sa_t *child)
+{
+	enumerator_t *tasks;
+	task_t *task;
+
+	tasks = this->ike_sa->create_task_enumerator(this->ike_sa,
+												 TASK_QUEUE_ACTIVE);
+	while (tasks->enumerate(tasks, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_REKEY)
+		{
+			child_rekey_t *rekey = (child_rekey_t*)task;
+
+			if (rekey->is_redundant(rekey, child))
+			{
+				tasks->destroy(tasks);
+				return TRUE;
+			}
+		}
+	}
+	tasks->destroy(tasks);
+	return FALSE;
+}
+
+/**
  * read in payloads and find the children to delete
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
@@ -171,8 +199,15 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						/* we reply as usual, rekeying will fail */
 					case CHILD_INSTALLED:
 						if (!this->initiator)
-						{	/* reestablish installed children if required */
-							this->check_delete_action = TRUE;
+						{
+							if (is_redundant(this, child_sa))
+							{
+								this->rekeyed = TRUE;
+							}
+							else
+							{
+								this->check_delete_action = TRUE;
+							}
 						}
 						break;
 					default:
