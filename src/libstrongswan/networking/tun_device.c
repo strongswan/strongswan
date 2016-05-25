@@ -402,8 +402,6 @@ METHOD(tun_device_t, get_fd, int,
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
-	ssize_t s;
-
 #ifdef __APPLE__
 	/* UTUN's expect the packets to be prepended by a 32-bit protocol number
 	 * instead of parsing the packet again, we assume IPv4 for now */
@@ -413,7 +411,7 @@ METHOD(tun_device_t, write_packet, bool,
         bool status;
         DWORD size;
         status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
-            (DWORD) &packet.len, (LPDWORD) &size, NULL);
+            packet.len, (LPDWORD) &size, NULL);
         if (!status)
         {
 		DBG1(DBG_LIB, "failed to write packet to TUN device %s: %u",
@@ -428,6 +426,7 @@ METHOD(tun_device_t, write_packet, bool,
                 return FALSE;
         }
 #else
+        ssize_t s;
 	s = write(this->tunfd, packet.ptr, packet.len);
 	if (s < 0)
 	{
@@ -584,7 +583,18 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* Try to open that device */
         while(enumerator->enumerate(enumerator, &name))
         {
+            /* Set mode */
+            char device_path[256];
+            /* Translate dev name to guid */
+            /* TODO: Fix. device_guid should be */
+            snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, name, TAP_WIN_SUFFIX);
 
+            this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
+            0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
+            if (this->tunhandle == INVALID_HANDLE_VALUE)
+            {
+            DBG1(DBG_LIB, "could not create TUN device %s", device_path);
+            }
             /* device has been examined or used, free it */
             free(name);
         }
@@ -594,22 +604,11 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          */
         enumerator->destroy(enumerator);
         possible_devices->destroy(possible_devices);
-        /* Set mode */
-        char device_path[256];
-        /* Translate dev name to guid */
-        /* TODO: Fix. device_guid should be */
-        snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, device_guid, TAP_WIN_SUFFIX);
-        this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
-            0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
-        if (this->tunhandle == INVALID_HANDLE_VALUE)
-        {
-            DBG1(DBG_LIB, "could not create TUN device %s", device_path);
-        }
         /* set correct mode */
         /* We set a fake gateway of 169.254.254.128 that we route packets over
          The TAP driver strips the Ethernet header and trailer of the Ethernet frames
          before sending them back to the application that listens on the handle */
-	in_addr_t ep[3];
+	in_addr ep[3];
 	BOOL status;
         DWORD len;
         /* Local address (just fake one): 169.254.128.127 */
@@ -621,6 +620,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          * (local & remote_netmask ? local)
          * The driver does proxy arp for this network and the local address.
          */
+        /* We need to integrate support for IPv6, too. */
         /* Just fake a link local address for now (169.254.128.128) */
 	ep[1] = htonl (0xA9FE8080);
         /* Remote netmask (255.255.0.0) */
