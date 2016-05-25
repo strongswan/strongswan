@@ -690,7 +690,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 
                     /* Horribly intricate struct */
                     ipv6_address.sin6_family = AF_INET6;
-                    ipv6_address.sin6_addr = *address.ptr;
+                    /* Copy address into structure */
+                    memcpy(&ipv6_address.sin6_addr.u, address.ptr, address.len);
 
                     ip_row.InterfaceIndex = index;
                     ip_row.Address.Ipv6 = ipv6_address;
@@ -814,7 +815,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 
                 /* Horribly intricate struct */
                 ipv6_address.sin_family = AF_INET6;
-                ipv6_address.sin6_addr = *address.ptr;
+                /* Copy address into structure */
+                memcpy(&ipv6_address.sin6_addr.u, address.ptr, address.len);
 
                 ip_row.InterfaceIndex = index;
                 ip_row.Address.Ipv6 = ipv6_address;
