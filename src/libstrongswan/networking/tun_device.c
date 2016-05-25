@@ -43,7 +43,7 @@
 #include <utils/debug.h>
 #include <threading/thread.h>
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H) && !defined(W32)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H) && defined(W32)
 
 tun_device_t *tun_device_create(const char *name_tmpl)
 {
@@ -57,15 +57,16 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <fcntl.h>
 #if !defined(WIN32)
 #include <netinet/in.h>
-#endif
-#include <string.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <net/if.h>
 #endif
+#include <string.h>
+
+#include <sys/types.h>
+
+#include <sys/stat.h>
+#include <unistd.h>
 
 #ifdef __APPLE__
 #include <net/if_utun.h>
@@ -577,23 +578,30 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* Check if there is an unused tun device following the IPsec name scheme*/
         enumerator_t *enumerator;
         char *name;
+        BOOL success = FALSE;
         linked_list_t *possible_devices = get_tap_reg();
         /* Iterate over list */
         enumerator = possible_devices->create_enumerator(possible_devices);
         /* Try to open that device */
         while(enumerator->enumerate(enumerator, &name))
         {
-            /* Set mode */
-            char device_path[256];
-            /* Translate dev name to guid */
-            /* TODO: Fix. device_guid should be */
-            snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, name, TAP_WIN_SUFFIX);
+            if (!success){
+                /* Set mode */
+                char device_path[256];
+                /* Translate dev name to guid */
+                /* TODO: Fix. device_guid should be */
+                snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, name, TAP_WIN_SUFFIX);
 
-            this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
-            0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
-            if (this->tunhandle == INVALID_HANDLE_VALUE)
-            {
-            DBG1(DBG_LIB, "could not create TUN device %s", device_path);
+                this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
+                    0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
+                if (this->tunhandle == INVALID_HANDLE_VALUE)
+                {
+                    DBG1(DBG_LIB, "could not create TUN device %s", device_path);
+                }
+                else
+                {
+                    success = TRUE;
+                }
             }
             /* device has been examined or used, free it */
             free(name);
@@ -608,11 +616,14 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* We set a fake gateway of 169.254.254.128 that we route packets over
          The TAP driver strips the Ethernet header and trailer of the Ethernet frames
          before sending them back to the application that listens on the handle */
-	in_addr ep[3];
-	BOOL status;
+	struct in_addr ep[3];
+        ULONG status = TRUE;
         DWORD len;
         /* Local address (just fake one): 169.254.128.127 */
-	ep[0] = htonl (0xA9FE8079);
+	ep[0].S_un.S_un_b.s_b1 = 169;
+        ep[0].S_un.S_un_b.s_b2 = 254;
+        ep[0].S_un.S_un_b.s_b3 = 128;
+        ep[0].S_un.S_un_b.s_b4 = 127;
         /*
          * Remote network. THe tap driver validates it by masking it with the remote_netmask
          * and then comparing hte result against the remote network (this value here).
@@ -622,15 +633,21 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          */
         /* We need to integrate support for IPv6, too. */
         /* Just fake a link local address for now (169.254.128.128) */
-	ep[1] = htonl (0xA9FE8080);
+	ep[1].S_un.S_un_b.s_b1 = 169;
+        ep[1].S_un.S_un_b.s_b2 = 254;
+        ep[1].S_un.S_un_b.s_b3 = 128;
+        ep[1].S_un.S_un_b.s_b4 = 128;
         /* Remote netmask (255.255.0.0) */
-	ep[2] = htonl (0xFFFF0000);
+	ep[2].S_un.S_un_b.s_b1 = 255;
+        ep[2].S_un.S_un_b.s_b2 = 255;
+        ep[2].S_un.S_un_b.s_b3 = 0;
+        ep[2].S_un.S_un_b.s_b4 = 0;
 
         status = DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_CONFIG_TUN,
 		    ep, sizeof (ep),
 		    ep, sizeof (ep), &len, NULL);
         /* Set device to up */
-        ULONG status = TRUE;
+
         if (!DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
   			  &status, sizeof (status),
                             &status, sizeof (status), &len, NULL))
@@ -641,6 +658,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
             /* Give the adapter 2 seconds to come up */
         DBG3 (DBG_LIB, "Sleeping for %d seconds...", 2);
         sleep(2);
+        return TRUE;
 #elif defined(IFF_TUN)
 
 	struct ifreq ifr;
