@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -434,6 +435,18 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_CHILD_REKEY;
 }
 
+METHOD(child_rekey_t, is_redundant, bool,
+	private_child_rekey_t *this, child_sa_t *child)
+{
+	if (this->collision &&
+		this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
+	{
+		private_child_rekey_t *rekey = (private_child_rekey_t*)this->collision;
+		return child == rekey->child_create->get_child(rekey->child_create);
+	}
+	return FALSE;
+}
+
 METHOD(child_rekey_t, collide, void,
 	private_child_rekey_t *this, task_t *other)
 {
@@ -452,19 +465,11 @@ METHOD(child_rekey_t, collide, void,
 	else if (other->get_type(other) == TASK_CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
-		if (this->collision &&
-			this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
+		if (is_redundant(this, del->get_child(del)))
 		{
-			private_child_rekey_t *rekey;
-
-			rekey = (private_child_rekey_t*)this->collision;
-			if (del->get_child(del) == rekey->child_create->get_child(rekey->child_create))
-			{
-				/* peer deletes redundant child created in collision */
-				this->other_child_destroyed = TRUE;
-				other->destroy(other);
-				return;
-			}
+			this->other_child_destroyed = TRUE;
+			other->destroy(other);
+			return;
 		}
 		if (del->get_child(del) != this->child_sa)
 		{
@@ -475,7 +480,7 @@ METHOD(child_rekey_t, collide, void,
 	}
 	else
 	{
-		/* any other task is not critical for collisisions, ignore */
+		/* any other task is not critical for collisions, ignore */
 		other->destroy(other);
 		return;
 	}
@@ -532,6 +537,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.is_redundant = _is_redundant,
 			.collide = _collide,
 		},
 		.ike_sa = ike_sa,
