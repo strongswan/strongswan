@@ -1203,6 +1203,7 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 	packet_t *packet;
 	status_t status;
 	bool use_frags = FALSE;
+	bool pre_generated = FALSE;
 
 	if (this->ike_cfg)
 	{
@@ -1237,14 +1238,21 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 		return SUCCESS;
 	}
 
+	pre_generated = message->is_encoded(message);
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
-	charon->bus->message(charon->bus, message, FALSE, TRUE);
+	if (!pre_generated)
+	{
+		charon->bus->message(charon->bus, message, FALSE, TRUE);
+	}
 	status = message->fragment(message, this->keymat, this->fragment_size,
 							   &fragments);
 	if (status == SUCCESS)
 	{
-		charon->bus->message(charon->bus, message, FALSE, FALSE);
+		if (!pre_generated)
+		{
+			charon->bus->message(charon->bus, message, FALSE, FALSE);
+		}
 		*packets = enumerator_create_filter(fragments, (void*)filter_fragments,
 											this, NULL);
 	}
