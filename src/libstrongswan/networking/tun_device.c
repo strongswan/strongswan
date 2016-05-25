@@ -600,6 +600,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                 }
                 else
                 {
+                    DBG1(DBG_LIB, "device %s has been opened for use as TAP device.", name);
                     success = TRUE;
                 }
             }
