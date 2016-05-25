@@ -82,6 +82,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #elif defined(WIN32)
 #include <tap-windows.h>
 #include <winioctl.h>
+#include <collections/linked_list.h>
+#define TAP_WIN_COMPONENT_ID "tap0901"
 #else
 #include <net/if_tun.h>
 #endif
@@ -148,7 +150,7 @@ linked_list_t *get_tap_reg()
     HKEY adapter_key;
     LONG status;
     DWORD len;
-    linked_list_t list = linked_list_create();
+    linked_list_t *list = linked_list_create();
     int i = 0;
 
     /*
@@ -164,7 +166,7 @@ linked_list_t *get_tap_reg()
 
     if (status != ERROR_SUCCESS)
     {
-        DBG2(M_FATAL, "Error opening registry key: %s", ADAPTER_KEY);
+        DBG2(DBG_LIB, "Error opening registry key: %s", ADAPTER_KEY);
     }
 
     while (true)
@@ -194,7 +196,7 @@ linked_list_t *get_tap_reg()
         }
         else if (status != ERROR_SUCCESS)
         {
-            DBG2(M_FATAL, "Error enumerating registry subkeys of key: %s",
+            DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
                     ADAPTER_KEY);
         }
 
@@ -210,7 +212,7 @@ linked_list_t *get_tap_reg()
 
         if (status != ERROR_SUCCESS)
         {
-            DBG2(D_REGISTRY, "Error opening registry key: %s", unit_string);
+            DBG2(DBG_LIB, "Error opening registry key: %s", unit_string);
         }
         else
         {
@@ -225,7 +227,7 @@ linked_list_t *get_tap_reg()
 
             if (status != ERROR_SUCCESS || data_type != REG_SZ)
             {
-                DBG2(D_REGISTRY, "Error opening registry key: %s\\%s",
+                DBG2(DBG_LIB, "Error opening registry key: %s\\%s",
                         unit_string, component_id_string);
             }
             else
@@ -245,8 +247,8 @@ linked_list_t *get_tap_reg()
                     {
                         /* That thing is a valid interface key */
                         /* link into return list */
-                        char *guid = malloc_thing(net_cfg_instance_id);
-                        memcpy(guid, net_cfg_instance_id, strlen(net_cfg_instance_id));
+                        char *guid = malloc(sizeof(net_cfg_instance_id));
+                        memcpy(guid, net_cfg_instance_id, sizeof(net_cfg_instance_id));
                         list->insert_last(list, guid);
                     }
                 }
