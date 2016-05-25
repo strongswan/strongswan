@@ -629,7 +629,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                 /*
                  * Transform IP address into in_addr structure
                  */
-                chunk_t address = virtual_ip->get_address(this);
+                chunk_t address = virtual_ip->get_address(virtual_ip);
 
                 MIB_UNICASTIPADDRESS_ROW ip_row;
                 InitializeUnicastIpAddressEntry(&ip_row);
@@ -674,11 +674,11 @@ METHOD(kernel_net_t, add_ip, status_t,
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
                         }
-                        return FAILURE;
+                        return FALSE;
                     }
                     else
                     {
-                        return SUCCESS;
+                        return FALSE;
                     }
                 }
                 else if (address.len == 16)
@@ -689,7 +689,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                     SOCKADDR_IN6 ipv6_address;
 
                     /* Horribly intricate struct */
-                    ipv6_address.sin_family = AF_INET6;
+                    ipv6_address.sin6_family = AF_INET6;
                     ipv6_address.sin6_addr = *address.ptr;
 
                     ip_row.InterfaceIndex = index;
@@ -720,7 +720,7 @@ METHOD(kernel_net_t, add_ip, status_t,
                                 DBG1(DBG_KNL, "the kernel complained with error %d", status);
                                 break;
                         }
-                        return FAILURE;
+                        return FALSE;
                     }
                     else
                     {
@@ -743,125 +743,114 @@ METHOD(kernel_net_t, del_ip, status_t,
 	bool wait)
 {
         /*
-         * If we don't have a TUN device, we need to return NOT_SUPPORTED
-         * Check if the name starts with TAP
+         * Convert the interface name to an index
          */
-        char *pos = strstr(iface_name, "TAP");
-        if (!pos)
+        NET_IFINDEX index = if_nametoindex(iface_name);
+        if (!index)
         {
-            return NOT_SUPPORTED;
+            DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
+            return FALSE;
         }
         else
         {
             /*
-             * Convert the interface name to an index
+             * Transform IP address into in_addr structure
              */
-            NET_IFINDEX index = if_nametoindex(iface_name);
-            if (!index)
-            {
-                DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
-                return FALSE;
-            }
-            else
+            chunk_t address = virtual_ip->get_address(this);
+
+            MIB_UNICASTIPADDRESS_ROW ip_row;
+            InitializeUnicastIpAddressEntry(&ip_row);
+            ip_row.PrefixOrigin = IpPrefixOriginUnchanged;
+            ip_row.OnLinkPrefixLength = prefix;
+
+            /*
+             * Check the length of the chunk.
+             */
+            if (address.len == 4)
             {
                 /*
-                 * Transform IP address into in_addr structure
+                 * IPv4
                  */
-                chunk_t address = virtual_ip->get_address(this);
+                SOCKADDR_IN ipv4_address;
 
-                MIB_UNICASTIPADDRESS_ROW ip_row;
-                InitializeUnicastIpAddressEntry(&ip_row);
-                ip_row.PrefixOrigin = IpPrefixOriginUnchanged;
-                ip_row.OnLinkPrefixLength = prefix;
+                /* Horribly intricate struct */
+                ipv4_address.sin_family = AF_INET;
+                ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
 
-                /*
-                 * Check the length of the chunk.
-                 */
-                if (address.len == 4)
+                ip_row.InterfaceIndex = index;
+                ip_row.Address.Ipv4 = ipv4_address;
+
+                BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
+
+                if (status != NO_ERROR)
                 {
-                    /*
-                     * IPv4
-                     */
-                    SOCKADDR_IN ipv4_address;
-
-                    /* Horribly intricate struct */
-                    ipv4_address.sin_family = AF_INET;
-                    ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
-
-                    ip_row.InterfaceIndex = index;
-                    ip_row.Address.Ipv4 = ipv4_address;
-
-                    BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
-
-                    if (status != NO_ERROR)
-                    {
-                        switch (status) {
-                            case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            default:
-                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                                break;
-                        }                        return FAILURE;
+                    switch (status) {
+                        case ERROR_INVALID_PARAMETER:
+                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        case ERROR_NOT_FOUND:
+                            DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        case ERROR_NOT_SUPPORTED:
+                            DBG1(DBG_KNL, "the kernel complained about missing support for delete the address %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        default:
+                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                            break;
                     }
-                    else
-                    {
-                        return SUCCESS;
-                    }
-                }
-                else if (address.len == 16)
-                {
-                    /*
-                     * IPv6
-                     */
-                    SOCKADDR_IN6 ipv6_address;
-
-                    /* Horribly intricate struct */
-                    ipv6_address.sin_family = AF_INET6;
-                    ipv6_address.sin6_addr = *address.ptr;
-
-                    ip_row.InterfaceIndex = index;
-                    ip_row.Address.Ipv6 = ipv6_address;
-
-                    BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
-
-                    if (status != NO_ERROR)
-                    {
-                        switch (status) {
-                            case ERROR_INVALID_PARAMETER:
-                                DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            case ERROR_NOT_FOUND:
-                                DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            case ERROR_NOT_SUPPORTED:
-                                DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %H to interface %s", virtual_ip, iface_name);
-                                break;
-                            default:
-                                DBG1(DBG_KNL, "the kernel complained with error %d", status);
-                                break;
-                        }
-                        return FAILURE;
-                    }
-                    else
-                    {
-                        return SUCCESS;
-                    }
+                    return FALSE;
                 }
                 else
                 {
-                    /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
-                    DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
+                    return SUCCESS;
+                }
+            }
+            else if (address.len == 16)
+            {
+                /*
+                 * IPv6
+                 */
+                SOCKADDR_IN6 ipv6_address;
+
+                /* Horribly intricate struct */
+                ipv6_address.sin_family = AF_INET6;
+                ipv6_address.sin6_addr = *address.ptr;
+
+                ip_row.InterfaceIndex = index;
+                ip_row.Address.Ipv6 = ipv6_address;
+
+                BOOL status = DeleteUnicastIpAddressEntry(&ip_row);
+
+                if (status != NO_ERROR)
+                {
+                    switch (status) {
+                        case ERROR_INVALID_PARAMETER:
+                            DBG1(DBG_KNL, "the kernel complained about an invalid parameter when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        case ERROR_NOT_FOUND:
+                            DBG1(DBG_KNL, "the kernel complained about the interface not existing when trying to delete the IP %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        case ERROR_NOT_SUPPORTED:
+                            DBG1(DBG_KNL, "the kernel complained about missing support for deleting the address %H to interface %s", virtual_ip, iface_name);
+                            break;
+                        default:
+                            DBG1(DBG_KNL, "the kernel complained with error %d", status);
+                            break;
+                    }
                     return FALSE;
                 }
-
+                else
+                {
+                    return SUCCESS;
+                }
             }
+            else
+            {
+                /* Something is wrong with the chunk. The length is not valid for IPv4 or IPv6 */
+                DBG1(DBG_LIB, "was passed an unknown virtual IP type with length %z", address.len);
+                return FALSE;
+            }
+
         }
 
 }
