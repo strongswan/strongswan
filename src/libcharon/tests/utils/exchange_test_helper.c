@@ -18,6 +18,7 @@
 #include "mock_ipsec.h"
 #include "mock_nonce_gen.h"
 
+#include <collections/array.h>
 #include <credentials/sets/mem_cred.h>
 
 typedef struct private_exchange_test_helper_t private_exchange_test_helper_t;
@@ -42,6 +43,11 @@ struct private_exchange_test_helper_t {
 	 * IKE_SA SPI counter
 	 */
 	refcount_t ike_spi;
+
+	/**
+	 * List of registered listeners
+	 */
+	array_t *listeners;
 };
 
 /**
@@ -240,6 +246,13 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	DESTROY_IF(backend.ike_cfg);
 }
 
+METHOD(exchange_test_helper_t, add_listener, void,
+	private_exchange_test_helper_t *this, listener_t *listener)
+{
+	array_insert_create(&this->listeners, ARRAY_TAIL, listener);
+	charon->bus->add_listener(charon->bus, listener);
+}
+
 /**
  * Enable logging in charon as requested
  */
@@ -291,6 +304,7 @@ void exchange_test_helper_init(char *plugins)
 			.sender = mock_sender_create(),
 			.establish_sa = _establish_sa,
 			.process_message = _process_message,
+			.add_listener = _add_listener,
 		},
 		.creds = mem_cred_create(),
 	);
@@ -327,13 +341,19 @@ void exchange_test_helper_init(char *plugins)
 void exchange_test_helper_deinit()
 {
 	private_exchange_test_helper_t *this;
+	listener_t *listener;
 
 	this = (private_exchange_test_helper_t*)exchange_test_helper;
 
+	while (array_remove(this->listeners, ARRAY_HEAD, &listener))
+	{
+		charon->bus->remove_listener(charon->bus, listener);
+	}
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
 	/* can't let charon do it as it happens too late */
 	charon->sender->destroy(charon->sender);
 	charon->sender = NULL;
+	array_destroy(this->listeners);
 	free(this);
 }

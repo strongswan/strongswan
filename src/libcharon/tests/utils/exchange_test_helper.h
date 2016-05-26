@@ -67,6 +67,18 @@ struct exchange_test_helper_t {
 	 */
 	void (*process_message)(exchange_test_helper_t *this, ike_sa_t *sa,
 							message_t *message);
+
+	/**
+	 * Register a listener with the bus.
+	 *
+	 * Don't use bus_t::add_listener() directly for listeners on the stack
+	 * as that could lead to invalid listeners registered when hooks are
+	 * triggered during cleanup if a test case fails.  All of the listeners
+	 * added this way are unregistered with the bus before cleaning up.
+	 *
+	 * @param listener		listener to add to the bus
+	 */
+	void (*add_listener)(exchange_test_helper_t *this, listener_t *listener);
 };
 
 struct exchange_test_sa_conf_t {
