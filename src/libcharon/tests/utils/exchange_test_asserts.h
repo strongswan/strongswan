@@ -183,7 +183,7 @@ do { \
 		.name = #n, \
 		##__VA_ARGS__ \
 	}; \
-	charon->bus->add_listener(charon->bus, &_hook_listener.listener)
+	exchange_test_helper->add_listener(exchange_test_helper, &_hook_listener.listener)
 
 /**
  * Enforce the most recently initialized hook assertion.
@@ -337,7 +337,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 		.rules = _rules, \
 		.num_rules = countof(_rules), \
 	}; \
-	charon->bus->add_listener(charon->bus, &_listener.listener); \
+	exchange_test_helper->add_listener(exchange_test_helper, &_listener.listener); \
 })
 
 #endif /** EXCHANGE_TEST_ASSERTS_H_ @}*/
