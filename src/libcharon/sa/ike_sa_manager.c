@@ -2188,7 +2188,7 @@ METHOD(ike_sa_manager_t, flush, void,
 	unlock_all_segments(this);
 
 	this->spi_lock->write_lock(this->spi_lock);
-	this->rng->destroy(this->rng);
+	DESTROY_IF(this->rng);
 	this->rng = NULL;
 	this->spi_cb.cb = NULL;
 	this->spi_cb.data = NULL;
