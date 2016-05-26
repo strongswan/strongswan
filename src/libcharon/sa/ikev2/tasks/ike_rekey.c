@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2015-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -123,7 +124,6 @@ static void establish_new(private_ike_rekey_t *this)
 METHOD(task_t, process_r_delete, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
-	establish_new(this);
 	return this->ike_delete->task.process(&this->ike_delete->task, message);
 }
 
@@ -232,7 +232,12 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 	charon->bus->set_sa(charon->bus, this->ike_sa);
-	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_REKEYING)
+	{	/* in case of a collision we let the initiating task handle this */
+		establish_new(this);
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	}
 
 	/* rekeying successful, delete the IKE_SA using a subtask */
 	this->ike_delete = ike_delete_create(this->ike_sa, FALSE);
