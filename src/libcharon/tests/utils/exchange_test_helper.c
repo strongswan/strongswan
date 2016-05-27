@@ -354,7 +354,9 @@ void exchange_test_helper_deinit()
 	}
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
-	/* can't let charon do it as it happens too late */
+	/* flush SAs before destroying the sender (in case of test failures) */
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+	/* charon won't destroy this as it didn't initialize the original sender */
 	charon->sender->destroy(charon->sender);
 	charon->sender = NULL;
 	array_destroy(this->listeners);
