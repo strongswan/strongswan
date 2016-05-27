@@ -20,12 +20,15 @@
 #include <utils/debug.h>
 
 #include <sys/types.h>
+#if !defined(WIN32)
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
 #endif
-
+#else
+#include "w32.h"
+#endif
 /**
  * TCP header, defined here because platforms disagree regarding member names
  * and unfortunately Android does not define a variant with BSD names.
