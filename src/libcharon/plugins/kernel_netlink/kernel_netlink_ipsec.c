@@ -2393,6 +2393,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	enumerator_t *enumerator;
 	bool found = FALSE, update = TRUE;
 	char markstr[32] = "";
+	uint32_t cur_priority = 0;
+	int use_count;
 
 	/* create a policy */
 	INIT(policy,
@@ -2463,15 +2465,23 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 				break;
 			}
 		}
-		update = FALSE;
+		if (update)
+		{
+			cur_priority = current_sa->priority;
+			update = FALSE;
+		}
 	}
 	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
 	enumerator->destroy(enumerator);
 
+	use_count = policy->used_by->get_count(policy->used_by);
 	if (!update)
 	{	/* we don't update the policy if the priority is lower than that of
 		 * the currently installed one */
 		this->mutex->unlock(this->mutex);
+		DBG2(DBG_KNL, "not updating policy %R === %R %N%s [priority %u,"
+			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names,
+			 id->dir, markstr, cur_priority, use_count);
 		return SUCCESS;
 	}
 
@@ -2480,8 +2490,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		found = TRUE;
 	}
 
-	DBG2(DBG_KNL, "%s policy %R === %R %N%s", found ? "updating" : "adding",
-		 id->src_ts, id->dst_ts, policy_dir_names, id->dir, markstr);
+	DBG2(DBG_KNL, "%s policy %R === %R %N%s [priority %u, refcount %d]",
+		 found ? "updating" : "adding", id->src_ts, id->dst_ts,
+		 policy_dir_names, id->dir, markstr, assigned_sa->priority, use_count);
 
 	if (add_policy_internal(this, policy, assigned_sa, found) != SUCCESS)
 	{
@@ -2586,7 +2597,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
-	uint32_t priority, auto_priority;
+	uint32_t priority, auto_priority, cur_priority;
 	ipsec_sa_t assigned_sa = {
 		.src = data->src,
 		.dst = data->dst,
@@ -2594,6 +2605,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		.cfg = *data->sa,
 	};
 	char markstr[32] = "";
+	int use_count;
 
 	format_mark(markstr, sizeof(markstr), id->mark);
 
@@ -2635,23 +2647,32 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			policy_sa_destroy(mapping, &id->dir, this);
 			break;
 		}
-		is_installed = FALSE;
+		if (is_installed)
+		{
+			cur_priority = mapping->priority;
+			is_installed = FALSE;
+		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (current->used_by->get_count(current->used_by) > 0)
+	use_count = current->used_by->get_count(current->used_by);
+	if (use_count > 0)
 	{	/* policy is used by more SAs, keep in kernel */
 		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
 		if (!is_installed)
 		{	/* no need to update as the policy was not installed for this SA */
 			this->mutex->unlock(this->mutex);
+			DBG2(DBG_KNL, "not updating policy %R === %R %N%s [priority %u, "
+				 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names,
+				 id->dir, markstr, cur_priority, use_count);
 			return SUCCESS;
 		}
-
-		DBG2(DBG_KNL, "updating policy %R === %R %N%s", id->src_ts, id->dst_ts,
-			 policy_dir_names, id->dir, markstr);
-
 		current->used_by->get_first(current->used_by, (void**)&mapping);
+
+		DBG2(DBG_KNL, "updating policy %R === %R %N%s [priority %u, "
+			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
+			 markstr, mapping->priority, use_count);
+
 		if (add_policy_internal(this, current, mapping, TRUE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "unable to update policy %R === %R %N%s",
