@@ -311,20 +311,25 @@ METHOD(task_t, process_i, status_t,
 			/* if we have the lower nonce, delete rekeyed SA. If not, delete
 			 * the redundant. */
 			if (memcmp(this_nonce.ptr, other_nonce.ptr,
-						min(this_nonce.len, other_nonce.len)) > 0)
+					   min(this_nonce.len, other_nonce.len)) > 0)
 			{
 				/* peer should delete this SA. Add a timeout just in case. */
 				job_t *job = (job_t*)delete_ike_sa_job_create(
-						other->new_sa->get_id(other->new_sa), TRUE);
+									other->new_sa->get_id(other->new_sa), TRUE);
 				lib->scheduler->schedule_job(lib->scheduler, job, 10);
-				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete");
-				charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
+				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete "
+					 "for redundant IKE_SA %s[%d]",
+					 other->new_sa->get_name(other->new_sa),
+					 other->new_sa->get_unique_id(other->new_sa));
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+												other->new_sa);
 				other->new_sa = NULL;
 			}
 			else
 			{
-				DBG1(DBG_IKE, "IKE_SA rekey collision lost, "
-					 "deleting redundant IKE_SA");
+				DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant "
+					 "IKE_SA %s[%d]", this->new_sa->get_name(this->new_sa),
+					 this->new_sa->get_unique_id(this->new_sa));
 				/* apply host for a proper delete */
 				host = this->ike_sa->get_my_host(this->ike_sa);
 				this->new_sa->set_my_host(this->new_sa, host->clone(host));
@@ -338,8 +343,8 @@ METHOD(task_t, process_i, status_t,
 				}
 				else
 				{
-					charon->ike_sa_manager->checkin(
-								charon->ike_sa_manager, this->new_sa);
+					charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+													this->new_sa);
 				}
 				charon->bus->set_sa(charon->bus, this->ike_sa);
 				this->new_sa = NULL;
