@@ -26,6 +26,7 @@ libcharon_tests_LDADD = \
 exchange_tests_SOURCES = \
   suites/test_child_delete.c \
   suites/test_child_rekey.c \
+  suites/test_ike_rekey.c \
   utils/exchange_test_asserts.h utils/exchange_test_asserts.c \
   utils/exchange_test_helper.h utils/exchange_test_helper.c \
   utils/job_asserts.h \
