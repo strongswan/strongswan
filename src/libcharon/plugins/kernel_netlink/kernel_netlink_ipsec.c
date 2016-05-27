@@ -1081,7 +1081,8 @@ static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 				/* no data ready, select again */
 				return TRUE;
 			default:
-				DBG1(DBG_KNL, "unable to receive from xfrm event socket");
+				DBG1(DBG_KNL, "unable to receive from XFRM event socket: %s "
+					 "(%d)", strerror(errno), errno);
 				sleep(1);
 				return TRUE;
 		}
@@ -1109,8 +1110,8 @@ static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 				process_mapping(this, hdr);
 				break;
 			default:
-				DBG1(DBG_KNL, "received unknown event from xfrm event "
-							  "socket: %d", hdr->nlmsg_type);
+				DBG1(DBG_KNL, "received unknown event from XFRM event "
+					 "socket: %d", hdr->nlmsg_type);
 				break;
 		}
 		hdr = NLMSG_NEXT(hdr, len);
@@ -1678,8 +1679,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 				{
 					struct nlmsgerr *err = NLMSG_DATA(hdr);
 					DBG1(DBG_KNL, "querying replay state from SAD entry "
-								  "failed: %s (%d)", strerror(-err->error),
-								  -err->error);
+						 "failed: %s (%d)", strerror(-err->error), -err->error);
 					break;
 				}
 				default:
@@ -2359,9 +2359,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 										old->src_ip, old->if_name) != SUCCESS)
 				{
 					DBG1(DBG_KNL, "error uninstalling route installed with "
-								  "policy %R === %R %N", in->src_ts,
-								   in->dst_ts, policy_dir_names,
-								   policy->direction);
+						 "policy %R === %R %N", in->src_ts, in->dst_ts,
+						 policy_dir_names, policy->direction);
 				}
 				route_entry_destroy(old);
 				policy->route = NULL;
@@ -2787,15 +2786,15 @@ static bool add_socket_bypass(private_kernel_netlink_ipsec_t *this,
 	policy.dir = XFRM_POLICY_OUT;
 	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-					   strerror(errno));
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s (%d)",
+			 strerror(errno), errno);
 		return FALSE;
 	}
 	policy.dir = XFRM_POLICY_IN;
 	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-					   strerror(errno));
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s (%d)",
+			 strerror(errno), errno);
 		return FALSE;
 	}
 	return TRUE;
@@ -3068,7 +3067,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 		if (this->socket_xfrm_events <= 0)
 		{
-			DBG1(DBG_KNL, "unable to create XFRM event socket");
+			DBG1(DBG_KNL, "unable to create XFRM event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}
@@ -3076,7 +3076,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 						 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
 		if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 		{
-			DBG1(DBG_KNL, "unable to bind XFRM event socket");
+			DBG1(DBG_KNL, "unable to bind XFRM event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}

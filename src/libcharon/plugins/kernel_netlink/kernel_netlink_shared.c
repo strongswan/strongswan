@@ -594,13 +594,15 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 	}
 	if (this->socket == -1)
 	{
-		DBG1(DBG_KNL, "unable to create netlink socket");
+		DBG1(DBG_KNL, "unable to create netlink socket: %s (%d)",
+			 strerror(errno), errno);
 		destroy(this);
 		return NULL;
 	}
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
 	{
-		DBG1(DBG_KNL, "unable to bind netlink socket");
+		DBG1(DBG_KNL, "unable to bind netlink socket: %s (%d)",
+			 strerror(errno), errno);
 		destroy(this);
 		return NULL;
 	}

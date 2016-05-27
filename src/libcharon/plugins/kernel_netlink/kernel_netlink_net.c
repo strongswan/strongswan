@@ -1297,7 +1297,8 @@ static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 				/* no data ready, select again */
 				return TRUE;
 			default:
-				DBG1(DBG_KNL, "unable to receive from rt event socket");
+				DBG1(DBG_KNL, "unable to receive from RT event socket %s (%d)",
+					 strerror(errno), errno);
 				sleep(1);
 				return TRUE;
 		}
@@ -2644,7 +2645,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 		if (this->socket_events < 0)
 		{
-			DBG1(DBG_KNL, "unable to create RT event socket");
+			DBG1(DBG_KNL, "unable to create RT event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}
@@ -2652,7 +2654,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
 		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 		{
-			DBG1(DBG_KNL, "unable to bind RT event socket");
+			DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}
