@@ -572,7 +572,6 @@ METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
 	chunk_t data;
-	ssize_t len;
 	bool old;
 
 	data = chunk_alloca(get_mtu(this));
@@ -594,6 +593,7 @@ METHOD(tun_device_t, read_packet, bool,
 
         }
 #else
+	ssize_t len;
 	len = read(this->tunfd, data.ptr, data.len);
 	thread_cancelability(old);
 	if (len < 0)
