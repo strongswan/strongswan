@@ -179,17 +179,20 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 	return enumerator_create_single(this->peer_cfg, NULL);
 }
 
-METHOD(exchange_test_helper_t, process_message, void,
+METHOD(exchange_test_helper_t, process_message, status_t,
 	private_exchange_test_helper_t *this, ike_sa_t *ike_sa, message_t *message)
 {
+	status_t status;
+
 	if (!message)
 	{
 		message = this->public.sender->dequeue(this->public.sender);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
-	ike_sa->process_message(ike_sa, message);
+	status = ike_sa->process_message(ike_sa, message);
 	charon->bus->set_sa(charon->bus, NULL);
 	message->destroy(message);
+	return status;
 }
 
 METHOD(exchange_test_helper_t, establish_sa, void,

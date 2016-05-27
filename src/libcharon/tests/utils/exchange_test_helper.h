@@ -64,9 +64,10 @@ struct exchange_test_helper_t {
 	 * @param ike_sa		the IKE_SA receiving the message
 	 * @param message		the message, or NULL to pass the next message in the
 	 *						send queue (adopted)
+	 * @return				return value from ike_sa_t::process_message()
 	 */
-	void (*process_message)(exchange_test_helper_t *this, ike_sa_t *sa,
-							message_t *message);
+	status_t (*process_message)(exchange_test_helper_t *this, ike_sa_t *sa,
+								message_t *message);
 
 	/**
 	 * Register a listener with the bus.
