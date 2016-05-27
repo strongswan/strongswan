@@ -6,7 +6,7 @@
  */
 
 #ifndef WINDOWS_32_PROTOCOL_HEADERS
-#define WINDOWS_32_PROTOCOL_HEADERS%
+#define WINDOWS_32_PROTOCOL_HEADERS
 
 /*
  * Structure of an internet header, naked of options.
