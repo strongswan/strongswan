@@ -25,6 +25,10 @@
 #include <networking/host.h>
 #include <networking/packet.h>
 
+#if defined(WIN32)
+#include "w32.h"
+#endif
+
 typedef struct ip_packet_t ip_packet_t;
 
 /**
