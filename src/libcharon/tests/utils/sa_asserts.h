@@ -24,6 +24,51 @@
 #ifndef SA_ASSERTS_H_
 #define SA_ASSERTS_H_
 
+#include <inttypes.h>
+
+/**
+ * Check that there exists a specific number of IKE_SAs in the manager.
+ */
+#define assert_ike_sa_count(count) \
+({ \
+	typeof(count) _count = count; \
+	u_int _actual = charon->ike_sa_manager->get_count(charon->ike_sa_manager); \
+	test_assert_msg(_count == _actual, "unexpected number of IKE_SAs in " \
+					"manager (%d != %d)", _count, _actual); \
+})
+
+/**
+ * Check that the IKE_SA with the given SPIs and initiator flag is in the
+ * manager and return it.  Does not actually keep the SA checked out as
+ * that would block cleaning up if asserts against it fail (since we control
+ * access to SAs it's also not really necessary).
+ */
+#define assert_ike_sa_checkout(spi_i, spi_r, initiator) \
+({ \
+	typeof(spi_i) _spi_i = spi_i; \
+	typeof(spi_r) _spi_r = spi_r; \
+	typeof(initiator) _init = initiator; \
+	ike_sa_id_t *_id = ike_sa_id_create(IKEV2, _spi_i, _spi_r, _init); \
+	ike_sa_t *_ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, _id); \
+	test_assert_msg(_ike_sa, "IKE_SA with SPIs %.16"PRIx64"_i %.16"PRIx64"_r " \
+					"(%d) does not exist", be64toh(_spi_i), be64toh(_spi_r), _init); \
+	_id->destroy(_id); \
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, _ike_sa); \
+	_ike_sa; \
+})
+
+/**
+ * Check if the given IKE_SA is in the expected state.
+ */
+#define assert_ike_sa_state(ike_sa, state) \
+({ \
+	typeof(ike_sa) _sa = ike_sa; \
+	typeof(state) _state = state; \
+	test_assert_msg(_state == _sa->get_state(_sa), "%N != %N", \
+					ike_sa_state_names, _state, \
+					ike_sa_state_names, _sa->get_state(_sa)); \
+})
+
 /**
  * Check that there exists a specific number of CHILD_SAs.
  */
