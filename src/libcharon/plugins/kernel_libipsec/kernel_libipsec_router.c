@@ -35,7 +35,11 @@ typedef struct {
 	/** virtual IP (points to internal data of tun) */
 	host_t *addr;
 	/** underlying TUN file descriptor (cached from tun) */
+#ifdef WIN32
+        HANDLE *handle;
+#else
 	int fd;
+#endif /* WIN32 */
 	/** TUN device */
 	tun_device_t *tun;
 } tun_entry_t;
@@ -250,7 +254,11 @@ METHOD(kernel_listener_t, tun, bool,
 	{
 		INIT(entry,
 			.addr = tun->get_address(tun, NULL),
+#ifdef WIN32
+                        .handle = tun->get_handle(tun);
+#else
 			.fd = tun->get_fd(tun),
+#endif /* WIN32 */
 			.tun = tun,
 		);
 		this->tuns->put(this->tuns, entry, entry);
@@ -292,7 +300,7 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 	private_kernel_libipsec_router_t *this)
 {
 	charon->receiver->del_esp_cb(charon->receiver,
-								(receiver_esp_cb_t)receiver_esp_cb);
+							 (receiver_esp_cb_t)receiver_esp_cb);
 	ipsec->processor->unregister_outbound(ipsec->processor,
 										 (ipsec_outbound_cb_t)send_esp);
 	ipsec->processor->unregister_inbound(ipsec->processor,
@@ -342,8 +350,11 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 		free(this);
 		return NULL;
 	}
-
+#ifdef WIN32
+	this->tun.handle = this->tun.tun->get_handle(this->tun.tun);
+#else
 	this->tun.fd = this->tun.tun->get_fd(this->tun.tun);
+#endif /* WIN32 */
 
 	this->tuns = hashtable_create((hashtable_hash_t)tun_entry_hash,
 								  (hashtable_equals_t)tun_entry_equals, 4);
