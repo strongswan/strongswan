@@ -1415,7 +1415,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 		{
 			continue;
 		}
-		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING ||
+			entry->ike_sa->get_state(entry->ike_sa) == IKE_REKEYED)
 		{	/* skip IKE_SAs which are not usable, wake other waiting threads */
 			entry->condvar->signal(entry->condvar);
 			continue;

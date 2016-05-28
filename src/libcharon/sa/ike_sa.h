@@ -309,6 +309,11 @@ enum ike_sa_state_t {
 	IKE_REKEYING,
 
 	/**
+	 * IKE_SA has been rekeyed (or is redundant)
+	 */
+	IKE_REKEYED,
+
+	/**
 	 * IKE_SA is in progress of deletion
 	 */
 	IKE_DELETING,

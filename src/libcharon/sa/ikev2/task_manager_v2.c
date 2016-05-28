@@ -535,6 +535,7 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 			case IKE_REKEYING:
+			case IKE_REKEYED:
 				if (activate_task(this, TASK_IKE_DELETE))
 				{
 					exchange = INFORMATIONAL;
@@ -611,7 +612,8 @@ METHOD(task_manager_t, initiate, status_t,
 			case FAILED:
 			default:
 				this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING &&
+					this->ike_sa->get_state(this->ike_sa) != IKE_REKEYED)
 				{
 					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				}
@@ -909,9 +911,11 @@ static status_t process_request(private_task_manager_t *this,
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
+	ike_sa_state_t state;
 
 	if (array_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
+		state = this->ike_sa->get_state(this->ike_sa);
 		switch (message->get_exchange_type(message))
 		{
 			case IKE_SA_INIT:
@@ -947,8 +951,8 @@ static status_t process_request(private_task_manager_t *this,
 			{	/* FIXME: we should prevent this on mediation connections */
 				bool notify_found = FALSE, ts_found = FALSE;
 
-				if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
-					this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+				if (state == IKE_CREATED ||
+					state == IKE_CONNECTING)
 				{
 					DBG1(DBG_IKE, "received CREATE_CHILD_SA request for "
 						 "unestablished IKE_SA, rejected");
@@ -1013,6 +1017,14 @@ static status_t process_request(private_task_manager_t *this,
 						case PLV2_NOTIFY:
 						{
 							notify = (notify_payload_t*)payload;
+							if (state == IKE_REKEYED)
+							{
+								DBG1(DBG_IKE, "received unexpected notify %N "
+									 "for rekeyed IKE_SA, ignored",
+									 notify_type_names,
+									 notify->get_notify_type(notify));
+								break;
+							}
 							switch (notify->get_notify_type(notify))
 							{
 								case ADDITIONAL_IP4_ADDRESS:
@@ -1355,6 +1367,8 @@ METHOD(task_manager_t, process_message, status_t,
 	status_t status;
 	uint32_t mid;
 	bool schedule_delete_job = FALSE;
+	ike_sa_state_t state;
+	exchange_type_t type;
 
 	charon->bus->message(charon->bus, msg, TRUE, FALSE);
 	status = parse_message(this, msg);
@@ -1395,15 +1409,16 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (mid == this->responding.mid)
 		{
-			/* reject initial messages if not received in specific states */
-			if ((msg->get_exchange_type(msg) == IKE_SA_INIT &&
-				 this->ike_sa->get_state(this->ike_sa) != IKE_CREATED) ||
-				(msg->get_exchange_type(msg) == IKE_AUTH &&
-				 this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING))
+			/* reject initial messages if not received in specific states,
+			 * after rekeying we only expect a DELETE in an INFORMATIONAL */
+			type = msg->get_exchange_type(msg);
+			state = this->ike_sa->get_state(this->ike_sa);
+			if ((type == IKE_SA_INIT && state != IKE_CREATED) ||
+				(type == IKE_AUTH && state != IKE_CONNECTING) ||
+				(state == IKE_REKEYED && type != INFORMATIONAL))
 			{
 				DBG1(DBG_IKE, "ignoring %N in IKE_SA state %N",
-					 exchange_type_names, msg->get_exchange_type(msg),
-					 ike_sa_state_names, this->ike_sa->get_state(this->ike_sa));
+					 exchange_type_names, type, ike_sa_state_names, state);
 				return FAILED;
 			}
 			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))

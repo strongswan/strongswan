@@ -51,7 +51,7 @@ START_TEST(test_regular)
 	assert_hook_rekey(ike_rekey, 1, 3);
 	assert_no_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_ike_sa_state(b, IKE_REKEYING);
+	assert_ike_sa_state(b, IKE_REKEYED);
 	assert_child_sa_count(b, 0);
 	new_sa = assert_ike_sa_checkout(3, 4, FALSE);
 	assert_ike_sa_state(new_sa, IKE_ESTABLISHED);

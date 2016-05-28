@@ -68,7 +68,8 @@ METHOD(task_t, build_i, status_t,
 	delete_payload = delete_payload_create(PLV2_DELETE, PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
 
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
+		this->ike_sa->get_state(this->ike_sa) == IKE_REKEYED)
 	{
 		this->rekeyed = TRUE;
 	}
@@ -119,11 +120,12 @@ METHOD(task_t, process_r, status_t,
 
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
+		case IKE_REKEYING:
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
 			return NEED_MORE;
-		case IKE_REKEYING:
+		case IKE_REKEYED:
 			this->rekeyed = TRUE;
 			break;
 		case IKE_DELETING:

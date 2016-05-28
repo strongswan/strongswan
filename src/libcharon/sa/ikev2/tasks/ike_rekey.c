@@ -84,7 +84,6 @@ static job_t* check_queued_tasks(ike_sa_t *ike_sa)
 		job = (job_t*)initiate_tasks_job_create(ike_sa->get_id(ike_sa));
 	}
 	enumerator->destroy(enumerator);
-
 	return job;
 }
 
@@ -118,19 +117,9 @@ static void establish_new(private_ike_rekey_t *this)
 		}
 		this->new_sa = NULL;
 		charon->bus->set_sa(charon->bus, this->ike_sa);
+
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYED);
 	}
-}
-
-METHOD(task_t, process_r_delete, status_t,
-	private_ike_rekey_t *this, message_t *message)
-{
-	return this->ike_delete->task.process(&this->ike_delete->task, message);
-}
-
-METHOD(task_t, build_r_delete, status_t,
-	private_ike_rekey_t *this, message_t *message)
-{
-	return this->ike_delete->task.build(&this->ike_delete->task, message);
 }
 
 METHOD(task_t, build_i_delete, status_t,
@@ -236,21 +225,12 @@ METHOD(task_t, build_r, status_t,
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_REKEYING)
 	{	/* in case of a collision we let the initiating task handle this */
 		establish_new(this);
-		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+		/* make sure the IKE_SA is gone in case the peer fails to delete it */
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+			delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE),
+									 90);
 	}
-
-	/* rekeying successful, delete the IKE_SA using a subtask */
-	this->ike_delete = ike_delete_create(this->ike_sa, FALSE);
-	this->public.task.build = _build_r_delete;
-	this->public.task.process = _process_r_delete;
-
-	/* the peer does have to delete the IKE_SA. If it does not, we get a
-	 * unusable IKE_SA in REKEYING state without a replacement. We consider
-	 * this a timeout condition by the peer, and trigger a delete actively. */
-	lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-		delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE), 90);
-
-	return NEED_MORE;
+	return SUCCESS;
 }
 
 METHOD(task_t, process_i, status_t,
@@ -316,11 +296,13 @@ METHOD(task_t, process_i, status_t,
 				/* peer should delete this SA. Add a timeout just in case. */
 				job_t *job = (job_t*)delete_ike_sa_job_create(
 									other->new_sa->get_id(other->new_sa), TRUE);
-				lib->scheduler->schedule_job(lib->scheduler, job, 10);
+				lib->scheduler->schedule_job(lib->scheduler, job,
+											 HALF_OPEN_IKE_SA_TIMEOUT);
 				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete "
 					 "for redundant IKE_SA %s[%d]",
 					 other->new_sa->get_name(other->new_sa),
 					 other->new_sa->get_unique_id(other->new_sa));
+				other->new_sa->set_state(other->new_sa, IKE_REKEYED);
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager,
 												other->new_sa);
 				other->new_sa = NULL;
@@ -335,7 +317,8 @@ METHOD(task_t, process_i, status_t,
 				this->new_sa->set_my_host(this->new_sa, host->clone(host));
 				host = this->ike_sa->get_other_host(this->ike_sa);
 				this->new_sa->set_other_host(this->new_sa, host->clone(host));
-				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				/* IKE_SAs in state IKE_REKEYED are silently deleted, so we use
+				 * IKE_REKEYING */
 				this->new_sa->set_state(this->new_sa, IKE_REKEYING);
 				if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
 				{
