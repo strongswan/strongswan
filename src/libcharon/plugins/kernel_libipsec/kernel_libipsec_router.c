@@ -74,11 +74,14 @@ struct private_kernel_libipsec_router_t {
 	 * Lock for TUN device map
 	 */
 	rwlock_t *lock;
-
+#ifdef WIN32
+        HANDLE notify[2];
+#else
 	/**
 	 * Pipe to signal handle_plain() about changes regarding TUN devices
 	 */
 	int notify[2];
+#endif
 };
 
 /**
