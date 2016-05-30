@@ -729,6 +729,10 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                     success = TRUE;
                 }
             }
+            else
+            {
+                break;
+            }
             /* device has been examined or used, free it */
             free(name);
         }
@@ -738,6 +742,10 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          */
         enumerator->destroy(enumerator);
         possible_devices->destroy(possible_devices);
+        if (!success)
+        {
+            return FALSE;
+        }
         /* set correct mode */
         /* We set a fake gateway of 169.254.254.128 that we route packets over
          The TAP driver strips the Ethernet header and trailer of the Ethernet frames
@@ -751,7 +759,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         ep[0].S_un.S_un_b.s_b3 = 128;
         ep[0].S_un.S_un_b.s_b4 = 127;
         /*
-         * Remote network. THe tap driver validates it by masking it with the remote_netmask
+         * Remote network. The tap driver validates it by masking it with the remote_netmask
          * and then comparing hte result against the remote network (this value here).
          * If it does not match, an error is logged and initialization fails.
          * (local & remote_netmask ? local)
