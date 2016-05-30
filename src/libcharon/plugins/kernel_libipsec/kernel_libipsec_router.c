@@ -346,6 +346,8 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 		}
 	);
 #ifdef WIN32
+	this->tun.handle = this->tun.tun->get_handle(this->tun.tun);
+
         HANDLE inputPipe = NULL, outputPipe = NULL;
         /* create named pipe. We need to use named pipes, because IoControlPorts don't work with anonymous pipes. Sorry.  */
         /*              lpName, dwOpenMode, dwPipeMode  */
@@ -389,10 +391,7 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 		free(this);
 		return NULL;
 	}
-#endif
-#ifdef WIN32
-	this->tun.handle = this->tun.tun->get_handle(this->tun.tun);
-#else
+
 	this->tun.fd = this->tun.tun->get_fd(this->tun.tun);
 #endif /* WIN32 */
 
