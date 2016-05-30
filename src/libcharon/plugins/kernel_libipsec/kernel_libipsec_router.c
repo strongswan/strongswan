@@ -320,12 +320,13 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 /**
  * Set O_NONBLOCK on the given socket.
  */
+#if !defined(WIN32)
 static bool set_nonblock(int socket)
 {
 	int flags = fcntl(socket, F_GETFL);
 	return flags != -1 && fcntl(socket, F_SETFL, flags | O_NONBLOCK) != -1;
 }
-
+#endif
 /*
  * See header file
  */
