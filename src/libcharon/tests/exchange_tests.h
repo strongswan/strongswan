@@ -13,6 +13,7 @@
  * for more details.
  */
 
+TEST_SUITE(ike_delete_suite_create)
 TEST_SUITE(ike_rekey_suite_create)
 TEST_SUITE(child_delete_suite_create)
 TEST_SUITE(child_rekey_suite_create)
