@@ -345,7 +345,43 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 			.tun = lib->get(lib, "kernel-libipsec-tun"),
 		}
 	);
+#ifdef WIN32
+        HANDLE inputPipe = NULL, outputPipe = NULL;
+        /* create named pipe. We need to use named pipes, because IoControlPorts don't work with anonymous pipes. Sorry.  */
+        /*              lpName, dwOpenMode, dwPipeMode  */
+        inputPipe = CreateNamedPipe("\\\\.\\pipe\\charon-svc-libipsec-notify", PIPE_ACCESS_INBOUND & FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE & PIPE_REJECT_REMOTE_CLIENTS,
+                        /*nMaxInstances, nOutBufferSize, nInBufferSize, nDefaultTimeout, lpSecurityAttributes  */
+                        1, 512, 512, 0, NULL);
+        outputPipe = CreateNamedPipe("\\\\.\\pipe\\charon-svc-libipsec-notify", PIPE_ACCESS_INBOUND & FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE & PIPE_REJECT_REMOTE_CLIENTS,
+                        /*nMaxInstances, nOutBufferSize, nInBufferSize, nDefaultTimeout, lpSecurityAttributes  */
+                        1, 512, 512, 0, NULL);
 
+        if (inputPipe == INVALID_HANDLE_VALUE || outputPipe == INVALID_HANDLE_VALUE)
+        {
+            char *errorString = NULL;
+            /* Construct the language identifier for english first, before we can print a message. */
+            /* 0x09 is LANG_ENGLISH, 0x01 is SUBLANG_ENGLISH_US */
+
+            FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL, 0, MAKELANGID(0x09, 0x01), errorString, 0, NULL);
+            DBG0(DBG_LIB, "an error occured while trying to open a named pipe in libipsec.\n%s", errorString);
+            LocalFree(errorString);
+            /* Close the pipe(s) whose creation did not error. */
+            if (inputPipe != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(inputPipe);
+            }
+            if (outputPipe != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(outputPipe);
+            }
+            return NULL;
+        }
+        this->notify[0] = inputPipe;
+        this->notify[1] = outputPipe;
+
+
+#else
 	if (pipe(this->notify) != 0 ||
 		!set_nonblock(this->notify[0]) || !set_nonblock(this->notify[1]))
 	{
@@ -353,6 +389,7 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 		free(this);
 		return NULL;
 	}
+#endif
 #ifdef WIN32
 	this->tun.handle = this->tun.tun->get_handle(this->tun.tun);
 #else
