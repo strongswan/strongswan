@@ -45,11 +45,6 @@ struct private_ike_delete_t {
 	 * are we deleting a rekeyed SA?
 	 */
 	bool rekeyed;
-
-	/**
-	 * are we responding to a delete, but have initated our own?
-	 */
-	bool simultaneous;
 };
 
 METHOD(task_t, build_i, status_t,
@@ -128,9 +123,6 @@ METHOD(task_t, process_r, status_t,
 		case IKE_REKEYED:
 			this->rekeyed = TRUE;
 			break;
-		case IKE_DELETING:
-			this->simultaneous = TRUE;
-			break;
 		default:
 			break;
 	}
@@ -143,11 +135,6 @@ METHOD(task_t, build_r, status_t,
 {
 	DBG0(DBG_IKE, "IKE_SA deleted");
 
-	if (this->simultaneous)
-	{
-		/* wait for peer's response for our delete request */
-		return SUCCESS;
-	}
 	if (!this->rekeyed)
 	{	/* invoke ike_down() hook if SA has not been rekeyed */
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
@@ -166,7 +153,6 @@ METHOD(task_t, migrate, void,
 	private_ike_delete_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
-	this->simultaneous = FALSE;
 }
 
 METHOD(task_t, destroy, void,
