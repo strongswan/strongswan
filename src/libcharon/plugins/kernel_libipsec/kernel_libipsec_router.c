@@ -181,6 +181,12 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
  */
 static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 {
+#ifdef WIN32
+        tun_entry_t *entry;
+        bool oldstate;
+
+
+#else
 	enumerator_t *enumerator;
 	tun_entry_t *entry;
 	bool oldstate;
@@ -244,7 +250,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 	this->lock->unlock(this->lock);
 
 	return JOB_REQUEUE_DIRECT;
+#endif /* WIN32 */
 }
+
 
 METHOD(kernel_listener_t, tun, bool,
 	private_kernel_libipsec_router_t *this, tun_device_t *tun, bool created)
