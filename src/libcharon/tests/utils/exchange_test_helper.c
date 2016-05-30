@@ -182,16 +182,24 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 METHOD(exchange_test_helper_t, process_message, status_t,
 	private_exchange_test_helper_t *this, ike_sa_t *ike_sa, message_t *message)
 {
-	status_t status;
+	status_t status = FAILED;
+	ike_sa_id_t *id;
 
 	if (!message)
 	{
 		message = this->public.sender->dequeue(this->public.sender);
 	}
-	charon->bus->set_sa(charon->bus, ike_sa);
-	status = ike_sa->process_message(ike_sa, message);
-	charon->bus->set_sa(charon->bus, NULL);
+	id = message->get_ike_sa_id(message);
+	id = id->clone(id);
+	id->switch_initiator(id);
+	if (!id->get_responder_spi(id) || id->equals(id, ike_sa->get_id(ike_sa)))
+	{
+		charon->bus->set_sa(charon->bus, ike_sa);
+		status = ike_sa->process_message(ike_sa, message);
+		charon->bus->set_sa(charon->bus, NULL);
+	}
 	message->destroy(message);
+	id->destroy(id);
 	return status;
 }
 
