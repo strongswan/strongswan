@@ -17,6 +17,7 @@
 
 #include <tests/utils/exchange_test_helper.h>
 #include <tests/utils/exchange_test_asserts.h>
+#include <tests/utils/job_asserts.h>
 #include <tests/utils/sa_asserts.h>
 
 /**
@@ -256,6 +257,174 @@ START_TEST(test_collision)
 }
 END_TEST
 
+/**
+ * One of the hosts initiates a DELETE of the IKE_SA the other peer is
+ * concurrently trying to rekey.
+ *
+ *            rekey ----\       /---- delete
+ *                       \-----/----> detect collision
+ * detect collision <---------/ /---- TEMP_FAIL
+ *           delete ----\      /
+ *                       \----/----->
+ *  sa already gone <--------/
+ */
+START_TEST(test_collision_delete)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+	status_t s;
+
+	if (_i)
+	{	/* responder rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, NULL);
+	}
+	else
+	{	/* initiator rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, NULL);
+	}
+	/* this should never get called as this does not result in a successful
+	 * rekeying on either side */
+	assert_hook_not_called(ike_rekey);
+
+	initiate_rekey(a);
+	call_ikesa(b, delete);
+	assert_ike_sa_state(b, IKE_DELETING);
+
+	/* RFC 7296, 2.25.2: If a peer receives a request to rekey an IKE SA that
+	 * it is currently trying to close, it SHOULD reply with TEMPORARY_FAILURE.
+	 */
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
+	assert_hook_not_called(ike_updown);
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_DELETING);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* RFC 7296, 2.25.2: If a peer receives a request to close an IKE SA that
+	 * it is currently rekeying, it SHOULD reply as usual, and forget its own
+	 * rekeying request.
+	 */
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_updown(ike_updown, FALSE);
+	assert_hook_updown(child_updown, FALSE);
+	assert_single_payload(IN, PLV2_DELETE);
+	assert_message_empty(OUT);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+	assert_hook();
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	/* the SA is already gone */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+	msg->destroy(msg);
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_updown(ike_updown, FALSE);
+	assert_hook_updown(child_updown, FALSE);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	assert_hook();
+	assert_hook();
+
+	/* ike_rekey */
+	assert_hook();
+}
+END_TEST
+
+/**
+ * One of the hosts initiates a DELETE of the IKE_SA the other peer is
+ * concurrently trying to rekey.  However, the delete request is delayed or
+ * dropped, so the peer doing the rekeying is unaware of the collision.
+ *
+ *            rekey ----\       /---- delete
+ *                       \-----/----> detect collision
+ *       reschedule <---------/------ TEMP_FAIL
+ *                  <--------/
+ *           delete ---------------->
+ */
+START_TEST(test_collision_delete_drop_delete)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+	status_t s;
+
+	if (_i)
+	{	/* responder rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, NULL);
+	}
+	else
+	{	/* initiator rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, NULL);
+	}
+	/* this should never get called as this does not result in a successful
+	 * rekeying on either side */
+	assert_hook_not_called(ike_rekey);
+
+	initiate_rekey(a);
+	call_ikesa(b, delete);
+	assert_ike_sa_state(b, IKE_DELETING);
+
+	/* RFC 7296, 2.25.2: If a peer receives a request to rekey an IKE SA that
+	 * it is currently trying to close, it SHOULD reply with TEMPORARY_FAILURE.
+	 */
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
+	assert_hook_not_called(ike_updown);
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_DELETING);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* delay the DELETE request */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+	/* we expect a job to retry the rekeying is scheduled */
+	assert_jobs_scheduled(1);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_ESTABLISHED);
+	assert_scheduler();
+	assert_hook();
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } (delayed) */
+	assert_hook_updown(ike_updown, FALSE);
+	assert_hook_updown(child_updown, FALSE);
+	assert_single_payload(IN, PLV2_DELETE);
+	assert_message_empty(OUT);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, msg);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+	assert_hook();
+	assert_hook();
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_updown(ike_updown, FALSE);
+	assert_hook_updown(child_updown, FALSE);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	assert_hook();
+	assert_hook();
+
+	/* ike_rekey */
+	assert_hook();
+}
+END_TEST
+
 Suite *ike_rekey_suite_create()
 {
 	Suite *s;
@@ -269,6 +438,11 @@ Suite *ike_rekey_suite_create()
 
 	tc = tcase_create("collisions rekey");
 	tcase_add_loop_test(tc, test_collision, 0, 4);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("collisions delete");
+	tcase_add_loop_test(tc, test_collision_delete, 0, 2);
+	tcase_add_loop_test(tc, test_collision_delete_drop_delete, 0, 2);
 	suite_add_tcase(s, tc);
 
 	return s;
