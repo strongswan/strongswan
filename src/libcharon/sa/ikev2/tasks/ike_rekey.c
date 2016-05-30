@@ -208,6 +208,11 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
+		return SUCCESS;
+	}
 	if (this->new_sa == NULL)
 	{
 		/* IKE_SA/a CHILD_SA is in an inacceptable state, deny rekeying */
