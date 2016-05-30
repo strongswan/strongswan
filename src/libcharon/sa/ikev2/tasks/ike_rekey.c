@@ -70,6 +70,22 @@ struct private_ike_rekey_t {
 };
 
 /**
+ * Schedule a retry if rekeying temporary failed
+ */
+static void schedule_delayed_rekey(private_ike_rekey_t *this)
+{
+	uint32_t retry;
+	job_t *job;
+
+	retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+	job = (job_t*)rekey_ike_sa_job_create(
+						this->ike_sa->get_id(this->ike_sa), FALSE);
+	DBG1(DBG_IKE, "IKE_SA rekeying failed, trying again in %d seconds", retry);
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	lib->scheduler->schedule_job(lib->scheduler, job, retry);
+}
+
+/**
  * Check if an IKE_SA has any queued tasks, return initiation job
  */
 static job_t* check_queued_tasks(ike_sa_t *ike_sa)
@@ -251,6 +267,11 @@ METHOD(task_t, process_i, status_t,
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
 	}
+	if (message->get_notify(message, TEMPORARY_FAILURE))
+	{
+		schedule_delayed_rekey(this);
+		return SUCCESS;
+	}
 
 	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
@@ -260,14 +281,7 @@ METHOD(task_t, process_i, status_t,
 				this->collision->get_type(this->collision) == TASK_IKE_DELETE ||
 				this->collision->get_type(this->collision) == TASK_IKE_REAUTH)))
 			{
-				job_t *job;
-				uint32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
-				job = (job_t*)rekey_ike_sa_job_create(
-										this->ike_sa->get_id(this->ike_sa), FALSE);
-				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
-										"trying again in %d seconds", retry);
-				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				lib->scheduler->schedule_job(lib->scheduler, job, retry);
+				schedule_delayed_rekey(this);
 			}
 			return SUCCESS;
 		case NEED_MORE:
