@@ -266,7 +266,7 @@ METHOD(kernel_listener_t, tun, bool,
 		INIT(entry,
 			.addr = tun->get_address(tun, NULL),
 #ifdef WIN32
-                        .handle = tun->get_handle(tun);
+                        .handle = tun->get_handle(tun),
 #else
 			.fd = tun->get_fd(tun),
 #endif /* WIN32 */
