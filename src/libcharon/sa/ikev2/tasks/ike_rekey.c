@@ -67,6 +67,11 @@ struct private_ike_rekey_t {
 	 * colliding task detected by the task manager
 	 */
 	task_t *collision;
+
+	/**
+	 * TRUE if rekeying can't be handled temporarily
+	 */
+	bool failed_temporarily;
 };
 
 /**
@@ -186,6 +191,7 @@ METHOD(task_t, process_r, status_t,
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		DBG1(DBG_IKE, "peer initiated rekeying, but we are deleting");
+		this->failed_temporarily = TRUE;
 		return NEED_MORE;
 	}
 
@@ -201,6 +207,7 @@ METHOD(task_t, process_r, status_t,
 				/* we do not allow rekeying while we have children in-progress */
 				DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
 				enumerator->destroy(enumerator);
+				this->failed_temporarily = TRUE;
 				return NEED_MORE;
 			default:
 				break;
@@ -224,7 +231,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	if (this->failed_temporarily)
 	{
 		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
