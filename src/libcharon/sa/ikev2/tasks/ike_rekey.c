@@ -392,6 +392,17 @@ METHOD(ike_rekey_t, collide, void,
 {
 	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
 		 TASK_IKE_REKEY, task_type_names, other->get_type(other));
+	if (other->get_type(other) == TASK_IKE_DELETE)
+	{
+		if (this->collision &&
+			this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+		{
+			DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision");
+			other->destroy(other);
+			establish_new((private_ike_rekey_t*)this->collision);
+			return;
+		}
+	}
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }
