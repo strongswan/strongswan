@@ -380,6 +380,13 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_IKE_REKEY;
 }
 
+METHOD(ike_rekey_t, did_collide, bool,
+	private_ike_rekey_t *this)
+{
+	return this->collision &&
+		   this->collision->get_type(this->collision) == TASK_IKE_REKEY;
+}
+
 METHOD(ike_rekey_t, collide, void,
 	private_ike_rekey_t* this, task_t *other)
 {
@@ -444,6 +451,7 @@ ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator)
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.did_collide = _did_collide,
 			.collide = _collide,
 		},
 		.ike_sa = ike_sa,
