@@ -382,11 +382,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_child_delete_t *this, message_t *message)
 {
-	/* if we are rekeying, we send an empty informational */
-	if (this->ike_sa->get_state(this->ike_sa) != IKE_REKEYING)
-	{
-		build_payloads(this, message);
-	}
+	build_payloads(this, message);
 	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
