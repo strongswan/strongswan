@@ -6,7 +6,7 @@ aikpub2_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 aikpub2.o :	$(top_builddir)/config.status
 
 if USE_TSS2
-  aikpub2_LDADD += -ltss2
+  aikpub2_LDADD += -ltctisocket -ltss2
 endif
 
 AM_CPPFLAGS = \

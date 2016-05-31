@@ -20,6 +20,7 @@
 #include <asn1/oid.h>
 
 #include <tss2/tpm20.h>
+#include <tcti/tcti_socket.h>
 
 #include <syslog.h>
 #include <getopt.h>
@@ -27,7 +28,6 @@
 
 /* default directory where AIK keys are stored */
 #define AIK_DIR							IPSEC_CONFDIR "/pts/"
-
 
 /* default name of AIK private key blob */
 #define DEFAULT_FILENAME_AIKPUBKEY		AIK_DIR "aikPub.der"
@@ -41,6 +41,7 @@ static level_t default_loglevel = 1;
 options_t *options;
 
 /* global variables */
+chunk_t aik_blob;
 chunk_t aik_pubkey;
 chunk_t aik_keyid;
 
@@ -110,6 +111,7 @@ static void exit_aikpub2(err_t message, ...)
 {
 	int status = 0;
 
+	free(aik_blob.ptr);
 	free(aik_pubkey.ptr);
 	free(aik_keyid.ptr);
 	options->destroy(options);
@@ -140,13 +142,14 @@ static void exit_aikpub2(err_t message, ...)
 static void usage(const char *message)
 {
 	fprintf(stderr,
-		"Usage: aikpub2  [--in <filename>] [--out <filename>]\n"
-		"                [--force] [--quiet] [--debug <level>]\n"
+		"Usage: aikpub2 [--in <filename>|--handle <handle>] --out <filename>\n"
+		"               [--force] [--quiet] [--debug <level>]\n"
 		"       aikpub2 --help\n"
 		"\n"
 		"Options:\n"
 		" --in (-i)         TSS 2.0 AIK public key blob\n"
-		" --out (-o)        AIK public key in PKCS#1 format\n"
+		" --handle (-H)     TSS 2.0 AIK object handle\n"
+		" --out (-o)        AIK public key in PKCS #1 format\n"
 		" --force (-f)      force to overwrite existing files\n"
 		" --help (-h)       show usage and exit\n"
 		"\n"
@@ -155,6 +158,103 @@ static void usage(const char *message)
 		" --quiet (-q)      do not write log output to stderr\n"
 		);
 	exit_aikpub2(message);
+}
+
+/**
+ * Some symbols required by libtctisocket
+ */
+FILE *outFp;
+uint8_t simulator = 1;
+
+int TpmClientPrintf (uint8_t type, const char *format, ...)
+{
+    return 0;
+}
+
+/**
+ * read the public key portion of a TSS 2.0 AIK key from NVRAM
+ */
+void read_public(TPMI_DH_OBJECT handle, TPM2B_PUBLIC *public)
+{
+	size_t tcti_context_size;
+	uint32_t sys_context_size, rval;
+
+	TCTI_SOCKET_CONF rm_if_config = { DEFAULT_HOSTNAME,
+									  DEFAULT_RESMGR_TPM_PORT
+									};
+
+	TSS2_ABI_VERSION abi_version = { TSSWG_INTEROP,
+									 TSS_SAPI_FIRST_FAMILY,
+									 TSS_SAPI_FIRST_LEVEL,
+									 TSS_SAPI_FIRST_VERSION
+								   };
+
+	TPM2B_NAME name = { { sizeof(TPM2B_NAME)-2, } };
+	TPM2B_NAME qualified_name = { { sizeof(TPM2B_NAME)-2, } };
+
+	TSS2_TCTI_CONTEXT *tcti_context;
+	TSS2_SYS_CONTEXT  *sys_context;
+
+	TPMS_AUTH_RESPONSE session_data;
+	TSS2_SYS_RSP_AUTHS sessions_data;
+	TPMS_AUTH_RESPONSE *session_data_array[1];
+
+	session_data_array[0]  = &session_data;
+	sessions_data.rspAuths = &session_data_array[0];
+	sessions_data.rspAuthsCount = 1;
+
+	/* determine size of tcti context */
+	rval = InitSocketTcti(NULL, &tcti_context_size, &rm_if_config, 0);
+	if (rval != TSS2_RC_SUCCESS)
+	{
+		exit_aikpub2("could not get tcti_context size: 0x%06x", rval);
+	}
+
+	/* allocate memory for tcti context */
+	tcti_context = (TSS2_TCTI_CONTEXT*)malloc(tcti_context_size);
+
+	/* initialize tcti context */
+	rval = InitSocketTcti(tcti_context, &tcti_context_size, &rm_if_config, 0);
+	if (rval != TSS2_RC_SUCCESS)
+	{
+		exit_aikpub2("could not get tcti_context: 0x%06x", rval);
+	}
+
+	/* determine size of sys context */
+	sys_context_size = Tss2_Sys_GetContextSize(0);
+
+	/* allocate memory for sys context */
+	sys_context = malloc(sys_context_size);
+
+	/* initialize sys context */
+	rval = Tss2_Sys_Initialize(sys_context, sys_context_size, tcti_context,
+							   &abi_version);
+	if (rval != TSS2_RC_SUCCESS)
+	{
+		TeardownSocketTcti(tcti_context);
+		exit_aikpub2("could not get sys_context: 0x%06x", rval);
+	}
+
+	/* always send simulator platform command, ignored by true RM */
+	PlatformCommand(tcti_context ,MS_SIM_POWER_ON );
+	PlatformCommand(tcti_context, MS_SIM_NV_ON );
+
+	/* read public key for a given object handle from TPM 2.0 NVRAM */
+	rval = Tss2_Sys_ReadPublic(sys_context, handle, 0, public, &name,
+							   &qualified_name, &sessions_data);
+
+	PlatformCommand(tcti_context, MS_SIM_POWER_OFF);
+
+	/* clean up connection to TPM 2.0 */
+	TeardownSocketTcti(tcti_context);
+	Tss2_Sys_Finalize(sys_context);
+	free(sys_context);
+
+	if (rval != TPM_RC_SUCCESS)
+	{
+		exit_aikpub2("could not read TSS 2.0 public key from handle 0x%08x:"
+					 " 0x%06x", handle, rval);
+	}
 }
 
 /**
@@ -169,14 +269,15 @@ int main(int argc, char *argv[])
 	extern char * optarg;
 	extern int optind;
 
-	char *aikblob_filename   = NULL;
-	char *aikpubkey_filename = DEFAULT_FILENAME_AIKPUBKEY;
+	uint32_t aik_handle = 0;
+	char *aik_in_filename   = NULL;
+	char *aik_out_filename = DEFAULT_FILENAME_AIKPUBKEY;
+	chunk_t *aik_mapped;
 	bool force = FALSE;
-	chunk_t *aikblob;
 	hasher_t *hasher;
 
 	/* TSS 2.0 variables */
-	TPM2B_PUBLIC public;
+	TPM2B_PUBLIC public = { { 0, } };
 
 	atexit(library_deinit);
 	if (!library_init(NULL, "aikpub2"))
@@ -199,6 +300,7 @@ int main(int argc, char *argv[])
 			/* name, has_arg, flag, val */
 			{ "help", no_argument, NULL, 'h' },
 			{ "optionsfrom", required_argument, NULL, '+' },
+			{ "handle", required_argument, NULL, 'H' },
 			{ "in", required_argument, NULL, 'i' },
 			{ "out", required_argument, NULL, 'o' },
 			{ "force", no_argument, NULL, 'f' },
@@ -208,7 +310,7 @@ int main(int argc, char *argv[])
 		};
 
 		/* parse next option */
-		int c = getopt_long(argc, argv, "ho:c:b:p:fqd:", long_opts, NULL);
+		int c = getopt_long(argc, argv, "h+:H:i:o:fql:", long_opts, NULL);
 
 		switch (c)
 		{
@@ -225,12 +327,16 @@ int main(int argc, char *argv[])
 				}
 				continue;
 
+			case 'H':       /* --handle <handle> */
+				aik_handle = strtoll(optarg, NULL, 16);
+				continue;
+
 			case 'i':       /* --in <filename> */
-				aikblob_filename = optarg;
+				aik_in_filename = optarg;
 				continue;
 
 			case 'o':       /* --out <filename> */
-				aikpubkey_filename = optarg;
+				aik_out_filename = optarg;
 				continue;
 
 			case 'f':       /* --force */
@@ -259,27 +365,38 @@ int main(int argc, char *argv[])
 	{
 		exit_aikpub2("plugin loading failed");
 	}
+	if (!aik_in_filename && !aik_handle)
+	{
+		usage("either --in or --handle option is required");
+	}
 
-	/* read TSS 2.0 AIK public key blob */
-	if (!aikblob_filename)
+	if (aik_handle)
 	{
-		usage("--aikblob is required");
+		/* read public key blob directly from TPM 2.0 */
+		read_public(aik_handle, &public);
+		aik_blob = chunk_clone(chunk_create((u_char*)&public, sizeof(public)));
 	}
-	aikblob = chunk_map(aikblob_filename, FALSE);
-	if (!aikblob)
+	else
 	{
-		exit_aikpub2("could not read TSS 2.0 public key file '%s'",
-					  aikblob_filename);
-	}
-	DBG3(DBG_LIB, "aikblob: %B", aikblob);
+		/* read stored TPM 2.0 public key blob from a file */
+		aik_mapped = chunk_map(aik_in_filename, FALSE);
+		if (!aik_mapped)
+		{
+			exit_aikpub2("could not read TSS 2.0 public key file '%s'",
+						  aik_in_filename);
+		}
+		aik_blob = chunk_clone(*aik_mapped);
+		chunk_unmap(aik_mapped);
 
-	if (aikblob->len != sizeof(TPM2B_PUBLIC))
-	{
-		chunk_unmap(aikblob);
-		exit_aikpub2("size of aikblob is not %d bytes", sizeof(TPM2B_PUBLIC));
+		if (aik_blob.len != sizeof(TPM2B_PUBLIC))
+		{
+			exit_aikpub2("size of aikblob is not %d bytes",
+						  sizeof(TPM2B_PUBLIC));
+		}
+		public = *(TPM2B_PUBLIC*)aik_blob.ptr;
 	}
-	public = *(TPM2B_PUBLIC*)aikblob->ptr;
-	chunk_unmap(aikblob);
+	DBG3(DBG_LIB, "TSS 2.0 AIK blob: %B", &aik_blob);
+
 
 	switch (public.t.publicArea.type)
 	{
@@ -335,13 +452,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* store AIK subjectPublicKeyInfo to file */
-	if (!chunk_write(aik_pubkey, aikpubkey_filename, 0022, force))
+	if (!chunk_write(aik_pubkey, aik_out_filename, 0022, force))
 	{
 		exit_aikpub2("could not write AIK public key file '%s': %s",
-					  aikpubkey_filename, strerror(errno));
+					  aik_out_filename, strerror(errno));
 	}
 	DBG1(DBG_LIB, "AIK public key written to '%s' (%u bytes)",
-				   aikpubkey_filename, aik_pubkey.len);
+				   aik_out_filename, aik_pubkey.len);
 
 	/* AIK keyid derived from subjectPublicKeyInfo encoding */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
