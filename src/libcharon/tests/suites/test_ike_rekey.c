@@ -258,6 +258,343 @@ START_TEST(test_collision)
 END_TEST
 
 /**
+ * In this scenario one of the peers does not notice that there is a rekey
+ * collision because the other request is dropped:
+ *
+ *            rekey ----\       /---- rekey
+ *                       \     /
+ * detect collision <-----\---/
+ *                  -------\-------->
+ * detect collision <-------\-------- delete old SA
+ *           delete ---------\------>
+ *       rekey done           \-----> SA not found (or it never arrives)
+ */
+START_TEST(test_collision_dropped_request)
+{
+	ike_sa_t *a, *b, *sa;
+	message_t *msg;
+	status_t s;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, NULL);
+
+	/* Three nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *   N3/5 <-----\--/
+	 *   ...  -----\ \-------> ...
+	 * We test this three times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[3];
+		/* SPIs of the deleted IKE_SAs (either redundant or replaced) */
+		uint32_t del_a_i, del_a_r;
+		uint32_t del_b_i, del_b_r;
+		/* SPIs of the kept IKE_SA */
+		uint32_t spi_i, spi_r;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0x00, 0xFF }, 1, 2, 4, 6, 3, 5 },
+		{ { 0xFF, 0xFF, 0x00 }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0xFF, 0xFF }, 1, 2, 4, 6, 3, 5 },
+	};
+	/* these should never get called as this results in a successful rekeying */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a);
+	/* drop the CREATE_CHILD_SA request from a to b */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+	msg->destroy(msg);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b);
+
+	/* <-- CREATE_CHILD_SA { SA, Ni, KEi } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(ike_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_DELETING);
+	assert_child_sa_count(b, 0);
+	sa = assert_ike_sa_checkout(4, 5, TRUE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(1);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	assert_single_payload(IN, PLV2_DELETE);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+	sa = assert_ike_sa_checkout(4, 5, FALSE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(2);
+	assert_hook();
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_not_called(ike_rekey);
+	assert_message_empty(IN);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	assert_hook();
+
+	/* ike_updown/child_updown */
+	assert_hook();
+	assert_hook();
+
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+}
+END_TEST
+
+/**
+ * In this scenario one of the peers does not notice that there is a rekey
+ * collision because the other request is delayed:
+ *
+ *            rekey ----\       /---- rekey
+ *                       \     /
+ * detect collision <-----\---/
+ *                  -------\-------->
+ *                          \   /---- delete old SA
+ *                           \-/----> detect collision
+ * detect collision <---------/ /---- TEMP_FAIL
+ *           delete -----------/---->
+ *       rekey done           /
+ *  sa already gone <--------/
+ */
+START_TEST(test_collision_delayed_request)
+{
+	ike_sa_t *a, *b, *sa;
+	message_t *msg;
+	status_t s;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, NULL);
+
+	/* Three nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *   N3/5 <-----\--/
+	 *   ...  -----\ \-------> ...
+	 * We test this three times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[3];
+		/* SPIs of the deleted IKE_SAs (either redundant or replaced) */
+		uint32_t del_a_i, del_a_r;
+		uint32_t del_b_i, del_b_r;
+		/* SPIs of the kept IKE_SA */
+		uint32_t spi_i, spi_r;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0x00, 0xFF }, 1, 2, 4, 6, 3, 5 },
+		{ { 0xFF, 0xFF, 0x00 }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0xFF, 0xFF }, 1, 2, 4, 6, 3, 5 },
+	};
+	/* these should never get called as this results in a successful rekeying */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b);
+
+	/* delay the CREATE_CHILD_SA request from a to b */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- CREATE_CHILD_SA { SA, Ni, KEi } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(ike_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_DELETING);
+	assert_child_sa_count(b, 0);
+	sa = assert_ike_sa_checkout(4, 5, TRUE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(1);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> (delayed) */
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, msg);
+	assert_ike_sa_state(b, IKE_DELETING);
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	assert_single_payload(IN, PLV2_DELETE);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+	sa = assert_ike_sa_checkout(4, 5, FALSE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(2);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	/* the SA is already gone */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+	msg->destroy(msg);
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_not_called(ike_rekey);
+	assert_message_empty(IN);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	assert_hook();
+
+	/* ike_updown/child_updown */
+	assert_hook();
+	assert_hook();
+
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+}
+END_TEST
+
+/**
+ * In this scenario one of the peers does not notice that there is a rekey
+ * collision and the delete arrives after the TEMPORARY_FAILURE notify:
+ *
+ *            rekey ----\       /---- rekey
+ *                       \     /
+ * detect collision <-----\---/
+ *                  -------\-------->
+ *                          \   /---- delete old SA
+ *                           \-/----> detect collision
+ *    no reschedule <---------/------ TEMP_FAIL
+ * detect collision <--------/
+ *           delete ---------------->
+ *       rekey done
+ */
+START_TEST(test_collision_delayed_request_and_delete)
+{
+	ike_sa_t *a, *b, *sa;
+	message_t *msg;
+	status_t s;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, NULL);
+
+	/* Three nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *   N3/5 <-----\--/
+	 *   ...  -----\ \-------> ...
+	 * We test this three times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[3];
+		/* SPIs of the deleted IKE_SAs (either redundant or replaced) */
+		uint32_t del_a_i, del_a_r;
+		uint32_t del_b_i, del_b_r;
+		/* SPIs of the kept IKE_SA */
+		uint32_t spi_i, spi_r;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0x00, 0xFF }, 1, 2, 4, 6, 3, 5 },
+		{ { 0xFF, 0xFF, 0x00 }, 3, 5, 1, 2, 4, 6 },
+		{ { 0xFF, 0xFF, 0xFF }, 1, 2, 4, 6, 3, 5 },
+	};
+	/* these should never get called as this results in a successful rekeying */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b);
+
+	/* delay the CREATE_CHILD_SA request from a to b */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- CREATE_CHILD_SA { SA, Ni, KEi } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(ike_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_DELETING);
+	assert_child_sa_count(b, 0);
+	sa = assert_ike_sa_checkout(4, 5, TRUE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(1);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi } --> (delayed) */
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, msg);
+	assert_ike_sa_state(b, IKE_DELETING);
+
+	/* delay the INFORMATIONAL request from b to a */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	assert_hook_rekey(ike_rekey, 1, 4);
+	assert_no_jobs_scheduled();
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_REKEYED);
+	assert_child_sa_count(a, 0);
+	sa = assert_ike_sa_checkout(4, 5, FALSE);
+	assert_ike_sa_state(sa, IKE_ESTABLISHED);
+	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(2);
+	assert_scheduler();
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } (delayed) */
+	assert_single_payload(IN, PLV2_DELETE);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, msg);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+
+	/* INFORMATIONAL { } --> */
+	assert_hook_not_called(ike_rekey);
+	assert_message_empty(IN);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	assert_hook();
+
+	/* ike_updown/child_updown */
+	assert_hook();
+	assert_hook();
+
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+}
+END_TEST
+
+/**
  * One of the hosts initiates a DELETE of the IKE_SA the other peer is
  * concurrently trying to rekey.
  *
@@ -438,6 +775,9 @@ Suite *ike_rekey_suite_create()
 
 	tc = tcase_create("collisions rekey");
 	tcase_add_loop_test(tc, test_collision, 0, 4);
+	tcase_add_loop_test(tc, test_collision_dropped_request, 0, 3);
+	tcase_add_loop_test(tc, test_collision_delayed_request, 0, 3);
+	tcase_add_loop_test(tc, test_collision_delayed_request_and_delete, 0, 3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions delete");
