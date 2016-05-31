@@ -304,63 +304,53 @@ METHOD(task_t, process_i, status_t,
 		this->collision->get_type(this->collision) == TASK_IKE_REKEY)
 	{
 		private_ike_rekey_t *other = (private_ike_rekey_t*)this->collision;
+		host_t *host;
+		chunk_t this_nonce, other_nonce;
 
-		/* ike_init can be NULL, if child_sa is half-open */
-		if (other->ike_init)
+		this_nonce = this->ike_init->get_lower_nonce(this->ike_init);
+		other_nonce = other->ike_init->get_lower_nonce(other->ike_init);
+
+		/* if we have the lower nonce, delete rekeyed SA. If not, delete
+		 * the redundant. */
+		if (memcmp(this_nonce.ptr, other_nonce.ptr,
+				   min(this_nonce.len, other_nonce.len)) < 0)
 		{
-			host_t *host;
-			chunk_t this_nonce, other_nonce;
-
-			this_nonce = this->ike_init->get_lower_nonce(this->ike_init);
-			other_nonce = other->ike_init->get_lower_nonce(other->ike_init);
-
-			/* if we have the lower nonce, delete rekeyed SA. If not, delete
-			 * the redundant. */
-			if (memcmp(this_nonce.ptr, other_nonce.ptr,
-					   min(this_nonce.len, other_nonce.len)) > 0)
+			DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant "
+				 "IKE_SA %s[%d]", this->new_sa->get_name(this->new_sa),
+				 this->new_sa->get_unique_id(this->new_sa));
+			/* apply host for a proper delete */
+			host = this->ike_sa->get_my_host(this->ike_sa);
+			this->new_sa->set_my_host(this->new_sa, host->clone(host));
+			host = this->ike_sa->get_other_host(this->ike_sa);
+			this->new_sa->set_other_host(this->new_sa, host->clone(host));
+			/* IKE_SAs in state IKE_REKEYED are silently deleted, so we use
+			 * IKE_REKEYING */
+			this->new_sa->set_state(this->new_sa, IKE_REKEYING);
+			if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
 			{
-				/* peer should delete this SA. Add a timeout just in case. */
-				job_t *job = (job_t*)delete_ike_sa_job_create(
-									other->new_sa->get_id(other->new_sa), TRUE);
-				lib->scheduler->schedule_job(lib->scheduler, job,
-											 HALF_OPEN_IKE_SA_TIMEOUT);
-				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete "
-					 "for redundant IKE_SA %s[%d]",
-					 other->new_sa->get_name(other->new_sa),
-					 other->new_sa->get_unique_id(other->new_sa));
-				other->new_sa->set_state(other->new_sa, IKE_REKEYED);
-				charon->ike_sa_manager->checkin(charon->ike_sa_manager,
-												other->new_sa);
-				other->new_sa = NULL;
+				this->new_sa->destroy(this->new_sa);
 			}
 			else
 			{
-				DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant "
-					 "IKE_SA %s[%d]", this->new_sa->get_name(this->new_sa),
-					 this->new_sa->get_unique_id(this->new_sa));
-				/* apply host for a proper delete */
-				host = this->ike_sa->get_my_host(this->ike_sa);
-				this->new_sa->set_my_host(this->new_sa, host->clone(host));
-				host = this->ike_sa->get_other_host(this->ike_sa);
-				this->new_sa->set_other_host(this->new_sa, host->clone(host));
-				/* IKE_SAs in state IKE_REKEYED are silently deleted, so we use
-				 * IKE_REKEYING */
-				this->new_sa->set_state(this->new_sa, IKE_REKEYING);
-				if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
-				{
-					this->new_sa->destroy(this->new_sa);
-				}
-				else
-				{
-					charon->ike_sa_manager->checkin(charon->ike_sa_manager,
-													this->new_sa);
-				}
-				charon->bus->set_sa(charon->bus, this->ike_sa);
-				this->new_sa = NULL;
-				establish_new(other);
-				return SUCCESS;
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+												this->new_sa);
 			}
+			charon->bus->set_sa(charon->bus, this->ike_sa);
+			this->new_sa = NULL;
+			establish_new(other);
+			return SUCCESS;
 		}
+		/* peer should delete this SA. Add a timeout just in case. */
+		job_t *job = (job_t*)delete_ike_sa_job_create(
+									other->new_sa->get_id(other->new_sa), TRUE);
+		lib->scheduler->schedule_job(lib->scheduler, job,
+									 HALF_OPEN_IKE_SA_TIMEOUT);
+		DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete for "
+			 "redundant IKE_SA %s[%d]", other->new_sa->get_name(other->new_sa),
+			 other->new_sa->get_unique_id(other->new_sa));
+		other->new_sa->set_state(other->new_sa, IKE_REKEYED);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
+		other->new_sa = NULL;
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 
@@ -392,16 +382,34 @@ METHOD(ike_rekey_t, collide, void,
 {
 	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
 		 TASK_IKE_REKEY, task_type_names, other->get_type(other));
-	if (other->get_type(other) == TASK_IKE_DELETE)
+
+	switch (other->get_type(other))
 	{
-		if (this->collision &&
-			this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+		case TASK_IKE_DELETE:
+			if (this->collision &&
+				this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+			{
+				DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision");
+				other->destroy(other);
+				establish_new((private_ike_rekey_t*)this->collision);
+				return;
+			}
+			break;
+		case TASK_IKE_REKEY:
 		{
-			DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision");
-			other->destroy(other);
-			establish_new((private_ike_rekey_t*)this->collision);
-			return;
+			private_ike_rekey_t *rekey = (private_ike_rekey_t*)other;
+
+			if (!rekey->ike_init)
+			{
+				DBG1(DBG_IKE, "colliding exchange did not result in an IKE_SA, "
+					 "ignore");
+				other->destroy(other);
+				return;
+			}
+			break;
 		}
+		default:
+			break;
 	}
 	DESTROY_IF(this->collision);
 	this->collision = other;
