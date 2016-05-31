@@ -261,6 +261,28 @@ METHOD(task_t, build_r, status_t,
 	return SUCCESS;
 }
 
+/**
+ * Conclude any undetected rekey collision.
+ *
+ * If the peer does not detect the collision it will delete this IKE_SA.
+ * Depending on when our request reaches the peer and we receive the delete
+ * this may get called at different times.
+ *
+ * Returns TRUE if there was a collision, FALSE otherwise.
+ */
+static bool conclude_undetected_collision(private_ike_rekey_t *this)
+{
+	if (this->collision &&
+		this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+	{
+		DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision, abort "
+			 "active rekeying");
+		establish_new((private_ike_rekey_t*)this->collision);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
@@ -274,18 +296,12 @@ METHOD(task_t, process_i, status_t,
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
 	}
-	if (message->get_notify(message, TEMPORARY_FAILURE))
-	{
-		schedule_delayed_rekey(this);
-		return SUCCESS;
-	}
 
 	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
 		case FAILED:
 			/* rekeying failed, fallback to old SA */
-			if (!this->collision ||
-				this->collision->get_type(this->collision) != TASK_IKE_DELETE)
+			if (!conclude_undetected_collision(this))
 			{
 				schedule_delayed_rekey(this);
 			}
@@ -385,15 +401,9 @@ METHOD(ike_rekey_t, collide, void,
 	switch (other->get_type(other))
 	{
 		case TASK_IKE_DELETE:
-			if (this->collision &&
-				this->collision->get_type(this->collision) == TASK_IKE_REKEY)
-			{
-				DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision");
-				other->destroy(other);
-				establish_new((private_ike_rekey_t*)this->collision);
-				return;
-			}
-			break;
+			conclude_undetected_collision(this);
+			other->destroy(other);
+			return;
 		case TASK_IKE_REKEY:
 		{
 			private_ike_rekey_t *rekey = (private_ike_rekey_t*)other;
