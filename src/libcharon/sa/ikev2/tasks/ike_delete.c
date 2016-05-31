@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,7 +18,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
-
+#include <sa/ikev2/tasks/ike_rekey.h>
 
 typedef struct private_ike_delete_t private_ike_delete_t;
 
@@ -89,6 +90,33 @@ METHOD(task_t, process_i, status_t,
 	return DESTROY_ME;
 }
 
+/**
+ * Check if this delete happened after a rekey collsion
+ */
+static bool after_rekey_collision(private_ike_delete_t *this)
+{
+	enumerator_t *tasks;
+	task_t *task;
+
+	tasks = this->ike_sa->create_task_enumerator(this->ike_sa,
+												 TASK_QUEUE_ACTIVE);
+	while (tasks->enumerate(tasks, &task))
+	{
+		if (task->get_type(task) == TASK_IKE_REKEY)
+		{
+			ike_rekey_t *rekey = (ike_rekey_t*)task;
+
+			if (rekey->did_collide(rekey))
+			{
+				tasks->destroy(tasks);
+				return TRUE;
+			}
+		}
+	}
+	tasks->destroy(tasks);
+	return FALSE;
+}
+
 METHOD(task_t, process_r, status_t,
 	private_ike_delete_t *this, message_t *message)
 {
@@ -116,6 +144,16 @@ METHOD(task_t, process_r, status_t,
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
 		case IKE_REKEYING:
+			/* if the peer concurrently deleted the IKE_SA we treat this as
+			 * regular delete.  however, in case the peer did not detect a rekey
+			 * collision it will delete the replaced IKE_SA if we are still in
+			 * state IKE_REKEYING */
+			if (after_rekey_collision(this))
+			{
+				this->rekeyed = TRUE;
+				break;
+			}
+			/* fall-through */
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
