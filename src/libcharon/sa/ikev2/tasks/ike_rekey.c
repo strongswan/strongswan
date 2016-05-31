@@ -284,9 +284,8 @@ METHOD(task_t, process_i, status_t,
 	{
 		case FAILED:
 			/* rekeying failed, fallback to old SA */
-			if (!(this->collision && (
-				this->collision->get_type(this->collision) == TASK_IKE_DELETE ||
-				this->collision->get_type(this->collision) == TASK_IKE_REAUTH)))
+			if (!this->collision ||
+				this->collision->get_type(this->collision) != TASK_IKE_DELETE)
 			{
 				schedule_delayed_rekey(this);
 			}

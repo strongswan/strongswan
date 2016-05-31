@@ -761,8 +761,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 
 	/* do we have to check  */
 	if (type == TASK_IKE_REKEY || type == TASK_CHILD_REKEY ||
-		type == TASK_CHILD_DELETE || type == TASK_IKE_DELETE ||
-		type == TASK_IKE_REAUTH)
+		type == TASK_CHILD_DELETE || type == TASK_IKE_DELETE)
 	{
 		/* find an exchange collision, and notify these tasks */
 		enumerator = array_create_enumerator(this->active_tasks);
@@ -771,8 +770,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 			switch (active->get_type(active))
 			{
 				case TASK_IKE_REKEY:
-					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE ||
-						type == TASK_IKE_REAUTH)
+					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE)
 					{
 						ike_rekey_t *rekey = (ike_rekey_t*)active;
 						rekey->collide(rekey, task);
