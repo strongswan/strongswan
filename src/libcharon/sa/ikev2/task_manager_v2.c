@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -849,6 +849,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				/* FALL */
 			case DESTROY_ME:
 				/* destroy IKE_SA, but SEND response first */
+				if (handle_collisions(this, task))
+				{
+					array_remove_at(this->passive_tasks, enumerator);
+				}
 				delete = TRUE;
 				break;
 		}
