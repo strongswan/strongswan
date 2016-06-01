@@ -242,9 +242,10 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
-
 	if (this->ike_init->task.build(&this->ike_init->task, message) == FAILED)
 	{
+		this->ike_init->task.destroy(&this->ike_init->task);
+		this->ike_init = NULL;
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 		return SUCCESS;
 	}
