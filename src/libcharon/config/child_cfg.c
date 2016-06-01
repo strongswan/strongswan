@@ -211,25 +211,40 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 
 METHOD(child_cfg_t, select_proposal, proposal_t*,
 	private_child_cfg_t*this, linked_list_t *proposals, bool strip_dh,
-	bool private)
+	bool private, bool prefer_self)
 {
-	enumerator_t *stored_enum, *supplied_enum;
-	proposal_t *stored, *supplied, *selected = NULL;
+	enumerator_t *prefer_enum, *match_enum;
+	proposal_t *proposal, *match, *selected = NULL;
 
-	stored_enum = this->proposals->create_enumerator(this->proposals);
-	supplied_enum = proposals->create_enumerator(proposals);
-
-	/* compare all stored proposals with all supplied. Stored ones are preferred. */
-	while (stored_enum->enumerate(stored_enum, &stored))
+	if (prefer_self)
 	{
-		stored = stored->clone(stored);
-		while (supplied_enum->enumerate(supplied_enum, &supplied))
+		prefer_enum = this->proposals->create_enumerator(this->proposals);
+		match_enum = proposals->create_enumerator(proposals);
+	}
+	else
+	{
+		prefer_enum = proposals->create_enumerator(proposals);
+		match_enum = this->proposals->create_enumerator(this->proposals);
+	}
+
+	while (prefer_enum->enumerate(prefer_enum, &proposal))
+	{
+		proposal = proposal->clone(proposal);
+		if (prefer_self)
+		{
+			proposals->reset_enumerator(proposals, match_enum);
+		}
+		else
+		{
+			this->proposals->reset_enumerator(this->proposals, match_enum);
+		}
+		while (match_enum->enumerate(match_enum, &match))
 		{
 			if (strip_dh)
 			{
-				stored->strip_dh(stored, MODP_NONE);
+				proposal->strip_dh(proposal, MODP_NONE);
 			}
-			selected = stored->select(stored, supplied, private);
+			selected = proposal->select(proposal, match, private);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
@@ -238,17 +253,15 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 				break;
 			}
 		}
-		stored->destroy(stored);
+		proposal->destroy(proposal);
 		if (selected)
 		{
 			break;
 		}
-		supplied_enum->destroy(supplied_enum);
-		supplied_enum = proposals->create_enumerator(proposals);
 	}
-	stored_enum->destroy(stored_enum);
-	supplied_enum->destroy(supplied_enum);
-	if (selected == NULL)
+	prefer_enum->destroy(prefer_enum);
+	match_enum->destroy(match_enum);
+	if (!selected)
 	{
 		DBG1(DBG_CFG, "received proposals: %#P", proposals);
 		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);

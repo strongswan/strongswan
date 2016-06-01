@@ -1109,8 +1109,8 @@ METHOD(task_t, process_r, status_t,
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
-			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, private);
+			this->proposal = this->config->select_proposal(this->config, list,
+														FALSE, private, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			get_lifetimes(this);
@@ -1323,8 +1323,8 @@ METHOD(task_t, process_i, status_t,
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
-			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, private);
+			this->proposal = this->config->select_proposal(this->config, list,
+														FALSE, private, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

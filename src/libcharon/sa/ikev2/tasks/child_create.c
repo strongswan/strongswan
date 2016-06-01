@@ -482,7 +482,7 @@ static status_t select_and_install(private_child_create_t *this,
 
 	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
 	this->proposal = this->config->select_proposal(this->config,
-											this->proposals, no_dh, private);
+										this->proposals, no_dh, private, TRUE);
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
