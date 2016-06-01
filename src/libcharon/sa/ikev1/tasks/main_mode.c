@@ -394,7 +394,7 @@ METHOD(task_t, process_r, status_t,
 			private = this->ike_sa->supports_extension(this->ike_sa,
 														   EXT_STRONGSWAN);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-															list, private);
+															list, private, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -641,7 +641,7 @@ METHOD(task_t, process_i, status_t,
 			private = this->ike_sa->supports_extension(this->ike_sa,
 														   EXT_STRONGSWAN);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-															list, private);
+															list, private, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

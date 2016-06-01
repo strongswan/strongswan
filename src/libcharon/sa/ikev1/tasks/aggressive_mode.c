@@ -402,7 +402,7 @@ METHOD(task_t, process_r, status_t,
 
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-															list, FALSE);
+															list, FALSE, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -640,7 +640,7 @@ METHOD(task_t, process_i, status_t,
 		}
 		list = sa_payload->get_proposals(sa_payload);
 		this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-														list, FALSE);
+														list, FALSE, TRUE);
 		list->destroy_offset(list, offsetof(proposal_t, destroy));
 		if (!this->proposal)
 		{

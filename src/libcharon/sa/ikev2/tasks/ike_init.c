@@ -379,7 +379,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				private = this->ike_sa->supports_extension(this->ike_sa,
 														   EXT_STRONGSWAN);
 				this->proposal = this->config->select_proposal(this->config,
-														proposal_list, private);
+												proposal_list, private, TRUE);
 				if (!this->proposal)
 				{
 					charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
