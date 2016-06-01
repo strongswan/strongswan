@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
  * Copyright (C) 2013-2015 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
@@ -210,7 +210,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 
 	e1 = create_enumerator(this, type);
 	e2 = other->create_enumerator(other, type);
-	if (!e1->enumerate(e1, NULL, NULL))
+	if (!e1->enumerate(e1, &alg1, NULL))
 	{
 		if (!e2->enumerate(e2, &alg2, NULL))
 		{
@@ -219,10 +219,21 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		else if (optional)
 		{
 			do
-			{	/* if the other peer proposes NONE, we accept the proposal */
+			{	/* if NONE is proposed, we accept the proposal */
 				found = !alg2;
 			}
 			while (!found && e2->enumerate(e2, &alg2, NULL));
+		}
+	}
+	else if (!e2->enumerate(e2, NULL, NULL))
+	{
+		if (optional)
+		{
+			do
+			{	/* if NONE is proposed, we accept the proposal */
+				found = !alg1;
+			}
+			while (!found && e1->enumerate(e1, &alg1, NULL));
 		}
 	}
 
@@ -244,7 +255,6 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 						 "but peer implementation is unknown, skipped");
 					continue;
 				}
-				/* ok, we have an algorithm */
 				selected->add_algorithm(selected, type, alg1, ks1);
 				found = TRUE;
 				break;
@@ -288,9 +298,7 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	}
 
 	DBG2(DBG_CFG, "  proposal matches");
-
 	selected->set_spi(selected, other->get_spi(other));
-
 	return selected;
 }
 
