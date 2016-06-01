@@ -453,6 +453,16 @@ static void check_proposal(private_proposal_t *this)
 			}
 		}
 		e->destroy(e);
+		/* remove MODP_NONE from IKE proposal */
+		e = array_create_enumerator(this->transforms);
+		while (e->enumerate(e, &entry))
+		{
+			if (entry->type == DIFFIE_HELLMAN_GROUP && !entry->alg)
+			{
+				array_remove_at(this->transforms, e);
+			}
+		}
+		e->destroy(e);
 	}
 
 	if (this->protocol == PROTO_ESP)
