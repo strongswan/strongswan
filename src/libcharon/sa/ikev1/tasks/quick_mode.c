@@ -1051,7 +1051,7 @@ METHOD(task_t, process_r, status_t,
 			linked_list_t *tsi, *tsr, *hostsi, *hostsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
 			uint16_t group;
-			bool private;
+			bool private, prefer_configured;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -1109,8 +1109,10 @@ METHOD(task_t, process_r, status_t,
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
+			prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 			this->proposal = this->config->select_proposal(this->config, list,
-														FALSE, private, TRUE);
+											FALSE, private, prefer_configured);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			get_lifetimes(this);

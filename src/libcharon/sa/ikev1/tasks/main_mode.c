@@ -367,7 +367,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
-			bool private;
+			bool private, prefer_configured;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "%H is initiating a Main Mode IKE_SA",
@@ -392,9 +392,11 @@ METHOD(task_t, process_r, status_t,
 
 			list = sa_payload->get_proposals(sa_payload);
 			private = this->ike_sa->supports_extension(this->ike_sa,
-														   EXT_STRONGSWAN);
+													   EXT_STRONGSWAN);
+			prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-															list, private, TRUE);
+											list, private, prefer_configured);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

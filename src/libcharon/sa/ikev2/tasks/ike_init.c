@@ -373,13 +373,15 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_t *proposal_list;
-				bool private;
+				bool private, prefer_configured;
 
 				proposal_list = sa_payload->get_proposals(sa_payload);
 				private = this->ike_sa->supports_extension(this->ike_sa,
 														   EXT_STRONGSWAN);
+				prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 				this->proposal = this->config->select_proposal(this->config,
-												proposal_list, private, TRUE);
+									proposal_list, private, prefer_configured);
 				if (!this->proposal)
 				{
 					charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,

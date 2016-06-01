@@ -464,7 +464,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other;
-	bool private;
+	bool private, prefer_configured;
 
 	if (this->proposals == NULL)
 	{
@@ -481,8 +481,10 @@ static status_t select_and_install(private_child_create_t *this,
 	other = this->ike_sa->get_other_host(this->ike_sa);
 
 	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
+	prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 	this->proposal = this->config->select_proposal(this->config,
-										this->proposals, no_dh, private, TRUE);
+							this->proposals, no_dh, private, prefer_configured);
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
