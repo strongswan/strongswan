@@ -455,9 +455,18 @@ METHOD(child_rekey_t, collide, void,
 	if (other->get_type(other) == TASK_CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
+		child_sa_t *other_child;
+
 		if (rekey->child_sa != this->child_sa)
+		{	/* not the same child => no collision */
+			other->destroy(other);
+			return;
+		}
+		/* ignore passive tasks that did not successfully create a CHILD_SA */
+		other_child = rekey->child_create->get_child(rekey->child_create);
+		if (!other_child ||
+			 other_child->get_state(other_child) != CHILD_INSTALLED)
 		{
-			/* not the same child => no collision */
 			other->destroy(other);
 			return;
 		}
