@@ -182,38 +182,59 @@ METHOD(task_t, build_i, status_t,
 	return NEED_MORE;
 }
 
-METHOD(task_t, process_r, status_t,
-	private_ike_rekey_t *this, message_t *message)
+/**
+ * Check if there are any half-open children
+ */
+static bool have_half_open_children(private_ike_rekey_t *this)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
-	{
-		DBG1(DBG_IKE, "peer initiated rekeying, but we are deleting");
-		this->failed_temporarily = TRUE;
-		return NEED_MORE;
-	}
+	task_t *task;
 
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		switch (child_sa->get_state(child_sa))
 		{
-			case CHILD_CREATED:
 			case CHILD_REKEYING:
 			case CHILD_RETRYING:
 			case CHILD_DELETING:
-				/* we do not allow rekeying while we have children in-progress */
-				DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
 				enumerator->destroy(enumerator);
-				this->failed_temporarily = TRUE;
-				return NEED_MORE;
+				return TRUE;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	enumerator = this->ike_sa->create_task_enumerator(this->ike_sa,
+													  TASK_QUEUE_ACTIVE);
+	while (enumerator->enumerate(enumerator, (void**)&task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE)
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
+METHOD(task_t, process_r, status_t,
+	private_ike_rekey_t *this, message_t *message)
+{
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		DBG1(DBG_IKE, "peer initiated rekeying, but we are deleting");
+		this->failed_temporarily = TRUE;
+		return NEED_MORE;
+	}
+	if (have_half_open_children(this))
+	{
+		DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
+		this->failed_temporarily = TRUE;
+		return NEED_MORE;
+	}
 
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 							this->ike_sa->get_version(this->ike_sa), FALSE);
