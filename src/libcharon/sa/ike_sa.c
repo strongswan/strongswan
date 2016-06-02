@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -2620,6 +2620,12 @@ METHOD(ike_sa_t, queue_task, void,
 	this->task_manager->queue_task(this->task_manager, task);
 }
 
+METHOD(ike_sa_t, queue_task_delayed, void,
+	private_ike_sa_t *this, task_t *task, uint32_t delay)
+{
+	this->task_manager->queue_task_delayed(this->task_manager, task, delay);
+}
+
 METHOD(ike_sa_t, inherit_pre, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
@@ -2938,6 +2944,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.create_task_enumerator = _create_task_enumerator,
 			.flush_queue = _flush_queue,
 			.queue_task = _queue_task,
+			.queue_task_delayed = _queue_task_delayed,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
 			.get_server_reflexive_host = _get_server_reflexive_host,
