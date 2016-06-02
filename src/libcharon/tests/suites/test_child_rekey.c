@@ -703,7 +703,10 @@ START_TEST(test_collision_ke_invalid)
 		{ { 0xFF, 0xFF, 0xFF, 0x00 }, 1, 8, 7, 9 },
 	};
 
+	/* make sure the nonces of the first try don't affect the retries */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
 	initiate_rekey(a, 1);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
 	initiate_rekey(b, 2);
 
 	/* this should never get called as this results in a successful rekeying */
@@ -803,6 +806,145 @@ START_TEST(test_collision_ke_invalid)
 	/* INFORMATIONAL { D } --> */
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_count(b, 1);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	assert_sa_idle(a);
+	assert_sa_idle(b);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * This is a variation of the above but with the retry by one peer delayed so
+ * that to the other peer it looks like there is no collision.
+ */
+START_TEST(test_collision_ke_invalid_delayed_retry)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = "aes128-sha256-modp2048-modp3072",
+		},
+		.responder = {
+			.esp = "aes128-sha256-modp3072-modp2048",
+		},
+	};
+	ike_sa_t *a, *b;
+	message_t *msg;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, &conf);
+
+	/* Seven nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *     N1/3 -----\    /----- N2/4
+	 *                \--/-----> N3/5
+	 *     N4/6 <-------/  /---- INVAL_KE
+	 * INVAL_KE -----\    /
+	 *          <-----\--/
+	 *     N5/7 -----\ \------->
+	 *          <-----\--------- N6/8
+	 *     N7/9 -------\------->
+	 *          <-------\------- DELETE
+	 *      ... ------\  \----->
+	 *                     /---- TEMP_FAIL
+	 *
+	 * We test this three times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[3];
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF } },
+		{ { 0xFF, 0x00, 0xFF } },
+		{ { 0xFF, 0xFF, 0x00 } },
+	};
+
+	/* make sure the nonces of the first try don't affect the retries */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(a, 1);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(b, 2);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_count(b, 1);
+	assert_hook();
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(INVAL_KE) } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	assert_hook_not_called(child_rekey);
+	assert_single_notify(IN, INVALID_KE_PAYLOAD);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_hook();
+	/* CREATE_CHILD_SA { N(INVAL_KE) } --> */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	assert_hook_not_called(child_rekey);
+	assert_single_notify(IN, INVALID_KE_PAYLOAD);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_count(b, 1);
+	assert_hook();
+
+	/* delay the CREATE_CHILD_SA request from a to b */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_rekey(child_rekey, 1, 9);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 9, CHILD_INSTALLED);
+	assert_hook();
+	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
+	assert_hook_rekey(child_rekey, 2, 8);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED);
+	assert_hook();
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(child_rekey);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> (delayed) */
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, msg);
+	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED);
+
+	/* <-- INFORMATIONAL { D } */
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 9, CHILD_INSTALLED);
+	assert_child_sa_count(a, 1);
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	assert_no_jobs_scheduled();
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 9, CHILD_INSTALLED);
+	assert_child_sa_count(a, 1);
+	assert_scheduler();
+
+	/* INFORMATIONAL { D } --> */
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -1277,6 +1419,7 @@ Suite *child_rekey_suite_create()
 	tcase_add_loop_test(tc, test_collision_delayed_request, 0, 3);
 	tcase_add_loop_test(tc, test_collision_delayed_request_more, 0, 3);
 	tcase_add_loop_test(tc, test_collision_ke_invalid, 0, 4);
+	tcase_add_loop_test(tc, test_collision_ke_invalid_delayed_retry, 0, 3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions delete");
