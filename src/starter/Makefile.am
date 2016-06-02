@@ -28,6 +28,9 @@ AM_CPPFLAGS = \
 	-DPLUGINS=\""${starter_plugins}\"" \
 	-DDEBUG
 
+AM_CFLAGS = \
+	@COVERAGE_CFLAGS@
+
 AM_YFLAGS = -v -d
 
 starter_LDADD = \
