@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,7 +29,7 @@
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/inactivity_job.h>
-
+#include <processing/jobs/initiate_tasks_job.h>
 
 typedef struct private_child_create_t private_child_create_t;
 
@@ -203,6 +203,25 @@ struct private_child_create_t {
 	 */
 	bool retry;
 };
+
+/**
+ * Schedule a retry if creating the CHILD_SA temporary failed
+ */
+static void schedule_delayed_retry(private_child_create_t *this)
+{
+	child_create_t *task;
+	uint32_t retry;
+
+	retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+
+	task = child_create_create(this->ike_sa,
+							   this->config->get_ref(this->config), FALSE,
+							   this->packet_tsi, this->packet_tsr);
+	task->use_reqid(task, this->reqid);
+	DBG1(DBG_IKE, "creating CHILD_SA failed, trying again in %d seconds",
+		 retry);
+	this->ike_sa->queue_task_delayed(this->ike_sa, (task_t*)task, retry);
+}
 
 /**
  * get the nonce from a message
@@ -1434,7 +1453,6 @@ METHOD(task_t, process_i, status_t,
 				case FAILED_CP_REQUIRED:
 				case TS_UNACCEPTABLE:
 				case INVALID_SELECTORS:
-				case TEMPORARY_FAILURE:
 				{
 					DBG1(DBG_IKE, "received %N notify, no CHILD_SA built",
 						 notify_type_names, type);
@@ -1442,6 +1460,17 @@ METHOD(task_t, process_i, status_t,
 					raise_alerts(this, type);
 					handle_child_sa_failure(this, message);
 					/* an error in CHILD_SA creation is not critical */
+					return SUCCESS;
+				}
+				case TEMPORARY_FAILURE:
+				{
+					DBG1(DBG_IKE, "received %N notify, will retry later",
+						 notify_type_names, type);
+					enumerator->destroy(enumerator);
+					if (!this->rekey)
+					{	/* the rekey task will retry itself if necessary */
+						schedule_delayed_retry(this);
+					}
 					return SUCCESS;
 				}
 				case INVALID_KE_PAYLOAD:
