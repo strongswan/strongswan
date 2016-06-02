@@ -58,12 +58,12 @@ typedef struct ike_sa_t ike_sa_t;
 /**
  * After which time rekeying should be retried if it failed, in seconds.
  */
-#define RETRY_INTERVAL 30
+#define RETRY_INTERVAL 15
 
 /**
  * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
  */
-#define RETRY_JITTER 20
+#define RETRY_JITTER 10
 
 /**
  * Number of redirects allowed within REDIRECT_LOOP_DETECT_PERIOD.
