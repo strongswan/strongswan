@@ -52,36 +52,86 @@ struct private_tpm_tss_trousers_t {
 	 */
 	TSS_HCONTEXT hContext;
 
+	/**
+	 * TPM version info
+	 */
+	chunk_t version_info;
+
 };
 
 /**
  * Initialize TSS context
+ *
+ * TPM 1.2 Specification, Part 2 TPM Structures, 21.6 TPM_CAP_VERSION_INFO
+ *
+ *   typedef struct tdTPM_VERSION {
+ *       TPM_VERSION_BYTE major;
+ *       TPM_VERSION_BYTE minor;
+ *       BYTE revMajor;
+ *       BYTE revMinor;
+ *   } TPM_VERSION;
+ *
+ *   typedef struct tdTPM_CAP_VERSION_INFO {
+ *       TPM_STRUCTURE_TAG tag;
+ *       TPM_VERSION version;
+ *       UINT16 specLevel;
+ *       BYTE errataRev;
+ *       BYTE tpmVendorID[4];
+ *       UINT16 vendorSpecificSize;
+ *       [size_is(vendorSpecificSize)] BYTE* vendorSpecific;
+ *   } TPM_CAP_VERSION_INFO;
  */
 static bool initialize_context(private_tpm_tss_trousers_t *this)
 {
+	uint8_t *version_ptr;
+	uint32_t version_len;
+
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
+	TPM_CAP_VERSION_INFO *info;
 
 	result = Tspi_Context_Create(&this->hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not created context: 0x%x", LABEL, result);
+		DBG1(DBG_PTS, "%s could not created context: 0x%x",
+					   LABEL, result);
 		return FALSE;
 	}
 
 	result = Tspi_Context_Connect(this->hContext, NULL);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not connect with context: 0x%x", LABEL, result);
+		DBG1(DBG_PTS, "%s could not connect with context: 0x%x",
+					   LABEL, result);
 		return FALSE;
 	}
 
 	result = Tspi_Context_GetTpmObject (this->hContext, &hTPM);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not get TPM object: 0x%x", LABEL, result);
+		DBG1(DBG_PTS, "%s could not get TPM object: 0x%x",
+					   LABEL, result);
 		return FALSE;
 	}
+
+	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
+									&version_len, &version_ptr);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_TPM_GetCapability failed: 0x%x",
+						LABEL, result);
+		return FALSE;
+	}
+
+	info = (TPM_CAP_VERSION_INFO *)version_ptr;
+	DBG2(DBG_PTS, "TPM Version Info: Chip Version: %u.%u.%u.%u, "
+		 "Spec Level: %u, Errata Rev: %u, Vendor ID: %.4s",
+		 info->version.major, info->version.minor,
+		 info->version.revMajor, info->version.revMinor,
+		 untoh16(&info->specLevel), info->errataRev, info->tpmVendorID);
+
+	this->version_info = chunk_clone(chunk_create(version_ptr, version_len));
+
 	return TRUE;
 }
 
@@ -101,6 +151,12 @@ METHOD(tpm_tss_t, get_version, tpm_version_t,
 	private_tpm_tss_trousers_t *this)
 {
 	return TPM_VERSION_1_2;
+}
+
+METHOD(tpm_tss_t, get_version_info, chunk_t,
+	private_tpm_tss_trousers_t *this)
+{
+	return this->version_info;
 }
 
 METHOD(tpm_tss_t, generate_aik, bool,
@@ -288,6 +344,7 @@ METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
 	finalize_context(this);
+	free(this->version_info.ptr);
 	free(this);
 }
 
@@ -302,6 +359,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 	INIT(this,
 		.public = {
 			.get_version = _get_version,
+			.get_version_info = _get_version_info,
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
 			.destroy = _destroy,

@@ -141,6 +141,12 @@ METHOD(tpm_tss_t, get_version, tpm_version_t,
 	return TPM_VERSION_2_0;
 }
 
+METHOD(tpm_tss_t, get_version_info, chunk_t,
+	private_tpm_tss_tss2_t *this)
+{
+	return chunk_empty;
+}
+
 /**
  * read the public key portion of a TSS 2.0 AIK key from NVRAM
  */
@@ -276,6 +282,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 	INIT(this,
 		.public = {
 			.get_version = _get_version,
+			.get_version_info = _get_version_info,
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
 			.destroy = _destroy,

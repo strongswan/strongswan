@@ -48,6 +48,13 @@ struct tpm_tss_t {
 	tpm_version_t (*get_version)(tpm_tss_t *this);
 
 	/**
+	 * Get TPM version info (TPM 1.2 only)
+	 *
+	 * @return			TPM version info struct
+	 */
+	chunk_t (*get_version_info)(tpm_tss_t *this);
+
+	/**
 	 * Generate AIK key pair bound to TPM (TPM 1.2 only)
 	 *
 	 * @param ca_modulus	RSA modulus of CA public key
