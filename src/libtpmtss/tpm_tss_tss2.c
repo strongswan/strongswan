@@ -14,6 +14,7 @@
  */
 
 #include "tpm_tss_tss2.h"
+#include "tpm_tss_tss2_names.h"
 
 #ifdef TSS_TSS2
 
@@ -58,6 +59,74 @@ uint8_t simulator = 1;
 int TpmClientPrintf (uint8_t type, const char *format, ...)
 {
     return 0;
+}
+
+/**
+ * Get a list of supported algorithms
+ */
+static bool get_algs_capability(private_tpm_tss_tss2_t *this)
+{
+	TPMS_CAPABILITY_DATA cap_data;
+	TPMI_YES_NO more_data;
+	uint32_t rval, i;
+	size_t len = BUF_LEN;
+	char buf[BUF_LEN];
+	char *pos = buf;
+	int written;
+
+	/* get supported algorithms */
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_ALGS,
+						0, TPM_PT_ALGORITHM_SET, &more_data, &cap_data, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_ALGS: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	/* print supported algorithms */
+	for (i = 0; i < cap_data.data.algorithms.count; i++)
+	{
+		written = snprintf(pos, len, " %N", tpm_alg_id_names,
+						   cap_data.data.algorithms.algProperties[i].alg);
+		if (written < 0 || written >= len)
+		{
+			break;
+		}
+		pos += written;
+		len -= written;
+	}
+	DBG2(DBG_PTS, "%s algorithms:%s", LABEL, buf);
+
+	/* get supported ECC curves */
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_ECC_CURVES,
+						0, TPM_PT_LOADED_CURVES, &more_data, &cap_data, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_ECC_CURVES: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	/* reset print buffer */
+	pos = buf;
+	len = BUF_LEN;
+
+	/* print supported ECC curves */
+	for (i = 0; i < cap_data.data.eccCurves.count; i++)
+	{
+		written = snprintf(pos, len, " %N", tpm_ecc_curve_names,
+						   cap_data.data.eccCurves.eccCurves[i]);
+		if (written < 0 || written >= len)
+		{
+			break;
+		}
+		pos += written;
+		len -= written;
+	}
+	DBG2(DBG_PTS, "%s ECC curves:%s", LABEL, buf);
+
+	return TRUE;
 }
 
 /**
@@ -116,7 +185,9 @@ static bool initialize_context(private_tpm_tss_tss2_t *this)
 					   LABEL, rval);
 		return FALSE;
 	}
-	return TRUE;
+
+	/* get a list of supported algorithms and ECC curves */
+	return get_algs_capability(this);
 }
 
 /**
