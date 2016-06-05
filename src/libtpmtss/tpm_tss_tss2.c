@@ -335,6 +335,31 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	return aik_pubkey;
 }
 
+METHOD(tpm_tss_t, read_pcr, bool,
+	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+	hash_algorithm_t alg)
+{
+	/* TODO */
+	return FALSE;
+}
+
+METHOD(tpm_tss_t, extend_pcr, bool,
+	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+	chunk_t data, hash_algorithm_t alg)
+{
+	/* TODO */
+	return FALSE;
+}
+
+METHOD(tpm_tss_t, quote, bool,
+	private_tpm_tss_tss2_t *this, uint32_t aik_handle, uint32_t pcr_sel,
+	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode, chunk_t *pcr_comp,
+	chunk_t *quote_sig)
+{
+	/* TODO */
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -356,6 +381,9 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.get_version_info = _get_version_info,
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
+			.read_pcr = _read_pcr,
+			.extend_pcr = _extend_pcr,
+			.quote = _quote,
 			.destroy = _destroy,
 		},
 	);

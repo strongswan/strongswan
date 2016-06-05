@@ -217,7 +217,12 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 						DBG1(DBG_IMV, "received TCG-PTS error '%N'",
 							 pts_error_code_names, error_code.type);
 						DBG1(DBG_IMV, "error information: %B", &msg_info);
-						fatal_error = TRUE;
+
+						/* TPM 2.0 doesn't return TPM Version Information */
+						if (error_code.type != TCG_PTS_TPM_VERS_NOT_SUPPORTED)
+						{
+							fatal_error =  TRUE;
+						}
 					}
 					break;
 				}

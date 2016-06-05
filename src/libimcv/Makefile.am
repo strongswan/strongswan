@@ -1,6 +1,7 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
+	-I$(top_srcdir)/src/libtpmtss \
 	-DIPSEC_SCRIPT=\"${ipsec_script}\"
 
 ipseclib_LTLIBRARIES = libimcv.la
@@ -10,11 +11,8 @@ libimcv_la_LDFLAGS = \
 
 libimcv_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libtncif/libtncif.la
-
-if USE_TROUSERS
-  libimcv_la_LIBADD += -ltspi
-endif
+	$(top_builddir)/src/libtncif/libtncif.la \
+	$(top_builddir)/src/libtpmtss/libtpmtss.la
 
 if USE_WINDOWS
   libimcv_la_LIBADD += -lws2_32

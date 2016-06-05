@@ -27,15 +27,24 @@
 
 #ifdef TSS_TROUSERS
 
+#ifdef _BASETSD_H_
+/* MinGW defines _BASETSD_H_, but TSS checks for _BASETSD_H */
+# define _BASETSD_H
+#endif
+
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
 #define LABEL	"TPM 1.2 -"
 
 /* size in bytes of a TSS AIK public key blob */
-#define AIK_PUBKEY_BLOB_SIZE			284
+#define AIK_PUBKEY_BLOB_SIZE		284
+
+/* maximum number of PCR registers */
+#define PCR_NUM_MAX					24
 
 typedef struct private_tpm_tss_trousers_t private_tpm_tss_trousers_t;
+typedef struct aik_t aik_t;
 
 /**
  * Private data of an tpm_tss_trousers_t object.
@@ -45,7 +54,7 @@ struct private_tpm_tss_trousers_t {
 	/**
 	 * Public tpm_tss_trousers_t interface.
 	 */
-	tpm_tss_t public;
+	tpm_tss_trousers_t interface;
 
 	/**
 	 * TSS context
@@ -53,11 +62,39 @@ struct private_tpm_tss_trousers_t {
 	TSS_HCONTEXT hContext;
 
 	/**
+	 * TPM handle
+	 */
+	TSS_HTPM hTPM;
+
+	/**
 	 * TPM version info
 	 */
 	chunk_t version_info;
 
+	/**
+	 * List of AIKs retrievable by an object handle
+	 */
+	linked_list_t *aik_list;
+
 };
+
+struct aik_t {
+	/** AIK object handle */
+	uint32_t handle;
+
+	/** AIK private key blob */
+	chunk_t blob;
+
+	/** AIK public key */
+	chunk_t pubkey;
+};
+
+static void free_aik(aik_t *this)
+{
+	free(this->blob.ptr);
+	free(this->pubkey.ptr);
+	free(this);
+}
 
 /**
  * Initialize TSS context
@@ -86,7 +123,6 @@ static bool initialize_context(private_tpm_tss_trousers_t *this)
 	uint8_t *version_ptr;
 	uint32_t version_len;
 
-	TSS_HTPM hTPM;
 	TSS_RESULT result;
 	TPM_CAP_VERSION_INFO *info;
 
@@ -106,7 +142,7 @@ static bool initialize_context(private_tpm_tss_trousers_t *this)
 		return FALSE;
 	}
 
-	result = Tspi_Context_GetTpmObject (this->hContext, &hTPM);
+	result = Tspi_Context_GetTpmObject (this->hContext, &this->hTPM);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s could not get TPM object: 0x%x",
@@ -114,8 +150,8 @@ static bool initialize_context(private_tpm_tss_trousers_t *this)
 		return FALSE;
 	}
 
-	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
-									&version_len, &version_ptr);
+	result = Tspi_TPM_GetCapability(this->hTPM, TSS_TPMCAP_VERSION_VAL,  0,
+									NULL, &version_len, &version_ptr);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s Tspi_TPM_GetCapability failed: 0x%x",
@@ -168,7 +204,6 @@ METHOD(tpm_tss_t, generate_aik, bool,
 	chunk_t aik_exponent;
 
 	TSS_RESULT   result;
-	TSS_HTPM     hTPM;
 	TSS_HKEY     hSRK;
 	TSS_HKEY     hPCAKey;
 	TSS_HPOLICY  hSrkPolicy;
@@ -206,14 +241,14 @@ METHOD(tpm_tss_t, generate_aik, bool,
 	}
 
 	/* get TPM plus TPM policy and set TPM secret */
-	result = Tspi_Context_GetTpmObject (this->hContext, &hTPM);
+	result = Tspi_Context_GetTpmObject (this->hContext, &this->hTPM);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s Tspi_Context_GetTpmObject failed:  0x%x",
 					   LABEL, result);
 		return FALSE;
 	}
-	result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy);
+	result = Tspi_GetPolicyObject(this->hTPM, TSS_POLICY_USAGE, &hTPMPolicy);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s Tspi_GetPolicyObject for TPM failed: 0x%x",
@@ -268,7 +303,7 @@ METHOD(tpm_tss_t, generate_aik, bool,
 
 	/* generate AIK */
 	DBG1(DBG_LIB, "Generating identity key...");
-	result = Tspi_TPM_CollateIdentityRequest(hTPM, hSRK, hPCAKey, 0, NULL,
+	result = Tspi_TPM_CollateIdentityRequest(this->hTPM, hSRK, hPCAKey, 0, NULL,
 					hIdentKey, TSS_ALG_AES,	&IdentityReqLen, &IdentityReq);
 	if (result != TSS_SUCCESS)
 	{
@@ -337,15 +372,238 @@ METHOD(tpm_tss_t, generate_aik, bool,
 METHOD(tpm_tss_t, get_public, chunk_t,
 	private_tpm_tss_trousers_t *this, uint32_t handle)
 {
-	return chunk_empty;
+	enumerator_t *enumerator;
+	chunk_t aik_pubkey = chunk_empty;
+	aik_t *aik;
+
+	enumerator = this->aik_list->create_enumerator(this->aik_list);
+	while (enumerator->enumerate(enumerator, &aik))
+	{
+		if (aik->handle == handle)
+		{
+			aik_pubkey = chunk_clone(aik->pubkey);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return aik_pubkey;
+}
+
+METHOD(tpm_tss_t, read_pcr, bool,
+	private_tpm_tss_trousers_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+	hash_algorithm_t alg)
+{
+	TSS_RESULT result;
+	uint8_t *value;
+	uint32_t len;
+
+	result = Tspi_TPM_PcrRead(this->hTPM, pcr_num, &len, &value);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_TPM_PcrRead failed: 0x%x", LABEL, result);
+		return FALSE;
+	}
+	*pcr_value = chunk_clone(chunk_create(value, len));
+
+	return TRUE;
+}
+
+METHOD(tpm_tss_t, extend_pcr, bool,
+	private_tpm_tss_trousers_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+	chunk_t data, hash_algorithm_t alg)
+{
+	TSS_RESULT result;
+	uint32_t pcr_len;
+	uint8_t *pcr_ptr;
+
+	result = Tspi_TPM_PcrExtend(this->hTPM, pcr_num, data.len, data.ptr,
+								NULL, &pcr_len, &pcr_ptr);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_TPM_PcrExtend failed: 0x%x", LABEL, result);
+		return FALSE;
+	}
+	*pcr_value = chunk_clone(chunk_create(pcr_ptr, pcr_len));
+
+	return TRUE;
+}
+
+METHOD(tpm_tss_t, quote, bool,
+	private_tpm_tss_trousers_t *this, uint32_t aik_handle, uint32_t pcr_sel,
+	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode, chunk_t *pcr_comp,
+	chunk_t *quote_sig)
+{
+	TSS_HKEY hAIK;
+	TSS_HKEY hSRK;
+	TSS_HPOLICY srkUsagePolicy;
+	TSS_UUID SRK_UUID = TSS_UUID_SRK;
+	TSS_HPCRS hPcrComposite;
+	TSS_VALIDATION valData;
+	TSS_RESULT result;
+	uint8_t secret[] = TSS_WELL_KNOWN_SECRET;
+	uint8_t *version_info, *comp_hash;
+	uint32_t version_info_size, pcr;
+	aik_t *aik;
+	chunk_t aik_blob = chunk_empty;
+	chunk_t quote_info;
+	enumerator_t *enumerator;
+	bool success = FALSE;
+
+	/* Retrieve SRK from TPM and set the authentication to well known secret*/
+	result = Tspi_Context_LoadKeyByUUID(this->hContext, TSS_PS_TYPE_SYSTEM,
+										SRK_UUID, &hSRK);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_Context_LoadKeyByUUID for SRK failed: 0x%x",
+					   LABEL, result);
+		return FALSE;
+	}
+	result = Tspi_GetPolicyObject(hSRK, TSS_POLICY_USAGE, &srkUsagePolicy);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_GetPolicyObject for SRK failed: 0x%x",
+					   LABEL, result);
+		return FALSE;
+	}
+	result = Tspi_Policy_SetSecret(srkUsagePolicy, TSS_SECRET_MODE_SHA1,
+					20, secret);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_Policy_SetSecret for SRK failed: 0x%x",
+					   LABEL, result);
+		return FALSE;
+	}
+
+	/* Retrieve AIK using its handle and load private key into TPM 1.2 */
+	enumerator = this->aik_list->create_enumerator(this->aik_list);
+	while (enumerator->enumerate(enumerator, &aik))
+	{
+		if (aik->handle == aik_handle)
+		{
+			aik_blob = aik->blob;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (aik_blob.len == 0)
+	{
+		DBG1(DBG_PTS, "%s AIK private key for handle 0x%80x not found", LABEL);
+		return FALSE;
+	}
+	result = Tspi_Context_LoadKeyByBlob(this->hContext, hSRK, aik_blob.len,
+										aik_blob.ptr, &hAIK);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_Context_LoadKeyByBlob for AIK failed: 0x%x",
+					   LABEL, result);
+		return FALSE;
+	}
+
+	/* Create PCR composite object */
+	result = Tspi_Context_CreateObject(this->hContext, TSS_OBJECT_TYPE_PCRS,
+					(mode == TPM_QUOTE) ? TSS_PCRS_STRUCT_INFO :
+										  TSS_PCRS_STRUCT_INFO_SHORT,
+					&hPcrComposite);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_Context_CreateObject for pcrComposite failed: "
+					  "0x%x", LABEL, result);
+		goto err1;
+	}
+
+	/* Select PCRs */
+	for (pcr = 0; pcr < PCR_NUM_MAX; pcr++)
+	{
+		if (pcr_sel & (1 << pcr))
+		{
+			result = (mode == TPM_QUOTE) ?
+				Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr) :
+				Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
+										TSS_PCRS_DIRECTION_RELEASE);
+			if (result != TSS_SUCCESS)
+			{
+				DBG1(DBG_PTS, "%s Tspi_PcrComposite_SelectPcrIndex failed: "
+							  "0x%x", LABEL, result);
+				goto err2;
+			}
+		}
+	}
+
+	/* Set the Validation Data */
+	valData.ulExternalDataLength = data.len;
+	valData.rgbExternalData      = data.ptr;
+
+	/* TPM Quote */
+	result = (mode == TPM_QUOTE) ?
+			Tspi_TPM_Quote (this->hTPM, hAIK, hPcrComposite, &valData) :
+			Tspi_TPM_Quote2(this->hTPM, hAIK, mode == TPM_QUOTE2_VERSION_INFO,
+						    hPcrComposite, &valData, &version_info_size,
+							&version_info);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tspi_TPM_Quote%s failed: 0x%x", LABEL,
+					  (mode == TPM_QUOTE) ? "" : "2", result);
+		goto err2;
+	}
+
+	/* Extract TPM_Composite_Hash */
+	*pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
+
+	if (mode == TPM_QUOTE)
+	{
+		/* TPM_Composite_Hash starts at byte 8 of TPM_Quote_Info structure */
+		comp_hash = valData.rgbData + 8;
+	}
+	else
+	{
+		/* TPM_Composite_Hash is last 20 bytes of TPM_Quote_Info2 structure */
+		comp_hash = valData.rgbData + valData.ulDataLength - version_info_size -
+					HASH_SIZE_SHA1;
+	}
+	memcpy(pcr_comp->ptr, comp_hash, HASH_SIZE_SHA1);
+	DBG3(DBG_PTS, "Hash of PCR Composite: %#B", pcr_comp);
+
+	quote_info = chunk_create(valData.rgbData, valData.ulDataLength);
+	DBG3(DBG_PTS, "TPM Quote Info: %B",&quote_info);
+
+	*quote_sig = chunk_clone(chunk_create(valData.rgbValidationData,
+										  valData.ulValidationDataLength));
+	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_sig);
+
+	success = TRUE;
+
+err2:
+	Tspi_Context_CloseObject(this->hContext, hPcrComposite);
+err1:
+	Tspi_Context_CloseObject(this->hContext, hAIK);
+
+	return success;
 }
 
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
 	finalize_context(this);
+	this->aik_list->destroy_function(this->aik_list, (void*)free_aik);
 	free(this->version_info.ptr);
 	free(this);
+}
+
+METHOD(tpm_tss_trousers_t, load_aik, void,
+	private_tpm_tss_trousers_t *this, chunk_t blob, chunk_t pubkey,
+	uint32_t handle)
+{
+	aik_t *item;
+
+	INIT(item,
+		.handle = handle,
+		.blob = blob,
+		.pubkey = pubkey,
+	);
+
+	this->aik_list->insert_last(this->aik_list, item);
 }
 
 /**
@@ -357,13 +615,20 @@ tpm_tss_t *tpm_tss_trousers_create()
 	bool available;
 
 	INIT(this,
-		.public = {
-			.get_version = _get_version,
-			.get_version_info = _get_version_info,
-			.generate_aik = _generate_aik,
-			.get_public = _get_public,
-			.destroy = _destroy,
+		.interface = {
+			.public = {
+				.get_version = _get_version,
+				.get_version_info = _get_version_info,
+				.generate_aik = _generate_aik,
+				.get_public = _get_public,
+				.read_pcr = _read_pcr,
+				.quote = _quote,
+				.extend_pcr = _extend_pcr,
+				.destroy = _destroy,
+			},
+			.load_aik = _load_aik,
 		},
+		.aik_list = linked_list_create(),
 	);
 
 	available = initialize_context(this);
@@ -374,7 +639,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 		destroy(this);
 		return NULL;
 	}
-	return &this->public;
+	return &this->interface.public;
 }
 
 #else /* TSS_TROUSERS */

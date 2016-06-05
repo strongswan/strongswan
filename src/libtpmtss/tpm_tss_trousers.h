@@ -23,6 +23,27 @@
 
 #include "tpm_tss.h"
 
+typedef struct tpm_tss_trousers_t tpm_tss_trousers_t;
+
+/**
+ * TPM 1.2 access via TrouSerS public interface
+ */
+struct tpm_tss_trousers_t {
+
+	tpm_tss_t public;
+
+	/**
+	 * Load AIK public and private key pair and save it under an object handle
+	 *
+	 * @param blob		encrypted AIK private key
+	 * @param pubkey	AIK public key
+	 * @param handle	object handle under which the AIK key is stored
+	 */
+	void (*load_aik)(tpm_tss_trousers_t *this, chunk_t blob, chunk_t pubkey,
+					 uint32_t handle);
+
+};
+
 /**
  * Create a tpm_tss_trousers instance.
  */

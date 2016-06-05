@@ -16,6 +16,9 @@ libimcv.plugins.imc-attestation.nonce_len = 20
 libimcv.plugins.imc-attestation.use_quote2 = yes
 	Use Quote2 AIK signature instead of Quote signature.
 
+libimcv.plugins.imc-attestation.use_version_info = no
+	Version Info is included in Quote2 signature.
+
 libimcv.plugins.imc-attestation.pcr_info = no
 	Whether to send pcr_before and pcr_after info.
 

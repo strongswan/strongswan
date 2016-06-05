@@ -24,6 +24,7 @@
 #include <library.h>
 
 typedef enum tpm_version_t tpm_version_t;
+typedef enum tpm_quote_mode_t tpm_quote_mode_t;
 typedef struct tpm_tss_t tpm_tss_t;
 
 /**
@@ -33,6 +34,15 @@ enum tpm_version_t {
 	TPM_VERSION_ANY,
 	TPM_VERSION_1_2,
 	TPM_VERSION_2_0,
+};
+
+/**
+ * TPM Quote Modes
+ */
+enum tpm_quote_mode_t {
+	TPM_QUOTE,
+	TPM_QUOTE2,
+	TPM_QUOTE2_VERSION_INFO
 };
 
 /**
@@ -73,6 +83,45 @@ struct tpm_tss_t {
 	 * @return			public key in PKCS#1 format
 	 */
 	chunk_t (*get_public)(tpm_tss_t *this, uint32_t handle);
+
+	/**
+	 * Retrieve the current value of a PCR register in a given PCR bank
+	 *
+	 * @param pcr_num		PCR number
+	 * @param pcr_value		PCR value returned
+	 * @param alg			hash algorithm, selects PCR bank (TPM 2.0 only)
+	 * @return				TRUE if PCR value retrieval succeeded
+	 */
+	bool (*read_pcr)(tpm_tss_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+					 hash_algorithm_t alg);
+
+	/**
+	 * Extend a PCR register in a given PCR bank with a hash value
+	 *
+	 * @param pcr_num		PCR number
+	 * @param pcr_value		extended PCR value returned
+	 * @param hash			data to be extended into the PCR
+	 * @param alg			hash algorithm, selects PCR bank (TPM 2.0 only)
+	 * @return				TRUE if PCR extension succeeded
+	 */
+	bool (*extend_pcr)(tpm_tss_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+					   chunk_t data, hash_algorithm_t alg);
+
+	/**
+	 * Do a quote signature over a selection of PCR registers
+	 *
+	 * @param aik_handle	object handle of AIK to be used for quote signature
+	 * @param pcr_sel		selection of PCR registers
+	 * @param alg			hash algorithm to be used for quote signature
+	 * @param data			additional data to be hashed into the quote
+	 * @param mode			define current and legacy TPM quote modes
+	 * @param pcr_comp		returns hash of PCR composite
+	 * @param sig			returns quote signature
+	 * @return				TRUE if quote signature succeeded
+	 */
+	bool (*quote)(tpm_tss_t *this, uint32_t aik_handle, uint32_t pcr_sel,
+				  hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode,
+				  chunk_t *pcr_comp, chunk_t *quote_sig);
 
 	/**
 	 * Destroy a tpm_tss_t.
