@@ -2320,7 +2320,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			if (!ipsec->src->is_anyaddr(ipsec->src))
 			{
 				route->gateway = charon->kernel->get_nexthop(charon->kernel,
-											ipsec->src, -1, ipsec->dst, NULL);
+												ipsec->src, -1, ipsec->dst,
+												&route->if_name);
 			}
 			else
 			{	/* for shunt policies */
