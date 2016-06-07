@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <utils/debug.h>
+#include <utils/process.h>
 #include <threading/mutex.h>
 
 /* path to resolvconf executable */
@@ -148,38 +149,79 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 							  identification_t *server, host_t *addr,
 							  bool install)
 {
-	char cmd[128];
+	process_t *process;
+	FILE *shell;
+	int in, out, retval;
 
 	/* we use the nameserver's IP address as part of the interface name to
 	 * make them unique */
-	if (snprintf(cmd, sizeof(cmd), "%s %s %s%H", RESOLVCONF_EXEC,
-				install ? "-a" : "-d", this->iface_prefix, addr) >= sizeof(cmd))
+	process = process_start_shell(NULL, install ? &in : NULL, &out, NULL,
+							"2>&1 %s %s %s%H", RESOLVCONF_EXEC,
+							install ? "-a" : "-d", this->iface_prefix, addr);
+
+	if (!process)
 	{
 		return FALSE;
 	}
-
 	if (install)
 	{
-		FILE *out;
-		bool success;
-
-		out = popen(cmd, "w");
-		if (!out)
+		shell = fdopen(in, "w");
+		if (shell)
 		{
-			return FALSE;
+			DBG1(DBG_IKE, "installing DNS server %H via resolvconf", addr);
+			fprintf(shell, "nameserver %H\n", addr);
+			fclose(shell);
 		}
-		DBG1(DBG_IKE, "installing DNS server %H via resolvconf", addr);
-		fprintf(out, "nameserver %H\n", addr);
-		success = !ferror(out);
-		if (pclose(out) || !success)
+		else
 		{
-			invoke_resolvconf(this, server, addr, FALSE);
+			close(in);
+			close(out);
+			process->wait(process, NULL);
 			return FALSE;
 		}
 	}
 	else
 	{
-		ignore_result(system(cmd));
+		DBG1(DBG_IKE, "removing DNS server %H via resolvconf", addr);
+	}
+	shell = fdopen(out, "r");
+	if (shell)
+	{
+		while (TRUE)
+		{
+			char resp[128], *e;
+
+			if (fgets(resp, sizeof(resp), shell) == NULL)
+			{
+				if (ferror(shell))
+				{
+					DBG1(DBG_IKE, "error reading from resolvconf");
+				}
+				break;
+			}
+			else
+			{
+				e = resp + strlen(resp);
+				if (e > resp && e[-1] == '\n')
+				{
+					e[-1] = '\0';
+				}
+				DBG1(DBG_IKE, "resolvconf: %s", resp);
+			}
+		}
+		fclose(shell);
+	}
+	else
+	{
+		close(out);
+	}
+	if (!process->wait(process, &retval) || retval != EXIT_SUCCESS)
+	{
+		if (install)
+		{	/* revert changes when installing fails */
+			invoke_resolvconf(this, server, addr, FALSE);
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
