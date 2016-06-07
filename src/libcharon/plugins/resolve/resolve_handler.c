@@ -149,7 +149,6 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 							  bool install)
 {
 	char cmd[128];
-	bool success = TRUE;
 
 	/* we use the nameserver's IP address as part of the interface name to
 	 * make them unique */
@@ -162,6 +161,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 	if (install)
 	{
 		FILE *out;
+		bool success;
 
 		out = popen(cmd, "w");
 		if (!out)
@@ -171,8 +171,9 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 		DBG1(DBG_IKE, "installing DNS server %H via resolvconf", addr);
 		fprintf(out, "nameserver %H\n", addr);
 		success = !ferror(out);
-		if (pclose(out))
+		if (pclose(out) || !success)
 		{
+			invoke_resolvconf(this, server, addr, FALSE);
 			return FALSE;
 		}
 	}
@@ -180,7 +181,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 	{
 		ignore_result(system(cmd));
 	}
-	return success;
+	return TRUE;
 }
 
 METHOD(attribute_handler_t, handle, bool,
