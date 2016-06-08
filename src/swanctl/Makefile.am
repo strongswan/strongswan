@@ -27,7 +27,7 @@ swanctl_SOURCES = \
 swanctl_LDADD = \
 	$(top_builddir)/src/libcharon/plugins/vici/libvici.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(PTHREADLIB) $(DLLIB)
+	$(PTHREADLIB) $(ATOMICLIB) $(DLLIB)
 
 swanctl.o :		$(top_builddir)/config.status
 

@@ -120,7 +120,9 @@ endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
+libstrongswan_la_LIBADD = \
+	$(DLLIB) $(ATOMICLIB)  $(BTLIB) $(SOCKLIB) \
+	$(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \

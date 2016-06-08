@@ -490,6 +490,11 @@ LIBS=$DLLIB
 AC_SEARCH_LIBS(pthread_create, pthread, [PTHREADLIB=$LIBS])
 AC_SUBST(PTHREADLIB)
 
+# uClibc requires explicit -latomic for __atomic_* operations
+LIBS=""
+AC_SEARCH_LIBS(__atomic_load, atomic, [ATOMICLIB=$LIBS])
+AC_SUBST(ATOMICLIB)
+
 LIBS=$saved_LIBS
 # ------------------------------------------------------
 

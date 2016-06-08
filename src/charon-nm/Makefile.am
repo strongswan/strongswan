@@ -21,4 +21,4 @@ AM_CFLAGS = \
 charon_nm_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
-	-lm $(PTHREADLIB) $(DLLIB) ${nm_LIBS}
+	-lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB) ${nm_LIBS}

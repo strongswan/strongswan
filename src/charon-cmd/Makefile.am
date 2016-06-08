@@ -20,4 +20,4 @@ AM_CPPFLAGS = \
 charon_cmd_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
-	-lm $(PTHREADLIB) $(DLLIB)
+	-lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB)
