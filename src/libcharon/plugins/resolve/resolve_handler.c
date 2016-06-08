@@ -22,6 +22,7 @@
 
 #include <utils/debug.h>
 #include <utils/process.h>
+#include <collections/array.h>
 #include <threading/mutex.h>
 
 /* path to resolvconf executable */
@@ -48,12 +49,12 @@ struct private_resolve_handler_t {
 	char *file;
 
 	/**
-	 * use resolvconf instead of writing directly to resolv.conf
+	 * Use resolvconf instead of writing directly to resolv.conf
 	 */
 	bool use_resolvconf;
 
 	/**
-	 * prefix to be used for interface names sent to resolvconf
+	 * Prefix to be used for interface names sent to resolvconf
 	 */
 	char *iface_prefix;
 
@@ -61,13 +62,55 @@ struct private_resolve_handler_t {
 	 * Mutex to access file exclusively
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Reference counting for DNS servers dns_server_t
+	 */
+	array_t *servers;
 };
+
+/**
+ * Reference counting for DNS servers
+ */
+typedef struct {
+
+	/**
+	 * DNS server address
+	 */
+	host_t *server;
+
+	/**
+	 * Reference count
+	 */
+	u_int refcount;
+
+} dns_server_t;
+
+/**
+ * Compare a server and a stored reference
+ */
+static int dns_server_find(const void *a, const void *b)
+{
+	host_t *server = (host_t*)a;
+	dns_server_t *item = (dns_server_t*)b;
+	return chunk_compare(server->get_address(server),
+						 item->server->get_address(item->server));
+}
+
+/**
+ * Sort references by DNS server
+ */
+static int dns_server_sort(const void *a, const void *b, void *user)
+{
+	const dns_server_t *da = a, *db = b;
+	return chunk_compare(da->server->get_address(da->server),
+						 db->server->get_address(db->server));
+}
 
 /**
  * Writes the given nameserver to resolv.conf
  */
-static bool write_nameserver(private_resolve_handler_t *this,
-							 identification_t *server, host_t *addr)
+static bool write_nameserver(private_resolve_handler_t *this, host_t *addr)
 {
 	FILE *in, *out;
 	char buf[1024];
@@ -80,8 +123,7 @@ static bool write_nameserver(private_resolve_handler_t *this,
 	out = fopen(this->file, "w");
 	if (out)
 	{
-		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n", addr,
-				server);
+		fprintf(out, "nameserver %H   # by strongSwan\n", addr);
 		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
 		handled = TRUE;
 
@@ -105,8 +147,7 @@ static bool write_nameserver(private_resolve_handler_t *this,
 /**
  * Removes the given nameserver from resolv.conf
  */
-static void remove_nameserver(private_resolve_handler_t *this,
-							  identification_t *server, host_t *addr)
+static void remove_nameserver(private_resolve_handler_t *this, host_t *addr)
 {
 	FILE *in, *out;
 	char line[1024], matcher[512];
@@ -120,8 +161,7 @@ static void remove_nameserver(private_resolve_handler_t *this,
 		if (out)
 		{
 			snprintf(matcher, sizeof(matcher),
-					 "nameserver %H   # by strongSwan, from %Y\n",
-					 addr, server);
+					 "nameserver %H   # by strongSwan\n", addr);
 
 			/* copy all, but matching line */
 			while (fgets(line, sizeof(line), in))
@@ -145,8 +185,7 @@ static void remove_nameserver(private_resolve_handler_t *this,
 /**
  * Add or remove the given nameserver by invoking resolvconf.
  */
-static bool invoke_resolvconf(private_resolve_handler_t *this,
-							  identification_t *server, host_t *addr,
+static bool invoke_resolvconf(private_resolve_handler_t *this, host_t *addr,
 							  bool install)
 {
 	process_t *process;
@@ -219,7 +258,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 	{
 		if (install)
 		{	/* revert changes when installing fails */
-			invoke_resolvconf(this, server, addr, FALSE);
+			invoke_resolvconf(this, addr, FALSE);
 			return FALSE;
 		}
 	}
@@ -230,7 +269,7 @@ METHOD(attribute_handler_t, handle, bool,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	identification_t *server;
+	dns_server_t *found = NULL;
 	host_t *addr;
 	bool handled;
 
@@ -251,16 +290,34 @@ METHOD(attribute_handler_t, handle, bool,
 		DESTROY_IF(addr);
 		return FALSE;
 	}
-	server = ike_sa->get_other_id(ike_sa);
 
 	this->mutex->lock(this->mutex);
-	if (this->use_resolvconf)
+	if (array_bsearch(this->servers, addr, dns_server_find, &found) == -1)
 	{
-		handled = invoke_resolvconf(this, server, addr, TRUE);
+		if (this->use_resolvconf)
+		{
+			handled = invoke_resolvconf(this, addr, TRUE);
+		}
+		else
+		{
+			handled = write_nameserver(this, addr);
+		}
+		if (handled)
+		{
+			INIT(found,
+				.server = addr->clone(addr),
+				.refcount = 1,
+			);
+			array_insert_create(&this->servers, ARRAY_TAIL, found);
+			array_sort(this->servers, dns_server_sort, NULL);
+		}
 	}
 	else
 	{
-		handled = write_nameserver(this, server, addr);
+		DBG1(DBG_IKE, "DNS server %H already installed, increasing refcount",
+			 addr);
+		found->refcount++;
+		handled = TRUE;
 	}
 	this->mutex->unlock(this->mutex);
 	addr->destroy(addr);
@@ -276,9 +333,9 @@ METHOD(attribute_handler_t, release, void,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	identification_t *server;
+	dns_server_t *found = NULL;
 	host_t *addr;
-	int family;
+	int family, idx;
 
 	switch (type)
 	{
@@ -292,16 +349,30 @@ METHOD(attribute_handler_t, release, void,
 			return;
 	}
 	addr = host_create_from_chunk(family, data, 0);
-	server = ike_sa->get_other_id(ike_sa);
 
 	this->mutex->lock(this->mutex);
-	if (this->use_resolvconf)
+	idx = array_bsearch(this->servers, addr, dns_server_find, &found);
+	if (idx != -1)
 	{
-		invoke_resolvconf(this, server, addr, FALSE);
-	}
-	else
-	{
-		remove_nameserver(this, server, addr);
+		if (--found->refcount > 0)
+		{
+			DBG1(DBG_IKE, "DNS server %H still used, decreasing refcount",
+				 addr);
+		}
+		else
+		{
+			if (this->use_resolvconf)
+			{
+				invoke_resolvconf(this, addr, FALSE);
+			}
+			else
+			{
+				remove_nameserver(this, addr);
+			}
+			array_remove(this->servers, idx, NULL);
+			found->server->destroy(found->server);
+			free(found);
+		}
 	}
 	this->mutex->unlock(this->mutex);
 
@@ -384,6 +455,7 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 METHOD(resolve_handler_t, destroy, void,
 	private_resolve_handler_t *this)
 {
+	array_destroy(this->servers);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
