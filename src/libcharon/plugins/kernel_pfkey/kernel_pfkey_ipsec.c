@@ -2560,13 +2560,20 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 
 	/* install a route, if:
 	 * - this is an inbound policy (to just get one for each child)
-	 * - we are in tunnel mode or install a bypass policy
 	 * - routing is not disabled via strongswan.conf
+	 * - the selector is not for a specific protocol/port
+	 * - we are in tunnel mode or install a bypass policy
 	 */
 	if (policy->direction == POLICY_IN && this->install_routes &&
-		(mapping->type != POLICY_IPSEC || ipsec->cfg.mode != MODE_TRANSPORT))
+		policy->src.proto == IPSEC_PROTO_ANY &&
+		!policy->src.net->get_port(policy->src.net) &&
+		!policy->dst.net->get_port(policy->dst.net))
 	{
-		install_route(this, policy, (policy_sa_in_t*)mapping);
+		if (mapping->type == POLICY_PASS ||
+		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
+		{
+			install_route(this, policy, (policy_sa_in_t*)mapping);
+		}
 	}
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;
