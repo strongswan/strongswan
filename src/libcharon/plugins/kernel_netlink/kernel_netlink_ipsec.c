@@ -414,8 +414,9 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
 {
 	return sa->src->ip_equals(sa->src, other_sa->src) &&
 		   sa->dst->ip_equals(sa->dst, other_sa->dst) &&
-		   memeq(&sa->mark, &other_sa->mark, sizeof(mark_t)) &&
-		   memeq(&sa->cfg, &other_sa->cfg, sizeof(ipsec_sa_cfg_t));
+		   sa->mark.value == other_sa->mark.value &&
+		   sa->mark.mask == other_sa->mark.mask &&
+		   ipsec_sa_cfg_equals(&sa->cfg, &other_sa->cfg);
 }
 
 /**
