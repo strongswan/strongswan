@@ -665,6 +665,10 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	if (ts->includes(ts, host))
 	{
 		*ip = host_create_any(family);
+		if (vip)
+		{
+			*vip = FALSE;
+		}
 		host->destroy(host);
 		DBG2(DBG_KNL, "using host %H", *ip);
 		return SUCCESS;
