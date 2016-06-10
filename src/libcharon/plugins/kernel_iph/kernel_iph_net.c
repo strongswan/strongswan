@@ -562,7 +562,8 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_iph_net_t *this, host_t *dest, int prefix, host_t *src)
+	private_kernel_iph_net_t *this, host_t *dest, int prefix, host_t *src,
+	char **iface)
 {
 	MIB_IPFORWARD_ROW2 route;
 	SOCKADDR_INET best, *sai_dst, *sai_src = NULL;
@@ -592,6 +593,10 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	{
 		if (!nexthop->is_anyaddr(nexthop))
 		{
+			if (iface)
+			{
+				*iface = NULL;
+			}
 			return nexthop;
 		}
 		nexthop->destroy(nexthop);
