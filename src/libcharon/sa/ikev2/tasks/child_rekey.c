@@ -160,14 +160,21 @@ METHOD(task_t, build_i, status_t,
 	{	/* check if it is an outbound CHILD_SA */
 		this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 													this->spi, FALSE);
-		if (!this->child_sa)
-		{	/* CHILD_SA is gone, unable to rekey. As an empty CREATE_CHILD_SA
-			 * exchange is invalid, we fall back to an INFORMATIONAL exchange.*/
-			message->set_exchange_type(message, INFORMATIONAL);
-			return SUCCESS;
+		if (this->child_sa)
+		{
+			/* we work only with the inbound SPI */
+			this->spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		}
-		/* we work only with the inbound SPI */
-		this->spi = this->child_sa->get_spi(this->child_sa, TRUE);
+	}
+	if (!this->child_sa ||
+		(!this->child_create &&
+		  this->child_sa->get_state(this->child_sa) != CHILD_INSTALLED) ||
+		(this->child_create &&
+		 this->child_sa->get_state(this->child_sa) != CHILD_REKEYING))
+	{
+		/* CHILD_SA is gone or in the wrong state, unable to rekey */
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
 	}
 	config = this->child_sa->get_config(this->child_sa);
 
