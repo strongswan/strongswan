@@ -432,7 +432,14 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 		.prefixlen = policy->dst.mask,
 	);
-#ifndef __linux__
+#ifdef __linux__
+#elif defined(WIN32)
+        /* TODO: Complete */
+        /* Set out special gateway */
+        /* We also need to add a route to 169.254.0.0/16 via all our tun devices */
+        host_t *gw = host_create_from_string("169.254.128.128", 0);
+        route->gateway = gw;
+#else
 	/* on Linux we cant't install a gateway */
 	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src);
 #endif
@@ -502,6 +509,9 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 			this->mutex->unlock(this->mutex);
 			return FALSE;
 	}
+#ifdef WIN32
+        gw->destroy(gw);
+#endif
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
