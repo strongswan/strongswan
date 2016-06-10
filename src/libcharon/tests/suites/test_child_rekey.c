@@ -185,6 +185,133 @@ START_TEST(test_regular_ke_invalid)
 END_TEST
 
 /**
+ * Check that the responder ignores soft expires while waiting for the delete
+ * after a rekeying.
+ */
+START_TEST(test_regular_responder_ignore_soft_expire)
+{
+	ike_sa_t *a, *b;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, NULL);
+	initiate_rekey(a, 1);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_hook();
+
+	/* we don't expect this to get called anymore */
+	assert_hook_not_called(child_rekey);
+	/* this should not produce a message, if it does there won't be a delete
+	 * payload below */
+	call_ikesa(b, rekey_child_sa, PROTO_ESP, 2);
+	assert_child_sa_state(b, 2, CHILD_REKEYED);
+
+	/* INFORMATIONAL { D } --> */
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_count(b, 1);
+	/* <-- INFORMATIONAL { D } */
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_child_sa_count(a, 1);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Check that the responder handles hard expires properly while waiting for the
+ * delete after a rekeying (e.g. if the initiator of the rekeying fails to
+ * delete the CHILD_SA for some reason).
+ */
+START_TEST(test_regular_responder_handle_hard_expire)
+{
+	ike_sa_t *a, *b;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, NULL);
+	initiate_rekey(a, 1);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_hook();
+
+	/* we don't expect this to get called anymore */
+	assert_hook_not_called(child_rekey);
+	/* this is similar to a regular delete collision */
+	assert_single_payload(OUT, PLV2_DELETE);
+	call_ikesa(b, delete_child_sa, PROTO_ESP, 2, TRUE);
+	assert_child_sa_state(b, 2, CHILD_DELETING);
+
+	/* INFORMATIONAL { D } --> */
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(a, 2, CHILD_DELETING);
+	/* <-- INFORMATIONAL { D } */
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_child_sa_state(a, 1, CHILD_DELETING);
+	/* <-- INFORMATIONAL { } */
+	assert_message_empty(IN);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_child_sa_count(a, 1);
+	/* INFORMATIONAL { } --> */
+	assert_message_empty(IN);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_count(b, 1);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
  * Both peers initiate the CHILD_SA reekying concurrently and should handle
  * the collision properly depending on the nonces.
  */
@@ -1411,6 +1538,8 @@ Suite *child_rekey_suite_create()
 	tc = tcase_create("regular");
 	tcase_add_loop_test(tc, test_regular, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid, 0, 2);
+	tcase_add_test(tc, test_regular_responder_ignore_soft_expire);
+	tcase_add_test(tc, test_regular_responder_handle_hard_expire);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions rekey");
