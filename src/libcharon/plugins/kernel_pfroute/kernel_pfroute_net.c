@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2013 Tobias Brunner
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1533,7 +1533,7 @@ METHOD(kernel_net_t, del_route, status_t,
  * address.
  */
 static host_t *get_route(private_kernel_pfroute_net_t *this, bool nexthop,
-						 host_t *dest, host_t *src)
+						 host_t *dest, host_t *src, char **iface)
 {
 	struct {
 		struct rt_msghdr hdr;
@@ -1612,6 +1612,15 @@ retry:
 							host = gtw;
 						}
 					}
+					if (type == RTAX_IFP && addr->sa_family == AF_LINK)
+					{
+						struct sockaddr_dl *sdl = (struct sockaddr_dl*)addr;
+						if (iface)
+						{
+							free(*iface);
+							*iface = strndup(sdl->sdl_data, sdl->sdl_nlen);
+						}
+					}
 				}
 				else
 				{
@@ -1680,7 +1689,7 @@ retry:
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, FALSE, dest, src);
+	return get_route(this, FALSE, dest, src, NULL);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
@@ -1691,7 +1700,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	{
 		*iface = NULL;
 	}
-	return get_route(this, TRUE, dest, src);
+	return get_route(this, TRUE, dest, src, iface);
 }
 
 /**
