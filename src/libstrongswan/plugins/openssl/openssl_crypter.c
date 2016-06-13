@@ -57,12 +57,12 @@ static char* lookup_algorithm(uint16_t ikev2_algo, size_t *key_size)
 		/* maximum key size */
 		size_t key_max;
 	} mappings[] = {
-		{ENCR_DES, 			"des",			 8,		 8,		  8},
-		{ENCR_3DES, 		"des3",			24,		24,		 24},
-		{ENCR_RC5, 			"rc5", 			16,		 5,		255},
-		{ENCR_IDEA, 		"idea",			16,		16,		 16},
-		{ENCR_CAST, 		"cast",			16,		 5,		 16},
-		{ENCR_BLOWFISH, 	"blowfish",		16,		 5,		 56},
+		{ENCR_DES, 			"des-cbc",		 8,		 8,		  8},
+		{ENCR_3DES, 		"des-ede3-cbc",	24,		24,		 24},
+		{ENCR_RC5, 			"rc5-cbc",		16,		 5,		255},
+		{ENCR_IDEA, 		"idea-cbc",		16,		16,		 16},
+		{ENCR_CAST, 		"cast5-cbc",	16,		 5,		 16},
+		{ENCR_BLOWFISH, 	"bf-cbc",		16,		 5,		 56},
 	};
 	int i;
 
@@ -193,13 +193,13 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:        /* AES 128 */
-					this->cipher = EVP_get_cipherbyname("aes128");
+					this->cipher = EVP_get_cipherbyname("aes-128-cbc");
 					break;
 				case 24:        /* AES-192 */
-					this->cipher = EVP_get_cipherbyname("aes192");
+					this->cipher = EVP_get_cipherbyname("aes-192-cbc");
 					break;
 				case 32:        /* AES-256 */
-					this->cipher = EVP_get_cipherbyname("aes256");
+					this->cipher = EVP_get_cipherbyname("aes-256-cbc");
 					break;
 				default:
 					free(this);
@@ -213,13 +213,13 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:        /* CAMELLIA 128 */
-					this->cipher = EVP_get_cipherbyname("camellia128");
+					this->cipher = EVP_get_cipherbyname("camellia-128-cbc");
 					break;
 				case 24:        /* CAMELLIA 192 */
-					this->cipher = EVP_get_cipherbyname("camellia192");
+					this->cipher = EVP_get_cipherbyname("camellia-192-cbc");
 					break;
 				case 32:        /* CAMELLIA 256 */
-					this->cipher = EVP_get_cipherbyname("camellia256");
+					this->cipher = EVP_get_cipherbyname("camellia-256-cbc");
 					break;
 				default:
 					free(this);
