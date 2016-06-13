@@ -623,7 +623,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private Integer getInteger(EditText view)
 	{
 		String value = view.getText().toString().trim();
-		return value.isEmpty() ? null : Integer.valueOf(value);
+		try
+		{
+			return value.isEmpty() ? null : Integer.valueOf(value);
+		}
+		catch (NumberFormatException e)
+		{
+			return null;
+		}
 	}
 
 	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback
