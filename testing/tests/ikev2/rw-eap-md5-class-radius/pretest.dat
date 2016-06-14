@@ -5,6 +5,8 @@ alice::radiusd
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start
+moon::expect-connection research
+moon::expect-connection accounting
 carol::expect-connection alice
 carol::expect-connection venus
 carol::ipsec up alice

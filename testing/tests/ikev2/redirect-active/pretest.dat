@@ -8,6 +8,9 @@ moon::ipsec start
 alice::ipsec start
 carol::ipsec start
 dave::ipsec start
-carol::sleep 1
+moon::expect-connection rw
+alice::expect-connection rw
+carol::expect-connection home
 carol::ipsec up home
+dave::expect-connection home
 dave::ipsec up home

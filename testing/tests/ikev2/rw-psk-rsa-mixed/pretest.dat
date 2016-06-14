@@ -5,6 +5,8 @@ carol::rm /etc/ipsec.d/cacerts/*
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start
+moon::expect-connection rw-rsasig
+moon::expect-connection rw-psk
 carol::expect-connection home
 carol::ipsec up home
 dave::expect-connection home

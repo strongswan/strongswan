@@ -4,5 +4,6 @@ moon::cat /etc/ipsec.d/triplets.dat
 carol::cat /etc/ipsec.d/triplets.dat
 moon::ipsec start
 carol::ipsec start
+moon::expect-connection rw-eap-sim
 carol::expect-connection home
 carol::ipsec up home

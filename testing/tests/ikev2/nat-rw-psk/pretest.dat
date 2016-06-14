@@ -9,6 +9,7 @@ sun::rm /etc/ipsec.d/cacerts/*
 sun::ipsec start
 alice::ipsec start
 venus::ipsec start
+sun::expect-connection nat-t
 alice::expect-connection nat-t
 alice::ipsec up nat-t
 venus::expect-connection nat-t

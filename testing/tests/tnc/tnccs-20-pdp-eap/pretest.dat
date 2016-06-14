@@ -22,6 +22,8 @@ alice::service charon start
 moon::service charon start
 dave::service charon start
 carol::service charon start
+moon::expect-connection rw-allow
+moon::expect-connection rw-isolate
 dave::expect-connection home
 dave::swanctl --initiate --child home 2> /dev/null
 carol::expect-connection home

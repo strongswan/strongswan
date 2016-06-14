@@ -5,4 +5,5 @@ sun::ip route add 10.1.0.0/16 via PH_IP_MOON
 alice::ipsec start
 sun::ipsec start
 alice::expect-connection mobike
+sun::expect-connection mobike
 alice::ipsec up mobike

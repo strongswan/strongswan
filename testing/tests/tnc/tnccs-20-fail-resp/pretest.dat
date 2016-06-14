@@ -6,5 +6,7 @@ carol::rm /etc/swanctl/rsa/*
 carol::rm /etc/swanctl/x509/*
 moon::service charon start
 carol::service charon start
+moon::expect-connection rw-allow
+moon::expect-connection rw-isolate
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null

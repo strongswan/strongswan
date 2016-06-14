@@ -9,5 +9,5 @@ dave::ipsec start
 moon::expect-connection rw
 carol::expect-connection home
 carol::ipsec up home
-carol::expect-connection home
+dave::expect-connection home
 dave::ipsec up home

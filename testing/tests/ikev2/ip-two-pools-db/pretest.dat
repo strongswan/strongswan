@@ -18,6 +18,8 @@ alice::ipsec start
 venus::ipsec start
 carol::ipsec start
 dave::ipsec start
+moon::expect-connection int
+moon::expect-connection ext
 carol::expect-connection home
 carol::ipsec up home
 dave::expect-connection home
