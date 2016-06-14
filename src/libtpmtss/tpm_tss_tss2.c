@@ -48,6 +48,15 @@ struct private_tpm_tss_tss2_t {
 	 */
 	TSS2_SYS_CONTEXT  *sys_context;
 
+	/**
+	 * Number of supported algorithms
+	 */
+	size_t supported_algs_count;
+
+	/**
+	 * List of supported algorithms
+	 */
+	TPM_ALG_ID supported_algs[TPM_PT_ALGORITHM_SET];
 };
 
 /**
@@ -62,12 +71,56 @@ int TpmClientPrintf (uint8_t type, const char *format, ...)
 }
 
 /**
+ * Convert hash algorithm to TPM_ALG_ID
+ */
+static TPM_ALG_ID hash_alg_to_tpm_alg_id(hash_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case HASH_SHA1:
+			return TPM_ALG_SHA1;
+		case HASH_SHA256:
+			return TPM_ALG_SHA256;
+		case HASH_SHA384:
+			return TPM_ALG_SHA384;
+		case HASH_SHA512:
+			return TPM_ALG_SHA512;
+		default:
+			return TPM_ALG_ERROR;
+	}
+}
+
+/**
+ * Check if an algorithm given by its TPM_ALG_ID is supported by the TPM
+ */
+static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
+{
+	int i;
+
+	if (alg_id == TPM_ALG_ERROR)
+	{
+		return FALSE;
+	}
+
+	for (i = 0; i < this->supported_algs_count; i++)
+	{
+		if (this->supported_algs[i] == alg_id)
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/**
  * Get a list of supported algorithms
  */
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
 	TPMS_CAPABILITY_DATA cap_data;
 	TPMI_YES_NO more_data;
+	TPM_ALG_ID alg;
 	uint32_t rval, i;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN];
@@ -84,11 +137,16 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		return FALSE;
 	}
 
-	/* print supported algorithms */
-	for (i = 0; i < cap_data.data.algorithms.count; i++)
+	/* Number of supported algorithms */
+	this->supported_algs_count = cap_data.data.algorithms.count;
+
+	/* store and print supported algorithms */
+	for (i = 0; i < this->supported_algs_count; i++)
 	{
-		written = snprintf(pos, len, " %N", tpm_alg_id_names,
-						   cap_data.data.algorithms.algProperties[i].alg);
+		alg = cap_data.data.algorithms.algProperties[i].alg;
+		this->supported_algs[i] = alg;
+
+		written = snprintf(pos, len, " %N", tpm_alg_id_names, alg);
 		if (written < 0 || written >= len)
 		{
 			break;
@@ -339,8 +397,58 @@ METHOD(tpm_tss_t, read_pcr, bool,
 	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
 	hash_algorithm_t alg)
 {
-	/* TODO */
-	return FALSE;
+    TPML_PCR_SELECTION  pcr_sel_in, pcr_sel_out;
+	TPML_DIGEST pcr_values;
+	TPM_ALG_ID alg_id;
+
+	uint32_t pcr_update_counter, rval;
+	uint8_t *pcr_value_ptr;
+	size_t   pcr_value_len;
+
+	alg_id = hash_alg_to_tpm_alg_id(alg);
+	if (!is_supported_alg(this, alg_id))
+	{
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+			 LABEL, hash_algorithm_short_names, alg);
+		return FALSE;
+	}
+
+	if (pcr_num >= PLATFORM_PCR)
+	{
+		DBG1(DBG_PTS, "%s maximum number of supported PCR is %d",
+					   LABEL, PLATFORM_PCR);
+		return FALSE;
+	}
+
+	/* initialize the PCR Selection structure */
+	pcr_sel_in.count = 1;
+	pcr_sel_in.pcrSelections[0].hash = alg_id;
+	pcr_sel_in.pcrSelections[0].sizeofSelect = 3;
+	pcr_sel_in.pcrSelections[0].pcrSelect[0] = 0;
+	pcr_sel_in.pcrSelections[0].pcrSelect[1] = 0;
+	pcr_sel_in.pcrSelections[0].pcrSelect[2] = 0;
+
+	/* set the desired PCR */
+	pcr_sel_in.pcrSelections[0].pcrSelect[pcr_num / 8] = 1 << (pcr_num % 8);
+
+	/* initialize the PCR Digest structure */
+	memset(&pcr_values, 0, sizeof(TPML_DIGEST));
+
+	/* read the PCR value */
+	rval = Tss2_Sys_PCR_Read(this->sys_context, 0, &pcr_sel_in,
+				&pcr_update_counter, &pcr_sel_out, &pcr_values, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s PCR bank could not be read: 0x%60x",
+					   LABEL, rval);
+		return FALSE;
+	}
+	pcr_value_ptr = (uint8_t *)pcr_values.digests[0].t.buffer;
+	pcr_value_len = (size_t)   pcr_values.digests[0].t.size;
+
+	*pcr_value = chunk_clone(chunk_create(pcr_value_ptr, pcr_value_len));
+
+	return TRUE;
 }
 
 METHOD(tpm_tss_t, extend_pcr, bool,
