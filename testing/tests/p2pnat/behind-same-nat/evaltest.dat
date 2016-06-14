@@ -7,5 +7,5 @@ alice::ipsec status 2> /dev/null::peer.*ESTABLISHED.*alice@strongswan.org.*venus
 venus::ipsec status 2> /dev/null::peer.*ESTABLISHED.*venus.strongswan.org.*alice@strongswan.org::YES
 alice::ipsec status 2> /dev/null::peer.*INSTALLED, TUNNEL::YES
 venus::ipsec status 2> /dev/null::peer.*INSTALLED, TUNNEL::YES
-alice::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_req=1::YES
-venus::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_req=1::YES
+alice::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_.eq=1::YES
+venus::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_.eq=1::YES
