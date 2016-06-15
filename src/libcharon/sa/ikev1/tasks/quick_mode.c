@@ -146,7 +146,7 @@ struct private_quick_mode_t {
 	uint32_t lifetime;
 
 	/**
-	 * Negotaited lifebytes of new SA
+	 * Negotiated lifebytes of new SA
 	 */
 	uint64_t lifebytes;
 
@@ -727,7 +727,7 @@ static void get_lifetimes(private_quick_mode_t *this)
 	{
 		this->lifetime = lft->time.life;
 	}
-	else if (lft->bytes.life)
+	if (lft->bytes.life)
 	{
 		this->lifebytes = lft->bytes.life;
 	}
