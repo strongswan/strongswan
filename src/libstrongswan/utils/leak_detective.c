@@ -522,6 +522,7 @@ char *whitelist[] = {
 	"vsyslog",
 	"__syslog_chk",
 	"__vsyslog_chk",
+	"__fprintf_chk",
 	"getaddrinfo",
 	"setlocale",
 	"getpass",
