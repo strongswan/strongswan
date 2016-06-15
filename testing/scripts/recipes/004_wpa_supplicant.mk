@@ -3,7 +3,7 @@
 PV  = 2.0
 PKG = wpa_supplicant-$(PV)
 TAR = $(PKG).tar.gz
-SRC = http://hostap.epitest.fi/releases/$(TAR)
+SRC = http://w1.fi/releases/$(TAR)
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
