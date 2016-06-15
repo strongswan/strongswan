@@ -810,10 +810,11 @@ HOOK(void*, malloc, size_t bytes)
 HOOK(void*, calloc, size_t nmemb, size_t size)
 {
 	void *ptr;
+	volatile size_t total;
 
-	size *= nmemb;
-	ptr = malloc(size);
-	memset(ptr, 0, size);
+	total = nmemb * size;
+	ptr = malloc(total);
+	memset(ptr, 0, total);
 
 	return ptr;
 }
