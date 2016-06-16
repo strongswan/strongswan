@@ -7,6 +7,9 @@ libimcv.plugins.imc-attestation.aik_cert =
 libimcv.plugins.imc-attestation.aik_pubkey =
 	AIK public key file.
 
+libimcv.plugins.imc-attestation.aik_handle =
+	AIK object handle.
+
 libimcv.plugins.imc-attestation.mandatory_dh_groups = yes
 	Enforce mandatory Diffie-Hellman groups.
 

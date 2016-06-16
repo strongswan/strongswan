@@ -393,18 +393,16 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	return aik_pubkey;
 }
 
-METHOD(tpm_tss_t, read_pcr, bool,
-	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
-	hash_algorithm_t alg)
+/**
+ * Configure a PCR Selection assuming a maximum of 24 registers
+ */
+static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
+							   hash_algorithm_t alg, TPML_PCR_SELECTION *pcr_sel)
 {
-    TPML_PCR_SELECTION  pcr_sel_in, pcr_sel_out;
-	TPML_DIGEST pcr_values;
 	TPM_ALG_ID alg_id;
+	uint32_t pcr;
 
-	uint32_t pcr_update_counter, rval;
-	uint8_t *pcr_value_ptr;
-	size_t   pcr_value_len;
-
+	/* check if hash algorithm is supported by TPM */
 	alg_id = hash_alg_to_tpm_alg_id(alg);
 	if (!is_supported_alg(this, alg_id))
 	{
@@ -413,6 +411,36 @@ METHOD(tpm_tss_t, read_pcr, bool,
 		return FALSE;
 	}
 
+	/* initialize the PCR Selection structure,*/
+	pcr_sel->count = 1;
+	pcr_sel->pcrSelections[0].hash = alg_id;
+	pcr_sel->pcrSelections[0].sizeofSelect = 3;
+	pcr_sel->pcrSelections[0].pcrSelect[0] = 0;
+	pcr_sel->pcrSelections[0].pcrSelect[1] = 0;
+	pcr_sel->pcrSelections[0].pcrSelect[2] = 0;
+
+	/* set the selected PCRs */
+	for (pcr = 0; pcr < PLATFORM_PCR; pcr++)
+	{
+		if (pcrs & (1 << pcr))
+		{
+			pcr_sel->pcrSelections[0].pcrSelect[pcr / 8] |= ( 1 << (pcr % 8) );
+		}
+	}
+	return TRUE;
+}
+
+METHOD(tpm_tss_t, read_pcr, bool,
+	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+	hash_algorithm_t alg)
+{
+	TPML_PCR_SELECTION pcr_selection;
+	TPML_DIGEST pcr_values;
+
+	uint32_t pcr_update_counter, rval;
+	uint8_t *pcr_value_ptr;
+	size_t   pcr_value_len;
+
 	if (pcr_num >= PLATFORM_PCR)
 	{
 		DBG1(DBG_PTS, "%s maximum number of supported PCR is %d",
@@ -420,23 +448,17 @@ METHOD(tpm_tss_t, read_pcr, bool,
 		return FALSE;
 	}
 
-	/* initialize the PCR Selection structure */
-	pcr_sel_in.count = 1;
-	pcr_sel_in.pcrSelections[0].hash = alg_id;
-	pcr_sel_in.pcrSelections[0].sizeofSelect = 3;
-	pcr_sel_in.pcrSelections[0].pcrSelect[0] = 0;
-	pcr_sel_in.pcrSelections[0].pcrSelect[1] = 0;
-	pcr_sel_in.pcrSelections[0].pcrSelect[2] = 0;
-
-	/* set the desired PCR */
-	pcr_sel_in.pcrSelections[0].pcrSelect[pcr_num / 8] = 1 << (pcr_num % 8);
+	if (!init_pcr_selection(this, (1 << pcr_num), alg, &pcr_selection))
+	{
+		return FALSE;
+	}
 
 	/* initialize the PCR Digest structure */
 	memset(&pcr_values, 0, sizeof(TPML_DIGEST));
 
 	/* read the PCR value */
-	rval = Tss2_Sys_PCR_Read(this->sys_context, 0, &pcr_sel_in,
-				&pcr_update_counter, &pcr_sel_out, &pcr_values, 0);
+	rval = Tss2_Sys_PCR_Read(this->sys_context, 0, &pcr_selection,
+				&pcr_update_counter, &pcr_selection, &pcr_values, 0);
 	if (rval != TPM_RC_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s PCR bank could not be read: 0x%60x",
@@ -464,8 +486,102 @@ METHOD(tpm_tss_t, quote, bool,
 	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode, chunk_t *pcr_comp,
 	chunk_t *quote_sig)
 {
-	/* TODO */
-	return FALSE;
+	chunk_t quote_info;
+	uint32_t rval;
+
+	TPM2B_DATA qualifying_data;
+	TPML_PCR_SELECTION  pcr_selection;
+	TPMS_ATTEST *attest;
+	TPM2B_ATTEST quoted = { { sizeof(TPM2B_ATTEST)-2, } };
+	TPM2B_DIGEST digest;
+	TPMT_SIGNATURE sig;
+	TPMT_SIG_SCHEME scheme;
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.hmac.t.size = 0;
+	session_data_cmd.nonce.t.size = 0;
+
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	qualifying_data.t.size = data.len;
+	memcpy(qualifying_data.t.buffer, data.ptr, data.len);
+
+	scheme.scheme = TPM_ALG_NULL;
+	memset(&sig, 0x00, sizeof(sig));
+
+	if (mode == TPM_QUOTE || mode == TPM_QUOTE2_VERSION_INFO)
+	{
+		DBG1(DBG_PTS, "%s TPM Quote mode not supported", LABEL);
+		return FALSE;
+	}
+
+	if (!init_pcr_selection(this, pcr_sel, alg, &pcr_selection))
+	{
+		return FALSE;
+	}
+
+	rval = Tss2_Sys_Quote(this->sys_context, aik_handle, &sessions_data_cmd,
+						  &qualifying_data, &scheme, &pcr_selection,  &quoted,
+						  &sig, &sessions_data_rsp);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_Quote failed: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+
+	attest = (TPMS_ATTEST *)quoted.t.attestationData;
+	digest = attest->attested.quote.pcrDigest;
+	*pcr_comp = chunk_clone(chunk_create(digest.t.buffer, digest.t.size));
+	DBG2(DBG_PTS, "Hash of PCR Composite: %#B", pcr_comp);
+
+	quote_info = chunk_create(quoted.t.attestationData, quoted.t.size);
+	DBG2(DBG_PTS, "TPM Quote Info: %B",&quote_info);
+
+	/* extract signature */
+	switch (sig.sigAlg)
+	{
+		case TPM_ALG_RSASSA:
+		case TPM_ALG_RSAPSS:
+			*quote_sig = chunk_clone(
+							chunk_create(
+								sig.signature.rsassa.sig.t.buffer,
+								sig.signature.rsassa.sig.t.size));
+			break;
+		case TPM_ALG_ECDSA:
+		case TPM_ALG_ECDAA:
+		case TPM_ALG_SM2:
+		case TPM_ALG_ECSCHNORR:
+			*quote_sig = chunk_cat("cc",
+							chunk_create(
+								sig.signature.ecdsa.signatureR.t.buffer,
+								sig.signature.ecdsa.signatureR.t.size),
+							chunk_create(
+								sig.signature.ecdsa.signatureS.t.buffer,
+								sig.signature.ecdsa.signatureS.t.size));
+			break;
+		default:
+			DBG1(DBG_PTS, "%s unsupported %N signature algorithm",
+						   LABEL, tpm_alg_id_names, sig.sigAlg);
+			return FALSE;
+	};
+	DBG2(DBG_PTS, "TPM Quote Signature: %B", quote_sig);
+
+	return TRUE;
 }
 
 METHOD(tpm_tss_t, destroy, void,
