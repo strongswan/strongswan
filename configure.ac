@@ -512,24 +512,28 @@ AC_COMPILE_IFELSE(
 # check if pthread_condattr_setclock(CLOCK_MONOTONIC) is supported
 saved_LIBS=$LIBS
 LIBS=$PTHREADLIB
-AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONIC)])
-AC_RUN_IFELSE(
-	[AC_LANG_SOURCE(
-		[[#include <pthread.h>
-		  int main() { pthread_condattr_t attr;
-			pthread_condattr_init(&attr);
-			return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}]])],
-	[AC_MSG_RESULT([yes]);
-	 AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
-			   [pthread_condattr_setclock supports CLOCK_MONOTONIC])],
-	[AC_MSG_RESULT([no])],
-	# Check existence of pthread_condattr_setclock if cross-compiling
-	[AC_MSG_RESULT([unknown]);
-	 AC_CHECK_FUNCS(pthread_condattr_setclock,
-		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
-				   [have pthread_condattr_setclock()])]
-	)]
-)
+AC_CACHE_CHECK([for pthread_condattr_setclock(CLOCK_MONOTONIC)],
+	[ss_cv_func_pthread_condattr_setclock_monotonic],
+	[AC_RUN_IFELSE(
+		[AC_LANG_SOURCE(
+			[[#include <pthread.h>
+			  int main() { pthread_condattr_t attr;
+				pthread_condattr_init(&attr);
+				return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}]])],
+		[ss_cv_func_pthread_condattr_setclock_monotonic=yes],
+		[ss_cv_func_pthread_condattr_setclock_monotonic=no],
+		# Check existence of pthread_condattr_setclock if cross-compiling
+		[AC_CHECK_FUNCS(pthread_condattr_setclock,
+			ss_cv_func_pthread_condattr_setclock_monotonic=unknown)]
+	)])
+if test x$ss_cv_func_pthread_condattr_setclock_monotonic = xyes; then
+	AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
+			  [pthread_condattr_setclock supports CLOCK_MONOTONIC])
+elif test x$ss_cv_func_pthread_condattr_setclock_monotonic = xunknown; then
+	AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
+			  [have pthread_condattr_setclock()])
+fi
+
 # check if we actually are able to configure attributes on cond vars
 AC_CHECK_FUNCS(pthread_condattr_init)
 # instead of pthread_condattr_setclock Android has this function
