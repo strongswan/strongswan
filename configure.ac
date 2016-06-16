@@ -509,10 +509,10 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([no])]
 )
 
-# check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
+# check if pthread_condattr_setclock(CLOCK_MONOTONIC) is supported
 saved_LIBS=$LIBS
 LIBS=$PTHREADLIB
-AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONE)])
+AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONIC)])
 AC_RUN_IFELSE(
 	[AC_LANG_SOURCE(
 		[[#include <pthread.h>
