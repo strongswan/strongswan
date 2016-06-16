@@ -117,12 +117,12 @@ METHOD(pts_comp_func_name_t, log_, void,
 
 	if (names && types)
 	{
-		DBG2(DBG_PTS, "%s%N functional component '%N' [%s] '%N'",
+		DBG3(DBG_PTS, "%s%N functional component '%N' [%s] '%N'",
 			 label, pen_names, this->vid, names, this->name, flags, types, type);
 	}
 	else
 	{
-		DBG2(DBG_PTS, "%s0x%06x functional component 0x%08x 0x%02x",
+		DBG3(DBG_PTS, "%s0x%06x functional component 0x%08x 0x%02x",
 			 label, this->vid, this->name, this->qualifier);
 	}
 }
