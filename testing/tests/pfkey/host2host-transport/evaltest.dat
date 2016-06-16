@@ -5,6 +5,6 @@ sun:: ipsec status 2> /dev/null::host-host.*INSTALLED, TRANSPORT::YES
 moon::cat /var/log/daemon.log::parsed IKE_AUTH response.*N(USE_TRANSP)::YES
 moon::ip xfrm state::mode transport::YES
 sun:: ip xfrm state::mode transport::YES
-moon::ping -c 1 PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_req=1::YES
+moon::ping -c 1 PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
 sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
 sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES

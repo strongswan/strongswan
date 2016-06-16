@@ -1,0 +1,38 @@
+diff -u -ur hostapd-2.0.orig/hostapd/defconfig hostapd-2.0/hostapd/defconfig
+--- hostapd-2.0.orig/hostapd/defconfig	2013-01-12 16:42:53.000000000 +0100
++++ hostapd-2.0/hostapd/defconfig	2016-06-15 17:32:57.000000000 +0200
+@@ -13,14 +13,14 @@
+ CONFIG_DRIVER_HOSTAP=y
+ 
+ # Driver interface for wired authenticator
+-#CONFIG_DRIVER_WIRED=y
++CONFIG_DRIVER_WIRED=y
+ 
+ # Driver interface for madwifi driver
+ #CONFIG_DRIVER_MADWIFI=y
+ #CFLAGS += -I../../madwifi # change to the madwifi source directory
+ 
+ # Driver interface for drivers using the nl80211 kernel interface
+-CONFIG_DRIVER_NL80211=y
++#CONFIG_DRIVER_NL80211=y
+ 
+ # Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)
+ #CONFIG_DRIVER_BSD=y
+@@ -30,7 +30,7 @@
+ #LIBS_c += -L/usr/local/lib
+ 
+ # Driver interface for no driver (e.g., RADIUS server only)
+-#CONFIG_DRIVER_NONE=y
++CONFIG_DRIVER_NONE=y
+ 
+ # IEEE 802.11F/IAPP
+ CONFIG_IAPP=y
+@@ -152,7 +152,7 @@
+ 
+ # Add support for writing debug log to a file: -f /tmp/hostapd.log
+ # Disabled by default.
+-#CONFIG_DEBUG_FILE=y
++CONFIG_DEBUG_FILE=y
+ 
+ # Remove support for RADIUS accounting
+ #CONFIG_NO_ACCOUNTING=y

@@ -10,12 +10,12 @@ carol::cat /var/log/daemon.log::IKE_AUTH response.*N(IPCOMP_SUP)::YES
 alice::ip xfrm state::proto comp spi::YES
 bob::  ip xfrm state::proto comp spi::YES
 carol::ip xfrm state::proto comp spi::YES
-alice::ping -c 1 -s 8184 -p deadbeef PH_IP_CAROL::8192 bytes from PH_IP_CAROL: icmp_req=1::YES
-alice::ping -c 1 PH_IP_CAROL::64 bytes from PH_IP_CAROL: icmp_req=1::YES
-alice::ping -c 1 -s 8184 -p deadbeef PH_IP_BOB::8192 bytes from PH_IP_BOB: icmp_req=1::YES
-alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_req=1::YES
-bob::  ping -c 1 -s 8184 -p deadbeef PH_IP_ALICE::8192 bytes from PH_IP_ALICE: icmp_req=1::YES
-bob::  ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_req=1::YES
+alice::ping -c 1 -s 8184 -p deadbeef PH_IP_CAROL::8192 bytes from PH_IP_CAROL: icmp_.eq=1::YES
+alice::ping -c 1 PH_IP_CAROL::64 bytes from PH_IP_CAROL: icmp_.eq=1::YES
+alice::ping -c 1 -s 8184 -p deadbeef PH_IP_BOB::8192 bytes from PH_IP_BOB: icmp_.eq=1::YES
+alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_.eq=1::YES
+bob::  ping -c 1 -s 8184 -p deadbeef PH_IP_ALICE::8192 bytes from PH_IP_ALICE: icmp_.eq=1::YES
+bob::  ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_.eq=1::YES
 moon::tcpdump::IP moon.strongswan.org.* > carol.strongswan.org.*: UDP::YES
 moon::tcpdump::IP carol.strongswan.org.* > moon.strongswan.org.*: UDP::YES
 sun::tcpdump::IP sun.strongswan.org.* > carol.strongswan.org.*: UDP::YES

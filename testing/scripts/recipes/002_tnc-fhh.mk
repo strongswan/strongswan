@@ -9,6 +9,9 @@ CONFIG_OPTS = \
 	-DCOMPONENT=all \
 	-DNAL=8021x
 
+PATCHES = \
+	tnc-fhh-tncsim
+
 all: install
 
 .$(PKG)-cloned:
@@ -16,7 +19,11 @@ all: install
 	mkdir $(PKG)/build
 	@touch $@
 
-.$(PKG)-configured: .$(PKG)-cloned
+.$(PKG)-patches-applied: .$(PKG)-cloned
+	cd $(PKG) && cat $(addprefix ../patches/, $(PATCHES)) | patch -p1
+	@touch $@
+
+.$(PKG)-configured: .$(PKG)-patches-applied
 	cd $(PKG)/build && cmake $(CONFIG_OPTS) ../
 	@touch $@
 

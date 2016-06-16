@@ -111,6 +111,13 @@ done
 [ -f $SHAREDDIR/.strongswan-version ] && SWANVERSION=`cat $SHAREDDIR/.strongswan-version`
 KERNELVERSION=`ssh $SSHCONF root@\$ipv4_winnetou uname -r 2>/dev/null`
 
+# check if tcpdump supports --immediate-mode
+ssh $SSHCONF root@$ipv4_winnetou tcpdump --immediate-mode -c 1 >/dev/null 2>&1
+if [ $? -eq 0 ]
+then
+	TCPDUMP_IM=--immediate-mode
+fi
+
 ##############################################################################
 # create header for the results html file
 #
@@ -359,7 +366,7 @@ do
 	    do
 		host=`echo $host_iface | awk -F ":" '{print $1}'`
 		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
-		tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain > /tmp/tcpdump.log 2>&1 &"
+		tcpdump_cmd="tcpdump -l $TCPDUMP_IM -i $iface not port ssh and not port domain >/tmp/tcpdump.log 2>/tmp/tcpdump.err.log &"
 		echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
 		ssh $SSHCONF root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 		eval TDUP_${host}="true"
@@ -417,10 +424,12 @@ do
 	#
 
 	function stop_tcpdump {
+	    # wait for packets to get processed, but don't wait longer than 1s
+	    eval ssh $SSHCONF root@\$ipv4_${1} "\"i=100; while [ \\\$i -gt 0 ]; do pkill -USR1 tcpdump; tail -1 /tmp/tcpdump.err.log | perl -n -e '/(\\d+).*?(\\d+)/; exit (\\\$1 == \\\$2)' || break; sleep 0.01; i=\\\$((\\\$i-1)); done;\""
 	    echo "${1}# killall tcpdump" >> $CONSOLE_LOG
-	    eval ssh $SSHCONF root@\$ipv4_${1} killall tcpdump
+	    eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
 	    eval TDUP_${1}="false"
-	    echo ""
+	    echo "" >> $CONSOLE_LOG
 	}
 
 
@@ -712,15 +721,9 @@ do
 
 	for host in $TCPDUMPHOSTS
 	do
-	    eval HOSTLOGIN=root@\$ipv4_${host}
-
-		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
-			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
-
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
 	    <li><a href="$host.tcpdump.log">$host tcpdump.log</a></li>
 @EOF
-
 	done
 
 	cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -802,10 +805,11 @@ do
 	do
 	    if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
 	    then
-		echo "${host}# killall tcpdump" >> $CONSOLE_LOG
-		eval ssh $SSHCONF root@\$ipv4_$host killall tcpdump
-		eval TDUP_${host}="false"
+			stop_tcpdump $host
 	    fi
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
+			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
 	done
 
 	##########################################################################
