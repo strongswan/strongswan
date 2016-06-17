@@ -1587,6 +1587,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	if (id->proto != IPPROTO_COMP)
 	{
+		/* generally, we don't need a replay window for outbound SAs, however,
+		 * when using ESN the kernel rejects the attribute if it is 0 */
+		if (!data->inbound && data->replay_window)
+		{
+			data->replay_window = data->esn ? 1 : 0;
+		}
 		if (data->replay_window != 0 && (data->esn || data->replay_window > 32))
 		{
 			/* for ESN or larger replay windows we need the new
