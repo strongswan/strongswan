@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="array_vpn_type">
+        <item>ikev2-eap</item>
+        <item>ikev2-cert</item>
+        <item>ikev2-cert-eap</item>
+        <item>ikev2-eap-tls</item>
+        <item>ikev2-byod-eap</item>
+    </string-array>
+</resources>
