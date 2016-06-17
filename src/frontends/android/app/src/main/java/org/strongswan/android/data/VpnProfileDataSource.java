@@ -140,12 +140,14 @@ public class VpnProfileDataSource
 				updateColumns(db);
 			}
 			if (oldVersion < 5)
-			{   fancyfonDatabaseUpdateVersion5(db);
+			{
+                fancyfonDatabaseUpdateVersion5(db);
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_MTU +
 						" INTEGER;");
 			}
 			if (oldVersion < 6)
-			{	fancyfonDatabaseUpdateVersion6(db);
+			{
+                fancyfonDatabaseUpdateVersion6(db);
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_PORT +
 						" INTEGER;");
 			}
