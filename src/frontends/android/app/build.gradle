@@ -46,4 +46,9 @@ dependencies {
     compile 'com.android.support:appcompat-v7:23.3.0'
     compile 'com.android.support:design:23.3.0'
     testCompile 'junit:junit:4.12'
+
+
+    //fancyfon libs
+    compile project (':api')
+    compile group: 'com.fancyfon.mobile.android.verification', name: 'Android_Caller_Verification_Library', version: '1.0.2'
 }
