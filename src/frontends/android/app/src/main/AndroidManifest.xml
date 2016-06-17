@@ -98,6 +98,26 @@
                  not work (probably too many indirections with ACTION_SEND) so we secure
                  this provider with a custom ticketing system -->
         </provider>
+
+        <!--fancyfon-->
+        <service
+            android:name="org.strongswan.android.ipc.VpnProfileCrudServiceImpl"
+            android:exported="true"
+            android:permission="org.strongswan.android.permission.VPN_PROFILE_CRUD"
+            android:process=":remote">
+            <intent-filter>
+                <action android:name="org.strongswan.android.action.VPN_PROFILE_CRUD_SERVICE"/>
+            </intent-filter>
+        </service>
+        <service
+            android:name="org.strongswan.android.ipc.VpnProfileCrudMessengerService"
+            android:exported="true"
+            android:process=":remote"
+            android:permission="org.strongswan.android.permission.VPN_PROFILE_CRUD">
+            <intent-filter>
+                <action android:name="org.strongswan.android.action.VPN_PROFILE_CRUD_MESSENGER_SERVICE"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

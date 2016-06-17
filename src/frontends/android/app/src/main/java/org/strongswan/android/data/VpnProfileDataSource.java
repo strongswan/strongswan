@@ -17,9 +17,6 @@
 
 package org.strongswan.android.data;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -29,9 +26,14 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
 public class VpnProfileDataSource
 {
-	private static final String TAG = VpnProfileDataSource.class.getSimpleName();
+    private static final String TAG = VpnProfileDataSource.class.getSimpleName();
 	public static final String KEY_ID = "_id";
 	public static final String KEY_NAME = "name";
 	public static final String KEY_GATEWAY = "gateway";
@@ -46,7 +48,14 @@ public class VpnProfileDataSource
 	public static final String KEY_LOCAL_ID = "local_id";
 	public static final String KEY_REMOTE_ID = "remote_id";
 
-	private DatabaseHelper mDbHelper;
+	//fancyfon
+    public static final String KEY_CERTIFICATE_ID = "id_certificate";
+	public static final String KEY_ALLOWED_APPLICATIONS = "allowed_applications";
+
+    private static final String EMPTY_STRING = "";
+    private static final String SPLIT_TUNNELING_DEFAULT_VALUE = "0";
+
+    private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
 	private final Context mContext;
 
@@ -55,39 +64,50 @@ public class VpnProfileDataSource
 
 	private static final int DATABASE_VERSION = 8;
 
+
 	public static final String DATABASE_CREATE =
-							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
-								KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-								KEY_NAME + " TEXT NOT NULL," +
-								KEY_GATEWAY + " TEXT NOT NULL," +
-								KEY_VPN_TYPE + " TEXT NOT NULL," +
-								KEY_USERNAME + " TEXT," +
-								KEY_PASSWORD + " TEXT," +
-								KEY_CERTIFICATE + " TEXT," +
-								KEY_USER_CERTIFICATE + " TEXT," +
-								KEY_MTU + " INTEGER," +
-								KEY_PORT + " INTEGER," +
-								KEY_SPLIT_TUNNELING + " INTEGER," +
-								KEY_LOCAL_ID + " TEXT," +
-								KEY_REMOTE_ID + " TEXT" +
-							");";
+			"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
+					KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+					KEY_NAME + " TEXT NOT NULL," +
+					KEY_GATEWAY + " TEXT NOT NULL," +
+					KEY_VPN_TYPE + " TEXT NOT NULL," +
+					KEY_USERNAME + " TEXT," +
+					KEY_PASSWORD + " TEXT," +
+					KEY_CERTIFICATE + " TEXT," +
+					KEY_USER_CERTIFICATE + " TEXT," +
+					KEY_MTU + " INTEGER," +
+					KEY_PORT + " INTEGER," +
+					KEY_SPLIT_TUNNELING + " INTEGER," +
+					KEY_LOCAL_ID + " TEXT," +
+					KEY_REMOTE_ID + " TEXT," +
+
+					//fancyfon
+					KEY_CERTIFICATE_ID + " TEXT," +
+					KEY_ALLOWED_APPLICATIONS + " TEXT" +
+					");";
+
 	private static final String[] ALL_COLUMNS = new String[] {
-								KEY_ID,
-								KEY_NAME,
-								KEY_GATEWAY,
-								KEY_VPN_TYPE,
-								KEY_USERNAME,
-								KEY_PASSWORD,
-								KEY_CERTIFICATE,
-								KEY_USER_CERTIFICATE,
-								KEY_MTU,
-								KEY_PORT,
-								KEY_SPLIT_TUNNELING,
-								KEY_LOCAL_ID,
-								KEY_REMOTE_ID,
+					KEY_ID,
+					KEY_NAME,
+					KEY_GATEWAY,
+					KEY_VPN_TYPE,
+					KEY_USERNAME,
+					KEY_PASSWORD,
+					KEY_CERTIFICATE,
+					KEY_USER_CERTIFICATE,
+					KEY_MTU,
+					KEY_PORT,
+					KEY_SPLIT_TUNNELING,
+					KEY_LOCAL_ID,
+					KEY_REMOTE_ID,
+
+					//fancyfon
+                    KEY_CERTIFICATE_ID,
+					KEY_ALLOWED_APPLICATIONS
 							};
 
-	private static class DatabaseHelper extends SQLiteOpenHelper
+
+    private static class DatabaseHelper extends SQLiteOpenHelper
 	{
 		public DatabaseHelper(Context context)
 		{
@@ -122,24 +142,37 @@ public class VpnProfileDataSource
 			if (oldVersion < 5)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_MTU +
-						   " INTEGER;");
+						" INTEGER;");
 			}
 			if (oldVersion < 6)
-			{
+			{	fancyfonDatabaseUpdates(oldVersion,db);
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_PORT +
-						   " INTEGER;");
+						" INTEGER;");
 			}
 			if (oldVersion < 7)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SPLIT_TUNNELING +
-						   " INTEGER;");
+						" INTEGER;");
 			}
 			if (oldVersion < 8)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_LOCAL_ID +
-						   " TEXT;");
+						" TEXT;");
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_REMOTE_ID +
-						   " TEXT;");
+						" TEXT;");
+			}
+		}
+
+		private void fancyfonDatabaseUpdates(int oldVersion,SQLiteDatabase db){
+			if (oldVersion < 5)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ALLOWED_APPLICATIONS +
+						" TEXT;");
+			}
+			if (oldVersion < 6)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_CERTIFICATE_ID +
+						" TEXT;");
 			}
 		}
 
@@ -239,8 +272,33 @@ public class VpnProfileDataSource
 	 */
 	public boolean deleteVpnProfile(VpnProfile profile)
 	{
-		long id = profile.getId();
-		return mDatabase.delete(TABLE_VPNPROFILE, KEY_ID + " = " + id, null) > 0;
+        if(profile == null)
+        {
+            return true;
+        }
+		String name = profile.getName();
+		return mDatabase.delete(TABLE_VPNPROFILE, KEY_NAME + " = \"" + name + "\"", null) > 0;
+	}
+
+	/**
+	 * Get a single VPN profile from the database.
+	 * @param name name of vpn profile
+	 * @return the profile or null, if not found
+	 */
+	public VpnProfile getVpnProfile(String name)
+	{
+		VpnProfile profile = null;
+		Cursor cursor = null;
+		try {
+			cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
+					KEY_NAME + "=\"" + name + "\"", null, null, null, null);
+			if (cursor.moveToFirst()) {
+				profile = VpnProfileFromCursor(cursor);
+			}
+		} finally {
+			closeCursor(cursor);
+		}
+		return profile;
 	}
 
 	/**
@@ -251,13 +309,16 @@ public class VpnProfileDataSource
 	public VpnProfile getVpnProfile(long id)
 	{
 		VpnProfile profile = null;
-		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
-										KEY_ID + "=" + id, null, null, null, null);
-		if (cursor.moveToFirst())
-		{
-			profile = VpnProfileFromCursor(cursor);
+		Cursor cursor = null;
+		try {
+			cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
+					KEY_ID + "=" + id, null, null, null, null);
+			if (cursor.moveToFirst()) {
+				profile = VpnProfileFromCursor(cursor);
+			}
+		} finally {
+			closeCursor(cursor);
 		}
-		cursor.close();
 		return profile;
 	}
 
@@ -269,15 +330,18 @@ public class VpnProfileDataSource
 	{
 		List<VpnProfile> vpnProfiles = new ArrayList<VpnProfile>();
 
-		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS, null, null, null, null, null);
-		cursor.moveToFirst();
-		while (!cursor.isAfterLast())
-		{
-			VpnProfile vpnProfile = VpnProfileFromCursor(cursor);
-			vpnProfiles.add(vpnProfile);
-			cursor.moveToNext();
+		Cursor cursor = null;
+		try {
+			cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS, null, null, null, null, null);
+			cursor.moveToFirst();
+			while (!cursor.isAfterLast()) {
+				VpnProfile vpnProfile = VpnProfileFromCursor(cursor);
+				vpnProfiles.add(vpnProfile);
+				cursor.moveToNext();
+			}
+		} finally {
+			closeCursor(cursor);
 		}
-		cursor.close();
 		return vpnProfiles;
 	}
 
@@ -297,8 +361,15 @@ public class VpnProfileDataSource
 		profile.setSplitTunneling(getInt(cursor, cursor.getColumnIndex(KEY_SPLIT_TUNNELING)));
 		profile.setLocalId(cursor.getString(cursor.getColumnIndex(KEY_LOCAL_ID)));
 		profile.setRemoteId(cursor.getString(cursor.getColumnIndex(KEY_REMOTE_ID)));
+        profile = setFancyFonValuesOnProfileFromCursor(profile,cursor);
 		return profile;
 	}
+
+    private VpnProfile setFancyFonValuesOnProfileFromCursor(VpnProfile profile, Cursor cursor){
+        profile.setCertificateId(cursor.getString(cursor.getColumnIndex(KEY_CERTIFICATE_ID)));
+        profile.setAllowedApplications(convertFromString(cursor.getString(cursor.getColumnIndex(KEY_ALLOWED_APPLICATIONS))));
+        return profile;
+    }
 
 	private ContentValues ContentValuesFromVpnProfile(VpnProfile profile)
 	{
@@ -310,12 +381,50 @@ public class VpnProfileDataSource
 		values.put(KEY_PASSWORD, profile.getPassword());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
 		values.put(KEY_USER_CERTIFICATE, profile.getUserCertificateAlias());
-		values.put(KEY_MTU, profile.getMTU());
-		values.put(KEY_PORT, profile.getPort());
-		values.put(KEY_SPLIT_TUNNELING, profile.getSplitTunneling());
-		values.put(KEY_LOCAL_ID, profile.getLocalId());
-		values.put(KEY_REMOTE_ID, profile.getRemoteId());
-		return values;
+		//not implemented in ff
+		values.put(KEY_MTU, EMPTY_STRING);
+		values.put(KEY_PORT, EMPTY_STRING);
+        values.put(KEY_SPLIT_TUNNELING, SPLIT_TUNNELING_DEFAULT_VALUE);
+		values.put(KEY_LOCAL_ID, EMPTY_STRING);
+		values.put(KEY_REMOTE_ID, EMPTY_STRING);
+		values = putFancyFonValues(values,profile);
+        return values;
+
+	}
+
+    private ContentValues putFancyFonValues(ContentValues values,VpnProfile profile){
+        values.put(KEY_CERTIFICATE_ID, profile.getCertificateId());
+        values.put(KEY_ALLOWED_APPLICATIONS, convertToString(profile.getAllowedApplications()));
+        return values;
+    }
+
+	private String convertToString(ArrayList<String> list) {
+        if (list == null) {
+            return EMPTY_STRING;
+        }
+		StringBuilder buffer = new StringBuilder(list.size() * 16);
+		Iterator<String> it = list.iterator();
+		while (it.hasNext()) {
+			Object next = it.next();
+				buffer.append(next);
+			if (it.hasNext()) {
+				buffer.append(",");
+			}
+		}
+		return buffer.toString();
+	}
+
+    private ArrayList<String> convertFromString(String string) {
+        if (string == null || string.length() == 0) {
+            return new ArrayList<String>();
+        }
+        return new ArrayList<String> ( Arrays.asList(string.split(",")));
+    }
+
+	private void closeCursor(Cursor cursor) {
+		if(cursor != null) {
+			cursor.close();
+		}
 	}
 
 	private Integer getInt(Cursor cursor, int columnIndex)
