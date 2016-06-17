@@ -100,10 +100,12 @@ struct child_cfg_t {
 	 * @param proposals		list from which proposals are selected
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @param private		accept algorithms from a private range
+	 * @param prefer_self	whether to prefer configured or supplied proposals
 	 * @return				selected proposal, or NULL if nothing matches
 	 */
 	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals,
-								   bool strip_dh, bool private);
+								   bool strip_dh, bool private,
+								   bool prefer_self);
 
 	/**
 	 * Add a traffic selector to the config.

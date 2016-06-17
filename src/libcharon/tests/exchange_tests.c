@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
+ * Copyright (C) 2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,10 +16,12 @@
 #include <test_runner.h>
 #include <daemon.h>
 
+#include "utils/exchange_test_helper.h"
+
 /* declare test suite constructors */
 #define TEST_SUITE(x) test_suite_t* x();
 #define TEST_SUITE_DEPEND(x, ...) TEST_SUITE(x)
-#include "libcharon_tests.h"
+#include "exchange_tests.h"
 #undef TEST_SUITE
 #undef TEST_SUITE_DEPEND
 
@@ -28,7 +30,7 @@ static test_configuration_t tests[] = {
 	{ .suite = x, },
 #define TEST_SUITE_DEPEND(x, type, ...) \
 	{ .suite = x, .feature = PLUGIN_DEPENDS(type, __VA_ARGS__) },
-#include "libcharon_tests.h"
+#include "exchange_tests.h"
 	{ .suite = NULL, }
 };
 
@@ -46,13 +48,11 @@ static bool test_runner_init(bool init)
 		plugindir = lib->settings->get_str(lib->settings,
 										"tests.plugindir", PLUGINDIR);
 		plugin_loader_add_plugindirs(plugindir, plugins);
-		if (!lib->plugins->load(lib->plugins, plugins))
-		{
-			return FALSE;
-		}
+		exchange_test_helper_init(plugins);
 	}
 	else
 	{
+		exchange_test_helper_deinit();
 		libcharon_deinit();
 	}
 	return TRUE;
@@ -60,5 +60,5 @@ static bool test_runner_init(bool init)
 
 int main(int argc, char *argv[])
 {
-	return test_runner_run("libcharon", tests, test_runner_init);
+	return test_runner_run("exchanges", tests, test_runner_init);
 }

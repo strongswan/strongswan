@@ -1,9 +1,6 @@
 /*
- * Copyright (C) 2014-2016 Tobias Brunner
+ * Copyright (C) 2016 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
- *
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,15 +13,8 @@
  * for more details.
  */
 
-/**
- * @defgroup libcharon-tests tests
- * @ingroup libcharon
- *
- * @defgroup test_utils_c test_utils
- * @ingroup libcharon-tests
- */
-
-TEST_SUITE(proposal_suite_create)
-TEST_SUITE(ike_cfg_suite_create)
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+TEST_SUITE(ike_delete_suite_create)
+TEST_SUITE(ike_rekey_suite_create)
+TEST_SUITE(child_create_suite_create)
+TEST_SUITE(child_delete_suite_create)
+TEST_SUITE(child_rekey_suite_create)

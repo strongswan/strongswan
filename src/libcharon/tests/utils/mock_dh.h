@@ -1,9 +1,6 @@
 /*
- * Copyright (C) 2014-2016 Tobias Brunner
+ * Copyright (C) 2016 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
- *
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,14 +14,24 @@
  */
 
 /**
- * @defgroup libcharon-tests tests
- * @ingroup libcharon
+ * Provides a DH implementation that does no real work to make the tests run
+ * faster.
  *
- * @defgroup test_utils_c test_utils
- * @ingroup libcharon-tests
+ * @defgroup mock_dh mock_dh
+ * @{ @ingroup test_utils_c
  */
 
-TEST_SUITE(proposal_suite_create)
-TEST_SUITE(ike_cfg_suite_create)
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+#ifndef MOCK_DH_H_
+#define MOCK_DH_H_
+
+#include <crypto/diffie_hellman.h>
+
+/**
+ * Creates a diffie_hellman_t object.
+ *
+ * @param group			Diffie Hellman group, supports MODP_NULL only
+ * @return				created object
+ */
+diffie_hellman_t *mock_dh_create(diffie_hellman_group_t group);
+
+#endif /** MOCK_DH_H_ @}*/

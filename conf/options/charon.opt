@@ -253,6 +253,11 @@ charon.port_nat_t = 4500
 	allocated.  Has to be different from **charon.port**, otherwise a random
 	port will be allocated.
 
+charon.prefer_configured_proposals = yes
+	Prefer locally configured proposals for	IKE/IPsec over supplied ones as
+	responder (disabling this can avoid keying retries due to INVALID_KE_PAYLOAD
+	notifies).
+
 charon.prefer_temporary_addrs = no
 	By default public IPv6 addresses are preferred over temporary ones (RFC
 	4941), to make connections more stable. Enable this option to reverse this.

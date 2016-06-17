@@ -1,9 +1,6 @@
 /*
- * Copyright (C) 2014-2016 Tobias Brunner
+ * Copyright (C) 2016 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
- *
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,14 +14,23 @@
  */
 
 /**
- * @defgroup libcharon-tests tests
- * @ingroup libcharon
+ * kernel_ipsec_t implementation used for exchange unit tests.  Currently
+ * returns sequential SPIs, all other methods are noops.
  *
- * @defgroup test_utils_c test_utils
- * @ingroup libcharon-tests
+ * @defgroup mock_ipsec mock_ipsec
+ * @{ @ingroup test_utils_c
  */
 
-TEST_SUITE(proposal_suite_create)
-TEST_SUITE(ike_cfg_suite_create)
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+#ifndef MOCK_IPSEC_H_
+#define MOCK_IPSEC_H_
+
+#include <kernel/kernel_ipsec.h>
+
+/**
+ * Create an instance of kernel_ipsec_t
+ *
+ * @return		created object
+ */
+kernel_ipsec_t *mock_ipsec_create();
+
+#endif /** MOCK_IPSEC_H_ @}*/

@@ -1,9 +1,6 @@
 /*
- * Copyright (C) 2014-2016 Tobias Brunner
+ * Copyright (C) 2016 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
- *
- * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,14 +14,24 @@
  */
 
 /**
- * @defgroup libcharon-tests tests
- * @ingroup libcharon
+ * Special nonce generator that sets the first byte of the generated nonces to
+ * a fixed specified value.
  *
- * @defgroup test_utils_c test_utils
- * @ingroup libcharon-tests
+ * @defgroup mock_nonce_gen mock_nonce_gen
+ * @{ @ingroup test_utils_c
  */
 
-TEST_SUITE(proposal_suite_create)
-TEST_SUITE(ike_cfg_suite_create)
-TEST_SUITE(mem_pool_suite_create)
-TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+#ifndef MOCK_NONCE_GEN_H_
+#define MOCK_NONCE_GEN_H_
+
+#include <crypto/nonce_gen.h>
+
+/**
+ * Creates a nonce_gen_t instance.
+ *
+ * @param first		first byte to set in generated nonces
+ * @return			created object
+ */
+nonce_gen_t *mock_nonce_gen_create(u_char first);
+
+#endif /** MOCK_NONCE_GEN_H_ @} */

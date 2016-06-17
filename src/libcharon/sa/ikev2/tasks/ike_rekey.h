@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,6 +37,13 @@ struct ike_rekey_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+
+	/**
+	 * Check if there was a rekey collision.
+	 *
+	 * @return			TRUE if there was a rekey collision before
+	 */
+	bool (*did_collide)(ike_rekey_t *this);
 
 	/**
 	 * Register a rekeying task which collides with this one.

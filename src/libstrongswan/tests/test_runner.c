@@ -90,6 +90,28 @@ static void apply_filter(array_t *loaded, char *filter, bool exclude)
 }
 
 /**
+ * Check if the given string is contained in the filter string.
+ */
+static bool is_in_filter(const char *find, char *filter)
+{
+	enumerator_t *names;
+	bool found = FALSE;
+	char *name;
+
+	names = enumerator_create_token(filter, ",", " ");
+	while (names->enumerate(names, &name))
+	{
+		if (streq(name, find))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	names->destroy(names);
+	return found;
+}
+
+/**
  * Removes and destroys test suites that are not selected or
  * explicitly excluded.
  */
@@ -524,10 +546,16 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	enumerator_t *enumerator;
 	int passed = 0, result;
 	level_t level = LEVEL_SILENT;
-	char *cfg, *verbosity;
+	char *cfg, *runners, *verbosity;
 
 	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
 	dup2(2, 1);
+
+	runners = getenv("TESTS_RUNNERS");
+	if (runners && !is_in_filter(name, runners))
+	{
+		return EXIT_SUCCESS;
+	}
 
 	cfg = getenv("TESTS_STRONGSWAN_CONF");
 

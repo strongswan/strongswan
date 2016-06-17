@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,7 +18,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
-
+#include <sa/ikev2/tasks/ike_rekey.h>
 
 typedef struct private_ike_delete_t private_ike_delete_t;
 
@@ -45,11 +46,6 @@ struct private_ike_delete_t {
 	 * are we deleting a rekeyed SA?
 	 */
 	bool rekeyed;
-
-	/**
-	 * are we responding to a delete, but have initated our own?
-	 */
-	bool simultaneous;
 };
 
 METHOD(task_t, build_i, status_t,
@@ -68,7 +64,8 @@ METHOD(task_t, build_i, status_t,
 	delete_payload = delete_payload_create(PLV2_DELETE, PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
 
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
+		this->ike_sa->get_state(this->ike_sa) == IKE_REKEYED)
 	{
 		this->rekeyed = TRUE;
 	}
@@ -91,6 +88,33 @@ METHOD(task_t, process_i, status_t,
 	}
 	/* completed, delete IKE_SA by returning DESTROY_ME */
 	return DESTROY_ME;
+}
+
+/**
+ * Check if this delete happened after a rekey collsion
+ */
+static bool after_rekey_collision(private_ike_delete_t *this)
+{
+	enumerator_t *tasks;
+	task_t *task;
+
+	tasks = this->ike_sa->create_task_enumerator(this->ike_sa,
+												 TASK_QUEUE_ACTIVE);
+	while (tasks->enumerate(tasks, &task))
+	{
+		if (task->get_type(task) == TASK_IKE_REKEY)
+		{
+			ike_rekey_t *rekey = (ike_rekey_t*)task;
+
+			if (rekey->did_collide(rekey))
+			{
+				tasks->destroy(tasks);
+				return TRUE;
+			}
+		}
+	}
+	tasks->destroy(tasks);
+	return FALSE;
 }
 
 METHOD(task_t, process_r, status_t,
@@ -119,15 +143,23 @@ METHOD(task_t, process_r, status_t,
 
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
+		case IKE_REKEYING:
+			/* if the peer concurrently deleted the IKE_SA we treat this as
+			 * regular delete.  however, in case the peer did not detect a rekey
+			 * collision it will delete the replaced IKE_SA if we are still in
+			 * state IKE_REKEYING */
+			if (after_rekey_collision(this))
+			{
+				this->rekeyed = TRUE;
+				break;
+			}
+			/* fall-through */
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
 			return NEED_MORE;
-		case IKE_REKEYING:
+		case IKE_REKEYED:
 			this->rekeyed = TRUE;
-			break;
-		case IKE_DELETING:
-			this->simultaneous = TRUE;
 			break;
 		default:
 			break;
@@ -141,11 +173,6 @@ METHOD(task_t, build_r, status_t,
 {
 	DBG0(DBG_IKE, "IKE_SA deleted");
 
-	if (this->simultaneous)
-	{
-		/* wait for peer's response for our delete request */
-		return SUCCESS;
-	}
 	if (!this->rekeyed)
 	{	/* invoke ike_down() hook if SA has not been rekeyed */
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
@@ -164,7 +191,6 @@ METHOD(task_t, migrate, void,
 	private_ike_delete_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
-	this->simultaneous = FALSE;
 }
 
 METHOD(task_t, destroy, void,

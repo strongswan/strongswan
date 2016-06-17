@@ -347,6 +347,10 @@ METHOD(crypto_factory_t, create_nonce_gen, nonce_gen_t*,
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		nonce_gen = entry->create_nonce_gen();
+		if (nonce_gen)
+		{
+			break;
+		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);

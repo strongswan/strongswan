@@ -1415,7 +1415,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 		{
 			continue;
 		}
-		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING)
+		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING ||
+			entry->ike_sa->get_state(entry->ike_sa) == IKE_REKEYED)
 		{	/* skip IKE_SAs which are not usable, wake other waiting threads */
 			entry->condvar->signal(entry->condvar);
 			continue;
@@ -2188,7 +2189,7 @@ METHOD(ike_sa_manager_t, flush, void,
 	unlock_all_segments(this);
 
 	this->spi_lock->write_lock(this->spi_lock);
-	this->rng->destroy(this->rng);
+	DESTROY_IF(this->rng);
 	this->rng = NULL;
 	this->spi_cb.cb = NULL;
 	this->spi_cb.data = NULL;
