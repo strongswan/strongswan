@@ -17,11 +17,6 @@
       xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/menu_manage_certs"
-        android:title="@string/trusted_certs_title"
-        app:showAsAction="withText" />
-
-    <item
         android:id="@+id/menu_show_log"
         android:title="@string/show_log"
         app:showAsAction="withText" />

@@ -178,11 +178,13 @@
             android:id="@+id/show_advanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:text="@string/profile_show_advanced_label" />
 
         <LinearLayout
             android:id="@+id/advanced_settings"
             android:layout_width="match_parent"
+            android:visibility="gone"
             android:layout_height="wrap_content"
             android:orientation="vertical" >
 
