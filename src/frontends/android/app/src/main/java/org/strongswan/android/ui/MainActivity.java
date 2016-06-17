@@ -145,10 +145,6 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	{
 		switch (item.getItemId())
 		{
-			case R.id.menu_manage_certs:
-				Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
-				startActivity(certIntent);
-				return true;
 			case R.id.menu_show_log:
 				Intent logIntent = new Intent(this, LogActivity.class);
 				startActivity(logIntent);
