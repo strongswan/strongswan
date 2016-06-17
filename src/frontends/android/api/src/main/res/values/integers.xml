@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright © 2015 FancyFon Software Ltd.
+All rights reserved.
+
+-->
+<resources>    
+    <integer name="vpn_profile_create_message">1</integer>
+    <integer name="vpn_profile_read_message">2</integer>
+    <integer name="vpn_profile_read_all_message">3</integer>
+    <integer name="vpn_profile_update_message">4</integer>
+    <integer name="vpn_profile_delete_message">5</integer>
+    <integer name="vpn_profile_delete_all_message">6</integer>
+    <integer name="vpn_profile_delete_profile_certificate_message">7</integer>
+    <integer name="vpn_profile_read_by_name_message">8</integer>
+</resources>
