@@ -140,12 +140,12 @@ public class VpnProfileDataSource
 				updateColumns(db);
 			}
 			if (oldVersion < 5)
-			{
+			{   fancyfonDatabaseUpdateVersion5(db);
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_MTU +
 						" INTEGER;");
 			}
 			if (oldVersion < 6)
-			{	fancyfonDatabaseUpdates(oldVersion,db);
+			{	fancyfonDatabaseUpdateVersion6(db);
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_PORT +
 						" INTEGER;");
 			}
@@ -163,18 +163,16 @@ public class VpnProfileDataSource
 			}
 		}
 
-		private void fancyfonDatabaseUpdates(int oldVersion,SQLiteDatabase db){
-			if (oldVersion < 5)
-			{
-				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ALLOWED_APPLICATIONS +
-						" TEXT;");
-			}
-			if (oldVersion < 6)
-			{
-				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_CERTIFICATE_ID +
-						" TEXT;");
-			}
-		}
+
+        private void fancyfonDatabaseUpdateVersion5(SQLiteDatabase db){
+                db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ALLOWED_APPLICATIONS +
+                        " TEXT;");
+        }
+
+        private void fancyfonDatabaseUpdateVersion6(SQLiteDatabase db){
+                db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_CERTIFICATE_ID +
+                        " TEXT;");
+        }
 
 		private void updateColumns(SQLiteDatabase db)
 		{
