@@ -743,8 +743,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				continue;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
-				if (task->get_type(task) == TASK_QUICK_MODE ||
-					task->get_type(task) == TASK_AGGRESSIVE_MODE)
+				if (task->get_type(task) == TASK_QUICK_MODE)
 				{	/* we rely on initiator retransmission, except for
 					 * three-message exchanges */
 					expect_request = TRUE;
