@@ -1,1 +1,5 @@
 /build
+/.idea
+/gen
+/gen-external-apklibs
+/*.iml
