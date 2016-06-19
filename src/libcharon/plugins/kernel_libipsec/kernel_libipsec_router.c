@@ -44,6 +44,13 @@ typedef struct {
 	tun_device_t *tun;
 } tun_entry_t;
 
+#ifdef WIN32
+typedef struct {
+    HANDLE fileHandle;
+    OVERLAPPED overlapped;
+    chunk_t buffer;
+} handle_overlapped_buffer_t;
+#endif
 /**
  * Single instance of the router
  */
@@ -65,7 +72,7 @@ struct private_kernel_libipsec_router_t {
 	 */
 	tun_entry_t tun;
 
-	/**
+        /**
 	 * Hashtable that maps virtual IPs to TUN devices (tun_entry_t).
 	 */
 	hashtable_t *tuns;
@@ -75,7 +82,10 @@ struct private_kernel_libipsec_router_t {
 	 */
 	rwlock_t *lock;
 #ifdef WIN32
-        HANDLE notify[2];
+        /**
+         * Event we use to signal handle_plain() about changes regarding tun devices
+         */
+        HANDLE event;
 #else
 	/**
 	 * Pipe to signal handle_plain() about changes regarding TUN devices
@@ -139,6 +149,7 @@ static void deliver_plain(private_kernel_libipsec_router_t *this,
 /**
  * Read and process outbound plaintext packet for the given TUN device
  */
+#if !defined(WIN32)
 static void process_plain(tun_device_t *tun)
 {
 	chunk_t raw;
@@ -175,6 +186,7 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 	}
 	return 0;
 }
+#endif /* WIN32 */
 
 /**
  * Job handling outbound plaintext packets
@@ -182,10 +194,192 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 {
 #ifdef WIN32
-        tun_entry_t *entry;
-        bool oldstate;
+
+        void **key;
+        bool oldstate, status;
+        uint32_t length, event_status = 0, i = 0, j = 0;
+
+        tun_device_t *tun_device;
+        handle_overlapped_buffer_t bundle_array[length+2];
+        HANDLE event_array[length+2];
+        enumerator_t *tuns_enumerator;
+
+        this->lock->read_lock(this->lock);
+
+        length = this->tuns->get_count(this->tuns);
+
+        /* Allocate variable number of objects on thread. Valid in some implementations? */
+        OVERLAPPED overlapped[length];
+
+        HANDLE tun_device_event = OpenEvent(SYNCHRONIZE|EVENT_MODIFY_STATE, FALSE, "WIN32-libipsec-tun0");
+        handle_overlapped_buffer_t dummy, tun_device_handle_overlapped_buffer, structures[length];
+
+        /* These are the arrays we're going to work with */
+
+        tuns_enumerator = this->tuns->create_enumerator(this->tuns);
+        /* first position is the event we use for synchronisation  */
+        /* second position is this->tun */
+
+        event_array[i] = this->event;
+        bundle_array[i] = dummy;
+        /* insert event object for this->tun device */
+        i++;
+
+        event_array[i] = tun_device_event;
 
 
+        /* dummy object for the notification handle */
+
+        tun_device_handle_overlapped_buffer.buffer = chunk_alloca(tun_device->get_mtu(tun_device));
+        tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
+        tun_device_handle_overlapped_buffer.overlapped = overlapped[0];
+        memset(&tun_device_handle_overlapped_buffer.overlapped, 0, sizeof(OVERLAPPED));
+
+        bundle_array[i] = tun_device_handle_overlapped_buffer;
+
+        i++;
+
+        /* Start ReadFile for this->tun.handle and this->event */
+        /* pad bundle_array with two empty structures */
+        /* iterate over all our tun devices, create event handles, reset them, queue read operations on all handles */
+
+        while(tuns_enumerator->enumerate(tuns_enumerator, key, &tun_device))
+        {
+            char name[80];
+
+            /* Allocate structure and buffer */
+
+            structures[j].buffer = chunk_alloca(tun_device->get_mtu(tun_device));
+
+            structures[j].fileHandle = tun_device->get_handle(tun_device);
+            /* Allocate and initialise OVERLAPPED structure */
+            structures[j].overlapped = overlapped[j];
+            memset(&structures[j].overlapped, 0, sizeof(OVERLAPPED));
+            /* Create unique name for that event. */
+            snprintf(name, 80, "WIN32-libipsec-device-%d", i);
+            /* Create unique event for read accesses on that device
+             * No security attributes, no manual reset, initial state is unsignaled,
+             * name is the special name we created
+             */
+            structures[j].overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, name);
+            event_array[i] = structures[j].overlapped.hEvent;
+            bundle_array[i] = structures[j];
+            i++;
+
+            /* Initialise read with the allocate overwrite structure */
+            status = ReadFile(structures[j].fileHandle, structures[j].buffer.ptr,
+                    structures[j].buffer.len, NULL, &structures[j].overlapped);
+            if (status)
+            {
+                /* All fine */
+                continue;
+            }
+            else
+            {
+                DWORD error = GetLastError();
+                switch(error)
+                {
+                    case ERROR_IO_PENDING:
+                        /* IO enqueud. Everything's fine. */
+                        break;
+                    case ERROR_INVALID_USER_BUFFER:
+                    case ERROR_NOT_ENOUGH_MEMORY:
+                        /* too many outstanding I/O requests
+                         * We can't fix that and need to stop the process
+                         */
+                        break;
+                    case ERROR_NOT_ENOUGH_QUOTA:
+                        /* unable to page lock calling process's buffer */
+                        break;
+                    default:
+                        /* Some error we don't know */
+                        break;
+                }
+            }
+            j++;
+        }
+        tuns_enumerator->destroy(tuns_enumerator);
+
+        this->lock->unlock(this->lock);
+
+        while(TRUE)
+        {
+            /* Wait for a handle to be signaled */
+            /* In the mingw64 sources, MAXIMUM_WAIT_OBJECTS is defined as 64. That means we can wait for a maximum of 64 event handles.
+             * This translates to 63 tun devices. I think this is sufficiently high to not have to implement a mechanism for waiting for more
+             * events /support more TUN devices */
+            oldstate = thread_cancelability(FALSE);
+            event_status = WaitForMultipleObjects(i, event_array, FALSE, INFINITE);
+            thread_cancelability(oldstate);
+            /* A handle was signaled. Find the tun handle whose read was successful */
+
+            /* We can only use the event_status of indication for the first completed IO operation.
+             * After the event was signaled, we need to test the OVERLAPPED structure in the other array
+             * to find out what event was signaled.
+             */
+
+            if ((WAIT_OBJECT_0 < event_status) < ((WAIT_OBJECT_0 + length - 1)))
+            {
+                /* the event at event_array[event_status - WAIT_OBJECT_0] has been signaled */
+                /* It is possible that more than one event was signalled. In that case, (event_status - WAIT_OBJECT_0)
+                 * is the index with the lowest event that was signalled. More signalled events can be found higher
+                 */
+                DWORD offset = event_status - WAIT_OBJECT_0;
+                if (offset == 0)
+                {
+                    /* Notification about changes regarding the tun devices.
+                     * We need to rebuild the array. So exit and rebuild. */
+
+                    /* Cleanup*/
+                    for(uint32_t k=0;k<i;k++)
+                    {
+                        /* stop all asynchronous IO */
+                        CancelIo(bundle_array[k].fileHandle);
+
+                        ResetEvent(event_array[k]);
+                    }
+                    /* exit */
+                    return JOB_REQUEUE_FAIR;
+                }
+                for(uint32_t k=1;k<i; k++)
+                {
+                    /* Is the object signaled? */
+                    if (WaitForSingleObject(event_array[k], 0) == WAIT_OBJECT_0)
+                    {
+                        /* The arrays have the same length and the same positioning of the elements.
+                         * Therefore, if event_array[k] is signaled, the read on bundle_array[i].fileHandle has succeeded
+                         * and bundle_array[k].buffer has our data now. */
+
+                        /* Do we need to copy the chunk before we enqueue it? */
+                        ip_packet_t *packet;
+
+                        packet = ip_packet_create(bundle_array[k].buffer);
+                        if (packet)
+                        {
+                                ipsec->processor->queue_outbound(ipsec->processor, packet);
+                        }
+                        else
+                        {
+                                DBG1(DBG_KNL, "invalid IP packet read from TUN device");
+                        }
+                        /* Reset the overlapped structure, event and buffer */
+                        memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
+                        bundle_array[k].overlapped.hEvent = event_array[k];
+                        ResetEvent(event_array[k]);
+
+                    }
+                }
+
+            }
+            /* Function failed */
+            else
+            {
+                DBG1(DBG_LIB, "waiting for events on the tun device reads failed.");
+                /* cleanup, exit, retry */
+            }
+        }
+
+        return JOB_REQUEUE_DIRECT;
 #else
 	enumerator_t *enumerator;
 	tun_entry_t *entry;
@@ -280,8 +474,13 @@ METHOD(kernel_listener_t, tun, bool,
 		entry = this->tuns->remove(this->tuns, &lookup);
 		free(entry);
 	}
+
+#ifdef WIN32
+        SetEvent(this->event);
+#else
 	/* notify handler thread to recreate FD set */
 	ignore_result(write(this->notify[1], buf, sizeof(buf)));
+#endif
 	this->lock->unlock(this->lock);
 	return TRUE;
 }
@@ -319,8 +518,15 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 	charon->kernel->remove_listener(charon->kernel, &this->public.listener);
 	this->lock->destroy(this->lock);
 	this->tuns->destroy(this->tuns);
+#ifdef WIN32
+        CloseHandle(this->tun.handle);
+        CloseHandle(this->event);
+        /* Remove all other handles we might have */
+        /* TODO: Create enumerator, enumerate over tuns, close all those handles */
+#else
 	close(this->notify[0]);
 	close(this->notify[1]);
+#endif
 	router = NULL;
 	free(this);
 }
@@ -356,42 +562,7 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 	);
 #ifdef WIN32
 	this->tun.handle = this->tun.tun->get_handle(this->tun.tun);
-
-        HANDLE inputPipe = NULL, outputPipe = NULL;
-        /* create named pipe. We need to use named pipes, because IoControlPorts don't work with anonymous pipes. Sorry.  */
-        /*              lpName, dwOpenMode, dwPipeMode  */
-        inputPipe = CreateNamedPipe("\\\\.\\pipe\\charon-svc-libipsec-notify", PIPE_ACCESS_INBOUND & FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE & PIPE_REJECT_REMOTE_CLIENTS,
-                        /*nMaxInstances, nOutBufferSize, nInBufferSize, nDefaultTimeout, lpSecurityAttributes  */
-                        1, 512, 512, 0, NULL);
-        outputPipe = CreateNamedPipe("\\\\.\\pipe\\charon-svc-libipsec-notify", PIPE_ACCESS_INBOUND & FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE & PIPE_REJECT_REMOTE_CLIENTS,
-                        /*nMaxInstances, nOutBufferSize, nInBufferSize, nDefaultTimeout, lpSecurityAttributes  */
-                        1, 512, 512, 0, NULL);
-
-        if (inputPipe == INVALID_HANDLE_VALUE || outputPipe == INVALID_HANDLE_VALUE)
-        {
-            char *errorString = NULL;
-            /* Construct the language identifier for english first, before we can print a message. */
-            /* 0x09 is LANG_ENGLISH, 0x01 is SUBLANG_ENGLISH_US */
-
-            FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL, 0, MAKELANGID(0x09, 0x01), errorString, 0, NULL);
-            DBG0(DBG_LIB, "an error occured while trying to open a named pipe in libipsec.\n%s", errorString);
-            LocalFree(errorString);
-            /* Close the pipe(s) whose creation did not error. */
-            if (inputPipe != INVALID_HANDLE_VALUE)
-            {
-                CloseHandle(inputPipe);
-            }
-            if (outputPipe != INVALID_HANDLE_VALUE)
-            {
-                CloseHandle(outputPipe);
-            }
-            return NULL;
-        }
-        this->notify[0] = inputPipe;
-        this->notify[1] = outputPipe;
-
-
+        this->event = CreateEvent(NULL, FALSE, FALSE, "WIN32-libipsec-tun0");
 #else
 	if (pipe(this->notify) != 0 ||
 		!set_nonblock(this->notify[0]) || !set_nonblock(this->notify[1]))
