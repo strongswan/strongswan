@@ -365,6 +365,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         }
                         /* Reset the overlapped structure, event and buffer */
                         memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
+                        /* Don't leak packets */
+                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                        
                         bundle_array[k].overlapped.hEvent = event_array[k];
                         ResetEvent(event_array[k]);
 
