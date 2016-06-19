@@ -39,6 +39,7 @@
  */
 
 #include "tun_device.h"
+#include "threading/rwlock.h"
 
 #include <utils/debug.h>
 #include <threading/thread.h>
@@ -103,6 +104,14 @@ struct private_tun_device_t {
          * The TUN device's file handle
          */
         HANDLE *tunhandle;
+        /**
+         * a linked list to keep packets and overlapped structures in
+         */
+        linked_list_t *overlapped_list;
+	/**
+	 * Lock for the overlapped_list structure.
+	 */
+	rwlock_t *lock;
         /**
          * Name of the TUN device
          */
@@ -512,19 +521,108 @@ METHOD(tun_device_t, get_name, char*,
 {
 	return this->if_name;
 }
+
 #ifdef WIN32
 METHOD(tun_device_t, get_handle, HANDLE,
         private_tun_device_t *this)
 {
         return this->tunhandle;
 }
+
+METHOD(tun_device_t, write_packet, bool,
+	private_tun_device_t *this, chunk_t packet)
+{
+        bool status;
+        OVERLAPPED overlapped;
+        char name[80];
+        HANDLE write_event;
+
+        snprintf(name, 80, "tun-%s-read", this->if_name);
+        write_event = CreateEvent(NULL, FALSE, FALSE, name);
+
+        memset(&overlapped, 0, sizeof(OVERLAPPED));
+
+        overlapped.hEvent = write_event;
+        /* We need to clone the packet here, because we don't know if the write will
+         * finish before we exit the function. The caller function destroys the packet,
+         * thereby freeing the memory area that the packet contains. For overlapped IO,
+         * we need to keep it around though, until the write is finished.
+         * This is indicated by the system. It will trigger the CompletionPort in the handle_plain method in kernel_libipsec_router.c.
+         * In that method, we catch the event and free the packet and memory.
+         */
+
+        status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
+            packet.len, NULL, &overlapped);
+        if (!status)
+        {
+            DWORD error = GetLastError();
+            switch(error)
+            {
+                case ERROR_IO_PENDING:
+                    /* all fine */
+                    break;
+                case ERROR_INVALID_USER_BUFFER:
+                case ERROR_NOT_ENOUGH_MEMORY:
+                    DBG1(DBG_LIB, "failed to write packet to TUN device %s: %u",
+			 this->if_name, (uint32_t) GetLastError());
+                    return FALSE;
+                    break;
+                case ERROR_OPERATION_ABORTED:
+                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the IO operation was aborted.");
+                    return FALSE;
+                    break;
+                case ERROR_NOT_ENOUGH_QUOTA:
+                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the process's buffer could not be page locked.");
+                    return FALSE;
+                    break;
+            }
+        }
+        WaitForSingleObject(write_event, INFINITE);
+        return TRUE;
+}
+
+METHOD(tun_device_t, read_packet, bool,
+	private_tun_device_t *this, chunk_t *packet)
+{
+	chunk_t data;
+	bool old;
+        OVERLAPPED overlapped;
+        char name[80];
+
+        snprintf(name, 80, "tun-%s-read", this->if_name);
+        HANDLE event_handle = CreateEvent(NULL, FALSE, FALSE, name);
+        memset(&overlapped, 0, sizeof(OVERLAPPED));
+	data = chunk_alloca(get_mtu(this));
+
+	old = thread_cancelability(TRUE);
+
+        bool status;
+        DWORD size;
+        /* Read chunk from handle */
+        status = ReadFile(*(this->tunhandle), (LPVOID) &data.ptr,
+            (DWORD) data.len, &size, &overlapped);
+	thread_cancelability(old);
+        if (!status)
+        {
+                /* TODO: Convert DWORD (GetLastError()) to human readable error string */
+                DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
+                   (uint32_t) GetLastError());
+                return FALSE;
+
+        }
+	*packet = chunk_clone(data);
+        CloseHandle(event_handle);
+        return TRUE;
+}
+
 #else
+
 METHOD(tun_device_t, get_fd, int,
 	private_tun_device_t *this)
 {
 	return this->tunfd;
 }
-#endif /* WIN32 */
+
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
@@ -533,25 +631,7 @@ METHOD(tun_device_t, write_packet, bool,
 	 * instead of parsing the packet again, we assume IPv4 for now */
 	uint32_t proto = htonl(AF_INET);
 	packet = chunk_cata("cc", chunk_from_thing(proto), packet);
-#elif defined(WIN32)
-        bool status;
-        DWORD size;
-        status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
-            packet.len, (LPDWORD) &size, NULL);
-        if (!status)
-        {
-		DBG1(DBG_LIB, "failed to write packet to TUN device %s: %u",
-			 this->if_name, (uint32_t) GetLastError());
-                /*
-                 * TODO: Translate integer to human readable string
-                 */
-		return FALSE;
-        }
-        if (size != packet.len)
-        {
-                return FALSE;
-        }
-#else
+#endif /* __APPLE__ */
         ssize_t s;
 	s = write(this->tunfd, packet.ptr, packet.len);
 	if (s < 0)
@@ -564,7 +644,7 @@ METHOD(tun_device_t, write_packet, bool,
 	{
 		return FALSE;
 	}
-#endif /* __APPLE__ or WIN32 */
+
 	return TRUE;
 }
 
@@ -577,22 +657,6 @@ METHOD(tun_device_t, read_packet, bool,
 	data = chunk_alloca(get_mtu(this));
 
 	old = thread_cancelability(TRUE);
-#ifdef WIN32
-        bool status;
-        DWORD size;
-        /* Read chunk from handle */
-        status = ReadFile(*(this->tunhandle), (LPVOID) &data.ptr,
-            (DWORD) data.len, &size, NULL);
-	thread_cancelability(old);
-        if (!status)
-        {
-                /* TODO: Convert DWORD (GetLastError()) to human readable error string */
-                DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
-                   (uint32_t) GetLastError());
-                return FALSE;
-
-        }
-#else
 	ssize_t len;
 	len = read(this->tunfd, data.ptr, data.len);
 	thread_cancelability(old);
@@ -603,7 +667,7 @@ METHOD(tun_device_t, read_packet, bool,
 		return FALSE;
 	}
 	data.len = len;
-#endif /* WIN32 */
+
 #ifdef __APPLE__
 	/* UTUN's prepend packets with a 32-bit protocol number */
 	data = chunk_skip(data, sizeof(uint32_t));
@@ -611,6 +675,7 @@ METHOD(tun_device_t, read_packet, bool,
 	*packet = chunk_clone(data);
 	return TRUE;
 }
+#endif /* WIN32 */
 
 METHOD(tun_device_t, destroy, void,
 	private_tun_device_t *this)
@@ -638,6 +703,8 @@ METHOD(tun_device_t, destroy, void,
 #endif
 	}
 #endif
+        /* destroy the linked lists */
+        this->overlapped_list->destroy(this->overlapped_list);
 	if (this->sock > 0)
 	{
 		close(this->sock);
@@ -881,6 +948,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		},
 #ifdef WIN32
                 .tunhandle = NULL,
+                .overlapped_list = linked_list_create(),
 #else
 		.tunfd = -1,
 #endif
