@@ -195,18 +195,19 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 {
 #ifdef WIN32
 
-        void **key;
+        void **key = NULL;
         bool oldstate, status;
         uint32_t length, event_status = 0, i = 0, j = 0;
 
         tun_device_t *tun_device;
+
+        length = this->tuns->get_count(this->tuns);
+
         handle_overlapped_buffer_t bundle_array[length+2];
         HANDLE event_array[length+2];
         enumerator_t *tuns_enumerator;
 
         this->lock->read_lock(this->lock);
-
-        length = this->tuns->get_count(this->tuns);
 
         /* Allocate variable number of objects on thread. Valid in some implementations? */
         OVERLAPPED overlapped[length];
@@ -452,7 +453,9 @@ METHOD(kernel_listener_t, tun, bool,
 	private_kernel_libipsec_router_t *this, tun_device_t *tun, bool created)
 {
 	tun_entry_t *entry, lookup;
+#if !defined(WIN32)
 	char buf[] = {0x01};
+#endif
 
 	this->lock->write_lock(this->lock);
 	if (created)
