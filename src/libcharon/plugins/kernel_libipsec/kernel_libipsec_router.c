@@ -201,6 +201,8 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
         tun_device_t *tun_device;
 
+        /* Reset synchronisation event */
+        ResetEvent(this->event);
         length = this->tuns->get_count(this->tuns);
 
         handle_overlapped_buffer_t bundle_array[length+2];
@@ -367,7 +369,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
                         /* Don't leak packets */
                         memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
-                        
+
                         bundle_array[k].overlapped.hEvent = event_array[k];
                         ResetEvent(event_array[k]);
 
