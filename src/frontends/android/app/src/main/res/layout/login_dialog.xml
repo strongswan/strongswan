@@ -26,13 +26,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" >
 
-        <android.support.design.widget.TextInputEditText
+<!--        <android.support.design.widget.TextInputEditText
             android:id="@+id/username"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:enabled="false"
             android:inputType="none"
-            android:hint="@string/login_username" />
+            android:hint="@string/login_username" />-->
 
     </android.support.design.widget.TextInputLayout>
 
