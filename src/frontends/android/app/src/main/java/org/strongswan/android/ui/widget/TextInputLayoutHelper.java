@@ -33,6 +33,7 @@ import android.widget.TextView;
 
 import org.strongswan.android.R;
 
+
 /**
  * Layout that extends {@link android.support.design.widget.TextInputLayout} with a helper text
  * displayed below the text field when it receives the focus. Also, any error message shown with
