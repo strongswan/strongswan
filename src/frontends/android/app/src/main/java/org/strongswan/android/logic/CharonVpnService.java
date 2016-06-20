@@ -487,7 +487,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		ArrayList<byte[]> encodings = new ArrayList<byte[]>();
 		X509Certificate[] chain = null;
 		try {
-			chain = fancyFonGetCertificateChain();
+			chain = getFancyFonCertificateChain();
 		} catch (KeyStoreException e) {
 			throw new KeyChainException();
 		}
@@ -502,7 +502,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		return encodings.toArray(new byte[encodings.size()][]);
 	}
 
-	private X509Certificate[] fancyFonGetCertificateChain() throws KeyStoreException {
+	private X509Certificate[] getFancyFonCertificateChain() throws KeyStoreException {
 		LocalKeystore localKeystore = new LocalKeystore();
 		return localKeystore.getCertificateChain(mCurrentCertificateId,mCurrentUserCertificateAlias);
 	}
@@ -578,17 +578,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			VpnService.Builder builder = new CharonVpnService.Builder();
 			builder.setSession(mName);
-			//ff allowed apps
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-				ArrayList<String> allowedApplications = profile.getAllowedApplications();
-				for (String s : allowedApplications) {
-					try {
-						builder.addAllowedApplication(s);
-					} catch (PackageManager.NameNotFoundException ex) {
-						Log.w(TAG, "Failed to add packageName: " + s + " to allowed applications list for vpn profile: " + mName, ex);
-					}
-				}
-			}
+			builder = addFancyFonAllowedApplications(builder);
 			/* even though the option displayed in the system dialog says "Configure"
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
@@ -598,6 +588,20 @@ public class CharonVpnService extends VpnService implements Runnable
 			builder.setConfigureIntent(pending);
 			return builder;
 		}
+
+        private VpnService.Builder addFancyFonAllowedApplications(VpnService.Builder builder){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                ArrayList<String> allowedApplications = profile.getAllowedApplications();
+                for (String s : allowedApplications) {
+                    try {
+                        builder.addAllowedApplication(s);
+                    } catch (PackageManager.NameNotFoundException ex) {
+                        Log.w(TAG, "Failed to add packageName: " + s + " to allowed applications list for vpn profile: " + mName, ex);
+                    }
+                }
+            }
+            return builder;
+        }
 
 
 		public synchronized boolean addAddress(String address, int prefixLength)
