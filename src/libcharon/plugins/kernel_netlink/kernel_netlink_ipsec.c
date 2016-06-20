@@ -1639,6 +1639,31 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 data->replay_window);
 			sa->replay_window = data->replay_window;
 		}
+		if (data->hw_offload)
+		{
+			host_t *local = data->inbound ? id->dst : id->src;
+			char *ifname;
+
+			if (charon->kernel->get_interface(charon->kernel, local, &ifname))
+			{
+				struct xfrm_user_offload *offload;
+
+				offload = netlink_reserve(hdr, sizeof(request),
+										  XFRMA_OFFLOAD_DEV, sizeof(*offload));
+				if (!offload)
+				{
+					free(ifname);
+					goto failed;
+				}
+				offload->ifindex = if_nametoindex(ifname);
+				if (local->get_family(local) == AF_INET6)
+				{
+					offload->flags |= XFRM_OFFLOAD_IPV6;
+				}
+				offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
+				free(ifname);
+			}
+		}
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
