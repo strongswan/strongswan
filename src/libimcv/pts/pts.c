@@ -622,14 +622,13 @@ METHOD(pts_t, extend_pcr, bool,
 	return TRUE;
 }
 
-METHOD(pts_t, quote_tpm, bool,
-	private_pts_t *this, bool use_quote2, bool use_version_info,
-	chunk_t *pcr_comp, chunk_t *quote_sig)
+METHOD(pts_t, quote, bool,
+	private_pts_t *this, tpm_quote_mode_t *quote_mode,
+	tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig)
 {
-	chunk_t pcr_value;
+	chunk_t pcr_value, pcr_computed;
 	uint32_t pcr, pcr_sel = 0;
 	enumerator_t *enumerator;
-	tpm_quote_mode_t quote_mode;
 
 	/* select PCRs */
 	DBG2(DBG_PTS, "PCR values hashed into PCR Composite:");
@@ -638,7 +637,9 @@ METHOD(pts_t, quote_tpm, bool,
 	{
 		if (this->tpm->read_pcr(this->tpm, pcr, &pcr_value, HASH_SHA1))
 		{
-			DBG2(DBG_PTS, "PCR %2d %#B", pcr, &pcr_value);
+			pcr_computed = this->pcrs->get(this->pcrs, pcr);
+			DBG2(DBG_PTS, "PCR %2d %#B  %s", pcr, &pcr_value,
+				 chunk_equals(pcr_value, pcr_computed) ? "ok" : "differs");
 			chunk_free(&pcr_value);
 		};
 
@@ -647,36 +648,16 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 	enumerator->destroy(enumerator);
 
-	quote_mode = use_quote2 ? (use_version_info ? TPM_QUOTE2_VERSION_INFO :
-												  TPM_QUOTE2) : TPM_QUOTE;
-
 	/* TPM Quote */
 	return this->tpm->quote(this->tpm, this->aik_handle, pcr_sel, HASH_SHA1,
-							this->secret, quote_mode, pcr_comp, quote_sig);
+							this->secret, quote_mode, quote_info, quote_sig);
 }
 
-/**
- * TPM_QUOTE_INFO structure:
- *	4 bytes of version
- *	4 bytes 'Q' 'U' 'O' 'T'
- *	20 byte SHA1 of TCPA_PCR_COMPOSITE
- *	20 byte nonce
- *
- * TPM_QUOTE_INFO2 structure:
- * 2 bytes Tag 0x0036 TPM_Tag_Quote_info2
- * 4 bytes 'Q' 'U' 'T' '2'
- * 20 bytes nonce
- * 26 bytes PCR_INFO_SHORT
- */
-
-METHOD(pts_t, get_quote_info, bool,
-	private_pts_t *this, bool use_quote2, bool use_version_info,
-	pts_meas_algorithms_t comp_hash_algo,
-	chunk_t *out_pcr_comp, chunk_t *out_quote_info)
+METHOD(pts_t, get_quote, bool,
+	private_pts_t *this, tpm_tss_quote_info_t *quote_info, chunk_t *quoted)
 {
-	chunk_t selection, pcr_comp, hash_pcr_comp;
-	bio_writer_t *writer;
-	hasher_t *hasher;
+	tpm_tss_pcr_composite_t *pcr_composite;
+	bool success;
 
 	if (!this->pcrs->get_count(this->pcrs))
 	{
@@ -690,111 +671,33 @@ METHOD(pts_t, get_quote_info, bool,
 					  "unable to construct TPM Quote Info");
 		return FALSE;
 	}
-	if (use_quote2 && use_version_info && !this->tpm_version_info.ptr)
+	if (quote_info->get_quote_mode(quote_info) == TPM_QUOTE2_VERSION_INFO)
 	{
-		DBG1(DBG_PTS, "TPM Version Information unavailable, ",
-					  "unable to construct TPM Quote Info2");
-		return FALSE;
-	}
-
-	pcr_comp = this->pcrs->get_composite(this->pcrs);
-
-
-	/* Output the TPM_PCR_COMPOSITE expected from IMC */
-	if (comp_hash_algo)
-	{
-		hash_algorithm_t algo;
-
-		algo = pts_meas_algo_to_hash(comp_hash_algo);
-		hasher = lib->crypto->create_hasher(lib->crypto, algo);
-
-		/* Hash the PCR Composite Structure */
-		if (!hasher || !hasher->allocate_hash(hasher, pcr_comp, out_pcr_comp))
+		if (!this->tpm_version_info.ptr)
 		{
-			DESTROY_IF(hasher);
-			free(pcr_comp.ptr);
+			DBG1(DBG_PTS, "TPM Version Information unavailable, ",
+						  "unable to construct TPM Quote Info2");
 			return FALSE;
 		}
-		DBG3(DBG_PTS, "constructed PCR Composite hash: %#B", out_pcr_comp);
-		hasher->destroy(hasher);
+		quote_info->set_version_info(quote_info, this->tpm_version_info);
 	}
-	else
-	{
-		*out_pcr_comp = chunk_clone(pcr_comp);
-	}
+	pcr_composite = this->pcrs->get_composite(this->pcrs);
 
-	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher || !hasher->allocate_hash(hasher, pcr_comp, &hash_pcr_comp))
-	{
-		DESTROY_IF(hasher);
-		chunk_free(out_pcr_comp);
-		free(pcr_comp.ptr);
-		return FALSE;
-	}
-	hasher->destroy(hasher);
+	success = quote_info->get_quote(quote_info, this->secret,
+									pcr_composite, quoted);
+	chunk_free(&pcr_composite->pcr_select);
+	chunk_free(&pcr_composite->pcr_composite);
+	free(pcr_composite);
 
-	/* Construct TPM_QUOTE_INFO/TPM_QUOTE_INFO2 structure */
-	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
-
-	if (use_quote2)
-	{
-		/* TPM Structure Tag */
-		writer->write_uint16(writer, TPM_TAG_QUOTE_INFO2);
-
-		/* Magic QUT2 value */
-		writer->write_data(writer, chunk_create("QUT2", 4));
-
-		/* Secret assessment value 20 bytes (nonce) */
-		writer->write_data(writer, this->secret);
-
-		/* PCR selection */
-		selection.ptr = pcr_comp.ptr;
-		selection.len = 2 + this->pcrs->get_selection_size(this->pcrs);
-		writer->write_data(writer, selection);
-
-		/* TPM Locality Selection */
-		writer->write_uint8(writer, TPM_LOC_ZERO);
-
-		/* PCR Composite Hash */
-		writer->write_data(writer, hash_pcr_comp);
-
-		if (use_version_info)
-		{
-			/* TPM version Info */
-			writer->write_data(writer, this->tpm_version_info);
-		}
-	}
-	else
-	{
-		/* Version number */
-		writer->write_data(writer, chunk_from_chars(1, 1, 0, 0));
-
-		/* Magic QUOT value */
-		writer->write_data(writer, chunk_create("QUOT", 4));
-
-		/* PCR Composite Hash */
-		writer->write_data(writer, hash_pcr_comp);
-
-		/* Secret assessment value 20 bytes (nonce) */
-		writer->write_data(writer, this->secret);
-	}
-
-	/* TPM Quote Info */
-	*out_quote_info = writer->extract_buf(writer);
-	DBG3(DBG_PTS, "constructed TPM Quote Info: %B", out_quote_info);
-
-	writer->destroy(writer);
-	free(pcr_comp.ptr);
-	free(hash_pcr_comp.ptr);
-
-	return TRUE;
+	return success;
 }
 
 METHOD(pts_t, verify_quote_signature, bool,
-				private_pts_t *this, chunk_t data, chunk_t signature)
+	private_pts_t *this, hash_algorithm_t digest_alg, chunk_t digest,
+	chunk_t signature)
 {
 	public_key_t *aik_pubkey;
+	signature_scheme_t scheme;
 
 	aik_pubkey = this->aik_cert->get_public_key(this->aik_cert);
 	if (!aik_pubkey)
@@ -803,8 +706,51 @@ METHOD(pts_t, verify_quote_signature, bool,
 		return FALSE;
 	}
 
-	if (!aik_pubkey->verify(aik_pubkey, SIGN_RSA_EMSA_PKCS1_SHA1,
-		data, signature))
+	/* Determine signing scheme */
+	switch (aik_pubkey->get_type(aik_pubkey))
+	{
+		case KEY_RSA:
+			switch (digest_alg)
+			{
+				case HASH_SHA1:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+					break;
+				case HASH_SHA256:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
+					break;
+				case HASH_SHA384:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
+					break;
+				case HASH_SHA512:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
+					break;
+				default:
+					scheme = SIGN_UNKNOWN;
+			}
+			break;
+		case KEY_ECDSA:
+			switch (digest_alg)
+			{
+				case HASH_SHA256:
+					scheme = SIGN_ECDSA_256;
+					break;
+				case HASH_SHA384:
+					scheme = SIGN_ECDSA_384;
+					break;
+				case HASH_SHA512:
+					scheme = SIGN_ECDSA_521;
+					break;
+				default:
+					scheme = SIGN_UNKNOWN;
+			}
+			break;
+		default:
+			DBG1(DBG_PTS, "%N AIK key type not supported", key_type_names,
+						   aik_pubkey->get_type(aik_pubkey));
+			return FALSE;
+	}
+
+	if (!aik_pubkey->verify(aik_pubkey, scheme, digest, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		DESTROY_IF(aik_pubkey);
@@ -873,9 +819,9 @@ pts_t *pts_create(bool is_imc)
 			.get_metadata = _get_metadata,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
-			.quote_tpm = _quote_tpm,
+			.quote = _quote,
 			.get_pcrs = _get_pcrs,
-			.get_quote_info = _get_quote_info,
+			.get_quote = _get_quote,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,
 		},

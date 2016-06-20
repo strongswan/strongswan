@@ -21,10 +21,12 @@
 #ifndef TPM_TSS_H_
 #define TPM_TSS_H_
 
+#include "tpm_tss_quote_info.h"
+
 #include <library.h>
+#include <crypto/hashers/hasher.h>
 
 typedef enum tpm_version_t tpm_version_t;
-typedef enum tpm_quote_mode_t tpm_quote_mode_t;
 typedef struct tpm_tss_t tpm_tss_t;
 
 /**
@@ -34,15 +36,6 @@ enum tpm_version_t {
 	TPM_VERSION_ANY,
 	TPM_VERSION_1_2,
 	TPM_VERSION_2_0,
-};
-
-/**
- * TPM Quote Modes
- */
-enum tpm_quote_mode_t {
-	TPM_QUOTE,
-	TPM_QUOTE2,
-	TPM_QUOTE2_VERSION_INFO
 };
 
 /**
@@ -114,14 +107,15 @@ struct tpm_tss_t {
 	 * @param pcr_sel		selection of PCR registers
 	 * @param alg			hash algorithm to be used for quote signature
 	 * @param data			additional data to be hashed into the quote
-	 * @param mode			define current and legacy TPM quote modes
-	 * @param pcr_comp		returns hash of PCR composite
-	 * @param sig			returns quote signature
+	 * @param quote_mode	define current and legacy TPM quote modes
+	 * @param quote_info	returns various info covered by quote signature
+	 * @param quote_sig		returns quote signature
 	 * @return				TRUE if quote signature succeeded
 	 */
 	bool (*quote)(tpm_tss_t *this, uint32_t aik_handle, uint32_t pcr_sel,
-				  hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode,
-				  chunk_t *pcr_comp, chunk_t *quote_sig);
+				  hash_algorithm_t alg, chunk_t data,
+				  tpm_quote_mode_t *quote_mode,
+				  tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig);
 
 	/**
 	 * Destroy a tpm_tss_t.

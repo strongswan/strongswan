@@ -32,8 +32,9 @@ typedef struct pts_t pts_t;
 #include "pts_dh_group.h"
 #include "pts_pcr.h"
 #include "pts_req_func_comp_evid.h"
-#include "pts_simple_evid_final.h"
 #include "components/pts_comp_func_name.h"
+
+#include <tpm_tss_quote_info.h>
 
 #include <library.h>
 #include <collections/linked_list.h>
@@ -69,11 +70,6 @@ typedef struct pts_t pts_t;
  * Length of the generated nonce used for calculation of shared secret
  */
 #define ASSESSMENT_SECRET_LEN	20
-
-/**
- * Length of the TPM_QUOTE_INFO structure, TPM Spec 1.2
- */
-#define TPM_QUOTE_INFO_LEN		48
 
 /**
  * Hashing algorithm used by tboot and trustedGRUB
@@ -262,15 +258,13 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param use_quote2		Version of the Quote function to be used
-	 * @param use_version_info	Version info is concatenated to TPM_QUOTE_INFO2
-	 * @param pcr_comp			Chunk to save PCR composite structure
-	 * @param quote_sig			Chunk to save quote operation output
-	 *							without external data (anti-replay protection)
-	 * @return					FALSE in case of TSS error, TRUE otherwise
+	 * @param quote_mode	type of Quote signature
+	 * @param quote_info	returns various info covered by Quote signature
+	 * @param quote_sig		returns Quote signature
+	 * @return				FALSE in case of Quote error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, bool use_quote2, bool use_version_info,
-					   chunk_t *pcr_comp, chunk_t *quote_sig);
+	 bool (*quote)(pts_t *this, tpm_quote_mode_t *quote_mode,
+				   tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig);
 
 	/**
 	 * Get the shadow PCR set
@@ -279,28 +273,26 @@ struct pts_t {
 	 */
 	pts_pcr_t* (*get_pcrs)(pts_t *this);
 
-	 /**
-	 * Constructs and returns TPM Quote Info structure expected from IMC
+	/**
+	 * Computes digest of the constructed TPM Quote Info structure
 	 *
-	 * @param use_quote2		Version of the TPM_QUOTE_INFO to be constructed
-	 * @param use_version_info	Version info is concatenated to TPM_QUOTE_INFO2
-	 * @param comp_hash_algo	Composite Hash Algorithm
-	 * @param pcr_comp			Output variable to store PCR Composite
-	 * @param quote_info		Output variable to store TPM Quote Info
+	 * @param quote_info		TPM Quote Info as received from IMC
+	 * @param quoted			Encoding of TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, bool use_quote2, bool use_version_info,
-							pts_meas_algorithms_t comp_hash_algo,
-							chunk_t *pcr_comp, chunk_t *quote_info);
+	 bool (*get_quote)(pts_t *this, tpm_tss_quote_info_t *quote_info,
+					   chunk_t *quoted);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
 	 *
-	 * @param data				Calculated TPM Quote Digest
+	 * @param digest_alg		Hash algorithm used for TPM Quote Digest
+	 * @param digest			Calculated TPM Quote Digest
 	 * @param signature			TPM Quote Signature received from IMC
 	 * @return					FALSE if signature is not verified
 	 */
-	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
+	 bool (*verify_quote_signature)(pts_t *this, hash_algorithm_t digest_alg,
+									chunk_t digest, chunk_t signature);
 
 	/**
 	 * Destroys a pts_t object.

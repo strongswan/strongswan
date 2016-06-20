@@ -20,6 +20,7 @@
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
+#include <bio/bio_reader.h>
 
 #include <tss2/tpm20.h>
 #include <tcti/tcti_socket.h>
@@ -87,6 +88,26 @@ static TPM_ALG_ID hash_alg_to_tpm_alg_id(hash_algorithm_t alg)
 			return TPM_ALG_SHA512;
 		default:
 			return TPM_ALG_ERROR;
+	}
+}
+
+/**
+ * Convert TPM_ALG_ID to hash algorithm
+ */
+static hash_algorithm_t hash_alg_from_tpm_alg_id(TPM_ALG_ID alg)
+{
+	switch (alg)
+	{
+		case TPM_ALG_SHA1:
+			return HASH_SHA1;
+		case TPM_ALG_SHA256:
+			return HASH_SHA256;
+		case TPM_ALG_SHA384:
+			return HASH_SHA384;
+		case TPM_ALG_SHA512:
+			return HASH_SHA512;
+		default:
+			return HASH_UNKNOWN;
 	}
 }
 
@@ -483,19 +504,21 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 
 METHOD(tpm_tss_t, quote, bool,
 	private_tpm_tss_tss2_t *this, uint32_t aik_handle, uint32_t pcr_sel,
-	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode, chunk_t *pcr_comp,
-	chunk_t *quote_sig)
+	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t *quote_mode,
+	tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig)
 {
-	chunk_t quote_info;
+	chunk_t quoted_chunk, qualified_signer, extra_data, clock_info,
+			firmware_version, pcr_select, pcr_digest;
+	hash_algorithm_t pcr_digest_alg;
+	bio_reader_t *reader;
 	uint32_t rval;
 
 	TPM2B_DATA qualifying_data;
 	TPML_PCR_SELECTION  pcr_selection;
-	TPMS_ATTEST *attest;
 	TPM2B_ATTEST quoted = { { sizeof(TPM2B_ATTEST)-2, } };
-	TPM2B_DIGEST digest;
-	TPMT_SIGNATURE sig;
 	TPMT_SIG_SCHEME scheme;
+	TPMT_SIGNATURE sig;
+	TPMI_ALG_HASH hash_alg;
 	TPMS_AUTH_COMMAND  session_data_cmd;
 	TPMS_AUTH_RESPONSE session_data_rsp;
 	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
@@ -524,11 +547,8 @@ METHOD(tpm_tss_t, quote, bool,
 	scheme.scheme = TPM_ALG_NULL;
 	memset(&sig, 0x00, sizeof(sig));
 
-	if (mode == TPM_QUOTE || mode == TPM_QUOTE2_VERSION_INFO)
-	{
-		DBG1(DBG_PTS, "%s TPM Quote mode not supported", LABEL);
-		return FALSE;
-	}
+	/* set Quote mode */
+	*quote_mode = TPM_QUOTE_TPM2;
 
 	if (!init_pcr_selection(this, pcr_sel, alg, &pcr_selection))
 	{
@@ -543,14 +563,29 @@ METHOD(tpm_tss_t, quote, bool,
 		DBG1(DBG_PTS,"%s Tss2_Sys_Quote failed: 0x%06x", LABEL, rval);
 		return FALSE;
 	}
+	quoted_chunk = chunk_create(quoted.t.attestationData, quoted.t.size);
 
-	attest = (TPMS_ATTEST *)quoted.t.attestationData;
-	digest = attest->attested.quote.pcrDigest;
-	*pcr_comp = chunk_clone(chunk_create(digest.t.buffer, digest.t.size));
-	DBG2(DBG_PTS, "Hash of PCR Composite: %#B", pcr_comp);
+	reader = bio_reader_create(chunk_skip(quoted_chunk, 6));
+	if (!reader->read_data16(reader, &qualified_signer) ||
+		!reader->read_data16(reader, &extra_data) ||
+		!reader->read_data  (reader, 17, &clock_info) ||
+		!reader->read_data  (reader,  8, &firmware_version) ||
+		!reader->read_data  (reader, 10, &pcr_select) ||
+		!reader->read_data16(reader, &pcr_digest))
+	{
+		DBG1(DBG_PTS, "%s parsing of quoted struct failed", LABEL);
+		reader->destroy(reader);
+		return FALSE;
+	}
+	reader->destroy(reader);
 
-	quote_info = chunk_create(quoted.t.attestationData, quoted.t.size);
-	DBG2(DBG_PTS, "TPM Quote Info: %B",&quote_info);
+	DBG2(DBG_PTS, "PCR Composite digest: %B", &pcr_digest);
+	DBG2(DBG_PTS, "TPM Quote Info: %B", &quoted_chunk);
+	DBG2(DBG_PTS, "qualifiedSigner: %B", &qualified_signer);
+	DBG2(DBG_PTS, "extraData: %B", &extra_data);
+	DBG2(DBG_PTS, "clockInfo: %B", &clock_info);
+	DBG2(DBG_PTS, "firmwareVersion: %B", &firmware_version);
+	DBG2(DBG_PTS, "pcrSelect: %B", &pcr_select);
 
 	/* extract signature */
 	switch (sig.sigAlg)
@@ -561,6 +596,7 @@ METHOD(tpm_tss_t, quote, bool,
 							chunk_create(
 								sig.signature.rsassa.sig.t.buffer,
 								sig.signature.rsassa.sig.t.size));
+			hash_alg = sig.signature.rsassa.hash;
 			break;
 		case TPM_ALG_ECDSA:
 		case TPM_ALG_ECDAA:
@@ -573,13 +609,25 @@ METHOD(tpm_tss_t, quote, bool,
 							chunk_create(
 								sig.signature.ecdsa.signatureS.t.buffer,
 								sig.signature.ecdsa.signatureS.t.size));
+			hash_alg = sig.signature.ecdsa.hash;
 			break;
 		default:
 			DBG1(DBG_PTS, "%s unsupported %N signature algorithm",
 						   LABEL, tpm_alg_id_names, sig.sigAlg);
 			return FALSE;
 	};
+
+	DBG2(DBG_PTS, "PCR digest algorithm is %N", tpm_alg_id_names, hash_alg);
+	pcr_digest_alg = hash_alg_from_tpm_alg_id(hash_alg);
+
 	DBG2(DBG_PTS, "TPM Quote Signature: %B", quote_sig);
+
+	/* Create and initialize Quote Info object */
+	*quote_info = tpm_tss_quote_info_create(*quote_mode, pcr_digest_alg,
+														 pcr_digest);
+	(*quote_info)->set_tpm2_info(*quote_info, qualified_signer, clock_info,
+														 pcr_select);
+	(*quote_info)->set_version_info(*quote_info, firmware_version);
 
 	return TRUE;
 }

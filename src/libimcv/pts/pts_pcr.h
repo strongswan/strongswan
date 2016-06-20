@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
 typedef struct pts_pcr_t pts_pcr_t;
 
 #include <library.h>
+
+#include <tpm_tss_quote_info.h>
 
 /**
  * Maximum number of PCR's of TPM, TPM Spec 1.2
@@ -100,7 +102,7 @@ struct pts_pcr_t {
 	 *
 	 * @return				PCR Composite object (must be freed)
 	 */
-	chunk_t (*get_composite)(pts_pcr_t *this);
+	tpm_tss_pcr_composite_t* (*get_composite)(pts_pcr_t *this);
 
 	/**
 

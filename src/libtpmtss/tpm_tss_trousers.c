@@ -431,8 +431,8 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 
 METHOD(tpm_tss_t, quote, bool,
 	private_tpm_tss_trousers_t *this, uint32_t aik_handle, uint32_t pcr_sel,
-	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t mode, chunk_t *pcr_comp,
-	chunk_t *quote_sig)
+	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t *quote_mode,
+	tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig)
 {
 	TSS_HKEY hAIK;
 	TSS_HKEY hSRK;
@@ -446,7 +446,7 @@ METHOD(tpm_tss_t, quote, bool,
 	uint32_t version_info_size, pcr;
 	aik_t *aik;
 	chunk_t aik_blob = chunk_empty;
-	chunk_t quote_info;
+	chunk_t quote_chunk, pcr_digest;
 	enumerator_t *enumerator;
 	bool success = FALSE;
 
@@ -503,8 +503,8 @@ METHOD(tpm_tss_t, quote, bool,
 
 	/* Create PCR composite object */
 	result = Tspi_Context_CreateObject(this->hContext, TSS_OBJECT_TYPE_PCRS,
-					(mode == TPM_QUOTE) ? TSS_PCRS_STRUCT_INFO :
-										  TSS_PCRS_STRUCT_INFO_SHORT,
+					(*quote_mode == TPM_QUOTE) ? TSS_PCRS_STRUCT_INFO :
+												 TSS_PCRS_STRUCT_INFO_SHORT,
 					&hPcrComposite);
 	if (result != TSS_SUCCESS)
 	{
@@ -518,7 +518,7 @@ METHOD(tpm_tss_t, quote, bool,
 	{
 		if (pcr_sel & (1 << pcr))
 		{
-			result = (mode == TPM_QUOTE) ?
+			result = (*quote_mode == TPM_QUOTE) ?
 				Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr) :
 				Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
 										TSS_PCRS_DIRECTION_RELEASE);
@@ -536,22 +536,20 @@ METHOD(tpm_tss_t, quote, bool,
 	valData.rgbExternalData      = data.ptr;
 
 	/* TPM Quote */
-	result = (mode == TPM_QUOTE) ?
+	result = (*quote_mode == TPM_QUOTE) ?
 			Tspi_TPM_Quote (this->hTPM, hAIK, hPcrComposite, &valData) :
-			Tspi_TPM_Quote2(this->hTPM, hAIK, mode == TPM_QUOTE2_VERSION_INFO,
+			Tspi_TPM_Quote2(this->hTPM, hAIK,
+							*quote_mode == TPM_QUOTE2_VERSION_INFO,
 						    hPcrComposite, &valData, &version_info_size,
 							&version_info);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s Tspi_TPM_Quote%s failed: 0x%x", LABEL,
-					  (mode == TPM_QUOTE) ? "" : "2", result);
+					  (*quote_mode == TPM_QUOTE) ? "" : "2", result);
 		goto err2;
 	}
 
-	/* Extract TPM_Composite_Hash */
-	*pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
-
-	if (mode == TPM_QUOTE)
+	if (*quote_mode == TPM_QUOTE)
 	{
 		/* TPM_Composite_Hash starts at byte 8 of TPM_Quote_Info structure */
 		comp_hash = valData.rgbData + 8;
@@ -562,15 +560,17 @@ METHOD(tpm_tss_t, quote, bool,
 		comp_hash = valData.rgbData + valData.ulDataLength - version_info_size -
 					HASH_SIZE_SHA1;
 	}
-	memcpy(pcr_comp->ptr, comp_hash, HASH_SIZE_SHA1);
-	DBG3(DBG_PTS, "Hash of PCR Composite: %#B", pcr_comp);
+	pcr_digest = chunk_create(comp_hash, HASH_SIZE_SHA1);
+	DBG2(DBG_PTS, "PCR composite digest: %B", &pcr_digest);
 
-	quote_info = chunk_create(valData.rgbData, valData.ulDataLength);
-	DBG3(DBG_PTS, "TPM Quote Info: %B",&quote_info);
+	quote_chunk = chunk_create(valData.rgbData, valData.ulDataLength);
+	DBG2(DBG_PTS, "TPM Quote Info: %B", &quote_chunk);
+
+	*quote_info = tpm_tss_quote_info_create(*quote_mode, HASH_SHA1, pcr_digest);
 
 	*quote_sig = chunk_clone(chunk_create(valData.rgbValidationData,
 										  valData.ulValidationDataLength));
-	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_sig);
+	DBG2(DBG_PTS, "TPM Quote Signature: %B", quote_sig);
 
 	success = TRUE;
 
