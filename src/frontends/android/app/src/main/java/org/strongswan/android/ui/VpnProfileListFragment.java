@@ -220,11 +220,9 @@ public class VpnProfileListFragment extends Fragment
 				setDebugProfileView(mode,menu);
 			}else {
 				setProfileView(mode,menu);
-
 			}
 			mEditProfile = menu.findItem(R.id.edit_profile);
 			mSelected = new HashSet<Integer>();
-			mode.setTitle(R.string.select_profiles);
 			return true;
 		}
 
