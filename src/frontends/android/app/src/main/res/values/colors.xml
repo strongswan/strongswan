@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2016 Tobias Brunner
-    HSR Hochschule fuer Technik Rapperswil
+    Copyright (C) 2012-2013 Tobias Brunner
+    Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -24,8 +24,7 @@
     <color
         name="primary_dark">#000000</color>
 
-    <color
-        name="error_text">#D9192C</color>
+    <color        name="error_text">#D9192C</color>
 
     <color
         name="warning_text">#FF9909</color>
@@ -34,12 +33,10 @@
         name="success_text">#99CC00</color>
 
     <color
-        name="panel_background">#444444</color>
+        name="panel_background">#333333</color>
 
     <color
         name="panel_separator">#5a5a5a</color>
 
     <color
-        name="pressed">#5a5a5a</color>
-
-</resources>
+        name="pressed">#5a5a5a</color></resources>
