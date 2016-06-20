@@ -16,6 +16,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifdef WIN32
+#include <signal.h>
+#endif
+
 #include "kernel_libipsec_router.h"
 
 #include <daemon.h>
@@ -290,12 +294,26 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* too many outstanding I/O requests
                          * We can't fix that and need to stop the process
                          */
+                        DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations");
+                        this->lock->unlock(this->lock);
+                        raise(SIGTERM);
+                        /* fatal error */
                         break;
                     case ERROR_NOT_ENOUGH_QUOTA:
                         /* unable to page lock calling process's buffer */
+                        DBG1(DBG_LIB, "the operating system could not lock the buffer");
+                        this->lock->unlock(this->lock);
+                        /* fatal error */
+                        raise(SIGTERM);
                         break;
                     default:
+                        DBG1(DBG_LIB, "Unknown error %d occured", error);
                         /* Some error we don't know */
+                        /* exit */
+                        /* TODO: Translate error number to human readable*/
+                        /* fatal error */
+                        raise(SIGTERM);
+                        return ;
                         break;
                 }
             }
