@@ -888,6 +888,10 @@ connections.<conn>.children.<child>.replay_window = 32
 	default of 32 are supported using the Netlink backend only, a value of 0
 	disables IPsec replay protection.
 
+connections.<conn>.children.<child>.hw_offload = no
+	Enable hardware offload for this CHILD_SA, if supported by the IPsec
+	implementation.
+
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).
 
