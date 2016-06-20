@@ -304,6 +304,9 @@ enum child_cfg_option_t {
 
 	/** Install outbound FWD IPsec policies to bypass drop policies */
 	OPT_FWD_OUT_POLICIES = (1<<4),
+
+	/** Enable hardware offload, if supported by the IPsec backend */
+	OPT_HW_OFFLOAD = (1<<5),
 };
 
 /**
