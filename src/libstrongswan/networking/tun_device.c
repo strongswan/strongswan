@@ -563,7 +563,7 @@ METHOD(tun_device_t, write_packet, bool,
                     break;
                 case ERROR_INVALID_USER_BUFFER:
                 case ERROR_NOT_ENOUGH_MEMORY:
-                    DBG1(DBG_LIB, "failed to write packet to TUN device %s: %u",
+                    DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations\nfailed to write packet to TUN device %s: %u",
 			 this->if_name, (uint32_t) GetLastError());
                     return FALSE;
                     break;
