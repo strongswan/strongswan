@@ -1,3 +1,7 @@
+swanctl {
+  load = x509 acert pubkey pkcs1 pkcs7 pkcs8 pkcs12 pgp dnskey sshkey pem openssl
+}
+
 charon {
   retransmit_tries = 2
   retransmit_timeout = 1.0
