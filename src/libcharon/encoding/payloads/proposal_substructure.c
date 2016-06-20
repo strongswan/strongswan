@@ -933,6 +933,7 @@ static void add_to_proposal_v1(proposal_t *proposal,
 	transform_attribute_t *tattr;
 	enumerator_t *enumerator;
 	uint16_t encr, value, key_length = 0;
+	extended_sequence_numbers_t esn = NO_EXT_SEQ_NUMBERS;
 
 	enumerator = transform->create_attribute_enumerator(transform);
 	while (enumerator->enumerate(enumerator, &tattr))
@@ -952,15 +953,16 @@ static void add_to_proposal_v1(proposal_t *proposal,
 				proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
 						value, 0);
 				break;
+			case TATTR_PH2_EXT_SEQ_NUMBER:
+				esn = EXT_SEQ_NUMBERS;
+				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: handle ESN attribute */
-	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
-							NO_EXT_SEQ_NUMBERS, 0);
+	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 	if (proto == PROTO_ESP)
 	{
 		encr = get_alg_from_ikev1_transid(ENCRYPTION_ALGORITHM,
@@ -1410,6 +1412,18 @@ static void set_from_proposal_v1(private_proposal_substructure_t *this,
 							TATTR_PH2_SA_LIFE_DURATION, lifebytes / 1000));
 	}
 
+	enumerator = proposal->create_enumerator(proposal,
+			EXTENDED_SEQUENCE_NUMBERS);
+	while (enumerator->enumerate(enumerator, &alg, NULL))
+	{
+		if (alg == EXT_SEQ_NUMBERS)
+		{
+			transform->add_transform_attribute(transform,
+				transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
+								TATTR_PH2_EXT_SEQ_NUMBER, alg));
+		}
+	}
+	enumerator->destroy(enumerator);
 	add_transform_substructure(this, transform);
 }
 
