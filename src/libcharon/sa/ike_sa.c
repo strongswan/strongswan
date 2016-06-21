@@ -1792,6 +1792,13 @@ METHOD(ike_sa_t, delete_, status_t,
 			{	/* IKE_SA hard lifetime hit */
 				charon->bus->alert(charon->bus, ALERT_IKE_SA_EXPIRED);
 			}
+			if (this->version == IKEV1)
+			{
+				this->task_manager->flush_queue(this->task_manager, 
+						TASK_QUEUE_ACTIVE); 
+				this->task_manager->flush_queue(this->task_manager, 
+						TASK_QUEUE_QUEUED); 
+			}
 			this->task_manager->queue_ike_delete(this->task_manager);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
