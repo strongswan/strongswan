@@ -8,7 +8,7 @@ android {
         applicationId "org.strongswan.android"
         minSdkVersion 15
         targetSdkVersion 22
-        versionCode 32
+        versionCode 31
         versionName "1.6.2"
     }
 
@@ -25,6 +25,7 @@ android {
         fancyfon {
             applicationId "com.fancyfon.strongswan"
             versionName "1.1.0"
+            versionCode 32
         }
     }
 

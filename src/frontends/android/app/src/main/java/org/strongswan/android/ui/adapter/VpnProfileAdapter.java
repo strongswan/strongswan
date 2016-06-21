@@ -69,7 +69,6 @@ public class VpnProfileAdapter extends ArrayAdapter<VpnProfile>
 		if (profile.getVpnType().has(VpnTypeFeature.USER_PASS))
 		{	/* if the view is reused we make sure it is visible */
 			setFancyFonUsernameDisplay(tv,profile);
-
 		}
 		else if (profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) &&
 				 profile.getLocalId() != null)
@@ -93,13 +92,15 @@ public class VpnProfileAdapter extends ArrayAdapter<VpnProfile>
 		return vpnProfileView;
 	}
 
-	public void setFancyFonUsernameDisplay(TextView tv,VpnProfile profile){
-		String userName = (profile.getUsername() == null ? getContext().getString(R.string.username_absent) : profile.getUsername());
+	public void setFancyFonUsernameDisplay(TextView tv,VpnProfile profile)
+	{
+		String userName = profile.getUsername() == null ? getContext().getString(R.string.username_absent) : profile.getUsername();
 		tv.setText(getContext().getString(R.string.profile_username_label) + " " + userName);
 		tv.setVisibility(View.VISIBLE);
 	}
 
-	public void setFancyFonCertificateDisplay(TextView tv,VpnProfile profile){
+	public void setFancyFonCertificateDisplay(TextView tv,VpnProfile profile)
+	{
 		String certDisplayData = (TextUtils.isEmpty(profile.getUserCertificateAlias()) ? getContext().getString(R.string.certificate_absent) : profile.getUserCertificateAlias());
 		tv.setText(getContext().getString(R.string.profile_user_certificate_label) + " " + certDisplayData);
 		tv.setVisibility(View.VISIBLE);
