@@ -26,6 +26,7 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,8 +68,7 @@ public class VpnProfileAdapter extends ArrayAdapter<VpnProfile>
 		tv = (TextView)vpnProfileView.findViewById(R.id.profile_item_username);
 		if (profile.getVpnType().has(VpnTypeFeature.USER_PASS))
 		{	/* if the view is reused we make sure it is visible */
-			tv.setVisibility(View.VISIBLE);
-			tv.setText(getContext().getString(R.string.profile_username_label) + ": " + profile.getUsername());
+			setFancyFonUsernameDisplay(tv,profile);
 		}
 		else if (profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) &&
 				 profile.getLocalId() != null)
@@ -83,8 +83,7 @@ public class VpnProfileAdapter extends ArrayAdapter<VpnProfile>
 		tv = (TextView)vpnProfileView.findViewById(R.id.profile_item_certificate);
 		if (profile.getVpnType().has(VpnTypeFeature.CERTIFICATE))
 		{
-			tv.setText(getContext().getString(R.string.profile_user_certificate_label) + ": " + profile.getUserCertificateAlias());
-			tv.setVisibility(View.VISIBLE);
+			setFancyFonCertificateDisplay(tv,profile);
 		}
 		else
 		{
@@ -93,6 +92,19 @@ public class VpnProfileAdapter extends ArrayAdapter<VpnProfile>
 		return vpnProfileView;
 	}
 
+	public void setFancyFonUsernameDisplay(TextView tv,VpnProfile profile)
+	{
+		String userName = profile.getUsername() == null ? getContext().getString(R.string.username_absent) : profile.getUsername();
+		tv.setText(getContext().getString(R.string.profile_username_label) + " " + userName);
+		tv.setVisibility(View.VISIBLE);
+	}
+
+	public void setFancyFonCertificateDisplay(TextView tv,VpnProfile profile)
+	{
+		String certDisplayData = (TextUtils.isEmpty(profile.getUserCertificateAlias()) ? getContext().getString(R.string.certificate_absent) : profile.getUserCertificateAlias());
+		tv.setText(getContext().getString(R.string.profile_user_certificate_label) + " " + certDisplayData);
+		tv.setVisibility(View.VISIBLE);
+	}
 	@Override
 	public void notifyDataSetChanged()
 	{
