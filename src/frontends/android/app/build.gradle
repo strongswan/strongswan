@@ -26,6 +26,8 @@ android {
             applicationId "com.fancyfon.strongswan"
             versionName "1.1.0"
             versionCode 32
+            setProperty("archivesBaseName", "strongswan_$versionName")
+
         }
     }
 
@@ -52,8 +54,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
 }

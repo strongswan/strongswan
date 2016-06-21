@@ -1,0 +1,6 @@
+-keep public class org.strongswan.android.logic.CharonVpnService**{
+    *;
+}
+-keep public class org.strongswan.android.logic.NetworkManager**{
+    *;
+}
