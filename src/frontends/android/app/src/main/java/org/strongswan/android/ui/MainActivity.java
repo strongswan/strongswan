@@ -43,6 +43,7 @@ import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import org.strongswan.android.BuildConfig;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -105,6 +106,9 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		this.bindService(new Intent(this, VpnStateService.class),
 						 mServiceConnection, Service.BIND_AUTO_CREATE);
 
+
+		bar.setDisplayShowTitleEnabled(false);
+
 		/* load CA certificates in a background task */
 		new LoadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 	}
@@ -134,9 +138,12 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu)
-	{
-		getMenuInflater().inflate(R.menu.main, menu);
+	public boolean onCreateOptionsMenu(Menu menu){
+		if(BuildConfig.DEBUG){
+			getMenuInflater().inflate(R.menu.main_debug, menu);
+		}else{
+			getMenuInflater().inflate(R.menu.main, menu);
+		}
 		return true;
 	}
 

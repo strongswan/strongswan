@@ -16,9 +16,10 @@
     for more details.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+   >
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -31,8 +32,7 @@
             android:id="@+id/gateway_wrap"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            app:helper_text="@string/profile_gateway_hint" >
+            android:layout_marginTop="6dp">
 
             <android.support.design.widget.TextInputEditText
                 android:id="@+id/gateway"
@@ -122,13 +122,13 @@
                 android:id="@+id/select_user_certificate"
                 layout="@layout/two_line_button" />
 
-            <TextView
+<!--            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:layout_marginLeft="4dp"
                 android:textSize="12sp"
-                android:text="@string/profile_user_select_id_label" />
+                android:text="@string/profile_user_select_id_label" />-->
 
             <Spinner
                 android:id="@+id/select_user_id"
