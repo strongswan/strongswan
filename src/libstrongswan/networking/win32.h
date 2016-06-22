@@ -30,5 +30,9 @@
 #define ADAPTER_KEY "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
 #define NETWORK_CONNECTIONS_KEY "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
 
+typedef struct {
+    char *guid;
+    char *name;
+} guid_name_pair_t;
 #endif /* WIN32_H */
 
