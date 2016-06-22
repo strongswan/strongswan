@@ -23,7 +23,8 @@
 #ifndef WIN32_H
 #define WIN32_H
 
-#define WIN32_TUN_EVENT_TEMPLATE "WIN32-libipsec-device-%d"
+#define WIN32_TUN_READ_EVENT_TEMPLATE "WIN32-libipsec-read-device-%d"
+#define WIN32_TUN_WRITE_EVENT_TEMPLATE "WIN32-libipsec-write-device-%d"
 #define WIN32_TUN_EVENT_LENGTH 80
 #define TAP_WIN_COMPONENT_ID "tap0901"
 
