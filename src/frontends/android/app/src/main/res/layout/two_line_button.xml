@@ -25,6 +25,7 @@
         android:id="@android:id/text1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textColor="@color/inactive_in_release"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <TextView

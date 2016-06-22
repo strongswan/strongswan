@@ -132,8 +132,8 @@
 
             <Spinner
                 android:id="@+id/select_user_id"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:spinnerMode="dropdown" />
 
         </LinearLayout>
@@ -147,8 +147,8 @@
 
         <CheckBox
             android:id="@+id/ca_auto"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="@dimen/gone_field_width"
+            android:layout_height="@dimen/gone_field_height"
             android:text="@string/profile_ca_auto_label" />
 
         <include
