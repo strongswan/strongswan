@@ -108,12 +108,12 @@ struct private_tun_device_t {
         /**
          * The event handle name for writing from the device
          */
-        HANDLE *write_event_name;
+        char *write_event_name;
 
         /**
          * The event handle name for reading from the device
          */
-        HANDLE *read_event_name;
+        char *read_event_name;
 	/**
 	 * Lock for the overlapped_list structure.
 	 */
@@ -359,15 +359,15 @@ linked_list_t *get_panel_reg ()
                 {
                     int n;
                     LPSTR name;
-                    guid_name_pair_t *member = calloc(sizeof (guid_name_pair_t));
+                    guid_name_pair_t *member = calloc(1, sizeof (guid_name_pair_t));
                     n = WideCharToMultiByte(CP_UTF8, 0, name_data, -1, NULL, 0, NULL, NULL);
                     name = malloc(n);
                     WideCharToMultiByte(CP_UTF8, 0, name_data, -1, name, n, NULL, NULL);
 
-                    list->insert_last(member) = name;
+                    list->insert_last(list, member);
                     member->name = name;
 
-                    member->guid = malloc(sizeof (enum_name));
+                    member->guid = calloc(1, sizeof (enum_name));
                     memcpy(member->guid, enum_name, strlen(enum_name));
                 }
                 RegCloseKey(connection_key);
@@ -945,7 +945,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         char *guid;
         char read_name[WIN32_TUN_EVENT_LENGTH], write_name[WIN32_TUN_EVENT_LENGTH];
         BOOL success = FALSE;
-        linked_list_t *possible_devices = get_tap_reg(), connections = get_panel_reg();
+        linked_list_t *possible_devices = get_tap_reg(), *connections = get_panel_reg();
         guid_name_pair_t *pair;
 
         memset(this->if_name, 0, sizeof(this->if_name));
@@ -1144,7 +1144,6 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		},
 #ifdef WIN32
                 .tunhandle = NULL,
-                .overlapped_list = linked_list_create(),
 #else
 		.tunfd = -1,
 #endif /* WIN32 */
