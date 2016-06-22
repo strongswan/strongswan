@@ -278,7 +278,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     structures[j].buffer.len, NULL, &structures[j].overlapped);
             if (status)
             {
-                /* All fine */
+                /* Read returned immediately */
+                /* We need to signal the event ourselves */
+                SetEvent(event_array[i]);
                 continue;
             }
             else
@@ -313,7 +315,6 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* TODO: Translate error number to human readable*/
                         /* fatal error */
                         raise(SIGTERM);
-                        return ;
                         break;
                 }
             }
