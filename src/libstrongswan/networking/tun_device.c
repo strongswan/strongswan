@@ -84,7 +84,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <tap-windows.h>
 #include <winioctl.h>
 #include <collections/linked_list.h>
-#define TAP_WIN_COMPONENT_ID "tap0901"
+#include "win32.h"
 #else
 #include <net/if_tun.h>
 #endif
@@ -104,10 +104,16 @@ struct private_tun_device_t {
          * The TUN device's file handle
          */
         HANDLE *tunhandle;
+
         /**
-         * a linked list to keep packets and overlapped structures in
+         * The event handle name for writing from the device
          */
-        linked_list_t *overlapped_list;
+        HANDLE *write_event_name;
+
+        /**
+         * The event handle name for reading from the device
+         */
+        HANDLE *read_event_name;
 	/**
 	 * Lock for the overlapped_list structure.
 	 */
@@ -270,6 +276,110 @@ linked_list_t *get_tap_reg()
     RegCloseKey(adapter_key);
     return list;
 }
+
+linked_list_t *get_panel_reg ()
+{
+        LONG status;
+        HKEY network_connections_key;
+        DWORD len;
+        linked_list_t *list = linked_list_create();
+        int i = 0;
+
+        status = RegOpenKeyEx(
+                HKEY_LOCAL_MACHINE,
+                NETWORK_CONNECTIONS_KEY,
+                0,
+                KEY_READ,
+                &network_connections_key);
+
+        if (status != ERROR_SUCCESS)
+        {
+            DBG1(DBG_LIB, "Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
+        }
+        while (TRUE)
+        {
+            char enum_name[256];
+            char connection_string[256];
+            HKEY connection_key;
+            WCHAR name_data[256];
+            DWORD name_type;
+            const WCHAR name_string[] = L"Name";
+
+            len = sizeof (enum_name);
+            status = RegEnumKeyEx(
+                    network_connections_key,
+                    i,
+                    enum_name,
+                    &len,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL);
+            if (status == ERROR_NO_MORE_ITEMS)
+            {
+                break;
+            }
+            else if (status != ERROR_SUCCESS)
+            {
+                DBG1(DBG_LIB, "Error enumerating registry subkeys of key: %s",
+                        NETWORK_CONNECTIONS_KEY);
+            }
+            snprintf(connection_string, sizeof (connection_string),
+                    "%s\\%s\\Connection",
+                    NETWORK_CONNECTIONS_KEY, enum_name);
+
+            status = RegOpenKeyEx(
+                    HKEY_LOCAL_MACHINE,
+                    connection_string,
+                    0,
+                    KEY_READ,
+                    &connection_key);
+
+            if (status != ERROR_SUCCESS)
+            {
+                DBG1(DBG_LIB, "Error opening registry key: %s", connection_string);
+            }
+            else
+            {
+                len = sizeof (name_data);
+                status = RegQueryValueExW(
+                        connection_key,
+                        name_string,
+                        NULL,
+                        &name_type,
+                        (LPBYTE) name_data,
+                        &len);
+
+                if (status != ERROR_SUCCESS || name_type != REG_SZ)
+                {
+                    DBG1(DBG_LIB, "Error opening registry key: %s\\%s\\%s",
+                            NETWORK_CONNECTIONS_KEY, connection_string, name_string);
+                }
+                else
+                {
+                    int n;
+                    LPSTR name;
+                    guid_name_pair_t *member = calloc(sizeof (guid_name_pair_t));
+                    n = WideCharToMultiByte(CP_UTF8, 0, name_data, -1, NULL, 0, NULL, NULL);
+                    name = malloc(n);
+                    WideCharToMultiByte(CP_UTF8, 0, name_data, -1, name, n, NULL, NULL);
+
+                    list->insert_last(member) = name;
+                    member->name = name;
+
+                    member->guid = malloc(sizeof (enum_name));
+                    memcpy(member->guid, enum_name, strlen(enum_name));
+                }
+                RegCloseKey(connection_key);
+            }
+            ++i;
+        }
+
+        RegCloseKey(network_connections_key);
+
+        return list;
+}
+
 #endif /* WIN32 */
 /**
  * FreeBSD 10 deprecated the SIOCSIFADDR etc. commands.
@@ -479,9 +589,9 @@ METHOD(tun_device_t, set_mtu, bool,
 			 strerror(errno));
 		return FALSE;
 	}
-#endif
 	this->mtu = mtu;
 	return TRUE;
+#endif
 }
 
 METHOD(tun_device_t, get_mtu, int,
@@ -534,11 +644,23 @@ METHOD(tun_device_t, write_packet, bool,
 {
         bool status;
         OVERLAPPED overlapped;
-        char name[80];
-        HANDLE write_event;
+        DWORD error;
+        HANDLE write_event = CreateEvent(NULL, FALSE, FALSE, this->write_event_name);
 
-        snprintf(name, 80, "tun-%s-read", this->if_name);
-        write_event = CreateEvent(NULL, FALSE, FALSE, name);
+        ResetEvent(write_event);
+
+        error = GetLastError();
+        switch (error)
+        {
+            case ERROR_INVALID_HANDLE:
+                /* An event with that name already exists, but the type is a different one */
+                return FALSE;
+                break;
+            case ERROR_ALREADY_EXISTS:
+            default:
+                /* Just fine. Don't do anything. */
+                break;
+        }
 
         memset(&overlapped, 0, sizeof(OVERLAPPED));
 
@@ -553,7 +675,11 @@ METHOD(tun_device_t, write_packet, bool,
 
         status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
             packet.len, NULL, &overlapped);
-        if (!status)
+        if (status) {
+            /* Read returned immediately. */
+            SetEvent(write_event);
+        }
+        else
         {
             DWORD error = GetLastError();
             switch(error)
@@ -578,40 +704,89 @@ METHOD(tun_device_t, write_packet, bool,
             }
         }
         WaitForSingleObject(write_event, INFINITE);
+        CloseHandle(write_event);
         return TRUE;
 }
 
 METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
-	chunk_t data;
-	bool old;
+	bool old, status;
+        DWORD size, error;
         OVERLAPPED overlapped;
-        char name[80];
+	chunk_t data;
+        HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, this->read_event_name);
 
-        snprintf(name, 80, "tun-%s-read", this->if_name);
-        HANDLE event_handle = CreateEvent(NULL, FALSE, FALSE, name);
+        ResetEvent(read_event);
+
+        error = GetLastError();
+        switch (error)
+        {
+            case ERROR_INVALID_HANDLE:
+                /* An event with that name already exists, but the type is a different one */
+                return FALSE;
+                break;
+            case ERROR_ALREADY_EXISTS:
+            default:
+                /* Just fine. Don't do anything. */
+                break;
+        }
+
         memset(&overlapped, 0, sizeof(OVERLAPPED));
+
+        overlapped.hEvent = read_event;
+
 	data = chunk_alloca(get_mtu(this));
 
 	old = thread_cancelability(TRUE);
 
-        bool status;
-        DWORD size;
         /* Read chunk from handle */
         status = ReadFile(*(this->tunhandle), (LPVOID) &data.ptr,
             (DWORD) data.len, &size, &overlapped);
 	thread_cancelability(old);
-        if (!status)
+        if (status)
         {
-                /* TODO: Convert DWORD (GetLastError()) to human readable error string */
-                DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
-                   (uint32_t) GetLastError());
-                return FALSE;
-
+            /* Read returned immediately. */
+            SetEvent(read_event);
         }
+        else
+        {
+            error = GetLastError();
+            switch(error)
+            {
+                case ERROR_IO_PENDING:
+                    /* all fine */
+                    break;
+                case ERROR_INVALID_USER_BUFFER:
+                case ERROR_NOT_ENOUGH_MEMORY:
+                    DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations\nfailed to write packet to TUN device %s: %u",
+                            this->if_name, (uint32_t) GetLastError());
+                    CloseHandle(read_event);
+                    return FALSE;
+                    break;
+                case ERROR_OPERATION_ABORTED:
+                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the IO operation was aborted.");
+                    CloseHandle(read_event);
+                    return FALSE;
+                    break;
+                case ERROR_NOT_ENOUGH_QUOTA:
+                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the process's buffer could not be page locked.");
+                    CloseHandle(read_event);
+                    return FALSE;
+                    break;
+                default:
+                    /* TODO: Convert DWORD (GetLastError()) to human readable error string */
+                    DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
+                       (uint32_t) GetLastError());
+                    CloseHandle(read_event);
+                    return FALSE;
+                    break;
+            }
+        }
+        WaitForSingleObject(read_event, INFINITE);
 	*packet = chunk_clone(data);
-        CloseHandle(event_handle);
+
+        CloseHandle(read_event);
         return TRUE;
 }
 
@@ -702,13 +877,11 @@ METHOD(tun_device_t, destroy, void,
 		}
 #endif
 	}
-#endif
-        /* destroy the linked lists */
-        this->overlapped_list->destroy(this->overlapped_list);
 	if (this->sock > 0)
 	{
 		close(this->sock);
 	}
+#endif
 	DESTROY_IF(this->address);
 	free(this);
 }
@@ -768,21 +941,26 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 #elif defined(WIN32)
         /* WIN32 TAP driver stuff*/
         /* Check if there is an unused tun device following the IPsec name scheme*/
-        enumerator_t *enumerator;
-        char *name;
+        enumerator_t *enumerator, *enumerator2;
+        char *guid;
+        char read_name[WIN32_TUN_EVENT_LENGTH], write_name[WIN32_TUN_EVENT_LENGTH];
         BOOL success = FALSE;
-        linked_list_t *possible_devices = get_tap_reg();
+        linked_list_t *possible_devices = get_tap_reg(), connections = get_panel_reg();
+        guid_name_pair_t *pair;
+
+        memset(this->if_name, 0, sizeof(this->if_name));
+
         /* Iterate over list */
         enumerator = possible_devices->create_enumerator(possible_devices);
         /* Try to open that device */
-        while(enumerator->enumerate(enumerator, &name))
+        while(enumerator->enumerate(enumerator, &guid))
         {
             if (!success){
                 /* Set mode */
                 char device_path[256];
                 /* Translate dev name to guid */
                 /* TODO: Fix. device_guid should be */
-                snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, name, TAP_WIN_SUFFIX);
+                snprintf (device_path, sizeof(device_path), "%s%s%s", USERMODEDEVICEDIR, guid, TAP_WIN_SUFFIX);
 
                 this->tunhandle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0,
                     0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
@@ -792,7 +970,22 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                 }
                 else
                 {
-                    DBG1(DBG_LIB, "device %s has been opened for use as TAP interface.", name);
+                    /* translate GUID to name */
+                    enumerator2 = connections->create_enumerator(connections);
+
+                    while(enumerator2->enumerate(enumerator, &pair))
+                    {
+                        if (pair->guid == guid)
+                        {
+                            /* Set name */
+                            memcpy(this->if_name, pair->name, strlen(pair->name));
+                        }
+                        free(pair->guid);
+                        free(pair->name);
+                        free(pair);
+                    }
+                    enumerator2->destroy(enumerator2);
+                    DBG1(DBG_LIB, "device %s has been opened for use as TAP interface.", guid);
                     success = TRUE;
                 }
             }
@@ -801,7 +994,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                 break;
             }
             /* device has been examined or used, free it */
-            free(name);
+            free(guid);
         }
 
         /* possible_devices has been freed while going over the enumerator.
@@ -858,6 +1051,9 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 
             /* Give the adapter 2 seconds to come up */
         DBG3 (DBG_LIB, "Sleeping for %d seconds...", 2);
+        /* Create event with special template */
+        snprintf(read_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_READ_EVENT_TEMPLATE, this->if_name);
+        snprintf(write_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_WRITE_EVENT_TEMPLATE, this->if_name);
         sleep(2);
         return TRUE;
 #elif defined(IFF_TUN)
@@ -940,7 +1136,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                         .get_handle = _get_handle,
 #else
 			.get_fd = _get_fd,
-#endif
+#endif /* WIN32 */
 			.set_address = _set_address,
 			.get_address = _get_address,
 			.up = _up,
@@ -951,7 +1147,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                 .overlapped_list = linked_list_create(),
 #else
 		.tunfd = -1,
-#endif
+#endif /* WIN32 */
 		.sock = -1,
 	);
 
@@ -962,6 +1158,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 	}
 	DBG1(DBG_LIB, "created TUN device: %s", this->if_name);
 
+#ifdef WIN32
+#else
 	this->sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (this->sock < 0)
 	{
@@ -969,6 +1167,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		destroy(this);
 		return NULL;
 	}
+#endif /* WIN32 */
 	return &this->public;
 }
 
