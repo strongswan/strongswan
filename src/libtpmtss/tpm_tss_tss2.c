@@ -346,6 +346,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	private_tpm_tss_tss2_t *this, uint32_t handle)
 {
 	TPM2B_PUBLIC public = { { 0, } };
+	TPM_ALG_ID sig_alg, digest_alg;
 	chunk_t aik_blob, aik_pubkey = chunk_empty;
 
 	if (!read_public(this, handle, &public))
@@ -362,7 +363,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		case TPM_ALG_RSA:
 		{
 			TPM2B_PUBLIC_KEY_RSA *rsa;
+			TPMT_RSA_SCHEME *scheme;
 			chunk_t aik_exponent, aik_modulus;
+
+			scheme = &public.t.publicArea.parameters.rsaDetail.scheme;
+			sig_alg   = scheme->scheme;
+			digest_alg = scheme->details.anySig.hashAlg;
 
 			rsa = &public.t.publicArea.unique.rsa;
 			aik_modulus = chunk_create(rsa->t.buffer, rsa->t.size);
@@ -381,8 +387,13 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		case TPM_ALG_ECC:
 		{
 			TPMS_ECC_POINT *ecc;
+			TPMT_ECC_SCHEME *scheme;
 			chunk_t ecc_point;
 			uint8_t *pos;
+
+			scheme = &public.t.publicArea.parameters.eccDetail.scheme;
+			sig_alg   = scheme->scheme;
+			digest_alg = scheme->details.anySig.hashAlg;
 
 			ecc = &public.t.publicArea.unique.ecc;
 
@@ -409,8 +420,10 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		}
 		default:
 			DBG1(DBG_PTS, "%s unsupported AIK key type", LABEL);
+			return chunk_empty;
 	}
-
+	DBG1(DBG_PTS, "AIK signature algorithm is %N with %N hash",
+		 tpm_alg_id_names, sig_alg, tpm_alg_id_names, digest_alg);
 	return aik_pubkey;
 }
 
