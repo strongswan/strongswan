@@ -81,7 +81,6 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 #include <net/if_var.h>
 #include <netinet/in_var.h>
 #elif defined(WIN32)
-#include <tap-windows.h>
 #include <winioctl.h>
 #include <collections/linked_list.h>
 #include "win32.h"
@@ -294,7 +293,7 @@ linked_list_t *get_panel_reg ()
 
         if (status != ERROR_SUCCESS)
         {
-            DBG1(DBG_LIB, "Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
+            DBG2(DBG_LIB, "Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
         }
         while (TRUE)
         {
@@ -321,7 +320,7 @@ linked_list_t *get_panel_reg ()
             }
             else if (status != ERROR_SUCCESS)
             {
-                DBG1(DBG_LIB, "Error enumerating registry subkeys of key: %s",
+                DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
                         NETWORK_CONNECTIONS_KEY);
             }
             snprintf(connection_string, sizeof (connection_string),
@@ -337,7 +336,7 @@ linked_list_t *get_panel_reg ()
 
             if (status != ERROR_SUCCESS)
             {
-                DBG1(DBG_LIB, "Error opening registry key: %s", connection_string);
+                DBG2(DBG_LIB, "Error opening registry key: %s", connection_string);
             }
             else
             {
@@ -352,7 +351,7 @@ linked_list_t *get_panel_reg ()
 
                 if (status != ERROR_SUCCESS || name_type != REG_SZ)
                 {
-                    DBG1(DBG_LIB, "Error opening registry key: %s\\%s\\%s",
+                    DBG2(DBG_LIB, "Error opening registry key: %s\\%s\\%s",
                             NETWORK_CONNECTIONS_KEY, connection_string, name_string);
                 }
                 else
