@@ -457,6 +457,14 @@ if test x$perl_cpan_install = xtrue; then
 	perl_cpan=true
 fi
 
+if test x$aikgen = xtrue; then
+	tss_trousers=true
+fi
+
+if test x$aikpub2 = xtrue; then
+	tss_tss2=true
+fi
+
 # ===========================================
 #  check required libraries and header files
 # ===========================================
@@ -1634,8 +1642,8 @@ AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
-AM_CONDITIONAL(USE_TROUSERS, test x$tss_trousers = xtrue -o x$aikgen = xtrue)
-AM_CONDITIONAL(USE_TSS2, test x$tss_tss2 = xtrue -o x$aikpub2 = xtrue)
+AM_CONDITIONAL(USE_TROUSERS, test x$tss_trousers = xtrue)
+AM_CONDITIONAL(USE_TSS2, test x$tss_tss2 = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
