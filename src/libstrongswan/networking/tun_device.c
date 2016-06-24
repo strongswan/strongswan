@@ -356,18 +356,15 @@ linked_list_t *get_panel_reg ()
                 }
                 else
                 {
-                    int n;
-                    LPSTR name;
-                    guid_name_pair_t *member = calloc(1, sizeof (guid_name_pair_t));
-                    n = WideCharToMultiByte(CP_UTF8, 0, name_data, -1, NULL, 0, NULL, NULL);
-                    name = malloc(n);
-                    WideCharToMultiByte(CP_UTF8, 0, name_data, -1, name, n, NULL, NULL);
-
+                    guid_name_pair_t *member = malloc(sizeof(guid_name_pair_t));
+                    member->name = malloc(sizeof(char)*256);
+                    member->guid = malloc(sizeof(char)*256);
+                    memset(member->name, 0, 256);
+                    memset(member->guid, 0, 256);
+                    WideCharToMultiByte(CP_UTF8, 0, name_data, 256, member->name, 256, NULL, NULL);
+                    memset(member->guid, 0, sizeof(enum_name));
+                    memcpy(member->guid, enum_name, sizeof(enum_name));
                     list->insert_last(list, member);
-                    member->name = name;
-
-                    member->guid = calloc(1, sizeof (enum_name));
-                    memcpy(member->guid, enum_name, strlen(enum_name));
                 }
                 RegCloseKey(connection_key);
             }
@@ -946,7 +943,6 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         BOOL success = FALSE;
         linked_list_t *possible_devices = get_tap_reg(), *connections = get_panel_reg();
         guid_name_pair_t *pair;
-
         memset(this->if_name, 0, sizeof(this->if_name));
 
         /* Iterate over list */
@@ -972,9 +968,9 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                     /* translate GUID to name */
                     enumerator2 = connections->create_enumerator(connections);
 
-                    while(enumerator2->enumerate(enumerator, &pair))
+                    while(enumerator2->enumerate(enumerator2, &pair))
                     {
-                        if (pair->guid == guid)
+                        if (strcmp(pair->guid, guid) == 0)
                         {
                             /* Set name */
                             memcpy(this->if_name, pair->name, strlen(pair->name));
@@ -984,7 +980,6 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                         free(pair);
                     }
                     enumerator2->destroy(enumerator2);
-                    DBG1(DBG_LIB, "device %s has been opened for use as TAP interface.", guid);
                     success = TRUE;
                 }
             }
@@ -1049,7 +1044,6 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         }
 
             /* Give the adapter 2 seconds to come up */
-        DBG3 (DBG_LIB, "Sleeping for %d seconds...", 2);
         /* Create event with special template */
         snprintf(read_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_READ_EVENT_TEMPLATE, this->if_name);
         snprintf(write_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_WRITE_EVENT_TEMPLATE, this->if_name);
