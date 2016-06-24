@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright © 2015 FancyFon Software Ltd.
+All rights reserved.
+-->
+
+<resources>
+    
+    <string name="vpn_profile_crud_service_action">org.strongswan.android.action.VPN_PROFILE_CRUD_SERVICE</string>
+    <string name="vpn_profile_crud_messenger_service_action">org.strongswan.android.action.VPN_PROFILE_CRUD_MESSENGER_SERVICE</string>
+    
+    <string name="vpn_profile_create_action">org.strongswan.android.action.VPN_PROFILE_CREATE</string>
+    <string name="vpn_profile_read_action">org.strongswan.android.action.VPN_PROFILE_READ</string>
+    <string name="vpn_profile_update_action">org.strongswan.android.action.VPN_PROFILE_UPDATE</string>
+    <string name="vpn_profile_delete_action">org.strongswan.android.action.VPN_PROFILE_DELETE</string>
+
+    <string name="vpn_profile_crud_permission">org.strongswan.android.permission.VPN_PROFILE_CRUD</string>
+    
+    <string name="vpn_profile_bundle_id_key">id</string>
+    <string name="vpn_profile_bundle_id_params_key">id_%1$s</string>
+    <string name="vpn_profile_bundle_ids_key">ids</string>
+    <string name="vpn_profile_bundle_name_key">name</string>
+    <string name="vpn_profile_bundle_gateway_key">gateway</string>
+    <string name="vpn_profile_bundle_username_key">username</string>
+    <string name="vpn_profile_bundle_password_key">password</string>
+    <string name="vpn_profile_bundle_certificate_id_key">certificate_id</string>
+    <string name="vpn_profile_bundle_certificate_alias_key">certificate_alias</string>
+    <string name="vpn_profile_bundle_user_certificate_alias_key">user_certificate_alias</string>
+    <string name="vpn_profile_bundle_user_certificate_key">user_certificate</string>
+    <string name="vpn_profile_bundle_user_certificate_password_key">user_certificate_password</string>
+    <string name="vpn_profile_bundle_certificate_key">certificate</string>
+    <string name="vpn_profile_bundle_allowed_applications">allowed_applications</string>
+    <string name="vpn_profile_bundle_type_key">type</string>
+    <string name="vpn_profile_bundle_type_ikev2_eap_value">ikev2-eap</string>
+    <string name="vpn_profile_bundle_type_ikev2_cert_value">ikev2-cert</string>
+    <string name="vpn_profile_bundle_type_ikev2_cert_eap_value">ikev2-cert-eap</string>
+    <string name="vpn_profile_bundle_type_ikev2_eap_tls_value">ikev2-eap-tls</string>
+    <string name="vpn_profile_bundle_type_ikev2_byod_eap_value">ikev2-byod-eap</string>
+
+</resources>

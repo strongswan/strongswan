@@ -46,46 +46,28 @@
     <!-- VPN profile details -->
     <string name="profile_edit_save">Сохранить</string>
     <string name="profile_edit_cancel">Отмена</string>
-    <string name="profile_name_label">Название профиля (необязательный)</string>
-    <string name="profile_name_hint">Defaults to the configured server</string>
-    <string name="profile_name_hint_gateway">Defaults to \"%1$s\"</string>
-    <string name="profile_gateway_label">Сервер</string>
-    <string name="profile_gateway_hint">IP address or hostname of the VPN server</string>
-    <string name="profile_vpn_type_label">VPN Тип</string>
-    <string name="profile_username_label">Логин</string>
-    <string name="profile_password_label">Пароль (необязательный)</string>
-    <string name="profile_password_hint">Leave blank to get prompted on demand</string>
-    <string name="profile_user_certificate_label">Сертификат пользователя</string>
+    <string name="profile_name_label">Название профиля:</string>
+    <string name="profile_name_hint">(адрес шлюза)</string>
+    <string name="profile_gateway_label">Шлюз:</string>
+    <string name="profile_vpn_type_label">Тип:</string>
+    <string name="profile_username_label">Логин:</string>
+    <string name="profile_password_label">Пароль:</string>
+    <string name="profile_password_hint">(спросить если нужно)</string>
+    <string name="profile_user_certificate_label">Сертификат пользователя:</string>
     <string name="profile_user_select_certificate_label">Выбрать сертификат пользователя</string>
     <string name="profile_user_select_certificate">Выбрать сертификат пользователя</string>
-    <string name="profile_user_select_id_label">User identity</string>
-    <string name="profile_user_select_id_init">Select a certificate first</string>
-    <string name="profile_user_select_id_default">Default (%1$s)</string>
-    <string name="profile_ca_label">Сертификат CA</string>
+    <string name="profile_ca_label">Сертификат CA:</string>
     <string name="profile_ca_auto_label">Выбрать автоматически</string>
     <string name="profile_ca_select_certificate_label">Выбрать сертификат CA</string>
     <string name="profile_ca_select_certificate">Выбрать CA сертификат</string>
-    <string name="profile_advanced_label">Advanced settings</string>
-    <string name="profile_show_advanced_label">Show advanced settings</string>
-    <string name="profile_remote_id_label">Server identity</string>
-    <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
-    <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
-    <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
-    <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
-    <string name="profile_port_label">Server port</string>
-    <string name="profile_port_hint">UDP port to connect to, if different from the default</string>
-    <string name="profile_split_tunneling_label">Split tunneling</string>
-    <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
-    <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
     <!-- Warnings/Notifications in the details view -->
-    <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
+    <string name="alert_text_no_input_gateway">Пожалуйста введите адрес шлюза</string>
     <string name="alert_text_no_input_username">Пожалуйста введите имя пользователя</string>
     <string name="alert_text_nocertfound_title">Не выбран сертификат CA</string>
     <string name="alert_text_nocertfound">Пожалуйста выберите один <i>Выбрать автоматически</i></string>
-    <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
-    <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
-    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>
+    <string name="tnc_notice_subtitle">Device data is sent to the gateway operator</string>
+    <string name="tnc_notice_details">&lt;p>Trusted Network Connect (TNC) allows gateway operators to assess the health of a client device.&lt;/p>&lt;p>For that purpose the gateway operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.&lt;/p>&lt;b>Any data will be sent only after verifying the gateway\'s identity.&lt;/b></string>
 
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">Сертификаты CA</string>
@@ -121,16 +103,16 @@
 
     <!-- Dialogs -->
     <string name="login_title">Введите пароль для соединения</string>
-    <string name="login_username">Логин</string>
-    <string name="login_password">Пароль</string>
     <string name="login_confirm">Соединить</string>
     <string name="error_introduction">Ошибка подключения к VPN:</string>
-    <string name="error_lookup_failed">Не найден адрес сервер.</string>
-    <string name="error_unreachable">Сервер недоступен.</string>
-    <string name="error_peer_auth_failed">Ошибка авторизаци при подключении к сервер.</string>
+    <string name="error_lookup_failed">Не найден адрес шлюза.</string>
+    <string name="error_unreachable">Шлюз недоступен.</string>
+    <string name="error_peer_auth_failed">Ошибка авторизаци при подключении к шлюзу.</string>
     <string name="error_auth_failed">Ошибка авторизации пользователя.</string>
     <string name="error_assessment_failed">Security assessment failed.</string>
     <string name="error_generic">Неизвестная ошибка.</string>
+    <string name="connecting_title">Подключение: %1$s</string>
+    <string name="connecting_message">Подключение к VPN с \""%1$s\".</string>
     <string name="vpn_connected">Соединение с VPN установлено</string>
     <string name="vpn_profile_connected">Подключение к этому профилю VPN уже существует!</string>
     <string name="reconnect">Переподключить</string>
@@ -139,3 +121,4 @@
     <string name="connect">Соединить</string>
 
 </resources>
+
