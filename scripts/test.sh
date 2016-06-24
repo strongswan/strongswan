@@ -33,7 +33,7 @@ all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-maemo --disable-padlock
-			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
+			--disable-osx-attr --disable-tkm --disable-uci
 			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
@@ -41,6 +41,8 @@ all)
 		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
 		CONFIG="$CONFIG --disable-forecast --disable-connmark"
 	fi
+	# Ubuntu 12.04 does not provide libtss2-dev
+	CONFIG="$CONFIG --disable-aikpub2 --disable-tss-tss2"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
@@ -48,7 +50,8 @@ all)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
-		  binutils-dev libunwind7-dev libjson0-dev iptables-dev python-pip"
+		  binutils-dev libunwind7-dev libjson0-dev iptables-dev python-pip
+		  libtspi-dev"
 	PYDEPS="pytest"
 	;;
 win*)
