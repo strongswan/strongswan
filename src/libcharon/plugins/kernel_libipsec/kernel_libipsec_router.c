@@ -50,9 +50,9 @@ typedef struct {
 
 #ifdef WIN32
 typedef struct {
-    HANDLE fileHandle;
-    OVERLAPPED overlapped;
-    chunk_t buffer;
+    HANDLE *fileHandle;
+    OVERLAPPED *overlapped;
+    chunk_t *buffer;
 } handle_overlapped_buffer_t;
 #endif
 /**
@@ -202,24 +202,25 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         void **key = NULL;
         bool oldstate, status;
         uint32_t length, event_status = 0, i = 0, j = 0;
-
-        tun_device_t *tun_device;
+        handle_overlapped_buffer_t *bundle_array = NULL, dummy, tun_device_handle_overlapped_buffer, *structures = NULL;
+        OVERLAPPED *overlapped = NULL;
+        HANDLE *event_array = NULL, tun_device_event;
+        tun_device_t *tun_device = this->tun.tun;
+        enumerator_t *tuns_enumerator;
 
         /* Reset synchronisation event */
         ResetEvent(this->event);
-        length = this->tuns->get_count(this->tuns);
 
-        handle_overlapped_buffer_t bundle_array[length+2];
-        HANDLE event_array[length+2];
-        enumerator_t *tuns_enumerator;
+        length = this->tuns->get_count(this->tuns);
 
         this->lock->read_lock(this->lock);
 
         /* Allocate variable number of objects on thread. Valid in some implementations? */
-        OVERLAPPED overlapped[length];
-
-        HANDLE tun_device_event = OpenEvent(SYNCHRONIZE|EVENT_MODIFY_STATE, FALSE, "WIN32-libipsec-tun0");
-        handle_overlapped_buffer_t dummy, tun_device_handle_overlapped_buffer, structures[length];
+        overlapped = alloca((length+2)*sizeof(OVERLAPPED));
+        event_array = alloca((length+2)*sizeof(HANDLE));
+        bundle_array = alloca((length+2)*sizeof(handle_overlapped_buffer_t));
+        structures = alloca((length+2)*sizeof(handle_overlapped_buffer_t));
+        tun_device_event = OpenEvent(SYNCHRONIZE|EVENT_MODIFY_STATE, FALSE, "WIN32-libipsec-tun0");
 
         /* These are the arrays we're going to work with */
 
@@ -231,15 +232,18 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         bundle_array[i] = dummy;
         /* insert event object for this->tun device */
         i++;
-
+        DBG1(DBG_LIB, "i: %d", i);
         event_array[i] = tun_device_event;
-
 
         /* dummy object for the notification handle */
 
-        tun_device_handle_overlapped_buffer.buffer = chunk_alloca(tun_device->get_mtu(tun_device));
+        tun_device_handle_overlapped_buffer.buffer = alloca(sizeof(chunk_t));
+        (*tun_device_handle_overlapped_buffer.buffer) = chunk_alloca(tun_device->get_mtu(tun_device));
+        DBG1(DBG_LIB, "Allocated buffer.");
         tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
-        tun_device_handle_overlapped_buffer.overlapped = overlapped[0];
+        DBG1(DBG_LIB, "Allocated file handle.");
+        tun_device_handle_overlapped_buffer.overlapped = overlapped;
+        DBG1(DBG_LIB, "Allocated overlapped..");
         memset(&tun_device_handle_overlapped_buffer.overlapped, 0, sizeof(OVERLAPPED));
 
         bundle_array[i] = tun_device_handle_overlapped_buffer;
@@ -256,11 +260,13 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
             /* Allocate structure and buffer */
 
-            structures[j].buffer = chunk_alloca(tun_device->get_mtu(tun_device));
+            structures[j].buffer = alloca(sizeof(chunk_t));
+            (*structures[j].buffer) = chunk_alloca(tun_device->get_mtu(tun_device));
 
             structures[j].fileHandle = tun_device->get_handle(tun_device);
             /* Allocate and initialise OVERLAPPED structure */
-            structures[j].overlapped = overlapped[j];
+            structures[j].overlapped = alloca(sizeof(OVERLAPPED));
+            (*structures[j].overlapped) = overlapped[j];
             memset(&structures[j].overlapped, 0, sizeof(OVERLAPPED));
             /* Create unique name for that event. */
             snprintf(name, 80, "WIN32-libipsec-device-%d", i);
@@ -268,14 +274,14 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
              * No security attributes, no manual reset, initial state is unsignaled,
              * name is the special name we created
              */
-            structures[j].overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, name);
-            event_array[i] = structures[j].overlapped.hEvent;
+            structures[j].overlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, name);
+            event_array[i] = structures[j].overlapped->hEvent;
             bundle_array[i] = structures[j];
             i++;
 
             /* Initialise read with the allocate overwrite structure */
-            status = ReadFile(structures[j].fileHandle, structures[j].buffer.ptr,
-                    structures[j].buffer.len, NULL, &structures[j].overlapped);
+            status = ReadFile(structures[j].fileHandle, structures[j].buffer->ptr,
+                    structures[j].buffer->len, NULL, structures[j].overlapped);
             if (status)
             {
                 /* Read returned immediately */
@@ -356,7 +362,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     for(uint32_t k=0;k<i;k++)
                     {
                         /* stop all asynchronous IO */
-                        CancelIo(bundle_array[k].fileHandle);
+                        CancelIo((*bundle_array[k].fileHandle));
 
                         ResetEvent(event_array[k]);
                     }
@@ -375,7 +381,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* Do we need to copy the chunk before we enqueue it? */
                         ip_packet_t *packet;
 
-                        packet = ip_packet_create(bundle_array[k].buffer);
+                        packet = ip_packet_create((*bundle_array[k].buffer));
                         if (packet)
                         {
                                 ipsec->processor->queue_outbound(ipsec->processor, packet);
@@ -387,9 +393,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* Reset the overlapped structure, event and buffer */
                         memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
                         /* Don't leak packets */
-                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                        memset(bundle_array[k].buffer->ptr, 0, bundle_array[k].buffer->len);
 
-                        bundle_array[k].overlapped.hEvent = event_array[k];
+                        bundle_array[k].overlapped->hEvent = event_array[k];
                         ResetEvent(event_array[k]);
 
                     }
@@ -536,6 +542,7 @@ METHOD(kernel_libipsec_router_t, get_tun_name, char*,
 METHOD(kernel_libipsec_router_t, destroy, void,
 	private_kernel_libipsec_router_t *this)
 {
+        DBG1(DBG_LIB, "Destroy on kernel_libipsec_router called");
 	charon->receiver->del_esp_cb(charon->receiver,
 							 (receiver_esp_cb_t)receiver_esp_cb);
 	ipsec->processor->unregister_outbound(ipsec->processor,
@@ -546,8 +553,11 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 	this->lock->destroy(this->lock);
 	this->tuns->destroy(this->tuns);
 #ifdef WIN32
+        DBG1(DBG_LIB, "Setting event.");
+        SetEvent(this->event);
         CloseHandle(this->tun.handle);
         CloseHandle(this->event);
+        DBG1(DBG_LIB, "Handles closed");
         /* Remove all other handles we might have */
         /* TODO: Create enumerator, enumerate over tuns, close all those handles */
 #else
@@ -556,6 +566,7 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 #endif
 	router = NULL;
 	free(this);
+        DBG1(DBG_LIB, "Destroy end.");
 }
 
 /**
