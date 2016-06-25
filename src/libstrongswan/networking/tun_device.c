@@ -661,13 +661,6 @@ METHOD(tun_device_t, write_packet, bool,
         memset(&overlapped, 0, sizeof(OVERLAPPED));
 
         overlapped.hEvent = write_event;
-        /* We need to clone the packet here, because we don't know if the write will
-         * finish before we exit the function. The caller function destroys the packet,
-         * thereby freeing the memory area that the packet contains. For overlapped IO,
-         * we need to keep it around though, until the write is finished.
-         * This is indicated by the system. It will trigger the CompletionPort in the handle_plain method in kernel_libipsec_router.c.
-         * In that method, we catch the event and free the packet and memory.
-         */
 
         status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
             packet.len, NULL, &overlapped);
