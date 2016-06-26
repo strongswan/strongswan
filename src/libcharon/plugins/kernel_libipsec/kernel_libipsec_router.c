@@ -50,9 +50,9 @@ typedef struct {
 
 #ifdef WIN32
 typedef struct {
-    HANDLE *fileHandle;
+    HANDLE fileHandle;
     OVERLAPPED *overlapped;
-    chunk_t *buffer;
+    chunk_t buffer;
 } handle_overlapped_buffer_t;
 #endif
 /**
@@ -198,7 +198,7 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 {
 #ifdef WIN32
-
+        DBG1(DBG_LIB, "entered handle_plain.");
         void **key = NULL;
         bool oldstate, status;
         uint32_t length, event_status = 0, i = 0, j = 0;
@@ -208,84 +208,192 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         tun_device_t *tun_device = this->tun.tun;
         enumerator_t *tuns_enumerator;
 
+        memset(&tun_device_handle_overlapped_buffer, 0, sizeof(handle_overlapped_buffer_t));
         /* Reset synchronisation event */
         ResetEvent(this->event);
 
         length = this->tuns->get_count(this->tuns);
 
         this->lock->read_lock(this->lock);
+        /* Read event for this->tun */
 
-        /* Allocate variable number of objects on thread. Valid in some implementations? */
+        /* allocate arrays for all the structs we need */
+        /* events, overlapped structures and bundles. */
+        /* event_array holds all the HANDLE structures for the events that are
+         * used for notifying the thread of finished reads and writes.
+         */
+
         overlapped = alloca((length+2)*sizeof(OVERLAPPED));
         event_array = alloca((length+2)*sizeof(HANDLE));
         bundle_array = alloca((length+2)*sizeof(handle_overlapped_buffer_t));
-        structures = alloca((length+2)*sizeof(handle_overlapped_buffer_t));
-        tun_device_event = OpenEvent(SYNCHRONIZE|EVENT_MODIFY_STATE, FALSE, "WIN32-libipsec-tun0");
+
+        memset(overlapped, 0, (length+2)*sizeof(OVERLAPPED));
+        memset(bundle_array, 0, (length+2)*sizeof(handle_overlapped_buffer_t));
+
+        DBG1(DBG_LIB, "Allocated arrays, opened events");
 
         /* These are the arrays we're going to work with */
 
-        tuns_enumerator = this->tuns->create_enumerator(this->tuns);
         /* first position is the event we use for synchronisation  */
-        /* second position is this->tun */
-
+        /* Insert notification event */
         event_array[i] = this->event;
+        /* Insert dummy structure */
         bundle_array[i] = dummy;
-        /* insert event object for this->tun device */
         i++;
-        DBG1(DBG_LIB, "i: %d", i);
+
+        /* second position is this->tun */
+        /* insert event object for this->tun device */
+        tun_device_event = CreateEvent(NULL, FALSE, FALSE, this->tun.tun->get_read_event_name(this->tun.tun));
+        if (!tun_device_event)
+        {
+            DWORD error = GetLastError();
+            char *lpMsgBuf;
+            FormatMessage(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL,
+                error,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPTSTR) &lpMsgBuf,
+                0, NULL );
+            DBG1(DBG_LIB, "Error: %s", lpMsgBuf);
+            raise(SIGTERM);
+        }
         event_array[i] = tun_device_event;
-
-        /* dummy object for the notification handle */
-
-        tun_device_handle_overlapped_buffer.buffer = alloca(sizeof(chunk_t));
-        (*tun_device_handle_overlapped_buffer.buffer) = chunk_alloca(tun_device->get_mtu(tun_device));
+        ResetEvent(event_array[i]);
+        /* bundle for the read on this->tun */
+        /* Reserve memory for the buffer*/
+        tun_device_handle_overlapped_buffer.buffer = chunk_alloca(tun_device->get_mtu(tun_device));
         DBG1(DBG_LIB, "Allocated buffer.");
         tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
         DBG1(DBG_LIB, "Allocated file handle.");
         tun_device_handle_overlapped_buffer.overlapped = overlapped;
         DBG1(DBG_LIB, "Allocated overlapped..");
-        memset(&tun_device_handle_overlapped_buffer.overlapped, 0, sizeof(OVERLAPPED));
-
+        /* Fill in code */
+        tun_device_handle_overlapped_buffer.overlapped->hEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, this->tun.tun->get_read_event_name(this->tun.tun));
+        if (tun_device_handle_overlapped_buffer.overlapped->hEvent == NULL)
+        {
+            DWORD error = GetLastError();
+            char *lpMsgBuf;
+            FormatMessage(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL,
+                error,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPTSTR) &lpMsgBuf,
+                0, NULL );
+            DBG1(DBG_LIB, "Error: %s", lpMsgBuf);
+            raise(SIGTERM);
+        }
+        DBG1(DBG_LIB, "Created event");
         bundle_array[i] = tun_device_handle_overlapped_buffer;
 
+        DBG1(DBG_LIB, "%d", tun_device_handle_overlapped_buffer.buffer.ptr[1499]);
+        DBG1(DBG_LIB, "handle: %d", tun_device_handle_overlapped_buffer.fileHandle);
+        DBG1(DBG_LIB, "%d", tun_device_handle_overlapped_buffer.overlapped->hEvent);
         i++;
 
-        /* Start ReadFile for this->tun.handle and this->event */
+        /* Start ReadFile for this->tun.handle */
+        status = ReadFile(tun_device_handle_overlapped_buffer.fileHandle,
+            tun_device_handle_overlapped_buffer.buffer.ptr,
+            tun_device_handle_overlapped_buffer.buffer.len,
+            NULL,
+            tun_device_handle_overlapped_buffer.overlapped );
+        if (status)
+        {
+            SetEvent(tun_device_handle_overlapped_buffer.overlapped->hEvent);
+        }
+        else
+        {
+            DWORD error = GetLastError();
+            switch(error)
+            {
+                case ERROR_IO_PENDING:
+                    /* IO enqueud. Everything's fine. */
+                    break;
+                case ERROR_INVALID_USER_BUFFER:
+                case ERROR_NOT_ENOUGH_MEMORY:
+                    /* too many outstanding I/O requests
+                     * We can't fix that and need to stop the process
+                     */
+                    DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations");
+                    this->lock->unlock(this->lock);
+                    raise(SIGTERM);
+                    /* fatal error */
+                    break;
+                case ERROR_NOT_ENOUGH_QUOTA:
+                    /* unable to page lock calling process's buffer */
+                    DBG1(DBG_LIB, "the operating system could not lock the buffer");
+                    this->lock->unlock(this->lock);
+                    /* fatal error */
+                    raise(SIGTERM);
+                    break;
+                default:
+                    DBG1(DBG_LIB, "Unknown error %d occured", error);
+                    /* Some error we don't know */
+                    /* exit */
+                    /* TODO: Translate error number to human readable*/
+                    /* fatal error */
+                    raise(SIGTERM);
+                    break;
+            }
+
+        }
         /* pad bundle_array with two empty structures */
         /* iterate over all our tun devices, create event handles, reset them, queue read operations on all handles */
 
+        DBG1(DBG_LIB, "Enumerating tun devices ...");
+
+        tuns_enumerator = this->tuns->create_enumerator(this->tuns);
         while(tuns_enumerator->enumerate(tuns_enumerator, key, &tun_device))
         {
-            char name[80];
-
             /* Allocate structure and buffer */
 
-            structures[j].buffer = alloca(sizeof(chunk_t));
-            (*structures[j].buffer) = chunk_alloca(tun_device->get_mtu(tun_device));
-
+            structures[j].buffer = chunk_alloca(tun_device->get_mtu(tun_device));
             structures[j].fileHandle = tun_device->get_handle(tun_device);
             /* Allocate and initialise OVERLAPPED structure */
             structures[j].overlapped = alloca(sizeof(OVERLAPPED));
             (*structures[j].overlapped) = overlapped[j];
             memset(&structures[j].overlapped, 0, sizeof(OVERLAPPED));
             /* Create unique name for that event. */
-            snprintf(name, 80, "WIN32-libipsec-device-%d", i);
             /* Create unique event for read accesses on that device
              * No security attributes, no manual reset, initial state is unsignaled,
              * name is the special name we created
              */
-            structures[j].overlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, name);
-            event_array[i] = structures[j].overlapped->hEvent;
+            structures[j].overlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, tun_device->get_read_event_name(tun_device));
+            event_array[i] = OpenEvent(EVENT_ALL_ACCESS, FALSE, tun_device->get_read_event_name(tun_device));
             bundle_array[i] = structures[j];
+
+            if (event_array[i] == NULL)
+            {
+                DWORD error = GetLastError();
+                char *lpMsgBuf;
+                FormatMessage(
+                    FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                    FORMAT_MESSAGE_FROM_SYSTEM |
+                    FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL,
+                    error,
+                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                    (LPTSTR) &lpMsgBuf,
+                    0, NULL );
+                DBG1(DBG_LIB, "Error: %s", lpMsgBuf);
+                raise(SIGTERM);
+            }
             i++;
 
             /* Initialise read with the allocate overwrite structure */
-            status = ReadFile(structures[j].fileHandle, structures[j].buffer->ptr,
-                    structures[j].buffer->len, NULL, structures[j].overlapped);
+            DBG1(DBG_LIB, "Reading on %s", tun_device->get_name(tun_device));
+            status = ReadFile(structures[j].fileHandle, structures[j].buffer.ptr,
+                    structures[j].buffer.len, NULL, structures[j].overlapped);
             if (status)
             {
                 /* Read returned immediately */
                 /* We need to signal the event ourselves */
+
                 SetEvent(event_array[i]);
                 continue;
             }
@@ -337,8 +445,10 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
              * This translates to 63 tun devices. I think this is sufficiently high to not have to implement a mechanism for waiting for more
              * events /support more TUN devices */
             oldstate = thread_cancelability(FALSE);
+            DBG1(DBG_LIB, "Waiting for events...");
             event_status = WaitForMultipleObjects(i, event_array, FALSE, INFINITE);
             thread_cancelability(oldstate);
+            DBG1(DBG_LIB, "Event triggered...");
             /* A handle was signaled. Find the tun handle whose read was successful */
 
             /* We can only use the event_status of indication for the first completed IO operation.
@@ -357,21 +467,24 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                 {
                     /* Notification about changes regarding the tun devices.
                      * We need to rebuild the array. So exit and rebuild. */
-
+                    DBG1(DBG_LIB, "cleanup.");
                     /* Cleanup*/
                     for(uint32_t k=0;k<i;k++)
                     {
                         /* stop all asynchronous IO */
-                        CancelIo((*bundle_array[k].fileHandle));
-
+                        CancelIo(bundle_array[k].fileHandle);
+                        CloseHandle(bundle_array[k].overlapped->hEvent);
                         ResetEvent(event_array[k]);
+                        CloseHandle(event_array[k]);
                     }
                     /* exit */
+                    DBG1(DBG_LIB, "Cleanup done.");
                     return JOB_REQUEUE_FAIR;
                 }
                 for(uint32_t k=1;k<i; k++)
                 {
                     /* Is the object signaled? */
+                    DBG1(DBG_LIB, "checking if event is signaled.");
                     if (WaitForSingleObject(event_array[k], 0) == WAIT_OBJECT_0)
                     {
                         /* The arrays have the same length and the same positioning of the elements.
@@ -379,9 +492,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                          * and bundle_array[k].buffer has our data now. */
 
                         /* Do we need to copy the chunk before we enqueue it? */
+                        DBG1(DBG_LIB, "Event is signaled. Processing packet.");
                         ip_packet_t *packet;
-
-                        packet = ip_packet_create((*bundle_array[k].buffer));
+                        packet = ip_packet_create(bundle_array[k].buffer);
                         if (packet)
                         {
                                 ipsec->processor->queue_outbound(ipsec->processor, packet);
@@ -393,7 +506,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* Reset the overlapped structure, event and buffer */
                         memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
                         /* Don't leak packets */
-                        memset(bundle_array[k].buffer->ptr, 0, bundle_array[k].buffer->len);
+                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
 
                         bundle_array[k].overlapped->hEvent = event_array[k];
                         ResetEvent(event_array[k]);
