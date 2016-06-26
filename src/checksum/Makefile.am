@@ -53,6 +53,11 @@ if USE_LIBPTTLS
   libs += $(DESTDIR)$(ipseclibdir)/libpttls.so
 endif
 
+if USE_LIBTPMTSS
+  deps += $(top_builddir)/src/libtpmtss/libtpmtss.la
+  libs += $(DESTDIR)$(ipseclibdir)/libtpmtss.so
+endif
+
 if USE_LIBTNCCS
   deps += $(top_builddir)/src/libtnccs/libtnccs.la
   libs += $(DESTDIR)$(ipseclibdir)/libtnccs.so

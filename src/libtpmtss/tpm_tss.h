@@ -130,4 +130,9 @@ struct tpm_tss_t {
  */
 tpm_tss_t *tpm_tss_probe(tpm_version_t version);
 
+/**
+ * Dummy libtpmtss initialization function needed for integrity test
+ */
+void libtpmtss_init(void);
+
 #endif /** TPM_TSS_H_ @}*/

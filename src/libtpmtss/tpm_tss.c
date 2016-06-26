@@ -17,6 +17,14 @@
 #include "tpm_tss_tss2.h"
 #include "tpm_tss_trousers.h"
 
+/**
+ * Described in header.
+ */
+void libtpmtss_init(void)
+{
+	/* empty */
+}
+
 typedef tpm_tss_t*(*tpm_tss_create)();
 
 /**
