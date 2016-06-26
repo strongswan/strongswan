@@ -1,11 +1,12 @@
-bin_PROGRAMS = aikgen
+bin_PROGRAMS = aikpub2
 
-aikgen_SOURCES = aikgen.c
+aikpub2_SOURCES = aikpub2.c
 
-aikgen_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+aikpub2_LDADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libtpmtss/libtpmtss.la
 
-aikgen.o :	$(top_builddir)/config.status
+aikpub2.o :	$(top_builddir)/config.status
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \

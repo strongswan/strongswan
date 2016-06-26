@@ -32,6 +32,10 @@ if USE_LIBPTTLS
   SUBDIRS += libpttls
 endif
 
+if USE_LIBTPMTSS
+  SUBDIRS += libtpmtss
+endif
+
 if USE_IMCV
   SUBDIRS += libimcv
 endif
@@ -130,4 +134,8 @@ endif
 
 if USE_AIKGEN
   SUBDIRS += aikgen
+endif
+
+if USE_AIKPUB2
+  SUBDIRS += aikpub2
 endif

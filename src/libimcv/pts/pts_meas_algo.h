@@ -96,6 +96,14 @@ pts_meas_algorithms_t pts_meas_algo_select(pts_meas_algorithms_t supported_algos
 hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm);
 
 /**
+ * Convert hash_algorithm_t to pts_meas_algorithms_t
+ *
+ * @param algorithm		PTS measurement algorithm type
+ * @return				libstrongswan hash algorithm type
+ */
+pts_meas_algorithms_t pts_meas_algo_from_hash(hash_algorithm_t algorithm);
+
+/**
  * Return the hash size of a pts_meas_algorithm
  *
  * @param algorithm		PTS measurement algorithm type
