@@ -376,6 +376,18 @@ linked_list_t *get_panel_reg ()
         return list;
 }
 
+METHOD(tun_device_t, get_read_event_name, char *,
+	private_tun_device_t *this)
+{
+    return this->read_event_name;
+}
+
+METHOD(tun_device_t, get_write_event_name, char *,
+	private_tun_device_t *this)
+{
+    return this->write_event_name;
+}
+
 #endif /* WIN32 */
 /**
  * FreeBSD 10 deprecated the SIOCSIFADDR etc. commands.
@@ -932,12 +944,13 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* Check if there is an unused tun device following the IPsec name scheme*/
         enumerator_t *enumerator, *enumerator2;
         char *guid;
-        char read_name[WIN32_TUN_EVENT_LENGTH], write_name[WIN32_TUN_EVENT_LENGTH];
         BOOL success = FALSE;
         linked_list_t *possible_devices = get_tap_reg(), *connections = get_panel_reg();
         guid_name_pair_t *pair;
         memset(this->if_name, 0, sizeof(this->if_name));
 
+        this->read_event_name = malloc(WIN32_TUN_EVENT_LENGTH);
+        this->write_event_name = malloc(WIN32_TUN_EVENT_LENGTH);
         /* Iterate over list */
         enumerator = possible_devices->create_enumerator(possible_devices);
         /* Try to open that device */
@@ -1038,8 +1051,8 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 
             /* Give the adapter 2 seconds to come up */
         /* Create event with special template */
-        snprintf(read_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_READ_EVENT_TEMPLATE, this->if_name);
-        snprintf(write_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_WRITE_EVENT_TEMPLATE, this->if_name);
+        snprintf(this->read_event_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_READ_EVENT_TEMPLATE, this->if_name);
+        snprintf(this->write_event_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_WRITE_EVENT_TEMPLATE, this->if_name);
         sleep(2);
         return TRUE;
 #elif defined(IFF_TUN)
@@ -1120,6 +1133,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                         /* For WIN32, that's a handle. */
 #ifdef WIN32
                         .get_handle = _get_handle,
+                        .get_write_event_name = _get_write_event_name,
+                        .get_read_event_name = _get_read_event_name,
 #else
 			.get_fd = _get_fd,
 #endif /* WIN32 */
