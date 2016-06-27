@@ -564,6 +564,10 @@ char *whitelist[] = {
 	"ECDSA_do_sign_ex",
 	"ECDSA_verify",
 	"RSA_new_method",
+	/* OpenSSL 1.1.0 does not cleanup anymore until the library is unloaded */
+	"OPENSSL_init_crypto",
+	"CRYPTO_THREAD_lock_new",
+	"ERR_add_error_data",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
