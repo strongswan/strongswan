@@ -23,6 +23,10 @@
 #include <library.h>
 #include <credentials/sets/mem_cred.h>
 
+#ifdef OPENSSL_IS_BORINGSSL
+#define EVP_PKEY_base_id(p) EVP_PKEY_type(p->type)
+#endif
+
 typedef struct private_pkcs12_t private_pkcs12_t;
 
 /**
@@ -110,7 +114,7 @@ static bool add_key(private_pkcs12_t *this, EVP_PKEY *private)
 	{	/* no private key is ok */
 		return TRUE;
 	}
-	switch (EVP_PKEY_type(private->type))
+	switch (EVP_PKEY_base_id(private))
 	{
 		case EVP_PKEY_RSA:
 			type = KEY_RSA;
