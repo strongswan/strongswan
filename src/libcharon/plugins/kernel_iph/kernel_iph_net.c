@@ -605,14 +605,27 @@ METHOD(kernel_net_t, add_ip, status_t,
         char *iface_name)
 {
         /*
-         * If we don't have a TUN device, we need to return NOT_SUPPORTED
-         * Check if the name starts with TAP
+         * The iface_name that is passed to this function is actually the GUID.
+         * We need to translate that GUID to the LUID of the interface.
          */
-        /*
-         * Convert the interface name to an index
-         */
-        NET_IFINDEX index = if_nametoindex(iface_name);
-        if (!index)
+        iface_t *interface;
+        NET_IFINDEX index = 0;
+        enumerator_t *enumerator;
+        BOOL found = FALSE;
+        this->mutex->lock(this->mutex);
+        enumerator = this->ifaces->create_enumerator(this->ifaces);
+
+        while(enumerator->enumerate(enumerator, &interface) && !found)
+        {
+            if (strcmp(interface->ifname, iface_name) == 0)
+            {
+                found = TRUE;
+                index = interface->ifindex;
+            }
+        }
+        enumerator->destroy(enumerator);
+        this->mutex->unlock(this->mutex);
+        if (!found)
         {
             DBG1(DBG_KNL, "getting the index of the interface %s failed", iface_name);
             return FALSE;
@@ -641,7 +654,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 
                 /* Horribly intricate struct */
                 ipv4_address.sin_family = AF_INET;
-                ipv4_address.sin_addr.S_un.S_addr = *address.ptr;
+                memcpy(&ipv4_address.sin_addr.S_un.S_addr, address.ptr, 4);
 
                 ip_row.InterfaceIndex = index;
                 ip_row.Address.Ipv4 = ipv4_address;
