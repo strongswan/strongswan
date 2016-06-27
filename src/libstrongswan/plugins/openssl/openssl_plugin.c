@@ -515,6 +515,10 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+/* OpenSSL 1.1.0 cleans up itself at exit and while OPENSSL_cleanup() exists we
+ * can't call it as we couldn't re-initialize the library (as required by the
+ * unit tests and the Android app) */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 #ifndef OPENSSL_IS_BORINGSSL
 	CONF_modules_free();
 	OBJ_cleanup();
@@ -526,6 +530,7 @@ METHOD(plugin_t, destroy, void,
 	CRYPTO_cleanup_all_ex_data();
 	threading_cleanup();
 	ERR_free_strings();
+#endif /* OPENSSL_VERSION_NUMBER */
 
 	free(this);
 }
@@ -568,12 +573,23 @@ plugin_t *openssl_plugin_create()
 		},
 	);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	/* note that we can't call OPENSSL_cleanup() when the plugin is destroyed
+	 * as we couldn't initialize the library again afterwards */
+	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG |
+						OPENSSL_INIT_ENGINE_ALL_BUILTIN, NULL);
+#else /* OPENSSL_VERSION_NUMBER */
 	threading_init();
-
 #ifndef OPENSSL_IS_BORINGSSL
 	OPENSSL_config(NULL);
 #endif
 	OpenSSL_add_all_algorithms();
+#ifndef OPENSSL_NO_ENGINE
+	/* activate support for hardware accelerators */
+	ENGINE_load_builtin_engines();
+	ENGINE_register_all_complete();
+#endif /* OPENSSL_NO_ENGINE */
+#endif /* OPENSSL_VERSION_NUMBER */
 
 #ifdef OPENSSL_FIPS
 	/* we do this here as it may have been enabled via openssl.conf */
@@ -581,12 +597,6 @@ plugin_t *openssl_plugin_create()
 	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,
 		"openssl FIPS mode(%d) - %sabled ", fips_mode, fips_mode ? "en" : "dis");
 #endif /* OPENSSL_FIPS */
-
-#ifndef OPENSSL_NO_ENGINE
-	/* activate support for hardware accelerators */
-	ENGINE_load_builtin_engines();
-	ENGINE_register_all_complete();
-#endif /* OPENSSL_NO_ENGINE */
 
 	if (!seed_rng())
 	{
