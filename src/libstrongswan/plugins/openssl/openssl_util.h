@@ -60,7 +60,8 @@ bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash);
  * @param chunk		resulting chunk
  * @return			TRUE on success, FALSE otherwise
  */
-bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
+bool openssl_bn_cat(const int len, const BIGNUM *a, const BIGNUM *b,
+					chunk_t *chunk);
 
 /**
  * Splits a chunk into two bignums of equal binary length.
@@ -80,7 +81,7 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
  * @param chunk		the chunk (data gets allocated)
  * @return			TRUE on success, FALSE otherwise
  */
-bool openssl_bn2chunk(BIGNUM *bn, chunk_t *chunk);
+bool openssl_bn2chunk(const BIGNUM *bn, chunk_t *chunk);
 
 /**
  * Allocate a chunk using the i2d function of a given object

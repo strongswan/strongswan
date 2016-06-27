@@ -76,7 +76,8 @@ error:
 /**
  * Described in header.
  */
-bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk)
+bool openssl_bn_cat(const int len, const BIGNUM *a, const BIGNUM *b,
+					chunk_t *chunk)
 {
 	int offset;
 
@@ -133,7 +134,7 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b)
 /**
  * Described in header.
  */
-bool openssl_bn2chunk(BIGNUM *bn, chunk_t *chunk)
+bool openssl_bn2chunk(const BIGNUM *bn, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(BN_num_bytes(bn));
 	if (BN_bn2bin(bn, chunk->ptr) == chunk->len)
