@@ -49,13 +49,6 @@ struct private_openssl_rng_t {
 METHOD(rng_t, get_bytes, bool,
 	private_openssl_rng_t *this, size_t bytes, uint8_t *buffer)
 {
-	if (this->quality == RNG_WEAK)
-	{
-		/* RAND_pseudo_bytes() returns 1 if returned bytes are strong,
-		 * 0 if of not. Both is acceptable for RNG_WEAK. */
-		return RAND_pseudo_bytes((char*)buffer, bytes) != -1;
-	}
-	/* A 0 return value is a failure for RAND_bytes() */
 	return RAND_bytes((char*)buffer, bytes) == 1;
 }
 
