@@ -22,6 +22,12 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
+/* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define OBJ_get0_data(o) ((o)->data)
+#define OBJ_length(o) ((o)->length)
+#endif
+
 /**
  * Described in header.
  */
@@ -149,7 +155,7 @@ chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1)
 {
 	if (asn1)
 	{
-		return chunk_create((u_char*)asn1->data, asn1->length);
+		return chunk_create((u_char*)OBJ_get0_data(asn1), OBJ_length(asn1));
 	}
 	return chunk_empty;
 }
