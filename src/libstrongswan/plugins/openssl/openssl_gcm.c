@@ -71,7 +71,7 @@ struct private_aead_t {
 static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 				  u_char *out, int enc)
 {
-	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX *ctx;
 	u_char nonce[NONCE_LEN];
 	bool success = FALSE;
 	int len;
@@ -79,29 +79,29 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	memcpy(nonce, this->salt, SALT_LEN);
 	memcpy(nonce + SALT_LEN, iv.ptr, IV_LEN);
 
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_CIPHER_CTX_set_padding(&ctx, 0);
-	if (!EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc) ||
-		!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, NONCE_LEN, NULL) ||
-		!EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, nonce, enc))
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+	if (!EVP_CipherInit_ex(ctx, this->cipher, NULL, NULL, NULL, enc) ||
+		!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, NONCE_LEN, NULL) ||
+		!EVP_CipherInit_ex(ctx, NULL, NULL, this->key.ptr, nonce, enc))
 	{
 		goto done;
 	}
-	if (!enc && !EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_TAG, this->icv_size,
+	if (!enc && !EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, this->icv_size,
 									 data.ptr + data.len))
 	{	/* set ICV for verification on decryption */
 		goto done;
 	}
-	if (assoc.len && !EVP_CipherUpdate(&ctx, NULL, &len, assoc.ptr, assoc.len))
+	if (assoc.len && !EVP_CipherUpdate(ctx, NULL, &len, assoc.ptr, assoc.len))
 	{	/* set AAD if specified */
 		goto done;
 	}
-	if (!EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len) ||
-		!EVP_CipherFinal_ex(&ctx, out + len, &len))
+	if (!EVP_CipherUpdate(ctx, out, &len, data.ptr, data.len) ||
+		!EVP_CipherFinal_ex(ctx, out + len, &len))
 	{	/* EVP_CipherFinal_ex fails if ICV is incorrect on decryption */
 		goto done;
 	}
-	if (enc && !EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_GET_TAG, this->icv_size,
+	if (enc && !EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, this->icv_size,
 									out + data.len))
 	{	/* copy back the ICV when encrypting */
 		goto done;
@@ -109,7 +109,7 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	success = TRUE;
 
 done:
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	return success;
 }
 
@@ -152,7 +152,7 @@ METHOD(aead_t, decrypt, bool,
 METHOD(aead_t, get_block_size, size_t,
 	private_aead_t *this)
 {
-	return this->cipher->block_size;
+	return EVP_CIPHER_block_size(this->cipher);
 }
 
 METHOD(aead_t, get_icv_size, size_t,
