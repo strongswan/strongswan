@@ -28,6 +28,10 @@
 #include <openssl/rsa.h>
 #include <openssl/x509.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(RSA, key, n, e, d)
+#endif
+
 typedef struct private_openssl_rsa_public_key_t private_openssl_rsa_public_key_t;
 
 /**
@@ -224,11 +228,13 @@ bool openssl_rsa_fingerprint(RSA *rsa, cred_encoding_type_t type, chunk_t *fp)
 			break;
 		default:
 		{
+			const BIGNUM *bn_n, *bn_e;
 			chunk_t n = chunk_empty, e = chunk_empty;
 			bool success = FALSE;
 
-			if (openssl_bn2chunk(rsa->n, &n) &&
-				openssl_bn2chunk(rsa->e, &e))
+			RSA_get0_key(rsa, &bn_n, &bn_e, NULL);
+			if (openssl_bn2chunk(bn_n, &n) &&
+				openssl_bn2chunk(bn_e, &e))
 			{
 				success = lib->encoding->encode(lib->encoding, type, rsa, fp,
 									CRED_PART_RSA_MODULUS, n,
@@ -297,10 +303,12 @@ METHOD(public_key_t, get_encoding, bool,
 		}
 		default:
 		{
+			const BIGNUM *bn_n, *bn_e;
 			chunk_t n = chunk_empty, e = chunk_empty;
 
-			if (openssl_bn2chunk(this->rsa->n, &n) &&
-				openssl_bn2chunk(this->rsa->e, &e))
+			RSA_get0_key(this->rsa, &bn_n, &bn_e, NULL);
+			if (openssl_bn2chunk(bn_n, &n) &&
+				openssl_bn2chunk(bn_e, &e))
 			{
 				success = lib->encoding->encode(lib->encoding, type, NULL,
 									encoding, CRED_PART_RSA_MODULUS, n,
@@ -416,10 +424,15 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 	}
 	else if (n.ptr && e.ptr && type == KEY_RSA)
 	{
+		BIGNUM *bn_n, *bn_e;
+
 		this->rsa = RSA_new();
-		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
-		this->rsa->e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
-		return &this->public;
+		bn_n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
+		bn_e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
+		if (RSA_set0_key(this->rsa, bn_n, bn_e, NULL))
+		{
+			return &this->public;
+		}
 	}
 	destroy(this);
 	return NULL;
