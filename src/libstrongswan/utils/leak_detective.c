@@ -844,6 +844,18 @@ HOOK(void, free, void *ptr)
 
 	if (!enabled || thread_disabled->get(thread_disabled))
 	{
+		/* after deinitialization we might have to free stuff we allocated
+		 * while we were enabled */
+		if (!first_header.magic && ptr)
+		{
+			hdr = ptr - sizeof(memory_header_t);
+			tail = ptr + hdr->bytes;
+			if (hdr->magic == MEMORY_HEADER_MAGIC &&
+				tail->magic == MEMORY_TAIL_MAGIC)
+			{
+				ptr = hdr;
+			}
+		}
 		real_free(ptr);
 		return;
 	}
@@ -960,6 +972,7 @@ METHOD(leak_detective_t, destroy, void,
 	lock->destroy(lock);
 	thread_disabled->destroy(thread_disabled);
 	free(this);
+	first_header.magic = 0;
 	first_header.next = NULL;
 }
 
