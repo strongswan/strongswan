@@ -66,6 +66,11 @@ struct private_openssl_plugin_t {
 };
 
 /**
+ * OpenSSL is thread-safe since 1.1.0
+ */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+/**
  * Array of static mutexs, with CRYPTO_num_locks() mutex
  */
 static mutex_t **mutex = NULL;
@@ -226,6 +231,14 @@ static void threading_cleanup()
 
 	cleanup->destroy(cleanup);
 }
+
+#else /* OPENSSL_VERSION_NUMBER */
+
+#define threading_init()
+
+#define threading_cleanup()
+
+#endif
 
 /**
  * Seed the OpenSSL RNG, if required
