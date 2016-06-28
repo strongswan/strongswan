@@ -33,6 +33,7 @@ LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/libimcv \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libtnccs \
+	$(strongswan_PATH)/src/libtpmtss \
 	$(strongswan_PATH)/src/libtls
 endif
 
