@@ -1661,6 +1661,9 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 
+	/* cancel any currently active task to get the DELETE done quickly */
+	flush_queue(this, TASK_QUEUE_ACTIVE);
+
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
