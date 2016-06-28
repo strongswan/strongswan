@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2016 Noel Kuntze
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
