@@ -507,7 +507,7 @@ static bool decrypt_symmetric(private_openssl_pkcs7_t *this, chunk_t key,
 	chunk_t iv;
 	size_t key_size;
 
-	/* read encryption algorithm from interal structures; TODO fixup */
+	/* read encryption algorithm from internal structures; TODO fixup */
 	alg = this->cms->envelopedData->encryptedContentInfo->
 												contentEncryptionAlgorithm;
 	encr = encryption_algorithm_from_oid(openssl_asn1_known_oid(alg->algorithm),

@@ -67,7 +67,7 @@ struct private_tpm_tss_quote_info_t {
 	chunk_t pcr_digest;
 
 	/**
-	 * TPM PCR Composite Hash algoritm
+	 * TPM PCR Composite Hash algorithm
 	 */
 	hash_algorithm_t pcr_digest_alg;
 
