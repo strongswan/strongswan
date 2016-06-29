@@ -93,8 +93,10 @@ static char* lookup_algorithm(uint16_t ikev2_algo, size_t *key_size)
 static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 				  chunk_t *dst, int enc)
 {
+	EVP_CIPHER_CTX *ctx;
 	int len;
 	u_char *out;
+	bool success = FALSE;
 
 	out = data.ptr;
 	if (dst)
@@ -102,16 +104,19 @@ static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 		*dst = chunk_alloc(data.len);
 		out = dst->ptr;
 	}
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
-	return EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc) &&
-		   EVP_CIPHER_CTX_set_padding(&ctx, 0) /* disable padding */ &&
-		   EVP_CIPHER_CTX_set_key_length(&ctx, this->key.len) &&
-		   EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, iv.ptr, enc) &&
-		   EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len) &&
-		   /* since padding is disabled this does nothing */
-		   EVP_CipherFinal_ex(&ctx, out + len, &len) &&
-		   EVP_CIPHER_CTX_cleanup(&ctx);
+	ctx = EVP_CIPHER_CTX_new();
+	if (EVP_CipherInit_ex(ctx, this->cipher, NULL, NULL, NULL, enc) &&
+		EVP_CIPHER_CTX_set_padding(ctx, 0) /* disable padding */ &&
+		EVP_CIPHER_CTX_set_key_length(ctx, this->key.len) &&
+		EVP_CipherInit_ex(ctx, NULL, NULL, this->key.ptr, iv.ptr, enc) &&
+		EVP_CipherUpdate(ctx, out, &len, data.ptr, data.len) &&
+		/* since padding is disabled this does nothing */
+		EVP_CipherFinal_ex(ctx, out + len, &len))
+	{
+		success = TRUE;
+	}
+	EVP_CIPHER_CTX_free(ctx);
+	return success;
 }
 
 METHOD(crypter_t, decrypt, bool,
@@ -129,13 +134,13 @@ METHOD(crypter_t, encrypt, bool,
 METHOD(crypter_t, get_block_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->cipher->block_size;
+	return EVP_CIPHER_block_size(this->cipher);
 }
 
 METHOD(crypter_t, get_iv_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->cipher->iv_len;
+	return EVP_CIPHER_iv_length(this->cipher);
 }
 
 METHOD(crypter_t, get_key_size, size_t,

@@ -564,6 +564,10 @@ char *whitelist[] = {
 	"ECDSA_do_sign_ex",
 	"ECDSA_verify",
 	"RSA_new_method",
+	/* OpenSSL 1.1.0 does not cleanup anymore until the library is unloaded */
+	"OPENSSL_init_crypto",
+	"CRYPTO_THREAD_lock_new",
+	"ERR_add_error_data",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
@@ -840,6 +844,18 @@ HOOK(void, free, void *ptr)
 
 	if (!enabled || thread_disabled->get(thread_disabled))
 	{
+		/* after deinitialization we might have to free stuff we allocated
+		 * while we were enabled */
+		if (!first_header.magic && ptr)
+		{
+			hdr = ptr - sizeof(memory_header_t);
+			tail = ptr + hdr->bytes;
+			if (hdr->magic == MEMORY_HEADER_MAGIC &&
+				tail->magic == MEMORY_TAIL_MAGIC)
+			{
+				ptr = hdr;
+			}
+		}
 		real_free(ptr);
 		return;
 	}
@@ -956,6 +972,7 @@ METHOD(leak_detective_t, destroy, void,
 	lock->destroy(lock);
 	thread_disabled->destroy(thread_disabled);
 	free(this);
+	first_header.magic = 0;
 	first_header.next = NULL;
 }
 

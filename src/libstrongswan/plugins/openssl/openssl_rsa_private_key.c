@@ -20,6 +20,7 @@
 
 #include "openssl_rsa_private_key.h"
 #include "openssl_rsa_public_key.h"
+#include "openssl_util.h"
 
 #include <utils/debug.h>
 
@@ -34,6 +35,12 @@
  *  Public exponent to use for key generation.
  */
 #define PUBLIC_EXPONENT 0x10001
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(RSA, key, n, e, d)
+OPENSSL_KEY_FALLBACK(RSA, factors, p, q)
+OPENSSL_KEY_FALLBACK(RSA, crt_params, dmp1, dmq1, iqmp)
+#endif
 
 typedef struct private_openssl_rsa_private_key_t private_openssl_rsa_private_key_t;
 
@@ -436,22 +443,38 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 	}
 	else if (n.ptr && e.ptr && d.ptr && p.ptr && q.ptr && coeff.ptr)
 	{
+		BIGNUM *bn_n, *bn_e, *bn_d, *bn_p, *bn_q;
+		BIGNUM *dmp1 = NULL, *dmq1 = NULL, *iqmp = NULL;
+
 		this->rsa = RSA_new();
-		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
-		this->rsa->e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
-		this->rsa->d = BN_bin2bn((const u_char*)d.ptr, d.len, NULL);
-		this->rsa->p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
-		this->rsa->q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
+
+		bn_n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
+		bn_e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
+		bn_d = BN_bin2bn((const u_char*)d.ptr, d.len, NULL);
+		if (!RSA_set0_key(this->rsa, bn_n, bn_e, bn_d))
+		{
+			destroy(this);
+			return NULL;
+
+		}
+		bn_p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
+		bn_q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
+		if (!RSA_set0_factors(this->rsa, bn_p, bn_q))
+		{
+			destroy(this);
+			return NULL;
+		}
 		if (exp1.ptr)
 		{
-			this->rsa->dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
+			dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
 		}
 		if (exp2.ptr)
 		{
-			this->rsa->dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
+			dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
 		}
-		this->rsa->iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
-		if (RSA_check_key(this->rsa) == 1)
+		iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
+		if (RSA_set0_crt_params(this->rsa, dmp1, dmq1, iqmp) &&
+			RSA_check_key(this->rsa) == 1)
 		{
 			return &this->public;
 		}
