@@ -192,8 +192,7 @@ int main(int argc, char *argv[])
 	bool force = FALSE;
 	chunk_t identity_req;
 	chunk_t aik_blob;
-	chunk_t aik_modulus;
-	chunk_t aik_exponent;
+	hasher_t *hasher;
 
 	atexit(library_deinit);
 	if (!library_init(NULL, "aikgen"))
@@ -347,7 +346,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!tpm->generate_aik(tpm, ca_modulus, &aik_blob, &aik_pubkey,
-						  &identity_req))
+						   &identity_req))
 	{
 		exit_aikgen("could not generate AIK");
 	}
@@ -383,12 +382,14 @@ int main(int argc, char *argv[])
 				   aikpubkey_filename, aik_pubkey.len);
 
 	/* display AIK keyid derived from subjectPublicKeyInfo encoding */
-	if (!lib->encoding->encode(lib->encoding, KEYID_PUBKEY_INFO_SHA1, NULL,
-					&aik_keyid, CRED_PART_RSA_MODULUS, aik_modulus,
-					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher || !hasher->allocate_hash(hasher, aik_pubkey, &aik_keyid))
 	{
-		exit_aikgen("computation of AIK keyid failed");
+		DESTROY_IF(hasher);
+		exit_aikgen("SHA1 hash algorithm not supported, computation of AIK "
+					"keyid failed");
 	}
+	hasher->destroy(hasher);
 	DBG1(DBG_LIB, "AIK keyid: %#B", &aik_keyid);
 
 	exit_aikgen(NULL);
