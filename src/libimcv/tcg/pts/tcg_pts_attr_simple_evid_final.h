@@ -74,7 +74,7 @@ struct tcg_pts_attr_simple_evid_final_t {
  * Creates an tcg_pts_attr_simple_evid_final_t object
  *
  * @param quote_info			Optional TPM Quote Info
- * @param quote_sign			Optional TPM Quote Signature
+ * @param quote_sig				Optional TPM Quote Signature
  */
 pa_tnc_attr_t* tcg_pts_attr_simple_evid_final_create(
 						tpm_tss_quote_info_t *quote_info, chunk_t quote_sig);
