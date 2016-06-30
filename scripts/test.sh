@@ -110,6 +110,11 @@ osx)
 dist)
 	TARGET=distcheck
 	;;
+apidoc)
+	DEPS="doxygen"
+	CONFIG="--disable-defaults"
+	TARGET=apidoc
+	;;
 *)
 	echo "$0: unknown test $TEST" >&2
 	exit 1
@@ -146,5 +151,27 @@ CONFIG="$CONFIG
 
 echo "$ ./autogen.sh"
 ./autogen.sh || exit $?
-echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG && make $TARGET"
-CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make -j4 $TARGET
+echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG"
+CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG || exit $?
+
+case "$TEST" in
+apidoc)
+	exec 2>make.warnings
+	;;
+*)
+	;;
+esac
+
+echo "$ make $TARGET"
+make -j4 $TARGET
+
+case "$TEST" in
+apidoc)
+	if test -s make.warnings; then
+		cat make.warnings
+		exit 1
+	fi
+	;;
+*)
+	;;
+esac
