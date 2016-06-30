@@ -14,8 +14,10 @@
  */
 
 /**
- * @defgroup tpm_tss tpm_tss
- * @{ @ingroup libtpmtss
+ * @defgroup libtpmtss libtpmtss
+ *
+ * @addtogroup libtpmtss
+ * @{
  */
 
 #ifndef TPM_TSS_H_

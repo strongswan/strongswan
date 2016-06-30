@@ -2,7 +2,7 @@
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
-* This program is free software; you can redistribute it and/or modify it
+ * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
@@ -205,7 +205,7 @@ METHOD(tpm_tss_quote_info_t, get_quote, bool,
 			writer->write_data(writer, this->clock_info);
 
 			/* Firmware Version */
-			writer->write_data(writer, this->version_info);		
+			writer->write_data(writer, this->version_info);
 
 			/* PCR Selection */
 			writer->write_data(writer, this->pcr_select);

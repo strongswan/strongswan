@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup tpm_tss_tss_names tpm_tss_tss_names
+ * @defgroup tpm_tss_tss2_names tpm_tss_tss2_names
  * @{ @ingroup libtpmtss
  */
 
