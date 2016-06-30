@@ -5,6 +5,12 @@ strongswan-5.5.0
   Trusted Platform Modules. This allows the Attestation IMC/IMV pair to
   do TPM 2.0 based attestation.
 
+ - Enhanced the functionality of the swanctl --list-conns command by
+   listing IKE_SA and CHILD_SA reauthentication and rekeying settings.
+
+ - IPsec policy rule priorities can be set manually and restricted to a
+   network interface.
+
 
 strongswan-5.4.0
 ----------------
