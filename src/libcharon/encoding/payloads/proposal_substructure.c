@@ -1360,18 +1360,21 @@ static void set_from_proposal_v1(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transid = get_ikev1_transid_from_alg(INTEGRITY_ALGORITHM, alg);
 		alg = get_ikev1_auth_from_alg(alg);
-		if (transid && alg)
+		if (alg)
 		{
-			if (!transform)
+			transid = get_ikev1_transid_from_alg(INTEGRITY_ALGORITHM, alg);
+			if (!transform && transid)
 			{
 				transform = transform_substructure_create_type(
 								PLV1_TRANSFORM_SUBSTRUCTURE, number, transid);
 			}
-			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
-									TATTR_PH2_AUTH_ALGORITHM, alg));
+			if (transform)
+			{
+				transform->add_transform_attribute(transform,
+					transform_attribute_create_value(PLV1_TRANSFORM_ATTRIBUTE,
+										TATTR_PH2_AUTH_ALGORITHM, alg));
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
