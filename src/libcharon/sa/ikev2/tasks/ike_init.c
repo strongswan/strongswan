@@ -457,6 +457,11 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	}
 	enumerator->destroy(enumerator);
 
+	if (this->proposal)
+	{
+		this->ike_sa->set_proposal(this->ike_sa, this->proposal);
+	}
+
 	if (ke_payload && this->proposal &&
 		this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
@@ -614,7 +619,6 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 	/* check if we'd have to redirect the client */
 	if (!this->old_sa &&
@@ -849,7 +853,6 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "peers proposal selection invalid");
 		return FAILED;
 	}
-	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
