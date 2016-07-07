@@ -819,6 +819,11 @@ METHOD(kernel_net_t, add_ip, status_t,
 METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *vip, int prefix, bool wait)
 {
+        if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+        
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
 
