@@ -75,6 +75,17 @@ struct private_kernel_iph_net_t {
 	 * Roam event due to address change?
 	 */
 	bool roam_address;
+
+        /**
+         * Whether to install virtual IPs
+         */
+        bool install_virtual_ip;
+
+        /**
+         * Where to install virtual IPs
+         */
+
+        char *install_virtual_ip_on;
 };
 
 /**
@@ -124,6 +135,13 @@ static void iface_destroy(iface_t *this)
 	free(this->ifname);
 	free(this->ifdesc);
 	free(this);
+}
+/**
+ * find an interface entry by name
+ */
+static bool iface_by_name(iface_t *this, char *ifname)
+{
+	return streq(this->ifname, ifname);
 }
 
 /**
@@ -718,10 +736,6 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
-/**
- * Missing declaration
- */
-long WINAPI InitializeUnicastIpAddressEntry(MIB_UNICASTIPADDRESS_ROW *row);
 
 /**
  * Create a MIB unicast row from a host
@@ -758,12 +772,31 @@ static void host2unicast(host_t *host, int prefix, MIB_UNICASTIPADDRESS_ROW *row
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *vip, int prefix, char *name)
 {
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
+        iface_t *iface = NULL, *entry = NULL;
 
+        /* Print out all known interfaces */
+        enumerator_t *enumerator = this->ifaces->create_enumerator(this->ifaces);
+        while(enumerator->enumerate(enumerator, &entry))
+        {
+            DBG1(DBG_KNL, "interface %s\n index: %d\n description %s\n type %d", entry->ifname, entry->ifindex, entry->ifdesc, entry->iftype);
+        }
+        enumerator->destroy(enumerator);
 	/* name of the MS Loopback adapter */
-	name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
-
+        if (!this->install_virtual_ip_on || this->ifaces->find_first(this->ifaces, (void*)iface_by_name,
+						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
+        {
+            name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
+        }
+        else
+        {
+            name = this->install_virtual_ip_on;
+        }
 	host2unicast(vip, prefix, &row);
 
 	row.InterfaceIndex = add_addr(this, name, vip, TRUE);
@@ -960,6 +993,10 @@ kernel_iph_net_t *kernel_iph_net_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
+		.install_virtual_ip = lib->settings->get_bool(lib->settings,
+						"%s.install_virtual_ip", TRUE, lib->ns),
+		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
+						"%s.install_virtual_ip_on", NULL, lib->ns),
 	);
 	/* PIPINTERFACE_CHANGE_CALLBACK is not using WINAPI in MinGW, which seems
 	 * to be wrong. Force a cast to our WINAPI call */

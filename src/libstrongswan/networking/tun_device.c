@@ -979,7 +979,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                         if (strcmp(pair->guid, guid) == 0)
                         {
                             /* Set name */
-                            memcpy(this->if_name, pair->name, strlen(pair->name));
+                            memcpy(this->if_name, pair->guid, strlen(pair->guid));
                         }
                         free(pair->guid);
                         free(pair->name);
