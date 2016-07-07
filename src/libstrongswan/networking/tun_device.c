@@ -276,106 +276,6 @@ linked_list_t *get_tap_reg()
     return list;
 }
 
-linked_list_t *get_panel_reg ()
-{
-        LONG status;
-        HKEY network_connections_key;
-        DWORD len;
-        linked_list_t *list = linked_list_create();
-        int i = 0;
-
-        status = RegOpenKeyEx(
-                HKEY_LOCAL_MACHINE,
-                NETWORK_CONNECTIONS_KEY,
-                0,
-                KEY_READ,
-                &network_connections_key);
-
-        if (status != ERROR_SUCCESS)
-        {
-            DBG2(DBG_LIB, "Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
-        }
-        while (TRUE)
-        {
-            char enum_name[256];
-            char connection_string[256];
-            HKEY connection_key;
-            WCHAR name_data[256];
-            DWORD name_type;
-            const WCHAR name_string[] = L"Name";
-
-            len = sizeof (enum_name);
-            status = RegEnumKeyEx(
-                    network_connections_key,
-                    i,
-                    enum_name,
-                    &len,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL);
-            if (status == ERROR_NO_MORE_ITEMS)
-            {
-                break;
-            }
-            else if (status != ERROR_SUCCESS)
-            {
-                DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
-                        NETWORK_CONNECTIONS_KEY);
-            }
-            snprintf(connection_string, sizeof (connection_string),
-                    "%s\\%s\\Connection",
-                    NETWORK_CONNECTIONS_KEY, enum_name);
-
-            status = RegOpenKeyEx(
-                    HKEY_LOCAL_MACHINE,
-                    connection_string,
-                    0,
-                    KEY_READ,
-                    &connection_key);
-
-            if (status != ERROR_SUCCESS)
-            {
-                DBG2(DBG_LIB, "Error opening registry key: %s", connection_string);
-            }
-            else
-            {
-                len = sizeof (name_data);
-                status = RegQueryValueExW(
-                        connection_key,
-                        name_string,
-                        NULL,
-                        &name_type,
-                        (LPBYTE) name_data,
-                        &len);
-
-                if (status != ERROR_SUCCESS || name_type != REG_SZ)
-                {
-                    DBG2(DBG_LIB, "Error opening registry key: %s\\%s\\%s",
-                            NETWORK_CONNECTIONS_KEY, connection_string, name_string);
-                }
-                else
-                {
-                    guid_name_pair_t *member = malloc(sizeof(guid_name_pair_t));
-                    member->name = malloc(sizeof(char)*256);
-                    member->guid = malloc(sizeof(char)*256);
-                    memset(member->name, 0, 256);
-                    memset(member->guid, 0, 256);
-                    WideCharToMultiByte(CP_UTF8, 0, name_data, 256, member->name, 256, NULL, NULL);
-                    memset(member->guid, 0, sizeof(enum_name));
-                    memcpy(member->guid, enum_name, sizeof(enum_name));
-                    list->insert_last(list, member);
-                }
-                RegCloseKey(connection_key);
-            }
-            ++i;
-        }
-
-        RegCloseKey(network_connections_key);
-
-        return list;
-}
-
 METHOD(tun_device_t, get_read_event_name, char *,
 	private_tun_device_t *this)
 {
@@ -942,11 +842,10 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 #elif defined(WIN32)
         /* WIN32 TAP driver stuff*/
         /* Check if there is an unused tun device following the IPsec name scheme*/
-        enumerator_t *enumerator, *enumerator2;
+        enumerator_t *enumerator;
         char *guid;
         BOOL success = FALSE;
-        linked_list_t *possible_devices = get_tap_reg(), *connections = get_panel_reg();
-        guid_name_pair_t *pair;
+        linked_list_t *possible_devices = get_tap_reg();
         memset(this->if_name, 0, sizeof(this->if_name));
 
         this->read_event_name = malloc(WIN32_TUN_EVENT_LENGTH);
@@ -971,21 +870,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
                 }
                 else
                 {
-                    /* translate GUID to name */
-                    enumerator2 = connections->create_enumerator(connections);
-
-                    while(enumerator2->enumerate(enumerator2, &pair))
-                    {
-                        if (strcmp(pair->guid, guid) == 0)
-                        {
-                            /* Set name */
-                            memcpy(this->if_name, pair->guid, strlen(pair->guid));
-                        }
-                        free(pair->guid);
-                        free(pair->name);
-                        free(pair);
-                    }
-                    enumerator2->destroy(enumerator2);
+                    memcpy(this->if_name, guid, strlen(guid));
                     success = TRUE;
                 }
             }

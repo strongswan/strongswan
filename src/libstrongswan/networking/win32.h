@@ -31,11 +31,6 @@
 #define ADAPTER_KEY "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
 #define NETWORK_CONNECTIONS_KEY "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
 
-typedef struct {
-    char *guid;
-    char *name;
-} guid_name_pair_t;
-
 /*
  * ======================
  * Filesystem prefixes
@@ -48,7 +43,7 @@ typedef struct {
 #define TAP_WIN_SUFFIX    ".tap"
 
 /*
- * TAP IOCTL constants and macros. 
+ * TAP IOCTL constants and macros.
  *
  */
 #define TAP_WIN_CONTROL_CODE(request,method) \
