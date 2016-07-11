@@ -482,10 +482,13 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		/* add exclude route for peer */
 		add_exclude_route(this, route, src, dst);
 	}
-
+#ifdef WIN32
+        DBG1(DBG_KNL, "installing route %R src %H gateway %H dev %s",
+                dst_ts, route->src_ip, route->gateway, route->if_name);
+#else
 	DBG2(DBG_KNL, "installing route: %R src %H dev %s",
 		 dst_ts, route->src_ip, route->if_name);
-
+#endif
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
 									  route->src_ip, route->if_name))
