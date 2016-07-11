@@ -916,15 +916,37 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         ep[1].S_un.S_un_b.s_b2 = 254;
         ep[1].S_un.S_un_b.s_b3 = 128;
         ep[1].S_un.S_un_b.s_b4 = 128;
-        /* Remote netmask (255.255.0.0) */
+        /* Remote netmask (255.255.255.255) */
 	ep[2].S_un.S_un_b.s_b1 = 255;
         ep[2].S_un.S_un_b.s_b2 = 255;
-        ep[2].S_un.S_un_b.s_b3 = 0;
-        ep[2].S_un.S_un_b.s_b4 = 0;
+        ep[2].S_un.S_un_b.s_b3 = 255;
+        ep[2].S_un.S_un_b.s_b4 = 255;
 
-        status = DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_CONFIG_TUN,
+        if(!DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_CONFIG_TUN,
 		    ep, sizeof (ep),
-		    ep, sizeof (ep), &len, NULL);
+		    ep, sizeof (ep), &len, NULL))
+        {
+            DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_CONFIG_TUN DeviceIoControl call.");
+        }
+
+        ULONG disable_src_check = FALSE;
+        if(!DeviceIoControl(this->tunhandle, TAP_WIN_IOCTL_CONFIG_SET_SRC_CHECK,
+                    &disable_src_check, sizeof(disable_src_check),
+                    &disable_src_check, sizeof(disable_src_check), &len, NULL))
+        {
+            DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_CONFIG_SET_SRC_CHECK DeviceIoControl call.");
+        }
+        ULONG driverVersion[3] = {0 , 0, 0};
+        if(!DeviceIoControl(this->tunhandle, TAP_WIN_IOCTL_GET_VERSION,
+                    &driverVersion, sizeof(driverVersion),
+                    &driverVersion, sizeof(driverVersion), &len, NULL))
+        {
+            DBG1(DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_GET_VERSION DeviceIoControl call.");
+        }
+        else
+        {
+            DBG1(DBG_LIB, "TAP-Windows driver version %d.%d available.", driverVersion[0], driverVersion[1]);
+        }
         /* Set device to up */
 
         if (!DeviceIoControl (this->tunhandle, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
