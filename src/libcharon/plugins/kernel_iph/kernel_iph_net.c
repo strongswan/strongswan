@@ -823,7 +823,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 	{	/* disabled by config */
 		return SUCCESS;
 	}
-        
+
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
 
@@ -907,8 +907,8 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 	}
 	if (gtw)
 	{
-		/*memcpy(&row.NextHop, gtw->get_sockaddr(gtw),
-			   *gtw->get_sockaddr_len(gtw));*/
+		memcpy(&row.NextHop, gtw->get_sockaddr(gtw),
+			   *gtw->get_sockaddr_len(gtw));
 	}
 
 	if (add)
