@@ -5,11 +5,35 @@ strongswan-5.5.0
   Trusted Platform Modules. This allows the Attestation IMC/IMV pair to
   do TPM 2.0 based attestation.
 
- - Enhanced the functionality of the swanctl --list-conns command by
-   listing IKE_SA and CHILD_SA reauthentication and rekeying settings.
+- The behavior during IKEv2 exchange collisions has been improved/fixed in
+  several corner cases and support for TEMPORARY_FAILURE and CHILD_SA_NOT_FOUND
+  notifies, as defined by RFC 7296, has been added.
 
- - IPsec policy rule priorities can be set manually and restricted to a
-   network interface.
+- IPsec policy priorities can be set manually (e.g. for high-priority drop
+  policies) and outbound policies may be restricted to a network interface.
+
+- The scheme for the automatically calculated default priorities has been
+  changed and now also considers port masks, which were added with 5.4.0.
+
+- FWD policies are now installed in both directions in regards to the traffic
+  selectors.  Because such "outbound" FWD policies could conflict with "inbound"
+  FWD policies of other SAs they are installed with a lower priority and don't
+  have a reqid set, which allows kernel plugins to distinguish between the two
+  and prefer those with a reqid.
+
+- For outbound IPsec SAs no replay window is configured anymore.
+
+- Enhanced the functionality of the swanctl --list-conns command by listing
+  IKE_SA and CHILD_SA reauthentication and rekeying settings, and EAP/XAuth
+  identities and EAP types.
+
+- DNS servers installed by the resolve plugin are now refcounted, which should
+  fix its use with make-before-break reauthentication.  Any output written to
+  stderr/stdout by resolvconf is now logged.
+
+- The methods in the kernel interfaces have been changed to take structs instead
+  of long lists of arguments.  Similarly the constructors for peer_cfg_t and
+  child_cfg_t now take structs.
 
 
 strongswan-5.4.0
