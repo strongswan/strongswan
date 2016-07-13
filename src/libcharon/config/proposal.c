@@ -422,7 +422,7 @@ static const struct {
 /**
  * Checks the proposal read from a string.
  */
-static void check_proposal(private_proposal_t *this)
+static bool check_proposal(private_proposal_t *this)
 {
 	enumerator_t *e;
 	entry_t *entry;
@@ -461,6 +461,14 @@ static void check_proposal(private_proposal_t *this)
 			{
 				array_remove_at(this->transforms, e);
 			}
+		}
+		e->destroy(e);
+		e = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+		if (!e->enumerate(e, &alg, &ks))
+		{
+			DBG1(DBG_CFG, "a DH group is mandatory in IKE proposals");
+			e->destroy(e);
+			return FALSE;
 		}
 		e->destroy(e);
 	}
@@ -505,6 +513,7 @@ static void check_proposal(private_proposal_t *this)
 	}
 
 	array_compress(this->transforms);
+	return TRUE;
 }
 
 /**
@@ -1000,13 +1009,11 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 	}
 	enumerator->destroy(enumerator);
 
-	if (failed)
+	if (failed || !check_proposal(this))
 	{
 		destroy(this);
 		return NULL;
 	}
-
-	check_proposal(this);
 
 	return &this->public;
 }

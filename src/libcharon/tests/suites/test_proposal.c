@@ -18,38 +18,50 @@
 #include <config/proposal.h>
 
 static struct {
+	protocol_id_t proto;
 	char *self;
 	char *other;
 	char *expected;
 } select_data[] = {
-	{ "aes128", "aes128", "aes128" },
-	{ "aes128", "aes256", NULL },
-	{ "aes128-aes256", "aes256-aes128", "aes128" },
-	{ "aes256-aes128", "aes128-aes256", "aes256" },
-	{ "aes128-aes256-sha1-sha256", "aes256-aes128-sha256-sha1", "aes128-sha1" },
-	{ "aes256-aes128-sha256-sha1", "aes128-aes256-sha1-sha256", "aes256-sha256" },
-	{ "aes128-sha256-modp3072", "aes128-sha256", NULL },
-	{ "aes128-sha256", "aes128-sha256-modp3072", NULL },
-	{ "aes128-sha256-modp3072", "aes128-sha256-modpnone", NULL },
-	{ "aes128-sha256-modpnone", "aes128-sha256-modp3072", NULL },
-	{ "aes128-sha256-modp3072-modpnone", "aes128-sha256", "aes128-sha256" },
-	{ "aes128-sha256", "aes128-sha256-modp3072-modpnone", "aes128-sha256" },
-	{ "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072" },
-	{ "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone" },
+	{ PROTO_ESP, "aes128", "aes128", "aes128" },
+	{ PROTO_ESP, "aes128", "aes256", NULL },
+	{ PROTO_ESP, "aes128-aes256", "aes256-aes128", "aes128" },
+	{ PROTO_ESP, "aes256-aes128", "aes128-aes256", "aes256" },
+	{ PROTO_ESP, "aes128-aes256-sha1-sha256", "aes256-aes128-sha256-sha1", "aes128-sha1" },
+	{ PROTO_ESP, "aes256-aes128-sha256-sha1", "aes128-aes256-sha1-sha256", "aes256-sha256" },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256", NULL },
+	{ PROTO_ESP, "aes128-sha256", "aes128-sha256-modp3072", NULL },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256-modpnone", NULL },
+	{ PROTO_ESP, "aes128-sha256-modpnone", "aes128-sha256-modp3072", NULL },
+	{ PROTO_ESP, "aes128-sha256-modp3072-modpnone", "aes128-sha256", "aes128-sha256" },
+	{ PROTO_ESP, "aes128-sha256", "aes128-sha256-modp3072-modpnone", "aes128-sha256" },
+	{ PROTO_ESP, "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072" },
+	{ PROTO_ESP, "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone" },
+	{ PROTO_IKE, "aes128", NULL, NULL },
+	{ PROTO_IKE, "aes128-sha256", NULL, NULL },
+	{ PROTO_IKE, "aes128-sha256-modpnone", NULL, NULL },
+	{ PROTO_IKE, "aes128-sha256-modp3072", "aes128-sha256-modp3072", "aes128-sha256-modp3072" },
+	{ PROTO_IKE, "aes128-sha256-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256-modp3072" },
+	{ PROTO_IKE, "aes128-sha256-modp3072-modpnone", "aes128-sha256-modp3072", "aes128-sha256-modp3072" },
 };
 
 START_TEST(test_select)
 {
 	proposal_t *self, *other, *selected, *expected;
 
-	self = proposal_create_from_string(PROTO_ESP,
+	self = proposal_create_from_string(select_data[_i].proto,
 									   select_data[_i].self);
-	other = proposal_create_from_string(PROTO_ESP,
+	if (!select_data[_i].other)
+	{
+		ck_assert(!self);
+		return;
+	}
+	other = proposal_create_from_string(select_data[_i].proto,
 										select_data[_i].other);
 	selected = self->select(self, other, FALSE);
 	if (select_data[_i].expected)
 	{
-		expected = proposal_create_from_string(PROTO_ESP,
+		expected = proposal_create_from_string(select_data[_i].proto,
 											   select_data[_i].expected);
 		ck_assert(selected);
 		ck_assert_msg(expected->equals(expected, selected), "proposal %P does "
