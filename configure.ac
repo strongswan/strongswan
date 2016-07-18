@@ -977,10 +977,11 @@ if test x$tss_trousers = xtrue; then
 fi
 
 if test x$tss_tss2 = xtrue; then
-	AC_CHECK_LIB([tss2],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([TTS 2.0 library libtss2 not found])],[])
-	AC_CHECK_HEADER([tss2/tpm20.h],,[AC_MSG_ERROR([TSS 2.0 header tss2/tpm20.h not found!])])
-	AC_DEFINE([TSS_TSS2], [], [use TSS 2.0 library libtss2])
+	PKG_CHECK_MODULES(tss2, [tcti-socket], [AC_DEFINE([TSS_TSS2], [], [use TSS 2.0 libraries])])
+	AC_SUBST(tss2_CFLAGS)
+	AC_SUBST(tss2_LIBS)
 fi
+
 if test x$imv_swid = xtrue; then
 	PKG_CHECK_MODULES(json, [json-c], [],
 		[PKG_CHECK_MODULES(json, [json])])
