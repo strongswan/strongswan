@@ -1,6 +1,9 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan
 
+AM_CFLAGS = \
+	$(tss2_CFLAGS)
+
 AM_LDFLAGS = \
 	-no-undefined
 
@@ -16,7 +19,7 @@ libtpmtss_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 
 if USE_TSS2
-libtpmtss_la_LIBADD += -ltctisocket -ltss2
+libtpmtss_la_LIBADD += $(tss2_LIBS)
 endif
 
 if USE_TROUSERS

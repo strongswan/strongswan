@@ -17,7 +17,7 @@
 
 #ifdef TSS_TSS2
 
-#include <tss2/tpm20.h>
+#include <tpm20.h>
 
 #ifndef TPM_ALG_ECMQV
 #define TPM_ALG_ECMQV		(TPM_ALG_ID)0x001D

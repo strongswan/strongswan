@@ -22,8 +22,8 @@
 #include <asn1/oid.h>
 #include <bio/bio_reader.h>
 
-#include <tss2/tpm20.h>
-#include <tcti/tcti_socket.h>
+#include <tpm20.h>
+#include <tcti_socket.h>
 
 #define LABEL	"TPM 2.0 -"
 
