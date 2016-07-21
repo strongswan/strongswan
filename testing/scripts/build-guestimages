@@ -61,6 +61,7 @@ do
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
 		execute "cp -rf $DIR/../images $LOOPDIR/var/www/" 0
 		execute_chroot "a2enmod -q cgid" 0
+		execute_chroot "a2enmod -q rewrite" 0
 		execute_chroot "ln -s /etc/openssl/certs /var/www/certs" 0
 		execute_chroot "/etc/openssl/generate-crl" 0
 		execute_chroot "rm -rf /var/lib/ldap/*" 0
