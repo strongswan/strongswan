@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,6 +17,7 @@
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
 #include "bliss_fft.h"
+#include "bliss_reduce.h"
 #include "bliss_utils.h"
 
 #include <asn1/asn1.h>
@@ -43,6 +44,11 @@ struct private_bliss_public_key_t {
 	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
 	 */
 	uint32_t *A;
+
+	/**
+	 * NTT of BLISS public key in Montgomery representation Ar = rA mod
+	 */
+	uint32_t *Ar;
 
 	/**
 	 * reference counter
@@ -125,7 +131,7 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 
 	for (i = 0; i < n; i++)
 	{
-		az[i] = (this->A[i] * az[i]) % q;
+		az[i] = bliss_mreduce(this->Ar[i] * az[i], this->set->fft_params);
 	}
 	fft->transform(fft, az, az, TRUE);
 
@@ -279,6 +285,7 @@ METHOD(public_key_t, destroy, void,
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
 		free(this->A);
+		free(this->Ar);
 		free(this);
 	}
 }
@@ -304,7 +311,8 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 	chunk_t blob = chunk_empty, object, param;
 	asn1_parser_t *parser;
 	bool success = FALSE;
-	int objectID, oid;
+	int objectID, oid, i;
+	uint32_t r2;
 
 	while (TRUE)
 	{
@@ -379,6 +387,14 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 				if (!bliss_public_key_from_asn1(object, this->set, &this->A))
 				{
 					goto end;
+				}
+				this->Ar = malloc(this->set->n * sizeof(uint32_t));
+				r2 = this->set->fft_params->r2;
+
+				for (i = 0; i < this->set->n; i++)
+				{
+					this->Ar[i] = bliss_mreduce(this->A[i] * r2,
+												this->set->fft_params);
 				}
 				break;
 		}

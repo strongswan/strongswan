@@ -20,7 +20,7 @@ libbliss_la_SOURCES = \
 	bliss_signature.h bliss_signature.c \
 	bliss_utils.h bliss_utils.c \
 	bliss_bitpacker.h bliss_bitpacker.c \
-	bliss_fft.h bliss_fft.c \
+	bliss_reduce.h bliss_fft.h bliss_fft.c \
 	bliss_huffman_code.h bliss_huffman_code.c \
 	bliss_huffman_code_1.c bliss_huffman_code_3.c bliss_huffman_code_4.c \
 	bliss_huffman_coder.h bliss_huffman_coder.c \

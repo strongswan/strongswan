@@ -16,6 +16,7 @@
 #include "test_suite.h"
 
 #include <bliss_fft.h>
+#include <bliss_reduce.h>
 
 #include <time.h>
 
@@ -28,6 +29,7 @@ START_TEST(test_bliss_fft_impulse)
 {
 	bliss_fft_t *fft;
 	uint16_t n = fft_params[_i]->n;
+	uint32_t rq = (1 << fft_params[_i]->rlog) % fft_params[_i]->q;
 	uint32_t x[n], X[n];
 	int i;
 
@@ -42,7 +44,7 @@ START_TEST(test_bliss_fft_impulse)
 
 	for (i = 0; i < n; i++)
 	{
-		ck_assert(X[i] == 1);
+		ck_assert(X[i] == rq);
 	}
 	fft->transform(fft, X, x, TRUE);
 
@@ -79,7 +81,7 @@ START_TEST(test_bliss_fft_wrap)
 
 		for (i = 0; i < n; i++)
 		{
-			Y[i] = (X[i] * Y[i]) % q;
+			Y[i] = bliss_mreduce(X[i] * Y[i], fft_params[_i]);
 		}
 		fft->transform(fft, Y, Y, TRUE);
 

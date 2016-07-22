@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,6 +14,7 @@
  */
 
 #include "bliss_fft.h"
+#include "bliss_reduce.h"
 
 typedef struct private_bliss_fft_t private_bliss_fft_t;
 
@@ -21,6 +22,7 @@ typedef struct private_bliss_fft_t private_bliss_fft_t;
  * Private data structure for bliss_fft_t object
  */
 struct private_bliss_fft_t {
+
 	/**
 	 * Public interface.
 	 */
@@ -65,8 +67,8 @@ static void butterfly(private_bliss_fft_t *this, uint32_t *x, int i1,int i2,
 	{
 		xp -= this->p->q;
 	}
-	x[i1] =  xp;
-	x[i2] = (xm * this->p->w[iw]) % this->p->q;
+	x[i1] = xp;
+	x[i2] = bliss_mreduce(xm * this->p->wr[iw], this->p);
 }
 
 /**
@@ -95,19 +97,17 @@ METHOD(bliss_fft_t, transform, void,
 	private_bliss_fft_t *this, uint32_t *a, uint32_t *b, bool inverse)
 {
 	int stage, i, j, k, m, n, t, iw, i_rev;
-	uint16_t q;
 	uint32_t tmp;
 
-	/* we are going to use the transform size n and the modulus q a lot */
+	/* we are going to use the transform size n a lot */
 	n = this->p->n;
-	q = this->p->q;
 
 	if (!inverse)
 	{
 		/* apply linear phase needed for negative wrapped convolution */
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (a[i] * this->p->w[i]) % q;
+			b[i] = bliss_mreduce(a[i] * this->p->wf[i], this->p);
 		}
 	}
 	else if (a != b)
@@ -137,7 +137,7 @@ METHOD(bliss_fft_t, transform, void,
 			{
 				for (i = 0; i < m; i++)
 				{
-					iw = 2 * (inverse ? (n - i * k) : (i * k));
+					iw = inverse ? (n - i * k) : (i * k);
 					butterfly(this, b, t + i, t + i + m, iw);
 				}				
 			}
@@ -167,7 +167,7 @@ METHOD(bliss_fft_t, transform, void,
 	{
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (((b[i] * this->p->w[2*n - i]) % q) * this->p->n_inv) % q;
+			b[i] = bliss_mreduce(b[i] * this->p->wi[i], this->p);
 		}
 	}
 }

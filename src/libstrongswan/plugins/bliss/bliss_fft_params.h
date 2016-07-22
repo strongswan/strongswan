@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,6 +36,26 @@ struct bliss_fft_params_t {
 	uint16_t q;
 
 	/**
+	 * Inverse of Prime modulus (-q_inv * q mod r = 1)
+	 */
+	uint16_t q_inv;
+
+	/**
+	 * Logarithm of Montgomery radix: log2(r)
+	 */
+	uint16_t rlog;
+
+	/**
+	 * Square of Montgomery radix: r^2 mod q
+	 */
+	uint32_t r2;
+
+	/**
+	 * Montgomery radix mask: (1<<rlog) - 1
+	 */
+	uint32_t rmask;
+
+	/**
 	 * Size of the FFT with the condition k * n = q-1
 	 */
 	uint16_t n;
@@ -51,9 +71,19 @@ struct bliss_fft_params_t {
 	uint16_t stages;
 
 	/**
-	 * FFT twiddle factors (n-th roots of unity)
+	 * FFT twiddle factors (n-th roots of unity) in Montgomery form
 	 */
-	uint16_t *w;
+	uint16_t *wr;
+
+	/**
+	 * FFT phase shift (2n-th roots of unity) in forward transform
+	 */
+	uint16_t *wf;
+
+	/**
+	 * FFT phase shift (2n-th roots of unity) and scaling in inverse transform
+	 */
+	uint16_t *wi;
 
 	/**
 	 * FFT bit reversal
