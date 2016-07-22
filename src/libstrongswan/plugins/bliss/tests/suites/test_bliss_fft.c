@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,6 +16,8 @@
 #include "test_suite.h"
 
 #include <bliss_fft.h>
+
+#include <time.h>
 
 static bliss_fft_params_t *fft_params[] = {
 	&bliss_fft_17_8,
@@ -91,6 +93,40 @@ START_TEST(test_bliss_fft_wrap)
 }
 END_TEST
 
+START_TEST(test_bliss_fft_speed)
+{
+	bliss_fft_t *fft;
+	struct timespec start, stop;
+	uint16_t n = bliss_fft_12289_512.n;
+	uint32_t x[n], X[n];
+	int i, m, count = 100000;
+
+	for (i = 0; i < n; i++)
+	{
+		x[i] = i;
+	}
+	fft = bliss_fft_create(&bliss_fft_12289_512);
+
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	for (m = 0; m < count; m++)
+	{
+		fft->transform(fft, x, X, FALSE);
+		fft->transform(fft, X, x, TRUE);
+	}
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stop);
+
+	DBG0(DBG_LIB, "%d FFT loops in %d ms\n", count,
+				  (stop.tv_nsec - start.tv_nsec) / 1000000 +
+				  (stop.tv_sec - start.tv_sec) * 1000);
+
+	for (i = 0; i < n; i++)
+	{
+		ck_assert(x[i] == i);
+	}
+	fft->destroy(fft);
+}
+END_TEST
+
 Suite *bliss_fft_suite_create()
 {
 	Suite *s;
@@ -104,6 +140,11 @@ Suite *bliss_fft_suite_create()
 
 	tc = tcase_create("negative_wrap");
 	tcase_add_loop_test(tc, test_bliss_fft_wrap, 0, countof(fft_params));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("speed");
+	tcase_set_timeout(tc, 10);
+	tcase_add_test(tc, test_bliss_fft_speed);
 	suite_add_tcase(s, tc);
 
 	return s;
