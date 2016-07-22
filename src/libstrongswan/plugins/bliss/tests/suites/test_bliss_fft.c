@@ -99,7 +99,7 @@ START_TEST(test_bliss_fft_speed)
 	struct timespec start, stop;
 	uint16_t n = bliss_fft_12289_512.n;
 	uint32_t x[n], X[n];
-	int i, m, count = 100000;
+	int i, m, count = 10000;
 
 	for (i = 0; i < n; i++)
 	{
