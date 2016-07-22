@@ -93,6 +93,11 @@ struct bliss_fft_params_t {
 };
 
 /**
+ * FFT parameters for q = 12289 and n = 1024
+ */
+extern bliss_fft_params_t bliss_fft_12289_1024;
+
+/**
  * FFT parameters for q = 12289 and n = 512
  */
 extern bliss_fft_params_t bliss_fft_12289_512;
