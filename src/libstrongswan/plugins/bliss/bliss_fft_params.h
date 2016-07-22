@@ -86,6 +86,11 @@ struct bliss_fft_params_t {
 	uint16_t *wi;
 
 	/**
+	 * Subsampling of FFT twiddle factors table
+	 */
+	uint16_t s;
+
+	/**
 	 * FFT bit reversal
 	 */
 	uint16_t *rev;

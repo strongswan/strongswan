@@ -96,18 +96,19 @@ static void butterfly_last(private_bliss_fft_t *this, uint32_t *x, int i1)
 METHOD(bliss_fft_t, transform, void,
 	private_bliss_fft_t *this, uint32_t *a, uint32_t *b, bool inverse)
 {
-	int stage, i, j, k, m, n, t, iw, i_rev;
+	int stage, i, j, k, m, n, s, t, iw, i_rev;
 	uint32_t tmp;
 
 	/* we are going to use the transform size n a lot */
 	n = this->p->n;
+	s = this->p->s;
 
 	if (!inverse)
 	{
 		/* apply linear phase needed for negative wrapped convolution */
 		for (i = 0; i < n; i++)
 		{
-			b[i] = bliss_mreduce(a[i] * this->p->wf[i], this->p);
+			b[i] = bliss_mreduce(a[i] * this->p->wf[s*i], this->p);
 		}
 	}
 	else if (a != b)
@@ -137,7 +138,7 @@ METHOD(bliss_fft_t, transform, void,
 			{
 				for (i = 0; i < m; i++)
 				{
-					iw = inverse ? (n - i * k) : (i * k);
+					iw = s * (inverse ? (n - i * k) : (i * k));
 					butterfly(this, b, t + i, t + i + m, iw);
 				}				
 			}
