@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Andreas Steffen
+ * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,10 +13,30 @@
  * for more details.
  */
 
-TEST_SUITE(bliss_bitpacker_suite_create)
-TEST_SUITE(bliss_huffman_suite_create)
-TEST_SUITE(bliss_keys_suite_create)
-TEST_SUITE(bliss_sampler_suite_create)
-TEST_SUITE(bliss_signature_suite_create)
-TEST_SUITE(bliss_sign_suite_create)
+/**
+ * @defgroup ntt_fft ntt_fft
+ * @{ @ingroup ntt_p
+ */
 
+#ifndef NTT_REDUCE_H_
+#define NTT_REDUCE_H_
+
+#include "ntt_fft_params.h"
+
+/**
+ * Montgomery Reduction
+ *
+ * Montgomery, P. L. Modular multiplication without trial division.
+ * Mathematics of Computation 44, 170 (1985), 519–521.
+ */
+static inline uint32_t ntt_fft_mreduce(uint32_t x, ntt_fft_params_t *p)
+{
+	uint32_t m, t;
+	
+	m = (x * p->q_inv) & p->rmask;
+	t = (x + m * p->q) >> p->rlog;
+
+	return (t < p->q) ? t : t - p->q;
+}
+
+#endif /** NTT_REDUCE_H_ @}*/

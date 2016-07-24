@@ -221,15 +221,21 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/
 		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D < \
 												$(srcdir)/crypto/proposal/proposal_keywords_static.txt > $@
 
-
-# build plugins with their own Makefile
-#######################################
-
 if MONOLITHIC
 SUBDIRS =
 else
 SUBDIRS = .
 endif
+
+# build libnttfft used by some plugins
+######################################
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft
+endif
+
+# build plugins with their own Makefile
+#######################################
 
 if USE_AF_ALG
   SUBDIRS += plugins/af_alg
@@ -605,7 +611,16 @@ endif
 if MONOLITHIC
   SUBDIRS += .
 endif
+
+# build unit tests
+##################
+
 SUBDIRS += tests
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft/tests
+endif
+
 if USE_BLISS
   SUBDIRS += plugins/bliss/tests
 endif

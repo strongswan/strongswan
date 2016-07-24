@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "bliss_fft_params.h"
+#include "ntt_fft_params.h"
 
 /**
  * FFT twiddle factors in Montgomery form for q = 12289 and n = 1024
@@ -491,7 +491,7 @@ static uint16_t rev_1024[] = {
 	 255,  767,  511, 1023
 };
 
-bliss_fft_params_t bliss_fft_12289_1024 = {
+ntt_fft_params_t ntt_fft_12289_1024 = {
 	12289, 12287, 18, 3186, (1<<18)-1, 1024, 12277, 10,
 	wr_12289_1024, wf_12289_1024, wi_12289_1024, 1, rev_1024
 };
@@ -622,7 +622,7 @@ static uint16_t rev_512[] = {
 	255, 511
 };
 
-bliss_fft_params_t bliss_fft_12289_512 = {
+ntt_fft_params_t ntt_fft_12289_512 = {
 	12289, 12287, 18, 3186, (1<<18)-1, 512, 12265, 9,
 	wr_12289_1024, wf_12289_1024, wi_12289_512, 2, rev_512
 };
@@ -647,6 +647,6 @@ static uint16_t wi_17_8[] = { 15, 5, 13, 10, 9, 3, 1, 6 };
  */
 static uint16_t rev_8[] = { 0, 4, 2, 6, 1, 5, 3, 7 };
 
-bliss_fft_params_t bliss_fft_17_8 = {
+ntt_fft_params_t ntt_fft_17_8 = {
 	17, 15, 5, 4, (1<<5)-1, 8, 15, 3, wr_17_8, wf_17_8, wi_17_8, 1, rev_8
 };

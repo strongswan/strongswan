@@ -13,30 +13,5 @@
  * for more details.
  */
 
-/**
- * @defgroup bliss_fft bliss_fft
- * @{ @ingroup bliss_p
- */
+TEST_SUITE(ntt_fft_suite_create)
 
-#ifndef BLISS_REDUCE_H_
-#define BLISS_REDUCE_H_
-
-#include "bliss_fft_params.h"
-
-/**
- * Montgomery Reduction
- *
- * Montgomery, P. L. Modular multiplication without trial division.
- * Mathematics of Computation 44, 170 (1985), 519–521.
- */
-static inline uint32_t bliss_mreduce(uint32_t x, bliss_fft_params_t *p)
-{
-	uint32_t m, t;
-	
-	m = (x * p->q_inv) & p->rmask;
-	t = (x + m * p->q) >> p->rlog;
-
-	return (t < p->q) ? t : t - p->q;
-}
-
-#endif /** BLISS_REDUCE_H_ @}*/

@@ -16,8 +16,8 @@
 #include "bliss_public_key.h"
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
-#include "bliss_fft.h"
-#include "bliss_reduce.h"
+#include "ntt_fft.h"
+#include "ntt_fft_reduce.h"
 #include "bliss_utils.h"
 
 #include <asn1/asn1.h>
@@ -77,7 +77,7 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	chunk_t data_hash;
 	hasher_t *hasher;
 	hash_algorithm_t oracle_alg;
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	bliss_signature_t *sig;
 	bool success = FALSE;
 
@@ -126,12 +126,12 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	{
 		az[i] = z1[i] < 0 ? q + z1[i] : z1[i];
 	}
-	fft = bliss_fft_create(this->set->fft_params);
+	fft = ntt_fft_create(this->set->fft_params);
 	fft->transform(fft, az, az, FALSE);
 
 	for (i = 0; i < n; i++)
 	{
-		az[i] = bliss_mreduce(this->Ar[i] * az[i], this->set->fft_params);
+		az[i] = ntt_fft_mreduce(this->Ar[i] * az[i], this->set->fft_params);
 	}
 	fft->transform(fft, az, az, TRUE);
 
@@ -393,8 +393,8 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 
 				for (i = 0; i < this->set->n; i++)
 				{
-					this->Ar[i] = bliss_mreduce(this->A[i] * r2,
-												this->set->fft_params);
+					this->Ar[i] = ntt_fft_mreduce(this->A[i] * r2,
+												  this->set->fft_params);
 				}
 				break;
 		}

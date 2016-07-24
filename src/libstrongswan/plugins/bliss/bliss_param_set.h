@@ -24,7 +24,7 @@
 typedef enum bliss_param_set_id_t bliss_param_set_id_t;
 typedef struct bliss_param_set_t bliss_param_set_t;
 
-#include "bliss_fft_params.h"
+#include "ntt_fft_params.h"
 #include "bliss_huffman_code.h"
 
 #include <library.h>
@@ -93,7 +93,7 @@ struct bliss_param_set_t {
 	/**
 	 * FFT parameters
 	 */
-	bliss_fft_params_t *fft_params;
+	ntt_fft_params_t *fft_params;
 
 	/**
 	 * Number of [-1, +1] secret key coefficients

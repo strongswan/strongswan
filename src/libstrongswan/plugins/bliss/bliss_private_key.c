@@ -20,8 +20,8 @@
 #include "bliss_sampler.h"
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
-#include "bliss_fft.h"
-#include "bliss_reduce.h"
+#include "ntt_fft.h"
+#include "ntt_fft_reduce.h"
 
 #include <crypto/mgf1/mgf1_bitspender.h>
 #include <asn1/asn1.h>
@@ -169,7 +169,7 @@ static void greedy_sc(int8_t *s1, int8_t *s2, int n, uint16_t *c_indices,
 static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 					   chunk_t data, chunk_t *signature)
 {
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	bliss_signature_t *sig;
 	bliss_sampler_t *sampler = NULL;
 	rng_t *rng;
@@ -247,7 +247,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	y2 = z2;
 	ud = z2d;
 
-	fft = bliss_fft_create(this->set->fft_params);
+	fft = ntt_fft_create(this->set->fft_params);
 
 	/* Use of the enhanced BLISS-B signature algorithm? */
 	switch (this->set->id)
@@ -343,7 +343,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 
 		for (i = 0; i < n; i++)
 		{
-			ay[i] = bliss_mreduce(this->Ar[i] * ay[i], this->set->fft_params);
+			ay[i] = ntt_fft_mreduce(this->Ar[i] * ay[i], this->set->fft_params);
 		}
 		fft->transform(fft, ay, ay, TRUE);
 
@@ -819,11 +819,11 @@ static uint32_t invert(private_bliss_private_key_t *this, uint32_t x)
 	}
 	for (i = 1; i <= i_max; i++)
 	{
-		x2 = bliss_mreduce(x2 * x2, this->set->fft_params);
+		x2 = ntt_fft_mreduce(x2 * x2, this->set->fft_params);
 
 		if (q2 & (1 << i))
 		{
-			x1 = bliss_mreduce(x1 * x2, this->set->fft_params);
+			x1 = ntt_fft_mreduce(x1 * x2, this->set->fft_params);
 		}
 	}
 
@@ -1008,7 +1008,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	uint16_t q;
 	bool success = FALSE;
 	bliss_param_set_t *set;
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	rng_t *rng;
 
 	while (TRUE)
@@ -1069,7 +1069,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	this->set = set;
 
 	/* We derive the public key from the private key using the FFT */
-	fft = bliss_fft_create(set->fft_params);
+	fft = ntt_fft_create(set->fft_params);
 
 	/* Some vectors needed to derive the publi key */
 	S1 = malloc(n * sizeof(uint32_t));
@@ -1113,8 +1113,8 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 				break;
 			}
 			this->Ar[i] = invert(this, S1[i]);
-			this->Ar[i] = bliss_mreduce(S2[i] * this->Ar[i], set->fft_params);
-			this->A[i]  = bliss_mreduce(this->Ar[i], set->fft_params);
+			this->Ar[i] = ntt_fft_mreduce(S2[i] * this->Ar[i], set->fft_params);
+			this->A[i]  = ntt_fft_mreduce(this->Ar[i], set->fft_params);
 		}
 	}
 	while (!success && trials < SECRET_KEY_TRIALS_MAX);
@@ -1131,7 +1131,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 		{
 			DBG4(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
 						  i, this->s1[i], this->s2[i],
-						  bliss_mreduce(a[i], set->fft_params),
+						  ntt_fft_mreduce(a[i], set->fft_params),
 				 		  S1[i], S2[i], this->A[i]);
 		}
 	}
@@ -1265,8 +1265,8 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 
 				for (i = 0; i < this->set->n; i++)
 				{
-					this->Ar[i] = bliss_mreduce(this->A[i] * r2,
-												this->set->fft_params);
+					this->Ar[i] = ntt_fft_mreduce(this->A[i] * r2,
+												  this->set->fft_params);
 				}
 				break;
 			case PRIV_KEY_SECRET1:

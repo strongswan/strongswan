@@ -14,21 +14,21 @@
  */
 
 /**
- * @defgroup bliss_fft_params bliss_fft_params
- * @{ @ingroup bliss_p
+ * @defgroup ntt_fft_params ntt_fft_params
+ * @{ @ingroup ntt_p
  */
 
-#ifndef BLISS_FFT_PARAMS_H_
-#define BLISS_FFT_PARAMS_H_
+#ifndef NTT_FFT_PARAMS_H_
+#define NTT_FFT_PARAMS_H_
 
 #include <library.h>
 
-typedef struct bliss_fft_params_t bliss_fft_params_t;
+typedef struct ntt_fft_params_t ntt_fft_params_t;
 
 /**
  * Defines the parameters for an NTT computed via the FFT algorithm
  */
-struct bliss_fft_params_t {
+struct ntt_fft_params_t {
 
 	/**
 	 * Prime modulus
@@ -100,16 +100,16 @@ struct bliss_fft_params_t {
 /**
  * FFT parameters for q = 12289 and n = 1024
  */
-extern bliss_fft_params_t bliss_fft_12289_1024;
+extern ntt_fft_params_t ntt_fft_12289_1024;
 
 /**
  * FFT parameters for q = 12289 and n = 512
  */
-extern bliss_fft_params_t bliss_fft_12289_512;
+extern ntt_fft_params_t ntt_fft_12289_512;
 
 /**
  * FFT parameters for q = 17 and n = 8
  */
-extern bliss_fft_params_t bliss_fft_17_8;
+extern ntt_fft_params_t ntt_fft_17_8;
 
-#endif /** BLISS_FFT_PARAMS_H_ @}*/
+#endif /** NTT_FFT_PARAMS_H_ @}*/

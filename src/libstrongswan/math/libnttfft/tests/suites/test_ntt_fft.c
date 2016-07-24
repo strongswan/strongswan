@@ -15,20 +15,20 @@
 
 #include "test_suite.h"
 
-#include <bliss_fft.h>
-#include <bliss_reduce.h>
+#include <ntt_fft.h>
+#include <ntt_fft_reduce.h>
 
 #include <time.h>
 
-static bliss_fft_params_t *fft_params[] = {
-	&bliss_fft_17_8,
-	&bliss_fft_12289_512,
-	&bliss_fft_12289_1024
+static ntt_fft_params_t *fft_params[] = {
+	&ntt_fft_17_8,
+	&ntt_fft_12289_512,
+	&ntt_fft_12289_1024
 };
 
-START_TEST(test_bliss_fft_impulse)
+START_TEST(test_ntt_fft_impulse)
 {
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	uint16_t n = fft_params[_i]->n;
 	uint32_t rq = (1 << fft_params[_i]->rlog) % fft_params[_i]->q;
 	uint32_t x[n], X[n];
@@ -40,7 +40,7 @@ START_TEST(test_bliss_fft_impulse)
 	}
 	x[0] = 1;
  
-	fft = bliss_fft_create(fft_params[_i]);
+	fft = ntt_fft_create(fft_params[_i]);
 	fft->transform(fft, x, X, FALSE);
 
 	for (i = 0; i < n; i++)
@@ -57,9 +57,9 @@ START_TEST(test_bliss_fft_impulse)
 }
 END_TEST
 
-START_TEST(test_bliss_fft_wrap)
+START_TEST(test_ntt_fft_wrap)
 {
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	uint16_t n = fft_params[_i]->n;
 	uint16_t q = fft_params[_i]->q;
 	uint32_t x[n],y[n], X[n], Y[n];
@@ -70,7 +70,7 @@ START_TEST(test_bliss_fft_wrap)
 		x[i] = i;
 		y[i] = 0;
 	}
-	fft = bliss_fft_create(fft_params[_i]);
+	fft = ntt_fft_create(fft_params[_i]);
 	ck_assert(fft->get_size(fft) == n);
 	ck_assert(fft->get_modulus(fft) == q); 
 	fft->transform(fft, x, X, FALSE);
@@ -82,7 +82,7 @@ START_TEST(test_bliss_fft_wrap)
 
 		for (i = 0; i < n; i++)
 		{
-			Y[i] = bliss_mreduce(X[i] * Y[i], fft_params[_i]);
+			Y[i] = ntt_fft_mreduce(X[i] * Y[i], fft_params[_i]);
 		}
 		fft->transform(fft, Y, Y, TRUE);
 
@@ -96,9 +96,9 @@ START_TEST(test_bliss_fft_wrap)
 }
 END_TEST
 
-START_TEST(test_bliss_fft_speed)
+START_TEST(test_ntt_fft_speed)
 {
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	struct timespec start, stop;
 	int i, m, count = 10000;
 	int n = fft_params[_i]->n;
@@ -108,7 +108,7 @@ START_TEST(test_bliss_fft_speed)
 	{
 		x[i] = i;
 	}
-	fft = bliss_fft_create(fft_params[_i]);
+	fft = ntt_fft_create(fft_params[_i]);
 
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	for (m = 0; m < count; m++)
@@ -130,24 +130,24 @@ START_TEST(test_bliss_fft_speed)
 }
 END_TEST
 
-Suite *bliss_fft_suite_create()
+Suite *ntt_fft_suite_create()
 {
 	Suite *s;
 	TCase *tc;
 
-	s = suite_create("bliss_fft");
+	s = suite_create("ntt_fft");
 
 	tc = tcase_create("impulse");
-	tcase_add_loop_test(tc, test_bliss_fft_impulse, 0, countof(fft_params));
+	tcase_add_loop_test(tc, test_ntt_fft_impulse, 0, countof(fft_params));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("negative_wrap");
-	tcase_add_loop_test(tc, test_bliss_fft_wrap, 0, countof(fft_params));
+	tcase_add_loop_test(tc, test_ntt_fft_wrap, 0, countof(fft_params));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("speed");
 	tcase_set_timeout(tc, 10);
-	tcase_add_loop_test(tc, test_bliss_fft_speed, 1, countof(fft_params));
+	tcase_add_loop_test(tc, test_ntt_fft_speed, 1, countof(fft_params));
 	suite_add_tcase(s, tc);
 
 	return s;
