@@ -47,7 +47,7 @@ struct private_bliss_private_key_t {
 	/**
 	 * BLISS signature parameter set
 	 */
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 
 	/**
 	 * BLISS secret key S1 (coefficients of polynomial f)
@@ -1007,7 +1007,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	uint32_t *S1, *S2, *a;
 	uint16_t q;
 	bool success = FALSE;
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 	ntt_fft_t *fft;
 	rng_t *rng;
 

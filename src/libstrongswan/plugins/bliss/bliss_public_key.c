@@ -38,7 +38,7 @@ struct private_bliss_public_key_t {
 	/**
 	 * BLISS signature parameter set
 	 */
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 
 	/**
 	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
@@ -415,7 +415,7 @@ end:
 /**
  * See header.
  */
-bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
+bool bliss_public_key_from_asn1(chunk_t object, const bliss_param_set_t *set,
 								uint32_t **pubkey)
 {
 	bliss_bitpacker_t *packer;
@@ -454,7 +454,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 /**
  * See header.
  */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set)
+chunk_t bliss_public_key_encode(uint32_t *pubkey, const bliss_param_set_t *set)
 {
 	bliss_bitpacker_t *packer;
 	chunk_t encoding;
@@ -476,7 +476,7 @@ chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set)
  * See header.
  */
 chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
-									 bliss_param_set_t *set)
+									 const bliss_param_set_t *set)
 {
 	chunk_t encoding, pubkey_encoding;
 
@@ -495,7 +495,7 @@ chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
  * See header.
  */
 bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey,
-								  bliss_param_set_t *set,
+								  const bliss_param_set_t *set,
 								  cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;

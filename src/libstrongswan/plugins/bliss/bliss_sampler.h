@@ -89,6 +89,6 @@ struct bliss_sampler_t {
  * @param set		BLISS parameter set to be used
  */
 bliss_sampler_t *bliss_sampler_create(hash_algorithm_t alg, chunk_t seed,
-									  bliss_param_set_t *set);
+									  const bliss_param_set_t *set);
 
 #endif /** BLISS_SAMPLER_H_ @}*/
