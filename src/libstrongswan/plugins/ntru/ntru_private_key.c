@@ -38,7 +38,7 @@ struct private_ntru_private_key_t {
 	/**
 	 * NTRU Parameter Set
 	 */
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	/**
 	 * Polynomial F which is the private key
@@ -642,7 +642,7 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
  * Described in header.
  */
 ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
-											ntru_param_set_t *params)
+											const ntru_param_set_t *params)
 {
 	private_ntru_private_key_t *this;
 	size_t t_len;
@@ -775,7 +775,7 @@ ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
 	size_t privkey_packed_trits_len, privkey_packed_indices_len;
 	uint8_t *privkey_packed, tag;
 	uint16_t *indices, dF;
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	header_len = 2 + NTRU_OID_LEN;
 
